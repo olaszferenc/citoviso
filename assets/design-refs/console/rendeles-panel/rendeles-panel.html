@@ -1,0 +1,281 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Riport — Rendelés-panel (JÓVÁHAGYOTT: A + B)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-ink-brand:var(--citui-navy-900);
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --viz-1:var(--citui-link-ink); --viz-2:var(--citui-cyan-500);
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel));
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  .bar{position:static;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  @media (min-width:600px){.bar{position:sticky;top:0}}
+  .bar b{font-size:13px}
+  .bar button{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .bar .grp{display:flex;gap:4px;align-items:center} .bar .grp span{font-size:11px;opacity:.7;margin-right:4px}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1100px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink);font-weight:600}
+  h1{font:600 20px/1.2 var(--citui-font-text);margin:0 2px 10px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);margin:0 0 12px;overflow-x:auto}
+  .tabs span{padding:9px 14px;font:600 13px/1 var(--citui-font-text);color:var(--citui-muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs span.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+  .panel h2{margin:0 0 10px;font:600 15px/1.3 var(--citui-font-text);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .panel h2 .q{font-weight:500;color:var(--citui-muted);font-size:12.5px}
+  .panel h3{margin:14px 0 6px;font:700 10.5px/1.2 var(--citui-font-text);letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .mut{color:var(--citui-muted)} .small{font-size:12px}
+  .fact{border:1px dashed var(--citui-line-strong);background:var(--citui-surface);border-radius:10px;padding:10px 12px;font-size:12.5px;margin:0 0 12px}
+  .fact b{color:var(--citui-ink-brand)}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel);flex-wrap:wrap}
+  .chips button{appearance:none;border:0;background:none;padding:7px 12px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:32px}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .kstrip{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0 4px}
+  .kbox{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;background:var(--citui-panel);min-width:0}
+  .kbox__t{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .kbox__v{font-family:var(--citui-font-display);font-weight:700;font-size:1.35rem;color:var(--citui-ink-brand);line-height:1.1;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kbox__s{font-size:11.5px;color:var(--citui-muted);margin-top:2px}
+  .split{display:grid;grid-template-columns:1fr;gap:16px}
+  @container (min-width:720px){ .kstrip{grid-template-columns:repeat(4,1fr)} .split{grid-template-columns:3fr 2fr} .fun .row{grid-template-columns:170px 1fr 120px} }
+  .fun{display:grid;gap:7px;margin:4px 0}
+  .fun .row{display:grid;grid-template-columns:118px 1fr 70px;gap:10px;align-items:center}
+  .fun .lab{font-size:12.5px;font-weight:600;line-height:1.2} .fun .lab small{display:block;font-weight:500;color:var(--citui-muted);font-size:11px}
+  .fun .trk{position:relative;height:26px;background:var(--viz-ghost);border-radius:4px;overflow:hidden}
+  .fun .trk i{position:absolute;inset:0 auto 0 0;background:var(--viz-1);border-radius:4px 0 0 4px;transition:width .22s}
+  .fun .trk b{position:absolute;left:8px;top:0;line-height:26px;font-size:12px;color:var(--citui-ink-inverse);font-variant-numeric:tabular-nums}
+  .fun .trk b.out{color:var(--citui-ink)}
+  .fun .drop{font-size:11.5px;text-align:right;line-height:1.2;font-variant-numeric:tabular-nums}
+  .fun .drop b{font-size:12.5px;margin-right:4px}
+  .fun .drop.hot b{color:var(--citui-bad-ink)}
+  .acts{width:100%;border-collapse:collapse;font-size:12.5px}
+  .acts td{padding:6px 4px;border-bottom:1px solid var(--citui-line);font-variant-numeric:tabular-nums} .acts td.num{text-align:right;font-weight:600;white-space:nowrap}
+  .acts tr:last-child td{border-bottom:0}
+  .acts tr.warn td:first-child{color:var(--citui-bad-ink);font-weight:600}
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .tbl th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:6px;border-bottom:1px solid var(--citui-line);white-space:nowrap}
+  .tbl td{padding:8px 6px;border-bottom:1px solid var(--citui-line);vertical-align:middle;font-variant-numeric:tabular-nums}
+  .tbl tr.r{cursor:pointer} .tbl tr.r:hover td{background:var(--citui-surface)}
+  .tbl tr.r td:first-child b{color:var(--citui-link-ink)}
+  .tbl tr.det td{background:var(--citui-surface);padding:8px 10px 12px}
+  .tblwrap{overflow-x:auto}
+  .dots{display:inline-flex;gap:3px;align-items:center;white-space:nowrap}
+  .dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--viz-1);display:inline-block}
+  .dots i.f{background:var(--viz-1)}
+  .dots i.paid{background:var(--citui-ok);border-color:var(--citui-ok)}
+  .tl{list-style:none;margin:0;padding:0;font-size:12.5px}
+  .tl li{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:3px 0;border-bottom:1px dotted var(--citui-line)}
+  .tl li:last-child{border-bottom:0} .tl time{color:var(--citui-muted);font-variant-numeric:tabular-nums}
+  .tl li.strong span{font-weight:700} .tl li.bad span{color:var(--citui-bad-ink);font-weight:600}
+  .tl small{color:var(--citui-muted)}
+  .pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--citui-radius-pill);font-size:11px;font-weight:600;border:1px solid var(--citui-line);background:var(--citui-surface-2);white-space:nowrap}
+  .pill.ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft)}
+  .pill.bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel))}
+  .hide-m{display:none} @container (min-width:720px){ .hide-m{display:table-cell} }
+  .sumline{font-size:12.5px;margin:4px 0 10px}
+  .card-m{display:block} .tbl-d{display:none}
+  @container (min-width:720px){ .card-m{display:none} .tbl-d{display:block} }
+  .lc{border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px;margin:0 0 8px;cursor:pointer}
+  .lc .t{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .lc .t b{color:var(--citui-link-ink)} .lc .s{font-size:12px;color:var(--citui-muted);margin-top:3px}
+  .lc .tl{margin-top:8px;display:none} .lc.open .tl{display:block}
+  .legend{font-size:11.5px;color:var(--citui-muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+  .legend .dots i{vertical-align:-1px}
+  .var-b{display:none} body.vb .var-a{display:none} body.vb .var-b{display:block}
+</style></head><body>
+<div class="bar">
+  <b>Riport — „Itt rendelheti meg” panel</b>
+  <div class="grp"><span>Méret</span><button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button></div>
+  <div class="grp"><span>Változat</span><button data-var="a" class="on">A — lépcső</button><button data-var="b">B — leadenként</button></div>
+</div>
+<p class="note"><b>Mit dönt el ez a lap:</b> hogyan látod a riportban, hogy a megnyitó megnyomta-e az „Itt rendelheti meg” gombot, és a panelen belül meddig jutott. <b>A</b> = összesített lépcső (hol morzsolódnak le) + „mit csinált közben”. <b>B</b> = leadenkénti lista, sorra kattintva a panelen belüli idővonal. Mindkettő a Viselkedés lap új panele, és mindkettőben a lead „Tevékenység” lapja magyar feliratot kap minden panel-eseményre (ma pl. <code>checkout_step</code> nyersen jelenik meg). Az A és a B együtt is mehet. A „Hogyan nyitotta meg” szűrő működik — kattints rá.</p>
+
+<div class="stage" id="stage">
+  <div class="crumb">Riport › <b>Viselkedés</b></div>
+  <h1>Megkeresés-riport</h1>
+  <div class="tabs"><span>Tölcsér</span><span class="on">Viselkedés</span><span>Pénzügy</span><span>Tenantok</span></div>
+
+  <div class="fact"><b>Élesen ma (2026-10-06, valós adat):</b> 16 megnyitás, ebből <b>0</b> nyomta meg a gombot — a mérés működik (dev-ben a gombnyomás rögzül), egyszerűen senki nem kattintott. A lenti számok pilot-alakú MINTA, hogy lásd, hogyan néz ki adattal.</div>
+
+  <div class="panel">
+    <h2>Rendelés-panel <span class="q">— megnyomta-e az „Itt rendelheti meg” gombot, és mi történt benne</span></h2>
+    <div class="chips" id="via" role="group" aria-label="Hogyan nyitotta meg">
+      <button data-via="all" class="on">Mind</button><button data-via="pill">A gombbal</button><button data-via="esc">Az ajánlatból</button><button data-via="tab">Szél-füllel újra</button>
+    </div>
+    <div class="kstrip" id="kpi"></div>
+
+    <div class="var-a">
+      <div class="split">
+        <div>
+          <h3>Meddig jutott a panelen belül</h3>
+          <div class="fun" id="fun"></div>
+          <p class="mut small">A sáv = hányan értek el ide (a panelt megnyitók közül). Jobbra: hányan hagyták itt abba — a legtöbbet vesztő lépés piros.</p>
+        </div>
+        <div>
+          <h3>Mit csinált közben</h3>
+          <table class="acts" id="acts"></table>
+          <p class="mut small">Egy lead több sort is ad. Piros = hiba, amibe belefutott.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="var-b">
+      <p class="sumline" id="bsum"></p>
+      <div class="tbl-d tblwrap"><table class="tbl" id="btbl"></table></div>
+      <div class="card-m" id="bcards"></div>
+      <div class="legend"><span><span class="dots"><i class="f"></i></span> elérte</span><span><span class="dots"><i></i></span> nem érte el</span><span><span class="dots"><i class="paid"></i></span> fizetett</span><span>Lépések: Megnyitotta · Tovább · Számlázás · Elküldte · Fizetésre ment · Fizetett</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>A lead Tevékenység lapja <span class="q">— mindkét változatban így olvasható a panelen belüli rész (ma nyers kódok)</span></h2>
+    <ul class="tl" id="leadtl"></ul>
+  </div>
+</div>
+
+<script>
+// Sample pilot-shaped data: one record per panel session (a visit in which the panel was opened).
+// steps: 1 opened, 2 "Tovább" (checkout_step), 3 billing (billing_step_open), 4 submitted (order_intent_submitted),
+// 5 went to payment (checkout_redirect), 6 paid (payment.status='paid').
+var S = [
+  {lead:"Napfény Panzió",at:"10-02 09:41",dev:"Mobil",via:"pill",sec:212,step:6,preset:1,mod:2,period:1,info:1,dsearch:1,own:0,inval:0,fail:0,collapse:0},
+  {lead:"Hullám Apartman",at:"10-02 18:05",dev:"Asztali",via:"pill",sec:48,step:1,preset:2,mod:0,period:0,info:2,dsearch:0,own:0,inval:0,fail:0,collapse:1},
+  {lead:"Villa Hegyalja",at:"10-03 07:52",dev:"Mobil",via:"esc",sec:95,step:3,preset:0,mod:1,period:1,info:0,dsearch:1,own:0,inval:2,fail:0,collapse:0},
+  {lead:"Margo Apartman",at:"10-03 12:10",dev:"Mobil",via:"pill",sec:22,step:1,preset:0,mod:0,period:0,info:0,dsearch:0,own:0,inval:0,fail:0,collapse:1},
+  {lead:"Bástya Apartman",at:"10-03 20:33",dev:"Asztali",via:"pill",sec:301,step:5,preset:1,mod:3,period:1,info:3,dsearch:2,own:1,inval:1,fail:0,collapse:0},
+  {lead:"Tanay Vendégház",at:"10-04 08:14",dev:"Mobil",via:"tab",sec:64,step:2,preset:1,mod:0,period:0,info:0,dsearch:1,own:0,inval:0,fail:0,collapse:1},
+  {lead:"Andi Apartman",at:"10-04 10:47",dev:"Mobil",via:"pill",sec:15,step:1,preset:0,mod:0,period:0,info:0,dsearch:0,own:0,inval:0,fail:0,collapse:1},
+  {lead:"Beach Hostel Balatonboglár",at:"10-04 16:20",dev:"Mobil",via:"pill",sec:133,step:2,preset:2,mod:1,period:1,info:1,dsearch:3,own:0,inval:0,fail:0,collapse:0},
+  {lead:"Villa Suzy Zamárdi",at:"10-05 09:02",dev:"Asztali",via:"esc",sec:176,step:4,preset:0,mod:2,period:0,info:1,dsearch:1,own:0,inval:0,fail:1,collapse:0},
+  {lead:"Melinda Apartman",at:"10-05 13:38",dev:"Mobil",via:"pill",sec:41,step:1,preset:1,mod:0,period:0,info:0,dsearch:0,own:0,inval:0,fail:0,collapse:1},
+  {lead:"Balla apartman",at:"10-05 19:11",dev:"Mobil",via:"pill",sec:88,step:2,preset:0,mod:1,period:0,info:2,dsearch:1,own:1,inval:0,fail:0,collapse:0},
+  {lead:"Villa Bobek Keszthely",at:"10-06 07:30",dev:"Tablet",via:"tab",sec:57,step:1,preset:1,mod:0,period:1,info:0,dsearch:0,own:0,inval:0,fail:0,collapse:1}
+];
+var OPENERS = 40; // visitors who opened the link in the same window (sample)
+var STEPS = [
+  ["Megnyitotta","„Itt rendelheti meg” / ajánlat / fül"],
+  ["Tovább","1. lépés után, a domainhez"],
+  ["Számlázás","számlázási adatok lépés"],
+  ["Elküldte","megrendelés beküldve"],
+  ["Fizetésre ment","átirányítva a Barionra"],
+  ["Fizetett","payment = paid"]
+];
+var VIA = {pill:"a gombbal",esc:"az ajánlatból",tab:"szél-füllel újra"};
+var via = "all";
+
+function rows(){ return S.filter(function(s){ return via==="all" || s.via===via; }); }
+function med(a){ if(!a.length) return NaN; var b=a.slice().sort(function(x,y){return x-y;}); var m=b.length>>1; return b.length%2?b[m]:Math.round((b[m-1]+b[m])/2); }
+function mmss(s){ if(isNaN(s)) return "—"; var m=Math.floor(s/60), r=s%60; return m? m+" p "+r+" mp" : r+" mp"; }
+function pct(n,d){ return d? Math.round(100*n/d)+"%" : "—"; }
+function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+function kpi(){
+  var r=rows(), n=r.length;
+  var pillN=S.filter(function(s){return s.via==="pill";}).length;
+  var left=r.filter(function(s){return s.step<4;}).length;
+  var errs=r.filter(function(s){return s.step<4 && (s.inval||s.fail);}).length;
+  document.getElementById("kpi").innerHTML=
+    box("Megnyomta a gombot", pillN+" / "+OPENERS, pct(pillN,OPENERS)+" a megnyitókból")+
+    box("Panelt megnyitott", n, via==="all"?"gomb "+pillN+" · ajánlat "+S.filter(function(s){return s.via==="esc";}).length+" · fül "+S.filter(function(s){return s.via==="tab";}).length:"szűrve: "+VIA[via])+
+    box("Medián idő a panelben", mmss(med(r.map(function(s){return s.sec;}))), "p90: "+mmss(r.length?r.map(function(s){return s.sec;}).sort(function(a,b){return a-b;})[Math.min(r.length-1,Math.ceil(r.length*.9)-1)]:NaN))+
+    box("Rendelés nélkül zárta", left, pct(left,n)+" · ebből hibába futott: "+errs);
+}
+function box(t,v,s){ return '<div class="kbox"><div class="kbox__t">'+esc(t)+'</div><div class="kbox__v">'+esc(v)+'</div><div class="kbox__s">'+esc(s)+'</div></div>'; }
+
+function funnel(){
+  var r=rows(), n=r.length, html="", drops=[];
+  for(var i=1;i<=6;i++){ drops.push(r.filter(function(s){return s.step===i && i<6;}).length); }
+  var hot=Math.max.apply(null,drops);
+  for(var k=1;k<=6;k++){
+    var reach=r.filter(function(s){return s.step>=k;}).length;
+    var w=n?Math.round(100*reach/n):0;
+    var d=drops[k-1];
+    html+='<div class="row"><div class="lab">'+esc(STEPS[k-1][0])+'<small>'+esc(STEPS[k-1][1])+'</small></div>'+
+      '<div class="trk" title="'+reach+' fő ('+pct(reach,n)+')"><i style="width:'+w+'%"></i><b class="'+(w<22?"out":"")+'" style="'+(w<22?"left:calc("+w+"% + 8px)":"")+'">'+reach+' · '+pct(reach,n)+'</b></div>'+
+      '<div class="drop'+(d&&d===hot?" hot":"")+'">'+(k<6?'<b>'+d+'</b>itt abbahagyta':'<b class="mut">—</b>')+'</div></div>';
+  }
+  document.getElementById("fun").innerHTML=html;
+}
+function acts(){
+  var r=rows(); function c(f){ return r.filter(function(s){return s[f]>0;}).length; }
+  var list=[
+    ["Csomagot váltott","preset"],["Modult be-/kikapcsolt","mod"],["Fizetési ciklust váltott (havi/éves)","period"],
+    ["Megnyitotta egy modul leírását","info"],["Domaint keresett / választott","dsearch"],["Saját domaint ellenőrzött","own"],
+    ["Összecsukta a panelt (visszajött a gomb)","collapse"],["Hibás számlázási adat","inval",1],["A beküldés nem sikerült","fail",1]
+  ];
+  document.getElementById("acts").innerHTML=list.map(function(l){
+    return '<tr class="'+(l[2]?"warn":"")+'"><td>'+esc(l[0])+'</td><td class="num">'+c(l[1])+' fő</td></tr>';
+  }).join("");
+}
+function dots(st){ var h='<span class="dots" aria-label="'+st+'. lépésig">'; for(var i=1;i<=6;i++){ h+='<i class="'+(i<=st?(st===6&&i===6?"paid":"f"):"")+'"></i>'; } return h+'</span>'; }
+function lastLabel(s){ return s.step===6?'<span class="pill ok">Fizetett</span>':((s.step<4&&s.inval)||(s.step===4&&s.fail))?'<span class="pill bad">'+esc(STEPS[s.step-1][0])+' · hiba</span>':'<span class="pill">'+esc(STEPS[s.step-1][0])+'</span>'; }
+function timeline(s){
+  var t=s.at.slice(6), h=parseInt(t,10), m=parseInt(t.slice(3),10), sec=0, out=[];
+  function at(x){ sec+=x; var mm=m+Math.floor(sec/60), hh=h+Math.floor(mm/60); mm%=60; return (hh<10?"0":"")+hh+":"+(mm<10?"0":"")+mm+":"+((sec%60)<10?"0":"")+(sec%60); }
+  out.push([at(0),'Megnyomta: „Itt rendelheti meg”'+(s.via!=="pill"?' <small>('+VIA[s.via]+')</small>':""),""]);
+  if(s.info) out.push([at(9),"Megnézte egy modul leírását",""]);
+  if(s.preset) out.push([at(14),"Csomagot váltott <small>→ Alap</small>",""]);
+  if(s.mod) out.push([at(11),"Bekapcsolt egy modult <small>Online foglalás</small>",""]);
+  if(s.period) out.push([at(8),"Fizetési ciklust váltott <small>éves</small>",""]);
+  if(s.step>=2) out.push([at(12),"Továbblépett (domain-választás)",""]);
+  if(s.dsearch) out.push([at(20),"Domaint választott <small>"+esc(s.lead.toLowerCase().replace(/[^a-z]+/g,"").slice(0,14))+".hu</small>",""]);
+  if(s.step>=3) out.push([at(15),"Megnyitotta a számlázási adatokat",""]);
+  if(s.inval) out.push([at(25),"Hibás számlázási adat <small>irányítószám</small>","bad"]);
+  if(s.step>=4) out.push([at(30),"ELKÜLDTE A MEGRENDELÉST","strong"]);
+  if(s.fail) out.push([at(2),"A rendelés beküldése nem sikerült","bad"]);
+  if(s.step>=5) out.push([at(3),"Továbbment a fizetéshez (Barion)","strong"]);
+  if(s.step>=6) out.push([at(40),"Fizetett","strong"]);
+  if(s.step<4) out.push([at(Math.max(5,s.sec-sec)),s.collapse?"Összecsukta a panelt":"Elhagyta az oldalt a panelből","mut"]);
+  return out.map(function(o){ return '<li class="'+o[2]+'"><time>'+o[0]+'</time><span>'+o[1]+'</span></li>'; }).join("");
+}
+function varB(){
+  var r=rows(), n=r.length;
+  var paid=r.filter(function(s){return s.step===6;}).length, sub=r.filter(function(s){return s.step>=4;}).length;
+  document.getElementById("bsum").innerHTML="<b>"+n+"</b> lead nyitotta meg a panelt"+(via==="all"?"":" ("+VIA[via]+")")+" · "+sub+" elküldte a rendelést · "+paid+" fizetett. Sorra kattintva: mi történt a panelben.";
+  var h='<thead><tr><th>Lead</th><th>Mikor</th><th class="hide-m">Eszköz</th><th class="hide-m">Hogyan</th><th>Idő a panelben</th><th>Lépések</th><th>Utolsó lépés</th></tr></thead><tbody>';
+  r.slice().reverse().forEach(function(s,i){
+    h+='<tr class="r" data-i="'+i+'"><td><b>'+esc(s.lead)+'</b></td><td>'+esc(s.at)+'</td><td class="hide-m">'+esc(s.dev)+'</td><td class="hide-m">'+esc(VIA[s.via])+'</td><td>'+mmss(s.sec)+'</td><td>'+dots(s.step)+'</td><td>'+lastLabel(s)+'</td></tr>'+
+       '<tr class="det" hidden><td colspan="7"><ul class="tl">'+timeline(s)+'</ul></td></tr>';
+  });
+  document.getElementById("btbl").innerHTML=h+'</tbody>';
+  document.getElementById("bcards").innerHTML=r.slice().reverse().map(function(s){
+    return '<div class="lc"><div class="t"><b>'+esc(s.lead)+'</b><span class="small mut">'+esc(s.at)+'</span></div>'+
+      '<div class="s">'+dots(s.step)+' &nbsp;'+lastLabel(s)+' · '+mmss(s.sec)+' · '+esc(s.dev)+' · '+esc(VIA[s.via])+'</div><ul class="tl">'+timeline(s)+'</ul></div>';
+  }).join("");
+}
+document.getElementById("btbl").addEventListener("click",function(e){
+  var tr=e.target.closest("tr.r"); if(!tr) return; var d=tr.nextElementSibling; d.hidden=!d.hidden;
+});
+document.getElementById("bcards").addEventListener("click",function(e){
+  var c=e.target.closest(".lc"); if(c) c.classList.toggle("open");
+});
+function render(){ kpi(); funnel(); acts(); varB(); }
+document.getElementById("via").addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(!b) return; via=b.dataset.via;
+  this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b);}); render();
+});
+document.querySelectorAll("[data-size]").forEach(function(b){ b.addEventListener("click",function(){
+  document.getElementById("stage").classList.toggle("m",b.dataset.size==="m");
+  document.querySelectorAll("[data-size]").forEach(function(x){x.classList.toggle("on",x===b);});
+});});
+document.querySelectorAll("[data-var]").forEach(function(b){ b.addEventListener("click",function(){
+  document.body.classList.toggle("vb",b.dataset.var==="b");
+  document.querySelectorAll("[data-var]").forEach(function(x){x.classList.toggle("on",x===b);});
+});});
+// Lead activity page sample: the Bástya session (reaches payment) with Hungarian labels.
+document.getElementById("leadtl").innerHTML=timeline(S[4]);
+if (window.matchMedia && matchMedia("(max-width: 600px)").matches) document.querySelector('[data-size="m"]').click();
+render();
+</script>
+</body></html>
