@@ -13,6 +13,7 @@
 - Dev DB-n a 0090 lefutott; próba: `Üdülő tábor` → `udulo-tabor` → az élő token.
 
 ## Nyitott
-- A proxy élő próbája a fő fán (:4800, `Host: udulo-tabor.citoviso.com`) a land után.
+- ✅ (2026-10-06) Élő próba a fő fán lefutott: `Host: udulo-tabor.citoviso.com` → 200, a lead mockja, `x-robots-tag: noindex`, konfigurátor `subLabel=udulo-tabor`; ismeretlen címke 404; `/assets/…` az aldomainen 200.
+- Deploy UTÁN: próba-SMS a tulaj teszt-mobiljára (+36 30 516 1631) — hogyan mutatja a Google Messages az aldomain-link előnézetét.
 - Éles: a nagy deployjal megy (migráció 0090); a nginx/Cloudflare wildcard már ma kiszolgálja a `*.citoviso.com`-ot (mérve: TLS ok, 404 lap).
 - A már kiküldött linkek tokenesek maradnak (működnek); csak az új üzenetek kapják az aldomaint.
