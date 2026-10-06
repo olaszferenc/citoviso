@@ -1727,7 +1727,7 @@ fi
 # ack). Eldobható fixture a valódi DB-ben, MOCK modemmel — valódi MMS soha nem megy ki.
 if [ -f scripts/mms-relay-check.mts ] && \
    changed_files | grep -qE '^src/mms/|^src/sms/modemLane\.ts$|^src/sms/relayQueue\.ts$|^scripts/sms-relay\.mts$|^src/sms/sendWindow\.ts$|^src/outreach/sendOutreachPair\.ts$|^scripts/mms-relay|^migrations/0081_'; then
-  echo "[pre-commit] mms-relay-check (MMS-relay: az MMS sorból a modemre, az ack zárja a párt, a kísérő SMS igazoltan kimegy a következő MMS előtt — ADR-XXXX)…"
+  echo "[pre-commit] mms-relay-check (MMS-relay: az MMS sorból a modemre, az ack zárja a párt, a kísérő SMS igazoltan kimegy a következő MMS előtt — modem-sáv)…"
   npx tsx scripts/mms-relay-check.mts >"$GATE_LOG" || gate_failed
 fi
 # The kimeno-ablakok-budapest-ido-szerint ADR: every outbound window/deadline on the BUDAPEST clock, whatever the server's zone
