@@ -1,4 +1,4 @@
-## ADR-XXXX — A rendelés-panel mérése és riportja: honnan nyílt, meddig jutott, mennyi ideig maradt
+## ADR-0333 — A rendelés-panel mérése és riportja: honnan nyílt, meddig jutott, mennyi ideig maradt
 
 - **Kiváltó (tulaj, 2026-10-06):** „Az is legyen mérve a kiküldött linkben, hogy meg van-e nyitva az Itt
   rendelhetem meg gomb, és azon belül mi történik.” A gombnyomás (`panel_open`) már rögzült, de a riport

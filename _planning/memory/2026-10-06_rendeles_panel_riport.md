@@ -1,7 +1,7 @@
 # 2026-10-06 — Rendelés-panel mérése + riport (A + B) megvalósítva
 
 **Kérés:** a kiküldött linken mérjük, megnyomták-e az „Itt rendelheti meg” gombot, és mi történt a panelen belül.
-**Döntés:** ADR-XXXX (a land adja a számot). Jóváhagyott terv: `assets/design-refs/console/rendeles-panel/`.
+**Döntés:** ADR-0333 (a land adja a számot). Jóváhagyott terv: `assets/design-refs/console/rendeles-panel/`.
 
 ## Elvégezve
 - Konfigurátor: `panel_open.via`, új `panel_close`, panel-idő (`panel_collapse/close.seconds`, `dwell_end.panel_seconds`).
