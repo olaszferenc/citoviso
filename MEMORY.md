@@ -1,4 +1,6 @@
 # MEMORY — Citoviso
+Utolsó frissítés: 2026-10-06 (💾 **Scrape adagonkénti mentés — ÉLES** (ADR-0331, a 10-05-i 490 $-os OOM-veszteség után): Place Details tároló place id-ra, forrás-checkpoint (elhalt futás Google-bejárás nélkül folytat), 500-as földrajzi adagok adagonkénti mentéssel; ÉLES `c93f6d3e` = `prod/20261006-0916` (a 0089/0090 is kiment); következő: költség-csökkentés mérése billing exporttal; jegyzet `_planning/memory/2026-10-06_scrape_adagonkenti_mentes.md`)
+
 Utolsó frissítés: 2026-10-05 (🔗 **A megkeresés linkje a lead saját aldomainje** (ADR-0330, tulaj: „nehogy vírusnak tűnjön”): élesen `https://<címke>.citoviso.com` a tokenes `/p/…` helyett; `lead.preview_label` (0090), a public szerver a `/`-en a konzol `/p/<token>` lapját adja; vásárláskor a címke marad, ha az lett a cím, különben törlődik; `?sajat=1` ráül; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_lead_sajat_aldomain_link.md`)
 
 Utolsó frissítés: 2026-10-05 (🕘 **Lead-fülek „ki szerkesztette utoljára”** (A terv megvalósítva): új `lead_activity` napló (migráció 0089), minden fül alatt „<név> · <mikor>” / „—”, mock-kártyán „Létrehozta: …”, a döntésnél a valódi operátor (régi „console” → „nem rögzített”); nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_lead_lastedit_impl.md`)
