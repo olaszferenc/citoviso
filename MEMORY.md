@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-06 (💾 **Scrape adagonkénti mentés — ÉLES** (ADR-0331, a 10-05-i 490 $-os OOM-veszteség után): Place Details tároló place id-ra, forrás-checkpoint (elhalt futás Google-bejárás nélkül folytat), 500-as földrajzi adagok adagonkénti mentéssel; ÉLES `c93f6d3e` = `prod/20261006-0916` (a 0089/0090 is kiment); következő: költség-csökkentés mérése billing exporttal; jegyzet `_planning/memory/2026-10-06_scrape_adagonkenti_mentes.md`)
+Utolsó frissítés: 2026-10-06 (⏹ **Kimi-mock koordinátor lezárva** — m001–m003 a tulajnál, a Kimi-csővezeték leállítva: havi keret) · 2026-10-06 (💾 **Scrape adagonkénti mentés — ÉLES** (ADR-0331, a 10-05-i 490 $-os OOM-veszteség után): Place Details tároló place id-ra, forrás-checkpoint (elhalt futás Google-bejárás nélkül folytat), 500-as földrajzi adagok adagonkénti mentéssel; ÉLES `c93f6d3e` = `prod/20261006-0916` (a 0089/0090 is kiment); következő: költség-csökkentés mérése billing exporttal; jegyzet `_planning/memory/2026-10-06_scrape_adagonkenti_mentes.md`)
 
 Utolsó frissítés: 2026-10-05 (🔗 **A megkeresés linkje a lead saját aldomainje** (ADR-0330, tulaj: „nehogy vírusnak tűnjön”): élesen `https://<címke>.citoviso.com` a tokenes `/p/…` helyett; `lead.preview_label` (0090), a public szerver a `/`-en a konzol `/p/<token>` lapját adja; vásárláskor a címke marad, ha az lett a cím, különben törlődik; `?sajat=1` ráül; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_lead_sajat_aldomain_link.md`)
 
@@ -64,6 +64,14 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > ez a teljes éles kör egyetlen bizonyítéka: terhelés → webhook → élesítés → **valódi számla**.
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
+
+## Párhuzamos szál (2026-10-04/05 — `cit1e4fd2ba`: Kimi-mock koordinátor, folyamatos Kimi-csővezeték) — LEZÁRVA, kód nem változott
+- A Kimi (Moonshot CLI) folyamatos mock-gyártása a Három Huszár leaden: `~/kimi-sandbox/run-folyamatos.sh`, munkamappa `~/kimi-sandbox/folyamatos/`. **⏹ LEÁLLÍTVA 2026-10-05 13:00 a tulaj döntésére** (`STOP` fájl): a Kimi a HAVI keretét érte el (12:13), az m004 félbemaradt.
+- Kész és a tulajnál: m001 „Foglalási lap” (zöld) · m002 „A fotó térképpé éled” (mobilon 619 px: `.map-box` aspect-ratio 16/8 + min-height 300px) · m003 „Boltívek és karikázott jelek” (zöld, a legerősebb). Forrás: `~/kimi-sandbox/folyamatos/mockok/`.
+- Referencia-katalógus (22 díjazott szállás-oldal, 2023-10→2026-10, Awwwards/CSSDA/FWA/Red Dot/GDA): `~/kimi-sandbox/folyamatos/referenciak.md` — az első 20-at Claude-agent gyűjtötte, mert a Kimi 403-on állt.
+- A futtató 403 utáni várakozása 600 → 3600 mp (a 10 percenkénti próba feleslegesen pörgött). A 403 szövege dönti el, melyik keret fogyott el („5-hour” vs „monthly”).
+- Nyitott kérdések: (1) Kimi-újraindítás az új számlázási ciklusban? (`rm STOP` + setsid run-folyamatos.sh; az m004-gyel folytatja). (2) Visszatérő Kimi-csúsztatás — „nagy, fás kert”, „Köveskál szívében”, fotó→szobatípus hozzárendelés (m002/m003 fordítva) — a futtató promptjába tiltásként beírni? (a tulaj még nem döntött). (3) `~/kimi-sandbox/inline-img.py` nem kezeli a `../img/` útvonalat (kézi sed kellett). (4) A tulaj a k1–k6 / m001–m003 közül még nem választott sablont.
+- Jegyzet: `_planning/memory/2026-10-05_kimi_mock_koordinator.md`.
 
 ## Koordinátor (2026-10-04 — `citcad90429`: Éles hibák javítása) — LANDOLVA; élesítés a „CIT ➕ Deploy-koordinátor: minden élesbe” sessioné
 - Saját: `ece2b5e4` mock-összehasonlító tábla csukva · `7eaa2d1a` Kapunyitás 1,5 s · `90c7dfc2` hős-másolat dHash-sel kiszűrve (`photoHash.ts`, `samePicture.ts`).
