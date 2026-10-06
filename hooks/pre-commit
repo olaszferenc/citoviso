@@ -2144,7 +2144,7 @@ if [ -f scripts/scrape-known-skip-check.mts ] && \
   echo "[pre-commit] scrape-known-skip-check (az ismert lead nem megy át a fizetős dúsításon)…"
   npx tsx scripts/scrape-known-skip-check.mts
 fi
-# Save as you go (ADR-XXXX, 2026-10-06): the 10-05 Székesfehérvár run died in the enrichment (OOM)
+# Save as you go (_planning/decisions: scrape-save-as-you-go, 2026-10-06): the 10-05 Székesfehérvár run died in the enrichment (OOM)
 # holding every paid answer in memory — 0 leads, 490 USD. Every paid Details answer is stored by
 # place id at once, the source result is checkpointed with the run (a restart resumes without
 # Google), and leads are saved batch by batch. Fetch-stubbed, never pays; writes its own
