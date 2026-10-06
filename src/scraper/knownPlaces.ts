@@ -58,7 +58,7 @@ export async function knownPlacesFromDb(placeIds: string[]): Promise<Map<string,
   return out;
 }
 
-// ── Place Details store (0091, ADR-XXXX) ─────────────────────────────────────────
+// ── Place Details store (0091, ADR-0331) ─────────────────────────────────────────
 // Every paid Details answer lands here the moment it arrives, keyed by place id. A run
 // that dies before its leads are saved (2026-10-05: OOM in the enrichment, ~16 000
 // Details calls lost) leaves the answers behind, and the next run reads them instead of

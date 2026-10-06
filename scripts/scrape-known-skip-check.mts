@@ -148,7 +148,7 @@ check(
 const run = await readFile(new URL("../src/scraper/run.ts", import.meta.url), "utf8");
 const persist = await readFile(new URL("../src/scraper/persist.ts", import.meta.url), "utf8");
 const partAt = run.search(/partitionNewLeads\(\s*base\s*,\s*await storedLeadIdentities\(\)\s*\)/);
-// Batched since ADR-XXXX: the chain gets one geo-batch at a time, every batch cut from `fresh`.
+// Batched since ADR-0331: the chain gets one geo-batch at a time, every batch cut from `fresh`.
 const batchesAt = run.search(/const batches = geoBatches\(\s*fresh\s*,/);
 // The chain is handed to the batch loop (batchedRun.ts) as `(batch) => enrichLeads(batch, …)`.
 const batchVar = /\((\w+)\)\s*=>\s*enrichLeads\(/.exec(run)?.[1];

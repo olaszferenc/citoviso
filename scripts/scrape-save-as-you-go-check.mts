@@ -1,4 +1,4 @@
-// ⛔ A SCRAPE NEM VESZÍTHETI EL A KIFIZETETT ADATOT (ADR-XXXX, tulaj: „adagonkénti mentés", 2026-10-06).
+// ⛔ A SCRAPE NEM VESZÍTHETI EL A KIFIZETETT ADATOT (ADR-0331, tulaj: „adagonkénti mentés", 2026-10-06).
 //
 // A MÉRT LELET. Élesen 2026-10-05-én a Székesfehérvár-scrape ~10 800 Text Search és ~16 000
 // Place Details hívás után a dúsításban halt meg (kernel OOM-kill). A run.ts mindent a memóriában

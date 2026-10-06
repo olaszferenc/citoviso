@@ -237,7 +237,7 @@ export async function storedLeadIdentities(): Promise<LeadIdentity[]> {
  * Persist the qualified leads and close the run as completed — the one-shot form, for
  * callers that hold the whole set (seed-from-json, the persist guard). The scraper
  * itself saves batch by batch (persistLeadBatch → closeScrapeRun), so a run that dies
- * halfway keeps everything it had already saved (ADR-XXXX).
+ * halfway keeps everything it had already saved (ADR-0331).
  */
 export async function completeScrapeRun(
   runId: string,
@@ -392,7 +392,7 @@ export async function closeScrapeRun(
   await db.deleteFrom("scrape_checkpoint").where("scrape_run_id", "=", runId).execute();
 }
 
-// ── Source checkpoint + resume (0091, ADR-XXXX) ──────────────────────────────────
+// ── Source checkpoint + resume (0091, ADR-0331) ──────────────────────────────────
 
 /** How old a dead run's checkpoint may be and still be resumed instead of re-fetched. */
 export const SCRAPE_RESUME_MAX_AGE_MS = 14 * 24 * 60 * 60_000;

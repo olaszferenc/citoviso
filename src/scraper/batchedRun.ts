@@ -1,4 +1,4 @@
-// Save-as-you-go scrape (ADR-XXXX, owner: „adagonkénti mentés", 2026-10-06).
+// Save-as-you-go scrape (ADR-0331, owner: „adagonkénti mentés", 2026-10-06).
 //
 // THE MEASURED LOSS. The 2026-10-05 Székesfehérvár run (50 km) paid ~10 800 Text Search
 // and ~16 000 Place Details calls, then died in the enrichment (kernel OOM-kill at
@@ -30,7 +30,7 @@ const BATCH_CELL_DEG = 0.1;
  * enrichWebSearch), and they only see the batch they run in. Ordering by a lat/lon grid
  * walked row by row, alternating direction, keeps nearby leads together, so a contact
  * shared by neighbours is still seen as shared. Two leads on either side of a batch
- * boundary are the residual blind spot (ADR-XXXX). Coordinate-less leads go last.
+ * boundary are the residual blind spot (ADR-0331). Coordinate-less leads go last.
  */
 export function geoBatches<T extends { lat?: number; lon?: number }>(leads: T[], size: number): T[][] {
   const keyed = leads.map((l, i) => {

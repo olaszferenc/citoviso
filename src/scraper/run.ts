@@ -1,7 +1,7 @@
 // CLI runner for the lead-discovery scraper (Phase 4, the volume engine).
 // Usage: npm run scrape -- [regionId] [--out file.json] [--cap N]
 // Runs all sources over the region+industry, dedupes, qualifies, enriches and saves
-// the leads BATCH BY BATCH (ADR-XXXX), prints a summary, and — only with --out —
+// the leads BATCH BY BATCH (ADR-0331), prints a summary, and — only with --out —
 // writes the qualified leads as JSON.
 //
 // Nothing paid for is held only in memory (2026-10-05: an OOM-kill in the enrichment
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
 
   // Open the run in the DB up front so failures are recorded, not lost. A dead run of
   // the same definition that left its source result behind is REOPENED instead: the
-  // Google walk and the Details it paid for are not bought twice (ADR-XXXX).
+  // Google walk and the Details it paid for are not bought twice (ADR-0331).
   const definitionId = await ensureScraperDefinition(
     region,
     INDUSTRY,

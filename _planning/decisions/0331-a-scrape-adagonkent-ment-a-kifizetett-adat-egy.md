@@ -1,4 +1,4 @@
-## ADR-XXXX — A scrape adagonként ment: a kifizetett adat egy elhaló futás után is megmarad
+## ADR-0331 — A scrape adagonként ment: a kifizetett adat egy elhaló futás után is megmarad
 
 - **Kiváltó (éles, 2026-10-05):** a Székesfehérvár-scrape (50 km-es kör, `scrape_run 15107e23…`) ~10 800 Text
   Search és ~16 000 Place Details hívás után a dúsításban halt meg (21:03 UTC, kernel OOM-kill, node 1,7 GB RSS,

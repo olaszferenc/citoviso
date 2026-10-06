@@ -115,7 +115,7 @@ const defaultKnownPlaces: KnownPlacesResolver = async (placeIds) =>
   (await import("../knownPlaces.js")).knownPlacesFromDb(placeIds);
 
 /**
- * Every paid Place Details answer, kept by place id (0091, ADR-XXXX). `put` runs the
+ * Every paid Place Details answer, kept by place id (0091, ADR-0331). `put` runs the
  * moment an answer arrives — not at the end of the run — so a run that dies later
  * (2026-10-05: OOM in the enrichment, ~16 000 Details calls lost with the process)
  * leaves them behind, and the next run reads them instead of paying again.

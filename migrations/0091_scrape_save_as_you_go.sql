@@ -1,4 +1,4 @@
--- 0091 A SCRAPE NEM VESZÍTHETI EL A KIFIZETETT ADATOT (ADR-XXXX, tulaj: „adagonkénti mentés", 2026-10-06).
+-- 0091 A SCRAPE NEM VESZÍTHETI EL A KIFIZETETT ADATOT (ADR-0331, tulaj: „adagonkénti mentés", 2026-10-06).
 --
 -- MIÉRT KELL. Élesen 2026-10-05-én a Székesfehérvár-scrape (50 km) ~10 800 Text Search és ~16 000
 -- Place Details hívás után a dúsításban halt meg (kernel OOM-kill, 1,7 GB RSS). A run.ts minden
