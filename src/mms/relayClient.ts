@@ -10,7 +10,7 @@
 // never starts a oneshot that is still running, and the CLI lock refuses a second
 // sender ("masik mms-send fut eppen" → the server refunds the attempt).
 //
-// THE PAIR IS ONE UNIT (ADR-XXXX, owner decree 2026-10-06: „MMS utána sms és csak
+// THE PAIR IS ONE UNIT (ADR-0332, owner decree 2026-10-06: „MMS utána sms és csak
 // utána mehet tovább a következő leadre”). The paragraph above was wrong in practice:
 // the queued SMS goes out only while the daemon RUNS, and the next mms-send stopped it
 // again 5–20 s later — the 3–4-part companion SMS lost its link part. Now a tick runs
@@ -44,7 +44,7 @@ export interface MmsRelayClientDeps {
   errorDetail(err: unknown): string;
   /** The journal file of sent-but-not-yet-acked results. */
   journalPath: string;
-  /** The modem lane: the pair's SMS half is driven and VERIFIED here (ADR-XXXX). */
+  /** The modem lane: the pair's SMS half is driven and VERIFIED here (ADR-0332). */
   lane: SmsLaneDeps;
   /** The lane lock file (shared with scripts/sms-relay.mts). */
   lockPath: string;

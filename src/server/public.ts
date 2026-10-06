@@ -3672,7 +3672,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // callable service on the dev box. Two-phase: pull marks 'sending' (a relay
   // crash re-queues after 10 min), ack settles sent/failed. Bearer-secret auth,
   // constant-time compare; no secret configured → the endpoints do not exist.
-  // The logic lives in src/sms/relayQueue.ts (ADR-XXXX: the guard drives it in-process).
+  // The logic lives in src/sms/relayQueue.ts (ADR-0332: the guard drives it in-process).
   if (req.method === "POST" && pathname === "/api/sms-relay/pull") {
     if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
     const { pullSms } = await import("../sms/relayQueue.js");

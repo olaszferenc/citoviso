@@ -1,9 +1,9 @@
 // SMS-relay — the SERVER side of the remote SMS queue (ADR-0080 ⑦). Moved out of
-// src/server/public.ts (ADR-XXXX) so the guard (scripts/mms-relay-check.mts) can drive
+// src/server/public.ts (ADR-0332) so the guard (scripts/mms-relay-check.mts) can drive
 // the REAL pull/ack semantics in-process, the way it already drives the MMS twin.
 //
 // Two-phase: pull marks 'sending' (a relay crash re-queues after 10 min), ack settles
-// sent/failed. Since ADR-XXXX the Debian-box relay acks ok ONLY after gammu's
+// sent/failed. Since ADR-0332 the Debian-box relay acks ok ONLY after gammu's
 // sentitems shows every part of the message sent — an ok:false is a real modem
 // failure (errorbox, missing part, time-out), re-queued up to 3 attempts, then parked
 // 'failed' with ONE house alert.

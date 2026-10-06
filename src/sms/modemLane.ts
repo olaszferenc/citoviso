@@ -1,4 +1,4 @@
-// THE MODEM LANE (ADR-XXXX) — one GSM modem, two relays, ONE ordered lane.
+// THE MODEM LANE (ADR-0332) — one GSM modem, two relays, ONE ordered lane.
 //
 // Measured 2026-10-06 (40 mobile pairs queued at once): the MMS relay ran one MMS per
 // minute, and every `mms-send` STOPS gammu-smsd for its upload. The pair's companion

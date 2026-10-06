@@ -36,7 +36,7 @@ címzett hálózatán múlik (mobiladat kell a letöltéséhez a címzett telefo
 | Képméret | **≤ 300 KB** JPEG | MMSC-plafon; az eszköz elutasítja felette |
 | Futásidő | **~60–90 mp / MMS** | 2G GPRS feltöltés — ez NEM tömeges csatorna |
 | Kizárólagosság | küldés alatt a modem foglalt | `flock` védi; párhuzamos hívás `masik mms-send fut` hibával kilép |
-| SMS-kiesés | a küldés idejére a `gammu-smsd` áll | a gammu outboxban álló SMS részei `SendingError`-ba futhatnak, ha a következő MMS túl hamar jön — a relay ezért csak üres sávon indít MMS-t (ADR-XXXX) |
+| SMS-kiesés | a küldés idejére a `gammu-smsd` áll | a gammu outboxban álló SMS részei `SendingError`-ba futhatnak, ha a következő MMS túl hamar jön — a relay ezért csak üres sávon indít MMS-t (ADR-0332) |
 | Jogosultság | **root** (`sudo`) kell | systemctl stop/start + soros port |
 | Subject | ASCII | WSP text-string; ékezetes tárgyat kerülni |
 
@@ -80,7 +80,7 @@ SMS-relaynél). A ~90 mp/darab miatt **percenkénti timer + soronként EGY üzen
   (dupla fizetős hideg MMS). A sikeres küldés az ack előtt a helyi naplóba kerül
   (`outbox-mms/relay-journal.json`), a következő futás onnan utólag nyugtáz.
 - A páros (ADR-0083) `mms_sent_at`-ját az ack írja, és a kísérő SMS csak utána indul.
-- **A pár EGY egység (ADR-XXXX, modem-sáv):** az MMS-relay a következő MMS-t CSAK akkor húzza,
+- **A pár EGY egység (ADR-0332, modem-sáv):** az MMS-relay a következő MMS-t CSAK akkor húzza,
   ha az előző pár kísérő SMS-e (és a tulaj-másolat) a gammu `sentitems` szerint MINDEN részével
   kiment, a gammu outbox üres és a `gammu-smsd` fut. Az MMS ack-ja után a relay maga viszi ki
   az SMS-sort, és csak a gammu-igazolás után nyugtáz `sent`-et; errorbox → újrapróba, 3× → `failed`

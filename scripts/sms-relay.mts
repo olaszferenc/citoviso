@@ -11,7 +11,7 @@
 // Two-phase safety lives on the SERVER side (pull marks 'sending', stale rows
 // re-queue): this script may die at any point without losing a message.
 //
-// THE MODEM LANE (ADR-XXXX): with GAMMU_DB_USER/GAMMU_DB_PASSWORD set, a tick holds
+// THE MODEM LANE (ADR-0332): with GAMMU_DB_USER/GAMMU_DB_PASSWORD set, a tick holds
 // the lane lock shared with the MMS relay and acks an SMS 'sent' ONLY when gammu's
 // sentitems shows every part sent (src/sms/modemLane.ts) — 2026-10-06 the ack of
 // the bare injection reported link SMS as 'sent' that died in gammu's errorbox.
@@ -74,7 +74,7 @@ if (config.gammuDb.user) {
   }
   process.exit(0);
 }
-console.error("[sms-relay] ⚠️ GAMMU_DB_USER nincs beállítva — a kiküldés NEM igazolt, az ack csak a befecskendezést jelenti (ADR-XXXX).");
+console.error("[sms-relay] ⚠️ GAMMU_DB_USER nincs beállítva — a kiküldés NEM igazolt, az ack csak a befecskendezést jelenti (ADR-0332).");
 
 try {
   const pulled = await api("/api/sms-relay/pull", {});

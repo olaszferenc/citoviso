@@ -112,7 +112,7 @@ export const config = {
    */
   smsRelaySecret: env("SMS_RELAY_SECRET"),
   /**
-   * gammu-smsd's SQL store on THIS Debian box (ADR-XXXX): the relays read its
+   * gammu-smsd's SQL store on THIS Debian box (ADR-0332): the relays read its
    * outbox/sentitems to learn whether an injected SMS really LEFT the modem — the
    * pair's companion SMS is acked, and the next MMS is pulled, only on that proof.
    * The same database/user as /etc/gammu-smsd-inject.conf. Empty user = the relays

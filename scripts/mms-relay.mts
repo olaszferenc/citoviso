@@ -9,7 +9,7 @@
 //   MMS_RELAY_JOURNAL — optional; default outbox-mms/relay-journal.json (gitignored).
 //   GAMMU_DB_USER / GAMMU_DB_PASSWORD (+ GAMMU_DB_HOST, GAMMU_DB_NAME) — gammu-smsd's
 //                      SQL store: the pair's companion SMS is verified from its
-//                      sentitems (ADR-XXXX). Unset → NO MMS goes out (a pair whose
+//                      sentitems (ADR-0332). Unset → NO MMS goes out (a pair whose
 //                      link SMS cannot be verified is exactly the 2026-10-06 defect).
 //
 // A tick holds the modem-lane lock (outbox-sms/modem-lane.lock, shared with
@@ -34,7 +34,7 @@ if (!BASE || !SECRET) {
 
 if (!config.gammuDb.user) {
   console.error(
-    "[mms-relay] ⛔ GAMMU_DB_USER / GAMMU_DB_PASSWORD nincs beállítva — a kísérő SMS kiküldése nem igazolható, MMS NEM indul (ADR-XXXX).",
+    "[mms-relay] ⛔ GAMMU_DB_USER / GAMMU_DB_PASSWORD nincs beállítva — a kísérő SMS kiküldése nem igazolható, MMS NEM indul (ADR-0332).",
   );
   process.exit(0);
 }

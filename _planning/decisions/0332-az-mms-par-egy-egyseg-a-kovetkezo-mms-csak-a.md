@@ -1,4 +1,4 @@
-## ADR-XXXX — Az MMS-pár egy egység: a következő MMS csak a kísérő SMS igazolt kiküldése után indul (modem-sáv)
+## ADR-0332 — Az MMS-pár egy egység: a következő MMS csak a kísérő SMS igazolt kiküldése után indul (modem-sáv)
 
 **Dátum:** 2026-10-06 · **Státusz:** ELFOGADVA (tulaj-rendelet a „CIT ➕ megkeresés” koordinátoron át) ·
 **Kapcsolódó:** ADR-0080 ⑦ (SMS-relay), ADR-0083 (MMS+SMS páros), ADR-0282 (MMS-relay),

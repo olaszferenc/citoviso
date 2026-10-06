@@ -1,4 +1,4 @@
-# 2026-10-06 — MMS-pár egy egység: modem-sáv (ADR-XXXX)
+# 2026-10-06 — MMS-pár egy egység: modem-sáv (ADR-0332)
 
 **Brief:** `~/rc-briefs/mms-par-sorrend-20261006.md` (koordinátor: CIT ➕ megkeresés). Tulaj: „MMS utána sms és csak utána mehet tovább a következő leadre”.
 

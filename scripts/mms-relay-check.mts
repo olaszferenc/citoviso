@@ -24,7 +24,7 @@
 //      'queued', no attempt spent); DST-correct, and on a UTC process (prod) the morning
 //      start follows the companion SMS's gate — never earlier
 //
-// THE MODEM LANE (ADR-XXXX) — the 2026-10-06 defect: the next mms-send stopped
+// THE MODEM LANE (ADR-0332) — the 2026-10-06 defect: the next mms-send stopped
 // gammu-smsd while the previous pair's 3–4-part link SMS was still going out; the lead
 // got the picture with no link, and sms_outbox said 'sent' (the ack of the injection).
 // A mock gammu (outbox → sentitems, a mock clock; the daemon only runs while the relay
@@ -447,7 +447,7 @@ try {
     await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
   }
 
-  // ════ THE MODEM LANE (ADR-XXXX) ════════════════════════════════════════════
+  // ════ THE MODEM LANE (ADR-0332) ════════════════════════════════════════════
   const smsAlerts: string[] = [];
   setSmsRelayDeps({
     alert: async (subject) => {
