@@ -113,6 +113,30 @@ export type KnownPlacesResolver = (placeIds: string[]) => Promise<Map<string, Ra
 // this file (console, generator, guards) never opens a pool.
 const defaultKnownPlaces: KnownPlacesResolver = async (placeIds) =>
   (await import("../knownPlaces.js")).knownPlacesFromDb(placeIds);
+
+/**
+ * Every paid Place Details answer, kept by place id (0091, ADR-XXXX). `put` runs the
+ * moment an answer arrives — not at the end of the run — so a run that dies later
+ * (2026-10-05: OOM in the enrichment, ~16 000 Details calls lost with the process)
+ * leaves them behind, and the next run reads them instead of paying again.
+ * `null` = the place is gone (404); that answer was paid for too.
+ */
+export interface PlaceDetailsStore {
+  get(placeIds: string[]): Promise<Map<string, PlaceRecord | null>>;
+  put(placeId: string, place: PlaceRecord | null): Promise<void>;
+}
+
+const dbPlaceDetails: PlaceDetailsStore = {
+  get: async (placeIds) =>
+    (await import("../knownPlaces.js")).placeDetailsFromDb(placeIds) as Promise<
+      Map<string, PlaceRecord | null>
+    >,
+  put: async (placeId, place) =>
+    (await import("../knownPlaces.js")).savePlaceDetails(
+      placeId,
+      place as unknown as Record<string, unknown> | null,
+    ),
+};
 /** Tiles are not split below this side (~550 m lat). Measured on Badacsony (real
  *  API): at 0.02° two tiles were still saturated (>60 apartman-hits in 2.2 km) and
  *  the source found 258; at 0.005° zero saturation and 310. Resort villages pack
@@ -309,7 +333,7 @@ export async function placesSearchText(
   return data ?? {};
 }
 
-type PlaceRecord = NonNullable<PlacesResponse["places"]>[number];
+export type PlaceRecord = NonNullable<PlacesResponse["places"]>[number];
 
 /** One Place Details (GET /v1/places/{id}) request through the same transport.
  *  `null` = the id no longer exists (404). The mask has NO `places.` prefix here. */
@@ -703,8 +727,33 @@ export class GoogleMapsSource implements LeadSource {
   readonly name = "google_places";
 
   /** place ids → the RawLead rebuilt from our DB, for ids we already store.
-   *  Injectable so the guard runs without a database; the default reads `lead`. */
-  constructor(private readonly knownPlaces: KnownPlacesResolver = defaultKnownPlaces) {}
+   *  Injectable so the guard runs without a database; the default reads `lead`.
+   *  The Details store follows the resolver: an injected resolver is a hermetic run, and
+   *  the DB store then stays out unless the caller injects one too — a guard's stub
+   *  places must never land in the real cache. */
+  constructor(
+    private readonly knownPlaces: KnownPlacesResolver = defaultKnownPlaces,
+    private readonly detailsStore: PlaceDetailsStore | null = knownPlaces === defaultKnownPlaces
+      ? dbPlaceDetails
+      : null,
+  ) {}
+
+  private rawLeadOf(id: string, p: PlaceRecord, name: string): RawLead {
+    const { country, city } = localityFromComponents(p.addressComponents);
+    return {
+      source: this.name,
+      sourceId: id,
+      name,
+      lat: p.location?.latitude,
+      lon: p.location?.longitude,
+      address: p.formattedAddress,
+      country,
+      city,
+      phone: p.nationalPhoneNumber,
+      website: p.websiteUri,
+      photoCount: p.photos?.length ?? 0,
+    };
+  }
 
   private lastWarnings: string[] = [];
 
@@ -796,11 +845,25 @@ export class GoogleMapsSource implements LeadSource {
     // Step 2: what we already know costs nothing; only new ids get Details.
     const known = await this.knownPlaces([...ids]);
     const byId = new Map<string, RawLead>();
-    const fresh: string[] = [];
+    const unknown: string[] = [];
     for (const id of ids) {
       const k = known.get(id);
       if (k) byId.set(id, k);
-      else fresh.push(id);
+      else unknown.push(id);
+    }
+    // Step 2b: Details we paid for in an earlier run that never saved its leads.
+    let gone = 0;
+    const cached = this.detailsStore ? await this.detailsStore.get(unknown) : new Map();
+    const fresh: string[] = [];
+    for (const id of unknown) {
+      if (!cached.has(id)) {
+        fresh.push(id);
+        continue;
+      }
+      const p = cached.get(id) as PlaceRecord | null;
+      const name = p?.displayName?.text;
+      if (!p || !name) gone++;
+      else byId.set(id, this.rawLeadOf(id, p, name));
     }
     // No cap (ADR-0298): every new place gets its Details call. Over the warning
     // line the run says so up front — the calls are known before they are made.
@@ -811,32 +874,28 @@ export class GoogleMapsSource implements LeadSource {
       console.warn(`[google_places] ⚠️ ${msg}`);
     }
     let detailCalls = 0;
-    let gone = 0;
+    let storeFailures = 0;
     let next = 0;
     const worker = async (): Promise<void> => {
       while (next < detailIds.length) {
         const id = detailIds[next++];
         detailCalls++;
         const p = await placesGetPlace(id, key, DETAILS_MASK);
+        // Paid for → kept, before anything else can go wrong. A failed write costs a
+        // re-payment later, never this run, so it is counted, not thrown.
+        if (this.detailsStore) {
+          await this.detailsStore.put(id, p).catch((e: Error) => {
+            if (storeFailures++ === 0) {
+              console.warn(`[google_places] adatlap-tároló írása sikertelen: ${e.message}`);
+            }
+          });
+        }
         const name = p?.displayName?.text;
         if (!p || !name) {
           gone++;
           continue;
         }
-        const { country, city } = localityFromComponents(p.addressComponents);
-        byId.set(id, {
-          source: this.name,
-          sourceId: id,
-          name,
-          lat: p.location?.latitude,
-          lon: p.location?.longitude,
-          address: p.formattedAddress,
-          country,
-          city,
-          phone: p.nationalPhoneNumber,
-          website: p.websiteUri,
-          photoCount: p.photos?.length ?? 0,
-        });
+        byId.set(id, this.rawLeadOf(id, p, name));
       }
     };
     await Promise.all(
@@ -845,7 +904,10 @@ export class GoogleMapsSource implements LeadSource {
 
     console.log(
       `  [google_places] ${byId.size} hely · ${calls} ingyenes ID-keresés · ${keywords.length} kulcsszó` +
-        ` · ${known.size} már ismert (DB, 0 Ft) · ${detailCalls} fizetős adatlap az új helyekre` +
+        ` · ${known.size} már ismert (DB, 0 Ft)` +
+        (cached.size ? ` · ${cached.size} korábban kifizetett adatlap (tároló, 0 Ft)` : "") +
+        ` · ${detailCalls} fizetős adatlap az új helyekre` +
+        (storeFailures ? ` · ${storeFailures} adatlap NEM került a tárolóba` : "") +
         (gone ? ` · ${gone} megszűnt/név nélküli` : "") +
         (saturatedFloor ? ` · ${saturatedFloor} telített mini-csempe` : ""),
     );

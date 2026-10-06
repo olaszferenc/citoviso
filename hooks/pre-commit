@@ -2144,6 +2144,16 @@ if [ -f scripts/scrape-known-skip-check.mts ] && \
   echo "[pre-commit] scrape-known-skip-check (az ismert lead nem megy át a fizetős dúsításon)…"
   npx tsx scripts/scrape-known-skip-check.mts
 fi
+# Save as you go (ADR-XXXX, 2026-10-06): the 10-05 Székesfehérvár run died in the enrichment (OOM)
+# holding every paid answer in memory — 0 leads, 490 USD. Every paid Details answer is stored by
+# place id at once, the source result is checkpointed with the run (a restart resumes without
+# Google), and leads are saved batch by batch. Fetch-stubbed, never pays; writes its own
+# ocean-coordinate fixture to the local DB and removes it.
+if [ -f scripts/scrape-save-as-you-go-check.mts ] && \
+   changed_files | grep -qE '^src/scraper/(run|persist|batchedRun|knownPlaces)\.ts$|^src/scraper/sources/googleMaps\.ts$|^src/db/schema\.ts$|^scripts/scrape-save-as-you-go-check'; then
+  echo "[pre-commit] scrape-save-as-you-go-check (a kifizetett adat egy elhaló futás után is megmarad)…"
+  npx tsx scripts/scrape-save-as-you-go-check.mts >"$GATE_LOG" || gate_failed
+fi
 # The daily Google API cost report (2026-10-02, the "G part" of the Places-cost brief): price × count, the threshold and the ≥2×
 # highlight, the Budapest day (DST) and the no-data branch (a failed token/Monitoring still mails,
 # saying why). Hermetic (fetch stub, global fetch throws), no DB, no mail.

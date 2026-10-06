@@ -7,7 +7,7 @@ import { APP_TZ } from "../text/zoneTime.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { partitionNewLeads, type LeadIdentity } from "./dedupe.js";
-import type { QualifiedLead, Region } from "./types.js";
+import type { QualifiedLead, RawLead, Region } from "./types.js";
 
 // The Balaton pilot regions are Hungarian; country is fixed until the scraper
 // definition itself carries a country (Industry × Country parameterization).
@@ -234,9 +234,10 @@ export async function storedLeadIdentities(): Promise<LeadIdentity[]> {
 }
 
 /**
- * Persist the qualified leads and close the run as completed. Leads and their
- * provenance go in one transaction so a run is all-or-nothing; the run row is
- * closed afterwards with the summary stats.
+ * Persist the qualified leads and close the run as completed — the one-shot form, for
+ * callers that hold the whole set (seed-from-json, the persist guard). The scraper
+ * itself saves batch by batch (persistLeadBatch → closeScrapeRun), so a run that dies
+ * halfway keeps everything it had already saved (ADR-XXXX).
  */
 export async function completeScrapeRun(
   runId: string,
@@ -244,26 +245,44 @@ export async function completeScrapeRun(
   stats: Record<string, unknown>,
   costEstimate?: number,
 ): Promise<{ inserted: number; deduped: number }> {
+  const { inserted, deduped } = await persistLeadBatch(runId, leads);
+  await closeScrapeRun(
+    runId,
+    {
+      ...stats,
+      newLeads: inserted,
+      // run.ts drops the known leads BEFORE the paid enrichment (ADR-0296) and reports
+      // them as knownBeforeEnrichment; the stat keeps meaning "all known ones this run".
+      dedupedAgainstStore:
+        deduped +
+        (typeof stats.knownBeforeEnrichment === "number" ? stats.knownBeforeEnrichment : 0),
+    },
+    costEstimate,
+  );
+  return { inserted, deduped };
+}
+
+/**
+ * Save one batch of qualified leads under the run — durably, NOW. Leads and their
+ * provenance go in one transaction, so a batch is all-or-nothing; the batches before
+ * it are already committed and survive whatever happens next.
+ */
+export async function persistLeadBatch(
+  runId: string,
+  leads: QualifiedLead[],
+): Promise<{ inserted: number; deduped: number }> {
   // Cross-run / cross-region dedup: a re-scrape or two OVERLAPPING scrape areas must
   // not insert the same physical business twice. Match freshly-scraped leads against
   // EVERY existing lead (any lifecycle) by name + ~250 m proximity; only insert the
   // genuinely new ones. Disqualified players are matched too, so they are not
-  // resurrected. Loaded once, before the write transaction (a plain read).
+  // resurrected. Re-read per batch: the previous batches of this very run are in the
+  // store by now, which is what lets a resumed run skip what it already saved.
   const { fresh, duplicates } = partitionNewLeads(leads, await storedLeadIdentities());
   if (duplicates.length) {
     console.log(
       `  Store-dedup: ${duplicates.length} lead már szerepel (átfedő régió / újra-scrape) → kihagyva; ${fresh.length} új.`,
     );
   }
-  const finalStats = {
-    ...stats,
-    newLeads: fresh.length,
-    // run.ts drops the known leads BEFORE the paid enrichment (ADR-0296) and reports
-    // them as knownBeforeEnrichment; the stat keeps meaning "all known ones this run".
-    dedupedAgainstStore:
-      duplicates.length +
-      (typeof stats.knownBeforeEnrichment === "number" ? stats.knownBeforeEnrichment : 0),
-  };
 
   await db.transaction().execute(async (trx) => {
     for (const l of fresh) {
@@ -350,19 +369,152 @@ export async function completeScrapeRun(
     }
   });
 
+  return { inserted: fresh.length, deduped: duplicates.length };
+}
+
+/** Close the run as completed with its summary stats; its source checkpoint goes too. */
+export async function closeScrapeRun(
+  runId: string,
+  stats: Record<string, unknown>,
+  costEstimate?: number,
+): Promise<void> {
   await db
     .updateTable("scrape_run")
     .set({
       status: "completed",
       finished_at: new Date(),
       heartbeat_at: new Date(),
-      stats: JSON.stringify(finalStats),
+      stats: JSON.stringify(stats),
       cost_estimate: costEstimate ?? null,
     })
     .where("id", "=", runId)
     .execute();
+  await db.deleteFrom("scrape_checkpoint").where("scrape_run_id", "=", runId).execute();
+}
 
-  return { inserted: fresh.length, deduped: duplicates.length };
+// ── Source checkpoint + resume (0091, ADR-XXXX) ──────────────────────────────────
+
+/** How old a dead run's checkpoint may be and still be resumed instead of re-fetched. */
+export const SCRAPE_RESUME_MAX_AGE_MS = 14 * 24 * 60 * 60_000;
+
+/** Keep the source phase's result with the run, the moment it exists. */
+export async function saveScrapeCheckpoint(
+  runId: string,
+  raw: RawLead[],
+  warnings: string[],
+): Promise<void> {
+  await db
+    .insertInto("scrape_checkpoint")
+    .values({ scrape_run_id: runId, raw: JSON.stringify(raw), warnings: JSON.stringify(warnings) })
+    .onConflict((oc) =>
+      oc.column("scrape_run_id").doUpdateSet({
+        raw: JSON.stringify(raw),
+        warnings: JSON.stringify(warnings),
+      }),
+    )
+    .execute();
+}
+
+export interface ResumableRun {
+  runId: string;
+  raw: RawLead[];
+  warnings: string[];
+  /** Leads the dead run had already saved (its finished batches). */
+  savedLeads: number;
+  checkpointAt: Date;
+}
+
+/**
+ * The newest dead run of this definition that left a source checkpoint behind, if it
+ * is fresh enough to resume. Stale 'running' rows are reaped first, so a run killed
+ * from the outside (OOM, deploy) counts as dead; a run that is still breathing is
+ * never taken over.
+ */
+export async function findResumableRun(definitionId: string): Promise<ResumableRun | null> {
+  await reapStaleScrapeRuns();
+  const row = await db
+    .selectFrom("scrape_checkpoint as c")
+    .innerJoin("scrape_run as r", "r.id", "c.scrape_run_id")
+    .select(["c.scrape_run_id", "c.raw", "c.warnings", "c.created_at"])
+    .where("r.scraper_definition_id", "=", definitionId)
+    .where("r.status", "in", ["failed", "pending"])
+    .where("c.created_at", ">=", new Date(Date.now() - SCRAPE_RESUME_MAX_AGE_MS))
+    .orderBy("c.created_at", "desc")
+    .executeTakeFirst();
+  if (!row) return null;
+  const saved = await db
+    .selectFrom("lead")
+    .select((eb) => eb.fn.countAll<string>().as("n"))
+    .where("scrape_run_id", "=", row.scrape_run_id)
+    .executeTakeFirstOrThrow();
+  return {
+    runId: row.scrape_run_id,
+    raw: row.raw as RawLead[],
+    warnings: row.warnings ?? [],
+    savedLeads: Number(saved.n),
+    checkpointAt: new Date(row.created_at),
+  };
+}
+
+/** Reopen a dead run: it is running again, and its old verdict no longer stands. */
+export async function reopenScrapeRun(runId: string, phase: string): Promise<void> {
+  const now = new Date();
+  await db
+    .updateTable("scrape_run")
+    .set({
+      status: "running",
+      error: null,
+      finished_at: null,
+      heartbeat_at: now,
+      stats: JSON.stringify({ phase }),
+    })
+    .where("id", "=", runId)
+    .execute();
+}
+
+/**
+ * The run's outcome counted from what is SAVED under it — every batch, the ones a
+ * previous (dead) attempt saved included. Summing in memory would forget those.
+ */
+export async function savedRunStats(runId: string): Promise<{
+  saved: number;
+  leads: number;
+  noSite: number;
+  outdatedOwn: number;
+  unreachable: number;
+  byStatus: Record<string, number>;
+  contactChannels: Record<string, number>;
+}> {
+  const rows = await db
+    .selectFrom("lead")
+    .select([
+      sql<string | null>`raw->>'websiteStatus'`.as("status"),
+      sql<boolean>`coalesce((raw->>'isLead')::boolean, false)`.as("isLead"),
+      sql<boolean>`coalesce((raw->'assessment'->>'outdated')::boolean, false)`.as("outdated"),
+      sql<boolean>`(raw->'assessment' IS NOT NULL AND raw->'assessment'->>'reachable' = 'false')`.as(
+        "unreachable",
+      ),
+      sql<string | null>`raw->>'contactChannel'`.as("channel"),
+    ])
+    .where("scrape_run_id", "=", runId)
+    .execute();
+  const byStatus: Record<string, number> = {};
+  const contactChannels: Record<string, number> = {};
+  let leads = 0;
+  let noSite = 0;
+  let outdatedOwn = 0;
+  let unreachable = 0;
+  for (const r of rows) {
+    const st = r.status ?? "unknown";
+    byStatus[st] = (byStatus[st] ?? 0) + 1;
+    const ch = r.channel ?? "none";
+    contactChannels[ch] = (contactChannels[ch] ?? 0) + 1;
+    if (r.isLead) leads++;
+    if (st === "none" || st === "portal_only") noSite++;
+    if (st === "has_own" && r.outdated) outdatedOwn++;
+    if (r.unreachable) unreachable++;
+  }
+  return { saved: rows.length, leads, noSite, outdatedOwn, unreachable, byStatus, contactChannels };
 }
 
 /** Close a run as failed, recording the error message. */

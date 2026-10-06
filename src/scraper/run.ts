@@ -1,26 +1,38 @@
 // CLI runner for the lead-discovery scraper (Phase 4, the volume engine).
-// Usage: npm run scrape -- [regionId] [--out file.json]
-// Runs all sources over the region+industry, dedupes, qualifies, prints a
-// summary, and writes the qualified leads as JSON.
+// Usage: npm run scrape -- [regionId] [--out file.json] [--cap N]
+// Runs all sources over the region+industry, dedupes, qualifies, enriches and saves
+// the leads BATCH BY BATCH (ADR-XXXX), prints a summary, and — only with --out —
+// writes the qualified leads as JSON.
+//
+// Nothing paid for is held only in memory (2026-10-05: an OOM-kill in the enrichment
+// took ~16 000 paid Details answers and 5 692 candidates with it, 0 leads saved):
+// the source result is checkpointed with the run, every Details answer is stored by
+// place id (sources/googleMaps.ts), and each enriched batch is committed before the
+// next one starts. A start on a definition whose last run died resumes from its
+// checkpoint instead of walking Google again.
 
 import { writeFile } from "node:fs/promises";
 import { db } from "../db/client.js";
 import {
   beatScrapeRun,
-  completeScrapeRun,
+  closeScrapeRun,
   ensureScraperDefinition,
   failScrapeRun,
+  findResumableRun,
   interruptScrapeRun,
+  reopenScrapeRun,
+  savedRunStats,
   startScrapeRun,
   storedLeadIdentities,
 } from "./persist.js";
 import { dedupeAndQualify, partitionNewLeads } from "./dedupe.js";
 import { enrichLeads } from "./enrichChain.js";
+import { enrichAndSaveInBatches, geoBatches, runSourcePhase, SCRAPE_BATCH_SIZE } from "./batchedRun.js";
 import { distanceKm, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
 import type { LeadSource } from "./sources/LeadSource.js";
-import type { Industry, RawLead, ScrapeQuery } from "./types.js";
+import type { Industry, QualifiedLead, ScrapeQuery } from "./types.js";
 
 const INDUSTRY: Industry = "accommodation";
 
@@ -76,15 +88,25 @@ async function main(): Promise<void> {
     `Scraping ${region.label} · ${INDUSTRY} · sources: ${sourceNames.join(", ")}`,
   );
 
-  // Open the run in the DB up front so failures are recorded, not lost.
+  // Open the run in the DB up front so failures are recorded, not lost. A dead run of
+  // the same definition that left its source result behind is REOPENED instead: the
+  // Google walk and the Details it paid for are not bought twice (ADR-XXXX).
   const definitionId = await ensureScraperDefinition(
     region,
     INDUSTRY,
     sourceNames,
   );
-  const runId = await startScrapeRun(definitionId);
+  const resume = await findResumableRun(definitionId);
+  let runId: string;
+  if (resume) {
+    runId = resume.runId;
+    await reopenScrapeRun(runId, "folytatás mentett forrás-eredményből");
+    console.log(`  scrape_run ${runId} (újranyitva, running)`);
+  } else {
+    runId = await startScrapeRun(definitionId);
+    console.log(`  scrape_run ${runId} (running)`);
+  }
   liveRunId = runId;
-  console.log(`  scrape_run ${runId} (running)`);
 
   // A long step (Places lookup over hundreds of leads) must not look like death,
   // so the heart beats on a timer too, not only at phase boundaries. unref(): the
@@ -114,19 +136,7 @@ async function main(): Promise<void> {
     });
   }
 
-  const raw: RawLead[] = [];
-  for (const src of sources) {
-    try {
-      mark(`  [${src.name}] forrás lekérdezése…`);
-      const found = await src.fetch(query);
-      console.log(`  [${src.name}] ${found.length} players`);
-      raw.push(...found);
-    } catch (err) {
-      console.error(`  [${src.name}] failed:`, (err as Error).message);
-    }
-  }
-
-  const sourceWarnings = sources.flatMap((s) => s.warnings?.() ?? []);
+  const { raw, warnings: sourceWarnings } = await runSourcePhase(runId, resume, sources, query, mark);
 
   try {
     let base = dedupeAndQualify(raw, INDUSTRY, region.id);
@@ -149,109 +159,83 @@ async function main(): Promise<void> {
     }
     // Store-dedup FIRST (ADR-0296): a lead already in the store is never inserted
     // again, so every paid enrichment step spent on it was wasted. Only the new ones
-    // go on; the count still lands in the run's stats (dedupedAgainstStore).
+    // go on; the count still lands in the run's stats (dedupedAgainstStore). On a
+    // resume this is also what skips the batches the dead attempt already saved.
     const { fresh, duplicates: known } = partitionNewLeads(base, await storedLeadIdentities());
     if (known.length) {
       console.log(
         `Store-dedup: ${known.length} lead már szerepel (átfedő régió / újra-scrape) → dúsítás nélkül kihagyva; ${fresh.length} új.`,
       );
     }
-    let leads = await enrichLeads(fresh, region, mark);
-    if (cap && leads.length > cap) {
-      // Keep the most valuable (actual leads) first, then cap the volume.
-      leads = [...leads]
-        .sort((a, b) => Number(b.isLead) - Number(a.isLead))
-        .slice(0, cap);
-      console.log(`\nCap alkalmazva: ${cap} leadre szűkítve (isLead-elsőbbség).`);
+    // The ones saved by this run's own earlier attempt were found here, not elsewhere.
+    const savedEarlier = Math.min(resume?.savedLeads ?? 0, known.length);
+
+    // Enrich and save batch by batch (batchedRun.ts): a death costs at most the batch
+    // in flight; the batches cut from `fresh` are neighbours (shared-contact guards).
+    const batches = geoBatches(fresh, SCRAPE_BATCH_SIZE);
+    const collected: QualifiedLead[] = [];
+    const m = await enrichAndSaveInBatches(runId, batches, {
+      enrich: (batch) => enrichLeads(batch, region, mark),
+      mark,
+      cap,
+      savedEarlier,
+      collect: out ? collected : undefined,
+    });
+
+    // The run's outcome, counted from what is SAVED under it (earlier attempt included).
+    const saved = await savedRunStats(runId);
+    console.log(`\n${fresh.length + known.length} unique players · ${saved.leads} leads (mentve: ${saved.saved})`);
+    console.log(
+      `  = no own site + ${saved.outdatedOwn} outdated own sites (${saved.unreachable} unreachable)`,
+    );
+    console.log("  by website status:", saved.byStatus);
+    console.log(
+      `\n=== ENRICHMENT MÉRÉS — "nincs saját oldal" szegmens, ebben a próbálkozásban (${m.noSite} lead) ===`,
+    );
+    console.log(
+      `  Places-fotós: ${m.withPlaces} · Street View: ${m.withSV} · van legalább 1 kép: ${m.withAny} · NULLA kép: ${m.noSite - m.withAny}`,
+    );
+    console.log(`  átlag kép/lead: ${(m.noSite ? m.images / m.noSite : 0).toFixed(1)}`);
+    console.log(
+      `  PORTÁL-ADAT: ${m.withPortalData} leadnek van igazolt portál-adatlapja · ${m.portalPhotoTotal} portál-fotó (jogállás: portal)`,
+    );
+    console.log(`  KONTAKT-CSATORNA (összes mentett): ${JSON.stringify(saved.contactChannels)}`);
+
+    if (out) {
+      await writeFile(out, JSON.stringify(collected, null, 2), "utf8");
+      console.log(`\nWrote ${collected.length} leads → ${out}`);
     }
 
-    const mvpLeads = leads.filter((l) => l.isLead);
-    const outdatedOwn = leads.filter(
-      (l) => l.websiteStatus === "has_own" && l.assessment?.outdated,
-    );
-    const unreachable = leads.filter(
-      (l) => l.assessment && !l.assessment.reachable,
-    );
-    const byStatus = leads.reduce<Record<string, number>>((acc, l) => {
-      acc[l.websiteStatus] = (acc[l.websiteStatus] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    console.log(`\n${leads.length} unique players · ${mvpLeads.length} leads`);
-    console.log(
-      `  = no own site + ${outdatedOwn.length} outdated own sites (${unreachable.length} unreachable)`,
-    );
-    console.log("  by website status:", byStatus);
-
-    // Enrichment measurement — focus on the "no own site" segment (most valuable).
-    const noSite = leads.filter(
-      (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
-    );
-    const withPlaces = noSite.filter(
-      (l) => (l.material?.placesPhotos ?? 0) > 0,
-    ).length;
-    const withSV = noSite.filter((l) => l.material?.streetView).length;
-    const withPortalData = noSite.filter((l) => (l.portalProfiles?.length ?? 0) > 0).length;
-    const portalPhotoTotal = noSite.reduce(
-      (s, l) => s + (l.material?.portalPhotos ?? 0),
-      0,
-    );
-    const withAny = noSite.filter((l) => l.material?.hasAnyImage).length;
-    const avgImages = noSite.length
-      ? noSite.reduce((s, l) => s + (l.material?.totalImages ?? 0), 0) /
-        noSite.length
-      : 0;
-
-    console.log(
-      `\n=== ENRICHMENT MÉRÉS — "nincs saját oldal" szegmens (${noSite.length} lead) ===`,
-    );
-    console.log(
-      `  Places-fotós: ${withPlaces} · Street View: ${withSV} · van legalább 1 kép: ${withAny} · NULLA kép: ${noSite.length - withAny}`,
-    );
-    console.log(`  átlag kép/lead: ${avgImages.toFixed(1)}`);
-    console.log(
-      `  PORTÁL-ADAT: ${withPortalData} leadnek van igazolt portál-adatlapja · ${portalPhotoTotal} portál-fotó (jogállás: portal)`,
-    );
-    const channelBreakdown = (set: typeof leads): Record<string, number> =>
-      set.reduce<Record<string, number>>((acc, l) => {
-        const c = l.contactChannel ?? "none";
-        acc[c] = (acc[c] ?? 0) + 1;
-        return acc;
-      }, {});
-    console.log(
-      `  KONTAKT-CSATORNA (no-site): ${JSON.stringify(channelBreakdown(noSite))}`,
-    );
-    console.log(
-      `  KONTAKT-CSATORNA (összes ${leads.length}): ${JSON.stringify(channelBreakdown(leads))}`,
-    );
-
-    const outFile = out ?? `leads-${region.id}.json`;
-    await writeFile(outFile, JSON.stringify(leads, null, 2), "utf8");
-    console.log(`\nWrote ${leads.length} leads → ${outFile}`);
-
-    // Persist to the DB — now the source of truth (the JSON is a replay artifact).
+    const knownBeforeEnrichment = known.length - savedEarlier;
     const stats = {
       // The players this run FOUND, the known ones included (as before the early
       // store-dedup) — the console's "felmért szereplő" column reads this.
-      players: leads.length + known.length,
-      leads: mvpLeads.length,
-      noSite: noSite.length,
-      outdatedOwn: outdatedOwn.length,
-      unreachable: unreachable.length,
-      byStatus,
-      contactChannels: channelBreakdown(leads),
-      knownBeforeEnrichment: known.length,
+      players: fresh.length + known.length,
+      leads: saved.leads,
+      noSite: saved.noSite,
+      outdatedOwn: saved.outdatedOwn,
+      unreachable: saved.unreachable,
+      byStatus: saved.byStatus,
+      contactChannels: saved.contactChannels,
+      knownBeforeEnrichment,
+      newLeads: saved.saved,
+      dedupedAgainstStore: m.deduped + knownBeforeEnrichment,
+      batches: batches.length,
+      ...(resume
+        ? { resumed: { checkpointAt: resume.checkpointAt.toISOString(), savedBefore: savedEarlier } }
+        : {}),
       // Loud source warnings (ADR-0298) — kept with the run, not only in the live log.
       ...(sourceWarnings.length ? { warnings: sourceWarnings } : {}),
     };
-    mark(`Mentés az adatbázisba — ${leads.length} szereplő…`);
-    const { inserted, deduped } = await completeScrapeRun(runId, leads, stats);
+    await closeScrapeRun(runId, stats);
     liveRunId = null;
     console.log(
-      `  scrape_run ${runId} (completed) · ${inserted} új lead beszúrva` +
-        (deduped ? ` · ${deduped} duplikátum kihagyva (átfedő régió / újra-scrape)` : ""),
+      `  scrape_run ${runId} (completed) · ${m.inserted} új lead beszúrva ebben a próbálkozásban` +
+        (savedEarlier ? ` · ${savedEarlier} az előzőben` : "") +
+        (m.deduped ? ` · ${m.deduped} duplikátum kihagyva (átfedő régió / újra-scrape)` : ""),
     );
   } catch (err) {
+    // The checkpoint stays: the next start on this definition resumes from it.
     await failScrapeRun(runId, (err as Error).message);
     liveRunId = null;
     throw err;

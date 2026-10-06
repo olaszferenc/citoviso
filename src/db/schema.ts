@@ -1270,6 +1270,24 @@ export interface LeadPlacesCacheTable {
   fetched_at: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+/** 0091: every paid Place Details answer, written the moment it arrives and kept without
+ *  expiry (ADR-0293) — a dead scrape never pays for the same place twice. NULL raw = the
+ *  place is gone (404). Reader/writer: src/scraper/knownPlaces.ts. */
+export interface PlacesDetailCacheTable {
+  place_id: string;
+  raw: JSONColumnType<Record<string, unknown> | null, string | null, string | null>;
+  fetched_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+/** 0091: the source phase's full result for a run — a later start on the same definition
+ *  resumes from here without a Google call (src/scraper/persist.ts). */
+export interface ScrapeCheckpointTable {
+  scrape_run_id: string;
+  raw: JSONColumnType<unknown[], string, string>;
+  warnings: JSONColumnType<string[], string | undefined, string>;
+  created_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 /** First-party guest reviews — ours to store, moderate and display (0027). */
 export interface SiteReviewTable {
   id: Generated<string>;
@@ -1584,6 +1602,8 @@ export interface Database {
   lead_hero_override: LeadHeroOverrideTable;
   lead_activity: LeadActivityTable;
   lead_places_cache: LeadPlacesCacheTable;
+  places_detail_cache: PlacesDetailCacheTable;
+  scrape_checkpoint: ScrapeCheckpointTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;
   partner_bank_account: PartnerBankAccountTable;

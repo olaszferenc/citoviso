@@ -148,11 +148,19 @@ check(
 const run = await readFile(new URL("../src/scraper/run.ts", import.meta.url), "utf8");
 const persist = await readFile(new URL("../src/scraper/persist.ts", import.meta.url), "utf8");
 const partAt = run.search(/partitionNewLeads\(\s*base\s*,\s*await storedLeadIdentities\(\)\s*\)/);
+// Batched since ADR-XXXX: the chain gets one geo-batch at a time, every batch cut from `fresh`.
+const batchesAt = run.search(/const batches = geoBatches\(\s*fresh\s*,/);
+// The chain is handed to the batch loop (batchedRun.ts) as `(batch) => enrichLeads(batch, …)`.
+const batchVar = /\((\w+)\)\s*=>\s*enrichLeads\(/.exec(run)?.[1];
 const chainCall = /enrichLeads\(\s*(\w+)\s*,/.exec(run);
 check(
-  "③ run.ts: a store-dedup a dúsító-lánc ELŐTT fut, és a lánc a `fresh` halmazt kapja",
-  partAt >= 0 && !!chainCall && chainCall.index > partAt && chainCall[1] === "fresh",
-  `partitionNewLeads@${partAt} · enrichLeads(${chainCall?.[1] ?? "—"})@${chainCall?.index ?? -1}`,
+  "③ run.ts: a store-dedup a dúsító-lánc ELŐTT fut, és a lánc a `fresh` halmaz adagjait kapja",
+  partAt >= 0 &&
+    batchesAt > partAt &&
+    !!chainCall &&
+    chainCall.index > batchesAt &&
+    chainCall[1] === batchVar,
+  `partitionNewLeads@${partAt} · geoBatches(fresh)@${batchesAt} · enrichLeads(${chainCall?.[1] ?? "—"})@${chainCall?.index ?? -1} · adag-változó: ${batchVar ?? "—"}`,
 );
 const directPaid = [...run.matchAll(/from "\.\/(enrich\w+|sources\/webSearch|streetview)\.js"/g)]
   .map((m) => m[1])
@@ -164,8 +172,10 @@ check(
 );
 check(
   "⑤ a statisztika az ismerteket is számolja (players + dedupedAgainstStore)",
-  /players:\s*leads\.length\s*\+\s*known\.length/.test(run) &&
-    /knownBeforeEnrichment:\s*known\.length/.test(run) &&
+  /players:\s*fresh\.length\s*\+\s*known\.length/.test(run) &&
+    // A resumed run subtracts only its OWN earlier batches from the known ones.
+    /knownBeforeEnrichment\s*=\s*known\.length\s*-\s*savedEarlier/.test(run) &&
+    /dedupedAgainstStore:\s*m\.deduped\s*\+\s*knownBeforeEnrichment/.test(run) &&
     /stats\.knownBeforeEnrichment/.test(persist),
 );
 
