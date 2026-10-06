@@ -2632,7 +2632,8 @@
 .cit-cfg-panel,
 .cit-cfg-scrim,
 .cit-cfg-escveil,
-.cit-cfg-esccard {
+.cit-cfg-esccard,
+.cit-cfg-editstrip {
   position: fixed !important;
   float: none !important;
   margin: 0 !important;
@@ -2642,6 +2643,7 @@
 .cit-cfg-panel { z-index: 2147483001 !important; }
 .cit-cfg-escveil { z-index: 2147483200 !important; }
 .cit-cfg-esccard { z-index: 2147483300 !important; }
+.cit-cfg-editstrip { z-index: 2147482990 !important; }
 /* cit-cfg-armour-end */
 
 /* Barion Smart Payment Banner a fizetési lépésen. A hivatalos útmutató tiltja a
@@ -2787,5 +2789,102 @@
   }
   .cit-cfg-fb.cit-cfg-on {
     transform: translate(-50%, 0);
+  }
+}
+
+/* ── ADR-XXXX editability strip (assets/design-refs/prospect-page/edit-strip/) ──
+ * Slides in ONCE from the top after the visitor scrolls to the rooms (or one full
+ * screen), floats over the page (never pushes it down), dismissible. Fixed colours:
+ * the mock does not load citui.css — navy mirrors --citui-ink, cyan the order pill.
+ * Layering: under the scrim (2147482999), so the open panel and the decision card
+ * always cover it; the order pill and the booking/cookie bars live at the bottom. */
+.cit-cfg-editstrip {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 2147482990;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  transform: translateY(-110%);
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cit-cfg-editstrip.cit-cfg-on {
+  transform: none;
+}
+.cit-cfg-editstrip[hidden] {
+  display: none;
+}
+.cit-cfg-editstrip__in {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  max-width: 820px;
+  margin: 10px;
+  padding: 10px 8px 10px 16px;
+  border-radius: 12px;
+  background: #10243a;
+  color: #eaf3f8;
+  font: 400 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-align: left;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+.cit-cfg-editstrip__in b {
+  color: #fff;
+  font-weight: 700;
+}
+.cit-cfg-editstrip__pen {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cit-cfg-editstrip__pen .cit-cfg-editstrip__dot {
+  fill: #1fb6d6;
+  stroke: none;
+}
+.cit-cfg-editstrip__x {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #eaf3f8;
+  cursor: pointer;
+}
+.cit-cfg-editstrip__x:hover,
+.cit-cfg-editstrip__x:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+.cit-cfg-editstrip__x svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+}
+@media (max-width: 560px) {
+  .cit-cfg-editstrip__in {
+    margin: 8px;
+    gap: 10px;
+    padding: 9px 4px 9px 12px;
+    font-size: 13.5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-editstrip {
+    transition: none;
   }
 }

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Szerkeszthetőség-sáv — jóváhagyott terv</title>
+<style>
+  /* Plan round: telling the lead that everything on the mock is theirs to edit after ordering.
+   * ① inline note at the scraped data, ② scroll-triggered dismissible top strip, ③ one sentence
+   * in the outreach letter / SMS. The page skin is a stand-in; the notes, the strip and its
+   * trigger are what is being decided. Platform colours mirror --citui-* (navy / cyan). */
+  :root{--ui-bg:#0f1116;--ui-panel:#151821;--ui-line:#262b37;--ui-ink:#e6e9ef;--ui-muted:#8a93a3;
+    --cy:#1fb6d6;--cy-ink:#06131b;--navy:#10243a;--navy-ink:#eaf3f8;
+    --s-bg:#f7f2ea;--s-ink:#2b2420;--s-hdr:#efe6d8;--s-accent:#7a4b2a;--s-on:#fff;--s-muted:#6f645b;--s-card:#fffaf3}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ui-bg);color:var(--ui-ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .bar{display:flex;flex-wrap:wrap;gap:10px 18px;padding:12px 16px;border-bottom:1px solid var(--ui-line)}
+  .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .grp>b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ui-muted);margin-right:2px}
+  .seg{border:1px solid var(--ui-line);background:var(--ui-panel);color:var(--ui-ink);border-radius:999px;padding:8px 12px;min-height:40px;font:inherit;cursor:pointer}
+  .seg[aria-pressed="true"]{background:var(--cy);color:var(--cy-ink);border-color:var(--cy);font-weight:600}
+  .note{padding:8px 16px 0;color:var(--ui-muted);font-size:13px;max-width:1100px}
+  .note b{color:var(--ui-ink)}
+  .log{padding:6px 16px;color:var(--cy);font:12px/1.4 ui-monospace,monospace;min-height:22px}
+  .stageWrap{display:flex;justify-content:center;padding:8px 16px 40px}
+  .view[hidden]{display:none}
+
+  /* device frame = a container, so the size switch really re-lays out (not @media) */
+  .dev{container-type:inline-size;position:relative;overflow:hidden;border:1px solid var(--ui-line);border-radius:14px;transform:translateZ(0)}
+  .dev.m{width:390px;height:780px}.dev.d{width:min(1100px,100%);height:680px}
+  .page{position:absolute;inset:0;overflow-y:auto;background:var(--s-bg);color:var(--s-ink);font-family:Georgia,"Times New Roman",serif}
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:var(--s-hdr)}
+  .hdr h1{margin:0;font-size:22px;font-weight:400}
+  .hdr nav{display:flex;gap:22px;font:13px system-ui;color:var(--s-muted)}
+  .cta{background:var(--s-accent);color:var(--s-on);border:0;border-radius:6px;padding:12px 16px;font:600 12px/1 system-ui;letter-spacing:.12em;min-height:44px;cursor:pointer}
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;padding:40px 24px}
+  .hero h2{font-size:42px;line-height:1.1;margin:0 0 14px;font-weight:400}
+  .hero p{margin:0 0 20px;color:var(--s-muted);font-size:17px}
+  .photo{height:340px;border-radius:12px;background:linear-gradient(135deg,#b98a5e,#5d3b22 60%,#2f2117)}
+  .sec{padding:40px 24px;max-width:1100px;margin:0 auto}
+  .eyebrow{font:600 11px system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--s-accent)}
+  .sec h3{font-size:30px;font-weight:400;margin:6px 0 12px}
+  .rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+  .room{position:relative;background:var(--s-card);border-radius:12px;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+  .room .ph{height:150px}
+  .room .bd{padding:14px 16px 16px}
+  .room h4{margin:0 0 4px;font-size:19px;font-weight:400}
+  .room .meta{font:13px system-ui;color:var(--s-muted)}
+  .room .price{margin-top:8px;font:600 14px system-ui}
+  .svc{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .svc span{font:13px system-ui;background:var(--s-card);border-radius:999px;padding:7px 12px}
+  .rev{font-size:17px;font-style:italic;max-width:640px}
+  .foot{padding:40px 24px 160px;background:var(--s-hdr);font:13px system-ui;color:var(--s-muted)}
+  @container (max-width:560px){
+    .hdr{padding:14px 16px}.hdr nav{display:none}.hdr .cta{display:none}
+    .hero{grid-template-columns:1fr;padding:24px 16px;gap:18px}.hero h2{font-size:30px}
+    .photo{height:220px}.sec{padding:30px 16px}.sec h3{font-size:25px}
+    .rooms{grid-template-columns:1fr}
+  }
+  /* template's fixed booking bar (phone only), like the real templates */
+  .book{position:absolute;left:0;right:0;bottom:0;display:none;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--s-hdr);border-top:1px solid rgba(127,127,127,.3);z-index:5;font:13px system-ui}
+  @container (max-width:560px){.book{display:flex}}
+  /* the approved order pill (ADR-0242), shown only for the layer budget */
+  .pill{position:absolute;z-index:20;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;font:700 15px/1.1 system-ui;padding:14px 26px;left:50%;bottom:18px;transform:translateX(-50%);background:var(--cy);color:var(--cy-ink);box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.9)}
+  .pill svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+  @container (max-width:560px){.pill{left:auto;right:16px;transform:none;font-size:14px;padding:0 16px;min-height:44px;bottom:74px}}
+
+  /* ── ① inline notes at the scraped data (contract candidates) ── */
+  .ed{display:flex;gap:9px;align-items:flex-start;font:13.5px/1.45 system-ui;color:var(--s-muted);margin:4px 0 0;max-width:680px}
+  .ed svg{flex:0 0 18px;width:18px;height:18px;margin-top:1px;fill:none;stroke:var(--s-ink);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .ed .dot{fill:var(--cy);stroke:none}
+  .ed b{color:var(--s-ink);font-weight:600}
+  /* variant 1b: a boxed note + a tag on each card */
+  body.n-b .ed{background:var(--s-card);border:1px dashed color-mix(in srgb,var(--s-ink) 30%,transparent);border-radius:10px;padding:10px 12px}
+  .tag{display:none;position:absolute;top:10px;left:10px;align-items:center;gap:6px;font:600 12px system-ui;background:rgba(255,255,255,.94);color:var(--navy);border-radius:999px;padding:6px 10px 6px 8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .tag svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .tag .dot{fill:var(--cy);stroke:none}
+  body.n-b .tag{display:inline-flex}
+
+  /* ── ② the top strip (contract candidate) ── */
+  .strip{position:absolute;left:0;right:0;top:0;z-index:15;display:flex;justify-content:center;pointer-events:none;
+    transform:translateY(-110%);transition:transform .38s cubic-bezier(.2,.8,.2,1)}
+  .strip.in{transform:none}
+  .strip .in2{pointer-events:auto;display:flex;align-items:center;gap:12px;background:var(--navy);color:var(--navy-ink);
+    font:14px/1.4 system-ui;padding:10px 8px 10px 16px;margin:10px;border-radius:12px;max-width:820px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+  .strip svg.pen{flex:0 0 20px;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .strip svg.pen .dot{fill:var(--cy);stroke:none}
+  .strip b{color:#fff}
+  .strip .x{flex:0 0 44px;width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:var(--navy-ink);font-size:22px;cursor:pointer}
+  .strip .x:hover{background:rgba(255,255,255,.08)}
+  @container (max-width:560px){.strip .in2{margin:8px;font-size:13.5px;gap:10px;padding:9px 4px 9px 12px}}
+  @media (prefers-reduced-motion:reduce){.strip{transition:none}}
+
+  /* ③ letter view */
+  .mail{max-width:640px;margin:0 auto;background:#fff;color:#1f2937;border-radius:12px;padding:24px 26px;font:15px/1.6 system-ui}
+  .mail .sub{font-weight:700;margin-bottom:14px;color:#111}
+  .mail p{margin:0 0 12px}
+  .mail mark{background:color-mix(in srgb,var(--cy) 28%,#fff);padding:1px 2px;border-radius:3px}
+  .sms{max-width:390px;margin:18px auto 0;background:#e9edf2;color:#111;border-radius:16px;padding:14px 16px;font:15px/1.45 system-ui;white-space:pre-wrap}
+  .smsmeta{max-width:390px;margin:6px auto 0;color:var(--ui-muted);font:12px ui-monospace,monospace}
+  .cap{max-width:640px;margin:0 auto 10px;color:var(--ui-muted);font-size:13px}
+</style>
+</head>
+<body class="n-a">
+<div class="bar">
+  <div class="grp" id="gZ"><b>Méret</b>
+    <button class="seg" data-z="m" aria-pressed="true">Mobil 390px</button>
+    <button class="seg" data-z="d" aria-pressed="false">Asztali</button></div>
+  <div class="grp" id="gT"><b>2 · Sáv indul</b>
+    <button class="seg" data-t="rooms" aria-pressed="false">a szobáknál</button>
+    <button class="seg" data-t="screen" aria-pressed="false">1 képernyő után</button>
+    <button class="seg" data-t="first" aria-pressed="true">amelyik előbb</button></div>
+  <div class="grp"><b>Próba</b><button class="seg" id="reset" aria-pressed="false">Újra (sáv vissza, lap tetejére)</button></div>
+</div>
+<p class="note"><b>Próbáld:</b> görgess le a terven. A sáv nem villog, és nem tolja le a tartalmat: egyszer becsúszik, × után nem jön vissza (élesben leadenként megjegyezzük). A szobák mellett nincs külön jegyzet (a sablon „Minta —” sora marad).</p>
+<div class="log" id="log"></div>
+
+<section class="view" id="vPage">
+<div class="stageWrap"><div class="dev m" id="dev">
+  <div class="page" id="page">
+    <div class="hdr"><h1>Három Huszár Vendégház</h1><nav><span>Szobák</span><span>Szolgáltatások</span><span>Vélemények</span><span>Kapcsolat</span></nav><button class="cta">FOGLALÁSI IGÉNY</button></div>
+    <div class="hero"><div><h2>Árnyas kert, játszótér és saját parkoló Köveskálon</h2><p>Csendes, kertes vidéki pihenő a Káli-medencében, ahol a család minden tagja megtalálja a helyét.</p><button class="cta">FOGLALÁS</button></div><div class="photo"></div></div>
+    <div class="sec">
+      <p class="eyebrow">Szálláshelyek</p><h3>Szobák és apartmanok</h3>
+      <div class="rooms" id="rooms">
+        <div class="room"><div class="ph" style="background:linear-gradient(135deg,#c9a77f,#7b5434)"></div><div class="bd"><h4>Huszár szoba</h4><div class="meta">2 fő + 1 pótágy · saját fürdő</div><div class="price">18 000 Ft / éj-től</div></div></div>
+        <div class="room"><div class="ph" style="background:linear-gradient(135deg,#9fb08a,#4f5f3a)"></div><div class="bd"><h4>Családi apartman</h4><div class="meta">4 fő · 2 hálószoba · konyha</div><div class="price">29 000 Ft / éj-től</div></div></div>
+        <div class="room"><div class="ph" style="background:linear-gradient(135deg,#d8b98f,#8f6a42)"></div><div class="bd"><h4>Kerti stúdió</h4><div class="meta">2 fő · terasz a kertre</div><div class="price">16 000 Ft / éj-től</div></div></div>
+      </div>
+    </div>
+    <div class="sec">
+      <p class="eyebrow">Amit kínálunk</p><h3>Szolgáltatások</h3>
+      <div class="svc"><span>Saját parkoló</span><span>Játszótér</span><span>Kert, grillező</span><span>Wifi</span><span>Kisállat hozható</span></div>
+    </div>
+    <div class="sec"><p class="eyebrow">Vendégeink mondták</p><h3>Vélemények</h3><p class="rev">„Nyugodt, tiszta, a gyerekek imádták a kertet. Jövőre is jövünk!”</p></div>
+    <div class="sec"><p class="eyebrow">Megközelítés</p><h3>Köveskál, Káli-medence</h3><p style="font:15px system-ui;color:var(--s-muted)">Tapolcától 12 km, a Balaton 15 perc autóval.</p></div>
+    <div class="foot">Három Huszár Vendégház · Köveskál</div>
+  </div>
+  <div class="strip" id="strip" role="status" aria-live="polite"><div class="in2">
+    <svg class="pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/><circle class="dot" cx="20" cy="20" r="2.6"/></svg>
+    <span>Ez egy terv mintaadatokkal. <b>Megrendelés után mindent Ön szerkeszt:</b> képeket, szobákat, szövegeket, árakat.</span>
+    <button class="x" id="stripX" type="button" aria-label="Bezárás">×</button></div></div>
+  <div class="book"><span>4,9 ★ · 56 vélemény</span><button class="cta">FOGLALÁS</button></div>
+  <button class="pill" type="button" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span>Itt rendelheti meg</span></button>
+</div></div>
+</section>
+
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const page = $("#page"), strip = $("#strip"), dev = $("#dev"), log = $("#log");
+  const KEY = "cit-edit-strip-closed"; // real page: per lead token
+  const st = { trigger: "first", shown: false };
+  const say = (m) => { log.textContent = m; };
+  const closed = () => { try { return localStorage.getItem(KEY) === "1"; } catch { return false; } };
+  function show(why) {
+    if (st.shown || closed()) return;
+    st.shown = true; strip.classList.add("in"); say("Sáv megjelent — ok: " + why);
+  }
+  function check() {
+    if (st.shown) return;
+    const roomsTop = $("#rooms").getBoundingClientRect().top - page.getBoundingClientRect().top;
+    const roomsVisible = roomsTop < page.clientHeight * 0.5;
+    const screenDone = page.scrollTop >= page.clientHeight;
+    if ((st.trigger === "rooms" || st.trigger === "first") && roomsVisible) return show("a szobák a képernyő közepére értek");
+    if ((st.trigger === "screen" || st.trigger === "first") && screenDone) return show("1 képernyőnyi görgetés");
+  }
+  page.addEventListener("scroll", check, { passive: true });
+  $("#stripX").addEventListener("click", () => {
+    strip.classList.remove("in");
+    try { localStorage.setItem(KEY, "1"); } catch {}
+    say("Bezárva — nem jön vissza (élesben leadenként megjegyezve).");
+  });
+  function reset() {
+    try { localStorage.removeItem(KEY); } catch {}
+    st.shown = false; strip.classList.remove("in"); page.scrollTop = 0; say("Visszaállítva: lap tetején, sáv rejtve.");
+  }
+  $("#reset").addEventListener("click", reset);
+
+  const group = (id, attr, fn) => document.querySelectorAll(`#${id} [data-${attr}]`).forEach((b) =>
+    b.addEventListener("click", () => {
+      document.querySelectorAll(`#${id} [data-${attr}]`).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      fn(b.dataset[attr]);
+    }));
+  group("gZ", "z", (z) => { dev.className = "dev " + z; reset(); });
+  group("gT", "t", (t) => { st.trigger = t; reset(); });
+
+  if (matchMedia("(max-width: 700px)").matches) { /* phone: start in phone mode (already) */ } else {
+    document.querySelector('#gZ [data-z="d"]').click();
+  }
+  reset();
+})();
+</script>
+</body>
+</html>

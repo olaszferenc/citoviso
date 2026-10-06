@@ -4338,6 +4338,91 @@
     launch.classList.toggle("cit-cfg-launch--alt", near);
   }
 
+  // ── ADR-XXXX editability strip (assets/design-refs/prospect-page/edit-strip/) ──
+  // The lead sees sample rooms/prices and may not realise everything is theirs to
+  // change after ordering. A top strip slides in ONCE — when the rooms section reaches
+  // mid-screen or after one full screen of scrolling, whichever comes first — and a
+  // dismissal is remembered per artifact (memory-only when storage is blocked).
+  // Never on load, never blinking; the owned-lead branch does not get this runtime.
+  var ROOMS_SEL =
+    '#cit-rooms, [data-cit-module="rooms"], .tb-sample, .wc-sample, .sb-sample, .h-sample, ' +
+    ".cl-sample, .au-sample, .ad-sample, .og-sample, .cn-sample, .cit-modsec__note";
+  function mountEditStrip() {
+    var key = "cit-edit-strip-closed:" + (CFG.artifactId || "");
+    var closedMem = false;
+    function isClosed() {
+      if (closedMem) return true;
+      try {
+        return window.localStorage.getItem(key) === "1";
+      } catch (e) {
+        return false;
+      }
+    }
+    if (isClosed()) return;
+    var strip = el(
+      '<div class="cit-cfg-editstrip" role="status" aria-live="polite">' +
+        '<div class="cit-cfg-editstrip__in">' +
+        '<svg class="cit-cfg-editstrip__pen" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>' +
+        '<circle class="cit-cfg-editstrip__dot" cx="20" cy="20" r="2.6"/></svg>' +
+        "<span></span>" +
+        '<button class="cit-cfg-editstrip__x" type="button"></button>' +
+        "</div></div>",
+    );
+    var txt = strip.querySelector("span");
+    txt.appendChild(document.createTextNode(tr("Ez egy terv mintaadatokkal.") + " "));
+    var b = document.createElement("b");
+    b.textContent = tr("Megrendelés után mindent Ön szerkeszt:");
+    txt.appendChild(b);
+    txt.appendChild(document.createTextNode(" " + tr("képeket, szobákat, szövegeket, árakat.")));
+    var x = strip.querySelector("button");
+    x.setAttribute("aria-label", tr("Bezárás"));
+    x.innerHTML = I.x;
+    strip.hidden = true;
+    document.body.appendChild(strip);
+
+    var shown = false;
+    var rooms = null;
+    function findRooms() {
+      if (rooms && rooms.isConnected) return rooms;
+      var r = document.querySelector(ROOMS_SEL);
+      rooms = r ? (r.closest && r.closest("section")) || r : null;
+      return rooms;
+    }
+    function check() {
+      if (shown) return;
+      var y = window.scrollY || document.documentElement.scrollTop || 0;
+      if (y <= 0) return; // never on load — only after the visitor scrolled
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var r = findRooms();
+      var roomsMid = !!r && r.getBoundingClientRect().top < vh * 0.5;
+      if (roomsMid || y >= vh) show();
+    }
+    function show() {
+      if (shown || isClosed()) return;
+      shown = true;
+      window.removeEventListener("scroll", check);
+      strip.hidden = false;
+      // one frame in the off-screen position, then slide in (no animation under reduced motion — CSS)
+      void strip.offsetHeight;
+      strip.classList.add("cit-cfg-on");
+    }
+    x.addEventListener("click", function () {
+      closedMem = true;
+      try {
+        window.localStorage.setItem(key, "1");
+      } catch (e) {
+        /* private mode: remembered for this page only */
+      }
+      strip.classList.remove("cit-cfg-on");
+      setTimeout(function () {
+        strip.hidden = true;
+      }, 400);
+    });
+    window.addEventListener("scroll", check, { passive: true });
+    check();
+  }
+
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
     // ALL-IN on first paint (ADR-0047): the lead must SEE the full package in the
@@ -4349,6 +4434,7 @@
     document.body.appendChild(panel);
     document.body.appendChild(launch);
     mountEscalationCard();
+    mountEditStrip();
     mounted = true;
     // Barion Pixel (Full): ez a lap TERMÉK-lap — az ajánlat a saját csomagjával
     // itt áll a vevő előtt. A `contentView` a `cit-consent.js`-ből lap-szinten is

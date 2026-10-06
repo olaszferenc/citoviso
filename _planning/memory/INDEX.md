@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-06_szerkeszthetoseg_sav.md](2026-10-06_szerkeszthetoseg_sav.md) — 2026-10-06 — Szerkeszthetőség-sáv a kiküldött mockon (ADR-XXXX)
 - [2026-10-06_scrape_adagonkenti_mentes.md](2026-10-06_scrape_adagonkenti_mentes.md) — 2026-10-06 — Scrape: adagonkénti mentés + fizetés nélküli folytatás (ÉLES)
 - [2026-10-06_rendeles_panel_riport.md](2026-10-06_rendeles_panel_riport.md) — 2026-10-06 — Rendelés-panel mérése + riport (A + B) megvalósítva
 - [2026-10-06_mock_kuldesi_ablak_hetkoznap_9_16.md](2026-10-06_mock_kuldesi_ablak_hetkoznap_9_16.md) — 2026-10-06 — Mock-megkeresés csak hétköznap 9–16 (Budapest) — ADR-0334
