@@ -42,6 +42,7 @@ import {
   budapestHhmm,
   minutesUntilWindowCloses,
   mobileWindowOff,
+  mockOutreachWindowBlocks,
   sendWindowOpen,
 } from "../sms/sendWindow.js";
 import { config } from "../config.js";
@@ -310,7 +311,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   const now = new Date();
   if (!isAllowlistedTestNumber(to) && !mobileWindowOff() && !sendWindowOpen(now)) {
     return no(
-      `hideg mobil-megkeresés csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${budapestHhmm(now)} van) — a levél-csatorna éjjel is használható`,
+      `hideg mobil-megkeresés csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${budapestHhmm(now)} van)`,
     );
   }
 
@@ -327,6 +328,11 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   const gate = await mobileOutreachGates(prospectId);
   if (!gate.ok) return gate;
   const { d, to } = gate;
+  // A standalone cold SMS is a mock outreach: weekdays 9–16 Budapest only (ADR-XXXX).
+  // Not in mobileOutreachGates — the pair's SMS half shares that, and a pair started at
+  // 15:59 must still get its link SMS (and its repair) after 16:00.
+  const mockBlock = mockOutreachWindowBlocks(new Date());
+  if (mockBlock) return no(mockBlock);
 
   // Channel one-shot (ADR-0082): the SMS stamp gates the SMS channel only.
   const prior = await db

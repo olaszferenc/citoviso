@@ -38,6 +38,7 @@ import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
 import { sendSms } from "../sms/sender.js";
 import { ensureMmsJpeg, sendMms } from "../mms/sender.js";
 import { config } from "../config.js";
+import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { copyOutreachMms, copyOutreachSms } from "./pilotCopy.js";
 
 export interface PairJobState {
@@ -126,6 +127,11 @@ export async function startOutreachPair(
   // irreversible — the only real defence is not to start.
   const windowBlock = pairWindowBlocks(to);
   if (windowBlock) return { ok: false, message: windowBlock };
+  // The owner's mock-outreach window (ADR-XXXX): a pair STARTS only on a weekday 9–16
+  // Budapest. Refused, not queued for the morning: the operator sees the reason now
+  // instead of an MMS waiting overnight in a queue (and the e-mail half has no queue).
+  const mockBlock = mockOutreachWindowBlocks(new Date());
+  if (mockBlock) return { ok: false, message: mockBlock };
 
   // Pair one-shot (0043): a stamped MMS means the lead saw the image — never again.
   const prior = await db

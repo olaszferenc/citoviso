@@ -46,6 +46,12 @@ export function budapestIsoDay(d: Date): string {
   return isoDayIn(d, APP_TZ);
 }
 
+/** The Budapest day of the week of an instant: 0 = Sunday … 6 = Saturday. */
+export function budapestWeekday(d: Date): number {
+  // Noon UTC of the Budapest calendar day — never crosses a day boundary.
+  return new Date(`${isoDayIn(d, APP_TZ)}T12:00:00Z`).getUTCDay();
+}
+
 /** The Budapest calendar year of an instant. */
 export function budapestYear(d: Date): number {
   return yearIn(d, APP_TZ);

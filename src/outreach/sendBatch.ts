@@ -30,6 +30,7 @@ import { huArticleLower } from "../hu.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
+import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -546,6 +547,13 @@ export async function sendOutreachMail(
   if (opts.dryRun) {
     return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };
   }
+
+  // The owner's mock-outreach window (ADR-XXXX): a cold mail goes out only on a weekday
+  // 9–16 Budapest. Below the dryRun line ON PURPOSE, unlike the content gates above:
+  // it is a pure function of the clock, not of the prospect — „Mehet ki most?” and the
+  // dry-run guards judge the MAIL, and the send itself says when the hour is wrong.
+  const mockBlock = mockOutreachWindowBlocks(new Date());
+  if (mockBlock) return { ...base, outcome: { kind: "skipped", reason: mockBlock } };
 
   // Hero shot of the mock's opening screen (best-effort — its absence must never
   // block a §C-PASS send; the mail is valid text+link without it).

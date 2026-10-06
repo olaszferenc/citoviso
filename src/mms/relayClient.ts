@@ -34,6 +34,7 @@ import { MMS_MAX_BYTES, isJpeg, toMmsJpeg, type MmsMessage, type MmsSendResult }
 import { normalizePhone } from "../sms/sender.js";
 import type { MmsAck, PulledMms } from "./relayQueue.js";
 import { drainSmsLane, withLaneLock, type SmsLaneDeps } from "../sms/modemLane.js";
+import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 
 export interface MmsRelayClientDeps {
   /** POST to the remote API (bearer auth is the caller's business). */
@@ -50,6 +51,8 @@ export interface MmsRelayClientDeps {
   lockPath: string;
   /** Wall-clock budget of one tick (the unit's TimeoutStartSec minus a margin). */
   budgetMs: number;
+  /** The instant the mock-outreach window is judged at (ADR-XXXX); default: the lane clock. The guard pins it. */
+  windowAt?(): Date;
   log?(line: string): void;
 }
 
@@ -74,7 +77,7 @@ export interface MmsRelayRun {
   readonly reacked: number;
   readonly pulled: number;
   readonly results: readonly MmsAck[];
-  /** Why no MMS was pulled ("lock", "lane"), if so. */
+  /** Why no MMS was pulled ("lock", "lane", "window"), if so. */
   readonly heldBack?: string;
   /** After the MMS: did its companion SMS leave the modem within this tick? */
   readonly pairSettled?: boolean;
@@ -106,6 +109,18 @@ async function runLocked(deps: MmsRelayClientDeps, log: (l: string) => void): Pr
   if (!before.idle) {
     log(`[mms-relay] az előző SMS még nincs igazoltan kint (${before.waitingFor}) — MMS ebben a tickben NEM indul.`);
     return { reacked: pending.length, pulled: 0, results: [], heldBack: "lane" };
+  }
+
+  // ②b The owner's mock-outreach window (ADR-XXXX): every MMS is a mock outreach, and
+  // one goes out only on a weekday 9–16 Budapest. Outside it the queue simply WAITS —
+  // nothing is pulled, so nothing is claimed or spent — and the next weekday's 09:00
+  // tick starts it. Judged HERE, on the box that owns the modem, so the rule holds the
+  // moment this lands, whatever code the queue's host still runs. The lane above keeps
+  // draining: a pair started at 15:59 still gets its companion SMS after 16:00.
+  const windowBlock = mockOutreachWindowBlocks(deps.windowAt?.() ?? now());
+  if (windowBlock) {
+    log(`[mms-relay] ${windowBlock} — a sor áll, MMS ebben a tickben NEM indul.`);
+    return { reacked: pending.length, pulled: 0, results: [], heldBack: "window" };
   }
 
   // ③ One message per tick.

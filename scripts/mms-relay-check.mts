@@ -20,9 +20,10 @@
 //   ⑨ lost ack: the journal keeps the send; the next tick re-acks → 'sent' (even from 'unknown')
 //   ⑩ a non-JPEG image in the row is converted (sharp) before the modem sees it
 //   ⑪ pairJobState reads the queue row: pending → mms, unknown/failed → failed with the reason
-//   ⑫ evening stop (ADR-0282 addendum): 19:29 Budapest pulls, 19:31 does not (the row stays
-//      'queued', no attempt spent); DST-correct, and on a UTC process (prod) the morning
-//      start follows the companion SMS's gate — never earlier
+//   ⑫ the pull window (ADR-XXXX, owner 2026-10-06): weekdays 09:00–16:00 Budapest — 15:59
+//      pulls, 16:00 does not (the row stays 'queued', no attempt spent), 08:59 and the
+//      weekend do not; DST-correct, the weekday is the Budapest one on a UTC process
+//      (prod), and MOBILE_SEND_WINDOW_OFF does not lift it
 //
 // THE MODEM LANE (ADR-0332) — the 2026-10-06 defect: the next mms-send stopped
 // gammu-smsd while the previous pair's 3–4-part link SMS was still going out; the lead
@@ -39,6 +40,10 @@
 //      after the queue's 10-min stale re-queue); the concat-UDH part total is read right
 //   ⑰ a foreign message in gammu's outbox, or a stopped gammu-smsd, holds the MMS back
 //   ⑱ the lane lock: a live holder → the tick is skipped; a dead holder's lock is taken over
+//   ⑲ THE DEV RELAY'S OWN WINDOW (ADR-XXXX) — live the moment it lands, whatever the queue's
+//      host runs: outside weekdays 9–16 it pulls NO MMS (heldBack "window", the row stays
+//      'queued'), but it still drives the queued SMS out (a 15:59 pair's link SMS); inside
+//      the window the same row goes
 //
 // Usage: npx tsx scripts/mms-relay-check.mts
 
@@ -55,6 +60,7 @@ const { sendMms, toMmsJpeg, isJpeg, MMS_MAX_BYTES } = await import("../src/mms/s
 const { pullMms, ackMms, setMmsRelayDeps, MMS_MAX_ATTEMPTS } = await import("../src/mms/relayQueue.js");
 const { runMmsRelayOnce } = await import("../src/mms/relayClient.js");
 const { mmsPullBlocks } = await import("../src/sms/sendWindow.js");
+const { config } = await import("../src/config.js");
 const { pairJobState } = await import("../src/outreach/sendOutreachPair.js");
 const { pullSms, ackSms, setSmsRelayDeps, SMS_MAX_ATTEMPTS } = await import("../src/sms/relayQueue.js");
 const { gammuVerdict, partTotal, LANE_SMS_TIMEOUT_MS } = await import("../src/sms/modemLane.js");
@@ -196,6 +202,8 @@ const relayDeps = (send: ReturnType<typeof modem>["send"], a: typeof api = api) 
   lane: { ...laneDeps(), api: a },
   lockPath,
   budgetMs: 270_000,
+  // ①–⑱ must not depend on the hour the guard runs (⑲ tests the relay's window itself).
+  windowAt: () => MIDDAY,
   log: () => {},
 });
 const tick = (m: ReturnType<typeof modem>) => runMmsRelayOnce(relayDeps(m.send));
@@ -405,45 +413,54 @@ try {
     await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
   }
 
-  // ── ⑫ evening stop: 19:30 Budapest, TZ-correct ──────────────────────────
+  // ── ⑫ the pull window: weekdays 09:00–16:00 Budapest (ADR-XXXX), TZ-correct ──
+  // It replaced the 08:00–19:30 window of the ADR-0282 addendum for the MMS (every MMS is a
+  // mock outreach); the 19:30 stop stays in the code but sits outside the new window.
   {
     const origTz = process.env.TZ;
+    const origOff = config.mobileSendWindowOff;
     const at = (tz: string, iso: string): string | null => {
       process.env.TZ = tz;
       return mmsPullBlocks(new Date(iso));
     };
     try {
       // Summer (CEST, UTC+2) and winter (CET, UTC+1), on a Budapest AND on a UTC process.
+      // 2026-09-30 is a Wednesday, 2026-12-01 a Tuesday, 2026-10-03 a Saturday, 2026-10-04 a Sunday.
       for (const tz of ["Europe/Budapest", "UTC"]) {
-        say(at(tz, "2026-09-30T17:29:00Z") === null, `⑫ [${tz}] nyáron 19:29 (Budapest) → húz`);
-        say(at(tz, "2026-09-30T17:31:00Z") !== null, `⑫ [${tz}] nyáron 19:31 (Budapest) → NEM húz`);
-        say(at(tz, "2026-12-01T18:29:00Z") === null, `⑫ [${tz}] télen 19:29 (Budapest) → húz`);
-        say(at(tz, "2026-12-01T18:31:00Z") !== null, `⑫ [${tz}] télen 19:31 (Budapest) → NEM húz`);
-        say(at(tz, "2026-09-30T05:59:00Z") !== null, `⑫ [${tz}] 07:59 (Budapest) → NEM húz`);
+        say(at(tz, "2026-09-30T06:59:00Z") !== null, `⑫ [${tz}] nyáron szerda 08:59 (Budapest) → NEM húz`);
+        say(at(tz, "2026-09-30T07:00:00Z") === null, `⑫ [${tz}] nyáron szerda 09:00 (Budapest) → húz`);
+        say(at(tz, "2026-09-30T13:59:00Z") === null, `⑫ [${tz}] nyáron szerda 15:59 (Budapest) → húz`);
+        say(at(tz, "2026-09-30T14:00:00Z") !== null, `⑫ [${tz}] nyáron szerda 16:00 (Budapest) → NEM húz`);
+        say(at(tz, "2026-12-01T08:00:00Z") === null, `⑫ [${tz}] télen kedd 09:00 (Budapest) → húz`);
+        say(at(tz, "2026-12-01T14:59:00Z") === null, `⑫ [${tz}] télen kedd 15:59 (Budapest) → húz`);
+        say(at(tz, "2026-12-01T15:00:00Z") !== null, `⑫ [${tz}] télen kedd 16:00 (Budapest) → NEM húz`);
+        say(at(tz, "2026-10-03T08:00:00Z") !== null, `⑫ [${tz}] szombat 10:00 (Budapest) → NEM húz`);
+        say(at(tz, "2026-10-04T08:00:00Z") !== null, `⑫ [${tz}] vasárnap 10:00 (Budapest) → NEM húz`);
+        // Sunday 23:30 UTC = Monday 01:30 Budapest: the weekday is the BUDAPEST one.
+        say(at(tz, "2026-10-04T22:30:00Z") !== null && at(tz, "2026-10-05T07:00:00Z") === null,
+          `⑫ [${tz}] a hétköznap budapesti: hétfő 00:30 zárva, hétfő 09:00 húz`);
       }
-      // Morning: the MMS starts exactly when the companion SMS's gate opens — 08:00
-      // BUDAPEST on a UTC process too (ADR-0288; it used to open at 08:00 UTC = 10:00 Budapest).
-      for (const tz of ["Europe/Budapest", "UTC"]) {
-        say(at(tz, "2026-09-30T06:00:00Z") === null, `⑫ [${tz}] nyáron 08:00 (Budapest) → húz (az SMS-kapu nyitva)`);
-        say(at(tz, "2026-12-01T07:00:00Z") === null, `⑫ [${tz}] télen 08:00 (Budapest) → húz`);
-        say(at(tz, "2026-12-01T06:59:00Z") !== null, `⑫ [${tz}] télen 07:59 (Budapest) → NEM húz`);
-      }
+      // The owner's MOBILE_SEND_WINDOW_OFF (set on prod) does NOT lift the mock window.
+      (config as { mobileSendWindowOff: boolean }).mobileSendWindowOff = true;
+      say(at("UTC", "2026-09-30T15:00:00Z") !== null && at("UTC", "2026-10-03T08:00:00Z") !== null,
+        "⑫ MOBILE_SEND_WINDOW_OFF mellett is: szerda 17:00 és szombat 10:00 → NEM húz");
     } finally {
+      (config as { mobileSendWindowOff: boolean }).mobileSendWindowOff = origOff;
       if (origTz === undefined) delete process.env.TZ;
       else process.env.TZ = origTz;
     }
-    // End to end on the queue: 19:31 leaves the row alone, 19:29 hands it out.
+    // End to end on the queue: 16:00 leaves the row alone, 15:59 hands it out.
     const img = await sharp({ create: { width: 64, height: 64, channels: 3, background: { r: 10, g: 120, b: 200 } } }).jpeg().toBuffer();
     const ins = await db
       .insertInto("mms_outbox")
       .values({ to_phone: PHONE, subject: "Teszt 12", image: img })
       .returning("id")
       .executeTakeFirstOrThrow();
-    const late = await pullMms(new Date(), new Date("2026-09-30T17:31:00Z"));
+    const late = await pullMms(new Date(), new Date("2026-09-30T14:00:00Z"));
     const r1 = await row(ins.id);
-    say(late.length === 0 && r1.status === "queued" && r1.attempts === 0, "⑫ 19:31-kor a sor 'queued' marad, kísérlet nem fogy", JSON.stringify({ late: late.length, r1 }));
-    const ok = await pullMms(new Date(), new Date("2026-09-30T17:29:00Z"));
-    say(ok.length === 1 && ok[0]!.id === ins.id, "⑫ 19:29-kor ugyanez a sor kimegy", JSON.stringify(ok.map((m) => m.id)));
+    say(late.length === 0 && r1.status === "queued" && r1.attempts === 0, "⑫ 16:00-kor a sor 'queued' marad, kísérlet nem fogy", JSON.stringify({ late: late.length, r1 }));
+    const ok = await pullMms(new Date(), new Date("2026-09-30T13:59:00Z"));
+    say(ok.length === 1 && ok[0]!.id === ins.id, "⑫ 15:59-kor ugyanez a sor kimegy", JSON.stringify(ok.map((m) => m.id)));
     await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
   }
 
@@ -626,6 +643,29 @@ try {
     }
     say(t2.heldBack === undefined && lockGone, "⑱ halott tulajdonos zárját átveszi, és a tick végén elengedi", JSON.stringify(t2));
   }
+
+  // ── ⑲ the dev relay holds the queue outside the window ────────────────
+  {
+    const img = await sharp({ create: { width: 64, height: 64, channels: 3, background: { r: 10, g: 120, b: 200 } } }).jpeg().toBuffer();
+    const ins = await db.insertInto("mms_outbox").values({ to_phone: PHONE, subject: "Teszt 19", image: img }).returning("id").executeTakeFirstOrThrow();
+    const sms = await db.insertInto("sms_outbox").values({ to_phone: PHONE, body: `${SMS_TAG}19 kísérő` }).returning("id").executeTakeFirstOrThrow();
+    const smsStatus = async () => (await db.selectFrom("sms_outbox").select("status").where("id", "=", sms.id).executeTakeFirstOrThrow()).status;
+    for (const [label, iso] of [
+      ["szerda 16:00", "2026-09-30T14:00:00Z"],
+      ["szombat 10:00", "2026-10-03T08:00:00Z"],
+      ["hétfő 08:59", "2026-10-05T06:59:00Z"],
+    ] as const) {
+      const m = okModem();
+      const t = await runMmsRelayOnce({ ...relayDeps(m.send), windowAt: () => new Date(iso) });
+      say(t.heldBack === "window" && t.pulled === 0 && m.got.length === 0 && (await row(ins.id)).status === "queued" && (await row(ins.id)).attempts === 0,
+        `⑲ ${label} (Budapest): a dev relay NEM húz MMS-t, a sor 'queued' marad, kísérlet nem fogy`, JSON.stringify(t));
+    }
+    say((await smsStatus()) === "sent", "⑲ ablakon kívül is: a sorban álló (kísérő) SMS igazoltan kimegy", String(await smsStatus()));
+    const m = okModem();
+    const t = await runMmsRelayOnce({ ...relayDeps(m.send), windowAt: () => new Date("2026-09-30T13:59:00Z") });
+    say(t.heldBack === undefined && m.got.length === 1 && (await row(ins.id)).status === "sent", "⑲ szerda 15:59 (Budapest): ugyanez a sor kimegy", JSON.stringify(t));
+    await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
+  }
 } catch (e) {
   failed++;
   console.error(`  ❌ az őr nem futott végig: ${(e as Error).stack ?? e}`);
@@ -633,7 +673,7 @@ try {
   setMmsRelayDeps(null);
   setSmsRelayDeps(null);
   await db.deleteFrom("sms_outbox").where("body", "like", `${SMS_TAG}%`).execute();
-  await db.deleteFrom("mms_outbox").where("subject", "=", "Teszt 17").where("prospect_id", "is", null).execute();
+  await db.deleteFrom("mms_outbox").where("subject", "in", ["Teszt 17", "Teszt 19"]).where("prospect_id", "is", null).execute();
   await db.deleteFrom("mms_outbox").where("subject", "in", ["Teszt 4", "PNG", "Teszt 12"]).where("prospect_id", "is", null).execute();
   if (ids.leadId) {
     await db.deleteFrom("prospect").where("lead_id", "=", ids.leadId).execute(); // cascades mms_outbox

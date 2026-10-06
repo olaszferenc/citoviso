@@ -16,8 +16,16 @@
 //   ② it is before 19:30 Europe/Budapest (ADR-0282 addendum, owner 2026-09-30): a pull
 //      at 19:29 leaves ~30 min for the 60–90 s send + the companion SMS before 20:00.
 // Rows outside the window stay 'queued' and go out in the morning.
+//
+// ADR-XXXX (owner, 2026-10-06: „Mockot hétköznap 9-16 között küldjünk!”): the MOCK
+// OUTREACH itself — the cold e-mail, the MMS+SMS pair, a standalone cold SMS — starts
+// only on a WEEKDAY between 09:00 and 16:00 Budapest (MOCK_OUTREACH_WINDOW). It is
+// narrower than SEND_WINDOW and sits on top of it; the 8–20 window keeps guarding what
+// is NOT a new outreach (the companion SMS of a pair started at 15:59, the pair repair,
+// the escalation follow-up). Unlike SEND_WINDOW it is NOT lifted by MOBILE_SEND_WINDOW_OFF:
+// that switch is set on prod, and an owner rule that the live box ignores is no rule.
 
-import { APP_TZ, budapestHhmm, budapestMinutes } from "../text/budapestTime.js";
+import { APP_TZ, budapestHhmm, budapestMinutes, budapestWeekday } from "../text/budapestTime.js";
 import { config } from "../config.js";
 
 /** The owner's temporary MOBILE_SEND_WINDOW_OFF switch (live test): SMS/MMS go out at any hour. */
@@ -52,8 +60,36 @@ export function minutesUntilWindowCloses(now: Date): number {
   return SEND_WINDOW.toHour * 60 - budapestMinutes(now);
 }
 
+/** When a mock outreach (mail, MMS+SMS pair, cold SMS) may START: Mon–Fri, Budapest wall clock (ADR-XXXX). */
+export const MOCK_OUTREACH_WINDOW = { fromHour: 9, toHour: 16, timeZone: SEND_WINDOW_TZ } as const;
+
+const WEEKDAY_HU = ["vasárnap", "hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat"] as const;
+
+/** Is `now` a weekday between MOCK_OUTREACH_WINDOW.fromHour and toHour (Budapest)? */
+export function mockOutreachWindowOpen(now: Date): boolean {
+  const day = budapestWeekday(now);
+  if (day === 0 || day === 6) return false;
+  const m = budapestMinutes(now);
+  return m >= MOCK_OUTREACH_WINDOW.fromHour * 60 && m < MOCK_OUTREACH_WINDOW.toHour * 60;
+}
+
+/**
+ * Why a mock outreach may not start at `now`, or null when it may. Operator-facing
+ * (console banner, relay log, CLI) — it never reaches the lead. No bank-holiday list:
+ * the owner asked for weekdays only.
+ */
+export function mockOutreachWindowBlocks(now: Date): string | null {
+  if (mockOutreachWindowOpen(now)) return null;
+  const { fromHour, toHour } = MOCK_OUTREACH_WINDOW;
+  return `mock-megkeresés csak hétköznap ${fromHour}:00–${toHour}:00 (Budapest) között megy ki (most ${WEEKDAY_HU[budapestWeekday(now)]} ${budapestHhmm(now)}) — a következő hétköznap ${fromHour}:00-tól indítható`; // i18n-exempt: operátori üzenet, sosem éri el a leadet
+}
+
 /** Why an MMS may not be pulled at `now`, or null when it may. */
 export function mmsPullBlocks(now: Date): string | null {
+  // Every MMS is a mock outreach (the pair's image) — the owner's weekday window first,
+  // and it holds even with MOBILE_SEND_WINDOW_OFF (ADR-XXXX).
+  const mock = mockOutreachWindowBlocks(now);
+  if (mock) return mock;
   if (mobileWindowOff()) return null;
   const bud = budapestMinutes(now);
   const cutoff = MMS_PULL_CUTOFF.hour * 60 + MMS_PULL_CUTOFF.minute;
