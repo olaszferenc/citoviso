@@ -10,6 +10,18 @@
 // never starts a oneshot that is still running, and the CLI lock refuses a second
 // sender ("masik mms-send fut eppen" → the server refunds the attempt).
 //
+// THE PAIR IS ONE UNIT (ADR-XXXX, owner decree 2026-10-06: „MMS utána sms és csak
+// utána mehet tovább a következő leadre”). The paragraph above was wrong in practice:
+// the queued SMS goes out only while the daemon RUNS, and the next mms-send stopped it
+// again 5–20 s later — the 3–4-part companion SMS lost its link part. Now a tick runs
+// on the modem lane (src/sms/modemLane.ts), under the lane lock:
+//   ① the lane must be idle (nothing in flight, SMS queue empty, gammu outbox empty,
+//      daemon up) — otherwise no MMS is pulled this tick;
+//   ② ONE MMS → ack (the server enqueues the pair's companion SMS + the owner's copy);
+//   ③ the relay itself pulls those SMS, injects them and waits for gammu's sentitems
+//      to show every part sent; a tick that runs out of time leaves them in the lane
+//      state, and ① of the next tick keeps the next MMS back until they are settled.
+//
 // THE JOURNAL: a successful send is written to a local file BEFORE the ack. If the
 // ack is lost (host restarting, network blip), the next run re-acks from the journal
 // — the server marks a stale row 'unknown' and never re-sends it, so without the
@@ -21,6 +33,7 @@ import path from "node:path";
 import { MMS_MAX_BYTES, isJpeg, toMmsJpeg, type MmsMessage, type MmsSendResult } from "./sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import type { MmsAck, PulledMms } from "./relayQueue.js";
+import { drainSmsLane, withLaneLock, type SmsLaneDeps } from "../sms/modemLane.js";
 
 export interface MmsRelayClientDeps {
   /** POST to the remote API (bearer auth is the caller's business). */
@@ -31,8 +44,17 @@ export interface MmsRelayClientDeps {
   errorDetail(err: unknown): string;
   /** The journal file of sent-but-not-yet-acked results. */
   journalPath: string;
+  /** The modem lane: the pair's SMS half is driven and VERIFIED here (ADR-XXXX). */
+  lane: SmsLaneDeps;
+  /** The lane lock file (shared with scripts/sms-relay.mts). */
+  lockPath: string;
+  /** Wall-clock budget of one tick (the unit's TimeoutStartSec minus a margin). */
+  budgetMs: number;
   log?(line: string): void;
 }
+
+/** The longest an mms-send may take (a send is ≤180 s) — an MMS starts only with this much budget left. */
+export const MMS_SEND_RESERVE_MS = 180_000;
 
 async function readJournal(p: string): Promise<MmsAck[]> {
   try {
@@ -52,11 +74,24 @@ export interface MmsRelayRun {
   readonly reacked: number;
   readonly pulled: number;
   readonly results: readonly MmsAck[];
+  /** Why no MMS was pulled ("lock", "lane"), if so. */
+  readonly heldBack?: string;
+  /** After the MMS: did its companion SMS leave the modem within this tick? */
+  readonly pairSettled?: boolean;
 }
 
-/** One relay tick. Network errors propagate (the script logs them; the next tick retries). */
+/** One relay tick, under the lane lock. Network errors propagate (the script logs them; the next tick retries). */
 export async function runMmsRelayOnce(deps: MmsRelayClientDeps): Promise<MmsRelayRun> {
   const log = deps.log ?? ((l: string) => console.log(l));
+  const r = await withLaneLock(deps.lockPath, () => runLocked(deps, log));
+  if (r) return r;
+  log("[mms-relay] a modem-sáv foglalt (az SMS-relay dolgozik) — ez a tick kimarad.");
+  return { reacked: 0, pulled: 0, results: [], heldBack: "lock" };
+}
+
+async function runLocked(deps: MmsRelayClientDeps, log: (l: string) => void): Promise<MmsRelayRun> {
+  const now = deps.lane.now ?? (() => new Date());
+  const deadline = new Date(now().getTime() + deps.budgetMs);
 
   // ① Settle what an earlier run sent but could not ack.
   const pending = await readJournal(deps.journalPath);
@@ -66,7 +101,14 @@ export async function runMmsRelayOnce(deps: MmsRelayClientDeps): Promise<MmsRela
     log(`[mms-relay] ${pending.length} korábbi küldés utólag nyugtázva (napló).`);
   }
 
-  // ② One message per tick.
+  // ② The lane must be idle: the previous pair's SMS (or any SMS) out and VERIFIED.
+  const before = await drainSmsLane(deps.lane, new Date(deadline.getTime() - MMS_SEND_RESERVE_MS));
+  if (!before.idle) {
+    log(`[mms-relay] az előző SMS még nincs igazoltan kint (${before.waitingFor}) — MMS ebben a tickben NEM indul.`);
+    return { reacked: pending.length, pulled: 0, results: [], heldBack: "lane" };
+  }
+
+  // ③ One message per tick.
   const pulled = await deps.api("/api/mms-relay/pull", {});
   const messages = (pulled.messages ?? []) as PulledMms[];
   if (!messages.length) {
@@ -106,5 +148,14 @@ export async function runMmsRelayOnce(deps: MmsRelayClientDeps): Promise<MmsRela
   await deps.api("/api/mms-relay/ack", { results });
   await writeJournal(deps.journalPath, []);
   log(`[mms-relay] kész: ${results.filter((r) => r.ok).length}/${results.length} elküldve.`);
-  return { reacked: pending.length, pulled: messages.length, results };
+
+  // ④ The ack enqueued the pair's SMS half: drive it out NOW, while nothing else may
+  // touch the modem, and wait for gammu's proof.
+  const after = await drainSmsLane(deps.lane, deadline);
+  if (after.idle) {
+    log(`[mms-relay] a pár teljes: a kísérő SMS-ek (${after.injected}) igazoltan kimentek.`);
+  } else {
+    log(`[mms-relay] a kísérő SMS még úton (${after.waitingFor}) — a következő tick igazolja, addig új MMS nem indul.`);
+  }
+  return { reacked: pending.length, pulled: messages.length, results, pairSettled: after.idle };
 }

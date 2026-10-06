@@ -7,6 +7,13 @@
 //                      unset → the relay exits quietly (feature not armed).
 //   SMS_RELAY_SECRET — the bearer secret (the SAME one the SMS relay uses).
 //   MMS_RELAY_JOURNAL — optional; default outbox-mms/relay-journal.json (gitignored).
+//   GAMMU_DB_USER / GAMMU_DB_PASSWORD (+ GAMMU_DB_HOST, GAMMU_DB_NAME) — gammu-smsd's
+//                      SQL store: the pair's companion SMS is verified from its
+//                      sentitems (ADR-XXXX). Unset → NO MMS goes out (a pair whose
+//                      link SMS cannot be verified is exactly the 2026-10-06 defect).
+//
+// A tick holds the modem-lane lock (outbox-sms/modem-lane.lock, shared with
+// scripts/sms-relay.mts) and lasts at most 270 s — the unit's TimeoutStartSec is 300.
 //
 //   tsx scripts/mms-relay.mts
 
@@ -14,12 +21,21 @@ import path from "node:path";
 import { config } from "../src/config.js";
 import { cliErrorDetail, sendMmsViaCli } from "../src/mms/sender.js";
 import { runMmsRelayOnce } from "../src/mms/relayClient.js";
+import { injectViaGammu } from "../src/sms/sender.js";
+import { mysqlGammuStore } from "../src/sms/modemLane.js";
 
 const BASE = (process.env.SMS_RELAY_URL ?? "").replace(/\/$/, "");
 const SECRET = config.smsRelaySecret;
 
 if (!BASE || !SECRET) {
   console.log("[mms-relay] SMS_RELAY_URL / SMS_RELAY_SECRET nincs beállítva — nincs teendő.");
+  process.exit(0);
+}
+
+if (!config.gammuDb.user) {
+  console.error(
+    "[mms-relay] ⛔ GAMMU_DB_USER / GAMMU_DB_PASSWORD nincs beállítva — a kísérő SMS kiküldése nem igazolható, MMS NEM indul (ADR-XXXX).",
+  );
   process.exit(0);
 }
 
@@ -39,6 +55,14 @@ try {
     send: sendMmsViaCli,
     errorDetail: cliErrorDetail,
     journalPath: process.env.MMS_RELAY_JOURNAL ?? path.resolve(process.cwd(), "outbox-mms", "relay-journal.json"),
+    lane: {
+      api,
+      inject: injectViaGammu,
+      gammu: mysqlGammuStore(config.gammuDb),
+      statePath: path.resolve(process.cwd(), "outbox-sms", "modem-lane.json"),
+    },
+    lockPath: path.resolve(process.cwd(), "outbox-sms", "modem-lane.lock"),
+    budgetMs: 270_000,
   });
 } catch (err) {
   // Transient network trouble: one short line, the next minute retries. A sent

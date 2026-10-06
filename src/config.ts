@@ -112,6 +112,19 @@ export const config = {
    */
   smsRelaySecret: env("SMS_RELAY_SECRET"),
   /**
+   * gammu-smsd's SQL store on THIS Debian box (ADR-XXXX): the relays read its
+   * outbox/sentitems to learn whether an injected SMS really LEFT the modem — the
+   * pair's companion SMS is acked, and the next MMS is pulled, only on that proof.
+   * The same database/user as /etc/gammu-smsd-inject.conf. Empty user = the relays
+   * cannot verify delivery (the MMS relay then refuses to send).
+   */
+  gammuDb: {
+    host: env("GAMMU_DB_HOST", "localhost"),
+    name: env("GAMMU_DB_NAME", "minereal_sms"),
+    user: env("GAMMU_DB_USER"),
+    password: env("GAMMU_DB_PASSWORD"),
+  },
+  /**
    * COLD-SMS ALLOWLIST (ADR-0082, owner decision 2026-08-29). Comma-separated
    * phone numbers the outreach SMS may reach; empty = no restriction.
    *

@@ -24,6 +24,22 @@
 //      'queued', no attempt spent); DST-correct, and on a UTC process (prod) the morning
 //      start follows the companion SMS's gate — never earlier
 //
+// THE MODEM LANE (ADR-XXXX) — the 2026-10-06 defect: the next mms-send stopped
+// gammu-smsd while the previous pair's 3–4-part link SMS was still going out; the lead
+// got the picture with no link, and sms_outbox said 'sent' (the ack of the injection).
+// A mock gammu (outbox → sentitems, a mock clock; the daemon only runs while the relay
+// waits, exactly like mms-send stopping it) drives the REAL SMS queue (pullSms/ackSms):
+//   ⑬ a pair is ONE unit: MMS A → A's SMS (+ the owner's copy) every part sent → only
+//      then MMS B; sms_outbox 'sent' only after gammu's sentitems
+//   ⑭ the defect itself: A's SMS still in gammu's outbox when the tick ends → the next
+//      tick does NOT pull MMS B, the SMS row is NOT 'sent'; B goes once the parts are out
+//   ⑮ errorbox (a SendingError part) → ok:false ack, re-queued, re-injected; 3× → 'failed'
+//      + ONE alert, never 'sent'; a single error then success → 'sent' on the retry
+//   ⑯ an SMS stuck 8 min in gammu's outbox is cancelled and failed (no double send
+//      after the queue's 10-min stale re-queue); the concat-UDH part total is read right
+//   ⑰ a foreign message in gammu's outbox, or a stopped gammu-smsd, holds the MMS back
+//   ⑱ the lane lock: a live holder → the tick is skipped; a dead holder's lock is taken over
+//
 // Usage: npx tsx scripts/mms-relay-check.mts
 
 process.env.MMS_PROVIDER = "queue";
@@ -40,6 +56,10 @@ const { pullMms, ackMms, setMmsRelayDeps, MMS_MAX_ATTEMPTS } = await import("../
 const { runMmsRelayOnce } = await import("../src/mms/relayClient.js");
 const { mmsPullBlocks } = await import("../src/sms/sendWindow.js");
 const { pairJobState } = await import("../src/outreach/sendOutreachPair.js");
+const { pullSms, ackSms, setSmsRelayDeps, SMS_MAX_ATTEMPTS } = await import("../src/sms/relayQueue.js");
+const { gammuVerdict, partTotal, LANE_SMS_TIMEOUT_MS } = await import("../src/sms/modemLane.js");
+type SmsLaneDeps = import("../src/sms/modemLane.js").SmsLaneDeps;
+type SentPart = import("../src/sms/modemLane.js").SentPart;
 type MmsMessage = import("../src/mms/sender.js").MmsMessage;
 type MmsSendResult = import("../src/mms/sender.js").MmsSendResult;
 
@@ -56,15 +76,21 @@ const say = (ok: boolean, what: string, detail = ""): void => {
 const PHONE = "+36301234567";
 const MIDDAY = new Date("2026-09-30T10:00:00Z"); // 12:00 CEST, 10:00 UTC
 const ids: { defId?: string; runId?: string; leadId?: string; p1?: string; p2?: string; p3?: string } = {};
+const SMS_TAG = "_mms_relay_check ";
 const tmp = await mkdtemp(path.join(tmpdir(), "cit-mms-relay-check-"));
 const journalPath = path.join(tmp, "journal.json");
+const lanePath = path.join(tmp, "modem-lane.json");
+const lockPath = path.join(tmp, "modem-lane.lock");
 
 // Injected server-side effects.
 const afterSent: string[] = [];
 const alerts: string[] = [];
+// ⑬–⑮: the pair's SMS half as prod enqueues it (sendPairSmsHalf + copyOutreachSms).
+let onAfterSent: (prospectId: string) => Promise<void> = async () => {};
 setMmsRelayDeps({
   afterSent: async (id) => {
     afterSent.push(id);
+    await onAfterSent(id);
   },
   alert: async (subject) => {
     alerts.push(subject);
@@ -82,8 +108,70 @@ const api = async (pathname: string, body: unknown): Promise<Record<string, unkn
   if (pathname === "/api/mms-relay/ack") {
     return JSON.parse(JSON.stringify({ ok: true, sent: await ackMms((b.results ?? []) as never) }));
   }
+  if (pathname === "/api/sms-relay/pull") return JSON.parse(JSON.stringify({ messages: await pullSms() }));
+  if (pathname === "/api/sms-relay/ack") {
+    await ackSms((b.results ?? []) as never);
+    return { ok: true };
+  }
   throw new Error(`unknown route ${pathname}`);
 };
+
+// ── the mock gammu: outbox → sentitems on a mock clock ─────────────────────
+// Plans per destination: "ok", "error" (the last part SendingError, like gammu 69/71),
+// or a list consumed one injection at a time. `steps` = daemon polls until it is sent.
+type Plan = "ok" | "error" | "stuck";
+const gm = {
+  clock: Date.now(),
+  nextId: 9000,
+  daemon: true,
+  steps: 2,
+  outbox: new Map<string, { to: string; parts: number; plan: Plan; left: number }>(),
+  sent: [] as { id: string; seq: number; status: string; udh: string; at: number }[],
+  plans: new Map<string, Plan[]>(),
+  events: [] as string[],
+};
+const udh = (n: number, seq: number): string => (n > 1 ? `050003A7${n.toString(16).padStart(2, "0")}${seq.toString(16).padStart(2, "0")}`.toUpperCase() : "");
+function daemonStep(): void {
+  if (!gm.daemon) return;
+  const first = [...gm.outbox.entries()][0];
+  if (!first) return;
+  const [id, m] = first;
+  if (m.plan === "stuck" || --m.left > 0) return;
+  for (let seq = 1; seq <= m.parts; seq++) {
+    const status = m.plan === "error" && seq === m.parts ? "SendingError" : "SendingOK";
+    gm.sent.push({ id, seq, status, udh: udh(m.parts, seq), at: gm.clock });
+    gm.events.push(`SMS ${m.to} ${seq}/${m.parts} ${status}`);
+  }
+  gm.outbox.delete(id);
+}
+const laneDeps = (): SmsLaneDeps => ({
+  api,
+  inject: async (to, text) => {
+    const id = String(gm.nextId++);
+    const plan = gm.plans.get(to)?.shift() ?? "ok";
+    // Unicode concat: 67 chars per part, a single SMS up to 70.
+    gm.outbox.set(id, { to, parts: text.length <= 70 ? 1 : Math.ceil(text.length / 67), plan, left: gm.steps });
+    return id;
+  },
+  gammu: {
+    outboxIds: async () => [...gm.outbox.keys()],
+    sentParts: async (id, since): Promise<SentPart[]> =>
+      gm.sent.filter((x) => x.id === id && x.at >= since.getTime()).map((x) => ({ seq: x.seq, status: x.status, udh: x.udh })),
+    cancel: async (id) => {
+      gm.outbox.delete(id);
+      gm.events.push(`CANCEL ${id}`);
+    },
+    daemonActive: async () => gm.daemon,
+  },
+  statePath: lanePath,
+  now: () => new Date(gm.clock),
+  sleep: async (ms) => {
+    gm.clock += ms;
+    daemonStep();
+  },
+  log: () => {},
+  warn: () => {},
+});
 
 /** A mock modem: records what it got, answers what the test says. */
 function modem(answer: (() => MmsSendResult) | Error) {
@@ -92,19 +180,33 @@ function modem(answer: (() => MmsSendResult) | Error) {
     got,
     send: async (msg: MmsMessage, to: string): Promise<MmsSendResult> => {
       got.push({ to, subject: msg.subject, bytes: await readFile(msg.imagePath) });
+      // mms-send: ~90 s with gammu-smsd STOPPED (no daemonStep while it runs).
+      gm.clock += 90_000;
+      gm.events.push(`MMS ${to}`);
       if (answer instanceof Error) throw answer;
       return answer();
     },
   };
 }
-const tick = (m: ReturnType<typeof modem>) =>
-  runMmsRelayOnce({
-    api,
-    send: m.send,
-    errorDetail: (e) => (e as Error).message,
-    journalPath,
-    log: () => {},
-  });
+const relayDeps = (send: ReturnType<typeof modem>["send"], a: typeof api = api) => ({
+  api: a,
+  send,
+  errorDetail: (e: unknown) => (e as Error).message,
+  journalPath,
+  lane: { ...laneDeps(), api: a },
+  lockPath,
+  budgetMs: 270_000,
+  log: () => {},
+});
+const tick = (m: ReturnType<typeof modem>) => runMmsRelayOnce(relayDeps(m.send));
+async function smsRows() {
+  return db
+    .selectFrom("sms_outbox")
+    .select(["id", "to_phone", "status", "attempts", "last_error"])
+    .where("body", "like", `${SMS_TAG}%`)
+    .orderBy("created_at", "asc")
+    .execute();
+}
 
 async function row(id: string) {
   return db
@@ -128,6 +230,9 @@ try {
     .where("status", "in", ["queued", "sending"])
     .execute();
   if (foreign.length) throw new Error(`a közös DB mms_outbox-ában ${foreign.length} függő sor áll — az őr nem futhat mellette`);
+  // The SMS pull takes the oldest rows globally too.
+  const foreignSms = await db.selectFrom("sms_outbox").select("id").where("status", "in", ["queued", "sending"]).execute();
+  if (foreignSms.length) throw new Error(`a közös DB sms_outbox-ában ${foreignSms.length} függő sor áll — az őr nem futhat mellette`);
 
   const def = await db
     .insertInto("scraper_definition")
@@ -267,7 +372,7 @@ try {
     };
     let threw = false;
     try {
-      await runMmsRelayOnce({ api: flakyApi, send: m.send, errorDetail: (e) => (e as Error).message, journalPath, log: () => {} });
+      await runMmsRelayOnce(relayDeps(m.send, flakyApi));
     } catch {
       threw = true;
     }
@@ -341,11 +446,194 @@ try {
     say(ok.length === 1 && ok[0]!.id === ins.id, "⑫ 19:29-kor ugyanez a sor kimegy", JSON.stringify(ok.map((m) => m.id)));
     await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
   }
+
+  // ════ THE MODEM LANE (ADR-XXXX) ════════════════════════════════════════════
+  const smsAlerts: string[] = [];
+  setSmsRelayDeps({
+    alert: async (subject) => {
+      smsAlerts.push(subject);
+    },
+  });
+  const OWNER = "+36305161631";
+  // A real-shaped companion SMS: Unicode, 3 parts, the LINK in the last one.
+  const pairText = (who: string): string =>
+    `${SMS_TAG}${who}: elkészítettük az Ön szállásának honlap-látványtervét, a képet MMS-ben küldtük. ` +
+    `Itt nézheti meg teljes méretben, mobilon is: https://citoviso.com/p/mrc-${who}`;
+  const phoneOf = new Map<string, string>();
+  onAfterSent = async (prospectId) => {
+    const to = phoneOf.get(prospectId);
+    if (!to) return;
+    // sendPairSmsHalf → the lead's SMS; copyOutreachSms → the owner's copy (ADR pilot copy).
+    await db.insertInto("sms_outbox").values({ to_phone: to, body: pairText(to.slice(-4)) }).execute();
+    await db.insertInto("sms_outbox").values({ to_phone: OWNER, body: pairText(`masolat-${to.slice(-4)}`) }).execute();
+  };
+  const pairMms = async (tag: string, to: string) => {
+    const pid = await mkProspect(tag);
+    phoneOf.set(pid, to);
+    const q = await sendMms({ to, imagePath: jpegPath, subject: `Lane ${tag}`, prospectId: pid });
+    return q.messageId!;
+  };
+  const okModem = () => modem(() => ({ ok: true, messageId: "LANE", provider: "cli" }));
+  const idx = (prefix: string): number[] => gm.events.flatMap((e, i) => (e.startsWith(prefix) ? [i] : []));
+
+  // ── ⑬ a pair is one unit ───────────────────────────────────────────────
+  {
+    const A = "+36301110001";
+    const B = "+36301110002";
+    gm.events.length = 0;
+    gm.steps = 2;
+    await pairMms("la", A);
+    await pairMms("lb", B);
+    const t1 = await tick(okModem());
+    const afterT1 = await smsRows();
+    say(t1.pulled === 1 && t1.pairSettled === true, "⑬ 1. tick: EGY MMS, és a kísérő SMS-ek ugyanebben a tickben igazoltan kimentek", JSON.stringify(t1));
+    say(
+      afterT1.length === 2 && afterT1.every((r) => r.status === "sent"),
+      "⑬ a lead SMS-e ÉS a tulaj-másolat 'sent' — gammu sentitems alapján",
+      JSON.stringify(afterT1),
+    );
+    await tick(okModem());
+    const mmsB = idx(`MMS ${B}`)[0] ?? -1;
+    const beforeB = gm.events.slice(0, Math.max(mmsB, 0));
+    say(
+      gm.events[0] === `MMS ${A}` &&
+        beforeB.filter((e) => e.startsWith(`SMS ${A} `)).length === 3 &&
+        beforeB.filter((e) => e.startsWith(`SMS ${OWNER} `)).length === 3 &&
+        beforeB.every((e) => !e.includes("SendingError")),
+      "⑬ sorrend: MMS A → A SMS-ének MINDHÁROM része (+ másolat) → csak utána MMS B",
+      JSON.stringify(gm.events),
+    );
+    await db.deleteFrom("sms_outbox").where("body", "like", `${SMS_TAG}%`).execute();
+  }
+
+  // ── ⑭ the 2026-10-06 defect: the link SMS still in gammu when the tick ends ──
+  {
+    const C = "+36301110003";
+    const D = "+36301110004";
+    gm.events.length = 0;
+    gm.steps = 50; // 250 s per message: longer than what one tick has left after the MMS
+    await pairMms("lc", C);
+    await pairMms("ld", D);
+    const t1 = await tick(okModem());
+    const r1 = await smsRows();
+    say(t1.pulled === 1 && t1.pairSettled === false, "⑭ a tick végén C kísérő SMS-e még a gammu outboxában", JSON.stringify(t1));
+    say(r1.length >= 1 && r1.every((r) => r.status === "sending"), "⑭ amíg a gammu nem küldte ki, az sms_outbox NEM 'sent' (nincs hamis zöld)", JSON.stringify(r1));
+    const m2 = okModem();
+    const t2 = await tick(m2);
+    say(t2.heldBack === "lane" && t2.pulled === 0 && m2.got.length === 0, "⑭ a következő tick D MMS-ét NEM indítja, amíg C SMS-e úton van", JSON.stringify(t2));
+    for (let i = 0; i < 6 && !idx(`MMS ${D}`).length; i++) await tick(okModem());
+    const mmsD = idx(`MMS ${D}`)[0] ?? -1;
+    const lastC = Math.max(...idx(`SMS ${C}`), ...idx(`SMS ${OWNER}`).filter((i) => i < (mmsD < 0 ? 1e9 : mmsD)));
+    say(mmsD > lastC && idx(`SMS ${C}`).length === 3, "⑭ D MMS-e csak C SMS-ének utolsó (linkes) része UTÁN megy ki", JSON.stringify(gm.events));
+    say((await smsRows()).filter((r) => r.to_phone === C).every((r) => r.status === "sent"), "⑭ C SMS-e a kiküldés igazolása után 'sent'");
+    gm.steps = 2;
+    for (let i = 0; i < 3 && gm.outbox.size; i++) await tick(okModem()); // D's SMS out
+    await db.deleteFrom("sms_outbox").where("body", "like", `${SMS_TAG}%`).execute();
+  }
+
+  // ── ⑮ errorbox → ok:false, retried, 3× → failed + one alert ────────────
+  {
+    const E = "+36301110005";
+    const F = "+36301110006";
+    gm.events.length = 0;
+    gm.plans.set(E, ["error", "error", "error"]);
+    gm.plans.set(F, ["error", "ok"]);
+    await pairMms("le", E);
+    await tick(okModem());
+    const e = (await smsRows()).find((r) => r.to_phone === E);
+    say(
+      !!e && e.status === "failed" && e.attempts === SMS_MAX_ATTEMPTS && /SendingError/.test(e.last_error ?? ""),
+      "⑮ a SendingError-os kísérő SMS újrapróbálva, a 3. után 'failed' — SOHA nem 'sent'",
+      JSON.stringify(e),
+    );
+    say(smsAlerts.length === 1 && /kísérlet után sem ment ki/.test(smsAlerts[0] ?? ""), "⑮ a végleges SMS-bukásra PONTOSAN egy riasztás", JSON.stringify(smsAlerts));
+    await pairMms("lf", F);
+    await tick(okModem());
+    const f = (await smsRows()).find((r) => r.to_phone === F);
+    say(!!f && f.status === "sent" && f.attempts === 2, "⑮ egyszeri errorbox után az újrapróba igazoltan kiment → 'sent' (2. kísérlet)", JSON.stringify(f));
+    say(smsAlerts.length === 1, "⑮ a sikeres újrapróbára nincs riasztás");
+    await db.deleteFrom("sms_outbox").where("body", "like", `${SMS_TAG}%`).execute();
+  }
+
+  // ── ⑯ stuck in gammu's outbox → cancelled + failed; UDH part total ──────
+  {
+    const cancelled: string[] = [];
+    let inOutbox = true;
+    const store = {
+      outboxIds: async () => (inOutbox ? ["77"] : []),
+      sentParts: async () => [] as SentPart[],
+      cancel: async (id: string) => {
+        cancelled.push(id);
+        inOutbox = false;
+      },
+      daemonActive: async () => true,
+    };
+    const t0 = new Date("2026-10-06T10:00:00Z");
+    const f = { smsId: "s", gammuId: "77", to: PHONE, injectedAt: t0.toISOString() };
+    const early = await gammuVerdict(store, f, new Date(t0.getTime() + LANE_SMS_TIMEOUT_MS - 1000));
+    say(early.state === "pending" && cancelled.length === 0, "⑯ időkorlát előtt: még úton (pending), nincs törlés");
+    const late = await gammuVerdict(store, f, new Date(t0.getTime() + LANE_SMS_TIMEOUT_MS + 1000));
+    say(late.state === "failed" && cancelled[0] === "77", "⑯ 8 perc után az outboxból TÖRÖLVE és bukottnak ítélve (a 10 perces újrasorolás előtt)", JSON.stringify(late));
+    say(partTotal("050003E60401") === 4 && partTotal("") === 1 && partTotal("060804A1B20302") === 3, "⑯ a concat-UDH-ból a részek száma helyes (8 és 16 bites ref)");
+    // Missing part: 2 of 3 in sentitems, gone from the outbox.
+    const missing = await gammuVerdict(
+      {
+        ...store,
+        outboxIds: async () => [],
+        sentParts: async () => [
+          { seq: 1, status: "SendingOK", udh: "050003A70301" },
+          { seq: 2, status: "SendingOK", udh: "050003A70302" },
+        ],
+      },
+      f,
+      t0,
+    );
+    say(missing.state === "failed" && /hiányzó rész 3\/3/.test((missing as { error: string }).error), "⑯ hiányzó (linkes) utolsó rész = bukás", JSON.stringify(missing));
+  }
+
+  // ── ⑰ foreign outbox message / stopped daemon hold the MMS back ─────────
+  {
+    const img = await sharp({ create: { width: 64, height: 64, channels: 3, background: { r: 10, g: 120, b: 200 } } }).jpeg().toBuffer();
+    const ins = await db.insertInto("mms_outbox").values({ to_phone: PHONE, subject: "Teszt 17", image: img }).returning("id").executeTakeFirstOrThrow();
+    gm.outbox.set("legacy-1", { to: "+36309999999", parts: 1, plan: "stuck", left: 1 });
+    const m1 = okModem();
+    const t1 = await tick(m1);
+    say(t1.heldBack === "lane" && m1.got.length === 0 && (await row(ins.id)).status === "queued", "⑰ idegen üzenet a gammu outboxában → MMS NEM indul (a sor 'queued' marad)", JSON.stringify(t1));
+    gm.outbox.delete("legacy-1");
+    gm.daemon = false;
+    const m2 = okModem();
+    const t2 = await tick(m2);
+    say(t2.heldBack === "lane" && m2.got.length === 0, "⑰ leállt gammu-smsd → MMS NEM indul", JSON.stringify(t2));
+    gm.daemon = true;
+    const m3 = okModem();
+    await tick(m3);
+    say(m3.got.length === 1 && (await row(ins.id)).status === "sent", "⑰ üres sávon az MMS kimegy");
+    await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
+  }
+
+  // ── ⑱ the lane lock ───────────────────────────────────────────────────
+  {
+    await writeFile(lockPath, String(process.ppid)); // a live process
+    const t1 = await tick(okModem());
+    say(t1.heldBack === "lock", "⑱ élő zártulajdonos → a tick kimarad", JSON.stringify(t1));
+    await writeFile(lockPath, "4194303"); // above pid_max on a default kernel — dead
+    const t2 = await tick(okModem());
+    let lockGone = false;
+    try {
+      await readFile(lockPath);
+    } catch {
+      lockGone = true;
+    }
+    say(t2.heldBack === undefined && lockGone, "⑱ halott tulajdonos zárját átveszi, és a tick végén elengedi", JSON.stringify(t2));
+  }
 } catch (e) {
   failed++;
   console.error(`  ❌ az őr nem futott végig: ${(e as Error).stack ?? e}`);
 } finally {
   setMmsRelayDeps(null);
+  setSmsRelayDeps(null);
+  await db.deleteFrom("sms_outbox").where("body", "like", `${SMS_TAG}%`).execute();
+  await db.deleteFrom("mms_outbox").where("subject", "=", "Teszt 17").where("prospect_id", "is", null).execute();
   await db.deleteFrom("mms_outbox").where("subject", "in", ["Teszt 4", "PNG", "Teszt 12"]).where("prospect_id", "is", null).execute();
   if (ids.leadId) {
     await db.deleteFrom("prospect").where("lead_id", "=", ids.leadId).execute(); // cascades mms_outbox
@@ -360,5 +648,5 @@ if (failed) {
   console.error(`\n⛔ mms-relay-check: ${failed} ellenőrzés bukott.`);
   process.exit(1);
 }
-console.log("\n✅ mms-relay-check: az MMS sorból a modemre megy, az ack zárja a párt, a bukás és az ismeretlen kimenet szól.");
+console.log("\n✅ mms-relay-check: az MMS sorból a modemre megy, az ack zárja a párt, a kísérő SMS igazoltan kimegy a következő MMS előtt, a bukás és az ismeretlen kimenet szól.");
 process.exit(0);

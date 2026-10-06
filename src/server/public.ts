@@ -3672,64 +3672,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // callable service on the dev box. Two-phase: pull marks 'sending' (a relay
   // crash re-queues after 10 min), ack settles sent/failed. Bearer-secret auth,
   // constant-time compare; no secret configured → the endpoints do not exist.
+  // The logic lives in src/sms/relayQueue.ts (ADR-XXXX: the guard drives it in-process).
   if (req.method === "POST" && pathname === "/api/sms-relay/pull") {
     if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
-    // Stale 'sending' rows (a relay that died mid-batch) go back to the queue.
-    await db
-      .updateTable("sms_outbox")
-      .set({ status: "queued" })
-      .where("status", "=", "sending")
-      .where("pulled_at", "<", new Date(Date.now() - 10 * 60_000))
-      .execute();
-    const batch = await db
-      .selectFrom("sms_outbox")
-      .select(["id", "to_phone", "body"])
-      .where("status", "=", "queued")
-      .orderBy("created_at", "asc")
-      .limit(10)
-      .execute();
-    if (batch.length) {
-      await db
-        .updateTable("sms_outbox")
-        .set((eb) => ({
-          status: "sending" as const,
-          pulled_at: new Date(),
-          attempts: eb("attempts", "+", 1),
-        }))
-        .where("id", "in", batch.map((b) => b.id))
-        .execute();
-    }
-    return sendJson(res, 200, { messages: batch });
+    const { pullSms } = await import("../sms/relayQueue.js");
+    return sendJson(res, 200, { messages: await pullSms() });
   }
   if (req.method === "POST" && pathname === "/api/sms-relay/ack") {
     if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
     const b = await readJsonBody(req);
-    const results = Array.isArray(b.results) ? b.results : [];
-    for (const r of results) {
-      const id = String((r as { id?: unknown }).id ?? "");
-      const ok = (r as { ok?: unknown }).ok === true;
-      const error = String((r as { error?: unknown }).error ?? "").slice(0, 500) || null;
-      if (!id) continue;
-      if (ok) {
-        await db
-          .updateTable("sms_outbox")
-          .set({ status: "sent", sent_at: new Date(), last_error: null })
-          .where("id", "=", id)
-          .execute();
-      } else {
-        // Retry up to 3 attempts, then park as failed (visible, not silent).
-        const row = await db
-          .selectFrom("sms_outbox")
-          .select("attempts")
-          .where("id", "=", id)
-          .executeTakeFirst();
-        await db
-          .updateTable("sms_outbox")
-          .set({ status: (row?.attempts ?? 0) >= 3 ? "failed" : "queued", last_error: error })
-          .where("id", "=", id)
-          .execute();
-      }
-    }
+    const results = (Array.isArray(b.results) ? b.results : []).map((r) => {
+      const o = r as { id?: unknown; ok?: unknown; error?: unknown };
+      return { id: String(o.id ?? ""), ok: o.ok === true, error: o.error ? String(o.error) : undefined };
+    });
+    const { ackSms } = await import("../sms/relayQueue.js");
+    await ackSms(results);
     return sendJson(res, 200, { ok: true });
   }
 

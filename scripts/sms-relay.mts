@@ -11,10 +11,20 @@
 // Two-phase safety lives on the SERVER side (pull marks 'sending', stale rows
 // re-queue): this script may die at any point without losing a message.
 //
+// THE MODEM LANE (ADR-XXXX): with GAMMU_DB_USER/GAMMU_DB_PASSWORD set, a tick holds
+// the lane lock shared with the MMS relay and acks an SMS 'sent' ONLY when gammu's
+// sentitems shows every part sent (src/sms/modemLane.ts) — 2026-10-06 the ack of
+// the bare injection reported link SMS as 'sent' that died in gammu's errorbox.
+// Lock held by the MMS relay → this tick is skipped (the MMS relay drains the SMS
+// queue itself). At most 100 s per tick (the unit's TimeoutStartSec is 120).
+// Without the gammu DB settings: the legacy inject-and-ack path, with a warning.
+//
 //   tsx scripts/sms-relay.mts [--once]
 
+import path from "node:path";
 import { injectViaGammu } from "../src/sms/sender.js";
 import { config } from "../src/config.js";
+import { drainSmsLane, mysqlGammuStore, withLaneLock } from "../src/sms/modemLane.js";
 
 const BASE = (process.env.SMS_RELAY_URL ?? "").replace(/\/$/, "");
 const SECRET = config.smsRelaySecret;
@@ -42,6 +52,29 @@ async function api(pathname: string, body: unknown): Promise<Record<string, unkn
   if (!resp.ok) throw new Error(`${pathname} → HTTP ${resp.status}`);
   return (await resp.json()) as Record<string, unknown>;
 }
+
+if (config.gammuDb.user) {
+  try {
+    const r = await withLaneLock(path.resolve(process.cwd(), "outbox-sms", "modem-lane.lock"), () =>
+      drainSmsLane(
+        {
+          api,
+          inject: injectViaGammu,
+          gammu: mysqlGammuStore(config.gammuDb),
+          statePath: path.resolve(process.cwd(), "outbox-sms", "modem-lane.json"),
+        },
+        new Date(Date.now() + 100_000),
+      ),
+    );
+    if (!r) console.log("[sms-relay] a modem-sáv foglalt (MMS-pár fut) — az MMS-relay viszi az SMS-sort.");
+    else if (r.idle) console.log(`[sms-relay] üres sáv${r.injected ? ` — ${r.injected} SMS igazoltan kiment` : ""}.`);
+    else console.log(`[sms-relay] a sáv még nem üres (${r.waitingFor}) — a következő perc folytatja.`);
+  } catch (err) {
+    console.error(`[sms-relay] hálózati hiba (a következő perc újrapróbálja): ${(err as Error).message}`);
+  }
+  process.exit(0);
+}
+console.error("[sms-relay] ⚠️ GAMMU_DB_USER nincs beállítva — a kiküldés NEM igazolt, az ack csak a befecskendezést jelenti (ADR-XXXX).");
 
 try {
   const pulled = await api("/api/sms-relay/pull", {});
