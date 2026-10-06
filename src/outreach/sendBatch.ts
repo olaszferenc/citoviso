@@ -548,7 +548,7 @@ export async function sendOutreachMail(
     return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };
   }
 
-  // The owner's mock-outreach window (ADR-XXXX): a cold mail goes out only on a weekday
+  // The owner's mock-outreach window (ADR-0334): a cold mail goes out only on a weekday
   // 9–16 Budapest. Below the dryRun line ON PURPOSE, unlike the content gates above:
   // it is a pure function of the clock, not of the prospect — „Mehet ki most?” and the
   // dry-run guards judge the MAIL, and the send itself says when the hour is wrong.

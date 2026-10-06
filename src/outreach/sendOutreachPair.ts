@@ -127,7 +127,7 @@ export async function startOutreachPair(
   // irreversible — the only real defence is not to start.
   const windowBlock = pairWindowBlocks(to);
   if (windowBlock) return { ok: false, message: windowBlock };
-  // The owner's mock-outreach window (ADR-XXXX): a pair STARTS only on a weekday 9–16
+  // The owner's mock-outreach window (ADR-0334): a pair STARTS only on a weekday 9–16
   // Budapest. Refused, not queued for the morning: the operator sees the reason now
   // instead of an MMS waiting overnight in a queue (and the e-mail half has no queue).
   const mockBlock = mockOutreachWindowBlocks(new Date());

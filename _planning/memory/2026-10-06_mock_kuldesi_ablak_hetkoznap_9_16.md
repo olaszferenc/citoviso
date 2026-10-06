@@ -1,4 +1,4 @@
-# 2026-10-06 — Mock-megkeresés csak hétköznap 9–16 (Budapest) — ADR-XXXX
+# 2026-10-06 — Mock-megkeresés csak hétköznap 9–16 (Budapest) — ADR-0334
 
 **Kérés:** tulaj 16:5x „Mockot hétköznap 9-16 között küldjünk!” (SUB, koordinátor cit671edbcb, brief `~/rc-briefs/mock-kuldesi-ablak-hetkoznap-9-16.md`).
 

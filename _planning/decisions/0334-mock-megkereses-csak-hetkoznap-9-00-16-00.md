@@ -1,4 +1,4 @@
-## ADR-XXXX — Mock-megkeresés csak hétköznap 9:00–16:00 (Budapest) között indul; a dev relay a sort áll, a szerver tilt (2026-10-06)
+## ADR-0334 — Mock-megkeresés csak hétköznap 9:00–16:00 (Budapest) között indul; a dev relay a sort áll, a szerver tilt (2026-10-06)
 
 **Dátum:** 2026-10-06 · **Státusz:** elfogadva (SUB, koordinátor: cit671edbcb; brief: `~/rc-briefs/mock-kuldesi-ablak-hetkoznap-9-16.md`) ·
 **Kapcsolódó:** ADR-0288 (minden kimenő ablak Budapest szerint — ennek a kiterjesztése), ADR-0282 (MMS-relay, 19:30-as vágás),

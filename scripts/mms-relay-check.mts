@@ -20,7 +20,7 @@
 //   ⑨ lost ack: the journal keeps the send; the next tick re-acks → 'sent' (even from 'unknown')
 //   ⑩ a non-JPEG image in the row is converted (sharp) before the modem sees it
 //   ⑪ pairJobState reads the queue row: pending → mms, unknown/failed → failed with the reason
-//   ⑫ the pull window (ADR-XXXX, owner 2026-10-06): weekdays 09:00–16:00 Budapest — 15:59
+//   ⑫ the pull window (ADR-0334, owner 2026-10-06): weekdays 09:00–16:00 Budapest — 15:59
 //      pulls, 16:00 does not (the row stays 'queued', no attempt spent), 08:59 and the
 //      weekend do not; DST-correct, the weekday is the Budapest one on a UTC process
 //      (prod), and MOBILE_SEND_WINDOW_OFF does not lift it
@@ -40,7 +40,7 @@
 //      after the queue's 10-min stale re-queue); the concat-UDH part total is read right
 //   ⑰ a foreign message in gammu's outbox, or a stopped gammu-smsd, holds the MMS back
 //   ⑱ the lane lock: a live holder → the tick is skipped; a dead holder's lock is taken over
-//   ⑲ THE DEV RELAY'S OWN WINDOW (ADR-XXXX) — live the moment it lands, whatever the queue's
+//   ⑲ THE DEV RELAY'S OWN WINDOW (ADR-0334) — live the moment it lands, whatever the queue's
 //      host runs: outside weekdays 9–16 it pulls NO MMS (heldBack "window", the row stays
 //      'queued'), but it still drives the queued SMS out (a 15:59 pair's link SMS); inside
 //      the window the same row goes
@@ -413,7 +413,7 @@ try {
     await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
   }
 
-  // ── ⑫ the pull window: weekdays 09:00–16:00 Budapest (ADR-XXXX), TZ-correct ──
+  // ── ⑫ the pull window: weekdays 09:00–16:00 Budapest (ADR-0334), TZ-correct ──
   // It replaced the 08:00–19:30 window of the ADR-0282 addendum for the MMS (every MMS is a
   // mock outreach); the 19:30 stop stays in the code but sits outside the new window.
   {

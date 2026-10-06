@@ -328,7 +328,7 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   const gate = await mobileOutreachGates(prospectId);
   if (!gate.ok) return gate;
   const { d, to } = gate;
-  // A standalone cold SMS is a mock outreach: weekdays 9–16 Budapest only (ADR-XXXX).
+  // A standalone cold SMS is a mock outreach: weekdays 9–16 Budapest only (ADR-0334).
   // Not in mobileOutreachGates — the pair's SMS half shares that, and a pair started at
   // 15:59 must still get its link SMS (and its repair) after 16:00.
   const mockBlock = mockOutreachWindowBlocks(new Date());

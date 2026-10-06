@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-mock-megkereses-csak-hetkoznap-9-16-kozott-indul.md) — Mock-megkeresés csak hétköznap 9:00–16:00 (Budapest) között indul; a dev relay a sort áll, a szerver tilt (2026-10-06)
+- [ADR-0334](decisions/0334-mock-megkereses-csak-hetkoznap-9-00-16-00.md) — Mock-megkeresés csak hétköznap 9:00–16:00 (Budapest) között indul; a dev relay a sort áll, a szerver tilt (2026-10-06)
 - [ADR-0333](decisions/0333-a-rendeles-panel-merese-es-riportja-honnan.md) — A rendelés-panel mérése és riportja: honnan nyílt, meddig jutott, mennyi ideig maradt
 - [ADR-0332](decisions/0332-az-mms-par-egy-egyseg-a-kovetkezo-mms-csak-a.md) — Az MMS-pár egy egység: a következő MMS csak a kísérő SMS igazolt kiküldése után indul (modem-sáv)
 - [ADR-0331](decisions/0331-a-scrape-adagonkent-ment-a-kifizetett-adat-egy.md) — A scrape adagonként ment: a kifizetett adat egy elhaló futás után is megmarad

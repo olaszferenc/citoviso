@@ -16,7 +16,7 @@
 //      Budapest disagree;
 //   ⑦ STRUCTURE: the owner/buyer-facing files read no local getter, every date formatter in
 //      them names the zone, every SQL day/month boundary says AT TIME ZONE;
-//   ⑧ ADR-XXXX the MOCK-OUTREACH window (owner 2026-10-06): weekdays 09:00–16:00 Budapest —
+//   ⑧ ADR-0334 the MOCK-OUTREACH window (owner 2026-10-06): weekdays 09:00–16:00 Budapest —
 //      08:59 shut · 09:00 open · 15:59 open · 16:00 shut, Saturday/Sunday shut all day, the
 //      weekday is the BUDAPEST one around midnight, and MOBILE_SEND_WINDOW_OFF (set on prod)
 //      does not lift it;

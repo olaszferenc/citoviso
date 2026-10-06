@@ -17,7 +17,7 @@
 //      at 19:29 leaves ~30 min for the 60–90 s send + the companion SMS before 20:00.
 // Rows outside the window stay 'queued' and go out in the morning.
 //
-// ADR-XXXX (owner, 2026-10-06: „Mockot hétköznap 9-16 között küldjünk!”): the MOCK
+// ADR-0334 (owner, 2026-10-06: „Mockot hétköznap 9-16 között küldjünk!”): the MOCK
 // OUTREACH itself — the cold e-mail, the MMS+SMS pair, a standalone cold SMS — starts
 // only on a WEEKDAY between 09:00 and 16:00 Budapest (MOCK_OUTREACH_WINDOW). It is
 // narrower than SEND_WINDOW and sits on top of it; the 8–20 window keeps guarding what
@@ -60,7 +60,7 @@ export function minutesUntilWindowCloses(now: Date): number {
   return SEND_WINDOW.toHour * 60 - budapestMinutes(now);
 }
 
-/** When a mock outreach (mail, MMS+SMS pair, cold SMS) may START: Mon–Fri, Budapest wall clock (ADR-XXXX). */
+/** When a mock outreach (mail, MMS+SMS pair, cold SMS) may START: Mon–Fri, Budapest wall clock (ADR-0334). */
 export const MOCK_OUTREACH_WINDOW = { fromHour: 9, toHour: 16, timeZone: SEND_WINDOW_TZ } as const;
 
 const WEEKDAY_HU = ["vasárnap", "hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat"] as const;
@@ -87,7 +87,7 @@ export function mockOutreachWindowBlocks(now: Date): string | null {
 /** Why an MMS may not be pulled at `now`, or null when it may. */
 export function mmsPullBlocks(now: Date): string | null {
   // Every MMS is a mock outreach (the pair's image) — the owner's weekday window first,
-  // and it holds even with MOBILE_SEND_WINDOW_OFF (ADR-XXXX).
+  // and it holds even with MOBILE_SEND_WINDOW_OFF (ADR-0334).
   const mock = mockOutreachWindowBlocks(now);
   if (mock) return mock;
   if (mobileWindowOff()) return null;

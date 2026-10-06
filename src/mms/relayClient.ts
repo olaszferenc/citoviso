@@ -51,7 +51,7 @@ export interface MmsRelayClientDeps {
   lockPath: string;
   /** Wall-clock budget of one tick (the unit's TimeoutStartSec minus a margin). */
   budgetMs: number;
-  /** The instant the mock-outreach window is judged at (ADR-XXXX); default: the lane clock. The guard pins it. */
+  /** The instant the mock-outreach window is judged at (ADR-0334); default: the lane clock. The guard pins it. */
   windowAt?(): Date;
   log?(line: string): void;
 }
@@ -111,7 +111,7 @@ async function runLocked(deps: MmsRelayClientDeps, log: (l: string) => void): Pr
     return { reacked: pending.length, pulled: 0, results: [], heldBack: "lane" };
   }
 
-  // ②b The owner's mock-outreach window (ADR-XXXX): every MMS is a mock outreach, and
+  // ②b The owner's mock-outreach window (ADR-0334): every MMS is a mock outreach, and
   // one goes out only on a weekday 9–16 Budapest. Outside it the queue simply WAITS —
   // nothing is pulled, so nothing is claimed or spent — and the next weekday's 09:00
   // tick starts it. Judged HERE, on the box that owns the modem, so the rule holds the
