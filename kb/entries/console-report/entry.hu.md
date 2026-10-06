@@ -4,7 +4,7 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-10-04
+updated: 2026-10-06
 ---
 
 A Riport két lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
@@ -71,12 +71,12 @@ leadet mutatja.
 
 ## Viselkedés — eszköz, kilépés, miért
 
-![Képernyőkép: a Viselkedés lap telefonon — a hat mutató és az eszköz-panel](assets/hu/behaviour.png)
+![Képernyőkép: a Viselkedés lap telefonon — a hat mutató és a Rendelés-panel eleje](assets/hu/behaviour.png)
 
 A lap tetején hat mutató: **„Medián időtöltés”** (és a p90), **„Medián görgetés”** (és hányan
 értek a lap aljáig), **„Mobilról”** (tablet és asztali arány mellette), **„Ár-panelig jutott”**,
 **„Fizetésnél elakadt”** (rendelt, de nem fizetett) és **„Kimondott ok”** (hány kérdőív-válasz
-érkezett). Alatta a panelek:
+érkezett). Alattuk teljes szélességben a **„Rendelés-panel”** (lásd lent), utána a panelek:
 
 - **„Eszköz”**: mobil / tablet / asztali — hányan nyitották meg ÉS hány százalékuk fizetett
   („fizet: 10,5%”). Ha a mobil hozza a megnyitásokat, de az asztali a fizetéseket, a mobil
@@ -102,6 +102,41 @@ A lap tetején hat mutató: **„Medián időtöltés”** (és a p90), **„Med
 - **„A mikro-kérdőív”**: előnézet — így látja majd a vendég a mock-oldalon az eszkalációs
   ajánlat elvetése után (a gombok itt nem élnek, csak mutatják a kártyát). A válaszok a
   „Kimondott” nézetbe és a kalibrációba folynak be.
+
+## Rendelés-panel — megnyomta-e a gombot, és mi történt benne
+
+![Képernyőkép: a Rendelés-panel telefonon — szűrő, négy mutató, a lépcső és a leadenkénti lista](assets/hu/order-panel.png)
+
+Azt mutatja, hogy a megnyitó megnyomta-e az **„Itt rendelheti meg”** gombot, és a rendelés-panelen
+belül meddig jutott. Egy sor = egy látogatás, amelyben a panelt megnyitotta; aki visszajött és
+újra kinyitotta, több sort ad.
+
+- **Szűrő**: **„Mind”** · **„A gombbal”** · **„Az ajánlatból”** (az eszkalációs ajánlat gombja) ·
+  **„Szél-füllel újra”** (a képernyő szélén maradt fül). A panel minden száma erre számolódik újra;
+  a lap időszak-szűrője ugyanúgy érvényes.
+- **Négy mutató**: **„Megnyomta a gombot”** (hány megnyitó nyomta meg a gombot — ezt a szűrő nem
+  változtatja), **„Panelt megnyitott”** (a „Mind” alatt gomb · ajánlat · fül bontásban),
+  **„Medián idő a panelben”** (és a p90) és **„Rendelés nélkül zárta”** (mellette: ebből hány
+  futott hibába).
+- **„Meddig jutott a panelen belül”**: hat lépcső — **„Megnyitotta”** → **„Tovább”** (a
+  domain-választáshoz) → **„Számlázás”** → **„Elküldte”** → **„Fizetésre ment”** (Barion) →
+  **„Fizetett”**. Minden sávon a szám és az arány a panelt megnyitók közül; jobbra, hányan hagyták
+  ott abba („itt abbahagyta”) — a legtöbbet vesztő lépés száma piros. A „Fizetett” a tényleges
+  fizetésből jön, nem a lead állapotából.
+- **„Mit csinált közben”**: hány látogatásban váltott csomagot, kapcsolt modult, váltott fizetési
+  ciklust, nyitotta meg egy modul leírását, keresett domaint, ellenőrzött saját domaint, vagy
+  csukta össze a panelt. A piros sorok hibák: **„Hibás számlázási adat”** és **„A beküldés nem
+  sikerült”**.
+- **Leadenként**: az összegző mondat alatt a lista, a legfrissebb elöl — Lead · Mikor · Eszköz ·
+  Hogyan · Idő a panelben · Lépések (hat pötty: telített = elérte, zöld = fizetett) · Utolsó lépés
+  (ha hibába futott és nem ment el a rendelés: piros „· hiba”). **A sorra koppintva kibomlik** a
+  panelen belüli idővonal: időpont (Budapest-idő), mit csinált, és a részlet. A lead nevére
+  kattintva a lead **Tevékenység** lapja nyílik, ahol minden esemény ugyanezzel a magyar
+  felirattal olvasható.
+
+Ha az időszakban senki nem nyitotta meg a panelt, ezt írja: „Ebben az időszakban senki nem nyitotta
+meg a rendelés-panelt.” A mérés semmit nem rögzít a saját (`?sajat=1`) megnyitásodnál, a
+leiratkozottnál és a már vásárlónál.
 
 ## Honnan jönnek a számok?
 

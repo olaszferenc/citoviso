@@ -1,4 +1,6 @@
 # MEMORY — Citoviso
+Utolsó frissítés: 2026-10-06 (🛒 **Rendelés-panel mérése + riport** (ADR-XXXX, terv `assets/design-refs/console/rendeles-panel/`, A + B): `panel_open.via` (gomb/ajánlat/fül), `panel_close`, panel-idő; Viselkedés lap „Rendelés-panel” (chip-szűrő, 4 KPI, lépcső, mit csinált közben, leadenkénti idővonal); Tevékenység lap minden eseményre magyar felirattal; KB frissítve; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-06_rendeles_panel_riport.md`)
+
 Utolsó frissítés: 2026-10-06 (🔗 **Saját-aldomain link — zárás landolt**: a session-jegyzet `c0c9035c`-ként IGAZOLTAN FENT; a `help-collapse-check` egyedül és a land alatt is zöld lett (kapu nem változott → korábbi piros ingadozás); NYITOTT: SMS-próba a nagy deploy után; jegyzet `_planning/memory/2026-10-05_lead_sajat_aldomain_link.md`)
 Utolsó frissítés: 2026-10-06 (📲 **MMS-pár egy egység — modem-sáv** (ADR-0332, tulaj: „MMS utána sms és csak utána mehet tovább”): az MMS-relay csak üres sávon húz MMS-t, az ack után maga viszi ki és a gammu `sentitems`-ből IGAZOLJA a kísérő SMS-t (+ tulaj-másolat); `sms_outbox` `sent` csak igazolt kiküldés után, errorbox → újrapróba, 3× → `failed` + riasztás; dev-rész a land után él, az éles riasztás a nagy deployjal; jegyzet `_planning/memory/2026-10-06_mms_par_modem_sav.md`)
 

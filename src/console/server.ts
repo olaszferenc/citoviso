@@ -62,7 +62,7 @@ import {
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
 import { reportFunnelPage, reportBehaviourPage, type ReasonMode } from "./reportViews.js";
-import { addNote, getReportData, REPORT_DIMS, type ReportDays, type ReportDim } from "./reportData.js";
+import { addNote, getReportData, PANEL_FILTERS, REPORT_DIMS, type PanelFilter, type ReportDays, type ReportDim } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
@@ -2136,7 +2136,10 @@ async function handle(
     if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
     const rsRaw = url.searchParams.get("rs") ?? "inf";
     const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";
-    return send(res, 200, reportBehaviourPage(d, rs));
+    // pv = the Rendelés-panel's own chip filter (how the panel was opened); default „Mind”.
+    const pvRaw = url.searchParams.get("pv") ?? "all";
+    const pv: PanelFilter = (PANEL_FILTERS as readonly string[]).includes(pvRaw) ? (pvRaw as PanelFilter) : "all";
+    return send(res, 200, reportBehaviourPage(d, rs, pv));
   }
   // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.
   if (method === "POST" && path === "/report/note") {

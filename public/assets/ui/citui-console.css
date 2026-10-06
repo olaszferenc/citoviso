@@ -3012,3 +3012,88 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-survey__foot { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .rp-survey__btn { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: var(--citui-radius-pill); font: 600 12.5px var(--citui-font-text); border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-ink-brand); opacity: .7; }
 .rp-survey__btn--primary { background: var(--citui-navy-900); border-color: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+
+/* ═══ RIPORT — Rendelés-panel (frozen plan: assets/design-refs/console/rendeles-panel/, A + B) ═══
+   One hue (link-ink) + the ghost gray; red only for the step losing the most and for errors;
+   green only for „Fizetett”. No JS: the chips are links, a lead row is a <details>. The list
+   is a table on a desk (one grid per row, header row aligned) and a card on a phone. */
+.rp-op h3 { margin: 14px 0 6px; font: 700 10.5px/1.2 var(--citui-font-text); letter-spacing: .05em; text-transform: uppercase; color: var(--citui-muted); }
+.rp-op .rp-op__k { margin: 10px 0 4px; }
+/* phone: four chips must fit one row in a ~326 px panel; if a narrower screen still wraps them,
+   the group reads as a box, not a broken pill */
+.rp-op .rp-chips { flex-wrap: wrap; border-radius: 16px; }
+.rp-op .rp-chips a { white-space: nowrap; padding: 7px 8px; }
+.rp-op__empty { margin: 10px 0 0; }
+.rp-op__split { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.rp-op__fun { display: grid; gap: 7px; margin: 4px 0; }
+.rp-op__row { display: grid; grid-template-columns: 104px 1fr 76px; gap: 10px; align-items: center; cursor: default; }
+.rp-op__lab { font-size: 12.5px; font-weight: 600; line-height: 1.2; }
+.rp-op__lab small { display: block; font-weight: 500; color: var(--citui-muted); font-size: 11px; }
+.rp-op__row .rp-bar__n { white-space: nowrap; }
+/* inside a fill the count takes the PANEL colour: white on the light theme's dark fill, dark on the dark theme's light fill */
+/* the count carries the fill's colour as its own background: invisible on the fill, and the
+   contrast scan measures the colour the text really sits on (not the gray track under the fill) */
+.rp-op__row .rp-bar__n:not(.rp-bar__n--out) { color: var(--citui-panel); background: var(--citui-link-ink); left: 0; padding: 0 8px; border-radius: 4px 0 0 4px; }
+.rp-op__row:hover .rp-bar { outline: 2px solid var(--citui-cyan-500); outline-offset: 1px; }
+.rp-op__drop { font-size: 11.5px; text-align: right; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--citui-muted); }
+.rp-op__drop b { display: block; font-size: 12.5px; color: var(--citui-ink); }
+.rp-op__drop--hot b { color: var(--citui-bad-ink); }
+.rp-op__acts td { padding: 6px 4px; }
+.rp-op__acts td.num { font-weight: 600; white-space: nowrap; }
+.rp-op__warn td:first-child { color: var(--citui-bad-ink); font-weight: 600; }
+.rp-op__sum { font-size: 12.5px; margin: 16px 0 10px; }
+.rp-op__list { display: grid; gap: 8px; }
+.rp-op__lead { border: 1px solid var(--citui-line); border-radius: 10px; background: var(--citui-panel); }
+.rp-op__lead > summary { list-style: none; cursor: pointer; }
+.rp-op__lead > summary::-webkit-details-marker { display: none; }
+.rp-op__lead > summary:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 10px; }
+/* phone card: name + when, then dots · last step · time · device · route */
+.rp-op__r { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 10px 12px; font-size: 12px; color: var(--citui-muted); font-variant-numeric: tabular-nums; }
+.rp-op__c--lead { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 600; }
+.rp-op__c--lead a { color: var(--citui-link-ink); }
+.rp-op__c--when { margin-left: auto; white-space: nowrap; }
+.rp-op__br { flex-basis: 100%; height: 0; }
+.rp-op__list > .rp-op__r--h { display: none; }
+.rp-op__c--dots { order: 1; }
+.rp-op__c--last { order: 2; }
+.rp-op__c--sec { order: 3; }
+.rp-op__c--dev { order: 4; }
+.rp-op__c--via { order: 5; }
+.rp-op__c--sec::before, .rp-op__c--dev::before, .rp-op__c--via::before { content: "· "; }
+.rp-op__dots { display: inline-flex; gap: 3px; align-items: center; white-space: nowrap; vertical-align: -1px; }
+.rp-op__dots i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--citui-link-ink); display: inline-block; box-sizing: border-box; }
+.rp-op__dots i.f { background: var(--citui-link-ink); }
+.rp-op__dots i.paid { background: var(--citui-ok); border-color: var(--citui-ok); }
+.rp-op__tl { list-style: none; margin: 0; padding: 4px 12px 10px; font-size: 12.5px; border-top: 1px solid var(--citui-line); background: var(--citui-surface); border-radius: 0 0 10px 10px; }
+.rp-op__tl li { display: grid; grid-template-columns: 62px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px dotted var(--citui-line); }
+.rp-op__tl li:last-child { border-bottom: 0; }
+.rp-op__tl time { color: var(--citui-muted); font-variant-numeric: tabular-nums; }
+.rp-op__tl small { color: var(--citui-muted); }
+.rp-op__tl li.strong span { font-weight: 700; }
+.rp-op__tl li.bad span { color: var(--citui-bad-ink); font-weight: 600; }
+.rp-op__tl li.mut span { color: var(--citui-muted); }
+.rp-op__legend .rp-op__dots i { margin: 0; width: 10px; height: 10px; vertical-align: 0; }
+@container (min-width: 720px) {
+  .rp-op .rp-op__k { grid-template-columns: repeat(4, 1fr); }
+  .rp-op .rp-chips { border-radius: var(--citui-radius-pill); }
+  .rp-op .rp-chips a { padding: 7px 12px; }
+  .rp-op__split { grid-template-columns: 3fr 2fr; }
+  .rp-op__row { grid-template-columns: 170px 1fr 120px; }
+  .rp-op__drop b { display: inline; margin-right: 4px; }
+  /* desk table: the header and every summary share one column grid */
+  .rp-op__list { gap: 0; }
+  .rp-op__r, .rp-op__list > .rp-op__r--h { display: grid; grid-template-columns: minmax(150px, 1.6fr) 92px 70px 112px 112px 90px minmax(120px, 1fr); gap: 8px; align-items: center; padding: 8px 6px; }
+  .rp-op__r--h { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--citui-muted); font-weight: 700; padding: 6px; border-bottom: 1px solid var(--citui-line); white-space: nowrap; }
+  .rp-op__lead { border: 0; border-bottom: 1px solid var(--citui-line); border-radius: 0; }
+  .rp-op__lead > summary:hover { background: var(--citui-surface); }
+  .rp-op__r { font-size: 12.5px; color: var(--citui-ink); }
+  .rp-op__c--lead { font-size: 12.5px; }
+  .rp-op__c--when { margin-left: 0; }
+  .rp-op__br { display: none; }
+  .rp-op__c--dev, .rp-op__c--via, .rp-op__c--sec, .rp-op__c--dots, .rp-op__c--last { order: 0; }
+  .rp-op__c--sec::before, .rp-op__c--dev::before, .rp-op__c--via::before { content: none; }
+  .rp-op__tl { border-radius: 0; padding: 6px 12px 12px; }
+}
+
+/* lead Tevékenység page: error events in the bad TEXT token (README rendeles-panel ⑩) */
+.con tr.ev-bad td:nth-child(2) { color: var(--citui-bad-ink); font-weight: 600; }

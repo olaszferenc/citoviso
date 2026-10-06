@@ -121,6 +121,13 @@
   var checkoutStep = function () {
     return null;
   };
+  // Order panel time (riport: rendeles-panel README ③): wall-clock seconds of the
+  // CURRENT open stint, 0 while the panel is closed. Set by open(), reset by
+  // collapse()/close(); dwell_end reads it without resetting.
+  var panelOpenedAt = 0;
+  function panelSeconds() {
+    return panelOpenedAt ? Math.round((Date.now() - panelOpenedAt) / 1000) : 0;
+  }
   if (TRACK) {
     ["scroll", "wheel", "touchstart", "pointerdown", "keydown"].forEach(function (ev) {
       window.addEventListener(ev, registerView, { passive: true, once: true });
@@ -165,7 +172,12 @@
     // WHERE the visit ended — the last section seen and, with the panel open, the
     // checkout step — which is what the report's exit map reads.
     window.addEventListener("pagehide", function () {
-      track("dwell_end", { seconds: dwell, last_section: lastSection, last_step: checkoutStep() });
+      track("dwell_end", {
+        seconds: dwell,
+        last_section: lastSection,
+        last_step: checkoutStep(),
+        panel_seconds: panelSeconds(),
+      });
     });
     // ADR-0322 ②: section visibility — each section ONCE per visit, at 50 % in view.
     // A section = the hero, every top-level `data-cit-module` hook and every template
@@ -3452,14 +3464,17 @@
   // selection restored above — re-check the links once the page has settled.
   window.addEventListener("load", syncNavLinks);
 
-  function open() {
+  // `via` = where the panel was opened from (rendeles-panel README ①): "pill" = the
+  // order button, "esc" = the escalation offer's button, "tab" = the edge tab.
+  function open(via) {
     revealSamples(); // first open = the "all-in" reveal (full package visible)
     panel.classList.add("cit-cfg-open");
     panel.classList.add("cit-cfg-seen"); // the edge tab lives from now on
     panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
-    track("panel_open", {});
+    track("panel_open", { via: via === "esc" || via === "tab" ? via : "pill" });
+    if (!panelOpenedAt) panelOpenedAt = Date.now();
     sectionSeen("panel", SEC_TAIL);
     // The body only has measurable geometry once the panel is on stage.
     setTimeout(syncMoreCue, 340);
@@ -3477,7 +3492,8 @@
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
-    track("panel_collapse", {});
+    track("panel_collapse", { seconds: panelSeconds() });
+    panelOpenedAt = 0;
   }
   function close() {
     panel.classList.remove("cit-cfg-open");
@@ -3486,13 +3502,18 @@
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
+    // The X reset the tab: measured apart from the collapse (README ②).
+    if (panelOpenedAt) track("panel_close", { seconds: panelSeconds() });
+    panelOpenedAt = 0;
   }
-  launch.addEventListener("click", open);
+  launch.addEventListener("click", function () {
+    open("pill");
+  });
   scrim.addEventListener("click", collapse);
   panel.querySelector(".cit-cfg-close").addEventListener("click", close);
   panel.querySelector(".cit-cfg-handle").addEventListener("click", function () {
     if (panel.classList.contains("cit-cfg-open")) collapse();
-    else open();
+    else open("tab");
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && panel.classList.contains("cit-cfg-open")) collapse();
@@ -3936,7 +3957,7 @@
     card.querySelector(".cit-cfg-escgo").addEventListener("click", function () {
       track("escalation_cta", {});
       hide();
-      open();
+      open("esc");
     });
     veil.addEventListener("click", hide);
     document.body.appendChild(veil);

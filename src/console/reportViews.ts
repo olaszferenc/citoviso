@@ -8,7 +8,8 @@
 // everywhere except the device panel (3 classes, direct-labelled). Every chart has its
 // number next to it, so colour never carries meaning alone (dataviz rule + README ⑥).
 
-import { esc, helpLink, layout } from "./views.js";
+import { esc, eventDetail, eventLabel, EVENT_BAD, EVENT_STRONG, helpLink, layout } from "./views.js";
+import { APP_TZ, partsIn } from "../text/zoneTime.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { SKINS } from "../engine/skins.js";
@@ -21,6 +22,11 @@ import {
   type Device,
   type ExitSection,
   type Hypothesis,
+  PANEL_FILTERS,
+  summarizePanel,
+  type PanelAct,
+  type PanelFilter,
+  type PanelSession,
   type ReportData,
   type ReportDim,
   type ReportDays,
@@ -351,6 +357,174 @@ function behaviourKpis(d: ReportData, lang: string): string {
   );
 }
 
+// ── Rendelés-panel (frozen plan: assets/design-refs/console/rendeles-panel/, A + B) ──
+const PANEL_VIA_LABEL = (lang: string): Readonly<Record<PanelFilter, string>> => ({
+  all: T(lang, "Mind"),
+  pill: T(lang, "A gombbal"),
+  esc: T(lang, "Az ajánlatból"),
+  tab: T(lang, "Szél-füllel újra"),
+});
+/** Lower-case route names for the list's „Hogyan” column. */
+const PANEL_VIA_SHORT = (lang: string): Readonly<Record<"pill" | "esc" | "tab", string>> => ({
+  pill: T(lang, "a gombbal"),
+  esc: T(lang, "az ajánlatból"),
+  tab: T(lang, "szél-füllel újra"),
+});
+const PANEL_STEPS = (lang: string): readonly { t: string; s: string }[] => [
+  { t: T(lang, "Megnyitotta"), s: T(lang, "„Itt rendelheti meg” / ajánlat / fül") },
+  { t: T(lang, "Tovább"), s: T(lang, "1. lépés után, a domainhez") },
+  { t: T(lang, "Számlázás"), s: T(lang, "számlázási adatok lépés") },
+  { t: T(lang, "Elküldte"), s: T(lang, "megrendelés beküldve") },
+  { t: T(lang, "Fizetésre ment"), s: T(lang, "átirányítva a Barionra") },
+  { t: T(lang, "Fizetett"), s: T(lang, "a fizetés beérkezett") },
+];
+const PANEL_ACT_LABEL = (lang: string): Readonly<Record<PanelAct, string>> => ({
+  preset: T(lang, "Csomagot váltott"),
+  module: T(lang, "Modult be-/kikapcsolt"),
+  period: T(lang, "Fizetési ciklust váltott (havi/éves)"),
+  info: T(lang, "Megnyitotta egy modul leírását"),
+  domain: T(lang, "Domaint keresett / választott"),
+  own_domain: T(lang, "Saját domaint ellenőrzött"),
+  collapse: T(lang, "Összecsukta a panelt (visszajött a gomb)"),
+  billing_invalid: T(lang, "Hibás számlázási adat"),
+  order_send_failed: T(lang, "A beküldés nem sikerült"),
+});
+/** Events the panel timeline leaves out: page-level noise, not something done in the panel. */
+const PANEL_TL_SKIP: readonly string[] = ["scroll", "dwell", "section_seen", "open"];
+
+const pad2 = (n: number): string => String(n).padStart(2, "0");
+/** "MM-DD HH:MM", Budapest time. */
+const whenLabel = (d: Date): string => {
+  const z = partsIn(d, APP_TZ);
+  return `${pad2(z.month)}-${pad2(z.day)} ${pad2(z.hour)}:${pad2(z.minute)}`;
+};
+/** "HH:MM:SS", Budapest time. */
+const clockLabel = (d: Date): string => {
+  const z = partsIn(d, APP_TZ);
+  return `${pad2(z.hour)}:${pad2(z.minute)}:${pad2(z.second)}`;
+};
+
+function panelDots(s: PanelSession, lang: string): string {
+  let h = `<span class="rp-op__dots" role="img" aria-label="${esc(T(lang, "{n}. lépésig jutott", { n: s.step }))}">`;
+  for (let i = 1; i <= 6; i++) h += `<i${i <= s.step ? ` class="${s.paid && i === 6 ? "paid" : "f"}"` : ""}></i>`;
+  return `${h}</span>`;
+}
+
+function panelLastStep(s: PanelSession, lang: string): string {
+  const steps = PANEL_STEPS(lang);
+  if (s.paid) return `<span class="rp-pill rp-pill--ok rp-pill--xs">${esc(steps[5]!.t)}</span>`;
+  const label = steps[s.step - 1]!.t;
+  if (s.error && !s.ordered) return `<span class="rp-pill rp-pill--bad rp-pill--xs">${esc(label)} · ${esc(T(lang, "hiba"))}</span>`;
+  return `<span class="rp-pill rp-pill--xs">${esc(label)}</span>`;
+}
+
+function panelTimeline(s: PanelSession, lang: string): string {
+  const rows = s.events
+    .filter((e) => !PANEL_TL_SKIP.includes(e.type))
+    .map((e) => {
+      const at = e.occurredAt instanceof Date ? e.occurredAt : new Date(e.occurredAt);
+      const cls = EVENT_STRONG.includes(e.type) ? "strong" : EVENT_BAD.includes(e.type) ? "bad" : e.type === "dwell_end" || e.type === "panel_collapse" || e.type === "panel_close" ? "mut" : "";
+      const det = eventDetail(e.type, e.payload, lang);
+      return `<li${cls ? ` class="${cls}"` : ""}><time>${esc(clockLabel(at))}</time><span>${esc(eventLabel(e.type, e.payload, lang))}${det ? ` <small>${det}</small>` : ""}</span></li>`;
+    });
+  if (s.paid && s.paidAt) rows.push(`<li class="strong"><time>${esc(clockLabel(s.paidAt))}</time><span>${esc(T(lang, "Fizetett"))}${partsIn(s.paidAt, APP_TZ).day !== partsIn(s.startedAt, APP_TZ).day ? ` <small>${esc(whenLabel(s.paidAt))}</small>` : ""}</span></li>`);
+  return `<ul class="rp-op__tl">${rows.join("")}</ul>`;
+}
+
+function orderPanelPanel(d: ReportData, lang: string, via: PanelFilter, mode: ReasonMode): string {
+  const P = d.behaviour.panel;
+  const sum = summarizePanel(P.sessions, via);
+  const vl = PANEL_VIA_LABEL(lang);
+  const vs = PANEL_VIA_SHORT(lang);
+  const dev = DEVICE_LABEL(lang);
+  const steps = PANEL_STEPS(lang);
+  const openers = d.behaviour.openers;
+  const keep = (pv: PanelFilter): Record<string, string> => ({ ...(mode === "inf" ? {} : { rs: mode }), ...(pv === "all" ? {} : { pv }) });
+  const chips = PANEL_FILTERS.map(
+    (f) => `<a href="/report/behaviour${qs(d, keep(f))}"${f === via ? ' class="on" aria-current="true"' : ""}>${esc(vl[f])}</a>`,
+  ).join("");
+  const kpis =
+    `<div class="con-kstrip rp-kstrip rp-op__k">` +
+    kbox(T(lang, "Megnyomta a gombot"), `${P.pressedPill} / ${openers}`, T(lang, "{p} a megnyitókból", { p: pct(P.pressedPill, openers) })) +
+    kbox(
+      T(lang, "Panelt megnyitott"),
+      String(sum.n),
+      via === "all"
+        ? T(lang, "gomb {a} · ajánlat {b} · fül {c}", { a: sum.byVia.pill, b: sum.byVia.esc, c: sum.byVia.tab })
+        : T(lang, "szűrve: {v}", { v: vs[via] }),
+    ) +
+    kbox(T(lang, "Medián idő a panelben"), fmtS(sum.secondsMedian, lang), T(lang, "p90: {v}", { v: fmtS(sum.secondsP90, lang) })) +
+    kbox(T(lang, "Rendelés nélkül zárta"), String(sum.leftWithout), T(lang, "{p} · ebből hibába futott: {e}", { p: pct(sum.leftWithout, sum.n), e: sum.leftWithError })) +
+    `</div>`;
+  const head =
+    `<h2>${esc(T(lang, "Rendelés-panel"))} <span class="rp-q">${esc(T(lang, "— megnyomta-e az „Itt rendelheti meg” gombot, és mi történt benne"))}</span></h2>` +
+    `<div class="rp-chips rp-chips--mb" role="group" aria-label="${esc(T(lang, "Hogyan nyitotta meg"))}">${chips}</div>` +
+    kpis;
+  if (!sum.n) {
+    const empty = via === "all"
+      ? T(lang, "Ebben az időszakban senki nem nyitotta meg a rendelés-panelt.")
+      : T(lang, "Ebben az időszakban senki nem nyitotta meg a rendelés-panelt így: {v}.", { v: vs[via] });
+    return `<div class="panel rp-op">${head}<p class="mut rp-op__empty">${esc(empty)}</p></div>`;
+  }
+
+  // A — the steps inside the panel + what the visitor did meanwhile.
+  const fun = steps
+    .map((st, i) => {
+      const reach = sum.reach[i]!;
+      const w = sum.n ? (reach / sum.n) * 100 : 0;
+      // The count sits inside only on a wide fill — a phone's bar is ~90 px, „4 · 29%” overflows it.
+      const inside = w >= 50;
+      const stop = sum.stopped[i]!;
+      const drop = i < 5
+        ? `<div class="rp-op__drop${i === sum.hottest ? " rp-op__drop--hot" : ""}"><b>${stop}</b>${esc(T(lang, "itt abbahagyta"))}</div>`
+        : `<div class="rp-op__drop"><b class="mut">—</b></div>`;
+      return (
+        `<div class="rp-op__row" title="${esc(T(lang, "{s}: {n} munkamenet ({p})", { s: st.t, n: reach, p: pct(reach, sum.n) }))}">` +
+        `<div class="rp-op__lab">${esc(st.t)}<small>${esc(st.s)}</small></div>` +
+        `<div class="rp-bar rp-bar--tall">${bar(w)}<b class="rp-bar__n${inside ? "" : " rp-bar__n--out"}"${inside ? "" : ` style="left:calc(${w.toFixed(1)}% + 8px)"`}>${reach} · ${pct(reach, sum.n)}</b></div>` +
+        drop +
+        `</div>`
+      );
+    })
+    .join("");
+  const al = PANEL_ACT_LABEL(lang);
+  const acts = (Object.keys(al) as PanelAct[])
+    .map((a) => `<tr${a === "billing_invalid" || a === "order_send_failed" ? ' class="rp-op__warn"' : ""}><td>${esc(al[a])}</td><td class="num">${esc(T(lang, "{n} fő", { n: sum.acts[a] }))}</td></tr>`)
+    .join("");
+  const partA =
+    `<div class="rp-op__split"><div><h3>${esc(T(lang, "Meddig jutott a panelen belül"))}</h3><div class="rp-op__fun">${fun}</div>` +
+    `<p class="mut small rp-note">${esc(T(lang, "A sáv = hányan értek el ide (a panelt megnyitók közül). Jobbra: hányan hagyták itt abba — a legtöbbet vesztő lépés piros."))}</p></div>` +
+    `<div><h3>${esc(T(lang, "Mit csinált közben"))}</h3><table class="rp-tbl rp-op__acts"><tbody>${acts}</tbody></table>` +
+    `<p class="mut small rp-note">${esc(T(lang, "Egy lead több sort is ad. Piros = hiba, amibe belefutott."))}</p></div></div>`;
+
+  // B — per lead: one <details> per session (no JS), a table row on a desk, a card on a phone.
+  const hdr =
+    `<div class="rp-op__r rp-op__r--h" aria-hidden="true"><span>${esc(T(lang, "Lead"))}</span><span>${esc(T(lang, "Mikor"))}</span><span>${esc(T(lang, "Eszköz"))}</span><span>${esc(T(lang, "Hogyan"))}</span><span>${esc(T(lang, "Idő a panelben"))}</span><span>${esc(T(lang, "Lépések"))}</span><span>${esc(T(lang, "Utolsó lépés"))}</span></div>`;
+  const list = sum.sessions
+    .map(
+      (s) =>
+        `<details class="rp-op__lead"><summary class="rp-op__r">` +
+        `<span class="rp-op__c rp-op__c--lead"><a href="/prospect/${esc(s.prospectId)}/activity">${esc(s.leadName)}</a></span>` +
+        `<span class="rp-op__c rp-op__c--when">${esc(whenLabel(s.startedAt))}</span>` +
+        `<span class="rp-op__br" aria-hidden="true"></span>` +
+        `<span class="rp-op__c rp-op__c--dev">${esc(dev[s.device])}</span>` +
+        `<span class="rp-op__c rp-op__c--via">${esc(s.vias.map((v) => vs[v]).join(", "))}</span>` +
+        `<span class="rp-op__c rp-op__c--sec">${esc(fmtS(s.seconds, lang))}</span>` +
+        `<span class="rp-op__c rp-op__c--dots">${panelDots(s, lang)}</span>` +
+        `<span class="rp-op__c rp-op__c--last">${panelLastStep(s, lang)}</span>` +
+        `</summary>${panelTimeline(s, lang)}</details>`,
+    )
+    .join("");
+  const sentence = via === "all"
+    ? T(lang, "{n} lead nyitotta meg a panelt · {o} elküldte a rendelést · {p} fizetett. Sorra kattintva: mi történt a panelben.", { n: sum.n, o: sum.submitted, p: sum.paid })
+    : T(lang, "{n} lead nyitotta meg a panelt ({v}) · {o} elküldte a rendelést · {p} fizetett. Sorra kattintva: mi történt a panelben.", { n: sum.n, v: vs[via], o: sum.submitted, p: sum.paid });
+  const legend =
+    `<div class="rp-legend rp-op__legend"><span><span class="rp-op__dots"><i class="f"></i></span> ${esc(T(lang, "elérte"))}</span><span><span class="rp-op__dots"><i></i></span> ${esc(T(lang, "nem érte el"))}</span><span><span class="rp-op__dots"><i class="paid"></i></span> ${esc(T(lang, "fizetett"))}</span>` +
+    `<span>${esc(T(lang, "Lépések: {s}", { s: steps.map((x) => x.t).join(" · ") }))}</span></div>`;
+  const partB = `<p class="rp-op__sum">${esc(sentence)}</p><div class="rp-op__list">${hdr}${list}</div>${legend}`;
+  return `<div class="panel rp-op">${head}${partA}${partB}</div>`;
+}
+
 function devicePanel(d: ReportData, lang: string): string {
   const b = d.behaviour;
   const lab = DEVICE_LABEL(lang);
@@ -392,13 +566,13 @@ function exitMapPanel(d: ReportData, lang: string): string {
   );
 }
 
-function reasonsPanel(d: ReportData, lang: string, mode: ReasonMode): string {
+function reasonsPanel(d: ReportData, lang: string, mode: ReasonMode, via: PanelFilter): string {
   const b = d.behaviour;
   const rl = REASON_LABEL(lang);
   const sl = STATED_LABEL(lang);
   const nSaid = b.stated.reduce((s, r) => s + r.count, 0);
   const chips = (["inf", "said", "both"] as const)
-    .map((m) => `<a href="/report/behaviour${qs(d, { rs: m })}"${m === mode ? ' class="on"' : ""}>${esc(m === "inf" ? T(lang, "Következtetett") : m === "said" ? T(lang, "Kimondott") : T(lang, "Egymás mellett"))}</a>`)
+    .map((m) => `<a href="/report/behaviour${qs(d, via === "all" ? { rs: m } : { rs: m, pv: via })}"${m === mode ? ' class="on"' : ""}>${esc(m === "inf" ? T(lang, "Következtetett") : m === "said" ? T(lang, "Kimondott") : T(lang, "Egymás mellett"))}</a>`)
     .join("");
   const rowR = (label: string, v: number, base: number, said: boolean, extra = ""): string =>
     `<div class="rp-rr"><div class="rp-rr__l"><b>${esc(label)}</b><div class="rp-bar">${bar(base ? (v / base) * 100 : 0, said ? "rp-said" : "")}</div></div><div class="rp-rr__v">${v} <small>${pct(v, base)}</small>${extra}</div></div>`;
@@ -503,12 +677,13 @@ function surveyPreview(lang: string): string {
   );
 }
 
-export function reportBehaviourPage(d: ReportData, mode: ReasonMode): string {
+export function reportBehaviourPage(d: ReportData, mode: ReasonMode, via: PanelFilter = "all"): string {
   const lang = consoleLang();
   const body =
     behaviourKpis(d, lang) +
+    orderPanelPanel(d, lang, via, mode) +
     `<div class="rp-grid2">${devicePanel(d, lang)}${exitMapPanel(d, lang)}</div>` +
-    `<div class="rp-grid2">${reasonsPanel(d, lang, mode)}${calibrationPanel(d, lang)}</div>` +
+    `<div class="rp-grid2">${reasonsPanel(d, lang, mode, via)}${calibrationPanel(d, lang)}</div>` +
     `<div class="rp-grid2">${buyersPanel(d, lang)}${heatPanel(d, lang)}</div>` +
     surveyPreview(lang);
   return shell(d, "/report/behaviour", body, lang);

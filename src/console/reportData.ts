@@ -182,6 +182,69 @@ export interface BuyerProfile {
   readonly mobileShare: number;
 }
 
+/** Where the order panel was opened from (`panel_open.via`; legacy, via-less opens = "pill"). */
+export type PanelVia = "pill" | "esc" | "tab";
+export const PANEL_VIAS: readonly PanelVia[] = ["pill", "esc", "tab"];
+/** The Rendelés-panel chip filter (`pv` query param). */
+export type PanelFilter = "all" | PanelVia;
+export const PANEL_FILTERS: readonly PanelFilter[] = ["all", "pill", "esc", "tab"];
+/** What the visitor did inside the panel — the „Mit csinált közben” rows, in display order. */
+export const PANEL_ACTS = ["preset", "module", "period", "info", "domain", "own_domain", "collapse", "billing_invalid", "order_send_failed"] as const;
+export type PanelAct = (typeof PANEL_ACTS)[number];
+/** Error events inside the panel (an error after the last submit means the order did not go out). */
+export const PANEL_ERROR_EVENTS: readonly string[] = ["billing_invalid", "order_send_failed", "module_dependency_unmet"];
+
+/**
+ * One panel session = one human visit (mock_view) of a SENT prospect in range in which the
+ * order panel was opened at least once (README ⑨). A lead who came back gives several rows.
+ */
+export interface PanelSession {
+  readonly visitId: string;
+  readonly prospectId: string;
+  readonly leadName: string;
+  /** The visit's start. */
+  readonly startedAt: Date;
+  /** The first `panel_open` of the visit. */
+  readonly openedAt: Date;
+  readonly device: Device;
+  readonly vias: readonly PanelVia[];
+  /** Seconds spent with the panel open (sum of the stints). */
+  readonly seconds: number;
+  /** Highest step reached: 1 opened · 2 Tovább · 3 Számlázás · 4 Elküldte · 5 Fizetésre ment · 6 Fizetett. */
+  readonly step: 1 | 2 | 3 | 4 | 5 | 6;
+  /** The order went out in this session (redirect, or a submit not followed by an error). */
+  readonly ordered: boolean;
+  readonly paid: boolean;
+  readonly paidAt: Date | null;
+  /** Any error event (billing_invalid · order_send_failed · module_dependency_unmet). */
+  readonly error: boolean;
+  readonly acts: readonly PanelAct[];
+  /** The visit's events from the first `panel_open` on (the expanded timeline). */
+  readonly events: readonly RawEvent[];
+}
+
+/** Every number of the Rendelés-panel, for one chip filter. */
+export interface PanelSummary {
+  readonly sessions: readonly PanelSession[];
+  readonly n: number;
+  /** Sessions per opening route (a session can count under more than one). */
+  readonly byVia: Readonly<Record<PanelVia, number>>;
+  readonly secondsMedian: number;
+  readonly secondsP90: number;
+  /** Closed without an order and without paying. */
+  readonly leftWithout: number;
+  readonly leftWithError: number;
+  /** reach[k-1] = sessions that reached step k (k = 1…6). */
+  readonly reach: readonly number[];
+  /** stopped[k-1] = sessions whose highest step is k (k < 6; stopped[5] is always 0). */
+  readonly stopped: readonly number[];
+  /** Index of the step losing the most sessions; -1 when nobody stopped. */
+  readonly hottest: number;
+  readonly acts: Readonly<Record<PanelAct, number>>;
+  readonly submitted: number;
+  readonly paid: number;
+}
+
 export interface ReportData {
   readonly days: ReportDays;
   readonly dim: ReportDim;
@@ -226,6 +289,12 @@ export interface ReportData {
     readonly deepBuyers: BuyerProfile;
     /** 7 × 17 (Mon…Sun × 07…23 h) open counts, Budapest time. */
     readonly heat: readonly (readonly number[])[];
+    /** The Rendelés-panel (README rendeles-panel ④–⑨): sessions newest first + the pill KPI. */
+    readonly panel: {
+      readonly sessions: readonly PanelSession[];
+      /** Openers with at least one `panel_open` via the „Itt rendelheti meg” pill — never chip-filtered. */
+      readonly pressedPill: number;
+    };
   };
   readonly targets: Readonly<Record<Hypothesis["key"], number>>;
 }
@@ -597,6 +666,143 @@ function buyerProfile(ps: readonly ProspectFacts[]): BuyerProfile {
   };
 }
 
+// ── the Rendelés-panel (assets/design-refs/console/rendeles-panel/README.md) ────
+
+const ms = (v: string | Date): number => (v instanceof Date ? v.getTime() : new Date(v).getTime());
+const viaOf = (payload: unknown): PanelVia => {
+  const v = (payload as Record<string, unknown> | null | undefined)?.via;
+  return v === "esc" || v === "tab" ? v : "pill";
+};
+const ACT_OF: Readonly<Record<string, PanelAct>> = {
+  preset_select: "preset",
+  module_add: "module",
+  module_remove: "module",
+  period_select: "period",
+  module_info: "info",
+  domain_pick: "domain",
+  domain_select: "domain",
+  own_domain_check: "own_domain",
+  own_domain_pick: "own_domain",
+  panel_collapse: "collapse",
+  billing_invalid: "billing_invalid",
+  order_send_failed: "order_send_failed",
+};
+const STEP_OF: Readonly<Record<string, 2 | 3 | 4 | 5>> = {
+  checkout_step: 2,
+  billing_step_open: 3,
+  order_intent_submitted: 4,
+  checkout_redirect: 5,
+};
+
+/** Fold one visit into a panel session; null when the panel was never opened in it. */
+export function panelSessionOf(p: Pick<ProspectFacts, "id" | "leadName" | "paidAt">, v: Visit): PanelSession | null {
+  // Stable sort by time — the DB already orders, synthetic fixtures may not.
+  const evs = v.events.map((e, i) => ({ e, t: ms(e.occurredAt), i })).sort((a, b) => a.t - b.t || a.i - b.i);
+  const first = evs.findIndex((x) => x.e.type === "panel_open");
+  if (first < 0) return null;
+  const vias = new Set<PanelVia>();
+  const acts = new Set<PanelAct>();
+  let step = 1;
+  let seconds = 0;
+  let openAt: number | null = null;
+  let error = false;
+  let redirected = false;
+  let lastSubmit = -1;
+  let lastError = -1;
+  const close = (t: number, reported: unknown): void => {
+    if (openAt === null) return;
+    seconds += typeof reported === "number" && Number.isFinite(reported) ? Math.max(0, reported) : Math.max(0, (t - openAt) / 1000);
+    openAt = null;
+  };
+  for (let k = first; k < evs.length; k++) {
+    const { e, t } = evs[k]!;
+    const pl = (e.payload ?? {}) as Record<string, unknown>;
+    if (e.type === "panel_open") {
+      vias.add(viaOf(e.payload));
+      if (openAt === null) openAt = t;
+    } else if (e.type === "panel_collapse" || e.type === "panel_close") {
+      close(t, pl.seconds);
+    } else if (e.type === "dwell_end") {
+      close(t, pl.panel_seconds);
+    }
+    const s = STEP_OF[e.type];
+    if (s && s > step) step = s;
+    if (e.type === "checkout_redirect") redirected = true;
+    if (e.type === "order_intent_submitted") lastSubmit = k;
+    if (PANEL_ERROR_EVENTS.includes(e.type)) {
+      error = true;
+      lastError = k;
+    }
+    const a = ACT_OF[e.type];
+    if (a) acts.add(a);
+  }
+  close(evs[evs.length - 1]!.t, undefined);
+  const ordered = redirected || (lastSubmit >= 0 && lastError < lastSubmit);
+  return {
+    visitId: v.id,
+    prospectId: p.id,
+    leadName: p.leadName,
+    startedAt: v.startedAt,
+    openedAt: new Date(evs[first]!.t),
+    device: v.device,
+    vias: PANEL_VIAS.filter((x) => vias.has(x)),
+    seconds: Math.round(seconds),
+    step: step as PanelSession["step"],
+    ordered,
+    paid: false,
+    paidAt: null,
+    error,
+    acts: PANEL_ACTS.filter((x) => acts.has(x)),
+    events: evs.slice(first).map((x) => x.e),
+  };
+}
+
+/**
+ * Every panel session of the given prospects, newest first. „Fizetett” (step 6) comes from
+ * the PAYMENT table (ProspectFacts.paidAt): the lead paid at/after the visit started, and
+ * that visit reached at least „Elküldte” — the latest such visit before the payment owns it,
+ * so one payment never counts twice when a lead submitted in two visits.
+ */
+export function panelSessions(ps: readonly ProspectFacts[]): PanelSession[] {
+  const out: PanelSession[] = [];
+  for (const p of ps) {
+    const own = p.visits.map((v) => panelSessionOf(p, v)).filter((s): s is PanelSession => s !== null);
+    const paidAt = p.paidAt;
+    const payer = paidAt
+      ? own.filter((s) => s.step >= 4 && s.startedAt.getTime() <= paidAt.getTime()).sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0]
+      : undefined;
+    for (const s of own) out.push(s === payer ? { ...s, step: 6, paid: true, paidAt } : s);
+  }
+  return out.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+}
+
+/** The panel's numbers for one chip filter — pure, the view computes nothing itself. */
+export function summarizePanel(all: readonly PanelSession[], via: PanelFilter): PanelSummary {
+  const sessions = via === "all" ? all : all.filter((s) => s.vias.includes(via));
+  const n = sessions.length;
+  const secs = sessions.map((s) => s.seconds);
+  const left = sessions.filter((s) => !s.ordered && !s.paid);
+  const reach = [1, 2, 3, 4, 5, 6].map((k) => sessions.filter((s) => s.step >= k).length);
+  const stopped = [1, 2, 3, 4, 5, 6].map((k) => (k < 6 ? sessions.filter((s) => s.step === k).length : 0));
+  const mx = Math.max(0, ...stopped);
+  const acts = Object.fromEntries(PANEL_ACTS.map((a) => [a, sessions.filter((s) => s.acts.includes(a)).length])) as Record<PanelAct, number>;
+  return {
+    sessions,
+    n,
+    byVia: { pill: all.filter((s) => s.vias.includes("pill")).length, esc: all.filter((s) => s.vias.includes("esc")).length, tab: all.filter((s) => s.vias.includes("tab")).length },
+    secondsMedian: median(secs),
+    secondsP90: median(secs, 0.9),
+    leftWithout: left.length,
+    leftWithError: left.filter((s) => s.error).length,
+    reach,
+    stopped,
+    hottest: mx > 0 ? stopped.indexOf(mx) : -1,
+    acts,
+    submitted: sessions.filter((s) => s.step >= 4).length,
+    paid: sessions.filter((s) => s.paid).length,
+  };
+}
+
 /** Everything both pages render from, for one range + one breakdown dimension. */
 export async function getReportData(days: ReportDays, dim: ReportDim, now = new Date()): Promise<ReportData> {
   const [all, targets, notes] = await Promise.all([loadProspectFacts(), loadTargets(), loadNotes()]);
@@ -799,6 +1005,10 @@ export function foldReport(
       fastBuyers: buyerProfile(fast),
       deepBuyers: buyerProfile(deep),
       heat,
+      panel: {
+        sessions: panelSessions(inRange),
+        pressedPill: openers.filter((p) => p.visits.some((v) => v.events.some((e) => e.type === "panel_open" && viaOf(e.payload) === "pill"))).length,
+      },
     },
     targets,
   };

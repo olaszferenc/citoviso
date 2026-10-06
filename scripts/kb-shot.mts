@@ -1962,6 +1962,43 @@ const rpVisit = (id: string, at: Date, device: Visit["device"], deep: boolean, p
   events.push({ type: "dwell_end", payload: { seconds: deep ? 240 : 8 }, occurredAt: new Date(at.getTime() + (deep ? 240_000 : 8_000)) });
   return { id, startedAt: at, device, dwellSeconds: deep ? 240 : 8, maxScroll: deep ? 100 : 25, moduleTouched: deep, presetChanges: deep ? 1 : 0, moduleChanges: deep ? 2 : 0, panelOpened: panel, lastSection: last, events };
 };
+// Rendelés-panel (README rendeles-panel ④–⑨): a panel visit gets a DETERMINISTIC in-panel
+// path from the prospect index — NO rnd() here, that would shift every other fixture value.
+// Ordered prospects submit (and go to Barion); the rest stop at a step picked by i.
+const rpPanel = (v: Visit, i: number, ordered: boolean): Visit => {
+  const k = v.events.findIndex((e) => e.type === "panel_open");
+  if (k < 0) return v;
+  const t0 = new Date(v.events[k]!.occurredAt).getTime();
+  const at = (s: number): Date => new Date(t0 + s * 1000);
+  const via = i % 7 === 3 ? "esc" : i % 7 === 5 ? "tab" : "pill";
+  const reach = ordered ? 5 : [1, 2, 1, 3, 2, 1, 3, 1, 2][i % 9]!;
+  const ev: { type: string; payload: Record<string, unknown>; occurredAt: Date }[] = [{ type: "panel_open", payload: { via }, occurredAt: at(0) }];
+  let s = 0;
+  const push = (type: string, payload: Record<string, unknown>, dt: number): void => {
+    s += dt;
+    ev.push({ type, payload, occurredAt: at(s) });
+  };
+  if (i % 3 === 0) push("module_info", { module: "booking" }, 9);
+  if (i % 4 === 1) push("preset_select", { preset: "alap" }, 14);
+  if (i % 2 === 0) push("module_add", { module: "booking" }, 11);
+  if (i % 5 === 2) push("period_select", { period: "annual" }, 8);
+  if (reach >= 2) {
+    push("checkout_step", {}, 12);
+    if (i % 2 === 1) push("domain_pick", { domain: `mintavendeghaz${i + 1}.hu` }, 20);
+    if (i % 6 === 4) push("own_domain_check", {}, 10);
+  }
+  if (reach >= 3) {
+    push("billing_step_open", {}, 15);
+    if (i % 4 === 3) push("billing_invalid", { fields: "buyer_zip" }, 25);
+  }
+  if (reach >= 4) push("order_intent_submitted", { modules: 3, period: "annual" }, 30);
+  if (reach >= 5) push("checkout_redirect", { period: "annual" }, 3);
+  if (reach < 4 && i % 2 === 1) push("panel_collapse", { seconds: s + 6 }, 6);
+  else push("dwell_end", { seconds: v.dwellSeconds, panel_seconds: s + 9 }, 9);
+  // The visit's own panel_open/dwell_end are replaced by the panel path above.
+  const rest = v.events.filter((e, j) => j < k && e.type !== "dwell_end");
+  return { ...v, events: [...rest, ...ev] };
+};
 const rpFacts: ProspectFacts[] = Array.from({ length: 72 }, (_, i) => {
   const sentAt = new Date(rpNow.getTime() - Math.floor(rnd() * 42) * 86_400_000 - 9 * 3_600_000);
   const device = rnd() < 0.62 ? "mobile" : rnd() < 0.2 ? "tablet" : "desktop";
@@ -1974,6 +2011,7 @@ const rpFacts: ProspectFacts[] = Array.from({ length: 72 }, (_, i) => {
   if (openedAt && rnd() < 0.4) visits.push(rpVisit(`v${i}b`, new Date(openedAt.getTime() + 86_400_000), device, deep, deep, deep ? 7 : 3));
   const orderedAt = ordered ? new Date(openedAt!.getTime() + rnd() * 48 * 3_600_000) : null;
   const paidAt = paid ? new Date(orderedAt!.getTime() + rnd() * 6 * 3_600_000) : null;
+  visits.forEach((v, j) => (visits[j] = rpPanel(v, i + j * 4, ordered && j === visits.length - 1)));
   const last = visits[visits.length - 1];
   const verdict = paidAt || !last ? null : inferExitReason(signalsFromEvents(last.events, false));
   return {
@@ -1991,6 +2029,14 @@ await shootConsole(reportFunnelPage(rpData, "2026-10-04"), conOut("console-repor
 await shootConsole(
   reportBehaviourPage(rpData, "inf"),
   path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "behaviour.png"),
+);
+// The Rendelés-panel (README rendeles-panel): the whole panel as an element shot — its list
+// runs far below the fold, and the entry explains every part of it.
+await shootConsole(
+  reportBehaviourPage(rpData, "inf"),
+  path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "order-panel.png"),
+  undefined,
+  ".rp-op",
 );
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.

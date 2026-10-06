@@ -8284,24 +8284,126 @@ export function privacyPage(sender: {
 
 import type { ProspectActivity } from "./data.js";
 
-/** Human labels for the instrumentation event types (06-UI-CONTRACT beacons). */
+/**
+ * Human labels for EVERY instrumentation event type (06-UI-CONTRACT beacons + the
+ * configurator's `track()` calls) — ONE source for the lead's Tevékenység page and the
+ * report's Rendelés-panel timeline (README rendeles-panel ⑩: no raw code on screen).
+ */
 export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
-  open: T(lang, "megnyitotta az oldalt"),
-  scroll: T(lang, "görgetett"),
-  dwell: T(lang, "olvasta az oldalt"),
-  dwell_end: T(lang, "elhagyta az oldalt"),
-  panel_open: T(lang, "megnyitotta a konfigurátort"),
-  module_add: T(lang, "bekapcsolt egy modult"),
-  module_remove: T(lang, "kikapcsolt egy modult"),
-  preset_select: T(lang, "csomagot választott"),
-  period_select: T(lang, "fizetési ciklust váltott"),
-  domain_select: T(lang, "domain-típust választott"),
-  domain_pick: T(lang, "domainnevet választott"),
-  photo_rights_declared: T(lang, "elfogadta a fotó-jog nyilatkozatot"),
+  open: T(lang, "Megnyitotta az oldalt"),
+  scroll: T(lang, "Görgetett"),
+  dwell: T(lang, "Olvasta az oldalt"),
+  dwell_end: T(lang, "Elhagyta az oldalt"),
+  section_seen: T(lang, "Látta az oldal egy szakaszát"),
+  client_error: T(lang, "Hiba a böngészőjében"),
+  panel_open: T(lang, "Megnyomta: „Itt rendelheti meg”"),
+  panel_collapse: T(lang, "Összecsukta a panelt"),
+  panel_close: T(lang, "Bezárta a panelt (X)"),
+  module_add: T(lang, "Bekapcsolt egy modult"),
+  module_remove: T(lang, "Kikapcsolt egy modult"),
+  module_info: T(lang, "Megnézte egy modul leírását"),
+  module_see: T(lang, "Megnézte a modult az oldalon"),
+  module_dependency_unmet: T(lang, "Hiányzó előfeltétel-modul"),
+  preset_select: T(lang, "Csomagot váltott"),
+  preset_info: T(lang, "Megnézte egy csomag tartalmát"),
+  period_select: T(lang, "Fizetési ciklust váltott"),
+  checkout_step: T(lang, "Továbblépett (domain-választás)"),
+  domain_gate_dismiss: T(lang, "Elvetette a saját domain ajánlatát"),
+  domain_select: T(lang, "Domain-típust választott"),
+  domain_pick: T(lang, "Domaint választott"),
+  own_domain_check: T(lang, "Saját domaint ellenőrzött"),
+  own_domain_pick: T(lang, "Saját domaint választott"),
+  photo_rights_declared: T(lang, "Elfogadta a fotó-jog nyilatkozatot"),
+  billing_step_open: T(lang, "Megnyitotta a számlázási adatokat"),
+  buyer_type_select: T(lang, "Vevőtípust választott"),
+  tax_moved_from_address: T(lang, "Az adószámot a címből átvette"),
+  billing_invalid: T(lang, "Hibás számlázási adat"),
   order_intent_submitted: T(lang, "ELKÜLDTE A MEGRENDELÉST"),
-  checkout_redirect: T(lang, "továbbment a fizetéshez"),
-  order_send_failed: T(lang, "a rendelés beküldése NEM sikerült"),
+  order_send_failed: T(lang, "A rendelés beküldése nem sikerült"),
+  checkout_redirect: T(lang, "Továbbment a fizetéshez (Barion)"),
+  escalation_shown: T(lang, "Megjelent neki az eszkalációs ajánlat"),
+  escalation_cta: T(lang, "Rákattintott az eszkalációs ajánlatra"),
+  escalation_dismiss: T(lang, "Elvetette az eszkalációs ajánlatot"),
 });
+
+/** Events shown emphasised (the order went out / to payment). */
+export const EVENT_STRONG: readonly string[] = ["order_intent_submitted", "checkout_redirect"];
+/** Events shown as an error (red token). */
+export const EVENT_BAD: readonly string[] = ["billing_invalid", "order_send_failed", "module_dependency_unmet", "client_error"];
+
+/** The label of one event, with the panel's opening route when it was not the pill. */
+export function eventLabel(type: string, payload: unknown, lang = "hu"): string {
+  const base = EVENT_LABEL(lang)[type] ?? T(lang, "Egyéb esemény");
+  if (type !== "panel_open") return base;
+  const via = (payload as Record<string, unknown> | null | undefined)?.via;
+  if (via === "esc") return `${base} (${T(lang, "az ajánlatból")})`;
+  if (via === "tab") return `${base} (${T(lang, "szél-füllel újra")})`;
+  return base;
+}
+
+const BILLING_FIELD = (lang: string): Readonly<Record<string, string>> => ({
+  buyer_name: T(lang, "név"),
+  buyer_email: T(lang, "e-mail"),
+  buyer_address: T(lang, "cím"),
+  buyer_city: T(lang, "település"),
+  buyer_zip: T(lang, "irányítószám"),
+  buyer_country: T(lang, "ország"),
+  buyer_tax_number: T(lang, "adószám"),
+  buyer_eu_vat_number: T(lang, "közösségi adószám"),
+});
+
+/** The detail column of one event (escaped HTML) — shared by the Tevékenység page and the report. */
+export function eventDetail(type: string, payload: unknown, lang = "hu"): string {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const modLabel = (id: unknown): string => esc(MODULE_CATALOG.find((m) => m.id === id)?.publicLabel ?? String(id ?? ""));
+  const list = (v: unknown, f: (x: string) => string): string =>
+    String(v ?? "")
+      .split(",")
+      .filter(Boolean)
+      .map(f)
+      .join(", ");
+  const period = (v: unknown): string => (v === "annual" ? T(lang, "éves") : T(lang, "havi"));
+  switch (type) {
+    case "scroll":
+      return `${esc(p.pct)}%`;
+    case "dwell":
+    case "dwell_end":
+      return `${esc(p.seconds)} mp`;
+    case "panel_collapse":
+    case "panel_close":
+      return typeof p.seconds === "number" ? esc(T(lang, "{n} mp volt nyitva", { n: Math.round(p.seconds) })) : "";
+    case "module_add":
+    case "module_remove":
+    case "module_info":
+    case "module_see":
+      return typeof p.module === "string" ? modLabel(p.module) : "";
+    case "module_dependency_unmet":
+      return list(p.missing, (x) => modLabel(x));
+    case "preset_select":
+    case "preset_info":
+      return esc(p.preset);
+    case "period_select":
+    case "checkout_redirect":
+      return p.period ? period(p.period) : "";
+    case "domain_select":
+      return p.choice === "custom" ? T(lang, "saját domain") : "citoviso.com aldomain";
+    case "domain_pick":
+    case "own_domain_pick":
+      return esc(p.domain);
+    case "buyer_type_select":
+      return p.buyer_type === "business" ? T(lang, "cég") : T(lang, "magánszemély");
+    case "billing_invalid":
+      return esc(list(p.fields, (x) => BILLING_FIELD(lang)[x] ?? x));
+    case "order_send_failed":
+      return esc(p.reason);
+    case "client_error":
+      return esc(p.msg);
+    case "order_intent_submitted":
+      return `${esc(p.modules)} modul · ${period(p.period)}`;
+    default:
+      return "";
+  }
+}
 
 /** Prospect activity page: sessions + event timeline + derived intent signals. */
 export function prospectActivityPage(a: ProspectActivity): string {
@@ -8310,21 +8412,6 @@ export function prospectActivityPage(a: ProspectActivity): string {
     MODULE_CATALOG.find((m) => m.id === id)?.publicLabel ?? id;
   const hhmm = (iso: string) => esc(iso.slice(11, 19));
   const dmy = (iso: string) => esc(iso.slice(0, 16).replace("T", " "));
-
-  const detail = (e: { type: string; payload: Record<string, unknown> }): string => {
-    const p = e.payload ?? {};
-    if (e.type === "scroll") return `${esc(p.pct)}%`;
-    if (e.type === "dwell" || e.type === "dwell_end") return `${esc(p.seconds)} mp`;
-    if (e.type === "module_add" || e.type === "module_remove")
-      return typeof p.module === "string" ? esc(modLabel(p.module)) : "";
-    if (e.type === "preset_select") return esc(p.preset);
-    if (e.type === "period_select") return p.period === "annual" ? T(lang, "éves") : "havi";
-    if (e.type === "domain_select") return p.choice === "custom" ? T(lang, "saját domain") : "citoviso.com aldomain";
-    if (e.type === "domain_pick") return esc(p.domain);
-    if (e.type === "order_intent_submitted")
-      return `${esc(p.modules)} modul · ${p.period === "annual" ? T(lang, "éves") : "havi"}`;
-    return "";
-  };
 
   const totalEvents = a.sessions.reduce((n, s) => n + s.events.length, 0);
   const bestScroll = a.sessions.reduce((m, s) => Math.max(m, s.maxScroll), 0);
@@ -8366,12 +8453,16 @@ export function prospectActivityPage(a: ProspectActivity): string {
   const sessionBlocks = a.sessions.length
     ? a.sessions
         .map((s, i) => {
+          // section_seen is the exit map's raw input — one row per scrolled-past section
+          // would bury the clicks (README rendeles-panel ⑩).
           const rows = s.events
+            .filter((e) => e.type !== "section_seen")
             .map((e) => {
-              const label = EVENT_LABEL(lang)[e.type] ?? e.type;
-              const d = detail(e);
-              const strong = e.type === "order_intent_submitted" || e.type === "checkout_redirect";
-              return `<tr${strong ? ` style="font-weight:600"` : ""}>
+              const label = eventLabel(e.type, e.payload, lang);
+              const d = eventDetail(e.type, e.payload, lang);
+              const strong = EVENT_STRONG.includes(e.type);
+              const bad = EVENT_BAD.includes(e.type);
+              return `<tr${strong ? ` style="font-weight:600"` : ""}${bad ? ` class="ev-bad"` : ""}>
                 <td class="mut small" style="white-space:nowrap">${hhmm(e.at)}</td>
                 <td>${esc(label)}</td>
                 <td class="small mut">${d}</td></tr>`;

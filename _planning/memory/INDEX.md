@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-06_scrape_adagonkenti_mentes.md](2026-10-06_scrape_adagonkenti_mentes.md) — 2026-10-06 — Scrape: adagonkénti mentés + fizetés nélküli folytatás (ÉLES)
+- [2026-10-06_rendeles_panel_riport.md](2026-10-06_rendeles_panel_riport.md) — 2026-10-06 — Rendelés-panel mérése + riport (A + B) megvalósítva
 - [2026-10-06_mms_par_modem_sav.md](2026-10-06_mms_par_modem_sav.md) — 2026-10-06 — MMS-pár egy egység: modem-sáv (ADR-0332)
 - [2026-10-05_sajat_megnyitas_nem_szamit.md](2026-10-05_sajat_megnyitas_nem_szamit.md) — 2026-10-05 — A tulaj saját mock-megnyitása nem számít (`?sajat=1`)
 - [2026-10-05_poe_szovegkurator.md](2026-10-05_poe_szovegkurator.md) — 2026-10-05 — Poe, a szövegkurátor: kód + konzol + charter + ADR (SUB-lánc, 10 session)

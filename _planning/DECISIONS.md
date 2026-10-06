@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-rendeles-panel-merese-a-riportban.md) — A rendelés-panel mérése és riportja: honnan nyílt, meddig jutott, mennyi ideig maradt
 - [ADR-0332](decisions/0332-az-mms-par-egy-egyseg-a-kovetkezo-mms-csak-a.md) — Az MMS-pár egy egység: a következő MMS csak a kísérő SMS igazolt kiküldése után indul (modem-sáv)
 - [ADR-0331](decisions/0331-a-scrape-adagonkent-ment-a-kifizetett-adat-egy.md) — A scrape adagonként ment: a kifizetett adat egy elhaló futás után is megmarad
 - [ADR-0330](decisions/0330-a-lead-sajat-aldomainje-a-megkereses-linkje.md) — A lead SAJÁT aldomainje a megkeresés linkje (`<címke>.citoviso.com`)
