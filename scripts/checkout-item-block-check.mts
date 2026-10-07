@@ -133,6 +133,12 @@ const REGRESSIONS: Record<string, { from: RegExp; to: string; hits: string }> = 
     to: "if (false) {",
     hits: "⑨",
   },
+  // ⑨ the one-off discount shown as if it were the lasting price
+  "kartya-elso-dij-nelkul": {
+    from: /first\.textContent = tr\("első díj"\);/,
+    to: 'first.textContent = "";',
+    hits: "⑨",
+  },
   // ③④⑦ the box stops following the cycle → stale figures from the other cycle
   "nem-koveti-az-utemet": {
     from: /function syncItemBlock\(\) \{\n    var sub = panel\.querySelector\(".cit-cfg-item-sub"\);\n    if \(!sub\) return;/,
@@ -171,6 +177,10 @@ const STEP1 = `(function () {
       unit: small ? (small.textContent || "").trim() : null,
       amount: num ? Number(num[0].replace(/[^\\d]/g, "")) : null,
       struck: !!struck,
+      first: (function () {
+        var f = pr ? pr.querySelector(".cit-cfg-preset__first") : null;
+        return f && f.offsetParent !== null ? (f.textContent || "").trim() : null;
+      })(),
       pay: payNum ? Number(payNum[0].replace(/[^\\d]/g, "")) : null,
       // ⛔ Overflow is MEASURED: the annual figure is longer than the monthly one,
       // and a price that wraps or clips on a 390px card is a new defect, not a fix.
@@ -361,6 +371,11 @@ async function runAll(regress?: string): Promise<void> {
       const r = (await page.evaluate(READ)) as Read;
       check(r.hasItem, "[ajánlat nélkül] a tétel-doboz ott van");
       check(r.discHidden === true, `[ajánlat nélkül] NINCS kedvezmény-sor (mérve: "${r.discVal}")`);
+      const c0 = (await page.evaluate(STEP1)) as Step1;
+      check(
+        c0.cards.length > 0 && c0.cards.every((c) => !c.struck && c.first === null),
+        `[ajánlat nélkül] ⑨ a kártyákon NINCS áthúzott ár és „első díj” jelölés`,
+      );
       await page.close();
     }
 
@@ -380,7 +395,7 @@ async function runAll(regress?: string): Promise<void> {
 }
 
 
-interface Card { id: string; active: boolean; text: string; unit: string | null; amount: number | null; struck: boolean; pay: number | null; overflow: number | null }
+interface Card { id: string; active: boolean; text: string; unit: string | null; amount: number | null; struck: boolean; first: string | null; pay: number | null; overflow: number | null }
 interface Step1 { cards: Card[]; listPrice: number | null; payPrice: number | null }
 
 /** ⑧ The package cards must carry the SELECTED cycle — and follow the switch. */
@@ -422,6 +437,11 @@ async function checkCards(page: Page, tag: string): Promise<void> {
   check(
     annual.cards.every((c) => c.struck && c.pay !== null && c.amount !== null && c.pay < c.amount),
     `${T} ⑨ ajánlattal MINDEN kártya áthúzott listaár + kedvezményes ár (${annual.cards.map((c) => `${c.amount}→${c.pay}`).join(", ")})`,
+  );
+  // the discount is ONE-OFF (ADR-0088): the card must say whose price it is
+  check(
+    annual.cards.every((c) => c.first === "első díj"),
+    `${T} ⑨ …és kimondja, hogy ez az ELSŐ díj (mérve: ${annual.cards.map((c) => c.first).join(", ")})`,
   );
   check(
     act.pay !== null && act.pay === annual.payPrice,

@@ -3273,6 +3273,14 @@
       var unit = document.createElement("small");
       unit.textContent = period === "annual" ? tr("/év") : tr("/hó");
       slot.appendChild(unit);
+      // The offer is ONE-OFF (ADR-0088): a bare "7 125 Ft/hó" would read as the
+      // lasting price. Owner 2026-10-07: name it on the card too, not only below.
+      if (OFFER && offerPrice(list) < list) {
+        var first = document.createElement("span");
+        first.className = "cit-cfg-preset__first";
+        first.textContent = tr("első díj");
+        slot.appendChild(first);
+      }
     });
   }
 
