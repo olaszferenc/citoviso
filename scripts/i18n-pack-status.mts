@@ -3,6 +3,7 @@
 //   npx tsx scripts/i18n-pack-status.mts --ensure   → also GENERATE the missing entries (AI)
 import { ensureAllLanguagePacks, packCoverage } from "../src/i18n/packs.js";
 import { withAiUsage } from "../src/ai/usage.js";
+import { withTranslationTrigger } from "../src/i18n/spend.js";
 import { db } from "../src/db/client.js";
 
 const ensure = process.argv.includes("--ensure");
@@ -13,7 +14,7 @@ const ensure = process.argv.includes("--ensure");
 // meg: az a HÍVÁSI HELYET ellenőrzi (van-e recordAiUsage), nem azt, fut-e gyűjtő
 // körülötte. A `--ensure` mostantól scope-ban fut, és a végén kiírja, mibe került.
 const { result: rows, usage } = ensure
-  ? await withAiUsage(() => ensureAllLanguagePacks())
+  ? await withAiUsage(() => withTranslationTrigger("cli", () => ensureAllLanguagePacks()))
   : { result: await packCoverage(), usage: null };
 
 if (!rows.length) {

@@ -190,6 +190,14 @@ export const config = {
    * not parse to NaN and silently disable the cap (dailyCap.ts validates it).
    */
   aiDailyCapUsdRaw: env("AI_DAILY_CAP_USD", "20"),
+  /**
+   * Boot-time language-pack top-up (ADR-0036/b self-heal) — the servers' only AI call at
+   * startup. "0" = boot only MEASURES coverage (read-only) and never calls the API.
+   * Dev sets it to 0 in .env (measured 2026-10-07: every land restarts both dev servers,
+   * each re-translating on the shared prod key); prod keeps the default until translation
+   * moves fully into the deploy (GATE 5, ADR-0207).
+   */
+  i18nBootTopup: env("I18N_BOOT_TOPUP", "1") !== "0",
   googleCostProject: env("GOOGLE_COST_PROJECT", "mineralcrm"),
   googleCostReportTo: env("GOOGLE_COST_REPORT_TO"),
   googleCostDailyThresholdUsd: Number(env("GOOGLE_COST_DAILY_THRESHOLD_USD", "20")),

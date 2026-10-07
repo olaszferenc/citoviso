@@ -14,6 +14,7 @@ import { sql } from "kysely";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { ensureKbTranslations, kbCoverage, type KbPackStatus } from "./kbPacks.js";
+import { recordTranslationSpend } from "./spend.js";
 import { DEFAULT_LANG, langName } from "./lang.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -245,6 +246,7 @@ async function translateBatch(lang: string, strings: string[]): Promise<Record<s
       messages: [{ role: "user", content: user }],
     });
     recordAiUsage("translateUiBatch", "claude-opus-4-8", res.usage);
+    await recordTranslationSpend("translateUiBatch", lang, "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
     return block && block.type === "text" ? block.text : null;
   };

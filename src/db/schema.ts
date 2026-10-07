@@ -1288,6 +1288,22 @@ export interface ScrapeCheckpointTable {
   created_at: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+/** 0092: one row per AI translation call (UI-string pack / KB entry) — the translation
+ *  meter outside a mock run (src/i18n/spend.ts). cost_usd NULL = unpriced model. */
+export interface TranslationSpendTable {
+  id: Generated<string>;
+  at: ColumnType<Date, Date | string | undefined, Date | string>;
+  host: string;
+  process: string;
+  trigger: string;
+  step: string;
+  lang: string;
+  model: string;
+  input_tokens: ColumnType<number, number | undefined, number>;
+  output_tokens: ColumnType<number, number | undefined, number>;
+  cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
+}
+
 /** First-party guest reviews — ours to store, moderate and display (0027). */
 export interface SiteReviewTable {
   id: Generated<string>;
@@ -1604,6 +1620,7 @@ export interface Database {
   lead_places_cache: LeadPlacesCacheTable;
   places_detail_cache: PlacesDetailCacheTable;
   scrape_checkpoint: ScrapeCheckpointTable;
+  translation_spend: TranslationSpendTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;
   partner_bank_account: PartnerBankAccountTable;

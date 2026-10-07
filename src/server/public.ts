@@ -4002,8 +4002,13 @@ server.listen(PORT, "0.0.0.0", () => {
 // Skipped under CIT_SHOT=1: a screenshot run must never trigger AI top-ups or DB writes.
 if (process.env.CIT_SHOT !== "1") {
   void (async () => {
-    const { ensureAllLanguagePacks } = await import("../i18n/packs.js");
-    const rows = await ensureAllLanguagePacks();
+    const { ensureAllLanguagePacks, packCoverage } = await import("../i18n/packs.js");
+    const { withTranslationTrigger } = await import("../i18n/spend.js");
+    // I18N_BOOT_TOPUP=0 (dev): measure coverage only — no API call at boot (2026-10-07).
+    if (!config.i18nBootTopup) console.log("[i18n] boot-fordítás KIKAPCSOLVA (I18N_BOOT_TOPUP=0) — csak mérés");
+    const rows = config.i18nBootTopup
+      ? await withTranslationTrigger("boot", () => ensureAllLanguagePacks())
+      : await packCoverage();
     for (const r of rows) {
       const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";
       console.log(

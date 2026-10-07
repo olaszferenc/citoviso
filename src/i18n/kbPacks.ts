@@ -17,6 +17,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { loadKbEntries, makeSnippet, type KbEntry } from "../kb/kb.js";
 import { DEFAULT_LANG, langName } from "./lang.js";
+import { recordTranslationSpend } from "./spend.js";
 
 /** Version fingerprint of the Hungarian source an entry translation derives from. */
 export function kbSourceHash(entry: Pick<KbEntry, "title" | "body">): string {
@@ -110,6 +111,7 @@ async function translateEntry(
     ],
   });
   recordAiUsage("translateKbEntry", "claude-opus-4-8", res.usage);
+  await recordTranslationSpend("translateKbEntry", lang, "claude-opus-4-8", res.usage);
   // ⛔ A BUKÁS OKA NEVEZŐDJÖN MEG. Eddig minden út ugyanabba a `null`-ba futott, és a
   // hívó mindet „integritás-sértés"-nek naplózta — az elvágott választ is. Így a
   // valódi ok (túl kicsi korlát) hónapokig láthatatlan maradt, miközben minden
