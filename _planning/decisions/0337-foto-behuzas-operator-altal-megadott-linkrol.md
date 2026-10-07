@@ -1,4 +1,4 @@
-## ADR-XXXX — Fotó-behúzás operátor által megadott linkről, díj nélkül (új provenance: `website`)
+## ADR-0337 — Fotó-behúzás operátor által megadott linkről, díj nélkül (új provenance: `website`)
 
 **Dátum:** 2026-10-07 · **Döntött:** tulaj („NEM FIZETEK. FEJLESSZÜNK”), megvalósítás: CIT SUB a koordinátor briefjéből
 

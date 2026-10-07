@@ -1,4 +1,4 @@
-# 2026-10-07 — Fotó-behúzás megadott linkről, $0 (ADR-XXXX)
+# 2026-10-07 — Fotó-behúzás megadott linkről, $0 (ADR-0337)
 
 SUB a koordinátor (cita768df48-ed) briefjéből: `~/rc-briefs/foto-link-0dollar-20261007.md`.
 Tulaj: „NEM FIZETEK. FEJLESSZÜNK” — Neo böngészőben megtalálja a portál-adatlapot / saját honlapot,

@@ -2436,7 +2436,7 @@ async function handle(
   }
   // POST /lead/:id/photo-links — attach the photos behind operator-supplied links
   // (portal listing or the business's own site) at $0: the given URLs are read and
-  // nothing else — no web search, no Places (ADR-XXXX, owner 2026-10-07 "NEM FIZETEK").
+  // nothing else — no web search, no Places (ADR-0337, owner 2026-10-07 "NEM FIZETEK").
   // Sits BESIDE rescrape-photos, which stays as it was. A plain form for the browser
   // (flash + #ls-photos), JSON for scripted batches (Accept: application/json).
   const photoLinksMatch = /^\/lead\/([0-9a-f-]{36})\/photo-links$/i.exec(path);
