@@ -460,7 +460,7 @@ function pricingSampleBlock(d: SiteData): string {
  * the "Minta" pill and says the owner ticks the real ones).
  */
 function amenitiesSampleBlock(d: SiteData): string {
-  // ADR-XXXX: the source's own offers first, then the generic types it does not
+  // ADR-0338: the source's own offers first, then the generic types it does not
   // contradict (Partvilla: „Háziállat nem engedélyezett” → no „Kisállat” on the mock).
   // The keys mirror SAMPLE_AMENITY_TYPES; the labels stay literal T() calls for the extractor.
   const generic = [

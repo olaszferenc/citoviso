@@ -1,4 +1,4 @@
-// The mock's SAMPLE blocks, read against the lead's own source (§B.17, ADR-XXXX).
+// The mock's SAMPLE blocks, read against the lead's own source (§B.17, ADR-0338).
 //
 // A sample block is marked "Minta", but its ITEMS still read as statements about the
 // house. Measured 2026-10-07 on the pilot dispatch (four leads held back):

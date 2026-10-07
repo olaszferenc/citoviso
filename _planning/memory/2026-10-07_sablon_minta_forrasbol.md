@@ -1,7 +1,7 @@
 # 2026-10-07 — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
 
 SUB-szál a csapat-koordinátornak (brief: `~/rc-briefs/sablon-mintablokk-forrasbol-20261007.md`,
-átadás: `~/rc-briefs/sablon-mintablokk-forrasbol-atadas-20261007-1735.md`). Döntés: ADR-XXXX.
+átadás: `~/rc-briefs/sablon-mintablokk-forrasbol-atadas-20261007-1735.md`). Döntés: ADR-0338.
 Lokál + land; élesre SEMMI (nagy deploy).
 
 ## Mit javítottunk

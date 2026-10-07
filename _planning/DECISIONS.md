@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-mock-minta-blokkjai-a-forrasbol.md) — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
+- [ADR-0338](decisions/0338-a-mock-minta-blokkjai-a-forrasbol-szolgaltatas.md) — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
 - [ADR-0337](decisions/0337-foto-behuzas-operator-altal-megadott-linkrol.md) — Fotó-behúzás operátor által megadott linkről, díj nélkül (új provenance: `website`)
 - [ADR-0336](decisions/0336-magellan-digitalis-felderito-munkatars-a.md) — Magellan: digitális felderítő munkatárs a Térképen; a scrape fizetős API nélkül, régió-munkalapon át kerül a store-ba
 - [ADR-0335](decisions/0335-szerkeszthetoseg-sav-a-kikuldott-mockon.md) — Szerkeszthetőség-sáv a kiküldött mockon (görgetés után, bezárható)

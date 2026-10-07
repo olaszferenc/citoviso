@@ -270,13 +270,13 @@ export interface SiteData {
   readonly sampleRoomCount?: number;
   /**
    * Unit names the owner's own prose gives („Family apartman”, „Gold apartman”) when the
-   * listing has no structured room list (ADR-XXXX). The mock's sample cards then wear
+   * listing has no structured room list (ADR-0338). The mock's sample cards then wear
    * these names, as many as there are — never numbered cards with an invented count.
    * Mock-only hint: the live page renders only `rooms`.
    */
   readonly sampleRoomNames?: readonly string[];
   /**
-   * The mock's services SAMPLE, filled from the source (ADR-XXXX): the listing's own
+   * The mock's services SAMPLE, filled from the source (ADR-0338): the listing's own
    * offers, strongest first. Mock-only hint — the live page renders `amenities`.
    */
   readonly sampleAmenities?: readonly string[];

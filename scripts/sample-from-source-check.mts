@@ -1,4 +1,4 @@
-// sample-from-source-check — the mock's SAMPLE blocks may not contradict the source (ADR-XXXX).
+// sample-from-source-check — the mock's SAMPLE blocks may not contradict the source (ADR-0338).
 //
 // Why this exists (pilot dispatch 2026-10-07, four leads held back by the dispatcher):
 //   · Partvilla: the services sample said „Kisállat”; the listing says „Háziállat nem engedélyezett”.

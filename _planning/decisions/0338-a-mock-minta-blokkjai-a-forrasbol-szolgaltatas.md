@@ -1,4 +1,4 @@
-## ADR-XXXX — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
+## ADR-0338 — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
 
 **Dátum:** 2026-10-07 · **Döntött:** tulaj (a SUB-brief jóváhagyása, ~16:40), megvalósítás: CIT SUB a koordinátor briefjéből
 

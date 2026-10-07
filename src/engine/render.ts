@@ -714,7 +714,7 @@ export function renderSite(
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
-  // ADR-XXXX: the guest-facing address drops the property's own country („… 8646 Hungary”).
+  // ADR-0338: the guest-facing address drops the property's own country („… 8646 Hungary”).
   if (data.contact.address && data.place?.country) {
     const address = addressWithoutOwnCountry(data.contact.address, data.place.country, data.lang);
     if (address !== data.contact.address) data = { ...data, contact: { ...data.contact, address } };

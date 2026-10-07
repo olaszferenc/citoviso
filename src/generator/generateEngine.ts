@@ -572,7 +572,7 @@ async function generateEngineMockInner(
     // No list, but a stated room count → the sample cards follow that number, so the
     // SHAPE of the property is true even where the names are not known.
     ...(!units.rooms.length && units.count ? { sampleRoomCount: units.count } : {}),
-    // ADR-XXXX: the mock's SAMPLE blocks read against the source. Unit names from the
+    // ADR-0338: the mock's SAMPLE blocks read against the source. Unit names from the
     // owner's prose (Hungarian only — the type word is Hungarian) beat a bare count.
     ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),
     // The services sample: the listing's own offers (Hungarian source labels → Hungarian

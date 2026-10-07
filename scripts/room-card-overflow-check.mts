@@ -477,7 +477,7 @@ async function runMatrix(
     const tpl = TEMPLATES[id]!;
     for (const sc of SCENARIOS) {
       // No room list → the mock draws one card unless the source states a count
-      // (ADR-XXXX); a stated 3 keeps this scenario measuring a multi-card grid.
+      // (ADR-0338); a stated 3 keeps this scenario measuring a multi-card grid.
       const d = sc.rooms ? siteData(sc.photo, sc.rooms) : { ...siteData(sc.photo, sc.rooms), sampleRoomCount: 3 };
       const recipe: Recipe = {
         template: id,

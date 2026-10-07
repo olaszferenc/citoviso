@@ -129,7 +129,7 @@ export function honestStarCount(data: SiteData): number {
 export function sampleRooms(d: SiteData): readonly Room[] {
   // The COUNT follows the source (owner: "szoba egy, ha van szoba kettő, ha van…") — a
   // lead with three rooms must not meet a mock built for a different property.
-  // ADR-XXXX: names the owner's prose gives → that many cards, by those names (Főnix:
+  // ADR-0338: names the owner's prose gives → that many cards, by those names (Főnix:
   // „Family apartman”, „Gold apartman”, not „1.–3. szoba”); a stated count → numbered
   // cards; NOTHING stated → one card for the whole place — the owner's own default
   // (2026-09-08: „az egész szállás a jó alapértelmezés"), never an invented count.

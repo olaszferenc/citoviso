@@ -1,4 +1,4 @@
-// The address as a GUEST reads it: without the property's own country (ADR-XXXX).
+// The address as a GUEST reads it: without the property's own country (ADR-0338).
 //
 // The Places scrape stores addresses in Google's international shape — „Balatonfenyves,
 // Fenyvesi u. 3a, 8646 Hungary” — and the templates printed it verbatim, so a Hungarian

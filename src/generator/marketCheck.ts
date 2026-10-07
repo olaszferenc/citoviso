@@ -339,7 +339,7 @@ export function groupAmenities(raw: readonly string[]): AmenityGroup[] {
 const AREA_ACTIVITY = /roplabda|foci|labda|tenisz|kolcsonz|berles|lovag|hajoz|horgasz|tura/;
 
 /**
- * The mock's services SAMPLE from the listing (ADR-XXXX): one item per RECOGNISED facility
+ * The mock's services SAMPLE from the listing (ADR-0338): one item per RECOGNISED facility
  * kind (the same buckets the curator panel counts), in the given — strongest-first — order.
  * An item no bucket recognises, a refusal, or an area activity stays out: the block says
  * „Amit kínálunk”, so only what the house itself offers may stand there.
