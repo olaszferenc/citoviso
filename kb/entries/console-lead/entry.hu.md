@@ -359,9 +359,12 @@ gombra.
   közepesen biztos, az adatlapot megjegyzi, de a képeit nem teszi ki. A szallas.hu linkjét
   annak nyílt párján (booked.hu) olvassuk.
 - **Saját honlapnál** a rendszer a főoldal és a galéria-oldal képeit gyűjti, és kiszűri a
-  logókat, ikonokat, hirdetéseket és a túl kicsi képeket. A honlapot akkor fogadja el, ha az
-  a leadnél tárolt honlap, vagy ha az oldalon szerepel a szállás neve és a települése. Ezek a
-  képek a rácsban **„saját honlap”** forrással jelennek meg.
+  logókat, ikonokat, hirdetéseket és a túl kicsi képeket. A honlapot három esetben fogadja el:
+  ha az a leadnél tárolt honlap; ha a **domain neve** viseli a szállás nevét, és az oldalon
+  szerepel a szállás települése; vagy ha az oldalon a szállás neve mellett a lead
+  **telefonszáma** is ott áll. Az nem elég, hogy a szállás neve szerepel valahol az oldalon —
+  egy település- vagy gyűjtőoldal több szállást is felsorolhat. Ezek a képek a rácsban
+  **„saját honlap”** forrással jelennek meg.
 - **Az eredményt a lap tetején egy sor mondja meg:** hány fotója volt a leadnek előtte és
   utána, és melyik link miért nem adott képet (például *„az oldal elutasította a gépi
   olvasást”*, *„az oldal nem létezik”*, vagy hogy az oldal nem igazolja a szállás nevét és a
