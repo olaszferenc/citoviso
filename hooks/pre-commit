@@ -2947,7 +2947,7 @@ if [ -f scripts/rating-attribution-check.mts ] && \
   echo "[pre-commit] rating-attribution-check (a Google-értékelés egy szabállyal, ≥ 0,7)…"
   npx tsx scripts/rating-attribution-check.mts >"$GATE_LOG" || gate_failed
 fi
-# VÁLASZOK A MEGKERESÉSEKRE (ADR-XXXX, 2026-10-07): 3 valódi válasz (2 SMS, 1 e-mail) ült a gammu
+# VÁLASZOK A MEGKERESÉSEKRE (ADR: _planning/decisions/*-valaszok-a-megkeresesekre.md, 2026-10-07): 3 valódi válasz (2 SMS, 1 e-mail) ült a gammu
 #     inboxban és a Zoho INBOX-ban, és egyikről sem tudott a rendszer. Az őr a csővezeték mért
 #     csapdáit tartja: csak megkeresett feladó (a modem MineREAL-lel közös), a 10+11-es valódi
 #     gammu-alak (TextDecoded duplázna, a 2. rész csak a Text-ben), Gmail-HU idézetvágás, IMAP FETCH
