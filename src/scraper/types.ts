@@ -159,6 +159,18 @@ export interface QualifiedLead {
     readonly heldPhone?: string;
     readonly heldWebsite?: string;
   };
+  /**
+   * ADR-0336 (Q2): the star rating + review count the Magellan scout READ off the
+   * place's own Google Maps card. The scout opened that exact place (its link is the
+   * lead's identity), so the attribution is certain — no name/distance match is
+   * involved. The generator prints it only when Places gave no attributable rating
+   * (generate.ts resolveGatedPhotos). Never written into lead_places_cache.
+   */
+  readonly mapsRating?: {
+    readonly value: number;
+    readonly count: number;
+    readonly source: "magellan";
+  };
   /** Assessment of the own site (only set for has_own leads after enrichment). */
   readonly assessment?: WebsiteAssessment;
   /** Gathered enrichment material (set after the material measurement pass). */

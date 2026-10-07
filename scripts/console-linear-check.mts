@@ -25,7 +25,7 @@ import { pathToFileURL } from "node:url";
 import { chromium, type Page } from "playwright-core";
 import { config } from "../src/config.js";
 import { runWithConsoleLang, setConsoleNav } from "../src/console/i18nCtx.js";
-import { activeTrail, navLeaves, navTree, type NavNumbers } from "../src/console/nav.js";
+import { activeTrail, findGroup, navLeaves, navTree, type NavNumbers } from "../src/console/nav.js";
 import { dashboardPage, layout, modulePage, type HubData } from "../src/console/views.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -170,8 +170,10 @@ for (const size of SIZES) {
   ok("útvonal: Konzol › CRM", (await page.locator(".con-crumb").innerText()).replace(/\s+/g, " ").trim() === "Konzol CRM");
   ok("a ← látható és egy szinttel feljebb (/) mutat", (await page.locator(".con-back:not(.is-hidden)").count()) === 1 && (await page.locator(".con-back").getAttribute("href")) === "/");
   const navSel = mobile ? "#con-menu" : ".con-nav";
-  ok("CSAK a CRM nyitva, a 7 funkciója látszik", (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 1 && (await page.locator(`${navSel} .con-nav__grp.is-open`).getAttribute("data-grp")) === "crm" && (await page.locator(`${navSel} .con-nav__kids:not([hidden]) .con-nav__sub`).count()) === 7);
-  ok("a CRM widgetje + a CRM 3 figyelmeztetése + a 7 funkció listája", (await page.locator("[data-widget=crm]").count()) === 1 && (await page.locator("[data-widget]").count()) === 1 && (await page.locator("[data-attention] .con-att__row").count()) === 3 && (await page.locator("[data-functions] a").count()) === 7);
+  // The CRM function count comes from the nav registry (a new leaf — e.g. „Felderítés", ADR-0336 — must not redden this).
+  const crmN = findGroup("crm")!.children.length;
+  ok(`CSAK a CRM nyitva, a ${crmN} funkciója látszik`, (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 1 && (await page.locator(`${navSel} .con-nav__grp.is-open`).getAttribute("data-grp")) === "crm" && (await page.locator(`${navSel} .con-nav__kids:not([hidden]) .con-nav__sub`).count()) === crmN);
+  ok(`a CRM widgetje + a CRM 3 figyelmeztetése + a ${crmN} funkció listája`, (await page.locator("[data-widget=crm]").count()) === 1 && (await page.locator("[data-widget]").count()) === 1 && (await page.locator("[data-attention] .con-att__row").count()) === 3 && (await page.locator("[data-functions] a").count()) === crmN);
   ok("a funkció-lista számlálója = a sáv számlálója (600 · 11 · 13/14 eladó)", (await page.locator("[data-functions]").innerText()).includes("600") && (await page.locator("[data-functions]").innerText()).includes("13/14 eladó"));
   // The chevron folds WITHOUT navigating.
   const before = page.url();

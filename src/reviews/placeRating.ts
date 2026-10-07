@@ -139,7 +139,7 @@ export async function savePlaceRating(input: {
  * would silently upgrade the whole call to the Enterprise+Atmosphere price.
  */
 export async function refreshPlaceRating(siteId: string): Promise<boolean> {
-  const apiKey = config.googleMapsApiKey;
+  const apiKey = config.googleMapsGeneratorKey;
   if (!apiKey) return false;
 
   const known = await placeIdForSite(siteId);

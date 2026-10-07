@@ -39,6 +39,8 @@ const FILES = [
   "src/generator/patternBadge.ts",
   // ADR-0323: the mock copy editor (A form + the B bar injected into the mock preview).
   "src/console/copyEditViews.ts",
+  // ADR-0336: the scout worksheet (/scout) — its own view file with its own scoped styles.
+  "src/console/scoutViews.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",
   "src/ui/icons.ts",

@@ -8,6 +8,13 @@
 // dropped by the store-dedup at the end of the run anyway, so enriching it was paid
 // work thrown away (62 and 130 known leads per run on 2026-09-27/28).
 // Guard: scripts/scrape-known-skip-check.mts.
+//
+// SCRAPE_PAID_APIS (ADR-0336, Q7): unless it is "on", every PAID step is skipped or
+// fed an empty key, so the chain costs $0 — Places/Street View get "", the web
+// site search, Google reviews and web-search contact do not run at all, the
+// portal step reads only the listings already tied to the lead (no search), and
+// the broken-site repair only probes the domain root.
+// Guard: scripts/scrape-zero-paid-check.mts.
 
 import { config } from "../config.js";
 import { enrichContact } from "./enrichContact.js";
@@ -29,10 +36,18 @@ export async function enrichLeads(
   region: Region,
   mark: (line: string) => void,
 ): Promise<QualifiedLead[]> {
+  const paid = config.scrapePaidApis;
+  const mapsKey = paid ? config.googleMapsApiKey : "";
+  if (!paid) {
+    mark(
+      "Fizetős API-k KIKAPCSOLVA (SCRAPE_PAID_APIS≠on, ADR-0336): nincs Places, Street View, " +
+        "Google-vélemény és webes keresés — csak az ingyenes lépések futnak.",
+    );
+  }
   mark(
     `\nPer-lead Places lookup (contact + photos for OSM-only leads) — ${base.length} lead…`,
   );
-  const enriched = await enrichPlaces(base, config.googleMapsApiKey);
+  const enriched = await enrichPlaces(base, mapsKey);
   const noSiteBefore = enriched.filter(
     (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
   ).length;
@@ -52,20 +67,25 @@ export async function enrichLeads(
   const stillNone = withPresence.filter(
     (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
   ).length;
-  mark(
-    `Webes honlap-keresés (${webSearchBackend()}): ${stillNone} lead ellenőrzése kereséssel…`,
-  );
-  const withSearch = await enrichSiteSearch(
-    withPresence,
-    config.googleMapsApiKey,
-    config.googleCseId,
-    region,
-  );
+  let withSearch = withPresence;
+  if (paid) {
+    mark(
+      `Webes honlap-keresés (${webSearchBackend()}): ${stillNone} lead ellenőrzése kereséssel…`,
+    );
+    withSearch = await enrichSiteSearch(
+      withPresence,
+      config.googleMapsApiKey,
+      config.googleCseId,
+      region,
+    );
+  } else {
+    mark(`Webes honlap-keresés KIHAGYVA (fizetős): ${stillNone} lead marad a domain-próba ítéletén.`);
+  }
   const ownCount = withSearch.filter(
     (l) => l.websiteStatus === "has_own",
   ).length;
   mark(`Assessing ${ownCount} own websites for outdatedness…`);
-  const assessed = await enrichOutdated(withSearch, region);
+  const assessed = await enrichOutdated(withSearch, region, { webSearch: paid });
   // Portal listings: the only free source of ROOMS, PRICES, AMENITIES and a
   // real description — Places gives none of those. Runs before the material
   // measurement so the portal photos count towards the lead's material.
@@ -76,27 +96,37 @@ export async function enrichLeads(
     `Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal) — ` +
       `${assessed.filter((l) => l.isLead).length} új kontaktálható lead…`,
   );
-  const withPortal = await enrichPortal(assessed, region);
+  const withPortal = await enrichPortal(
+    assessed,
+    region,
+    paid ? {} : { maxSearchLeads: 0 },
+  );
   // Guest voice (ADR-0106): the review TEXTS for the leads we would contact —
   // the only source that already speaks the guest's language. One-off per
   // lead, 30-day freshness, A4-gated by the place id's presence.
-  mark("Vendég-vélemények olvasása (Google Places, ADR-0106)…");
-  const withReviews = await enrichGuestReviews(withPortal, config.googleMapsApiKey);
+  let withReviews = withPortal;
+  if (paid) {
+    mark("Vendég-vélemények olvasása (Google Places, ADR-0106)…");
+    withReviews = await enrichGuestReviews(withPortal, config.googleMapsApiKey);
+  }
   mark(
     "Measuring enrichment material (Places photos, Street View, site images, portal photos)…",
   );
-  const withMaterial = await enrichMaterial(withReviews, config.googleMapsApiKey);
-  if (webSearchBackend() !== "none") {
-    mark(
-      `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,
+  const withMaterial = await enrichMaterial(withReviews, mapsKey);
+  let withWeb = withMaterial;
+  if (paid) {
+    if (webSearchBackend() !== "none") {
+      mark(
+        `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,
+      );
+    }
+    withWeb = await enrichWebSearch(
+      withMaterial,
+      config.googleMapsApiKey,
+      config.googleCseId,
+      region,
     );
   }
-  const withWeb = await enrichWebSearch(
-    withMaterial,
-    config.googleMapsApiKey,
-    config.googleCseId,
-    region,
-  );
   // Geo facets (ADR-0040): no lead leaves without a country. Source tags won
   // upstream; reverse-geocode fills the rest from coordinates; the region's
   // country closes the coordinate-less tail.

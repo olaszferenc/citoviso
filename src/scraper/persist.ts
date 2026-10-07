@@ -234,6 +234,27 @@ export async function storedLeadIdentities(): Promise<LeadIdentity[]> {
 }
 
 /**
+ * The same identities WITH the lead id — for callers that must point at the matched
+ * lead, not only know that one exists (the scout worksheet's „már ismert lead" link,
+ * ADR-0336). Optional box: only leads inside it (a place can only match a lead within
+ * 250 m, so the caller pads its own box by that much).
+ */
+export async function storedLeadIdentitiesWithId(
+  box?: { south: number; west: number; north: number; east: number },
+): Promise<Array<LeadIdentity & { id: string }>> {
+  let q = db.selectFrom("lead").select(["id", "name", "lat", "lng"]);
+  if (box) {
+    q = q
+      .where("lat", ">=", box.south)
+      .where("lat", "<=", box.north)
+      .where("lng", ">=", box.west)
+      .where("lng", "<=", box.east);
+  }
+  const rows = await q.execute();
+  return rows.map((e) => ({ id: e.id, name: e.name, lat: e.lat, lon: e.lng }));
+}
+
+/**
  * Persist the qualified leads and close the run as completed — the one-shot form, for
  * callers that hold the whole set (seed-from-json, the persist guard). The scraper
  * itself saves batch by batch (persistLeadBatch → closeScrapeRun), so a run that dies

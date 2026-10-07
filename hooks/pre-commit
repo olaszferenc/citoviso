@@ -2154,6 +2154,15 @@ if [ -f scripts/scrape-save-as-you-go-check.mts ] && \
   echo "[pre-commit] scrape-save-as-you-go-check (a kifizetett adat egy elhaló futás után is megmarad)…"
   npx tsx scripts/scrape-save-as-you-go-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Zero-cost scrape (ADR-0336, Q7): with SCRAPE_PAID_APIS unset/anything but "on" the scrape pays $0 —
+# the real enrichment chain makes no googleapis / Brave call, the Google Maps source stays out of
+# run.ts's sources, and the console's three paid buttons answer 409. Red control: with "on" the
+# same chain must want to pay (else the guard is blind). Fetch-stubbed child processes, no DB write.
+if [ -f scripts/scrape-zero-paid-check.mts ] && \
+   changed_files | grep -qE '^src/scraper/(run|enrichChain|enrich[A-Za-z]+|reenrichOne|rescrapePhotos)\.ts$|^src/scraper/sources/webSearch\.ts$|^src/config\.ts$|^src/console/server\.ts$|^scripts/scrape-zero-paid-check'; then
+  echo "[pre-commit] scrape-zero-paid-check (kikapcsolt fizetős API-kkal a scrape 0 Ft)…"
+  npx tsx scripts/scrape-zero-paid-check.mts >"$GATE_LOG" || gate_failed
+fi
 # The daily Google API cost report (2026-10-02, the "G part" of the Places-cost brief): price × count, the threshold and the ≥2×
 # highlight, the Budapest day (DST) and the no-data branch (a failed token/Monitoring still mails,
 # saying why). Hermetic (fetch stub, global fetch throws), no DB, no mail.

@@ -105,6 +105,7 @@ import { curatorForm, curatorPill, sourcePackPane } from "./curatorViews.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
+import { config } from "../config.js";
 import { uiLangs } from "../i18n/lang.js";
 import { consoleAi, consoleLang, consoleNav } from "./i18nCtx.js";
 import {
@@ -3926,6 +3927,11 @@ function hostOf(url: string): string {
   }
 }
 
+/** Shown under a paid scrape button while SCRAPE_PAID_APIS is off (ADR-0336, Q7). */
+function paidScrapeOffNote(lang: string): string {
+  return T(lang, "Fizetős lekérés — a fizetős scrape-API-k ki vannak kapcsolva (SCRAPE_PAID_APIS), ezért most nem futtatható.");
+}
+
 /**
  * Re-run the enrichment chain for THIS lead (ADR-0029 follow-up).
  *
@@ -3937,6 +3943,13 @@ function hostOf(url: string): string {
  */
 function reenrichForm(d: LeadDetail): string {
   const lang = consoleLang();
+  // ADR-0336 (Q7): the chain behind this button is paid (Places, web search, reviews).
+  if (!config.scrapePaidApis) {
+    return `<div class="con-reenrich">
+      <button type="button" class="ghost" disabled>${ic("scrape", 15)} ${T(lang, "Adatok újragyűjtése")}</button>
+      <span class="mut small">${paidScrapeOffNote(lang)}</span>
+    </div>`;
+  }
   return `<form method="post" action="/lead/${esc(d.id)}/reenrich" class="con-reenrich"
         onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Újragyűjtés folyamatban…"))}'`)}">
       <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Adatok újragyűjtése")}</button>
@@ -4375,6 +4388,8 @@ function leadPhotosPanel(
     placesLane: T(lang, "Google Places"),
     noPortal: T(lang, "Ehhez a leadhez nincs portál-fotó."),
     fee: T(lang, "fizetős"),
+    // ADR-0336 (Q7): with the paid APIs off the button renders disabled, with this note.
+    paidOff: config.scrapePaidApis ? "" : paidScrapeOffNote(lang),
     ask: T(lang, "Places-fotók lekérése"),
     reask: T(lang, "Places-fotók újrakérése"),
     retry: T(lang, "Újrapróbálom"),
@@ -4449,12 +4464,15 @@ function leadPhotosPanel(
         <input type="hidden" name="url" value="">
         <input type="hidden" name="artifactId" value="${esc(latestArtifactId ?? "")}">
       </form>
-      <form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
+      ${config.scrapePaidApis ? `<form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
         style="margin-top:12px"
         onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Fotók újra-scrapelése folyamatban…"))}'`)}">
         <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Portál-fotók újragyűjtése")}</button>
         <p class="mut small" style="margin:6px 0 0">${T(lang, "Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.")}</p>
-      </form>
+      </form>` : `<div class="con-reenrich" style="margin-top:12px">
+        <button type="button" class="ghost" disabled>${ic("scrape", 15)} ${T(lang, "Portál-fotók újragyűjtése")}</button>
+        <p class="mut small" style="margin:6px 0 0">${paidScrapeOffNote(lang)}</p>
+      </div>`}
       <form method="post" action="/lead/${esc(leadId)}/photo-links" class="con-reenrich"
         style="margin-top:12px"
         onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Fotók behúzása folyamatban…"))}'`)}">
@@ -4515,6 +4533,9 @@ function leadPhotosPanel(
           return '<div class="lead-photos">' + items.map(function (it) { return cell(it.p, it.k); }).join('') + '</div>';
         }
         function paidBtn(label) {
+          if (S.paidOff) return '<button type="button" class="lp-paid" disabled>' + PIN + ' ' + label
+            + ' <span class="lp-fee">' + S.fee + '</span></button>'
+            + '<p class="mut small" style="margin:6px 0 0">' + S.paidOff + '</p>';
           return '<button type="button" class="lp-paid" data-places-ask>' + PIN + ' ' + label
             + ' <span class="lp-fee">' + S.fee + '</span></button>';
         }

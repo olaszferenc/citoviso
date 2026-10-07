@@ -348,7 +348,7 @@ function storedPlaceId(lead: QualifiedLead): string | null {
  * and are never stored — they are not a fact about the lead.
  */
 async function askPlaces(lead: QualifiedLead, identity: PlacesIdentity): Promise<CachedPlaces> {
-  const key = config.googleMapsApiKey;
+  const key = config.googleMapsGeneratorKey;
   const id = storedPlaceId(lead);
   let via: CachedPlaces["via"] = "text_search";
   let m = id
@@ -398,6 +398,18 @@ export function attributedRating(m: {
 }): { rating?: number; userRatingCount?: number } {
   if (m.rating == null || !ratingAttributable(m.score)) return {};
   return { rating: m.rating, ...(m.userRatingCount != null ? { userRatingCount: m.userRatingCount } : {}) };
+}
+
+/**
+ * The rating the Magellan scout read off the place's own Maps card (ADR-0336, Q2) —
+ * the fallback when Places gave no attributable number. Only a sane reading counts.
+ */
+export function scoutedRating(lead: QualifiedLead): { rating: number; userRatingCount: number } | null {
+  const r = lead.mapsRating;
+  if (!r || r.source !== "magellan") return null;
+  if (!Number.isFinite(r.value) || r.value < 1 || r.value > 5) return null;
+  if (!Number.isInteger(r.count) || r.count < 1) return null;
+  return { rating: r.value, userRatingCount: r.count };
 }
 
 export async function resolveGatedPhotos(
@@ -461,7 +473,7 @@ export async function resolveGatedPhotos(
           opts.checkLiveness === false ? portal : await livePhotosOnly(portal);
         mayPay = livePortal.length === 0;
       }
-      if (mayPay && config.googleMapsApiKey) {
+      if (mayPay && config.googleMapsGeneratorKey) {
         try {
           const askedBy = policy === "curator" ? "curator" : "auto";
           answer = { ...(await askPlaces(lead, identity)), askedBy };
@@ -511,6 +523,16 @@ export async function resolveGatedPhotos(
           console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
         }
       }
+    }
+  }
+  // ADR-0336 (Q2): no attributable Places rating → the scout's own reading of the
+  // place's Maps card. Its attribution is certain (the scout opened THAT place), so it
+  // needs no match score; it is never written into lead_places_cache.
+  if (rating == null) {
+    const scouted = scoutedRating(lead);
+    if (scouted) {
+      ({ rating, userRatingCount } = scouted);
+      console.log(`  Értékelés a felderítő Térkép-olvasatából: ${rating}★/${userRatingCount}`);
     }
   }
   // A hero SORRENDJE (heroPick.ts). A méret-szerinti "best-first" rendezés 2026-09-09-ig

@@ -1304,6 +1304,64 @@ export interface TranslationSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
+/** 0093: the scout worksheet's tile grid (ADR-0336, `/scout`) — a region's box cut into
+ *  ~10 × 11 km tiles; a saturated tile splits into four children in its place.
+ *  Reader/writer: src/scout/store.ts. */
+export interface ScoutTileTable {
+  id: Generated<string>;
+  region: string;
+  parent_id: string | null;
+  idx: number;
+  grid_row: number;
+  grid_col: number;
+  label: string;
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+  state: ColumnType<
+    "todo" | "work" | "sat" | "split" | "done" | "out",
+    "todo" | "work" | "sat" | "split" | "done" | "out" | undefined,
+    "todo" | "work" | "sat" | "split" | "done" | "out"
+  >;
+  /** {keyword: hit count | null} — JSON string on write. */
+  kw: JSONColumnType<Record<string, number | null>, string | undefined, string>;
+  closed_at: Timestamp | null;
+  scrape_run_id: string | null;
+  created_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+/** 0093: one Maps place on the scout worksheet — every field saved on change (ADR-0331). */
+export interface ScoutPlaceTable {
+  id: Generated<string>;
+  tile_id: string;
+  region: string;
+  name: string;
+  lat: number;
+  lon: number;
+  ftid: string | null;
+  link: string;
+  status: ColumnType<
+    "known" | "new" | "proc" | "lead" | "nolead",
+    "known" | "new" | "proc" | "lead" | "nolead" | undefined,
+    "known" | "new" | "proc" | "lead" | "nolead"
+  >;
+  known_lead_id: string | null;
+  address: string | null;
+  city: string | null;
+  phone: string | null;
+  website: string | null;
+  photo_count: number | null;
+  rating: number | null;
+  rating_count: number | null;
+  found_links: string | null;
+  verdict: "none" | "own" | "unsure" | null;
+  lead_id: string | null;
+  created_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 /** First-party guest reviews — ours to store, moderate and display (0027). */
 export interface SiteReviewTable {
   id: Generated<string>;
@@ -1621,6 +1679,8 @@ export interface Database {
   places_detail_cache: PlacesDetailCacheTable;
   scrape_checkpoint: ScrapeCheckpointTable;
   translation_spend: TranslationSpendTable;
+  scout_tile: ScoutTileTable;
+  scout_place: ScoutPlaceTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;
   partner_bank_account: PartnerBankAccountTable;

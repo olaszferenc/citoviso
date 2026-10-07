@@ -75,11 +75,50 @@ export function startScrapeJob(regionId: string, cap?: number): string | null {
   }
   const args = ["tsx", path.join("src", "scraper", "run.ts"), regionId];
   if (cap && Number.isFinite(cap) && cap > 0) args.push("--cap", String(cap));
+  spawnJob(args, regionId, cap ?? null, process.env, null, null);
+  return null;
+}
 
+/**
+ * Close of a scout worksheet tile (ADR-0336, `/scout`): the tile's new rows run through the
+ * SAME CLI in scout mode (`run.ts <region> --scout <tileId>`), under the same one-job lock —
+ * and ALWAYS with the paid APIs off, whatever the console's own environment says (the
+ * child reads SCRAPE_PAID_APIS at its config import). `onExit(code)` lets the worksheet
+ * reopen the tile when the processing did not finish. Returns an error string or null.
+ */
+export function startScoutJob(
+  regionId: string,
+  tileId: string,
+  onExit: (code: number) => void,
+): string | null {
+  if (state.running) {
+    return `Már fut egy scrape (${state.regionId}) — egyszerre egy futás engedett.`;
+  }
+  const args = ["tsx", path.join("src", "scraper", "run.ts"), regionId, "--scout", tileId];
+  spawnJob(args, regionId, null, { ...process.env, SCRAPE_PAID_APIS: "off" }, tileId, onExit);
+  return null;
+}
+
+/** The tile a running scout job is processing (null: none, or a regular scrape runs). */
+export function runningScoutTile(): string | null {
+  return state.running ? scoutTile : null;
+}
+
+let scoutTile: string | null = null;
+
+function spawnJob(
+  args: string[],
+  regionId: string,
+  cap: number | null,
+  env: NodeJS.ProcessEnv,
+  tileId: string | null,
+  onExit: ((code: number) => void) | null,
+): void {
+  scoutTile = tileId;
   state = {
     running: true,
     regionId,
-    cap: cap ?? null,
+    cap,
     startedAt: new Date(),
     finishedAt: null,
     exitCode: null,
@@ -88,7 +127,7 @@ export function startScrapeJob(regionId: string, cap?: number): string | null {
 
   const child = spawn("npx", args, {
     cwd: process.cwd(),
-    env: process.env,
+    env,
     stdio: ["ignore", "pipe", "pipe"],
   });
   child.stdout.on("data", pushLines);
@@ -98,12 +137,15 @@ export function startScrapeJob(regionId: string, cap?: number): string | null {
     state.running = false;
     state.finishedAt = new Date();
     state.exitCode = -1;
+    scoutTile = null;
+    onExit?.(-1);
   });
   child.on("close", (code) => {
     state.running = false;
     state.finishedAt = new Date();
     state.exitCode = code ?? -1;
     state.log.push(`[kilépés] exit code ${code}`);
+    scoutTile = null;
+    onExit?.(code ?? -1);
   });
-  return null;
 }

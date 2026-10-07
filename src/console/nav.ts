@@ -106,6 +106,8 @@ export function navTree(lang = "hu"): readonly NavNode[] {
         { kind: "leaf", id: "approved", label: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved" },
         { kind: "leaf", id: "duplicates", label: T(lang, "Duplikátumok"), href: "/duplicates" },
         { kind: "leaf", id: "scrape", label: T(lang, "Adatgyűjtés indítása"), href: "/scrape" },
+        // ADR-0336: Magellan's worksheet — the $0 way leads enter the store (plan: scout-worksheet).
+        { kind: "leaf", id: "scout", label: T(lang, "Felderítés"), href: "/scout" },
         { kind: "leaf", id: "map", label: T(lang, "Térkép (lefedettség)"), href: "/scrape/map" },
         { kind: "leaf", id: "regions", label: T(lang, "Területek"), href: "/scrape/regions" },
         { kind: "leaf", id: "pricing", label: T(lang, "Árazás és értékesítés"), short: T(lang, "Árazás"), href: "/pricing" },

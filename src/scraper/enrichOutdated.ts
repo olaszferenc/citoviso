@@ -39,10 +39,11 @@ function rootOf(url: string): string | null {
   }
 }
 
-/** Try the domain root, then the open web. Returns a CONFIRMED url, or null. */
+/** Try the domain root, then (when `webSearch`) the open web. Returns a CONFIRMED url, or null. */
 async function repairBrokenSite(
   lead: QualifiedLead,
   region: Region,
+  webSearch: boolean,
 ): Promise<string | null> {
   const terms = geoTerms(lead, region);
 
@@ -54,6 +55,10 @@ async function repairBrokenSite(
     }
   }
 
+  // Step 2 is a PAID web search: with the paid scrape APIs off (ADR-0336, Q7)
+  // only the free domain-root probe runs and an unrepairable site keeps its verdict.
+  if (!webSearch) return null;
+
   // The domain itself is gone (or now belongs to someone else) — ask the web.
   try {
     return await findOwnSiteForLead(lead, region);
@@ -62,10 +67,20 @@ async function repairBrokenSite(
   }
 }
 
+export interface OutdatedOptions {
+  /**
+   * May the broken-link repair ask the (paid) web search? Default true. False =
+   * only the free domain-root probe (SCRAPE_PAID_APIS off, ADR-0336).
+   */
+  readonly webSearch?: boolean;
+}
+
 export async function enrichOutdated(
   leads: QualifiedLead[],
   region?: Region,
+  opts: OutdatedOptions = {},
 ): Promise<QualifiedLead[]> {
+  const webSearch = opts.webSearch ?? true;
   const targets = leads.filter(
     (l) => l.websiteStatus === "has_own" && l.website,
   );
@@ -82,7 +97,7 @@ export async function enrichOutdated(
       // Only a dead site is worth a second question, and only when we know the
       // region (the geo-anchor's fallback) — otherwise the verdict stands.
       if (!assessment.reachable && region) {
-        const fixed = await repairBrokenSite(lead, region);
+        const fixed = await repairBrokenSite(lead, region, webSearch);
         if (fixed && fixed !== website) {
           website = fixed;
           assessment = await assessWebsite(website);

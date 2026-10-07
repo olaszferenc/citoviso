@@ -14,7 +14,7 @@ export async function resolvePlacesPhoto(
 ): Promise<string | null> {
   const url =
     `https://places.googleapis.com/v1/${name}/media` +
-    `?maxWidthPx=${maxWidth}&skipHttpRedirect=true&key=${config.googleMapsApiKey}`;
+    `?maxWidthPx=${maxWidth}&skipHttpRedirect=true&key=${config.googleMapsGeneratorKey}`;
   let res: Response;
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
@@ -219,6 +219,6 @@ export function streetViewUrl(
 ): string {
   return (
     `https://maps.googleapis.com/maps/api/streetview` +
-    `?size=${w}x${h}&location=${lat},${lon}&fov=80&pitch=0&key=${config.googleMapsApiKey}`
+    `?size=${w}x${h}&location=${lat},${lon}&fov=80&pitch=0&key=${config.googleMapsGeneratorKey}`
   );
 }

@@ -12,6 +12,7 @@
 // checkpoint instead of walking Google again.
 
 import { writeFile } from "node:fs/promises";
+import { config } from "../config.js";
 import { db } from "../db/client.js";
 import {
   beatScrapeRun,
@@ -31,6 +32,8 @@ import { enrichAndSaveInBatches, geoBatches, runSourcePhase, SCRAPE_BATCH_SIZE }
 import { distanceKm, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
+import { applyScoutExtras, MagellanSource } from "./sources/magellan.js";
+import { finishScoutTile } from "../scout/finish.js";
 import type { LeadSource } from "./sources/LeadSource.js";
 import type { Industry, QualifiedLead, ScrapeQuery } from "./types.js";
 
@@ -62,26 +65,36 @@ function mark(line: string): void {
   }
 }
 
-function parseArgs(argv: string[]): { regionId: string; out?: string; cap?: number } {
+function parseArgs(argv: string[]): { regionId: string; out?: string; cap?: number; scout?: string } {
   const args = argv.slice(2);
   let regionId = "badacsony";
   let out: string | undefined;
   let cap: number | undefined;
+  let scout: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--out") out = args[++i];
     else if (args[i] === "--cap") cap = Number(args[++i]) || undefined;
+    else if (args[i] === "--scout") scout = args[++i];
     else if (!args[i].startsWith("--")) regionId = args[i];
   }
-  return { regionId, out, cap };
+  return { regionId, out, cap, scout };
 }
 
 async function main(): Promise<void> {
-  const { regionId, out, cap } = parseArgs(process.argv);
+  const { regionId, out, cap, scout } = parseArgs(process.argv);
+  // Scout mode (ADR-0336, `/scout` tile close): the worksheet's rows are the ONLY source, and
+  // the run is free by construction — refused outright if the paid switch is on.
+  if (scout && config.scrapePaidApis) {
+    throw new Error("--scout csak SCRAPE_PAID_APIS=off mellett fut (a felderítés díjmentes, ADR-0336).");
+  }
   // Operator-defined areas live in the DB (0018); refresh before resolving.
   await loadRegions(true);
   const region = getRegion(regionId);
   const query: ScrapeQuery = { region, industry: INDUSTRY };
-  const sources: LeadSource[] = [new OsmSource(), new GoogleMapsSource()];
+  // The Google Maps source is paid (Places Text Search) — only with SCRAPE_PAID_APIS=on (ADR-0336).
+  const sources: LeadSource[] = config.scrapePaidApis ? [new OsmSource(), new GoogleMapsSource()] : [new OsmSource()];
+  const magellan = scout ? new MagellanSource({ tileId: scout }) : null;
+  if (magellan) sources.splice(0, sources.length, magellan);
   const sourceNames = sources.map((s) => s.name);
 
   console.log(
@@ -91,12 +104,15 @@ async function main(): Promise<void> {
   // Open the run in the DB up front so failures are recorded, not lost. A dead run of
   // the same definition that left its source result behind is REOPENED instead: the
   // Google walk and the Details it paid for are not bought twice (ADR-0331).
+  // Scout runs keep their OWN definition (`<region>:magellan`): a dead tile run must never
+  // be resumed by a regular scrape of the region, nor the other way round.
   const definitionId = await ensureScraperDefinition(
-    region,
+    scout ? { ...region, id: `${region.id}:magellan`, label: `${region.label} · Felderítés` } : region,
     INDUSTRY,
     sourceNames,
   );
-  const resume = await findResumableRun(definitionId);
+  // A tile run never resumes another tile's checkpoint: it reads its rows fresh.
+  const resume = scout ? null : await findResumableRun(definitionId);
   let runId: string;
   if (resume) {
     runId = resume.runId;
@@ -142,7 +158,7 @@ async function main(): Promise<void> {
     let base = dedupeAndQualify(raw, INDUSTRY, region.id);
     // Circular area (0019): the sources fetched the enclosing rectangle, so drop
     // whatever falls outside the radius — the searched area is a circle, not a box.
-    if (region.circle) {
+    if (region.circle && !scout) {
       const c = region.circle;
       const before = base.length;
       base = base.filter(
@@ -161,6 +177,8 @@ async function main(): Promise<void> {
     // again, so every paid enrichment step spent on it was wasted. Only the new ones
     // go on; the count still lands in the run's stats (dedupedAgainstStore). On a
     // resume this is also what skips the batches the dead attempt already saved.
+    // The worksheet's verdicts (website, portal links, rating) ride on the merged lead.
+    if (magellan) base = applyScoutExtras(base, magellan.extras);
     const { fresh, duplicates: known } = partitionNewLeads(base, await storedLeadIdentities());
     if (known.length) {
       console.log(
@@ -229,6 +247,11 @@ async function main(): Promise<void> {
     };
     await closeScrapeRun(runId, stats);
     liveRunId = null;
+    // The worksheet rows learn what became of them: lead / not a lead, and which lead.
+    if (scout) {
+      const r = await finishScoutTile(scout, runId);
+      console.log(`  Felderítés: ${r.lead} lead lett, ${r.nolead} nem lead, ${r.unmatched} sor lead nélkül.`);
+    }
     console.log(
       `  scrape_run ${runId} (completed) · ${m.inserted} új lead beszúrva ebben a próbálkozásban` +
         (savedEarlier ? ` · ${savedEarlier} az előzőben` : "") +

@@ -22,6 +22,8 @@ process.env.GOOGLE_MAPS_API_KEY = "stub-key-no-network";
 process.env.GOOGLE_CSE_ID = "stub-cse-no-network";
 process.env.BRAVE_API_KEY = "stub-brave-no-network";
 process.env.ANTHROPIC_API_KEY = "";
+// The paid steps run only with the switch on (ADR-0336); this guard measures what they pay.
+process.env.SCRAPE_PAID_APIS = "on";
 
 import { readFile } from "node:fs/promises";
 

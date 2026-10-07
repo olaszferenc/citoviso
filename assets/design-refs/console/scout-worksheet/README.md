@@ -8,8 +8,10 @@ Ez a terv a megvalósítás **KONTRAKTUSA**: elvárt viselkedés, nem stílus-ja
 Döntés: **ADR-0336** (Q1–Q10, 2026-10-07). Terv: `magellan/TERV.md`. A felület
 felhasználója Magellan (digitális felderítő, saját konzol-fiók) — operátori felület.
 
-> ⚠️ A `„…”` alak ebben a fájlban **felületi feliratot** jelöl — a `contract-drift-check`
-> azokat keresi vissza a kódban. Futásidőben összerakott mondat (szám, csempe-név) nem felirat.
+**Hatókör:** `src/console/scoutViews.ts` · `src/console/nav.ts`
+
+> ⚠️ A **`„…”`** (félkövér) alak ebben a fájlban **KÖTŐ felületi felirat** — a
+> `contract-drift-check` azokat keresi vissza a Hatókör fájljaiban. Futásidőben összerakott mondat (szám, csempe-név) nem felirat.
 
 Az elvetett A változat (egyesével beküldött űrlap) képe bent marad (`A-elvetett-*.png`):
 a lefedettség nem mérhető vele, és a „hol tartok” elvész, ha a session elhal.
@@ -19,7 +21,7 @@ a lefedettség nem mérhető vele, és a „hol tartok” elvész, ha a session 
 ## Mit KÖT a terv
 
 ### ① Fejléc
-- Cím: „Felderítés” (a konzol-menüben is ez a felirat), mellette EGY „?” gomb → felugró
+- Cím: **„Felderítés”** (a konzol-menüben is ez a felirat), mellette EGY „?” gomb → felugró
   jelmagyarázat (a lead-lista A2-mintája; Esc és háttér-kattintás zárja, a fókusz visszaáll).
 - Régió-választó (a konzol régió-táblájából), és mentés-jelző: mentés közben sárga pötty,
   utána zöld pötty és a mentés ideje.
@@ -36,14 +38,14 @@ tárolt, NEM Magellan-forrású leadek; számláló: az ezekre illesztett ismert
 - Kiválasztott csempén a 6 kulcsszó (`szállás, hotel, panzió, apartman, vendégház, kemping`)
   egy-egy egész szám mezővel. Nem egész szám → hibaüzenet, nem ment. Üres = hátravan.
   **>100 → telített** (a küszöb egy helyen, konstansként; az első munkanap méri pontosítja).
-- „Felosztás négy csempére” csak telített csempén aktív; a négy negyed a szülő helyén,
+- **„Felosztás négy csempére”** csak telített csempén aktív; a négy negyed a szülő helyén,
   2×2-ben jelenik meg, és az első negyed lesz kijelölve.
-- „Csempe lezárása” csak akkor aktív, ha mind a 6 kulcsszó kész, nincs telített, és
+- **„Csempe lezárása”** csak akkor aktív, ha mind a 6 kulcsszó kész, nincs telített, és
   nincs hiányos új hely. Alatta egy mondat mondja meg, mi hiányzik még.
 - Lezárás után a csempe mezői nem szerkeszthetők.
 
 ### ④ Helyek kártya
-- Szövegmező (soronként egy Google Térkép-hely link) + „Felvétel” gomb.
+- Szövegmező (soronként egy Google Térkép-hely link) + **„Felvétel”** gomb.
 - A szerver a linkből veszi a nevet, koordinátát, Térkép-azonosítót (`!3d<lat>!4d<lon>`,
   tartalék: `/@lat,lon`; `!1s0x…:0x…`). Nem értelmezhető sor → számolt hibaüzenet; a munkalapon
   már szereplő hely → kihagyva, számolva.

@@ -311,6 +311,7 @@ import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
 import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
+import { handleScoutRoute } from "./scoutRoutes.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
 import { anyLeadFilter, mockStatusLabel } from "./leadFilters.js";
@@ -759,6 +760,14 @@ function lastRecopyOutcome(id: string): { ok: boolean; message: string } | null 
     return null;
   }
   return { ok: o.ok, message: o.message };
+}
+
+/** The operator's answer to a paid scrape button while SCRAPE_PAID_APIS is off (ADR-0336, Q7). */
+function paidScrapeOffMessage(): string {
+  return T(
+    consoleLang(),
+    "Ez fizetős lekérés, a fizetős scrape-API-k pedig ki vannak kapcsolva (SCRAPE_PAID_APIS). Nem indult semmi, nem fizettünk semmit.",
+  );
 }
 
 function send(
@@ -2126,6 +2135,9 @@ async function handle(
     await loadRegions(true);
     return redirect(res, "/scrape/regions?ok=Ter%C3%BClet%20kivonva");
   }
+  // Felderítés — the scout worksheet (ADR-0336, frozen plan: design-refs/console/scout-worksheet/).
+  // Every /scout route lives in scoutRoutes.ts; this is its one mount point.
+  if (await handleScoutRoute(req, res, method, path, url)) return;
   // Riport module (frozen plan: assets/design-refs/console/riport/) — Tölcsér + Viselkedés.
   // The filters are query params (links, no JS): days ∈ {7,30,90,0}, dim ∈ REPORT_DIMS.
   if (method === "GET" && (path === "/report" || path === "/report/behaviour")) {
@@ -2410,6 +2422,8 @@ async function handle(
   // wants the verdict on the page they are looking at, not a background job.
   const reenrichMatch = /^\/lead\/([0-9a-f-]{36})\/reenrich$/i.exec(path);
   if (method === "POST" && reenrichMatch) {
+    // ADR-0336 (Q7): the chain is paid — refused while SCRAPE_PAID_APIS is off.
+    if (!config.scrapePaidApis) return send(res, 409, paidScrapeOffMessage(), "text/plain; charset=utf-8");
     const result = await reenrichOne(reenrichMatch[1]);
     if (result.ok)
       await logLeadActivity({ leadId: reenrichMatch[1]!, tab: "ls-data", action: "data.reenrich", actor: operatorActor(await currentOperator(req)) });
@@ -2425,6 +2439,7 @@ async function handle(
   // from the Fotók panel where the photos are shown. Synchronous, like reenrich.
   const rescrapeMatch = /^\/lead\/([0-9a-f-]{36})\/rescrape-photos$/i.exec(path);
   if (method === "POST" && rescrapeMatch) {
+    if (!config.scrapePaidApis) return send(res, 409, paidScrapeOffMessage(), "text/plain; charset=utf-8");
     const result = await rescrapePhotos(rescrapeMatch[1]);
     if (result.ok)
       await logLeadActivity({ leadId: rescrapeMatch[1]!, tab: "ls-photos", action: "photos.rescrape", actor: operatorActor(await currentOperator(req)) });
@@ -3385,11 +3400,14 @@ async function handle(
   // GET, so the Fotók panel redraws in place without a reload.
   const placesAskMatch = /^\/lead\/([0-9a-f-]{36})\/places-photos$/i.exec(path);
   if (method === "POST" && placesAskMatch) {
+    if (!config.scrapePaidApis) {
+      return send(res, 409, JSON.stringify({ ok: false, unavailable: "paid_off", message: paidScrapeOffMessage() }), "application/json");
+    }
     try {
       const loaded = await loadLead(placesAskMatch[1]!);
       // No key on this machine: nothing could be asked. Saying so beats a silent
       // "nincs lekérve" that would look as if the button had done nothing.
-      if (!config.googleMapsApiKey) {
+      if (!config.googleMapsGeneratorKey) {
         const media = await resolveGatedPhotos(loaded.lead, placesAskMatch[1]!, { places: "cached" });
         const body = { ...(await leadPhotosPayload(placesAskMatch[1]!, media)), unavailable: "nokey" };
         return send(res, 200, JSON.stringify(body), "application/json");

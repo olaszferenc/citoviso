@@ -91,6 +91,9 @@ const VIEW_GROUPS = {
     // (feedback_label_change_breaks_its_quoters). A címke-drift őr csak akkor tudja
     // megvédeni, ha a fájl a korpuszban van.
     "src/console/prospectNotice.ts",
+    // ADR-0336: the scout worksheet (/scout) — its labels („Felvétel”, „Csempe lezárása” …)
+    // live in its own view file, so the handbook quotes THEM.
+    "src/console/scoutViews.ts",
   ],
 } as const;
 type Audience = keyof typeof VIEW_GROUPS;
@@ -107,6 +110,7 @@ const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
     "console.settings",
     "console.outreach_draft",
     "console.test_log",
+    "console.scout",
   ],
 };
 const REQUIRED_FIELDS = ["id", "title", "audience", "category", "anchors", "updated"];

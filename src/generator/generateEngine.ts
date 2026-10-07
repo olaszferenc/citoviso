@@ -288,9 +288,9 @@ async function generateEngineMockInner(
       rating: r.rating,
       source: "google_places",
     }));
-  } else if (placeIdOf(lead) && config.googleMapsApiKey) {
+  } else if (placeIdOf(lead) && config.googleMapsGeneratorKey) {
     try {
-      const fresh = await fetchPlaceReviews(placeIdOf(lead)!, config.googleMapsApiKey);
+      const fresh = await fetchPlaceReviews(placeIdOf(lead)!, config.googleMapsGeneratorKey);
       googleVoice = fresh.map((r) => ({ text: r.text, rating: r.rating, source: "google_places" }));
     } catch (err) {
       console.warn(`  [engine] vendég-vélemény lekérés kihagyva: ${(err as Error).message}`);

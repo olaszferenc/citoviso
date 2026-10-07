@@ -347,6 +347,20 @@ export const config = {
   barionPixelId: env("BARION_PIXEL_ID"),
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /**
+   * ADR-0336 (Q7) — the GENERATOR's own Google key (Places photos/rating/reviews,
+   * Street View for the mock). Separate from the scrape key above so the two
+   * budgets can be capped and watched apart. Unset → falls back to the old key.
+   */
+  googleMapsGeneratorKey: env("GOOGLE_MAPS_GENERATOR_KEY", env("GOOGLE_MAPS_API_KEY")),
+  /**
+   * ADR-0336 (Q7) — the scrape's PAID APIs switch (Places lookup, Street View,
+   * Google reviews, Brave / Google CSE web search, the Google Maps source and the
+   * console's paid re-enrich / photo buttons). ONLY the literal "on" enables them;
+   * unset or anything else = off, i.e. the scrape costs $0 (OSM + Magellan +
+   * free portal reads). Guard: scripts/scrape-zero-paid-check.mts.
+   */
+  scrapePaidApis: env("SCRAPE_PAID_APIS") === "on",
+  /**
    * ADR-0241 — the BROWSER key for the admin's pin-drop map (Maps JavaScript API +
    * Geocoding). A SEPARATE key on purpose: it is printed into the page, so it must be
    * HTTP-referrer restricted in the Google console. The server key above is never
