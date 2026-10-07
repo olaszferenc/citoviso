@@ -4,18 +4,30 @@ import { isValidEmail, splitEmailList } from "../../email/leadEmails.js";
 
 // OpenStreetMap via the Overpass API. Free, open data, legally clean — and it
 // carries the `website` tag, which is exactly our qualification signal.
+// The $0 lead source (Magellan project, 2026-10-07): it runs with SCRAPE_PAID_APIS=off
+// too (scripts/scrape-zero-paid-check.mts ⑤). Data © OpenStreetMap contributors, ODbL 1.0
+// — the console names it wherever the lead's sources are shown.
 // Public Overpass instances are often overloaded (429/504); try mirrors in order.
 export const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
 ];
 
-// Industry → OSM tag filter. Accommodation maps to the tourism=* lodging values.
-const OSM_FILTERS: Record<Industry, string> = {
-  accommodation:
-    '"tourism"~"^(hotel|guest_house|apartment|hostel|chalet|motel|camp_site|caravan_site)$"',
+// Industry → OSM tag values. Accommodation maps to the tourism=* lodging values.
+// ⛔ Queried as a UNION of equality filters, never one `"tourism"~"^(…)$"` regex: on
+// 2026-10-07 the regex form got a dispatcher timeout (504) from overpass-api.de on a
+// 15 km box while the equality union answered the whole country in 32 s.
+export const OSM_TOURISM_VALUES: Record<Industry, readonly string[]> = {
+  accommodation: ["hotel", "guest_house", "apartment", "hostel", "chalet", "motel", "camp_site", "caravan_site"],
 };
+
+/** Public Overpass is shared and free: one request per region, a readable UA, and a
+ *  pause between retry rounds — never a hammering loop (operator usage policy). */
+const OVERPASS_UA = "citoviso-scraper/0.2 (+https://citoviso.com; lead discovery, 1 request per region)";
+/** Retry rounds over the whole mirror list, and the pause before each repeat. */
+const RETRY_PAUSES_MS = [0, 15_000, 45_000];
 
 interface OverpassElement {
   type: "node" | "way" | "relation";
@@ -28,18 +40,35 @@ interface OverpassElement {
 
 interface OverpassResponse {
   elements: OverpassElement[];
+  /** Overpass reports a server-side timeout/memory abort here with HTTP 200. */
+  remark?: string;
 }
 
-function buildQuery(query: ScrapeQuery): string {
+/** The OSM object's own page — the openable proof of where a lead came from. */
+export function osmObjectUrl(ref: string): string | null {
+  return /^(node|way|relation)\/\d+$/.test(ref) ? `https://www.openstreetmap.org/${ref}` : null;
+}
+
+/** Server-side budget (s): a country is one big request, a region a small one. */
+function serverTimeoutS(query: ScrapeQuery): number {
+  return query.region.osmArea ? 180 : 60;
+}
+
+/**
+ * The Overpass QL for one region (bbox) or one whole country (`region.osmArea`, the
+ * ISO 3166-1 code of an admin_level=2 boundary — the bbox of a country also takes in
+ * strips of its neighbours).
+ */
+export function buildQuery(query: ScrapeQuery): string {
+  const values = OSM_TOURISM_VALUES[query.industry];
+  const area = query.region.osmArea;
   const [s, w, n, e] = query.region.bbox;
-  const filter = OSM_FILTERS[query.industry];
-  const bbox = `(${s},${w},${n},${e})`;
+  const scope = area ? "(area.a)" : `(${s},${w},${n},${e})`;
   return [
-    "[out:json][timeout:25];",
+    `[out:json][timeout:${serverTimeoutS(query)}];`,
+    ...(area ? [`area["ISO3166-1"="${area.replace(/[^A-Za-z]/g, "").toUpperCase()}"][admin_level=2]->.a;`] : []),
     "(",
-    `  node[${filter}]${bbox};`,
-    `  way[${filter}]${bbox};`,
-    `  relation[${filter}]${bbox};`,
+    ...values.map((v) => `  nwr["tourism"="${v}"]${scope};`),
     ");",
     "out center tags;",
   ].join("\n");
@@ -102,44 +131,70 @@ function localityFromTags(tags: Record<string, string>): {
 
 export class OsmSource implements LeadSource {
   readonly name = "osm";
+  private lastWarnings: string[] = [];
+  /** What the last fetch saw, before and after the named-only filter (dry-run numbers). */
+  lastCounts = { elements: 0, unnamed: 0 };
 
-  /** POST the query to each mirror in turn; return the first success. */
-  private async queryOverpass(ql: string): Promise<OverpassResponse> {
+  warnings(): string[] {
+    return [...this.lastWarnings];
+  }
+
+  /**
+   * POST the query to each mirror in turn; return the first COMPLETE answer. A round
+   * that fails on every mirror is repeated after a pause (RETRY_PAUSES_MS) — public
+   * Overpass is often busy for a minute, rarely for long. An answer carrying a
+   * `remark` (server-side timeout/out of memory) is partial, so it counts as a failure:
+   * a half list would silently look like "these are all the places".
+   */
+  private async queryOverpass(ql: string, timeoutS: number): Promise<OverpassResponse> {
     const body = "data=" + encodeURIComponent(ql);
-    let lastErr = "";
-    for (const endpoint of OVERPASS_ENDPOINTS) {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            // Public Overpass (behind Cloudflare) rejects header-less requests.
-            Accept: "application/json",
-            "User-Agent":
-              "citoviso-scraper/0.1 (+https://github.com/olaszferenc/citoviso)",
-          },
-          body,
-          signal: AbortSignal.timeout(30_000), // don't hang on a slow mirror
-        });
-        if (!res.ok) {
-          lastErr = `${res.status} ${res.statusText} @ ${endpoint}`;
-          continue; // try next mirror
+    const errors: string[] = [];
+    for (const pause of RETRY_PAUSES_MS) {
+      if (pause) await new Promise((r) => setTimeout(r, pause));
+      for (const endpoint of OVERPASS_ENDPOINTS) {
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              // Public Overpass (behind Cloudflare) rejects header-less requests.
+              Accept: "application/json",
+              "User-Agent": OVERPASS_UA,
+            },
+            body,
+            // The server's own budget plus transfer time — don't hang on a dead mirror.
+            signal: AbortSignal.timeout((timeoutS + 30) * 1000),
+          });
+          if (!res.ok) {
+            errors.push(`${res.status} ${res.statusText} @ ${endpoint}`);
+            continue; // try next mirror
+          }
+          const data = (await res.json()) as OverpassResponse;
+          if (data.remark && /error|timed out|out of memory/i.test(data.remark)) {
+            errors.push(`részleges válasz (${data.remark.slice(0, 120)}) @ ${endpoint}`);
+            continue;
+          }
+          return data;
+        } catch (err) {
+          errors.push(`${(err as Error).message} @ ${endpoint}`);
         }
-        return (await res.json()) as OverpassResponse;
-      } catch (err) {
-        lastErr = `${(err as Error).message} @ ${endpoint}`;
       }
     }
-    throw new Error(`Overpass request failed on all mirrors: ${lastErr}`);
+    throw new Error(`Overpass request failed on all mirrors: ${errors.slice(-OVERPASS_ENDPOINTS.length).join(" · ")}`);
   }
 
   async fetch(query: ScrapeQuery): Promise<RawLead[]> {
-    const data = await this.queryOverpass(buildQuery(query));
+    this.lastWarnings = [];
+    const data = await this.queryOverpass(buildQuery(query), serverTimeoutS(query));
     const leads: RawLead[] = [];
+    let unnamed = 0;
     for (const el of data.elements) {
       const tags = el.tags ?? {};
       const name = tags.name ?? tags["name:hu"];
-      if (!name) continue; // unnamed POIs are useless as leads
+      if (!name) {
+        unnamed++; // unnamed POIs are useless as leads
+        continue;
+      }
       const { country, city } = localityFromTags(tags);
       leads.push({
         source: this.name,
@@ -154,6 +209,10 @@ export class OsmSource implements LeadSource {
         ...osmEmails(firstTag(tags, ["email", "contact:email"])),
         website: firstTag(tags, ["website", "contact:website", "url"]),
       });
+    }
+    this.lastCounts = { elements: data.elements.length, unnamed };
+    if (unnamed) {
+      this.lastWarnings.push(`OpenStreetMap: ${unnamed} név nélküli szállás-objektum kihagyva (${data.elements.length}-ből).`);
     }
     return leads;
   }

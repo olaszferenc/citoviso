@@ -17,7 +17,10 @@
 //      fizetős hívás, az őr vak (a fixture nem éri el a fizetős lépéseket), és a kapu bukik;
 //   ③ a run.ts a Google Maps forrást csak `config.scrapePaidApis` mellett veszi a források közé;
 //   ④ a konzol három fizetős gombja (újragyűjtés, portál-fotók, Places-fotók) a kapcsolóval
-//      kapuzott a szerveren (409), mielőtt a fizetős kódot meghívná.
+//      kapuzott a szerveren (409), mielőtt a fizetős kódot meghívná;
+//   ⑤ az OsmSource (a 0 Ft-os lead-forrás, Magellan-projekt 2026-10-07) MINDKÉT állásban csak az
+//      Overpass-tükröt hívja, régiónként EGY kéréssel, egyenlőség-unióval (a regex-alak ma 504-et
+//      kapott), és a run.ts a kikapcsolt ágban is a források közé veszi.
 //
 // Futtatás: npx tsx scripts/scrape-zero-paid-check.mts
 
@@ -42,10 +45,20 @@ if (process.argv.includes("--child")) {
 /** One measurement in THIS process: the env was set by the parent before any import. */
 async function child(): Promise<void> {
   const paid: string[] = [];
+  const overpass: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const json = (body: unknown) =>
       new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    if (/\/api\/interpreter$/.test(url)) {
+      overpass.push(decodeURIComponent(String(init?.body ?? "").replace(/^data=/, "")));
+      return json({
+        elements: [
+          { type: "node", id: 920001, lat: 46.78, lon: 17.5, tags: { tourism: "guest_house", name: "Nullforint OSM Vendégház", phone: "+36 30 555 0200" } },
+          { type: "way", id: 920002, center: { lat: 46.79, lon: 17.51 }, tags: { tourism: "apartment" } },
+        ],
+      });
+    }
     if (PAID.some((p) => url.startsWith(p)) || /googleapis\.com|api\.search\.brave\.com/.test(url)) {
       paid.push(`${url.split("?")[0]}`);
       if (url.startsWith("https://api.search.brave.com/")) return json({ web: { results: [] } });
@@ -110,15 +123,32 @@ async function child(): Promise<void> {
   } finally {
     [console.log, console.warn] = [log, warn];
   }
+  // ⑤ The OSM source on its own: what it calls, and how often.
+  const { OsmSource } = await import("../src/scraper/sources/osm.js");
+  const paidBefore = paid.length;
+  let osm: ChildResult["osm"];
+  try {
+    const found = await new OsmSource().fetch({ region: { ...region, bbox: [46.7, 17.4, 46.9, 17.6] }, industry: "accommodation" });
+    osm = { leads: found.length, paid: paid.slice(paidBefore), queries: overpass, error: null };
+  } catch (e) {
+    osm = { leads: 0, paid: paid.slice(paidBefore), queries: overpass, error: (e as Error).message };
+  }
   const { db } = await import("../src/db/client.js");
   await db.destroy().catch(() => {});
   process.stdout.write(
-    `${MARK}${JSON.stringify({ switch: config.scrapePaidApis, leads: base.length, paid, marks, error })}\n`,
+    `${MARK}${JSON.stringify({ switch: config.scrapePaidApis, leads: base.length, paid, marks, error, osm })}\n`,
   );
   process.exit(0);
 }
 
-type ChildResult = { switch: boolean; leads: number; paid: string[]; marks: string[]; error: string | null };
+type ChildResult = {
+  switch: boolean;
+  leads: number;
+  paid: string[];
+  marks: string[];
+  error: string | null;
+  osm: { leads: number; paid: string[]; queries: string[]; error: string | null };
+};
 
 /** Run one measurement in a child process (the config reads the env at import time). */
 function runChild(value: string | undefined): Promise<ChildResult | string> {
@@ -234,6 +264,29 @@ async function parent(): Promise<void> {
       pre ? undefined : "a route nem található",
     );
   }
+
+  // ⑤ OsmSource: free in BOTH positions, one Overpass request per region, equality union.
+  for (const [label, r] of [["OFF", offRuns[0]], ["ON", onRun]] as const) {
+    if (!r || typeof r === "string") {
+      check(`⑤ OsmSource (${label}): a mérés lefutott`, false, r ?? "nincs eredmény");
+      continue;
+    }
+    const o = r.osm;
+    check(`⑤ OsmSource (${label}): lefutott, a névvel bíró objektumból lead lett (1 a 2-ből)`, o.error === null && o.leads === 1, o.error ?? `${o.leads} lead`);
+    check(`⑤ OsmSource (${label}): 0 fizetős hívás`, o.paid.length === 0, o.paid.length ? o.paid[0] : undefined);
+    check(`⑤ OsmSource (${label}): régiónként EGY Overpass-kérés`, o.queries.length === 1, `${o.queries.length} kérés`);
+    const ql = o.queries[0] ?? "";
+    check(
+      `⑤ OsmSource (${label}): egyenlőség-unió, nem regex (a \`"tourism"~\` alak 504-et kapott)`,
+      /\["tourism"="guest_house"\]/.test(ql) && !/"tourism"~/.test(ql),
+      ql.replace(/\s+/g, " ").slice(0, 160),
+    );
+  }
+  check(
+    "⑤ run.ts: az OsmSource a kikapcsolt ágban is forrás",
+    /config\.scrapePaidApis \?[^:]*:\s*\[new OsmSource\(\)\]/.test(stmt),
+    stmt.replace(/\s+/g, " ").slice(0, 200),
+  );
 
   if (failures) {
     console.error(`\n⛔ scrape-zero-paid-check: ${failures} állítás piros — kikapcsolt kapcsolóval is fizetne a scrape (vagy az őr vak).`);

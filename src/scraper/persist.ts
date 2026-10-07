@@ -7,7 +7,18 @@ import { APP_TZ } from "../text/zoneTime.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { partitionNewLeads, type LeadIdentity } from "./dedupe.js";
+import { osmObjectUrl } from "./sources/osm.js";
 import type { QualifiedLead, RawLead, Region } from "./types.js";
+
+/**
+ * The discovery row's openable proof. OSM (the $0 source, 2026-10-07): the object's
+ * page + the licence its data is under (ODbL 1.0 — attribution is owed wherever the
+ * data is shown). Other sources keep the null they always had.
+ */
+function discoveryEntity(source: string, ref: string | undefined): string | null {
+  const url = source === "osm" && ref ? osmObjectUrl(ref) : null;
+  return url ? JSON.stringify({ ref, url, license: "ODbL-1.0", attribution: "© OpenStreetMap contributors" }) : null;
+}
 
 // The Balaton pilot regions are Hungarian; country is fixed until the scraper
 // definition itself carries a country (Industry × Country parameterization).
@@ -342,7 +353,7 @@ export async function persistLeadBatch(
         field: "discovery",
         value: l.name,
         source: src,
-        matched_entity: null,
+        matched_entity: discoveryEntity(src, l.sourceRefs?.[src]),
         confidence: null,
       }));
       prov.push({

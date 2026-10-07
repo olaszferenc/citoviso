@@ -1,5 +1,6 @@
 // CLI runner for the lead-discovery scraper (Phase 4, the volume engine).
 // Usage: npm run scrape -- [regionId] [--out file.json] [--cap N]
+//        npm run scrape -- [regionId | --country HU] --dry-run   (OSM only, counts, NO writes)
 // Runs all sources over the region+industry, dedupes, qualifies, enriches and saves
 // the leads BATCH BY BATCH (ADR-0331), prints a summary, and — only with --out —
 // writes the qualified leads as JSON.
@@ -35,7 +36,7 @@ import { OsmSource } from "./sources/osm.js";
 import { applyScoutExtras, MagellanSource } from "./sources/magellan.js";
 import { finishScoutTile } from "../scout/finish.js";
 import type { LeadSource } from "./sources/LeadSource.js";
-import type { Industry, QualifiedLead, ScrapeQuery } from "./types.js";
+import type { Industry, QualifiedLead, Region, ScrapeQuery } from "./types.js";
 
 const INDUSTRY: Industry = "accommodation";
 
@@ -65,23 +66,104 @@ function mark(line: string): void {
   }
 }
 
-function parseArgs(argv: string[]): { regionId: string; out?: string; cap?: number; scout?: string } {
+function parseArgs(argv: string[]): {
+  regionId: string;
+  out?: string;
+  cap?: number;
+  scout?: string;
+  dryRun: boolean;
+  country?: string;
+} {
   const args = argv.slice(2);
   let regionId = "badacsony";
   let out: string | undefined;
   let cap: number | undefined;
   let scout: string | undefined;
+  let dryRun = false;
+  let country: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--out") out = args[++i];
     else if (args[i] === "--cap") cap = Number(args[++i]) || undefined;
     else if (args[i] === "--scout") scout = args[++i];
+    else if (args[i] === "--dry-run") dryRun = true;
+    else if (args[i] === "--country") country = args[++i]?.toUpperCase();
     else if (!args[i].startsWith("--")) regionId = args[i];
   }
-  return { regionId, out, cap, scout };
+  return { regionId, out, cap, scout, dryRun, country };
+}
+
+/** Whole-country areas for `--country` (bbox = [S, W, N, E]; the OSM query uses the
+ *  admin boundary, the bbox is only the enclosing box the Region type requires). */
+const COUNTRY_AREAS: Record<string, Region> = {
+  HU: { id: "country-hu", label: "Magyarország (teljes ország)", country: "HU", bbox: [45.73, 16.11, 48.59, 22.9], osmArea: "HU" },
+};
+
+/**
+ * Dry run (Magellan project, 2026-10-07): what the FREE OSM source would bring for an
+ * area, counted the same way the real run decides — dedupe, the circle, the store
+ * identities (isSamePlayer), the website qualification. Reads the DB, writes nothing:
+ * no scraper_definition, no scrape_run, no lead, no checkpoint; no enrichment either
+ * (the presence check would fetch thousands of sites), so "no website" here is the
+ * OSM tag's verdict, before the domain probe.
+ */
+async function dryRun(region: Region): Promise<void> {
+  const osm = new OsmSource();
+  const query: ScrapeQuery = { region, industry: INDUSTRY };
+  console.log(`DRY-RUN (írás nélkül) · ${region.label} · forrás: osm`);
+  const t0 = Date.now();
+  const raw = await osm.fetch(query);
+  const secs = ((Date.now() - t0) / 1000).toFixed(0);
+  let base = dedupeAndQualify(raw, INDUSTRY, region.id);
+  const unique = base.length;
+  if (region.circle) {
+    const c = region.circle;
+    base = base.filter((l) => l.lat == null || l.lon == null || distanceKm(c.lat, c.lon, l.lat, l.lon) <= c.radiusKm);
+  }
+  const { fresh, duplicates } = partitionNewLeads(base, await storedLeadIdentities());
+  const count = (xs: QualifiedLead[], f: (l: QualifiedLead) => boolean) => xs.filter(f).length;
+  const noSite = fresh.filter((l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only");
+  const tally = {
+    overpassElements: osm.lastCounts.elements,
+    unnamed: osm.lastCounts.unnamed,
+    named: raw.length,
+    unique,
+    ...(region.circle ? { outsideCircle: unique - base.length } : {}),
+    alreadyLead: duplicates.length,
+    fresh: fresh.length,
+    freshByWebsite: {
+      none: count(fresh, (l) => l.websiteStatus === "none"),
+      portal_only: count(fresh, (l) => l.websiteStatus === "portal_only"),
+      has_own: count(fresh, (l) => l.websiteStatus === "has_own"),
+    },
+    freshNoSite: noSite.length,
+    freshNoSiteWithPhone: count(noSite, (l) => !!l.phone),
+    freshNoSiteWithEmail: count(noSite, (l) => !!l.email),
+    freshNoSiteWithAnyContact: count(noSite, (l) => !!l.phone || !!l.email),
+  };
+  console.log(`  Overpass: ${tally.overpassElements} objektum, ${secs} mp, 0 Ft`);
+  console.log(`  név nélküli (kihagyva): ${tally.unnamed} · névvel: ${tally.named} · egyedi: ${tally.unique}`);
+  if (region.circle) console.log(`  a kör-sugáron kívül: ${tally.outsideCircle}`);
+  console.log(`  már lead (isSamePlayer, ≤250 m): ${tally.alreadyLead} · ÚJ: ${tally.fresh}`);
+  console.log(
+    `  új, honlap szerint: nincs ${tally.freshByWebsite.none} · csak portál ${tally.freshByWebsite.portal_only} · ` +
+      `saját ${tally.freshByWebsite.has_own}`,
+  );
+  console.log(
+    `  új, saját honlap nélkül: ${tally.freshNoSite} — telefonnal ${tally.freshNoSiteWithPhone}, ` +
+      `e-maillel ${tally.freshNoSiteWithEmail}, bármelyikkel ${tally.freshNoSiteWithAnyContact}`,
+  );
+  console.log(`DRY_RUN_JSON ${JSON.stringify(tally)}`);
 }
 
 async function main(): Promise<void> {
-  const { regionId, out, cap, scout } = parseArgs(process.argv);
+  const { regionId, out, cap, scout, dryRun: dry, country } = parseArgs(process.argv);
+  if (dry && scout) throw new Error("--dry-run és --scout együtt nem értelmes (a munkalap sorai nem OSM-ből jönnek).");
+  if (country && !COUNTRY_AREAS[country]) {
+    throw new Error(`--country ${country}: ismeretlen ország (ismert: ${Object.keys(COUNTRY_AREAS).join(", ")}).`);
+  }
+  // A whole-country WRITE has no region row to hang the leads on (lead.region, the
+  // console's area facet) — counts only, until that is decided.
+  if (country && !dry) throw new Error("--country egyelőre csak --dry-run mellett fut (országos mentéshez régió-döntés kell).");
   // Scout mode (ADR-0336, `/scout` tile close): the worksheet's rows are the ONLY source, and
   // the run is free by construction — refused outright if the paid switch is on.
   if (scout && config.scrapePaidApis) {
@@ -89,7 +171,15 @@ async function main(): Promise<void> {
   }
   // Operator-defined areas live in the DB (0018); refresh before resolving.
   await loadRegions(true);
-  const region = getRegion(regionId);
+  const region = country ? COUNTRY_AREAS[country]! : getRegion(regionId);
+  if (dry) {
+    try {
+      await dryRun(region);
+    } finally {
+      await db.destroy();
+    }
+    return;
+  }
   const query: ScrapeQuery = { region, industry: INDUSTRY };
   // The Google Maps source is paid (Places Text Search) — only with SCRAPE_PAID_APIS=on (ADR-0336).
   const sources: LeadSource[] = config.scrapePaidApis ? [new OsmSource(), new GoogleMapsSource()] : [new OsmSource()];
