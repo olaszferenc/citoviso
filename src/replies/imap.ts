@@ -1,4 +1,4 @@
-// A minimal READ-ONLY IMAP client for the replies collector (ADR-XXXX). Byte-exact on
+// A minimal READ-ONLY IMAP client for the replies collector (ADR-0339). Byte-exact on
 // literals (a mail body is counted in BYTES, so a utf8-decoded stream — as in
 // src/domains/registryConfirmWatch.ts — would cut multi-byte text short). Only EXAMINE,
 // UID SEARCH and UID FETCH with BODY.PEEK exist here: by construction it can never set a

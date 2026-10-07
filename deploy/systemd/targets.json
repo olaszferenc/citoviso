@@ -30,11 +30,11 @@
     },
     "citoviso-replies-sms.timer": {
       "target": "dev",
-      "why": "a helyi GSM-modem gammu inboxát (MineREAL-lel közös) olvassa a dev gépen; csak olvas, és a /api/replies/ingest végpontra küldi (ADR-XXXX)"
+      "why": "a helyi GSM-modem gammu inboxát (MineREAL-lel közös) olvassa a dev gépen; csak olvas, és a /api/replies/ingest végpontra küldi (ADR-0339)"
     },
     "citoviso-replies-email.timer": {
       "target": "dev",
-      "why": "a Zoho postafiókot a dev gép hitelesítőjével olvassa (EXAMINE + BODY.PEEK); a jelölteket a /api/replies/ingest végpontra küldi (ADR-XXXX)"
+      "why": "a Zoho postafiókot a dev gép hitelesítőjével olvassa (EXAMINE + BODY.PEEK); a jelölteket a /api/replies/ingest végpontra küldi (ADR-0339)"
     },
     "citoviso-pair-repair.timer": {
       "target": "dev",

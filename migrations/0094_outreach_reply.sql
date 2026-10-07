@@ -1,4 +1,4 @@
--- 0094 VÁLASZOK A MEGKERESÉSEKRE (2026-10-07, ADR-XXXX).
+-- 0094 VÁLASZOK A MEGKERESÉSEKRE (2026-10-07, ADR-0339).
 --
 -- MIÉRT KELL. 2026-10-07-én három valódi válasz érkezett a megkeresésekre (2 SMS, 1 e-mail),
 -- és egyikről sem tudott a rendszer: az SMS-ek a gammu `inbox` táblájában (a dev gép modemje,
@@ -47,4 +47,4 @@ CREATE TABLE IF NOT EXISTS outreach_reply_poll (
   checked_at  timestamptz NOT NULL
 );
 
-COMMENT ON TABLE outreach_reply IS 'Válaszok a megkeresésekre (ADR-XXXX): a dev gépi gyűjtő tölti, az irányítópult mutatja.';
+COMMENT ON TABLE outreach_reply IS 'Válaszok a megkeresésekre (ADR-0339): a dev gépi gyűjtő tölti, az irányítópult mutatja.';

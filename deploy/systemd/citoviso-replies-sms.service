@@ -1,9 +1,9 @@
 [Unit]
-# ADR-XXXX: válaszok a megkeresésekre. A gyűjtő CSAK OLVASSA a GSM-modem gammu inboxát (MineREAL-lel közös),
+# ADR-0339: válaszok a megkeresésekre. A gyűjtő CSAK OLVASSA a GSM-modem gammu inboxát (MineREAL-lel közös),
 # és bearer-rel (SMS_RELAY_SECRET) felküldi a jelölteket a /api/replies/ingest végpontra;
 # a szerver párosít leadhez, a nem-lead feladót eldobja. Hiba → az állapot nem lép, a
 # következő kör újraküldi.
-Description=Citoviso válasz-gyűjtő (sms) — válaszok a megkeresésekre (ADR-XXXX)
+Description=Citoviso válasz-gyűjtő (sms) — válaszok a megkeresésekre (ADR-0339)
 After=network-online.target gammu-smsd.service
 Wants=network-online.target
 

@@ -1,4 +1,4 @@
-// Válaszok a megkeresésekre (ADR-XXXX) — the reply pipeline's guard.
+// Válaszok a megkeresésekre (ADR-0339) — the reply pipeline's guard.
 //
 // What it pins down, each a MEASURED way the 2026-10-07 replies could have been lost or
 // misattributed (contract: assets/design-refs/console/valaszok/README.md):

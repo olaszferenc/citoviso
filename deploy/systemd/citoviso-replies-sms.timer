@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso válasz-gyűjtő (sms) 60 mp-enként (ADR-XXXX)
+Description=Citoviso válasz-gyűjtő (sms) 60 mp-enként (ADR-0339)
 
 [Timer]
 # ⛔ Csak akkor engedélyezd, ha a végpont az SMS_RELAY_URL hostján már létezik (élesen: a

@@ -66,7 +66,7 @@ export interface NavNumbers {
   readonly partners: number;
   readonly sellable: number;
   readonly catalog: number;
-  /** Replies to our outreach nobody has answered yet — the dashboard's „Válaszok" block (ADR-XXXX). */
+  /** Replies to our outreach nobody has answered yet — the dashboard's „Válaszok" block (ADR-0339). */
   readonly openReplies: number;
 }
 

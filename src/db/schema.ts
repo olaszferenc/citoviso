@@ -1615,7 +1615,7 @@ export interface DomainProvisioningTable {
   finished_at: Timestamp | null;
 }
 
-/** 0094 (ADR-XXXX): a reply to our outreach, collected read-only from the dev box's
+/** 0094 (ADR-0339): a reply to our outreach, collected read-only from the dev box's
  *  gammu inbox / Zoho INBOX and matched to a lead server-side. */
 export interface OutreachReplyTable {
   id: Generated<string>;

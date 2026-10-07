@@ -1404,7 +1404,7 @@ async function handle(
   markAudience(res, consoleAudience(path));
 
   // POST /replies/<id>/answered | /undo — „Megválaszoltam" / „Visszavonás" on the home's
-  // replies block (ADR-XXXX). Who = the signed-in operator; back to the same conversation.
+  // replies block (ADR-0339). Who = the signed-in operator; back to the same conversation.
   {
     const m = method === "POST" ? path.match(/^\/replies\/([0-9a-f-]{36})\/(answered|undo)$/) : null;
     if (m) {

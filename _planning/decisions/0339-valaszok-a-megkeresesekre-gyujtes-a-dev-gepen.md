@@ -1,4 +1,4 @@
-## ADR-XXXX — Válaszok a megkeresésekre: gyűjtés a dev gépen, tárolás a lead-gazdán, irányítópult-blokk
+## ADR-0339 — Válaszok a megkeresésekre: gyűjtés a dev gépen, tárolás a lead-gazdán, irányítópult-blokk
 
 **Dátum:** 2026-10-07 · **Döntött:** tulaj („nyitó oldalán jelenjen meg: melyik lead küldte mikor mit,
 megvan-e válaszolva. ugrás a lead oldalára”; a B terv jóváhagyva), megvalósítás: CIT session

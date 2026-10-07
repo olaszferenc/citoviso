@@ -1,9 +1,9 @@
 [Unit]
-# ADR-XXXX: válaszok a megkeresésekre. A gyűjtő CSAK OLVASSA a Zoho postafiókot (INBOX + Elküldött),
+# ADR-0339: válaszok a megkeresésekre. A gyűjtő CSAK OLVASSA a Zoho postafiókot (INBOX + Elküldött),
 # és bearer-rel (SMS_RELAY_SECRET) felküldi a jelölteket a /api/replies/ingest végpontra;
 # a szerver párosít leadhez, a nem-lead feladót eldobja. Hiba → az állapot nem lép, a
 # következő kör újraküldi.
-Description=Citoviso válasz-gyűjtő (email) — válaszok a megkeresésekre (ADR-XXXX)
+Description=Citoviso válasz-gyűjtő (email) — válaszok a megkeresésekre (ADR-0339)
 After=network-online.target
 Wants=network-online.target
 

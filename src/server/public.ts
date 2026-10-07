@@ -3690,7 +3690,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     return sendJson(res, 200, { ok: true });
   }
 
-  // ── ADR-XXXX replies to our outreach: the Debian-box collector (gammu inbox + Zoho
+  // ── ADR-0339 replies to our outreach: the Debian-box collector (gammu inbox + Zoho
   // mailbox, both read-only) posts candidates here; the server matches them to a lead
   // and drops every sender we never reached. Same bearer secret as the SMS relay —
   // the console has no bearer route, and the DB is shared, so the public host takes it.

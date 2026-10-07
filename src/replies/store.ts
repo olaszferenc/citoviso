@@ -1,4 +1,4 @@
-// Replies to our outreach (ADR-XXXX) — the SERVER side: match an incoming reply to a
+// Replies to our outreach (ADR-0339) — the SERVER side: match an incoming reply to a
 // lead, store it idempotently, list it for the dashboard, and the „Megválaszoltam” mark.
 //
 // The data lives on the dev box (the GSM modem's gammu inbox + the Zoho mailbox); the

@@ -1,4 +1,4 @@
-// Replies collector (ADR-XXXX) — reads the replies to our outreach where they land,
+// Replies collector (ADR-0339) — reads the replies to our outreach where they land,
 // on THIS Debian box, and posts them to the host that owns the leads:
 //   --sms    the GSM modem's gammu `inbox` (shared with MineREAL)  → every 60 s
 //   --email  the Zoho mailbox (INBOX + the Sent folder)            → every 120 s

@@ -1,4 +1,4 @@
-// Replies collector, SMS half (ADR-XXXX): the gammu `inbox` of the dev box's modem,
+// Replies collector, SMS half (ADR-0339): the gammu `inbox` of the dev box's modem,
 // READ-ONLY. ⛔ `Processed` is never written — the modem (and this table) is shared with
 // MineREAL, whose own reader owns that flag.
 //

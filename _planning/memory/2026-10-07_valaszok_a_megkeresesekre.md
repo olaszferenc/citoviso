@@ -1,4 +1,4 @@
-# 2026-10-07 — Válaszok a megkeresésekre (ADR-XXXX): gyűjtő + irányítópult-blokk (B terv)
+# 2026-10-07 — Válaszok a megkeresésekre (ADR-0339): gyűjtő + irányítópult-blokk (B terv)
 
 **Kérés (tulaj):** „nyitó oldalán jelenjen meg: melyik lead küldte mikor mit, megvan-e válaszolva.
 ugrás a lead oldalára” — aznap 3 valódi válasz (2 SMS, 1 e-mail) érkezett, és egyikről sem tudott a rendszer.

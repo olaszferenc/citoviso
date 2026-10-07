@@ -1,4 +1,4 @@
-// Just enough RFC 5322 / MIME for the replies collector (ADR-XXXX): headers with
+// Just enough RFC 5322 / MIME for the replies collector (ADR-0339): headers with
 // encoded-words, multipart walk, base64 / quoted-printable, charsets via TextDecoder —
 // and the cut that keeps ONLY the reply's own text (contract README ⑧: the quoted part,
 // i.e. our own mail, is not part of the reply).

@@ -6,7 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [2026-10-07_valaszok_a_megkeresesekre.md](2026-10-07_valaszok_a_megkeresesekre.md) — 2026-10-07 — Válaszok a megkeresésekre (ADR-XXXX): gyűjtő + irányítópult-blokk (B terv)
+- [2026-10-07_valaszok_a_megkeresesekre.md](2026-10-07_valaszok_a_megkeresesekre.md) — 2026-10-07 — Válaszok a megkeresésekre (ADR-0339): gyűjtő + irányítópult-blokk (B terv)
 - [2026-10-07_sablon_minta_forrasbol.md](2026-10-07_sablon_minta_forrasbol.md) — 2026-10-07 — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
 - [2026-10-07_mms_kuldo_javitas.md](2026-10-07_mms_kuldo_javitas.md) — 2026-10-07 — MMS-küldő: 4 hiba javítva (timeout, relay-éhezés, vezetékes, foglalt port)
 - [2026-10-07_magellan_terv.md](2026-10-07_magellan_terv.md) — 2026-10-07 — Magellan, a digitális felderítő: terv (SUB, „Google api / scrape” szál)

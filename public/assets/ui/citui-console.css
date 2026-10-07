@@ -823,7 +823,7 @@
 .con-fl .con-nav__n + .con-fl__go, .con-fl .con-tag + .con-fl__go { margin-left: 8px; }
 @media (max-width: 899px) { .con-wgrid { grid-template-columns: 1fr; } .con-wgrid--one { max-width: none; } }
 
-/* ── Replies to our outreach (ADR-XXXX, design-refs/console/valaszok B) ──────────────
+/* ── Replies to our outreach (ADR-0339, design-refs/console/valaszok B) ──────────────
    Master–detail on the home: list left, the conversation right; on a phone the list OR
    the conversation (`data-open`). Every row/chip is a link, so it works without JS. */
 .con-rep { border: 1px solid var(--citui-line-strong); border-radius: 8px; background: var(--citui-panel); margin-bottom: 14px; }

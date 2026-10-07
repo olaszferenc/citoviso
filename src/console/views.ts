@@ -8680,7 +8680,7 @@ export interface HubData {
   /** Test surface lagging behind origin/main, with the files blocking the sync
    *  (2026-09-08: it lagged 19 commits for two days and only a log file knew). */
   readonly stale: { readonly behind: number; readonly dirtyFiles: readonly string[] } | null;
-  /** Replies to our outreach (ADR-XXXX) — the block on the home, the attention row, the widget row. */
+  /** Replies to our outreach (ADR-0339) — the block on the home, the attention row, the widget row. */
   readonly replies: RepliesBlock;
   readonly repliesQuery: RepliesQuery;
 }
@@ -8867,7 +8867,7 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
   }
 }
 
-/* ═══ REPLIES TO OUR OUTREACH (ADR-XXXX, approved plan: design-refs/console/valaszok B) ══
+/* ═══ REPLIES TO OUR OUTREACH (ADR-0339, approved plan: design-refs/console/valaszok B) ══
    Server-rendered master–detail: every list row is a link and every detail panel is in
    the markup (hidden but the selected one), so the block works without JS; the script
    only switches in place. Mobile shows the list OR the conversation (`data-open`). */
