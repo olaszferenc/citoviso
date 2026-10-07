@@ -40,6 +40,9 @@
 //      after the queue's 10-min stale re-queue); the concat-UDH part total is read right
 //   ⑰ a foreign message in gammu's outbox, or a stopped gammu-smsd, holds the MMS back
 //   ⑱ the lane lock: a live holder → the tick is skipped; a dead holder's lock is taken over
+//   ⑳ 2026-10-07: the MMS relay WAITS for a briefly held lock; 2517 is final at once; a
+//      landline never reaches the pair; the Node timeout outlasts mms-send's own ceiling;
+//      deploy/mms-send/mms-send --selftest is green
 //   ⑲ THE DEV RELAY'S OWN WINDOW (ADR-0334) — live the moment it lands, whatever the queue's
 //      host runs: outside weekdays 9–16 it pulls NO MMS (heldBack "window", the row stays
 //      'queued'), but it still drives the queued SMS out (a 15:59 pair's link SMS); inside
@@ -57,7 +60,9 @@ import sharp from "sharp";
 
 const { db } = await import("../src/db/client.js");
 const { sendMms, toMmsJpeg, isJpeg, MMS_MAX_BYTES } = await import("../src/mms/sender.js");
-const { pullMms, ackMms, setMmsRelayDeps, MMS_MAX_ATTEMPTS } = await import("../src/mms/relayQueue.js");
+const { pullMms, ackMms, setMmsRelayDeps, MMS_MAX_ATTEMPTS, isPermanentRefusal } = await import("../src/mms/relayQueue.js");
+const { isHuMobileE164 } = await import("../src/text/phone.js");
+const { MMS_CLI_TIMEOUT_MS } = await import("../src/mms/sender.js");
 const { runMmsRelayOnce } = await import("../src/mms/relayClient.js");
 const { mmsPullBlocks } = await import("../src/sms/sendWindow.js");
 const { config } = await import("../src/config.js");
@@ -201,7 +206,7 @@ const relayDeps = (send: ReturnType<typeof modem>["send"], a: typeof api = api) 
   journalPath,
   lane: { ...laneDeps(), api: a },
   lockPath,
-  budgetMs: 270_000,
+  budgetMs: 380_000,
   // ①–⑱ must not depend on the hour the guard runs (⑲ tests the relay's window itself).
   windowAt: () => MIDDAY,
   log: () => {},
@@ -528,7 +533,7 @@ try {
     const C = "+36301110003";
     const D = "+36301110004";
     gm.events.length = 0;
-    gm.steps = 50; // 250 s per message: longer than what one tick has left after the MMS
+    gm.steps = 70; // 350 s per message: longer than what one tick (380 s) has left after the MMS
     await pairMms("lc", C);
     await pairMms("ld", D);
     const t1 = await tick(okModem());
@@ -642,6 +647,61 @@ try {
       lockGone = true;
     }
     say(t2.heldBack === undefined && lockGone, "⑱ halott tulajdonos zárját átveszi, és a tick végén elengedi", JSON.stringify(t2));
+  }
+
+  // ── ⑳ 2026-10-07 fixes ────────────────────────────────────────────────
+  {
+    // ⑳a the SMS relay's idle tick holds the lock in the same second: WAIT, don't skip.
+    await writeFile(lockPath, String(process.ppid)); // a live holder…
+    const ins = await db.insertInto("mms_outbox").values({ to_phone: PHONE, subject: "Teszt 20", image: await readFile(jpegPath) }).returning("id").executeTakeFirstOrThrow();
+    const m = okModem();
+    let waited = 0;
+    const t = await runMmsRelayOnce({
+      ...relayDeps(m.send),
+      lockSleep: async (ms: number) => {
+        waited += ms;
+        gm.clock += ms;
+        if (waited >= 3_000) await rm(lockPath, { force: true }); // …that lets go after 3 s
+      },
+    });
+    say(t.heldBack === undefined && m.got.length === 1 && (await row(ins.id)).status === "sent",
+      "⑳ a sáv-zárat 3 mp-ig fogó SMS-relay mellett az MMS-relay KIVÁR és küld (nem dobja el a ticket)", JSON.stringify({ t, waited }));
+    await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
+
+    // ⑳b a deterministic recipient refusal is parked at once — no 3× modem time.
+    const ins2 = await db.insertInto("mms_outbox").values({ to_phone: PHONE, subject: "Teszt 20b", image: await readFile(jpegPath) }).returning("id").executeTakeFirstOrThrow();
+    const alertsBefore = alerts.length;
+    await tick(modem(() => ({ ok: false, error: "MMSC elutasitas: status=0xE1 2517:Unresolvable recipient", provider: "cli" })));
+    const r2 = await row(ins2.id);
+    say(r2.status === "failed" && r2.attempts === 1 && alerts.length === alertsBefore + 1,
+      "⑳ 2517 „Unresolvable recipient” → az ELSŐ válasz után 'failed' + egy riasztás (nincs 3× modem-idő)", JSON.stringify(r2));
+    say(isPermanentRefusal("MMSC elutasitas: status=0xE1 2517:Unresolvable recipient") && !isPermanentRefusal("HTTPACTION timeout (3 probalkozas utan)"),
+      "⑳ csak a 2517 végleges; az átmeneti modem-hiba újrapróbálható marad");
+    await db.deleteFrom("mms_outbox").where("id", "=", ins2.id).execute();
+
+    // ⑳c landline out of the mobile pair (the +3688424136 of 10-07).
+    const gateSrc = await readFile(path.resolve("src/outreach/sendOutreachSms.ts"), "utf8");
+    const body = gateSrc.slice(gateSrc.indexOf("export async function mobileOutreachGates("));
+    say(!isHuMobileE164("+3688424136") && ["+36201234567", "+36301234567", "+36311234567", "+36501234567", "+36701234567"].every(isHuMobileE164),
+      "⑳ a mobil-felismerő: 88 vezetékes ✗, 20/30/31/50/70 ✓");
+    say(/if \(!isHuMobileE164\(to\)\) \{\s*return no\(/.test(body) && body.indexOf("isHuMobileE164(to)") < body.indexOf("phoneContactBlocks("),
+      "⑳ a mobil-kapu (pár + SMS) vezetékes számra no()-val megáll, a többi kizárás előtt");
+
+    // ⑳d the relay waits longer than mms-send's own ceiling (deploy/mms-send/mms-send TOTAL_BUDGET).
+    const tool = await readFile(path.resolve("deploy/mms-send/mms-send"), "utf8");
+    const budget = Number(/^TOTAL_BUDGET\s*=\s*(\d+)/m.exec(tool)?.[1] ?? NaN);
+    say(budget > 0 && MMS_CLI_TIMEOUT_MS >= (budget + 20) * 1000,
+      `⑳ a Node ${MMS_CLI_TIMEOUT_MS / 1000} s-ig vár, az mms-send saját plafonja ${budget} s — a hívó soha nem öli meg`);
+    // ⑳e the tool's own selftest (mock serial + systemctl): SIGTERM/ceiling → gammu-smsd
+    // restarted, port wait + AT probe, 2517 tried once, only what ran is restarted.
+    const { execFileSync } = await import("node:child_process");
+    let selftest = "";
+    try {
+      selftest = execFileSync("python3", [path.resolve("deploy/mms-send/mms-send"), "--selftest"], { encoding: "utf8", timeout: 120_000, stdio: ["ignore", "pipe", "ignore"] });
+    } catch (e) {
+      selftest = String((e as { stdout?: string }).stdout ?? e);
+    }
+    say(/selftest: ZOLD/.test(selftest), "⑳ az mms-send önteszt zöld (SIGTERM/plafon után a gammu-smsd újraindul; port-várás; 2517 egyszer)", selftest.split("\n").filter((l) => /HIBA/.test(l)).join(" | "));
   }
 
   // ── ⑲ the dev relay holds the queue outside the window ────────────────

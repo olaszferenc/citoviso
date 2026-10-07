@@ -35,7 +35,7 @@ címzett hálózatán múlik (mobiladat kell a letöltéséhez a címzett telefo
 |---|---|---|
 | Képméret | **≤ 300 KB** JPEG | MMSC-plafon; az eszköz elutasítja felette |
 | Futásidő | **~60–90 mp / MMS** | 2G GPRS feltöltés — ez NEM tömeges csatorna |
-| Kizárólagosság | küldés alatt a modem foglalt | `flock` védi; párhuzamos hívás `masik mms-send fut` hibával kilép |
+| Kizárólagosság | küldés alatt a modem foglalt | `flock` védi; párhuzamos hívás `masik mms-send fut` hibával kilép. A két relay közös sáv-zárát az MMS-relay ≤40 s-ig kivárja (nem dobja el a ticket) |
 | SMS-kiesés | a küldés idejére a `gammu-smsd` áll | a gammu outboxban álló SMS részei `SendingError`-ba futhatnak, ha a következő MMS túl hamar jön — a relay ezért csak üres sávon indít MMS-t (ADR-0332) |
 | Jogosultság | **root** (`sudo`) kell | systemctl stop/start + soros port |
 | Subject | ASCII | WSP text-string; ékezetes tárgyat kerülni |
@@ -95,7 +95,20 @@ mint a hideg e-mail — célzott, személyre szabott, és legyen benne lemondás
 
 ## Műszaki háttér (ha mélyebbre kell ásni)
 
-Az eszköz forrása: `/usr/local/bin/mms-send` (Python3, pyserial). Pipeline:
+Az eszköz forrása **a repóban él: `deploy/mms-send/mms-send`** (Python3, pyserial; 2026-10-07-ig
+csak a `/usr/local/bin`-ben volt). Telepítés/ellenőrzés: `bash deploy/mms-send/install.sh`
+(önteszt + diff, dry-run) → `sudo bash deploy/mms-send/install.sh --go` (mentés, telepítés,
+bájt-egyezés + önteszt). Önteszt modem nélkül: `python3 deploy/mms-send/mms-send --selftest`.
+⛔ A telepített példányt kézzel ne szerkeszd.
+
+Időkorlátok (2026-10-07): az mms-send saját teljes plafonja **170 s** (SIGALRM), új próbát csak
+≥75 s maradék kerettel kezd; SIGTERM/SIGHUP/SIGINT-re is lefut a `finally` (gammu-smsd újraindul).
+A Node-hívó (`MMS_CLI_TIMEOUT_MS`) 200 s-ig vár, a relay-unit `TimeoutStartSec=420`. A gammu-smsd
+leállítása után megvárja, hogy a portot senki ne fogja, és AT-próbával (backoff) nyit. Csak a
+`gammu-smsd`-t (és a régi MineREAL `sms-relay`-t) állítja le, és CSAK azt indítja újra, ami futott —
+a `citoviso-sms-relay` időzítőt nem bántja (a sáv-zár védi, ADR-0332). A 2517-es
+(„Unresolvable recipient”) elutasítás a sorban azonnal `failed`, nem próbáljuk 3×.
+Mobil-pár csak magyar mobilszámra (20/30/31/50/70) indul; vezetékesre a kapu megáll. Pipeline:
 `wap` APN (⚠️ nem internet.telekom!) → Telekom WAP-proxy `212.51.126.10:8080` →
 kézzel épített WSP M-Send.req POST a `http://mms.t-mobile.hu/servlets/mms` MMSC-re →
 M-Send.conf válasz parse-olása (Response-Status 0x80=Ok + Message-ID).

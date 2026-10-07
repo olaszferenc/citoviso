@@ -27,6 +27,15 @@ import { normalizePhone } from "../sms/sender.js";
 
 const execFileP = promisify(execFile);
 
+/**
+ * How long the relay waits for `sudo mms-send`. The tool has its OWN whole-run ceiling
+ * (TOTAL_BUDGET = 170 s in deploy/mms-send/mms-send, SIGALRM) and restarts gammu-smsd
+ * on the way out; this is set ABOVE it so the tool always ends on its own. Measured
+ * 2026-10-07 09:00: the old 180 s was below the tool's worst case, the SIGTERM killed
+ * it before its restart ran, and gammu-smsd stood stopped for 18 minutes.
+ */
+export const MMS_CLI_TIMEOUT_MS = 200_000;
+
 const MMS_OUTBOX_DIR = path.resolve(process.cwd(), "outbox-mms");
 /** The CLI's own ceiling is 300 000; we convert to ≤290 KB for headroom. */
 export const MMS_MAX_BYTES = 290_000;
@@ -109,7 +118,8 @@ async function sendMock(msg: MmsMessage, to: string): Promise<MmsSendResult> {
 }
 
 /**
- * Real adapter: the proven CLI. Long timeout — the send itself is ~60–90 s.
+ * Real adapter: the proven CLI. Long timeout — the send itself is ~60–90 s, the
+ * tool's own ceiling 170 s (MMS_CLI_TIMEOUT_MS).
  * Exported for the relay (scripts/mms-relay.mts): exactly ONE place drives the
  * modem's MMS path. Throws on exit≠0 (the JSON error line is on e.stdout).
  */
@@ -117,7 +127,7 @@ export async function sendMmsViaCli(msg: MmsMessage, to: string): Promise<MmsSen
   const { stdout } = await execFileP(
     "sudo",
     ["-n", "/usr/local/bin/mms-send", "--to", to, "--image", msg.imagePath, "--subject", msg.subject],
-    { timeout: 180_000 },
+    { timeout: MMS_CLI_TIMEOUT_MS },
   );
   const parsed = JSON.parse(stdout.trim().split("\n").pop() ?? "{}") as {
     ok?: boolean;

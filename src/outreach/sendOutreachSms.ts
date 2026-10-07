@@ -37,6 +37,7 @@ import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
+import { isHuMobileE164 } from "../text/phone.js";
 import {
   SEND_WINDOW,
   budapestHhmm,
@@ -295,6 +296,16 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
       d.phone
         ? `érvénytelen telefonszám a leaden: "${d.phone}"`
         : "nincs telefonszám a leaden — add meg a lead Begyűjtött adatok paneljén",
+    );
+  }
+
+  // MOBILE ONLY (2026-10-07): a landline (+3688424136, Veszprém) got into a pair; the
+  // MMSC refused it (2517 Unresolvable recipient) after the image was queued and
+  // modem time was spent. An MMS/SMS pair needs a Hungarian mobile (20/30/31/50/70).
+  if (!isHuMobileE164(to)) {
+    return no(
+      `a lead telefonszáma (${to}) nem magyar mobilszám (20/30/31/50/70 előtag) — vezetékesre MMS/SMS nem megy ki; ` +
+        "adj meg mobilszámot a lead Begyűjtött adatok paneljén",
     );
   }
 

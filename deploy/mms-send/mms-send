@@ -1,0 +1,458 @@
+#!/usr/bin/env python3
+# =============================================================================
+# mms-send — send an MMS picture through the local SIM800C GSM modem
+#            (Telekom HU, main SIM +36 30 120 0971 lives in the modem)
+#
+# SOURCE OF TRUTH: deploy/mms-send/mms-send in the citoviso repo. The installed
+# copy (/usr/local/bin/mms-send) is put there by deploy/mms-send/install.sh —
+# never edit the installed file by hand (until 2026-10-07 it lived ONLY there).
+#
+# Usage:
+#   sudo mms-send --to 06301234567 --image /path/pic.jpg [--subject "Hello"]
+#   mms-send --selftest          # mocked modem + systemctl, no root, no hardware
+#
+# Output: one JSON line on stdout:
+#   {"ok": true,  "message_id": "...", "to": "+36301234567"}
+#   {"ok": false, "error": "..."}
+# Exit code 0 on success, 1 on failure.
+#
+# Root is required: the tool takes EXCLUSIVE modem access for ~60-90s
+# (stops gammu-smsd, restarts it afterwards — SMS queued meanwhile wait in
+# gammu's outbox and go out after the restart).
+#
+# Proven pipeline (2026-08-29 PoC, delivered end-to-end):
+#   wap APN (no user/pwd) -> Telekom WAP proxy 212.51.126.10:8080
+#   -> hand-built M-Send.req POST to http://mms.t-mobile.hu/servlets/mms
+#   -> parse M-Send.conf (the SIM800 CMMS engine SWALLOWS errors; never use it)
+#
+# Retry (2026-09-05): the SIM sits in national roaming on 21625 (Telekom's own
+# 2G is switched off — forcing 21630 gives CME ERROR 100, don't try). On this
+# roaming data path transient PDP flaps cause "HTTPACTION timeout"; the cure is
+# a plain retry. Transient errors are retried up to ATTEMPTS times within the
+# same modem-exclusive window; an explicit MMSC refusal is NOT retried.
+#
+# 2026-10-07 fixes (measured on the live relay that day):
+#  ① A SIGTERM (the Node caller's 180 s timeout) killed the tool before its
+#    `finally` ran: gammu-smsd stayed stopped 09:00–09:18. Now SIGTERM/SIGHUP/
+#    SIGINT raise SystemExit, so the restart always runs; and the tool has its
+#    OWN wall-clock ceiling (TOTAL_BUDGET, enforced by SIGALRM) well under the
+#    caller's timeout, so the caller never has to kill it at all.
+#  ② It restarted citoviso-sms-relay.timer after every MMS, which re-phased the
+#    timer onto the MMS relay's second and starved the MMS relay of the modem
+#    lane lock. The relays share the lane lock (ADR-0332), so the SMS relay can
+#    no longer touch the modem during an MMS: only gammu-smsd (and the legacy
+#    MineREAL relay, which knows no lane) is stopped, and ONLY what was running
+#    is started again (it used to start sms-relay.timer even when it was off).
+#  ③ 12:52:27 the port was opened right after `systemctl stop gammu-smsd`
+#    ("device reports readiness to read but returned no data … multiple access
+#    on port?"). Now it waits until no other process holds the port, then
+#    probes it with AT (backoff) before the real session starts.
+# =============================================================================
+import argparse, fcntl, json, os, re, signal, subprocess, sys, time
+
+PORT      = '/dev/gsmmodem'
+BAUD      = 115200
+APN       = 'wap'                                   # NOT internet.telekom
+PROXY_IP  = '212.51.126.10'
+PROXY_PORT= 8080
+MMSC_URL  = 'http://mms.t-mobile.hu/servlets/mms'
+LOCKFILE  = '/var/lock/mms-send.lock'
+MAX_BYTES = 300_000                                 # MMSC ceiling (~300 KB)
+ATTEMPTS  = 3                                       # total tries on transient errors
+RETRY_WAIT= 8                                       # seconds between tries
+# Whole-run ceiling (stop services → attempts → restart). The Node caller
+# (src/mms/sender.ts MMS_CLI_TIMEOUT_MS) waits longer than this, so the tool
+# always ends — and restarts gammu-smsd — on its own.
+TOTAL_BUDGET  = 170
+# A new attempt starts only with this much of the budget left (a normal send is
+# 60–90 s; starting one we must cut off only burns modem time).
+ATTEMPT_MIN   = 75
+PORT_FREE_WAIT= 20                                  # s: wait for gammu to let go of the port
+PORT_PROBE_TRIES = 4                                # AT probes after the port is free
+# Stopped for the send, started again ONLY if they were running. The citoviso
+# SMS relay is NOT here: the modem lane lock (ADR-0332) keeps it off the modem.
+SERVICES  = ['gammu-smsd', 'sms-relay.timer', 'sms-relay.service']
+
+class Budget(Exception):
+    """The whole-run ceiling (SIGALRM) fired."""
+
+class Terminated(SystemExit):
+    """SIGTERM/SIGHUP/SIGINT — a SystemExit, so every `finally` still runs."""
+
+# ── side effects, swappable by --selftest ────────────────────────────────────
+class Sys:
+    def systemctl(self, *args):
+        return subprocess.run(['systemctl', *args], check=False).returncode
+    def port_holders(self, port):
+        """PIDs (other than us) that hold `port` open — /proc scan, like fuser."""
+        target, me, out = os.path.realpath(port), os.getpid(), []
+        for pid in os.listdir('/proc'):
+            if not pid.isdigit() or int(pid) == me: continue
+            try:
+                for fd in os.listdir(f'/proc/{pid}/fd'):
+                    try:
+                        if os.readlink(f'/proc/{pid}/fd/{fd}') == target:
+                            out.append(int(pid)); break
+                    except OSError: pass
+            except OSError: pass
+        return out
+    def open_modem(self):
+        import serial
+        return serial.Serial(PORT, BAUD, timeout=1)
+    def sleep(self, s): time.sleep(s)
+    def now(self): return time.monotonic()
+
+SYS = Sys()
+
+def emit(obj):
+    print(json.dumps(obj, ensure_ascii=False), flush=True)
+
+def die(msg):
+    emit({'ok': False, 'error': msg})
+    sys.exit(1)
+
+def normalize_phone(raw):
+    p = re.sub(r'[\s\-()]', '', raw)
+    if p.startswith('06'):  p = '+36' + p[2:]
+    elif p.startswith('36'): p = '+' + p
+    elif not p.startswith('+'): die(f'nem ertelmezheto telefonszam: {raw}')
+    if not re.fullmatch(r'\+\d{10,14}', p): die(f'nem ertelmezheto telefonszam: {raw}')
+    return p
+
+def uintvar(n):
+    out = [n & 0x7F]; n >>= 7
+    while n: out.insert(0, 0x80 | (n & 0x7F)); n >>= 7
+    return bytes(out)
+
+def build_msend_req(to, subject, jpg):
+    # Minimal WSP-encoded M-Send.req; From = insert-address-token (0x81):
+    # the WAP gateway resolves the subscriber, MMSC maps it for billing.
+    pdu  = bytes([0x8C, 0x80])                       # X-Mms-Message-Type: m-send-req
+    pdu += b'\x98' + f'mr{int(time.time())}'.encode() + b'\x00'   # Transaction-ID
+    pdu += bytes([0x8D, 0x92])                       # MMS-Version 1.2
+    pdu += bytes([0x89, 0x01, 0x81])                 # From: insert-address-token
+    pdu += b'\x97' + f'{to}/TYPE=PLMN'.encode() + b'\x00'         # To
+    if subject:
+        pdu += b'\x96' + subject.encode('ascii', 'replace') + b'\x00'  # Subject (ASCII!)
+    pdu += bytes([0x84, 0xA3])                       # Content-Type: multipart.mixed
+    part_hdr = bytes([0x9E])                         # part content-type: image/jpeg
+    pdu += bytes([0x01]) + uintvar(len(part_hdr)) + uintvar(len(jpg)) + part_hdr + jpg
+    return pdu
+
+def parse_msend_conf(body):
+    # Walk the WSP MMS headers properly. CAUTION: do NOT grep for the first
+    # 0x92 byte — the version field's VALUE is 0x92 and will mislead you.
+    i, out = 0, {}
+    while i < len(body):
+        h = body[i]; i += 1
+        if h == 0x8C: out['type'] = body[i]; i += 1
+        elif h == 0x8D: out['version'] = body[i]; i += 1
+        elif h in (0x98, 0x8B, 0x93):                # TID / Message-ID / Response-Text
+            j = body.index(0, i); val = body[i:j].decode(errors='replace'); i = j + 1
+            out[{0x98:'tid',0x8B:'message_id',0x93:'response_text'}[h]] = val
+        elif h == 0x92: out['status'] = body[i]; i += 1
+        else: break                                  # unknown header -> stop safely
+    return out
+
+class Modem:
+    def __init__(self):
+        self.s = SYS.open_modem()
+    def at(self, cmd, timeout=15, expect=('OK','ERROR','+CME ERROR','DOWNLOAD')):
+        self.s.reset_input_buffer(); self.s.write((cmd + '\r').encode())
+        buf, end = '', time.time() + timeout
+        while time.time() < end:
+            buf += self.s.read(256).decode(errors='replace')
+            if any(t in buf for t in expect): break
+            time.sleep(0.1)
+        return buf
+    def must(self, cmd, timeout=15):
+        r = self.at(cmd, timeout)
+        if 'OK' not in r: raise RuntimeError(f'{cmd} -> {r.strip()[:120]}')
+        return r
+
+def wait_port_ready():
+    """After gammu-smsd stops: wait until nobody else holds the port, then make
+    sure the modem answers a plain AT (backoff) before the session opens it."""
+    end = SYS.now() + PORT_FREE_WAIT
+    holders = SYS.port_holders(PORT)
+    while holders and SYS.now() < end:
+        SYS.sleep(0.5); holders = SYS.port_holders(PORT)
+    if holders: raise RuntimeError(f'a soros portot {PORT_FREE_WAIT} s utan is fogja: pid {holders}')
+    last, wait = '', 1.0
+    for _ in range(PORT_PROBE_TRIES):
+        try:
+            m = Modem()
+            try:
+                r = m.at('AT', 3)
+                if 'OK' in r: return
+                last = r.strip()[:80] or 'ures valasz'
+            finally:
+                m.s.close()
+        except Exception as e:
+            last = str(e)[:120]
+        SYS.sleep(wait); wait *= 2
+    raise RuntimeError(f'a modem nem valaszol AT-re ({PORT_PROBE_TRIES} proba): {last}')
+
+def send_mms(to, subject, jpg):
+    m = Modem()
+    try:
+        m.must('AT'); m.must('AT+CGATT=1', 15)
+        m.must('AT+SAPBR=3,1,"CONTYPE","GPRS"')
+        m.must(f'AT+SAPBR=3,1,"APN","{APN}"')
+        m.must('AT+SAPBR=3,1,"USER",""'); m.must('AT+SAPBR=3,1,"PWD",""')
+        r = m.at('AT+SAPBR=1,1', 40)                 # open bearer (retry once)
+        if 'OK' not in r:
+            time.sleep(3); m.must('AT+SAPBR=1,1', 40)
+        ip = m.at('AT+SAPBR=2,1', 10)
+        if '0.0.0.0' in ip: raise RuntimeError('bearer up de nincs IP')
+        m.at('AT+HTTPTERM', 3)                       # clean slate, may CME ERROR
+        m.must('AT+HTTPINIT'); m.must('AT+HTTPPARA="CID",1')
+        m.must(f'AT+HTTPPARA="PROIP","{PROXY_IP}"')
+        m.must(f'AT+HTTPPARA="PROPORT",{PROXY_PORT}')
+        m.must(f'AT+HTTPPARA="URL","{MMSC_URL}"')
+        m.must('AT+HTTPPARA="CONTENT","application/vnd.wap.mms-message"')
+        pdu = build_msend_req(to, subject, jpg)
+        r = m.at(f'AT+HTTPDATA={len(pdu)},60000', 10)
+        if 'DOWNLOAD' not in r: raise RuntimeError(f'HTTPDATA: {r.strip()[:120]}')
+        m.s.write(pdu)
+        buf, end = '', time.time() + 60
+        while time.time() < end:
+            buf += m.s.read(256).decode(errors='replace')
+            if 'OK' in buf or 'ERROR' in buf: break
+            time.sleep(0.1)
+        if 'OK' not in buf: raise RuntimeError('PDU feltoltes nem OK')
+        m.s.reset_input_buffer(); m.s.write(b'AT+HTTPACTION=1\r')
+        buf, end = '', time.time() + 120
+        while time.time() < end:
+            buf += m.s.read(256).decode(errors='replace')
+            if re.search(r'\+HTTPACTION: 1,\d+,\d+', buf): break
+            time.sleep(0.1)
+        act = re.search(r'\+HTTPACTION: 1,(\d+),(\d+)', buf)
+        if not act: raise RuntimeError('HTTPACTION timeout')
+        status, blen = int(act.group(1)), int(act.group(2))
+        if status != 200: raise RuntimeError(f'MMSC HTTP {status}')
+        m.s.reset_input_buffer(); m.s.write(b'AT+HTTPREAD\r')
+        raw, end = b'', time.time() + 30
+        while time.time() < end:
+            raw += m.s.read(2048)
+            if b'OK\r\n' in raw[-8:]: break
+            time.sleep(0.1)
+        h = re.search(rb'\+HTTPREAD: (\d+)\r\n', raw)
+        body = raw[h.end():h.end()+int(h.group(1))] if h else b''
+        conf = parse_msend_conf(body)
+        if conf.get('status') == 0x80:               # Ok
+            return {'ok': True, 'to': to,
+                    'message_id': conf.get('message_id', ''),
+                    'response_text': conf.get('response_text', '')}
+        raise RuntimeError('MMSC elutasitas: status=0x%02X %s' % (
+            conf.get('status', 0), conf.get('response_text', body.hex()[:80])))
+    finally:
+        try: m.at('AT+HTTPTERM', 3); m.at('AT+SAPBR=0,1', 10)
+        except Exception: pass
+        m.s.close()
+
+def send_mms_retry(to, subject, jpg, deadline):
+    # Retry transient failures (PDP flap / HTTPACTION timeout) within the same
+    # modem-exclusive window. An explicit MMSC refusal (e.g. "balance too low",
+    # "2517 Unresolvable recipient") is deterministic — retrying would only burn
+    # money and modem time, so re-raise at once. No attempt starts without
+    # ATTEMPT_MIN seconds of the whole-run budget left.
+    last, tried = None, 0
+    for attempt in range(1, ATTEMPTS + 1):
+        if attempt > 1 and deadline - SYS.now() < ATTEMPT_MIN:
+            break
+        tried = attempt
+        try:
+            result = send_mms(to, subject, jpg)
+            if attempt > 1: result['attempt'] = attempt
+            return result
+        except Budget:
+            raise
+        except Exception as e:
+            if str(e).startswith('MMSC elutasitas'): raise
+            last = e
+            if attempt < ATTEMPTS and deadline - SYS.now() - RETRY_WAIT >= ATTEMPT_MIN:
+                print(json.dumps({'retry': attempt, 'error': str(e)},
+                                 ensure_ascii=False), file=sys.stderr)
+                SYS.sleep(RETRY_WAIT)
+    raise RuntimeError(f'{last} ({tried} probalkozas utan)')
+
+def _on_signal(signum, _frame):
+    raise Terminated(1)
+
+def _on_alarm(_signum, _frame):
+    raise Budget(f'teljes plafon ({TOTAL_BUDGET} s) letelt')
+
+def run(to, subject, jpg):
+    """The exclusive window: stop services → port ready → send → restart.
+    Returns the result dict (raises on failure). The restart ALWAYS runs."""
+    stopped = []
+    deadline = SYS.now() + TOTAL_BUDGET
+    signal.signal(signal.SIGALRM, _on_alarm)
+    signal.alarm(TOTAL_BUDGET)
+    try:
+        for svc in SERVICES:
+            if SYS.systemctl('is-active', '--quiet', svc) == 0:
+                SYS.systemctl('stop', svc); stopped.append(svc)
+        wait_port_ready()
+        return send_mms_retry(to, subject, jpg, deadline)
+    finally:
+        signal.alarm(0)
+        # Never let a second signal cut the restart short.
+        for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            signal.signal(s, signal.SIG_IGN)
+        for svc in stopped:
+            SYS.systemctl('start', svc)
+
+def main():
+    ap = argparse.ArgumentParser(description='MMS kuldese a helyi GSM modemen at')
+    ap.add_argument('--to', help='cimzett (06.../+36... forma)')
+    ap.add_argument('--image', help='JPEG fajl utvonala')
+    ap.add_argument('--subject', default='', help='targy (ASCII, max ~40 kar.)')
+    ap.add_argument('--selftest', action='store_true', help='mock modem + systemctl onteszt')
+    a = ap.parse_args()
+    if a.selftest:
+        sys.exit(selftest())
+    if not a.to or not a.image: die('--to es --image kotelezo')
+    for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(s, _on_signal)
+    if os.geteuid() != 0: die('root kell (sudo mms-send ...)')
+    to = normalize_phone(a.to)
+    try: jpg = open(a.image, 'rb').read()
+    except OSError as e: die(f'kep nem olvashato: {e}')
+    if jpg[:3] != b'\xff\xd8\xff': die('nem JPEG (konvertald: pl. PIL .save(..., "JPEG"))')
+    if len(jpg) > MAX_BYTES: die(f'tul nagy: {len(jpg)}B > {MAX_BYTES}B — tomoritsd')
+
+    lock = open(LOCKFILE, 'w')
+    try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError: die('masik mms-send fut eppen')
+
+    try:
+        emit(run(to, a.subject, jpg))
+    except Terminated:
+        emit({'ok': False, 'error': 'mms-send leallitva (SIGTERM) — a kimenet bizonytalan'})
+        sys.exit(1)
+    except Exception as e:
+        emit({'ok': False, 'error': str(e)})
+        sys.exit(1)
+
+# ── selftest: no modem, no root, no systemctl ────────────────────────────────
+class FakePort:
+    """A SIM800 that answers OK, or per-command scripted replies."""
+    def __init__(self, script):
+        self.script, self.pending, self.closed = script, b'', False
+    def reset_input_buffer(self): self.pending = b''
+    def write(self, data):
+        cmd = data.decode(errors='replace').strip() if len(data) < 200 else '<pdu>'
+        rep = self.script(cmd)
+        self.pending += rep.encode() if isinstance(rep, str) else rep
+    def read(self, n):
+        out, self.pending = self.pending[:n], self.pending[n:]
+        return out
+    def close(self): self.closed = True
+
+class FakeSys(Sys):
+    def __init__(self, active=('gammu-smsd',), holders_for=0, probe_fail=0,
+                 script=None, clock_step=0.0):
+        self.active, self.calls = set(active), []
+        self.holders_for, self.probe_fail = holders_for, probe_fail
+        self.script, self.t, self.clock_step, self.opens = script, 0.0, clock_step, 0
+    def systemctl(self, *args):
+        self.calls.append(args)
+        if args[0] == 'is-active': return 0 if args[-1] in self.active else 3
+        if args[0] == 'stop': self.active.discard(args[1])
+        if args[0] == 'start': self.active.add(args[1])
+        return 0
+    def port_holders(self, port):
+        if self.holders_for > 0:
+            self.holders_for -= 1; return [4242]
+        return []
+    def open_modem(self):
+        self.opens += 1
+        if self.probe_fail > 0:
+            self.probe_fail -= 1
+            return FakePort(lambda c: '')                 # silent port (12:52:27)
+        return FakePort(self.script or ok_script())
+    def sleep(self, s): self.t += s
+    def now(self):
+        self.t += self.clock_step; return self.t
+
+def ok_script(conf_status=0x80, text='1000:OK'):
+    body = bytes([0x8C, 0x81, 0x98]) + b'mr1\x00' + bytes([0x8D, 0x92, 0x92, conf_status]) \
+        + b'\x8B' + b'MID42\x00' + b'\x93' + text.encode() + b'\x00'
+    def s(cmd):
+        if cmd.startswith('AT+HTTPDATA'): return 'DOWNLOAD\r\n'
+        if cmd == '<pdu>': return 'OK\r\n'
+        if cmd == 'AT+HTTPACTION=1': return f'OK\r\n+HTTPACTION: 1,200,{len(body)}\r\n'
+        if cmd == 'AT+HTTPREAD': return f'+HTTPREAD: {len(body)}\r\n'.encode() + body + b'\r\nOK\r\n'
+        if cmd == 'AT+SAPBR=2,1': return '+SAPBR: 1,1,"10.1.2.3"\r\nOK\r\n'
+        return 'OK\r\n'
+    return s
+
+def selftest():
+    global SYS, TOTAL_BUDGET
+    fails = []
+    def check(name, cond):
+        print(('  ok  ' if cond else '  HIBA ') + name)
+        if not cond: fails.append(name)
+    jpg = b'\xff\xd8\xff' + b'x' * 100
+    real_budget = TOTAL_BUDGET
+
+    # ① happy path: only the running service is stopped and started again.
+    SYS = FakeSys(active=('gammu-smsd',))
+    r = run('+36301234567', 'T', jpg)
+    check('① sikeres kuldes message_id-vel', r.get('ok') and r.get('message_id') == 'MID42')
+    check('① csak a futo gammu-smsd all le es indul ujra',
+          ('stop', 'gammu-smsd') in SYS.calls and ('start', 'gammu-smsd') in SYS.calls
+          and not any(c[0] == 'start' and c[1] != 'gammu-smsd' for c in SYS.calls))
+    check('① a citoviso-sms-relay.timer-hez nem nyul (ADR-0332 sav-zar)',
+          not any('citoviso-sms-relay' in ' '.join(c) for c in SYS.calls))
+
+    # ② the port is still held after the stop → wait, then probe with backoff.
+    SYS = FakeSys(holders_for=3, probe_fail=2)
+    r = run('+36301234567', 'T', jpg)
+    check('② foglalt port: megvarja, majd AT-probaval nyit (2 nema proba utan)',
+          r.get('ok') and SYS.opens == 4)
+    SYS = FakeSys(holders_for=10_000)
+    try: run('+36301234567', 'T', jpg); check('② orokke foglalt port hibat ad', False)
+    except RuntimeError as e: check('② orokke foglalt port hibat ad', 'fogja' in str(e))
+    check('② ... es a gammu-smsd ujraindul', ('start', 'gammu-smsd') in SYS.calls)
+
+    # ③ a deterministic MMSC refusal (2517) is tried ONCE.
+    SYS = FakeSys(script=ok_script(0xE1, '2517:Unresolvable recipient'))
+    try: run('+3688424136', 'T', jpg); check('③ 2517 elutasitas', False)
+    except RuntimeError as e:
+        check('③ 2517 elutasitas egyetlen probaval', '2517' in str(e) and SYS.opens == 2)
+
+    # ④ the budget: transient failures stop retrying when the budget runs low.
+    SYS = FakeSys(script=lambda c: 'ERROR\r\n' if c == 'AT+SAPBR=1,1' else 'OK\r\n', clock_step=20)
+    try: run('+36301234567', 'T', jpg); check('④ plafon', False)
+    except RuntimeError as e:
+        check('④ alacsony keretnel nem indul uj proba', '(1 probalkozas utan)' in str(e) or
+              '(2 probalkozas utan)' in str(e))
+
+    # ⑤ SIGALRM ceiling mid-send → Budget, and the restart still runs.
+    TOTAL_BUDGET = 1
+    SYS = FakeSys(script=lambda c: (time.sleep(2), 'OK\r\n')[1] if c == 'AT+CGATT=1' else 'OK\r\n')
+    try: run('+36301234567', 'T', jpg); check('⑤ SIGALRM plafon', False)
+    except Budget: check('⑤ SIGALRM plafon megszakit', True)
+    check('⑤ ... es a gammu-smsd ujraindul', ('start', 'gammu-smsd') in SYS.calls)
+    TOTAL_BUDGET = real_budget
+
+    # ⑥ SIGTERM mid-send (the 09:00 case) → SystemExit, the restart still runs.
+    for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(s, _on_signal)
+    def term_script(c):
+        if c == 'AT+CGATT=1': os.kill(os.getpid(), signal.SIGTERM)
+        return 'OK\r\n'
+    SYS = FakeSys(script=term_script)
+    try: run('+36301234567', 'T', jpg); check('⑥ SIGTERM', False)
+    except Terminated: check('⑥ SIGTERM SystemExit-et ad (finally lefut)', True)
+    check('⑥ ... es a gammu-smsd ujraindul', ('start', 'gammu-smsd') in SYS.calls)
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
+    print(f'mms-send selftest: {"ZOLD" if not fails else "PIROS (" + str(len(fails)) + ")"}')
+    return 1 if fails else 0
+
+if __name__ == '__main__':
+    main()

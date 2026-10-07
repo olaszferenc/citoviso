@@ -62,7 +62,8 @@ try {
       statePath: path.resolve(process.cwd(), "outbox-sms", "modem-lane.json"),
     },
     lockPath: path.resolve(process.cwd(), "outbox-sms", "modem-lane.lock"),
-    budgetMs: 270_000,
+    // TimeoutStartSec=420 minus a margin; the lock wait (≤40 s) is spent from it.
+    budgetMs: 380_000,
   });
 } catch (err) {
   // Transient network trouble: one short line, the next minute retries. A sent

@@ -30,7 +30,7 @@
 import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { MMS_MAX_BYTES, isJpeg, toMmsJpeg, type MmsMessage, type MmsSendResult } from "./sender.js";
+import { MMS_CLI_TIMEOUT_MS, MMS_MAX_BYTES, isJpeg, toMmsJpeg, type MmsMessage, type MmsSendResult } from "./sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import type { MmsAck, PulledMms } from "./relayQueue.js";
 import { drainSmsLane, withLaneLock, type SmsLaneDeps } from "../sms/modemLane.js";
@@ -49,15 +49,25 @@ export interface MmsRelayClientDeps {
   lane: SmsLaneDeps;
   /** The lane lock file (shared with scripts/sms-relay.mts). */
   lockPath: string;
-  /** Wall-clock budget of one tick (the unit's TimeoutStartSec minus a margin). */
+  /** Wall-clock budget of one tick, lock wait included (the unit's TimeoutStartSec minus a margin). */
   budgetMs: number;
+  /** How long to wait for a lane lock the SMS relay holds (default MMS_LANE_LOCK_WAIT_MS). */
+  lockWaitMs?: number;
+  /** Lock-wait clock/sleep (the guard fakes them). */
+  lockSleep?(ms: number): Promise<void>;
   /** The instant the mock-outreach window is judged at (ADR-0334); default: the lane clock. The guard pins it. */
   windowAt?(): Date;
   log?(line: string): void;
 }
 
-/** The longest an mms-send may take (a send is ≤180 s) — an MMS starts only with this much budget left. */
-export const MMS_SEND_RESERVE_MS = 180_000;
+/** The longest an mms-send may take (MMS_CLI_TIMEOUT_MS) — an MMS starts only with this much budget left. */
+export const MMS_SEND_RESERVE_MS = MMS_CLI_TIMEOUT_MS;
+/**
+ * The SMS relay's idle tick holds the lane lock for a few seconds; its timer fired in
+ * the same second as ours (2026-10-07), so dropping the tick on a busy lock starved
+ * the MMS relay. Wait this long for the lock instead.
+ */
+export const MMS_LANE_LOCK_WAIT_MS = 40_000;
 
 async function readJournal(p: string): Promise<MmsAck[]> {
   try {
@@ -86,15 +96,21 @@ export interface MmsRelayRun {
 /** One relay tick, under the lane lock. Network errors propagate (the script logs them; the next tick retries). */
 export async function runMmsRelayOnce(deps: MmsRelayClientDeps): Promise<MmsRelayRun> {
   const log = deps.log ?? ((l: string) => console.log(l));
-  const r = await withLaneLock(deps.lockPath, () => runLocked(deps, log));
+  const now = deps.lane.now ?? (() => new Date());
+  // The budget counts from the tick's start: a lock wait is spent from it.
+  const deadline = new Date(now().getTime() + deps.budgetMs);
+  const waitMs = deps.lockWaitMs ?? MMS_LANE_LOCK_WAIT_MS;
+  const r = await withLaneLock(deps.lockPath, () => runLocked(deps, deadline, log), {
+    waitMs,
+    sleep: deps.lockSleep ?? deps.lane.sleep,
+    now: () => now().getTime(),
+  });
   if (r) return r;
-  log("[mms-relay] a modem-sáv foglalt (az SMS-relay dolgozik) — ez a tick kimarad.");
+  log(`[mms-relay] a modem-sáv ${Math.round(waitMs / 1000)} mp után is foglalt (az SMS-relay dolgozik) — ez a tick kimarad.`);
   return { reacked: 0, pulled: 0, results: [], heldBack: "lock" };
 }
 
-async function runLocked(deps: MmsRelayClientDeps, log: (l: string) => void): Promise<MmsRelayRun> {
-  const now = deps.lane.now ?? (() => new Date());
-  const deadline = new Date(now().getTime() + deps.budgetMs);
+async function runLocked(deps: MmsRelayClientDeps, deadline: Date, log: (l: string) => void): Promise<MmsRelayRun> {
 
   // ① Settle what an earlier run sent but could not ack.
   const pending = await readJournal(deps.journalPath);
@@ -117,7 +133,7 @@ async function runLocked(deps: MmsRelayClientDeps, log: (l: string) => void): Pr
   // tick starts it. Judged HERE, on the box that owns the modem, so the rule holds the
   // moment this lands, whatever code the queue's host still runs. The lane above keeps
   // draining: a pair started at 15:59 still gets its companion SMS after 16:00.
-  const windowBlock = mockOutreachWindowBlocks(deps.windowAt?.() ?? now());
+  const windowBlock = mockOutreachWindowBlocks(deps.windowAt?.() ?? (deps.lane.now ?? (() => new Date()))());
   if (windowBlock) {
     log(`[mms-relay] ${windowBlock} — a sor áll, MMS ebben a tickben NEM indul.`);
     return { reacked: pending.length, pulled: 0, results: [], heldBack: "window" };

@@ -13,7 +13,8 @@ User=citoviso
 # A FŐ FÁBÓL fut (ADR-0052); SMS_RELAY_URL/SECRET a fő fa .env-jéből jön (config.ts).
 WorkingDirectory=/home/citoviso/citoviso
 ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/mms-relay.mts
-# Az mms-send saját plafonja 180 s; + pull/ack.
-TimeoutStartSec=300
+# Az mms-send saját plafonja 170 s (a Node 200 s-ig vár rá), + a sáv-zárra várás (≤40 s)
+# + a pár kísérő SMS-ének igazolása + pull/ack (scripts/mms-relay.mts budgetMs=380 s).
+TimeoutStartSec=420
 StandardOutput=append:/home/citoviso/.claude/citoviso-mms-relay.log
 StandardError=inherit

@@ -99,30 +99,56 @@ async function writeState(p: string, rows: readonly InFlightSms[]): Promise<void
 
 // ── the lock ────────────────────────────────────────────────────────────────
 
+/** Poll interval while waiting for a busy lane lock. */
+export const LANE_LOCK_POLL_MS = 1_000;
+
 /**
- * Run `fn` holding the lane lock; `null` when another live process holds it.
- * A lock whose PID is dead (a relay killed by systemd's TimeoutStartSec) is taken over.
+ * Run `fn` holding the lane lock; `null` when another live process holds it (for
+ * longer than `waitMs`). A lock whose PID is dead (a relay killed by systemd's
+ * TimeoutStartSec) is taken over.
+ *
+ * `waitMs` (2026-10-07): both relay timers fire every 60 s and systemd merged their
+ * wake-ups into the same second, so the SMS relay's few-second idle tick took the lock
+ * EVERY minute and the MMS relay skipped its tick (10:35–11:05: 2 MMS in 30 minutes).
+ * The MMS relay therefore waits for the lock instead of dropping the tick.
  */
-export async function withLaneLock<T>(lockPath: string, fn: () => Promise<T>): Promise<T | null> {
+export async function withLaneLock<T>(
+  lockPath: string,
+  fn: () => Promise<T>,
+  opts: { waitMs?: number; sleep?(ms: number): Promise<void>; now?(): number } = {},
+): Promise<T | null> {
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const now = opts.now ?? Date.now;
+  const until = now() + (opts.waitMs ?? 0);
+  for (;;) {
+    const r = await tryLaneLock(lockPath, fn);
+    if (r.held) return r.value;
+    if (now() + LANE_LOCK_POLL_MS > until) return null;
+    await sleep(LANE_LOCK_POLL_MS);
+  }
+}
+
+async function tryLaneLock<T>(lockPath: string, fn: () => Promise<T>): Promise<{ held: true; value: T } | { held: false }> {
   await mkdir(path.dirname(lockPath), { recursive: true });
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const fh = await open(lockPath, "wx");
       await fh.writeFile(String(process.pid));
       await fh.close();
-      try {
-        return await fn();
-      } finally {
-        await rm(lockPath, { force: true });
-      }
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
       const pid = Number((await readFile(lockPath, "utf8").catch(() => "")).trim());
-      if (pid && pid !== process.pid && isAlive(pid)) return null;
+      if (pid && pid !== process.pid && isAlive(pid)) return { held: false };
       await rm(lockPath, { force: true }); // stale (dead holder or unreadable) → take over
+      continue;
+    }
+    try {
+      return { held: true, value: await fn() };
+    } finally {
+      await rm(lockPath, { force: true });
     }
   }
-  return null;
+  return { held: false };
 }
 
 function isAlive(pid: number): boolean {

@@ -21,7 +21,7 @@ import { db } from "../db/client.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { mmsPullBlocks } from "../sms/sendWindow.js";
 
-/** A 'sending' row older than this is a relay that died mid-send (a send is ≤180 s). */
+/** A 'sending' row older than this is a relay that died mid-send (a send is ≤200 s, MMS_CLI_TIMEOUT_MS). */
 export const MMS_STALE_MS = 10 * 60_000;
 /** Attempts before a row is parked as 'failed' and the house is told. */
 export const MMS_MAX_ATTEMPTS = 3;
@@ -69,6 +69,16 @@ export function setMmsRelayDeps(d: MmsRelayDeps | null): void {
 /** "The modem is busy with another MMS" is a timing answer, not a verdict — no attempt burnt. */
 export function isModemBusy(error: string): boolean {
   return /masik mms-send fut/i.test(error);
+}
+
+/**
+ * A deterministic MMSC refusal of the RECIPIENT — the same number gets the same answer
+ * every time, so a retry only burns ~1 min of modem time (measured 2026-10-07: a
+ * landline +3688… and three dead +3620… numbers, each refused 3×). Parked 'failed' on
+ * the first answer. 2517 = "Unresolvable recipient".
+ */
+export function isPermanentRefusal(error: string): boolean {
+  return /\b2517\b|unresolvable recipient/i.test(error);
 }
 
 async function alertRow(id: string, headline: string, detail: string): Promise<void> {
@@ -188,7 +198,7 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
         .execute();
       continue;
     }
-    const final = row.attempts >= MMS_MAX_ATTEMPTS;
+    const final = row.attempts >= MMS_MAX_ATTEMPTS || isPermanentRefusal(error);
     await db
       .updateTable("mms_outbox")
       .set({ status: final ? "failed" : "queued", last_error: error })
@@ -197,7 +207,7 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
     if (final) {
       await alertRow(
         r.id,
-        `${row.attempts} kísérlet után sem ment ki`,
+        isPermanentRefusal(error) ? "az MMSC a címzettet elutasította (nem próbáljuk újra)" : `${row.attempts} kísérlet után sem ment ki`,
         `Utolsó hiba: ${error}\n\nSemmi nem ért el a leadhez; a páros a konzolon újraindítható.`,
       );
     }
