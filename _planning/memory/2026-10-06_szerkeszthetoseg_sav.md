@@ -16,4 +16,6 @@ configurator-float, lead-mobile (`--gate`).
 **Módosított fájlok.** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css` ·
 `src/i18n/catalog.json` · a terv (`assets/design-refs/prospect-page/edit-strip/*`) · ADR.
 
-**Nyitott.** Élesre csak a nagy deployjal. Megjelenés/bezárás nincs mérve (tulaj nem kérte).
+**Élesítés (2026-10-07, tulaj: „Most menjen ki élesre”).** `bda13b04` = `prod/20261007-0711`. Mivel a deploy commitot visz, vele ment ki az ADR-0332/0333/0334 is (tulaj jóváhagyta). Útközben: a Rendelés-panel súgó-képe frissítve (`c962cb3a`), a megkeresés-súgóba a 9–16 szabály + az elavult MMS 8:00–19:30 mondat javítva (`bda13b04`, tudasbazis-or PASS).
+
+**Nyitott.** Megjelenés/bezárás nincs mérve (tulaj nem kérte).
