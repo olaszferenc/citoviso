@@ -10,6 +10,7 @@
 - [2026-10-07_magellan_terv.md](2026-10-07_magellan_terv.md) — 2026-10-07 — Magellan, a digitális felderítő: terv (SUB, „Google api / scrape” szál)
 - [2026-10-07_foto_behuzas_linkrol.md](2026-10-07_foto_behuzas_linkrol.md) — 2026-10-07 — Fotó-behúzás megadott linkről, $0 (ADR-0337)
 - [2026-10-07_forditas_api_koltseg.md](2026-10-07_forditas_api_koltseg.md) — 2026-10-07 — Fordítás API-költség: dev boot-fordítás KI + mérő (translation_spend)
+- [2026-10-07_csomag_kartya_kedvezmenyes_ar.md](2026-10-07_csomag_kartya_kedvezmenyes_ar.md) — 2026-10-07 — Csomag-kártyák: kedvezményes ár alapból + „első díj” jelölés
 - [2026-10-06_szerkeszthetoseg_sav.md](2026-10-06_szerkeszthetoseg_sav.md) — 2026-10-06 — Szerkeszthetőség-sáv a kiküldött mockon (ADR-0335)
 - [2026-10-06_scrape_adagonkenti_mentes.md](2026-10-06_scrape_adagonkenti_mentes.md) — 2026-10-06 — Scrape: adagonkénti mentés + fizetés nélküli folytatás (ÉLES)
 - [2026-10-06_rendeles_panel_riport.md](2026-10-06_rendeles_panel_riport.md) — 2026-10-06 — Rendelés-panel mérése + riport (A + B) megvalósítva
