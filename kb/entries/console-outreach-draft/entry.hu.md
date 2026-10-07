@@ -4,7 +4,7 @@ title: Megkeresés-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
 category: lead-path
 anchors: console.outreach_draft
-updated: 2026-10-05
+updated: 2026-10-07
 ---
 
 A **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
@@ -151,8 +151,8 @@ a KÜLDÉS a lap alján, a levél alatt:”** blokk két kártyája már csak az
    idővonal első lépése pedig futó (kék) marad, amíg a relay nem nyugtázza. A kísérő SMS az MMS
    nyugtájakor indul magától. Ha újra megnyomnád, amíg a sor tart, a felső pirula pirosan, „Nem
    küldhető — ” előtaggal írja: „ennél a prospectnél már sorban áll az MMS — a dev gép relay-e
-   küldi”. Az MMS csak **8:00 és 19:30 között** (magyar idő szerint) megy ki (a kísérő SMS esti
-   ablaka miatt); ami később kerül sorba, reggel 8 után megy.
+   küldi”. Az MMS csak **hétköznap 9:00 és 16:00 között** (magyar idő szerint) megy ki — ami
+   ezen kívül áll a sorban, azt a relay visszatartja, és a következő hétköznap 9:00-tól küldi.
    Két piros eset az idővonalon:
    - „MMS-hiba (relay): … — semmi nem ment ki, a pár újraindítható” — a modem vagy a
      hálózat háromszor elhasalt; nézd meg a hibaszöveget, és indítsd újra a párost.
@@ -170,6 +170,13 @@ feliratában), a **„Páros indítása”**, és ha MINDKÉT csatorna küldhet�
 ÉS szám, és még egyik sem ment ki), az **„Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros”**.
 Mindegyik megerősítést kér, és a RENDSZERBŐL küld — nem a saját leveleződ nyílik meg. A
 kapu-ellenőrzések küldéskor a szerveren újra lefutnak.
+
+⚠️ **Mock-megkeresés csak hétköznap 9:00–16:00 (magyar idő) között megy ki** — a tulaj döntése:
+a szállásadó munkaidőben, nem este vagy hétvégén kapja a megkeresést. Ez az e-mailre, a
+**„Páros indítása”** gombra és a hideg SMS-re egyaránt áll. Ablakon kívül a gomb megnyomására a
+rendszer nem küld, hanem kiírja, hogy a mock-megkeresés csak hétköznap 9:00–16:00 (Budapest)
+között megy ki, és hogy **a következő hétköznap 9:00-tól indítható** — akkor nyisd meg újra a
+lapot, és indítsd el.
 
 ⚠️ **A sáv ZÁRVA indul**, és ezt ki is írja: **„Zárva: a levél végét (leiratkozás + jogalap)
 még nem láttad — görgess végig a levélen.”** Amint a levél végére érsz, a gombok felélednek, és
