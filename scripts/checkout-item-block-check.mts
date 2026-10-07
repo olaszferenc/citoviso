@@ -118,14 +118,20 @@ const REGRESSIONS: Record<string, { from: RegExp; to: string; hits: string }> = 
   // ⑧ the SHIPPED bug, verbatim: the card price baked in at build time, always
   // monthly, never following the cycle switch standing right below it.
   "kartya-mindig-havi": {
-    from: /slot\.textContent = fmt\(presetTotal\(p\)\);/,
-    to: "slot.textContent = fmt(presetMonthly(p));",
+    from: /var list = presetTotal\(p\);/,
+    to: "var list = presetMonthly(p);",
     hits: "⑧",
   },
   "kartya-rossz-egyseg": {
     from: /unit\.textContent = period === "annual" \? tr\("\/év"\) : tr\("\/hó"\);/,
     to: 'unit.textContent = tr("/hó");',
     hits: "⑧",
+  },
+  // ⑨ the pre-2026-10-07 card: list price only, the discount visible only in the summary
+  "kartya-listaar-kedvezmeny-nelkul": {
+    from: /if \(OFFER && offerPrice\(list\) < list\) \{/,
+    to: "if (false) {",
+    hits: "⑨",
   },
   // ③④⑦ the box stops following the cycle → stale figures from the other cycle
   "nem-koveti-az-utemet": {
@@ -152,13 +158,20 @@ const STEP1 = `(function () {
     var small = pr ? pr.querySelector("small") : null;
     var r = pr ? pr.getBoundingClientRect() : null;
     var txt = pr ? (pr.innerText || "").replace(/\\s+/g, " ").trim() : "";
+    var struck = pr ? pr.querySelector("s") : null;
+    var sTxt = struck ? (struck.textContent || "") : "";
+    // the payable figure = the slot without its struck list price and unit
+    var payTxt = pr ? txt.replace(sTxt.replace(/\\s+/g, " ").trim(), "") : "";
     var num = txt.match(AMT);
+    var payNum = payTxt.match(AMT);
     return {
       id: el.getAttribute("data-preset"),
       active: el.classList.contains("cit-cfg-preset--on"),
       text: txt,
       unit: small ? (small.textContent || "").trim() : null,
       amount: num ? Number(num[0].replace(/[^\\d]/g, "")) : null,
+      struck: !!struck,
+      pay: payNum ? Number(payNum[0].replace(/[^\\d]/g, "")) : null,
       // ⛔ Overflow is MEASURED: the annual figure is longer than the monthly one,
       // and a price that wraps or clips on a 390px card is a new defect, not a fix.
       overflow: pr ? pr.scrollWidth - Math.ceil(r.width) : null
@@ -167,7 +180,14 @@ const STEP1 = `(function () {
   var sum = document.querySelector(".cit-cfg-sum");
   var struck = sum ? sum.querySelector("s") : null;
   var sn = struck ? (struck.textContent || "").match(AMT) : null;
+  var mini = document.querySelector(".cit-cfg-mini__amt");
+  var miniS = mini ? mini.querySelector("s") : null;
+  var miniPay = mini
+    ? (mini.textContent || "").replace(miniS ? miniS.textContent || "" : "", "").match(AMT)
+    : null;
   return {
+    // the step-1 running total's PAYABLE figure (after any struck list price)
+    payPrice: miniPay ? Number(miniPay[0].replace(/[^\\d]/g, "")) : null,
     cards: cards,
     // the summary's STRUCK list price — the same basis the cards show
     listPrice: sn ? Number(sn[0].replace(/[^\\d]/g, "")) : null
@@ -360,8 +380,8 @@ async function runAll(regress?: string): Promise<void> {
 }
 
 
-interface Card { id: string; active: boolean; text: string; unit: string | null; amount: number | null; overflow: number | null }
-interface Step1 { cards: Card[]; listPrice: number | null }
+interface Card { id: string; active: boolean; text: string; unit: string | null; amount: number | null; struck: boolean; pay: number | null; overflow: number | null }
+interface Step1 { cards: Card[]; listPrice: number | null; payPrice: number | null }
 
 /** ⑧ The package cards must carry the SELECTED cycle — and follow the switch. */
 async function checkCards(page: Page, tag: string): Promise<void> {
@@ -396,6 +416,16 @@ async function checkCards(page: Page, tag: string): Promise<void> {
   check(
     act.amount !== null && act.amount === annual.listPrice,
     `${T} ⑧ az aktív kártya ára = az összegző áthúzott listaára (${act.amount} vs ${annual.listPrice})`,
+  );
+  // ⑨ owner 2026-10-07: with an offer the cards show the DISCOUNTED price by
+  // default (struck list price above it) — not only the summary at the bottom.
+  check(
+    annual.cards.every((c) => c.struck && c.pay !== null && c.amount !== null && c.pay < c.amount),
+    `${T} ⑨ ajánlattal MINDEN kártya áthúzott listaár + kedvezményes ár (${annual.cards.map((c) => `${c.amount}→${c.pay}`).join(", ")})`,
+  );
+  check(
+    act.pay !== null && act.pay === annual.payPrice,
+    `${T} ⑨ az aktív kártya kedvezményes ára = a futó összeg fizetendője (${act.pay} vs ${annual.payPrice})`,
   );
 
   await page.locator('.cit-cfg-ppill [data-period="monthly"]').click();

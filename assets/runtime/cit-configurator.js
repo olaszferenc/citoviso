@@ -3259,7 +3259,17 @@
       PRESETS.forEach(function (x) { if (x.id === id) p = x; });
       var slot = el.querySelector(".cit-cfg-preset__price");
       if (!p || !slot) return;
-      slot.textContent = fmt(presetTotal(p));
+      // With an offer the card shows what the buyer PAYS by default, the list
+      // price struck above it — the same pair the summary below prints (order-step1-offer ①).
+      // Owner 2026-10-07: the discount was only visible down in the summary.
+      var list = presetTotal(p);
+      slot.textContent = "";
+      if (OFFER && offerPrice(list) < list) {
+        var was = document.createElement("s");
+        was.textContent = fmt(list);
+        slot.appendChild(was);
+      }
+      slot.appendChild(document.createTextNode(fmt(offerPrice(list))));
       var unit = document.createElement("small");
       unit.textContent = period === "annual" ? tr("/év") : tr("/hó");
       slot.appendChild(unit);

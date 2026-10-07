@@ -1343,6 +1343,15 @@
   color: #e7ebf1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+/* offer: the struck list price sits on its own line ABOVE the payable figure,
+ * so the 390px card never has to fit both amounts side by side */
+.cit-cfg-preset__price s {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #9aa4b2;
 }
 .cit-cfg-preset__price small {
   font-size: 11px;
