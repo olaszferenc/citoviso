@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Felderítés — B változat — régió-munkalap</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-ok-ink:#19733f;--citui-bad-ink:#b3262b;--citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);--citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:color-mix(in srgb,var(--citui-navy-900) 14%,var(--citui-white));font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+/* ── draft chrome (NOT part of the design) ── */
+.sizebar{position:sticky;top:0;z-index:99;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:13px}
+.sizebar button{font:inherit;font-weight:700;cursor:pointer;border-radius:999px;padding:6px 14px;
+  border:1px solid color-mix(in srgb,var(--citui-white) 28%,transparent);background:transparent;color:inherit}
+.sizebar button.on{background:var(--citui-cyan-400);color:var(--citui-navy-950);border-color:transparent}
+.sizebar .note{opacity:.8}
+.stage{display:flex;justify-content:center;padding:18px 10px 40px}
+.frame{container-type:inline-size;width:100%;max-width:1280px;background:var(--citui-surface);
+  border-radius:12px;box-shadow:var(--citui-shadow-md)}
+body.m .frame{width:390px}
+
+/* ── console shell ── */
+.topnav{display:flex;align-items:center;gap:18px;padding:12px 16px;border-radius:12px 12px 0 0;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-ink-inverse);
+  font-weight:700;font-size:14px;overflow:hidden;white-space:nowrap}
+.topnav .brand{font-family:var(--citui-font-display);font-size:17px;display:flex;align-items:center;gap:8px}
+.topnav .dot{width:16px;height:16px;border-radius:50%;border:3px solid var(--citui-cyan-400);border-right-color:transparent}
+.topnav span.on{background:color-mix(in srgb,var(--citui-white) 14%,transparent);padding:6px 12px;border-radius:8px}
+.topnav .sp{margin-left:auto;opacity:.85;font-weight:600}
+@container (max-width:700px){.topnav .hide-m{display:none}}
+.panel{padding:18px 16px 22px}
+@container (max-width:700px){.panel{padding:14px 10px 18px}}
+
+.phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.phead h1{font-family:var(--citui-font-display);font-size:22px;margin:0;color:var(--citui-navy-900)}
+.helpq{width:26px;height:26px;border-radius:50%;border:1px solid var(--citui-line-strong);
+  background:var(--citui-white);color:var(--citui-muted);font:700 14px/1 var(--citui-font-text);cursor:pointer;padding:0}
+.helpq:hover,.helpq:focus-visible{color:var(--citui-link-ink);border-color:var(--citui-cyan-500)}
+select,input,textarea{font:inherit;font-size:14px;color:var(--citui-ink);border:1px solid var(--citui-line-strong);
+  border-radius:8px;padding:8px 10px;background:var(--citui-white);min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--citui-cyan-400);outline-offset:1px}
+.phead select{margin-left:auto}
+.saved{font-size:12px;color:var(--citui-muted);display:flex;align-items:center;gap:6px}
+.saved i{width:8px;height:8px;border-radius:50%;background:var(--citui-ok)}
+.saved.busy i{background:var(--citui-warn)}
+
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0 16px}
+@container (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font:700 20px/1.1 var(--citui-font-display);color:var(--citui-navy-900);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--citui-muted)}
+.stat.cov b{color:var(--citui-ok-ink)}
+.bar{height:6px;border-radius:3px;background:var(--citui-surface-2);margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--citui-cyan-500);width:0}
+
+.cols{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+@container (max-width:700px){.cols{grid-template-columns:1fr}}
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;padding:14px}
+.card h2{font:700 15px/1.2 var(--citui-font-display);margin:0 0 10px;color:var(--citui-navy-900);display:flex;gap:8px;align-items:center}
+.card h2 small{font:500 12px var(--citui-font-text);color:var(--citui-muted);margin-left:auto}
+
+/* tile map */
+.tmap{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;aspect-ratio:64/46}
+.tsub{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.tile{border:0;border-radius:4px;cursor:pointer;font:700 10px/1 var(--citui-font-text);color:var(--citui-navy-900);
+  background:var(--citui-surface-2);min-height:0;min-width:0;padding:0;position:relative}
+.tile.water{background:color-mix(in srgb,var(--citui-cyan-300) 35%,var(--citui-white));color:var(--citui-muted);cursor:default}
+.tile.work{background:color-mix(in srgb,var(--citui-cyan-400) 55%,var(--citui-white))}
+.tile.sat{background:color-mix(in srgb,var(--citui-warn) 40%,var(--citui-white))}
+.tile.done{background:color-mix(in srgb,var(--citui-ok) 45%,var(--citui-white));color:var(--citui-ok-ink)}
+.tile.sel{outline:3px solid var(--citui-navy-900);outline-offset:-1px;z-index:1}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--citui-muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+/* keyword list */
+.kw{display:grid;grid-template-columns:1fr 64px auto;gap:6px 8px;align-items:center;margin-top:12px;font-size:13px}
+.kw input{width:64px;padding:6px 8px;text-align:right}
+.kw .st{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--citui-surface-2);color:var(--citui-muted);white-space:nowrap}
+.kw .st.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.kw .st.sat{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-white));color:var(--citui-warn-ink)}
+.btn{font:inherit;font-size:13px;font-weight:700;border-radius:8px;padding:8px 12px;cursor:pointer;
+  border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-navy-900)}
+.btn.pri{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.hint{font-size:12px;color:var(--citui-muted);margin:8px 0 0}
+.err{font-size:12px;color:var(--citui-bad-ink);margin:6px 0 0;min-height:0}
+
+/* places */
+.add{display:flex;gap:8px}
+.add textarea{flex:1;min-height:42px;resize:vertical}
+.rows{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.row{border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px;background:var(--citui-surface)}
+.row .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row .nm{font-weight:700}
+.row .co{font-size:11px;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+.chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.chip.new{background:color-mix(in srgb,var(--citui-cyan-400) 22%,var(--citui-white));color:var(--citui-link-ink)}
+.chip.known{background:var(--citui-surface-2);color:var(--citui-muted)}
+.chip.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.chip.warn{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-white));color:var(--citui-warn-ink)}
+.chip.bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad-ink)}
+.row .top .sp{margin-left:auto;display:flex;gap:6px;align-items:center}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:10px}
+@container (max-width:700px){.form{grid-template-columns:1fr}}
+.form label{font-size:12px;color:var(--citui-muted);display:flex;flex-direction:column;gap:3px}
+.form .full{grid-column:1/-1}
+.form .out{font-size:11px;color:var(--citui-link-ink);min-height:14px}
+.form .out.bad{color:var(--citui-bad-ink)}
+.verdict{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--citui-ink)}
+.verdict label{flex-direction:row;align-items:center;color:var(--citui-ink);font-size:13px}
+.known-note{font-size:12px;color:var(--citui-muted);margin-top:4px}
+.known-note a{color:var(--citui-link-ink)}
+
+/* help popup */
+.dlg{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 50%,transparent);display:none;place-items:center;z-index:200;padding:16px}
+.dlg.open{display:grid}
+.dlg .box{background:var(--citui-white);border-radius:14px;max-width:520px;width:100%;padding:18px 20px;box-shadow:var(--citui-shadow-md);font-size:13px;line-height:1.5}
+.dlg .box h3{margin:0 0 8px;font-family:var(--citui-font-display)}
+.dlg .x{float:right}
+</style></head>
+<body>
+<div class="sizebar"><b>B — régió-munkalap</b>
+  <button type="button" data-size="d" class="on">Asztali</button><button type="button" data-size="m">Mobil 390px</button>
+  <span class="note">Vázlat: a viselkedés működik (link-értelmezés, ismert-lead szűrés, telefon/honlap-normalizálás, csempe-állapot, mentés-jelzés). Adat: minta, Siófok környéke.</span></div>
+<div class="stage"><div class="frame">
+<div class="topnav"><span class="brand"><i class="dot"></i>Citoviso</span>
+  <span class="hide-m">Leadek</span><span class="on">Felderítés</span><span class="hide-m">Scrape</span><span class="sp">magellan</span></div>
+<div class="panel">
+  <div class="phead">
+    <h1>Felderítés</h1>
+    <button class="helpq" type="button" id="helpBtn" aria-label="Jelmagyarázat">?</button>
+    <select id="region" aria-label="Régió"><option value="balaton-kelet">Balaton-Kelet</option><option value="szekesfehervar">Székesfehérvár</option></select>
+    <span class="saved" id="saved"><i></i><span>Minden mentve</span></span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="sTiles">0 / 0</b><span>csempe kész</span><div class="bar"><i id="sBar"></i></div></div>
+    <div class="stat"><b id="sRows">0</b><span>rögzített hely</span></div>
+    <div class="stat"><b id="sNew">0</b><span>új a rendszerben</span></div>
+    <div class="stat"><b id="sKnown">0</b><span>már ismert lead</span></div>
+    <div class="stat cov"><b id="sCov">–</b><span>a korábbi leadek közül újra látott</span></div>
+  </div>
+
+  <div class="cols">
+    <div class="card" id="tileCard">
+      <h2>Csempék <small id="tileName">válassz csempét</small></h2>
+      <div class="tmap" id="tmap"></div>
+      <div class="legend"><span><i style="background:var(--citui-surface-2)"></i>hátravan</span>
+        <span><i style="background:color-mix(in srgb,var(--citui-cyan-400) 55%,var(--citui-white))"></i>folyamatban</span>
+        <span><i style="background:color-mix(in srgb,var(--citui-warn) 40%,var(--citui-white))"></i>telített: felosztandó</span>
+        <span><i style="background:color-mix(in srgb,var(--citui-ok) 45%,var(--citui-white))"></i>kész</span></div>
+      <div id="kwBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>Helyek ebben a csempében <small id="rowCount"></small></h2>
+      <div class="add">
+        <textarea id="links" placeholder="Térkép-hely link(ek) — soronként egy" aria-label="Térkép-hely linkek"></textarea>
+        <button class="btn pri" type="button" id="addBtn">Felvétel</button>
+      </div>
+      <p class="err" id="addErr"></p>
+      <p class="hint">A rendszer a linkből veszi a nevet és a koordinátát, és azonnal megmondja, ismert-e már. Ismert helyet nem kell kinyitni.</p>
+      <div class="rows" id="rows"></div>
+    </div>
+  </div>
+</div></div></div>
+
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT"><div class="box">
+  <button class="btn sm x" type="button" id="dlgX" aria-label="Bezárás">×</button>
+  <h3 id="dlgT">Hogyan működik a munkalap?</h3>
+  <p><b>Csempe</b>: a régió egy darabja, amit a Térképen egy nézetben átnézel. Minden csempében mind a hat kulcsszóra keresel, és beírod, hány találatot adott a lista.</p>
+  <p><b>Telített</b>: ha a lista egy kulcsszóra 100-nál több találatot ad, a Térkép nem mutat meg mindent — a csempét négy kisebbre bontod, és azokat nézed át.</p>
+  <p><b>Ismert lead</b>: azonos név 250 méteren belül. Ezt a rendszer dönti el a felvételkor; ismert helyet nem nyitsz ki.</p>
+  <p><b>Mentés</b>: minden mező a kitöltéskor mentődik. Ha a munkád megszakad, innen folytatod.</p>
+  <p><b>Feldolgozás</b>: a csempe lezárásakor az új helyek a szokásos ingyenes lépéseken mennek át (honlap-ellenőrzés domain alapján, portál-olvasás), és lead lesz belőlük.</p>
+</div></div>
+
+<script>
+"use strict";
+// ── real rules mirrored from the code ────────────────────────────────────────
+// normalizeName + 250 m: src/scraper/dedupe.ts · PORTAL list: src/scraper/qualify.ts (excerpt)
+function normName(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()}
+function dist(a,b){var R=6371000,r=Math.PI/180,dLa=(b.lat-a.lat)*r,dLo=(b.lon-a.lon)*r,h=Math.sin(dLa/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+var PORTALS=["booking.com","airbnb.","szallas.hu","szallashely","hovamenjek","zimmerinfo","tripadvisor.","expedia.","hotels.com","agoda.","balatonnyaralas","turistautak.hu","facebook.com"];
+function hostOf(u){try{return new URL(/^https?:\/\//.test(u)?u:"https://"+u).hostname.replace(/^www\./,"")}catch(e){return null}}
+function webClass(u){if(!u)return"none";var h=hostOf(u.toLowerCase());if(!h||h.indexOf(".")<0)return"invalid";
+  var labels=h.split(".");if(PORTALS.some(function(d){return d.endsWith(".")?labels.indexOf(d.slice(0,-1))>=0:(h===d||h.endsWith("."+d))}))return"portal_only";return"has_own"}
+// HU phone normalisation — excerpt of PHONE_NORM_JS (src/text/phone.ts)
+var PM=["20","30","31","50","70"],P9=[],PA=["22","23","24","25","26","27","28","29","32","33","34","35","36","37","42","44","45","46","47","48","49","52","53","54","56","57","59","62","63","66","68","69","72","73","74","75","76","77","78","79","82","83","84","85","87","88","89","92","93","94","95","96","99"];
+function pLen(n){if(n[0]==="1")return 8;var p=n.slice(0,2);if(PM.indexOf(p)>=0||P9.indexOf(p)>=0)return 9;if(PA.indexOf(p)>=0)return 8;return 0}
+function pOk(n){return /^[0-9]+$/.test(n)&&pLen(n)===n.length}
+function normPhone(raw){var c=String(raw).replace(/[\s\-()./]/g,"");if(!/^\+?[0-9]{8,15}$/.test(c))return null;var h=null;
+  if(c.indexOf("+36")===0)h=c.slice(3);else if(c.indexOf("0036")===0)h=c.slice(4);else if(c.indexOf("06")===0)h=c.slice(2);else if(c.indexOf("36")===0)h=c.slice(2);
+  if(h!==null)return pOk(h)?"+36"+h:null;if(c[0]==="+")return c;return null}
+// Google Maps place link → {name, lat, lon, ftid}
+function parseLink(u){
+  var m=/google\.[a-z.]+\/maps\/place\/([^/]+)\/.*?!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/.exec(u);
+  if(!m){var m2=/google\.[a-z.]+\/maps\/place\/([^/]+)\/@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(u);if(!m2)return null;m=[0,m2[1],m2[2],m2[3]]}
+  var f=/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/.exec(u);
+  return{name:decodeURIComponent(m[1].replace(/\+/g," ")),lat:+m[2],lon:+m[3],ftid:f?f[1]:null}}
+
+// ── sample state ─────────────────────────────────────────────────────────────
+var KNOWN=[{id:"7f3a91c2",name:"Napfény Apartman",lat:46.9091,lon:18.0612},{id:"a19e04bd",name:"Fenyőliget Vendégház",lat:46.9150,lon:18.0731},
+  {id:"c40d22e8",name:"Hotel Azúr",lat:46.9072,lon:18.0789},{id:"5be7f013",name:"Kék Hullám Panzió",lat:46.9031,lon:18.0476}];
+var KW=["szállás","hotel","panzió","apartman","vendégház","kemping"];
+var SAT=100;
+// 6×4 grid over the 64×46 km box; row 0 mostly the lake
+var WATER={"r0c0":1,"r0c1":1,"r0c2":1,"r1c0":1};
+var tiles={};
+function mkTile(id,label){return{id:id,label:label,state:"todo",kw:KW.map(function(k){return{k:k,n:"",state:"todo"}}),rows:[],children:null}}
+for(var r=0;r<4;r++)for(var c=0;c<6;c++){var id="r"+r+"c"+c;tiles[id]=mkTile(id,String.fromCharCode(65+c)+(r+1));if(WATER[id])tiles[id].state="water"}
+var sel=null;
+// demo: a done tile and a tile in progress
+tiles.r1c4.state="done";tiles.r1c4.kw.forEach(function(k,i){k.n=[48,12,9,31,22,2][i];k.state="ok"});
+tiles.r1c5.state="work";sel="r1c5";
+
+// ── save indicator (each field change = one checkpoint write) ────────────────
+var savedEl=document.getElementById("saved"),saveT=null;
+function stamp(){var d=new Date();return d.toTimeString().slice(0,8)}
+function save(){savedEl.classList.add("busy");savedEl.lastChild.textContent="Mentés…";clearTimeout(saveT);
+  saveT=setTimeout(function(){savedEl.classList.remove("busy");savedEl.lastChild.textContent="Mentve "+stamp()},450)}
+
+// ── tile map ─────────────────────────────────────────────────────────────────
+var tmap=document.getElementById("tmap");
+function tileBtn(t){var b=document.createElement("button");b.type="button";b.className="tile "+t.state+(sel===t.id?" sel":"");
+  b.textContent=t.state==="water"?"":t.label;b.title=t.label;if(t.state!=="water")b.onclick=function(){sel=t.id;render()};return b}
+function tileNode(t){if(!t.children)return tileBtn(t);var g=document.createElement("div");g.className="tsub";t.children.forEach(function(cid){g.appendChild(tileNode(tiles[cid]))});return g}
+function renderMap(){tmap.innerHTML="";Object.keys(tiles).forEach(function(id){if(id.indexOf("-")<0)tmap.appendChild(tileNode(tiles[id]))})}
+function leafTiles(){return Object.keys(tiles).map(function(k){return tiles[k]}).filter(function(t){return!t.children&&t.state!=="water"})}
+
+// ── keyword panel ────────────────────────────────────────────────────────────
+var kwBox=document.getElementById("kwBox");
+function renderKw(){var t=tiles[sel];document.getElementById("tileName").textContent=t?("Csempe "+t.label):"válassz csempét";
+  if(!t){kwBox.innerHTML='<p class="hint">Válassz egy csempét a térképen.</p>';return}
+  var h='<div class="kw">';t.kw.forEach(function(k,i){var st=k.state==="ok"?'<span class="st ok">kész</span>':k.state==="sat"?'<span class="st sat">telített</span>':'<span class="st">hátravan</span>';
+    h+='<span>'+k.k+'</span><input inputmode="numeric" data-kw="'+i+'" value="'+k.n+'" aria-label="'+k.k+' találat" '+(t.state==="done"?"disabled":"")+'>'+st});
+  h+='</div><p class="err" id="kwErr"></p><div class="actions">';
+  var anySat=t.kw.some(function(k){return k.state==="sat"});
+  h+='<button class="btn" type="button" id="splitBtn" '+(anySat&&t.state!=="done"?"":"disabled")+'>Felosztás négy csempére</button>';
+  h+='<button class="btn pri" type="button" id="closeBtn" '+(canClose(t)?"":"disabled")+'>Csempe lezárása</button></div>';
+  h+='<p class="hint" id="closeHint">'+closeHint(t)+'</p>';
+  kwBox.innerHTML=h;
+  kwBox.querySelectorAll("input[data-kw]").forEach(function(inp){inp.onchange=function(){var k=t.kw[+inp.dataset.kw],v=inp.value.trim();
+    var e=document.getElementById("kwErr");if(v!==""&&!/^\d+$/.test(v)){e.textContent="Csak egész szám: hány találatot mutatott a lista.";return}e.textContent="";
+    k.n=v;k.state=v===""?"todo":(+v>SAT?"sat":"ok");if(t.state==="todo")t.state="work";if(k.state==="sat")t.state="sat";
+    else if(t.state==="sat"&&!t.kw.some(function(x){return x.state==="sat"}))t.state="work";save();render()}});
+  var sb=document.getElementById("splitBtn");if(sb)sb.onclick=function(){split(t)};
+  var cb=document.getElementById("closeBtn");if(cb)cb.onclick=function(){closeTile(t)}}
+function pendingRows(t){return t.rows.filter(function(r){return r.status==="new"&&!rowComplete(r)})}
+function canClose(t){return t.state!=="done"&&t.state!=="sat"&&t.kw.every(function(k){return k.state==="ok"})&&pendingRows(t).length===0}
+function closeHint(t){if(t.state==="done")return"Lezárva. Az új helyek feldolgozása lefutott.";
+  if(t.state==="sat")return"Telített kulcsszó van: bontsd négy csempére, a kisebbeket nézd át.";
+  var left=t.kw.filter(function(k){return k.state!=="ok"}).length,p=pendingRows(t).length;
+  if(left)return left+" kulcsszó van még hátra.";if(p)return p+" új hely adatai hiányosak.";return"Minden kész: lezárható."}
+function split(t){var base=t.label;t.children=[];for(var i=0;i<4;i++){var cid=t.id+"-"+i;tiles[cid]=mkTile(cid,base+"."+(i+1));t.children.push(cid)}
+  t.state="split";sel=t.children[0];save();render()}
+
+// ── rows ─────────────────────────────────────────────────────────────────────
+var allRows=[];
+function seenAnywhere(p){return allRows.some(function(r){return normName(r.name)===normName(p.name)&&dist(r,p)<=250})}
+function knownMatch(p){for(var i=0;i<KNOWN.length;i++){var k=KNOWN[i];if(normName(k.name)===normName(p.name)&&dist(k,p)<=250)return k}return null}
+document.getElementById("addBtn").onclick=function(){var t=tiles[sel],e=document.getElementById("addErr");e.textContent="";
+  if(!t||t.state==="done"){e.textContent="Válassz egy nyitott csempét.";return}
+  var lines=document.getElementById("links").value.split(/\n+/).map(function(s){return s.trim()}).filter(Boolean),bad=0,dup=0;
+  lines.forEach(function(l){var p=parseLink(l);if(!p){bad++;return}if(seenAnywhere(p)){dup++;return}
+    var k=knownMatch(p);var row={id:"m"+Math.random().toString(36).slice(2,8),name:p.name,lat:p.lat,lon:p.lon,ftid:p.ftid,link:l,status:k?"known":"new",known:k,
+      address:"",city:"",phone:"",phoneN:null,web:"",webC:"none",photos:"",rating:"",reviews:"",found:"",verdict:"",open:!k};
+    t.rows.push(row);allRows.push(row)});
+  var msg=[];if(bad)msg.push(bad+" sor nem Google Térkép-hely link");if(dup)msg.push(dup+" hely már szerepel a munkalapon");e.textContent=msg.join(" · ");
+  if(t.state==="todo")t.state="work";document.getElementById("links").value="";save();render()};
+function rowComplete(r){if(r.status!=="new")return true;if(!r.address||!r.city)return false;if(r.phone&&!r.phoneN)return false;if(r.webC==="invalid")return false;
+  if(r.webC!=="has_own"&&!r.verdict)return false;if(r.verdict==="own"&&webClass(r.found.split(/\s+/)[0]||"")!=="has_own")return false;return true}
+function chipFor(r){if(r.status==="known")return'<span class="chip known">már ismert lead</span>';
+  if(r.status==="proc")return'<span class="chip warn">feldolgozás…</span>';
+  if(r.status==="lead")return'<span class="chip ok">lead lett</span>';
+  if(r.status==="nolead")return'<span class="chip known">nem lead: saját honlap</span>';
+  return rowComplete(r)?'<span class="chip ok">adatok rendben</span>':'<span class="chip new">új hely · adat kell</span>'}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function renderRows(){var t=tiles[sel],box=document.getElementById("rows");box.innerHTML="";
+  document.getElementById("rowCount").textContent=t?t.rows.length+" hely":"";if(!t)return;
+  t.rows.forEach(function(r){var d=document.createElement("div");d.className="row";
+    var h='<div class="top"><span class="nm">'+esc(r.name)+'</span><span class="co">'+r.lat.toFixed(4)+", "+r.lon.toFixed(4)+'</span><span class="sp">'+chipFor(r);
+    if(r.status==="new"&&t.state!=="done")h+='<button class="btn sm" type="button" data-tog>'+(r.open?"Becsuk":"Adatok")+'</button>';
+    h+='</span></div>';
+    if(r.status==="known")h+='<div class="known-note">Azonos név 250 m-en belül: <a href="#">'+esc(r.known.name)+' · #'+r.known.id+'</a>. Nem kell kinyitni.</div>';
+    if(r.status==="new"&&r.open&&t.state!=="done"){
+      h+='<div class="form">'+
+      '<label>Cím<input data-f="address" value="'+esc(r.address)+'" placeholder="utca, házszám"></label>'+
+      '<label>Település<input data-f="city" value="'+esc(r.city)+'"></label>'+
+      '<label>Telefon (a Térkép-profilról)<input data-f="phone" value="'+esc(r.phone)+'" inputmode="tel"><span class="out'+(r.phone&&!r.phoneN?" bad":"")+'" data-o="phone">'+(r.phone?(r.phoneN?"→ "+r.phoneN:"Nem érvényes magyar szám"):"")+'</span></label>'+
+      '<label>Honlap (a Térkép-profilról)<input data-f="web" value="'+esc(r.web)+'" inputmode="url"><span class="out'+(r.webC==="invalid"?" bad":"")+'" data-o="web">'+webOut(r)+'</span></label>'+
+      '<label>Fotók száma a profilon<input data-f="photos" value="'+esc(r.photos)+'" inputmode="numeric"></label>'+
+      '<label>Értékelés · db<input data-f="rating" value="'+esc(r.rating)+'" placeholder="pl. 4,6 · 21"></label>';
+      if(r.webC!=="has_own")h+='<div class="full"><label>Google-keresés: „név + település” — talált linkek (szóközzel)<textarea data-f="found" rows="2">'+esc(r.found)+'</textarea></label>'+
+        '<div class="verdict" role="radiogroup" aria-label="Ítélet"><span>Ítélet:</span>'+
+        ['none:nincs saját honlap','own:van saját honlap (első link)','unsure:bizonytalan'].map(function(o){var v=o.split(":");return'<label><input type="radio" name="v'+r.id+'" value="'+v[0]+'"'+(r.verdict===v[0]?" checked":"")+'> '+v[1]+'</label>'}).join("")+
+        '</div><span class="out bad" data-o="verdict">'+(r.verdict==="own"&&webClass(r.found.split(/\s+/)[0]||"")!=="has_own"?"Az első link nem saját honlap (portál vagy hibás cím).":"")+'</span></div>';
+      h+='</div>'}
+    d.innerHTML=h;box.appendChild(d);
+    var tog=d.querySelector("[data-tog]");if(tog)tog.onclick=function(){r.open=!r.open;renderRows()};
+    d.querySelectorAll("[data-f]").forEach(function(inp){inp.oninput=function(){r[inp.dataset.f]=inp.value;
+      if(inp.dataset.f==="phone")r.phoneN=inp.value?normPhone(inp.value):null;
+      if(inp.dataset.f==="web")r.webC=webClass(inp.value.trim());
+      updateOuts(d,r)};inp.onchange=function(){save();if(inp.dataset.f==="web")renderRows();else{renderStats();renderKw();d.querySelector(".top .sp").firstChild.outerHTML=chipFor(r)}}});
+    d.querySelectorAll('input[type=radio]').forEach(function(rb){rb.onchange=function(){r.verdict=rb.value;save();renderRows();renderKw()}})})}
+function webOut(r){return r.webC==="has_own"?"saját honlap — nem lead lesz belőle":r.webC==="portal_only"?"portál, nem saját honlap":r.webC==="invalid"?"Nem értelmezhető cím":""}
+function updateOuts(d,r){var o=d.querySelector('[data-o=phone]');if(o){o.textContent=r.phone?(r.phoneN?"→ "+r.phoneN:"Nem érvényes magyar szám"):"";o.className="out"+(r.phone&&!r.phoneN?" bad":"")}
+  var w=d.querySelector('[data-o=web]');if(w){w.textContent=webOut(r);w.className="out"+(r.webC==="invalid"?" bad":"")}}
+
+// ── close tile → server-side free processing (simulated) ─────────────────────
+function closeTile(t){if(!canClose(t))return;t.state="done";t.rows.forEach(function(r){if(r.status==="new")r.status="proc"});save();render();
+  setTimeout(function(){t.rows.forEach(function(r){if(r.status==="proc")r.status=(r.webC==="has_own"||r.verdict==="own")?"nolead":"lead"});render()},1400)}
+
+// ── stats ────────────────────────────────────────────────────────────────────
+function renderStats(){var lv=leafTiles(),done=lv.filter(function(t){return t.state==="done"}).length;
+  document.getElementById("sTiles").textContent=done+" / "+lv.length;document.getElementById("sBar").style.width=(lv.length?100*done/lv.length:0)+"%";
+  document.getElementById("sRows").textContent=allRows.length;
+  document.getElementById("sNew").textContent=allRows.filter(function(r){return r.status!=="known"}).length;
+  var kn=allRows.filter(function(r){return r.status==="known"}).length;document.getElementById("sKnown").textContent=kn;
+  document.getElementById("sCov").textContent=Math.round(100*kn/KNOWN.length)+"%"}
+function render(){renderMap();renderKw();renderRows();renderStats()}
+
+// ── help popup (one "?" — lead-list A2 pattern) ──────────────────────────────
+var dlg=document.getElementById("dlg"),hb=document.getElementById("helpBtn");
+function closeDlg(){dlg.classList.remove("open");hb.focus()}
+hb.onclick=function(){dlg.classList.add("open");document.getElementById("dlgX").focus()};
+document.getElementById("dlgX").onclick=closeDlg;dlg.onclick=function(e){if(e.target===dlg)closeDlg()};
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&dlg.classList.contains("open"))closeDlg()});
+
+// ── size switch (draft chrome) ───────────────────────────────────────────────
+document.querySelectorAll(".sizebar button").forEach(function(b){b.onclick=function(){document.body.classList.toggle("m",b.dataset.size==="m");
+  document.querySelectorAll(".sizebar button").forEach(function(x){x.classList.toggle("on",x===b)})}});
+if(matchMedia("(max-width:600px)").matches)document.querySelector('.sizebar [data-size=m]').click();
+
+// demo rows in the working tile
+(function(){var t=tiles.r1c5;[
+ "https://www.google.com/maps/place/Fenyőliget+Vendégház/data=!4m7!3m6!1s0x4769c08abcddc63b:0x4fcf9e7cd321fda!8m2!3d46.9150156!4d18.0731!16s%2Fg%2F11c1",
+ "https://www.google.com/maps/place/Csend+Kert+Vendégház/data=!4m7!3m6!1s0x4769c0aa12345678:0x1a2b3c4d5e6f7081!8m2!3d46.9118!4d18.0655!16s"].forEach(function(l){
+  var p=parseLink(l),k=knownMatch(p),row={id:"d"+allRows.length,name:p.name,lat:p.lat,lon:p.lon,ftid:p.ftid,link:l,status:k?"known":"new",known:k,
+  address:"",city:"",phone:"",phoneN:null,web:"",webC:"none",photos:"",rating:"",reviews:"",found:"",verdict:"",open:!k};t.rows.push(row);allRows.push(row)});
+ t.kw[0].n="78";t.kw[0].state="ok";})();
+render();
+</script>
+</body></html>

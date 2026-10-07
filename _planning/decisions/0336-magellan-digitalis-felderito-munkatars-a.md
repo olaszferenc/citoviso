@@ -4,8 +4,9 @@
   előfizetés terhére, az nem érdekel.” „Ugyanott fusson, mint Neo, Vera meg Poe.” „Ugyanazokat
   lássa, nézze, mint most a jelenlegi területi scrape-program.” Név: **Magellan**, folyamatos felderítés.
   A ToS/letiltási kockázatot a koordináló elmondta; a tulaj ezzel a döntéssel válaszolt.
-- **Státusz:** ⏳ JAVASLAT — a változat (Q1) és a nyitott kérdések a tulajnál. Terv: `magellan/TERV.md`;
-  charter: `magellan/charter/`.
+- **Státusz:** ✅ ELFOGADVA (2026-10-07, tulaj a koordinálón át: Q1–Q10 mind az ajánlás szerint).
+  Terv: `magellan/TERV.md`; charter: `magellan/charter/`; befagyasztott felület-terv:
+  `assets/design-refs/console/scout-worksheet/` (README = kontraktus).
 - **Perszóna, nem pipeline (ADR-0325 mintája):** Magellan saját RC-session a CIT dev gépen, saját
   tartós Chrome-profil (`~/magellan/chrome-profile`, Google-bejelentkezés NÉLKÜL), saját konzol-fiók
   (`magellan`), a konzol felületén dolgozik. Emberi tempó; captchánál megáll.
@@ -28,9 +29,12 @@
   visszamérés: `google-cost-report`, külön generátor-kulccsal a scrape-credential napi száma = 0.
 - **Nem része:** a generátor Places-ága (`askPlaces`, ADR-0293), a vélemény-frissítés generáláskor,
   a Street View Static hős-tartalék, a tenant-csillag és -térkép, az önkiszolgáló kérés — külön döntés (Q6).
-- **Nyitott tulaj-döntések:** Q1 változat (ajánlás B) · Q2 értékelés rögzítése (igen) · Q3 Google-vélemények
-  elhagyása (igen) · Q4 Street View elhagyása (igen) · Q5 kontakt-keresés Neóhoz (igen) · Q6 generátor
-  0 Ft (külön szál) · Q7 kapcsoló + külön generátor-kulcs (igen, nagy deploy) · Q8 munkaidő (8–20) ·
-  Q9 régió-sorrend (Székesfehérvár először) · Q10 éles `magellan` fiók (külön engedéllyel).
+- **Tulaj-döntések (2026-10-07):** Q1 **B** régió-munkalap (`/scout`) · Q2 értékelés (csillag + db)
+  számként rögzítve · Q3 Google-vélemények ki (portál-vélemények maradnak) · Q4 Street View ki ·
+  Q5 kontakt-keresés Neónál leadenként, a scrape-ből ki · Q6 a generátor Places-ága 0 Ft-ra KÜLÖN
+  szál, addig `cached` politika a pilot-leadekre · Q7 `SCRAPE_PAID_APIS=off` élesen alapból + külön
+  generátor-kulcs, a nagy deployjal · Q8 munkaidő 8–20, óránként 10 perc szünet, captcha → aznapra
+  leáll és jelent · Q9 Székesfehérvár → Balaton-Kelet újrajárás · Q10 `magellan` éles konzol-fiók
+  a megvalósítás végén, külön engedéllyel.
 - **Becslés:** új helyekre ~70–90 hely/óra kereséssel; Balaton-Kelet ≈ 2 munkanap, Székesfehérvár ≈ 10.
 - **Visszafordíthatóság:** 🔄 könnyű — a kapcsoló visszaállítható `on`-ra, a régi út kódja megmarad.

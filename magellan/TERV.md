@@ -1,4 +1,4 @@
-# MAGELLAN — terv (2026-10-07, JAVASLAT, a koordináló és a tulaj jóváhagyásáig nincs implementáció)
+# MAGELLAN — terv (2026-10-07; ELFOGADVA: Q1–Q10 az ajánlás szerint, ADR-0336 — a felület-kontraktus: `assets/design-refs/console/scout-worksheet/`)
 
 > Brief: `~/rc-briefs/magellan-digitalis-scraper-20261007.md`. Döntés-tervezet: `_planning/decisions/XXXX-magellan-digitalis-felderito.md`.
 > Charter: `magellan/charter/` (CHARTER · RUNBOOK · ONTOLOGIA). Mockok: `assets/design-refs/_drafts/magellan/` (nem commitolt).
