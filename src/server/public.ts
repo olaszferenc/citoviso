@@ -3690,6 +3690,25 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     return sendJson(res, 200, { ok: true });
   }
 
+  // ── ADR-XXXX replies to our outreach: the Debian-box collector (gammu inbox + Zoho
+  // mailbox, both read-only) posts candidates here; the server matches them to a lead
+  // and drops every sender we never reached. Same bearer secret as the SMS relay —
+  // the console has no bearer route, and the DB is shared, so the public host takes it.
+  if (req.method === "POST" && pathname === "/api/replies/ingest") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    // The collector batches 40 replies (≤ 8 KB text + ≤ 2 KB ours each): 64 KB is too tight.
+    const b = await readJsonBody(req, 1_000_000);
+    const { ingestReplies, markAutoAnswered } = await import("../replies/store.js");
+    const items = (Array.isArray(b.items) ? b.items : []) as Parameters<typeof ingestReplies>[0];
+    const checked = (Array.isArray(b.checked) ? b.checked : []).filter((c): c is "sms" | "email" => c === "sms" || c === "email");
+    const answered = (Array.isArray(b.answered) ? b.answered : []).map((a) => {
+      const o = a as { key?: unknown; at?: unknown };
+      return { key: String(o.key ?? ""), at: String(o.at ?? "") };
+    });
+    const r = await ingestReplies(items, checked);
+    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: await markAutoAnswered(answered) });
+  }
+
   // ── ADR-0282 MMS-relay API: the same Debian-box modem, the same bearer secret. ──
   // One message per pull (a send is ~90 s); a stale 'sending' becomes 'unknown',
   // never re-sent; the ack stamps the pair's mms_sent_at and starts its SMS half.

@@ -104,12 +104,12 @@ export async function loadSentContacts(): Promise<SentContact[]> {
   });
 }
 
-const clip = (s: string | null | undefined, n: number): string | null => {
-  const t = (s ?? "").trim();
+const clip = (s: unknown, n: number): string | null => {
+  const t = typeof s === "string" ? s.trim() : "";
   return t ? t.slice(0, n) : null;
 };
-const isoOrNull = (s: string | null | undefined): Date | null => {
-  if (!s) return null;
+const isoOrNull = (s: unknown): Date | null => {
+  if (typeof s !== "string" || !s) return null;
   const d = new Date(s);
   return Number.isFinite(d.getTime()) ? d : null;
 };
@@ -133,7 +133,7 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
     const key = String(r.key ?? "").slice(0, 500);
     const text = clip(r.text, MAX_BODY);
     const receivedAt = isoOrNull(r.receivedAt);
-    if (!key || !text || !receivedAt || (r.channel !== "sms" && r.channel !== "email")) {
+    if (!key || !text || !receivedAt || typeof r.from !== "string" || (r.channel !== "sms" && r.channel !== "email")) {
       dropped++;
       continue;
     }

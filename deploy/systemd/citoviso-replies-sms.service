@@ -1,0 +1,18 @@
+[Unit]
+# ADR-XXXX: válaszok a megkeresésekre. A gyűjtő CSAK OLVASSA a GSM-modem gammu inboxát (MineREAL-lel közös),
+# és bearer-rel (SMS_RELAY_SECRET) felküldi a jelölteket a /api/replies/ingest végpontra;
+# a szerver párosít leadhez, a nem-lead feladót eldobja. Hiba → az állapot nem lép, a
+# következő kör újraküldi.
+Description=Citoviso válasz-gyűjtő (sms) — válaszok a megkeresésekre (ADR-XXXX)
+After=network-online.target gammu-smsd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut (ADR-0052); SMS_RELAY_URL/SECRET és a forrás-hitelesítők a fő fa .env-jéből.
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/replies-collect.mts --sms
+TimeoutStartSec=110
+StandardOutput=append:/home/citoviso/.claude/citoviso-replies-sms.log
+StandardError=inherit
