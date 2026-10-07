@@ -1615,8 +1615,45 @@ export interface DomainProvisioningTable {
   finished_at: Timestamp | null;
 }
 
+/** 0093 (ADR-XXXX): a reply to our outreach, collected read-only from the dev box's
+ *  gammu inbox / Zoho INBOX and matched to a lead server-side. */
+export interface OutreachReplyTable {
+  id: Generated<string>;
+  /** 'sms:<lowest gammu inbox ID>' | 'email:<Message-ID>' — the idempotency key. */
+  source_key: string;
+  channel: "sms" | "email";
+  lead_id: string;
+  prospect_id: string | null;
+  /** E.164 number or lower-cased e-mail address. */
+  sender: string;
+  sender_name: string | null;
+  received_at: Timestamp;
+  subject: string | null;
+  /** The reply's own text: multipart SMS joined, quoted mail tail cut. */
+  body: string;
+  /** What it answered — our sent message, when the collector found it. */
+  ours_at: Timestamp | null;
+  ours_subject: string | null;
+  ours_text: string | null;
+  answered_at: Timestamp | null;
+  /** Operator display name, or 'postafiók' when set from the Sent folder. */
+  answered_by: string | null;
+  /** Last manual undo — after it the Sent-folder automation never re-marks. */
+  answer_undone_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+/** 0093: when the collector last looked at each source (the freshness line). */
+export interface OutreachReplyPollTable {
+  channel: "sms" | "email";
+  checked_at: Timestamp;
+}
+
 export interface Database {
   region: RegionTable;
+  outreach_reply: OutreachReplyTable;
+  outreach_reply_poll: OutreachReplyPollTable;
   scraper_definition: ScraperDefinitionTable;
   scrape_run: ScrapeRunTable;
   lead: LeadTable;
