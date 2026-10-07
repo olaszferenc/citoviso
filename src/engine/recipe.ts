@@ -268,6 +268,21 @@ export interface SiteData {
    * an invented "Apartman". Never rendered as a claim in text.
    */
   readonly sampleRoomCount?: number;
+  /**
+   * Unit names the owner's own prose gives („Family apartman”, „Gold apartman”) when the
+   * listing has no structured room list (ADR-XXXX). The mock's sample cards then wear
+   * these names, as many as there are — never numbered cards with an invented count.
+   * Mock-only hint: the live page renders only `rooms`.
+   */
+  readonly sampleRoomNames?: readonly string[];
+  /**
+   * The mock's services SAMPLE, filled from the source (ADR-XXXX): the listing's own
+   * offers, strongest first. Mock-only hint — the live page renders `amenities`.
+   */
+  readonly sampleAmenities?: readonly string[];
+  /** Generic sample service types the source CONTRADICTS (keys of SAMPLE_AMENITY_TYPES,
+   *  e.g. "pets" for „Háziállat nem engedélyezett”) — never shown on the mock. */
+  readonly sampleAmenityDeny?: readonly string[];
   readonly reviews?: readonly Review[];
   readonly stats?: readonly Stat[];
   readonly faqs?: readonly Faq[];

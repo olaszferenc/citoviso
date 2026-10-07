@@ -1,4 +1,6 @@
 # MEMORY — Citoviso
+Utolsó frissítés: 2026-10-07 (🧩 **Mock minta-blokkjai a forrásból** (SUB, ADR-XXXX, a pilot-diszpécser 4 TARTVA-leadje): szolgáltatás-minta a forrás tételeiből, a tagadott típus (Partvilla „Kisállat”) kimarad; szobakártyák a prózai nevekből (Főnix: Family + Gold), ismeretlen darabszám → 1 „Az egész szállás” (ADR-0192 ④.4 indoka módosul, a szabály nem); „Hungary” le a címről; „Vendegház” a Places-névből jön, nem javítva; őr `sample-from-source-check`; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-07_sablon_minta_forrasbol.md`)
+
 Utolsó frissítés: 2026-10-07 (🖼️ **Fotó-behúzás linkről, $0** (SUB, ADR-0337, tulaj: „NEM FIZETEK. FEJLESSZÜNK”): `POST /lead/:id/photo-links` + űrlap a Fotók fülön (és JSON Neo adagolásához) — csak a megadott portál-adatlapot / saját honlapot olvassa, keresés és Places nélkül; új provenance `website`; a fizetős `rescrape-photos` változatlan; nem élesítve; jegyzet `_planning/memory/2026-10-07_foto_behuzas_linkrol.md`)
 
 Utolsó frissítés: 2026-10-07 (🧭 **Magellan, a digitális felderítő — TERV** (SUB `cit3492a943`, brief `magellan-digitalis-scraper-20261007`): 0 Ft-os scrape a Térképen böngészővel; charter `magellan/charter/`, terv `magellan/TERV.md`, ADR-0336 JAVASLAT (régió-munkalap `/scout`, `SCRAPE_PAID_APIS=off` kapcsoló); mockok A/B a `_drafts/magellan/`-ban. Kód nincs; Q1–Q10 a tulajnál.)

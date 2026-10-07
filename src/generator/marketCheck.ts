@@ -334,6 +334,31 @@ export function groupAmenities(raw: readonly string[]): AmenityGroup[] {
   return [...out].map(([label, items]) => ({ label, items }));
 }
 
+/** Sport/rental items a portal lists among the amenities — the AREA's offer, not the house's
+ *  facility („Strandröplabda”, „Csónakbérlés” on balaton.hu). Kept out of the mock's sample. */
+const AREA_ACTIVITY = /roplabda|foci|labda|tenisz|kolcsonz|berles|lovag|hajoz|horgasz|tura/;
+
+/**
+ * The mock's services SAMPLE from the listing (ADR-XXXX): one item per RECOGNISED facility
+ * kind (the same buckets the curator panel counts), in the given — strongest-first — order.
+ * An item no bucket recognises, a refusal, or an area activity stays out: the block says
+ * „Amit kínálunk”, so only what the house itself offers may stand there.
+ */
+export function sampleFacilityItems(ranked: readonly string[], max = 6): string[] {
+  const out: string[] = [];
+  const kinds = new Set<string>();
+  for (const item of ranked) {
+    if (out.length >= max) break;
+    const n = norm(item);
+    if (NEGATED_LABEL.test(n) || AREA_ACTIVITY.test(n)) continue;
+    const kind = AMENITY_BUCKET.find(([, keys]) => keys.some((k) => n.includes(k)))?.[0];
+    if (!kind || kinds.has(kind)) continue;
+    kinds.add(kind);
+    out.push(item.trim());
+  }
+  return out;
+}
+
 /** „Háziállat nem engedélyezett” is a listing item, and the opposite of a selling point. */
 const NEGATED_LABEL = /(?<![a-z])(?:nem|nincs|nincsen|nelkul|tilos|not|no)(?![a-z])/;
 

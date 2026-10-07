@@ -8,6 +8,7 @@ import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
+import { sampleTypeOf } from "./sampleFromSource.js";
 // Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
 export { copyHook, highlightHook, hookPick } from "./copyFields.js";
@@ -126,13 +127,30 @@ export function honestStarCount(data: SiteData): number {
  * photos are still strong. Deterministic — mock=live safe.
  */
 export function sampleRooms(d: SiteData): readonly Room[] {
-  // The COUNT follows the verified listing when it states one (owner: "szoba egy,
-  // ha van szoba kettő, ha van…") — a lead with three rooms must not meet a mock
-  // built for a different property. Absent data → the neutral default of three.
-  const n = Math.max(1, Math.min(8, d.sampleRoomCount ?? SAMPLE_ROOMS.length));
+  // The COUNT follows the source (owner: "szoba egy, ha van szoba kettő, ha van…") — a
+  // lead with three rooms must not meet a mock built for a different property.
+  // ADR-XXXX: names the owner's prose gives → that many cards, by those names (Főnix:
+  // „Family apartman”, „Gold apartman”, not „1.–3. szoba”); a stated count → numbered
+  // cards; NOTHING stated → one card for the whole place — the owner's own default
+  // (2026-09-08: „az egész szállás a jó alapértelmezés"), never an invented count.
+  const names = d.sampleRoomNames?.length ? d.sampleRoomNames.slice(0, 8) : null;
+  const n = names ? names.length : d.sampleRoomCount ? Math.max(1, Math.min(8, d.sampleRoomCount)) : 1;
+  const deny = d.sampleAmenityDeny ?? [];
   const base: Room[] = Array.from({ length: n }, (_, i) => {
     const proto = SAMPLE_ROOMS[Math.min(i, SAMPLE_ROOMS.length - 1)]!;
-    return { ...proto, name: T(d, "{n}. szoba", { n: i + 1 }) };
+    const name = names
+      ? names[i]!
+      : d.sampleRoomCount
+        ? T(d, "{n}. szoba", { n: i + 1 })
+        : T(d, "Az egész szállás");
+    // A sample amenity the source contradicts is not shown on any card either. On a card
+    // that names a REAL unit („Gold apartman") or the whole place, a generic chip is no
+    // longer an illustration but a claim about that unit („Gold apartman: Erkély") — those
+    // cards carry no sample chips (fact-check 2026-10-07, §B.17 (5)).
+    const amenities = names || !d.sampleRoomCount
+      ? []
+      : proto.amenities?.filter((a) => !deny.includes(sampleTypeOf(a.label) ?? ""));
+    return { ...proto, name, ...(amenities ? { amenities } : {}) };
   });
   if (!d.photos.length) return base;
   const offset = d.photos.length > base.length + 1 ? 2 : 0;

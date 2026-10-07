@@ -2531,6 +2531,15 @@ fi
 # élő oldalán is. A portál-URL-ek rendszeresen elrohadnak, ez nem szélső eset. A KÖZÖS
 # `sites/`-hez nem nyúl (saját tmp-fa), de böngészőt indít: 19 sablon × 3 eset × 2
 # szélesség, ezért ~144 s — szigorúan diff-scope-olva.
+# A MOCK MINTA-BLOKKJAI A FORRÁSBÓL (ADR-XXXX, pilot-kiküldés 2026-10-07): a forrással
+# ellentétes minta-elem („Kisállat” a „Háziállat nem engedélyezett” mellett) kimarad, a
+# szoba-minta neve/száma a forrásból jön (kitalált „1.–3. szoba” soha), és a magyar lapon
+# nem áll „Hungary” a címben. Determinisztikus, AI/DB/böngésző nélkül, ~3 s.
+if [ -f scripts/sample-from-source-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(sampleFromSource|displayAddress|templateKit|moduleSections|render|recipe)\.ts$|^src/engine/templates/|^src/generator/(generateEngine|marketCheck)\.ts$|^scripts/sample-from-source-check'; then
+  echo "[pre-commit] sample-from-source-check (a minta nem mond ellent a forrásnak)…"
+  npx tsx scripts/sample-from-source-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/room-card-overflow-check.mts ] && \
    changed_files | grep -qE '^src/engine/render\.ts$|^src/engine/templates/|^assets/runtime/cit-modules\.css$|^scripts/room-card-overflow-check'; then
   echo "[pre-commit] room-card-overflow-check (a szoba-kártya képe nem takarja a szöveget)…"

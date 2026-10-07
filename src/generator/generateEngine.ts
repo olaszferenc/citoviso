@@ -8,6 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
+import { deniedSampleTypes, unitNamesFromProse } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
@@ -39,7 +40,7 @@ import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { MIN_GUEST_STARS } from "./guestVoice.js";
 import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
-import { groupAmenities, subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { groupAmenities, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { fingerprintCandidates } from "./photoHash.js";
@@ -406,6 +407,9 @@ async function generateEngineMockInner(
 
   // What the verified listing knows about the property's rooms (measured, gated).
   const units = portalRooms(lead, dLang);
+  const sampleRoomNames = unitNamesFromProse(sourcedDescriptions, lead.name);
+  const sampleAmenityDeny = deniedSampleTypes(sources.listedAmenities, sourcedDescriptions);
+  const sampleAmenities = sampleFacilityItems(sourcedAmenities);
 
   // MARKETING-RELEVANCE gate with TEETH (owner ruling 2026-08-31). The other gates ask
   // "is it true / pretty / properly framed"; this one asks whether a person looking for a
@@ -568,6 +572,13 @@ async function generateEngineMockInner(
     // No list, but a stated room count → the sample cards follow that number, so the
     // SHAPE of the property is true even where the names are not known.
     ...(!units.rooms.length && units.count ? { sampleRoomCount: units.count } : {}),
+    // ADR-XXXX: the mock's SAMPLE blocks read against the source. Unit names from the
+    // owner's prose (Hungarian only — the type word is Hungarian) beat a bare count.
+    ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),
+    // The services sample: the listing's own offers (Hungarian source labels → Hungarian
+    // pages only), and on every page the generic types the source contradicts drop out.
+    ...(lang === DEFAULT_LANG && sampleAmenities.length ? { sampleAmenities } : {}),
+    ...(sampleAmenityDeny.length ? { sampleAmenityDeny } : {}),
   };
 
   // ADR-0027 template-first: with photos (the hero's fuel) the mock renders through the

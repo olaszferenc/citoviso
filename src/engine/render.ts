@@ -12,6 +12,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
+import { addressWithoutOwnCountry } from "./displayAddress.js";
 import { setHighlightSources } from "./copyFields.js";
 
 /** Templates escape their text, so compare against the escaped form. */
@@ -713,6 +714,11 @@ export function renderSite(
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
+  // ADR-XXXX: the guest-facing address drops the property's own country („… 8646 Hungary”).
+  if (data.contact.address && data.place?.country) {
+    const address = addressWithoutOwnCountry(data.contact.address, data.place.country, data.lang);
+    if (address !== data.contact.address) data = { ...data, contact: { ...data.contact, address } };
+  }
   // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
   // so no card is left as a bare icon panel next to a page full of real imagery.
   if (phase === "mock" && data.rooms?.length) data = { ...data, rooms: roomsForMock(data) };

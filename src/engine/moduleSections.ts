@@ -20,6 +20,7 @@
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
+import { sampleAmenityItems } from "./sampleFromSource.js";
 import { mapEmbed } from "./primitives.js";
 import { formatMoney } from "../text/money.js";
 
@@ -459,14 +460,19 @@ function pricingSampleBlock(d: SiteData): string {
  * the "Minta" pill and says the owner ticks the real ones).
  */
 function amenitiesSampleBlock(d: SiteData): string {
-  const items = [
-    T(d, "Ingyenes wifi"),
-    T(d, "Parkolás"),
-    T(d, "Reggeli"),
-    T(d, "Klíma"),
-    T(d, "Terasz, kert"),
-    T(d, "Kisállat"),
+  // ADR-XXXX: the source's own offers first, then the generic types it does not
+  // contradict (Partvilla: „Háziállat nem engedélyezett” → no „Kisállat” on the mock).
+  // The keys mirror SAMPLE_AMENITY_TYPES; the labels stay literal T() calls for the extractor.
+  const generic = [
+    { key: "wifi", label: T(d, "Ingyenes wifi") },
+    { key: "parking", label: T(d, "Parkolás") },
+    { key: "breakfast", label: T(d, "Reggeli") },
+    { key: "ac", label: T(d, "Klíma") },
+    { key: "terrace", label: T(d, "Terasz, kert") },
+    { key: "pets", label: T(d, "Kisállat") },
   ];
+  const items = sampleAmenityItems(d.sampleAmenities ?? [], generic, d.sampleAmenityDeny ?? []);
+  if (!items.length) return "";
   return asSample(
     listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t)),
     d,
