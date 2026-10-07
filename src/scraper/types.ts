@@ -276,6 +276,8 @@ export interface PortalListing {
  *   owner       the business's own (or explicitly licensed) asset — live-safe
  *   guest       guest-uploaded photo — live only with the §A.1/b declaration
  *   portal      read off a booking/catalogue listing — live only with §A.1/b
+ *   website     read off the business's OWN website (operator-supplied link,
+ *               ADR-XXXX) — not a licence, so live only with §A.1/b, like portal
  *   places      Google Places photo — NEVER live (Google's rights)
  *   streetview  Google Street View — NEVER live
  *   generated   produced by us — separate licence to the tenant
@@ -284,6 +286,7 @@ export type PhotoProvenance =
   | "owner"
   | "guest"
   | "portal"
+  | "website"
   | "places"
   | "streetview"
   | "generated";
@@ -308,8 +311,9 @@ export interface SourcedValue<T> {
 export interface PortalPhoto {
   /** Absolute URL of the image as published by the portal. */
   readonly url: string;
-  /** §A.3 rights class — always "portal" for this source. */
-  readonly provenance: "portal";
+  /** §A.3 rights class — "portal" for a listing; "website" for the business's own
+   *  site read via an operator-supplied link (attachPhotoLinks.ts, ADR-XXXX). */
+  readonly provenance: "portal" | "website";
   /** The listing page the image was read from (the provenance trail). */
   readonly sourceUrl: string;
   /** Host of the portal that published it (e.g. "booked.hu"). */

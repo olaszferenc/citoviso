@@ -324,7 +324,7 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
         p.width && p.height ? Math.max(p.width, p.height) : undefined;
       out.push({
         url: p.url,
-        provenance: "portal",
+        provenance: p.provenance,
         ...(p.caption ? { caption: p.caption } : {}),
         sourceUrl: p.sourceUrl,
         ...(longEdge ? { longEdge } : {}),

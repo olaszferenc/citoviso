@@ -455,9 +455,9 @@ export function fromOpenGraph(html: string, pageUrl: string): Partial<ExtractedL
  * chrome from /platform/ui/ and friends, which is how a "small_map" thumbnail
  * ended up in a gallery during the first live run.
  */
-const NON_CONTENT_IMAGE =
+export const NON_CONTENT_IMAGE =
   /(logo|icon|sprite|favicon|flag|fl_[a-z]+\.|banner|pixel|tracking|avatar|placeholder|no-image|nokep|button|btn[-_]|arrow|spinner|loader|badge|szepkartya|payment|social|facebook|instagram|small_map|staticmap|map_thumb|\/platform\/ui\/|\/ui\/global\/|\/assets\/ui\/|\/static\/ui\/|\/modules\/|\/templates?\/)/i;
-const IMAGE_EXT = /\.(jpe?g|png|webp|avif)(\?|#|$)/i;
+export const IMAGE_EXT = /\.(jpe?g|png|webp|avif)(\?|#|$)/i;
 
 /**
  * Markers of the "you might also like" block every portal appends. Everything

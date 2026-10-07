@@ -59,7 +59,7 @@ function materialScore(l: QualifiedLead): number {
 }
 
 /** Merge the newly read profiles into whatever the lead already carried, by URL. */
-function mergeProfiles(
+export function mergeProfiles(
   existing: readonly PortalProfile[] | undefined,
   found: readonly PortalProfile[],
 ): PortalProfile[] {
@@ -74,7 +74,7 @@ function mergeProfiles(
  * meg" panel should show it as verified, since we did not merely see it in a
  * search snippet, we read the page and matched the entity.
  */
-function mergeListings(
+export function mergeListings(
   existing: readonly PortalListing[] | undefined,
   profiles: readonly PortalProfile[],
 ): PortalListing[] {
@@ -244,6 +244,6 @@ export async function enrichPortal(
 
 /** All DISTINCT photos from accepted profiles — every one of them provenance "portal".
  *  Distinct across hosts: a portal network repeats the same file (scraper/portalPhotos.ts). */
-export function portalPhotosOf(lead: QualifiedLead): readonly { url: string; provenance: "portal" }[] {
+export function portalPhotosOf(lead: QualifiedLead): readonly { url: string; provenance: "portal" | "website" }[] {
   return distinctPortalPhotos(lead.portalProfiles ?? []);
 }

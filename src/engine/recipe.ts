@@ -81,6 +81,7 @@ export type PhotoProvenance =
   | "owner"
   | "guest"
   | "portal"
+  | "website"
   | "places"
   | "streetview"
   | "generated";

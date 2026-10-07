@@ -1,4 +1,6 @@
 # MEMORY — Citoviso
+Utolsó frissítés: 2026-10-07 (🖼️ **Fotó-behúzás linkről, $0** (SUB, ADR-XXXX, tulaj: „NEM FIZETEK. FEJLESSZÜNK”): `POST /lead/:id/photo-links` + űrlap a Fotók fülön (és JSON Neo adagolásához) — csak a megadott portál-adatlapot / saját honlapot olvassa, keresés és Places nélkül; új provenance `website`; a fizetős `rescrape-photos` változatlan; nem élesítve; jegyzet `_planning/memory/2026-10-07_foto_behuzas_linkrol.md`)
+
 Utolsó frissítés: 2026-10-07 (🧭 **Magellan, a digitális felderítő — TERV** (SUB `cit3492a943`, brief `magellan-digitalis-scraper-20261007`): 0 Ft-os scrape a Térképen böngészővel; charter `magellan/charter/`, terv `magellan/TERV.md`, ADR-0336 JAVASLAT (régió-munkalap `/scout`, `SCRAPE_PAID_APIS=off` kapcsoló); mockok A/B a `_drafts/magellan/`-ban. Kód nincs; Q1–Q10 a tulajnál.)
 
 Utolsó frissítés: 2026-10-07 (📲 **MMS-küldő 4 hibája javítva** (SUB, brief `mms-kuldo-javitas-20261007`): `mms-send` a repóban (`deploy/mms-send/`, SIGTERM-biztos restart, 170 s saját plafon, port-várás + AT-próba, csak a futott szolgáltatást indítja újra), MMS-relay ≤40 s-ig kivárja a sáv-zárat, vezetékes nem kerül mobil-párba, 2517 azonnal `failed`; telepítés a koordinátoré 16:00 után; jegyzet `_planning/memory/2026-10-07_mms_kuldo_javitas.md`)

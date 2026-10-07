@@ -8,7 +8,7 @@ import type { LeadMaterial, QualifiedLead } from "./types.js";
 // enough to build a magical mock — especially for the "no own site" segment.
 const CONCURRENCY = 6;
 
-function buildMaterial(lead: QualifiedLead, streetView: boolean): LeadMaterial {
+export function buildMaterial(lead: QualifiedLead, streetView: boolean): LeadMaterial {
   const placesPhotos = lead.photoCount ?? 0;
   const websiteImages = lead.assessment?.imageCount ?? 0;
   // Portal photos come from ACCEPTED listings only (the medium band returns

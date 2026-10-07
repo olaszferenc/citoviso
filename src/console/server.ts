@@ -96,6 +96,7 @@ import {
   type LeadQuery,
 } from "./data.js";
 import { reenrichOne } from "../scraper/reenrichOne.js";
+import { attachPhotoLinks } from "../scraper/attachPhotoLinks.js";
 import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
@@ -2430,6 +2431,27 @@ async function handle(
     return redirect(
       res,
       `/lead/${rescrapeMatch[1]}?flash=${encodeURIComponent(result.message)}` +
+        `&flashKind=${result.ok ? "ok" : "bad"}#ls-photos`,
+    );
+  }
+  // POST /lead/:id/photo-links — attach the photos behind operator-supplied links
+  // (portal listing or the business's own site) at $0: the given URLs are read and
+  // nothing else — no web search, no Places (ADR-XXXX, owner 2026-10-07 "NEM FIZETEK").
+  // Sits BESIDE rescrape-photos, which stays as it was. A plain form for the browser
+  // (flash + #ls-photos), JSON for scripted batches (Accept: application/json).
+  const photoLinksMatch = /^\/lead\/([0-9a-f-]{36})\/photo-links$/i.exec(path);
+  if (method === "POST" && photoLinksMatch) {
+    const leadId = photoLinksMatch[1]!;
+    const form = await readBody(req);
+    const result = await attachPhotoLinks(leadId, form.get("links") ?? "");
+    if (result.after > result.before)
+      await logLeadActivity({ leadId, tab: "ls-photos", action: "photos.links", actor: operatorActor(await currentOperator(req)) });
+    if ((req.headers.accept ?? "").includes("application/json")) {
+      return send(res, result.ok ? 200 : 422, JSON.stringify(result), "application/json");
+    }
+    return redirect(
+      res,
+      `/lead/${leadId}?flash=${encodeURIComponent(result.message)}` +
         `&flashKind=${result.ok ? "ok" : "bad"}#ls-photos`,
     );
   }

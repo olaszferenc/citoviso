@@ -4455,6 +4455,15 @@ function leadPhotosPanel(
         <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Portál-fotók újragyűjtése")}</button>
         <p class="mut small" style="margin:6px 0 0">${T(lang, "Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.")}</p>
       </form>
+      <form method="post" action="/lead/${esc(leadId)}/photo-links" class="con-reenrich"
+        style="margin-top:12px"
+        onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Fotók behúzása folyamatban…"))}'`)}">
+        <textarea name="links" rows="2" required
+          placeholder="${esc(T(lang, "https://… (soronként egy link)"))}"
+          aria-label="${esc(T(lang, "Fotók linkről"))}" style="flex:1 1 100%;min-width:0"></textarea>
+        <button type="submit" class="ghost">${ic("link", 15)} ${T(lang, "Fotók behúzása linkről")}</button>
+        <p class="mut small" style="margin:6px 0 0">${T(lang, "Portál-adatlap vagy a szállás saját honlapja — csak a megadott oldalakat olvassuk, keresés és díj nélkül. A képek a leadhez kötődnek, a fotószám frissül.")}</p>
+      </form>
       <script>
       (function () {
         var LEAD = '${esc(leadId)}';
@@ -4471,7 +4480,7 @@ function leadPhotosPanel(
         // The source is part of what the operator judges (a portal listing image is
         // the owner's own marketing shot; a Places one is usually a guest snapshot),
         // so the rights class rides along into the caption.
-        var srcLabel = { portal: 'portál-adatlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
+        var srcLabel = { portal: 'portál-adatlap', website: 'saját honlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
         var box = document.getElementById('leadPhotos');
         var msg = document.getElementById('photoMsg');
         var last = null;

@@ -344,6 +344,30 @@ A Places-sáv fejlécén egy címke mondja meg, hol tart a Places-rész:
 Ha egy sávban több kép van, mint amennyi elfér, a sáv a dobozon belül görgethető: alatta a
 *„még N kép lent — görgess a rácsban”* sor jelzi, hogy van még kép.
 
+### Fotók behúzása linkről — díj nélkül
+
+Ha böngészés közben megtalálod a szállás **portál-adatlapját** vagy a **saját honlapját**, a
+képeit közvetlenül a leadhez kötheted. A Fotók fül alján a szövegmezőbe illeszd be a linket
+(soronként egyet, egyszerre legfeljebb tízet), és kattints a **„Fotók behúzása linkről”**
+gombra.
+
+- **Nem kerül pénzbe:** csak a megadott oldalakat olvassuk be — nincs webes keresés és nincs
+  Google Places-lekérés. (A **„Portál-fotók újragyűjtése”** gomb ezzel szemben keresést is
+  indíthat, ha a leadnek kevés ismert adatlapja van.)
+- **Portál-adatlapnál** ugyanaz az ellenőrzés fut, mint a gyűjtésnél: a rendszer csak akkor
+  köti a képeket a leadhez, ha az oldal igazolja, hogy ez ugyanaz a szállás. Ha csak
+  közepesen biztos, az adatlapot megjegyzi, de a képeit nem teszi ki. A szallas.hu linkjét
+  annak nyílt párján (booked.hu) olvassuk.
+- **Saját honlapnál** a rendszer a főoldal és a galéria-oldal képeit gyűjti, és kiszűri a
+  logókat, ikonokat, hirdetéseket és a túl kicsi képeket. A honlapot akkor fogadja el, ha az
+  a leadnél tárolt honlap, vagy ha az oldalon szerepel a szállás neve és a települése. Ezek a
+  képek a rácsban **„saját honlap”** forrással jelennek meg.
+- **Az eredményt a lap tetején egy sor mondja meg:** hány fotója volt a leadnek előtte és
+  utána, és melyik link miért nem adott képet (például *„az oldal elutasította a gépi
+  olvasást”*, *„az oldal nem létezik”*, vagy hogy az oldal nem igazolja a szállás nevét és a
+  települését). A már kiküldött mockot ez nem írja felül — a képek a következő mockban
+  jelennek meg.
+
 ## „A mock szövege” — a szöveg-panel
 
 Az **„A mock szövege”** panelen látod, amit a szállásadó olvasni fog — és itt kérhetsz rajta
