@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-07_mms_kuldo_javitas.md](2026-10-07_mms_kuldo_javitas.md) — 2026-10-07 — MMS-küldő: 4 hiba javítva (timeout, relay-éhezés, vezetékes, foglalt port)
+- [2026-10-07_magellan_terv.md](2026-10-07_magellan_terv.md) — 2026-10-07 — Magellan, a digitális felderítő: terv (SUB, „Google api / scrape” szál)
 - [2026-10-07_forditas_api_koltseg.md](2026-10-07_forditas_api_koltseg.md) — 2026-10-07 — Fordítás API-költség: dev boot-fordítás KI + mérő (translation_spend)
 - [2026-10-06_szerkeszthetoseg_sav.md](2026-10-06_szerkeszthetoseg_sav.md) — 2026-10-06 — Szerkeszthetőség-sáv a kiküldött mockon (ADR-0335)
 - [2026-10-06_scrape_adagonkenti_mentes.md](2026-10-06_scrape_adagonkenti_mentes.md) — 2026-10-06 — Scrape: adagonkénti mentés + fizetés nélküli folytatás (ÉLES)
