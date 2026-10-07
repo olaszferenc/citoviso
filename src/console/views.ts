@@ -100,6 +100,8 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
+import type { RepliesBlock, ReplyView } from "../replies/store.js";
+import { displayPhone } from "../tenant/contact.js";
 import { copyEditPill, mockCopyEditBlock, mockCopyEditScript, scriptJson } from "./copyEditViews.js";
 import { curatorForm, curatorPill, sourcePackPane } from "./curatorViews.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
@@ -251,7 +253,7 @@ function langSwitcher(lang: string): string {
 function navMark(id: string, counts: NavCounts): string {
   const m = counts[id];
   if (!m) return "";
-  if (m.badge) return `<span class="con-tag con-tag--${m.badge.tone}">${esc(m.badge.text)}</span>`;
+  if (m.badge) return `<span class="con-tag con-tag--${m.badge.tone}"${m.title ? ` title="${esc(m.title)}"` : ""}>${esc(m.badge.text)}</span>`;
   if (m.n === undefined) return "";
   return `<span class="con-nav__n"${m.title ? ` title="${esc(m.title)}"` : ""}>${esc(m.n)}</span>`;
 }
@@ -8678,6 +8680,9 @@ export interface HubData {
   /** Test surface lagging behind origin/main, with the files blocking the sync
    *  (2026-09-08: it lagged 19 commits for two days and only a log file knew). */
   readonly stale: { readonly behind: number; readonly dirtyFiles: readonly string[] } | null;
+  /** Replies to our outreach (ADR-XXXX) — the block on the home, the attention row, the widget row. */
+  readonly replies: RepliesBlock;
+  readonly repliesQuery: RepliesQuery;
 }
 
 interface AttentionRow {
@@ -8710,6 +8715,16 @@ function attentionRows(d: HubData, lang: string): readonly AttentionRow[] {
           : ` — ${esc(T(lang, "A frissítés nem futott le."))}`),
       href: "/help?topic=console.dashboard",
       where: T(lang, "Súgó"),
+    });
+  }
+  // Someone answered our outreach and nobody has replied yet — a lost lead if it waits.
+  if (d.replies.open) {
+    rows.push({
+      group: "crm",
+      tone: "bad",
+      html: `${b(String(d.replies.open))} ${esc(T(lang, "megválaszolatlan válasz a megkeresésekre"))}`,
+      href: "/#replies",
+      where: T(lang, "Válaszok"),
     });
   }
   // AAM cap meter (owner, 2026-09-06): silent below 80% — from there a warn row,
@@ -8843,6 +8858,7 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
     }
     case "report":
       return w("report", T(lang, "Megkeresések"), String(d.r.total.sent), T(lang, "kiküldött megkeresés összesen"), [
+        [T(lang, "Válaszolt"), String(d.replies.total), "/?replies=all#replies"],
         [T(lang, "Megkezdett rendelés"), String(d.r.total.orderIntent), "/report"],
         [T(lang, "Tölcsér"), T(lang, "megnyitás"), "/report"],
       ]);
@@ -8850,6 +8866,144 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
       return "";
   }
 }
+
+/* ═══ REPLIES TO OUR OUTREACH (ADR-XXXX, approved plan: design-refs/console/valaszok B) ══
+   Server-rendered master–detail: every list row is a link and every detail panel is in
+   the markup (hidden but the selected one), so the block works without JS; the script
+   only switches in place. Mobile shows the list OR the conversation (`data-open`). */
+
+/** Which replies the request asked for — `?replies=all` and `?reply=<id>` on the home. */
+export interface RepliesQuery {
+  readonly filter: "open" | "all";
+  readonly reply: string | null;
+}
+
+const REPLIES_STALE_MS = 10 * 60_000;
+
+function repliesHref(q: { readonly filter: "open" | "all"; readonly reply?: string | null }): string {
+  const p = [q.reply ? `reply=${encodeURIComponent(q.reply)}` : "", q.filter === "all" ? "replies=all" : ""].filter(Boolean);
+  return `/${p.length ? `?${p.join("&")}` : ""}#replies`;
+}
+
+/** „Kiküldött levél · ma 9:27 · „tárgy"" — what the bubble above the reply says about OUR message. */
+function oursLabel(r: ReplyView, lang: string): string {
+  const at = r.oursAt ? ` · ${whenShort(r.oursAt.toISOString(), lang)}` : "";
+  if (r.channel === "email") {
+    return T(lang, "Kiküldött levél") + at + (r.oursSubject ? ` · „${r.oursSubject}”` : "");
+  }
+  return (r.sentMms ? T(lang, "Kiküldött MMS + SMS") : T(lang, "Kiküldött SMS")) + at;
+}
+
+/** One line of a message, whitespace folded; cut on a word boundary with „…" past `max`. */
+function replyExcerpt(text: string, max: number): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 20)).trimEnd()}…`;
+}
+
+/** Our sent message as the bubble shows it: an SMS whole, a long letter as its opening
+ *  (the reply is what the operator reads here; the full letter is on the lead page). */
+const OURS_MAX = 260;
+
+function replySender(r: ReplyView): string {
+  const addr = r.channel === "sms" ? displayPhone(r.sender) : r.sender;
+  return r.senderName ? `${r.senderName} · ${addr}` : addr;
+}
+
+/** The freshness line: how often the collector looks, and when it last did (warn when it stopped). */
+function repliesFreshness(b: RepliesBlock, lang: string, now: Date): string {
+  const { sms, email } = b.checked;
+  const stale = [sms, email].some((d) => !d || now.getTime() - d.getTime() > REPLIES_STALE_MS);
+  const w = (d: Date | null) => (d ? whenShort(d.toISOString(), lang, now) : T(lang, "még nem nézte"));
+  const last =
+    sms && email && w(sms) === w(email)
+      ? T(lang, "utoljára {t}", { t: w(sms) })
+      : T(lang, "SMS utoljára {s}, e-mail utoljára {e}", { s: w(sms), e: w(email) });
+  return (
+    `<span class="con-rep__src${stale ? " is-stale" : ""}">` +
+    `${esc(T(lang, "SMS percenként, e-mail 2 percenként frissül"))} · ${esc(last)}</span>`
+  );
+}
+
+function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: string): string {
+  const pill = r.answeredAt
+    ? `<span class="con-rep__pill is-done">${icf("check", 12)}${esc(T(lang, "Megválaszolva"))}</span>`
+    : `<span class="con-rep__pill is-open">${esc(T(lang, "Megválaszolatlan"))}</span>`;
+  const hidden = `<input type="hidden" name="f" value="${q.filter}" data-rep-fin>`;
+  const acts = r.answeredAt
+    ? `<span class="con-rep__meta">${esc(T(lang, "Megválaszolta: {who} · {at}", { who: r.answeredBy ?? "—", at: whenShort(r.answeredAt.toISOString(), lang) }))} · ` +
+      `<form method="post" action="/replies/${esc(r.id)}/undo">${hidden}<button type="submit" class="ghost con-rep__undo">${esc(T(lang, "Visszavonás"))}</button></form></span>`
+    : `<form method="post" action="/replies/${esc(r.id)}/answered">${hidden}<button type="submit" class="con-rep__do">${icf("check", 13)}${esc(T(lang, "Megválaszoltam"))}</button></form>`;
+  return (
+    `<div class="con-rep__p" data-rep-p="${esc(r.id)}"${selected ? "" : " hidden"}>` +
+    `<div class="con-rep__dh"><a class="con-btn con-btn--sm con-rep__back" href="${esc(repliesHref({ filter: q.filter }))}" data-rep-back>${icf("back", 13)}${esc(T(lang, "Vissza"))}</a>` +
+    `<span class="con-rep__pn">${esc(r.leadName)}</span>` +
+    `<span class="con-rep__who">${esc([r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
+    `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
+    `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>` +
+    `<div class="con-rep__acts">${acts}<a class="con-btn" href="/lead/${esc(r.leadId)}">${esc(T(lang, "Lead lapja"))}${icf("fwd", 13)}</a></div>` +
+    `</div>`
+  );
+}
+
+/** The „Válaszok a megkeresésekre" block at the top of the home (README ①–⑧). */
+export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string, now: Date = new Date()): string {
+  const all = b.replies;
+  // Under „Megválaszolatlan" an answered reply stays visible while it is the one being
+  // looked at — otherwise „Megválaszoltam" would make the conversation (and its
+  // „Visszavonás") vanish under the operator's finger.
+  const visible = (r: ReplyView) => q.filter === "all" || !r.answeredAt || r.id === q.reply;
+  const sel = all.find((r) => r.id === q.reply && visible(r)) ?? all.find(visible) ?? null;
+  const anyVisible = all.some(visible);
+  const emptyText =
+    T(lang, "Nincs megválaszolatlan válasz.") + (b.total > b.open ? ` ${T(lang, "A korábbiak a „Mind” szűrőn.")}` : "");
+  const chip = (f: "open" | "all", label: string) =>
+    `<a class="con-rep__chip" href="${esc(repliesHref({ filter: f }))}" data-rep-f="${f}"${q.filter === f ? ' aria-current="true"' : ""}>${esc(label)}</a>`;
+  const items = all
+    .map((r) => {
+      const first = replyExcerpt(r.body, 160);
+      return (
+        `<a class="con-rep__it${r.answeredAt ? " is-done" : ""}" href="${esc(repliesHref({ filter: q.filter, reply: r.id }))}" data-rep-id="${esc(r.id)}" data-done="${r.answeredAt ? 1 : 0}"` +
+        `${sel?.id === r.id ? ' aria-current="true"' : ""}${visible(r) ? "" : " hidden"}>` +
+        `<span class="con-rep__d"></span><span class="con-rep__nm">${esc(r.leadName)}</span>` +
+        `<span class="con-rep__when"><span class="con-rep__ch">${ic(r.channel === "sms" ? "sms" : "mail", 13)}${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))}</span>${esc(whenShort(r.receivedAt.toISOString(), lang, now))}</span>` +
+        `<span class="con-rep__ex">${esc(first)}</span></a>`
+      );
+    })
+    .join("");
+  const badge = b.open
+    ? `<span class="con-rep__badge" data-rep-badge>${esc(T(lang, "{n} megválaszolatlan", { n: b.open }))}</span>`
+    : `<span class="con-rep__badge is-zero" data-rep-badge>${esc(T(lang, "mind megválaszolva"))}</span>`;
+  return (
+    `<section class="con-rep" id="replies" data-replies data-filter="${q.filter}">` +
+    `<div class="con-rep__h"><span class="con-rep__t">${ic("sms", 16)}${esc(T(lang, "Válaszok a megkeresésekre"))} ${badge}</span>` +
+    `<span class="con-rep__chips">${chip("open", `${T(lang, "Megválaszolatlan")} ${b.open}`)}${chip("all", `${T(lang, "Mind")} ${b.total}`)}</span>` +
+    repliesFreshness(b, lang, now) +
+    `</div>` +
+    `<div class="con-rep__b" data-open="${q.reply && sel ? "true" : "false"}">` +
+    `<div class="con-rep__list">${items}<div class="con-rep__empty" data-rep-empty${anyVisible ? " hidden" : ""}>${esc(emptyText)}</div></div>` +
+    `<div class="con-rep__det">${all.map((r) => replyPanel(r, q, sel?.id === r.id, lang)).join("")}` +
+    `<div class="con-rep__empty" data-rep-none${sel ? " hidden" : ""}>${esc(T(lang, "Nincs megválaszolatlan válasz."))}</div></div>` +
+    `</div></section>` +
+    REPLIES_JS
+  );
+}
+
+/** Speeds the block up in place (filter, select, back); every action also works as a plain link. */
+const REPLIES_JS =
+  `<script>(function(){var R=document.querySelector('[data-replies]');if(!R)return;var B=R.querySelector('.con-rep__b');` +
+  `var its=function(){return [].slice.call(R.querySelectorAll('[data-rep-id]'))};` +
+  `function sel(id,open){var any=false;its().forEach(function(a){var on=a.getAttribute('data-rep-id')===id;if(on)any=true;if(on)a.setAttribute('aria-current','true');else a.removeAttribute('aria-current')});` +
+  `[].slice.call(R.querySelectorAll('[data-rep-p]')).forEach(function(p){p.hidden=p.getAttribute('data-rep-p')!==id});` +
+  `R.querySelector('[data-rep-none]').hidden=any;B.setAttribute('data-open',open&&any?'true':'false')}` +
+  `function filt(f){R.setAttribute('data-filter',f);[].slice.call(R.querySelectorAll('[data-rep-f]')).forEach(function(c){if(c.getAttribute('data-rep-f')===f)c.setAttribute('aria-current','true');else c.removeAttribute('aria-current')});` +
+  `[].slice.call(R.querySelectorAll('[data-rep-fin]')).forEach(function(i){i.value=f});var first=null,cur=null;` +
+  `its().forEach(function(a){a.hidden=f==='open'&&a.getAttribute('data-done')==='1';if(!a.hidden&&!first)first=a;if(!a.hidden&&a.getAttribute('aria-current'))cur=a});` +
+  `R.querySelector('[data-rep-empty]').hidden=!!first;var c=cur||first;sel(c?c.getAttribute('data-rep-id'):'',false)}` +
+  `R.addEventListener('click',function(e){var t=e.target.closest('[data-rep-f],[data-rep-id],[data-rep-back]');if(!t||e.metaKey||e.ctrlKey)return;e.preventDefault();` +
+  `if(t.hasAttribute('data-rep-f'))filt(t.getAttribute('data-rep-f'));else if(t.hasAttribute('data-rep-id'))sel(t.getAttribute('data-rep-id'),true);else B.setAttribute('data-open','false');` +
+  `try{history.replaceState(null,'',t.getAttribute('href'))}catch(x){}})})();</script>`;
 
 /** The console home — Irányítópult: greeting, one widget per module, what needs attention. */
 export function dashboardPage(d: HubData): string {
@@ -8861,6 +9015,7 @@ export function dashboardPage(d: HubData): string {
   const body =
     `<div class="con-ph"><h1>${esc(T(lang, "Irányítópult"))} ${helpLink("console.dashboard")}</h1>` +
     `<p>${esc(T(lang, "Szia, {name}! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.", { name: d.operatorName }))}</p></div>` +
+    repliesBlockHtml(d.replies, d.repliesQuery, lang) +
     `<div class="con-wgrid">${widgets}</div>` +
     attentionHtml(attentionRows(d, lang), lang);
   return layout(T(lang, "Irányítópult"), body, { active: "/" });

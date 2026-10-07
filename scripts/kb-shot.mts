@@ -1898,7 +1898,7 @@ const salesLive = new Map([
   ["gallery", 7],
 ]);
 await shootConsole(
-  dashboardPage({ r: funnel, scrapeRunning: false, operatorName: "Ferenc", fin: finCounts, sales: { on: 13, all: 14 }, stale: null }),
+  dashboardPage({ r: funnel, scrapeRunning: false, operatorName: "Ferenc", fin: finCounts, sales: { on: 13, all: 14 }, stale: null, replies: { replies: [], open: 0, total: 0, checked: { sms: null, email: null } }, repliesQuery: { filter: "open", reply: null } }),
   conOut("console-dashboard"),
 );
 // The handbook's shot must show the list as the operator MEETS it: the default

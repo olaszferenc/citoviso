@@ -11,19 +11,21 @@ import { db } from "../db/client.js";
 import { countMockQueues } from "./data.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { getDisabledModules } from "../moduleSales.js";
+import { countOpenReplies } from "../replies/store.js";
 import type { NavNumbers } from "./nav.js";
 
 const TTL_MS = 15_000;
 let cache: { at: number; value: NavNumbers } | null = null;
 
 export async function getNavNumbers(): Promise<NavNumbers> {  if (cache && Date.now() - cache.at < TTL_MS) return cache.value;
-  const [players, approved, queues, docs, partners, disabled] = await Promise.all([
+  const [players, approved, queues, docs, partners, disabled, openReplies] = await Promise.all([
     db.selectFrom("lead").select(db.fn.countAll().as("n")).executeTakeFirst(),
     db.selectFrom("mock_artifact").select(db.fn.countAll().as("n")).where("status", "=", "approved").executeTakeFirst(),
     countMockQueues(),
     db.selectFrom("accounting_document").select(db.fn.countAll().as("n")).where("status", "!=", "void").executeTakeFirst(),
     db.selectFrom("partner").select(db.fn.countAll().as("n")).where("active", "=", true).executeTakeFirst(),
     getDisabledModules(),
+    countOpenReplies(),
   ]);
   const value: NavNumbers = {
     players: Number(players?.n ?? 0),
@@ -34,6 +36,7 @@ export async function getNavNumbers(): Promise<NavNumbers> {  if (cache && Date.
     partners: Number(partners?.n ?? 0),
     sellable: MODULE_CATALOG.length - disabled.size,
     catalog: MODULE_CATALOG.length,
+    openReplies,
   };
   cache = { at: Date.now(), value };
   return value;

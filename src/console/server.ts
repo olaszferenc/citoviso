@@ -143,6 +143,7 @@ import { normalizeCustomDomain, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
+import { getRepliesBlock, markAnswered, unmarkAnswered } from "../replies/store.js";
 import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import {
@@ -1402,6 +1403,20 @@ async function handle(
   // MI vevőnknek szól. Ez a sor dönti el, hová kerül a süti-sáv és a Pixel.
   markAudience(res, consoleAudience(path));
 
+  // POST /replies/<id>/answered | /undo — „Megválaszoltam" / „Visszavonás" on the home's
+  // replies block (ADR-XXXX). Who = the signed-in operator; back to the same conversation.
+  {
+    const m = method === "POST" ? path.match(/^\/replies\/([0-9a-f-]{36})\/(answered|undo)$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const ok = m[2] === "answered" ? await markAnswered(m[1]!, op.displayName) : await unmarkAnswered(m[1]!);
+      if (!ok) return send(res, 404, layout("404", `<p>${T(consoleLang(), "Nincs ilyen válasz.")}</p>`));
+      const all = form.get("f") === "all" ? "&replies=all" : "";
+      return redirect(res, `/?reply=${m[1]}${all}#replies`);
+    }
+  }
   // GET / — Irányítópult; GET /hub/<id> — a module's own dashboard (linear-shell README ④⑤).
   // Both render from ONE data object, so a number on the home and on the module page
   // can never disagree.
@@ -1418,6 +1433,11 @@ async function handle(
       })(),
       // Is this console even running today's code? (2026-09-08 silent-staleness fix)
       stale: await getTreeFreshness(),
+      replies: await getRepliesBlock(),
+      repliesQuery: {
+        filter: url.searchParams.get("replies") === "all" ? "all" : "open",
+        reply: url.searchParams.get("reply"),
+      },
     };
     if (path === "/") return send(res, 200, dashboardPage(data));
     const page = modulePage(path.slice(HUB_PREFIX.length), data);

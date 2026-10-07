@@ -66,12 +66,23 @@ export interface NavNumbers {
   readonly partners: number;
   readonly sellable: number;
   readonly catalog: number;
+  /** Replies to our outreach nobody has answered yet — the dashboard's „Válaszok" block (ADR-XXXX). */
+  readonly openReplies: number;
 }
 
 /** Numbers → marks beside the nodes. Pure, so a guard can feed fixtures; null → no marks. */
 export function navCountsOf(n: NavNumbers | null, lang = "hu"): NavCounts {
   if (!n) return {};
   return {
+    // Silent at 0: a badge that says „0" is noise next to the one row that has something to do.
+    ...(n.openReplies > 0
+      ? {
+          home: {
+            badge: { text: String(n.openReplies), tone: "bad" as const },
+            title: T(lang, "{n} megválaszolatlan válasz a megkeresésekre", { n: n.openReplies }),
+          },
+        }
+      : {}),
     leads: {
       n: n.players,
       title: T(lang, "{n} felmért szereplő összesen, a diszkvalifikáltakkal együtt — a link a szűretlen AKTÍV listát nyitja, a diszkvalifikáltak külön nézetben vannak", { n: n.players }),

@@ -241,6 +241,8 @@ export interface ReplyView {
 export interface RepliesBlock {
   readonly replies: readonly ReplyView[];
   readonly open: number;
+  /** Every reply ever received (the list is capped, this number is not) — the „Válaszolt" widget row. */
+  readonly total: number;
   readonly checked: { readonly sms: Date | null; readonly email: Date | null };
 }
 
@@ -258,7 +260,7 @@ export function placeOf(address: string | null | undefined): string | null {
 
 /** Everything the dashboard block needs, newest first (the open/all filter is client-side). */
 export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
-  const [rows, polls] = await Promise.all([
+  const [rows, polls, all] = await Promise.all([
     db
       .selectFrom("outreach_reply as r")
       .innerJoin("lead as l", "l.id", "r.lead_id")
@@ -277,6 +279,8 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         "r.ours_at",
         "r.ours_subject",
         "r.ours_text",
+        "p.sent_at",
+        "p.email_sent_at",
         "p.mms_sent_at",
         "p.sms_sent_at",
         "r.answered_at",
@@ -286,6 +290,7 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
       .limit(limit)
       .execute(),
     db.selectFrom("outreach_reply_poll").selectAll().execute(),
+    db.selectFrom("outreach_reply").select(db.fn.countAll().as("n")).executeTakeFirst(),
   ]);
   const replies: ReplyView[] = rows.map((r) => ({
     id: r.id,
@@ -298,7 +303,11 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     receivedAt: new Date(r.received_at),
     subject: r.subject,
     body: r.body,
-    oursAt: r.ours_at ? new Date(r.ours_at) : null,
+    // No message of ours was found in the sent folder → the prospect's own stamp for that channel.
+    oursAt: (() => {
+      const d = r.ours_at ?? (r.channel === "sms" ? (r.mms_sent_at ?? r.sms_sent_at) : (r.email_sent_at ?? r.sent_at));
+      return d ? new Date(d) : null;
+    })(),
     oursSubject: r.ours_subject,
     oursText: r.ours_text,
     sentMms: !!r.mms_sent_at,
@@ -310,7 +319,13 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     const p = polls.find((x) => x.channel === ch);
     return p ? new Date(p.checked_at) : null;
   };
-  return { replies, open: replies.filter((r) => !r.answeredAt).length, checked: { sms: at("sms"), email: at("email") } };
+  return {
+    replies,
+    // The cap only trims the list; the badge counts every open reply (the same number the sidebar shows).
+    open: rows.length < limit ? replies.filter((r) => !r.answeredAt).length : await countOpenReplies(),
+    total: Number(all?.n ?? 0),
+    checked: { sms: at("sms"), email: at("email") },
+  };
 }
 
 /** Open replies count — the sidebar / attention-row number. */

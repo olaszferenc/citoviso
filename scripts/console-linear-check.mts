@@ -38,7 +38,7 @@ const ok = (label: string, cond: boolean, detail = ""): void => {
 };
 
 // ── fixtures (representative, never personal) ───────────────────────────────────
-const NUMBERS: NavNumbers = { players: 600, approvedMocks: 11, awaitingApproval: 9, approvedUnsent: 4, documents: 12, partners: 7, sellable: 13, catalog: 14 };
+const NUMBERS: NavNumbers = { players: 600, approvedMocks: 11, awaitingApproval: 9, approvedUnsent: 4, documents: 12, partners: 7, sellable: 13, catalog: 14, openReplies: 0 };
 const DATA: HubData = {
   r: {
     total: { sent: 6, orderIntent: 6 },
@@ -50,6 +50,8 @@ const DATA: HubData = {
   fin: { docs: 12, open: 3, overdue: 1, partners: 7, aamYearNetHuf: 4_200_000, aamLimitHuf: 18_000_000, aamFxDocs: 0 },
   sales: { on: 13, all: 14 },
   stale: null,
+  replies: { replies: [], open: 0, total: 0, checked: { sms: null, email: null } },
+  repliesQuery: { filter: "open", reply: null },
 };
 
 /** Render inside a request context, as the HTTP layer would (language + nav numbers). */
