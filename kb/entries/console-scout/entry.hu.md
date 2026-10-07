@@ -28,7 +28,13 @@ Minden mező a kitöltéskor mentődik: ha a munka megszakad, a munkalap ott fol
 
 ## Egy csempe végigjárása
 
-1. Koppints egy csempére a térképen. A Térképen állítsd be ugyanezt a területet.
+1. Koppints egy csempére a térképen. A kulcsszavak fölött látod a csempe közepét, a javasolt
+   Térkép-nagyítást és a négy határ-koordinátát. A csempe neve mutatja a helyét: a betű az
+   oszlop nyugatról keletre (A a legnyugatibb), a szám a sor északról délre (1 a legészakibb);
+   a negyedek .1 északnyugat, .2 északkelet, .3 délnyugat, .4 délkelet.
+   Minden kulcsszó mellett ott a **„Térkép”** link: a csempe nézetére nyitja a keresést. A
+   találati lista ettől még nem szorul a csempére — kicsinyíts egyet, nagyíts vissza, és
+   kattints a Térképen a „Keresés ezen a területen” gombra.
 2. Keress rá egyenként a hat kulcsszóra (szállás, hotel, panzió, apartman, vendégház, kemping),
    görgesd végig a listát, és írd a kulcsszó melletti mezőbe, hány találatot mutatott. Csak
    egész szám mehet be; az üres mező „hátravan”.
@@ -39,6 +45,8 @@ Minden mező a kitöltéskor mentődik: ha a munka megszakad, a munkalap ott fol
 4. A listában talált helyek linkjét másold be a szövegmezőbe (soronként egy), és koppints a
    **„Felvétel”** gombra. A rendszer a linkből veszi a nevet és a koordinátát. Ami nem
    Google Térkép-hely link, azt kihagyja és megszámolja; ami már szerepel a munkalapon, azt is.
+   A csempén kívül eső helyet nem veszi fel: megírja, melyik csempébe tartozik (vagy hogy a
+   régión is kívül esik) — a csempe határán kívüli találatokat nem kell kézzel kiválogatnod.
 
 ## Ismert és új helyek
 

@@ -8,6 +8,7 @@ import { db } from "../db/client.js";
 import { isSamePlayer } from "../scraper/dedupe.js";
 import { storedLeadIdentitiesWithId } from "../scraper/persist.js";
 import {
+  boxContains,
   canClose,
   closeHint,
   kwState,
@@ -20,11 +21,14 @@ import {
   rowComplete,
   SCOUT_KEYWORDS,
   splitTile,
+  mapsSearchUrl,
+  tileGeo,
   tileStateOf,
   webClass,
   type Bbox,
   type Circle,
   type PlaceStatus,
+  type TileGeo,
   type TileState,
   type Verdict,
   type WebClass,
@@ -104,6 +108,12 @@ export interface TileView {
   readonly row: number;
   readonly col: number;
   readonly label: string;
+  /** The tile's box on the map (south ≤ lat ≤ north, west ≤ lon ≤ east). */
+  readonly box: Bbox;
+  /** Centre + the Maps zoom that shows the whole tile (tileGeo). */
+  readonly geo: TileGeo;
+  /** Per keyword: the Maps search opened on the tile's view (mapsSearchUrl). */
+  readonly maps: Record<string, string>;
   readonly state: TileState;
   readonly kw: Record<string, number | null>;
   readonly kwStates: Record<string, "todo" | "ok" | "sat">;
@@ -240,7 +250,7 @@ export async function tilePlaces(tileId: string): Promise<PlaceView[]> {
 export async function listTiles(regionId: string, lang = "hu"): Promise<TileView[]> {
   const tiles = await db
     .selectFrom("scout_tile")
-    .select(["id", "parent_id", "idx", "grid_row", "grid_col", "label", "state", "kw"])
+    .select(["id", "parent_id", "idx", "grid_row", "grid_col", "label", "state", "kw", "south", "west", "north", "east"])
     .where("region", "=", regionId)
     .orderBy("parent_id", "desc")
     .orderBy("idx")
@@ -260,6 +270,8 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
     const kw = (t.kw ?? {}) as Record<string, number | null>;
     const tRows = byTile.get(t.id) ?? [];
     const input = { state: t.state, kw, rows: tRows };
+    const box = { south: t.south, west: t.west, north: t.north, east: t.east };
+    const geo = tileGeo(box);
     return {
       id: t.id,
       parent: t.parent_id,
@@ -267,6 +279,9 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
       row: t.grid_row,
       col: t.grid_col,
       label: t.label,
+      box,
+      geo,
+      maps: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, mapsSearchUrl(k, geo)])),
       state: t.state,
       kw,
       kwStates: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, kwState(kw[k])])),
@@ -426,6 +441,8 @@ export interface AddResult {
   readonly known: number;
   readonly bad: number;
   readonly dup: number;
+  /** Links whose pin lies outside this tile — refused, with the tile they belong to (null = outside the region). */
+  readonly outside: ReadonlyArray<{ readonly name: string; readonly tile: string | null }>;
 }
 
 /**
@@ -438,8 +455,24 @@ export async function addLinks(tile: TileRow, text: string): Promise<MutationErr
   const lines = text.split(/\r?\n+/).map((s) => s.trim()).filter(Boolean);
   if (!lines.length) return { error: "empty" };
   const parsed = lines.map((line) => ({ line, p: parsePlaceLink(line) }));
-  const ok = parsed.flatMap((x) => (x.p ? [{ ...x.p, line: x.line }] : []));
-  const bad = parsed.length - ok.length;
+  const readable = parsed.flatMap((x) => (x.p ? [{ ...x.p, line: x.line }] : []));
+  const bad = parsed.length - readable.length;
+  // A pin outside the tile was not seen in this tile's view: refuse it, and name its tile.
+  const ok = readable.filter((p) => boxContains(tile, p.lat, p.lon));
+  const outside: Array<{ name: string; tile: string | null }> = [];
+  if (ok.length < readable.length) {
+    const leaves = await db
+      .selectFrom("scout_tile")
+      .select(["label", "south", "west", "north", "east"])
+      .where("region", "=", tile.region)
+      .where("state", "not in", ["split", "out"])
+      .orderBy("label")
+      .execute();
+    for (const p of readable) {
+      if (boxContains(tile, p.lat, p.lon)) continue;
+      outside.push({ name: p.name, tile: leaves.find((l) => boxContains(l, p.lat, p.lon))?.label ?? null });
+    }
+  }
   let dup = 0;
   let added = 0;
   let known = 0;
@@ -491,7 +524,7 @@ export async function addLinks(tile: TileRow, text: string): Promise<MutationErr
     });
   }
   await restate(tile);
-  return { added, known, bad, dup };
+  return { added, known, bad, dup, outside };
 }
 
 export const PLACE_FIELDS = ["address", "city", "phone", "website", "photos", "rating", "found", "verdict"] as const;

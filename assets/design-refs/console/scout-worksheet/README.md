@@ -35,6 +35,17 @@ tárolt, NEM Magellan-forrású leadek; számláló: az ezekre illesztett ismert
 - A régió doboza rácsra bontva (~10 km × ~11 km); kör alakú régiónál a körön teljesen kívül
   eső csempe nem munka (a terv „víz” színével, nem kattintható).
 - Állapotok és színek: hátravan · folyamatban · telített: felosztandó · kész (jelmagyarázattal).
+- Csempe-azonosító (2026-10-07): a betű az oszlop nyugatról keletre (A a legnyugatibb), a szám
+  a sor északról délre (1 a legészakibb); a negyedek .1 ÉNy · .2 ÉK · .3 DNy · .4 DK. A „?”
+  jelmagyarázat is kimondja.
+- A felosztott csempe negyedei ugyanazon az EGY rácson ülnek, mint a többi csempe (a szülő
+  cellái finomabb osztással) — minden csempének saját rács-területe van, semmi nem fedi a mást.
+- Kiválasztott csempén (2026-10-07): a csempe **közepe** (lat, lon) és a Térkép-**nagyítás**
+  (a legnagyobb, amelyen az egész csempe kifér egy ≈ 1000 × 800 px-es térképnézetbe: gyökér 13z,
+  negyed 14z), a négy határ-koordináta, és kulcsszavanként egy Térkép-link
+  (`https://www.google.com/maps/search/<kw>/@lat,lon,<z>z`). Mérve 2026-10-07: a link a nézetet
+  állítja be, de a lista NEM szorul rá, és a „Keresés ezen a területen” eredménye az URL-ben sem
+  marad meg — ezért a lap kimondja a lépést (kicsinyítés, visszanagyítás, „Keresés ezen a területen”).
 - Kiválasztott csempén a 6 kulcsszó (`szállás, hotel, panzió, apartman, vendégház, kemping`)
   egy-egy egész szám mezővel. Nem egész szám → hibaüzenet, nem ment. Üres = hátravan.
   **>100 → telített** (a küszöb egy helyen, konstansként; az első munkanap méri pontosítja).
@@ -49,6 +60,8 @@ tárolt, NEM Magellan-forrású leadek; számláló: az ezekre illesztett ismert
 - A szerver a linkből veszi a nevet, koordinátát, Térkép-azonosítót (`!3d<lat>!4d<lon>`,
   tartalék: `/@lat,lon`; `!1s0x…:0x…`). Nem értelmezhető sor → számolt hibaüzenet; a munkalapon
   már szereplő hely → kihagyva, számolva.
+- Csempén kívüli pin (2026-10-07) → a sor nem kerül fel; az üzenet megnevezi, melyik csempébe
+  tartozik („… a csempén kívül esik — a B2 csempébe tartozik”), vagy hogy a régión is kívül esik.
 - **Ismert lead** a felvételkor dől el, `isSamePlayer`-rel (normalizált név + ≤250 m,
   ADR-0296): szürke címke, link a lead lapjára, nincs adat-űrlap.
 - Új hely: címke („adat kell” / „adatok rendben”), nyitható űrlap: cím, település, telefon
@@ -60,6 +73,10 @@ tárolt, NEM Magellan-forrású leadek; számláló: az ezekre illesztett ismert
 - Hiányos = nincs cím vagy település; érvénytelen telefon; értelmezhetetlen honlap; hiányzó
   ítélet (honlap nélkül); hibás „van” ítélet.
 - **Minden mező a változáskor a szerverre ment** (ADR-0331): újratöltés után minden ott van.
+  Mentéskor csak az állapot-jelzők frissülnek (címke, kulcsszó-jel, csempe-szín, gombok, mondat);
+  a mezők és a csempe-gombok DOM-ja megmarad (2026-10-07: a teljes újrarajzolás minden mentés után
+  elavulttá tette a böngésző-eszköz elem-azonosítóit). Sor csak akkor épül újra, ha a fajtája
+  változik (állapot, lezárás, lead).
 
 ### ⑤ Lezárás = feldolgozás
 A lezárás a csempe új, rendben lévő helyeit a meglévő scrape-láncon futtatja (`run.ts`,

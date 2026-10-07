@@ -52,7 +52,6 @@ const SCOUT_CSS = `<style>
 .con .sc-card h2{font:700 15px/1.2 var(--citui-font-display);margin:0 0 10px;color:var(--citui-ink-brand);display:flex;gap:8px;align-items:center}
 .con .sc-card h2 small{font:500 12px var(--citui-font-text);color:var(--citui-muted);margin-left:auto}
 .con .sc-map{display:grid;gap:3px}
-.con .sc-sub{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;min-height:0;min-width:0}
 .con button.sc-tile,.con .sc-tile{border:0;border-radius:4px;cursor:pointer;font:700 10px/1 var(--citui-font-text);color:var(--citui-ink-brand);
   background:var(--citui-surface-2);min-height:0;min-width:0;padding:0;position:relative;overflow:hidden;display:grid;place-items:center}
 .con .sc-tile.out{background:color-mix(in srgb,var(--citui-cyan-300) 35%,var(--citui-panel));color:var(--citui-muted);cursor:default}
@@ -66,7 +65,12 @@ const SCOUT_CSS = `<style>
 .con .sc-legend .l-work{background:color-mix(in srgb,var(--citui-cyan-400) 55%,var(--citui-panel))}
 .con .sc-legend .l-sat{background:color-mix(in srgb,var(--citui-warn) 40%,var(--citui-panel))}
 .con .sc-legend .l-done{background:color-mix(in srgb,var(--citui-ok) 45%,var(--citui-panel))}
-.con .sc-kw{display:grid;grid-template-columns:1fr 64px auto;gap:6px 8px;align-items:center;margin-top:12px;font-size:13px}
+.con .sc-geo{margin-top:12px;padding:8px 10px;border-radius:8px;background:var(--citui-surface);border:1px solid var(--citui-line);font-size:12px;color:var(--citui-ink);font-variant-numeric:tabular-nums}
+.con .sc-geo div{overflow-wrap:anywhere}
+.con .sc-geo span{color:var(--citui-muted)}
+.con .sc-geo p{margin:6px 0 0;color:var(--citui-muted)}
+.con .sc-kw{display:grid;grid-template-columns:1fr 64px auto auto;gap:6px 8px;align-items:center;margin-top:12px;font-size:13px}
+.con .sc-kw a{font-size:12px;font-weight:700;color:var(--citui-link-ink);white-space:nowrap}
 .con .sc-kw input{width:64px;padding:6px 8px;text-align:right}
 .con .sc-st{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--citui-surface-2);color:var(--citui-muted);white-space:nowrap;text-align:center}
 .con .sc-st.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
@@ -79,6 +83,7 @@ const SCOUT_CSS = `<style>
 .con .sc-hint{font-size:12px;color:var(--citui-muted);margin:8px 0 0}
 .con .sc-err{font-size:12px;color:var(--citui-bad-ink);margin:6px 0 0}
 .con .sc-err:empty{display:none}
+.con .sc-err{white-space:pre-line}
 .con .sc-add{display:flex;gap:8px}
 .con .sc-add textarea{flex:1;min-height:42px;resize:vertical;min-width:0}
 .con .sc-rows{margin-top:12px;display:flex;flex-direction:column;gap:8px}
@@ -115,6 +120,18 @@ function scoutStrings(lang: string): Record<string, string> {
     pick: T(lang, "válassz csempét"),
     pickHint: T(lang, "Válassz egy csempét a térképen."),
     tile: T(lang, "Csempe {label}"),
+    geoCenter: T(lang, "Közép"),
+    geoZoom: T(lang, "nagyítás"),
+    geoEdges: T(lang, "Határ"),
+    geoN: T(lang, "É"),
+    geoS: T(lang, "D"),
+    geoW: T(lang, "Ny"),
+    geoE: T(lang, "K"),
+    geoStep: T(lang, "A Térkép-link a csempe nézetére nyit, de a találati lista NEM szorul rá. Kicsinyíts egyet, nagyíts vissza, és kattints a „Keresés ezen a területen” gombra — a lista csak ezután a csempéé."),
+    mapLink: T(lang, "Térkép"),
+    mapLinkTitle: T(lang, "„{kw}” keresés a Térképen, a csempe nézetén"),
+    addOut: T(lang, "„{name}” a csempén kívül esik — a {tile} csempébe tartozik"),
+    addOutRegion: T(lang, "„{name}” a csempén kívül esik — a régión is kívül"),
     stTodo: T(lang, "hátravan"),
     stOk: T(lang, "kész"),
     stSat: T(lang, "telített"),
@@ -226,6 +243,7 @@ export function scoutPage(d: ScoutPageData): string {
       </div>
       <dl class="con-legend__list">
         <div class="con-legend__row"><dt>${T(lang, "Csempe")}</dt><dd>${T(lang, "A régió egy darabja, amit a Térképen egy nézetben átnézel. Minden csempében mind a hat kulcsszóra keresel, és beírod, hány találatot adott a lista.")}</dd></div>
+        <div class="con-legend__row"><dt>${T(lang, "Csempe-azonosító")}</dt><dd>${T(lang, "A betű az oszlop nyugatról keletre (A a legnyugatibb), a szám a sor északról délre (1 a legészakibb). A negyedek: .1 északnyugat, .2 északkelet, .3 délnyugat, .4 délkelet.")}</dd></div>
         <div class="con-legend__row"><dt>${T(lang, "Telített")}</dt><dd>${T(lang, "Ha a lista egy kulcsszóra {n}-nál több találatot ad, a Térkép nem mutat meg mindent — a csempét négy kisebbre bontod, és azokat nézed át.", { n: SCOUT_SAT_THRESHOLD })}</dd></div>
         <div class="con-legend__row"><dt>${T(lang, "Ismert lead")}</dt><dd>${T(lang, "Azonos név 250 méteren belül. Ezt a rendszer dönti el a felvételkor; ismert helyet nem nyitsz ki.")}</dd></div>
         <div class="con-legend__row"><dt>${T(lang, "Mentés")}</dt><dd>${T(lang, "Minden mező a kitöltéskor mentődik. Ha a munkád megszakad, innen folytatod.")}</dd></div>
@@ -264,37 +282,61 @@ function absorb(j){if(j.tiles)SC.tiles=j.tiles;if(j.stats)SC.stats=j.stats;if(j.
 function tileById(id){for(var i=0;i<SC.tiles.length;i++)if(SC.tiles[i].id===id)return SC.tiles[i];return null}
 function selTile(){return SC.sel?tileById(SC.sel):null}
 function syncUrl(){try{var u=new URL(location.href);u.searchParams.set("region",SC.region);if(SC.sel)u.searchParams.set("tile",SC.sel);else u.searchParams.delete("tile");history.replaceState(null,"",u)}catch(e){}}
-// ── tile map: roots on the region's grid, split tiles as 2×2 in their place ──
+// ── tile map: ONE flat grid — a split tile's quarters take over its cells, so every tile has
+// its own grid area (nested grids gave a quarter the same area as a root tile, 2026-10-07) ──
 function kids(id){return SC.tiles.filter(function(t){return t.parent===id}).sort(function(a,b){return a.idx-b.idx})}
-function tileNode(t){
-  if(t.state==="split"){var g=document.createElement("div");g.className="sc-sub";kids(t.id).forEach(function(c){g.appendChild(tileNode(c))});place(g,t);return g}
-  var b;if(t.state==="out"){b=document.createElement("span");b.className="sc-tile out";b.title=t.label;b.setAttribute("aria-hidden","true")}
-  else{b=document.createElement("button");b.type="button";b.className="sc-tile "+t.state+(SC.sel===t.id?" sel":"");b.textContent=t.label;b.title=t.label;
-    b.setAttribute("data-tile",t.id);b.onclick=function(){select(t.id)}}
-  place(b,t);return b}
-function place(el,t){el.style.gridRow=String(t.row+1);el.style.gridColumn=String(t.col+1)}
-function renderMap(){var m=$("scMap"),roots=SC.tiles.filter(function(t){return!t.parent});m.innerHTML="";
-  var rows=0,cols=0;roots.forEach(function(t){rows=Math.max(rows,t.row+1);cols=Math.max(cols,t.col+1)});
-  m.style.gridTemplateColumns="repeat("+cols+",minmax(0,1fr))";m.style.gridTemplateRows="repeat("+rows+",minmax(0,1fr))";
-  m.style.aspectRatio=(cols*1.1)+" / "+rows;roots.forEach(function(t){m.appendChild(tileNode(t))})}
+function depthOf(t){var d=0;while(t&&t.parent){t=tileById(t.parent);d++}return d}
+function layoutTiles(){var roots=SC.tiles.filter(function(t){return!t.parent}),D=0,cells=[],rows=0,cols=0;
+  SC.tiles.forEach(function(t){D=Math.max(D,depthOf(t))});var u=Math.pow(2,D);
+  function walk(t,r,c,n){if(t.state==="split"){var h=n/2;kids(t.id).forEach(function(k){walk(k,r+k.row*h,c+k.col*h,h)});return}cells.push({t:t,r:r,c:c,n:n})}
+  roots.forEach(function(t){rows=Math.max(rows,t.row+1);cols=Math.max(cols,t.col+1);walk(t,t.row*u,t.col*u,u)});
+  return{cells:cells,u:u,rows:rows,cols:cols}}
+function tileClass(t){return"sc-tile "+t.state+(SC.sel===t.id?" sel":"")}
+var mapSig="";
+// Same tiles as drawn → only the state classes change; the buttons keep their DOM.
+function renderMap(){var m=$("scMap"),g=layoutTiles(),sig=g.cells.map(function(x){return x.t.id+(x.t.state==="out"?"o":"")}).join(",");
+  if(sig===mapSig){g.cells.forEach(function(x){var b=m.querySelector('button[data-tile="'+x.t.id+'"]');if(b)b.className=tileClass(x.t)});return}
+  mapSig=sig;m.innerHTML="";
+  m.style.gridTemplateColumns="repeat("+(g.cols*g.u)+",minmax(0,1fr))";m.style.gridTemplateRows="repeat("+(g.rows*g.u)+",minmax(0,1fr))";
+  m.style.aspectRatio=(g.cols*1.1)+" / "+g.rows;
+  g.cells.forEach(function(x){var t=x.t,b;
+    if(t.state==="out"){b=document.createElement("span");b.className="sc-tile out";b.setAttribute("aria-hidden","true")}
+    else{b=document.createElement("button");b.type="button";b.className=tileClass(t);b.textContent=t.label;b.onclick=function(){select(t.id)}}
+    b.title=t.label;b.setAttribute("data-tile",t.id);
+    b.style.gridRow=(x.r+1)+" / span "+x.n;b.style.gridColumn=(x.c+1)+" / span "+x.n;m.appendChild(b)})}
 // ── keyword panel + split / close ──
+function kwChip(el,st){el.className="sc-st"+(st==="ok"?" ok":st==="sat"?" sat":"");el.textContent=st==="ok"?L.stOk:st==="sat"?L.stSat:L.stTodo}
+function c5(n){return Number(n).toFixed(5)}
+function geoHtml(t){var g=t.geo,b=t.box;
+  return'<div class="sc-geo" id="scGeo"><div><span>'+esc(L.geoCenter)+':</span> '+c5(g.lat)+', '+c5(g.lon)+' · <span>'+esc(L.geoZoom)+':</span> '+g.zoom+'z</div>'+
+    '<div><span>'+esc(L.geoEdges)+':</span> '+esc(L.geoN)+' '+c5(b.north)+' · '+esc(L.geoS)+' '+c5(b.south)+' · '+esc(L.geoW)+' '+c5(b.west)+' · '+esc(L.geoE)+' '+c5(b.east)+'</div>'+
+    '<p>'+esc(L.geoStep)+'</p></div>'}
 function renderKw(){var t=selTile(),box=$("scKw");$("scTileName").textContent=t?fmt(L.tile,{label:t.label}):L.pick;
-  if(!t){box.innerHTML='<p class="sc-hint">'+esc(L.pickHint)+'</p>';return}
-  var closed=t.state==="done",h='<div class="sc-kw">';
-  SC.kw.forEach(function(k){var st=t.kwStates[k],v=t.kw[k];
-    var chip=st==="ok"?'<span class="sc-st ok">'+esc(L.stOk)+'</span>':st==="sat"?'<span class="sc-st sat">'+esc(L.stSat)+'</span>':'<span class="sc-st">'+esc(L.stTodo)+'</span>';
-    h+='<span>'+esc(k)+'</span><input inputmode="numeric" data-kw="'+esc(k)+'" value="'+(v==null?"":v)+'" aria-label="'+esc(fmt(L.kwHits,{kw:k}))+'"'+(closed?" disabled":"")+'>'+chip});
+  if(!t){box.removeAttribute("data-for");box.innerHTML='<p class="sc-hint">'+esc(L.pickHint)+'</p>';return}
+  var closed=t.state==="done",key=t.id+(closed?":done":"");
+  // Same tile, same editability → refresh the status marks only; the inputs keep their DOM.
+  if(box.getAttribute("data-for")===key){
+    box.querySelectorAll("[data-kwst]").forEach(function(c){kwChip(c,t.kwStates[c.getAttribute("data-kwst")])});
+    $("scSplit").disabled=t.state!=="sat";$("scClose").disabled=!t.canClose;$("scCloseHint").textContent=t.hint;return}
+  box.setAttribute("data-for",key);
+  var h=geoHtml(t)+'<div class="sc-kw">';
+  SC.kw.forEach(function(k){var v=t.kw[k];
+    h+='<span>'+esc(k)+'</span><input inputmode="numeric" data-kw="'+esc(k)+'" value="'+(v==null?"":v)+'" aria-label="'+esc(fmt(L.kwHits,{kw:k}))+'"'+(closed?" disabled":"")+'>'+
+      '<span class="sc-st" data-kwst="'+esc(k)+'"></span>'+
+      '<a href="'+esc(t.maps[k])+'" target="_blank" rel="noopener" data-map="'+esc(k)+'" title="'+esc(fmt(L.mapLinkTitle,{kw:k}))+'">'+esc(L.mapLink)+'</a>'});
   h+='</div><p class="sc-err" id="scKwErr"></p><div class="sc-actions">'+
     '<button class="sc-btn" type="button" id="scSplit"'+(t.state==="sat"?"":" disabled")+'>'+esc(L.split)+'</button>'+
     '<button class="sc-btn pri" type="button" id="scClose"'+(t.canClose?"":" disabled")+'>'+esc(L.close)+'</button></div>'+
     '<p class="sc-hint" id="scCloseHint">'+esc(t.hint)+'</p>';
   box.innerHTML=h;
+  box.querySelectorAll("[data-kwst]").forEach(function(c){kwChip(c,t.kwStates[c.getAttribute("data-kwst")])});
+  var id=t.id;
   box.querySelectorAll("input[data-kw]").forEach(function(inp){inp.onchange=function(){var v=inp.value.trim(),e=$("scKwErr");
     if(v!==""&&!/^\d+$/.test(v)){e.textContent=L.kwInt;return}e.textContent="";
-    api("POST","/scout/tile/"+t.id+"/kw",{kw:inp.getAttribute("data-kw"),value:v}).then(function(j){
+    api("POST","/scout/tile/"+id+"/kw",{kw:inp.getAttribute("data-kw"),value:v}).then(function(j){
       if(j.error){e.textContent=j.message||L.kwInt;return}absorb(j);renderMap();renderKw();renderStats()})}});
-  $("scSplit").onclick=function(){api("POST","/scout/tile/"+t.id+"/split",{}).then(function(j){if(j.error){$("scKwErr").textContent=j.message||"";return}absorb(j);syncUrl();render()})};
-  $("scClose").onclick=function(){$("scClose").disabled=true;api("POST","/scout/tile/"+t.id+"/close",{}).then(function(j){
+  $("scSplit").onclick=function(){api("POST","/scout/tile/"+id+"/split",{}).then(function(j){if(j.error){$("scKwErr").textContent=j.message||"";return}absorb(j);syncUrl();render()})};
+  $("scClose").onclick=function(){$("scClose").disabled=true;api("POST","/scout/tile/"+id+"/close",{}).then(function(j){
     if(j.error){$("scKwErr").textContent=j.message||"";absorb(j);render();return}absorb(j);render();poll()})}}
 // ── rows ──
 function chipFor(r){if(r.status==="known")return'<span class="sc-chip known">'+esc(L.chipKnown)+'</span>';
@@ -348,13 +390,24 @@ function saveField(d,r,t,f,v){api("POST","/scout/place/"+r.id,{field:f,value:v})
   if(f==="website")setOut(d,"web",webOut(r.webC),r.webC==="invalid");
   if(f==="phone")phoneOut(d,r.phone);
   renderMap();renderKw();renderStats()})}
-function renderRows(){var t=selTile(),box=$("scRows");box.innerHTML="";$("scRowCount").textContent=t?fmt(L.places,{n:SC.places.length}):"";
-  var closed=!t||t.state==="done"||t.state==="out";$("scAdd").disabled=closed;$("scLinks").disabled=closed;if(!t)return;
-  SC.places.forEach(function(r){var d=document.createElement("div");d.className="sc-row";d.setAttribute("data-place",r.id);d.innerHTML=rowHtml(r,t);box.appendChild(d);wireRow(d,r,t)})}
+// Rows are keyed by place: a row is rebuilt only when its kind changes (status, closed, lead);
+// otherwise only its label chip is refreshed and its fields keep their DOM.
+function rowSig(r,t){return r.status+"|"+(t.state==="done"?1:0)+"|"+(r.leadId||"")+"|"+(r.known?r.known.id:"")}
+function renderRows(){var t=selTile(),box=$("scRows");$("scRowCount").textContent=t?fmt(L.places,{n:SC.places.length}):"";
+  var closed=!t||t.state==="done"||t.state==="out";$("scAdd").disabled=closed;$("scLinks").disabled=closed;
+  if(!t){box.innerHTML="";box.removeAttribute("data-for");return}
+  if(box.getAttribute("data-for")!==t.id){box.innerHTML="";box.setAttribute("data-for",t.id)}
+  var seen={};
+  SC.places.forEach(function(r){seen[r.id]=1;var d=box.querySelector('[data-place="'+r.id+'"]'),sig=rowSig(r,t);
+    if(d&&d.getAttribute("data-sig")===sig&&d._r){for(var k in r)d._r[k]=r[k];var c=d.querySelector(".top .sp").firstChild;if(c)c.outerHTML=chipFor(d._r);return}
+    var nd=document.createElement("div");nd.className="sc-row";nd.setAttribute("data-place",r.id);nd.setAttribute("data-sig",sig);nd._r=r;
+    nd.innerHTML=rowHtml(r,t);wireRow(nd,r,t);if(d)box.replaceChild(nd,d);else box.appendChild(nd)});
+  box.querySelectorAll("[data-place]").forEach(function(d){if(!seen[d.getAttribute("data-place")])d.remove()})}
 $("scAdd").onclick=function(){var t=selTile(),e=$("scAddErr");e.textContent="";if(!t||t.state==="done"){e.textContent=L.addOpen;return}
   var v=$("scLinks").value;if(!v.trim()){e.textContent=L.addEmpty;return}
   api("POST","/scout/tile/"+t.id+"/links",{links:v}).then(function(j){if(j.error){e.textContent=j.message||L.addOpen;return}
-    var msg=[];if(j.bad)msg.push(fmt(L.addBad,{n:j.bad}));if(j.dup)msg.push(fmt(L.addDup,{n:j.dup}));e.textContent=msg.join(" · ");
+    var msg=[];if(j.bad)msg.push(fmt(L.addBad,{n:j.bad}));if(j.dup)msg.push(fmt(L.addDup,{n:j.dup}));
+    (j.outside||[]).forEach(function(o){msg.push(fmt(o.tile?L.addOut:L.addOutRegion,{name:o.name,tile:o.tile}))});e.textContent=msg.join("\n");
     $("scLinks").value="";absorb(j);render()})};
 // ── stats ──
 function renderStats(){var s=SC.stats;$("sTiles").textContent=s.tilesDone+" / "+s.tilesAll;$("sBar").style.width=(s.tilesAll?100*s.tilesDone/s.tilesAll:0)+"%";

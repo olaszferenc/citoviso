@@ -307,3 +307,47 @@ export function closeHint(t: CloseInput, lang = "hu"): string {
   if (p) return T(lang, "{n} új hely adatai hiányosak.", { n: p });
   return T(lang, "Minden kész: lezárható.");
 }
+
+// ── Tile geometry on Google Maps (2026-10-07 first-day fixes) ────────────────
+
+/**
+ * The map pane the zoom is fitted to: a desktop browser with the Maps result list open
+ * beside the map (≈ 1000 × 800 px of map). Root tiles land on 13z, quarters on 14z.
+ */
+const MAP_PANE_PX = { w: 1000, h: 800 } as const;
+const MAPS_MAX_ZOOM = 18;
+
+export interface TileGeo {
+  readonly lat: number;
+  readonly lon: number;
+  /** The largest Maps zoom at which the whole tile fits in the map pane. */
+  readonly zoom: number;
+}
+
+/** A tile's centre and the Maps zoom that shows exactly it (Web Mercator, 256 px tiles). */
+export function tileGeo(b: Bbox): TileGeo {
+  const lat = (b.south + b.north) / 2;
+  const lon = (b.west + b.east) / 2;
+  const cos = Math.cos((lat * Math.PI) / 180);
+  // ground metres per pixel at zoom 0 at this latitude
+  const m0 = 156543.03392 * cos;
+  const wM = (b.east - b.west) * 111320 * cos;
+  const hM = (b.north - b.south) * 110574;
+  const z = Math.floor(Math.log2(Math.min((MAP_PANE_PX.w * m0) / wM, (MAP_PANE_PX.h * m0) / hM)));
+  return { lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)), zoom: Math.max(1, Math.min(MAPS_MAX_ZOOM, z)) };
+}
+
+/**
+ * The keyword's Maps search opened on the tile's view. Measured 2026-10-07: the search
+ * URL only MOVES the map there — the list is not bound to the view (it reaches across the
+ * county), and the „Keresés ezen a területen" result does not survive in the URL either.
+ * The page therefore states that step next to the links.
+ */
+export function mapsSearchUrl(keyword: string, g: TileGeo): string {
+  return `https://www.google.com/maps/search/${encodeURIComponent(keyword)}/@${g.lat},${g.lon},${g.zoom}z`;
+}
+
+/** Is the point inside the box? (edges included — a point on a border belongs to both) */
+export function boxContains(b: Bbox, lat: number, lon: number): boolean {
+  return lat >= b.south && lat <= b.north && lon >= b.west && lon <= b.east;
+}
