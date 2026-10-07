@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-07_forditas_api_koltseg.md](2026-10-07_forditas_api_koltseg.md) — 2026-10-07 — Fordítás API-költség: dev boot-fordítás KI + mérő (translation_spend)
 - [2026-10-06_szerkeszthetoseg_sav.md](2026-10-06_szerkeszthetoseg_sav.md) — 2026-10-06 — Szerkeszthetőség-sáv a kiküldött mockon (ADR-0335)
 - [2026-10-06_scrape_adagonkenti_mentes.md](2026-10-06_scrape_adagonkenti_mentes.md) — 2026-10-06 — Scrape: adagonkénti mentés + fizetés nélküli folytatás (ÉLES)
 - [2026-10-06_rendeles_panel_riport.md](2026-10-06_rendeles_panel_riport.md) — 2026-10-06 — Rendelés-panel mérése + riport (A + B) megvalósítva
