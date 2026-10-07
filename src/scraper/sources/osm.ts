@@ -158,7 +158,13 @@ export class OsmSource implements LeadSource {
    * `remark` (server-side timeout/out of memory) is partial, so it counts as a failure:
    * a half list would silently look like "these are all the places".
    */
-  private async queryOverpass(ql: string, timeoutS: number): Promise<OverpassResponse> {
+  private async queryOverpass(
+    ql: string,
+    timeoutS: number,
+    /** Boundary (country/county) query: an EMPTY answer is a mirror fault, never the truth
+     *  (2026-10-07: Baranya came back with 0 elements, HTTP 200, no remark — 412 a minute later). */
+    emptyIsFailure: boolean,
+  ): Promise<OverpassResponse & { endpoint: string }> {
     const body = "data=" + encodeURIComponent(ql);
     const errors: string[] = [];
     for (const pause of RETRY_PAUSES_MS) {
@@ -186,7 +192,11 @@ export class OsmSource implements LeadSource {
             errors.push(`részleges válasz (${data.remark.slice(0, 120)}) @ ${endpoint}`);
             continue;
           }
-          return data;
+          if (emptyIsFailure && data.elements.length === 0) {
+            errors.push(`üres válasz egy határ-lekérdezésre @ ${endpoint}`);
+            continue;
+          }
+          return { ...data, endpoint };
         } catch (err) {
           errors.push(`${(err as Error).message} @ ${endpoint}`);
         }
@@ -197,7 +207,7 @@ export class OsmSource implements LeadSource {
 
   async fetch(query: ScrapeQuery): Promise<RawLead[]> {
     this.lastWarnings = [];
-    const data = await this.queryOverpass(buildQuery(query), serverTimeoutS(query));
+    const data = await this.queryOverpass(buildQuery(query), serverTimeoutS(query), !!query.region.osmArea);
     const leads: RawLead[] = [];
     let unnamed = 0;
     for (const el of data.elements) {
@@ -223,6 +233,7 @@ export class OsmSource implements LeadSource {
       });
     }
     this.lastCounts = { elements: data.elements.length, unnamed };
+    console.log(`  [osm] ${data.elements.length} objektum · ${new URL(data.endpoint).host}`);
     if (unnamed) {
       this.lastWarnings.push(`OpenStreetMap: ${unnamed} név nélküli szállás-objektum kihagyva (${data.elements.length}-ből).`);
     }

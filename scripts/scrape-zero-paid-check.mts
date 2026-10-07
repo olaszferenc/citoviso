@@ -51,7 +51,12 @@ async function child(): Promise<void> {
     const json = (body: unknown) =>
       new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
     if (/\/api\/interpreter$/.test(url)) {
-      overpass.push(decodeURIComponent(String(init?.body ?? "").replace(/^data=/, "")));
+      const ql = decodeURIComponent(String(init?.body ?? "").replace(/^data=/, ""));
+      overpass.push(ql);
+      // A boundary (county) query: the FIRST mirror answers empty (measured 2026-10-07).
+      if (ql.includes('area["ISO3166-2"') && overpass.filter((q) => q.includes("ISO3166-2")).length === 1) {
+        return json({ elements: [] });
+      }
       return json({
         elements: [
           { type: "node", id: 920001, lat: 46.78, lon: 17.5, tags: { tourism: "guest_house", name: "Nullforint OSM Vendégház", phone: "+36 30 555 0200" } },
@@ -126,13 +131,26 @@ async function child(): Promise<void> {
   // ⑤ The OSM source on its own: what it calls, and how often.
   const { OsmSource } = await import("../src/scraper/sources/osm.js");
   const paidBefore = paid.length;
-  let osm: ChildResult["osm"];
+  let osm: ChildResult["osm"] & { county?: ChildResult["county"] };
   try {
     const found = await new OsmSource().fetch({ region: { ...region, bbox: [46.7, 17.4, 46.9, 17.6] }, industry: "accommodation" });
-    osm = { leads: found.length, paid: paid.slice(paidBefore), queries: overpass, error: null };
+    osm = { leads: found.length, paid: paid.slice(paidBefore), queries: [...overpass], error: null };
   } catch (e) {
-    osm = { leads: 0, paid: paid.slice(paidBefore), queries: overpass, error: (e as Error).message };
+    osm = { leads: 0, paid: paid.slice(paidBefore), queries: [...overpass], error: (e as Error).message };
   }
+  // ⑤ A county query whose first mirror answers EMPTY must go on to the next mirror.
+  const countyFrom = overpass.length;
+  let county: ChildResult["county"];
+  try {
+    const found = await new OsmSource().fetch({
+      region: { ...region, id: "megye-to", bbox: [46.2, 18.2, 46.9, 19.0], osmArea: "HU-TO" },
+      industry: "accommodation",
+    });
+    county = { leads: found.length, queries: overpass.length - countyFrom, error: null };
+  } catch (e) {
+    county = { leads: 0, queries: overpass.length - countyFrom, error: (e as Error).message };
+  }
+  osm.county = county;
   const { db } = await import("../src/db/client.js");
   await db.destroy().catch(() => {});
   process.stdout.write(
@@ -147,7 +165,8 @@ type ChildResult = {
   paid: string[];
   marks: string[];
   error: string | null;
-  osm: { leads: number; paid: string[]; queries: string[]; error: string | null };
+  osm: { leads: number; paid: string[]; queries: string[]; error: string | null; county?: ChildResult["county"] };
+  county?: { leads: number; queries: number; error: string | null };
 };
 
 /** Run one measurement in a child process (the config reads the env at import time). */
@@ -275,6 +294,11 @@ async function parent(): Promise<void> {
     check(`⑤ OsmSource (${label}): lefutott, a névvel bíró objektumból lead lett (1 a 2-ből)`, o.error === null && o.leads === 1, o.error ?? `${o.leads} lead`);
     check(`⑤ OsmSource (${label}): 0 fizetős hívás`, o.paid.length === 0, o.paid.length ? o.paid[0] : undefined);
     check(`⑤ OsmSource (${label}): régiónként EGY Overpass-kérés`, o.queries.length === 1, `${o.queries.length} kérés`);
+    check(
+      `⑤ OsmSource (${label}): megyei lekérdezésnél az ÜRES tükör-válasz nem „0 szállás” — jön a következő tükör`,
+      o.county?.error === null && o.county.leads === 1 && o.county.queries === 2,
+      o.county ?? "nincs mérés",
+    );
     const ql = o.queries[0] ?? "";
     check(
       `⑤ OsmSource (${label}): egyenlőség-unió, nem regex (a \`"tourism"~\` alak 504-et kapott)`,
