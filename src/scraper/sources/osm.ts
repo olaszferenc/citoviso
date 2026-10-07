@@ -49,9 +49,21 @@ export function osmObjectUrl(ref: string): string | null {
   return /^(node|way|relation)\/\d+$/.test(ref) ? `https://www.openstreetmap.org/${ref}` : null;
 }
 
-/** Server-side budget (s): a country is one big request, a region a small one. */
+/** Server-side budget (s): a country/county is one big request, a region a small one. */
 function serverTimeoutS(query: ScrapeQuery): number {
   return query.region.osmArea ? 180 : 60;
+}
+
+/**
+ * The boundary an area run is clipped to: "HU" → the country (ISO 3166-1, admin_level=2),
+ * "HU-TO" → a subdivision (ISO 3166-2, e.g. a Hungarian county — a county is no
+ * rectangle, its bbox would take in the neighbours' places).
+ */
+function osmAreaStatement(code: string): string {
+  const c = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  return /^[A-Z]{2}$/.test(c)
+    ? `area["ISO3166-1"="${c}"][admin_level=2]->.a;`
+    : `area["ISO3166-2"="${c}"]->.a;`;
 }
 
 /**
@@ -66,7 +78,7 @@ export function buildQuery(query: ScrapeQuery): string {
   const scope = area ? "(area.a)" : `(${s},${w},${n},${e})`;
   return [
     `[out:json][timeout:${serverTimeoutS(query)}];`,
-    ...(area ? [`area["ISO3166-1"="${area.replace(/[^A-Za-z]/g, "").toUpperCase()}"][admin_level=2]->.a;`] : []),
+    ...(area ? [osmAreaStatement(area)] : []),
     "(",
     ...values.map((v) => `  nwr["tourism"="${v}"]${scope};`),
     ");",

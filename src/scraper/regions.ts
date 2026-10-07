@@ -37,6 +37,23 @@ export const DEFAULT_REGIONS: Record<string, Region> = {
   },
 };
 
+/**
+ * County regions (Magellan project, 2026-10-07, owner: „megyénként"): the region row
+ * `megye-<code>` is the Hungarian county with ISO 3166-2 code HU-<CODE>; the OSM source
+ * clips to the county boundary (its bbox is only the enclosing box). Budapest is HU-BU.
+ */
+export const HU_COUNTY_CODES = [
+  "BA", "BE", "BK", "BU", "BZ", "CS", "FE", "GS", "HB", "HE",
+  "JN", "KE", "NO", "PE", "SO", "SZ", "TO", "VA", "VE", "ZA",
+] as const;
+
+/** `megye-to` → "HU-TO"; any other region id → undefined (bbox query). */
+export function osmAreaForRegion(id: string): string | undefined {
+  const m = /^megye-([a-z]{2})$/.exec(id);
+  const code = m?.[1]?.toUpperCase();
+  return code && (HU_COUNTY_CODES as readonly string[]).includes(code) ? `HU-${code}` : undefined;
+}
+
 /** Live snapshot — starts as the built-ins, replaced by loadRegions(). */
 export let REGIONS: Record<string, Region> = { ...DEFAULT_REGIONS };
 
@@ -65,6 +82,7 @@ export async function loadRegions(force = false): Promise<void> {
             label: r.label,
             country: r.country,
             bbox: [r.south, r.west, r.north, r.east] as const,
+            ...(osmAreaForRegion(r.id) ? { osmArea: osmAreaForRegion(r.id) } : {}),
             ...(r.center_lat != null && r.center_lon != null && r.radius_km != null
               ? { circle: { lat: r.center_lat, lon: r.center_lon, radiusKm: r.radius_km } }
               : {}),

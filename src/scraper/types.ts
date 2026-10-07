@@ -23,8 +23,9 @@ export interface Region {
     readonly lon: number;
     readonly radiusKm: number;
   };
-  /** Whole-country run (`run.ts --country HU`): the OSM source queries the country's
-   *  admin boundary (ISO 3166-1) instead of the bbox, which takes in border strips. */
+  /** Boundary run: the OSM source queries this admin boundary instead of the bbox, which
+   *  takes in border strips — ISO 3166-1 for a country (`run.ts --country HU`), ISO 3166-2
+   *  for a county region (`megye-to` → "HU-TO", regions.ts). */
   readonly osmArea?: string;
 }
 
