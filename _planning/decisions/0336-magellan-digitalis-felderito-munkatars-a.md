@@ -1,4 +1,4 @@
-## ADR-XXXX — Magellan: digitális felderítő munkatárs a Térképen; a scrape fizetős API nélkül, régió-munkalapon át kerül a store-ba
+## ADR-0336 — Magellan: digitális felderítő munkatárs a Térképen; a scrape fizetős API nélkül, régió-munkalapon át kerül a store-ba
 
 - **Tulaj-döntés (2026-10-07):** „A cél a nulla forint API-hívásköltség.” „Az, hogy tokent eszik
   előfizetés terhére, az nem érdekel.” „Ugyanott fusson, mint Neo, Vera meg Poe.” „Ugyanazokat

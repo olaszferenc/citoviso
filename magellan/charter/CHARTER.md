@@ -1,6 +1,6 @@
 # MAGELLAN — munkaköri charter (digitális felderítő munkatárs)
 
-> ⚠️ TERVEZET (2026-10-07) — a tulaj jóváhagyásáig nem él. Döntés: `ADR-XXXX`
+> ⚠️ TERVEZET (2026-10-07) — a tulaj jóváhagyásáig nem él. Döntés: `ADR-0336`
 > (`_planning/decisions/XXXX-magellan-digitalis-felderito.md`), terv: `magellan/TERV.md`.
 > Testvérek: Neo (`neo/charter/`, ADR-0325), Poe (`poe/charter/`), Vera (`vera/charter/`).
 > Ez a fájl MINDEN munkanapod első olvasmánya, a `RUNBOOK.md`-vel együtt.
