@@ -1,4 +1,4 @@
--- 0093 VÁLASZOK A MEGKERESÉSEKRE (2026-10-07, ADR-XXXX).
+-- 0094 VÁLASZOK A MEGKERESÉSEKRE (2026-10-07, ADR-XXXX).
 --
 -- MIÉRT KELL. 2026-10-07-én három valódi válasz érkezett a megkeresésekre (2 SMS, 1 e-mail),
 -- és egyikről sem tudott a rendszer: az SMS-ek a gammu `inbox` táblájában (a dev gép modemje,

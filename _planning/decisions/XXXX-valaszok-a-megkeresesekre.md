@@ -12,7 +12,7 @@ visszapattanás között. A tulaj csak véletlenül vette észre őket.
 1. **Adatút.** A források a dev gépen vannak, a leadek a konzol gazdáján. Gyűjtő a dev gépen
    (`scripts/replies-collect.mts --sms` 60 mp-enként, `--email` 120 mp-enként, systemd timer a FŐ
    fából) → `POST /api/replies/ingest` (bearer) → a szerver PÁROSÍT és tárol (`outreach_reply`,
-   migráció 0093) → az irányítópult blokkja ebből él. A csatornánkénti utolsó lekérdezés
+   migráció 0094) → az irányítópult blokkja ebből él. A csatornánkénti utolsó lekérdezés
    (`outreach_reply_poll`) akkor is íródik, ha nem jött semmi: a csend és a halott gyűjtő így
    megkülönböztethető (a blokk frissesség-sora 10 perc fölött figyelmeztet).
 2. **A végpont a PUBLIC szerveren van**, az SMS-relay mellett: a konzolon nincs bearer-út (csak

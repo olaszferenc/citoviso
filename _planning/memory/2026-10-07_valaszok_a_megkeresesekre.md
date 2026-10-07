@@ -5,7 +5,7 @@ ugrás a lead oldalára” — aznap 3 valódi válasz (2 SMS, 1 e-mail) érkeze
 Jóváhagyott terv: B (beszélgetés-nézet), `assets/design-refs/console/valaszok/`.
 
 **Elvégezve (4 session-szakasz, egy fában, `~/wt/cit84e19510`):**
-- Migráció 0093 (`outreach_reply`, `outreach_reply_poll`); `src/replies/{store,gammu,imap,mime}.ts`.
+- Migráció 0094 (`outreach_reply`, `outreach_reply_poll`); `src/replies/{store,gammu,imap,mime}.ts`.
 - Gyűjtő a dev gépen: `scripts/replies-collect.mts --sms|--email` (csak olvas), systemd timerek
   `deploy/systemd/citoviso-replies-{sms,email}.{service,timer}`; `POST /api/replies/ingest` a PUBLIC szerveren.
 - Konzol: irányítópult-blokk (lista + beszélgetés, mobilon lista VAGY beszélgetés), „Megválaszoltam” /
@@ -23,7 +23,7 @@ Jóváhagyott terv: B (beszélgetés-nézet), `assets/design-refs/console/valasz
 `MEMORY.md`, ez a jegyzet.
 
 **Nyitott:**
-- NEM élesítve (nagy deploy). Élesen kell: migráció 0093, a timerek a dev gép FŐ fájából
+- NEM élesítve (nagy deploy). Élesen kell: migráció 0094, a timerek a dev gép FŐ fájából
   (`SMS_RELAY_URL/SECRET`, `GAMMU_DB_*`, IMAP-hitelesítő a fő fa `.env`-jében).
 - Tulaj-kérdés változatlan: EMAIL_BCC / OUTREACH_COPY_PHONE élesi kivétele csak kimondott „mehet”-re.
 - A KB-kép a kb-shot üres fixture-ét mutatja („mind megválaszolva”) — mintaválasz a fixture-be később.

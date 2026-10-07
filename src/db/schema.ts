@@ -1615,7 +1615,7 @@ export interface DomainProvisioningTable {
   finished_at: Timestamp | null;
 }
 
-/** 0093 (ADR-XXXX): a reply to our outreach, collected read-only from the dev box's
+/** 0094 (ADR-XXXX): a reply to our outreach, collected read-only from the dev box's
  *  gammu inbox / Zoho INBOX and matched to a lead server-side. */
 export interface OutreachReplyTable {
   id: Generated<string>;
@@ -1644,7 +1644,7 @@ export interface OutreachReplyTable {
   updated_at: Generated<Timestamp>;
 }
 
-/** 0093: when the collector last looked at each source (the freshness line). */
+/** 0094: when the collector last looked at each source (the freshness line). */
 export interface OutreachReplyPollTable {
   channel: "sms" | "email";
   checked_at: Timestamp;
