@@ -698,6 +698,8 @@
 .con-src { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .con-src + .con-src { margin-left: 10px; }
 .con-src--flat { color: var(--citui-muted); }
+/* ODbL attribution under an OSM source: its own line, wraps inside the column. */
+.con-src-lic { display: block; color: var(--citui-muted); white-space: normal; overflow-wrap: anywhere; margin-top: 2px; }
 .con-open {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; flex: 0 0 auto;

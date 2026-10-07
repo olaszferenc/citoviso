@@ -3977,9 +3977,16 @@ function sourceLink(
     // Older leads carry no place id — the coordinate still lands on the spot.
     href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
   }
-  return href
+  const link = href
     ? `<a href="${esc(href)}" target="_blank" rel="noopener" class="con-src">${esc(label)}${ic("external", 13)}</a>`
     : `<span class="con-src con-src--flat">${esc(label)}</span>`;
+  // OSM data is under ODbL 1.0: the attribution goes wherever the data is shown.
+  return source === "osm" ? `${link}${osmAttribution()}` : link;
+}
+
+/** „© OpenStreetMap contributors" with the link the OSM attribution guideline asks for. */
+function osmAttribution(lang = consoleLang()): string {
+  return `<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" class="con-src-lic small">${esc(T(lang, "© OpenStreetMap-közreműködők · ODbL"))}</a>`;
 }
 
 /** Everything the scrape actually gathered about this lead — the operator should
@@ -6921,7 +6928,7 @@ function cpScript(prefix: string): string {
   const provPanel = `
     <details class="panel">
       <summary style="cursor:pointer;font-weight:600">${T(lang, "Honnan jött az adat")} — ${d.provenance.length} rekord</summary>
-      <div style="margin-top:10px">${prov}</div>
+      <div style="margin-top:10px">${prov}${d.provenance.some((p) => p.source === "osm") ? `<p class="small mut">${osmAttribution(lang)}</p>` : ""}</div>
     </details>`;
 
   const ordersPanel = orderIntentsPanel(orders, payments, d.id);
