@@ -2531,7 +2531,7 @@ fi
 # élő oldalán is. A portál-URL-ek rendszeresen elrohadnak, ez nem szélső eset. A KÖZÖS
 # `sites/`-hez nem nyúl (saját tmp-fa), de böngészőt indít: 19 sablon × 3 eset × 2
 # szélesség, ezért ~144 s — szigorúan diff-scope-olva.
-# A MOCK MINTA-BLOKKJAI A FORRÁSBÓL (ADR-XXXX, pilot-kiküldés 2026-10-07): a forrással
+# A MOCK MINTA-BLOKKJAI A FORRÁSBÓL (a döntés: src/engine/sampleFromSource.ts fejléce, pilot-kiküldés 2026-10-07): a forrással
 # ellentétes minta-elem („Kisállat” a „Háziállat nem engedélyezett” mellett) kimarad, a
 # szoba-minta neve/száma a forrásból jön (kitalált „1.–3. szoba” soha), és a magyar lapon
 # nem áll „Hungary” a címben. Determinisztikus, AI/DB/böngésző nélkül, ~3 s.
