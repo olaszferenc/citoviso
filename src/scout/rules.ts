@@ -1,10 +1,11 @@
 // Scout worksheet rules (ADR-0336, frozen plan: assets/design-refs/console/scout-worksheet/).
 // PURE — no DB, no I/O — so the console routes, the scrape child (run.ts --scout) and the
 // guards all read ONE set of rules: the tile grid, the Maps link parser, the saturation
-// threshold, the row completeness rule and the close gate with its one-sentence hint.
+// rule, the row completeness rule and the close gate with its one-sentence hint.
 //
-// The rules mirror the approved mock (plan-B.html) one for one; the website and phone
-// verdicts come from the real helpers (classifyWebsite, normalizePhone), never a copy.
+// The rules mirror the approved mock (plan-B.html), narrowed 2026-10-07 (Magellan records
+// the Maps panel's basic facts only); the website and phone labels come from the real
+// helpers (classifyWebsite, normalizePhone), never a copy.
 
 import { classifyWebsite } from "../scraper/qualify.js";
 import { normalizePhone } from "../text/phone.js";
@@ -15,9 +16,14 @@ export const SCOUT_KEYWORDS = ["szállás", "hotel", "panzió", "apartman", "ven
 export type ScoutKeyword = (typeof SCOUT_KEYWORDS)[number];
 
 /**
- * A keyword list longer than this is SATURATED: the Maps list cuts off around 120, so
- * the tile must be split and its quarters walked. ONE place on purpose — the first
- * working day measures the real cut and moves it here (README ③).
+ * Saturation (ADR-0336, Kiegészítés 2026-10-07). The Maps list stops around 120, but it
+ * WIDENS past the tile when the tile itself has few hits (measured: „kemping" 120 on
+ * every tile, 0–3 of them inside). Results inside the view come first, the widening is
+ * the tail — so a full list only hides places of THIS tile when the tile itself holds
+ * that many. A keyword is saturated when its list is longer than SCOUT_SAT_THRESHOLD AND
+ * the tile's recorded places (all of them lie inside it — addLinks refuses the rest)
+ * number at least SCOUT_SAT_THRESHOLD: per keyword the in-tile hits are never more than
+ * the tile's recorded places, so below that every in-tile hit fits in the list.
  */
 export const SCOUT_SAT_THRESHOLD = 100;
 
@@ -229,39 +235,35 @@ export function ratingText(rating: number | null, count: number | null): string 
 
 export interface RowFields {
   readonly status: PlaceStatus;
-  readonly address: string | null;
-  readonly city: string | null;
-  readonly phone: string | null;
-  readonly website: string | null;
-  readonly found_links: string | null;
-  readonly verdict: Verdict | null;
+  readonly name: string | null;
+  readonly lat: number | null;
+  readonly lon: number | null;
 }
 
 /** The „van" verdict needs an OWN first link — a portal or a broken address is not one. */
-export function ownVerdictBad(r: Pick<RowFields, "verdict" | "found_links">): boolean {
+export function ownVerdictBad(r: { readonly verdict: Verdict | null; readonly found_links: string | null }): boolean {
   return r.verdict === "own" && webClass(foundLinks(r.found_links)[0] ?? "") !== "has_own";
 }
 
 /**
- * Is a NEW row ready for processing? Missing = no address or no settlement; a phone that
- * is not a valid number; a website that is not an address; no own site and no verdict;
- * a „van" verdict whose first link is not an own site. Known/processed rows: always.
+ * Is a NEW row ready for processing? (2026-10-07, tulaj: Magellan discovers and records
+ * the Maps panel's basic facts; the full profile is Neo's.) Name + coordinate — both come
+ * from the link — and nothing else: address, phone, website, rating, category are
+ * optional, and the website verdict is the chain's (presence check, 0 Ft), not his.
+ * An unreadable phone / website is shown red on the form and simply not used.
  */
 export function rowComplete(r: RowFields): boolean {
   if (r.status !== "new") return true;
-  if (!(r.address ?? "").trim() || !(r.city ?? "").trim()) return false;
-  if ((r.phone ?? "").trim() && !phoneE164(r.phone)) return false;
-  const wc = webClass(r.website);
-  if (wc === "invalid") return false;
-  if (wc !== "has_own" && !r.verdict) return false;
-  if (ownVerdictBad(r)) return false;
-  return true;
+  return !!(r.name ?? "").trim() && Number.isFinite(r.lat) && Number.isFinite(r.lon);
 }
 
-/** Keyword map → per-keyword state. Empty = hátravan; >SAT = telített. */
-export function kwState(n: number | null | undefined): "todo" | "ok" | "sat" {
+/**
+ * One keyword's state. Empty = hátravan; a list over SAT on a tile with at least SAT
+ * recorded places = telített (see SCOUT_SAT_THRESHOLD); anything else = kész.
+ */
+export function kwState(n: number | null | undefined, inTile: number): "todo" | "ok" | "sat" {
   if (n == null) return "todo";
-  return n > SCOUT_SAT_THRESHOLD ? "sat" : "ok";
+  return n > SCOUT_SAT_THRESHOLD && inTile >= SCOUT_SAT_THRESHOLD ? "sat" : "ok";
 }
 
 /** A tile's state after a keyword or a row change (done / split / out never move back). */
@@ -271,7 +273,7 @@ export function tileStateOf(
   rowCount: number,
 ): TileState {
   if (current === "done" || current === "split" || current === "out") return current;
-  const states = SCOUT_KEYWORDS.map((k) => kwState(kw[k]));
+  const states = SCOUT_KEYWORDS.map((k) => kwState(kw[k], rowCount));
   if (states.includes("sat")) return "sat";
   if (states.some((s) => s !== "todo") || rowCount > 0) return "work";
   return "todo";
@@ -290,7 +292,7 @@ function pendingRows(t: CloseInput): number {
 /** Close gate: every keyword counted, none saturated, no incomplete new place. */
 export function canClose(t: CloseInput): boolean {
   if (t.state === "done" || t.state === "sat" || t.state === "split" || t.state === "out") return false;
-  return SCOUT_KEYWORDS.every((k) => kwState(t.kw[k]) === "ok") && pendingRows(t) === 0;
+  return SCOUT_KEYWORDS.every((k) => kwState(t.kw[k], t.rows.length) === "ok") && pendingRows(t) === 0;
 }
 
 /** The one sentence under the close button: what is still missing (README ③). */
@@ -301,10 +303,10 @@ export function closeHint(t: CloseInput, lang = "hu"): string {
       : T(lang, "Lezárva. Az új helyek feldolgozása lefutott.");
   }
   if (t.state === "sat") return T(lang, "Telített kulcsszó van: bontsd négy csempére, a kisebbeket nézd át.");
-  const left = SCOUT_KEYWORDS.filter((k) => kwState(t.kw[k]) !== "ok").length;
+  const left = SCOUT_KEYWORDS.filter((k) => kwState(t.kw[k], t.rows.length) !== "ok").length;
   if (left) return T(lang, "{n} kulcsszó van még hátra.", { n: left });
   const p = pendingRows(t);
-  if (p) return T(lang, "{n} új hely adatai hiányosak.", { n: p });
+  if (p) return T(lang, "{n} új hely neve vagy koordinátája hiányzik.", { n: p });
   return T(lang, "Minden kész: lezárható.");
 }
 

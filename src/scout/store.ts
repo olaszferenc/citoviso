@@ -12,7 +12,6 @@ import {
   canClose,
   closeHint,
   kwState,
-  ownVerdictBad,
   parsePlaceLink,
   parseRating,
   phoneE164,
@@ -30,7 +29,6 @@ import {
   type PlaceStatus,
   type TileGeo,
   type TileState,
-  type Verdict,
   type WebClass,
 } from "./rules.js";
 
@@ -138,9 +136,7 @@ export interface PlaceView {
   readonly webC: WebClass;
   readonly photos: string;
   readonly rating: string;
-  readonly found: string;
-  readonly verdict: Verdict | null;
-  readonly verdictBad: boolean;
+  readonly category: string;
   readonly complete: boolean;
   readonly leadId: string | null;
   /** lead / nolead: the saved lead's qualification (why it is or is not a lead). */
@@ -174,8 +170,7 @@ type PlaceRow = {
   photo_count: number | null;
   rating: number | null;
   rating_count: number | null;
-  found_links: string | null;
-  verdict: Verdict | null;
+  category: string | null;
   lead_id: string | null;
 };
 
@@ -195,8 +190,7 @@ const PLACE_COLS = [
   "photo_count",
   "rating",
   "rating_count",
-  "found_links",
-  "verdict",
+  "category",
   "lead_id",
 ] as const;
 
@@ -219,9 +213,7 @@ function placeView(r: PlaceRow, leadNames: Map<string, { name: string; qual: str
     webC: webClass(r.website),
     photos: r.photo_count == null ? "" : String(r.photo_count),
     rating: ratingText(r.rating, r.rating_count),
-    found: r.found_links ?? "",
-    verdict: r.verdict,
-    verdictBad: ownVerdictBad(r),
+    category: r.category ?? "",
     complete: rowComplete(r),
     leadId: r.lead_id,
     leadQual: lead?.qual ?? null,
@@ -246,7 +238,11 @@ export async function tilePlaces(tileId: string): Promise<PlaceView[]> {
   return rows.map((r) => placeView(r, names));
 }
 
-/** Every tile of the region, each with its close gate and hint computed from its rows. */
+/**
+ * Every tile of the region, each with its close gate and hint computed from its rows.
+ * A stored state the current rules no longer give (a tile marked saturated under the
+ * whole-list rule, before 2026-10-07) is re-derived and written back here.
+ */
 export async function listTiles(regionId: string, lang = "hu"): Promise<TileView[]> {
   const tiles = await db
     .selectFrom("scout_tile")
@@ -257,7 +253,7 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
     .execute();
   const rows = await db
     .selectFrom("scout_place")
-    .select(["tile_id", "status", "address", "city", "phone", "website", "found_links", "verdict"])
+    .select(["tile_id", "status", "name", "lat", "lon"])
     .where("region", "=", regionId)
     .execute();
   const byTile = new Map<string, typeof rows>();
@@ -266,10 +262,13 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
     list.push(r);
     byTile.set(r.tile_id, list);
   }
-  return tiles.map((t) => {
+  const stale: Array<{ id: string; state: TileState }> = [];
+  const views = tiles.map((t) => {
     const kw = (t.kw ?? {}) as Record<string, number | null>;
     const tRows = byTile.get(t.id) ?? [];
-    const input = { state: t.state, kw, rows: tRows };
+    const state = tileStateOf(t.state, kw, tRows.length);
+    if (state !== t.state) stale.push({ id: t.id, state });
+    const input = { state, kw, rows: tRows };
     const box = { south: t.south, west: t.west, north: t.north, east: t.east };
     const geo = tileGeo(box);
     return {
@@ -282,14 +281,18 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
       box,
       geo,
       maps: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, mapsSearchUrl(k, geo)])),
-      state: t.state,
+      state,
       kw,
-      kwStates: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, kwState(kw[k])])),
+      kwStates: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, kwState(kw[k], tRows.length)])),
       rows: tRows.length,
       canClose: canClose(input),
       hint: closeHint(input, lang),
     };
   });
+  for (const x of stale) {
+    await db.updateTable("scout_tile").set({ state: x.state, updated_at: new Date() }).where("id", "=", x.id).execute();
+  }
+  return views;
 }
 
 /** The counter row (README ②). Coverage denominator: the stored, NON-Magellan leads inside
@@ -527,7 +530,12 @@ export async function addLinks(tile: TileRow, text: string): Promise<MutationErr
   return { added, known, bad, dup, outside };
 }
 
-export const PLACE_FIELDS = ["address", "city", "phone", "website", "photos", "rating", "found", "verdict"] as const;
+/**
+ * The fields of a row's form: the Maps panel's basic facts (2026-10-07: the Google
+ * search and the website verdict are not Magellan's — the chain and Neo do them; the
+ * columns `found_links` / `verdict` stay, empty, and the processing reads them if set).
+ */
+export const PLACE_FIELDS = ["address", "city", "phone", "website", "photos", "rating", "category"] as const;
 export type PlaceField = (typeof PLACE_FIELDS)[number];
 
 /** One field of one row, saved the moment it changes (ADR-0331). */
@@ -557,8 +565,8 @@ export async function savePlaceField(placeId: string, field: string, value: stri
     case "website":
       set = { website: text };
       break;
-    case "found":
-      set = { found_links: text };
+    case "category":
+      set = { category: text ? text.slice(0, 200) : null };
       break;
     case "photos":
       if (v !== "" && !/^\d{1,5}$/.test(v)) return { error: "photos" };
@@ -570,10 +578,6 @@ export async function savePlaceField(placeId: string, field: string, value: stri
       set = { rating: r.rating, rating_count: r.count };
       break;
     }
-    case "verdict":
-      if (v !== "" && v !== "none" && v !== "own" && v !== "unsure") return { error: "verdict" };
-      set = { verdict: v === "" ? null : v };
-      break;
     default:
       return { error: "field" };
   }
@@ -589,10 +593,11 @@ export async function savePlaceField(placeId: string, field: string, value: stri
 export async function closeScoutTile(tile: TileRow, lang = "hu"): Promise<MutationError | { procRows: number }> {
   const rows = await db
     .selectFrom("scout_place")
-    .select(["status", "address", "city", "phone", "website", "found_links", "verdict"])
+    .select(["status", "name", "lat", "lon"])
     .where("tile_id", "=", tile.id)
     .execute();
-  if (!canClose({ state: tile.state, kw: tile.kw, rows })) return { error: closeHint({ state: tile.state, kw: tile.kw, rows }, lang) };
+  const input = { state: tileStateOf(tile.state, tile.kw, rows.length), kw: tile.kw, rows };
+  if (!canClose(input)) return { error: closeHint(input, lang) };
   const now = new Date();
   await db.transaction().execute(async (trx) => {
     await trx.updateTable("scout_tile").set({ state: "done", closed_at: now, updated_at: now }).where("id", "=", tile.id).execute();

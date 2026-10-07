@@ -38,3 +38,24 @@
   a megvalósítás végén, külön engedéllyel.
 - **Becslés:** új helyekre ~70–90 hely/óra kereséssel; Balaton-Kelet ≈ 2 munkanap, Székesfehérvár ≈ 10.
 - **Visszafordíthatóság:** 🔄 könnyű — a kapcsoló visszaállítható `on`-ra, a régi út kódja megmarad.
+
+### Kiegészítés 2026-10-07 — felfedezés + panel-alapadat; telítettség a csempén belülről
+
+- **Tulaj-döntés (2026-10-07 21:20, Q5 megerősítve):** „Magellan fő feladata a felfedezés; ha talált
+  valamit, a hozzá tartozó (panelen látható) alapadatot is lementi, de utána átadja Neónak, és Neo
+  készíti el a teljes profilt (hol található meg a lead, rákeres, kontakt stb.).”
+- **Hely „adatai rendben”** = név + koordináta (mindkettő a linkből). Cím, település, telefon, honlap,
+  fotók, értékelés · db és az új **kategória** (`scout_place.category`, 0095, csak a munkalapon)
+  opcionális; az érvénytelen telefon/honlap pirosan jelez, és nem kerül a leadre. A Google-keresés
+  mező és az ítélet-rádió kikerült a kártyáról (az oszlopok üresen maradnak, a lánc olvassa, ha
+  kitöltöttek). A honlap-minősítés a lezáráskor a meglévő lánc dolga (presence, 0 Ft).
+- **Telítettség (mérés: `~/magellan/jelentesek/2026-10-07-meres.md`):** a Térkép a listát a csempén
+  TÚL kitágítja (kemping: 120 minden csempén, a csempén belül 0–3), ezért a lista hossza magában
+  nem mutatja, hogy a csempe helyei kiszorultak. Szabály: egy kulcsszó **telített**, ha a listája
+  **> 100 ÉS a csempén belül rögzített helyek száma ≥ 100** (`SCOUT_SAT_THRESHOLD`, egy konstans).
+  Indok: a nézeten belüli találatok állnak elöl, a tágítás a lista vége; kulcsszavanként a csempén
+  belüli találat sosem több, mint a csempén rögzített helyek összesen (a munkalap a csempén kívüli
+  pint elutasítja), tehát 100 alatt minden csempén belüli találat befér a ~120-as listába.
+  Ismert rés: a ki nem rögzített nem-szállás találatok (múzeum, pince) is foglalnak helyet a
+  listában — a 100 vs. ~120 különbség ezt fedi. A régi szabály szerint „telített” csempék
+  állapotát a munkalap az első betöltéskor újraszámolja.

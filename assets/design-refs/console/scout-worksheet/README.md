@@ -48,11 +48,13 @@ tárolt, NEM Magellan-forrású leadek; számláló: az ezekre illesztett ismert
   marad meg — ezért a lap kimondja a lépést (kicsinyítés, visszanagyítás, „Keresés ezen a területen”).
 - Kiválasztott csempén a 6 kulcsszó (`szállás, hotel, panzió, apartman, vendégház, kemping`)
   egy-egy egész szám mezővel. Nem egész szám → hibaüzenet, nem ment. Üres = hátravan.
-  **>100 → telített** (a küszöb egy helyen, konstansként; az első munkanap méri pontosítja).
+  **>100 → telített** (a küszöb egy helyen, konstansként). ⚠️ Pontosítva 2026-10-07 (ADR-0336
+  Kiegészítés): telített = a lista >100 **ÉS** a csempén belül rögzített helyek ≥100 — a Térkép a
+  listát a csempén túlra tágítja, ezért a teli lista magában nem telítettség.
 - **„Felosztás négy csempére”** csak telített csempén aktív; a négy negyed a szülő helyén,
   2×2-ben jelenik meg, és az első negyed lesz kijelölve.
 - **„Csempe lezárása”** csak akkor aktív, ha mind a 6 kulcsszó kész, nincs telített, és
-  nincs hiányos új hely. Alatta egy mondat mondja meg, mi hiányzik még.
+  nincs hiányos új hely (2026-10-07 óta: hiányos = nincs neve vagy koordinátája). Alatta egy mondat mondja meg, mi hiányzik még.
 - Lezárás után a csempe mezői nem szerkeszthetők.
 
 ### ④ Helyek kártya
@@ -64,14 +66,15 @@ tárolt, NEM Magellan-forrású leadek; számláló: az ezekre illesztett ismert
   tartozik („… a csempén kívül esik — a B2 csempébe tartozik”), vagy hogy a régión is kívül esik.
 - **Ismert lead** a felvételkor dől el, `isSamePlayer`-rel (normalizált név + ≤250 m,
   ADR-0296): szürke címke, link a lead lapjára, nincs adat-űrlap.
-- Új hely: címke („adat kell” / „adatok rendben”), nyitható űrlap: cím, település, telefon
-  (élő normalizálás `normalizePhone`-nal, érvénytelen → piros üzenet), honlap (élő besorolás
-  `classifyWebsite`-tal: saját / portál / értelmezhetetlen), fotók száma, értékelés · db (Q2).
-- Saját honlap nélküli (üres vagy portál) helynél: „talált linkek” mező + ítélet rádió
-  (nincs saját honlap · van saját honlap (első link) · bizonytalan). „Van” ítéletnél az első
-  link nem lehet portál/hibás — különben hibaüzenet és a sor hiányos marad.
-- Hiányos = nincs cím vagy település; érvénytelen telefon; értelmezhetetlen honlap; hiányzó
-  ítélet (honlap nélkül); hibás „van” ítélet.
+- ⚠️ **Szűkítve 2026-10-07 (tulaj-döntés: Magellan = felfedezés + panel-alapadat, a teljes
+  profil Neóé):** új hely címkéje „adatok rendben”, ha a linkből megvan a név és a koordináta —
+  minden más opcionális. Nyitható űrlap (nyitva, amíg egy adata sincs): cím, település, telefon
+  (élő normalizálás `normalizePhone`-nal; érvénytelen → piros üzenet, a leadre nem kerül), honlap
+  (élő besorolás `classifyWebsite`-tal: saját / portál / értelmezhetetlen), fotók száma,
+  értékelés · db (Q2), kategória (ahogy a panel mutatja).
+- A Google-keresés („talált linkek”) mező és az ítélet-rádió **kikerült** a kártyáról: a
+  honlap-minősítés a lezáráskori láncé (presence, 0 Ft), a kontakt-keresés Neóé (Q5). Az oszlopok
+  (`found_links`, `verdict`) maradnak, üresen; ha kitöltöttek, a feldolgozás olvassa.
 - **Minden mező a változáskor a szerverre ment** (ADR-0331): újratöltés után minden ott van.
   Mentéskor csak az állapot-jelzők frissülnek (címke, kulcsszó-jel, csempe-szín, gombok, mondat);
   a mezők és a csempe-gombok DOM-ja megmarad (2026-10-07: a teljes újrarajzolás minden mentés után
@@ -83,6 +86,7 @@ A lezárás a csempe új, rendben lévő helyeit a meglévő scrape-láncon futt
 `MagellanSource`), **fizetős hívás nélkül** (`SCRAPE_PAID_APIS=off`): presence, outdated
 (keresés nélkül), portál-olvasás a rögzített portál-linkekre, contact, geo → `persistLeadBatch`.
 A sorok címkéje közben „feldolgozás…”, utána „lead lett” / „nem lead: saját honlap”.
+A lead a Lead-sorba kerül, a teljes profilt Neo készíti el.
 
 ### ⑥ Mobil (390 px)
 Egy oszlop; a felső menüben csak a „Felderítés” marad; a számláló 2 oszlopos; az

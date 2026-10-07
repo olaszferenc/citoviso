@@ -1357,6 +1357,8 @@ export interface ScoutPlaceTable {
   rating_count: number | null;
   found_links: string | null;
   verdict: "none" | "own" | "unsure" | null;
+  /** 0095: the Maps panel's category as shown (optional, worksheet-only). */
+  category: string | null;
   lead_id: string | null;
   created_at: ColumnType<Date, Date | string | undefined, Date | string>;
   updated_at: ColumnType<Date, Date | string | undefined, Date | string>;

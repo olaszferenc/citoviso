@@ -3,11 +3,12 @@
 // working mock this page is measured against).
 //
 // Magellan (the digital scout) walks the Google Maps list tile by tile and records what
-// he sees here: per tile the six keyword hit counts, per place the facts off its Maps
-// profile. Every field is saved the moment it changes (ADR-0331). The server decides
+// he sees here: per tile the six keyword hit counts, per place the basic facts off its
+// Maps panel (2026-10-07: discovery only — the website verdict is the chain's, the full
+// profile Neo's). Every field is saved the moment it changes (ADR-0331). The server decides
 // everything that has a rule (link parsing, known-lead match, completeness, close gate);
 // the page only mirrors the phone normalisation live (PHONE_NORM_JS, the official client
-// mirror of normalizePhone) and asks the server for the website verdict as one types.
+// mirror of normalizePhone) and asks the server for the website label as one types.
 
 import { T } from "../i18n/mail.js";
 import { PHONE_NORM_JS } from "../text/phone.js";
@@ -102,8 +103,6 @@ const SCOUT_CSS = `<style>
 .con .sc-form .full{grid-column:1/-1}
 .con .sc-form .out{font-size:11px;color:var(--citui-link-ink);min-height:14px}
 .con .sc-form .out.bad{color:var(--citui-bad-ink)}
-.con .sc-verdict{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--citui-ink);margin-top:4px}
-.con .sc-verdict label{flex-direction:row;align-items:center;color:var(--citui-ink);font-size:13px;gap:5px}
 .con .sc-note{font-size:12px;color:var(--citui-muted);margin-top:4px}
 .con .sc-note a{color:var(--citui-link-ink)}
 @media (max-width:760px){
@@ -153,7 +152,7 @@ function scoutStrings(lang: string): Record<string, string> {
     chipNoOwn: T(lang, "nem lead: saját honlap"),
     chipNoUnsure: T(lang, "nem lead: bizonytalan honlap"),
     chipOk: T(lang, "adatok rendben"),
-    chipNew: T(lang, "új hely · adat kell"),
+    chipNew: T(lang, "név vagy koordináta hiányzik"),
     open: T(lang, "Adatok"),
     shut: T(lang, "Becsuk"),
     knownNote: T(lang, "Azonos név 250 m-en belül:"),
@@ -167,16 +166,12 @@ function scoutStrings(lang: string): Record<string, string> {
     fPhotos: T(lang, "Fotók száma a profilon"),
     fRating: T(lang, "Értékelés · db"),
     fRatingPh: T(lang, "pl. 4,6 · 21"),
-    fFound: T(lang, "Google-keresés: „név + település” — talált linkek (szóközzel)"),
-    verdict: T(lang, "Ítélet:"),
-    vNone: T(lang, "nincs saját honlap"),
-    vOwn: T(lang, "van saját honlap (első link)"),
-    vUnsure: T(lang, "bizonytalan"),
-    vOwnBad: T(lang, "Az első link nem saját honlap (portál vagy hibás cím)."),
-    phoneBad: T(lang, "Nem érvényes magyar szám"),
+    fCategory: T(lang, "Kategória (ha a panel mutatja)"),
+    fCategoryPh: T(lang, "pl. Panzió"),
+    phoneBad: T(lang, "Nem érvényes magyar szám — így nem kerül a leadre"),
     webOwn: T(lang, "saját honlap — nem lead lesz belőle"),
     webPortal: T(lang, "portál, nem saját honlap"),
-    webBad: T(lang, "Nem értelmezhető cím"),
+    webBad: T(lang, "Nem értelmezhető cím — így nem kerül a leadre"),
     photosBad: T(lang, "Csak egész szám: hány fotó van a profilon."),
     ratingBad: T(lang, "Értékelés és darabszám, pl. 4,6 · 21"),
     covTitle: T(lang, "{seen} / {all} korábbi lead a régió területén"),
@@ -231,7 +226,7 @@ export function scoutPage(d: ScoutPageData): string {
         <button class="sc-btn pri" type="button" id="scAdd">${T(lang, "Felvétel")}</button>
       </div>
       <p class="sc-err" id="scAddErr"></p>
-      <p class="sc-hint">${T(lang, "A rendszer a linkből veszi a nevet és a koordinátát, és azonnal megmondja, ismert-e már. Ismert helyet nem kell kinyitni.")}</p>
+      <p class="sc-hint">${T(lang, "A rendszer a linkből veszi a nevet és a koordinátát, és azonnal megmondja, ismert-e már. Ismert helyet nem kell kinyitni; új helynél a Térkép-panel adatait írd be, ami látszik.")}</p>
       <div class="sc-rows" id="scRows"></div>
     </div>
   </div>
@@ -244,10 +239,11 @@ export function scoutPage(d: ScoutPageData): string {
       <dl class="con-legend__list">
         <div class="con-legend__row"><dt>${T(lang, "Csempe")}</dt><dd>${T(lang, "A régió egy darabja, amit a Térképen egy nézetben átnézel. Minden csempében mind a hat kulcsszóra keresel, és beírod, hány találatot adott a lista.")}</dd></div>
         <div class="con-legend__row"><dt>${T(lang, "Csempe-azonosító")}</dt><dd>${T(lang, "A betű az oszlop nyugatról keletre (A a legnyugatibb), a szám a sor északról délre (1 a legészakibb). A negyedek: .1 északnyugat, .2 északkelet, .3 délnyugat, .4 délkelet.")}</dd></div>
-        <div class="con-legend__row"><dt>${T(lang, "Telített")}</dt><dd>${T(lang, "Ha a lista egy kulcsszóra {n}-nál több találatot ad, a Térkép nem mutat meg mindent — a csempét négy kisebbre bontod, és azokat nézed át.", { n: SCOUT_SAT_THRESHOLD })}</dd></div>
+        <div class="con-legend__row"><dt>${T(lang, "Telített")}</dt><dd>${T(lang, "Ha a lista egy kulcsszóra {n}-nál több találatot ad, ÉS a csempén belül már legalább {n} helyet rögzítettél, a Térkép nem mutat meg mindent — a csempét négy kisebbre bontod, és azokat nézed át. A teli lista magában nem telítettség: a Térkép a csempén túlra is kitágítja.", { n: SCOUT_SAT_THRESHOLD })}</dd></div>
         <div class="con-legend__row"><dt>${T(lang, "Ismert lead")}</dt><dd>${T(lang, "Azonos név 250 méteren belül. Ezt a rendszer dönti el a felvételkor; ismert helyet nem nyitsz ki.")}</dd></div>
         <div class="con-legend__row"><dt>${T(lang, "Mentés")}</dt><dd>${T(lang, "Minden mező a kitöltéskor mentődik. Ha a munkád megszakad, innen folytatod.")}</dd></div>
-        <div class="con-legend__row"><dt>${T(lang, "Feldolgozás")}</dt><dd>${T(lang, "A csempe lezárásakor az új helyek a szokásos ingyenes lépéseken mennek át (honlap-ellenőrzés domain alapján, portál-olvasás), és lead lesz belőlük.")}</dd></div>
+        <div class="con-legend__row"><dt>${T(lang, "Feldolgozás")}</dt><dd>${T(lang, "A csempe lezárásakor az új helyek a szokásos ingyenes lépéseken mennek át (honlap-ellenőrzés domain alapján, portál-olvasás), és lead lesz belőlük. A teljes profilt (hol található még, kontakt) Neo készíti el a Lead-sorból.")}</dd></div>
+        <div class="con-legend__row"><dt>${T(lang, "Adatok rendben")}</dt><dd>${T(lang, "Egy hely rendben van, ha a linkből megvan a neve és a koordinátája. A Térkép-panel többi adata (cím, település, telefon, honlap, értékelés, kategória) opcionális: amit a panel mutat, azt írd be.")}</dd></div>
       </dl>
       <p class="con-legend__foot">${helpLink("console.scout", T(lang, "Részletes súgó a tudásbázisban"))}</p>
     </div>
@@ -345,12 +341,8 @@ function chipFor(r){if(r.status==="known")return'<span class="sc-chip known">'+e
   if(r.status==="nolead")return'<span class="sc-chip known">'+esc(r.leadQual==="unknown"?L.chipNoUnsure:L.chipNoOwn)+'</span>';
   return r.complete?'<span class="sc-chip ok">'+esc(L.chipOk)+'</span>':'<span class="sc-chip new">'+esc(L.chipNew)+'</span>'}
 function webOut(c){return c==="has_own"?L.webOwn:c==="portal_only"?L.webPortal:c==="invalid"?L.webBad:""}
-function isOpen(r){return openRows[r.id]!=null?openRows[r.id]:!r.complete}
-function verdictBox(r){if(r.webC==="has_own")return"";
-  return'<label>'+esc(L.fFound)+'<textarea data-f="found" rows="2">'+esc(r.found)+'</textarea></label>'+
-    '<div class="sc-verdict" role="radiogroup" aria-label="'+esc(L.verdict)+'"><span>'+esc(L.verdict)+'</span>'+
-    [["none",L.vNone],["own",L.vOwn],["unsure",L.vUnsure]].map(function(o){return'<label><input type="radio" name="v'+r.id+'" value="'+o[0]+'"'+(r.verdict===o[0]?" checked":"")+'> '+esc(o[1])+'</label>'}).join("")+
-    '</div><span class="out bad" data-o="verdict">'+(r.verdictBad?esc(L.vOwnBad):"")+'</span>'}
+// A new row opens by default while none of its panel facts is typed in yet.
+function isOpen(r){return openRows[r.id]!=null?openRows[r.id]:!r.complete||!(r.address||r.city||r.phone||r.website||r.rating||r.category)}
 function rowHtml(r,t){var closed=t.state==="done";
   var h='<div class="top"><span class="nm">'+esc(r.name)+'</span><span class="co">'+r.lat.toFixed(4)+", "+r.lon.toFixed(4)+'</span><span class="sp">'+chipFor(r);
   if(r.status==="new"&&!closed)h+='<button class="sc-btn sm" type="button" data-tog>'+esc(isOpen(r)?L.shut:L.open)+'</button>';
@@ -365,7 +357,7 @@ function rowHtml(r,t){var closed=t.state==="done";
     '<label>'+esc(L.fWeb)+'<input data-f="website" value="'+esc(r.website)+'" inputmode="url"><span class="out" data-o="web"></span></label>'+
     '<label>'+esc(L.fPhotos)+'<input data-f="photos" value="'+esc(r.photos)+'" inputmode="numeric"><span class="out" data-o="photos"></span></label>'+
     '<label>'+esc(L.fRating)+'<input data-f="rating" value="'+esc(r.rating)+'" placeholder="'+esc(L.fRatingPh)+'"><span class="out" data-o="rating"></span></label>'+
-    '<div class="full sc-vbox">'+verdictBox(r)+'</div></div>'}
+    '<label>'+esc(L.fCategory)+'<input data-f="category" value="'+esc(r.category)+'" placeholder="'+esc(L.fCategoryPh)+'"></label></div>'}
   return h}
 function setOut(d,key,text,bad){var o=d.querySelector('[data-o="'+key+'"]');if(o){o.textContent=text;o.className="out"+(bad?" bad":"")}}
 function phoneOut(d,v){var n=v.trim()?norm(v):null;setOut(d,"phone",v.trim()?(n?"→ "+n:L.phoneBad):"",!!v.trim()&&!n)}
@@ -376,17 +368,13 @@ function wireRow(d,r,t){var tog=d.querySelector("[data-tog]");if(tog)tog.onclick
   setOut(d,"web",webOut(r.webC),r.webC==="invalid");
   d.querySelectorAll("[data-f]").forEach(function(inp){var f=inp.getAttribute("data-f");
     inp.oninput=function(){if(f==="phone")phoneOut(d,inp.value);if(f==="website")liveWeb(d,inp.value.trim())};
-    inp.onchange=function(){saveField(d,r,t,f,inp.value)}});
-  d.querySelectorAll('input[type=radio]').forEach(function(rb){rb.onchange=function(){saveField(d,r,t,"verdict",rb.value)}})}
+    inp.onchange=function(){saveField(d,r,t,f,inp.value)}})}
 function saveField(d,r,t,f,v){api("POST","/scout/place/"+r.id,{field:f,value:v}).then(function(j){
   if(j.error){if(f==="photos")setOut(d,"photos",L.photosBad,true);else if(f==="rating")setOut(d,"rating",L.ratingBad,true);return}
   if(f==="photos")setOut(d,"photos","",false);if(f==="rating")setOut(d,"rating","",false);
   absorb(j);var nr=null;SC.places.forEach(function(p){if(p.id===r.id)nr=p});if(!nr)return;
-  var hadBox=r.webC!=="has_own",hasBox=nr.webC!=="has_own";
   for(var k in nr)r[k]=nr[k];
   d.querySelector(".top .sp").firstChild.outerHTML=chipFor(r);
-  if(hadBox!==hasBox){var vb=d.querySelector(".sc-vbox");if(vb){vb.innerHTML=verdictBox(r);wireRow(d,r,t)}}
-  else setOut(d,"verdict",r.verdictBad?L.vOwnBad:"",true);
   if(f==="website")setOut(d,"web",webOut(r.webC),r.webC==="invalid");
   if(f==="phone")phoneOut(d,r.phone);
   renderMap();renderKw();renderStats()})}
