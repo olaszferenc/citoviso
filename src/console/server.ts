@@ -327,7 +327,7 @@ import {
 } from "../auth/operatorAuth.js";
 import path_mod from "node:path";
 import { consoleLang, runWithConsoleLang, setConsoleAi, setConsoleLang, setConsoleNav } from "./i18nCtx.js";
-import { getNavNumbers } from "./navCounts.js";
+import { getNavNumbers, resetNavCountsCache } from "./navCounts.js";
 import { getAiSpend } from "./aiSpend.js";
 import { runStaggered } from "./staggeredBatch.js";
 import { HUB_PREFIX } from "./nav.js";
@@ -1413,6 +1413,9 @@ async function handle(
       const form = await readBody(req);
       const ok = m[2] === "answered" ? await markAnswered(m[1]!, op.displayName) : await unmarkAnswered(m[1]!);
       if (!ok) return send(res, 404, layout("404", `<p>${T(consoleLang(), "Nincs ilyen válasz.")}</p>`));
+      // The sidebar count is cached for 15 s, the block on the redirect target is not —
+      // without this the menu kept the old number while the block had already moved (README ⑥).
+      resetNavCountsCache();
       const all = form.get("f") === "all" ? "&replies=all" : "";
       return redirect(res, `/?reply=${m[1]}${all}#replies`);
     }

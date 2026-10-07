@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-10-05
+updated: 2026-10-07
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -46,6 +46,33 @@ A menü egy fa: **„Irányítópult”**, alatta a modulok — **CRM**, **„P�
 
 ## Az Irányítópult tartalma
 
+**„Válaszok a megkeresésekre”** — a lap tetején, a kártyák fölött: ide kerül minden SMS és
+e-mail, amivel egy lead a megkeresésünkre válaszolt. A gép az SMS-eket percenként, a postafiókot
+két percenként nézi meg; a blokk alján lévő sor mutatja, mikor nézte utoljára (ha 10 percnél
+régebben, a sor borostyán — a gyűjtés akadt el, nem a válaszok maradtak el). Csak olyan feladó
+jelenik meg, akinek mi írtunk; más SMS vagy levél nem kerül ide.
+
+- A cím mellett a jelvény: **„{n} megválaszolatlan”** (piros), vagy ha nincs ilyen,
+  **„mind megválaszolva”** (zöld). Alatta két szűrő: **„Megválaszolatlan”** (ez az alap) és
+  **„Mind”**, mellettük a darabszám.
+- **Asztali gépen** bal oldalt a lista, a legújabb felül: piros pötty = megválaszolatlan, zöld
+  karika = megválaszolt, a lead neve, SMS vagy E-mail, az időpont és a válasz eleje. Jobb oldalt
+  a kiválasztott beszélgetés: felül a MI kiküldött üzenetünk (melyik csatornán, mikor, levélnél a
+  tárgy), alatta a válasz teljes szövege.
+- **Telefonon** csak a lista látszik; egy sorra koppintva a beszélgetés nyílik meg helyette, a
+  **„Vissza”** gomb hozza vissza a listát.
+- Ha válaszoltál a leadnek (telefonon, SMS-ben, levélben), koppints a **„Megválaszoltam”**
+  gombra: a jelölés **„Megválaszolva”** lesz, mellette, hogy ki és mikor jelölte
+  (**„Megválaszolta: {who} · {at}”**), és egy **„Visszavonás”**, ha tévedtél. Levélnél a gép
+  magától is megválaszoltnak jelöli, ha a válasz után a postafiókból levél ment ugyanarra a címre
+  (ilyenkor a jelölő „postafiók”) — de amit visszavontál, azt nem jelöli vissza.
+- **„Lead lapja”** — a lead saját lapjára visz.
+- Ha minden válasz meg van válaszolva: **„Nincs megválaszolatlan válasz.”** — a korábbiak a
+  **„Mind”** szűrőn megmaradnak.
+
+A megválaszolatlanok száma a menüben is ott áll, az **„Irányítópult”** sor mellett piros
+jelvényként; 0-nál eltűnik.
+
 **Egy kártya modulonként** a legfontosabb számokkal, mindegyik sor a saját listájára visz:
 
 - **CRM** — a felmért szereplők száma (a diszkvalifikáltakkal együtt), alatta a kvalifikált
@@ -60,7 +87,8 @@ A menü egy fa: **„Irányítópult”**, alatta a modulok — **CRM**, **„P�
   Mindkét szám pontosan annyi, ahány sort a link mögötti lista mutat.
 - **„Pénzügy”** — a nyitott bizonylatok száma (és hogy van-e lejárt), alatta a bizonylatok, a
   partnerek és az AAM-limit kihasználtsága százalékban.
-- **„Megkeresések”** — a kiküldött megkeresések száma, alatta a megkezdett rendelések és a
+- **„Megkeresések”** — a kiküldött megkeresések száma, alatta a **„Válaszolt”** sor (hány válasz
+  érkezett összesen; koppintva a fenti blokk a **„Mind”** szűrővel), a megkezdett rendelések és a
   tölcsér megnyitása.
 
 **„Figyelmet kér”** — a kártyák alatti lista azt sorolja, ami MA teendőt jelenthet; minden sor a
@@ -72,6 +100,8 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
   adómentesség 18 M Ft-os keretéhez mérve; amíg 80% alatt van, a sor nem jelenik meg — ha
   felbukkan, a rendszer SMS-t/e-mailt is küldött róla (címzettek: Beállítások →
   „Riasztások — keret-kihasználtság”);
+- **„megválaszolatlan válasz a megkeresésekre”** (piros) — hány lead válaszára nem reagáltunk
+  még; a fenti blokkra ugrik;
 - **„lejárt számla”** (piros) és **„nyitott bizonylat”** (borostyán) — a nyitott tételekre visz;
 - hány modul eladó a katalógusból, ha nem mind — az Árazás és értékesítés lapra visz;
 - **„kvalifikált lead”** — pontosan annyi, amennyit a Lead-sor a linkre koppintva mutat;

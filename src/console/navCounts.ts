@@ -42,7 +42,8 @@ export async function getNavNumbers(): Promise<NavNumbers> {  if (cache && Date.
   return value;
 }
 
-/** Test seam: forget the cache (guards render several fixtures in one process). */
+/** Forget the cache: guards render several fixtures in one process, and a write that
+ * moves a count the operator just acted on (a reply marked answered) must show at once. */
 export function resetNavCountsCache(): void {
   cache = null;
 }
