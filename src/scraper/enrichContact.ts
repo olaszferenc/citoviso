@@ -1,3 +1,4 @@
+import { fullerEmail } from "../email/leadEmails.js";
 import { mergeContacts } from "./contactLedger.js";
 import { isBusinessEmail } from "./enrichWebSearch.js";
 import type { ContactCandidate, ContactChannel, QualifiedLead } from "./types.js";
@@ -34,7 +35,11 @@ export function enrichContact(leads: QualifiedLead[]): QualifiedLead[] {
     // off a webnode template) or an office address; mailing those is a bounce
     // or spam to a stranger. Until now this path was unfiltered.
     const fromSite = l.assessment?.emails?.find((e) => isBusinessEmail(e));
-    const email = l.email ?? fromSite;
+    // A discovery address the own site shows in FULL is a truncated copy (a broken
+    // OSM tag, 2026-10-08) — the site's form replaces it.
+    const siteBusiness = (l.assessment?.emails ?? []).filter((e) => isBusinessEmail(e));
+    const repaired = l.email ? fullerEmail(l.email, siteBusiness, l.website) : undefined;
+    const email = repaired ?? fromSite;
     // Ledger: every address the own site carried, with the verdict. The ones we
     // skip here are exactly the interesting ones (template placeholders, office
     // addresses) — dropping them silently is what made the filters unauditable.
@@ -49,6 +54,18 @@ export function enrichContact(leads: QualifiedLead[]): QualifiedLead[] {
         : "nem üzleti cím (iroda / sablon / gépi)",
     }));
     const sightings: Omit<ContactCandidate, "firstSeen">[] = [...seen];
+    // The discovery address belongs in the ledger as well — a replaced stump most of
+    // all, or the panel shows the full address while the lead mails another one.
+    if (l.email) {
+      const truncated = repaired !== l.email;
+      sightings.push({
+        kind: "email",
+        value: l.email,
+        source: l.sources.includes("osm") ? "osm" : (l.sources[0] ?? "korábbi adat"),
+        accepted: !truncated,
+        rejectedReason: truncated ? `csonka — teljes alakja: ${repaired}` : undefined,
+      });
+    }
     // The discovery phone (Places/OSM) belongs in the ledger too, otherwise the
     // panel would list web finds only and look like the number came from nowhere.
     if (l.phone) {

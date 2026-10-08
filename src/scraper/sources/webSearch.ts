@@ -12,6 +12,7 @@
 // "no site", which is a credibility bug, not a missing feature.
 
 import { config } from "../../config.js";
+import { decodeEntities } from "./portals/extract.js";
 
 const CSE_ENDPOINT = "https://www.googleapis.com/customsearch/v1";
 const BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
@@ -43,6 +44,22 @@ function braveThrottled<T>(task: () => Promise<T>): Promise<T> {
     .catch(() => {})
     .then(() => new Promise((r) => setTimeout(r, BRAVE_MIN_GAP_MS)));
   return run;
+}
+
+/**
+ * A Brave title/description as plain text. Brave marks the query words with
+ * `<strong>` INSIDE the text, and the mark can split a word: the lead's name is the
+ * query, so "írj a hajas</strong>.bela@gmail.com" came back for Hajas Família
+ * (2026-09-27), and the e-mail pattern fished ".bela@gmail.com" — the address minus
+ * its name word, on 2 live leads. Inline marks go WITHOUT a gap (the word stays
+ * whole), any other tag becomes a space, entities are decoded.
+ */
+export function braveText(s: string | undefined): string {
+  return decodeEntities(
+    String(s ?? "")
+      .replace(/<\/?(?:strong|b|em|i|mark)\b[^>]*>/gi, "")
+      .replace(/<[^>]+>/g, " "),
+  );
 }
 
 /** Brave Search — the primary backend (ADR-0026). */
@@ -79,9 +96,9 @@ async function braveSearch(
     web?: { results?: Array<{ title?: string; url?: string; description?: string }> };
   };
   return (data.web?.results ?? []).map((r) => ({
-    title: r.title ?? "",
+    title: braveText(r.title),
     link: r.url ?? "",
-    snippet: r.description ?? "",
+    snippet: braveText(r.description),
   }));
 }
 

@@ -21,13 +21,23 @@
 //      phone in the artifact pages, and still find the real one in plain text
 //   ⑤ a label inside a mailto: href ("mailto:email%3Aharmonia…@gmail.com", balatonalmadi.hu,
 //      2026-10-08) never reaches the lead: both extractors keep only the address
+//   ⑥ a TRUNCATED address never becomes the lead's e-mail (4 live leads, 2026-10-08):
+//      · Brave's `<strong>` query mark split the name word off ("írj a hajas</strong>.bela@
+//        gmail.com") → braveText() keeps the word whole, and a dot-led local part is no
+//        business address;
+//      · a broken OSM tag ("amiliapizzeria@familiapizzeria.hu") loses to the own site's full
+//        form, and the stump stays in the ledger as rejected
 //
 // --self-test: the OLD unbounded pattern must find the artifacts in the same fixtures
 // (otherwise ④ would be green on fixtures that never triggered the defect).
 
 import { readFileSync } from "node:fs";
 import { normalizePhone, splitPhones, PHONE_NORM_JS } from "../src/text/phone.js";
-import { extractContacts } from "../src/scraper/enrichWebSearch.js";
+import { extractContacts, isBusinessEmail } from "../src/scraper/enrichWebSearch.js";
+import { enrichContact } from "../src/scraper/enrichContact.js";
+import { braveText } from "../src/scraper/sources/webSearch.js";
+import { fullerEmail } from "../src/email/leadEmails.js";
+import type { QualifiedLead } from "../src/scraper/types.js";
 import { domEmail, domPhone } from "../src/scraper/sources/portals/extract.js";
 
 const selfTest = process.argv.includes("--self-test");
@@ -170,6 +180,63 @@ if (!selfTest) {
   check(extractContacts(plain).emails.includes("info@pelda.hu"), "⑤ a kódolt @-os sima mailto: elveszett");
 }
 
+// ── ⑥ truncated addresses ────────────────────────────────────────────────────
+// The real Brave descriptions (queried 2026-10-08 for the two affected leads).
+const BRAVE_SNIPPETS: readonly (readonly [string, string])[] = [
+  [
+    "Amennyiben kérdésed lenne <strong>kiadó szobáinkkal vagy különálló apartmanunkkal kapcsolatban, kérlek töltsd ki az alábbi űrlapot, vagy írj a hajas</strong>.bela@gmail.com címre",
+    "hajas.bela@gmail.com",
+  ],
+  ["E-mail: <strong>vasutas</strong>.segelyezo@gmail.com &amp; tel", "vasutas.segelyezo@gmail.com"],
+];
+const SNIPPET_EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+for (const [desc, want] of BRAVE_SNIPPETS) {
+  if (selfTest) {
+    const old = desc.match(SNIPPET_EMAIL_RE)?.[0];
+    check(old !== undefined && old !== want, `self-test: a nyers Brave-kivonatból ép cím jön (${old}) — a fixtúra semmit nem bizonyít`);
+    continue;
+  }
+  const got = braveText(desc).match(SNIPPET_EMAIL_RE)?.[0];
+  check(got === want, `⑥ Brave-kivonat → ${got}, várt: ${want}`);
+}
+if (!selfTest) {
+  for (const cut of [".bela@gmail.com", ".segelyezo@gmail.com", "hajas.@gmail.com", "a..b@gmail.com"]) {
+    check(!isBusinessEmail(cut), `⑥ a csonka cím üzleti címnek számít: ${cut}`);
+  }
+  check(isBusinessEmail("hajas.bela@gmail.com"), "⑥ az ép pontos cím elveszett");
+  const FULLER: readonly (readonly [string, string[], string | undefined, string])[] = [
+    // the live stumps (2026-10-08) → their full form
+    ["amiliapizzeria@familiapizzeria.hu", ["familiapizzeria@familiapizzeria.hu"], "https://www.familiapizzeria.hu/", "familiapizzeria@familiapizzeria.hu"],
+    ["llaberekturistahaz@gmail.com", ["illaberekturistahaz@gmail.com"], "https://illaberekturistahaz.hu/", "illaberekturistahaz@gmail.com"],
+    [".bela@gmail.com", ["hajas.bela@gmail.com"], "http://www.hajasfamilia.hu/", "hajas.bela@gmail.com"],
+    // the live FALSE suffixes of the same day → untouched: junk or another real mailbox
+    ["ligetapartments@gmail.com", ["nligetapartments@gmail.com"], "https://www.ligetapartments.hu/", "ligetapartments@gmail.com"],
+    ["hello@royal27.hu", ["%20hello@royal27.hu"], undefined, "hello@royal27.hu"],
+    ["atriumagard@gmail.com", ["atriumagard@gmail.com", "info.atriumagard@gmail.com"], "http://www.atriumagard.hu/", "atriumagard@gmail.com"],
+    ["budapest@intercityhotel.com", ["reservations.budapest@intercityhotel.com"], "https://www.intercityhotel.com/", "budapest@intercityhotel.com"],
+    ["etterem@ilkacsardapanzio.hu", ["etterem@ilkacsardapanzio.hu", "setterem@ilkacsardapanzio.hu"], "https://ilkacsarda.hu/", "etterem@ilkacsardapanzio.hu"],
+    // another domain → untouched
+    ["info@a.hu", ["szallas.info@b.hu"], "https://a.hu/", "info@a.hu"],
+  ];
+  for (const [stored, cands, site, want] of FULLER) {
+    const got = fullerEmail(stored, cands, site);
+    check(got === want, `⑥ fullerEmail(${stored}) → ${got}, várt: ${want}`);
+  }
+  const osmLead = {
+    name: "Família Pizzéria Panzió",
+    sources: ["osm"],
+    website: "https://www.familiapizzeria.hu/",
+    email: "amiliapizzeria@familiapizzeria.hu",
+    assessment: { emails: ["familiapizzeria@familiapizzeria.hu"] },
+  } as unknown as QualifiedLead;
+  const [out] = enrichContact([osmLead]);
+  check(out?.email === "familiapizzeria@familiapizzeria.hu", `⑥ OSM-csonk maradt a lead e-mailje: ${out?.email}`);
+  const stump = out?.contacts?.find((c) => c.kind === "email" && c.value === "amiliapizzeria@familiapizzeria.hu");
+  check(stump !== undefined && stump.accepted === false, "⑥ a csonk nincs elutasítva a kontaktnaplóban");
+  const intact = enrichContact([{ ...osmLead, email: "info@familiapizzeria.hu" } as QualifiedLead])[0];
+  check(intact?.email === "info@familiapizzeria.hu", `⑥ ép OSM-cím felülíródott: ${intact?.email}`);
+}
+
 if (fails.length) {
   console.error(`phone-normalize-check: PIROS (${fails.length})`);
   for (const f of fails) console.error(`  ✗ ${f}`);
@@ -178,5 +245,5 @@ if (fails.length) {
 console.log(
   selfTest
     ? "phone-normalize-check --self-test: a régi minta minden fixtúrán talál — a fixtúrák élnek"
-    : `phone-normalize-check: zöld (${VECTORS.length} vektor, ${SPLITS.length} bontás, kliens-tükör, ${ARTIFACT_PAGES.length} lelet-oldal, címkés mailto:)`,
+    : `phone-normalize-check: zöld (${VECTORS.length} vektor, ${SPLITS.length} bontás, kliens-tükör, ${ARTIFACT_PAGES.length} lelet-oldal, címkés mailto:, csonka cím)`,
 );

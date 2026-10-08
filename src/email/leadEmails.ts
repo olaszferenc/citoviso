@@ -42,6 +42,55 @@ export function mailtoAddress(target: string): string | undefined {
 }
 
 /**
+ * The FULL form of a truncated address, when another source carries it. A source can
+ * lose the front of the local part and still look valid: the OSM tag of Família
+ * Pizzéria Panzió reads "amiliapizzeria@familiapizzeria.hu", its own site
+ * "familiapizzeria@…" (way/373597860, 2026-10-08); Illaberek: "llaberek…@gmail.com".
+ * Mailing the stump bounces.
+ *
+ * "Ends with" alone is NOT proof — measured on the live leads the same day: the longer
+ * one is just as often the junk ("nligetapartments@" from a page's "\n", "%20hello@") or
+ * another real mailbox ("info.atriumagard@" beside "atriumagard@",
+ * "reservations.budapest@" beside "budapest@"). So a candidate wins only when
+ *   · it is a valid address of the SAME domain whose local part ends with the stump's,
+ *     starts with a letter/digit, and the candidates do not carry the stump itself; AND
+ *   · the stump is visibly cut (its local part starts with a dot), or the candidate's
+ *     local part IS the name of the lead's own site ("familiapizzeria" ↔
+ *     familiapizzeria.hu) while the stump's is not.
+ * Otherwise the address stays as it is.
+ */
+export function fullerEmail(email: string, candidates: readonly string[], website?: string): string {
+  const [local, domain] = splitAddress(email);
+  if (!local || !domain) return email;
+  const pool = candidates.map((c) => c.trim().toLowerCase());
+  if (pool.includes(`${local}@${domain}`)) return email;
+  const site = siteCore(website);
+  for (const c of pool) {
+    const [cl, cd] = splitAddress(c);
+    if (cd !== domain || cl.length <= local.length || !cl.endsWith(local)) continue;
+    if (!/^[a-z0-9]/u.test(cl) || !isValidEmail(c)) continue;
+    if (local.startsWith(".") || (site !== "" && cl === site && local !== site)) return c;
+  }
+  return email;
+}
+
+function splitAddress(s: string): [string, string] {
+  const t = s.trim().toLowerCase();
+  const at = t.lastIndexOf("@");
+  return at > 0 ? [t.slice(0, at), t.slice(at + 1)] : ["", ""];
+}
+
+/** "https://www.familiapizzeria.hu/x" → "familiapizzeria". */
+function siteCore(website: string | undefined): string {
+  if (!website) return "";
+  try {
+    return new URL(website).hostname.toLowerCase().replace(/^www\./u, "").split(".")[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * A pasted/typed list → address tokens. Separators: `;` `,` whitespace (the OSM `email` tag
  * joins multiple values with `;`; a copied mail header uses `,`). `mailto:` and the brackets
  * of "Név <cím>" are unwrapped; an HTML entity scraped along (`…hu&quot;`) is decoded first,

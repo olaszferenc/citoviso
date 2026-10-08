@@ -1680,7 +1680,7 @@ fi
 # Egy telefon-szabály szerveren és kliensen, és nincs fotó-útvonalból „kihalászott” szám
 # (2026-10-05: „06/30 …” elutasítva; „069/6590698” egy képazonosítóból). Tiszta, ~2 s.
 if [ -f scripts/phone-normalize-check.mts ] && \
-   changed_files | grep -qE '^src/text/phone\.ts$|^src/sms/sender\.ts$|^src/server/contactViews\.ts$|^src/scraper/(enrichWebSearch|sources/portals/extract)\.ts$|^scripts/phone-normalize-check'; then
+   changed_files | grep -qE '^src/text/phone\.ts$|^src/sms/sender\.ts$|^src/server/contactViews\.ts$|^src/scraper/(enrichWebSearch|enrichContact|sources/webSearch|sources/portals/extract)\.ts$|^src/email/leadEmails\.ts$|^scripts/phone-normalize-check'; then
   echo "[pre-commit] phone-normalize-check (perjel, több szám, kliens-tükör, fotó-útvonal)…"
   npx tsx scripts/phone-normalize-check.mts >"$GATE_LOG" || gate_failed
 fi

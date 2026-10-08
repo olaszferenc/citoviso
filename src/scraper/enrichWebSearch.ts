@@ -61,9 +61,15 @@ const HASH_LOCAL_RE = /^[0-9a-f]{16,}@/i;
 const PLACEHOLDER_EMAIL_RE =
   /@(domain|domainem|example|sajatdomain|yourdomain|valami)\.|^(your|youremail|email|sajat|nev|az|xy)@/i;
 
+// A local part that starts or ends with a dot (or has two in a row) is no mailbox
+// (RFC 5321 dot-string) — it is the tail of a word the text cut off: ".bela@gmail.com"
+// out of "hajas</strong>.bela@…" (2026-09-27, 2 live leads).
+const CUT_LOCAL_RE = /^\.|\.@|\.\.[^@]*@/;
+
 /** Is this address plausibly the business's own contact? (Reused by reenrich.) */
 export function isBusinessEmail(email: string): boolean {
   return (
+    !CUT_LOCAL_RE.test(email) &&
     !NON_BUSINESS_EMAIL_RE.test(email) &&
     !HASH_LOCAL_RE.test(email) &&
     !PLACEHOLDER_EMAIL_RE.test(email)
