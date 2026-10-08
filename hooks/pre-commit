@@ -602,7 +602,7 @@ if [ -f scripts/photo-liveness-check.mts ] && \
   echo "[pre-commit] photo-liveness (halott fotó nem kerülhet a lapra)…"
   npx tsx scripts/photo-liveness-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX: http-s fotó a https-es mockon nem jelenik meg (Kerékhegy/Forrás, 2026-10-08).
+# http-s fotó a https-es mockon (photoTransport.ts) nem jelenik meg (Kerékhegy/Forrás, 2026-10-08).
 # Generáláskor https (bájtra azonos kép) vagy saját proxy; a fotókapu a KISZÁLLÍTOTT URL-t méri.
 if [ -f scripts/mock-photo-transport-check.mts ] && \
    changed_files | grep -qE '^(src/generator/(photoTransport|generate|generateEngine|heroOverride|recopy|copyManual)\.ts|src/outreach/mockPhotoHealth\.ts|src/console/(photoProxy|server)\.ts|scripts/(rerender-mock|mock-photo-transport-check)\.mts)'; then
