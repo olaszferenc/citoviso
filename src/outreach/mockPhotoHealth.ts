@@ -240,8 +240,20 @@ export function extractImageRefs(html: string): ImageRef[] {
   // Háttérképek: inline `style="…"` ÉS `<style>` blokk egyaránt. A `background`
   // rövidítés is ide tartozik; a `@font-face` url() viszont NEM kép — ezért csak a
   // background-deklarációkból veszünk url()-t.
-  for (const m of html.matchAll(/background(?:-image)?\s*:[^;{}"']*?url\(\s*["']?([^"')]+)["']?\s*\)/gi)) {
-    add(m[1], "background");
+  // ⛔ 2026-10-08 (Hársfa 5e90203e): az IDÉZŐJELES url()-ben a fájlnév zárójelet is
+  // tartalmazhat (`url('…/kep (1).jpg')`) — a régi kivonat az első `)`-nél vágott, a
+  // csonka URL 404-et adott, és a fotókapu egy ép mockot állított meg. Idézőjelesben
+  // a ZÁRÓ IDÉZŐJELIG tart (az attribútumon belüli `&quot;` is idézőjel); idézőjel
+  // nélküliben a CSS szerint zárójel és szóköz nem lehet, ott marad a régi szabály.
+  const bgUrl =
+    /background(?:-image)?\s*:[^;{}"']*?url\(\s*(?:"([^"]*)"|'([^']*)'|&quot;(.*?)&quot;|([^"')\s]+))\s*\)/gi;
+  for (const m of html.matchAll(bgUrl)) {
+    const url = m[1] ?? m[2] ?? m[3] ?? m[4];
+    // A beágyazott `data:` háttér (pl. a brutalism zaj-textúrája) dekoráció, nem
+    // szállás-fotó, és forrásnál sem halhat meg — a régi kivonat csak véletlenül
+    // hagyta ki (a belső `'`-n elakadt); a `nophoto` predikátum erre számít.
+    if (url && /^data:/i.test(url.trim())) continue;
+    add(url, "background");
   }
 
   return [...found.entries()].map(([url, v]) => ({ url, where: v.where, refs: v.refs }));

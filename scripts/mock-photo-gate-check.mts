@@ -88,7 +88,9 @@ const SRC_ROOT = path.resolve(import.meta.dirname, "..");
 async function main(): Promise<void> {
   // ── Helyi kép-forrás: egy élő és egy halott kép, valódi HTTP-n ───────────────
   const imgSrv = http.createServer((req, res) => {
-    if ((req.url ?? "").startsWith("/ok")) {
+    // A zárójeles fájlnév (Hársfa 5e90203e): CSAK a teljes név él — a csonka
+    // `/kep (1` 404-et kap, pontosan úgy, ahogy a harsfapanzio.com adta.
+    if ((req.url ?? "").startsWith("/ok") || decodeURIComponent(req.url ?? "") === "/kep (1).png") {
       res.writeHead(200, { "content-type": "image/png", "content-length": PNG_1X1.length });
       return res.end(PNG_1X1);
     }
@@ -248,6 +250,60 @@ async function main(): Promise<void> {
   } finally {
     flaky.close();
   }
+
+  // ⛔⛔ A ZÁRÓJELES FÁJLNÉV (2026-10-08, Hársfa 5e90203e / d33e9ae5): a háttérkép-
+  // kivonat az idézőjeles `url('…/kep (1).jpg')`-t az első `)`-nél vágta, a csonka URL
+  // 404-et adott, és a fotókapu egy ÉP mockot állított meg. Mindkét helyen mérjük:
+  // `<style>` blokkban és `style=""` attribútumban (a `&quot;` alakkal is), és a
+  // független referencia itt is a valódi Chromium kérés-listája.
+  console.log("\n②a Zárójeles fájlnév — a kivonat nem vágja el a háttérkép URL-jét");
+  const KEP = `http://127.0.0.1:${imgPort}/kep (1).png`;
+  const parenHtml =
+    `<!doctype html><html><head><style>.a{width:40px;height:40px;background-image:url('${KEP}')}` +
+    `.b{width:40px;height:40px;background:center/cover no-repeat url("${KEP}")}</style></head><body>` +
+    `<div class="a"></div><div class="b"></div>` +
+    `<div style="width:40px;height:40px;background-image:url('${KEP}')"></div>` +
+    `<div style="width:40px;height:40px;background-image:url(&quot;${KEP}&quot;)"></div>` +
+    `<img src="${KEP}" alt=""></body></html>`;
+  const parenFile = path.join(WORK, "mock-or-photo-gate-paren.html");
+  await writeFile(parenFile, parenHtml, "utf8");
+  const parenRequested = new Set<string>();
+  const parenBrowser = await chromium.launch();
+  try {
+    const page = await parenBrowser.newPage();
+    page.on("request", (r) => {
+      if (r.resourceType() === "image") parenRequested.add(r.url());
+    });
+    await page.goto(`file://${parenFile}`, { waitUntil: "networkidle", timeout: 30000 });
+  } finally {
+    await parenBrowser.close();
+  }
+  // A böngésző kódolva kéri (`%20`), a kivonat a forrás-alakot adja — URL-ként vetjük össze.
+  const norm = (u: string): string => {
+    try {
+      return new URL(u).href;
+    } catch {
+      return u; // a csonka/hibás kivonat nem URL — maradjon, és bukjon az összevetésen
+    }
+  };
+  const parenRefs = extractImageRefs(parenHtml);
+  const parenExtracted = new Set(parenRefs.map((r) => norm(r.url)));
+  check(
+    parenRequested.size >= 1 && [...parenRequested].every((u) => parenExtracted.has(norm(u))),
+    `a kivonat a böngésző minden zárójeles kép-kérését látja (${parenRequested.size} kérés)`,
+    `böngésző: ${[...parenRequested].join(" · ")} · kivonat: ${[...parenExtracted].join(" · ")}`,
+  );
+  check(
+    parenRefs.length === 1 && parenRefs[0]?.url === KEP && parenRefs[0]?.refs === 5,
+    "mind az öt hivatkozás (2× <style>, 2× style=\"\" — `'` és `&quot;` —, 1× <img>) a TELJES `kep (1).png`",
+    `kivonat: ${parenRefs.map((r) => `${r.where}:${r.url}×${r.refs}`).join(" · ")}`,
+  );
+  const parenBroken = await probeImageRefs(parenRefs, "hu");
+  check(
+    parenBroken.length === 0,
+    "a zárójeles, élő kép NEM törött (nincs hamis 404)",
+    parenBroken.map((b) => `${b.url} — ${b.reason}`).join(" · "),
+  );
 
   // ── ④ A KAPU-PREDIKÁTUM igazságtáblája ───────────────────────────────────────
   console.log("\n③ Egy predikátum dönt — és a tudomásulvétel NÉVSORRA szól");
