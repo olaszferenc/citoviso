@@ -1434,7 +1434,7 @@ async function handle(
       return redirect(res, `/?reply=${m[1]}${all}#replies`);
     }
   }
-  // POST /replies/<id>/send — „Elküldöm" (ADR-XXXX, plan valaszok-valasz ③④⑦⑦b⑧): the
+  // POST /replies/<id>/send — „Elküldöm" (ADR-0340, plan valaszok-valasz ③④⑦⑦b⑧): the
   // operator's answer on the reply's own channel; inside the weekday window it goes now,
   // outside it is queued for the next opening. POST /replies/<id>/suggest — Poe's
   // „Javasolt válasz" through the console form with the `poe` account (no back-door API).
@@ -1494,7 +1494,7 @@ async function handle(
         reply: url.searchParams.get("reply"),
         notice: takeReplyNotice(url.searchParams.get("reply")),
         // Poe's suggestion form shows only to the copy curator's own account — the
-        // operator's screen stays the approved plan (ADR-XXXX).
+        // operator's screen stays the approved plan (ADR-0340).
         suggestForm: op?.username === POE_USERNAME,
       },
     };

@@ -1642,7 +1642,7 @@ export interface OutreachReplyTable {
   answered_by: string | null;
   /** Last manual undo — after it the Sent-folder automation never re-marks. */
   answer_undone_at: Timestamp | null;
-  /** 0096: Poe's suggested answer (ADR-XXXX) — text, subject (mail), who, when, what it rests on. */
+  /** 0096: Poe's suggested answer (ADR-0340) — text, subject (mail), who, when, what it rests on. */
   suggestion_text: string | null;
   suggestion_subject: string | null;
   suggestion_by: string | null;
@@ -1652,7 +1652,7 @@ export interface OutreachReplyTable {
   updated_at: Generated<Timestamp>;
 }
 
-/** 0096: one operator send of an answer (ADR-XXXX) — a failed one is retried as a new row. */
+/** 0096: one operator send of an answer (ADR-0340) — a failed one is retried as a new row. */
 export interface OutreachReplySendTable {
   id: Generated<string>;
   reply_id: string;

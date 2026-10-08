@@ -870,7 +870,7 @@
 .con button.con-rep__undo { border: 0; background: none; color: var(--citui-link-ink); text-decoration: underline; padding: 0; min-height: 0; font-size: 12px; font-weight: 500; border-radius: 0; }
 .con .con-rep__back { display: none; }
 .con-rep__empty { padding: 18px 14px; color: var(--citui-muted); }
-/* ADR-XXXX — answering from the dashboard (plan valaszok-valasz A): Poe's draft bubble,
+/* ADR-0340 — answering from the dashboard (plan valaszok-valasz A): Poe's draft bubble,
    the in-place editor, the queue / error line, the sent bubble, the list tags, the toast. */
 .con-rep__sug { max-width: 620px; margin: 12px 0 0; border: 1.5px dashed color-mix(in srgb, var(--citui-cyan-500) 60%, var(--citui-panel)); border-radius: 12px; padding: 10px 12px; background: var(--citui-surface); }
 .con-rep__sug.is-solid { border-style: solid; border-color: var(--citui-line-strong); background: var(--citui-panel); }

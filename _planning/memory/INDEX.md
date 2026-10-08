@@ -6,7 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [2026-10-08_valasz_az_iranyitopultrol.md](2026-10-08_valasz_az_iranyitopultrol.md) — 2026-10-08 — Válaszolás az irányítópultról, Poe javaslatával (ADR-XXXX)
+- [2026-10-08_valasz_az_iranyitopultrol.md](2026-10-08_valasz_az_iranyitopultrol.md) — 2026-10-08 — Válaszolás az irányítópultról, Poe javaslatával (ADR-0340)
 - [2026-10-07_valaszok_a_megkeresesekre.md](2026-10-07_valaszok_a_megkeresesekre.md) — 2026-10-07 — Válaszok a megkeresésekre (ADR-0339): gyűjtő + irányítópult-blokk (B terv)
 - [2026-10-07_sablon_minta_forrasbol.md](2026-10-07_sablon_minta_forrasbol.md) — 2026-10-07 — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
 - [2026-10-07_osm_lead_forras.md](2026-10-07_osm_lead_forras.md) — 2026-10-07 — OSM mint 0 Ft-os lead-forrás (Magellan-projekt, SUB)

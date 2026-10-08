@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-valasz-az-iranyitopultrol.md) — Válaszolás az irányítópultról: Poe javasol, az operátor küld, a hétköznap 9–16 ablak a válaszra is áll
+- [ADR-0340](decisions/0340-valaszolas-az-iranyitopultrol-poe-javasol-az.md) — Válaszolás az irányítópultról: Poe javasol, az operátor küld, a hétköznap 9–16 ablak a válaszra is áll
 - [ADR-0339](decisions/0339-valaszok-a-megkeresesekre-gyujtes-a-dev-gepen.md) — Válaszok a megkeresésekre: gyűjtés a dev gépen, tárolás a lead-gazdán, irányítópult-blokk
 - [ADR-0338](decisions/0338-a-mock-minta-blokkjai-a-forrasbol-szolgaltatas.md) — A mock minta-blokkjai a forrásból (szolgáltatás, szobakártyák, cím)
 - [ADR-0337](decisions/0337-foto-behuzas-operator-altal-megadott-linkrol.md) — Fotó-behúzás operátor által megadott linkről, díj nélkül (új provenance: `website`)

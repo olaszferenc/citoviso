@@ -20,7 +20,7 @@
 //   ⑥ the dashboard block — under „Megválaszolatlan” an answered reply is hidden, EXCEPT the
 //      one being looked at (?reply=<id>), or „Megválaszoltam” would pull the conversation and
 //      its „Visszavonás” away under the operator's finger; 0 open → „mind megválaszolva”.
-//   ⑦ answering — the pure rules (ADR-XXXX, src/replies/answerRules.ts): SMS parts at the
+//   ⑦ answering — the pure rules (ADR-0340, src/replies/answerRules.ts): SMS parts at the
 //      unicode edges (70 → 1, 71 → 2, 335 → 5, 336 → 6 = refused), and the owner's weekday
 //      9–16 window holds for the answer too: Friday 16:30 → next Monday 09:00 Budapest.
 //   ⑧ the answer's life — sendAnswer outside the window is only 'scheduled' (nothing goes

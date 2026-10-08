@@ -1,4 +1,4 @@
-# 2026-10-08 — Válaszolás az irányítópultról, Poe javaslatával (ADR-XXXX)
+# 2026-10-08 — Válaszolás az irányítópultról, Poe javaslatával (ADR-0340)
 
 **Kérés (tulaj):** „kellene: válaszolás az irányítópultról (email és sms), azzal, hogy a kollégák rakjanak össze egy javasolt választ!”
 Döntések: A terv (vázlat-buborék), a javaslatot Poe írja, a hétköznap 9–16 ablak a válaszra is vonatkozik.

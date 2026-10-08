@@ -170,7 +170,7 @@ export const ICON_THIN: Readonly<Record<string, string>> = {
   // the secure-payment line under the pay button (approved A1 contract).
   shield: `<path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>`,
   lock: `<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>`,
-  // ADR-XXXX — answering a reply from the dashboard: „Elküldöm" / „Szerkesztem".
+  // ADR-0340 — answering a reply from the dashboard: „Elküldöm" / „Szerkesztem".
   send: `<path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/>`,
   pen: `<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`,
 };

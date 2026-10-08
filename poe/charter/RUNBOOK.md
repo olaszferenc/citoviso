@@ -107,7 +107,7 @@ Nyisd meg a kész mockot **mobil és asztali** szélességben. Olvasd végig ven
 
 A jegyet a `beerkezo/`-ban jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.
 
-## 6b. Válasz-javaslat (ADR-XXXX)
+## 6b. Válasz-javaslat (ADR-0340)
 
 Ha egy megkeresett szállásadó VÁLASZOL (SMS vagy e-mail), a gyűjtő jegyet ír a
 `~/poe/beerkezo/`-ba: `ÉÉÉÉ-HH-NN-<lead8>-valasz-<válasz8>.md`. Benne: a lead neve, a válasz

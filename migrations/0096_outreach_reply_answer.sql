@@ -1,4 +1,4 @@
--- 0096 VÁLASZOLÁS AZ IRÁNYÍTÓPULTRÓL (2026-10-08, ADR-XXXX; terv: assets/design-refs/console/valaszok-valasz/).
+-- 0096 VÁLASZOLÁS AZ IRÁNYÍTÓPULTRÓL (2026-10-08, ADR-0340; terv: assets/design-refs/console/valaszok-valasz/).
 --
 -- MIÉRT KELL. A 0094 „Válaszok a megkeresésekre” blokkja csak MUTATTA a beérkezett
 -- válaszokat; Melindának a tulaj szövegét kézzel kellett kiküldeni (gammu, 2026-10-08).
@@ -48,4 +48,4 @@ CREATE TABLE IF NOT EXISTS outreach_reply_send (
 CREATE INDEX IF NOT EXISTS outreach_reply_send_reply_idx ON outreach_reply_send (reply_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS outreach_reply_send_pending_idx ON outreach_reply_send (scheduled_for) WHERE status IN ('scheduled', 'queued');
 
-COMMENT ON TABLE outreach_reply_send IS 'Válasz a válaszra (ADR-XXXX): az operátor kiküldése az irányítópultról, SMS az sms_outbox-on át, e-mail a levélküldővel.';
+COMMENT ON TABLE outreach_reply_send IS 'Válasz a válaszra (ADR-0340): az operátor kiküldése az irányítópultról, SMS az sms_outbox-on át, e-mail a levélküldővel.';

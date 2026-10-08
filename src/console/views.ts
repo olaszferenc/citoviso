@@ -8886,11 +8886,11 @@ export interface RepliesQuery {
   readonly reply: string | null;
   /** The one-shot outcome of the last „Elküldöm” / suggestion on `reply` (shown as a toast). */
   readonly notice?: ReplyNotice | null;
-  /** Poe's suggestion form — only on the copy curator's own account (ADR-XXXX). */
+  /** Poe's suggestion form — only on the copy curator's own account (ADR-0340). */
   readonly suggestForm?: boolean;
 }
 
-/** What the redirect after a send / suggestion tells the operator (ADR-XXXX). */
+/** What the redirect after a send / suggestion tells the operator (ADR-0340). */
 export interface ReplyNotice {
   readonly kind: "scheduled" | "queued" | "sent" | "failed" | "suggested";
   readonly detail: string | null;
@@ -9001,7 +9001,7 @@ function repSugHead(r: ReplyView, lang: string): string {
 }
 
 /**
- * The answer under the conversation (ADR-XXXX, plan valaszok-valasz A): Poe's draft bubble
+ * The answer under the conversation (ADR-0340, plan valaszok-valasz A): Poe's draft bubble
  * with „Elküldöm” / „Szerkesztem”, the „készül” box with „Megírom magam” while he writes,
  * the in-place editor, the queue / error line, and Poe's own form on his account.
  */

@@ -45,7 +45,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/modules.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/moduleConfig.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/domains.ts": "adat-regiszter (domain-ajánló szótöve) — nem levél-szöveg",
-  // ADR-XXXX: the dashboard answer. The letter's subject and body are the OPERATOR's own
+  // ADR-0340: the dashboard answer. The letter's subject and body are the OPERATOR's own
   // text (typed or Poe's suggestion, in the lead's language) — nothing is composed here;
   // the Hungarian literals are operator-facing outcomes / validation messages.
   "src/replies/answer.ts": "operátor írta levél-szöveg; a magyar literálok operátori hiba-/állapot-üzenetek",

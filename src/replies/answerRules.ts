@@ -1,4 +1,4 @@
-// The pure rules of answering a reply (ADR-XXXX) — no database, so the console views and
+// The pure rules of answering a reply (ADR-0340) — no database, so the console views and
 // the outreach-reply check use the very same numbers the sender enforces.
 
 import { MOCK_OUTREACH_WINDOW, mockOutreachWindowOpen } from "../sms/sendWindow.js";

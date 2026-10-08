@@ -3707,7 +3707,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     });
     const r = await ingestReplies(items, checked);
     const auto = await markAutoAnswered(answered);
-    // ADR-XXXX: the once-a-minute collector call is also the clock of the dashboard
+    // ADR-0340: the once-a-minute collector call is also the clock of the dashboard
     // answers — scheduled ones leave when the window opens, queued SMS settle — and it
     // carries back the replies Poe still owes a suggestion for (his tickets).
     const { settleReplySends, replyConsoleUrl } = await import("../replies/answer.js");

@@ -1,4 +1,4 @@
-## ADR-XXXX — Válaszolás az irányítópultról: Poe javasol, az operátor küld, a hétköznap 9–16 ablak a válaszra is áll
+## ADR-0340 — Válaszolás az irányítópultról: Poe javasol, az operátor küld, a hétköznap 9–16 ablak a válaszra is áll
 
 **Dátum:** 2026-10-08 · **Döntött:** tulaj („kellene: válaszolás az irányítópultról (email és sms), azzal,
 hogy a kollégák rakjanak össze egy javasolt választ!”; az A terv jóváhagyva), megvalósítás: CIT session

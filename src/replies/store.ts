@@ -237,7 +237,7 @@ export interface ReplyView {
   readonly sentSms: boolean;
   readonly answeredAt: Date | null;
   readonly answeredBy: string | null;
-  /** Poe's „Javasolt válasz” (ADR-XXXX), or null while it is still being written. */
+  /** Poe's „Javasolt válasz” (ADR-0340), or null while it is still being written. */
   readonly suggestion: ReplySuggestion | null;
   /** The operator's sends on this reply, newest first (a failure, then its „Újraküldés”). */
   readonly sends: readonly ReplySendView[];
@@ -392,7 +392,7 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
 }
 
 /** Open replies Poe has not suggested an answer for yet — the collector writes his ticket
- *  for each (once: it skips a ticket file that already exists). ADR-XXXX. */
+ *  for each (once: it skips a ticket file that already exists). ADR-0340. */
 export async function repliesNeedingSuggestion(): Promise<
   readonly { readonly id: string; readonly lead: string; readonly leadId: string; readonly channel: ReplyChannel; readonly sender: string; readonly body: string; readonly receivedAt: string }[]
 > {

@@ -1,4 +1,4 @@
-// Answering a reply from the dashboard (ADR-XXXX; approved plan
+// Answering a reply from the dashboard (ADR-0340; approved plan
 // assets/design-refs/console/valaszok-valasz/, variant A).
 //
 //   ① Poe (the copy curator, ADR-0326) leaves a SUGGESTION on the reply through a plain

@@ -16,7 +16,7 @@
 //   REPLIES_IMAP_URL > REGISTRY_IMAP_URL > SMTP_URL — the mailbox (--email).
 // A failed POST leaves the state untouched: the next tick re-sends the same batch.
 //
-// Poe's tickets (ADR-XXXX): the ingest answer lists the open replies that still have no
+// Poe's tickets (ADR-0340): the ingest answer lists the open replies that still have no
 // suggestion; for each, ONE ticket file goes to ~/poe/beerkezo/ (never rewritten — a file
 // that exists is skipped). The link is the server's own console URL when it knows it,
 // else REPLIES_CONSOLE_URL (default: the prod console).
