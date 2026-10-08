@@ -16,6 +16,7 @@
 // normalised into a nicer unit, or inferred from context. A fact we cannot quote
 // is a fact we do not emit — "bizonytalanság → kevesebb, sosem hamis".
 
+import { mailtoAddress } from "../../../email/leadEmails.js";
 import { deaccent } from "../../enrichPresence.js";
 
 import type {
@@ -735,7 +736,8 @@ export function domPhone(html: string, text: string): string | undefined {
 
 export function domEmail(html: string, text: string): string | undefined {
   const mailto = /mailto:([^"'?>\s]+)/i.exec(html)?.[1];
-  const value = mailto ? decodeURIComponent(mailto) : DOM_EMAIL_RE.exec(text)?.[0];
+  // A label inside the href ("mailto:email%3A…") is not part of the address.
+  const value = (mailto ? mailtoAddress(mailto) : undefined) ?? DOM_EMAIL_RE.exec(text)?.[0];
   return clean(value, 120)?.toLowerCase();
 }
 

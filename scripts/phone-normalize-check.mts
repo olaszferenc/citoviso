@@ -19,6 +19,8 @@
 //      on every vector, and contactViews really embeds it
 //   ④ extraction: enrichWebSearch.extractContacts() and the portal domPhone() find no
 //      phone in the artifact pages, and still find the real one in plain text
+//   ⑤ a label inside a mailto: href ("mailto:email%3Aharmonia…@gmail.com", balatonalmadi.hu,
+//      2026-10-08) never reaches the lead: both extractors keep only the address
 //
 // --self-test: the OLD unbounded pattern must find the artifacts in the same fixtures
 // (otherwise ④ would be green on fixtures that never triggered the defect).
@@ -26,7 +28,7 @@
 import { readFileSync } from "node:fs";
 import { normalizePhone, splitPhones, PHONE_NORM_JS } from "../src/text/phone.js";
 import { extractContacts } from "../src/scraper/enrichWebSearch.js";
-import { domPhone } from "../src/scraper/sources/portals/extract.js";
+import { domEmail, domPhone } from "../src/scraper/sources/portals/extract.js";
 
 const selfTest = process.argv.includes("--self-test");
 const fails: string[] = [];
@@ -154,6 +156,20 @@ if (!selfTest) {
   );
 }
 
+if (!selfTest) {
+  const labelled = `<p><a href="mailto:email%3Aharmonia.vendeghaz2020@gmail.com">email:harmonia.vendeghaz2020@gmail.com</a></p>`;
+  const want = "harmonia.vendeghaz2020@gmail.com";
+  const got = extractContacts(labelled).emails;
+  check(
+    got.length > 0 && got.every((e) => e === want),
+    `⑤ enrichWebSearch címkés mailto: → ${JSON.stringify(got)}, várt: ["${want}"]`,
+  );
+  const dom = domEmail(labelled, "email:harmonia.vendeghaz2020@gmail.com");
+  check(dom === want, `⑤ portál domEmail címkés mailto: → ${dom}, várt: ${want}`);
+  const plain = `<a href="mailto:Info%40Pelda.hu">info</a>`;
+  check(extractContacts(plain).emails.includes("info@pelda.hu"), "⑤ a kódolt @-os sima mailto: elveszett");
+}
+
 if (fails.length) {
   console.error(`phone-normalize-check: PIROS (${fails.length})`);
   for (const f of fails) console.error(`  ✗ ${f}`);
@@ -162,5 +178,5 @@ if (fails.length) {
 console.log(
   selfTest
     ? "phone-normalize-check --self-test: a régi minta minden fixtúrán talál — a fixtúrák élnek"
-    : `phone-normalize-check: zöld (${VECTORS.length} vektor, ${SPLITS.length} bontás, kliens-tükör, ${ARTIFACT_PAGES.length} lelet-oldal)`,
+    : `phone-normalize-check: zöld (${VECTORS.length} vektor, ${SPLITS.length} bontás, kliens-tükör, ${ARTIFACT_PAGES.length} lelet-oldal, címkés mailto:)`,
 );

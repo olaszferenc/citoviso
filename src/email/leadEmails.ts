@@ -27,6 +27,21 @@ export function isValidEmail(s: string): boolean {
 }
 
 /**
+ * The address inside a raw `mailto:` target: percent-decoded (a malformed escape is
+ * read as-is), then reduced to the first address-shaped run, so a label glued in
+ * front ("email:", "e-mail:") or after it never reaches the lead. No address → none.
+ */
+export function mailtoAddress(target: string): string | undefined {
+  let decoded = target;
+  try {
+    decoded = decodeURIComponent(target);
+  } catch {
+    // keep the raw target
+  }
+  return /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.exec(decoded)?.[0].toLowerCase();
+}
+
+/**
  * A pasted/typed list → address tokens. Separators: `;` `,` whitespace (the OSM `email` tag
  * joins multiple values with `;`; a copied mail header uses `,`). `mailto:` and the brackets
  * of "Név <cím>" are unwrapped; an HTML entity scraped along (`…hu&quot;`) is decoded first,

@@ -6,6 +6,7 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
+import { mailtoAddress } from "../email/leadEmails.js";
 import { splitPhones } from "../text/phone.js";
 import { FOREIGN_DOMAIN_REASON, FREEMAIL, mergeContacts } from "./contactLedger.js";
 import { classifyWebsite } from "./qualify.js";
@@ -159,7 +160,11 @@ function isListingHost(url: string, ownWebsite?: string): boolean {
 export function extractContacts(html: string): { emails: string[]; phones: string[] } {
   const emails: string[] = [];
   for (const m of html.matchAll(/mailto:([^"'?>\s&]+)/gi)) {
-    emails.push(decodeURIComponent(m[1]!).toLowerCase());
+    // The href is the site's own markup and can carry a label: balatonalmadi.hu links
+    // `mailto:email%3Aharmonia…@gmail.com`, which decodes to "email:harmonia…" — stored
+    // verbatim as a live lead's address (2026-10-08). Keep only the address inside.
+    const address = mailtoAddress(m[1]!);
+    if (address) emails.push(address);
   }
   // Script/style bodies are not page text: JSON-LD and gallery configs carry the
   // photo paths and coordinates the phone pattern used to fish numbers out of.
