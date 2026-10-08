@@ -149,6 +149,7 @@ export function navTree(lang = "hu"): readonly NavNode[] {
       children: [
         { kind: "leaf", id: "funnel", label: T(lang, "Megkeresés-tölcsér — hol akadnak el"), short: T(lang, "Megkeresés-tölcsér"), href: "/report" },
         { kind: "leaf", id: "behaviour", label: T(lang, "Viselkedés — eszköz, kilépés, miért"), short: T(lang, "Viselkedés"), href: "/report/behaviour" },
+        { kind: "leaf", id: "mock", label: T(lang, "Mock — melyik mennyire vonzó"), short: T(lang, "Mock"), href: "/report/mock" },
       ],
     },
     {

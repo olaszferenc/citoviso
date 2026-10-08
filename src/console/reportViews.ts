@@ -15,6 +15,20 @@ import { consoleLang } from "./i18nCtx.js";
 import { SKINS } from "../engine/skins.js";
 import { EXIT_REASONS, EXPECTED_STATED, STATED_REASONS, type ExitReason, type StatedReason } from "../analytics/exitReason.js";
 import {
+  MOCK_CHANNELS,
+  MOCK_MIN_SENDS,
+  MOCK_PAGE,
+  MOCK_SORTS,
+  MOCK_STEPS,
+  MOCK_WEIGHTS,
+  mockRowMatches,
+  sortMockRows,
+  type MockCard,
+  type MockChannelFilter,
+  type MockReport,
+  type MockRow,
+  type MockSort,
+  type MockStep,
   EXIT_SECTIONS,
   REPORT_DIMS,
   REPORT_RANGES,
@@ -136,14 +150,24 @@ const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
   return `?${p.toString()}`;
 };
 
-function shell(d: ReportData, active: "/report" | "/report/behaviour", body: string, lang: string): string {
-  const tabs =
+type ReportTab = "/report" | "/report/behaviour" | "/report/mock";
+
+/** The Riport tab row — Tölcsér · Viselkedés · Mock (mock-tab README ①) · the coming rounds. */
+function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string): string {
+  const a = (href: ReportTab, q: string, label: string): string => `<a href="${href}${q}"${active === href ? ' class="active"' : ""}>${esc(label)}</a>`;
+  return (
     `<nav class="con-tabs">` +
-    `<a href="/report${qs(d)}"${active === "/report" ? ' class="active"' : ""}>${esc(T(lang, "Tölcsér"))}</a>` +
-    `<a href="/report/behaviour${qs(d)}"${active === "/report/behaviour" ? ' class="active"' : ""}>${esc(T(lang, "Viselkedés"))}</a>` +
+    a("/report", funnelQs, T(lang, "Tölcsér")) +
+    a("/report/behaviour", funnelQs, T(lang, "Viselkedés")) +
+    a("/report/mock", mockQs, T(lang, "Mock")) +
     `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "2. kör — készül"))}">${esc(T(lang, "Pénzügy"))}</a>` +
     `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "3. kör — készül"))}">${esc(T(lang, "Tenantok"))}</a>` +
-    `</nav>`;
+    `</nav>`
+  );
+}
+
+function shell(d: ReportData, active: "/report" | "/report/behaviour", body: string, lang: string): string {
+  const tabs = reportTabs(active, qs(d), `?days=${d.days}`, lang);
   const base = active;
   const ranges = REPORT_RANGES.map(
     (r) => `<a href="${base}${qs(d, { days: String(r) })}"${r === d.days ? ' class="on"' : ""}>${esc(RANGE_LABEL(r, lang))}</a>`,
@@ -687,4 +711,220 @@ export function reportBehaviourPage(d: ReportData, mode: ReasonMode, via: PanelF
     `<div class="rp-grid2">${buyersPanel(d, lang)}${heatPanel(d, lang)}</div>` +
     surveyPreview(lang);
   return shell(d, "/report/behaviour", body, lang);
+}
+
+// ── Mock tab (frozen plan: assets/design-refs/console/mock-tab/README.md, B + C hybrid) ──
+// Server-rendered and complete without JS (cards, chips, sort and „Több mutatása” are
+// links, the search is a GET form). The small script only does the same in place: a card
+// click filters the list, the search filters as you type, the sort reorders the rows.
+// Every number comes from MockReport (reportData.ts) — this function formats, never counts.
+
+export interface MockPageState {
+  readonly tpl: string | null;
+  readonly q: string;
+  readonly sort: MockSort;
+  /** How many rows are shown (README ⑧: 25 at a time). */
+  readonly n: number;
+}
+
+const MOCK_STEP_LABEL = (lang: string): Readonly<Record<MockStep, string>> => ({
+  opened: T(lang, "Megnyitotta"),
+  min1: T(lang, "≥1 percet nézte"),
+  full: T(lang, "Végiggörgette"),
+  returned: T(lang, "Visszatért"),
+  engaged: T(lang, "Panel / válasz"),
+});
+const MOCK_CH_LABEL = (lang: string): Readonly<Record<MockChannelFilter, string>> => ({
+  all: T(lang, "Mind"),
+  email: T(lang, "E-mail"),
+  mobile: T(lang, "MMS / SMS"),
+});
+const MOCK_SORT_LABEL = (lang: string): Readonly<Record<MockSort, string>> => ({
+  score: T(lang, "Legvonzóbb"),
+  sent: T(lang, "Legutóbbi"),
+  dwell: T(lang, "Leghosszabb idő"),
+});
+const wholePct = (v: number): string => (Number.isFinite(v) ? `${v}%` : "—");
+function fmtDwell(s: number, lang: string): string {
+  const r = Math.round(s);
+  if (r < 60) return T(lang, "{n} mp", { n: r });
+  return r % 60 ? T(lang, "{m} p {s} mp", { m: Math.floor(r / 60), s: r % 60 }) : T(lang, "{m} p", { m: r / 60 });
+}
+const bpLabel = (d: Date): string => {
+  const z = partsIn(d, APP_TZ);
+  return `${pad2(z.month)}.${pad2(z.day)}. ${pad2(z.hour)}:${pad2(z.minute)}`;
+};
+
+function mockQs(m: MockReport, st: MockPageState, extra: Record<string, string | null> = {}): string {
+  const p = new URLSearchParams();
+  const v: Record<string, string | null> = { days: String(m.days), ch: m.ch, tpl: st.tpl, q: st.q || null, sort: st.sort === "score" ? null : st.sort, ...extra };
+  for (const [k, x] of Object.entries(v)) if (x) p.set(k, x);
+  return `?${p.toString()}`;
+}
+
+function mockCardHtml(c: MockCard, all: MockCard, st: MockPageState, m: MockReport, lang: string): string {
+  const isAll = c.key === "";
+  const sel = isAll ? st.tpl === null : st.tpl === c.key;
+  const sl = MOCK_STEP_LABEL(lang);
+  const label = isAll ? T(lang, "Minden sablon") : c.key === "ismeretlen" ? T(lang, "Ismeretlen") : c.label;
+  const href = `/report/mock${mockQs(m, st, { tpl: isAll || sel ? null : c.key })}`;
+  const rows = MOCK_STEPS.map((step, i) => {
+    const v = c.steps[i]!;
+    const avg = all.steps[i]!;
+    const mark = isAll || !Number.isFinite(avg) ? "" : `<u style="left:${avg}%" title="${esc(T(lang, "átlag {p}", { p: `${avg}%` }))}"></u>`;
+    return `<div class="rpm-lad__row"><span>${esc(sl[step])}</span><span class="rpm-trk"><i style="width:${Number.isFinite(v) ? v : 0}%"></i>${mark}</span><span class="rpm-lad__v">${wholePct(v)}</span></div>`;
+  }).join("");
+  const d = c.openDelta;
+  const delta = isAll
+    ? `<div class="rpm-delta mut">${esc(T(lang, "A vonal a többi kártyán ennek az átlagnak felel meg."))}</div>`
+    : `<div class="rpm-delta">${esc(T(lang, "Megnyitás az átlaghoz képest:"))} ${
+        !Number.isFinite(d) ? "—" : d >= 0 ? `<span class="rpm-up">+${d} ${esc(T(lang, "pont"))}</span>` : `<span class="rpm-down">−${Math.abs(d)} ${esc(T(lang, "pont"))}</span>`
+      }</div>`;
+  return (
+    `<a class="rpm-card${sel ? " is-sel" : ""}${isAll ? " rpm-card--all" : ""}" href="${esc(href)}" data-t="${esc(c.key)}" data-l="${esc(label)}"${sel ? ' aria-current="true"' : ""}>` +
+    `<div class="rpm-card__t"><b>${esc(label)}</b><span class="mut small">${esc(T(lang, "{n} kiküldve", { n: c.sent }))}${c.few ? ` · <span class="rpm-few">${esc(T(lang, "kevés adat"))}</span>` : ""}</span></div>` +
+    `<div class="rpm-lad">${rows}</div>${delta}` +
+    `<div class="rpm-card__sc"><span>${esc(T(lang, "Átlagos vonzóság"))}</span>${scoreBadge(c.avgScore)}</div></a>`
+  );
+}
+
+/** The score badge: one hue, intensity = score (0–100 → 0–60 % cyan over the surface). */
+const scoreBadge = (v: number): string =>
+  v ? `<span class="rpm-score" style="background:color-mix(in srgb, var(--citui-cyan-500) ${Math.round(v * 0.6)}%, var(--citui-surface-2))">${v}</span>` : `<span class="rpm-score is-zero">0</span>`;
+
+function mockVerdictHtml(m: MockReport, lang: string): string {
+  const v = m.verdict;
+  let head: string;
+  if (v.kind === "compare") {
+    head =
+      T(lang, "Legtöbben a {top} mockot nyitották meg ({p}%, {n} kiküldésből), legkevesebben: {bottom} ({q}%). Az átlag {a}%.", {
+        top: `<b>${esc(v.top.label)}</b>`,
+        p: v.top.steps[0]!,
+        n: v.top.sent,
+        bottom: `<b>${esc(v.bottom.label)}</b>`,
+        q: v.bottom.steps[0]!,
+        a: v.avgOpen,
+      }) +
+      " " +
+      (v.overlap
+        ? `<span class="mut">${esc(
+            T(lang, "A különbség még belefér a véletlenbe (a 95%-os tartományok átfednek: {a}–{b}% és {c}–{d}%) — több kiküldés kell az ítélethez.", {
+              a: v.top.ci![0],
+              b: v.top.ci![1],
+              c: v.bottom.ci![0],
+              d: v.bottom.ci![1],
+            }),
+          )}</span>`
+        : esc(T(lang, "A különbség már nem véletlen (a 95%-os tartományok nem fednek át).")));
+  } else {
+    head = `<span class="mut">${esc(T(lang, "Ebben a szűrésben még nincs két sablon legalább {n} kiküldéssel — nem lehet összevetni.", { n: MOCK_MIN_SENDS }))}</span>`;
+  }
+  const foot = T(lang, "A függőleges vonal a sávokon = az összes mock átlaga. A {n}-nél kevesebb kiküldésű sablont nem nevezzük meg nyertesnek. Kattints egy kártyára: a lenti lista a sablon mockjaira szűr.", { n: MOCK_MIN_SENDS });
+  return `<div class="panel"><h2>${esc(T(lang, "Mit mondanak a számok?"))}</h2><div class="rpm-verdict">${head}<br><span class="small mut">${esc(foot)}</span></div></div>`;
+}
+
+function mockDots(r: MockRow, lang: string): string {
+  const f = [r.opened, r.returned, r.min1, r.full, r.panel].map((b) => `<i${b ? ' class="f"' : ""}></i>`).join("");
+  const last = r.unsubscribed ? '<i class="x"></i>' : r.replied || r.ordered ? '<i class="g"></i>' : "<i></i>";
+  return `<span class="rpm-dots" title="${esc(T(lang, "megnyitotta · visszatért · ≥1 perc · végiggörgette · rendelés-panel · válasz/rendelés"))}">${f}${last}</span>`;
+}
+
+function mockRowHtml(r: MockRow, hidden: boolean, lang: string): string {
+  // The skin's console label without its description (the part before „ — ”, like the template's).
+  const skin = SKINS[r.skin]?.label.split(" — ")[0]!.trim() ?? (r.skin === "ismeretlen" ? T(lang, "Ismeretlen") : r.skin);
+  const tpl = r.template === "ismeretlen" ? T(lang, "Ismeretlen") : r.templateLabel;
+  const first =
+    r.firstOpenHours === null
+      ? ""
+      : ` · ${r.firstOpenHours < 1 ? T(lang, "első megnyitás 1 órán belül") : T(lang, "első megnyitás {n} óra múlva", { n: Math.round(r.firstOpenHours) })}`;
+  const met = (v: string): string => `<span class="rpm-met">${esc(v)}</span>`;
+  return (
+    `<div class="rpm-row"${hidden ? " hidden" : ""} data-t="${esc(r.template)}" data-n="${esc(r.name.toLowerCase())}" data-s="${r.score}" data-at="${r.sentAt.getTime()}" data-d="${Math.round(r.dwellSeconds)}">` +
+    scoreBadge(r.score) +
+    `<a class="rpm-nm" href="/lead/${esc(r.leadId)}">${esc(r.name)}</a>` +
+    mockDots(r, lang) +
+    met(r.opened ? `${r.views}×` : "—") +
+    met(r.opened ? fmtDwell(r.dwellSeconds, lang) : "—") +
+    met(r.opened ? `${Math.round(r.maxScroll)}%` : "—") +
+    `<span class="rpm-sub">${esc(`${tpl} · ${skin} · ${CHANNEL_LABEL(lang)[r.channel]} · ${bpLabel(r.sentAt)}${first}`)}</span></div>`
+  );
+}
+
+const MOCK_JS = `(function(){var root=document.getElementById("rpm");if(!root)return;
+var list=document.getElementById("rpm-rows"),rows=[].slice.call(list.querySelectorAll(".rpm-row")),
+cards=[].slice.call(root.querySelectorAll(".rpm-card")),q=document.getElementById("rpm-q"),more=document.getElementById("rpm-more"),
+cnt=document.getElementById("rpm-count"),note=document.getElementById("rpm-sel"),empty=document.getElementById("rpm-empty"),
+form=document.getElementById("rpm-form"),PAGE=${MOCK_PAGE};
+var st={tpl:root.dataset.tpl||"",q:(q.value||"").trim().toLowerCase(),sort:root.dataset.sort,n:+root.dataset.n||PAGE};
+function url(){var u=new URL(location.href);["tpl","q","sort","n"].forEach(function(k){u.searchParams.delete(k)});
+if(st.tpl)u.searchParams.set("tpl",st.tpl);if(st.q)u.searchParams.set("q",st.q);if(st.sort!=="score")u.searchParams.set("sort",st.sort);
+if(st.n>PAGE)u.searchParams.set("n",st.n);history.replaceState(null,"",u);form.tpl.value=st.tpl;form.sort.value=st.sort;}
+function apply(){var k=0;rows.forEach(function(r){var ok=(!st.tpl||r.dataset.t===st.tpl)&&(!st.q||r.dataset.n.indexOf(st.q)>=0);
+if(ok)k++;r.hidden=!ok||k>st.n;});cnt.textContent=k;more.hidden=k<=st.n;empty.hidden=k>0;
+cards.forEach(function(c){var on=c.dataset.t===st.tpl;c.classList.toggle("is-sel",on);if(on)c.setAttribute("aria-current","true");else c.removeAttribute("aria-current");});
+note.hidden=!st.tpl;if(st.tpl){var c=cards.filter(function(x){return x.dataset.t===st.tpl})[0];note.querySelector("b").textContent=c?c.dataset.l:st.tpl;}url();}
+function sort(){var key=st.sort==="sent"?"at":st.sort==="dwell"?"d":"s";rows.sort(function(a,b){
+return (+b.dataset[key]-+a.dataset[key])||(+b.dataset.d-+a.dataset.d)||(+b.dataset.at-+a.dataset.at)});rows.forEach(function(r){list.appendChild(r)});
+[].forEach.call(document.querySelectorAll("#rpm-sort a"),function(a){a.classList.toggle("on",a.dataset.s===st.sort)});}
+function pick(t){st.tpl=st.tpl===t?"":t;st.n=PAGE;apply();if(window.innerWidth<720)document.getElementById("rpm-list").scrollIntoView({behavior:"smooth",block:"start"});}
+cards.forEach(function(c){c.addEventListener("click",function(e){if(e.metaKey||e.ctrlKey||e.shiftKey)return;e.preventDefault();pick(c.dataset.t);});});
+note.querySelector("a").addEventListener("click",function(e){e.preventDefault();st.tpl="";st.n=PAGE;apply();});
+q.addEventListener("input",function(){st.q=q.value.trim().toLowerCase();st.n=PAGE;apply();});
+form.addEventListener("submit",function(e){e.preventDefault();});
+more.addEventListener("click",function(e){e.preventDefault();st.n+=PAGE;apply();});
+[].forEach.call(document.querySelectorAll("#rpm-sort a"),function(a){a.addEventListener("click",function(e){e.preventDefault();st.sort=a.dataset.s;sort();apply();});});
+})();`;
+
+export function reportMockPage(m: MockReport, st: MockPageState): string {
+  const lang = consoleLang();
+  const tabs = reportTabs("/report/mock", `?days=${m.days}`, mockQs(m, { ...st, tpl: null, q: "", sort: "score" }), lang);
+  const chip = (on: boolean, href: string, label: string, extra = ""): string => `<a href="${esc(href)}"${on ? ' class="on"' : ""}${extra}>${esc(label)}</a>`;
+  const ranges = REPORT_RANGES.map((r) => chip(r === m.days, `/report/mock${mockQs(m, st, { days: String(r) })}`, RANGE_LABEL(r, lang))).join("");
+  const chans = MOCK_CHANNELS.map((c) => chip(c === m.ch, `/report/mock${mockQs(m, st, { ch: c === "all" ? null : c })}`, MOCK_CH_LABEL(lang)[c])).join("");
+  const filters =
+    `<div class="rpm-filters"><div><span class="rpm-flab">${esc(T(lang, "Időszak"))}</span><span class="rp-chips" role="group" aria-label="${esc(T(lang, "Időszak"))}">${ranges}</span></div>` +
+    `<div><span class="rpm-flab">${esc(T(lang, "Csatorna"))}</span><span class="rp-chips" role="group" aria-label="${esc(T(lang, "Csatorna"))}">${chans}</span></div></div>`;
+  const fact = `<div class="rpm-fact">${T(lang, "Csak a {b}kiküldött{e} linkek számítanak. Nem számít: a gépi megnyitás (link-ellenőrző, headless böngésző), a saját megnyitás ({b}?sajat=1{e} link — a konzolból, a pilot-másolatból nyitva), a ki nem küldött mock. Az idő = a látogatásonként mért oldalon töltött idő összege.", { b: "<b>", e: "</b>" })}</div>`;
+  const tplKnown = st.tpl !== null && m.cards.some((c) => c.key === st.tpl);
+  const s: MockPageState = { ...st, tpl: tplKnown ? st.tpl : null };
+  const cards = `<div class="rpm-grid">${mockCardHtml(m.all, m.all, s, m, lang)}${m.cards.map((c) => mockCardHtml(c, m.all, s, m, lang)).join("")}</div>`;
+  const w = MOCK_WEIGHTS;
+  const formula = `<p class="rpm-formula">${esc(
+    T(lang, "Vonzóság-pont (0–100), mockonként: megnyitotta {a} · visszatért {b} · legalább 1 percet töltött rajta {c} · végiggörgette (≥75%) {d} · megnyitotta a rendelés-panelt {e} · válaszolt {f} · rendelt {g}. Leiratkozás = 0 pont. A kártyán az átlaga.", {
+      a: w.opened,
+      b: w.returned,
+      c: w.min1,
+      d: w.full,
+      e: w.panel,
+      f: w.replied,
+      g: w.ordered,
+    }),
+  )}</p>`;
+  const sorted = sortMockRows(m.rows, s.sort);
+  let k = 0;
+  const rowsHtml = sorted
+    .map((r) => {
+      const ok = mockRowMatches(r, s.tpl, s.q);
+      if (ok) k++;
+      return mockRowHtml(r, !ok || k > s.n, lang);
+    })
+    .join("");
+  const selLabel = s.tpl === "ismeretlen" ? T(lang, "Ismeretlen") : s.tpl ? (m.cards.find((c) => c.key === s.tpl)?.label ?? s.tpl) : "";
+  const sorts = MOCK_SORTS.map((x) => chip(x === s.sort, `/report/mock${mockQs(m, s, { sort: x === "score" ? null : x })}`, MOCK_SORT_LABEL(lang)[x], ` data-s="${x}"`)).join("");
+  const hidden = (n: string, v: string): string => `<input type="hidden" name="${n}" value="${esc(v)}">`;
+  const list =
+    `<div class="panel" id="rpm-list"><h2>${esc(T(lang, "Mockok"))} <span class="rp-q"><span id="rpm-count">${k}</span> ${esc(T(lang, "db"))}</span></h2>` +
+    `<div class="rpm-selnote" id="rpm-sel"${s.tpl ? "" : " hidden"}>${esc(T(lang, "Szűrve:"))} <b>${esc(selLabel)}</b> · <a href="/report/mock${esc(mockQs(m, s, { tpl: null }))}">${esc(T(lang, "Minden sablon"))}</a></div>` +
+    `<form class="rpm-toolbar" id="rpm-form" method="get" action="/report/mock">${hidden("days", String(m.days))}${m.ch === "all" ? "" : hidden("ch", m.ch)}${hidden("tpl", s.tpl ?? "")}${hidden("sort", s.sort)}` +
+    `<input id="rpm-q" type="search" name="q" value="${esc(s.q)}" placeholder="${esc(T(lang, "Szállás neve…"))}" aria-label="${esc(T(lang, "Keresés a szállás nevére"))}">` +
+    `<span class="rp-chips" id="rpm-sort" role="group" aria-label="${esc(T(lang, "Rendezés"))}">${sorts}</span></form>` +
+    `<div class="rpm-head" aria-hidden="true"><span>${esc(T(lang, "Pont"))}</span><span>${esc(T(lang, "Szállás · sablon"))}</span><span>${esc(T(lang, "Jelek"))}</span><span>${esc(T(lang, "Megnyitás"))}</span><span>${esc(T(lang, "Idő"))}</span><span>${esc(T(lang, "Görgetés"))}</span></div>` +
+    `<div id="rpm-rows">${rowsHtml}</div>` +
+    `<p class="mut small" id="rpm-empty"${k ? " hidden" : ""}>${esc(m.rows.length ? T(lang, "Nincs találat.") : T(lang, "Nincs kiküldött mock ebben a szűrésben."))}</p>` +
+    `<a class="rpm-more" id="rpm-more" href="/report/mock${esc(mockQs(m, s, { n: String(s.n + MOCK_PAGE) }))}"${k > s.n ? "" : " hidden"}>${esc(T(lang, "Több mutatása"))}</a>` +
+    `<div class="rpm-legend"><span class="rpm-dots"><i class="f"></i></span>${esc(T(lang, "megnyitotta · visszatért · ≥1 perc · végiggörgette · rendelés-panel"))} · <span class="rpm-dots"><i class="g"></i></span> ${esc(T(lang, "válaszolt / rendelt"))} · <span class="rpm-dots"><i class="x"></i></span> ${esc(T(lang, "leiratkozott"))}</div></div>`;
+  const body =
+    `<div class="rpm" id="rpm" data-tpl="${esc(s.tpl ?? "")}" data-sort="${s.sort}" data-n="${s.n}">${filters}${fact}${mockVerdictHtml(m, lang)}${cards}${formula}${list}</div>` +
+    `<script>${MOCK_JS}</script>`;
+  return layout(T(lang, "Megkeresés-riport"), `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${body}`, { active: "/report/mock" });
 }

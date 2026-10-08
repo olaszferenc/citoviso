@@ -62,8 +62,8 @@ import {
   resolveDocType,
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
-import { reportFunnelPage, reportBehaviourPage, type ReasonMode } from "./reportViews.js";
-import { addNote, getReportData, PANEL_FILTERS, REPORT_DIMS, type PanelFilter, type ReportDays, type ReportDim } from "./reportData.js";
+import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
+import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
@@ -2233,6 +2233,22 @@ async function handle(
     const pvRaw = url.searchParams.get("pv") ?? "all";
     const pv: PanelFilter = (PANEL_FILTERS as readonly string[]).includes(pvRaw) ? (pvRaw as PanelFilter) : "all";
     return send(res, 200, reportBehaviourPage(d, rs, pv));
+  }
+  // GET /report/mock — the Mock tab (frozen plan: assets/design-refs/console/mock-tab/).
+  // Query: days ∈ {7,30,90,0} (default Összes, as the plan shows), ch ∈ MOCK_CHANNELS,
+  // tpl = template id, q = name search, sort ∈ MOCK_SORTS, n = rows shown (25-step).
+  if (method === "GET" && path === "/report/mock") {
+    const daysRaw = Number(url.searchParams.get("days") ?? "0");
+    const days = ([7, 30, 90, 0] as const).includes(daysRaw as ReportDays) ? (daysRaw as ReportDays) : 0;
+    const chRaw = url.searchParams.get("ch") ?? "all";
+    const ch: MockChannelFilter = (MOCK_CHANNELS as readonly string[]).includes(chRaw) ? (chRaw as MockChannelFilter) : "all";
+    const sortRaw = url.searchParams.get("sort") ?? "score";
+    const sort: MockSort = (MOCK_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as MockSort) : "score";
+    const nRaw = Math.floor(Number(url.searchParams.get("n") ?? MOCK_PAGE));
+    const n = Number.isFinite(nRaw) && nRaw >= MOCK_PAGE ? Math.min(nRaw, 5000) : MOCK_PAGE;
+    const labels = Object.fromEntries(Object.values(TEMPLATES).map((t) => [t.id, t.label]));
+    const m = await getMockReport(days, ch, labels);
+    return send(res, 200, reportMockPage(m, { tpl: url.searchParams.get("tpl") || null, q: (url.searchParams.get("q") ?? "").trim().slice(0, 80), sort, n }));
   }
   // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.
   if (method === "POST" && path === "/report/note") {

@@ -68,10 +68,13 @@ export interface Visit {
 
 export interface ProspectFacts {
   readonly id: string;
+  readonly leadId: string;
   readonly leadName: string;
   readonly segment: string;
   readonly channel: Channel;
   readonly style: string;
+  /** The mock's art template id (`inputs.template`, src/engine/templates.ts), "ismeretlen" when absent. */
+  readonly template: string;
   readonly sentAt: Date;
   /** Hour of the send in Budapest time (ADR-0288). */
   readonly sentHour: number;
@@ -90,6 +93,8 @@ export interface ProspectFacts {
   readonly exitReason: ExitReason | null;
   readonly exitConfidence: "sure" | "medium" | null;
   readonly stated: StatedReason | null;
+  /** The lead answered the outreach (an `outreach_reply` row for this send). */
+  readonly replied: boolean;
 }
 
 export interface StageCounts {
@@ -339,6 +344,12 @@ function styleOf(inputs: Record<string, unknown> | null | undefined): string {
   return typeof t === "string" && t ? t : "ismeretlen";
 }
 
+/** The mock's art template = `inputs.template` (src/engine/templates.ts). */
+function templateOf(inputs: Record<string, unknown> | null | undefined): string {
+  const t = inputs?.template;
+  return typeof t === "string" && t ? t : "ismeretlen";
+}
+
 /**
  * Template section ids → the exit map's rows. The templates name their sections freely
  * (`t-services`, `t-features`, `t-about`, `t-showcase`, `data-cit-module="map"`…; the
@@ -445,6 +456,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
     .select([
       "prospect.id as id",
+      "prospect.lead_id as lead_id",
       "prospect.segment as segment",
       "prospect.sent_at as sent_at",
       "prospect.email_sent_at as email_sent_at",
@@ -482,6 +494,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .where("order_intent.kind", "=", "initial")
     .execute();
   const feedback = await loadFeedback(ids);
+  const replied = await loadReplied(rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })));
 
   const eventsByView = new Map<string, RawEvent[]>();
   for (const e of events) {
@@ -531,10 +544,12 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     const verdict = paidAt || !lastVisit ? null : inferExitReason(signalsFromEvents(lastVisit.events, false));
     return {
       id: r.id,
+      leadId: r.lead_id,
       leadName: r.lead_name,
       segment: r.segment ?? "ismeretlen",
       channel: channelOf(r),
       style: styleOf(r.inputs as Record<string, unknown> | null),
+      template: templateOf(r.inputs as Record<string, unknown> | null),
       sentAt,
       sentHour: partsIn(sentAt, APP_TZ).hour,
       visits,
@@ -550,6 +565,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       exitReason: verdict?.reason ?? null,
       exitConfidence: verdict?.confidence ?? null,
       stated: feedback.get(r.id) ?? null,
+      replied: replied.has(r.id),
     };
   });
 }
@@ -580,6 +596,28 @@ async function loadFeedback(ids: readonly string[]): Promise<Map<string, StatedR
     .execute();
   for (const r of rows) {
     if (!out.has(r.prospect_id) && (STATED_REASONS as readonly string[]).includes(r.reason)) out.set(r.prospect_id, r.reason as StatedReason);
+  }
+  return out;
+}
+
+/**
+ * Which sends got an answer (outreach_reply, ADR-0339): the reply names the prospect, or —
+ * when the collector could only match the lead — it arrived after this send.
+ */
+async function loadReplied(ps: readonly { id: string; leadId: string; sentAt: Date }[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const rows = await db
+    .selectFrom("outreach_reply")
+    .select(["prospect_id", "lead_id", "received_at"])
+    .where("lead_id", "in", [...new Set(ps.map((p) => p.leadId))])
+    .execute();
+  for (const r of rows) {
+    if (r.prospect_id) {
+      out.add(r.prospect_id);
+      continue;
+    }
+    const at = toDate(r.received_at)!;
+    for (const p of ps) if (p.leadId === r.lead_id && p.sentAt.getTime() <= at.getTime()) out.add(p.id);
   }
   return out;
 }
@@ -1012,4 +1050,241 @@ export function foldReport(
     },
     targets,
   };
+}
+
+// ── the Mock tab (frozen plan: assets/design-refs/console/mock-tab/README.md) ────
+
+/** README ②: channel chip — „E-mail” = any mail touch, „MMS / SMS” = any mobile touch. */
+export type MockChannelFilter = "all" | "email" | "mobile";
+export const MOCK_CHANNELS: readonly MockChannelFilter[] = ["all", "email", "mobile"];
+/** README ⑧: Legvonzóbb · Legutóbbi · Leghosszabb idő. */
+export type MockSort = "score" | "sent" | "dwell";
+export const MOCK_SORTS: readonly MockSort[] = ["score", "sent", "dwell"];
+/** README ④/⑤: below this many sends a template is „kevés adat” and never named in the verdict. */
+export const MOCK_MIN_SENDS = 10;
+/** README ⑧: the list grows 25 at a time. */
+export const MOCK_PAGE = 25;
+/** README ⑦: the attractiveness weights (sum = 100). */
+export const MOCK_WEIGHTS = { opened: 20, returned: 15, min1: 15, full: 15, panel: 15, replied: 10, ordered: 10 } as const;
+/** README ⑤: the ladder, in the card's order. */
+export const MOCK_STEPS = ["opened", "min1", "full", "returned", "engaged"] as const;
+export type MockStep = (typeof MOCK_STEPS)[number];
+
+/** The signals of ONE sent mock — everything the score and the ladder read. */
+export interface MockSignals {
+  readonly opened: boolean;
+  /** ≥ 2 human visits. */
+  readonly returned: boolean;
+  /** ≥ 60 s summed over the visits. */
+  readonly min1: boolean;
+  /** ≥ 75 % scroll in any visit. */
+  readonly full: boolean;
+  readonly panel: boolean;
+  readonly replied: boolean;
+  readonly ordered: boolean;
+  readonly unsubscribed: boolean;
+}
+
+export interface MockRow extends MockSignals {
+  readonly prospectId: string;
+  readonly leadId: string;
+  readonly name: string;
+  readonly template: string;
+  readonly templateLabel: string;
+  readonly skin: string;
+  readonly channel: Channel;
+  readonly sentAt: Date;
+  readonly views: number;
+  /** Seconds: the SUM of the visits' dwellSeconds (README: „Az idő = … ÖSSZEGE”). */
+  readonly dwellSeconds: number;
+  readonly maxScroll: number;
+  /** Hours from the send to the first human visit; null = never opened. */
+  readonly firstOpenHours: number | null;
+  readonly score: number;
+}
+
+export interface MockCard {
+  /** Template id; "" = the „Minden sablon” card. */
+  readonly key: string;
+  readonly label: string;
+  readonly sent: number;
+  readonly opened: number;
+  /** README ⑤: fewer than MOCK_MIN_SENDS sends (never on the „Minden sablon” card). */
+  readonly few: boolean;
+  /** Whole percents of the SENT, in MOCK_STEPS order; NaN when sent = 0. */
+  readonly steps: readonly number[];
+  /** Open % minus the all-mock open % (whole points); NaN without data. */
+  readonly openDelta: number;
+  readonly avgScore: number;
+  /** Wilson 95 % interval of the open rate, whole percents; null when sent = 0. */
+  readonly ci: readonly [number, number] | null;
+}
+
+export type MockVerdict =
+  | { readonly kind: "none" }
+  | {
+      readonly kind: "compare";
+      readonly top: MockCard;
+      readonly bottom: MockCard;
+      readonly avgOpen: number;
+      /** The two 95 % intervals overlap → the gap may still be chance. */
+      readonly overlap: boolean;
+    };
+
+export interface MockReport {
+  readonly days: ReportDays;
+  readonly ch: MockChannelFilter;
+  /** Every sent mock of the range + channel, in „Legvonzóbb” order. */
+  readonly rows: readonly MockRow[];
+  readonly all: MockCard;
+  /** One card per template, most sends first. */
+  readonly cards: readonly MockCard[];
+  readonly verdict: MockVerdict;
+}
+
+/** README ⑦: 0–100; an unsubscribe zeroes it. */
+export function mockScore(s: MockSignals): number {
+  if (s.unsubscribed) return 0;
+  const w = MOCK_WEIGHTS;
+  return (
+    (s.opened ? w.opened : 0) +
+    (s.returned ? w.returned : 0) +
+    (s.min1 ? w.min1 : 0) +
+    (s.full ? w.full : 0) +
+    (s.panel ? w.panel : 0) +
+    (s.replied ? w.replied : 0) +
+    (s.ordered ? w.ordered : 0)
+  );
+}
+
+export function mockStepHit(s: MockSignals, step: MockStep): boolean {
+  return step === "engaged" ? s.panel || s.replied || s.ordered : s[step];
+}
+
+/** Wilson score interval (95 %, z = 1.96) of k successes in n, as fractions; null when n = 0. */
+export function wilson(k: number, n: number): readonly [number, number] | null {
+  if (!n) return null;
+  const z = 1.96;
+  const p = k / n;
+  const d = 1 + (z * z) / n;
+  const c = p + (z * z) / (2 * n);
+  const w = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+  return [Math.max(0, (c - w) / d), Math.min(1, (c + w) / d)];
+}
+
+/** The template's console label: the part before „ — ” (src/engine/templates/*.ts `label`). */
+export function templateLabelOf(id: string, labels: Readonly<Record<string, string>>): string {
+  const l = labels[id];
+  return l ? l.split(" — ")[0]!.trim() : id;
+}
+
+export function mockRowOf(p: ProspectFacts, labels: Readonly<Record<string, string>>): MockRow {
+  const dwell = p.visits.reduce((s, v) => s + v.dwellSeconds, 0);
+  const scroll = Math.max(0, ...p.visits.map((v) => v.maxScroll));
+  const sig: MockSignals = {
+    opened: p.visits.length > 0,
+    returned: p.visits.length >= 2,
+    min1: dwell >= 60,
+    full: scroll >= 75,
+    panel: p.visits.some((v) => v.panelOpened),
+    replied: p.replied,
+    ordered: p.orderedAt !== null,
+    unsubscribed: p.unsubscribedAt !== null,
+  };
+  return {
+    ...sig,
+    prospectId: p.id,
+    leadId: p.leadId,
+    name: p.leadName,
+    template: p.template,
+    templateLabel: templateLabelOf(p.template, labels),
+    skin: p.style,
+    channel: p.channel,
+    sentAt: p.sentAt,
+    views: p.visits.length,
+    dwellSeconds: dwell,
+    maxScroll: scroll,
+    firstOpenHours: p.openedAt ? (p.openedAt.getTime() - p.sentAt.getTime()) / HOUR : null,
+    score: mockScore(sig),
+  };
+}
+
+const pctWhole = (a: number, b: number): number => (b ? Math.round((a / b) * 100) : NaN);
+
+function mockCard(key: string, label: string, rows: readonly MockRow[], avgOpen: number, isAll: boolean): MockCard {
+  const n = rows.length;
+  const opened = rows.filter((r) => r.opened).length;
+  const steps = MOCK_STEPS.map((s) => pctWhole(rows.filter((r) => mockStepHit(r, s)).length, n));
+  const ci = wilson(opened, n);
+  return {
+    key,
+    label,
+    sent: n,
+    opened,
+    few: !isAll && n < MOCK_MIN_SENDS,
+    steps,
+    openDelta: Number.isFinite(steps[0]!) && Number.isFinite(avgOpen) ? steps[0]! - avgOpen : NaN,
+    avgScore: n ? Math.round(rows.reduce((s, r) => s + r.score, 0) / n) : 0,
+    ci: ci ? [Math.round(ci[0] * 100), Math.round(ci[1] * 100)] : null,
+  };
+}
+
+/** README ④: name the most- and least-opened template among those with ≥ 10 sends. */
+export function mockVerdict(cards: readonly MockCard[], avgOpen: number): MockVerdict {
+  const big = cards.filter((c) => c.sent >= MOCK_MIN_SENDS).sort((a, b) => b.opened / b.sent - a.opened / a.sent);
+  if (big.length < 2) return { kind: "none" };
+  const top = big[0]!;
+  const bottom = big[big.length - 1]!;
+  const a = wilson(top.opened, top.sent)!;
+  const b = wilson(bottom.opened, bottom.sent)!;
+  return { kind: "compare", top, bottom, avgOpen, overlap: a[0] <= b[1] };
+}
+
+export function inMockChannel(c: Channel, ch: MockChannelFilter): boolean {
+  if (ch === "email") return c === "email" || c === "email_sms";
+  if (ch === "mobile") return c === "sms" || c === "mms" || c === "email_sms";
+  return true;
+}
+
+/** README ⑧ ordering — the view and the client script sort by the same keys. */
+export function sortMockRows(rows: readonly MockRow[], sort: MockSort): MockRow[] {
+  const by =
+    sort === "sent"
+      ? (a: MockRow, b: MockRow) => b.sentAt.getTime() - a.sentAt.getTime()
+      : sort === "dwell"
+        ? (a: MockRow, b: MockRow) => b.dwellSeconds - a.dwellSeconds || b.sentAt.getTime() - a.sentAt.getTime()
+        : (a: MockRow, b: MockRow) => b.score - a.score || b.dwellSeconds - a.dwellSeconds || b.sentAt.getTime() - a.sentAt.getTime();
+  return [...rows].sort(by);
+}
+
+/** README ⑥/⑧: the list filter — template card + name search (case-insensitive substring). */
+export function mockRowMatches(r: MockRow, tpl: string | null, q: string): boolean {
+  return (!tpl || r.template === tpl) && (!q || r.name.toLowerCase().includes(q.toLowerCase()));
+}
+
+/** The pure fold of the Mock tab — the kb-shot fixtures and the check feed it synthetic facts. */
+export function foldMockReport(
+  all: readonly ProspectFacts[],
+  labels: Readonly<Record<string, string>>,
+  days: ReportDays,
+  ch: MockChannelFilter,
+  now: Date,
+): MockReport {
+  const from = days ? now.getTime() - days * DAY : -Infinity;
+  const rows = sortMockRows(
+    all.filter((p) => p.sentAt.getTime() >= from && inMockChannel(p.channel, ch)).map((p) => mockRowOf(p, labels)),
+    "score",
+  );
+  const allCard = mockCard("", "", rows, NaN, true);
+  const avgOpen = allCard.steps[0]!;
+  const groups = new Map<string, MockRow[]>();
+  for (const r of rows) groups.set(r.template, [...(groups.get(r.template) ?? []), r]);
+  const cards = [...groups.entries()]
+    .map(([k, rs]) => mockCard(k, rs[0]!.templateLabel, rs, avgOpen, false))
+    .sort((a, b) => b.sent - a.sent || a.label.localeCompare(b.label, "hu"));
+  return { days, ch, rows, all: allCard, cards, verdict: mockVerdict(cards, avgOpen) };
+}
+
+export async function getMockReport(days: ReportDays, ch: MockChannelFilter, labels: Readonly<Record<string, string>>, now = new Date()): Promise<MockReport> {
+  return foldMockReport(await loadProspectFacts(), labels, days, ch, now);
 }

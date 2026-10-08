@@ -63,8 +63,9 @@ import {
 import { testLogPage } from "../src/console/testLogViews.js";
 import { findScenario } from "../src/elek/fkParse.js";
 import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
-import { reportBehaviourPage, reportFunnelPage } from "../src/console/reportViews.js";
-import { DEFAULT_TARGETS, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
+import { reportBehaviourPage, reportFunnelPage, reportMockPage } from "../src/console/reportViews.js";
+import { DEFAULT_TARGETS, foldMockReport, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
+import { TEMPLATES as RP_TEMPLATES } from "../src/engine/templates.js";
 import { inferExitReason, signalsFromEvents } from "../src/analytics/exitReason.js";
 import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
 import type { PricingSnapshot } from "../src/pricing.js";
@@ -2015,12 +2016,14 @@ const rpFacts: ProspectFacts[] = Array.from({ length: 72 }, (_, i) => {
   const last = visits[visits.length - 1];
   const verdict = paidAt || !last ? null : inferExitReason(signalsFromEvents(last.events, false));
   return {
-    id: `p${i}`, leadName: `Minta Vendégház ${i + 1}`, segment: ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult"][i % 4]!,
-    channel: ["email", "sms", "email_sms", "mms"][i % 4] as ProspectFacts["channel"], style: "coastal-fresh", sentAt, sentHour: 9,
+    id: `p${i}`, leadId: `l${i}`, leadName: `Minta Vendégház ${i + 1}`, segment: ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult"][i % 4]!,
+    channel: ["email", "sms", "email_sms", "mms"][i % 4] as ProspectFacts["channel"], style: "coastal-fresh",
+    template: ["gate-opening", "wordmark-grow", "fullbleed", "horizontal", "parallax"][i % 5]!, sentAt, sentHour: 9,
     visits, openedAt, deepAt: deep ? openedAt : null, orderedAt, paidAt, unsubscribedAt: null,
     escalationShown: visits.length >= 2 && rnd() < 0.5, escalationCta: false, escalationDismiss: false,
     device, exitReason: verdict?.reason ?? null, exitConfidence: verdict?.confidence ?? null,
     stated: !paidAt && opened && rnd() < 0.1 ? "expensive" : null,
+    replied: opened && i % 9 === 0,
   };
 });
 const rpNotes = [{ id: "n1", day: "2026-09-18", text: "Tárgymező csere: személyes megszólítás" }];
@@ -2037,6 +2040,14 @@ await shootConsole(
   path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "order-panel.png"),
   undefined,
   ".rp-op",
+);
+// The Mock tab (assets/design-refs/console/mock-tab/): verdict, template cards and the top of the list.
+await shootConsole(
+  reportMockPage(
+    foldMockReport(rpFacts, Object.fromEntries(Object.values(RP_TEMPLATES).map((t) => [t.id, t.label])), 0, "all", rpNow),
+    { tpl: null, q: "", sort: "score", n: 25 },
+  ),
+  path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "mock.png"),
 );
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.

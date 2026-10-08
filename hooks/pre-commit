@@ -2970,6 +2970,18 @@ if [ -f scripts/outreach-reply-check.mts ] && \
   echo "[pre-commit] outreach-reply-check (válaszok: párosítás, SMS-összefűzés, idézet, PEEK, jelölés)…"
   npx tsx scripts/outreach-reply-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Riport „Mock” fül (assets/design-refs/console/mock-tab/README.md ④–⑧): vonzóság-pont, lépcső,
+#     Wilson-tartomány, ítélet (csak ≥10 kiküldés), szűrők + a lap mondatai. Tiszta, DB nélkül, <3 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/report-mock-check.mts ] && \
+   changed_files | grep -qE '^src/console/report(Data|Views)\.ts$|^scripts/report-mock-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/report-mock-check\.mts$'; then
+    echo "[pre-commit] report-mock-check --self-test (a Mock-fül őre pirosra tud-e menni)…"
+    npx tsx scripts/report-mock-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] report-mock-check (Mock fül: vonzóság-pont, ítélet, szűrők)…"
+  npx tsx scripts/report-mock-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"
