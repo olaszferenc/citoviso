@@ -3213,7 +3213,9 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rpm-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @container (min-width: 720px) { .rpm-grid { grid-template-columns: repeat(3, 1fr); } }
 .rpm-card { display: block; border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px; background: var(--citui-panel); color: var(--citui-ink); text-decoration: none; }
-.rpm-card:hover { border-color: var(--citui-line-strong); }
+/* The card is an <a>: `.con a` (0,1,1) would paint all its text link-ink and underline it on hover. */
+.con a.rpm-card { color: var(--citui-ink); }
+.con a.rpm-card:hover { border-color: var(--citui-line-strong); text-decoration: none; }
 .rpm-card.is-sel { border-color: var(--citui-link-ink); box-shadow: 0 0 0 1px var(--citui-link-ink); }
 .rpm-card:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; }
 .rpm-card__t { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }

@@ -1778,6 +1778,9 @@ async function shootConsole(
   // viewport-height, so without the scroll the panel below the fold is missed
   // (ADR-0106: the source panel lives on the mocks tab).
   await page.goto(pathToFileURL(file).href + (hash ?? ""));
+  // Park the pointer: a previous click-to-open shot leaves it over the page, and the
+  // next capture then shows a stray :hover state (underlined card text on mock.png).
+  await page.mouse.move(0, 0);
   await page.waitForTimeout(300);
   if (clickToOpen) {
     const btn = page.locator(clickToOpen).first();
@@ -2041,14 +2044,14 @@ await shootConsole(
   undefined,
   ".rp-op",
 );
-// The Mock tab (assets/design-refs/console/mock-tab/): verdict, template cards and the top of the list.
-await shootConsole(
-  reportMockPage(
-    foldMockReport(rpFacts, Object.fromEntries(Object.values(RP_TEMPLATES).map((t) => [t.id, t.label])), 0, "all", rpNow),
-    { tpl: null, q: "", sort: "score", n: 25 },
-  ),
-  path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "mock.png"),
+// The Mock tab (assets/design-refs/console/mock-tab/) has its own entry: the top of the page
+// (filters, verdict, the "Minden sablon" card) and the "Mockok" list as an element shot.
+const rpMock = reportMockPage(
+  foldMockReport(rpFacts, Object.fromEntries(Object.values(RP_TEMPLATES).map((t) => [t.id, t.label])), 0, "all", rpNow),
+  { tpl: null, q: "", sort: "score", n: 25 },
 );
+await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", "assets", "hu", "mock.png"));
+await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", "assets", "hu", "mock-list.png"), undefined, "#rpm-list");
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.
 await shootConsole(

@@ -926,5 +926,5 @@ export function reportMockPage(m: MockReport, st: MockPageState): string {
   const body =
     `<div class="rpm" id="rpm" data-tpl="${esc(s.tpl ?? "")}" data-sort="${s.sort}" data-n="${s.n}">${filters}${fact}${mockVerdictHtml(m, lang)}${cards}${formula}${list}</div>` +
     `<script>${MOCK_JS}</script>`;
-  return layout(T(lang, "Megkeresés-riport"), `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${body}`, { active: "/report/mock" });
+  return layout(T(lang, "Megkeresés-riport"), `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_mock")}</h1></div>${tabs}${body}`, { active: "/report/mock" });
 }

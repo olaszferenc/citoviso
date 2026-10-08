@@ -106,6 +106,7 @@ const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
     "console.scrape",
     "console.duplicates",
     "console.report",
+    "console.report_mock",
     "console.pricing",
     "console.settings",
     "console.outreach_draft",
