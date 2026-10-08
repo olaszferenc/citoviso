@@ -24,5 +24,6 @@ szűkített, és csak a hiányt/elavultat fordítja. A pénz a dev boot-on és a
 `scripts/i18n-pack-status.mts`, `_planning/proposals/forditas-csak-elesiteskor-20261007.md` (új);
 fán kívül: a fő fa `.env`-je (`I18N_BOOT_TOPUP=0`).
 
-**Nyitott.** Tulaj-döntés (a) vs (b); a prod boot-háló kikapcsolása (`I18N_BOOT_TOPUP=0` élesen) a nagy
-deployjal; a 0092 migráció és a mérő a nagy deployjal megy ki (élesen addig nincs fordítás-mérés).
+**Döntés (tulaj, 2026-10-08).** Az (a) marad (GATE 5, diff-alapú), fordító munkatárs nem kell. Az éles
+`I18N_BOOT_TOPUP=0` és a 0092 migráció a nagy deployjal megy — felvéve a `_planning/DEPLOY-READY.md` §2
+ellenőrzőlistájába és a §6 táblába. Élesen addig nincs fordítás-mérés.

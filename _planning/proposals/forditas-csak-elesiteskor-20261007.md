@@ -1,5 +1,9 @@
 # Fordítás csak élesítéskor, csak diffből — terv a tulajnak (2026-10-07)
 
+> **✅ DÖNTÖTT (tulaj, 2026-10-08, koordinátoron át):** az **(a)** marad — a meglévő diff-alapú GATE 5;
+> a (b) fordító munkatárs NEM kell. Az éles boot-fordítás kikapcsolása (`I18N_BOOT_TOPUP=0`) a nagy
+> deployjal megy (`_planning/DEPLOY-READY.md` §2). A lenti (b)-javaslat ezzel elvetve.
+
 > Döntési anyag, kód előtt. Koordinátor: cita768df48-70. A tulaj szava:
 > „Fordítás csak akkor ha élesre megy valami és azt is diffel kéne... Vagy: legyen egy fordító munkatársunk, aki ezt megteszi”
 

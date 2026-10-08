@@ -88,6 +88,12 @@ Az éles állapot kérdése egy parancs: `$SSH 'git -C /opt/citoviso/app rev-par
 - [ ] **GATE 5 tudomásul:** a tartomány érinti a katalógust és a súgót → a deploy közben AI-fordítás fut az
       éles DB-n (idő + költség); a restart csak a zöld 5b után jön. A felületi csomagok és a súgó fordítása
       AUTOMATIKUS — kézi `kb-translate` NEM kell (a régi „kézi újrafordítás” sor elavult, ADR-0207).
+- [ ] **Éles `.env`: `I18N_BOOT_TOPUP=0`** (tulaj-döntés 2026-10-08) — a servicek boot-kor ne fordítsanak
+      API-n (ADR-0036/b önjavítás KI, csak lefedettség-mérés); a fordítás egyetlen útja a GATE 5 (diff-alapú).
+      A kód (`src/config.ts`, alap `1`) és a `0092_translation_spend` migráció a deployjal megy ki; a sor
+      ugyanúgy a deploy restartja ELŐTT kerüljön a `.env`-be, mint a fenti kulcsok (előtte `.env`-mentés).
+      Ellenőrzés a restart után: a `citoviso-console`/`citoviso-public` naplóban „boot-fordítás KIKAPCSOLVA”;
+      a fordítás költsége a `translation_spend` táblában (`trigger`: deploy/cli/on-demand).
 - [ ] **Nincs futó éles scrape** (GATE 4 úgyis megállít) — a scrape vonal a tulaj külön szála.
 - [ ] Legyen idő a teljes §4 füst-próbára (~30–40 perc) közvetlenül utána; a deploy és a füst-próba között ne
       menjen kiküldés (outreach).
@@ -316,3 +322,4 @@ Ha egy szálnak deploy-előfeltétele vagy deploy utáni teendője van, **ide, e
 | Pillanatkép-runtime (2026-09-28) | `rerender-tenant --all` a deploy után | §4.2 |
 | Places medium (ADR-0258) | `places-medium-backfill` szárazon, majd `--apply --backup` | §4.8 |
 | Eszkalációs ajánlat admin (ADR-0285) | ✅ **élesítve 2026-09-30 14:33** (`prod/20260930-1433`); migráció nincs | §4b.4 |
+| Fordítás-költség (2026-10-07) | éles `.env`: `I18N_BOOT_TOPUP=0`; migráció `0092_translation_spend` | §2 |
