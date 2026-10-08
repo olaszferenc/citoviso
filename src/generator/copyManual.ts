@@ -38,6 +38,7 @@ import { DEFAULT_LANG } from "../i18n/lang.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
 import { checkDesign } from "./designCheck.js";
 import { injectRuntime } from "./runtime.js";
+import { secureMockPhotos } from "./photoTransport.js";
 
 export interface ManualCopyResult {
   readonly ok: boolean;
@@ -172,7 +173,9 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
   );
   const design = checkDesign(html);
 
-  await writeFile(row.path, html, "utf8");
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  const secured = await secureMockPhotos(html, String(row.id), (nextData.photos ?? []).map((p) => p.url));
+  await writeFile(row.path, secured.html, "utf8");
   const patch = {
     recipe: nextRecipe,
     siteData: nextData,

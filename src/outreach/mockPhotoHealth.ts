@@ -56,6 +56,7 @@ import {
   type PhotoFailure,
   type PhotoVerdict,
 } from "../console/photoProxy.js";
+import { isInsecurePhotoUrl, parseProxiedMockPhoto, resolveProxiedSource } from "../generator/photoTransport.js";
 
 /** Egy kép-hivatkozás a renderelt lapon. */
 export interface ImageRef {
@@ -264,6 +265,64 @@ function isRemote(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
+/** Van-e a lapon http-s (a https-es oldalon meg nem jelenő) kép — nem tudomásul vehető. */
+export function hasInsecurePhoto(health: Pick<MockPhotoHealth, "broken">): boolean {
+  return health.broken.some((b) => b.failure === "insecure");
+}
+
+/**
+ * A KISZÁLLÍTOTT URL szerint sorolja a hivatkozásokat (ADR-XXXX):
+ *   • `http://` → azonnal törött (`insecure`): a https-es lapon a böngésző nem mutatja,
+ *     bármit is válaszol a forrás. ⛔ Ez volt a rés: a szerver http-n 200-at kapott, a
+ *     kapu „ép"-et mondott, a lead üres keretet látott.
+ *   • a saját proxy-URL-ünk (`/configure/<id>/photo/<hash>`) → a TÁROLT forrására
+ *     fordítva mérjük; ha a hash egyik tárolt forrásra sem mutat, a route 404-et ad →
+ *     törött (`notfound`). Más artefaktum proxy-URL-je ugyanígy törött: a route a
+ *     saját artefaktumán kívül nem szolgál ki.
+ *   • minden más változatlanul megy a mérésre.
+ */
+export function classifyServedRefs(
+  refs: readonly ImageRef[],
+  artifactId: string,
+  inputs: unknown,
+  lang: string,
+): { measure: ImageRef[]; failed: BrokenImage[]; sourceOf: Map<string, string> } {
+  const measure: ImageRef[] = [];
+  const failed: BrokenImage[] = [];
+  const sourceOf = new Map<string, string>();
+  for (const r of refs) {
+    if (isInsecurePhotoUrl(r.url)) {
+      failed.push({
+        url: r.url,
+        reason: photoFailReason({ ok: false, status: null, failure: "insecure" }, lang, hostOf(r.url)),
+        where: r.where,
+        refs: r.refs,
+        failure: "insecure",
+      });
+      continue;
+    }
+    const proxied = parseProxiedMockPhoto(r.url);
+    if (proxied) {
+      const source = proxied.artifactId === artifactId.toLowerCase() ? resolveProxiedSource(inputs, proxied.hash) : null;
+      if (!source) {
+        failed.push({
+          url: r.url,
+          reason: photoFailReason({ ok: false, status: 404, failure: "notfound" }, lang, hostOf(r.url) || "citoviso"),
+          where: r.where,
+          refs: r.refs,
+          failure: "notfound",
+        });
+        continue;
+      }
+      sourceOf.set(source, r.url);
+      measure.push({ ...r, url: source });
+      continue;
+    }
+    measure.push(r);
+  }
+  return { measure, failed, sourceOf };
+}
+
 /**
  * Megméri a kép-hivatkozásokat — gazdagépenként sorosítva, egy udvarias újrapróbával
  * a múlandónak látszó hibákra.
@@ -339,11 +398,12 @@ export async function probeImageRefs(
 export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise<MockPhotoHealth> {
   const empty = { artifactId, checked: 0, unmeasured: 0, broken: [] as BrokenImage[] };
   let file: string;
+  let inputs: unknown = null;
   let staleFile: MockPhotoHealth["staleFile"];
   try {
     const a = await db
       .selectFrom("mock_artifact")
-      .select(["path", "lead_id", "generated_at"])
+      .select(["path", "lead_id", "generated_at", "inputs"])
       .where("id", "=", artifactId)
       .executeTakeFirst();
     if (!a?.path) {
@@ -372,6 +432,7 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
         newerAt: String(newer.generated_at),
       };
     }
+    inputs = a.inputs;
     file = path.resolve(process.cwd(), a.path);
   } catch (e) {
     return { ...empty, verdict: "unknown", note: (e as Error).message.slice(0, 200) };
@@ -390,8 +451,14 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
   }
 
   const refs = extractImageRefs(html);
-  const remote = refs.filter((r) => isRemote(r.url));
-  const broken = await probeImageRefs(refs, lang);
+  const { measure, failed, sourceOf } = classifyServedRefs(refs, artifactId, inputs, lang);
+  const remote = measure.filter((r) => isRemote(r.url));
+  // A proxied photo is measured at its SOURCE (the same fetchPhoto the route serves from),
+  // and reported under the URL the page actually carries.
+  const broken = [
+    ...failed,
+    ...(await probeImageRefs(measure, lang)).map((b) => ({ ...b, url: sourceOf.get(b.url) ?? b.url })),
+  ].sort((a, b) => a.url.localeCompare(b.url));
   // ⛔⛔ A NULLA FOTÓ NEM „ok" (ADR-0150). A `broken.length ? "broken" : "ok"` szabály
   // egy KÉP NÉLKÜLI lapra is zöldet adott, mert nem volt mit töröttnek mérni — a lead
   // pedig pontosan azt kapta, amit a kapu meg akart előzni: egy üres oldalt.
@@ -407,8 +474,8 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
   return {
     artifactId,
     verdict,
-    checked: remote.length,
-    unmeasured: refs.length - remote.length,
+    checked: remote.length + failed.length,
+    unmeasured: refs.length - remote.length - failed.length,
     broken,
     ...(staleFile ? { staleFile } : {}),
   };
@@ -521,6 +588,9 @@ export function photoGateBlocks(health: MockPhotoHealth, acks: PhotoGateAcks): b
   // ezért ez a sor a `verdict === "ok"` ÁG ELŐTT áll: különben a kapu zöldet mondana.
   if (health.staleFile) return true;
   if (health.verdict === "ok") return false;
+  // ⛔ A http-s kép (ADR-XXXX) NEM tudomásul vehető: a lead lapján biztosan nem jelenik
+  // meg, és az újragenerálás ($0, rerender-mock) megjavítja — nincs mit vállalni.
+  if (hasInsecurePhoto(health)) return true;
   if (health.verdict === "unknown") return true;
   // ⛔⛔ KÉP NÉLKÜLI LAP NEM MEGY KI (ADR-0150) — de nem VAK tiltás: van, akinek
   // jogosan nincs fotója, és a kurátor tudatosan vállalhatja. A kivétel viszont
@@ -548,6 +618,12 @@ export function brokenPhotoSentence(health: MockPhotoHealth, lang = "hu"): strin
     return T(
       lang,
       "Ezen a lapon EGYETLEN szállás-fotó sincs — a leadnek kép nélküli oldal menne ki. A megkeresés lényege épp a látvány.",
+    );
+  }
+  if (hasInsecurePhoto(health)) {
+    return T(
+      lang,
+      "A lap titkosítatlan http-címen hivatkozik szállás-fotóra — a leadnek kiküldött https-es oldalon ez a kép NEM jelenik meg. Generáld újra a mockot (a generálás https-re vagy a saját szerverünkre teszi a képet).",
     );
   }
   const n = health.broken.length;

@@ -40,6 +40,7 @@ import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { injectRuntime } from "./runtime.js";
+import { secureMockPhotos } from "./photoTransport.js";
 
 export interface RecopyResult {
   readonly ok: boolean;
@@ -259,7 +260,9 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     renderSite(nextRecipe, nextSiteData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
     lang,
   );
-  await writeFile(row.path, html, "utf8");
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  const secured = await secureMockPhotos(html, String(row.id), (nextSiteData.photos ?? []).map((p) => p.url));
+  await writeFile(row.path, secured.html, "utf8");
 
   const design = checkDesign(html);
   let factCheck: FactCheckVerdict | null = null;

@@ -29,6 +29,7 @@ import { renderSite } from "../src/engine/render.js";
 import { checkDesign } from "../src/generator/designCheck.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 import { getHeroPin, rerenderArtifactWithHero } from "../src/generator/heroOverride.js";
+import { secureMockPhotos } from "../src/generator/photoTransport.js";
 
 const REHERO = process.argv.includes("--rehero");
 const arg = process.argv.slice(2).find((a) => !a.startsWith("--"));
@@ -92,7 +93,9 @@ for (const row of rows) {
     continue;
   }
   const html = await injectRuntime(renderSite(recipe, siteData, { phase: "mock" }), siteData.lang);
-  await writeFile(row.path, html, "utf8");
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  const secured = await secureMockPhotos(html, String(row.id), (siteData.photos ?? []).map((p) => p.url));
+  await writeFile(row.path, secured.html, "utf8");
   const design = checkDesign(html);
   console.log(
     `  ✓ ${row.name} → ${row.path} (dizájn: ${design.verdict}${design.verdict === "pass" ? "" : ` — ${design.reason}`})`,

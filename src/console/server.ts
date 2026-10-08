@@ -27,6 +27,7 @@ import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
 import { isCopyKey, type CopyKey, type CopyValue } from "../engine/copyFields.js";
 import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "../generator/runtime.js";
+import { resolveProxiedSource } from "../generator/photoTransport.js";
 import { copyEditorOverlay } from "./copyEditViews.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clearHeroPin, getHeroPin, repointHero, setHeroPin } from "../generator/heroOverride.js";
@@ -2888,6 +2889,28 @@ async function handle(
   const mockMatch = /^\/mock\/([0-9a-f-]{36})$/i.exec(path);
   if (method === "GET" && mockMatch) {
     return serveMock(res, mockMatch[1]);
+  }
+  // GET /configure/:artifactId/photo/:hash — the mock's http-only photo, served over our
+  // https origin (ADR-XXXX, photoTransport.ts path (b)). ⛔ Not an open proxy: the hash
+  // must name one of THIS artifact's stored photo sources, and only http:// sources are
+  // served (Places media is https, so a paid call can never ride this route).
+  const cfgPhotoMatch = /^\/configure\/([0-9a-f-]{36})\/photo\/([0-9a-f]{24})$/i.exec(path);
+  if (method === "GET" && cfgPhotoMatch) {
+    const row = await db
+      .selectFrom("mock_artifact")
+      .select("inputs")
+      .where("id", "=", cfgPhotoMatch[1]!)
+      .executeTakeFirst();
+    const source = row ? resolveProxiedSource(row.inputs, cfgPhotoMatch[2]!) : null;
+    if (!source || !/^http:\/\//i.test(source)) return send(res, 404, "not found", "text/plain");
+    const got = await fetchPhoto(source);
+    if (!got.ok || !got.body) return send(res, 404, "not found", "text/plain");
+    res.writeHead(200, {
+      "content-type": got.contentType ?? "image/jpeg",
+      "cache-control": "public, max-age=86400",
+    });
+    res.end(got.body);
+    return;
   }
   // GET /configure/:artifactId — prospect configurator (mock + interactive sell).
   const cfgMatch = /^\/configure\/([0-9a-f-]{36})$/i.exec(path);

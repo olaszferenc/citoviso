@@ -57,6 +57,7 @@ import { render, type MockData, type MockFeature } from "./render.js";
 // A halott fotó ki sem kerül a halmazba (a kiküldés-kapu, ADR-0134, az AJTÓBAN fog —
 // ez a réteg azt intézi, hogy ilyen lap elő se álljon). Ugyanaz a lekérő, ugyanaz a cache.
 import { dropDeadPhotos } from "./photoLiveness.js";
+import { secureMockPhotos } from "./photoTransport.js";
 import {
   placesIdentityOf,
   readPlacesCache,
@@ -711,7 +712,9 @@ async function generateMockInner(
       const ai =
         cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
       if (ai && sel && /<html/i.test(ai.html)) {
-        await writeFile(path, await injectRuntime(ai.html), "utf8");
+        // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+        const securedAi = await secureMockPhotos(await injectRuntime(ai.html), artifactIdPre, aiPhotos);
+        await writeFile(path, securedAi.html, "utf8");
         // QA-gate (ADR-0011): measure vertical-rhythm dead space at mobile width.
         // Best-effort + non-blocking — a headless-render hiccup must never fail a
         // generation. Recorded as a quality metric (no auto-regeneration yet).
@@ -816,6 +819,7 @@ async function generateMockInner(
             demoFramingReason: framing.reason ?? null,
             designVerdict: design.verdict,
             designReason: design.reason ?? null,
+            ...(securedAi.transport.length ? { photoTransport: securedAi.transport } : {}),
             aiUsage: usageForArtifact(currentAiUsage()),
           },
         });
@@ -861,7 +865,8 @@ async function generateMockInner(
     address: lead.address,
     mapUrl,
   };
-  await writeFile(path, render(data), "utf8");
+  const secured = await secureMockPhotos(render(data), artifactIdPre, [...(hero ? [hero] : []), ...photoUrls]);
+  await writeFile(path, secured.html, "utf8");
   const artifactId = await recordMockArtifact({
     id: artifactIdPre,
     leadId,
@@ -875,6 +880,7 @@ async function generateMockInner(
       heroType,
       matchBand: matchBand ?? null,
       copySource: copy ? "ai" : "template",
+      ...(secured.transport.length ? { photoTransport: secured.transport } : {}),
       aiUsage: usageForArtifact(currentAiUsage()),
     },
   });

@@ -30,6 +30,7 @@ import {
   readCachedScores,
   scoreHeroCandidates,
 } from "./heroPick.js";
+import { secureMockPhotos } from "./photoTransport.js";
 
 /** A lead operátori nyitókép-választása, ha van. */
 export async function getHeroPin(leadId: string): Promise<{ url: string; actor: string } | null> {
@@ -155,7 +156,9 @@ export async function rerenderArtifactWithHero(
     renderSite(recipe, nextData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
     nextData.lang,
   );
-  await writeFile(row.path, html, "utf8");
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  const secured = await secureMockPhotos(html, String(row.id), (nextData.photos ?? []).map((p) => p.url));
+  await writeFile(row.path, secured.html, "utf8");
 
   // Az ÚJ nyitókép ítélete kerül a panelre. Ha nincs verdikt (mert az operátor olyan
   // képet választott, amit nem néztünk meg), a judgeHero "error"-t ad: a mi hiányunk

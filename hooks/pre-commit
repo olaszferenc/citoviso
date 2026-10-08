@@ -602,6 +602,13 @@ if [ -f scripts/photo-liveness-check.mts ] && \
   echo "[pre-commit] photo-liveness (halott fotó nem kerülhet a lapra)…"
   npx tsx scripts/photo-liveness-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX: http-s fotó a https-es mockon nem jelenik meg (Kerékhegy/Forrás, 2026-10-08).
+# Generáláskor https (bájtra azonos kép) vagy saját proxy; a fotókapu a KISZÁLLÍTOTT URL-t méri.
+if [ -f scripts/mock-photo-transport-check.mts ] && \
+   changed_files | grep -qE '^(src/generator/(photoTransport|generate|generateEngine|heroOverride|recopy|copyManual)\.ts|src/outreach/mockPhotoHealth\.ts|src/console/(photoProxy|server)\.ts|scripts/(rerender-mock|mock-photo-transport-check)\.mts)'; then
+  echo "[pre-commit] mock-photo-transport (http-s fotó nem kerülhet a https-es mockra)…"
+  npx tsx scripts/mock-photo-transport-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
 # not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified

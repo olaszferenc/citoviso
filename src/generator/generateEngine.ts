@@ -53,6 +53,7 @@ import {
   recordMockArtifact,
   type LoadedLead,
 } from "./persist.js";
+import { secureMockPhotos } from "./photoTransport.js";
 import { injectRuntime } from "./runtime.js";
 
 export interface EngineGenerateResult {
@@ -621,7 +622,7 @@ async function generateEngineMockInner(
   opts.onStage?.("render");
   const sampleDeny = sampleDenyKeys(await getDisabledModules());
   const baseHtml = renderSite(finalRecipe, siteData, { sampleDeny });
-  const html = await injectRuntime(baseHtml, lang);
+  const rendered = await injectRuntime(baseHtml, lang);
 
   // EGY ARTEFAKTUM = EGY FÁJL (ADR-0140). Ez a komment eddig is ezt állította, de a
   // név csak a SABLON-változatokat választotta szét: ugyanannak a leadnek ugyanazzal a
@@ -629,6 +630,12 @@ async function generateEngineMockInner(
   // ezért a render ELŐTT kérjük el, és a sor is ezt kapja.
   const artifactIdPre = newArtifactId();
   const path = mockArtifactPath(lead.name, finalRecipe.template ?? "engine", artifactIdPre);
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  const { html, transport: photoTransport } = await secureMockPhotos(
+    rendered,
+    artifactIdPre,
+    siteData.photos.map((p) => p.url),
+  );
   await writeFile(path, html, "utf8");
 
   // Design-doctrine gate (deterministic): emoji-free, 11 --cit-* tokens, booking hook.
@@ -710,6 +717,7 @@ async function generateEngineMockInner(
       ...(region.known ? { region: region.label } : {}),
       regionId: region.id,
       photos: photos.length,
+      ...(photoTransport.length ? { photoTransport } : {}),
       recipeSource: source,
       designVerdict: design.verdict,
       // ⛔ The REASON must be stored, not just the verdict (measured 2026-09-16): the

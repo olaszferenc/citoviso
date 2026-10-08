@@ -40,7 +40,9 @@ const FETCH_TIMEOUT_MS = 8_000;
 /** Ennél nagyobb képet nem szolgálunk ki bélyegnek (védelem a véletlen óriás ellen). */
 const MAX_BYTES = 12 * 1024 * 1024;
 
-export type PhotoFailure = "notfound" | "forbidden" | "upstream" | "network" | "nonimage" | "toolarge";
+// `insecure` (ADR-XXXX): the RENDERED mock links the photo over plain http — the https page
+// will not show it, whatever the source answers. Only the mock gate sets it, never fetchPhoto.
+export type PhotoFailure = "notfound" | "forbidden" | "upstream" | "network" | "nonimage" | "toolarge" | "insecure";
 
 export interface PhotoVerdict {
   readonly ok: boolean;
@@ -184,6 +186,8 @@ export function photoFailReason(v: PhotoVerdict, lang: string, host: string): st
       return T(lang, "Kép helyett weboldal érkezett — elavult hivatkozás ({host}).", { host });
     case "toolarge":
       return T(lang, "A kép túl nagy ahhoz, hogy bélyegként betöltsük.");
+    case "insecure":
+      return T(lang, "A lap titkosítatlan http-címen hivatkozik a képre — a https-es oldalon a böngésző nem jeleníti meg ({host}). Generáld újra a mockot.", { host });
     case "network":
       return T(lang, "A forrás nem válaszolt időben — hálózati hiba vagy időtúllépés ({host}).", { host });
     default:
