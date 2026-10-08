@@ -156,7 +156,7 @@ export async function rerenderArtifactWithHero(
     renderSite(recipe, nextData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
     nextData.lang,
   );
-  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
   const secured = await secureMockPhotos(html, String(row.id), (nextData.photos ?? []).map((p) => p.url));
   await writeFile(row.path, secured.html, "utf8");
 

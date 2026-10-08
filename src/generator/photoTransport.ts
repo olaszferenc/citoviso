@@ -1,4 +1,4 @@
-// HOGYAN JUT EL A FOTÓ A HTTPS-ES MOCKBA — generáláskor dől el (ADR-XXXX).
+// HOGYAN JUT EL A FOTÓ A HTTPS-ES MOCKBA — generáláskor dől el (ADR-0341).
 //
 // ⛔⛔ MÉRT HIBA (2026-10-08, Forrás 880497a6 · Kerékhegy 0ccc74f6): a saját-honlapos
 // fotó-behúzás (ADR-0337) `http://` URL-eket hozott, a mock viszont https-en fut. A

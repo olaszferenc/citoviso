@@ -40,7 +40,7 @@ const FETCH_TIMEOUT_MS = 8_000;
 /** Ennél nagyobb képet nem szolgálunk ki bélyegnek (védelem a véletlen óriás ellen). */
 const MAX_BYTES = 12 * 1024 * 1024;
 
-// `insecure` (ADR-XXXX): the RENDERED mock links the photo over plain http — the https page
+// `insecure` (ADR-0341): the RENDERED mock links the photo over plain http — the https page
 // will not show it, whatever the source answers. Only the mock gate sets it, never fetchPhoto.
 export type PhotoFailure = "notfound" | "forbidden" | "upstream" | "network" | "nonimage" | "toolarge" | "insecure";
 

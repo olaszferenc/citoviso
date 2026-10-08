@@ -1,4 +1,4 @@
-## ADR-XXXX — http-s fotó a https-es mockon: https-emelés vagy saját proxy, a kapu a kiszállított URL-t méri
+## ADR-0341 — http-s fotó a https-es mockon: https-emelés vagy saját proxy, a kapu a kiszállított URL-t méri
 
 **Dátum:** 2026-10-08 · **Döntött:** koordinátor-brief (mock-http-foto-20261008), megvalósítás: CIT SUB session
 

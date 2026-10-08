@@ -1,5 +1,5 @@
 /**
- * Kapu — http-s fotó NE kerüljön a https-es mockra, és ha mégis, a fotókapu BUKJON (ADR-XXXX).
+ * Kapu — http-s fotó NE kerüljön a https-es mockra, és ha mégis, a fotókapu BUKJON (ADR-0341).
  *
  * Kiváltó (mérve élesen 2026-10-08): a saját-honlapos fotó-behúzás `http://` URL-eket hozott
  * (16 lead · 237 URL). A mock https-en fut, a böngésző a képet https-re emeli, és ahol a hoszt

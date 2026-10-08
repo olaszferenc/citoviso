@@ -712,7 +712,7 @@ async function generateMockInner(
       const ai =
         cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
       if (ai && sel && /<html/i.test(ai.html)) {
-        // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+        // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
         const securedAi = await secureMockPhotos(await injectRuntime(ai.html), artifactIdPre, aiPhotos);
         await writeFile(path, securedAi.html, "utf8");
         // QA-gate (ADR-0011): measure vertical-rhythm dead space at mobile width.

@@ -271,7 +271,7 @@ export function hasInsecurePhoto(health: Pick<MockPhotoHealth, "broken">): boole
 }
 
 /**
- * A KISZÁLLÍTOTT URL szerint sorolja a hivatkozásokat (ADR-XXXX):
+ * A KISZÁLLÍTOTT URL szerint sorolja a hivatkozásokat (ADR-0341):
  *   • `http://` → azonnal törött (`insecure`): a https-es lapon a böngésző nem mutatja,
  *     bármit is válaszol a forrás. ⛔ Ez volt a rés: a szerver http-n 200-at kapott, a
  *     kapu „ép"-et mondott, a lead üres keretet látott.
@@ -588,7 +588,7 @@ export function photoGateBlocks(health: MockPhotoHealth, acks: PhotoGateAcks): b
   // ezért ez a sor a `verdict === "ok"` ÁG ELŐTT áll: különben a kapu zöldet mondana.
   if (health.staleFile) return true;
   if (health.verdict === "ok") return false;
-  // ⛔ A http-s kép (ADR-XXXX) NEM tudomásul vehető: a lead lapján biztosan nem jelenik
+  // ⛔ A http-s kép (ADR-0341) NEM tudomásul vehető: a lead lapján biztosan nem jelenik
   // meg, és az újragenerálás ($0, rerender-mock) megjavítja — nincs mit vállalni.
   if (hasInsecurePhoto(health)) return true;
   if (health.verdict === "unknown") return true;

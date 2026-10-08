@@ -2891,7 +2891,7 @@ async function handle(
     return serveMock(res, mockMatch[1]);
   }
   // GET /configure/:artifactId/photo/:hash — the mock's http-only photo, served over our
-  // https origin (ADR-XXXX, photoTransport.ts path (b)). ⛔ Not an open proxy: the hash
+  // https origin (ADR-0341, photoTransport.ts path (b)). ⛔ Not an open proxy: the hash
   // must name one of THIS artifact's stored photo sources, and only http:// sources are
   // served (Places media is https, so a paid call can never ride this route).
   const cfgPhotoMatch = /^\/configure\/([0-9a-f-]{36})\/photo\/([0-9a-f]{24})$/i.exec(path);

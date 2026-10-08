@@ -260,7 +260,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     renderSite(nextRecipe, nextSiteData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
     lang,
   );
-  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
   const secured = await secureMockPhotos(html, String(row.id), (nextSiteData.photos ?? []).map((p) => p.url));
   await writeFile(row.path, secured.html, "utf8");
 

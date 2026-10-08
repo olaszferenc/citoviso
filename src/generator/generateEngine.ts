@@ -630,7 +630,7 @@ async function generateEngineMockInner(
   // ezért a render ELŐTT kérjük el, és a sor is ezt kapja.
   const artifactIdPre = newArtifactId();
   const path = mockArtifactPath(lead.name, finalRecipe.template ?? "engine", artifactIdPre);
-  // http-s fotó a https-es mockon nem jelenik meg (ADR-XXXX): https-emelés vagy saját proxy.
+  // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
   const { html, transport: photoTransport } = await secureMockPhotos(
     rendered,
     artifactIdPre,
