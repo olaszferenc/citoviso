@@ -1,0 +1,465 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Válaszok — válaszolás az irányítópultról (JÓVÁHAGYOTT: A)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-muted:#5a6d82;
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --warn-soft:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));
+    --bad-soft:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  /* mock control bar (not part of the design) */
+  .mockbar{position:static;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--citui-navy-950);color:var(--citui-white);font-size:13px}
+  .mockbar b{margin-right:4px}
+  .mockbar button{font:inherit;border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;border-radius:var(--citui-radius-pill);padding:4px 12px;cursor:pointer}
+  .mockbar button[aria-pressed=true]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:600}
+  .mockbar .sp{flex:1}
+  .note{max-width:1280px;margin:12px auto 0;padding:10px 14px;background:var(--citui-surface-2);border:1px dashed var(--citui-line-strong);border-radius:10px;font-size:13px;color:var(--citui-navy-700)}
+  .frame{margin:14px auto 40px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;overflow:hidden;container-type:inline-size;transition:max-width .2s}
+  .frame[data-size=desk]{max-width:1280px} .frame[data-size=mob]{max-width:390px}
+
+  /* console shell (simplified copy of the real one) */
+  .shell{display:grid;grid-template-columns:230px 1fr;min-height:760px}
+  .side{border-right:1px solid var(--citui-line);background:var(--citui-surface);padding:14px 8px}
+  .logo{font:700 18px var(--citui-font-display);padding:2px 8px 16px}
+  .logo small{display:block;font:400 12px var(--citui-font-text);color:var(--citui-muted)}
+  .nav a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;color:var(--citui-ink);text-decoration:none;font-weight:600}
+  .nav a.on{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-panel))}
+  .nav .n{margin-left:auto;background:var(--citui-bad);color:var(--citui-white);font-size:11px;border-radius:var(--citui-radius-pill);padding:0 7px;font-weight:700}
+  .top{height:52px;border-bottom:1px solid var(--citui-line);display:flex;align-items:center;padding:0 20px;font-weight:600}
+  .main{padding:20px}
+  h1{font:600 22px var(--citui-font-text);margin:0 0 2px}
+  .lede{color:var(--citui-muted);margin:0 0 14px}
+  .wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .w{border:1px solid var(--citui-line);border-radius:10px;padding:12px 14px}
+  .w h3{margin:0;font-size:13px;font-weight:500;color:var(--citui-muted)} .w .big{font-size:22px;font-weight:700;margin:4px 0 0}
+  .w .row{display:flex;justify-content:space-between;color:var(--citui-muted);font-size:13px;border-top:1px solid var(--citui-line);margin-top:8px;padding-top:6px}
+  .w .row b{color:var(--citui-ink)}
+  .att{border:1px solid var(--citui-line);border-radius:10px;margin-top:12px}
+  .att__h{padding:9px 12px;border-bottom:1px solid var(--citui-line);font-size:13px;font-weight:600}
+  .att__r{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--citui-line);font-size:14px}
+  .att__r:last-child{border-bottom:0}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--citui-muted)}
+  .att__r .go{margin-left:auto;color:var(--citui-muted);font-size:13px}
+  .att__r.hot .dot{background:var(--citui-bad)}
+
+  /* ── Replies card (shared) ── */
+  .rep{border:1px solid var(--citui-line-strong);border-radius:12px;background:var(--citui-panel);margin:0 0 4px}
+  .rep__h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--citui-line)}
+  .rep__t{font-weight:700;font-size:15px;display:flex;gap:8px;align-items:center}
+  .badge{white-space:nowrap;background:var(--citui-bad);color:var(--citui-white);border-radius:var(--citui-radius-pill);font-size:12px;font-weight:700;padding:1px 8px}
+  .badge.zero{background:var(--citui-ok)}
+  .chips{display:flex;gap:6px}
+  .chip{font:inherit;font-size:13px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:3px 11px;cursor:pointer;color:var(--citui-ink)}
+  .chip[aria-pressed=true]{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .rep__src{margin-left:auto;color:var(--citui-muted);font-size:12px}
+  .ch{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:6px;padding:2px 7px;background:var(--citui-surface-2);color:var(--citui-navy-700);white-space:nowrap}
+  .pill{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:600;border-radius:var(--citui-radius-pill);padding:2px 9px;white-space:nowrap}
+  .pill.open{background:var(--bad-soft);color:var(--citui-bad-ink)}
+  .pill.done{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+  .btn{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 11px;cursor:pointer;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);white-space:nowrap;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+  .btn.pri{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .btn.link{border-color:transparent;color:var(--citui-link-ink);padding-left:4px;padding-right:4px}
+  .undo{font:inherit;font-size:12px;border:0;background:none;color:var(--citui-link-ink);cursor:pointer;text-decoration:underline;padding:0}
+  .empty{padding:18px 14px;color:var(--citui-muted)}
+  .who b{font-weight:700} .who .mut{color:var(--citui-muted);font-size:13px}
+  .msg{margin:4px 0 0;white-space:pre-line}
+  .clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .our{margin-top:8px;border-left:3px solid var(--citui-line-strong);padding:4px 10px;color:var(--citui-muted);font-size:13px;white-space:pre-line}
+  .our b{color:var(--citui-navy-700);font-weight:600}
+  .when{color:var(--citui-muted);font-size:13px;white-space:nowrap}
+  .meta-done{font-size:12px;color:var(--citui-ok-ink)}
+
+  /* A: list rows */
+  .ra{display:grid;grid-template-columns:86px minmax(0,1fr) 210px;gap:4px 16px;padding:12px 14px;border-bottom:1px solid var(--citui-line);align-items:start}
+  .ra:last-child{border-bottom:0}
+  .ra.isdone{background:var(--citui-surface)}
+  .ra__side{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .ra__acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+  .ra__ch{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+  @container (max-width:640px){
+    .shell{grid-template-columns:1fr} .side{display:none}
+    .main{padding:14px}
+    .wgrid{grid-template-columns:1fr}
+    .ra{grid-template-columns:1fr;gap:6px}
+    .ra__ch{flex-direction:row;align-items:center}
+    .ra__side{align-items:stretch}
+    .ra__side .pill{align-self:flex-start}
+    .ra__acts{justify-content:flex-start}
+    .rep__src{margin-left:0;width:100%}
+  }
+
+  /* B: master–detail */
+  .rb{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:330px}
+  .rb__list{border-right:1px solid var(--citui-line)}
+  .rb__it{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:2px 10px;padding:10px 12px;border-bottom:1px solid var(--citui-line);cursor:pointer;width:100%;text-align:left;font:inherit;color:inherit;background:none;border-left:0;border-right:0;border-top:0}
+  .rb__it[aria-current=true]{background:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-panel))}
+  .rb__it .d{width:8px;height:8px;border-radius:50%;background:var(--citui-bad);margin-top:6px}
+  .rb__it.isdone .d{background:transparent;border:1.5px solid var(--citui-ok)}
+  .rb__it .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rb__it .ex{grid-column:2/4;color:var(--citui-muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rb__det{padding:14px 18px}
+  .rb__dh{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px}
+  .rb__dh .nm{font-size:16px;font-weight:700}
+  .bub{max-width:560px;border-radius:12px;padding:9px 12px;margin:8px 0;white-space:pre-line}
+  .bub.out{background:var(--citui-surface-2);color:var(--citui-navy-700);font-size:13px;margin-right:auto}
+  .bub.in{background:var(--citui-panel);border:1px solid var(--citui-line-strong);margin-left:28px}
+  .bub .lbl{display:block;font-size:12px;font-weight:600;color:var(--citui-muted);margin-bottom:2px}
+  .rb__acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+  .rb__back{display:none}
+  @container (max-width:640px){
+    .rb{grid-template-columns:1fr;min-height:0}
+    .rb__list{border-right:0}
+    .rb[data-open=true] .rb__list{display:none}
+    .rb[data-open=false] .rb__det{display:none}
+    .rb__back{display:inline-flex}
+  }
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--citui-navy-950);color:var(--citui-white);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+  .toast.on{opacity:1}
+  svg{flex:none}
+
+  /* ── Reply round (new) ── */
+  .mockbar select{font:inherit;border-radius:var(--citui-radius-pill);padding:3px 8px;border:1px solid rgba(255,255,255,.3);background:var(--citui-navy-900);color:var(--citui-white)}
+  .q{max-width:1280px;margin:10px auto 0;padding:10px 14px;background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--citui-warn) 40%,var(--citui-panel));border-radius:10px;font-size:13px;color:var(--citui-warn-ink)}
+  .q ol{margin:4px 0 0;padding-left:20px}
+  .tag{display:inline-flex;gap:4px;align-items:center;font-size:11px;font-weight:700;border-radius:var(--citui-radius-pill);padding:1px 7px;white-space:nowrap}
+  .tag.sug{background:color-mix(in srgb,var(--citui-cyan-500) 16%,var(--citui-panel));color:var(--citui-link-ink)}
+  .tag.wait{background:var(--warn-soft);color:var(--citui-warn-ink)}
+  .tag.sent{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+  .rb__it .tags{grid-column:2/4;display:flex;gap:6px;margin-top:2px}
+  .bub.sent{background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-panel));color:var(--citui-ink);font-size:14px;margin-right:auto;border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,var(--citui-panel))}
+  .sugbox{max-width:620px;margin:12px 0 0;border:1.5px dashed color-mix(in srgb,var(--citui-cyan-500) 60%,var(--citui-panel));border-radius:12px;padding:10px 12px;background:var(--citui-surface)}
+  .sugbox.solid{border-style:solid;border-color:var(--citui-line-strong);background:var(--citui-panel)}
+  .sugbox.waiting{border-color:var(--citui-line-strong)}
+  .sug__h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}
+  .sug__h b{font-weight:700}
+  .sug__h .mut{color:var(--citui-muted)}
+  .basis{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}
+  .basis span{font-size:12px;background:var(--citui-surface-2);color:var(--citui-navy-700);border-radius:6px;padding:1px 7px}
+  .sug__txt{white-space:pre-line;margin:8px 0 0;font-size:14px}
+  .fld{display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px 10px;align-items:center;margin:8px 0 0;font-size:13px}
+  .fld label{color:var(--citui-muted)}
+  .fld input{font:inherit;font-size:14px;border:1px solid var(--citui-line-strong);border-radius:8px;padding:6px 9px;width:100%;color:var(--citui-ink);background:var(--citui-panel)}
+  .fld .ro{padding:6px 0;font-weight:600;overflow-wrap:anywhere}
+  textarea.ed{display:block;width:100%;min-height:150px;margin:8px 0 0;font:inherit;font-size:14px;line-height:1.5;border:1px solid var(--citui-line-strong);border-radius:10px;padding:9px 11px;resize:vertical;color:var(--citui-ink);background:var(--citui-panel)}
+  textarea.ed:focus,.fld input:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .cnt{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;font-size:12px;color:var(--citui-muted);margin-top:4px}
+  .cnt b{color:var(--citui-ink)}
+  .cnt .over{color:var(--citui-bad-ink);font-weight:700}
+  .tabs{display:inline-flex;border:1px solid var(--citui-line-strong);border-radius:8px;overflow:hidden}
+  .tabs button{font:inherit;font-size:13px;font-weight:600;border:0;background:var(--citui-panel);padding:5px 11px;cursor:pointer;color:var(--citui-ink);display:inline-flex;gap:5px;align-items:center}
+  .tabs button[aria-pressed=true]{background:var(--citui-navy-900);color:var(--citui-white)}
+  .tabs button:disabled{color:var(--citui-muted);cursor:not-allowed}
+  .sendrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .st{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600;border-radius:8px;padding:5px 10px}
+  .st.q{background:var(--warn-soft);color:var(--citui-warn-ink);margin:0;max-width:none;border:0}
+  .st.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+  .st.err{background:var(--bad-soft);color:var(--citui-bad-ink)}
+  .spin{width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp 0.8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hint{font-size:12px;color:var(--citui-muted)}
+  .arrived{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-size:13px;background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-panel));border-radius:8px;padding:6px 10px}
+  .sheet{margin-top:10px;border:1px solid var(--citui-line-strong);border-radius:10px;padding:10px 12px;background:var(--citui-surface)}
+  .sheet dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 10px;margin:0 0 8px;font-size:13px}
+  .sheet dt{color:var(--citui-muted)} .sheet dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+  @container (max-width:640px){
+    .fld{grid-template-columns:1fr;gap:2px}
+    .sendrow .btn.pri{flex:1;justify-content:center}
+    .bub.in{margin-left:14px}
+    .sheet dl{grid-template-columns:1fr}
+  }
+</style></head><body>
+<div class="mockbar">
+  <b>Változat:</b><button data-v="A" aria-pressed="true">A — vázlat-buborék</button><button data-v="B" aria-pressed="false">B — szerkesztő (elvetve)</button><button data-v="C" aria-pressed="false">C — két lépés (elvetve)</button>
+  <span class="sp"></span>
+  <b>Szimuláció:</b>
+  <select id="simSug" aria-label="Javaslat állapota"><option value="real">Javaslat: valós állás (Krisztinánál még nincs)</option><option value="all">Javaslat: mindhárom kész</option><option value="none">Javaslat: egyik sincs kész</option></select>
+  <select id="simSend" aria-label="Küldés kimenete"><option value="ok">Küldés: sikerül</option><option value="err">Küldés: hiba</option></select>
+  <b>Méret:</b><button data-s="mob" aria-pressed="false">Mobil 390px</button><button data-s="desk" aria-pressed="true">Asztali</button>
+</div>
+<div class="note" id="note"></div>
+<div class="q"><b>Tulaj-döntések (2026-10-08):</b> A változat · a javaslatot Poe (szövegkurátor) írja.</div>
+<div class="frame" id="frame" data-size="desk"><div class="shell">
+  <aside class="side">
+    <div class="logo">Citoviso<small>belső konzol</small></div>
+    <nav class="nav">
+      <a class="on" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Irányítópult<span class="n" id="navN">3</span></a>
+      <a href="#">CRM</a><a href="#">Pénzügy</a><a href="#">Riport</a><a href="#">Rendszer</a><a href="#">Súgó</a>
+    </nav>
+  </aside>
+  <div>
+    <div class="top">Irányítópult</div>
+    <div class="main">
+      <h1>Irányítópult</h1>
+      <p class="lede">Szia, Ferenc! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.</p>
+      <div id="replies"></div>
+      <div class="wgrid">
+        <div class="w"><h3>CRM</h3><p class="big">601</p><div class="row">Kvalifikált lead <b>298</b></div><div class="row">Jóváhagyott mock <b>18</b></div></div>
+        <div class="w"><h3>Pénzügy</h3><p class="big">0</p><div class="row">Bizonylat <b>0</b></div><div class="row">Partner <b>22</b></div></div>
+        <div class="w"><h3>Megkeresések</h3><p class="big">13</p><div class="row">Válaszolt <b>3</b></div><div class="row">Megkezdett rendelés <b>15</b></div></div>
+      </div>
+      <div class="att"><div class="att__h">Figyelmet kér</div>
+        <div class="att__r hot" id="attRep"><span class="dot"></span><span><b id="attN">3</b> megválaszolatlan válasz a megkeresésekre</span><a class="go" href="#replies">Válaszok</a></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<div class="toast" id="toast"></div>
+<script>
+// Sample = the three REAL replies (gammu inbox + Zoho INBOX, 2026-10-07). Suggestions are SAMPLE texts in the
+// owner's own tone (his 2026-10-08 SMS to Melinda); the price is the real prod pricing_config row (hu: 3900 HUF/month,
+// 2 free months on annual prepay). The SMS counter mirrors src/sms/sender.ts: every text goes out with -unicode,
+// so 70 chars fit one SMS, a longer one is split into 67-char parts.
+const SIG_SMS = "A Citoviso csapata";
+const SIG_MAIL = "Üdvözlettel:\nA Citoviso csapata"; // from the mail config (OUTREACH_FROM display name), never a person's name
+const BASE = [
+  { id:"r3", ch:"email", lead:"Villa Eszter", leadId:"290033d4", place:"Balatonkeresztúr", from:"Eszter Varga · balatonifecskek@gmail.com",
+    to:"balatonifecskek@gmail.com", phone:null, subj:"Re: Villa Eszter – honlap-terv",
+    at:"tegnap 15:53", ts:3, text:"Köszönjük a megkeresést, de ez nem a mi apartmanházunk.\nVolt honlapunk, de nem vált be, ezért nem tartunk igényt honlap szolgáltatásra.\n\nÜdv.",
+    ours:{ label:"Kiküldött levél · tegnap 9:27 · „Villa Eszter – honlap-terv”", text:"Tisztelt Villa Eszter! Átnéztük a nyilvánosan elérhető adatait. Saját honlapot viszont nem találtunk. Ezért készítettünk Önnek egy honlap-tervet…" },
+    sug:{ by:"Poe", at:"ma 9:41", basis:["a válasz: „nem a mi apartmanházunk”, „nem tartunk igényt”","hangnem: a 10-08-i Melinda-válasz","aláírás: a levél-konfigból"],
+      text:"Tisztelt Varga Eszter!\n\nKöszönjük, hogy jelezte, és elnézést kérünk a tévedésért. A megkeresésünket tévesen küldtük Önnek.\n\n" + SIG_MAIL },
+    real:true },
+  { id:"r2", ch:"sms", lead:"Krisztina Panzió és étterem", leadId:"c64217b9", place:"Siófok", from:"+36 70 627 7604",
+    to:"+36 70 627 7604", phone:"+36 70 627 7604", subj:null,
+    at:"tegnap 14:25", ts:2, text:"Rossz helyre kuldték",
+    ours:{ label:"Kiküldött MMS + SMS · tegnap 13:45", text:"Krisztina Panzió és étterem – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\nhttps://krisztina-panzio-es-etterem.citoviso.com" },
+    sug:{ by:"Poe", at:"ma 9:44", basis:["a válasz: „Rossz helyre küldték”","hangnem: a 10-08-i Melinda-válasz"],
+      text:"Köszönjük a jelzést, és elnézést kérünk a zavarásért!\n" + SIG_SMS },
+    real:false, picked:"ma 9:38" },
+  { id:"r1", ch:"sms", lead:"Melinda Apartman", leadId:"970bd7e6", place:"Balatonboglár", from:"Kovács Melinda · +36 30 527 9272",
+    to:"+36 30 527 9272", phone:"+36 30 527 9272", subj:"Re: Melinda Apartman – honlap-terv",
+    at:"tegnap 12:42", ts:1, text:"Üdvözlöm, érdeklodni szeretnék hogy a weboldal elkészitése mennyibe kerülne, és vannak-e tovabbi költségei az üzemeltetésnek, fenntartasnak.\nValaszat előre is köszönöm!\nÜdvözlettel,\nKovacs Melinda",
+    ours:{ label:"Kiküldött MMS + SMS · 10-06 11:25", text:"Melinda Apartman – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\nhttps://melinda-apartman.citoviso.com" },
+    sug:{ by:"Poe", at:"ma 9:40", basis:["a válasz: ár + további költségek kérdése","árazás: alapcsomag 3 900 Ft/hó, éves fizetésnél 2 hónap ingyen (élő árlista)","a lead terve: melinda-apartman.citoviso.com","hangnem: a 10-08-i saját válaszod"],
+      text:"Kedves Melinda!\nA honlap havi előfizetés: az alapcsomag 3 900 Ft/hó, havonta bármikor lemondható. A havidíjon kívül más költség nincs. A tervben választható bővítések árát az „Itt rendelheti meg” gomb mutatja: https://melinda-apartman.citoviso.com\nÜdvözlettel:\n" + SIG_SMS },
+    real:true },
+];
+const NOTES = {
+  A: "<b>A — vázlat-buborék a beszélgetésben.</b> A javaslat a válasz ALATT, szaggatott keretes buborékként ül (ez még nem ment ki): ki írta, mikor, mire alapozott. <b>Elküldöm</b> rögtön küldi; <b>Szerkesztem</b> helyben szövegmezővé nyitja. Ha még nincs javaslat: a buborék azt mondja, hogy Poe dolgozik rajta (mióta), és <b>Megírom magam</b> üres mezőt ad — ha Poe közben letesz egyet, szól, de a te szövegedet nem írja felül.",
+  B: "<b>B — válasz-szerkesztő mindig nyitva a beszélgetés alatt.</b> Olyan, mint egy levelező válasz-ablaka: csatorna-váltó (SMS / E-mail — ami a leadnél elérhető), e-mailnél címzett + tárgy, alatta a szöveg a javaslattal előtöltve, felette csík: kié a javaslat és mire alapozott; átírás után <b>Eredeti javaslat</b> visszahozza. Ha még nincs javaslat: üres mező, azonnal írhatsz.",
+  C: "<b>C — javaslat-kártya, két lépésben.</b> A javaslat olvasható kártya; <b>Elküldöm így</b> előbb egy összegzést mutat (kinek, milyen csatornán, hány SMS-rész / milyen tárggyal), és csak a <b>Megerősítem és küldöm</b> küld. <b>Módosítom</b> szerkesztővé nyitja. Ha még nincs javaslat: a tétel „Javaslatra vár”, küldés-gomb nincs, csak <b>Megírom magam</b>. A listán minden sor mutatja: javaslat kész / javaslatra vár.",
+};
+let V = "A", FILTER = "open", SEL = "r1", OPEN = false, SIM_SUG = "real", SIM_SEND = "ok";
+let R = [];
+function reset() {
+  R = BASE.map((b) => ({ ...b, done:null, sent:null, state:null, draft:null, editing:false, own:false, chan:b.ch, confirm:false, arrivedOffer:false,
+    hasSug: SIM_SUG === "all" ? true : SIM_SUG === "none" ? false : b.real,
+    subjDraft:b.subj ?? "Re: " + b.lead + " – honlap-terv" }));
+}
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" })[c]);
+const ICON = {
+  sms:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  email:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  go:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  ok:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>',
+  send:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>',
+  pen:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  bad:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>',
+};
+const chLabel = (ch) => `<span class="ch">${ICON[ch]}${ch === "sms" ? "SMS" : "E-mail"}</span>`;
+const pill = (r) => r.done ? `<span class="pill done">${ICON.ok}Megválaszolva</span>` : `<span class="pill open">Megválaszolatlan</span>`;
+const doneMeta = (r) => r.done ? `<span class="meta-done">Megválaszolta: ${esc(r.done)} · <button class="undo" data-undo="${r.id}">Visszavonás</button></span>` : "";
+const openCount = () => R.filter((r) => !r.done).length;
+const visible = () => R.filter((r) => FILTER === "all" || !r.done).sort((a, b) => b.ts - a.ts);
+const now = () => new Date().toTimeString().slice(0, 5);
+
+// SMS counter — mirrors src/sms/sender.ts (always -unicode): ≤70 chars = 1 SMS, otherwise 67-char parts.
+function smsParts(t) { const n = [...t].length; return n === 0 ? 0 : n <= 70 ? 1 : Math.ceil(n / 67); }
+function counter(r) {
+  const t = curText(r);
+  if (r.chan !== "sms") return `<div class="cnt"><span>${r.ch === "email" ? "A beérkezett levél szálában megy (Re:), a mi levelünk idézve alatta." : "Új levél (erre a leadre még nem ment e-mail)."}</span></div>`;
+  const n = [...t].length, p = smsParts(t);
+  const cls = p > 5 ? "over" : "";
+  return `<div class="cnt"><span><b>${n}</b> karakter · <b class="${cls}">${p}</b> SMS-rész${p > 1 ? " (67 karakter/rész)" : " (max. 70 karakter)"}</span><span>${p > 5 ? '<span class="over">5 résznél hosszabb — rövidíts</span>' : "Ékezetes szöveg: mindig unicode SMS"}</span></div>`;
+}
+const curText = (r) => r.draft ?? (r.hasSug ? r.sug.text : "");
+const sendable = (r) => curText(r).trim().length > 0 && !(r.chan === "sms" && smsParts(curText(r)) > 5);
+
+function header() {
+  const n = openCount();
+  return `<div class="rep__h"><span class="rep__t">${ICON.sms}Válaszok a megkeresésekre <span class="badge${n ? "" : " zero"}">${n ? n + " megválaszolatlan" : "mind megválaszolva"}</span></span>
+    <span class="chips"><button class="chip" data-f="open" aria-pressed="${FILTER === "open"}">Megválaszolatlan ${n}</button><button class="chip" data-f="all" aria-pressed="${FILTER === "all"}">Mind ${R.length}</button></span>
+    <span class="rep__src">SMS percenként, e-mail 2 percenként frissül · utoljára 9:52</span></div>`;
+}
+function listTags(x) {
+  if (x.sent) return `<span class="tags"><span class="tag sent">${ICON.ok}Válasz elküldve</span></span>`;
+  if (x.done) return "";
+  return `<span class="tags">${x.hasSug ? `<span class="tag sug">${ICON.pen}Javaslat kész</span>` : `<span class="tag wait">Javaslatra vár</span>`}</span>`;
+}
+function sugHead(r, opts = {}) {
+  return `<div class="sug__h"><b>Javasolt válasz</b><span class="mut">${esc(r.sug.by)} · szövegkurátor · ${esc(r.sug.at)}</span>${opts.edited ? '<span class="tag wait">átírva</span>' : ""}</div>
+    <div class="basis" title="Mire alapozott">${r.sug.basis.map((b) => `<span>${esc(b)}</span>`).join("")}</div>`;
+}
+function chanTabs(r) {
+  const hasSms = !!r.phone, hasMail = !!(r.ch === "email" ? r.to : r.email);
+  return `<span class="tabs" role="group" aria-label="Csatorna"><button data-chan="sms" aria-pressed="${r.chan === "sms"}" ${hasSms ? "" : "disabled title=\"Nincs telefonszám\""}>${ICON.sms}SMS</button><button data-chan="email" aria-pressed="${r.chan === "email"}" ${hasMail ? "" : "disabled title=\"Nincs e-mail cím\""}>${ICON.email}E-mail</button></span>`;
+}
+function addrFields(r, editable) {
+  const to = r.chan === "sms" ? (r.phone ?? "") : (r.ch === "email" ? r.to : r.email);
+  return `<div class="fld"><label>Címzett</label><span class="ro">${esc(to)}</span>
+    ${r.chan === "email" ? `<label for="subj">Tárgy</label>${editable ? `<input id="subj" data-subj="${r.id}" value="${esc(r.subjDraft)}">` : `<span class="ro">${esc(r.subjDraft)}</span>`}` : ""}</div>`;
+}
+function editor(r) {
+  return `<textarea class="ed" data-ed="${r.id}" aria-label="Válasz szövege" placeholder="Írd ide a választ…">${esc(curText(r))}</textarea><div id="cnt">${counter(r)}</div>`;
+}
+function stateLine(r) {
+  if (!r.state) return "";
+  if (r.state === "sending") return `<span class="st q"><span class="spin"></span>${r.chan === "sms" ? "Sorban — a modem-sáv viszi ki" : "Küldés…"}</span>`;
+  if (r.state === "ok") return `<span class="st ok">${ICON.ok}Kiment · ${esc(r.sent.at)}${r.sent.parts ? " · " + r.sent.parts + " rész" : ""}</span>`;
+  return `<span class="st err">${ICON.bad}Nem ment ki: ${r.chan === "sms" ? "a modem nem fogadta (SendingError)" : "a levélszerver elutasította"}</span><button class="btn" data-send="${r.id}">Újraküldés</button>`;
+}
+function sendBtn(r, label = "Elküldöm") {
+  return `<button class="btn pri" data-send="${r.id}" ${sendable(r) ? "" : "disabled"}>${ICON.send}${label}</button>`;
+}
+function arrivedOffer(r) {
+  return r.arrivedOffer ? `<div class="arrived">Poe közben letett egy javaslatot — a te szövegedet nem írta felül.<button class="btn" data-load="${r.id}">Betöltöm a javaslatot</button></div>` : "";
+}
+
+// ── Variant A: draft bubble inside the conversation ──
+function replyA(r) {
+  if (r.sent) return "";
+  if (r.editing) {
+    return `<div class="sugbox solid">${r.hasSug && !r.own ? sugHead(r, { edited: r.draft !== null && r.draft !== r.sug.text }) : `<div class="sug__h"><b>Saját válasz</b>${r.hasSug ? "" : `<span class="mut">Poe ${r.picked ? "is dolgozik rajta (" + esc(r.picked) + " óta)" : "még nem kezdte"}</span>`}</div>`}
+      <div class="sendrow">${chLabel(r.chan)}<span class="hint">ugyanazon a csatornán, ahol a válasz jött</span></div>
+      ${addrFields(r, true)}${editor(r)}${arrivedOffer(r)}
+      <div class="sendrow">${sendBtn(r)}<button class="btn" data-cancel="${r.id}">Mégse</button>${stateLine(r)}</div></div>`;
+  }
+  if (!r.hasSug) {
+    return `<div class="sugbox waiting"><div class="sug__h"><b>Javasolt válasz</b><span class="tag wait">készül</span></div>
+      <p class="hint" style="margin:6px 0 0">Poe dolgozik rajta${r.picked ? " (" + esc(r.picked) + " óta)" : ""}. Ha nem vársz rá, írd meg te.</p>
+      <div class="sendrow"><button class="btn" data-own="${r.id}">${ICON.pen}Megírom magam</button></div></div>`;
+  }
+  return `<div class="sugbox">${sugHead(r)}
+      <div class="sendrow" style="margin-top:6px">${chLabel(r.chan)}<span class="hint">${r.chan === "sms" ? esc(r.to) + " · " + smsParts(curText(r)) + " SMS-rész" : esc(r.to) + " · „" + esc(r.subjDraft) + "”"}</span></div>
+      <p class="sug__txt">${esc(curText(r))}</p>
+      <div class="sendrow">${sendBtn(r)}<button class="btn" data-edit="${r.id}">${ICON.pen}Szerkesztem</button>${stateLine(r)}</div></div>`;
+}
+// ── Variant B: composer always open under the conversation ──
+function replyB(r) {
+  if (r.sent) return "";
+  const edited = r.hasSug && r.draft !== null && r.draft !== r.sug.text;
+  const strip = r.hasSug && !r.own
+    ? `${sugHead(r, { edited })}${edited ? `<button class="undo" data-orig="${r.id}">Eredeti javaslat visszaállítása</button>` : ""}`
+    : `<div class="sug__h"><b>Válasz</b><span class="mut">Még nincs javaslat — Poe dolgozik rajta${r.picked ? " (" + esc(r.picked) + " óta)" : ""}. Írhatsz te is; ha közben letesz egyet, itt szól, és nem írja felül a szövegedet.</span></div>`;
+  return `<div class="sugbox solid">${strip}
+    <div class="sendrow">${chanTabs(r)}<span class="hint">alapból az a csatorna, ahol a válasz jött</span></div>
+    ${addrFields(r, true)}${editor(r)}${arrivedOffer(r)}
+    <div class="sendrow">${sendBtn(r)}${stateLine(r)}</div></div>`;
+}
+// ── Variant C: read-only suggestion card + confirm step ──
+function replyC(r) {
+  if (r.sent) return "";
+  if (r.editing) {
+    return `<div class="sugbox solid">${r.hasSug && !r.own ? sugHead(r, { edited: r.draft !== null && r.draft !== r.sug.text }) : `<div class="sug__h"><b>Saját válasz</b></div>`}
+      <div class="sendrow">${chanTabs(r)}</div>${addrFields(r, true)}${editor(r)}${arrivedOffer(r)}
+      <div class="sendrow"><button class="btn pri" data-confirm="${r.id}" ${sendable(r) ? "" : "disabled"}>Tovább a küldéshez</button><button class="btn" data-cancel="${r.id}">Mégse</button></div>${confirmSheet(r)}</div>`;
+  }
+  if (!r.hasSug) {
+    return `<div class="sugbox waiting"><div class="sug__h"><b>Javaslatra vár</b><span class="mut">Poe ${r.picked ? "felvette " + esc(r.picked) + "-kor" : "még nem vette fel"}</span></div>
+      <div class="sendrow"><button class="btn" data-own="${r.id}">${ICON.pen}Megírom magam</button></div></div>`;
+  }
+  return `<div class="sugbox solid">${sugHead(r)}
+      <p class="sug__txt">${esc(curText(r))}</p>
+      <div class="sendrow"><button class="btn pri" data-confirm="${r.id}">${ICON.send}Elküldöm így</button><button class="btn" data-edit="${r.id}">${ICON.pen}Módosítom</button></div>${confirmSheet(r)}</div>`;
+}
+function confirmSheet(r) {
+  if (!r.confirm) return "";
+  const to = r.chan === "sms" ? r.phone : (r.ch === "email" ? r.to : r.email);
+  return `<div class="sheet"><dl><dt>Kinek</dt><dd>${esc(r.lead)} · ${esc(to)}</dd><dt>Csatorna</dt><dd>${r.chan === "sms" ? "SMS · " + smsParts(curText(r)) + " rész" : "E-mail · „" + esc(r.subjDraft) + "” (a beérkezett levél szálában)"}</dd><dt>Utána</dt><dd>a tétel „Megválaszolva” lesz (te jelölöd, a küldéssel)</dd></dl>
+    <div class="sendrow">${sendBtn(r, "Megerősítem és küldöm")}<button class="btn" data-unconfirm="${r.id}">Vissza</button>${stateLine(r)}</div></div>`;
+}
+
+function renderB() {
+  const rows = visible();
+  if (!rows.find((r) => r.id === SEL)) SEL = rows[0]?.id ?? null;
+  const r = R.find((x) => x.id === SEL);
+  const list = rows.map((x) => `<button class="rb__it${x.done ? " isdone" : ""}" data-sel="${x.id}" aria-current="${x.id === SEL}">
+      <span class="d"></span><span class="nm">${esc(x.lead)}</span><span class="when">${chLabel(x.ch)} ${esc(x.at)}</span><span class="ex">${esc(x.text.split("\n")[0])}</span>${listTags(x)}</button>`).join("");
+  const reply = r ? ({ A: replyA, B: replyB, C: replyC })[V](r) : "";
+  const det = r ? `<div class="rb__dh"><button class="btn rb__back" data-back>← Vissza</button><span class="nm">${esc(r.lead)}</span><span class="when">${esc(r.place)} · ${esc(r.from)}</span>${pill(r)}</div>
+      <div class="bub out"><span class="lbl">${esc(r.ours.label)}</span>${esc(r.ours.text)}</div>
+      <div class="bub in"><span class="lbl">${r.ch === "sms" ? "SMS" : "E-mail"} · ${esc(r.at)}</span>${esc(r.text)}</div>
+      ${r.sent ? `<div class="bub sent"><span class="lbl">Elküldött válasz · ${r.chan === "sms" ? "SMS · " + r.sent.parts + " rész" : "E-mail · „" + esc(r.subjDraft) + "”"} · ${esc(r.sent.at)} · ${esc(r.sent.by)}</span>${esc(r.sent.text)}</div>` : ""}
+      ${reply}
+      <div class="rb__acts">${r.done ? doneMeta(r) : `<button class="btn" data-done="${r.id}">${ICON.ok}Megválaszoltam</button>`}
+        <a class="btn" href="/lead/${r.leadId}" data-lead="${r.leadId}">Lead lapja ${ICON.go}</a></div>`
+    : `<div class="empty">Nincs megválaszolatlan válasz.</div>`;
+  return `<section class="rep" id="repCard">${header()}<div class="rb" data-open="${OPEN}"><div class="rb__list">${list || `<div class="empty">Nincs megválaszolatlan válasz. A korábbiak a „Mind” szűrőn.</div>`}</div><div class="rb__det">${det}</div></div></section>`;
+}
+function render() {
+  const ae = document.activeElement, focusEd = ae && ae.dataset && ae.dataset.ed, pos = focusEd ? ae.selectionStart : 0;
+  $("#replies").innerHTML = renderB();
+  const n = openCount();
+  $("#navN").textContent = n; $("#navN").style.display = n ? "" : "none";
+  $("#attN").textContent = n; $("#attRep").style.display = n ? "" : "none";
+  $("#note").innerHTML = NOTES[V];
+  if (focusEd) { const t = document.querySelector(`[data-ed="${focusEd}"]`); if (t) { t.focus(); t.setSelectionRange(pos, pos); } }
+}
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove("on"), 2200); }
+function doSend(r) {
+  const text = curText(r).trim(); if (!text) return;
+  r.state = "sending"; render();
+  setTimeout(() => {
+    if (SIM_SEND === "err") { r.state = "err"; render(); toast("Nem ment ki — a tétel megválaszolatlan maradt"); return; }
+    const at = "ma " + now();
+    r.sent = { at, by:"Ferenc", text, parts: r.chan === "sms" ? smsParts(text) : 0 };
+    r.state = "ok"; r.done = "Ferenc · " + at + " (elküldött válasz)"; r.editing = false; r.confirm = false;
+    render(); toast("Kiment — " + r.lead + " · megválaszoltnak jelölve");
+  }, r.chan === "sms" ? 2200 : 1100);
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.ed) { const r = R.find((x) => x.id === t.dataset.ed); r.draft = t.value;
+    // B demo: the operator started writing without a suggestion → the colleague's one arrives later, offered only.
+    if (V === "B" && !r.hasSug && !r._t) { r.own = true; r._t = setTimeout(() => { if (!r.sent) { r.hasSug = true; r.arrivedOffer = true; render(); } }, 6000); } $("#cnt").innerHTML = counter(r);
+    document.querySelectorAll(`[data-send="${r.id}"],[data-confirm="${r.id}"]`).forEach((b) => { b.disabled = !sendable(r); });
+    // First edit of a suggestion → re-render once so the "átírva" tag (+ B: restore link) appears.
+    if (r.hasSug && !r.own && r.draft !== r.sug.text && !document.querySelector(".sug__h .tag")) render(); }
+  if (t.dataset.subj) { R.find((x) => x.id === t.dataset.subj).subjDraft = t.value; }
+});
+document.addEventListener("change", (e) => {
+  if (e.target.id === "simSug") { SIM_SUG = e.target.value; reset(); render(); }
+  if (e.target.id === "simSend") { SIM_SEND = e.target.value; }
+});
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button,a"); if (!t || t.disabled) return;
+  const id = (k) => R.find((x) => x.id === t.dataset[k]);
+  if (t.dataset.v) { V = t.dataset.v; document.querySelectorAll("[data-v]").forEach((b) => b.setAttribute("aria-pressed", b === t)); reset(); render(); }
+  else if (t.dataset.s) { $("#frame").dataset.size = t.dataset.s; document.querySelectorAll("[data-s]").forEach((b) => b.setAttribute("aria-pressed", b === t)); }
+  else if (t.dataset.f) { FILTER = t.dataset.f; render(); }
+  else if (t.dataset.done) { const r = id("done"); r.done = "Ferenc · ma " + now(); render(); toast("Megválaszoltnak jelölve — " + r.lead); }
+  else if (t.dataset.undo) { const r = id("undo"); r.done = null; render(); }
+  else if (t.dataset.sel) { SEL = t.dataset.sel; OPEN = true; render(); }
+  else if (t.dataset.back !== undefined) { OPEN = false; render(); }
+  else if (t.dataset.lead) { e.preventDefault(); toast("→ a lead lapja: /lead/" + t.dataset.lead + " (a mockban nem nyílik meg)"); }
+  else if (t.dataset.send) { doSend(id("send")); }
+  else if (t.dataset.edit) { const r = id("edit"); r.editing = true; r.confirm = false; render(); document.querySelector(`[data-ed="${r.id}"]`)?.focus(); }
+  else if (t.dataset.cancel) { const r = id("cancel"); r.editing = false; r.own = false; r.draft = null; r.confirm = false; render(); }
+  else if (t.dataset.own) { const r = id("own"); r.editing = true; r.own = true; r.draft = ""; render(); document.querySelector(`[data-ed="${r.id}"]`)?.focus();
+    // Demo: the colleague lands a suggestion a few seconds later — it is OFFERED, never written over the operator's text.
+    setTimeout(() => { if (!r.sent && r.own) { r.hasSug = true; r.arrivedOffer = true; render(); } }, 6000); }
+  else if (t.dataset.load) { const r = id("load"); r.own = false; r.draft = null; r.arrivedOffer = false; render(); }
+  else if (t.dataset.orig) { const r = id("orig"); r.draft = null; render(); }
+  else if (t.dataset.chan) { const r = R.find((x) => x.id === SEL); r.chan = t.dataset.chan; render(); }
+  else if (t.dataset.confirm) { const r = id("confirm"); r.confirm = true; render(); }
+  else if (t.dataset.unconfirm) { const r = id("unconfirm"); r.confirm = false; render(); }
+  else if (t.getAttribute("href") === "#replies") { e.preventDefault(); $("#repCard").scrollIntoView({ behavior: "smooth" }); }
+});
+// Phone → start in mobile mode.
+if (matchMedia("(max-width: 700px)").matches) { $("#frame").dataset.size = "mob"; document.querySelectorAll("[data-s]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.s === "mob")); }
+reset(); render();
+</script>
+</body></html>

@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -69,6 +69,42 @@ jelenik meg, akinek mi írtunk; más SMS vagy levél nem kerül ide.
 - **„Lead lapja”** — a lead saját lapjára visz.
 - Ha minden válasz meg van válaszolva: **„Nincs megválaszolatlan válasz.”** — a korábbiak a
   **„Mind”** szűrőn megmaradnak.
+
+### Válaszolás a konzolról, Poe javaslatával
+
+A beszélgetésben, a lead válasza ALATT (a **„Megválaszoltam”** gomb fölött) szaggatott keretes
+buborék áll: ez még NEM ment ki.
+
+- **„Javasolt válasz”** — Poe, a szövegkurátor kolléga írta (mellette a neve és az időpont).
+  Alatta címkékben, mire alapozott (például: élő árlista, a beszélgetés kérdése). Kiírja a
+  csatornát és a címzettet — a válasz MINDIG ugyanazon a csatornán megy, ahol a lead írt, és
+  annak a számára/címére; levélnél a beérkezett levél szálában, „Re: …” tárggyal. SMS-nél azt
+  is, hány részből áll.
+- **„Elküldöm”** — kiküldi a szöveget úgy, ahogy van.
+- **„Szerkesztem”** — a szöveg (levélnél a **„Tárgy”** is) helyben szerkeszthetővé válik, ott
+  **„Elküldöm”** vagy **„Mégse”**. SMS-nél egy számláló mutatja a karaktereket és a részeket:
+  70 karakterig 1 SMS, fölötte 67 karakterenként egy rész (minden SMS így számol, ékezettől függetlenül).
+  5 résznél hosszabb vagy üres szöveg nem küldhető — a gomb ilyenkor nem nyomható. Ha
+  átírtad Poe szövegét, **„átírva”** jelzés áll mellette.
+- **Ha még nincs javaslat**, a buborékban **„készül”** áll, és hogy Poe mióta dolgozik rajta.
+  Ha nem vársz rá: **„Megírom magam”** — üres szövegmező. Ha Poe közben leteszi a javaslatát,
+  a felület felajánlja (**„Betöltöm a javaslatot”**), de a te szövegedet magától nem írja felül.
+- **Küldés-ablak:** a válasz is csak hétköznap 9 és 16 óra között megy ki, mint a megkeresés.
+  Ablakon kívül az **„Elküldöm”** sorba állítja, és kiírja, mikor indul (például: holnap 9:00).
+  A sorban álló választ (**„Válasz a sorban”**) már nem lehet szerkeszteni vagy visszavonni, és
+  amíg ott áll, újabb válasz sem küldhető ugyanerre — ezért este, hétvégén küldés előtt olvasd át.
+- **Állapot:** SMS-nél először **„Sorban — a modem-sáv viszi ki”**, amíg a modem ki nem küldi.
+  Sikeres küldés után a buborék helyén az **„Elküldött válasz”** áll (csatorna — SMS-nél a részek
+  száma, levélnél a tárgy —, idő, ki küldte), és a tétel MAGÁTÓL **„Megválaszolva”** lesz, a te neveddel — a **„Megválaszoltam”**-ot
+  ilyenkor nem kell megnyomni. Ha nem ment ki: piros sor az okkal és **„Újraküldés”** gomb; a
+  tétel megválaszolatlan marad.
+- **A listában** a megválaszolatlan soroknál **„Javaslat kész”** vagy **„Javaslatra vár”**,
+  az elküldötteknél **„Válasz elküldve”** címke áll.
+
+A **„Visszavonás”** csak a megválaszolt-jelölést veszi vissza — a kiment üzenetet nem. Ilyenkor
+Poe javaslata már nem áll ott újra (az egyszer kiment); ha folytatnád a beszélgetést, a
+**„Megírom magam”** gombbal írod meg a következő üzenetet.
+Poe soha nem küld: a küldés mindig a te gombnyomásod.
 
 A megválaszolatlanok száma a menüben is ott áll, az **„Irányítópult”** sor mellett piros
 jelvényként; 0-nál eltűnik.

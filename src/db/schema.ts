@@ -1642,7 +1642,33 @@ export interface OutreachReplyTable {
   answered_by: string | null;
   /** Last manual undo — after it the Sent-folder automation never re-marks. */
   answer_undone_at: Timestamp | null;
+  /** 0096: Poe's suggested answer (ADR-XXXX) — text, subject (mail), who, when, what it rests on. */
+  suggestion_text: string | null;
+  suggestion_subject: string | null;
+  suggestion_by: string | null;
+  suggestion_at: Timestamp | null;
+  suggestion_basis: Generated<string[]>;
   created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+/** 0096: one operator send of an answer (ADR-XXXX) — a failed one is retried as a new row. */
+export interface OutreachReplySendTable {
+  id: Generated<string>;
+  reply_id: string;
+  channel: "sms" | "email";
+  to_addr: string;
+  subject: string | null;
+  body: string;
+  status: "scheduled" | "queued" | "sent" | "failed";
+  scheduled_for: Timestamp | null;
+  sent_by: string;
+  parts: number | null;
+  sms_outbox_id: string | null;
+  message_id: string | null;
+  error: string | null;
+  created_at: Generated<Timestamp>;
+  sent_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
 }
 
@@ -1656,6 +1682,7 @@ export interface Database {
   region: RegionTable;
   outreach_reply: OutreachReplyTable;
   outreach_reply_poll: OutreachReplyPollTable;
+  outreach_reply_send: OutreachReplySendTable;
   scraper_definition: ScraperDefinitionTable;
   scrape_run: ScrapeRunTable;
   lead: LeadTable;

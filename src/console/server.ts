@@ -143,7 +143,8 @@ import { normalizeCustomDomain, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
-import { getRepliesBlock, markAnswered, unmarkAnswered } from "../replies/store.js";
+import { getRepliesBlock, getReplySuggestion, markAnswered, unmarkAnswered } from "../replies/store.js";
+import { saveSuggestion, sendAnswer } from "../replies/answer.js";
 import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import {
@@ -303,7 +304,7 @@ import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
 import { curatePage, layout, leadPage, leadsPage, tenantAdminPage, scrapePage } from "./views.js";
 import type { PhotoGateView } from "./views.js";
-import { dashboardPage, modulePage, operatorLoginPage, operatorLoginHelpPage, settingsPage, type HubData } from "./views.js";
+import { dashboardPage, modulePage, operatorLoginPage, operatorLoginHelpPage, settingsPage, type HubData, type ReplyNotice } from "./views.js";
 import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
@@ -800,6 +801,19 @@ function emailListFromForm(form: URLSearchParams): string[] | undefined {
   const p = Number(form.get("emailPrimary") ?? "0");
   if (Number.isInteger(p) && p > 0 && p < rows.length) rows.unshift(...rows.splice(p, 1));
   return rows;
+}
+
+/** Poe's console account — the only one the suggestion form shows to (ADR-0326). */
+const POE_USERNAME = "poe";
+
+/** One-shot outcome of the last send / suggestion per reply — the redirect target shows it
+ *  as a toast once (kept server-side so a crafted URL cannot put words on the screen). */
+const replyNotices = new Map<string, ReplyNotice>();
+function takeReplyNotice(id: string | null): ReplyNotice | null {
+  if (!id) return null;
+  const n = replyNotices.get(id) ?? null;
+  replyNotices.delete(id);
+  return n;
 }
 
 async function readBody(req: http.IncomingMessage): Promise<URLSearchParams> {
@@ -1420,6 +1434,44 @@ async function handle(
       return redirect(res, `/?reply=${m[1]}${all}#replies`);
     }
   }
+  // POST /replies/<id>/send — „Elküldöm" (ADR-XXXX, plan valaszok-valasz ③④⑦⑦b⑧): the
+  // operator's answer on the reply's own channel; inside the weekday window it goes now,
+  // outside it is queued for the next opening. POST /replies/<id>/suggest — Poe's
+  // „Javasolt válasz" through the console form with the `poe` account (no back-door API).
+  {
+    const m = method === "POST" ? path.match(/^\/replies\/([0-9a-f-]{36})\/(send|suggest)$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const id = m[1]!;
+      if (m[2] === "send") {
+        const out = await sendAnswer(id, { text: form.get("text") ?? "", subject: form.get("subject") ?? "" }, op.displayName);
+        replyNotices.set(id, { kind: out.status, detail: out.ok ? null : out.message, at: out.scheduledFor ?? null });
+      } else {
+        const err = await saveSuggestion(
+          id,
+          { text: form.get("text") ?? "", subject: form.get("subject") ?? "", basis: form.get("basis") ?? "" },
+          op.displayName,
+        );
+        replyNotices.set(id, err ? { kind: "failed", detail: err, at: null } : { kind: "suggested", detail: null, at: null });
+      }
+      resetNavCountsCache();
+      const all = form.get("f") === "all" ? "&replies=all" : "";
+      return redirect(res, `/?reply=${id}${all}#replies`);
+    }
+  }
+  // GET /replies/<id>/suggestion — the editor's poll while the operator writes their own
+  // answer: Poe's suggestion as JSON once it lands (README ⑥ — OFFERED, never written over).
+  {
+    const m = method === "GET" ? path.match(/^\/replies\/([0-9a-f-]{36})\/suggestion$/) : null;
+    if (m) {
+      const s = await getReplySuggestion(m[1]!);
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify(s ? { text: s.text, subject: s.subject } : null));
+      return;
+    }
+  }
   // GET / — Irányítópult; GET /hub/<id> — a module's own dashboard (linear-shell README ④⑤).
   // Both render from ONE data object, so a number on the home and on the module page
   // can never disagree.
@@ -1440,6 +1492,10 @@ async function handle(
       repliesQuery: {
         filter: url.searchParams.get("replies") === "all" ? "all" : "open",
         reply: url.searchParams.get("reply"),
+        notice: takeReplyNotice(url.searchParams.get("reply")),
+        // Poe's suggestion form shows only to the copy curator's own account — the
+        // operator's screen stays the approved plan (ADR-XXXX).
+        suggestForm: op?.username === POE_USERNAME,
       },
     };
     if (path === "/") return send(res, 200, dashboardPage(data));

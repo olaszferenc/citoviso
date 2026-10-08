@@ -100,7 +100,8 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
-import type { RepliesBlock, ReplyView } from "../replies/store.js";
+import type { RepliesBlock, ReplySendView, ReplyView } from "../replies/store.js";
+import { SMS_MAX_PARTS, smsParts } from "../replies/answerRules.js";
 import { displayPhone } from "../tenant/contact.js";
 import { copyEditPill, mockCopyEditBlock, mockCopyEditScript, scriptJson } from "./copyEditViews.js";
 import { curatorForm, curatorPill, sourcePackPane } from "./curatorViews.js";
@@ -8883,6 +8884,17 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
 export interface RepliesQuery {
   readonly filter: "open" | "all";
   readonly reply: string | null;
+  /** The one-shot outcome of the last „Elküldöm” / suggestion on `reply` (shown as a toast). */
+  readonly notice?: ReplyNotice | null;
+  /** Poe's suggestion form — only on the copy curator's own account (ADR-XXXX). */
+  readonly suggestForm?: boolean;
+}
+
+/** What the redirect after a send / suggestion tells the operator (ADR-XXXX). */
+export interface ReplyNotice {
+  readonly kind: "scheduled" | "queued" | "sent" | "failed" | "suggested";
+  readonly detail: string | null;
+  readonly at: Date | null;
 }
 
 const REPLIES_STALE_MS = 10 * 60_000;
@@ -8933,13 +8945,166 @@ function repliesFreshness(b: RepliesBlock, lang: string, now: Date): string {
   );
 }
 
+/** A FUTURE moment, the way the queue line says it: „ma 9:00” / „holnap 9:00” / „hétfő 9:00”. */
+function whenAhead(d: Date, lang: string, now: Date = new Date()): string {
+  const day = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(x);
+  const time = new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest", hour: "numeric", minute: "2-digit" }).format(d);
+  if (day(d) === day(now)) return T(lang, "ma {t}", { t: time });
+  if (day(d) === day(new Date(now.getTime() + 86_400_000))) return T(lang, "holnap {t}", { t: time });
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Budapest", weekday: "short" }).format(d);
+  const names: Record<string, string> = {
+    Mon: T(lang, "hétfő"),
+    Tue: T(lang, "kedd"),
+    Wed: T(lang, "szerda"),
+    Thu: T(lang, "csütörtök"),
+    Fri: T(lang, "péntek"),
+    Sat: T(lang, "szombat"),
+    Sun: T(lang, "vasárnap"),
+  };
+  return `${names[wd] ?? wd} ${time}`;
+}
+
+/** „SMS” / „E-mail” chip of the answer box. */
+function repChan(ch: "sms" | "email", lang: string): string {
+  return `<span class="con-rep__ch">${ic(ch === "sms" ? "sms" : "mail", 13)}${esc(ch === "sms" ? "SMS" : T(lang, "E-mail"))}</span>`;
+}
+
+/** The address line under the box head: number + parts (SMS) or address + „subject” (e-mail). */
+function repAddr(r: ReplyView, text: string, subject: string | null, lang: string): string {
+  const to = r.channel === "sms" ? displayPhone(r.sender) : r.sender;
+  const tail = r.channel === "sms" ? T(lang, "{n} SMS-rész", { n: smsParts(text) }) : `„${subject ?? ""}”`;
+  return `<div class="con-rep__row">${repChan(r.channel, lang)}<span class="con-rep__hint">${esc(to)} · ${esc(tail)}</span></div>`;
+}
+
+/** The send's state line (README ⑦ / ⑦b). */
+function repState(x: ReplySendView, r: ReplyView, hidden: string, lang: string): string {
+  if (x.status === "scheduled")
+    return `<span class="con-rep__st is-q">${icf("clock", 13)}${esc(T(lang, "Sorban — {when} megy ki", { when: x.scheduledFor ? whenAhead(x.scheduledFor, lang) : "—" }))}</span>`;
+  if (x.status === "queued") return `<span class="con-rep__st is-q"><span class="con-rep__spin"></span>${esc(T(lang, "Sorban — a modem-sáv viszi ki"))}</span>`;
+  if (x.status === "failed")
+    return (
+      `<span class="con-rep__st is-err">${icf("alert", 13)}${esc(T(lang, "Nem ment ki: {why}", { why: x.error ?? "—" }))}</span>` +
+      `<form method="post" action="/replies/${esc(r.id)}/send">${hidden}<input type="hidden" name="text" value="${esc(x.body)}">` +
+      `<input type="hidden" name="subject" value="${esc(x.subject ?? "")}"><button type="submit" class="con-btn">${esc(T(lang, "Újraküldés"))}</button></form>`
+    );
+  return "";
+}
+
+/** „Javasolt válasz” head: author · szövegkurátor · time, then the „mire alapozott” chips. */
+function repSugHead(r: ReplyView, lang: string): string {
+  const s = r.suggestion!;
+  return (
+    `<div class="con-rep__sh"><b>${esc(T(lang, "Javasolt válasz"))}</b><span class="con-rep__mut">${esc(s.by)} · ${esc(T(lang, "szövegkurátor"))} · ${esc(whenShort(s.at.toISOString(), lang))}</span>` +
+    `<span class="con-rep__tag is-wait" data-rep-edited hidden>${esc(T(lang, "átírva"))}</span></div>` +
+    (s.basis.length ? `<div class="con-rep__basis" title="${esc(T(lang, "Mire alapozott"))}">${s.basis.map((b) => `<span>${esc(b)}</span>`).join("")}</div>` : "")
+  );
+}
+
+/**
+ * The answer under the conversation (ADR-XXXX, plan valaszok-valasz A): Poe's draft bubble
+ * with „Elküldöm” / „Szerkesztem”, the „készül” box with „Megírom magam” while he writes,
+ * the in-place editor, the queue / error line, and Poe's own form on his account.
+ */
+function replyAnswer(r: ReplyView, q: RepliesQuery, hidden: string, lang: string): string {
+  const latest = r.sends[0] ?? null;
+  const sent = r.sends.filter((x) => x.status === "sent").reverse();
+  const bubbles = sent
+    .map((x) => {
+      const via = x.channel === "sms" ? `SMS · ${T(lang, "{n} rész", { n: x.parts ?? smsParts(x.body) })}` : `${T(lang, "E-mail")} · „${x.subject ?? ""}”`;
+      return `<div class="con-rep__bub is-sent"><span class="con-rep__lbl">${esc(T(lang, "Elküldött válasz"))} · ${esc(via)} · ${esc(whenShort((x.sentAt ?? x.createdAt).toISOString(), lang))} · ${esc(x.by)}</span>${esc(x.body)}</div>`;
+    })
+    .join("");
+  const poe = q.suggestForm ? repPoeForm(r, hidden, lang) : "";
+  // A send that went out and is still marked answered closes the composer; „Visszavonás”
+  // (only the mark) opens it again for a follow-up.
+  if (sent.length && r.answeredAt) return bubbles + poe;
+  if (latest && (latest.status === "scheduled" || latest.status === "queued")) {
+    return (
+      bubbles +
+      `<div class="con-rep__sug is-solid"><div class="con-rep__sh"><b>${esc(T(lang, "Válasz a sorban"))}</b><span class="con-rep__mut">${esc(latest.by)}</span></div>` +
+      repAddr(r, latest.body, latest.subject, lang) +
+      `<p class="con-rep__txt">${esc(latest.body)}</p><div class="con-rep__row">${repState(latest, r, hidden, lang)}</div></div>` +
+      poe
+    );
+  }
+  const failed = latest?.status === "failed" ? latest : null;
+  const sug = r.suggestion;
+  const base = failed ? failed.body : (sug?.text ?? "");
+  const subj = r.channel === "email" ? (failed?.subject ?? sug?.subject ?? replySubjectOf(r)) : null;
+  const subjIn = subj !== null ? `<input type="hidden" name="subject" value="${esc(subj)}">` : "";
+  const head = sug ? repSugHead(r, lang) : `<div class="con-rep__sh"><b>${esc(T(lang, "Saját válasz"))}</b></div>`;
+  const view = base
+    ? `<div class="con-rep__sug" data-rep-view="${esc(r.id)}">${head}${repAddr(r, base, subj, lang)}<p class="con-rep__txt">${esc(base)}</p>` +
+      `<div class="con-rep__row"><form method="post" action="/replies/${esc(r.id)}/send">${hidden}<input type="hidden" name="text" value="${esc(base)}">${subjIn}` +
+      `<button type="submit" class="con-rep__send">${icf("send", 13)}${esc(T(lang, "Elküldöm"))}</button></form>` +
+      `<button type="button" class="con-btn" data-rep-edit="${esc(r.id)}">${icf("pen", 13)}${esc(T(lang, "Szerkesztem"))}</button>` +
+      `${failed ? repState(failed, r, hidden, lang) : ""}</div></div>`
+    : sent.length
+    ? // Already answered from here, the mark undone: a follow-up is the operator's own text.
+      `<div class="con-rep__row" data-rep-view="${esc(r.id)}"><button type="button" class="con-btn" data-rep-own="${esc(r.id)}">${icf("pen", 13)}${esc(T(lang, "Megírom magam"))}</button></div>`
+    : `<div class="con-rep__sug is-wait" data-rep-view="${esc(r.id)}"><div class="con-rep__sh"><b>${esc(T(lang, "Javasolt válasz"))}</b><span class="con-rep__tag is-wait">${esc(T(lang, "készül"))}</span></div>` +
+      `<p class="con-rep__hint con-rep__p1">${esc(T(lang, "Poe dolgozik rajta ({t} óta). Ha nem vársz rá, írd meg te.", { t: whenShort(r.receivedAt.toISOString(), lang) }))}</p>` +
+      `<div class="con-rep__row"><button type="button" class="con-btn" data-rep-own="${esc(r.id)}">${icf("pen", 13)}${esc(T(lang, "Megírom magam"))}</button></div></div>`;
+  const to = r.channel === "sms" ? displayPhone(r.sender) : r.sender;
+  const editor =
+    `<form class="con-rep__sug is-solid" method="post" action="/replies/${esc(r.id)}/send" data-rep-ed="${esc(r.id)}" data-ch="${r.channel}"` +
+    ` data-sug="${esc(sug?.text ?? "")}" data-sugsub="${esc(sug?.subject ?? "")}" hidden>${hidden}` +
+    `${sug ? repSugHead(r, lang) : `<div class="con-rep__sh"><b>${esc(T(lang, "Saját válasz"))}</b>${sent.length ? "" : `<span class="con-rep__mut">${esc(T(lang, "Poe is dolgozik rajta"))}</span>`}</div>`}` +
+    `<div class="con-rep__row">${repChan(r.channel, lang)}<span class="con-rep__hint">${esc(T(lang, "ugyanazon a csatornán, ahol a válasz jött"))}</span></div>` +
+    `<div class="con-rep__fld"><label>${esc(T(lang, "Címzett"))}</label><span class="con-rep__ro">${esc(to)}</span>` +
+    (subj !== null ? `<label for="rep-subj-${esc(r.id)}">${esc(T(lang, "Tárgy"))}</label><input id="rep-subj-${esc(r.id)}" name="subject" maxlength="300" value="${esc(subj)}">` : "") +
+    `</div><textarea class="con-rep__ta" name="text" aria-label="${esc(T(lang, "Válasz szövege"))}" placeholder="${esc(T(lang, "Írd ide a választ…"))}">${esc(base)}</textarea>` +
+    `<div class="con-rep__cnt" data-rep-cnt></div>` +
+    `<div class="con-rep__arr" data-rep-arr hidden>${esc(T(lang, "Poe közben letett egy javaslatot — a te szövegedet nem írta felül."))}` +
+    `<button type="button" class="con-btn" data-rep-load>${esc(T(lang, "Betöltöm a javaslatot"))}</button></div>` +
+    `<div class="con-rep__row"><button type="submit" class="con-rep__send" data-rep-send>${icf("send", 13)}${esc(T(lang, "Elküldöm"))}</button>` +
+    `<button type="button" class="con-btn" data-rep-cancel>${esc(T(lang, "Mégse"))}</button></div></form>`;
+  return bubbles + view + editor + poe;
+}
+
+/** „Re: <subject>” of the incoming letter (or of ours when the reply had none). */
+function replySubjectOf(r: ReplyView): string {
+  const s = (r.subject ?? r.oursSubject ?? "").trim();
+  return /^re:/i.test(s) ? s : `Re: ${s}`.trim();
+}
+
+/** Poe's suggestion form — a plain POST with his own account (ADR-0329 ④ pattern). */
+function repPoeForm(r: ReplyView, hidden: string, lang: string): string {
+  const s = r.suggestion;
+  return (
+    `<details class="con-rep__poe"><summary>${esc(T(lang, "Javaslat letétele (Poe)"))}</summary>` +
+    `<form method="post" action="/replies/${esc(r.id)}/suggest">${hidden}` +
+    `<label>${esc(T(lang, "A javasolt válasz szövege"))}<textarea name="text" class="con-rep__ta" required>${esc(s?.text ?? "")}</textarea></label>` +
+    (r.channel === "email" ? `<label>${esc(T(lang, "Tárgy"))}<input name="subject" maxlength="300" value="${esc(s?.subject ?? replySubjectOf(r))}"></label>` : "") +
+    `<label>${esc(T(lang, "Mire alapozott (soronként egy)"))}<textarea name="basis" rows="3">${esc((s?.basis ?? []).join("\n"))}</textarea></label>` +
+    `<button type="submit" class="con-btn">${esc(T(lang, "Javaslat letétele"))}</button></form></details>`
+  );
+}
+
+/** The toast after the redirect of a send / suggestion (README ⑧ wording). */
+function replyToast(r: ReplyView | null, n: ReplyNotice | null | undefined, lang: string): string {
+  if (!r || !n) return "";
+  const text =
+    n.kind === "sent"
+      ? T(lang, "Kiment — {lead} · megválaszoltnak jelölve", { lead: r.leadName })
+      : n.kind === "queued"
+        ? T(lang, "Sorban — a modem-sáv viszi ki · {lead}", { lead: r.leadName })
+        : n.kind === "scheduled"
+          ? T(lang, "Sorba állítva — {when} megy ki · {lead}", { when: n.at ? whenAhead(n.at, lang) : "—", lead: r.leadName })
+          : n.kind === "suggested"
+            ? T(lang, "Javaslat letéve — {lead}", { lead: r.leadName })
+            : `${T(lang, "Nem ment ki — a tétel megválaszolatlan maradt")}${n.detail ? ` · ${n.detail}` : ""}`;
+  return `<div class="con-rep__toast${n.kind === "failed" ? " is-err" : ""}" role="status" data-rep-toast>${esc(text)}</div>`;
+}
+
 function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: string): string {
   const pill = r.answeredAt
     ? `<span class="con-rep__pill is-done">${icf("check", 12)}${esc(T(lang, "Megválaszolva"))}</span>`
     : `<span class="con-rep__pill is-open">${esc(T(lang, "Megválaszolatlan"))}</span>`;
   const hidden = `<input type="hidden" name="f" value="${q.filter}" data-rep-fin>`;
   const acts = r.answeredAt
-    ? `<span class="con-rep__meta">${esc(T(lang, "Megválaszolta: {who} · {at}", { who: r.answeredBy ?? "—", at: whenShort(r.answeredAt.toISOString(), lang) }))} · ` +
+    ? `<span class="con-rep__meta">${esc(T(lang, "Megválaszolta: {who} · {at}", { who: r.answeredBy ?? "—", at: whenShort(r.answeredAt.toISOString(), lang) }))}` +
+      `${r.sends.some((x) => x.status === "sent") ? ` ${esc(T(lang, "(elküldött válasz)"))}` : ""} · ` +
       `<form method="post" action="/replies/${esc(r.id)}/undo">${hidden}<button type="submit" class="ghost con-rep__undo">${esc(T(lang, "Visszavonás"))}</button></form></span>`
     : `<form method="post" action="/replies/${esc(r.id)}/answered">${hidden}<button type="submit" class="con-rep__do">${icf("check", 13)}${esc(T(lang, "Megválaszoltam"))}</button></form>`;
   return (
@@ -8949,9 +9114,20 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
     `<span class="con-rep__who">${esc([r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
     `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
     `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>` +
+    replyAnswer(r, q, hidden, lang) +
     `<div class="con-rep__acts">${acts}<a class="con-btn" href="/lead/${esc(r.leadId)}">${esc(T(lang, "Lead lapja"))}${icf("fwd", 13)}</a></div>` +
     `</div>`
   );
+}
+
+/** README ⑨: „Javaslat kész” / „Javaslatra vár” on the open rows, „Válasz elküldve” on the sent ones. */
+function replyListTag(r: ReplyView, lang: string): string {
+  if (r.sends.some((x) => x.status === "sent") && (r.answeredAt || !r.suggestion))
+    return `<span class="con-rep__tags"><span class="con-rep__tag is-sent">${icf("check", 11)}${esc(T(lang, "Válasz elküldve"))}</span></span>`;
+  if (r.answeredAt) return "";
+  return r.suggestion
+    ? `<span class="con-rep__tags"><span class="con-rep__tag is-sug">${icf("pen", 11)}${esc(T(lang, "Javaslat kész"))}</span></span>`
+    : `<span class="con-rep__tags"><span class="con-rep__tag is-wait">${esc(T(lang, "Javaslatra vár"))}</span></span>`;
 }
 
 /** The „Válaszok a megkeresésekre" block at the top of the home (README ①–⑧). */
@@ -8975,7 +9151,7 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
         `${sel?.id === r.id ? ' aria-current="true"' : ""}${visible(r) ? "" : " hidden"}>` +
         `<span class="con-rep__d"></span><span class="con-rep__nm">${esc(r.leadName)}</span>` +
         `<span class="con-rep__when"><span class="con-rep__ch">${ic(r.channel === "sms" ? "sms" : "mail", 13)}${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))}</span>${esc(whenShort(r.receivedAt.toISOString(), lang, now))}</span>` +
-        `<span class="con-rep__ex">${esc(first)}</span></a>`
+        `<span class="con-rep__ex">${esc(first)}</span>${replyListTag(r, lang)}</a>`
       );
     })
     .join("");
@@ -8983,7 +9159,7 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
     ? `<span class="con-rep__badge" data-rep-badge>${esc(T(lang, "{n} megválaszolatlan", { n: b.open }))}</span>`
     : `<span class="con-rep__badge is-zero" data-rep-badge>${esc(T(lang, "mind megválaszolva"))}</span>`;
   return (
-    `<section class="con-rep" id="replies" data-replies data-filter="${q.filter}">` +
+    `<section class="con-rep" id="replies" data-replies data-filter="${q.filter}" data-rep-l="${esc(JSON.stringify(replyEditorLabels(lang)))}">` +
     `<div class="con-rep__h"><span class="con-rep__t">${ic("sms", 16)}${esc(T(lang, "Válaszok a megkeresésekre"))} ${badge}</span>` +
     `<span class="con-rep__chips">${chip("open", `${T(lang, "Megválaszolatlan")} ${b.open}`)}${chip("all", `${T(lang, "Mind")} ${b.total}`)}</span>` +
     repliesFreshness(b, lang, now) +
@@ -8992,10 +9168,58 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
     `<div class="con-rep__list">${items}<div class="con-rep__empty" data-rep-empty${anyVisible ? " hidden" : ""}>${esc(emptyText)}</div></div>` +
     `<div class="con-rep__det">${all.map((r) => replyPanel(r, q, sel?.id === r.id, lang)).join("")}` +
     `<div class="con-rep__empty" data-rep-none${sel ? " hidden" : ""}>${esc(T(lang, "Nincs megválaszolatlan válasz."))}</div></div>` +
-    `</div></section>` +
-    REPLIES_JS
+    `</div>${replyToast(sel, q.notice, lang)}</section>` +
+    REPLIES_JS +
+    REPLY_EDITOR_JS
   );
 }
+
+/** The editor script's words — from the server, so the i18n catalog owns them (§B.18). */
+function replyEditorLabels(lang: string): Record<string, string> {
+  return {
+    count: T(lang, "{n} karakter · {p} SMS-rész"),
+    one: T(lang, "(max. 70 karakter)"),
+    many: T(lang, "(67 karakter/rész)"),
+    uni: T(lang, "Ékezetes szöveg: mindig unicode SMS"),
+    over: T(lang, "{max} résznél hosszabb — rövidíts", { max: SMS_MAX_PARTS }),
+    mail: T(lang, "A beérkezett levél szálában megy (Re:)."),
+  };
+}
+
+/**
+ * The in-place editor (README ④⑤⑥): „Szerkesztem” / „Megírom magam” open it, „Mégse”
+ * closes it; the live SMS counter disables „Elküldöm” past 5 parts or on empty text; the
+ * draft survives a reload (sessionStorage); while the operator writes without a suggestion
+ * it asks the server every 30 s, and a landed one is OFFERED („Betöltöm a javaslatot”),
+ * never written over the operator's text. The server re-checks everything (answerTextError).
+ */
+const REPLY_EDITOR_JS =
+  `<script>(function(){var R=document.querySelector('[data-replies]');if(!R)return;var L={};try{L=JSON.parse(R.getAttribute('data-rep-l')||'{}')}catch(x){}` +
+  `var MAX=${SMS_MAX_PARTS};function parts(t){var n=Array.from(t).length;return n===0?0:n<=70?1:Math.ceil(n/67)}` +
+  `function key(f){return 'rep-draft:'+f.getAttribute('data-rep-ed')}` +
+  `function store(f,v){try{if(v===null)sessionStorage.removeItem(key(f));else sessionStorage.setItem(key(f),v)}catch(x){}}` +
+  `function load(f){try{return sessionStorage.getItem(key(f))}catch(x){return null}}` +
+  `function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}` +
+  `function upd(f){var t=f.querySelector('textarea[name=text]').value,c=f.querySelector('[data-rep-cnt]'),ok=t.trim().length>0;` +
+  `if(f.getAttribute('data-ch')==='sms'){var n=Array.from(t).length,p=parts(t),over=p>MAX;if(over)ok=false;` +
+  `c.innerHTML='<span>'+esc(L.count||'').replace('{n}','<b>'+n+'</b>').replace('{p}','<b'+(over?' class="is-over"':'')+'>'+p+'</b>')+' '+esc(p>1?L.many:L.one)+'</span><span'+(over?' class="is-over"':'')+'>'+esc(over?L.over:L.uni)+'</span>'}` +
+  `else c.innerHTML='<span>'+esc(L.mail||'')+'</span>';f.querySelector('[data-rep-send]').disabled=!ok;` +
+  `var e=f.querySelector('[data-rep-edited]'),s=f.getAttribute('data-sug');if(e)e.hidden=!s||t===s}` +
+  `function poll(f){if(f._poll||f.getAttribute('data-sug'))return;var id=f.getAttribute('data-rep-ed');f._poll=setInterval(function(){if(f.hidden){clearInterval(f._poll);f._poll=null;return}` +
+  `fetch('/replies/'+id+'/suggestion',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j||!j.text)return;clearInterval(f._poll);f._poll=null;` +
+  `f.setAttribute('data-sug',j.text);f.setAttribute('data-sugsub',j.subject||'');f.querySelector('[data-rep-arr]').hidden=false}).catch(function(){})},30000)}` +
+  `function open(id,own){var f=R.querySelector('[data-rep-ed="'+id+'"]'),v=R.querySelector('[data-rep-view="'+id+'"]');if(!f)return null;` +
+  `var ta=f.querySelector('textarea[name=text]');if(own)ta.value='';f.hidden=false;if(v)v.hidden=true;upd(f);if(own||!f.getAttribute('data-sug'))poll(f);return f}` +
+  `R.addEventListener('click',function(e){var t=e.target.closest('[data-rep-edit],[data-rep-own],[data-rep-cancel],[data-rep-load]');if(!t)return;` +
+  `if(t.hasAttribute('data-rep-edit')||t.hasAttribute('data-rep-own')){var f=open(t.getAttribute('data-rep-edit')||t.getAttribute('data-rep-own'),t.hasAttribute('data-rep-own'));if(f)f.querySelector('textarea[name=text]').focus();return}` +
+  `var f=t.closest('[data-rep-ed]');if(!f)return;var ta=f.querySelector('textarea[name=text]');` +
+  `if(t.hasAttribute('data-rep-cancel')){ta.value=ta.defaultValue;var sj=f.querySelector('input[name=subject]');if(sj)sj.value=sj.defaultValue;store(f,null);f.hidden=true;f.querySelector('[data-rep-arr]').hidden=true;` +
+  `var v=R.querySelector('[data-rep-view="'+f.getAttribute('data-rep-ed')+'"]');if(v)v.hidden=false;return}` +
+  `ta.value=f.getAttribute('data-sug')||'';var sj2=f.querySelector('input[name=subject]');if(sj2&&f.getAttribute('data-sugsub'))sj2.value=f.getAttribute('data-sugsub');f.querySelector('[data-rep-arr]').hidden=true;store(f,ta.value);upd(f)});` +
+  `R.addEventListener('input',function(e){var f=e.target.closest&&e.target.closest('[data-rep-ed]');if(!f||e.target.name!=='text')return;store(f,e.target.value);upd(f)});` +
+  `R.addEventListener('submit',function(e){var f=e.target.closest('[data-rep-ed]');if(f)store(f,null)});` +
+  `[].slice.call(R.querySelectorAll('[data-rep-ed]')).forEach(function(f){var d=load(f);if(d!==null&&d!==f.querySelector('textarea[name=text]').defaultValue){var g=open(f.getAttribute('data-rep-ed'),false);if(g)g.querySelector('textarea[name=text]').value=d;upd(f)}});` +
+  `var T=R.querySelector('[data-rep-toast]');if(T)setTimeout(function(){T.hidden=true},5000)})();</script>`;
 
 /** Speeds the block up in place (filter, select, back); every action also works as a plain link. */
 const REPLIES_JS =

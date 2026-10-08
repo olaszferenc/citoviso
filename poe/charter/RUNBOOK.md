@@ -107,6 +107,28 @@ Nyisd meg a kész mockot **mobil és asztali** szélességben. Olvasd végig ven
 
 A jegyet a `beerkezo/`-ban jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.
 
+## 6b. Válasz-javaslat (ADR-XXXX)
+
+Ha egy megkeresett szállásadó VÁLASZOL (SMS vagy e-mail), a gyűjtő jegyet ír a
+`~/poe/beerkezo/`-ba: `ÉÉÉÉ-HH-NN-<lead8>-valasz-<válasz8>.md`. Benne: a lead neve, a válasz
+konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
+
+1. Nyisd meg a jegy linkjét: a konzol irányítópultján a beszélgetés nyílik (a mi üzenetünk és a
+   válasz). Olvasd el mindkettőt — a hangnemet a válaszhoz igazítod.
+2. Írd meg a választ:
+   - **Forrás nélkül tényt nem.** Ami a lead Forrás-csomagjában és a beszélgetésben nincs, az nem
+     kerül bele.
+   - **Árat CSAK az élő árlistából** (a konzol árazás-lapja) — soha emlékezetből, soha régi jegyből.
+   - **SMS:** rövid, legfeljebb 5 rész (a konzol számolja), aláírás: „A Citoviso csapata”.
+   - **E-mail:** a tárgy „Re: …” marad, aláírás: „Üdvözlettel,” + a márka-aláírás (ahogy a mi
+     korábbi levelünk alján látod). Személynév aláírásként soha.
+   - Magázol, a ház nevében beszélsz.
+3. Tedd le a konzolon, a beszélgetés alatti lenyíló javaslat-űrlapon (csak a `poe` fióknak
+   látszik): szöveg, e-mailnél tárgy, és soronként, mire alapoztad (pl. „árazás: élő árlista”).
+   Újabb letétel felülírja az előzőt.
+4. ⛔ **KÜLDENI TILOS.** A küldés az operátoré (ADR-0325): ő olvassa el, javítja, és ő küldi.
+5. A jegyet jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.
+
 ## 7. Nap vége
 
 - Jelentés a `~/poe/jelentesek/ÉÉÉÉ-HH-NN.md`-be: hány jegy, hány generálás, hány első-PASS,

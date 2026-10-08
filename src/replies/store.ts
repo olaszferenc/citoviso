@@ -14,6 +14,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { normalizePhone } from "../text/phone.js";
 import { leadEmails } from "../email/leadEmails.js";
+import { settleReplySends } from "./answer.js";
 
 export type ReplyChannel = "sms" | "email";
 
@@ -236,6 +237,33 @@ export interface ReplyView {
   readonly sentSms: boolean;
   readonly answeredAt: Date | null;
   readonly answeredBy: string | null;
+  /** Poe's „Javasolt válasz” (ADR-XXXX), or null while it is still being written. */
+  readonly suggestion: ReplySuggestion | null;
+  /** The operator's sends on this reply, newest first (a failure, then its „Újraküldés”). */
+  readonly sends: readonly ReplySendView[];
+}
+
+export interface ReplySuggestion {
+  readonly text: string;
+  readonly subject: string | null;
+  readonly by: string;
+  readonly at: Date;
+  readonly basis: readonly string[];
+}
+
+export interface ReplySendView {
+  readonly id: string;
+  readonly channel: ReplyChannel;
+  readonly to: string;
+  readonly subject: string | null;
+  readonly body: string;
+  readonly status: "scheduled" | "queued" | "sent" | "failed";
+  readonly scheduledFor: Date | null;
+  readonly by: string;
+  readonly parts: number | null;
+  readonly error: string | null;
+  readonly createdAt: Date;
+  readonly sentAt: Date | null;
 }
 
 export interface RepliesBlock {
@@ -260,6 +288,8 @@ export function placeOf(address: string | null | undefined): string | null {
 
 /** Everything the dashboard block needs, newest first (the open/all filter is client-side). */
 export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
+  // Scheduled answers whose window opened go out, queued SMS follow their outbox row.
+  await settleReplySends();
   const [rows, polls, all] = await Promise.all([
     db
       .selectFrom("outreach_reply as r")
@@ -285,6 +315,11 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         "p.sms_sent_at",
         "r.answered_at",
         "r.answered_by",
+        "r.suggestion_text",
+        "r.suggestion_subject",
+        "r.suggestion_by",
+        "r.suggestion_at",
+        "r.suggestion_basis",
       ])
       .orderBy("r.received_at", "desc")
       .limit(limit)
@@ -292,6 +327,14 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     db.selectFrom("outreach_reply_poll").selectAll().execute(),
     db.selectFrom("outreach_reply").select(db.fn.countAll().as("n")).executeTakeFirst(),
   ]);
+  const sendRows = rows.length
+    ? await db
+        .selectFrom("outreach_reply_send")
+        .selectAll()
+        .where("reply_id", "in", rows.map((r) => r.id))
+        .orderBy("created_at", "desc")
+        .execute()
+    : [];
   const replies: ReplyView[] = rows.map((r) => ({
     id: r.id,
     channel: r.channel,
@@ -314,6 +357,26 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     sentSms: !!r.sms_sent_at,
     answeredAt: r.answered_at ? new Date(r.answered_at) : null,
     answeredBy: r.answered_by,
+    suggestion:
+      r.suggestion_text && r.suggestion_at
+        ? { text: r.suggestion_text, subject: r.suggestion_subject, by: r.suggestion_by ?? "Poe", at: new Date(r.suggestion_at), basis: r.suggestion_basis ?? [] }
+        : null,
+    sends: sendRows
+      .filter((x) => x.reply_id === r.id)
+      .map((x) => ({
+        id: x.id,
+        channel: x.channel,
+        to: x.to_addr,
+        subject: x.subject,
+        body: x.body,
+        status: x.status,
+        scheduledFor: x.scheduled_for ? new Date(x.scheduled_for) : null,
+        by: x.sent_by,
+        parts: x.parts,
+        error: x.error,
+        createdAt: new Date(x.created_at as unknown as Date),
+        sentAt: x.sent_at ? new Date(x.sent_at) : null,
+      })),
   }));
   const at = (ch: ReplyChannel) => {
     const p = polls.find((x) => x.channel === ch);
@@ -328,8 +391,47 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
   };
 }
 
+/** Open replies Poe has not suggested an answer for yet — the collector writes his ticket
+ *  for each (once: it skips a ticket file that already exists). ADR-XXXX. */
+export async function repliesNeedingSuggestion(): Promise<
+  readonly { readonly id: string; readonly lead: string; readonly leadId: string; readonly channel: ReplyChannel; readonly sender: string; readonly body: string; readonly receivedAt: string }[]
+> {
+  const rows = await db
+    .selectFrom("outreach_reply as r")
+    .innerJoin("lead as l", "l.id", "r.lead_id")
+    .select(["r.id", "l.name as lead", "r.lead_id", "r.channel", "r.sender", "r.body", "r.received_at"])
+    .where("r.answered_at", "is", null)
+    .where("r.suggestion_text", "is", null)
+    // A reply already answered from the dashboard needs no ticket after a „Visszavonás”.
+    .where(({ not, exists, selectFrom }) => not(exists(selectFrom("outreach_reply_send as s").select("s.id").whereRef("s.reply_id", "=", "r.id").where("s.status", "=", "sent"))))
+    .where("r.received_at", ">", sql<Date>`now() - interval '14 days'`)
+    .orderBy("r.received_at")
+    .limit(20)
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    lead: r.lead,
+    leadId: r.lead_id,
+    channel: r.channel,
+    sender: r.sender,
+    body: r.body,
+    receivedAt: new Date(r.received_at as unknown as Date).toISOString(),
+  }));
+}
+
+/** Poe's current suggestion on one reply (the editor's poll), or null while there is none. */
+export async function getReplySuggestion(id: string): Promise<{ readonly text: string; readonly subject: string | null } | null> {
+  const r = await db
+    .selectFrom("outreach_reply")
+    .select(["suggestion_text", "suggestion_subject"])
+    .where("id", "=", id)
+    .executeTakeFirst();
+  return r?.suggestion_text ? { text: r.suggestion_text, subject: r.suggestion_subject } : null;
+}
+
 /** Open replies count — the sidebar / attention-row number. */
 export async function countOpenReplies(): Promise<number> {
+  await settleReplySends();
   const r = await db.selectFrom("outreach_reply").select(db.fn.countAll().as("n")).where("answered_at", "is", null).executeTakeFirst();
   return Number(r?.n ?? 0);
 }

@@ -45,6 +45,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/modules.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/moduleConfig.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/domains.ts": "adat-regiszter (domain-ajánló szótöve) — nem levél-szöveg",
+  // ADR-XXXX: the dashboard answer. The letter's subject and body are the OPERATOR's own
+  // text (typed or Poe's suggestion, in the lead's language) — nothing is composed here;
+  // the Hungarian literals are operator-facing outcomes / validation messages.
+  "src/replies/answer.ts": "operátor írta levél-szöveg; a magyar literálok operátori hiba-/állapot-üzenetek",
+  "src/replies/answerRules.ts": "operátori validációs üzenetek; a levélbe nem kerül komponált szöveg",
   // ADR-0287: az eszkalációs emlékeztető (escalationFollowup.ts) innen veszi a küldési
   // ablak ÓRÁIT és a budapesti falióra-számítást. A fájl magyar literáljai operátori/relé
   // napló-okok (mmsPullBlocks) — levélbe egyik sem kerül.

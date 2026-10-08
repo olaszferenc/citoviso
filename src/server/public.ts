@@ -3698,7 +3698,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
     // The collector batches 40 replies (≤ 8 KB text + ≤ 2 KB ours each): 64 KB is too tight.
     const b = await readJsonBody(req, 1_000_000);
-    const { ingestReplies, markAutoAnswered } = await import("../replies/store.js");
+    const { ingestReplies, markAutoAnswered, repliesNeedingSuggestion } = await import("../replies/store.js");
     const items = (Array.isArray(b.items) ? b.items : []) as Parameters<typeof ingestReplies>[0];
     const checked = (Array.isArray(b.checked) ? b.checked : []).filter((c): c is "sms" | "email" => c === "sms" || c === "email");
     const answered = (Array.isArray(b.answered) ? b.answered : []).map((a) => {
@@ -3706,7 +3706,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return { key: String(o.key ?? ""), at: String(o.at ?? "") };
     });
     const r = await ingestReplies(items, checked);
-    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: await markAutoAnswered(answered) });
+    const auto = await markAutoAnswered(answered);
+    // ADR-XXXX: the once-a-minute collector call is also the clock of the dashboard
+    // answers — scheduled ones leave when the window opens, queued SMS settle — and it
+    // carries back the replies Poe still owes a suggestion for (his tickets).
+    const { settleReplySends, replyConsoleUrl } = await import("../replies/answer.js");
+    await settleReplySends();
+    // The ticket's link: this host knows its console only when CONSOLE_URL is set — else
+    // the collector falls back to its own REPLIES_CONSOLE_URL.
+    const needsSuggestion = (await repliesNeedingSuggestion()).map((n) => ({ ...n, url: config.consoleUrl ? replyConsoleUrl(n.id) : null }));
+    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: auto, needsSuggestion });
   }
 
   // ── ADR-0282 MMS-relay API: the same Debian-box modem, the same bearer secret. ──

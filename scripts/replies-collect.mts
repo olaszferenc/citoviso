@@ -16,6 +16,11 @@
 //   REPLIES_IMAP_URL > REGISTRY_IMAP_URL > SMTP_URL — the mailbox (--email).
 // A failed POST leaves the state untouched: the next tick re-sends the same batch.
 //
+// Poe's tickets (ADR-XXXX): the ingest answer lists the open replies that still have no
+// suggestion; for each, ONE ticket file goes to ~/poe/beerkezo/ (never rewritten — a file
+// that exists is skipped). The link is the server's own console URL when it knows it,
+// else REPLIES_CONSOLE_URL (default: the prod console).
+//
 //   tsx scripts/replies-collect.mts --sms|--email [--dry]
 
 import { createHash } from "node:crypto";
@@ -56,16 +61,28 @@ interface Item {
   ours?: { at?: string | null; subject?: string | null; text?: string | null } | null;
 }
 
+interface NeedsSuggestion {
+  id: string;
+  lead: string;
+  leadId: string;
+  channel: "sms" | "email";
+  sender: string;
+  body: string;
+  receivedAt: string;
+  url?: string | null;
+}
+
 interface IngestReply {
   accepted: string[];
   dropped: number;
   answered: number;
+  needsSuggestion: NeedsSuggestion[];
 }
 
 async function post(body: { items: Item[]; checked: string[]; answered?: { key: string; at: string }[] }): Promise<IngestReply> {
   if (DRY) {
     console.log(JSON.stringify(body, null, 2));
-    return { accepted: body.items.map((i) => i.key), dropped: 0, answered: 0 };
+    return { accepted: body.items.map((i) => i.key), dropped: 0, answered: 0, needsSuggestion: [] };
   }
   const resp = await fetch(`${BASE}/api/replies/ingest`, {
     method: "POST",
@@ -74,20 +91,79 @@ async function post(body: { items: Item[]; checked: string[]; answered?: { key: 
   });
   if (!resp.ok) throw new Error(`/api/replies/ingest → HTTP ${resp.status}`);
   const r = (await resp.json()) as Partial<IngestReply>;
-  return { accepted: r.accepted ?? [], dropped: Number(r.dropped ?? 0), answered: Number(r.answered ?? 0) };
+  return {
+    accepted: r.accepted ?? [],
+    dropped: Number(r.dropped ?? 0),
+    answered: Number(r.answered ?? 0),
+    needsSuggestion: Array.isArray(r.needsSuggestion) ? r.needsSuggestion : [],
+  };
 }
 
 /** Post in batches (the endpoint's body cap); `checked` rides on the last one. */
 async function postAll(items: Item[], checked: string[], answered: { key: string; at: string }[] = []): Promise<IngestReply> {
-  const out: IngestReply = { accepted: [], dropped: 0, answered: 0 };
+  const out: IngestReply = { accepted: [], dropped: 0, answered: 0, needsSuggestion: [] };
   for (let i = 0; i < items.length || i === 0; i += BATCH) {
     const last = i + BATCH >= items.length;
     const r = await post({ items: items.slice(i, i + BATCH), checked: last ? checked : [], answered: last ? answered : [] });
     out.accepted.push(...r.accepted);
     out.dropped += r.dropped;
     out.answered += r.answered;
+    out.needsSuggestion = r.needsSuggestion;
   }
+  await writePoeTickets(out.needsSuggestion);
   return out;
+}
+
+// ── Poe's tickets ────────────────────────────────────────────────────────────────
+
+const POE_INBOX = process.env.POE_INBOX_DIR || path.join(os.homedir(), "poe", "beerkezo");
+const CONSOLE = (process.env.REPLIES_CONSOLE_URL || "https://admin.citoviso.com").replace(/\/$/, "");
+
+/** Budapest calendar day of an ISO instant, YYYY-MM-DD. */
+const bpDay = (iso: string): string => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });
+
+/** One ticket per reply that still needs a suggestion — written once, never overwritten. */
+function poeTicket(n: NeedsSuggestion, consoleBase: string): { name: string; body: string } {
+  const name = `${bpDay(n.receivedAt)}-${n.leadId.slice(0, 8)}-valasz-${n.id.slice(0, 8)}.md`;
+  const url = n.url || `${consoleBase}/?reply=${encodeURIComponent(n.id)}#replies`;
+  const ch = n.channel === "sms" ? "SMS" : "e-mail";
+  const at = new Date(n.receivedAt).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" });
+  const body =
+    `# Válasz-javaslat — ${n.lead}\n\n` +
+    `- Válasz a konzolon: ${url}\n` +
+    `- Csatorna: ${ch} · feladó: ${n.sender} · érkezett: ${at}\n\n` +
+    `## A beérkezett szöveg\n\n` +
+    n.body.split("\n").map((l) => `> ${l}`).join("\n") +
+    `\n\n## Szabályok (RUNBOOK „Válasz-javaslat”)\n\n` +
+    `- A javaslatot a konzolon, a válasz alatti lenyíló javaslat-űrlapon teszed le, a poe fiókkal. KÜLDENI TILOS — az operátor küldi.\n` +
+    `- Forrás nélkül tényt nem írsz (a lead Forrás-csomagja és a beszélgetés a forrás).\n` +
+    `- Árat CSAK az élő árlistából (a konzol árazás-lapja — pricing_config), soha emlékezetből.\n` +
+    (n.channel === "sms"
+      ? `- SMS: legfeljebb 5 rész (a konzol számolja), aláírás: „A Citoviso csapata”.\n`
+      : `- E-mail: a tárgy „Re: …”, aláírás: „Üdvözlettel,” + a megkeresés-levél márka-aláírása (konfigból — a mi korábbi levelünk alján látod).\n`) +
+    `- Magázol; személynév aláírásként soha.\n` +
+    `- A „mire alapoztam” mezőbe soronként írd, honnan vetted (pl. „árazás: élő árlista”).\n`;
+  return { name, body };
+}
+
+async function writePoeTickets(list: NeedsSuggestion[]): Promise<void> {
+  if (!list.length) return;
+  if (DRY) {
+    for (const n of list) console.log(`[replies-${MODE}] (dry) Poe-jegy: ${poeTicket(n, CONSOLE).name}`);
+    return;
+  }
+  if (!fs.existsSync(POE_INBOX)) return;
+  let made = 0;
+  for (const n of list) {
+    const t = poeTicket(n, CONSOLE);
+    try {
+      fs.writeFileSync(path.join(POE_INBOX, t.name), t.body, { flag: "wx" });
+      made++;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+  }
+  if (made) console.log(`[replies-${MODE}] ${made} új Poe-jegy a ${POE_INBOX}-ban.`);
 }
 
 function loadState<T>(file: string, empty: T): T {

@@ -20,12 +20,22 @@
 //   ⑥ the dashboard block — under „Megválaszolatlan” an answered reply is hidden, EXCEPT the
 //      one being looked at (?reply=<id>), or „Megválaszoltam” would pull the conversation and
 //      its „Visszavonás” away under the operator's finger; 0 open → „mind megválaszolva”.
+//   ⑦ answering — the pure rules (ADR-XXXX, src/replies/answerRules.ts): SMS parts at the
+//      unicode edges (70 → 1, 71 → 2, 335 → 5, 336 → 6 = refused), and the owner's weekday
+//      9–16 window holds for the answer too: Friday 16:30 → next Monday 09:00 Budapest.
+//   ⑧ the answer's life — sendAnswer outside the window is only 'scheduled' (nothing goes
+//      out); a queued SMS whose outbox row went 'sent' settles to 'sent' and marks the reply
+//      answered BY THE OPERATOR and retires the used suggestion (after a „Visszavonás” it must
+//      not stand there behind a one-tap „Elküldöm” again); a 'failed' outbox row leaves the
+//      reply OPEN (→ „Újraküldés”).
 //
 //   npx tsx scripts/outreach-reply-check.mts            (the checks)
 //   npx tsx scripts/outreach-reply-check.mts --self-test (each check must go RED on a broken input)
 //
-// ⑤ writes ONE own row (source_key 'selftest:<uuid>') against an existing lead and deletes
-// it by id in `finally`; everything else is pure.
+// ⑤ and ⑧ write own rows (source_key 'selftest:<uuid>', sms_outbox to an invalid number
+// with a final status the relay never pulls) and delete them by id in `finally`; ⑧ runs
+// on a SATURDAY clock, so neither sendAnswer nor the settle can put anything on the wire.
+// Everything else is pure.
 
 import { randomUUID } from "node:crypto";
 
@@ -36,6 +46,8 @@ import { ImapReader } from "../src/replies/imap.js";
 import { repliesBlockHtml } from "../src/console/views.js";
 import type { ReplyView, RepliesBlock } from "../src/replies/store.js";
 import { db } from "../src/db/client.js";
+import { answerTextError, nextWindowStart, smsParts, SMS_MAX_PARTS } from "../src/replies/answerRules.js";
+import { sendAnswer, settleReplySends } from "../src/replies/answer.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 
@@ -186,6 +198,8 @@ function view(id: string, answered: boolean, mins: number): ReplyView {
     sentSms: true,
     answeredAt: answered ? new Date(Date.UTC(2026, 9, 7, 11, 0)) : null,
     answeredBy: answered ? "Teszt Operátor" : null,
+    suggestion: null,
+    sends: [],
   };
 }
 const NOW = new Date(Date.UTC(2026, 9, 7, 12, 0));
@@ -208,6 +222,85 @@ function blockCases(render: typeof repliesBlockHtml): boolean[] {
   ];
 }
 
+// ---------- ⑦ answering rules ----------
+const FRI_1630 = new Date("2026-10-09T14:30:00Z"); // Friday 16:30 Budapest (CEST)
+const MON_0900 = new Date("2026-10-12T07:00:00Z"); // Monday 09:00 Budapest
+const TUE_1000 = new Date("2026-10-13T08:00:00Z"); // inside the window
+function ruleCases(parts: typeof smsParts, next: typeof nextWindowStart): boolean[] {
+  const p = (n: number) => parts("á".repeat(n));
+  return [
+    check("⑦ SMS 70 karakter → 1 rész", p(70) === 1, String(p(70))),
+    check("⑦ SMS 71 karakter → 2 rész (67-es részek)", p(71) === 2, String(p(71))),
+    check(`⑦ SMS 335 karakter → ${SMS_MAX_PARTS} rész`, p(335) === SMS_MAX_PARTS, String(p(335))),
+    check(`⑦ SMS 336 karakter → ${SMS_MAX_PARTS + 1} rész`, p(336) === SMS_MAX_PARTS + 1, String(p(336))),
+    check("⑦ péntek 16:30 → a következő hétfő 9:00 (Budapest)", next(FRI_1630).getTime() === MON_0900.getTime(), next(FRI_1630).toISOString()),
+    check("⑦ ablakon belül → most", next(TUE_1000).getTime() === TUE_1000.getTime(), next(TUE_1000).toISOString()),
+  ];
+}
+
+// ---------- ⑧ the answer's life (own rows in the dev DB, Saturday clock) ----------
+const SAT_1000 = new Date("2026-10-10T08:00:00Z"); // Saturday 10:00 Budapest — window closed
+async function sendCases(send: typeof sendAnswer, settle: typeof settleReplySends): Promise<boolean[]> {
+  // gate-subject-allow: any lead is only the FK target — its content is never read, the rows are our own (deleted by id)
+  const lead = await db.selectFrom("lead").select("id").limit(1).executeTakeFirst();
+  if (!lead) return [check("⑧ van lead a dev DB-ben (FK-cél)", false)];
+  const mk = () =>
+    db
+      .insertInto("outreach_reply")
+      .values({ source_key: `selftest:${randomUUID()}`, channel: "sms", lead_id: lead.id, sender: "+3600000000", received_at: "2026-10-07T12:00:00.000Z", body: "önteszt" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+  const [a, b, c] = [await mk(), await mk(), await mk()];
+  const outbox: string[] = [];
+  const res: boolean[] = [];
+  try {
+    const out = await send(a.id, { text: "Köszönjük a választ! A Citoviso csapata" }, "Teszt Operátor", SAT_1000);
+    const row = await db.selectFrom("outreach_reply_send").select(["status", "scheduled_for"]).where("reply_id", "=", a.id).executeTakeFirst();
+    res.push(
+      check(
+        "⑧ ablakon kívül (szombat) az „Elküldöm” csak sorba állít, hétfő 9:00-ra",
+        out.status === "scheduled" && row?.status === "scheduled" && new Date(row.scheduled_for as unknown as Date).getTime() === MON_0900.getTime(),
+        JSON.stringify({ out: out.status, row }),
+      ),
+    );
+    const tooLong = await send(c.id, { text: "á".repeat(336) }, "Teszt Operátor", SAT_1000);
+    res.push(check(`⑧ ${SMS_MAX_PARTS} résznél hosszabb SMS: elutasítva, sor nélkül`, !tooLong.ok && tooLong.message === answerTextError("sms", "á".repeat(336))));
+
+    // Queued SMS whose outbox row settled: one 'sent', one 'failed'. b carries a suggestion.
+    await db.updateTable("outreach_reply").set({ suggestion_text: "önteszt-javaslat", suggestion_by: "Poe", suggestion_at: new Date() }).where("id", "=", b.id).execute();
+    for (const [reply, status] of [[b.id, "sent"], [c.id, "failed"]] as const) {
+      const o = await db
+        .insertInto("sms_outbox")
+        .values({ to_phone: "+3600000000", body: "önteszt", status, sent_at: status === "sent" ? new Date() : null, last_error: status === "failed" ? "önteszt-hiba" : null })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      outbox.push(o.id);
+      await db
+        .insertInto("outreach_reply_send")
+        .values({ reply_id: reply, channel: "sms", to_addr: "+3600000000", body: "önteszt", status: "queued", sent_by: "Teszt Operátor", parts: 1, sms_outbox_id: o.id })
+        .execute();
+    }
+    await settle(SAT_1000);
+    const st = (id: string) =>
+      Promise.all([
+        db.selectFrom("outreach_reply").select(["answered_at", "answered_by"]).where("id", "=", id).executeTakeFirstOrThrow(),
+        db.selectFrom("outreach_reply_send").select("status").where("reply_id", "=", id).orderBy("created_at", "desc").executeTakeFirst(),
+      ]);
+    const [rb, sb] = await st(b.id);
+    const [rc, sc] = await st(c.id);
+    const [ra, sa] = await st(a.id);
+    res.push(check("⑧ queued → az outbox 'sent' → a küldés 'sent', a válasz megválaszolva AZ OPERÁTOR nevével", sb?.status === "sent" && rb.answered_by === "Teszt Operátor", JSON.stringify({ rb, sb })));
+    const sugB = await db.selectFrom("outreach_reply").select("suggestion_text").where("id", "=", b.id).executeTakeFirstOrThrow();
+    res.push(check("⑧ a kiment válasz javaslata visszavonás után nem küldhető újra egy koppintással (törölve)", sugB.suggestion_text === null, JSON.stringify(sugB)));
+    res.push(check("⑧ queued → az outbox 'failed' → a küldés 'failed', a válasz NYITVA marad", sc?.status === "failed" && rc.answered_at === null, JSON.stringify({ rc, sc })));
+    res.push(check("⑧ a sorba állított (scheduled) az ablakon kívül nem megy ki", sa?.status === "scheduled" && ra.answered_at === null, JSON.stringify({ ra, sa })));
+  } finally {
+    await db.deleteFrom("outreach_reply").where("id", "in", [a.id, b.id, c.id]).execute();
+    if (outbox.length) await db.deleteFrom("sms_outbox").where("id", "in", outbox).execute();
+  }
+  return res;
+}
+
 // ---------- run ----------
 async function runAll(): Promise<void> {
   matcherCases(matchReply);
@@ -216,6 +309,8 @@ async function runAll(): Promise<void> {
   await fetchCases(new ImapReader({ host: "imap.invalid", user: "x", pass: "x" } as never));
   await autoCases(markAutoAnswered);
   blockCases(repliesBlockHtml);
+  ruleCases(smsParts, nextWindowStart);
+  await sendCases(sendAnswer, settleReplySends);
 }
 
 /** Every family must go RED on a deliberately broken implementation. */
@@ -229,6 +324,17 @@ async function selfTest(): Promise<void> {
     ["④", () => fetchCases({ uidFetch: async () => [] })],
     ["⑤", () => autoCases(async () => 0)],
     // A filter that hides every answered reply, the selected one too.
+    // 70-char parts everywhere, and „tomorrow 9:00” even on a weekend.
+    [
+      "⑦",
+      () =>
+        ruleCases(
+          (t) => Math.ceil([...t].length / 70),
+          (now) => new Date(now.getTime() + 86_400_000 - ((now.getTime() + 2 * 3_600_000) % 86_400_000) + 7 * 3_600_000),
+        ),
+    ],
+    // A send that ignores the window (reports 'sent', stores nothing), and a settle that never runs.
+    ["⑧", () => sendCases(async () => ({ ok: true, status: "sent", message: "" }), async () => {})],
     ["⑥", () => blockCases((b, q, lang, now) => repliesBlockHtml({ ...b, replies: q.filter === "open" ? b.replies.filter((r) => !r.answeredAt) : b.replies }, q, lang, now))],
   ];
   for (const [fam, run] of reds) {
