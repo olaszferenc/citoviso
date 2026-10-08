@@ -1,0 +1,271 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Riport — Mock fül (JÓVÁHAGYOTT: B + C hibrid)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-ink-brand:var(--citui-navy-900);
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --viz-1:var(--citui-link-ink); --viz-2:var(--citui-cyan-500);
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel));
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  .bar{position:static;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  @media (min-width:600px){.bar{position:sticky;top:0}}
+  .bar b{font-size:13px}
+  .bar button{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .bar .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap} .bar .grp span{font-size:11px;opacity:.7;margin-right:4px}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1100px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink);font-weight:600}
+  h1{font:600 20px/1.2 var(--citui-font-text);margin:0 2px 10px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);margin:0 0 12px;overflow-x:auto}
+  .tabs span{padding:9px 14px;font:600 13px/1 var(--citui-font-text);color:var(--citui-muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs span.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+  .filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 10px}
+  .filters label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);margin-right:6px}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+  .panel h2{margin:0 0 10px;font:600 15px/1.3 var(--citui-font-text);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .panel h2 .q{font-weight:500;color:var(--citui-muted);font-size:12.5px}
+  .mut{color:var(--citui-muted)} .small{font-size:12px}
+  .fact{border:1px dashed var(--citui-line-strong);background:var(--citui-surface);border-radius:10px;padding:10px 12px;font-size:12.5px;margin:0 0 12px}
+  .fact b{color:var(--citui-ink-brand)}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel);flex-wrap:wrap}
+  .chips button{appearance:none;border:0;background:none;padding:7px 12px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:32px}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--citui-radius-pill);font-size:11px;font-weight:600;border:1px solid var(--citui-line);background:var(--citui-surface-2);white-space:nowrap}
+  .pill.ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft)}
+  .pill.bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel))}
+  .pill.few{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-warn) 40%,var(--citui-panel))}
+  .tblwrap{overflow-x:auto}
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .tbl th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:6px;border-bottom:1px solid var(--citui-line);white-space:nowrap;vertical-align:bottom}
+  .tbl th.s{cursor:pointer;user-select:none} .tbl th.s:hover{color:var(--citui-ink)}
+  .tbl th.on{color:var(--citui-ink)} .tbl th.on::after{content:" ▼";font-size:9px} .tbl th.on.asc::after{content:" ▲"}
+  .tbl th.n,.tbl td.n{text-align:right}
+  .tbl td{padding:8px 6px;border-bottom:1px solid var(--citui-line);vertical-align:middle;font-variant-numeric:tabular-nums}
+  .tbl tr.r{cursor:pointer} .tbl tr.r:hover td{background:var(--citui-surface)}
+  .tbl tr.r td:first-child b{color:var(--citui-link-ink)}
+  .tbl tr.det>td{background:var(--citui-surface);padding:8px 10px 12px}
+  .cell{display:grid;gap:3px;justify-items:end}
+  .mbar{width:64px;height:5px;border-radius:3px;background:var(--viz-ghost);overflow:hidden}
+  .mbar i{display:block;height:100%;background:var(--viz-1)}
+  .ci{font-size:10.5px;color:var(--citui-muted)}
+  .best>td:first-child{box-shadow:inset 3px 0 0 var(--citui-ok)} .gc.best{box-shadow:inset 3px 0 0 var(--citui-ok)}
+  .tbl-d{display:none} .card-m{display:block}
+  @container (min-width:720px){ .tbl-d{display:block} .card-m{display:none} }
+  .gc{border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px;margin:0 0 8px;cursor:pointer;background:var(--citui-panel)}
+  .gc .t{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .gc .t b{color:var(--citui-link-ink)}
+  .gc .kv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px;margin-top:8px;font-size:12px}
+  .gc .kv div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dotted var(--citui-line);padding-bottom:2px}
+  .gc .kv b{font-variant-numeric:tabular-nums}
+  .gc .ml{display:none;margin-top:8px} .gc.open .ml{display:block}
+  /* mock rows (shared) */
+  .ml-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid var(--citui-line);font-size:12.5px}
+  .ml-row:last-child{border-bottom:0}
+  .ml-row .nm{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ml-row .nm a{color:var(--citui-link-ink);text-decoration:none}
+  .ml-row .sub{grid-column:1/-1;font-size:11.5px;color:var(--citui-muted)}
+  .dots{display:inline-flex;gap:3px;align-items:center;white-space:nowrap}
+  .dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--viz-1);display:inline-block}
+  .dots i.f{background:var(--viz-1)} .dots i.g{background:var(--citui-ok);border-color:var(--citui-ok)}
+  .dots i.x{background:var(--citui-bad);border-color:var(--citui-bad)}
+  .legend{font-size:11.5px;color:var(--citui-muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+  .legend .dots i{vertical-align:-1px}
+  /* B */
+  .score{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:26px;padding:0 6px;border-radius:6px;font:700 13px/1 var(--citui-font-display);font-variant-numeric:tabular-nums;color:var(--citui-ink-brand);background:color-mix(in srgb,var(--viz-2) calc(var(--p)*0.6%),var(--citui-surface-2))}
+  .score.z{color:var(--citui-muted);background:var(--citui-surface-2)}
+  .avgbars{display:grid;gap:6px;margin:4px 0}
+  .avgbars .row{display:grid;grid-template-columns:110px 1fr 74px;gap:10px;align-items:center;font-size:12.5px;cursor:pointer}
+  .avgbars .row.on .lab{color:var(--citui-link-ink)}
+  .avgbars .lab{font-weight:600;line-height:1.2} .avgbars .lab small{display:block;color:var(--citui-muted);font-weight:500;font-size:11px}
+  .avgbars .trk{height:18px;background:var(--viz-ghost);border-radius:4px;overflow:hidden;position:relative}
+  .avgbars .trk i{position:absolute;inset:0 auto 0 0;background:var(--viz-1)}
+  .avgbars .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  @container (min-width:720px){ .avgbars .row{grid-template-columns:180px 1fr 110px} }
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}
+  .toolbar input{flex:1 1 160px;min-width:0;padding:7px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;font:13px var(--citui-font-text);color:var(--citui-ink);background:var(--citui-panel)}
+  .formula{font-size:11.5px;color:var(--citui-muted);margin:6px 0 0}
+  .b-row{display:grid;grid-template-columns:44px 1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--citui-line);font-size:12.5px}
+  .b-row .nm{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .b-row .sub{grid-column:2/-1;font-size:11.5px;color:var(--citui-muted)}
+  .b-row .met{display:none}
+  @container (min-width:720px){
+    .b-row{grid-template-columns:44px minmax(160px,1.4fr) 120px 70px 70px 70px auto}
+    .b-row .met{display:block;text-align:right;font-variant-numeric:tabular-nums}
+    .b-row .sub{grid-column:2/3}
+    .b-head{display:grid!important}
+  }
+  .b-head{display:none;grid-template-columns:44px minmax(160px,1.4fr) 120px 70px 70px 70px auto;gap:10px;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:0 0 6px;border-bottom:1px solid var(--citui-line)}
+  .b-head span:nth-child(n+3){text-align:right}
+  .more{display:block;margin:10px auto 0;padding:7px 14px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);background:var(--citui-panel);font:600 12px var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+  /* C */
+  .cgrid{display:grid;grid-template-columns:1fr;gap:10px}
+  @container (min-width:720px){ .cgrid{grid-template-columns:repeat(3,1fr)} }
+  .cc{border:1px solid var(--citui-line);border-radius:12px;padding:12px;background:var(--citui-panel);cursor:pointer}
+  .cc.sel{border-color:var(--viz-1);box-shadow:0 0 0 1px var(--viz-1)}
+  .cc .t{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+  .cc .t b{font-size:14px}
+  .cc .lad{display:grid;gap:4px;margin-top:8px}
+  .cc .lad .row{display:grid;grid-template-columns:96px 1fr 40px;gap:6px;align-items:center;font-size:11.5px}
+  .cc .lad .trk{height:12px;background:var(--viz-ghost);border-radius:3px;overflow:hidden;position:relative}
+  .cc .lad .trk i{position:absolute;inset:0 auto 0 0;background:var(--viz-1)}
+  .cc .lad .trk u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--citui-ink);opacity:.55}
+  .cc .lad .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .cc .delta{font-size:11.5px;margin-top:6px}
+  .up{color:var(--citui-ok-ink);font-weight:600} .down{color:var(--citui-bad-ink);font-weight:600}
+  .verdict{font-size:13px;line-height:1.45}
+  .verdict b{color:var(--citui-ink-brand)}
+  .cc .sc{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dotted var(--citui-line);font-size:12px}
+  .cc.all .t b{color:var(--citui-link-ink)}
+  .cc:focus-visible{outline:2px solid var(--viz-2);outline-offset:2px}
+  .selnote{font-size:12px;color:var(--citui-muted);margin:0 0 8px} .selnote button{border:0;background:none;color:var(--citui-link-ink);font:600 12px var(--citui-font-text);cursor:pointer;padding:0 4px;text-decoration:underline}
+</style></head><body>
+<div class="bar">
+  <b>Riport — Mock fül (B + C hibrid)</b>
+  <div class="grp"><span>Méret</span><button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button></div>
+</div>
+<p class="note"><b>Valós éles adat</b> (read-only lekérdezés, 2026-10-08): mind a <span id="ntotal"></span> kiküldött mock, első kiküldés 10-04. <b>Tulaj-döntés:</b> fent a C sablon-kártyái (kattintva szűrik a listát), alattuk a B mocklistája 0–100-as ponttal. Bontás: sablon. Minden szűrő, rendezés, kereső működik.</p>
+<div class="stage" id="stage">
+  <div class="crumb">Riport › <b>Mock</b></div>
+  <h1>Riport</h1>
+  <div class="tabs"><span>Megkeresés-tölcsér</span><span>Viselkedés</span><span class="on">Mock</span></div>
+  <div class="filters">
+    <div><label>Időszak</label><span class="chips" id="days"><button data-d="7">7 nap</button><button data-d="30">30 nap</button><button data-d="90">90 nap</button><button data-d="0" class="on">Összes</button></span></div>
+    <div><label>Csatorna</label><span class="chips" id="chan"><button data-c="all" class="on">Mind</button><button data-c="E">E-mail</button><button data-c="M">MMS / SMS</button></span></div>
+  </div>
+  <div class="fact">Csak a <b>kiküldött</b> linkek számítanak. Nem számít: a gépi megnyitás (link-ellenőrző, headless böngésző), a saját megnyitás (<b>?sajat=1</b> link — a konzolból, a pilot-másolatból nyitva), a ki nem küldött mock. Az idő = a látogatásonként mért oldalon töltött idő összege.</div>
+  <div class="panel">
+    <h2>Mit mondanak a számok?</h2>
+    <div class="verdict" id="cverdict"></div>
+  </div>
+  <div class="cgrid" id="cgrid"></div>
+  <p class="formula" style="margin:8px 2px 12px">Vonzóság-pont (0–100), mockonként: megnyitotta 20 · visszatért 15 · legalább 1 percet töltött rajta 15 · végiggörgette (≥75%) 15 · megnyitotta a rendelés-panelt 15 · válaszolt 10 · rendelt 10. Leiratkozás = 0 pont. A kártyán az átlaga.</p>
+  <div class="panel" id="list">
+    <h2>Mockok <span class="q" id="bcount"></span></h2>
+    <div class="selnote" id="selnote" hidden></div>
+    <div class="toolbar">
+      <input id="bq" type="search" placeholder="Szállás neve…">
+      <span class="chips" id="bsort"><button data-s="score" class="on">Legvonzóbb</button><button data-s="sent">Legutóbbi</button><button data-s="dwell">Leghosszabb idő</button></span>
+    </div>
+    <div class="b-head"><span>Pont</span><span>Szállás · sablon</span><span>Jelek</span><span>Megnyitás</span><span>Idő</span><span>Görgetés</span><span></span></div>
+    <div id="blist"></div>
+    <button class="more" id="bmore" type="button">Több mutatása</button>
+    <div class="legend"><span class="dots"><i class="f"></i></span>megnyitotta · visszatért · ≥1 perc · végiggörgette · rendelés-panel · <span class="dots"><i class="g"></i></span> válaszolt / rendelt · <span class="dots"><i class="x"></i></span> leiratkozott</div>
+  </div>
+</div>
+<script>
+var D=[["Matievics Vendégház","parallax","night-azure-gold","nincs_honlap","2026-10-08 11:05","EM",0,0,0,0,0,0,0,0,"",null,"59592380"],["Szent Gaál Kastély Panzió","parallax","night-azure-gold","nincs_honlap","2026-10-08 11:05","E",1,15,50,12,0,0,0,0,"desktop",0.2,"2a0a8dd0"],["D&K Panzió","parallax","alpine-bold","nincs_honlap","2026-10-08 11:04","E",0,0,0,0,0,0,0,0,"",null,"ee642eae"],["Margaréta Motel","parallax","coastal-fresh","van_labnyom","2026-10-08 11:02","M",0,0,0,0,0,0,0,0,"",null,"97e7a333"],["Zichy Park Hotel","wordmark-grow","editorial-warm","nincs_honlap","2026-10-08 11:00","E",0,0,0,0,0,0,0,0,"",null,"75f90f12"],["Kisvasút Vendegház","wordmark-grow","sand-cream-airy","elavult","2026-10-08 07:41","M",0,0,0,0,0,0,0,0,"",null,"a662347e"],["Helka Apartman","wordmark-grow","coastal-fresh","elavult","2026-10-08 07:39","M",0,0,0,0,0,0,0,0,"",null,"46b53f8a"],["Lantos Apartmanház","wordmark-grow","sand-cream-airy","elavult","2026-10-08 07:37","M",0,0,0,0,0,0,0,0,"",null,"8e531671"],["Holló és Bárány vendégház","horizontal","night-azure-gold","elavult","2026-10-08 07:28","M",0,0,0,0,0,0,0,0,"",null,"9cb6b4ee"],["Hilwa Vendégház","wordmark-grow","editorial-warm","elavult","2026-10-08 07:21","M",0,0,0,0,0,0,0,0,"",null,"b2e744a6"],["Káldy Panzió","fullbleed","tuscan-terracotta","elavult","2026-10-08 07:19","M",0,0,0,0,0,0,0,0,"",null,"1f78075e"],["Gemini Superior Apartman & Yacht","fullbleed","coastal-fresh","elavult","2026-10-08 07:15","M",0,0,0,0,0,0,0,0,"",null,"20050398"],["Helikon Panzió","fullbleed","tuscan-terracotta","elavult","2026-10-08 07:12","M",0,0,0,0,0,0,0,0,"",null,"55d308bf"],["Főnix Vendégház","wordmark-grow","editorial-warm","elavult","2026-10-08 07:09","EM",0,0,0,0,0,0,0,0,"",null,"f1287939"],["AQUA VENDÉGHÁZ FONYÓD","wordmark-grow","editorial-warm","elavult","2026-10-08 07:09","EM",0,0,0,0,0,0,0,0,"",null,"e632c94c"],["Golden House","wordmark-grow","coastal-fresh","elavult","2026-10-08 07:09","EM",1,15,25,3,0,0,0,0,"mobile",1.2,"bb67758b"],["Vitorlás Apartman","wordmark-grow","coastal-fresh","elavult","2026-10-08 07:08","E",0,0,0,0,0,0,0,0,"",null,"139964b3"],["Mangolia Room & Spa","fullbleed","coastal-fresh","elavult","2026-10-08 07:07","M",0,0,0,0,0,0,0,0,"",null,"ad8fdee1"],["Lala Apartmanok","wordmark-grow","clay-soft","elavult","2026-10-08 07:07","EM",0,0,0,0,0,0,0,0,"",null,"409ca707"],["Csaba Guesthouse","wordmark-grow","editorial-warm","elavult","2026-10-08 07:06","EM",0,0,0,0,0,0,0,0,"",null,"d47ce5e1"],["Merse Apartman","wordmark-grow","clay-soft","elavult","2026-10-08 07:06","EM",0,0,0,0,0,0,0,0,"",null,"7cea5bb3"],["Tieff Apartmanház","wordmark-grow","sand-cream-airy","elavult","2026-10-08 07:05","EM",1,0,25,2,0,0,0,0,"mobile",0,"29979d6d"],["Ágnes Villa","wordmark-grow","sand-cream-airy","elavult","2026-10-08 07:04","E",0,0,0,0,0,0,0,0,"",null,"dd03dab5"],["Harmónia Vendégház, Apartmanház","horizontal","forest-night","elavult","2026-10-08 07:04","E",0,0,0,0,0,0,0,0,"",null,"76709264"],["Ilona Kis Kastély Panzió","fullbleed","stone-masonry","elavult","2026-10-08 07:03","E",0,0,0,0,0,0,0,0,"",null,"5b7fd4ea"],["Amira Boutique Hotel Hévíz Wellness & Spa","fullbleed","coastal-fresh","elavult","2026-10-08 07:02","E",0,0,0,0,0,0,0,0,"",null,"189d4085"],["Siesta Apartmanház","fullbleed","editorial-magazine","elavult","2026-10-08 07:00","EM",0,0,0,0,0,0,0,0,"",null,"a57db38f"],["Csenge Panzió","fullbleed","tuscan-terracotta","elavult","2026-10-08 07:00","EM",0,0,0,0,0,0,0,0,"",null,"dd33f481"],["Mandula Apartmanház","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 12:24","M",0,0,0,0,0,0,0,0,"",null,"2c08f3d9"],["Kisház a hegyen","fullbleed","sand-cream-airy","nincs_honlap","2026-10-07 12:06","M",0,0,0,0,0,0,0,0,"",null,"35a2f506"],["Tamási Villa- Nyaralóház","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 11:55","M",1,75,75,14,0,0,0,0,"mobile",1,"4b674776"],["Krisztina Panzió és étterem","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 11:45","M",1,15,25,3,0,1,0,0,"mobile",0.7,"38d4ca96"],["Hotel Kenese Port","fullbleed","stone-masonry","nincs_honlap","2026-10-07 11:41","M",0,0,0,0,0,0,0,0,"",null,"c137b880"],["Kézműves Vendégház","horizontal","cellar-dark-wine","nincs_honlap","2026-10-07 11:39","M",0,0,0,0,0,0,0,0,"",null,"96ebb2bb"],["Marika Vendégház","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 11:33","M",1,15,0,0,0,0,0,0,"mobile",0.2,"725d824c"],["Szabadság Apartman","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 11:24","M",0,0,0,0,0,0,0,0,"",null,"86bc3ae6"],["Elena Apart","horizontal","forest-night","nincs_honlap","2026-10-07 11:15","M",0,0,0,0,0,0,0,0,"",null,"614e6507"],["Szőlőskert Apartman Ábrahámhegy","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 11:12","M",0,0,0,0,0,0,0,0,"",null,"60c6ffe4"],["Millenove Apartman Balatonföldvár","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 10:59","M",3,15,0,0,0,0,0,0,"mobile",0,"90bc36e1"],["Ligeti Nyaraló","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 10:57","M",1,45,50,6,0,0,0,0,"mobile",0.9,"8191dde4"],["Natural Enteriőr Apartmanház","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 10:50","M",0,0,0,0,0,0,0,0,"",null,"8a3b22d3"],["Haven Katherina","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 10:47","M",0,0,0,0,0,0,0,0,"",null,"77c90b85"],["Barátság ház","fullbleed","coastal-fresh","nincs_honlap","2026-10-07 10:45","M",0,0,0,0,0,0,0,0,"",null,"7c5992e2"],["Pension Ilona","horizontal","forest-night","nincs_honlap","2026-10-07 10:37","M",0,0,0,0,0,0,0,0,"",null,"983ca25f"],["Campari Panzió","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 10:31","M",0,0,0,0,0,0,0,0,"",null,"dc8b257c"],["Pipacs Apartman","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 10:28","M",0,0,0,0,0,0,0,0,"",null,"6905a60d"],["Feketebács Nyaralóház","horizontal","cellar-dark-wine","nincs_honlap","2026-10-07 10:15","M",0,0,0,0,0,0,0,0,"",null,"2c6474e0"],["Csillag Villa","fullbleed","tuscan-terracotta","nincs_honlap","2026-10-07 10:09","M",1,15,50,10,0,0,0,0,"mobile",0.4,"69998151"],["Marci Apartman Tóparti hangulatú nyaraló","fullbleed","sand-cream-airy","nincs_honlap","2026-10-07 09:59","M",0,0,0,0,0,0,0,0,"",null,"84233851"],["Balaton House","fullbleed","tuscan-terracotta","nincs_honlap","2026-10-07 09:55","M",0,0,0,0,0,0,0,0,"",null,"92b87cc2"],["Margaret Apartment","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 09:52","M",0,0,0,0,0,0,0,0,"",null,"715c4a8a"],["Relax Hotel Hévíznél","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 09:42","M",0,0,0,0,0,0,0,0,"",null,"e1786536"],["Molnár Vendégház","horizontal","forest-night","nincs_honlap","2026-10-07 09:28","M",0,0,0,0,0,0,0,0,"",null,"ac0ebb55"],["Szikla vendeghaz","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 09:25","M",1,30,50,9,0,0,0,0,"mobile",0.1,"a43f4351"],["Balaton Breeze Apartman","horizontal","cellar-dark-wine","nincs_honlap","2026-10-07 09:19","M",0,0,0,0,0,0,0,0,"",null,"0a02041a"],["Liget Stúdió Apartman","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 09:07","M",0,0,0,0,0,0,0,0,"",null,"c848ca48"],["Négy Évszak Vendégház","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 08:50","M",0,0,0,0,0,0,0,0,"",null,"ee896f68"],["Kenese-Völgye Villapark","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 08:00","M",0,0,0,0,0,0,0,0,"",null,"7053d9c9"],["Vazul Vendégház","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:57","EM",0,0,0,0,0,0,0,0,"",null,"3cb2de1a"],["Boróka ház","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:57","EM",1,45,100,11,0,0,0,0,"mobile",0.3,"f8764303"],["Balatinus Apartmanház","fullbleed","sand-cream-airy","nincs_honlap","2026-10-07 07:57","M",0,0,0,0,0,0,0,0,"",null,"7df7998b"],["Bambusz Apartman","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 07:56","EM",1,30,100,9,0,0,0,0,"mobile",0.9,"6746e70f"],["Hajnalka Apartmanház","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:55","EM",0,0,0,0,0,0,0,0,"",null,"038b3d9a"],["Kovács Panzió","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 07:55","EM",0,0,0,0,0,0,0,0,"",null,"f17fc00d"],["Szőlőskert Apartman","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:55","EM",0,0,0,0,0,0,0,0,"",null,"0b966d47"],["Villa Clara","fullbleed","stone-masonry","nincs_honlap","2026-10-07 07:53","EM",0,0,0,0,0,0,0,0,"",null,"e4f7a2b2"],["Bakony Kőhegy Vendégház","horizontal","forest-night","nincs_honlap","2026-10-07 07:53","EM",5,165,75,11,0,0,0,0,"desktop,mobile",2.9,"b178b411"],["Muschel Panzió","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 07:52","E",0,0,0,0,0,0,0,0,"",null,"c53f8647"],["Aranykagyló 36","fullbleed","tuscan-terracotta","nincs_honlap","2026-10-07 07:51","E",0,0,0,0,0,0,0,0,"",null,"d977d2da"],["Sétány Apartman","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 07:49","EM",2,150,100,14,1,0,0,0,"mobile",2.1,"67ea6a36"],["Vincze Vendégház","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:49","EM",1,30,0,1,0,0,0,0,"mobile",3.9,"e63a34a2"],["Szilvia apartman","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:48","EM",0,0,0,0,0,0,0,0,"",null,"1c8868d5"],["Málna Nyaralóház","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 07:48","EM",0,0,0,0,0,0,0,0,"",null,"203d12ea"],["Pipacs Vendégház","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 07:47","EM",1,45,75,10,0,0,0,0,"mobile",0,"f5b490e3"],["Barbi-ház","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 07:46","EM",0,0,0,0,0,0,0,0,"",null,"e69390c9"],["Liliom Apartman","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 07:44","EM",0,0,0,0,0,0,0,0,"",null,"2946c931"],["Mariann Vendégház - Balatonrendes","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 07:44","EM",1,30,75,11,0,0,0,0,"mobile",0,"8e5921b9"],["Fűzfa Apartman","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:43","EM",1,90,75,12,0,0,0,0,"desktop",0.1,"d25224ed"],["Éva nyaralóház","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:43","EM",4,270,25,6,0,0,0,0,"mobile",3.4,"c12d61b7"],["Mandula Nyaralóház","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:42","E",0,0,0,0,0,0,0,0,"",null,"60feb526"],["Márti Vendégház","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 07:41","EM",4,435,100,13,0,0,0,0,"mobile",3.5,"343dd533"],["Casa Bella","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 07:39","EM",0,0,0,0,0,0,0,0,"",null,"4cbc7817"],["Fonyódi Centrum Apartman","gate-opening","lantern-charcoal","nincs_honlap","2026-10-07 07:38","EM",0,0,0,0,0,0,0,0,"",null,"ca70c39b"],["Gyümölcsöskert Vendégház","horizontal","night-azure-gold","nincs_honlap","2026-10-07 07:36","EM",0,0,0,0,0,0,0,0,"",null,"8fad7b56"],["Lekics Pince és Vendégház","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 07:36","EM",1,15,25,1,0,0,0,0,"mobile",3.3,"102af6b2"],["Farkas","horizontal","forest-night","nincs_honlap","2026-10-07 07:35","EM",0,0,0,0,0,0,0,0,"",null,"028e3769"],["STAY Apartman","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:35","EM",1,30,25,3,0,0,0,0,"mobile",2.7,"32af04c4"],["Béke Apartmanház","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 07:34","EM",2,15,25,4,0,0,0,0,"mobile",4.9,"40a1305e"],["Kakukkfű apartman Aszófő","wordmark-grow","clay-soft","nincs_honlap","2026-10-07 07:33","EM",1,0,0,0,0,0,0,0,"mobile",2.5,"44bd7eb1"],["Tatika Vendégház","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 07:33","EM",2,60,100,11,0,0,0,0,"mobile",0.1,"8b5a866f"],["Fresh Hotel","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:31","EM",0,0,0,0,0,0,0,0,"",null,"da2782fa"],["Dencs Apartmanház","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-07 07:28","EM",1,30,100,11,0,0,0,0,"mobile",3,"a251a1a7"],["Hotel Garni","fullbleed","sand-cream-airy","nincs_honlap","2026-10-07 07:28","E",0,0,0,0,0,0,0,0,"",null,"30001452"],["Villa Eszter","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 07:27","EM",2,15,100,14,0,1,0,0,"desktop",6.8,"754d38ba"],["Tekergő Vendégház","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:26","E",0,0,0,0,0,0,0,0,"",null,"3508f059"],["Lelle Resort Apartman","wordmark-grow","editorial-warm","nincs_honlap","2026-10-07 07:25","EM",2,15,25,3,0,0,0,0,"mobile",1.7,"84813ff9"],["Patricia Apartman","wordmark-grow","sand-cream-airy","nincs_honlap","2026-10-07 07:25","EM",2,15,25,1,0,0,0,0,"desktop,mobile",0.4,"91d38dc1"],["Violetta Vendégház","fullbleed","sand-cream-airy","nincs_honlap","2026-10-07 07:23","EM",1,0,0,2,0,0,0,0,"mobile",0.6,"f61c97bf"],["Villa Zsófia","horizontal","night-azure-gold","nincs_honlap","2026-10-07 07:23","EM",2,120,100,12,0,0,0,0,"desktop",5.7,"748fe3cf"],["Körtefa Vendégház","fullbleed","sand-cream-airy","nincs_honlap","2026-10-07 07:22","EM",2,285,100,14,0,0,0,0,"mobile",0.4,"6bad8d11"],["Betérő Apartman Veszprém","fullbleed","editorial-magazine","nincs_honlap","2026-10-07 07:22","EM",3,495,100,14,0,0,0,0,"desktop,mobile",10.5,"f7762a15"],["Berek Vendégház Fonyód","tilted-gallery","editorial-warm","nincs_honlap","2026-10-07 07:22","EM",0,0,0,0,0,0,0,0,"",null,"2ac465e2"],["Pálköve Nádfedeles Házikó","wordmark-grow","editorial-warm","elavult","2026-10-06 14:30","EM",4,465,75,9,0,0,0,0,"desktop",1,"f168aa3a"],["Martina Apartmanház","parallax","alpine-bold","nincs_honlap","2026-10-06 14:29","EM",1,330,100,14,0,0,0,0,"mobile",17,"ecd02ef3"],["Kunyhó","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 14:29","E",0,0,0,0,0,0,0,0,"",null,"b0d712f5"],["Kishalász Vendégház","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 14:28","EM",2,45,50,8,0,0,0,0,"mobile",0.4,"7447fffe"],["Hajnalka Apartment","horizontal","night-azure-gold","nincs_honlap","2026-10-06 14:28","EM",0,0,0,0,0,0,0,0,"",null,"2ebb37b1"],["Garabuczi Apartman","fullbleed","sand-cream-airy","nincs_honlap","2026-10-06 14:27","EM",0,0,0,0,0,0,0,0,"",null,"7683ffda"],["EszterHáz","fullbleed","sand-cream-airy","nincs_honlap","2026-10-06 14:27","EM",0,0,0,0,0,0,0,0,"",null,"185840ce"],["CORNER vendégház","horizontal","cellar-dark-wine","elavult","2026-10-06 14:26","EM",2,15,50,9,0,0,0,0,"mobile",0.2,"dcdb5f79"],["Apart Júlia Villa","fullbleed","stone-masonry","elavult","2026-10-06 14:26","EM",0,0,0,0,0,0,0,0,"",null,"5fcd99ec"],["Vulcanus Apartment","fullbleed","stone-masonry","elavult","2026-10-06 08:07","EM",0,0,0,0,0,0,0,0,"",null,"01d9d7b2"],["Villa Suzy Zamárdi","fullbleed","coastal-fresh","nincs_honlap","2026-10-06 08:06","EM",1,165,100,14,0,0,0,0,"desktop",1.3,"f73c0283"],["Villa Hegyalja","horizontal","forest-night","nincs_honlap","2026-10-06 08:06","EM",2,0,0,3,0,0,0,0,"desktop,mobile",0.5,"7a49ff98"],["Villa Bobek Keszthely","horizontal","cellar-dark-wine","nincs_honlap","2026-10-06 08:06","EM",2,30,50,10,0,0,0,0,"desktop,mobile",2,"c03a3474"],["Tündér Szálló","fullbleed","stone-masonry","elavult","2026-10-06 08:05","EM",0,0,0,0,0,0,0,0,"",null,"3ef70fe8"],["Tanay Vendégház","horizontal","night-azure-gold","nincs_honlap","2026-10-06 08:05","EM",1,0,25,4,0,0,0,0,"mobile",0.6,"b032f334"],["Szkíta Panzió","horizontal","night-azure-gold","nincs_honlap","2026-10-06 08:04","EM",0,0,0,0,0,0,0,0,"",null,"43d5f7dc"],["Szegfű ház","horizontal","cellar-dark-wine","nincs_honlap","2026-10-06 08:04","EM",0,0,0,0,0,0,0,0,"",null,"2c0a48f0"],["Pátri Apartmanház","wordmark-grow","coastal-fresh","elavult","2026-10-06 08:03","EM",1,60,100,11,0,0,0,0,"desktop",21,"e78b0403"],["Panoráma Vendégház","gate-opening","lantern-charcoal","elavult","2026-10-06 08:03","EM",2,105,100,13,0,0,0,0,"mobile",0,"e19e5c6e"],["Napsugár Vendégház","fullbleed","coastal-fresh","nincs_honlap","2026-10-06 08:02","EM",0,0,0,0,0,0,0,0,"",null,"308431dc"],["Napsugár Apartman","fullbleed","tuscan-terracotta","nincs_honlap","2026-10-06 08:02","E",0,0,0,0,0,0,0,0,"",null,"c3d0515e"],["Napfény Apartmanház","horizontal","cellar-dark-wine","nincs_honlap","2026-10-06 08:01","E",0,0,0,0,0,0,0,0,"",null,"042e6c10"],["Munkácsy Apartman Balatonfenyves","horizontal","cellar-dark-wine","nincs_honlap","2026-10-06 08:01","EM",0,0,0,0,0,0,0,0,"",null,"8f6c75a1"],["Mézes vendégház","parallax","alpine-bold","nincs_honlap","2026-10-06 08:01","EM",0,0,0,0,0,0,0,0,"",null,"50fb2522"],["Melinda Apartman","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 08:00","EM",3,465,100,13,1,1,0,0,"mobile",2.4,"0b79e5ff"],["Margo Apartman","horizontal","forest-night","nincs_honlap","2026-10-06 08:00","EM",2,30,0,4,0,0,0,0,"mobile",1.4,"b6b1a1c5"],["MARaBU vendégház","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 07:59","EM",0,0,0,0,0,0,0,0,"",null,"e3d9c529"],["Korona Panzió","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 07:59","EM",0,0,0,0,0,0,0,0,"",null,"eb127541"],["King Kong Kapitány Vendégház","horizontal","night-azure-gold","nincs_honlap","2026-10-06 07:58","EM",0,0,0,0,0,0,0,0,"",null,"5bdd3b24"],["Kék Kuckó Vendégház","wordmark-grow","editorial-warm","nincs_honlap","2026-10-06 07:58","EM",0,0,0,0,0,0,0,0,"",null,"71c2e464"],["Hello Balcsi Apartmanház","wordmark-grow","clay-soft","elavult","2026-10-06 07:57","EM",0,0,0,0,0,0,0,0,"",null,"5b27c717"],["Hajni Vendégház","fullbleed","sand-cream-airy","nincs_honlap","2026-10-06 07:56","EM",2,135,100,14,0,0,0,0,"mobile",25.1,"0e1ea5ae"],["Garda Apartmanok Balatonfenyves","fullbleed","coastal-fresh","nincs_honlap","2026-10-06 07:56","EM",0,0,0,0,0,0,0,0,"",null,"379a60b3"],["Füred Gyöngye Vendégház","gate-opening","lantern-charcoal","elavult","2026-10-06 07:55","E",0,0,0,0,0,0,0,0,"",null,"5e1bb900"],["Eifert Panzió","horizontal","forest-night","nincs_honlap","2026-10-06 07:55","EM",0,0,0,0,0,0,0,0,"",null,"1b6434d7"],["Bungalow Park Balatonboglár","horizontal","cellar-dark-wine","elavult","2026-10-06 07:54","EM",0,0,0,0,0,0,0,0,"",null,"a3a616ca"],["Árnyas Park Panzió","horizontal","forest-night","elavult","2026-10-06 07:54","M",0,0,0,0,0,0,0,0,"",null,"937f74fc"],["Bokréta Panzió","wordmark-grow","clay-soft","nincs_honlap","2026-10-06 07:54","EM",0,0,0,0,0,0,0,0,"",null,"3e7a9d04"],["Bettina vendégház","horizontal","cellar-dark-wine","nincs_honlap","2026-10-06 07:54","EM",2,45,75,11,0,0,0,0,"desktop",41.7,"174233e5"],["Bertalan Apartman","horizontal","night-azure-gold","nincs_honlap","2026-10-06 07:53","EM",0,0,0,0,0,0,0,0,"",null,"ed3bfab0"],["Bella Ciao","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 07:52","EM",0,0,0,0,0,0,0,0,"",null,"31f7d486"],["Beach Hostel Balatonboglár","fullbleed","stone-masonry","nincs_honlap","2026-10-06 07:52","E",2,90,75,13,0,0,0,0,"desktop,mobile",0.4,"225d6c28"],["Bástya Apartman","gate-opening","lantern-charcoal","nincs_honlap","2026-10-06 07:51","EM",2,90,100,12,0,0,0,0,"desktop",0.4,"9cb2a131"],["Banya Vendégház","parallax","coastal-fresh","nincs_honlap","2026-10-06 07:51","EM",0,0,0,0,0,0,0,0,"",null,"73bbe6d3"],["Balla apartman","horizontal","night-azure-gold","elavult","2026-10-06 07:50","EM",1,135,75,12,0,0,0,0,"mobile",0.5,"49de93d6"],["Balati Vendégház","fullbleed","editorial-magazine","nincs_honlap","2026-10-06 07:50","EM",0,0,0,0,0,0,0,0,"",null,"30adc163"],["Andi Apartman","gate-opening","lantern-charcoal","elavult","2026-10-06 07:49","EM",1,0,0,2,0,0,0,0,"mobile",1.9,"3123c6af"],["Hullám Apartman","horizontal","cellar-dark-wine","nincs_honlap","2026-10-06 07:48","EM",1,0,25,5,0,0,0,0,"mobile",0.3,"28c3463a"],["Yorki Vendégház","wordmark-grow","coastal-fresh","nincs_honlap","2026-10-05 11:21","EM",0,0,0,0,0,0,0,0,"",null,"c7aaf909"],["Napfény Villa","fullbleed","stone-masonry","nincs_honlap","2026-10-05 11:09","EM",0,0,0,0,0,0,0,0,"",null,"2a387e47"],["Oleánder Vendégház","fullbleed","sand-cream-airy","nincs_honlap","2026-10-05 08:38","EM",0,0,0,0,0,0,0,0,"",null,"4db616de"],["Rebeka Panzió","tilted-gallery","stone-masonry","nincs_honlap","2026-10-05 08:35","EM",0,0,0,0,0,0,0,0,"",null,"2188e9bf"],["Vécsey Apartman","wordmark-grow","clay-soft","nincs_honlap","2026-10-05 08:32","EM",0,0,0,0,0,0,0,0,"",null,"f8f67c6d"],["János Apartman","gate-opening","lantern-charcoal","nincs_honlap","2026-10-05 08:29","EM",0,0,0,0,0,0,0,0,"",null,"56e3dd6b"],["The Boys apartman house","horizontal","cellar-dark-wine","nincs_honlap","2026-10-04 10:00","EM",0,0,0,0,0,0,0,0,"",null,"c5c5c18f"],["Rózsakő ház","dark-luxury","night-azure-gold","nincs_honlap","2026-10-04 09:59","M",0,0,0,0,0,0,0,0,"",null,"575e0ce0"]];
+
+// Row: 0 name,1 tpl,2 skin,3 segment,4 sent(UTC "YYYY-MM-DD HH:MM"),5 channel("E","M","S","EM","ES"),
+// 6 views,7 dwell s,8 max scroll %,9 sections seen,10 panel,11 replies,12 orders,13 unsub,14 devices,15 first-open h,16 mock id8
+var TPL={"wordmark-grow":"Névből növő","horizontal":"Fejezetes","fullbleed":"Fullbleed","gate-opening":"Kapunyitás","parallax":"Parallax","dark-luxury":"Sötét luxus","tilted-gallery":"Döntött galéria"};
+var SKIN={"lantern-charcoal":"Lámpásfény","clay-soft":"Agyag","editorial-warm":"Editorial","coastal-fresh":"Parti","sand-cream-airy":"Homok","cellar-dark-wine":"Pince","forest-night":"Erdő","night-azure-gold":"Éjkék","editorial-magazine":"Magazin","stone-masonry":"Kő","tuscan-terracotta":"Toszkán","alpine-bold":"Alpesi"};
+var TODAY=new Date("2026-10-08T23:59:00Z");
+var M=D.map(function(r){var o={name:r[0],tpl:r[1],skin:r[2],seg:r[3],sent:new Date(r[4].replace(" ","T")+":00Z"),ch:r[5],views:r[6],dwell:r[7],scroll:r[8],sections:r[9],panel:!!r[10],replies:r[11],orders:r[12],unsub:!!r[13],dev:r[14],fo:r[15],id:r[16]};
+  o.opened=o.views>0; o.ret=o.views>1; o.min1=o.dwell>=60; o.full=o.scroll>=75;
+  o.score=o.unsub?0:(o.opened?20:0)+(o.ret?15:0)+(o.min1?15:0)+(o.full?15:0)+(o.panel?15:0)+(o.replies?10:0)+(o.orders?10:0);
+  return o;});
+document.getElementById("ntotal").textContent=M.length;
+var st={days:0,chan:"all",adim:"tpl",asort:"open",adir:-1,bsort:"score",bq:"",btpl:null,blimit:25,csel:null};
+function rows(){return M.filter(function(m){
+  if(st.days&&(TODAY-m.sent)>st.days*864e5) return false;
+  if(st.chan==="E"&&m.ch.indexOf("E")<0) return false;
+  if(st.chan==="M"&&!/[MS]/.test(m.ch)) return false;
+  return true;});}
+function pct(a,b){return b?Math.round(a/b*100):NaN}
+function fmtP(v){return isNaN(v)?"—":v+"%"}
+function median(a){if(!a.length)return NaN;a=a.slice().sort(function(x,y){return x-y});var h=a.length>>1;return a.length%2?a[h]:(a[h-1]+a[h])/2}
+function fmtT(s){if(isNaN(s))return "—";s=Math.round(s);if(s<60)return s+" mp";var m=Math.floor(s/60),r=s%60;return m+" p"+(r?" "+r+" mp":"")}
+function wilson(k,n){if(!n)return null;var z=1.96,p=k/n,d=1+z*z/n,c=p+z*z/(2*n),w=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n));return [Math.max(0,Math.round((c-w)/d*100)),Math.min(100,Math.round((c+w)/d*100))]}
+function bud(d){var b=new Date(d.getTime()+2*36e5);return (b.getUTCMonth()+1+"").padStart(2,"0")+"."+(b.getUTCDate()+"").padStart(2,"0")+". "+(b.getUTCHours()+"").padStart(2,"0")+":"+(b.getUTCMinutes()+"").padStart(2,"0")}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function keyOf(m,k){return k==="tpl"?TPL[m.tpl]||m.tpl:k==="skin"?SKIN[m.skin]||m.skin:(TPL[m.tpl]||m.tpl)+" · "+(SKIN[m.skin]||m.skin)}
+function chLab(c){return c.replace("EM","E-mail + MMS").replace("ES","E-mail + SMS").replace(/^E$/,"E-mail").replace(/^M$/,"MMS").replace(/^S$/,"SMS")}
+function group(list,k){var g={};list.forEach(function(m){var key=keyOf(m,k);(g[key]=g[key]||[]).push(m)});
+  return Object.keys(g).map(function(key){var l=g[key],o=l.filter(function(m){return m.opened});
+    return {key:key,list:l,sent:l.length,opened:o.length,open:pct(o.length,l.length),ci:wilson(o.length,l.length),
+      ret:pct(o.filter(function(m){return m.ret}).length,o.length),
+      dwell:median(o.map(function(m){return m.dwell})),
+      full:pct(o.filter(function(m){return m.full}).length,o.length),
+      panel:l.filter(function(m){return m.panel}).length,reply:l.filter(function(m){return m.replies}).length,
+      order:l.filter(function(m){return m.orders}).length,unsub:l.filter(function(m){return m.unsub}).length,
+      score:Math.round(l.reduce(function(s,m){return s+m.score},0)/l.length)};});}
+function dots(m){return '<span class="dots" title="megnyitotta · visszatért · ≥1 perc · végiggörgette · rendelés-panel · válasz/rendelés">'+
+  [m.opened,m.ret,m.min1,m.full,m.panel].map(function(b){return '<i'+(b?' class="f"':'')+'></i>'}).join("")+
+  (m.unsub?'<i class="x"></i>':(m.replies||m.orders)?'<i class="g"></i>':'<i></i>')+'</span>'}
+function mockRows(list){
+  list=list.slice().sort(function(a,b){return b.score-a.score||b.sent-a.sent});
+  return list.map(function(m){
+    var bits=m.opened?[m.views+"× nyitotta",fmtT(m.dwell),m.scroll+"% görgetés"]:["nem nyitotta meg"];
+    if(m.panel) bits.push("rendelés-panel"); if(m.replies) bits.push("válaszolt"); if(m.unsub) bits.push("leiratkozott");
+    return '<div class="ml-row"><span class="nm"><a href="#" title="mock '+m.id+'">'+esc(m.name)+'</a></span>'+dots(m)+
+      '<span class="sub">'+esc(keyOf(m,"both"))+' · '+chLab(m.ch)+' · '+bud(m.sent)+' · '+bits.join(" · ")+'</span></div>';}).join("")||'<p class="mut small">Nincs mock ebben a szűrésben.</p>';}
+
+var STEPS=[["Kiküldve",function(m){return true}],["Megnyitotta",function(m){return m.opened}],["≥1 percet nézte",function(m){return m.min1}],["Végiggörgette",function(m){return m.full}],["Visszatért",function(m){return m.ret}],["Panel / válasz",function(m){return m.panel||m.replies||m.orders}]];
+function avgScore(l){return l.length?Math.round(l.reduce(function(s,m){return s+m.score},0)/l.length):0}
+function cardHtml(key,list,avg,isAll){
+  var vals=STEPS.map(function(s){return pct(list.filter(s[1]).length,list.length)});
+  var d=vals[1]-avg[1], sel=isAll?st.btpl===null:st.btpl===key;
+  return '<div class="cc'+(sel?' sel':'')+(isAll?' all':'')+'" role="button" tabindex="0" data-t="'+(isAll?"":esc(key))+'"><div class="t"><b>'+esc(key)+'</b><span class="mut small">'+list.length+' kiküldve'+(!isAll&&list.length<10?' · <span class="pill few">kevés adat</span>':'')+'</span></div>'+
+    '<div class="lad">'+STEPS.slice(1).map(function(s,i){var v=vals[i+1];return '<div class="row"><span>'+s[0]+'</span><span class="trk"><i style="width:'+(v||0)+'%"></i>'+(isAll?'':'<u style="left:'+avg[i+1]+'%" title="átlag '+avg[i+1]+'%"></u>')+'</span><span class="v">'+fmtP(v)+'</span></div>'}).join("")+'</div>'+
+    (isAll?'<div class="delta mut">A vonal a többi kártyán ennek az átlagnak felel meg.</div>':'<div class="delta">Megnyitás az átlaghoz képest: '+(isNaN(d)?"—":d>=0?'<span class="up">+'+d+' pont</span>':'<span class="down">'+d+' pont</span>')+'</div>')+
+    '<div class="sc"><span>Átlagos vonzóság</span><span class="score'+(avgScore(list)?'':' z')+'" style="--p:'+avgScore(list)+'">'+avgScore(list)+'</span></div></div>';}
+function renderCards(){
+  var all=rows(), g=group(all,"tpl").sort(function(a,b){return b.sent-a.sent});
+  var avg=STEPS.map(function(s){return pct(all.filter(s[1]).length,all.length)});
+  if(st.btpl&&!g.some(function(x){return x.key===st.btpl})) st.btpl=null;
+  document.getElementById("cgrid").innerHTML=cardHtml("Minden sablon",all,avg,true)+g.map(function(x){return cardHtml(x.key,x.list,avg,false)}).join("");
+  // verdict: only templates with >= 10 sends are named
+  var big=g.filter(function(x){return x.sent>=10}).sort(function(a,b){return b.open-a.open}), v="";
+  if(big.length>=2){var t=big[0],b=big[big.length-1];
+    v='Legtöbben a <b>'+esc(t.key)+'</b> mockot nyitották meg ('+t.open+'%, '+t.sent+' kiküldésből), legkevesebben: <b>'+esc(b.key)+'</b> ('+b.open+'%). Az átlag '+avg[1]+'%. ';
+    v+=(t.ci[0]<=b.ci[1])?'<span class="mut">A különbség még belefér a véletlenbe (a 95%-os tartományok átfednek: '+t.ci[0]+'–'+t.ci[1]+'% és '+b.ci[0]+'–'+b.ci[1]+'%) — több kiküldés kell az ítélethez.</span>':'A különbség már nem véletlen (a 95%-os tartományok nem fednek át).';
+  } else v='<span class="mut">Ebben a szűrésben még nincs két sablon legalább 10 kiküldéssel — nem lehet összevetni.</span>';
+  v+='<br><span class="small mut">A függőleges vonal a sávokon = az összes mock átlaga. A 10-nél kevesebb kiküldésű sablont nem nevezzük meg nyertesnek. Kattints egy kártyára: a lenti lista a sablon mockjaira szűr.</span>';
+  document.getElementById("cverdict").innerHTML=v;
+}
+function renderList(){
+  var l=rows().filter(function(m){return (!st.btpl||keyOf(m,"tpl")===st.btpl)&&(!st.bq||m.name.toLowerCase().indexOf(st.bq)>=0)});
+  l.sort(st.bsort==="score"?function(a,b){return b.score-a.score||b.dwell-a.dwell}:st.bsort==="sent"?function(a,b){return b.sent-a.sent}:function(a,b){return b.dwell-a.dwell});
+  document.getElementById("bcount").textContent=l.length+" db";
+  var sn=document.getElementById("selnote"); sn.hidden=!st.btpl;
+  sn.innerHTML=st.btpl?'Szűrve: <b>'+esc(st.btpl)+'</b><button type="button" id="clearsel">Minden sablon</button>':"";
+  document.getElementById("blist").innerHTML=l.slice(0,st.blimit).map(function(m){
+    return '<div class="b-row"><span class="score'+(m.score?'':' z')+'" style="--p:'+m.score+'">'+m.score+'</span>'+
+      '<span class="nm">'+esc(m.name)+'</span>'+dots(m)+
+      '<span class="met">'+(m.opened?m.views+"×":"—")+'</span><span class="met">'+(m.opened?fmtT(m.dwell):"—")+'</span><span class="met">'+(m.opened?m.scroll+"%":"—")+'</span><span class="met"></span>'+
+      '<span class="sub">'+esc(keyOf(m,"both"))+' · '+chLab(m.ch)+' · '+bud(m.sent)+(m.opened&&m.fo!==null?' · első megnyitás '+(m.fo<1?"1 órán belül":Math.round(m.fo)+" óra múlva"):"")+'</span></div>'}).join("")||'<p class="mut small">Nincs találat.</p>';
+  document.getElementById("bmore").hidden=l.length<=st.blimit;
+}
+function pick(t){st.btpl=t||null;st.blimit=25;renderCards();renderList();
+  if(window.innerWidth<720||document.getElementById("stage").classList.contains("m")) document.getElementById("list").scrollIntoView({behavior:"smooth",block:"start"});}
+document.getElementById("cgrid").addEventListener("click",function(e){var c=e.target.closest(".cc");if(!c)return;var t=c.dataset.t;pick(st.btpl===t?null:t);});
+document.getElementById("cgrid").addEventListener("keydown",function(e){if(e.key!=="Enter"&&e.key!==" ")return;var c=e.target.closest(".cc");if(!c)return;e.preventDefault();var t=c.dataset.t;pick(st.btpl===t?null:t);});
+document.getElementById("selnote").addEventListener("click",function(e){if(e.target.id==="clearsel")pick(null);});
+document.getElementById("bq").addEventListener("input",function(){st.bq=this.value.trim().toLowerCase();st.blimit=25;renderList();});
+document.getElementById("bmore").addEventListener("click",function(){st.blimit+=25;renderList();});
+function chipGroup(id,fn){document.getElementById(id).addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+  this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});fn(b);});}
+chipGroup("bsort",function(b){st.bsort=b.dataset.s;renderList();});
+function render(){renderCards();renderList();}
+chipGroup("days",function(b){st.days=+b.dataset.d;st.blimit=25;render();});
+chipGroup("chan",function(b){st.chan=b.dataset.c;st.blimit=25;render();});
+document.querySelectorAll("[data-size]").forEach(function(b){b.addEventListener("click",function(){
+  document.getElementById("stage").classList.toggle("m",b.dataset.size==="m");
+  document.querySelectorAll("[data-size]").forEach(function(x){x.classList.toggle("on",x===b)});});});
+if((location.hash.match(/s=m/))||(window.matchMedia&&matchMedia("(max-width: 600px)").matches)) document.querySelector('[data-size="m"]').click();
+render();
+</script>
+</body></html>
