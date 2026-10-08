@@ -58,8 +58,11 @@ lead, a sor szürke „már ismert lead” címkét kap, és linkel a lead lapj�
 kinyitni.
 
 Az új hely „adatok rendben” címkét kap: a linkből megvan a neve és a koordinátája, ennyi kell a
-lezáráshoz. Amíg egyetlen adatát sem írtad be, az űrlapja nyitva van. A Térkép-panelről írd be,
-ami látszik — mind opcionális:
+lezáráshoz. Ha valamelyik hiányzik, a címke „név vagy koordináta hiányzik” — ilyenkor az űrlap
+nyitva van, és a hiányzót be kell írnod. Amíg egyetlen adatát sem írtad be, az űrlapja szintén
+nyitva van; ha már van benne adat, újratöltés vagy csempeváltás után csukva jelenik meg. A sor
+végén az **„Adatok”** gomb nyitja ki, a **„Becsuk”** csukja be. A Térkép-panelről írd be, ami
+látszik — mind opcionális:
 
 - **Cím** és **Település**.
 - **Telefon** — gépelés közben látod a szabványos alakot (pl. → +3687123456); ha nem érvényes
@@ -79,7 +82,8 @@ telített, és minden új helynek megvan a neve és a koordinátája. A gomb ala
 
 Lezáráskor a csempe mezői lezárulnak, az új helyek címkéje „feldolgozás…” lesz, és a rendszer
 lefuttatja rájuk a szokásos, díjmentes lépéseket (honlap-ellenőrzés domain alapján, portál-olvasás,
-elérhetőség). A lead a Lead-sorba kerül, ahol Neo folytatja. Néhány másodperc múlva a címke „lead lett” vagy „nem lead: saját
-honlap” lesz, a lead lapjára mutató linkkel. Egyszerre egy feldolgozás futhat: ha épp fut egy
+elérhetőség). A lead a Lead-sorba kerül, ahol Neo folytatja. Néhány másodperc múlva a címke „lead lett”, „nem lead: saját
+honlap” vagy „nem lead: bizonytalan honlap” lesz (az utóbbinál a lánc nem tudta eldönteni, saját-e
+a honlap), a lead lapjára mutató linkkel. Egyszerre egy feldolgozás futhat: ha épp fut egy
 scrape, a lap szól, és a csempe nyitva marad — próbáld újra pár perc múlva. Ha a feldolgozás nem
 fut végig, a csempe magától újra nyílik, és a helyek adatai megmaradnak.

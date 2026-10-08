@@ -75,6 +75,15 @@ a mentett érték a következő mock-generáláskor már érvényes. Azt, hogy m
 lenyíló táblázat mutatja. Ha az adat hiányos vagy gyanús, az **„Adatok újragyűjtése”** gomb
 friss webes keresést futtat erre az egy leadre.
 
+⚠️ **Az „Adatok újragyűjtése” fizetős lekéréseket indít** (Google Places, webes keresés), ezért
+csak akkor használható, ha a fizetős scrape-API-k be vannak kapcsolva. Kikapcsolt állapotban a
+gomb szürke, és alatta ez áll: *Fizetős lekérés — a fizetős scrape-API-k ki vannak kapcsolva (SCRAPE_PAID_APIS), ezért most nem futtatható.* Ilyenkor a hiányzó adatot a panelben kézzel
+pótold; képhez a Fotók fülön a **„Fotók behúzása linkről”** díjmentes.
+
+Ha a lead az OpenStreetMap-ből jött, a **Források** alatt és a **„Honnan jött az adat”**
+táblázat alatt a **„© OpenStreetMap-közreműködők · ODbL”** sor áll. Ez a kötelező
+forrás-feltüntetés (az OSM-adat ODbL-licenc alatt van); a link az OSM szerzői jogi oldalát nyitja.
+
 ⚠️ **A mentés mindent vagy semmit.** A szállás címe minden mockon és honlapon megjelenik, ezért a
 rendszer nem enged bele vevő-számlázási adatot. Az űrlapon a böngésző automatikus kitöltése ki
 van kapcsolva (az a saját számlázási adatainkat írná ide); a biztos védelem mégis ez a szabály:
@@ -259,7 +268,9 @@ egészen mást jelentenek:
 ⛔ **Ha van ilyen kép, a választó alatt piros összegző sor jelenik meg:** *„N kép forrása nem
 érhető el — ezek a képek a LEADNEK kiküldött lapon is törötten jelennek meg.”* Ez nem
 szépséghiba: **ugyanezek a képek hiányoznak a szállásadónak megmutatott lapról is.** Ilyenkor a
-Fotók fülön a **„Portál-fotók újragyűjtése”** a következő lépés, és utána új mock.
+Fotók fülön a **„Portál-fotók újragyűjtése”** a következő lépés, és utána új mock. Ha a fizetős
+scrape-API-k ki vannak kapcsolva, ez a gomb szürke; ilyenkor a **„Fotók behúzása linkről”**
+mezőbe másold be a portál-adatlap vagy a saját honlap linkjét (díjmentes).
 
 ### ⛔ Törött képpel a rendszer NEM ENGEDI ki a mockot
 
@@ -277,7 +288,9 @@ A lap képenként felsorolja, melyik kép miért nem érhető el — így látod
 
 1. **A rendes út** — friss képeket kell szerezni. A kapu-doboz maga az **„Adatok újragyűjtése”**
    gombra irányít (Adatok fül); ugyanezt a Fotók fülön a **„Portál-fotók újragyűjtése”** teszi.
-   Utána új mock, és a lead ép lapot kap.
+   Mindkettő fizetős lekérés: ha a fizetős scrape-API-k ki vannak kapcsolva, a két gomb szürke.
+   Ilyenkor a díjmentes út a Fotók fülön a **„Fotók behúzása linkről”**. Utána új mock, és a
+   lead ép lapot kap.
 2. **A kivételes út** — a **„Tudomásul veszem — törött képekkel hagyom jóvá”** gombbal
    átléphetsz a kapun. ⚠️ Csak akkor válaszd, ha tudod, mit vállalsz: a szállásadó **tényleg
    törött képeket fog látni** azon a lapon, amit róla készítettünk.
@@ -308,7 +321,9 @@ kettőt közvetlenül össze tudod vetni.
 van, amikor mégis lekérjük:
 
 - **Neked kell döntened:** ha a portál-képeket gyengének látod, a Places-sávban a
-  **„Places-fotók lekérése”** gombbal kérhetsz Google-fotót. A gombon ott a **„fizetős”**
+  **„Places-fotók lekérése”** gombbal kérhetsz Google-fotót. Ha a fizetős scrape-API-k ki
+  vannak kapcsolva, a gomb (és a **„Places-fotók újrakérése”** is) szürke, alatta ugyanaz a
+  *„Fizetős lekérés — …”* mondat áll; ilyenkor Places-fotó nem kérhető. A gombon ott a **„fizetős”**
   címke: ez egy fizetős Google-lekérés (1 hely-lekérdezés + legfeljebb 6 fotó), de
   **leadenként csak egyszer** — az eredményt eltároljuk, és újra nem fizetünk érte.
 - **Ha a leadnek egyáltalán nincs portál-fotója**, a generálás egyszer magától lekéri a
