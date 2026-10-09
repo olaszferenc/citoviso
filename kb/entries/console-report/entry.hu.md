@@ -113,10 +113,11 @@ belül meddig jutott. Egy sor = egy látogatás, amelyben a panelt megnyitotta; 
 újra kinyitotta, több sort ad.
 
 - **Szűrő**: **„Mind”** · **„A gombbal”** · **„Az ajánlatból”** (az eszkalációs ajánlat gombja) ·
-  **„Szél-füllel újra”** (a képernyő szélén maradt fül). A panel minden száma erre számolódik újra;
+  **„Szél-füllel újra”** (a képernyő szélén maradt fül) · **„Próba-űrlapról”** (az ingyenes próba
+  űrlapja alatti rendelés-link — külön útként számít). A panel minden száma erre számolódik újra;
   a lap időszak-szűrője ugyanúgy érvényes.
 - **Négy mutató**: **„Megnyomta a gombot”** (hány megnyitó nyomta meg a gombot — ezt a szűrő nem
-  változtatja), **„Panelt megnyitott”** (a „Mind” alatt gomb · ajánlat · fül bontásban),
+  változtatja), **„Panelt megnyitott”** (a „Mind” alatt gomb · ajánlat · fül · próba-űrlap bontásban),
   **„Medián idő a panelben”** (és a p90) és **„Rendelés nélkül zárta”** (mellette: ebből hány
   futott hibába).
 - **„Meddig jutott a panelen belül”**: hat lépcső — **„Megnyitotta”** → **„Tovább”** (a
