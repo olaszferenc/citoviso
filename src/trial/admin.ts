@@ -6,7 +6,7 @@
 //   · lapsed    → the paused-site block (the trial has no subscription row, so the
 //                 subscription freeze block never renders for it — measured 2026-10-09:
 //                 the admin of a lapsed trial said NOTHING).
-//   · converted → nothing; from then on the subscription speaks.
+//   · converted → nothing; from then on the subscription speaks (purged: no tenant left).
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
@@ -46,7 +46,9 @@ export async function trialAdminState(tenantId: string, now = new Date()): Promi
     ])
     .where("free_trial.tenant_id", "=", tenantId)
     .executeTakeFirst();
-  if (!row || row.status === "converted") return null;
+  // 'purged' (ADR-0345: the lapsed trial's data deleted after 90 days) keeps no tenant_id, so it
+  // cannot match here — named anyway, so the type stays honest.
+  if (!row || row.status === "converted" || row.status === "purged") return null;
   const until = new Date(row.trialUntil as unknown as string);
   const started = new Date(row.startedAt as unknown as string);
   const base = config.publicBaseUrl.replace(/\/+$/, "");
