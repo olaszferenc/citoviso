@@ -13,7 +13,8 @@
 //      off — and a module the tenant PAID for (trial_grant cleared) stays on; the admin
 //      reads the tenant as frozen (isSubscriptionFrozen);
 //   ④ the purchase gate: a trialist may buy (ownedBlocksInitialPurchase → null), a
-//      tenant WITHOUT a trial stays refused;
+//      tenant WITHOUT a trial stays refused; GET /p/<t>/folytatas serves the trialist the
+//      configurator with the trial coupon, and sends anyone else back to /p/<t>;
 //   ⑤ continuation: the REAL settlement (applyWebhookResult, mock gateway) → site live,
 //      trial 'converted', subscription anchor = today, the trial coupon burnt ONCE, no
 //      second (welcome) coupon — and from then on the lead is a customer (gate refuses).
@@ -22,14 +23,15 @@
 // db client; the provider switches are forced to mock and READ BACK (the dev .env names a
 // real invoice agent and the real Barion gateway). The snapshot under sites/ is removed.
 //
-// --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the notice
+// --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the trial
+// coupon expired before the /folytatas GET, the notice
 // ledger wiped before the second run, the
 // site switched back on after the lapse, a trial module revived) — ② ③ must go red.
 //
 // Run: npx tsx scripts/free-trial-expiry-check.mts   (--self-test: must go RED)
 
 import pg from "pg";
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./lib/scratch-db.mts";
@@ -71,6 +73,8 @@ execFileSync("npx", ["tsx", "src/db/migrate.ts"], {
 });
 process.env.PGDATABASE = SCRATCH;
 process.env.DATABASE_URL = "";
+process.env.CIT_SHOT = "1";
+process.env.CONSOLE_PORT = "0";
 
 const { db } = await import("../src/db/client.js");
 const { sql } = await import("kysely");
@@ -116,6 +120,8 @@ const RECIPE = { template: "editorial", skin: "", archetype: "", sections: [] } 
 const FORM = { name: "Teszt Elek", email: "trialexpiry@example.invalid", phone: "+36 30 123 4567", aszfAccepted: true, photoRightsAccepted: true };
 
 const tenants: string[] = [];
+let closeConsole: (() => void) | null = null;
+let closeMockFile: (() => Promise<void>) | null = null;
 /** A Budapest wall-clock instant (CEST in October: UTC+2). */
 const bp = (isoDay: string, hhmm: string): Date => new Date(`${isoDay}T${hhmm}:00+02:00`);
 
@@ -227,6 +233,24 @@ try {
   const bt = await db.insertInto("tenant").values({ lead_id: b.leadId, display_name: `_trialexpiry_${stamp} b` }).returning("id").executeTakeFirstOrThrow();
   tenants.push(bt.id);
   check("próba nélküli tulajdonos lead → továbbra is elutasítva", (await ownedBlocksInitialPurchase(b.leadId)) !== null);
+  // the continuation entry: GET /p/<token>/folytatas → the configurator with the trial coupon
+  const { server: consoleServer } = await import("../src/console/server.js");
+  closeConsole = () => { consoleServer.closeAllConnections(); consoleServer.close(); };
+  if (!consoleServer.listening) await new Promise((r) => consoleServer.once("listening", r));
+  const cport = (consoleServer.address() as { port: number }).port;
+  const get = (p: string) => fetch(`http://127.0.0.1:${cport}${p}`, { redirect: "manual" });
+  if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() - 1000) } as never).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  const mockFile = path.resolve(process.cwd(), `sites/_trialexpiry_${stamp}a.html`);
+  await writeFile(mockFile, "<!doctype html><html><head><title>t</title></head><body><main>mock</main></body></html>");
+  closeMockFile = () => rm(mockFile, { force: true });
+  const contA = await get(`/p/${a.token}/folytatas`);
+  const bodyA = contA.status === 200 ? await contA.text() : "";
+  check("GET /p/<t>/folytatas (lejárt próbázó) → 200, konfigurátor a saját /request-re", contA.status === 200 && bodyA.includes(`/p/${a.token}/request`), String(contA.status));
+  const cp = await db.selectFrom("offer").select("percent").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").executeTakeFirstOrThrow();
+  check(`…a próba-kupon (${cp.percent}%) mint ajánlat`, new RegExp(`"offer":\\{"kind":"coupon","percent":${cp.percent}[,}]`).test(bodyA));
+  if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() + 90 * 86_400_000) } as never).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  const contB = await get(`/p/${b.token}/folytatas`);
+  check("…próba nélküli lead → vissza a /p/<t>-re (nincs konfigurátor)", contB.status >= 300 && contB.status < 400 && (contB.headers.get("location") ?? "").endsWith(`/p/${b.token}`), String(contB.status));
 
   // ⑤ continuation — the real settlement on the trial's own checkout order
   console.log("⑤ folytatás-fizetés");
@@ -248,6 +272,8 @@ try {
   check("a fizetés aktivál", paid.ok && paid.activated === true, JSON.stringify(paid));
   const siteAfter = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
   check("a site újra LIVE", siteAfter.status === "live", siteAfter.status);
+  const contPaid = await get(`/p/${a.token}/folytatas`);
+  check("fizetés után a /folytatas már nem pénztár → vissza a /p/<t>-re", contPaid.status >= 300 && contPaid.status < 400, String(contPaid.status));
   const trAfter = await db.selectFrom("free_trial").select(["status", "converted_at"]).where("id", "=", trial.id).executeTakeFirstOrThrow();
   check("free_trial → converted", trAfter.status === "converted" && !!trAfter.converted_at, trAfter.status);
   const sub = await db.selectFrom("subscription").select(["anchor_date", "status"]).where("tenant_id", "=", tenantId).executeTakeFirst();
@@ -264,6 +290,8 @@ try {
     entsAfter.map((e) => `${e.module}${e.trial_grant ? "*" : ""}`).join(","));
   check("a fizetés után a lead VEVŐ: a kapu újra elutasít", (await ownedBlocksInitialPurchase(a.leadId)) !== null);
 } finally {
+  closeConsole?.();
+  await closeMockFile?.();
   overrideFreeTrialConfigInProcess(null);
   for (const t of tenants) await rm(path.resolve(process.cwd(), "sites", t), { recursive: true, force: true });
   await db.destroy();

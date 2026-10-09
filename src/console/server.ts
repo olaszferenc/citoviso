@@ -3208,6 +3208,48 @@ async function handle(
   // escalation offer, and showing any offer card. What stays: the mock, the
   // configurator, and an honest banner saying they opted out and opened this
   // themselves.
+  // GET /p/:token/folytatas — ADR-XXXX: the trialist's way to PAY (continue). The plain
+  // /p/:token keeps serving the owned notice (a trial tenant IS an owner there); this
+  // route serves the same configurator, its checkout posting to the same /p/:token/request
+  // (handleOrderRequest already lets a continuable trial through and prices it with the
+  // tenant's coupon). Only for a continuable trial — anyone else goes back to /p/:token,
+  // which knows what to show them. Nothing is measured: this visitor is a customer.
+  // ⛔ No framing text yet: the banner/wording is a §2b design (proba-C mock), not wired.
+  const pContMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas$/.exec(pPath);
+  if (method === "GET" && pContMatch) {
+    const p = await getProspectByToken(pContMatch[1]);
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    const pf = await db
+      .selectFrom("prospect")
+      .innerJoin("lead", "lead.id", "prospect.lead_id")
+      .select([
+        "lead.id as leadId",
+        "lead.address as leadAddress",
+        "lead.raw as leadRaw",
+        "lead.preview_label as previewLabel",
+        "prospect.contact_email as contactEmail",
+      ])
+      .where("prospect.token", "=", pContMatch[1])
+      .executeTakeFirst();
+    const trial = pf ? await continuableTrialForLead(pf.leadId) : null;
+    if (!pf || !trial) return redirect(res, `/p/${pContMatch[1]}`);
+    const coupon = await bestActiveCouponForTenant(trial.tenantId);
+    try {
+      const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
+      const page = await injectConfigurator(html, p.artifactId, p.leadName, {
+        requestUrl: `/p/${pContMatch[1]}/request`,
+        subLabel: pf.previewLabel ?? null,
+        renewalLeadId: pf.leadId,
+        ...(p.lang ? { lang: p.lang } : {}),
+        billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null),
+        ...(coupon ? { offer: offerForPage(coupon, p.lang ?? "hu") } : {}),
+      });
+      return send(res, 200, disableIntroAnimation(page));
+    } catch {
+      return redirect(res, `/p/${pContMatch[1]}`);
+    }
+  }
+
   const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(pPath);
   if (method === "GET" && pMatch) {
     const p = await getProspectByToken(pMatch[1]);
