@@ -239,6 +239,8 @@ try {
   });
   check("kupon nélkül: nincs kupon-mondat és nincs Kedvezmény-sor („A kupon nélkül” ág)",
     !noCoupon.text.includes("kedvezmény") && !(noCoupon.html ?? "").includes("Kedvezmény") && (noCoupon.html ?? "").includes("Törlés napja"));
+  // Elek 22 (2026-10-09): the intro opens with the site's name — it needs its article.
+  check("névelő: „A Teszt Panzió honlapjának…”", noCoupon.text.includes("A Teszt Panzió honlapjának ingyenes próbája"), noCoupon.text.slice(0, 160));
   const rows = await p7Rows();
   check("…a p7 sor 'sent', a törlés napjával", rows.length === 1 && rows[0]!.status === "sent" && rows[0]!.detail === "2026-10-12", JSON.stringify(rows));
   const again = await runPurgeWarnings(bp("2026-10-05", "11:00"), deps, only);

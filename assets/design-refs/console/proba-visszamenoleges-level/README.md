@@ -34,6 +34,6 @@ kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tart
    a leiratkozó link, a jogalap-sor, a cégazonosítás (`advertiserIdentity`). Az egy-lövés sor KÓDKÉNYSZER: `trial_campaign` tábla
    (leadenként és címenként egy), és az eszkalációs follow-up utána nem megy.
 8. **SMS:** ékezet nélkül (GSM-7), a linkkel, ≤ 2 szelet; hosszú névnél a NÉV rövidül, a link soha. Szövege (ékezetes forrás, majd
-   GSM-7-re hajtva): „{name}: a {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya,
+   GSM-7-re hajtva): „{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya,
    nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso”.
 9. **Küldés:** csak hétköznap 9–16 (ADR-0334), sorban (SMS ≥ 90 mp), szárazon alapból; élesen `--go`, a tulaj külön „mehet”-jével.

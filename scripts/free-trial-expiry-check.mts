@@ -308,6 +308,10 @@ try {
   const mon = buildTrialNoticeEmail({ to: "x@example.invalid", daysLeft: monLeft, siteName: "X", contactName: null, trialUntilIso: "2026-10-19", coupon: null, continueUrl: "https://citoviso.test/p/x/folytatas", lang: "hu" });
   check("hétfői lejárat pénteki T−1-e: „Még 3 nap…”, nem „Holnap”", monLeft === 3 && mon.subject.startsWith("Még 3 nap az ingyenes próbából") && !mon.html!.includes("Holnap"), mon.subject);
   check("kupon nélkül nincs kedvezmény-ígéret", !mon.html!.includes("kedvezmény"));
+  // Elek 22 (2026-10-09): the intro opens with the site's name — it needs its article.
+  const art = buildTrialNoticeEmail({ to: "x@example.invalid", daysLeft: 3, siteName: "Üdülő tábor", contactName: null, trialUntilIso: "2026-10-19", coupon: null, continueUrl: "https://citoviso.test/p/x/folytatas", lang: "hu" });
+  check("névelő: „Az Üdülő tábor honlapjának…” (nem névelő nélkül)", art.text.includes("Az Üdülő tábor honlapjának ingyenes próbája") && (art.html ?? "").includes("Az <b>Üdülő tábor</b> honlapjának"), art.text.split("\n")[2]);
+  check("névelő: „A X honlapjának…” mássalhangzónál", mon.text.includes("A X honlapjának ingyenes próbája"));
   // the hourly tick runs the wired deps, never dry
   const tick = readFileSync(path.resolve(process.cwd(), "scripts/offer-followup.mts"), "utf8");
   // Only the T−3/T−1 call is judged here; the ADR-0345 purge warning call is judged by free-trial-retention-check.

@@ -21,6 +21,7 @@
 
 import path from "node:path";
 import { T } from "../i18n/mail.js";
+import { huArticleLower } from "../hu.js";
 import { config } from "../config.js";
 import { formatDayShortOn, formatMonthDayOn } from "../text/day.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
@@ -445,12 +446,15 @@ export function buildTrialCampaignSmsText(input: {
   readonly link: string;
 }): { readonly text: string; readonly name: string } {
   const { lang } = input;
+  const date = formatDayShortOn(input.sentIso, lang);
   const build = (name: string): string =>
     toGsm7(
       T(
         lang,
-        "{name}: a {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya, nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso",
-        { name, date: formatDayShortOn(input.sentIso, lang), days: String(input.days), link: input.link },
+        "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya, nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso",
+        // The article follows the date's first sound ("az okt. 4-én", "a szept. 24-én") —
+        // a fixed "a" read "a okt. 4-en" (Elek, 2026-10-09).
+        { name, art: huArticleLower(date), date, days: String(input.days), link: input.link },
       ),
     );
   const fits = (t: string): boolean => smsEncoding(t).segments <= TRIAL_CAMPAIGN_SMS_MAX_SEGMENTS;

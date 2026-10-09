@@ -159,6 +159,9 @@ if (SELF_TEST) {
   smsLegs(sms.text, link, "minta");
   check("② a jóváhagyott szöveg", sms.text === `Roze Fogado: a szept. 24-en kuldott honlap-tervet most 14 napig ingyen, elesben is kiprobalhatja. Nincs kartya, nincs elofizetes, a vegen nem terhelunk. ${link} Leiratkozas a lap aljan. Citoviso`, sms.text);
   smsLegs(smsLong.text, link, "hosszú név");
+  // Elek 22 (2026-10-09): the article follows the date — "a okt. 4-en" was the bug.
+  const smsOkt = buildTrialCampaignSmsText({ lang, leadName: "Rozé Fogadó", sentIso: "2026-10-04", days: 14, link });
+  check("② névelő a dátum előtt: „az okt. 4-en”", smsOkt.text.startsWith("Roze Fogado: az okt. 4-en kuldott"), smsOkt.text.slice(0, 40));
   check("② hosszú név → a név rövidül, nem a link", smsLong.name.endsWith("...") && smsLong.text.startsWith(smsLong.name));
   const g = checkOutreachSms(
     { text: sms.text, link, unsubscribeLink: "https://citoviso.com/p/roze-fogado/Xk3mintatokenmintatoken0/unsubscribe" },

@@ -16,7 +16,7 @@ T−3 e-mail (`t3-*.png`), T−1 e-mail (`t1-*.png`), próbás belépő-levél (
    **T−1 tárgy:** **„Holnap lejár az ingyenes próba – {site}”**. ⛔ A szám a VALÓS hátralévő napok száma
    (Budapest naptári nap), nem a lépcső neve: hétvégére eső lépcső a pénteken megy, és ott a „Holnap” hazugság
    lenne (§B.17). Kiesés utáni, a lejárat napján menő pótlás: „Ma lejár az ingyenes próba”.
-3. **Szöveg:** **„{site} honlapjának ingyenes próbája {until} lejár.”** (a dátum „2026. október 22-én, csütörtökön”
+3. **Szöveg:** **„{Art} {site} honlapjának ingyenes próbája {until} lejár.”** (a dátum „2026. október 22-én, csütörtökön”
    alakú), majd ha van próba-kupon: **„Ha folytatná, a próbához kapott kedvezménnyel teheti: {percent} az első díjból, {until}-ig.”**
    Kupon nélkül ez a bekezdés és a két kupon-sor elmarad — kedvezményt nem ígérünk, ami nincs.
 4. **Adat-panel:** „A próba vége” (2026. okt. 22. (csütörtök)) · „Kedvezmény” · „A kedvezmény érvényes”.

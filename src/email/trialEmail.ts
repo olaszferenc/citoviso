@@ -14,7 +14,7 @@
 
 import { T } from "../i18n/mail.js";
 import { formatDayOn, formatDayShortOn, formatDayShortStem, formatDayShortWeekday, formatDayLongStem } from "../text/day.js";
-import { huArticleLower } from "../hu.js";
+import { huArticle, huArticleLower } from "../hu.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { esc, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
@@ -81,9 +81,11 @@ export function buildTrialNoticeEmail(input: {
         ? T(lang, "Holnap lejár az ingyenes próba")
         : T(lang, "{n} nap múlva lejár az ingyenes próba", { n });
 
-  const intro = (v: { site: string; until: string }): string =>
-    T(lang, "{site} honlapjának ingyenes próbája {until} lejár.", v);
-  const introVars = { site: siteName, until: formatDayOn(trialUntilIso, lang) };
+  // The sentence opens with the site's name, so it needs its article ("A Napfény…",
+  // "Az Üdülő…") — without it the letter read "Napfény Vendégház honlapjának…" (Elek, 2026-10-09).
+  const intro = (v: { Art: string; site: string; until: string }): string =>
+    T(lang, "{Art} {site} honlapjának ingyenes próbája {until} lejár.", v);
+  const introVars = { Art: huArticle(siteName), site: siteName, until: formatDayOn(trialUntilIso, lang) };
   const offer = (v: { percent: string; until: string }): string =>
     T(lang, "Ha folytatná, a próbához kapott kedvezménnyel teheti: {percent} az első díjból, {until}-ig.", v);
   const offerVars = coupon
@@ -155,13 +157,18 @@ export function buildPurgeWarningEmail(input: {
   const subject = T(lang, "{n} nap múlva töröljük a próba-honlap adatait – {site}", { n, site: siteName });
   const heading = T(lang, "{n} nap múlva töröljük a próba-honlap adatait", { n });
 
-  const intro = (v: { site: string; until: string; purge: string }): string =>
+  const intro = (v: { Art: string; site: string; until: string; purge: string }): string =>
     T(
       lang,
-      "{site} honlapjának ingyenes próbája {until} lejárt. Az adatait azóta megőriztük; {purge} véglegesen töröljük a honlapot, a szerkesztő-fiókot és a feltöltött fényképeket.",
+      "{Art} {site} honlapjának ingyenes próbája {until} lejárt. Az adatait azóta megőriztük; {purge} véglegesen töröljük a honlapot, a szerkesztő-fiókot és a feltöltött fényképeket.",
       v,
     );
-  const introVars = { site: siteName, until: formatDayOn(trialUntilIso, lang), purge: formatDayOn(purgeIso, lang) };
+  const introVars = {
+    Art: huArticle(siteName),
+    site: siteName,
+    until: formatDayOn(trialUntilIso, lang),
+    purge: formatDayOn(purgeIso, lang),
+  };
   const offer = (v: { percent: string; until: string }): string =>
     T(lang, "Ha folytatná, a próbához kapott kedvezménnyel még megteheti: {percent} az első díjból, {until}-ig.", v);
   const offerVars = coupon

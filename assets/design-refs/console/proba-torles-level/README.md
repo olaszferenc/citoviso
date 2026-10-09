@@ -17,7 +17,7 @@ dátumok + kupon a fizetéshez; kupon nélkül az „A kupon nélkül” ág). K
 2. **Tárgy:** **„{n} nap múlva töröljük a próba-honlap adatait – {site}”**, címsor: **„{n} nap múlva töröljük a próba-honlap adatait”**.
    ⛔ Az {n} a VALÓS napok száma a küldés napjától a törlés napjáig (Budapest naptári nap): hétvégére eső
    figyelmeztetés a péntekre kerül (`purgeWarningDay`), és ott **9 nap** áll, nem kerekített 7 (§B.17).
-3. **Szöveg:** **„{site} honlapjának ingyenes próbája {until} lejárt. Az adatait azóta megőriztük; {purge} véglegesen töröljük a honlapot, a szerkesztő-fiókot és a feltöltött fényképeket.”**
+3. **Szöveg:** **„{Art} {site} honlapjának ingyenes próbája {until} lejárt. Az adatait azóta megőriztük; {purge} véglegesen töröljük a honlapot, a szerkesztő-fiókot és a feltöltött fényképeket.”**
    (a dátumok „2027. január 20-án, szerdán” alakúak; a szállás neve és a törlés napja félkövér). A {purge} a levél
    által ígért nap: késve kiment levélnél az `effectivePurgeDay` (a törlés csúszik, az értesítés nem rövidül).
 4. **Kupon (csak élő próba-kuponnal, `liveTrialCoupon`):** **„Ha folytatná, a próbához kapott kedvezménnyel még megteheti: {percent} az első díjból, {until}-ig.”**
