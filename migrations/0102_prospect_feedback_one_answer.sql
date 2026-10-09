@@ -1,4 +1,4 @@
--- 0102 ONE ANSWER PER KEY, THE LATEST WINS — "Mi tartja vissza?" (ADR-XXXX; IT A-07, Elek).
+-- 0102 ONE ANSWER PER KEY, THE LATEST WINS — "Mi tartja vissza?" (ADR-0350; IT A-07, Elek).
 --
 -- Until now the rule "one answer per view per source" lived only in the app, as a
 -- check-then-insert (0087: "enforced in the app"):

@@ -54,7 +54,7 @@ export function cleanFeedbackText(reason: FeedbackReason, raw: unknown): string 
 export type FeedbackOutcome = "created" | "updated" | "bad_view";
 
 /**
- * Store one answer. ONE ROW PER KEY, THE LATEST ANSWER WINS (ADR-XXXX, IT A-07): the key
+ * Store one answer. ONE ROW PER KEY, THE LATEST ANSWER WINS (ADR-0350, IT A-07): the key
  * is prospect + source + view (without a view — unsubscribe page, reminder link, trial
  * letter — prospect + source). A repeat overwrites the reason and text; a double tap
  * writes the same answer again. The key is unique in the DATABASE (0102), so parallel

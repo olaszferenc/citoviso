@@ -231,7 +231,7 @@ export interface ProspectFeedbackTable {
   text: string | null;
   /** Time of the FIRST answer for this key (prospect, source, view). */
   created_at: Generated<Timestamp>;
-  /** 0102 (ADR-XXXX): set when a later answer overwrote the stored one; null = never changed. */
+  /** 0102 (ADR-0350): set when a later answer overwrote the stored one; null = never changed. */
   updated_at: Timestamp | null;
 }
 

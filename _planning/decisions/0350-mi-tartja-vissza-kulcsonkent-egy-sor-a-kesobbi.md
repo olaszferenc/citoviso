@@ -1,4 +1,4 @@
-## ADR-XXXX — „Mi tartja vissza?”: kulcsonként egy sor, a későbbi válasz felülírja az elsőt
+## ADR-0350 — „Mi tartja vissza?”: kulcsonként egy sor, a későbbi válasz felülírja az elsőt
 
 **Dátum:** 2026-10-10 · **Kontextus:** IT A-07 + Elek lelete — a próba-levél „mi tartja vissza?” válaszai közül csak az első maradt meg; párhuzamos POST-nál két sor született.
 

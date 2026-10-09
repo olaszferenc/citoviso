@@ -3135,7 +3135,7 @@ async function handle(
   // ADR-0322 ④/B — the micro-survey answer. ONE endpoint for all three places: JSON from
   // the mock page (→ 204), a plain form from the unsubscribe / reminder-link page (→ a
   // thank-you page). Token-checked like the event beacon; one row per view per source, and
-  // a later answer OVERWRITES the stored one (ADR-XXXX, IT A-07 — the first tap used to win
+  // a later answer OVERWRITES the stored one (ADR-0350, IT A-07 — the first tap used to win
   // and a changed answer was thanked for and dropped). An opted-out visitor
   // MAY answer: this is a reply they choose to give, not measurement.
   const pFeedbackMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/feedback$/.exec(pPath);
