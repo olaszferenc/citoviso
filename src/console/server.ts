@@ -3133,7 +3133,7 @@ async function handle(
     }
     return send(res, 204, "");
   }
-  // POST /p/:token/trial — ADR-XXXX: the card-less free trial (no payment, no invoice).
+  // POST /p/:token/trial — ADR-0342: the card-less free trial (no payment, no invoice).
   // JSON {name, email, phone, aszfAccepted, photoRightsAccepted, viewId?} → {ok, …} or
   // {ok:false, error:<TrialError>}; the page maps the code to its own wording.
   // Idempotent: a repeat answers the SAME trial (existing:true), never a second tenant.

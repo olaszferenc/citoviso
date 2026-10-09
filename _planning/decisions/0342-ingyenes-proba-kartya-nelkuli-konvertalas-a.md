@@ -1,4 +1,4 @@
-## ADR-XXXX — Ingyenes próba: kártya nélküli konvertálás, a próba-állapot külön táblában (nem az előfizetésen)
+## ADR-0342 — Ingyenes próba: kártya nélküli konvertálás, a próba-állapot külön táblában (nem az előfizetésen)
 
 **Dátum:** 2026-10-09 · **Státusz:** ELFOGADVA (tulaj-döntés 2026-10-09: próba VAN, full funkció,
 végén szünetel, nem terhel; a szerkezeti döntés a SUB A-é) · **Kapcsolódó:** ADR-0080 (előfizetés-motor),

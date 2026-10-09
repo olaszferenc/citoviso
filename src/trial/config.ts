@@ -1,4 +1,4 @@
-// ADR-XXXX — the free trial's operator-set parameters (one app_setting row, JSON;
+// ADR-0342 — the free trial's operator-set parameters (one app_setting row, JSON;
 // the same pattern as ADR-0285 `escalation_offer`, so no migration). The /pricing
 // editor is a separate slice; this getter is the ONLY place minting code reads from.
 

@@ -1,6 +1,6 @@
 # 2026-10-09 — Ingyenes próba SUB A: próba-állapot + kártya nélküli konvertálás (backend)
 
-**Szál:** koordinátor `f3e80964`, brief `~/rc-briefs/proba-A-allapot-konvertalas-20261009.md`. Döntés: ADR-XXXX.
+**Szál:** koordinátor `f3e80964`, brief `~/rc-briefs/proba-A-allapot-konvertalas-20261009.md`. Döntés: ADR-0342.
 
 ## Elvégezve
 - `free_trial` tábla + `module_entitlement.trial_grant` (0097); a próbázónak nincs subscription sora → a billing-tick nem lát rá.

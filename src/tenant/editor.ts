@@ -640,7 +640,7 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
     .where("order_intent.photo_rights_declared_at", "is not", null)
     .executeTakeFirst();
 
-  // ADR-XXXX: a card-less trial stamps the same declaration on its free_trial row.
+  // ADR-0342: a card-less trial stamps the same declaration on its free_trial row.
   const trialDecl = decl
     ? undefined
     : await db

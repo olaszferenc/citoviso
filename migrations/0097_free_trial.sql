@@ -1,4 +1,4 @@
--- 0097 INGYENES PRÓBA — kártya nélküli próba-állapot (ADR-XXXX).
+-- 0097 INGYENES PRÓBA — kártya nélküli próba-állapot (ADR-0342).
 --
 -- MIÉRT KÜLÖN TÁBLA, ÉS MIÉRT NEM `subscription.status='trial'`. A `subscription` sor a
 -- fizetés szülötte: az `anchor_date` NOT NULL, és ADR-0080 ① szerint az ELSŐ fizetés napja.
@@ -47,6 +47,6 @@ ALTER TABLE module_entitlement
   ADD COLUMN IF NOT EXISTS trial_grant boolean NOT NULL DEFAULT false;
 
 COMMENT ON TABLE free_trial IS
-  'ADR-XXXX: kártya nélküli ingyenes próba — leadenként egy; a próbázó tenantnak nincs subscription sora, így a billing-tick nem lát rá.';
+  'ADR-0342: kártya nélküli ingyenes próba — leadenként egy; a próbázó tenantnak nincs subscription sora, így a billing-tick nem lát rá.';
 COMMENT ON COLUMN module_entitlement.trial_grant IS
-  'ADR-XXXX: a próba adta, nem fizetett jogosultság; a fizetett egyeztetés a megvett modulokról leveszi, a többit kikapcsolja.';
+  'ADR-0342: a próba adta, nem fizetett jogosultság; a fizetett egyeztetés a megvett modulokról leveszi, a többit kikapcsolja.';

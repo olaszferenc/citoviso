@@ -1,4 +1,4 @@
-// ADR-XXXX — the card-less free trial: mock → live trial site, no payment, no invoice.
+// ADR-0342 — the card-less free trial: mock → live trial site, no payment, no invoice.
 //
 // Built on the conversion path a paid order takes (convertLead → live render → owner
 // login), with three differences that ARE the trial:
@@ -214,7 +214,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     //    then no-ops on conflict, so discounts never stack (ADR-0088 ⑥).
     await db
       .updateTable("offer")
-      .set({ expires_at: now, note: `ADR-XXXX: lezárva — a próbát választotta (${trialId})` })
+      .set({ expires_at: now, note: `ADR-0342: lezárva — a próbát választotta (${trialId})` })
       .where("prospect_id", "=", p.id)
       .where("scope", "=", "initial")
       .whereRef("used_count", "<", "max_uses")
@@ -232,7 +232,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           percent: cfg.couponPercent,
           scope: "purchase",
           expires_at: new Date(trialUntil.getTime() + NEW_SUBSCRIBER_COUPON_DAYS * 86_400_000),
-          note: `ADR-XXXX: ingyenes próba folytatás-kupon (${trialId})`,
+          note: `ADR-0342: ingyenes próba folytatás-kupon (${trialId})`,
         })
         .onConflict((oc) => oc.doNothing())
         .returning("id")

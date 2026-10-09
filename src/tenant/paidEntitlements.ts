@@ -170,7 +170,7 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
     revoked.push(module);
   }
 
-  // ADR-XXXX: what the buyer paid for is no longer a trial grant — it stays, unflagged.
+  // ADR-0342: what the buyer paid for is no longer a trial grant — it stays, unflagged.
   // The unpaid trial grants were switched off by the loop above (they are active and
   // unpaid like any leak); their flag stays, so the record shows where they came from.
   if (paid.length) {

@@ -494,12 +494,12 @@ export interface ModuleEntitlementTable {
   /** ADR-0080 ②: mid-cycle addition awaiting its first renewal invoice —
    *  legitimately active though unpaid; cleared by the renewal that bills it. */
   awaiting_first_charge: Generated<boolean>;
-  /** 0097 (ADR-XXXX): granted by the free trial, not bought. Cleared by the paid
+  /** 0097 (ADR-0342): granted by the free trial, not bought. Cleared by the paid
    *  reconciliation on what the buyer paid for; the rest is switched off there. */
   trial_grant: Generated<boolean>;
 }
 
-/** 0097 (ADR-XXXX): the card-less free trial — one per lead. A trialling tenant has
+/** 0097 (ADR-0342): the card-less free trial — one per lead. A trialling tenant has
  *  NO subscription row, so the billing tick cannot mint an invoice or dunning for it. */
 export interface FreeTrialTable {
   id: Generated<string>;

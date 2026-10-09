@@ -1,4 +1,4 @@
-// ADR-XXXX — the card-less free trial (src/trial/). What this proves, each leg a way the
+// ADR-0342 — the card-less free trial (src/trial/). What this proves, each leg a way the
 // trial could quietly cost money or hand out a second site:
 //   ① a valid submit → tenant + LIVE site on the subdomain + free_trial row, trial_until =
 //      start + the CONFIGURED days;
