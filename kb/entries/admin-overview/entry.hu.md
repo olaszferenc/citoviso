@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-10-02
+updated: 2026-10-09
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -117,6 +117,38 @@ A **„Megadom az árakat”** gomb az Árazás lapra visz. Ha egy szobára szá
 mert mindig egyedi ajánlatot küld, ott pipálja be — akkor a szoba lekerül a sorról, és
 emlékeztetőt sem küldünk róla. Ha az Árak modulban egyáltalán nincs tartalom, ez a sor nem
 jelenik meg, mert akkor a „Töltse ki:” sor szól róla.
+
+## Ingyenes próba — a sáv a lap tetején
+
+Amíg az oldalát ingyenes próbában használja, **minden lap tetején** egy vékony sáv mutatja, meddig tart
+még a próba: hány nap van hátra, és melyik napig (például „2026. okt. 22. (csütörtök)-ig”). A sávot nem lehet
+bezárni — a próba végét ne veszítse szem elől. Ha a próbához kedvezményt is kapott, és az még érvényes, a sáv kiírja, hány
+százalékot kap az első díjból, ha folytatja.
+
+- **3 nappal a vége előtt** a sáv sárgára vált. Az utolsó előtti napon „holnap jár le”, az utolsó napon
+  **„Ma jár le az ingyenes próba.”** áll benne.
+- A **„Folytatom”** gombbal a saját honlapja előnézetére jut, mellette a rendelő panellel: itt kiválasztja,
+  mely modulokat tartja meg, és kifizeti (a próbához kapott kedvezmény már be van számítva). Kártyát a próba
+  alatt nem kértünk, és magától nem is terhelünk semmit. Ha mégsem fizet most, a böngésző Vissza gombjával
+  visszatér a kezelőfelületre.
+- **Telefonon** a haladás-csík elmarad, a gomb a sáv teljes szélességében áll.
+- Ha a próba utolsó napja már elmúlt, de a honlap még nem állt le (ez reggel 7-kor történik), a sávban
+  **„Az ingyenes próba lejárt.”** áll.
+- Ha már kifizette, a sáv eltűnik — onnantól a **Modulok** fül **Előfizetés** kártyája mutatja a díjat
+  és a fordulónapot.
+
+### Lejárt a próba — a honlap szünetel
+
+Ha a próba vége után nem folytatta, a honlapja **szünetel**: a látogatók egy udvarias lapot kapnak a szállás
+nevével, településével és az Ön elérhetőségeivel, hogy foglalási kérdéssel közvetlenül Önt kereshessék.
+A kezelőfelülete viszont él — ebben most is dolgozhat.
+
+Ilyenkor minden lap tetején egy piros doboz áll, a címében a próba utolsó napjával: a honlapja szünetel, mert a próba lejárt. Az Áttekintésen
+ebben látja a próbához kapott kedvezményt (ha volt), a **„Folytatom — fizetés”** gombot, és a
+**„Mi maradt meg”** listát: a szerkesztő felülete, minden szöveg, kép és beállítás, és a beérkezett üzenetek.
+A doboz alján lévő **„Megnézem, mit lát a látogató”** linkkel meg is nézheti, hogy a vendégei most is
+elérik-e Önt. A többi lapon a doboz rövidebb. **Tartozása nincs** — nem terheltünk semmit. A fizetés után a honlap
+magától, azonnal visszakapcsol.
 
 ## Az oldal megnyitása
 

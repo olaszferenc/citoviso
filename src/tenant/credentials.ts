@@ -13,6 +13,7 @@ import { generateMemorablePassword, hashPassword } from "../auth/tenantAuth.js";
 import { findUserForReset, issuePasswordToken, passwordLinkUrl } from "../auth/passwordLink.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildCredentialsEmail, buildPasswordResetEmail } from "../email/loginEmail.js";
+import { footerReasonForTenant } from "../trial/footer.js";
 import type { TrialCouponView } from "../email/trialEmail.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
@@ -152,6 +153,8 @@ export async function sendPasswordResetLinks(identifier: string): Promise<number
       setPasswordUrl: passwordLinkUrl(token, lang),
       siteName: u.siteName,
       lang,
+      // ADR-0344 C2c: a trialist did not order yet — the footer says „próbálja ki".
+      footerReason: await footerReasonForTenant(u.tenantId),
     });
     await getEmailSender().send(msg);
     await logTenantMessage({

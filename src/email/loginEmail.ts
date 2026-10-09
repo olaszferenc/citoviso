@@ -23,7 +23,7 @@
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
 import { mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
-import type { MailDetailRow } from "./platformLayout.js";
+import type { FooterReason, MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 import { boldVars, couponValue, type TrialCouponView } from "./trialEmail.js";
 import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "../text/day.js";
@@ -123,8 +123,10 @@ export function buildPasswordResetEmail(input: {
   setPasswordUrl: string;
   siteName: string;
   lang?: string;
+  /** ADR-0344 C2c: an account in its free trial did not order yet — footerReasonForTenant(). */
+  footerReason?: FooterReason;
 }): EmailMessage {
-  const { to, username, setPasswordUrl, siteName, lang } = input;
+  const { to, username, setPasswordUrl, siteName, lang, footerReason } = input;
   const subject = T(lang, "Új jelszó beállítása – {site}", { site: siteName });
   const intro = T(
     lang,
@@ -152,5 +154,6 @@ export function buildPasswordResetEmail(input: {
       mailButton(setPasswordUrl, button),
       mailNote(esc(note)),
     ],
+    footerReason,
   });
 }

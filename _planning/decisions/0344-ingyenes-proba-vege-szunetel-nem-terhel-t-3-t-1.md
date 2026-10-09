@@ -1,6 +1,6 @@
 ## ADR-0344 — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
 
-**Dátum:** 2026-10-09 · **Státusz:** elfogadva (backend); a levelek szövege jóváhagyva és bekötve (C2 kiegészítés, lent); az admin-sáv és az SMS formája a tulajnál
+**Dátum:** 2026-10-09 · **Státusz:** elfogadva (backend); a levelek szövege jóváhagyva és bekötve (C2), az SMS él (C2b), az admin-sáv bekötve (C2c)
 **Előzmény:** ADR-0342 (próba-állapot, kártya nélküli konvertálás), ADR-0080 (⑥ freeze = 503 + Retry-After
 udvariassági lap; ① fordulónap), ADR-0088 (kupon: egyszeri, az első díjra, nem halmozódik), ADR-0334 (9–16 ablak),
 ADR-0287 (óránkénti tick). Tulaj-döntés 2026-10-09: a próba végén LEFAGY, nem terhel, kártya nem kell; 3 és 1 nappal
@@ -100,9 +100,38 @@ Tulaj-döntés (a koordinátoron át): **ékezet nélkül, linkkel**, ≤ 2 szel
    szöveg ékezet nélkül; hosszú ékezetes név → GSM-7, ≤ 2 szelet, ép link; a modem-injektálás GSM-7-nél
    nem kér `-unicode`-ot. `--self-test`: a bekötött SMS-küldő visszacserélve száraz-ra → pirosra megy.
 
+#### C2c — az admin próba-sáv és a próba-lábléc a többi platform-levélen (2026-10-09)
+
+Tulaj-döntés: az admin-sáv **A** változata (vékony sáv minden fülön). Kontraktus: `assets/design-refs/console/proba-admin-sav/`.
+
+10. **Aktív próba → sáv MINDEN fülön** (`trialStrip`, `src/server/adminViews.ts`; állapot: `trialAdminState`,
+    `src/trial/admin.ts`, minden admin-fülön betöltve, `src/server/public.ts`): a valós hátralévő napok
+    (`trialDaysLeft`), a próba utolsó napja, haladás-csík, „Folytatom” → `/p/<t>/folytatas`; nem zárható be;
+    `TRIAL_WARN_DAYS = 3` naptól sárga. A kedvezmény-mondat CSAK élő kuponnal (`liveTrialCoupon` — kiemelve a
+    `notices.ts`-ből, EGY szabály a levélnek és a sávnak). Ha a `trial_until` elmúlt, de a 07:00-s lejáratás még
+    nem futott: „Az ingyenes próba lejárt.” (a mockban nem volt; a „ma” rossz napon hazugság lenne).
+11. **Lejárt próba → szünetel-blokk** (`trialLapsedBlock`, `data-trial-lapsed`). Mérve: lejárt próbánál az admin
+    eddig SEMMIT nem mondott — az előfizetéses freeze-blokk a `subscription` sorra épül, ami a próbának nincs
+    (az `isSubscriptionFrozen` igaz, a nézet nem rajzolt). Ugyanaz a piros `adm-frz` keret, tartozás nélkül:
+    próba-kupon %, „Folytatom — fizetés”, „Mi maradt meg”, látogató-sor; a nem-Áttekintés füleken kompakt.
+    Fizetett (`converted`) próba → se sáv, se blokk. A mock „Modulok” kártyájának „csak a próbában volt” címkéi
+    NINCSENEK bekötve (nyitott).
+12. **Lábléc a többi platform-levélen:** `footerReasonForTenant(tenantId)` (`src/trial/footer.ts`) → `"trial"`, ha
+    a fióknak AKTÍV próbája van, különben `"order"`. Bekötve: jelszó-visszaállítás (`buildPasswordResetEmail`
+    `footerReason`, hívó `sendPasswordResetLinks`), a tulajnak menő foglalási levelek (`ownerLetter` — a
+    `footerReason` KÖTELEZŐ paraméter, 3 hívó — és az új kérés értesítője, `notifyOwner`). Felmérve, nem kell:
+    domain-levelek (saját domain csak rendeléssel jár, a próba csak aldomaint ad), számla/rendelés/billing
+    (próbázónak nem megy). A lejárt (nem fizetett) próbázó ma a vevői láblécet kapja — nyitott kérdés.
+13. **Őr:** a `free-trial-expiry-check` új ②c lába (a VALÓDI `adminDashboard` 13 fülön: sáv mindenütt;
+    >3 nap nem warn, ≤3 warn; Folytatom-link; lejárt → `data-trial-lapsed`; fizetett → semmi) és a ②b
+    lábléc-láb bővítése (`footerReasonForTenant`, jelszó-visszaállítás próbázónak/vevőnek, a küldők bekötése).
+    `--self-test`: a keret próba nélkül kapja / a próba vége kicsúszik a warn-ablakból → pirosra megy.
+
 ### Nyitott (a tulajé)
-- ~~Az SMS formája~~ → C2b: ékezet nélkül, linkkel. Az admin próba-sáv: A változat (tulaj, 2026-10-09) — bekötése folyamatban. Mock:
-  `~/rc-briefs/proba-C-mock-20261009/proba-C.html`. (A levelek: jóváhagyva, C2.)
+- ~~Az SMS formája~~ → C2b: ékezet nélkül, linkkel. ~~Az admin próba-sáv~~ → C2c: A változat bekötve,
+  kontraktus `assets/design-refs/console/proba-admin-sav/`. (A levelek: jóváhagyva, C2.)
 - **Meddig marad meg a lejárt próba adata?** Ma semmi nem törli; a szövegek „megmarad”-ot mondanak, határidő nélkül.
-- ~~A platform-levél lábléce próbánál nem pontos~~ → C2: a három próba-levélben javítva.
+- ~~A platform-levél lábléce próbánál nem pontos~~ → C2: a három próba-levélben javítva; C2c: a jelszó-visszaállításban és
+  a tulaj foglalási leveleiben is (aktív próbánál). **Nyitott:** a LEJÁRT próbázó is kapja-e a „próbálja ki” láblécet?
+- A lejárt próbánál a mock „Modulok” kártyájának „csak a próbában volt” címkéi nincsenek bekötve.
 - A lejárat a napi 07:00-s tickkel fut: a `trial_until` után legfeljebb ~1 napig az oldal még él.

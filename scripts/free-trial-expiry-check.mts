@@ -22,7 +22,12 @@
 //      -unicode; the tick calls exactly those deps (no dryRun); the heading counts the REAL
 //      days left (a Monday expiry's Friday T−1 says "Még 3 nap", never "Holnap"); the
 //      trial footer says "próbálja ki", the buyer's still says "rendelte meg"; the trial
-//      login letter carries the approved trial wording;
+//      login letter carries the approved trial wording; the password reset and the owner's
+//      booking letters take the footer from the account (footerReasonForTenant, C2c ②);
+//   ②c the ADMIN STRIP (C2c): the REAL adminDashboard on every tab carries data-trial-strip
+//      while the trial runs; more than TRIAL_WARN_DAYS left → calm, ≤ → adm-trial--warn;
+//      „Folytatom" → /p/<t>/folytatas; after the lapse the paused block (data-trial-lapsed),
+//      after paying (converted) neither;
 //   ⑤ continuation: the REAL settlement (applyWebhookResult, mock gateway) → site live,
 //      trial 'converted', subscription anchor = today, the trial coupon burnt ONCE, no
 //      second (welcome) coupon — and from then on the lead is a customer (gate refuses).
@@ -34,7 +39,8 @@
 // --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the trial
 // coupon expired before the /folytatas GET, the wired SMS sender swapped back to DRY, the notice
 // ledger wiped before the second run, the
-// site switched back on after the lapse, a trial module revived) — ② ③ must go red.
+// site switched back on after the lapse, a trial module revived, the admin frame handed no
+// trial, the trial end slid past the warn window) — ② ②c ③ must go red.
 //
 // Run: npx tsx scripts/free-trial-expiry-check.mts   (--self-test: must go RED)
 
@@ -115,7 +121,10 @@ const { budapestIsoDay } = await import("../src/text/budapestTime.js");
 const { trialNoticeDeps, trialDaysLeft } = await import("../src/trial/notices.js");
 const { buildTrialNoticeEmail, buildTrialNoticeSmsText } = await import("../src/email/trialEmail.js");
 const { isGsm7, smsEncoding } = await import("../src/sms/encoding.js");
-const { buildCredentialsEmail } = await import("../src/email/loginEmail.js");
+const { buildCredentialsEmail, buildPasswordResetEmail } = await import("../src/email/loginEmail.js");
+const { footerReasonForTenant } = await import("../src/trial/footer.js");
+const { trialAdminState, TRIAL_WARN_DAYS } = await import("../src/trial/admin.js");
+const { adminDashboard } = await import("../src/server/adminViews.js");
 const { readFileSync } = await import("node:fs");
 type EmailMessage = import("../src/email/sender.js").EmailMessage;
 type SiteData = import("../src/engine/recipe.js").SiteData;
@@ -139,6 +148,15 @@ let closeConsole: (() => void) | null = null;
 let closeMockFile: (() => Promise<void>) | null = null;
 /** A Budapest wall-clock instant (CEST in October: UTC+2). */
 const bp = (isoDay: string, hhmm: string): Date => new Date(`${isoDay}T${hhmm}:00+02:00`);
+
+/** ②c: the REAL admin frame on every tab — what the trialist sees, not the helper's opinion. */
+const ADMIN_TABS = ["attekintes", "szovegek", "fotok", "elerhetoseg", "modulok", "foglalasok", "uzenetek", "webcim", "forgalom", "dokumentumok", "penztarca", "fiok", "sugo"];
+const renderAdmin = (tenantId: string, tab: string, trial: unknown): string =>
+  adminDashboard(
+    { tenantId, username: "trialexpiry@example.invalid", displayName: "Teszt Elek" } as never,
+    { lang: "hu", status: "live", name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
+    { siteSlug: "trialexpiry", tab, trial: trial as never, now: new Date() } as never,
+  );
 
 try {
   // ① the send day, pure (2026-10: Wed 14, Thu 15, Fri 16, Sat 17, Sun 18, Mon 19)
@@ -280,8 +298,42 @@ try {
   check("próbás belépő-levél: lábléc „próbálja ki”, dátum, kupon", trialMail.includes("Citovisónál próbálja ki.") && trialMail.includes("2026. okt. 22. (csütörtök)") && trialMail.includes("25% az első díjból, 2027. jan. 20-ig") && trialMail.includes("<b>2026. október 22-ig</b>"));
   const cred = await db.selectFrom("tenant_message").select("body_text").where("tenant_id", "=", tenantId).where("kind", "=", "credentials").executeTakeFirst();
   check("a valódi próba-indítás a próbás belépő-levelet küldte", !!cred && cred.body_text.includes("ingyenes próbája") && cred.body_text.includes("3 nappal és 1 nappal a vége előtt szólunk."));
+  // C2c ②: the OTHER platform letters of a running trial (password reset, the owner's booking
+  // letters) say „próbálja ki" too — the reason comes from the account, not the letter.
+  check("footerReasonForTenant: aktív próba → trial, ismeretlen fiók → order", (await footerReasonForTenant(tenantId)) === "trial" && (await footerReasonForTenant(null)) === "order");
+  const resetBase = { to: "x@example.invalid", username: "u", setPasswordUrl: "https://citoviso.test/j", siteName: "Napfény Vendégház", lang: "hu" };
+  const resetTrial = buildPasswordResetEmail({ ...resetBase, footerReason: await footerReasonForTenant(tenantId) }).html ?? "";
+  const resetBuyer = buildPasswordResetEmail(resetBase).html ?? "";
+  check("jelszó-visszaállítás próbázónak: „…próbálja ki.”", resetTrial.includes("Citovisónál próbálja ki.") && !resetTrial.includes("rendelte meg"));
+  check("jelszó-visszaállítás vevőnek: „…rendelte meg.” változatlan", resetBuyer.includes("Citovisónál rendelte meg.") && !resetBuyer.includes("próbálja ki"));
+  const credSrc = readFileSync(path.resolve(process.cwd(), "src/tenant/credentials.ts"), "utf8");
+  const bookSrc = readFileSync(path.resolve(process.cwd(), "src/booking/requests.ts"), "utf8");
+  check("a jelszó-visszaállítás küldője a fiókból veszi a láblécet", credSrc.includes("footerReason: await footerReasonForTenant(u.tenantId)"));
+  check("a tulaj foglalási levelei (3 ownerLetter + az új kérés) a fiókból veszik a láblécet",
+    (bookSrc.match(/footerReason: await footerReasonForTenant\(/g) ?? []).length === 4, String((bookSrc.match(/footerReason: await footerReasonForTenant\(/g) ?? []).length));
 
-  // ③ lapse — one module is made "paid" (trial_grant cleared): it must survive
+  // ②c the admin strip (ADR-0344 C2c, contract assets/design-refs/console/proba-admin-sav/):
+  // on EVERY tab while active, warn from TRIAL_WARN_DAYS before the end, „Folytatom" → /folytatas.
+  console.log("②c admin próba-sáv");
+  const untilRow = await db.selectFrom("free_trial").select("trial_until").where("id", "=", trial.id).executeTakeFirstOrThrow();
+  const untilAt = new Date(untilRow.trial_until as unknown as string).getTime();
+  const calmAt = new Date(untilAt - (TRIAL_WARN_DAYS + 4) * 86_400_000);
+  const warnAt = new Date(untilAt - (TRIAL_WARN_DAYS - 1) * 86_400_000);
+  const calm = await trialAdminState(tenantId, calmAt);
+  check("aktív próba → állapot 'active', a valós hátralévő napokkal", calm?.status === "active" && calm.daysLeft === TRIAL_WARN_DAYS + 4, JSON.stringify(calm));
+  // --self-test: the frame lost its wiring (no trial handed over) → the strip is gone
+  const stripTabs = ADMIN_TABS.filter((tab) => renderAdmin(tenantId, tab, SELF_TEST ? null : calm).includes("data-trial-strip"));
+  check(`a sáv MINDEN fülön ott van (${ADMIN_TABS.length} fül)`, stripTabs.length === ADMIN_TABS.length, `${stripTabs.length}/${ADMIN_TABS.length}`);
+  const calmHtml = renderAdmin(tenantId, "szovegek", calm);
+  check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
+  check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));
+  // --self-test: the end date slid away → the warn assertion must go red
+  if (SELF_TEST) await db.updateTable("free_trial").set({ trial_until: new Date(untilAt + 30 * 86_400_000) }).where("id", "=", trial.id).execute();
+  const warn = await trialAdminState(tenantId, warnAt);
+  if (SELF_TEST) await db.updateTable("free_trial").set({ trial_until: new Date(untilAt) }).where("id", "=", trial.id).execute();
+  const warnHtml = renderAdmin(tenantId, "fotok", warn);
+  check(`≤${TRIAL_WARN_DAYS} nap → warn sáv`, warnHtml.includes("adm-trial--warn"), `daysLeft=${warn?.daysLeft}`);
+
   console.log("③ lejárat → szünetel");
   await db.updateTable("module_entitlement").set({ trial_grant: false }).where("tenant_id", "=", tenantId).where("module", "=", "gallery").execute();
   await db.updateTable("free_trial").set({ trial_until: new Date(Date.now() - 3_600_000) }).where("id", "=", trial.id).execute();
@@ -304,6 +356,10 @@ try {
   check("második lejárat-futás nem csinál semmit", again2.lapsed === 0);
   const noAfterLapse = await runTrialNotices(bp("2026-10-16", "10:00"), deps, only);
   check("lejárt próbára nem megy figyelmeztetés", noAfterLapse.sent === 0);
+  check("lejárt próba → a lábléc ismét az alapértelmezett (order)", (await footerReasonForTenant(tenantId)) === "order");
+  const lapsedState = await trialAdminState(tenantId);
+  const lapsedHtml = renderAdmin(tenantId, "attekintes", lapsedState);
+  check("admin: lejárt próba → szünetel-blokk (data-trial-lapsed), sáv nélkül", lapsedState?.status === "lapsed" && lapsedHtml.includes("data-trial-lapsed") && !lapsedHtml.includes("data-trial-strip"));
 
   // ④ the purchase gate
   console.log("④ vásárlási kapu");
@@ -369,6 +425,9 @@ try {
     ["gallery", "enquiry"].every((m) => entsAfter.some((e) => e.module === m && !e.trial_grant)) && entsAfter.every((e) => !e.trial_grant),
     entsAfter.map((e) => `${e.module}${e.trial_grant ? "*" : ""}`).join(","));
   check("a fizetés után a lead VEVŐ: a kapu újra elutasít", (await ownedBlocksInitialPurchase(a.leadId)) !== null);
+  const paidState = await trialAdminState(tenantId);
+  const paidHtml = renderAdmin(tenantId, "attekintes", paidState);
+  check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed"));
 } finally {
   closeConsole?.();
   await closeMockFile?.();
@@ -378,8 +437,9 @@ try {
 }
 
 if (SELF_TEST) {
-  // Sabotage legs: the wiped ledger (1: second run sends), the SMS sender slipped in (1), the site back on (1), a revived trial module (1).
-  if (failures < 4) {
+  // Sabotage legs: the wiped ledger (1: second run sends), the SMS sender slipped in (1), the site back on (1), a revived trial module (1),
+  // the admin strip unwired (1) and the warn threshold missed (1).
+  if (failures < 6) {
     console.error(`\n⛔ free-trial-expiry-check --self-test: csak ${failures} állítás ment pirosra a szabotázson — az őr vak.`);
     process.exit(1);
   }

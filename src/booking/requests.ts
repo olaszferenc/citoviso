@@ -36,12 +36,14 @@ import {
   mailNote,
   mailPara,
   platformMail,
+  type FooterReason,
   type MailDetailRow,
 } from "../email/platformLayout.js";
 import { displayPhone, effectiveContact } from "../tenant/contact.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
+import { footerReasonForTenant } from "../trial/footer.js";
 import { siteRendersModule } from "../tenant/modules.js";
 import { blockingUnitIds } from "../tenant/unitScope.js";
 import { seasonalOnlyInForce } from "../tenant/seasonalOnly.js";
@@ -487,6 +489,8 @@ function ownerLetter(o: {
   kicker: string;
   heading: string;
   blocks: string[];
+  /** ADR-0344 C2c: footerReasonForTenant() — required, so no owner letter forgets the trial. */
+  footerReason: FooterReason;
 }): EmailMessage {
   return {
     ...platformMail({
@@ -498,6 +502,7 @@ function ownerLetter(o: {
       heading: o.heading,
       blocks: [...o.blocks, mailButton(adminBookingsUrl(), T(o.lang, "Foglalások megnyitása"))],
       siteName: o.hostName,
+      footerReason: o.footerReason,
     }),
     audience: "guest",
   };
@@ -1034,6 +1039,8 @@ async function notifyOwner(
       heading: (isQuote ? T(lang, "Új árajánlat-kérés") : T(lang, "Új foglalási kérés")) + unit,
       blocks,
       siteName: hostName,
+      // ADR-0344 C2c: the trial grants every module, so a trialist gets this letter too.
+      footerReason: await footerReasonForTenant(owner?.tenantId),
     }),
     // Goes to the TENANT, but every line of it is their guest's personal data
     // (name, phone, dates) — the tenant is its controller, so no pilot BCC.
@@ -1737,6 +1744,7 @@ export async function cancelRequest(opts: {
       });
       const ownerMsg = ownerLetter({
         to: ctx.notifyList.join(", "),
+        footerReason: await footerReasonForTenant(ctx.tenantId),
         subject,
         text: ownerBody,
         lang: ctx.lang,
@@ -2001,6 +2009,7 @@ async function sendOwnerExpired(req: RequestRow, hours: number): Promise<void> {
   await getEmailSender().send(
     ownerLetter({
       to: ctx.notifyList.join(", "),
+      footerReason: await footerReasonForTenant(ctx.tenantId),
       subject,
       text: body,
       lang,
@@ -2768,6 +2777,7 @@ async function sendOwnerOfferNews(
   await getEmailSender().send(
     ownerLetter({
       to: ctx.notifyList.join(", "),
+      footerReason: await footerReasonForTenant(ctx.tenantId),
       subject: M.subject,
       text: body,
       lang,
