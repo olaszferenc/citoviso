@@ -89,7 +89,7 @@ export function placeCard(v: ContactView, lead: string): string {
     `<div class="adm-card__head"><span class="adm-ico">${ic("pin")}</span><h2>${T(lang, "A szállás helye")}</h2>${contactHelp(lang)}</div>` +
     `<p class="adm-lead">${lead}</p>` +
     `<div class="citui-field"><label class="citui-label" for="pl_addr">${T(lang, "Cím")}</label>` +
-    `<div class="pl-row"><input class="citui-input" id="pl_addr" name="address" value="${esc(v.facts.address)}" autocomplete="street-address" maxlength="200" required>` +
+    `<div class="pl-row"><input class="citui-input" id="pl_addr" name="address" value="${esc(v.facts.address)}" autocomplete="street-address" maxlength="200"${v.facts.address ? " required" : ""}>` +
     (v.mapsKey
       ? `<button class="citui-btn citui-btn--ghost" type="button" id="pl_find">${ic("search", 16)}<span>${T(lang, "Megkeresem a térképen")}</span></button>`
       : "") +
@@ -208,7 +208,7 @@ export function placeScript(v: ContactView): string {
     `function checkEmail(){var i=$('ct_email');if(!i)return true;var v=i.value.trim(),er=$('ct_email_err');` +
     `if(v&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(v)){er.hidden=false;er.textContent=L.emailBad;i.setAttribute('aria-invalid','true');return false}` +
     `er.hidden=true;i.removeAttribute('aria-invalid');return true}` +
-    `function checkAddr(){var i=$('pl_addr'),er=$('pl_addr_err');if(i.value.replace(/\\s+/g,' ').trim().length<5){er.hidden=false;er.textContent=L.addrBad;i.setAttribute('aria-invalid','true');return false}` +
+    `function checkAddr(){var i=$('pl_addr'),er=$('pl_addr_err'),nv=function(x){return x.replace(/\\s+/g,' ').trim()};if(nv(i.value).length<5&&nv(i.value)!==nv(i.defaultValue)){er.hidden=false;er.textContent=L.addrBad;i.setAttribute('aria-invalid','true');return false}` +
     `er.hidden=true;i.removeAttribute('aria-invalid');return true}` +
     `function place(p,how){cur={lat:p.lat,lng:p.lng};$('pl_lat').value=String(cur.lat);$('pl_lon').value=String(cur.lng);` +
     `if(marker)marker.setPosition(cur);else if(map){marker=mk(cur)}` +

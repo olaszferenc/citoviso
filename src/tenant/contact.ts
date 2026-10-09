@@ -91,7 +91,11 @@ export function applyContactEdits(
   let address = current.address;
   if (edits.address !== undefined) {
     address = cleanAddress(edits.address);
-    if (address.length < 5) errors.push("address");
+    // ⛔ Only an address he CHANGED is judged (Elek 2026-10-09, lelet 2): a trial
+    // tenant with no scraped address could not save his phone — the form posts every
+    // field, and the untouched empty Cím blocked the save while the error pointed at
+    // a field he never edited.
+    if (address.length < 5 && address !== cleanAddress(current.address)) errors.push("address");
   }
 
   let phone = current.phone;

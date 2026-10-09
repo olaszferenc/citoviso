@@ -63,6 +63,9 @@ const base = { address: "Fő utca 1, Próbafalva", phone: "", email: "", geo: { 
   ok(!bad.ok, "MINDENT VAGY SEMMIT: a rossz telefon a jó címet sem engedi át");
   ok(!applyContactEdits(base, { email: "olasz@" }).ok, "rossz e-mail → hiba");
   ok(!applyContactEdits(base, { address: "ab" }).ok, "túl rövid cím → hiba");
+  // Elek 2026-10-09: no address on file + the form re-posts the empty Cím → the phone saves.
+  const noAddr = applyContactEdits({ ...base, address: "" }, { address: "", phone: "06 30 999 9999" });
+  ok(noAddr.ok && noAddr.facts.phone === prettyPhone("+36309999999"), "üres, nem módosított cím mellett a telefon menthető");
   ok(!applyContactEdits(base, { lat: "95", lon: "19" }).ok, "tartományon kívüli tű → hiba");
   ok(!applyContactEdits(base, { lat: "0", lon: "0" }).ok, "0,0 tű (a törött térkép jele) → hiba");
   const keep = applyContactEdits(base, { lat: "", lon: "" });
