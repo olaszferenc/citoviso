@@ -54,3 +54,15 @@ folytatás-fizetésre is, azt a folytatás-út (C SUB) köti be (`bestActiveCoup
 **Visszafordíthatóság:** 🔄 additív (új tábla + oszlop); `enabled:false` → nem indul új próba.
 🚪 kifelé tett ígéret: „kártya nélkül, a végén szünetel, nem terhelünk” — ÁSZF-pont kell (1.3 → 1.4 javaslat,
 a tulajé).
+
+**Kiegészítés 2026-10-09 — a `/pricing` szerkesztő (SUB B):** „Ingyenes próba” szekció a „Lead-ajánlatok”
+alatt, az ADR-0285 mintája egy az egyben: kapcsoló (`trial_on`) + „A próba hossza” (nap) + „Kupon az első
+vásárlásra” (%). Új döntés nincs, a határok a fentiek. EGY szabály: a `freeTrialConfigErrors` — a POST
+(`freeTrialFromForm`) MINDEN írás előtt ellenőriz, hibás értéknél semmit nem ment (az árakat sem, ADR-0285 ④/⑦,
+ADR-0128); a lap szkriptje csak tükröz, és a mentés-gombot a két szekció KÖZÖSEN tiltja (`form.dataset.err*`).
+Jelenlét-jelölő `trial_present` (régi fül nem nulláz); kikapcsolva a tiltott mezők nem jönnek → a tárolt számok
+maradnak. A futó próbák száma (`runningFreeTrials`: `status='active'`, `trial_until > now`) kiírva: a hossz a
+claimkor `trial_until`-ba, a kupon induláskor `offer`-be rögzül, ezért a változás csak az ezután indulókra hat.
+⚠️ Kivétel-él: egy claimelt, de félbeszakadt (crash) próba folytatásakor a kupon a FOLYTATÁS pillanatának %-át
+kapja. Kikapcsolt próba → `startTrial` `'disabled'` (már induláskor bekötve); a mock-lap belépőjének (D SUB) is a
+`getFreeTrialConfig().enabled`-et kell olvasnia. Őr: `scripts/free-trial-config-check.mts` (pre-commit, DB-írás nélkül).

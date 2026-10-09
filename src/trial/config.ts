@@ -1,8 +1,9 @@
 // ADR-0342 — the free trial's operator-set parameters (one app_setting row, JSON;
-// the same pattern as ADR-0285 `escalation_offer`, so no migration). The /pricing
-// editor is a separate slice; this getter is the ONLY place minting code reads from.
+// the same pattern as ADR-0285 `escalation_offer`, so no migration). Edited in the
+// /pricing „Ingyenes próba” section; this getter is the ONLY place minting code reads from.
 
 import { getSetting, setSetting } from "../console/appSettings.js";
+import { db } from "../db/client.js";
 
 const FREE_TRIAL_SETTING_KEY = "free_trial";
 
@@ -85,4 +86,43 @@ export async function setFreeTrialConfig(c: FreeTrialConfig): Promise<void> {
     FREE_TRIAL_SETTING_KEY,
     JSON.stringify({ enabled: c.enabled, days: c.days, couponPercent: c.couponPercent }),
   );
+}
+
+/**
+ * The /pricing POST → trial config (not yet validated; the caller refuses an invalid one
+ * with freeTrialConfigErrors before writing ANYTHING — the prices included).
+ *
+ * - null when the form does not carry the section (`trial_present`): an older open tab
+ *   must leave the stored config alone, not reset it (ADR-0128, as ADR-0285 esc_present).
+ * - Disabled inputs are not submitted, so a switched-off section keeps the STORED numbers.
+ * - Normalised like the page script: spaces, a trailing "%", decimal comma; a fraction or
+ *   junk becomes NaN, which the validator rejects.
+ */
+export function freeTrialFromForm(
+  form: { get(name: string): string | null },
+  current: FreeTrialConfig,
+): FreeTrialConfig | null {
+  if (form.get("trial_present") !== "1") return null;
+  const intOf = (name: string, fallback: number): number => {
+    const raw = form.get(name);
+    if (raw === null) return fallback;
+    const s = raw.trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", ".");
+    return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : Number.NaN;
+  };
+  return {
+    enabled: form.get("trial_on") === "on",
+    days: intOf("trial_days", current.days),
+    couponPercent: intOf("trial_coupon", current.couponPercent),
+  };
+}
+
+/** Trials running now (for the "running ones keep their length and coupon" notice). */
+export async function runningFreeTrials(now = new Date()): Promise<number> {
+  const r = await db
+    .selectFrom("free_trial")
+    .select((eb) => eb.fn.countAll<string>().as("n"))
+    .where("status", "=", "active")
+    .where("trial_until", ">", now)
+    .executeTakeFirst();
+  return Number(r?.n ?? 0);
 }

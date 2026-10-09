@@ -89,9 +89,18 @@ import {
   ESCALATION_THRESHOLD_MAX,
   ESCALATION_THRESHOLD_MIN,
   OUTREACH_PERCENT_MAX,
+  NEW_SUBSCRIBER_COUPON_DAYS,
   OUTREACH_PERCENT_MIN,
   type EscalationConfig,
 } from "../payment/offers.js";
+import {
+  FREE_TRIAL_CONFIG_DEFAULT,
+  FREE_TRIAL_COUPON_MAX,
+  FREE_TRIAL_COUPON_MIN,
+  FREE_TRIAL_DAYS_MAX,
+  FREE_TRIAL_DAYS_MIN,
+  type FreeTrialConfig,
+} from "../trial/config.js";
 import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic, icAdmin } from "../ui/icons.js";
@@ -818,6 +827,8 @@ export function pricingPage(
     readonly cfg: EscalationConfig;
     readonly live: { readonly count: number; readonly percents: readonly number[] };
   } = { cfg: ESCALATION_CONFIG_DEFAULT, live: { count: 0, percents: [] } },
+  /** ADR-0342: the GLOBAL free-trial parameters + the trials running now. */
+  trial: { readonly cfg: FreeTrialConfig; readonly running: number } = { cfg: FREE_TRIAL_CONFIG_DEFAULT, running: 0 },
 ): string {
   const lang = consoleLang();
   // Currency unit for the selected region (module add-ons stay global HUF).
@@ -1025,6 +1036,7 @@ export function pricingPage(
           kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
 
         ${escalationSection(lang, escalation.cfg, escalation.live, snap, disabledSales)}
+        ${freeTrialSection(lang, trial.cfg, trial.running)}
 
         <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek")}</h3>
         <div class="con-edit-grid">
@@ -1267,7 +1279,10 @@ const ESCALATION_SECTION_JS = `(function(){
     Object.keys(IN).forEach(function(k){
       var id = IN[k].id; $("f_" + id).classList.toggle("err", !!e[k]); $("e_" + id).textContent = e[k] || ""; if (e[k]) bad++;
     });
-    if (btn) btn.disabled = bad > 0;
+    // The submit button is shared with the free-trial section: each section posts its own
+    // error count on the form, and the button stays off while ANY of them is non-zero.
+    form.dataset.errEsc = String(bad);
+    if (btn) btn.disabled = Object.keys(form.dataset).some(function(k){ return /^err/.test(k) && form.dataset[k] !== "0"; });
     if (sum) sum.textContent = bad === 1 ? M.sumOne : bad > 1 ? fill(M.sumMany, {k: bad}) : "";
     function ok(k){ return !e[k] && !r[k].err; }
     $("h_out_p").textContent = ok("o") && D.example ? fill(M.oHint, {tier: D.example.tier, list: nb(D.example.fmtList), price: price(r.o.v)}) : "";
@@ -1295,6 +1310,130 @@ const ESCALATION_SECTION_JS = `(function(){
   }
   function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
   on.addEventListener("change", render); days.addEventListener("change", render);
+  Object.keys(IN).forEach(function(k){
+    IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
+    IN[k].addEventListener("blur", function(){ tidy(IN[k]); });
+  });
+  render();
+  }
+})();`;
+
+/**
+ * ADR-0342 — „Ingyenes próba”: the card-less trial's switch, length and continuation coupon,
+ * the ADR-0285 „Lead-ajánlatok” pattern one to one. GLOBAL (every region page, saved with
+ * whichever region's form is submitted). The bounds come from src/trial/config.ts — the
+ * server re-validates on POST and refuses the WHOLE save on an invalid value; the script
+ * only mirrors them. Disabled inputs are not submitted, so a switched-off section keeps the
+ * stored numbers. A running trial keeps its own length (free_trial.trial_until is stamped
+ * at the claim) and its coupon (minted at the start) — the notice says so, with the count.
+ */
+function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialConfig, running: number): string {
+  const s = String;
+  const msgs = {
+    dEmpty: T(lang, "Adj meg egy napszámot ({min}–{max}).", { min: s(FREE_TRIAL_DAYS_MIN), max: s(FREE_TRIAL_DAYS_MAX) }),
+    dNan: T(lang, "Egész nap kell ({min}–{max}).", { min: s(FREE_TRIAL_DAYS_MIN), max: s(FREE_TRIAL_DAYS_MAX) }),
+    dLow: T(lang, "Legalább {min} nap.", { min: s(FREE_TRIAL_DAYS_MIN) }),
+    dHigh: T(lang, "Legfeljebb {max} nap.", { max: s(FREE_TRIAL_DAYS_MAX) }),
+    cEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}; a 0 azt jelenti, hogy nincs kupon).", { min: s(FREE_TRIAL_COUPON_MIN), max: s(FREE_TRIAL_COUPON_MAX) }),
+    cNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: s(FREE_TRIAL_COUPON_MIN), max: s(FREE_TRIAL_COUPON_MAX) }),
+    cLow: T(lang, "Nem lehet negatív: a 0 azt jelenti, hogy nincs kupon."),
+    cHigh: T(lang, "Legfeljebb {max}%: a 100% ingyenes első díj lenne, az már nem kupon.", { max: s(FREE_TRIAL_COUPON_MAX) }),
+    on: T(lang, "Így fut: aki ezután próbát indít, {d} napig használja a saját oldalát minden modullal, kártya és fizetés nélkül.", { d: "{d}" }),
+    onCoupon: T(lang, "Mellé egy −{c}% kupont kap az első vásárlására, ami a próba vége után még {k} napig érvényes.", { c: "{c}", k: s(NEW_SUBSCRIBER_COUPON_DAYS) }),
+    onNoCoupon: T(lang, "Kupont nem kap."),
+    off: T(lang, "Kikapcsolva: új próba nem indítható. A már futó próbák a saját határidejükig futnak."),
+    bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
+    sumOne: T(lang, "A mentés addig nem megy, amíg az „Ingyenes próba” jelölt mezője hibás."),
+    sumMany: T(lang, "A mentés addig nem megy, amíg az „Ingyenes próba” {k} jelölt mezője hibás.", { k: "{k}" }),
+    runNone: T(lang, "Most nem fut próba."),
+    run: T(lang, "Most {n} próba fut. Mindegyik megtartja a saját hosszát és kuponját — a változás csak az ezután indított próbákra hat.", { n: "{n}" }),
+  };
+  const data = {
+    dMin: FREE_TRIAL_DAYS_MIN,
+    dMax: FREE_TRIAL_DAYS_MAX,
+    cMin: FREE_TRIAL_COUPON_MIN,
+    cMax: FREE_TRIAL_COUPON_MAX,
+    saved: cfg,
+    running,
+    msgs,
+  };
+  const field = (id: string, name: string, label: string, value: number, unit: string): string =>
+    `<div class="pr-field" id="f_${id}">
+      <label class="pr-field__l" for="${id}">${esc(label)}</label>
+      <div class="pr-input">
+        <input id="${id}" name="${name}" inputmode="numeric" value="${esc(value)}"${cfg.enabled ? "" : " disabled"}>
+        <span class="pr-input__u">${esc(unit)}</span>
+      </div>
+      <div class="pr-ferr" id="e_${id}" role="alert"></div>
+    </div>`;
+  return `
+        <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-trial">
+          <h3 style="margin-top:22px">${T(lang, "Ingyenes próba")}</h3>
+          <p class="mut small" style="margin:2px 0 10px">${T(lang, "A kiküldött tervet megnyitó lead a kedvezmény helyett kártya nélkül kipróbálhatja a saját oldalát, minden modullal, az aldomainjén. A próbáért nem fizet, számla nem készül.")}
+            <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
+          <input type="hidden" name="trial_present" value="1">
+          <label class="pr-esc__head">
+            <span class="con-sell"><input type="checkbox" id="trial_on" name="trial_on"${cfg.enabled ? " checked" : ""}><span class="con-sell__track"></span></span>
+            <b>${T(lang, "Ingyenes próba indítható")}</b>
+          </label>
+          <div class="pr-esc__gated">
+            <div class="con-edit-grid" style="margin-top:10px">
+              ${field("trial_d", "trial_days", T(lang, "A próba hossza"), cfg.days, T(lang, "nap"))}
+              ${field("trial_c", "trial_coupon", T(lang, "Kupon az első vásárlásra"), cfg.couponPercent, "%")}
+            </div>
+          </div>
+          <div class="pr-esc__preview" id="trial_preview"></div>
+          <div class="pr-esc__live" id="trial_live"></div>
+          <script type="application/json" id="trial_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>
+          <script>${FREE_TRIAL_SECTION_JS}</script>
+        </section>`;
+}
+
+/** Live mirror of freeTrialConfigErrors() + the preview sentence (the server stays the authority). */
+const FREE_TRIAL_SECTION_JS = `(function(){
+  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); return; }
+  init();
+  function init(){
+  var D = JSON.parse(document.getElementById("trial_data").textContent), M = D.msgs, S = D.saved;
+  var sec = document.getElementById("pr-trial"), form = sec.closest("form");
+  var on = document.getElementById("trial_on");
+  var IN = {d: document.getElementById("trial_d"), c: document.getElementById("trial_c")};
+  var prev = document.getElementById("trial_preview"), live = document.getElementById("trial_live");
+  var btn = form.querySelector("button[type=submit]"), sum = null;
+  if (btn) { sum = document.createElement("span"); sum.className = "pr-esc__sum"; sum.setAttribute("role", "alert"); btn.parentNode.appendChild(sum); }
+  function fill(t, v){ return t.replace(/\\{(\\w+)\\}/g, function(_, k){ return v[k] != null ? v[k] : "{" + k + "}"; }); }
+  function norm(v){ return String(v).trim().replace(/\\s+/g, "").replace(/%$/, "").replace(",", "."); }
+  function num(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\\d+(\\.\\d+)?$/.test(s)) return {err:"nan"};
+    var x = Number(s); if (x !== Math.floor(x)) return {err:"nan"}; return {v:x}; }
+  function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (r.v > hi) return m[3]; return ""; }
+  function render(){
+    var en = on.checked;
+    IN.d.disabled = !en; IN.c.disabled = !en; sec.classList.toggle("is-off", !en);
+    var r = {d: num(IN.d.value), c: num(IN.c.value)}, e = {};
+    // Disabled fields are not submitted: the stored numbers stand for them, so only an
+    // enabled section can be wrong.
+    if (en) {
+      e.d = chk(r.d, D.dMin, D.dMax, [M.dEmpty, M.dNan, M.dLow, M.dHigh]);
+      e.c = chk(r.c, D.cMin, D.cMax, [M.cEmpty, M.cNan, M.cLow, M.cHigh]);
+    }
+    var bad = 0;
+    Object.keys(IN).forEach(function(k){
+      var id = IN[k].id; document.getElementById("f_" + id).classList.toggle("err", !!e[k]);
+      document.getElementById("e_" + id).textContent = e[k] || ""; if (e[k]) bad++;
+    });
+    form.dataset.errTrial = String(bad);
+    if (btn) btn.disabled = Object.keys(form.dataset).some(function(k){ return /^err/.test(k) && form.dataset[k] !== "0"; });
+    if (sum) sum.textContent = bad === 1 ? M.sumOne : bad > 1 ? fill(M.sumMany, {k: bad}) : "";
+    if (!en) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.off; }
+    else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
+    else {
+      prev.className = "pr-esc__preview";
+      prev.textContent = fill(M.on, {d: r.d.v}) + " " + (r.c.v > 0 ? fill(M.onCoupon, {c: r.c.v}) : M.onNoCoupon);
+    }
+    live.textContent = D.running > 0 ? fill(M.run, {n: D.running}) : M.runNone;
+  }
+  function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
+  on.addEventListener("change", render);
   Object.keys(IN).forEach(function(k){
     IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
     IN[k].addEventListener("blur", function(){ tidy(IN[k]); });

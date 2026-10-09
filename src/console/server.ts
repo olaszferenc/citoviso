@@ -2,6 +2,13 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
+import {
+  freeTrialConfigErrors,
+  freeTrialFromForm,
+  getFreeTrialConfig,
+  runningFreeTrials,
+  setFreeTrialConfig,
+} from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
@@ -1779,6 +1786,9 @@ async function handle(
       pricingPage(pricingSnapshot(region), pricingRegions(), notice, await getDisabledModules(), liveCounts, {
         cfg: await getEscalationConfig(),
         live: await liveEscalationOffers(),
+      }, {
+        cfg: await getFreeTrialConfig(),
+        running: await runningFreeTrials(),
       }),
     );
   }
@@ -1817,8 +1827,19 @@ async function handle(
         )}`,
       );
     }
+    // ADR-0342: the free-trial section, the same rule — refused before anything is written.
+    const trial = freeTrialFromForm(form, await getFreeTrialConfig());
+    if (trial && freeTrialConfigErrors(trial).length) {
+      return redirect(
+        res,
+        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+          "hiba:Nem mentettem: az Ingyenes próba egyik mezője a megengedett tartományon kívül esik.",
+        )}`,
+      );
+    }
     try {
       if (escalation) await setEscalationConfig(escalation);
+      if (trial) await setFreeTrialConfig(trial);
       await savePricing({
         region: snap.region,
         currency: snap.currency,
