@@ -1,4 +1,4 @@
-## ADR-XXXX — Lejárt ingyenes próba: 90 napos adatmegőrzés, figyelmeztetés, törlés + ÁSZF 1.4
+## ADR-0345 — Lejárt ingyenes próba: 90 napos adatmegőrzés, figyelmeztetés, törlés + ÁSZF 1.4
 
 **Dátum:** 2026-10-09 · **Státusz:** elfogadva (motor + őr + ÁSZF); a törlés SZÁRAZON fut, amíg a figyelmeztető levél
 szövege a §2b terv-kapun nincs jóváhagyva

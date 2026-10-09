@@ -1,4 +1,4 @@
--- 0099 INGYENES PRÓBA — a lejárt próba adatainak 90 napos megőrzése, utána törlés (ADR-XXXX, a 0097/0098 folytatása).
+-- 0099 INGYENES PRÓBA — a lejárt próba adatainak 90 napos megőrzése, utána törlés (ADR-0345, a 0097/0098 folytatása).
 --
 -- Tulaj-döntés 2026-10-09: a lejárt (szünetelő) próba adatai a próbaidő végétől számított 90 NAPIG
 -- maradnak meg (ugyanaddig, ameddig a próba-kupon él), előtte 7 nappal figyelmeztető levél megy, utána
@@ -30,4 +30,4 @@ ALTER TABLE free_trial_notice
   ADD CONSTRAINT free_trial_notice_step_check CHECK (step IN ('t3', 't1', 'p7'));
 
 COMMENT ON COLUMN free_trial.purge_report IS
-  'ADR-XXXX: a 90 napos megőrzés utáni törlés naplója — táblánkénti sorszám, site slug, törölt fájlok; tartalom nélkül.';
+  'ADR-0345: a 90 napos megőrzés utáni törlés naplója — táblánkénti sorszám, site slug, törölt fájlok; tartalom nélkül.';

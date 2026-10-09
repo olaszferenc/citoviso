@@ -1,4 +1,4 @@
-// ADR-XXXX — the 90-day retention of a LAPSED free trial and the purge after it
+// ADR-0345 — the 90-day retention of a LAPSED free trial and the purge after it
 // (src/trial/retention.ts). Deleting a tenant cannot be undone, so every leg here is a way the
 // purge could delete too early, delete the wrong thing, or leave something behind:
 //   ① the days, pure: purge day = the trial's last day + 90; the warning 7 days before, a

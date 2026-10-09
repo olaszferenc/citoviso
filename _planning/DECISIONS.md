@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-ingyenes-proba-adatmegorzes-90-nap.md) — Lejárt ingyenes próba: 90 napos adatmegőrzés, figyelmeztetés, törlés + ÁSZF 1.4
+- [ADR-0345](decisions/0345-lejart-ingyenes-proba-90-napos-adatmegorzes.md) — Lejárt ingyenes próba: 90 napos adatmegőrzés, figyelmeztetés, törlés + ÁSZF 1.4
 - [ADR-0344](decisions/0344-ingyenes-proba-vege-szunetel-nem-terhel-t-3-t-1.md) — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
 - [ADR-0343](decisions/0343-proba-belepo-a-lead-lapon-pirula-par-trial.md) — Próba-belépő a lead-lapon: pirula-pár, `trial_*` esemény-család, a belépő kapuja
 - [ADR-0342](decisions/0342-ingyenes-proba-kartya-nelkuli-konvertalas-a.md) — Ingyenes próba: kártya nélküli konvertálás, a próba-állapot külön táblában (nem az előfizetésen)

@@ -40,7 +40,7 @@ try {
   console.error("trial-lapse HIBA:", e);
   sideStepFailed = true;
 }
-// ADR-XXXX: a lapsed trial's data is deleted 90 days after its end — DRY until the warning
+// ADR-0345: a lapsed trial's data is deleted 90 days after its end — DRY until the warning
 // letter's wording is approved (§2b): it only logs what would go. Without a SENT warning it
 // deletes nothing anyway; the dry flag is the second lock. Not narrowed by --tenant: a
 // purged trial has no tenant, and the dry run writes nothing.

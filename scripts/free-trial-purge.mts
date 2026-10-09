@@ -1,4 +1,4 @@
-// ADR-XXXX — the 90-day retention purge of lapsed free trials, by hand (src/trial/retention.ts).
+// ADR-0345 — the 90-day retention purge of lapsed free trials, by hand (src/trial/retention.ts).
 // DRY by default: lists what would be deleted, what waits (warning not sent / too recent) and
 // what is REFUSED (a paid trace — a human decides). --go deletes; it still deletes nothing
 // whose purge warning was not SENT at least 7 days earlier.

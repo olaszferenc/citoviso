@@ -118,7 +118,7 @@ export const RECURRING_MANDATE_V1 =
 // 1.3 (2026-09-29): §9 — a custom-domain order only BLOCKS the amount on the card
 // (Barion DelayedCapture, ADR-0251); the charge follows a successful registration (ADR-0277).
 // 1.4 (2026-10-09): §1 — the card-less free trial (ADR-0342/0344), owner-approved wording; the
-// 90-day retention after the trial ends is the owner's retention decision (ADR-XXXX).
+// 90-day retention after the trial ends is the owner's retention decision (ADR-0345).
 export const ASZF_VERSION = "1.4";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
 export const ASZF_EFFECTIVE_FROM = "2026-10-09";
@@ -156,7 +156,7 @@ export const ASZF_V1: readonly LegalSection[] = [
         "mintán látott.",
       // 1.4 (owner-approved 2026-10-09, ADR-0342/0344): the free trial forms no paid
       // contract — it pauses at the end, and nothing is charged without an explicit order.
-      // "a próbaidő végétől számított 90 napig" = the retention decision (ADR-XXXX), the
+      // "a próbaidő végétől számított 90 napig" = the retention decision (ADR-0345), the
       // only deviation from the approved text.
       "Ingyenes próbaidőszak: a Szolgáltató a meghirdetett ideig díjmentesen, fizetési adat " +
         "megadása nélkül biztosítja a szolgáltatást teljes funkcionalitással. A próbaidő végén " +

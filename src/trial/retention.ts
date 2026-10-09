@@ -1,4 +1,4 @@
-// ADR-XXXX — what happens to a LAPSED free trial (ADR-0344) afterwards: its data is kept for
+// ADR-0345 — what happens to a LAPSED free trial (ADR-0344) afterwards: its data is kept for
 // 90 days from the end of the trial (owner, 2026-10-09 — the same span the trial coupon lives,
 // ADR-0342), a warning letter goes 7 days before, and then everything the trial built is DELETED:
 // the tenant and all that cascades from it (site, admin account, login tokens, modules,
