@@ -517,9 +517,13 @@ export interface FreeTrialTable {
   started_at: Generated<Date>;
   trial_until: Timestamp;
   coupon_offer_id: string | null;
-  status: Generated<"active" | "converted" | "lapsed">;
+  status: Generated<"active" | "converted" | "lapsed" | "purged">;
   converted_at: Timestamp | null;
   lapsed_at: Timestamp | null;
+  /** 0099: the lapsed trial's data was deleted after the 90-day retention (tenant_id → NULL). */
+  purged_at: Timestamp | null;
+  /** 0099: what the purge deleted — row counts per table, slug, files; never the content. */
+  purge_report: NullableJson;
   created_at: Generated<Timestamp>;
 }
 
@@ -530,7 +534,8 @@ export interface FreeTrialTable {
 export interface FreeTrialNoticeTable {
   id: Generated<string>;
   free_trial_id: string;
-  step: "t3" | "t1";
+  /** t3 / t1 = before the trial ends (0098); p7 = 7 days before the retention purge (0099). */
+  step: "t3" | "t1" | "p7";
   channel: "email" | "sms";
   status: Generated<"claimed" | "sent" | "failed" | "skipped">;
   detail: string | null;

@@ -335,7 +335,7 @@ async function recordTrialStart(prospectId: string, viewId: string | null, trial
 /** Is this tenant in (or past) a card-less trial? The hook the expiry/freeze slice reads. */
 export async function trialForTenant(tenantId: string): Promise<{
   id: string;
-  status: "active" | "converted" | "lapsed";
+  status: "active" | "converted" | "lapsed" | "purged";
   trialUntil: Date;
 } | null> {
   const r = await db

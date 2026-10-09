@@ -8,6 +8,7 @@ import { checkAamAlert } from "../src/console/aamAlert.js";
 import { retryFailedInvoices } from "../src/billing/invoiceRetry.js";
 import { db } from "../src/db/client.js";
 import { lapseExpiredTrials } from "../src/trial/expiry.js";
+import { purgeExpiredTrials } from "../src/trial/retention.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
 const now = nowArg ? new Date(nowArg.slice("--now=".length)) : new Date();
@@ -37,6 +38,18 @@ try {
   console.log(`trial-lapse @ ${now.toISOString()}:`, JSON.stringify(t));
 } catch (e) {
   console.error("trial-lapse HIBA:", e);
+  sideStepFailed = true;
+}
+// ADR-XXXX: a lapsed trial's data is deleted 90 days after its end — DRY until the warning
+// letter's wording is approved (§2b): it only logs what would go. Without a SENT warning it
+// deletes nothing anyway; the dry flag is the second lock. Not narrowed by --tenant: a
+// purged trial has no tenant, and the dry run writes nothing.
+try {
+  const p = await purgeExpiredTrials(now, { dryRun: true });
+  console.log(`trial-purge (száraz) @ ${now.toISOString()}:`, JSON.stringify({ purged: p.purged, refused: p.refused, waiting: p.waiting, due: p.candidates.length }));
+  if (p.refused > 0) sideStepFailed = true;
+} catch (e) {
+  console.error("trial-purge HIBA:", e);
   sideStepFailed = true;
 }
 // ADR-0088 §4b: the escalation follow-up NO LONGER rides this daily tick — its delay is

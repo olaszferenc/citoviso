@@ -3017,6 +3017,21 @@ if [ -f scripts/free-trial-expiry-check.mts ] && \
   echo "[pre-commit] free-trial-expiry-check (próba vége: figyelmeztetés, szünetel, folytatás-fizetés)…"
   npx tsx scripts/free-trial-expiry-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Lejárt próba 90 napos megőrzése + TÖRLÉS (src/trial/retention.ts): a nap-számítás (hétvége → péntek,
+#     késő levél a törlést tolja), a p7 levél egyszer, levél nélkül / 7 napon belül NEM töröl, mind az 5 fizetett
+#     nyom MEGTAGAD, törlés = pontosan a jelentett sorok + a sites/<id> mappa, a free_trial sor marad, a lead
+#     'qualified'; katalógus: a séma tenant-kaszkád fája ⊆ PURGE_TABLES ∪ blocker — ezért MINDEN migráció tüzeli
+#     (egy új kaszkádoló tábla sorai számolatlanul tűnnének el). Saját scratch-DB, ~15 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/free-trial-retention-check.mts ] && \
+   changed_files | grep -qE '^src/trial/(retention|start)\.ts$|^migrations/.*\.sql$|^scripts/free-trial-purge\.mts$|^scripts/billing-cycle\.ts$|^scripts/offer-followup\.mts$|^scripts/free-trial-retention-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/free-trial-retention-check\.mts$'; then
+    echo "[pre-commit] free-trial-retention-check --self-test (a megőrzés-őr pirosra tud-e menni)…"
+    npx tsx scripts/free-trial-retention-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] free-trial-retention-check (lejárt próba: 90 nap, figyelmeztetés, törlés, katalógus)…"
+  npx tsx scripts/free-trial-retention-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

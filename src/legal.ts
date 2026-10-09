@@ -117,9 +117,11 @@ export const RECURRING_MANDATE_V1 =
 // cancellation route. Substance changed → version bumped (ADR-0056).
 // 1.3 (2026-09-29): §9 — a custom-domain order only BLOCKS the amount on the card
 // (Barion DelayedCapture, ADR-0251); the charge follows a successful registration (ADR-0277).
-export const ASZF_VERSION = "1.3";
+// 1.4 (2026-10-09): §1 — the card-less free trial (ADR-0342/0344), owner-approved wording; the
+// 90-day retention after the trial ends is the owner's retention decision (ADR-XXXX).
+export const ASZF_VERSION = "1.4";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
-export const ASZF_EFFECTIVE_FROM = "2026-09-29";
+export const ASZF_EFFECTIVE_FROM = "2026-10-09";
 
 /** One numbered chapter of a legal document. `body` entries are paragraphs. */
 export interface LegalSection {
@@ -152,6 +154,15 @@ export const ASZF_V1: readonly LegalSection[] = [
         "díj megfizetésével jön létre. A megrendeléskor bemutatott mintaoldal (látványterv) " +
         "és az éles honlap ugyanabból a rendszerből készül: a Megrendelő azt kapja, amit a " +
         "mintán látott.",
+      // 1.4 (owner-approved 2026-10-09, ADR-0342/0344): the free trial forms no paid
+      // contract — it pauses at the end, and nothing is charged without an explicit order.
+      // "a próbaidő végétől számított 90 napig" = the retention decision (ADR-XXXX), the
+      // only deviation from the approved text.
+      "Ingyenes próbaidőszak: a Szolgáltató a meghirdetett ideig díjmentesen, fizetési adat " +
+        "megadása nélkül biztosítja a szolgáltatást teljes funkcionalitással. A próbaidő végén " +
+        "a honlap szünetel, a fiók és az adatok megmaradnak a próbaidő végétől számított " +
+        "90 napig; díjat a Szolgáltató csak a Megrendelő kifejezett megrendelése és " +
+        "fizetése után számít fel.",
       // 2026-09-16, Barion remark -001/1 (card-scheme rules): the reviewer read the
       // T&C as "builds sites for partners" and asked us to state explicitly that no
       // online payment provider can be wired into the sites offered under these
