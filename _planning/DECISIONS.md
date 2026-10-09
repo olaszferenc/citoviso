@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-masodik-terheles-elso-vasarlasra.md) — A második terhelés egy már kifizetett első vásárlásra: az első nyer, a második kézi rendezés
+- [ADR-0349](decisions/0349-a-masodik-terheles-egy-mar-kifizetett-elso.md) — A második terhelés egy már kifizetett első vásárlásra: az első nyer, a második kézi rendezés
 - [ADR-0348](decisions/0348-visszamenoleges-14-nap-ingyen-level-sms-a-mar.md) — Visszamenőleges „14 nap ingyen” levél + SMS a már megkeresett leadeknek: egy lövés kódban, „mi tartja vissza?” → prospect_feedback
 - [ADR-0347](decisions/0347-ingyenes-proba-uzemeltetese-operator-riasztasok.md) — Ingyenes próba üzemeltetése: operátor-riasztások, „Próba” tölcsér-lépcső, ígért aldomain = valódi slug, Modulok-kártya, e2e
 - [ADR-0346](decisions/0346-egy-kupon-mindenkinek-aki-admin-hozzaferest-kap.md) — Egy kupon mindenkinek: aki admin-hozzáférést kap (első fizetés VAGY próba), egyet kap, egyszer, bármire

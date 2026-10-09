@@ -1,4 +1,4 @@
-## ADR-XXXX — A második terhelés egy már kifizetett első vásárlásra: az első nyer, a második kézi rendezés
+## ADR-0349 — A második terhelés egy már kifizetett első vásárlásra: az első nyer, a második kézi rendezés
 
 **Dátum:** 2026-10-10 · **Kontextus:** IT-teszt B1-PAR (BLOKKOLÓ) — két pénztár-fül → két fizetés, két számla, kétszer −25%.
 
