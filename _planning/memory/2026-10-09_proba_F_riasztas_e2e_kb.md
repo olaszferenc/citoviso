@@ -1,6 +1,6 @@
 # 2026-10-09 — Ingyenes próba, SUB F: élesi riasztások, e2e, „Próba” tölcsér-lépcső, KB
 
-Koordinátor: `f0d3286a` (fa `~/wt/citf3e80964`). ADR: ADR-XXXX (próba üzemeltetése — riasztás, riport, e2e).
+Koordinátor: `f0d3286a` (fa `~/wt/citf3e80964`). ADR: ADR-0347 (próba üzemeltetése — riasztás, riport, e2e).
 Előzmények: ADR-0342 · 0343 · 0344 · 0345.
 
 ## Elkészült

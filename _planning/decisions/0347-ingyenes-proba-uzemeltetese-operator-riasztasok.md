@@ -1,4 +1,4 @@
-## ADR-XXXX — Ingyenes próba üzemeltetése: operátor-riasztások, „Próba” tölcsér-lépcső, ígért aldomain = valódi slug, Modulok-kártya, e2e
+## ADR-0347 — Ingyenes próba üzemeltetése: operátor-riasztások, „Próba” tölcsér-lépcső, ígért aldomain = valódi slug, Modulok-kártya, e2e
 
 **Dátum:** 2026-10-09 · **Státusz:** elfogadva (SUB F; a riasztások köre és a „belépő-levél nem ment ki” riasztás
 tulaj-döntés 2026-10-09) · **Előzmény:** ADR-0342 (próba-állapot), ADR-0343 (pirula-pár, `trial.sub`), ADR-0344 (lejárat,
