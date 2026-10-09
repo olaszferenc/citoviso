@@ -306,7 +306,9 @@ function statusShort(status: string, lang: string): string {
     ? T(lang, "Élő")
     : status === "provisioned"
       ? T(lang, "Előnézet")
-      : status === "suspended"
+      : status === "trial_paused"
+        ? T(lang, "Szünetel")
+        : status === "suspended"
         ? T(lang, "Felfüggesztve")
         : status === "deactivated"
           ? T(lang, "Deaktiválva")
@@ -5944,6 +5946,9 @@ export function adminDashboard(
     live: T(lang, "Élő (publikus)"),
     draft: T(lang, "Vázlat"),
     suspended: T(lang, "Felfüggesztve"),
+    // A lapsed trial's site is 'suspended' but nothing is owed — every approved trial
+    // text says „szünetel", so the status word does too (coordinator, 2026-10-09).
+    trial_paused: T(lang, "Szünetel"),
     deactivated: T(lang, "Deaktiválva"),
   };
   const previewUrl = previewToken ? `/site/${previewToken}` : null;
@@ -6173,6 +6178,7 @@ export function adminDashboard(
   // ADR-0344 C2c: the trial speaks on EVERY tab — the running one as a strip, the lapsed
   // one as the paused block (full on Áttekintés, compact elsewhere). A paid trial
   // („converted") reaches here as null: from then on the subscription speaks.
+  const shownStatus = content.status === "suspended" && opts.trial?.status === "lapsed" ? "trial_paused" : content.status;
   const trialBar = opts.trial
     ? opts.trial.status === "active"
       ? trialStrip(opts.trial, lang)
@@ -6273,7 +6279,7 @@ export function adminDashboard(
               (opts.legal ? legalSection(opts.legal, lang) : "")
             : overviewSection(
                 content,
-                statusLabel[content.status] ?? content.status,
+                statusLabel[shownStatus] ?? content.status,
                 siteUrl,
                 previewUrl,
                 mv,
@@ -6306,7 +6312,7 @@ export function adminDashboard(
       session,
       siteName,
       opts.siteSlug ?? null,
-      content.status,
+      shownStatus,
       counts,
       tabLabel,
       viewBtn + primaryBtn,

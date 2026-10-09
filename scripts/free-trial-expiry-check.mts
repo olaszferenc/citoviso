@@ -406,6 +406,10 @@ try {
     !todoHtml.includes("Rendezze a díjat") && todoRow.includes("A honlapja szünetel") && todoRow.includes("Nem terheltünk semmit") &&
       todoRow.includes("Folytatom — fizetés") && todoRow.includes("/folytatas"),
     todoRow || "nincs trial-lapsed sor");
+  // The status word (overview widget + sidebar) of a lapsed trial's paused site is
+  // „Szünetel", not „Felfüggesztve" (coordinator, 2026-10-09). --self-test: no trial → red.
+  check("admin Állapot: lejárt próba → „Szünetel”, nem „Felfüggesztve”",
+    todoHtml.includes("Szünetel") && !todoHtml.includes("Felfüggesztve"));
   // ②c „Modulok" card (mock proba-C, README Kötő horgony data-trial-modules): on Áttekintés only,
   // after the paused block; the rows are the REAL trial_grant entitlements — the spine
   // (enquiry) „csomag · fizetéskor vissza", a non-spine granted module „csak a próbában volt",

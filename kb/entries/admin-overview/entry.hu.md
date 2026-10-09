@@ -155,7 +155,7 @@ magától, azonnal visszakapcsol.
 
 A **Teendők** listában is ugyanez áll: a honlapja szünetel, mert a próba lejárt, és nem terheltünk semmit. A sor
 végén lévő „Folytatom — fizetés” link ugyanoda visz, mint a piros doboz gombja. Fizetendő díja ilyenkor nincs —
-a díj csak akkor születik, ha folytatja.
+a díj csak akkor születik, ha folytatja. Az **„Állapot”** csempén és a bal oldali sávban ilyenkor „Szünetel” áll.
 
 ### A „Modulok” kártya lejárt próbánál
 

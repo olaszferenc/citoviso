@@ -26,7 +26,8 @@
    fagyott-blokk nem jelenik meg (mérve 2026-10-09: az admin lejárt próbánál SEMMIT nem mondott) — helyette ugyanaz
    a piros blokk (`adm-frz`), de tartozás nélkül: cím „A honlapja szünetel — a próba {date} lejárt”, a próba-kupon
    %-a, gomb **„Folytatom — fizetés”**, **„Mi maradt meg”** lista, és **„Mit lát közben a látogató:”** sor.
-   Az Áttekintésen teljes, a többi fülön kompakt (a „Mi maradt meg” nélkül).
+   Az Áttekintésen teljes, a többi fülön kompakt (a „Mi maradt meg” nélkül). Az Állapot-csempe és az oldalsáv
+   állapot-szava **„Szünetel”** (nem „Felfüggesztve” — a site `suspended`, de tartozás nincs; koordinátor, 2026-10-09).
    **A megőrzésnek határideje van (ADR-0345, ÁSZF 1.4):** a lista alatt a törlés NAPJA áll (próba vége + 90 nap,
    `purgeDay`; ha a 'p7' figyelmeztetés már kiment, a tényleges nap: `effectivePurgeDay`), és hogy előtte levelet
    küldünk: **„Ha nem folytatja, ezeket {date} véglegesen töröljük — előtte levélben szólunk.”** — a levél után:
