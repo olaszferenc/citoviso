@@ -10,7 +10,6 @@ import {
   setFreeTrialConfig,
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
-import { getFreeTrialConfig } from "../trial/config.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
