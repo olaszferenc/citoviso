@@ -3173,7 +3173,7 @@ async function handle(
     const p = await getProspectByToken(pWhyMatch[1]);
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
     const lang = await feedbackLang(p.lang);
-    // ADR-XXXX: the retroactive trial letter's answer links carry `forras=proba` and the
+    // ADR-0348: the retroactive trial letter's answer links carry `forras=proba` and the
     // tapped answer — shown pre-selected; the GET still records nothing.
     if (url.searchParams.get("forras") === "proba") {
       const pre = trialWhyPreselect(url.searchParams.get("ok"));

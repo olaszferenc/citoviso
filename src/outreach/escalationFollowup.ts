@@ -100,7 +100,7 @@ export async function sendEscalationFollowups(
       skipped++;
       continue;
     }
-    // ADR-XXXX: the retroactive trial letter promised "Erről a próbáról több levelet nem
+    // ADR-0348: the retroactive trial letter promised "Erről a próbáról több levelet nem
     // küldünk" — a lead (or address) that got the campaign mail or SMS gets no follow-up.
     if (p && (await trialCampaignReached(p.lead_id, email))) {
       skipped++;

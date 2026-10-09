@@ -1,5 +1,5 @@
 -- 0101 RETROACTIVE TRIAL LETTER — the "14 days free" mail/SMS to leads already contacted
--- (ADR-XXXX; plan: assets/design-refs/console/proba-visszamenoleges-level/; runner:
+-- (ADR-0348; plan: assets/design-refs/console/proba-visszamenoleges-level/; runner:
 -- scripts/trial-campaign.mts; sender: src/outreach/trialCampaign.ts).
 --
 -- ① trial_campaign — the ONE-SHOT constraint in code. The letter's footer promises

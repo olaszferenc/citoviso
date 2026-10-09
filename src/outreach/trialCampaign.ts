@@ -1,4 +1,4 @@
-// ADR-XXXX — the RETROACTIVE trial campaign: one "{name}: 14 napig ingyen, élesben" letter (or,
+// ADR-0348 — the RETROACTIVE trial campaign: one "{name}: 14 napig ingyen, élesben" letter (or,
 // for the mobile-only leads, its accent-free SMS) to every lead that ALREADY received the cold
 // outreach, sent once, after the big deploy, on the owner's separate "mehet".
 //

@@ -5,7 +5,7 @@
 //   (b) the unsubscribe page, AFTER the confirmation (plain <form>, works without JS)
 //   (c) the reminder mail's "why" link → a confirmation page; the POST decides (ADR-0291:
 //       a mail scanner's GET answers nothing).
-//   (d) ADR-XXXX: the retroactive trial letter's three one-tap answers → the same page in its
+//   (d) ADR-0348: the retroactive trial letter's three one-tap answers → the same page in its
 //       campaign form (`?forras=proba&ok=<reason>`): the tapped answer arrives PRE-SELECTED,
 //       all five stay on offer, and only the POST stores it (source 'trial_mail').
 //
@@ -168,7 +168,7 @@ export function feedbackFormHtml(
   token: string,
   source: FeedbackSource,
   lang: string,
-  /** ADR-XXXX: the answer tapped in the trial letter — shown CHECKED, never stored by the GET. */
+  /** ADR-0348: the answer tapped in the trial letter — shown CHECKED, never stored by the GET. */
   preselect: FeedbackReason | null = null,
 ): string {
   const action = `/p/${encodeURIComponent(token)}/feedback`;
@@ -239,7 +239,7 @@ export function trialWhyPreselect(raw: string | null): FeedbackReason | null {
 
 /**
  * GET /p/:token/why?forras=proba&ok=<reason> — the retroactive trial letter's answer page
- * (approved mock, ADR-XXXX). Like the reminder page it SHOWS and records nothing (ADR-0291):
+ * (approved mock, ADR-0348). Like the reminder page it SHOWS and records nothing (ADR-0291):
  * the tapped answer is pre-selected, all five are offered, the POST stores it as 'trial_mail'.
  * The unsubscribe stays one tap away (§C.1) — and the page says the answer is not one.
  */

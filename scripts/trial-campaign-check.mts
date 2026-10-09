@@ -1,4 +1,4 @@
-// ADR-XXXX — the RETROACTIVE trial letter + SMS (src/email/trialCampaignEmail.ts,
+// ADR-0348 — the RETROACTIVE trial letter + SMS (src/email/trialCampaignEmail.ts,
 // src/outreach/trialCampaign.ts). What this proves, each leg a way the campaign could break
 // a promise or the owner's ruling:
 //   ① the letter: the removed sentence ("Helyezést nem ígérünk.") is in neither part, the

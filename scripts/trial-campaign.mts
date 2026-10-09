@@ -1,4 +1,4 @@
-// ADR-XXXX — the RETROACTIVE trial campaign runner: "{name}: 14 napig ingyen, élesben" once to
+// ADR-0348 — the RETROACTIVE trial campaign runner: "{name}: 14 napig ingyen, élesben" once to
 // every lead the cold outreach reached (mail; SMS for the mobile-only ones).
 //
 // ⛔ DRY BY DEFAULT. Without `--go` nothing is claimed and nothing is sent: the run prints the

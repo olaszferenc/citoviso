@@ -133,7 +133,7 @@ const LETTERS: readonly { name: string; html: string }[] = [
       }).html as string,
   },
   {
-    name: "visszamenőleges próba-levél (ADR-XXXX)",
+    name: "visszamenőleges próba-levél (ADR-0348)",
     html: buildTrialCampaignEmail(
       renderTrialCampaignLetter({
         lang,

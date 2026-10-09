@@ -8,7 +8,7 @@ A 42 csak-mobilos lead az SMS-t kapja. Jogalap: eldöntve, nem nyitjuk újra.
 képei `level-mobile.png` · `level-desktop.png`; az SMS: `sms.html`, `sms-mobile.png` · `sms-desktop.png`.
 **Megvalósítás:** `src/email/trialCampaignEmail.ts` (levél + SMS-szöveg) · `src/outreach/trialCampaign.ts` (célcsoport,
 kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tartja vissza?” oldal) · futtató:
-`scripts/trial-campaign.mts` · őr: `scripts/trial-campaign-check.mts` · ADR-XXXX.
+`scripts/trial-campaign.mts` · őr: `scripts/trial-campaign-check.mts` · ADR-0348.
 
 **Hatókör:** `src/email/trialCampaignEmail.ts` · `src/console/prospectFeedback.ts` · `src/outreach/trialCampaign.ts`
 

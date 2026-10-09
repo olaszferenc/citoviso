@@ -1,4 +1,4 @@
-## ADR-XXXX — Visszamenőleges „14 nap ingyen” levél + SMS a már megkeresett leadeknek: egy lövés kódban, „mi tartja vissza?” → prospect_feedback
+## ADR-0348 — Visszamenőleges „14 nap ingyen” levél + SMS a már megkeresett leadeknek: egy lövés kódban, „mi tartja vissza?” → prospect_feedback
 
 **Dátum:** 2026-10-09 · **Státusz:** elfogadva (tulaj-döntés 2026-10-09: C levél a „Helyezést nem ígérünk.” mondat nélkül,
 a csak-mobilosok SMS-t kapnak, jogalap eldöntve) · **Előzmény:** ADR-0342 (próba), ADR-0343 (pirula, `trial.sub`),

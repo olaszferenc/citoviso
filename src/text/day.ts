@@ -174,7 +174,7 @@ export function formatDayShortOn(iso: string | null | undefined, lang = "hu"): s
 
 /** `2026-09-24` → `szeptember 24-én` (hu: the month by name and the superessive of the
  *  ordinal — no year, no weekday; the retroactive trial letter's "when we wrote to you",
- *  ADR-XXXX), or the reader's long month + day for other packs. Same 31-day ending rule as
+ *  ADR-0348), or the reader's long month + day for other packs. Same 31-day ending rule as
  *  formatDayOn. */
 export function formatMonthDayOn(iso: string | null | undefined, lang = "hu"): string {
   if (!iso) return "";

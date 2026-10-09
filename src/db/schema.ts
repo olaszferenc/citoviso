@@ -224,7 +224,7 @@ export interface ProspectFeedbackTable {
   id: Generated<string>;
   prospect_id: string;
   mock_view_id: string | null;
-  /** 0101 (ADR-XXXX): 'trial_mail' = the retroactive trial letter's "mi tartja vissza?" buttons. */
+  /** 0101 (ADR-0348): 'trial_mail' = the retroactive trial letter's "mi tartja vissza?" buttons. */
   source: "escalation_dismiss" | "unsubscribe" | "reminder_link" | "trial_mail";
   reason: "expensive" | "not_now" | "distrust" | "have_site" | "other";
   /** Free text, only with reason 'other'; ≤300 chars. */
@@ -528,7 +528,7 @@ export interface FreeTrialTable {
   created_at: Generated<Timestamp>;
 }
 
-/** 0101 (ADR-XXXX): the retroactive trial letter's one-shot log — one row per lead (a mail,
+/** 0101 (ADR-0348): the retroactive trial letter's one-shot log — one row per lead (a mail,
  *  an SMS or an operator exclusion), and (channel, address_key) unique per address. */
 export interface TrialCampaignTable {
   id: Generated<string>;

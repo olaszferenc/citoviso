@@ -1,4 +1,4 @@
-// ADR-XXXX — the RETROACTIVE trial letter: "{name}: {days} napig ingyen, élesben", sent once to
+// ADR-0348 — the RETROACTIVE trial letter: "{name}: {days} napig ingyen, élesben", sent once to
 // the leads that already received the cold outreach, plus its accent-free SMS twin for the
 // mobile-only ones.
 //

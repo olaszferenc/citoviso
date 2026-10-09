@@ -697,7 +697,7 @@ export function checkOutreachSms(
 
 /**
  * What checkOutreachDraft actually reads of a letter. The cold letter (OutreachDraft) is one;
- * the retroactive trial letter (ADR-XXXX, src/email/trialCampaignEmail.ts) has different
+ * the retroactive trial letter (ADR-0348, src/email/trialCampaignEmail.ts) has different
  * named parts but the same §C obligations, so it is judged by the SAME function rather than a
  * lookalike copy. Only the identity line of the parts is read (the placeholder-contact scope).
  */
