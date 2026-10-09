@@ -249,7 +249,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           percent: cfg.percent,
           scope: "purchase",
           // To the END of the printed day (letters/admin say "<day>-ig"): an instant of
-          // trial_until + N days ran out in the morning of that day (IT B1-HATAR, ADR-XXXX).
+          // trial_until + N days ran out in the morning of that day (IT B1-HATAR, ADR-0352).
           expires_at: budapestDayEnd(addIsoDays(budapestIsoDay(trialUntil), cfg.days)),
           note: `ADR-0342: ingyenes próba folytatás-kupon (${trialId})`,
         })

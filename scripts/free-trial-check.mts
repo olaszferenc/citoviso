@@ -212,7 +212,7 @@ try {
   check("pontosan EGY kupon", coupons.length === 1, `${coupons.length}`);
   check("kupon: a KÖZÖS beállítás 30%-a, scope=purchase, lejárattal", coupons[0]?.percent === 30 && coupons[0]?.scope === "purchase" && !!coupons[0]?.expires_at);
   const tu = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
-  // IT B1-HATAR (ADR-XXXX): the letters print "<day>-ig" — the coupon holds to the END of that
+  // IT B1-HATAR (ADR-0352): the letters print "<day>-ig" — the coupon holds to the END of that
   // Budapest day, not to the trial's start-hour on it (it ran out at 09:20 of the printed day).
   const { addIsoDays, budapestDayEnd, budapestIsoDay } = await import("../src/text/budapestTime.js");
   const couponDay = addIsoDays(budapestIsoDay(new Date(tu.trial_until as unknown as string)), 40);

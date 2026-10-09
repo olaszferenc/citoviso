@@ -1,4 +1,4 @@
-## ADR-XXXX — A próba-kupon a kiírt nap VÉGÉIG él; a törlés a 90. megőrzött nap UTÁNI napon jön
+## ADR-0352 — A próba-kupon a kiírt nap VÉGÉIG él; a törlés a 90. megőrzött nap UTÁNI napon jön
 
 **Dátum:** 2026-10-10 · **Kontextus:** IT B1-HATAR + B1-PURGE (`~/wt/citf604e298/_it/parts/b.md`). Módosítja: ADR-0342 (kupon lejárata), ADR-0345 ① („a törlés napja = a kupon lejáratának napja”).
 

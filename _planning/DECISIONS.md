@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-proba-kupon-a-nap-vegeig-torles-a-91-napon.md) — A próba-kupon a kiírt nap VÉGÉIG él; a törlés a 90. megőrzött nap UTÁNI napon jön
+- [ADR-0352](decisions/0352-a-proba-kupon-a-kiirt-nap-vegeig-el-a-torles-a.md) — A próba-kupon a kiírt nap VÉGÉIG él; a törlés a 90. megőrzött nap UTÁNI napon jön
 - [ADR-0351](decisions/0351-a-proba-elott-arazott-elso-rendeles-a-proba.md) — A próba ELŐTT árazott első rendelés a próba alatt nem fizethető; a próba a lead MINDEN tokenjének bevezető ajánlatát zárja
 - [ADR-0350](decisions/0350-mi-tartja-vissza-kulcsonkent-egy-sor-a-kesobbi.md) — „Mi tartja vissza?”: kulcsonként egy sor, a későbbi válasz felülírja az elsőt
 - [ADR-0349](decisions/0349-a-masodik-terheles-egy-mar-kifizetett-elso.md) — A második terhelés egy már kifizetett első vásárlásra: az első nyer, a második kézi rendezés

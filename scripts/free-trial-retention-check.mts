@@ -136,7 +136,7 @@ const exists = async (p: string): Promise<boolean> => stat(p).then(() => true, (
 try {
   // ① the days, pure (2026-10: Thu 1, Fri 2, Sat 3, Sun 4, Thu 8, Sat 10, Sun 11)
   console.log("① a napok");
-  // ADR-XXXX (IT B1-PURGE): the 90th day (10-08) is still KEPT — the coupon lives to its end.
+  // ADR-0352 (IT B1-PURGE): the 90th day (10-08) is still KEPT — the coupon lives to its end.
   check("csütörtöki vég (07-09) + 90 megőrzött nap → törlés 10-08 (a 91. nap)", purgeDay(bp("2026-07-09", "10:00")) === "2026-10-08");
   check("a 90. nap (10-07 — a 90 napos kupon utolsó, „-ig” napja) egész nap megőrzött", addIsoDays("2026-07-09", 90) === "2026-10-07" && purgeDay(bp("2026-07-09", "23:30")) > "2026-10-07");
   check("…figyelmeztetés: −7 → 10-01 (csütörtök)", purgeWarningDay(bp("2026-07-09", "10:00")) === "2026-10-01");
