@@ -31,6 +31,7 @@
 
 import pg from "pg";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./lib/scratch-db.mts";
@@ -52,6 +53,7 @@ const check = (label: string, pass: boolean, detail = ""): void => {
 
 // ── 0. providers + scratch DB FIRST — before ANY import that reads config or opens db ──
 process.env.EMAIL_PROVIDER = "mock";
+process.env.PUBLIC_BASE_URL = "https://citoviso.test";
 process.env.SMS_PROVIDER = "mock";
 process.env.INVOICE_PROVIDER = "mock";
 process.env.PAYMENT_GATEWAY = "mock";
@@ -100,6 +102,10 @@ const {
   purgeWarningDay,
   runPurgeWarnings,
 } = await import("../src/trial/retention.js");
+const { purgeWarningDeps, sendPurgeWarningEmail } = await import("../src/trial/notices.js");
+const { buildPurgeWarningEmail } = await import("../src/email/trialEmail.js");
+const { formatDayOn } = await import("../src/text/day.js");
+type EmailMessage = import("../src/email/sender.js").EmailMessage;
 type SiteData = import("../src/engine/recipe.js").SiteData;
 type Recipe = import("../src/engine/recipe.js").Recipe;
 
@@ -196,8 +202,43 @@ try {
   check("…a tenant megvan", (await count("SELECT count(*)::int AS n FROM tenant WHERE id = $1", [tenantId])) === 1);
 
   // the warning goes late (Mon 10-05, an outage) — the purge moves to 10-12
-  const real = await runPurgeWarnings(bp("2026-10-05", "10:00"), deps, only);
+  // ②b the WIRED sender (what the hourly tick runs: purgeWarningDeps) — approved letter "A"
+  // (assets/design-refs/console/proba-torles-level/), the real builder, the real coupon.
+  console.log("②b a bekötött levél (A terv)");
+  const caps: EmailMessage[] = [];
+  const cap = { send: async (m: EmailMessage) => { caps.push(m); return { id: "cap", provider: "mock" as const }; } };
+  const mon = bp("2026-10-05", "10:00");
+  const wired = purgeWarningDeps(mon, cap);
+  const liveDeps = { sendEmail: async (t: Parameters<typeof wired.sendEmail>[0]) => { sent.push(t.purgeDay); if (!SELF_TEST) await wired.sendEmail(t); } };
+  const real = await runPurgeWarnings(mon, liveDeps, only);
   check("hétfő 10:00 (késve): 1 levél, a levélben a törlés napja 10-12", real.sent === 1 && sent.join() === "2026-10-12", sent.join());
+  const m = caps[0];
+  check("a bekötött küldő a VALÓDI levelet küldte (1 db, a próbázó címére)", caps.length === 1 && !!m && m.to.length > 0, String(caps.length));
+  check("tárgy: a VALÓS napok száma (10-05 → 10-12 = 7) + a szállás neve",
+    !!m && m.subject.startsWith(`7 nap múlva töröljük a próba-honlap adatait – _trialretention_${stamp}`), m?.subject);
+  check("a levélben a törlés napja („2026. október 12-én, hétfőn”) és a „Törlés napja” sor",
+    !!m && m.text.includes(formatDayOn("2026-10-12")) && (m.html ?? "").includes("Törlés napja"), m?.text);
+  check("a levélben a Folytatom link (/p/<token>/folytatas) és a megnyugtató zárás",
+    !!m && /citoviso\.test\/p\/[^/\s]+\/folytatas/.test(m.text) && m.text.includes("Ha nem folytatja, nincs teendője — díjat nem számítunk fel."), m?.text);
+  check("élő próba-kupon → a kupon-mondat és a Kedvezmény-sor benne", !!m && m.text.includes("a próbához kapott kedvezménnyel még megteheti") && (m.html ?? "").includes("Kedvezmény"));
+  // a warning moved back to Friday (Sunday purge day) names the REAL 9 days, never a rounded 7
+  const sunCaps: EmailMessage[] = [];
+  await sendPurgeWarningEmail(
+    { trialId: trial.id, tenantId, email: "x@example.invalid", contactName: "Teszt", trialUntil: bp("2026-07-10", "10:00"), purgeDay: "2026-10-11" },
+    bp("2026-10-02", "10:00"),
+    { send: async (mm: EmailMessage) => { sunCaps.push(mm); return { id: "cap", provider: "mock" as const }; } },
+  );
+  check("péntekre hozott figyelmeztetés (vasárnapi törlés) → „9 nap múlva”", sunCaps[0]?.subject.startsWith("9 nap múlva töröljük") === true, sunCaps[0]?.subject);
+  const tick = readFileSync(path.resolve(process.cwd(), "scripts/offer-followup.mts"), "utf8");
+  const warnCall = tick.split("\n").filter((l) => l.includes("runPurgeWarnings("));
+  check("az óránkénti tick a bekötött levéllel küld (purgeWarningDeps, nem száraz)",
+    warnCall.length === 1 && warnCall[0]!.includes("runPurgeWarnings(now, purgeWarningDeps(now))") && !/dryRun|null/.test(warnCall[0]!), warnCall.join(" | "));
+  const noCoupon = buildPurgeWarningEmail({
+    to: "x@example.invalid", daysToPurge: 7, siteName: "Teszt Panzió", contactName: null,
+    trialUntilIso: "2026-07-10", purgeIso: "2026-10-08", coupon: null, continueUrl: "https://citoviso.test/p/t/folytatas",
+  });
+  check("kupon nélkül: nincs kupon-mondat és nincs Kedvezmény-sor („A kupon nélkül” ág)",
+    !noCoupon.text.includes("kedvezmény") && !(noCoupon.html ?? "").includes("Kedvezmény") && (noCoupon.html ?? "").includes("Törlés napja"));
   const rows = await p7Rows();
   check("…a p7 sor 'sent', a törlés napjával", rows.length === 1 && rows[0]!.status === "sent" && rows[0]!.detail === "2026-10-12", JSON.stringify(rows));
   const again = await runPurgeWarnings(bp("2026-10-05", "11:00"), deps, only);

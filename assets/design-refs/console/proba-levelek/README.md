@@ -22,10 +22,12 @@ T−3 e-mail (`t3-*.png`), T−1 e-mail (`t1-*.png`), próbás belépő-levél (
 4. **Adat-panel:** „A próba vége” (2026. okt. 22. (csütörtök)) · „Kedvezmény” · „A kedvezmény érvényes”.
 5. **Egyetlen gomb:** **„Folytatom”** → `/p/<token>/folytatas` (ADR-0344 ④). Link nélkül a levél nem megy ki
    (a küldő hangosan bukik), mert gomb nélkül a levél célja veszne el.
-6. **Megnyugtató zárás:** **„Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk.”** + mi marad meg.
+6. **Megnyugtató zárás:** **„Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk.”** + mi marad meg,
+   HATÁRIDŐVEL (ADR-0345, ÁSZF 1.4; tulaj-döntés 2026-10-09): **„A szerkesztő felülete és minden feltöltött adata a próbaidő végétől számított 90 napig megmarad; ha addig fizet, a honlap azonnal visszakapcsol.”**
+   ⛔ A korábbi határidő nélküli „…megmarad; ha később fizet…” kivezetve (§B.17).
 7. **Próbás belépő-levél:** **„Elindult {art} {site} ingyenes próbája: a honlap él, és minden modul be van kapcsolva.”**
    Az adat-panelben a felhasználónév mellett „A próba vége” és „Kedvezmény, ha folytatja”; a gomb alatt
-   **„3 nappal és 1 nappal a vége előtt szólunk.”**. A felhasználónév, a jelszó-gomb és a 7 napos megjegyzés változatlan.
+   **„3 nappal és 1 nappal a vége előtt szólunk.”**; a szünet-mondat határidővel: **„ha nem folytatja, a honlap szünetel, az adatai a próbaidő végétől számított 90 napig megmaradnak.”**. A felhasználónév, a jelszó-gomb és a 7 napos megjegyzés változatlan.
 8. **Lábléc próbánál:** **„oldalát a Citovisónál próbálja ki.”** — a rendelő vevőnél változatlanul „…rendelte meg.”
 9. **Ablak:** csak hétköznap 9–16 (ADR-0334), az óránkénti tick viszi. **Az SMS SZÁRAZ** (a forma — ékezet, link —
    a tulajnál van): nem megy ki, és sort sem foglal.

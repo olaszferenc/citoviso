@@ -294,7 +294,7 @@ try {
   check("kupon nélkül nincs kedvezmény-ígéret", !mon.html!.includes("kedvezmény"));
   // the hourly tick runs the wired deps, never dry
   const tick = readFileSync(path.resolve(process.cwd(), "scripts/offer-followup.mts"), "utf8");
-  // Only the T−3/T−1 call is judged: the same tick also runs the ADR-0345 purge warning DRY.
+  // Only the T−3/T−1 call is judged here; the ADR-0345 purge warning call is judged by free-trial-retention-check.
   const noticeCall = tick.split("\n").filter((l) => l.includes("runTrialNotices("));
   check("az óránkénti tick a bekötött küldőkkel fut (nem dryRun)", noticeCall.length === 1 && noticeCall[0]!.includes("runTrialNotices(now, trialNoticeDeps(now))") && !/dryRun/.test(noticeCall[0]!));
   // footer: trial vs buyer; the trial login letter

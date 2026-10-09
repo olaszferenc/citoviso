@@ -91,7 +91,7 @@ export function buildTrialNoticeEmail(input: {
     : null;
   const stay = T(
     lang,
-    "Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk. A próba végén a honlap szünetel: a látogatók helyette a szállás nevét, települését és az Ön elérhetőségeit látják. A szerkesztő felülete és minden feltöltött adata megmarad; ha később fizet, a honlap azonnal visszakapcsol.",
+    "Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk. A próba végén a honlap szünetel: a látogatók helyette a szállás nevét, települését és az Ön elérhetőségeit látják. A szerkesztő felülete és minden feltöltött adata a próbaidő végétől számított 90 napig megmarad; ha addig fizet, a honlap azonnal visszakapcsol.",
   );
   const button = T(lang, "Folytatom");
 
@@ -123,6 +123,84 @@ export function buildTrialNoticeEmail(input: {
       mailDetails(details),
       mailButton(continueUrl, button),
       mailNote(esc(stay)),
+    ],
+  });
+}
+
+/**
+ * ADR-0345 — the purge warning, 7 days before a lapsed trial's data is deleted (approved
+ * design "A", owner 2026-10-09, §2b: assets/design-refs/console/proba-torles-level/).
+ * The count in the subject and heading is the REAL distance to the deletion day: a warning
+ * moved back to Friday (purgeWarningDay) says 9 days, never a rounded 7 (§B.17). Without a
+ * live coupon the coupon paragraph and its details row are left out — no promise we lack.
+ */
+export function buildPurgeWarningEmail(input: {
+  to: string;
+  /** Whole Budapest days from the send day to the deletion day (≥ 7 by construction). */
+  daysToPurge: number;
+  siteName: string;
+  contactName: string | null;
+  /** ISO day (Budapest) the trial ended. */
+  trialUntilIso: string;
+  /** ISO day (Budapest) the data is deleted — the day the letter promises. */
+  purgeIso: string;
+  coupon: TrialCouponView | null;
+  /** GET /p/<token>/folytatas — the configurator with the trial coupon. */
+  continueUrl: string;
+  lang?: string;
+}): EmailMessage {
+  const { to, siteName, trialUntilIso, purgeIso, coupon, continueUrl, lang } = input;
+  const greeting = mailGreeting(lang, input.contactName, true);
+  const n = String(input.daysToPurge);
+  const subject = T(lang, "{n} nap múlva töröljük a próba-honlap adatait – {site}", { n, site: siteName });
+  const heading = T(lang, "{n} nap múlva töröljük a próba-honlap adatait", { n });
+
+  const intro = (v: { site: string; until: string; purge: string }): string =>
+    T(
+      lang,
+      "{site} honlapjának ingyenes próbája {until} lejárt. Az adatait azóta megőriztük; {purge} véglegesen töröljük a honlapot, a szerkesztő-fiókot és a feltöltött fényképeket.",
+      v,
+    );
+  const introVars = { site: siteName, until: formatDayOn(trialUntilIso, lang), purge: formatDayOn(purgeIso, lang) };
+  const offer = (v: { percent: string; until: string }): string =>
+    T(lang, "Ha folytatná, a próbához kapott kedvezménnyel még megteheti: {percent} az első díjból, {until}-ig.", v);
+  const offerVars = coupon
+    ? { percent: `${coupon.percent}%`, until: formatDayLongStem(coupon.untilIso, lang) }
+    : null;
+  const calm = T(lang, "Ha nem folytatja, nincs teendője — díjat nem számítunk fel.");
+  const button = T(lang, "Folytatom");
+
+  const details = [
+    { label: T(lang, "A próba vége"), value: formatDayShortWeekday(trialUntilIso, lang) },
+    { label: T(lang, "Törlés napja"), value: formatDayShortWeekday(purgeIso, lang) },
+  ];
+  if (coupon) {
+    details.push({
+      label: T(lang, "Kedvezmény"),
+      value: T(lang, "{discount}, {date}-ig", { discount: couponValue(lang, coupon), date: formatDayShortStem(coupon.untilIso, lang) }),
+    });
+  }
+
+  const text =
+    `${greeting}\n\n${intro(introVars)}\n\n` +
+    (offerVars ? `${offer(offerVars)}\n\n` : "") +
+    `${button}: ${continueUrl}\n\n${calm}\n`;
+
+  return platformMail({
+    to,
+    subject,
+    text,
+    lang,
+    heading,
+    greeting,
+    siteName,
+    footerReason: "trial",
+    blocks: [
+      mailPara(boldVars(intro, introVars, ["site", "purge"])),
+      ...(offerVars ? [mailPara(boldVars(offer, offerVars, ["percent", "until"]))] : []),
+      mailDetails(details),
+      mailButton(continueUrl, button),
+      mailNote(esc(calm)),
     ],
   });
 }

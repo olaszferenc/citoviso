@@ -11,13 +11,14 @@
 // DRY (sendSms null — neither sent nor claimed) until its form is approved.
 //
 // ADR-0345 — and the purge warning 7 days before a lapsed trial's data is deleted (same
-// weekday 9–16 window). DRY (deps null — only logged, no ledger row) until the letter's
-// wording is approved; without a sent warning the daily purge deletes nothing.
+// weekday 9–16 window). LIVE with the owner-approved letter "A" (2026-10-09,
+// assets/design-refs/console/proba-torles-level/); the daily purge itself stays DRY until
+// it goes live with the big deploy (separate owner permission).
 //   tsx scripts/offer-followup.mts [--now=2026-10-01T09:00:00+02:00]
 
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { runTrialNotices } from "../src/trial/expiry.js";
-import { trialNoticeDeps } from "../src/trial/notices.js";
+import { purgeWarningDeps, trialNoticeDeps } from "../src/trial/notices.js";
 import { runPurgeWarnings } from "../src/trial/retention.js";
 import { db } from "../src/db/client.js";
 
@@ -33,8 +34,8 @@ try {
   console.log(`offer-followup @ ${now.toISOString()}:`, JSON.stringify(f));
   const n = await runTrialNotices(now, trialNoticeDeps(now));
   console.log(`trial-notices (e-mail éles, SMS száraz) @ ${now.toISOString()}:`, JSON.stringify(n));
-  const w = await runPurgeWarnings(now, null, { dryRun: true });
-  console.log(`trial-purge-warnings (száraz) @ ${now.toISOString()}:`, JSON.stringify(w));
+  const w = await runPurgeWarnings(now, purgeWarningDeps(now));
+  console.log(`trial-purge-warnings (éles) @ ${now.toISOString()}:`, JSON.stringify(w));
 } catch (e) {
   // Non-zero exit → the unit's OnFailure= mails the house (ADR-0276).
   console.error("offer-followup HIBA:", e);

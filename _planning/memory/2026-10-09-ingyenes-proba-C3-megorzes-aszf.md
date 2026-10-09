@@ -19,11 +19,17 @@ SUB (koordinátor `31815b5a`), két session ugyanabban a fában (`~/wt/cit3cce04
 ## Ebben a commitban
 - Óránkénti `scripts/offer-followup.mts`: `runPurgeWarnings(now, null, {dryRun:true})`.
 
+## 3. session — a törlés-levél (tulaj-döntés: „A”) élesen a tickben
+- `buildPurgeWarningEmail` (`src/email/trialEmail.ts`), `sendPurgeWarningEmail` / `purgeWarningDeps` (`src/trial/notices.ts`),
+  `scripts/offer-followup.mts` a bekötött küldővel; a napi purge SZÁRAZ marad (nagy deploy + külön engedély).
+- „megmarad” → „a próbaidő végétől számított 90 napig” (`trialEmail.ts` stay, `loginEmail.ts` próba-mondat) + KÖTŐ idézetek
+  (`proba-levelek/README.md` 6–7.).
+- Terv befagyva: `assets/design-refs/console/proba-torles-level/` (valódi építővel renderelt `level-*.html` + jóváhagyott PNG-k).
+- Őr: `free-trial-retention-check` ②b (a bekötött levél: valós napok 7/9, törlés-nap, link, kupon / kupon nélkül, tick-bekötés).
+
 ## Nyitott
-- **§2b**: a törlés-figyelmeztető levél terve a koordinátornál (`_report/proba-C3/`, A teljes / A hétvége / A kupon nélkül
-  / B rövid). Jóváhagyás után: küldő (`PurgeWarningDeps.sendEmail`) a `trialEmail.ts` mintájára + éles tick.
-- A határidő nélküli „megmarad” szövegek → „90 napig” (C2 T−3/T−1 `stay` mondat a `trialEmail.ts`-ben + README KÖTŐ
-  idézet, a belépő-levél próba-mondata a `loginEmail.ts`-ben, szünetel-lap, próba-űrlap sikere) — a jóváhagyott levél-szöveget érinti, a koordinátor viszi a tulajhoz.
+- A napi purge élesítése (`dryRun` le) — a nagy deployjal, külön tulaj-engedéllyel.
+- A G SUB egyesített kuponja: a levél kupon-mondata `liveTrialCoupon`-ból olvas; ha a G más megnevezést ad, igazítani.
 
 ## 3. session — a lejárt-próba admin-blokk határideje (koordinátor-kérés, külön commit)
 - `trialLapsedBlock` (`src/server/adminViews.ts`): a „Mi maradt meg” alatt a törlés NAPJA + „előtte levélben szólunk”

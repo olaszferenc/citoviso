@@ -42,6 +42,11 @@ a `free_trial` sor a törlés után megmarad.
    végétől számított 90 napig**” —, ami a két tulaj-döntés közös következménye.
 6. **Szárazon, amíg a levél nincs jóváhagyva:** a napi tick `purgeExpiredTrials(now, {dryRun:true})`. Elküldött `p7`
    nélkül a motor amúgy sem töröl; a száraz jel a második zár. A küldő a jóváhagyott szöveggel kerül be (kapcsoló nincs).
+   **Kiegészítés (2026-10-09, tulaj-döntés: a levél = „A” változat):** a figyelmeztetés ÉLES — `buildPurgeWarningEmail`
+   (`src/email/trialEmail.ts`), `purgeWarningDeps` (`src/trial/notices.ts`), az óránkénti tick a bekötött küldővel
+   hívja; a terv befagyva: `assets/design-refs/console/proba-torles-level/`. A tárgy/címsor {n}-je a valós napok száma
+   (pénteki eltolásnál 9). **A napi törlés továbbra is SZÁRAZ**: élesítése a nagy deployjal megy, külön tulaj-engedéllyel.
+   A próba-levelek határidő nélküli „megmarad” mondatai (T−3/T−1, belépő-levél) „a próbaidő végétől számított 90 napig”.
 
 ### Őr
 

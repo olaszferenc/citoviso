@@ -147,7 +147,7 @@ Ilyenkor minden lap tetején egy piros doboz áll, a címében a próba utolsó 
 ebben látja a próbához kapott kedvezményt (ha volt), a **„Folytatom — fizetés”** gombot, és a
 **„Mi maradt meg”** listát: a szerkesztő felülete, minden szöveg, kép és beállítás, és a beérkezett üzenetek.
 Ezek **nem maradnak meg örökre**: a próba utolsó napjától számított 90 napig őrizzük őket (ÁSZF 1.4), és a lista
-alatt ott a nap, amikor véglegesen töröljük őket. A törlés előtt egy héttel levélben is szólunk — ha addig
+alatt ott a nap, amikor véglegesen töröljük őket. A törlés előtt legalább egy héttel levélben is szólunk („… nap múlva töröljük a próba-honlap adatait” tárggyal) — ha addig
 folytatja, semmi nem törlődik.
 A doboz alján lévő **„Megnézem, mit lát a látogató”** linkkel meg is nézheti, hogy a vendégei most is
 elérik-e Önt. A többi lapon a doboz rövidebb. **Tartozása nincs** — nem terheltünk semmit. A fizetés után a honlap

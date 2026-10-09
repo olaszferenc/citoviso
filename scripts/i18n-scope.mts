@@ -52,6 +52,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // and ledger details only; the letter's wording lives in src/email/trialEmail.ts.
   "src/trial/expiry.ts": "operátori napló + ledger-részlet; a levél szövege trialEmail.ts",
   "src/trial/notices.ts": "operátori hibaüzenet a ledgerbe; a levél szövege trialEmail.ts",
+  "src/trial/retention.ts": "operátori napló + ledger-részlet (törlés-jelentés, megtagadás oka); a törlés-levél szövege trialEmail.ts",
   // ADR-0340: the dashboard answer. The letter's subject and body are the OPERATOR's own
   // text (typed or Poe's suggestion, in the lead's language) — nothing is composed here;
   // the Hungarian literals are operator-facing outcomes / validation messages.

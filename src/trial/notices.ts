@@ -10,13 +10,14 @@
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
-import { buildTrialNoticeEmail, buildTrialNoticeSmsText } from "../email/trialEmail.js";
+import { buildPurgeWarningEmail, buildTrialNoticeEmail, buildTrialNoticeSmsText } from "../email/trialEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { sendSms as sendSmsDefault, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import type { TrialNoticeDeps, TrialNoticeTarget } from "./expiry.js";
+import type { PurgeWarningDeps, PurgeWarningTarget } from "./retention.js";
 
 /** Whole calendar days (Budapest) from `now` to the trial's last day. */
 export function trialDaysLeft(now: Date, trialUntil: Date): number {
@@ -54,7 +55,7 @@ interface NoticeContext {
 }
 
 /** What both channels say: the site, the live coupon and the /folytatas link. */
-async function noticeContext(t: TrialNoticeTarget, now: Date): Promise<NoticeContext> {
+async function noticeContext(t: Pick<TrialNoticeTarget, "trialId" | "trialUntil">, now: Date): Promise<NoticeContext> {
   const row = await db
     .selectFrom("free_trial")
     .innerJoin("tenant", "tenant.id", "free_trial.tenant_id")
@@ -159,4 +160,46 @@ export function trialNoticeDeps(now: Date, sender?: EmailSender, sms?: TrialSmsS
     sendEmail: (t) => sendTrialNoticeEmail(t, now, sender),
     sendSms: (t) => sendTrialNoticeSms(t, now, sms),
   };
+}
+
+/**
+ * ADR-0345 — build and send the purge warning (approved design "A", owner 2026-10-09:
+ * assets/design-refs/console/proba-torles-level/), then log it into the tenant's mailbox.
+ * Same site name, live coupon and /folytatas link as the T−3/T−1 letters (noticeContext).
+ */
+export async function sendPurgeWarningEmail(
+  t: PurgeWarningTarget,
+  now: Date,
+  sender: EmailSender = getEmailSender(),
+): Promise<void> {
+  const c = await noticeContext(t, now);
+  const lang = await prepareMailLang(await langForTenant(t.tenantId));
+  const today = Date.parse(`${budapestIsoDay(now)}T00:00:00Z`);
+  const msg = buildPurgeWarningEmail({
+    to: t.email,
+    daysToPurge: Math.round((Date.parse(`${t.purgeDay}T00:00:00Z`) - today) / 86_400_000),
+    siteName: c.siteName,
+    contactName: c.contactName,
+    trialUntilIso: c.trialUntilIso,
+    purgeIso: t.purgeDay,
+    coupon: c.coupon,
+    continueUrl: c.continueUrl,
+    lang,
+  });
+  await sender.send(msg);
+  await logTenantMessage({
+    tenantId: t.tenantId,
+    channel: "email",
+    kind: "other",
+    subject: msg.subject,
+    bodyText: msg.text,
+    recipient: msg.to,
+    relatedKind: "free_trial_p7",
+    relatedId: t.trialId,
+  });
+}
+
+/** What the hourly tick runs the purge warnings with (live e-mail). */
+export function purgeWarningDeps(now: Date, sender?: EmailSender): PurgeWarningDeps {
+  return { sendEmail: (t) => sendPurgeWarningEmail(t, now, sender) };
 }

@@ -65,7 +65,7 @@ export function buildCredentialsEmail(input: {
   const trialPara = (v: { until: string }): string =>
     T(
       lang,
-      "A próba {until}-ig tart. Kártyát nem kértünk, és a próba végén sem terhelünk semmit: ha nem folytatja, a honlap szünetel, az adatai megmaradnak. 3 nappal és 1 nappal a vége előtt szólunk.",
+      "A próba {until}-ig tart. Kártyát nem kértünk, és a próba végén sem terhelünk semmit: ha nem folytatja, a honlap szünetel, az adatai a próbaidő végétől számított 90 napig megmaradnak. 3 nappal és 1 nappal a vége előtt szólunk.",
       v,
     );
   const trialVars = trial ? { until: formatDayLongStem(trial.untilIso, lang) } : null;
