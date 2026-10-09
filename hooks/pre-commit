@@ -2996,7 +2996,7 @@ if [ -f scripts/free-trial-check.mts ] && \
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
   EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
-# trial-campaign-check (ADR-XXXX, visszamenőleges „14 nap ingyen” levél + SMS): a kivett mondat
+# trial-campaign-check (a visszamenőleges próba-levél ADR-je, visszamenőleges „14 nap ingyen” levél + SMS): a kivett mondat
 #     („Helyezést nem ígérünk.”) sehol, az egy-lövés lábléc-sor ott van, az SMS GSM-7 és ≤ 2 szelet
 #     (hosszú névnél a név rövidül, a link soha), a §C kapu átengedi; a /why?forras=proba GET nem ír,
 #     a POST egy 'trial_mail' sort ír; a célcsoport-szűrés kizárásai; EGY LÖVÉS (ablakon kívül nem
