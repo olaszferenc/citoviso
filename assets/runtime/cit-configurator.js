@@ -1858,6 +1858,17 @@
     launch.classList.add("cit-cfg-launch--pair");
   }
   var trialSheetOpen = false;
+  // The browse-step header. On the trialist's continue-and-pay page (/p/<t>/folytatas,
+  // CFG.continuation) "Ez az Ön leendő weboldala … Most nem fizet semmit" is false: the
+  // site is already theirs and paying is why they came (Elek, 2026-10-09).
+  function browseHead() {
+    return CFG.continuation ? tr("Az Ön honlapja — folytatás") : tr("Ez az Ön leendő weboldala");
+  }
+  function browseSub() {
+    return CFG.continuation
+      ? tr("Válassza ki, mit tartson meg — azonnal látja. Fizetni a következő lépésben fog.")
+      : tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.");
+  }
   /** The trial pill follows the order pill's visibility; an open trial form hides both. */
   function syncTrialPill() {
     if (!trialPill) return;
@@ -1876,8 +1887,8 @@
       '" aria-label="' + tr("Panel elrejtése / megnyitása") + '">' +
       I.chevR +
       "</button>" +
-      '<div class="cit-cfg-head"><h2>' + tr("Ez az Ön leendő weboldala") + "</h2>" +
-      "<p>" + tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.") + "</p>" +
+      '<div class="cit-cfg-head"><h2>' + esc(browseHead()) + "</h2>" +
+      "<p>" + esc(browseSub()) + "</p>" +
       '<button class="cit-cfg-close" type="button" aria-label="' + tr("Bezárás") + '">' +
       I.x +
       "</button></div>" +
@@ -2632,8 +2643,8 @@
         ' — <b class="cit-cfg-strap-amt"></b>.';
       syncStrapAmount();
     } else {
-      h.textContent = tr("Ez az Ön leendő weboldala");
-      p.textContent = tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.");
+      h.textContent = browseHead();
+      p.textContent = browseSub();
     }
   }
 

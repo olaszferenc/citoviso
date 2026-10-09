@@ -3279,6 +3279,7 @@ async function handle(
         // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
         subLabel: await plannedSiteSlug(pf.leadId),
         renewalLeadId: pf.leadId,
+        continuation: true,
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null),
         ...(coupon ? { offer: offerForPage(coupon, p.lang ?? "hu") } : {}),

@@ -490,6 +490,9 @@ try {
   const bodyA = contA.status === 200 ? await contA.text() : "";
   check("GET /p/<t>/folytatas (lejárt próbázó) → 200, konfigurátor a saját /request-re", contA.status === 200 && bodyA.includes(`/p/${a.token}/request`), String(contA.status));
   const cp = await db.selectFrom("offer").select("percent").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").executeTakeFirstOrThrow();
+  // Elek (2026-10-09): the browse header said „Most nem fizet semmit" to someone who came to
+  // pay — the page must mark itself the continuation so the runtime swaps that header.
+  check("…a manifest folytatásként jelöli (continuation), a fejléc nem „Most nem fizet semmit”", bodyA.includes('"continuation":true'));
   check(`…a próba-kupon (${cp.percent}%) mint ajánlat`, new RegExp(`"offer":\\{"kind":"coupon","percent":${cp.percent}[,}]`).test(bodyA));
   if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() + 90 * 86_400_000) } as never).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
   // Elek 3: the plain /p/<t> of a LAPSED trialist — not „már az Öné… folyamatban", but

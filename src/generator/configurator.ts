@@ -245,6 +245,12 @@ export interface ConfiguratorManifest {
    * what it was before the trial existed (README 5).
    */
   readonly trial?: TrialEntry;
+  /**
+   * The trialist's own checkout (/p/<t>/folytatas, ADR-0344): the site is already theirs
+   * and they came here to pay, so the browse header's "Ez az Ön leendő weboldala … Most
+   * nem fizet semmit" is false for them (Elek, 2026-10-09). Absent = the prospect page.
+   */
+  readonly continuation?: true;
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -337,6 +343,8 @@ export interface ConfiguratorOpts {
    * the same label the domain step uses, so the two can never name different hosts.
    */
   readonly trial?: Omit<TrialEntry, "sub">;
+  /** The trialist's continue-and-pay checkout (/p/<t>/folytatas) — see the manifest field. */
+  readonly continuation?: boolean;
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */
@@ -456,6 +464,7 @@ export async function buildManifest(
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
     ...(opts.trial ? { trial: { ...opts.trial, sub: subHost } } : {}),
+    ...(opts.continuation ? { continuation: true as const } : {}),
     cta: {
       booking: {
         title: "Foglalás",
