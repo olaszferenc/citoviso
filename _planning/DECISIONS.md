@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-ingyenes-proba-lejarat-figyelmeztetes-folytatas.md) — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
 - [ADR-0343](decisions/0343-proba-belepo-a-lead-lapon-pirula-par-trial.md) — Próba-belépő a lead-lapon: pirula-pár, `trial_*` esemény-család, a belépő kapuja
 - [ADR-0342](decisions/0342-ingyenes-proba-kartya-nelkuli-konvertalas-a.md) — Ingyenes próba: kártya nélküli konvertálás, a próba-állapot külön táblában (nem az előfizetésen)
 - [ADR-0341](decisions/0341-http-s-foto-a-https-es-mockon-https-emeles-vagy.md) — http-s fotó a https-es mockon: https-emelés vagy saját proxy, a kapu a kiszállított URL-t méri
