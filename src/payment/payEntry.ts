@@ -87,9 +87,6 @@ export async function resolvePayEntry(
   const paid = pays.find((p) => p.status === "paid" && p.ref);
   if (paid) return { kind: "redirect", url: `/pay/done?paymentId=${encodeURIComponent(paid.ref!)}`, reissued: false };
 
-  const self = pays.find((p) => p.id === paymentId);
-  if (self?.status === "pending" && self.payUrl) return { kind: "redirect", url: self.payUrl, reissued: false };
-
   // ALREADY A CUSTOMER (measured 2026-09-26): an old, never-paid initial order
   // whose lead has since bought through ANOTHER order. requestPayment refuses it
   // (correctly — a second charge adds nothing), but the fallback then told the
@@ -106,6 +103,12 @@ export async function resolvePayEntry(
     const owned = await ownedBlocksInitialPurchase(kind.leadId);
     if (owned) return { kind: "owned", owned };
   }
+
+  // ⛔ AFTER the owned check (B1-PAR, IT 2026-10-09): a second checkout tab's payment
+  // is still payable at the gateway after its sibling order was paid — handing it
+  // back here was the road to the second charge.
+  const self = pays.find((p) => p.id === paymentId);
+  if (self?.status === "pending" && self.payUrl) return { kind: "redirect", url: self.payUrl, reissued: false };
 
   if (!opts.reissue) return { kind: "renew" };
 

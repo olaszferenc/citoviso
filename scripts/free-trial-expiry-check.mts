@@ -35,7 +35,11 @@
 //      fizetés", never the debt row „Rendezze a díjat";
 //   ⑤ continuation: the REAL settlement (applyWebhookResult, mock gateway) → site live,
 //      trial 'converted', subscription anchor = today, the trial coupon burnt ONCE, no
-//      second (welcome) coupon — and from then on the lead is a customer (gate refuses).
+//      second (welcome) coupon — and from then on the lead is a customer (gate refuses);
+//   ⑤b B1-PAR, two checkout tabs: the second tab's /pay/go no longer hands back its live
+//      gateway page, and its payment, settled anyway, converts nothing, invoices nothing,
+//      burns nothing and lands on the „már kifizette” page (--self-test: the first payment's
+//      paid_at slid after the second → the second wins, the duplicate legs go red).
 //
 // ISOLATION: own throwaway database (scratch-db), created BEFORE any import that opens the
 // db client; the provider switches are forced to mock and READ BACK (the dev .env names a
@@ -474,6 +478,20 @@ try {
   await db.insertInto("payment")
     .values({ order_intent_id: oi.id, amount: 7000, period: "monthly", gateway: "mock", gateway_ref: ref, status: "pending" } as never)
     .execute();
+  // B1-PAR: a SECOND checkout tab — its own order + pending payment, minted while nothing was paid yet.
+  const oi2 = await db.insertInto("order_intent")
+    .values({
+      prospect_id: a.prospectId, kind: "initial", price: 7000, billing_period: "monthly", modules: JSON.stringify(["gallery", "enquiry"]),
+      status: "submitted", submitted_at: new Date(), offer_id: coupon.id, domain_type: "citoviso_sub",
+      photo_rights_declared_at: new Date(), photo_rights_text: "teszt", buyer_type: "individual", buyer_name: "Teszt Elek",
+      buyer_country: "HU", buyer_zip: "8360", buyer_city: "Keszthely", buyer_address: "Fő utca 1.", buyer_email: "trialexpiry@example.invalid",
+      terms_accepted_at: new Date(), terms_text: "teszt",
+    } as never)
+    .returning("id").executeTakeFirstOrThrow();
+  const ref2 = `trialexpiry2_${stamp}`;
+  const pay2 = await db.insertInto("payment")
+    .values({ order_intent_id: oi2.id, amount: 7000, period: "monthly", gateway: "mock", gateway_ref: ref2, pay_url: `http://pay.invalid/${ref2}`, status: "pending" } as never)
+    .returning("id").executeTakeFirstOrThrow();
   const paid = await applyWebhookResult({ gatewayRef: ref, status: "paid" });
   check("a fizetés aktivál", paid.ok && paid.activated === true, JSON.stringify(paid));
   const siteAfter = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
@@ -501,6 +519,24 @@ try {
     ["gallery", "enquiry"].every((m) => entsAfter.some((e) => e.module === m && !e.trial_grant)) && entsAfter.every((e) => !e.trial_grant),
     entsAfter.map((e) => `${e.module}${e.trial_grant ? "*" : ""}`).join(","));
   check("a fizetés után a lead VEVŐ: a kapu újra elutasít", (await ownedBlocksInitialPurchase(a.leadId)) !== null);
+  // B1-PAR: the second tab after the first was paid. /pay/go must not hand its live gateway page back…
+  const goTab2 = await get(`/pay/go/${pay2.id}`);
+  check("B1-PAR: /pay/go a második fül függő fizetésére → nem a pénztár (már az Öné)", !(goTab2.headers.get("location") ?? "").includes("pay.invalid"), `${goTab2.status} ${goTab2.headers.get("location") ?? ""}`);
+  // …and when it is paid anyway (the gateway page was already open), nothing is delivered twice.
+  const invBefore = (await db.selectFrom("invoice").select("id").execute()).length;
+  if (SELF_TEST) await db.updateTable("payment").set({ paid_at: new Date(Date.now() + 3_600_000) } as never).where("gateway_ref", "=", ref).execute();
+  const paid2 = await applyWebhookResult({ gatewayRef: ref2, status: "paid" });
+  if (SELF_TEST) await db.updateTable("payment").set({ paid_at: new Date(Date.now() - 3_600_000) } as never).where("gateway_ref", "=", ref).execute();
+  check("B1-PAR: a második fizetés NEM aktivál, duplikátumként jelölve", paid2.ok && paid2.activated === false && !!paid2.duplicateOf, JSON.stringify(paid2));
+  const invAfter = (await db.selectFrom("invoice").select("id").execute()).length;
+  check("B1-PAR: a második fizetésre nincs számla", invAfter === invBefore, `${invBefore}→${invAfter}`);
+  const couponTwice = await db.selectFrom("offer").select("used_count").where("id", "=", coupon.id).executeTakeFirstOrThrow();
+  check("B1-PAR: a kupon továbbra is egyszer égett", couponTwice.used_count === 1, `${couponTwice.used_count}`);
+  const done2 = await get(`/pay/done?paymentId=${encodeURIComponent(ref2)}`);
+  const done2Html = done2.status === 200 ? await done2.text() : "";
+  check("B1-PAR: /pay/done a második fizetésre → „már kifizette” lap, nem az üdvözlő", done2Html.includes("data-pay-duplicate"), String(done2.status));
+  const done1 = await get(`/pay/done?paymentId=${encodeURIComponent(ref)}`);
+  check("B1-PAR: …az első fizetés lapja továbbra is a normál eredmény", done1.status === 200 && !(await done1.text()).includes("data-pay-duplicate"));
   const paidState = await trialAdminState(tenantId);
   const paidHtml = renderAdmin(tenantId, "attekintes", paidState);
   check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk, se „Modulok” kártya", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed") && !paidHtml.includes("data-trial-modules"));
@@ -516,7 +552,7 @@ if (SELF_TEST) {
   // Sabotage legs: the wiped ledger (1: second run sends), the SMS sender slipped in (1), the site back on (1), a revived trial module (1),
   // the admin strip unwired (1), the warn threshold missed (1), the spine's trial_grant lost (1)
   // and the lapsed trial's Teendők row handed no trial (1).
-  if (failures < 8) {
+  if (failures < 9) {
     console.error(`\n⛔ free-trial-expiry-check --self-test: csak ${failures} állítás ment pirosra a szabotázson — az őr vak.`);
     process.exit(1);
   }

@@ -28,7 +28,7 @@ import {
   startOrderDomainProvisioning,
 } from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
-import { alertInvoiceFailure, INVOICE_AUTO_RETRY_LIMIT } from "../console/houseAlert.js";
+import { alertHouse, alertInvoiceFailure, INVOICE_AUTO_RETRY_LIMIT } from "../console/houseAlert.js";
 import { publicPaymentRef } from "./publicRef.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
@@ -382,7 +382,7 @@ export function paymentEndLogLine(
  */
 export async function applyWebhookResult(
   res: import("./gateway.js").WebhookResult,
-): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean; reason?: string }> {
+): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean; reason?: string; duplicateOf?: string }> {
   const payment = await db
     .selectFrom("payment")
     .select(["id", "order_intent_id", "status", "reservation"])
@@ -462,6 +462,22 @@ export async function applyWebhookResult(
       res.card ?? null,
     );
     return { ok: true, activated: stored };
+  }
+  // B1-PAR (IT, 2026-10-09): TWO checkouts for ONE first purchase. The already-a-
+  // customer gate runs when a pay-link is MINTED (requestPayment) — two tabs minted
+  // two links while nothing was paid yet, and both payments went through: two
+  // charges, two invoices, the coupon's price applied twice (burnt once). The money
+  // has already moved when we get here, so the gate that remains is: the EARLIER
+  // paid initial payment of the lead wins, this one converts nothing, burns nothing,
+  // invoices nothing, and the house is told to settle it by hand (no refund API is
+  // wired — ADR-0078; we promise nothing we cannot do). Deterministic without a lock:
+  // both racers order the same paid rows the same way, so exactly one is first.
+  if (kindRow?.kind === "initial") {
+    const first = await earlierPaidInitialPayment(payment.id);
+    if (first) {
+      await flagDuplicateInitialPayment(payment.id, first);
+      return { ok: true, activated: false, duplicateOf: first.paymentId };
+    }
   }
   // ADR-0088: a paid offer-priced order burns one use of its offer. Renewals
   // redeem inside applyRenewalPaid instead — that path is also reached by the
@@ -568,6 +584,65 @@ export async function applyWebhookResult(
   // (returns null) for citoviso_sub / own orders.
   if (activated) fireDomainProvisioning(payment.order_intent_id);
   return { ok: true, activated };
+}
+
+/**
+ * B1-PAR: the lead's FIRST paid initial payment, when it is not `paymentId` itself —
+ * i.e. `paymentId` is a second charge for a purchase the lead already paid. Ordered by
+ * paid_at, then id, so two concurrent settlements agree on which one was first.
+ * Null for the first (or only) one, and for a payment whose order has no lead.
+ */
+export async function earlierPaidInitialPayment(
+  paymentId: string,
+): Promise<{ readonly paymentId: string; readonly orderIntentId: string } | null> {
+  const me = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select(["prospect.lead_id as leadId", "order_intent.kind as kind", "payment.status as status"])
+    .where("payment.id", "=", paymentId)
+    .executeTakeFirst();
+  if (!me?.leadId || me.kind !== "initial" || me.status !== "paid") return null;
+  const first = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select(["payment.id as paymentId", "payment.order_intent_id as orderIntentId"])
+    .where("prospect.lead_id", "=", me.leadId)
+    .where("order_intent.kind", "=", "initial")
+    .where("payment.status", "=", "paid")
+    .orderBy("payment.paid_at", "asc")
+    .orderBy("payment.id", "asc")
+    .executeTakeFirst();
+  return first && first.paymentId !== paymentId ? first : null;
+}
+
+/** B1-PAR: a second charge for an already-paid first purchase — loud log + house mail. */
+async function flagDuplicateInitialPayment(
+  paymentId: string,
+  first: { readonly paymentId: string; readonly orderIntentId: string },
+): Promise<void> {
+  const info = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .leftJoin("lead", "lead.id", "prospect.lead_id")
+    .select([
+      "payment.amount as amount", "payment.currency as currency", "payment.gateway_ref as ref",
+      "payment.order_intent_id as orderIntentId", "lead.name as leadName", "order_intent.buyer_email as email",
+    ])
+    .where("payment.id", "=", paymentId)
+    .executeTakeFirst();
+  const sum = `${info?.amount ?? "?"} ${info?.currency ?? "HUF"}`;
+  const text =
+    `MÁSODIK TERHELÉS egy már kifizetett első vásárlásra (B1-PAR).\n\n` +
+    `Lead: ${info?.leadName ?? "?"} · vevő e-mail: ${info?.email ?? "?"}\n` +
+    `Második fizetés: ${publicPaymentRef(paymentId)} (${paymentId}) · ${sum} · order ${info?.orderIntentId ?? "?"} · gateway ref ${info?.ref ?? "?"}\n` +
+    `Az első, érvényes fizetés: ${publicPaymentRef(first.paymentId)} (${first.paymentId}) · order ${first.orderIntentId}\n\n` +
+    `Mit tett a rendszer: a második fizetés 'paid' (a pénz beérkezett), de NEM konvertált, NEM égetett kupont, ` +
+    `NEM állított ki számlát. Teendő: a második összeg visszautalása a Barion felületén (vagy számla kézzel, ha a vevő mást kér).`;
+  console.error(`[payment] ${text.replace(/\n+/g, " ")}`);
+  await alertHouse({ tag: "duplicate-initial", subject: `Második terhelés egy már kifizetett rendelésre — ${info?.leadName ?? "?"}`, text });
 }
 
 /**

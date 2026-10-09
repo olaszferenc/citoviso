@@ -2827,6 +2827,29 @@ export function payAlreadyOwnedPage(siteUrl: string | null, loginUrl: string | n
 }
 
 /**
+ * B1-PAR: this payment went through, but the lead had ALREADY paid the same first
+ * purchase (a second checkout tab). Nothing was converted, burnt or invoiced for it;
+ * the house was alerted to settle it by hand. The page says what is true: the charge
+ * happened, the first one is what counts, a colleague settles the second (§B.17 — no
+ * refund is promised as automatic, because it is not).
+ */
+export function payDuplicatePage(ref: string, loginUrl: string | null, supportEmail: string | null): string {
+  const lang = consoleLang();
+  const links = [
+    loginUrl ? `<a class="con-linkact" href="${esc(loginUrl)}">${T(lang, "Belépés a kezelőfelületre")}</a>` : "",
+    supportEmail ? `<a class="con-linkact" href="mailto:${esc(supportEmail)}">${T(lang, "Írjon nekünk: {email}", { email: esc(supportEmail) })}</a>` : "",
+  ].filter(Boolean);
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto" data-pay-duplicate>
+    <h2 style="margin-top:0">${T(lang, "Ezt a rendelést már kifizette")}</h2>
+    <p style="margin:0">${T(lang, "Ez a fizetés egy már rendezett rendelésre érkezett — valószínűleg két ablakban nyitotta meg a fizetést. Az első fizetése érvényes, a honlapja az Öné.")}</p>
+    <p style="margin:12px 0 0">${T(lang, "Erre a második terhelésre nem állítottunk ki számlát. Munkatársunk értesítést kapott, és felveszi Önnel a kapcsolatot a visszautalásról.")}</p>
+    <p class="mut small" style="margin:10px 0 0">${T(lang, "Hivatkozási szám: {ref}", { ref: `<code>${esc(ref)}</code>` })}</p>
+    ${links.length ? `<div class="row" style="margin-top:18px">${links.join("")}</div>` : ""}
+  </div>`;
+  return layout(T(lang, "Már kifizetve"), body, { chrome: false });
+}
+
+/**
  * The stable pay-link (/pay/go) could not start a payment for this order — the
  * gates in requestPayment refused (e.g. the order is no longer payable). The house
  * has been alerted; the page says exactly that and nothing more (§B.17): no charge

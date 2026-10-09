@@ -114,7 +114,7 @@ import { payDonePasswordUrl } from "../auth/passwordLink.js";
 import { leadIdOfPayment, retryInvoice } from "../billing/invoiceRetry.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
-import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
+import { applyWebhookResult, earlierPaidInitialPayment, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { mockCard, MOCK_CARDS } from "../payment/mock.js";
 import { siteShotPath } from "../payment/siteShot.js";
 import { rerenderTenantSnapshot, tenantCoverPhoto } from "../tenant/editor.js";
@@ -141,6 +141,7 @@ import {
   payMockPage,
   payPendingPage,
   payResultPage,
+  payDuplicatePage,
   payUnknownRefPage,
   payLinkUnavailablePage,
   payLinkRenewPage,
@@ -4284,6 +4285,16 @@ async function handle(
     }
     if (p.status === "pending") return send(res, 200, payPendingPage(gatewayRefreshFailed));
     const paid = p.status === "paid";
+    // B1-PAR: a second charge for a first purchase already paid in another tab —
+    // never the welcome page (it would thank them for a purchase this charge did
+    // not make); say what happened and that a person settles it.
+    if (paid && (await earlierPaidInitialPayment(p.id))) {
+      return send(
+        res,
+        200,
+        payDuplicatePage(publicPaymentRef(p.id) ?? ref, `${config.publicSiteUrl.replace(/\/+$/, "")}/login`, config.supportEmail || null),
+      );
+    }
     // ⛔ A MULTILANG purchase is NOT an activation (measured defect, 2026-08-28):
     // the buyer already HAS a live site and login, so the generic "your site is
     // live, here are your credentials" page was both wrong and confusing. What
