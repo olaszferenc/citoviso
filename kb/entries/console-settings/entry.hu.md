@@ -45,7 +45,11 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
   ebből nem lesz: a már kiállított számlát a rendszer nem adja ki újra;
 - a **megrekedt rendelés** — a vevő végigment a konfigurátoron és megrendelt, de fizetési
   linket nem tudtunk kiadni neki (például mert a mockját a kurátor elutasította, vagy a
-  fizetési szolgáltató hibázott). A rendelés rögzült, a pénz nem.
+  fizetési szolgáltató hibázott). A rendelés rögzült, a pénz nem;
+- az **elakadt ingyenes próba** (tárgy: „Citoviso: ingyenes próba — …”) — öt eset: a lejárt
+  próba nem szünetelt, a lejárat előtti figyelmeztetés nem ment ki, az elindult próba oldala
+  nem él, a kifizetett folytatásból nem lett számla vagy előfizetés, a próbázó nem kapta meg a
+  belépő-levelet. Mindegyiknél mit jelent és mit tegyél: a Súgóban az „Ingyenes próba” téma.
 
 ### Mit tegyél megrekedt rendelésnél?
 

@@ -10,6 +10,7 @@
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
+import { MODULE_CATALOG } from "../modules.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { liveTrialCoupon, trialDaysLeft } from "./notices.js";
 import { effectivePurgeDay, purgeDay } from "./retention.js";
@@ -32,6 +33,36 @@ export interface TrialAdminState {
   readonly purgeIso: string;
   /** The 'p7' purge warning e-mail has been sent. */
   readonly purgeWarned: boolean;
+  /**
+   * Lapsed only (empty while active): the modules the trial GAVE (module_entitlement
+   * rows with trial_grant — lapseExpiredTrials switched exactly these off), in catalog
+   * order, retired ones left out. `label` is the catalog's tenant-facing name (the one
+   * the Modulok tab shows), still untranslated — the renderer runs it through T().
+   * `spine` = in every package, so paying brings it back; the rest was trial-only.
+   */
+  readonly modules: readonly TrialGrantedModule[];
+}
+
+export interface TrialGrantedModule {
+  readonly id: string;
+  readonly label: string;
+  readonly spine: boolean;
+}
+
+/** The trial-granted modules of a tenant, in catalog order (retired ones skipped). */
+async function trialGrantedModules(tenantId: string): Promise<TrialGrantedModule[]> {
+  const rows = await db
+    .selectFrom("module_entitlement")
+    .select("module")
+    .where("tenant_id", "=", tenantId)
+    .where("trial_grant", "=", true)
+    .execute();
+  const ids = new Set(rows.map((r) => r.module));
+  return MODULE_CATALOG.filter((m) => ids.has(m.id) && !m.retired).map((m) => ({
+    id: m.id,
+    label: m.publicLabel,
+    spine: Boolean(m.spine),
+  }));
 }
 
 /** The trial state the admin frame renders, or null (no trial, or already paid). */
@@ -79,5 +110,6 @@ export async function trialAdminState(tenantId: string, now = new Date()): Promi
     continueUrl: base && row.token ? `${base}/p/${row.token}/folytatas` : null,
     purgeIso: warned ? effectivePurgeDay(until, budapestIsoDay(new Date(warn!.at as unknown as string))) : purgeDay(until),
     purgeWarned: warned,
+    modules: row.status === "lapsed" ? await trialGrantedModules(tenantId) : [],
   };
 }

@@ -4,7 +4,7 @@
 (vékony sáv minden fülön), képek: `a-A-10nap-*.png`, `a-A-3nap-*.png`, `a-A-lejart-*.png`, `a-fizetve-*.png`.
 **Vázlat:** `proba-C.html` (a próba-C mock: állapotváltó 10 nap / 3 nap / lejárt / fizetve + Mobil 390px / Asztali váltó).
 **Megvalósítás:** `src/trial/admin.ts` (`trialAdminState`) · `src/server/adminViews.ts` (`trialStrip`, `trialLapsedBlock`,
-`AdminOpts.trial`) · `public/assets/ui/citui-admin.css` (`.adm-trial*`) · betöltés: `src/server/public.ts` · ADR-0344 (C2c).
+`trialModulesCard`, `AdminOpts.trial`) · `public/assets/ui/citui-admin.css` (`.adm-trial*`, `.adm-trial-mods*`) · betöltés: `src/server/public.ts` · ADR-0344 (C2c).
 
 **Hatókör:** `src/server/adminViews.ts` · `src/trial/admin.ts` · `public/assets/ui/citui-admin.css`
 
@@ -32,7 +32,14 @@
    küldünk: **„Ha nem folytatja, ezeket {date} véglegesen töröljük — előtte levélben szólunk.”** — a levél után:
    **„Ha nem folytatja, ezeket {date} véglegesen töröljük — erről levelet is küldtünk.”** ⛔ A korábbi „A szünet
    addig tart, amíg nem folytatja.” határidő nélküli ígéret volt (§B.17) — kivezetve (2026-10-09, koordinátor).
-8. **Fizetett próba (converted):** nincs sáv és nincs blokk — onnan az előfizetés beszél.
+8. **Lejárt próba — „Modulok” kártya** (csak az Áttekintésen, a szünetel-blokk UTÁN; a kompakt füleken, aktív és
+   fizetett próbánál nincs): cím „Modulok”, megjegyzés **„Szünet alatt csak olvasható. Fizetéskor a választott csomag
+   kapcsol vissza; amit csak kipróbált, azt a Modulok fülön később is hozzáadhatja.”**, soronként a próba ADTA modulok
+   (`module_entitlement.trial_grant` — pontosan amit a lejáratás kikapcsolt; kivezetett modul nélkül, katalógus-sorrendben,
+   a Modulok fül tenant-nevével). A gerinc (katalógus `spine`, minden csomagban benne van) címkéje
+   **„csomag · fizetéskor vissza”**, minden más próba-modulé **„csak a próbában volt”**, mindkettő halvány címke.
+   Fizetett modul nem szerepel (azt nem a próba adta). Próba-modul nélkül nincs kártya.
+9. **Fizetett próba (converted):** nincs sáv és nincs blokk — onnan az előfizetés beszél.
 
 ## Kötő horgony
 - `data-trial-strip`
@@ -41,7 +48,8 @@
 - `data-trial-lapsed`
 - `data-trial-go`
 - `TRIAL_WARN_DAYS`
+- `data-trial-modules`
 
 ## NEM köt (nyitott)
 
-- A mock „Modulok” kártyájának „csak a próbában volt” címkéi lejárt próbánál NINCSENEK bekötve — külön döntés.
+- Nincs nyitott tétel. (A mock „Modulok” kártyája 2026-10-09 óta bekötve — lásd 8.)

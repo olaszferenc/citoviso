@@ -758,7 +758,7 @@ export function settingsPage(
     </div>
     <div class="panel" style="max-width:560px">
       <h2>${T(lang, "Üzemi riasztások — ide szól a rendszer")}</h2>
-      <p class="mut small" style="margin:0 0 10px">${T(lang, "Ide megy MINDEN üzemi riasztás: az AAM-keret (18 M Ft/év) 80%/100%-a, a törött MMS+SMS pár, a .hu megerősítő link, a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás, és a megrekedt rendelés (a vevő megrendelt, de fizetési linket nem kapott). Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
+      <p class="mut small" style="margin:0 0 10px">${T(lang, "Ide megy MINDEN üzemi riasztás: az AAM-keret (18 M Ft/év) 80%/100%-a, a törött MMS+SMS pár, a .hu megerősítő link, a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás, a megrekedt rendelés (a vevő megrendelt, de fizetési linket nem kapott), és az elakadt ingyenes próba (lejárat, értesítés, élesítés, belépő-levél, folytatás-fizetés). Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
       ${alertNotice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${alertNotice.ok ? "approved" : "rejected"}">${esc(alertNotice.text)}</span></div>` : ""}
       <form method="post" action="/settings/alerts" style="display:block;max-width:340px">
         <label class="small mut" for="al-phone">${T(lang, "SMS-szám")}</label>
@@ -1370,7 +1370,7 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
     </div>`;
   return `
         <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-trial">
-          <h3 style="margin-top:22px">${T(lang, "Ingyenes próba")}</h3>
+          <h3 style="margin-top:22px">${T(lang, "Ingyenes próba")} ${helpLink("console.free_trial")}</h3>
           <p class="mut small" style="margin:2px 0 10px">${T(lang, "A kiküldött tervet megnyitó lead a kedvezmény helyett kártya nélkül kipróbálhatja a saját oldalát, minden modullal, az aldomainjén. A próbáért nem fizet, számla nem készül.")}
             <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
           <input type="hidden" name="trial_present" value="1">

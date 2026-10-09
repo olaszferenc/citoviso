@@ -29,6 +29,7 @@ nem elég, kérdez (mikro-kérdőív), majd a kettőt egymáshoz kalibrálja.
 3. **Tölcsér-lépcsők és definíciójuk** (a cím alatt kis betűvel, a lapon kimondva):
    Kiküldve = `prospect.sent_at` (bármely csatorna) · Megnyitva = emberi jel a lapon
    (`POST /p/:token/view`, ADR-0291) · Elmélyült = modul/preset-érintés VAGY ≥50% görgetés ·
+   Próba = `free_trial.started_at` (ADR-0342; a `mock_event 'trial_start'` csak a látogatás jele) ·
    Rendelés = `order_intent.submitted_at` · Fizetve = `payment.status='paid'`. ⛔ A „Fizetve" a
    payment-ből számolódik, NEM a `prospect.status`-ból — és a `converted`/`lost` státusz-írás
    is megjavul (fizetéskor `converted`, leiratkozáskor `lost`).
@@ -44,9 +45,9 @@ nem elég, kérdez (mikro-kérdőív), majd a kettőt egymáshoz kalibrálja.
 
 ### Tölcsér lap (B — kérdés-első)
 
-7. **Hat kérdés-kártya legfelül** (a mai H1–H5 folytatása, +1): „Megfogja-e a levél?" (megnyitás /
+7. **Hét kérdés-kártya legfelül** (a mai H1–H5 folytatása, +1, és 2026-10-09 óta a próba): „Megfogja-e a levél?" (megnyitás /
    kiküldött, cél 40%) · „Visszatér-e?" (visszatérő / megnyitó, 30%) · „Belenyúl-e a modulokba?"
-   (elmélyülő / megnyitó, 20%) · „Megrendeli-e?" (rendelés / kiküldött, 4%) · „Ki is fizeti?"
+   (elmélyülő / megnyitó, 20%) · **„Kipróbálja-e?"** (próba / kiküldött, 5%) · „Megrendeli-e?" (rendelés / kiküldött, 4%) · „Ki is fizeti?"
    (fizetve / rendelés, 75%) · „Gyorsan reagál-e?" (medián küldés→1. megnyitás, cél ≤ 24 óra).
    Kártyánként: a kérdés, a mérőszám neve, a NAGY érték, ítélet-pill (**„cél felett"** · **„közelít"**
    · **„cél alatt"** · **„nincs adat"**), mérő a cél-jelölővel, a tört (N / M), 6 heti szikra-vonal.
@@ -54,8 +55,8 @@ nem elég, kérdez (mikro-kérdőív), majd a kettőt egymáshoz kalibrálja.
 8. **Visszatérés-panel:** 1 / 2 / 3+ látogatás → db + „rendel: X%", és az eszkalációs ajánlat
    tényállása egy mondatban (megjelent N-nek, kattintott K, rendelt R, elvetette E).
 9. **Bontás-panel** a kiválasztott dimenzió szerint: ÖSSZES sor + dimenzió-sorok, oszlopok:
-   Kiküldve (mini-sávval) · Megnyitva · Elmélyült · Rendelés · Fizetve.
-10. **Kohorsz-tábla:** küldési hét × (Kiküldve · Megnyitás 7 n. · Rendelés 14 n. · Fizetve 30 n. ·
+   Kiküldve (mini-sávval) · Megnyitva · Elmélyült · **„Próba"** · Rendelés · Fizetve.
+10. **Kohorsz-tábla:** küldési hét × (Kiküldve · Megnyitás 7 n. · **„Próba 14 n."** · Rendelés 14 n. · Fizetve 30 n. ·
     1. megnyitás medián); a ráta-cellák egy-hue hő-színezéssel; a még le nem telt ablakú sor
     „nyitott" jelet visel.
 11. **Pilot-napló:** kiküldés/nap (oszlop) + megnyitás/nap (vonal), tooltip-pel, és a tulaj
@@ -106,5 +107,19 @@ nem elég, kérdez (mikro-kérdőív), majd a kettőt egymáshoz kalibrálja.
 ## Amit a terv NEM köt / nyitva hagy
 
 - A sötét mód színei a megvalósításban a konzol sötét hatóköréből jönnek (a vázlat világos).
-- Az ítélet-célok számai (40/30/20/4/75/24 óra) kezdőértékek — a tulaj a konfigban átírja.
+- Az ítélet-célok számai (40/30/20/5/4/75/24 óra) kezdőértékek — a tulaj a konfigban átírja. A próba
+  célja (`trial_rate`, 5%) a kódbeli alapérték: `report_target` sor nincs hozzá vetve, egy sor felülírja.
 - A 2. kör (Pénzügy + csomag-besorolás) és a 3. kör (Tenant-aktivitás + forgalom) külön terv.
+
+## Kiegészítés 2026-10-09 — a „Próba" lépcső (ADR-0342, SUB F)
+
+A kártya nélküli ingyenes próba MELLÉKÁG, nem a lépcső egy foka: a vevő nem feltétlenül próbáz, a
+folytató próbázó pedig a `/p/<token>/folytatas` → `/p/<token>/request` úton `order_intent`-et ír, tehát
+a „Rendelés" és a „Fizetve" oszlopban IS számít. Ezért a
+„Rendelés" és a „Fizetve" definíciója változatlan, a „Próba" ugyanarra a nevezőre (kiküldött) mér,
+mint a „Megrendeli-e?", hogy a két út egymás mellett olvasható legyen. Egy próba akkor számít, ha
+elindult (a tenant kiépült) vagy már továbblépett (átváltott / lejárt / törölt — a törölt is
+elindult); a félbemaradt foglalás nem. Hozzárendelés: `free_trial.prospect_id` (a link, amelyről az
+űrlap ment), ha üres, a lead utolsó kiküldése az indulás előtt. Csak KIKÜLDÖTT link számít.
+Új terv-kör nem kellett (meglévő minta követése, §2b kivétel).
+

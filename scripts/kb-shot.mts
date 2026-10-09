@@ -2022,7 +2022,10 @@ const rpFacts: ProspectFacts[] = Array.from({ length: 72 }, (_, i) => {
     id: `p${i}`, leadId: `l${i}`, leadName: `Minta Vendégház ${i + 1}`, segment: ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult"][i % 4]!,
     channel: ["email", "sms", "email_sms", "mms"][i % 4] as ProspectFacts["channel"], style: "coastal-fresh",
     template: ["gate-opening", "wordmark-grow", "fullbleed", "horizontal", "parallax"][i % 5]!, sentAt, sentHour: 9,
-    visits, openedAt, deepAt: deep ? openedAt : null, orderedAt, paidAt, unsubscribedAt: null,
+    visits, openedAt, deepAt: deep ? openedAt : null,
+    // ADR-0342: a deep non-buyer every 3rd row tries it free — no rnd() call, so the seeded sequence stays put.
+    trialedAt: deep && !ordered && i % 3 === 0 ? new Date(openedAt!.getTime() + 20 * 3_600_000) : null,
+    orderedAt, paidAt, unsubscribedAt: null,
     escalationShown: visits.length >= 2 && rnd() < 0.5, escalationCta: false, escalationDismiss: false,
     device, exitReason: verdict?.reason ?? null, exitConfidence: verdict?.confidence ?? null,
     stated: !paidAt && opened && rnd() < 0.1 ? "expensive" : null,

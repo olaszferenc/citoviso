@@ -12,7 +12,12 @@
 //   ⑥ `trial_start` lands on the mock_event spine (the visit the page is in);
 //   ⑦ a lead that already owns a site is refused (already_owned), and creates nothing;
 //   ⑧ a missing ÁSZF / photo-rights tick is refused BEFORE any row is written;
-//   ⑨ the app_setting parser: missing keys → defaults, corrupt / out-of-range → null.
+//   ⑨ the app_setting parser: missing keys → defaults, corrupt / out-of-range → null;
+//   ⑩ the address the page PROMISES is the address the trial GETS: `trial.sub` in the
+//      GET /p/<token> manifest (ADR-0343 ②) = the slug convertLead gives the site — for a
+//      lead with a preview label (ADR-0330) AND for a label-less one whose name-derived
+//      slug is already held by another site (measured 2026-10-09: the page said
+//      `<name>.citoviso.com`, the site got `<name>-2`).
 //
 // The dev DB is SHARED: the config is set with the PROCESS-LOCAL override (the app_setting
 // row is never written); every row is this run's own and deleted in `finally`; the
@@ -20,11 +25,12 @@
 // the real login letter otherwise) — the guard refuses to run on anything else.
 //
 // --self-test: after the trial starts, the world is SABOTAGED (a subscription row, a module
-// switched off, the intro offer revived) — legs ③ ④ ⑤ must go red, or the guard is blind.
+// switched off, the intro offer revived, the preview label moved between the page and the
+// submit) — legs ③ ④ ⑤ ⑩ must go red, or the guard is blind.
 //
 // Run: EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts
 
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { config } from "../src/config.js";
@@ -40,10 +46,18 @@ import { overrideCouponConfigInProcess } from "../src/payment/couponConfig.js";
 import { startTrial, trialModuleIds } from "../src/trial/start.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
+// ⑩ reads the REAL GET /p/<token> page: the console server is imported in-process on a
+// free port, with its background jobs off (CIT_SHOT=1 — no AI top-ups, no scheduled writes).
+process.env.CONSOLE_PORT = "0";
+process.env.CIT_SHOT = "1";
 const stamp = Date.now().toString(36);
 let failures = 0;
+const failed: string[] = [];
 const check = (label: string, pass: boolean, detail = ""): void => {
-  if (!pass) failures++;
+  if (!pass) {
+    failures++;
+    failed.push(label);
+  }
   console.log(`  ${pass ? "✅" : "❌"} ${label}${detail ? ` — ${detail}` : ""}`);
 };
 
@@ -64,14 +78,24 @@ const SITE: SiteData = {
 const RECIPE: Recipe = { template: "editorial", skin: "", archetype: "", sections: [] } as unknown as Recipe;
 
 const leads: string[] = [];
+const MOCK_FILE = path.resolve(process.cwd(), `sites/_trialcheck_${stamp}.html`);
+let closeConsole: (() => void) | null = null;
 const tenants: string[] = [];
 let defId: string | null = null;
 let runId: string | null = null;
 
-async function fixtureLead(tag: string): Promise<{ leadId: string; prospectId: string; token: string; artId: string }> {
+async function fixtureLead(
+  tag: string,
+  over: { name?: string; previewLabel?: string } = {},
+): Promise<{ leadId: string; prospectId: string; token: string; artId: string }> {
   const lead = await db
     .insertInto("lead")
-    .values({ scrape_run_id: runId!, name: `_trialcheck_${stamp} ${tag}`, raw: JSON.stringify({}) })
+    .values({
+      scrape_run_id: runId!,
+      name: over.name ?? `_trialcheck_${stamp} ${tag}`,
+      raw: JSON.stringify({}),
+      ...(over.previewLabel ? { preview_label: over.previewLabel } : {}),
+    })
     .returning("id")
     .executeTakeFirstOrThrow();
   leads.push(lead.id);
@@ -197,7 +221,54 @@ try {
   const bTrials = await db.selectFrom("free_trial").select("id").where("lead_id", "=", b.leadId).execute();
   check("tulajdonos lead → already_owned", !rb.ok && rb.error === "already_owned");
   check("…és nem írt próba-sort", bTrials.length === 0);
+
+  // ⑩ promised address = given address, read off the real page
+  console.log("⑩ a lapon ígért aldomain = a próba-site slugja");
+  await writeFile(MOCK_FILE, "<!doctype html><html><head><title>t</title></head><body><main>mock</main></body></html>");
+  const { server: consoleServer } = await import("../src/console/server.js");
+  closeConsole = () => {
+    consoleServer.closeAllConnections();
+    consoleServer.close();
+  };
+  if (!consoleServer.listening) await new Promise((r) => consoleServer.once("listening", r));
+  const cport = (consoleServer.address() as { port: number }).port;
+  const promisedSub = async (token: string): Promise<string | null> => {
+    const r = await fetch(`http://127.0.0.1:${cport}/p/${token}`, { redirect: "manual" });
+    const html = r.status === 200 ? await r.text() : "";
+    const m = /<script type="application\/json" data-cit-configurator>([\s\S]*?)<\/script>/.exec(html);
+    if (!m) return null;
+    const mf = JSON.parse(m[1]!) as { trial?: { sub?: string } };
+    return mf.trial?.sub ?? null;
+  };
+  const givenSub = async (leadId: string): Promise<string | null> => {
+    const s = await db
+      .selectFrom("site")
+      .innerJoin("tenant", "tenant.id", "site.tenant_id")
+      .select("site.slug")
+      .where("tenant.lead_id", "=", leadId)
+      .executeTakeFirst();
+    return s ? `${s.slug}.citoviso.com` : null;
+  };
+  // (c) label-less, and its name-derived slug is ALREADY lead a's site — the collision case.
+  const c = await fixtureLead("c", { name: `_trialcheck_${stamp} a` });
+  const cPromised = await promisedSub(c.token);
+  const rc = await startTrial(c.token, FORM);
+  const cGiven = await givenSub(c.leadId);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", c.leadId).execute()).map((t) => t.id));
+  check("címke nélküli, foglalt névvel: a lap trial.sub-ja = a site slugja", rc.ok && !!cPromised && cPromised === cGiven, `ígért ${cPromised} · kapott ${cGiven}`);
+  // (d) the lead carries its own preview label (ADR-0330) — the common, post-0330 case.
+  const dLabel = `trialcheck-${stamp}-sajat`;
+  const dl = await fixtureLead("d", { previewLabel: dLabel });
+  const dPromised = await promisedSub(dl.token);
+  // Sabotage: the label moves between the page and the submit — the promise is broken.
+  if (SELF_TEST) await db.updateTable("lead").set({ preview_label: `${dLabel}-mas` }).where("id", "=", dl.leadId).execute();
+  const rd = await startTrial(dl.token, FORM);
+  const dGiven = await givenSub(dl.leadId);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", dl.leadId).execute()).map((t) => t.id));
+  check("saját előnézeti címkével: a lap trial.sub-ja = a site slugja", rd.ok && dPromised === `${dLabel}.citoviso.com` && dPromised === dGiven, `ígért ${dPromised} · kapott ${dGiven}`);
 } finally {
+  closeConsole?.();
+  await rm(MOCK_FILE, { force: true });
   overrideFreeTrialConfigInProcess(null);
   overrideCouponConfigInProcess(null);
   for (const t of tenants) {
@@ -219,9 +290,11 @@ try {
 }
 
 if (SELF_TEST) {
-  // Sabotage legs: subscription (3 checks), gallery off (1), intro offer revived (1).
-  if (failures < 3) {
-    console.error(`\n⛔ free-trial-check --self-test: csak ${failures} állítás ment pirosra a szabotázson — az őr vak.`);
+  // Sabotage legs: subscription (3 checks), gallery off (1), intro offer revived (1),
+  // preview label moved (1) — and ⑩ must be among them by name.
+  const slugLegRed = failed.some((l) => l.startsWith("saját előnézeti címkével"));
+  if (failures < 4 || !slugLegRed) {
+    console.error(`\n⛔ free-trial-check --self-test: csak ${failures} állítás ment pirosra a szabotázson${slugLegRed ? "" : " (⑩ zöld maradt)"} — az őr vak.`);
     process.exit(1);
   }
   console.log(`\n✅ free-trial-check --self-test: a szabotázs ${failures} állítást pirosra vitt.`);

@@ -133,6 +133,31 @@ async function uniqueSiteSlug(
   return `${base}-${randomBytes(3).toString("hex")}`;
 }
 
+/**
+ * The platform slug this lead's site has, or WOULD get from convertLead without a buyer
+ * choice — the ONE rule the page's promised address reads (ADR-0343 ②: the trial entry's
+ * `trial.sub`, and the configurator's default subdomain). Read-only.
+ *
+ * Measured 2026-10-09 (scripts/free-trial-check.mts ⑩): the /p page showed the raw
+ * `lead.preview_label ?? slugify(name)`, while provisioning skips a label another site
+ * already holds and clips to 40 — a label-less lead whose name slug was taken was promised
+ * `<name>.citoviso.com` and given `<name>-2`. Same function now on both sides; the only
+ * gap left is a race (another site taking the slug between page load and submit).
+ */
+export async function plannedSiteSlug(leadId: string): Promise<string | null> {
+  const lead = await db.selectFrom("lead").select(["name", "preview_label"]).where("id", "=", leadId).executeTakeFirst();
+  if (!lead) return null;
+  // An existing site keeps its slug (convertLead never re-slugs a site row).
+  const site = await db
+    .selectFrom("site")
+    .innerJoin("tenant", "tenant.id", "site.tenant_id")
+    .select("site.slug")
+    .where("tenant.lead_id", "=", leadId)
+    .executeTakeFirst();
+  if (site?.slug) return site.slug;
+  return uniqueSiteSlug(lead.name, null, leadId, lead.preview_label);
+}
+
 /** Preliminary availability of a buyer-chosen subdomain label (ADR-0032). Normalizes the
  *  input, rejects too-short/reserved/taken labels. Preliminary: the DB check races with
  *  concurrent provisioning, so the final uniqueness is re-decided at provision time.

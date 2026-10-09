@@ -817,6 +817,18 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 }
 /* The lapsed trial's „Mi maradt meg" list sits on the red block's light panel. */
 .adm-trial__kept{margin:2px 0 4px;padding-left:18px;font-size:12px;line-height:1.6;color:var(--citui-on-bad)}
+/* The lapsed trial's „Modulok" card (Áttekintés only, after the paused block): what the
+   trial gave, each row with a muted tag — „csomag · fizetéskor vissza" for the spine,
+   „csak a próbában volt" for the rest. Read-only: no controls. */
+.adm-trial-mods__note{margin:0 0 6px;font-size:13px;line-height:1.5;color:var(--citui-muted)}
+.adm-trial-mods__list{list-style:none;margin:0;padding:0}
+.adm-trial-mods__list li{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-top:1px solid var(--citui-line);font-size:14px;color:var(--citui-ink)}
+.adm-trial-mods__list li:first-child{border-top:0}
+.adm-trial-mods__n{min-width:0}
+.adm-trial-mods__tag{margin-left:auto;flex:0 0 auto;text-align:right;
+  font:700 11px/1.2 var(--citui-font-text);padding:4px 8px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-surface-2);color:var(--citui-muted)}
 
 /* Read-only module row under a freeze: no price chip, no on/off control, so the
    row is text + preview only. The grid must not keep empty columns for controls

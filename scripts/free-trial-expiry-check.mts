@@ -27,7 +27,12 @@
 //   ②c the ADMIN STRIP (C2c): the REAL adminDashboard on every tab carries data-trial-strip
 //      while the trial runs; more than TRIAL_WARN_DAYS left → calm, ≤ → adm-trial--warn;
 //      „Folytatom" → /p/<t>/folytatas; after the lapse the paused block (data-trial-lapsed),
-//      after paying (converted) neither;
+//      after paying (converted) neither; the lapsed block on Áttekintés is followed by the
+//      „Modulok" card (data-trial-modules) listing the REAL trial_grant modules — the spine
+//      „csomag · fizetéskor vissza", the rest „csak a próbában volt", a paid one absent —
+//      and no other tab, no active and no converted trial shows it;
+//      the Teendők row of a lapsed (suspended) trial says the paused wording + „Folytatom —
+//      fizetés", never the debt row „Rendezze a díjat";
 //   ⑤ continuation: the REAL settlement (applyWebhookResult, mock gateway) → site live,
 //      trial 'converted', subscription anchor = today, the trial coupon burnt ONCE, no
 //      second (welcome) coupon — and from then on the lead is a customer (gate refuses).
@@ -40,7 +45,8 @@
 // coupon expired before the /folytatas GET, the wired SMS sender swapped back to DRY, the notice
 // ledger wiped before the second run, the
 // site switched back on after the lapse, a trial module revived, the admin frame handed no
-// trial, the trial end slid past the warn window) — ② ②c ③ must go red.
+// trial, the trial end slid past the warn window, the spine's trial_grant lost before the
+// „Modulok" card is read, the overview's Teendők handed no lapsed trial) — ② ②c ③ must go red.
 //
 // Run: npx tsx scripts/free-trial-expiry-check.mts   (--self-test: must go RED)
 
@@ -155,10 +161,10 @@ const bp = (isoDay: string, hhmm: string): Date => new Date(`${isoDay}T${hhmm}:0
 
 /** ②c: the REAL admin frame on every tab — what the trialist sees, not the helper's opinion. */
 const ADMIN_TABS = ["attekintes", "szovegek", "fotok", "elerhetoseg", "modulok", "foglalasok", "uzenetek", "webcim", "forgalom", "dokumentumok", "penztarca", "fiok", "sugo"];
-const renderAdmin = (tenantId: string, tab: string, trial: unknown): string =>
+const renderAdmin = (tenantId: string, tab: string, trial: unknown, status = "live"): string =>
   adminDashboard(
     { tenantId, username: "trialexpiry@example.invalid", displayName: "Teszt Elek" } as never,
-    { lang: "hu", status: "live", name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
+    { lang: "hu", status, name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
     { siteSlug: "trialexpiry", tab, trial: trial as never, now: new Date() } as never,
   );
 
@@ -390,6 +396,36 @@ try {
       warnedHtml.includes(formatDayOn(movedPurge)) && warnedHtml.includes("erről levelet is küldtünk"),
   );
   await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).where("step", "=", "p7").execute();
+  // ②c Teendők (the paused site is 'suspended'): a lapsed trial owes NOTHING — the debt row
+  // „Rendezze a díjat" would be false (§B.17); the row says the approved paused wording
+  // (proba-admin-sav README §7) and offers „Folytatom — fizetés" → /p/<t>/folytatas.
+  // --self-test: the overview is handed no trial → the debt sentence comes back → red.
+  const todoHtml = renderAdmin(tenantId, "attekintes", SELF_TEST ? null : lapsedState, "suspended");
+  const todoRow = todoHtml.match(/<li class="pending" data-todo="trial-lapsed">.*?<\/li>/)?.[0] ?? "";
+  check("admin Teendők: lejárt próba → nincs „Rendezze a díjat”, a sor a szünetet mondja + Folytatom — fizetés",
+    !todoHtml.includes("Rendezze a díjat") && todoRow.includes("A honlapja szünetel") && todoRow.includes("Nem terheltünk semmit") &&
+      todoRow.includes("Folytatom — fizetés") && todoRow.includes("/folytatas"),
+    todoRow || "nincs trial-lapsed sor");
+  // ②c „Modulok" card (mock proba-C, README Kötő horgony data-trial-modules): on Áttekintés only,
+  // after the paused block; the rows are the REAL trial_grant entitlements — the spine
+  // (enquiry) „csomag · fizetéskor vissza", a non-spine granted module „csak a próbában volt",
+  // the PAID one (gallery, trial_grant cleared above) not listed at all.
+  // --self-test: the spine's trial_grant is lost → its row (and tag) must go missing
+  if (SELF_TEST) await db.updateTable("module_entitlement").set({ trial_grant: false }).where("tenant_id", "=", tenantId).where("module", "=", "enquiry").execute();
+  const modsState = await trialAdminState(tenantId);
+  if (SELF_TEST) await db.updateTable("module_entitlement").set({ trial_grant: true }).where("tenant_id", "=", tenantId).where("module", "=", "enquiry").execute();
+  const modsHtml = renderAdmin(tenantId, "attekintes", modsState);
+  const modRow = (id: string): string => modsHtml.match(new RegExp(`<li data-trial-module="${id}"[^>]*>.*?</li>`))?.[0] ?? "";
+  check("admin: lejárt próba, Áttekintés → „Modulok” kártya a blokk után",
+    modsHtml.includes("data-trial-modules") && modsHtml.indexOf("data-trial-modules") > modsHtml.indexOf("data-trial-lapsed"));
+  check("…a gerinc (enquiry) „csomag · fizetéskor vissza”",
+    modRow("enquiry").includes("data-trial-module-spine") && modRow("enquiry").includes("csomag · fizetéskor vissza"), modRow("enquiry") || "nincs sor");
+  check("…egy nem-gerinc próba-modul (rooms) „csak a próbában volt”",
+    modRow("rooms").includes("csak a próbában volt") && !modRow("rooms").includes("data-trial-module-spine"), modRow("rooms") || "nincs sor");
+  check("…a FIZETETT modul (gallery) nincs a próba-listán", !modRow("gallery"));
+  const modTabs = ADMIN_TABS.filter((tab) => tab !== "attekintes" && renderAdmin(tenantId, tab, modsState).includes("data-trial-modules"));
+  check("…a kompakt füleken nincs kártya", modTabs.length === 0, modTabs.join(","));
+  check("…aktív próbánál nincs kártya", calm?.modules.length === 0 && !renderAdmin(tenantId, "attekintes", calm).includes("data-trial-modules"));
 
   // ④ the purchase gate
   console.log("④ vásárlási kapu");
@@ -463,7 +499,7 @@ try {
   check("a fizetés után a lead VEVŐ: a kapu újra elutasít", (await ownedBlocksInitialPurchase(a.leadId)) !== null);
   const paidState = await trialAdminState(tenantId);
   const paidHtml = renderAdmin(tenantId, "attekintes", paidState);
-  check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed"));
+  check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk, se „Modulok” kártya", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed") && !paidHtml.includes("data-trial-modules"));
 } finally {
   closeConsole?.();
   await closeMockFile?.();
@@ -474,8 +510,9 @@ try {
 
 if (SELF_TEST) {
   // Sabotage legs: the wiped ledger (1: second run sends), the SMS sender slipped in (1), the site back on (1), a revived trial module (1),
-  // the admin strip unwired (1) and the warn threshold missed (1).
-  if (failures < 6) {
+  // the admin strip unwired (1), the warn threshold missed (1), the spine's trial_grant lost (1)
+  // and the lapsed trial's Teendők row handed no trial (1).
+  if (failures < 8) {
     console.error(`\n⛔ free-trial-expiry-check --self-test: csak ${failures} állítás ment pirosra a szabotázson — az őr vak.`);
     process.exit(1);
   }

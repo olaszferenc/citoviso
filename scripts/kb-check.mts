@@ -94,6 +94,10 @@ const VIEW_GROUPS = {
     // ADR-0336: the scout worksheet (/scout) — its labels („Felvétel”, „Csempe lezárása” …)
     // live in its own view file, so the handbook quotes THEM.
     "src/console/scoutViews.ts",
+    // ADR-0342/0344/0345: the free-trial WATCH alert subjects („a lejárt próba nem szünetelt
+    // …”) and its „Mi a baj” / „Teendő” lines are operator copy the console-free-trial entry
+    // quotes — an alert reworded must turn this gate red until the handbook follows.
+    "src/trial/watch.ts",
   ],
 } as const;
 type Audience = keyof typeof VIEW_GROUPS;

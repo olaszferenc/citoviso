@@ -2985,9 +2985,10 @@ fi
 # Ingyenes próba (free_trial, 0097 — src/trial/start.ts): kártya nélküli konvertálás — próbázóra nincs számla/dunning, dupla indítás =
 #     1 tenant, minden modul aktív (trial_grant), 1 kupon, vásárolt lead elutasítva, trial_start mérve.
 #     Saját, eldobható sorokat ír a közös dev-DB-re, `finally`-ben törli; EMAIL_PROVIDER=mock kötelező. ~10 mp.
+#     + src/conversion/provision.ts: plannedSiteSlug — a lapon ígért aldomain = a próba valódi slugja (⑩).
 #     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/free-trial-check.mts ] && \
-   changed_files | grep -qE '^src/trial/.*\.ts$|^src/tenant/paidEntitlements\.ts$|^src/payment/subscription\.ts$|^migrations/0097_free_trial\.sql$|^scripts/free-trial-check\.mts$'; then
+   changed_files | grep -qE '^src/trial/.*\.ts$|^src/tenant/paidEntitlements\.ts$|^src/payment/subscription\.ts$|^src/conversion/provision\.ts$|^migrations/0097_free_trial\.sql$|^scripts/free-trial-check\.mts$'; then
   if changed_files | grep -qE '^scripts/free-trial-check\.mts$'; then
     echo "[pre-commit] free-trial-check --self-test (a próba-őr pirosra tud-e menni)…"
     EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts --self-test >"$GATE_LOG" || gate_failed
@@ -3031,6 +3032,19 @@ if [ -f scripts/free-trial-retention-check.mts ] && \
   fi
   echo "[pre-commit] free-trial-retention-check (lejárt próba: 90 nap, figyelmeztetés, törlés, katalógus)…"
   npx tsx scripts/free-trial-retention-check.mts >"$GATE_LOG" || gate_failed
+fi
+# Ingyenes próba ŐRSZEM (src/trial/watch.ts, 0100): az öt elakadás (lejáratás elmaradt, figyelmeztetés bukott,
+#     oldal nem él, fizetett folytatás számla/előfizetés nélkül, belépő-levél nem ment) operátori e-mail + SMS,
+#     esetenként PONTOSAN egyszer; címzett nélkül hangos és nem jelöl; csatorna-hiba → újrapróba. Saját scratch-DB, ~10 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/free-trial-watch-check.mts ] && \
+   changed_files | grep -qE '^src/trial/.*\.ts$|^src/tenant/credentials\.ts$|^src/console/(appSettings|houseAlert)\.ts$|^scripts/offer-followup\.mts$|^migrations/0100_free_trial_alert\.sql$|^scripts/free-trial-watch-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/free-trial-watch-check\.mts$'; then
+    echo "[pre-commit] free-trial-watch-check --self-test (a próba-őrszem pirosra tud-e menni)…"
+    npx tsx scripts/free-trial-watch-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] free-trial-watch-check (ingyenes próba elakadásai → operátori riasztás, egyszer)…"
+  npx tsx scripts/free-trial-watch-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush

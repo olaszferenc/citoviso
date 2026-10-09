@@ -137,6 +137,10 @@ amíg az „Ingyenes próba” jelölt mezője hibás.” Ha a szerver mégis hi
 sem, és a lap tetején ez jelenik meg: „Nem mentettem: az Ingyenes próba egyik mezője a megengedett tartományon kívül
 esik.” Egy régi, nyitva hagyott fül, amin még nem volt ilyen szekció, mentéskor nem írja át a próba beállítását.
 
+A szekció címe melletti **?** ikon a próba teljes útját nyitja meg: hol látod a próbát a riportban és a lead lapján,
+mi történik a vége előtt és után, hogyan folytatja a próbázó, mikor törlődnek az adatai, és mit jelentenek a
+próba-riasztások.
+
 ## Kupon — egy kupon mindenkinek
 
 A **„Kupon”** szekció az „Ingyenes próba” alatt van. Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő

@@ -12,8 +12,19 @@
 //   sent     = prospect.sent_at (first touch on ANY channel, ADR-0082/0122)
 //   opened   = at least one mock_view (a HUMAN signal: POST /p/:token/view, ADR-0291)
 //   deep     = module/preset touched OR scroll ≥ 50 % in any visit
+//   trialed  = free_trial.started_at (ADR-0342 „Mérés": the TABLE is the truth; the
+//              mock_event 'trial_start' only marks the visit). Matched on free_trial.prospect_id
+//              (startTrial always stamps the link the form was sent from); a row without one
+//              falls back to the lead's latest send at/before the start. A trial counts once
+//              it PROVISIONED (tenant_id set) or moved on (converted / lapsed / purged — a purged
+//              row still started); a claim that never finished (crash, tenant_id NULL, active)
+//              is not a trial.
 //   ordered  = first order_intent.submitted_at
 //   paid     = first payment.status='paid' — from the PAYMENT table, never prospect.status
+// trialed is a SIDE stage, not a rung between deep and ordered: a buyer may never trial, and
+// a trialist who continues DOES submit an order_intent (/p/:token/folytatas posts to
+// /p/:token/request), so it also counts as ordered/paid. `ordered`/`paid` keep their
+// definitions — starting a trial is not an order.
 // Only SENT links count (ADR-0139): own opens / tests on an unsent link are not interest.
 
 import { db } from "../db/client.js";
@@ -81,6 +92,8 @@ export interface ProspectFacts {
   readonly visits: readonly Visit[];
   readonly openedAt: Date | null;
   readonly deepAt: Date | null;
+  /** free_trial.started_at of this send's trial (see the header definition), null = none. */
+  readonly trialedAt: Date | null;
   readonly orderedAt: Date | null;
   readonly paidAt: Date | null;
   readonly unsubscribedAt: Date | null;
@@ -101,6 +114,7 @@ export interface StageCounts {
   readonly sent: number;
   readonly opened: number;
   readonly deep: number;
+  readonly trialed: number;
   readonly ordered: number;
   readonly paid: number;
   readonly returned: number;
@@ -115,7 +129,7 @@ export interface TimeStats {
 }
 
 export interface Hypothesis {
-  readonly key: "open_rate" | "return_rate" | "deep_rate" | "order_rate" | "paid_rate" | "first_open_hours";
+  readonly key: "open_rate" | "return_rate" | "deep_rate" | "trial_rate" | "order_rate" | "paid_rate" | "first_open_hours";
   /** Percent (0–100) or hours for first_open_hours; NaN = no data. */
   readonly value: number;
   /** The same measure over the previous, equally long window; null for "Összes". */
@@ -140,6 +154,7 @@ export interface CohortRow {
   readonly weekEnd: string;
   readonly sent: number;
   readonly opened7: number;
+  readonly trialed14: number;
   readonly ordered14: number;
   readonly paid30: number;
   readonly firstOpenMedianHours: number;
@@ -322,6 +337,8 @@ export const DEFAULT_TARGETS: Readonly<Record<Hypothesis["key"], number>> = {
   open_rate: 40,
   return_rate: 30,
   deep_rate: 20,
+  // ADR-0342: no report_target row is seeded — this default holds until the operator writes one.
+  trial_rate: 5,
   order_rate: 4,
   paid_rate: 75,
   first_open_hours: 24,
@@ -494,6 +511,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .where("order_intent.prospect_id", "in", ids)
     .where("order_intent.kind", "=", "initial")
     .execute();
+  const trialed = await loadTrialStarts(rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })));
   const feedback = await loadFeedback(ids);
   const replied = await loadReplied(rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })));
 
@@ -556,6 +574,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       visits,
       openedAt,
       deepAt,
+      trialedAt: trialed.get(r.id) ?? null,
       orderedAt: firstOrder.get(r.id) ?? null,
       paidAt,
       unsubscribedAt: toDate(r.unsubscribed_at),
@@ -584,6 +603,35 @@ function deviceOf(v: { user_agent: string | null; device: string | null }): Devi
   if (/ipad|tablet|android(?!.*mobile)/i.test(ua)) return "tablet";
   if (/iphone|ipod|android.*mobile|windows phone|mobile/i.test(ua)) return "mobile";
   return "desktop";
+}
+
+/**
+ * Trial starts per send (free_trial, ADR-0342 — the header's `trialed` definition). One
+ * trial per lead (free_trial.lead_id UNIQUE), so a prospect gets at most one date.
+ */
+async function loadTrialStarts(ps: readonly { id: string; leadId: string; sentAt: Date }[]): Promise<Map<string, Date>> {
+  const out = new Map<string, Date>();
+  if (!ps.length) return out;
+  const rows = await db
+    .selectFrom("free_trial")
+    .select(["prospect_id", "lead_id", "started_at"])
+    .where("lead_id", "in", [...new Set(ps.map((p) => p.leadId))])
+    .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "!=", "active"), eb("purged_at", "is not", null)]))
+    .execute();
+  const sent = new Set(ps.map((p) => p.id));
+  for (const r of rows) {
+    const at = toDate(r.started_at)!;
+    if (r.prospect_id) {
+      // Only a SENT link counts (ADR-0139): a trial from an unsent link is not in the funnel.
+      if (sent.has(r.prospect_id)) out.set(r.prospect_id, at);
+      continue;
+    }
+    const own = ps
+      .filter((p) => p.leadId === r.lead_id && p.sentAt.getTime() <= at.getTime())
+      .sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime())[0];
+    if (own) out.set(own.id, at);
+  }
+  return out;
 }
 
 /** Stated reasons (prospect_feedback): the FIRST answer per prospect counts. */
@@ -645,6 +693,7 @@ export async function addNote(day: string, text: string, createdBy: string): Pro
 function stageCounts(ps: readonly ProspectFacts[]): StageCounts {
   let opened = 0;
   let deep = 0;
+  let trialed = 0;
   let ordered = 0;
   let paid = 0;
   let returned = 0;
@@ -652,12 +701,13 @@ function stageCounts(ps: readonly ProspectFacts[]): StageCounts {
   for (const p of ps) {
     if (p.openedAt) opened++;
     if (p.deepAt) deep++;
+    if (p.trialedAt) trialed++;
     if (p.orderedAt) ordered++;
     if (p.paidAt) paid++;
     if (p.visits.length > 1) returned++;
     if (p.unsubscribedAt) unsub++;
   }
-  return { sent: ps.length, opened, deep, ordered, paid, returned, unsubscribed: unsub };
+  return { sent: ps.length, opened, deep, trialed, ordered, paid, returned, unsubscribed: unsub };
 }
 
 const hours = (a: Date | null, b: Date | null): number | null => (a && b ? (b.getTime() - a.getTime()) / HOUR : null);
@@ -908,6 +958,8 @@ export function foldReport(
     hyp("open_rate", counts.opened, counts.sent, "higher", (ps) => rate(stageCounts(ps).opened, ps.length)),
     hyp("return_rate", counts.returned, counts.opened, "higher", (ps) => { const c = stageCounts(ps); return rate(c.returned, c.opened); }),
     hyp("deep_rate", counts.deep, counts.opened, "higher", (ps) => { const c = stageCounts(ps); return rate(c.deep, c.opened); }),
+    // Same denominator as order_rate (per SENT link): the two alternative paths read side by side.
+    hyp("trial_rate", counts.trialed, counts.sent, "higher", (ps) => rate(stageCounts(ps).trialed, ps.length)),
     hyp("order_rate", counts.ordered, counts.sent, "higher", (ps) => rate(stageCounts(ps).ordered, ps.length)),
     hyp("paid_rate", counts.paid, counts.ordered, "higher", (ps) => { const c = stageCounts(ps); return rate(c.paid, c.ordered); }),
     hyp("first_open_hours", sentToOpen.length, counts.opened, "lower", (ps) => median(collect(ps, (p) => hours(p.sentAt, p.openedAt))), median(sentToOpen)),
@@ -947,6 +999,7 @@ export function foldReport(
       weekEnd: isoDay(new Date(b - DAY)),
       sent: ps.length,
       opened7: ps.filter((p) => p.openedAt && p.openedAt.getTime() - p.sentAt.getTime() <= 7 * DAY).length,
+      trialed14: ps.filter((p) => p.trialedAt && p.trialedAt.getTime() - p.sentAt.getTime() <= 14 * DAY).length,
       ordered14: ps.filter((p) => p.orderedAt && p.orderedAt.getTime() - p.sentAt.getTime() <= 14 * DAY).length,
       paid30: ps.filter((p) => p.paidAt && p.paidAt.getTime() - p.sentAt.getTime() <= 30 * DAY).length,
       firstOpenMedianHours: median(collect(ps, (p) => hours(p.sentAt, p.openedAt))),

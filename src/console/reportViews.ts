@@ -215,6 +215,7 @@ const HYP_TEXT = (lang: string): Readonly<Record<Hypothesis["key"], { q: string;
   open_rate: { q: T(lang, "Megfogja-e a levél?"), m: T(lang, "megnyitás / kiküldött") },
   return_rate: { q: T(lang, "Visszatér-e?"), m: T(lang, "visszatérő / megnyitó") },
   deep_rate: { q: T(lang, "Belenyúl-e a modulokba?"), m: T(lang, "elmélyülő / megnyitó") },
+  trial_rate: { q: T(lang, "Kipróbálja-e?"), m: T(lang, "próba / kiküldött") },
   order_rate: { q: T(lang, "Megrendeli-e?"), m: T(lang, "rendelés / kiküldött") },
   paid_rate: { q: T(lang, "Ki is fizeti?"), m: T(lang, "fizetve / rendelés") },
   first_open_hours: { q: T(lang, "Gyorsan reagál-e?"), m: T(lang, "medián küldés → 1. megnyitás") },
@@ -275,10 +276,10 @@ function returnsPanel(d: ReportData, lang: string): string {
 function dimPanel(d: ReportData, lang: string): string {
   const mx = Math.max(1, ...d.dims.map((r) => r.counts.sent));
   const row = (label: string, c: StageCounts, tot = false): string =>
-    `<tr${tot ? ' class="rp-tot"' : ""}><td>${esc(label)}</td><td class="num"><span class="rp-mini" style="width:${((c.sent / mx) * 48).toFixed(0)}px"></span>${c.sent}</td><td class="num">${pct(c.opened, c.sent)}</td><td class="num">${pct(c.deep, c.opened)}</td><td class="num">${pct1(c.ordered, c.sent)}</td><td class="num">${pct1(c.paid, c.sent)}</td></tr>`;
+    `<tr${tot ? ' class="rp-tot"' : ""}><td>${esc(label)}</td><td class="num"><span class="rp-mini" style="width:${((c.sent / mx) * 48).toFixed(0)}px"></span>${c.sent}</td><td class="num">${pct(c.opened, c.sent)}</td><td class="num">${pct(c.deep, c.opened)}</td><td class="num">${pct1(c.trialed, c.sent)}</td><td class="num">${pct1(c.ordered, c.sent)}</td><td class="num">${pct1(c.paid, c.sent)}</td></tr>`;
   return (
     `<div class="panel"><h2>${esc(T(lang, "Bontás"))} <span class="rp-q">${esc(T(lang, "— {dim} szerint", { dim: DIM_LABEL(lang)[d.dim].toLowerCase() }))}</span></h2>` +
-    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(DIM_LABEL(lang)[d.dim])}</th><th class="num">${esc(T(lang, "Kiküldve"))}</th><th class="num">${esc(T(lang, "Megnyitva"))}</th><th class="num">${esc(T(lang, "Elmélyült"))}</th><th class="num">${esc(T(lang, "Rendelés"))}</th><th class="num">${esc(T(lang, "Fizetve"))}</th></tr></thead>` +
+    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(DIM_LABEL(lang)[d.dim])}</th><th class="num">${esc(T(lang, "Kiküldve"))}</th><th class="num">${esc(T(lang, "Megnyitva"))}</th><th class="num">${esc(T(lang, "Elmélyült"))}</th><th class="num">${esc(T(lang, "Próba"))}</th><th class="num">${esc(T(lang, "Rendelés"))}</th><th class="num">${esc(T(lang, "Fizetve"))}</th></tr></thead>` +
     `<tbody>${row(T(lang, "ÖSSZES"), d.counts, true)}${d.dims.map((r) => row(dimValueLabel(d.dim, r.key, lang), r.counts)).join("")}</tbody></table></div>` +
     `<p class="mut small rp-note">${esc(T(lang, "A tölcsér sosem lép vissza: a szám azt jelenti, hogy a lead LEGALÁBB eddig eljutott."))}</p></div>`
   );
@@ -289,12 +290,12 @@ function cohortPanel(d: ReportData, lang: string): string {
     .map(
       (c) =>
         `<tr><td>${esc(dayLabel(c.weekStart))} – ${esc(dayLabel(c.weekEnd))}${c.open ? ` <span class="rp-pill rp-pill--warn rp-pill--xs" title="${esc(T(lang, "A 30 napos ablak még nem telt le"))}">${esc(T(lang, "nyitott"))}</span>` : ""}</td>` +
-        `<td class="num">${c.sent}</td><td class="num">${heatCell(c.opened7 / c.sent, 0.7, pct(c.opened7, c.sent))}</td><td class="num">${heatCell(c.ordered14 / c.sent, 0.12, pct(c.ordered14, c.sent))}</td><td class="num">${heatCell(c.paid30 / c.sent, 0.1, pct(c.paid30, c.sent))}</td><td>${esc(fmtH(c.firstOpenMedianHours, lang))}</td></tr>`,
+        `<td class="num">${c.sent}</td><td class="num">${heatCell(c.opened7 / c.sent, 0.7, pct(c.opened7, c.sent))}</td><td class="num">${heatCell(c.trialed14 / c.sent, 0.12, pct(c.trialed14, c.sent))}</td><td class="num">${heatCell(c.ordered14 / c.sent, 0.12, pct(c.ordered14, c.sent))}</td><td class="num">${heatCell(c.paid30 / c.sent, 0.1, pct(c.paid30, c.sent))}</td><td>${esc(fmtH(c.firstOpenMedianHours, lang))}</td></tr>`,
     )
     .join("");
   return (
     `<div class="panel"><h2>${esc(T(lang, "Kohorsz"))} <span class="rp-q">${esc(T(lang, "— küldési hét szerint: javul-e a kör, nem csak az összeg"))}</span></h2>` +
-    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(T(lang, "Küldés hete"))}</th><th class="num">${esc(T(lang, "Kiküldve"))}</th><th class="num">${esc(T(lang, "Megnyitás 7 n."))}</th><th class="num">${esc(T(lang, "Rendelés 14 n."))}</th><th class="num">${esc(T(lang, "Fizetve 30 n."))}</th><th>${esc(T(lang, "1. megnyitás"))}</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="mut">${esc(T(lang, "Még nincs kiküldött megkeresés."))}</td></tr>`}</tbody></table></div>` +
+    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(T(lang, "Küldés hete"))}</th><th class="num">${esc(T(lang, "Kiküldve"))}</th><th class="num">${esc(T(lang, "Megnyitás 7 n."))}</th><th class="num">${esc(T(lang, "Próba 14 n."))}</th><th class="num">${esc(T(lang, "Rendelés 14 n."))}</th><th class="num">${esc(T(lang, "Fizetve 30 n."))}</th><th>${esc(T(lang, "1. megnyitás"))}</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="mut">${esc(T(lang, "Még nincs kiküldött megkeresés."))}</td></tr>`}</tbody></table></div>` +
     `<p class="mut small rp-note">${esc(T(lang, "A friss hetek ablaka még nyitott — a sor jelzi, ha a 30 nap nem telt le."))}</p></div>`
   );
 }
@@ -353,7 +354,7 @@ export function reportFunnelPage(d: ReportData, today: string): string {
   const lang = consoleLang();
   const body =
     hypothesisCards(d, lang) +
-    `<div class="rp-grid2">${returnsPanel(d, lang)}${dimPanel(d, lang)}</div>` +
+    `<div class="rp-grid2 rp-grid2--stack">${returnsPanel(d, lang)}${dimPanel(d, lang)}</div>` +
     cohortPanel(d, lang) +
     timelinePanel(d, lang, today);
   return shell(d, "/report", body, lang);

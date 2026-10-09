@@ -14,12 +14,18 @@
 // weekday 9–16 window). LIVE with the owner-approved letter "A" (2026-10-09,
 // assets/design-refs/console/proba-torles-level/); the daily purge itself stays DRY until
 // it goes live with the big deploy (separate owner permission).
+// The same tick runs the free-trial WATCH (src/trial/watch.ts, migration 0100): five stuck-
+// trial states (lapse overdue, warning failed, site not live, paid continuation without
+// invoice/subscription, login letter not sent) → operator e-mail + SMS, once per incident.
+// HOURLY on purpose: it also catches the daily 07:00 billing tick being dead. Its own
+// try/catch — a watch failure must not stop the follow-ups/notices, and vice versa.
 //   tsx scripts/offer-followup.mts [--now=2026-10-01T09:00:00+02:00]
 
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { runTrialNotices } from "../src/trial/expiry.js";
 import { purgeWarningDeps, trialNoticeDeps } from "../src/trial/notices.js";
 import { runPurgeWarnings } from "../src/trial/retention.js";
+import { runTrialWatch } from "../src/trial/watch.js";
 import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -39,6 +45,15 @@ try {
 } catch (e) {
   // Non-zero exit → the unit's OnFailure= mails the house (ADR-0276).
   console.error("offer-followup HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  const w = await runTrialWatch(now);
+  console.log(`trial-watch @ ${now.toISOString()}:`, JSON.stringify(w));
+  // An alert that could not go out is a failure of this tick too (OnFailure= mails the house).
+  if (w.failedKinds.length > 0) process.exitCode = 1;
+} catch (e) {
+  console.error("trial-watch HIBA:", e);
   process.exitCode = 1;
 } finally {
   await db.destroy();

@@ -1144,6 +1144,32 @@ function trialLapsedBlock(t: TrialAdminState, lang: string, compact: boolean, gu
     `<h2>${T(lang, "A honlapja szünetel — a próba {date} lejárt", { date: esc(formatDayShortWeekday(t.untilIso, lang)) })}</h2></div>` +
     `<div class="adm-frz__grid"><div class="adm-frz__money">${money}</div>${kept}</div>` +
     guest +
+    `</section>` +
+    (compact ? "" : trialModulesCard(t, lang))
+  );
+}
+
+/**
+ * The lapsed trial's „Modulok" card (approved mock proba-C, Áttekintés only): what the trial
+ * GAVE and what paying brings back. Rows = the tenant's trial_grant entitlements (real data,
+ * §B.17). The spine is in every package, so „fizetéskor vissza" is true for it; anything
+ * else the trial switched on was trial-only. No rows → no card (nothing to account for).
+ */
+function trialModulesCard(t: TrialAdminState, lang: string): string {
+  if (!t.modules.length) return "";
+  const rows = t.modules
+    .map(
+      (m) =>
+        `<li data-trial-module="${esc(m.id)}"${m.spine ? " data-trial-module-spine" : ""}>` +
+        `<span class="adm-trial-mods__n">${esc(T(lang, m.label))}</span>` +
+        `<span class="adm-trial-mods__tag">${m.spine ? T(lang, "csomag · fizetéskor vissza") : T(lang, "csak a próbában volt")}</span></li>`,
+    )
+    .join("");
+  return (
+    `<section class="adm-card adm-trial-mods" data-trial-modules>` +
+    `<div class="adm-card__head"><h2>${T(lang, "Modulok")}</h2></div>` +
+    `<p class="adm-trial-mods__note">${T(lang, "Szünet alatt csak olvasható. Fizetéskor a választott csomag kapcsol vissza; amit csak kipróbált, azt a Modulok fülön később is hozzáadhatja.")}</p>` +
+    `<ul class="adm-trial-mods__list">${rows}</ul>` +
     `</section>`
   );
 }
@@ -4291,6 +4317,8 @@ function overviewSection(
   /** The phone's subscription card (README ④: at the bottom of the Áttekintés). */
   subSummary: SubscriptionSummary | null = null,
   now: Date = new Date(),
+  /** ADR-0344 C2c — the LAPSED free trial (null otherwise): its paused site owes nothing. */
+  lapsedTrial: TrialAdminState | null = null,
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -4481,18 +4509,33 @@ function overviewSection(
       "szovegek",
       true,
     ) +
-    todoItem(
-      live,
-      live
-        ? T(lang, "Az oldala élő és nyilvános")
-        : suspended
-          ? // Action first, then cause, then the way back. The old sentence was
-            // written for a site that has never been published yet — under a
-            // freeze it was simply false, and false in OUR favour.
-            `<strong>${T(lang, "Rendezze a díjat — a honlapja fel van függesztve")}</strong> ${T(lang, "— a vendégek most nem érik el. A befizetés után magától, azonnal visszakapcsol")}`
-          : T(lang, "Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll"),
-      suspended ? "modulok" : "webcim",
-    );
+    (suspended && lapsedTrial
+      ? // ADR-0344 C2c: a LAPSED TRIAL is paused, not in debt — „Rendezze a díjat" would
+        // be false (a trial owes nothing). The row reuses the approved paused-block
+        // wording (proba-admin-sav README §7) and its way out, „Folytatom — fizetés".
+        `<li class="pending" data-todo="trial-lapsed"><i class="adm-todo__st"></i><span>` +
+        `<strong>${T(lang, "A honlapja szünetel — a próba {date} lejárt", { date: esc(formatDayShortWeekday(lapsedTrial.untilIso, lang)) })}</strong> ` +
+        // ADR-0345: the kept data has a deadline — same sentence as the paused block, no open-ended promise.
+        `${T(lang, "Nem terheltünk semmit, és kártyát sem kértünk.")} ` +
+        (lapsedTrial.purgeWarned
+          ? T(lang, "Ha nem folytatja, ezeket {date} véglegesen töröljük — erről levelet is küldtünk.", { date: esc(formatDayOn(lapsedTrial.purgeIso, lang)) })
+          : T(lang, "Ha nem folytatja, ezeket {date} véglegesen töröljük — előtte levélben szólunk.", { date: esc(formatDayOn(lapsedTrial.purgeIso, lang)) })) +
+        `</span>` +
+        `<em class="adm-todo__m">${
+          lapsedTrial.continueUrl ? `<a href="${esc(lapsedTrial.continueUrl)}">${T(lang, "Folytatom — fizetés")}</a>` : ""
+        }</em></li>`
+      : todoItem(
+          live,
+          live
+            ? T(lang, "Az oldala élő és nyilvános")
+            : suspended
+              ? // Action first, then cause, then the way back. The old sentence was
+                // written for a site that has never been published yet — under a
+                // freeze it was simply false, and false in OUR favour.
+                `<strong>${T(lang, "Rendezze a díjat — a honlapja fel van függesztve")}</strong> ${T(lang, "— a vendégek most nem érik el. A befizetés után magától, azonnal visszakapcsol")}`
+              : T(lang, "Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll"),
+          suspended ? "modulok" : "webcim",
+        ));
   const openCount =
     pendingItems.length +
     paidEmpty.length + (priceGaps.length ? 1 : 0) + (introDone ? 0 : 1) + (live ? 0 : 1);
@@ -6241,6 +6284,7 @@ export function adminDashboard(
                 opts.overview ?? null,
                 opts.subSummary ?? null,
                 opts.now ?? new Date(),
+                opts.trial?.status === "lapsed" ? opts.trial : null,
               );
 
   // The Áttekintés and the Fotók render their own page head (title + sentence);

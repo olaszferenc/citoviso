@@ -153,6 +153,38 @@ A doboz alján lévő **„Megnézem, mit lát a látogató”** linkkel meg is 
 elérik-e Önt. A többi lapon a doboz rövidebb. **Tartozása nincs** — nem terheltünk semmit. A fizetés után a honlap
 magától, azonnal visszakapcsol.
 
+A **Teendők** listában is ugyanez áll: a honlapja szünetel, mert a próba lejárt, és nem terheltünk semmit. A sor
+végén lévő „Folytatom — fizetés” link ugyanoda visz, mint a piros doboz gombja. Fizetendő díja ilyenkor nincs —
+a díj csak akkor születik, ha folytatja.
+
+### A „Modulok” kártya lejárt próbánál
+
+Az Áttekintésen a piros doboz alatt egy **„Modulok”** kártya sorolja fel, mely modulokat használta a próba alatt.
+A kártya csak olvasható: **„Szünet alatt csak olvasható. Fizetéskor a választott csomag kapcsol vissza; amit csak
+kipróbált, azt a Modulok fülön később is hozzáadhatja.”** Minden sor mellett egy halvány címke:
+
+- **„csomag · fizetéskor vissza”** — ez a modul minden csomagban benne van, a fizetéssel biztosan visszakapcsol.
+- **„csak a próbában volt”** — ezt csak a próba adta. Ha a fizetéskor kiválasztja, visszakapcsol; ha nem, a
+  Modulok fülön később is hozzáadhatja.
+
+### Ha folytatja: a folytatás a fizetés
+
+A „Folytatom” vagy a „Folytatom — fizetés” gombbal a rendelő panelre jut, ahol kiválasztja a csomagját és a
+moduljait, és bankkártyával kifizeti — a próbához kapott kedvezmény, ha még érvényes, már be van számítva, és
+egyszer, ennél az első fizetésnél használható fel. A fizetés után:
+
+- a honlapja azonnal újra él (ha szünetelt), és a kiválasztott modulok bekapcsolva maradnak; amit csak kipróbált
+  és nem választott ki, az kikapcsol — a beállításai megmaradnak;
+- elindul az előfizetése, és a **fordulónapja a fizetés napja** lesz, nem a próba első napja: ettől a naptól
+  számítva újul meg minden hónapban (vagy évben). Az előfizetéséről a **Modulok** fül **Előfizetés** kártyája szól.
+
+### Meddig marad meg az oldala, ha nem folytatja?
+
+A szünet alatt semmi nem vész el. A fiókja és minden adata — szövegek, képek, beállítások, üzenetek — a próba
+utolsó napjától számított **90 napig** megmarad (ÁSZF 1.4), és ezalatt bármikor folytathatja. A 90 nap
+leteltével a honlapját, a fotóit és a fiókját töröljük. A törlés előtt legalább 7 nappal e-mailben szólunk; ilyen
+levél nélkül nem törlünk. Ugyanarra a szállásra új ingyenes próba nem indítható.
+
 ## Az oldal megnyitása
 
 A lap tetején, jobb oldalon lévő **„Oldal”** gombbal bármikor megnézheti, hogyan látják az oldalát

@@ -3001,7 +3001,12 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   .rp-chart--narrow { display: none; }
 }
 @container (max-width: 719.9px) { .rp-chart--wide { display: none; } }
-@container (min-width: 980px) { .rp-hyp { grid-template-columns: repeat(3, 1fr); } }
+/* Funnel (ADR-0342 „Próba”): 7 cards → 4 + 3 instead of 3 + 3 + 1 alone. The Bontás table
+   has 7 columns and does not fit half a desktop panel („Fizetve” was cut behind a scroll):
+   Visszatérés and Bontás stack full-width, like the Kohorsz table below them. (A
+   max-content column cannot work: .tblwrap is a size container, its intrinsic width is 0.) */
+@container (min-width: 720px) { .rp-grid2--stack { grid-template-columns: 1fr; } }
+@container (min-width: 980px) { .rp-hyp { grid-template-columns: repeat(4, 1fr); } }
 
 /* hypothesis cards */
 .rp-hcard { border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px; background: var(--citui-panel); display: grid; gap: 6px; align-content: start; }

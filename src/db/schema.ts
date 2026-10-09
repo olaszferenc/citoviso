@@ -542,6 +542,20 @@ export interface FreeTrialNoticeTable {
   created_at: Generated<Timestamp>;
 }
 
+/** 0100: the operator alert ledger for stuck free trials (src/trial/watch.ts) — one row per
+ *  (trial, kind, ref); the unique key is the alert-once guard. A claim whose alert could not
+ *  go out (no recipient, every channel failed) is deleted, so the next tick retries. */
+export interface FreeTrialAlertTable {
+  id: Generated<string>;
+  free_trial_id: string;
+  kind: "lapse_overdue" | "notice_failed" | "site_not_live" | "continuation_stuck" | "login_not_sent";
+  /** The offending record (notice id / payment id) where a trial can have several; else ''. */
+  ref: Generated<string>;
+  status: Generated<"claimed" | "sent">;
+  detail: string | null;
+  created_at: Generated<Timestamp>;
+}
+
 /** One subscription per tenant, one renewal day: every monthly module folds into
  *  this common cycle (one charge, one invoice per period). Renewals run through
  *  the existing spine as order_intent kind='renewal'. */
@@ -1747,6 +1761,7 @@ export interface Database {
   module_entitlement: ModuleEntitlementTable;
   free_trial: FreeTrialTable;
   free_trial_notice: FreeTrialNoticeTable;
+  free_trial_alert: FreeTrialAlertTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;

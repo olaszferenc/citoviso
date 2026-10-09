@@ -28,7 +28,7 @@ időszakban KIKÜLDÖTT linkeket nézi — a saját megnyitásod és a teszt nem
 széle ezt ki is írja. A változás-számok („+3,7 pont”) az előző, ugyanakkora időszakhoz mérnek;
 az **„Összes”** mellett ilyen összevetés nincs, ott egy kötőjel áll.
 
-## Tölcsér — hat kérdés, hat kártya
+## Tölcsér — hét kérdés, hét kártya
 
 Minden kártya egy kérdés, a mérőszám nevével, a nagy értékkel, az ítélettel és a célt jelölő
 mérővel:
@@ -37,6 +37,11 @@ mérővel:
 - **„Visszatér-e?”** — visszatérő / megnyitó (cél 30%).
 - **„Belenyúl-e a modulokba?”** — elmélyülő / megnyitó (cél 20%). Elmélyült az, aki modult vagy
   presetet érintett, vagy a lap felénél lejjebb görgetett.
+- **„Kipróbálja-e?”** — próba / kiküldött (cél 5%). Hány kiküldött linkről indult kártya nélküli
+  ingyenes próba. Csak a ténylegesen elindult próba számít (a félbemaradt indítás nem). A próba a
+  rendelés ALTERNATÍVÁJA, nem a lépcső egy foka — ezért ugyanarra a nevezőre (kiküldött) mér, mint a
+  következő kártya, hogy a két út egymás mellett olvasható legyen. A próba teljes útja: a Súgóban az
+  „Ingyenes próba” téma.
 - **„Megrendeli-e?”** — rendelés / kiküldött (cél 4%).
 - **„Ki is fizeti?”** — fizetve / rendelés (cél 75%). A „fizetve” a tényleges fizetésből jön,
   nem a lead állapotából.
@@ -56,12 +61,16 @@ leadet mutatja.
 - **„Visszatérés”**: hányan jöttek 1 / 2 / 3+ alkalommal, és közülük hányan rendeltek
   („rendel: 29%”). Alatta egy mondat az eszkalációs ajánlatról: hánynak jelent meg, hány
   kattintott, hány rendelt, hány vetette el.
-- **„Bontás”**: a kiválasztott dimenzió szerint (pl. szegmensenként) a tölcsér öt oszlopa; az
-  **„ÖSSZES”** sor az összesítés. Telefonon a táblázat oldalra húzható — az utolsó oszlopok a
-  jobb szélen túl vannak. A tölcsér sosem lép vissza: aki fizetett, az a megnyitók között is ott
-  van.
+- **„Bontás”**: a kiválasztott dimenzió szerint (pl. szegmensenként) a tölcsér hat oszlopa:
+  **„Kiküldve”** · **„Megnyitva”** · **„Elmélyült”** · **„Próba”** · **„Rendelés”** · **„Fizetve”**; az
+  **„ÖSSZES”** sor az összesítés. Asztali gépen a panel a lap teljes szélességét kapja, így minden
+  oszlop látszik; telefonon a táblázat oldalra húzható — az utolsó oszlopok a jobb szélen túl vannak.
+  A tölcsér sosem lép vissza: aki fizetett, az a megnyitók között is ott van. A **„Próba”** kivétel:
+  az a rendelés melletti másik út, nem lépcsőfok — aki próbázik, nem feltétlenül rendel, és aki már
+  fizetett, az nem indíthat próbát. Ha a próbázó a próba után fizetve folytatja, az a folytatás rendelésnek
+  számít: ő a **„Próba”**, a **„Rendelés”** és a **„Fizetve”** oszlopban is ott van.
 - **„Kohorsz”**: küldési hetek soronként — a hét kiküldöttjeinek hány százaléka nyitott meg 7,
-  rendelt 14, fizetett 30 napon belül. A **„nyitott”** jel azt mondja, hogy a 30 nap még nem
+  indított próbát 14 (**„Próba 14 n.”**), rendelt 14, fizetett 30 napon belül. A **„nyitott”** jel azt mondja, hogy a 30 nap még nem
   telt le, tehát a sor még nőhet. A sötétebb cella a magasabb arány. Telefonon ez is húzható.
 - **„Pilot-napló”**: naponta a kiküldések (oszlop) és a megnyitások (vonal); az egérrel egy
   napra állva a számok megjelennek. Alatta a jegyzet-űrlap: ① a nap (alapból a mai), ② a

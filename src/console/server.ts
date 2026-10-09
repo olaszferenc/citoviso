@@ -146,7 +146,7 @@ import {
   payLinkRenewPage,
   payAlreadyOwnedPage,
 } from "./views.js";
-import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
+import { checkSubdomainAvailable, convertLead, plannedSiteSlug } from "../conversion/provision.js";
 import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
@@ -3243,7 +3243,6 @@ async function handle(
         "lead.id as leadId",
         "lead.address as leadAddress",
         "lead.raw as leadRaw",
-        "lead.preview_label as previewLabel",
         "prospect.contact_email as contactEmail",
       ])
       .where("prospect.token", "=", pContMatch[1])
@@ -3255,7 +3254,8 @@ async function handle(
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pContMatch[1]}/request`,
-        subLabel: pf.previewLabel ?? null,
+        // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
+        subLabel: await plannedSiteSlug(pf.leadId),
         renewalLeadId: pf.leadId,
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null),
@@ -3329,7 +3329,6 @@ async function handle(
           "lead.id as leadId",
           "lead.address as leadAddress",
           "lead.raw as leadRaw",
-          "lead.preview_label as previewLabel",
           "prospect.contact_email as contactEmail",
         ])
         .where("prospect.token", "=", pMatch[1])
@@ -3346,8 +3345,10 @@ async function handle(
           : true;
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
-        // ADR-0330: the subdomain the outreach link showed is the default they keep.
-        subLabel: pf?.previewLabel ?? null,
+        // ADR-0330: the subdomain the outreach link showed is the default they keep — via
+        // plannedSiteSlug, the SAME rule convertLead assigns with (ADR-0343 ②: `trial.sub`
+        // must be the address the trial site gets; free-trial-check ⑩).
+        subLabel: pf?.leadId ? await plannedSiteSlug(pf.leadId) : null,
         // ADR-0080 ①: if this buyer's tenant already runs a cycle, the purchase
         // JOINS it — so the checkout must promise that anniversary and that
         // invoice, not today+12mo over the ticked boxes (Elek FK-005a H-1).

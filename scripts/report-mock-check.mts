@@ -43,7 +43,7 @@ function fact(template: string, visits: Visit[], o: Partial<ProspectFacts> = {})
   const sentAt = new Date(NOW.getTime() - 2 * DAY);
   return {
     id: `p${i}`, leadId: `l${i}`, leadName: `Minta ${i}`, segment: "nincs_honlap", channel: "email", style: "coastal-fresh", template,
-    sentAt, sentHour: 9, visits, openedAt: visits[0] ? new Date(sentAt.getTime() + 3 * 3_600_000) : null, deepAt: null, orderedAt: null,
+    sentAt, sentHour: 9, visits, openedAt: visits[0] ? new Date(sentAt.getTime() + 3 * 3_600_000) : null, deepAt: null, trialedAt: null, orderedAt: null,
     paidAt: null, unsubscribedAt: null, escalationShown: false, escalationCta: false, escalationDismiss: false, device: "mobile",
     exitReason: null, exitConfidence: null, stated: null, replied: false, ...o,
   };
