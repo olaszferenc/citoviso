@@ -551,7 +551,7 @@ export async function ensureEscalationOffer(
  * §6: the welcome coupon, granted when the FIRST paid order converts the lead.
  * Resolves the tenant both ways money can point at one (order.tenant_id or
  * prospect → lead → tenant); idempotent by the partial unique index.
- * ADR-XXXX: percent and validity from the ONE coupon setting (getCouponConfig) — the
+ * ADR-0346: percent and validity from the ONE coupon setting (getCouponConfig) — the
  * same numbers a trial start mints with; a trial owner already holds the tenant's one
  * coupon, so this no-ops for them (used or not). 0% = no coupon.
  */

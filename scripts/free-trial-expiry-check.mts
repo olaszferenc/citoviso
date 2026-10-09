@@ -450,7 +450,7 @@ try {
   check("a próba-kupon egyszer égett el (used_count 1)", couponAfter.used_count === 1, `${couponAfter.used_count}`);
   const coupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
   check("nem született második (üdvözlő) kupon", coupons.length === 1, `${coupons.length}`);
-  // ADR-XXXX: ONE coupon rule — the trial's coupon carries the shared setting's percent.
+  // ADR-0346: ONE coupon rule — the trial's coupon carries the shared setting's percent.
   check("a kupon %-a a közös „Kupon” beállításból jön (30%)", cp.percent === 30, `${cp.percent}`);
   // …and the paid path's welcome grant, run once more for this tenant, still mints nothing.
   await grantNewSubscriberCouponForOrder(oi.id);

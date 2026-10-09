@@ -1,4 +1,4 @@
-## ADR-XXXX — Egy kupon mindenkinek: aki admin-hozzáférést kap (első fizetés VAGY próba), egyet kap, egyszer, bármire
+## ADR-0346 — Egy kupon mindenkinek: aki admin-hozzáférést kap (első fizetés VAGY próba), egyet kap, egyszer, bármire
 
 **Dátum:** 2026-10-09 · **Státusz:** ELFOGADVA (tulaj-döntés 2026-10-09, szó szerint: „aki belép az adminfelületre,
 annak jár az egyszerű huszonöt százalék … annak, aki próbaverziót kér, úgy jár a huszonöt százalék, hogy bármire,

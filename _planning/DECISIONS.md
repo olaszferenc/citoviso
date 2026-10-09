@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-egy-kupon-mindenkinek-elso-fizetes-vagy-proba.md) — Egy kupon mindenkinek: aki admin-hozzáférést kap (első fizetés VAGY próba), egyet kap, egyszer, bármire
+- [ADR-0346](decisions/0346-egy-kupon-mindenkinek-aki-admin-hozzaferest-kap.md) — Egy kupon mindenkinek: aki admin-hozzáférést kap (első fizetés VAGY próba), egyet kap, egyszer, bármire
 - [ADR-0345](decisions/0345-lejart-ingyenes-proba-90-napos-adatmegorzes.md) — Lejárt ingyenes próba: 90 napos adatmegőrzés, figyelmeztetés, törlés + ÁSZF 1.4
 - [ADR-0344](decisions/0344-ingyenes-proba-vege-szunetel-nem-terhel-t-3-t-1.md) — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
 - [ADR-0343](decisions/0343-proba-belepo-a-lead-lapon-pirula-par-trial.md) — Próba-belépő a lead-lapon: pirula-pár, `trial_*` esemény-család, a belépő kapuja

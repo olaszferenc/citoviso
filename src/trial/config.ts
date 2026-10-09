@@ -1,7 +1,7 @@
 // ADR-0342 — the free trial's operator-set parameters (one app_setting row, JSON;
 // the same pattern as ADR-0285 `escalation_offer`, so no migration). Edited in the
 // /pricing „Ingyenes próba” section; this getter is the ONLY place minting code reads from.
-// ADR-XXXX: the coupon is NOT a trial parameter any more — one coupon setting for everyone
+// ADR-0346: the coupon is NOT a trial parameter any more — one coupon setting for everyone
 // who gets admin access (src/payment/couponConfig.ts). A stored row's old `couponPercent`
 // is ignored here (couponConfig reads it once, for migration) and dropped on the next save.
 

@@ -1,5 +1,5 @@
 // ADR-0342 — the free trial's length is OPERATOR-SET on /pricing („Ingyenes próba” section, the
-// ADR-0285 „Lead-ajánlatok” pattern); ADR-XXXX — the ONE coupon (first payment OR trial start)
+// ADR-0285 „Lead-ajánlatok” pattern); ADR-0346 — the ONE coupon (first payment OR trial start)
 // is set in the „Kupon” section beside it. What this proves — each leg is a way the setting
 // could silently stop meaning anything:
 //   ① the validity rules: trial days 1–90; coupon 0–90% (0 = no coupon), 1–365 days; whole numbers;

@@ -834,7 +834,7 @@ export function pricingPage(
   } = { cfg: ESCALATION_CONFIG_DEFAULT, live: { count: 0, percents: [] } },
   /** ADR-0342: the GLOBAL free-trial parameters + the trials running now. */
   trial: { readonly cfg: FreeTrialConfig; readonly running: number } = { cfg: FREE_TRIAL_CONFIG_DEFAULT, running: 0 },
-  /** ADR-XXXX: the ONE coupon (first payment or trial start) + the unused coupons out now. */
+  /** ADR-0346: the ONE coupon (first payment or trial start) + the unused coupons out now. */
   coupon: { readonly cfg: CouponConfig; readonly live: number } = { cfg: COUPON_CONFIG_DEFAULT, live: 0 },
 ): string {
   const lang = consoleLang();
@@ -1327,7 +1327,7 @@ const ESCALATION_SECTION_JS = `(function(){
 })();`;
 
 /**
- * ADR-0342 — „Ingyenes próba”: the card-less trial's switch and length (ADR-XXXX: the coupon
+ * ADR-0342 — „Ingyenes próba”: the card-less trial's switch and length (ADR-0346: the coupon
  * moved to the ONE „Kupon” section below — couponSection),
  * the ADR-0285 „Lead-ajánlatok” pattern one to one. GLOBAL (every region page, saved with
  * whichever region's form is submitted). The bounds come from src/trial/config.ts — the
@@ -1443,7 +1443,7 @@ const FREE_TRIAL_SECTION_JS = `(function(){
 })();`;
 
 /**
- * ADR-XXXX — „Kupon”: the ONE coupon everyone with admin access gets (owner 2026-10-09) —
+ * ADR-0346 — „Kupon”: the ONE coupon everyone with admin access gets (owner 2026-10-09) —
  * a direct buyer at the first payment, a trial owner at the trial start; used once, on
  * anything. The ADR-0285 field pattern without a switch (0% = no coupon). GLOBAL like the
  * two sections above. A minted coupon keeps its percent and expiry — the notice says so,

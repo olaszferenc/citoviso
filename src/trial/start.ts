@@ -221,7 +221,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
       .whereRef("used_count", "<", "max_uses")
       .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
       .execute();
-    // ADR-XXXX: the ONE coupon setting — the same percent and validity a direct buyer gets
+    // ADR-0346: the ONE coupon setting — the same percent and validity a direct buyer gets
     //    at the first payment; for the trial owner it is valid from the trial's last day.
     const cfg = await getCouponConfig();
     let couponId = trial.coupon_offer_id;

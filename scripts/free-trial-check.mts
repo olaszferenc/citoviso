@@ -97,7 +97,7 @@ try {
   const d = FREE_TRIAL_CONFIG_DEFAULT;
   check("üres objektum → alapértékek", JSON.stringify(parseFreeTrialSetting("{}")) === JSON.stringify(d));
   check("days 0 → null (érvénytelen)", parseFreeTrialSetting('{"days":0}') === null);
-  check("a régi couponPercent mezőt figyelmen kívül hagyja (ADR-XXXX: a kupon a közös beállításé)", JSON.stringify(parseFreeTrialSetting('{"couponPercent":2.5}')) === JSON.stringify(d));
+  check("a régi couponPercent mezőt figyelmen kívül hagyja (ADR-0346: a kupon a közös beállításé)", JSON.stringify(parseFreeTrialSetting('{"couponPercent":2.5}')) === JSON.stringify(d));
   check("sérült JSON → null", parseFreeTrialSetting("{nem json") === null);
   check("enabled:false megmarad", parseFreeTrialSetting('{"enabled":false}')?.enabled === false);
 

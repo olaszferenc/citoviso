@@ -1853,7 +1853,7 @@ async function handle(
         )}`,
       );
     }
-    // ADR-XXXX: the ONE coupon section, the same rule. A trial save from a tab without the
+    // ADR-0346: the ONE coupon section, the same rule. A trial save from a tab without the
     // section still writes the EFFECTIVE coupon first: setFreeTrialConfig drops the legacy
     // couponPercent the getter migrates from (ADR-0342), and it must not vanish silently.
     const coupon = couponFromForm(form, await getCouponConfig()) ?? (trial ? await getCouponConfig() : null);

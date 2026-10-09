@@ -1,4 +1,4 @@
-// ADR-XXXX — ONE coupon for everyone who gets admin access (owner ruling 2026-10-09:
+// ADR-0346 — ONE coupon for everyone who gets admin access (owner ruling 2026-10-09:
 // „aki belép az adminfelületre, annak jár az egyszerű huszonöt százalék”). A direct buyer
 // gets it at the first payment (grantNewSubscriberCouponForOrder), a trial owner at the
 // trial start (startTrial) — the SAME percent and validity, from this one setting, and the
