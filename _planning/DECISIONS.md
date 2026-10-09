@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-proba-elotti-rendeles-nem-fizetheto-a-proba-alatt.md) — A próba ELŐTT árazott első rendelés a próba alatt nem fizethető; a próba a lead MINDEN tokenjének bevezető ajánlatát zárja
 - [ADR-0350](decisions/0350-mi-tartja-vissza-kulcsonkent-egy-sor-a-kesobbi.md) — „Mi tartja vissza?”: kulcsonként egy sor, a későbbi válasz felülírja az elsőt
 - [ADR-0349](decisions/0349-a-masodik-terheles-egy-mar-kifizetett-elso.md) — A második terhelés egy már kifizetett első vásárlásra: az első nyer, a második kézi rendezés
 - [ADR-0348](decisions/0348-visszamenoleges-14-nap-ingyen-level-sms-a-mar.md) — Visszamenőleges „14 nap ingyen” levél + SMS a már megkeresett leadeknek: egy lövés kódban, „mi tartja vissza?” → prospect_feedback

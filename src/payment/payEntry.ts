@@ -21,7 +21,7 @@
 
 import { db } from "../db/client.js";
 import { handleWebhook, requestPayment } from "./service.js";
-import { ownedBlocksInitialPurchase, type OwnedSite } from "../conversion/owned.js";
+import { ownedBlocksInitialPurchase, preTrialOrderOfContinuableTrial, type OwnedSite } from "../conversion/owned.js";
 
 export type PayEntryDecision =
   | { readonly kind: "redirect"; readonly url: string; readonly reissued: boolean }
@@ -102,6 +102,10 @@ export async function resolvePayEntry(
     // ADR-0344: a trial waiting for its first payment is not "already theirs".
     const owned = await ownedBlocksInitialPurchase(kind.leadId);
     if (owned) return { kind: "owned", owned };
+    // IT A-04 / B2: a pre-trial order (intro price) is not the trial's continuation — the
+    // trialist is sent to the continuation checkout, priced with the trial coupon.
+    const pre = await preTrialOrderOfContinuableTrial(orderIntentId);
+    if (pre) return { kind: "redirect", url: `/p/${pre.token}/folytatas`, reissued: false };
   }
 
   // ⛔ AFTER the owned check (B1-PAR, IT 2026-10-09): a second checkout tab's payment

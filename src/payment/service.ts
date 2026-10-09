@@ -12,7 +12,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
-import { ownedBlocksInitialPurchase } from "../conversion/owned.js";
+import { ownedBlocksInitialPurchase, preTrialOrderOfContinuableTrial } from "../conversion/owned.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { tenantSiteUrl } from "../domains.js";
@@ -110,6 +110,15 @@ export async function requestPayment(
         `[payment] requestPayment ${orderIntentId} MEGTAGADVA: a lead MÁR VÁSÁROLT ` +
           `(állapot: ${owned.stage}${owned.siteUrl ? `, oldal: ${owned.siteUrl}` : ""}) — ` +
           `initial rendelésre nem adunk pay-linket, mert a második terhelés semmit nem adna hozzá`,
+      );
+      return null;
+    }
+    // IT A-04 / B2: an order priced before the trial started carries the intro discount
+    // the trial replaced — the continuation is priced at /p/<token>/folytatas instead.
+    if (await preTrialOrderOfContinuableTrial(orderIntentId)) {
+      console.warn(
+        `[payment] requestPayment ${orderIntentId} MEGTAGADVA: a próba ELŐTT árazott rendelés — ` +
+          `a próbázó a /folytatas oldalon fizet a próba-kuponnal (ADR-0342 ⑥, nem halmozódik)`,
       );
       return null;
     }

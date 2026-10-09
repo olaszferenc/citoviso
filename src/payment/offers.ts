@@ -510,11 +510,16 @@ export async function ensureEscalationOffer(
 ): Promise<ActiveOffer | null> {
   const p = await db
     .selectFrom("prospect")
-    .select(["sent_at"])
+    .select(["sent_at", "lead_id"])
     .where("id", "=", prospectId)
     .executeTakeFirst();
   // Outreach-entitled prospects only — the direct path is list-priced (§1).
   if (!p?.sent_at) return null;
+  // ADR-0342: the free trial is chosen INSTEAD of the intro discounts — a lead that has
+  // had one (on ANY of its tokens, in any state) is never offered the decision-helper
+  // afterwards (IT A-05: after the purge the other token offered −50%).
+  const trial = await db.selectFrom("free_trial").select("id").where("lead_id", "=", p.lead_id).executeTakeFirst();
+  if (trial) return null;
   const cfg = await getEscalationConfig();
   if (!cfg.enabled) return null;
 

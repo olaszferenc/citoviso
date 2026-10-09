@@ -18,6 +18,12 @@
 //      lead with a preview label (ADR-0330) AND for a label-less one whose name-derived
 //      slug is already held by another site (measured 2026-10-09: the page said
 //      `<name>.citoviso.com`, the site got `<name>-2`).
+//   ⑪ IT A-02: a start that crashed after the tenant was written is RESUMED by the next
+//      submit (live site, coupon, login) — not answered "your trial is already running";
+//   ⑫ IT A-05: the trial ends the intro/escalation offers of EVERY token of the lead, and
+//      no decision-helper offer is minted for a trial lead afterwards;
+//   ⑬ IT A-04 / B2: a pre-trial initial order (intro price) is not payable during the
+//      trial — /pay/go leads to /folytatas, requestPayment refuses it.
 //
 // The dev DB is SHARED: the config is set with the PROCESS-LOCAL override (the app_setting
 // row is never written); every row is this run's own and deleted in `finally`; the
@@ -44,6 +50,10 @@ import {
 } from "../src/trial/config.js";
 import { overrideCouponConfigInProcess } from "../src/payment/couponConfig.js";
 import { startTrial, trialModuleIds } from "../src/trial/start.js";
+import { preTrialOrderOfContinuableTrial } from "../src/conversion/owned.js";
+import { ensureEscalationOffer, ESCALATION_CONFIG_DEFAULT, overrideEscalationConfigInProcess } from "../src/payment/offers.js";
+import { resolvePayEntry } from "../src/payment/payEntry.js";
+import { requestPayment } from "../src/payment/service.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 // ⑩ reads the REAL GET /p/<token> page: the console server is imported in-process on a
@@ -266,11 +276,92 @@ try {
   const dGiven = await givenSub(dl.leadId);
   tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", dl.leadId).execute()).map((t) => t.id));
   check("saját előnézeti címkével: a lap trial.sub-ja = a site slugja", rd.ok && dPromised === `${dLabel}.citoviso.com` && dPromised === dGiven, `ígért ${dPromised} · kapott ${dGiven}`);
+
+  // ⑪ IT A-02: a start that crashed AFTER the tenant was written (site not live, no
+  // coupon, no login) is RESUMED by the next submit — not answered "already running".
+  console.log("⑪ félbetört indítás gyógyul");
+  const e = await fixtureLead("e");
+  const re1 = await startTrial(e.token, FORM);
+  const eTenant = (await db.selectFrom("tenant").select("id").where("lead_id", "=", e.leadId).executeTakeFirst())?.id ?? null;
+  if (eTenant) tenants.push(eTenant);
+  if (re1.ok && eTenant) {
+    // The crash, after the fact: back to what step 4 leaves behind, claimed > 2 minutes ago.
+    await db.updateTable("free_trial").set({ coupon_offer_id: null, created_at: new Date(Date.now() - 10 * 60_000) }).where("lead_id", "=", e.leadId).execute();
+    await db.deleteFrom("offer").where("tenant_id", "=", eTenant).execute();
+    await db.deleteFrom("tenant_user").where("tenant_id", "=", eTenant).execute();
+    await db.updateTable("site").set({ status: "provisioned" }).where("tenant_id", "=", eTenant).execute();
+  }
+  const re2 = await startTrial(e.token, FORM);
+  const eSite = eTenant ? await db.selectFrom("site").select("status").where("tenant_id", "=", eTenant).executeTakeFirst() : undefined;
+  const eCoupons = eTenant ? await db.selectFrom("offer").select("id").where("tenant_id", "=", eTenant).where("kind", "=", "coupon").execute() : [];
+  const eLogin = eTenant ? await db.selectFrom("tenant_user").select("id").where("tenant_id", "=", eTenant).executeTakeFirst() : undefined;
+  const eTrial = await db.selectFrom("free_trial").select("coupon_offer_id").where("lead_id", "=", e.leadId).executeTakeFirst();
+  check("az újraküldés NEM „már fut” (existing:false), a belépő-levél kimegy", re2.ok && !re2.existing && !!re2.loginSentTo, JSON.stringify(re2));
+  check("…a site LIVE lett", eSite?.status === "live", `${eSite?.status}`);
+  check("…EGY kupon, a próba-sorra kötve", eCoupons.length === 1 && eTrial?.coupon_offer_id === eCoupons[0]?.id, `${eCoupons.length}`);
+  check("…van belépés", !!eLogin);
+  const re3 = await startTrial(e.token, FORM);
+  check("a befejezett próba újraküldése már existing:true", re3.ok && re3.existing);
+
+  // ⑫ IT A-05: a lead reached on TWO tokens — the trial on one ends the other's intro and
+  // escalation offers too, and no decision-helper is minted for it afterwards.
+  console.log("⑫ több prospectes lead");
+  const f = await fixtureLead("f");
+  const fB = await db
+    .insertInto("prospect")
+    .values({ lead_id: f.leadId, mock_artifact_id: f.artId, token: `trialcheck${stamp}fbxxxxxxxxxx`.replace(/[^A-Za-z0-9_-]/g, ""), status: "sent", sent_at: new Date() })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await db.insertInto("offer").values({ kind: "outreach", prospect_id: fB.id, percent: 25, scope: "initial" }).execute();
+  await db.insertInto("offer").values({ kind: "escalation", prospect_id: fB.id, percent: 50, scope: "initial", expires_at: new Date(Date.now() + 86_400_000) }).execute();
+  const rf = await startTrial(f.token, FORM);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", f.leadId).execute()).map((t) => t.id));
+  const bOpen = await db
+    .selectFrom("offer")
+    .select(["kind", "expires_at"])
+    .where("prospect_id", "=", fB.id)
+    .execute();
+  const stillOpen = bOpen.filter((o) => !o.expires_at || new Date(o.expires_at as unknown as string).getTime() > Date.now());
+  check("a másik token ajánlatai (25% + 50%) is lezárva", rf.ok && bOpen.length === 2 && stillOpen.length === 0, stillOpen.map((o) => o.kind).join(",") || "0 nyitott");
+  await db.deleteFrom("offer").where("prospect_id", "=", fB.id).where("kind", "=", "escalation").execute();
+  overrideEscalationConfigInProcess({ ...ESCALATION_CONFIG_DEFAULT, enabled: true, threshold: 1, distinctDays: false });
+  await db.insertInto("mock_view").values({ prospect_id: fB.id }).execute();
+  const esc = await ensureEscalationOffer(fB.id);
+  overrideEscalationConfigInProcess(null);
+  check("próbázó leadnek nem születik döntés-segítő ajánlat", esc === null, JSON.stringify(esc));
+
+  // ⑬ IT A-04 / B2: an initial order priced BEFORE the trial (intro −40%) is not payable
+  // during the trial — /pay/go sends to the continuation, requestPayment refuses it.
+  console.log("⑬ próba előtti rendelés");
+  const g = await fixtureLead("g");
+  const gOrder = await db
+    .insertInto("order_intent")
+    .values({ prospect_id: g.prospectId, price: 2340, modules: JSON.stringify([]), status: "submitted", buyer_country: "HU", created_at: new Date(Date.now() - 60_000) })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const gPay = await db
+    .insertInto("payment")
+    .values({ order_intent_id: gOrder.id, amount: 2340, period: "monthly", status: "pending", pay_url: "https://mock.invalid/pay/x" })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const rg = await startTrial(g.token, FORM);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", g.leadId).execute()).map((t) => t.id));
+  const goGet = await resolvePayEntry(gPay.id, { reissue: false });
+  check("/pay/go a régi, pending linkre → /folytatas (nem a régi áras pénztár)", rg.ok && goGet.kind === "redirect" && goGet.url === `/p/${g.token}/folytatas`, JSON.stringify(goGet));
+  const fresh = await requestPayment(gOrder.id);
+  check("requestPayment a próba előtti rendelésre nem ad pay-linket", fresh === null, JSON.stringify(fresh));
+  const gCont = await db
+    .insertInto("order_intent")
+    .values({ prospect_id: g.prospectId, price: 2925, modules: JSON.stringify([]), status: "submitted" })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  check("a próba UTÁNI (folytatás-) rendelést a kapu nem érinti", (await preTrialOrderOfContinuableTrial(gCont.id)) === null);
 } finally {
   closeConsole?.();
   await rm(MOCK_FILE, { force: true });
   overrideFreeTrialConfigInProcess(null);
   overrideCouponConfigInProcess(null);
+  overrideEscalationConfigInProcess(null);
   for (const t of tenants) {
     await db.deleteFrom("offer").where("tenant_id", "=", t).execute();
     await db.deleteFrom("tenant_user").where("tenant_id", "=", t).execute();

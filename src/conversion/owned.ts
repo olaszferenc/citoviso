@@ -167,3 +167,28 @@ export async function ownedBlocksInitialPurchase(leadId: string): Promise<OwnedS
   if (!owned) return null;
   return (await continuableTrialForLead(leadId)) ? null : owned;
 }
+
+/**
+ * IT A-04 / B2-REGIPAY (2026-10-10): an `initial` order minted BEFORE the lead's trial
+ * started was priced with the prospect's intro / escalation offer — the very discount the
+ * trial is chosen INSTEAD of (ADR-0342 ⑥). Its old pay-link stayed payable during the
+ * trial: the trialist paid −40% and the trial's −25% coupon stayed unburnt for a later
+ * module (two discounts). Such an order is not the continuation; the continuation is
+ * priced at /p/<token>/folytatas with the tenant's coupon. Returns that page's token, or
+ * null when the order is not a pre-trial initial order of a continuable trial.
+ */
+export async function preTrialOrderOfContinuableTrial(orderIntentId: string): Promise<{ readonly token: string } | null> {
+  const o = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select(["order_intent.kind as kind", "order_intent.created_at as createdAt", "prospect.lead_id as leadId", "prospect.token as token"])
+    .where("order_intent.id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (!o || o.kind !== "initial" || !o.leadId || !o.token) return null;
+  const trial = await continuableTrialForLead(o.leadId);
+  if (!trial) return null;
+  const started = await db.selectFrom("free_trial").select("started_at").where("id", "=", trial.trialId).executeTakeFirst();
+  if (!started) return null;
+  const before = new Date(o.createdAt as unknown as string).getTime() < new Date(started.started_at as unknown as string).getTime();
+  return before ? { token: o.token } : null;
+}

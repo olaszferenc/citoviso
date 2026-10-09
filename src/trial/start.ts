@@ -12,7 +12,9 @@
 // ⛔ IDEMPOTENT BY STRUCTURE, NOT BY LUCK. `free_trial.lead_id` is UNIQUE: the trial row is
 // CLAIMED before anything is provisioned, so a double click (or two tabs) yields one row and
 // one tenant. A claimed-but-unfinished trial (crash mid-provision) is resumed by the next
-// submit of the same lead. See feedback_idempotency_made_the_second_charge_worthless: the
+// submit of the same lead — ALSO once the tenant is written (IT A-02, 2026-10-10): a crash
+// after step 4 left a provisioned site, no coupon and no login, and the repeat answered
+// "your trial is running, we sent the link" for a trial that never finished. See feedback_idempotency_made_the_second_charge_worthless: the
 // second request must return the FIRST trial, never quietly build nothing.
 
 import { db } from "../db/client.js";
@@ -118,11 +120,14 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     .executeTakeFirst();
   if (prior) {
     if (prior.status !== "active") return { ok: false, error: "trial_used" };
-    if (prior.tenant_id) return finished(prior.tenant_id, prior.trial_until, prior.coupon_offer_id, true, null);
+    if (prior.tenant_id && (await trialFinished(prior.tenant_id, prior.coupon_offer_id))) {
+      return finished(prior.tenant_id, prior.trial_until, prior.coupon_offer_id, true, null);
+    }
     if (now.getTime() - new Date(prior.created_at as unknown as string).getTime() < IN_FLIGHT_MS) {
       return { ok: false, error: "in_progress" };
     }
-    // A claim that never finished (crash) — resume it below with the stored row.
+    // A claim that never finished (crash) — resume it below with the stored row; the
+    // steps already done are skipped or idempotent.
   } else {
     const cfg = await getFreeTrialConfig();
     if (!cfg.enabled) return { ok: false, error: "disabled" };
@@ -169,54 +174,63 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   const trialId = trial.id;
 
   try {
-    // 4. Provision: the visitor's own submit is the approval of the mock they are on
-    //    (same owner ruling as the paid order, 2026-09-13). A 'rejected' mock stays refused.
-    const promo = await approveArtifactForBuyerOrder(p.mock_artifact_id, `trial:${trialId}`);
-    if (!promo.promoted && promo.status !== "approved") {
-      console.error(`[trial] ${trialId}: a mock '${promo.status ?? "hiányzik"}' — próba nem indítható`); // i18n-exempt: operátori napló
-      return { ok: false, error: "provision_failed" };
-    }
     const modules = trialModuleIds();
-    const conv = await convertLead(p.lead_id, p.mock_artifact_id, modules, null);
-    if (conv.renderSource === "copy") {
-      console.error(`[trial] ${trialId}: legacy HTML-másolat mock — a §A fotó-policy nem alkalmazható`); // i18n-exempt: operátori napló
-      return { ok: false, error: "provision_failed" };
+    let tenantId = trial.tenant_id;
+    if (!tenantId) {
+      // 4. Provision: the visitor's own submit is the approval of the mock they are on
+      //    (same owner ruling as the paid order, 2026-09-13). A 'rejected' mock stays refused.
+      const promo = await approveArtifactForBuyerOrder(p.mock_artifact_id, `trial:${trialId}`);
+      if (!promo.promoted && promo.status !== "approved") {
+        console.error(`[trial] ${trialId}: a mock '${promo.status ?? "hiányzik"}' — próba nem indítható`); // i18n-exempt: operátori napló
+        return { ok: false, error: "provision_failed" };
+      }
+      const conv = await convertLead(p.lead_id, p.mock_artifact_id, modules, null);
+      if (conv.renderSource === "copy") {
+        console.error(`[trial] ${trialId}: legacy HTML-másolat mock — a §A fotó-policy nem alkalmazható`); // i18n-exempt: operátori napló
+        return { ok: false, error: "provision_failed" };
+      }
+      // Trial-origin marking: everything granted here that money does not back. (A fresh
+      // trial tenant has paid for nothing, so that is all of them.)
+      const paid = new Set(await paidModuleIds(conv.tenantId));
+      const granted = modules.filter((m) => !paid.has(m));
+      if (granted.length) {
+        await db
+          .updateTable("module_entitlement")
+          .set({ trial_grant: true })
+          .where("tenant_id", "=", conv.tenantId)
+          .where("module", "in", granted)
+          .execute();
+      }
+      await db.updateTable("free_trial").set({ tenant_id: conv.tenantId }).where("id", "=", trialId).execute();
+      tenantId = conv.tenantId;
     }
-    // Trial-origin marking: everything granted here that money does not back. (A fresh
-    // trial tenant has paid for nothing, so that is all of them.)
-    const paid = new Set(await paidModuleIds(conv.tenantId));
-    const granted = modules.filter((m) => !paid.has(m));
-    if (granted.length) {
-      await db
-        .updateTable("module_entitlement")
-        .set({ trial_grant: true })
-        .where("tenant_id", "=", conv.tenantId)
-        .where("module", "in", granted)
-        .execute();
-    }
-    await db.updateTable("free_trial").set({ tenant_id: conv.tenantId }).where("id", "=", trialId).execute();
 
     // 5. Public on the subdomain. The §A declaration is read from free_trial by the editor.
-    const rendered = await rerenderTenantSnapshot(conv.tenantId, { as: "live" });
-    if (!rendered) {
-      console.error(`[trial] ${trialId}: a live render nem sikerült — a site provisioned marad`); // i18n-exempt: operátori napló
-      return { ok: false, error: "provision_failed" };
+    //    A resumed trial whose site already went live is not rendered again.
+    const siteNow = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirst();
+    if (siteNow?.status !== "live") {
+      const rendered = await rerenderTenantSnapshot(tenantId, { as: "live" });
+      if (!rendered) {
+        console.error(`[trial] ${trialId}: a live render nem sikerült — a site provisioned marad`); // i18n-exempt: operátori napló
+        return { ok: false, error: "provision_failed" };
+      }
+      await db
+        .updateTable("site")
+        .set({ status: "live", live_at: now })
+        .where("tenant_id", "=", tenantId)
+        .where("status", "=", "provisioned")
+        .execute();
     }
-    await db
-      .updateTable("site")
-      .set({ status: "live", live_at: now })
-      .where("tenant_id", "=", conv.tenantId)
-      .where("status", "=", "provisioned")
-      .execute();
 
     // 6. Offers. The trial is chosen INSTEAD of the intro discount (owner, 2026-10-09):
-    //    the prospect's open checkout offers end now. The continuation coupon is the
+    //    the open checkout offers of EVERY prospect of the lead end now — a lead reached
+    //    on two tokens kept the other token's −25% / −50% alive (IT A-05). The continuation coupon is the
     //    tenant's ONE coupon (offer_tenant_coupon_uq) — the paid path's welcome coupon
     //    then no-ops on conflict, so discounts never stack (ADR-0088 ⑥).
     await db
       .updateTable("offer")
       .set({ expires_at: now, note: `ADR-0342: lezárva — a próbát választotta (${trialId})` })
-      .where("prospect_id", "=", p.id)
+      .where("prospect_id", "in", db.selectFrom("prospect").select("id").where("lead_id", "=", p.lead_id))
       .where("scope", "=", "initial")
       .whereRef("used_count", "<", "max_uses")
       .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
@@ -231,7 +245,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         .insertInto("offer")
         .values({
           kind: "coupon",
-          tenant_id: conv.tenantId,
+          tenant_id: tenantId,
           percent: cfg.percent,
           scope: "purchase",
           expires_at: new Date(trialUntil.getTime() + cfg.days * 86_400_000),
@@ -249,17 +263,17 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     const hasLogin = await db
       .selectFrom("tenant_user")
       .select("id")
-      .where("tenant_id", "=", conv.tenantId)
+      .where("tenant_id", "=", tenantId)
       .executeTakeFirst();
     if (!hasLogin) {
       try {
-        const lead = await db.selectFrom("tenant").select("display_name").where("id", "=", conv.tenantId).executeTakeFirst();
+        const lead = await db.selectFrom("tenant").select("display_name").where("id", "=", tenantId).executeTakeFirst();
         // ADR-0344: the approved TRIAL login letter — its end and the continuation coupon.
         const cp = couponId
           ? await db.selectFrom("offer").select(["percent", "expires_at"]).where("id", "=", couponId).executeTakeFirst()
           : undefined;
         const login = await issueAndSendTenantLogin(
-          conv.tenantId,
+          tenantId,
           lead?.display_name ?? "oldalam",
           trial.contact_email,
           { name: trial.contact_name, isPerson: true },
@@ -280,12 +294,23 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     // 8. Measurement on the mock_event spine (F SUB funnel).
     await recordTrialStart(p.id, input.viewId ?? null, trialId);
 
-    console.log(`[trial] INDULT · lead ${p.lead_id} · tenant ${conv.tenantId} · ${modules.length} modul · eddig ${new Date(trial.trial_until as unknown as string).toISOString()}`); // i18n-exempt: operátori napló
-    return finished(conv.tenantId, trial.trial_until, couponId, false, loginSentTo);
+    console.log(`[trial] ${prior ? "FOLYTATVA" : "INDULT"} · lead ${p.lead_id} · tenant ${tenantId} · ${modules.length} modul · eddig ${new Date(trial.trial_until as unknown as string).toISOString()}`); // i18n-exempt: operátori napló
+    return finished(tenantId, trial.trial_until, couponId, false, loginSentTo);
   } catch (e) {
     console.error(`[trial] ${trialId} hiba: ${(e as Error).message}`); // i18n-exempt: operátori napló
     return { ok: false, error: "provision_failed" };
   }
+}
+
+/** A tenant-bearing trial is finished when its site went live, it holds the continuation
+ *  coupon (unless the coupon setting is 0%) and the owner has a login. Anything short of
+ *  that is a start that crashed after step 4 — the next submit resumes it. */
+async function trialFinished(tenantId: string, couponOfferId: string | null): Promise<boolean> {
+  const site = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirst();
+  if (site?.status === "provisioned") return false;
+  if (!couponOfferId && (await getCouponConfig()).percent > 0) return false;
+  const login = await db.selectFrom("tenant_user").select("id").where("tenant_id", "=", tenantId).executeTakeFirst();
+  return !!login;
 }
 
 async function finished(
