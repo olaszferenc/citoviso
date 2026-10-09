@@ -1,4 +1,4 @@
-## ADR-XXXX — A próba ELŐTT árazott első rendelés a próba alatt nem fizethető; a próba a lead MINDEN tokenjének bevezető ajánlatát zárja
+## ADR-0351 — A próba ELŐTT árazott első rendelés a próba alatt nem fizethető; a próba a lead MINDEN tokenjének bevezető ajánlatát zárja
 
 **Dátum:** 2026-10-10 · **Kontextus:** IT A-04 / B2-REGIPAY, A-05, A-02 — az ingyenes próba (ADR-0342 ⑥: a próbát a bevezető kedvezmény HELYETT választja, nem adódik össze) három résen át mégis halmozott.
 
