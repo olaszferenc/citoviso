@@ -112,6 +112,8 @@ if (getInvoiceProvider().name !== "mock") {
 }
 
 const { overrideFreeTrialConfigInProcess } = await import("../src/trial/config.js");
+const { overrideCouponConfigInProcess } = await import("../src/payment/couponConfig.js");
+const { grantNewSubscriberCouponForOrder } = await import("../src/payment/offers.js");
 const { startTrial } = await import("../src/trial/start.js");
 const { lapseExpiredTrials, noticeSendDay, runTrialNotices } = await import("../src/trial/expiry.js");
 const { isSubscriptionFrozen } = await import("../src/payment/subscription.js");
@@ -173,7 +175,8 @@ try {
   check("a próba első napja előtti lépcső nem létezik", noticeSendDay("t3", bp("2026-10-14", "10:00"), bp("2026-10-16", "10:00")) === null);
 
   // fixture: a real trial, through the real door
-  overrideFreeTrialConfigInProcess({ enabled: true, days: 9, couponPercent: 30 });
+  overrideFreeTrialConfigInProcess({ enabled: true, days: 9 });
+  overrideCouponConfigInProcess({ percent: 30, days: 90 });
   await db.insertInto("market").values({ country: "HU", legal_status: "approved" } as never).onConflict((oc) => oc.column("country").doUpdateSet({ legal_status: "approved" } as never)).execute();
   const def = await db.insertInto("scraper_definition")
     .values({ label: `_trialexpiry_${stamp}`, country: "HU", region: "_test", industry: "accommodation", sources: JSON.stringify(["osm"]) })
@@ -447,6 +450,12 @@ try {
   check("a próba-kupon egyszer égett el (used_count 1)", couponAfter.used_count === 1, `${couponAfter.used_count}`);
   const coupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
   check("nem született második (üdvözlő) kupon", coupons.length === 1, `${coupons.length}`);
+  // ADR-XXXX: ONE coupon rule — the trial's coupon carries the shared setting's percent.
+  check("a kupon %-a a közös „Kupon” beállításból jön (30%)", cp.percent === 30, `${cp.percent}`);
+  // …and the paid path's welcome grant, run once more for this tenant, still mints nothing.
+  await grantNewSubscriberCouponForOrder(oi.id);
+  const coupons2 = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  check("egy tenant = egy kupon: a fizetéskori üdvözlő kupon újrafuttatva sem ver másodikat", coupons2.length === 1, `${coupons2.length}`);
   const entsAfter = await db.selectFrom("module_entitlement").select(["module", "active", "trial_grant"]).where("tenant_id", "=", tenantId).where("active", "=", true).execute();
   check("a fizetés után a megvett modulok élnek, próba-jel nélkül",
     ["gallery", "enquiry"].every((m) => entsAfter.some((e) => e.module === m && !e.trial_grant)) && entsAfter.every((e) => !e.trial_grant),

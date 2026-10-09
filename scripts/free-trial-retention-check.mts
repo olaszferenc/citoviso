@@ -89,6 +89,7 @@ const { config } = await import("../src/config.js");
 }
 
 const { overrideFreeTrialConfigInProcess } = await import("../src/trial/config.js");
+const { overrideCouponConfigInProcess } = await import("../src/payment/couponConfig.js");
 const { startTrial } = await import("../src/trial/start.js");
 const {
   PURGE_BLOCKERS,
@@ -137,7 +138,8 @@ try {
   check("késő figyelmeztetés (10-05): a törlés → 10-12, a 7 nap megmarad", effectivePurgeDay(bp("2026-07-10", "10:00"), "2026-10-05") === "2026-10-12");
 
   // fixture: a real trial, through the real door, then lapsed with a known end day
-  overrideFreeTrialConfigInProcess({ enabled: true, days: 9, couponPercent: 30 });
+  overrideFreeTrialConfigInProcess({ enabled: true, days: 9 });
+  overrideCouponConfigInProcess({ percent: 30, days: 90 });
   await db.insertInto("market").values({ country: "HU", legal_status: "approved" } as never).onConflict((oc) => oc.column("country").doUpdateSet({ legal_status: "approved" } as never)).execute();
   const def = await db.insertInto("scraper_definition")
     .values({ label: `_trialretention_${stamp}`, country: "HU", region: "_test", industry: "accommodation", sources: JSON.stringify(["osm"]) })

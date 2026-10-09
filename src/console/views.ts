@@ -89,14 +89,19 @@ import {
   ESCALATION_THRESHOLD_MAX,
   ESCALATION_THRESHOLD_MIN,
   OUTREACH_PERCENT_MAX,
-  NEW_SUBSCRIBER_COUPON_DAYS,
   OUTREACH_PERCENT_MIN,
   type EscalationConfig,
 } from "../payment/offers.js";
 import {
+  COUPON_CONFIG_DEFAULT,
+  COUPON_DAYS_MAX,
+  COUPON_DAYS_MIN,
+  COUPON_PERCENT_MAX,
+  COUPON_PERCENT_MIN,
+  type CouponConfig,
+} from "../payment/couponConfig.js";
+import {
   FREE_TRIAL_CONFIG_DEFAULT,
-  FREE_TRIAL_COUPON_MAX,
-  FREE_TRIAL_COUPON_MIN,
   FREE_TRIAL_DAYS_MAX,
   FREE_TRIAL_DAYS_MIN,
   type FreeTrialConfig,
@@ -829,6 +834,8 @@ export function pricingPage(
   } = { cfg: ESCALATION_CONFIG_DEFAULT, live: { count: 0, percents: [] } },
   /** ADR-0342: the GLOBAL free-trial parameters + the trials running now. */
   trial: { readonly cfg: FreeTrialConfig; readonly running: number } = { cfg: FREE_TRIAL_CONFIG_DEFAULT, running: 0 },
+  /** ADR-XXXX: the ONE coupon (first payment or trial start) + the unused coupons out now. */
+  coupon: { readonly cfg: CouponConfig; readonly live: number } = { cfg: COUPON_CONFIG_DEFAULT, live: 0 },
 ): string {
   const lang = consoleLang();
   // Currency unit for the selected region (module add-ons stay global HUF).
@@ -1037,6 +1044,7 @@ export function pricingPage(
 
         ${escalationSection(lang, escalation.cfg, escalation.live, snap, disabledSales)}
         ${freeTrialSection(lang, trial.cfg, trial.running)}
+        ${couponSection(lang, coupon.cfg, coupon.live)}
 
         <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek")}</h3>
         <div class="con-edit-grid">
@@ -1319,7 +1327,8 @@ const ESCALATION_SECTION_JS = `(function(){
 })();`;
 
 /**
- * ADR-0342 — „Ingyenes próba”: the card-less trial's switch, length and continuation coupon,
+ * ADR-0342 — „Ingyenes próba”: the card-less trial's switch and length (ADR-XXXX: the coupon
+ * moved to the ONE „Kupon” section below — couponSection),
  * the ADR-0285 „Lead-ajánlatok” pattern one to one. GLOBAL (every region page, saved with
  * whichever region's form is submitted). The bounds come from src/trial/config.ts — the
  * server re-validates on POST and refuses the WHOLE save on an invalid value; the script
@@ -1334,25 +1343,18 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
     dNan: T(lang, "Egész nap kell ({min}–{max}).", { min: s(FREE_TRIAL_DAYS_MIN), max: s(FREE_TRIAL_DAYS_MAX) }),
     dLow: T(lang, "Legalább {min} nap.", { min: s(FREE_TRIAL_DAYS_MIN) }),
     dHigh: T(lang, "Legfeljebb {max} nap.", { max: s(FREE_TRIAL_DAYS_MAX) }),
-    cEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}; a 0 azt jelenti, hogy nincs kupon).", { min: s(FREE_TRIAL_COUPON_MIN), max: s(FREE_TRIAL_COUPON_MAX) }),
-    cNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: s(FREE_TRIAL_COUPON_MIN), max: s(FREE_TRIAL_COUPON_MAX) }),
-    cLow: T(lang, "Nem lehet negatív: a 0 azt jelenti, hogy nincs kupon."),
-    cHigh: T(lang, "Legfeljebb {max}%: a 100% ingyenes első díj lenne, az már nem kupon.", { max: s(FREE_TRIAL_COUPON_MAX) }),
     on: T(lang, "Így fut: aki ezután próbát indít, {d} napig használja a saját oldalát minden modullal, kártya és fizetés nélkül.", { d: "{d}" }),
-    onCoupon: T(lang, "Mellé egy −{c}% kupont kap az első vásárlására, ami a próba vége után még {k} napig érvényes.", { c: "{c}", k: s(NEW_SUBSCRIBER_COUPON_DAYS) }),
-    onNoCoupon: T(lang, "Kupont nem kap."),
+    onCoupon: T(lang, "A kupont a lenti „Kupon” szekció adja, ugyanazt, mint a közvetlen vevőnek."),
     off: T(lang, "Kikapcsolva: új próba nem indítható. A már futó próbák a saját határidejükig futnak."),
     bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
     sumOne: T(lang, "A mentés addig nem megy, amíg az „Ingyenes próba” jelölt mezője hibás."),
     sumMany: T(lang, "A mentés addig nem megy, amíg az „Ingyenes próba” {k} jelölt mezője hibás.", { k: "{k}" }),
     runNone: T(lang, "Most nem fut próba."),
-    run: T(lang, "Most {n} próba fut. Mindegyik megtartja a saját hosszát és kuponját — a változás csak az ezután indított próbákra hat.", { n: "{n}" }),
+    run: T(lang, "Most {n} próba fut. Mindegyik megtartja a saját hosszát — a változás csak az ezután indított próbákra hat.", { n: "{n}" }),
   };
   const data = {
     dMin: FREE_TRIAL_DAYS_MIN,
     dMax: FREE_TRIAL_DAYS_MAX,
-    cMin: FREE_TRIAL_COUPON_MIN,
-    cMax: FREE_TRIAL_COUPON_MAX,
     saved: cfg,
     running,
     msgs,
@@ -1379,7 +1381,6 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
           <div class="pr-esc__gated">
             <div class="con-edit-grid" style="margin-top:10px">
               ${field("trial_d", "trial_days", T(lang, "A próba hossza"), cfg.days, T(lang, "nap"))}
-              ${field("trial_c", "trial_coupon", T(lang, "Kupon az első vásárlásra"), cfg.couponPercent, "%")}
             </div>
           </div>
           <div class="pr-esc__preview" id="trial_preview"></div>
@@ -1397,7 +1398,7 @@ const FREE_TRIAL_SECTION_JS = `(function(){
   var D = JSON.parse(document.getElementById("trial_data").textContent), M = D.msgs, S = D.saved;
   var sec = document.getElementById("pr-trial"), form = sec.closest("form");
   var on = document.getElementById("trial_on");
-  var IN = {d: document.getElementById("trial_d"), c: document.getElementById("trial_c")};
+  var IN = {d: document.getElementById("trial_d")};
   var prev = document.getElementById("trial_preview"), live = document.getElementById("trial_live");
   var btn = form.querySelector("button[type=submit]"), sum = null;
   if (btn) { sum = document.createElement("span"); sum.className = "pr-esc__sum"; sum.setAttribute("role", "alert"); btn.parentNode.appendChild(sum); }
@@ -1408,13 +1409,12 @@ const FREE_TRIAL_SECTION_JS = `(function(){
   function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (r.v > hi) return m[3]; return ""; }
   function render(){
     var en = on.checked;
-    IN.d.disabled = !en; IN.c.disabled = !en; sec.classList.toggle("is-off", !en);
-    var r = {d: num(IN.d.value), c: num(IN.c.value)}, e = {};
+    IN.d.disabled = !en; sec.classList.toggle("is-off", !en);
+    var r = {d: num(IN.d.value)}, e = {};
     // Disabled fields are not submitted: the stored numbers stand for them, so only an
     // enabled section can be wrong.
     if (en) {
       e.d = chk(r.d, D.dMin, D.dMax, [M.dEmpty, M.dNan, M.dLow, M.dHigh]);
-      e.c = chk(r.c, D.cMin, D.cMax, [M.cEmpty, M.cNan, M.cLow, M.cHigh]);
     }
     var bad = 0;
     Object.keys(IN).forEach(function(k){
@@ -1428,12 +1428,115 @@ const FREE_TRIAL_SECTION_JS = `(function(){
     else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
     else {
       prev.className = "pr-esc__preview";
-      prev.textContent = fill(M.on, {d: r.d.v}) + " " + (r.c.v > 0 ? fill(M.onCoupon, {c: r.c.v}) : M.onNoCoupon);
+      prev.textContent = fill(M.on, {d: r.d.v}) + " " + M.onCoupon;
     }
     live.textContent = D.running > 0 ? fill(M.run, {n: D.running}) : M.runNone;
   }
   function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
   on.addEventListener("change", render);
+  Object.keys(IN).forEach(function(k){
+    IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
+    IN[k].addEventListener("blur", function(){ tidy(IN[k]); });
+  });
+  render();
+  }
+})();`;
+
+/**
+ * ADR-XXXX — „Kupon”: the ONE coupon everyone with admin access gets (owner 2026-10-09) —
+ * a direct buyer at the first payment, a trial owner at the trial start; used once, on
+ * anything. The ADR-0285 field pattern without a switch (0% = no coupon). GLOBAL like the
+ * two sections above. A minted coupon keeps its percent and expiry — the notice says so,
+ * with the count of unused ones out now.
+ */
+function couponSection(lang: ReturnType<typeof consoleLang>, cfg: CouponConfig, live: number): string {
+  const s = String;
+  const msgs = {
+    pEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}; a 0 azt jelenti, hogy nincs kupon).", { min: s(COUPON_PERCENT_MIN), max: s(COUPON_PERCENT_MAX) }),
+    pNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: s(COUPON_PERCENT_MIN), max: s(COUPON_PERCENT_MAX) }),
+    pLow: T(lang, "Nem lehet negatív: a 0 azt jelenti, hogy nincs kupon."),
+    pHigh: T(lang, "Legfeljebb {max}%: a 100% ingyenes első díj lenne, az már nem kupon.", { max: s(COUPON_PERCENT_MAX) }),
+    dEmpty: T(lang, "Adj meg egy napszámot ({min}–{max}).", { min: s(COUPON_DAYS_MIN), max: s(COUPON_DAYS_MAX) }),
+    dNan: T(lang, "Egész nap kell ({min}–{max}).", { min: s(COUPON_DAYS_MIN), max: s(COUPON_DAYS_MAX) }),
+    dLow: T(lang, "Legalább {min} nap.", { min: s(COUPON_DAYS_MIN) }),
+    dHigh: T(lang, "Legfeljebb {max} nap.", { max: s(COUPON_DAYS_MAX) }),
+    on: T(lang, "Így fut: aki ezután admin-hozzáférést kap — az első fizetéssel vagy egy ingyenes próba indulásával —, egy −{p}% kupont kap. Egyszer használható, bármire: a próba folytatására vagy egy modulra, amelyik előbb jön. {d} napig érvényes: a fizetéstől, próbánál a próba utolsó napjától.", { p: "{p}", d: "{d}" }),
+    none: T(lang, "0%: aki ezután admin-hozzáférést kap, kupont nem kap — sem az első fizetéskor, sem a próba indulásakor."),
+    bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
+    sumOne: T(lang, "A mentés addig nem megy, amíg a „Kupon” jelölt mezője hibás."),
+    sumMany: T(lang, "A mentés addig nem megy, amíg a „Kupon” {k} jelölt mezője hibás.", { k: "{k}" }),
+    liveNone: T(lang, "Most nincs kint fel nem használt kupon."),
+    live: T(lang, "Most {n} fel nem használt kupon van kint. Mindegyik megtartja a saját kedvezményét és lejáratát — a változás csak az ezután kiadott kuponokra hat.", { n: "{n}" }),
+  };
+  const data = {
+    pMin: COUPON_PERCENT_MIN,
+    pMax: COUPON_PERCENT_MAX,
+    dMin: COUPON_DAYS_MIN,
+    dMax: COUPON_DAYS_MAX,
+    saved: cfg,
+    live,
+    msgs,
+  };
+  const field = (id: string, name: string, label: string, value: number, unit: string): string =>
+    `<div class="pr-field" id="f_${id}">
+      <label class="pr-field__l" for="${id}">${esc(label)}</label>
+      <div class="pr-input">
+        <input id="${id}" name="${name}" inputmode="numeric" value="${esc(value)}">
+        <span class="pr-input__u">${esc(unit)}</span>
+      </div>
+      <div class="pr-ferr" id="e_${id}" role="alert"></div>
+    </div>`;
+  return `
+        <section class="pr-esc" id="pr-coupon">
+          <h3 style="margin-top:22px">${T(lang, "Kupon")}</h3>
+          <p class="mut small" style="margin:2px 0 10px">${T(lang, "Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő az első fizetéskor, a próbázó a próba indulásakor. Fiókonként egy van, és egyszer használható.")}
+            <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
+          <input type="hidden" name="coupon_present" value="1">
+          <div class="con-edit-grid">
+            ${field("cpn_p", "coupon_percent", T(lang, "Kedvezmény"), cfg.percent, "%")}
+            ${field("cpn_d", "coupon_days", T(lang, "Érvényesség"), cfg.days, T(lang, "nap"))}
+          </div>
+          <div class="pr-esc__preview" id="coupon_preview"></div>
+          <div class="pr-esc__live" id="coupon_live"></div>
+          <script type="application/json" id="coupon_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>
+          <script>${COUPON_SECTION_JS}</script>
+        </section>`;
+}
+
+/** Live mirror of couponConfigErrors() + the preview sentence (the server stays the authority). */
+const COUPON_SECTION_JS = `(function(){
+  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); return; }
+  init();
+  function init(){
+  var D = JSON.parse(document.getElementById("coupon_data").textContent), M = D.msgs;
+  var sec = document.getElementById("pr-coupon"), form = sec.closest("form");
+  var IN = {p: document.getElementById("cpn_p"), d: document.getElementById("cpn_d")};
+  var prev = document.getElementById("coupon_preview"), live = document.getElementById("coupon_live");
+  var btn = form.querySelector("button[type=submit]"), sum = null;
+  if (btn) { sum = document.createElement("span"); sum.className = "pr-esc__sum"; sum.setAttribute("role", "alert"); btn.parentNode.appendChild(sum); }
+  function fill(t, v){ return t.replace(/\\{(\\w+)\\}/g, function(_, k){ return v[k] != null ? v[k] : "{" + k + "}"; }); }
+  function norm(v){ return String(v).trim().replace(/\\s+/g, "").replace(/%$/, "").replace(",", "."); }
+  function num(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\\d+(\\.\\d+)?$/.test(s)) return {err:"nan"};
+    var x = Number(s); if (x !== Math.floor(x)) return {err:"nan"}; return {v:x}; }
+  function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (r.v > hi) return m[3]; return ""; }
+  function render(){
+    var r = {p: num(IN.p.value), d: num(IN.d.value)}, e = {};
+    e.p = chk(r.p, D.pMin, D.pMax, [M.pEmpty, M.pNan, M.pLow, M.pHigh]);
+    e.d = chk(r.d, D.dMin, D.dMax, [M.dEmpty, M.dNan, M.dLow, M.dHigh]);
+    var bad = 0;
+    Object.keys(IN).forEach(function(k){
+      var id = IN[k].id; document.getElementById("f_" + id).classList.toggle("err", !!e[k]);
+      document.getElementById("e_" + id).textContent = e[k] || ""; if (e[k]) bad++;
+    });
+    form.dataset.errCoupon = String(bad);
+    if (btn) btn.disabled = Object.keys(form.dataset).some(function(k){ return /^err/.test(k) && form.dataset[k] !== "0"; });
+    if (sum) sum.textContent = bad === 1 ? M.sumOne : bad > 1 ? fill(M.sumMany, {k: bad}) : "";
+    if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
+    else if (r.p.v === 0) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.none; }
+    else { prev.className = "pr-esc__preview"; prev.textContent = fill(M.on, {p: r.p.v, d: r.d.v}); }
+    live.textContent = D.live > 0 ? fill(M.live, {n: D.live}) : M.liveNone;
+  }
+  function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
   Object.keys(IN).forEach(function(k){
     IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
     IN[k].addEventListener("blur", function(){ tidy(IN[k]); });

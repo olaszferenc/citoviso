@@ -2,6 +2,7 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
+import { couponConfigErrors, couponFromForm, getCouponConfig, liveTenantCoupons, setCouponConfig } from "../payment/couponConfig.js";
 import {
   freeTrialConfigErrors,
   freeTrialFromForm,
@@ -1801,6 +1802,9 @@ async function handle(
       }, {
         cfg: await getFreeTrialConfig(),
         running: await runningFreeTrials(),
+      }, {
+        cfg: await getCouponConfig(),
+        live: await liveTenantCoupons(),
       }),
     );
   }
@@ -1849,8 +1853,21 @@ async function handle(
         )}`,
       );
     }
+    // ADR-XXXX: the ONE coupon section, the same rule. A trial save from a tab without the
+    // section still writes the EFFECTIVE coupon first: setFreeTrialConfig drops the legacy
+    // couponPercent the getter migrates from (ADR-0342), and it must not vanish silently.
+    const coupon = couponFromForm(form, await getCouponConfig()) ?? (trial ? await getCouponConfig() : null);
+    if (coupon && couponConfigErrors(coupon).length) {
+      return redirect(
+        res,
+        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+          "hiba:Nem mentettem: a Kupon egyik mezője a megengedett tartományon kívül esik.",
+        )}`,
+      );
+    }
     try {
       if (escalation) await setEscalationConfig(escalation);
+      if (coupon) await setCouponConfig(coupon);
       if (trial) await setFreeTrialConfig(trial);
       await savePricing({
         region: snap.region,

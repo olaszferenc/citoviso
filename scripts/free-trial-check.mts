@@ -36,6 +36,7 @@ import {
   overrideFreeTrialConfigInProcess,
   parseFreeTrialSetting,
 } from "../src/trial/config.js";
+import { overrideCouponConfigInProcess } from "../src/payment/couponConfig.js";
 import { startTrial, trialModuleIds } from "../src/trial/start.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
@@ -96,11 +97,12 @@ try {
   const d = FREE_TRIAL_CONFIG_DEFAULT;
   check("üres objektum → alapértékek", JSON.stringify(parseFreeTrialSetting("{}")) === JSON.stringify(d));
   check("days 0 → null (érvénytelen)", parseFreeTrialSetting('{"days":0}') === null);
-  check("couponPercent 2,5 → null", parseFreeTrialSetting('{"couponPercent":2.5}') === null);
+  check("a régi couponPercent mezőt figyelmen kívül hagyja (ADR-XXXX: a kupon a közös beállításé)", JSON.stringify(parseFreeTrialSetting('{"couponPercent":2.5}')) === JSON.stringify(d));
   check("sérült JSON → null", parseFreeTrialSetting("{nem json") === null);
   check("enabled:false megmarad", parseFreeTrialSetting('{"enabled":false}')?.enabled === false);
 
-  overrideFreeTrialConfigInProcess({ enabled: true, days: 9, couponPercent: 30 });
+  overrideFreeTrialConfigInProcess({ enabled: true, days: 9 });
+  overrideCouponConfigInProcess({ percent: 30, days: 40 });
   const def = await db
     .insertInto("scraper_definition")
     .values({ label: `_trialcheck_${stamp}`, country: "HU", region: "_test", industry: "accommodation", sources: JSON.stringify(["osm"]) })
@@ -174,7 +176,10 @@ try {
   console.log("⑤ kupon");
   const coupons = await db.selectFrom("offer").select(["percent", "scope", "expires_at"]).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
   check("pontosan EGY kupon", coupons.length === 1, `${coupons.length}`);
-  check("kupon: a beállított 30%, scope=purchase, lejárattal", coupons[0]?.percent === 30 && coupons[0]?.scope === "purchase" && !!coupons[0]?.expires_at);
+  check("kupon: a KÖZÖS beállítás 30%-a, scope=purchase, lejárattal", coupons[0]?.percent === 30 && coupons[0]?.scope === "purchase" && !!coupons[0]?.expires_at);
+  const tu = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
+  const wantExp = new Date(tu.trial_until as unknown as string).getTime() + 40 * 86_400_000;
+  check("kupon lejárata = a próba vége + a közös beállítás 40 napja", Math.abs(new Date(coupons[0]?.expires_at as unknown as string).getTime() - wantExp) < 1000);
   const intro = await db.selectFrom("offer").select("expires_at").where("prospect_id", "=", a.prospectId).where("kind", "=", "outreach").executeTakeFirst();
   check("az outreach-ajánlat lezárva", !!intro?.expires_at && new Date(intro.expires_at as unknown as string).getTime() <= Date.now());
 
@@ -194,6 +199,7 @@ try {
   check("…és nem írt próba-sort", bTrials.length === 0);
 } finally {
   overrideFreeTrialConfigInProcess(null);
+  overrideCouponConfigInProcess(null);
   for (const t of tenants) {
     await db.deleteFrom("offer").where("tenant_id", "=", t).execute();
     await db.deleteFrom("tenant_user").where("tenant_id", "=", t).execute();

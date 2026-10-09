@@ -111,7 +111,7 @@ legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer j�
   időből számol. Ha az ajánlat addigra lejár, nem megy ki emlékeztető. A felület ezt is kiírja, ha a késleltetést
   átállítod.
 
-## Ingyenes próba — hossz és kupon
+## Ingyenes próba — hossz
 
 Az **„Ingyenes próba”** szekció a „Lead-ajánlatok” alatt, az „Egyedi domain — feltételek” előtt van. A kiküldött
 tervet megnyitó lead a kedvezmény helyett kártya nélkül kipróbálhatja a saját oldalát: minden modul aktív, az
@@ -119,25 +119,45 @@ oldal a citoviso.com aldomainjén él, a próbáért nem fizet, és számla sem 
 piacra érvényes”**: bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése menti.
 
 1. Az **„Ingyenes próba indítható”** kapcsolóval kapcsolod be vagy ki. Kikapcsolva új próba nem indítható (aki
-   mégis elküldi a próba-kérést, elutasítást kap), a két mező tiltott, a legutóbb mentett számok megmaradnak,
-   visszakapcsoláskor nem kell újra beírnod őket. A már futó próbák a saját határidejükig futnak.
+   mégis elküldi a próba-kérést, elutasítást kap), a mező tiltott, a legutóbb mentett szám megmarad,
+   visszakapcsoláskor nem kell újra beírnod. A már futó próbák a saját határidejükig futnak.
 2. **„A próba hossza”**: egész nap 1 és 90 között. Alapból 14 nap.
-3. **„Kupon az első vásárlásra”**: egész százalék 0 és 90 között. Alapból 25%. A próba indulásakor a lead egy
-   ekkora kupont kap az első vásárlására, ami a próba vége után még 90 napig érvényes. A **0** azt jelenti, hogy
-   nincs kupon; a próba ettől még fut. A kupon a vevőnél „Üdvözlő kedvezmény” néven jelenik meg, és a kedvezmények
-   itt sem adódnak össze, mindig a legnagyobb érvényes.
+
+A próbázó kuponját itt nem állítod: ugyanazt kapja, mint a közvetlen vevő, a lenti **„Kupon”** szekció szerint.
 
 A mezők alatti keretes mondat előre megmutatja, mit kap az, aki ezután próbát indít. Alatta az áll, hány próba fut
 most („Most 2 próba fut.” vagy „Most nem fut próba.”).
 
-**Mi történik a már futó próbákkal?** Semmi: a próba hossza az indulásakor rögzül, a kupon az indulásakor születik.
-A változás csak az ezután indított próbákra hat. A képernyő ezt ki is írja a futó próbák száma mellett.
+**Mi történik a már futó próbákkal?** Semmi: a próba hossza az indulásakor rögzül. A változás csak az ezután
+indított próbákra hat. A képernyő ezt ki is írja a futó próbák száma mellett.
 
 **Hibák és mentés.** Ha egy mező üres, nem egész szám, vagy a tartományon kívül esik, a mező pirosan keretezett,
 alatta ott az ok, és az **„Árazás mentése”** gomb nem nyomható meg. A gomb mellett ez áll: „A mentés addig nem megy,
 amíg az „Ingyenes próba” jelölt mezője hibás.” Ha a szerver mégis hibás értéket kap, **semmit nem ment**, az árakat
 sem, és a lap tetején ez jelenik meg: „Nem mentettem: az Ingyenes próba egyik mezője a megengedett tartományon kívül
 esik.” Egy régi, nyitva hagyott fül, amin még nem volt ilyen szekció, mentéskor nem írja át a próba beállítását.
+
+## Kupon — egy kupon mindenkinek
+
+A **„Kupon”** szekció az „Ingyenes próba” alatt van. Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő
+az első fizetésekor, a próbázó a próba indulásakor. Fiókonként egy kupon van, és egyszer használható, bármire:
+a próbázónál a próba folytatására vagy egy modulra, amelyik előbb jön. Második kupon nem jár: aki próbával kapta,
+a folytatás fizetésekor már nem kap újat. Ez a beállítás is **„minden piacra érvényes”**.
+
+1. **„Kedvezmény”**: egész százalék 0 és 90 között. Alapból 25%. A **0** azt jelenti, hogy senki nem kap kupont;
+   a próba ettől még fut. A kupon a vevőnél „Üdvözlő kedvezmény” néven jelenik meg, és a kedvezmények nem adódnak
+   össze, mindig a legnagyobb érvényes.
+2. **„Érvényesség”**: egész nap 1 és 365 között. Alapból 90 nap. A közvetlen vevőnél a fizetés napjától számít,
+   a próbázónál a próba utolsó napjától.
+
+A mezők alatti keretes mondat előre megmutatja, mit kap, aki ezután admin-hozzáférést kap. Alatta az áll, hány fel
+nem használt kupon van most kint. A már kiadott kupon megtartja a saját kedvezményét és lejáratát: a változás csak
+az ezután kiadott kuponokra hat.
+
+**Hibák és mentés.** Ugyanúgy, mint a fenti szekcióknál: hibás mezőnél az **„Árazás mentése”** gomb nem nyomható meg,
+mellette ez áll: „A mentés addig nem megy, amíg a „Kupon” jelölt mezője hibás.” Ha a szerver mégis hibás értéket
+kap, semmit nem ment, és a lap tetején ez jelenik meg: „Nem mentettem: a Kupon egyik mezője a megengedett
+tartományon kívül esik.”
 
 ## Modul-felárak és értékesítés — az eladhatóság kapcsolója
 

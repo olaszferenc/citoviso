@@ -10,6 +10,7 @@
 - [2026-10-09_proba_belepo_pirula_par_kod.md](2026-10-09_proba_belepo_pirula_par_kod.md) — 2026-10-09 — Ingyenes próba, SUB D: a „{n} nap ingyen” pirula-pár + próba-űrlap (KÓD)
 - [2026-10-09_proba_B_pricing_mezok.md](2026-10-09_proba_B_pricing_mezok.md) — 2026-10-09 — Ingyenes próba SUB B: a /pricing „Ingyenes próba” szekciója
 - [2026-10-09_hol_az_ingyenes_proba_session.md](2026-10-09_hol_az_ingyenes_proba_session.md) — 2026-10-09 — „Hol a próba-session?” — a koordinátor megtalálva, SUB-jel levéve (citcc631f6f)
+- [2026-10-09_egy-kupon-mindenkinek.md](2026-10-09_egy-kupon-mindenkinek.md) — 2026-10-09 — Egy kupon mindenkinek (SUB G, ADR-XXXX)
 - [2026-10-09-ingyenes-proba-C3-megorzes-aszf.md](2026-10-09-ingyenes-proba-C3-megorzes-aszf.md) — 2026-10-09 — Ingyenes próba C3: 90 napos adatmegőrzés + törlés (száraz) + ÁSZF 1.4 (ADR-0345)
 - [2026-10-09-ingyenes-proba-C2c-adminsav-lablec.md](2026-10-09-ingyenes-proba-C2c-adminsav-lablec.md) — 2026-10-09 — Ingyenes próba C2c: admin próba-sáv (A) + próba-lábléc a többi platform-levélen
 - [2026-10-09-ingyenes-proba-C2b-sms-eles.md](2026-10-09-ingyenes-proba-C2b-sms-eles.md) — 2026-10-09 — Ingyenes próba C2b: a T−3/T−1 SMS élesítve (ékezet nélkül, linkkel)

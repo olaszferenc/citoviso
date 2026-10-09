@@ -17,6 +17,7 @@
 import { sql } from "kysely";
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
+import { getCouponConfig } from "./couponConfig.js";
 import { couponRule } from "./couponRule.js";
 import { T } from "../i18n/mail.js";
 
@@ -36,8 +37,6 @@ export const ESCALATION_VISIT_THRESHOLD = 3;
 export const ESCALATION_OFFER_HOURS = 72;
 /** §4b: the follow-up mail goes at the earliest this long after the on-page offer appeared. */
 export const ESCALATION_FOLLOWUP_HOURS = 24;
-export const NEW_SUBSCRIBER_COUPON_PERCENT = 25;
-export const NEW_SUBSCRIBER_COUPON_DAYS = 90;
 
 // ── ADR-0285: the escalation offer's operator-set parameters (frozen plan:
 // assets/design-refs/console/escalation-offer-admin/). GLOBAL, not per pricing
@@ -552,6 +551,9 @@ export async function ensureEscalationOffer(
  * §6: the welcome coupon, granted when the FIRST paid order converts the lead.
  * Resolves the tenant both ways money can point at one (order.tenant_id or
  * prospect → lead → tenant); idempotent by the partial unique index.
+ * ADR-XXXX: percent and validity from the ONE coupon setting (getCouponConfig) — the
+ * same numbers a trial start mints with; a trial owner already holds the tenant's one
+ * coupon, so this no-ops for them (used or not). 0% = no coupon.
  */
 export async function grantNewSubscriberCouponForOrder(
   orderIntentId: string,
@@ -573,14 +575,16 @@ export async function grantNewSubscriberCouponForOrder(
     tenantId = t?.id ?? null;
   }
   if (!tenantId) return;
+  const cfg = await getCouponConfig();
+  if (cfg.percent <= 0) return;
   const inserted = await db
     .insertInto("offer")
     .values({
       kind: "coupon",
       tenant_id: tenantId,
-      percent: NEW_SUBSCRIBER_COUPON_PERCENT,
+      percent: cfg.percent,
       scope: "purchase",
-      expires_at: new Date(Date.now() + NEW_SUBSCRIBER_COUPON_DAYS * 86_400_000),
+      expires_at: new Date(Date.now() + cfg.days * 86_400_000),
       note: "ADR-0088 §6: new-subscriber welcome coupon (auto)",
     })
     .onConflict((oc) => oc.doNothing())
@@ -588,7 +592,7 @@ export async function grantNewSubscriberCouponForOrder(
     .executeTakeFirst();
   if (inserted) {
     console.log(
-      `[offer] üdvözlő kupon (−${NEW_SUBSCRIBER_COUPON_PERCENT}%, ${NEW_SUBSCRIBER_COUPON_DAYS} nap) · tenant ${tenantId}`,
+      `[offer] üdvözlő kupon (−${cfg.percent}%, ${cfg.days} nap) · tenant ${tenantId}`,
     );
   }
 }

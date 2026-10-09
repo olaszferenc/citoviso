@@ -25,7 +25,7 @@ import { isValidEmail } from "../email/leadEmails.js";
 import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { NEW_SUBSCRIBER_COUPON_DAYS } from "../payment/offers.js";
+import { getCouponConfig } from "../payment/couponConfig.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
@@ -221,18 +221,20 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
       .whereRef("used_count", "<", "max_uses")
       .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
       .execute();
-    const cfg = await getFreeTrialConfig();
+    // ADR-XXXX: the ONE coupon setting — the same percent and validity a direct buyer gets
+    //    at the first payment; for the trial owner it is valid from the trial's last day.
+    const cfg = await getCouponConfig();
     let couponId = trial.coupon_offer_id;
-    if (!couponId && cfg.couponPercent > 0) {
+    if (!couponId && cfg.percent > 0) {
       const trialUntil = new Date(trial.trial_until as unknown as string);
       const c = await db
         .insertInto("offer")
         .values({
           kind: "coupon",
           tenant_id: conv.tenantId,
-          percent: cfg.couponPercent,
+          percent: cfg.percent,
           scope: "purchase",
-          expires_at: new Date(trialUntil.getTime() + NEW_SUBSCRIBER_COUPON_DAYS * 86_400_000),
+          expires_at: new Date(trialUntil.getTime() + cfg.days * 86_400_000),
           note: `ADR-0342: ingyenes próba folytatás-kupon (${trialId})`,
         })
         .onConflict((oc) => oc.doNothing())

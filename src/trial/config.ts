@@ -1,6 +1,9 @@
 // ADR-0342 — the free trial's operator-set parameters (one app_setting row, JSON;
 // the same pattern as ADR-0285 `escalation_offer`, so no migration). Edited in the
 // /pricing „Ingyenes próba” section; this getter is the ONLY place minting code reads from.
+// ADR-XXXX: the coupon is NOT a trial parameter any more — one coupon setting for everyone
+// who gets admin access (src/payment/couponConfig.ts). A stored row's old `couponPercent`
+// is ignored here (couponConfig reads it once, for migration) and dropped on the next save.
 
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
@@ -12,31 +15,19 @@ export interface FreeTrialConfig {
   readonly enabled: boolean;
   /** Trial length in days. */
   readonly days: number;
-  /** The continuation coupon's percent (offer kind='coupon', scope='purchase'). */
-  readonly couponPercent: number;
 }
 
-/** Owner decision 2026-10-09: 14 days, 25%. */
-export const FREE_TRIAL_CONFIG_DEFAULT: FreeTrialConfig = { enabled: true, days: 14, couponPercent: 25 };
+/** Owner decision 2026-10-09: 14 days. */
+export const FREE_TRIAL_CONFIG_DEFAULT: FreeTrialConfig = { enabled: true, days: 14 };
 
 export const FREE_TRIAL_DAYS_MIN = 1;
 export const FREE_TRIAL_DAYS_MAX = 90;
-export const FREE_TRIAL_COUPON_MIN = 0;
-export const FREE_TRIAL_COUPON_MAX = 90;
+export type FreeTrialFieldError = "days";
 
-export type FreeTrialFieldError = "days" | "couponPercent";
-
-/** Whole-number bounds; 0% coupon = no coupon is minted (the trial still runs). */
-export function freeTrialConfigErrors(c: { days: number; couponPercent: number }): FreeTrialFieldError[] {
+/** Whole-number bounds. */
+export function freeTrialConfigErrors(c: { days: number }): FreeTrialFieldError[] {
   const errs: FreeTrialFieldError[] = [];
   if (!Number.isInteger(c.days) || c.days < FREE_TRIAL_DAYS_MIN || c.days > FREE_TRIAL_DAYS_MAX) errs.push("days");
-  if (
-    !Number.isInteger(c.couponPercent) ||
-    c.couponPercent < FREE_TRIAL_COUPON_MIN ||
-    c.couponPercent > FREE_TRIAL_COUPON_MAX
-  ) {
-    errs.push("couponPercent");
-  }
   return errs;
 }
 
@@ -53,7 +44,6 @@ export function parseFreeTrialSetting(raw: string): FreeTrialConfig | null {
     const c: FreeTrialConfig = {
       enabled: v.enabled !== false,
       days: v.days === undefined ? d.days : Number(v.days),
-      couponPercent: v.couponPercent === undefined ? d.couponPercent : Number(v.couponPercent),
     };
     return freeTrialConfigErrors(c).length === 0 ? c : null;
   } catch {
@@ -84,7 +74,7 @@ export async function setFreeTrialConfig(c: FreeTrialConfig): Promise<void> {
   if (errs.length) throw new Error(`invalid free_trial config: ${errs.join(", ")}`);
   await setSetting(
     FREE_TRIAL_SETTING_KEY,
-    JSON.stringify({ enabled: c.enabled, days: c.days, couponPercent: c.couponPercent }),
+    JSON.stringify({ enabled: c.enabled, days: c.days }),
   );
 }
 
@@ -112,11 +102,10 @@ export function freeTrialFromForm(
   return {
     enabled: form.get("trial_on") === "on",
     days: intOf("trial_days", current.days),
-    couponPercent: intOf("trial_coupon", current.couponPercent),
   };
 }
 
-/** Trials running now (for the "running ones keep their length and coupon" notice). */
+/** Trials running now (for the "running ones keep their length" notice). */
 export async function runningFreeTrials(now = new Date()): Promise<number> {
   const r = await db
     .selectFrom("free_trial")
