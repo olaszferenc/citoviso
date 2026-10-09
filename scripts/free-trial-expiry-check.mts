@@ -137,6 +137,7 @@ const { buildCredentialsEmail, buildPasswordResetEmail } = await import("../src/
 const { footerReasonForTenant } = await import("../src/trial/footer.js");
 const { trialAdminState, TRIAL_WARN_DAYS } = await import("../src/trial/admin.js");
 const { adminDashboard } = await import("../src/server/adminViews.js");
+const { getTenantModules, paidButEmptyModules } = await import("../src/tenant/modules.js");
 const { effectivePurgeDay, purgeDay } = await import("../src/trial/retention.js");
 const { formatDayOn } = await import("../src/text/day.js");
 const { readFileSync } = await import("node:fs");
@@ -341,6 +342,29 @@ try {
   // --self-test: the frame lost its wiring (no trial handed over) → the strip is gone
   const stripTabs = ADMIN_TABS.filter((tab) => renderAdmin(tenantId, tab, SELF_TEST ? null : calm).includes("data-trial-strip"));
   check(`a sáv MINDEN fülön ott van (${ADMIN_TABS.length} fül)`, stripTabs.length === ADMIN_TABS.length, `${stripTabs.length}/${ADMIN_TABS.length}`);
+  // ②c2 Elek 2026-10-09 (lelet 1/6/13): a RUNNING trial has paid nothing — the
+  // Áttekintés must not say „kifizette" / „számlázott", the Modulok tab not „megvett".
+  // The real module view of the real trial tenant, every content field empty.
+  // --self-test: the trial is not handed over → the purchase wording comes back → red.
+  const trialMv = await getTenantModules(tenantId);
+  const trialOpts = (tab: string) => ({
+    siteSlug: "trialexpiry", tab, trial: SELF_TEST ? null : calm, now: new Date(),
+    modules: trialMv, paidEmpty: paidButEmptyModules(trialMv, new Set()),
+  });
+  const ovHtml = adminDashboard(
+    { tenantId, username: "trialexpiry@example.invalid", displayName: "Teszt Elek" } as never,
+    { lang: "hu", status: "live", name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
+    trialOpts("attekintes") as never,
+  );
+  const modHtml = adminDashboard(
+    { tenantId, username: "trialexpiry@example.invalid", displayName: "Teszt Elek" } as never,
+    { lang: "hu", status: "live", name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
+    trialOpts("modulok") as never,
+  );
+  check("próba-Áttekintés: van üres-modul sor, de nincs „kifizette” / „számlázott”",
+    ovHtml.includes("a próbában be van kapcsolva, de üres") && !ovHtml.includes("kifizette") && !ovHtml.includes("számlázott"));
+  check("próba-Modulok: nincs „megvett”, a sor-díj a folytatásé",
+    !modHtml.includes("modult megvett") && modHtml.includes("Az ingyenes próbában minden modul be van kapcsolva"));
   const calmHtml = renderAdmin(tenantId, "szovegek", calm);
   check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
   check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));

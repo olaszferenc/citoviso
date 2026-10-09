@@ -1542,6 +1542,12 @@ export function modulesSection(
    * silently drop it.
    */
   multiUnit: MultiUnitState = "unknown",
+  /**
+   * A RUNNING free trial (Elek 2026-10-09, lelet 6/13): every module is switched on
+   * and nothing is owed. Without it the tab spoke the purchase language — „Minden
+   * elérhető modult megvett", and a count that did not match the rows below.
+   */
+  trialActive = false,
 ): string {
   const huf = hufAmount;
   // The anniversary the owner reads a dozen times on this page. It arrives in
@@ -2302,8 +2308,23 @@ export function modulesSection(
   // in the very branch that renders the empty per-row state, so the sentence can
   // never claim a number the rows do not show. Under a freeze it is 0 and the
   // sentence disappears, which is what `frozen-state-check` requires.
-  const plainNote =
-    plainActive > 0
+  // ⛔ Trial (Elek 2026-10-09): nothing is bought, so the sentence says what the
+  // trial did, and the row price is named as the fee AFTER continuing. The
+  // superseded spine is the one row the number does not cover — said here, since the
+  // invoice reconciliation below needs a subscription the trial does not have.
+  const plainNote = trialActive
+    ? `<p class="adm-mine__all" id="adm-mine-all">${T(lang, "Az ingyenes próbában minden modul be van kapcsolva, díjat nem számolunk. A sorok melletti díj akkor érvényes, ha a próba után folytatja.")}</p>` +
+      (supersededLabel
+        ? `<p class="adm-mine__recon">${T(lang, "Alább {all} modul áll, ebből {n} látszik az oldalán — {art} „{name}” helyén most {art2} „{other}” jelenik meg.", {
+            all: String(mineCount),
+            n: String(mineCount - 1),
+            art: huArticleLower(supersededLabel.name),
+            name: esc(supersededLabel.name),
+            art2: huArticleLower(supersededLabel.other),
+            other: esc(supersededLabel.other),
+          })}</p>`
+        : "")
+    : plainActive > 0
       ? `<p class="adm-mine__all" id="adm-mine-all">${T(lang, "Aktív az oldalán mind a {n} modul — alább csak azt jelezzük, ami ettől eltér.", { n: String(plainActive) })}</p>`
       : "";
   // ⭐ modules-quiet-list §8 — the 12 ≠ 11 gap, resolved WHERE THE NUMBER STANDS.
@@ -2463,7 +2484,9 @@ export function modulesSection(
           : `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>`) +
         (coupon && !frozen ? couponBanner(coupon, sub?.keptOffers ?? []) : "") +
         shopBlocks
-      : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
+      : trialActive
+        ? `<p class="adm-lead">${T(lang, "A próba alatt minden modul be van kapcsolva — nincs mit hozzáadnia. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`
+        : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
     `</section>`;
 
   // ADR-0088 ⑨ confirm dialog for revoking the mandate (approved B plan). A
@@ -4321,6 +4344,8 @@ function overviewSection(
   now: Date = new Date(),
   /** ADR-0344 C2c — the LAPSED free trial (null otherwise): its paused site owes nothing. */
   lapsedTrial: TrialAdminState | null = null,
+  /** A RUNNING free trial: nothing is paid, nothing is billed (Elek 2026-10-09, lelet 1). */
+  trialActive = false,
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -4406,8 +4431,12 @@ function overviewSection(
         // nevet látna — ugyanarra a modulra két név. Az i18n-lint ezt nem látja: a
         // kulcs itt változó, nem literál (tudásbázis-őr verdikt, 2026-09-21).
         `<strong>${T(lang, "Töltse ki: {module}", { module: esc(T(lang, m.label)) })}</strong> ` +
-        `<span class="adm-todo__price">${modulePriceForm(m.priceMonthly, false, annualMult, lang)}</span> ` +
-        `${T(lang, "— kifizette, de üres, ezért a vendég ma nem látja")}` +
+        // ⛔ Trial (Elek 2026-10-09, lelet 1): he has paid nothing, so no price and no
+        // „kifizette" — the module is on because the trial switched it on.
+        (trialActive
+          ? `${T(lang, "— a próbában be van kapcsolva, de üres, ezért a vendég ma nem látja")}`
+          : `<span class="adm-todo__price">${modulePriceForm(m.priceMonthly, false, annualMult, lang)}</span> ` +
+            `${T(lang, "— kifizette, de üres, ezért a vendég ma nem látja")}`) +
         `<span class="adm-todo__note">${emptyNote(m.id)}</span>` +
         `<span class="adm-todo__acts">${fill}${look}</span>` +
         `</span></li>`
@@ -4606,7 +4635,7 @@ function overviewSection(
     showcase +
     `<div class="adm-todobox" id="teendok"><div class="adm-todo__h">${T(lang, "Teendők")} <span class="cnt">${T(lang, "{n} nyitott", { n: openCount })}</span>` +
     `<span class="adm-sp"></span><span class="cnt">${
-      billedActiveCount === activeCount
+      billedActiveCount === activeCount || trialActive
         ? T(lang, "{n} modul", { n: activeCount })
         : T(lang, "{n} modul · {k} számlázott", { n: activeCount, k: billedActiveCount })
     }</span></div>` +
@@ -6210,6 +6239,7 @@ export function adminDashboard(
                     lang,
                     opts.guestViewUrl ?? null,
                     opts.multiUnit ?? "unknown",
+                    opts.trial?.status === "active",
                   ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.
@@ -6291,6 +6321,7 @@ export function adminDashboard(
                 opts.subSummary ?? null,
                 opts.now ?? new Date(),
                 opts.trial?.status === "lapsed" ? opts.trial : null,
+                opts.trial?.status === "active",
               );
 
   // The Áttekintés and the Fotók render their own page head (title + sentence);
