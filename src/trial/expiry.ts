@@ -109,13 +109,19 @@ export interface TrialNoticeDeps {
  * and a (trial, step, channel) row is CLAIMED before the send, so a second run — or two
  * overlapping ones — can never send twice. Only the HIGHEST due step is sent; a lower one
  * that was missed is recorded as skipped (no two letters in one go after an outage).
+ *
+ * `dryRun` (deps = null): only LOGS what is due — no send, and no ledger row either, because
+ * the claim is written before the send: a dry claim would burn the step for good, and the
+ * day the wording is approved the trial would get nothing (§2b — until then the hourly tick
+ * runs dry, scripts/offer-followup.mts).
  */
 export async function runTrialNotices(
   now: Date,
-  deps: TrialNoticeDeps,
-  opts: { readonly onlyTrialIds?: readonly string[] } = {},
-): Promise<{ sent: number; skipped: number; failed: number; windowClosed: boolean }> {
-  const out = { sent: 0, skipped: 0, failed: 0, windowClosed: false };
+  deps: TrialNoticeDeps | null,
+  opts: { readonly onlyTrialIds?: readonly string[]; readonly dryRun?: boolean } = {},
+): Promise<{ sent: number; skipped: number; failed: number; due: number; windowClosed: boolean }> {
+  const out = { sent: 0, skipped: 0, failed: 0, due: 0, windowClosed: false };
+  const dry = opts.dryRun === true || deps === null;
   if (!mockOutreachWindowOpen(now)) return { ...out, windowClosed: true };
   if (opts.onlyTrialIds && opts.onlyTrialIds.length === 0) return out;
   let q = db
@@ -136,6 +142,18 @@ export async function runTrialNotices(
     });
     if (!due.length) continue;
     const [step, ...older] = due;
+    if (dry) {
+      const done = await db
+        .selectFrom("free_trial_notice")
+        .select("id")
+        .where("free_trial_id", "=", t.id)
+        .where("step", "=", step!)
+        .executeTakeFirst();
+      if (done) continue;
+      out.due++;
+      console.log(`[trial] ESEDÉKES (száraz, nem küld, nem foglal) · ${step} · próba ${t.id} · lejár ${until.toISOString()}`); // i18n-exempt: operátori napló
+      continue;
+    }
     for (const s of older) {
       for (const channel of ["email", "sms"] as const) {
         const r = await claim(t.id, s, channel, "skipped", "egy későbbi lépcső már esedékes");
@@ -152,7 +170,7 @@ export async function runTrialNotices(
     };
     if (await claim(t.id, step!, "email", "claimed", null)) {
       try {
-        await deps.sendEmail(target);
+        await deps!.sendEmail(target);
         await mark(t.id, step!, "email", "sent", null);
         out.sent++;
       } catch (e) {
@@ -165,7 +183,7 @@ export async function runTrialNotices(
       if (await claim(t.id, step!, "sms", "skipped", "nincs telefonszám")) out.skipped++;
     } else if (await claim(t.id, step!, "sms", "claimed", null)) {
       try {
-        await deps.sendSms({ ...target, phone: t.contact_phone });
+        await deps!.sendSms({ ...target, phone: t.contact_phone });
         await mark(t.id, step!, "sms", "sent", null);
         out.sent++;
       } catch (e) {

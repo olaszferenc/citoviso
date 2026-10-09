@@ -6,7 +6,8 @@
 //      a step before the trial's first day does not exist;
 //   ② warnings: outside the weekday 9–16 window (Saturday, 17:00) NOTHING goes out; inside
 //      it the due step goes once per channel (e-mail + SMS); a second run sends nothing;
-//      when t1 is due a missed t3 is recorded as skipped, never sent late;
+//      when t1 is due a missed t3 is recorded as skipped, never sent late; the DRY run (the
+//      hourly tick until the wording is approved) reports the step due and claims nothing;
 //   ③ lapse: a trial past trial_until → 'lapsed', the site 'suspended' (the public host
 //      answers 503 + the ADR-0080 ⑥ courtesy page for that status), the trial_grant modules
 //      off — and a module the tenant PAID for (trial_grant cleared) stays on; the admin
@@ -21,7 +22,8 @@
 // db client; the provider switches are forced to mock and READ BACK (the dev .env names a
 // real invoice agent and the real Barion gateway). The snapshot under sites/ is removed.
 //
-// --self-test: the world is SABOTAGED (the notice ledger wiped before the second run, the
+// --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the notice
+// ledger wiped before the second run, the
 // site switched back on after the lapse, a trial module revived) — ② ③ must go red.
 //
 // Run: npx tsx scripts/free-trial-expiry-check.mts   (--self-test: must go RED)
@@ -170,6 +172,11 @@ try {
   check("szombat 10:00 → ablak zárva, 0 küldés", sat.windowClosed && sent.length === 0);
   const late = await runTrialNotices(bp("2026-10-14", "17:00"), deps, only);
   check("szerda 17:00 → ablak zárva, 0 küldés", late.windowClosed && sent.length === 0);
+  const dry = await runTrialNotices(bp("2026-10-14", "10:00"), null, { ...only, dryRun: true });
+  if (SELF_TEST) await db.insertInto("free_trial_notice").values({ free_trial_id: trial.id, step: "t3", channel: "email", status: "claimed", detail: "sabotage" }).execute();
+  const dryRows = await db.selectFrom("free_trial_notice").select("id").where("free_trial_id", "=", trial.id).execute();
+  check("száraz futás (óránkénti tick a jóváhagyásig): 1 esedékes, 0 küldés, 0 foglalt sor", dry.due === 1 && dry.sent === 0 && sent.length === 0 && dryRows.length === 0, `${dry.due}/${dryRows.length}`);
+  if (SELF_TEST) await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).execute();
   const early = await runTrialNotices(bp("2026-10-13", "10:00"), deps, only);
   check("kedd 10:00 (még nem esedékes) → 0 küldés", early.sent === 0 && sent.length === 0);
   const t3 = await runTrialNotices(bp("2026-10-14", "10:00"), deps, only);
