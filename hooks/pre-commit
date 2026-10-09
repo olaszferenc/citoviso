@@ -2982,6 +2982,19 @@ if [ -f scripts/report-mock-check.mts ] && \
   echo "[pre-commit] report-mock-check (Mock fül: vonzóság-pont, ítélet, szűrők)…"
   npx tsx scripts/report-mock-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Ingyenes próba (ADR-XXXX): kártya nélküli konvertálás — próbázóra nincs számla/dunning, dupla indítás =
+#     1 tenant, minden modul aktív (trial_grant), 1 kupon, vásárolt lead elutasítva, trial_start mérve.
+#     Saját, eldobható sorokat ír a közös dev-DB-re, `finally`-ben törli; EMAIL_PROVIDER=mock kötelező. ~10 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/free-trial-check.mts ] && \
+   changed_files | grep -qE '^src/trial/.*\.ts$|^src/tenant/paidEntitlements\.ts$|^src/payment/subscription\.ts$|^migrations/0097_free_trial\.sql$|^scripts/free-trial-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/free-trial-check\.mts$'; then
+    echo "[pre-commit] free-trial-check --self-test (a próba-őr pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
+  EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

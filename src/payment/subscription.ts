@@ -116,6 +116,14 @@ export async function ensureSubscriptionForOrder(
     })
     .onConflict((oc) => oc.column("tenant_id").doNothing())
     .execute();
+  // ADR-XXXX: the first real payment ends a free trial — the subscription just born
+  // (anchor = this payment's day) takes over; the expiry job never touches it again.
+  await db
+    .updateTable("free_trial")
+    .set({ status: "converted", converted_at: anchor })
+    .where("tenant_id", "=", tenantId)
+    .where("status", "in", ["active", "lapsed"])
+    .execute();
 }
 
 export interface RenewalSettlement {

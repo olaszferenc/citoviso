@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-ingyenes-proba-kartya-nelkul-kulon-tabla.md) — Ingyenes próba: kártya nélküli konvertálás, a próba-állapot külön táblában (nem az előfizetésen)
 - [ADR-0341](decisions/0341-http-s-foto-a-https-es-mockon-https-emeles-vagy.md) — http-s fotó a https-es mockon: https-emelés vagy saját proxy, a kapu a kiszállított URL-t méri
 - [ADR-0340](decisions/0340-valaszolas-az-iranyitopultrol-poe-javasol-az.md) — Válaszolás az irányítópultról: Poe javasol, az operátor küld, a hétköznap 9–16 ablak a válaszra is áll
 - [ADR-0339](decisions/0339-valaszok-a-megkeresesekre-gyujtes-a-dev-gepen.md) — Válaszok a megkeresésekre: gyűjtés a dev gépen, tárolás a lead-gazdán, irányítópult-blokk

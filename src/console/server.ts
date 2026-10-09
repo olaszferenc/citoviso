@@ -2,6 +2,7 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
+import { startTrial } from "../trial/start.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -3131,6 +3132,29 @@ async function handle(
       await recordEvent(p.id, viewId, type, payload);
     }
     return send(res, 204, "");
+  }
+  // POST /p/:token/trial — ADR-XXXX: the card-less free trial (no payment, no invoice).
+  // JSON {name, email, phone, aszfAccepted, photoRightsAccepted, viewId?} → {ok, …} or
+  // {ok:false, error:<TrialError>}; the page maps the code to its own wording.
+  // Idempotent: a repeat answers the SAME trial (existing:true), never a second tenant.
+  const pTrialMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/trial$/.exec(pPath);
+  if (method === "POST" && pTrialMatch) {
+    const b = (await readJson(req)) as Record<string, unknown>;
+    const r = await startTrial(pTrialMatch[1], {
+      name: typeof b.name === "string" ? b.name : "",
+      email: typeof b.email === "string" ? b.email : "",
+      phone: typeof b.phone === "string" ? b.phone : "",
+      aszfAccepted: b.aszfAccepted === true,
+      photoRightsAccepted: b.photoRightsAccepted === true,
+      viewId: typeof b.viewId === "string" ? b.viewId : null,
+    });
+    const status = r.ok ? 200 : r.error === "not_found" ? 404 : r.error === "provision_failed" ? 500 : 409;
+    return send(
+      res,
+      r.ok || ["provision_failed", "not_found", "in_progress", "already_owned", "trial_used", "disabled", "market_not_approved"].includes(r.error) ? status : 400,
+      JSON.stringify(r.ok ? { ...r, trialUntil: r.trialUntil.toISOString() } : r),
+      "application/json",
+    );
   }
   // POST /p/:token/request — order submit bound to the token's prospect.
   const pReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/request$/.exec(pPath);

@@ -494,6 +494,33 @@ export interface ModuleEntitlementTable {
   /** ADR-0080 ②: mid-cycle addition awaiting its first renewal invoice —
    *  legitimately active though unpaid; cleared by the renewal that bills it. */
   awaiting_first_charge: Generated<boolean>;
+  /** 0097 (ADR-XXXX): granted by the free trial, not bought. Cleared by the paid
+   *  reconciliation on what the buyer paid for; the rest is switched off there. */
+  trial_grant: Generated<boolean>;
+}
+
+/** 0097 (ADR-XXXX): the card-less free trial — one per lead. A trialling tenant has
+ *  NO subscription row, so the billing tick cannot mint an invoice or dunning for it. */
+export interface FreeTrialTable {
+  id: Generated<string>;
+  lead_id: string;
+  prospect_id: string | null;
+  /** NULL while provisioning is in flight (a re-submit resumes it). */
+  tenant_id: string | null;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string | null;
+  terms_accepted_at: Timestamp;
+  terms_text: string;
+  photo_rights_declared_at: Timestamp;
+  photo_rights_text: string;
+  started_at: Generated<Date>;
+  trial_until: Timestamp;
+  coupon_offer_id: string | null;
+  status: Generated<"active" | "converted" | "lapsed">;
+  converted_at: Timestamp | null;
+  lapsed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
 }
 
 // --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---
@@ -1701,6 +1728,7 @@ export interface Database {
   offer: OfferTable;
   tenant: TenantTable;
   module_entitlement: ModuleEntitlementTable;
+  free_trial: FreeTrialTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;

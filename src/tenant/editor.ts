@@ -640,12 +640,21 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
     .where("order_intent.photo_rights_declared_at", "is not", null)
     .executeTakeFirst();
 
+  // ADR-XXXX: a card-less trial stamps the same declaration on its free_trial row.
+  const trialDecl = decl
+    ? undefined
+    : await db
+        .selectFrom("free_trial")
+        .select("photo_rights_declared_at as declaredAt")
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst();
+
   return {
     id: site.id,
     path: site.path,
     status: site.status,
     tenantId,
-    rightsDeclared: Boolean(decl?.declaredAt),
+    rightsDeclared: Boolean(decl?.declaredAt ?? trialDecl?.declaredAt),
     overrides: (site.edited_site_data as Overrides | null) ?? {},
     recipe: inputs.recipe as unknown as Recipe,
     baseSiteData: inputs.siteData as unknown as SiteData,

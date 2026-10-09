@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md](2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md) — 2026-10-09 — Valós oldal erőforrásigénye (mérés) + ingyenes próba koordinátor indítva
+- [2026-10-09-ingyenes-proba-A-allapot-konvertalas.md](2026-10-09-ingyenes-proba-A-allapot-konvertalas.md) — 2026-10-09 — Ingyenes próba SUB A: próba-állapot + kártya nélküli konvertálás (backend)
 - [2026-10-08_valasz_az_iranyitopultrol.md](2026-10-08_valasz_az_iranyitopultrol.md) — 2026-10-08 — Válaszolás az irányítópultról, Poe javaslatával (ADR-0340)
 - [2026-10-08_riport_mock_ful.md](2026-10-08_riport_mock_ful.md) — 2026-10-08 — Riport „Mock” fül: melyik mock mennyire vonzó (SUB)
 - [2026-10-08_csonka_lead_email.md](2026-10-08_csonka_lead_email.md) — 2026-10-08 — Csonka lead-e-mail (raw.email az eleje nélkül): két ok, javítás + őr ⑥

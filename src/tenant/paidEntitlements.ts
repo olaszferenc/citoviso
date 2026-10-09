@@ -170,6 +170,19 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
     revoked.push(module);
   }
 
+  // ADR-XXXX: what the buyer paid for is no longer a trial grant — it stays, unflagged.
+  // The unpaid trial grants were switched off by the loop above (they are active and
+  // unpaid like any leak); their flag stays, so the record shows where they came from.
+  if (paid.length) {
+    await db
+      .updateTable("module_entitlement")
+      .set({ trial_grant: false })
+      .where("tenant_id", "=", tenantId)
+      .where("module", "in", paid)
+      .where("trial_grant", "=", true)
+      .execute();
+  }
+
   // Revocation is the loud half: it means the tenant was holding something it
   // never bought, and the rendered page is about to lose a section.
   if (revoked.length) {
