@@ -138,7 +138,11 @@ export function mailGreeting(lang: string | undefined, name: string | null | und
 
 // ── The frame ────────────────────────────────────────────────────────────────
 
-function footerHtml(lang: string | undefined, siteName: string | null | undefined): string {
+/** Why the reader gets our letters — a buyer ORDERED the site, a trialist is TRYING it
+ *  (ADR-0344 kiegészítés: "…a Citovisónál rendelte meg" was false for a free trial). */
+export type FooterReason = "order" | "trial";
+
+function footerHtml(lang: string | undefined, siteName: string | null | undefined, reason: FooterReason = "order"): string {
   const le = config.legalEntity;
   // Only facts that are actually configured: an unfilled field is left out, never
   // invented (§B.17 binds us about ourselves too) — legal-check guards the gaps.
@@ -151,15 +155,22 @@ function footerHtml(lang: string | undefined, siteName: string | null | undefine
     .filter(Boolean)
     .join(" · ");
   const site = (siteName ?? "").trim();
-  const reason = site
-    ? esc(
-        T(lang, "Ezt a levelet azért kapta, mert {art} {site} oldalát a Citovisónál rendelte meg.", {
-          art: huArticleLower(site),
-          site,
-        }),
-      )
-    : "";
-  return [line1, line2, reason].filter(Boolean).join("<br>");
+  const why = !site
+    ? ""
+    : reason === "trial"
+      ? esc(
+          T(lang, "Ezt a levelet azért kapta, mert {art} {site} oldalát a Citovisónál próbálja ki.", {
+            art: huArticleLower(site),
+            site,
+          }),
+        )
+      : esc(
+          T(lang, "Ezt a levelet azért kapta, mert {art} {site} oldalát a Citovisónál rendelte meg.", {
+            art: huArticleLower(site),
+            site,
+          }),
+        );
+  return [line1, line2, why].filter(Boolean).join("<br>");
 }
 
 /** The E4 logo as a CID-inline attachment — shared with the outreach letter. */
@@ -244,12 +255,14 @@ export interface PlatformMailInput {
   readonly blocks: readonly string[];
   /** The site the letter is about — names it in the footer's "why you got this". */
   readonly siteName?: string | null;
+  /** The footer's "why you got this": ordered (default) or trying it (a free trial). */
+  readonly footerReason?: FooterReason;
   readonly attachments?: readonly EmailAttachment[];
 }
 
 /** Wrap the body in the approved platform frame and return a complete message. */
 export function platformMail(input: PlatformMailInput): EmailMessage {
-  const { to, subject, text, lang, heading, greeting, blocks, siteName, kicker } = input;
+  const { to, subject, text, lang, heading, greeting, blocks, siteName, kicker, footerReason } = input;
   const hasLogo = existsSync(LOGO_PATH);
 
   const card =
@@ -263,7 +276,7 @@ export function platformMail(input: PlatformMailInput): EmailMessage {
     blocks.join("") +
     `</td></tr>` +
     `<tr><td class="m-pad" style="padding:18px 32px 22px;border-top:1px solid ${LINE};font-family:${FONT};` +
-    `font-size:12px;line-height:1.6;color:${FAINT}">${footerHtml(lang, siteName)}</td></tr>` +
+    `font-size:12px;line-height:1.6;color:${FAINT}">${footerHtml(lang, siteName, footerReason)}</td></tr>` +
     `</table>`;
 
   const html = mailDocument(lang, card);

@@ -53,6 +53,8 @@ export const I18N_SOURCES = [
   // contact card, step indicator) — the GUEST reads it in the site's language.
   "src/email/bookingLayout.ts",
   "src/email/loginEmail.ts",
+  // ADR-0344 C2: the free-trial T−3/T−1 letter (owner-approved wording).
+  "src/email/trialEmail.ts",
   // Elek T-3: the masked mail copy logged to the owner's Üzenetek tab.
   "src/tenant/credentials.ts",
   "src/email/invoiceEmail.ts",

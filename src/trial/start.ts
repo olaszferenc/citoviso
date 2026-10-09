@@ -29,6 +29,7 @@ import { NEW_SUBSCRIBER_COUPON_DAYS } from "../payment/offers.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { getFreeTrialConfig } from "./config.js";
 
@@ -251,10 +252,23 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (!hasLogin) {
       try {
         const lead = await db.selectFrom("tenant").select("display_name").where("id", "=", conv.tenantId).executeTakeFirst();
-        const login = await issueAndSendTenantLogin(conv.tenantId, lead?.display_name ?? "oldalam", trial.contact_email, {
-          name: trial.contact_name,
-          isPerson: true,
-        });
+        // ADR-0344: the approved TRIAL login letter — its end and the continuation coupon.
+        const cp = couponId
+          ? await db.selectFrom("offer").select(["percent", "expires_at"]).where("id", "=", couponId).executeTakeFirst()
+          : undefined;
+        const login = await issueAndSendTenantLogin(
+          conv.tenantId,
+          lead?.display_name ?? "oldalam",
+          trial.contact_email,
+          { name: trial.contact_name, isPerson: true },
+          {
+            untilIso: budapestIsoDay(new Date(trial.trial_until as unknown as string)),
+            coupon:
+              cp?.percent && cp.expires_at
+                ? { percent: cp.percent, untilIso: budapestIsoDay(new Date(cp.expires_at as unknown as string)) }
+                : null,
+          },
+        );
         loginSentTo = login.contactEmail;
       } catch (e) {
         console.error(`[trial] ${trialId}: belépés-kiadás SIKERTELEN (a site él, kézzel pótolandó): ${(e as Error).message}`); // i18n-exempt: operátori napló

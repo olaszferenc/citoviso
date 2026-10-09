@@ -1,6 +1,6 @@
 ## ADR-0344 — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
 
-**Dátum:** 2026-10-09 · **Státusz:** elfogadva (backend); a felületek és a szövegek a §2b terv-kapun várnak
+**Dátum:** 2026-10-09 · **Státusz:** elfogadva (backend); a levelek szövege jóváhagyva és bekötve (C2 kiegészítés, lent); az admin-sáv és az SMS formája a tulajnál
 **Előzmény:** ADR-0342 (próba-állapot, kártya nélküli konvertálás), ADR-0080 (⑥ freeze = 503 + Retry-After
 udvariassági lap; ① fordulónap), ADR-0088 (kupon: egyszeri, az első díjra, nem halmozódik), ADR-0334 (9–16 ablak),
 ADR-0287 (óránkénti tick). Tulaj-döntés 2026-10-09: a próba végén LEFAGY, nem terhel, kártya nem kell; 3 és 1 nappal
@@ -49,9 +49,35 @@ skipped; száraz futás: esedékes, 0 küldés, 0 sor; lejárat → lapsed, susp
 fagyott; vásárlási kapu; `/folytatas` 200 + kupon / idegennek vissza / fizetés után vissza; valódi `applyWebhookResult`
 → live, converted, anchor = ma, kupon egyszer. `--self-test`: a szabotázs pirosra viszi.
 
+### Kiegészítés — C2: a jóváhagyott levelek bekötése (2026-10-09)
+
+Tulaj-döntés 2026-10-09: a T−3 és T−1 e-mail és a próbás belépő-levél szövege JÓVÁHAGYVA. Terv-kontraktus:
+`assets/design-refs/console/proba-levelek/` (README = mit köt).
+
+1. **E-mail ÉLES, SMS SZÁRAZ.** Az óránkénti tick (`scripts/offer-followup.mts`) a `trialNoticeDeps(now)`-val fut
+   (`src/trial/notices.ts`): `sendEmail` a jóváhagyott levelet küldi (`src/email/trialEmail.ts`) és a tenant
+   postafiókjába naplózza (`tenant_message`, kind `other`, related `free_trial_t3|t1`); `sendSms: null`.
+   **`sendSms` null → az SMS-csatorna se nem küld, se nem FOGLAL** (a kimaradt alacsonyabb lépcsőnek sem írunk
+   SMS-`skipped` sort) — a száraz foglalás elégetné a lépcsőt, és a jóváhagyás napján a próbázó nem kapna semmit.
+   A `dryRun` (deps = null) megmarad diagnosztikának.
+2. **A cím a VALÓS hátralévő napokat mondja**, nem a lépcső nevét: a hétvégére eső lépcső pénteken megy (§3), így
+   egy hétfői lejárat T−1-e pénteken „Még 3 nap…”, nem „Holnap…” (§B.17). A lejárat napján menő pótlás: „Ma lejár…”
+   (ez a forma nem volt a mockban — a jóváhagyott minta logikus folytatása, a tulajnak jelezve).
+3. **Link nélkül nincs levél:** üres `PUBLIC_BASE_URL` vagy hiányzó prospect-token → a küldés hangosan bukik
+   (`failed` sor), mert a levél célja a „Folytatom” gomb. Kupon nélkül (0%-os próba-kupon, lejárt/elhasznált kupon)
+   a kedvezmény-bekezdés és -sorok elmaradnak.
+4. **Próbás belépő-levél:** `buildCredentialsEmail({ trial })` — a `startTrial` adja át a próba végét és a kupont.
+5. **Lábléc:** `platformMail({ footerReason: "trial" })` → „…oldalát a Citovisónál próbálja ki.” (`T()`); a rendelő
+   vevőnél változatlanul „…rendelte meg.” Csak a három próba-levél kapja; a próba alatti egyéb platform-levél
+   (pl. jelszó-visszaállítás) ma még a vevői láblécet viszi.
+6. **Őr:** a `free-trial-expiry-check` ②b lába: bekötött `sendSms === null`, péntek → 1 e-mail + 0 SMS-sor, a gomb
+   linkje, kupon, lábléc, tenant-napló, a hétfői lejárat őszinte címe, a tick a bekötött deps-szel hív (nem dryRun),
+   vevői vs. próbás lábléc, a valódi próba-indítás a próbás belépő-levelet küldte. `--self-test`: egy becsempészett
+   SMS-küldő pirosra viszi.
+
 ### Nyitott (a tulajé)
-- A felületek és szövegek (admin próba-sáv A/B, T−3/T−1 levél, SMS linkkel/link nélkül, ékezetes/ékezet nélkül,
-  a belépő-levél próbás változata) — mock: `assets/design-refs/_drafts/proba-C/proba-C.html`.
+- Az admin próba-sáv (A/B) és az SMS formája (linkkel/link nélkül, ékezetes/ékezet nélkül) — mock:
+  `~/rc-briefs/proba-C-mock-20261009/proba-C.html`. (A levelek: jóváhagyva, C2.)
 - **Meddig marad meg a lejárt próba adata?** Ma semmi nem törli; a szövegek „megmarad”-ot mondanak, határidő nélkül.
-- A platform-levél lábléce („…a Citovisónál rendelte meg”) próbánál nem pontos.
+- ~~A platform-levél lábléce próbánál nem pontos~~ → C2: a három próba-levélben javítva.
 - A lejárat a napi 07:00-s tickkel fut: a `trial_until` után legfeljebb ~1 napig az oldal még él.

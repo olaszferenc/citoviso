@@ -86,3 +86,73 @@ export function formatMonthDay(day: number | null | undefined, lang = "hu"): str
   }
   return String(day);
 }
+
+// ── The LONG day: month by name, and the "on which day" form ─────────────────
+//
+// ADR-0344 / proba-levelek (owner-approved 2026-10-09): the trial letters name the
+// end of the trial the way a person writes it on paper — "2026. október 22-én,
+// csütörtökön" in the sentence, "2026. okt. 22. (csütörtök)" in the details box.
+// The same rules as above: an ISO day in, a pure string transform for Hungarian,
+// and the Intl branch for other packs pinned to UTC (a day is a label, not an instant).
+
+const HU_MONTHS = [
+  "január", "február", "március", "április", "május", "június",
+  "július", "augusztus", "szeptember", "október", "november", "december",
+];
+const HU_MONTHS_SHORT = ["jan.", "febr.", "márc.", "ápr.", "máj.", "jún.", "júl.", "aug.", "szept.", "okt.", "nov.", "dec."];
+const HU_WEEKDAYS = ["vasárnap", "hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat"];
+/** "On Thursday" — vasárnap has no suffix ("vasárnap lejár"). */
+const HU_WEEKDAYS_ON = ["vasárnap", "hétfőn", "kedden", "szerdán", "csütörtökön", "pénteken", "szombaton"];
+
+function isoParts(iso: string): { y: string; m: number; d: number; wd: number } | null {
+  const m = ISO_DAY.exec(iso);
+  if (!m) return null;
+  return { y: m[1]!, m: Number(m[2]), d: Number(m[3]), wd: new Date(`${iso}T00:00:00Z`).getUTCDay() };
+}
+
+function intlDay(iso: string, lang: string, opts: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(lang, { ...opts, timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+}
+
+/** `2026-10-22` → `2026. október 22` (hu, NO closing dot — the sentence appends
+ *  "-ig" / "."), or the reader's long date for other packs. */
+export function formatDayLongStem(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") return `${p.y}. ${HU_MONTHS[p.m - 1]} ${p.d}`;
+  return intlDay(iso, lang, { dateStyle: "long" });
+}
+
+/** `2026-10-22` → `2026. október 22-én, csütörtökön` (hu: the superessive of the
+ *  ordinal, then the weekday), or the reader's full date for other packs. The
+ *  ending follows the same closed 31-day rule as formatMonthDay: másodikÁN, but
+ *  negyedikÉN; the 1st is "1-jén" (elsején). */
+export function formatDayOn(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") {
+    const suffix = p.d === 1 ? "jén" : BACK_VOWEL_DAYS.has(p.d) ? "án" : "én";
+    return `${p.y}. ${HU_MONTHS[p.m - 1]} ${p.d}-${suffix}, ${HU_WEEKDAYS_ON[p.wd]}`;
+  }
+  return intlDay(iso, lang, { dateStyle: "full" });
+}
+
+/** `2026-10-22` → `2026. okt. 22. (csütörtök)` — the details-box form. */
+export function formatDayShortWeekday(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") return `${p.y}. ${HU_MONTHS_SHORT[p.m - 1]} ${p.d}. (${HU_WEEKDAYS[p.wd]})`;
+  return intlDay(iso, lang, { year: "numeric", month: "short", day: "numeric", weekday: "long" });
+}
+
+/** `2027-01-20` → `2027. jan. 20` (hu, NO closing dot — for "{date}-ig"). */
+export function formatDayShortStem(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") return `${p.y}. ${HU_MONTHS_SHORT[p.m - 1]} ${p.d}`;
+  return intlDay(iso, lang, { year: "numeric", month: "short", day: "numeric" });
+}

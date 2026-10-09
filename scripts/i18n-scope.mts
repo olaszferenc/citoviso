@@ -45,6 +45,13 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/modules.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/moduleConfig.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/domains.ts": "adat-regiszter (domain-ajánló szótöve) — nem levél-szöveg",
+  // ADR-0344 C2: the long-date helpers. The Hungarian month/weekday names ARE the hu
+  // branch of a formatter; every other pack goes through Intl in the reader's locale.
+  "src/text/day.ts": "dátum-formázó — a magyar hónap/nap nevek a hu-ág, más nyelv Intl-en",
+  // ADR-0344: the trial lapse/notice runner and its wired senders — operator log lines
+  // and ledger details only; the letter's wording lives in src/email/trialEmail.ts.
+  "src/trial/expiry.ts": "operátori napló + ledger-részlet; a levél szövege trialEmail.ts",
+  "src/trial/notices.ts": "operátori hibaüzenet a ledgerbe; a levél szövege trialEmail.ts",
   // ADR-0340: the dashboard answer. The letter's subject and body are the OPERATOR's own
   // text (typed or Poe's suggestion, in the lead's language) — nothing is composed here;
   // the Hungarian literals are operator-facing outcomes / validation messages.

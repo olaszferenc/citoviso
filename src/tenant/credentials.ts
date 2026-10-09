@@ -13,6 +13,7 @@ import { generateMemorablePassword, hashPassword } from "../auth/tenantAuth.js";
 import { findUserForReset, issuePasswordToken, passwordLinkUrl } from "../auth/passwordLink.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildCredentialsEmail, buildPasswordResetEmail } from "../email/loginEmail.js";
+import type { TrialCouponView } from "../email/trialEmail.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
 import { config } from "../config.js";
@@ -98,6 +99,8 @@ export async function issueAndSendTenantLogin(
   contactEmail: string,
   /** Who ordered — only for the salutation (a company gets a neutral one). */
   buyer?: { name: string | null; isPerson: boolean },
+  /** ADR-0344: a free trial's login — the approved trial wording, the trial footer. */
+  trial?: { readonly untilIso: string; readonly coupon: TrialCouponView | null } | null,
 ): Promise<IssuedLogin> {
   const login = await issueTenantLogin(tenantId, businessName, contactEmail);
   const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
@@ -113,6 +116,7 @@ export async function issueAndSendTenantLogin(
     buyerName: buyer?.name ?? null,
     buyerIsPerson: buyer?.isPerson ?? false,
     lang,
+    trial: trial ?? null,
   });
   await getEmailSender().send(msg);
   // ADR-0084: log AFTER a successful send — a failed log must not fake a delivery,

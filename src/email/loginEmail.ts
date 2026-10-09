@@ -13,11 +13,20 @@
 // Frame: platformLayout.ts (approved variant A, 2026-09-24). The letter names
 // the SITE — an owner with two places, or one who ordered weeks ago, must not
 // have to guess which login this is.
+//
+// ADR-0344 kiegészítés — the FREE-TRIAL variant (owner-approved 2026-10-09,
+// assets/design-refs/console/proba-levelek/): "Elindult … ingyenes próbája", the
+// trial's end and the continuation discount in the details box, and one paragraph
+// saying we charge nothing. Username, button and the 7-day note are unchanged; the
+// footer says the reader is TRYING the site, not that they ordered it.
 
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
 import { mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
+import type { MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
+import { boldVars, couponValue, type TrialCouponView } from "./trialEmail.js";
+import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "../text/day.js";
 
 export function buildCredentialsEmail(input: {
   to: string;
@@ -34,15 +43,45 @@ export function buildCredentialsEmail(input: {
   buyerIsPerson?: boolean;
   /** Reader's language (ADR-0067). Absent → Hungarian. */
   lang?: string;
+  /** Present = the login of a FREE TRIAL (ADR-0342/0344): its end and coupon. */
+  trial?: { readonly untilIso: string; readonly coupon: TrialCouponView | null } | null;
 }): EmailMessage {
   const { to, username, setPasswordUrl, loginUrl, siteName, lang } = input;
+  const trial = input.trial ?? null;
   const greeting = mailGreeting(lang, input.buyerName, input.buyerIsPerson ?? false);
   const subject = T(lang, "Belépési adatai – {site}", { site: siteName });
-  const intro = T(
-    lang,
-    "Elkészült {art} {site} oldalának szerkesztő felülete. Az első belépéshez állítson be egy saját jelszót.",
-    { art: huArticleLower(siteName), site: siteName },
-  );
+  const introVars = { art: huArticleLower(siteName), site: siteName };
+  const intro = trial
+    ? T(
+        lang,
+        "Elindult {art} {site} ingyenes próbája: a honlap él, és minden modul be van kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
+        introVars,
+      )
+    : T(
+        lang,
+        "Elkészült {art} {site} oldalának szerkesztő felülete. Az első belépéshez állítson be egy saját jelszót.",
+        introVars,
+      );
+  const trialPara = (v: { until: string }): string =>
+    T(
+      lang,
+      "A próba {until}-ig tart. Kártyát nem kértünk, és a próba végén sem terhelünk semmit: ha nem folytatja, a honlap szünetel, az adatai megmaradnak. 3 nappal és 1 nappal a vége előtt szólunk.",
+      v,
+    );
+  const trialVars = trial ? { until: formatDayLongStem(trial.untilIso, lang) } : null;
+  const details: MailDetailRow[] = [{ label: T(lang, "Felhasználónév"), value: username, mono: true }];
+  if (trial) {
+    details.push({ label: T(lang, "A próba vége"), value: formatDayShortWeekday(trial.untilIso, lang) });
+    if (trial.coupon) {
+      details.push({
+        label: T(lang, "Kedvezmény, ha folytatja"),
+        value: T(lang, "{discount}, {date}-ig", {
+          discount: couponValue(lang, trial.coupon),
+          date: formatDayShortStem(trial.coupon.untilIso, lang),
+        }),
+      });
+    }
+  }
   const note = T(
     lang,
     "A gomb 7 napig érvényes, és egyszer használható. Ha lejárt, a belépő lapon az „Elfelejtett jelszó?” linkre kattintva bármikor kérhet újat. Jelszót e-mailben nem küldünk.",
@@ -53,7 +92,9 @@ export function buildCredentialsEmail(input: {
   const text =
     `${greeting}\n\n${intro}\n\n` +
     `${T(lang, "Felhasználónév:")} ${username}\n\n` +
-    `${button}: ${setPasswordUrl}\n\n${note}\n\n${later} ${loginUrl}\n`;
+    `${button}: ${setPasswordUrl}\n\n` +
+    (trialVars ? `${trialPara(trialVars)}\n\n` : "") +
+    `${note}\n\n${later} ${loginUrl}\n`;
 
   return platformMail({
     to,
@@ -63,10 +104,12 @@ export function buildCredentialsEmail(input: {
     heading: T(lang, "Belépési adatai"),
     greeting,
     siteName,
+    footerReason: trial ? "trial" : "order",
     blocks: [
       mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
-      mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }]),
+      mailDetails(details),
       mailButton(setPasswordUrl, button),
+      ...(trialVars ? [mailPara(boldVars(trialPara, trialVars, ["until"]))] : []),
       mailNote(esc(note)),
       mailNote(`${esc(later)} <a href="${esc(loginUrl)}">${esc(loginUrl.replace(/^https?:\/\//, ""))}</a>`),
     ],

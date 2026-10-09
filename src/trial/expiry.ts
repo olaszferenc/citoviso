@@ -9,6 +9,8 @@
 //                it forward would put a T−1 after the freeze (a Sunday expiry's Monday).
 //                When both steps land on the same day only the later one (t1) goes — two
 //                letters in one hour saying the same date is noise, not care.
+//                E-mail LIVE with the approved wording (src/trial/notices.ts), SMS DRY
+//                (sendSms null) until its form is approved (2026-10-09).
 //
 // ⛔ The trial tenant has NO subscription row, so nothing here touches the billing ladder,
 // and nothing in the billing ladder touches a trial (ADR-0342).
@@ -100,8 +102,10 @@ export interface TrialNoticeTarget {
 export interface TrialNoticeDeps {
   /** Sends the step's e-mail; throws on failure. The WORDING is the owner's (§2b gate). */
   readonly sendEmail: (t: TrialNoticeTarget) => Promise<void>;
-  /** Sends the step's SMS; throws on failure. */
-  readonly sendSms: (t: TrialNoticeTarget & { phone: string }) => Promise<void>;
+  /** Sends the step's SMS; throws on failure. NULL = the SMS channel is DRY (its form is
+   *  still the owner's, 2026-10-09): nothing is sent AND nothing is claimed — a dry claim
+   *  would burn the step. The e-mail channel runs regardless (src/trial/notices.ts). */
+  readonly sendSms: ((t: TrialNoticeTarget & { phone: string }) => Promise<void>) | null;
 }
 
 /**
@@ -154,8 +158,9 @@ export async function runTrialNotices(
       console.log(`[trial] ESEDÉKES (száraz, nem küld, nem foglal) · ${step} · próba ${t.id} · lejár ${until.toISOString()}`); // i18n-exempt: operátori napló
       continue;
     }
+    const channels = deps!.sendSms ? (["email", "sms"] as const) : (["email"] as const);
     for (const s of older) {
-      for (const channel of ["email", "sms"] as const) {
+      for (const channel of channels) {
         const r = await claim(t.id, s, channel, "skipped", "egy későbbi lépcső már esedékes");
         if (r) out.skipped++;
       }
@@ -179,11 +184,15 @@ export async function runTrialNotices(
         console.error(`[trial] ${step} e-mail SIKERTELEN · próba ${t.id}: ${(e as Error).message}`); // i18n-exempt: operátori napló
       }
     }
-    if (!t.contact_phone) {
+    const sendSms = deps!.sendSms;
+    if (!sendSms) {
+      // SMS DRY: no row — the day the SMS wording is approved, the next step still goes.
+      console.log(`[trial] ${step} SMS száraz (nem küld, nem foglal) · próba ${t.id}`); // i18n-exempt: operátori napló
+    } else if (!t.contact_phone) {
       if (await claim(t.id, step!, "sms", "skipped", "nincs telefonszám")) out.skipped++;
     } else if (await claim(t.id, step!, "sms", "claimed", null)) {
       try {
-        await deps!.sendSms({ ...target, phone: t.contact_phone });
+        await sendSms({ ...target, phone: t.contact_phone });
         await mark(t.id, step!, "sms", "sent", null);
         out.sent++;
       } catch (e) {

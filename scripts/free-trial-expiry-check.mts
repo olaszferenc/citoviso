@@ -15,6 +15,13 @@
 //   ④ the purchase gate: a trialist may buy (ownedBlocksInitialPurchase → null), a
 //      tenant WITHOUT a trial stays refused; GET /p/<t>/folytatas serves the trialist the
 //      configurator with the trial coupon, and sends anyone else back to /p/<t>;
+//   ②b the WIRED senders (src/trial/notices.ts, what the hourly tick runs): the e-mail is
+//      LIVE — one approved letter with the /folytatas button, logged in the tenant's
+//      mailbox — and the SMS is DRY: not sent AND no ledger row (a dry claim would burn the
+//      step); the tick calls exactly those deps (no dryRun); the heading counts the REAL
+//      days left (a Monday expiry's Friday T−1 says "Még 3 nap", never "Holnap"); the
+//      trial footer says "próbálja ki", the buyer's still says "rendelte meg"; the trial
+//      login letter carries the approved trial wording;
 //   ⑤ continuation: the REAL settlement (applyWebhookResult, mock gateway) → site live,
 //      trial 'converted', subscription anchor = today, the trial coupon burnt ONCE, no
 //      second (welcome) coupon — and from then on the lead is a customer (gate refuses).
@@ -24,7 +31,7 @@
 // real invoice agent and the real Barion gateway). The snapshot under sites/ is removed.
 //
 // --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the trial
-// coupon expired before the /folytatas GET, the notice
+// coupon expired before the /folytatas GET, an SMS sender slipped into the wired deps, the notice
 // ledger wiped before the second run, the
 // site switched back on after the lapse, a trial module revived) — ② ③ must go red.
 //
@@ -56,6 +63,7 @@ process.env.EMAIL_PROVIDER = "mock";
 process.env.SMS_PROVIDER = "mock";
 process.env.INVOICE_PROVIDER = "mock";
 process.env.PAYMENT_GATEWAY = "mock";
+process.env.PUBLIC_BASE_URL = "https://citoviso.test";
 
 async function admin(q: string): Promise<void> {
   const c = new pg.Client({ ...PG, database: "postgres" });
@@ -103,6 +111,11 @@ const { isSubscriptionFrozen } = await import("../src/payment/subscription.js");
 const { continuableTrialForLead, ownedBlocksInitialPurchase } = await import("../src/conversion/owned.js");
 const { applyWebhookResult } = await import("../src/payment/service.js");
 const { budapestIsoDay } = await import("../src/text/budapestTime.js");
+const { trialNoticeDeps, trialDaysLeft } = await import("../src/trial/notices.js");
+const { buildTrialNoticeEmail } = await import("../src/email/trialEmail.js");
+const { buildCredentialsEmail } = await import("../src/email/loginEmail.js");
+const { readFileSync } = await import("node:fs");
+type EmailMessage = import("../src/email/sender.js").EmailMessage;
 type SiteData = import("../src/engine/recipe.js").SiteData;
 type Recipe = import("../src/engine/recipe.js").Recipe;
 
@@ -201,6 +214,44 @@ try {
   check("kimaradt t3 + esedékes t1 → csak a t1 megy (2)", catchUp.sent === 2 && sent.join() === "email:t1,sms:t1", sent.join());
   check("…a t3 'skipped' sorként rögzül, utólag sem megy", t3Rows.length === 2 && t3Rows.every((r) => r.status === "skipped"));
 
+  // ②b the wired senders — e-mail live, SMS dry
+  console.log("②b bekötött küldők: e-mail éles, SMS száraz");
+  await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).execute();
+  const caps: EmailMessage[] = [];
+  const cap = { send: async (m: EmailMessage) => { caps.push(m); return { id: "cap", provider: "mock" as const }; } };
+  const fri = bp("2026-10-16", "10:00");
+  const wired = trialNoticeDeps(fri, cap);
+  check("a bekötött SMS-küldő NULL (száraz)", wired.sendSms === null);
+  const live = await runTrialNotices(fri, SELF_TEST ? { ...wired, sendSms: async () => {} } : wired, only);
+  const wl = await db.selectFrom("free_trial_notice").select(["step", "channel", "status"]).where("free_trial_id", "=", trial.id).execute();
+  check("péntek (szombati lejárat) → 1 e-mail ment ki", live.sent === 1 && caps.length === 1, `${live.sent}/${caps.length}`);
+  check("…t1 e-mail 'sent' sor", wl.some((r) => r.step === "t1" && r.channel === "email" && r.status === "sent"));
+  check("SMS-sor NINCS (se küldés, se foglalás — a lépcső nem ég el)", wl.every((r) => r.channel !== "sms"), wl.map((r) => `${r.step}:${r.channel}:${r.status}`).join(","));
+  const m1 = caps[0];
+  const h1 = m1?.html ?? "";
+  check("tárgy: „Holnap lejár az ingyenes próba – …”", !!m1 && m1.subject.startsWith("Holnap lejár az ingyenes próba – "), m1?.subject);
+  check("a Folytatom gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Folytatom</a>"));
+  check("a próba-kupon a levélben (30% az első díjból)", h1.includes("<b>30%</b> az első díjból"));
+  check("lábléc: „…próbálja ki.” — és nem „rendelte meg”", h1.includes("Citovisónál próbálja ki.") && !h1.includes("rendelte meg"));
+  const logged = await db.selectFrom("tenant_message").select(["subject", "related_kind"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").execute();
+  check("…a levél a tenant postafiókjában is (tenant_message)", logged.length === 1 && logged[0]!.subject === m1?.subject);
+  // honesty: a Monday expiry's T−1 leaves on Friday — 3 days, not "tomorrow"
+  const monLeft = trialDaysLeft(fri, bp("2026-10-19", "10:00"));
+  const mon = buildTrialNoticeEmail({ to: "x@example.invalid", daysLeft: monLeft, siteName: "X", contactName: null, trialUntilIso: "2026-10-19", coupon: null, continueUrl: "https://citoviso.test/p/x/folytatas", lang: "hu" });
+  check("hétfői lejárat pénteki T−1-e: „Még 3 nap…”, nem „Holnap”", monLeft === 3 && mon.subject.startsWith("Még 3 nap az ingyenes próbából") && !mon.html!.includes("Holnap"), mon.subject);
+  check("kupon nélkül nincs kedvezmény-ígéret", !mon.html!.includes("kedvezmény"));
+  // the hourly tick runs the wired deps, never dry
+  const tick = readFileSync(path.resolve(process.cwd(), "scripts/offer-followup.mts"), "utf8");
+  check("az óránkénti tick a bekötött küldőkkel fut (nem dryRun)", tick.includes("runTrialNotices(now, trialNoticeDeps(now))") && !/dryRun:\s*true/.test(tick));
+  // footer: trial vs buyer; the trial login letter
+  const credBase = { to: "x@example.invalid", username: "u", setPasswordUrl: "https://citoviso.test/j", loginUrl: "https://citoviso.test/login", siteName: "Napfény Vendégház", lang: "hu" };
+  const buyerMail = buildCredentialsEmail(credBase).html ?? "";
+  check("rendelő vevő belépő-levele: „…rendelte meg.” változatlan", buyerMail.includes("Citovisónál rendelte meg.") && !buyerMail.includes("próbálja ki"));
+  const trialMail = buildCredentialsEmail({ ...credBase, trial: { untilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" } } }).html ?? "";
+  check("próbás belépő-levél: lábléc „próbálja ki”, dátum, kupon", trialMail.includes("Citovisónál próbálja ki.") && trialMail.includes("2026. okt. 22. (csütörtök)") && trialMail.includes("25% az első díjból, 2027. jan. 20-ig") && trialMail.includes("<b>2026. október 22-ig</b>"));
+  const cred = await db.selectFrom("tenant_message").select("body_text").where("tenant_id", "=", tenantId).where("kind", "=", "credentials").executeTakeFirst();
+  check("a valódi próba-indítás a próbás belépő-levelet küldte", !!cred && cred.body_text.includes("ingyenes próbája") && cred.body_text.includes("3 nappal és 1 nappal a vége előtt szólunk."));
+
   // ③ lapse — one module is made "paid" (trial_grant cleared): it must survive
   console.log("③ lejárat → szünetel");
   await db.updateTable("module_entitlement").set({ trial_grant: false }).where("tenant_id", "=", tenantId).where("module", "=", "gallery").execute();
@@ -298,8 +349,8 @@ try {
 }
 
 if (SELF_TEST) {
-  // Sabotage legs: the wiped ledger (1: second run sends), the site back on (1), a revived trial module (1).
-  if (failures < 3) {
+  // Sabotage legs: the wiped ledger (1: second run sends), the SMS sender slipped in (1), the site back on (1), a revived trial module (1).
+  if (failures < 4) {
     console.error(`\n⛔ free-trial-expiry-check --self-test: csak ${failures} állítás ment pirosra a szabotázson — az őr vak.`);
     process.exit(1);
   }
