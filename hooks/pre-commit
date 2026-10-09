@@ -3009,7 +3009,7 @@ fi
 #     (valódi applyWebhookResult) → live, converted, fordulónap = ma, a kupon egyszer ég. Saját scratch-DB, ~15 mp.
 #     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/free-trial-expiry-check.mts ] && \
-   changed_files | grep -qE '^src/trial/.*\.ts$|^src/conversion/owned\.ts$|^src/payment/subscription\.ts$|^src/payment/payEntry\.ts$|^migrations/0098_free_trial_notice\.sql$|^scripts/free-trial-expiry-check\.mts$'; then
+   changed_files | grep -qE '^src/trial/.*\.ts$|^src/conversion/owned\.ts$|^src/console/server\.ts$|^scripts/offer-followup\.mts$|^src/payment/subscription\.ts$|^src/payment/payEntry\.ts$|^migrations/0098_free_trial_notice\.sql$|^scripts/free-trial-expiry-check\.mts$'; then
   if changed_files | grep -qE '^scripts/free-trial-expiry-check\.mts$'; then
     echo "[pre-commit] free-trial-expiry-check --self-test (a lejárat-őr pirosra tud-e menni)…"
     npx tsx scripts/free-trial-expiry-check.mts --self-test >"$GATE_LOG" || gate_failed
