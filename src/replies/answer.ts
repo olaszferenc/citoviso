@@ -253,6 +253,23 @@ export function settleReplySends(now: Date = new Date()): Promise<void> {
   return settling;
 }
 
+/**
+ * Does this reply still have a send waiting (scheduled / queued)? The dashboard's poll
+ * while it shows „Sorban”: the page was rendered at the send, and the queued SMS settles
+ * a few seconds to minutes later — without this the operator kept looking at „Sorban”
+ * long after the modem had delivered it (2026-10-09, Gemini Superior).
+ */
+export async function replyHasPendingSend(replyId: string): Promise<boolean> {
+  await settleReplySends();
+  const row = await db
+    .selectFrom("outreach_reply_send")
+    .select("id")
+    .where("reply_id", "=", replyId)
+    .where("status", "in", ["scheduled", "queued"])
+    .executeTakeFirst();
+  return !!row;
+}
+
 /** Console URL of one reply on the dashboard — what Poe's ticket links to. */
 export function replyConsoleUrl(replyId: string): string {
   const base = (config.consoleUrl ?? "").replace(/\/$/, "");

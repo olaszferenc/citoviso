@@ -155,7 +155,7 @@ import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
 import { getRepliesBlock, getReplySuggestion, markAnswered, unmarkAnswered } from "../replies/store.js";
-import { saveSuggestion, sendAnswer } from "../replies/answer.js";
+import { replyHasPendingSend, saveSuggestion, sendAnswer } from "../replies/answer.js";
 import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import {
@@ -1491,6 +1491,18 @@ async function handle(
       const s = await getReplySuggestion(m[1]!);
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
       res.end(JSON.stringify(s ? { text: s.text, subject: s.subject } : null));
+      return;
+    }
+  }
+  // GET /replies/<id>/pending — the dashboard's poll while a send of this reply shows
+  // „Sorban”: once it settles (sent / failed) the page reloads to show the outcome.
+  {
+    const m = method === "GET" ? path.match(/^\/replies\/([0-9a-f-]{36})\/pending$/) : null;
+    if (m) {
+      const pending = await replyHasPendingSend(m[1]!);
+      if (!pending) resetNavCountsCache();
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ pending }));
       return;
     }
   }

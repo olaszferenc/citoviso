@@ -9229,8 +9229,8 @@ function repAddr(r: ReplyView, text: string, subject: string | null, lang: strin
 /** The send's state line (README ⑦ / ⑦b). */
 function repState(x: ReplySendView, r: ReplyView, hidden: string, lang: string): string {
   if (x.status === "scheduled")
-    return `<span class="con-rep__st is-q">${icf("clock", 13)}${esc(T(lang, "Sorban — {when} megy ki", { when: x.scheduledFor ? whenAhead(x.scheduledFor, lang) : "—" }))}</span>`;
-  if (x.status === "queued") return `<span class="con-rep__st is-q"><span class="con-rep__spin"></span>${esc(T(lang, "Sorban — a modem-sáv viszi ki"))}</span>`;
+    return `<span class="con-rep__st is-q" data-rep-pending="${esc(r.id)}">${icf("clock", 13)}${esc(T(lang, "Sorban — {when} megy ki", { when: x.scheduledFor ? whenAhead(x.scheduledFor, lang) : "—" }))}</span>`;
+  if (x.status === "queued") return `<span class="con-rep__st is-q" data-rep-pending="${esc(r.id)}"><span class="con-rep__spin"></span>${esc(T(lang, "Sorban — a modem-sáv viszi ki"))}</span>`;
   if (x.status === "failed")
     return (
       `<span class="con-rep__st is-err">${icf("alert", 13)}${esc(T(lang, "Nem ment ki: {why}", { why: x.error ?? "—" }))}</span>` +
@@ -9469,7 +9469,11 @@ const REPLY_EDITOR_JS =
   `R.addEventListener('input',function(e){var f=e.target.closest&&e.target.closest('[data-rep-ed]');if(!f||e.target.name!=='text')return;store(f,e.target.value);upd(f)});` +
   `R.addEventListener('submit',function(e){var f=e.target.closest('[data-rep-ed]');if(f)store(f,null)});` +
   `[].slice.call(R.querySelectorAll('[data-rep-ed]')).forEach(function(f){var d=load(f);if(d!==null&&d!==f.querySelector('textarea[name=text]').defaultValue){var g=open(f.getAttribute('data-rep-ed'),false);if(g)g.querySelector('textarea[name=text]').value=d;upd(f)}});` +
-  `var T=R.querySelector('[data-rep-toast]');if(T)setTimeout(function(){T.hidden=true},5000)})();</script>`;
+  `var T=R.querySelector('[data-rep-toast]');if(T)setTimeout(function(){T.hidden=true},5000);` +
+  // A „Sorban” send settles server-side after the page was rendered: ask every 15 s, reload once it did.
+  `var P=[].slice.call(R.querySelectorAll('[data-rep-pending]')).map(function(e){return e.getAttribute('data-rep-pending')});` +
+  `if(P.length){var pt=setInterval(function(){P.forEach(function(id){fetch('/replies/'+id+'/pending',{credentials:'same-origin'}).then(function(r){return r.json()})` +
+  `.then(function(j){if(j&&j.pending===false){clearInterval(pt);location.reload()}}).catch(function(){})})},15000)}})();</script>`;
 
 /** Speeds the block up in place (filter, select, back); every action also works as a plain link. */
 const REPLIES_JS =
