@@ -204,6 +204,18 @@ try {
   check("figyelmeztetés nélkül: vár, 0 törölve", noWarn.waiting === 1 && noWarn.purged === 0, JSON.stringify({ w: noWarn.waiting, p: noWarn.purged }));
   check("…a tenant megvan", (await count("SELECT count(*)::int AS n FROM tenant WHERE id = $1", [tenantId])) === 1);
 
+  // ③b IT C3.4: a FAILED warning is retried (next day) — it used to stay 'failed' forever, and
+  // without a SENT p7 the purge never came (data kept beyond the ÁSZF's 90 days).
+  console.log("③b hibás figyelmeztetés → másnap újra");
+  const boom = { sendEmail: async () => { throw new Error("smtp 451 teszt"); } };
+  const failFri = await runPurgeWarnings(bp("2026-10-02", "10:00"), boom, only);
+  check("péntek 10:00: a küldés bukik → 1 failed", failFri.failed === 1 && (await p7Rows())[0]?.status === "failed", JSON.stringify(await p7Rows()));
+  const sameDay = await runPurgeWarnings(bp("2026-10-02", "11:00"), deps, only);
+  check("…ugyanaznap 11:00: nem próbálja újra (naponta egyszer)", sameDay.due === 0 && sent.length === 0, JSON.stringify(sameDay));
+  const stillWaits = await purgeExpiredTrials(bp("2026-10-08", "03:00"), only);
+  check("failed figyelmeztetéssel a törlés vár", stillWaits.waiting === 1 && stillWaits.purged === 0);
+  // the retry below (Mon 10-05) is the late warning of the next block — the purge moves to 10-12
+
   // the warning goes late (Mon 10-05, an outage) — the purge moves to 10-12
   // ②b the WIRED sender (what the hourly tick runs: purgeWarningDeps) — approved letter "A"
   // (assets/design-refs/console/proba-torles-level/), the real builder, the real coupon.

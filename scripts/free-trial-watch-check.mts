@@ -228,6 +228,9 @@ try {
   const noticeFx = await fixture({ tag: "notice", startedMin: 5 * 24 * 60 });
   const nFailed = await notice(noticeFx, "t3", "email", "failed", 300, "SMTP 550 teszt");
   const nStale = await notice(noticeFx, "t1", "sms", "claimed", 120);
+  // IT C3.4: a failed PURGE warning (p7) — its alert names the daily retry, not "a próba végéről"
+  const p7Fx = await fixture({ tag: "p7", startedMin: 30 * 24 * 60, untilMin: -16 * 24 * 60, status: "lapsed" });
+  const nP7 = await notice(p7Fx, "p7", "email", "failed", 300, "SMTP 451 p7-teszt");
   const noTenant = await fixture({ tag: "notenant", startedMin: 60, tenant: false });
   const notLive = await fixture({ tag: "notlive", startedMin: 60, site: "provisioned" });
   const stuck = await fixture({ tag: "stuck", startedMin: 5 * 24 * 60 });
@@ -243,7 +246,7 @@ try {
   console.log("① az öt állapot tüzel, a közel-hibák és az egészséges próba nem");
   const c1 = capture(RCPT);
   const r1 = await runTrialWatch(NOW, c1.deps);
-  const expect: Record<TrialAlertKind, number> = { lapse_overdue: 1, notice_failed: 2, site_not_live: 2, continuation_stuck: 1, login_not_sent: 1 };
+  const expect: Record<TrialAlertKind, number> = { lapse_overdue: 1, notice_failed: 3, site_not_live: 2, continuation_stuck: 1, login_not_sent: 1 };
   for (const k of TRIAL_ALERT_KINDS) check(`${k}: ${expect[k]} új eset`, r1.found[k] === expect[k], `${r1.found[k]}`);
   check("a lejárt (27 óra) próba: lapse_overdue", (await ledger(overdue.trialId)).some((l) => l.kind === "lapse_overdue"));
   const nl = await ledger(noticeFx.trialId);
@@ -268,7 +271,7 @@ try {
   }
 
   console.log("② fajtánként egy levél + egy SMS");
-  check("5 üzenet (fajtánként egy), 7 eset jelezve", r1.messages === 5 && r1.alerted === 7, `${r1.messages} / ${r1.alerted}`);
+  check("5 üzenet (fajtánként egy), 8 eset jelezve", r1.messages === 5 && r1.alerted === 8, `${r1.messages} / ${r1.alerted}`);
   check("5 e-mail, 5 SMS", c1.emails.length === 5 && c1.sms.length === 5, `${c1.emails.length} / ${c1.sms.length}`);
   check("e-mail: platform-audience, a riasztási címzettnek", c1.emails.every((m) => m.audience === "platform" && m.to === RCPT.email));
   check("e-mail tárgy: „[TESZT] ” (nem éles host)", c1.emails.every((m) => m.subject.startsWith("[TESZT] Citoviso: ingyenes próba")));
@@ -282,6 +285,9 @@ try {
   check("a belépő-levél: /login/help a próbázó címével", !!loginMail && loginMail.text.includes("/login/help") && loginMail.text.includes("trialwatch@example.invalid"));
   const noticeMail = c1.emails.find((m) => m.subject.includes("figyelmeztetés"));
   check("a figyelmeztetés-levél: a hibaok és a /folytatas link", !!noticeMail && noticeMail.text.includes("SMTP 550 teszt") && noticeMail.text.includes("/folytatas"));
+  check("p7 (törlés-figyelmeztetés) riasztása: a napi újrapróbálás és a törlés-zár, nem „a próba végéről”",
+    (await ledger(p7Fx.trialId)).some((l) => l.ref === nP7) && !!noticeMail && noticeMail.text.includes("SMTP 451 p7-teszt") &&
+      noticeMail.text.includes("magától újrapróbálja") && noticeMail.text.includes("a próba adatait NEM töröljük"), noticeMail?.text);
   check("SMS: tisztán ASCII (ékezet nélkül), a címzett telefonjára",
     c1.sms.every((m) => m.to === RCPT.phone && /^[\x20-\x7e]+$/.test(m.text)), c1.sms.map((m) => m.text).find((t) => !/^[\x20-\x7e]+$/.test(t)) ?? "");
   check("SMS: „[TESZT] Citoviso:” elöl, a ház neve ékezet nélkül", c1.sms.every((m) => m.text.startsWith("[TESZT] Citoviso:")) && c1.sms.some((m) => m.text.includes("Haz nologin")));

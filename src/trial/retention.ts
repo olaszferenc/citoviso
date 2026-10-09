@@ -17,7 +17,7 @@
 import { readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { db, pool } from "../db/client.js";
-import { addIsoDays, budapestIsoDay, budapestWeekday, isoDayDiff } from "../text/budapestTime.js";
+import { addIsoDays, budapestIsoDay, budapestMidnight, budapestWeekday, isoDayDiff } from "../text/budapestTime.js";
 import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
 
 /** Days the lapsed trial's data is kept, counted from the trial's last day (ÁSZF 1.4). */
@@ -81,18 +81,23 @@ export async function runPurgeWarnings(
   const dry = opts.dryRun === true || deps === null;
   if (!mockOutreachWindowOpen(now)) return { ...out, windowClosed: true };
   if (opts.onlyTrialIds && opts.onlyTrialIds.length === 0) return out;
+  const todayStart = budapestMidnight(budapestIsoDay(now));
   let q = db
     .selectFrom("free_trial")
     .select(["id", "tenant_id", "contact_email", "contact_name", "trial_until"])
     .where("status", "=", "lapsed")
     .where("tenant_id", "is not", null)
+    // A 'failed' p7 is retried once a day (IT C3.4): without it the purge never comes (it needs
+    // a SENT warning) and the data outlives the ÁSZF's 90 days. 'claimed' / 'sent' are left
+    // alone — a stale claim may have gone out, so that one stays with the operator (watch ②).
     .where(({ not, exists, selectFrom }) =>
       not(
         exists(
           selectFrom("free_trial_notice")
             .select("id")
             .whereRef("free_trial_notice.free_trial_id", "=", "free_trial.id")
-            .where("step", "=", "p7"),
+            .where("step", "=", "p7")
+            .where((n) => n.or([n("status", "!=", "failed"), n("created_at", ">=", todayStart as never)])),
         ),
       ),
     );
@@ -117,12 +122,24 @@ export async function runPurgeWarnings(
     }
     // created_at = the run's `now`: the purge counts its 7 days from the day the warning went.
     // (`as never`: Generated<Timestamp> does not accept a value in the schema typing.)
-    const claimed = await db
-      .insertInto("free_trial_notice")
-      .values({ free_trial_id: t.id, step: "p7", channel: "email", status: "claimed", detail: target.purgeDay, created_at: now as never })
-      .onConflict((oc) => oc.columns(["free_trial_id", "step", "channel"]).doNothing())
-      .returning("id")
-      .executeTakeFirst();
+    // A failed row is re-claimed atomically (failed → claimed); two overlapping runs cannot both win.
+    const claimed =
+      (await db
+        .insertInto("free_trial_notice")
+        .values({ free_trial_id: t.id, step: "p7", channel: "email", status: "claimed", detail: target.purgeDay, created_at: now as never })
+        .onConflict((oc) => oc.columns(["free_trial_id", "step", "channel"]).doNothing())
+        .returning("id")
+        .executeTakeFirst()) ??
+      (await db
+        .updateTable("free_trial_notice")
+        .set({ status: "claimed", detail: target.purgeDay, created_at: now as never })
+        .where("free_trial_id", "=", t.id)
+        .where("step", "=", "p7")
+        .where("channel", "=", "email")
+        .where("status", "=", "failed")
+        .where("created_at", "<", todayStart as never)
+        .returning("id")
+        .executeTakeFirst());
     if (!claimed) continue;
     try {
       await deps!.sendEmail(target);

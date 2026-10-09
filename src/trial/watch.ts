@@ -220,9 +220,18 @@ export async function detectTrialIncidents(
         r.nstatus === "failed"
           ? `A ${r.step} figyelmeztetés (${r.channel}) NEM ment ki: ${r.ndetail ?? "ismeretlen hiba"}.`
           : `A ${r.step} figyelmeztetés (${r.channel}) küldése ${iso(r.ncreated)} óta 'claimed' — a küldés közben leállt, nem tudni, kiment-e.`,
+      // The p7 purge warning has its own remedy (IT C3.4): a failed one is retried daily, and
+      // without a SENT p7 nothing is deleted — the T−3/T−1 text ("a próba végéről") misled.
       next:
-        `A napló a lépcsőt nem küldi újra. Az ok a free_trial_notice sor detail mezőjében áll (id: ${r.notice_id}); ` +
-        `ha a levél/SMS nem ment ki, értesítsd a próbázót kézzel a próba végéről.${link}`,
+        r.step === "p7"
+          ? r.nstatus === "failed"
+            ? `A törlés-figyelmeztetést az óránkénti tick a következő munkanapon 9–16 között magától újrapróbálja; ` +
+              `amíg ki nem megy, a próba adatait NEM töröljük, és a törlés napja a levél után legalább 7 nappal lesz. ` +
+              `Az ok a free_trial_notice sor detail mezőjében áll (id: ${r.notice_id}) — ha a cím hibás, javítsd a free_trial sorban.`
+            : `Nem tudni, kiment-e a törlés-figyelmeztetés; amíg a sor 'claimed', a próba adatait NEM töröljük. ` +
+              `Ha a levél nem ment ki, állítsd a sort 'failed'-re (id: ${r.notice_id}) — a tick másnap újraküldi; ha kiment, 'sent'-re.`
+          : `A napló a lépcsőt nem küldi újra. Az ok a free_trial_notice sor detail mezőjében áll (id: ${r.notice_id}); ` +
+            `ha a levél/SMS nem ment ki, értesítsd a próbázót kézzel a próba végéről.${link}`,
     });
   }
 
@@ -382,7 +391,7 @@ const KIND_INTRO: Readonly<Record<TrialAlertKind, string>> = {
     `után sem szüneteltette. Valószínűleg a tick nem fut: systemctl status citoviso-billing.timer · journalctl -u citoviso-billing. ` +
     `A pótlás próbánként lent (a --tenant a futást arra az egy tenantra szűkíti; idempotens).`,
   notice_failed:
-    "A próba lejárata előtti figyelmeztetés (free_trial_notice) elbukott vagy félbeszakadt. A napló kétszeri küldést tilt, ezért magától nem megy ki újra.",
+    "Egy próba-figyelmeztetés (free_trial_notice) elbukott vagy félbeszakadt. A lejárat előtti T−3/T−1 magától nem megy ki újra (a napló kétszeri küldést tilt); a törlés-figyelmeztetés (p7) bukás után másnap újrapróbálódik.",
   site_not_live: `A próba több mint ${SITE_LIVE_GRACE_MINUTES} perce elindult, de a próbázó oldala nem él — a próbázó egy nem működő ígéretet kapott.`,
   continuation_stuck:
     `A próbázó KIFIZETTE a folytatást (${CONTINUATION_GRACE_MINUTES} percnél régebben), de a fizetés utáni lépések nem fejeződtek be. A pénz bent van, a vevő nem kapta meg, amit vett.`,
