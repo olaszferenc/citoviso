@@ -229,7 +229,10 @@ export interface ProspectFeedbackTable {
   reason: "expensive" | "not_now" | "distrust" | "have_site" | "other";
   /** Free text, only with reason 'other'; ≤300 chars. */
   text: string | null;
+  /** Time of the FIRST answer for this key (prospect, source, view). */
   created_at: Generated<Timestamp>;
+  /** 0102 (ADR-XXXX): set when a later answer overwrote the stored one; null = never changed. */
+  updated_at: Timestamp | null;
 }
 
 /** ADR-0322 (0087): the owner's pilot-log note — a dated marker on the report chart. */

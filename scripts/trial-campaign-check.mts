@@ -8,7 +8,8 @@
 //      the three answer links carry forras=proba&ok=<reason>, and the §C gate passes it;
 //   ② the SMS: GSM-7, ≤ 2 segments, the link whole — for a normal AND a very long name —
 //      and the §C SMS gate passes on the text that goes out;
-//   ③ GET /p/<token>/why?forras=proba&ok=<reason> writes NOTHING, shows the tapped answer
+//   ③ GET /p/<token>/why?forras=proba&ok=<reason> writes NOTHING (a later POST overwrites the
+//      answer, 12 parallel POSTs leave one row — ADR-XXXX), shows the tapped answer
 //      pre-selected (only an allow-listed one), offers all five and the unsubscribe; the POST
 //      stores ONE row with source 'trial_mail';
 //   ④ the target selection: an emailed lead is a mail target, a texted mobile-only one an SMS
@@ -281,6 +282,19 @@ if (!SELF_TEST) {
     await post.text();
     const after = await rows();
     check("③ a POST egy trial_mail sort írt", after.length === 1 && after[0]!.source === "trial_mail" && after[0]!.reason === "not_now", JSON.stringify(after));
+    // ADR-XXXX (IT A-07): a later answer OVERWRITES the stored one, and parallel POSTs leave ONE row.
+    const postAs = (reason: string): Promise<Response> =>
+      fetch(`http://127.0.0.1:${port}/p/${page.token}/feedback`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", accept: "text/html" },
+        body: `source=trial_mail&reason=${reason}`,
+      });
+    await (await postAs("expensive")).text();
+    const changed = await rows();
+    check("③ a második, MÁS válasz felülírja az elsőt (egy sor, expensive)", changed.length === 1 && changed[0]!.reason === "expensive", JSON.stringify(changed));
+    await Promise.all(Array.from({ length: 12 }, (_, i) => postAs(i % 2 ? "distrust" : "not_now").then((r) => r.text())));
+    const raced = await rows();
+    check("③ 12 párhuzamos POST után is EGY trial_mail sor", raced.length === 1, `${raced.length} sor`);
 
     // ④ selection
     console.log("④ a célcsoport");

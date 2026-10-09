@@ -14,6 +14,7 @@
 // came from (when there is one), which of the three places asked, the reason and an
 // optional short text for "Más…".
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { T } from "../i18n/mail.js";
 import { loadPack } from "../i18n/packs.js";
@@ -50,12 +51,17 @@ export function cleanFeedbackText(reason: FeedbackReason, raw: unknown): string 
   return s || null;
 }
 
-export type FeedbackOutcome = "created" | "duplicate" | "bad_view";
+export type FeedbackOutcome = "created" | "updated" | "bad_view";
 
 /**
- * Store one answer. One answer per view per source: a repeat (double tap, back button,
- * resubmitted form) is reported as `duplicate` and changes nothing. Without a view
- * (unsubscribe page, reminder link) the key is prospect + source.
+ * Store one answer. ONE ROW PER KEY, THE LATEST ANSWER WINS (ADR-XXXX, IT A-07): the key
+ * is prospect + source + view (without a view — unsubscribe page, reminder link, trial
+ * letter — prospect + source). A repeat overwrites the reason and text; a double tap
+ * writes the same answer again. The key is unique in the DATABASE (0102), so parallel
+ * POSTs cannot leave two rows behind.
+ *
+ * ⛔ It used to be "the first answer wins, the rest are `duplicate`": a changed answer
+ * was dropped silently while the page thanked the person for it.
  */
 export async function recordProspectFeedback(input: {
   readonly prospectId: string;
@@ -74,14 +80,7 @@ export async function recordProspectFeedback(input: {
       .executeTakeFirst();
     if (!v) return "bad_view";
   }
-  let q = db
-    .selectFrom("prospect_feedback")
-    .select("id")
-    .where("prospect_id", "=", input.prospectId)
-    .where("source", "=", input.source);
-  q = input.viewId ? q.where("mock_view_id", "=", input.viewId) : q.where("mock_view_id", "is", null);
-  if (await q.executeTakeFirst()) return "duplicate";
-  await db
+  const row = await db
     .insertInto("prospect_feedback")
     .values({
       prospect_id: input.prospectId,
@@ -90,8 +89,16 @@ export async function recordProspectFeedback(input: {
       reason: input.reason,
       text: input.text,
     })
-    .execute();
-  return "created";
+    .onConflict((oc) =>
+      oc.constraint("prospect_feedback_one_answer").doUpdateSet({
+        reason: input.reason,
+        text: input.text,
+        updated_at: sql`now()`,
+      }),
+    )
+    .returning(sql<boolean>`xmax = 0`.as("inserted"))
+    .executeTakeFirstOrThrow();
+  return row.inserted ? "created" : "updated";
 }
 
 function esc(s: string): string {
