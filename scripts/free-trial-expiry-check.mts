@@ -39,7 +39,10 @@
 //   ⑤b B1-PAR, two checkout tabs: the second tab's /pay/go no longer hands back its live
 //      gateway page, and its payment, settled anyway, converts nothing, invoices nothing,
 //      burns nothing and lands on the „már kifizette” page (--self-test: the first payment's
-//      paid_at slid after the second → the second wins, the duplicate legs go red).
+//      paid_at slid after the second → the second wins, the duplicate legs go red);
+//   ⑤c Elek 4: the continuation's /pay/done says the account is unchanged — no „Elküldtük a
+//      belépési adatait”, no password form (--self-test: the login's created_at slid after the
+//      payment → it reads as a first purchase, the leg goes red).
 //
 // ISOLATION: own throwaway database (scratch-db), created BEFORE any import that opens the
 // db client; the provider switches are forced to mock and READ BACK (the dev .env names a
@@ -559,8 +562,13 @@ try {
   const done2 = await get(`/pay/done?paymentId=${encodeURIComponent(ref2)}`);
   const done2Html = done2.status === 200 ? await done2.text() : "";
   check("B1-PAR: /pay/done a második fizetésre → „már kifizette” lap, nem az üdvözlő", done2Html.includes("data-pay-duplicate"), String(done2.status));
+  if (SELF_TEST) await db.updateTable("tenant_user").set({ created_at: new Date(Date.now() + 3_600_000) } as never).where("tenant_id", "=", tenantId).execute();
   const done1 = await get(`/pay/done?paymentId=${encodeURIComponent(ref)}`);
-  check("B1-PAR: …az első fizetés lapja továbbra is a normál eredmény", done1.status === 200 && !(await done1.text()).includes("data-pay-duplicate"));
+  const done1Html = done1.status === 200 ? await done1.text() : "";
+  check("B1-PAR: …az első fizetés lapja továbbra is a normál eredmény", done1.status === 200 && !done1Html.includes("data-pay-duplicate"));
+  // Elek 4: the continuation sent NO credentials mail (the login predates the payment).
+  check("Elek 4: folytatás-fizetés lapja → „A fiókja változatlan”, nem „Elküldtük a belépési adatait”, nincs jelszó-űrlap",
+    done1Html.includes("data-pay-account-kept") && !done1Html.includes("Elküldtük a belépési adatait") && !done1Html.includes(`class="pd-pwset"`));
   const paidState = await trialAdminState(tenantId);
   const paidHtml = renderAdmin(tenantId, "attekintes", paidState);
   check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk, se „Modulok” kártya", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed") && !paidHtml.includes("data-trial-modules"));
@@ -575,8 +583,8 @@ try {
 if (SELF_TEST) {
   // Sabotage legs: the wiped ledger (1: second run sends), the SMS sender slipped in (1), the site back on (1), a revived trial module (1),
   // the admin strip unwired (1), the warn threshold missed (1), the spine's trial_grant lost (1)
-  // and the lapsed trial's Teendők row handed no trial (1).
-  if (failures < 9) {
+  // and the lapsed trial's Teendők row handed no trial (1), the login made to look newer than the payment (1).
+  if (failures < 10) {
     console.error(`\n⛔ free-trial-expiry-check --self-test: csak ${failures} állítás ment pirosra a szabotázson — az őr vak.`);
     process.exit(1);
   }

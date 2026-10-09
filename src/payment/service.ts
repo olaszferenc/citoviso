@@ -1869,6 +1869,13 @@ export interface ActivationSummary {
   /** Where the credentials were sent. */
   readonly contactEmail: string | null;
   /**
+   * The owner's login existed BEFORE this payment was started — a free trial being
+   * continued (ADR-0344). Activation then issues no login and sends no credentials
+   * mail (only a missing tenant_user gets one), so the confirmation must not say it
+   * did (Elek 4, 2026-10-10: „Elküldtük a belépési adatait” after a continuation).
+   */
+  readonly accountExisted: boolean;
+  /**
    * Charged amount (HUF) — the buyer must see WHAT was taken on the result page
    * itself, not first in the invoice mail (Elek FK-005a HIBA, 2026-09-05).
    */
@@ -1951,8 +1958,10 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
       "site.custom_domain as customDomain",
       "tenant_user.username as username",
       "tenant_user.contact_email as tenantEmail",
+      "tenant_user.created_at as userCreatedAt",
       "prospect.contact_email as prospectEmail",
       "payment.amount as amount",
+      "payment.created_at as paymentCreatedAt",
       "tenant.id as tenantId",
     ])
     .where("payment.gateway_ref", "=", gatewayRef)
@@ -1968,6 +1977,12 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
         : null,
     username: row.username ?? null,
     contactEmail: row.tenantEmail ?? row.prospectEmail ?? null,
+    // A first purchase creates the login during activation, i.e. AFTER the payment
+    // row; a login older than the payment was there already (trial continuation).
+    accountExisted:
+      row.userCreatedAt != null &&
+      new Date(row.userCreatedAt as unknown as string).getTime() <
+        new Date(row.paymentCreatedAt as unknown as string).getTime(),
     amount: row.amount ?? null,
   };
 }

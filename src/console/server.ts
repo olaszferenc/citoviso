@@ -4375,7 +4375,8 @@ async function handle(
     const activated = Boolean(summary?.siteUrl ?? summary?.username);
     // Elek T-3 (B): the password can be set right here, right after paying.
     const passwordSetUrl =
-      paid && activated && summary?.username
+      // ⛔ Not for a continued trial (Elek 4): the account is the one they already use.
+      paid && activated && summary?.username && !summary.accountExisted
         ? await payDonePasswordUrl(ref, summary.username).catch((e) => {
             console.error(`[pay/done] jelszó-link kiadása sikertelen (${ref}):`, e);
             return null;

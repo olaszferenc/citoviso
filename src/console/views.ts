@@ -3422,6 +3422,12 @@ export function payResultPage(
      * window passed: the page then points at the mail.
      */
     passwordSetUrl?: string | null;
+    /**
+     * Elek 4 (2026-10-10): the login predates this payment (a continued free trial).
+     * No credentials mail went out — the page says the account is unchanged instead
+     * of „Elküldtük a belépési adatait”, and offers no password link.
+     */
+    accountExisted?: boolean | null;
   },
 ): string {
   const lang = consoleLang();
@@ -3584,16 +3590,25 @@ export function payResultPage(
   }
   const site = info?.siteUrl;
   const businessName = info?.businessName ?? info?.productName ?? "";
-  const mailNote = info?.contactEmail
-    ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
-    : T(lang, "A belépési adatait e-mailben küldtük el.");
+  // ⛔ Elek 4: a continued trial got NO credentials mail (activation only issues a
+  // login that did not exist) — telling them we sent one sends them hunting for it.
+  const existing = Boolean(info?.accountExisted && info?.username);
+  const mailNote = existing
+    ? T(lang, "A fiókja változatlan: ugyanazzal a felhasználónévvel és jelszóval lép be, mint eddig.")
+    : info?.contactEmail
+      ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
+      : T(lang, "A belépési adatait e-mailben küldtük el.");
   // ⛔ Elek T-3: no password travels by mail any more — the line says where it IS set.
-  const setUrl = /^https?:\/\//.test(info?.passwordSetUrl ?? "") ? info!.passwordSetUrl! : null;
+  const setUrl = !existing && /^https?:\/\//.test(info?.passwordSetUrl ?? "") ? info!.passwordSetUrl! : null;
   const userLine = info?.username
     ? payRow(
         T(lang, "Felhasználónév"),
         `${esc(info.username)} <span class="pd-soft">${
-          setUrl ? T(lang, "(a jelszót most, itt állíthatja be)") : T(lang, "(a jelszó-beállító link az e-mailben)")
+          existing
+            ? T(lang, "(a jelszava nem változott)")
+            : setUrl
+              ? T(lang, "(a jelszót most, itt állíthatja be)")
+              : T(lang, "(a jelszó-beállító link az e-mailben)")
         }</span>`,
       )
     : payRow(T(lang, "Felhasználónév"), T(lang, "A felhasználónevet és a jelszó-beállító linket e-mailben küldtük."));
@@ -3658,7 +3673,7 @@ export function payResultPage(
         T(lang, "Mit szerkeszthet"),
         T(lang, "A bemutatkozó szöveget, a képeket és az elérhetőségeit — nem kell hozzá szakember."),
       )}
-      <p class="pd-soft" style="margin:10px 0 0;font-size:12.5px">${mailNote}</p>
+      <p class="pd-soft" style="margin:10px 0 0;font-size:12.5px"${existing ? " data-pay-account-kept" : ""}>${mailNote}</p>
       ${
         setForm
           ? setForm
