@@ -124,3 +124,46 @@ export async function ownedSiteForArtifact(artifactId: string): Promise<OwnedSit
     .executeTakeFirst();
   return r ? ownedSiteForLead(r.leadId) : null;
 }
+
+/**
+ * ADR-XXXX — a card-less trial (ADR-0342) the lead may still CONTINUE by paying.
+ *
+ * The trial tenant reads as "owned" above (a tenant exists), and that is right for every
+ * screen that must not sell the trialist a second site. But its first real payment is
+ * not a second purchase — it is THE first one, the one the trial was waiting for. So the
+ * purchase gates (requestPayment, the order submit, the pay-link entry) ask this ONE
+ * predicate before refusing: a trial that is running or lapsed, and no paid initial order.
+ * Converted = already paid → null, and the plain already-a-customer refusal stands.
+ */
+export async function continuableTrialForLead(leadId: string): Promise<{
+  readonly trialId: string;
+  readonly tenantId: string;
+  readonly status: "active" | "lapsed";
+} | null> {
+  const t = await db
+    .selectFrom("free_trial")
+    .select(["id", "tenant_id", "status"])
+    .where("lead_id", "=", leadId)
+    .where("status", "in", ["active", "lapsed"])
+    .where("tenant_id", "is not", null)
+    .executeTakeFirst();
+  if (!t?.tenant_id) return null;
+  const paid = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select("payment.id")
+    .where("prospect.lead_id", "=", leadId)
+    .where("order_intent.kind", "=", "initial")
+    .where("payment.status", "=", "paid")
+    .executeTakeFirst();
+  if (paid) return null;
+  return { trialId: t.id, tenantId: t.tenant_id, status: t.status as "active" | "lapsed" };
+}
+
+/** The purchase gate's question: owned AND not a trial waiting for its first payment. */
+export async function ownedBlocksInitialPurchase(leadId: string): Promise<OwnedSite | null> {
+  const owned = await ownedSiteForLead(leadId);
+  if (!owned) return null;
+  return (await continuableTrialForLead(leadId)) ? null : owned;
+}

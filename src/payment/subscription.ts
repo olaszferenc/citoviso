@@ -25,7 +25,16 @@ export async function isSubscriptionFrozen(tenantId: string): Promise<boolean> {
     .select("status")
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
-  return sub?.status === "frozen";
+  if (sub) return sub.status === "frozen";
+  // ADR-XXXX: a lapsed card-less trial is paused the same way (site suspended, admin
+  // alive) — and it has no subscription row, so the trial table answers. Continuing is
+  // the trial's own checkout, never a module purchase on a paused site.
+  const trial = await db
+    .selectFrom("free_trial")
+    .select("status")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  return trial?.status === "lapsed";
 }
 
 /** Calendar-month arithmetic on a date (mirrors the 0039 backfill's interval math). */

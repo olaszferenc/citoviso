@@ -123,6 +123,7 @@ import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
 import { resolvePayEntry } from "../payment/payEntry.js";
 import {
   applyOffer,
+  bestActiveCouponForTenant,
   bestActiveOfferForProspect,
   offerForPage,
   bestActiveOfferForProspectToken,
@@ -145,7 +146,7 @@ import {
   payAlreadyOwnedPage,
 } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
-import { ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
+import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import { normalizeCustomDomain, suggestDomains } from "../domains.js";
@@ -984,8 +985,14 @@ async function handleOrderRequest(
   // non-problem and tell the buyer "a colleague will contact you". Nothing is
   // wrong: they already own the site. Refuse at the door and say so.
   // Keyed on the ARTIFACT so the token-less /configure path is gated too.
+  // ADR-XXXX: a running or lapsed card-less trial is NOT refused here — its first
+  // payment is the continuation (the same checkout, the trial coupon as the offer).
   const alreadyOwned = await ownedSiteForArtifact(artifactId);
-  if (alreadyOwned) {
+  const artifactLead = alreadyOwned
+    ? await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst()
+    : undefined;
+  const trialCont = artifactLead ? await continuableTrialForLead(artifactLead.lead_id) : null;
+  if (alreadyOwned && !trialCont) {
     console.warn(
       `[console] rendelés ELUTASÍTVA: a lead már vásárolt (artifact ${artifactId}, ` +
         `állapot: ${alreadyOwned.stage}) — nincs order_intent, nincs pay-link, nincs riasztás`,
@@ -1129,9 +1136,14 @@ async function handleOrderRequest(
   // renewals recompute from list in billing.ts.
   const listPrice =
     billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
-  const offer = prospectToken
-    ? await bestActiveOfferForProspectToken(prospectToken)
-    : null;
+  // ADR-XXXX: the trial's continuation is priced by the TENANT's coupon (minted at
+  // trial start, ADR-0342) — the prospect's intro offers were closed when the trial
+  // began. One offer, never stacked (ADR-0088 ⑥); redeemOfferForOrder burns its one use.
+  const offer = trialCont
+    ? await bestActiveCouponForTenant(trialCont.tenantId)
+    : prospectToken
+      ? await bestActiveOfferForProspectToken(prospectToken)
+      : null;
   // ADR-0109: a domain through us carries a flat MONTHLY fee, and it is only
   // sellable at all above the package threshold — measured on the LIST price, so
   // a discount can never buy the entitlement (⑧). The order charges the fee for

@@ -525,6 +525,18 @@ export interface FreeTrialTable {
 
 // --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---
 
+/** ADR-XXXX (0098): the trial's T−3 / T−1 warning log — one row per trial, step and
+ *  channel; the unique key is the never-twice guard. */
+export interface FreeTrialNoticeTable {
+  id: Generated<string>;
+  free_trial_id: string;
+  step: "t3" | "t1";
+  channel: "email" | "sms";
+  status: Generated<"claimed" | "sent" | "failed" | "skipped">;
+  detail: string | null;
+  created_at: Generated<Timestamp>;
+}
+
 /** One subscription per tenant, one renewal day: every monthly module folds into
  *  this common cycle (one charge, one invoice per period). Renewals run through
  *  the existing spine as order_intent kind='renewal'. */
@@ -1729,6 +1741,7 @@ export interface Database {
   tenant: TenantTable;
   module_entitlement: ModuleEntitlementTable;
   free_trial: FreeTrialTable;
+  free_trial_notice: FreeTrialNoticeTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;

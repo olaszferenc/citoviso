@@ -12,7 +12,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
-import { ownedSiteForLead } from "../conversion/owned.js";
+import { ownedBlocksInitialPurchase } from "../conversion/owned.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { tenantSiteUrl } from "../domains.js";
@@ -103,7 +103,8 @@ export async function requestPayment(
       .select("prospect.lead_id as leadId")
       .where("order_intent.id", "=", orderIntentId)
       .executeTakeFirst();
-    const owned = lead ? await ownedSiteForLead(lead.leadId) : null;
+    // ADR-XXXX: a trial's first payment is the continuation, not a second purchase.
+    const owned = lead ? await ownedBlocksInitialPurchase(lead.leadId) : null;
     if (owned) {
       console.warn(
         `[payment] requestPayment ${orderIntentId} MEGTAGADVA: a lead MÁR VÁSÁROLT ` +

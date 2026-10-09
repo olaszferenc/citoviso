@@ -7,6 +7,7 @@ import { runBillingCycle } from "../src/payment/billing.js";
 import { checkAamAlert } from "../src/console/aamAlert.js";
 import { retryFailedInvoices } from "../src/billing/invoiceRetry.js";
 import { db } from "../src/db/client.js";
+import { lapseExpiredTrials } from "../src/trial/expiry.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
 const now = nowArg ? new Date(nowArg.slice("--now=".length)) : new Date();
@@ -25,6 +26,19 @@ let sideStepFailed = false;
 
 const r = await runBillingCycle(now, tenantId ? { tenantId } : undefined);
 console.log(`billing-cycle @ ${now.toISOString()}:`, JSON.stringify(r));
+// ADR-XXXX: a card-less trial past its end pauses (site 503, trial modules off) on the
+// same daily tick. Separate from the ladder above: a trial has no subscription row.
+// --tenant narrows it too (the dev DB is shared).
+try {
+  const trialIds = tenantId
+    ? (await db.selectFrom("free_trial").select("id").where("tenant_id", "=", tenantId).execute()).map((t) => t.id)
+    : undefined;
+  const t = await lapseExpiredTrials(now, trialIds ? { onlyTrialIds: trialIds } : {});
+  console.log(`trial-lapse @ ${now.toISOString()}:`, JSON.stringify(t));
+} catch (e) {
+  console.error("trial-lapse HIBA:", e);
+  sideStepFailed = true;
+}
 // ADR-0088 §4b: the escalation follow-up NO LONGER rides this daily tick — its delay is
 // operator-set from 1 hour (ADR-0286), so it runs hourly on its own timer
 // (citoviso-offer-followup.timer → scripts/offer-followup.mts, ADR-0287).

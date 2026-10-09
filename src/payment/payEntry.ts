@@ -21,7 +21,7 @@
 
 import { db } from "../db/client.js";
 import { handleWebhook, requestPayment } from "./service.js";
-import { ownedSiteForLead, type OwnedSite } from "../conversion/owned.js";
+import { ownedBlocksInitialPurchase, type OwnedSite } from "../conversion/owned.js";
 
 export type PayEntryDecision =
   | { readonly kind: "redirect"; readonly url: string; readonly reissued: boolean }
@@ -102,7 +102,8 @@ export async function resolvePayEntry(
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
   if (kind?.kind === "initial" && kind.leadId) {
-    const owned = await ownedSiteForLead(kind.leadId);
+    // ADR-XXXX: a trial waiting for its first payment is not "already theirs".
+    const owned = await ownedBlocksInitialPurchase(kind.leadId);
     if (owned) return { kind: "owned", owned };
   }
 
