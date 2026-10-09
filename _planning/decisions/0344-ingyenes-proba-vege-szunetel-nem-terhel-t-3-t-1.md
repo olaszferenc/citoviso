@@ -75,8 +75,33 @@ Tulaj-döntés 2026-10-09: a T−3 és T−1 e-mail és a próbás belépő-lev�
    vevői vs. próbás lábléc, a valódi próba-indítás a próbás belépő-levelet küldte. `--self-test`: egy becsempészett
    SMS-küldő pirosra viszi.
 
+#### C2b — az SMS ÉLES (2026-10-09)
+
+Tulaj-döntés (a koordinátoron át): **ékezet nélkül, linkkel**, ≤ 2 szelet, GSM-7; hétköznap 9–16 marad.
+
+7. **`trialNoticeDeps` SMS-küldője ÉL** (`sendTrialNoticeSms`, `src/trial/notices.ts`): a szöveg
+   `buildTrialNoticeSmsText` (`src/email/trialEmail.ts`) — a mock szövege, `T()`-ből fordítva, UTÁNA
+   GSM-7-re hajtva (`toGsm7`, `src/sms/encoding.ts`): ékezet le, „”–… → ASCII, a maradék nem-GSM jel ki.
+   Ugyanaz a valós-napszám szabály, mint a levélnél (≥2 nap → dátum „okt. 22-en lejar”, 1 → „holnap”,
+   0 → „ma”); a T−3 záró mondata („Nem terhelunk, ha nem folytatja.”) csak a T−3-ban van, mint a mockban.
+   Ha nem fér 2 szeletbe: előbb a záró mondat megy, aztán a szállásnév rövidül „...”-tal — **a link soha**.
+   A link séma nélküli (`citoviso.com/p/<t>/folytatas`). Kupon nélkül „Folytatas: <link>”.
+   A küldés `sendSms`-en át (Elek-őr, provider-választás ugyanaz); `blocked` → dob → a ledger `failed`
+   (nem „sent” egy ki nem ment SMS-re); a kiment SMS a tenant postafiókjába naplózódik (`channel sms`,
+   kind `other`, related `free_trial_t3|t1`).
+8. **A modem eddig MINDEN SMS-t `-unicode`-dal küldött** (`injectViaGammu`) — az ékezet nélküli szöveg is
+   70/67 karakteres szeletekben ment volna, a jóváhagyott T−3 (176 kar.) 3 szelet lett volna. Mostantól a
+   tisztán GSM-7 (alap-tábla) szöveg 7 biten megy, minden más változatlanul `-unicode`. Ez MINDEN SMS-t érint,
+   ami véletlenül tiszta GSM-7 (pl. a modul-függőség operátor-riasztás): kevesebb szelet, ugyanaz a szöveg.
+   A kiterjesztett tábla (€ [ ] { } …) szándékosan UCS-2 marad. A `replies/answerRules.ts` `smsParts`-ja
+   UCS-2-vel számol — ez mostantól felső korlát, nem pontos érték.
+9. **Őr ②b átírva:** bekötött `sendSms` NEM null; péntek → 1 e-mail + 1 SMS (`sent` sor mindkettőre);
+   az SMS GSM-7, ≤ 2 szelet, benne a `/p/<t>/folytatas` link, a tenant-postafiókban; a T−3 a jóváhagyott
+   szöveg ékezet nélkül; hosszú ékezetes név → GSM-7, ≤ 2 szelet, ép link; a modem-injektálás GSM-7-nél
+   nem kér `-unicode`-ot. `--self-test`: a bekötött SMS-küldő visszacserélve száraz-ra → pirosra megy.
+
 ### Nyitott (a tulajé)
-- Az admin próba-sáv (A/B) és az SMS formája (linkkel/link nélkül, ékezetes/ékezet nélkül) — mock:
+- ~~Az SMS formája~~ → C2b: ékezet nélkül, linkkel. Az admin próba-sáv: A változat (tulaj, 2026-10-09) — bekötése folyamatban. Mock:
   `~/rc-briefs/proba-C-mock-20261009/proba-C.html`. (A levelek: jóváhagyva, C2.)
 - **Meddig marad meg a lejárt próba adata?** Ma semmi nem törli; a szövegek „megmarad”-ot mondanak, határidő nélkül.
 - ~~A platform-levél lábléce próbánál nem pontos~~ → C2: a három próba-levélben javítva.

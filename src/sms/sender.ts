@@ -22,6 +22,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { config } from "../config.js";
 import { normalizePhone } from "../text/phone.js";
+import { isGsm7 } from "./encoding.js";
 
 // The rule lives in a pure module (shared with the scrapers and the console);
 // re-exported here because every sender caller already imports it from this file.
@@ -37,7 +38,7 @@ export interface SmsMessage {
   readonly to: string;
   /**
    * Message text. Keep it short: Hungarian accents (ő/ű are outside GSM-7)
-   * force unicode encoding = 70 chars per segment.
+   * force unicode encoding = 70 chars per segment (src/sms/encoding.ts).
    */
   readonly text: string;
 }
@@ -70,8 +71,10 @@ class MockSmsSender implements SmsSender {
 /**
  * Direct GSM injection — shared by the local 'gammu' provider AND the relay
  * (scripts/sms-relay.mts), so there is exactly ONE place that knows how the
- * modem is driven. -unicode because the texts carry ő/ű (outside GSM-7 —
- * without it they would arrive mangled).
+ * modem is driven. -unicode whenever the text has a character outside the GSM-7
+ * basic alphabet (ő/ű — without it they would arrive mangled); a pure GSM-7 text
+ * goes 7-bit, 160/153 characters per segment instead of 70/67 (src/sms/encoding.ts,
+ * ADR-0344 C2b: until 2026-10-09 every text went -unicode, an accent-free one too).
  */
 export async function injectViaGammu(toRaw: string, text: string): Promise<string> {
   const to = normalizePhone(toRaw);
@@ -90,7 +93,7 @@ export async function injectViaGammu(toRaw: string, text: string): Promise<strin
     to,
     "-len",
     String(text.length),
-    "-unicode",
+    ...(isGsm7(text) ? [] : ["-unicode"]),
     "-text",
     text,
   ]);

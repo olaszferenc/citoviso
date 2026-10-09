@@ -9,7 +9,8 @@ export const SMS_MAX_PARTS = 5;
 export const MAX_TEXT = 4000;
 export const MAX_SUBJECT = 300;
 
-/** Parts of an SMS — mirrors src/sms/sender.ts (always -unicode): ≤70 chars = 1, else 67/part. */
+/** Parts of an SMS, counted as UCS-2 (≤70 chars = 1, else 67/part) — the UPPER bound: since
+ *  2026-10-09 a pure GSM-7 text goes 7-bit and costs fewer (src/sms/encoding.ts). */
 export function smsParts(text: string): number {
   const n = [...text].length;
   return n === 0 ? 0 : n <= 70 ? 1 : Math.ceil(n / 67);

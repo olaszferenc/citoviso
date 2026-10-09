@@ -13,7 +13,9 @@
 // an outage) says "Ma lejár…".
 
 import { T } from "../i18n/mail.js";
-import { formatDayOn, formatDayShortStem, formatDayShortWeekday, formatDayLongStem } from "../text/day.js";
+import { formatDayOn, formatDayShortOn, formatDayShortStem, formatDayShortWeekday, formatDayLongStem } from "../text/day.js";
+import { huArticleLower } from "../hu.js";
+import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { esc, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 
@@ -123,4 +125,54 @@ export function buildTrialNoticeEmail(input: {
       mailNote(esc(stay)),
     ],
   });
+}
+
+/** The trial SMS may cost at most this many segments (owner, 2026-10-09: accent-free, ≤ 2). */
+export const TRIAL_SMS_MAX_SEGMENTS = 2;
+
+/**
+ * The T−3 / T−1 SMS twin (owner, 2026-10-09: ACCENT-FREE, WITH THE LINK, ≤ 2 segments —
+ * mock ~/rc-briefs/proba-C-mock-20261009, contract assets/design-refs/console/proba-levelek/).
+ * The sentence is translated with accents (the catalog key is the Hungarian source), THEN
+ * folded to GSM-7 (toGsm7): an accent outside GSM-7 would turn the whole text into UCS-2,
+ * 70 characters a segment, and the approved text would cost 3–4.
+ *
+ * Like the letter, it says the REAL distance: a weekend-shifted step reads the date, never
+ * "holnap". Too long for 2 segments (a long site name) → the closing reassurance goes first,
+ * then the site name is shortened — the link is the message's purpose and is never cut.
+ */
+export function buildTrialNoticeSmsText(input: {
+  daysLeft: number;
+  siteName: string;
+  trialUntilIso: string;
+  coupon: TrialCouponView | null;
+  /** The /p/<token>/folytatas link (the scheme is dropped: phones link a bare host too). */
+  continueUrl: string;
+  lang?: string;
+}): string {
+  const { daysLeft, trialUntilIso, coupon, lang } = input;
+  const url = input.continueUrl.replace(/^https?:\/\//, "");
+  const build = (siteName: string, tail: boolean): string => {
+    const v = { art: huArticleLower(siteName), site: siteName };
+    const when =
+      daysLeft <= 0
+        ? T(lang, "Citoviso: ma lejár {art} {site} ingyenes próbája.", v)
+        : daysLeft === 1
+          ? T(lang, "Citoviso: holnap lejár {art} {site} ingyenes próbája.", v)
+          : T(lang, "Citoviso: {art} {site} ingyenes próbája {date} lejár.", { ...v, date: formatDayShortOn(trialUntilIso, lang) });
+    const go = coupon
+      ? T(lang, "Folytatás {percent}% kedvezménnyel: {url}", { percent: String(coupon.percent), url })
+      : T(lang, "Folytatás: {url}", { url });
+    // The approved T−3 closes with the reassurance; the approved T−1 has no room for it.
+    const rest = tail && daysLeft >= 2 ? ` ${T(lang, "Nem terhelünk, ha nem folytatja.")}` : "";
+    return toGsm7(`${when} ${go}${rest}`);
+  };
+  const fits = (t: string): boolean => smsEncoding(t).segments <= TRIAL_SMS_MAX_SEGMENTS;
+  let text = build(input.siteName, true);
+  if (fits(text)) return text;
+  text = build(input.siteName, false);
+  for (let n = [...input.siteName].length - 1; !fits(text) && n > 8; n--) {
+    text = build(`${[...input.siteName].slice(0, n).join("").trimEnd()}...`, false);
+  }
+  return text;
 }

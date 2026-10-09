@@ -17,8 +17,9 @@
 //      configurator with the trial coupon, and sends anyone else back to /p/<t>;
 //   ②b the WIRED senders (src/trial/notices.ts, what the hourly tick runs): the e-mail is
 //      LIVE — one approved letter with the /folytatas button, logged in the tenant's
-//      mailbox — and the SMS is DRY: not sent AND no ledger row (a dry claim would burn the
-//      step); the tick calls exactly those deps (no dryRun); the heading counts the REAL
+//      mailbox — and the SMS is LIVE too (C2b): accent-free GSM-7, ≤ 2 segments, the
+//      /folytatas link, logged in the mailbox; the modem injects a GSM-7 text without
+//      -unicode; the tick calls exactly those deps (no dryRun); the heading counts the REAL
 //      days left (a Monday expiry's Friday T−1 says "Még 3 nap", never "Holnap"); the
 //      trial footer says "próbálja ki", the buyer's still says "rendelte meg"; the trial
 //      login letter carries the approved trial wording;
@@ -31,7 +32,7 @@
 // real invoice agent and the real Barion gateway). The snapshot under sites/ is removed.
 //
 // --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the trial
-// coupon expired before the /folytatas GET, an SMS sender slipped into the wired deps, the notice
+// coupon expired before the /folytatas GET, the wired SMS sender swapped back to DRY, the notice
 // ledger wiped before the second run, the
 // site switched back on after the lapse, a trial module revived) — ② ③ must go red.
 //
@@ -112,7 +113,8 @@ const { continuableTrialForLead, ownedBlocksInitialPurchase } = await import("..
 const { applyWebhookResult } = await import("../src/payment/service.js");
 const { budapestIsoDay } = await import("../src/text/budapestTime.js");
 const { trialNoticeDeps, trialDaysLeft } = await import("../src/trial/notices.js");
-const { buildTrialNoticeEmail } = await import("../src/email/trialEmail.js");
+const { buildTrialNoticeEmail, buildTrialNoticeSmsText } = await import("../src/email/trialEmail.js");
+const { isGsm7, smsEncoding } = await import("../src/sms/encoding.js");
 const { buildCredentialsEmail } = await import("../src/email/loginEmail.js");
 const { readFileSync } = await import("node:fs");
 type EmailMessage = import("../src/email/sender.js").EmailMessage;
@@ -214,26 +216,53 @@ try {
   check("kimaradt t3 + esedékes t1 → csak a t1 megy (2)", catchUp.sent === 2 && sent.join() === "email:t1,sms:t1", sent.join());
   check("…a t3 'skipped' sorként rögzül, utólag sem megy", t3Rows.length === 2 && t3Rows.every((r) => r.status === "skipped"));
 
-  // ②b the wired senders — e-mail live, SMS dry
-  console.log("②b bekötött küldők: e-mail éles, SMS száraz");
+  // ②b the wired senders — e-mail AND SMS live (C2b: accent-free, with the link, ≤ 2 segments)
+  console.log("②b bekötött küldők: e-mail és SMS éles");
   await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).execute();
   const caps: EmailMessage[] = [];
   const cap = { send: async (m: EmailMessage) => { caps.push(m); return { id: "cap", provider: "mock" as const }; } };
+  const smsCaps: { to: string; text: string }[] = [];
+  const smsCap = async (m: { to: string; text: string }) => {
+    smsCaps.push(m);
+    return { id: "cap", provider: "mock" as const };
+  };
   const fri = bp("2026-10-16", "10:00");
-  const wired = trialNoticeDeps(fri, cap);
-  check("a bekötött SMS-küldő NULL (száraz)", wired.sendSms === null);
-  const live = await runTrialNotices(fri, SELF_TEST ? { ...wired, sendSms: async () => {} } : wired, only);
+  const wired = trialNoticeDeps(fri, cap, smsCap);
+  check("a bekötött SMS-küldő NEM null (éles)", wired.sendSms !== null);
+  // --self-test: the SMS channel slipped back to DRY → the SMS legs must go red
+  const live = await runTrialNotices(fri, SELF_TEST ? { ...wired, sendSms: null } : wired, only);
   const wl = await db.selectFrom("free_trial_notice").select(["step", "channel", "status"]).where("free_trial_id", "=", trial.id).execute();
-  check("péntek (szombati lejárat) → 1 e-mail ment ki", live.sent === 1 && caps.length === 1, `${live.sent}/${caps.length}`);
+  check("péntek (szombati lejárat) → 1 e-mail + 1 SMS ment ki", live.sent === 2 && caps.length === 1 && smsCaps.length === 1, `${live.sent}/${caps.length}/${smsCaps.length}`);
   check("…t1 e-mail 'sent' sor", wl.some((r) => r.step === "t1" && r.channel === "email" && r.status === "sent"));
-  check("SMS-sor NINCS (se küldés, se foglalás — a lépcső nem ég el)", wl.every((r) => r.channel !== "sms"), wl.map((r) => `${r.step}:${r.channel}:${r.status}`).join(","));
+  check("…t1 SMS 'sent' sor", wl.some((r) => r.step === "t1" && r.channel === "sms" && r.status === "sent"), wl.map((r) => `${r.step}:${r.channel}:${r.status}`).join(","));
+  const s1 = smsCaps[0]?.text ?? "";
+  const enc = smsEncoding(s1);
+  check("SMS: GSM-7 (ékezet nélkül), ≤2 szelet — a modem is 7 biten küldi", enc.gsm7 && enc.segments >= 1 && enc.segments <= 2, `${enc.length} kar., ${enc.segments} szelet, gsm7=${enc.gsm7}`);
+  check("SMS: benne a /p/<t>/folytatas link", s1.includes(`citoviso.test/p/${a.token}/folytatas`), s1);
+  check("SMS: „holnap lejar”, a kupon (30%), „Citoviso:” feladó-előtag", s1.startsWith("Citoviso: holnap lejar ") && s1.includes("Folytatas 30% kedvezmennyel: "), s1);
+  check("SMS a próbázó számára ment", (smsCaps[0]?.to ?? "").replace(/\D/g, "") === FORM.phone.replace(/\D/g, ""), smsCaps[0]?.to);
+  const smsLog = await db.selectFrom("tenant_message").select(["body_text", "channel"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "sms").execute();
+  check("…az SMS a tenant postafiókjában is (tenant_message, sms)", smsLog.length === 1 && smsLog[0]!.body_text === s1);
+  // the T−3 form + a long, accented site name: still GSM-7, ≤ 2 segments, the link whole
+  const longT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Őrségi Erdőszéli Ökoturisztikai Vendégház és Apartmanok „Csendes” — Szalafő", trialUntilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" }, continueUrl: "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", lang: "hu" });
+  const le = smsEncoding(longT3);
+  check("T−3, hosszú ékezetes név: GSM-7, ≤2 szelet, a link épen", le.gsm7 && le.segments <= 2 && longT3.includes("citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas") && longT3.includes("okt. 22-en lejar"), `${le.length}/${le.segments}: ${longT3}`);
+  const hugeT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Őrségi Erdőszéli Ökoturisztikai Vendégház és Apartmanok „Csendes” — Szalafő-Pityerszer, a Szala-patak völgyében, közvetlenül az Őrségi Nemzeti Park erdei tanösvényeinek kiindulópontja mellett, saját tóval", trialUntilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" }, continueUrl: "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", lang: "hu" });
+  const he = smsEncoding(hugeT3);
+  check("T−3, 2 szeletbe nem férő név: rövidül, de ≤2 szelet és a link épen", he.gsm7 && he.segments <= 2 && hugeT3.endsWith("citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas") && hugeT3.includes("..."), `${he.length}/${he.segments}: ${hugeT3}`);
+  const shortT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Napfény Vendégház", trialUntilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" }, continueUrl: "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", lang: "hu" });
+  check("T−3 a jóváhagyott szöveg ékezet nélkül", shortT3 === "Citoviso: a Napfeny Vendeghaz ingyenes probaja okt. 22-en lejar. Folytatas 25% kedvezmennyel: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", shortT3);
+  // the wire: a GSM-7 text is injected WITHOUT -unicode, an accented one WITH it
+  const senderSrc = readFileSync(path.resolve(process.cwd(), "src/sms/sender.ts"), "utf8");
+  check("a modem-injektálás GSM-7 szövegnél nem kér -unicode-ot", /\.\.\.\(isGsm7\(text\) \? \[\] : \["-unicode"\]\)/.test(senderSrc));
+  check("isGsm7: ékezet nélküli igen, „ő” nem", isGsm7(shortT3) && !isGsm7("próbája lejár ő"));
   const m1 = caps[0];
   const h1 = m1?.html ?? "";
   check("tárgy: „Holnap lejár az ingyenes próba – …”", !!m1 && m1.subject.startsWith("Holnap lejár az ingyenes próba – "), m1?.subject);
   check("a Folytatom gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Folytatom</a>"));
   check("a próba-kupon a levélben (30% az első díjból)", h1.includes("<b>30%</b> az első díjból"));
   check("lábléc: „…próbálja ki.” — és nem „rendelte meg”", h1.includes("Citovisónál próbálja ki.") && !h1.includes("rendelte meg"));
-  const logged = await db.selectFrom("tenant_message").select(["subject", "related_kind"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").execute();
+  const logged = await db.selectFrom("tenant_message").select(["subject", "related_kind"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "email").execute();
   check("…a levél a tenant postafiókjában is (tenant_message)", logged.length === 1 && logged[0]!.subject === m1?.subject);
   // honesty: a Monday expiry's T−1 leaves on Friday — 3 days, not "tomorrow"
   const monLeft = trialDaysLeft(fri, bp("2026-10-19", "10:00"));

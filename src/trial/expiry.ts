@@ -9,8 +9,8 @@
 //                it forward would put a T−1 after the freeze (a Sunday expiry's Monday).
 //                When both steps land on the same day only the later one (t1) goes — two
 //                letters in one hour saying the same date is noise, not care.
-//                E-mail LIVE with the approved wording (src/trial/notices.ts), SMS DRY
-//                (sendSms null) until its form is approved (2026-10-09).
+//                Both LIVE with the approved wording (src/trial/notices.ts): the e-mail
+//                since C2, the accent-free SMS with the link since C2b (2026-10-09).
 //
 // ⛔ The trial tenant has NO subscription row, so nothing here touches the billing ladder,
 // and nothing in the billing ladder touches a trial (ADR-0342).
@@ -102,9 +102,9 @@ export interface TrialNoticeTarget {
 export interface TrialNoticeDeps {
   /** Sends the step's e-mail; throws on failure. The WORDING is the owner's (§2b gate). */
   readonly sendEmail: (t: TrialNoticeTarget) => Promise<void>;
-  /** Sends the step's SMS; throws on failure. NULL = the SMS channel is DRY (its form is
-   *  still the owner's, 2026-10-09): nothing is sent AND nothing is claimed — a dry claim
-   *  would burn the step. The e-mail channel runs regardless (src/trial/notices.ts). */
+  /** Sends the step's SMS; throws on failure. NULL = the SMS channel is DRY: nothing is
+   *  sent AND nothing is claimed — a dry claim would burn the step. The hourly tick wires
+   *  a live sender since C2b (2026-10-09, src/trial/notices.ts); null stays for diagnostics. */
   readonly sendSms: ((t: TrialNoticeTarget & { phone: string }) => Promise<void>) | null;
 }
 
@@ -186,7 +186,7 @@ export async function runTrialNotices(
     }
     const sendSms = deps!.sendSms;
     if (!sendSms) {
-      // SMS DRY: no row — the day the SMS wording is approved, the next step still goes.
+      // SMS DRY (diagnostics only since C2b): no row, so a later live run still sends the step.
       console.log(`[trial] ${step} SMS száraz (nem küld, nem foglal) · próba ${t.id}`); // i18n-exempt: operátori napló
     } else if (!t.contact_phone) {
       if (await claim(t.id, step!, "sms", "skipped", "nincs telefonszám")) out.skipped++;

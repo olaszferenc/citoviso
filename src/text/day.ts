@@ -156,3 +156,18 @@ export function formatDayShortStem(iso: string | null | undefined, lang = "hu"):
   if (!lang || lang === "hu") return `${p.y}. ${HU_MONTHS_SHORT[p.m - 1]} ${p.d}`;
   return intlDay(iso, lang, { year: "numeric", month: "short", day: "numeric" });
 }
+
+/** `2026-10-22` → `okt. 22-én` (hu: short month, the superessive of the ordinal, no
+ *  year, no weekday — the SMS form, where every character is a fraction of a segment),
+ *  or the reader's short month + day for other packs. Same 31-day ending rule as
+ *  formatDayOn. */
+export function formatDayShortOn(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") {
+    const suffix = p.d === 1 ? "jén" : BACK_VOWEL_DAYS.has(p.d) ? "án" : "én";
+    return `${HU_MONTHS_SHORT[p.m - 1]} ${p.d}-${suffix}`;
+  }
+  return intlDay(iso, lang, { month: "short", day: "numeric" });
+}
