@@ -3324,10 +3324,16 @@ async function handle(
           `[console] /p/${pMatch[1]}: MÁR VÁSÁROLT lead (állapot: ${owned.stage}` +
             `${owned.siteUrl ? `, oldal: ${owned.siteUrl}` : ""}) — vásárlási réteg nélkül szolgáljuk ki`,
         );
+        // ADR-0344 / Elek 3: a trialist reads as owned too — tell the bar, so a lapsed one
+        // gets "szünetel" + the /folytatas checkout instead of "már az Öné… folyamatban".
+        const trial = await continuableTrialForLead(p.leadId);
+        const framing = trial
+          ? { ...owned, trial: { status: trial.status, continueUrl: `/p/${pMatch[1]}/folytatas` } }
+          : owned;
         return send(
           res,
           200,
-          injectOwnedNotice(injectOwnedBanner(disableIntroAnimation(html), owned), owned),
+          injectOwnedNotice(injectOwnedBanner(disableIntroAnimation(html), framing), framing),
         );
       }
       // ⛔ ADR-0291 (owner's ruling B, 2026-10-01): this GET RECORDS NOTHING. Mail-link

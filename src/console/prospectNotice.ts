@@ -234,6 +234,16 @@ export interface OwnedBannerInput {
   readonly siteUrl: string | null;
   /** Where the owner signs in (ADR-0042), when there is a host. */
   readonly loginUrl: string | null;
+  /**
+   * ADR-0344 — the "owner" is a card-less trialist (continuableTrialForLead), not a buyer.
+   * Absent for a real customer. A LAPSED trial must not read "már az Öné… folyamatban":
+   * the site is paused and the one true next step is paying (Elek 3, 2026-10-10).
+   */
+  readonly trial?: {
+    readonly status: "active" | "lapsed";
+    /** GET /p/<t>/folytatas — the trialist's own checkout. */
+    readonly continueUrl: string;
+  };
 }
 
 /** The brand cyan, literal for the same reason the two greys are: this bar sits
@@ -276,12 +286,28 @@ const OWNED_WHY =
   "már nem lehet újra megrendelni — a szövegeit és a képeit a kezelőfelületen szerkesztheti. " +
   "Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.";
 
+/** WHY, for a trialist: they never ordered, they started the free trial. */
+const TRIAL_WHY =
+  "Ezt a linket a korábbi megkeresésünkben kapta. Azóta elindította az ingyenes próbát, ezért itt " +
+  "nem indítható újra — a szövegeit és a képeit a kezelőfelületen szerkesztheti. " +
+  "Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.";
+
 /** The headline per stage. A stalled activation MUST NOT claim a live site —
  *  that is the buyer most likely to re-open the letter, and the one a confident
  *  "your page is live" would mislead hardest. */
 function ownedHeadline(i: OwnedBannerInput): string {
   const strong = (s: string) =>
     `<strong style="color:#fff;font-weight:600">${CHECK}${s}</strong>`;
+  // A lapsed trial: the site is paused (trial/expiry.ts), nothing was charged, and paying
+  // switches it back on — the same three facts the admin's paused block and the trial
+  // letters state. Checked BEFORE the stage: a paused trial site may still be "provisioned".
+  if (i.trial?.status === "lapsed") {
+    // No CHECK mark: it confirms something done, and an expiry is not a confirmation.
+    return (
+      `<strong style="color:#fff;font-weight:600">Az ingyenes próbaidő lejárt — a honlapja szünetel.</strong>` +
+      " Nem terheltünk semmit. Ha folytatja, a honlap azonnal visszakapcsol."
+    );
+  }
   if (i.stage === "paid_pending") {
     return (
       strong("Ezt már megrendelte.") +
@@ -322,9 +348,14 @@ function prettyUrl(url: string): string {
  * flow, native <details>, no script), different truth.
  */
 export function injectOwnedBanner(html: string, input: OwnedBannerInput): string {
-  const action = input.loginUrl
-    ? `<a class="ow-btn" href="${escapeHtml(input.loginUrl)}">Belépés a kezelőfelületre</a>`
-    : "";
+  // The lapsed trialist's way out is paying, not signing in — the sign-in stays in the
+  // footer (injectOwnedNotice), so it is not lost.
+  const action =
+    input.trial?.status === "lapsed"
+      ? `<a class="ow-btn" data-cit-owned-continue href="${escapeHtml(input.trial.continueUrl)}">Folytatom — fizetés</a>`
+      : input.loginUrl
+        ? `<a class="ow-btn" href="${escapeHtml(input.loginUrl)}">Belépés a kezelőfelületre</a>`
+        : "";
   const banner =
     OWNED_CSS +
     `<div data-cit-framing="owned" style="padding:13px 18px;` +
@@ -333,7 +364,7 @@ export function injectOwnedBanner(html: string, input: OwnedBannerInput): string
     `<div class="ow-wrap"><div class="ow-row">` +
     `<div class="ow-txt">${ownedHeadline(input)}</div>${action}</div>` +
     `<details class="ow-det"><summary>Miért ezt látom?</summary>` +
-    `<div class="ow-body">${OWNED_WHY} ` +
+    `<div class="ow-body">${input.trial ? TRIAL_WHY : OWNED_WHY} ` +
     `<a href="/privacy" style="color:${INK_MUTED};text-decoration:underline">Adatkezelési tájékoztató</a>` +
     `</div></details></div></div>`;
   return prependToBody(html, banner);

@@ -14,7 +14,9 @@
 //      reads the tenant as frozen (isSubscriptionFrozen);
 //   ④ the purchase gate: a trialist may buy (ownedBlocksInitialPurchase → null), a
 //      tenant WITHOUT a trial stays refused; GET /p/<t>/folytatas serves the trialist the
-//      configurator with the trial coupon, and sends anyone else back to /p/<t>;
+//      configurator with the trial coupon, and sends anyone else back to /p/<t>; the plain
+//      /p/<t> of a LAPSED trialist says „szünetel” and its bar's action is that /folytatas
+//      (Elek 3 — it said „már az Öné… folyamatban” with no way to continue);
 //   ②b the WIRED senders (src/trial/notices.ts, what the hourly tick runs): the e-mail is
 //      LIVE — one approved letter with the /folytatas button, logged in the tenant's
 //      mailbox — and the SMS is LIVE too (C2b): accent-free GSM-7, ≤ 2 segments, the
@@ -486,6 +488,17 @@ try {
   const cp = await db.selectFrom("offer").select("percent").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").executeTakeFirstOrThrow();
   check(`…a próba-kupon (${cp.percent}%) mint ajánlat`, new RegExp(`"offer":\\{"kind":"coupon","percent":${cp.percent}[,}]`).test(bodyA));
   if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() + 90 * 86_400_000) } as never).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  // Elek 3: the plain /p/<t> of a LAPSED trialist — not „már az Öné… folyamatban", but
+  // „szünetel" + the /folytatas checkout as the bar's action.
+  const plainA = await get(`/p/${a.token}`);
+  const plainBodyA = plainA.status === 200 ? await plainA.text() : "";
+  check(
+    "GET /p/<t> (lejárt próbázó) → „szünetel” + Folytatom → /p/<t>/folytatas, nincs „folyamatban”",
+    plainA.status === 200 && plainBodyA.includes("a honlapja szünetel") &&
+      plainBodyA.includes(`href="/p/${a.token}/folytatas">Folytatom — fizetés</a>`) &&
+      !plainBodyA.includes("folyamatban van") && !plainBodyA.includes("Azóta megrendelte"),
+    String(plainA.status),
+  );
   const contB = await get(`/p/${b.token}/folytatas`);
   check("…próba nélküli lead → vissza a /p/<t>-re (nincs konfigurátor)", contB.status >= 300 && contB.status < 400 && (contB.headers.get("location") ?? "").endsWith(`/p/${b.token}`), String(contB.status));
 
@@ -525,6 +538,8 @@ try {
   check("a site újra LIVE", siteAfter.status === "live", siteAfter.status);
   const contPaid = await get(`/p/${a.token}/folytatas`);
   check("fizetés után a /folytatas már nem pénztár → vissza a /p/<t>-re", contPaid.status >= 300 && contPaid.status < 400, String(contPaid.status));
+  const plainPaid = await (await get(`/p/${a.token}`)).text();
+  check("…és a /p/<t> sávja már nem kínál folytatást (vásárló)", !plainPaid.includes("data-cit-owned-continue") && plainPaid.includes("Ez az oldal már az Öné."));
   const trAfter = await db.selectFrom("free_trial").select(["status", "converted_at"]).where("id", "=", trial.id).executeTakeFirstOrThrow();
   check("free_trial → converted", trAfter.status === "converted" && !!trAfter.converted_at, trAfter.status);
   const sub = await db.selectFrom("subscription").select(["anchor_date", "status"]).where("tenant_id", "=", tenantId).executeTakeFirst();
