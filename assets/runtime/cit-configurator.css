@@ -2710,13 +2710,61 @@
   padding: 8px;
 }
 @media (max-width: 560px) {
+  /* Elek 2026-10-10 (02x): on a phone the veil + blur hid the WHOLE plan and the
+   * card took two thirds of the screen — the lead came for the plan and saw none
+   * of it. The plan (offer-ui ④) asks a veil on DESKTOP only and a bottom-anchored
+   * card on mobile; so no veil here, the page above stays visible and scrollable,
+   * and the card is compact (countdown beside the percent). Logic untouched. */
+  .cit-cfg-escveil {
+    display: none;
+  }
   .cit-cfg-esccard {
     top: auto;
-    bottom: 14px;
+    bottom: 10px;
+    width: calc(100vw - 24px);
+    padding: 16px 18px 10px;
+    box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.28), 0 10px 30px rgba(0, 0, 0, 0.3);
     transform: translate(-50%, 6px);
   }
   .cit-cfg-esccard.cit-cfg-on {
     transform: translate(-50%, 0);
+  }
+  .cit-cfg-esccard h4 {
+    font-size: 16.5px;
+    margin-bottom: 4px;
+  }
+  .cit-cfg-esccard p {
+    font-size: 12.5px;
+    line-height: 1.45;
+    margin-bottom: 8px;
+  }
+  .cit-cfg-escpct {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    margin-bottom: 10px;
+  }
+  .cit-cfg-escpct b {
+    font-size: 30px;
+  }
+  .cit-cfg-escpct span {
+    font-size: 12px;
+    flex: 1 1 140px;
+  }
+  .cit-cfg-esccd {
+    margin-bottom: 10px;
+  }
+  .cit-cfg-esccd i {
+    padding: 4px 7px;
+    font-size: 14px;
+  }
+  .cit-cfg-escgo {
+    padding: 11px;
+    font-size: 14.5px;
+  }
+  .cit-cfg-esclater {
+    margin-top: 2px;
+    padding: 9px 8px;
   }
 }
 

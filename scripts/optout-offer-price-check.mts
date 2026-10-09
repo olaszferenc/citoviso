@@ -8,7 +8,9 @@
 // turns off is the PUSH — the deadline-bound decision card.
 //
 // Real browser, 390px + desktop, the SAME escalation offer rendered twice:
-//   tracked   → the decision card mounts (control: proves the card path is alive)
+//   tracked   → the decision card mounts (control: proves the card path is alive);
+//               on a phone it sits low with NO veil, so the plan stays visible
+//               (Elek 2026-10-10, 02x), on desktop it keeps its veil (offer-ui ④)
 //   offerQuiet→ NO decision card, but the struck list price + the discounted
 //               payable figure are on screen, and the pay button charges it
 //
@@ -90,6 +92,27 @@ async function run(browser: Browser, html: string, tag: string, size: { width: n
   const cards = await page.locator(".cit-cfg-esccard").count();
   if (quiet) check(cards === 0, `${label}: NINCS döntés-segítő kártya (mért: ${cards})`);
   else check(cards === 1, `${label}: a döntés-segítő kártya megjelenik (kontroll, mért: ${cards})`);
+  if (!quiet && cards) {
+    // Elek 2026-10-10 (02x): on a phone the veil + blur hid the whole plan. offer-ui ④:
+    // veil on desktop, bottom-anchored card on mobile — and the plan must stay visible.
+    await page.locator(".cit-cfg-esccard.cit-cfg-on").waitFor({ state: "visible", timeout: 5000 });
+    await page.waitForTimeout(500);
+    const m = await page.evaluate(() => {
+      const v = document.querySelector(".cit-cfg-escveil") as HTMLElement;
+      const vs = getComputedStyle(v);
+      const r = (document.querySelector(".cit-cfg-esccard") as HTMLElement).getBoundingClientRect();
+      return { veil: vs.display !== "none" && Number(vs.opacity) > 0, top: r.top, bottom: r.bottom, vh: innerHeight };
+    });
+    if (size.width <= 560) {
+      check(!m.veil, `${label}: mobilon NINCS fátyol a terv előtt (mért: ${m.veil ? "van" : "nincs"})`);
+      check(
+        m.top >= m.vh * 0.55 && m.bottom <= m.vh,
+        `${label}: a kártya alul ül, a képernyő felső 55%-a a terv (régi kártya: 383/844) (teteje ${Math.round(m.top)} / ${m.vh} px)`,
+      );
+    } else {
+      check(m.veil, `${label}: asztalon a kártya fátyollal (offer-ui ④)`);
+    }
+  }
 
   // Close the card if present, then look at the price the buyer is going to pay.
   if (cards) await page.evaluate(() => document.querySelectorAll(".cit-cfg-escveil,.cit-cfg-esccard").forEach((n) => n.remove()));
