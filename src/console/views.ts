@@ -9253,7 +9253,7 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
     ? `<span class="con-rep__meta">${esc(T(lang, "Megválaszolta: {who} · {at}", { who: r.answeredBy ?? "—", at: whenShort(r.answeredAt.toISOString(), lang) }))}` +
       `${r.sends.some((x) => x.status === "sent") ? ` ${esc(T(lang, "(elküldött válasz)"))}` : ""} · ` +
       `<form method="post" action="/replies/${esc(r.id)}/undo">${hidden}<button type="submit" class="ghost con-rep__undo">${esc(T(lang, "Visszavonás"))}</button></form></span>`
-    : `<form method="post" action="/replies/${esc(r.id)}/answered">${hidden}<button type="submit" class="con-rep__do">${icf("check", 13)}${esc(T(lang, "Megválaszoltam"))}</button></form>`;
+    : `<form method="post" action="/replies/${esc(r.id)}/answered">${hidden}<button type="submit" class="ghost con-rep__do">${icf("check", 13)}${esc(T(lang, "Megválaszoltam"))}</button></form>`;
   return (
     `<div class="con-rep__p" data-rep-p="${esc(r.id)}"${selected ? "" : " hidden"}>` +
     `<div class="con-rep__dh"><a class="con-btn con-btn--sm con-rep__back" href="${esc(repliesHref({ filter: q.filter }))}" data-rep-back>${icf("back", 13)}${esc(T(lang, "Vissza"))}</a>` +

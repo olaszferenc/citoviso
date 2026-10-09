@@ -179,9 +179,27 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
 
   // Proximity: same doorstep AND a shared distinctive name token. Without the
   // name test every neighbouring guesthouse would pair up.
+  // Grid pre-filter: 0.001° cells (≈111 m N–S, ≈75 m E–W at 47°N) are wider than the
+  // 60 m radius, so every partner sits in the 3×3 neighbourhood. The all-pairs scan
+  // took 33 s on 14k leads (2026-10-08). Pairs are still visited in i<j order, so the
+  // result — tie order included — is the same as before.
   const withGeo = leads.filter((l) => l.lat != null && l.lon != null);
+  const CELL = 0.001;
+  const cellKey = (y: number, x: number): string => `${y}:${x}`;
+  const grid = new Map<string, number[]>();
+  const cellOf = withGeo.map((l) => [Math.floor(l.lat! / CELL), Math.floor(l.lon! / CELL)] as const);
+  cellOf.forEach(([y, x], i) => {
+    const k = cellKey(y, x);
+    const list = grid.get(k);
+    if (list) list.push(i);
+    else grid.set(k, [i]);
+  });
   for (let i = 0; i < withGeo.length; i++) {
-    for (let j = i + 1; j < withGeo.length; j++) {
+    const [cy, cx] = cellOf[i]!;
+    const near: number[] = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const j of grid.get(cellKey(cy + dy, cx + dx)) ?? []) if (j > i) near.push(j);
+    near.sort((p, q) => p - q);
+    for (const j of near) {
       const a = withGeo[i]!;
       const b = withGeo[j]!;
       const km = distanceKm(a.lat!, a.lon!, b.lat!, b.lon!);

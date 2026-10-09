@@ -11,5 +11,10 @@ Döntések: A terv (vázlat-buborék), a javaslatot Poe írja, a hétköznap 9�
 - `scripts/outreach-reply-check.mts` ⑦⑧ (+önteszt); KB: `kb/entries/console-dashboard/entry.hu.md`
 - képernyőkép a valódi felületről (390 + 1280) a terv-képekhez mérve; Playwright-kattintás a fixture-ökön (JS-hiba 0)
 
-**Nyitott:** élesítés a nagy deployjal (tulaj-engedély); élesen nincs konzol-URL a configban → a jegy-link a gyűjtő `REPLIES_CONSOLE_URL`-jéből (alap: az éles admin-host);
-a „Megválaszoltam” gomb kitöltött stílusú (a terven körvonalas) — a meglévő stílus, nem változtattuk.
+**Lezárás (2026-10-09, a tulaj kérésére a nyitott pontok is):**
+- „Megválaszoltam” gomb: a `ghost` másodlagos osztály → körvonalas, mindkét terv (B és A) szerint; ui-shot 390 + 1280.
+- `/duplicates` 33 s → 0,24 s: a közelség-pár keresés minden-pár helyett 0,001°-os rácson (3×3 szomszéd), a jelöltlista és a
+  csoportok BETŰRE azonosak a régivel (mérve a dev DB-n, 300 jelölt). A gomb-súly kapu 30 s-os korlátja ezért változatlan maradt.
+- Konzol-URL élesen: nincs teendő — a jegy-link a gyűjtő alapértékéből (az éles admin-host) jön; élesre külön semmi nem megy.
+
+**Nyitott:** élesítés a nagy deployjal (tulaj-engedély).

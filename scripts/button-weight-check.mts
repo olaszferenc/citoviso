@@ -172,10 +172,7 @@ async function measureRoute(
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
   await ctx.addCookies([{ name: "cit_op_session", value: cookie, url: origin }]);
   const page = await ctx.newPage();
-  // This guard measures button weight, not speed: /duplicates took 33 s on the dev DB
-  // (2026-10-08, +6421 OSM leads; same on a clean origin/main) — the 30 s default goto
-  // timeout turned that into a red „no response” for every console diff.
-  const res = await page.goto(`${origin}${route}`, { waitUntil: "networkidle", timeout: 90_000 }).catch(() => null);
+  const res = await page.goto(`${origin}${route}`, { waitUntil: "networkidle" }).catch(() => null);
   const label = `${vp.tag} · ${route}${poison ? " · MÉRGEZETT" : ""}`;
   if (!res || res.status() >= 400) {
     say(false, `${label}: a lap betölt`, `HTTP ${res?.status() ?? "nincs válasz"}`);
