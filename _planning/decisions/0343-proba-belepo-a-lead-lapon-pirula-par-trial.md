@@ -1,4 +1,4 @@
-## ADR-XXXX — Próba-belépő a lead-lapon: pirula-pár, `trial_*` esemény-család, a belépő kapuja
+## ADR-0343 — Próba-belépő a lead-lapon: pirula-pár, `trial_*` esemény-család, a belépő kapuja
 
 **Dátum:** 2026-10-09 · **Státusz:** ELFOGADVA (a terv tulaj-jóváhagyott: „B a legjobb, ahol a két pirula
 egyben van.”, 2026-10-09; a szerkezeti döntések a SUB D-é) · **Kapcsolódó:** ADR-0342 (kártya nélküli próba),

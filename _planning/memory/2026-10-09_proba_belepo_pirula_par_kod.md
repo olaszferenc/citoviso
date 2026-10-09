@@ -1,7 +1,7 @@
 # 2026-10-09 — Ingyenes próba, SUB D: a „{n} nap ingyen” pirula-pár + próba-űrlap (KÓD)
 
 Koordinátor: `f3e80964` (Ingyenes próba). Terv: `assets/design-refs/prospect-page/proba-gomb/` (B, tulaj-jóváhagyás).
-ADR: ADR-XXXX (pirula-pár, `trial_*` események, a belépő kapuja).
+ADR: ADR-0343 (pirula-pár, `trial_*` események, a belépő kapuja).
 
 ## Elkészült
 - Pirula-pár a `cit-configurator.js/.css`-ben (próba balra, navy + ajándék-ikon; rendelés jobbra, változatlan);
