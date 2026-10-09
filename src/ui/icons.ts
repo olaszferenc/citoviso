@@ -60,6 +60,13 @@ export const ICON: Readonly<Record<string, string>> = {
     `<circle cx="8.6" cy="8.2" r="3.3"/><path d="M2.8 19.5c.8-3.2 3-4.9 5.8-4.9s5 1.7 5.8 4.9"/>` +
     `<path d="M15.2 5.4a3.3 3.3 0 0 1 0 5.6M17.5 14.9c2 .6 3.3 2.1 3.9 4.6"/>` +
     `<circle cx="18.9" cy="8.2" r="2" ${CY_ACCENT}/>`,
+  // ADR-0342 — the card-less free trial („{n} nap ingyen” pill on the lead page): a gift
+  // box, the bow's knot is the cyan accent. The prospect runtime mirrors these paths
+  // verbatim (assets/runtime/cit-configurator.js `I.gift`).
+  gift:
+    `<rect x="4" y="10.5" width="16" height="10" rx="2.2"/><rect x="3" y="7" width="18" height="3.5" rx="1.4"/>` +
+    `<path d="M12 7v13.5"/><path d="M12 7C10.6 4.2 7.4 3.6 7.1 5.6 6.9 7 9.4 7 12 7zM12 7c1.4-2.8 4.6-3.4 4.9-1.4.2 1.4-2.3 1.4-4.9 1.4z"/>` +
+    `<circle cx="12" cy="7" r="1.7" ${CY_ACCENT}/>`,
   docs:
     `<path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/>` +
     `<path d="M14 3.8V8.5h4.7M8.4 12.4h7.2M8.4 15.6h4.6"/>` +

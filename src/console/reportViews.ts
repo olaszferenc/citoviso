@@ -387,12 +387,14 @@ const PANEL_VIA_LABEL = (lang: string): Readonly<Record<PanelFilter, string>> =>
   pill: T(lang, "A gombbal"),
   esc: T(lang, "Az ajánlatból"),
   tab: T(lang, "Szél-füllel újra"),
+  trial: T(lang, "Próba-űrlapról"),
 });
 /** Lower-case route names for the list's „Hogyan” column. */
-const PANEL_VIA_SHORT = (lang: string): Readonly<Record<"pill" | "esc" | "tab", string>> => ({
+const PANEL_VIA_SHORT = (lang: string): Readonly<Record<"pill" | "esc" | "tab" | "trial", string>> => ({
   pill: T(lang, "a gombbal"),
   esc: T(lang, "az ajánlatból"),
   tab: T(lang, "szél-füllel újra"),
+  trial: T(lang, "a próba-űrlapról"),
 });
 const PANEL_STEPS = (lang: string): readonly { t: string; s: string }[] => [
   { t: T(lang, "Megnyitotta"), s: T(lang, "„Itt rendelheti meg” / ajánlat / fül") },
@@ -474,7 +476,7 @@ function orderPanelPanel(d: ReportData, lang: string, via: PanelFilter, mode: Re
       T(lang, "Panelt megnyitott"),
       String(sum.n),
       via === "all"
-        ? T(lang, "gomb {a} · ajánlat {b} · fül {c}", { a: sum.byVia.pill, b: sum.byVia.esc, c: sum.byVia.tab })
+        ? T(lang, "gomb {a} · ajánlat {b} · fül {c} · próba-űrlap {d}", { a: sum.byVia.pill, b: sum.byVia.esc, c: sum.byVia.tab, d: sum.byVia.trial })
         : T(lang, "szűrve: {v}", { v: vs[via] }),
     ) +
     kbox(T(lang, "Medián idő a panelben"), fmtS(sum.secondsMedian, lang), T(lang, "p90: {v}", { v: fmtS(sum.secondsP90, lang) })) +

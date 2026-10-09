@@ -10,6 +10,7 @@ import {
   setFreeTrialConfig,
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
+import { getFreeTrialConfig } from "../trial/config.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -3263,6 +3264,16 @@ async function handle(
         ])
         .where("prospect.token", "=", pMatch[1])
         .executeTakeFirst();
+      // ADR-0342 (frozen plan prospect-page/proba-gomb/ ⑤): the „{n} nap ingyen” entry only
+      // while the trial is switched on AND this lead has NO free_trial row at all — an
+      // active, lapsed, converted or still-provisioning trial all mean no second offer of
+      // one (the endpoint would answer them with the same trial or `trial_used`). An owned
+      // lead never reaches this branch.
+      const trialCfg = await getFreeTrialConfig();
+      const hadTrial =
+        trialCfg.enabled && pf?.leadId
+          ? !!(await db.selectFrom("free_trial").select("id").where("lead_id", "=", pf.leadId).executeTakeFirst())
+          : true;
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
         // ADR-0330: the subdomain the outreach link showed is the default they keep.
@@ -3285,6 +3296,16 @@ async function handle(
           ? {
               offer: offerForPage(offer, p.lang ?? "hu"),
               ...(tracked ? {} : { offerQuiet: true }),
+            }
+          : {}),
+        ...(trialCfg.enabled && !hadTrial
+          ? {
+              trial: {
+                enabled: true as const,
+                days: trialCfg.days,
+                url: `/p/${pMatch[1]}/trial`,
+                privacyUrl: "/privacy",
+              },
             }
           : {}),
       });

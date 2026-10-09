@@ -45,6 +45,7 @@ import {
   VAT_NOTE_REVERSE_CHARGE,
 } from "../legal.js";
 import { packForClientAsync } from "../i18n/packs.js";
+import { PHONE_NORM_JS } from "../text/phone.js";
 import { config } from "../config.js";
 import { renewalQuoteForLead, type RenewalQuote } from "../payment/renewalQuote.js";
 import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
@@ -92,9 +93,14 @@ async function configuratorBlock(): Promise<string> {
     path.resolve(HERE, "../../public/assets/vendor/barion/barion-smart-banner-dark.svg"),
     "utf8",
   );
+  // ADR-0342 free-trial form: the phone field normalises on blur with the SAME rule the
+  // server applies (src/text/phone.ts PHONE_NORM_JS, the one client mirror that
+  // phone-normalize-check runs against the server). Handed over as a function instead
+  // of a second hand-copied table inside the runtime file.
+  const phoneNorm = `window.CIT_PHONE_NORM=(function(){${PHONE_NORM_JS};return norm;})();`;
   cached =
     `<style data-cit-configurator-css>\n${css}\n</style>\n` +
-    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${JSON.stringify(banner.trim())};\n${money}\n${js}\n</script>\n`;
+    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${JSON.stringify(banner.trim())};\n${phoneNorm}\n${money}\n${js}\n</script>\n`;
   return cached;
 }
 
@@ -232,6 +238,13 @@ export interface ConfiguratorManifest {
     readonly booking: { readonly title: string; readonly button: string; readonly href: string };
     readonly enquiry: { readonly title: string; readonly button: string; readonly href: string };
   };
+  /**
+   * ADR-0342: the card-less free trial's entry (the „{n} nap ingyen” pill + its form,
+   * frozen plan assets/design-refs/prospect-page/proba-gomb/). Present ONLY when the
+   * trial is switched on AND this lead never had one — absent = the page is exactly
+   * what it was before the trial existed (README 5).
+   */
+  readonly trial?: TrialEntry;
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -258,6 +271,19 @@ export interface ConfiguratorManifest {
      *  three page states). Without these the toggle found nothing to move. */
     readonly domTypesAlso?: readonly string[];
   }[];
+}
+
+/** ADR-0342: what the trial entry needs on the page (README 1–12). */
+export interface TrialEntry {
+  readonly enabled: true;
+  /** Trial length (getFreeTrialConfig().days) — every „{n}” label reads it. */
+  readonly days: number;
+  /** The live address the trial runs on — the same host as `domain.sub`. */
+  readonly sub: string;
+  /** POST endpoint (/p/<token>/trial). */
+  readonly url: string;
+  /** The privacy notice the ÁSZF tick names (the /p page serves it at /privacy). */
+  readonly privacyUrl: string;
 }
 
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
@@ -305,6 +331,12 @@ export interface ConfiguratorOpts {
    * operator preview — then the quote is the first-purchase one.
    */
   readonly renewalLeadId?: string | null;
+  /**
+   * ADR-0342: the free-trial entry. The CALLER decides (trial switched on, lead never
+   * had a trial, not owned) — the manifest only carries it. `sub` is filled in here, from
+   * the same label the domain step uses, so the two can never name different hosts.
+   */
+  readonly trial?: Omit<TrialEntry, "sub">;
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */
@@ -352,6 +384,7 @@ export async function buildManifest(
     opts.renewalLeadId ?? null,
     offered.map((m) => m.id),
   );
+  const subHost = opts.subLabel ? `${opts.subLabel}.citoviso.com` : subdomainHost(leadName);
   return {
     artifactId,
     renewal,
@@ -407,7 +440,7 @@ export async function buildManifest(
       vatNoteReverse: VAT_NOTE_REVERSE_CHARGE,
     },
     domain: {
-      sub: opts.subLabel ? `${opts.subLabel}.citoviso.com` : subdomainHost(leadName),
+      sub: subHost,
       // ADR-0032: the buyer may freely CHOOSE the subdomain label; these feed the input + check.
       subLabel: opts.subLabel || subdomainHost(leadName).split(".")[0]!,
       subBase: ".citoviso.com",
@@ -422,6 +455,7 @@ export async function buildManifest(
       minPackageMonthly: getDomainMinPackageMonthly(),
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
+    ...(opts.trial ? { trial: { ...opts.trial, sub: subHost } } : {}),
     cta: {
       booking: {
         title: "Foglalás",

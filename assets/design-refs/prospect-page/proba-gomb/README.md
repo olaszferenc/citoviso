@@ -10,8 +10,9 @@ Kattintható terv: `plan.html` (önhordó; méret-váltó, próba-hossz 7/14/30,
 i18n-jelölő; a mérés-napló élőben mutatja a kiváltott eseményeket). A lap a valódi Laguna Panzió dev-mock
 kivonata (hős, szöveg, fotók).
 
-**Hatókör (a kód landolásakor töltendő ki):** `assets/runtime/cit-configurator.js` ·
-`assets/runtime/cit-configurator.css` — és ahol a próba-űrlap él.
+**Hatókör:** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css`
+(a próba-űrlap is a `cit-configurator.js`-ben él; a manifest-ág: `src/generator/configurator.ts` `trial`,
+a `/p/:token` route adja át, ha a próba be van kapcsolva és a leadnek nincs `free_trial` sora).
 
 ## Ami KÖT (elvárt viselkedés, nem stílus-javaslat)
 
@@ -87,7 +88,7 @@ saját chipként kapja (`PANEL_VIAS`).
 A mock végigkattintva 390 px-en és asztalon (hibás e-mail/telefon/név, pipák nélkül, küldés, szerverhiba,
 siker, napszám-váltás): mind zöld, JS-hiba 0.
 
-## Kötő feliratok (a kód landolásakor félkövér-idézetté válnak a contract-drift-checkhez)
+## Kötő feliratok (contract-drift-check)
 
-„{n} nap ingyen” · „Itt rendelheti meg” · „Próbálja ki {n} napig ingyen” · „Elindítom a {n} napos próbát” ·
-„A hozzáférést elküldtük” · „Nem kell bankkártya, nincs előre fizetés”
+**„{n} nap ingyen”** · **„Itt rendelheti meg”** · **„Próbálja ki {n} napig ingyen”** ·
+**„Elindítom a {n} napos próbát”** · **„A hozzáférést elküldtük”** · **„Nem kell bankkártya, nincs előre fizetés”**

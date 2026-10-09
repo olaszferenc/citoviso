@@ -6,7 +6,7 @@
 //   npx tsx scripts/lead-mobile-check.mts --vp=390        (csak egy nézet: 390 | 360 | land)
 //   npx tsx scripts/lead-mobile-check.mts --links=<fájl>  (más link-lista)
 //   npx tsx scripts/lead-mobile-check.mts --gate           (ŐR: 5 sablon fixture-ön, DB-lead nélkül)
-//   npx tsx scripts/lead-mobile-check.mts --gate --selftest (PIROS önteszt: 9 visszarontás)
+//   npx tsx scripts/lead-mobile-check.mts --gate --selftest (PIROS önteszt: 10 visszarontás)
 //
 // MIT MÉR, ÉS MIÉRT ÍGY
 //
@@ -392,17 +392,23 @@ const PANEL = `() => {
     bodyScrollable: !!(body && body.scrollHeight > body.clientHeight + 4) };
 }`;
 
-/** R8 probe: the visible bottom-fixed layers (outside our chrome) the pill's box intersects. */
+/** R8 probe: the visible bottom-fixed layers (outside our chrome) the pill's box intersects.
+ *  ADR-0342 (proba-gomb README ④): with the free trial on, the order pill has a partner —
+ *  the „{n} nap ingyen” pill — and BOTH members are tested; a layer under either is red. */
 const PILL_ON_FIXED = `(() => { const l = document.querySelector(".cit-cfg-launch.cit-cfg-in"); if (!l) return [];
-      const p = l.getBoundingClientRect(); const out = [];
+      const t = document.querySelector(".cit-cfg-trialpill.cit-cfg-in");
+      const members = t && !t.hidden ? [l, t] : [l];
+      const rects = members.map((m) => m.getBoundingClientRect()); const out = [];
       for (const e of document.querySelectorAll("body *")) {
-        if (e === l || l.contains(e) || e.closest('[class*="cit-cfg"]')) continue;
+        if (members.some((m) => e === m || m.contains(e)) || e.closest('[class*="cit-cfg"]')) continue;
         const c = getComputedStyle(e); if (c.position !== "fixed" || c.display === "none" || c.visibility === "hidden" || +c.opacity === 0) continue;
         const r = e.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
         if (r.bottom <= window.innerHeight * 0.5) continue; // top-anchored chrome is not a bottom layer
         if (r.height > window.innerHeight * 0.6) continue; // a full-screen backdrop (aurora's glow) is not a bar
-        const ox = Math.min(r.right, p.right) - Math.max(r.left, p.left), oy = Math.min(r.bottom, p.bottom) - Math.max(r.top, p.top);
-        if (ox > 1 && oy > 1) out.push((e.id ? "#" + e.id : e.tagName.toLowerCase() + (e.className && e.className.toString ? "." + e.className.toString().trim().split(/\\s+/)[0] : "")) + " (" + Math.round(oy) + " px)");
+        rects.forEach((p, k) => {
+          const ox = Math.min(r.right, p.right) - Math.max(r.left, p.left), oy = Math.min(r.bottom, p.bottom) - Math.max(r.top, p.top);
+          if (ox > 1 && oy > 1) out.push((k ? "[próba-pirula] " : "") + (e.id ? "#" + e.id : e.tagName.toLowerCase() + (e.className && e.className.toString ? "." + e.className.toString().trim().split(/\\s+/)[0] : "")) + " (" + Math.round(oy) + " px)");
+        });
       }
       return out; })()`;
 
@@ -423,6 +429,8 @@ interface PageReport {
   path: string;
   first: FirstScreen;
   pill: HitProbe;
+  /** ADR-0342: the free-trial pill beside the order pill (found:false when the page has no trial). */
+  trialPill: HitProbe;
   pillAppearedMs: number | null;
   /** Fixed bottom layers (booking bar, consent bar) the pill overlaps at the moment it is tapped. */
   pillOnFixed: string[];
@@ -528,7 +536,7 @@ async function measure(
     await page.evaluate(`window.__lmRestKey = null`); // a still window starts NOW, never an earlier call's
     const ok = await page
       .waitForFunction(
-        `(() => { const els = [".cit-cfg-launch", "[data-cit-mobbar]", "#cit-consent", ".cit-cfg-panel"]
+        `(() => { const els = [".cit-cfg-launch", ".cit-cfg-trialpill", "[data-cit-mobbar]", "#cit-consent", ".cit-cfg-panel"]
           .map((s) => document.querySelector(s)).filter(Boolean);
         const key = Math.round(window.scrollY) + "|" + els.map((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e);
           return [r.top, r.left, r.width, r.height].map(Math.round).join(",") + "," + c.visibility + "," + c.opacity; }).join("|");
@@ -568,6 +576,7 @@ async function measure(
   await rest("② pirula");
   await settle();
   const pill = (await page.evaluate(`(${HIT})(${JSON.stringify({ selector: ".cit-cfg-launch.cit-cfg-in" })})`)) as HitProbe;
+  const trialPill = (await page.evaluate(`(${HIT})(${JSON.stringify({ selector: ".cit-cfg-trialpill.cit-cfg-in" })})`)) as HitProbe;
   const consentNow = (await page.evaluate(`(() => { const c = document.getElementById("cit-consent"); if (!c) return null;
     const cs = getComputedStyle(c); if (cs.display === "none" || cs.visibility === "hidden") return null;
     const r = c.getBoundingClientRect(); return { h: r.height, vh: window.innerHeight }; })()`)) as { h: number; vh: number } | null;
@@ -694,6 +703,9 @@ async function measure(
   if (pill.found && !pill.inViewport) flags.push({ level: "HIBA", what: "a pirula a képernyőn kívül áll" });
   if (pill.found && pill.inViewport && !pill.hitSelf) flags.push({ level: "HIBA", what: `a pirulát takarja: ${pill.hitBy}` });
   if (pill.rect && pill.rect.height < 44) flags.push({ level: "ERGONÓMIA", what: `a pirula ${Math.round(pill.rect.height)} px magas (< 44)` });
+  if (trialPill.found && !trialPill.inViewport) flags.push({ level: "HIBA", what: "a próba-pirula a képernyőn kívül áll" });
+  if (trialPill.found && trialPill.inViewport && !trialPill.hitSelf) flags.push({ level: "HIBA", what: `a próba-pirulát takarja: ${trialPill.hitBy}` });
+  if (trialPill.rect && trialPill.rect.height < 44) flags.push({ level: "ERGONÓMIA", what: `a próba-pirula ${Math.round(trialPill.rect.height)} px magas (< 44)` });
   if (consentHeightPct != null && consentHeightPct > 25) flags.push({ level: "ERGONÓMIA", what: `a süti-sáv a képernyő ${consentHeightPct}%-a` });
   const fixedTop = first.fixed.filter((f) => f.h / vh > 0.4);
   if (fixedTop.length) flags.push({ level: "HIBA", what: `takaró rögzített elem betöltéskor: ${fixedTop.map((f) => `${f.sel} ${f.h}px`).join(", ")}` });
@@ -736,6 +748,7 @@ async function measure(
     path: link.path,
     first,
     pill,
+    trialPill,
     pillAppearedMs,
     pillOnFixed,
     why,
@@ -927,7 +940,7 @@ const PIX =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8" +
   "//8/AzbAhFVkOEgAAP//Awr/A0f8WlgAAAAASUVORK5CYII=";
 
-type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer" | "js-error" | "ext-404" | "pill-on-bar";
+type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer" | "js-error" | "ext-404" | "pill-on-bar" | "trial-on-bar";
 /** A third-party host the ext-404 sabotage points at — answered 404 by the interceptor, never the network. */
 const EXT_404_HOST = "https://kulso-pelda.example";
 
@@ -955,7 +968,11 @@ async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   const token = "hWAeKUweNOvCiAAMz6hlqUAA";
   let html = await injectRuntime(renderSite(recipe as never, data as never));
   if (sabotage !== "no-lazy") html = pn.lazyLoadBelowFold(html);
-  html = await injectConfigurator(html, "00000000-0000-0000-0000-000000000000", data.name, {});
+  // ADR-0342: the free trial is ON by default in the product → the served page carries the
+  // „{n} nap ingyen” pill beside the order pill, and R8 measures the PAIR (README ④).
+  html = await injectConfigurator(html, "00000000-0000-0000-0000-000000000000", data.name, {
+    trial: { enabled: true, days: 14, url: `/p/${token}/trial`, privacyUrl: "/privacy" },
+  });
   html = pn.containHorizontalOverflow(html);
   html = pn.injectTrackingNotice(pn.injectTrackingBanner(pn.disableIntroAnimation(html), token), token);
   const res = {};
@@ -970,6 +987,13 @@ async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   if (sabotage === "pill-on-bar") {
     const cut = html.replace("fixedBottomTop() - AVOID_GAP", "window.innerHeight");
     if (cut === html) throw new Error("pill-on-bar: a visszarontás nem talált célt (fixedBottomTop) — az önteszt vak lenne");
+    html = cut;
+  }
+  // ADR-0342: ONLY the trial pill drops onto the bottom stack (the order pill stays clear)
+  // → R8 must go red, which proves R8 measures the pair's other member too.
+  if (sabotage === "trial-on-bar") {
+    const cut = html.replace("trialPill.style.bottom = pillBottom;", 'trialPill.style.bottom = "4px";');
+    if (cut === html) throw new Error("trial-on-bar: a visszarontás nem talált célt (trialPill.style.bottom) — az önteszt vak lenne");
     html = cut;
   }
   if (sabotage === "panel-under-consent") html = html.replace(/height:\s*calc\(100% - var\(--citui-consent-h, 0px\)\);/, "height:100%;");
@@ -1035,6 +1059,8 @@ async function gate(): Promise<void> {
       R4_pill_and_panel: r.pill.found && r.pill.inViewport && r.pill.hitSelf && r.panel.open && r.panel.fitsViewport && r.panel.cta.found && r.panel.cta.inViewport && r.panel.cta.hitSelf,
       R6_no_js_errors: r.jsErrors.length === 0,
       R8_pill_above_fixed_bars: r.pill.found && r.pillOnFixed.length === 0,
+      // ADR-0342: the fixture carries the trial — its pill must be on the screen and take the tap.
+      R9_trial_pill_tappable: r.trialPill.found && r.trialPill.inViewport && r.trialPill.hitSelf,
       // first-screen-compact (2026-09-26): before any engagement the consent bar is NOT on
       // the first screen, the framing bar is ≤ 90 px on the phone (≤ 60 px on the desktop
       // width), and after the walk to the bottom (scroll = engagement) the bar IS there —
@@ -1070,6 +1096,7 @@ async function gate(): Promise<void> {
     cases.push(["panel-under-consent", "R4_pill_and_panel"]);
     cases.push(["no-defer", "R7_first_screen_compact"]);
     cases.push(["pill-on-bar", "R8_pill_above_fixed_bars"]);
+    cases.push(["trial-on-bar", "R8_pill_above_fixed_bars"]);
     if (selftest) {
       for (const [sab] of cases) jobs.push({ tpl: "fullbleed", vp: sab === "panel-under-consent" ? VIEWPORTS[2]! : vp390, sab });
       jobs.push({ tpl: "fullbleed", vp: vp390, sab: "js-error" });

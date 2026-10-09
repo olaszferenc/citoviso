@@ -40,9 +40,15 @@
 //      occupies, note which buttons answer `elementFromPoint`; show it again and see who
 //      is now buried. Geometry, not the pill's own opinion of where it is.
 //
+// ⭐ ADR-0342 (proba-gomb README ④): with the free trial switched on the order pill has a
+//   partner — the „{n} nap ingyen” pill — and the PAIR is the unit. ② therefore samples
+//   BOTH members' rectangles, waits for both to rest, and asserts the pair stays one row
+//   with one shared bottom edge. The fixtures carry the trial (the default product state);
+//   ② also runs on trial-less copies, so the lone pill (trial off) stays measured too.
+//
 // Every half self-tests RED: the map box without its pin card, the map section without
-// the row outside the frame, and the pill with its avoidance block cut out of the served
-// JS. A guard never seen red proves nothing.
+// the row outside the frame, the pill with its avoidance block cut out of the served
+// JS, and a button that ONLY the trial pill covers. A guard never seen red proves nothing.
 
 process.env.CIT_SHOT = "1"; // no boot self-heal, no AI calls
 
@@ -241,11 +247,25 @@ const EMPTY_BOX_PROBE = `() => {
 const OCCLUSION_PROBE = `() => {
   const pill = document.querySelector(".cit-cfg-launch");
   if (!pill) return { error: "nincs .cit-cfg-launch" };
-  const b = pill.getBoundingClientRect();
-  if (!(b.width > 0 && b.height > 0)) return { error: "a pirula nem renderel" };
+  // ADR-0342: the trial pill, when on the page, is the order pill's other half — BOTH
+  // members are sampled, and the reported rectangle is their union.
+  const tp = document.querySelector(".cit-cfg-trialpill");
+  const members = [pill];
+  if (tp && !tp.hidden) members.push(tp);
+  const rects = members.map((m) => m.getBoundingClientRect());
+  if (!rects.every((r) => r.width > 0 && r.height > 0)) return { error: "a pirula (vagy a pár egyik tagja) nem renderel" };
+  const b = {
+    left: Math.min(...rects.map((r) => r.left)),
+    right: Math.max(...rects.map((r) => r.right)),
+    top: Math.min(...rects.map((r) => r.top)),
+    bottom: Math.max(...rects.map((r) => r.bottom)),
+  };
+  b.width = b.right - b.left;
+  b.height = b.bottom - b.top;
   const pts = [];
-  for (let i = 1; i <= 7; i++) for (let j = 1; j <= 3; j++)
-    pts.push([Math.round(b.left + (b.width * i) / 8), Math.round(b.top + (b.height * j) / 4)]);
+  for (const r of rects)
+    for (let i = 1; i <= 7; i++) for (let j = 1; j <= 3; j++)
+      pts.push([Math.round(r.left + (r.width * i) / 8), Math.round(r.top + (r.height * j) / 4)]);
 
   const primary = (el) => {
     const a = el.closest("a, button, [role=button]");
@@ -265,15 +285,15 @@ const OCCLUSION_PROBE = `() => {
     return a;
   };
 
-  const prev = pill.style.visibility;
-  pill.style.visibility = "hidden";
+  const prev = members.map((m) => m.style.visibility);
+  members.forEach((m) => (m.style.visibility = "hidden"));
   const under = new Map();
   for (const [x, y] of pts) {
     const hit = document.elementFromPoint(x, y);
     const a = hit && primary(hit);
     if (a) under.set(a, (a.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 38));
   }
-  pill.style.visibility = prev;
+  members.forEach((m, k) => (m.style.visibility = prev[k]));
 
   const buried = [];
   for (const [a, label] of under) {
@@ -288,17 +308,25 @@ const OCCLUSION_PROBE = `() => {
       if (hit && a.contains(hit)) { free = true; break; }
     }
     const pr = a.getBoundingClientRect();
-    const ox = Math.min(pr.right, b.right) - Math.max(pr.left, b.left);
-    const oy = Math.min(pr.bottom, b.bottom) - Math.max(pr.top, b.top);
+    // covered area = the sum over the members (they never overlap each other)
+    let cov = 0;
+    for (const m of rects) {
+      const ox = Math.min(pr.right, m.right) - Math.max(pr.left, m.left);
+      const oy = Math.min(pr.bottom, m.bottom) - Math.max(pr.top, m.top);
+      if (ox > 0 && oy > 0) cov += ox * oy;
+    }
     buried.push({
       label,
-      coveredFrac: +Math.max(0, (ox * oy) / (pr.width * pr.height)).toFixed(2),
+      coveredFrac: +Math.max(0, cov / (pr.width * pr.height)).toFixed(2),
       fullyBlocked: !free,
       rect: [Math.round(pr.left), Math.round(pr.top), Math.round(pr.width), Math.round(pr.height)],
     });
   }
+  const box = (r) => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
   return {
-    pill: [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)],
+    pill: box(b),
+    members: rects.map(box),
+    pair: members.length === 2,
     vh: innerHeight,
     buried,
   };
@@ -350,23 +378,31 @@ async function settlePill(
     async ([ceiling, quiet]) => {
       const el = document.querySelector<HTMLElement>(".cit-cfg-launch");
       if (!el) return { y: -1, ms: 0, settled: false };
+      // ADR-0342: the pair rests only when BOTH members rest (position and fade-in).
+      const tp = document.querySelector<HTMLElement>(".cit-cfg-trialpill");
+      const els = tp && !tp.hidden ? [el, tp] : [el];
       const t0 = performance.now();
-      let last = Number.NaN;
+      let last = "";
       let since = performance.now();
       while (performance.now() - t0 < ceiling) {
         await new Promise<void>((r) => requestAnimationFrame(() => r()));
-        const y = Math.round(el.getBoundingClientRect().top);
-        const painted = parseFloat(getComputedStyle(el).opacity || "0") === 1;
-        if (y !== last || !painted) {
-          last = y;
+        const key = els
+          .map((e) => {
+            const r = e.getBoundingClientRect();
+            return `${Math.round(r.left)},${Math.round(r.top)}`;
+          })
+          .join("|");
+        const painted = els.every((e) => parseFloat(getComputedStyle(e).opacity || "0") === 1);
+        if (key !== last || !painted) {
+          last = key;
           since = performance.now();
           continue;
         }
         if (performance.now() - since >= quiet) {
-          return { y, ms: Math.round(performance.now() - t0), settled: true };
+          return { y: Math.round(el.getBoundingClientRect().top), ms: Math.round(performance.now() - t0), settled: true };
         }
       }
-      return { y: last, ms: Math.round(performance.now() - t0), settled: false };
+      return { y: Math.round(el.getBoundingClientRect().top), ms: Math.round(performance.now() - t0), settled: false };
     },
     [PILL_SETTLE_CEILING_MS, PILL_QUIET_MS] as const,
   )) as { y: number; ms: number; settled: boolean };
@@ -505,17 +541,26 @@ const VIEWPORTS = [
 ] as const;
 
 // ── build one page per template ──────────────────────────────────────────────
+/** ADR-0342: the trial entry as the /p route passes it (the endpoint is never called here). */
+const TRIAL_OPT = { enabled: true as const, days: 14, url: "/p/fixture-token-0000/trial", privacyUrl: "/privacy" };
 const files: Record<string, string> = {};
+/** The same pages WITHOUT the trial (trial switched off): the lone order pill. */
+const soloFiles: Record<string, string> = {};
 for (const id of ids) {
   // The REAL delivery pipeline: render → runtime (this is what carries
   // assets/runtime/cit-modules.css) → configurator. Skipping the runtime made the
   // map iframe fall back to the browser default 300×150 box — a fixture measuring a
   // page no lead ever receives.
-  const html = await injectConfigurator(
-    await injectRuntime(renderSite(recipe(id), DATA, { phase: "mock" })),
-    art.id,
-    DATA.name,
-  );
+  const base = await injectRuntime(renderSite(recipe(id), DATA, { phase: "mock" }));
+  // ADR-0342: the trial entry is ON by default in the product → the fixture carries it,
+  // so ② measures the PAIR. A trial-less copy keeps the lone pill (trial off) measured.
+  const html = await injectConfigurator(base, art.id, DATA.name, { trial: TRIAL_OPT });
+  if (!html.includes('"trial":{')) {
+    console.error(`  ✗ ${id}: a fixture manifestjéből hiányzik a próba — a PÁR mérése vak lenne`);
+    failures++;
+    continue;
+  }
+  const solo = await injectConfigurator(base, art.id, DATA.name);
   // The fixture must prove its own path: 17 renders of the same archetype page would be
   // fake coverage, and a page with no map section cannot show the defect at all.
   if (!new RegExp(`<body[^>]*class="[^"]*cit-tpl-${id}\\b`).test(html)) {
@@ -536,6 +581,9 @@ for (const id of ids) {
   const file = path.join(OUT, `${id}.html`);
   await writeFile(file, html, "utf8");
   files[id] = file;
+  const soloFile = path.join(OUT, `${id}.solo.html`);
+  await writeFile(soloFile, solo, "utf8");
+  soloFiles[id] = soloFile;
 }
 
 /** One independent measurement: its section, a name for a unit that threw, and the work. */
@@ -595,28 +643,48 @@ for (const [id, file] of Object.entries(files)) {
 }
 
 // ── ② the floating pill buries no primary action ─────────────────────────────
-for (const [id, file] of Object.entries(files)) {
-  for (const [w, h, vp] of VIEWPORTS) {
-    units.push({ s: 2, label: `②${id}/${vp}`, run: async () => {
-      const { ctx, p } = await open(browser, file, w, h);
-      await wakePill(p);
-      // A PIXELRE várunk, nem órára: a kikerülés animált, és a mozgó pirula bármelyik
-      // gombra ráeshet egy pillanatra anélkül, hogy a lead valaha is takarva látná.
-      const st = await settlePill(p);
-      const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as {
-        error?: string;
-        pill?: number[];
-        buried?: { label: string; coveredFrac: number; fullyBlocked: boolean }[];
-      };
-      // A meg nem álló pirula ÖNMAGÁBAN lelet (a kikerülő oszcillál) — nem elnyelt timeout.
-      check(
-        `${id}/${vp}: a pirula MEGÁLL (${st.ms} ms)`,
-        st.settled,
-        st.settled ? "" : { ...st, ceiling: PILL_SETTLE_CEILING_MS },
-      );
-      check(`${id}/${vp}: a pirula senkit nem temet be (y=${r.pill?.[1]})`, !r.error && r.buried?.length === 0, r);
-      await ctx.close();
-    } });
+for (const [mode, set] of [["pár", files], ["próba nélkül", soloFiles]] as const) {
+  for (const [id, file] of Object.entries(set)) {
+    for (const [w, h, vp] of VIEWPORTS) {
+      units.push({ s: 2, label: `②${id}/${vp}/${mode}`, run: async () => {
+        const { ctx, p } = await open(browser, file, w, h);
+        await wakePill(p);
+        // A PIXELRE várunk, nem órára: a kikerülés animált, és a mozgó pirula bármelyik
+        // gombra ráeshet egy pillanatra anélkül, hogy a lead valaha is takarva látná.
+        const st = await settlePill(p);
+        const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as {
+          error?: string;
+          pill?: number[];
+          members?: number[][];
+          pair?: boolean;
+          buried?: { label: string; coveredFrac: number; fullyBlocked: boolean }[];
+        };
+        const tag = `${id}/${vp}/${mode}`;
+        // A meg nem álló pirula ÖNMAGÁBAN lelet (a kikerülő oszcillál) — nem elnyelt timeout.
+        check(
+          `${tag}: a pirula MEGÁLL (${st.ms} ms)`,
+          st.settled,
+          st.settled ? "" : { ...st, ceiling: PILL_SETTLE_CEILING_MS },
+        );
+        check(`${tag}: a pirula senkit nem temet be (y=${r.pill?.[1]})`, !r.error && r.buried?.length === 0, r);
+        if (mode === "pár") {
+          // README ①④: the pair is ONE unit — both members on stage, one row, one shared
+          // bottom edge, trial on the left, a narrow gap, never split by the avoidance.
+          const [o, t] = r.members ?? [];
+          const ok =
+            !!r.pair && !!o && !!t &&
+            Math.abs(t[1]! + t[3]! - (o[1]! + o[3]!)) <= 1 &&
+            t[0]! + t[2]! <= o[0]! &&
+            o[0]! - (t[0]! + t[2]!) <= 16 &&
+            t[3]! < 64 && o[3]! < 64 &&
+            t[0]! >= 0 && o[0]! + o[2]! <= w;
+          check(`${tag}: a pár EGYBEN áll (egy sor, közös alsó él, bal = próba)`, ok, r.members);
+        } else {
+          check(`${tag}: próba nélkül nincs próba-pirula`, r.pair === false, r.members);
+        }
+        await ctx.close();
+      } });
+    }
   }
 }
 
@@ -793,6 +861,51 @@ if (!ONLY) {
     check("ütközés-kerülés nélkül a pirula tényleg betemet egy gombot (az őr él)", !!caught, caught);
   } });
 
+  // ④e ADR-0342: a button that ONLY the trial pill covers must be caught — the proof that
+  // ② samples the pair's OTHER member too. Without the avoidance block the pair stays put;
+  // a primary-looking control is planted exactly under the trial pill (clear of the order
+  // pill), and the probe must name it as buried. A probe that sampled the order pill
+  // alone would stay green here.
+  units.push({ s: 4, label: "④e csak a próba-pirula alatti gomb", run: async () => {
+    const victimFile = files["fullbleed"] ?? Object.values(files)[0]!;
+    const cut = (await readFile(victimFile, "utf8")).replace(
+      /\/\* cit-cfg-avoid-start[\s\S]*?cit-cfg-avoid-end \*\//,
+      "",
+    );
+    check("④e: a kerülő-blokk kivágódott és a próba-pirula a lapon van", !cut.includes("cit-cfg-avoid-start") && cut.includes('"trial":{'));
+    const f = path.join(OUT, "_trialonly.noavoid.html");
+    await writeFile(f, cut, "utf8");
+    for (const [w, h, vp] of VIEWPORTS) {
+      const { ctx, p } = await open(browser, f, w, h);
+      await wakePill(p);
+      await settlePill(p);
+      const planted = (await p.evaluate(`(() => {
+        const t = document.querySelector(".cit-cfg-trialpill");
+        const o = document.querySelector(".cit-cfg-launch");
+        if (!t || t.hidden) return { error: "nincs próba-pirula" };
+        const tr = t.getBoundingClientRect(), or = o.getBoundingClientRect();
+        const a = document.createElement("a");
+        a.href = "#"; a.textContent = "ULTETETT-PROBA-ALATT";
+        a.setAttribute("style", "position:fixed;display:block;z-index:5;margin:0;padding:0;border:0;" +
+          "background:rgb(200,0,0);color:rgb(255,255,255);font:12px sans-serif;" +
+          "left:" + Math.round(tr.left + 4) + "px;top:" + Math.round(tr.top + 4) + "px;" +
+          "width:" + Math.max(100, Math.round(tr.width - 8)) + "px;height:" + Math.max(32, Math.round(tr.height - 8)) + "px");
+        document.body.appendChild(a);
+        const ar = a.getBoundingClientRect();
+        const clearOfOrder = ar.right <= or.left || ar.left >= or.right || ar.bottom <= or.top || ar.top >= or.bottom;
+        return { clearOfOrder, planted: [ar.left, ar.top, ar.width, ar.height].map(Math.round) };
+      })()`)) as { error?: string; clearOfOrder?: boolean; planted?: number[] };
+      const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as { buried?: { label: string }[]; pair?: boolean };
+      check(`④e ${vp}: az ültetett gomb CSAK a próba-pirula alatt van (a rendelés-pirulától távol)`, !planted.error && !!planted.clearOfOrder, planted);
+      check(
+        `④e ${vp}: a csak a próba-pirula alatti gombot az őr betemetettnek látja (a PÁR mindkét tagját méri)`,
+        !!r.pair && !!r.buried?.some((b) => b.label.includes("ULTETETT-PROBA-ALATT")),
+        r,
+      );
+      await ctx.close();
+    }
+  } });
+
   // ④d A MEG NEM ÁLLÓ pirula is lelet — és ennek az állításnak is kell piros ikre.
   // Enélkül a „a pirula MEGÁLL" sor csupa zöldje semmit nem bizonyítana: egy olyan
   // várakozás, ami SOHA nem tud settled=false-t adni, nem mérés, hanem díszlet.
@@ -836,7 +949,7 @@ if (!ONLY) {
 const settled = await pool(units, (u) => u.run());
 const HEADERS: Record<Unit["s"], string> = {
   1: `\n① Üres, jelöletlen doboz SEHOL (a térkép-keret FÜGGŐBEN — ez a fényképezett állapot; ${ids.length} sablon × 2 méret):\n`,
-  2: `\n② A lebegő pirula nem takar elsődleges műveletet (${ids.length} sablon × 2 méret):\n`,
+  2: `\n② A lebegő pirula (próbával: a PÁR mindkét tagja) nem takar elsődleges műveletet (${ids.length} sablon × 2 méret × próbával/próba nélkül):\n`,
   3: "\n③ A „Testre szabom” doboz — vagy tétel van benne, vagy nem nyitható:\n",
   4: ONLY
     ? "\n④ Önteszt — KIHAGYVA a szűkített futásban (csak a teljes kör méri).\n"
@@ -870,7 +983,7 @@ if (ONLY) {
 }
 console.log(
   `\n✅ lead-page-surface-check: ${ids.length} sablon × 2 méret — ① nincs üres keretezett doboz ` +
-    `(függő ÉS elutasított térkép-keret mellett is), ② a lebegő pirula egyetlen elsődleges gombot ` +
+    `(függő ÉS elutasított térkép-keret mellett is), ② a lebegő pirula (próbával a PÁR mindkét tagja, próba nélkül a magányos pirula) egyetlen elsődleges gombot ` +
     `sem takar, ③ a „Testre szabom” doboz nem nyitható üresre és a fejléc-száma a meglévő sorokat ` +
     `mondja — + piros önteszt mind a háromra.`,
 );

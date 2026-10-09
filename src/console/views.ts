@@ -8503,12 +8503,19 @@ export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
   escalation_shown: T(lang, "Megjelent neki az eszkalációs ajánlat"),
   escalation_cta: T(lang, "Rákattintott az eszkalációs ajánlatra"),
   escalation_dismiss: T(lang, "Elvetette az eszkalációs ajánlatot"),
+  // ADR-0342 free trial (proba-gomb README Mérés) — its own family, not panel_open.
+  trial_open: T(lang, "Megnyomta az ingyenes próba gombját"),
+  trial_invalid: T(lang, "Hibás adat a próba-űrlapon"),
+  trial_submit: T(lang, "Elküldte a próba-űrlapot"),
+  trial_send_failed: T(lang, "A próba indítása nem sikerült"),
+  trial_close: T(lang, "Bezárta a próba-űrlapot"),
+  trial_start: T(lang, "ELINDÍTOTTA AZ INGYENES PRÓBÁT"),
 });
 
 /** Events shown emphasised (the order went out / to payment). */
-export const EVENT_STRONG: readonly string[] = ["order_intent_submitted", "checkout_redirect"];
+export const EVENT_STRONG: readonly string[] = ["order_intent_submitted", "checkout_redirect", "trial_start"];
 /** Events shown as an error (red token). */
-export const EVENT_BAD: readonly string[] = ["billing_invalid", "order_send_failed", "module_dependency_unmet", "client_error"];
+export const EVENT_BAD: readonly string[] = ["billing_invalid", "order_send_failed", "module_dependency_unmet", "client_error", "trial_send_failed"];
 
 /** The label of one event, with the panel's opening route when it was not the pill. */
 export function eventLabel(type: string, payload: unknown, lang = "hu"): string {
@@ -8517,6 +8524,7 @@ export function eventLabel(type: string, payload: unknown, lang = "hu"): string 
   const via = (payload as Record<string, unknown> | null | undefined)?.via;
   if (via === "esc") return `${base} (${T(lang, "az ajánlatból")})`;
   if (via === "tab") return `${base} (${T(lang, "szél-füllel újra")})`;
+  if (via === "trial") return `${base} (${T(lang, "a próba-űrlapról")})`;
   return base;
 }
 

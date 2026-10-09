@@ -288,6 +288,22 @@
       '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>',
     eye:
       '<svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+    // ⭐ The shared set's `gift` (src/ui/icons.ts) — the SAME paths, so the free-trial
+    // pill (ADR-0342) and any console surface wear one mark. The solid knot is the cyan
+    // accent; here it reads the runtime's own mirror of --citui-cyan-500 (citui.css is not
+    // loaded on the mock page).
+    gift:
+      '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<rect x="4" y="10.5" width="16" height="10" rx="2.2"/><rect x="3" y="7" width="18" height="3.5" rx="1.4"/>' +
+      '<path d="M12 7v13.5"/><path d="M12 7C10.6 4.2 7.4 3.6 7.1 5.6 6.9 7 9.4 7 12 7zM12 7c1.4-2.8 4.6-3.4 4.9-1.4.2 1.4-2.3 1.4-4.9 1.4z"/>' +
+      '<circle class="cit-cfg-gdot" cx="12" cy="7" r="1.7"/></svg>',
+    // Fact rows of the trial form: a ticked circle (true now) and a paused circle (day n+1).
+    okc:
+      '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/></svg>',
+    pausec:
+      '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7M14 8.5v7"/></svg>',
   };
 
   function stars(n) {
@@ -1820,6 +1836,34 @@
       I.spark +
       "<span>" + tr("Itt rendelheti meg") + "</span></button>"
   );
+  // ── ADR-0342: the free-trial entry beside the order pill (frozen plan:
+  // assets/design-refs/prospect-page/proba-gomb/, variant B) ─────────────────────
+  // ONE unit with the order pill: left = trial, right = order, one row. Two fixed
+  // buttons moved in lockstep rather than one wrapper, because the order pill itself must
+  // stay the fixed `.cit-cfg-launch` every guard taps and measures. No manifest entry (the
+  // trial is off, the lead had one, or this is the operator preview) → no trial pill, and
+  // the order pill stands alone exactly as before (README 5).
+  var TRIAL =
+    CFG.trial && CFG.trial.enabled && CFG.trial.url && Number(CFG.trial.days) >= 1 ? CFG.trial : null;
+  var TRIAL_DAYS = TRIAL ? Math.round(Number(TRIAL.days)) : 0;
+  /** Every trial label carries the operator-set length (README 6) — never a literal number. */
+  function trialN(s) {
+    return String(s).split("{n}").join(String(TRIAL_DAYS));
+  }
+  var trialPill = null;
+  if (TRIAL) {
+    trialPill = el('<button class="cit-cfg-trialpill" type="button">' + I.gift + "<span></span></button>");
+    trialPill.querySelector("span").textContent = trialN(tr("{n} nap ingyen"));
+    trialPill.hidden = true; // follows the order pill — shown at mount
+    launch.classList.add("cit-cfg-launch--pair");
+  }
+  var trialSheetOpen = false;
+  /** The trial pill follows the order pill's visibility; an open trial form hides both. */
+  function syncTrialPill() {
+    if (!trialPill) return;
+    trialPill.hidden = launch.hidden || trialSheetOpen;
+    trialPill.classList.toggle("cit-cfg-in", launch.classList.contains("cit-cfg-in"));
+  }
   var panel = el(
     '<aside class="cit-cfg-panel" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
       // Protruding edge tab: collapse/expand without losing the configuration.
@@ -3483,7 +3527,8 @@
   window.addEventListener("load", syncNavLinks);
 
   // `via` = where the panel was opened from (rendeles-panel README ①): "pill" = the
-  // order button, "esc" = the escalation offer's button, "tab" = the edge tab.
+  // order button, "esc" = the escalation offer's button, "tab" = the edge tab,
+  // "trial" = the order link under the free-trial form (ADR-0342).
   function open(via) {
     revealSamples(); // first open = the "all-in" reveal (full package visible)
     panel.classList.add("cit-cfg-open");
@@ -3491,7 +3536,9 @@
     panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
-    track("panel_open", { via: via === "esc" || via === "tab" ? via : "pill" });
+    syncTrialPill();
+    // "trial" = the order link at the foot of the free-trial form (ADR-0342 measurement).
+    track("panel_open", { via: via === "esc" || via === "tab" || via === "trial" ? via : "pill" });
     if (!panelOpenedAt) panelOpenedAt = Date.now();
     sectionSeen("panel", SEC_TAIL);
     // The body only has measurable geometry once the panel is on stage.
@@ -3509,6 +3556,7 @@
     panel.classList.add("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
+    syncTrialPill();
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
     track("panel_collapse", { seconds: panelSeconds() });
     panelOpenedAt = 0;
@@ -3519,6 +3567,7 @@
     panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
+    syncTrialPill();
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
     // The X reset the tab: measured apart from the collapse (README ②).
     if (panelOpenedAt) track("panel_close", { seconds: panelSeconds() });
@@ -3536,6 +3585,433 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && panel.classList.contains("cit-cfg-open")) collapse();
   });
+
+  // ── ADR-0342: the free-trial form (frozen plan prospect-page/proba-gomb/, README 7–12) ──
+  // Phone: a bottom sheet; desktop: a centred dialog. Built on the first open. The server
+  // records the success itself (`trial_start` on this visit) — the page never writes a
+  // success event, so a start is never counted twice.
+  // EMAIL_RE mirrors src/tenant/contact.ts; the phone rule is the server's own
+  // (window.CIT_PHONE_NORM = src/text/phone.ts PHONE_NORM_JS, injected with this runtime).
+  var TRIAL_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  var trialNorm =
+    typeof window.CIT_PHONE_NORM === "function"
+      ? window.CIT_PHONE_NORM
+      : function (raw) {
+          // no client mirror on the page → the server decides; never block a plausible number
+          var v = String(raw || "").trim();
+          return v ? v : null;
+        };
+  /** "+36301234567" → "+36 30 123 4567" (src/tenant/contact.ts printing rule). */
+  function trialPretty(e) {
+    if (String(e).indexOf("+36") !== 0) return e;
+    var n = e.slice(3);
+    if (n[0] === "1") return "+36 1 " + n.slice(1, 4) + " " + n.slice(4);
+    var r = n.slice(2);
+    return "+36 " + n.slice(0, 2) + " " + r.slice(0, 3) + " " + r.slice(3);
+  }
+  function trialDate(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.getFullYear() + ". " + pad2(d.getMonth() + 1) + ". " + pad2(d.getDate()) + ".";
+  }
+  var tSheet = null;
+  var tScrim = null;
+  var tOpenedAt = 0;
+  var tVia = "sticky";
+  var tLastFocus = null;
+  var tDone = false;
+  var tSending = false;
+
+  /** The ÁSZF tick's label: the STAMPED wording (startTrial stores TERMS_ACCEPTANCE_V1),
+   *  verbatim — its two document names become the links, as at the checkout. */
+  function trialTermsHtml() {
+    var B = CFG.billing || {};
+    var text =
+      B.termsText ||
+      "Elfogadom a Citoviso Általános Szerződési Feltételeit, és megismertem az Adatkezelési tájékoztatót."; // i18n-exempt: legal wording (TERMS_ACCEPTANCE_V1) — country LEGAL pack scope
+    var html = esc(text);
+    function link(phrase, href, fallbackLabel) {
+      if (!href) return;
+      var a = '<a href="' + esc(href) + '" target="_blank" rel="noopener">';
+      var at = html.indexOf(esc(phrase));
+      if (at >= 0) html = html.slice(0, at) + a + esc(phrase) + "</a>" + html.slice(at + esc(phrase).length);
+      else html += " " + a + esc(fallbackLabel) + "</a>";
+    }
+    link("Általános Szerződési Feltételeit", B.termsUrl || null, tr("ÁSZF")); // i18n-exempt: matches the legal wording above
+    link("Adatkezelési tájékoztatót", TRIAL.privacyUrl || null, tr("Adatkezelési tájékoztató")); // i18n-exempt: matches the legal wording above
+    return html;
+  }
+
+  /** The foot line: the trial is chosen INSTEAD of the order discount (README 11). */
+  function trialAltText() {
+    var pct = OFFER && Number(OFFER.percent) > 0 ? Math.round(Number(OFFER.percent)) : 0;
+    if (!pct) return tr("Inkább most rendelné meg?");
+    var s =
+      OFFER.kind === "outreach"
+        ? tr("Inkább most rendelné meg? A −{p}% bemutatkozó kedvezmény a megrendelésnél él, a próbával nem adódik össze.")
+        : tr("Inkább most rendelné meg? A −{p}% kedvezmény a megrendelésnél él, a próbával nem adódik össze.");
+    return s.replace("{p}", String(pct));
+  }
+
+  function buildTrialSheet() {
+    var exampleName = DOM && DOM.exampleName ? DOM.exampleName : "";
+    tScrim = el('<div class="cit-cfg-tscrim" hidden></div>');
+    tSheet = el(
+      '<div class="cit-cfg-tsheet" role="dialog" aria-modal="true" aria-labelledby="cit-cfg-th" hidden>' +
+        '<button class="cit-cfg-tx" type="button" aria-label="' + esc(tr("Bezárás")) + '">' + I.x + "</button>" +
+        '<div class="cit-cfg-tbody" data-t="form">' +
+        '<p class="cit-cfg-tkick">' + I.gift + "<span>" + esc(tr("Ingyenes próba")) + "</span></p>" +
+        '<h3 class="cit-cfg-th" id="cit-cfg-th">' + esc(trialN(tr("Próbálja ki {n} napig ingyen"))) + "</h3>" +
+        '<p class="cit-cfg-taddr">' + esc(tr("Az Ön oldala élesben, ezen a címen:")) + " <b>" + esc(TRIAL.sub || "") + "</b></p>" +
+        '<ul class="cit-cfg-tfacts">' +
+        "<li>" + I.okc + "<span>" + esc(tr("Nem kell bankkártya, nincs előre fizetés")) + "</span></li>" +
+        "<li>" + I.okc + "<span>" +
+        esc(trialN(tr("{n} napig minden funkció: foglalási naptár, szobák, árak, galéria, vélemények, programajánló"))) +
+        "</span></li>" +
+        "<li>" + I.okc + "<span>" + esc(tr("Saját kezelőfelület: a képeket és a szövegeket Ön cseréli")) + "</span></li>" +
+        "<li>" + I.okc + "<span>" +
+        esc(tr("A keresőknek szóló alapok benne vannak: szálláshely-adatok, oldaltérkép, biztonságos (HTTPS) cím")) +
+        "</span></li>" +
+        '<li class="cit-cfg-tpause">' + I.pausec + "<span>" +
+        esc(trialN(tr("A {n}. nap után az oldal szünetel: nem terhelünk semmit, az adatai megmaradnak. Folytatni megrendeléssel lehet."))) +
+        "</span></li>" +
+        "</ul>" +
+        '<p class="cit-cfg-tnote">' +
+        esc(
+          exampleName
+            ? tr("Saját domain (pl. {domain}) a próbában nincs — megrendeléskor választható.").replace("{domain}", exampleName)
+            : tr("Saját domain a próbában nincs — megrendeléskor választható."),
+        ) +
+        "</p>" +
+        '<form class="cit-cfg-tform" novalidate>' +
+        '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("Az Ön neve")) + "</span>" +
+        '<input class="cit-cfg-tin" name="name" autocomplete="name" aria-describedby="cit-cfg-te-name">' +
+        '<em class="cit-cfg-terr" id="cit-cfg-te-name" data-e="name"></em></label>' +
+        '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("E-mail-cím")) + "</span>" +
+        '<input class="cit-cfg-tin" name="email" type="email" inputmode="email" autocomplete="email" ' +
+        'autocapitalize="off" spellcheck="false" aria-describedby="cit-cfg-te-email">' +
+        '<small class="cit-cfg-thint">' + esc(tr("Ide küldjük a belépés linkjét.")) + "</small>" +
+        '<em class="cit-cfg-terr" id="cit-cfg-te-email" data-e="email"></em></label>' +
+        '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("Telefonszám")) + "</span>" +
+        '<input class="cit-cfg-tin" name="phone" type="tel" inputmode="tel" autocomplete="tel" ' +
+        'placeholder="06 30 123 4567" aria-describedby="cit-cfg-te-phone">' +
+        '<small class="cit-cfg-thint">' + esc(tr("A próba vége előtt itt is szólunk.")) + "</small>" +
+        '<em class="cit-cfg-terr" id="cit-cfg-te-phone" data-e="phone"></em></label>' +
+        '<label class="cit-cfg-ttick"><input type="checkbox" name="terms"><span>' + trialTermsHtml() + "</span></label>" +
+        '<em class="cit-cfg-terr" data-e="terms"></em>' +
+        '<label class="cit-cfg-ttick"><input type="checkbox" name="photo_rights"><span class="cit-cfg-tphoto"></span></label>' +
+        '<em class="cit-cfg-terr" data-e="photo_rights"></em>' +
+        '<button class="cit-cfg-tsubmit" type="submit"><span class="cit-cfg-tspin" aria-hidden="true"></span>' +
+        '<span class="cit-cfg-tlbl"></span></button>' +
+        '<p class="cit-cfg-tsenderr" role="alert" hidden></p>' +
+        "</form>" +
+        '<p class="cit-cfg-talt"><span></span> <button class="cit-cfg-tlink" type="button">' +
+        esc(tr("Itt rendelheti meg")) + "</button></p>" +
+        "</div>" +
+        '<div class="cit-cfg-tbody cit-cfg-tok" data-t="ok" hidden tabindex="-1">' +
+        '<div class="cit-cfg-tokico">' + I.okc + "</div>" +
+        '<h3 class="cit-cfg-th cit-cfg-tokh"></h3>' +
+        '<p class="cit-cfg-tokmail"></p>' +
+        '<p class="cit-cfg-tokdates"></p>' +
+        '<p class="cit-cfg-tnote cit-cfg-tokwarn">' +
+        esc(tr("A lejárat előtt 3 nappal és 1 nappal e-mailben és SMS-ben is szólunk.")) + "</p>" +
+        '<button class="cit-cfg-tghost" type="button">' + esc(tr("Rendben")) + "</button>" +
+        "</div>" +
+        "</div>",
+    );
+    // §A: the declaration the tick stands for IS the stamped wording (startTrial stores
+    // PHOTO_RIGHTS_DECLARATION_V1) — shown verbatim, like the checkout's photo tick.
+    tSheet.querySelector(".cit-cfg-tphoto").textContent =
+      CFG.photoRightsText ||
+      "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok."; // i18n-exempt: §A legal wording — country LEGAL pack scope
+    tSheet.querySelector(".cit-cfg-tlbl").textContent = trialN(tr("Elindítom a {n} napos próbát"));
+    document.body.appendChild(tScrim);
+    document.body.appendChild(tSheet);
+
+    var form = tSheet.querySelector(".cit-cfg-tform");
+    var fName = form.querySelector('[name="name"]');
+    var fEmail = form.querySelector('[name="email"]');
+    var fPhone = form.querySelector('[name="phone"]');
+    var fTerms = form.querySelector('[name="terms"]');
+    var fPhoto = form.querySelector('[name="photo_rights"]');
+    var submit = form.querySelector(".cit-cfg-tsubmit");
+    var sendErr = form.querySelector(".cit-cfg-tsenderr");
+    var FIELD = { name: fName, email: fEmail, phone: fPhone, terms: fTerms, photo_rights: fPhoto };
+    var MSG = {
+      name: tr("Kérjük, írja be a nevét."),
+      emailEmpty: tr("Az e-mail-cím kell: ide küldjük a belépés linkjét."),
+      email: tr("Ez nem tűnik e-mail-címnek. Pl.: nev@gmail.com"),
+      phoneEmpty: tr("A telefonszám kell: a próba vége előtt SMS-ben is szólunk."),
+      phone: tr("Ezt a számot nem tudjuk értelmezni. Így írja: 06 30 123 4567"),
+      terms: tr("A próba indításához el kell fogadnia az ÁSZF-et."),
+      photo_rights: tr("A próbaoldalon a mostani fotók jelennek meg — ehhez a fotó-nyilatkozat kell."),
+    };
+    function setErr(key, msg) {
+      var e = form.querySelector('[data-e="' + key + '"]');
+      if (e) e.textContent = msg || "";
+      var f = FIELD[key];
+      if (f && f.type !== "checkbox") f.setAttribute("aria-invalid", msg ? "true" : "false");
+    }
+    // ⛔ README 9: a blur that hands the focus to the submit button stays QUIET. Measured
+    // at 390 px: a message appearing there pushed the button down between press and
+    // release, and the tap was lost. The submit checks every field anyway.
+    function toSubmit(e) {
+      return e.relatedTarget === submit;
+    }
+    fPhone.addEventListener("blur", function (e) {
+      if (toSubmit(e) || tSending) return;
+      var v = fPhone.value.trim();
+      if (!v) return;
+      var n = trialNorm(v);
+      if (n) {
+        fPhone.value = trialPretty(n);
+        setErr("phone", "");
+      } else setErr("phone", MSG.phone);
+    });
+    fEmail.addEventListener("blur", function (e) {
+      if (toSubmit(e) || tSending) return;
+      var v = fEmail.value.trim().toLowerCase();
+      fEmail.value = v;
+      if (v && !TRIAL_EMAIL_RE.test(v)) setErr("email", MSG.email);
+      else if (v) setErr("email", "");
+    });
+    fName.addEventListener("blur", function (e) {
+      if (toSubmit(e) || tSending) return;
+      if (fName.value.trim().replace(/\s+/g, " ").length >= 2) setErr("name", "");
+    });
+    fTerms.addEventListener("change", function () {
+      if (fTerms.checked) setErr("terms", "");
+    });
+    fPhoto.addEventListener("change", function () {
+      if (fPhoto.checked) setErr("photo_rights", "");
+    });
+
+    function lock(on) {
+      tSending = on;
+      submit.disabled = on;
+      submit.classList.toggle("cit-cfg-tsending", on);
+      submit.querySelector(".cit-cfg-tlbl").textContent = on
+        ? tr("Indítjuk a próbát…")
+        : trialN(tr("Elindítom a {n} napos próbát"));
+      [fName, fEmail, fPhone, fTerms, fPhoto].forEach(function (f) {
+        f.disabled = on;
+      });
+    }
+    function failSend(status, code) {
+      lock(false);
+      track("trial_send_failed", { status: status, error: code });
+      var field = {
+        invalid_name: ["name", MSG.name],
+        invalid_email: ["email", MSG.email],
+        invalid_phone: ["phone", MSG.phone],
+        terms_required: ["terms", MSG.terms],
+        photo_rights_required: ["photo_rights", MSG.photo_rights],
+      }[code];
+      if (field) {
+        setErr(field[0], field[1]);
+        FIELD[field[0]].focus();
+        return;
+      }
+      var SENT = {
+        trial_used: tr("Ehhez a szálláshoz már indult egy ingyenes próba — szállásonként egy jár. Folytatni megrendeléssel lehet."),
+        already_owned: tr("Ehhez a szálláshoz már tartozik megrendelt oldal, ezért próbát nem indítunk."),
+        in_progress: tr("A próbája éppen most indul. Várjon egy percet, és küldje el újra — akkor megmutatjuk, hová ment a belépés linkje."),
+        disabled: tr("Az ingyenes próba most nem indítható. A megrendelés továbbra is elérhető."),
+        market_not_approved: tr("A szállás országában az ingyenes próba még nem indítható."),
+        not_found: tr("Ez a link már nem érvényes, ezért innen nem indítható próba."),
+      };
+      sendErr.textContent =
+        SENT[code] || tr("Most nem sikerült elindítani a próbát. Amit beírt, megmaradt — próbálja újra egy perc múlva.");
+      sendErr.hidden = false;
+    }
+    function showOk(j, email) {
+      tDone = true;
+      var ok = tSheet.querySelector('[data-t="ok"]');
+      var mail = ok.querySelector(".cit-cfg-tokmail");
+      var dates = ok.querySelector(".cit-cfg-tokdates");
+      var until = trialDate(j.trialUntil);
+      mail.textContent = "";
+      dates.textContent = "";
+      if (j.loginSentTo) {
+        ok.querySelector(".cit-cfg-tokh").textContent = tr("A hozzáférést elküldtük");
+        mail.appendChild(document.createTextNode(tr("A belépés linkjét erre a címre küldtük:") + " "));
+        var b = document.createElement("b");
+        b.textContent = j.loginSentTo;
+        mail.appendChild(b);
+        mail.appendChild(
+          document.createTextNode(
+            ". " + tr("Ha pár percen belül nem érkezik meg, nézze meg a Promóciók vagy a Spam mappát is."),
+          ),
+        );
+      } else if (j.existing) {
+        // The trial already ran from an earlier submit: nothing was sent now (§B.17).
+        ok.querySelector(".cit-cfg-tokh").textContent = tr("A próbája már fut");
+        mail.textContent = tr("A belépés linkjét a próba indításakor küldtük el, az akkor megadott e-mail-címre. Ha nem találja, nézze meg a Promóciók vagy a Spam mappát is.");
+      } else {
+        // Started, but the login letter did not go out (the server logs it for a manual resend).
+        ok.querySelector(".cit-cfg-tokh").textContent = tr("A próba elindult");
+        mail.appendChild(
+          document.createTextNode(tr("A belépés linkjét most nem tudtuk automatikusan elküldeni. Munkatársunk elküldi erre a címre:") + " "),
+        );
+        var b2 = document.createElement("b");
+        b2.textContent = email;
+        mail.appendChild(b2);
+      }
+      if (until) {
+        dates.appendChild(
+          document.createTextNode((j.existing ? tr("A próba eddig tart:") : tr("A próba ma indul, és eddig tart:")) + " "),
+        );
+        var bu = document.createElement("b");
+        bu.textContent = until;
+        dates.appendChild(bu);
+      }
+      tSheet.querySelector('[data-t="form"]').hidden = true;
+      ok.hidden = false;
+      tSheet.scrollTop = 0;
+      ok.focus({ preventScroll: true });
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (tSending) return;
+      var bad = [];
+      var nv = fName.value.trim().replace(/\s+/g, " ");
+      fName.value = nv;
+      if (nv.length < 2) {
+        setErr("name", MSG.name);
+        bad.push("name");
+      } else setErr("name", "");
+      var mv = fEmail.value.trim().toLowerCase();
+      fEmail.value = mv;
+      if (!mv) {
+        setErr("email", MSG.emailEmpty);
+        bad.push("email");
+      } else if (!TRIAL_EMAIL_RE.test(mv)) {
+        setErr("email", MSG.email);
+        bad.push("email");
+      } else setErr("email", "");
+      var pv = fPhone.value.trim();
+      var pn = pv ? trialNorm(pv) : null;
+      if (!pv) {
+        setErr("phone", MSG.phoneEmpty);
+        bad.push("phone");
+      } else if (!pn) {
+        setErr("phone", MSG.phone);
+        bad.push("phone");
+      } else {
+        fPhone.value = trialPretty(pn);
+        setErr("phone", "");
+      }
+      if (!fTerms.checked) {
+        setErr("terms", MSG.terms);
+        bad.push("terms");
+      } else setErr("terms", "");
+      if (!fPhoto.checked) {
+        setErr("photo_rights", MSG.photo_rights);
+        bad.push("photo_rights");
+      } else setErr("photo_rights", "");
+      if (bad.length) {
+        track("trial_invalid", { fields: bad });
+        FIELD[bad[0]].focus();
+        return;
+      }
+      sendErr.hidden = true;
+      lock(true);
+      track("trial_submit", { via: tVia });
+      var body = JSON.stringify({
+        name: nv,
+        email: mv,
+        phone: pn,
+        aszfAccepted: true,
+        photoRightsAccepted: true,
+        viewId: VIEW_ID,
+      });
+      fetch(TRIAL.url, { method: "POST", headers: { "content-type": "application/json" }, body: body })
+        .then(function (r) {
+          return r
+            .json()
+            .catch(function () {
+              return null;
+            })
+            .then(function (j) {
+              return { status: r.status, j: j };
+            });
+        })
+        .then(function (res) {
+          if (res.j && res.j.ok === true && res.status === 200) {
+            lock(false);
+            showOk(res.j, mv);
+            return;
+          }
+          failSend(res.status, (res.j && res.j.error) || (res.status >= 500 ? "server" : "unknown"));
+        })
+        .catch(function () {
+          failSend(0, "network");
+        });
+    });
+
+    tSheet.querySelector(".cit-cfg-tx").addEventListener("click", function () {
+      closeTrial(false);
+    });
+    tScrim.addEventListener("click", function () {
+      closeTrial(false);
+    });
+    tSheet.querySelector(".cit-cfg-tghost").addEventListener("click", function () {
+      closeTrial(true);
+    });
+    tSheet.querySelector(".cit-cfg-tlink").addEventListener("click", function () {
+      closeTrial(true);
+      open("trial");
+    });
+  }
+
+  function openTrial(via) {
+    if (!TRIAL) return;
+    if (!tSheet) buildTrialSheet();
+    if (!tSheet.hidden) return;
+    tLastFocus = document.activeElement;
+    if (!tDone) {
+      // A fresh look at the form: stale messages go, what was typed stays.
+      tSheet.querySelectorAll(".cit-cfg-terr").forEach(function (e) {
+        e.textContent = "";
+      });
+      tSheet.querySelector(".cit-cfg-tsenderr").hidden = true;
+      tSheet.querySelector(".cit-cfg-talt span").textContent = trialAltText();
+    }
+    trialSheetOpen = true;
+    launch.hidden = true;
+    syncTrialPill();
+    tScrim.hidden = false;
+    tSheet.hidden = false;
+    tSheet.scrollTop = 0;
+    tOpenedAt = Date.now();
+    tVia = via;
+    track("trial_open", { via: via });
+    setTimeout(function () {
+      var f = tDone ? tSheet.querySelector('[data-t="ok"]') : tSheet.querySelector('[name="name"]');
+      if (f) f.focus({ preventScroll: true });
+    }, 30);
+  }
+  /** `silent` = no trial_close (after a success, or when the form hands over to the order panel). */
+  function closeTrial(silent) {
+    if (!tSheet || tSheet.hidden) return;
+    tSheet.hidden = true;
+    tScrim.hidden = true;
+    trialSheetOpen = false;
+    if (!silent && !tDone) track("trial_close", { seconds: Math.round((Date.now() - tOpenedAt) / 1000) });
+    launch.hidden = panel.classList.contains("cit-cfg-open");
+    syncTrialPill();
+    if (armPillAvoidance) setTimeout(placeLaunch, 0);
+    if (tLastFocus && tLastFocus.focus && tLastFocus.isConnected) tLastFocus.focus({ preventScroll: true });
+  }
+  if (trialPill) {
+    trialPill.addEventListener("click", function () {
+      openTrial("sticky");
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && tSheet && !tSheet.hidden) closeTrial(false);
+    });
+  }
 
   // ── a drag on the panel scrolls the PANEL, never the page behind it ──────────
   // Owner, 2026-09-26, on a phone: "nem a vásárlási szekció gördül, hanem a honlap
@@ -4176,8 +4652,20 @@
 
   // Horizontal slots, in order of preference. '' = the CSS default for the breakpoint
   // (phone: right corner; desktop: centre).
+  // ADR-0342 ④: with the trial pill beside it the PAIR is the unit. On a phone the pair
+  // spans the width, so there is no other side — only the upward sweep is left.
+  var PAIR_GAP_PHONE = 8;
+  var PAIR_GAP_DESK = 10;
+  var PAIR_EDGE_PHONE = 12;
+  function isPhone() {
+    return window.matchMedia("(max-width:560px)").matches;
+  }
+  function pairOn() {
+    return !!trialPill && !trialPill.hidden && trialPill.isConnected;
+  }
   function sideSlots() {
-    return window.matchMedia("(max-width:560px)").matches ? ["", "l"] : ["", "r", "l"];
+    if (pairOn() && isPhone()) return [""];
+    return isPhone() ? ["", "l"] : ["", "r", "l"];
   }
   function setSide(side) {
     launch.classList.toggle("cit-cfg-launch--r", side === "r");
@@ -4185,10 +4673,38 @@
   }
   function slotRect(side, w) {
     var vw = document.documentElement.clientWidth;
-    var m = window.matchMedia("(max-width:560px)").matches ? 16 : 24;
-    var phone = m === 16;
+    var phone = isPhone();
+    if (pairOn() && phone) return { left: PAIR_EDGE_PHONE, right: PAIR_EDGE_PHONE + w };
+    var m = phone ? 16 : 24;
     var left = side === "l" ? m : side === "r" || (side === "" && phone) ? vw - m - w : (vw - w) / 2;
     return { left: left, right: left + w };
+  }
+  /**
+   * The pair's members at their final widths, left = trial, right = order. Phone: the pair
+   * fills the width between the 12 px edges and the spare width is shared between the two
+   * (README 1); desktop: natural widths, 10 px apart. Returns the pair's total width.
+   */
+  function pairLayout() {
+    trialPill.style.removeProperty("width");
+    launch.style.removeProperty("width");
+    var wt = trialPill.offsetWidth;
+    var wl = launch.offsetWidth;
+    if (!isPhone()) return { wt: wt, wl: wl, gap: PAIR_GAP_DESK, w: wt + PAIR_GAP_DESK + wl };
+    var avail = document.documentElement.clientWidth - 2 * PAIR_EDGE_PHONE - PAIR_GAP_PHONE;
+    var spare = avail - wt - wl;
+    if (spare > 0) {
+      wt += Math.floor(spare / 2);
+      wl = avail - wt;
+    } else if (spare < 0) {
+      // Narrower than both labels (a 320 px screen, a long translation): shrink both in
+      // proportion — the labels end in an ellipsis (CSS), the pair never leaves the screen
+      // and never breaks into two rows.
+      wt = Math.floor((avail * wt) / (wt + wl));
+      wl = avail - wt;
+    }
+    trialPill.style.width = wt + "px";
+    launch.style.width = wl + "px";
+    return { wt: wt, wl: wl, gap: PAIR_GAP_PHONE, w: wt + PAIR_GAP_PHONE + wl };
   }
   function clashAt(rects, bottomY, h) {
     var clash = null;
@@ -4211,14 +4727,17 @@
       launch.style.removeProperty("bottom");
       launchBase = (parseFloat(getComputedStyle(launch).bottom) || 16) - consentH();
     }
-    var h = launch.offsetHeight;
-    var w = launch.offsetWidth;
+    var pair = pairOn();
+    var pl = pair ? pairLayout() : null;
+    var h = pair ? Math.max(launch.offsetHeight, trialPill.offsetHeight) : launch.offsetHeight;
+    var w = pair ? pl.w : launch.offsetWidth;
     // ① rest just above the bottom-fixed stack (booking bar, consent bar)
     var bottomY = Math.min(
       window.innerHeight - (launchBase + consentH()),
       fixedBottomTop() - AVOID_GAP,
     );
-    // ② an in-flow primary control under that spot → try the other side(s)
+    // ② an in-flow primary control under that spot → try the other side(s). For the pair
+    // the tested box is the UNION of both pills: it moves together or not at all.
     var slots = sideSlots();
     var side = null;
     for (var si = 0; si < slots.length; si++) {
@@ -4244,8 +4763,23 @@
         bottomY = lifted;
       }
     }
-    setSide(side);
-    launch.style.bottom = Math.round(window.innerHeight - bottomY) + "px";
+    var pillBottom = Math.round(window.innerHeight - bottomY) + "px";
+    if (pair) {
+      // Both members get exact pixels: one shared bottom edge, the pair's left from the
+      // chosen slot, trial first. The side classes stay off — they belong to the lone pill.
+      setSide("");
+      var at = slotRect(side, w).left;
+      trialPill.style.left = Math.round(at) + "px";
+      trialPill.style.right = "auto";
+      launch.style.left = Math.round(at + pl.wt + pl.gap) + "px";
+      launch.style.right = "auto";
+      trialPill.style.bottom = pillBottom;
+    } else {
+      launch.style.removeProperty("left");
+      launch.style.removeProperty("right");
+      setSide(side);
+    }
+    launch.style.bottom = pillBottom;
     // Publish how much of the viewport's bottom the pill AND everything it climbed
     // over (a template's fixed booking bar, the consent bar) really take, so the
     // page's last in-flow block — the legal footer with the opt-out — can pad
@@ -4264,7 +4798,7 @@
     var fixedBottom = document.querySelectorAll("body > *, body > * > *, body > * > * > *");
     for (var k = 0; k < fixedBottom.length; k++) {
       var fb = fixedBottom[k];
-      if (fb === launch || (fb.closest && fb.closest('[class*="cit-cfg"]'))) continue;
+      if (fb === launch || fb === trialPill || (fb.closest && fb.closest('[class*="cit-cfg"]'))) continue;
       var fcs = getComputedStyle(fb);
       if (fcs.position !== "fixed" || fcs.display === "none" || fcs.visibility === "hidden") continue;
       var fr = fb.getBoundingClientRect();
@@ -4451,6 +4985,10 @@
     document.body.appendChild(scrim);
     document.body.appendChild(panel);
     document.body.appendChild(launch);
+    if (trialPill) {
+      document.body.insertBefore(trialPill, launch);
+      syncTrialPill(); // on stage but transparent until showPill() slides both in
+    }
     mountEscalationCard();
     mountEditStrip();
     mounted = true;
@@ -4477,6 +5015,7 @@
       if (pillShown) return;
       pillShown = true;
       launch.classList.add("cit-cfg-in");
+      syncTrialPill();
       if (armPillAvoidance) armPillAvoidance();
     }
     setTimeout(showPill, 300);

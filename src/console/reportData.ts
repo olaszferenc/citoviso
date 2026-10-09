@@ -187,12 +187,13 @@ export interface BuyerProfile {
   readonly mobileShare: number;
 }
 
-/** Where the order panel was opened from (`panel_open.via`; legacy, via-less opens = "pill"). */
-export type PanelVia = "pill" | "esc" | "tab";
-export const PANEL_VIAS: readonly PanelVia[] = ["pill", "esc", "tab"];
+/** Where the order panel was opened from (`panel_open.via`; legacy, via-less opens = "pill").
+ *  "trial" = the order link under the free-trial form (ADR-0342, proba-gomb README Mérés). */
+export type PanelVia = "pill" | "esc" | "tab" | "trial";
+export const PANEL_VIAS: readonly PanelVia[] = ["pill", "esc", "tab", "trial"];
 /** The Rendelés-panel chip filter (`pv` query param). */
 export type PanelFilter = "all" | PanelVia;
-export const PANEL_FILTERS: readonly PanelFilter[] = ["all", "pill", "esc", "tab"];
+export const PANEL_FILTERS: readonly PanelFilter[] = ["all", "pill", "esc", "tab", "trial"];
 /** What the visitor did inside the panel — the „Mit csinált közben” rows, in display order. */
 export const PANEL_ACTS = ["preset", "module", "period", "info", "domain", "own_domain", "collapse", "billing_invalid", "order_send_failed"] as const;
 export type PanelAct = (typeof PANEL_ACTS)[number];
@@ -709,7 +710,7 @@ function buyerProfile(ps: readonly ProspectFacts[]): BuyerProfile {
 const ms = (v: string | Date): number => (v instanceof Date ? v.getTime() : new Date(v).getTime());
 const viaOf = (payload: unknown): PanelVia => {
   const v = (payload as Record<string, unknown> | null | undefined)?.via;
-  return v === "esc" || v === "tab" ? v : "pill";
+  return v === "esc" || v === "tab" || v === "trial" ? v : "pill";
 };
 const ACT_OF: Readonly<Record<string, PanelAct>> = {
   preset_select: "preset",
@@ -827,7 +828,12 @@ export function summarizePanel(all: readonly PanelSession[], via: PanelFilter): 
   return {
     sessions,
     n,
-    byVia: { pill: all.filter((s) => s.vias.includes("pill")).length, esc: all.filter((s) => s.vias.includes("esc")).length, tab: all.filter((s) => s.vias.includes("tab")).length },
+    byVia: {
+      pill: all.filter((s) => s.vias.includes("pill")).length,
+      esc: all.filter((s) => s.vias.includes("esc")).length,
+      tab: all.filter((s) => s.vias.includes("tab")).length,
+      trial: all.filter((s) => s.vias.includes("trial")).length,
+    },
     secondsMedian: median(secs),
     secondsP90: median(secs, 0.9),
     leftWithout: left.length,

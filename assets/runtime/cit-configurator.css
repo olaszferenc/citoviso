@@ -124,6 +124,84 @@
   transform: translateY(-2px);
 }
 
+/* ── ADR-0342: the free-trial pill — ONE unit with the order pill ──────────────
+ * Frozen plan: assets/design-refs/prospect-page/proba-gomb/ (variant B). Left = trial,
+ * right = order, one row, never split. Two fixed buttons, not a wrapper: the order pill
+ * must itself stay the fixed `.cit-cfg-launch` the guards tap and measure. The runtime
+ * sets exact left/bottom px for both (placeLaunch, the pair's union is what avoids a
+ * button); the rules below are the layout WITHOUT that script — the pair still stands
+ * side by side around the centre (desktop) or between the 12 px edges (phone).
+ * Colours mirror the design core (citui.css is not loaded on the mock page):
+ * --citui-navy-900 / --citui-white / --citui-cyan-300 / --citui-cyan-500. */
+.cit-cfg-trialpill {
+  --cit-tp: #0e2a47;
+  --cit-tp-ink: #ffffff;
+  --cit-tp-icon: #6fd8eb;
+  --cit-tp-dot: #1fb6d6;
+  position: fixed;
+  left: auto;
+  right: calc(50% + 5px);
+  bottom: calc(24px + var(--citui-consent-h, 0px));
+  z-index: 2147483000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 24px;
+  border: none;
+  border-radius: 999px;
+  background: var(--cit-tp);
+  color: var(--cit-tp-ink);
+  font: 700 16px/1.1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+  /* the same white rim as the order pill: legible on a dark photo and a pale page alike */
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.9);
+  transform: translateY(24px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    bottom 0.22s ease;
+}
+.cit-cfg-trialpill.cit-cfg-in {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.cit-cfg-trialpill:hover {
+  filter: brightness(1.15);
+  transform: translateY(-2px);
+}
+.cit-cfg-trialpill[hidden] {
+  display: none;
+}
+.cit-cfg-trialpill svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: var(--cit-tp-icon);
+}
+.cit-cfg-trialpill .cit-cfg-gdot {
+  fill: var(--cit-tp-dot);
+  stroke: none;
+}
+/* The order pill in the pair: no centring translate — its left edge IS its place. */
+.cit-cfg-launch--pair {
+  left: calc(50% + 5px);
+  white-space: nowrap;
+  justify-content: center;
+  transform: translateY(24px);
+}
+.cit-cfg-launch.cit-cfg-launch--pair.cit-cfg-in {
+  transform: none;
+}
+.cit-cfg-launch.cit-cfg-launch--pair:hover {
+  transform: translateY(-2px);
+}
+
 /* ── panel ──────────────────────────────────────────────────────────────────── */
 .cit-cfg-panel {
   position: fixed;
@@ -1308,6 +1386,37 @@
     width: 16px;
     height: 16px;
     flex: none;
+  }
+  /* ADR-0342 pair on the phone: the full width, 12 px from both edges, 8 px apart, one
+   * row (README 1). The runtime shares the spare width between the two. */
+  .cit-cfg-launch--pair {
+    left: auto;
+    right: 12px;
+    max-width: none;
+    min-height: 48px;
+    padding: 0 14px;
+    gap: 6px;
+  }
+  .cit-cfg-trialpill {
+    left: 12px;
+    right: auto;
+    bottom: calc(14px + var(--citui-consent-h, 0px));
+    min-height: 48px;
+    padding: 0 14px;
+    gap: 6px;
+    font-size: 14px;
+  }
+  .cit-cfg-trialpill svg {
+    width: 16px;
+    height: 16px;
+  }
+  /* A pill's label never wraps and never spills: on a very narrow screen the runtime
+   * narrows the members, and the label ends in an ellipsis instead of a second row. */
+  .cit-cfg-launch--pair span,
+  .cit-cfg-trialpill span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   /* Bottom sheet → the handle sits on TOP of the sheet; chevron points down
    * (hide) when open, up (bring back) when collapsed. */
@@ -2645,8 +2754,11 @@
  * the open/closed states, so forcing them would break the panel's animation.
  * Guard: scripts/configurator-float-check.mts (all templates, red without this). */
 .cit-cfg-launch,
+.cit-cfg-trialpill,
 .cit-cfg-panel,
 .cit-cfg-scrim,
+.cit-cfg-tscrim,
+.cit-cfg-tsheet,
 .cit-cfg-escveil,
 .cit-cfg-esccard,
 .cit-cfg-editstrip {
@@ -2656,6 +2768,10 @@
 }
 .cit-cfg-scrim { z-index: 2147482999 !important; }
 .cit-cfg-launch { z-index: 2147483000 !important; }
+.cit-cfg-trialpill { z-index: 2147483000 !important; }
+/* ADR-0342 trial form: above both pills and the order panel, below the escalation veil. */
+.cit-cfg-tscrim { z-index: 2147483140 !important; }
+.cit-cfg-tsheet { z-index: 2147483150 !important; }
 .cit-cfg-panel { z-index: 2147483001 !important; }
 .cit-cfg-escveil { z-index: 2147483200 !important; }
 .cit-cfg-esccard { z-index: 2147483300 !important; }
@@ -2902,5 +3018,406 @@
 @media (prefers-reduced-motion: reduce) {
   .cit-cfg-editstrip {
     transition: none;
+  }
+}
+
+/* ── ADR-0342: the free-trial form (frozen plan prospect-page/proba-gomb/, README 7–11) ──
+ * Desktop: a centred dialog; phone (≤ 560 px): a bottom sheet. It lives in a FOREIGN
+ * document (the generated mock), so every element states its own font, colour and
+ * spacing — a template's `h3`, `label` or `input` rules must not reach in. Light surface
+ * with the design core's values mirrored as custom properties (citui.css is not loaded
+ * here): --citui-white / ink / muted / line-strong / cyan-500 / ok / ok-ink / ok-soft /
+ * bad / bad-ink / accent-ink / link-ink. It ends above the consent bar, like the panel. */
+.cit-cfg-tscrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483140;
+  background: rgba(5, 12, 24, 0.55);
+}
+.cit-cfg-tscrim[hidden],
+.cit-cfg-tsheet[hidden],
+.cit-cfg-tsheet [hidden] {
+  display: none !important;
+}
+.cit-cfg-tsheet {
+  --cit-ts-bg: #ffffff;
+  --cit-ts-ink: #10243a;
+  --cit-ts-muted: #5a6d82;
+  --cit-ts-line: rgba(14, 42, 71, 0.12);
+  --cit-ts-line-strong: rgba(14, 42, 71, 0.22);
+  --cit-ts-cyan: #1fb6d6;
+  --cit-ts-accent-ink: #06131b;
+  --cit-ts-link: #10697a;
+  --cit-ts-ok: #2fa96b;
+  --cit-ts-ok-ink: #19733f;
+  --cit-ts-ok-soft: #e7f8ef;
+  --cit-ts-bad: #e5484d;
+  --cit-ts-bad-ink: #b3262b;
+  position: fixed;
+  z-index: 2147483150;
+  left: 50%;
+  top: calc((100% - var(--citui-consent-h, 0px)) / 2);
+  transform: translate(-50%, -50%);
+  width: min(560px, 92vw);
+  max-height: calc(92vh - var(--citui-consent-h, 0px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  background: var(--cit-ts-bg);
+  color: var(--cit-ts-ink);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(14, 42, 71, 0.28);
+  font: 400 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.cit-cfg-tsheet *,
+.cit-cfg-tsheet *::before,
+.cit-cfg-tsheet *::after {
+  box-sizing: border-box;
+}
+.cit-cfg-tbody {
+  padding: 26px 28px 22px;
+}
+.cit-cfg-tx {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cit-ts-muted);
+  cursor: pointer;
+}
+.cit-cfg-tx svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+}
+.cit-cfg-tkick {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0 44px 0 0;
+  color: var(--cit-ts-link);
+  font: 600 12px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.cit-cfg-tkick svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+}
+.cit-cfg-tkick .cit-cfg-gdot {
+  fill: var(--cit-ts-cyan);
+  stroke: none;
+}
+.cit-cfg-th {
+  margin: 4px 0 6px;
+  padding: 0;
+  color: var(--cit-ts-ink);
+  font: 750 24px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.cit-cfg-taddr {
+  margin: 0 0 6px;
+  color: var(--cit-ts-muted);
+  font: inherit;
+}
+.cit-cfg-taddr b {
+  /* the host moves to its own line whole, rather than breaking at its hyphen */
+  display: inline-block;
+  max-width: 100%;
+  color: var(--cit-ts-ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.cit-cfg-tfacts {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font: 400 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--cit-ts-ink);
+}
+.cit-cfg-tfacts li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+}
+.cit-cfg-tfacts li::before {
+  content: none;
+}
+.cit-cfg-tfacts svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+  fill: none;
+  stroke: var(--cit-ts-ok);
+}
+.cit-cfg-tnote {
+  margin: 6px 0 12px;
+  color: var(--cit-ts-muted);
+  font: 400 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cit-cfg-tform {
+  margin: 0;
+}
+.cit-cfg-tf {
+  display: block;
+  margin: 10px 0;
+}
+.cit-cfg-tl {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--cit-ts-ink);
+  font: 600 14px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cit-cfg-tin {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 14px;
+  border: 1.5px solid var(--cit-ts-line-strong);
+  border-radius: 12px;
+  background: var(--cit-ts-bg);
+  color: var(--cit-ts-ink);
+  /* 16 px: iOS zooms the page into a smaller input on focus */
+  font: 400 16px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cit-cfg-tin::placeholder {
+  color: var(--cit-ts-muted);
+  opacity: 0.8;
+}
+.cit-cfg-tin:focus {
+  outline: none;
+  border-color: var(--cit-ts-cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cit-ts-cyan) 25%, transparent);
+}
+.cit-cfg-tin[aria-invalid="true"] {
+  border-color: var(--cit-ts-bad);
+}
+.cit-cfg-tin:disabled {
+  opacity: 0.7;
+}
+.cit-cfg-thint {
+  display: block;
+  margin-top: 3px;
+  color: var(--cit-ts-muted);
+  font: 400 12.5px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cit-cfg-terr {
+  display: block;
+  margin-top: 3px;
+  color: var(--cit-ts-bad-ink);
+  font: 500 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-style: normal;
+}
+.cit-cfg-terr:empty {
+  display: none;
+}
+.cit-cfg-ttick {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 14px 0 4px;
+  color: var(--cit-ts-ink);
+  font: 400 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-ttick input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin: 1px 0 0;
+  accent-color: var(--cit-ts-cyan);
+}
+.cit-cfg-ttick a {
+  color: var(--cit-ts-link);
+  text-decoration: underline;
+}
+.cit-cfg-tsubmit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  margin: 14px 0 0;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cit-ts-cyan);
+  color: var(--cit-ts-accent-ink);
+  font: 700 16px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+.cit-cfg-tsubmit:disabled {
+  opacity: 0.75;
+  cursor: progress;
+}
+.cit-cfg-tspin {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid color-mix(in srgb, var(--cit-ts-accent-ink) 30%, transparent);
+  border-top-color: var(--cit-ts-accent-ink);
+  border-radius: 50%;
+  animation: citCfgTSpin 0.8s linear infinite;
+}
+.cit-cfg-tsending .cit-cfg-tspin {
+  display: inline-block;
+}
+@keyframes citCfgTSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.cit-cfg-tsenderr {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cit-ts-bad) 10%, var(--cit-ts-bg));
+  color: var(--cit-ts-bad-ink);
+  font: 400 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cit-cfg-talt {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--cit-ts-line);
+  color: var(--cit-ts-muted);
+  font: 400 13.5px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cit-cfg-tlink {
+  display: inline;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cit-ts-link);
+  font: 600 13.5px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cit-cfg-tok {
+  text-align: center;
+  padding-top: 34px;
+  outline: none;
+}
+.cit-cfg-tokico {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 6px;
+  border-radius: 50%;
+  background: var(--cit-ts-ok-soft);
+  color: var(--cit-ts-ok-ink);
+  display: grid;
+  place-items: center;
+}
+.cit-cfg-tokico svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+}
+.cit-cfg-tok .cit-cfg-th {
+  margin: 4px 0 6px;
+}
+.cit-cfg-tok p {
+  margin: 0 0 10px;
+  color: var(--cit-ts-ink);
+  font: inherit;
+}
+.cit-cfg-tok b {
+  overflow-wrap: anywhere;
+}
+.cit-cfg-tok .cit-cfg-tnote {
+  color: var(--cit-ts-muted);
+}
+.cit-cfg-tghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin: 6px 0 0;
+  padding: 0 24px;
+  border: 1.5px solid var(--cit-ts-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cit-ts-ink);
+  font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+}
+@media (max-width: 560px) {
+  .cit-cfg-tsheet {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: var(--citui-consent-h, 0px);
+    transform: none;
+    width: 100%;
+    max-height: calc(94vh - var(--citui-consent-h, 0px));
+    max-height: calc(94dvh - var(--citui-consent-h, 0px));
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.35);
+  }
+  .cit-cfg-tbody {
+    padding: 22px 16px 18px;
+  }
+  .cit-cfg-th {
+    font-size: 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-tspin {
+    animation-duration: 2.4s;
+  }
+}
+
+/* ADR-0342 pair on a narrow phone (360 px class): measured at 360 px the two pills at the
+ * 390 px size overflowed the screen by 16 px — tighter padding and type keep both on one
+ * row between the 12 px edges. */
+@media (max-width: 380px) {
+  .cit-cfg-launch--pair,
+  .cit-cfg-trialpill {
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 13px;
+  }
+  .cit-cfg-launch--pair svg,
+  .cit-cfg-trialpill svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+/* 320 px class: the icons give way before the words do (measured: both labels ellipsised). */
+@media (max-width: 340px) {
+  .cit-cfg-launch--pair svg,
+  .cit-cfg-trialpill svg {
+    display: none;
   }
 }
