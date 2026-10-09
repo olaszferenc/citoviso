@@ -43,7 +43,7 @@ import { foldIncludes } from "../text/fold.js";
 import { huArticle, huArticleLower } from "../hu.js";
 // A vevőnek mutatott support-cím EGY forrása (a hívók is ezt adják át).
 import { config } from "../config.js";
-import { formatDay, formatDayShortStem, formatDayShortWeekday, formatDayStem, formatMonthDay } from "../text/day.js";
+import { formatDay, formatDayOn, formatDayShortStem, formatDayShortWeekday, formatDayStem, formatMonthDay } from "../text/day.js";
 import { TRIAL_WARN_DAYS, type TrialAdminState } from "../trial/admin.js";
 import { formatAmount } from "../tenant/prices.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
@@ -1124,7 +1124,11 @@ function trialLapsedBlock(t: TrialAdminState, lang: string, compact: boolean, gu
       `<div class="adm-owe__l">${T(lang, "Mi maradt meg")}</div>` +
       `<ul class="adm-trial__kept"><li>${T(lang, "a szerkesztő felülete — most is ebben van")}</li>` +
       `<li>${T(lang, "minden szöveg, kép és beállítás")}</li><li>${T(lang, "a beérkezett üzenetek")}</li></ul>` +
-      `<p>${T(lang, "Nem terheltünk semmit, és kártyát sem kértünk. A szünet addig tart, amíg nem folytatja.")}</p>` +
+      `<p>${T(lang, "Nem terheltünk semmit, és kártyát sem kértünk.")} ` +
+      (t.purgeWarned
+        ? T(lang, "Ha nem folytatja, ezeket {date} véglegesen töröljük — erről levelet is küldtünk.", { date: `<b>${esc(formatDayOn(t.purgeIso, lang))}</b>` })
+        : T(lang, "Ha nem folytatja, ezeket {date} véglegesen töröljük — előtte levélben szólunk.", { date: `<b>${esc(formatDayOn(t.purgeIso, lang))}</b>` })) +
+      `</p>` +
       `</div>`;
   const guest =
     `<p class="adm-frz__guest">` +

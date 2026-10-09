@@ -27,6 +27,11 @@
    a piros blokk (`adm-frz`), de tartozás nélkül: cím „A honlapja szünetel — a próba {date} lejárt”, a próba-kupon
    %-a, gomb **„Folytatom — fizetés”**, **„Mi maradt meg”** lista, és **„Mit lát közben a látogató:”** sor.
    Az Áttekintésen teljes, a többi fülön kompakt (a „Mi maradt meg” nélkül).
+   **A megőrzésnek határideje van (ADR-0345, ÁSZF 1.4):** a lista alatt a törlés NAPJA áll (próba vége + 90 nap,
+   `purgeDay`; ha a 'p7' figyelmeztetés már kiment, a tényleges nap: `effectivePurgeDay`), és hogy előtte levelet
+   küldünk: **„Ha nem folytatja, ezeket {date} véglegesen töröljük — előtte levélben szólunk.”** — a levél után:
+   **„Ha nem folytatja, ezeket {date} véglegesen töröljük — erről levelet is küldtünk.”** ⛔ A korábbi „A szünet
+   addig tart, amíg nem folytatja.” határidő nélküli ígéret volt (§B.17) — kivezetve (2026-10-09, koordinátor).
 8. **Fizetett próba (converted):** nincs sáv és nincs blokk — onnan az előfizetés beszél.
 
 ## Kötő horgony

@@ -22,8 +22,15 @@ SUB (koordinátor `31815b5a`), két session ugyanabban a fában (`~/wt/cit3cce04
 ## Nyitott
 - **§2b**: a törlés-figyelmeztető levél terve a koordinátornál (`_report/proba-C3/`, A teljes / A hétvége / A kupon nélkül
   / B rövid). Jóváhagyás után: küldő (`PurgeWarningDeps.sendEmail`) a `trialEmail.ts` mintájára + éles tick.
-- A határidő nélküli „megmarad” szövegek → „90 napig” (C2 T−3/T−1 `stay` mondat + README KÖTŐ idézet, szünetel-lap,
-  próba-űrlap sikere, admin-sáv) — a jóváhagyott levél-szöveget érinti, a koordinátor viszi a tulajhoz.
+- A határidő nélküli „megmarad” szövegek → „90 napig” (C2 T−3/T−1 `stay` mondat a `trialEmail.ts`-ben + README KÖTŐ
+  idézet, a belépő-levél próba-mondata a `loginEmail.ts`-ben, szünetel-lap, próba-űrlap sikere) — a jóváhagyott levél-szöveget érinti, a koordinátor viszi a tulajhoz.
+
+## 3. session — a lejárt-próba admin-blokk határideje (koordinátor-kérés, külön commit)
+- `trialLapsedBlock` (`src/server/adminViews.ts`): a „Mi maradt meg” alatt a törlés NAPJA + „előtte levélben szólunk”
+  (a 'p7' után: „erről levelet is küldtünk”); a „A szünet addig tart, amíg nem folytatja.” kivezetve (§B.17).
+- `TrialAdminState.purgeIso` / `purgeWarned` (`src/trial/admin.ts`): `purgeDay`, kiment 'p7' után `effectivePurgeDay`.
+- KÖTŐ idézetek: `assets/design-refs/console/proba-admin-sav/README.md` 7. pont; KB: `kb/entries/admin-overview`.
+- Őr: `scripts/free-trial-expiry-check.mts` — a törlés napja mindkét ágon (tervezett + késve ment 'p7').
 
 ## Tanulság
 - Követetlen `_report/` a fában → a land utó-feltétele „idegen fájl változott” + hamis „rebase-konfliktus”: land idejére

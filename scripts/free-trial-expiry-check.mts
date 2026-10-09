@@ -125,6 +125,8 @@ const { buildCredentialsEmail, buildPasswordResetEmail } = await import("../src/
 const { footerReasonForTenant } = await import("../src/trial/footer.js");
 const { trialAdminState, TRIAL_WARN_DAYS } = await import("../src/trial/admin.js");
 const { adminDashboard } = await import("../src/server/adminViews.js");
+const { effectivePurgeDay, purgeDay } = await import("../src/trial/retention.js");
+const { formatDayOn } = await import("../src/text/day.js");
 const { readFileSync } = await import("node:fs");
 type EmailMessage = import("../src/email/sender.js").EmailMessage;
 type SiteData = import("../src/engine/recipe.js").SiteData;
@@ -362,6 +364,29 @@ try {
   const lapsedState = await trialAdminState(tenantId);
   const lapsedHtml = renderAdmin(tenantId, "attekintes", lapsedState);
   check("admin: lejárt próba → szünetel-blokk (data-trial-lapsed), sáv nélkül", lapsedState?.status === "lapsed" && lapsedHtml.includes("data-trial-lapsed") && !lapsedHtml.includes("data-trial-strip"));
+  // ADR-0345: the kept data has a deadline — the block names the purge day and the warning
+  // letter; the old open-ended „A szünet addig tart, amíg nem folytatja." is gone (§B.17).
+  const lapsedUntil = (await db.selectFrom("free_trial").select("trial_until").where("id", "=", trial.id).executeTakeFirstOrThrow()).trial_until as unknown as string;
+  const plannedPurge = purgeDay(new Date(lapsedUntil));
+  check(
+    "admin: lejárt próba → a törlés napja (próba vége + 90 nap) + „előtte levélben szólunk”",
+    lapsedState?.purgeIso === plannedPurge && lapsedState?.purgeWarned === false &&
+      lapsedHtml.includes(formatDayOn(plannedPurge)) && lapsedHtml.includes("előtte levélben szólunk") && !lapsedHtml.includes("addig tart"),
+  );
+  const warnedDay = budapestIsoDay(new Date(Date.parse(`${plannedPurge}T12:00:00Z`) - 2 * 86_400_000));
+  await db
+    .insertInto("free_trial_notice")
+    .values({ free_trial_id: trial.id, step: "p7", channel: "email", status: "sent", detail: plannedPurge, created_at: new Date(`${warnedDay}T10:00:00Z`) as never })
+    .execute();
+  const warnedState = await trialAdminState(tenantId);
+  const warnedHtml = renderAdmin(tenantId, "attekintes", warnedState);
+  const movedPurge = effectivePurgeDay(new Date(lapsedUntil), warnedDay);
+  check(
+    "admin: késve ment 'p7' után a TÉNYLEGES törlési nap (effectivePurgeDay) + „erről levelet is küldtünk”",
+    movedPurge > plannedPurge && warnedState?.purgeIso === movedPurge && warnedState?.purgeWarned === true &&
+      warnedHtml.includes(formatDayOn(movedPurge)) && warnedHtml.includes("erről levelet is küldtünk"),
+  );
+  await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).where("step", "=", "p7").execute();
 
   // ④ the purchase gate
   console.log("④ vásárlási kapu");
