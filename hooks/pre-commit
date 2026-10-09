@@ -2996,6 +2996,23 @@ if [ -f scripts/free-trial-check.mts ] && \
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
   EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
+# trial-campaign-check (ADR-XXXX, visszamenőleges „14 nap ingyen” levél + SMS): a kivett mondat
+#     („Helyezést nem ígérünk.”) sehol, az egy-lövés lábléc-sor ott van, az SMS GSM-7 és ≤ 2 szelet
+#     (hosszú névnél a név rövidül, a link soha), a §C kapu átengedi; a /why?forras=proba GET nem ír,
+#     a POST egy 'trial_mail' sort ír; a célcsoport-szűrés kizárásai; EGY LÖVÉS (ablakon kívül nem
+#     foglal, másodszor nem küld, a cím-egyedi index véd, bukás feloldja); az eszkalációs follow-up
+#     utána nem megy (kontroll-leaddel). Saját, eldobható sorok a közös dev-DB-n, `finally`-ben
+#     törölve; mock szállító kötelező (a dev .env-ben smtp/gammu áll!). ~10 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/trial-campaign-check.mts ] && \
+   changed_files | grep -qE '^src/email/trialCampaignEmail\.ts$|^src/outreach/(trialCampaign|escalationFollowup|outreachCheck)\.ts$|^src/console/prospectFeedback\.ts$|^src/text/day\.ts$|^migrations/0101_trial_campaign\.sql$|^scripts/trial-campaign(-check)?\.mts$'; then
+  if changed_files | grep -qE '^scripts/trial-campaign-check\.mts$'; then
+    echo "[pre-commit] trial-campaign-check --self-test (a próba-kampány őr pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-campaign-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] trial-campaign-check (próba-kampány: levél, SMS, why-oldal, egy lövés, follow-up)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-campaign-check.mts >"$GATE_LOG" || gate_failed
+fi
 # free-trial-config-check (ADR-0342, /pricing „Ingyenes próba” szekció): határok, a POST-értelmezés
 #     (régi fül nem nulláz, kikapcsolva a tárolt szám marad), a POST minden írás ELŐTT utasít el, a lap a
 #     tárolt értéket mutatja, kikapcsolt próba → startTrial 'disabled'. Nem ír DB-sort. ~3 mp.

@@ -171,3 +171,18 @@ export function formatDayShortOn(iso: string | null | undefined, lang = "hu"): s
   }
   return intlDay(iso, lang, { month: "short", day: "numeric" });
 }
+
+/** `2026-09-24` → `szeptember 24-én` (hu: the month by name and the superessive of the
+ *  ordinal — no year, no weekday; the retroactive trial letter's "when we wrote to you",
+ *  ADR-XXXX), or the reader's long month + day for other packs. Same 31-day ending rule as
+ *  formatDayOn. */
+export function formatMonthDayOn(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") {
+    const suffix = p.d === 1 ? "jén" : BACK_VOWEL_DAYS.has(p.d) ? "án" : "én";
+    return `${HU_MONTHS[p.m - 1]} ${p.d}-${suffix}`;
+  }
+  return intlDay(iso, lang, { month: "long", day: "numeric" });
+}

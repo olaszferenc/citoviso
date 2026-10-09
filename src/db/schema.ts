@@ -224,7 +224,8 @@ export interface ProspectFeedbackTable {
   id: Generated<string>;
   prospect_id: string;
   mock_view_id: string | null;
-  source: "escalation_dismiss" | "unsubscribe" | "reminder_link";
+  /** 0101 (ADR-XXXX): 'trial_mail' = the retroactive trial letter's "mi tartja vissza?" buttons. */
+  source: "escalation_dismiss" | "unsubscribe" | "reminder_link" | "trial_mail";
   reason: "expensive" | "not_now" | "distrust" | "have_site" | "other";
   /** Free text, only with reason 'other'; ≤300 chars. */
   text: string | null;
@@ -525,6 +526,22 @@ export interface FreeTrialTable {
   /** 0099: what the purge deleted — row counts per table, slug, files; never the content. */
   purge_report: NullableJson;
   created_at: Generated<Timestamp>;
+}
+
+/** 0101 (ADR-XXXX): the retroactive trial letter's one-shot log — one row per lead (a mail,
+ *  an SMS or an operator exclusion), and (channel, address_key) unique per address. */
+export interface TrialCampaignTable {
+  id: Generated<string>;
+  lead_id: string;
+  prospect_id: string | null;
+  channel: "email" | "sms" | "excluded";
+  /** recipientKey(email) for mail, E.164 for SMS; NULL only for an exclusion. */
+  address_key: string | null;
+  status: Generated<"claimed" | "sent" | "excluded">;
+  /** The operator's exclusion reason, or a send detail. */
+  note: string | null;
+  created_at: Generated<Timestamp>;
+  sent_at: Timestamp | null;
 }
 
 // --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---
@@ -1762,6 +1779,7 @@ export interface Database {
   free_trial: FreeTrialTable;
   free_trial_notice: FreeTrialNoticeTable;
   free_trial_alert: FreeTrialAlertTable;
+  trial_campaign: TrialCampaignTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;

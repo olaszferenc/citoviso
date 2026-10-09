@@ -695,8 +695,18 @@ export function checkOutreachSms(
   return { verdict: reasons.length ? "FLAG" : "PASS", reasons, identity };
 }
 
+/**
+ * What checkOutreachDraft actually reads of a letter. The cold letter (OutreachDraft) is one;
+ * the retroactive trial letter (ADR-XXXX, src/email/trialCampaignEmail.ts) has different
+ * named parts but the same §C obligations, so it is judged by the SAME function rather than a
+ * lookalike copy. Only the identity line of the parts is read (the placeholder-contact scope).
+ */
+export type CheckableLetter = Pick<OutreachDraft, "subject" | "body" | "link" | "unsubscribeLink" | "privacyLink"> & {
+  readonly parts?: { readonly identity?: string };
+};
+
 export function checkOutreachDraft(
-  draft: OutreachDraft,
+  draft: CheckableLetter,
   leadName: string,
   /** The lead's language area — used for the message when no market verdict exists. */
   lang?: string,

@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visszamenőleges próba-levél — jóváhagyott terv (C + SMS)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-cyan-500:#1fb6d6;--citui-white:#ffffff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#5a6d82;--citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);--citui-ok-ink:#19733f;--citui-ok-soft:#e7f8ef;
+  --citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;--citui-radius-sm:14px;--citui-radius-pill:999px;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mail-bg:#eef2f6;--mail-foot:#8a97a5;--mail-line:#e3ecf2;--mail-sub:#a9bdd0;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface-2);color:var(--citui-ink);font:14px/1.5 var(--citui-font-text)}
+.bar{position:sticky;top:0;z-index:5;background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar b{margin-right:6px}
+.seg{display:inline-flex;border:1px solid rgba(255,255,255,.25);border-radius:var(--citui-radius-pill);overflow:hidden}
+.seg button{appearance:none;border:0;background:transparent;color:var(--citui-ink-inverse);font:600 12.5px var(--citui-font-text);padding:8px 12px;min-height:36px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.info{max-width:980px;margin:14px auto 0;padding:0 16px}
+.info details{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:10px 14px}
+.info summary{cursor:pointer;font-weight:700}
+.info table{border-collapse:collapse;margin:8px 0;font-size:13px}
+.info td{padding:3px 10px 3px 0;border-bottom:1px solid var(--citui-line)}
+.info td.n{text-align:right;font-weight:700}
+.vnote{max-width:980px;margin:10px auto 0;padding:0 16px;color:var(--citui-muted);font-size:13px}
+.stage{margin:14px auto 40px;padding:0 16px;max-width:980px}
+.frame{container-type:inline-size;margin:0 auto;background:var(--mail-bg);border:1px solid var(--citui-line-strong);border-radius:12px;overflow:hidden;transition:max-width .2s}
+.frame.mob{max-width:390px}
+.frame.desk{max-width:980px}
+.inbox{background:var(--citui-white);border-bottom:1px solid var(--citui-line);padding:10px 14px;font-size:13px}
+.inbox .from{font-weight:700}
+.inbox .subj{font-weight:600}
+.inbox .pre{color:var(--citui-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the letter — mirrors the approved outreach layout (outreach-mail B navy) */
+.mail{max-width:600px;margin:0 auto;background:var(--citui-white)}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px;border-bottom:2px solid var(--citui-cyan-500)}
+.mh .logo{font-weight:700;letter-spacing:2px;color:var(--citui-navy-900);font-size:13px;text-transform:uppercase}
+.mh .logo i{color:var(--citui-cyan-500);font-style:normal}
+.mh .tag{font-size:10px;letter-spacing:1.5px;color:var(--citui-muted);text-transform:uppercase}
+.mb{padding:20px 20px 0}
+.mb p{margin:0 0 14px;font-size:15px;line-height:1.6}
+.mb p.greet{font-size:17px}
+.hero{display:block;width:100%;height:auto;border:1px solid var(--mail-line)}
+.cta{display:inline-block;margin:14px 0 6px;background:var(--citui-navy-900);color:var(--citui-white);text-decoration:none;font-weight:600;font-size:15px;padding:13px 26px;border-radius:8px}
+.raw{font-size:12px;color:var(--mail-foot);word-break:break-all;margin:0 0 16px}
+.navy{background:var(--citui-navy-950);border-radius:10px;padding:16px 18px;margin:2px 0 18px;color:var(--citui-white)}
+.navy .k{font-size:12px;letter-spacing:1px;color:var(--citui-cyan-500);text-transform:uppercase}
+.navy .big{font-size:24px;font-weight:700;display:block;margin:2px 0}
+.navy .s{font-size:13.5px;color:var(--mail-sub)}
+.lst{margin:0 0 14px;padding:0;list-style:none}
+.lst li{position:relative;padding:0 0 6px 18px;font-size:15px;line-height:1.55}
+.lst li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--citui-cyan-500)}
+.h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px;font-weight:700}
+.box{border:1px solid var(--mail-line);border-radius:10px;padding:14px 16px;margin:0 0 16px;background:var(--citui-surface)}
+.cq{border-top:1px solid var(--mail-line);padding:16px 0 4px;margin-top:4px}
+.cq p.q{margin:0 0 4px;font-weight:700}
+.cq p.qs{margin:0 0 10px;font-size:13px;color:var(--citui-muted)}
+.fbrow{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.fbrow a{display:inline-block;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:10px 16px;font-size:14px;color:var(--citui-ink);text-decoration:none;background:var(--citui-white)}
+.fbrow a:hover{border-color:var(--citui-navy-900)}
+.sig{border-top:1px solid var(--mail-line);padding-top:16px;margin-top:4px}
+.sig p{margin:0 0 4px;font-size:15px}
+.sig .co{font-size:13px;color:var(--citui-muted)}
+.foot{padding:18px 20px 22px}
+.foot div{border-top:1px solid var(--mail-line);padding-top:14px;font-size:12px;line-height:1.6;color:var(--mail-foot)}
+.foot p{margin:0 0 8px}
+.foot a{color:var(--mail-foot)}
+/* simulated landing pages (what the links open) */
+.land{display:none;max-width:480px;margin:28px auto;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:20px;text-align:center}
+.land.on{display:block}
+.land h2{margin:0 0 6px;font-size:20px}
+.land .mut{color:var(--citui-muted);font-size:13.5px}
+.land .url{font:12px ui-monospace,monospace;color:var(--citui-muted);margin:0 0 12px}
+.opt{display:flex;align-items:center;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);min-height:44px;padding:0 14px;margin:0 0 6px;font-weight:500;font-size:13px;cursor:pointer;text-align:left}
+.opt input{position:absolute;opacity:0;width:1px;height:1px}
+.opt:has(input:checked){background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:var(--citui-navy-900)}
+.opt:has(input:focus-visible){outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.land textarea{display:none;width:100%;min-height:56px;border:1px solid var(--citui-line);border-radius:10px;padding:8px 10px;font:13px var(--citui-font-text);margin-top:6px}
+.land form:has(input[value=other]:checked) textarea{display:block}
+.btnp{appearance:none;border:0;background:var(--citui-navy-900);color:var(--citui-white);font:600 14px var(--citui-font-text);padding:0 18px;min-height:44px;border-radius:10px;cursor:pointer}
+.btnp:disabled{opacity:.5;cursor:not-allowed}
+.btng{appearance:none;border:0;background:none;color:var(--citui-muted);font:500 13px var(--citui-font-text);padding:0 12px;min-height:44px;cursor:pointer}
+.done{color:var(--citui-ok-ink);font-weight:600;font-size:13.5px}
+.back{display:inline-block;margin-top:14px;font-size:13px;color:var(--citui-link-ink);cursor:pointer;background:none;border:0}
+.dbg{max-width:600px;margin:10px auto 18px;padding:8px 12px;border:1px dashed var(--citui-line-strong);border-radius:10px;font:12px ui-monospace,monospace;color:var(--citui-muted);background:var(--citui-white)}
+/* SMS view */
+.sms{max-width:600px;margin:0 auto;padding:22px 16px}
+.bubble{background:var(--citui-white);border-radius:18px 18px 18px 4px;padding:12px 14px;font-size:15px;line-height:1.45;max-width:320px;border:1px solid var(--citui-line);word-break:break-word}
+.bubble a{color:var(--citui-link-ink)}
+.smsmeta{font-size:12px;color:var(--citui-muted);margin:8px 0 0}
+.smsmeta b.ok{color:var(--citui-ok-ink)}
+.smsmeta b.bad{color:var(--citui-warn-ink)}
+/* desktop frame: letter + a side note column */
+.wrap{display:block}
+@container (min-width:760px){
+  .wrap{display:grid;grid-template-columns:minmax(0,600px) 1fr;gap:20px;padding:20px}
+  .wrap .side{display:block}
+  .mail{margin:0}
+  .mh{padding:18px 28px 14px}.mb{padding:24px 28px 0}.foot{padding:18px 28px 24px}
+}
+.side{display:none;font-size:13px;color:var(--citui-muted)}
+.side .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.side .card b{color:var(--citui-ink)}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Próba E — JÓVÁHAGYOTT (C + SMS)</b>
+  <span class="seg" id="vsw">
+    <button type="button" data-v="C" aria-pressed="true">C · Személyes</button>
+    <button type="button" data-v="S" aria-pressed="false">SMS (42 csak-mobilos)</button>
+  </span>
+  <span class="seg" id="ssw">
+    <button type="button" data-s="mob" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-s="desk" aria-pressed="false">Asztali</button>
+  </span>
+</div>
+
+<div class="info"><details open>
+  <summary>Célcsoport — élesi adat, olvasás 2026-10-09</summary>
+  <table>
+    <tr><td>Megkeresett lead (mock-link kiment)</td><td class="n">177</td></tr>
+    <tr><td>− leiratkozott / vásárolt / rendelési szándék / próbázik / teszt</td><td class="n">0</td></tr>
+    <tr><td>− válaszolt (3 elutasító + 2 beszélgetésben, kézzel kezelt)</td><td class="n">5</td></tr>
+    <tr><td><b>Célcsoport</b></td><td class="n">172</td></tr>
+    <tr><td>&nbsp;&nbsp;ebből e-mailes → levél</td><td class="n">130</td></tr>
+    <tr><td>&nbsp;&nbsp;ebből csak-mobilos → SMS kellene (tulaj-döntés)</td><td class="n">42</td></tr>
+    <tr><td>&nbsp;&nbsp;meg sem nyitotta a tervet</td><td class="n">115</td></tr>
+  </table>
+  <span class="mut">Minta-adat a levelekben: Rozé Fogadó (a jóváhagyott hideg levél mintája), kiküldve szeptember 24-én. Kupon: 25% (a „Kupon” beállításból, ADR-0346).</span>
+</details></div>
+<p class="vnote" id="vnote"></p>
+
+<div class="stage">
+  <div class="frame mob" id="frame">
+    <div class="wrap">
+      <div>
+        <div class="inbox" id="inbox"></div>
+        <div id="view"></div>
+      </div>
+      <div class="side" id="side"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // Sample data — in production every field comes from the prospect row / settings.
+  var D = {
+    name: "Rozé Fogadó",
+    smsName: "Roze Fogado",
+    sentOn: "szeptember 24-én",
+    sentOnSms: "szept. 24-en",
+    host: "roze-fogado.citoviso.com",
+    days: 14,
+    coupon: 25,
+    keepDays: 90
+  };
+  var LINK = "https://" + D.host;
+  var UNSUB = "https://citoviso.com/p/Xk3…/unsubscribe";
+  var PRIV = "https://citoviso.com/adatkezeles";
+  var WHY = function(r){ return "https://citoviso.com/p/Xk3…/why?forras=proba&ok=" + r; };
+
+  // The five reasons of prospect_feedback, in the approved order; the mail shows three.
+  var REASONS = [
+    ["expensive","Drágának találom"],
+    ["not_now","Most nem időszerű"],
+    ["distrust","Nem bízom benne, vagy nem értem"],
+    ["have_site","Van már honlapom, nem kell"],
+    ["other","Más…"]
+  ];
+  var MAIL3 = [["expensive","Drágának találom"],["not_now","Most nem időszerű"],["distrust","Nem értem, vagy nem bízom benne"]];
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function li(a){return '<ul class="lst">'+a.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ul>";}
+
+  var GETS = [
+    "A honlap élesben elérhető egy saját aldomainen: <b>"+esc(D.host)+"</b> (saját domain a megrendeléssel jár)",
+    "Saját szerkesztő felület: a fotókat, szövegeket, árakat Ön cseréli",
+    "Minden funkció be van kapcsolva, az online foglalással együtt",
+    // Owner, 2026-10-09: "Helyezést nem ígérünk." REMOVED from the approved letter.
+    "A Google számára olvasható felépítés (szállás-adatok, oldaltérkép)."
+  ];
+  var END = "Ha nem folytatja, a honlap szünetel, és semmit nem terhelünk. A próba-honlap adatai a próba végétől "+D.keepDays+" napig megmaradnak, utána töröljük őket.";
+  var COUPON = "Ha folytatja, az első díjból "+D.coupon+"% kedvezményt kap (a próba végétől "+D.keepDays+" napig érvényes). A próba a korábbi levelünkben ajánlott kedvezmény helyett választható.";
+
+  function header(){return '<div class="mh"><span class="logo">Citoviso<i>.</i></span><span class="tag">Ingyenes próba</span></div>';}
+  function heroCta(label){
+    return '<a href="#" data-go="page"><img class="hero" src="hero.png" alt="A honlap-terv nyitóképe"></a>'+
+      '<a class="cta" href="#" data-go="page">'+esc(label)+'</a><p class="raw">'+esc(LINK)+'</p>';
+  }
+  function feedback(lead){
+    return '<div class="cq"><p class="q">'+esc(lead)+'</p>'+
+      '<p class="qs">Egy koppintás, és megtudjuk. Ez nem leiratkozás.</p>'+
+      '<div class="fbrow">'+MAIL3.map(function(r){return '<a href="#" data-why="'+r[0]+'">'+esc(r[1])+'</a>';}).join("")+'</div></div>';
+  }
+  function sig(){return '<div class="sig"><p>Üdvözlettel,</p><p><b>Citoviso</b></p><p class="co">citoviso.com · (feladó-cím a konfigból, mint ma)</p></div>';}
+  function foot(){
+    return '<div class="foot"><div>'+
+      '<p>Erről a próbáról több levelet nem küldünk; ha nem kér tőlünk több megkeresést, leiratkozhat.</p>'+
+      '<p>Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:<br><a href="#" data-go="unsub">'+esc(UNSUB)+'</a></p>'+
+      '<p>Ezt a levelet azért kapta, mert '+esc(D.sentOn)+' a szálláshelye nyilvánosan közzétett üzleti elérhetőségére honlap-tervet küldtünk. Adatai kezelésének jogalapja jogos érdek (GDPR 6. cikk (1) f)). Ön bármikor tiltakozhat az adatai közvetlen üzletszerzési célú kezelése ellen: egy kattintással leiratkozhat, és ezután nem keressük. Adatkezelési tájékoztató: <a href="#">'+esc(PRIV)+'</a></p>'+
+      '<p>A megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33</p>'+
+      '</div></div>';
+  }
+
+  var V = {
+    C: {
+      subject: D.name+": "+D.days+" napig ingyen, élesben",
+      pre: "A honlap-tervét most élesben kipróbálhatja, kártya és előfizetés nélkül…",
+      note: "C — SZEMÉLYES: a 115 meg-sem-nyitónak szól (semleges nyitás — a jog-őr szerint a „lehet, hogy elkerülte” a 57 megnyitónak hamis), kevesebb doboz, a kérdés ELŐRE kerül (a terv után, nem a végén). Rövid bekezdések, lista csak a „mit kap”-nál.",
+      body: function(){
+        return '<p class="greet">Tisztelt '+esc(D.name)+'!</p>'+
+          '<p>'+esc(D.sentOn.charAt(0).toUpperCase()+D.sentOn.slice(1))+' küldtünk Önnek egy honlap-tervet. Azóta egy dolog változott.</p>'+
+          '<p>Most annyi változott, hogy nem kell rögtön döntenie: '+D.days+' napig ingyen, élesben kipróbálhatja. Kártya és előfizetés nélkül.</p>'+
+          heroCta("Megnézem a tervemet")+
+          feedback("Ha nem érdekli: mi tartja vissza?")+
+          '<p class="h4">Ha kipróbálja</p>'+li(GETS)+
+          '<p>'+esc(END)+' '+esc(COUPON)+'</p>'+sig();
+      }
+    }
+  };
+
+  // SMS: plain GSM-7 (no accents), the mobile path's legal carrier is the linked page footer (ADR-0112).
+  var SMS = D.smsName+": a "+D.sentOnSms+" kuldott honlap-tervet most "+D.days+" napig ingyen, elesben is kiprobalhatja. Nincs kartya, nincs elofizetes, a vegen nem terhelunk. "+LINK+" Leiratkozas a lap aljan. Citoviso";
+  var GSM = /^[A-Za-z0-9 @£$¥\n\r!"#%&'()*+,\-./:;<=>?¡§¿_]*$/;
+  function smsView(){
+    var gsm = GSM.test(SMS), n = SMS.length, segs = gsm ? (n<=160?1:Math.ceil(n/153)) : (n<=70?1:Math.ceil(n/67));
+    return '<div class="sms"><div class="bubble">'+esc(SMS).replace(esc(LINK),'<a href="#" data-go="page">'+esc(LINK)+'</a>')+'</div>'+
+      '<p class="smsmeta">'+n+' karakter · '+(gsm?'<b class="ok">GSM-7 (ékezet nélkül)</b>':'<b class="bad">Unicode!</b>')+' · '+(segs<=2?'<b class="ok">':'<b class="bad">')+segs+' szelet</b> (plafon: 2)</p>'+
+      '<p class="smsmeta">A „Mi tartja vissza?” kérdés és a leiratkozás itt a linkelt oldalon van (mobil út, ADR-0112) — SMS-ben nem fér el.</p></div>';
+  }
+
+  // Landing simulations — the mail links only OPEN these; a POST decides (ADR-0291).
+  function whyPage(pre){
+    return '<div class="land on" data-land="why"><p class="url">GET '+esc(WHY(pre))+'</p>'+
+      '<h2>Mi tartja vissza?</h2><p class="mut">A válasz nem kötelező, és nem iratkoztatja le. Egyetlen kérdés, nevet nem kérünk.</p>'+
+      '<form id="fb">'+REASONS.map(function(r){return '<label class="opt"><input type="radio" name="reason" value="'+r[0]+'"'+(r[0]===pre?' checked':'')+'>'+esc(r[1])+'</label>';}).join("")+
+      '<textarea name="text" maxlength="300" placeholder="Írja le röviden (nem kötelező)"></textarea>'+
+      '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px"><button class="btnp" type="submit" id="fbsend">Elküldöm</button><button class="btng" type="button" id="fbskip">Inkább nem</button></div></form>'+
+      '<p class="mut" style="margin:16px 0 0;font-size:12.5px">Ha nem szeretne több megkeresést kapni tőlünk, itt leiratkozhat: <a href="#" data-go="unsub">Leiratkozom</a></p>'+
+      '<button class="back" type="button" data-go="mail">← vissza a levélhez</button></div>';
+  }
+  function unsubPage(){
+    return '<div class="land on"><p class="url">GET '+esc(UNSUB)+' → megerősítés (POST)</p><h2>Leiratkozás</h2>'+
+      '<p class="mut">Megerősítés után ezen a címen nem keressük többé.</p>'+
+      '<button class="btnp" type="button" id="unsubOk">Leiratkozom</button><p class="done" id="unsubDone" hidden>Leiratkozott. Nem keressük többé.</p>'+
+      '<br><button class="back" type="button" data-go="mail">← vissza a levélhez</button></div>';
+  }
+  function trialPage(){
+    return '<div class="land on"><p class="url">GET '+esc(LINK)+'</p><h2>A honlap-terv oldala</h2>'+
+      '<p class="mut">Itt van a már élő „'+D.days+' nap ingyen” pirula (ADR-0343) — a levél gombja ide visz, a próba ott, az űrlappal indul. A levélből próba nem indul.</p>'+
+      '<button class="back" type="button" data-go="mail">← vissza a levélhez</button></div>';
+  }
+
+  var state = { v: "C", screen: "mail", why: null, log: [] };
+  var view = document.getElementById("view"), inbox = document.getElementById("inbox"), side = document.getElementById("side");
+
+  function render(){
+    var v = V[state.v];
+    document.getElementById("vnote").textContent = state.v === "S" ? "SMS — a csak-mobilos leadeknek (tulaj-döntés 2026-10-09: megkapják). Ugyanaz a link (a saját aldomain), ékezet nélkül, ≤2 szelet." : v.note;
+    if (state.v === "S") {
+      inbox.innerHTML = '<span class="from">Feladó: +36 30 120 0971 (modem SIM)</span>';
+    } else {
+      inbox.innerHTML = '<div class="from">Citoviso</div><div class="subj">'+esc(v.subject)+'</div><div class="pre">'+esc(v.pre)+'</div>';
+    }
+    if (state.screen === "why") view.innerHTML = whyPage(state.why);
+    else if (state.screen === "unsub") view.innerHTML = unsubPage();
+    else if (state.screen === "page") view.innerHTML = trialPage();
+    else view.innerHTML = state.v === "S" ? smsView() : '<div class="mail">'+header()+'<div class="mb">'+v.body()+'</div>'+foot()+'</div>';
+    view.insertAdjacentHTML("beforeend", '<div class="dbg" id="dbg">'+(state.log.length ? "prospect_feedback (szimulált): "+state.log.map(esc).join(" · ") : "prospect_feedback: még nincs sor — a gomb csak megnyit, a POST ír.")+'</div>');
+    side.innerHTML =
+      '<div class="card"><b>Tárgy-sor</b><br>'+(state.v==="S"?"—":esc(V[state.v].subject))+'</div>'+
+      '<div class="card"><b>Gombok a levélben</b><br>A három gomb csak MEGNYIT egy oldalt (előre kijelölt válasszal); a válasz ott, egy POST-tal rögzül — egy levélszkenner kattintása nem válaszol (ADR-0291). Az oldalon mind az öt ok elérhető.</div>'+
+      '<div class="card"><b>Csak ami VAN</b><br>Saját aldomain (nem saját domain), szerkesztő, minden modul, Schema.org + oldaltérkép (§B.17).</div>';
+    wire();
+  }
+  function wire(){
+    view.querySelectorAll("[data-why]").forEach(function(a){a.addEventListener("click",function(e){e.preventDefault();state.why=a.getAttribute("data-why");state.screen="why";render();window.scrollTo(0,0);});});
+    view.querySelectorAll("[data-go]").forEach(function(a){a.addEventListener("click",function(e){e.preventDefault();state.screen=a.getAttribute("data-go");render();window.scrollTo(0,0);});});
+    var f = document.getElementById("fb");
+    if (f) {
+      var send = document.getElementById("fbsend");
+      var sync = function(){ send.disabled = !f.querySelector("input[name=reason]:checked"); };
+      f.addEventListener("change", sync); sync();
+      f.addEventListener("submit", function(e){
+        e.preventDefault();
+        var r = f.querySelector("input[name=reason]:checked"); if (!r) return;
+        var t = r.value === "other" ? f.querySelector("textarea").value.replace(/[<>\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,300) : "";
+        state.log.push("source=trial_mail, reason="+r.value+(t?', text="'+t+'"':""));
+        f.parentNode.innerHTML = '<p class="done">Köszönjük — a válasz csak ehhez a megkereséshez kapcsolódik, nevet nem kérünk.</p><button class="back" type="button" data-go="mail">← vissza a levélhez</button>';
+        render2();
+      });
+      document.getElementById("fbskip").addEventListener("click", function(){
+        f.parentNode.innerHTML = '<p class="done">Rendben, nem kérdezzük többet.</p><button class="back" type="button" data-go="mail">← vissza a levélhez</button>';
+        render2();
+      });
+    }
+    var u = document.getElementById("unsubOk");
+    if (u) u.addEventListener("click", function(){ u.hidden = true; document.getElementById("unsubDone").hidden = false; });
+  }
+  // After a POST: keep the thank-you screen, refresh only the debug line and the back link.
+  function render2(){
+    document.getElementById("dbg").textContent = "prospect_feedback (szimulált): " + state.log.join(" · ");
+    view.querySelectorAll("[data-go]").forEach(function(a){a.addEventListener("click",function(e){e.preventDefault();state.screen=a.getAttribute("data-go");render();});});
+  }
+
+  document.querySelectorAll("#vsw button").forEach(function(b){b.addEventListener("click",function(){
+    document.querySelectorAll("#vsw button").forEach(function(x){x.setAttribute("aria-pressed", String(x===b));});
+    state.v = b.getAttribute("data-v"); state.screen = "mail"; render();
+  });});
+  var frame = document.getElementById("frame");
+  function size(s){
+    frame.className = "frame " + s;
+    document.querySelectorAll("#ssw button").forEach(function(x){x.setAttribute("aria-pressed", String(x.getAttribute("data-s")===s));});
+  }
+  document.querySelectorAll("#ssw button").forEach(function(b){b.addEventListener("click",function(){size(b.getAttribute("data-s"));});});
+  var q = new URLSearchParams(location.search);
+  if (q.get("v") && (V[q.get("v")] || q.get("v")==="S")) { state.v = q.get("v"); document.querySelectorAll("#vsw button").forEach(function(x){x.setAttribute("aria-pressed", String(x.getAttribute("data-v")===state.v));}); }
+  size(q.get("s") || (window.innerWidth < 700 ? "mob" : "desk"));
+  render();
+})();
+</script>
+</body>
+</html>

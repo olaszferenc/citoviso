@@ -134,3 +134,28 @@ Az öt eset, a levél tárgyában szereplő szöveggel:
 
 Ha nincs beállítva riasztás-címzett, vagy egyik csatorna sem ment ki, a rendszer a riasztást **nem**
 jelöli elküldöttnek, és a következő órában újra próbálja.
+
+## Visszamenőleges próba-levél a már megkeresett leadeknek (kampány)
+
+Akik a próba előtt kaptak hideg megkeresést, EGYSZER kapnak egy „14 napig ingyen, élesben” levelet (a
+csak-mobilosok ékezet nélküli SMS-t), a saját tervük linkjével. A kampányt parancssorból futtatod a szerveren —
+konzol-gomb nincs hozzá, és a nagy élesítés UTÁN, a tulaj külön „mehet”-jével indul.
+
+1. **Nézd meg, kiket érne el (semmi nem megy ki):** `npx tsx scripts/trial-campaign.mts`. Kiírja a megkeresett
+   leadek számát, a kimaradókat okonként (leiratkozott, vásárolt, próbázik, rendelési szándék, teszt, archivált,
+   operátori kizárás, már megkapta, nincs csatorna, ugyanaz a cím másik leadnél), és a célcsoportot levél/SMS
+   bontásban, mintával. A `--kapuk` kapcsolóval minden célpont szövegét átfuttatja a jogi kapun is (szárazon).
+2. **Zárd ki, akivel kézzel beszélsz:** `npx tsx scripts/trial-campaign.mts --kizar <prospect- vagy lead-azonosító> --ok "kézi beszélgetés"`.
+   A kizárás tartós (a következő futás is kihagyja), az oka megmarad. Aki csak elutasító választ írt, az NEM
+   leiratkozás — ő megkapja a levelet.
+3. **Küldés:** `npx tsx scripts/trial-campaign.mts --go`. Csak hétköznap 9 és 16 óra között megy, egyesével:
+   a levelek között 20 mp, az SMS-ek között legalább 90 mp (a modem tempója). 16 órakor megáll; másnap
+   ugyanaz a parancs onnan folytatja, ahol abbahagyta. A napló a `tmp/trial-campaign.log` fájlba is íródik.
+   Óvatos indításhoz: `--limit 5`.
+
+Egy lead és egy cím (e-mail vagy telefonszám) **egyszer** kap kampány-üzenetet — ezt az adatbázis kényszeríti,
+mert a levél lábléce ígéri: „Erről a próbáról több levelet nem küldünk”. Akinek kiment, annak utána az
+eszkalációs emlékeztető sem megy. Ha egy küldés elbukik, nem számít kiküldöttnek: a következő futás újra próbálja.
+
+A levél „Ha nem érdekli: mi tartja vissza?” gombjai egy kérdőlapot nyitnak (előre kijelölt válasszal); a válasz
+csak a lap „Elküldöm” gombjával rögzül, és a Riport megállt-okai között jelenik meg, mint a többi kimondott ok.

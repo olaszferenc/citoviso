@@ -5,6 +5,9 @@
 //   (b) the unsubscribe page, AFTER the confirmation (plain <form>, works without JS)
 //   (c) the reminder mail's "why" link → a confirmation page; the POST decides (ADR-0291:
 //       a mail scanner's GET answers nothing).
+//   (d) ADR-XXXX: the retroactive trial letter's three one-tap answers → the same page in its
+//       campaign form (`?forras=proba&ok=<reason>`): the tapped answer arrives PRE-SELECTED,
+//       all five stay on offer, and only the POST stores it (source 'trial_mail').
 //
 // ⛔ What this is NOT: tracking. It is an answer the person chose to give. It carries no
 // name and no contact field — only the prospect it belongs to (the token), the view it
@@ -14,8 +17,9 @@
 import { db } from "../db/client.js";
 import { T } from "../i18n/mail.js";
 import { loadPack } from "../i18n/packs.js";
+import { isTrialMailReason } from "../email/trialCampaignEmail.js";
 
-export const FEEDBACK_SOURCES = ["escalation_dismiss", "unsubscribe", "reminder_link"] as const;
+export const FEEDBACK_SOURCES = ["escalation_dismiss", "unsubscribe", "reminder_link", "trial_mail"] as const;
 export const FEEDBACK_REASONS = ["expensive", "not_now", "distrust", "have_site", "other"] as const;
 export type FeedbackSource = (typeof FEEDBACK_SOURCES)[number];
 export type FeedbackReason = (typeof FEEDBACK_REASONS)[number];
@@ -160,19 +164,31 @@ function questionText(source: FeedbackSource, lang: string): string {
  * The survey as a plain POST form (unsubscribe page, reminder-link page). "Elküldöm"
  * submits the chosen reason; "Inkább nem" submits `skip` and stores nothing.
  */
-export function feedbackFormHtml(token: string, source: FeedbackSource, lang: string): string {
+export function feedbackFormHtml(
+  token: string,
+  source: FeedbackSource,
+  lang: string,
+  /** ADR-XXXX: the answer tapped in the trial letter — shown CHECKED, never stored by the GET. */
+  preselect: FeedbackReason | null = null,
+): string {
   const action = `/p/${encodeURIComponent(token)}/feedback`;
   const opts = optionLabels(lang)
     .map(
       ([v, label], i) =>
-        `<label class="cit-fb-opt"><input type="radio" name="reason" value="${v}"${i === 0 ? " required" : ""}>${esc(label)}</label>`,
+        `<label class="cit-fb-opt"><input type="radio" name="reason" value="${v}"${i === 0 ? " required" : ""}${v === preselect ? " checked" : ""}>${esc(label)}</label>`,
     )
     .join("");
+  // The trial page asks the question in its heading (approved mock) — the legend then names
+  // the group for a screen reader only, instead of printing the question twice.
+  const legend =
+    source === "trial_mail"
+      ? `<legend style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">${esc(T(lang, "Mi tartja vissza?"))}</legend>`
+      : `<legend><p class="cit-fb-q">${esc(questionText(source, lang))}</p></legend>`;
   return (
     FORM_CSS +
     `<form class="cit-fb" data-cit-feedback="${source}" method="post" action="${action}">` +
     `<input type="hidden" name="source" value="${source}">` +
-    `<fieldset><legend><p class="cit-fb-q">${esc(questionText(source, lang))}</p></legend>` +
+    `<fieldset>${legend}` +
     opts +
     `</fieldset>` +
     `<textarea name="text" maxlength="${FEEDBACK_TEXT_MAX}" placeholder="${esc(T(lang, "Írja le röviden (nem kötelező)"))}" aria-label="${esc(T(lang, "Más…"))}"></textarea>` +
@@ -207,6 +223,32 @@ export function feedbackWhyPageBody(token: string, lang: string): string {
     feedbackFormHtml(token, "reminder_link", lang) +
     // ⚖️ §C.1: the way out stays one tap away on every page the outreach leads to (jog-őr
     // FLAG 2026-10-04) — someone who clicked this line meaning "stop" must find it here.
+    `<p class="mut small" style="margin:16px 0 0">${esc(T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, itt leiratkozhat:"))} ` +
+    `<a href="/p/${encodeURIComponent(token)}/unsubscribe" style="display:inline-block;padding:6px 4px">${esc(T(lang, "Leiratkozom"))}</a></p>` +
+    `</div>`
+  );
+}
+
+/**
+ * The `ok=` value of a trial-letter link, if it may pre-select an answer: only the three the
+ * letter offers (TRIAL_MAIL_REASONS). Anything else — a typo, a hand-made URL — selects nothing.
+ */
+export function trialWhyPreselect(raw: string | null): FeedbackReason | null {
+  return isTrialMailReason(raw) ? raw : null;
+}
+
+/**
+ * GET /p/:token/why?forras=proba&ok=<reason> — the retroactive trial letter's answer page
+ * (approved mock, ADR-XXXX). Like the reminder page it SHOWS and records nothing (ADR-0291):
+ * the tapped answer is pre-selected, all five are offered, the POST stores it as 'trial_mail'.
+ * The unsubscribe stays one tap away (§C.1) — and the page says the answer is not one.
+ */
+export function feedbackTrialWhyPageBody(token: string, lang: string, preselect: FeedbackReason | null): string {
+  return (
+    `<div class="panel" data-cit-feedback-why="trial_mail" style="max-width:480px;margin:48px auto;text-align:center">` +
+    `<h2>${esc(T(lang, "Mi tartja vissza?"))}</h2>` +
+    `<p class="mut">${esc(T(lang, "A válasz nem kötelező, és nem iratkoztatja le. Egyetlen kérdés, nevet nem kérünk."))}</p>` +
+    feedbackFormHtml(token, "trial_mail", lang, preselect) +
     `<p class="mut small" style="margin:16px 0 0">${esc(T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, itt leiratkozhat:"))} ` +
     `<a href="/p/${encodeURIComponent(token)}/unsubscribe" style="display:inline-block;padding:6px 4px">${esc(T(lang, "Leiratkozom"))}</a></p>` +
     `</div>`

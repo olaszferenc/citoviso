@@ -55,6 +55,8 @@ export const I18N_SOURCES = [
   "src/email/loginEmail.ts",
   // ADR-0344 C2: the free-trial T−3/T−1 letter (owner-approved wording).
   "src/email/trialEmail.ts",
+  // ADR-XXXX: the retroactive "14 nap ingyen" letter + its accent-free SMS (owner-approved C).
+  "src/email/trialCampaignEmail.ts",
   // Elek T-3: the masked mail copy logged to the owner's Üzenetek tab.
   "src/tenant/credentials.ts",
   "src/email/invoiceEmail.ts",

@@ -72,6 +72,12 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // Operator-only pipeline reporting: reasons shown in the CONSOLE RUN REPORT,
   // never sent to the recipient (the mail body comes from draft.ts).
   "src/outreach/sendBatch.ts": "operátor-riport (skip-okok) — a címzett sosem látja",
+  // ADR-XXXX: the retroactive trial campaign pulls these into the mail graph. Their Hungarian
+  // is operator-facing (gate reasons, slug words, the Elek park's fixed lead name) — the
+  // letter's and the SMS's wording come from trialCampaignEmail.ts (I18N_SOURCES).
+  "src/outreach/sendOutreachSms.ts": "hideg SMS kapu-láncának operátori okai — a kampány-SMS szövege trialCampaignEmail.ts",
+  "src/conversion/provision.ts": "aldomain-tervezés (slug) + operátori okok — a levélbe csak a slug kerül, szöveg nem",
+  "src/elek/park.ts": "az Elek teszt-park lead-nevének konstansa — teszt-lead felismerés, levélbe nem kerül",
   // A generáláskori őr-verdiktek megnevezése és indok-sora a KONZOL képernyőjén jelenik
   // meg (piszkozat-lap piros csík + a küldés-megerősítő felugró). A levél törzse a
   // draft.ts-ből jön; ide egyetlen betű sem jut el a címzetthez. A felugró SAJÁT feliratai

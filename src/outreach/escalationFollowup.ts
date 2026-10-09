@@ -31,6 +31,7 @@ import { applyOffer } from "../payment/offers.js";
 import { getBaseMonthly } from "../pricing.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { isEmailSuppressed } from "./sendBatch.js";
+import { trialCampaignReached } from "./trialCampaign.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { T } from "../i18n/mail.js";
@@ -91,11 +92,17 @@ export async function sendEscalationFollowups(
   for (const f of due) {
     const p = await db
       .selectFrom("prospect")
-      .select(["contact_email", "unsubscribed_at"])
+      .select(["lead_id", "contact_email", "unsubscribed_at"])
       .where("id", "=", f.prospectId)
       .executeTakeFirst();
     const email = p?.contact_email?.trim() || null;
     if (!email || p?.unsubscribed_at || (await isEmailSuppressed(email))) {
+      skipped++;
+      continue;
+    }
+    // ADR-XXXX: the retroactive trial letter promised "Erről a próbáról több levelet nem
+    // küldünk" — a lead (or address) that got the campaign mail or SMS gets no follow-up.
+    if (p && (await trialCampaignReached(p.lead_id, email))) {
       skipped++;
       continue;
     }

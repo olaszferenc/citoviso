@@ -23,6 +23,8 @@
 import { renderDraft } from "../src/outreach/draft.js";
 import { buildOutreachEmail } from "../src/email/outreachEmail.js";
 import { buildTrafficEmail } from "../src/email/trafficEmail.js";
+import { buildTrialCampaignEmail, renderTrialCampaignLetter } from "../src/email/trialCampaignEmail.js";
+import { advertiserIdentity, senderParts } from "../src/outreach/draft.js";
 import { loadPricing } from "../src/pricing.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 
@@ -129,6 +131,29 @@ const LETTERS: readonly { name: string; html: string }[] = [
         adminUrl: "https://citoviso.com/admin?tab=forgalom",
         lang,
       }).html as string,
+  },
+  {
+    name: "visszamenőleges próba-levél (ADR-XXXX)",
+    html: buildTrialCampaignEmail(
+      renderTrialCampaignLetter({
+        lang,
+        leadName: "Rozé Fogadó",
+        sentIso: "2026-09-24",
+        days: 14,
+        host: "roze-fogado.citoviso.com",
+        retentionDays: 90,
+        coupon: { percent: 25, days: 90 },
+        sender: senderParts(),
+        identity: advertiserIdentity(lang),
+        links: {
+          cta: "https://roze-fogado.citoviso.com",
+          unsub: "https://citoviso.com/p/roze-fogado/00000000000000000000/unsubscribe",
+          privacy: "https://citoviso.com/privacy",
+        },
+      }),
+      "teszt@example.com",
+      { lang, heroShotPath: "assets/design-refs/console/outreach-mail/hero.png" },
+    ).html as string,
   },
 ];
 
