@@ -126,7 +126,7 @@ export async function ownedSiteForArtifact(artifactId: string): Promise<OwnedSit
 }
 
 /**
- * ADR-XXXX — a card-less trial (ADR-0342) the lead may still CONTINUE by paying.
+ * ADR-0344 — a card-less trial (ADR-0342) the lead may still CONTINUE by paying.
  *
  * The trial tenant reads as "owned" above (a tenant exists), and that is right for every
  * screen that must not sell the trialist a second site. But its first real payment is

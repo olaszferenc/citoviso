@@ -102,7 +102,7 @@ export async function resolvePayEntry(
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
   if (kind?.kind === "initial" && kind.leadId) {
-    // ADR-XXXX: a trial waiting for its first payment is not "already theirs".
+    // ADR-0344: a trial waiting for its first payment is not "already theirs".
     const owned = await ownedBlocksInitialPurchase(kind.leadId);
     if (owned) return { kind: "owned", owned };
   }

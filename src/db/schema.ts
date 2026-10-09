@@ -525,7 +525,7 @@ export interface FreeTrialTable {
 
 // --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---
 
-/** ADR-XXXX (0098): the trial's T−3 / T−1 warning log — one row per trial, step and
+/** ADR-0344 (0098): the trial's T−3 / T−1 warning log — one row per trial, step and
  *  channel; the unique key is the never-twice guard. */
 export interface FreeTrialNoticeTable {
   id: Generated<string>;

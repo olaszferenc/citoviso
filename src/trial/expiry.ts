@@ -1,4 +1,4 @@
-// ADR-XXXX — the end of a card-less free trial (ADR-0342): it PAUSES, it never charges.
+// ADR-0344 — the end of a card-less free trial (ADR-0342): it PAUSES, it never charges.
 //
 //   · lapse    — a trial past `trial_until` → free_trial 'lapsed', the site 'suspended'
 //                (the public host then serves the ADR-0080 ⑥ 503 + Retry-After courtesy

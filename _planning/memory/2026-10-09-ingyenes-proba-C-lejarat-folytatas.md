@@ -1,6 +1,6 @@
 # 2026-10-09 — Ingyenes próba, SUB C: lejárat (szünetel), T−3/T−1 figyelmeztetés, folytatás-fizetés
 
-Koordinátor: `f3e80964`. Három session egy fában (`~/wt/cit1bd25926`), két átadással. Döntés: ADR-XXXX
+Koordinátor: `f3e80964`. Három session egy fában (`~/wt/cit1bd25926`), két átadással. Döntés: ADR-0344
 (`_planning/decisions/…-ingyenes-proba-lejarat-figyelmeztetes-folytatas.md`). Élesre semmi (nagy deploy).
 
 ## Elvégezve

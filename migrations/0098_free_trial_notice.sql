@@ -1,4 +1,4 @@
--- 0098 INGYENES PRÓBA — lejárat előtti figyelmeztetés naplója (ADR-XXXX, a 0097 folytatása).
+-- 0098 INGYENES PRÓBA — lejárat előtti figyelmeztetés naplója (ADR-0344, a 0097 folytatása).
 --
 -- Egy próbára lépcsőnként (t3 = 3 nappal, t1 = 1 nappal a lejárat előtt) és csatornánként
 -- (email / sms) EGY sor, soha több: a unique index a kétszeri küldés szerkezeti őre — az
@@ -17,4 +17,4 @@ CREATE TABLE IF NOT EXISTS free_trial_notice (
 );
 
 COMMENT ON TABLE free_trial_notice IS
-  'ADR-XXXX: a próba T−3 / T−1 figyelmeztetése — próbánként, lépcsőnként, csatornánként egy sor (kétszer nem megy ki).';
+  'ADR-0344: a próba T−3 / T−1 figyelmeztetése — próbánként, lépcsőnként, csatornánként egy sor (kétszer nem megy ki).';

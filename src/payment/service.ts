@@ -103,7 +103,7 @@ export async function requestPayment(
       .select("prospect.lead_id as leadId")
       .where("order_intent.id", "=", orderIntentId)
       .executeTakeFirst();
-    // ADR-XXXX: a trial's first payment is the continuation, not a second purchase.
+    // ADR-0344: a trial's first payment is the continuation, not a second purchase.
     const owned = lead ? await ownedBlocksInitialPurchase(lead.leadId) : null;
     if (owned) {
       console.warn(

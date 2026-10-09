@@ -985,7 +985,7 @@ async function handleOrderRequest(
   // non-problem and tell the buyer "a colleague will contact you". Nothing is
   // wrong: they already own the site. Refuse at the door and say so.
   // Keyed on the ARTIFACT so the token-less /configure path is gated too.
-  // ADR-XXXX: a running or lapsed card-less trial is NOT refused here — its first
+  // ADR-0344: a running or lapsed card-less trial is NOT refused here — its first
   // payment is the continuation (the same checkout, the trial coupon as the offer).
   const alreadyOwned = await ownedSiteForArtifact(artifactId);
   const artifactLead = alreadyOwned
@@ -1136,7 +1136,7 @@ async function handleOrderRequest(
   // renewals recompute from list in billing.ts.
   const listPrice =
     billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
-  // ADR-XXXX: the trial's continuation is priced by the TENANT's coupon (minted at
+  // ADR-0344: the trial's continuation is priced by the TENANT's coupon (minted at
   // trial start, ADR-0342) — the prospect's intro offers were closed when the trial
   // began. One offer, never stacked (ADR-0088 ⑥); redeemOfferForOrder burns its one use.
   const offer = trialCont
@@ -3208,7 +3208,7 @@ async function handle(
   // escalation offer, and showing any offer card. What stays: the mock, the
   // configurator, and an honest banner saying they opted out and opened this
   // themselves.
-  // GET /p/:token/folytatas — ADR-XXXX: the trialist's way to PAY (continue). The plain
+  // GET /p/:token/folytatas — ADR-0344: the trialist's way to PAY (continue). The plain
   // /p/:token keeps serving the owned notice (a trial tenant IS an owner there); this
   // route serves the same configurator, its checkout posting to the same /p/:token/request
   // (handleOrderRequest already lets a continuable trial through and prices it with the

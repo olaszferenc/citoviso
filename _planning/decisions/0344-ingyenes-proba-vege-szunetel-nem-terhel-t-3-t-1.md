@@ -1,4 +1,4 @@
-## ADR-XXXX — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
+## ADR-0344 — Ingyenes próba vége: szünetel (nem terhel), T−3/T−1 figyelmeztetés, folytatás = a meglévő első fizetés
 
 **Dátum:** 2026-10-09 · **Státusz:** elfogadva (backend); a felületek és a szövegek a §2b terv-kapun várnak
 **Előzmény:** ADR-0342 (próba-állapot, kártya nélküli konvertálás), ADR-0080 (⑥ freeze = 503 + Retry-After

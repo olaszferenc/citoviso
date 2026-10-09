@@ -26,7 +26,7 @@ let sideStepFailed = false;
 
 const r = await runBillingCycle(now, tenantId ? { tenantId } : undefined);
 console.log(`billing-cycle @ ${now.toISOString()}:`, JSON.stringify(r));
-// ADR-XXXX: a card-less trial past its end pauses (site 503, trial modules off) on the
+// ADR-0344: a card-less trial past its end pauses (site 503, trial modules off) on the
 // same daily tick. Separate from the ladder above: a trial has no subscription row.
 // --tenant narrows it too (the dev DB is shared).
 try {

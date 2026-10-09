@@ -5,7 +5,7 @@
 // a reminder due at night goes with the first run of the morning. One send per offer
 // is guaranteed by the atomic claim (claimFollowup), not by the tick interval.
 //
-// ADR-XXXX — the same hourly tick carries the free-trial T−3 / T−1 warnings (they must go
+// ADR-0344 — the same hourly tick carries the free-trial T−3 / T−1 warnings (they must go
 // weekdays 9–16, the daily 07:00 billing tick never runs inside that window). ⛔ The e-mail
 // and SMS wording waits for the owner's approval (§2b), so until then this runs DRY: it logs
 // what is due and neither sends nor claims (runTrialNotices dryRun — a dry claim would burn

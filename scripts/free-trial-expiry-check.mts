@@ -1,4 +1,4 @@
-// ADR-XXXX — the END of a card-less free trial (src/trial/expiry.ts): it PAUSES, it never
+// ADR-0344 — the END of a card-less free trial (src/trial/expiry.ts): it PAUSES, it never
 // charges, and paying brings it back. What this proves, each leg a way the end of a trial
 // could cost the owner their site, their money or their trust:
 //   ① noticeSendDay, pure: T−N on a weekday; a weekend step moves BACK to Friday (a Sunday
