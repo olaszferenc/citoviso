@@ -31,7 +31,7 @@ import { getCouponConfig } from "../payment/couponConfig.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
-import { budapestIsoDay } from "../text/budapestTime.js";
+import { addIsoDays, budapestDayEnd, budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { getFreeTrialConfig } from "./config.js";
 
@@ -248,7 +248,9 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           tenant_id: tenantId,
           percent: cfg.percent,
           scope: "purchase",
-          expires_at: new Date(trialUntil.getTime() + cfg.days * 86_400_000),
+          // To the END of the printed day (letters/admin say "<day>-ig"): an instant of
+          // trial_until + N days ran out in the morning of that day (IT B1-HATAR, ADR-XXXX).
+          expires_at: budapestDayEnd(addIsoDays(budapestIsoDay(trialUntil), cfg.days)),
           note: `ADR-0342: ingyenes próba folytatás-kupon (${trialId})`,
         })
         .onConflict((oc) => oc.doNothing())

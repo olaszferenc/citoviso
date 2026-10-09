@@ -103,6 +103,7 @@ const {
   runPurgeWarnings,
 } = await import("../src/trial/retention.js");
 const { purgeWarningDeps, sendPurgeWarningEmail } = await import("../src/trial/notices.js");
+const { addIsoDays } = await import("../src/text/budapestTime.js");
 const { buildPurgeWarningEmail } = await import("../src/email/trialEmail.js");
 const { formatDayOn } = await import("../src/text/day.js");
 type EmailMessage = import("../src/email/sender.js").EmailMessage;
@@ -135,13 +136,15 @@ const exists = async (p: string): Promise<boolean> => stat(p).then(() => true, (
 try {
   // ① the days, pure (2026-10: Thu 1, Fri 2, Sat 3, Sun 4, Thu 8, Sat 10, Sun 11)
   console.log("① a napok");
-  check("pénteki vég (07-10) + 90 → 10-08", purgeDay(bp("2026-07-10", "10:00")) === "2026-10-08");
-  check("…figyelmeztetés: −7 → 10-01 (csütörtök)", purgeWarningDay(bp("2026-07-10", "10:00")) === "2026-10-01");
-  check("szombati törlés (07-12 vég): figyelmeztetés szombat → PÉNTEK 10-02 (8 nap)", purgeWarningDay(bp("2026-07-12", "10:00")) === "2026-10-02");
-  check("vasárnapi törlés (07-13 vég): figyelmeztetés vasárnap → PÉNTEK 10-02", purgeWarningDay(bp("2026-07-13", "10:00")) === "2026-10-02");
-  check("a nap a próba Budapest-napja: 23:30 helyi idő nem csúszik át", purgeDay(bp("2026-07-10", "23:30")) === "2026-10-08");
-  check("időben ment figyelmeztetés: a törlés napja nem mozdul", effectivePurgeDay(bp("2026-07-10", "10:00"), "2026-10-01") === "2026-10-08");
-  check("késő figyelmeztetés (10-05): a törlés → 10-12, a 7 nap megmarad", effectivePurgeDay(bp("2026-07-10", "10:00"), "2026-10-05") === "2026-10-12");
+  // ADR-XXXX (IT B1-PURGE): the 90th day (10-08) is still KEPT — the coupon lives to its end.
+  check("csütörtöki vég (07-09) + 90 megőrzött nap → törlés 10-08 (a 91. nap)", purgeDay(bp("2026-07-09", "10:00")) === "2026-10-08");
+  check("a 90. nap (10-07 — a 90 napos kupon utolsó, „-ig” napja) egész nap megőrzött", addIsoDays("2026-07-09", 90) === "2026-10-07" && purgeDay(bp("2026-07-09", "23:30")) > "2026-10-07");
+  check("…figyelmeztetés: −7 → 10-01 (csütörtök)", purgeWarningDay(bp("2026-07-09", "10:00")) === "2026-10-01");
+  check("szombati törlés (07-11 vég): figyelmeztetés szombat → PÉNTEK 10-02 (8 nap)", purgeWarningDay(bp("2026-07-11", "10:00")) === "2026-10-02");
+  check("vasárnapi törlés (07-12 vég): figyelmeztetés vasárnap → PÉNTEK 10-02", purgeWarningDay(bp("2026-07-12", "10:00")) === "2026-10-02");
+  check("a nap a próba Budapest-napja: 23:30 helyi idő nem csúszik át", purgeDay(bp("2026-07-09", "23:30")) === "2026-10-08");
+  check("időben ment figyelmeztetés: a törlés napja nem mozdul", effectivePurgeDay(bp("2026-07-09", "10:00"), "2026-10-01") === "2026-10-08");
+  check("késő figyelmeztetés (10-05): a törlés → 10-12, a 7 nap megmarad", effectivePurgeDay(bp("2026-07-09", "10:00"), "2026-10-05") === "2026-10-12");
 
   // fixture: a real trial, through the real door, then lapsed with a known end day
   overrideFreeTrialConfigInProcess({ enabled: true, days: 9 });
@@ -168,7 +171,7 @@ try {
   const trial = await db.selectFrom("free_trial").select(["id"]).where("lead_id", "=", lead.id).executeTakeFirstOrThrow();
   const only = { onlyTrialIds: [trial.id] };
   await db.updateTable("free_trial")
-    .set({ status: "lapsed", lapsed_at: bp("2026-07-10", "10:05"), started_at: bp("2026-07-01", "10:00"), trial_until: bp("2026-07-10", "10:00") })
+    .set({ status: "lapsed", lapsed_at: bp("2026-07-09", "10:05"), started_at: bp("2026-06-30", "10:00"), trial_until: bp("2026-07-09", "10:00") })
     .where("id", "=", trial.id).execute();
   const siteDir = path.resolve(process.cwd(), "sites", tenantId);
   await mkdir(path.join(siteDir, "uploads"), { recursive: true });

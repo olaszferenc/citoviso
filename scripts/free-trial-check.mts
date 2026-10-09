@@ -212,8 +212,15 @@ try {
   check("pontosan EGY kupon", coupons.length === 1, `${coupons.length}`);
   check("kupon: a KÖZÖS beállítás 30%-a, scope=purchase, lejárattal", coupons[0]?.percent === 30 && coupons[0]?.scope === "purchase" && !!coupons[0]?.expires_at);
   const tu = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
-  const wantExp = new Date(tu.trial_until as unknown as string).getTime() + 40 * 86_400_000;
-  check("kupon lejárata = a próba vége + a közös beállítás 40 napja", Math.abs(new Date(coupons[0]?.expires_at as unknown as string).getTime() - wantExp) < 1000);
+  // IT B1-HATAR (ADR-XXXX): the letters print "<day>-ig" — the coupon holds to the END of that
+  // Budapest day, not to the trial's start-hour on it (it ran out at 09:20 of the printed day).
+  const { addIsoDays, budapestDayEnd, budapestIsoDay } = await import("../src/text/budapestTime.js");
+  const couponDay = addIsoDays(budapestIsoDay(new Date(tu.trial_until as unknown as string)), 40);
+  const couponExp = new Date(coupons[0]?.expires_at as unknown as string);
+  check("kupon lejárata = a próba vége + a közös beállítás 40 napja, a nap VÉGÉIG (23:59:59.999 Budapest)",
+    couponExp.getTime() === budapestDayEnd(couponDay).getTime() && budapestIsoDay(couponExp) === couponDay, couponExp.toISOString());
+  const { purgeDay } = await import("../src/trial/retention.js");
+  check("a törlés napja a kupon-nap UTÁN jön (40 < 90 nap)", purgeDay(new Date(tu.trial_until as unknown as string)) > couponDay);
   const intro = await db.selectFrom("offer").select("expires_at").where("prospect_id", "=", a.prospectId).where("kind", "=", "outreach").executeTakeFirst();
   check("az outreach-ajánlat lezárva", !!intro?.expires_at && new Date(intro.expires_at as unknown as string).getTime() <= Date.now());
 

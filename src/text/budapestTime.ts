@@ -62,6 +62,12 @@ export function budapestMidnight(isoDay: string): Date {
   return midnightIn(isoDay, APP_TZ);
 }
 
+/** The last instant (23:59:59.999 Budapest) of a calendar day: a deadline printed as
+ *  "<day>-ig" holds for the WHOLE day (IT B1-HATAR, ADR-XXXX). */
+export function budapestDayEnd(isoDay: string): Date {
+  return new Date(budapestMidnight(addIsoDays(isoDay, 1)).getTime() - 1);
+}
+
 /** Budapest midnight `days` calendar days before today (0 = today's midnight). */
 export function budapestDayStart(daysAgo: number, now: Date = new Date()): Date {
   return dayStartIn(daysAgo, APP_TZ, now);

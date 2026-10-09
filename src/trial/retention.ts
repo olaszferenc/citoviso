@@ -25,9 +25,12 @@ export const TRIAL_RETENTION_DAYS = 90;
 /** The purge warning goes this many days before the purge day. */
 export const PURGE_WARNING_DAYS = 7;
 
-/** Budapest day on which the data may first be deleted: the trial's end + 90 days. */
+/** Budapest day on which the data may first be deleted: the day AFTER the 90th kept day.
+ *  The trial coupon is valid to the END of trial end + 90 (budapestDayEnd), and the ÁSZF
+ *  keeps the data "90 napig" — a 07:00 purge ON the 90th day deleted both while the
+ *  warning letter still offered the coupon "<that day>-ig" (IT B1-PURGE, ADR-XXXX). */
 export function purgeDay(trialUntil: Date): string {
-  return addIsoDays(budapestIsoDay(trialUntil), TRIAL_RETENTION_DAYS);
+  return addIsoDays(budapestIsoDay(trialUntil), TRIAL_RETENTION_DAYS + 1);
 }
 
 /** The weekday the warning goes on: purge day − 7, a weekend moved BACK to Friday
