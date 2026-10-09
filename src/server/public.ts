@@ -96,6 +96,7 @@ import {
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, getSubscriptionSummary, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
+import { trialAdminState } from "../trial/admin.js";
 import { createCardUpdateOrder, getWalletAdmin } from "../tenant/wallet.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { retryRenewalCharge } from "../payment/retryCharge.js";
@@ -1275,6 +1276,8 @@ async function serveAdmin(
 
   // ── ADR-0224: the frame's subscription card (every tab) + the Áttekintés widgets ──
   const subSummary = await getSubscriptionSummary(session.tenantId);
+  // ADR-0344 C2c: the card-less trial's strip / paused block (every tab).
+  const trial = await trialAdminState(session.tenantId);
   let overview: AdminOpts["overview"] = null;
   if (overviewTab) {
     const series = await getVisitorSeries(session.tenantId, 7);
@@ -1959,6 +1962,7 @@ async function serveAdmin(
       paidEmpty,
       priceGaps,
       subscription,
+      trial,
       moduleApplied,
       domainSettle,
       supportEmail: config.supportEmail,

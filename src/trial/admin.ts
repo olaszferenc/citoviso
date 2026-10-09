@@ -1,0 +1,61 @@
+// ADR-0344 C2c — what the tenant admin shows about a card-less free trial (approved plan
+// "A", owner 2026-10-09; contract: assets/design-refs/console/proba-admin-sav/).
+//
+//   · active    → a thin strip on EVERY tab: days left, the end date, the coupon, „Folytatom";
+//                 warn tone from 3 days before the end. Not dismissable.
+//   · lapsed    → the paused-site block (the trial has no subscription row, so the
+//                 subscription freeze block never renders for it — measured 2026-10-09:
+//                 the admin of a lapsed trial said NOTHING).
+//   · converted → nothing; from then on the subscription speaks.
+
+import { db } from "../db/client.js";
+import { config } from "../config.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
+import { liveTrialCoupon, trialDaysLeft } from "./notices.js";
+
+/** The strip turns warn this many days before the end (mock: „3 nappal a vége előtt"). */
+export const TRIAL_WARN_DAYS = 3;
+
+export interface TrialAdminState {
+  readonly status: "active" | "lapsed";
+  /** Budapest calendar days to the last day; 0 = ends today, negative = already over. */
+  readonly daysLeft: number;
+  /** The trial's length in days — the meter's denominator. */
+  readonly totalDays: number;
+  readonly untilIso: string;
+  readonly coupon: { readonly percent: number; readonly untilIso: string } | null;
+  /** `/p/<token>/folytatas` on the platform host — null when it cannot be built. */
+  readonly continueUrl: string | null;
+}
+
+/** The trial state the admin frame renders, or null (no trial, or already paid). */
+export async function trialAdminState(tenantId: string, now = new Date()): Promise<TrialAdminState | null> {
+  const row = await db
+    .selectFrom("free_trial")
+    .leftJoin("prospect", "prospect.id", "free_trial.prospect_id")
+    .leftJoin("offer", "offer.id", "free_trial.coupon_offer_id")
+    .select([
+      "free_trial.status as status",
+      "free_trial.started_at as startedAt",
+      "free_trial.trial_until as trialUntil",
+      "prospect.token as token",
+      "offer.percent as percent",
+      "offer.expires_at as couponUntil",
+      "offer.used_count as usedCount",
+      "offer.max_uses as maxUses",
+    ])
+    .where("free_trial.tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!row || row.status === "converted") return null;
+  const until = new Date(row.trialUntil as unknown as string);
+  const started = new Date(row.startedAt as unknown as string);
+  const base = config.publicBaseUrl.replace(/\/+$/, "");
+  return {
+    status: row.status,
+    daysLeft: trialDaysLeft(now, until),
+    totalDays: Math.max(1, trialDaysLeft(started, until)),
+    untilIso: budapestIsoDay(until),
+    coupon: liveTrialCoupon(row, now),
+    continueUrl: base && row.token ? `${base}/p/${row.token}/folytatas` : null,
+  };
+}

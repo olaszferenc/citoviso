@@ -43,7 +43,8 @@ import { foldIncludes } from "../text/fold.js";
 import { huArticle, huArticleLower } from "../hu.js";
 // A vevőnek mutatott support-cím EGY forrása (a hívók is ezt adják át).
 import { config } from "../config.js";
-import { formatDay, formatDayStem, formatMonthDay } from "../text/day.js";
+import { formatDay, formatDayShortStem, formatDayShortWeekday, formatDayStem, formatMonthDay } from "../text/day.js";
+import { TRIAL_WARN_DAYS, type TrialAdminState } from "../trial/admin.js";
 import { formatAmount } from "../tenant/prices.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
@@ -1062,6 +1063,87 @@ function daysUntil(iso: string): number {
  * are NOT about money the block states the situation and the way out, without
  * taking over a screen the owner opened for something else.
  */
+/**
+ * ADR-0344 C2c — the running trial's strip (approved plan „A", owner 2026-10-09;
+ * contract: assets/design-refs/console/proba-admin-sav/README.md). On EVERY tab, under
+ * the top bar; warn tone from TRIAL_WARN_DAYS before the end; no close button — the
+ * date is the one thing the owner must not lose sight of.
+ *   The discount sentence only with a LIVE coupon (liveTrialCoupon — the same rule the
+ * T−3/T−1 letters follow): promising 25 % that the checkout would not give is §B.17.
+ */
+function trialStrip(t: TrialAdminState, lang: string): string {
+  const n = t.daysLeft;
+  const until = esc(formatDayShortWeekday(t.untilIso, lang));
+  const head =
+    n >= 2
+      ? T(lang, "<b>Ingyenes próba: még {n} nap</b> ({date}-ig).", { n: String(n), date: until })
+      : n === 1
+        ? T(lang, "<b>Ingyenes próba: holnap jár le</b> ({date}-ig).", { date: until })
+        : n === 0
+          ? T(lang, "<b>Ma jár le az ingyenes próba.</b>")
+          : // Past trial_until but the daily lapse has not run yet (07:00): the site
+            // still answers — say it is over rather than „ma" on the wrong day.
+            T(lang, "<b>Az ingyenes próba lejárt.</b>");
+  const offer = t.coupon
+    ? " " + T(lang, "Ha folytatja, {percent}% kedvezményt kap az első díjból.", { percent: String(t.coupon.percent) })
+    : "";
+  const pct = Math.min(100, Math.max(4, Math.round(((t.totalDays - Math.max(n, 0)) / t.totalDays) * 100)));
+  return (
+    `<div class="adm-trial${n <= TRIAL_WARN_DAYS ? " adm-trial--warn" : ""}" data-trial-strip role="status">` +
+    `<div class="adm-trial__in"><span class="adm-trial__t">${head}${offer}</span>` +
+    `<span class="adm-trial__meter" aria-hidden="true"><i style="width:${pct}%"></i></span>` +
+    (t.continueUrl
+      ? `<a class="citui-btn citui-btn--primary adm-trial__go" href="${esc(t.continueUrl)}">${T(lang, "Folytatom")}</a>`
+      : "") +
+    `</div></div>`
+  );
+}
+
+/**
+ * ADR-0344 C2c — the LAPSED trial: the site is paused (suspended, 503 courtesy page) and
+ * the admin stays alive. Same red block as the subscription freeze (adm-frz), but the
+ * trial owes nothing — the block offers the continuation, never a debt. `compact` (the
+ * tabs not about money) keeps the statement, the way out and the guest line.
+ */
+function trialLapsedBlock(t: TrialAdminState, lang: string, compact: boolean, guestUrl: string | null): string {
+  const money =
+    `<div class="adm-owe">` +
+    (t.coupon
+      ? `<div class="adm-owe__l">${T(lang, "A próbához kapott kedvezmény")}</div>` +
+        `<div class="adm-owe__v">${esc(String(t.coupon.percent))}%</div>` +
+        `<div class="adm-owe__sub">${T(lang, "az első díjból · {date}-ig használható", { date: esc(formatDayShortStem(t.coupon.untilIso, lang)) })}</div>`
+      : "") +
+    `</div>` +
+    (t.continueUrl
+      ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(t.continueUrl)}" data-trial-go>${T(lang, "Folytatom — fizetés")}</a>`
+      : "") +
+    `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A fizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
+  const kept = compact
+    ? ""
+    : `<div class="adm-owe__dl">` +
+      `<div class="adm-owe__l">${T(lang, "Mi maradt meg")}</div>` +
+      `<ul class="adm-trial__kept"><li>${T(lang, "a szerkesztő felülete — most is ebben van")}</li>` +
+      `<li>${T(lang, "minden szöveg, kép és beállítás")}</li><li>${T(lang, "a beérkezett üzenetek")}</li></ul>` +
+      `<p>${T(lang, "Nem terheltünk semmit, és kártyát sem kértünk. A szünet addig tart, amíg nem folytatja.")}</p>` +
+      `</div>`;
+  const guest =
+    `<p class="adm-frz__guest">` +
+    `<b>${T(lang, "Mit lát közben a látogató:")}</b> ` +
+    T(lang, "a szállás nevét, települését és az Ön elérhetőségeit — hogy foglalási kérdéssel közvetlenül Önt kereshesse.") +
+    (guestUrl
+      ? ` <a class="adm-frz__glink" href="${esc(guestUrl)}" target="_blank" rel="noopener">${T(lang, "Megnézem, mit lát a látogató")}</a>`
+      : "") +
+    `</p>`;
+  return (
+    `<section class="adm-frz${compact ? " adm-frz--compact" : ""}" data-trial-lapsed>` +
+    `<div class="adm-frz__head"><span class="adm-frz__dot"></span>` +
+    `<h2>${T(lang, "A honlapja szünetel — a próba {date} lejárt", { date: esc(formatDayShortWeekday(t.untilIso, lang)) })}</h2></div>` +
+    `<div class="adm-frz__grid"><div class="adm-frz__money">${money}</div>${kept}</div>` +
+    guest +
+    `</section>`
+  );
+}
+
 /**
  * A kézi terhelés-újrapróba VISSZAJELZŐ SÁVJÁNAK horgonya — ide tér vissza a redirect.
  *
@@ -5665,6 +5747,9 @@ export interface AdminOpts {
    * (az 503-as udvarias lap).
    */
   readonly guestViewUrl?: string | null;
+  /** ADR-0344 C2c: the card-less trial (active → strip on every tab, lapsed → paused
+   *  block). Null/absent: no trial, or already paid. */
+  readonly trial?: TrialAdminState | null;
   /** ADR-0192 ④.4: has the tenant 2+ bookable units? Absent = "unknown" → the
    *  conditional requirement STANDS (fail-closed, and it matches the mock). */
   readonly multiUnit?: MultiUnitState;
@@ -6038,6 +6123,14 @@ export function adminDashboard(
     subFrozen && tab !== "modulok"
       ? frozenStateBlock(opts.subscription!, lang, tab !== "attekintes", opts.guestViewUrl ?? null)
       : "";
+  // ADR-0344 C2c: the trial speaks on EVERY tab — the running one as a strip, the lapsed
+  // one as the paused block (full on Áttekintés, compact elsewhere). A paid trial
+  // („converted") reaches here as null: from then on the subscription speaks.
+  const trialBar = opts.trial
+    ? opts.trial.status === "active"
+      ? trialStrip(opts.trial, lang)
+      : trialLapsedBlock(opts.trial, lang, tab !== "attekintes", opts.guestViewUrl ?? null)
+    : "";
 
   const section =
     tab === "sugo"
@@ -6169,7 +6262,8 @@ export function adminDashboard(
       counts,
       tabLabel,
       viewBtn + primaryBtn,
-      pageHead +
+      trialBar +
+        pageHead +
         savedNote +
         retryNote +
         // ── ADR-0119 ① reaches EVERY tab (approved plan B, freeze-state-v2 §⑥) ──

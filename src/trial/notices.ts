@@ -25,6 +25,25 @@ export function trialDaysLeft(now: Date, trialUntil: Date): number {
   return Math.round((b - a) / 86_400_000);
 }
 
+/**
+ * The trial coupon as the owner may still use it — or null (0 %, expired, used up). ONE
+ * rule for every place that promises the discount (the warnings AND the admin strip): a
+ * screen offering 25 % while the letter says nothing would be two answers to one question.
+ */
+export function liveTrialCoupon(
+  row: {
+    readonly percent: number | null;
+    readonly couponUntil: unknown;
+    readonly usedCount: number | string | null;
+    readonly maxUses: number | string | null;
+  },
+  now: Date,
+): { percent: number; untilIso: string } | null {
+  const until = row.couponUntil ? new Date(row.couponUntil as string) : null;
+  const live = row.percent && until && until > now && Number(row.usedCount ?? 0) < Number(row.maxUses ?? 1);
+  return live ? { percent: row.percent!, untilIso: budapestIsoDay(until!) } : null;
+}
+
 interface NoticeContext {
   readonly siteName: string;
   readonly contactName: string | null;
@@ -59,13 +78,10 @@ async function noticeContext(t: TrialNoticeTarget, now: Date): Promise<NoticeCon
   if (!base) throw new Error("PUBLIC_BASE_URL hiányzik — a Folytatom link nem építhető");
   if (!row.token) throw new Error("a próbához nincs prospect-token — a Folytatom link nem építhető");
 
-  const couponUntil = row.couponUntil ? new Date(row.couponUntil as unknown as string) : null;
-  const couponLive =
-    row.percent && couponUntil && couponUntil > now && Number(row.usedCount ?? 0) < Number(row.maxUses ?? 1);
   return {
     siteName: row.siteName,
     contactName: row.contactName,
-    coupon: couponLive ? { percent: row.percent!, untilIso: budapestIsoDay(couponUntil!) } : null,
+    coupon: liveTrialCoupon(row, now),
     continueUrl: `${base}/p/${row.token}/folytatas`,
     daysLeft: trialDaysLeft(now, t.trialUntil),
     trialUntilIso: budapestIsoDay(t.trialUntil),

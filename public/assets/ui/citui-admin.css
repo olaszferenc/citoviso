@@ -794,6 +794,30 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   .adm-frz--compact .adm-frz__grid{grid-template-columns:1fr}
   .adm-frz--compact .adm-owe__v{font-size:29px}
 }
+/* ADR-0344 C2c — the running free trial's strip (approved plan „A", 2026-10-09;
+   contract: assets/design-refs/console/proba-admin-sav/). Every tab, top of the page,
+   no close button. Warn tone from 3 days before the end. On a narrow column (≤520px
+   CONTAINER, not window — the admin column is narrower than the window on desktop)
+   the meter goes and the button takes the full width. */
+.adm-trial{container-type:inline-size;margin:0 0 14px;border-radius:var(--citui-radius-sm);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line)}
+.adm-trial--warn{background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));
+  border-color:color-mix(in srgb,var(--citui-warn) 45%,transparent)}
+.adm-trial__in{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:11px 16px;
+  font-size:13px;line-height:1.5;color:var(--citui-ink)}
+.adm-trial__t{flex:1 1 220px}
+.adm-trial__t b{color:var(--citui-ink)}
+.adm-trial__meter{flex:0 0 120px;height:6px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-line);overflow:hidden}
+.adm-trial__meter i{display:block;height:100%;background:var(--citui-cyan-500)}
+.adm-trial--warn .adm-trial__meter i{background:var(--citui-warn)}
+@container (max-width:520px){
+  .adm-trial__meter{display:none}
+  .adm-trial__go{width:100%;justify-content:center}
+}
+/* The lapsed trial's „Mi maradt meg" list sits on the red block's light panel. */
+.adm-trial__kept{margin:2px 0 4px;padding-left:18px;font-size:12px;line-height:1.6;color:var(--citui-on-bad)}
+
 /* Read-only module row under a freeze: no price chip, no on/off control, so the
    row is text + preview only. The grid must not keep empty columns for controls
    that are no longer rendered. */
