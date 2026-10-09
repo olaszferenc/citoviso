@@ -3004,6 +3004,19 @@ if [ -f scripts/free-trial-config-check.mts ] && \
   echo "[pre-commit] free-trial-config-check (a /pricing próba-hossza és kupon-%-a tényleg a beállítás)…"
   npx tsx scripts/free-trial-config-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Ingyenes próba VÉGE (src/trial/expiry.ts): T−3/T−1 figyelmeztetés csak hétköznap 9–16, kétszer nem megy,
+#     hétvége → péntek; lejárat = site suspended + próba-modulok le (fizetett marad), fagyott; folytatás-fizetés
+#     (valódi applyWebhookResult) → live, converted, fordulónap = ma, a kupon egyszer ég. Saját scratch-DB, ~15 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/free-trial-expiry-check.mts ] && \
+   changed_files | grep -qE '^src/trial/.*\.ts$|^src/conversion/owned\.ts$|^src/payment/subscription\.ts$|^src/payment/payEntry\.ts$|^migrations/0098_free_trial_notice\.sql$|^scripts/free-trial-expiry-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/free-trial-expiry-check\.mts$'; then
+    echo "[pre-commit] free-trial-expiry-check --self-test (a lejárat-őr pirosra tud-e menni)…"
+    npx tsx scripts/free-trial-expiry-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] free-trial-expiry-check (próba vége: figyelmeztetés, szünetel, folytatás-fizetés)…"
+  npx tsx scripts/free-trial-expiry-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"
