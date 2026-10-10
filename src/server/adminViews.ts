@@ -6321,7 +6321,9 @@ export function adminDashboard(
                   ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.
-                  (opts.multilang
+                  // proba-c README 3 (Elek3 K4): a RUNNING trial has no single purchase on
+                  // this tab — its way on is „Folytatom — csomag és modulok".
+                  (opts.multilang && opts.trial?.status !== "active"
                     ? (opts.multilangError
                         ? `<div class="adm-saved" role="alert">${ic("alert", 18)} ${esc(opts.multilangError)}</div>`
                         : "") + multilangSection(opts.multilang, lang)

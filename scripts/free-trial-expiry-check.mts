@@ -2,7 +2,8 @@
 // charges, and paying brings it back. What this proves, each leg a way the end of a trial
 // could cost the owner their site, their money or their trust:
 //   ① noticeSendDay, pure: T−N on a weekday; a weekend step moves BACK to Friday (a Sunday
-//      expiry's T−1 is Friday, not the Monday after the freeze); t3 on t1's day → t1 only;
+//      expiry's T−1 is Friday, not the Monday after the freeze); t3 on t1's day → one weekday
+//      earlier (ADR-XXXX, Elek3 K3: both warnings always go, for every start weekday);
 //      a step before the trial's first day does not exist;
 //   ② warnings: outside the weekday 9–16 window (Saturday, 17:00) NOTHING goes out; inside
 //      it the due step goes once per channel (e-mail + SMS); a second run sends nothing;
@@ -196,7 +197,20 @@ try {
   check("vasárnapi lejárat: t1 = PÉNTEK (szombat → vissza)", noticeSendDay("t1", start, bp("2026-10-18", "10:00")) === "2026-10-16");
   check("vasárnapi lejárat: t3 = csütörtök", noticeSendDay("t3", start, bp("2026-10-18", "10:00")) === "2026-10-15");
   check("hétfői lejárat: t1 = péntek (vasárnap → vissza)", noticeSendDay("t1", start, bp("2026-10-19", "10:00")) === "2026-10-16");
-  check("hétfői lejárat: t3 a t1 napjára esik → nincs t3", noticeSendDay("t3", start, bp("2026-10-19", "10:00")) === null);
+  // ADR-XXXX (Elek3 K3): both warnings ALWAYS go — a collision moves T−3 one weekday earlier.
+  check("hétfői lejárat: t3 a t1 napjára esne → egy hétköznappal korábban (csütörtök)", noticeSendDay("t3", start, bp("2026-10-19", "10:00")) === "2026-10-15");
+  // Every start weekday (Mon–Sun) of a 14-day trial: T−3 and T−1 both exist, on two distinct
+  // weekdays, T−3 first, both before the trial's last day.
+  for (let k = 0; k < 7; k++) {
+    const s0 = bp(`2026-10-${String(12 + k).padStart(2, "0")}`, "10:00");
+    const u0 = new Date(s0.getTime() + 14 * 86_400_000);
+    const t3d = noticeSendDay("t3", s0, u0);
+    const t1d = noticeSendDay("t1", s0, u0);
+    const wk = (d: string | null) => (d ? new Date(`${d}T12:00:00Z`).getUTCDay() : -1);
+    check(`K3: ${budapestIsoDay(s0)} indulás → T−3 és T−1 is kimegy, hétköznap, külön napon, a próba vége előtt`,
+      !!t3d && !!t1d && t3d < t1d && t1d < budapestIsoDay(u0) && ![0, 6].includes(wk(t3d)) && ![0, 6].includes(wk(t1d)),
+      `${t3d} · ${t1d} (vég ${budapestIsoDay(u0)})`);
+  }
   check("a próba első napja előtti lépcső nem létezik", noticeSendDay("t3", bp("2026-10-14", "10:00"), bp("2026-10-16", "10:00")) === null);
 
   // fixture: a real trial, through the real door
@@ -427,6 +441,27 @@ try {
     !modHtml.includes("modult megvett") && modHtml.includes("A próbában minden modul be van kapcsolva") &&
       !modHtml.includes("A sorok melletti díj") && !modHtml.includes("adm-modform") && !modHtml.includes("Kosárba teszem") &&
       modHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom — csomag és modulok</a>`));
+  // Elek3 K4 (proba-c README 3): during the trial the Modulok tab sells nothing one by one —
+  // not even the one-off multilang generation; the purchase path refuses it as well.
+  {
+    const { multilangCardData } = await import("../src/tenant/multilangCard.js");
+    const { createMultilangOrder } = await import("../src/tenant/multilangOrder.js");
+    const siteRow = await db.selectFrom("site").select("id").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
+    const ml = await multilangCardData({ siteId: siteRow.id, tenantId });
+    const mlHtml = adminDashboard(
+      { tenantId, username: "trialexpiry@example.invalid", displayName: "Teszt Elek" } as never,
+      { lang: "hu", status: "live", name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
+      { ...trialOpts("modulok"), multilang: ml } as never,
+    );
+    check("K4: próba alatt a Modulok fülön nincs egyedi vétel (többnyelvű honlap sem)", !mlHtml.includes("Fizetés és generálás"), mlHtml.includes("Fizetés és generálás") ? "van „Fizetés és generálás” gomb" : "");
+    const mlOrder = await createMultilangOrder(tenantId, ["en"], null);
+    const leak = mlOrder.orderId ? await db.selectFrom("order_intent").select("id").where("id", "=", mlOrder.orderId).execute() : [];
+    for (const r of leak) {
+      await db.deleteFrom("multilang_generation").where("order_intent_id", "=", r.id).execute().catch(() => {});
+      await db.deleteFrom("order_intent").where("id", "=", r.id).execute();
+    }
+    check("K4: …és a vásárlási út is elutasítja, a próba miatt", !mlOrder.ok && /próba/.test(mlOrder.error ?? ""), JSON.stringify(mlOrder));
+  }
   const calmHtml = renderAdmin(tenantId, "szovegek", calm);
   check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
   check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));

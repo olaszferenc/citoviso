@@ -53,6 +53,21 @@ export async function createMultilangOrder(
         "a honlapja jelenleg fel van függesztve a rendezetlen díj miatt — előbb a tartozást rendezze, utána vásárolhat modult",
     };
   }
+  // proba-c README 3 (Elek3 K4): during a running free trial there is no single purchase —
+  // the trialist chooses what to keep on the continuation page. The card is hidden too; the
+  // rule lives here.
+  const trial = await db
+    .selectFrom("free_trial")
+    .select("id")
+    .where("tenant_id", "=", tenantId)
+    .where("status", "=", "active")
+    .executeTakeFirst();
+  if (trial) {
+    return {
+      ok: false,
+      error: "az ingyenes próba alatt modult külön nem vásárolhat — a Folytatom gombbal választhatja ki, mit tart meg",
+    };
+  }
   const primaryLang = site.effective.lang ?? DEFAULT_LANG;
   const allTargets = siteLangs().filter((l) => l !== primaryLang);
   const tier = multilangTier(requestedTier);

@@ -12,3 +12,11 @@
 3. **Kliens-szám sosem áraz.** Ha a küldött % se a lead élő ajánlata, se a bevezető %, a régi szabály marad (a legnagyobb élő ajánlat), naplózva. Ha az űrlap nem írt ki %-ot (0), szintén a régi szabály.
 
 **Őrök:** `free-trial-e2e` ⑩ (forras=proba → nincs eszkaláció, a lap −25%-ot kap; a próba a kiírt −25%-ot rögzíti; kontroll: paraméter nélkül az eszkaláció kibocsátódik; élő −50% mellett a −25%-ot kiíró űrlap → −25%, a −50% lezárva; kitalált −90% → nem áraz). A régi kóddal 4 FAIL (mérve). `proba-c-checkout-check` ⑥: a látogatás-jelzés valódi böngészőben viszi a `forras=proba` jelet.
+
+### ② K3 — a T−3 és a T−1 értesítő mindig kimegy
+
+**A probléma (mérve):** a hétköznap 9–16-os küldési ablak miatt a hétvégére eső lépcső péntekre került; hétfői lejáratnál a T−1 (vasárnap → péntek) a T−3 (péntek) napjára esett, és a szabály („t3 a t1 napján → csak t1”) a T−3-at elhagyta. A hétfőn indult 14 napos próba egyetlen értesítőt kapott, pénteken — miközben a siker-ablak ezt ígéri: „A lejárat előtt 3 nappal és 1 nappal e-mailben és SMS-ben is szólunk”.
+
+**Döntés (koordinátori, a tulaj elvei szerint):** a T−3 és a T−1 **mindig** kimegy. Ha a napja hétvégére esik, az előző hétköznapra kerül; ha így a kettő egy napra (vagy a T−3 a T−1 utánra) esne, a T−3 még egy hétköznappal korábban megy. A levelek szövege a valós hátralévő napokból készül (`trialDaysLeft`), így a pénteki T−1 hétfői lejáratnál „Még 3 nap…”, nem „Holnap”. Csak az a lépcső marad el, amely a próba első napja elé esne (nagyon rövid próba).
+
+**Őr:** `free-trial-expiry-check` ① — hétfői lejárat: T−3 csütörtök, T−1 péntek; mind a hét indulási napra (H–V) mindkét értesítő létezik, hétköznapra esik, külön napon, a T−3 az első, és mindkettő a próba utolsó napja előtt. A régi kóddal 2 FAIL (mérve).

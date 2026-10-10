@@ -118,20 +118,26 @@ export async function endTrialGrantsAfterConversion(
 export type NoticeStep = "t3" | "t1";
 const STEP_DAYS: Record<NoticeStep, number> = { t3: 3, t1: 1 };
 
-/** The weekday (Budapest) a step is sent on: trial_until's day − N, a weekend moved back
- *  to Friday. Null = the step does not exist for this trial (it would fall before the
- *  trial's first day) or it collides with the later step (t3 on t1's day → t1 only). */
+/** The weekday (Budapest) a step is sent on (ADR-XXXX, Elek3 K3): trial_until's day − N; a
+ *  weekend day moves BACK to the previous weekday (Friday). Both warnings always go: if T−3
+ *  would land on T−1's day (or after it), T−3 goes one more weekday earlier — so a Monday
+ *  expiry gets Thursday + Friday, never a single Friday letter. Null = the step would fall
+ *  before the trial's first day (a very short trial). */
 export function noticeSendDay(step: NoticeStep, startedAt: Date, trialUntil: Date): string | null {
-  const day = (s: NoticeStep): string => {
-    let d = addIsoDays(budapestIsoDay(trialUntil), -STEP_DAYS[s]);
-    const wd = budapestWeekday(new Date(`${d}T12:00:00Z`));
-    if (wd === 6) d = addIsoDays(d, -1);
-    if (wd === 0) d = addIsoDays(d, -2);
-    return d;
+  const weekdayOnOrBefore = (d: string): string => {
+    let x = d;
+    for (;;) {
+      const wd = budapestWeekday(new Date(`${x}T12:00:00Z`));
+      if (wd !== 0 && wd !== 6) return x;
+      x = addIsoDays(x, -1);
+    }
   };
-  const d = day(step);
+  const last = budapestIsoDay(trialUntil);
+  const t1 = weekdayOnOrBefore(addIsoDays(last, -STEP_DAYS.t1));
+  let t3 = weekdayOnOrBefore(addIsoDays(last, -STEP_DAYS.t3));
+  if (t3 >= t1) t3 = weekdayOnOrBefore(addIsoDays(t1, -1));
+  const d = step === "t1" ? t1 : t3;
   if (d < budapestIsoDay(startedAt)) return null;
-  if (step === "t3" && d >= (day("t1") ?? "")) return null;
   return d;
 }
 
