@@ -1197,7 +1197,10 @@ async function handleOrderRequest(
     billingPeriod,
     price,
     domainType: effectiveDomainType,
-    domainName: domainEligible ? domainName : null,
+    // Elek3 B1 (ADR-0032 / ADR-0356): a freely-chosen platform subdomain is a domain NAME
+    // too — dropping it here meant activation never saw the buyer's choice. A custom-domain
+    // name refused for the package (or an "own" one) is NOT carried onto the free subdomain.
+    domainName: domainEligible || domainType === "citoviso_sub" ? domainName : null,
     commitmentMonths,
     committedMinMonthly,
     domainFee: domainFee || null,

@@ -3033,6 +3033,16 @@ if [ -f scripts/proba-c-checkout-check.mts ] && \
   echo "[pre-commit] proba-c-checkout-check (a próba-folytatás és a próba-levél terv-lapja a terv szerint)…"
   EMAIL_PROVIDER=mock npx tsx scripts/proba-c-checkout-check.mts >"$GATE_LOG" || gate_failed
 fi
+# free-trial-e2e (ADR-0097/0354/0356, Elek3 B1): a próba teljes útja SAJÁT scratch-DB-n — indítás,
+#     admin, lejárat, folytatás a VALÓDI /p/<t>/request + mock-fizetés úton; a fizetés UTÁN a site
+#     slugja a választott aldomain, a régi cím alias + 301 (a proba-c ④ csak a POST-törzset látja:
+#     a server.ts elhagyta a domain_name-et, és az őr zöld maradt). ~10 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza.
+if [ -f scripts/free-trial-e2e.mts ] && \
+   changed_files | grep -qE '^src/console/server\.ts$|^src/payment/(service|subscription)\.ts$|^src/conversion/provision\.ts$|^src/trial/.*\.ts$|^scripts/free-trial-e2e\.mts$'; then
+  echo "[pre-commit] free-trial-e2e (próba → folytatás → fizetés → választott cím érvényesül)…"
+  npx tsx scripts/free-trial-e2e.mts >"$GATE_LOG" || gate_failed
+fi
 # slug-rename-check (ADR-0356, névváltás a próba végén): a /folytatas-on választott aldomain
 #     érvényesül a próba által már megépített site-on (activate → convertLead(preferredSlug) →
 #     élő render); a régi slug EGY alias-sor; a canonical/og:url az új hostot mondja; a régi host

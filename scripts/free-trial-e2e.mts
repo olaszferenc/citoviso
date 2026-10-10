@@ -221,6 +221,7 @@ try {
   const siteA = await db.selectFrom("site").select(["status", "slug"]).where("tenant_id", "=", tenantA).executeTakeFirstOrThrow();
   check("a site LIVE az aldomainen", siteA.status === "live" && !!siteA.slug, `${siteA.status} ${siteA.slug}`);
   const hostA = `${siteA.slug}.citoviso.com`;
+  const RENAMED = `uj${stamp}nev`;
   const liveA = await pGet(hostA, "/");
   check("nyilvános host (próba alatt) → 200", liveA.status === 200, String(liveA.status));
   const subA0 = await db.selectFrom("subscription").select("id").where("tenant_id", "=", tenantA).executeTakeFirst();
@@ -337,7 +338,9 @@ try {
   check("…lejárt próba: nincs ajánlat a manifestben (listaár, ADR-0354)", !contBody.includes('"offer":{'));
   const MODULES = ["gallery", "enquiry"];
   const reqRes = await cPost(`/p/${a.token}/request`, {
-    modules: MODULES, billing_period: "monthly", domain_type: "citoviso_sub",
+    // ADR-0356 / ADR-0032: the buyer chose a NEW free subdomain on /folytatas (Elek3 B1:
+    // the order dropped it — the old guard read only the POST body, never the outcome).
+    modules: MODULES, billing_period: "monthly", domain_type: "citoviso_sub", domain_name: `${RENAMED}.citoviso.com`,
     photo_rights_declared: true, recurring_consent: true,
     buyer_type: "individual", buyer_name: "Teszt Elek", buyer_country: "HU", buyer_zip: "8360",
     buyer_city: "Keszthely", buyer_address: "Fő utca 1.", buyer_email: EMAIL_A,
@@ -356,9 +359,17 @@ try {
   const payRow = await db.selectFrom("payment").select(["status", "paid_at", "id"]).where("order_intent_id", "=", oi.id).executeTakeFirstOrThrow();
   const PAY_DAY = budapestIsoDay(new Date(payRow.paid_at as unknown as string));
   check("payment 'paid'", payRow.status === "paid", `${payRow.status} ${PAY_DAY}`);
-  const siteA3 = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantA).executeTakeFirstOrThrow();
-  const liveAgain = await pGet(hostA, "/");
-  check("site újra LIVE, nyilvános host 200", siteA3.status === "live" && liveAgain.status === 200, `${siteA3.status} ${liveAgain.status}`);
+  const siteA3 = await db.selectFrom("site").select(["id", "status", "slug"]).where("tenant_id", "=", tenantA).executeTakeFirstOrThrow();
+  const liveAgain = await pGet(`${RENAMED}.citoviso.com`, "/");
+  check("site újra LIVE, az ÚJ cím nyilvános hostja 200", siteA3.status === "live" && liveAgain.status === 200, `${siteA3.status} ${liveAgain.status}`);
+  // Elek3 B1: the OUTCOME, not the request — the site is renamed and the old label 301s.
+  const oiDom = await db.selectFrom("order_intent").select("domain_name").where("id", "=", oi.id).executeTakeFirstOrThrow();
+  check("B1: az order_intent a választott aldomaint rögzíti", oiDom.domain_name === `${RENAMED}.citoviso.com`, String(oiDom.domain_name));
+  check("B1: fizetés után a site slugja a választott cím", siteA3.slug === RENAMED, `${siteA3.slug} (várt ${RENAMED})`);
+  const aliasA = await db.selectFrom("site_slug_alias").select("slug").where("site_id", "=", siteA3.id).execute();
+  check("B1: a régi cím aliasként él", aliasA.some((r) => r.slug === siteA.slug), aliasA.map((r) => r.slug).join(",") || "nincs alias");
+  const oldHost = await pGet(hostA, "/");
+  check("B1: a régi cím 301-gyel az újra visz", oldHost.status === 301, String(oldHost.status));
   const trA3 = await db.selectFrom("free_trial").select(["status", "converted_at"]).where("id", "=", trialA.id).executeTakeFirstOrThrow();
   check("free_trial 'converted'", trA3.status === "converted" && !!trA3.converted_at, trA3.status);
   const sub = await db.selectFrom("subscription").selectAll().where("tenant_id", "=", tenantA).executeTakeFirst();
