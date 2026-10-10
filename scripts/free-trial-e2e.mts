@@ -19,7 +19,10 @@
 //      trial start, ≠ trial end; current_period_end = +1 month;
 //   ⑦ a second trial is refused (startTrial AND POST /p/<t>/trial → trial_used), also
 //      after the conversion;
-//   ⑧ the lapsed, unpaid trial is not billed by runBillingCycle.
+//   ⑧ the lapsed, unpaid trial is not billed by runBillingCycle;
+//   ⑨ IT B4-LEMOND: a module the trialist CANCELLED in the admin (gallery, before the
+//      lapse) and then bought in the continuation is live with NO cancel mark — the
+//      admin does not say "Lemondva", the first renewal does not drop it.
 //
 // ISOLATION: own scratch DB (dropped on every exit path), providers forced to mock and
 // READ BACK; the outbox files and the sites/ snapshots it writes are removed.
@@ -100,6 +103,7 @@ const { getGateway } = await import("../src/payment/index.js");
 const { overrideFreeTrialConfigInProcess } = await import("../src/trial/config.js");
 const { startTrial } = await import("../src/trial/start.js");
 const { lapseExpiredTrials, runTrialNotices } = await import("../src/trial/expiry.js");
+const { applyModuleChange } = await import("../src/tenant/moduleChange.js");
 const { trialNoticeDeps } = await import("../src/trial/notices.js");
 const { getEmailSender } = await import("../src/email/sender.js");
 const { sendSms } = await import("../src/sms/sender.js");
@@ -294,6 +298,11 @@ try {
   const noticeEml = (await ourEml()).filter((e) => e.body.includes(`To: ${EMAIL_A}\n`) && /\/p\/[^/]+\/folytatas/.test(e.body) && !e.file.includes(credEml[0]?.file ?? "\u0000"));
   check("mock outbox: a 2 figyelmeztető .eml a Folytatom-linkkel", noticeEml.length === 2, String(noticeEml.length));
 
+  // ⑨ (setup) the trialist unticks the gallery in the admin while the trial runs.
+  const allOn = (await db.selectFrom("module_entitlement").select("module").where("tenant_id", "=", tenantA).where("active", "=", true).execute()).map((r) => r.module);
+  const mc = await applyModuleChange(tenantA, allOn.filter((m) => m !== "gallery"));
+  check("⑨ előkészítés: próba alatt a Galéria lemondva (admin modul-váltás)", mc.cancelled.includes("gallery"), JSON.stringify(mc.cancelled));
+
   // ④ lapse ──────────────────────────────────────────────────────────────────
   console.log("④ lejárat → szünetel");
   const tooEarly = await lapseExpiredTrials(new Date(until.getTime() - 60_000));
@@ -360,6 +369,8 @@ try {
   check("a próba-kupon egyszer égett el, nincs második kupon", cp2.used_count === 1 && coupons.length === 1, `used ${cp2.used_count}, kupon ${coupons.length}`);
   const ents = await db.selectFrom("module_entitlement").select(["module", "trial_grant"]).where("tenant_id", "=", tenantA).where("active", "=", true).execute();
   check("a megvett modulok élnek, próba-jel nélkül", MODULES.every((m) => ents.some((e) => e.module === m)) && ents.every((e) => !e.trial_grant), ents.map((e) => e.module).join(","));
+  const gal = await db.selectFrom("module_entitlement").select(["active", "cancel_at_period_end", "cancelled_at"]).where("tenant_id", "=", tenantA).where("module", "=", "gallery").executeTakeFirst();
+  check("⑨ a próbában lemondott, majd megvett Galéria: aktív, lemondás-jel nélkül", !!gal && gal.active && !gal.cancel_at_period_end && gal.cancelled_at === null, JSON.stringify(gal));
 
   // ⑥ fordulónap ─────────────────────────────────────────────────────────────
   console.log("⑥ fordulónap = a fizetés napja");

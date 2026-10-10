@@ -85,11 +85,29 @@ export interface EntitlementSync {
 export async function syncEntitlementsToPaid(tenantId: string): Promise<EntitlementSync> {
   const paid = await paidModuleIds(tenantId);
   const paidSet = new Set(paid);
-  const current = await db
+  const rows = await db
     .selectFrom("module_entitlement")
-    .select(["module", "active", "awaiting_first_charge", "cancelled_at"])
+    .select(["module", "active", "awaiting_first_charge", "cancelled_at", "trial_grant"])
     .where("tenant_id", "=", tenantId)
     .execute();
+  // ADR-0342: a cancellation made while the module was still a trial grant cancelled
+  // nothing paid — a trial has no paid period (moduleChange's cancel branch). Once the
+  // buyer pays for that module it is theirs, unmarked: left standing, the admin showed
+  // the fresh purchase as "Lemondva — …-ig aktív marad" and the first renewal switched it
+  // off; after a lapse the tombstone even kept it from being granted (IT B4-LEMOND).
+  const trialCancelled = rows
+    .filter((c) => c.trial_grant && c.cancelled_at != null && paidSet.has(c.module))
+    .map((c) => c.module);
+  if (trialCancelled.length) {
+    await db
+      .updateTable("module_entitlement")
+      .set({ cancel_at_period_end: false, cancelled_at: null })
+      .where("tenant_id", "=", tenantId)
+      .where("module", "in", trialCancelled)
+      .execute();
+    console.log(`[entitlement] ${tenantId}: próba alatti lemondás törölve (megvette) → ${trialCancelled.join(", ")}`);
+  }
+  const current = rows.map((c) => (trialCancelled.includes(c.module) ? { ...c, cancelled_at: null } : c));
   const activeNow = new Set(current.filter((c) => c.active).map((c) => c.module));
   // ADR-0080 ② (B-opció): a mid-cycle addition is legitimately active though not
   // yet in any paid order — its first fee rides the next renewal invoice, which
