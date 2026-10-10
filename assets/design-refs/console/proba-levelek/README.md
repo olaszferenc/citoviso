@@ -9,6 +9,10 @@ T−3 e-mail (`t3-*.png`), T−1 e-mail (`t1-*.png`), próbás belépő-levél (
 
 **Hatókör:** `src/email/trialEmail.ts` · `src/email/loginEmail.ts` · `src/email/platformLayout.ts`
 
+> **Kiegészítve / felülírva:** `../proba-c/` (ADR-0354 „C” + ADR-0356, jóváhagyva 2026-10-10). Az ADR-0354 óta
+> indult próba EGY kedvezményt visz, a „Próba-kedvezmény”-t (a próba utolsó napjának végéig, az ELSŐ díjra) —
+> a lenti 3., 4., 7. pont kupon-szövege csak a C ELŐTT indult (élő kuponos) próbákra érvényes; a C-szöveg a lap alján.
+
 ## Mit KÖT ez a terv (nem stílus-javaslat)
 
 1. **A keret a platform-levél** (`../platform-email/`): logó, egy sötétkék gomb, adat-panel, cégadatos lábléc.
@@ -31,3 +35,17 @@ T−3 e-mail (`t3-*.png`), T−1 e-mail (`t1-*.png`), próbás belépő-levél (
 8. **Lábléc próbánál:** **„oldalát a Citovisónál próbálja ki.”** — a rendelő vevőnél változatlanul „…rendelte meg.”
 9. **Ablak:** csak hétköznap 9–16 (ADR-0334), az óránkénti tick viszi. **Az SMS SZÁRAZ** (a forma — ékezet, link —
    a tulajnál van): nem megy ki, és sort sem foglal.
+
+## ADR-0354 „C” — a Próba-kedvezmény (`../proba-c/3-levelek-sms.html`, jóváhagyva 2026-10-10)
+
+Forrás: `trialDiscount` (`src/trial/offer.ts`) — `kind: "trial"` = C; `kind: "coupon"` = a C előtti kupon (a fenti szöveg).
+
+10. **T−3 / T−1 / lejárat-napi levél:** **„Ha a próba végéig, {date}-ig megrendeli, {p}% kedvezményt kap — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.”**
+    (a dátum „2026. október 23” alakú, félkövér). Adat-panel: **„Próba-kedvezmény”** = **„−{p}%”**, **„Érvényes”** = **„{date}-ig, a próba végéig”**.
+11. **CSAK a T−1 levélben** (`../proba-c/4-nevvaltas.html`, ADR-0356): **„Tetszik a cím? Most {host} — megrendeléskor ingyen megváltoztathatja.”**
+    — a {host} a honlap mai címe (élő saját domain, különben `<slug>.citoviso.com`); a T−3-ba és az SMS-be nem kerül.
+12. **SMS (ékezet nélkül, ≤ 2 szelet, a link sosem rövidül):** T−3 **„Ha addig megrendeli, -{p}% az első díjból: {url}”**,
+    T−1 **„Holnapig -{p}% az első díjból: {url}”**, a lejárat napján **„Ma éjfélig -{p}% az első díjból: {url}”**.
+    Kedvezmény nélkül változatlanul „Folytatás: {url}”.
+13. **Belépő-levél:** adat-panel **„Próba-kedvezmény”** = **„−{p}%, ha {date}-ig megrendeli (évesen az első évre)”**, és a próba-bekezdés végén
+    **„Ha a próba végéig megrendeli, a díjból {p}% kedvezményt kap — évesen az első évre, havinál az első hónapra.”**

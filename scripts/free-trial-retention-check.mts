@@ -235,14 +235,23 @@ try {
     !!m && m.text.includes(formatDayOn("2026-10-12")) && (m.html ?? "").includes("Törlés napja"), m?.text);
   check("a levélben a Folytatom link (/p/<token>/folytatas) és a megnyugtató zárás",
     !!m && /citoviso\.test\/p\/[^/\s]+\/folytatas/.test(m.text) && m.text.includes("Ha nem folytatja, nincs teendője — díjat nem számítunk fel."), m?.text);
-  // ADR-0354 ("C"): a new trial holds no coupon — the wired letter carries no coupon sentence
-  // (the C wording is the §2b round 2); a trial started before it keeps its coupon (below).
-  check("új próba (kupon nélkül, ADR-0354) → nincs kupon-mondat és nincs Kedvezmény-sor", !!m && !m.text.includes("a próbához kapott kedvezménnyel") && !(m.html ?? "").includes("Kedvezmény"));
+  // ADR-0354 ("C", proba-c/3-levelek-sms.html): the Próba-kedvezmény died with the trial — the
+  // wired letter carries no discount sentence and no Kedvezmény row, only the way back; a trial
+  // started before C keeps its coupon (below).
+  const COME_BACK = "Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.";
+  check("új (C) próba → nincs kedvezmény-mondat és nincs Kedvezmény-sor, van „Ha folytatná, a Folytatom gombbal most is megteheti; …”",
+    !!m && !m.text.includes("a próbához kapott kedvezménnyel") && !(m.html ?? "").includes("Kedvezmény") && !m.text.includes("Próba-kedvezmény") && m.text.includes(COME_BACK) && (m.html ?? "").includes(COME_BACK), m?.text);
+  const cKind = buildPurgeWarningEmail({
+    to: "x@example.invalid", daysToPurge: 7, siteName: "Teszt Panzió", contactName: null,
+    trialUntilIso: "2026-07-10", purgeIso: "2026-10-08", coupon: { kind: "trial", percent: 50, untilIso: "2026-10-08" }, continueUrl: "https://citoviso.test/p/t/folytatas",
+  });
+  check("C kedvezmény (kind=trial) a törlés-levélben SEM ígér: nincs mondat, nincs sor, van a visszaút-mondat",
+    !cKind.text.includes("kedvezmény") && !(cKind.html ?? "").includes("Kedvezmény") && cKind.text.includes(COME_BACK));
   const legacyCoupon = buildPurgeWarningEmail({
     to: "x@example.invalid", daysToPurge: 7, siteName: "Teszt Panzió", contactName: null,
     trialUntilIso: "2026-07-10", purgeIso: "2026-10-08", coupon: { percent: 25, untilIso: "2026-10-08" }, continueUrl: "https://citoviso.test/p/t/folytatas",
   });
-  check("régi próba élő kuponnal → a kupon-mondat és a Kedvezmény-sor benne", legacyCoupon.text.includes("a próbához kapott kedvezménnyel még megteheti") && (legacyCoupon.html ?? "").includes("Kedvezmény"));
+  check("régi próba élő kuponnal → a kupon-mondat és a Kedvezmény-sor benne (a visszaút-mondat nem)", legacyCoupon.text.includes("a próbához kapott kedvezménnyel még megteheti") && (legacyCoupon.html ?? "").includes("Kedvezmény") && !legacyCoupon.text.includes(COME_BACK));
   // a warning moved back to Friday (Sunday purge day) names the REAL 9 days, never a rounded 7
   const sunCaps: EmailMessage[] = [];
   await sendPurgeWarningEmail(

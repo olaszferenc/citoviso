@@ -11,6 +11,13 @@
 // about ourselves too). The approved forms are "Holnap lejár…" (1 day) and
 // "N nap múlva lejár…" / "Még N nap…" (N days); the day itself (a late catch-up after
 // an outage) says "Ma lejár…".
+//
+// ADR-0354 "C" (owner-approved 2026-10-10, assets/design-refs/console/proba-c/3-levelek-sms.html):
+// a trial started since C holds ONE discount, the "Próba-kedvezmény" — valid to the END of the
+// trial's last day, on the FIRST fee (annual = first year, monthly = first month), list price
+// after. A pre-C trial's coupon (kind "coupon") keeps its own wording and date. The T−1 letter
+// also names the site's current address (4-nevvaltas.html, "p-mail"): it can be changed free
+// at the order.
 
 import { T } from "../i18n/mail.js";
 import { formatDayOn, formatDayShortOn, formatDayShortStem, formatDayShortWeekday, formatDayLongStem } from "../text/day.js";
@@ -19,11 +26,19 @@ import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { esc, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 
-/** The trial's continuation coupon, as the letters show it. */
+/** The trial's discount, as the letters show it (trialDiscount, src/trial/offer.ts). */
 export interface TrialCouponView {
   readonly percent: number;
-  /** ISO day (Budapest) the coupon is valid until. */
+  /** ISO day (Budapest) the discount is valid until. */
   readonly untilIso: string;
+  /** "trial" = the C "Próba-kedvezmény" (to the trial's end, first fee); "coupon" or absent =
+   *  a pre-C trial's continuation coupon, in its own (legacy) wording. */
+  readonly kind?: "trial" | "coupon";
+}
+
+/** Is this the C "Próba-kedvezmény" (ADR-0354), not a legacy coupon? */
+export function isTrialOffer(c: TrialCouponView | null | undefined): c is TrialCouponView & { kind: "trial" } {
+  return c?.kind === "trial";
 }
 
 /**
@@ -63,9 +78,13 @@ export function buildTrialNoticeEmail(input: {
   coupon: TrialCouponView | null;
   /** GET /p/<token>/folytatas — the configurator with the trial coupon. */
   continueUrl: string;
+  /** The site's current public host — given ONLY for the T−1 step (the free rename at the
+   *  order, ADR-0356); absent → the sentence is left out. */
+  siteHost?: string | null;
   lang?: string;
 }): EmailMessage {
   const { to, daysLeft, siteName, trialUntilIso, coupon, continueUrl, lang } = input;
+  const siteHost = input.siteHost ?? null;
   const greeting = mailGreeting(lang, input.contactName, true);
   const n = String(daysLeft);
   const subject =
@@ -88,9 +107,22 @@ export function buildTrialNoticeEmail(input: {
   const introVars = { Art: huArticle(siteName), site: siteName, until: formatDayOn(trialUntilIso, lang) };
   const offer = (v: { percent: string; until: string }): string =>
     T(lang, "Ha folytatná, a próbához kapott kedvezménnyel teheti: {percent} az első díjból, {until}-ig.", v);
-  const offerVars = coupon
+  const offerVars = coupon && !isTrialOffer(coupon)
     ? { percent: `${coupon.percent}%`, until: formatDayLongStem(coupon.untilIso, lang) }
     : null;
+  // ADR-0354 "C": the Próba-kedvezmény — one deadline (the trial's end), the first fee only.
+  const offerC = (v: { date: string; p: string }): string =>
+    T(
+      lang,
+      "Ha a próba végéig, {date}-ig megrendeli, {p}% kedvezményt kap — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.",
+      v,
+    );
+  const offerCVars = isTrialOffer(coupon)
+    ? { date: formatDayLongStem(coupon.untilIso, lang), p: String(coupon.percent) }
+    : null;
+  const rename = (v: { host: string }): string =>
+    T(lang, "Tetszik a cím? Most {host} — megrendeléskor ingyen megváltoztathatja.", v);
+  const renameVars = siteHost ? { host: siteHost } : null;
   const stay = T(
     lang,
     "Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk. A próba végén a honlap szünetel: a látogatók helyette a szállás nevét, települését és az Ön elérhetőségeit látják. A szerkesztő felülete és minden feltöltött adata a próbaidő végétől számított 90 napig megmarad; ha addig fizet, a honlap azonnal visszakapcsol.",
@@ -98,7 +130,12 @@ export function buildTrialNoticeEmail(input: {
   const button = T(lang, "Folytatom");
 
   const details = [{ label: T(lang, "A próba vége"), value: formatDayShortWeekday(trialUntilIso, lang) }];
-  if (coupon) {
+  if (isTrialOffer(coupon)) {
+    details.push(
+      { label: T(lang, "Próba-kedvezmény"), value: T(lang, "−{p}%", { p: String(coupon.percent) }) },
+      { label: T(lang, "Érvényes"), value: T(lang, "{date}-ig, a próba végéig", { date: formatDayShortStem(coupon.untilIso, lang) }) },
+    );
+  } else if (coupon) {
     details.push(
       { label: T(lang, "Kedvezmény"), value: couponValue(lang, coupon) },
       { label: T(lang, "A kedvezmény érvényes"), value: T(lang, "{date}-ig", { date: formatDayShortStem(coupon.untilIso, lang) }) },
@@ -108,6 +145,8 @@ export function buildTrialNoticeEmail(input: {
   const text =
     `${greeting}\n\n${intro(introVars)}\n\n` +
     (offerVars ? `${offer(offerVars)}\n\n` : "") +
+    (offerCVars ? `${offerC(offerCVars)}\n\n` : "") +
+    (renameVars ? `${rename(renameVars)}\n\n` : "") +
     `${button}: ${continueUrl}\n\n${stay}\n`;
 
   return platformMail({
@@ -122,6 +161,8 @@ export function buildTrialNoticeEmail(input: {
     blocks: [
       mailPara(boldVars(intro, introVars, ["site"])),
       ...(offerVars ? [mailPara(boldVars(offer, offerVars, ["percent", "until"]))] : []),
+      ...(offerCVars ? [mailPara(boldVars(offerC, offerCVars, ["date"]))] : []),
+      ...(renameVars ? [mailPara(boldVars(rename, renameVars, ["host"]))] : []),
       mailDetails(details),
       mailButton(continueUrl, button),
       mailNote(esc(stay)),
@@ -135,6 +176,11 @@ export function buildTrialNoticeEmail(input: {
  * The count in the subject and heading is the REAL distance to the deletion day: a warning
  * moved back to Friday (purgeWarningDay) says 9 days, never a rounded 7 (§B.17). Without a
  * live coupon the coupon paragraph and its details row are left out — no promise we lack.
+ *
+ * ADR-0354 "C": the Próba-kedvezmény ends with the trial, so by now it is dead — a C trial
+ * (and any trial without a live legacy coupon) gets no discount sentence and no "Kedvezmény"
+ * row, only the way back: "Ha folytatná, a Folytatom gombbal most is megteheti; …". A pre-C
+ * trial's live coupon keeps its approved sentence.
  */
 export function buildPurgeWarningEmail(input: {
   to: string;
@@ -171,9 +217,11 @@ export function buildPurgeWarningEmail(input: {
   };
   const offer = (v: { percent: string; until: string }): string =>
     T(lang, "Ha folytatná, a próbához kapott kedvezménnyel még megteheti: {percent} az első díjból, {until}-ig.", v);
-  const offerVars = coupon
-    ? { percent: `${coupon.percent}%`, until: formatDayLongStem(coupon.untilIso, lang) }
+  const legacy = coupon && !isTrialOffer(coupon) ? coupon : null;
+  const offerVars = legacy
+    ? { percent: `${legacy.percent}%`, until: formatDayLongStem(legacy.untilIso, lang) }
     : null;
+  const comeBack = T(lang, "Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.");
   const calm = T(lang, "Ha nem folytatja, nincs teendője — díjat nem számítunk fel.");
   const button = T(lang, "Folytatom");
 
@@ -181,16 +229,16 @@ export function buildPurgeWarningEmail(input: {
     { label: T(lang, "A próba vége"), value: formatDayShortWeekday(trialUntilIso, lang) },
     { label: T(lang, "Törlés napja"), value: formatDayShortWeekday(purgeIso, lang) },
   ];
-  if (coupon) {
+  if (legacy) {
     details.push({
       label: T(lang, "Kedvezmény"),
-      value: T(lang, "{discount}, {date}-ig", { discount: couponValue(lang, coupon), date: formatDayShortStem(coupon.untilIso, lang) }),
+      value: T(lang, "{discount}, {date}-ig", { discount: couponValue(lang, legacy), date: formatDayShortStem(legacy.untilIso, lang) }),
     });
   }
 
   const text =
     `${greeting}\n\n${intro(introVars)}\n\n` +
-    (offerVars ? `${offer(offerVars)}\n\n` : "") +
+    (offerVars ? `${offer(offerVars)}\n\n` : `${comeBack}\n\n`) +
     `${button}: ${continueUrl}\n\n${calm}\n`;
 
   return platformMail({
@@ -204,7 +252,7 @@ export function buildPurgeWarningEmail(input: {
     footerReason: "trial",
     blocks: [
       mailPara(boldVars(intro, introVars, ["site", "purge"])),
-      ...(offerVars ? [mailPara(boldVars(offer, offerVars, ["percent", "until"]))] : []),
+      mailPara(offerVars ? boldVars(offer, offerVars, ["percent", "until"]) : esc(comeBack)),
       mailDetails(details),
       mailButton(continueUrl, button),
       mailNote(esc(calm)),
@@ -245,9 +293,18 @@ export function buildTrialNoticeSmsText(input: {
         : daysLeft === 1
           ? T(lang, "Citoviso: holnap lejár {art} {site} ingyenes próbája.", v)
           : T(lang, "Citoviso: {art} {site} ingyenes próbája {date} lejár.", { ...v, date: formatDayShortOn(trialUntilIso, lang) });
-    const go = coupon
-      ? T(lang, "Folytatás {percent}% kedvezménnyel: {url}", { percent: String(coupon.percent), url })
-      : T(lang, "Folytatás: {url}", { url });
+    // ADR-0354 "C": the Próba-kedvezmény is named with its deadline in the SAME words as the
+    // opening sentence ("addig" = the date, "Holnapig", "Ma éjfélig"); a pre-C coupon keeps
+    // its approved form.
+    const go = isTrialOffer(coupon)
+      ? daysLeft <= 0
+        ? T(lang, "Ma éjfélig -{p}% az első díjból: {url}", { p: String(coupon.percent), url })
+        : daysLeft === 1
+          ? T(lang, "Holnapig -{p}% az első díjból: {url}", { p: String(coupon.percent), url })
+          : T(lang, "Ha addig megrendeli, -{p}% az első díjból: {url}", { p: String(coupon.percent), url })
+      : coupon
+        ? T(lang, "Folytatás {percent}% kedvezménnyel: {url}", { percent: String(coupon.percent), url })
+        : T(lang, "Folytatás: {url}", { url });
     // The approved T−3 closes with the reassurance; the approved T−1 has no room for it.
     const rest = tail && daysLeft >= 2 ? ` ${T(lang, "Nem terhelünk, ha nem folytatja.")}` : "";
     return toGsm7(`${when} ${go}${rest}`);

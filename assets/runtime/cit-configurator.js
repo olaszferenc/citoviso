@@ -899,10 +899,21 @@
       return d.toISOString().slice(0, 16).replace("T", " ");
     }
   }
+  /** proba-C: the trial discount ends with a DAY (the trial's last), not a minute — "okt. 23-ig". */
+  function offerDayText() {
+    var d = offerDeadline();
+    if (!d) return "";
+    try {
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }).replace(/\.$/, "");
+    } catch (e) {
+      return d.toISOString().slice(0, 10);
+    }
+  }
   // MONTHLY is the default (ADR-0211, owner 2026-09-23 — overrides the 2026-08-23
   // annual decree): the entry price is the smaller number, and the annual deal is
   // advertised by the badge on its card instead (contract: design-refs/console/period-badge).
-  var period = "monthly"; // "monthly" | "annual"
+  // proba-C: on the trialist's checkout annual is the recommended choice (the trial % rides the first YEAR).
+  var period = CFG.continuation ? "annual" : "monthly"; // "monthly" | "annual"
   var priceById = {};
   MODULES.forEach(function (m) {
     priceById[m.id] = m.price || 0;
@@ -1758,6 +1769,33 @@
     }
   }
 
+  /** ADR-0356: the trial site's address + the once-free change (contract proba-c/4a). */
+  function renameBlockHtml() {
+    return (
+      '<div class="cit-cfg-ren">' +
+      '<div class="cit-cfg-ren__now"><span class="cit-cfg-ren__host">' + esc(DOM.subLabel + DOM.subBase) + "</span>" +
+      '<span class="cit-cfg-ren__free">' + tr("Ingyen megváltoztatható") + "</span></div>" +
+      '<p class="cit-cfg-ren__when">' +
+      (CONT.lapsed
+        ? tr("A próba véget ért: a folytatáskor most egyszer, ingyen választhat másik címet. A cím ezután marad.")
+        : tr("A próba alatt megrendelve most egyszer, ingyen választhat másik címet. A cím ezután marad.")) +
+      "</p>" +
+      '<div class="cit-cfg-ren__edit" hidden>' +
+      '<label class="cit-cfg-ren__lbl">' + tr("Új cím") +
+      '<span class="cit-cfg-sub__in"><input class="cit-cfg-ren__in" type="text" spellcheck="false" ' +
+      'autocapitalize="off" autocorrect="off" maxlength="80" placeholder="' + esc(tr("pl. zamardi-udulo")) + '">' +
+      '<span class="cit-cfg-sub__base">' + esc(DOM.subBase) + "</span></span></label>" +
+      '<p class="cit-cfg-ren__msg" aria-live="polite"></p>' +
+      '<div class="cit-cfg-ren__acts">' +
+      '<button type="button" class="cit-cfg-ren__apply">' + tr("Ezt választom") + "</button>" +
+      '<button type="button" class="cit-cfg-ren__cancel">' + tr("Marad a mostani") + "</button></div></div>" +
+      '<div class="cit-cfg-ren__acts cit-cfg-ren__openrow">' +
+      '<button type="button" class="cit-cfg-ren__open">' + tr("Megváltoztatom a címet") + "</button></div>" +
+      '<div class="cit-cfg-ren__fate" hidden></div>' +
+      "</div>"
+    );
+  }
+
   function domainSectionHtml() {
     if (!DOM) return "";
     return (
@@ -1769,12 +1807,16 @@
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
       '<span class="cit-cfg-dopt__txt"><b>' + tr("Ingyenes cím a citoviso.com-on") + "</b>" +
       "<span>" + tr("Az árban — azonnal működik. Válassza meg szabadon:") + "</span></span></div>" +
+      // ADR-0356 (contract proba-c/4-nevvaltas a): on the trialist's checkout the site
+      // already HAS an address — it is shown as such, and changing it is an explicit,
+      // once-free step with what happens to the old one spelled out.
+      (CONT ? renameBlockHtml() : "") +
       // ADR-0032: free-choice subdomain label + live availability check.
-      '<div class="cit-cfg-sub">' +
+      (CONT ? "" : '<div class="cit-cfg-sub">' +
       '<span class="cit-cfg-sub__in"><input class="cit-cfg-sub__label" type="text" spellcheck="false" ' +
       'autocapitalize="off" value="' + esc(DOM.subLabel) + '" aria-label="' + tr("Aldomain neve") + '">' +
       '<span class="cit-cfg-sub__base">' + esc(DOM.subBase) + "</span></span>" +
-      '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>' +
+      '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>') +
       '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
       // Fee + terms are LIVE (ADR-0093/0094): painted by refreshDomainTerms from
@@ -1846,6 +1888,17 @@
   var TRIAL =
     CFG.trial && CFG.trial.enabled && CFG.trial.url && Number(CFG.trial.days) >= 1 ? CFG.trial : null;
   var TRIAL_DAYS = TRIAL ? Math.round(Number(TRIAL.days)) : 0;
+  // proba-C: the trial campaign mail's links (trialCampaignEmail.ts) — `forras=proba` on both,
+  // `proba=nyit` on the "try it" button.
+  var PAGE_QS = (function () {
+    try {
+      return new URLSearchParams(window.location.search);
+    } catch (_e) {
+      return null;
+    }
+  })();
+  var FROM_TRIAL_MAIL = !!PAGE_QS && PAGE_QS.get("forras") === "proba";
+  var OPEN_TRIAL_ON_LOAD = !!PAGE_QS && PAGE_QS.get("proba") === "nyit";
   /** Every trial label carries the operator-set length (README 6) — never a literal number. */
   function trialN(s) {
     return String(s).split("{n}").join(String(TRIAL_DAYS));
@@ -1864,7 +1917,10 @@
   function browseHead() {
     return CFG.continuation ? tr("Az Ön honlapja — folytatás") : tr("Ez az Ön leendő weboldala");
   }
+  /** proba-C: the trial's checkout facts (server-side, ContinuationInfo) or null. */
+  var CONT = CFG.continuation && typeof CFG.continuation === "object" ? CFG.continuation : null;
   function browseSub() {
+    if (CONT && CONT.lapsed) return tr("Válassza ki, mit kapcsoljunk vissza. Fizetni a következő lépésben fog.");
     return CFG.continuation
       ? tr("Válassza ki, mit tartson meg — azonnal látja. Fizetni a következő lépésben fog.")
       : tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.");
@@ -1893,6 +1949,8 @@
       I.x +
       "</button></div>" +
       '<div class="cit-cfg-body">' +
+      // proba-C: a lapsed trial is said FIRST — the site is paused, the price is the list price.
+      (CONT && CONT.lapsed ? '<p class="cit-cfg-cnote cit-cfg-cnote--lapsed"></p>' : "") +
       '<div class="cit-cfg-q">' + tr("Milyen legyen az oldala?") + "</div>" +
       '<div class="cit-cfg-presets"></div>' +
       // Open by DEFAULT (tulaj, 2026-08-21): the prospect must see the itemised
@@ -1919,6 +1977,10 @@
       "</span></button>" +
       '<div class="cit-cfg-detail"></div>' +
       "</div>" +
+      // proba-C: what happens to the modules left out (trial) / that the trial ended (lapsed).
+      // In the scrolling body, not the pinned foot: on a phone every foot line is a line
+      // less of the package list.
+      (CONT && !CONT.lapsed ? '<p class="cit-cfg-cnote"></p>' : "") +
       domainSectionHtml() +
       "</div>" +
       // Scroll cue: the body is a scroll container inside a fixed panel, and on a
@@ -1994,7 +2056,10 @@
       '<div class="cit-cfg-ppill" role="group" aria-label="' + tr("Fizetési gyakoriság") + '">' +
       '<button class="cit-cfg-popt cit-cfg-popt--on" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
       '<button class="cit-cfg-popt" type="button" data-period="annual">' + tr("Éves") +
-      ' <span class="cit-cfg-ppill__g"></span></button>' +
+      ' <span class="cit-cfg-ppill__g"></span>' +
+      // proba-C: the first fee carries the trial % — on annual that is the whole first year.
+      (CONT ? ' <em class="cit-cfg-rec">' + tr("ajánlott") + "</em>" : "") +
+      "</button>" +
       "</div>" +
       '<div class="cit-cfg-mini">' +
       '<div class="cit-cfg-mini__tot"><small>' + tr("Összesen") + "</small>" +
@@ -2005,9 +2070,18 @@
       "</button>" +
       "</div>" +
       "</div>" + // /.cit-cfg-s1bar
+      (CONT ? '<div class="cit-cfg-tsavebox"></div>' : "") +
       '<div class="cit-cfg-step2" hidden>' +
       '<button class="cit-cfg-submit" type="button" disabled>' + tr("Tovább a számlázási adatokhoz") + I.chevR + "</button>" +
-      '<p class="cit-cfg-note">' + tr("Ez még nem fizetés. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
+      // proba-C: the trialist's site already runs and they already have a login — the
+      // prospect's "élesítjük … elküldjük a belépőt" would promise what they have (Elek Ú2).
+      '<p class="cit-cfg-note">' +
+      (CONT
+        ? CONT.lapsed
+          ? tr("Ez még nem fizetés. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük. A fizetés után a honlap azonnal visszakapcsol, ugyanazzal a felhasználónévvel és jelszóval lép be; a számlát e-mailben küldjük.")
+          : tr("Ez még nem fizetés. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük. A fizetés után a honlapja változatlanul fut tovább, ugyanazzal a felhasználónévvel és jelszóval lép be; a számlát e-mailben küldjük.")
+        : tr("Ez még nem fizetés. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.")) +
+      "</p>" +
       "</div>" +
       billingStepHtml() +
       "</div>" +
@@ -2710,6 +2784,63 @@
       // the amount never breaks inside the number ("95 / 000 Ft")
       '<span class="cit-cfg-gain-amt">' + esc(fmt(yearly) + tr("/év")) + "</span></span>";
   }
+  /**
+   * proba-C (contract 1-vasarlas A): what the first fee saves. Annual — the free months AND
+   * the trial % on the first year, added up; monthly — honestly "only the first month",
+   * with the way to annual. A lapsed trial (list price) keeps only the annual nudge.
+   */
+  function trialSaveHtml() {
+    if (!CONT) return "";
+    var m = monthlyTotal();
+    var y = annualTotal();
+    var free = m * 12 - y;
+    var yOff = OFFER ? y - offerPrice(y) : 0;
+    var row = function (k, v, cls) {
+      return '<div class="cit-cfg-tsave__r' + (cls || "") + '"><span>' + esc(k) + "</span><span>" + esc(v) + "</span></div>";
+    };
+    if (period === "annual") {
+      if (!OFFER) return "";
+      return (
+        '<div class="cit-cfg-tsave">' +
+        row(tr("12 havi díj listaáron"), fmt(m * 12)) +
+        (free > 0 ? row(tr("Éves fizetés: {n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)), "−" + fmt(free)) : "") +
+        row(tr("{name} −{p}% az első évre").replace("{name}", offerName()).replace("{p}", String(OFFER.percent)), "−" + fmt(yOff)) +
+        row(tr("Megtakarítás az első évben"), "−" + fmt(free + yOff), " cit-cfg-tsave__r--sum") +
+        "</div>"
+      );
+    }
+    var text = OFFER
+      ? tr("Havi fizetésnél a −{p}% csak az első hónapra jár (−{a}). Évesen az első évben −{y}.")
+          .replace("{p}", String(OFFER.percent))
+          .replace("{a}", fmt(m - offerPrice(m)))
+          .replace("{y}", fmt(free + yOff))
+      : free > 0
+        ? tr("Évesen {n} hónap ingyen (−{a}).").replace("{n}", String(PRICING.annualFreeMonths)).replace("{a}", fmt(free))
+        : "";
+    if (!text) return "";
+    return (
+      '<div class="cit-cfg-tnudge">' + esc(text) +
+      ' <button type="button" class="cit-cfg-toannual">' + tr("Évesre váltok") + "</button></div>"
+    );
+  }
+  function syncTrialBoxes() {
+    if (!CONT) return;
+    var box = panel.querySelector(".cit-cfg-tsavebox");
+    if (box) box.innerHTML = trialSaveHtml();
+    var note = panel.querySelector(".cit-cfg-cnote");
+    if (note) {
+      note.textContent = CONT.lapsed
+        ? tr("Az ingyenes próba {d}-ig tartott, a honlap szünetel. A díj a listaár; a fizetés után a honlap azonnal visszakapcsol.").replace("{d}", huDay(CONT.trialEndIso).replace(/\.$/, ""))
+        : tr("Amit most nem választ ki, az is bekapcsolva marad a próba végéig ({d}), csak utána kapcsol ki.").replace("{d}", huDay(CONT.trialEndIso));
+    }
+  }
+  // "Évesre váltok" — the same switch as the period buttons (ONE handler, ONE state).
+  panel.addEventListener("click", function (e) {
+    var t = e.target && e.target.closest ? e.target.closest(".cit-cfg-toannual") : null;
+    if (!t) return;
+    var ab = panel.querySelector('.cit-cfg-popt[data-period="annual"]');
+    if (ab) ab.click();
+  });
   function syncPeriodButtons() {
     panel.querySelectorAll(".cit-cfg-popt").forEach(function (x) {
       var on = x.getAttribute("data-period") === period;
@@ -3088,6 +3219,118 @@
       });
     }
 
+    // ADR-0356: the rename block. The typed label is only a CANDIDATE until "Ezt választom";
+    // the order carries the committed one (subHost/domainName), so a half-typed name never
+    // reaches the order. The check is the same server rule (checkSubdomainAvailable: the
+    // buyer's own former names are free for them, every other site's are taken).
+    var ren = panel.querySelector(".cit-cfg-ren");
+    if (ren && DOM.subCheckUrl) {
+      var renOrig = DOM.subLabel;
+      var renIn = ren.querySelector(".cit-cfg-ren__in");
+      var renMsg = ren.querySelector(".cit-cfg-ren__msg");
+      var renEdit = ren.querySelector(".cit-cfg-ren__edit");
+      var renOpenRow = ren.querySelector(".cit-cfg-ren__openrow");
+      var renOpen = ren.querySelector(".cit-cfg-ren__open");
+      var renFate = ren.querySelector(".cit-cfg-ren__fate");
+      var renHostEl = ren.querySelector(".cit-cfg-ren__host");
+      var renCand = null; // last server verdict for the typed label
+      var renTimer = null;
+      var renSeq = 0;
+      var renMsgSet = function (cls, text) {
+        renMsg.className = "cit-cfg-ren__msg" + (cls ? " cit-cfg-ren__msg--" + cls : "");
+        renMsg.textContent = text;
+      };
+      var renCurrent = function () {
+        return (subHost || renOrig + DOM.subBase).replace(DOM.subBase, "");
+      };
+      var renPaint = function () {
+        var cur = renCurrent();
+        renHostEl.textContent = cur + DOM.subBase;
+        var changed = cur !== renOrig;
+        renOpen.textContent = changed ? tr("Másik címet választok") : tr("Megváltoztatom a címet");
+        renFate.hidden = !changed;
+        if (changed) {
+          renFate.innerHTML =
+            "<b>" + esc(tr("Új cím: {host}").replace("{host}", cur + DOM.subBase)) + "</b><ul>" +
+            "<li>" + esc(tr("A régi cím ({old}) örökre az újra irányít, és senki más nem kaphatja meg. A már kiküldött levelek, a névjegyre vagy a Google-profilba beírt cím tovább működik.").replace("{old}", renOrig + DOM.subBase)) + "</li>" +
+            "<li>" + esc(tr("A honlap tartalma, a foglalások és a belépés nem változik.")) + "</li>" +
+            "<li>" + esc(CONT.lapsed ? tr("Az új cím a folytatással, a fizetés után él.") : tr("Az új cím a megrendeléskor él.")) + "</li></ul>";
+        }
+      };
+      var renCheck = function () {
+        var label = renIn.value.trim();
+        var seq = ++renSeq;
+        if (!label) {
+          renCand = null;
+          renMsgSet("", "");
+          return;
+        }
+        renMsgSet("wait", tr("Ellenőrzés…"));
+        fetch(DOM.subCheckUrl + "?label=" + encodeURIComponent(label))
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (j) {
+            if (seq !== renSeq) return; // a later keystroke owns the message
+            renCand = j;
+            if (j && j.ok && j.normalized === renCurrent()) renMsgSet("", tr("Ez a mostani cím."));
+            else if (j && j.ok) renMsgSet("ok", tr("Szabad:") + " " + j.host);
+            else renMsgSet("bad", ((j && j.reason) || tr("Nem választható")) + (j && j.normalized ? " (" + j.normalized + ")" : ""));
+          })
+          .catch(function () {
+            if (seq !== renSeq) return;
+            renCand = null;
+            renMsgSet("bad", tr("Most nem tudtuk ellenőrizni — próbálja újra."));
+          });
+      };
+      renIn.addEventListener("input", function () {
+        if (renTimer) clearTimeout(renTimer);
+        renCand = null;
+        renTimer = setTimeout(renCheck, 350);
+      });
+      renIn.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          ren.querySelector(".cit-cfg-ren__apply").click();
+        }
+      });
+      renOpen.addEventListener("click", function () {
+        renEdit.hidden = false;
+        renOpenRow.hidden = true;
+        renIn.value = "";
+        renCand = null;
+        renMsgSet("", "");
+        renIn.focus();
+      });
+      ren.querySelector(".cit-cfg-ren__cancel").addEventListener("click", function () {
+        renEdit.hidden = true;
+        renOpenRow.hidden = false;
+        renPaint();
+      });
+      ren.querySelector(".cit-cfg-ren__apply").addEventListener("click", function () {
+        if (!renIn.value.trim()) {
+          renMsgSet("bad", tr("Adjon meg legalább egy betűt vagy számot."));
+          return;
+        }
+        // The verdict must belong to what is in the box now; otherwise check first.
+        if (!renCand) {
+          if (renTimer) clearTimeout(renTimer);
+          renCheck();
+          return;
+        }
+        if (!renCand.ok) return;
+        subHost = renCand.host;
+        if (domainType === "citoviso_sub") domainName = subHost;
+        subOk = true;
+        renEdit.hidden = true;
+        renOpenRow.hidden = false;
+        renPaint();
+        refreshSubmit();
+        track("subdomain_rename", { changed: renCurrent() !== renOrig });
+      });
+      renPaint();
+    }
+
     // ADR-0032: free-choice subdomain label with a debounced availability check.
     var subInput = panel.querySelector(".cit-cfg-sub__label");
     var subStatus = panel.querySelector(".cit-cfg-sub__status");
@@ -3171,12 +3414,25 @@
     // Elek L-2: the name comes from the SERVER (offerLabel, one place) — the left
     // item block and this card print the same words for the same offer.
     var l3 = offerName() + ": " + tr("−{p}% az első díjból").replace("{p}", String(OFFER.percent));
-    if (OFFER.kind === "escalation" && offerDeadline()) {
+    if (CONT && offerDeadline()) {
+      // proba-C: ONE discount, ONE deadline — the trial's last day.
+      l3 += " · " + tr("érvényes {d}-ig, a próba végéig").replace("{d}", offerDayText());
+    } else if (OFFER.kind === "escalation" && offerDeadline()) {
       l3 += " · " + tr("érvényes {d}-ig").replace("{d}", offerDeadlineText());
     }
     var flat = flatAmount || 0;
     var firstCharge = offerPrice(listAmount) + flat;
     var recurring = listAmount + flat;
+    // proba-C: what the "first fee" is — the first YEAR on annual, only the first MONTH on monthly.
+    var l4 = CONT
+      ? period === "annual"
+        ? tr("Az első díjra szól, ami évesnél az első év. Utána {price} / év (továbbra is {n} hónap ingyen).")
+            .replace("{price}", fmt(recurring))
+            .replace("{n}", String(PRICING.annualFreeMonths))
+        : tr("Havi fizetésnél csak az első hónapra szól. Utána {price} / hó.").replace("{price}", fmt(recurring))
+      : tr("Egyszeri kedvezmény — utána {price} {per} a díj.")
+          .replace("{price}", fmt(recurring))
+          .replace("{per}", perLabel.trim());
     return (
       '<span class="cit-cfg-off-l1">' + tr("Most fizetendő") +
       ' <s class="cit-cfg-off-list">' + fmt(recurring) + "</s></span>" +
@@ -3185,9 +3441,7 @@
       // "/ hó" label reads as the standing price. Name what comes after it.
       '<span class="cit-cfg-off-l3' + (OFFER.kind === "escalation" ? " cit-cfg-off-l3--hot" : "") + '">' + l3 + "</span>" +
       // perLabel is " / hó" | " / év" — join with a space so it does not read "Ft/ hó"
-      '<span class="cit-cfg-off-l4">' + tr("Egyszeri kedvezmény — utána {price} {per} a díj.")
-        .replace("{price}", fmt(recurring))
-        .replace("{per}", perLabel.trim()) + "</span>"
+      '<span class="cit-cfg-off-l4">' + esc(l4) + "</span>"
     );
   }
   /**
@@ -3236,7 +3490,16 @@
         if (d) d.classList.add("cit-cfg-delta--out");
       }, 2200);
     }
-    if (miniOffer) {
+    if (miniOffer && CONT && OFFER) {
+      // proba-C (contract 1-vasarlas A): the deadline rides in the price line — no ribbon.
+      miniOffer.textContent =
+        (period === "annual"
+          ? tr("{name} −{p}% az első évre · a próba végéig, {d}-ig")
+          : tr("{name} −{p}% — csak az első hónapra · a próba végéig, {d}-ig"))
+          .replace("{name}", offerName())
+          .replace("{p}", String(OFFER.percent))
+          .replace("{d}", offerDayText());
+    } else if (miniOffer) {
       miniOffer.textContent = OFFER
         ? tr("{name} (−{p}%) −{amount} az első díjból")
             .replace("{name}", offerName())
@@ -3385,6 +3648,18 @@
     if (anchor) {
       date = huDay(anchor);
       sentence = tr("A következő terhelés meglévő előfizetése fordulónapján, {date}: {amount} {per}, automatikusan.");
+    } else if (CONT && !CONT.lapsed) {
+      // ADR-0354 ⓐ (subscription.ts): paid during the trial, the paid period starts the day
+      // AFTER the trial's last day — the free days left are kept.
+      date = huDay(isoAddMonths(CONT.paidStartIso, months));
+      sentence =
+        (CONT.freeDaysLeft > 0
+          ? tr("A fizetett időszak a próba vége után indul ({start}) — a hátralévő {n} ingyen nap megmarad.")
+          : tr("A fizetett időszak a próba vége után indul ({start})."))
+          .replace("{start}", huDay(CONT.paidStartIso))
+          .replace("{n}", String(CONT.freeDaysLeft)) +
+        " " +
+        tr("A következő terhelés {date}: {amount} {per}, automatikusan.");
     } else {
       var d = new Date();
       d.setMonth(d.getMonth() + months);
@@ -3435,6 +3710,16 @@
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
     return m ? m[1] + ". " + m[2] + ". " + m[3] + "." : iso;
   }
+  /** `2026-10-24` + 1 → `2026-11-24` (day clamped to the month's end), a pure calendar step. */
+  function isoAddMonths(iso, k) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return iso;
+    var y = +m[1], mo = +m[2] - 1 + k, d = +m[3];
+    y += Math.floor(mo / 12);
+    mo = ((mo % 12) + 12) % 12;
+    var last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+    return y + "-" + pad2(mo + 1) + "-" + pad2(Math.min(d, last));
+  }
   function pad2(n) {
     return (n < 10 ? "0" : "") + n;
   }
@@ -3468,7 +3753,9 @@
         ? offerCardHtml(a, tr("/ év"), permoA, domA)
         : '<b>' + fmt(a + domA) + "</b> " + tr("/ év") + " " + permoA;
       // Contract period-badge ⑥: the saving named in forints once the deal is chosen.
-      if (PRICING.annualFreeMonths > 0) {
+      if (CONT && OFFER) {
+        sumEl.innerHTML += trialSaveHtml();
+      } else if (PRICING.annualFreeMonths > 0) {
         sumEl.innerHTML +=
           '<span class="cit-cfg-save">' +
           tr("{amount} megtakarítás a havi fizetéshez képest").replace("{amount}", fmt(annualSaving())) +
@@ -3481,6 +3768,12 @@
       sumEl.innerHTML = OFFER
         ? offerCardHtml(m0, tr("/ hó"), permoM, domMonthly)
         : '<b>' + fmt(m0 + domMonthly) + "</b> " + tr("/ hó") + " " + permoM;
+      if (CONT) sumEl.innerHTML += trialSaveHtml();
+    }
+    // proba-C: after the trial the price is the list price — said once, where the price is.
+    if (CONT && CONT.lapsed && CONT.hadOffer && !OFFER) {
+      sumEl.innerHTML +=
+        '<span class="cit-cfg-off-l4">' + esc(tr("Listaár — a próba-kedvezmény a próba végével lejárt.")) + "</span>";
     }
     if (diff) {
       sumEl.innerHTML += deltaHtml(diff);
@@ -3515,6 +3808,7 @@
     // button advertising a stale amount.
     syncStrapAmount();
     syncMini(diff);
+    syncTrialBoxes();
     syncNextCharge();
     // …and so does the item box: contract ⑦ — switching the cycle must not leave
     // a single number on screen that belongs to the other one.
@@ -3653,15 +3947,17 @@
     return html;
   }
 
-  /** The foot line: the trial is chosen INSTEAD of the order discount (README 11). */
+  /**
+   * The foot line. proba-C (ADR-0354, contract proba-c/2 (c) A): the trial does NOT cost the
+   * discount — the very same offer holds to the trial's end (pinTrialOffer), so the line says
+   * that in ONE sentence instead of "a próbával nem adódik össze" (three discounts at once).
+   */
   function trialAltText() {
     var pct = OFFER && Number(OFFER.percent) > 0 ? Math.round(Number(OFFER.percent)) : 0;
     if (!pct) return tr("Inkább most rendelné meg?");
-    var s =
-      OFFER.kind === "outreach"
-        ? tr("Inkább most rendelné meg? A −{p}% bemutatkozó kedvezmény a megrendelésnél él, a próbával nem adódik össze.")
-        : tr("Inkább most rendelné meg? A −{p}% kedvezmény a megrendelésnél él, a próbával nem adódik össze.");
-    return s.replace("{p}", String(pct));
+    return tr("−{p}% az első díjból, ha a próba végéig megrendeli (a próba indításától {n} nap). Egy kedvezmény, utána a listaár érvényes.")
+      .replace("{p}", String(pct))
+      .replace("{n}", String(TRIAL_DAYS));
   }
 
   function buildTrialSheet() {
@@ -4431,6 +4727,12 @@
   function mountEscalationCard() {
     if (escMounted) return;
     if (!OFFER || OFFER.kind !== "escalation") return;
+    // proba-C (contract proba-c/2 (c) A): who came from the trial mail came to TRY — no
+    // pop-up decision card over that; the form's one line names the same offer.
+    if (FROM_TRIAL_MAIL) return;
+    // …nor on the trialist's own checkout: there the pinned offer IS the trial discount
+    // (proba-C 1-vasarlas A — its deadline rides in the price line, no card, no ribbon).
+    if (CONT) return;
     // ADR-0112: an opted-out visitor sees the price the server will charge, but
     // we do not push — no decision card over the page they came back to by choice.
     if (PRICING.offerQuiet) return;
@@ -5047,6 +5349,12 @@
     mountEscalationCard();
     mountEditStrip();
     mounted = true;
+    // proba-C: the trial mail's "Kipróbálom … ingyen" button lands with the form open.
+    if (OPEN_TRIAL_ON_LOAD && TRIAL) {
+      setTimeout(function () {
+        openTrial("mail");
+      }, 0);
+    }
     // Barion Pixel (Full): ez a lap TERMÉK-lap — az ajánlat a saját csomagjával
     // itt áll a vevő előtt. A `contentView` a `cit-consent.js`-ből lap-szinten is
     // elmegy (contentType: "Page"); ez a TERMÉKET nevezi meg, a Barion kötelező

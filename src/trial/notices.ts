@@ -7,9 +7,14 @@
 //              /folytatas link, ≤ 2 segments (buildTrialNoticeSmsText). Logged in the
 //              tenant's mailbox like the letter; a 'blocked' send throws, so the ledger
 //              row says failed — never "sent" for an SMS that never left.
+//
+// ADR-0354 "C" (owner-approved 2026-10-10, assets/design-refs/console/proba-c/): every message
+// promises what trialDiscount (src/trial/offer.ts) says — the C "Próba-kedvezmény" or a pre-C
+// trial's coupon, in its own wording; the T−1 letter also names the site's current host.
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
+import { PLATFORM_DOMAIN } from "../domains.js";
 import { buildPurgeWarningEmail, buildTrialNoticeEmail, buildTrialNoticeSmsText } from "../email/trialEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
@@ -18,6 +23,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { sendSms as sendSmsDefault, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import type { TrialNoticeDeps, TrialNoticeTarget } from "./expiry.js";
 import type { PurgeWarningDeps, PurgeWarningTarget } from "./retention.js";
+import { trialDiscount, type TrialDiscount } from "./offer.js";
 
 /** Whole calendar days (Budapest) from `now` to the trial's last day. */
 export function trialDaysLeft(now: Date, trialUntil: Date): number {
@@ -48,27 +54,28 @@ export function liveTrialCoupon(
 interface NoticeContext {
   readonly siteName: string;
   readonly contactName: string | null;
-  readonly coupon: { percent: number; untilIso: string } | null;
+  readonly coupon: TrialDiscount | null;
+  /** The site's current public host (live custom domain, else <slug>.<platform>) — or null. */
+  readonly siteHost: string | null;
   readonly continueUrl: string;
   readonly daysLeft: number;
   readonly trialUntilIso: string;
 }
 
-/** What both channels say: the site, the live coupon and the /folytatas link. */
+/** What both channels say: the site, the discount (trialDiscount) and the /folytatas link. */
 async function noticeContext(t: Pick<TrialNoticeTarget, "trialId" | "trialUntil">, now: Date): Promise<NoticeContext> {
   const row = await db
     .selectFrom("free_trial")
     .innerJoin("tenant", "tenant.id", "free_trial.tenant_id")
     .leftJoin("prospect", "prospect.id", "free_trial.prospect_id")
-    .leftJoin("offer", "offer.id", "free_trial.coupon_offer_id")
+    .leftJoin("site", "site.tenant_id", "free_trial.tenant_id")
     .select([
       "free_trial.contact_name as contactName",
       "tenant.display_name as siteName",
       "prospect.token as token",
-      "offer.percent as percent",
-      "offer.expires_at as couponUntil",
-      "offer.used_count as usedCount",
-      "offer.max_uses as maxUses",
+      "site.slug as slug",
+      "site.custom_domain as customDomain",
+      "site.custom_domain_status as customDomainStatus",
     ])
     .where("free_trial.id", "=", t.trialId)
     .executeTakeFirst();
@@ -82,7 +89,14 @@ async function noticeContext(t: Pick<TrialNoticeTarget, "trialId" | "trialUntil"
   return {
     siteName: row.siteName,
     contactName: row.contactName,
-    coupon: liveTrialCoupon(row, now),
+    coupon: await trialDiscount(t.trialId, now),
+    // ADR-0071: a custom domain serves the site only once it is 'live'.
+    siteHost:
+      row.customDomain && row.customDomainStatus === "live"
+        ? row.customDomain
+        : row.slug
+          ? `${row.slug}.${PLATFORM_DOMAIN}`
+          : null,
     continueUrl: `${base}/p/${row.token}/folytatas`,
     daysLeft: trialDaysLeft(now, t.trialUntil),
     trialUntilIso: budapestIsoDay(t.trialUntil),
@@ -105,6 +119,8 @@ export async function sendTrialNoticeEmail(
     trialUntilIso: c.trialUntilIso,
     coupon: c.coupon,
     continueUrl: c.continueUrl,
+    // Only the T−1 letter names the address (proba-c/4-nevvaltas.html): not T−3, not the SMS.
+    siteHost: t.step === "t1" ? c.siteHost : null,
     lang,
   });
   await sender.send(msg);
@@ -165,7 +181,8 @@ export function trialNoticeDeps(now: Date, sender?: EmailSender, sms?: TrialSmsS
 /**
  * ADR-0345 — build and send the purge warning (approved design "A", owner 2026-10-09:
  * assets/design-refs/console/proba-torles-level/), then log it into the tenant's mailbox.
- * Same site name, live coupon and /folytatas link as the T−3/T−1 letters (noticeContext).
+ * Same site name, discount and /folytatas link as the T−3/T−1 letters (noticeContext); the
+ * letter itself drops a C Próba-kedvezmény (it died with the trial, ADR-0354).
  */
 export async function sendPurgeWarningEmail(
   t: PurgeWarningTarget,

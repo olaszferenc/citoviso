@@ -16,8 +16,15 @@
 // letter is on its list).
 //
 // The builder is PURE: the sender's identity, the legal-entity line and every number (trial
-// days, retention days, coupon) are inputs — read by the caller from the one source each
-// (senderParts/advertiserIdentity, getFreeTrialConfig, TRIAL_RETENTION_DAYS, getCouponConfig).
+// days, retention days, the offer percent) are inputs — read by the caller from the one source
+// each (senderParts/advertiserIdentity, getFreeTrialConfig, TRIAL_RETENTION_DAYS,
+// trialCampaignOfferPercent — the rule pinTrialOffer applies at trial start).
+//
+// ADR-0354 "C" (owner-approved 2026-10-10, assets/design-refs/console/proba-c/3-levelek-sms.html):
+// the lead's earlier offer STAYS during the trial (to its end, on the first fee — never "instead
+// of" the trial); the opening is one sentence (Elek #22); TWO buttons (Elek #10): the primary
+// opens the plan with the trial form open (`forras=proba&proba=nyit`), the secondary the plan
+// itself (`forras=proba`).
 
 import path from "node:path";
 import { T } from "../i18n/mail.js";
@@ -61,8 +68,9 @@ export interface TrialCampaignLetterInput {
   readonly host: string;
   /** TRIAL_RETENTION_DAYS (ADR-0345). */
   readonly retentionDays: number;
-  /** getCouponConfig() — null (or 0%) = the coupon sentence is left out. */
-  readonly coupon: { readonly percent: number; readonly days: number } | null;
+  /** The lead's best live initial offer today (trialCampaignOfferPercent) — null (or 0%) =
+   *  the offer sentence is left out. */
+  readonly coupon: { readonly percent: number } | null;
   /** senderParts() — the cold letter's signature. */
   readonly sender: { readonly sigName: string; readonly sigCo: string; readonly sigMail: string };
   /** advertiserIdentity(lang) — §C.2 registry identification. */
@@ -82,6 +90,9 @@ export interface TrialCampaignParts {
   readonly greet: string;
   readonly p1: string;
   readonly p2: string;
+  /** The primary button: try it (the plan with the trial form open). */
+  readonly ctaTry: string;
+  /** The secondary button: the plan itself. */
   readonly cta: string;
   readonly heroAlt: string;
   readonly whyQ: string;
@@ -101,6 +112,28 @@ export interface TrialCampaignParts {
   readonly unsubTxt: string;
   readonly legal: string;
   readonly identity: string;
+}
+
+/** Add query parameters to a link, keeping whatever it already carries (tracking, etc.). */
+export function withQuery(url: string, params: Readonly<Record<string, string>>): string {
+  const hashAt = url.indexOf("#");
+  const base = hashAt >= 0 ? url.slice(0, hashAt) : url;
+  const hash = hashAt >= 0 ? url.slice(hashAt) : "";
+  const add = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+  if (!add) return url;
+  const sep = !base.includes("?") ? "?" : /[?&]$/.test(base) ? "" : "&";
+  return `${base}${sep}${add}${hash}`;
+}
+
+/** The two button links (the main session's plan page reads them): the primary opens the
+ *  trial form (`proba=nyit`), both say the visit came from this letter (`forras=proba`). */
+export function trialCampaignLinks(planLink: string): { readonly tryLink: string; readonly planLink: string } {
+  return {
+    tryLink: withQuery(planLink, { forras: "proba", proba: "nyit" }),
+    planLink: withQuery(planLink, { forras: "proba" }),
+  };
 }
 
 function upperFirst(s: string): string {
@@ -123,20 +156,17 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
     i.coupon && i.coupon.percent > 0
       ? T(
           lang,
-          "Ha folytatja, az első díjból {percent}% kedvezményt kap (a próba végétől {days} napig érvényes). A próba a korábbi levelünkben ajánlott kedvezmény helyett választható.",
-          { percent: String(i.coupon.percent), days: String(i.coupon.days) },
+          "A korábbi levelünkben ajánlott {p}% kedvezmény a próba alatt is megmarad: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.",
+          { p: String(i.coupon.percent) },
         )
       : null;
   return {
     subject: T(lang, "{name}: {days} napig ingyen, élesben", { name, days }),
     headerTag: T(lang, "Ingyenes próba"),
     greet: T(lang, "Tisztelt {name}!", { name }),
-    p1: T(lang, "{when} küldtünk Önnek egy honlap-tervet. Azóta egy dolog változott.", { when: upperFirst(when) }),
-    p2: T(
-      lang,
-      "Most annyi változott, hogy nem kell rögtön döntenie: {days} napig ingyen, élesben kipróbálhatja. Kártya és előfizetés nélkül.",
-      { days },
-    ),
+    p1: T(lang, "{when} küldtünk Önnek egy honlap-tervet.", { when: upperFirst(when) }),
+    p2: T(lang, "Most nem kell rögtön döntenie: {days} napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.", { days }),
+    ctaTry: T(lang, "Kipróbálom {days} napig ingyen", { days }),
     cta: T(lang, "Megnézem a tervemet"),
     heroAlt: T(lang, "A honlap-terv nyitóképe"),
     whyQ: T(lang, "Ha nem érdekli: mi tartja vissza?"),
@@ -178,6 +208,7 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
 
 /** The plain-text letter, COMPOSED from the parts — what the §C gate judges (§I). */
 export function composeTrialCampaignText(t: TrialCampaignParts, l: TrialCampaignLetterInput["links"]): string {
+  const b = trialCampaignLinks(l.cta);
   return [
     t.greet,
     "",
@@ -185,7 +216,8 @@ export function composeTrialCampaignText(t: TrialCampaignParts, l: TrialCampaign
     "",
     t.p2,
     "",
-    `${t.cta}: ${l.cta}`,
+    `${t.ctaTry}: ${b.tryLink}`,
+    `${t.cta}: ${b.planLink}`,
     "",
     t.whyQ,
     t.whySub,
@@ -257,6 +289,7 @@ function para(html: string, extra = ""): string {
 
 /** The letter's inner HTML (the fluid table inside the MSO ghost table). */
 function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampaignLetterInput["links"], brand: string): string {
+  const b = trialCampaignLinks(l.cta);
   const header =
     `<tr><td style="padding:16px ${PAD}px 12px;border-bottom:2px solid ${CYAN}">` +
     tbl(
@@ -277,19 +310,27 @@ function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampa
 
   const hero = heroSrc
     ? `<tr><td style="padding:0 ${PAD}px">` +
-      `<a href="${esc(l.cta)}" style="text-decoration:none">` +
+      `<a href="${esc(b.planLink)}" style="text-decoration:none">` +
       `<img src="${heroSrc}" alt="${esc(t.heroAlt)}" width="${W - 2 * PAD}" ` +
       `style="display:block;width:100%;max-width:${W - 2 * PAD}px;height:auto;border:1px solid ${LINE}" border="0"></a>` +
       `</td></tr>`
     : "";
 
-  // bgcolor ON THE TD — Outlook can drop the CSS background of the link.
+  // bgcolor ON THE TD — Outlook can drop the CSS background of the link. The pair is stacked
+  // (primary, then the outlined secondary — the house ghost button, bookingLayout.ts): two
+  // tables cannot wrap side by side in Outlook, and stacked they read the same on a phone.
   const cta =
     `<tr><td style="padding:14px ${PAD}px 6px">` +
     tbl(
       `cellpadding="0"`,
       `<tr><td bgcolor="${NAVY}" style="background:${NAVY};border-radius:8px">` +
-        `<a href="${esc(l.cta)}" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(t.cta)}</a>` +
+        `<a href="${esc(b.tryLink)}" data-cta="try" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(t.ctaTry)}</a>` +
+        `</td></tr>`,
+    ) +
+    tbl(
+      `cellpadding="0" style="margin:10px 0 0"`,
+      `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE_STRONG};border-radius:8px">` +
+        `<a href="${esc(b.planLink)}" data-cta="plan" style="display:block;padding:12px 24px;font-family:${FONT};font-size:15px;font-weight:600;color:${NAVY};text-decoration:none">${esc(t.cta)}</a>` +
         `</td></tr>`,
     ) +
     `</td></tr>`;
@@ -374,7 +415,7 @@ export function buildTrialCampaignEmail(
   // check keeps a later hand-edit from breaking it silently.
   const t = letter.parts;
   const shown = [
-    t.greet, t.p1, t.p2, t.cta, t.whyQ, t.whySub, ...t.whyLabels.map((w) => w.label), t.getsTitle,
+    t.greet, t.p1, t.p2, t.ctaTry, t.cta, t.whyQ, t.whySub, ...t.whyLabels.map((w) => w.label), t.getsTitle,
     ...t.gets, t.end, ...(t.coupon ? [t.coupon] : []), t.oneShot, t.unsubTxt, t.legal, t.identity,
   ];
   for (const s of shown) {
@@ -444,25 +485,44 @@ export function buildTrialCampaignSmsText(input: {
   readonly sentIso: string;
   readonly days: number;
   readonly link: string;
+  /** The lead's live offer percent (trialCampaignOfferPercent) — null/0 = the text without it. */
+  readonly percent?: number | null;
 }): { readonly text: string; readonly name: string } {
   const { lang } = input;
   const date = formatDayShortOn(input.sentIso, lang);
-  const build = (name: string): string =>
-    toGsm7(
-      T(
-        lang,
-        "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya, nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso",
-        // The article follows the date's first sound ("az okt. 4-én", "a szept. 24-én") —
-        // a fixed "a" read "a okt. 4-en" (Elek, 2026-10-09).
-        { name, art: huArticleLower(date), date, days: String(input.days), link: input.link },
-      ),
+  const percent = input.percent && input.percent > 0 ? input.percent : null;
+  // The article follows the date's first sound ("az okt. 4-én", "a szept. 24-én") —
+  // a fixed "a" read "a okt. 4-en" (Elek, 2026-10-09).
+  const build = (name: string, withOffer = percent !== null): string => {
+    const v = { name, art: huArticleLower(date), date, days: String(input.days), link: input.link };
+    return toGsm7(
+      withOffer && percent
+        ? T(
+            lang,
+            "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, a {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso",
+            { ...v, p: String(percent) },
+          )
+        : T(
+            lang,
+            "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya, nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso",
+            v,
+          ),
     );
+  };
   const fits = (t: string): boolean => smsEncoding(t).segments <= TRIAL_CAMPAIGN_SMS_MAX_SEGMENTS;
-  let name = input.leadName;
-  let text = build(name);
-  for (let n = [...input.leadName].length - 1; !fits(text) && n > 8; n--) {
-    name = `${[...input.leadName].slice(0, n).join("").trimEnd()}...`;
-    text = build(name);
-  }
-  return { text, name: toGsm7(name) };
+  const shorten = (withOffer: boolean): { text: string; name: string } => {
+    let name = input.leadName;
+    let text = build(name, withOffer);
+    for (let n = [...input.leadName].length - 1; !fits(text) && n > 8; n--) {
+      name = `${[...input.leadName].slice(0, n).join("").trimEnd()}...`;
+      text = build(name, withOffer);
+    }
+    return { text, name };
+  };
+  // The offer sentence is ~20 characters longer: when even the shortest name leaves no room
+  // for it next to a long link, the approved text WITHOUT it goes (the offer still holds — it
+  // is pinned at the trial's start); the link is never cut.
+  let r = shorten(percent !== null);
+  if (!fits(r.text) && percent !== null) r = shorten(false);
+  return { text: r.text, name: toGsm7(r.name) };
 }

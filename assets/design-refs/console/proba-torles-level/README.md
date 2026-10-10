@@ -11,6 +11,10 @@ dátumok + kupon a fizetéshez; kupon nélkül az „A kupon nélkül” ág). K
 
 **Hatókör:** `src/email/trialEmail.ts` · `src/trial/notices.ts` · `src/trial/retention.ts` · `src/email/platformLayout.ts`
 
+> **Kiegészítve:** `../proba-c/` (ADR-0354 „C” + ADR-0356, jóváhagyva 2026-10-10). A C-próba „Próba-kedvezmény”-e a próba
+> végével lejár, a törlés-levélben tehát NINCS kedvezmény-mondat és „Kedvezmény” sor (lásd 4b). A 4. pont csak a C ELŐTT
+> indult, élő kuponos próbákra áll.
+
 ## Mit KÖT ez a terv (nem stílus-javaslat)
 
 1. **A keret a platform-levél** (`../platform-email/`), próba-lábléccel (`footerReason: "trial"`): **„oldalát a Citovisónál próbálja ki.”**
@@ -22,6 +26,7 @@ dátumok + kupon a fizetéshez; kupon nélkül az „A kupon nélkül” ág). K
    által ígért nap: késve kiment levélnél az `effectivePurgeDay` (a törlés csúszik, az értesítés nem rövidül).
 4. **Kupon (csak élő próba-kuponnal, `liveTrialCoupon`):** **„Ha folytatná, a próbához kapott kedvezménnyel még megteheti: {percent} az első díjból, {until}-ig.”**
    Kupon nélkül a bekezdés ÉS a „Kedvezmény” sor elmarad — kedvezményt nem ígérünk, ami nincs.
+4b. **C-próba / élő kupon nélkül (`../proba-c/3-levelek-sms.html`):** a kupon-bekezdés helyén **„Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.”**
 5. **Adat-panel:** „A próba vége” · „Törlés napja” · „Kedvezmény” („30% az első díjból, 2027. jan. 20-ig”).
 6. **Egyetlen gomb:** **„Folytatom”** → `/p/<token>/folytatas` (ADR-0344 ④). Link nélkül a levél nem megy ki (a küldő hangosan bukik).
 7. **Zárás:** **„Ha nem folytatja, nincs teendője — díjat nem számítunk fel.”**

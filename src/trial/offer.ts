@@ -124,3 +124,52 @@ export async function offerIsLive(offerId: string, now = new Date()): Promise<bo
   if (Number(o.used_count) >= Number(o.max_uses)) return false;
   return !o.expires_at || new Date(o.expires_at as unknown as string) > now;
 }
+
+/**
+ * The discount a trial's messages and screens may PROMISE — ONE answer for the letters,
+ * the SMS, the admin strip and the continuation page (ADR-0354 "C": "Próba-kedvezmény").
+ *
+ *   · kind "trial"  — the C offer (free_trial.offer_id), live and unused: valid to the END
+ *                     of the trial's last day; on the FIRST fee (annual = first year,
+ *                     monthly = first month).
+ *   · kind "coupon" — a pre-C trial's coupon (coupon_offer_id, ADR-0346): keeps its own
+ *                     wording and its own date (it ran 90 days past the trial).
+ *   · null          — nothing to promise (expired, used, 0 %): the list price, said by no one.
+ */
+export interface TrialDiscount {
+  readonly kind: "trial" | "coupon";
+  readonly percent: number;
+  /** The last day it can be used (Budapest calendar day, ISO). */
+  readonly untilIso: string;
+}
+
+export async function trialDiscount(trialId: string, now = new Date()): Promise<TrialDiscount | null> {
+  const r = await db
+    .selectFrom("free_trial")
+    .leftJoin("offer as o", "o.id", "free_trial.offer_id")
+    .leftJoin("offer as c", "c.id", "free_trial.coupon_offer_id")
+    .select([
+      "o.percent as oPercent",
+      "o.expires_at as oUntil",
+      "o.used_count as oUsed",
+      "o.max_uses as oMax",
+      "c.percent as cPercent",
+      "c.expires_at as cUntil",
+      "c.used_count as cUsed",
+      "c.max_uses as cMax",
+    ])
+    .where("free_trial.id", "=", trialId)
+    .executeTakeFirst();
+  if (!r) return null;
+  const live = (pct: number | null, until: unknown, used: unknown, max: unknown): Date | null => {
+    if (!pct || pct <= 0) return null;
+    if (Number(used ?? 0) >= Number(max ?? 1)) return null;
+    const u = until ? new Date(until as string) : null;
+    return u && u > now ? u : null;
+  };
+  const o = live(r.oPercent, r.oUntil, r.oUsed, r.oMax);
+  if (o) return { kind: "trial", percent: r.oPercent!, untilIso: budapestIsoDay(o) };
+  const c = live(r.cPercent, r.cUntil, r.cUsed, r.cMax);
+  if (c) return { kind: "coupon", percent: r.cPercent!, untilIso: budapestIsoDay(c) };
+  return null;
+}

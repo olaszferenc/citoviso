@@ -3018,6 +3018,21 @@ if [ -f scripts/free-trial-check.mts ] && \
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
   EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
+# proba-c-checkout-check (design-refs/console/proba-c, jóváhagyva 2026-10-10; ADR-0354 „C”, ADR-0356): a
+#     próbázó /folytatas oldala és a próba-levél terv-lapja VALÓDI böngészőben, 390 px és asztali
+#     szélességen végigkattintva: éves az alap; az ár-sor az EGY kedvezményt és határidőt mondja
+#     (szalag és döntés-segítő kártya nélkül); éves összeadott megtakarítás / havi „csak az első
+#     hónapra” + „Évesre váltok”; a 2. lépés kártyája és a „fizetett időszak a próba vége után”
+#     sor; névváltás: foglalt cím elutasítva, a választott a rendelésbe kerül; lejárt próba:
+#     listaár, „szünetel” sor; forras=proba → nincs kártya, proba=nyit → nyitott próba-űrlap,
+#     a kontroll (paraméter nélkül) a kártyát mutatja; 0 JS-hiba. Saját, eldobható sorok a közös
+#     dev-DB-n, `finally`-ben törölve; EMAIL_PROVIDER=mock kötelező. ~60 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/proba-c-checkout-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/trial/offer\.ts$|^scripts/proba-c-checkout-check\.mts$'; then
+  echo "[pre-commit] proba-c-checkout-check (a próba-folytatás és a próba-levél terv-lapja a terv szerint)…"
+  EMAIL_PROVIDER=mock npx tsx scripts/proba-c-checkout-check.mts >"$GATE_LOG" || gate_failed
+fi
 # slug-rename-check (ADR-0356, névváltás a próba végén): a /folytatas-on választott aldomain
 #     érvényesül a próba által már megépített site-on (activate → convertLead(preferredSlug) →
 #     élő render); a régi slug EGY alias-sor; a canonical/og:url az új hostot mondja; a régi host

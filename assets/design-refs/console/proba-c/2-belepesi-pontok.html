@@ -1,0 +1,193 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Próba „C” — belépési pontok (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:960px;margin:12px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .sub button{border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);padding:6px 11px;border-radius:var(--citui-radius-pill);font:600 12px/1 var(--citui-font-text);cursor:pointer}
+  .sub button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .note{max-width:960px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:10px auto 30px;container-type:inline-size;width:100%;max-width:960px;padding:0 12px;transition:max-width .25s}
+  .stage.m{max-width:390px;padding:0}
+  .pane{display:none} .pane.on{display:block}
+  .adm{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:18px;overflow:hidden}
+  .adm-top{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white)}
+  .adm-top .nm{font:700 1rem/1.2 var(--citui-font-display)}
+  .strip{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:11px 16px;background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line);font-size:.9rem}
+  .strip.warn{background:var(--citui-warn-soft)}
+  .strip .t{flex:1 1 240px} .strip .t b{color:var(--citui-navy-900)}
+  .strip .meter{flex:0 0 120px;height:6px;border-radius:9px;background:var(--citui-line);overflow:hidden}
+  .strip .meter i{display:block;height:100%;background:var(--citui-cyan-500)}
+  @container (max-width:520px){ .strip .meter{display:none} .strip .btn{width:100%;text-align:center} }
+  .tabs{display:flex;gap:2px;overflow-x:auto;padding:0 10px;background:var(--citui-white);border-bottom:1px solid var(--citui-line)}
+  .tabs button{border:0;background:transparent;padding:11px 12px;font:600 .84rem/1 var(--citui-font-text);color:var(--citui-muted);white-space:nowrap;cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.on{color:var(--citui-navy-900);border-color:var(--citui-cyan-500)}
+  .adm-body{padding:16px} @container (min-width:640px){ .adm-body{padding:22px 26px} }
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;box-shadow:var(--citui-shadow-sm);padding:18px 20px;margin-bottom:14px}
+  .card h3{margin:0 0 8px;font:700 1.05rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .muted{color:var(--citui-muted);font-size:.86rem}
+  .btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:10px 18px;font:700 .88rem/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink);text-decoration:none}
+  .btn.pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .keep{display:grid;grid-template-columns:1fr;gap:12px;align-items:center}
+  @container (min-width:640px){ .keep{grid-template-columns:1fr auto} }
+  .mods{list-style:none;margin:0;padding:0}
+  .mods li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--citui-line);font-size:.9rem}
+  .mods li:first-child{border-top:0}
+  .mods .tag{margin-left:auto;font:700 .7rem/1 var(--citui-font-text);padding:4px 8px;border-radius:var(--citui-radius-pill);background:var(--citui-ok-soft);color:var(--citui-ok)}
+  .old{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--citui-surface-2);font-size:.8rem;color:var(--citui-muted)}
+  .old s{color:var(--citui-bad)}
+  .frz{border-radius:16px;overflow:hidden;border:1px solid color-mix(in srgb,var(--citui-bad) 40%,transparent);background:var(--citui-white);margin-bottom:14px}
+  .frz-h{padding:13px 18px;background:var(--citui-bad);color:var(--citui-white)} .frz-h h2{margin:0;font:700 1.08rem/1.3 var(--citui-font-display)}
+  .frz-g{display:grid;grid-template-columns:1fr;gap:16px;padding:18px} @container (min-width:640px){ .frz-g{grid-template-columns:1fr 1fr} }
+  .lbl{font:700 .72rem/1.4 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+  .frz ul{margin:6px 0 0;padding-left:18px;font-size:.9rem}
+  /* plan page: escalation card + trial form */
+  .plan{position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#3b6b7a,#1d3b4f 60%,#0f2233);min-height:640px;color:var(--citui-white);padding:28px 22px}
+  .plan h1{font:800 2rem/1.05 var(--citui-font-display);text-transform:uppercase;max-width:560px;margin:60px 0 10px}
+  .esc{position:absolute;left:12px;right:12px;bottom:12px;background:var(--citui-white);color:var(--citui-ink);border-radius:18px;padding:18px 20px;box-shadow:0 24px 60px rgba(14,42,71,.3)}
+  @container (min-width:640px){ .esc{left:50%;right:auto;bottom:auto;top:90px;transform:translateX(-50%);width:440px} }
+  .esc .pc{font:800 2.2rem/1 var(--citui-font-display);color:var(--citui-navy-900)}
+  .esc .cd{display:inline-block;margin-top:6px;font:700 .8rem/1 var(--citui-font-text);padding:5px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-warn-soft);color:var(--citui-navy-900)}
+  .esc .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .tf{position:absolute;inset:auto 12px 12px 12px;background:var(--citui-white);color:var(--citui-ink);border-radius:18px;padding:18px 20px;box-shadow:0 24px 60px rgba(14,42,71,.3)}
+  @container (min-width:640px){ .tf{inset:auto;right:24px;top:70px;width:400px} }
+  .tf h3{margin:0 0 4px;font:700 1.15rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .tf input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--citui-line-strong);margin:6px 0;font:15px var(--citui-font-text)}
+  .tf .one{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--citui-ok-soft);font-size:.86rem}
+  .tf .one b{color:var(--citui-navy-900)}
+  .tf .wasnote{font-size:.78rem;color:var(--citui-muted);margin-top:8px}
+  .tf .wasnote s{color:var(--citui-bad)}
+  .pillx{position:absolute;right:16px;bottom:16px;padding:9px 14px;border-radius:var(--citui-radius-pill);background:var(--citui-cyan-500);color:var(--citui-navy-950);font:700 .84rem/1 var(--citui-font-text);border:0;cursor:pointer}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-white);padding:10px 16px;border-radius:12px;font-size:.88rem;display:none;z-index:99;max-width:92vw}
+  .toast.on{display:block}
+  .hide{display:none!important}
+</style></head><body>
+<div class="bar">
+  <b>Próba „C” — belépési pontok</b>
+  <button data-tab="admin" class="on">(a) Admin: sáv + Modulok fül</button>
+  <button data-tab="lapsed">(b) Admin: lejárt próba</button>
+  <button data-tab="plan">(c) Terv-lap: kártya + próba-űrlap</button>
+  <span class="sp"></span>
+  <button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button>
+</div>
+
+<section class="pane on" id="p-admin">
+  <div class="sub">Gomb felirata: <button data-lbl="Megtartom">„Megtartom”</button><button data-lbl="Folytatom" class="on">„Folytatom” (a 10-09-én jóváhagyott)</button>
+    &nbsp; Ajánlat: <button data-pc="50" class="on">−50%</button><button data-pc="25">−25%</button></div>
+  <p class="note"><b>Mit dönt el:</b> a sáv a próba alatt kimondja az EGY kedvezményt és az EGY határidőt; a gomb és a Modulok fül gombja
+  UGYANARRA a teljes vásárlási felületre visz (<b>1-vasarlas.html</b>) — nincs egyedi modul-vétel (IT B1-K2 zsákutca megszűnik). A Modulok fülön a próba alatt nincs árlista: az ár a gomb mögött jön.</p>
+  <div class="stage" data-stage>
+    <div class="adm">
+      <div class="adm-top"><span class="nm">Üdülő tábor</span></div>
+      <div class="strip" data-trial-strip><span class="t" id="stripT"></span><span class="meter"><i style="width:28%"></i></span><a class="btn pri" href="1-vasarlas.html" data-go id="stripBtn">Megtartom</a></div>
+      <div class="tabs"><button data-at="ov" class="on">Áttekintés</button><button data-at="mod">Modulok</button><button>Szövegek</button><button>Képek</button><button>Elérhetőség</button></div>
+      <div class="adm-body">
+        <div id="at-ov"><div class="card"><h3>Áttekintés</h3><p class="muted">A honlapja él: udulo-tabor.citoviso.com. (A többi kártya változatlan — itt csak a sáv a kérdés.)</p></div></div>
+        <div id="at-mod" class="hide">
+          <div class="card keep">
+            <div><h3>Modulok a próbában</h3><p class="muted" id="modP"></p></div>
+            <a class="btn pri" href="1-vasarlas.html" data-go id="modBtn">Megtartom — csomag és modulok</a>
+          </div>
+          <div class="card"><ul class="mods">
+            <li>Képek a szállásról<span class="tag">be</span></li><li>Szobák, apartmanok<span class="tag">be</span></li><li>Árak, szezonok<span class="tag">be</span></li>
+            <li>Online foglalás<span class="tag">be</span></li><li>Vendégek véleménye<span class="tag">be</span></li><li>Heti programajánló<span class="tag">be</span></li><li>Saját e-mail cím (pl. info@…)<span class="tag">be</span></li>
+          </ul>
+          <div class="old">Ma: <s>„A sorok melletti díj akkor érvényes, ha a próba után folytatja.”</s> + soronként Ft/hó és egyedi „Hozzáadom” → a C-ben kivezetve.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pane" id="p-lapsed">
+  <p class="note"><b>Mit dönt el:</b> a próba vége után NINCS kedvezmény (a határidő valódi). A piros blokkból a „A próbához kapott kedvezmény · 25%” doboz kikerül; minden más marad, ahogy 10-09-én jóváhagytad. Szándékosan nem írunk ki árat és nem emlegetjük, hogy a kedvezmény elveszett — a gomb mögött a listaár látszik.</p>
+  <div class="stage" data-stage>
+    <div class="adm">
+      <div class="adm-top"><span class="nm">Üdülő tábor</span></div>
+      <div class="adm-body">
+        <div class="frz" data-trial-lapsed>
+          <div class="frz-h"><h2>A honlapja szünetel — a próba okt. 23-án lejárt</h2></div>
+          <div class="frz-g">
+            <div><a class="btn pri" href="1-vasarlas.html" data-go data-trial-go>Folytatom — fizetés</a>
+              <p class="muted">Bankkártyával, a Barion biztonságos oldalán. A fizetés után a honlap magától, azonnal visszakapcsol.</p>
+              <div class="old">Kivezetve: <s>„A próbához kapott kedvezmény — 25% — az első díjból · jan. 21-ig használható”</s></div></div>
+            <div><div class="lbl">Mi maradt meg</div><ul><li>a szerkesztő felülete — most is ebben van</li><li>minden szöveg, kép és beállítás</li><li>a beérkezett üzenetek</li></ul>
+              <p class="muted">Nem terheltünk semmit, és kártyát sem kértünk. Ha nem folytatja, ezeket 2027. jan. 21-én véglegesen töröljük — előtte levélben szólunk.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pane" id="p-plan">
+  <div class="sub">Változat (Elek #8/#9):
+    <button data-pv="A" class="on">A — a próba-levélből jövőnek nincs felugró kártya; a % az űrlapon EGY sorban</button>
+    <button data-pv="B">B — a kártya marad, de egy ajánlatot mond: 72 óra, vagy a próba végéig</button></div>
+  <p class="note"><b>Mit dönt el:</b> eddig a próba-levélből érkezőt −50%-os, 72 órás visszaszámláló fogadta, és az űrlap alja azt írta: „a próbával nem adódik össze” — három kedvezmény egyszerre (25% a levélben, −50% a kártyán, „a korábbi”). A C-ben EGY kedvezmény van: ha elindítja a próbát, ugyanaz a % él a próba végéig.</p>
+  <div class="stage" data-stage>
+    <div class="plan">
+      <div style="font:800 1.4rem/1 var(--citui-font-display);letter-spacing:.06em">ÜDÜLŐ TÁBOR</div>
+      <h1>Faházas és kőépületes szállás a Balaton közelében</h1>
+      <div class="esc hide" id="esc">
+        <div class="lbl">Döntés-segítő ajánlat</div>
+        <div class="pc">−50%</div>
+        <p style="margin:6px 0 0">Ha most rendeli meg, az első díjból ennyit engedünk. <b>Ha előbb kipróbálja, ugyanez a −50% él a próba végéig</b> — a kettő ugyanaz az ajánlat, nem adódik össze.</p>
+        <span class="cd">még 71:58:12 — vagy a próba végéig</span>
+        <div class="row"><button class="btn pri" data-open-tf>Kipróbálom 14 napig ingyen</button><button class="btn" data-toast="Itt a megrendelés (konfigurátor) nyílna, −50%-kal.">Most megrendelem</button><button class="btn" data-close-esc>Később</button></div>
+      </div>
+      <form class="tf hide" id="tf" novalidate>
+        <h3>14 nap ingyen, élesben</h3>
+        <p class="muted" style="margin:0 0 6px">Kártya és előfizetés nélkül. A végén nem terhelünk.</p>
+        <input id="tf-mail" type="email" placeholder="E-mail cím" value="tabor@example.hu">
+        <div class="one" id="tfOne"></div>
+        <div class="wasnote">Ma: <s>„Inkább most rendelné meg? A −50% bemutatkozó kedvezmény a megrendelésnél él, a próbával nem adódik össze.”</s></div>
+        <p style="margin:12px 0 0"><button class="btn pri" type="submit">Elindítom a próbát</button></p>
+      </form>
+      <button class="pillx" type="button" data-open-tf>14 nap ingyen</button>
+    </div>
+  </div>
+</section>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+let lbl = "Folytatom", pc = 50, pv = "A";
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove("on"), 3200); }
+function render() {
+  $("#stripT").innerHTML = `<b>Ingyenes próba: még 10 nap</b> (okt. 23., p-ig). Ha a próba végéig megrendeli, −${pc}% az első díjból.`;
+  $("#stripBtn").textContent = lbl;
+  $("#modBtn").textContent = `${lbl} — csomag és modulok`;
+  $("#modP").textContent = `A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki — a próba végéig −${pc}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.`;
+  $("#esc").classList.toggle("hide", pv !== "B");
+  $(".pillx").classList.toggle("hide", pv === "B");
+  $("#tfOne").innerHTML = pv === "A"
+    ? `<b>−50% az első díjból, ha a próba végéig megrendeli</b> (a próba indításától 14 nap). Egy kedvezmény, utána a listaár érvényes.`
+    : `<b>A −50% a próba végéig él</b> — a fenti ajánlat nem vész el, ha előbb kipróbálja.`;
+}
+$$("[data-tab]").forEach((b) => b.addEventListener("click", () => { $$("[data-tab]").forEach((o) => o.classList.toggle("on", o === b)); $$(".pane").forEach((p) => p.classList.toggle("on", p.id === "p-" + b.dataset.tab)); }));
+$$("[data-at]").forEach((b) => b.addEventListener("click", () => { $$("[data-at]").forEach((o) => o.classList.toggle("on", o === b)); $("#at-ov").classList.toggle("hide", b.dataset.at !== "ov"); $("#at-mod").classList.toggle("hide", b.dataset.at !== "mod"); }));
+$$("[data-lbl]").forEach((b) => b.addEventListener("click", () => { lbl = b.dataset.lbl; $$("[data-lbl]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+$$("[data-pc]").forEach((b) => b.addEventListener("click", () => { pc = +b.dataset.pc; $$("[data-pc]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+$$("[data-pv]").forEach((b) => b.addEventListener("click", () => { pv = b.dataset.pv; $$("[data-pv]").forEach((o) => o.classList.toggle("on", o === b)); $("#tf").classList.add("hide"); render(); }));
+$$("[data-open-tf]").forEach((b) => b.addEventListener("click", () => { $("#esc").classList.add("hide"); $("#tf").classList.remove("hide"); $(".pillx").classList.add("hide"); }));
+$$("[data-close-esc]").forEach((b) => b.addEventListener("click", () => $("#esc").classList.add("hide")));
+$$("[data-toast]").forEach((b) => b.addEventListener("click", () => toast(b.dataset.toast)));
+$("#tf").addEventListener("submit", (e) => { e.preventDefault(); const ok = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#tf-mail").value.trim()); toast(ok ? "A próba elindulna — a −50% a próba végéig (okt. 23.) rögzül." : "Adjon meg egy érvényes e-mail címet."); });
+function setSize(s) { $$("[data-stage]").forEach((st) => st.classList.toggle("m", s === "m")); $$("[data-size]").forEach((o) => o.classList.toggle("on", o.dataset.size === s)); }
+$$("[data-size]").forEach((b) => b.addEventListener("click", () => setSize(b.dataset.size)));
+if (matchMedia("(max-width: 600px)").matches) setSize("m");
+render();
+</script>
+</body></html>

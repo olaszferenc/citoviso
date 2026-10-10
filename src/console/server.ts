@@ -12,6 +12,9 @@ import {
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
 import { liveTrialOffer } from "../trial/offer.js";
+import { trialDaysLeft } from "../trial/notices.js";
+import { addIsoDays } from "../text/zoneTime.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -3258,7 +3261,6 @@ async function handle(
   // (handleOrderRequest already lets a continuable trial through and prices it with the
   // trial offer, ADR-0354). Only for a continuable trial — anyone else goes back to /p/:token,
   // which knows what to show them. Nothing is measured: this visitor is a customer.
-  // ⛔ No framing text yet: the banner/wording is a §2b design (proba-C mock), not wired.
   const pContMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas$/.exec(pPath);
   if (method === "GET" && pContMatch) {
     const p = await getProspectByToken(pContMatch[1]);
@@ -3278,6 +3280,15 @@ async function handle(
     if (!pf || !trial) return redirect(res, `/p/${pContMatch[1]}`);
     // ADR-0354: the trial offer while the trial runs; after its end the list price.
     const coupon = await liveTrialOffer(trial.tenantId);
+    // proba-C (design-refs/console/proba-c): the page names the trial's one discount and
+    // deadline, and the paid period's real start (subscription.ts: the day after the trial).
+    const ft = await db
+      .selectFrom("free_trial")
+      .select(["trial_until", "offer_id"])
+      .where("id", "=", trial.trialId)
+      .executeTakeFirstOrThrow();
+    const trialEndIso = budapestIsoDay(new Date(ft.trial_until as unknown as string));
+    const contLang = p.lang ?? "hu";
     try {
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
@@ -3285,10 +3296,18 @@ async function handle(
         // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
         subLabel: await plannedSiteSlug(pf.leadId),
         renewalLeadId: pf.leadId,
-        continuation: true,
+        continuation: {
+          // Ended = the trial is over (the expiry tick may not have flipped the status yet).
+          lapsed: trial.status === "lapsed" || trialEndIso < budapestIsoDay(new Date()),
+          trialEndIso,
+          paidStartIso: addIsoDays(trialEndIso, 1),
+          freeDaysLeft: Math.max(0, trialDaysLeft(new Date(), new Date(ft.trial_until as unknown as string))),
+          hadOffer: !!ft.offer_id,
+        },
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null),
-        ...(coupon ? { offer: offerForPage(coupon, p.lang ?? "hu") } : {}),
+        // proba-C: ONE name for the trial's discount on every surface („Próba-kedvezmény”).
+        ...(coupon ? { offer: { ...offerForPage(coupon, contLang), label: T(contLang, "Próba-kedvezmény") } } : {}),
       });
       return send(res, 200, disableIntroAnimation(page));
     } catch {

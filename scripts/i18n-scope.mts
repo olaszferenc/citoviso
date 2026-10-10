@@ -169,6 +169,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // (a kulcs maga a magyar szöveg, §B.18) — a vendég-oldalon a string-kulcsú fordítás
   // (ADR-0063 multilang) fordítja, ugyanaz a minta, mint a fenti adat-regisztereknél.
   // A scope-ba a domain-átköltöztetés re-renderelése (rerenderTenantSnapshot) hozta be.
+  // proba-C: trialDiscount() brought it onto the mail path (notices → trialEmail). Its only
+  // Hungarian literals are offer.note values — the operator's audit line in the console,
+  // never a buyer-facing text (the mails print the percent and the date, nothing else).
+  "src/trial/offer.ts": "offer.note operátori jegyzet (konzol) — vevő-felirat nincs benne",
   "src/tenant/editor.ts":
     "SiteData forrás-stringek (Férőhely/fő) — string-kulcsú fordítás fordítja, mint az adat-regisztereket",
 };

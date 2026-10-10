@@ -249,8 +249,11 @@ export interface ConfiguratorManifest {
    * The trialist's own checkout (/p/<t>/folytatas, ADR-0344): the site is already theirs
    * and they came here to pay, so the browse header's "Ez az Ön leendő weboldala … Most
    * nem fizet semmit" is false for them (Elek, 2026-10-09). Absent = the prospect page.
+   * proba-C (design-refs/console/proba-c, approved 2026-10-10): the trial's dates, so the
+   * page states the ONE deadline, the paid period's real start (the day after the trial,
+   * subscription.ts) and that a lapsed trial pays the list price.
    */
-  readonly continuation?: true;
+  readonly continuation?: ContinuationInfo;
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -344,7 +347,21 @@ export interface ConfiguratorOpts {
    */
   readonly trial?: Omit<TrialEntry, "sub">;
   /** The trialist's continue-and-pay checkout (/p/<t>/folytatas) — see the manifest field. */
-  readonly continuation?: boolean;
+  readonly continuation?: ContinuationInfo;
+}
+
+/** The trialist's checkout facts (proba-C). Calendar days are Budapest ISO days. */
+export interface ContinuationInfo {
+  /** No live trial discount: the trial ended (or its offer is gone) → list price. */
+  readonly lapsed: boolean;
+  /** The trial's last day — the discount's deadline. */
+  readonly trialEndIso: string;
+  /** The first day of the paid period when bought during the trial (trialEnd + 1). */
+  readonly paidStartIso: string;
+  /** Free days still ahead (kept: the paid period starts after them). */
+  readonly freeDaysLeft: number;
+  /** The trial had a discount at all (a lapsed page may say it ended with the trial). */
+  readonly hadOffer: boolean;
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */
@@ -464,7 +481,7 @@ export async function buildManifest(
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
     ...(opts.trial ? { trial: { ...opts.trial, sub: subHost } } : {}),
-    ...(opts.continuation ? { continuation: true as const } : {}),
+    ...(opts.continuation ? { continuation: opts.continuation } : {}),
     cta: {
       booking: {
         title: "Foglalás",

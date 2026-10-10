@@ -1,0 +1,216 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Próba „C” — névváltás (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:960px;margin:12px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .sub button{border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);padding:6px 11px;border-radius:var(--citui-radius-pill);font:600 12px/1 var(--citui-font-text);cursor:pointer}
+  .sub button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .note{max-width:960px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:10px auto 30px;container-type:inline-size;width:100%;max-width:960px;padding:0 12px;transition:max-width .25s}
+  .stage.m{max-width:390px;padding:0}
+  .pane{display:none} .pane.on{display:block}
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;box-shadow:var(--citui-shadow-sm);padding:18px 20px;margin-bottom:14px}
+  .card h3{margin:0 0 8px;font:700 1.05rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .muted{color:var(--citui-muted);font-size:.86rem}
+  .lbl{font:700 .72rem/1.4 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+  .btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:10px 18px;font:700 .88rem/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink);text-decoration:none}
+  .btn.pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  /* configurator step 1 — address block */
+  .cfg{display:grid;grid-template-columns:minmax(0,1fr);gap:14px} .cfg>*{min-width:0}
+  @container (min-width:720px){ .cfg{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start} }
+  .addr-now{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;border-radius:12px;background:var(--citui-surface-2);font-size:.95rem}
+  .addr-now .h{font:700 1rem/1.3 var(--citui-font-display);color:var(--citui-navy-900);word-break:break-all}
+  .free{font:700 .72rem/1 var(--citui-font-text);padding:5px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-ok-soft);color:var(--citui-ok)}
+  .edit{margin-top:12px}
+  .inrow{display:flex;align-items:stretch;border:1px solid var(--citui-line-strong);border-radius:12px;overflow:hidden;background:var(--citui-white)}
+  .inrow:focus-within{border-color:var(--citui-cyan-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 25%,transparent)}
+  .inrow.bad{border-color:var(--citui-bad)}
+  .inrow input{flex:1;min-width:0;border:0;padding:12px;font:16px var(--citui-font-text);outline:0}
+  .inrow span{display:flex;align-items:center;padding:0 12px;background:var(--citui-surface-2);color:var(--citui-muted);font-size:.9rem;white-space:nowrap}
+  .msg{min-height:1.4em;margin-top:6px;font-size:.86rem;overflow-wrap:anywhere}
+  .msg.ok{color:var(--citui-ok)} .msg.err{color:var(--citui-bad)}
+  .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .prev{border:1px solid var(--citui-line);border-radius:14px;overflow:hidden;background:var(--citui-white)}
+  .prev .chrome{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line);font-size:.8rem}
+  .prev .chrome i{width:9px;height:9px;border-radius:50%;background:var(--citui-line-strong);display:inline-block}
+  .prev .url{flex:1;min-width:0;margin-left:6px;padding:5px 10px;border-radius:var(--citui-radius-pill);background:var(--citui-white);border:1px solid var(--citui-line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .prev .hero{height:150px;background:linear-gradient(160deg,#3b6b7a,#1d3b4f 60%,#0f2233);color:var(--citui-white);padding:18px;font:800 1.3rem/1.1 var(--citui-font-display);text-transform:uppercase;display:flex;align-items:flex-end}
+  .fate{overflow-wrap:anywhere;margin-top:12px;padding:12px 14px;border-radius:12px;font-size:.88rem;border:1px solid var(--citui-line)}
+  .fate.on-change{background:var(--citui-warn-soft)}
+  .fate b{color:var(--citui-navy-900)}
+  .fate ul{margin:6px 0 0;padding-left:18px}
+  .sum{margin-top:12px;font-size:.88rem;border-top:1px solid var(--citui-line);padding-top:10px}
+  .sum div{display:flex;justify-content:space-between;gap:10px;padding:3px 0} .sum div span:last-child{overflow-wrap:anywhere;text-align:right}
+  .sum .z{color:var(--citui-ok);font-weight:700}
+  /* lapsed block */
+  .frz{border-radius:16px;overflow:hidden;border:1px solid color-mix(in srgb,var(--citui-bad) 40%,transparent);background:var(--citui-white);margin-bottom:14px}
+  .frz-h{padding:13px 18px;background:var(--citui-bad);color:var(--citui-white)} .frz-h h2{margin:0;font:700 1.08rem/1.3 var(--citui-font-display)}
+  .frz-b{padding:18px}
+  .tip{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--citui-surface-2);font-size:.9rem}
+  /* mail */
+  .mail{max-width:620px;margin:0 auto;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:14px;overflow:hidden}
+  .mail .mh{padding:12px 16px;background:var(--citui-surface-2);font-size:.82rem;color:var(--citui-muted);border-bottom:1px solid var(--citui-line)}
+  .mail .mb{padding:18px 20px;font-size:.95rem}
+  .mail .new{background:var(--citui-ok-soft);border-left:3px solid var(--citui-ok);padding:8px 12px;border-radius:6px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-white);padding:10px 16px;border-radius:12px;font-size:.88rem;display:none;z-index:99;max-width:92vw}
+  .toast.on{display:block}
+  .hide{display:none!important}
+</style></head><body>
+<div class="bar">
+  <b>Próba „C” — névváltás</b>
+  <button data-tab="cfg" class="on">(a) Folytatás: honlap címe</button>
+  <button data-tab="lapsed">(b) Lejárt próba</button>
+  <button data-tab="mail">(c) T−1 levél</button>
+  <span class="sp"></span>
+  <button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button>
+</div>
+<div class="sub">
+  <span>A régi cím sorsa:</span>
+  <button data-old="A" class="on">A — örökre átirányít (javaslat)</button>
+  <button data-old="B">B — 90 napig átirányít, utána felszabadul</button>
+  <span style="margin-left:10px">Állapot:</span>
+  <button data-st="trial" class="on">próba alatt</button>
+  <button data-st="lapsed">próba lejárt</button>
+</div>
+<p class="note">Tulaj-döntés (2026-10-10): <b>„A próbaidőszak végén lehetőség van névváltoztatásra. Nekünk az nem kerül semmibe.”</b>
+Az input a valódi szabályt követi (<code>slugify</code> + <code>checkSubdomainAvailable</code>: ékezet le, kisbetű, minden más jel → kötőjel, max. 40 karakter, legalább 3,
+fenntartott név, foglalt név). Foglaltnak szimulálva: <code>napsugar</code>, <code>balaton-apartman</code>, <code>tabor</code>. Ma a mező már szerepel a folytatás-konfigurátorban, de a rendszer meglévő honlapnál figyelmen kívül hagyja.</p>
+
+<section class="stage" data-stage>
+  <!-- (a) continuation configurator, step 1 -->
+  <div class="pane on" id="p-cfg">
+    <div class="cfg">
+      <div class="card">
+        <div class="lbl">1. lépés · A honlap címe</div>
+        <h3 style="margin-top:4px">Ez lesz a honlapja címe</h3>
+        <div class="addr-now"><span class="h" id="curHost">udulo-tabor.citoviso.com</span><span class="free" id="freeTag">Ingyen megváltoztatható</span></div>
+        <p class="muted" id="whenP" style="margin:8px 0 0"></p>
+        <div class="edit hide" id="editBox">
+          <label for="slug" class="muted">Új cím</label>
+          <div class="inrow" id="inrow"><input id="slug" autocomplete="off" spellcheck="false" maxlength="80" placeholder="pl. zamardi-udulo"><span>.citoviso.com</span></div>
+          <div class="msg" id="msg"></div>
+          <div class="acts"><button class="btn pri" id="apply" type="button">Ezt választom</button><button class="btn" id="cancel" type="button">Marad a mostani</button></div>
+        </div>
+        <div class="acts" id="openRow"><button class="btn" id="open" type="button">Megváltoztatom a címet</button></div>
+        <div class="fate hide" id="fate"></div>
+        <div class="sum">
+          <div><span>Csomag: Alap + Foglalás, éves</span><span>…</span></div>
+          <div><span>Honlap címe</span><span id="sumHost">udulo-tabor.citoviso.com</span></div>
+          <div><span>Címváltás</span><span class="z">0 Ft</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="prev"><div class="chrome"><i></i><i></i><i></i><span class="url" id="prevUrl">https://udulo-tabor.citoviso.com</span></div><div class="hero">Üdülő-tábor<br>Zamárdi</div></div>
+        <p class="muted" style="margin:8px 2px 0">Előnézet: így jelenik meg a cím a böngészőben. A honlap tartalma nem változik.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- (b) lapsed trial block -->
+  <div class="pane" id="p-lapsed">
+    <div class="frz">
+      <div class="frz-h"><h2>A próbaidőszak véget ért — a honlap szünetel</h2></div>
+      <div class="frz-b">
+        <p style="margin:0">A honlapja megvan, minden beállítása megmarad. Ha folytatja, a vendégek újra látják.</p>
+        <div class="tip"><b>Tetszik a cím?</b> <span id="lapHost">udulo-tabor.citoviso.com</span> — folytatáskor ingyen megváltoztathatja.</div>
+        <p style="margin:14px 0 0"><button class="btn pri" type="button" data-goto-cfg>Folytatom</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- (c) T-1 mail -->
+  <div class="pane" id="p-mail">
+    <div class="mail">
+      <div class="mh">Tárgy: Holnap ér véget az ingyenes próba</div>
+      <div class="mb">
+        <p>Kedves Kiss Anna!</p>
+        <p>Holnap (okt. 23.) ér véget az Üdülő-tábor Zamárdi honlapjának ingyenes próbája. Ha a próba végéig megrendeli, −50% az első díjból.</p>
+        <p class="new"><b>Új mondat:</b> Tetszik a cím? Most <b>udulo-tabor.citoviso.com</b> — megrendeléskor ingyen megváltoztathatja.</p>
+        <p class="muted">A T−3 levélbe és az SMS-be NEM kerül (az SMS 2 szegmensben marad; egy ígéret egyszer hangozzon el).</p>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+// Mirrors src/domains.ts slugify + src/conversion/provision.ts checkSubdomainAvailable.
+// One deviation, proposed as a fix: trailing hyphen trimmed AFTER the 40-char cut (a DNS label cannot end in "-").
+const RESERVED = new Set(["www","admin","api","app","mail","smtp","imap","console","static","assets","cdn","help","support","status","blog","shop","test","dev"]);
+const TAKEN = new Set(["napsugar","balaton-apartman","tabor"]);
+const ORIG = "udulo-tabor";
+let cur = ORIG, old = "A", st = "trial";
+const slugify = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+function check(raw) {
+  const n = slugify(raw).slice(0, 40).replace(/-+$/, "");
+  if (!n) return { ok: false, n, r: "Adjon meg legalább egy betűt vagy számot." };
+  if (n.length < 3) return { ok: false, n, r: "Legalább 3 karakter kell." };
+  if (RESERVED.has(n)) return { ok: false, n, r: "Ez a név fenntartott." };
+  if (TAKEN.has(n)) return { ok: false, n, r: "Ez az aldomain már foglalt." };
+  return { ok: true, n };
+}
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove("on"), 3200); }
+function fateHtml(from, to) {
+  const keep = old === "A"
+    ? `A régi cím (<b>${from}.citoviso.com</b>) <b>örökre</b> az újra irányít, és senki más nem kaphatja meg. A már kiküldött levelek, a névjegyre vagy a Google-profilba beírt cím tovább működik.`
+    : `A régi cím (<b>${from}.citoviso.com</b>) <b>90 napig</b> az újra irányít, utána felszabadul, és más is választhatja. Ami addig a régi címre mutat (névjegy, Google-profil, kiküldött levél), azt ezalatt cserélje le.`;
+  return `<b>Új cím: ${to}.citoviso.com</b><ul><li>${keep}</li><li>A honlap tartalma, a foglalások és a belépés nem változik.</li><li>${st === "trial" ? "Az új cím a megrendeléskor él." : "Az új cím a folytatással, a fizetés után él."}</li></ul>`;
+}
+function render() {
+  const h = cur + ".citoviso.com";
+  $("#curHost").textContent = h; $("#sumHost").textContent = h; $("#prevUrl").textContent = "https://" + h;
+  $("#lapHost").textContent = ORIG + ".citoviso.com";
+  $("#whenP").textContent = st === "trial"
+    ? "A próba alatt megrendelve most egyszer, ingyen választhat másik címet. A cím ezután marad."
+    : "A próba véget ért: a folytatáskor most egyszer, ingyen választhat másik címet. A cím ezután marad.";
+  const changed = cur !== ORIG;
+  $("#fate").classList.toggle("hide", !changed);
+  $("#fate").classList.toggle("on-change", changed);
+  if (changed) $("#fate").innerHTML = fateHtml(ORIG, cur);
+  $("#open").textContent = changed ? "Másik címet választok" : "Megváltoztatom a címet";
+}
+function live() {
+  const raw = $("#slug").value, r = check(raw);
+  const m = $("#msg");
+  if (!raw.trim()) { m.className = "msg"; m.textContent = ""; $("#inrow").classList.remove("bad"); $("#prevUrl").textContent = "https://" + cur + ".citoviso.com"; return r; }
+  $("#inrow").classList.toggle("bad", !r.ok);
+  if (r.ok && r.n === cur) { m.className = "msg"; m.textContent = "Ez a mostani cím."; }
+  else if (r.ok) { m.className = "msg ok"; m.textContent = `Szabad: ${r.n}.citoviso.com`; }
+  else { m.className = "msg err"; m.textContent = r.r + (r.n ? ` (${r.n})` : ""); }
+  $("#prevUrl").textContent = "https://" + (r.ok ? r.n : cur) + ".citoviso.com";
+  return r;
+}
+$("#slug").addEventListener("input", live);
+$("#open").addEventListener("click", () => { $("#editBox").classList.remove("hide"); $("#openRow").classList.add("hide"); $("#slug").value = ""; live(); $("#slug").focus(); });
+$("#cancel").addEventListener("click", () => { $("#editBox").classList.add("hide"); $("#openRow").classList.remove("hide"); render(); });
+$("#apply").addEventListener("click", () => {
+  const r = live();
+  if (!$("#slug").value.trim()) { $("#msg").className = "msg err"; $("#msg").textContent = "Adjon meg legalább egy betűt vagy számot."; $("#inrow").classList.add("bad"); return; }
+  if (!r.ok) return;
+  cur = r.n; $("#editBox").classList.add("hide"); $("#openRow").classList.remove("hide"); render();
+  toast(`A cím: ${cur}.citoviso.com — 0 Ft.`);
+});
+$("#slug").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#apply").click(); });
+$$("[data-tab]").forEach((b) => b.addEventListener("click", () => { $$("[data-tab]").forEach((o) => o.classList.toggle("on", o === b)); $$(".pane").forEach((p) => p.classList.toggle("on", p.id === "p-" + b.dataset.tab)); }));
+$$("[data-goto-cfg]").forEach((b) => b.addEventListener("click", () => { st = "lapsed"; $$("[data-st]").forEach((o) => o.classList.toggle("on", o.dataset.st === st)); $("[data-tab=cfg]").click(); render(); }));
+$$("[data-old]").forEach((b) => b.addEventListener("click", () => { old = b.dataset.old; $$("[data-old]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+$$("[data-st]").forEach((b) => b.addEventListener("click", () => { st = b.dataset.st; $$("[data-st]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+function setSize(s) { $$("[data-stage]").forEach((x) => x.classList.toggle("m", s === "m")); $$("[data-size]").forEach((o) => o.classList.toggle("on", o.dataset.size === s)); }
+$$("[data-size]").forEach((b) => b.addEventListener("click", () => setSize(b.dataset.size)));
+if (matchMedia("(max-width: 600px)").matches) setSize("m");
+render();
+</script>
+</body></html>

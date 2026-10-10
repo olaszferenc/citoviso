@@ -136,7 +136,7 @@ if (getInvoiceProvider().name !== "mock") {
 const { overrideFreeTrialConfigInProcess } = await import("../src/trial/config.js");
 const { overrideCouponConfigInProcess } = await import("../src/payment/couponConfig.js");
 const { grantNewSubscriberCouponForOrder } = await import("../src/payment/offers.js");
-const { trialOfferDeadline } = await import("../src/trial/offer.js");
+const { trialOfferDeadline, trialDiscount } = await import("../src/trial/offer.js");
 const { endTrialGrantsAfterConversion } = await import("../src/trial/expiry.js");
 const { startTrial } = await import("../src/trial/start.js");
 const { lapseExpiredTrials, noticeSendDay, runTrialNotices } = await import("../src/trial/expiry.js");
@@ -231,6 +231,9 @@ try {
   // ② warnings — the trial is re-dated so the steps fall on known days
   console.log("② figyelmeztetés");
   await db.updateTable("free_trial").set({ started_at: bp("2026-10-05", "10:00"), trial_until: bp("2026-10-17", "10:00") }).where("id", "=", trial.id).execute();
+  // ADR-0354 "C": the pinned offer's ONE deadline follows the re-dated trial's last day.
+  const pinned = await db.selectFrom("free_trial").select("offer_id").where("id", "=", trial.id).executeTakeFirstOrThrow();
+  await db.updateTable("offer").set({ expires_at: trialOfferDeadline(bp("2026-10-17", "10:00")) } as never).where("id", "=", pinned.offer_id!).execute();
   const sent: string[] = [];
   const deps = {
     sendEmail: async (t: { step: string }) => void sent.push(`email:${t.step}`),
@@ -287,9 +290,12 @@ try {
   const enc = smsEncoding(s1);
   check("SMS: GSM-7 (ékezet nélkül), ≤2 szelet — a modem is 7 biten küldi", enc.gsm7 && enc.segments >= 1 && enc.segments <= 2, `${enc.length} kar., ${enc.segments} szelet, gsm7=${enc.gsm7}`);
   check("SMS: benne a /p/<t>/folytatas link", s1.includes(`citoviso.test/p/${a.token}/folytatas`), s1);
-  // ADR-0354: a new trial holds NO coupon — the coupon sentence must not appear (a promise that
-  // does not exist, §B.17); the C wording ("<p>% a próba végéig") is the §2b round 2.
-  check("SMS: „holnap lejar”, „Citoviso:” feladó-előtag, kupon-mondat NINCS (kupon nélküli próba)", s1.startsWith("Citoviso: holnap lejar ") && !s1.includes("kedvezmennyel") && s1.includes("Folytatas: "), s1);
+  // ADR-0354 "C" (proba-c/3-levelek-sms.html): a new trial's message names the Próba-kedvezmény
+  // with the T−1 deadline ("Holnapig") — never the pre-C coupon form („Folytatás … kedvezménnyel”).
+  const dC = await trialDiscount(trial.id, fri);
+  check("C: a próba kedvezménye kind=trial, a próba utolsó napjáig (2026-10-17)", dC?.kind === "trial" && dC.untilIso === "2026-10-17" && dC.percent > 0, JSON.stringify(dC));
+  check("SMS: „holnap lejar”, „Citoviso:” feladó-előtag, C-mondat „Holnapig -{p}% az elso dijbol:” (nem a régi kupon-forma)",
+    s1.startsWith("Citoviso: holnap lejar ") && s1.includes(`Holnapig -${dC?.percent}% az elso dijbol: citoviso.test/p/${a.token}/folytatas`) && !s1.includes("kedvezmennyel"), s1);
   check("SMS a próbázó számára ment", (smsCaps[0]?.to ?? "").replace(/\D/g, "") === FORM.phone.replace(/\D/g, ""), smsCaps[0]?.to);
   const smsLog = await db.selectFrom("tenant_message").select(["body_text", "channel"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "sms").execute();
   check("…az SMS a tenant postafiókjában is (tenant_message, sms)", smsLog.length === 1 && smsLog[0]!.body_text === s1);
@@ -301,7 +307,21 @@ try {
   const he = smsEncoding(hugeT3);
   check("T−3, 2 szeletbe nem férő név: rövidül, de ≤2 szelet és a link épen", he.gsm7 && he.segments <= 2 && hugeT3.endsWith("citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas") && hugeT3.includes("..."), `${he.length}/${he.segments}: ${hugeT3}`);
   const shortT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Napfény Vendégház", trialUntilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" }, continueUrl: "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", lang: "hu" });
-  check("T−3 a jóváhagyott szöveg ékezet nélkül", shortT3 === "Citoviso: a Napfeny Vendeghaz ingyenes probaja okt. 22-en lejar. Folytatas 25% kedvezmennyel: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", shortT3);
+  check("T−3 a jóváhagyott szöveg ékezet nélkül (régi, C előtti kupon)", shortT3 === "Citoviso: a Napfeny Vendeghaz ingyenes probaja okt. 22-en lejar. Folytatas 25% kedvezmennyel: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", shortT3);
+  // ADR-0354 "C" SMS (proba-c/3-levelek-sms.html): T−3, T−1 and the day itself, ≤ 2 segments.
+  const cDisc = { kind: "trial" as const, percent: 50, untilIso: "2026-10-23" };
+  const cUrl = "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas";
+  const cT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
+  check("C T−3 a jóváhagyott szöveg ékezet nélkül", cT3 === "Citoviso: az Udulo tabor ingyenes probaja okt. 23-an lejar. Ha addig megrendeli, -50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", cT3);
+  const cT1 = buildTrialNoticeSmsText({ daysLeft: 1, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
+  check("C T−1 a jóváhagyott szöveg ékezet nélkül", cT1 === "Citoviso: holnap lejar az Udulo tabor ingyenes probaja. Holnapig -50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", cT1);
+  const cT0 = buildTrialNoticeSmsText({ daysLeft: 0, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
+  check("C lejárat napja: „Ma ejfelig -50% az elso dijbol:”", cT0 === "Citoviso: ma lejar az Udulo tabor ingyenes probaja. Ma ejfelig -50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", cT0);
+  for (const [tag, dl] of [["T−3", 3], ["T−1", 1], ["ma", 0]] as const) {
+    const t = buildTrialNoticeSmsText({ daysLeft: dl, siteName: "Őrségi Erdőszéli Ökoturisztikai Vendégház és Apartmanok „Csendes” — Szalafő-Pityerszer, a Szala-patak völgyében, közvetlenül az Őrségi Nemzeti Park erdei tanösvényeinek kiindulópontja mellett, saját tóval", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
+    const e = smsEncoding(t);
+    check(`C ${tag}, hosszú név: GSM-7, ≤2 szelet, a név rövidül, a link és a -50% épen`, e.gsm7 && e.segments <= 2 && t.includes("...") && t.includes("-50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas"), `${e.length}/${e.segments}: ${t}`);
+  }
   // the wire: a GSM-7 text is injected WITHOUT -unicode, an accented one WITH it
   const senderSrc = readFileSync(path.resolve(process.cwd(), "src/sms/sender.ts"), "utf8");
   check("a modem-injektálás GSM-7 szövegnél nem kér -unicode-ot", /\.\.\.\(isGsm7\(text\) \? \[\] : \["-unicode"\]\)/.test(senderSrc));
@@ -310,7 +330,18 @@ try {
   const h1 = m1?.html ?? "";
   check("tárgy: „Holnap lejár az ingyenes próba – …”", !!m1 && m1.subject.startsWith("Holnap lejár az ingyenes próba – "), m1?.subject);
   check("a Folytatom gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Folytatom</a>"));
-  check("a levélben NINCS kupon-mondat (kupon nélküli próba, ADR-0354)", !h1.includes("az első díjból"));
+  // ADR-0354 "C" (proba-c/3-levelek-sms.html): the Próba-kedvezmény sentence + its two rows;
+  // the pre-C coupon sentence is not said.
+  check("C T−1 levél: „Ha a próba végéig, <b>2026. október 17-ig</b> megrendeli, {p}% kedvezményt kap — …”",
+    h1.includes(`Ha a próba végéig, <b>2026. október 17-ig</b> megrendeli, ${dC?.percent}% kedvezményt kap — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.`) &&
+      !h1.includes("a próbához kapott kedvezménnyel"), m1?.text);
+  check("C T−1 levél: „Próba-kedvezmény −{p}%” és „Érvényes 2026. okt. 17-ig, a próba végéig” sorok",
+    h1.includes("Próba-kedvezmény") && h1.includes(`−${dC?.percent}%`) && h1.includes("2026. okt. 17-ig, a próba végéig") && !h1.includes("A kedvezmény érvényes"));
+  // ADR-0356 (proba-c/4-nevvaltas.html "p-mail"): ONLY the T−1 letter names the current address.
+  const aSite = await db.selectFrom("site").select("slug").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
+  check("C T−1 levél: „Tetszik a cím? Most <host> — megrendeléskor ingyen megváltoztathatja.”",
+    (m1?.text ?? "").includes(`Tetszik a cím? Most ${aSite.slug}.citoviso.com — megrendeléskor ingyen megváltoztathatja.`) && h1.includes(`<b>${aSite.slug}.citoviso.com</b>`), m1?.text);
+  check("…az SMS-ben nincs cím-mondat", !s1.includes("Tetszik"));
   check("lábléc: „…próbálja ki.” — és nem „rendelte meg”", h1.includes("Citovisónál próbálja ki.") && !h1.includes("rendelte meg"));
   const logged = await db.selectFrom("tenant_message").select(["subject", "related_kind"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "email").execute();
   check("…a levél a tenant postafiókjában is (tenant_message)", logged.length === 1 && logged[0]!.subject === m1?.subject);
@@ -333,9 +364,16 @@ try {
   const buyerMail = buildCredentialsEmail(credBase).html ?? "";
   check("rendelő vevő belépő-levele: „…rendelte meg.” változatlan", buyerMail.includes("Citovisónál rendelte meg.") && !buyerMail.includes("próbálja ki"));
   const trialMail = buildCredentialsEmail({ ...credBase, trial: { untilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" } } }).html ?? "";
-  check("próbás belépő-levél: lábléc „próbálja ki”, dátum, kupon", trialMail.includes("Citovisónál próbálja ki.") && trialMail.includes("2026. okt. 22. (csütörtök)") && trialMail.includes("25% az első díjból, 2027. jan. 20-ig") && trialMail.includes("<b>2026. október 22-ig</b>"));
+  check("próbás belépő-levél (régi, C előtti kupon): lábléc „próbálja ki”, dátum, kupon", trialMail.includes("Citovisónál próbálja ki.") && trialMail.includes("2026. okt. 22. (csütörtök)") && trialMail.includes("25% az első díjból, 2027. jan. 20-ig") && trialMail.includes("<b>2026. október 22-ig</b>"));
+  // ADR-0354 "C" login letter (proba-c/3-levelek-sms.html): the Próba-kedvezmény row + one sentence.
+  const trialMailC = buildCredentialsEmail({ ...credBase, trial: { untilIso: "2026-10-23", coupon: { kind: "trial", percent: 50, untilIso: "2026-10-23" } } });
+  check("C belépő-levél: „Próba-kedvezmény: −50%, ha 2026. okt. 23-ig megrendeli (évesen az első évre)” + a bekezdés vége",
+    (trialMailC.html ?? "").includes("Próba-kedvezmény") && (trialMailC.html ?? "").includes("−50%, ha 2026. okt. 23-ig megrendeli (évesen az első évre)") &&
+      (trialMailC.html ?? "").includes("Ha a próba végéig megrendeli, a díjból 50% kedvezményt kap — évesen az első évre, havinál az első hónapra.") &&
+      trialMailC.text.includes("Ha a próba végéig megrendeli, a díjból 50% kedvezményt kap") && !(trialMailC.html ?? "").includes("Kedvezmény, ha folytatja"));
   const cred = await db.selectFrom("tenant_message").select("body_text").where("tenant_id", "=", tenantId).where("kind", "=", "credentials").executeTakeFirst();
   check("a valódi próba-indítás a próbás belépő-levelet küldte", !!cred && cred.body_text.includes("ingyenes próbája") && cred.body_text.includes("3 nappal és 1 nappal a vége előtt szólunk."));
+  check("…a C próba-kedvezménnyel (trialDiscount, nem a régi kupon)", !!cred && cred.body_text.includes("Ha a próba végéig megrendeli, a díjból") && cred.body_text.includes("% kedvezményt kap — évesen az első évre"), cred?.body_text);
   // C2c ②: the OTHER platform letters of a running trial (password reset, the owner's booking
   // letters) say „próbálja ki" too — the reason comes from the account, not the letter.
   check("footerReasonForTenant: aktív próba → trial, ismeretlen fiók → order", (await footerReasonForTenant(tenantId)) === "trial" && (await footerReasonForTenant(null)) === "order");
@@ -383,11 +421,21 @@ try {
   );
   check("próba-Áttekintés: van üres-modul sor, de nincs „kifizette” / „számlázott”",
     ovHtml.includes("a próbában be van kapcsolva, de üres") && !ovHtml.includes("kifizette") && !ovHtml.includes("számlázott"));
-  check("próba-Modulok: nincs „megvett”, a sor-díj a folytatásé",
-    !modHtml.includes("modult megvett") && modHtml.includes("Az ingyenes próbában minden modul be van kapcsolva"));
+  // ADR-0354 "C" (mock proba-c (a), approved 2026-10-10): no per-row price, no per-row buying —
+  // one card whose button opens the SAME /folytatas the strip does.
+  check("próba-Modulok: nincs „megvett”, nincs sor-díj / kosár, egy „Folytatom — csomag és modulok” → /folytatas",
+    !modHtml.includes("modult megvett") && modHtml.includes("A próbában minden modul be van kapcsolva") &&
+      !modHtml.includes("A sorok melletti díj") && !modHtml.includes("adm-modform") && !modHtml.includes("Kosárba teszem") &&
+      modHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom — csomag és modulok</a>`));
   const calmHtml = renderAdmin(tenantId, "szovegek", calm);
   check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
   check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));
+  // ADR-0354 "C" (mock proba-c (a)): the strip names the ONE discount and its ONE deadline;
+  // the pre-C coupon sentence („…kedvezményt kap…") is not said for a C trial.
+  check("C: a sáv „Ha a próba végéig megrendeli, −{p}% az első díjból.”",
+    calm?.discount?.kind === "trial" &&
+      calmHtml.includes(`Ha a próba végéig megrendeli, −${calm.discount.percent}% az első díjból.`) && !calmHtml.includes("kedvezményt kap"),
+    JSON.stringify(calm?.discount));
   // --self-test: the end date slid away → the warn assertion must go red
   if (SELF_TEST) await db.updateTable("free_trial").set({ trial_until: new Date(untilAt + 30 * 86_400_000) }).where("id", "=", trial.id).execute();
   const warn = await trialAdminState(tenantId, warnAt);
@@ -421,6 +469,16 @@ try {
   const lapsedState = await trialAdminState(tenantId);
   const lapsedHtml = renderAdmin(tenantId, "attekintes", lapsedState);
   check("admin: lejárt próba → szünetel-blokk (data-trial-lapsed), sáv nélkül", lapsedState?.status === "lapsed" && lapsedHtml.includes("data-trial-lapsed") && !lapsedHtml.includes("data-trial-strip"));
+  // ADR-0354 "C" (mock proba-c (b)): the Próba-kedvezmény ended with the trial — no discount box;
+  // ADR-0356 (mock 4-nevvaltas (b)): the address tip names the host the guest reaches today.
+  const lapsedGuestHtml = adminDashboard(
+    { tenantId, username: "trialexpiry@example.invalid", displayName: "Teszt Elek" } as never,
+    { lang: "hu", status: "suspended", name: SITE.name, usingOwnPhotos: false, intro: "x".repeat(60), photos: [] } as never,
+    { siteSlug: "trialexpiry", tab: "attekintes", trial: lapsedState as never, guestViewUrl: "https://trialexpiry.citoviso.test", now: new Date() } as never,
+  );
+  check("admin: lejárt C-próba → nincs „A próbához kapott kedvezmény”, van „Tetszik a cím? <host>”",
+    !lapsedGuestHtml.includes("A próbához kapott kedvezmény") &&
+      lapsedGuestHtml.includes("<b>Tetszik a cím?</b> trialexpiry.citoviso.test — folytatáskor ingyen megváltoztathatja."));
   // ADR-0345: the kept data has a deadline — the block names the purge day and the warning
   // letter; the old open-ended „A szünet addig tart, amíg nem folytatja." is gone (§B.17).
   const lapsedUntil = (await db.selectFrom("free_trial").select("trial_until").where("id", "=", trial.id).executeTakeFirstOrThrow()).trial_until as unknown as string;
@@ -516,7 +574,8 @@ try {
   check("GET /p/<t>/folytatas (lejárt próbázó) → 200, konfigurátor a saját /request-re", contA.status === 200 && bodyA.includes(`/p/${a.token}/request`), String(contA.status));
   // Elek (2026-10-09): the browse header said „Most nem fizet semmit" to someone who came to
   // pay — the page must mark itself the continuation so the runtime swaps that header.
-  check("…a manifest folytatásként jelöli (continuation), a fejléc nem „Most nem fizet semmit”", bodyA.includes('"continuation":true'));
+  // proba-C: `continuation` carries the trial's dates (ContinuationInfo); this trialist is LAPSED.
+  check("…a manifest folytatásként jelöli (continuation), a fejléc nem „Most nem fizet semmit”", /"continuation":\{"lapsed":true,/.test(bodyA));
   check("…a próba utolsó napja UTÁN nincs ajánlat: listaár (a határidő valódi)", !bodyA.includes('"offer":{'));
   // Elek 3: the plain /p/<t> of a LAPSED trialist — not „már az Öné… folyamatban", but
   // „szünetel" + the /folytatas checkout as the bar's action.

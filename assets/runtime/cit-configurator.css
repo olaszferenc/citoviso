@@ -3496,3 +3496,195 @@
     display: none;
   }
 }
+
+/* proba-C (design-refs/console/proba-c, approved 2026-10-10) — the trialist's checkout. */
+.cit-cfg-cnote {
+  margin: 0 2px 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa4b2;
+}
+.cit-cfg-cnote:empty {
+  display: none;
+}
+.cit-cfg-cnote--lapsed {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+.cit-cfg-rec {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.16);
+  color: #7ee2a0;
+}
+.cit-cfg-tsavebox:empty {
+  display: none;
+}
+.cit-cfg-tsavebox {
+  margin-top: 8px;
+}
+.cit-cfg-tsave {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  font-size: 12px;
+  color: #c9d2dd;
+}
+.cit-cfg-tsave__r {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+}
+.cit-cfg-tsave__r span:last-child {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cit-cfg-tsave__r--sum {
+  margin-top: 3px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(52, 211, 153, 0.25);
+  font-weight: 700;
+  color: #7ee2a0;
+}
+.cit-cfg-tnudge {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #c9d2dd;
+}
+.cit-cfg-toannual {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #7ee2a0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+/* ADR-0356 — the site's address and the once-free change */
+.cit-cfg-ren {
+  padding: 6px 2px 2px;
+}
+.cit-cfg-ren__now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.cit-cfg-ren__host {
+  font-weight: 700;
+  font-size: 15px;
+  color: #e7ebf1;
+  overflow-wrap: anywhere;
+}
+.cit-cfg-ren__free {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.16);
+  color: #7ee2a0;
+}
+.cit-cfg-ren__when {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa4b2;
+}
+.cit-cfg-ren__edit {
+  margin-top: 10px;
+}
+.cit-cfg-ren__lbl {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  color: #9aa4b2;
+}
+.cit-cfg-ren__in {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #e7ebf1;
+  font: 600 15px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding: 11px 12px;
+}
+.cit-cfg-ren__in:focus {
+  outline: none;
+}
+.cit-cfg-ren__msg {
+  margin: 6px 2px 0;
+  min-height: 16px;
+  font-size: 12px;
+  color: #9aa4b2;
+}
+.cit-cfg-ren__msg--ok {
+  color: #34d399;
+}
+.cit-cfg-ren__msg--bad {
+  color: #f87171;
+}
+.cit-cfg-ren__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cit-cfg-ren__acts[hidden] {
+  display: none;
+}
+.cit-cfg-ren__acts button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid #33404e;
+  background: #141b26;
+  color: #e7ebf1;
+  font: 600 13.5px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-ren__acts .cit-cfg-ren__apply {
+  background: #34d399;
+  border-color: #34d399;
+  color: #06281b;
+}
+.cit-cfg-ren__fate {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #c9d2dd;
+}
+.cit-cfg-ren__fate ul {
+  margin: 5px 0 0;
+  padding-left: 18px;
+}
+@media (max-width: 600px) {
+  .cit-cfg-ren__acts button {
+    flex: 1 1 100%;
+  }
+}
+/* Step 1's breakdown only — step 2's price card carries its own. */
+.cit-cfg-panel--s2 .cit-cfg-tsavebox {
+  display: none;
+}
+.cit-cfg-dsec + .cit-cfg-cnote,
+.cit-cfg-cnote {
+  margin-top: 12px;
+}

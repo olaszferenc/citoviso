@@ -1070,8 +1070,11 @@ function daysUntil(iso: string): number {
  * contract: assets/design-refs/console/proba-admin-sav/README.md). On EVERY tab, under
  * the top bar; warn tone from TRIAL_WARN_DAYS before the end; no close button — the
  * date is the one thing the owner must not lose sight of.
- *   The discount sentence only with a LIVE coupon (liveTrialCoupon — the same rule the
- * T−3/T−1 letters follow): promising 25 % that the checkout would not give is §B.17.
+ *   The discount sentence only with a LIVE discount (trialDiscount — the same answer the
+ * letters and the continuation page get): promising 25 % that the checkout would not give
+ * is §B.17. ADR-0354 "C" (mock proba-c/2-belepesi-pontok (a), approved 2026-10-10): the
+ * „Próba-kedvezmény" names its ONE deadline — the end of the trial; a pre-C coupon keeps
+ * its old sentence.
  */
 function trialStrip(t: TrialAdminState, lang: string): string {
   const n = t.daysLeft;
@@ -1086,9 +1089,12 @@ function trialStrip(t: TrialAdminState, lang: string): string {
           : // Past trial_until but the daily lapse has not run yet (07:00): the site
             // still answers — say it is over rather than „ma" on the wrong day.
             T(lang, "<b>Az ingyenes próba lejárt.</b>");
-  const offer = t.coupon
-    ? " " + T(lang, "Ha folytatja, {percent}% kedvezményt kap az első díjból.", { percent: String(t.coupon.percent) })
-    : "";
+  const d = t.discount;
+  const offer = !d
+    ? ""
+    : d.kind === "trial"
+      ? " " + T(lang, "Ha a próba végéig megrendeli, −{percent}% az első díjból.", { percent: String(d.percent) })
+      : " " + T(lang, "Ha folytatja, {percent}% kedvezményt kap az első díjból.", { percent: String(d.percent) });
   const pct = Math.min(100, Math.max(4, Math.round(((t.totalDays - Math.max(n, 0)) / t.totalDays) * 100)));
   return (
     `<div class="adm-trial${n <= TRIAL_WARN_DAYS ? " adm-trial--warn" : ""}" data-trial-strip role="status">` +
@@ -1108,14 +1114,24 @@ function trialStrip(t: TrialAdminState, lang: string): string {
  * tabs not about money) keeps the statement, the way out and the guest line.
  */
 function trialLapsedBlock(t: TrialAdminState, lang: string, compact: boolean, guestUrl: string | null): string {
+  // ADR-0354 "C" (mock proba-c/2-belepesi-pontok (b), approved 2026-10-10): the
+  // „Próba-kedvezmény" ends with the trial, so a lapsed trial has none — no box. Only a
+  // pre-C coupon that is still live keeps its box (it ran 90 days past the trial).
+  const coupon = t.discount?.kind === "coupon" ? t.discount : null;
+  // ADR-0356 (mock proba-c/4-nevvaltas (b)): the address may be changed once, free, at
+  // continuation — said with the host the guest reaches TODAY (slug host or custom domain).
+  const host = guestUrl ? guestUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "") : "";
   const money =
-    `<div class="adm-owe">` +
-    (t.coupon
-      ? `<div class="adm-owe__l">${T(lang, "A próbához kapott kedvezmény")}</div>` +
-        `<div class="adm-owe__v">${esc(String(t.coupon.percent))}%</div>` +
-        `<div class="adm-owe__sub">${T(lang, "az első díjból · {date}-ig használható", { date: esc(formatDayShortStem(t.coupon.untilIso, lang)) })}</div>`
+    (coupon
+      ? `<div class="adm-owe">` +
+        `<div class="adm-owe__l">${T(lang, "A próbához kapott kedvezmény")}</div>` +
+        `<div class="adm-owe__v">${esc(String(coupon.percent))}%</div>` +
+        `<div class="adm-owe__sub">${T(lang, "az első díjból · {date}-ig használható", { date: esc(formatDayShortStem(coupon.untilIso, lang)) })}</div>` +
+        `</div>`
       : "") +
-    `</div>` +
+    (host && !compact
+      ? `<p class="adm-trial__tip" data-trial-rename>${T(lang, "<b>Tetszik a cím?</b> {host} — folytatáskor ingyen megváltoztathatja.", { host: esc(host) })}</p>`
+      : "") +
     (t.continueUrl
       ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(t.continueUrl)}" data-trial-go>${T(lang, "Folytatom — fizetés")}</a>`
       : "") +
@@ -1173,6 +1189,45 @@ function trialModulesCard(t: TrialAdminState, lang: string): string {
     `<p class="adm-trial-mods__note">${T(lang, "Szünet alatt csak olvasható. Fizetéskor a választott csomag kapcsol vissza; amit csak kipróbált, azt a Modulok fülön később is hozzáadhatja.")}</p>` +
     `<ul class="adm-trial-mods__list">${rows}</ul>` +
     `</section>`
+  );
+}
+
+/**
+ * ADR-0354 "C" — the Modulok tab DURING a running trial (mock proba-c/2-belepesi-pontok (a),
+ * approved 2026-10-10). Every module is on and nothing is billed, so the tab carries no
+ * prices and no per-row buying (the old per-row „Hozzáadom" was a dead end: a trial has no
+ * subscription to add to). ONE card says what the button does — the SAME full configurator
+ * the strip's „Folytatom" opens — and the list below only states what is on. A module with
+ * a settings screen keeps its „Beállítás" link: the trial is for setting the site up.
+ */
+function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string): string {
+  const d = t.discount;
+  const text =
+    d?.kind === "trial"
+      ? T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki — a próba végéig −{percent}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.", { percent: String(d.percent) })
+      : d
+        ? T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki — −{percent}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.", { percent: String(d.percent) })
+        : T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki. Amit nem választ, az is bekapcsolva marad a próba végéig.");
+  const rows = mv.modules
+    .filter((m) => m.active)
+    .map(
+      (m) =>
+        `<li data-modrow="${esc(m.id)}"><span class="adm-trial-mods__n">${esc(T(lang, m.label))}</span>` +
+        (hasSettingsScreen(m.id)
+          ? `<a class="adm-trial-keep__cfg" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
+            `${ic("settings", 14)}<span>${T(lang, "Beállítás")}</span></a>`
+          : "") +
+        `<span class="adm-trial-keep__on">${T(lang, "be")}</span></li>`,
+    )
+    .join("");
+  return (
+    `<section class="adm-card adm-trial-keep" data-trial-keep>` +
+    `<div class="adm-trial-keep__t"><h2>${T(lang, "Modulok a próbában")}</h2><p>${text}</p></div>` +
+    (t.continueUrl
+      ? `<a class="citui-btn citui-btn--primary adm-trial-keep__go" href="${esc(t.continueUrl)}">${T(lang, "Folytatom — csomag és modulok")}</a>`
+      : "") +
+    `</section>` +
+    (rows ? `<section class="adm-card"><ul class="adm-trial-mods__list adm-trial-keep__list">${rows}</ul></section>` : "")
   );
 }
 
@@ -1546,9 +1601,12 @@ export function modulesSection(
    * A RUNNING free trial (Elek 2026-10-09, lelet 6/13): every module is switched on
    * and nothing is owed. Without it the tab spoke the purchase language — „Minden
    * elérhető modult megvett", and a count that did not match the rows below.
+   * ADR-0354 "C" (approved 2026-10-10): the tab is then trialModulesTab() — no prices,
+   * no per-row buying; the ONE way on is the full configurator behind the button.
    */
-  trialActive = false,
+  trial: TrialAdminState | null = null,
 ): string {
+  if (trial?.status === "active") return trialModulesTab(mv, trial, lang);
   const huf = hufAmount;
   // The anniversary the owner reads a dozen times on this page. It arrives in
   // STORAGE form (`2027-09-10`) and used to be printed raw into every one of
@@ -2310,23 +2368,9 @@ export function modulesSection(
   // in the very branch that renders the empty per-row state, so the sentence can
   // never claim a number the rows do not show. Under a freeze it is 0 and the
   // sentence disappears, which is what `frozen-state-check` requires.
-  // ⛔ Trial (Elek 2026-10-09): nothing is bought, so the sentence says what the
-  // trial did, and the row price is named as the fee AFTER continuing. The
-  // superseded spine is the one row the number does not cover — said here, since the
-  // invoice reconciliation below needs a subscription the trial does not have.
-  const plainNote = trialActive
-    ? `<p class="adm-mine__all" id="adm-mine-all">${T(lang, "Az ingyenes próbában minden modul be van kapcsolva, díjat nem számolunk. A sorok melletti díj akkor érvényes, ha a próba után folytatja.")}</p>` +
-      (supersededLabel
-        ? `<p class="adm-mine__recon">${T(lang, "Alább {all} modul áll, ebből {n} látszik az oldalán — {art} „{name}” helyén most {art2} „{other}” jelenik meg.", {
-            all: String(mineCount),
-            n: String(liveCount),
-            art: huArticleLower(supersededLabel.name),
-            name: esc(supersededLabel.name),
-            art2: huArticleLower(supersededLabel.other),
-            other: esc(supersededLabel.other),
-          })}</p>`
-        : "")
-    : plainActive > 0
+  // (A running trial never reaches this point — trialModulesTab() renders its tab.)
+  const plainNote =
+    plainActive > 0
       ? `<p class="adm-mine__all" id="adm-mine-all">${T(lang, "Aktív az oldalán mind a {n} modul — alább csak azt jelezzük, ami ettől eltér.", { n: String(plainActive) })}</p>`
       : "";
   // ⭐ modules-quiet-list §8 — the 12 ≠ 11 gap, resolved WHERE THE NUMBER STANDS.
@@ -2480,7 +2524,7 @@ export function modulesSection(
   // modult megvett" — while the trial had shown that very module switched on. The
   // module is NOT made sellable here (owner decision); its absence is SAID, by name,
   // and for a continued trial the reason it went off is said too.
-  const notOrderable = trialActive ? [] : (mv.notOrderable ?? []);
+  const notOrderable = mv.notOrderable ?? [];
   const naNote = notOrderable.length
     ? `<div class="adm-shop__na" id="adm-shop-na">` +
       notOrderable
@@ -2512,12 +2556,10 @@ export function modulesSection(
         (coupon && !frozen ? couponBanner(coupon, sub?.keptOffers ?? []) : "") +
         shopBlocks +
         naNote
-      : trialActive
-        ? `<p class="adm-lead">${T(lang, "A próba alatt minden modul be van kapcsolva — nincs mit hozzáadnia. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`
-        : naNote
-          ? `<p class="adm-lead">${T(lang, "A most rendelhető modulokat mind megvette. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>` +
-            naNote
-          : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
+      : naNote
+        ? `<p class="adm-lead">${T(lang, "A most rendelhető modulokat mind megvette. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>` +
+          naNote
+        : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
     `</section>`;
 
   // ADR-0088 ⑨ confirm dialog for revoking the mandate (approved B plan). A
@@ -6274,7 +6316,7 @@ export function adminDashboard(
                     lang,
                     opts.guestViewUrl ?? null,
                     opts.multiUnit ?? "unknown",
-                    opts.trial?.status === "active",
+                    opts.trial ?? null,
                   ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.

@@ -1,7 +1,7 @@
 // ADR-0344 C2c — what the tenant admin shows about a card-less free trial (approved plan
 // "A", owner 2026-10-09; contract: assets/design-refs/console/proba-admin-sav/).
 //
-//   · active    → a thin strip on EVERY tab: days left, the end date, the coupon, „Folytatom";
+//   · active    → a thin strip on EVERY tab: days left, the end date, the discount, „Folytatom";
 //                 warn tone from 3 days before the end. Not dismissable.
 //   · lapsed    → the paused-site block (the trial has no subscription row, so the
 //                 subscription freeze block never renders for it — measured 2026-10-09:
@@ -12,7 +12,8 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
-import { liveTrialCoupon, trialDaysLeft } from "./notices.js";
+import { trialDaysLeft } from "./notices.js";
+import { trialDiscount, type TrialDiscount } from "./offer.js";
 import { effectivePurgeDay, purgeDay } from "./retention.js";
 
 /** The strip turns warn this many days before the end (mock: „3 nappal a vége előtt"). */
@@ -25,7 +26,13 @@ export interface TrialAdminState {
   /** The trial's length in days — the meter's denominator. */
   readonly totalDays: number;
   readonly untilIso: string;
-  readonly coupon: { readonly percent: number; readonly untilIso: string } | null;
+  /**
+   * ADR-0354 "C": the ONE discount the screens may promise (trialDiscount — the same answer
+   * the letters and the continuation page get). kind "trial" = the „Próba-kedvezmény" (to the
+   * end of the trial's last day, on the first fee); kind "coupon" = a pre-C trial's coupon,
+   * which keeps its old wording; null = nothing to promise.
+   */
+  readonly discount: TrialDiscount | null;
   /** `/p/<token>/folytatas` on the platform host — null when it cannot be built. */
   readonly continueUrl: string | null;
   /** ADR-0345: the Budapest day the lapsed trial's data is deleted (end + 90 days; once the
@@ -70,16 +77,12 @@ export async function trialAdminState(tenantId: string, now = new Date()): Promi
   const row = await db
     .selectFrom("free_trial")
     .leftJoin("prospect", "prospect.id", "free_trial.prospect_id")
-    .leftJoin("offer", "offer.id", "free_trial.coupon_offer_id")
     .select([
+      "free_trial.id as id",
       "free_trial.status as status",
       "free_trial.started_at as startedAt",
       "free_trial.trial_until as trialUntil",
       "prospect.token as token",
-      "offer.percent as percent",
-      "offer.expires_at as couponUntil",
-      "offer.used_count as usedCount",
-      "offer.max_uses as maxUses",
     ])
     .where("free_trial.tenant_id", "=", tenantId)
     .executeTakeFirst();
@@ -106,7 +109,7 @@ export async function trialAdminState(tenantId: string, now = new Date()): Promi
     daysLeft: trialDaysLeft(now, until),
     totalDays: Math.max(1, trialDaysLeft(started, until)),
     untilIso: budapestIsoDay(until),
-    coupon: liveTrialCoupon(row, now),
+    discount: await trialDiscount(row.id, now),
     continueUrl: base && row.token ? `${base}/p/${row.token}/folytatas` : null,
     purgeIso: warned ? effectivePurgeDay(until, budapestIsoDay(new Date(warn!.at as unknown as string))) : purgeDay(until),
     purgeWarned: warned,

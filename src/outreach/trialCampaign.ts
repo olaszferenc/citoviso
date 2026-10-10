@@ -41,7 +41,7 @@ import { ownedSiteForLead } from "../conversion/owned.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { missingPackStrings } from "../i18n/packs.js";
-import { getCouponConfig } from "../payment/couponConfig.js";
+import { getEscalationConfig, legacyOutreachPercent } from "../payment/offers.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
@@ -413,19 +413,51 @@ async function markSent(id: string, note: string | null): Promise<void> {
   await db.updateTable("trial_campaign").set({ status: "sent", sent_at: new Date(), note }).where("id", "=", id).execute();
 }
 
-/** The numbers the letter quotes, each from its one source. */
+/** The numbers the letter quotes, each from its one source. `coupon` is the lead-independent
+ *  default — the operator intro percent pinTrialOffer mints when a lead has no live offer
+ *  (the renderer's sample); a real send quotes trialCampaignOfferPercent(leadId). */
 export async function trialCampaignNumbers(): Promise<{
   days: number;
   retentionDays: number;
-  coupon: { percent: number; days: number } | null;
+  coupon: { percent: number } | null;
 }> {
   const trial = await getFreeTrialConfig();
-  const coupon = await getCouponConfig();
+  const { outreachPercent } = await getEscalationConfig();
   return {
     days: trial.days,
     retentionDays: TRIAL_RETENTION_DAYS,
-    coupon: coupon.percent > 0 ? { percent: coupon.percent, days: coupon.days } : null,
+    coupon: outreachPercent > 0 ? { percent: outreachPercent } : null,
   };
+}
+
+/**
+ * ADR-0354 "C": the percent the lead would keep if they started the trial TODAY — the same
+ * rule pinTrialOffer (src/trial/offer.ts) applies at the start, read-only: the largest LIVE
+ * initial offer across the lead's tokens (a legacy send's intro, which pinTrialOffer would
+ * materialise via ensureOutreachOffer, counts at legacyOutreachPercent); none → the operator
+ * intro percent it mints as a `campaign` row. null = nothing to promise (0 %).
+ */
+export async function trialCampaignOfferPercent(leadId: string, now = new Date()): Promise<number | null> {
+  const prospects = await db.selectFrom("prospect").select(["id", "sent_at"]).where("lead_id", "=", leadId).execute();
+  if (!prospects.length) return null;
+  const offers = await db
+    .selectFrom("offer")
+    .select(["prospect_id", "kind", "scope", "percent", "expires_at", "used_count", "max_uses"])
+    .where("prospect_id", "in", prospects.map((p) => p.id))
+    .execute();
+  const percents = offers
+    .filter(
+      (o) =>
+        o.scope === "initial" &&
+        Number(o.used_count) < Number(o.max_uses) &&
+        (!o.expires_at || new Date(o.expires_at as unknown as string) > now),
+    )
+    .map((o) => o.percent);
+  for (const p of prospects) {
+    if (p.sent_at && !offers.some((o) => o.prospect_id === p.id && o.kind === "outreach")) percents.push(legacyOutreachPercent());
+  }
+  const best = percents.length ? Math.max(...percents) : (await getEscalationConfig()).outreachPercent;
+  return best > 0 ? best : null;
 }
 
 /** The trial site's promised host (ADR-0347 ④: the same rule the provisioning runs). */
@@ -481,6 +513,7 @@ export async function buildTrialCampaignLetterFor(
   const host = await trialCampaignHost(c.leadId);
   if (!host) return { error: "a próba-aldomain nem határozható meg" }; // i18n-exempt: operátori CLI-kimenet
   const n = await trialCampaignNumbers();
+  const percent = await trialCampaignOfferPercent(c.leadId);
   const letter = renderTrialCampaignLetter({
     lang: d.lang,
     leadName: d.input.leadName,
@@ -488,7 +521,7 @@ export async function buildTrialCampaignLetterFor(
     days: n.days,
     host,
     retentionDays: n.retentionDays,
-    coupon: n.coupon,
+    coupon: percent ? { percent } : null,
     sender: senderParts(),
     identity: advertiserIdentity(d.lang),
     links: { cta: d.draft.link, unsub: d.draft.unsubscribeLink, privacy: d.draft.privacyLink },
@@ -578,7 +611,8 @@ export async function sendTrialCampaignSms(c: TrialCampaignCandidate, deps: Tria
     unsubscribeLink = g.d.sms.unsubscribeLink;
   }
   const n = await trialCampaignNumbers();
-  const sms = buildTrialCampaignSmsText({ lang, leadName: c.leadName, sentIso: budapestIsoDay(c.sentAt), days: n.days, link });
+  const percent = await trialCampaignOfferPercent(c.leadId);
+  const sms = buildTrialCampaignSmsText({ lang, leadName: c.leadName, sentIso: budapestIsoDay(c.sentAt), days: n.days, link, percent });
   // §C on the text that goes out. The name is checked in its GSM-7 form — the form the
   // message actually carries (the accented original is, by design, not in it).
   const gate = checkOutreachSms({ text: sms.text, link, unsubscribeLink }, sms.name, lang, market);

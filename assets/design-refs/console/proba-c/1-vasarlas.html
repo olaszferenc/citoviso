@@ -1,0 +1,294 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Próba „C” — vásárlási felület (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-warn:#d29922; --citui-bad:#e5484d; --citui-blue:#2f6fe4;
+    --citui-radius-sm:14px; --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    /* drawer (dark) */
+    --d-bg:#0f1b2b; --d-card:#15243a; --d-line:rgba(234,243,248,.14); --d-line-2:rgba(234,243,248,.26); --d-ink:#eaf3f8; --d-muted:#9fb0c3; --d-gold:#f1c27d;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button,.sub button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:1100px;margin:12px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .sub button{border-color:var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);font-size:12px;padding:6px 11px}
+  .sub button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+  .stage{margin:12px auto 30px;container-type:inline-size;width:100%;max-width:1100px;padding:0 12px;transition:max-width .25s}
+  .stage.m{max-width:390px;padding:0}
+
+  /* page = plan hero + configurator drawer */
+  .page{position:relative;display:grid;grid-template-columns:1fr;border-radius:16px;overflow:hidden;background:var(--d-bg);min-height:760px}
+  @container (min-width:760px){ .page{grid-template-columns:1fr 430px} }
+  .hero{display:none;position:relative;background:linear-gradient(160deg,#3b6b7a,#1d3b4f 55%,#0f2233);color:var(--citui-white);padding:60px 48px}
+  @container (min-width:760px){ .hero{display:block} }
+  .hero h1{font:800 2.5rem/1.05 var(--citui-font-display);text-transform:uppercase;margin:120px 0 14px;letter-spacing:-.01em}
+  .hero p{max-width:440px;opacity:.85}
+  .hero .brand{font:800 1.9rem/1 var(--citui-font-display);letter-spacing:.06em;text-align:center}
+  .drawer{background:var(--d-bg);color:var(--d-ink);display:flex;flex-direction:column;min-height:760px;border-left:1px solid var(--d-line)}
+  .dh{padding:16px 20px 12px;border-bottom:1px solid var(--d-line)}
+  .dh h2{margin:0;font:800 .95rem/1.2 var(--citui-font-display);letter-spacing:.04em;text-transform:uppercase}
+  .dh p{margin:4px 0 0;font-size:.86rem;color:var(--d-muted)}
+  .ribbon{margin:12px 16px 0;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--d-gold) 55%,transparent);background:color-mix(in srgb,var(--d-gold) 12%,transparent);font-size:.86rem}
+  .ribbon b{color:var(--d-gold)}
+  .ribbon .rs{display:block;color:var(--d-muted);font-size:.8rem;margin-top:2px}
+  .lapsedline{margin:12px 16px 0;padding:10px 12px;border-radius:12px;border:1px solid var(--d-line-2);font-size:.86rem;color:var(--d-muted)}
+  .db{flex:1;overflow:auto;padding:14px 16px}
+  .q{font:700 .95rem/1.3 var(--citui-font-text);margin:4px 4px 10px}
+  .pk{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:start;padding:12px 14px;border:1px solid var(--d-line);border-radius:12px;margin-bottom:10px;cursor:pointer;background:transparent;color:inherit;width:100%;text-align:left;font:inherit}
+  .pk.on{border-color:var(--citui-blue);background:color-mix(in srgb,var(--citui-blue) 14%,transparent)}
+  .pk .r{width:18px;height:18px;border-radius:50%;border:2px solid var(--d-line-2);margin-top:3px}
+  .pk.on .r{border-color:var(--citui-blue);box-shadow:inset 0 0 0 4px var(--d-bg);background:var(--citui-blue)}
+  .pk .n{font:700 1rem/1.3 var(--citui-font-text)} .pk .s{font-size:.82rem;color:var(--d-muted)}
+  .pk .pr{text-align:right;white-space:nowrap}
+  .pk .pr s{display:block;font-size:.76rem;color:var(--d-muted)}
+  .pk .pr b{font:800 1.05rem/1.2 var(--citui-font-text)} .pk .pr small{font-size:.74rem;color:var(--d-muted)}
+  .pk .pr i{display:block;font-style:normal;font-size:.74rem;color:var(--d-gold)}
+  .mods{border:1px solid var(--d-line);border-radius:12px;margin-top:4px}
+  .mods summary{padding:12px 14px;cursor:pointer;font-weight:700;list-style:none}
+  .mods summary::-webkit-details-marker{display:none}
+  .mods summary small{display:block;font-weight:400;color:var(--d-muted);font-size:.8rem}
+  .mrow{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--d-line);font-size:.88rem}
+  .mrow span{flex:1} .mrow em{font-style:normal;color:var(--d-muted);font-size:.8rem}
+  .sw{position:relative;width:38px;height:22px;border-radius:12px;background:var(--d-line-2);border:0;cursor:pointer;flex:0 0 auto}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--citui-white);transition:left .15s}
+  .sw.on{background:var(--citui-blue)} .sw.on::after{left:19px}
+  .df{border-top:1px solid var(--d-line);padding:12px 16px 14px;background:var(--d-bg);position:sticky;bottom:0}
+  .per{display:inline-flex;border:1px solid var(--d-line-2);border-radius:var(--citui-radius-pill);padding:3px;margin-bottom:8px}
+  .per button{border:0;background:transparent;color:var(--d-muted);font:700 .82rem/1 var(--citui-font-text);padding:7px 13px;border-radius:var(--citui-radius-pill);cursor:pointer}
+  .per button.on{background:color-mix(in srgb,var(--citui-blue) 30%,transparent);color:var(--d-ink)}
+  .per button g{color:var(--citui-ok)} .per .rec{font-style:normal;font-size:.68rem;padding:2px 6px;border-radius:6px;background:var(--d-gold);color:var(--citui-navy-950);margin-left:4px}
+  .save{margin-top:8px;border:1px solid color-mix(in srgb,var(--citui-ok) 45%,transparent);border-radius:10px;padding:8px 10px;font-size:.82rem;background:color-mix(in srgb,var(--citui-ok) 10%,transparent)}
+  .save div{display:flex;justify-content:space-between;gap:10px} .save .sum{border-top:1px solid var(--d-line-2);margin-top:4px;padding-top:4px;font-weight:800}
+  .nudge{margin-top:6px;font-size:.8rem;color:var(--d-muted)} .nudge button{border:0;background:none;color:var(--citui-cyan-300);font:700 .8rem var(--citui-font-text);cursor:pointer;padding:0;text-decoration:underline}
+  .tot{display:flex;align-items:flex-end;gap:12px}
+  .tot .l{flex:1;min-width:0}
+  .tot .k{font-size:.8rem;color:var(--d-muted)}
+  .tot .a{font:800 1.25rem/1.2 var(--citui-font-text)} .tot .a s{font-weight:700;color:var(--d-muted);font-size:1rem;margin-right:6px} .tot .a small{font-size:.8rem;color:var(--d-muted);font-weight:400}
+  .tot .o{font-size:.78rem;color:var(--d-gold);margin-top:2px}
+  .go{border:0;background:var(--citui-blue);color:var(--citui-white);font:800 .98rem/1 var(--citui-font-text);padding:14px 20px;border-radius:12px;cursor:pointer;white-space:nowrap}
+  .go:disabled{opacity:.5;cursor:not-allowed}
+  /* step 2 */
+  .s2h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--d-line)}
+  .s2h button{border:0;background:transparent;color:var(--d-muted);font:700 .9rem/1 var(--citui-font-text);cursor:pointer;padding:6px 0}
+  .s2h b{font:800 1.05rem/1 var(--citui-font-display)} .s2h .st{margin-left:auto;font:700 .74rem/1 var(--citui-font-text);letter-spacing:.08em;color:var(--d-muted)}
+  .pcard{border:1px solid var(--d-line);border-radius:14px;background:var(--d-card);padding:14px 16px;margin-bottom:12px}
+  .pcard .l1{display:flex;justify-content:space-between;font:700 .74rem/1.4 var(--citui-font-text);letter-spacing:.08em;text-transform:uppercase;color:var(--d-muted)}
+  .pcard .l1 s{color:#d38a8a;letter-spacing:0}
+  .pcard .big{font:800 1.9rem/1.15 var(--citui-font-text);margin:4px 0}
+  .pcard .big small{font-size:1rem;font-weight:400;color:var(--d-muted)}
+  .pcard .l3{color:var(--citui-cyan-300);font-size:.9rem}
+  .pcard .l4{color:var(--d-muted);font-size:.84rem;margin-top:4px}
+  .pcard .l4 b{color:var(--d-ink)}
+  .fine{font-size:.82rem;color:var(--d-muted);margin:6px 2px}
+  .fine b{color:var(--d-ink)}
+  .anchor{border-left:3px solid var(--citui-cyan-500);padding:8px 10px;margin:10px 0;background:color-mix(in srgb,var(--citui-cyan-500) 9%,transparent);border-radius:0 10px 10px 0;font-size:.84rem}
+  .anchor .tag{display:inline-block;font:700 .66rem/1 var(--citui-font-text);padding:3px 6px;border-radius:6px;background:var(--d-gold);color:var(--citui-navy-950);margin-left:6px;vertical-align:1px}
+  .cnote{font-size:.84rem;color:var(--d-muted);margin:10px 2px}
+  .fld{margin:10px 0}
+  .fld label{display:block;font:700 .82rem/1.4 var(--citui-font-text);color:var(--d-muted);margin-bottom:4px}
+  .fld input,.fld select{width:100%;padding:12px 13px;border-radius:10px;border:1px solid var(--d-line-2);background:var(--d-card);color:var(--d-ink);font:15px/1.2 var(--citui-font-text)}
+  .fld input.bad{border-color:var(--citui-bad)}
+  .fld .err{color:#ff9a9d;font-size:.8rem;margin-top:4px;display:none} .fld .err.on{display:block}
+  .two{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+  .chk{display:flex;gap:10px;font-size:.84rem;color:var(--d-muted);margin:10px 0}
+  .chk input{width:20px;height:20px;flex:0 0 auto;margin-top:1px}
+  .pay{width:100%;margin-top:8px}
+  .modal{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--citui-navy-950) 60%,transparent);padding:16px}
+  .modal.on{display:flex}
+  .modal .box{background:var(--citui-white);color:var(--citui-ink);border-radius:16px;max-width:460px;width:100%;padding:20px 22px}
+  .modal .box h3{margin:0 0 8px;font:700 1.1rem/1.3 var(--citui-font-display)}
+  .btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:10px 18px;font:700 .88rem/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink)}
+  .hide{display:none!important}
+</style></head><body>
+<div class="bar">
+  <b>Próba „C” — vásárlási felület</b>
+  <button data-var="A" class="on">A — a határidő az ár-sorban</button>
+  <button data-var="B">B — + határidő-szalag felül</button>
+  <span class="sp"></span>
+  <button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button>
+</div>
+<div class="sub">Állapot (minta: Üdülő tábor, próba okt. 10.–okt. 23., „ma” = okt. 13.):
+  <button data-st="esc" class="on">próba alatt · −50% (eszkalációs ajánlata volt)</button>
+  <button data-st="out">próba alatt · −25% (bevezető ajánlat)</button>
+  <button data-st="base">próba alatt · −25% (nem volt élő ajánlata → alap)</button>
+  <button data-st="lapsed">lejárt próba · listaár</button>
+</div>
+<p class="note"><b>Mit dönt el:</b> a próba alatt a vevő a megszokott konfigurátort kapja; a kedvezményes ár a FŐ ár, a lista áthúzva; a neve
+mindenhol <b>„Próba-kedvezmény”</b> (Elek #16: eddig „Üdvözlő kedvezmény”); a határidő a próba utolsó napja; <b>az éves a kiemelt választás</b> (tulaj, 10-10: a próba-% az első díjon marad — „az első díj is arra ösztönzi, hogy az éveset válassza”): évesen a megtakarítás összeadva (2 hónap ingyen + −X% az első évre), havinál őszintén „csak az első hónapra”. A 2. lépésben a fejléc felül (Elek #17), a jegyzet nem ígér belépőt (Elek Ú2), és a
+fordulónap-sor (tulaj megerősítette, 10-10): a fizetett időszak a próba vége után indul. „Lejárt próba”: nincs kedvezmény, listaár.</p>
+
+<div class="stage" id="stage">
+  <div class="page">
+    <div class="hero"><div class="brand">ÜDÜLŐ TÁBOR</div><h1>Faházas és kőépületes szállás a Balaton közelében</h1><p>Csendes, zöld környezetben megbúvó üdülőtábor — a honlapja most is él, a próba alatt.</p></div>
+    <div class="drawer">
+      <div class="dh"><h2>Az Ön honlapja — folytatás</h2><p id="dhSub">Válassza ki, mit tartson meg — azonnal látja. Fizetni a következő lépésben fog.</p></div>
+      <div class="ribbon hide" id="ribbon"></div>
+      <div class="lapsedline hide" id="lapsedLine">Az ingyenes próba okt. 23-án lejárt, a honlap szünetel. A díj a listaár; a fizetés után a honlap azonnal visszakapcsol.</div>
+
+      <!-- STEP 1 -->
+      <div id="s1" class="db">
+        <div class="q">Milyen legyen az oldala?</div>
+        <div id="pkgs"></div>
+        <details class="mods" id="mods"><summary>Testre szabom <small>Egyedi csomag — tételesen kiválasztom, mely szekciók jelenjenek meg</small></summary><div id="mrows"></div></details>
+        <p class="cnote" id="keepNote">Amit most nem választ ki, az is bekapcsolva marad a próba végéig (okt. 23.), csak utána kapcsol ki.</p>
+      </div>
+      <!-- STEP 2 -->
+      <div id="s2" class="hide" style="flex:1;display:flex;flex-direction:column">
+        <div class="s2h"><button type="button" id="back">‹ Vissza a tervhez</button><b>Fizetés</b><span class="st">2/2 LÉPÉS</span></div>
+        <div class="db">
+          <div class="pcard" id="pcard"></div><div id="saveBox2" style="margin:-4px 0 10px"></div>
+          <p class="fine">Az ár ÁFÁ-t nem tartalmaz — a szolgáltató alanyi adómentes (AAM).</p>
+          <div id="anchor"></div>
+          <p class="cnote" id="s2note"></p>
+          <form id="bill" novalidate>
+            <div class="fld"><label for="f-name">Teljes név vagy cégnév</label><input id="f-name" autocomplete="name"><div class="err" id="e-name">Adja meg a nevét — ez kerül a számlára.</div></div>
+            <div class="fld"><label for="f-country">Ország</label><select id="f-country"><option>Magyarország</option><option>Ausztria</option><option>Németország</option></select></div>
+            <div class="two">
+              <div class="fld"><label for="f-zip">Irányítószám</label><input id="f-zip" inputmode="numeric" value="8264"><div class="err" id="e-zip">4 számjegy kell.</div></div>
+              <div class="fld"><label for="f-city">Település</label><input id="f-city" value="Szigliget"><div class="err" id="e-city">Adja meg a települést.</div></div>
+            </div>
+            <div class="fld"><label for="f-street">Utca, házszám</label><input id="f-street" value="Fő utca 1."><div class="err" id="e-street">Adja meg az utcát és a házszámot.</div></div>
+            <label class="chk"><input type="checkbox" id="c1"><span>Kérem az azonnali kezdést, és tudomásul veszem, hogy ezzel elveszítem a 14 napos elállási jogomat.</span></label>
+            <label class="chk"><input type="checkbox" id="c2"><span>Elfogadom a Citoviso Általános Szerződési Feltételeit, és megismertem az Adatkezelési tájékoztatót.</span></label>
+            <label class="chk"><input type="checkbox" id="c3"><span>Hozzájárulok az ismétlődő kártyás fizetéshez: a díjat a fordulónapon automatikusan leemeljük.</span></label>
+            <div class="fld"><div class="err" id="e-chk">Mindhárom jelölőnégyzet kell a fizetéshez.</div></div>
+            <button class="go pay" type="submit" id="payBtn"></button>
+          </form>
+        </div>
+      </div>
+
+      <div class="df" id="foot">
+        <div class="per"><button type="button" data-per="y" class="on">Éves <g>2 hó ingyen</g> <em class="rec">ajánlott</em></button><button type="button" data-per="m">Havi</button></div>
+        <div class="tot"><div class="l"><div class="k">Összesen</div><div class="a" id="totA"></div><div class="o" id="totO"></div></div><button class="go" type="button" id="next">Tovább ›</button></div>
+        <div id="saveBox"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal"><div class="box"><h3>Itt a Barion pénztára jönne</h3><p id="mtext"></p><p style="font-size:.85rem;color:var(--citui-muted)">Vázlat — fizetés nem indul.</p><button class="btn" type="button" id="mclose">Bezárom</button></div></div>
+
+<script>
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+// Real figures (Elek's measurement on dev, 2026-10-10): list price per package, monthly; annual = 12 − 2 free months.
+const PKGS = [
+  { id: "teljes", n: "Teljes", s: "Minden, amit kínálunk — ajánlott", m: 9500, sec: 11 },
+  { id: "ajanlott", n: "Ajánlott", s: "A lényeg, ami elad", m: 7240, sec: 7 },
+  { id: "alap", n: "Alap", s: "A minimum: képek, elérhetőség, térkép", m: 4880, sec: 3 },
+];
+const MODS = [["Képek a szállásról", 490], ["Szobák, apartmanok", 690], ["Amit kínál (felszereltség)", 490], ["Árak, szezonok", 490], ["Térkép, megközelítés", 490], ["Nyitvatartás, érkezés", 290], ["Miért Önt válasszák", 490], ["Vendégek véleménye", 690], ["Heti programajánló", 490], ["Online foglalás", 990]];
+const ST = {
+  esc: { p: 50, src: "eszkalációs ajánlat (72 óra) → a próba végéig nyújtva" },
+  out: { p: 25, src: "a megkeresés bevezető ajánlata" },
+  base: { p: 25, src: "nem volt élő ajánlata → alap: a /pricing bevezető %-a" },
+  lapsed: { p: 0, src: "lejárt" },
+};
+let st = "esc", per = "y", pkg = "teljes", step = 1, variant = "A";
+const fmt = (n) => n.toLocaleString("hu-HU").replace(/ /g, " ") + " Ft";
+const list = (p) => (per === "m" ? p.m : p.m * 10);
+const off = (n) => Math.round(n * (1 - ST[st].p / 100));
+const perL = () => (per === "m" ? "/ hó" : "/ év");
+const DEADLINE = "okt. 23. (péntek) 23:59-ig";
+const live = () => st !== "lapsed";
+
+// Owner 2026-10-10 (ADR-0354 B): the offer stays on the FIRST fee — annual = 10 months' price AND the trial % on top.
+function saveHtml(P) {
+  const m12 = P.m * 12, y = P.m * 10, pct = live() ? ST[st].p : 0, yOff = Math.round(y * pct / 100);
+  if (per === "y") {
+    return `<div class="save"><div><span>12 havi díj listaáron</span><span>${fmt(m12)}</span></div>` +
+      `<div><span>Éves fizetés: 2 hónap ingyen</span><span>−${fmt(m12 - y)}</span></div>` +
+      (pct ? `<div><span>Próba-kedvezmény −${pct}% az első évre</span><span>−${fmt(yOff)}</span></div>` : "") +
+      `<div class="sum"><span>Megtakarítás az első évben</span><span>−${fmt(m12 - y + yOff)}</span></div></div>`;
+  }
+  const mOff = Math.round(P.m * pct / 100);
+  return pct
+    ? `<div class="nudge">Havi fizetésnél a −${pct}% csak az első hónapra jár (−${fmt(mOff)}). Évesen az első évben −${fmt(m12 - y + yOff)}. <button type="button" data-to-y>Évesre váltok</button></div>`
+    : `<div class="nudge">Évesen 2 hónap ingyen (−${fmt(m12 - y)}). <button type="button" data-to-y>Évesre váltok</button></div>`;
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-to-y]")) { per = "y"; $$("[data-per]").forEach((o) => o.classList.toggle("on", o.dataset.per === "y")); render(); } });
+function render() {
+  const P = PKGS.find((x) => x.id === pkg);
+  // packages
+  $("#pkgs").innerHTML = PKGS.map((x) => {
+    const L = list(x);
+    return `<button type="button" class="pk${x.id === pkg ? " on" : ""}" data-pkg="${x.id}"><span class="r"></span><span><span class="n">${x.n}</span><br><span class="s">${x.s}</span></span>` +
+      `<span class="pr">${live() ? `<s>${fmt(L)}</s><b>${fmt(off(L))}</b><small>${perL().replace(" ", "")}</small><i>első díj</i>` : `<b>${fmt(L)}</b><small>${perL().replace(" ", "")}</small>`}</span></button>`;
+  }).join("");
+  $$("[data-pkg]").forEach((b) => b.addEventListener("click", () => { pkg = b.dataset.pkg; render(); }));
+  // modules (only the list; price shown behind the button — the trial's Modulok tab shows none)
+  if (!$("#mrows").childElementCount) {
+    $("#mrows").innerHTML = MODS.map(([n, pr], i) => `<div class="mrow"><span>${n}</span><em>+${pr} Ft</em><button type="button" class="sw on" aria-label="${n}" data-m="${i}"></button></div>`).join("");
+    $$("[data-m]").forEach((b) => b.addEventListener("click", () => b.classList.toggle("on")));
+  }
+  const L = list(P), C = live() ? off(L) : L;
+  $("#totA").innerHTML = (live() ? `<s>${fmt(L)}</s>` : "") + `${fmt(C)} <small>${perL()}</small>`;
+  $("#totO").innerHTML = live()
+    ? (per === "y" ? `Próba-kedvezmény −${ST[st].p}% az első évre · a próba végéig, okt. 23-ig` : `Próba-kedvezmény −${ST[st].p}% — csak az első hónapra · a próba végéig, okt. 23-ig`)
+    : "";
+  $("#saveBox").innerHTML = saveHtml(P);
+  $("#ribbon").classList.toggle("hide", !(variant === "B" && live()));
+  $("#ribbon").innerHTML = `<b>Próba-kedvezmény: −${ST[st].p}%</b> — ha a próba végéig megrendeli.<span class="rs">Egy kedvezmény, egy határidő: ${DEADLINE} (még 10 nap). Utána a listaár érvényes.</span>`;
+  $("#lapsedLine").classList.toggle("hide", live());
+  $("#keepNote").classList.toggle("hide", !live());
+  $("#dhSub").textContent = live() ? "Válassza ki, mit tartson meg — azonnal látja. Fizetni a következő lépésben fog." : "Válassza ki, mit kapcsoljunk vissza. Fizetni a következő lépésben fog.";
+  // step 2
+  const first = per === "m" ? "az első hónapra" : "az első évre";
+  $("#pcard").innerHTML = `<div class="l1"><span>Most fizetendő</span>${live() ? `<s>${fmt(L)}</s>` : ""}</div>` +
+    `<div class="big">${fmt(C)} <small>${perL()} · ${P.sec} szekció</small></div>` +
+    (live()
+      ? `<div class="l3">Próba-kedvezmény: −${ST[st].p}% az első díjból · érvényes ${DEADLINE}, a próba végéig</div>` +
+        (per === "y" ? `<div class="l4">Az első díjra szól, ami évesnél <b>az első év</b>. Utána <b>${fmt(L)} / év</b> (továbbra is 2 hónap ingyen).</div>` : `<div class="l4">Havi fizetésnél <b>csak az első hónapra</b> szól. Utána <b>${fmt(L)} / hó</b>.</div>`)
+      : `<div class="l4">Listaár — a próba-kedvezmény a próba végével (okt. 23.) lejárt.</div>`);
+  if (live()) {
+    const next = per === "m" ? "2026. nov. 24." : "2027. okt. 24.";
+    $("#anchor").innerHTML = `<div class="anchor"><b>A fizetett időszak a próba vége után, okt. 24-én indul</b> — a hátralévő 10 ingyen nap megmarad.<span class="tag">tulaj megerősítette 10-10</span><br>A következő terhelés ${next}: ${fmt(L)} ${perL()}, automatikusan.</div>`;
+    $("#s2note").textContent = "Ez még nem fizetés. A következő lépésben a biztonságos fizetéshez visszük. A fizetés után a honlapja változatlanul fut tovább, ugyanazzal a felhasználónévvel és jelszóval lép be; a számlát e-mailben küldjük.";
+  } else {
+    const next = per === "m" ? "2027. jan. 28." : "2027. dec. 28.";
+    $("#anchor").innerHTML = `<p class="fine">A következő terhelés a mai fizetéstől számítva ${next}: <b>${fmt(L)} ${perL()}</b>, automatikusan.</p>`;
+    $("#s2note").textContent = "Ez még nem fizetés. A következő lépésben a biztonságos fizetéshez visszük. A fizetés után a honlap azonnal visszakapcsol, ugyanazzal a felhasználónévvel és jelszóval lép be; a számlát e-mailben küldjük.";
+  }
+  $("#saveBox2").innerHTML = saveHtml(P);
+  $("#payBtn").textContent = `Fizetek — ${fmt(C)}`;
+  $("#s1").classList.toggle("hide", step !== 1);
+  $("#s2").classList.toggle("hide", step !== 2);
+  $("#foot").classList.toggle("hide", step !== 1);
+}
+$$("[data-per]").forEach((b) => b.addEventListener("click", () => { per = b.dataset.per; $$("[data-per]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+$$("[data-st]").forEach((b) => b.addEventListener("click", () => { st = b.dataset.st; $$("[data-st]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+$$("[data-var]").forEach((b) => b.addEventListener("click", () => { variant = b.dataset.var; $$("[data-var]").forEach((o) => o.classList.toggle("on", o === b)); render(); }));
+$("#next").addEventListener("click", () => { step = 2; render(); });
+$("#back").addEventListener("click", () => { step = 1; render(); });
+function setSize(s) { $("#stage").classList.toggle("m", s === "m"); $$("[data-size]").forEach((o) => o.classList.toggle("on", o.dataset.size === s)); }
+$$("[data-size]").forEach((b) => b.addEventListener("click", () => setSize(b.dataset.size)));
+// Validation mirrors the billing step: required name/city/street, HU zip = 4 digits, all three consents.
+$("#bill").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const chk = (id, ok) => { $("#f-" + id).classList.toggle("bad", !ok); $("#e-" + id).classList.toggle("on", !ok); return ok; };
+  const hu = $("#f-country").value === "Magyarország";
+  let ok = chk("name", $("#f-name").value.trim().length > 1);
+  ok = chk("zip", hu ? /^\d{4}$/.test($("#f-zip").value.trim()) : $("#f-zip").value.trim().length > 2) && ok;
+  ok = chk("city", $("#f-city").value.trim().length > 1) && ok;
+  ok = chk("street", $("#f-street").value.trim().length > 2) && ok;
+  const cons = $("#c1").checked && $("#c2").checked && $("#c3").checked;
+  $("#e-chk").classList.toggle("on", !cons);
+  if (!(ok && cons)) return;
+  $("#mtext").textContent = `${$("#payBtn").textContent.replace("Fizetek — ", "")} terhelés indulna. ` + (live() ? "A próba-kedvezmény a rendelésre rögzül; ha a fizetés okt. 23. után történne, a rendelés listaáron újraárazódik." : "A honlap a fizetés után azonnal visszakapcsol.");
+  $("#modal").classList.add("on");
+});
+$$("#bill input").forEach((i) => i.addEventListener("input", () => { i.classList.remove("bad"); const e = $("#e-" + i.id.replace("f-", "")); if (e) e.classList.remove("on"); }));
+$$("#bill input[type=checkbox]").forEach((i) => i.addEventListener("change", () => $("#e-chk").classList.remove("on")));
+$("#mclose").addEventListener("click", () => $("#modal").classList.remove("on"));
+if (matchMedia("(max-width: 600px)").matches) setSize("m");
+render();
+</script>
+</body></html>

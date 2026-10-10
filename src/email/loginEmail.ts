@@ -19,13 +19,17 @@
 // trial's end and the continuation discount in the details box, and one paragraph
 // saying we charge nothing. Username, button and the 7-day note are unchanged; the
 // footer says the reader is TRYING the site, not that they ordered it.
+//
+// ADR-0354 "C" (owner-approved 2026-10-10, assets/design-refs/console/proba-c/3-levelek-sms.html):
+// a C trial's discount is the "Próba-kedvezmény" row ("−{p}%, ha {date}-ig megrendeli …") and
+// one closing sentence in the trial paragraph; a pre-C trial keeps its coupon row.
 
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
 import { mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
 import type { FooterReason, MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
-import { boldVars, couponValue, type TrialCouponView } from "./trialEmail.js";
+import { boldVars, couponValue, isTrialOffer, type TrialCouponView } from "./trialEmail.js";
 import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "../text/day.js";
 
 export function buildCredentialsEmail(input: {
@@ -69,10 +73,23 @@ export function buildCredentialsEmail(input: {
       v,
     );
   const trialVars = trial ? { until: formatDayLongStem(trial.untilIso, lang) } : null;
+  const offerC = trial && isTrialOffer(trial.coupon)
+    ? T(lang, "Ha a próba végéig megrendeli, a díjból {p}% kedvezményt kap — évesen az első évre, havinál az első hónapra.", {
+        p: String(trial.coupon.percent),
+      })
+    : null;
   const details: MailDetailRow[] = [{ label: T(lang, "Felhasználónév"), value: username, mono: true }];
   if (trial) {
     details.push({ label: T(lang, "A próba vége"), value: formatDayShortWeekday(trial.untilIso, lang) });
-    if (trial.coupon) {
+    if (isTrialOffer(trial.coupon)) {
+      details.push({
+        label: T(lang, "Próba-kedvezmény"),
+        value: T(lang, "−{p}%, ha {date}-ig megrendeli (évesen az első évre)", {
+          p: String(trial.coupon.percent),
+          date: formatDayShortStem(trial.coupon.untilIso, lang),
+        }),
+      });
+    } else if (trial.coupon) {
       details.push({
         label: T(lang, "Kedvezmény, ha folytatja"),
         value: T(lang, "{discount}, {date}-ig", {
@@ -93,7 +110,7 @@ export function buildCredentialsEmail(input: {
     `${greeting}\n\n${intro}\n\n` +
     `${T(lang, "Felhasználónév:")} ${username}\n\n` +
     `${button}: ${setPasswordUrl}\n\n` +
-    (trialVars ? `${trialPara(trialVars)}\n\n` : "") +
+    (trialVars ? `${trialPara(trialVars)}${offerC ? ` ${offerC}` : ""}\n\n` : "") +
     `${note}\n\n${later} ${loginUrl}\n`;
 
   return platformMail({
@@ -109,7 +126,7 @@ export function buildCredentialsEmail(input: {
       mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
       mailDetails(details),
       mailButton(setPasswordUrl, button),
-      ...(trialVars ? [mailPara(boldVars(trialPara, trialVars, ["until"]))] : []),
+      ...(trialVars ? [mailPara(boldVars(trialPara, trialVars, ["until"]) + (offerC ? ` ${esc(offerC)}` : ""))] : []),
       mailNote(esc(note)),
       mailNote(`${esc(later)} <a href="${esc(loginUrl)}">${esc(loginUrl.replace(/^https?:\/\//, ""))}</a>`),
     ],

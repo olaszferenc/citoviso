@@ -4,10 +4,14 @@
 //   ① the letter: the removed sentence ("Helyezést nem ígérünk.") is in neither part, the
 //      Google bullet is the approved one, the one-shot footer line is there, the subject is
 //      "{name}: {days} napig ingyen, élesben", the numbers come from their sources (trial
-//      days, TRIAL_RETENTION_DAYS, the coupon setting — 0% leaves the coupon sentence out),
-//      the three answer links carry forras=proba&ok=<reason>, and the §C gate passes it;
-//   ② the SMS: GSM-7, ≤ 2 segments, the link whole — for a normal AND a very long name —
-//      and the §C SMS gate passes on the text that goes out;
+//      days, TRIAL_RETENTION_DAYS, the lead's live offer — 0% leaves the offer sentence out),
+//      the ADR-0354 "C" wording (proba-c/3-levelek-sms.html: the offer STAYS during the trial,
+//      one-sentence opening, the button PAIR with forras=proba[&proba=nyit]), the three answer
+//      links carry forras=proba&ok=<reason>, and the §C gate passes it;
+//   ② the SMS: GSM-7, ≤ 2 segments, the link whole — for a normal AND a very long name, with
+//      and without the offer — and the §C SMS gate passes on the text that goes out;
+//   ②b trialCampaignOfferPercent: the largest LIVE initial offer of the lead (pinTrialOffer's
+//      rule, read-only), the legacy intro once the others expired; it writes no row;
 //   ③ GET /p/<token>/why?forras=proba&ok=<reason> writes NOTHING (a later POST overwrites the
 //      answer, 12 parallel POSTs leave one row — ADR-0350), shows the tapped answer
 //      pre-selected (only an allow-listed one), offers all five and the unsubscribe; the POST
@@ -43,6 +47,7 @@ import {
   buildTrialCampaignEmail,
   buildTrialCampaignSmsText,
   renderTrialCampaignLetter,
+  withQuery,
   type TrialCampaignLetterInput,
 } from "../src/email/trialCampaignEmail.js";
 import type { EmailMessage, EmailSender } from "../src/email/sender.js";
@@ -50,12 +55,14 @@ import { prepareMailLang } from "../src/i18n/mail.js";
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { advertiserIdentity, buildDraftForProspect, senderParts } from "../src/outreach/draft.js";
 import { checkOutreachDraft, checkOutreachSms } from "../src/outreach/outreachCheck.js";
+import { legacyOutreachPercent } from "../src/payment/offers.js";
 import {
   excludeFromTrialCampaign,
   listTrialCampaignCandidates,
   releaseStuckTrialCampaignClaim,
   sendTrialCampaignMail,
   sendTrialCampaignSms,
+  trialCampaignOfferPercent,
   type TrialCampaignCandidate,
 } from "../src/outreach/trialCampaign.js";
 import { smsEncoding } from "../src/sms/encoding.js";
@@ -96,7 +103,7 @@ const sampleInput = (over: Partial<TrialCampaignLetterInput> = {}): TrialCampaig
   days: 14,
   host: "roze-fogado.citoviso.com",
   retentionDays: TRIAL_RETENTION_DAYS,
-  coupon: { percent: 25, days: 90 },
+  coupon: { percent: 25 },
   sender: senderParts(),
   identity: advertiserIdentity(lang),
   links: {
@@ -140,9 +147,28 @@ if (SELF_TEST) {
 } else {
   letterLegs(letter.subject, letter.body, html, "minta");
   check("① a megőrzés napjai = TRIAL_RETENTION_DAYS", letter.body.includes(`a próba végétől ${TRIAL_RETENTION_DAYS} napig megmaradnak`));
-  check("① a kupon a beállításból (25% · 90 nap)", letter.body.includes("az első díjból 25% kedvezményt kap (a próba végétől 90 napig érvényes)"));
-  const noCoupon = renderTrialCampaignLetter(sampleInput({ coupon: { percent: 0, days: 90 } }));
-  check("① 0%-os kupon → a kupon-mondat elmarad", !noCoupon.body.includes("kedvezményt kap") && !noCoupon.body.includes("korábbi levelünkben"));
+  const C_OFFER = "A korábbi levelünkben ajánlott 25% kedvezmény a próba alatt is megmarad: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.";
+  check("① C: az ajánlat a próba alatt is megmarad (szöveg + HTML)", letter.body.includes(C_OFFER) && html.includes(C_OFFER));
+  check("① a régi „a próba végétől … napig érvényes” / „helyett választható” szöveg nincs", !letter.body.includes("napig érvényes)") && !letter.body.includes("helyett választható"));
+  const noCoupon = renderTrialCampaignLetter(sampleInput({ coupon: { percent: 0 } }));
+  check("① 0%-os ajánlat → az ajánlat-mondat elmarad", !noCoupon.body.includes("kedvezmény") && !noCoupon.body.includes("korábbi levelünkben"));
+  check("① nincs ajánlat (null) → az ajánlat-mondat elmarad", !renderTrialCampaignLetter(sampleInput({ coupon: null })).body.includes("korábbi levelünkben"));
+  check("① nyitány (#22): „Szeptember 24-én küldtünk Önnek egy honlap-tervet.” — „Azóta egy dolog változott.” nélkül",
+    letter.body.includes("Szeptember 24-én küldtünk Önnek egy honlap-tervet.\n") && !letter.body.includes("Azóta egy dolog változott") && !html.includes("Azóta egy dolog változott"));
+  check("① második bekezdés: „Most nem kell rögtön döntenie: 14 napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.”",
+    letter.body.includes("Most nem kell rögtön döntenie: 14 napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.") && !letter.body.includes("Most annyi változott"));
+  // #10: the button PAIR — primary opens the trial form, secondary the plan; both in the text too.
+  const tryHref = "https://roze-fogado.citoviso.com?forras=proba&proba=nyit";
+  const planHref = "https://roze-fogado.citoviso.com?forras=proba";
+  check("① gombpár a szövegben: „Kipróbálom 14 napig ingyen: …&proba=nyit” + „Megnézem a tervemet: …?forras=proba”",
+    letter.body.includes(`Kipróbálom 14 napig ingyen: ${tryHref}\n`) && letter.body.includes(`Megnézem a tervemet: ${planHref}\n`));
+  check("① gombpár a HTML-ben: elsődleges a próbára, másodlagos a tervre",
+    html.includes(`href="${tryHref.replace(/&/g, "&amp;")}" data-cta="try"`) && html.includes(">Kipróbálom 14 napig ingyen</a>") &&
+      html.includes(`href="${planHref}" data-cta="plan"`) && html.includes(">Megnézem a tervemet</a>") &&
+      html.indexOf('data-cta="try"') < html.indexOf('data-cta="plan"'));
+  check("① a link meglévő query-je megmarad (követő paraméter)",
+    withQuery("https://x.citoviso.com/?utm=a#top", { forras: "proba", proba: "nyit" }) === "https://x.citoviso.com/?utm=a&forras=proba&proba=nyit#top" &&
+      withQuery("https://x.citoviso.com", { forras: "proba" }) === "https://x.citoviso.com?forras=proba");
   check("① 7 napos próba → a szöveg 7-et mond", renderTrialCampaignLetter(sampleInput({ days: 7 })).body.includes("7 napig ingyen, élesben kipróbálhatja"));
   check(
     "① a három válasz-link: …/why?forras=proba&ok=<ok>",
@@ -165,7 +191,19 @@ if (SELF_TEST) {
   smsLegs(`${sms.text} ${"x".repeat(120)}`, link, "SZABOTÁZS: 3. szelet");
 } else {
   smsLegs(sms.text, link, "minta");
-  check("② a jóváhagyott szöveg", sms.text === `Roze Fogado: a szept. 24-en kuldott honlap-tervet most 14 napig ingyen, elesben is kiprobalhatja. Nincs kartya, nincs elofizetes, a vegen nem terhelunk. ${link} Leiratkozas a lap aljan. Citoviso`, sms.text);
+  check("② a jóváhagyott szöveg (ajánlat nélkül)", sms.text === `Roze Fogado: a szept. 24-en kuldott honlap-tervet most 14 napig ingyen, elesben is kiprobalhatja. Nincs kartya, nincs elofizetes, a vegen nem terhelunk. ${link} Leiratkozas a lap aljan. Citoviso`, sms.text);
+  // ADR-0354 "C" (proba-c/3-levelek-sms.html): with the lead's live offer.
+  const smsC = buildTrialCampaignSmsText({ lang, leadName: "Rozé Fogadó", sentIso: "2026-09-24", days: 14, link, percent: 25 });
+  smsLegs(smsC.text, link, "C, ajánlattal");
+  check("② C: a jóváhagyott szöveg ajánlattal", smsC.text === `Roze Fogado: a szept. 24-en kuldott honlap-tervet most 14 napig ingyen, elesben is kiprobalhatja, kartya nelkul. Ha a proba vegeig megrendeli, a 25% kedvezmeny megmarad. ${link} Leiratkozas a lap aljan. Citoviso`, smsC.text);
+  const smsCLong = buildTrialCampaignSmsText({ lang, leadName: longName, sentIso: "2026-09-24", days: 14, link, percent: 25 });
+  smsLegs(smsCLong.text, link, "C, hosszú név");
+  check("② C, hosszú név → a név rövidül, az ajánlat marad", smsCLong.name.endsWith("...") && smsCLong.text.includes("a 25% kedvezmeny megmarad"), smsCLong.text);
+  const hugeLink = "https://mineral.tail3a89f.ts.net:8443/p/trialcampaigncheck-mv21m57m-sms/tccmv21m57msmsxxxxxxxxxxxxxxxx";
+  const smsCHuge = buildTrialCampaignSmsText({ lang, leadName: longName, sentIso: "2026-09-24", days: 14, link: hugeLink, percent: 25 });
+  smsLegs(smsCHuge.text, hugeLink, "C, hosszú név + hosszú link");
+  check("② C, a legrövidebb névvel sem fér → az ajánlat-mondat nélküli jóváhagyott szöveg (a link sosem rövidül)",
+    !smsCHuge.text.includes("kedvezmeny") && smsCHuge.text.includes("Nincs kartya, nincs elofizetes"), smsCHuge.text);
   smsLegs(smsLong.text, link, "hosszú név");
   // Elek 22 (2026-10-09): the article follows the date — "a okt. 4-en" was the bug.
   const smsOkt = buildTrialCampaignSmsText({ lang, leadName: "Rozé Fogadó", sentIso: "2026-10-04", days: 14, link });
@@ -394,6 +432,21 @@ if (!SELF_TEST) {
     const smsDraft = await buildDraftForProspect(smsB.prospectId);
     if (texts[0] && smsDraft) smsLegs(texts[0].text, smsDraft.sms.link, "a kiment SMS");
     check("⑤ a kiment SMS a lead számára ment", texts[0]?.to === smsPhone);
+
+    // ②b the offer percent the letter quotes — pinTrialOffer's rule, read-only
+    console.log("②b az ajánlat-százalék (pinTrialOffer szabálya, írás nélkül)");
+    const pctLead = await fixture("pct");
+    await db
+      .insertInto("offer")
+      .values({ kind: "escalation", prospect_id: pctLead.prospectId, percent: 45, scope: "initial", expires_at: new Date("2026-10-08T12:00:00+02:00"), note: "trial-campaign-check" } as never)
+      .execute();
+    const offersBefore = (await db.selectFrom("offer").select("id").where("prospect_id", "=", pctLead.prospectId).execute()).length;
+    const pctLive = await trialCampaignOfferPercent(pctLead.leadId, new Date("2026-10-07T10:00:00+02:00"));
+    const pctLater = await trialCampaignOfferPercent(pctLead.leadId, new Date("2026-10-09T10:00:00+02:00"));
+    const offersAfter = (await db.selectFrom("offer").select("id").where("prospect_id", "=", pctLead.prospectId).execute()).length;
+    check("②b élő 45%-os eszkaláció → 45 (a legnagyobb élő)", pctLive === 45, String(pctLive));
+    check("②b lejárt eszkaláció → a régi küldés bevezető ajánlata (legacyOutreachPercent)", pctLater === legacyOutreachPercent(), String(pctLater));
+    check("②b az olvasás nem ír ajánlat-sort", offersBefore === offersAfter, `${offersBefore} → ${offersAfter}`);
 
     // ⑥ follow-up skip
     console.log("⑥ eszkalációs follow-up utána nem megy");

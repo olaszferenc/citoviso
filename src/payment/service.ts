@@ -118,7 +118,7 @@ export async function requestPayment(
     if (await preTrialOrderOfContinuableTrial(orderIntentId)) {
       console.warn(
         `[payment] requestPayment ${orderIntentId} MEGTAGADVA: a próba ELŐTT árazott rendelés — ` +
-          `a próbázó a /folytatas oldalon fizet a próba-kuponnal (ADR-0342 ⑥, nem halmozódik)`,
+          `a próbázó a /folytatas oldalon fizet, a próba-kedvezménnyel (ADR-0354, egy kedvezmény, nem halmozódik)`,
       );
       return null;
     }

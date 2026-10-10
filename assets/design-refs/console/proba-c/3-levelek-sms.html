@@ -1,0 +1,98 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Próba „C” — levél- és SMS-szövegek (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-cyan-500:#1fb6d6; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d; --citui-bad-soft:#fdecec;
+    --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.55 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .note{max-width:980px;margin:12px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:10px auto 30px;container-type:inline-size;width:100%;max-width:980px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 6px}
+  .item{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;box-shadow:var(--citui-shadow-sm);padding:16px 18px;margin-bottom:14px}
+  .item h3{margin:0 0 2px;font:700 1.02rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .item .w{font-size:.8rem;color:var(--citui-muted);margin-bottom:10px}
+  .cmp{display:grid;grid-template-columns:1fr;gap:10px}
+  @container (min-width:700px){ .cmp{grid-template-columns:1fr 1fr} }
+  .was,.now{border-radius:12px;padding:10px 12px;font-size:.9rem}
+  .was{background:var(--citui-bad-soft)} .now{background:var(--citui-ok-soft)}
+  .was .k,.now .k{display:block;font:700 .7rem/1.4 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);margin-bottom:2px}
+  .tag{display:inline-block;font:700 .68rem/1 var(--citui-font-text);padding:3px 7px;border-radius:6px;background:var(--citui-warn-soft);border:1px solid var(--citui-warn);margin-left:6px;vertical-align:2px}
+  textarea{width:100%;min-height:96px;border:1px solid var(--citui-line-strong);border-radius:10px;padding:9px 10px;font:14px/1.45 var(--citui-font-text);color:var(--citui-ink);background:var(--citui-white)}
+  .count{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:.78rem}
+  .count span{padding:3px 8px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2)}
+  .count .ok{background:var(--citui-ok-soft);color:var(--citui-ok)} .count .bad{background:var(--citui-warn-soft);border:1px solid var(--citui-warn)}
+  .mailbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .mb{display:inline-block;padding:10px 16px;border-radius:var(--citui-radius-pill);font:700 .86rem/1 var(--citui-font-text);background:var(--citui-cyan-500);color:var(--citui-navy-950);border:0}
+  .mb.sec{background:var(--citui-white);border:1px solid var(--citui-line-strong);color:var(--citui-ink)}
+</style></head><body>
+<div class="bar"><b>Próba „C” — levél- és SMS-szövegek</b><span class="sp"></span><button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button></div>
+<p class="note"><b>Mit dönt el:</b> a „25% … 90 napig” / „az első díjból 25%” mondatok helyén a C: <b>a próba végéig {p}% kedvezménnyel rendelheti meg — évesen az első évre, havinál csak az első hónapra; utána listaár.</b>
+A {p} a lead SAJÁT próba-ajánlata (25 bevezető / 50 eszkaláció / alap 25), a minta −50%. Ugyanaz a név mindenhol: <b>„Próba-kedvezmény”</b> (Elek #16). A lejárat után nincs kedvezmény-mondat (a határidő valódi).
+Lejárat-napi levél ma sincs (csak T−3, T−1, 90 napos) — újat nem javaslunk, a lejárt próbát az admin piros blokkja mondja. Az SMS-mezők szerkeszthetők; a számláló ugyanúgy ékezet nélkül számol, ahogy a küldő (toGsm7) kiküldi (keret: 2 szegmens).</p>
+<div class="stage" id="stage">
+
+  <div class="item"><h3>Belépő-levél (próba indulása)</h3><div class="w">„Részletek” doboz, új sor</div>
+    <div class="cmp"><div class="was"><span class="k">Ma (régi próbánál)</span>Kedvezmény, ha folytatja: <i>25% az első díjból, jan. 21-ig</i><br><small>(kupon nélküli új próbánál a sor most egyszerűen elmarad)</small></div>
+    <div class="now"><span class="k">Javaslat</span><b>Próba-kedvezmény:</b> −50%, ha okt. 23-ig megrendeli (évesen az első évre)<br>+ a bekezdés végére: „Ha a próba végéig megrendeli, a díjból 50% kedvezményt kap — évesen az első évre, havinál az első hónapra.”</div></div></div>
+
+  <div class="item"><h3>T−3 és T−1 levél</h3><div class="w">a kedvezmény-mondat + a „Kedvezmény / A kedvezmény érvényes” sorok</div>
+    <div class="cmp"><div class="was"><span class="k">Ma</span>„Ha folytatná, a próbához kapott kedvezménnyel teheti: 25% az első díjból, január 21-ig.”<br>Kedvezmény: 25% az első díjból · A kedvezmény érvényes: jan. 21-ig</div>
+    <div class="now"><span class="k">Javaslat</span>„Ha a próba végéig, <b>október 23-ig</b> megrendeli, 50% kedvezményt kap — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.”<br>Próba-kedvezmény: −50% · Érvényes: okt. 23-ig, a próba végéig</div></div></div>
+
+  <div class="item"><h3>T−3 / T−1 SMS</h3><div class="w">„Folytatás {p}% kedvezménnyel” helyett — szerkeszthető</div>
+    <div class="cmp"><div class="was"><span class="k">Ma (T−3)</span>Citoviso: az Üdülő tábor ingyenes próbája okt. 23-án lejár. Folytatás 25% kedvezménnyel: citoviso.com/p/xxxxxxxx/folytatas Nem terhelünk, ha nem folytatja.</div>
+    <div class="now"><span class="k">Javaslat (T−3)</span><textarea data-sms>Citoviso: az Üdulo tábor ingyenes próbája okt. 23-án lejár. Ha addig megrendeli, -50% az elso díjból: citoviso.com/p/xxxxxxxx/folytatas Nem terhelünk, ha nem folytatja.</textarea><div class="count"></div>
+    <span class="k" style="margin-top:8px">Javaslat (T−1)</span><textarea data-sms>Citoviso: holnap lejár az Üdulo tábor ingyenes próbája. Holnapig -50% az elso díjból: citoviso.com/p/xxxxxxxx/folytatas</textarea><div class="count"></div></div></div></div>
+
+  <div class="item"><h3>90 napos törlés-figyelmeztető</h3><div class="w">a próba után 83. nap — a kedvezmény ekkor már nem él</div>
+    <div class="cmp"><div class="was"><span class="k">Ma</span>„Ha folytatná, a próbához kapott kedvezménnyel még megteheti: 25% az első díjból, január 27-ig.” + Kedvezmény-sor</div>
+    <div class="now"><span class="k">Javaslat</span>A mondat és a sor <b>kimarad</b>. Marad: „Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.”</div></div></div>
+
+  <div class="item"><h3>Visszamenőleges kampány-levél (ADR-0348 — még nem ment ki)</h3><div class="w">kupon-mondat (C) + Elek #22 nyitány + #10 gomb (csak javaslat, a levél jóvá van hagyva)</div>
+    <div class="cmp"><div class="was"><span class="k">Ma</span>„Ha folytatja, az első díjból 25% kedvezményt kap (a próba végétől 90 napig érvényes). A próba a korábbi levelünkben ajánlott kedvezmény helyett választható.”</div>
+    <div class="now"><span class="k">Javaslat <span class="tag">C</span></span>„A korábbi levelünkben ajánlott <b>25% kedvezmény a próba alatt is megmarad</b>: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.”<br><small>({p} = a lead ma élő legjobb ajánlata, ugyanazzal a szabállyal, ahogy a próba indulásakor rögzül.)</small></div></div>
+    <div class="cmp" style="margin-top:10px"><div class="was"><span class="k">Ma — nyitány (#22)</span>„Október 4-én küldtünk Önnek egy honlap-tervet. Azóta egy dolog változott.” / „Most annyi változott, hogy nem kell rögtön döntenie: 14 napig ingyen, élesben kipróbálhatja. Kártya és előfizetés nélkül.”</div>
+    <div class="now"><span class="k">Javaslat <span class="tag">#22</span></span>„Október 4-én küldtünk Önnek egy honlap-tervet.” / „Most nem kell rögtön döntenie: 14 napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.”</div></div>
+    <div class="cmp" style="margin-top:10px"><div class="was"><span class="k">Ma — gomb (#10)</span><div class="mailbtns"><span class="mb">Megnézem a tervemet</span></div></div>
+    <div class="now"><span class="k">Javaslat <span class="tag">#10, csak javaslat</span></span><div class="mailbtns"><span class="mb">Kipróbálom 14 napig ingyen</span><span class="mb sec">Megnézem a tervemet</span></div><small>Az első a tervet nyitja, a próba-űrlappal kinyitva.</small></div></div></div>
+
+  <div class="item"><h3>Kampány-SMS</h3><div class="w">ma kedvezményt nem említ; két változat — szerkeszthető</div>
+    <div class="cmp"><div class="was"><span class="k">Ma (marad, ha nem kell %)</span><textarea data-sms>Üdülő tábor: az okt. 4-én küldött honlap-tervet most 14 napig ingyen, élesben is kipróbálhatja. Nincs kártya, nincs előfizetés, a végén nem terhelünk. citoviso.com/p/xxxxxxxx Leiratkozás a lap alján. Citoviso</textarea><div class="count"></div></div>
+    <div class="now"><span class="k">Javaslat — a %-kal</span><textarea data-sms>Üdülo tábor: az okt. 4-én küldött honlap-tervet most 14 napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, a 25% kedvezmény megmarad. citoviso.com/p/xxxxxxxx Leiratkozás a lap alján. Citoviso</textarea><div class="count"></div></div></div></div>
+
+  <div class="item"><h3>Admin-sáv mondata (a 2-belepesi-pontok.html-ben is)</h3>
+    <div class="cmp"><div class="was"><span class="k">Ma</span>„Ha folytatja, 25% kedvezményt kap az első díjból.”</div>
+    <div class="now"><span class="k">Javaslat</span>„Ha a próba végéig megrendeli, −50% az első díjból.”</div></div></div>
+</div>
+<script>
+const $$ = (s) => [...document.querySelectorAll(s)];
+// GSM-7 basic set + extension table; anything else forces UCS-2 (70/67).
+const GSM = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+const EXT = "^{}\\[~]|€";
+function seg(t) {
+  let gsm = true, n = 0;
+  for (const ch of t) { if (GSM.includes(ch)) n++; else if (EXT.includes(ch)) n += 2; else { gsm = false; break; } }
+  if (!gsm) { const u = [...t].length; return { enc: "UCS-2", len: u, seg: u <= 70 ? 1 : Math.ceil(u / 67) }; }
+  return { enc: "GSM-7", len: n, seg: n <= 160 ? 1 : Math.ceil(n / 153) };
+}
+// Same fold as src/sms/encoding.ts toGsm7: strip ALL diacritics, map dashes, drop the rest.
+const toGsm7 = (t) => [...t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[–—−]/g, "-")].filter((c) => GSM.includes(c) || EXT.includes(c)).join("").replace(/ {2,}/g, " ");
+function upd(ta) {
+  const sent = toGsm7(ta.value), r = seg(sent), c = ta.nextElementSibling;
+  c.innerHTML = `<span>kiküldve: ${sent.length} karakter (ékezet nélkül, mint a küldő)</span><span class="${r.seg <= 2 ? "ok" : "bad"}">${r.seg} szegmens</span>`;
+}
+$$("[data-sms]").forEach((ta) => { ta.addEventListener("input", () => upd(ta)); upd(ta); });
+function setSize(s) { document.getElementById("stage").classList.toggle("m", s === "m"); $$("[data-size]").forEach((o) => o.classList.toggle("on", o.dataset.size === s)); }
+$$("[data-size]").forEach((b) => b.addEventListener("click", () => setSize(b.dataset.size)));
+if (matchMedia("(max-width: 600px)").matches) setSize("m");
+</script>
+</body></html>

@@ -34,7 +34,7 @@ import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { getFreeTrialConfig } from "./config.js";
-import { pinTrialOffer } from "./offer.js";
+import { pinTrialOffer, trialDiscount } from "./offer.js";
 
 export interface TrialInput {
   readonly name: string;
@@ -271,11 +271,9 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (!hasLogin) {
       try {
         const lead = await db.selectFrom("tenant").select("display_name").where("id", "=", tenantId).executeTakeFirst();
-        // ADR-0344: the approved TRIAL login letter — its end (and, for a trial started
-        // before ADR-0354, its continuation coupon; the C wording is the §2b round 2).
-        const cp = couponId
-          ? await db.selectFrom("offer").select(["percent", "expires_at"]).where("id", "=", couponId).executeTakeFirst()
-          : undefined;
+        // ADR-0344: the approved TRIAL login letter — its end and the discount it may promise
+        // (trialDiscount: the C "Próba-kedvezmény", or a pre-ADR-0354 trial's coupon).
+        const discount = await trialDiscount(trialId, now);
         const login = await issueAndSendTenantLogin(
           tenantId,
           lead?.display_name ?? "oldalam",
@@ -283,10 +281,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           { name: trial.contact_name, isPerson: true },
           {
             untilIso: budapestIsoDay(new Date(trial.trial_until as unknown as string)),
-            coupon:
-              cp?.percent && cp.expires_at
-                ? { percent: cp.percent, untilIso: budapestIsoDay(new Date(cp.expires_at as unknown as string)) }
-                : null,
+            coupon: discount,
           },
         );
         loginSentTo = login.contactEmail;
