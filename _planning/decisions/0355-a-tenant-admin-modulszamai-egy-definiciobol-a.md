@@ -1,4 +1,4 @@
-## ADR-XXXX — A tenant-admin modulszámai egy definícióból; a nem rendelhető modult a Bővítés megnevezi
+## ADR-0355 — A tenant-admin modulszámai egy definícióból; a nem rendelhető modult a Bővítés megnevezi
 
 **Dátum:** 2026-10-10 · **Kontextus:** Elek 2. kör, #14 #15 (`08k`, `08l` képek, fizetés utáni admin). Kiegészíti: ADR-0102 (email-modul nem eladható), modules-quiet-list §8, admin-linear (Teendők-számláló).
 
