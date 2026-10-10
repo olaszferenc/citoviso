@@ -290,6 +290,7 @@ const subscriptionFixture = {
   periodEnd: "2026-09-28",
   renewDay: 28,
   nextInvoiceTotal: 6070,
+  nextChargeTotal: 6070,
   nextInvoiceItems: [
     { label: "Fotógaléria", price: 490, isNew: false },
     { label: "Szobák és árak", price: 690, isNew: false },

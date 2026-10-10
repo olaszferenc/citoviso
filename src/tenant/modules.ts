@@ -28,6 +28,12 @@ export interface TenantModule {
   readonly cancelAtPeriodEnd: boolean;
   /** ADR-0080 ② (B-opció): live now, first fee on the next renewal invoice. */
   readonly awaitingFirstCharge: boolean;
+  /**
+   * ADR-0354 ⓑ: on only because the free trial grants it (not bought) — free to the trial's
+   * end, then switched off. Never a line on an invoice (Elek3 K1: the success page and the
+   * Modulok tab quoted 98 900 Ft/év for a 95 000 Ft purchase). Optional for hand-made fixtures.
+   */
+  readonly trialGrant?: boolean;
 }
 
 export interface TenantModuleView {
@@ -119,6 +125,7 @@ export function isBilledModule(m: TenantModule): boolean {
     !m.spine &&
     !m.supersededBy &&
     !m.cancelAtPeriodEnd &&
+    !m.trialGrant &&
     MODULE_CATALOG.some((c) => c.id === m.id && c.billing !== "once")
   );
 }
@@ -197,7 +204,9 @@ export function paidButEmptyModules(
     if (!pair) return false;
     // Billed, not merely active: a superseded or cancelled module is not something
     // the tenant is paying for right now, so it must not be dunned about.
-    return isBilledModule(m) && !filled.has(pair[1]);
+    // A trial-granted module is not billed (Elek3 K1), but the trialist HOLDS it and the
+    // page shows it — its empty content is still a to-do; only the money flag is ignored.
+    return isBilledModule({ ...m, trialGrant: false }) && !filled.has(pair[1]);
   });
 }
 
@@ -207,9 +216,10 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   const disabledSales = await getDisabledModules();
   const rows = await db
     .selectFrom("module_entitlement")
-    .select(["module", "active", "cancel_at_period_end", "awaiting_first_charge"])
+    .select(["module", "active", "cancel_at_period_end", "awaiting_first_charge", "trial_grant"])
     .where("tenant_id", "=", tenantId)
     .execute();
+  const trialGrantIds = new Set(rows.filter((r) => r.active && r.trial_grant).map((r) => r.module));
   const activeIds = new Set(rows.filter((r) => r.active).map((r) => r.module));
   const cancelIds = new Set(
     rows.filter((r) => r.active && r.cancel_at_period_end).map((r) => r.module),
@@ -248,12 +258,14 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
     supersededBy: supersederOf(m.id, effectiveIds),
     cancelAtPeriodEnd: cancelIds.has(m.id),
     awaitingFirstCharge: awaitingIds.has(m.id),
+    trialGrant: trialGrantIds.has(m.id),
   }));
   const baseMonthly = getBaseMonthly();
   // A replaced module is never billed: the page cannot show it, so charging for it
   // would be selling nothing.
+  // A trial-granted module is not paid for either (ADR-0354 ⓑ, Elek3 K1).
   const totalMonthly = modules
-    .filter((m) => m.active && !m.spine && !m.supersededBy)
+    .filter((m) => m.active && !m.spine && !m.supersededBy && !m.trialGrant)
     .reduce((sum, m) => sum + m.priceMonthly, baseMonthly);
   // Elek2 #14: an unsellable module the tenant had during a continued trial must not
   // vanish without a word. Only asked when there IS such a module (one cheap read).

@@ -27,6 +27,12 @@ export interface SubscriptionAdminData {
   /** Day-of-month of the anchor (the tenant's renewal day). */
   readonly renewDay: number;
   readonly nextInvoiceTotal: number;
+  /**
+   * Elek3 K2: what the NEXT renewal (at periodEnd) actually charges — the annual sum for an
+   * annual cycle (or an armed switch that takes effect then), the monthly one otherwise.
+   * `nextInvoiceTotal` stays the MONTHLY rate; the Pénztárca printed it as the charge.
+   */
+  readonly nextChargeTotal: number;
   readonly nextInvoiceItems: NextInvoiceItem[];
   /** The open (pending) renewal payment's pay-link, for the banner button. */
   readonly payUrl: string | null;
@@ -280,6 +286,10 @@ export async function getSubscriptionAdmin(
     periodEnd: isoDate(periodEndDate),
     renewDay: new Date(sub.anchor_date as unknown as string).getDate(),
     nextInvoiceTotal: total,
+    nextChargeTotal:
+      sub.billing_period === "annual" || (pendingAnnual && pendingEffectiveDate === isoDate(periodEndDate))
+        ? total * (12 - freeMonths)
+        : total,
     nextInvoiceItems: items,
     payUrl: openPay?.payUrl ?? null,
     arrears,

@@ -79,6 +79,7 @@ const sub: SubscriptionAdminData = {
   periodEnd: "2026-09-28",
   renewDay: 28,
   nextInvoiceTotal: 6070,
+  nextChargeTotal: 6070,
   nextInvoiceItems: [],
   payUrl: null,
   arrears: null,
@@ -118,6 +119,10 @@ console.log("A) render — állapotok és a kontraktus feliratai");
   ok(onT.includes("AUTOMATIKUS TERHELÉS BEKAPCSOLVA"), "kártya: a BEKAPCSOLVA pill (③)");
   ok(onT.includes("···· ···· ···· 4242") && onT.includes("Lejárat: 08/2028"), "kártya: utolsó 4 + lejárat (②)");
   ok(on.includes("2026. 09. 28.") && onT.includes("6 070 Ft"), "következő terhelés: dátum + a subscription összege (⑦)");
+  // Elek3 K2: an ANNUAL plan's next charge is the year's sum, never the monthly rate.
+  const annualSub: SubscriptionAdminData = { ...sub, billingPeriod: "annual", nextChargeTotal: 60700 };
+  const annT = strip(walletSection(base, annualSub, null));
+  ok(annT.includes("60 700 Ft") && !annT.includes("6 070 Ft"), "K2: éves előfizetés → a következő terhelés az éves összeg (60 700), nem a havi");
   ok(onT.includes("Korábbi kártyák (1)") && onT.includes("MASTERCARD ····8810") && onT.includes("cserélve"), "előzmény: cserélve (④)");
   ok(on.includes("data-wal-change>") && onT.includes("Kártya cseréje"), "gomb: Kártya cseréje (④)");
   ok(on.includes("data-mand-revoke>") && on.includes('form="adm-mand-off"'), "gomb: Megbízás visszavonása + kétlépéses ablak (⑥)");

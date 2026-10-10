@@ -5595,10 +5595,11 @@ export function walletSection(
         .join("") +
       `</ul></details>`
     : "";
-  // ── right column: next charge (ONE source for the amount: sub.nextInvoiceTotal) + charges ──
+  // ── right column: next charge (ONE source for the amount: sub.nextChargeTotal — the
+  //    cycle's sum, not the monthly rate: Elek3 K2, an annual plan read 9 890 Ft) + charges ──
   const nextVal = card
     ? sub
-      ? `${d(w.nextChargeOn)} · ${esc(hufAmount(sub.nextInvoiceTotal))}`
+      ? `${d(w.nextChargeOn)} · ${esc(hufAmount(sub.nextChargeTotal))}`
       : d(w.nextChargeOn)
     : `${d(w.nextChargeOn)} · ${T(lang, "fizetési link e-mailben")}`;
   const next =

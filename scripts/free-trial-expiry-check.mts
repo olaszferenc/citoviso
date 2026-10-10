@@ -718,6 +718,34 @@ try {
   check("ⓑ a nem választott próba-modul (rooms) a próba végéig aktív marad",
     e1.some((e) => e.module === "rooms" && e.active && e.trial_grant), e1.filter((e) => e.active).map((e) => `${e.module}${e.trial_grant ? "*" : ""}`).join(","));
   check("ⓑ …a megvett modulok próba-jel nélkül élnek", ["gallery", "enquiry"].every((m) => e1.some((e) => e.module === m && e.active && !e.trial_grant)));
+  // Elek3 K1: the unchosen trial modules are free to the trial's end — never on the next
+  // charge. The success page quoted 98 900 Ft/év (the e-mail module counted) for 95 000.
+  {
+    const { renewableModuleIds } = await import("../src/payment/billing.js");
+    const { getActivationSummary } = await import("../src/payment/service.js");
+    const { computeMonthly } = await import("../src/pricing.js");
+    // Self-test: forget one trial flag — the leg must go red (rooms becomes "bought").
+    if (SELF_TEST) await db.updateTable("module_entitlement").set({ trial_grant: false }).where("tenant_id", "=", cTenant).where("module", "=", "rooms").execute();
+    const ren = await renewableModuleIds(cTenant);
+    const summary = await getActivationSummary(cRef);
+    if (SELF_TEST) await db.updateTable("module_entitlement").set({ trial_grant: true }).where("tenant_id", "=", cTenant).where("module", "=", "rooms").execute();
+    const trialOnly = e1.filter((e) => e.active && e.trial_grant).map((e) => e.module);
+    check("K1: a következő terhelés tételei közt nincs próba-modul", trialOnly.length > 0 && ren.every((m) => !trialOnly.includes(m)), `számlázott: ${ren.join(",")} · próba: ${trialOnly.join(",")}`);
+    const want = computeMonthly(["gallery", "enquiry"]);
+    check("K1: a sikerlap következő terhelése = a megvett csomag listaára", summary?.renewal?.amount === want, `${summary?.renewal?.amount} (várt ${want})`);
+    // Elek3 K2: the Pénztárca's next charge — the cycle's sum. Monthly here; flipped to annual
+    // the same subscription must quote the year (10 monthly fees), never the monthly rate.
+    const { getSubscriptionAdmin } = await import("../src/tenant/subscriptionAdmin.js");
+    const { getAnnualFreeMonths } = await import("../src/pricing.js");
+    const mv = await getTenantModules(cTenant);
+    const sm = await getSubscriptionAdmin(cTenant, mv);
+    check("K2: havi előfizetés → a következő terhelés a havi díj", sm?.nextChargeTotal === want, `${sm?.nextChargeTotal} (várt ${want})`);
+    await db.updateTable("subscription").set({ billing_period: "annual" }).where("tenant_id", "=", cTenant).execute();
+    const sa = await getSubscriptionAdmin(cTenant, mv);
+    await db.updateTable("subscription").set({ billing_period: "monthly" }).where("tenant_id", "=", cTenant).execute();
+    const wantA = want * (12 - getAnnualFreeMonths());
+    check("K2: éves előfizetés → a következő terhelés az éves összeg", sa?.nextChargeTotal === wantA, `${sa?.nextChargeTotal} (várt ${wantA})`);
+  }
   const rerendered: string[] = [];
   const stub = { onlyTrialIds: [cTrial.id], rerender: async (t: string) => { rerendered.push(t); } };
   const g0 = await endTrialGrantsAfterConversion(new Date(), stub);
