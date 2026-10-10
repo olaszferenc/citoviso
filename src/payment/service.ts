@@ -38,7 +38,8 @@ import { getGateway } from "./index.js";
 import { MockGateway } from "./mock.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
 import { applyRenewalPaid, ensureSubscriptionForOrder, nextChargeDate } from "./subscription.js";
-import { grantNewSubscriberCouponForOrder, offerLabel, redeemOfferForOrder, type ActiveOffer } from "./offers.js";
+import { grantNewSubscriberCouponForOrder, offerLabel, redeemOfferForOrder, type ActiveOffer, type OfferNameKind } from "./offers.js";
+import { isTrialOffer } from "../trial/offer.js";
 import { startSiteShot } from "./siteShot.js";
 
 export interface RequestPaymentResult {
@@ -1278,7 +1279,7 @@ export function invoiceComment(
   listPrice: number | null | undefined,
   amount: number,
   /** Elek F-3: WHICH offer — its one name (offerLabel). Absent → the plain word. */
-  offerKind?: ActiveOffer["kind"] | null,
+  offerKind?: OfferNameKind | null,
 ): string {
   const legal = reverse
     ? "A szolgáltatás teljesítési helye a megrendelő tagállama — fordított adózás (Áfa tv. 37. §). Reverse charge."
@@ -1482,6 +1483,8 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       // Elek F-3: the NAME on the invoice follows the offer's kind — a 98% campaign
       // was printed as "Üdvözlő kedvezmény" (the welcome coupon is another offer).
       "offer.kind as offerKind",
+      // proba-C: the trial's own offer is named „Próba-kedvezmény” whatever kind it was minted as.
+      "offer.id as offerId",
       "prospect.contact_email as email",
       "prospect.lead_id as leadId",
     ])
@@ -1606,7 +1609,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     dueDate: today,
     paymentMethod: "Bankkártya",
     paid: true,
-    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, p.offerKind),
+    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, (await isTrialOffer(p.offerId)) ? "trial" : p.offerKind),
     // ADR-0283: provider-side idempotency — a retry can never mint a second document.
     externalId: `citoviso-payment-${paymentId}`,
   };

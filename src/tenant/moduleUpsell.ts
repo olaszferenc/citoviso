@@ -25,6 +25,7 @@ import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { couponRule } from "../payment/couponRule.js";
 import { bestActiveCouponForTenant } from "../payment/offers.js";
+import { isTrialOffer } from "../trial/offer.js";
 import { getAnnualFreeMonths, getModulePrice, loadPricing } from "../pricing.js";
 
 /**
@@ -58,7 +59,7 @@ export interface FirstChargeOrder {
   /** Percent of the applied coupon, when one discounted the price. */
   readonly offerPercent: number | null;
   /** Elek F-3: which offer the discount came from — the receipt names it by kind. */
-  readonly offerKind: "outreach" | "escalation" | "coupon" | "campaign" | null;
+  readonly offerKind: "outreach" | "escalation" | "coupon" | "campaign" | "trial" | null;
 }
 
 /**
@@ -177,7 +178,8 @@ export async function createFirstChargeOrder(
     listPrice,
     months,
     offerPercent: coupon?.percent ?? null,
-    offerKind: coupon?.kind ?? null,
+    // proba-C: the trial's own offer carries ONE name („Próba-kedvezmény”).
+    offerKind: coupon ? ((await isTrialOffer(coupon.id)) ? "trial" : coupon.kind) : null,
   };
 }
 

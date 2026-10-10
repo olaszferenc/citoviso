@@ -44,7 +44,7 @@ kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tart
    (leadenként és címenként egy), és az eszkalációs follow-up utána nem megy. Az ígéret a SZEMÉLYNEK szól (ADR-0353): egy ember
    (közös cím VAGY közös mobil) egy üzenetet kap — levelet, ha van levél-célpontja, különben SMS-t.
 8. **SMS:** ékezet nélkül (GSM-7), a linkkel, ≤ 2 szelet; hosszú névnél a NÉV rövidül, a link soha. Szövege (ékezetes forrás, majd
-   GSM-7-re hajtva), élő ajánlattal: **„{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, a {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso”**;
+   GSM-7-re hajtva), élő ajánlattal: **„{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, {pa} {p}% kedvezmény megmarad. ({pa} = a/az a szám kiejtése szerint, `huArticle`) {link} Leiratkozás a lap alján. Citoviso”**;
    ajánlat nélkül — és ha a legrövidebb névvel sem fér 2 szeletbe — a régi: „{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya,
    nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso”.
 9. **Küldés:** csak hétköznap 9–16 (ADR-0334), sorban (SMS ≥ 90 mp), szárazon alapból; élesen `--go`, a tulaj külön „mehet”-jével.

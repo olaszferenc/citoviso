@@ -984,7 +984,7 @@ export interface ModuleAppliedFlash {
   readonly chargedOfferPercent?: number;
   /** Elek F-3: which offer it was — named via offerLabel. Absent/coupon = the
    *  welcome coupon, the only purchase-scope offer minted automatically. */
-  readonly chargedOfferKind?: "outreach" | "escalation" | "coupon" | "campaign" | null;
+  readonly chargedOfferKind?: "outreach" | "escalation" | "coupon" | "campaign" | "trial" | null;
   /** ADR-0113: the MIT charge is in flight — the callback will activate. */
   readonly chargePending?: boolean;
   /** ADR-0094 ④: the change was refused — it would sink below the domain

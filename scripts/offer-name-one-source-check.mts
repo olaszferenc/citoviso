@@ -55,6 +55,19 @@ if (!SELF_TEST) {
   ok(coup.includes("Üdvözlő kedvezmény"), "számla: az üdvözlő kupon „Üdvözlő kedvezmény”", coup);
   const esc = invoiceComment(false, 50, 9300, 4650, "escalation");
   ok(esc.includes("Döntés-segítő ajánlat"), "számla: az eszkaláció „Döntés-segítő ajánlat”", esc);
+  // proba-C / Elek #16 (koordinátor, 2026-10-10): the trial's own offer has ONE name everywhere.
+  ok(offerLabel("hu", "trial") === "Próba-kedvezmény", "a próba saját ajánlata: „Próba-kedvezmény”", offerLabel("hu", "trial"));
+  const trialInv = invoiceComment(false, 50, 95000, 47500, "trial");
+  ok(trialInv.includes("Próba-kedvezmény") && !trialInv.includes("Döntés-segítő"), "számla: a próba-ajánlat „Próba-kedvezmény” (akkor is, ha eszkalációként született)", trialInv);
+}
+{
+  // The producers resolve the trial's offer to "trial" — the name above is only reached if they do.
+  const svc = readFileSync(new URL("../src/payment/service.ts", import.meta.url), "utf8");
+  const up = readFileSync(new URL("../src/tenant/moduleUpsell.ts", import.meta.url), "utf8");
+  const pub = readFileSync(new URL("../src/server/" + "public.ts", import.meta.url), "utf8");
+  ok(/isTrialOffer\(p\.offerId\)\)\s*\?\s*"trial"/.test(svc), "számla-megjegyzés: a próba-ajánlatot „trial”-ra oldja (isTrialOffer)");
+  ok(/isTrialOffer\(coupon\.id\)\)\s*\?\s*"trial"/.test(up), "modul-vásárlás nyugtája: a próba-ajánlatot „trial”-ra oldja (isTrialOffer)");
+  ok(/"campaign", "trial"\] as const\)\.find\(\(k\) => k === q\.get\("mkind"\)\)/.test(pub), "a nyugta-redirect a „trial” fajtát is átengedi (mkind)");
 }
 
 // ── 3. EVERY SURFACE READS THE ONE NAME ──────────────────────────────────────

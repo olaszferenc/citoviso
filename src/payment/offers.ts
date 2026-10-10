@@ -275,8 +275,14 @@ export async function liveEscalationOffers(): Promise<{ count: number; percents:
  * ⛔ Every surface (pay page both sides, invoice comment, tenant receipt) reads
  * the name from HERE; none spells one of its own.
  */
-export function offerLabel(lang: string, kind: ActiveOffer["kind"]): string {
+/** The names an offer can carry: its kind, or — the trial's own offer, whatever kind it was
+ *  minted as — „Próba-kedvezmény” (proba-C / Elek #16: ONE name on every surface). */
+export type OfferNameKind = ActiveOffer["kind"] | "trial";
+
+export function offerLabel(lang: string, kind: OfferNameKind): string {
   switch (kind) {
+    case "trial":
+      return T(lang, "Próba-kedvezmény");
     case "outreach":
       return T(lang, "Bemutatkozó ajánlat a levélből");
     case "escalation":

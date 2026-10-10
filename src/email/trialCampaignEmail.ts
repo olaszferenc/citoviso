@@ -499,8 +499,8 @@ export function buildTrialCampaignSmsText(input: {
       withOffer && percent
         ? T(
             lang,
-            "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, a {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso",
-            { ...v, p: String(percent) },
+            "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, {pa} {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso",
+            { ...v, p: String(percent), pa: huArticleLower(String(percent)) },
           )
         : T(
             lang,

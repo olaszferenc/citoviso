@@ -1728,7 +1728,7 @@ async function serveAdmin(
         chargedOfferPercent: Math.min(100, Math.max(0, Number(q.get("mpct")) || 0)),
         // Elek F-3: the offer's KIND, whitelisted (it rides the address bar) — the
         // receipt names the discount by it instead of always "Üdvözlő kedvezmény".
-        chargedOfferKind: (["outreach", "escalation", "coupon", "campaign"] as const).find((k) => k === q.get("mkind")) ?? null,
+        chargedOfferKind: (["outreach", "escalation", "coupon", "campaign", "trial"] as const).find((k) => k === q.get("mkind")) ?? null,
         chargePending: q.get("mpending") === "1",
       };
     }

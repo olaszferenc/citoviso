@@ -196,6 +196,11 @@ if (SELF_TEST) {
   const smsC = buildTrialCampaignSmsText({ lang, leadName: "Rozé Fogadó", sentIso: "2026-09-24", days: 14, link, percent: 25 });
   smsLegs(smsC.text, link, "C, ajánlattal");
   check("② C: a jóváhagyott szöveg ajánlattal", smsC.text === `Roze Fogado: a szept. 24-en kuldott honlap-tervet most 14 napig ingyen, elesben is kiprobalhatja, kartya nelkul. Ha a proba vegeig megrendeli, a 25% kedvezmeny megmarad. ${link} Leiratkozas a lap aljan. Citoviso`, smsC.text);
+  // The article follows how the percent is READ (huArticle): „az 5%”, „az 50%”, „a 10%”.
+  for (const [pct, art] of [[5, "az"], [50, "az"], [1, "az"], [10, "a"], [15, "a"], [30, "a"]] as const) {
+    const t = buildTrialCampaignSmsText({ lang, leadName: "Rozé Fogadó", sentIso: "2026-09-24", days: 14, link, percent: pct }).text;
+    check(`② C: „${art} ${pct}%” (a névelő a szám kiejtéséhez igazodik)`, t.includes(`megrendeli, ${art} ${pct}% kedvezmeny megmarad`), t);
+  }
   const smsCLong = buildTrialCampaignSmsText({ lang, leadName: longName, sentIso: "2026-09-24", days: 14, link, percent: 25 });
   smsLegs(smsCLong.text, link, "C, hosszú név");
   check("② C, hosszú név → a név rövidül, az ajánlat marad", smsCLong.name.endsWith("...") && smsCLong.text.includes("a 25% kedvezmeny megmarad"), smsCLong.text);

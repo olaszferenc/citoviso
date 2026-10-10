@@ -743,6 +743,20 @@ if (notes.length) {
   console.log("⚠️  MEGJEGYZÉSEK (nem mért részek — a zöld ezekre NEM áll):");
   for (const n of notes) console.log(`   · ${n}`);
 }
+// The definite article before a NUMBER follows its spoken form (src/hu.ts huArticle):
+// egy/öt/ezer/egymillió → az; tíz/száz/kettő/három… → a. Measured 2026-10-10: every
+// leading 1 got „az”, so „az 10%”, „az 150 Ft” were one call away.
+{
+  const { huArticleLower } = await import("../src/hu.js");
+  const TABLE: readonly [string, string][] = [
+    ["1", "az"], ["5", "az"], ["50", "az"], ["55", "az"], ["500", "az"], ["1000", "az"], ["1500", "az"],
+    ["1000000", "az"], ["10", "a"], ["11", "a"], ["15", "a"], ["100", "a"], ["150", "a"], ["10000", "a"],
+    ["2", "a"], ["3", "a"], ["4", "a"], ["6", "a"], ["7", "a"], ["8", "a"], ["9", "a"], ["25", "a"], ["30", "a"],
+    ["Rozé", "a"], ["Aranyhal", "az"], ["Öreg Tölgy", "az"],
+  ];
+  const wrong = TABLE.filter(([w, want]) => huArticleLower(w) !== want).map(([w, want]) => `${w}: ${huArticleLower(w)} (várt: ${want})`);
+  line(wrong.length === 0, "a névelő a szám kiejtéséhez igazodik (1, 5, 50, 1000 → az; 10, 15, 100 → a)", wrong.join(" · "));
+}
 if (failures.length) {
   console.log(`\n⛔ ${failures.length} GÉPIES ALAK A FELHASZNÁLÓI SZÖVEGBEN:\n`);
   const byRule = new Map<string, Hit[]>();

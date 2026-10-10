@@ -113,6 +113,12 @@ export async function liveTrialOffer(tenantId: string, now = new Date()): Promis
     : null;
 }
 
+/** Is this offer some trial's own offer (free_trial.offer_id)? Then its name is „Próba-kedvezmény”. */
+export async function isTrialOffer(offerId: string | null | undefined): Promise<boolean> {
+  if (!offerId) return false;
+  return !!(await db.selectFrom("free_trial").select("id").where("offer_id", "=", offerId).executeTakeFirst());
+}
+
 /** Is this offer still usable at `now`? (The continuation's re-pricing gate.) */
 export async function offerIsLive(offerId: string, now = new Date()): Promise<boolean> {
   const o = await db

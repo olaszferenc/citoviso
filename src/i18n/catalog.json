@@ -315,7 +315,7 @@
   "{name} véleménye kikerült az oldalára.",
   "{name} véleménye nem kerül ki.",
   "{name} véleményét levette az oldaláról.",
-  "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, a {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso",
+  "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, {pa} {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso",
   "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya, nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso",
   "{name}: {days} napig ingyen, élesben",
   "{names}: a házzal együtt foglalható, ezért nincs külön naptára.",
