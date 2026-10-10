@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-nevvaltas-a-proba-vegen-ingyen-egyszer.md) — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít
+- [ADR-0356](decisions/0356-nevvaltas-a-proba-vegen-egyszer-ingyen-a-regi.md) — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít
 - [ADR-0355](decisions/0355-a-tenant-admin-modulszamai-egy-definiciobol-a.md) — A tenant-admin modulszámai egy definícióból; a nem rendelhető modult a Bővítés megnevezi
 - [ADR-0354](decisions/0354-ingyenes-proba-c-egy-kedvezmeny-egy-hatarido-a.md) — Ingyenes próba, „C”: egy kedvezmény, egy határidő — a próba vége
 - [ADR-0353](decisions/0353-proba-kampany-egy-loves-szemelyenkent-ujrameres.md) — Próba-kampány: egy lövés SZEMÉLYENKÉNT, újramérés küldéskor, csak a hideg levél címére

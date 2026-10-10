@@ -1,4 +1,4 @@
-## ADR-XXXX — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít
+## ADR-0356 — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít
 
 **Dátum:** 2026-10-10 · **Kontextus:** tulaj-döntés („A próbaidőszak végén lehetőség van névváltoztatásra. Nekünk az nem kerül semmibe.”), a próba-koordinátor szálán, ADR-0354 kiegészítéseként. Módosítja: ADR-0032 (a választás meglévő site-nál is érvényesül), ADR-0330 („a címke nem változik” → a régi címke foglalva marad és átirányít), ADR-0347 ④ (az ígért aldomain = slug; a régi cím továbbra is elér). Státusz: **elv elfogadva; a régi cím sorsa (A/B) és a megvalósítás a §2b terv-kapu után.**
 
