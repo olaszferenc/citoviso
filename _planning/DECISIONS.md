@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-terv-link-a-tulajdonos-mostani-oldalat-mutatja.md) — A terv-link (`/p/<token>`) a tulajdonos lead MOSTANI oldalát mutatja, nem a kiküldött mockot
+- [ADR-0358](decisions/0358-a-terv-link-p-token-a-tulajdonos-lead-mostani.md) — A terv-link (`/p/<token>`) a tulajdonos lead MOSTANI oldalát mutatja, nem a kiküldött mockot
 - [ADR-0357](decisions/0357-a-terv-lap-a-proba-korul-a-kerdezo-kartya.md) — A terv-lap a próba körül: a kérdező-kártya félreáll, a „Rendben” újratölt, a pirula-pár újramér, a köszönőlap visszavezet
 - [ADR-0356](decisions/0356-nevvaltas-a-proba-vegen-egyszer-ingyen-a-regi.md) — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít
 - [ADR-0355](decisions/0355-a-tenant-admin-modulszamai-egy-definiciobol-a.md) — A tenant-admin modulszámai egy definícióból; a nem rendelhető modult a Bővítés megnevezi

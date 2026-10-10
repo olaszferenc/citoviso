@@ -1,4 +1,4 @@
-## ADR-XXXX — A terv-link (`/p/<token>`) a tulajdonos lead MOSTANI oldalát mutatja, nem a kiküldött mockot
+## ADR-0358 — A terv-link (`/p/<token>`) a tulajdonos lead MOSTANI oldalát mutatja, nem a kiküldött mockot
 
 **Dátum:** 2026-10-10 · **Kiváltó:** Elek 2. kör #24 (`mail/06f-p-token-lejart.txt`) · **Kiegészíti:** ADR-0191 ④ (a harmadik, `owned` keretezés), ADR-0344 (próba vége), ADR-0357 ② (a sikerablak után a `/p/<token>` az élő állapotot szolgálja ki).
 
