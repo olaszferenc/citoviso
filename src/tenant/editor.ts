@@ -14,6 +14,7 @@ import type { PhotoProvenance, Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import {
   renderTenantLegalPage,
+  stripTenantLegalLinks,
   withLegalStrip,
   type TenantLegalKind,
 } from "../engine/legalPages.js";
@@ -788,6 +789,42 @@ export async function renderTenantModulePreview(
   // Never indexable, always marked as a preview — even though it is only ever
   // served behind the tenant session.
   return toPrivatePreview(html, s.id);
+}
+
+/**
+ * Elek2 #24 — the plan link (`/p/<token>`) once the lead OWNS a site (trial or paid).
+ *
+ * Measured: after a trialist edited their site (new slogan, sample sections replaced by
+ * their own rooms), the plan link kept serving the ORIGINAL cold mock file under the
+ * "már az Öné / szünetel" bar — old slogan, "MINTA" blocks. The lead reads that link as
+ * "my site", so it must show the site's CURRENT content: base + the tenant's overrides +
+ * their module content, through the SAME assembly the live snapshot renders from.
+ *
+ * ⛔ WRITES NOTHING (no snapshot file, no DB row). Forms are demo-only: this page is
+ * served on the platform's /p/ route, not the tenant host, and must never take a real
+ * booking or enquiry. The tenant legal links (/adatvedelem, /impresszum) only exist on
+ * the tenant host, so they are cut here like on a mock; tenant uploads are referenced by
+ * root path (`/uploads/…`), which the console host does not serve in dev — they are
+ * pinned to the public server that does (`publicBase`). Null when the site cannot render.
+ */
+export async function renderTenantSiteForPlanLink(
+  tenantId: string,
+  publicBase: string,
+): Promise<string | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return null;
+  const { effective, hideGallery, hideAnchors } = await assembleEffective(s, s.overrides, s.status);
+  const html = await injectRuntime(
+    renderSite(s.recipe, effective, { phase: "live", demoForms: true, hideGallery, hideAnchors }),
+    effective.lang,
+    "live",
+  );
+  const base = publicBase.replace(/\/+$/, "");
+  const pinned = stripTenantLegalLinks(html).replace(
+    /(["'(\s,])\/uploads\//g,
+    (_m, pre: string) => `${pre}${base}/uploads/`,
+  );
+  return toPrivatePreview(pinned, s.id);
 }
 
 /** Persist overrides + re-render the snapshot (mock=live). `asStatus` lets the go-live

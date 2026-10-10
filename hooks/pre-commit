@@ -3074,6 +3074,19 @@ if [ -f scripts/free-trial-expiry-check.mts ] && \
   echo "[pre-commit] free-trial-expiry-check (próba vége: figyelmeztetés, szünetel, folytatás-fizetés)…"
   npx tsx scripts/free-trial-expiry-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Elek2 #24: a terv-link (/p/<token>) a TULAJDONOS lead (próba / fizetett) MOSTANI oldalát mutatja — a
+#     szerkesztett tartalmat (új szlogen, minta-blokkok nélkül), demó-űrlapokkal, a feltöltött képek a publikus
+#     szerverre kötve —, nem a kiküldött mock-fájlt; futó és lejárt („szünetel”) próbán is. Saját scratch-DB, ~20 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/plan-link-owned-content-check.mts ] && \
+   changed_files | grep -qE '^src/console/(server|prospectNotice)\.ts$|^src/tenant/editor\.ts$|^src/conversion/owned\.ts$|^src/engine/legalPages\.ts$|^scripts/plan-link-owned-content-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/plan-link-owned-content-check\.mts$'; then
+    echo "[pre-commit] plan-link-owned-content-check --self-test (a terv-link-őr pirosra tud-e menni)…"
+    npx tsx scripts/plan-link-owned-content-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] plan-link-owned-content-check (a terv-link a tulajdonos MOSTANI oldalát mutatja)…"
+  npx tsx scripts/plan-link-owned-content-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Lejárt próba 90 napos megőrzése + TÖRLÉS (src/trial/retention.ts): a nap-számítás (hétvége → péntek,
 #     késő levél a törlést tolja), a p7 levél egyszer, levél nélkül / 7 napon belül NEM töröl, mind az 5 fizetett
 #     nyom MEGTAGAD, törlés = pontosan a jelentett sorok + a sites/<id> mappa, a free_trial sor marad, a lead

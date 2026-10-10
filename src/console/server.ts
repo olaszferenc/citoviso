@@ -118,7 +118,7 @@ import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, earlierPaidInitialPayment, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { mockCard, MOCK_CARDS } from "../payment/mock.js";
 import { siteShotPath } from "../payment/siteShot.js";
-import { rerenderTenantSnapshot, tenantCoverPhoto } from "../tenant/editor.js";
+import { renderTenantSiteForPlanLink, rerenderTenantSnapshot, tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import { alertWebhookFailure } from "./houseAlert.js";
 import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
@@ -3325,7 +3325,18 @@ async function handle(
     try {
       // Below-the-fold photos lazy (serve-time, the file on disk is untouched):
       // this link is opened on a phone, on mobile data — Elek FK-009, 2026-09-26.
-      const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
+      // Elek2 #24: an OWNED lead (trial or paid) sees their site's CURRENT content — the
+      // edits they made in the admin — not the cold mock it was born from. The mock file
+      // stays the fallback (paid_pending: no tenant yet; a site that cannot render).
+      const ownedSite = owned?.tenantId
+        ? await renderTenantSiteForPlanLink(owned.tenantId, config.publicSiteUrl).catch((e) => {
+            console.error(`[console] /p/${pMatch[1]}: a tenant-oldal renderelése HIBA — a mockot szolgáljuk ki:`, e);
+            return null;
+          })
+        : null;
+      const html = containHorizontalOverflow(
+        lazyLoadBelowFold(ownedSite ?? (await readFile(p.artifactPath, "utf8"))),
+      );
       if (owned) {
         console.log(
           `[console] /p/${pMatch[1]}: MÁR VÁSÁROLT lead (állapot: ${owned.stage}` +
