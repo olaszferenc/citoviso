@@ -15,10 +15,15 @@ A kedvezmény dolga, hogy a „majd később” helyett MOST döntsön a vevő. 
 
 **„Első díj” — mérés (a tulaj „első év”-et mondott):** mint minden ajánlat, a próba-ajánlat is CSAK az adott tranzakcióra (az első díjra) szól, a megújítás listaáron megy (`billing.ts`). **Éves fizetésnél ez az első év, HAVI fizetésnél csak az első HÓNAP.** A mechanizmus nem változott; a felületen és a levelekben ezt őszintén ki kell mondani („az első díjra szól — utána X Ft/hó|év”). A koordinátornak jelezve.
 
-**Tulaj-megerősítésre (koordinátor-javaslat, így épült):**
+**Tulaj-döntés, megerősítve 2026-10-10 (koordinátor-javaslat, így épült):**
 - ⓐ **A próba alatti fizetésnél a fizetett időszak a próba VÉGE UTÁN indul:** `anchor_date = current_period_start = a próba utolsó napja + 1`, `current_period_end` = +1 / +12 hónap (`ensureSubscriptionForOrder`, naptári ISO-nap — a `date`-cast időzóna-függő). A hátralévő ingyen napok megmaradnak. Lejárt próba utáni fizetésnél a fordulónap továbbra is a fizetés napja.
 - ⓑ **A nem választott próba-modulok a próba végéig aktívak maradnak** (`syncEntitlementsToPaid` nem vonja vissza a `trial_grant`-ot, amíg `trial_until > now`); utána a napi tick (`scripts/billing-cycle.ts` → `endTrialGrantsAfterConversion`) kikapcsolja őket és újrarendereli az élő oldalt.
 
 **Őrök:** `free-trial-check` ⑤ ⑪ ⑫ ⑬ ⑮ (próba-ajánlat pinelve, határidő = a nap vége, legnagyobb él / a többi zárva, alap-campaign, lejárt ajánlatú rendelés → /folytatas, nincs kupon), `free-trial-expiry-check` ④ ⑤ ⑥ (utolsó napon még az ajánlat, utána listaár; nincs kupon; ⓐ fordulónap; ⓑ modulok a próba végéig, utána ki), `free-trial-e2e` ⑤, `free-trial-config-check` ⑦, `free-trial-retention-check` ②b.
 
 **A 2. körre marad (§2b terv-kapu, a tulaj jóváhagyása után):** a C szövegei a levelekben/SMS-ben (T−3, T−1, lejárat, 90 napos törlés, belépő-levél: most kupon nélküli próbánál a kupon-mondat egyszerűen elmarad), a kampány-levél és SMS „az első díjból 25%” mondata (ADR-0348), a vásárlási felület próba-változata (kedvezményes ár a fő ár, „érvényes a próba végéig”), az admin „Megtartom” belépési pont + a Modulok fül gombja, a `/pricing` kupon-előnézet szövege, KB; Elek újrateszt-leletei ebből a körből: #8/#9, #16, #10 (javaslat), #22, Ú2, #17.
+
+**Tulaj-döntés 2026-10-10 (a koordinátoron át)**
+- **B — a próba-ajánlat az ELSŐ DÍJON marad.** Éves = 10 havi ár (−2 hó), és erre jön a próba-%; a felületen az éves a kiemelt, alapból kiválasztott választás, a megtakarítás összeadva látszik (12 havi lista / −2 hó / −X% az első évre). Havinál őszintén: „csak az első hónapra”. A mechanizmus a fenti „Első díj” mérésével azonos, kódváltozás nem kell.
+- **ⓐ és ⓑ MEGERŐSÍTVE** — a fenti két pont a tulaj döntése, nem javaslat.
+- **Névváltás:** „A próbaidőszak végén lehetőség van névváltoztatásra. Nekünk az nem kerül semmibe.” A próba alatti vásárláskor és a lejárt próba folytatásakor a vevő egyszer, ingyen másik platform-aldomaint (slugot) választhat. Ez a slug eddigi stabilitás-elvét (ADR-0032, ADR-0330, ADR-0347 ④) érinti, ezért saját döntés: **ADR-XXXX** (névváltás a próba végén).
