@@ -1,4 +1,4 @@
-## ADR-XXXX — A terv-lap a próba körül: a kérdező-kártya félreáll, a „Rendben” újratölt, a pirula-pár újramér, a köszönőlap visszavezet
+## ADR-0357 — A terv-lap a próba körül: a kérdező-kártya félreáll, a „Rendben” újratölt, a pirula-pár újramér, a köszönőlap visszavezet
 
 **Dátum:** 2026-10-10 · **Kontextus:** Elek 2. kör, Ú3, #11/#12, #20, #18, Ú4, Ú5 (`02y`, `02b`, `02e`, `02f`, `01w1b`, `01w3` képek). Kiegészíti: ADR-0322 ④/B (mikro-kérdőív), ADR-0342 (próba-pirula, próba-űrlap), ADR-0348 (próba-levél „mi tartja vissza?” oldala), ADR-0350 (felülírt válasz), ADR-0145 ④ (`--citui-consent-h`), ADR-0242 ④ (a pirula kitérése).
 
