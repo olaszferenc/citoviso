@@ -18,6 +18,7 @@
 
 import { esc } from "../console/views.js";
 import { T } from "../i18n/mail.js";
+import { displayPhone, effectiveContact } from "../tenant/contact.js";
 
 /**
  * ADR-0157 — the language the courtesy page must speak.
@@ -53,6 +54,39 @@ export interface SuspendedPageData {
   readonly email: string;
   readonly phone: string;
   readonly address: string;
+}
+
+/**
+ * The page data from the site's two sources: the scraped site data the mock was
+ * built from, and the owner's own edits (`site.edited_site_data`).
+ *
+ * ⛔ Elek 2. kör Ú1 (2026-10-10): the loader used to read ONLY the scraped
+ * `siteData.contact`. The owner rewrote the phone number on the Elérhetőség tab,
+ * the live site showed the new number — and after expiry this page handed the
+ * guest the OLD one, while the admin promised the visitor sees "your contacts".
+ * The contact therefore goes through `effectiveContact` (override > scrape, the
+ * same rule as the live page and every guest letter), and the phone is printed
+ * the way the live page prints it. Pure, so the guard measures this exact path.
+ */
+export function suspendedPageData(inputs: unknown, edits: unknown): SuspendedPageData {
+  const sd = ((inputs as { siteData?: Record<string, unknown> } | null)?.siteData ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const ed = (edits ?? {}) as Record<string, unknown>;
+  const place = (sd.place ?? {}) as Record<string, string | undefined>;
+  const c = effectiveContact(
+    ed.contact as Parameters<typeof effectiveContact>[0],
+    sd.contact as Parameters<typeof effectiveContact>[1],
+  );
+  return {
+    // The owner's own edit of the name wins — that is what their guests know.
+    name: String(ed.name ?? sd.name ?? ""),
+    city: String(place.city ?? ""),
+    email: c.email,
+    phone: c.phone ? displayPhone(c.phone) : "",
+    address: c.address,
+  };
 }
 
 /** Pure render — the guard calls exactly this, so the sentences it measures are

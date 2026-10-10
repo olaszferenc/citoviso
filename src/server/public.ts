@@ -26,7 +26,12 @@ import { injectConsent, markAudience } from "./consent.js";
 import { isPlatformHosting, normalizeCustomDomain, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { prospectTokenForLabel } from "../outreach/previewLabel.js";
 import { esc, privacyPage } from "../console/views.js";
-import { renderSuspendedPage, suspendedLang } from "./suspendedPage.js";
+import {
+  renderSuspendedPage,
+  suspendedLang,
+  suspendedPageData,
+  type SuspendedPageData,
+} from "./suspendedPage.js";
 import { TENANT_LEGAL_PATHS } from "../engine/legalPages.js";
 import { hostingProvider, loadTenantLegal, saveTenantLegal } from "../tenant/legalIdentity.js";
 import {
@@ -753,11 +758,7 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
  * identity (often a private address, and frequently empty anyway).
  */
 async function suspendedPage(tenantId: string, lang: string): Promise<string> {
-  let name = "";
-  let city = "";
-  let email = "";
-  let phone = "";
-  let address = "";
+  let data: SuspendedPageData = { name: "", city: "", email: "", phone: "", address: "" };
   try {
     const row = await db
       .selectFrom("site")
@@ -765,23 +766,14 @@ async function suspendedPage(tenantId: string, lang: string): Promise<string> {
       .select(["mock_artifact.inputs as inputs", "site.edited_site_data as edits"])
       .where("site.tenant_id", "=", tenantId)
       .executeTakeFirst();
-    const sd = ((row?.inputs as { siteData?: Record<string, unknown> } | null)?.siteData ??
-      {}) as Record<string, unknown>;
-    const edits = (row?.edits ?? {}) as Record<string, unknown>;
-    const contact = (sd.contact ?? {}) as Record<string, string | undefined>;
-    const place = (sd.place ?? {}) as Record<string, string | undefined>;
-    // The owner's own edit of the name wins — that is what their guests know.
-    name = String(edits.name ?? sd.name ?? "");
-    city = String(place.city ?? "");
-    email = String(contact.email ?? "");
-    phone = String(contact.phone ?? "");
-    address = String(contact.address ?? "");
+    // Owner edit > scrape (ADR-0241) — the same contact the live page showed.
+    data = suspendedPageData(row?.inputs, row?.edits);
   } catch (err) {
     // A missing artifact must not turn the courtesy page into a 500 — degrade to
     // the anonymous version rather than serving nothing at all.
     console.error(`[public] felfüggesztett lap: az adat nem olvasható (${tenantId})`, err);
   }
-  return renderSuspendedPage({ name, city, email, phone, address }, lang);
+  return renderSuspendedPage(data, lang);
 }
 
 

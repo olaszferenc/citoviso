@@ -33,7 +33,7 @@
 // és a lapot nem fagyasztottként rendereljük) — az őrnek pirosra kell mennie.
 
 import { adminDashboard, modulesSection } from "../src/server/adminViews.js";
-import { renderSuspendedPage } from "../src/server/suspendedPage.js";
+import { renderSuspendedPage, suspendedPageData } from "../src/server/suspendedPage.js";
 import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
 
@@ -254,6 +254,40 @@ if (!selfTest) {
     fail("a modulesSection() saját blokkjába nem jut el a látogatói nézet címe");
   } else {
     pass("a Modulok fül saját blokkja is kínálja a látogatói nézetet");
+  }
+}
+
+// ── ⑦ A vendég-lap a tulaj MENTETT elérhetőségét mutatja, nem a scrape-et ──
+// Elek 2. kör Ú1 (2026-10-10): a tulaj az Elérhetőség fülön átírta a telefonszámát
+// („Mentve — az oldala frissült”, az élő oldalon az új szám állt), a lejárat után a
+// szünetel-lap mégis a RÉGI, scrape-elt számot adta a vendégnek — miközben az admin azt
+// ígéri, hogy a látogató „az Ön elérhetőségeit” látja. A loader a nyers siteData-t
+// olvasta, a `edited_site_data.contact` felülírást nem. Itt a VALÓDI adat-útvonalat
+// mérjük (`suspendedPageData` → `renderSuspendedPage`), ugyanazzal a két forrással.
+{
+  const inputs = {
+    siteData: {
+      name: "Üdülő tábor",
+      place: { city: "Szigliget" },
+      contact: { phone: "+36/70/459-27-61", email: "regi@pelda.hu", address: "Régi utca 1." },
+    },
+  };
+  const edits = selfTest ? {} : { contact: { phone: "+36309999999", email: "uj@pelda.hu" } };
+  const guest = visible(renderSuspendedPage(suspendedPageData(inputs, edits), "hu"));
+  if (!selfTest && /459-27-61/.test(guest)) {
+    fail("a szünetel-lap a RÉGI (scrape-elt) telefonszámot mutatja a tulaj mentett száma helyett");
+  }
+  if (!guest.includes("+36 30 999 9999")) {
+    fail("a szünetel-lapon nincs ott a tulaj által mentett telefonszám (+36 30 999 9999)");
+  }
+  if (!guest.includes("uj@pelda.hu")) {
+    fail("a szünetel-lapon nincs ott a tulaj által mentett e-mail-cím");
+  }
+  if (!selfTest && /Régi utca/.test(guest)) {
+    fail("a szünetel-lap a scrape-elt címet mutatja, pedig a tulaj felülírása a blokkot EGÉSZBEN cseréli");
+  }
+  if (!selfTest && guest.includes("+36 30 999 9999") && !/459-27-61/.test(guest)) {
+    pass("a szünetel-lap a tulaj mentett elérhetőségét mutatja (Ú1)");
   }
 }
 
