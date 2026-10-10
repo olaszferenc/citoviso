@@ -35,6 +35,68 @@ export interface TenantModuleView {
   readonly baseMonthly: number;
   /** base + every active non-spine module. */
   readonly totalMonthly: number;
+  /**
+   * Catalog modules the tenant does NOT hold and cannot order right now (sales switched
+   * off, ADR-0102 — e.g. the custom e-mail address). They are absent from `modules`, so
+   * without this list the shop would claim "everything bought" (Elek2 #14). Optional so
+   * hand-made fixtures that predate it keep compiling; absent = none.
+   */
+  readonly notOrderable?: readonly NotOrderableModule[];
+}
+
+/** A module the shop cannot offer right now — named, so its absence is explained. */
+export interface NotOrderableModule {
+  readonly id: string;
+  readonly label: string;
+  /**
+   * The tenant's free trial was continued: a trial grants every non-retired module
+   * (trialModuleIds), so this one WAS on during the trial and went off with the payment.
+   */
+  readonly heldInTrial: boolean;
+}
+
+/**
+ * Which catalog modules are hidden from this tenant's shop because their sale is
+ * switched off — and the tenant does not hold them. Same filter getTenantModules()
+ * applies (spine, one-off and retired modules are never shop items, so never listed).
+ */
+export function notOrderableModules(
+  activeIds: Iterable<string>,
+  disabledSales: Iterable<string>,
+  heldInTrial: boolean,
+): NotOrderableModule[] {
+  const active = new Set(activeIds);
+  const disabled = new Set(disabledSales);
+  return MODULE_CATALOG.filter(
+    (m) => !m.spine && m.billing !== "once" && !m.retired && disabled.has(m.id) && !active.has(m.id),
+  ).map((m) => ({ id: m.id, label: m.publicLabel, heldInTrial }));
+}
+
+/**
+ * The module counts the admin prints — ONE definition for every place (Elek2 #15).
+ *
+ * Measured with three copies: the sidebar said „11 modul aktív", the Teendők header
+ * „11 modul · 10 számlázott" and the Modulok tab „11 modul él az oldalán" right below
+ * „Aktív az oldalán mind a 10 modul". The 11 counted the superseded spine row, which
+ * does NOT render (the booking module occupies its slot). „Live" therefore means
+ * isRenderedModule(), „billed" means isBilledModule(); `listed` is only the row count of
+ * „Az én moduljaim", which also shows the superseded row (greyed, „nem számítjuk").
+ */
+export interface ModuleCounts {
+  /** Rows in „Az én moduljaim" — every active module, a superseded one included. */
+  readonly listed: number;
+  /** Modules that appear on the guest's page. */
+  readonly live: number;
+  /** Modules that are a line on the next invoice. */
+  readonly billed: number;
+}
+
+export function moduleCounts(mv: Pick<TenantModuleView, "modules">): ModuleCounts {
+  return {
+    listed: mv.modules.filter((m) => m.active).length,
+    live: mv.modules.filter(isRenderedModule).length,
+    billed: mv.modules.filter(isBilledModule).length,
+  };
 }
 
 /**
@@ -193,7 +255,19 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   const totalMonthly = modules
     .filter((m) => m.active && !m.spine && !m.supersededBy)
     .reduce((sum, m) => sum + m.priceMonthly, baseMonthly);
-  return { modules, baseMonthly, totalMonthly };
+  // Elek2 #14: an unsellable module the tenant had during a continued trial must not
+  // vanish without a word. Only asked when there IS such a module (one cheap read).
+  let notOrderable = notOrderableModules(activeIds, disabledSales, false);
+  if (notOrderable.length) {
+    const trial = await db
+      .selectFrom("free_trial")
+      .select("status")
+      .where("tenant_id", "=", tenantId)
+      .where("status", "=", "converted")
+      .executeTakeFirst();
+    if (trial) notOrderable = notOrderable.map((m) => ({ ...m, heldInTrial: true }));
+  }
+  return { modules, baseMonthly, totalMonthly, notOrderable };
 }
 
 /**

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-modulszam-egy-definicio-nem-rendelheto-modul-megnevezve.md) — A tenant-admin modulszámai egy definícióból; a nem rendelhető modult a Bővítés megnevezi
 - [ADR-0354](decisions/0354-ingyenes-proba-c-egy-kedvezmeny-egy-hatarido-a.md) — Ingyenes próba, „C”: egy kedvezmény, egy határidő — a próba vége
 - [ADR-0353](decisions/0353-proba-kampany-egy-loves-szemelyenkent-ujrameres.md) — Próba-kampány: egy lövés SZEMÉLYENKÉNT, újramérés küldéskor, csak a hideg levél címére
 - [ADR-0352](decisions/0352-a-proba-kupon-a-kiirt-nap-vegeig-el-a-torles-a.md) — A próba-kupon a kiírt nap VÉGÉIG él; a törlés a 90. megőrzött nap UTÁNI napon jön

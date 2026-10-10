@@ -309,10 +309,19 @@ Ha egy modult egy másik vált ki (mert a kettő ugyanazon a helyen jelenne meg 
 kiváltott modul **„nem számítjuk”** címkével látszik — ilyenkor nem is fizet érte. A kiváltott
 szakasz **nem jelenik meg** a honlapján: helyette az a modul látszik, amelyik kiváltotta,
 ugyanazon a helyen. A modul a listában marad, hogy lássa: megvan, csak most nincs szerepe (és
-nincs ára). Ezért fordulhat elő, hogy az **Áttekintés** fülön több aktív modult számolunk, mint
-amennyiért fizet — a csempe a darabszám mellé ki is írja, ebből hány a számlázott.
+nincs ára). Ezért áll a lista alatt egy mondat, ami mindhárom számot megnevezi: hány modul áll a
+listában, hány él az oldalán, és hány szerepel a számlán. Az oldalsáv, az **Áttekintés** és a
+Modulok lap ugyanazt a „működik az oldalán” számot mutatja — a kiváltott modul abban nincs benne.
 A mindig aktív alap-modul pedig azért nem kapcsolható ki, mert ezen keresztül keresik meg a
 vendégek — enélkül az oldal nem hozna megkeresést.
+
+## Miért nincs egy modul a Bővítésben?
+
+Egyes modulokat egy ideig nem lehet megrendelni (például a saját e-mail cím
+modult). Ezek nem szerepelnek a Bővítés kártyái között, de a Bővítés rész alján név szerint
+kiírjuk, hogy most nem rendelhetők. Ha ingyenes próbával indult, a próba alatt minden modul be volt
+kapcsolva, ezek is; a próba folytatásakor viszont kikapcsoltak, mert előfizetéssel még nem vehetők
+fel. Amint rendelhetők lesznek, ugyanitt veheti fel őket.
 
 ## Mi az a kupon a Bővítés fölött?
 

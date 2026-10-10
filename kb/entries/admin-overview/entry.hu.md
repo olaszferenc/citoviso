@@ -61,8 +61,11 @@ csomagnál az, hogy a 12 hónapból hányadikban jár (a 12 kis szegmens ezt raj
 ## A „Teendők” lista
 
 A lista fejléce megmondja, hány **nyitott** teendője van, és jobb oldalon azt, hogy hány modul
-működik az oldalán — ha egy bekapcsolt modulnak nincs külön ára (mert az alapdíj része, vagy mert
-egy másik modul váltja ki), a fejléc azt is kiírja, ebből hány a **számlázott** (például
+működik az oldalán — ugyanazt a számot, amit az előfizetés-kártya „modul aktív” sora és a
+Modulok lap is mond. Egy kiváltott modul (például az „Időpontkérés”, amikor az „Online foglalás”
+lép a helyére) nem jelenik meg az oldalon, ezért ebbe a számba nem tartozik bele. Ha egy működő
+modulnak nincs külön ára (mert az alapdíj része, vagy mert lemondta, és a kifizetett időszak
+végéig még fut), a fejléc azt is kiírja, ebből hány a **számlázott** (például
 „11 modul · 10 számlázott”). A két szám nem ellentmondás: az első azt mondja meg, mi működik az
 oldalán, a második azt, miért fizet. Az összesített díjat a Modulok lapon, az **„Az én
 moduljaim”** lista alján lévő összegzőben látja; a tételes bontást pedig az **„Előfizetés”** doboz

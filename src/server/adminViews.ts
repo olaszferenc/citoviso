@@ -17,7 +17,7 @@ import { zonePickerHtml, type ZonePickerData } from "../tenant/zonePicker.js";
 import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
-import { isBilledModule, type TenantModule, type TenantModuleView } from "../tenant/modules.js";
+import { moduleCounts, type TenantModule, type TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
 import { bookingsSection, hoursLeft } from "./bookingViews.js";
 import type { InboxItem } from "../booking/requests.js";
@@ -2206,7 +2206,9 @@ export function modulesSection(
   // rule here guarantees it drifts. One list, one total, one truth (contract §4).
   const billedCount = sub ? sub.nextInvoiceItems.length : 0;
   /** Rows actually rendered in "Az én moduljaim" — the number the owner COUNTS. */
-  const mineCount = mv.modules.filter((m) => m.active).length;
+  const mineCount = moduleCounts(mv).listed;
+  /** Modules on the guest's page — the SAME number the sidebar and the Áttekintés print. */
+  const liveCount = moduleCounts(mv).live;
   /**
    * The module that explains the gap between the two counts: an active spine that
    * something else currently occupies (0 Ft, so it never reaches the invoice).
@@ -2317,7 +2319,7 @@ export function modulesSection(
       (supersededLabel
         ? `<p class="adm-mine__recon">${T(lang, "Alább {all} modul áll, ebből {n} látszik az oldalán — {art} „{name}” helyén most {art2} „{other}” jelenik meg.", {
             all: String(mineCount),
-            n: String(mineCount - 1),
+            n: String(liveCount),
             art: huArticleLower(supersededLabel.name),
             name: esc(supersededLabel.name),
             art2: huArticleLower(supersededLabel.other),
@@ -2333,10 +2335,15 @@ export function modulesSection(
   // ⛔ The article comes from `huArticleLower` (ADR-0101 ①, landed 2026-09-14): a
   // hand-written „a(z)" reads as unfinished boilerplate, and a guard now bans it.
   // ⛔ Silent under a freeze — that page is about the debt, not about counting.
+  // ⛔ Elek2 #15: the sentence said „{rows} modul él az oldalán" — but the superseded
+  // row is exactly the one that does NOT appear on the site, so it printed 11 under
+  // „Aktív az oldalán mind a 10 modul". Each number now says what it is: the rows
+  // listed, the modules live on the site (moduleCounts().live) and the invoice lines.
   const reconNote =
-    sub && !frozen && billedCount !== mineCount && supersededLabel
-      ? `<p class="adm-mine__recon">${T(lang, "{all} modul él az oldalán, ebből {billed} szerepel a számlán — a különbség {art} „{name}”, amit most {art2} „{other}” vált ki.", {
+    sub && !frozen && supersededLabel
+      ? `<p class="adm-mine__recon">${T(lang, "A fenti listában {all} modul áll: {live} él az oldalán, és {billed} szerepel a számlán — {art} „{name}” helyén most {art2} „{other}” jelenik meg, ezért azt nem számítjuk.", {
           all: String(mineCount),
+          live: String(liveCount),
           billed: String(billedCount),
           art: huArticleLower(supersededLabel.name),
           name: esc(supersededLabel.name),
@@ -2468,6 +2475,26 @@ export function modulesSection(
     return `<div class="adm-coupon">${head}${keptLines}</div>`;
   };
 
+  // ⛔ Elek2 #14: a module whose sale is switched off (ADR-0102 — the custom e-mail
+  // address) is absent from the shop, and the empty state then said „Minden elérhető
+  // modult megvett" — while the trial had shown that very module switched on. The
+  // module is NOT made sellable here (owner decision); its absence is SAID, by name,
+  // and for a continued trial the reason it went off is said too.
+  const notOrderable = trialActive ? [] : (mv.notOrderable ?? []);
+  const naNote = notOrderable.length
+    ? `<div class="adm-shop__na" id="adm-shop-na">` +
+      notOrderable
+        .map(
+          (m) =>
+            `<p class="adm-lead">${T(lang, "„{name}” most nem rendelhető, ezért nem szerepel itt.", { name: esc(T(lang, m.label)) })} ` +
+            (m.heldInTrial
+              ? T(lang, "Az ingyenes próbában be volt kapcsolva; a próba folytatásakor kikapcsolt, mert előfizetéssel még nem vehető fel. Amint rendelhető lesz, itt veheti fel.")
+              : T(lang, "Amint rendelhető lesz, itt veheti fel.")) +
+            `</p>`,
+        )
+        .join("") +
+      `</div>`
+    : "";
   // The section NEVER vanishes: the page intro promises it ("amit még hozzáadhat,
   // azt alább"), and after an ALL-IN purchase it disappeared without a trace
   // (Elek FK-002 H1). No stock left → honest empty state.
@@ -2483,10 +2510,14 @@ export function modulesSection(
           ? `<p class="adm-lead">${T(lang, "A honlapja felfüggesztése alatt új modult nem tud felvenni — előbb a rendezetlen díjat kell rendezni a lap tetején. Addig is megnézheti, mit kínálunk, és a meglévő moduljait le tudja mondani.")}</p>`
           : `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>`) +
         (coupon && !frozen ? couponBanner(coupon, sub?.keptOffers ?? []) : "") +
-        shopBlocks
+        shopBlocks +
+        naNote
       : trialActive
         ? `<p class="adm-lead">${T(lang, "A próba alatt minden modul be van kapcsolva — nincs mit hozzáadnia. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`
-        : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
+        : naNote
+          ? `<p class="adm-lead">${T(lang, "A most rendelhető modulokat mind megvette. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>` +
+            naNote
+          : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
     `</section>`;
 
   // ADR-0088 ⑨ confirm dialog for revoking the mandate (approved B plan). A
@@ -4358,13 +4389,15 @@ function overviewSection(
   // where the only true answer is "pay, and it comes straight back" (§B.17).
   // ⚠️ The ADR-0119 ⑧ guard could not see it — it renders modulesSection() only.
   const suspended = content.status === "suspended";
-  // The two tabs count DIFFERENT things and neither said so: the overview counts
-  // every live module (12), while the Modulok tab bills 11 of them — the twelfth
-  // is the spine "Időpontkérés", superseded by "Online foglalás", hence 0 Ft
-  // (Elek FK-002 GY1). Both numbers are true; the label now NAMES which is which
-  // instead of one of them quietly disappearing.
-  const activeCount = mv ? mv.modules.filter((m) => m.active).length : 0;
-  const billedActiveCount = mv ? mv.modules.filter(isBilledModule).length : 0;
+  // The two numbers count DIFFERENT things and the label names both (Elek FK-002 GY1):
+  // the modules LIVE on the site, and how many of them are billed (the running spine
+  // rides in the base fee; a module cancelled for the period end is live but not
+  // re-invoiced). ⛔ Elek2 #15: „live" used to be every ACTIVE row, the superseded
+  // spine included — which does not render — so the header said 11 while the Modulok
+  // tab said 10. Both now come from moduleCounts(), the one definition.
+  const counted = mv ? moduleCounts(mv) : { listed: 0, live: 0, billed: 0 };
+  const activeCount = counted.live;
+  const billedActiveCount = counted.billed;
   const addr = siteUrl
     ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
     : previewUrl
@@ -5983,7 +6016,9 @@ export function adminDashboard(
   const previewUrl = previewToken ? `/site/${previewToken}` : null;
   const counts: NavCounts = {
     photos: content?.photos?.length ?? 0,
-    modules: mv ? mv.modules.filter((m) => m.active).length : 0,
+    // Elek2 #15: the modules LIVE on the site (moduleCounts) — the same number the
+    // Áttekintés and the Modulok tab print. The superseded spine row is not on the page.
+    modules: mv ? moduleCounts(mv).live : 0,
     unread,
     pendingBookings: opts.pendingBookings ?? 0,
     // module-subnav ①: the SAME predicate the Modulok tab runs before it offers
