@@ -2720,7 +2720,9 @@
   }
   .cit-cfg-esccard {
     top: auto;
-    bottom: 10px;
+    /* Above the consent bar (cit-consent.js publishes its height): under it the card's
+     * „Most még gondolkodom” sat behind the bar on a phone (Elek2, 2026-10-10). */
+    bottom: calc(10px + var(--citui-consent-h, 0px));
     width: calc(100vw - 24px);
     padding: 16px 18px 10px;
     box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.28), 0 10px 30px rgba(0, 0, 0, 0.3);

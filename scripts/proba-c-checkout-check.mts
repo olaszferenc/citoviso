@@ -133,13 +133,13 @@ try {
 
   for (const [w, tag] of [[390, "390px"], [1280, "asztali"]] as const) {
     console.log(`── ${tag}`);
-    const open = async (url: string): Promise<Page> => {
+    const open = async (url: string, opts: { keepConsent?: boolean } = {}): Promise<Page> => {
       const p = await browser.newPage({ viewport: { width: w, height: 900 } });
       p.on("pageerror", (e) => jsErrors.push(`${tag} ${url}: ${e.message}`));
       await p.goto(base + url, { waitUntil: "networkidle" });
       // The consent bar sits over the panel's foot on a phone; a visitor answers it first.
       const essentials = p.getByRole("button", { name: "Csak a szükségeseket" });
-      if (await essentials.isVisible().catch(() => false)) await essentials.click();
+      if (!opts.keepConsent && (await essentials.isVisible().catch(() => false))) await essentials.click();
       return p;
     };
     const openPanel = async (p: Page) => {
@@ -226,9 +226,27 @@ try {
     const alt = (await p.textContent(".cit-cfg-talt span").catch(() => "")) ?? "";
     check("⑥ a próba-űrlap nyitva, egy sorban a kedvezmény", alt.startsWith("−50% az első díjból, ha a próba végéig megrendeli"), alt);
     await p.close();
-    p = await open(`/p/${pl.token}`);
+    p = await open(`/p/${pl.token}`, { keepConsent: true });
     const shown = await p.waitForSelector(".cit-cfg-esccard.cit-cfg-on", { timeout: 10_000 }).then(() => true, () => false);
     check("⑥ kontroll: paraméter nélkül a kártya marad", shown);
+    // Elek2 (2026-10-10): with the consent bar still up, every card button must be hit-able —
+    // on a phone „Most még gondolkodom” sat behind the bar.
+    // On the sent page the bar waits for the first scroll (cit-consent.js renderWhenEngaged).
+    await p.mouse.wheel(0, 300);
+    await p.waitForSelector("#cit-consent", { state: "visible", timeout: 5000 }).catch(() => {});
+    await p.waitForTimeout(600);
+    const consentUp = await p.locator("#cit-consent").isVisible().catch(() => false);
+    check("⑥ (a süti-sáv fent van a mérésnél)", consentUp);
+    const blocked = await p.evaluate(() => {
+      const out: string[] = [];
+      document.querySelectorAll<HTMLElement>(".cit-cfg-esccard button").forEach((b) => {
+        const r = b.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (!hit || !(hit === b || b.contains(hit))) out.push((b.textContent ?? "").trim());
+      });
+      return out;
+    });
+    check("⑥ a kártya gombjai a süti-sáv mellett is elérhetők", shown && blocked.length === 0, blocked.join(", "));
     await p.close();
   }
   check("⑦ 0 JS-hiba", jsErrors.length === 0, jsErrors.join(" | "));
