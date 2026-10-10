@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-11_elek3_proba_javitasok.md](2026-10-11_elek3_proba_javitasok.md) — 2026-10-11 — Elek 3. kör javításai: próba „C” + névváltás, élesítés előtt
 - [2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md](2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md) — 2026-10-09 — Valós oldal erőforrásigénye (mérés) + ingyenes próba koordinátor indítva
 - [2026-10-09_valasz_sms_sorban_ragadt.md](2026-10-09_valasz_sms_sorban_ragadt.md) — 2026-10-09 — „Nem megy ki a válasz-SMS”: kiment, csak a konzol ragadt „Sorban”-on
 - [2026-10-09_proba_belepo_pirula_par_kod.md](2026-10-09_proba_belepo_pirula_par_kod.md) — 2026-10-09 — Ingyenes próba, SUB D: a „{n} nap ingyen” pirula-pár + próba-űrlap (KÓD)

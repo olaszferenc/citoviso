@@ -165,7 +165,7 @@ export async function prospectTokenForLabel(label: string): Promise<string | nul
     .where(sql<boolean>`lower(lead.preview_label) = ${label.toLowerCase()}`)
     .orderBy(sql`prospect.sent_at IS NOT NULL`, "desc")
     .orderBy(sql`prospect.archived_at IS NULL`, "desc")
-    .orderBy(sql`prospect.sent_at`, sql`desc nulls last`)
+    .orderBy(sql`prospect.sent_at desc nulls last`)
     .orderBy("prospect.created_at", "desc")
     .limit(1)
     .executeTakeFirst();
