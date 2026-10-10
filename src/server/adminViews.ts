@@ -43,7 +43,7 @@ import { foldIncludes } from "../text/fold.js";
 import { huArticle, huArticleLower } from "../hu.js";
 // A vevőnek mutatott support-cím EGY forrása (a hívók is ezt adják át).
 import { config } from "../config.js";
-import { formatDay, formatDayOn, formatDayShortStem, formatDayShortWeekday, formatDayStem, formatMonthDay } from "../text/day.js";
+import { formatDay, formatDayOn, formatDayShortStem, formatDayShortWeekday, formatDayStem, formatDayUntilWeekday, formatMonthDay } from "../text/day.js";
 import { TRIAL_WARN_DAYS, type TrialAdminState } from "../trial/admin.js";
 import { formatAmount } from "../tenant/prices.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
@@ -887,7 +887,10 @@ export function passwordSetDonePage(lang = "hu"): string {
       `<p class="citui-hint">${T(lang, "A jelszava beállítva. Mostantól a felhasználónevével és ezzel a jelszóval léphet be.")}</p>` +
       `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>` +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
-      `</div></div>`,
+      `</div></div>` +
+      // Elek3 A7: „beléptetjük” must be what happens — the session is already live, so the
+      // page goes on by itself after a moment to read; the button stays for no-JS / the impatient.
+      `<script>setTimeout(function(){location.replace("/admin")},2500);</script>`,
     lang,
   );
 }
@@ -1078,12 +1081,13 @@ function daysUntil(iso: string): number {
  */
 function trialStrip(t: TrialAdminState, lang: string): string {
   const n = t.daysLeft;
-  const until = esc(formatDayShortWeekday(t.untilIso, lang));
+  // Elek3 A1: one phrase („2026. okt. 23., péntekig”) — not „(… (péntek)-ig)”.
+  const until = esc(formatDayUntilWeekday(t.untilIso, lang));
   const head =
     n >= 2
-      ? T(lang, "<b>Ingyenes próba: még {n} nap</b> ({date}-ig).", { n: String(n), date: until })
+      ? T(lang, "<b>Ingyenes próba: még {n} nap</b> ({date}).", { n: String(n), date: until })
       : n === 1
-        ? T(lang, "<b>Ingyenes próba: holnap jár le</b> ({date}-ig).", { date: until })
+        ? T(lang, "<b>Ingyenes próba: holnap jár le</b> ({date}).", { date: until })
         : n === 0
           ? T(lang, "<b>Ma jár le az ingyenes próba.</b>")
           : // Past trial_until but the daily lapse has not run yet (07:00): the site

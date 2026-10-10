@@ -120,6 +120,9 @@ function letterLegs(subject: string, text: string, html: string, tag: string): v
   check(`① ${tag}: „${REMOVED}” sincs a HTML-ben`, !html.includes(REMOVED));
   check(`① ${tag}: a Google-pont a jóváhagyott mondat`, text.includes(`- ${GOOGLE}`) && html.includes(GOOGLE));
   check(`① ${tag}: az egy-lövés sor a láblécben (szöveg + HTML)`, text.includes(ONE_SHOT) && html.includes(ONE_SHOT));
+  // Elek3 A6: the opt-out is said ONCE in the foot — the one-shot line does not repeat it.
+  const oneShotLine = text.split("\n").find((l) => l.includes(ONE_SHOT)) ?? "";
+  check(`A6 ${tag}: az egy-lövés sor nem ismétli a leiratkozást`, !!oneShotLine && !/leiratkoz/i.test(oneShotLine), oneShotLine);
   check(`① ${tag}: tárgy = „{name}: {days} napig ingyen, élesben”`, subject === "Rozé Fogadó: 14 napig ingyen, élesben", subject);
 }
 

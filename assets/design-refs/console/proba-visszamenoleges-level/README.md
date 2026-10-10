@@ -39,7 +39,7 @@ kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tart
    van ma élő ajánlata: **„A korábbi levelünkben ajánlott {p}% kedvezmény a próba alatt is megmarad: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.”**
    A {p} ugyanaz a szabály, ahogy a próba indulásakor rögzül (`pinTrialOffer` → `trialCampaignOfferPercent`: a lead
    legnagyobb élő bevezető ajánlata, ennek híján az operátori bevezető %); 0%-nál a mondat elmarad.
-7. **Lábléc, változatlanul a mockból:** **„Erről a próbáról több levelet nem küldünk; ha nem kér tőlünk több megkeresést, leiratkozhat.”**,
+7. **Lábléc, változatlanul a mockból:** **„Erről a próbáról több levelet nem küldünk.”** (Elek3 A6, 2026-10-11: a mondat második fele — „ha nem kér tőlünk több megkeresést, leiratkozhat” — közvetlenül a leiratkozás-sor fölött ugyanazt mondta kétszer; a leiratkozás a link sorában marad),
    a leiratkozó link, a jogalap-sor, a cégazonosítás (`advertiserIdentity`). Az egy-lövés sor KÓDKÉNYSZER: `trial_campaign` tábla
    (leadenként és címenként egy), és az eszkalációs follow-up utána nem megy. Az ígéret a SZEMÉLYNEK szól (ADR-0353): egy ember
    (közös cím VAGY közös mobil) egy üzenetet kap — levelet, ha van levél-célpontja, különben SMS-t.

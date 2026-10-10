@@ -148,6 +148,22 @@ export function formatDayShortWeekday(iso: string | null | undefined, lang = "hu
   return intlDay(iso, lang, { year: "numeric", month: "short", day: "numeric", weekday: "long" });
 }
 
+/** "Until Friday" — the weekday with its -ig suffix (vowel harmony per word). */
+const HU_WEEKDAYS_UNTIL = ["vasárnapig", "hétfőig", "keddig", "szerdáig", "csütörtökig", "péntekig", "szombatig"];
+
+/**
+ * `2026-10-23` → `2026. okt. 23., péntekig` (hu) — a deadline WITH its weekday in one phrase.
+ * Elek3 A1: "({date}-ig)" around formatDayShortWeekday printed „(2026. okt. 23. (péntek)-ig)":
+ * a bracket inside a bracket and the suffix after it. Other languages: the dated weekday.
+ */
+export function formatDayUntilWeekday(iso: string | null | undefined, lang = "hu"): string {
+  if (!iso) return "";
+  const p = isoParts(iso);
+  if (!p) return iso;
+  if (!lang || lang === "hu") return `${p.y}. ${HU_MONTHS_SHORT[p.m - 1]} ${p.d}., ${HU_WEEKDAYS_UNTIL[p.wd]}`;
+  return intlDay(iso, lang, { year: "numeric", month: "short", day: "numeric", weekday: "long" });
+}
+
 /** `2027-01-20` → `2027. jan. 20` (hu, NO closing dot — for "{date}-ig"). */
 export function formatDayShortStem(iso: string | null | undefined, lang = "hu"): string {
   if (!iso) return "";

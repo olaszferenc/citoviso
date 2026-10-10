@@ -151,9 +151,11 @@ export function previewLink(label: string | null | undefined, publicBaseUrl: str
 }
 
 /**
- * The token of the prospect a preview host opens: the lead's LIVE prospect (most
- * recent not archived), else its most recent one — archiving is not deletion, an
- * address already sent keeps opening. null = no such label (or no prospect yet).
+ * The token of the prospect a preview host opens: the plan the lead was SENT — the
+ * most recently sent, live one first; archiving is not deletion, an address already
+ * sent keeps opening. Only a lead with no sent prospect falls back to the newest one.
+ * Elek3 A9: ordering by created_at alone opened a newer, never-sent mock variant on the
+ * host the lead's letter named. null = no such label (or no prospect yet).
  */
 export async function prospectTokenForLabel(label: string): Promise<string | null> {
   const row = await db
@@ -161,7 +163,9 @@ export async function prospectTokenForLabel(label: string): Promise<string | nul
     .innerJoin("lead", "lead.id", "prospect.lead_id")
     .select("prospect.token as token")
     .where(sql<boolean>`lower(lead.preview_label) = ${label.toLowerCase()}`)
+    .orderBy(sql`prospect.sent_at IS NOT NULL`, "desc")
     .orderBy(sql`prospect.archived_at IS NULL`, "desc")
+    .orderBy(sql`prospect.sent_at`, sql`desc nulls last`)
     .orderBy("prospect.created_at", "desc")
     .limit(1)
     .executeTakeFirst();

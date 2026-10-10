@@ -65,7 +65,15 @@ async function trialGrantedModules(tenantId: string): Promise<TrialGrantedModule
     .where("trial_grant", "=", true)
     .execute();
   const ids = new Set(rows.map((r) => r.module));
-  return MODULE_CATALOG.filter((m) => ids.has(m.id) && !m.retired).map((m) => ({
+  // Elek3 A8: a ONE-OFF module (multilang) is a generation, not a switch — granted but never
+  // generated, the trial did not „have” it, so it gets no „csak a próbában volt” row.
+  const generated = await db
+    .selectFrom("multilang_generation")
+    .select("id")
+    .where("tenant_id", "=", tenantId)
+    .where("status", "=", "done")
+    .executeTakeFirst();
+  return MODULE_CATALOG.filter((m) => ids.has(m.id) && !m.retired && (m.billing !== "once" || !!generated)).map((m) => ({
     id: m.id,
     label: m.publicLabel,
     spine: Boolean(m.spine),

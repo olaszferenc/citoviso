@@ -160,6 +160,16 @@ try {
     check("① nincs döntés-segítő kártya a folytatáson", (await p.locator(".cit-cfg-esccard").count()) === 0);
     // ② savings / monthly honesty / switch back
     check("② éves: a megtakarítás összeadva", ((await p.textContent(".cit-cfg-tsavebox")) ?? "").includes("Megtakarítás az első évben"));
+    if (w === 390) {
+      // Elek3 A5: on a phone the sticky foot must leave room to choose (it took half the
+      // screen); the breakdown folds under its sum and opens with one tap.
+      const footH = await p.locator(".cit-cfg-foot").evaluate((e) => e.getBoundingClientRect().height);
+      check("A5: mobilon az alsó összegző sáv a képernyő legfeljebb negyede", footH <= 900 * 0.25, `${Math.round(footH)} px / 900`);
+      await p.locator(".cit-cfg-tsave--fold > summary:visible").first().click();
+      const opened = await p.locator(".cit-cfg-tsave--fold:visible").first().evaluate((e) => (e as HTMLDetailsElement).open).catch(() => false);
+      check("A5: …a bontás egy koppintással kinyílik (12 havi lista / 2 hó / próba-%)", opened && ((await p.locator(".cit-cfg-tsave--fold:visible").first().textContent()) ?? "").includes("12 havi díj listaáron"));
+      await p.locator(".cit-cfg-tsave--fold > summary:visible").first().click();
+    }
     check("② a „bekapcsolva marad a próba végéig” sor", ((await p.textContent(".cit-cfg-cnote")) ?? "").includes("bekapcsolva marad a próba végéig"));
     await p.locator('.cit-cfg-ppill [data-period="monthly"]').click();
     const mline = (await p.textContent(".cit-cfg-mini__offer")) ?? "";
@@ -172,6 +182,15 @@ try {
     await p.fill(".cit-cfg-ren__in", `pcc-${stamp}-lejart`);
     await p.waitForFunction(() => /foglalt|Nem választható/.test(document.querySelector(".cit-cfg-ren__msg")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {});
     check("④ másik lead címe: foglalt", ((await p.textContent(".cit-cfg-ren__msg")) ?? "").includes("foglalt"));
+    // Elek3 A4: a refused label cannot be chosen — the button is off, and pressing it keeps the old address.
+    check("④ foglalt címnél az „Ezt választom” tiltott", await p.locator(".cit-cfg-ren__apply").isDisabled());
+    const hostBefore = (await p.textContent(".cit-cfg-ren__host")) ?? "";
+    await p.locator(".cit-cfg-ren__apply").click({ force: true });
+    const hostAfter = (await p.textContent(".cit-cfg-ren__host")) ?? "";
+    check("④ …megnyomva sem változik a cím", !!hostBefore && hostAfter === hostBefore && (await p.locator(".cit-cfg-ren__fate").isHidden()), `${hostBefore} → ${hostAfter}`);
+    await p.fill(".cit-cfg-ren__in", "admin");
+    await p.waitForFunction(() => /fenntartott|Nem választható/.test(document.querySelector(".cit-cfg-ren__msg")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {});
+    check("④ fenntartott névnél is tiltott", await p.locator(".cit-cfg-ren__apply").isDisabled(), (await p.textContent(".cit-cfg-ren__msg")) ?? "");
     await p.fill(".cit-cfg-ren__in", `PCC ${stamp} Új Név`);
     await p.waitForFunction(() => /Szabad:/.test(document.querySelector(".cit-cfg-ren__msg")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {});
     await p.locator(".cit-cfg-ren__apply").click();

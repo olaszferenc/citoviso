@@ -3560,6 +3560,35 @@
   font-weight: 700;
   color: #7ee2a0;
 }
+/* Elek3 A5: on a narrow panel the breakdown folds under its sum (summary = the sum row). */
+.cit-cfg-tsave--fold > summary {
+  list-style: none;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+.cit-cfg-tsave--fold > summary::-webkit-details-marker {
+  display: none;
+}
+.cit-cfg-tsave--fold > summary span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cit-cfg-tsave--fold > summary svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s;
+}
+.cit-cfg-tsave--fold[open] > summary {
+  padding-bottom: 5px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid rgba(52, 211, 153, 0.25);
+}
+.cit-cfg-tsave--fold[open] > summary svg {
+  transform: rotate(180deg);
+}
 .cit-cfg-tnudge {
   margin-top: 8px;
   font-size: 12px;
@@ -3662,6 +3691,13 @@
   background: #34d399;
   border-color: #34d399;
   color: #06281b;
+}
+/* Elek3 A4: a refused label — the button is visibly off, not a live green. */
+.cit-cfg-ren__acts .cit-cfg-ren__apply:disabled {
+  background: #1d2733;
+  border-color: #33404e;
+  color: #7d8a99;
+  cursor: not-allowed;
 }
 .cit-cfg-ren__fate {
   margin-top: 10px;

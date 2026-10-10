@@ -239,6 +239,20 @@ try {
     check("…a régi host újra helyben szolgál, az elhagyott irányít", oldServes.status === 200 && newRedirects.status === 301 && newRedirects.location === `https://${oldHost}/`, `${oldServes.status} · ${newRedirects.status} ${newRedirects.location}`);
   }
 
+  // ⑩ Elek3 A9: the preview host opens the SENT plan, not a newer unsent variant.
+  {
+    const { prospectTokenForLabel } = await import("../src/outreach/previewLabel.js");
+    const LBL = `srn-${stamp}-elonezet`;
+    const c = await fixtureLead("c", { previewLabel: LBL });
+    const newer = await db
+      .insertInto("prospect")
+      .values({ lead_id: c.leadId, mock_artifact_id: c.artId, token: `slugrename${stamp}cnewxxxxxxxx`.replace(/[^A-Za-z0-9_-]/g, ""), status: "created" } as never)
+      .returning("token")
+      .executeTakeFirstOrThrow();
+    const got = await prospectTokenForLabel(LBL);
+    check("⑩ az előnézeti host a KIKÜLDÖTT tervet nyitja, nem az újabb, ki nem küldöttet", got === c.token, `${got} (kiküldött ${c.token}, újabb ${newer.token})`);
+  }
+
   // ⑨ 40-character cut.
   const longName = `${"x".repeat(39)} apartman`;
   const cut = await checkSubdomainAvailable(longName, null);

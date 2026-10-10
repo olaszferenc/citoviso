@@ -16,6 +16,8 @@ import { getEmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { invoiceRecipientsForTenant } from "./partner.js";
+import { offerLabel } from "../payment/offers.js";
+import { isTrialOffer } from "../trial/offer.js";
 
 /**
  * E-mail the issued invoice to the buyer's billing recipients (0032).
@@ -61,6 +63,9 @@ export async function deliverInvoiceEmail(input: {
         // document row derives its item name from, so the mail subject and the
         // list can not drift apart.
         "order_intent.kind as orderKind",
+        // Elek3 A2: the redeemed offer, named in the mail like on the invoice comment.
+        "order_intent.offer_id as offerId",
+        "order_intent.list_price as listPrice",
       ])
       .where("payment.id", "=", input.paymentId)
       .executeTakeFirst();
@@ -83,6 +88,18 @@ export async function deliverInvoiceEmail(input: {
         `[invoice] ${input.invoiceNumber}: a szolgáltató nem adott PDF-et (${getInvoiceProvider().name}) — értesítő megy melléklet nélkül`,
       );
     }
+    const mailLang = row?.tenantId ? await prepareMailLang(await langForTenant(row.tenantId)) : undefined;
+    let discount: { label: string; percent: number; listGross: number } | null = null;
+    if (row?.offerId && row.listPrice && Number(row.listPrice) > input.gross) {
+      const o = await db.selectFrom("offer").select(["kind", "percent"]).where("id", "=", row.offerId).executeTakeFirst();
+      if (o) {
+        discount = {
+          label: offerLabel(mailLang ?? "hu", (await isTrialOffer(row.offerId)) ? "trial" : o.kind),
+          percent: o.percent,
+          listGross: Number(row.listPrice),
+        };
+      }
+    }
     const msg = buildInvoiceEmail({
       to: to.join(", "),
       buyerName: input.buyerName,
@@ -94,10 +111,9 @@ export async function deliverInvoiceEmail(input: {
       period: input.period,
       ...(row?.orderKind ? { itemKey: invoiceItemKey(row.orderKind) } : {}),
       // ADR-0067: the buyer reads the covering mail in their own site's language.
-      ...(row?.tenantId
-        ? { lang: await prepareMailLang(await langForTenant(row.tenantId)) }
-        : {}),
+      ...(mailLang ? { lang: mailLang } : {}),
       pdfBase64: input.pdfBase64,
+      discount,
       siteUrl:
         row?.siteStatus === "live"
           ? tenantSiteUrl(config.publicSiteUrl, row.siteSlug, row.siteCustomDomain)

@@ -161,6 +161,7 @@ type SiteData = import("../src/engine/recipe.js").SiteData;
 type Recipe = import("../src/engine/recipe.js").Recipe;
 
 const stamp = Date.now().toString(36);
+const T_RUN_START = Date.now() - 1000;
 const SITE = {
   name: `_trialexpiry_${stamp} Panzió`,
   tagline: "Csend a domb alatt",
@@ -463,6 +464,16 @@ try {
     check("K4: …és a vásárlási út is elutasítja, a próba miatt", !mlOrder.ok && /próba/.test(mlOrder.error ?? ""), JSON.stringify(mlOrder));
   }
   const calmHtml = renderAdmin(tenantId, "szovegek", calm);
+  // Elek3 A1: the deadline is ONE phrase — „(2026. okt. 23., péntekig)”, never „(… (péntek)-ig)”.
+  const stripHead = (calmHtml.match(/data-trial-strip[\s\S]*?<\/div>/)?.[0] ?? "").replace(/<[^>]+>/g, "");
+  {
+    // Elek3 A7: „Kész — beléptetjük” then steps in by itself (the button alone was one more click).
+    const { passwordSetDonePage } = await import("../src/server/adminViews.js");
+    const done = passwordSetDonePage("hu");
+    check("A7: a jelszó-beállítás utáni lap magától belép a szerkesztőbe", done.includes("Kész — beléptetjük") && /location\.replace\("\/admin"\)/.test(done));
+  }
+  check("A1: a sáv dátuma egy kifejezés, zárójel a zárójelben nélkül",
+    /\(\d{4}\. [^()]+ \d{1,2}\., [a-zőöüóéáúűí]+ig\)/.test(stripHead) && !/\)-ig\)/.test(stripHead), stripHead.slice(0, 120));
   check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
   check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));
   // ADR-0354 "C" (mock proba-c (a)): the strip names the ONE discount and its ONE deadline;
@@ -568,6 +579,9 @@ try {
   check("…egy nem-gerinc próba-modul (rooms) „csak a próbában volt”",
     modRow("rooms").includes("csak a próbában volt") && !modRow("rooms").includes("data-trial-module-spine"), modRow("rooms") || "nincs sor");
   check("…a FIZETETT modul (gallery) nincs a próba-listán", !modRow("gallery"));
+  // Elek3 A8: the one-off multilang was granted but never generated → no „csak a próbában volt” row.
+  const mlGranted = await db.selectFrom("module_entitlement").select("id").where("tenant_id", "=", tenantId).where("module", "=", "multilang").where("trial_grant", "=", true).executeTakeFirst();
+  check("A8: a nem használt egyszeri modul (többnyelvű) nem kap „csak a próbában volt” sort", !!mlGranted && !modRow("multilang"), mlGranted ? modRow("multilang") || "" : "a fixtúrában nincs próba-multilang");
   const modTabs = ADMIN_TABS.filter((tab) => tab !== "attekintes" && renderAdmin(tenantId, tab, modsState).includes("data-trial-modules"));
   check("…a kompakt füleken nincs kártya", modTabs.length === 0, modTabs.join(","));
   check("…aktív próbánál nincs kártya", calm?.modules.length === 0 && !renderAdmin(tenantId, "attekintes", calm).includes("data-trial-modules"));
@@ -723,7 +737,7 @@ try {
   const cLastDay = budapestIsoDay(new Date(cTrial.trial_until as unknown as string));
   const cOi = await db.insertInto("order_intent")
     .values({
-      prospect_id: c.prospectId, kind: "initial", price: 5250, billing_period: "monthly", modules: JSON.stringify(["gallery", "enquiry"]),
+      prospect_id: c.prospectId, kind: "initial", price: 5250, list_price: 7000, billing_period: "monthly", modules: JSON.stringify(["gallery", "enquiry"]),
       status: "submitted", submitted_at: new Date(), offer_id: cTrial.offer_id, domain_type: "citoviso_sub",
       photo_rights_declared_at: new Date(), photo_rights_text: "teszt", buyer_type: "individual", buyer_name: "Teszt Elek",
       buyer_country: "HU", buyer_zip: "8360", buyer_city: "Keszthely", buyer_address: "Fő utca 1.", buyer_email: "trialexpiry@example.invalid",
@@ -738,6 +752,26 @@ try {
   check("a próba alatti fizetés aktivál", cPaid.ok && cPaid.activated === true, JSON.stringify(cPaid));
   const cOffer = await db.selectFrom("offer").select("used_count").where("id", "=", cTrial.offer_id!).executeTakeFirstOrThrow();
   check("…a próba-ajánlat egyszer égett el", cOffer.used_count === 1, `${cOffer.used_count}`);
+  // Elek3 A2: the invoice NOTICE names the discount like the invoice does (it said only „Összeg”).
+  {
+    const { readdir, readFile, stat } = await import("node:fs/promises");
+    const inv = await db
+      .selectFrom("invoice")
+      .innerJoin("payment", "payment.id", "invoice.payment_id")
+      .select("invoice.invoice_number as no")
+      .where("payment.gateway_ref", "=", cRef)
+      .executeTakeFirst();
+    const OUT = path.resolve(process.cwd(), "outbox");
+    let body = "";
+    for (const f of await readdir(OUT).catch(() => [] as string[])) {
+      const fp = path.join(OUT, f);
+      if ((await stat(fp)).mtimeMs < T_RUN_START) continue;
+      const t = await readFile(fp, "utf8").catch(() => "");
+      if (inv?.no && t.includes(inv.no) && /Subject:.*Sz=C3=A1mla|Subject: Számla|Számla /.test(t)) body = t;
+    }
+    const named = body.includes("Próba-kedvezmény (−25%)") || body.includes("Pr=C3=B3ba-kedvezm=C3=A9ny");
+    check("A2: a számla-értesítő levél kiírja a „Próba-kedvezmény” sort", named, named ? "" : inv?.no ? (body ? "nincs kedvezmény-sor" : "nincs levél az outboxban") : "nincs számla");
+  }
   const cCoupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", cTenant).where("kind", "=", "coupon").execute();
   check("…nincs kupon (egy kedvezmény)", cCoupons.length === 0, `${cCoupons.length}`);
   const cSub = await db.selectFrom("subscription").select(["anchor_date", "current_period_start", "current_period_end"]).where("tenant_id", "=", cTenant).executeTakeFirst();

@@ -39,6 +39,12 @@ export interface InvoiceEmailInput {
   readonly pdfBase64?: string | null;
   /** Public URL of the buyer's site, when it is already live. */
   readonly siteUrl?: string | null;
+  /**
+   * Elek3 A2: the offer this payment redeemed — its ONE name (offerLabel, e.g.
+   * „Próba-kedvezmény”), its percent and the list price it came off. The invoice itself
+   * carries it in its comment (invoiceComment); the covering mail said only „Összeg”.
+   */
+  readonly discount?: { readonly label: string; readonly percent: number; readonly listGross: number } | null;
 }
 
 // The invoice mail was the ONE letter that already wrote "Ft" while the six
@@ -51,6 +57,9 @@ function money(amount: number, currency: string, lang?: string): string {
 export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
   const { to, buyerName, invoiceNumber, gross, currency, period, siteUrl, lang } = input;
   const total = money(gross, currency);
+  const disc = input.discount && input.discount.listGross > gross ? input.discount : null;
+  const discLabel = disc ? `${disc.label} (−${disc.percent}%)` : "";
+  const discValue = disc ? `−${money(disc.listGross - gross, currency)}` : "";
   // Elek FK-001 E1: the subject NAMES the item, from the same register the
   // Dokumentumok row reads. Before this, every invoice mail said „Citoviso
   // előfizetés" — the 14 900 Ft one-off multilingual fee too.
@@ -80,6 +89,9 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     `\n\n` +
     T(lang, "Számla sorszáma:") +
     ` ${invoiceNumber}\n` +
+    (disc
+      ? `${T(lang, "Listaár:")} ${money(disc.listGross, currency)}\n${discLabel}: ${discValue}\n`
+      : "") +
     T(lang, "Összeg:") +
     ` ${total}\n` +
     // A TÉTEL, nem a puszta ütem: a megnevezés maga hordozza az „(éves)"/„(havi)"
@@ -121,6 +133,12 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
       mailDetails([
         { label: T(lang, "Számla sorszáma"), value: invoiceNumber },
         { label: T(lang, "Tétel"), value: itemName },
+        ...(disc
+          ? [
+              { label: T(lang, "Listaár"), value: money(disc.listGross, currency) },
+              { label: discLabel, value: discValue },
+            ]
+          : []),
         { label: T(lang, "Összeg"), value: total, emphasis: true },
       ]),
       ...(siteUrl ? [mailButton(siteUrl, T(lang, "Oldala megtekintése"))] : []),

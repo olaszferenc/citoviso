@@ -2797,6 +2797,20 @@
    * the trial % on the first year, added up; monthly — honestly "only the first month",
    * with the way to annual. A lapsed trial (list price) keeps only the annual nudge.
    */
+  // Elek3 A5: the savings breakdown folds on a narrow panel; the visitor's own open/close
+  // survives the re-renders (every price change rebuilds the box).
+  var tsaveOpen = false;
+  function tsaveFold() {
+    // The panel may still be hidden (0 wide) at the first render — then the window decides.
+    return (panel.clientWidth || window.innerWidth || 0) < 560;
+  }
+  panel.addEventListener(
+    "toggle",
+    function (e) {
+      if (e.target && e.target.classList && e.target.classList.contains("cit-cfg-tsave--fold")) tsaveOpen = e.target.open;
+    },
+    true,
+  );
   function trialSaveHtml() {
     if (!CONT) return "";
     var m = monthlyTotal();
@@ -2808,11 +2822,25 @@
     };
     if (period === "annual") {
       if (!OFFER) return "";
-      return (
-        '<div class="cit-cfg-tsave">' +
+      var rows =
         row(tr("12 havi díj listaáron"), fmt(m * 12)) +
         (free > 0 ? row(tr("Éves fizetés: {n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)), "−" + fmt(free)) : "") +
-        row(tr("{name} −{p}% az első évre").replace("{name}", offerName()).replace("{p}", String(OFFER.percent)), "−" + fmt(yOff)) +
+        row(tr("{name} −{p}% az első évre").replace("{name}", offerName()).replace("{p}", String(OFFER.percent)), "−" + fmt(yOff));
+      // Elek3 A5: on a phone the sticky foot (period + total + offer line + four rows) took
+      // half the screen and left one and a half package cards to choose from. There the
+      // breakdown folds under its sum — one tap away, nothing removed; wide screens keep it open.
+      if (tsaveFold()) {
+        return (
+          '<details class="cit-cfg-tsave cit-cfg-tsave--fold"' + (tsaveOpen ? " open" : "") + ">" +
+          '<summary class="cit-cfg-tsave__r cit-cfg-tsave__r--sum"><span>' + esc(tr("Megtakarítás az első évben")) +
+          "</span><span>−" + esc(fmt(free + yOff)) + I.chev + "</span></summary>" +
+          rows +
+          "</details>"
+        );
+      }
+      return (
+        '<div class="cit-cfg-tsave">' +
+        rows +
         row(tr("Megtakarítás az első évben"), "−" + fmt(free + yOff), " cit-cfg-tsave__r--sum") +
         "</div>"
       );
@@ -3244,9 +3272,13 @@
       var renCand = null; // last server verdict for the typed label
       var renTimer = null;
       var renSeq = 0;
+      var renApply = ren.querySelector(".cit-cfg-ren__apply");
       var renMsgSet = function (cls, text) {
         renMsg.className = "cit-cfg-ren__msg" + (cls ? " cit-cfg-ren__msg--" + cls : "");
         renMsg.textContent = text;
+        // Elek3 A4: a refused label (taken / reserved / too short) cannot be chosen — the
+        // button says so instead of looking live and doing nothing.
+        renApply.disabled = cls === "bad" && !!renCand && !renCand.ok;
       };
       var renCurrent = function () {
         return (subHost || renOrig + DOM.subBase).replace(DOM.subBase, "");
@@ -3294,6 +3326,7 @@
       renIn.addEventListener("input", function () {
         if (renTimer) clearTimeout(renTimer);
         renCand = null;
+        renApply.disabled = false;
         renTimer = setTimeout(renCheck, 350);
       });
       renIn.addEventListener("keydown", function (e) {

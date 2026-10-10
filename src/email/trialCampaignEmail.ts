@@ -195,7 +195,8 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
     sigName: i.sender.sigName,
     sigCo: i.sender.sigCo,
     sigMail: i.sender.sigMail,
-    oneShot: T(lang, "Erről a próbáról több levelet nem küldünk; ha nem kér tőlünk több megkeresést, leiratkozhat."),
+    // Elek3 A6: the opt-out sentence lives once — in unsubTxt, right below, with its link.
+    oneShot: T(lang, "Erről a próbáról több levelet nem küldünk."),
     unsubTxt: T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
     legal: T(
       lang,
