@@ -7,8 +7,9 @@
 //   ③ no subscription row → the billing tick's scoped door mints NO renewal order, and no
 //      dunning_event exists for the tenant;
 //   ④ EVERY non-retired module is active and flagged trial_grant (translation included);
-//   ⑤ exactly ONE coupon (kind=coupon, scope=purchase, the CONFIGURED percent, expiring);
-//      the prospect's intro offer is ended (the trial is chosen INSTEAD of it);
+//   ⑤ ADR-XXXX ("C"): NO coupon — the lead's intro offer becomes THE trial offer
+//      (free_trial.offer_id), valid to the END of the trial's last Budapest day; a lead
+//      with no live offer gets a `campaign` row at the configured intro percent;
 //   ⑥ `trial_start` lands on the mock_event spine (the visit the page is in);
 //   ⑦ a lead that already owns a site is refused (already_owned), and creates nothing;
 //   ⑧ a missing ÁSZF / photo-rights tick is refused BEFORE any row is written;
@@ -19,9 +20,9 @@
 //      slug is already held by another site (measured 2026-10-09: the page said
 //      `<name>.citoviso.com`, the site got `<name>-2`).
 //   ⑪ IT A-02: a start that crashed after the tenant was written is RESUMED by the next
-//      submit (live site, coupon, login) — not answered "your trial is already running";
-//   ⑫ IT A-05: the trial ends the intro/escalation offers of EVERY token of the lead, and
-//      no decision-helper offer is minted for a trial lead afterwards;
+//      submit (live site, pinned offer, login) — not answered "your trial is already running";
+//   ⑫ IT A-05 + ADR-XXXX: of the offers of EVERY token of the lead only the LARGEST lives
+//      (to the trial's end), the rest close; no decision-helper offer is minted afterwards;
 //   ⑬ IT A-04 / B2: a pre-trial initial order (intro price) is not payable during the
 //      trial — /pay/go leads to /folytatas, requestPayment refuses it.
 //   ⑭ IT C5.3: a claim whose provisioning never finished (no tenant) is not lapsed by the
@@ -34,7 +35,7 @@
 // the real login letter otherwise) — the guard refuses to run on anything else.
 //
 // --self-test: after the trial starts, the world is SABOTAGED (a subscription row, a module
-// switched off, the intro offer revived, the preview label moved between the page and the
+// switched off, the trial offer's deadline removed, the preview label moved between the page and the
 // submit) — legs ③ ④ ⑤ ⑩ must go red, or the guard is blind.
 //
 // Run: EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts
@@ -210,23 +211,25 @@ try {
   check("minden nem-kivezetett modul aktív + trial_grant", missing.length === 0, missing.join(",") || `${want.length} modul`);
   check("a fordítás (multilang) is benne", want.includes("multilang"));
 
-  // ⑤ coupon + intro offer ended
-  console.log("⑤ kupon");
-  const coupons = await db.selectFrom("offer").select(["percent", "scope", "expires_at"]).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
-  check("pontosan EGY kupon", coupons.length === 1, `${coupons.length}`);
-  check("kupon: a KÖZÖS beállítás 30%-a, scope=purchase, lejárattal", coupons[0]?.percent === 30 && coupons[0]?.scope === "purchase" && !!coupons[0]?.expires_at);
-  const tu = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
-  // IT B1-HATAR (ADR-0352): the letters print "<day>-ig" — the coupon holds to the END of that
-  // Budapest day, not to the trial's start-hour on it (it ran out at 09:20 of the printed day).
-  const { addIsoDays, budapestDayEnd, budapestIsoDay } = await import("../src/text/budapestTime.js");
-  const couponDay = addIsoDays(budapestIsoDay(new Date(tu.trial_until as unknown as string)), 40);
-  const couponExp = new Date(coupons[0]?.expires_at as unknown as string);
-  check("kupon lejárata = a próba vége + a közös beállítás 40 napja, a nap VÉGÉIG (23:59:59.999 Budapest)",
-    couponExp.getTime() === budapestDayEnd(couponDay).getTime() && budapestIsoDay(couponExp) === couponDay, couponExp.toISOString());
-  const { purgeDay } = await import("../src/trial/retention.js");
-  check("a törlés napja a kupon-nap UTÁN jön (40 < 90 nap)", purgeDay(new Date(tu.trial_until as unknown as string)) > couponDay);
-  const intro = await db.selectFrom("offer").select("expires_at").where("prospect_id", "=", a.prospectId).where("kind", "=", "outreach").executeTakeFirst();
-  check("az outreach-ajánlat lezárva", !!intro?.expires_at && new Date(intro.expires_at as unknown as string).getTime() <= Date.now());
+  // ⑤ ADR-XXXX ("C"): no coupon; the intro offer is THE trial offer, to the trial's last day.
+  console.log("⑤ próba-ajánlat (C)");
+  const coupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  check("NINCS kupon (a próba-kupon kivezetve)", coupons.length === 0, `${coupons.length}`);
+  const tu = await db.selectFrom("free_trial").select(["trial_until", "offer_id", "coupon_offer_id"]).where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
+  const { budapestDayEnd, budapestIsoDay } = await import("../src/text/budapestTime.js");
+  const lastDay = budapestIsoDay(new Date(tu.trial_until as unknown as string));
+  const intro = await db.selectFrom("offer").select(["id", "percent", "expires_at"]).where("prospect_id", "=", a.prospectId).where("kind", "=", "outreach").executeTakeFirst();
+  check("a próba-ajánlat = a lead outreach-ajánlata (offer_id), coupon_offer_id üres", !!intro && tu.offer_id === intro.id && tu.coupon_offer_id === null, `${tu.offer_id} · ${intro?.id}`);
+  check("…a 25%-a marad", intro?.percent === 25, `${intro?.percent}`);
+  // IT B1-HATAR (ADR-0352): the letters print "<day>-ig" — the offer holds to the END of that day.
+  const introExp = intro?.expires_at ? new Date(intro.expires_at as unknown as string) : null;
+  check("…lejárata = a próba utolsó napjának VÉGE (23:59:59.999 Budapest)",
+    !!introExp && introExp.getTime() === budapestDayEnd(lastDay).getTime(), introExp?.toISOString() ?? "nincs lejárat");
+  const { liveTrialOffer } = await import("../src/trial/offer.js");
+  const lto = await liveTrialOffer(tenantId);
+  check("liveTrialOffer a próba alatt ezt adja", lto?.id === intro?.id && lto?.percent === 25, JSON.stringify(lto));
+  const ltoAfter = await liveTrialOffer(tenantId, new Date(budapestDayEnd(lastDay).getTime() + 1));
+  check("…a próba utolsó napja után null (listaár)", ltoAfter === null, JSON.stringify(ltoAfter));
 
   // ⑥ measurement
   console.log("⑥ mérés");
@@ -297,25 +300,26 @@ try {
   if (eTenant) tenants.push(eTenant);
   if (re1.ok && eTenant) {
     // The crash, after the fact: back to what step 4 leaves behind, claimed > 2 minutes ago.
-    await db.updateTable("free_trial").set({ coupon_offer_id: null, created_at: new Date(Date.now() - 10 * 60_000) }).where("lead_id", "=", e.leadId).execute();
-    await db.deleteFrom("offer").where("tenant_id", "=", eTenant).execute();
+    await db.updateTable("free_trial").set({ offer_id: null, coupon_offer_id: null, created_at: new Date(Date.now() - 10 * 60_000) }).where("lead_id", "=", e.leadId).execute();
     await db.deleteFrom("tenant_user").where("tenant_id", "=", eTenant).execute();
     await db.updateTable("site").set({ status: "provisioned" }).where("tenant_id", "=", eTenant).execute();
   }
   const re2 = await startTrial(e.token, FORM);
   const eSite = eTenant ? await db.selectFrom("site").select("status").where("tenant_id", "=", eTenant).executeTakeFirst() : undefined;
   const eCoupons = eTenant ? await db.selectFrom("offer").select("id").where("tenant_id", "=", eTenant).where("kind", "=", "coupon").execute() : [];
+  const eIntro = await db.selectFrom("offer").select("id").where("prospect_id", "=", e.prospectId).where("kind", "=", "outreach").executeTakeFirst();
   const eLogin = eTenant ? await db.selectFrom("tenant_user").select("id").where("tenant_id", "=", eTenant).executeTakeFirst() : undefined;
-  const eTrial = await db.selectFrom("free_trial").select("coupon_offer_id").where("lead_id", "=", e.leadId).executeTakeFirst();
+  const eTrial = await db.selectFrom("free_trial").select("offer_id").where("lead_id", "=", e.leadId).executeTakeFirst();
   check("az újraküldés NEM „már fut” (existing:false), a belépő-levél kimegy", re2.ok && !re2.existing && !!re2.loginSentTo, JSON.stringify(re2));
   check("…a site LIVE lett", eSite?.status === "live", `${eSite?.status}`);
-  check("…EGY kupon, a próba-sorra kötve", eCoupons.length === 1 && eTrial?.coupon_offer_id === eCoupons[0]?.id, `${eCoupons.length}`);
+  check("…a próba-ajánlat a próba-sorra kötve (offer_id), kupon nélkül", eCoupons.length === 0 && !!eIntro && eTrial?.offer_id === eIntro.id, `${eCoupons.length} kupon · ${eTrial?.offer_id}`);
   check("…van belépés", !!eLogin);
   const re3 = await startTrial(e.token, FORM);
   check("a befejezett próba újraküldése már existing:true", re3.ok && re3.existing);
 
-  // ⑫ IT A-05: a lead reached on TWO tokens — the trial on one ends the other's intro and
-  // escalation offers too, and no decision-helper is minted for it afterwards.
+  // ⑫ IT A-05 + ADR-XXXX: a lead reached on TWO tokens — of all its offers only the largest
+  // (the other token's −50% escalation) runs to the trial's end; the −25%s close. No
+  // decision-helper is minted for it afterwards.
   console.log("⑫ több prospectes lead");
   const f = await fixtureLead("f");
   const fB = await db
@@ -327,13 +331,21 @@ try {
   await db.insertInto("offer").values({ kind: "escalation", prospect_id: fB.id, percent: 50, scope: "initial", expires_at: new Date(Date.now() + 86_400_000) }).execute();
   const rf = await startTrial(f.token, FORM);
   tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", f.leadId).execute()).map((t) => t.id));
-  const bOpen = await db
+  const fOffers = await db
     .selectFrom("offer")
-    .select(["kind", "expires_at"])
-    .where("prospect_id", "=", fB.id)
+    .select(["id", "kind", "percent", "expires_at"])
+    .where("prospect_id", "in", [f.prospectId, fB.id])
     .execute();
-  const stillOpen = bOpen.filter((o) => !o.expires_at || new Date(o.expires_at as unknown as string).getTime() > Date.now());
-  check("a másik token ajánlatai (25% + 50%) is lezárva", rf.ok && bOpen.length === 2 && stillOpen.length === 0, stillOpen.map((o) => o.kind).join(",") || "0 nyitott");
+  const fNow = Date.now();
+  const fOpen = fOffers.filter((o) => !o.expires_at || new Date(o.expires_at as unknown as string).getTime() > fNow);
+  const fTrial = await db.selectFrom("free_trial").select(["offer_id", "trial_until"]).where("lead_id", "=", f.leadId).executeTakeFirst();
+  const fEsc = fOffers.find((o) => o.kind === "escalation");
+  check("a két token három ajánlatából (25+25+50) EGY él: az 50%-os eszkaláció", rf.ok && fOffers.length === 3 && fOpen.length === 1 && fOpen[0]?.id === fEsc?.id && fEsc?.percent === 50,
+    fOpen.map((o) => `${o.kind}:${o.percent}`).join(",") || "0 nyitott");
+  check("…ez a próba-ajánlat, és a próba utolsó napjának végéig él (nem 72 óráig)",
+    !!fTrial && fTrial.offer_id === fEsc?.id && new Date(fEsc!.expires_at as unknown as string).getTime() === budapestDayEnd(budapestIsoDay(new Date(fTrial.trial_until as unknown as string))).getTime(),
+    `${fEsc?.expires_at as unknown as string}`);
+  await db.updateTable("free_trial").set({ offer_id: null }).where("lead_id", "=", f.leadId).execute();
   await db.deleteFrom("offer").where("prospect_id", "=", fB.id).where("kind", "=", "escalation").execute();
   overrideEscalationConfigInProcess({ ...ESCALATION_CONFIG_DEFAULT, enabled: true, threshold: 1, distinctDays: false });
   await db.insertInto("mock_view").values({ prospect_id: fB.id }).execute();
@@ -367,6 +379,35 @@ try {
     .returning("id")
     .executeTakeFirstOrThrow();
   check("a próba UTÁNI (folytatás-) rendelést a kapu nem érinti", (await preTrialOrderOfContinuableTrial(gCont.id)) === null);
+  // ADR-XXXX: a continuation priced with the trial offer, paid after that offer died → re-priced.
+  const gOfferId = (await db.selectFrom("free_trial").select("offer_id").where("lead_id", "=", g.leadId).executeTakeFirst())?.offer_id ?? null;
+  const gPriced = await db
+    .insertInto("order_intent")
+    .values({ prospect_id: g.prospectId, price: 2925, modules: JSON.stringify([]), status: "submitted", offer_id: gOfferId })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  check("a próba-ajánlattal árazott folytatás fizethető, amíg az ajánlat él", !!gOfferId && (await preTrialOrderOfContinuableTrial(gPriced.id)) === null);
+  await db.updateTable("offer").set({ expires_at: new Date(Date.now() - 1000) }).where("id", "=", gOfferId!).execute();
+  const gGate = await preTrialOrderOfContinuableTrial(gPriced.id);
+  check("…lejárt ajánlattal → /folytatas (listaáron újraárazva)", gGate?.token === g.token, JSON.stringify(gGate));
+
+  // ⑮ ADR-XXXX: a lead with NO live offer (its intro already closed) gets the configured
+  // intro percent as a `campaign` row to the trial's end — never the list price in the trial.
+  console.log("⑮ ajánlat nélküli lead → alap-ajánlat");
+  const k = await fixtureLead("k");
+  await db.insertInto("offer").values({ kind: "outreach", prospect_id: k.prospectId, percent: 25, scope: "initial", expires_at: new Date(Date.now() - 3_600_000) }).execute();
+  overrideEscalationConfigInProcess({ ...ESCALATION_CONFIG_DEFAULT, outreachPercent: 33 });
+  const rk = await startTrial(k.token, FORM);
+  overrideEscalationConfigInProcess(null);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", k.leadId).execute()).map((t) => t.id));
+  const kTrial = await db.selectFrom("free_trial").select(["offer_id", "trial_until"]).where("lead_id", "=", k.leadId).executeTakeFirst();
+  const kOffer = kTrial?.offer_id
+    ? await db.selectFrom("offer").select(["kind", "percent", "scope", "prospect_id", "expires_at"]).where("id", "=", kTrial.offer_id).executeTakeFirst()
+    : undefined;
+  check("campaign sor a beállított bevezető %-kal (33), a próba prospectjén",
+    rk.ok && kOffer?.kind === "campaign" && kOffer.percent === 33 && kOffer.scope === "initial" && kOffer.prospect_id === k.prospectId, JSON.stringify(kOffer));
+  check("…a próba utolsó napjának végéig",
+    !!kOffer?.expires_at && new Date(kOffer.expires_at as unknown as string).getTime() === budapestDayEnd(budapestIsoDay(new Date(kTrial!.trial_until as unknown as string))).getTime());
 
   // ⑭ IT C5.3: the crashed claim (no tenant) whose trial_until passed long ago.
   console.log("⑭ tenant nélküli foglalás lejárat után");

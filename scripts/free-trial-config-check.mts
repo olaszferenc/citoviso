@@ -178,7 +178,12 @@ try {
   const grantBody = grant.slice(0, grant.indexOf("\n}\n"));
   check("⑦ a fizetéskori kupon a getCouponConfig()-ból ver (% és nap)", /getCouponConfig\(\)/.test(grantBody) && /percent: cfg\.percent/.test(grantBody) && /cfg\.days/.test(grantBody), true);
   const start = src("../src/trial/start.ts");
-  check("⑦ a próba-kupon ugyanabból (getCouponConfig, cfg.percent, cfg.days)", /getCouponConfig\(\)/.test(start) && /percent: cfg\.percent/.test(start) && /cfg\.days \* 86_400_000/.test(start), true);
+  // ADR-XXXX ("C"): the trial mints NO coupon — its one discount is the pinned trial offer,
+  // and the paid path's welcome coupon skips a trial tenant.
+  check("⑦ a próba NEM ver kupont (start.ts: nincs getCouponConfig, nincs kind \"coupon\"; pinTrialOffer)",
+    !/getCouponConfig/.test(start) && !/kind: "coupon"/.test(start) && /pinTrialOffer\(/.test(start), true);
+  check("⑦ a fizetéskori kupon próbázó tenantnak nem ver (free_trial-sor → return)",
+    /selectFrom\("free_trial"\)[\s\S]*?if \(trial\) return;/.test(grantBody), true);
   check("⑦ nincs második, rögzített kupon-konstans", /NEW_SUBSCRIBER_COUPON_(PERCENT|DAYS)/.test(offers + start), false);
   check("⑦ migráció: a régi próba-% átjön", legacyTrialCouponPercent('{"enabled":true,"days":14,"couponPercent":20}'), 20);
   check("⑦ migráció: nincs régi sor / mező / hibás érték → null (alapérték)", [legacyTrialCouponPercent(null), legacyTrialCouponPercent('{"days":14}'), legacyTrialCouponPercent('{"couponPercent":95}')], [null, null, null]);

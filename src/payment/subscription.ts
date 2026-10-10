@@ -10,6 +10,7 @@
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { redeemOffer } from "./offers.js";
+import { addIsoDays, budapestIsoDay } from "../text/budapestTime.js";
 import { announceRestore } from "./restoreNotice.js";
 import { alertHeldCancellations, heldCancellations } from "../tenant/moduleRequirements.js";
 
@@ -42,6 +43,14 @@ export function addMonths(d: Date, months: number): Date {
   const out = new Date(d);
   out.setMonth(out.getMonth() + months);
   return out;
+}
+
+/** addMonths on a calendar day ("YYYY-MM-DD" → "YYYY-MM-DD"), the same overflow rule. */
+export function addIsoMonths(day: string, months: number): string {
+  const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+  const t = new Date(Date.UTC(y, m - 1, d));
+  t.setUTCMonth(t.getUTCMonth() + months);
+  return t.toISOString().slice(0, 10);
 }
 
 /**
@@ -114,15 +123,38 @@ export async function ensureSubscriptionForOrder(
 
   const anchor = new Date(paid.paid_at as unknown as string);
   const months = paid.period === "annual" ? 12 : 1;
+  // ADR-XXXX ⓐ (tulaj-megerősítésre): paid DURING a free trial, the paid period starts
+  // the day AFTER the trial's last day — the free days left are kept, not swallowed by the
+  // first period. Calendar days as ISO strings: the columns are `date`, and a Date → date
+  // cast is zone-dependent (db/client.ts).
+  const trial = await db
+    .selectFrom("free_trial")
+    .select("trial_until")
+    .where("tenant_id", "=", tenantId)
+    .where("status", "in", ["active", "lapsed"])
+    .executeTakeFirst();
+  const trialLastDay = trial ? budapestIsoDay(new Date(trial.trial_until as unknown as string)) : null;
+  const startDay =
+    trialLastDay && trialLastDay >= budapestIsoDay(anchor) ? addIsoDays(trialLastDay, 1) : null;
   await db
     .insertInto("subscription")
-    .values({
-      tenant_id: tenantId,
-      billing_period: paid.period,
-      anchor_date: anchor,
-      current_period_start: anchor,
-      current_period_end: addMonths(anchor, months),
-    })
+    .values(
+      startDay
+        ? {
+            tenant_id: tenantId,
+            billing_period: paid.period,
+            anchor_date: startDay,
+            current_period_start: startDay,
+            current_period_end: addIsoMonths(startDay, months),
+          }
+        : {
+            tenant_id: tenantId,
+            billing_period: paid.period,
+            anchor_date: anchor,
+            current_period_start: anchor,
+            current_period_end: addMonths(anchor, months),
+          },
+    )
     .onConflict((oc) => oc.column("tenant_id").doNothing())
     .execute();
   // ADR-0342: the first real payment ends a free trial — the subscription just born

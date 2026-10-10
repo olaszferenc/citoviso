@@ -11,6 +11,7 @@ import {
   setFreeTrialConfig,
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
+import { liveTrialOffer } from "../trial/offer.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -124,7 +125,6 @@ import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
 import { resolvePayEntry } from "../payment/payEntry.js";
 import {
   applyOffer,
-  bestActiveCouponForTenant,
   bestActiveOfferForProspect,
   offerForPage,
   bestActiveOfferForProspectToken,
@@ -1140,11 +1140,12 @@ async function handleOrderRequest(
   // renewals recompute from list in billing.ts.
   const listPrice =
     billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
-  // ADR-0344: the trial's continuation is priced by the TENANT's coupon (minted at
-  // trial start, ADR-0342) — the prospect's intro offers were closed when the trial
-  // began. One offer, never stacked (ADR-0088 ⑥); redeemOfferForOrder burns its one use.
+  // ADR-XXXX ("C"): the trial's continuation is priced by the TRIAL offer — the lead's
+  // intro/escalation offer, pinned at trial start to the trial's last day. A lapsed
+  // trial's offer is expired → list price (the deadline is real). One offer, never
+  // stacked (ADR-0088 ⑥); redeemOfferForOrder burns its one use.
   const offer = trialCont
-    ? await bestActiveCouponForTenant(trialCont.tenantId)
+    ? await liveTrialOffer(trialCont.tenantId)
     : prospectToken
       ? await bestActiveOfferForProspectToken(prospectToken)
       : null;
@@ -3251,7 +3252,7 @@ async function handle(
   // /p/:token keeps serving the owned notice (a trial tenant IS an owner there); this
   // route serves the same configurator, its checkout posting to the same /p/:token/request
   // (handleOrderRequest already lets a continuable trial through and prices it with the
-  // tenant's coupon). Only for a continuable trial — anyone else goes back to /p/:token,
+  // trial offer, ADR-XXXX). Only for a continuable trial — anyone else goes back to /p/:token,
   // which knows what to show them. Nothing is measured: this visitor is a customer.
   // ⛔ No framing text yet: the banner/wording is a §2b design (proba-C mock), not wired.
   const pContMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas$/.exec(pPath);
@@ -3271,7 +3272,8 @@ async function handle(
       .executeTakeFirst();
     const trial = pf ? await continuableTrialForLead(pf.leadId) : null;
     if (!pf || !trial) return redirect(res, `/p/${pContMatch[1]}`);
-    const coupon = await bestActiveCouponForTenant(trial.tenantId);
+    // ADR-XXXX: the trial offer while the trial runs; after its end the list price.
+    const coupon = await liveTrialOffer(trial.tenantId);
     try {
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {

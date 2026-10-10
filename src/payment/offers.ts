@@ -557,8 +557,9 @@ export async function ensureEscalationOffer(
  * Resolves the tenant both ways money can point at one (order.tenant_id or
  * prospect → lead → tenant); idempotent by the partial unique index.
  * ADR-0346: percent and validity from the ONE coupon setting (getCouponConfig) — the
- * same numbers a trial start mints with; a trial owner already holds the tenant's one
- * coupon, so this no-ops for them (used or not). 0% = no coupon.
+ * numbers for every direct buyer. 0% = no coupon.
+ * ADR-XXXX ("C"): a trial tenant gets NO coupon — its one discount was the trial offer,
+ * deadline the trial's end; a coupon after the continuation would be a second discount.
  */
 export async function grantNewSubscriberCouponForOrder(
   orderIntentId: string,
@@ -580,6 +581,8 @@ export async function grantNewSubscriberCouponForOrder(
     tenantId = t?.id ?? null;
   }
   if (!tenantId) return;
+  const trial = await db.selectFrom("free_trial").select("id").where("tenant_id", "=", tenantId).executeTakeFirst();
+  if (trial) return;
   const cfg = await getCouponConfig();
   if (cfg.percent <= 0) return;
   const inserted = await db
@@ -688,6 +691,15 @@ export async function escalationFollowupsDue(
   for (const r of rows) {
     if (!r.prospect_id || !r.expires_at) continue;
     if (await prospectHasPaidOrder(r.prospect_id)) continue;
+    // ADR-XXXX: a trial lead's escalation runs to the trial's end as THE trial offer —
+    // its "expires in N hours" follow-up would be a false deadline.
+    const trialLead = await db
+      .selectFrom("free_trial")
+      .innerJoin("prospect", "prospect.lead_id", "free_trial.lead_id")
+      .select("free_trial.id")
+      .where("prospect.id", "=", r.prospect_id)
+      .executeTakeFirst();
+    if (trialLead) continue;
     due.push({
       offerId: r.id,
       prospectId: r.prospect_id,

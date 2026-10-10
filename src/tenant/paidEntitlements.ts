@@ -116,6 +116,18 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
   const awaitingFirstCharge = new Set(
     current.filter((c) => c.active && c.awaiting_first_charge).map((c) => c.module),
   );
+  // ADR-XXXX ⓑ (tulaj-megerősítésre): paid DURING the free trial, the modules the buyer did
+  // not choose stay on until the trial's end — the trial promised them to that day.
+  // endTrialGrantsAfterConversion (src/trial/expiry.ts, daily tick) switches them off after.
+  const trialRunning = await db
+    .selectFrom("free_trial")
+    .select("id")
+    .where("tenant_id", "=", tenantId)
+    .where("trial_until", ">", new Date())
+    .executeTakeFirst();
+  const keptTrialGrants = new Set(
+    trialRunning ? current.filter((c) => c.active && c.trial_grant).map((c) => c.module) : [],
+  );
 
   // ADR-0080 ③: an explicit cancellation OUTRANKS the historical paid union —
   // the module WAS paid once, but the tenant said stop; re-granting it off an
@@ -173,6 +185,7 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
   const revoked: string[] = [];
   for (const module of activeNow) {
     if (paidSet.has(module)) continue;
+    if (keptTrialGrants.has(module)) continue;
     if (awaitingFirstCharge.has(module)) {
       console.log(
         `[entitlement] ${tenantId}: ${module} első díjra vár (B-opció) — nem vonjuk vissza`,

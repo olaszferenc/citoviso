@@ -14,7 +14,8 @@
 //      reads the tenant as frozen (isSubscriptionFrozen);
 //   ④ the purchase gate: a trialist may buy (ownedBlocksInitialPurchase → null), a
 //      tenant WITHOUT a trial stays refused; GET /p/<t>/folytatas serves the trialist the
-//      configurator with the trial coupon, and sends anyone else back to /p/<t>; the plain
+//      configurator — with the trial offer while it lives, at LIST price once the trial's
+//      last day has passed (ADR-XXXX "C": the deadline is real) — and sends anyone else back to /p/<t>; the plain
 //      /p/<t> of a LAPSED trialist says „szünetel” and its bar's action is that /folytatas
 //      (Elek 3 — it said „már az Öné… folyamatban” with no way to continue);
 //   ②b the WIRED senders (src/trial/notices.ts, what the hourly tick runs): the e-mail is
@@ -35,9 +36,10 @@
 //      and no other tab, no active and no converted trial shows it;
 //      the Teendők row of a lapsed (suspended) trial says the paused wording + „Folytatom —
 //      fizetés", never the debt row „Rendezze a díjat";
-//   ⑤ continuation: the REAL settlement (applyWebhookResult, mock gateway) → site live,
-//      trial 'converted', subscription anchor = today, the trial coupon burnt ONCE, no
-//      second (welcome) coupon — and from then on the lead is a customer (gate refuses);
+//   ⑤ continuation of the LAPSED trial: the REAL settlement (applyWebhookResult, mock
+//      gateway) at list price → site live, trial 'converted', subscription anchor = today,
+//      NO coupon at all (ADR-XXXX: the welcome coupon is not minted for a trial tenant) —
+//      and from then on the lead is a customer (gate refuses);
 //   ⑤b B1-PAR, two checkout tabs: the second tab's /pay/go no longer hands back its live
 //      gateway page, and its payment, settled anyway, converts nothing, invoices nothing,
 //      burns nothing and lands on the „már kifizette” page (--self-test: the first payment's
@@ -45,13 +47,18 @@
 //   ⑤c Elek 4: the continuation's /pay/done says the account is unchanged — no „Elküldtük a
 //      belépési adatait”, no password form (--self-test: the login's created_at slid after the
 //      payment → it reads as a first purchase, the leg goes red).
+//   ⑥ ADR-XXXX, paid DURING the trial with the trial offer: the offer burnt once, no coupon;
+//      ⓐ the paid period starts the day AFTER the trial's last day (anchor = last day + 1,
+//      period end = that + 1 month); ⓑ the unchosen trial modules stay on to the trial's
+//      end, endTrialGrantsAfterConversion is a no-op before it and switches exactly them off
+//      after it (the bought ones stay), and a second run does nothing.
 //
 // ISOLATION: own throwaway database (scratch-db), created BEFORE any import that opens the
 // db client; the provider switches are forced to mock and READ BACK (the dev .env names a
 // real invoice agent and the real Barion gateway). The snapshot under sites/ is removed.
 //
-// --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the trial
-// coupon expired before the /folytatas GET, the wired SMS sender swapped back to DRY, the notice
+// --self-test: the world is SABOTAGED (a ledger row planted after the dry run, the expired
+// trial offer revived before the lapsed /folytatas GET, the wired SMS sender swapped back to DRY, the notice
 // ledger wiped before the second run, the
 // site switched back on after the lapse, a trial module revived, the admin frame handed no
 // trial, the trial end slid past the warn window, the spine's trial_grant lost before the
@@ -129,6 +136,8 @@ if (getInvoiceProvider().name !== "mock") {
 const { overrideFreeTrialConfigInProcess } = await import("../src/trial/config.js");
 const { overrideCouponConfigInProcess } = await import("../src/payment/couponConfig.js");
 const { grantNewSubscriberCouponForOrder } = await import("../src/payment/offers.js");
+const { trialOfferDeadline } = await import("../src/trial/offer.js");
+const { endTrialGrantsAfterConversion } = await import("../src/trial/expiry.js");
 const { startTrial } = await import("../src/trial/start.js");
 const { lapseExpiredTrials, noticeSendDay, runTrialNotices } = await import("../src/trial/expiry.js");
 const { isSubscriptionFrozen } = await import("../src/payment/subscription.js");
@@ -278,7 +287,9 @@ try {
   const enc = smsEncoding(s1);
   check("SMS: GSM-7 (ékezet nélkül), ≤2 szelet — a modem is 7 biten küldi", enc.gsm7 && enc.segments >= 1 && enc.segments <= 2, `${enc.length} kar., ${enc.segments} szelet, gsm7=${enc.gsm7}`);
   check("SMS: benne a /p/<t>/folytatas link", s1.includes(`citoviso.test/p/${a.token}/folytatas`), s1);
-  check("SMS: „holnap lejar”, a kupon (30%), „Citoviso:” feladó-előtag", s1.startsWith("Citoviso: holnap lejar ") && s1.includes("Folytatas 30% kedvezmennyel: "), s1);
+  // ADR-XXXX: a new trial holds NO coupon — the coupon sentence must not appear (a promise that
+  // does not exist, §B.17); the C wording ("<p>% a próba végéig") is the §2b round 2.
+  check("SMS: „holnap lejar”, „Citoviso:” feladó-előtag, kupon-mondat NINCS (kupon nélküli próba)", s1.startsWith("Citoviso: holnap lejar ") && !s1.includes("kedvezmennyel") && s1.includes("Folytatas: "), s1);
   check("SMS a próbázó számára ment", (smsCaps[0]?.to ?? "").replace(/\D/g, "") === FORM.phone.replace(/\D/g, ""), smsCaps[0]?.to);
   const smsLog = await db.selectFrom("tenant_message").select(["body_text", "channel"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "sms").execute();
   check("…az SMS a tenant postafiókjában is (tenant_message, sms)", smsLog.length === 1 && smsLog[0]!.body_text === s1);
@@ -299,7 +310,7 @@ try {
   const h1 = m1?.html ?? "";
   check("tárgy: „Holnap lejár az ingyenes próba – …”", !!m1 && m1.subject.startsWith("Holnap lejár az ingyenes próba – "), m1?.subject);
   check("a Folytatom gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Folytatom</a>"));
-  check("a próba-kupon a levélben (30% az első díjból)", h1.includes("<b>30%</b> az első díjból"));
+  check("a levélben NINCS kupon-mondat (kupon nélküli próba, ADR-XXXX)", !h1.includes("az első díjból"));
   check("lábléc: „…próbálja ki.” — és nem „rendelte meg”", h1.includes("Citovisónál próbálja ki.") && !h1.includes("rendelte meg"));
   const logged = await db.selectFrom("tenant_message").select(["subject", "related_kind"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "email").execute();
   check("…a levél a tenant postafiókjában is (tenant_message)", logged.length === 1 && logged[0]!.subject === m1?.subject);
@@ -476,25 +487,37 @@ try {
   const bt = await db.insertInto("tenant").values({ lead_id: b.leadId, display_name: `_trialexpiry_${stamp} b` }).returning("id").executeTakeFirstOrThrow();
   tenants.push(bt.id);
   check("próba nélküli tulajdonos lead → továbbra is elutasítva", (await ownedBlocksInitialPurchase(b.leadId)) !== null);
-  // the continuation entry: GET /p/<token>/folytatas → the configurator with the trial coupon
+  // the continuation entry: GET /p/<token>/folytatas → the configurator; ADR-XXXX: the trial
+  // offer while it lives (to the END of the trial's last day), the list price after it.
   const { server: consoleServer } = await import("../src/console/server.js");
   closeConsole = () => { consoleServer.closeAllConnections(); consoleServer.close(); };
   if (!consoleServer.listening) await new Promise((r) => consoleServer.once("listening", r));
   const cport = (consoleServer.address() as { port: number }).port;
   const get = (p: string) => fetch(`http://127.0.0.1:${cport}${p}`, { redirect: "manual" });
-  if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() - 1000) } as never).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  const aTrial = await db.selectFrom("free_trial").select("offer_id").where("id", "=", trial.id).executeTakeFirstOrThrow();
+  const aOffer = await db.selectFrom("offer").select(["id", "kind", "percent"]).where("id", "=", aTrial.offer_id!).executeTakeFirstOrThrow();
   const mockFile = path.resolve(process.cwd(), `sites/_trialexpiry_${stamp}a.html`);
   await writeFile(mockFile, "<!doctype html><html><head><title>t</title></head><body><main>mock</main></body></html>");
   closeMockFile = () => rm(mockFile, { force: true });
+  // (1) the trial's last day is still today (it lapsed an hour ago) — the offer lives to its end.
+  await db.updateTable("offer").set({ expires_at: trialOfferDeadline(new Date(Date.now() - 3_600_000)) } as never).where("id", "=", aOffer.id).execute();
+  const contLive = await get(`/p/${a.token}/folytatas`);
+  const bodyLive = contLive.status === 200 ? await contLive.text() : "";
+  check(`…a próba utolsó napján még a próba-ajánlat (${aOffer.kind} ${aOffer.percent}%) a fő ár`,
+    new RegExp(`"offer":\\{"kind":"${aOffer.kind}","percent":${aOffer.percent}[,}]`).test(bodyLive), String(contLive.status));
+  // (2) the last day is over (yesterday) — list price, no offer in the manifest.
+  const yesterdayEnd = new Date(Date.now() - 26 * 3_600_000);
+  await db.updateTable("free_trial").set({ trial_until: yesterdayEnd }).where("id", "=", trial.id).execute();
+  await db.updateTable("offer").set({ expires_at: trialOfferDeadline(yesterdayEnd) } as never).where("id", "=", aOffer.id).execute();
+  if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() + 86_400_000) } as never).where("id", "=", aOffer.id).execute();
   const contA = await get(`/p/${a.token}/folytatas`);
   const bodyA = contA.status === 200 ? await contA.text() : "";
+  if (SELF_TEST) await db.updateTable("offer").set({ expires_at: trialOfferDeadline(yesterdayEnd) } as never).where("id", "=", aOffer.id).execute();
   check("GET /p/<t>/folytatas (lejárt próbázó) → 200, konfigurátor a saját /request-re", contA.status === 200 && bodyA.includes(`/p/${a.token}/request`), String(contA.status));
-  const cp = await db.selectFrom("offer").select("percent").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").executeTakeFirstOrThrow();
   // Elek (2026-10-09): the browse header said „Most nem fizet semmit" to someone who came to
   // pay — the page must mark itself the continuation so the runtime swaps that header.
   check("…a manifest folytatásként jelöli (continuation), a fejléc nem „Most nem fizet semmit”", bodyA.includes('"continuation":true'));
-  check(`…a próba-kupon (${cp.percent}%) mint ajánlat`, new RegExp(`"offer":\\{"kind":"coupon","percent":${cp.percent}[,}]`).test(bodyA));
-  if (SELF_TEST) await db.updateTable("offer").set({ expires_at: new Date(Date.now() + 90 * 86_400_000) } as never).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  check("…a próba utolsó napja UTÁN nincs ajánlat: listaár (a határidő valódi)", !bodyA.includes('"offer":{'));
   // Elek 3: the plain /p/<t> of a LAPSED trialist — not „már az Öné… folyamatban", but
   // „szünetel" + the /folytatas checkout as the bar's action.
   const plainA = await get(`/p/${a.token}`);
@@ -511,11 +534,10 @@ try {
 
   // ⑤ continuation — the real settlement on the trial's own checkout order
   console.log("⑤ folytatás-fizetés");
-  const coupon = await db.selectFrom("offer").select(["id", "used_count"]).where("tenant_id", "=", tenantId).where("kind", "=", "coupon").executeTakeFirstOrThrow();
   const oi = await db.insertInto("order_intent")
     .values({
       prospect_id: a.prospectId, kind: "initial", price: 7000, billing_period: "monthly", modules: JSON.stringify(["gallery", "enquiry"]),
-      status: "submitted", submitted_at: new Date(), offer_id: coupon.id, domain_type: "citoviso_sub",
+      status: "submitted", submitted_at: new Date(), offer_id: null, domain_type: "citoviso_sub",
       photo_rights_declared_at: new Date(), photo_rights_text: "teszt", buyer_type: "individual", buyer_name: "Teszt Elek",
       buyer_country: "HU", buyer_zip: "8360", buyer_city: "Keszthely", buyer_address: "Fő utca 1.", buyer_email: "trialexpiry@example.invalid",
       terms_accepted_at: new Date(), terms_text: "teszt",
@@ -529,7 +551,7 @@ try {
   const oi2 = await db.insertInto("order_intent")
     .values({
       prospect_id: a.prospectId, kind: "initial", price: 7000, billing_period: "monthly", modules: JSON.stringify(["gallery", "enquiry"]),
-      status: "submitted", submitted_at: new Date(), offer_id: coupon.id, domain_type: "citoviso_sub",
+      status: "submitted", submitted_at: new Date(), offer_id: null, domain_type: "citoviso_sub",
       photo_rights_declared_at: new Date(), photo_rights_text: "teszt", buyer_type: "individual", buyer_name: "Teszt Elek",
       buyer_country: "HU", buyer_zip: "8360", buyer_city: "Keszthely", buyer_address: "Fő utca 1.", buyer_email: "trialexpiry@example.invalid",
       terms_accepted_at: new Date(), terms_text: "teszt",
@@ -553,16 +575,14 @@ try {
   const anchor = sub ? budapestIsoDay(new Date(sub.anchor_date as unknown as string)) : null;
   check("subscription született, fordulónap = a fizetés napja", anchor === budapestIsoDay(new Date()), `${anchor}`);
   check("…és nem fagyott", !(await isSubscriptionFrozen(tenantId)));
-  const couponAfter = await db.selectFrom("offer").select("used_count").where("id", "=", coupon.id).executeTakeFirstOrThrow();
-  check("a próba-kupon egyszer égett el (used_count 1)", couponAfter.used_count === 1, `${couponAfter.used_count}`);
   const coupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
-  check("nem született második (üdvözlő) kupon", coupons.length === 1, `${coupons.length}`);
-  // ADR-0346: ONE coupon rule — the trial's coupon carries the shared setting's percent.
-  check("a kupon %-a a közös „Kupon” beállításból jön (30%)", cp.percent === 30, `${cp.percent}`);
+  check("ADR-XXXX: a próbázó tenant NEM kap kupont a fizetéskor (a közös beállítás 30% ellenére)", coupons.length === 0, `${coupons.length}`);
   // …and the paid path's welcome grant, run once more for this tenant, still mints nothing.
   await grantNewSubscriberCouponForOrder(oi.id);
   const coupons2 = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
-  check("egy tenant = egy kupon: a fizetéskori üdvözlő kupon újrafuttatva sem ver másodikat", coupons2.length === 1, `${coupons2.length}`);
+  check("…az üdvözlő kupon újrafuttatva sem ver", coupons2.length === 0, `${coupons2.length}`);
+  const aOfferAfter = await db.selectFrom("offer").select("used_count").where("id", "=", aOffer.id).executeTakeFirstOrThrow();
+  check("a lejárt próba-ajánlat nem égett (listaáron fizetett)", aOfferAfter.used_count === 0, `${aOfferAfter.used_count}`);
   const entsAfter = await db.selectFrom("module_entitlement").select(["module", "active", "trial_grant"]).where("tenant_id", "=", tenantId).where("active", "=", true).execute();
   check("a fizetés után a megvett modulok élnek, próba-jel nélkül",
     ["gallery", "enquiry"].every((m) => entsAfter.some((e) => e.module === m && !e.trial_grant)) && entsAfter.every((e) => !e.trial_grant),
@@ -579,8 +599,8 @@ try {
   check("B1-PAR: a második fizetés NEM aktivál, duplikátumként jelölve", paid2.ok && paid2.activated === false && !!paid2.duplicateOf, JSON.stringify(paid2));
   const invAfter = (await db.selectFrom("invoice").select("id").execute()).length;
   check("B1-PAR: a második fizetésre nincs számla", invAfter === invBefore, `${invBefore}→${invAfter}`);
-  const couponTwice = await db.selectFrom("offer").select("used_count").where("id", "=", coupon.id).executeTakeFirstOrThrow();
-  check("B1-PAR: a kupon továbbra is egyszer égett", couponTwice.used_count === 1, `${couponTwice.used_count}`);
+  const couponsTwice = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
+  check("B1-PAR: a második fizetés sem ver kupont", couponsTwice.length === 0, `${couponsTwice.length}`);
   const done2 = await get(`/pay/done?paymentId=${encodeURIComponent(ref2)}`);
   const done2Html = done2.status === 200 ? await done2.text() : "";
   check("B1-PAR: /pay/done a második fizetésre → „már kifizette” lap, nem az üdvözlő", done2Html.includes("data-pay-duplicate"), String(done2.status));
@@ -594,6 +614,61 @@ try {
   const paidState = await trialAdminState(tenantId);
   const paidHtml = renderAdmin(tenantId, "attekintes", paidState);
   check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk, se „Modulok” kártya", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed") && !paidHtml.includes("data-trial-modules"));
+
+  // ⑥ ADR-XXXX: paid DURING the trial, with the trial offer.
+  console.log("⑥ fizetés a próba ALATT (ⓐ fordulónap, ⓑ modulok)");
+  const c = await fixtureLead("c");
+  await db.insertInto("offer").values({ kind: "outreach", prospect_id: c.prospectId, percent: 25, scope: "initial" } as never).execute();
+  const cStarted = await startTrial(c.token, FORM);
+  if (!cStarted.ok) throw new Error(`a c-próba nem indult: ${cStarted.error}`);
+  const cTenant = cStarted.tenantId;
+  tenants.push(cTenant);
+  const cTrial = await db.selectFrom("free_trial").select(["id", "offer_id", "trial_until"]).where("lead_id", "=", c.leadId).executeTakeFirstOrThrow();
+  const cLastDay = budapestIsoDay(new Date(cTrial.trial_until as unknown as string));
+  const cOi = await db.insertInto("order_intent")
+    .values({
+      prospect_id: c.prospectId, kind: "initial", price: 5250, billing_period: "monthly", modules: JSON.stringify(["gallery", "enquiry"]),
+      status: "submitted", submitted_at: new Date(), offer_id: cTrial.offer_id, domain_type: "citoviso_sub",
+      photo_rights_declared_at: new Date(), photo_rights_text: "teszt", buyer_type: "individual", buyer_name: "Teszt Elek",
+      buyer_country: "HU", buyer_zip: "8360", buyer_city: "Keszthely", buyer_address: "Fő utca 1.", buyer_email: "trialexpiry@example.invalid",
+      terms_accepted_at: new Date(), terms_text: "teszt",
+    } as never)
+    .returning("id").executeTakeFirstOrThrow();
+  const cRef = `trialexpiryc_${stamp}`;
+  await db.insertInto("payment")
+    .values({ order_intent_id: cOi.id, amount: 5250, period: "monthly", gateway: "mock", gateway_ref: cRef, status: "pending" } as never)
+    .execute();
+  const cPaid = await applyWebhookResult({ gatewayRef: cRef, status: "paid" });
+  check("a próba alatti fizetés aktivál", cPaid.ok && cPaid.activated === true, JSON.stringify(cPaid));
+  const cOffer = await db.selectFrom("offer").select("used_count").where("id", "=", cTrial.offer_id!).executeTakeFirstOrThrow();
+  check("…a próba-ajánlat egyszer égett el", cOffer.used_count === 1, `${cOffer.used_count}`);
+  const cCoupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", cTenant).where("kind", "=", "coupon").execute();
+  check("…nincs kupon (egy kedvezmény)", cCoupons.length === 0, `${cCoupons.length}`);
+  const cSub = await db.selectFrom("subscription").select(["anchor_date", "current_period_start", "current_period_end"]).where("tenant_id", "=", cTenant).executeTakeFirst();
+  const iso = (v: unknown): string | null => (v == null ? null : typeof v === "string" ? v.slice(0, 10) : budapestIsoDay(v as Date));
+  const { addIsoDays } = await import("../src/text/budapestTime.js");
+  const { addIsoMonths } = await import("../src/payment/subscription.js");
+  const wantStart = addIsoDays(cLastDay, 1);
+  check("ⓐ fordulónap = a próba utolsó napja + 1 (a maradék ingyen napok megmaradnak)",
+    iso(cSub?.anchor_date) === wantStart && iso(cSub?.current_period_start) === wantStart, `${iso(cSub?.anchor_date)} · várt ${wantStart}`);
+  check("ⓐ …az időszak vége = a kezdet + 1 hónap", iso(cSub?.current_period_end) === addIsoMonths(wantStart, 1), `${iso(cSub?.current_period_end)}`);
+  const cEnts = async () => db.selectFrom("module_entitlement").select(["module", "active", "trial_grant"]).where("tenant_id", "=", cTenant).execute();
+  const e1 = await cEnts();
+  check("ⓑ a nem választott próba-modul (rooms) a próba végéig aktív marad",
+    e1.some((e) => e.module === "rooms" && e.active && e.trial_grant), e1.filter((e) => e.active).map((e) => `${e.module}${e.trial_grant ? "*" : ""}`).join(","));
+  check("ⓑ …a megvett modulok próba-jel nélkül élnek", ["gallery", "enquiry"].every((m) => e1.some((e) => e.module === m && e.active && !e.trial_grant)));
+  const rerendered: string[] = [];
+  const stub = { onlyTrialIds: [cTrial.id], rerender: async (t: string) => { rerendered.push(t); } };
+  const g0 = await endTrialGrantsAfterConversion(new Date(), stub);
+  check("ⓑ a próba vége ELŐTT endTrialGrantsAfterConversion semmit nem kapcsol ki", g0.modulesOff === 0 && rerendered.length === 0, JSON.stringify(g0));
+  await db.updateTable("free_trial").set({ started_at: new Date(Date.now() - 10 * 86_400_000), trial_until: new Date(Date.now() - 60_000) }).where("id", "=", cTrial.id).execute();
+  const g1 = await endTrialGrantsAfterConversion(new Date(), stub);
+  const e2 = await cEnts();
+  check("ⓑ a próba vége UTÁN: minden próba-modul ki, a site újrarenderelve",
+    g1.modulesOff > 0 && e2.every((e) => !(e.active && e.trial_grant)) && rerendered.length === 1 && rerendered[0] === cTenant, `${JSON.stringify(g1)} · ${rerendered.length}`);
+  check("ⓑ …a megvett modulok maradnak", ["gallery", "enquiry"].every((m) => e2.some((e) => e.module === m && e.active)));
+  const g2 = await endTrialGrantsAfterConversion(new Date(), stub);
+  check("ⓑ második futás nem csinál semmit", g2.modulesOff === 0 && rerendered.length === 1, JSON.stringify(g2));
 } finally {
   closeConsole?.();
   await closeMockFile?.();

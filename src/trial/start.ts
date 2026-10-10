@@ -1,10 +1,11 @@
 // ADR-0342 — the card-less free trial: mock → live trial site, no payment, no invoice.
 //
 // Built on the conversion path a paid order takes (convertLead → live render → owner
-// login), with three differences that ARE the trial:
+// login), with the differences that ARE the trial:
 //   · no order_intent, no payment, no subscription row — the billing tick iterates
 //     subscriptions only, so it cannot mint an invoice or a dunning step for a trial;
 //     the subscription is born by the first real payment (ADR-0080 ①, its day = anchor);
+//   · the lead's best offer runs to the trial's last day (ADR-XXXX) — no coupon;
 //   · EVERY sellable module is entitled, flagged `trial_grant` — the paid reconciliation
 //     (syncEntitlementsToPaid) later keeps what the buyer paid for and switches the rest off;
 //   · the platform subdomain only (ADR-0330 preview label first) — no custom domain.
@@ -27,13 +28,13 @@ import { isValidEmail } from "../email/leadEmails.js";
 import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { getCouponConfig } from "../payment/couponConfig.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
-import { addIsoDays, budapestDayEnd, budapestIsoDay } from "../text/budapestTime.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { getFreeTrialConfig } from "./config.js";
+import { pinTrialOffer } from "./offer.js";
 
 export interface TrialInput {
   readonly name: string;
@@ -123,7 +124,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   const unprovisioned = !!prior && !prior.tenant_id && (prior.status === "active" || prior.status === "lapsed");
   if (prior) {
     if (prior.status !== "active" && !unprovisioned) return { ok: false, error: "trial_used" };
-    if (prior.tenant_id && (await trialFinished(prior.tenant_id, prior.coupon_offer_id))) {
+    if (prior.tenant_id && (await trialFinished(prior.tenant_id, prior.offer_id ?? prior.coupon_offer_id))) {
       return finished(prior.tenant_id, prior.trial_until, prior.coupon_offer_id, true, null);
     }
     if (now.getTime() - new Date(prior.created_at as unknown as string).getTime() < IN_FLIGHT_MS) {
@@ -243,43 +244,22 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         .execute();
     }
 
-    // 6. Offers. The trial is chosen INSTEAD of the intro discount (owner, 2026-10-09):
-    //    the open checkout offers of EVERY prospect of the lead end now — a lead reached
-    //    on two tokens kept the other token's −25% / −50% alive (IT A-05). The continuation coupon is the
-    //    tenant's ONE coupon (offer_tenant_coupon_uq) — the paid path's welcome coupon
-    //    then no-ops on conflict, so discounts never stack (ADR-0088 ⑥).
-    await db
-      .updateTable("offer")
-      .set({ expires_at: now, note: `ADR-0342: lezárva — a próbát választotta (${trialId})` })
-      .where("prospect_id", "in", db.selectFrom("prospect").select("id").where("lead_id", "=", p.lead_id))
-      .where("scope", "=", "initial")
-      .whereRef("used_count", "<", "max_uses")
-      .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
-      .execute();
-    // ADR-0346: the ONE coupon setting — the same percent and validity a direct buyer gets
-    //    at the first payment; for the trial owner it is valid from the trial's last day.
-    const cfg = await getCouponConfig();
-    let couponId = trial.coupon_offer_id;
-    if (!couponId && cfg.percent > 0) {
-      const trialUntil = new Date(trial.trial_until as unknown as string);
-      const c = await db
-        .insertInto("offer")
-        .values({
-          kind: "coupon",
-          tenant_id: tenantId,
-          percent: cfg.percent,
-          scope: "purchase",
-          // To the END of the printed day (letters/admin say "<day>-ig"): an instant of
-          // trial_until + N days ran out in the morning of that day (IT B1-HATAR, ADR-0352).
-          expires_at: budapestDayEnd(addIsoDays(budapestIsoDay(trialUntil), cfg.days)),
-          note: `ADR-0342: ingyenes próba folytatás-kupon (${trialId})`,
-        })
-        .onConflict((oc) => oc.doNothing())
-        .returning("id")
-        .executeTakeFirst();
-      couponId = c?.id ?? null;
-      if (couponId) await db.updateTable("free_trial").set({ coupon_offer_id: couponId }).where("id", "=", trialId).execute();
-    }
+    // 6. The ONE offer (ADR-XXXX, "C", owner 2026-10-10): the lead's best live intro /
+    //    escalation offer — on ANY of its tokens (IT A-05) — now runs to the end of the
+    //    trial's last day, the rest close; none live → the intro percent as a campaign row.
+    //    No continuation coupon any more (ADR-0346 retired for the trial): the discount's
+    //    deadline is the trial's end, and the purchase does not mint a second discount.
+    await pinTrialOffer(
+      {
+        id: trialId,
+        leadId: p.lead_id,
+        prospectId: trial.prospect_id ?? p.id,
+        trialUntil: new Date(trial.trial_until as unknown as string),
+        offerId: trial.offer_id,
+      },
+      now,
+    );
+    const couponId = trial.coupon_offer_id;
 
     // 7. Owner access through the existing letter (idempotent per tenant).
     let loginSentTo: string | null = null;
@@ -291,7 +271,8 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (!hasLogin) {
       try {
         const lead = await db.selectFrom("tenant").select("display_name").where("id", "=", tenantId).executeTakeFirst();
-        // ADR-0344: the approved TRIAL login letter — its end and the continuation coupon.
+        // ADR-0344: the approved TRIAL login letter — its end (and, for a trial started
+        // before ADR-XXXX, its continuation coupon; the C wording is the §2b round 2).
         const cp = couponId
           ? await db.selectFrom("offer").select(["percent", "expires_at"]).where("id", "=", couponId).executeTakeFirst()
           : undefined;
@@ -325,13 +306,14 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   }
 }
 
-/** A tenant-bearing trial is finished when its site went live, it holds the continuation
- *  coupon (unless the coupon setting is 0%) and the owner has a login. Anything short of
- *  that is a start that crashed after step 4 — the next submit resumes it. */
-async function trialFinished(tenantId: string, couponOfferId: string | null): Promise<boolean> {
+/** A tenant-bearing trial is finished when its site went live, its offer is pinned
+ *  (ADR-XXXX; a trial started before it holds the continuation coupon instead) and the
+ *  owner has a login. Anything short of that is a start that crashed after step 4 — the
+ *  next submit resumes it. */
+async function trialFinished(tenantId: string, offerOrCouponId: string | null): Promise<boolean> {
   const site = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirst();
   if (site?.status === "provisioned") return false;
-  if (!couponOfferId && (await getCouponConfig()).percent > 0) return false;
+  if (!offerOrCouponId) return false;
   const login = await db.selectFrom("tenant_user").select("id").where("tenant_id", "=", tenantId).executeTakeFirst();
   return !!login;
 }

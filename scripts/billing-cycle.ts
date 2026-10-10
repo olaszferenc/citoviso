@@ -7,7 +7,7 @@ import { runBillingCycle } from "../src/payment/billing.js";
 import { checkAamAlert } from "../src/console/aamAlert.js";
 import { retryFailedInvoices } from "../src/billing/invoiceRetry.js";
 import { db } from "../src/db/client.js";
-import { lapseExpiredTrials } from "../src/trial/expiry.js";
+import { endTrialGrantsAfterConversion, lapseExpiredTrials } from "../src/trial/expiry.js";
 import { purgeExpiredTrials } from "../src/trial/retention.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -36,6 +36,9 @@ try {
     : undefined;
   const t = await lapseExpiredTrials(now, trialIds ? { onlyTrialIds: trialIds } : {});
   console.log(`trial-lapse @ ${now.toISOString()}:`, JSON.stringify(t));
+  // ADR-XXXX ⓑ: a trial bought before its end kept the unchosen modules to that end.
+  const g = await endTrialGrantsAfterConversion(now, trialIds ? { onlyTrialIds: trialIds } : {});
+  console.log(`trial-grants-end @ ${now.toISOString()}:`, JSON.stringify(g));
 } catch (e) {
   console.error("trial-lapse HIBA:", e);
   sideStepFailed = true;

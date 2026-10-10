@@ -22,6 +22,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { tenantSiteUrl } from "../domains.js";
 import { TENANT_LOGIN_URL } from "../server/ownerLogin.js";
+import { offerIsLive } from "../trial/offer.js";
 
 /** How far a paying lead actually got. The three states are NOT cosmetic: each
  *  one makes a different promise true, and the bar must not claim a live site
@@ -174,14 +175,15 @@ export async function ownedBlocksInitialPurchase(leadId: string): Promise<OwnedS
  * trial is chosen INSTEAD of (ADR-0342 ⑥). Its old pay-link stayed payable during the
  * trial: the trialist paid −40% and the trial's −25% coupon stayed unburnt for a later
  * module (two discounts). Such an order is not the continuation; the continuation is
- * priced at /p/<token>/folytatas with the tenant's coupon. Returns that page's token, or
+ * priced at /p/<token>/folytatas with the trial offer (ADR-XXXX). The same holds for a
+ * continuation order whose offer has since expired (priced in the trial, paid after it). Returns that page's token, or
  * null when the order is not a pre-trial initial order of a continuable trial.
  */
 export async function preTrialOrderOfContinuableTrial(orderIntentId: string): Promise<{ readonly token: string } | null> {
   const o = await db
     .selectFrom("order_intent")
     .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
-    .select(["order_intent.kind as kind", "order_intent.created_at as createdAt", "prospect.lead_id as leadId", "prospect.token as token"])
+    .select(["order_intent.kind as kind", "order_intent.created_at as createdAt", "order_intent.offer_id as offerId", "prospect.lead_id as leadId", "prospect.token as token"])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
   if (!o || o.kind !== "initial" || !o.leadId || !o.token) return null;
@@ -190,5 +192,10 @@ export async function preTrialOrderOfContinuableTrial(orderIntentId: string): Pr
   const started = await db.selectFrom("free_trial").select("started_at").where("id", "=", trial.trialId).executeTakeFirst();
   if (!started) return null;
   const before = new Date(o.createdAt as unknown as string).getTime() < new Date(started.started_at as unknown as string).getTime();
-  return before ? { token: o.token } : null;
+  if (before) return { token: o.token };
+  // ADR-XXXX ("C"): a continuation priced with the trial offer is payable only while that
+  // offer lives — paid after the trial's end it would buy the expired discount; the
+  // continuation page re-prices it at list.
+  if (o.offerId && !(await offerIsLive(o.offerId))) return { token: o.token };
+  return null;
 }

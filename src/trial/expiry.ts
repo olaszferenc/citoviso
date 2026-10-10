@@ -73,6 +73,48 @@ export async function lapseExpiredTrials(
   return { lapsed: rows.length, sitesSuspended, modulesOff };
 }
 
+/**
+ * ADR-XXXX ⓑ (tulaj-megerősítésre): a trial that CONVERTED kept its unchosen trial modules
+ * to the trial's end (syncEntitlementsToPaid). Once that end passed, they go off — only
+ * `trial_grant` rows (what the buyer paid for lost the flag at the payment) — and the live
+ * page is re-rendered without them. Idempotent; `onlyTrialIds` narrows it for guards.
+ */
+export async function endTrialGrantsAfterConversion(
+  now: Date,
+  opts: { readonly onlyTrialIds?: readonly string[]; readonly rerender?: (tenantId: string) => Promise<unknown> } = {},
+): Promise<{ tenants: number; modulesOff: number }> {
+  if (opts.onlyTrialIds && opts.onlyTrialIds.length === 0) return { tenants: 0, modulesOff: 0 };
+  let q = db
+    .selectFrom("free_trial")
+    .select(["id", "tenant_id"])
+    .where("status", "=", "converted")
+    .where("trial_until", "<=", now)
+    .where("tenant_id", "is not", null);
+  if (opts.onlyTrialIds) q = q.where("id", "in", [...opts.onlyTrialIds]);
+  const rows = await q.execute();
+  let tenants = 0;
+  let modulesOff = 0;
+  for (const r of rows) {
+    const m = await db
+      .updateTable("module_entitlement")
+      .set({ active: false })
+      .where("tenant_id", "=", r.tenant_id!)
+      .where("trial_grant", "=", true)
+      .where("active", "=", true)
+      .returning("module")
+      .execute();
+    if (!m.length) continue;
+    tenants++;
+    modulesOff += m.length;
+    const rerender =
+      opts.rerender ??
+      (async (tenantId: string) => (await import("../tenant/editor.js")).rerenderTenantSnapshot(tenantId, { as: "live" }));
+    await rerender(r.tenant_id!);
+    console.warn(`[trial] próba vége (megvásárolt) · tenant ${r.tenant_id} · ${m.length} nem választott próba-modul ki: ${m.map((x) => x.module).join(", ")}`); // i18n-exempt: operátori napló
+  }
+  return { tenants, modulesOff };
+}
+
 export type NoticeStep = "t3" | "t1";
 const STEP_DAYS: Record<NoticeStep, number> = { t3: 3, t1: 1 };
 
