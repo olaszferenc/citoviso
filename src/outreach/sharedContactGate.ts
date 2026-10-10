@@ -27,7 +27,7 @@ import type { QualifiedLead } from "../scraper/types.js";
 import { leadEmails } from "../email/leadEmails.js";
 
 /** Leads that no longer receive anything — their contacts cannot collide. */
-const INACTIVE = ["terminated", "disqualified"] as const;
+export const INACTIVE = ["terminated", "disqualified"] as const;
 
 /** Same threshold as the Duplikátumok page: a value on more leads than this is an intermediary's. */
 const INTERMEDIARY_MIN = 7;

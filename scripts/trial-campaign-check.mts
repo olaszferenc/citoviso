@@ -19,7 +19,14 @@
 //      once, a second run sends nothing, the address unique index refuses a second lead on
 //      the same address, a failed send releases the claim; the SMS goes once;
 //   ⑥ the escalation follow-up skips a lead that got the campaign (a control lead without
-//      the campaign still gets its follow-up — so the skip, not something else, is measured).
+//      the campaign still gets its follow-up — so the skip, not something else, is measured);
+//   ⑦ the IT D findings (2026-10-10): a trial started AFTER the list was read stops the send
+//      (D-1i); disqualified / terminated leads are out (D-5l/m); a claim stuck mid-send shows
+//      as "stuck" and is released only by `--felold` (D-3a); one shot per PERSON — the mail
+//      target's mobile holds the SMS key, an operator exclusion and a sent campaign hold the
+//      twin's address (D-1g/D-1h/D-1x); the letter never goes to an address added after the
+//      cold letter (D-1f); a dry run mints no preview label (D-8k); a 36-hyphen id is refused,
+//      not thrown (D-4k).
 //
 // The dev DB is SHARED: every row is this run's own (stamped names, example.invalid
 // addresses, random mobile numbers) and deleted in `finally`; nothing is sent — the senders
@@ -46,6 +53,7 @@ import { checkOutreachDraft, checkOutreachSms } from "../src/outreach/outreachCh
 import {
   excludeFromTrialCampaign,
   listTrialCampaignCandidates,
+  releaseStuckTrialCampaignClaim,
   sendTrialCampaignMail,
   sendTrialCampaignSms,
   type TrialCampaignCandidate,
@@ -350,12 +358,12 @@ if (!SELF_TEST) {
     const smsSender = async (m: SmsMessage) => { texts.push(m); return { id: `fake-sms-${texts.length}`, provider: "mock" as const }; };
     const claims = async (leadId: string) => db.selectFrom("trial_campaign").select(["status", "channel"]).where("lead_id", "=", leadId).execute();
     const target = of(mailA.leadId)!;
-    const sat = await sendTrialCampaignMail(target, { mailer, now: SATURDAY, offline: true });
+    const sat = await sendTrialCampaignMail(target, { mailer, now: SATURDAY, offline: true, onlyLeads: leads });
     check("⑤ szombaton nem megy, és nem foglal", sat.kind === "skipped" && sent.length === 0 && (await claims(mailA.leadId)).length === 0, JSON.stringify(sat));
     const failing = { send: async () => { throw new Error("szimulált SMTP-hiba"); } } as unknown as EmailSender;
-    const fail = await sendTrialCampaignMail(target, { mailer: failing, now: WEEKDAY, offline: true });
+    const fail = await sendTrialCampaignMail(target, { mailer: failing, now: WEEKDAY, offline: true, onlyLeads: leads });
     check("⑤ elbukott küldés → a foglalás feloldva", fail.kind === "skipped" && (await claims(mailA.leadId)).length === 0, JSON.stringify(fail));
-    const first = await sendTrialCampaignMail(target, { mailer, now: WEEKDAY, offline: true });
+    const first = await sendTrialCampaignMail(target, { mailer, now: WEEKDAY, offline: true, onlyLeads: leads });
     check("⑤ hétköznap 10:00 → kiment", first.kind === "sent" && sent.length === 1, JSON.stringify(first));
     const st = await claims(mailA.leadId);
     check("⑤ a kampány-sor 'sent'", st.length === 1 && st[0]!.status === "sent" && st[0]!.channel === "email");
@@ -365,7 +373,7 @@ if (!SELF_TEST) {
       !!m0 && /: \d+ napig ingyen, élesben$/.test(m0.subject) && (m0.text ?? "").includes(ONE_SHOT) && !(m0.html as string).includes(REMOVED),
       m0?.subject,
     );
-    const second = await sendTrialCampaignMail(target, { mailer, now: WEEKDAY, offline: true });
+    const second = await sendTrialCampaignMail(target, { mailer, now: WEEKDAY, offline: true, onlyLeads: leads });
     check("⑤ második futás → nem küld újra", second.kind === "skipped" && sent.length === 1, JSON.stringify(second));
     const relisted = await listTrialCampaignCandidates({ onlyLeads: [mailA.leadId] });
     check("⑤ az újraolvasott listán: már megkapta", relisted[0]?.excluded === "already");
@@ -380,8 +388,8 @@ if (!SELF_TEST) {
     }
     check("⑤ ugyanarra a címre egy másik lead sorát a DB elutasítja", dupRefused);
     const smsTarget = of(smsB.leadId)!;
-    const s1 = await sendTrialCampaignSms(smsTarget, { sms: smsSender, now: WEEKDAY, offline: true });
-    const s2 = await sendTrialCampaignSms(smsTarget, { sms: smsSender, now: WEEKDAY, offline: true });
+    const s1 = await sendTrialCampaignSms(smsTarget, { sms: smsSender, now: WEEKDAY, offline: true, onlyLeads: leads });
+    const s2 = await sendTrialCampaignSms(smsTarget, { sms: smsSender, now: WEEKDAY, offline: true, onlyLeads: leads });
     check("⑤ az SMS egyszer megy ki", s1.kind === "sent" && s2.kind === "skipped" && texts.length === 1, JSON.stringify([s1, s2]));
     const smsDraft = await buildDraftForProspect(smsB.prospectId);
     if (texts[0] && smsDraft) smsLegs(texts[0].text, smsDraft.sms.link, "a kiment SMS");
@@ -409,6 +417,115 @@ if (!SELF_TEST) {
     const toControl = fu.filter((m) => m.to === `tcc-${stamp}-control@example.invalid`).length;
     check("⑥ a kampány-levelet kapott lead NEM kap follow-upot", toCampaign === 0, `${toCampaign} levél`);
     check("⑥ a kontroll-lead (kampány nélkül) megkapja — a kihagyás oka a kampány", toControl === 1, `${toControl} levél`);
+
+    // ⑦ the IT D findings
+    console.log("⑦ IT D: újramérés, életciklus, beragadt foglalás, egy lövés személyenként, régi cím, száraz futás");
+    const verdictOf = async (leadId: string): Promise<TrialCampaignCandidate | undefined> =>
+      (await listTrialCampaignCandidates({ onlyLeads: leads, now: WEEKDAY })).find((c) => c.leadId === leadId);
+
+    // D-1i: listed as a target, then a trial starts before the send.
+    const late = await fixture("late");
+    const lateTarget = await verdictOf(late.leadId);
+    check("⑦ D-1i: a lista olvasásakor még célpont", lateTarget?.excluded === null);
+    await db
+      .insertInto("free_trial")
+      .values({
+        lead_id: late.leadId, prospect_id: late.prospectId, contact_name: "Teszt", contact_email: "tcc-late@example.invalid",
+        terms_accepted_at: new Date(), terms_text: "t", photo_rights_declared_at: new Date(), photo_rights_text: "t",
+        trial_until: new Date(Date.now() + 86_400_000),
+      })
+      .execute();
+    const before = sent.length;
+    const lateSend = lateTarget ? await sendTrialCampaignMail(lateTarget, { mailer, now: WEEKDAY, offline: true, onlyLeads: leads }) : null;
+    check(
+      "⑦ D-1i: a lista UTÁN indított próba → küldéskor kimarad, nincs foglalás",
+      lateSend?.kind === "skipped" && sent.length === before && (await claims(late.leadId)).length === 0,
+      JSON.stringify(lateSend),
+    );
+
+    // D-5l/m: lifecycle.
+    const disq = await fixture("disq");
+    const term = await fixture("term");
+    await db.updateTable("lead").set({ lifecycle_status: "disqualified" }).where("id", "=", disq.leadId).execute();
+    await db.updateTable("lead").set({ lifecycle_status: "terminated" }).where("id", "=", term.leadId).execute();
+    check("⑦ D-5l: disqualified lead → kimarad", (await verdictOf(disq.leadId))?.excluded === "inactive");
+    check("⑦ D-5m: terminated lead → kimarad", (await verdictOf(term.leadId))?.excluded === "inactive");
+
+    // D-3a: a claim that never became a send.
+    const stuck = await fixture("stuck");
+    const stuckRow = await db
+      .insertInto("trial_campaign")
+      .values({ lead_id: stuck.leadId, prospect_id: stuck.prospectId, channel: "email", address_key: `tcc-${stamp}-stuck@example.invalid`, status: "claimed" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const nowish = new Date();
+    const freshV = (await listTrialCampaignCandidates({ onlyLeads: leads, now: nowish })).find((c) => c.leadId === stuck.leadId);
+    check("⑦ D-3a: friss foglalás → „már megkapta” (egy futó küldés)", freshV?.excluded === "already");
+    const freshRelease = await releaseStuckTrialCampaignClaim(stuckRow.id, "nincs nyoma az outboxban", nowish);
+    check("⑦ D-3a: a friss foglalást a --felold nem bántja", !freshRelease.ok && (await claims(stuck.leadId)).length === 1, JSON.stringify(freshRelease));
+    const later = new Date(nowish.getTime() + 2 * 3_600_000);
+    const stuckV = (await listTrialCampaignCandidates({ onlyLeads: leads, now: later })).find((c) => c.leadId === stuck.leadId);
+    check("⑦ D-3a: 30 percnél régebbi, el nem küldött foglalás → „beragadt”, sor-azonosítóval", stuckV?.excluded === "stuck" && stuckV.campaignRowId === stuckRow.id);
+    check("⑦ D-3a: --felold ok nélkül elutasít", !(await releaseStuckTrialCampaignClaim(stuckRow.id, "", later)).ok);
+    const released = await releaseStuckTrialCampaignClaim(stuckRow.id, "nincs nyoma az outboxban", later);
+    check("⑦ D-3a: --felold után újra célpont", released.ok && (await verdictOf(stuck.leadId))?.excluded === null, JSON.stringify(released));
+    check("⑦ D-3a: elküldött sort a --felold nem old fel", !(await releaseStuckTrialCampaignClaim(mailA.leadId, "próba", later)).ok);
+
+    // D-1g: one person, mail on lead "z…", SMS-only on lead "a…" — the mail wins, no SMS.
+    const sharedMobile = mobile();
+    const personMail = await fixture("zmailp", { phone: sharedMobile });
+    const personSms = await fixture("asmsp", { email: null, phone: sharedMobile, smsSent: true });
+    const pm = await verdictOf(personMail.leadId);
+    const ps = await verdictOf(personSms.leadId);
+    check("⑦ D-1g: ugyanaz a személy: a levél megy", pm?.excluded === null && pm.channel === "email", JSON.stringify(pm?.excluded));
+    check("⑦ D-1g: … az SMS nem (a levél-célpont mobilja foglalja)", ps?.excluded === "duplicate_address", JSON.stringify(ps?.excluded));
+
+    // D-1h: operator exclusion holds the twin's address.
+    const exclEmail = `tcc-${stamp}-exclpair@example.invalid`;
+    const exclA = await fixture("exclpa", { email: exclEmail });
+    const exclB = await fixture("exclpb", { email: exclEmail.toUpperCase() });
+    await excludeFromTrialCampaign(exclA.leadId, "kézi beszélgetés (őr)");
+    check("⑦ D-1h: a kizárt lead ikre (ugyanaz a cím) sem célpont", (await verdictOf(exclB.leadId))?.excluded === "duplicate_address", JSON.stringify((await verdictOf(exclB.leadId))?.excluded));
+
+    // D-1x: a twin on the address of a lead that already GOT the campaign.
+    const gotTwin = await fixture("gottwin", { email: target.address! });
+    check("⑦ D-1x: a már kiküldött cím ikre „duplikált”, nem célpont", (await verdictOf(gotTwin.leadId))?.excluded === "duplicate_address", JSON.stringify((await verdictOf(gotTwin.leadId))?.excluded));
+
+    // D-1f: the cold letter went to an old address; the live prospect carries a new one.
+    const moved = await fixture("moved", { email: `tcc-${stamp}-moved-old@example.invalid` });
+    const movedLive = await db
+      .insertInto("prospect")
+      .values({
+        lead_id: moved.leadId, token: `tcc${stamp}movednewxxxxxxxxxxxx`, status: "sent",
+        contact_email: `tcc-${stamp}-moved-new@example.invalid`, created_at: new Date(Date.now() + 1000),
+      } as never)
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    prospects.push(movedLive.id);
+    const mv = await verdictOf(moved.leadId);
+    check(
+      "⑦ D-1f: új címre (hideg levél nélkül) nem megy „küldtünk Önnek” levél",
+      mv?.excluded === "address_changed" && mv.address !== `tcc-${stamp}-moved-new@example.invalid`,
+      JSON.stringify([mv?.excluded, mv?.address]),
+    );
+
+    // D-8k: the dry run reserves no preview label.
+    const dry = await fixture("dry");
+    await db.updateTable("lead").set({ preview_label: null }).where("id", "=", dry.leadId).execute();
+    const dryV = await verdictOf(dry.leadId);
+    const dryRun = dryV ? await sendTrialCampaignMail(dryV, { dryRun: true, offline: true, onlyLeads: leads }) : null;
+    const label = await db.selectFrom("lead").select("preview_label").where("id", "=", dry.leadId).executeTakeFirst();
+    check("⑦ D-8k: a száraz futás (--kapuk) nem foglal előnézeti aldomaint", dryRun?.kind === "dry-run" && label?.preview_label === null, JSON.stringify([dryRun, label?.preview_label]));
+
+    // D-4k: 36 hyphens is not an id.
+    let threw = false;
+    let hy: { ok: boolean } = { ok: true };
+    try {
+      hy = await excludeFromTrialCampaign("-".repeat(36), "kézi beszélgetés (őr)");
+    } catch {
+      threw = true;
+    }
+    check("⑦ D-4k: 36 kötőjel → „nem azonosító”, nem nyers kivétel", !threw && !hy.ok);
   } finally {
     closeConsole?.();
     for (const p of prospects) await db.deleteFrom("offer").where("prospect_id", "=", p).execute();

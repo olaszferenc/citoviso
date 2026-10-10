@@ -9,12 +9,14 @@
 //     address is known), else SMS if a cold SMS went out to a Hungarian mobile;
 //   · a rejecting reply is NOT an unsubscribe — those leads get the letter.
 // Who does not (each counted under its own reason in the dry run):
-//   archived (no live prospect) · test lead · unsubscribed (any prospect row, or the address /
-//   number suppressed at person level) · bought (ownedSiteForLead) · trialing (a free_trial
-//   row) · order intent (status order_intent|converted, or a submitted order) · operator
-//   exclusion (`--kizar`, a 'excluded' trial_campaign row — e.g. a conversation handled by
-//   hand) · already got the campaign · no usable channel · a second lead on an address that
-//   is already a target.
+//   archived (no live prospect) · test lead · disqualified / terminated lead · unsubscribed
+//   (any prospect row, or the address / number suppressed at person level) · bought
+//   (ownedSiteForLead) · trialing (a free_trial row) · order intent (status
+//   order_intent|converted, or a submitted order) · operator exclusion (`--kizar`, a
+//   'excluded' trial_campaign row — e.g. a conversation handled by hand) · already got the
+//   campaign · a stuck claim (`--felold`) · the mail address changed since the cold letter ·
+//   no usable channel · a second lead of the same PERSON (mail address or mobile).
+// Every verdict is taken AGAIN right before the claim (a run takes hours).
 //
 // ⛔ ONE SHOT, in code: trial_campaign has one row per lead and one per (channel, address),
 // claimed BEFORE the send; a failed send releases the claim. The escalation follow-up reads
@@ -53,7 +55,7 @@ import { checkOutreachDraft, checkOutreachSms } from "./outreachCheck.js";
 import { isTestLeadName } from "./ownerTestPhone.js";
 import { isEmailSuppressed } from "./sendBatch.js";
 import { isPhoneSuppressed, mobileOutreachGates } from "./sendOutreachSms.js";
-import { sharedContactBlocks } from "./sharedContactGate.js";
+import { INACTIVE, sharedContactBlocks } from "./sharedContactGate.js";
 
 export type TrialCampaignChannel = "email" | "sms";
 
@@ -61,12 +63,15 @@ export type TrialCampaignChannel = "email" | "sms";
 export type TrialCampaignExclusion =
   | "archived"
   | "test"
+  | "inactive"
   | "unsubscribed"
   | "bought"
   | "trial"
   | "intent"
   | "operator"
   | "already"
+  | "stuck"
+  | "address_changed"
   | "no_channel"
   | "duplicate_address";
 
@@ -74,15 +79,21 @@ export type TrialCampaignExclusion =
 export const EXCLUSION_LABEL: Record<TrialCampaignExclusion, string> = {
   archived: "archivált (nincs élő link)", // i18n-exempt: operátori CLI-kimenet
   test: "teszt-lead", // i18n-exempt: operátori CLI-kimenet
+  inactive: "kizárt / megszűnt lead (disqualified / terminated)", // i18n-exempt: operátori CLI-kimenet
   unsubscribed: "leiratkozott (prospect vagy cím/szám szintjén)", // i18n-exempt: operátori CLI-kimenet
   bought: "vásárolt (tenant vagy fizetett rendelés)", // i18n-exempt: operátori CLI-kimenet
   trial: "próbázik / próbázott", // i18n-exempt: operátori CLI-kimenet
   intent: "rendelési szándék (order_intent / converted / leadott rendelés)", // i18n-exempt: operátori CLI-kimenet
   operator: "operátori kizárás (--kizar)", // i18n-exempt: operátori CLI-kimenet
   already: "már megkapta a kampányt", // i18n-exempt: operátori CLI-kimenet
+  stuck: "beragadt foglalás: lefoglalva, de nem igazoltan kiment — ellenőrzés után: --felold <id>", // i18n-exempt: operátori CLI-kimenet
+  address_changed: "a cím a hideg levél óta változott (az új címre hideg levél nem ment)", // i18n-exempt: operátori CLI-kimenet
   no_channel: "nincs használható csatorna (cím / magyar mobil)", // i18n-exempt: operátori CLI-kimenet
-  duplicate_address: "ugyanez a cím/szám már egy másik célponté", // i18n-exempt: operátori CLI-kimenet
+  duplicate_address: "ugyanez a személy (cím vagy szám) már egy másik lead célpontja / kapta / kizárva", // i18n-exempt: operátori CLI-kimenet
 };
+
+/** A `claimed` row older than this, still without sent_at, is a run that died mid-send (IT D-3a). */
+export const STUCK_CLAIM_MS = 30 * 60_000;
 
 export interface TrialCampaignCandidate {
   readonly leadId: string;
@@ -100,6 +111,8 @@ export interface TrialCampaignCandidate {
   readonly excluded: TrialCampaignExclusion | null;
   /** The operator's exclusion reason, when there is one. */
   readonly note?: string | null;
+  /** The trial_campaign row of a stuck claim (`--felold <id>`). */
+  readonly campaignRowId?: string | null;
 }
 
 interface ProspectRow {
@@ -118,13 +131,20 @@ interface ProspectRow {
 
 const asDate = (v: unknown): Date | null => (v ? new Date(v as string) : null);
 const isTestLead = (name: string): boolean => isTestLeadName(name) || name === ELEK_LEAD_NAME;
+const INACTIVE_STATUSES: readonly string[] = INACTIVE;
 
 /**
  * Every lead the cold outreach reached, with its verdict. `onlyLeads` narrows the set (the
  * guard's own fixtures — the dev DB is shared); product code passes nothing.
+ *
+ * ONE SHOT PER PERSON (IT D-1g/D-1h/D-1x): a lead's person keys are every address it is
+ * known by here — the mail address(es) and the Hungarian mobile. A lead that already got
+ * the campaign, is mid-send, or was excluded by the operator holds ALL its person keys; a
+ * mail target holds its mobile too, so a twin lead on that number gets no SMS. Mail targets
+ * are allocated before SMS ones (the letter is the fuller message).
  */
 export async function listTrialCampaignCandidates(
-  opts: { readonly onlyLeads?: readonly string[] } = {},
+  opts: { readonly onlyLeads?: readonly string[]; readonly now?: Date } = {},
 ): Promise<TrialCampaignCandidate[]> {
   let contacted = db
     .selectFrom("prospect")
@@ -138,7 +158,11 @@ export async function listTrialCampaignCandidates(
   const leadIds = (await contacted.execute()).map((r) => r.lead_id);
   if (!leadIds.length) return [];
 
-  const leads = await db.selectFrom("lead").select(["id", "name", "raw"]).where("id", "in", leadIds).execute();
+  const leads = await db
+    .selectFrom("lead")
+    .select(["id", "name", "raw", "lifecycle_status"])
+    .where("id", "in", leadIds)
+    .execute();
   const prospects = (await db
     .selectFrom("prospect")
     .select([
@@ -166,14 +190,21 @@ export async function listTrialCampaignCandidates(
   );
   const campaign = new Map(
     (
-      await db.selectFrom("trial_campaign").select(["lead_id", "channel", "note"]).where("lead_id", "in", leadIds).execute()
+      await db
+        .selectFrom("trial_campaign")
+        .select(["id", "lead_id", "channel", "status", "address_key", "note", "created_at", "sent_at"])
+        .where("lead_id", "in", leadIds)
+        .execute()
     ).map((r) => [r.lead_id, r]),
   );
+  const nowMs = (opts.now ?? new Date()).getTime();
 
-  const out: TrialCampaignCandidate[] = [];
+  const verdicts = new Map<string, TrialCampaignCandidate>();
   const takenKeys = new Set<string>();
+  const eligible: { readonly target: Omit<TrialCampaignCandidate, "excluded">; readonly keys: readonly string[] }[] = [];
   // Stable order: by lead name, so a re-run walks the same list.
-  for (const lead of [...leads].sort((a, b) => a.name.localeCompare(b.name, "hu"))) {
+  const sorted = [...leads].sort((a, b) => a.name.localeCompare(b.name, "hu"));
+  for (const lead of sorted) {
     const rows = byLead.get(lead.id) ?? [];
     const live = rows
       .filter((p) => !p.archived_at)
@@ -187,37 +218,63 @@ export async function listTrialCampaignCandidates(
     const texted = rows
       .filter((p) => p.sms_sent_at)
       .sort((a, b) => +new Date(b.sms_sent_at as string) - +new Date(a.sms_sent_at as string))[0];
-    const email = (live?.contact_email ?? mailed?.contact_email ?? "").trim() || null;
+    // IT D-1f: the letter says "we sent you a plan on <date>" — so it goes to the address
+    // the cold letter went to, never to one added since (which never got a cold letter).
+    const mailedEmail = (mailed?.contact_email ?? "").trim() || null;
+    const liveEmail = (live?.contact_email ?? "").trim() || null;
+    const addressChanged = Boolean(mailedEmail && liveEmail && recipientKey(mailedEmail) !== recipientKey(liveEmail));
     const rawPhone = ((lead.raw ?? {}) as { phone?: string }).phone;
     const phone = rawPhone ? normalizePhone(rawPhone) : null;
+    const mobile = phone && isHuMobileE164(phone) ? phone : null;
     let channel: TrialCampaignChannel | null = null;
     let address: string | null = null;
     let addressKey: string | null = null;
     let sentAt: Date | null = null;
-    if (mailed && email) {
+    if (mailed && mailedEmail) {
       channel = "email";
-      address = email;
-      addressKey = recipientKey(email) || null;
+      address = mailedEmail;
+      addressKey = recipientKey(mailedEmail) || null;
       sentAt = asDate(mailed.email_sent_at);
-    } else if (texted && phone && isHuMobileE164(phone)) {
+    } else if (texted && mobile) {
       channel = "sms";
-      address = phone;
-      addressKey = phone;
+      address = mobile;
+      addressKey = mobile;
       sentAt = asDate(texted.sms_sent_at);
     }
+    // Every address this person is known by here — the one-shot is per PERSON.
+    const keys = [
+      ...new Set(
+        [
+          ...[mailedEmail, liveEmail].filter((e): e is string => !!e).map((e) => recipientKey(e)).filter(Boolean).map((k) => `email:${k}`),
+          ...(mobile ? [`sms:${mobile}`] : []),
+        ],
+      ),
+    ];
     const target = { ...base, channel, address, addressKey, sentAt };
-    const no = (excluded: TrialCampaignExclusion, note: string | null = null): void => {
-      out.push({ ...target, excluded, note });
+    const no = (excluded: TrialCampaignExclusion, extra: { note?: string | null; campaignRowId?: string | null } = {}): void => {
+      verdicts.set(lead.id, { ...target, excluded, note: extra.note ?? null, campaignRowId: extra.campaignRowId ?? null });
+    };
+    const hold = (): void => {
+      for (const k of keys) takenKeys.add(k);
     };
 
     const row = campaign.get(lead.id);
-    if (row?.channel === "excluded") { no("operator", row.note); continue; }
-    if (row) { no("already"); continue; }
+    if (row) {
+      hold();
+      if (row.address_key) takenKeys.add(`${row.channel}:${row.address_key}`);
+      if (row.channel === "excluded") no("operator", { note: row.note });
+      else if (row.status === "claimed" && !row.sent_at && nowMs - +new Date(row.created_at as unknown as string) > STUCK_CLAIM_MS) {
+        no("stuck", { campaignRowId: row.id });
+      } else no("already");
+      continue;
+    }
     if (!live) { no("archived"); continue; }
     if (isTestLead(lead.name)) { no("test"); continue; }
+    if (INACTIVE_STATUSES.includes(lead.lifecycle_status)) { no("inactive"); continue; }
     if (
       rows.some((p) => p.unsubscribed_at) ||
-      (email && (await isEmailSuppressed(email))) ||
+      (mailedEmail && (await isEmailSuppressed(mailedEmail))) ||
+      (liveEmail && (await isEmailSuppressed(liveEmail))) ||
       (phone && (await isPhoneSuppressed(phone)))
     ) {
       no("unsubscribed");
@@ -229,13 +286,25 @@ export async function listTrialCampaignCandidates(
       no("intent");
       continue;
     }
+    if (channel === "email" && addressChanged) { no("address_changed"); continue; }
     if (!channel || !addressKey) { no("no_channel"); continue; }
-    const k = `${channel}:${addressKey}`;
-    if (takenKeys.has(k)) { no("duplicate_address"); continue; }
-    takenKeys.add(k);
-    out.push({ ...target, excluded: null });
+    eligible.push({ target, keys });
   }
-  return out;
+
+  // Allocation: mail targets first, then SMS — each in name order.
+  for (const ch of ["email", "sms"] as const) {
+    for (const e of eligible.filter((x) => x.target.channel === ch)) {
+      const own = `${ch}:${e.target.addressKey}`;
+      if (takenKeys.has(own) || e.keys.some((k) => takenKeys.has(k))) {
+        verdicts.set(e.target.leadId, { ...e.target, excluded: "duplicate_address", note: null });
+        continue;
+      }
+      takenKeys.add(own);
+      for (const k of e.keys) takenKeys.add(k);
+      verdicts.set(e.target.leadId, { ...e.target, excluded: null });
+    }
+  }
+  return sorted.flatMap((l) => verdicts.get(l.id) ?? []);
 }
 
 /** Did this lead (or this mail address) get the campaign mail or SMS? (follow-up gate) */
@@ -255,6 +324,8 @@ export async function trialCampaignReached(leadId: string, email: string | null)
   return Boolean(hit);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Operator exclusion (`--kizar <prospectId|leadId> --ok "<reason>"`): a persistent row that
  * keeps the lead out of every later run — a conversation handled by hand, for instance.
@@ -266,7 +337,7 @@ export async function excludeFromTrialCampaign(
 ): Promise<{ ok: true; leadId: string; leadName: string } | { ok: false; message: string }> {
   const why = reason.trim();
   if (why.length < 3) return { ok: false, message: "a kizárás oka kötelező (--ok \"…\", legalább 3 karakter)" }; // i18n-exempt: operátori CLI-kimenet
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, message: `nem azonosító: ${id}` }; // i18n-exempt: operátori CLI-kimenet
+  if (!UUID_RE.test(id)) return { ok: false, message: `nem azonosító: ${id}` }; // i18n-exempt: operátori CLI-kimenet
   const viaProspect = await db.selectFrom("prospect").select("lead_id").where("id", "=", id).executeTakeFirst();
   const leadId = viaProspect?.lead_id ?? id;
   const lead = await db.selectFrom("lead").select(["id", "name"]).where("id", "=", leadId).executeTakeFirst();
@@ -287,6 +358,33 @@ export async function excludeFromTrialCampaign(
     .executeTakeFirst();
   if (!r) return { ok: false, message: `${lead.name}: már van kampány-sora (kiküldve vagy kizárva) — nem írom felül` }; // i18n-exempt: operátori CLI-kimenet
   return { ok: true, leadId: lead.id, leadName: lead.name };
+}
+
+/**
+ * Release a STUCK claim (`--felold <rowId|leadId> --ok "<reason>"`, IT D-3a): a run died
+ * between the claim and the send, so the row says "taken" though nothing may have gone out.
+ * Only a `claimed` row without sent_at, older than STUCK_CLAIM_MS (a live run's fresh claim
+ * is not touched). The operator checks the outbox / modem log first — the reason is logged.
+ * Releasing also lifts the escalation follow-up's silence (trialCampaignReached).
+ */
+export async function releaseStuckTrialCampaignClaim(
+  id: string,
+  reason: string,
+  now: Date = new Date(),
+): Promise<{ ok: true; leadId: string; leadName: string } | { ok: false; message: string }> {
+  if (reason.trim().length < 3) return { ok: false, message: "a feloldás oka kötelező (--ok \"…\", pl. „a postafiókban/modem-naplóban nincs nyoma”)" }; // i18n-exempt: operátori CLI-kimenet
+  if (!UUID_RE.test(id)) return { ok: false, message: `nem azonosító: ${id}` }; // i18n-exempt: operátori CLI-kimenet
+  const r = await db
+    .deleteFrom("trial_campaign")
+    .where((eb) => eb.or([eb("id", "=", id), eb("lead_id", "=", id)]))
+    .where("status", "=", "claimed")
+    .where("sent_at", "is", null)
+    .where("created_at", "<", new Date(now.getTime() - STUCK_CLAIM_MS) as never)
+    .returning("lead_id")
+    .executeTakeFirst();
+  if (!r) return { ok: false, message: `nincs ${Math.round(STUCK_CLAIM_MS / 60_000)} percnél régebbi, beragadt (claimed, nem kiment) foglalás ezzel az azonosítóval: ${id}` }; // i18n-exempt: operátori CLI-kimenet
+  const lead = await db.selectFrom("lead").select("name").where("id", "=", r.lead_id).executeTakeFirst();
+  return { ok: true, leadId: r.lead_id, leadName: lead?.name ?? r.lead_id };
 }
 
 /** CLAIM the one shot BEFORE the send. null = the lead or the address already has a row. */
@@ -351,14 +449,34 @@ export interface TrialCampaignDeps {
   readonly dryRun?: boolean;
   /** Skip the network-bound gates (hero shot, photo health) — the guard's fixtures have no page. */
   readonly offline?: boolean;
+  /** Test seam: the send-time re-judgement reads only these leads (the guard's fixtures). */
+  readonly onlyLeads?: readonly string[];
 }
 
-/** Build the letter for one candidate (no DB writes beyond the draft's preview label). */
+/**
+ * IT D-1i: the runner reads the list ONCE and a run takes hours (20 s per letter, ≥ 90 s per
+ * SMS). Right before the claim the lead is judged AGAIN, by the same rules as the list: a
+ * trial started, an order placed, an archive, a disqualification, a twin that got it since —
+ * each stops the send. null = still a target, on the same channel and address.
+ */
+async function rejudge(c: TrialCampaignCandidate, deps: TrialCampaignDeps): Promise<string | null> {
+  const fresh = (await listTrialCampaignCandidates({ onlyLeads: deps.onlyLeads, now: deps.now })).find((x) => x.leadId === c.leadId);
+  if (!fresh) return "a lead közben kikerült a megkeresettek közül"; // i18n-exempt: operátori CLI-kimenet
+  if (fresh.excluded) return `${EXCLUSION_LABEL[fresh.excluded]} (küldéskor újramérve)`; // i18n-exempt: operátori CLI-kimenet
+  if (fresh.channel !== c.channel || fresh.addressKey !== c.addressKey || fresh.prospectId !== c.prospectId) {
+    return "a célpont közben változott (csatorna, cím vagy link) — a következő futás újraméri"; // i18n-exempt: operátori CLI-kimenet
+  }
+  return null;
+}
+
+/** Build the letter for one candidate (no DB writes beyond the draft's preview label — and
+ *  none at all with `dryRun`, IT D-8k). */
 export async function buildTrialCampaignLetterFor(
   c: TrialCampaignCandidate,
+  opts: { readonly dryRun?: boolean } = {},
 ): Promise<{ letter: TrialCampaignLetter; lang: string; market: { country: string | null; approved: boolean } } | { error: string }> {
   if (!c.prospectId || !c.sentAt) return { error: "nincs élő prospect vagy küldési dátum" }; // i18n-exempt: operátori CLI-kimenet
-  const d = await buildDraftForProspect(c.prospectId);
+  const d = await buildDraftForProspect(c.prospectId, { reserveLabel: !opts.dryRun });
   if (!d) return { error: "a piszkozat nem állítható elő" }; // i18n-exempt: operátori CLI-kimenet
   const host = await trialCampaignHost(c.leadId);
   if (!host) return { error: "a próba-aldomain nem határozható meg" }; // i18n-exempt: operátori CLI-kimenet
@@ -387,7 +505,7 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   const shared = await sharedContactBlocks(c.leadId, "email", c.address);
   if (shared) return { kind: "skipped", reason: shared };
 
-  const built = await buildTrialCampaignLetterFor(c);
+  const built = await buildTrialCampaignLetterFor(c, { dryRun: deps.dryRun });
   if ("error" in built) return { kind: "skipped", reason: built.error };
   const { letter, lang, market } = built;
   if (lang !== DEFAULT_LANG) {
@@ -417,6 +535,8 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   const msg = buildTrialCampaignEmail(letter, c.address, { heroShotPath, lang });
   if (!msg.text.includes(letter.unsubscribeLink)) return { kind: "skipped", reason: "hiányzó leiratkozó-link" }; // i18n-exempt: operátori CLI-kimenet
 
+  const changed = await rejudge(c, deps);
+  if (changed) return { kind: "skipped", reason: changed };
   const claimId = await claim(c);
   if (!claimId) return { kind: "skipped", reason: EXCLUSION_LABEL.already };
   try {
@@ -444,7 +564,7 @@ export async function sendTrialCampaignSms(c: TrialCampaignCandidate, deps: Tria
   let unsubscribeLink: string;
   if (deps.offline) {
     if (await isPhoneSuppressed(c.address)) return { kind: "skipped", reason: EXCLUSION_LABEL.unsubscribed };
-    const d = await buildDraftForProspect(c.prospectId);
+    const d = await buildDraftForProspect(c.prospectId, { reserveLabel: !deps.dryRun });
     if (!d) return { kind: "skipped", reason: "a piszkozat nem állítható elő" }; // i18n-exempt: operátori CLI-kimenet
     ({ lang, market } = d);
     link = d.sms.link;
@@ -468,6 +588,8 @@ export async function sendTrialCampaignSms(c: TrialCampaignCandidate, deps: Tria
   const block = mockOutreachWindowBlocks(deps.now ?? new Date());
   if (block) return { kind: "skipped", reason: block };
 
+  const changed = await rejudge(c, deps);
+  if (changed) return { kind: "skipped", reason: changed };
   const claimId = await claim(c);
   if (!claimId) return { kind: "skipped", reason: EXCLUSION_LABEL.already };
   const r = await (deps.sms ?? sendSms)({ to: c.address, text: sms.text });

@@ -15,7 +15,7 @@
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
-import { ensurePreviewLabel, previewLink } from "./previewLabel.js";
+import { ensurePreviewLabel, peekPreviewLabel, previewLink } from "./previewLabel.js";
 import { formatNumber } from "../text/money.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
@@ -500,7 +500,11 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
 
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
-export async function buildDraftForProspect(prospectId: string): Promise<
+export async function buildDraftForProspect(
+  prospectId: string,
+  /** reserveLabel false = a dry run: the preview label is only peeked, never written (IT D-8k). */
+  opts: { readonly reserveLabel?: boolean } = {},
+): Promise<
   | {
       draft: OutreachDraft;
       sms: SmsDraft;
@@ -565,7 +569,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     offerPercent: await outreachPercentForProspect(prospectId),
     // ADR-0330: reserved on the first draft — the console's preview and the sent
     // message must show the same address.
-    previewLabel: await ensurePreviewLabel(r.leadId),
+    previewLabel: opts.reserveLabel === false ? await peekPreviewLabel(r.leadId) : await ensurePreviewLabel(r.leadId),
   };
   // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
   // send path gets the same verdict. The gate itself stays synchronous (it is a pure

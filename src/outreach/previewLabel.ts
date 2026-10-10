@@ -111,6 +111,26 @@ export async function ensurePreviewLabel(leadId: string): Promise<string | null>
 }
 
 /**
+ * The label ensurePreviewLabel WOULD return, without reserving it — for dry runs that must
+ * not mutate (IT D-8k: a `--kapuk` preview minted 8 live preview subdomains). The existing
+ * label, else the first free candidate; a later real send may still get another one if a
+ * concurrent lead takes it first.
+ */
+export async function peekPreviewLabel(leadId: string): Promise<string | null> {
+  const lead = await db
+    .selectFrom("lead")
+    .select(["name", "address", "preview_label"])
+    .where("id", "=", leadId)
+    .executeTakeFirst();
+  if (!lead) return null;
+  if (lead.preview_label) return lead.preview_label;
+  for (const candidate of labelCandidates(lead.name, lead.address)) {
+    if (!(await labelHeldByOther(candidate, leadId))) return candidate;
+  }
+  return null;
+}
+
+/**
  * The absolute preview link for a label — ONLY on the real platform, where the
  * wildcard host resolves. Locally (Tailscale / localhost) there is no wildcard DNS,
  * so the caller keeps the /p/<slug>/<token> link that actually opens.

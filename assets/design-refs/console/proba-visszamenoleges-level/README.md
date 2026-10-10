@@ -32,8 +32,11 @@ kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tart
    a „Kupon” beállításból (ADR-0346) — 0%-nál elmarad.
 7. **Lábléc, változatlanul a mockból:** **„Erről a próbáról több levelet nem küldünk; ha nem kér tőlünk több megkeresést, leiratkozhat.”**,
    a leiratkozó link, a jogalap-sor, a cégazonosítás (`advertiserIdentity`). Az egy-lövés sor KÓDKÉNYSZER: `trial_campaign` tábla
-   (leadenként és címenként egy), és az eszkalációs follow-up utána nem megy.
+   (leadenként és címenként egy), és az eszkalációs follow-up utána nem megy. Az ígéret a SZEMÉLYNEK szól (ADR-XXXX): egy ember
+   (közös cím VAGY közös mobil) egy üzenetet kap — levelet, ha van levél-célpontja, különben SMS-t.
 8. **SMS:** ékezet nélkül (GSM-7), a linkkel, ≤ 2 szelet; hosszú névnél a NÉV rövidül, a link soha. Szövege (ékezetes forrás, majd
    GSM-7-re hajtva): „{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja. Nincs kártya,
    nincs előfizetés, a végén nem terhelünk. {link} Leiratkozás a lap alján. Citoviso”.
 9. **Küldés:** csak hétköznap 9–16 (ADR-0334), sorban (SMS ≥ 90 mp), szárazon alapból; élesen `--go`, a tulaj külön „mehet”-jével.
+   Minden célpontot a foglalás ELŐTT újramér (próba, rendelés, archiválás, kizárt lead); a levél csak a hideg levél címére megy;
+   a beragadt foglalást a száraz futás listázza, feloldása kézi (`--felold`) — ADR-XXXX.

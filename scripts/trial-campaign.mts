@@ -12,6 +12,9 @@
 //        [--sms-koz 95] [--level-koz 20] [--naplo <path>]   one at a time (SMS ≥ 90 s apart)
 //   npx tsx scripts/trial-campaign.mts --kizar <prospectId|leadId> --ok "<reason>"
 //                                                           persistent operator exclusion
+//   npx tsx scripts/trial-campaign.mts --felold <sorId|leadId> --ok "<reason>"
+//                                                           release a STUCK claim (a run died
+//                                                           mid-send) — check the outbox first
 //   npx tsx scripts/trial-campaign.mts --render             sample letter + SMS rendered into
 //                                                           assets/design-refs/_drafts/proba-E2/
 //
@@ -29,6 +32,7 @@ import { advertiserIdentity, senderParts } from "../src/outreach/draft.js";
 import {
   EXCLUSION_LABEL,
   excludeFromTrialCampaign,
+  releaseStuckTrialCampaignClaim,
   listTrialCampaignCandidates,
   sendTrialCampaign,
   trialCampaignNumbers,
@@ -40,13 +44,17 @@ import { mockOutreachWindowBlocks } from "../src/sms/sendWindow.js";
 
 const argv = process.argv.slice(2);
 const flag = (name: string): boolean => argv.includes(name);
+// A following flag is never a value: `--kizar <id> --ok --go` must not store "--go" as the reason.
 const opt = (name: string): string | null => {
   const i = argv.indexOf(name);
-  return i >= 0 && i + 1 < argv.length ? argv[i + 1]! : null;
+  const v = i >= 0 && i + 1 < argv.length ? argv[i + 1]! : null;
+  return v === null || v.startsWith("--") ? null : v;
 };
 const num = (name: string, def: number): number => {
   const v = opt(name);
-  const n = v === null ? def : Number(v);
+  // Absent = the default (Infinity for --limit: IT D-2h — `--go` alone was refused).
+  if (v === null && !flag(name)) return def;
+  const n = v === null ? NaN : Number(v);
   if (!Number.isFinite(n) || n < 0) {
     console.error(`⛔ ${name}: nem szám (${v})`);
     process.exit(2);
@@ -130,6 +138,23 @@ async function main(): Promise<void> {
     return;
   }
 
+  const felold = opt("--felold");
+  if (felold) {
+    const r = await releaseStuckTrialCampaignClaim(felold, opt("--ok") ?? "");
+    if (!r.ok) {
+      console.error(`⛔ ${r.message}`);
+      process.exitCode = 1;
+      return;
+    }
+    await log(`FELOLDVA ${r.leadName} (lead ${r.leadId}) — ${opt("--ok")}`);
+    return;
+  }
+  if (flag("--kizar") || flag("--felold")) {
+    console.error("⛔ --kizar / --felold: hiányzó azonosító");
+    process.exitCode = 2;
+    return;
+  }
+
   const all = await listTrialCampaignCandidates();
   const targets = all.filter((c) => !c.excluded);
   const byReason = new Map<TrialCampaignExclusion, number>();
@@ -151,6 +176,14 @@ async function main(): Promise<void> {
     for (const c of operator) console.log(`  · ${c.leadName} — ${c.note ?? ""}`);
   }
 
+  const stuck = all.filter((c) => c.excluded === "stuck");
+  if (stuck.length) {
+    console.log("⚠️  Beragadt foglalások (lefoglalva, de nem igazoltan kiment — a postafiók / modem-napló alapján döntsd el):");
+    for (const c of stuck) {
+      console.log(`  · ${c.leadName} — ${c.channel === "sms" ? "SMS" : "levél"} → ${c.address} · feloldás: --felold ${c.campaignRowId} --ok "<miért>"`);
+    }
+  }
+
   if (flag("--kapuk") && !flag("--go")) {
     console.log("\nKapuk (száraz futás — nem foglal, nem küld; a hálózati kép-mérés kimarad):");
     let pass = 0;
@@ -168,15 +201,16 @@ async function main(): Promise<void> {
   }
 
   // ── REAL SEND ────────────────────────────────────────────────────────────────
+  // The numbers first: a malformed command fails at once, any day, any hour.
+  const limit = num("--limit", Infinity);
+  const smsGapMs = Math.max(90, num("--sms-koz", 95)) * 1000;
+  const mailGapMs = num("--level-koz", 20) * 1000;
   const block = mockOutreachWindowBlocks(new Date());
   if (block) {
     console.error(`⛔ ${block}`);
     process.exitCode = 1;
     return;
   }
-  const limit = num("--limit", Infinity);
-  const smsGapMs = Math.max(90, num("--sms-koz", 95)) * 1000;
-  const mailGapMs = num("--level-koz", 20) * 1000;
   await log(`INDUL — célcsoport ${targets.length} (levél ${mail} · SMS ${sms}), limit ${limit}`);
   let sent = 0;
   let lastSms = 0;
