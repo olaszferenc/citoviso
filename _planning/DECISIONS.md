@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-proba-urlap-kedvezmenye-es-ertesitok-hetvegen.md) — Próba: amit az űrlap kiír, azt rögzíti a próba; a T−3 és a T−1 értesítő mindig kimegy
+- [ADR-0359](decisions/0359-proba-amit-az-urlap-kiir-azt-rogziti-a-proba-a.md) — Próba: amit az űrlap kiír, azt rögzíti a próba; a T−3 és a T−1 értesítő mindig kimegy
 - [ADR-0358](decisions/0358-a-terv-link-p-token-a-tulajdonos-lead-mostani.md) — A terv-link (`/p/<token>`) a tulajdonos lead MOSTANI oldalát mutatja, nem a kiküldött mockot
 - [ADR-0357](decisions/0357-a-terv-lap-a-proba-korul-a-kerdezo-kartya.md) — A terv-lap a próba körül: a kérdező-kártya félreáll, a „Rendben” újratölt, a pirula-pár újramér, a köszönőlap visszavezet
 - [ADR-0356](decisions/0356-nevvaltas-a-proba-vegen-egyszer-ingyen-a-regi.md) — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít

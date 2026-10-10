@@ -3121,7 +3121,7 @@ async function handle(
       (req.headers["user-agent"] as string | undefined) ?? null,
       typeof body.referrer === "string" && body.referrer ? body.referrer.slice(0, 500) : null,
     );
-    // Elek3 B2 (ADR-XXXX): a visit from the trial campaign mail (forras=proba) came to TRY —
+    // Elek3 B2 (ADR-0359): a visit from the trial campaign mail (forras=proba) came to TRY —
     // it gets no decision card (proba-c/2 A), so it must not get the card's offer either: the
     // form names the lead's current offer, and a silently minted −50% made the trial record
     // a discount the form never printed.

@@ -1,4 +1,4 @@
-## ADR-XXXX — Próba: amit az űrlap kiír, azt rögzíti a próba; a T−3 és a T−1 értesítő mindig kimegy
+## ADR-0359 — Próba: amit az űrlap kiír, azt rögzíti a próba; a T−3 és a T−1 értesítő mindig kimegy
 
 **Dátum:** 2026-10-11 · **Kontextus:** Elek 3. köre (próba „C” + névváltás, élesítés előtt), B2 és K3 lelet; koordinátori döntés a tulaj 3A-ja alapján (próba-koordinátor szál, 2026-10-10). Pontosítja: ADR-0354 ① (melyik ajánlatot pineli a próba), ADR-0088 §4 (eszkaláció), a próba-értesítők ütemezése (`noticeSendDay`, a hétköznap 9–16-os ablak).
 

@@ -118,7 +118,7 @@ export async function endTrialGrantsAfterConversion(
 export type NoticeStep = "t3" | "t1";
 const STEP_DAYS: Record<NoticeStep, number> = { t3: 3, t1: 1 };
 
-/** The weekday (Budapest) a step is sent on (ADR-XXXX, Elek3 K3): trial_until's day − N; a
+/** The weekday (Budapest) a step is sent on (ADR-0359, Elek3 K3): trial_until's day − N; a
  *  weekend day moves BACK to the previous weekday (Friday). Both warnings always go: if T−3
  *  would land on T−1's day (or after it), T−3 goes one more weekday earlier — so a Monday
  *  expiry gets Thursday + Friday, never a single Friday letter. Null = the step would fall

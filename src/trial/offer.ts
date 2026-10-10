@@ -82,7 +82,7 @@ export async function pinTrialOffer(
     if (rest.length) {
       await db
         .updateTable("offer")
-        .set({ expires_at: now, note: `ADR-XXXX: lezárva — a próba az űrlapon kiírt ajánlatot viszi (${trial.id})` })
+        .set({ expires_at: now, note: `ADR-0359: lezárva — a próba az űrlapon kiírt ajánlatot viszi (${trial.id})` })
         .where("id", "in", rest)
         .execute();
     }
@@ -93,7 +93,7 @@ export async function pinTrialOffer(
     if (live.length) {
       await db
         .updateTable("offer")
-        .set({ expires_at: now, note: `ADR-XXXX: lezárva — a próba az űrlapon kiírt ajánlatot viszi (${trial.id})` })
+        .set({ expires_at: now, note: `ADR-0359: lezárva — a próba az űrlapon kiírt ajánlatot viszi (${trial.id})` })
         .where("id", "in", live.map((o) => o.id))
         .execute();
     }

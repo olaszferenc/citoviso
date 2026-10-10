@@ -3,7 +3,7 @@
 // could cost the owner their site, their money or their trust:
 //   ① noticeSendDay, pure: T−N on a weekday; a weekend step moves BACK to Friday (a Sunday
 //      expiry's T−1 is Friday, not the Monday after the freeze); t3 on t1's day → one weekday
-//      earlier (ADR-XXXX, Elek3 K3: both warnings always go, for every start weekday);
+//      earlier (ADR-0359, Elek3 K3: both warnings always go, for every start weekday);
 //      a step before the trial's first day does not exist;
 //   ② warnings: outside the weekday 9–16 window (Saturday, 17:00) NOTHING goes out; inside
 //      it the due step goes once per channel (e-mail + SMS); a second run sends nothing;
@@ -198,7 +198,7 @@ try {
   check("vasárnapi lejárat: t1 = PÉNTEK (szombat → vissza)", noticeSendDay("t1", start, bp("2026-10-18", "10:00")) === "2026-10-16");
   check("vasárnapi lejárat: t3 = csütörtök", noticeSendDay("t3", start, bp("2026-10-18", "10:00")) === "2026-10-15");
   check("hétfői lejárat: t1 = péntek (vasárnap → vissza)", noticeSendDay("t1", start, bp("2026-10-19", "10:00")) === "2026-10-16");
-  // ADR-XXXX (Elek3 K3): both warnings ALWAYS go — a collision moves T−3 one weekday earlier.
+  // ADR-0359 (Elek3 K3): both warnings ALWAYS go — a collision moves T−3 one weekday earlier.
   check("hétfői lejárat: t3 a t1 napjára esne → egy hétköznappal korábban (csütörtök)", noticeSendDay("t3", start, bp("2026-10-19", "10:00")) === "2026-10-15");
   // Every start weekday (Mon–Sun) of a 14-day trial: T−3 and T−1 both exist, on two distinct
   // weekdays, T−3 first, both before the trial's last day.

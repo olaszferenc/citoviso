@@ -5,10 +5,10 @@
 
 ## Elvégezve
 - **B1 (BLOKKOLÓ)** — a választott ingyenes aldomain elveszett: `server.ts` a `domain_name`-et csak saját domainnél rögzítette. Javítva; az aktiválás a választott címre nevez át, a régi alias + 301. Őr: `free-trial-e2e` (bekötve a pre-commitbe) a fizetés UTÁNI slugot, aliast és 301-et méri. A régi őr (proba-c ④) csak a POST-törzset nézte.
-- **B2 (BLOKKOLÓ)** — a próba-levélből (`forras=proba`) jövő látogatás nem bocsát ki eszkalációt; a próba az űrlapon kiírt %-ot rögzíti (`offerPercent` → `pinTrialOffer`), kliens-szám nem áraz. ADR-XXXX ①. Őr: `free-trial-e2e` ⑩, `proba-c-checkout-check` ⑥.
+- **B2 (BLOKKOLÓ)** — a próba-levélből (`forras=proba`) jövő látogatás nem bocsát ki eszkalációt; a próba az űrlapon kiírt %-ot rögzíti (`offerPercent` → `pinTrialOffer`), kliens-szám nem áraz. ADR-0359 ①. Őr: `free-trial-e2e` ⑩, `proba-c-checkout-check` ⑥.
 - **K1** — a `trial_grant` modul nem számlázott tétel (`isBilledModule`); az üres-modul teendő továbbra is látja.
 - **K2** — Pénztárca: `nextChargeTotal` (évesnél az éves összeg).
-- **K3** — a T−3 és a T−1 mindig kimegy; ütközésnél a T−3 egy hétköznappal korábban. ADR-XXXX ②.
+- **K3** — a T−3 és a T−1 mindig kimegy; ütközésnél a T−3 egy hétköznappal korábban. ADR-0359 ②.
 - **K4** — próba alatt a Modulok fülön nincs többnyelvű-vétel, a vásárlási út elutasítja.
 - **A1, A2, A4–A9** — a sáv dátuma, a számla-levél kedvezmény-sora, a tiltott „Ezt választom”, a mobil összegző sáv (csukható bontás), a leiratkozás-mondat egyszer, automatikus belépés, egyszeri modul címkéje, az előnézeti host a KIKÜLDÖTT prospectet nyitja (a gyanú igaz volt). A3 marad (brief).
 - Mellékesen: `free-trial-expiry-check` 00:00–01:00 között a tiszta mainen is piros volt (az „egy órája” tegnapra esett) → javítva.
