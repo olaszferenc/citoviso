@@ -14,7 +14,8 @@
 //   ⑤ every channel failing: the claim is released (retried next run); one channel
 //      failing: 'sent' via the other, never re-sent;
 //   ⑥ the REAL deps (getAlertRecipients + mock e-mail/SMS providers) send and mark 'sent';
-//      the hourly tick (scripts/offer-followup.mts) calls runTrialWatch in its own try.
+//      the hourly tick (scripts/offer-followup.mts) calls runTrialWatch in its own try —
+//      and every other step of the tick in its own try too (IT C6.1).
 //
 // ISOLATION: own throwaway database (scratch-db), created BEFORE any import that opens the
 // db client; the providers are forced to mock and READ BACK. Rows are inserted directly
@@ -341,6 +342,11 @@ try {
   check("az óránkénti tick hívja: runTrialWatch(now), a valódi deps-szel", watchCall > 0);
   check("…SAJÁT try-ban (a figyelmeztetések bukása nem viszi)",
     watchCall > 0 && tick.lastIndexOf("try {", watchCall) > tick.indexOf("runTrialNotices(now"));
+  // IT C6.1: every step in its own try — a throwing follow-up must not skip the trial
+  // warnings / the purge warning (one shared block did, every hour).
+  const calls = ["await sendEscalationFollowups(now)", "await runTrialNotices(now", "await runPurgeWarnings(now", "await runTrialWatch(now)"].map((c) => tick.indexOf(c));
+  check("…a tick MINDEN lépése saját try-ban (follow-up · T−3/T−1 · törlés-figyelmeztetés · watch)",
+    calls.every((at) => at > 0) && calls.every((at, k) => tick.lastIndexOf("try {", at) > (k ? calls[k - 1]! : -1)), JSON.stringify(calls));
 } finally {
   await db.destroy();
 }

@@ -6,9 +6,9 @@
 // is guaranteed by the atomic claim (claimFollowup), not by the tick interval.
 //
 // ADR-0344 — the same hourly tick carries the free-trial T−3 / T−1 warnings (they must go
-// weekdays 9–16, the daily 07:00 billing tick never runs inside that window). The e-mail
-// goes with the owner-approved wording (2026-10-09, src/trial/notices.ts); the SMS stays
-// DRY (sendSms null — neither sent nor claimed) until its form is approved.
+// weekdays 9–16, the daily 07:00 billing tick never runs inside that window). Both LIVE
+// with the owner-approved wording (src/trial/notices.ts, trialNoticeDeps): the e-mail
+// since C2, the accent-free SMS with the link since C2b (2026-10-09).
 //
 // ADR-0345 — and the purge warning 7 days before a lapsed trial's data is deleted (same
 // weekday 9–16 window). LIVE with the owner-approved letter "A" (2026-10-09,
@@ -17,8 +17,10 @@
 // The same tick runs the free-trial WATCH (src/trial/watch.ts, migration 0100): five stuck-
 // trial states (lapse overdue, warning failed, site not live, paid continuation without
 // invoice/subscription, login letter not sent) → operator e-mail + SMS, once per incident.
-// HOURLY on purpose: it also catches the daily 07:00 billing tick being dead. Its own
-// try/catch — a watch failure must not stop the follow-ups/notices, and vice versa.
+// HOURLY on purpose: it also catches the daily 07:00 billing tick being dead.
+// EVERY step has its own try/catch (as billing-cycle.ts): one shared block let a throwing
+// escalation follow-up skip the trial warnings and the purge warning every hour while the
+// fault lasted (IT C6.1). A failed step → non-zero exit, the rest still run.
 //   tsx scripts/offer-followup.mts [--now=2026-10-01T09:00:00+02:00]
 
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
@@ -35,16 +37,26 @@ if (Number.isNaN(now.getTime())) {
   process.exit(1);
 }
 
+// Non-zero exit → the unit's OnFailure= mails the house (ADR-0276).
 try {
   const f = await sendEscalationFollowups(now);
   console.log(`offer-followup @ ${now.toISOString()}:`, JSON.stringify(f));
+} catch (e) {
+  console.error("offer-followup HIBA:", e);
+  process.exitCode = 1;
+}
+try {
   const n = await runTrialNotices(now, trialNoticeDeps(now));
-  console.log(`trial-notices (e-mail éles, SMS száraz) @ ${now.toISOString()}:`, JSON.stringify(n));
+  console.log(`trial-notices (e-mail + SMS éles) @ ${now.toISOString()}:`, JSON.stringify(n));
+} catch (e) {
+  console.error("trial-notices HIBA:", e);
+  process.exitCode = 1;
+}
+try {
   const w = await runPurgeWarnings(now, purgeWarningDeps(now));
   console.log(`trial-purge-warnings (éles) @ ${now.toISOString()}:`, JSON.stringify(w));
 } catch (e) {
-  // Non-zero exit → the unit's OnFailure= mails the house (ADR-0276).
-  console.error("offer-followup HIBA:", e);
+  console.error("trial-purge-warnings HIBA:", e);
   process.exitCode = 1;
 }
 try {
