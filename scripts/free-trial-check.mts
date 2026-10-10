@@ -24,6 +24,9 @@
 //      no decision-helper offer is minted for a trial lead afterwards;
 //   ⑬ IT A-04 / B2: a pre-trial initial order (intro price) is not payable during the
 //      trial — /pay/go leads to /folytatas, requestPayment refuses it.
+//   ⑭ IT C5.3: a claim whose provisioning never finished (no tenant) is not lapsed by the
+//      expiry tick, and the next submit starts it with a FRESH clock — also a tenant-less
+//      claim an older expiry run already lapsed; never "trial_used" for a trial that never was.
 //
 // The dev DB is SHARED: the config is set with the PROCESS-LOCAL override (the app_setting
 // row is never written); every row is this run's own and deleted in `finally`; the
@@ -50,6 +53,7 @@ import {
 } from "../src/trial/config.js";
 import { overrideCouponConfigInProcess } from "../src/payment/couponConfig.js";
 import { startTrial, trialModuleIds } from "../src/trial/start.js";
+import { lapseExpiredTrials } from "../src/trial/expiry.js";
 import { preTrialOrderOfContinuableTrial } from "../src/conversion/owned.js";
 import { ensureEscalationOffer, ESCALATION_CONFIG_DEFAULT, overrideEscalationConfigInProcess } from "../src/payment/offers.js";
 import { resolvePayEntry } from "../src/payment/payEntry.js";
@@ -363,6 +367,49 @@ try {
     .returning("id")
     .executeTakeFirstOrThrow();
   check("a próba UTÁNI (folytatás-) rendelést a kapu nem érinti", (await preTrialOrderOfContinuableTrial(gCont.id)) === null);
+
+  // ⑭ IT C5.3: the crashed claim (no tenant) whose trial_until passed long ago.
+  console.log("⑭ tenant nélküli foglalás lejárat után");
+  const DAY = 86_400_000;
+  const claim = async (tag: string, status: "active" | "lapsed") => {
+    const l = await fixtureLead(tag);
+    const t = await db
+      .insertInto("free_trial")
+      .values({
+        lead_id: l.leadId,
+        prospect_id: l.prospectId,
+        contact_name: FORM.name,
+        contact_email: FORM.email,
+        terms_accepted_at: new Date(Date.now() - 20 * DAY),
+        terms_text: "teszt",
+        photo_rights_declared_at: new Date(Date.now() - 20 * DAY),
+        photo_rights_text: "teszt",
+        started_at: new Date(Date.now() - 20 * DAY),
+        trial_until: new Date(Date.now() - 11 * DAY),
+        created_at: new Date(Date.now() - 20 * DAY),
+        status,
+        lapsed_at: status === "lapsed" ? new Date(Date.now() - 11 * DAY) : null,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    return { ...l, trialId: t.id };
+  };
+  const h = await claim("h", "active");
+  const hLapse = await lapseExpiredTrials(new Date(), { onlyTrialIds: [h.trialId] });
+  const hRow = await db.selectFrom("free_trial").select("status").where("id", "=", h.trialId).executeTakeFirst();
+  check("a lejárat a tenant nélküli foglalást NEM lépteti lapsed-re", hLapse.lapsed === 0 && hRow?.status === "active", `${hLapse.lapsed} · ${hRow?.status}`);
+  const before = Date.now();
+  const rh = await startTrial(h.token, FORM);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", h.leadId).execute()).map((t) => t.id));
+  const hAfter = await db.selectFrom("free_trial").select(["status", "started_at", "trial_until", "tenant_id"]).where("id", "=", h.trialId).executeTakeFirst();
+  const hUntil = hAfter ? new Date(hAfter.trial_until as unknown as string).getTime() : 0;
+  check("az újraküldés elindítja a próbát (nem trial_used)", rh.ok && !rh.existing && !!hAfter?.tenant_id, JSON.stringify(rh));
+  check("…friss órával: started_at most, trial_until = most + 9 nap", !!hAfter && new Date(hAfter.started_at as unknown as string).getTime() >= before - 1000 && Math.abs(hUntil - (before + 9 * DAY)) < 60_000, `${hAfter?.started_at} → ${hAfter?.trial_until}`);
+  const i = await claim("i", "lapsed");
+  const ri = await startTrial(i.token, FORM);
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", i.leadId).execute()).map((t) => t.id));
+  const iAfter = await db.selectFrom("free_trial").select(["status", "lapsed_at"]).where("id", "=", i.trialId).executeTakeFirst();
+  check("a régi futás által lapsed-elt tenant nélküli foglalás is indítható", ri.ok && iAfter?.status === "active" && iAfter.lapsed_at === null, `${JSON.stringify(ri)} · ${iAfter?.status}`);
 } finally {
   closeConsole?.();
   await rm(MOCK_FILE, { force: true });

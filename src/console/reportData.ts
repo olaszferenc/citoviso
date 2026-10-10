@@ -616,7 +616,9 @@ async function loadTrialStarts(ps: readonly { id: string; leadId: string; sentAt
     .selectFrom("free_trial")
     .select(["prospect_id", "lead_id", "started_at"])
     .where("lead_id", "in", [...new Set(ps.map((p) => p.leadId))])
-    .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "!=", "active"), eb("purged_at", "is not", null)]))
+    // A trial = a claim that got its tenant (purged ones lose tenant_id, so purged_at keeps
+    // them). Not the status: a tenant-less claim lapsed by an older expiry run is no trial (IT C5.3).
+    .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("purged_at", "is not", null)]))
     .execute();
   const sent = new Set(ps.map((p) => p.id));
   for (const r of rows) {

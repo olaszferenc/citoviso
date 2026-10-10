@@ -118,8 +118,11 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     .selectAll()
     .where("lead_id", "=", p.lead_id)
     .executeTakeFirst();
+  // A claim that never got a tenant is not a used trial — also when an older expiry run
+  // already lapsed it (before IT C5.3 the lapse took tenant-less rows too).
+  const unprovisioned = !!prior && !prior.tenant_id && (prior.status === "active" || prior.status === "lapsed");
   if (prior) {
-    if (prior.status !== "active") return { ok: false, error: "trial_used" };
+    if (prior.status !== "active" && !unprovisioned) return { ok: false, error: "trial_used" };
     if (prior.tenant_id && (await trialFinished(prior.tenant_id, prior.coupon_offer_id))) {
       return finished(prior.tenant_id, prior.trial_until, prior.coupon_offer_id, true, null);
     }
@@ -149,6 +152,24 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 
   // 3. CLAIM the trial (unique lead_id). Losing the race = the other request is building it.
   let trial = prior;
+  if (trial && unprovisioned) {
+    // The trial starts when its page does: the visitor never had one, so the clock of the
+    // crashed claim (possibly already run out) restarts now (IT C5.3).
+    const cfg = await getFreeTrialConfig();
+    trial = await db
+      .updateTable("free_trial")
+      .set({
+        status: "active",
+        lapsed_at: null,
+        started_at: now,
+        trial_until: new Date(now.getTime() + cfg.days * 86_400_000),
+      })
+      .where("id", "=", trial.id)
+      .where("tenant_id", "is", null)
+      .returningAll()
+      .executeTakeFirst();
+    if (!trial) return { ok: false, error: "in_progress" };
+  }
   if (!trial) {
     const cfg = await getFreeTrialConfig();
     trial = await db

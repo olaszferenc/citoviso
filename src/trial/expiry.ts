@@ -38,18 +38,21 @@ export async function lapseExpiredTrials(
     .updateTable("free_trial")
     .set({ status: "lapsed", lapsed_at: now })
     .where("status", "=", "active")
-    .where("trial_until", "<=", now);
+    .where("trial_until", "<=", now)
+    // A claim whose provisioning never finished is not a trial: nobody got a page, so it
+    // must not run out. Lapsing it made the lead's next submit answer 'trial_used' for a
+    // trial that never was, and counted it in /report (IT C5.3). startTrial resumes it.
+    .where("tenant_id", "is not", null);
   if (opts.onlyTrialIds) q = q.where("id", "in", [...opts.onlyTrialIds]);
   const rows = await q.returning(["id", "tenant_id"]).execute();
 
   let sitesSuspended = 0;
   let modulesOff = 0;
   for (const r of rows) {
-    if (!r.tenant_id) continue; // a claim whose provisioning never finished: nothing is public
     const s = await db
       .updateTable("site")
       .set({ status: "suspended" })
-      .where("tenant_id", "=", r.tenant_id)
+      .where("tenant_id", "=", r.tenant_id!)
       .where("status", "=", "live")
       .returning("id")
       .execute();
@@ -59,7 +62,7 @@ export async function lapseExpiredTrials(
     const m = await db
       .updateTable("module_entitlement")
       .set({ active: false })
-      .where("tenant_id", "=", r.tenant_id)
+      .where("tenant_id", "=", r.tenant_id!)
       .where("trial_grant", "=", true)
       .where("active", "=", true)
       .returning("module")
