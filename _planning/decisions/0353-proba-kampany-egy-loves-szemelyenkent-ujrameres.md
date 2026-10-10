@@ -1,4 +1,4 @@
-## ADR-XXXX — Próba-kampány: egy lövés SZEMÉLYENKÉNT, újramérés küldéskor, csak a hideg levél címére
+## ADR-0353 — Próba-kampány: egy lövés SZEMÉLYENKÉNT, újramérés küldéskor, csak a hideg levél címére
 
 **Dátum:** 2026-10-10 · **Kontextus:** IT D (`~/wt/citf604e298/_it/parts/d.md`: D-1f, D-1g, D-1h, D-1i, D-1x, D-2h, D-3a, D-4h, D-4k, D-5l/m, D-8k). Kiegészíti: ADR-0348 (visszamenőleges próba-levél).
 

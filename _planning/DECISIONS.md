@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-proba-kampany-egy-loves-szemelyenkent.md) — Próba-kampány: egy lövés SZEMÉLYENKÉNT, újramérés küldéskor, csak a hideg levél címére
+- [ADR-0353](decisions/0353-proba-kampany-egy-loves-szemelyenkent-ujrameres.md) — Próba-kampány: egy lövés SZEMÉLYENKÉNT, újramérés küldéskor, csak a hideg levél címére
 - [ADR-0352](decisions/0352-a-proba-kupon-a-kiirt-nap-vegeig-el-a-torles-a.md) — A próba-kupon a kiírt nap VÉGÉIG él; a törlés a 90. megőrzött nap UTÁNI napon jön
 - [ADR-0351](decisions/0351-a-proba-elott-arazott-elso-rendeles-a-proba.md) — A próba ELŐTT árazott első rendelés a próba alatt nem fizethető; a próba a lead MINDEN tokenjének bevezető ajánlatát zárja
 - [ADR-0350](decisions/0350-mi-tartja-vissza-kulcsonkent-egy-sor-a-kesobbi.md) — „Mi tartja vissza?”: kulcsonként egy sor, a későbbi válasz felülírja az elsőt
