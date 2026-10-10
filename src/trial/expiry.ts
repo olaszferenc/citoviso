@@ -74,7 +74,7 @@ export async function lapseExpiredTrials(
 }
 
 /**
- * ADR-XXXX ⓑ (tulaj-megerősítésre): a trial that CONVERTED kept its unchosen trial modules
+ * ADR-0354 ⓑ (tulaj-megerősítésre): a trial that CONVERTED kept its unchosen trial modules
  * to the trial's end (syncEntitlementsToPaid). Once that end passed, they go off — only
  * `trial_grant` rows (what the buyer paid for lost the flag at the payment) — and the live
  * page is re-rendered without them. Idempotent; `onlyTrialIds` narrows it for guards.

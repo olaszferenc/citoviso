@@ -123,7 +123,7 @@ export async function ensureSubscriptionForOrder(
 
   const anchor = new Date(paid.paid_at as unknown as string);
   const months = paid.period === "annual" ? 12 : 1;
-  // ADR-XXXX ⓐ (tulaj-megerősítésre): paid DURING a free trial, the paid period starts
+  // ADR-0354 ⓐ (tulaj-megerősítésre): paid DURING a free trial, the paid period starts
   // the day AFTER the trial's last day — the free days left are kept, not swallowed by the
   // first period. Calendar days as ISO strings: the columns are `date`, and a Date → date
   // cast is zone-dependent (db/client.ts).

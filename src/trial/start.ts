@@ -5,7 +5,7 @@
 //   · no order_intent, no payment, no subscription row — the billing tick iterates
 //     subscriptions only, so it cannot mint an invoice or a dunning step for a trial;
 //     the subscription is born by the first real payment (ADR-0080 ①, its day = anchor);
-//   · the lead's best offer runs to the trial's last day (ADR-XXXX) — no coupon;
+//   · the lead's best offer runs to the trial's last day (ADR-0354) — no coupon;
 //   · EVERY sellable module is entitled, flagged `trial_grant` — the paid reconciliation
 //     (syncEntitlementsToPaid) later keeps what the buyer paid for and switches the rest off;
 //   · the platform subdomain only (ADR-0330 preview label first) — no custom domain.
@@ -244,7 +244,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         .execute();
     }
 
-    // 6. The ONE offer (ADR-XXXX, "C", owner 2026-10-10): the lead's best live intro /
+    // 6. The ONE offer (ADR-0354, "C", owner 2026-10-10): the lead's best live intro /
     //    escalation offer — on ANY of its tokens (IT A-05) — now runs to the end of the
     //    trial's last day, the rest close; none live → the intro percent as a campaign row.
     //    No continuation coupon any more (ADR-0346 retired for the trial): the discount's
@@ -272,7 +272,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
       try {
         const lead = await db.selectFrom("tenant").select("display_name").where("id", "=", tenantId).executeTakeFirst();
         // ADR-0344: the approved TRIAL login letter — its end (and, for a trial started
-        // before ADR-XXXX, its continuation coupon; the C wording is the §2b round 2).
+        // before ADR-0354, its continuation coupon; the C wording is the §2b round 2).
         const cp = couponId
           ? await db.selectFrom("offer").select(["percent", "expires_at"]).where("id", "=", couponId).executeTakeFirst()
           : undefined;
@@ -307,7 +307,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 }
 
 /** A tenant-bearing trial is finished when its site went live, its offer is pinned
- *  (ADR-XXXX; a trial started before it holds the continuation coupon instead) and the
+ *  (ADR-0354; a trial started before it holds the continuation coupon instead) and the
  *  owner has a login. Anything short of that is a start that crashed after step 4 — the
  *  next submit resumes it. */
 async function trialFinished(tenantId: string, offerOrCouponId: string | null): Promise<boolean> {

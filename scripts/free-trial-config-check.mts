@@ -178,7 +178,7 @@ try {
   const grantBody = grant.slice(0, grant.indexOf("\n}\n"));
   check("⑦ a fizetéskori kupon a getCouponConfig()-ból ver (% és nap)", /getCouponConfig\(\)/.test(grantBody) && /percent: cfg\.percent/.test(grantBody) && /cfg\.days/.test(grantBody), true);
   const start = src("../src/trial/start.ts");
-  // ADR-XXXX ("C"): the trial mints NO coupon — its one discount is the pinned trial offer,
+  // ADR-0354 ("C"): the trial mints NO coupon — its one discount is the pinned trial offer,
   // and the paid path's welcome coupon skips a trial tenant.
   check("⑦ a próba NEM ver kupont (start.ts: nincs getCouponConfig, nincs kind \"coupon\"; pinTrialOffer)",
     !/getCouponConfig/.test(start) && !/kind: "coupon"/.test(start) && /pinTrialOffer\(/.test(start), true);

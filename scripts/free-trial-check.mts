@@ -7,7 +7,7 @@
 //   ③ no subscription row → the billing tick's scoped door mints NO renewal order, and no
 //      dunning_event exists for the tenant;
 //   ④ EVERY non-retired module is active and flagged trial_grant (translation included);
-//   ⑤ ADR-XXXX ("C"): NO coupon — the lead's intro offer becomes THE trial offer
+//   ⑤ ADR-0354 ("C"): NO coupon — the lead's intro offer becomes THE trial offer
 //      (free_trial.offer_id), valid to the END of the trial's last Budapest day; a lead
 //      with no live offer gets a `campaign` row at the configured intro percent;
 //   ⑥ `trial_start` lands on the mock_event spine (the visit the page is in);
@@ -21,7 +21,7 @@
 //      `<name>.citoviso.com`, the site got `<name>-2`).
 //   ⑪ IT A-02: a start that crashed after the tenant was written is RESUMED by the next
 //      submit (live site, pinned offer, login) — not answered "your trial is already running";
-//   ⑫ IT A-05 + ADR-XXXX: of the offers of EVERY token of the lead only the LARGEST lives
+//   ⑫ IT A-05 + ADR-0354: of the offers of EVERY token of the lead only the LARGEST lives
 //      (to the trial's end), the rest close; no decision-helper offer is minted afterwards;
 //   ⑬ IT A-04 / B2: a pre-trial initial order (intro price) is not payable during the
 //      trial — /pay/go leads to /folytatas, requestPayment refuses it.
@@ -211,7 +211,7 @@ try {
   check("minden nem-kivezetett modul aktív + trial_grant", missing.length === 0, missing.join(",") || `${want.length} modul`);
   check("a fordítás (multilang) is benne", want.includes("multilang"));
 
-  // ⑤ ADR-XXXX ("C"): no coupon; the intro offer is THE trial offer, to the trial's last day.
+  // ⑤ ADR-0354 ("C"): no coupon; the intro offer is THE trial offer, to the trial's last day.
   console.log("⑤ próba-ajánlat (C)");
   const coupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
   check("NINCS kupon (a próba-kupon kivezetve)", coupons.length === 0, `${coupons.length}`);
@@ -317,7 +317,7 @@ try {
   const re3 = await startTrial(e.token, FORM);
   check("a befejezett próba újraküldése már existing:true", re3.ok && re3.existing);
 
-  // ⑫ IT A-05 + ADR-XXXX: a lead reached on TWO tokens — of all its offers only the largest
+  // ⑫ IT A-05 + ADR-0354: a lead reached on TWO tokens — of all its offers only the largest
   // (the other token's −50% escalation) runs to the trial's end; the −25%s close. No
   // decision-helper is minted for it afterwards.
   console.log("⑫ több prospectes lead");
@@ -379,7 +379,7 @@ try {
     .returning("id")
     .executeTakeFirstOrThrow();
   check("a próba UTÁNI (folytatás-) rendelést a kapu nem érinti", (await preTrialOrderOfContinuableTrial(gCont.id)) === null);
-  // ADR-XXXX: a continuation priced with the trial offer, paid after that offer died → re-priced.
+  // ADR-0354: a continuation priced with the trial offer, paid after that offer died → re-priced.
   const gOfferId = (await db.selectFrom("free_trial").select("offer_id").where("lead_id", "=", g.leadId).executeTakeFirst())?.offer_id ?? null;
   const gPriced = await db
     .insertInto("order_intent")
@@ -391,7 +391,7 @@ try {
   const gGate = await preTrialOrderOfContinuableTrial(gPriced.id);
   check("…lejárt ajánlattal → /folytatas (listaáron újraárazva)", gGate?.token === g.token, JSON.stringify(gGate));
 
-  // ⑮ ADR-XXXX: a lead with NO live offer (its intro already closed) gets the configured
+  // ⑮ ADR-0354: a lead with NO live offer (its intro already closed) gets the configured
   // intro percent as a `campaign` row to the trial's end — never the list price in the trial.
   console.log("⑮ ajánlat nélküli lead → alap-ajánlat");
   const k = await fixtureLead("k");

@@ -1,4 +1,4 @@
-// ADR-XXXX — the trial's ONE discount with ONE deadline ("C", owner, 2026-10-10).
+// ADR-0354 — the trial's ONE discount with ONE deadline ("C", owner, 2026-10-10).
 //
 // The discount's job is to turn "maybe later" into "now". So the trialist keeps the very
 // offer they would have had without the trial (the lead's intro / escalation offer), and it
@@ -63,14 +63,14 @@ export async function pinTrialOffer(
     offerId = live[0]!.id;
     await db
       .updateTable("offer")
-      .set({ expires_at: deadline, note: `ADR-XXXX: próba-ajánlat, a próba végéig (${trial.id})` })
+      .set({ expires_at: deadline, note: `ADR-0354: próba-ajánlat, a próba végéig (${trial.id})` })
       .where("id", "=", offerId)
       .execute();
     const rest = live.slice(1).map((o) => o.id);
     if (rest.length) {
       await db
         .updateTable("offer")
-        .set({ expires_at: now, note: `ADR-XXXX: lezárva — a próba a nagyobb ajánlatot viszi (${trial.id})` })
+        .set({ expires_at: now, note: `ADR-0354: lezárva — a próba a nagyobb ajánlatot viszi (${trial.id})` })
         .where("id", "in", rest)
         .execute();
     }
@@ -86,7 +86,7 @@ export async function pinTrialOffer(
         percent: outreachPercent,
         scope: "initial",
         expires_at: deadline,
-        note: `ADR-XXXX: próba-ajánlat (alap), a próba végéig (${trial.id})`,
+        note: `ADR-0354: próba-ajánlat (alap), a próba végéig (${trial.id})`,
       })
       .returning("id")
       .executeTakeFirstOrThrow();

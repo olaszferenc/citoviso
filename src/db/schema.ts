@@ -521,7 +521,7 @@ export interface FreeTrialTable {
   started_at: Generated<Date>;
   trial_until: Timestamp;
   coupon_offer_id: string | null;
-  /** 0103 (ADR-XXXX): the continuation offer pinned at start — valid to the trial's last day. */
+  /** 0103 (ADR-0354): the continuation offer pinned at start — valid to the trial's last day. */
   offer_id: string | null;
   status: Generated<"active" | "converted" | "lapsed" | "purged">;
   converted_at: Timestamp | null;

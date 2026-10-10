@@ -175,7 +175,7 @@ export async function ownedBlocksInitialPurchase(leadId: string): Promise<OwnedS
  * trial is chosen INSTEAD of (ADR-0342 ⑥). Its old pay-link stayed payable during the
  * trial: the trialist paid −40% and the trial's −25% coupon stayed unburnt for a later
  * module (two discounts). Such an order is not the continuation; the continuation is
- * priced at /p/<token>/folytatas with the trial offer (ADR-XXXX). The same holds for a
+ * priced at /p/<token>/folytatas with the trial offer (ADR-0354). The same holds for a
  * continuation order whose offer has since expired (priced in the trial, paid after it). Returns that page's token, or
  * null when the order is not a pre-trial initial order of a continuable trial.
  */
@@ -193,7 +193,7 @@ export async function preTrialOrderOfContinuableTrial(orderIntentId: string): Pr
   if (!started) return null;
   const before = new Date(o.createdAt as unknown as string).getTime() < new Date(started.started_at as unknown as string).getTime();
   if (before) return { token: o.token };
-  // ADR-XXXX ("C"): a continuation priced with the trial offer is payable only while that
+  // ADR-0354 ("C"): a continuation priced with the trial offer is payable only while that
   // offer lives — paid after the trial's end it would buy the expired discount; the
   // continuation page re-prices it at list.
   if (o.offerId && !(await offerIsLive(o.offerId))) return { token: o.token };

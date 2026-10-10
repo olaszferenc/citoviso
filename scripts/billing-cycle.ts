@@ -36,7 +36,7 @@ try {
     : undefined;
   const t = await lapseExpiredTrials(now, trialIds ? { onlyTrialIds: trialIds } : {});
   console.log(`trial-lapse @ ${now.toISOString()}:`, JSON.stringify(t));
-  // ADR-XXXX ⓑ: a trial bought before its end kept the unchosen modules to that end.
+  // ADR-0354 ⓑ: a trial bought before its end kept the unchosen modules to that end.
   const g = await endTrialGrantsAfterConversion(now, trialIds ? { onlyTrialIds: trialIds } : {});
   console.log(`trial-grants-end @ ${now.toISOString()}:`, JSON.stringify(g));
 } catch (e) {

@@ -558,7 +558,7 @@ export async function ensureEscalationOffer(
  * prospect → lead → tenant); idempotent by the partial unique index.
  * ADR-0346: percent and validity from the ONE coupon setting (getCouponConfig) — the
  * numbers for every direct buyer. 0% = no coupon.
- * ADR-XXXX ("C"): a trial tenant gets NO coupon — its one discount was the trial offer,
+ * ADR-0354 ("C"): a trial tenant gets NO coupon — its one discount was the trial offer,
  * deadline the trial's end; a coupon after the continuation would be a second discount.
  */
 export async function grantNewSubscriberCouponForOrder(
@@ -691,7 +691,7 @@ export async function escalationFollowupsDue(
   for (const r of rows) {
     if (!r.prospect_id || !r.expires_at) continue;
     if (await prospectHasPaidOrder(r.prospect_id)) continue;
-    // ADR-XXXX: a trial lead's escalation runs to the trial's end as THE trial offer —
+    // ADR-0354: a trial lead's escalation runs to the trial's end as THE trial offer —
     // its "expires in N hours" follow-up would be a false deadline.
     const trialLead = await db
       .selectFrom("free_trial")

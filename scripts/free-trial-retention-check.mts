@@ -235,9 +235,9 @@ try {
     !!m && m.text.includes(formatDayOn("2026-10-12")) && (m.html ?? "").includes("Törlés napja"), m?.text);
   check("a levélben a Folytatom link (/p/<token>/folytatas) és a megnyugtató zárás",
     !!m && /citoviso\.test\/p\/[^/\s]+\/folytatas/.test(m.text) && m.text.includes("Ha nem folytatja, nincs teendője — díjat nem számítunk fel."), m?.text);
-  // ADR-XXXX ("C"): a new trial holds no coupon — the wired letter carries no coupon sentence
+  // ADR-0354 ("C"): a new trial holds no coupon — the wired letter carries no coupon sentence
   // (the C wording is the §2b round 2); a trial started before it keeps its coupon (below).
-  check("új próba (kupon nélkül, ADR-XXXX) → nincs kupon-mondat és nincs Kedvezmény-sor", !!m && !m.text.includes("a próbához kapott kedvezménnyel") && !(m.html ?? "").includes("Kedvezmény"));
+  check("új próba (kupon nélkül, ADR-0354) → nincs kupon-mondat és nincs Kedvezmény-sor", !!m && !m.text.includes("a próbához kapott kedvezménnyel") && !(m.html ?? "").includes("Kedvezmény"));
   const legacyCoupon = buildPurgeWarningEmail({
     to: "x@example.invalid", daysToPurge: 7, siteName: "Teszt Panzió", contactName: null,
     trialUntilIso: "2026-07-10", purgeIso: "2026-10-08", coupon: { percent: 25, untilIso: "2026-10-08" }, continueUrl: "https://citoviso.test/p/t/folytatas",

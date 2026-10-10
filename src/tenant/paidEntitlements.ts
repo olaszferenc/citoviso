@@ -116,7 +116,7 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
   const awaitingFirstCharge = new Set(
     current.filter((c) => c.active && c.awaiting_first_charge).map((c) => c.module),
   );
-  // ADR-XXXX ⓑ (tulaj-megerősítésre): paid DURING the free trial, the modules the buyer did
+  // ADR-0354 ⓑ (tulaj-megerősítésre): paid DURING the free trial, the modules the buyer did
   // not choose stay on until the trial's end — the trial promised them to that day.
   // endTrialGrantsAfterConversion (src/trial/expiry.ts, daily tick) switches them off after.
   const trialRunning = await db

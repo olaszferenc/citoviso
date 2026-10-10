@@ -1140,7 +1140,7 @@ async function handleOrderRequest(
   // renewals recompute from list in billing.ts.
   const listPrice =
     billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
-  // ADR-XXXX ("C"): the trial's continuation is priced by the TRIAL offer — the lead's
+  // ADR-0354 ("C"): the trial's continuation is priced by the TRIAL offer — the lead's
   // intro/escalation offer, pinned at trial start to the trial's last day. A lapsed
   // trial's offer is expired → list price (the deadline is real). One offer, never
   // stacked (ADR-0088 ⑥); redeemOfferForOrder burns its one use.
@@ -3252,7 +3252,7 @@ async function handle(
   // /p/:token keeps serving the owned notice (a trial tenant IS an owner there); this
   // route serves the same configurator, its checkout posting to the same /p/:token/request
   // (handleOrderRequest already lets a continuable trial through and prices it with the
-  // trial offer, ADR-XXXX). Only for a continuable trial — anyone else goes back to /p/:token,
+  // trial offer, ADR-0354). Only for a continuable trial — anyone else goes back to /p/:token,
   // which knows what to show them. Nothing is measured: this visitor is a customer.
   // ⛔ No framing text yet: the banner/wording is a §2b design (proba-C mock), not wired.
   const pContMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas$/.exec(pPath);
@@ -3272,7 +3272,7 @@ async function handle(
       .executeTakeFirst();
     const trial = pf ? await continuableTrialForLead(pf.leadId) : null;
     if (!pf || !trial) return redirect(res, `/p/${pContMatch[1]}`);
-    // ADR-XXXX: the trial offer while the trial runs; after its end the list price.
+    // ADR-0354: the trial offer while the trial runs; after its end the list price.
     const coupon = await liveTrialOffer(trial.tenantId);
     try {
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));

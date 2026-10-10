@@ -1,4 +1,4 @@
-## ADR-XXXX — Ingyenes próba, „C”: egy kedvezmény, egy határidő — a próba vége
+## ADR-0354 — Ingyenes próba, „C”: egy kedvezmény, egy határidő — a próba vége
 
 **Dátum:** 2026-10-10 · **Kontextus:** tulaj-döntés („Ok legyen c”, 2026-10-10), a próba-koordinátor szál javaslatára. Módosítja: ADR-0342 ⑥, ADR-0344 (folytatás-árazás), ADR-0346 (a próba-kupon a próbában kivezetve), ADR-0351 ② (a próba indulásakor az ajánlatok NEM mind zárulnak le). Megtartja: ADR-0088 ⑥ (kedvezmény sosem halmozódik), ADR-0352 (a kiírt nap VÉGÉIG).
 

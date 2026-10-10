@@ -15,7 +15,7 @@
 //   ④ the purchase gate: a trialist may buy (ownedBlocksInitialPurchase → null), a
 //      tenant WITHOUT a trial stays refused; GET /p/<t>/folytatas serves the trialist the
 //      configurator — with the trial offer while it lives, at LIST price once the trial's
-//      last day has passed (ADR-XXXX "C": the deadline is real) — and sends anyone else back to /p/<t>; the plain
+//      last day has passed (ADR-0354 "C": the deadline is real) — and sends anyone else back to /p/<t>; the plain
 //      /p/<t> of a LAPSED trialist says „szünetel” and its bar's action is that /folytatas
 //      (Elek 3 — it said „már az Öné… folyamatban” with no way to continue);
 //   ②b the WIRED senders (src/trial/notices.ts, what the hourly tick runs): the e-mail is
@@ -38,7 +38,7 @@
 //      fizetés", never the debt row „Rendezze a díjat";
 //   ⑤ continuation of the LAPSED trial: the REAL settlement (applyWebhookResult, mock
 //      gateway) at list price → site live, trial 'converted', subscription anchor = today,
-//      NO coupon at all (ADR-XXXX: the welcome coupon is not minted for a trial tenant) —
+//      NO coupon at all (ADR-0354: the welcome coupon is not minted for a trial tenant) —
 //      and from then on the lead is a customer (gate refuses);
 //   ⑤b B1-PAR, two checkout tabs: the second tab's /pay/go no longer hands back its live
 //      gateway page, and its payment, settled anyway, converts nothing, invoices nothing,
@@ -47,7 +47,7 @@
 //   ⑤c Elek 4: the continuation's /pay/done says the account is unchanged — no „Elküldtük a
 //      belépési adatait”, no password form (--self-test: the login's created_at slid after the
 //      payment → it reads as a first purchase, the leg goes red).
-//   ⑥ ADR-XXXX, paid DURING the trial with the trial offer: the offer burnt once, no coupon;
+//   ⑥ ADR-0354, paid DURING the trial with the trial offer: the offer burnt once, no coupon;
 //      ⓐ the paid period starts the day AFTER the trial's last day (anchor = last day + 1,
 //      period end = that + 1 month); ⓑ the unchosen trial modules stay on to the trial's
 //      end, endTrialGrantsAfterConversion is a no-op before it and switches exactly them off
@@ -287,7 +287,7 @@ try {
   const enc = smsEncoding(s1);
   check("SMS: GSM-7 (ékezet nélkül), ≤2 szelet — a modem is 7 biten küldi", enc.gsm7 && enc.segments >= 1 && enc.segments <= 2, `${enc.length} kar., ${enc.segments} szelet, gsm7=${enc.gsm7}`);
   check("SMS: benne a /p/<t>/folytatas link", s1.includes(`citoviso.test/p/${a.token}/folytatas`), s1);
-  // ADR-XXXX: a new trial holds NO coupon — the coupon sentence must not appear (a promise that
+  // ADR-0354: a new trial holds NO coupon — the coupon sentence must not appear (a promise that
   // does not exist, §B.17); the C wording ("<p>% a próba végéig") is the §2b round 2.
   check("SMS: „holnap lejar”, „Citoviso:” feladó-előtag, kupon-mondat NINCS (kupon nélküli próba)", s1.startsWith("Citoviso: holnap lejar ") && !s1.includes("kedvezmennyel") && s1.includes("Folytatas: "), s1);
   check("SMS a próbázó számára ment", (smsCaps[0]?.to ?? "").replace(/\D/g, "") === FORM.phone.replace(/\D/g, ""), smsCaps[0]?.to);
@@ -310,7 +310,7 @@ try {
   const h1 = m1?.html ?? "";
   check("tárgy: „Holnap lejár az ingyenes próba – …”", !!m1 && m1.subject.startsWith("Holnap lejár az ingyenes próba – "), m1?.subject);
   check("a Folytatom gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Folytatom</a>"));
-  check("a levélben NINCS kupon-mondat (kupon nélküli próba, ADR-XXXX)", !h1.includes("az első díjból"));
+  check("a levélben NINCS kupon-mondat (kupon nélküli próba, ADR-0354)", !h1.includes("az első díjból"));
   check("lábléc: „…próbálja ki.” — és nem „rendelte meg”", h1.includes("Citovisónál próbálja ki.") && !h1.includes("rendelte meg"));
   const logged = await db.selectFrom("tenant_message").select(["subject", "related_kind"]).where("tenant_id", "=", tenantId).where("related_kind", "=", "free_trial_t1").where("channel", "=", "email").execute();
   check("…a levél a tenant postafiókjában is (tenant_message)", logged.length === 1 && logged[0]!.subject === m1?.subject);
@@ -487,7 +487,7 @@ try {
   const bt = await db.insertInto("tenant").values({ lead_id: b.leadId, display_name: `_trialexpiry_${stamp} b` }).returning("id").executeTakeFirstOrThrow();
   tenants.push(bt.id);
   check("próba nélküli tulajdonos lead → továbbra is elutasítva", (await ownedBlocksInitialPurchase(b.leadId)) !== null);
-  // the continuation entry: GET /p/<token>/folytatas → the configurator; ADR-XXXX: the trial
+  // the continuation entry: GET /p/<token>/folytatas → the configurator; ADR-0354: the trial
   // offer while it lives (to the END of the trial's last day), the list price after it.
   const { server: consoleServer } = await import("../src/console/server.js");
   closeConsole = () => { consoleServer.closeAllConnections(); consoleServer.close(); };
@@ -576,7 +576,7 @@ try {
   check("subscription született, fordulónap = a fizetés napja", anchor === budapestIsoDay(new Date()), `${anchor}`);
   check("…és nem fagyott", !(await isSubscriptionFrozen(tenantId)));
   const coupons = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
-  check("ADR-XXXX: a próbázó tenant NEM kap kupont a fizetéskor (a közös beállítás 30% ellenére)", coupons.length === 0, `${coupons.length}`);
+  check("ADR-0354: a próbázó tenant NEM kap kupont a fizetéskor (a közös beállítás 30% ellenére)", coupons.length === 0, `${coupons.length}`);
   // …and the paid path's welcome grant, run once more for this tenant, still mints nothing.
   await grantNewSubscriberCouponForOrder(oi.id);
   const coupons2 = await db.selectFrom("offer").select("id").where("tenant_id", "=", tenantId).where("kind", "=", "coupon").execute();
@@ -615,7 +615,7 @@ try {
   const paidHtml = renderAdmin(tenantId, "attekintes", paidState);
   check("admin: fizetett (converted) próba → se sáv, se szünetel-blokk, se „Modulok” kártya", paidState === null && !paidHtml.includes("data-trial-strip") && !paidHtml.includes("data-trial-lapsed") && !paidHtml.includes("data-trial-modules"));
 
-  // ⑥ ADR-XXXX: paid DURING the trial, with the trial offer.
+  // ⑥ ADR-0354: paid DURING the trial, with the trial offer.
   console.log("⑥ fizetés a próba ALATT (ⓐ fordulónap, ⓑ modulok)");
   const c = await fixtureLead("c");
   await db.insertInto("offer").values({ kind: "outreach", prospect_id: c.prospectId, percent: 25, scope: "initial" } as never).execute();
