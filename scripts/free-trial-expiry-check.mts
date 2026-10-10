@@ -557,8 +557,10 @@ try {
   const mockFile = path.resolve(process.cwd(), `sites/_trialexpiry_${stamp}a.html`);
   await writeFile(mockFile, "<!doctype html><html><head><title>t</title></head><body><main>mock</main></body></html>");
   closeMockFile = () => rm(mockFile, { force: true });
-  // (1) the trial's last day is still today (it lapsed an hour ago) — the offer lives to its end.
-  await db.updateTable("offer").set({ expires_at: trialOfferDeadline(new Date(Date.now() - 3_600_000)) } as never).where("id", "=", aOffer.id).execute();
+  // (1) the trial's last day is still today — the offer lives to its end. TODAY's end, not
+  // "an hour ago"'s: between 00:00 and 01:00 Budapest that was yesterday, and the leg went red
+  // on a clean main (measured 2026-10-11 00:10).
+  await db.updateTable("offer").set({ expires_at: trialOfferDeadline(new Date()) } as never).where("id", "=", aOffer.id).execute();
   const contLive = await get(`/p/${a.token}/folytatas`);
   const bodyLive = contLive.status === 200 ? await contLive.text() : "";
   check(`…a próba utolsó napján még a próba-ajánlat (${aOffer.kind} ${aOffer.percent}%) a fő ár`,

@@ -32,6 +32,10 @@ export function trialOfferDeadline(trialUntil: Date): Date {
 export async function pinTrialOffer(
   trial: { readonly id: string; readonly leadId: string; readonly prospectId: string | null; readonly trialUntil: Date; readonly offerId: string | null },
   now: Date,
+  /** Elek3 B2: the percent the trial FORM named („−X% az első díjból…”). What the form
+   *  printed is what the trial records — a beacon may have minted a bigger offer behind
+   *  the lead's back. Omitted / 0 = the form named none → the best live offer, as before. */
+  seenPercent?: number | null,
 ): Promise<string | null> {
   if (trial.offerId) return trial.offerId;
   const deadline = trialOfferDeadline(trial.trialUntil);
@@ -58,7 +62,55 @@ export async function pinTrialOffer(
     : [];
 
   let offerId: string | null = null;
-  if (live.length) {
+  const seen = seenPercent && seenPercent > 0 ? Math.round(seenPercent) : 0;
+  const seenLive = seen ? live.find((o) => o.percent === seen) : undefined;
+  const { outreachPercent } = await getEscalationConfig();
+  if (seen && !seenLive && seen !== outreachPercent) {
+    // Not an offer this lead holds, nor the intro percent: never trust a client figure as a
+    // price — fall back to the best live offer (the old rule) and say so.
+    console.warn(`[trial] a próba-űrlap −${seen}%-ot jelzett, de ilyen ajánlat nincs (${trial.id}) — a legjobb élő ajánlat marad`);
+  }
+  if (seenLive) {
+    // (b') the offer the form named runs to the trial's end; every other one closes.
+    offerId = seenLive.id;
+    await db
+      .updateTable("offer")
+      .set({ expires_at: deadline, note: `ADR-0354: próba-ajánlat, a próba végéig (${trial.id})` })
+      .where("id", "=", offerId)
+      .execute();
+    const rest = live.filter((o) => o.id !== offerId).map((o) => o.id);
+    if (rest.length) {
+      await db
+        .updateTable("offer")
+        .set({ expires_at: now, note: `ADR-XXXX: lezárva — a próba az űrlapon kiírt ajánlatot viszi (${trial.id})` })
+        .where("id", "in", rest)
+        .execute();
+    }
+  } else if (seen && seen === outreachPercent && trial.prospectId) {
+    // (c') the form named the intro percent, but no live row carries it (e.g. the intro
+    // closed, or only a larger escalation is live): the intro percent as a campaign row,
+    // the rest close — the lead was promised this figure, not the bigger one.
+    if (live.length) {
+      await db
+        .updateTable("offer")
+        .set({ expires_at: now, note: `ADR-XXXX: lezárva — a próba az űrlapon kiírt ajánlatot viszi (${trial.id})` })
+        .where("id", "in", live.map((o) => o.id))
+        .execute();
+    }
+    const c = await db
+      .insertInto("offer")
+      .values({
+        kind: "campaign",
+        prospect_id: trial.prospectId,
+        percent: outreachPercent,
+        scope: "initial",
+        expires_at: deadline,
+        note: `ADR-0354: próba-ajánlat (az űrlapon kiírt), a próba végéig (${trial.id})`,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    offerId = c.id;
+  } else if (live.length) {
     // (b) the best one runs to the trial's end — an escalation's 72 hours included (ONE deadline).
     offerId = live[0]!.id;
     await db
@@ -77,7 +129,6 @@ export async function pinTrialOffer(
   } else if (trial.prospectId) {
     // (c) no live offer (direct visitor of a link, or the intro already closed): the
     // operator-set intro percent — list price during the trial would scare them off.
-    const { outreachPercent } = await getEscalationConfig();
     const c = await db
       .insertInto("offer")
       .values({

@@ -12,7 +12,8 @@
 //      „Ezt választom”, the old address's fate is spelled out, and the ORDER carries it;
 //   ⑤ a lapsed trial: the list price, the „szünetel” line first, no discount line;
 //   ⑥ the plan page from the trial campaign mail (forras=proba&proba=nyit): no escalation
-//      card, the trial form open with the one line; the control without the param still
+//      card, the trial form open with the one line, the visit beacon carries forras=proba
+//      (Elek3 B2 — the server then mints no escalation offer; free-trial-e2e ⑩); the control without the param still
 //      shows the card (the suppression is scoped, not a global switch-off);
 //   ⑦ 0 JS errors, at 390 px and 1280 px.
 //
@@ -220,8 +221,15 @@ try {
 
     // ⑥ plan page from the trial mail, and the control
     p = await open(`/p/${pl.token}?forras=proba&proba=nyit`);
+    // Elek3 B2: the visit beacon tells the server it came from the trial mail (no escalation).
+    const viewBodies: string[] = [];
+    p.on("request", (r) => {
+      if (/\/view$/.test(r.url()) && r.method() === "POST") viewBodies.push(r.postData() ?? "");
+    });
     await p.waitForSelector(".cit-cfg-talt span", { state: "attached", timeout: 10_000 }).catch(() => {});
+    await p.mouse.wheel(0, 200);
     await p.waitForTimeout(2500);
+    check("⑥ a látogatás-jelzés viszi a forras=proba jelet", viewBodies.some((b) => b.includes('"forras":"proba"')), viewBodies.join(" | ") || "nem ment jelzés");
     check("⑥ a próba-levélből: nincs döntés-segítő kártya", (await p.locator(".cit-cfg-esccard.cit-cfg-on").count()) === 0);
     const alt = (await p.textContent(".cit-cfg-talt span").catch(() => "")) ?? "";
     check("⑥ a próba-űrlap nyitva, egy sorban a kedvezmény", alt.startsWith("−50% az első díjból, ha a próba végéig megrendeli"), alt);

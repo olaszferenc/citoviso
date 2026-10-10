@@ -3115,13 +3115,18 @@ async function handle(
   if (method === "POST" && pViewMatch) {
     const p = await getProspectByToken(pViewMatch[1]);
     if (!p || p.unsubscribed || (await ownedSiteForProspectToken(pViewMatch[1]))) return send(res, 204, "");
-    const body = (await readJson(req)) as { referrer?: unknown };
+    const body = (await readJson(req)) as { referrer?: unknown; forras?: unknown };
     const viewId = await recordView(
       p.id,
       (req.headers["user-agent"] as string | undefined) ?? null,
       typeof body.referrer === "string" && body.referrer ? body.referrer.slice(0, 500) : null,
     );
-    const escalation = await ensureEscalationOffer(p.id);
+    // Elek3 B2 (ADR-XXXX): a visit from the trial campaign mail (forras=proba) came to TRY —
+    // it gets no decision card (proba-c/2 A), so it must not get the card's offer either: the
+    // form names the lead's current offer, and a silently minted −50% made the trial record
+    // a discount the form never printed.
+    const fromTrialMail = body.forras === "proba";
+    const escalation = fromTrialMail ? null : await ensureEscalationOffer(p.id);
     if (escalation) {
       console.log(
         `[offer] eszkalációs ajánlat (−${escalation.percent}%, ` +
@@ -3230,6 +3235,7 @@ async function handle(
       aszfAccepted: b.aszfAccepted === true,
       photoRightsAccepted: b.photoRightsAccepted === true,
       viewId: typeof b.viewId === "string" ? b.viewId : null,
+      seenOfferPercent: typeof b.offerPercent === "number" && Number.isFinite(b.offerPercent) ? b.offerPercent : null,
     });
     const status = r.ok ? 200 : r.error === "not_found" ? 404 : r.error === "provision_failed" ? 500 : 409;
     return send(

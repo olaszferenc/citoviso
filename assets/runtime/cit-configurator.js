@@ -74,7 +74,8 @@
       fetch(TRACK.viewUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ referrer: document.referrer || "" }),
+        // Elek3 B2: the trial campaign mail's visit (forras=proba) mints no escalation offer.
+        body: JSON.stringify({ referrer: document.referrer || "", forras: pageForras() }),
         keepalive: true,
       })
         .then(function (r) {
@@ -101,6 +102,13 @@
         .catch(function () {});
     } catch (e) {
       /* measurement must never break the page */
+    }
+  }
+  function pageForras() {
+    try {
+      return new URLSearchParams(window.location.search).get("forras") || "";
+    } catch (_e) {
+      return "";
     }
   }
   function sameOffer(a, b) {
@@ -3952,8 +3960,12 @@
    * discount — the very same offer holds to the trial's end (pinTrialOffer), so the line says
    * that in ONE sentence instead of "a próbával nem adódik össze" (three discounts at once).
    */
+  // Elek3 B2: the percent the form last PRINTED — sent with the start, so the trial records
+  // exactly the discount the lead read (0 = the form named none).
+  var trialShownPct = 0;
   function trialAltText() {
     var pct = OFFER && Number(OFFER.percent) > 0 ? Math.round(Number(OFFER.percent)) : 0;
+    trialShownPct = pct;
     if (!pct) return tr("Inkább most rendelné meg?");
     return tr("−{p}% az első díjból, ha a próba végéig megrendeli (a próba indításától {n} nap). Egy kedvezmény, utána a listaár érvényes.")
       .replace("{p}", String(pct))
@@ -4232,6 +4244,7 @@
         aszfAccepted: true,
         photoRightsAccepted: true,
         viewId: VIEW_ID,
+        offerPercent: trialShownPct,
       });
       fetch(TRIAL.url, { method: "POST", headers: { "content-type": "application/json" }, body: body })
         .then(function (r) {

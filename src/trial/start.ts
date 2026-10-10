@@ -47,6 +47,8 @@ export interface TrialInput {
   readonly photoRightsAccepted: boolean;
   /** Optional: the mock_view the page is in, so `trial_start` lands on that visit. */
   readonly viewId?: string | null;
+  /** Elek3 B2: the discount percent the trial form printed (0 = none) — the trial pins that. */
+  readonly seenOfferPercent?: number | null;
 }
 
 export type TrialError =
@@ -258,6 +260,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         offerId: trial.offer_id,
       },
       now,
+      input.seenOfferPercent ?? null,
     );
     const couponId = trial.coupon_offer_id;
 

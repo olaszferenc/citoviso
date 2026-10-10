@@ -424,6 +424,50 @@ try {
   check("runBillingCycle(+400 nap, B) → 0 megújulás; B-nek nincs order/subscription (→ dunning sem), a DB-ben csak A 1 számlája",
     billB.renewalOrders === 0 && oiB.length === 0 && subB.length === 0 && invAll.length === 1, `${JSON.stringify(billB)} · ${JSON.stringify(billAll)}`);
   check("…B továbbra is 'lapsed'", trB.status === "lapsed", trB.status);
+
+  // ⑩ Elek3 B2: what the trial form prints is what the trial records ─────────────
+  console.log("⑩ a próba-levélből jövő látogatás nem kap eszkalációt; a próba az űrlapon kiírt ajánlatot rögzíti");
+  const { overrideEscalationConfigInProcess, getEscalationConfig } = await import("../src/payment/offers.js");
+  const escCfg = { ...(await getEscalationConfig()), enabled: true, threshold: 2, percent: 50, outreachPercent: 25, distinctDays: false };
+  overrideEscalationConfigInProcess(escCfg);
+  const engaged = async (tag: string) => {
+    const f = await fixtureLead(tag);
+    await db.insertInto("offer").values({ kind: "outreach", prospect_id: f.prospectId, percent: 25, scope: "initial" }).execute();
+    // An engaged lead: the threshold's worth of earlier visits already on record.
+    for (let i = 0; i < escCfg.threshold; i++) await db.insertInto("mock_view").values({ prospect_id: f.prospectId } as never).execute();
+    return f;
+  };
+  const escOf = async (prospectId: string) =>
+    (await db.selectFrom("offer").select("id").where("prospect_id", "=", prospectId).where("kind", "=", "escalation").execute()).length;
+  const lc = await engaged("c");
+  const vC = await cPost(`/p/${lc.token}/view`, { referrer: "", forras: "proba" });
+  const vCJ = (await vC.json().catch(() => ({}))) as { offer?: { percent?: number } | null };
+  check("B2: forras=proba látogatás → nincs eszkalációs ajánlat", vC.status === 200 && (await escOf(lc.prospectId)) === 0, `${vC.status} esc=${await escOf(lc.prospectId)}`);
+  check("B2: …a lap a −25%-ot kapja vissza", vCJ.offer?.percent === 25, JSON.stringify(vCJ.offer ?? null));
+  const tC = await cPost(`/p/${lc.token}/trial`, { ...FORM(`e2e-c-${stamp}@example.invalid`), offerPercent: 25 });
+  const tCJ = (await tC.json().catch(() => ({}))) as { ok?: boolean; tenantId?: string };
+  if (tCJ.tenantId) tenants.push(tCJ.tenantId);
+  const pinC = await db.selectFrom("free_trial").innerJoin("offer", "offer.id", "free_trial.offer_id").select(["offer.percent as pct"]).where("free_trial.lead_id", "=", lc.leadId).executeTakeFirst();
+  check("B2: a próba a kiírt −25%-ot rögzíti", tC.status === 200 && pinC?.pct === 25, `${tC.status} ${pinC?.pct}`);
+  // Control: the SAME engaged lead without the param still gets the decision-helper (the
+  // suppression is scoped) — and that is the case where a stale form could still say 25.
+  const ld = await engaged("d");
+  await cPost(`/p/${ld.token}/view`, { referrer: "" });
+  check("B2 kontroll: paraméter nélkül az eszkaláció kibocsátódik", (await escOf(ld.prospectId)) === 1, `esc=${await escOf(ld.prospectId)}`);
+  const tD = await cPost(`/p/${ld.token}/trial`, { ...FORM(`e2e-d-${stamp}@example.invalid`), offerPercent: 25 });
+  const tDJ = (await tD.json().catch(() => ({}))) as { tenantId?: string };
+  if (tDJ.tenantId) tenants.push(tDJ.tenantId);
+  const pinD = await db.selectFrom("free_trial").innerJoin("offer", "offer.id", "free_trial.offer_id").select(["offer.percent as pct"]).where("free_trial.lead_id", "=", ld.leadId).executeTakeFirst();
+  const liveD = await db.selectFrom("offer").select("percent").where("prospect_id", "=", ld.prospectId).where("expires_at", ">", new Date()).execute();
+  check("B2: élő −50% mellett a −25%-ot kiíró űrlap → a próba −25%, a −50% lezárva", pinD?.pct === 25 && liveD.every((o) => o.percent === 25), `pin ${pinD?.pct} · élő ${liveD.map((o) => o.percent).join(",")}`);
+  // A client figure never prices: a percent the lead holds no offer for falls back.
+  const le = await engaged("e");
+  const tE = await cPost(`/p/${le.token}/trial`, { ...FORM(`e2e-e-${stamp}@example.invalid`), offerPercent: 90 });
+  const tEJ = (await tE.json().catch(() => ({}))) as { tenantId?: string };
+  if (tEJ.tenantId) tenants.push(tEJ.tenantId);
+  const pinE = await db.selectFrom("free_trial").innerJoin("offer", "offer.id", "free_trial.offer_id").select(["offer.percent as pct"]).where("free_trial.lead_id", "=", le.leadId).executeTakeFirst();
+  check("B2: kitalált −90% → nem árazódik, a lead saját ajánlata (−25%)", pinE?.pct === 25, String(pinE?.pct));
+  overrideEscalationConfigInProcess(null);
 } catch (e) {
   failures++;
   console.log(`  FAIL váratlan hiba — ${(e as Error).stack ?? e}`);
