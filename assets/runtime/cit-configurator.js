@@ -3992,6 +3992,7 @@
     trialSheetOpen = true;
     launch.hidden = true;
     syncTrialPill();
+    syncFbCard();
     tScrim.hidden = false;
     tSheet.hidden = false;
     tSheet.scrollTop = 0;
@@ -4006,12 +4007,29 @@
   /** `silent` = no trial_close (after a success, or when the form hands over to the order panel). */
   function closeTrial(silent) {
     if (!tSheet || tSheet.hidden) return;
+    /* cit-cfg-trialfx-live-start */
+    // Elek2 #11/#12: after a started trial THIS address already serves the live state (the
+    // preview subdomain → the live trial site; /p/<t> → the "már az Öné" framing). Leaving
+    // the modal for the old page kept "Ez még nem élő oldal" and the „14 nap ingyen” pill
+    // on screen until a manual reload — so closing the success modal (Rendben, ×, Esc, the
+    // scrim) reloads the page instead of revealing the plan underneath. The modal stays up
+    // until the new page arrives.
+    if (tDone) {
+      try {
+        location.reload();
+        return;
+      } catch (e) {
+        /* a page that cannot reload falls back to the plain close below */
+      }
+    }
+    /* cit-cfg-trialfx-live-end */
     tSheet.hidden = true;
     tScrim.hidden = true;
     trialSheetOpen = false;
     if (!silent && !tDone) track("trial_close", { seconds: Math.round((Date.now() - tOpenedAt) / 1000) });
     launch.hidden = panel.classList.contains("cit-cfg-open");
     syncTrialPill();
+    syncFbCard();
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
     if (tLastFocus && tLastFocus.focus && tLastFocus.isConnected) tLastFocus.focus({ preventScroll: true });
   }
@@ -4485,6 +4503,17 @@
    * server keeps one answer per view per source.
    */
   var fbMounted = false;
+  var fbCard = null;
+  /**
+   * Elek2 Ú3: the survey card steps aside while the trial form or its success modal is
+   * open — and stays aside after a started trial. Two dialogs at once, one of them asking
+   * why the person did NOT do what they are doing right now, was the photographed state.
+   */
+  function syncFbCard() {
+    /* cit-cfg-trialfx-held-start */
+    if (fbCard) fbCard.classList.toggle("cit-cfg-fb--held", trialSheetOpen || tDone);
+    /* cit-cfg-trialfx-held-end */
+  }
   function mountFeedbackCard(source) {
     if (fbMounted || !TRACK || !TRACK.feedbackUrl || !VIEW_ID) return;
     fbMounted = true;
@@ -4559,6 +4588,8 @@
       finish(tr("Rendben, nem kérdezzük többet."));
     });
     document.body.appendChild(card);
+    fbCard = card;
+    syncFbCard();
     setTimeout(function () {
       card.classList.add("cit-cfg-on");
     }, 450);
@@ -4872,6 +4903,19 @@
       }).observe(document.body, { childList: true });
     }
     setTimeout(placeLaunch, 900);
+    /* cit-cfg-trialfx-recheck-start
+     * Elek2 #20: a layout that changes WITHOUT a scroll or a resize left the pair where the
+     * previous layout put it. Measured 2026-10-10 on the real Üdülő tábor page: a capture
+     * turned the fixed layers static for a moment, the pair re-placed in that state, and
+     * when the layout came back it sat in the centre ON „GALÉRIA” for good — no event says
+     * "styles were restored", and a late web font or a template script is just as silent.
+     * So the spot is re-checked at a slow beat while the pill is on stage and the tab is
+     * visible: one pass over the buttons in its column, no motion when nothing changed. */
+    setInterval(function () {
+      if (document.hidden || launch.hidden || !launch.classList.contains("cit-cfg-in")) return;
+      placeLaunch();
+    }, 1500);
+    /* cit-cfg-trialfx-recheck-end */
   };
   /* cit-cfg-avoid-end */
 

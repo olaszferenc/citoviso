@@ -3167,7 +3167,11 @@ async function handle(
     }
     if (isJson) return send(res, 204, "");
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
-    return send(res, 200, layout("Köszönjük", feedbackDoneHtml(lang, skip), { chrome: false }));
+    return send(
+      res,
+      200,
+      layout("Köszönjük", feedbackDoneHtml(lang, skip, { token: pFeedbackMatch[1], source: isFeedbackSource(src) ? src : null }), { chrome: false }),
+    );
   }
   // GET /p/:token/why — the reminder mail's "Nem aktuális?" link. SHOWS the question and
   // records nothing (ADR-0291: a mail scanner's GET must not answer for the person).

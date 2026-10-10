@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-terv-lap-a-proba-korul-kerdezo-kartya-rendben-ujratolt.md) — A terv-lap a próba körül: a kérdező-kártya félreáll, a „Rendben” újratölt, a pirula-pár újramér, a köszönőlap visszavezet
 - [ADR-0356](decisions/0356-nevvaltas-a-proba-vegen-egyszer-ingyen-a-regi.md) — Névváltás a próba végén: egyszer, ingyen, a régi cím átirányít
 - [ADR-0355](decisions/0355-a-tenant-admin-modulszamai-egy-definiciobol-a.md) — A tenant-admin modulszámai egy definícióból; a nem rendelhető modult a Bővítés megnevezi
 - [ADR-0354](decisions/0354-ingyenes-proba-c-egy-kedvezmeny-egy-hatarido-a.md) — Ingyenes próba, „C”: egy kedvezmény, egy határidő — a próba vége

@@ -2604,6 +2604,19 @@ if [ -f scripts/lead-page-surface-check.mts ] && \
   echo "[pre-commit] lead-page-surface-check (üres doboz · pirula-ütközés · üres csomag)…"
   npx tsx scripts/lead-page-surface-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Elek2 Ú3 #11 #12 #20 #18 Ú4 (2026-10-10): a terv-lap a próba körül — a „Mi tartotta vissza?”
+# kártya a próba-űrlap/sikerablak alatt eltűnik és a süti-sáv FÖLÖTT ül; a „Rendben” újratölt (élő
+# állapot); a pirula-pár átmeneti elrendezés után sem ül hős-gombon; a köszönőlap visszavezet a
+# tervhez; a próba-levél gombja és a lap felirata szó szerint egyezik. Böngészős (~3–4 perc), diff-scope-olt.
+if [ -f scripts/mock-trial-overlay-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^public/assets/runtime/cit-consent\.(js|css)$|^src/console/(prospectFeedback|prospectNotice)\.ts$|^src/email/trialCampaignEmail\.ts$|^src/generator/(configurator|runtime)\.ts$|^scripts/mock-trial-overlay-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/mock-trial-overlay-check\.mts$'; then
+    echo "[pre-commit] mock-trial-overlay-check --self-test (az őr pirosra tud-e menni)…"
+    npx tsx scripts/mock-trial-overlay-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] mock-trial-overlay-check (kérdező-kártya · Rendben→élő · pirula-pár · köszönőlap)…"
+  npx tsx scripts/mock-trial-overlay-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0044 fixture-kapu: a modul-konfig réteg VÉGPONTTÓL VÉGPONTIG működik-e — alapérték-rétegek,
 # iparág-réteg, mentés/visszaolvasás, ismeretlen-kulcs elutasítás, visszaállítás, a közös
 # foglalás/érdeklődés hely, a foglaltság-naptár duplafoglalás-védelme és a kérés→döntés út.

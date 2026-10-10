@@ -116,12 +116,24 @@ export async function feedbackLang(lang: string | null): Promise<string> {
   return l;
 }
 
-/** The five options, in the approved order (riport README 19). */
-function optionLabels(lang: string): readonly [FeedbackReason, string][] {
+/**
+ * The five options, in the approved order (riport README 19).
+ *
+ * Elek2 Ú4: on the trial letter's answer page the "distrust" option wears the LETTER's
+ * wording ("Nem értem, vagy nem bízom benne") — the person tapped that button a moment
+ * ago, and the pre-selected answer must read as the one they chose. The other pages keep
+ * the riport contract's wording.
+ */
+function optionLabels(lang: string, source: FeedbackSource): readonly [FeedbackReason, string][] {
   return [
     ["expensive", T(lang, "Drágának találom")],
     ["not_now", T(lang, "Most nem időszerű")],
-    ["distrust", T(lang, "Nem bízom benne, vagy nem értem")],
+    [
+      "distrust",
+      source === "trial_mail"
+        ? T(lang, "Nem értem, vagy nem bízom benne")
+        : T(lang, "Nem bízom benne, vagy nem értem"),
+    ],
     ["have_site", T(lang, "Van már honlapom, nem kell")],
     ["other", T(lang, "Más…")],
   ];
@@ -179,7 +191,7 @@ export function feedbackFormHtml(
   preselect: FeedbackReason | null = null,
 ): string {
   const action = `/p/${encodeURIComponent(token)}/feedback`;
-  const opts = optionLabels(lang)
+  const opts = optionLabels(lang, source)
     .map(
       ([v, label], i) =>
         `<label class="cit-fb-opt"><input type="radio" name="reason" value="${v}"${i === 0 ? " required" : ""}${v === preselect ? " checked" : ""}>${esc(label)}</label>`,
@@ -206,15 +218,31 @@ export function feedbackFormHtml(
   );
 }
 
-/** The answer page after the form's POST (thanks, or the skip acknowledgement). */
-export function feedbackDoneHtml(lang: string, skipped: boolean): string {
+/**
+ * The answer page after the form's POST (thanks, or the skip acknowledgement).
+ *
+ * Elek2 #18: it used to be one sentence and nothing else — a dead end for someone who came
+ * from the plan's letter. From the reminder link and the trial letter it now leads back to
+ * the plan (/p/<token>, the „14 nap ingyen” pill is one tap away there). ⚖️ NOT from the
+ * unsubscribe page: an opted-out person is not pulled back (§C.1, the jog-őr FLAG of
+ * 2026-10-04 on the same page).
+ */
+export function feedbackDoneHtml(
+  lang: string,
+  skipped: boolean,
+  ctx: { readonly token: string; readonly source: FeedbackSource | null } | null = null,
+): string {
   const msg = skipped
     ? T(lang, "Rendben, nem kérdezzük többet.")
     : T(lang, "Köszönjük — a válasz csak ehhez a megkereséshez kapcsolódik, nevet nem kérünk.");
+  const back =
+    ctx && (ctx.source === "trial_mail" || ctx.source === "reminder_link")
+      ? `<p style="margin:14px 0 0"><a class="citui-btn citui-btn--primary" data-cit-fb-back href="/p/${encodeURIComponent(ctx.token)}">${esc(T(lang, "Vissza a honlap-tervhez"))}</a></p>`
+      : "";
   return (
     FORM_CSS +
     `<div class="panel" data-cit-feedback-done style="max-width:480px;margin:48px auto;text-align:center">` +
-    `<p class="cit-fb-done">${esc(msg)}</p></div>`
+    `<p class="cit-fb-done">${esc(msg)}</p>${back}</div>`
   );
 }
 

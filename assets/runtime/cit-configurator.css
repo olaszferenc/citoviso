@@ -2971,6 +2971,33 @@
     transform: translate(-50%, 0);
   }
 }
+/* cit-cfg-trialfx-consent-start
+ * Elek2 Ú3: the card sits ON the consent bar, never under it. The bar publishes its
+ * measured height as --citui-consent-h while it is up (cit-consent.js publishHeight,
+ * ADR-0145 ④) and removes it when answered — the card then drops back to its corner.
+ * Measured 2026-10-10 at 1280×800: „Elküldöm” / „Inkább nem” lay under the bar and the
+ * card could not be closed before the cookie decision. A tall card on a short screen
+ * scrolls inside itself instead of leaving the top of the screen. */
+.cit-cfg-fb {
+  bottom: calc(18px + var(--citui-consent-h, 0px));
+  max-height: calc(100vh - 36px - var(--citui-consent-h, 0px));
+  overflow-y: auto;
+}
+@media (max-width: 560px) {
+  .cit-cfg-fb {
+    bottom: calc(12px + var(--citui-consent-h, 0px));
+    max-height: calc(100vh - 24px - var(--citui-consent-h, 0px));
+  }
+}
+/* cit-cfg-trialfx-consent-end */
+/* cit-cfg-trialfx-held-start — Elek2 Ú3: out of the way while the trial form / its
+ * success modal is open (cit-configurator.js syncFbCard). */
+.cit-cfg-fb.cit-cfg-fb--held {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* cit-cfg-trialfx-held-end */
 
 /* ── ADR-0335 editability strip (assets/design-refs/prospect-page/edit-strip/) ──
  * Slides in ONCE from the top after the visitor scrolls to the rooms (or one full
