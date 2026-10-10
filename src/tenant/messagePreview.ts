@@ -40,7 +40,22 @@ function skipPatterns(lang: string): RegExp[] {
     T(lang, "Kedves Partnerünk!"),
     T(lang, "Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük."),
     T(lang, "Köszönjük a megrendelést. A fizetés megérkezett, a számlát mellékeljük."),
+    // Elek2 #23: the same notice when no PDF was attached.
+    T(lang, "Köszönjük az előfizetést. A fizetés megérkezett."),
+    T(lang, "Köszönjük a megrendelést. A fizetés megérkezett."),
   ].map(templateMatcher);
+}
+
+/**
+ * The headline of one message row in the Áttekintés widget — the same title the
+ * Üzenetek tab renders (adminViews.ts messagesSection, `title`); the equality is
+ * measured on the real tab render by scripts/admin-mail-truth-check.mts (Elek2 #21). An SMS has no subject, so its title is the body's
+ * first line (cut at 90 chars). ⚠️ The widget used to call `messagePreview(m, "")`
+ * instead: with an empty title EVERY line „echoes" it, so the SMS row showed only a
+ * dot and a date.
+ */
+export function messageTitle(m: { readonly subject: string | null; readonly bodyText: string }): string {
+  return m.subject ?? m.bodyText.split("\n")[0]!.slice(0, 90);
 }
 
 /** A törzs nem-üres sorai, levágva. */

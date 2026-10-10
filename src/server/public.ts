@@ -228,7 +228,7 @@ import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { distanceKm } from "../events/gates.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
-import { messagePreview } from "../tenant/messagePreview.js";
+import { messageTitle } from "../tenant/messagePreview.js";
 import { clientIp } from "./clientIp.js";
 import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
 import {
@@ -1286,7 +1286,8 @@ async function serveAdmin(
       visitsByDay: series.byDay,
       messages: inbox.rows.slice(0, 3).map((m) => ({
         id: m.id,
-        subject: m.subject ?? messagePreview(m, "", content?.lang ?? "hu"),
+        // Elek2 #21: the same title the Üzenetek tab shows (an SMS = its first line).
+        subject: messageTitle(m),
         sentAt: m.sentAt,
         unread: isUnread(m, m.thread),
       })),

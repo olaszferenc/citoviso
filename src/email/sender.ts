@@ -178,6 +178,23 @@ class PilotOwnViewCopy implements EmailSender {
   }
 }
 
+/**
+ * The bare address out of a mailbox string: "Name <a@b>" → "a@b", "a@b" → "a@b".
+ * OUTREACH_FROM may be a FULL mailbox; pairing that whole string with a display name
+ * nests two mailboxes (Zoho: "553 Sender is not allowed to relay", FK-007).
+ */
+export function bareAddress(addr: string): string {
+  return /<([^>]*)>/.exec(addr)?.[1]?.trim() ?? addr.trim();
+}
+
+/**
+ * The From header line the mock outbox writes — the SAME mailbox the SMTP adapter
+ * sends (Elek2 #24: the mock showed `"Citoviso" <Citoviso <x@y>>`).
+ */
+export function formatFrom(fromName: string | null | undefined, addr: string): string {
+  return fromName ? `"${fromName}" <${bareAddress(addr)}>` : addr;
+}
+
 /** Local adapter: writes an .eml-style file to outbox/ and logs it. */
 class MockEmailSender implements EmailSender {
   async send(msg: EmailMessage): Promise<SendResult> {
@@ -185,7 +202,7 @@ class MockEmailSender implements EmailSender {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const id = `${stamp}-${safeSlug(msg.to)}`;
     const fromAddr = msg.fromAddress || config.outreachFrom || "hello@citoviso.com";
-    const from = msg.fromName ? `"${msg.fromName}" <${fromAddr}>` : fromAddr;
+    const from = formatFrom(msg.fromName, fromAddr);
     const extra = Object.entries(msg.headers ?? {})
       .map(([k, v]) => `${k}: ${v}\n`)
       .join("");
@@ -247,14 +264,10 @@ class SmtpEmailSender implements EmailSender {
 
   async send(msg: EmailMessage): Promise<SendResult> {
     const bcc = pilotBcc(msg);
-    // OUTREACH_FROM may be a FULL mailbox ("Olasz Ferenc <x@y>"); pairing that
-    // whole string with a display name nests two mailboxes and Zoho answers
-    // "553 Sender is not allowed to relay" (measured, FK-007 first run). With a
-    // fromName only the BARE address may ride along.
-    const bare = (addr: string): string => /<([^>]*)>/.exec(addr)?.[1]?.trim() ?? addr.trim();
+    // With a fromName only the BARE address may ride along (see bareAddress).
     const info = await this.transporter.sendMail({
       from: msg.fromName
-        ? { name: msg.fromName, address: bare(msg.fromAddress || this.from) }
+        ? { name: msg.fromName, address: bareAddress(msg.fromAddress || this.from) }
         : msg.fromAddress || this.from,
       to: msg.to,
       ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),

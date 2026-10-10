@@ -1339,6 +1339,15 @@ if [ -f scripts/frozen-guest-view-check.mts ] && \
   echo "[pre-commit] frozen-guest-view-check (a tulaj látja, mit lát a világ)…"
   npx tsx scripts/frozen-guest-view-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Elek2 #21 #23 #24-From: három apró hazugság a tulaj felé — az SMS-sor cím nélkül a
+# widgetben (messageTitle = a fül címe), melléklet-ígéret PDF nélkül a számla-levélben,
+# és a mock From-sora két egymásba ágyazott mailboxszal. Hermetikus, piros önteszttel.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/admin-mail-truth-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/messagePreview\.ts$|^src/email/(invoiceEmail|sender)\.ts$|^src/server/(adminViews|public)\.ts$|^scripts/admin-mail-truth-check'; then
+  echo "[pre-commit] admin-mail-truth-check (widget-cím, számla-melléklet, mock From)…"
+  npx tsx scripts/admin-mail-truth-check.mts >"$GATE_LOG" || gate_failed
+fi
 # freeze-state-v2 ⑤: a KÉZI terhelés-újrapróba FÉKEI. Pénzt mozgató út, ezért nem a
 # boldog ágat mérjük (az egy sor), hanem a fékeket: püfölhető-e a gomb, indul-e két
 # párhuzamos kattintásból két terhelés, megáll-e a sorozat, és hisz-e a szerver a

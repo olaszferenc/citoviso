@@ -60,15 +60,23 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     item: itemName,
   });
 
+  const hasPdf = Boolean(input.pdfBase64);
   const greeting = mailGreeting(lang, buyerName, input.buyerIsPerson ?? false);
   const text =
     greeting +
     `\n\n` +
     // Egy egyszeri díjnál nincs mit „előfizetni" — ugyanaz a §B.17-sértés, mint
     // a tárgyban volt, csak a törzsben.
+    // ⛔ Elek2 #23: the attachment is promised ONLY when the PDF is really attached.
+    // Without one (mock provider, or a real provider failure — invoiceDelivery.ts
+    // sends the notice anyway) the letter must not claim a document it does not carry.
     (period === "once"
-      ? T(lang, "Köszönjük a megrendelést. A fizetés megérkezett, a számlát mellékeljük.")
-      : T(lang, "Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.")) +
+      ? hasPdf
+        ? T(lang, "Köszönjük a megrendelést. A fizetés megérkezett, a számlát mellékeljük.")
+        : T(lang, "Köszönjük a megrendelést. A fizetés megérkezett.")
+      : hasPdf
+        ? T(lang, "Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.")
+        : T(lang, "Köszönjük az előfizetést. A fizetés megérkezett.")) +
     `\n\n` +
     T(lang, "Számla sorszáma:") +
     ` ${invoiceNumber}\n` +
@@ -79,11 +87,11 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     T(lang, "Tétel:") +
     ` ${itemName}\n` +
     (siteUrl ? `\n${T(lang, "Oldala elérhető:")} ${siteUrl}\n` : "") +
-    `\n${T(lang, "A számla PDF formátumban a levél mellékletében található.")}\n` +
+    (hasPdf ? `\n${T(lang, "A számla PDF formátumban a levél mellékletében található.")}\n` : `\n`) +
     T(lang, "Ha kérdése van a számlával kapcsolatban, válaszoljon erre a levélre.") +
     `\n`;
 
-  const attachments: EmailAttachment[] = input.pdfBase64
+  const attachments: EmailAttachment[] = hasPdf && input.pdfBase64
     ? [
         {
           filename: `szamla-${invoiceNumber.replace(/[^\w-]/g, "-")}.pdf`,
@@ -95,7 +103,9 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
 
   const thanks =
     period === "once" ? T(lang, "Köszönjük a megrendelést!") : T(lang, "Köszönjük az előfizetést!");
-  const receivedLine = T(lang, "A fizetése megérkezett. A számlát PDF-ben csatoltuk ehhez a levélhez.");
+  const receivedLine = hasPdf
+    ? T(lang, "A fizetése megérkezett. A számlát PDF-ben csatoltuk ehhez a levélhez.")
+    : T(lang, "A fizetése megérkezett.");
 
   // Our own customer relationship (we issue the invoice) → pilot BCC applies.
   return platformMail({
