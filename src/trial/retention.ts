@@ -185,6 +185,9 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   { table: "site_multilang", where: `site_id IN ${SITES}` },
   { table: "site_place_rating", where: `site_id IN ${SITES}` },
   { table: "site_review", where: `site_id IN ${SITES}` },
+  // ADR-0356: a former slug is minted only at a PAID activation, which the blockers refuse —
+  // listed so the cascade stays counted, not because a purge is expected to meet one.
+  { table: "site_slug_alias", where: `site_id IN ${SITES}` },
   { table: "site_visit", where: `tenant_id = $1 OR site_id IN ${SITES}` },
   { table: "multilang_generation", where: `tenant_id = $1 OR site_id IN ${SITES}` },
   { table: "module_entitlement", where: "tenant_id = $1" },

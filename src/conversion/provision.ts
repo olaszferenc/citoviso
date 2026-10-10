@@ -108,6 +108,13 @@ function makeToken(): string {
 }
 
 
+/** A platform label cut to the 40-character limit WITHOUT a trailing hyphen — the cut can
+ *  land right after a word ("…-apartman-" at 40), and `x-.citoviso.com` is an invalid host
+ *  label. Same rule as previewLabel.ts clip(). */
+function clipLabel(slug: string): string {
+  return slug.slice(0, 40).replace(/-+$/, "");
+}
+
 /** A platform subdomain label unique across sites (case-insensitive, 0017). A `preferred`
  *  label (the buyer's free choice, ADR-0032) is honored when it normalizes cleanly, is not
  *  reserved, and is still free — otherwise the lead's own preview label (ADR-0330: the
@@ -121,10 +128,10 @@ async function uniqueSiteSlug(
 ): Promise<string> {
   for (const wish of [preferred, previewLabel]) {
     if (!wish) continue;
-    const p = slugify(wish).slice(0, 40);
+    const p = clipLabel(slugify(wish));
     if (p && p.length >= 3 && !RESERVED_SLUGS.has(p) && !(await labelHeldByOther(p, leadId))) return p;
   }
-  const base = slugify(businessName).slice(0, 40) || "oldalam";
+  const base = clipLabel(slugify(businessName)) || "oldalam";
   for (let i = 0; i < 100; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`;
     if (RESERVED_SLUGS.has(candidate)) continue;
@@ -166,12 +173,66 @@ export async function checkSubdomainAvailable(
   label: string,
   leadId: string | null = null,
 ): Promise<{ ok: boolean; normalized: string; reason?: string }> {
-  const normalized = slugify(label).slice(0, 40);
+  const normalized = clipLabel(slugify(label));
   if (!normalized) return { ok: false, normalized: "", reason: "Adjon meg legalább egy betűt vagy számot." };
   if (normalized.length < 3) return { ok: false, normalized, reason: "Legalább 3 karakter kell." };
   if (RESERVED_SLUGS.has(normalized)) return { ok: false, normalized, reason: "Ez a név fenntartott." };
   if (await labelHeldByOther(normalized, leadId)) return { ok: false, normalized, reason: "Ez az aldomain már foglalt." };
   return { ok: true, normalized };
+}
+
+/**
+ * ADR-0356 — rename an EXISTING site to the buyer's chosen platform label (the trial's
+ * once-free name change). The old slug goes to site_slug_alias: its host 301s to the new
+ * one forever and the label stays held. Choosing one of the site's OWN former slugs
+ * moves it back (that alias row is dropped, the current slug becomes the alias).
+ *
+ * Idempotent: a label equal to the current slug is a no-op, so the same activation run
+ * twice writes nothing the second time. A label that is invalid or was taken in the
+ * meantime keeps the old address — logged, never thrown (the buyer has paid; the site
+ * must still go live). The caller re-renders the snapshot (canonical / og:url).
+ *
+ * @returns the slug the site has afterwards
+ */
+export async function renameSiteSlug(siteId: string, leadId: string, preferred: string): Promise<string | null> {
+  const current = await db.selectFrom("site").select("slug").where("id", "=", siteId).executeTakeFirst();
+  if (!current) return null;
+  const wish = clipLabel(slugify(preferred));
+  if (current.slug && wish === current.slug.toLowerCase()) return current.slug;
+  const check = await checkSubdomainAvailable(wish, leadId);
+  if (!check.ok) {
+    console.error(
+      `[provision] névváltás ELMARADT (site ${siteId}): a választott „${preferred}” (${wish}) — ${check.reason} — marad: ${current.slug}`,
+    );
+    return current.slug;
+  }
+  try {
+    await db.transaction().execute(async (trx) => {
+      // Back to one of its own former names: that alias row gives way.
+      await trx
+        .deleteFrom("site_slug_alias")
+        .where("site_id", "=", siteId)
+        .where(sql<boolean>`lower(slug) = ${wish}`)
+        .execute();
+      if (current.slug) {
+        await trx
+          .insertInto("site_slug_alias")
+          .values({ slug: current.slug.toLowerCase(), site_id: siteId })
+          .onConflict((oc) => oc.doNothing())
+          .execute();
+      }
+      await trx.updateTable("site").set({ slug: wish }).where("id", "=", siteId).execute();
+    });
+  } catch (err) {
+    // site_slug_key: another site took the label between the check and the write.
+    if ((err as { code?: string }).code === "23505") {
+      console.error(`[provision] névváltás ELMARADT (site ${siteId}): „${wish}” közben foglalt lett — marad: ${current.slug}`);
+      return current.slug;
+    }
+    throw err;
+  }
+  console.log(`[provision] névváltás (ADR-0356): site ${siteId} ${current.slug} → ${wish} (a régi cím 301-gyel átirányít)`);
+  return wish;
 }
 
 /**
@@ -208,7 +269,8 @@ export async function convertLead(
   artifactId: string,
   modules: string[],
   // ADR-0032: the buyer's freely-chosen platform subdomain label; honored on FIRST provision
-  // if clean+free (else name-derived). Only applies when the site row is first created.
+  // if clean+free (else name-derived). ADR-0356: an EXISTING site (the trial built it) is
+  // renamed to it — the old slug becomes an alias that 301s forever (renameSiteSlug).
   preferredSlug?: string | null,
 ): Promise<ConversionResult> {
   // 1. Validate the artifact: it must exist, belong to the lead, and be approved.
@@ -280,6 +342,11 @@ export async function convertLead(
   );
 
   // 4. Entitlements + site + lifecycle — one transaction.
+  const existingSiteBefore = !!(await db
+    .selectFrom("site")
+    .select("id")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst());
   const site = await db.transaction().execute(async (trx) => {
     for (const module of wanted) {
       await trx
@@ -339,6 +406,11 @@ export async function convertLead(
 
     return row;
   });
+
+  // ADR-0356: the trial built the site BEFORE the buyer chose an address on /folytatas, so
+  // the update branch above kept the trial's slug and the choice was silently dropped
+  // (ADR-0032 "no bait-and-switch" broken). The choice is honored here, once the row exists.
+  if (existingSiteBefore && preferredSlug) await renameSiteSlug(site.id, leadId, preferredSlug);
 
   // ADR-0330 (owner, 2026-10-05): the preview subdomain the outreach link showed stays
   // only if it became this site's address; a buyer who chose another one releases it.

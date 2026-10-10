@@ -56,8 +56,10 @@ export function labelCandidates(name: string, address: string | null | undefined
 
 /**
  * True when `label` is held by someone other than `leadId`: a site's platform slug of
- * another lead's tenant, or another lead's preview reservation. A site of THIS lead
- * does not block it (the buyer keeping their own address).
+ * another lead's tenant, a FORMER slug of such a site (ADR-0356: the old address 301s
+ * forever, so it is never handed out again), or another lead's preview reservation.
+ * A site of THIS lead does not block it (the buyer keeping, or returning to, their own
+ * address).
  */
 export async function labelHeldByOther(label: string, leadId: string | null): Promise<boolean> {
   const l = label.toLowerCase();
@@ -68,6 +70,14 @@ export async function labelHeldByOther(label: string, leadId: string | null): Pr
     .where(sql<boolean>`lower(site.slug) = ${l}`)
     .executeTakeFirst();
   if (site && site.leadId !== leadId) return true;
+  const alias = await db
+    .selectFrom("site_slug_alias")
+    .innerJoin("site", "site.id", "site_slug_alias.site_id")
+    .leftJoin("tenant", "tenant.id", "site.tenant_id")
+    .select("tenant.lead_id as leadId")
+    .where(sql<boolean>`lower(site_slug_alias.slug) = ${l}`)
+    .executeTakeFirst();
+  if (alias && alias.leadId !== leadId) return true;
   let q = db.selectFrom("lead").select("id").where(sql<boolean>`lower(preview_label) = ${l}`);
   if (leadId) q = q.where("id", "!=", leadId);
   return !!(await q.executeTakeFirst());

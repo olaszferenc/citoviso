@@ -1062,6 +1062,15 @@ export interface LeadLinkTable {
  * Keyed on SITE (a setting belongs to a rendered page), while module_entitlement
  * stays tenant-scoped (that one is billing).
  */
+/** ADR-0356 (0104): a site's former platform slugs. The old host 301s to the site's
+ *  current address, and the label stays held forever (a freed label would later show
+ *  ANOTHER lodging's site under an address already printed in sent mails). */
+export interface SiteSlugAliasTable {
+  slug: string;
+  site_id: string;
+  created_at: Generated<Timestamp>;
+}
+
 export interface SiteModuleConfigTable {
   site_id: string;
   module: string;
@@ -1796,6 +1805,7 @@ export interface Database {
   market: MarketTable;
   market_log: MarketLogTable;
   site: SiteTable;
+  site_slug_alias: SiteSlugAliasTable;
   payment: PaymentTable;
   saved_card_history: SavedCardHistoryTable;
   invoice: InvoiceTable;

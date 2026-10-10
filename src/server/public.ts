@@ -559,6 +559,39 @@ interface TenantHostSite {
   readonly status: "live" | "suspended";
   /** ADR-0041: the request arrived on the <slug>.citoviso.com host (not the custom domain). */
   readonly viaSlug: boolean;
+  /** ADR-0356: the request arrived on a FORMER slug of the site (site_slug_alias) — GET/HEAD
+   *  301 to the site's current address; anything else is served in place. */
+  readonly viaAlias?: boolean;
+}
+
+/** ADR-0356: the live site a former platform slug (site_slug_alias) belongs to. */
+async function resolveAliasSite(label: string): Promise<TenantHostSite | null> {
+  const row = await db
+    .selectFrom("site_slug_alias")
+    .innerJoin("site", "site.id", "site_slug_alias.site_id")
+    .select([
+      "site.id as siteId",
+      "site.path as path",
+      "site.tenant_id as tenantId",
+      "site.slug as slug",
+      "site.custom_domain as customDomain",
+      "site.status as status",
+    ])
+    .where("site.status", "in", ["live", "suspended"])
+    .where(sql<string>`lower(site_slug_alias.slug)`, "=", label.toLowerCase())
+    .executeTakeFirst();
+  return row ? ({ ...row, viaSlug: true, viaAlias: true } as TenantHostSite) : null;
+}
+
+/**
+ * ADR-0356: where a former-slug request goes — the site's current host (its live custom
+ * domain first, as ADR-0041's slug → domain 301; not a mock-registrar domain, which does
+ * not exist in DNS), same path, same query. The old address keeps every link ever sent
+ * working: mails, the outreach link, the owner's own business card.
+ */
+function aliasRedirectHost(site: TenantHostSite): string | null {
+  if (site.customDomain && !isMockDomainProvisioning()) return site.customDomain;
+  return site.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null;
 }
 
 /**
@@ -587,7 +620,8 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
         : eb(sql<string>`lower(site.custom_domain)`, "=", host),
     )
     .executeTakeFirst();
-  return row ? ({ ...row, viaSlug: !!label } as TenantHostSite) : null;
+  if (row) return { ...row, viaSlug: !!label } as TenantHostSite;
+  return label ? resolveAliasSite(label) : null;
 }
 
 /** Platform labels that are ours, not a tenant slug. */
@@ -692,7 +726,7 @@ async function resolveDevSlugSite(slug: string): Promise<TenantHostSite | null> 
     .where("status", "in", ["live", "suspended"])
     .where(sql<string>`lower(site.slug)`, "=", slug.toLowerCase())
     .executeTakeFirst();
-  return row ? ({ ...row, viaSlug: true } as TenantHostSite) : null;
+  return row ? ({ ...row, viaSlug: true } as TenantHostSite) : resolveAliasSite(slug);
 }
 
 /** The site's canonical public host: custom domain first, else the platform slug host. */
@@ -2123,6 +2157,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // the marketing homepage. Only 'live' sites resolve — a provisioned (paid-for
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
+  // ADR-0356: a former slug answers GET/HEAD with a 301 to the current address — path and
+  // query kept, so a token link from an old mail lands on the same handler on the new host.
+  // A POST is NOT redirected (a 301 turns it into a GET, and a GET never decides): it is
+  // served in place below, exactly as on the current host.
+  if (tenantSite?.viaAlias && (req.method === "GET" || req.method === "HEAD")) {
+    const to = aliasRedirectHost(tenantSite);
+    if (to) {
+      res.writeHead(301, { Location: `https://${to}${pathname}${url.search}` });
+      return void res.end();
+    }
+  }
   // ⛔ EXCEPT the routes our mails link to (+ the assets their pages load): the mail
   // was built from THIS host (publicBaseUrl), and the tenant handler answered them
   // with "Nincs ilyen oldal." — every owner/guest mail link was dead in production
@@ -2146,6 +2191,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const inner = slash === -1 ? "/" : rest.slice(slash);
     const devSite = slug ? await resolveDevSlugSite(slug) : null;
     if (!devSite) return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+    // ADR-0356 on the dev path: a former slug 301s to /t/<current slug>, path + query kept.
+    if (devSite.viaAlias && devSite.slug && (req.method === "GET" || req.method === "HEAD")) {
+      res.writeHead(301, { Location: `/t/${devSite.slug}${inner === "/" && slash === -1 ? "" : inner}${url.search}` });
+      return void res.end();
+    }
     return serveTenantHost(req, res, devSite, inner);
   }
   // ── A LAP CÍMZETTJE (ld. PAGE_AUDIENCE) ─────────────────────────────────────

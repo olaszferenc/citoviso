@@ -3005,6 +3005,23 @@ if [ -f scripts/free-trial-check.mts ] && \
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
   EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
+# slug-rename-check (ADR-0356, névváltás a próba végén): a /folytatas-on választott aldomain
+#     érvényesül a próba által már megépített site-on (activate → convertLead(preferredSlug) →
+#     élő render); a régi slug EGY alias-sor; a canonical/og:url az új hostot mondja; a régi host
+#     GET/HEAD-re 301 az újra, útvonal + query marad (a levél-linkek is), POST-ra nem; a dev
+#     /t/<régi> út 301; a régi címke másik leadnek nem adható ki (se aldomainnek, se előnézeti
+#     címkének), a saját lead visszaválthat; 40-es vágás után nincs záró kötőjel. Saját, eldobható
+#     sorok a közös dev-DB-n, `finally`-ben törölve; EMAIL_PROVIDER=mock kötelező. ~15 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/slug-rename-check.mts ] && \
+   changed_files | grep -qE '^src/conversion/provision\.ts$|^src/outreach/previewLabel\.ts$|^src/server/(public|mailLinkRoutes)\.ts$|^src/payment/service\.ts$|^migrations/0104_site_slug_alias\.sql$|^scripts/slug-rename-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/slug-rename-check\.mts$'; then
+    echo "[pre-commit] slug-rename-check --self-test (a névváltás-őr pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock npx tsx scripts/slug-rename-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] slug-rename-check (névváltás: választott cím érvényesül, régi cím 301, örökre foglalt)…"
+  EMAIL_PROVIDER=mock npx tsx scripts/slug-rename-check.mts >"$GATE_LOG" || gate_failed
+fi
 # trial-campaign-check (a visszamenőleges próba-levél ADR-je, visszamenőleges „14 nap ingyen” levél + SMS): a kivett mondat
 #     („Helyezést nem ígérünk.”) sehol, az egy-lövés lábléc-sor ott van, az SMS GSM-7 és ≤ 2 szelet
 #     (hosszú névnél a név rövidül, a link soha), a §C kapu átengedi; a /why?forras=proba GET nem ír,
