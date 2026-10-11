@@ -1,4 +1,4 @@
-// ADR-XXXX (B1, Elek 10-11) — WHAT the trial gives, in words, from ONE source.
+// ADR-0364 (B1, Elek 10-11) — WHAT the trial gives, in words, from ONE source.
 //
 // ADR-0360 ⑥ made the trial's contents a parameter (/pricing „A próbázó ezt kapja”), but
 // three surfaces kept the old rule as fixed text: the trial form („14 napig minden funkció:

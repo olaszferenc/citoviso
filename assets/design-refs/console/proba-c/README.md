@@ -59,7 +59,7 @@ Bővíti: `../proba-admin-sav/`, `../proba-levelek/`, `../proba-torles-level/`, 
 - A böngésző-keret előnézete (4a jobb oldala) nem épült meg: díszítés volt, a cím a blokk tetején látszik.
 - Lejárt sor: „Az ingyenes próba {nap}-ig tartott, a honlap szünetel. …” (a „-án/-én” rag számfüggő).
 - A Modulok listában a „Beállítás” link megmaradt (nélküle a próbázó nem tudná a modulokat beállítani).
-- **Elek 10-11 javítókör (ADR-XXXX, koordinátori döntés):** ① a T−3 SMS dátumos alakja a hátralévő
+- **Elek 10-11 javítókör (ADR-0364, koordinátori döntés):** ① a T−3 SMS dátumos alakja a hátralévő
   napok számát is mondja („… ingyenes probaja 4 nap mulva, okt. 19-en lejar.”) — hétvégi eltolásnál a
   T−3 és a T−1 is ezt az alakot kapja, és a puszta dátummal két egymást követő napon szó szerint
   ugyanaz az SMS ment ki. ② A 3. pont „Modulok a próbában” kártyája és a belépő-levél „minden modul”

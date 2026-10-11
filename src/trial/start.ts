@@ -68,7 +68,7 @@ export type TrialError =
   | "trial_used"
   | "in_progress"
   | "market_not_approved"
-  /** ADR-XXXX (B2): this mock cannot become a live trial site (a legacy HTML-copy mock) —
+  /** ADR-0364 (B2): this mock cannot become a live trial site (a legacy HTML-copy mock) —
    *  nothing was created, the operator was told; the page says it cannot start now. */
   | "not_available"
   | "provision_failed";
@@ -87,7 +87,7 @@ export type TrialResult =
     }
   | { readonly ok: false; readonly error: TrialError };
 
-// The grant list lives with its wording (package.ts, ADR-XXXX): the trial form, the login
+// The grant list lives with its wording (package.ts, ADR-0364): the trial form, the login
 // letter and the admin read the SAME list this grants.
 export { trialModuleIds };
 
@@ -147,7 +147,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (await ownedSiteForLead(p.lead_id)) return { ok: false, error: "already_owned" };
   }
 
-  // 1b. ADR-XXXX (B2, Elek 10-11): a legacy HTML-copy mock has no recipe to render a live
+  // 1b. ADR-0364 (B2, Elek 10-11): a legacy HTML-copy mock has no recipe to render a live
   //     page from (the §A photo policy cannot be applied to a copy), so a trial on it can
   //     NEVER finish. Refused BEFORE anything is claimed — measured: the old order claimed,
   //     built a tenant, then refused, and the lead read „Ez az oldal már az Öné” with no login.
@@ -214,10 +214,10 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (!trial) return { ok: false, error: "in_progress" };
   }
   const trialId = trial.id;
-  // ADR-XXXX (B2): what the lead was before this start converted it — a failed start puts it back.
+  // ADR-0364 (B2): what the lead was before this start converted it — a failed start puts it back.
   const lifecycleBefore =
     (await db.selectFrom("lead").select("lifecycle_status").where("id", "=", p.lead_id).executeTakeFirst())?.lifecycle_status ?? null;
-  // ⛔ A FAILED START LEAVES NOTHING (ADR-XXXX, B2): every failure below rolls the start back
+  // ⛔ A FAILED START LEAVES NOTHING (ADR-0364, B2): every failure below rolls the start back
   // (abandonTrialStart) — no `active` claim without a tenant, no tenant the lead never got a
   // login to, so the page offers the trial again and the next submit starts clean.
   const fail = async (reason: string): Promise<TrialResult> => {
@@ -307,7 +307,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           {
             untilIso: budapestIsoDay(new Date(trial.trial_until as unknown as string)),
             coupon: discount,
-            // ADR-XXXX (B1): the letter names what this tenant was GRANTED (its trial_grant rows), not „all”.
+            // ADR-0364 (B1): the letter names what this tenant was GRANTED (its trial_grant rows), not „all”.
             pkg: trialPackageView(await tenantTrialPackage(tenantId)),
           },
         );
@@ -328,7 +328,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 }
 
 /**
- * ADR-XXXX (B2) — undo a trial start that did not finish, so the lead is exactly where it
+ * ADR-0364 (B2) — undo a trial start that did not finish, so the lead is exactly where it
  * was before the click: the claim row deleted (the page offers the trial again), the tenant
  * this start built deleted with everything under it (ON DELETE CASCADE, as the 90-day purge),
  * its snapshot directory removed, the lead's lifecycle put back. The operator is mailed.

@@ -4092,7 +4092,7 @@
   }
 
   /**
-   * ADR-XXXX (B1, Elek 10-11): what the trial GIVES, from the manifest (trial/package.ts —
+   * ADR-0364 (B1, Elek 10-11): what the trial GIVES, from the manifest (trial/package.ts —
    * the same list startTrial grants). No `pkg` = every module, the „minden funkció” line is
    * true; otherwise the configured package's name and its modules, nothing more.
    */
@@ -4275,7 +4275,7 @@
         disabled: tr("Az ingyenes próba most nem indítható. A megrendelés továbbra is elérhető."),
         market_not_approved: tr("A szállás országában az ingyenes próba még nem indítható."),
         not_found: tr("Ez a link már nem érvényes, ezért innen nem indítható próba."),
-        // ADR-XXXX (B2): this plan cannot become a live trial site (nothing was created; the
+        // ADR-0364 (B2): this plan cannot become a live trial site (nothing was created; the
         // operator was alerted server-side) — say so, and that ordering still works.
         not_available: tr("Ehhez a tervhez most nem indítható ingyenes próba. Szóltunk a kollégáinknak, hamarosan jelentkezünk. A megrendelés továbbra is elérhető."),
       };

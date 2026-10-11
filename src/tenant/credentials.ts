@@ -105,7 +105,7 @@ export async function issueAndSendTenantLogin(
   trial?: {
     readonly untilIso: string;
     readonly coupon: TrialCouponView | null;
-    /** ADR-XXXX (B1): what the trial gives when it is not everything (trial/package.ts). */
+    /** ADR-0364 (B1): what the trial gives when it is not everything (trial/package.ts). */
     readonly pkg?: TrialPackageView | null;
   } | null,
 ): Promise<IssuedLogin> {

@@ -50,7 +50,7 @@ export interface TrialAdminState {
    */
   readonly modules: readonly TrialGrantedModule[];
   /**
-   * ADR-XXXX (B1/A7): what this trial was granted, in words (trial/package.ts — its
+   * ADR-0364 (B1/A7): what this trial was granted, in words (trial/package.ts — its
    * trial_grant rows). The Modulok tab says „minden modul” only when `everything`; a tab of a
    * module the trial lacks (Foglalások) says so and points to „Folytatom”.
    */

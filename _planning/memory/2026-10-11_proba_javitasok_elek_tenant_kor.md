@@ -1,6 +1,6 @@
 # Próba-javítások Elek 10-11 tenant-köréből (B1/B2/K1/A1–A3/A5/A7 + IT A3 időzóna)
 
-**Dátum:** 2026-10-11 · **Szál:** SUB a „Elek-teszt koordinátor” alatt · **Döntés:** ADR-XXXX (a land osztja ki)
+**Dátum:** 2026-10-11 · **Szál:** SUB a „Elek-teszt koordinátor” alatt · **Döntés:** ADR-0364 (a land osztja ki)
 
 ## Elvégezve
 - **B1:** a próba ígérete a beállított próba-csomagból: `src/trial/package.ts` (egy forrás, `trialModuleIds` ide költözött).

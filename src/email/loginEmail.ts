@@ -33,7 +33,7 @@ import { boldVars, couponValue, isTrialOffer, type TrialCouponView } from "./tri
 import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "../text/day.js";
 
 /**
- * ADR-XXXX (B1, Elek 10-11): a trial that does NOT give every module names what it gives —
+ * ADR-0364 (B1, Elek 10-11): a trial that does NOT give every module names what it gives —
  * the package label (untranslated; null = no tier matches) and the modules' lead-facing
  * names (untranslated), from trial/package.ts, the list startTrial granted. Absent/null =
  * every module, and „minden modul be van kapcsolva” is true.

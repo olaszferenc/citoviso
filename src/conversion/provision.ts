@@ -45,7 +45,7 @@ export interface ConversionResult {
  * AI-HTML artifacts fall back to copying their rendered snapshot (backward compatible).
  */
 /** Can this mock be RE-RENDERED (an engine mock: recipe + data)? Otherwise convertLead can only
- *  copy its HTML — which a live trial refuses (ADR-XXXX, B2: the trial form and startTrial ask
+ *  copy its HTML — which a live trial refuses (ADR-0364, B2: the trial form and startTrial ask
  *  this BEFORE anything is created). */
 export function isEngineArtifact(inputs: unknown): boolean {
   const i = (inputs ?? {}) as Record<string, unknown>;

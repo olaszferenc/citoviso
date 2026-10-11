@@ -304,7 +304,7 @@ export interface TrialEntry {
   /** The privacy notice the ÁSZF tick names (the /p page serves it at /privacy). */
   readonly privacyUrl: string;
   /**
-   * ADR-XXXX (B1): what the trial gives when it is NOT everything we sell — the configured
+   * ADR-0364 (B1): what the trial gives when it is NOT everything we sell — the configured
    * package's label (null = no tier matches) and the module ids startTrial grants
    * (trial/package.ts), each with its lead-facing name (untranslated; the page tr()s it).
    * Absent = every module, the „minden funkció” line stays true.

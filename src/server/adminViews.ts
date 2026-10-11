@@ -1234,7 +1234,7 @@ function trialNoBookingCard(t: TrialAdminState, lang: string): string {
  */
 function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string): string {
   const d = t.discount;
-  // ADR-XXXX (B1, Elek 10-11): „minden modul” only when the trial really got every module
+  // ADR-0364 (B1, Elek 10-11): „minden modul” only when the trial really got every module
   // (trial/package.ts); otherwise the package it ran on, and that the rest can be added.
   const tail =
     d?.kind === "trial"

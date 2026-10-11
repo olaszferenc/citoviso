@@ -1,4 +1,4 @@
-// ADR-XXXX (Elek 10-11 próba-kör) — the trial PROMISES what it GIVES, and a failed start leaves
+// ADR-0364 (Elek 10-11 próba-kör) — the trial PROMISES what it GIVES, and a failed start leaves
 // nothing behind. Each leg is a measured defect of the 10-11 round:
 //
 //   ⓪ — IT 5. kör A3: the trial's end is the same Budapest wall time 14 CALENDAR days later, also

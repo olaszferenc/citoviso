@@ -90,7 +90,7 @@ export async function ownedSiteForLead(leadId: string): Promise<OwnedSite | null
     .executeTakeFirst();
 
   if (!paid && !tenant) return null;
-  // ADR-XXXX (B2, Elek 10-11): a tenant an UNFINISHED trial start left behind (its claim never
+  // ADR-0364 (B2, Elek 10-11): a tenant an UNFINISHED trial start left behind (its claim never
   // recorded it — a pre-fix failed start) is not ownership. The lead never got a login; the
   // page must offer the trial again, and the next submit cleans it up or finishes it.
   if (!paid && tenant) {

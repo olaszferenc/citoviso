@@ -1,4 +1,4 @@
-## ADR-XXXX — A próba azt ígéri, amit ad (a beállított csomagból); a bukott próba-indítás nem hagy semmit
+## ADR-0364 — A próba azt ígéri, amit ad (a beállított csomagból); a bukott próba-indítás nem hagy semmit
 
 **Dátum:** 2026-10-11 · **Kontextus:** Elek 10-11 próba-köre (tenant-szem), B1/B2 BLOKKOLÓ + K1, A1–A3, A5, A7;
 koordinátori döntés (Elek-teszt koordinátor). **Kiegészíti:** ADR-0360 ⑥ (a próba csomagja paraméter), ADR-0342

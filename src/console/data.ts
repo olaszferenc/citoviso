@@ -1674,7 +1674,7 @@ export interface ProspectPage {
   readonly artifactId: string;
   readonly artifactPath: string;
   readonly unsubscribed: boolean;
-  /** ADR-XXXX (B2): an ENGINE mock (recipe + data) — only that can become a live trial site. */
+  /** ADR-0364 (B2): an ENGINE mock (recipe + data) — only that can become a live trial site. */
   readonly engine: boolean;
 }
 

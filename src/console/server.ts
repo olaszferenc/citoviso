@@ -3519,7 +3519,7 @@ async function handle(
       // one (the endpoint would answer them with the same trial or `trial_used`). An owned
       // lead never reaches this branch.
       const trialCfg = await getFreeTrialConfig();
-      // ADR-XXXX (B2): a claim that never got a tenant is not a trial the lead had (startTrial
+      // ADR-0364 (B2): a claim that never got a tenant is not a trial the lead had (startTrial
       // resumes it), and a legacy HTML-copy mock can never become a live trial site — no entry.
       const hadTrial =
         trialCfg.enabled && pf?.leadId && p.engine
@@ -3530,7 +3530,7 @@ async function handle(
               .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "not in", ["active", "lapsed"])]))
               .executeTakeFirst())
           : true;
-      // ADR-XXXX (B1): the form names what the trial GIVES — the same list startTrial grants.
+      // ADR-0364 (B1): the form names what the trial GIVES — the same list startTrial grants.
       const trialPkg = trialCfg.enabled && !hadTrial ? await configuredTrialPackage() : null;
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
