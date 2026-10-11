@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-11_proba_koordinator_5_zaras.md](2026-10-11_proba_koordinator_5_zaras.md) — 2026-10-11 — Ingyenes próba koordinátor (5. folytatás) lezárva: C felület + névváltás + Elek 3. kör, minden landolt
+- [2026-10-11_marketing_elemzes_elso_hullam.md](2026-10-11_marketing_elemzes_elso_hullam.md) — 2026-10-11 — Marketing-elemzés: az első megkeresési hullám (177 link, 0 rendelés)
 - [2026-10-11_horvat_piac_elokutatas.md](2026-10-11_horvat_piac_elokutatas.md) — 2026-10-11 — Horvát piac: számlázási, ÁFA- és jogi előkutatás
 - [2026-10-11_elek3_proba_javitasok.md](2026-10-11_elek3_proba_javitasok.md) — 2026-10-11 — Elek 3. kör javításai: próba „C” + névváltás, élesítés előtt
 - [2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md](2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md) — 2026-10-09 — Valós oldal erőforrásigénye (mérés) + ingyenes próba koordinátor indítva
