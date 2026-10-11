@@ -75,6 +75,10 @@ export interface ModuleDef {
    *  info icon in the configurator. Plain benefit wording, no jargon, and NO
    *  fabricated facts (§B.17): describes what the module does, never lead data. */
   readonly publicDesc: string;
+  /** Prospect-facing "what comes with it" line, shown UNDER the module name in the
+   *  configurator while the module is on (ADR-XXXX, plan „portal-sync” A). `tags` are
+   *  proper names (portal brands), never translated; only verified claims (§B.17). */
+  readonly publicIncl?: { readonly label: string; readonly tags: readonly string[] };
   /** Prospect-facing group. */
   readonly group: ModuleGroup;
   /** Backbone module — pre-checked / locked on. */
@@ -167,7 +171,7 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   // rather than stacked. One slot, two states — never both.
   // No `domType` on purpose: the anchor is enquiry's, so detectPresentModules must
   // not report both as present from the same tag. Presence comes from entitlement.
-  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére.", group: "extra", domType: "booking-section", supersedes: ["enquiry"], priceMonthly: 990, requires: [{ id: "pricing", strength: "hard", why: "Az online foglalás összeget mond a vendégnek a naptárban, és ugyanaz az összeg megy ki a visszaigazoló levélben is — az árakat az Árak modul adja." }] },
+  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére. A naptár összeköthető a Booking.com, a Szállás.hu és az Airbnb naptárával: ami ott foglalt, itt is lezár, és fordítva — az árat a portálon továbbra is Ön állítja.", publicIncl: { label: "Benne: naptár-szinkron", tags: ["Booking.com", "Szállás.hu", "Airbnb"] }, group: "extra", domType: "booking-section", supersedes: ["enquiry"], priceMonthly: 990, requires: [{ id: "pricing", strength: "hard", why: "Az online foglalás összeget mond a vendégnek a naptárban, és ugyanaz az összeg megy ki a visszaigazoló levélben is — az árakat az Árak modul adja." }] },
   // ⛔⛔ LEVÉVE A POLCRÓL (tulajdonosi döntés, 2026-09-14). Mérve: az űrlap a
   // `/api/hirlevel` címre POST-olt, ami a nyilvános kiszolgálón NEM LÉTEZIK, és
   // feliratkozó-tábla sincs — a vendég beírta a címét, megnyomta a gombot, és

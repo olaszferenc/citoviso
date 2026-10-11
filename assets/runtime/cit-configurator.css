@@ -806,6 +806,45 @@
 .cit-cfg-row .cit-cfg-name .cit-cfg-label {
   flex: 0 1 auto;
 }
+/* ADR-XXXX (plan „portal-sync” A): the "Benne: naptár-szinkron" line, its own line
+   right UNDER the row (inside the name column it overlapped the (i) and the tag at
+   390 px); hidden while the row is off. */
+.cit-cfg-incl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 12px;
+  padding: 0 8px 8px;
+  margin-top: -3px;
+}
+.cit-cfg-row[aria-pressed="false"] + .cit-cfg-incl {
+  display: none;
+}
+.cit-cfg-incl__t {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: #6fd8eb;
+}
+.cit-cfg-incl__t svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  flex: none;
+}
+.cit-cfg-incl__tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(111, 216, 235, 0.55);
+  font-size: 11.5px;
+  font-weight: 600;
+}
 .cit-cfg-row .cit-cfg-deptag {
   display: inline-flex;
   align-items: center;

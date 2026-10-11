@@ -40,6 +40,8 @@
   var SVG_MENU =
     '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
     '<path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  var SVG_SYNC =
+    '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>';
   var SVG_CHECK =
     '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
     'aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>';
@@ -169,6 +171,16 @@
       '<p class="cit-book__title">' + SVG_CAL + "<span>" + tr("Foglalás") + "</span>" +
       (demo ? '<span class="cit-book__demo">' + tr("MINTA — kipróbálható") + "</span>" : "") +
       "</p>" +
+      // ADR-XXXX (plan „portal-sync” A): on the SAMPLE widget only — the reader of a
+      // mock is the owner, and his hesitation is "egy második naptár a portálom
+      // mellett". Never on a live page: a guest has no use for it. Calendar only,
+      // the price stays on the portal — the sentence says so (§B.17).
+      (demo
+        ? '<div class="cit-book__sync"><span class="cit-book__synct">' + SVG_SYNC + "<span>" + tr("Naptára szinkronban:") + "</span></span>" +
+          ["Booking.com", "Szállás.hu", "Airbnb"].map( // i18n-exempt: portal brand names
+            function (p) { return '<span class="cit-book__ptag">' + esc(p) + "</span>"; }).join("") +
+          '<span class="cit-book__syncs">' + tr("Ami a portálon foglalt, itt is lezár — és fordítva. Nem kell két naptárat vezetnie; az árat a portálon továbbra is Ön állítja.") + "</span></div>"
+        : "") +
       '<div class="cit-book__cols">' +
       '<div class="cit-book__calcol">' +
       '<div class="cit-book__cal"></div>' +
@@ -277,6 +289,7 @@
     var countEl = form.querySelector("[data-guests]");
     var guests = 2;
     var blocked = {};
+    var portalDays = {}; // demo only: sample portal-booked nights (ADR-XXXX)
     var pricing = null; // {currency, unit, rows} — live price list from the availability API
 
     form.querySelectorAll(".cit-book__step").forEach(function (btn) {
@@ -581,6 +594,15 @@
      *  taken ranges relative to today, different per unit so switching units visibly
      *  changes the calendar. Never a claim about the real property (the whole widget
      *  is MINTA-labelled and the legend says "minta-foglaltság"). */
+    /** The SAMPLE nights shown as "a portálon foglalták" (ADR-XXXX): the middle band of
+     *  demoBlocked, so the owner sees a portal booking closing a night on his own page. */
+    function demoPortal(unitId) {
+      var idx = 0;
+      units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
+      var b = {};
+      for (var i = 0; i < 2; i++) b[shift(todayISO(), 16 + idx * 2 + i)] = true;
+      return b;
+    }
     function demoBlocked(unitId) {
       var idx = 0;
       units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
@@ -608,6 +630,7 @@
       blocked = {};
       if (demo) {
         blocked = demoBlocked(currentUnit());
+        portalDays = demoPortal(currentUnit());
         pricing = demoPricing(currentUnit());
         validate();
         renderCal();
@@ -719,15 +742,17 @@
       for (var day = 1; day <= daysIn; day++) {
         var isoDay = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
         var busy = !!blocked[isoDay];
+        var viaPortal = demo && busy && !!portalDays[isoDay];
         var off = isoDay < earliest || isoDay > latest;
         var cls = "cit-book__day" +
           (busy ? " cit-book__day--busy" : "") +
+          (viaPortal ? " cit-book__day--portal" : "") +
           (a && isoDay === a ? " cit-book__day--sel" : "") +
           (b && isoDay === b ? " cit-book__day--sel" : "") +
           (a && b && isoDay > a && isoDay < b ? " cit-book__day--range" : "");
         cells += '<button type="button" class="' + cls + '" data-day="' + isoDay + '"' +
           (busy || off ? " disabled" : "") +
-          ' aria-label="' + isoDay + (busy ? " — " + tr("foglalt") : "") + '">' + day + "</button>";
+          ' aria-label="' + isoDay + (busy ? " — " + (viaPortal ? tr("a portálon foglalták") : tr("foglalt")) : "") + '">' + day + "</button>";
       }
       return '<div class="cit-book__month"><p class="cit-book__mlabel">' + esc(label) + "</p>" +
         '<div class="cit-book__mgrid">' + dowHeads() + cells + "</div></div>";
@@ -745,6 +770,7 @@
         '<div class="cit-book__legend">' +
         '<span class="cit-book__lg cit-book__lg--free"></span>' + tr("szabad") +
         '<span class="cit-book__lg cit-book__lg--busy"></span>' + tr("foglalt") +
+        (demo ? '<span class="cit-book__lg cit-book__lg--portal"></span>' + tr("a portálon foglalták") : "") +
         (demo ? " · " + tr("minta-foglaltság") : "") +
         "</div>";
       // The nights counter turns two dates into the thing the guest actually

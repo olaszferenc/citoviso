@@ -352,6 +352,37 @@
 .cit-book__lg--free { background: var(--cit-bg); }
 .cit-book__lg--busy { background: color-mix(in srgb, var(--cit-muted) 30%, transparent); }
 .cit-book__legend .cit-book__lg--busy { margin-left: 8px; }
+/* ADR-XXXX (plan „portal-sync” A) — SAMPLE widget only: the portal-sync strip and the
+   "a portálon foglalták" nights. Skin tokens only, so it sits inside every template. */
+.cit-book__day--portal {
+  background: color-mix(in srgb, var(--cit-accent) 22%, transparent);
+  color: var(--cit-ink);
+}
+.cit-book__lg--portal { background: color-mix(in srgb, var(--cit-accent) 35%, transparent); margin-left: 8px; }
+.cit-book__sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cit-accent) 10%, transparent);
+  font-size: 0.85rem;
+}
+.cit-book__synct { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; }
+.cit-book__ptag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--cit-ink) 25%, transparent);
+  background: var(--cit-bg);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.cit-book__syncs { flex-basis: 100%; color: var(--cit-muted); font-size: 0.8rem; }
 
 /* Variant: bar — a compact horizontal booking bar (wide screens). */
 @media (min-width: 720px) {

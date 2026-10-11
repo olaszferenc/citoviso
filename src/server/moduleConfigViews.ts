@@ -375,6 +375,33 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .plink--bad{border-color:color-mix(in srgb,var(--citui-warn) 50%,transparent);
   background:color-mix(in srgb,var(--citui-warn) 8%,transparent)}
 
+/* ── portal sync cards (ADR-XXXX, plan „portal-sync” variant 1) ─────── */
+.psync{display:grid;grid-template-columns:1fr;gap:10px;container-type:inline-size}
+@container (min-width:760px){.psync{grid-template-columns:1fr 1fr;align-items:start}}
+.psync__card{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px;background:var(--citui-panel)}
+.psync__card--ok{border-color:color-mix(in srgb,var(--citui-ok) 45%,transparent)}
+.psync__card--bad{border-color:color-mix(in srgb,var(--citui-bad) 55%,transparent)}
+.psync__top{display:flex;align-items:center;gap:8px}
+.psync__top strong{flex:1}
+.psync__pill{font-size:.75rem;border-radius:var(--citui-radius-pill);padding:2px 9px;background:var(--citui-hover);color:var(--citui-muted);white-space:nowrap}
+.psync__pill--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.psync__pill--bad{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad-ink)}
+.psync__help{margin-top:10px;border:1px solid var(--citui-line);border-radius:12px;background:var(--citui-surface)}
+.psync__help summary{cursor:pointer;padding:9px 12px;font-weight:600;font-size:.85rem;color:var(--citui-link-ink);display:flex;align-items:center;gap:8px}
+.psync__help ol{margin:0;padding:0 12px 12px 32px;font-size:.85rem}
+.psync__help li{margin:4px 0}
+.psync__step{margin-top:12px}
+.psync__t{margin:0;font-weight:600;font-size:.88rem}
+.psync__n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--citui-navy-900);color:var(--citui-white);font-size:.7rem;font-weight:700;margin-right:6px}
+.psync__where{margin:4px 0 6px 26px;font-size:.8rem;color:var(--citui-muted)}
+.psync__where code{background:var(--citui-hover);border-radius:6px;padding:1px 5px}
+.psync__fld{display:flex;gap:6px;margin:0 0 0 26px}
+.psync__fld .citui-input{flex:1;min-width:0}
+.psync__status{margin:10px 0 0;font-size:.82rem;color:var(--citui-muted)}
+.psync__status--bad{color:var(--citui-bad-ink)}
+.psync__limits{margin:14px 0 0;padding:10px 0 0 18px;border-top:1px solid var(--citui-line);font-size:.8rem;color:var(--citui-muted)}
+.psync__limits li{margin:2px 0}
+
 /* ── module header: ONE block, not five scattered lines (approved 2026-09-08) ─ */
 .mhead{background:var(--citui-navy-900);color:var(--citui-white);border-radius:var(--citui-radius-sm);
   padding:14px 15px;margin:0 0 14px}
@@ -1032,15 +1059,13 @@ function moduleHeader(
 }
 
 /**
- * Portal calendar sync (Booking.com/Airbnb) is BUILT and tested, but OUT OF SCOPE
- * for the pilot (tulaj, 2026-08-21): the engine only had to be *compatible* with a
- * portal API, not ship an integration we then have to support. So the UI stays dark
- * — offering "Booking.com összekötése" would promise something we do not stand
- * behind yet, and a half-supported sync is worse than none for this segment.
- * The layer keeps running (src/booking/sync.ts, ical.ts) and is covered by its own
- * checks; flipping this to true is all that is needed when it becomes scope.
+ * Portal calendar sync by iCal link. Dark from 2026-08-21 (ADR-0044: out of scope for
+ * the pilot), switched on by ADR-XXXX (tulaj, 2026-10-11): the leads live on portals,
+ * and a site that means a second calendar to keep is a chore, not an offer. Calendar
+ * only — prices and content stay on the portal, and the card says so (§B.17).
+ * Engine: src/booking/sync.ts + ical.ts, hourly import via booking-maintenance.
  */
-export const PORTAL_SYNC_UI = false;
+export const PORTAL_SYNC_UI = true;
 
 /** One declarative field → an input the owner understands. */
 function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
@@ -2335,6 +2360,8 @@ export interface BookingEditorData {
     id: string;
     provider: string;
     direction: string;
+    /** The portal's own feed (import direction) — shown back so the owner sees WHAT is connected. */
+    url: string | null;
     lastSyncAt: Date | null;
     lastError: string | null;
     lastDayCount: number | null;
@@ -2600,6 +2627,144 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
   );
 }
 
+/**
+ * The portals the owner can connect by calendar link (ADR-XXXX ⑤). Only portals whose
+ * iCal export AND import is verified are NAMED (§B.17): Booking.com and Airbnb from
+ * their official help, Szállás.hu from third-party guides. `provider` is the stored
+ * `calendar_link.provider` value; `where` and `steps` are the portal's own menu path
+ * (Booking/Airbnb keep their English labels — that is what their extranet shows).
+ */
+function syncPortals(lang: string): readonly {
+  readonly provider: string;
+  readonly where: string;
+  readonly steps: readonly string[];
+}[] {
+  return [
+    {
+      provider: "Booking.com",
+      where: "Extranet › Rates & Availability › Sync calendars › Add calendar connection",
+      steps: [
+        T(lang, "Booking.com extranet: Rates & Availability › Sync calendars."),
+        T(lang, "„Add calendar connection” → illessze be a 2. lépés linkjét (így az itteni foglalások ott is lezárnak)."),
+        T(lang, "A Booking megmutatja a saját naptár-linkjét („export”) → másolja ide, az 1. lépés mezőjébe."),
+      ],
+    },
+    {
+      provider: "Szállás.hu", // i18n-exempt: stored calendar_link.provider value + brand name
+      where: "Admin › Árak és kapacitás › Naptár szinkron (iCal)", // i18n-exempt: the portal's own menu labels
+      steps: [
+        T(lang, "Szállás.hu admin: Árak és kapacitás › Naptár szinkron (iCal). Több szobánál előbb válassza ki a szobatípust."),
+        T(lang, "„Naptár exportálása” → a kapott linket másolja ide, az 1. lépés mezőjébe."),
+        T(lang, "„Naptár importálása” → illessze be a 2. lépés linkjét, és nevezze el (például „honlap”)."),
+      ],
+    },
+    {
+      provider: "Airbnb",
+      where: "Calendar › a hirdetés › Availability › Connect calendars › Connect to another website", // i18n-exempt: Airbnb's own (English) menu labels
+      steps: [
+        T(lang, "Airbnb: Calendar › a hirdetés › Availability › Connect calendars."),
+        T(lang, "„Connect to another website” → illessze be a 2. lépés linkjét."),
+        T(lang, "Ugyanott az „Export calendar” linkjét másolja ide, az 1. lépés mezőjébe."),
+      ],
+    },
+  ];
+}
+
+/** One portal = one card with the two steps (approved plan „portal-sync”, variant 1). */
+function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean): string {
+  const imported = booking.links.filter((l) => l.direction === "import");
+  const portals = syncPortals(lang);
+  const known = new Set(portals.map((p) => p.provider));
+  const unitField = `<input type="hidden" name="unit" value="${esc(booking.unitId)}">`;
+  const exportField = booking.exportUrl
+    ? `<div class="psync__fld"><input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
+      `<button class="citui-btn citui-btn--ghost" type="button" data-copy="${esc(booking.exportUrl)}" ` +
+      `onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.copy);this.textContent=this.dataset.done" ` +
+      `data-done="${esc(T(lang, "Másolva"))}">${T(lang, "Másolás")}</button></div>`
+    : "";
+  const unlinkForm = (id: string): string =>
+    `<form id="unlink_${esc(id)}" method="POST" action="/admin/calendar-link/delete">` +
+    `<input type="hidden" name="id" value="${esc(id)}">${unitField}</form>`;
+  const state = (l: (typeof imported)[number]): string =>
+    l.lastError
+      ? `<p class="psync__status psync__status--bad">${esc(T(lang, "Nem sikerült frissíteni: {err}", { err: l.lastError }))}</p>`
+      : `<p class="psync__status">` +
+        (l.lastSyncAt
+          ? esc(T(lang, "Összekötve · utoljára frissült: {date}", {
+              date: new Date(l.lastSyncAt).toLocaleString("hu-HU", { timeZone: viewZone() }),
+            })) + (l.lastDayCount !== null ? esc(T(lang, " · {n} foglalt napot hoztunk át", { n: l.lastDayCount })) : "")
+          : esc(T(lang, "Még nem frissült"))) +
+        `</p>`;
+
+  const cards = portals.map((p) => {
+    const l = imported.find((x) => x.provider === p.provider);
+    const pill = !l
+      ? `<span class="psync__pill">${T(lang, "Nincs összekötve")}</span>`
+      : l.lastError
+        ? `<span class="psync__pill psync__pill--bad">${T(lang, "Hiba")}</span>`
+        : `<span class="psync__pill psync__pill--ok">${T(lang, "Összekötve")}</span>`;
+    const help =
+      `<details class="psync__help"><summary>${ic("help", 16)}${T(lang, "Segítség: így köti össze lépésről lépésre")}</summary>` +
+      `<ol>${p.steps.map((t) => `<li>${esc(t)}</li>`).join("")}</ol></details>`;
+    const step1 =
+      `<div class="psync__step"><p class="psync__t"><span class="psync__n">1</span>${T(lang, "Hozza ide a portál naptár-linkjét")}</p>` +
+      `<p class="psync__where">${T(lang, "Hol találja:")} <code>${esc(p.where)}</code></p>` +
+      (l
+        ? `<div class="psync__fld"><input class="citui-input" readonly value="${esc(l.url ?? "")}">` +
+          `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Leválasztás")}</button></div>` +
+          unlinkForm(l.id)
+        : `<form class="psync__fld" method="POST" action="/admin/calendar-link">${unitField}` +
+          `<input type="hidden" name="provider" value="${esc(p.provider)}">` +
+          `<input class="citui-input" name="url" type="url" inputmode="url" placeholder="https://…" required ` +
+          `aria-label="${esc(T(lang, "{portal} naptár-linkje", { portal: p.provider }))}">` +
+          `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Összekötés")}</button></form>`) +
+      `</div>`;
+    const step2 = booking.exportUrl
+      ? `<div class="psync__step"><p class="psync__t"><span class="psync__n">2</span>${T(lang, "Ezt a linket adja meg a portálon")}</p>` +
+        `<p class="psync__where">${T(lang, "Ugyanott, a naptár importálásánál — így az itteni foglalások ott is lezárnak.")}</p>` +
+        exportField +
+        `</div>`
+      : "";
+    return (
+      `<div class="psync__card${l ? (l.lastError ? " psync__card--bad" : " psync__card--ok") : ""}">` +
+      `<div class="psync__top">${ic("link", 16)}<strong>${esc(p.provider)}</strong>${pill}</div>` +
+      help + step1 + step2 + (l ? state(l) : "") +
+      `</div>`
+    );
+  }).join("");
+
+  // Links saved before the per-portal cards (provider „Egyéb” or a free name) stay
+  // visible and removable — a hidden link would keep blocking nights nobody can explain.
+  const others = imported
+    .filter((l) => !known.has(l.provider))
+    .map(
+      (l) =>
+        `<div class="plink ${l.lastError ? "plink--bad" : "plink--ok"}">` +
+        `<span class="adm-ico">${ic(l.lastError ? "alert" : "check", 18)}</span>` +
+        `<span class="plink__txt"><strong>${esc(T(lang, "{provider} összekötve", { provider: l.provider }))}</strong>` +
+        `<span>${esc(l.url ?? "")}</span></span>` +
+        `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Leválasztás")}</button>` +
+        unlinkForm(l.id) +
+        `</div>`,
+    )
+    .join("");
+
+  return (
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
+    `<p class="adm-lead">${esc(T(lang, "Ha {what} a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") }))}</p>` +
+    `<div class="psync">${cards}</div>` +
+    others +
+    `<ul class="psync__limits">` +
+    `<li>${T(lang, "Minden szobát külön kell összekötni — a portálokon is szobánként van naptár.")}</li>` +
+    `<li>${T(lang, "A foglalt napok mennek át, az ár és a vendég adatai nem.")}</li>` +
+    `<li>${T(lang, "Nem azonnali: mi óránként nézzük meg a portált, a Booking.com kétóránként a mi naptárunkat (ott „Import now” gombbal azonnal is frissíthető).")}</li>` +
+    `<li>${T(lang, "Booking.com: a naptár-összekötés csak akkor érhető el, ha ott egy szobatípus egy szobát jelent, és nem használ channel managert.")}</li>` +
+    `</ul>` +
+    `</div>`
+  );
+}
+
 function bookingEditor(
   moduleId: string,
   booking: BookingEditorData,
@@ -2607,33 +2772,8 @@ function bookingEditor(
   nu?: NewUnitView,
 ): string {
   const mv = booking.month;
-  const imported = booking.links.filter((l) => l.direction === "import");
   const multi = booking.units.length > 1;
   const unitName = booking.units.find((u) => u.id === booking.unitId)?.name ?? "";
-
-  const linkCards = imported.length
-    ? imported
-        .map((l) => {
-          const state = l.lastError
-            ? T(lang, "Nem sikerült frissíteni: {err}", { err: l.lastError })
-            : l.lastSyncAt
-              ? T(lang, "Utoljára frissült: {date}", { date: new Date(l.lastSyncAt).toLocaleString("hu-HU", { timeZone: viewZone() }) }) +
-                (l.lastDayCount !== null ? ` · ${l.lastDayCount} foglalt nap` : "")
-              : T(lang, "Még nem frissült");
-          return (
-            `<div class="plink ${l.lastError ? "plink--bad" : "plink--ok"}">` +
-            `<span class="adm-ico">${ic(l.lastError ? "alert" : "check", 18)}</span>` +
-            `<span class="plink__txt"><strong>${T(lang, "{provider} összekötve", { provider: esc(l.provider) })}</strong>` +
-            `<span>${esc(state)}</span></span>` +
-            `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Leválasztás")}</button>` +
-            `<form id="unlink_${esc(l.id)}" method="POST" action="/admin/calendar-link/delete">` +
-            `<input type="hidden" name="id" value="${esc(l.id)}">` +
-            `<input type="hidden" name="unit" value="${esc(booking.unitId)}"></form>` +
-            `</div>`
-          );
-        })
-        .join("")
-    : `<p class="mcfg-note">${T(lang, "Még nincs összekötve semmi. Ha máshol is hirdeti{what}, kösse össze — így soha nem lesz dupla foglalás.", { what: multi ? T(lang, " ezt a szobát") : T(lang, " a szállását") })}</p>`;
 
   return (
     // Approved plan 2026-09-06: the requests moved to their OWN "Foglalások" tab
@@ -2675,37 +2815,8 @@ function bookingEditor(
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Naptár mentése")}</button>` +
     `</div></div></div></form></details>` +
 
-    // ② portal connections — dark until portal sync is in scope (PORTAL_SYNC_UI)
-    (!PORTAL_SYNC_UI
-      ? ""
-      : `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
-    `<p class="adm-lead">${T(lang, "Ha {what} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") })}</p>` +
-    linkCards +
-    `<form method="POST" action="/admin/calendar-link">` +
-    `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
-    `<div class="citui-field"><label class="citui-label" for="provider">Hol hirdeti?</label>` +
-    `<select class="citui-input" id="provider" name="provider">` +
-    `<option value="Booking.com">Booking.com</option>` +
-    `<option value="Airbnb">Airbnb</option>` +
-    `<option value=T(lang, "Szállás.hu")>${T(lang, "Szállás.hu")}</option>` +
-    `<option value=T(lang, "Egyéb")>${T(lang, "Egyéb")}</option></select></div>` +
-    `<div class="citui-field"><label class="citui-label" for="ical_url">${T(lang, "A naptár linkje")}</label>` +
-    `<input class="citui-input" id="ical_url" name="url" type="url" placeholder="https://…" required>` +
-    `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Nem tudja, hol találja?")} ` +
-    `<a href="/admin/segitseg/naptar" target="_blank" rel="noopener">${T(lang, "Megmutatjuk lépésről lépésre")}</a>.</p></div>` +
-    `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Összekötés")}</button>` +
-    `</form>` +
-    (booking.exportUrl
-      ? `<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)">` +
-        `<h3 class="mcfg-sub" style="margin-top:0">${T(lang, "A másik irány")}</h3>` +
-        `<p class="citui-hint">${T(lang, "Adja meg ezt a linket a portálnak, hogy ő is lássa az itteni foglalásait")}` +
-        (multi ? ` ${T(lang, "{unit} szobánál", { unit: esc(unitName) })}` : "") +
-        `:</p>` +
-        `<input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
-        `</div>`
-      : "") +
-    `</div>`) +
+    // ② portal connections (ADR-XXXX; approved plan assets/design-refs/console/portal-sync, variant 1)
+    (!PORTAL_SYNC_UI ? "" : portalSyncCard(booking, lang, multi)) +
 
     // ③ units
     unitsCard(booking, lang, nu)

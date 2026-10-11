@@ -269,6 +269,8 @@ export interface ConfiguratorManifest {
     readonly label: string;
     /** Prospect-facing one-line description (info icon in the panel). */
     readonly desc: string;
+    /** "What comes with it" line under the name while on (ADR-XXXX); tags = portal names. */
+    readonly incl?: { readonly label: string; readonly tags: readonly string[] };
     readonly group: string;
     readonly present: boolean;
     readonly spine: boolean;
@@ -531,6 +533,7 @@ export async function buildManifest(
       id: m.id,
       label: m.publicLabel,
       desc: m.publicDesc,
+      ...(m.publicIncl ? { incl: { label: m.publicIncl.label, tags: [...m.publicIncl.tags] } } : {}),
       group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,
