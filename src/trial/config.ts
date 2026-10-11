@@ -8,6 +8,7 @@
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
 import { isTier, type Tier } from "../packages.js";
+import { addIsoDays, budapestIsoDay, budapestMidnight, budapestMinutes } from "../text/budapestTime.js";
 
 const FREE_TRIAL_SETTING_KEY = "free_trial";
 
@@ -126,4 +127,24 @@ export async function runningFreeTrials(now = new Date()): Promise<number> {
     .where("trial_until", ">", now)
     .executeTakeFirst();
   return Number(r?.n ?? 0);
+}
+
+/**
+ * The trial's end: the SAME Budapest wall-clock time `days` CALENDAR days later (IT 5. kör A3,
+ * 2026-10-11). `now + days × 86 400 000 ms` crossed a DST switch as 13 or 15 calendar days,
+ * or ±1 hour — while the T−3/T−1 steps count calendar days. A wall time the target day
+ * does not have (the spring gap) lands one hour later, on the same day.
+ */
+export function trialUntilFrom(now: Date, days: number): Date {
+  const day = addIsoDays(budapestIsoDay(now), days);
+  const msOfDay = now.getTime() - budapestMidnight(budapestIsoDay(now)).getTime();
+  const wallMin = budapestMinutes(now);
+  let t = new Date(budapestMidnight(day).getTime() + msOfDay);
+  // msOfDay is elapsed time; on a DST day of either end the wall clock drifts by the shift.
+  const drift = budapestMinutes(t) - wallMin;
+  if (drift !== 0 && Math.abs(drift) <= 60) {
+    const fixed = new Date(t.getTime() - drift * 60_000);
+    if (budapestIsoDay(fixed) === day && budapestMinutes(fixed) === wallMin) t = fixed;
+  }
+  return t;
 }

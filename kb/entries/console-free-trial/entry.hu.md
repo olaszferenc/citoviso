@@ -4,7 +4,7 @@ title: Ingyenes próba — a teljes út az indulástól a folytatásig, a törl�
 audience: operator
 category: lead-path
 anchors: console.free_trial
-updated: 2026-10-09
+updated: 2026-10-11
 ---
 
 Az ingyenes próba a **rendelés alternatívája**: a kiküldött tervet megnyitó lead kártya és fizetés
@@ -16,7 +16,12 @@ konzolon, és mit kell tenned, ha a rendszer riaszt.
 - A lead a kiküldött terv lapján (a követett linken) egy rövid űrlapot tölt ki: név, e-mail, telefon,
   és elfogadja az ÁSZF-et meg a fotó-nyilatkozatot. Fizetési adatot nem kérünk.
 - Az oldala azonnal **él** a citoviso.com aldomainjén — azon a címen, amit a lap előre megmutatott —,
-  **minden modul be van kapcsolva**, és belépő-levelet kap a kezelőfelületéhez.
+  a **beállított próba-csomag moduljai** vannak bekapcsolva (az Árazás lap **„A próbázó ezt kapja”**
+  mezője; mentés előtt minden modul), és belépő-levelet kap a kezelőfelületéhez. A próba-űrlap, a
+  belépő-levél és a próbázó Modulok füle ezt a csomagot nevezi meg a benne lévő modulokkal; „minden
+  funkció” csak akkor áll ott, ha a próba tényleg minden modult ad. Ha a csomagban nincs online foglalás,
+  a próbázó Foglalások füle ezt kimondja, és a „Folytatom” gombra mutat.
+- Régi (HTML-másolat) tervből próba nem indítható: az ilyen terv lapja nem kínál próbát.
 - Számla nem készül, előfizetés nem születik, terhelés nincs. Egy szállás (lead) **egyszer** próbázhat:
   aki már próbázott vagy vásárolt, annak a lapja nem kínál új próbát.
 - Ha a lead korábban kedvezményes ajánlatot kapott (megkeresés, eszkaláció), az a próba indulásakor
@@ -131,6 +136,13 @@ Az öt eset, a levél tárgyában szereplő szöveggel:
 5. **„a próbázó nem kapta meg a belépő-levelet”** — 15 perc után sincs belépő-levél, tehát nem tud
    belépni. Ha a fiókja megvan, a bejelentkező oldal **„Elfelejtett jelszó?”** útján új belépő-link
    kérhető az e-mail-címére; ha fiók sincs, fejlesztői beavatkozás kell.
+
+**Ha a próba el sem indul** (például régi, HTML-másolat tervnél, vagy ha az oldal elkészítése közben hiba
+történik), a rendszer azonnal visszavonja a félkész indítást: nem marad ott tenant, próba-sor vagy oldal, a
+lead a lapján újra elindíthatja a próbát, és a lapja nem írja, hogy „Ez az oldal már az Öné”. Erről a
+**„Fiók”** lap riasztási e-mail-címére azonnal levél megy, tárgya: „Citoviso: a próba NEM indult el”
+(utána a szállás neve). Teendő: nézd meg a lead tervét — régi HTML-tervnél új terv kell —, és ha kell,
+keresd meg a leadet.
 
 Ha nincs beállítva riasztás-címzett, vagy egyik csatorna sem ment ki, a rendszer a riasztást **nem**
 jelöli elküldöttnek, és a következő órában újra próbálja.

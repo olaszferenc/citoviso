@@ -292,7 +292,14 @@ export function buildTrialNoticeSmsText(input: {
         ? T(lang, "Citoviso: ma lejár {art} {site} ingyenes próbája.", v)
         : daysLeft === 1
           ? T(lang, "Citoviso: holnap lejár {art} {site} ingyenes próbája.", v)
-          : T(lang, "Citoviso: {art} {site} ingyenes próbája {date} lejár.", { ...v, date: formatDayShortOn(trialUntilIso, lang) });
+          : // A1 (Elek 10-11): the days left are named, as the letter does („Még 4 nap…”) — a
+            // weekend-shifted T−3/T−1 pair both get this form, and with the date alone the two
+            // SMS on consecutive days were word for word the same.
+            T(lang, "Citoviso: {art} {site} ingyenes próbája {n} nap múlva, {date} lejár.", {
+              ...v,
+              n: String(daysLeft),
+              date: formatDayShortOn(trialUntilIso, lang),
+            });
     // ADR-0354 "C": the Próba-kedvezmény is named with its deadline in the SAME words as the
     // opening sentence ("addig" = the date, "Holnapig", "Ma éjfélig"); a pre-C coupon keeps
     // its approved form.

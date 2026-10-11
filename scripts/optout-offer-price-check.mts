@@ -122,8 +122,9 @@ async function run(browser: Browser, html: string, tag: string, size: { width: n
   check((await sum.count()) >= 1, `${label}: az ár-kártya ajánlatos (áthúzott listaár + fizetendő)`);
   const text = (await page.locator(".cit-cfg-panel").innerText()).replace(/\s+/g, " ");
   // Step 1 names it as „<ajánlat> (−50%) −<Ft> az első díjból” since L3-2 (contract order-step1-offer);
-  // the step-2 card keeps „−50% az első díjból”. Either way the −50% is said to be on the FIRST fee.
-  check(/\(−50%\) −[\d\s\u00a0]+Ft az első díjból|−50% az első díjból/.test(text), `${label}: kimondja a −50%-ot az első díjra`);
+  // the step-2 card says „<ajánlat> (−50%) az első díjból” since A2 (Elek 10-11; before: „−50% az első
+  // díjból”). Either way the −50% is said to be on the FIRST fee.
+  check(/\(−50%\)( −[\d\s\u00a0]+Ft)? az első díjból|−50% az első díjból/.test(text), `${label}: kimondja a −50%-ot az első díjra`);
   check(errors.length === 0, `${label}: nincs JS-hiba (${errors.slice(0, 2).join(" | ")})`);
   await page.close();
 }

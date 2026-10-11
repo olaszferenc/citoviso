@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-10-01
+updated: 2026-10-11
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -17,6 +17,11 @@ kérés külön sort kap: a **„Döntök”** gomb egyenesen arra a kérésre v
 az **„Ajánlatot küldök”** gomb az ajánlat-lapra.
 
 ![Képernyőkép: a Foglalások fül telefonon, várakozó kérésekkel](assets/hu/screen.png)
+
+**Ingyenes próbában, online foglalás nélkül:** ha a próba csomagjában nincs online foglalás, a fül ezt
+írja ki (**„Az online foglalás nincs benne a próba csomagjában”**). A vendégek érdeklődését ilyenkor az
+**„Érdeklődések az Üzenetekben”** gomb mutatja meg; a foglalási naptárt a **„Folytatom — csomag és
+modulok”** gombbal adhatja hozzá.
 
 ## Foglalási kérés érkezett — mit tegyek?
 

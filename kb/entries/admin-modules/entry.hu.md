@@ -319,8 +319,8 @@ vendégek — enélkül az oldal nem hozna megkeresést.
 
 Egyes modulokat egy ideig nem lehet megrendelni (például a saját e-mail cím
 modult). Ezek nem szerepelnek a Bővítés kártyái között, de a Bővítés rész alján név szerint
-kiírjuk, hogy most nem rendelhetők. Ha ingyenes próbával indult, a próba alatt minden modul be volt
-kapcsolva, ezek is; a próba folytatásakor viszont kikapcsoltak, mert előfizetéssel még nem vehetők
+kiírjuk, hogy most nem rendelhetők. Ha ingyenes próbával indult, és a próba csomagjában ezek is benne
+voltak, a próba alatt be voltak kapcsolva; a próba folytatásakor viszont kikapcsoltak, mert előfizetéssel még nem vehetők
 fel. Amint rendelhetők lesznek, ugyanitt veheti fel őket.
 
 ## Mi az a kupon a Bővítés fölött?

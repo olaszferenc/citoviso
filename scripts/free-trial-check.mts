@@ -50,6 +50,7 @@ import { mintRenewalForTenant } from "../src/payment/billing.js";
 import {
   FREE_TRIAL_CONFIG_DEFAULT,
   overrideFreeTrialConfigInProcess,
+  trialUntilFrom,
   parseFreeTrialSetting,
 } from "../src/trial/config.js";
 import { overrideCouponConfigInProcess } from "../src/payment/couponConfig.js";
@@ -183,7 +184,10 @@ try {
   const site = await db.selectFrom("site").select(["status", "slug"]).where("tenant_id", "=", tenantId).executeTakeFirst();
   check("a site LIVE az aldomainen", site?.status === "live" && !!site.slug, `${site?.status} ${site?.slug}`);
   const days = (new Date(trials[0]!.trial_until as unknown as string).getTime() - t0) / 86_400_000;
-  check("trial_until = a beállított 9 nap", Math.abs(days - 9) < 0.01, days.toFixed(3));
+  // IT 5. kör A3: 9 CALENDAR days at the same Budapest wall time (trialUntilFrom) — across a DST
+  // switch that is 9 ± 1/24 days of milliseconds, so the ms count alone is not the rule.
+  const wantUntil = trialUntilFrom(new Date(trials[0]!.started_at as unknown as string), 9).getTime();
+  check("trial_until = a beállított 9 naptári nap", new Date(trials[0]!.trial_until as unknown as string).getTime() === wantUntil && Math.abs(days - 9) < 0.05, days.toFixed(3));
 
   if (SELF_TEST) {
     await db
@@ -445,7 +449,7 @@ try {
   const hAfter = await db.selectFrom("free_trial").select(["status", "started_at", "trial_until", "tenant_id"]).where("id", "=", h.trialId).executeTakeFirst();
   const hUntil = hAfter ? new Date(hAfter.trial_until as unknown as string).getTime() : 0;
   check("az újraküldés elindítja a próbát (nem trial_used)", rh.ok && !rh.existing && !!hAfter?.tenant_id, JSON.stringify(rh));
-  check("…friss órával: started_at most, trial_until = most + 9 nap", !!hAfter && new Date(hAfter.started_at as unknown as string).getTime() >= before - 1000 && Math.abs(hUntil - (before + 9 * DAY)) < 60_000, `${hAfter?.started_at} → ${hAfter?.trial_until}`);
+  check("…friss órával: started_at most, trial_until = most + 9 nap", !!hAfter && new Date(hAfter.started_at as unknown as string).getTime() >= before - 1000 && Math.abs(hUntil - trialUntilFrom(new Date(before), 9).getTime()) < 60_000, `${hAfter?.started_at} → ${hAfter?.trial_until}`);
   const i = await claim("i", "lapsed");
   const ri = await startTrial(i.token, FORM);
   tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", i.leadId).execute()).map((t) => t.id));

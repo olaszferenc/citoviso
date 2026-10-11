@@ -3041,6 +3041,17 @@ if [ -f scripts/free-trial-check.mts ] && \
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
   EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
+# trial-promise-check (Elek 10-11 próba-kör, a próba-ígéret ADR-je): a próba azt ÍGÉRI, amit AD — a beállított
+#     próba-csomagnál (Ajánlott) a próba-űrlap (valódi Chromium, 390 + 1280 px), a belépő-levél és az admin
+#     Modulok fül nem mond „minden funkció/modul”-t, hanem a csomag nevét + a ténylegesen adott modulokat; A7
+#     Foglalások fül; K1 a folytatás a próba csomagját jelöli elő; B2 elbukó indítás (régi HTML-mock, tenant
+#     utáni hiba, a régi kód hagyta félkész sor) után nincs bennragadt lead; a próba vége naptári napokkal (DST). Saját sorok, `finally`-ben törli.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/trial-promise-check.mts ] && \
+   changed_files | grep -qE '^src/trial/.*\.ts$|^src/conversion/(owned|provision)\.ts$|^src/email/loginEmail\.ts$|^src/tenant/credentials\.ts$|^src/generator/configurator\.ts$|^assets/runtime/cit-configurator\.js$|^scripts/trial-promise-check\.mts$'; then
+  echo "[pre-commit] trial-promise-check (a próba ígérete = amit ad; bukott indítás nem zár ki)…"
+  EMAIL_PROVIDER=mock npx tsx scripts/trial-promise-check.mts >"$GATE_LOG" || gate_failed
+fi
 # proba-c-checkout-check (design-refs/console/proba-c, jóváhagyva 2026-10-10; ADR-0354 „C”, ADR-0356): a
 #     próbázó /folytatas oldala és a próba-levél terv-lapja VALÓDI böngészőben, 390 px és asztali
 #     szélességen végigkattintva: éves az alap; az ár-sor az EGY kedvezményt és határidőt mondja

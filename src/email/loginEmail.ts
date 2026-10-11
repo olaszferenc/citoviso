@@ -32,6 +32,17 @@ import type { EmailMessage } from "./sender.js";
 import { boldVars, couponValue, isTrialOffer, type TrialCouponView } from "./trialEmail.js";
 import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "../text/day.js";
 
+/**
+ * ADR-XXXX (B1, Elek 10-11): a trial that does NOT give every module names what it gives —
+ * the package label (untranslated; null = no tier matches) and the modules' lead-facing
+ * names (untranslated), from trial/package.ts, the list startTrial granted. Absent/null =
+ * every module, and „minden modul be van kapcsolva” is true.
+ */
+export interface TrialPackageView {
+  readonly label: string | null;
+  readonly modules: readonly string[];
+}
+
 export function buildCredentialsEmail(input: {
   to: string;
   username: string;
@@ -48,19 +59,37 @@ export function buildCredentialsEmail(input: {
   /** Reader's language (ADR-0067). Absent → Hungarian. */
   lang?: string;
   /** Present = the login of a FREE TRIAL (ADR-0342/0344): its end and coupon. */
-  trial?: { readonly untilIso: string; readonly coupon: TrialCouponView | null } | null;
+  trial?: {
+    readonly untilIso: string;
+    readonly coupon: TrialCouponView | null;
+    readonly pkg?: TrialPackageView | null;
+  } | null;
 }): EmailMessage {
   const { to, username, setPasswordUrl, loginUrl, siteName, lang } = input;
   const trial = input.trial ?? null;
   const greeting = mailGreeting(lang, input.buyerName, input.buyerIsPerson ?? false);
   const subject = T(lang, "Belépési adatai – {site}", { site: siteName });
   const introVars = { art: huArticleLower(siteName), site: siteName };
+  const pkg = trial?.pkg && trial.pkg.modules.length ? trial.pkg : null;
+  const pkgLabel = pkg?.label ? T(lang, pkg.label) : null;
   const intro = trial
-    ? T(
-        lang,
-        "Elindult {art} {site} ingyenes próbája: a honlap él, és minden modul be van kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
-        introVars,
-      )
+    ? pkg && pkgLabel
+      ? T(
+          lang,
+          "Elindult {art} {site} ingyenes próbája: a honlap él, és {pkgArt} {pkg} csomag moduljai be vannak kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
+          { ...introVars, pkgArt: huArticleLower(pkgLabel), pkg: pkgLabel },
+        )
+      : pkg
+        ? T(
+            lang,
+            "Elindult {art} {site} ingyenes próbája: a honlap él, és a próba moduljai be vannak kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
+            introVars,
+          )
+        : T(
+            lang,
+            "Elindult {art} {site} ingyenes próbája: a honlap él, és minden modul be van kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
+            introVars,
+          )
     : T(
         lang,
         "Elkészült {art} {site} oldalának szerkesztő felülete. Az első belépéshez állítson be egy saját jelszót.",
@@ -81,6 +110,7 @@ export function buildCredentialsEmail(input: {
   const details: MailDetailRow[] = [{ label: T(lang, "Felhasználónév"), value: username, mono: true }];
   if (trial) {
     details.push({ label: T(lang, "A próba vége"), value: formatDayShortWeekday(trial.untilIso, lang) });
+    if (pkg) details.push({ label: T(lang, "A próbában"), value: pkg.modules.map((m) => T(lang, m)).join(" · ") });
     if (isTrialOffer(trial.coupon)) {
       details.push({
         label: T(lang, "Próba-kedvezmény"),
@@ -106,8 +136,11 @@ export function buildCredentialsEmail(input: {
   const button = T(lang, "Jelszó beállítása");
   const later = T(lang, "Később itt léphet be:");
 
+  // The plain-text part names the modules too (the details box is HTML-only) — the same list.
+  const pkgLine = pkg ? `${T(lang, "A próbában")}: ${pkg.modules.map((m) => T(lang, m)).join(" · ")}\n\n` : "";
   const text =
     `${greeting}\n\n${intro}\n\n` +
+    pkgLine +
     `${T(lang, "Felhasználónév:")} ${username}\n\n` +
     `${button}: ${setPasswordUrl}\n\n` +
     (trialVars ? `${trialPara(trialVars)}${offerC ? ` ${offerC}` : ""}\n\n` : "") +

@@ -2,7 +2,7 @@
 // trialist's checkout and the plan page a trial mail opens, CLICKED in a real browser.
 // What this proves, each leg a promise the approved plan makes:
 //   ① /folytatas during the trial: annual is the default; the price line carries the ONE
-//      discount („Próba-kedvezmény −X% az első évre · a próba végéig, <nap>-ig”) — no ribbon,
+//      discount („Próba-kedvezmény (−X%) az első évre · a próba végéig, <nap>-ig”) — no ribbon,
 //      no escalation pop-up (the pinned trial offer may be an escalation offer);
 //   ② annual adds the savings up (free months + the trial % on the first year); monthly says
 //      „csak az első hónapra” and „Évesre váltok” switches the ONE period state;
@@ -156,7 +156,7 @@ try {
     // ① price line + annual default + no escalation card
     const line = (await p.textContent(".cit-cfg-mini__offer")) ?? "";
     check("① éves az alapértelmezés", (await p.getAttribute('.cit-cfg-ppill [data-period="annual"]', "aria-pressed")) === "true");
-    check("① az ár-sor: Próba-kedvezmény −50% az első évre · a próba végéig, <nap>-ig", /^Próba-kedvezmény −50% az első évre · a próba végéig, [^·]+-ig$/.test(line.trim()), line);
+    check("① az ár-sor: Próba-kedvezmény (−50%) az első évre · a próba végéig, <nap>-ig", /^Próba-kedvezmény \(−50%\) az első évre · a próba végéig, [^·]+-ig$/.test(line.trim()), line);
     check("① nincs döntés-segítő kártya a folytatáson", (await p.locator(".cit-cfg-esccard").count()) === 0);
     // ② savings / monthly honesty / switch back
     check("② éves: a megtakarítás összeadva", ((await p.textContent(".cit-cfg-tsavebox")) ?? "").includes("Megtakarítás az első évben"));

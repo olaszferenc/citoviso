@@ -303,6 +303,16 @@ export interface TrialEntry {
   readonly url: string;
   /** The privacy notice the ÁSZF tick names (the /p page serves it at /privacy). */
   readonly privacyUrl: string;
+  /**
+   * ADR-XXXX (B1): what the trial gives when it is NOT everything we sell — the configured
+   * package's label (null = no tier matches) and the module ids startTrial grants
+   * (trial/package.ts), each with its lead-facing name (untranslated; the page tr()s it).
+   * Absent = every module, the „minden funkció” line stays true.
+   */
+  readonly pkg?: {
+    readonly label: string | null;
+    readonly modules: readonly { readonly id: string; readonly label: string }[];
+  };
 }
 
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
@@ -372,6 +382,8 @@ export interface ContinuationInfo {
   readonly freeDaysLeft: number;
   /** The trial had a discount at all (a lapsed page may say it ended with the trial). */
   readonly hadOffer: boolean;
+  /** K1 (Elek 10-11): the tier the trial ran on — the page preselects it (null = none matches). */
+  readonly preset?: string | null;
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */

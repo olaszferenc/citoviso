@@ -44,6 +44,14 @@ export interface ConversionResult {
  * deterministic output as the approved mock (mock=live), not a stale HTML copy. Legacy
  * AI-HTML artifacts fall back to copying their rendered snapshot (backward compatible).
  */
+/** Can this mock be RE-RENDERED (an engine mock: recipe + data)? Otherwise convertLead can only
+ *  copy its HTML — which a live trial refuses (ADR-XXXX, B2: the trial form and startTrial ask
+ *  this BEFORE anything is created). */
+export function isEngineArtifact(inputs: unknown): boolean {
+  const i = (inputs ?? {}) as Record<string, unknown>;
+  return i.engine === "composition" && !!i.recipe && !!i.siteData;
+}
+
 async function renderSnapshotHtml(
   artifact: {
     path: string | null;
@@ -53,7 +61,7 @@ async function renderSnapshotHtml(
   modules: readonly string[],
 ): Promise<{ html: string; source: "engine" | "copy" }> {
   const inputs = artifact.inputs ?? {};
-  if (inputs.engine === "composition" && inputs.recipe && inputs.siteData) {
+  if (isEngineArtifact(inputs)) {
     const recipe = inputs.recipe as unknown as Recipe;
     const stored = inputs.siteData as unknown as SiteData;
     // A pillanatkép BEFAGYOTT fotó-listát hoz: egy régebbi generálás halmazát, amiben még

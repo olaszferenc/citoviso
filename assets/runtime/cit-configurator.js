@@ -2897,7 +2897,7 @@
       var rows =
         row(tr("12 havi díj listaáron"), fmt(m * 12)) +
         (free > 0 ? row(tr("Éves fizetés: {n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)), "−" + fmt(free)) : "") +
-        row(tr("{name} −{p}% az első évre").replace("{name}", offerName()).replace("{p}", String(OFFER.percent)), "−" + fmt(yOff));
+        row(tr("{name} (−{p}%) az első évre").replace("{name}", offerName()).replace("{p}", String(OFFER.percent)), "−" + fmt(yOff));
       // Elek3 A5: on a phone the sticky foot (period + total + offer line + four rows) took
       // half the screen and left one and a half package cards to choose from. There the
       // breakdown folds under its sum — one tap away, nothing removed; wide screens keep it open.
@@ -3529,7 +3529,8 @@
   function offerCardHtml(listAmount, perLabel, permoHtml, flatAmount) {
     // Elek L-2: the name comes from the SERVER (offerLabel, one place) — the left
     // item block and this card print the same words for the same offer.
-    var l3 = offerName() + ": " + tr("−{p}% az első díjból").replace("{p}", String(OFFER.percent));
+    // A2 (Elek 10-11): ONE form of the name on every surface — „<name> (−X%)” (the invoice mail's).
+    var l3 = tr("{name} (−{p}%) az első díjból").replace("{name}", offerName()).replace("{p}", String(OFFER.percent));
     if (CONT && offerDeadline()) {
       // proba-C: ONE discount, ONE deadline — the trial's last day.
       l3 += " · " + tr("érvényes {d}-ig, a próba végéig").replace("{d}", offerDayText());
@@ -3610,8 +3611,8 @@
       // proba-C (contract 1-vasarlas A): the deadline rides in the price line — no ribbon.
       miniOffer.textContent =
         (period === "annual"
-          ? tr("{name} −{p}% az első évre · a próba végéig, {d}-ig")
-          : tr("{name} −{p}% — csak az első hónapra · a próba végéig, {d}-ig"))
+          ? tr("{name} (−{p}%) az első évre · a próba végéig, {d}-ig")
+          : tr("{name} (−{p}%) — csak az első hónapra · a próba végéig, {d}-ig"))
           .replace("{name}", offerName())
           .replace("{p}", String(OFFER.percent))
           .replace("{d}", offerDayText());
@@ -3939,8 +3940,19 @@
     syncScrollHint();
   }
 
-  // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring).
-  setActivePreset(PRESETS.length ? PRESETS[0].id : "teljes");
+  // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring). K1 (Elek 10-11):
+  // a trialist continuing preselects the package the trial RAN on — „mit tartson meg” must
+  // not arrive with modules the trial never had already ticked.
+  var contPreset =
+    CONT && CONT.preset
+      ? PRESETS.filter(function (pr) {
+          return pr.id === CONT.preset;
+        })[0]
+      : null;
+  // ⛔ applyPreset, not just the highlight: the ticked modules (and so the price) must follow,
+  // or the card says „Ajánlott” while the total charges „Teljes” (measured on the first cut).
+  if (contPreset) applyPreset(contPreset);
+  else setActivePreset(PRESETS.length ? PRESETS[0].id : "teljes");
   updateSummary();
   // The phone menu is built by cit-runtime.js at ITS boot, which may come after a
   // selection restored above — re-check the links once the page has settled.
@@ -4079,6 +4091,26 @@
       .replace("{n}", String(TRIAL_DAYS));
   }
 
+  /**
+   * ADR-XXXX (B1, Elek 10-11): what the trial GIVES, from the manifest (trial/package.ts —
+   * the same list startTrial grants). No `pkg` = every module, the „minden funkció” line is
+   * true; otherwise the configured package's name and its modules, nothing more.
+   */
+  function trialWhatLine() {
+    var pkg = TRIAL && TRIAL.pkg && TRIAL.pkg.modules && TRIAL.pkg.modules.length ? TRIAL.pkg : null;
+    if (!pkg) return trialN(tr("{n} napig minden funkció: foglalási naptár, szobák, árak, galéria, vélemények, programajánló"));
+    var list = pkg.modules
+      .map(function (m) {
+        return tr(m.label);
+      })
+      .join(" · ");
+    return (
+      pkg.label
+        ? trialN(tr("{n} napig a próba csomagja ({pkg}): {list}")).replace("{pkg}", tr(pkg.label))
+        : trialN(tr("{n} napig a próbában: {list}"))
+    ).replace("{list}", list);
+  }
+
   function buildTrialSheet() {
     var exampleName = DOM && DOM.exampleName ? DOM.exampleName : "";
     tScrim = el('<div class="cit-cfg-tscrim" hidden></div>');
@@ -4091,9 +4123,7 @@
         '<p class="cit-cfg-taddr">' + esc(tr("Az Ön oldala élesben, ezen a címen:")) + " <b>" + esc(TRIAL.sub || "") + "</b></p>" +
         '<ul class="cit-cfg-tfacts">' +
         "<li>" + I.okc + "<span>" + esc(tr("Nem kell bankkártya, nincs előre fizetés")) + "</span></li>" +
-        "<li>" + I.okc + "<span>" +
-        esc(trialN(tr("{n} napig minden funkció: foglalási naptár, szobák, árak, galéria, vélemények, programajánló"))) +
-        "</span></li>" +
+        "<li>" + I.okc + "<span>" + esc(trialWhatLine()) + "</span></li>" +
         "<li>" + I.okc + "<span>" + esc(tr("Saját kezelőfelület: a képeket és a szövegeket Ön cseréli")) + "</span></li>" +
         "<li>" + I.okc + "<span>" +
         esc(tr("A keresőknek szóló alapok benne vannak: szálláshely-adatok, oldaltérkép, biztonságos (HTTPS) cím")) +
@@ -4245,6 +4275,9 @@
         disabled: tr("Az ingyenes próba most nem indítható. A megrendelés továbbra is elérhető."),
         market_not_approved: tr("A szállás országában az ingyenes próba még nem indítható."),
         not_found: tr("Ez a link már nem érvényes, ezért innen nem indítható próba."),
+        // ADR-XXXX (B2): this plan cannot become a live trial site (nothing was created; the
+        // operator was alerted server-side) — say so, and that ordering still works.
+        not_available: tr("Ehhez a tervhez most nem indítható ingyenes próba. Szóltunk a kollégáinknak, hamarosan jelentkezünk. A megrendelés továbbra is elérhető."),
       };
       sendErr.textContent =
         SENT[code] || tr("Most nem sikerült elindítani a próbát. Amit beírt, megmaradt — próbálja újra egy perc múlva.");

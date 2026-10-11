@@ -14,6 +14,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { trialDaysLeft } from "./notices.js";
 import { trialDiscount, type TrialDiscount } from "./offer.js";
+import { tenantTrialPackage, type TrialPackage } from "./package.js";
 import { effectivePurgeDay, purgeDay } from "./retention.js";
 
 /** The strip turns warn this many days before the end (mock: „3 nappal a vége előtt"). */
@@ -48,6 +49,12 @@ export interface TrialAdminState {
    * `spine` = in every package, so paying brings it back; the rest was trial-only.
    */
   readonly modules: readonly TrialGrantedModule[];
+  /**
+   * ADR-XXXX (B1/A7): what this trial was granted, in words (trial/package.ts — its
+   * trial_grant rows). The Modulok tab says „minden modul” only when `everything`; a tab of a
+   * module the trial lacks (Foglalások) says so and points to „Folytatom”.
+   */
+  readonly pkg: TrialPackage;
 }
 
 export interface TrialGrantedModule {
@@ -122,5 +129,6 @@ export async function trialAdminState(tenantId: string, now = new Date()): Promi
     purgeIso: warned ? effectivePurgeDay(until, budapestIsoDay(new Date(warn!.at as unknown as string))) : purgeDay(until),
     purgeWarned: warned,
     modules: row.status === "lapsed" ? await trialGrantedModules(tenantId) : [],
+    pkg: await tenantTrialPackage(tenantId),
   };
 }

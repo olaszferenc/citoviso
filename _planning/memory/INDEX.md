@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-11_proba_koordinator_5_zaras.md](2026-10-11_proba_koordinator_5_zaras.md) — 2026-10-11 — Ingyenes próba koordinátor (5. folytatás) lezárva: C felület + névváltás + Elek 3. kör, minden landolt
+- [2026-10-11_proba_javitasok_elek_tenant_kor.md](2026-10-11_proba_javitasok_elek_tenant_kor.md) — Próba-javítások Elek 10-11 tenant-köréből (B1/B2/K1/A1–A3/A5/A7 + IT A3 időzóna)
 - [2026-10-11_portal_naptarszinkron_ical.md](2026-10-11_portal_naptarszinkron_ical.md) — 2026-10-11 — Portál-naptárszinkron iCal-lal, első kör (ADR-0361)
 - [2026-10-11_marketing_elemzes_elso_hullam.md](2026-10-11_marketing_elemzes_elso_hullam.md) — 2026-10-11 — Marketing-elemzés: az első megkeresési hullám (177 link, 0 rendelés)
 - [2026-10-11_horvat_piac_elokutatas.md](2026-10-11_horvat_piac_elokutatas.md) — 2026-10-11 — Horvát piac: számlázási, ÁFA- és jogi előkutatás

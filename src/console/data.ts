@@ -38,6 +38,7 @@ import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
 import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
+import { isEngineArtifact } from "../conversion/provision.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -1673,6 +1674,8 @@ export interface ProspectPage {
   readonly artifactId: string;
   readonly artifactPath: string;
   readonly unsubscribed: boolean;
+  /** ADR-XXXX (B2): an ENGINE mock (recipe + data) — only that can become a live trial site. */
+  readonly engine: boolean;
 }
 
 /** Resolve a tracked link's token to the prospect + its approved mock artifact. */
@@ -1702,6 +1705,7 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
     artifactId: r.artifactId,
     artifactPath: r.artifactPath,
     unsubscribed: r.unsubscribedAt != null,
+    engine: isEngineArtifact(r.artifactInputs),
   };
 }
 

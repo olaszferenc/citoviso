@@ -255,7 +255,9 @@ piacra érvényes”**: bármelyik régió oldalán ugyanazt látod, és bármel
 2. **„A próba hossza”**: egész nap 1 és 90 között. Alapból 14 nap.
 3. **„A próbázó ezt kapja”**: melyik csomag moduljait használhatja a próba alatt (Teljes, Ajánlott vagy Alap
    csomag). A csomagok tartalmát a lap tetején, a „Csomagok” panelen állítod. Amíg ezt egyszer el nem mented, a
-   próba a régi szabály szerint minden modult megkap.
+   próba a régi szabály szerint minden modult megkap. Amit itt beállítasz, azt ígéri a próba-űrlap, a
+   belépő-levél és a próbázó Modulok füle is: a csomag nevét és a benne lévő modulokat (a „minden funkció”
+   szöveg csak akkor marad, ha a csomag minden modult tartalmaz).
 
 A próbázó kuponját itt nem állítod: ugyanazt kapja, mint a közvetlen vevő, a lenti **„Kupon”** szekció szerint.
 

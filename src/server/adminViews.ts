@@ -886,10 +886,14 @@ export function passwordSetDonePage(lang = "hu"): string {
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Kész — beléptetjük")}</h1>` +
       `<p class="citui-hint">${T(lang, "A jelszava beállítva. Mostantól a felhasználónevével és ezzel a jelszóval léphet be.")}</p>` +
       `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>` +
+      `<p class="citui-hint" data-pw-autogo>${T(lang, "Pár másodperc múlva magától továbblépünk a szerkesztőbe.")}</p>` +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
       `</div></div>` +
-      // Elek3 A7: „beléptetjük” must be what happens — the session is already live, so the
-      // page goes on by itself after a moment to read; the button stays for no-JS / the impatient.
+      // Elek3 A7 / Elek 10-11 A5: „beléptetjük” must be what happens — the session is already
+      // live, so the page goes on by itself after a moment to read, and SAYS so (a reader who
+      // saw only a button took it for one more required click). The meta refresh carries it
+      // without JS too; the script is the faster path; the button is for the impatient.
+      `<meta http-equiv="refresh" content="3;url=/admin">` +
       `<script>setTimeout(function(){location.replace("/admin")},2500);</script>`,
     lang,
   );
@@ -1097,7 +1101,8 @@ function trialStrip(t: TrialAdminState, lang: string): string {
   const offer = !d
     ? ""
     : d.kind === "trial"
-      ? " " + T(lang, "Ha a próba végéig megrendeli, −{percent}% az első díjból.", { percent: String(d.percent) })
+      ? // A2 (Elek 10-11): the discount carries its one name here too, in the invoice mail's form.
+        " " + T(lang, "Ha a próba végéig megrendeli: Próba-kedvezmény (−{percent}%) az első díjból.", { percent: String(d.percent) })
       : " " + T(lang, "Ha folytatja, {percent}% kedvezményt kap az első díjból.", { percent: String(d.percent) });
   const pct = Math.min(100, Math.max(4, Math.round(((t.totalDays - Math.max(n, 0)) / t.totalDays) * 100)));
   return (
@@ -1197,6 +1202,29 @@ function trialModulesCard(t: TrialAdminState, lang: string): string {
 }
 
 /**
+ * A7 (Elek 10-11) — the Foglalások tab of a trial whose package has no online booking. The
+ * generic „…ha a Foglalás modul be van kapcsolva” left the trialist asking „hát nem minden be
+ * van kapcsolva?”, while the guests' enquiries sat under Üzenetek. Says the module is not in
+ * the trial's package, where the enquiries are, and the existing „Folytatom” way to add it.
+ */
+function trialNoBookingCard(t: TrialAdminState, lang: string): string {
+  const head = t.pkg?.label
+    ? T(lang, "Az online foglalás nincs benne a próba csomagjában ({pkg}).", { pkg: T(lang, t.pkg.label) })
+    : T(lang, "Az online foglalás nincs benne a próbában.");
+  return (
+    `<section class="adm-card adm-trial-keep" data-trial-nobooking>` +
+    `<div class="adm-trial-keep__t"><h2>${T(lang, "Foglalások")}</h2>` +
+    `<p>${head} ${T(lang, "A vendégek érdeklődését az Üzenetek között találja. A foglalási naptárt a „Folytatom” gombbal adhatja hozzá.")}</p></div>` +
+    `<div class="adm-trial-keep__acts">` +
+    `<a class="citui-btn citui-btn--ghost adm-trial-keep__go" href="/admin?tab=uzenetek&amp;t=foglalas">${T(lang, "Érdeklődések az Üzenetekben")}</a>` +
+    (t.continueUrl
+      ? `<a class="citui-btn citui-btn--primary adm-trial-keep__go" href="${esc(t.continueUrl)}">${T(lang, "Folytatom — csomag és modulok")}</a>`
+      : "") +
+    `</div></section>`
+  );
+}
+
+/**
  * ADR-0354 "C" — the Modulok tab DURING a running trial (mock proba-c/2-belepesi-pontok (a),
  * approved 2026-10-10). Every module is on and nothing is billed, so the tab carries no
  * prices and no per-row buying (the old per-row „Hozzáadom" was a dead end: a trial has no
@@ -1206,12 +1234,28 @@ function trialModulesCard(t: TrialAdminState, lang: string): string {
  */
 function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string): string {
   const d = t.discount;
-  const text =
+  // ADR-XXXX (B1, Elek 10-11): „minden modul” only when the trial really got every module
+  // (trial/package.ts); otherwise the package it ran on, and that the rest can be added.
+  const tail =
     d?.kind === "trial"
+      ? T(lang, "Hogy mit tart meg, a gomb mögött választja ki — a próba végéig −{percent}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.", { percent: String(d.percent) })
+      : d
+        ? T(lang, "Hogy mit tart meg, a gomb mögött választja ki — −{percent}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.", { percent: String(d.percent) })
+        : T(lang, "Hogy mit tart meg, a gomb mögött választja ki. Amit nem választ, az is bekapcsolva marad a próba végéig.");
+  const partial = t.pkg && !t.pkg.everything
+    ? (t.pkg.label
+        ? T(lang, "A próba csomagja: {pkg}. Az alábbi modulok vannak bekapcsolva, díjat nem számolunk.", { pkg: T(lang, t.pkg.label) })
+        : T(lang, "A próbában az alábbi modulok vannak bekapcsolva, díjat nem számolunk.")) +
+      " " + tail + " " +
+      T(lang, "Ami nincs a próba csomagjában, azt ugyanitt hozzáadhatja.")
+    : null;
+  const text =
+    partial ??
+    (d?.kind === "trial"
       ? T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki — a próba végéig −{percent}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.", { percent: String(d.percent) })
       : d
         ? T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki — −{percent}%-kal az első díjból. Amit nem választ, az is bekapcsolva marad a próba végéig.", { percent: String(d.percent) })
-        : T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki. Amit nem választ, az is bekapcsolva marad a próba végéig.");
+        : T(lang, "A próbában minden modul be van kapcsolva, díjat nem számolunk. Hogy mit tart meg, a gomb mögött választja ki. Amit nem választ, az is bekapcsolva marad a próba végéig."));
   const rows = mv.modules
     .filter((m) => m.active)
     .map(
@@ -6455,7 +6499,9 @@ export function adminDashboard(
             ? // Jóváhagyott terv 2026-09-06: kérések + naptár + csempék egy felületen.
               (opts.bookings
                 ? bookingsSection(opts.bookings, lang)
-                : `<div class="adm-card"><p class="citui-hint">${T(lang, "A foglalások akkor jelennek meg itt, ha a Foglalás modul be van kapcsolva.")}</p></div>`)
+                : opts.trial?.status === "active" && opts.trial.pkg && !opts.trial.pkg.moduleIds.includes("booking")
+                  ? trialNoBookingCard(opts.trial, lang)
+                  : `<div class="adm-card"><p class="citui-hint">${T(lang, "A foglalások akkor jelennek meg itt, ha a Foglalás modul be van kapcsolva.")}</p></div>`)
           : tab === "uzenetek"
             ? messagesSection(
                 opts.messages ?? {

@@ -15,6 +15,7 @@ import { getEmailSender } from "../email/sender.js";
 import { buildCredentialsEmail, buildPasswordResetEmail } from "../email/loginEmail.js";
 import { footerReasonForTenant } from "../trial/footer.js";
 import type { TrialCouponView } from "../email/trialEmail.js";
+import type { TrialPackageView } from "../email/loginEmail.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
 import { config } from "../config.js";
@@ -101,7 +102,12 @@ export async function issueAndSendTenantLogin(
   /** Who ordered — only for the salutation (a company gets a neutral one). */
   buyer?: { name: string | null; isPerson: boolean },
   /** ADR-0344: a free trial's login — the approved trial wording, the trial footer. */
-  trial?: { readonly untilIso: string; readonly coupon: TrialCouponView | null } | null,
+  trial?: {
+    readonly untilIso: string;
+    readonly coupon: TrialCouponView | null;
+    /** ADR-XXXX (B1): what the trial gives when it is not everything (trial/package.ts). */
+    readonly pkg?: TrialPackageView | null;
+  } | null,
 ): Promise<IssuedLogin> {
   const login = await issueTenantLogin(tenantId, businessName, contactEmail);
   const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;

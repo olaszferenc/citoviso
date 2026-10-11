@@ -23,7 +23,7 @@ folytatáskor) ezt a kontraktust bővíti — jóváhagyva 2026-10-10, tulajdono
 3. **Figyelmeztető tónus** 3 nappal a vége előtt (`TRIAL_WARN_DAYS = 3`) — sárga sáv (`adm-trial--warn`).
 4. **Kedvezmény-mondat csak élő kedvezménnyel** (`trialDiscount` — ugyanaz a válasz, mint a leveleké és a
    folytatás-lapé). C-próbánál (a „Próba-kedvezmény”, a próba utolsó napja végéig, az első díjra):
-   **„Ha a próba végéig megrendeli, −{percent}% az első díjból.”** A C előtti próba kuponja a régi mondatát
+   **„Ha a próba végéig megrendeli: Próba-kedvezmény (−{percent}%) az első díjból.”** (A2, Elek 10-11: a kedvezmény egy neve, a számla-levél alakjában) A C előtti próba kuponja a régi mondatát
    tartja: „Ha folytatja, {percent}% kedvezményt kap az első díjból.” Kedvezmény nélkül a mondat elmarad — nem
    ígérünk olyat, amit a pénztár nem adna.
 5. **Egyetlen gomb:** **„Folytatom”** → `/p/<token>/folytatas` (ADR-0344 ④).

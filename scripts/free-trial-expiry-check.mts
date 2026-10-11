@@ -322,12 +322,16 @@ try {
   const he = smsEncoding(hugeT3);
   check("T−3, 2 szeletbe nem férő név: rövidül, de ≤2 szelet és a link épen", he.gsm7 && he.segments <= 2 && hugeT3.endsWith("citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas") && hugeT3.includes("..."), `${he.length}/${he.segments}: ${hugeT3}`);
   const shortT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Napfény Vendégház", trialUntilIso: "2026-10-22", coupon: { percent: 25, untilIso: "2027-01-20" }, continueUrl: "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", lang: "hu" });
-  check("T−3 a jóváhagyott szöveg ékezet nélkül (régi, C előtti kupon)", shortT3 === "Citoviso: a Napfeny Vendeghaz ingyenes probaja okt. 22-en lejar. Folytatas 25% kedvezmennyel: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", shortT3);
+  check("T−3 a jóváhagyott szöveg ékezet nélkül (régi, C előtti kupon)", shortT3 === "Citoviso: a Napfeny Vendeghaz ingyenes probaja 3 nap mulva, okt. 22-en lejar. Folytatas 25% kedvezmennyel: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", shortT3);
   // ADR-0354 "C" SMS (proba-c/3-levelek-sms.html): T−3, T−1 and the day itself, ≤ 2 segments.
   const cDisc = { kind: "trial" as const, percent: 50, untilIso: "2026-10-23" };
   const cUrl = "https://citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas";
   const cT3 = buildTrialNoticeSmsText({ daysLeft: 3, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
-  check("C T−3 a jóváhagyott szöveg ékezet nélkül", cT3 === "Citoviso: az Udulo tabor ingyenes probaja okt. 23-an lejar. Ha addig megrendeli, -50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", cT3);
+  check("C T−3 a jóváhagyott szöveg ékezet nélkül", cT3 === "Citoviso: az Udulo tabor ingyenes probaja 3 nap mulva, okt. 23-an lejar. Ha addig megrendeli, -50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas Nem terhelunk, ha nem folytatja.", cT3);
+  // A1 (Elek 10-11): a weekend-shifted pair (4 and 3 days left) gets the date form twice — the
+  // two texts must still differ (the days left are named), never the same SMS on two days.
+  const cT4 = buildTrialNoticeSmsText({ daysLeft: 4, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
+  check("A1: T−3 (4 nap) és T−1 (3 nap) SMS-e NEM azonos szövegű", cT4 !== cT3 && cT4.includes("4 nap mulva") && cT3.includes("3 nap mulva"), `${cT4} | ${cT3}`);
   const cT1 = buildTrialNoticeSmsText({ daysLeft: 1, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
   check("C T−1 a jóváhagyott szöveg ékezet nélkül", cT1 === "Citoviso: holnap lejar az Udulo tabor ingyenes probaja. Holnapig -50% az elso dijbol: citoviso.com/p/k7Qm2xRb9fTzW4aN3pLs8vYc/folytatas", cT1);
   const cT0 = buildTrialNoticeSmsText({ daysLeft: 0, siteName: "Üdülő tábor", trialUntilIso: "2026-10-23", coupon: cDisc, continueUrl: cUrl, lang: "hu" });
@@ -471,6 +475,11 @@ try {
     const { passwordSetDonePage } = await import("../src/server/adminViews.js");
     const done = passwordSetDonePage("hu");
     check("A7: a jelszó-beállítás utáni lap magától belép a szerkesztőbe", done.includes("Kész — beléptetjük") && /location\.replace\("\/admin"\)/.test(done));
+    // Elek 10-11 A5: …JS nélkül is (meta refresh), és KI IS MONDJA, hogy magától továbblép — a gomb nem kötelező lépés.
+    check(
+      "A5: a lap kimondja a magától továbblépést, és JS nélkül is továbblép (meta refresh → /admin)",
+      done.includes("magától továbblépünk a szerkesztőbe") && /<meta http-equiv="refresh" content="\d+;url=\/admin">/.test(done),
+    );
   }
   check("A1: a sáv dátuma egy kifejezés, zárójel a zárójelben nélkül",
     /\(\d{4}\. [^()]+ \d{1,2}\., [a-zőöüóéáúűí]+ig\)/.test(stripHead) && !/\)-ig\)/.test(stripHead), stripHead.slice(0, 120));
@@ -478,9 +487,9 @@ try {
   check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));
   // ADR-0354 "C" (mock proba-c (a)): the strip names the ONE discount and its ONE deadline;
   // the pre-C coupon sentence („…kedvezményt kap…") is not said for a C trial.
-  check("C: a sáv „Ha a próba végéig megrendeli, −{p}% az első díjból.”",
+  check("C: a sáv „Ha a próba végéig megrendeli: Próba-kedvezmény (−{p}%) az első díjból.” (A2)",
     calm?.discount?.kind === "trial" &&
-      calmHtml.includes(`Ha a próba végéig megrendeli, −${calm.discount.percent}% az első díjból.`) && !calmHtml.includes("kedvezményt kap"),
+      calmHtml.includes(`Ha a próba végéig megrendeli: Próba-kedvezmény (−${calm.discount.percent}%) az első díjból.`) && !calmHtml.includes("kedvezményt kap"),
     JSON.stringify(calm?.discount));
   // --self-test: the end date slid away → the warn assertion must go red
   if (SELF_TEST) await db.updateTable("free_trial").set({ trial_until: new Date(untilAt + 30 * 86_400_000) }).where("id", "=", trial.id).execute();

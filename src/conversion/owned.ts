@@ -90,6 +90,19 @@ export async function ownedSiteForLead(leadId: string): Promise<OwnedSite | null
     .executeTakeFirst();
 
   if (!paid && !tenant) return null;
+  // ADR-XXXX (B2, Elek 10-11): a tenant an UNFINISHED trial start left behind (its claim never
+  // recorded it — a pre-fix failed start) is not ownership. The lead never got a login; the
+  // page must offer the trial again, and the next submit cleans it up or finishes it.
+  if (!paid && tenant) {
+    const orphanClaim = await db
+      .selectFrom("free_trial")
+      .select("id")
+      .where("lead_id", "=", leadId)
+      .where("tenant_id", "is", null)
+      .where("status", "in", ["active", "lapsed"])
+      .executeTakeFirst();
+    if (orphanClaim) return null;
+  }
 
   const paidAt = paid?.paidAt ? new Date(paid.paidAt as unknown as string) : null;
   if (!tenant) return { stage: "paid_pending", tenantId: null, siteUrl: null, loginUrl: null, paidAt };

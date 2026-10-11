@@ -18,24 +18,27 @@
 // "your trial is running, we sent the link" for a trial that never finished. See feedback_idempotency_made_the_second_charge_worthless: the
 // second request must return the FIRST trial, never quietly build nothing.
 
+import { rm } from "node:fs/promises";
+import path from "node:path";
+
 import { db } from "../db/client.js";
 import { config } from "../config.js";
+import { alertHouse } from "../console/houseAlert.js";
 import { approveArtifactForBuyerOrder } from "../console/data.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
-import { convertLead } from "../conversion/provision.js";
+import { convertLead, isEngineArtifact } from "../conversion/provision.js";
 import { tenantSiteUrl } from "../domains.js";
 import { isValidEmail } from "../email/leadEmails.js";
 import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
-import { MODULE_CATALOG } from "../modules.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
-import { getFreeTrialConfig } from "./config.js";
-import { tierModules, type Tier } from "../packages.js";
-import { getPackageAssignment, loadPricing } from "../pricing.js";
+import { getFreeTrialConfig, trialUntilFrom } from "./config.js";
+import { loadPricing } from "../pricing.js";
+import { tenantTrialPackage, trialModuleIds, trialPackageView } from "./package.js";
 import { pinTrialOffer, trialDiscount } from "./offer.js";
 
 export interface TrialInput {
@@ -65,6 +68,9 @@ export type TrialError =
   | "trial_used"
   | "in_progress"
   | "market_not_approved"
+  /** ADR-XXXX (B2): this mock cannot become a live trial site (a legacy HTML-copy mock) —
+   *  nothing was created, the operator was told; the page says it cannot start now. */
+  | "not_available"
   | "provision_failed";
 
 export type TrialResult =
@@ -81,14 +87,9 @@ export type TrialResult =
     }
   | { readonly ok: false; readonly error: TrialError };
 
-/** Every module the trial grants: the whole catalog except the retired ones (owner,
- *  2026-10-09: "FULL funkció", the translation module included). */
-export function trialModuleIds(pkg?: Tier): string[] {
-  // ADR-0360 ⑥: the configured package's contents (own + inherited, spine included);
-  // without one, the pre-ADR rule — every non-retired catalog module.
-  if (pkg) return tierModules(getPackageAssignment(), pkg);
-  return MODULE_CATALOG.filter((m) => !m.retired).map((m) => m.id);
-}
+// The grant list lives with its wording (package.ts, ADR-XXXX): the trial form, the login
+// letter and the admin read the SAME list this grants.
+export { trialModuleIds };
 
 /** A claimed trial younger than this with no tenant yet is assumed to be in flight. */
 const IN_FLIGHT_MS = 2 * 60_000;
@@ -146,6 +147,18 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (await ownedSiteForLead(p.lead_id)) return { ok: false, error: "already_owned" };
   }
 
+  // 1b. ADR-XXXX (B2, Elek 10-11): a legacy HTML-copy mock has no recipe to render a live
+  //     page from (the §A photo policy cannot be applied to a copy), so a trial on it can
+  //     NEVER finish. Refused BEFORE anything is claimed — measured: the old order claimed,
+  //     built a tenant, then refused, and the lead read „Ez az oldal már az Öné” with no login.
+  //     A claim such an old run left behind is cleaned up here too.
+  const art = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", p.mock_artifact_id).executeTakeFirst();
+  if (!isEngineArtifact(art?.inputs)) {
+    if (prior && unprovisioned) await abandonTrialStart(prior.id, p.lead_id, "legacy HTML-másolat mock (régi kör hagyta félbe)", null); // i18n-exempt: operátori napló
+    else await alertTrialNotStarted(p.lead_id, "legacy HTML-másolat mock — élő próba-oldal nem készíthető belőle; semmi nem jött létre"); // i18n-exempt: operátori napló
+    return { ok: false, error: "not_available" };
+  }
+
   // 2. The market gate, as at the paid go-live: a live page publishes legal pages, and
   //    those exist only for an approved market (ADR-0111). Trial has no billing
   //    declaration, so the lead's own scrape country decides.
@@ -170,7 +183,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         status: "active",
         lapsed_at: null,
         started_at: now,
-        trial_until: new Date(now.getTime() + cfg.days * 86_400_000),
+        trial_until: trialUntilFrom(now, cfg.days),
       })
       .where("id", "=", trial.id)
       .where("tenant_id", "is", null)
@@ -193,7 +206,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         photo_rights_declared_at: now,
         photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1,
         started_at: now,
-        trial_until: new Date(now.getTime() + cfg.days * 86_400_000),
+        trial_until: trialUntilFrom(now, cfg.days),
       })
       .onConflict((oc) => oc.column("lead_id").doNothing())
       .returningAll()
@@ -201,6 +214,16 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (!trial) return { ok: false, error: "in_progress" };
   }
   const trialId = trial.id;
+  // ADR-XXXX (B2): what the lead was before this start converted it — a failed start puts it back.
+  const lifecycleBefore =
+    (await db.selectFrom("lead").select("lifecycle_status").where("id", "=", p.lead_id).executeTakeFirst())?.lifecycle_status ?? null;
+  // ⛔ A FAILED START LEAVES NOTHING (ADR-XXXX, B2): every failure below rolls the start back
+  // (abandonTrialStart) — no `active` claim without a tenant, no tenant the lead never got a
+  // login to, so the page offers the trial again and the next submit starts clean.
+  const fail = async (reason: string): Promise<TrialResult> => {
+    await abandonTrialStart(trialId, p.lead_id, reason, lifecycleBefore);
+    return { ok: false, error: "provision_failed" };
+  };
 
   try {
     await loadPricing();
@@ -211,14 +234,10 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
       //    (same owner ruling as the paid order, 2026-09-13). A 'rejected' mock stays refused.
       const promo = await approveArtifactForBuyerOrder(p.mock_artifact_id, `trial:${trialId}`);
       if (!promo.promoted && promo.status !== "approved") {
-        console.error(`[trial] ${trialId}: a mock '${promo.status ?? "hiányzik"}' — próba nem indítható`); // i18n-exempt: operátori napló
-        return { ok: false, error: "provision_failed" };
+        return fail(`a mock '${promo.status ?? "hiányzik"}' — próba nem indítható`); // i18n-exempt: operátori napló
       }
       const conv = await convertLead(p.lead_id, p.mock_artifact_id, modules, null);
-      if (conv.renderSource === "copy") {
-        console.error(`[trial] ${trialId}: legacy HTML-másolat mock — a §A fotó-policy nem alkalmazható`); // i18n-exempt: operátori napló
-        return { ok: false, error: "provision_failed" };
-      }
+      if (conv.renderSource === "copy") return fail("legacy HTML-másolat mock — a §A fotó-policy nem alkalmazható"); // i18n-exempt: operátori napló
       // Trial-origin marking: everything granted here that money does not back. (A fresh
       // trial tenant has paid for nothing, so that is all of them.)
       const paid = new Set(await paidModuleIds(conv.tenantId));
@@ -240,10 +259,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     const siteNow = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirst();
     if (siteNow?.status !== "live") {
       const rendered = await rerenderTenantSnapshot(tenantId, { as: "live" });
-      if (!rendered) {
-        console.error(`[trial] ${trialId}: a live render nem sikerült — a site provisioned marad`); // i18n-exempt: operátori napló
-        return { ok: false, error: "provision_failed" };
-      }
+      if (!rendered) return fail("a live render nem sikerült"); // i18n-exempt: operátori napló
       await db
         .updateTable("site")
         .set({ status: "live", live_at: now })
@@ -291,6 +307,8 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           {
             untilIso: budapestIsoDay(new Date(trial.trial_until as unknown as string)),
             coupon: discount,
+            // ADR-XXXX (B1): the letter names what this tenant was GRANTED (its trial_grant rows), not „all”.
+            pkg: trialPackageView(await tenantTrialPackage(tenantId)),
           },
         );
         loginSentTo = login.contactEmail;
@@ -305,9 +323,90 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     console.log(`[trial] ${prior ? "FOLYTATVA" : "INDULT"} · lead ${p.lead_id} · tenant ${tenantId} · ${modules.length} modul · eddig ${new Date(trial.trial_until as unknown as string).toISOString()}`); // i18n-exempt: operátori napló
     return finished(tenantId, trial.trial_until, couponId, false, loginSentTo);
   } catch (e) {
-    console.error(`[trial] ${trialId} hiba: ${(e as Error).message}`); // i18n-exempt: operátori napló
-    return { ok: false, error: "provision_failed" };
+    return fail(`hiba: ${(e as Error).message}`); // i18n-exempt: operátori napló
   }
+}
+
+/**
+ * ADR-XXXX (B2) — undo a trial start that did not finish, so the lead is exactly where it
+ * was before the click: the claim row deleted (the page offers the trial again), the tenant
+ * this start built deleted with everything under it (ON DELETE CASCADE, as the 90-day purge),
+ * its snapshot directory removed, the lead's lifecycle put back. The operator is mailed.
+ *
+ * ⛔ Never touches money: a tenant with a paid payment on the lead, or a subscription, is
+ * NOT deleted — then only the claim goes, and the alert says a human must look.
+ * Never throws (it runs on a failure path); a rollback that itself fails is logged + alerted.
+ */
+export async function abandonTrialStart(
+  trialId: string,
+  leadId: string,
+  reason: string,
+  lifecycleBefore: string | null,
+): Promise<void> {
+  let tenantId: string | null = null;
+  let kept = "";
+  try {
+    tenantId = await db.transaction().execute(async (trx) => {
+      const claim = await trx
+        .selectFrom("free_trial")
+        .select(["id", "tenant_id"])
+        .where("id", "=", trialId)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!claim) return null;
+      const tenant = await trx.selectFrom("tenant").select("id").where("lead_id", "=", leadId).executeTakeFirst();
+      // Only the trial's own tenant: the one it recorded, or (crash before step 4 wrote it)
+      // the lead's tenant while the claim has none.
+      const own = tenant && (claim.tenant_id === null || claim.tenant_id === tenant.id) ? tenant.id : null;
+      let removable = own;
+      if (own) {
+        const paid = await trx
+          .selectFrom("payment")
+          .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+          .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+          .select("payment.id")
+          .where("prospect.lead_id", "=", leadId)
+          .where("payment.status", "in", ["paid", "pending", "reserved"])
+          .executeTakeFirst();
+        const sub = await trx.selectFrom("subscription").select("id").where("tenant_id", "=", own).executeTakeFirst();
+        if (paid || sub) {
+          removable = null;
+          kept = ` — a tenant (${own}) MARADT: fizetett/függő fizetés vagy előfizetés tartozik hozzá, kézi döntés kell`; // i18n-exempt: operátori napló
+        }
+      }
+      await trx.deleteFrom("free_trial").where("id", "=", trialId).execute();
+      if (removable) {
+        await trx.deleteFrom("tenant").where("id", "=", removable).execute();
+        await trx
+          .updateTable("lead")
+          .set({ lifecycle_status: (lifecycleBefore ?? "outreach") as "outreach" })
+          .where("id", "=", leadId)
+          .where("lifecycle_status", "=", "conversion")
+          .execute();
+      }
+      return removable;
+    });
+    if (tenantId) await rm(path.resolve(process.cwd(), "sites", tenantId), { recursive: true, force: true });
+    console.error(`[trial] ${trialId}: INDÍTÁS VISSZAGÖRGETVE · lead ${leadId} · ${reason}${tenantId ? ` · tenant ${tenantId} törölve` : ""}${kept}`); // i18n-exempt: operátori napló
+    await alertTrialNotStarted(leadId, `${reason}. A félkész indítás visszagörgetve${tenantId ? ` (tenant ${tenantId} törölve)` : ""}${kept}; a lead újra indíthatja a próbát.`); // i18n-exempt: operátori napló
+  } catch (e) {
+    console.error(`[trial] ${trialId}: a visszagörgetés MAGA is elhasalt (${reason}):`, e); // i18n-exempt: operátori napló
+    await alertTrialNotStarted(leadId, `${reason}. ⛔ A visszagörgetés is elhasalt: ${(e as Error).message} — a free_trial/tenant sort kézzel kell rendbe tenni.`); // i18n-exempt: operátori napló
+  }
+}
+
+/** The house hears about every trial that did not start (houseAlert: one mail, never throws). */
+async function alertTrialNotStarted(leadId: string, what: string): Promise<void> {
+  const lead = await db.selectFrom("lead").select("name").where("id", "=", leadId).executeTakeFirst().catch(() => undefined);
+  await alertHouse({
+    tag: "trial-start",
+    subject: `Citoviso: a próba NEM indult el — ${lead?.name ?? leadId}`, // i18n-exempt: operátori riasztás
+    text:
+      `Egy lead elindította volna az ingyenes próbát, de nem sikerült.\n\n` + // i18n-exempt: operátori riasztás
+      `Lead: ${lead?.name ?? "?"} (${leadId})\n` + // i18n-exempt: operátori riasztás
+      `Ok: ${what}\n\n` + // i18n-exempt: operátori riasztás
+      `A lead ezt látta: „most nem indítható / próbálja újra”. Teendő: nézd meg a lead mockját (régi HTML-mock → új mock kell), és szükség esetén keresd meg.`, // i18n-exempt: operátori riasztás
+  });
 }
 
 /** A tenant-bearing trial is finished when its site went live, its offer is pinned

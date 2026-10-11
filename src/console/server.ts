@@ -11,6 +11,7 @@ import {
   setFreeTrialConfig,
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
+import { configuredTrialPackage, tenantTrialPackage, trialModuleLabel } from "../trial/package.js";
 import { liveTrialOffer } from "../trial/offer.js";
 import { trialDaysLeft } from "../trial/notices.js";
 import { addIsoDays } from "../text/zoneTime.js";
@@ -151,7 +152,7 @@ import {
   payAlreadyOwnedPage,
 } from "./views.js";
 import { checkSubdomainAvailable, convertLead, plannedSiteSlug } from "../conversion/provision.js";
-import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
+import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForLead, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import { normalizeCustomDomain, slugify, suggestDomains } from "../domains.js";
@@ -238,7 +239,7 @@ import {
   verdictAckOf,
   type BlockingVerdict,
 } from "../outreach/mockVerdictGate.js";
-import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
+import { esc as escHtml, outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import {
   cleanFeedbackText,
   feedbackDoneHtml,
@@ -3343,7 +3344,7 @@ async function handle(
     const status = r.ok ? 200 : r.error === "not_found" ? 404 : r.error === "provision_failed" ? 500 : 409;
     return send(
       res,
-      r.ok || ["provision_failed", "not_found", "in_progress", "already_owned", "trial_used", "disabled", "market_not_approved"].includes(r.error) ? status : 400,
+      r.ok || ["provision_failed", "not_found", "in_progress", "already_owned", "trial_used", "disabled", "market_not_approved", "not_available"].includes(r.error) ? status : 400,
       JSON.stringify(r.ok ? { ...r, trialUntil: r.trialUntil.toISOString() } : r),
       "application/json",
     );
@@ -3415,6 +3416,8 @@ async function handle(
           paidStartIso: addIsoDays(trialEndIso, 1),
           freeDaysLeft: Math.max(0, trialDaysLeft(new Date(), new Date(ft.trial_until as unknown as string))),
           hadOffer: !!ft.offer_id,
+          // K1 (Elek 10-11): the package the trial ran on is the preselection — not the largest.
+          preset: (await tenantTrialPackage(trial.tenantId)).tier,
         },
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null),
@@ -3516,10 +3519,19 @@ async function handle(
       // one (the endpoint would answer them with the same trial or `trial_used`). An owned
       // lead never reaches this branch.
       const trialCfg = await getFreeTrialConfig();
+      // ADR-XXXX (B2): a claim that never got a tenant is not a trial the lead had (startTrial
+      // resumes it), and a legacy HTML-copy mock can never become a live trial site — no entry.
       const hadTrial =
-        trialCfg.enabled && pf?.leadId
-          ? !!(await db.selectFrom("free_trial").select("id").where("lead_id", "=", pf.leadId).executeTakeFirst())
+        trialCfg.enabled && pf?.leadId && p.engine
+          ? !!(await db
+              .selectFrom("free_trial")
+              .select("id")
+              .where("lead_id", "=", pf.leadId)
+              .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "not in", ["active", "lapsed"])]))
+              .executeTakeFirst())
           : true;
+      // ADR-XXXX (B1): the form names what the trial GIVES — the same list startTrial grants.
+      const trialPkg = trialCfg.enabled && !hadTrial ? await configuredTrialPackage() : null;
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
         // ADR-0330: the subdomain the outreach link showed is the default they keep — via
@@ -3553,6 +3565,14 @@ async function handle(
                 days: trialCfg.days,
                 url: `/p/${pMatch[1]}/trial`,
                 privacyUrl: "/privacy",
+                ...(trialPkg && !trialPkg.everything
+                  ? {
+                      pkg: {
+                        label: trialPkg.label,
+                        modules: trialPkg.moduleIds.map((id) => ({ id, label: trialModuleLabel(id) })),
+                      },
+                    }
+                  : {}),
               },
             }
           : {}),
@@ -4731,10 +4751,27 @@ async function handle(
     // A replayed click on an ALREADY-SETTLED payment must not claim a fresh
     // charge — honest state, no promises about mails that will not be sent.
     if (paid && r.alreadySettled) {
+      // A3 (Elek 10-11): not a dead end — the buyer's next steps (their site, the admin login),
+      // the same two the owned-site bar offers (ownedSiteForLead: one source).
+      const ownerLead = await db
+        .selectFrom("payment")
+        .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+        .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+        .select("prospect.lead_id as leadId")
+        .where("payment.gateway_ref", "=", mockPayDoMatch[1])
+        .executeTakeFirst();
+      const ownedNow = ownerLead ? await ownedSiteForLead(ownerLead.leadId) : null;
+      const nextLinks =
+        (ownedNow?.siteUrl
+          ? `<a class="citui-btn citui-btn--ghost" href="${escHtml(ownedNow.siteUrl)}">A honlapom megnyitása</a> ` // i18n-exempt: mock fizetési oldal (dev-kapu), mint a lap többi szövege
+          : "") +
+        (ownedNow?.loginUrl
+          ? `<a class="citui-btn citui-btn--primary" href="${escHtml(ownedNow.loginUrl)}">Belépés a kezelőfelületre</a>` // i18n-exempt: mock fizetési oldal (dev-kapu), mint a lap többi szövege
+          : "");
       return send(
         res,
         200,
-        layout("Fizetés már rendezve", `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center"><h2 class="q-good">Ez a fizetés már rendezve van</h2><p class="mut">Új terhelés NEM történt — a korábbi sikeres fizetés érvényes. A visszaigazolást és a számlát az első fizetéskor küldtük el.</p></div>`, { chrome: false }),
+        layout("Fizetés már rendezve", `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center"><h2 class="q-good">Ez a fizetés már rendezve van</h2><p class="mut">Új terhelés NEM történt — a korábbi sikeres fizetés érvényes. A visszaigazolást és a számlát az első fizetéskor küldtük el.</p>${nextLinks ? `<p data-paid-next style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextLinks}</p>` : ""}</div>`, { chrome: false }),
       );
     }
     // ⛔ ONE outcome renderer, not two (measured defect, Elek FK-005b 2026-09-11):
