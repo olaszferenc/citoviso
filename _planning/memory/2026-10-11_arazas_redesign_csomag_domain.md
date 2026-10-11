@@ -21,7 +21,7 @@
 - Ellenőrzés: Playwright 60/60 (asztali+mobil), érintéses húzás automatikus görgetéssel, sötét mód; a felsorolt őrök zöldek; `free-trial-e2e` PASS.
 
 ## Nyitott kérdések
-- **ÁSZF 1.5 szövege** a tulaj jóváhagyására vár (verzióugrás → meglévő ügyfeleknek 15 napos értesítés).
+- ✅ **ÁSZF 1.5 szövege** — a tulaj 2026-10-11-én jóváhagyta. Élesítéskor: verzióugrás → meglévő ügyfeleknek 15 napos előzetes értesítés.
 - Utólagos, díj nélküli domain-igénylés élő tenantnak (fizetés nélküli vétel-út) — következő kör.
 - A vevő oldala (mock/konfigurátor „saját .hu címmel” üzenet) — külön §2b terv-kör.
 - A Websupport megújítási ára (az első megújítási számlából).

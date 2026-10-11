@@ -29,7 +29,7 @@
 - Logika: `src/packages.ts` (összetétel, validáció, csomag-tartalom), `src/pricing.ts` (`currentPresets`, `domainMonthlyFee`, `domainFeeForCycle(…, ctx)`, `isDomainEligible(…, pkg)`, `offeredTldOf`, végződés-mentés), `src/domains/costCap.ts` (végződésenkénti plafon; `RegistrarAdapter.getYearlyNetPrice`).
 - Pénzút: rendelés-rögzítés, megújulás (`domainFeeForRenewal` → a tenant aktuális moduljaiból), utólagos domain-vétel, konfigurátor (végződésenkénti díj, 0 Ft csomag-tartalomra, javaslatok csak kínált végződéssel).
 - Felület: `src/console/pricingPage.ts` + `assets/runtime/cit-pricing-admin.js`; kemény függőség húzáskor vele megy / kivételkor a rá épülő is kikerül; a „nem eladó” jelölés és az ár egy zárványból (ADR-0192 ②).
-- ÁSZF 1.5 (§9): végződésenkénti díj, csomag-tartalom, platform-cím. **A szöveg a tulaj jóváhagyására vár.**
+- ÁSZF 1.5 (§9): végződésenkénti díj, csomag-tartalom, platform-cím. **A tulaj 2026-10-11-én jóváhagyta** („Jóváhagyom”); élesre a nagy deployjal megy, a meglévő ügyfeleknek 15 napos előzetes értesítés jár.
 - Őr: `scripts/pricing-packages-check.mts` (bekötve). A `module-sales-check` szelektorai az új jelöléshez igazítva (az állítás nem gyengült: `is-stop` + „nem eladó”, a zárványból).
 
 ### Nyitva / következő
