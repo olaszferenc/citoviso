@@ -23,7 +23,8 @@ async function main(): Promise<void> {
   if (existing) {
     await db
       .updateTable("operator_user")
-      .set({ password_hash, ...(displayName ? { display_name: displayName } : {}) })
+      // ADR-XXXX: a reset ends every console session of this operator.
+      .set({ password_hash, sessions_valid_from: new Date(), ...(displayName ? { display_name: displayName } : {}) })
       .where("id", "=", existing.id)
       .execute();
     console.log(`Operátor frissítve: ${username}`);

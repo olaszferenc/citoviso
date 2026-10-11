@@ -1807,6 +1807,14 @@ if [ -f scripts/password-link-check.mts ] && \
   echo "[pre-commit] password-link-check (jelszó nem jár levélben; egyszeri link; régi munkamenetek véget érnek)…"
   npx tsx scripts/password-link-check.mts
 fi
+# Elek IT-kör B1 (2026-10-11, ADR-XXXX): a console session ends on a password change,
+# when the operator is removed, and after its lifetime — the gate reads the operator row.
+# Spins up a scratch DB + the console in-process (~20s), so only when the login path changes.
+if [ -f scripts/operator-session-check.mts ] && \
+   changed_files | grep -qE '^src/auth/(operatorAuth|loginGuard)\.ts|^src/console/server\.ts|^scripts/operator-user\.ts|^migrations/0106_operator_session|^scripts/operator-session-check'; then
+  echo "[pre-commit] operator-session-check (jelszócsere / törölt operátor / lejárat kiléptet a konzolból)…"
+  npx tsx scripts/operator-session-check.mts
+fi
 # ADR-0100: the domain's 2nd+ year fee rides the anchor renewal whose period holds
 # the anniversary (before this, nobody billed it while the registrar bills US).
 # Spins up a scratch DB (~20s), so only when the renewal/pricing path changes.
