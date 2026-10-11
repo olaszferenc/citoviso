@@ -987,7 +987,37 @@ export interface PricingConfigTable {
   /** ADR-0094: the domain's defined purchase price in the early-exit settlement. */
   domain_buyout_price: Generated<number>;
   pricing_confirmed: Generated<boolean>;
+  /** ADR-XXXX ②: the domain counts as package content (no monthly fee) where a package
+   *  carries it AND the TLD is marked free-in-package. Off = the ADR-0109 behaviour. */
+  domain_free_in_package: Generated<boolean>;
   updated_at: Timestamp;
+}
+
+/** ADR-XXXX ①: module → the LOWEST tier that carries it (higher tiers inherit). The
+ *  'domain' pseudo-module may sit here too. Empty table = the code seed (PRESETS). */
+export interface PackageModuleTable {
+  module_id: string;
+  tier: "alap" | "ajanlott" | "teljes";
+  updated_at: Generated<Timestamp>;
+}
+
+/** ADR-XXXX ③: per market, the domain endings we offer and what they cost / earn. */
+export interface DomainTldTable {
+  region: string;
+  /** Leading dot, lowercase letters only (".hu"). */
+  tld: string;
+  offered: Generated<boolean>;
+  /** Measured NET yearly purchase price in `cost_currency`; NULL = never measured. */
+  cost_net: number | null;
+  cost_currency: Generated<string>;
+  cost_measured_at: Timestamp | null;
+  /** Purchase-cost cap (NET, `cost_currency`) the registrar buy must stay under. */
+  max_cost: number;
+  /** Monthly fee (row currency of the market) when the domain is NOT package content. */
+  monthly_fee: number;
+  free_in_package: Generated<boolean>;
+  sort: Generated<number>;
+  updated_at: Generated<Timestamp>;
 }
 
 /** Per-module monthly add-on price (HUF). */
@@ -1817,6 +1847,8 @@ export interface Database {
   login_token: LoginTokenTable;
   pricing_config: PricingConfigTable;
   module_price: ModulePriceTable;
+  package_module: PackageModuleTable;
+  domain_tld: DomainTldTable;
   schema_migrations: SchemaMigrationsTable;
   language_pack: LanguagePackTable;
   kb_translation: KbTranslationTable;

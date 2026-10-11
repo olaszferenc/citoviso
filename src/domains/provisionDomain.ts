@@ -15,13 +15,13 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { getRegistrar, DomainTakenError, LIVE_REGISTRAR_PROVIDERS } from "./registrar/index.js";
-import { loadPricing, getDomainMaxPriceEur } from "../pricing.js";
 import { getDns } from "./dns/index.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildDomainLiveEmail, buildDomainFailedEmail } from "../email/domainEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
+import { assertUnderCostCap } from "./costCap.js";
 
 /**
  * Igaz, ha a domain-beszerzés MOCK adaptereken fut (lokál fejlesztés/teszt).
@@ -291,15 +291,8 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
       // the registrar's authoritative price. Fail-closed: if the adapter cannot
       // price the domain, getYearlyPriceEur throws and the run lands in `failed`
       // — an unknown price is never a free pass (§B.17 missing-data branch).
-      await loadPricing();
-      const capEur = getDomainMaxPriceEur();
-      const priceEur = await registrar.getYearlyPriceEur(p.domain);
-      if (priceEur > capEur) {
-        throw new Error(
-          `ár-plafon (ADR-0093): a(z) ${p.domain} éves regisztrációs díja ${priceEur} € — ` +
-            `a megengedett plafon ${capEur} €, a vásárlás nem indult el`,
-        );
-      }
+      // ADR-XXXX ③: the cap is per ending, NET, in the registrar's currency.
+      await assertUnderCostCap(p.domain);
       await setStatus(p.id, p.siteId, "registering");
       const reg = await registrar.register(p.domain, { years });
       registrarRef = reg.registrarRef;

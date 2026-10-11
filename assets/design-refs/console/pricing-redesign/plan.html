@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Árazás és értékesítés — jóváhagyott terv (A)</title><style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-muted:#5a6d82;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-bg:#fff;--citui-panel:#fff;--citui-side:#fafafa;--citui-field:#f6f7f8;--citui-hover:#f2f3f5;
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-ok-ink:#19733f;
+  --citui-warn:#d29922;--citui-warn-ink:#7d5a12;--citui-bad:#e5484d;--citui-bad-ink:#b3262b;
+  --citui-link-ink:#10697a;--citui-accent-ink:#06131b;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  --citui-radius-pill:999px;
+  --citui-font-text:"Inter",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+}
+:root[data-theme="dark"]{
+  --citui-ink:#e6e9ef;--citui-muted:#8a93a3;--citui-surface:#12151c;--citui-surface-2:#1b1f29;
+  --citui-line:#262b37;--citui-line-strong:#343a48;
+  --citui-bg:#0f1116;--citui-panel:#151821;--citui-side:#12151c;--citui-field:#1b1f29;--citui-hover:#1e2330;
+  --citui-ok-soft:#14352a;--citui-ok-ink:#4fe3a3;--citui-bad-ink:#ff8e8e;--citui-warn-ink:#f5c06b;--citui-link-ink:#4fd0ea;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);
+}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.45 var(--citui-font-text);color:var(--citui-ink);background:var(--citui-bg)}
+button,input,select{font:inherit;color:inherit}
+.draft-bar{display:flex;gap:8px;align-items:center;padding:8px 14px;flex-wrap:wrap;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px}
+.draft-bar b{font-weight:600}
+.draft-bar button{border:1px solid var(--citui-cyan-500);background:transparent;color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 12px;cursor:pointer}
+.draft-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+
+/* frame */
+#frame{margin:0 auto;max-width:1320px;container-type:inline-size;border:1px solid var(--citui-line);background:var(--citui-bg)}
+#frame.mobile{max-width:390px}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.side{background:var(--citui-side);border-right:1px solid var(--citui-line);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;gap:8px;align-items:center;padding:4px 8px 14px}
+.brand i{width:22px;height:22px;border-radius:50%;border:4px solid var(--citui-cyan-500);border-right-color:transparent}
+.brand b{display:block;font-size:13.5px}.brand small{color:var(--citui-muted);font-size:11px}
+.nv{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;color:var(--citui-ink);text-decoration:none;font-weight:500}
+.nv:hover{background:var(--citui-hover)}
+.nv svg{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.6}
+.nv .chev{margin-left:auto;color:var(--citui-muted)}
+.sub{margin:0 0 4px 18px;border-left:1px solid var(--citui-line);padding-left:6px}
+.sub a{display:flex;justify-content:space-between;padding:5px 10px;border-radius:7px;color:var(--citui-ink);text-decoration:none;font-size:12.5px}
+.sub a span{color:var(--citui-muted);font-size:11.5px}
+.sub a.on{background:var(--citui-accent-soft);font-weight:600}
+.sub a.on span{color:var(--citui-warn-ink);font-weight:600}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--citui-line);background:var(--citui-panel);position:sticky;top:0;z-index:15}
+.top .crumbs{font-size:12.5px;color:var(--citui-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .crumbs b{color:var(--citui-ink);font-weight:600}
+.top .k{margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--citui-line);border-radius:8px;background:var(--citui-field);color:var(--citui-muted);min-width:240px;font-size:12.5px}
+.top .k kbd{margin-left:auto;border:1px solid var(--citui-line);border-radius:4px;padding:0 5px;font-size:11px}
+.ib{border:1px solid var(--citui-line);background:var(--citui-panel);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:12.5px}
+.burger{display:none}
+.page{padding:22px 28px 0;max-width:1080px;width:100%}
+@container (max-width:700px){
+  .app{grid-template-columns:1fr}
+  .side{display:none}
+  .burger{display:inline-block}
+  .top .k{min-width:0;flex:0 0 auto}.top .k span,.top .k kbd{display:none}
+  .page{padding:16px 12px 0}
+}
+
+/* page head */
+.ph{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.lead{color:var(--citui-muted);margin:0 0 14px;max-width:720px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--citui-radius-pill);font-size:11.5px;font-weight:600;background:var(--citui-surface-2);color:var(--citui-muted);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.pill.warn{background:color-mix(in srgb,var(--citui-warn) 16%,transparent);color:var(--citui-warn-ink)}
+.pill.bad{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad-ink)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--citui-line);margin:6px 0 16px;overflow-x:auto}
+.tab{border:0;background:transparent;padding:8px 12px;font-weight:600;color:var(--citui-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--citui-ink);border-bottom-color:var(--citui-ink)}
+.tab:disabled{opacity:.45;cursor:default}
+
+/* widgets (dashboard language) */
+.wg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.w{border:1px solid var(--citui-line);border-radius:10px;padding:14px;background:var(--citui-panel)}
+.w__h{display:flex;align-items:center;gap:8px;color:var(--citui-muted);font-size:12.5px}
+.w__h svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.6}
+.w__big{font-size:24px;font-weight:600;margin:6px 0 0;font-variant-numeric:tabular-nums}
+.w__cap{color:var(--citui-muted);font-size:12px;margin-bottom:10px}
+.w__rows{border-top:1px solid var(--citui-line);padding-top:8px;display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12.5px}
+.w__rows span{color:var(--citui-muted)} .w__rows b{text-align:right;font-variant-numeric:tabular-nums}
+.att{border:1px solid var(--citui-line);border-radius:10px;margin-top:12px;background:var(--citui-panel)}
+.att__h{display:flex;justify-content:space-between;padding:10px 14px;font-weight:600;font-size:12.5px;border-bottom:1px solid var(--citui-line)}
+.att__h span{color:var(--citui-muted);font-weight:500}
+.att a{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--citui-line);text-decoration:none;color:var(--citui-ink)}
+.att a:first-of-type{border-top:0}
+.att a:hover{background:var(--citui-hover)}
+.att a i{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--citui-muted)}
+.att a i.warn{background:var(--citui-warn)} .att a i.bad{background:var(--citui-bad)} .att a i.info{background:var(--citui-cyan-500)}
+.att a b{color:var(--citui-link-ink)} .att a em{margin-left:auto;color:var(--citui-muted);font-style:normal;font-size:12px;white-space:nowrap}
+.att .none{padding:12px 14px;color:var(--citui-muted)}
+@container (max-width:700px){.wg{grid-template-columns:1fr}}
+
+/* section nav */
+.snav{position:sticky;top:45px;z-index:10;background:var(--citui-bg);display:flex;gap:6px;padding:12px 0 10px;overflow-x:auto;margin-top:6px}
+.chip{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--citui-ink)}
+.chip[aria-current="true"]{background:var(--citui-ink);color:var(--citui-bg);border-color:var(--citui-ink)}
+.chip .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--citui-warn);margin-left:6px;vertical-align:middle}
+
+/* panels (report language) */
+.pn{border:1px solid var(--citui-line);border-radius:10px;padding:16px;background:var(--citui-panel);margin-bottom:12px;scroll-margin-top:100px}
+.pn__h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.pn__h h2{font-size:15px;font-weight:600;margin:0}
+.pn__h .sub2{color:var(--citui-muted)}
+.pn__h .pill{margin-left:auto}
+.desc{color:var(--citui-muted);margin:0 0 12px;font-size:12.5px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.two>.pn{margin-bottom:0}
+.twowrap{margin-bottom:12px}
+@container (max-width:700px){.two{grid-template-columns:1fr}}
+.run{margin-top:12px;padding:9px 12px;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface-2);border-radius:0 8px 8px 0;font-size:12.5px}
+.run b{font-weight:600}
+.state{margin-top:8px;font-size:12px;color:var(--citui-warn-ink)}
+.tabbed .pn{display:none} .tabbed .pn.show{display:block} .tabbed .two{display:block} .tabbed .two>.pn.show{margin-bottom:12px}
+
+/* fields */
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@container (max-width:700px){.g3,.g2{grid-template-columns:1fr}}
+.f__l{display:block;margin-bottom:4px;font-size:12px;color:var(--citui-muted)}
+.inp{display:flex;align-items:stretch;overflow:hidden;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-field)}
+.inp:focus-within{border-color:var(--citui-cyan-500)}
+.inp input,.inp select{width:100%;flex:1 1 auto;min-width:0;border:0;background:transparent;outline:none;padding:8px 10px;font-size:14px}
+.inp input{text-align:right;font-variant-numeric:tabular-nums}
+.inp span{display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--citui-line);color:var(--citui-muted);font-size:12px;white-space:nowrap}
+.f__h{margin-top:3px;font-size:11.5px;color:var(--citui-muted)}
+.ferr{display:none;margin-top:3px;font-size:11.5px;color:var(--citui-bad-ink)}
+.err .inp,.err .tin{border-color:var(--citui-bad)!important} .err .ferr{display:block}
+.inp input:disabled{opacity:.45}
+.tg{display:flex;align-items:center;gap:10px;margin:4px 0 12px;cursor:pointer;font-weight:600}
+.tg input{position:absolute;opacity:0;width:0;height:0}
+.tg .tr{width:32px;height:18px;border-radius:9px;background:var(--citui-line-strong);position:relative;flex:0 0 auto;transition:background .15s}
+.tg .tr::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--citui-white);transition:left .15s}
+.tg input:checked+.tr{background:var(--citui-ok)} .tg input:checked+.tr::after{left:16px}
+.tg input:focus-visible+.tr{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.tg small{font-weight:400;color:var(--citui-muted)}
+.cb{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:12.5px}
+
+/* packages (approved A) */
+.pl{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);border:1px solid var(--citui-line-strong);font-size:12.5px;font-weight:600;cursor:grab;user-select:none;touch-action:none;white-space:nowrap}
+.pl small{font-weight:500;color:var(--citui-muted)}
+.pl.dom{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-panel));border-color:var(--citui-cyan-500)}
+.pl.spine{cursor:default;background:transparent;border-style:dashed;color:var(--citui-muted)}
+.pl.inh{opacity:.5;cursor:default;border-style:dashed}
+.pl.stop{text-decoration:line-through;border-color:var(--citui-warn)}
+.pl.sel{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.pl.off{opacity:.4;cursor:not-allowed}
+.pl .x{border:0;background:transparent;color:var(--citui-muted);font-weight:600;font-size:14px;line-height:1;padding:0 0 0 2px;cursor:pointer}
+.ghost{position:fixed;pointer-events:none;z-index:50;box-shadow:0 6px 18px rgba(10,31,54,.25)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.pool{border:1px dashed var(--citui-line-strong);border-radius:10px;padding:10px;background:var(--citui-surface)}
+.pool.hot{border-color:var(--citui-cyan-500)}
+.pool__h{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap;font-size:12.5px}
+.pool__h b{font-weight:600}.pool__h span{color:var(--citui-muted)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+@container (max-width:700px){.cols{grid-template-columns:1fr}}
+.pk{border:1px solid var(--citui-line-strong);border-radius:10px;padding:12px;background:var(--citui-panel);min-height:150px;display:flex;flex-direction:column;gap:8px}
+.pk.hot{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.pk.armed{border-style:dashed;border-color:var(--citui-cyan-500)}
+.pk__h{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.pk__n{font-weight:600;font-size:14px}
+.pk__p{font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pk__p small{font-size:12px;color:var(--citui-muted);font-weight:500}
+.pk__sub{font-size:11.5px;color:var(--citui-muted)}
+.pk__lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);font-weight:700}
+.pk__drop{border:1px dashed var(--citui-line-strong);border-radius:8px;padding:7px;text-align:center;color:var(--citui-muted);font-size:11.5px;margin-top:auto}
+.pk__dom{font-size:12px;padding:6px 8px;border-radius:8px;background:var(--citui-surface-2)}
+.pk__dom.inc{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+
+/* tables (table-component language) */
+.tb{width:100%;border-collapse:collapse}
+.tb th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--citui-muted);text-align:left;padding:8px 8px;border-bottom:1px solid var(--citui-line);font-weight:700}
+.tb td{padding:8px;border-bottom:1px solid var(--citui-line);vertical-align:middle}
+.tb tr.grp td{background:var(--citui-surface);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);padding:6px 8px}
+.tb .num{text-align:right;font-variant-numeric:tabular-nums}
+.tb .tier td:first-child{padding-left:26px;color:var(--citui-muted)}
+.tin{width:88px;padding:5px 8px;text-align:right;border:1px solid var(--citui-line-strong);border-radius:7px;background:var(--citui-field);font-variant-numeric:tabular-nums}
+.tin:disabled{opacity:.45}
+.u{color:var(--citui-muted);font-size:11.5px;margin-left:4px;white-space:nowrap}
+.mini{display:inline-flex;align-items:center;gap:6px}
+.mini .tr{width:28px;height:16px;border-radius:8px;background:var(--citui-line-strong);position:relative;cursor:pointer}
+.mini .tr::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--citui-white);transition:left .15s}
+.mini input{position:absolute;opacity:0;width:0;height:0}
+.mini input:checked+.tr{background:var(--citui-ok)} .mini input:checked+.tr::after{left:14px}
+.mini input:focus-visible+.tr{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.btn{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer}
+.btn.pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink);font-weight:600}
+.btn.sm{padding:2px 8px;font-size:11.5px}
+.btn:disabled{opacity:.5;cursor:default}
+.meas{display:block;font-size:11px;color:var(--citui-muted)}
+.lm{display:none;font-size:10.5px;color:var(--citui-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.addrow{display:flex;gap:8px;align-items:flex-start;margin-top:10px;flex-wrap:wrap}
+.addrow input{width:130px;padding:6px 9px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-field)}
+.note{margin-top:10px;padding:9px 12px;border-radius:8px;background:var(--citui-surface-2);font-size:12.5px}
+@container (max-width:700px){
+  .tb.resp thead{display:none}
+  .tb.resp tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;padding:10px 0;border-bottom:1px solid var(--citui-line)}
+  .tb.resp tr.grp{display:block;padding:0}
+  .tb.resp td{border:0;padding:0}
+  .tb.resp td.full{grid-column:1/-1}
+  .tb.resp .num{text-align:left}
+  .tb.resp .tier td:first-child{padding-left:0}
+  .lm{display:block}
+  #modTable.resp tr{grid-template-columns:auto auto 1fr auto;align-items:center;gap:6px 8px}
+  #modTable.resp tr.grp{display:block}
+  #modTable .lm,#modTable .mini .u{display:none}
+  #modTable .num{text-align:right}
+  #modTable .tin{width:72px}
+}
+
+.final{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--citui-line);border-radius:10px;padding:14px;background:var(--citui-panel);margin-bottom:12px}
+.final input{width:18px;height:18px;margin-top:2px;accent-color:var(--citui-cyan-500)}
+.savebar{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;align-items:center;padding:10px 28px;background:var(--citui-panel);border-top:1px solid var(--citui-line);z-index:12;flex-wrap:wrap;margin-top:8px}
+#dirty{font-size:12px;color:var(--citui-warn-ink);margin-right:auto}
+#toast{font-size:12px}
+@container (max-width:700px){.savebar{padding:10px 12px}}
+</style></head><body>
+<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A — egy oldal, 2026-10-11) — Árazás és értékesítés: konzol-keret + riport-panelek; csomagok húzással</b>
+<span>· elrendezés:</span><button id="lA" type="button" aria-pressed="true">A — egy oldal</button><button id="lB" type="button" aria-pressed="false">B — fülek</button>
+<span>· méret:</span><button id="szMob" type="button" aria-pressed="false">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="true">Asztali</button>
+<span>· téma:</span><button id="thL" type="button" aria-pressed="true">Világos</button><button id="thD" type="button" aria-pressed="false">Sötét</button>
+<span style="opacity:.7">működő vázlat — minden mező él; a mentés csak a lapon belül ment; az „élő” darabszámok MINTA</span></div>
+
+<div id="frame"><div class="app">
+<nav class="side" aria-label="Konzol">
+  <div class="brand"><i></i><div><b>Citoviso</b><small>belső konzol</small></div></div>
+  <a class="nv" href="#"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9H3z"/></svg>Irányítópult</a>
+  <a class="nv" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/></svg>CRM<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></a>
+  <div class="sub"><a href="#">Lead-sor<span>7393</span></a><a href="#">Jóváhagyott mockok<span>18</span></a><a href="#">Adatgyűjtés indítása</a><a href="#">Felderítés</a><a class="on" href="#" aria-current="page">Árazás<span id="navBadge">13/14 eladó</span></a></div>
+  <a class="nv" href="#"><svg viewBox="0 0 24 24"><path d="M4 4h10l6 6-10 10-6-6z"/></svg>Pénzügy<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></a>
+  <a class="nv" href="#"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Riport<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></a>
+  <a class="nv" href="#"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Rendszer<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></a>
+  <a class="nv" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 2-2.5 2-2.5 4M12 17h.01"/></svg>Súgó</a>
+</nav>
+<div class="main">
+  <header class="top">
+    <button class="ib burger" type="button" aria-label="Menü">☰</button>
+    <button class="ib" type="button" aria-label="Vissza a CRM-re">←</button>
+    <div class="crumbs">Konzol › CRM › <b>Árazás és értékesítés</b></div>
+    <div class="k"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Ugrás funkcióra…</span><kbd>⌘K</kbd></div>
+    <button class="ib" type="button" id="thTop" aria-label="Téma váltása">◐</button>
+    <button class="ib" type="button">Súgó</button>
+  </header>
+
+  <div class="page">
+    <div class="ph"><div><h1>Árazás és értékesítés</h1>
+      <p class="lead">Az árazás egyetlen forrása — a konfigurátor, a megrendelés és a levelek ár-sora innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p></div>
+      <span id="confPill" class="pill ok"><i></i>Véglegesítve — a levelek árat hirdethetnek</span></div>
+
+    <div class="tabs" role="tablist" aria-label="Piac">
+      <button class="tab" role="tab" data-region="hu" aria-selected="true">Magyarország · HUF</button>
+      <button class="tab" role="tab" data-region="global" aria-selected="false">Globális · EUR</button>
+      <button class="tab" role="tab" disabled title="Az ország-réteg később jön">+ Ország</button>
+    </div>
+
+    <div class="wg" id="widgets"></div>
+    <div class="att" id="att"></div>
+
+    <div class="snav" id="snav" role="navigation" aria-label="Szakaszok"></div>
+
+    <div id="sections">
+      <section class="pn" id="s-pk" data-title="Csomagok">
+        <div class="pn__h"><h2>Csomagok</h2><span class="sub2">— húzd a modult a csomagba</span></div>
+        <p class="desc">Amit az alacsonyabb csomag tartalmaz, azt a magasabb is (halvány = öröklött). A csomag ára = alapdíj + a benne lévő modulok felára. Ami egyik csomagban sincs, az csak külön vehető. Ujjal: koppints a pirulára, aztán a csomagra.</p>
+        <div class="pool" id="pool"><div class="pool__h"><b>Csomagon kívül</b><span>külön vehető, a felárával</span></div><div class="chips" id="poolChips"></div></div>
+        <div class="cols" id="cols"></div>
+      </section>
+
+      <section class="pn" id="s-mod" data-title="Modulok">
+        <div class="pn__h"><h2>Modulok</h2><span class="sub2">— felár és értékesítés</span></div>
+        <p class="desc">A leállított modult új ügyfél nem kapja meg (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti. A felár a csomagárakba azonnal beszámít.</p>
+        <table class="tb resp" id="modTable"><thead><tr><th>Modul</th><th>Csomag</th><th class="num">Élő</th><th class="num">Felár</th><th>Eladó</th></tr></thead><tbody></tbody></table>
+      </section>
+
+      <div class="two twowrap">
+        <section class="pn" id="s-base" data-title="Alapdíj">
+          <div class="pn__h"><h2>Alapdíj és éves fizetés</h2></div>
+          <p class="desc">Minden csomag alja — a gerinccel (érdeklődés-CTA) együtt.</p>
+          <div class="g2">
+            <div id="f_base"><label class="f__l" for="base">Alapdíj</label><div class="inp"><input id="base" inputmode="numeric"><span class="cur">Ft / hó</span></div><div class="ferr">Pozitív egész szám.</div></div>
+            <div id="f_free"><label class="f__l" for="freeM">Éves előfizetés — ingyen hónapok</label><div class="inp"><input id="freeM" inputmode="numeric"><span>hónap</span></div><div class="ferr">0–6 közti egész.</div></div>
+          </div>
+          <div class="run" id="runBase"></div>
+        </section>
+        <section class="pn" id="s-cp" data-title="Kupon">
+          <div class="pn__h"><h2>Kupon</h2><span class="pill">minden piacra érvényes</span></div>
+          <p class="desc">Közvetlen vevő az első fizetéskor kap egyet. Próbázó nem kap (ADR-0354 — a próbában egy kedvezmény jár).</p>
+          <div class="g2">
+            <div id="f_cpp"><label class="f__l" for="cpp">Kedvezmény</label><div class="inp"><input id="cpp" inputmode="numeric"><span>%</span></div><div class="ferr">1–90 közti egész.</div></div>
+            <div id="f_cpd"><label class="f__l" for="cpd">Érvényesség</label><div class="inp"><input id="cpd" inputmode="numeric"><span>nap</span></div><div class="ferr">1–365 közti egész.</div></div>
+          </div>
+          <div class="run" id="runCp"></div><div class="state">Most 5 fel nem használt kupon van kint — mindegyik megtartja a saját feltételét.</div>
+        </section>
+      </div>
+
+      <section class="pn" id="s-dom" data-title="Saját domain">
+        <div class="pn__h"><h2>Saját domain</h2><span class="sub2">— a vevő maga választ nevet és végződést</span></div>
+        <p class="desc"><b>Ha a domain-pirula egy csomagban van, ott a saját címnek nincs havidíja</b> (a „csomagban ingyen” jelölt végződésekre). Csomagon kívül a végződés havidíja jár.</p>
+        <label class="tg"><input type="checkbox" id="domFree"><span class="tr"></span><span>Ingyen domain csomagban <small>— kikapcsolva a domain mindig felár</small></span></label>
+        <div class="g3">
+          <div id="f_min"><label class="f__l" for="minPkg">Belépési küszöb (csomag havidíja legalább)</label><div class="inp"><input id="minPkg" inputmode="numeric"><span class="cur">Ft / hó</span></div><div class="f__h">0 = nincs küszöb</div><div class="ferr">Egész szám, 0 vagy több.</div></div>
+          <div id="f_commit"><label class="f__l" for="commit">Hűség saját domainnel</label><div class="inp"><input id="commit" inputmode="numeric"><span>hónap</span></div><div class="ferr">0–36 közti egész.</div></div>
+          <div id="f_buyout"><label class="f__l" for="buyout">Kivásárlás (név elvitele hűség alatt)</label><div class="inp"><input id="buyout" inputmode="numeric"><span class="cur1">Ft</span></div><div class="ferr">Egész szám, 0 vagy több.</div></div>
+        </div>
+        <table class="tb resp" id="tld" style="margin-top:14px"><thead><tr><th>Végződés</th><th>Kínáljuk</th><th>Beszerzés / év (nettó)</th><th>Max. beszerzés</th><th>Havidíj csomagon kívül</th><th>Csomagban ingyen</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="addrow"><div id="f_new"><input id="newTld" placeholder=".at, .de…" aria-label="Új végződés"><div class="ferr" id="newErr"></div></div><button class="btn" id="addTld" type="button">+ Végződés</button></div>
+        <div class="note"><b>Kötelező platform-cím:</b> minden előfizetőnek lesz egy általa választott / jóváhagyott <b>&lt;név&gt;.citoviso.com</b> címe is, saját domain mellett is (ÁSZF). Nem kapcsolható ki.</div>
+        <div class="run" id="runDom"></div>
+      </section>
+
+      <div class="two twowrap">
+        <section class="pn" id="s-off" data-title="Lead-ajánlatok">
+          <div class="pn__h"><h2>Lead-ajánlatok</h2><span class="pill">minden piacra érvényes</span></div>
+          <p class="desc">A kiküldött tervet megnyitó lead kedvezményei. Nem adódnak össze — mindig a legnagyobb él.</p>
+          <div id="f_intro"><label class="f__l" for="intro">Bemutatkozó kedvezmény (a levéllel jár)</label><div class="inp"><input id="intro" inputmode="numeric"><span>%</span></div><div class="ferr">0–90 közti egész.</div></div>
+          <label class="tg" style="margin-top:14px"><input type="checkbox" id="escOn"><span class="tr"></span><span>Döntés-segítő (eszkalációs) ajánlat</span></label>
+          <div class="g2">
+            <div id="f_nth"><label class="f__l" for="nth">Hányadik megnyitásnál</label><div class="inp"><input id="nth" inputmode="numeric"><span>. megnyitás</span></div><div class="ferr">2–10 közti egész.</div></div>
+            <div id="f_escp"><label class="f__l" for="escp">Kedvezmény az első díjból</label><div class="inp"><input id="escp" inputmode="numeric"><span>%</span></div><div class="ferr">A bemutatkozónál nagyobb, legfeljebb 90.</div></div>
+            <div id="f_valid"><label class="f__l" for="valid">Érvényesség</label><div class="inp"><input id="valid" inputmode="numeric"><span>óra</span></div><div class="ferr">1–336 óra.</div></div>
+            <div id="f_rem"><label class="f__l" for="rem">Emlékeztető a kiadás után</label><div class="inp"><input id="rem" inputmode="numeric"><span>óra múlva</span></div><div class="ferr">Az érvényességnél kevesebb.</div></div>
+          </div>
+          <label class="cb"><input type="checkbox" id="distinct"> Csak a különböző napokon történt megnyitások számítanak</label>
+          <div class="run" id="runOff"></div>
+        </section>
+        <section class="pn" id="s-tr" data-title="Ingyenes próba">
+          <div class="pn__h"><h2>Ingyenes próba</h2><span class="pill">minden piacra érvényes</span></div>
+          <p class="desc">Kártya nélkül, a lead saját oldalán, a platform-címén. A próbáért nem fizet, számla nem készül.</p>
+          <label class="tg"><input type="checkbox" id="trialOn"><span class="tr"></span><span>Ingyenes próba indítható</span></label>
+          <div class="g2">
+            <div id="f_days"><label class="f__l" for="days">A próba hossza</label><div class="inp"><input id="days" inputmode="numeric"><span>nap</span></div><div class="ferr">1–90 közti egész nap.</div></div>
+            <div><label class="f__l" for="trialPkg">A próbázó ezt kapja</label><div class="inp"><select id="trialPkg"><option value="teljes">Teljes csomag</option><option value="ajanlott">Ajánlott csomag</option><option value="alap">Alap csomag</option></select></div></div>
+          </div>
+          <div class="run" id="runTr"></div><div class="state">Most nem fut próba.</div>
+        </section>
+      </div>
+
+      <div class="final pn" id="s-fin" data-title="Véglegesítés" style="display:flex">
+        <input type="checkbox" id="confirmed" aria-describedby="confD">
+        <div><b>Az árak véglegesek, élesíthetők</b><div class="desc" id="confD" style="margin:2px 0 0">Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv. / jogszerűségi kapu).</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="savebar"><span id="dirty"></span><span id="toast" role="status" aria-live="polite"></span><button class="btn" id="reset" type="button">Visszaállítás</button><button class="btn pri" id="save" type="button">Mentés — <span id="saveRegion">Magyarország</span></button></div>
+</div></div></div>
+
+<script>
+(function(){
+"use strict";
+// Sample state mirrors prod (2026-10-11): pricing_config + module_price. "Élő" counts are SAMPLE.
+var MODS = [
+  {id:"gallery",label:"Galéria",grp:"Amit bemutat",live:16},{id:"rooms",label:"Szobák / apartmanok",grp:"Amit bemutat",live:16},
+  {id:"amenities",label:"Felszereltség",grp:"Amit bemutat",live:15},{id:"pricing",label:"Árak / szezonok",grp:"Amit bemutat",live:13},
+  {id:"usp",label:"„Miért mi” — előnyök",grp:"Amit bemutat",live:16},{id:"reviews",label:"Vélemények",grp:"Amit bemutat",live:16},
+  {id:"poi",label:"Heti programajánló",grp:"Amit bemutat",live:13},
+  {id:"enquiry",label:"Érdeklődés-CTA",grp:"Elérhetőség",spine:true,live:16},
+  {id:"location",label:"Térkép",grp:"Elérhetőség",live:16},{id:"hours",label:"Nyitvatartás",grp:"Elérhetőség",live:9},
+  {id:"booking",label:"Foglalás",grp:"Extrák",live:13},{id:"email",label:"Egyedi e-mail cím",grp:"Extrák",live:1},
+  {id:"multilang6",label:"Többnyelvű — 6 nyelv",grp:"Extrák",live:0,once:true},
+  {id:"domain",label:"Saját domain",grp:"Saját domain",dom:true}
+];
+var TIERS=[{id:"alap",label:"Alap"},{id:"ajanlott",label:"Ajánlott"},{id:"teljes",label:"Teljes"}];
+var REG = {
+  hu:{name:"Magyarország",cur:"Ft",base:3900,freeM:2,
+    price:{gallery:790,rooms:790,amenities:490,pricing:790,usp:490,reviews:490,poi:590,location:490,hours:290,booking:1190,email:390,multilang6:22900},
+    sell:{gallery:1,rooms:1,amenities:1,pricing:1,usp:1,reviews:1,poi:1,location:1,hours:1,booking:1,email:0,multilang6:1},
+    minPkg:0,commit:12,buyout:20000,
+    tlds:[{end:".hu",on:true,cost:1990,at:"2026-10-11 élő",cap:5000,fee:1000,inc:true},
+          {end:".eu",on:false,cost:2499,at:"2026-10-11 élő",cap:5000,fee:1000,inc:false},
+          {end:".com",on:false,cost:4899,at:"2026-10-11 élő",cap:8000,fee:1500,inc:false}],
+    confirmed:true},
+  global:{name:"Globális",cur:"€",base:10,freeM:2,
+    price:{gallery:2,rooms:2,amenities:1,pricing:2,usp:1,reviews:1,poi:2,location:1,hours:1,booking:3,email:1,multilang6:60},
+    sell:{gallery:1,rooms:1,amenities:1,pricing:1,usp:1,reviews:1,poi:1,location:1,hours:1,booking:1,email:0,multilang6:1},
+    minPkg:20,commit:12,buyout:60,
+    tlds:[{end:".com",on:true,cost:4899,at:"2026-10-11 élő",cap:8000,fee:2,inc:false},{end:".eu",on:true,cost:2499,at:"2026-10-11 élő",cap:5000,fee:2,inc:true}],
+    confirmed:false}
+};
+var MEASURED={".hu":1990,".eu":2499,".com":4899};
+var START={
+  own:{alap:["enquiry","gallery","location"],ajanlott:["rooms","amenities","usp","reviews","domain"],teljes:["pricing","hours","poi","booking","email"]},
+  domFree:true,intro:25,escOn:true,nth:3,escp:50,valid:72,rem:24,distinct:true,trialOn:true,days:14,trialPkg:"teljes",cpp:25,cpd:90,
+  reg:REG
+};
+function clone(o){return JSON.parse(JSON.stringify(o));}
+var S=clone(START), saved=clone(START), region="hu", selected=null, layout="A", tab="s-pk";
+function R(){return S.reg[region];}
+function mod(id){return MODS.filter(function(m){return m.id===id;})[0];}
+function pr(id){var m=mod(id);return m.spine||m.dom?0:(R().price[id]||0);}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ");}
+function money(n){return R().cur==="€"?"€"+grp(n):grp(n)+" Ft";}
+function idx(t){return TIERS.map(function(x){return x.id;}).indexOf(t);}
+function full(t){var o=[];for(var i=0;i<=idx(t);i++)o=o.concat(S.own[TIERS[i].id]);return o;}
+function tierOf(id){for(var i=0;i<3;i++)if(S.own[TIERS[i].id].indexOf(id)>=0)return TIERS[i].id;return null;}
+function sellable(id){var m=mod(id);return m.spine||m.dom||!!R().sell[id];}
+function price(t){return R().base+full(t).reduce(function(a,id){return a+(sellable(id)&&!mod(id).once?pr(id):0);},0);}
+function domIn(t){return S.domFree&&full(t).indexOf("domain")>=0;}
+function incTlds(){return R().tlds.filter(function(x){return x.on&&x.inc;}).map(function(x){return x.end;});}
+function firstOn(){return R().tlds.filter(function(x){return x.on;})[0];}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function $(id){return document.getElementById(id);}
+var IC={pk:'<svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7"/></svg>',mod:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',off:'<svg viewBox="0 0 24 24"><path d="M4 4h10l6 6-10 10-6-6z"/><circle cx="9" cy="9" r="1.5"/></svg>'};
+
+/* ---------- widgets + attention ---------- */
+function widgets(){
+  var sold=MODS.filter(function(m){return !m.spine&&!m.dom;}), on=sold.filter(function(m){return R().sell[m.id];});
+  var outside=MODS.filter(function(m){return !m.spine&&!tierOf(m.id);}).length;
+  $("navBadge").textContent=on.length+"/"+sold.length+" eladó";
+  $("widgets").innerHTML=
+   '<div class="w"><div class="w__h">'+IC.pk+'Csomagok</div><div class="w__big">'+money(price("ajanlott"))+'</div><div class="w__cap">Ajánlott, havonta'+(domIn("ajanlott")?" · saját cím benne":"")+'</div><div class="w__rows"><span>Alap</span><b>'+money(price("alap"))+'</b><span>Teljes</span><b>'+money(price("teljes"))+'</b><span>Éves fizetés</span><b>−'+R().freeM+' hó</b></div></div>'+
+   '<div class="w"><div class="w__h">'+IC.mod+'Modulok</div><div class="w__big">'+on.length+' / '+sold.length+'</div><div class="w__cap">eladó modul</div><div class="w__rows"><span>Csomagon kívül</span><b>'+outside+'</b><span>Leállítva</span><b>'+(sold.length-on.length)+'</b><span>Saját domain</span><b>'+(S.domFree&&tierOf("domain")?"csomagban":"felár")+'</b></div></div>'+
+   '<div class="w"><div class="w__h">'+IC.off+'Ajánlatok és próba</div><div class="w__big">−'+S.intro+'%</div><div class="w__cap">bemutatkozó kedvezmény</div><div class="w__rows"><span>Döntés-segítő</span><b>'+(S.escOn?"−"+S.escp+"% · "+S.nth+". megnyitás":"ki")+'</b><span>Ingyenes próba</span><b>'+(S.trialOn?S.days+" nap":"ki")+'</b><span>Kupon</span><b>−'+S.cpp+'% · '+S.cpd+' nap</b></div></div>';
+  var a=[];
+  MODS.forEach(function(m){ if(!m.spine&&!m.dom&&tierOf(m.id)&&!R().sell[m.id]) a.push(["warn",m.label+" leállítva",", de a(z) "+TIERS[idx(tierOf(m.id))].label+" csomagban van — ott nem kerül az árba","s-mod","Modulok"]); });
+  if(S.domFree&&tierOf("domain")&&!incTlds().length) a.push(["bad","Domain csomagban, de nincs ingyenes végződés"," — a vevő nem kapna ingyen címet","s-dom","Saját domain"]);
+  if(!firstOn()) a.push(["bad","Nincs kínált végződés"," — saját cím nem rendelhető","s-dom","Saját domain"]);
+  R().tlds.forEach(function(x){ if(x.cost==null) a.push(["info",x.end+" ára nincs mérve"," — kérdezd le, mielőtt kínálod","s-dom","Saját domain"]); });
+  if(!R().confirmed) a.push(["warn","Az árak nincsenek véglegesítve"," — a levél nem hirdet árat, a nyilvános oldal „Egyedi ajánlat”-ot mutat","s-fin","Véglegesítés"]);
+  $("att").innerHTML='<div class="att__h">Figyelmet kér <span>'+a.length+'</span></div>'+(a.length?a.map(function(x){return '<a href="#'+x[3]+'" data-go="'+x[3]+'"><i class="'+x[0]+'"></i><span><b>'+esc(x[1])+'</b>'+esc(x[2])+'</span><em>'+x[4]+'</em></a>';}).join(""):'<div class="none">Minden rendben — nincs teendő ezen a piacon.</div>');
+  var c=$("confPill"); c.className="pill "+(R().confirmed?"ok":"warn"); c.innerHTML='<i></i>'+(R().confirmed?"Véglegesítve — a levelek árat hirdethetnek":"Nincs véglegesítve — a levél nem hirdet árat");
+}
+
+/* ---------- packages (approved A) ---------- */
+function pill(id,o){
+  o=o||{};var m=mod(id);
+  var cls="pl"+(m.dom?" dom":"")+(m.spine?" spine":"")+(o.inh?" inh":"")+(!sellable(id)?" stop":"")+(selected===id&&!o.inh?" sel":"")+(m.dom&&!S.domFree&&o.pool?" off":"");
+  var p=m.dom?(S.domFree?"":"felár"):m.spine?"gerinc":m.once?money(pr(id))+" egyszeri":"+"+grp(pr(id));
+  var x=(!o.inh&&!o.pool&&!m.spine)?'<button class="x" type="button" data-rm="'+id+'" aria-label="Kivétel: '+esc(m.label)+'">×</button>':"";
+  return '<span class="'+cls+'" data-id="'+id+'"'+(o.inh||m.spine?' data-fixed="1"':"")+(!sellable(id)?' title="Leállítva — nem kerül az árba"':"")+'>'+esc(m.label)+(p?' <small>'+p+'</small>':"")+x+'</span>';
+}
+function domLine(t){
+  if(domIn(t)) return '<div class="pk__dom inc">Saját cím <b>benne</b> ('+(incTlds().join(", ")||"nincs ingyenes végződés")+')</div>';
+  if(R().minPkg>0&&price(t)<R().minPkg) return '<div class="pk__dom">Saját cím <b>nem választható</b> (küszöb: '+money(R().minPkg)+'/hó)</div>';
+  var f=firstOn(); return '<div class="pk__dom">Saját cím: '+(f?"+"+money(f.fee)+"/hó ("+f.end+")":"nincs kínált végződés")+'</div>';
+}
+function renderPk(){
+  var ids=MODS.filter(function(m){return !tierOf(m.id);}).map(function(m){return m.id;});
+  $("poolChips").innerHTML=ids.length?ids.map(function(id){return pill(id,{pool:true});}).join(""):'<span class="u">Minden modul csomagban van.</span>';
+  $("cols").innerHTML=TIERS.map(function(t,i){
+    var own=S.own[t.id], inh=i?full(TIERS[i-1].id):[];
+    var n=full(t.id).filter(function(id){return !mod(id).dom;}).length;
+    return '<div class="pk'+(selected?" armed":"")+'" data-tier="'+t.id+'"><div class="pk__h"><span class="pk__n">'+t.label+'</span><span class="pk__p">'+money(price(t.id))+'<small> /hó</small></span></div>'+
+      '<div class="pk__sub">'+n+' modul · éves: '+money(price(t.id)*(12-R().freeM))+'</div>'+
+      (inh.length?'<div class="pk__lbl">Minden '+(i===1?"az Alapból":"az Ajánlottból")+'</div><div class="chips">'+inh.map(function(id){return pill(id,{inh:true});}).join("")+'</div>':"")+
+      '<div class="pk__lbl">'+(i?"Ebben jön még":"Tartalma")+'</div><div class="chips">'+(own.length?own.map(function(id){return pill(id);}).join(""):'<span class="u">—</span>')+'</div>'+
+      domLine(t.id)+'<div class="pk__drop">'+(selected?"Koppints ide: "+esc(mod(selected).label)+" → "+t.label:"Húzd ide a modult")+'</div></div>';
+  }).join("");
+}
+function moveTo(id,tier){
+  var m=mod(id); if(m.spine) return;
+  if(m.dom&&!S.domFree){flash("Az ingyen domain csomagban ki van kapcsolva.","bad");return;}
+  var from=tierOf(id); if(from) S.own[from]=S.own[from].filter(function(x){return x!==id;});
+  if(tier){ S.own[tier].push(id); for(var i=idx(tier)+1;i<3;i++) S.own[TIERS[i].id]=S.own[TIERS[i].id].filter(function(x){return x!==id;});
+    flash(m.label+" → "+TIERS[idx(tier)].label+(idx(tier)<2?" (és a magasabb csomagokban is)":"")); }
+  else flash(m.label+" kivéve a csomagokból — külön vehető.");
+  selected=null; render();
+}
+
+/* ---------- modules table ---------- */
+function renderMods(){
+  var tb=$("modTable").querySelector("tbody"), h="", last="";
+  MODS.filter(function(m){return !m.dom;}).forEach(function(m){
+    if(m.grp!==last){h+='<tr class="grp"><td colspan="5">'+m.grp+'</td></tr>';last=m.grp;}
+    var t=tierOf(m.id);
+    h+='<tr data-m="'+m.id+'"><td class="full"><b>'+esc(m.label)+'</b>'+(m.spine?' <span class="u">gerinc — az alapdíjban</span>':"")+'</td>'+
+      '<td><span class="lm">Csomag</span>'+(t?'<span class="pill">'+TIERS[idx(t)].label+(idx(t)<2?"-tól":"")+'</span>':'<span class="u">csak külön</span>')+'</td>'+
+      '<td class="num"><span class="lm">Élő</span>'+(m.live?'<span class="pill ok">'+m.live+' élő</span>':'<span class="u">—</span>')+'</td>'+
+      '<td class="num"><span class="lm">Felár</span>'+(m.spine?'<span class="u">—</span>':'<input class="tin" data-k="price" inputmode="numeric" value="'+R().price[m.id]+'" aria-label="'+esc(m.label)+' felára"'+(R().sell[m.id]?"":" disabled")+'><span class="u">'+(R().cur==="€"?"€":"Ft")+(m.once?" / alkalom":" / hó")+'</span><div class="ferr">Egész szám.</div>')+'</td>'+
+      '<td><span class="lm">Eladó</span>'+(m.spine?'<span class="u">mindig</span>':'<label class="mini"><input type="checkbox" data-k="sell"'+(R().sell[m.id]?" checked":"")+' aria-label="'+esc(m.label)+' eladó"><span class="tr"></span><span class="u">'+(R().sell[m.id]?"eladó":"leállítva")+'</span></label>')+'</td></tr>';
+  });
+  tb.innerHTML=h;
+}
+
+/* ---------- TLD ---------- */
+function renderTld(){
+  var c=R().cur==="€"?"€":"Ft";
+  $("tld").querySelector("tbody").innerHTML=R().tlds.map(function(x,i){
+    var over=x.cost!=null&&x.cost>x.cap;
+    return '<tr data-i="'+i+'"><td class="full"><b style="font-size:14px">'+esc(x.end)+'</b></td>'+
+      '<td><span class="lm">Kínáljuk</span><label class="mini"><input type="checkbox" data-k="on"'+(x.on?" checked":"")+' aria-label="'+esc(x.end)+' kínálva"><span class="tr"></span></label></td>'+
+      '<td><span class="lm">Beszerzés / év</span>'+(x.cost!=null?grp(x.cost)+" Ft":'<span class="u">nincs mérve</span>')+'<span class="meas">'+esc(x.at||"")+' · <button class="btn sm" type="button" data-q="'+i+'">Lekérdezés</button></span></td>'+
+      '<td class="'+(over?"err":"")+'"><span class="lm">Max. beszerzés</span><input class="tin" data-k="cap" inputmode="numeric" value="'+x.cap+'"><span class="u">Ft</span>'+(over?'<div class="ferr" style="display:block">A beszerzés a plafon felett — nem kínálható.</div>':"")+'</td>'+
+      '<td><span class="lm">Havidíj csomagon kívül</span><input class="tin" data-k="fee" inputmode="numeric" value="'+x.fee+'"><span class="u">'+c+'/hó</span></td>'+
+      '<td><span class="lm">Csomagban ingyen</span><label class="mini"><input type="checkbox" data-k="inc"'+(x.inc?" checked":"")+(S.domFree?"":" disabled")+' aria-label="'+esc(x.end)+' csomagban ingyen"><span class="tr"></span></label></td>'+
+      '<td><button class="btn sm" type="button" data-del="'+i+'">Törlés</button></td></tr>';
+  }).join("");
+}
+
+/* ---------- "Így fut" sentences ---------- */
+function runs(){
+  var aj=price("ajanlott");
+  $("runBase").innerHTML='<b>Így fut:</b> havi fizetésnél az Ajánlott '+money(aj)+'/hó; éves fizetésnél '+(12-R().freeM)+' hónap árát fizeti: '+money(aj*(12-R().freeM))+'/év ('+R().freeM+' hónap ingyen).';
+  $("runCp").innerHTML='<b>Így fut:</b> aki közvetlenül vásárol, az első fizetéskor egy −'+S.cpp+'% kupont kap, egyszer használható, '+S.cpd+' napig.';
+  var f=firstOn();
+  $("runDom").innerHTML='<b>Így fut:</b> '+TIERS.map(function(t){return t.label+": "+(domIn(t.id)?"saját "+(incTlds()[0])+" cím az árban":(R().minPkg>0&&price(t.id)<R().minPkg?"saját cím nem kérhető":"saját cím +"+(f?money(f.fee):"—")+"/hó"));}).join(" · ")+'. Mindegyik mellé jár a <b>&lt;név&gt;.citoviso.com</b> cím. A domaint a fizetés után regisztráljuk; '+R().commit+' hónap hűség alatt a név elvitele '+money(R().buyout)+'.';
+  var ex=Math.round(aj*(1-S.intro/100)), ex2=Math.round(aj*(1-S.escp/100));
+  $("runOff").innerHTML='<b>Így fut:</b> a levél −'+S.intro+'% bemutatkozó kedvezményt ígér (Ajánlott: '+money(aj)+' → '+money(ex)+' az első díjra).'+(S.escOn?' A '+S.nth+'. '+(S.distinct?"(különböző napon történt) ":"")+'megnyitáskor −'+S.escp+'% ajánlatot kap ('+money(ex2)+'), '+S.valid+' óráig; '+S.rem+' óra múlva emlékeztető megy.':' Döntés-segítő ajánlat nincs.');
+  $("runTr").innerHTML=S.trialOn?'<b>Így fut:</b> aki próbát indít, '+S.days+' napig használja a '+TIERS[idx(S.trialPkg)].label+' csomag moduljait a platform-címén, kártya nélkül. Egy kedvezmény jár: a saját lead-ajánlata, a próba végéig.'+(domIn(S.trialPkg)?" A saját cím ebben a csomagban az árban van.":""):'<b>Így fut:</b> próba nem indítható — a lead csak megrendelhet.';
+}
+
+/* ---------- section nav / layout ---------- */
+var SECS=["s-pk","s-mod","s-base","s-cp","s-dom","s-off","s-tr","s-fin"];
+function dirtyOf(sec){
+  var a=S,b=saved,r=region,ra=a.reg[r],rb=b.reg[r];
+  var eq=function(x,y){return JSON.stringify(x)===JSON.stringify(y);};
+  switch(sec){
+    case "s-pk":return !eq(a.own,b.own);
+    case "s-mod":return !eq(ra.price,rb.price)||!eq(ra.sell,rb.sell);
+    case "s-base":return ra.base!==rb.base||ra.freeM!==rb.freeM;
+    case "s-cp":return a.cpp!==b.cpp||a.cpd!==b.cpd;
+    case "s-dom":return a.domFree!==b.domFree||ra.minPkg!==rb.minPkg||ra.commit!==rb.commit||ra.buyout!==rb.buyout||!eq(ra.tlds,rb.tlds);
+    case "s-off":return a.intro!==b.intro||a.escOn!==b.escOn||a.nth!==b.nth||a.escp!==b.escp||a.valid!==b.valid||a.rem!==b.rem||a.distinct!==b.distinct;
+    case "s-tr":return a.trialOn!==b.trialOn||a.days!==b.days||a.trialPkg!==b.trialPkg;
+    case "s-fin":return ra.confirmed!==rb.confirmed;
+  }
+}
+function renderNav(){
+  $("snav").innerHTML=SECS.map(function(s){var t=$(s).dataset.title;return '<button class="chip" type="button" data-sec="'+s+'"'+(layout==="B"&&tab===s?' aria-current="true"':"")+'>'+t+(dirtyOf(s)?'<span class="dot" aria-label="mentetlen"></span>':"")+'</button>';}).join("");
+  $("sections").classList.toggle("tabbed",layout==="B");
+  SECS.forEach(function(s){$(s).classList.toggle("show",tab===s);});
+  var n=SECS.filter(dirtyOf).length;
+  $("dirty").textContent=n?"● "+n+" szakaszban mentetlen változás":"";
+}
+function go(s){ if(layout==="B"){tab=s;renderNav();} var e=$(s); if(e) e.scrollIntoView({behavior:"smooth",block:"start"}); }
+
+/* ---------- inputs ---------- */
+var NUM=[["base","f_base",1,1e6,"r"],["freeM","f_free",0,6,"r"],["minPkg","f_min",0,1e6,"r"],["commit","f_commit",0,36,"r"],["buyout","f_buyout",0,1e7,"r"],
+  ["intro","f_intro",0,90,"g"],["nth","f_nth",2,10,"g"],["escp","f_escp",1,90,"g"],["valid","f_valid",1,336,"g"],["rem","f_rem",1,336,"g"],
+  ["days","f_days",1,90,"g"],["cpp","f_cpp",1,90,"g"],["cpd","f_cpd",1,365,"g"]];
+function syncInputs(){
+  NUM.forEach(function(n){$(n[0]).value=n[4]==="r"?R()[n[0]]:S[n[0]];$(n[1]).classList.remove("err");});
+  $("domFree").checked=S.domFree;$("escOn").checked=S.escOn;$("distinct").checked=S.distinct;$("trialOn").checked=S.trialOn;$("trialPkg").value=S.trialPkg;$("confirmed").checked=R().confirmed;
+  document.querySelectorAll(".cur").forEach(function(e){e.textContent=R().cur==="€"?"€ / hó":"Ft / hó";});
+  document.querySelectorAll(".cur1").forEach(function(e){e.textContent=R().cur==="€"?"€":"Ft";});
+  $("saveRegion").textContent=R().name; disableDeps();
+}
+function disableDeps(){
+  ["nth","escp","valid","rem","distinct"].forEach(function(id){$(id).disabled=!S.escOn;});
+  ["days","trialPkg"].forEach(function(id){$(id).disabled=!S.trialOn;});
+}
+function crossCheck(){
+  var bad=S.escOn&&S.escp<=S.intro; $("f_escp").classList.toggle("err",bad);
+  var bad2=S.escOn&&S.rem>=S.valid; $("f_rem").classList.toggle("err",bad2);
+}
+NUM.forEach(function(n){
+  $(n[0]).addEventListener("input",function(){
+    var v=this.value.replace(/\s/g,""), ok=/^\d+$/.test(v)&&+v>=n[2]&&+v<=n[3];
+    $(n[1]).classList.toggle("err",!ok);
+    if(ok){ if(n[4]==="r") R()[n[0]]=+v; else S[n[0]]=+v; crossCheck(); render(true); }
+  });
+});
+$("domFree").onchange=function(){S.domFree=this.checked;render();};
+$("escOn").onchange=function(){S.escOn=this.checked;disableDeps();crossCheck();render();};
+$("distinct").onchange=function(){S.distinct=this.checked;render();};
+$("trialOn").onchange=function(){S.trialOn=this.checked;disableDeps();render();};
+$("trialPkg").onchange=function(){S.trialPkg=this.value;render();};
+$("confirmed").onchange=function(){R().confirmed=this.checked;render();};
+$("modTable").addEventListener("change",function(e){
+  var tr=e.target.closest("tr"); if(!tr) return; var id=tr.dataset.m, k=e.target.dataset.k;
+  if(k==="sell"){R().sell[id]=e.target.checked?1:0; flash(mod(id).label+(e.target.checked?" újra eladó.":" leállítva — új ügyfél nem kapja meg; a meglévők futnak tovább."));render();}
+});
+$("modTable").addEventListener("input",function(e){
+  if(e.target.dataset.k!=="price") return; var tr=e.target.closest("tr"), v=e.target.value.replace(/\s/g,""), ok=/^\d+$/.test(v);
+  tr.querySelector("td:nth-child(4)").classList.toggle("err",!ok); if(ok){R().price[tr.dataset.m]=+v; render(true);}
+});
+$("tld").addEventListener("change",function(e){
+  var tr=e.target.closest("tr"); if(!tr) return; var x=R().tlds[+tr.dataset.i], k=e.target.dataset.k;
+  if(k==="on"){ if(e.target.checked&&x.cost==null){e.target.checked=false;flash("Előbb kérdezd le az árat.","bad");return;}
+    if(e.target.checked&&x.cost>x.cap){e.target.checked=false;flash("A beszerzés a plafon felett.","bad");return;} x.on=e.target.checked; }
+  if(k==="inc") x.inc=e.target.checked;
+  if(k==="cap"||k==="fee"){var v=e.target.value.replace(/\s/g,""); if(!/^\d+$/.test(v)){e.target.closest("td").classList.add("err");flash("Egész szám kell.","bad");return;} x[k]=+v; if(k==="cap"&&x.cost>x.cap) x.on=false;}
+  render();
+});
+$("addTld").onclick=function(){
+  var v="."+$("newTld").value.trim().toLowerCase().replace(/^\.+/,"");
+  var bad=!/^\.[a-z]{2,24}$/.test(v)?"Csak betűk, legalább 2 (pl. .at).":R().tlds.some(function(x){return x.end===v;})?v+" már a listán van.":"";
+  $("f_new").classList.toggle("err",!!bad); $("newErr").textContent=bad; if(bad) return;
+  R().tlds.push({end:v,on:false,cost:null,at:"nincs mérve",cap:5000,fee:R().cur==="€"?2:1000,inc:false}); $("newTld").value=""; render();
+  flash(v+" hozzáadva — kérdezd le az árát, mielőtt kínálod.");
+};
+
+/* ---------- drag (pointer: mouse + touch, edge auto-scroll) ---------- */
+var drag=null;
+function zoneAt(x,y){var n=document.elementFromPoint(x,y);return n?n.closest(".pk[data-tier],#pool"):null;}
+function hot(){ if(!drag) return; document.querySelectorAll(".hot").forEach(function(x){x.classList.remove("hot");}); var t=zoneAt(drag.cx,drag.cy); if(t) t.classList.add("hot"); }
+document.addEventListener("pointerdown",function(e){
+  if(e.target.closest("[data-rm]")) return; var p=e.target.closest(".pl"); if(!p||p.dataset.fixed||p.classList.contains("off")) return;
+  drag={id:p.dataset.id,src:p,x:e.clientX,y:e.clientY};
+});
+document.addEventListener("pointermove",function(e){
+  if(!drag) return;
+  if(!drag.ghost){ if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)<6) return; drag.ghost=drag.src.cloneNode(true); drag.ghost.classList.add("ghost"); document.body.appendChild(drag.ghost); }
+  drag.ghost.style.left=(e.clientX-20)+"px"; drag.ghost.style.top=(e.clientY-14)+"px"; drag.cx=e.clientX; drag.cy=e.clientY; hot();
+  var v=e.clientY<70?-1:e.clientY>innerHeight-70?1:0; clearInterval(drag.as); if(v) drag.as=setInterval(function(){scrollBy(0,v*14);hot();},16);
+  e.preventDefault();
+},{passive:false});
+document.addEventListener("pointerup",function(e){
+  if(!drag) return; var d=drag; drag=null; clearInterval(d.as); document.querySelectorAll(".hot").forEach(function(x){x.classList.remove("hot");});
+  if(d.ghost){ d.ghost.remove(); var z=zoneAt(e.clientX,e.clientY); if(z) moveTo(d.id,z.id==="pool"?null:z.dataset.tier); return; }
+  selected=selected===d.id?null:d.id; render(); if(selected) flash("Kiválasztva: "+mod(selected).label+" — koppints egy csomagra.");
+});
+document.addEventListener("click",function(e){
+  var rm=e.target.closest("[data-rm]"); if(rm){moveTo(rm.dataset.rm,null);return;}
+  if(selected&&!e.target.closest(".pl")){var z=e.target.closest(".pk[data-tier],#pool"); if(z){moveTo(selected,z.id==="pool"?null:z.dataset.tier);return;}}
+  var g=e.target.closest("[data-go]"); if(g){e.preventDefault();go(g.dataset.go);return;}
+  var s=e.target.closest("[data-sec]"); if(s){go(s.dataset.sec);return;}
+  var q=e.target.closest("[data-q]"); if(q){var x=R().tlds[+q.dataset.q]; q.disabled=true; q.textContent="…";
+    setTimeout(function(){var v=MEASURED[x.end]; if(v!=null){x.cost=v;x.at="most mérve";flash(x.end+": "+grp(v)+" Ft nettó / év (Websupport)","ok");}else{x.cost=null;x.at="a regisztrátor nem árazza";x.on=false;flash(x.end+": a regisztrátor nem ad árat — nem kínálható","bad");} render();},700);}
+  var del=e.target.closest("[data-del]"); if(del){R().tlds.splice(+del.dataset.del,1);render();}
+  var rt=e.target.closest("[data-region]"); if(rt&&!rt.disabled){region=rt.dataset.region;document.querySelectorAll("[data-region]").forEach(function(b){b.setAttribute("aria-selected",b===rt);});syncInputs();render();flash("Piac: "+R().name+" ("+(R().cur==="€"?"EUR":"HUF")+")");}
+});
+
+/* ---------- render / save ---------- */
+var tmo; function flash(t,c){var e=$("toast");e.textContent=t;e.style.color=c==="bad"?"var(--citui-bad-ink)":c==="ok"?"var(--citui-ok-ink)":"var(--citui-muted)";clearTimeout(tmo);tmo=setTimeout(function(){e.textContent="";},4500);}
+function render(keepTables){
+  if(!S.domFree&&tierOf("domain")){var t=tierOf("domain");S.own[t]=S.own[t].filter(function(x){return x!=="domain";});flash("Ingyen domain kikapcsolva — a domain-pirula csomagon kívülre került.");}
+  widgets(); renderPk(); if(!keepTables){renderMods();renderTld();} runs(); renderNav();
+}
+$("save").onclick=function(){
+  var errs=document.querySelectorAll(".err").length;
+  if(errs){flash("Nem mentve: "+errs+" hibás mező — piros keret jelzi.","bad"); var f=document.querySelector(".err"); var sec=f&&f.closest(".pn"); if(sec) go(sec.id); return;}
+  saved=clone(S); render(); flash("Árazás mentve — "+R().name+". A nyilvános oldal ~10 mp-en belül átveszi.","ok");
+};
+$("reset").onclick=function(){S=clone(saved);syncInputs();render();flash("Visszaállítva az utolsó mentésre.");};
+
+/* ---------- draft bar ---------- */
+var fr=$("frame");
+function setSize(m){fr.classList.toggle("mobile",m);$("szMob").setAttribute("aria-pressed",m);$("szDesk").setAttribute("aria-pressed",!m);}
+function setTheme(d){document.documentElement.dataset.theme=d?"dark":"light";$("thD").setAttribute("aria-pressed",d);$("thL").setAttribute("aria-pressed",!d);}
+function setLayout(l){layout=l;$("lA").setAttribute("aria-pressed",l==="A");$("lB").setAttribute("aria-pressed",l==="B");renderNav();}
+$("szMob").onclick=function(){setSize(true);};$("szDesk").onclick=function(){setSize(false);};
+$("thL").onclick=function(){setTheme(false);};$("thD").onclick=function(){setTheme(true);};
+$("thTop").onclick=function(){setTheme(document.documentElement.dataset.theme!=="dark");};
+$("lA").onclick=function(){setLayout("A");};$("lB").onclick=function(){setLayout("B");};
+var q=new URLSearchParams(location.search);
+setSize(q.get("m")==="1"||(!q.has("m")&&matchMedia("(max-width:600px)").matches));
+setTheme(q.get("t")==="d"); layout=q.get("l")==="B"?"B":"A"; if(q.get("tab")) tab=q.get("tab");
+syncInputs(); render(); setLayout(layout);
+})();
+</script>
+</body></html>

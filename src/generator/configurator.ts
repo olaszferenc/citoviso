@@ -18,7 +18,6 @@ import { getDisabledModules } from "../moduleSales.js";
 import {
   MODULE_CATALOG,
   GROUP_LABELS,
-  PRESETS,
   applicableRequirements,
   detectPresentModules,
   sellableModuleIds,
@@ -32,7 +31,12 @@ import {
   getDomainMinPackageMonthly,
   getDomainMinCommitmentMonths,
   getModulePrice,
+  currentPresets,
+  offeredTlds,
+  getDomainFreeInPackage,
+  getPackageAssignment,
 } from "../pricing.js";
+import { domainTier, tierModules } from "../packages.js";
 import { subdomainHost } from "../domains.js";
 import {
   PHOTO_RIGHTS_DECLARATION_V1,
@@ -220,6 +224,10 @@ export interface ConfiguratorManifest {
      *  domain. Below it the option is not offered — the client shows the
      *  invitation card instead (frozen plan: design-refs/configurator/domain-monthly). */
     readonly minPackageMonthly: number;
+    /** ADR-XXXX ③: offered endings + their monthly fee outside a package. */
+    readonly tlds: readonly { readonly tld: string; readonly monthly: number; readonly freeInPackage: boolean }[];
+    /** ADR-XXXX ②: modules a selection must cover for the domain to be package content. */
+    readonly pkgModules: readonly string[] | null;
     /** A concrete example name for the invitation card, derived from the SAME
      *  label the subdomain uses. It illustrates the idea; availability is only
      *  ever claimed by the checked suggestion list (§B.17). */
@@ -478,6 +486,17 @@ export async function buildManifest(
       // ADR-0093 free-domain rule: the client resolves the fee against the LIVE
       // module selection (the threshold crossing must move with the toggles).
       minPackageMonthly: getDomainMinPackageMonthly(),
+      // ADR-XXXX ③: the endings a buyer may pick, with their fee outside a package.
+      tlds: offeredTlds().map((t) => ({ tld: t.tld, monthly: t.monthlyFee, freeInPackage: t.freeInPackage })),
+      // ADR-XXXX ②: the modules a selection must cover for the domain to be package content
+      // (the lowest domain-carrying tier, minus the spine and what is off sale); null = the
+      // market does not offer the domain as package content.
+      pkgModules: ((): string[] | null => {
+        const a = getPackageAssignment();
+        const t = domainTier(a);
+        if (!getDomainFreeInPackage() || !t) return null;
+        return tierModules(a, t).filter((id) => !disabledSales.has(id) && !MODULE_CATALOG.find((m) => m.id === id)?.spine);
+      })(),
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
     ...(opts.trial ? { trial: { ...opts.trial, sub: subHost } } : {}),
@@ -494,7 +513,8 @@ export async function buildManifest(
         href: "#cit-enquiry",
       },
     },
-    presets: PRESETS.map((p) => ({
+    // ADR-XXXX ①: the operator-set composition, not the code seed.
+    presets: currentPresets().map((p) => ({
       id: p.id,
       label: p.label,
       note: p.note,

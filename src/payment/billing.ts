@@ -32,6 +32,7 @@ import {
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { getDisabledModules } from "../moduleSales.js";
 import { getTenantModules, isBilledModule } from "../tenant/modules.js";
 import {
   computeAnnual,
@@ -165,7 +166,15 @@ export async function domainFeeForRenewal(
   if (!["registered", "dns_pending", "tls_pending", "live"].includes(site.custom_domain_status))
     return null;
 
-  const fee = domainFeeForCycle(cycleMonths);
+  // ADR-XXXX: per ending, and 0 while the tenant's modules are package content — so a
+  // tenant who downgrades below the domain-carrying package starts paying the fee on the
+  // next cycle, and one who upgrades stops. The off-sale modules cannot be bought, so they
+  // do not count against the set (the same reading the order path uses).
+  const fee = domainFeeForCycle(cycleMonths, undefined, {
+    domain: site.custom_domain,
+    modules: await renewableModuleIds(tenantId),
+    disabled: await getDisabledModules(),
+  });
   return fee > 0 ? { fee, domain: site.custom_domain } : null;
 }
 

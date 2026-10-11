@@ -164,6 +164,28 @@ export class WebsupportRegistrar implements RegistrarAdapter {
           "ezért a vásárlás blokkolva (ADR-0103 ④).",
       );
     }
+    const item = await this.#yearlyItem(domain);
+    const huf = item.priceWithVat ?? item.price;
+    if (typeof huf !== "number" || !(huf > 0)) {
+      throw new Error(`a(z) ${domain} ára nem olvasható ki a válaszból — vásárlás blokkolva`);
+    }
+    return huf / this.#hufPerEur;
+  }
+
+  /**
+   * ADR-XXXX ③: the NET yearly price in HUF (measured 2026-10-11: `.hu` 1 990, `.eu` 2 499,
+   * `.com` 4 899) — the per-ending cap is set in the same unit, so no FX is involved.
+   */
+  async getYearlyNetPrice(domain: string): Promise<{ readonly amount: number; readonly currency: string }> {
+    const item = await this.#yearlyItem(domain);
+    if (typeof item.price !== "number" || !(item.price > 0)) {
+      throw new Error(`a(z) ${domain} nettó ára nem olvasható ki a válaszból — vásárlás blokkolva`);
+    }
+    return { amount: item.price, currency: "HUF" };
+  }
+
+  /** The validated one-year HUF price item, or a loud refusal (shared by both getters). */
+  async #yearlyItem(domain: string): Promise<NonNullable<ValidateResponse["item"]>> {
     const r = await this.#validate(domain, 1);
     if (r.status !== "success") {
       const why = Array.isArray((r.errors as { domain?: string[] })?.domain)
@@ -184,11 +206,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
           `(period=${r.item?.period}, periodLength=${r.item?.periodLength}) — vásárlás blokkolva`,
       );
     }
-    const huf = r.item?.priceWithVat ?? r.item?.price;
-    if (typeof huf !== "number" || !(huf > 0)) {
-      throw new Error(`a(z) ${domain} ára nem olvasható ki a válaszból — vásárlás blokkolva`);
-    }
-    return huf / this.#hufPerEur;
+    return r.item;
   }
 
   /**

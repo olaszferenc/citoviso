@@ -31,6 +31,12 @@ export interface RegistrarAdapter {
    */
   getYearlyPriceEur(domain: string): Promise<number>;
   /**
+   * ADR-XXXX ③: the yearly NET registration price in the REGISTRAR's own currency — the
+   * per-ending cap (domain_tld.max_cost) is compared with this in the same currency, no FX.
+   * MUST throw when the price cannot be determined (no price, no buy — §B.17).
+   */
+  getYearlyNetPrice(domain: string): Promise<{ readonly amount: number; readonly currency: string }>;
+  /**
    * Atomic check-and-register for `years`. The security is HERE, not in a human
    * approval: if the domain was taken between the pre-check and this call, it
    * throws DomainTakenError instead of charging for nothing.

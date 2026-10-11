@@ -1,40 +1,171 @@
 ---
 id: console-pricing
-title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu
+title: Árazás és értékesítés — csomagok, modulok, saját domain, ajánlatok, ár-hirdetési kapu
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-10-09
+updated: 2026-10-11
 ---
 
-Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
-modulonként, hogy egyáltalán **eladható-e**. Ezek az árak jelennek meg a prospect-konfigurátorban
-és a nyilvános oldalon — és itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem
-hirdethet árat.
+Az **„Árazás és értékesítés”** képernyőn állítod be piaconként a valós árakat, a három csomag
+tartalmát, hogy a saját domain melyik csomagban jár díj nélkül, a lead-ajánlatokat, az ingyenes
+próbát és a kupont. Itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem hirdethet árat.
+Ez az árazás egyetlen forrása: a konfigurátor, a megrendelés és a levelek ár-sora is innen olvas.
 
-**Hol találod:** a bal oldali menüben a **CRM** modul alatt, **„Árazás és értékesítés”**
-néven (a menüben röviden **„Árazás”**). (Korábban a **„Pénzügy”** alatt volt — 2026-09-06 óta a CRM-hez tartozik, mert
-értékesítési döntés.) Az Irányítópulton a CRM-kártyán is ott a sora, mellette egy jelvény, ami
+**Hol találod:** a bal oldali menüben a **CRM** modul alatt, **„Árazás”** néven. Mellette egy jelvény
 mutatja, hány modul eladható a katalógusból (például „13/14 eladó”).
 
-![Képernyőkép: az árazás és értékesítés képernyő telefonon](assets/hu/screen.png)
+![Képernyőkép: az Árazás és értékesítés képernyő telefonon, teljes hosszában](assets/hu/screen.png)
 
-## Régió-váltó
+## A lap felépítése
 
-A panel tetején a régiók között váltasz (Magyarország = HUF, Globális = EUR fallback). Minden
-régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globálisra esik vissza.
+1. **Piac-fülek** a cím alatt: „Magyarország · HUF” és „Globális · EUR”. Minden piacnak saját
+   ár-sora van; amelyik piacra nincs mentett ár, az a globálisra esik vissza. A „+ Ország” fül
+   halvány: az ország szerinti bontás később jön.
+2. **Három összesítő kártya:** **„Csomagok”** (nagy számmal az Ajánlott csomag havidíja, alatta az
+   Alap, a Teljes és az éves kedvezmény), **„Modulok”** (hány modul eladó az összesből, hány van
+   csomagon kívül, hány leállítva, és hogy a saját domain csomagban jár vagy felár) és **„Ajánlatok
+   és próba”** (a bemutatkozó kedvezmény, a döntés-segítő, a próba és a kupon). A kártyák mentés
+   előtt is azonnal követik, amit átírsz.
+3. **„Figyelmet kér”** lista: amit a beállításaidban érdemes rendbe tenni, például egy leállított
+   modul, ami még egy csomagban van, vagy egy végződés, aminek nincs mért ára. A sorra koppintva a
+   lap az érintett szakaszhoz ugrik. Ha nincs ilyen: „Minden rendben — nincs teendő ezen a piacon.”
+4. **Szakasz-gombok:** Csomagok · Modulok · Alapdíj · Kupon · Saját domain · Lead-ajánlatok ·
+   Ingyenes próba · Véglegesítés. Görgetéskor is fent maradnak. Ha egy szakaszban mentetlen
+   változás van, a gombja mellett borostyán pötty jelenik meg. Telefonon a gombsor nem fér ki egy
+   képernyőre: a sort oldalra húzva éred el a többi gombot (Lead-ajánlatok, Ingyenes próba,
+   Véglegesítés).
+5. A **mentés-sáv** mindig látható a lap alján: „● N szakaszban mentetlen változás”,
+   **„Visszaállítás”** és a „Mentés — {piac}” gomb (például „Mentés — Magyarország”). A
+   „Visszaállítás” újratölti a lapot az utoljára mentett állapottal. Ha van mentetlen változás, a
+   böngésző előbb megkérdezi, hogy elhagyod-e a lapot: ha a változásokat el akarod dobni, válaszd a
+   távozást (a gomb neve böngészőnként más, például „Távozás” vagy „Újratöltés”). Ugyanezt kérdezi
+   akkor is, ha mentés nélkül másik lapra lépnél.
 
-## Az ár-mezők
+## Csomagok — húzással
 
-- **„Alapdíj (a gerinccel együtt)”** — a havi előfizetés alapára; a gerinc (honlap + érdeklődés-CTA)
-  benne van.
-- Éves előfizetésnél ingyenes hónapokat adsz (12 − N hónap árát fizeti).
-- **Saját domain** — a rajtunk keresztül intézett egyedi domain havi díja.
-- **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
+![Képernyőkép: a Csomagok panel — fent a „Csomagon kívül” sáv, alatta az Alap, az Ajánlott és a Teljes csomag](assets/hu/packages.png)
+
+A **„Csomagok”** panelen te döntöd el, melyik modul melyik csomagban van. A csomag ára az alapdíjból
+és a benne lévő modulok felárából áll össze, külön nem írod be.
+
+- **Húzd a modult** a pirulájánál fogva a kívánt csomag oszlopába. Ujjal is működik; ha a képernyő
+  aljára vagy tetejére érsz, a lap magától görget. Húzás helyett **koppinthatsz** is: koppints a
+  pirulára (kiemelődik), aztán a csomagra.
+- **Amit az alacsonyabb csomag tartalmaz, azt a magasabb is.** Az öröklött modulok halványan, a
+  **„Minden az Alapból”** / **„Minden az Ajánlottból”** felirat alatt látszanak, a csomag saját
+  többlete az **„Ebben jön még”** alatt. Ha egy modult magasabb csomagba húzol, az alacsonyabbakból
+  kikerül.
+- A pirulán lévő **×** kiveszi a modult a csomagokból; ilyenkor a **„Csomagon kívül”** sávba kerül,
+  és csak külön vehető, a felárával. A sávba húzva is kiveheted.
+- **Függőségek:** ha egy modul egy másikra épül (például az online foglalás az árakra, az árak a
+  szobákra), a rendszer nem engedi szétszakítani őket. Három eset van, és mindegyiket kiírja a
+  panel alatt:
+  - Ha behúzol egy ilyen modult, a függősége vele kerül ugyanabba a csomagba, akkor is, ha eddig
+    csomagon kívül vagy magasabb csomagban volt („Vele ment: Árak / szezonok …”).
+  - Ha egy modult magasabb csomagba húzol, a rá épülő, alacsonyabb csomagban lévő modulok is
+    feljebb kerülnek („Feljebb került: …”).
+  - Ha kiveszel egy modult, ami másoknak kell, a rá épülők is kikerülnek („Vele kikerült: …”).
+- Az **érdeklődés-CTA** (gerinc) mindig az Alapban van, nem mozdítható.
+- A **leállított** modul áthúzva, „nem eladó” jelöléssel marad a csomagban, és nem számít az árba;
+  a rá épülő modulok ugyanígy jelölődnek. A „Figyelmet kér” listán is megjelenik.
+- A **„Saját domain”** is egy pirula. Abban a csomagban, ahová húzod (és a felette lévőkben), a
+  saját címnek nincs havidíja. Ezt csak akkor húzhatod csomagba, ha a „Saját domain” panelen az
+  **„Ingyen domain csomagban”** kapcsoló be van kapcsolva.
+- Oszloponként a csomag ára, a modulok száma, az éves ár és egy sor arról, mennyibe kerül ott a
+  saját cím (benne / +díj/hó / nem választható).
+
+A csomagok összetétele minden piacra közös. A mentéskor a szerver is ellenőrzi: ha egy modul
+alacsonyabb csomagba került, mint amire épül, **semmit nem ment**, és a lap tetején ez áll: „Nem
+mentettem: a csomagok összetétele érvénytelen …”
+
+## Modulok — felár és eladhatóság
+
+A **„Modulok”** tábla csoportonként (Amit bemutat · Elérhetőség · Extrák) sorolja a modulokat.
+Soronként: a modul neve, hogy melyik csomagtól jár (például „Ajánlott-tól”, vagy „csak külön”), hány
+élő előfizetés van rá, a felár, és az eladhatóság kapcsolója. A gerincnél „gerinc — az alapdíjban”
+és „mindig” áll: se kapcsolója, se külön ára nincs. Telefonon soronként két sor: a név, alatta a
+csomag, az élő darabszám, a felár és a kapcsoló.
+
+A kapcsoló azt dönti el, hogy a modul **új ügyfélnek eladható-e**:
+
+- **Bekapcsolva** — a modul normálisan megjelenik az ajánlatban.
+- **Kikapcsolva** — a modul neve áthúzva jelenik meg, és a sor kiírja: **„Leállítva — új
+  előfizetés nem köthető rá; a meglévők futnak tovább.”**
+
+A tábla fölött a képernyő ezt ki is mondja: „A kikapcsolt modult új ügyfél nem kapja meg
+(konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.”
+
+> ⚠️ **A Többnyelvű honlap három sávja külön árazódik.** A „Többnyelvű honlap” sorban az
+> **Alap** csomag ára áll, alatta pedig — saját, behúzott sorban — a **Bővített** és a
+> **Teljes** sáv ára is szerkeszthető. Mindhárom **egyszeri** díj („Ft / alkalom”), nem havidíj,
+> és csomagba nem tehető.
+
+⚠️ **Mit jelent ez a gyakorlatban?** A kikapcsolás MIND A NÉGY eladási pontot lezárja: a
+prospect-konfigurátorban nem választható, a kiküldött mockban mintaként sem jelenik meg,
+konverziókor sem kerül bele a csomagba, és a tenant-admin sem tud rá előfizetni. Aki viszont
+MÁR fizet érte, annak változatlanul megy tovább. Az „élő” jelvény (például „3 élő”) a
+figyelmeztetésed: a kikapcsolás őket nem vágja el, de új ügyfelet nem szerzel rá többé.
+
+A modul-felárak jelenleg globálisak (HUF): a táblát a **Magyarország** fülön szerkeszted.
+
+## Alapdíj és éves fizetés
+
+- **„Alapdíj”** — a havi előfizetés alja; a gerinc (honlap + érdeklődés-CTA) benne van.
+- **„Éves előfizetés — ingyen hónapok”** — éves fizetésnél ennyi hónap ingyenes (12 − N hónap árát
+  fizeti).
+
+Az alatta lévő „Így fut:” mondat az Ajánlott csomaggal számolva mutatja a havi és az éves árat.
+
+## Saját domain
+
+![Képernyőkép: a Saját domain panel a végződés-táblával](assets/hu/domain.png)
+
+A vevő maga választ nevet és végződést, a kínált végződések közül. A panel:
+
+- **„Ingyen domain csomagban”** kapcsoló. Bekapcsolva a „Saját domain” pirula csomagba húzható, és
+  ahol benne van, ott a saját címnek nincs havidíja (a „csomagban ingyen” jelölt végződésekre).
+  Kikapcsolva a domain mindig felár; ha csomagban volt, kikerül onnan. Ez a kapcsoló piaconként
+  külön van.
+- **„Belépési küszöb (csomag havidíja legalább)”** — ekkora csomagtól választható saját cím
+  felárért. **0 = nincs küszöb**: bármelyik csomag mellé kérhető. A küszöböt a listaár dönti el,
+  kedvezmény nem számít bele. Ha a csomag a domaint tartalmazza, a küszöb nem számít. Ha a küszöb
+  nagyobb 0-nál, a hűségidő alatt a csomag nem csökkenhet alá.
+- **„Hűség saját domainnel”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér domaint.
+- **„Kivásárlás (név elvitele hűség alatt)”** — ennyit fizet, aki a hűségidő alatt kilép és a nevet
+  elviszi.
+
+**A végződés-tábla** soronként egy végződés (például .hu):
+
+- **Kínáljuk** — csak a bekapcsolt végződésből választhat a vevő. Bekapcsolni csak mért árú, a
+  plafon alatti végződést lehet.
+- **Beszerzés / év (nettó)** — amennyibe a regisztrátornál egy év kerül, a mérés dátumával
+  (telefonon a felirat rövidebb: „Beszerzés / év”). A **„Lekérdezés”** gomb most kérdezi le a
+  regisztrátortól (ez nem rendel semmit). Ha a regisztrátor nem ad árat, a végződés nem kínálható.
+- **Max. beszerzés** — ennél drágább nevet a rendszer nem vesz meg (a prémium nevek így nem
+  csúszhatnak át). Ha a beszerzés a plafon fölé kerül (mert a plafont lejjebb vetted, vagy a
+  „Lekérdezés” drágább árat hozott), a végződés kínálása kikapcsol, és a cella alatt ez áll: „A
+  beszerzés a plafon felett — nem kínálható.” Újra kínálni a plafon emelése után tudod.
+- **Havidíj csomagon kívül** — ennyi a saját cím havidíja, ahol nem csomag-tartalom. Kedvezmény
+  erre a díjra soha nem megy.
+- **Csomagban ingyen** — ha be van kapcsolva, és a vevő csomagja tartalmazza a domaint, ennek a
+  végződésnek nincs havidíja. Ez a kapcsoló csak akkor nyomható, ha fent az „Ingyen domain
+  csomagban” be van kapcsolva.
+
+- **„+ Végződés”** — új végződést veszel fel (például .at); utána kérdezd le az árát, mielőtt
+  kínálod. **„Törlés”** — kiveszi a sort.
+
+Ha a „Max. beszerzés” vagy a „Havidíj csomagon kívül” mezőbe nem egész szám kerül, „Egész szám
+kell.” üzenet jön, a mező piros keretes marad, és a mentés-gomb addig nem nyomható meg; a
+mentés-sávban ez áll: „A mentés addig nem megy, amíg a végződés-tábla jelölt mezője hibás.”
+
+A tábla alatt a **„Kötelező platform-cím:”** jegyzet: minden előfizetőnek lesz egy általa választott vagy
+jóváhagyott <név>.citoviso.com címe is, saját domain mellett is (ÁSZF). Ez nem kapcsolható ki. A
+panel alján az „Így fut:” mondat csomagonként mondja meg, mennyibe kerül a saját cím.
 
 ## Lead-ajánlatok — a bemutatkozó és a döntés-segítő ajánlat
 
-A **„Lead-ajánlatok”** szekció az „Alap-előfizetés” blokk alatt, az „Egyedi domain — feltételek” előtt van. Itt állítod be,
+A **„Lead-ajánlatok”** panel a „Saját domain” alatt, az „Ingyenes próba” mellett van (telefonon fölötte). Itt állítod be,
 mekkora kedvezményt ígér a kiküldött levél, és mikor, mekkora, meddig érvényes plusz kedvezményt kap az a lead,
 aki többször is megnyitja a neki küldött tervet, de még nem rendelt. Ez a beállítás **„minden piacra érvényes”**:
 bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése menti.
@@ -95,10 +226,10 @@ legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer j�
   az emlékeztető nem korábbi a lejáratnál, mindkét mező piros lesz, bármelyiket javíthatod. Kikapcsolt
   döntés-segítőnél a bemutatkozó kedvezményt a tárolt döntés-segítő kedvezményhez méri. Ilyenkor csak a bemutatkozó
   mező lesz piros: vagy csökkented, vagy visszakapcsolod a döntés-segítőt, és ott emeled a kedvezményt.
-- Hiba esetén az **„Árazás mentése”** gomb nem nyomható meg. A gomb a lap alján van, mellette ez áll: „A mentés
+- Hiba esetén a „Mentés — {piac}” gomb (például „Mentés — Magyarország”) nem nyomható meg. A gomb a lap alján, a mindig látható mentés-sávban van, alatta ez áll: „A mentés
   addig nem megy, amíg a jelölt mező hibás.” Ha több mező hibás, a szám is ott áll, pl. „A mentés addig nem megy,
   amíg a 2 jelölt mező hibás.” A javítandó mezőt a piros keret mutatja fent, a „Lead-ajánlatok” szekcióban.
-  Telefonon oda vissza kell görgetned.
+  A lap tetején a szakasz-gombok közül a **„Lead-ajánlatok”** visz oda.
 
 **Mi történik a már futó ajánlatokkal?**
 
@@ -113,15 +244,18 @@ legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer j�
 
 ## Ingyenes próba — hossz
 
-Az **„Ingyenes próba”** szekció a „Lead-ajánlatok” alatt, az „Egyedi domain — feltételek” előtt van. A kiküldött
-tervet megnyitó lead a kedvezmény helyett kártya nélkül kipróbálhatja a saját oldalát: minden modul aktív, az
-oldal a citoviso.com aldomainjén él, a próbáért nem fizet, és számla sem készül. Ez a beállítás is **„minden
+Az **„Ingyenes próba”** panel a „Lead-ajánlatok” mellett van. A kiküldött tervet megnyitó lead kártya nélkül
+kipróbálhatja a saját oldalát: a beállított csomag moduljai aktívak, az oldal a citoviso.com aldomainjén (a
+platform-címén) él, a próbáért nem fizet, és számla sem készül. Ez a beállítás is **„minden
 piacra érvényes”**: bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése menti.
 
 1. Az **„Ingyenes próba indítható”** kapcsolóval kapcsolod be vagy ki. Kikapcsolva új próba nem indítható (aki
    mégis elküldi a próba-kérést, elutasítást kap), a mező tiltott, a legutóbb mentett szám megmarad,
    visszakapcsoláskor nem kell újra beírnod. A már futó próbák a saját határidejükig futnak.
 2. **„A próba hossza”**: egész nap 1 és 90 között. Alapból 14 nap.
+3. **„A próbázó ezt kapja”**: melyik csomag moduljait használhatja a próba alatt (Teljes, Ajánlott vagy Alap
+   csomag). A csomagok tartalmát a lap tetején, a „Csomagok” panelen állítod. Amíg ezt egyszer el nem mented, a
+   próba a régi szabály szerint minden modult megkap.
 
 A próbázó kuponját itt nem állítod: ugyanazt kapja, mint a közvetlen vevő, a lenti **„Kupon”** szekció szerint.
 
@@ -132,7 +266,7 @@ most („Most 2 próba fut.” vagy „Most nem fut próba.”).
 indított próbákra hat. A képernyő ezt ki is írja a futó próbák száma mellett.
 
 **Hibák és mentés.** Ha egy mező üres, nem egész szám, vagy a tartományon kívül esik, a mező pirosan keretezett,
-alatta ott az ok, és az **„Árazás mentése”** gomb nem nyomható meg. A gomb mellett ez áll: „A mentés addig nem megy,
+alatta ott az ok, és a mentés-gomb nem nyomható meg. A gomb mellett ez áll: „A mentés addig nem megy,
 amíg az „Ingyenes próba” jelölt mezője hibás.” Ha a szerver mégis hibás értéket kap, **semmit nem ment**, az árakat
 sem, és a lap tetején ez jelenik meg: „Nem mentettem: az Ingyenes próba egyik mezője a megengedett tartományon kívül
 esik.” Egy régi, nyitva hagyott fül, amin még nem volt ilyen szekció, mentéskor nem írja át a próba beállítását.
@@ -143,7 +277,7 @@ próba-riasztások.
 
 ## Kupon — egy kupon mindenkinek
 
-A **„Kupon”** szekció az „Ingyenes próba” alatt van. Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő
+A **„Kupon”** panel az „Alapdíj és éves fizetés” mellett van (telefonon alatta). Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő
 az első fizetésekor, a próbázó a próba indulásakor. Fiókonként egy kupon van, és egyszer használható, bármire:
 a próbázónál a próba folytatására vagy egy modulra, amelyik előbb jön. Második kupon nem jár: aki próbával kapta,
 a folytatás fizetésekor már nem kap újat. Ez a beállítás is **„minden piacra érvényes”**.
@@ -158,104 +292,25 @@ A mezők alatti keretes mondat előre megmutatja, mit kap, aki ezután admin-hoz
 nem használt kupon van most kint. A már kiadott kupon megtartja a saját kedvezményét és lejáratát: a változás csak
 az ezután kiadott kuponokra hat.
 
-**Hibák és mentés.** Ugyanúgy, mint a fenti szekcióknál: hibás mezőnél az **„Árazás mentése”** gomb nem nyomható meg,
+**Hibák és mentés.** Ugyanúgy, mint a fenti szekcióknál: hibás mezőnél a mentés-gomb nem nyomható meg,
 mellette ez áll: „A mentés addig nem megy, amíg a „Kupon” jelölt mezője hibás.” Ha a szerver mégis hibás értéket
 kap, semmit nem ment, és a lap tetején ez jelenik meg: „Nem mentettem: a Kupon egyik mezője a megengedett
 tartományon kívül esik.”
 
-## Modul-felárak és értékesítés — az eladhatóság kapcsolója
-
-A **„Modul-felárak és értékesítés”** blokkban minden felárazott modul sorában van egy
-kapcsoló és egy ár-mező. (A gerinc-elemek kivételek: náluk „gerinc — az alapdíjban” áll,
-mert az alapdíj tartalmazza őket — se kapcsolójuk, se külön áruk nincs.)
-
-A kapcsoló azt dönti el, hogy a modul **új ügyfélnek eladható-e**:
-
-- **Bekapcsolva** — a modul normálisan megjelenik az ajánlatban.
-- **Kikapcsolva** — a modul neve áthúzva jelenik meg, és a sor kiírja: **„Leállítva — új
-  előfizetés nem köthető rá; a meglévők futnak tovább.”**
-
-A blokk címe alatt a képernyő ezt ki is mondja: „A kikapcsolt modult új ügyfél nem kapja meg
-(konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.”
-
-> ⚠️ **A Többnyelvű honlap három sávja külön árazódik.** A „Többnyelvű honlap” sorban az
-> **Alap** csomag ára áll, alatta pedig — saját, behúzott sorban — a **Bővített** és a
-> **Teljes** sáv ára is szerkeszthető, ugyanúgy számmezőben. Mindhárom **egyszeri** díj
-> („Ft / alkalom”), nem havidíj. A mentés mindhármat egyszerre viszi.
-
-⚠️ **Mit jelent ez a gyakorlatban?** A kikapcsolás MIND A NÉGY eladási pontot lezárja: a
-prospect-konfigurátorban nem választható, a kiküldött mockban mintaként sem jelenik meg,
-konverziókor sem kerül bele a csomagba, és a tenant-admin sem tud rá előfizetni. Aki viszont
-MÁR fizet érte, annak változatlanul megy tovább, és kezelni is tudja.
-
-Ha egy modulra már van élő előfizetés, a neve mellett egy jelvény mutatja a darabszámot
-(például „3 élő”). Ez a figyelmeztetésed: a kikapcsolás őket nem vágja el, de új ügyfelet
-nem szerzel rá többé.
-
-**Mikor kapcsold ki?** Ha a modul még nincs kész az értékesítésre (nincs kidolgozva a
-folyamat, nincs marketing-anyag, vagy még nem tudod kiszolgálni). Az egyedi e-mail cím modul
-például alapból ki van kapcsolva — külön marketing-körrel indul.
-
-## Egyedi domain — feltételek
-
-Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait állítja:
-
-- **„Vételi ár-plafon (a mi költségünk)”** — euróban: ennél drágább domaint a rendszer NEM
-  vesz meg (a prémium/emelt díjas nevek így nem csúszhatnak át az automata vásárláson). A
-  vevő az ilyen névre már az ellenőrzésnél elutasítást lát. Ez EGY közös érték: a
-  **Magyarország** lapon állítod, és minden vételre az érvényes — a többi régió lapján a
-  mező csak erre mutat.
-- **„Minimum elköteleződés”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér
-  domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
-- **„Saját domain ekkora csomagtól választható”** — ez BELÉPÉSI FELTÉTEL, nem kedvezmény:
-  aki ennél kisebb csomagot választ, annak a saját domain nem olcsóbb, hanem
-  egyáltalán nem elérhető — a konfigurátorban meg sem jelenik választható lehetőségként,
-  csak egy ajánló kártya mutatja, mennyi hiányzik hozzá. ⚠️ A küszöböt a **listaár** dönti
-  el: a kedvezmény (pl. a bemutatkozó −25%) NEM számít bele, mert egy időszakos engedmény
-  nem vehet meg egy tartós jogosultságot.
-- **„Saját domain (rajtunk keresztül)”** — a név **havi** díja. Nincs ingyen-ág:
-  a küszöb feletti csomag sem teszi ingyenessé, és a díj minden számlázási cikluson szerepel,
-  amíg a név a vevőnél van. Kedvezmény erre a díjra SOHA nem megy (átfolyó registrar-költség).
-- **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás:
-  a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
-  vételárát pedig CSAK akkor, ha a domaint el is viszi. Ha nem viszi, a domain nálunk marad.
-  A hűségidő **letelte után** nincs kötbér és nincs csomag-minimum: a név díjmentesen a vevőé,
-  és már csak a havi díj fut tovább, amíg nálunk tartja a nevet.
-
-## Díjcsomagok — mit tartalmaz és mennyibe kerül
-
-A **„Díjcsomagok”** blokk három kártyán mutatja, mit kap a vevő és mennyiért:
-**Alap**, **Ajánlott**, **Teljes**. Az árat NEM külön írod be — az alapdíjból és a
-bekapcsolt modulok felárából áll össze, tehát a lenti mezők módosítása azonnal
-átírja a csomagárakat is.
-
-**A szabály:** ami az alacsonyabb csomagban benne van, az benne van a magasabb
-csomagban is. A kártyán ezért két lista szerepel: felül a kisebb csomagból örökölt
-modulok (szaggatott keretű, halvány címkék — a fejlécük megnevezi, melyik csomagból
-jönnek), alattuk pedig az **„Ebben jön még:”** lista (tömör címkék), ami a csomag
-saját többlete. A legkisebb csomagnál csak egy lista van, **„Tartalma:”** fejléccel.
-Így egy pillantással látod, mit ad hozzá az adott szint.
-
-⚠️ Ha egy modult **kikapcsolsz** az eladásból, az kikerül a csomag árából is, és a
-címkéje **„nem eladó — nincs az árban”** jelölést kap. Ez szándékos: a csomagár
-mindig azt mutatja, amit a vevő ténylegesen meg tud vásárolni — ugyanazt a számot,
-amit a konfigurátorban lát.
-
-Ha a szabály valaha sérülne (egy modul kiesne a magasabb csomagból), a blokk alatt
-piros figyelmeztetés jelenik meg, és a `configurator-price-check` kapu is elbukik —
-nem lehet észrevétlenül elrontani.
-
 ## Az ár-hirdetési kapu (fogyasztóvédelmi kapu)
 
-A mentés fölött egy jelölőnégyzet: **„Az árak véglegesek, élesíthetők”**. Amíg NINCS bepipálva,
-a kiküldött levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat. Ez
-fogyasztóvédelmi kapu (megtévesztő ár-állítás tilalma) — csak akkor pipáld be, ha az árak
-tényleg véglegesek.
+A **„Véglegesítés”** panelen egy jelölőnégyzet: **„Az árak véglegesek, élesíthetők”**. Amíg NINCS
+bepipálva, a kiküldött levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat. Ez
+fogyasztóvédelmi kapu (megtévesztő ár-állítás tilalma) — csak akkor pipáld be, ha az árak tényleg
+véglegesek. A lap tetején a jel ezt mutatja: „Véglegesítve — a levelek árat hirdethetnek” vagy
+„Nincs véglegesítve — a levél nem hirdet árat”.
 
 ## Mentés
 
-Az **„Árazás mentése”** gomb (a felirat mögött ott a régió neve is) a kiválasztott régió árait
-és az eladhatóság-kapcsolókat menti. A mentés azonnal él: a következő
-konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Régiónként külön ments —
-a magyar mentés a globálist nem írja át. Kivétel a **„Lead-ajánlatok”** és az **„Ingyenes próba”** szekció: ezek minden
-piacra közösek, ezért bármelyik régió mentése menti őket.
+A „Mentés — {piac}” gomb (például „Mentés — Magyarország”) a kiválasztott piac árait, a
+végződés-táblát, az eladhatóság-kapcsolókat és a csomagok összetételét menti. A mentés azonnal él:
+a következő konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Piaconként külön
+ments — a magyar mentés a globálist nem írja át. Kivétel a **„Csomagok”**, a **„Lead-ajánlatok”**,
+az **„Ingyenes próba”** és a **„Kupon”**: ezek minden piacra közösek, ezért bármelyik piac mentése
+menti őket. Ha a végződés-tábla hibás (mért ár nélkül vagy a plafon felett kínált végződés), a
+szerver semmit nem ment, és ezt írja: „Nem mentettem: a végződés-tábla hibás …”

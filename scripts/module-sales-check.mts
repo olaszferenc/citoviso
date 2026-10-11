@@ -108,7 +108,7 @@ try {
   // ⛔ Compare against the RENDERED figures, not a substring of the whole page:
   // a bare `includes` can hit the same digits somewhere else entirely and go green
   // for the wrong reason.
-  const shownPrices = [...html.matchAll(/pr-tier__price">([^<]*)</g)].map((x) => x[1]!.trim());
+  const shownPrices = [...html.matchAll(/pr2-pk__p">([^<]*)</g)].map((x) => x[1]!.trim());
   const wanted = String(priced).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
   ok(
     shownPrices.some((v) => v.replace(/\u00a0/g, " ") === wanted),
@@ -170,7 +170,7 @@ try {
       );
 
       const html2 = pricingPage(pricingSnapshot("hu"), pricingRegions(), null, dis2, new Map());
-      const shown = [...html2.matchAll(/pr-tier__price">([^<]*)</g)].map((x) =>
+      const shown = [...html2.matchAll(/pr2-pk__p">([^<]*)</g)].map((x) =>
         x[1]!.trim().replace(/ /g, " "),
       );
       const want = String(SELF_TEST ? oldMonthly : wantMonthly).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
@@ -189,15 +189,17 @@ try {
       // modul csempéje is viselje a jelölést (feedback_label_must_derive_from_predicate).
       // ⛔ Csempénként mérve, nem a lap egészén: egy lapszintű `includes` a
       // KIKAPCSOLT modul jelölésétől is zöld lenne, a magával vitt nélkül.
-      const chips = [...html2.matchAll(/<span class="pr-tier__chip[^"]*"[^>]*>([\s\S]*?)<\/span>/g)].map(
-        (x) => x[1]!,
+      // ADR-XXXX ⑦ (pricing redesign): the tier chips are the package panel's pills now; the
+      // mark is the `is-stop` class + „nem eladó”, derived from the same closure as the price.
+      const chips = [...html2.matchAll(/<span class="(pr2-pl[^"]*)"[^>]*>([\s\S]*?)<\/span>/g)].map(
+        (x) => ({ cls: x[1]!, body: x[2]! }),
       );
       for (const id of knocked) {
-        const mine = chips.filter((c) => c.includes(label(id)));
+        const mine = chips.filter((c) => c.body.includes(`<b>${label(id)}</b>`));
         ok(
-          mine.length > 0 && mine.every((c) => /<b>/.test(c)),
+          mine.length > 0 && mine.every((c) => /\bis-stop\b/.test(c.cls) && c.body.includes("nem eladó")),
           `⑤ „${label(id)}" csempéje is JELÖLVE van (nem csak a kikapcsolt modulé)`,
-          mine.length ? `${mine.length} csempe, jelöletlen: ${mine.filter((c) => !/<b>/.test(c)).length}` : "nincs ilyen csempe",
+          mine.length ? `${mine.length} csempe, jelöletlen: ${mine.filter((c) => !/\bis-stop\b/.test(c.cls)).length}` : "nincs ilyen csempe",
         );
       }
     }

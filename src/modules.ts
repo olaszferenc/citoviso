@@ -314,12 +314,14 @@ export const PRESETS: readonly Preset[] = [
 export function orderPresetId(
   modules: readonly string[],
   claimed: unknown,
+  /** ADR-XXXX ①: the CURRENT tiers (pricing.ts currentPresets); the seed when omitted. */
+  presets: readonly Preset[] = PRESETS,
 ): "alap" | "ajanlott" | "teljes" | "egyedi" {
   const want = new Set(modules);
   const same = (p: Preset): boolean => p.modules.length === want.size && p.modules.every((m) => want.has(m));
-  const byClaim = PRESETS.find((p) => p.id === claimed);
+  const byClaim = presets.find((p) => p.id === claimed);
   if (byClaim && same(byClaim)) return byClaim.id as "alap" | "ajanlott" | "teljes";
-  const hit = PRESETS.find(same);
+  const hit = presets.find(same);
   return hit ? (hit.id as "alap" | "ajanlott" | "teljes") : "egyedi";
 }
 

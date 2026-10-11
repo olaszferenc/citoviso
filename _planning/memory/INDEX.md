@@ -10,6 +10,7 @@
 - [2026-10-11_marketing_elemzes_elso_hullam.md](2026-10-11_marketing_elemzes_elso_hullam.md) — 2026-10-11 — Marketing-elemzés: az első megkeresési hullám (177 link, 0 rendelés)
 - [2026-10-11_horvat_piac_elokutatas.md](2026-10-11_horvat_piac_elokutatas.md) — 2026-10-11 — Horvát piac: számlázási, ÁFA- és jogi előkutatás
 - [2026-10-11_elek3_proba_javitasok.md](2026-10-11_elek3_proba_javitasok.md) — 2026-10-11 — Elek 3. kör javításai: próba „C” + névváltás, élesítés előtt
+- [2026-10-11_arazas_redesign_csomag_domain.md](2026-10-11_arazas_redesign_csomag_domain.md) — 2026-10-11 — Árazás redesign: csomag × modul húzással, saját domain csomag-tartalomként, végződés-tábla
 - [2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md](2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md) — 2026-10-09 — Valós oldal erőforrásigénye (mérés) + ingyenes próba koordinátor indítva
 - [2026-10-09_valasz_sms_sorban_ragadt.md](2026-10-09_valasz_sms_sorban_ragadt.md) — 2026-10-09 — „Nem megy ki a válasz-SMS”: kiment, csak a konzol ragadt „Sorban”-on
 - [2026-10-09_proba_belepo_pirula_par_kod.md](2026-10-09_proba_belepo_pirula_par_kod.md) — 2026-10-09 — Ingyenes próba, SUB D: a „{n} nap ingyen” pirula-pár + próba-űrlap (KÓD)

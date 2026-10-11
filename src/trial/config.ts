@@ -7,6 +7,7 @@
 
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
+import { isTier, type Tier } from "../packages.js";
 
 const FREE_TRIAL_SETTING_KEY = "free_trial";
 
@@ -15,6 +16,12 @@ export interface FreeTrialConfig {
   readonly enabled: boolean;
   /** Trial length in days. */
   readonly days: number;
+  /**
+   * ADR-XXXX ⑥: which package's contents the trial grants. Absent = the pre-ADR rule
+   * (every non-retired catalog module), so a stored row from before keeps its behaviour
+   * until the operator saves the section.
+   */
+  readonly package?: Tier;
 }
 
 /** Owner decision 2026-10-09: 14 days. */
@@ -22,12 +29,13 @@ export const FREE_TRIAL_CONFIG_DEFAULT: FreeTrialConfig = { enabled: true, days:
 
 export const FREE_TRIAL_DAYS_MIN = 1;
 export const FREE_TRIAL_DAYS_MAX = 90;
-export type FreeTrialFieldError = "days";
+export type FreeTrialFieldError = "days" | "package";
 
-/** Whole-number bounds. */
-export function freeTrialConfigErrors(c: { days: number }): FreeTrialFieldError[] {
+/** Whole-number bounds; a package, when given, must be one of the three tiers. */
+export function freeTrialConfigErrors(c: { days: number; package?: unknown }): FreeTrialFieldError[] {
   const errs: FreeTrialFieldError[] = [];
   if (!Number.isInteger(c.days) || c.days < FREE_TRIAL_DAYS_MIN || c.days > FREE_TRIAL_DAYS_MAX) errs.push("days");
+  if (c.package !== undefined && !isTier(c.package)) errs.push("package");
   return errs;
 }
 
@@ -44,6 +52,7 @@ export function parseFreeTrialSetting(raw: string): FreeTrialConfig | null {
     const c: FreeTrialConfig = {
       enabled: v.enabled !== false,
       days: v.days === undefined ? d.days : Number(v.days),
+      ...(v.package === undefined ? {} : { package: v.package as Tier }),
     };
     return freeTrialConfigErrors(c).length === 0 ? c : null;
   } catch {
@@ -74,7 +83,7 @@ export async function setFreeTrialConfig(c: FreeTrialConfig): Promise<void> {
   if (errs.length) throw new Error(`invalid free_trial config: ${errs.join(", ")}`);
   await setSetting(
     FREE_TRIAL_SETTING_KEY,
-    JSON.stringify({ enabled: c.enabled, days: c.days }),
+    JSON.stringify({ enabled: c.enabled, days: c.days, ...(c.package ? { package: c.package } : {}) }),
   );
 }
 
@@ -99,9 +108,12 @@ export function freeTrialFromForm(
     const s = raw.trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", ".");
     return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : Number.NaN;
   };
+  // ADR-XXXX ⑥: an older tab without the select keeps the stored package.
+  const pkg = form.get("trial_package");
   return {
     enabled: form.get("trial_on") === "on",
     days: intOf("trial_days", current.days),
+    ...(pkg !== null ? { package: pkg as Tier } : current.package ? { package: current.package } : {}),
   };
 }
 

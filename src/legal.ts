@@ -119,9 +119,12 @@ export const RECURRING_MANDATE_V1 =
 // (Barion DelayedCapture, ADR-0251); the charge follows a successful registration (ADR-0277).
 // 1.4 (2026-10-09): §1 — the card-less free trial (ADR-0342/0344), owner-approved wording; the
 // 90-day retention after the trial ends is the owner's retention decision (ADR-0345).
-export const ASZF_VERSION = "1.4";
+// 1.5 (2026-10-11): §9 — the domain fee is per ending and is part of the package where the
+// price list says so (ADR-XXXX ②③); the platform address (<név>.citoviso.com) is kept for
+// every subscriber, custom domain or not (ADR-XXXX ⑤). Wording awaits the owner's approval.
+export const ASZF_VERSION = "1.5";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
-export const ASZF_EFFECTIVE_FROM = "2026-10-09";
+export const ASZF_EFFECTIVE_FROM = "2026-10-11";
 
 /** One numbered chapter of a legal document. `body` entries are paragraphs. */
 export interface LegalSection {
@@ -334,9 +337,12 @@ export const ASZF_V1: readonly LegalSection[] = [
         "néhány munkanapon belül válik ismét elérhetővé.",
       "Az egyedi domain igénylése a mindenkori árlistában rögzített minimális elköteleződési " +
         "időszak (hűségidő) vállalását feltételezi; a vállalt hűségidőt a megrendelés rögzíti. " +
-        "A domain éves díját a mindenkori árlista határozza meg; az árlistában rögzített havi " +
-        "csomagszintet elérő előfizetés esetén a domain éves díja a csomag részét képezi, és " +
-        "külön nem kerül kiszámlázásra. A hűségidő alatt a Megrendelő az előfizetését a " +
+        "A domain választható végződéseit és havi díját végződésenként a mindenkori árlista " +
+        "határozza meg. Ha a Megrendelő előfizetése az árlista szerint a domaint tartalmazó " +
+        "csomag tartalmát lefedi, a domain a csomag részét képezi, és külön díj nem terheli; " +
+        "ha az előfizetés később e csomagtartalom alá csökken, a következő számlázási " +
+        "időszaktól a domain árlista szerinti havi díja fizetendő. Ha az árlista csomagszintet " +
+        "(minimális havi díjat) rögzít, a hűségidő alatt a Megrendelő az előfizetését a " +
         "megrendeléskor vállalt csomagszint alá nem csökkentheti.",
       "A domain tulajdonjoga a Megrendelőre az előfizetés lejártát követő 90. napon száll át, " +
         "de kizárólag akkor, ha a Megrendelő a vállalt hűségidő alatt (a) az eredetileg " +
@@ -353,6 +359,10 @@ export const ASZF_V1: readonly LegalSection[] = [
         "maradéktalan megfizetése.",
       "A Szolgáltató a domaint a fenti időszak alatt a Megrendelő honlapján kívül más célra " +
         "nem használja, és harmadik személyre nem ruházza át.",
+      "Platform-cím: a Megrendelő honlapja — egyedi domain mellett is — az előfizetés teljes " +
+        "időtartama alatt elérhető a Szolgáltató domainjének egy, a Megrendelő által választott " +
+        "vagy jóváhagyott aldomainjén (név.citoviso.com). A platform-cím az előfizetés része, " +
+        "külön díj nem terheli, és nem mondható le.",
     ],
   },
   {

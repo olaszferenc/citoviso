@@ -20,6 +20,11 @@ export class MockRegistrar implements RegistrarAdapter {
     return /premium/i.test(domain) ? 499 : 12;
   }
 
+  /** ADR-XXXX ③: HUF like the live registrar; "premium" names are far above any cap. */
+  async getYearlyNetPrice(domain: string): Promise<{ readonly amount: number; readonly currency: string }> {
+    return { amount: /premium/i.test(domain) ? 199_000 : 1990, currency: "HUF" };
+  }
+
   async register(domain: string, opts: { readonly years: number }): Promise<DomainRegistration> {
     if (/taken/i.test(domain)) throw new DomainTakenError(domain);
     const until = new Date();

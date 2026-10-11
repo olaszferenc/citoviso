@@ -68,15 +68,25 @@ import { copyNames, groupAmenities, normForCopyMatch } from "../generator/market
 import { patternSummary, type PatternInputs } from "../generator/patternBadge.js";
 import {
   MODULE_CATALOG,
-  MULTILANG_TIERS,
-  GROUP_LABELS,
   modulesForConversion,
-  presetsAscending,
-  presetAddedModules,
-  presetNestingViolations,
   sellableModuleIds,
 } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
+import { seedAssignment, type Tier } from "../packages.js";
+import {
+  basePanel,
+  domainPanel,
+  finalPanel,
+  modulesPanel,
+  overviewBlock,
+  packagesPanel,
+  pricingHead,
+  pricingPageData,
+  regionTabs,
+  saveBar,
+  sectionNav,
+  trialPackageField,
+} from "./pricingPage.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
 import { SEND_WINDOW } from "../sms/sendWindow.js";
@@ -107,7 +117,7 @@ import {
   type FreeTrialConfig,
 } from "../trial/config.js";
 import { formatDay } from "../text/day.js";
-import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
+import { computeMonthly, currentPresets, getModulePrice } from "../pricing.js";
 import { ic, icAdmin } from "../ui/icons.js";
 import { lockup, markDataUri } from "../ui/brand.js";
 import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, type NavCounts, type NavNode } from "./nav.js";
@@ -794,30 +804,6 @@ export function settingsPage(
  *  outreach (§C). Region-keyed (0020): a switcher picks the market (HU=HUF,
  *  Globális=EUR); the homepage shows the visitor's region price, else 'global'.
  *  Grouped by the same prospect-facing groups as the configurator. */
-/**
- * ADR-0128 — a Többnyelvű modul SÁV-árai az Árazás lapon. A sávok nem katalógus-
- * modulok (egy modul csomagméretei), ezért a fenti `MODULE_CATALOG`-ciklus nem
- * látja őket — enélkül a kártya azt ígérné, hogy az árak szerkeszthetők, miközben
- * kettőnek nincs is mezője (a másik szál tudasbazis-őre mérte ki, 2026-09-13).
- * Az Alap sor NEM ismétlődik: az a katalógus `multilang` sora.
- */
-function multilangTierRows(
-  snap: { modulePrices: ReadonlyMap<string, number> },
-  lang: string,
-): string {
-  return MULTILANG_TIERS.filter((t) => t.priceId !== "multilang")
-    .map((t) => {
-      const price = snap.modulePrices.get(t.priceId) ?? t.priceDefault;
-      return `<div class="pr-mod pr-mod--sub">
-            <span></span>
-            <span class="pr-mod__name"><span class="pr-mod__n mut">↳ ${esc(t.name)} — ${esc(
-              t.cap === null ? T(lang, "mind a nyelv") : T(lang, "legfeljebb {n} nyelv", { n: t.cap }),
-            )}</span></span>
-            <span class="pr-mod__price"><input name="m_${esc(t.priceId)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}"><span class="pr-mod__u">${T(lang, "Ft / alkalom")}</span></span>
-          </div>`;
-    })
-    .join("");
-}
 
 export function pricingPage(
   snap: PricingSnapshot,
@@ -836,251 +822,45 @@ export function pricingPage(
   trial: { readonly cfg: FreeTrialConfig; readonly running: number } = { cfg: FREE_TRIAL_CONFIG_DEFAULT, running: 0 },
   /** ADR-0346: the ONE coupon (first payment or trial start) + the unused coupons out now. */
   coupon: { readonly cfg: CouponConfig; readonly live: number } = { cfg: COUPON_CONFIG_DEFAULT, live: 0 },
+  /** ADR-XXXX ①: the package composition (module → lowest tier). */
+  assignment: ReadonlyMap<string, Tier> = seedAssignment(),
 ): string {
   const lang = consoleLang();
-  // Currency unit for the selected region (module add-ons stay global HUF).
-  const unit = snap.currency === "HUF" ? "Ft" : snap.currency === "EUR" ? "€" : snap.currency;
-  const regionLabel = (r: string): string =>
-    r === "hu" ? T(lang, "Magyarország") : r === "global" ? T(lang, "Globális (fallback)") : r;
-
-  /**
-   * One priced field: label ABOVE, unit inside the field row. The page used to
-   * be a two-column `table.kv`, whose narrow first column broke every label
-   * across three lines ("Alapdíj (a gerinccel együtt)") while the right half of
-   * the card stayed empty — the same defect the lead page already fixed with
-   * `.con-edit-grid` (see the CSS note next to it).
-   */
-  const priceField = (name: string, label: string, value: number, suffix: string): string =>
-    `<div class="pr-field">
-      <label class="pr-field__l" for="pr-${esc(name)}">${esc(label)}</label>
-      <div class="pr-input">
-        <input id="pr-${esc(name)}" name="${esc(name)}" type="number" min="0" step="1"
-          inputmode="numeric" value="${esc(value)}">
-        <span class="pr-input__u">${esc(suffix)}</span>
-      </div>
-    </div>`;
-
-  /** A priced-looking cell with no price — keeps the grid rhythm (see .pr-static). */
-  const staticField = (label: string, text: string): string =>
-    `<div class="pr-field">
-      <span class="pr-field__l">${esc(label)}</span>
-      <div class="pr-static">${esc(text)}</div>
-    </div>`;
-
-  // Region switcher — each links to /pricing?region=<id>; the active one is a pill.
-  const switcher = regions
-    .map((r) => {
-      const active = r.region === snap.region;
-      const label = `${esc(regionLabel(r.region))} <span class="mut small">(${esc(r.currency)})</span>`;
-      return active
-        ? `<span class="pill approved">${label}</span>`
-        : `<a href="/pricing?region=${encodeURIComponent(r.region)}" class="pill">${label}</a>`;
-    })
-    .join(" ");
-
-  // Grouped grid instead of a 13-row single-column table: the module list is the
-  // bulk of this page, and stacked one per row it ran off the screen while two
-  // thirds of the card stayed blank.
-  const groupBlocks = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
-    .map((g) => {
-      const mods = MODULE_CATALOG.filter((m) => m.group === g);
-      if (!mods.length) return "";
-      const cells = mods
-        .map((m) => {
-          if (m.spine)
-            return `<div class="pr-mod"><span class="pr-mod__n mut">${esc(m.label)}</span>
-              <span class="mut small">${T(lang, "gerinc — az alapdíjban")}</span></div>`;
-          const price = snap.modulePrices.get(m.id) ?? 0;
-          const live = liveCounts.get(m.id) ?? 0;
-          const off = disabledSales.has(m.id);
-          // Frozen plan: switch · name · live chip · SHORT price input · unit; an
-          // OFF row strikes the name and says what the switch means. The :has()
-          // twin in the CSS mirrors .off live, before the save round-trips.
-          return `<div class="pr-mod${off ? " off" : ""}">
-            <label class="con-sell"><input type="checkbox" name="sell_${esc(m.id)}"${off ? "" : " checked"}><span class="con-sell__track"></span></label>
-            <span class="pr-mod__name"><span class="pr-mod__n">${esc(m.label)}</span>${
-              live ? `<span class="pill approved">${live} ${T(lang, "élő")}</span>` : ""
-            }<span class="pr-mod__why">${T(lang, "Leállítva — új előfizetés nem köthető rá; a meglévők futnak tovább.")}</span></span>
-            <span class="pr-mod__price"><input name="m_${esc(m.id)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}"><span class="pr-mod__u">${m.billing === "once" ? T(lang, "Ft / alkalom") : T(lang, "Ft / hó")}</span></span>
-          </div>${m.id === "multilang" ? multilangTierRows(snap, lang) : ""}`;
-        })
-        .join("");
-      return `<div class="pr-group">${esc(GROUP_LABELS[g])}</div>
-              <div class="pr-modgrid">${cells}</div>`;
-    })
-    .join("");
-
-  const confirmNote = snap.pricingConfirmed
-    ? `<span class="pill approved">${T(lang, "az árak véglegesítve — a levelek árat hirdethetnek")}</span>`
-    : `<span class="pill rejected">${T(lang, "nincs véglegesítve — a jogszerűségi kapu blokkol minden árat hirdető levelet")}</span>`;
-
-  // Module add-ons live in ONE global (HUF) table — editable on the HU page only,
-  // to avoid the illusion of per-region module prices (a follow-up slice).
-  const modulesSection =
-    snap.region === "hu"
-      ? `<h3 style="margin-top:22px">${T(lang, "Modul-felárak és értékesítés")}</h3>
-         <p class="mut small" style="margin:2px 0 6px">${T(lang, "A kikapcsolt modult új ügyfél nem kapja meg (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.")}</p>${groupBlocks}`
-      : `<h3 style="margin-top:18px">${T(lang, "Modul-felárak és értékesítés")}</h3>
-         <p class="mut small">A modul-felárak jelenleg globálisak (HUF); a
-         <a href="/pricing?region=hu">${T(lang, "Magyarország")}</a> ${T(lang, "oldalon szerkeszthetők.")}</p>`;
-
-  /**
-   * Díjcsomagok — mit tartalmaz és mennyibe kerül (owner request 2026-09-07).
-   *
-   * ⛔ OWNER RULE: "ami az alacsonyabb csomagban benne van, az benne van a
-   * magasabb csomagban is." The tiers are DERIVED from each other in modules.ts,
-   * so the rule cannot drift; here we RENDER it — each tier shows what it
-   * inherits and what it adds, which is the rule made visible rather than
-   * asserted in prose. If it were ever violated, the guard line below says so
-   * out loud instead of drawing a tidy lie.
-   */
-  const tierBlock = ((): string => {
-    // Module prices are the GLOBAL HUF list; on other region pages the tier
-    // prices would be a different currency's numbers with HUF add-ons mixed in,
-    // so we only draw the breakdown where it is honest.
-    if (snap.region !== "hu") return "";
-    const violations = presetNestingViolations();
-    const nameOf = (id: string): string =>
-      MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
-    const cards = presetsAscending()
-      .map((p, idx) => {
-        // ⛔ Price what the buyer can ACTUALLY get: a module switched off for
-        // sale is not in the package, so counting it would show a figure nobody
-        // can be charged (the configurator already excludes it — the two screens
-        // must not disagree about the same package).
-        //
-        // ⛔ ADR-0192/ADR-0202: the switch takes DOWN EVERYTHING THAT NEEDS IT,
-        // transitively — that is what `sellableModuleIds` is for, and the lead's
-        // configurator has always called it. This page filtered only the switched
-        // -off module itself, so with `rooms` stopped the card still priced
-        // `pricing` and `booking` — modules the buyer cannot be offered at all.
-        // The console quoted a HIGHER package price than anything invoiceable.
-        const sellable = sellableModuleIds(p.modules, disabledSales);
-        const sellableSet = new Set(sellable);
-        const monthly = computeMonthly(sellable, snap.region);
-        const annual = computeAnnual(sellable, snap.region);
-        const added = presetAddedModules(p.id);
-        const inherited = p.modules.filter((id) => !added.includes(id));
-        const chip = (id: string, faded: boolean): string => {
-          // ⭐ ONE predicate for the badge and for the price: the badge must not
-          // answer a different question than the figure next to it
-          // (feedback_label_must_derive_from_predicate). Deriving `off` from
-          // `disabledSales` alone is exactly how the two came apart.
-          const off = !sellableSet.has(id);
-          const price = getModulePrice(id, snap.region);
-          return (
-            `<span class="pr-tier__chip${faded ? " pr-tier__chip--inh" : ""}"` +
-            (off ? ` title="${esc(T(lang, "jelenleg nem eladó"))}"` : "") +
-            `>${esc(nameOf(id))}` +
-            (price > 0 ? `<i>+${esc(String(price))}</i>` : `<i>${esc(T(lang, "az árban"))}</i>`) +
-            (off ? `<b>${esc(T(lang, "nem eladó — nincs az árban"))}</b>` : "") +
-            `</span>`
-          );
-        };
-        return (
-          `<div class="pr-tier">` +
-          `<div class="pr-tier__head"><b>${esc(p.label)}</b>` +
-          `<span class="pr-tier__price">${esc(fmtHuf(monthly))}<i> / ${esc(T(lang, "hó"))}</i></span></div>` +
-          `<div class="pr-tier__note">${esc(p.note)}</div>` +
-          `<div class="pr-tier__sub">${T(lang, "Éves előrefizetéssel {price} / év", { price: esc(fmtHuf(annual)) })} · ` +
-          `${T(lang, "{n} modul", { n: String(sellable.length) })}</div>` +
-          (idx > 0
-            ? // ⛔ ADR-0101 ①: "a(z)" tilos — a névelőt a huArticle dönti el.
-              `<div class="pr-tier__inh">${T(lang, "Minden {art} {prev} csomagból:", { art: huArticleLower(presetsAscending()[idx - 1]!.label), prev: esc(presetsAscending()[idx - 1]!.label) })}</div>` +
-              `<div class="pr-tier__chips">${inherited.map((id) => chip(id, true)).join("")}</div>` +
-              `<div class="pr-tier__plus">${T(lang, "Ebben jön még:")}</div>`
-            : `<div class="pr-tier__plus">${T(lang, "Tartalma:")}</div>`) +
-          `<div class="pr-tier__chips">${added.map((id) => chip(id, false)).join("")}</div>` +
-          `</div>`
-        );
-      })
-      .join("");
-    const warn = violations.length
-      ? `<p class="mut small" style="color:var(--citui-bad-ink);margin:8px 0 0">` +
-        `${T(lang, "⛔ A csomag-szabály SÉRÜL:")} ` +
-        esc(
-          violations
-            .map((v) => `${v.tier} ← ${v.from}: ${v.missing.map(nameOf).join(", ")}`)
-            .join(" · "),
-        ) +
-        `</p>`
-      : "";
-    return (
-      `<h3 style="margin-top:22px">${T(lang, "Díjcsomagok")}</h3>` +
-      `<p class="mut small" style="margin:2px 0 8px">${T(lang, "Amit az alacsonyabb csomag tartalmaz, azt a magasabb is tartalmazza. Az árak az alapdíjból és a bekapcsolt modulok felárából állnak össze — a lenti mezők módosításával azonnal változnak.")}</p>` +
-      `<div class="pr-tiers">${cards}</div>${warn}`
-    );
-  })();
-
+  // ADR-XXXX ⑦ — frozen plan assets/design-refs/console/pricing-redesign/ (A): head, market
+  // tabs, overview, section jumps, then the panels; the lead-offer / trial / coupon sections
+  // keep their own fields and scripts, wrapped as panels.
+  const extras = { assignment, disabledSales, liveCounts, trialPackage: trial.cfg.package ?? null };
   const body = `
-    <a class="con-back" href="/"><span aria-hidden="true">←</span> ${T(lang, "Vissza a vezérlőpultra")}</a>
-    <div class="panel" style="max-width:980px;margin:0 auto">
-      <h2>${T(lang, "Árazás és értékesítés")} ${helpLink("console.pricing")}</h2>
-      <p class="mut small" style="margin-top:-4px">
-        Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
-        ár-sora is innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p>
-
-      <div class="row" style="margin:0 0 10px;gap:6px;flex-wrap:wrap;align-items:center">
-        <span class="mut small">${T(lang, "Piac / régió:")}</span> ${switcher}
+    <form method="post" action="/pricing" class="pr2" id="pr2-form">
+      <input type="hidden" name="region" value="${esc(snap.region)}">
+      ${pricingHead(lang, snap, notice)}
+      ${regionTabs(lang, snap, regions)}
+      ${overviewBlock(lang)}
+      ${sectionNav(lang)}
+      ${packagesPanel(lang, snap, extras)}
+      ${modulesPanel(lang, snap, extras)}
+      <div class="pr2-two">
+        ${basePanel(lang, snap)}
+        ${couponSection(lang, coupon.cfg, coupon.live)}
       </div>
-      <p class="mut small" style="margin:-4px 0 12px">A nyilvános oldal a látogató régiója
-        szerinti árat mutatja; ha arra nincs, a <strong>${T(lang, "Globális (EUR)")}</strong> ${T(lang, "árlistát.")}</p>
-
-      <div class="row" style="margin:10px 0 16px;gap:8px;flex-wrap:wrap;align-items:center">
-        ${notice ? `<span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span>` : ""}
-        ${confirmNote}
-      </div>
-
-      <form method="post" action="/pricing">
-        <input type="hidden" name="region" value="${esc(snap.region)}">
-        <h3>${T(lang, "Alap-előfizetés —")} ${esc(regionLabel(snap.region))} <span class="mut small">(${esc(snap.currency)})</span></h3>
-        <div class="con-edit-grid">
-          ${priceField("base_monthly", T(lang, "Alapdíj (a gerinccel együtt)"), snap.baseMonthly, `${unit} ${T(lang, "/ hó")}`)}
-          ${priceField("annual_free_months", T(lang, "Éves előrefizetés — ingyen hónapok"), snap.annualFreeMonths, T(lang, "hónap"))}
-          ${priceField("custom_domain_monthly", T(lang, "Saját domain (rajtunk keresztül)"), snap.customDomainMonthly, `${unit} ${T(lang, "/ hó")}`)}
-        </div>
-        <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
-          kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
-
+      ${domainPanel(lang, snap)}
+      <div class="pr2-two">
         ${escalationSection(lang, escalation.cfg, escalation.live, snap, disabledSales)}
         ${freeTrialSection(lang, trial.cfg, trial.running)}
-        ${couponSection(lang, coupon.cfg, coupon.live)}
-
-        <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek")}</h3>
-        <div class="con-edit-grid">
-          ${
-            // The cap guards OUR registrar cost — ONE knob (the default region's
-            // value), every guard call site reads that; other region pages only
-            // point at it instead of offering a field nothing reads.
-            snap.region === "hu"
-              ? priceField("domain_max_price_eur", T(lang, "Vételi ár-plafon (a mi költségünk)"), snap.domainMaxPriceEur, `€ ${T(lang, "/ év")}`)
-              : staticField(T(lang, "Vételi ár-plafon (a mi költségünk)"), T(lang, "a Magyarország lapon állítható"))
-          }
-          ${priceField("domain_min_commitment_months", T(lang, "Minimum elköteleződés"), snap.domainMinCommitmentMonths, T(lang, "hónap"))}
-          ${priceField("domain_min_package_monthly", T(lang, "Saját domain ekkora csomagtól választható"), snap.domainMinPackageMonthly, `${unit} ${T(lang, "/ hó")}`)}
-          ${priceField("domain_buyout_price", T(lang, "Domain vételára (korai kilépéskor)"), snap.domainBuyoutPrice, unit)}
-        </div>
-        <p class="mut small" style="margin:6px 0 0">${T(lang, "A saját domain HAVI díjas, és csak a megadott csomagmérettől választható — a küszöböt a LISTAÁR dönti el, kedvezmény nem számít bele. A plafon a regisztrátori vételt védi (prémium domaint nem veszünk). A hűségidő alatt nincs szabad lemondás: korai kilépés = a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi. A hűségidő letelte után nincs kötbér és nincs csomag-padló — csak a havidíj fut tovább.")}</p>
-
-        ${tierBlock}
-        ${modulesSection}
-
-        <label class="row" style="gap:12px;align-items:flex-start;margin:20px 0 4px;
-               padding:14px 16px;border:1px solid var(--citui-line-strong);border-radius:10px;
-               background:var(--citui-surface-2);cursor:pointer;flex-wrap:nowrap">
-          <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}
-            style="width:22px;height:22px;flex:0 0 auto;margin-top:1px;cursor:pointer">
-          <span style="min-width:0"><strong>${T(lang, "Az árak véglegesek, élesíthetők")}</strong>
-            <span class="mut small" style="display:block;margin-top:2px">${T(lang, "Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv. / jogszerűségi kapu).")}</span></span>
-        </label>
-
-        <div class="row" style="margin-top:12px">
-          <button class="ok" type="submit">${T(lang, "Árazás mentése ({region})", { region: esc(regionLabel(snap.region)) })}</button>
-        </div>
-      </form>
-    </div>`;
+      </div>
+      ${finalPanel(lang, snap)}
+      ${saveBar(lang, snap)}
+      ${pricingPageData(lang, snap, extras)}
+      <script>${ESCALATION_MONEY_JS}\n${PRICING_ADMIN_JS}</script>
+    </form>`;
   return layout(T(lang, "Árazás és értékesítés"), body, { active: "/pricing" });
 }
+
+// The page script travels as a file (assets/runtime/), inlined here like cit-money.js.
+const PRICING_ADMIN_JS = readFileSync(
+  new URL("../../assets/runtime/cit-pricing-admin.js", import.meta.url),
+  "utf8",
+);
 
 /**
  * ADR-0285 + ADR-0286 — „Lead-ajánlatok”: the intro percent and the escalation offer's
@@ -1103,7 +883,8 @@ function escalationSection(
 ): string {
   // The worked example uses a REAL package price (the middle tier) — only on the HU
   // page, where the package prices are honest (see tierBlock).
-  const tiers = presetsAscending();
+  // ADR-XXXX ①: the CURRENT tiers, smallest first.
+  const tiers = [...currentPresets()].reverse();
   const mid = tiers[Math.min(1, tiers.length - 1)];
   const example =
     snap.region === "hu" && mid
@@ -1193,10 +974,9 @@ function escalationSection(
     `\n      <input type="hidden" name="esc_days_present" value="1">` +
     `\n      <label class="pr-esc__days small"><input type="checkbox" id="esc_days" name="esc_days"${cfg.distinctDays ? " checked" : ""}${cfg.enabled ? "" : " disabled"}> ${T(lang, "Csak a különböző napokon történt megnyitások számítanak")}</label>`;
   return `
-        <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-esc">
-          <h3 style="margin-top:22px">${T(lang, "Lead-ajánlatok")}</h3>
-          <p class="mut small" style="margin:2px 0 10px">${T(lang, "A kiküldött tervet megnyitó lead kedvezményei. A kedvezmények nem adódnak össze — mindig a legnagyobb él.")}
-            <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
+        <section class="pr-esc pr2-pn${cfg.enabled ? "" : " is-off"}" id="pr-esc">
+          <div class="pr2-pn__h"><h2>${T(lang, "Lead-ajánlatok")}</h2><span class="pill">${T(lang, "minden piacra érvényes")}</span></div>
+          <p class="pr2-desc">${T(lang, "A kiküldött tervet megnyitó lead kedvezményei. A kedvezmények nem adódnak össze — mindig a legnagyobb él.")}</p>
           <input type="hidden" name="esc_present" value="1">
           <div class="pr-esc__sub"><b>${T(lang, "Bemutatkozó ajánlat")}</b> <span class="mut">— ${T(lang, "a kiküldött levél ígéri, az első megnyitástól él, határidő nélkül")}</span></div>
           <div class="con-edit-grid">
@@ -1343,7 +1123,7 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
     dNan: T(lang, "Egész nap kell ({min}–{max}).", { min: s(FREE_TRIAL_DAYS_MIN), max: s(FREE_TRIAL_DAYS_MAX) }),
     dLow: T(lang, "Legalább {min} nap.", { min: s(FREE_TRIAL_DAYS_MIN) }),
     dHigh: T(lang, "Legfeljebb {max} nap.", { max: s(FREE_TRIAL_DAYS_MAX) }),
-    on: T(lang, "Így fut: aki ezután próbát indít, {d} napig használja a saját oldalát minden modullal, kártya és fizetés nélkül.", { d: "{d}" }),
+    on: T(lang, "Így fut: aki ezután próbát indít, {d} napig használja a saját oldalát {pkgArt} csomag moduljaival, kártya és fizetés nélkül.", { d: "{d}", pkgArt: "{pkgArt}" }),
     onCoupon: T(lang, "A kupont a lenti „Kupon” szekció adja, ugyanazt, mint a közvetlen vevőnek."),
     off: T(lang, "Kikapcsolva: új próba nem indítható. A már futó próbák a saját határidejükig futnak."),
     bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
@@ -1369,10 +1149,9 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
       <div class="pr-ferr" id="e_${id}" role="alert"></div>
     </div>`;
   return `
-        <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-trial">
-          <h3 style="margin-top:22px">${T(lang, "Ingyenes próba")} ${helpLink("console.free_trial")}</h3>
-          <p class="mut small" style="margin:2px 0 10px">${T(lang, "A kiküldött tervet megnyitó lead a kedvezmény helyett kártya nélkül kipróbálhatja a saját oldalát, minden modullal, az aldomainjén. A próbáért nem fizet, számla nem készül.")}
-            <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
+        <section class="pr-esc pr2-pn${cfg.enabled ? "" : " is-off"}" id="pr-trial">
+          <div class="pr2-pn__h"><h2>${T(lang, "Ingyenes próba")} ${helpLink("console.free_trial")}</h2><span class="pill">${T(lang, "minden piacra érvényes")}</span></div>
+          <p class="pr2-desc">${T(lang, "Kártya nélkül, a lead saját oldalán, a platform-címén, a beállított csomag moduljaival. A próbáért nem fizet, számla nem készül.")}</p>
           <input type="hidden" name="trial_present" value="1">
           <label class="pr-esc__head">
             <span class="con-sell"><input type="checkbox" id="trial_on" name="trial_on"${cfg.enabled ? " checked" : ""}><span class="con-sell__track"></span></span>
@@ -1381,6 +1160,7 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
           <div class="pr-esc__gated">
             <div class="con-edit-grid" style="margin-top:10px">
               ${field("trial_d", "trial_days", T(lang, "A próba hossza"), cfg.days, T(lang, "nap"))}
+              ${trialPackageField(lang, cfg.package ?? null, cfg.enabled)}
             </div>
           </div>
           <div class="pr-esc__preview" id="trial_preview"></div>
@@ -1399,6 +1179,7 @@ const FREE_TRIAL_SECTION_JS = `(function(){
   var sec = document.getElementById("pr-trial"), form = sec.closest("form");
   var on = document.getElementById("trial_on");
   var IN = {d: document.getElementById("trial_d")};
+  var PKG = document.getElementById("trial_pkg");
   var prev = document.getElementById("trial_preview"), live = document.getElementById("trial_live");
   var btn = form.querySelector("button[type=submit]"), sum = null;
   if (btn) { sum = document.createElement("span"); sum.className = "pr-esc__sum"; sum.setAttribute("role", "alert"); btn.parentNode.appendChild(sum); }
@@ -1409,7 +1190,7 @@ const FREE_TRIAL_SECTION_JS = `(function(){
   function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (r.v > hi) return m[3]; return ""; }
   function render(){
     var en = on.checked;
-    IN.d.disabled = !en; sec.classList.toggle("is-off", !en);
+    IN.d.disabled = !en; if (PKG) PKG.disabled = !en; sec.classList.toggle("is-off", !en);
     var r = {d: num(IN.d.value)}, e = {};
     // Disabled fields are not submitted: the stored numbers stand for them, so only an
     // enabled section can be wrong.
@@ -1428,12 +1209,15 @@ const FREE_TRIAL_SECTION_JS = `(function(){
     else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
     else {
       prev.className = "pr-esc__preview";
-      prev.textContent = fill(M.on, {d: r.d.v}) + " " + M.onCoupon;
+      // The article comes with the option (huArticle on the server), never bracketed in the sentence.
+      var pk = PKG && PKG.selectedIndex >= 0 ? PKG.options[PKG.selectedIndex].getAttribute("data-art") : "";
+      prev.textContent = fill(M.on, {d: r.d.v, pkgArt: pk}) + " " + M.onCoupon;
     }
     live.textContent = D.running > 0 ? fill(M.run, {n: D.running}) : M.runNone;
   }
   function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
   on.addEventListener("change", render);
+  if (PKG) PKG.addEventListener("change", render);
   Object.keys(IN).forEach(function(k){
     IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
     IN[k].addEventListener("blur", function(){ tidy(IN[k]); });
@@ -1487,10 +1271,9 @@ function couponSection(lang: ReturnType<typeof consoleLang>, cfg: CouponConfig, 
       <div class="pr-ferr" id="e_${id}" role="alert"></div>
     </div>`;
   return `
-        <section class="pr-esc" id="pr-coupon">
-          <h3 style="margin-top:22px">${T(lang, "Kupon")}</h3>
-          <p class="mut small" style="margin:2px 0 10px">${T(lang, "Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő az első fizetéskor, a próbázó a próba indulásakor. Fiókonként egy van, és egyszer használható.")}
-            <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
+        <section class="pr-esc pr2-pn" id="pr-coupon">
+          <div class="pr2-pn__h"><h2>${T(lang, "Kupon")}</h2><span class="pill">${T(lang, "minden piacra érvényes")}</span></div>
+          <p class="pr2-desc">${T(lang, "Aki admin-hozzáférést kap, egy kupont kap: a közvetlen vevő az első fizetéskor, a próbázó a próba indulásakor. Fiókonként egy van, és egyszer használható.")}</p>
           <input type="hidden" name="coupon_present" value="1">
           <div class="con-edit-grid">
             ${field("cpn_p", "coupon_percent", T(lang, "Kedvezmény"), cfg.percent, "%")}

@@ -77,6 +77,9 @@ const VIEW_GROUPS = {
     // Riport-modul (ADR-0322): a Tölcsér és a Viselkedés lap feliratai — saját nézet-fájl,
     // saját korpusz-hely (feedback_guard_scope_is_the_doctrine).
     "src/console/reportViews.ts",
+    // ADR-XXXX: the redesigned Árazás page — its new panels (Csomagok, Modulok, Saját domain,
+    // the overview, the save bar) are rendered HERE; views.ts only assembles them.
+    "src/console/pricingPage.ts",
     // ADR-0323: the mock copy hand edit (A form on the card + the B preview editor bar) —
     // its labels („Eredeti visszaállítása”, „Szöveg szerkesztése” …) live HERE.
     "src/console/copyEditViews.ts",

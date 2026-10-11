@@ -20,12 +20,11 @@ import {
   domainFeeForCycle,
   getDomainMinPackageMonthly,
   getCurrency,
-  getDomainMaxPriceEur,
   getDomainMinCommitmentMonths,
 } from "../pricing.js";
 import { renewableModuleIds } from "../payment/billing.js";
-import { getRegistrar } from "./registrar/index.js";
 import { isMockDomainProvisioning, type DomainProvisioningStatus } from "./provisionDomain.js";
+import { exceedsCostCap } from "./costCap.js";
 
 /**
  * ADR-0093 offer-stage price screen: true when the domain is KNOWN to cost more
@@ -40,12 +39,8 @@ import { isMockDomainProvisioning, type DomainProvisioningStatus } from "./provi
  * region's value — one knob, set on the console /pricing HU page.
  */
 export async function exceedsPriceCap(domain: string): Promise<boolean> {
-  try {
-    return (await getRegistrar().getYearlyPriceEur(domain)) > getDomainMaxPriceEur();
-  } catch (e) {
-    console.warn(`[domain] ár-előszűrés kihagyva (${domain}): ${(e as Error).message}`);
-    return false;
-  }
+  // ADR-XXXX ③: the per-ending cap (and an ending we do not offer counts as over it).
+  return exceedsCostCap(domain);
 }
 
 export interface DomainSuggestionView {

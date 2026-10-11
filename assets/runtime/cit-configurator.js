@@ -1684,11 +1684,34 @@
   // ⛔ (a) is judged on the LIST total (monthlyTotal()), never on the offer price:
   // a temporary discount must not buy a lasting entitlement (owner: "kedvezmények
   // nélkül"). An old manifest without minPackageMonthly degrades to "not offered".
+  //
+  // ADR-XXXX (mirrored from pricing.ts): the fee is per ENDING (DOM.tlds), and it is 0 when
+  // the selection covers the lowest domain-carrying package (DOM.pkgModules — null when the
+  // market does not offer the domain as package content) and the ending is marked
+  // free-in-package. A threshold of 0 means "no threshold", not "not offered".
+  function domainTldOf(name) {
+    if (!DOM || !DOM.tlds || !name) return null;
+    var d = String(name).trim().toLowerCase();
+    var best = null;
+    DOM.tlds.forEach(function (t) {
+      if (d.length > t.tld.length && d.slice(-t.tld.length) === t.tld && (!best || t.tld.length > best.tld.length)) best = t;
+    });
+    return best;
+  }
+  function domainIsPackage() {
+    if (!DOM || !DOM.pkgModules) return false;
+    return DOM.pkgModules.every(function (id) { return !!selected[id]; });
+  }
   function domainEligible() {
-    return !!DOM && DOM.minPackageMonthly > 0 && monthlyTotal() >= DOM.minPackageMonthly;
+    if (!DOM || (DOM.tlds && !DOM.tlds.length)) return false;
+    if (!(DOM.minPackageMonthly > 0)) return true;
+    return monthlyTotal() >= DOM.minPackageMonthly || domainIsPackage();
   }
   function domainFeeMonthly() {
-    return DOM ? DOM.customMonthly || 0 : 0;
+    if (!DOM) return 0;
+    var t = (domainType === "citoviso_registered" && domainTldOf(domainName)) || (DOM.tlds && DOM.tlds[0]) || null;
+    if (!t) return DOM.customMonthly || 0;
+    return t.freeInPackage && domainIsPackage() ? 0 : t.monthly;
   }
   /**
    * How much more the buyer must add to reach the entry threshold.
@@ -1728,9 +1751,11 @@
 
     var feeEl = panel.querySelector(".cit-cfg-dopt__fee");
     if (feeEl) {
-      feeEl.textContent = tr("{price}/hó · {months} hó hűségidő")
-        .replace("{price}", fmt(domainFeeMonthly()))
-        .replace("{months}", months);
+      feeEl.textContent = domainFeeMonthly() === 0
+        ? tr("a csomag része · {months} hó hűségidő").replace("{months}", months)
+        : tr("{price}/hó · {months} hó hűségidő")
+            .replace("{price}", fmt(domainFeeMonthly()))
+            .replace("{months}", months);
     }
 
     if (card && !card.hidden) {
@@ -1767,7 +1792,22 @@
     // custom option is selected — the buyer must see what the hűségidő binds them to.
     var termsEl = panel.querySelector(".cit-cfg-dterms");
     if (termsEl) {
-      termsEl.textContent =
+      // ADR-XXXX: package content (fee 0) and "no threshold" (no package floor) each get
+      // their own honest sentence; the ADR-0109 sentence stays for the case it describes.
+      var outsideFee = DOM.tlds && DOM.tlds.length ? (domainTldOf(domainName) || DOM.tlds[0]).monthly : DOM.customMonthly || 0;
+      var noFloor = !(DOM.minPackageMonthly > 0);
+      if (domainFeeMonthly() === 0 || noFloor) {
+        termsEl.textContent =
+          (domainFeeMonthly() === 0
+            ? tr("A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja {price}/hó.").replace("{price}", fmt(outsideFee))
+            : tr("A saját cím {price}/hó, amíg a név Öné — a havidíj a fenntartásért fut.").replace("{price}", fmt(domainFeeMonthly()))) +
+          " " +
+          (noFloor
+            ? tr("{months} hónap hűségidő: ha ez alatt felmond és a nevet elviszi, a domain vételára fizetendő. Utána a név díjmentesen az Öné.")
+            : tr("{months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. Utána a név díjmentesen az Öné.")
+                .replace(/\{min\}/g, fmt(DOM.minPackageMonthly))
+          ).replace(/\{months\}/g, months);
+      } else termsEl.textContent =
         tr("A saját cím {price}/hó, amíg a név Öné — a havidíj a fenntartásért fut. {months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. A {months} hónap letelte után nincs hűségidő és nincs csomag-minimum: a név díjmentesen az Öné, a havidíj addig fut, amíg nálunk tartja.")
           .replace(/\{price\}/g, fmt(domainFeeMonthly()))
           .replace(/\{months\}/g, months)
@@ -3835,8 +3875,7 @@
       var dFee = domainFeeMonthly();
       sumEl.innerHTML +=
         '<span class="cit-cfg-domfee">' +
-        tr("ebből saját cím") + " " +
-        fmt(dFee) + tr("/hó") +
+        (dFee === 0 ? tr("saját cím: a csomag része") : tr("ebből saját cím") + " " + fmt(dFee) + tr("/hó")) +
         (domainName ? " (" + esc(domainName) + ")" : "") +
         " · " +
         tr("{months} hó hűségidő").replace("{months}", String(DOM.minCommitmentMonths)) +

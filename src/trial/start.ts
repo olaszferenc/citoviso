@@ -34,6 +34,8 @@ import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { getFreeTrialConfig } from "./config.js";
+import { tierModules, type Tier } from "../packages.js";
+import { getPackageAssignment, loadPricing } from "../pricing.js";
 import { pinTrialOffer, trialDiscount } from "./offer.js";
 
 export interface TrialInput {
@@ -81,7 +83,10 @@ export type TrialResult =
 
 /** Every module the trial grants: the whole catalog except the retired ones (owner,
  *  2026-10-09: "FULL funkció", the translation module included). */
-export function trialModuleIds(): string[] {
+export function trialModuleIds(pkg?: Tier): string[] {
+  // ADR-XXXX ⑥: the configured package's contents (own + inherited, spine included);
+  // without one, the pre-ADR rule — every non-retired catalog module.
+  if (pkg) return tierModules(getPackageAssignment(), pkg);
   return MODULE_CATALOG.filter((m) => !m.retired).map((m) => m.id);
 }
 
@@ -198,7 +203,8 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   const trialId = trial.id;
 
   try {
-    const modules = trialModuleIds();
+    await loadPricing();
+    const modules = trialModuleIds((await getFreeTrialConfig()).package);
     let tenantId = trial.tenant_id;
     if (!tenantId) {
       // 4. Provision: the visitor's own submit is the approval of the mock they are on

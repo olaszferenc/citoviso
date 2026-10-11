@@ -20,11 +20,12 @@ import {
   isDomainEligible,
   domainFeeForCycle,
   getDomainMinPackageMonthly,
-  getDomainMaxPriceEur,
   getDomainMinCommitmentMonths,
+  offeredTldOf,
 } from "../pricing.js";
+import { getDisabledModules } from "../moduleSales.js";
 import { renewableModuleIds } from "../payment/billing.js";
-import { getRegistrar } from "./registrar/index.js";
+import { exceedsCostCap } from "./costCap.js";
 
 export interface DomainUpgradeQuote {
   /** The normalized domain that will be registered. */
@@ -53,13 +54,17 @@ export async function quoteDomainUpgrade(
   // ADR-0109 ②/⑧: eligibility on the LIST monthly total — below the threshold we
   // do not sell the domain at all, so there is no quote to give (the caller shows
   // the condition instead of a price the buyer cannot act on).
-  const monthlyTotal = computeMonthly(await renewableModuleIds(tenantId), region);
-  if (!isDomainEligible(monthlyTotal, region)) return null;
+  // ADR-XXXX: only an OFFERED ending is quoted, and package content is eligible regardless
+  // of the threshold (its fee is then 0).
+  if (!offeredTldOf(norm.domain, region)) return null;
+  const owned = await renewableModuleIds(tenantId);
+  const ctx = { modules: owned, disabled: await getDisabledModules() };
+  if (!isDomainEligible(computeMonthly(owned, region), region, ctx)) return null;
   return {
     domain: norm.domain,
     // The upgrade rides the tenant's own cycle from the next renewal; what is
-    // charged NOW is one month of the fee (ADR-0109 ①).
-    price: domainFeeForCycle(1, region),
+    // charged NOW is one month of the fee (ADR-0109 ①) — 0 for package content.
+    price: domainFeeForCycle(1, region, { domain: norm.domain, ...ctx }),
     commitmentMonths: getDomainMinCommitmentMonths(region),
   };
 }
@@ -78,21 +83,21 @@ export async function createDomainUpgradeOrder(
 ): Promise<string | null> {
   const quote = await quoteDomainUpgrade(tenantId, rawDomain, region);
   if (!quote) return null;
+  // ADR-XXXX (open item): the purchase runs from the PAID webhook, so a 0 Ft order (the
+  // domain is package content) has no path to the registrar yet. Refused loudly rather
+  // than minting a pay-link nobody can pay; the payment-free claim path is the next round.
+  if (!(quote.price > 0)) {
+    console.warn(`[domain] ${tenantId}: ${quote.domain} csomag-tartalom (0 Ft) — utólagos igénylés még nincs, kézi intézés`);
+    return null;
+  }
 
   // ADR-0093 offer-side cap check. Advisory here (the adapter may not price a
   // domain yet — the INWX stub); the authoritative fail-closed gate runs in
   // provisionDomain.ts before real money moves. The cap guards OUR cost, so it
   // is the DEFAULT region's single knob — same as every other cap call site.
-  try {
-    const priceEur = await getRegistrar().getYearlyPriceEur(quote.domain);
-    if (priceEur > getDomainMaxPriceEur()) {
-      console.warn(
-        `[domain] rendelés elutasítva (ár-plafon, ADR-0093): ${quote.domain} = ${priceEur} €`,
-      );
-      return null;
-    }
-  } catch (e) {
-    console.warn(`[domain] ár-előszűrés kihagyva (${quote.domain}): ${(e as Error).message}`);
+  if (await exceedsCostCap(quote.domain)) {
+    console.warn(`[domain] rendelés elutasítva (végződés-plafon, ADR-XXXX ③): ${quote.domain}`);
+    return null;
   }
 
   const prospect = await db
@@ -147,7 +152,8 @@ export async function createDomainUpgradeOrder(
       commitment_months: quote.commitmentMonths,
       // ADR-0094 ④ / ADR-0109 ④: EVERY custom-domain order freezes the package
       // floor at order time — the entry threshold is what the hűségidő protects.
-      committed_min_monthly: getDomainMinPackageMonthly(region),
+      // ADR-XXXX ④: a threshold of 0 = no threshold, and then no floor either.
+      committed_min_monthly: getDomainMinPackageMonthly(region) > 0 ? getDomainMinPackageMonthly(region) : null,
       price: quote.price,
       // ADR-0109 ①: the fee is monthly, so the upgrade order is a monthly one —
       // "annual" here used to mean "one domain-year", a meaning that no longer exists.

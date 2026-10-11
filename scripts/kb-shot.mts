@@ -73,6 +73,7 @@ import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
 import { getTenantModules } from "../src/tenant/modules.js";
 import { MODULE_CATALOG } from "../src/modules.js";
+import { seedAssignment } from "../src/packages.js";
 import { positionThreads } from "../src/tenant/messageThreads.js";
 import { isUnread } from "../src/tenant/messages.js";
 import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
@@ -1627,20 +1628,28 @@ const leadDetail: LeadDetail = {
   ],
 };
 
+// ADR-XXXX (pricing redesign): the fixture carries the per-ending table and the
+// "domain as package content" switch — the guide shows the .hu inside the Ajánlott package.
 const huPricing: PricingSnapshot = {
   region: "hu",
   currency: "HUF",
-  baseMonthly: 4990,
+  baseMonthly: 3900,
   annualFreeMonths: 2,
-  customDomainYearly: 9900,
+  customDomainMonthly: 1000,
   domainMaxPriceEur: 15,
   domainMinCommitmentMonths: 12,
-  domainFreeMinMonthly: 8000,
+  domainMinPackageMonthly: 0,
   domainBuyoutPrice: 20000,
   pricingConfirmed: true,
-  modulePrices: new Map([["booking", 990]]),
+  domainFreeInPackage: true,
+  tlds: [
+    { tld: ".hu", offered: true, costNet: 1990, costCurrency: "HUF", costMeasuredAt: "2026-10-11T09:30:00.000Z", maxCost: 5000, monthlyFee: 1000, freeInPackage: true },
+    { tld: ".eu", offered: false, costNet: 2499, costCurrency: "HUF", costMeasuredAt: "2026-10-11T09:30:00.000Z", maxCost: 5000, monthlyFee: 1000, freeInPackage: false },
+  ],
+  modulePrices: new Map(MODULE_CATALOG.map((m) => [m.id, m.priceMonthly] as [string, number])),
 };
-const globalPricing: PricingSnapshot = { ...huPricing, region: "global", currency: "EUR", baseMonthly: 10, customDomainYearly: 25 };
+const globalPricing: PricingSnapshot = { ...huPricing, region: "global", currency: "EUR", baseMonthly: 10, customDomainMonthly: 2 };
+const kbPackages = new Map([...seedAssignment(), ["domain", "ajanlott"]] as [string, "alap" | "ajanlott" | "teljes"][]);
 
 const scrapeIdle = {
   running: false,
@@ -2059,11 +2068,21 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.
 await shootConsole(
-  pricingPage(huPricing, [huPricing, globalPricing], null, salesDisabled, salesLive),
+  pricingPage(huPricing, [huPricing, globalPricing], null, salesDisabled, salesLive, undefined, undefined, undefined, kbPackages),
   conOut("console-pricing"),
   undefined,
-  ".panel",
+  "#pr2-form",
 );
+// The two panels the guide walks through step by step (ADR-XXXX): the drag-and-drop
+// packages and the own-domain panel with the per-ending table.
+for (const [sel, file] of [["#pr2-s-pk", "packages.png"], ["#pr2-s-dom", "domain.png"]] as const) {
+  await shootConsole(
+    pricingPage(huPricing, [huPricing, globalPricing], null, salesDisabled, salesLive, undefined, undefined, undefined, kbPackages),
+    path.join(ROOT, "kb/entries", "console-pricing", "assets", "hu", file),
+    undefined,
+    sel,
+  );
+}
 await shootConsole(
   settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
   conOut("console-settings"),

@@ -158,6 +158,8 @@ import { normalizeCustomDomain, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
+import { packageAssignmentErrors, parsePackageAssignment } from "../packages.js";
+import { getRegistrar } from "../domains/registrar/index.js";
 import { getRepliesBlock, getReplySuggestion, markAnswered, unmarkAnswered } from "../replies/store.js";
 import { replyHasPendingSend, saveSuggestion, sendAnswer } from "../replies/answer.js";
 import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
@@ -171,6 +173,14 @@ import {
   pricingRegions,
   pricingSnapshot,
   isDomainEligible,
+  currentPresets,
+  getPackageAssignment,
+  savePackageAssignment,
+  saveDomainTlds,
+  tldRowErrors,
+  parseTldRows,
+  offeredTldOf,
+  offeredTlds,
   domainFeeForCycle,
   savePricing,
   getCurrency,
@@ -1163,17 +1173,26 @@ async function handleOrderRequest(
   // domain, it gets NO domain — the order is rewritten to the free subdomain
   // rather than silently carrying a name we would not sell (feedback:
   // additive_write_is_not_a_gate).
+  //
+  // ADR-XXXX: the fee is per ENDING and 0 when the module set is package content; an ending
+  // this market does not offer is refused the same way (the buyer picks from the offered
+  // ones — a forged or stale POST must not buy an unpriced name).
   const wantsOwnDomain = domainType === "citoviso_registered";
-  const domainEligible = wantsOwnDomain && isDomainEligible(computeMonthly(modules));
+  const salesOff = await getDisabledModules();
+  const pkgCtx = { modules: [...modules, ...spineIds], disabled: salesOff };
+  const tldOffered = !wantsOwnDomain || (domainName !== null && offeredTldOf(domainName) !== null);
+  const domainEligible = wantsOwnDomain && tldOffered && isDomainEligible(computeMonthly(modules), undefined, pkgCtx);
   if (wantsOwnDomain && !domainEligible) {
     console.warn(
-      `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
-        `${getDomainMinPackageMonthly()} (ADR-0109 ②) — a rendelés az ingyenes aldomainre áll`,
+      tldOffered
+        ? `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
+            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-XXXX) — a rendelés az ingyenes aldomainre áll`
+        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-XXXX ③) — a rendelés az ingyenes aldomainre áll`,
     );
   }
   const effectiveDomainType = domainEligible ? domainType : "citoviso_sub";
   const domainFee = domainEligible
-    ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1)
+    ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1, undefined, { domain: domainName, ...pkgCtx })
     : 0;
   const price = (offer ? applyOffer(listPrice, offer) : listPrice) + domainFee;
   // Tamper/drift signal: the client figure is display-only. Until the offer UI
@@ -1190,7 +1209,8 @@ async function handleOrderRequest(
   // ORDER TIME — during the hűségidő the tenant may not sink below the entry
   // threshold. Now EVERY custom-domain order carries the floor (there is no
   // free/paid split any more: the threshold is the entry condition itself).
-  const committedMinMonthly = domainEligible ? getDomainMinPackageMonthly() : null;
+  // ADR-XXXX ④: a threshold of 0 is "no threshold" — and then there is no floor either.
+  const committedMinMonthly = domainEligible && getDomainMinPackageMonthly() > 0 ? getDomainMinPackageMonthly() : null;
   const rec = await recordOrderIntent({
     artifactId,
     modules,
@@ -1207,7 +1227,7 @@ async function handleOrderRequest(
     photoRightsDeclared: true,
     recurringConsent: true,
     buyer,
-    preset: orderPresetId(modules, body.preset),
+    preset: orderPresetId(modules, body.preset, currentPresets()),
     ...(prospectToken ? { prospectToken } : {}),
     ...(offer ? { offerId: offer.id, listPrice } : {}),
   });
@@ -1218,7 +1238,7 @@ async function handleOrderRequest(
       ` · modulok: ${modules.join(", ") || "—"} · ` +
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
       (domainType === "citoviso_registered"
-        ? ` · domain-díj ${domainFee ? `${formatMoney(domainFee, getCurrency())}/év` : `${formatMoney(0, getCurrency())} (csomag-küszöb felett, padló befagy)`}`
+        ? ` · domain-díj ${domainFee ? `${formatMoney(domainFee, getCurrency())}/ciklus` : `${formatMoney(0, getCurrency())} (csomag-tartalom, ADR-XXXX)`}`
         : "") +
       (prospectToken ? " · követett link" : ""),
   );
@@ -1827,8 +1847,30 @@ async function handle(
       }, {
         cfg: await getCouponConfig(),
         live: await liveTenantCoupons(),
-      }),
+      }, getPackageAssignment()),
     );
+  }
+  // POST /pricing/tld-measure?tld=.eu — the registrar's NET yearly price for an ending
+  // (ADR-XXXX ③, the „Lekérdezés” button). Read-only at the registrar (a validate call
+  // creates no order); the probe name is random so it is (almost) never taken.
+  if (method === "POST" && path === "/pricing/tld-measure") {
+    const op = await currentOperator(req);
+    if (!op) return send(res, 401, JSON.stringify({ ok: false }), "application/json");
+    const tld = (url.searchParams.get("tld") ?? "").trim().toLowerCase();
+    if (!/^\.[a-z]{2,24}$/.test(tld)) return send(res, 400, JSON.stringify({ ok: false, reason: "bad_tld" }), "application/json");
+    const probe = `citoviso-arproba-${Math.random().toString(36).slice(2, 10)}${tld}`;
+    try {
+      const p = await getRegistrar().getYearlyNetPrice(probe);
+      return send(
+        res,
+        200,
+        JSON.stringify({ ok: true, amount: Math.round(p.amount), currency: p.currency.toUpperCase(), measuredAt: new Date().toISOString() }),
+        "application/json",
+      );
+    } catch (e) {
+      console.warn(`[pricing] végződés-ár mérés sikertelen (${tld}): ${(e as Error).message}`); // i18n-exempt: operátori napló
+      return send(res, 200, JSON.stringify({ ok: false }), "application/json");
+    }
   }
   // POST /pricing — persist the prices + the "confirmed" gate flip (per region).
   if (method === "POST" && path === "/pricing") {
@@ -1887,7 +1929,32 @@ async function handle(
         )}`,
       );
     }
+    // ADR-XXXX ①③: the package composition and the ending list — the same rule, refused
+    // before anything is written. An older tab without the fields leaves both alone.
+    const pkg = parsePackageAssignment(form.get("pkg_json"));
+    if (form.get("pkg_json") !== null && (!pkg || packageAssignmentErrors(pkg).length)) {
+      const why = pkg ? packageAssignmentErrors(pkg).map((e) => `${e.kind}:${e.module}`).join(", ") : "olvashatatlan";
+      console.warn(`[pricing] csomag-összetétel elutasítva: ${why}`); // i18n-exempt: operátori napló
+      return redirect(
+        res,
+        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+          "hiba:Nem mentettem: a csomagok összetétele érvénytelen (egy modul nem lehet alacsonyabb csomagban, mint amire épül).",
+        )}`,
+      );
+    }
+    const tlds = parseTldRows(form.get("tld_json"));
+    if (form.get("tld_json") !== null && (!tlds || tldRowErrors(tlds).length)) {
+      console.warn(`[pricing] végződés-lista elutasítva: ${tlds ? tldRowErrors(tlds).join("; ") : "olvashatatlan"}`); // i18n-exempt: operátori napló
+      return redirect(
+        res,
+        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+          "hiba:Nem mentettem: a végződés-tábla hibás (mért ár nélkül vagy a plafon felett nem kínálható végződés).",
+        )}`,
+      );
+    }
     try {
+      if (pkg) await savePackageAssignment(pkg);
+      if (tlds) await saveDomainTlds(snap.region, tlds);
       if (escalation) await setEscalationConfig(escalation);
       if (coupon) await setCouponConfig(coupon);
       if (trial) await setFreeTrialConfig(trial);
@@ -1903,6 +1970,8 @@ async function handle(
         domainMinPackageMonthly: num("domain_min_package_monthly", snap.domainMinPackageMonthly),
         domainBuyoutPrice: num("domain_buyout_price", snap.domainBuyoutPrice),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
+        // ADR-XXXX ②: only a form that carries the domain panel may flip the switch.
+        ...(form.get("dom_present") === "1" ? { domainFreeInPackage: form.get("domain_free_in_package") === "on" } : {}),
         modulePrices,
       });
       if (snap.region === "hu") {
@@ -3018,7 +3087,9 @@ async function handle(
       .where("mock_artifact.id", "=", cfgDomMatch[1])
       .executeTakeFirst();
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
-    const candidates = suggestDomains(a.leadName);
+    // ADR-XXXX ③: only the endings this market offers are suggested.
+    await loadPricing();
+    const candidates = suggestDomains(a.leadName).filter((d) => offeredTldOf(d) !== null);
     const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
     const suggestions = candidates.map((domain, i) => ({ domain, availability: verdicts[i]! }));
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
@@ -3045,6 +3116,17 @@ async function handle(
     const norm = normalizeCustomDomain(url.searchParams.get("name") ?? "");
     if (!norm.ok) {
       return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
+    }
+    // ADR-XXXX ③: the buyer picks name AND ending — but only from the offered endings.
+    await loadPricing();
+    if (!offeredTldOf(norm.domain!)) {
+      const list = offeredTlds().map((t) => t.tld).join(", ");
+      return send(
+        res,
+        200,
+        JSON.stringify({ ok: false, reason: `Ezt a végződést nem kínáljuk. Választható: ${list || "—"}` }),
+        "application/json",
+      );
     }
     const availability = await checkWebcimAvailability(norm.domain!);
     return send(
