@@ -1174,7 +1174,7 @@ async function handleOrderRequest(
   // rather than silently carrying a name we would not sell (feedback:
   // additive_write_is_not_a_gate).
   //
-  // ADR-XXXX: the fee is per ENDING and 0 when the module set is package content; an ending
+  // ADR-0360: the fee is per ENDING and 0 when the module set is package content; an ending
   // this market does not offer is refused the same way (the buyer picks from the offered
   // ones — a forged or stale POST must not buy an unpriced name).
   const wantsOwnDomain = domainType === "citoviso_registered";
@@ -1186,8 +1186,8 @@ async function handleOrderRequest(
     console.warn(
       tldOffered
         ? `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
-            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-XXXX) — a rendelés az ingyenes aldomainre áll`
-        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-XXXX ③) — a rendelés az ingyenes aldomainre áll`,
+            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés az ingyenes aldomainre áll`
+        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-0360 ③) — a rendelés az ingyenes aldomainre áll`,
     );
   }
   const effectiveDomainType = domainEligible ? domainType : "citoviso_sub";
@@ -1209,7 +1209,7 @@ async function handleOrderRequest(
   // ORDER TIME — during the hűségidő the tenant may not sink below the entry
   // threshold. Now EVERY custom-domain order carries the floor (there is no
   // free/paid split any more: the threshold is the entry condition itself).
-  // ADR-XXXX ④: a threshold of 0 is "no threshold" — and then there is no floor either.
+  // ADR-0360 ④: a threshold of 0 is "no threshold" — and then there is no floor either.
   const committedMinMonthly = domainEligible && getDomainMinPackageMonthly() > 0 ? getDomainMinPackageMonthly() : null;
   const rec = await recordOrderIntent({
     artifactId,
@@ -1238,7 +1238,7 @@ async function handleOrderRequest(
       ` · modulok: ${modules.join(", ") || "—"} · ` +
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
       (domainType === "citoviso_registered"
-        ? ` · domain-díj ${domainFee ? `${formatMoney(domainFee, getCurrency())}/ciklus` : `${formatMoney(0, getCurrency())} (csomag-tartalom, ADR-XXXX)`}`
+        ? ` · domain-díj ${domainFee ? `${formatMoney(domainFee, getCurrency())}/ciklus` : `${formatMoney(0, getCurrency())} (csomag-tartalom, ADR-0360)`}`
         : "") +
       (prospectToken ? " · követett link" : ""),
   );
@@ -1851,7 +1851,7 @@ async function handle(
     );
   }
   // POST /pricing/tld-measure?tld=.eu — the registrar's NET yearly price for an ending
-  // (ADR-XXXX ③, the „Lekérdezés” button). Read-only at the registrar (a validate call
+  // (ADR-0360 ③, the „Lekérdezés” button). Read-only at the registrar (a validate call
   // creates no order); the probe name is random so it is (almost) never taken.
   if (method === "POST" && path === "/pricing/tld-measure") {
     const op = await currentOperator(req);
@@ -1929,7 +1929,7 @@ async function handle(
         )}`,
       );
     }
-    // ADR-XXXX ①③: the package composition and the ending list — the same rule, refused
+    // ADR-0360 ①③: the package composition and the ending list — the same rule, refused
     // before anything is written. An older tab without the fields leaves both alone.
     const pkg = parsePackageAssignment(form.get("pkg_json"));
     if (form.get("pkg_json") !== null && (!pkg || packageAssignmentErrors(pkg).length)) {
@@ -1970,7 +1970,7 @@ async function handle(
         domainMinPackageMonthly: num("domain_min_package_monthly", snap.domainMinPackageMonthly),
         domainBuyoutPrice: num("domain_buyout_price", snap.domainBuyoutPrice),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
-        // ADR-XXXX ②: only a form that carries the domain panel may flip the switch.
+        // ADR-0360 ②: only a form that carries the domain panel may flip the switch.
         ...(form.get("dom_present") === "1" ? { domainFreeInPackage: form.get("domain_free_in_package") === "on" } : {}),
         modulePrices,
       });
@@ -3087,7 +3087,7 @@ async function handle(
       .where("mock_artifact.id", "=", cfgDomMatch[1])
       .executeTakeFirst();
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
-    // ADR-XXXX ③: only the endings this market offers are suggested.
+    // ADR-0360 ③: only the endings this market offers are suggested.
     await loadPricing();
     const candidates = suggestDomains(a.leadName).filter((d) => offeredTldOf(d) !== null);
     const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
@@ -3117,7 +3117,7 @@ async function handle(
     if (!norm.ok) {
       return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
     }
-    // ADR-XXXX ③: the buyer picks name AND ending — but only from the offered endings.
+    // ADR-0360 ③: the buyer picks name AND ending — but only from the offered endings.
     await loadPricing();
     if (!offeredTldOf(norm.domain!)) {
       const list = offeredTlds().map((t) => t.tld).join(", ");

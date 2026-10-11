@@ -1628,7 +1628,7 @@ const leadDetail: LeadDetail = {
   ],
 };
 
-// ADR-XXXX (pricing redesign): the fixture carries the per-ending table and the
+// ADR-0360 (pricing redesign): the fixture carries the per-ending table and the
 // "domain as package content" switch — the guide shows the .hu inside the Ajánlott package.
 const huPricing: PricingSnapshot = {
   region: "hu",
@@ -2073,7 +2073,7 @@ await shootConsole(
   undefined,
   "#pr2-form",
 );
-// The two panels the guide walks through step by step (ADR-XXXX): the drag-and-drop
+// The two panels the guide walks through step by step (ADR-0360): the drag-and-drop
 // packages and the own-domain panel with the per-ending table.
 for (const [sel, file] of [["#pr2-s-pk", "packages.png"], ["#pr2-s-dom", "domain.png"]] as const) {
   await shootConsole(

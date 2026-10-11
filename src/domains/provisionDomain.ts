@@ -291,7 +291,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
       // the registrar's authoritative price. Fail-closed: if the adapter cannot
       // price the domain, getYearlyPriceEur throws and the run lands in `failed`
       // — an unknown price is never a free pass (§B.17 missing-data branch).
-      // ADR-XXXX ③: the cap is per ending, NET, in the registrar's currency.
+      // ADR-0360 ③: the cap is per ending, NET, in the registrar's currency.
       await assertUnderCostCap(p.domain);
       await setStatus(p.id, p.siteId, "registering");
       const reg = await registrar.register(p.domain, { years });

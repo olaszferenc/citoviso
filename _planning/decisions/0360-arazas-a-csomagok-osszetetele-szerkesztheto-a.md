@@ -1,4 +1,4 @@
-## ADR-XXXX — Árazás: a csomagok összetétele szerkeszthető, a saját domain csomag-tartalom lehet, végződésenkénti díjjal; kötelező platform-cím; a próba csomagja paraméter
+## ADR-0360 — Árazás: a csomagok összetétele szerkeszthető, a saját domain csomag-tartalom lehet, végződésenkénti díjjal; kötelező platform-cím; a próba csomagja paraméter
 
 **Dátum:** 2026-10-11 · **Kontextus:** tulaj-döntések egy szálban (domain-ár mérés → pilot-kilépések → árazási folyamat → terv-kör, `assets/design-refs/console/pricing-redesign/`). **Felülírja:** ADR-0109 ③ („NINCS ingyen-ág” → paraméter), ADR-0109 ① (egyetlen átalány-havidíj → végződésenkénti), ADR-0093 ④ (EUR-plafon → végződésenkénti beszerzési plafon), ADR-0103 ④ (HUF→EUR átváltás az őrben), ADR-0342 „minden modullal” (a próba csomagja paraméter). **Megtartja:** ADR-0109 ②⑧ (a küszöb a LISTAÁRON mér, kedvezmény nem számít), ④–⑥ (hűség, kötbér, a domain-díjra kedvezmény nem megy), ADR-0192 (függőségek), ADR-0354 (próbában egy kedvezmény).
 

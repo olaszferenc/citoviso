@@ -1,4 +1,4 @@
-// Árazás és értékesítés — the page script (ADR-XXXX ⑦, frozen plan
+// Árazás és értékesítés — the page script (ADR-0360 ⑦, frozen plan
 // assets/design-refs/console/pricing-redesign/). Inlined by src/console/views.ts.
 //
 // It keeps the overview, the packages, the module table, the per-ending table, the

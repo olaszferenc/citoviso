@@ -120,8 +120,8 @@ export const RECURRING_MANDATE_V1 =
 // 1.4 (2026-10-09): §1 — the card-less free trial (ADR-0342/0344), owner-approved wording; the
 // 90-day retention after the trial ends is the owner's retention decision (ADR-0345).
 // 1.5 (2026-10-11): §9 — the domain fee is per ending and is part of the package where the
-// price list says so (ADR-XXXX ②③); the platform address (<név>.citoviso.com) is kept for
-// every subscriber, custom domain or not (ADR-XXXX ⑤). Wording awaits the owner's approval.
+// price list says so (ADR-0360 ②③); the platform address (<név>.citoviso.com) is kept for
+// every subscriber, custom domain or not (ADR-0360 ⑤). Wording awaits the owner's approval.
 export const ASZF_VERSION = "1.5";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
 export const ASZF_EFFECTIVE_FROM = "2026-10-11";

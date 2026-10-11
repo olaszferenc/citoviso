@@ -314,7 +314,7 @@ export const PRESETS: readonly Preset[] = [
 export function orderPresetId(
   modules: readonly string[],
   claimed: unknown,
-  /** ADR-XXXX ①: the CURRENT tiers (pricing.ts currentPresets); the seed when omitted. */
+  /** ADR-0360 ①: the CURRENT tiers (pricing.ts currentPresets); the seed when omitted. */
   presets: readonly Preset[] = PRESETS,
 ): "alap" | "ajanlott" | "teljes" | "egyedi" {
   const want = new Set(modules);

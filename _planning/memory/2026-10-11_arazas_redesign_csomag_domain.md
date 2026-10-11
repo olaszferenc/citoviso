@@ -1,6 +1,6 @@
 # 2026-10-11 — Árazás redesign: csomag × modul húzással, saját domain csomag-tartalomként, végződés-tábla
 
-**Szál:** domain-ár kérdés (brief: `~/rc-briefs/domain-20261011-091552.md`) → pilot-kilépések → árazási folyamat → terv-kör → megvalósítás. Döntés: ADR-XXXX (a land osztja ki).
+**Szál:** domain-ár kérdés (brief: `~/rc-briefs/domain-20261011-091552.md`) → pilot-kilépések → árazási folyamat → terv-kör → megvalósítás. Döntés: ADR-0360 (a land osztja ki).
 
 ## Mérések
 - **Websupport `.hu` ár (élő validate, 10-11):** egységesen 1 990 Ft nettó / 2 527 Ft bruttó / év, hossztól és szótári „értéktől” független (q8/szallas/panzio/vendeghaz.hu foglalt). `.eu` 2 499, `.com` 4 899 nettó. A végpont az első éves árat adja, megújítást nem; a `period` paramétert figyelmen kívül hagyja. Az ADR-0103 „2 599 Ft/év” elavult.

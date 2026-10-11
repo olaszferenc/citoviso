@@ -67,15 +67,15 @@ export interface PricingSnapshot {
   readonly domainBuyoutPrice: number;
   /** Gate: only true prices the owner has confirmed may be advertised (Fttv./§C). */
   readonly pricingConfirmed: boolean;
-  /** ADR-XXXX ②: the domain may be package content (no monthly fee) on this market. */
+  /** ADR-0360 ②: the domain may be package content (no monthly fee) on this market. */
   readonly domainFreeInPackage: boolean;
-  /** ADR-XXXX ③: the domain endings of this market, `sort` order. */
+  /** ADR-0360 ③: the domain endings of this market, `sort` order. */
   readonly tlds: readonly TldRow[];
   /** module id -> monthly add-on price (HUF, global). Covers every catalog id. */
   readonly modulePrices: ReadonlyMap<string, number>;
 }
 
-/** ADR-XXXX ③: one domain ending of a market. */
+/** ADR-0360 ③: one domain ending of a market. */
 export interface TldRow {
   /** Leading dot, lowercase (".hu"). */
   readonly tld: string;
@@ -180,7 +180,7 @@ function seedMap(modulePrices: ReadonlyMap<string, number>): Map<string, Pricing
 }
 
 let snapshots: Map<string, PricingSnapshot> = seedMap(defaultModulePrices());
-/** ADR-XXXX ①: the package composition — GLOBAL (one set of tiers for every market). */
+/** ADR-0360 ①: the package composition — GLOBAL (one set of tiers for every market). */
 let packageAssignment: Map<string, Tier> = seedAssignment();
 /** PROCESS-LOCAL guard freeze (the dev DB is shared — a guard must not edit live prices). */
 let guardFrozen = false;
@@ -298,7 +298,7 @@ export function getAnnualFreeMonths(region?: string): number {
 }
 /**
  * The custom domain's monthly fee OUTSIDE a package, for the market's PRIMARY ending (the
- * first offered one — ".hu" on the seed). ADR-XXXX ③ replaced the ADR-0109 flat fee with a
+ * first offered one — ".hu" on the seed). ADR-0360 ③ replaced the ADR-0109 flat fee with a
  * per-ending one; callers that do not know the ending yet (a quote before the buyer picked
  * a name) read this. With the ending known, use domainMonthlyFee().
  */
@@ -306,7 +306,7 @@ export function getCustomDomainMonthly(region?: string): number {
   return primaryTld(region)?.monthlyFee ?? snap(region).customDomainMonthly;
 }
 
-// ── ADR-XXXX: packages + domain endings ─────────────────────────────────────────
+// ── ADR-0360: packages + domain endings ─────────────────────────────────────────
 
 /** The package composition (module → lowest tier), a defensive copy. */
 export function getPackageAssignment(): Map<string, Tier> {
@@ -318,7 +318,7 @@ export function currentPresets(): Preset[] {
   return presetsFrom(packageAssignment);
 }
 
-/** ADR-XXXX ②: may the domain be package content on this market? */
+/** ADR-0360 ②: may the domain be package content on this market? */
 export function getDomainFreeInPackage(region?: string): boolean {
   return snap(region).domainFreeInPackage;
 }
@@ -349,7 +349,7 @@ export function offeredTldOf(domain: string, region?: string): TldRow | null {
 }
 
 /**
- * ADR-XXXX ②: does this module set carry the domain as PACKAGE CONTENT on this market?
+ * ADR-0360 ②: does this module set carry the domain as PACKAGE CONTENT on this market?
  * The market switch must be on and the set must cover the lowest domain-carrying tier
  * (an "egyedi" set qualifies when it buys at least that much). `disabled` = the modules
  * off sale now — they cannot be bought, so they do not count against the set.
@@ -363,7 +363,7 @@ export function domainIsPackageContent(
 }
 
 /**
- * ADR-XXXX ②③: the MONTHLY fee of a custom domain for this module set — 0 when it is
+ * ADR-0360 ②③: the MONTHLY fee of a custom domain for this module set — 0 when it is
  * package content and its ending is marked free-in-package, else the ending's fee.
  * `domain` null = not chosen yet → the primary ending. null result = the ending is not
  * offered on this market (the caller must not sell it).
@@ -381,7 +381,7 @@ export function domainMonthlyFee(
 }
 
 /**
- * ADR-XXXX ③: the purchase-cost cap of the ending a domain falls under — compared with the
+ * ADR-0360 ③: the purchase-cost cap of the ending a domain falls under — compared with the
  * registrar's NET price IN THE SAME CURRENCY. null = not an offered ending (do not buy).
  */
 export function domainCostCap(domain: string, region?: string): { max: number; currency: string } | null {
@@ -419,11 +419,11 @@ export function getDomainBuyoutPrice(region?: string): number {
 export function isDomainEligible(
   listMonthlyTotal: number,
   region?: string,
-  /** ADR-XXXX ②④: with the module set known, package content is eligible regardless. */
+  /** ADR-0360 ②④: with the module set known, package content is eligible regardless. */
   pkg?: { readonly modules: Iterable<string>; readonly disabled: ReadonlySet<string> },
 ): boolean {
   const min = snap(region).domainMinPackageMonthly;
-  // ADR-XXXX ④: 0 = no threshold (everyone may choose one), not "never offered".
+  // ADR-0360 ④: 0 = no threshold (everyone may choose one), not "never offered".
   if (min <= 0 || listMonthlyTotal >= min) return true;
   return !!pkg && domainIsPackageContent(pkg.modules, pkg.disabled, region);
 }
@@ -437,7 +437,7 @@ export function isDomainEligible(
 export function domainFeeForCycle(
   cycleMonths: number,
   region?: string,
-  /** ADR-XXXX: with the name and module set known, the per-ending / package-content fee. */
+  /** ADR-0360: with the name and module set known, the per-ending / package-content fee. */
   ctx?: { readonly domain: string | null; readonly modules: Iterable<string>; readonly disabled: ReadonlySet<string> },
 ): number {
   const monthly = ctx
@@ -554,7 +554,7 @@ export interface PricingInput {
   readonly domainMinPackageMonthly: number;
   readonly domainBuyoutPrice: number;
   readonly pricingConfirmed: boolean;
-  /** ADR-XXXX ②: omitted = keep the stored value. */
+  /** ADR-0360 ②: omitted = keep the stored value. */
   readonly domainFreeInPackage?: boolean;
   /** module id -> monthly add-on price (HUF); catalog ids only, spine ignored. */
   readonly modulePrices: Readonly<Record<string, number>>;
@@ -638,7 +638,7 @@ export async function savePricing(input: PricingInput): Promise<void> {
 }
 
 /**
- * ADR-XXXX ①: persist the package composition. The caller validates first
+ * ADR-0360 ①: persist the package composition. The caller validates first
  * (packageAssignmentErrors) — this writes the WHOLE map in one transaction, so a reader
  * never sees half a composition.
  */
@@ -662,14 +662,14 @@ export function tldRowErrors(rows: readonly TldRow[]): string[] {
     for (const [k, v] of [["maxCost", r.maxCost], ["monthlyFee", r.monthlyFee]] as const)
       if (!Number.isInteger(v) || v < 0) errs.push(`${r.tld}: ${k} nem nemnegatív egész`);
     if (r.costNet !== null && (!Number.isInteger(r.costNet) || r.costNet < 0)) errs.push(`${r.tld}: costNet hibás`);
-    // ADR-XXXX ③: only a measured ending under its cap may be offered.
+    // ADR-0360 ③: only a measured ending under its cap may be offered.
     if (r.offered && r.costNet === null) errs.push(`${r.tld}: mért ár nélkül nem kínálható`);
     if (r.offered && r.costNet !== null && r.costNet > r.maxCost) errs.push(`${r.tld}: a beszerzés a plafon felett`);
   }
   return errs;
 }
 
-/** ADR-XXXX ③: replace a market's ending list (validated by the caller with tldRowErrors). */
+/** ADR-0360 ③: replace a market's ending list (validated by the caller with tldRowErrors). */
 export async function saveDomainTlds(region: string, rows: readonly TldRow[]): Promise<void> {
   await db.transaction().execute(async (trx) => {
     await trx.deleteFrom("domain_tld").where("region", "=", region).execute();
@@ -696,7 +696,7 @@ export async function saveDomainTlds(region: string, rows: readonly TldRow[]): P
 }
 
 /**
- * ADR-XXXX ③: the console's posted ending list → rows (null when it is not that shape).
+ * ADR-0360 ③: the console's posted ending list → rows (null when it is not that shape).
  * Values are coerced to the row types; the RULES are tldRowErrors' job.
  */
 export function parseTldRows(raw: string | null): TldRow[] | null {

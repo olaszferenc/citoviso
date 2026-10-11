@@ -1,4 +1,4 @@
-// Árazás és értékesítés — the redesigned page (ADR-XXXX ⑦; frozen plan
+// Árazás és értékesítés — the redesigned page (ADR-0360 ⑦; frozen plan
 // assets/design-refs/console/pricing-redesign/, variant A — one page with section jumps).
 //
 // This file holds the NEW blocks of the page: the head, the market tabs, the overview
@@ -302,7 +302,7 @@ export function saveBar(lang: Lang, snap: PricingSnapshot): string {
     </div>`;
 }
 
-/** The trial's package select (ADR-XXXX ⑥) — inserted into the trial section. */
+/** The trial's package select (ADR-0360 ⑥) — inserted into the trial section. */
 export function trialPackageField(lang: Lang, pkg: Tier | null, enabled: boolean): string {
   const cur = pkg ?? "teljes";
   const opts = [...TIERS]

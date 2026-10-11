@@ -1,4 +1,4 @@
-// pricing-packages-check (ADR-XXXX): the package composition, the domain as package content,
+// pricing-packages-check (ADR-0360): the package composition, the domain as package content,
 // the per-ending table, the 0 = no-threshold rule, the per-ending cost cap and the trial's
 // package — the rules the redesigned /pricing page edits and the money paths read.
 //

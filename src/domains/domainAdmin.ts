@@ -39,7 +39,7 @@ import { exceedsCostCap } from "./costCap.js";
  * region's value — one knob, set on the console /pricing HU page.
  */
 export async function exceedsPriceCap(domain: string): Promise<boolean> {
-  // ADR-XXXX ③: the per-ending cap (and an ending we do not offer counts as over it).
+  // ADR-0360 ③: the per-ending cap (and an ending we do not offer counts as over it).
   return exceedsCostCap(domain);
 }
 

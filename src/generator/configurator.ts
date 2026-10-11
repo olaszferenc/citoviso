@@ -224,9 +224,9 @@ export interface ConfiguratorManifest {
      *  domain. Below it the option is not offered — the client shows the
      *  invitation card instead (frozen plan: design-refs/configurator/domain-monthly). */
     readonly minPackageMonthly: number;
-    /** ADR-XXXX ③: offered endings + their monthly fee outside a package. */
+    /** ADR-0360 ③: offered endings + their monthly fee outside a package. */
     readonly tlds: readonly { readonly tld: string; readonly monthly: number; readonly freeInPackage: boolean }[];
-    /** ADR-XXXX ②: modules a selection must cover for the domain to be package content. */
+    /** ADR-0360 ②: modules a selection must cover for the domain to be package content. */
     readonly pkgModules: readonly string[] | null;
     /** A concrete example name for the invitation card, derived from the SAME
      *  label the subdomain uses. It illustrates the idea; availability is only
@@ -486,9 +486,9 @@ export async function buildManifest(
       // ADR-0093 free-domain rule: the client resolves the fee against the LIVE
       // module selection (the threshold crossing must move with the toggles).
       minPackageMonthly: getDomainMinPackageMonthly(),
-      // ADR-XXXX ③: the endings a buyer may pick, with their fee outside a package.
+      // ADR-0360 ③: the endings a buyer may pick, with their fee outside a package.
       tlds: offeredTlds().map((t) => ({ tld: t.tld, monthly: t.monthlyFee, freeInPackage: t.freeInPackage })),
-      // ADR-XXXX ②: the modules a selection must cover for the domain to be package content
+      // ADR-0360 ②: the modules a selection must cover for the domain to be package content
       // (the lowest domain-carrying tier, minus the spine and what is off sale); null = the
       // market does not offer the domain as package content.
       pkgModules: ((): string[] | null => {
@@ -513,7 +513,7 @@ export async function buildManifest(
         href: "#cit-enquiry",
       },
     },
-    // ADR-XXXX ①: the operator-set composition, not the code seed.
+    // ADR-0360 ①: the operator-set composition, not the code seed.
     presets: currentPresets().map((p) => ({
       id: p.id,
       label: p.label,

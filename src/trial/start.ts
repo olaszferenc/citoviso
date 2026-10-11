@@ -84,7 +84,7 @@ export type TrialResult =
 /** Every module the trial grants: the whole catalog except the retired ones (owner,
  *  2026-10-09: "FULL funkció", the translation module included). */
 export function trialModuleIds(pkg?: Tier): string[] {
-  // ADR-XXXX ⑥: the configured package's contents (own + inherited, spine included);
+  // ADR-0360 ⑥: the configured package's contents (own + inherited, spine included);
   // without one, the pre-ADR rule — every non-retired catalog module.
   if (pkg) return tierModules(getPackageAssignment(), pkg);
   return MODULE_CATALOG.filter((m) => !m.retired).map((m) => m.id);

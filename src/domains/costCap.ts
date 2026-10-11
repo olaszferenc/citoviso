@@ -1,4 +1,4 @@
-// ADR-XXXX ③ — the per-ending purchase-cost cap. Replaces the ADR-0093 single EUR cap:
+// ADR-0360 ③ — the per-ending purchase-cost cap. Replaces the ADR-0093 single EUR cap:
 // every offered ending carries its own NET cap (domain_tld.max_cost) in the registrar's
 // currency, and the registrar's live NET price is compared with it in that SAME currency —
 // no FX (ADR-0103 ④'s conversion was a workaround for a cap kept in EUR).
@@ -26,7 +26,7 @@ export class CostCapRefusal extends Error {
 export async function assertUnderCostCap(domain: string): Promise<void> {
   await loadPricing();
   const cap = domainCostCap(domain);
-  if (!cap) throw new CostCapRefusal(`a(z) ${domain} végződését nem kínáljuk (ADR-XXXX ③) — a vásárlás nem indult el`);
+  if (!cap) throw new CostCapRefusal(`a(z) ${domain} végződését nem kínáljuk (ADR-0360 ③) — a vásárlás nem indult el`);
   const price = await getRegistrar().getYearlyNetPrice(domain);
   if (price.currency.toUpperCase() !== cap.currency.toUpperCase()) {
     throw new CostCapRefusal(
@@ -36,7 +36,7 @@ export async function assertUnderCostCap(domain: string): Promise<void> {
   }
   if (price.amount > cap.max) {
     throw new CostCapRefusal(
-      `ár-plafon (ADR-XXXX ③): a(z) ${domain} éves nettó díja ${price.amount} ${price.currency} — ` +
+      `ár-plafon (ADR-0360 ③): a(z) ${domain} éves nettó díja ${price.amount} ${price.currency} — ` +
         `a végződés plafonja ${cap.max} ${cap.currency}, a vásárlás nem indult el`,
     );
   }

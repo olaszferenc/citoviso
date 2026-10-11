@@ -822,11 +822,11 @@ export function pricingPage(
   trial: { readonly cfg: FreeTrialConfig; readonly running: number } = { cfg: FREE_TRIAL_CONFIG_DEFAULT, running: 0 },
   /** ADR-0346: the ONE coupon (first payment or trial start) + the unused coupons out now. */
   coupon: { readonly cfg: CouponConfig; readonly live: number } = { cfg: COUPON_CONFIG_DEFAULT, live: 0 },
-  /** ADR-XXXX ①: the package composition (module → lowest tier). */
+  /** ADR-0360 ①: the package composition (module → lowest tier). */
   assignment: ReadonlyMap<string, Tier> = seedAssignment(),
 ): string {
   const lang = consoleLang();
-  // ADR-XXXX ⑦ — frozen plan assets/design-refs/console/pricing-redesign/ (A): head, market
+  // ADR-0360 ⑦ — frozen plan assets/design-refs/console/pricing-redesign/ (A): head, market
   // tabs, overview, section jumps, then the panels; the lead-offer / trial / coupon sections
   // keep their own fields and scripts, wrapped as panels.
   const extras = { assignment, disabledSales, liveCounts, trialPackage: trial.cfg.package ?? null };
@@ -883,7 +883,7 @@ function escalationSection(
 ): string {
   // The worked example uses a REAL package price (the middle tier) — only on the HU
   // page, where the package prices are honest (see tierBlock).
-  // ADR-XXXX ①: the CURRENT tiers, smallest first.
+  // ADR-0360 ①: the CURRENT tiers, smallest first.
   const tiers = [...currentPresets()].reverse();
   const mid = tiers[Math.min(1, tiers.length - 1)];
   const example =

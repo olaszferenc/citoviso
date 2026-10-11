@@ -166,7 +166,7 @@ export async function domainFeeForRenewal(
   if (!["registered", "dns_pending", "tls_pending", "live"].includes(site.custom_domain_status))
     return null;
 
-  // ADR-XXXX: per ending, and 0 while the tenant's modules are package content — so a
+  // ADR-0360: per ending, and 0 while the tenant's modules are package content — so a
   // tenant who downgrades below the domain-carrying package starts paying the fee on the
   // next cycle, and one who upgrades stops. The off-sale modules cannot be bought, so they
   // do not count against the set (the same reading the order path uses).

@@ -1685,7 +1685,7 @@
   // a temporary discount must not buy a lasting entitlement (owner: "kedvezmények
   // nélkül"). An old manifest without minPackageMonthly degrades to "not offered".
   //
-  // ADR-XXXX (mirrored from pricing.ts): the fee is per ENDING (DOM.tlds), and it is 0 when
+  // ADR-0360 (mirrored from pricing.ts): the fee is per ENDING (DOM.tlds), and it is 0 when
   // the selection covers the lowest domain-carrying package (DOM.pkgModules — null when the
   // market does not offer the domain as package content) and the ending is marked
   // free-in-package. A threshold of 0 means "no threshold", not "not offered".
@@ -1792,7 +1792,7 @@
     // custom option is selected — the buyer must see what the hűségidő binds them to.
     var termsEl = panel.querySelector(".cit-cfg-dterms");
     if (termsEl) {
-      // ADR-XXXX: package content (fee 0) and "no threshold" (no package floor) each get
+      // ADR-0360: package content (fee 0) and "no threshold" (no package floor) each get
       // their own honest sentence; the ADR-0109 sentence stays for the case it describes.
       var outsideFee = DOM.tlds && DOM.tlds.length ? (domainTldOf(domainName) || DOM.tlds[0]).monthly : DOM.customMonthly || 0;
       var noFloor = !(DOM.minPackageMonthly > 0);

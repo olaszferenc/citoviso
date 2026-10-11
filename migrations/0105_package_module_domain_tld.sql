@@ -1,4 +1,4 @@
--- 0105 A CSOMAGOK ÖSSZETÉTELE ÉS A DOMAIN-VÉGZŐDÉSEK — ADATKÉNT (ADR-XXXX, tulaj, 2026-10-11).
+-- 0105 A CSOMAGOK ÖSSZETÉTELE ÉS A DOMAIN-VÉGZŐDÉSEK — ADATKÉNT (ADR-0360, tulaj, 2026-10-11).
 --
 -- package_module: melyik modul melyik csomagtól jár. Egy modulnak legfeljebb EGY sora van,
 -- a LEGALACSONYABB csomaggal; a magasabbak öröklik (az egymásra épülés így szerkezeti).
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS package_module (
 );
 
 COMMENT ON TABLE package_module IS
-  'ADR-XXXX: modul → a legalacsonyabb csomag, amelyben benne van (a magasabbak öröklik). Üres = kód-seed.';
+  'ADR-0360: modul → a legalacsonyabb csomag, amelyben benne van (a magasabbak öröklik). Üres = kód-seed.';
 
 -- domain_tld: piaconként a kínált végződések. Kínálni csak mért árú, plafon alatti végződést
 -- lehet (a konzol és a mentés is ellenőrzi). A beszerzési ár NETTÓ, a regisztrátor pénznemében.
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS domain_tld (
 );
 
 COMMENT ON TABLE domain_tld IS
-  'ADR-XXXX: piac × végződés — kínáljuk-e, mért nettó beszerzési ár, plafon, havidíj csomagon kívül, csomagban ingyen-e.';
+  'ADR-0360: piac × végződés — kínáljuk-e, mért nettó beszerzési ár, plafon, havidíj csomagon kívül, csomagban ingyen-e.';
 
 -- Az „Ingyen domain csomagban” kapcsoló piaconként. Alap: KI — a mai (ADR-0109) viselkedés
 -- marad, amíg a tulaj be nem kapcsolja.

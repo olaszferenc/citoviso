@@ -54,7 +54,7 @@ export async function quoteDomainUpgrade(
   // ADR-0109 ②/⑧: eligibility on the LIST monthly total — below the threshold we
   // do not sell the domain at all, so there is no quote to give (the caller shows
   // the condition instead of a price the buyer cannot act on).
-  // ADR-XXXX: only an OFFERED ending is quoted, and package content is eligible regardless
+  // ADR-0360: only an OFFERED ending is quoted, and package content is eligible regardless
   // of the threshold (its fee is then 0).
   if (!offeredTldOf(norm.domain, region)) return null;
   const owned = await renewableModuleIds(tenantId);
@@ -83,7 +83,7 @@ export async function createDomainUpgradeOrder(
 ): Promise<string | null> {
   const quote = await quoteDomainUpgrade(tenantId, rawDomain, region);
   if (!quote) return null;
-  // ADR-XXXX (open item): the purchase runs from the PAID webhook, so a 0 Ft order (the
+  // ADR-0360 (open item): the purchase runs from the PAID webhook, so a 0 Ft order (the
   // domain is package content) has no path to the registrar yet. Refused loudly rather
   // than minting a pay-link nobody can pay; the payment-free claim path is the next round.
   if (!(quote.price > 0)) {
@@ -96,7 +96,7 @@ export async function createDomainUpgradeOrder(
   // provisionDomain.ts before real money moves. The cap guards OUR cost, so it
   // is the DEFAULT region's single knob — same as every other cap call site.
   if (await exceedsCostCap(quote.domain)) {
-    console.warn(`[domain] rendelés elutasítva (végződés-plafon, ADR-XXXX ③): ${quote.domain}`);
+    console.warn(`[domain] rendelés elutasítva (végződés-plafon, ADR-0360 ③): ${quote.domain}`);
     return null;
   }
 
@@ -152,7 +152,7 @@ export async function createDomainUpgradeOrder(
       commitment_months: quote.commitmentMonths,
       // ADR-0094 ④ / ADR-0109 ④: EVERY custom-domain order freezes the package
       // floor at order time — the entry threshold is what the hűségidő protects.
-      // ADR-XXXX ④: a threshold of 0 = no threshold, and then no floor either.
+      // ADR-0360 ④: a threshold of 0 = no threshold, and then no floor either.
       committed_min_monthly: getDomainMinPackageMonthly(region) > 0 ? getDomainMinPackageMonthly(region) : null,
       price: quote.price,
       // ADR-0109 ①: the fee is monthly, so the upgrade order is a monthly one —

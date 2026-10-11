@@ -1,4 +1,4 @@
-// Package composition (ADR-XXXX ①②) — PURE logic, no DB. pricing.ts owns the loaded
+// Package composition (ADR-0360 ①②) — PURE logic, no DB. pricing.ts owns the loaded
 // state and the persistence; this file answers "what does each tier contain?", "is this
 // assignment valid?" and "does this module set carry the domain?" from an assignment map.
 //

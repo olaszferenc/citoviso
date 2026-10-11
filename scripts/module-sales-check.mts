@@ -189,7 +189,7 @@ try {
       // modul csempéje is viselje a jelölést (feedback_label_must_derive_from_predicate).
       // ⛔ Csempénként mérve, nem a lap egészén: egy lapszintű `includes` a
       // KIKAPCSOLT modul jelölésétől is zöld lenne, a magával vitt nélkül.
-      // ADR-XXXX ⑦ (pricing redesign): the tier chips are the package panel's pills now; the
+      // ADR-0360 ⑦ (pricing redesign): the tier chips are the package panel's pills now; the
       // mark is the `is-stop` class + „nem eladó”, derived from the same closure as the price.
       const chips = [...html2.matchAll(/<span class="(pr2-pl[^"]*)"[^>]*>([\s\S]*?)<\/span>/g)].map(
         (x) => ({ cls: x[1]!, body: x[2]! }),

@@ -3,7 +3,7 @@
 **Jóváhagyva:** 2026-10-11, tulaj, három körben: (1) csomag × modul húzással, A — oszlopok
 („legyen az A”); (2) „teljes redesign a nyitóoldal és report felület szerint”; (3) elrendezés:
 „A verzió” (egy oldal, szakasz-ugrókkal — a B „fülek” elvetve).
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0109 (saját cím — a ③ „nincs ingyen-ág” itt
+**Kapcsolódó:** ADR-0360 (ez a döntés), ADR-0109 (saját cím — a ③ „nincs ingyen-ág” itt
 paraméterré válik), ADR-0103 (regisztrátor), ADR-0192 (modul-függőségek), ADR-0233 (konzol-keret),
 ADR-0322 (riport-nyelv), ADR-0342/0354 (próba), ADR-0346 (kupon), ADR-0285/0286 (lead-ajánlatok).
 **Felülírja:** `pricing-sales/` 2. pont (kétoszlopos modulrács, „csík nélkül”) — a modulok tábla

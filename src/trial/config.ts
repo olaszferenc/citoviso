@@ -17,7 +17,7 @@ export interface FreeTrialConfig {
   /** Trial length in days. */
   readonly days: number;
   /**
-   * ADR-XXXX ⑥: which package's contents the trial grants. Absent = the pre-ADR rule
+   * ADR-0360 ⑥: which package's contents the trial grants. Absent = the pre-ADR rule
    * (every non-retired catalog module), so a stored row from before keeps its behaviour
    * until the operator saves the section.
    */
@@ -108,7 +108,7 @@ export function freeTrialFromForm(
     const s = raw.trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", ".");
     return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : Number.NaN;
   };
-  // ADR-XXXX ⑥: an older tab without the select keeps the stored package.
+  // ADR-0360 ⑥: an older tab without the select keeps the stored package.
   const pkg = form.get("trial_package");
   return {
     enabled: form.get("trial_on") === "on",

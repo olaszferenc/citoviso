@@ -3269,7 +3269,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rpm-legend { font-size: 11.5px; color: var(--citui-muted); margin-top: 8px; }
 .rpm-legend .rpm-dots i { vertical-align: -1px; }
 
-/* ── Árazás és értékesítés — redesign (ADR-XXXX ⑦; frozen plan
+/* ── Árazás és értékesítés — redesign (ADR-0360 ⑦; frozen plan
    assets/design-refs/console/pricing-redesign/, A). Konzol-keret + riport-panelek;
    the existing .pr-field/.pr-input/.pr-esc/.con-sell pieces are reused inside. ── */
 .con form.pr2 { display: block; max-width: 1080px; container-type: inline-size; } /* (0,2,1) beats `.con form { display: inline }` — an inline box cannot be a size container */

@@ -165,11 +165,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // domainEmail.ts-ben él, ami RAJTA VAN az I18N_SOURCES listán.
   "src/domains/provisionDomain.ts":
     "beszerzés-napló és dobott hibák — operátor látja; a tenant-szöveg a domainEmail.ts-ben van",
-  // ADR-XXXX: a végződésenkénti vétel-plafon — ugyanaz a helyzet, mint a provisionDomain.ts-nél:
+  // ADR-0360: a végződésenkénti vétel-plafon — ugyanaz a helyzet, mint a provisionDomain.ts-nél:
   // a magyar szövegek a dobott CostCapRefusal üzenetei (beszerzés-napló, operátor látja).
   "src/domains/costCap.ts":
     "vétel-plafon dobott hibái — beszerzés-napló, operátor látja; a tenant-szöveg a domainEmail.ts-ben van",
-  // ADR-XXXX: a tldRowErrors() magyar sorai a /pricing POST elutasításának NAPLÓ-okai
+  // ADR-0360: a tldRowErrors() magyar sorai a /pricing POST elutasításának NAPLÓ-okai
   // (console.warn); az operátornak a T()-burkolt redirect-üzenet szól, vevőhöz sosem jut.
   "src/pricing.ts":
     "végződés-tábla validáció naplóokai — console.warn, operátori; vevőhöz nem jut",

@@ -31,7 +31,7 @@ export interface RegistrarAdapter {
    */
   getYearlyPriceEur(domain: string): Promise<number>;
   /**
-   * ADR-XXXX ③: the yearly NET registration price in the REGISTRAR's own currency — the
+   * ADR-0360 ③: the yearly NET registration price in the REGISTRAR's own currency — the
    * per-ending cap (domain_tld.max_cost) is compared with this in the same currency, no FX.
    * MUST throw when the price cannot be determined (no price, no buy — §B.17).
    */

@@ -173,7 +173,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * ADR-XXXX ③: the NET yearly price in HUF (measured 2026-10-11: `.hu` 1 990, `.eu` 2 499,
+   * ADR-0360 ③: the NET yearly price in HUF (measured 2026-10-11: `.hu` 1 990, `.eu` 2 499,
    * `.com` 4 899) — the per-ending cap is set in the same unit, so no FX is involved.
    */
   async getYearlyNetPrice(domain: string): Promise<{ readonly amount: number; readonly currency: string }> {
