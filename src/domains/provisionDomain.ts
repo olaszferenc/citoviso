@@ -6,7 +6,7 @@
 //   pending → registering → registered → dns_pending → tls_pending → live   (+ failed)
 //   registered/dns_pending/tls_pending ──(DNS/TLS error)──▶ setup_retry ──(timer)──▶ registered …
 //
-// ADR-XXXX (Elek 10-11): `failed` means "we could NOT buy the name" (the hold is released).
+// ADR-0362 (Elek 10-11): `failed` means "we could NOT buy the name" (the hold is released).
 // Once the registrar sold it to us the name is the tenant's and the money is taken, so a
 // later DNS/TLS error is `setup_retry` — retried by the resume timer, the operator alerted —
 // never "someone else took it". And a tenant has at most ONE domain order in flight: a
@@ -56,7 +56,7 @@ export type DomainProvisioningStatus =
   | "registered"
   | "dns_pending"
   | "tls_pending"
-  /** ADR-XXXX: bought + paid, the DNS/TLS setup failed and is being retried. */
+  /** ADR-0362: bought + paid, the DNS/TLS setup failed and is being retried. */
   | "setup_retry"
   | "live"
   | "failed";
@@ -179,7 +179,7 @@ async function siteIsLive(siteId: string): Promise<boolean> {
 }
 
 /**
- * ADR-XXXX (Elek B2): the operator alert for a bought-and-paid name whose DNS/TLS setup
+ * ADR-0362 (Elek B2): the operator alert for a bought-and-paid name whose DNS/TLS setup
  * failed — through the house alert channel (ADR-0279: "[TESZT]" off the live host).
  * Operator text — outside the §B.18 buyer-facing i18n scope.
  */
@@ -202,7 +202,7 @@ async function alertSetupRetry(domain: string, tenantId: string, error: string):
  * payment webhook `paid` branch — the FIZETÉS is the trigger, no human approval.
  *
  * Idempotent per ORDER: a re-delivered webhook of the same order gets its own running row
- * back. ADR-XXXX (Elek B1): a DIFFERENT order is refused (null) when the site already has
+ * back. ADR-0362 (Elek B1): a DIFFERENT order is refused (null) when the site already has
  * a live domain or another running beszerzés — the caller then releases that order's hold.
  * Two partial unique indexes (per domain, per site) back this against parallel webhooks;
  * losing that race is the same refusal, never a raw `duplicate key` and a stuck hold.
@@ -438,7 +438,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
     return status;
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
-    // ADR-XXXX (Elek B2): AFTER the purchase the name is the tenant's and the hold was
+    // ADR-0362 (Elek B2): AFTER the purchase the name is the tenant's and the hold was
     // captured — this is a setup delay, not a failed purchase. Retried by the timer from
     // `registered`; alerted and told to the tenant ONCE (on entering the state).
     if (registrarRef) {

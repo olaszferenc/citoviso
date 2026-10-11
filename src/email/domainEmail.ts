@@ -105,7 +105,7 @@ export function buildDomainFailedEmail(input: {
 }
 
 /**
- * ADR-XXXX (Elek B2): the name IS bought (and paid for), only the address/certificate
+ * ADR-0362 (Elek B2): the name IS bought (and paid for), only the address/certificate
  * setup is late. Saying "someone else took it" here would be false twice over — the
  * name is the tenant's and the money was taken for it (§B.17 on ourselves).
  */

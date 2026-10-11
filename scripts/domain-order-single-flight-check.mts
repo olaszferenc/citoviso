@@ -1,4 +1,4 @@
-// Regression guard for the OWN-DOMAIN ORDER fixes of the Elek 10-11 round (ADR-XXXX).
+// Regression guard for the OWN-DOMAIN ORDER fixes of the Elek 10-11 round (ADR-0362).
 //
 // WHAT IT PROVES (each block names the Elek finding it closes):
 //   B1  a tenant has at most ONE own-domain order alive. Two orders paid one after the
@@ -22,7 +22,7 @@
 //
 // The behaviour blocks run against the REAL modules on a throwaway database (mock
 // registrar / DNS / gateway / invoice / mail). Measured against the code before this
-// round (ADR-XXXX): B1 (sequential + parallel), B2, B3, B4 and K1 go RED there.
+// round (ADR-0362): B1 (sequential + parallel), B2, B3, B4 and K1 go RED there.
 //
 // Run:  npx tsx scripts/domain-order-single-flight-check.mts
 

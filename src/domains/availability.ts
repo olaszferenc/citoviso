@@ -44,7 +44,7 @@ function registrarOracle(): WebsupportRegistrar | null {
 }
 
 /**
- * ADR-XXXX (Elek IT-kör K6): which oracle answers. A MOCK registrar implies the mock oracle —
+ * ADR-0362 (Elek IT-kör K6): which oracle answers. A MOCK registrar implies the mock oracle —
  * before, only DOMAIN_AVAILABILITY_SOURCE=mock switched it off, so a mock-registrar test run
  * with dev keys in the env called the real registrar API. The real (read-only) oracle next
  * to a mock registrar is an explicit opt-in: DOMAIN_AVAILABILITY_SOURCE=registrar.

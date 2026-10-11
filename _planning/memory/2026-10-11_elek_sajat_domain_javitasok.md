@@ -1,7 +1,7 @@
 # 2026-10-11 — Elek 10-11 saját domain kör: javítások (B1–B5, K1–K6, A1–A4)
 
 **Szál:** SUB `cit8a5530e0` (koordinátor: „Elek-teszt koordinátor”, `cit333dea6d`). Brief: `~/rc-briefs/domain-javitasok-elek-20261011.md`.
-**ADR:** `ADR-XXXX` — saját domain: egy rendelés tenantonként, `setup_retry`, `www` → 301, mock regisztrátor ⇒ mock orákulum.
+**ADR:** `ADR-0362` — saját domain: egy rendelés tenantonként, `setup_retry`, `www` → 301, mock regisztrátor ⇒ mock orákulum.
 **Commit:** `fix(domain): Elek 10-11 saját domain kör …` (247bf203 a fában). Migráció: `0106_domain_order_single_flight.sql`
 (a dev `citoviso_dev`-re kézzel lefuttatva; élesen olvasva: ütköző sor nincs). Nem élesítve.
 

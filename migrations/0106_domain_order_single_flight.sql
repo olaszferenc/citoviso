@@ -1,4 +1,4 @@
--- 0106 SAJÁT DOMAIN: egy tenantnak egy rendelés, és a vétel utáni hiba NEM bukás (ADR-XXXX, Elek 10-11 B1/B2/B5).
+-- 0106 SAJÁT DOMAIN: egy tenantnak egy rendelés, és a vétel utáni hiba NEM bukás (ADR-0362, Elek 10-11 B1/B2/B5).
 --
 -- ① `setup_retry` — a név MEGVÉVE (és a zárolt összeg lehívva), de a DNS/TLS-beállítás
 --    elakadt. Ez NEM `failed`: a cím a tenanté, a beállítás folyamatban, a resume-időzítő
@@ -34,4 +34,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS domain_provisioning_active_site_idx
 ALTER TABLE order_intent ADD COLUMN IF NOT EXISTS platform_label text;
 
 COMMENT ON COLUMN order_intent.platform_label IS
-  'ADR-XXXX (Elek B5): a saját domain mellé választott platform-címke (<címke>.citoviso.com); az aktiválás erre nevezi át a site-ot.';
+  'ADR-0362 (Elek B5): a saját domain mellé választott platform-címke (<címke>.citoviso.com); az aktiválás erre nevezi át a site-ot.';

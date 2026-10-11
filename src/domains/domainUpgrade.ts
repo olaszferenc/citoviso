@@ -77,7 +77,7 @@ export async function quoteDomainUpgrade(
 export const DOMAIN_PAY_WINDOW_MINUTES = 30;
 
 /**
- * ADR-XXXX (Elek B1): a tenant has at most ONE own-domain order alive — live, running,
+ * ADR-0362 (Elek B1): a tenant has at most ONE own-domain order alive — live, running,
  * held (reserved) or being paid. What blocks a new one:
  *   live / running / reserved → the Webcím tab shows that state, no second order;
  *   paying → an unpaid pay-link younger than DOMAIN_PAY_WINDOW_MINUTES (same name: the

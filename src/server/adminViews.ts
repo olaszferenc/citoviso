@@ -3892,7 +3892,7 @@ function progressDone(status: string): number {
     case "registering":
       return 0;
     case "registered":
-    case "setup_retry": // ADR-XXXX: bought, the setup is being retried
+    case "setup_retry": // ADR-0362: bought, the setup is being retried
       return 1;
     case "dns_pending":
       return 2;
@@ -3916,7 +3916,7 @@ export interface DomainViewState {
   readonly pickedAvailability?: WebcimAvailability;
   /** ADR-0251: „Másik név választása" after a released failure → back to step 1. */
   readonly restart?: boolean;
-  /** ADR-XXXX (ISMERT row): a package-content name was asked for — handled by hand. */
+  /** ADR-0362 (ISMERT row): a package-content name was asked for — handled by hand. */
   readonly manual?: boolean;
 }
 
@@ -3954,7 +3954,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     const bought = progressDone(d.status) >= 1;
     const amt = d.moneyAmount !== null ? money(d.moneyAmount, d.currency) : "";
     const slow = /\.hu$/i.test(d.activeDomain ?? "");
-    // ADR-XXXX (Elek B2): bought + charged, the setup failed once and is being retried —
+    // ADR-0362 (Elek B2): bought + charged, the setup failed once and is being retried —
     // the name is theirs, nothing for them to do (never "someone else took it").
     const setupSub = d.status === "setup_retry"
       ? T(lang, "A vártnál tovább tart — automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője.")

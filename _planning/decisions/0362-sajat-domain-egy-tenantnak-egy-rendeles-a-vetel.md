@@ -1,4 +1,4 @@
-## ADR-XXXX — Saját domain: egy tenantnak egy rendelés, a vétel utáni hiba „setup_retry” (nem bukás), `www.<domain>` → 301
+## ADR-0362 — Saját domain: egy tenantnak egy rendelés, a vétel utáni hiba „setup_retry” (nem bukás), `www.<domain>` → 301
 
 **Dátum:** 2026-10-11 · **Kontextus:** Elek 10-11 SAJÁT DOMAIN köre (B1/B2/K5 koordinátori döntések, a
 tulaj Elek-teszt koordinátorán át). **Kiegészíti:** ADR-0071 (beszerzés-állapotgép), ADR-0251 (kártyazárolás),

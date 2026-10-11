@@ -331,7 +331,7 @@ export async function handleWebhook(
     if (known.reservation && known.kind === "domain_upgrade" && known.status === "pending") {
       if (await markDomainReserved(known.id)) await fireReservedDomainProvisioning(known.orderIntentId);
     }
-    // ADR-XXXX (Elek B1): a SUPERSEDED pay-link (the buyer picked another name meanwhile)
+    // ADR-0362 (Elek B1): a SUPERSEDED pay-link (the buyer picked another name meanwhile)
     // that was completed anyway — its hold must not sit on the card for 7 days.
     if (known.reservation && known.kind === "domain_upgrade" && known.status === "cancelled") {
       await releaseStrayDomainHold(known.id, known.orderIntentId);
@@ -1107,7 +1107,7 @@ async function applyDomainReservationResult(
   res: import("./gateway.js").WebhookResult,
 ): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
   if (payment.status === "paid") return { ok: true, activated: true, alreadySettled: true };
-  // ADR-XXXX (Elek B1): a superseded pay-link completed anyway → give the hold back.
+  // ADR-0362 (Elek B1): a superseded pay-link completed anyway → give the hold back.
   if (payment.status === "cancelled") {
     if (res.status === "paid") await releaseStrayDomainHold(payment.id, payment.order_intent_id);
     return { ok: true, activated: false, alreadySettled: true };
@@ -1207,7 +1207,7 @@ export async function releaseDomainReservation(orderIntentId: string): Promise<b
 }
 
 /**
- * ADR-XXXX (Elek B1): release the hold of a domain payment that must never be captured —
+ * ADR-0362 (Elek B1): release the hold of a domain payment that must never be captured —
  * a superseded pay-link completed anyway. Marked `released` first (the ADR-0251 order),
  * then cancelled at the gateway.
  */
@@ -1257,7 +1257,7 @@ export async function settleDomainReservations(): Promise<{ captured: number; re
       if (await releaseDomainReservation(r.orderIntentId)) released++;
     }
   }
-  // ADR-XXXX (Elek B1): a hold whose order never got a beszerzés row (refused as a second
+  // ADR-0362 (Elek B1): a hold whose order never got a beszerzés row (refused as a second
   // order for the tenant, or a crash between the hold and the row) — nothing will ever
   // register it, so it is given back instead of blocking the buyer's money for 7 days.
   const orphans = await db
@@ -1282,7 +1282,7 @@ export async function settleDomainReservations(): Promise<{ captured: number; re
  * then always finds a registration in flight.
  */
 async function fireReservedDomainProvisioning(orderIntentId: string): Promise<void> {
-  // ADR-XXXX (Elek B1): null also when the tenant already has a live or running domain
+  // ADR-0362 (Elek B1): null also when the tenant already has a live or running domain
   // order (a second tab / parallel webhook) — that hold is released, nothing registered.
   const id = await startOrderDomainProvisioning(orderIntentId).catch((e) => {
     console.error(`[domain] beszerzés-indítás HIBA (${orderIntentId}):`, e);

@@ -353,7 +353,7 @@ async function readFormBody(req: http.IncomingMessage): Promise<URLSearchParams>
   return new URLSearchParams(await readRawBody(req));
 }
 
-/** One own-domain order submission at a time per tenant (ADR-XXXX, Elek B1). */
+/** One own-domain order submission at a time per tenant (ADR-0362, Elek B1). */
 const domainOrderLocks = new Map<string, Promise<void>>();
 async function domainOrderLock(tenantId: string): Promise<() => void> {
   const prev = domainOrderLocks.get(tenantId) ?? Promise.resolve();
@@ -584,7 +584,7 @@ interface TenantHostSite {
   /** ADR-0356: the request arrived on a FORMER slug of the site (site_slug_alias) — GET/HEAD
    *  301 to the site's current address; anything else is served in place. */
   readonly viaAlias?: boolean;
-  /** ADR-XXXX (Elek K5): the request arrived on `www.<custom domain>` — GET/HEAD 301 to the
+  /** ADR-0362 (Elek K5): the request arrived on `www.<custom domain>` — GET/HEAD 301 to the
    *  bare custom domain (the zone points `www` at us too, ADR-0103 ③). */
   readonly viaWww?: boolean;
 }
@@ -647,7 +647,7 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
     .executeTakeFirst();
   if (row) return { ...row, viaSlug: !!label } as TenantHostSite;
   if (label) return resolveAliasSite(label);
-  // ADR-XXXX (Elek K5): `www.<custom domain>` is the same site — answered with a 301 to the
+  // ADR-0362 (Elek K5): `www.<custom domain>` is the same site — answered with a 301 to the
   // bare name (one canonical host), not with our marketing page. Any OTHER unknown host
   // keeps today's behaviour (falls through to the platform routing).
   if (host.startsWith("www.")) {
@@ -2209,7 +2209,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return void res.end();
     }
   }
-  // ADR-XXXX (Elek K5): www.<custom domain> → the bare custom domain, path + query kept.
+  // ADR-0362 (Elek K5): www.<custom domain> → the bare custom domain, path + query kept.
   // Same POST rule as the alias: served in place, never turned into a GET.
   if (tenantSite?.viaWww && tenantSite.customDomain && (req.method === "GET" || req.method === "HEAD")) {
     res.writeHead(301, { Location: `https://${tenantSite.customDomain}${pathname}${url.search}` });
@@ -2768,7 +2768,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // "free" goes back to the review step, which re-checks and says why — we never
     // open a payment for a name we do not know to be buyable this minute.
     const wantedNorm = normalizeCustomDomain(wanted);
-    // ADR-XXXX (Elek B1): ONE own-domain order per tenant. Serialized per tenant in this
+    // ADR-0362 (Elek B1): ONE own-domain order per tenant. Serialized per tenant in this
     // process, so a double click / two tabs cannot both pass the check below; the paid
     // side (startDomainProvisioning + two unique indexes) is the last line behind it.
     const release = await domainOrderLock(session.tenantId);
