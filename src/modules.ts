@@ -76,7 +76,7 @@ export interface ModuleDef {
    *  fabricated facts (§B.17): describes what the module does, never lead data. */
   readonly publicDesc: string;
   /** Prospect-facing "what comes with it" line, shown UNDER the module name in the
-   *  configurator while the module is on (ADR-XXXX, plan „portal-sync” A). `tags` are
+   *  configurator while the module is on (ADR-0361, plan „portal-sync” A). `tags` are
    *  proper names (portal brands), never translated; only verified claims (§B.17). */
   readonly publicIncl?: { readonly label: string; readonly tags: readonly string[] };
   /** Prospect-facing group. */

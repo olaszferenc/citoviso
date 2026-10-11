@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-portal-naptar-szinkron-ical-elso-kor.md) — Portál-naptárszinkron iCal-lal, első kör: a foglalási modul része, ár nélkül; channel manager API később
+- [ADR-0361](decisions/0361-portal-naptarszinkron-ical-lal-elso-kor-a.md) — Portál-naptárszinkron iCal-lal, első kör: a foglalási modul része, ár nélkül; channel manager API később
 - [ADR-0360](decisions/0360-arazas-a-csomagok-osszetetele-szerkesztheto-a.md) — Árazás: a csomagok összetétele szerkeszthető, a saját domain csomag-tartalom lehet, végződésenkénti díjjal; kötelező platform-cím; a próba csomagja paraméter
 - [ADR-0359](decisions/0359-proba-amit-az-urlap-kiir-azt-rogziti-a-proba-a.md) — Próba: amit az űrlap kiír, azt rögzíti a próba; a T−3 és a T−1 értesítő mindig kimegy
 - [ADR-0358](decisions/0358-a-terv-link-p-token-a-tulajdonos-lead-mostani.md) — A terv-link (`/p/<token>`) a tulajdonos lead MOSTANI oldalát mutatja, nem a kiküldött mockot

@@ -171,7 +171,7 @@
       '<p class="cit-book__title">' + SVG_CAL + "<span>" + tr("Foglalás") + "</span>" +
       (demo ? '<span class="cit-book__demo">' + tr("MINTA — kipróbálható") + "</span>" : "") +
       "</p>" +
-      // ADR-XXXX (plan „portal-sync” A): on the SAMPLE widget only — the reader of a
+      // ADR-0361 (plan „portal-sync” A): on the SAMPLE widget only — the reader of a
       // mock is the owner, and his hesitation is "egy második naptár a portálom
       // mellett". Never on a live page: a guest has no use for it. Calendar only,
       // the price stays on the portal — the sentence says so (§B.17).
@@ -289,7 +289,7 @@
     var countEl = form.querySelector("[data-guests]");
     var guests = 2;
     var blocked = {};
-    var portalDays = {}; // demo only: sample portal-booked nights (ADR-XXXX)
+    var portalDays = {}; // demo only: sample portal-booked nights (ADR-0361)
     var pricing = null; // {currency, unit, rows} — live price list from the availability API
 
     form.querySelectorAll(".cit-book__step").forEach(function (btn) {
@@ -594,7 +594,7 @@
      *  taken ranges relative to today, different per unit so switching units visibly
      *  changes the calendar. Never a claim about the real property (the whole widget
      *  is MINTA-labelled and the legend says "minta-foglaltság"). */
-    /** The SAMPLE nights shown as "a portálon foglalták" (ADR-XXXX): the middle band of
+    /** The SAMPLE nights shown as "a portálon foglalták" (ADR-0361): the middle band of
      *  demoBlocked, so the owner sees a portal booking closing a night on his own page. */
     function demoPortal(unitId) {
       var idx = 0;

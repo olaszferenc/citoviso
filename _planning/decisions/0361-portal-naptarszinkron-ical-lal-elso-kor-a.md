@@ -1,4 +1,4 @@
-## ADR-XXXX — Portál-naptárszinkron iCal-lal, első kör: a foglalási modul része, ár nélkül; channel manager API később
+## ADR-0361 — Portál-naptárszinkron iCal-lal, első kör: a foglalási modul része, ár nélkül; channel manager API később
 
 **Dátum:** 2026-10-11 · **Státusz:** elfogadva (tulaj-irány 2026-10-11: „első kör iCal… aztán majd ha jönnek a tenantek
 és megrendelések akkor döntök a további fejlesztésről”); felület jóváhagyva 2026-10-11 („A + 1”, szöveges jelvény) ·

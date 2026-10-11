@@ -352,7 +352,7 @@
 .cit-book__lg--free { background: var(--cit-bg); }
 .cit-book__lg--busy { background: color-mix(in srgb, var(--cit-muted) 30%, transparent); }
 .cit-book__legend .cit-book__lg--busy { margin-left: 8px; }
-/* ADR-XXXX (plan „portal-sync” A) — SAMPLE widget only: the portal-sync strip and the
+/* ADR-0361 (plan „portal-sync” A) — SAMPLE widget only: the portal-sync strip and the
    "a portálon foglalták" nights. Skin tokens only, so it sits inside every template. */
 .cit-book__day--portal {
   background: color-mix(in srgb, var(--cit-accent) 22%, transparent);

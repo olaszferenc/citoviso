@@ -1477,7 +1477,7 @@
     rowsById[mod.id] = r;
     var wrap = el('<div class="cit-cfg-rowbox"></div>');
     wrap.appendChild(r);
-    // ADR-XXXX (plan „portal-sync” A): what comes WITH the module, visible without the
+    // ADR-0361 (plan „portal-sync” A): what comes WITH the module, visible without the
     // (i) — the lead's real hesitation is "egy második naptár", and the answer belongs
     // under the row. Its OWN line right after the row (inside the name column it
     // overlapped the (i) and the tag at 390 px — measured); hidden while the row is off.

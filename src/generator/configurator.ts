@@ -269,7 +269,7 @@ export interface ConfiguratorManifest {
     readonly label: string;
     /** Prospect-facing one-line description (info icon in the panel). */
     readonly desc: string;
-    /** "What comes with it" line under the name while on (ADR-XXXX); tags = portal names. */
+    /** "What comes with it" line under the name while on (ADR-0361); tags = portal names. */
     readonly incl?: { readonly label: string; readonly tags: readonly string[] };
     readonly group: string;
     readonly present: boolean;

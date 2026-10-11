@@ -375,7 +375,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .plink--bad{border-color:color-mix(in srgb,var(--citui-warn) 50%,transparent);
   background:color-mix(in srgb,var(--citui-warn) 8%,transparent)}
 
-/* ── portal sync cards (ADR-XXXX, plan „portal-sync” variant 1) ─────── */
+/* ── portal sync cards (ADR-0361, plan „portal-sync” variant 1) ─────── */
 .psync{display:grid;grid-template-columns:1fr;gap:10px;container-type:inline-size}
 @container (min-width:760px){.psync{grid-template-columns:1fr 1fr;align-items:start}}
 .psync__card{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px;background:var(--citui-panel)}
@@ -1060,7 +1060,7 @@ function moduleHeader(
 
 /**
  * Portal calendar sync by iCal link. Dark from 2026-08-21 (ADR-0044: out of scope for
- * the pilot), switched on by ADR-XXXX (tulaj, 2026-10-11): the leads live on portals,
+ * the pilot), switched on by ADR-0361 (tulaj, 2026-10-11): the leads live on portals,
  * and a site that means a second calendar to keep is a chore, not an offer. Calendar
  * only — prices and content stay on the portal, and the card says so (§B.17).
  * Engine: src/booking/sync.ts + ical.ts, hourly import via booking-maintenance.
@@ -2628,7 +2628,7 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
 }
 
 /**
- * The portals the owner can connect by calendar link (ADR-XXXX ⑤). Only portals whose
+ * The portals the owner can connect by calendar link (ADR-0361 ⑤). Only portals whose
  * iCal export AND import is verified are NAMED (§B.17): Booking.com and Airbnb from
  * their official help, Szállás.hu from third-party guides. `provider` is the stored
  * `calendar_link.provider` value; `where` and `steps` are the portal's own menu path
@@ -2815,7 +2815,7 @@ function bookingEditor(
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Naptár mentése")}</button>` +
     `</div></div></div></form></details>` +
 
-    // ② portal connections (ADR-XXXX; approved plan assets/design-refs/console/portal-sync, variant 1)
+    // ② portal connections (ADR-0361; approved plan assets/design-refs/console/portal-sync, variant 1)
     (!PORTAL_SYNC_UI ? "" : portalSyncCard(booking, lang, multi)) +
 
     // ③ units

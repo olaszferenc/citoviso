@@ -806,7 +806,7 @@
 .cit-cfg-row .cit-cfg-name .cit-cfg-label {
   flex: 0 1 auto;
 }
-/* ADR-XXXX (plan „portal-sync” A): the "Benne: naptár-szinkron" line, its own line
+/* ADR-0361 (plan „portal-sync” A): the "Benne: naptár-szinkron" line, its own line
    right UNDER the row (inside the name column it overlapped the (i) and the tag at
    390 px); hidden while the row is off. */
 .cit-cfg-incl {
