@@ -1,5 +1,5 @@
 // Regression gate: a console (operator) session ends — on a password change, when the
-// operator is removed, and after its lifetime (Elek IT-kör B1, 2026-10-11, ADR-XXXX).
+// operator is removed, and after its lifetime (Elek IT-kör B1, 2026-10-11, ADR-0363).
 //
 // WHAT WAS MEASURED (scratch DB, 2026-10-11, `_elek/bin/x-opcookie.mts`): the cookie was
 // `<id>.<hmac(id)>` — no issue time — and the console gate only checked the signature.

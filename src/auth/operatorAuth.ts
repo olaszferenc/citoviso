@@ -58,7 +58,7 @@ function setCookie(res: http.ServerResponse, value: string, maxAgeSec: number): 
  * tool (scripts/ui-shot.mts) can mint a session against its own in-process
  * server without a password round-trip or a DB write.
  *
- * Elek IT-kör B1 (ADR-XXXX): the value carries its ISSUE TIME, signed with the id —
+ * Elek IT-kör B1 (ADR-0363): the value carries its ISSUE TIME, signed with the id —
  * `<id>.<iat ms>.<hmac(id.iat)>`. The gate (verifyOperatorSession) ends it after
  * SESSION_TTL_DAYS, when the operator row is gone, or when the row's
  * sessions_valid_from (password change / reset) is later than `iat`.
@@ -81,7 +81,7 @@ const FUTURE_SKEW_MS = 5 * 60_000;
 
 /**
  * The SIGNED part of the cookie only — id + issue time, no DB. A legacy cookie
- * (`<id>.<hmac(id)>`, before ADR-XXXX) has no issue time and does not read: the
+ * (`<id>.<hmac(id)>`, before ADR-0363) has no issue time and does not read: the
  * format switch logs every operator out once, by design.
  * ⛔ Not a gate on its own — use verifyOperatorSession / currentOperator.
  */
@@ -112,7 +112,7 @@ function sessionLive(iat: number, row: { sessions_valid_from: Date | string | nu
 }
 
 /**
- * The console gate (ADR-XXXX): signature + age + the operator row on EVERY request —
+ * The console gate (ADR-0363): signature + age + the operator row on EVERY request —
  * a deleted operator, or a session older than the last password change, is out.
  * Returns the operator id, or null.
  */
@@ -147,7 +147,7 @@ export async function changeOperatorPassword(
   }
   await db
     .updateTable("operator_user")
-    // ADR-XXXX: the change ends every session issued before it (the caller re-issues its own).
+    // ADR-0363: the change ends every session issued before it (the caller re-issues its own).
     .set({ password_hash: hashPassword(next), sessions_valid_from: new Date() })
     .where("id", "=", operatorUserId)
     .execute();
@@ -182,7 +182,7 @@ export async function currentOperator(
     ])
     .where("id", "=", s.id)
     .executeTakeFirst();
-  // ADR-XXXX: same rule as the gate — a session older than the last password change is over.
+  // ADR-0363: same rule as the gate — a session older than the last password change is over.
   if (!found || !sessionLive(s.iat, found)) return null;
   const { sessions_valid_from: _cut, ...row } = found;
   // ADR-0067 ③: the ONE place the operator is loaded is the one place that can

@@ -6,7 +6,7 @@
 Élesre semmi nem ment.
 
 ## Mi készült
-- **B1 — az operátor-munkamenet véget ér** (ADR-XXXX): süti `<id>.<iat>.<hmac>`; a konzol-kapu minden kérésnél
+- **B1 — az operátor-munkamenet véget ér** (ADR-0363): süti `<id>.<iat>.<hmac>`; a konzol-kapu minden kérésnél
   az `operator_user` sort nézi (létezik + `sessions_valid_from`, migráció 0106) — jelszócsere kiléptet (a cserélő
   böngésző új sütit kap), törölt operátor → /login, 30 nap után lejár. **Az átállás egyszer MINDEN operátort kiléptet**
   (digitális kollégák is — jelszófájllal újra be tudnak lépni). Őr: `operator-session-check`.

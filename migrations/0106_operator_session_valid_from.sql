@@ -1,4 +1,4 @@
--- 0106 operator sessions end on a password change / account removal (Elek IT-kör B1, ADR-XXXX).
+-- 0106 operator sessions end on a password change / account removal (Elek IT-kör B1, ADR-0363).
 --
 -- The console cookie used to be `<id>.<hmac(id)>` — no issue time, and the gate only checked
 -- the signature: a password change did not end any session, and a DELETED operator's cookie
@@ -13,4 +13,4 @@ ALTER TABLE operator_user
   ADD COLUMN IF NOT EXISTS sessions_valid_from timestamptz;
 
 COMMENT ON COLUMN operator_user.sessions_valid_from IS
-  'ADR-XXXX: a console session cookie issued before this moment is void (password change / reset).';
+  'ADR-0363: a console session cookie issued before this moment is void (password change / reset).';

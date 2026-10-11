@@ -857,7 +857,7 @@ export interface OperatorUserTable {
   lang: Generated<string>;
   created_at: Generated<Timestamp>;
   last_login_at: Timestamp | null;
-  /** ADR-XXXX (0106): a console session issued before this moment is void —
+  /** ADR-0363 (0106): a console session issued before this moment is void —
    *  set by a password change or reset. NULL = no cut yet. */
   sessions_valid_from: Timestamp | null;
 }

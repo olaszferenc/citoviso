@@ -1,4 +1,4 @@
-## ADR-XXXX — Az operátor-munkamenet véget ér: kiadási idő a sütiben, a kapu minden kérésnél az operátor-sort nézi
+## ADR-0363 — Az operátor-munkamenet véget ér: kiadási idő a sütiben, a kapu minden kérésnél az operátor-sort nézi
 
 **Dátum:** 2026-10-11 · **Státusz:** elfogadva (a koordinátor briefje: Elek IT-kereszt kör, B1 — „a tenant-oldal ADR-0303
 mintájára”) · **Forrás:** Elek 5. kör (2026-10-11) B1, `_elek/bin/x-opcookie.mts` · **Kapcsolódó:** ADR-0021 (két realm),

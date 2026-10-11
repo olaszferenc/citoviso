@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-operator-munkamenet-vege-jelszocsere-torles-lejarat.md) — Az operátor-munkamenet véget ér: kiadási idő a sütiben, a kapu minden kérésnél az operátor-sort nézi
+- [ADR-0363](decisions/0363-az-operator-munkamenet-veget-er-kiadasi-ido-a.md) — Az operátor-munkamenet véget ér: kiadási idő a sütiben, a kapu minden kérésnél az operátor-sort nézi
 - [ADR-0362](decisions/0362-sajat-domain-egy-tenantnak-egy-rendeles-a-vetel.md) — Saját domain: egy tenantnak egy rendelés, a vétel utáni hiba „setup_retry” (nem bukás), `www.<domain>` → 301
 - [ADR-0361](decisions/0361-portal-naptarszinkron-ical-lal-elso-kor-a.md) — Portál-naptárszinkron iCal-lal, első kör: a foglalási modul része, ár nélkül; channel manager API később
 - [ADR-0360](decisions/0360-arazas-a-csomagok-osszetetele-szerkesztheto-a.md) — Árazás: a csomagok összetétele szerkeszthető, a saját domain csomag-tartalom lehet, végződésenkénti díjjal; kötelező platform-cím; a próba csomagja paraméter

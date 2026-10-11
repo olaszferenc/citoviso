@@ -1466,7 +1466,7 @@ async function handle(
     path.startsWith("/site/") || // provisioned site preview (token)
     path.startsWith("/admin/") || // tenant token page (data plane)
     LEGAL_PATHS.has(path);
-  // ADR-XXXX (Elek IT-kör B1): the gate reads the operator row — a deleted operator or a
+  // ADR-0363 (Elek IT-kör B1): the gate reads the operator row — a deleted operator or a
   // session older than the last password change is sent to /login, not just a bad signature.
   if (!isPublicPath && !(await verifyOperatorSession(req))) {
     return redirect(res, "/login");
@@ -1829,7 +1829,7 @@ async function handle(
       next !== (form.get("next2") ?? "")
         ? "A két új jelszó nem egyezik."
         : await changeOperatorPassword(op.operatorUserId, form.get("current") ?? "", next);
-    // ADR-XXXX: the change ended every older session — this browser gets a fresh one, the others are out.
+    // ADR-0363: the change ended every older session — this browser gets a fresh one, the others are out.
     if (!msg) setOperatorSession(res, op.operatorUserId);
     return redirect(
       res,
