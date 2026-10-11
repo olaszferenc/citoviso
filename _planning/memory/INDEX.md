@@ -10,6 +10,7 @@
 - [2026-10-11_portal_naptarszinkron_ical.md](2026-10-11_portal_naptarszinkron_ical.md) — 2026-10-11 — Portál-naptárszinkron iCal-lal, első kör (ADR-0361)
 - [2026-10-11_marketing_elemzes_elso_hullam.md](2026-10-11_marketing_elemzes_elso_hullam.md) — 2026-10-11 — Marketing-elemzés: az első megkeresési hullám (177 link, 0 rendelés)
 - [2026-10-11_horvat_piac_elokutatas.md](2026-10-11_horvat_piac_elokutatas.md) — 2026-10-11 — Horvát piac: számlázási, ÁFA- és jogi előkutatás
+- [2026-10-11_elek_sajat_domain_javitasok.md](2026-10-11_elek_sajat_domain_javitasok.md) — 2026-10-11 — Elek 10-11 saját domain kör: javítások (B1–B5, K1–K6, A1–A4)
 - [2026-10-11_elek3_proba_javitasok.md](2026-10-11_elek3_proba_javitasok.md) — 2026-10-11 — Elek 3. kör javításai: próba „C” + névváltás, élesítés előtt
 - [2026-10-11_arazas_redesign_csomag_domain.md](2026-10-11_arazas_redesign_csomag_domain.md) — 2026-10-11 — Árazás redesign: csomag × modul húzással, saját domain csomag-tartalomként, végződés-tábla
 - [2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md](2026-10-09_valos_oldal_eroforras_es_ingyenes_proba.md) — 2026-10-09 — Valós oldal erőforrásigénye (mérés) + ingyenes próba koordinátor indítva
