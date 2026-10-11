@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-10-02
+updated: 2026-10-11
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -97,6 +97,32 @@ A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
   jelölte nem kiadónak”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
 
 A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.
+
+## Ha a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is hirdet
+
+Kösse össze a naptárakat, így nem kell két helyen lezárnia ugyanazt a napot: ami a portálon
+foglalt, az itt is lezár, és ami itt foglalt, az a portálon is. A naptár alatti
+**„Hirdeti máshol is?”** kártyán mindhárom portálnak saját doboza van, két lépéssel:
+
+1. **A portál naptár-linkjét hozza ide.** A portálon a naptár-szinkron menüben kap egy linket
+   (Booking.com: Rates & Availability › Sync calendars; Szállás.hu: Árak és kapacitás › Naptár
+   szinkron (iCal); Airbnb: Calendar › Availability › Connect calendars). Másolja be a mezőbe, és
+   nyomja meg az **„Összekötés”** gombot — azonnal megnézzük, és kiírjuk, hány foglalt napot hoztunk át.
+2. **A mi linkünket adja meg a portálnak.** A **„Másolás”** gombbal vágólapra teszi, és a portál
+   ugyanazon menüjében, a naptár importálásánál illeszti be.
+
+Minden dobozban ott a **„Segítség: így köti össze lépésről lépésre”** sor: kinyitva a portál
+saját menüpontjaival vezeti végig. Egy rossz linket a **„Leválasztás”** gombbal bonthat; a
+portálról hozott napok ekkor eltűnnek a naptárából.
+
+Jó tudni:
+
+- Minden szobát külön kell összekötni — a portálokon is szobánként van naptár.
+- Csak a foglalt napok mennek át; az árat és a vendég adatait a portálon továbbra is ott kezeli.
+- Nem azonnali: mi óránként nézzük meg a portált, a Booking.com kétóránként a mi naptárunkat
+  (ott az „Import now” gombbal azonnal is frissítheti).
+- A Booking.com csak akkor engedi a naptár-összekötést, ha ott egy szobatípus egy szobát jelent, és
+  nem használ channel managert.
 
 ## Szobák, apartmanok
 

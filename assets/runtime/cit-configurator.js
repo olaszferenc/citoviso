@@ -254,6 +254,8 @@
 
   // ── icons (no emoji — design doctrine) ──────────────────────────────────────
   var I = {
+    sync:
+      '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>',
     gear:
       '<svg viewBox="0 0 24 24" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M4.5 12h-2M21.5 12h-2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"/></svg>',
     spark:
@@ -1475,6 +1477,19 @@
     rowsById[mod.id] = r;
     var wrap = el('<div class="cit-cfg-rowbox"></div>');
     wrap.appendChild(r);
+    // ADR-XXXX (plan „portal-sync” A): what comes WITH the module, visible without the
+    // (i) — the lead's real hesitation is "egy második naptár", and the answer belongs
+    // under the row. Its OWN line right after the row (inside the name column it
+    // overlapped the (i) and the tag at 390 px — measured); hidden while the row is off.
+    if (mod.incl) {
+      wrap.appendChild(
+        el(
+          '<div class="cit-cfg-incl"><span class="cit-cfg-incl__t">' + I.sync + "<span>" + esc(tr(mod.incl.label)) + "</span></span>" +
+            mod.incl.tags.map(function (t) { return '<span class="cit-cfg-incl__tag">' + esc(t) + "</span>"; }).join("") +
+            "</div>"
+        )
+      );
+    }
     // A magyarázó sáv SAJÁT sorban, a kapcsoló-sor ALATT. ⛔ Nem a flex-sorba:
     // 100%-os szélességgel a nevet szűk oszlopba préselné és kilógna a kártyából
     // (a terv-körben mérve, a jóváhagyott kontraktus külön kiköti).

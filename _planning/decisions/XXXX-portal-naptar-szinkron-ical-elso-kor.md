@@ -1,7 +1,8 @@
 ## ADR-XXXX — Portál-naptárszinkron iCal-lal, első kör: a foglalási modul része, ár nélkül; channel manager API később
 
 **Dátum:** 2026-10-11 · **Státusz:** elfogadva (tulaj-irány 2026-10-11: „első kör iCal… aztán majd ha jönnek a tenantek
-és megrendelések akkor döntök a további fejlesztésről”); a felület a §2b terv-jóváhagyásra vár ·
+és megrendelések akkor döntök a további fejlesztésről”); felület jóváhagyva 2026-10-11 („A + 1”, szöveges jelvény) ·
+**Terv:** `assets/design-refs/console/portal-sync/` (README = ami köt) ·
 **Felülírja:** ADR-0044 „Ami NEM scope” bekezdését a portál-NAPTÁR részére (a Booking.com-API-integráció továbbra sem scope) ·
 **Ág:** `feat/ical-sync` — a mainre CSAK a 14 napos próba élesítése után, a tulaj külön szavára (ADR-0348 ne csússzon).
 
@@ -55,7 +56,10 @@ Booking 24,6% · Facebook 23,9% · Apartman.hu 20,5%; 294/297 legalább egy port
 
 ### Következmények
 
-- A tenant-admin „Hirdeti máshol is?” kártyája (ma sötét) a jóváhagyott terv szerint újraépül; a mostani vázlatban
-  hibás `<option value=T(lang, "Szállás.hu")>` sor (szó szerinti szöveg a value-ban) ezzel együtt javul.
-- KB-bejegyzés kell a portálonkénti „hol találom a naptár-linket” lépésekhez (ADR-0045 §J; `/admin/segitseg/naptar`).
+- A tenant-admin „Hirdeti máshol is?” kártyája portálonként egy kártyára épült újra (a régi, sötét vázlat hibás
+  `<option value=T(lang, "Szállás.hu")>` sora és a nem létező `/admin/segitseg/naptar` link ezzel kiesett).
+- A rendelés-panel „Benne: naptár-szinkron” sora a modul-katalógus `publicIncl` mezőjéből jön (`src/modules.ts`), a
+  mock minta-widgetje a sávot és a „a portálon foglalták” minta-napokat CSAK minta módban mutatja (élő oldalon soha).
+- Portál-LOGÓ csak írásos engedéllyel (Airbnb védjegy-irányelv, Booking Holdings márka-irányelv); addig szöveges jelvény.
+- KB: `kb/entries/admin-modules-booking` új szakasza („Ha a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is hirdet”).
 - Azonos típusú, több egységes szállásnál az iCal egységenként köt — a felület egységenként kéri a linket.
