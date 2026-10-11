@@ -3086,7 +3086,7 @@ if [ -f scripts/free-trial-config-check.mts ] && \
   echo "[pre-commit] free-trial-config-check (a /pricing próba-hossza és kupon-%-a tényleg a beállítás)…"
   npx tsx scripts/free-trial-config-check.mts >"$GATE_LOG" || gate_failed
 fi
-# pricing-packages-check (ADR-XXXX, /pricing redesign): a csomag-összetétel szabályai (függőség, gerinc,
+# pricing-packages-check (/pricing redesign — csomag-összetétel + domain-végződések, design-refs/console/pricing-redesign): a csomag-összetétel szabályai (függőség, gerinc,
 #     egymásra épülés), a domain mint csomag-tartalom (0 Ft), végződésenkénti díj és plafon, a 0 = nincs
 #     küszöb, a próba csomagja, és hogy a lap a terv kötő elemeit rendereli. Folyamaton belül rögzített
 #     árazással, mock regisztrátorral; nem ír DB-sort. ~3 mp.
