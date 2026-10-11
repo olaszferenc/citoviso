@@ -1807,7 +1807,7 @@ if [ -f scripts/password-link-check.mts ] && \
   echo "[pre-commit] password-link-check (jelszó nem jár levélben; egyszeri link; régi munkamenetek véget érnek)…"
   npx tsx scripts/password-link-check.mts
 fi
-# Elek IT-kör B1 (2026-10-11, ADR-XXXX): a console session ends on a password change,
+# Elek IT-kör B1 (2026-10-11, operátor-munkamenet ADR): a console session ends on a password change,
 # when the operator is removed, and after its lifetime — the gate reads the operator row.
 # Spins up a scratch DB + the console in-process (~20s), so only when the login path changes.
 if [ -f scripts/operator-session-check.mts ] && \
