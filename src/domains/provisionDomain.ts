@@ -4,6 +4,14 @@
 // következőbe lép, így a `runDomainProvisioning` bárhonnan folytatja, ahol elakadt.
 //
 //   pending → registering → registered → dns_pending → tls_pending → live   (+ failed)
+//   registered/dns_pending/tls_pending ──(DNS/TLS error)──▶ setup_retry ──(timer)──▶ registered …
+//
+// ADR-XXXX (Elek 10-11): `failed` means "we could NOT buy the name" (the hold is released).
+// Once the registrar sold it to us the name is the tenant's and the money is taken, so a
+// later DNS/TLS error is `setup_retry` — retried by the resume timer, the operator alerted —
+// never "someone else took it". And a tenant has at most ONE domain order in flight: a
+// second paid order for a tenant that already has a live or running one is refused here
+// and its hold released (two tabs, a double click, two parallel webhooks).
 //
 // A `site.custom_domain` CSAK a tls_pending→live átmenetnél íródik be — előbb nem,
 // különben a public.ts (ADR-0041) egy még nem élő hosztra 301-ezne. A live lépés
@@ -17,7 +25,8 @@ import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { getRegistrar, DomainTakenError, LIVE_REGISTRAR_PROVIDERS } from "./registrar/index.js";
 import { getDns } from "./dns/index.js";
 import { getEmailSender } from "../email/sender.js";
-import { buildDomainLiveEmail, buildDomainFailedEmail } from "../email/domainEmail.js";
+import { buildDomainLiveEmail, buildDomainFailedEmail, buildDomainSetupDelayedEmail } from "../email/domainEmail.js";
+import { alertHouse } from "../console/houseAlert.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
@@ -47,6 +56,8 @@ export type DomainProvisioningStatus =
   | "registered"
   | "dns_pending"
   | "tls_pending"
+  /** ADR-XXXX: bought + paid, the DNS/TLS setup failed and is being retried. */
+  | "setup_retry"
   | "live"
   | "failed";
 
@@ -71,7 +82,7 @@ export interface StartDomainInput {
 async function notifyTenant(
   tenantId: string,
   siteId: string,
-  outcome: "live" | "failed",
+  outcome: "live" | "failed" | "setup_retry",
   domain: string,
   /** ADR-0251: the failed purchase's hold was released — nothing was charged. */
   released = false,
@@ -93,7 +104,9 @@ async function notifyTenant(
       .executeTakeFirst();
     const lang = await prepareMailLang(await langForTenant(tenantId));
     const msg =
-      outcome === "live"
+      outcome === "setup_retry"
+        ? buildDomainSetupDelayedEmail({ to, domain, lang })
+        : outcome === "live"
         ? buildDomainLiveEmail({
             to,
             domain,
@@ -140,43 +153,115 @@ async function setStatus(
     })
     .where("id", "=", provisioningId)
     .execute();
-  await db
+  // ⛔ A LIVE site is never pulled back by another row (Elek B1): a second purchase of a
+  // name the tenant already runs would come back "taken" from the registrar, and its
+  // `failed` must not overwrite the working domain's state on the site.
+  let q = db
     .updateTable("site")
     .set({
       custom_domain_status: status,
       ...(extra.registrarRef !== undefined ? { registrar_ref: extra.registrarRef } : {}),
       domain_provision_error: extra.error ?? null,
     })
+    .where("id", "=", siteId);
+  if (status !== "live") q = q.where("custom_domain_status", "!=", "live");
+  await q.execute();
+}
+
+/** Is this site's own domain already live? (Then no second order may touch it.) */
+async function siteIsLive(siteId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("site")
+    .select(["custom_domain_status"])
     .where("id", "=", siteId)
-    .execute();
+    .executeTakeFirst();
+  return row?.custom_domain_status === "live";
+}
+
+/**
+ * ADR-XXXX (Elek B2): the operator alert for a bought-and-paid name whose DNS/TLS setup
+ * failed — through the house alert channel (ADR-0279: "[TESZT]" off the live host).
+ * Operator text — outside the §B.18 buyer-facing i18n scope.
+ */
+async function alertSetupRetry(domain: string, tenantId: string, error: string): Promise<void> {
+  await alertHouse({
+    tag: "domain-setup",
+    subject: `Citoviso: ${domain} megvéve, de a beállítás elakadt (DNS/TLS)`,
+    text:
+      `A(z) ${domain} nevet a regisztrátornál megvettük, a zárolt díjat lehívtuk, a cím ` +
+      `beállítása (zóna / A-rekord / tanúsítvány) viszont hibára futott.\n\n` +
+      `Tenant: ${tenantId}\nHiba: ${error}\n\n` +
+      `Állapot: setup_retry — a resume-domains időzítő a 'registered' lépéstől újrapróbálja. ` +
+      `A tulaj felülete és levele azt mondja: a név az övé, a beállítás késik, nincs teendője.\n` +
+      `Ha nem áll helyre: a hiba okának megnézése, majd  npx tsx scripts/resume-domains.mts\n`,
+  });
 }
 
 /**
  * Create (or reuse) the beszerzés record and mark the site `pending`. Called from the
  * payment webhook `paid` branch — the FIZETÉS is the trigger, no human approval.
- * Idempotent per domain: the partial unique index refuses a second RUNNING row for the
- * same domain, so a double webhook cannot start two purchases.
+ *
+ * Idempotent per ORDER: a re-delivered webhook of the same order gets its own running row
+ * back. ADR-XXXX (Elek B1): a DIFFERENT order is refused (null) when the site already has
+ * a live domain or another running beszerzés — the caller then releases that order's hold.
+ * Two partial unique indexes (per domain, per site) back this against parallel webhooks;
+ * losing that race is the same refusal, never a raw `duplicate key` and a stuck hold.
  */
-export async function startDomainProvisioning(input: StartDomainInput): Promise<string> {
-  const existing = await db
+export async function startDomainProvisioning(input: StartDomainInput): Promise<string | null> {
+  const running = await db
     .selectFrom("domain_provisioning")
-    .select(["id"])
-    .where(sql<string>`lower(domain)`, "=", input.domain.toLowerCase())
+    .select(["id", "order_intent_id", "domain", "site_id"])
+    .where((eb) =>
+      eb.or([
+        eb(sql<string>`lower(domain)`, "=", input.domain.toLowerCase()),
+        eb("site_id", "=", input.siteId),
+      ]),
+    )
     .where("status", "not in", ["live", "failed"])
-    .executeTakeFirst();
-  if (existing) return existing.id;
+    .execute();
+  const same = running.find(
+    (r) => r.order_intent_id === input.orderIntentId && r.domain.toLowerCase() === input.domain.toLowerCase(),
+  );
+  if (same) return same.id;
+  if (running.length > 0) {
+    console.warn(
+      `[domain] második beszerzés ELUTASÍTVA (${input.domain}, order ${input.orderIntentId ?? "—"}): ` +
+        `már fut egy (${running.map((r) => `${r.domain} / order ${r.order_intent_id ?? "—"}`).join(", ")})`,
+    );
+    return null;
+  }
+  if (await siteIsLive(input.siteId)) {
+    console.warn(
+      `[domain] második beszerzés ELUTASÍTVA (${input.domain}, order ${input.orderIntentId ?? "—"}): ` +
+        `a site saját domainje már él`,
+    );
+    return null;
+  }
 
-  const row = await db
-    .insertInto("domain_provisioning")
-    .values({
-      site_id: input.siteId,
-      tenant_id: input.tenantId,
-      order_intent_id: input.orderIntentId,
-      domain: input.domain,
-      status: "pending",
-    })
-    .returning("id")
-    .executeTakeFirstOrThrow();
+  let row: { id: string };
+  try {
+    row = await db
+      .insertInto("domain_provisioning")
+      .values({
+        site_id: input.siteId,
+        tenant_id: input.tenantId,
+        order_intent_id: input.orderIntentId,
+        domain: input.domain,
+        status: "pending",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+  } catch (e) {
+    // A parallel webhook won the insert (23505 on one of the two partial indexes).
+    if ((e as { code?: string }).code === "23505") {
+      console.warn(
+        `[domain] második beszerzés ELUTASÍTVA (${input.domain}, order ${input.orderIntentId ?? "—"}): ` +
+          `egy párhuzamos rendelés megelőzte (egyedi index)`,
+      );
+      return null;
+    }
+    throw e;
+  }
   await db
     .updateTable("site")
     .set({ custom_domain_status: "pending", domain_provision_error: null })
@@ -271,6 +356,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
     .executeTakeFirst();
   if (!p) throw new Error(`domain_provisioning ${provisioningId} nem található`);
   if (p.status === "live" || p.status === "failed") return p.status;
+  const wasRetrying = p.status === "setup_retry";
 
   const registrar = getRegistrar();
   const dns = getDns();
@@ -283,6 +369,9 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
   let registrarRef = p.registrarRef;
   try {
     let status = p.status as DomainProvisioningStatus;
+    // setup_retry: the name is ours — re-enter at the DNS step (zone/A records are
+    // idempotent in every adapter: the Websupport zone is read, the A records upserted).
+    if (status === "setup_retry") status = "registered";
 
     // 1) pending → registering → registered: atomic buy at the registrar.
     if (status === "pending" || status === "registering") {
@@ -349,6 +438,26 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
     return status;
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
+    // ADR-XXXX (Elek B2): AFTER the purchase the name is the tenant's and the hold was
+    // captured — this is a setup delay, not a failed purchase. Retried by the timer from
+    // `registered`; alerted and told to the tenant ONCE (on entering the state).
+    if (registrarRef) {
+      await setStatus(p.id, p.siteId, "setup_retry", { registrarRef, error: msg });
+      if (p.orderIntentId) {
+        // A capture the purchase step missed is still owed (settleDomainReservations retries too).
+        const { captureDomainReservation } = await import("../payment/service.js");
+        await captureDomainReservation(p.orderIntentId).catch(() => false);
+      }
+      if (!wasRetrying) {
+        console.error(`[domain] ⛔ ${p.domain}: megvéve, de a beállítás elakadt → setup_retry (${msg})`);
+        await alertSetupRetry(p.domain, p.tenantId, msg);
+        await notifyTenant(p.tenantId, p.siteId, "setup_retry", p.domain);
+      } else {
+        console.warn(`[domain] ${p.domain}: setup_retry újrapróba sem sikerült (${msg})`);
+      }
+      return "setup_retry";
+    }
+    const liveAlready = await siteIsLive(p.siteId);
     await setStatus(p.id, p.siteId, "failed", { error: msg });
     // ADR-0251: failed BEFORE the purchase → the hold goes back, nothing is charged.
     // (After the purchase the name is the tenant's; a later DNS/TLS failure is ours
@@ -360,7 +469,9 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
     }
     // A tenant fizetett és vár — a kudarcról MAGUNKTÓL szólunk, nem hagyjuk, hogy
     // legközelebbi belépéskor szembesüljön vele.
-    await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released);
+    // A second order on a site whose domain is live: the tenant has a working domain —
+    // a "we could not buy it" letter about the duplicate would only confuse.
+    if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released);
     return "failed";
   }
 }
@@ -379,7 +490,7 @@ export async function resumePendingDomainProvisionings(): Promise<
   const rows = await db
     .selectFrom("domain_provisioning")
     .select(["id", "domain"])
-    .where("status", "in", ["pending", "registering", "registered", "dns_pending", "tls_pending"])
+    .where("status", "in", ["pending", "registering", "registered", "dns_pending", "tls_pending", "setup_retry"])
     .orderBy("created_at", "asc")
     .execute();
   const out: { id: string; domain: string; status: DomainProvisioningStatus }[] = [];

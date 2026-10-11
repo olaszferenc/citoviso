@@ -5,9 +5,9 @@
 
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
+import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing, offeredTldOf } from "../pricing.js";
 import { addMonths } from "../payment/subscription.js";
-import { DUNNING_CANCEL_OFFSET_DAYS } from "../payment/billing.js";
+import { DUNNING_CANCEL_OFFSET_DAYS, domainFeeForRenewal } from "../payment/billing.js";
 import { livePurchaseOffersForTenant, type ActiveOffer } from "../payment/offers.js";
 import { isBilledModule, type TenantModuleView } from "./modules.js";
 
@@ -92,6 +92,19 @@ export interface SubscriptionAdminData {
   /** Annual totals for the CURRENT module set (12 months at 10 monthly fees). */
   readonly annualTotal: number;
   readonly annualSavings: number;
+  /**
+   * ADR-0109 ① / Elek B4: the own domain's MONTHLY fee on the next invoice — the SAME
+   * source the renewal mint uses (domainFeeForRenewal). It rides every cycle undiscounted
+   * (×12 on an annual invoice, never the free months — ADR-0109 ⑥) and is part of
+   * nextInvoiceTotal / nextChargeTotal / annualTotal. null = no fee (none, or package content).
+   */
+  readonly domainFee: { readonly domain: string; readonly monthly: number } | null;
+  /**
+   * ADR-0360 ② / Elek K4: a live own domain that is package content NOW, and what it
+   * would cost per month outside the package — so the tab can say, before a downgrade,
+   * that the fee starts (the configurator's own sentence).
+   */
+  readonly domainInPackage: { readonly domain: string; readonly outsideMonthly: number } | null;
   readonly annualFreeMonths: number;
   // ── ADR-0088 ⑨: recurring-card mandate (ADR-0080 ④ made the charge, this
   // makes it VISIBLE and revocable — a stored credential the customer cannot
@@ -182,7 +195,23 @@ export async function getSubscriptionAdmin(
       price: getModulePrice(m.id),
       isNew: m.awaitingFirstCharge,
     }));
-  const total = items.reduce((s, i) => s + i.price, getBaseMonthly());
+  const modulesTotal = items.reduce((s, i) => s + i.price, getBaseMonthly());
+  // Elek B4: the screen's totals carry the domain fee exactly as the renewal mint does.
+  const domainDue = await domainFeeForRenewal(tenantId, 1);
+  const domainMonthly = domainDue?.fee ?? 0;
+  const total = modulesTotal + domainMonthly;
+  let domainInPackage: SubscriptionAdminData["domainInPackage"] = null;
+  if (!domainDue) {
+    const own = await db
+      .selectFrom("site")
+      .select(["custom_domain"])
+      .where("tenant_id", "=", tenantId)
+      .where("custom_domain_status", "=", "live")
+      .where("custom_domain", "is not", null)
+      .executeTakeFirst();
+    const outside = own?.custom_domain ? offeredTldOf(own.custom_domain)?.monthlyFee ?? 0 : 0;
+    if (own?.custom_domain && outside > 0) domainInPackage = { domain: own.custom_domain, outsideMonthly: outside };
+  }
 
   // The open pay-link of the CURRENT cycle's renewal order, if the ladder already
   // minted one — the banner's "Díj rendezése" button target.
@@ -288,7 +317,7 @@ export async function getSubscriptionAdmin(
     nextInvoiceTotal: total,
     nextChargeTotal:
       sub.billing_period === "annual" || (pendingAnnual && pendingEffectiveDate === isoDate(periodEndDate))
-        ? total * (12 - freeMonths)
+        ? modulesTotal * (12 - freeMonths) + domainMonthly * 12
         : total,
     nextInvoiceItems: items,
     payUrl: openPay?.payUrl ?? null,
@@ -301,8 +330,10 @@ export async function getSubscriptionAdmin(
     billingPeriod: sub.billing_period,
     pendingAnnual,
     pendingEffectiveDate,
-    annualTotal: total * (12 - freeMonths),
-    annualSavings: total * freeMonths,
+    annualTotal: modulesTotal * (12 - freeMonths) + domainMonthly * 12,
+    annualSavings: modulesTotal * freeMonths,
+    domainFee: domainDue ? { domain: domainDue.domain, monthly: domainMonthly } : null,
+    domainInPackage,
     annualFreeMonths: freeMonths,
     autoCharge,
     cardLabel: autoCharge && sub.card_last4 ? `${sub.card_brand ?? ""} ····${sub.card_last4}`.trim() : null,

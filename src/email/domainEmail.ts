@@ -104,6 +104,33 @@ export function buildDomainFailedEmail(input: {
   });
 }
 
+/**
+ * ADR-XXXX (Elek B2): the name IS bought (and paid for), only the address/certificate
+ * setup is late. Saying "someone else took it" here would be false twice over — the
+ * name is the tenant's and the money was taken for it (§B.17 on ourselves).
+ */
+export function buildDomainSetupDelayedEmail(input: {
+  to: string;
+  domain: string;
+  lang?: string;
+}): EmailMessage {
+  const { to, domain, lang } = input;
+  const title = T(lang, "A webcím az Öné — a beállítás tovább tart a vártnál");
+  const body = T(
+    lang,
+    "{Art} {domain} nevet megvásároltuk, az Öné. A cím beállítása és a biztonsági tanúsítvány a vártnál tovább tart: automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője — e-mailben jelezzük, amint kész.",
+    { Art: huArticle(domain), domain },
+  );
+  return platformMail({
+    to,
+    subject: title,
+    text: `${title}\n\n${body}\n`,
+    lang,
+    heading: title,
+    blocks: [mailPara(body)],
+  });
+}
+
 /** ADR-0094 ② (jóváhagyott B terv): a lemondás-elszámolás rögzült — itt a fizetési
  *  link. A záró képernyő ÍGÉRI ezt a levelet („a fizetéshez e-mailben küldjük a
  *  linket") — a nem teljesített ígéret ugyanaz a hiba-osztály, mint a kitalált tény. */

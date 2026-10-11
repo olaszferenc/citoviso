@@ -301,6 +301,9 @@ export interface OrderIntentTable {
   domain_type: Generated<"citoviso_sub" | "citoviso_registered" | "own">;
   /** Chosen host: full domain (custom/own) or the subdomain host. */
   domain_name: string | null;
+  /** 0106 (Elek B5): the platform label chosen NEXT TO a custom domain (`<label>.citoviso.com`);
+   *  the activation renames the site to it. NULL = no explicit choice. */
+  platform_label: Generated<string | null>;
   /** Commitment (months) implied by the domain choice (operator-set; ADR-0093: 12). */
   commitment_months: number | null;
   /** ADR-0094 ④: package floor (monthly, HUF) frozen at order for a free-domain
@@ -798,6 +801,8 @@ export interface SiteTable {
     | "registered"
     | "dns_pending"
     | "tls_pending"
+    /** 0106: the name is bought (and paid), the DNS/TLS setup is being retried. */
+    | "setup_retry"
     | "live"
     | "failed"
   >;
@@ -1727,6 +1732,8 @@ export interface DomainProvisioningTable {
     | "registered"
     | "dns_pending"
     | "tls_pending"
+    /** 0106: the name is bought (and paid), the DNS/TLS setup is being retried. */
+    | "setup_retry"
     | "live"
     | "failed"
   >;

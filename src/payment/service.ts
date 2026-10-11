@@ -9,6 +9,7 @@
 // the DB state + the existing /site/<token> snapshot. Idempotent on the gateway ref.
 
 import { budapestIsoDay } from "../text/budapestTime.js";
+import { sql } from "kysely";
 import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
@@ -329,6 +330,11 @@ export async function handleWebhook(
     // the capture follows only when the registrar confirmed the name.
     if (known.reservation && known.kind === "domain_upgrade" && known.status === "pending") {
       if (await markDomainReserved(known.id)) await fireReservedDomainProvisioning(known.orderIntentId);
+    }
+    // ADR-XXXX (Elek B1): a SUPERSEDED pay-link (the buyer picked another name meanwhile)
+    // that was completed anyway — its hold must not sit on the card for 7 days.
+    if (known.reservation && known.kind === "domain_upgrade" && known.status === "cancelled") {
+      await releaseStrayDomainHold(known.id, known.orderIntentId);
     }
     return { ok: true, pending: true };
   }
@@ -1101,6 +1107,11 @@ async function applyDomainReservationResult(
   res: import("./gateway.js").WebhookResult,
 ): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
   if (payment.status === "paid") return { ok: true, activated: true, alreadySettled: true };
+  // ADR-XXXX (Elek B1): a superseded pay-link completed anyway → give the hold back.
+  if (payment.status === "cancelled") {
+    if (res.status === "paid") await releaseStrayDomainHold(payment.id, payment.order_intent_id);
+    return { ok: true, activated: false, alreadySettled: true };
+  }
   // A buyer who backs out of the hold is, for the domain order, the same as a lapse:
   // nothing is held, nothing is registered. The row keeps the plain `failed` the
   // Webcím tab already reads.
@@ -1133,7 +1144,16 @@ async function applyDomainReservationResult(
     return { ok: true, activated: true };
   }
   // paid on a RESERVED row = Barion's Succeeded after OUR full-total finish (a zero
-  // finish writes `released` first and never reaches here).
+  // finish writes `released` first and never reaches here). ⛔ Only once the name IS
+  // bought: a replayed "paid" (the mock page clicked again in a second tab) on a hold
+  // whose registration is still running must not settle money we have not captured.
+  const bought = await db
+    .selectFrom("domain_provisioning")
+    .select("registrar_ref")
+    .where("order_intent_id", "=", payment.order_intent_id)
+    .where("registrar_ref", "is not", null)
+    .executeTakeFirst();
+  if (!bought) return { ok: true, activated: false, alreadySettled: true };
   const settled = await settleCapturedDomainPayment(payment.id);
   return { ok: true, activated: settled };
 }
@@ -1187,6 +1207,31 @@ export async function releaseDomainReservation(orderIntentId: string): Promise<b
 }
 
 /**
+ * ADR-XXXX (Elek B1): release the hold of a domain payment that must never be captured —
+ * a superseded pay-link completed anyway. Marked `released` first (the ADR-0251 order),
+ * then cancelled at the gateway.
+ */
+async function releaseStrayDomainHold(paymentId: string, orderIntentId: string): Promise<void> {
+  const row = await db
+    .updateTable("payment")
+    .set({ status: "released" })
+    .where("id", "=", paymentId)
+    .where("status", "in", ["cancelled", "pending", "reserved"])
+    .returning(["gateway", "gateway_ref"])
+    .executeTakeFirst();
+  if (!row?.gateway_ref) return;
+  const gw = gatewayFor(row.gateway);
+  const ok = gw.releaseHold ? await gw.releaseHold(row.gateway_ref) : false;
+  console.warn(
+    `[domain] felülírt / második domain-fizetés zárolása ${ok ? "FELOLDVA" : "feloldás NEM sikerült (magától lejár)"} ` +
+      `(order ${orderIntentId}, ref ${row.gateway_ref}) — egy tenantnak egy domain-rendelése futhat`,
+  );
+}
+
+/** A held payment with no beszerzés row this long after its hold stood is orphaned. */
+const ORPHAN_HOLD_MINUTES = 15;
+
+/**
  * Timer sweep (scripts/resume-domains.mts): every hold still `reserved` is settled
  * by its registration's state — bought ⇒ capture, failed before buying ⇒ release,
  * still running ⇒ wait. This is what retries a capture the webhook-time run missed.
@@ -1212,6 +1257,22 @@ export async function settleDomainReservations(): Promise<{ captured: number; re
       if (await releaseDomainReservation(r.orderIntentId)) released++;
     }
   }
+  // ADR-XXXX (Elek B1): a hold whose order never got a beszerzés row (refused as a second
+  // order for the tenant, or a crash between the hold and the row) — nothing will ever
+  // register it, so it is given back instead of blocking the buyer's money for 7 days.
+  const orphans = await db
+    .selectFrom("payment")
+    .leftJoin("domain_provisioning", "domain_provisioning.order_intent_id", "payment.order_intent_id")
+    .select(["payment.order_intent_id as orderIntentId"])
+    .where("payment.reservation", "=", true)
+    .where("payment.status", "=", "reserved")
+    .where("domain_provisioning.id", "is", null)
+    .where(sql<boolean>`payment.created_at < now() - make_interval(mins => ${ORPHAN_HOLD_MINUTES})`)
+    .execute();
+  for (const o of orphans) {
+    console.warn(`[domain] árva zárolás (nincs hozzá beszerzés) → feloldás: order ${o.orderIntentId}`);
+    if (await releaseDomainReservation(o.orderIntentId)) released++;
+  }
   return { captured, released };
 }
 
@@ -1221,9 +1282,14 @@ export async function settleDomainReservations(): Promise<{ captured: number; re
  * then always finds a registration in flight.
  */
 async function fireReservedDomainProvisioning(orderIntentId: string): Promise<void> {
-  const id = await startOrderDomainProvisioning(orderIntentId);
+  // ADR-XXXX (Elek B1): null also when the tenant already has a live or running domain
+  // order (a second tab / parallel webhook) — that hold is released, nothing registered.
+  const id = await startOrderDomainProvisioning(orderIntentId).catch((e) => {
+    console.error(`[domain] beszerzés-indítás HIBA (${orderIntentId}):`, e);
+    return null;
+  });
   if (!id) {
-    console.error(`[domain] zárolt rendelés beszerzés nélkül (${orderIntentId}) — a zárolást feloldjuk`);
+    console.warn(`[domain] zárolt rendelés beszerzés nélkül (${orderIntentId}) — a zárolást feloldjuk`);
     await releaseDomainReservation(orderIntentId);
     return;
   }
@@ -1676,6 +1742,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "order_intent.photo_rights_declared_at as photoRightsAt",
       "order_intent.domain_type as domainType",
       "order_intent.domain_name as domainName",
+      "order_intent.platform_label as platformLabel",
       "prospect.id as prospectId",
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
@@ -1726,8 +1793,11 @@ async function activate(orderIntentId: string): Promise<boolean> {
   // ADR-0032: honor the buyer's freely-chosen platform subdomain (only for the platform-sub
   // option; a custom domain is handled by the domain fields). The label part before the first
   // dot is the slug; uniqueSiteSlug re-checks it's clean+free at provision time.
-  const preferredSlug =
-    oi.domainType === "citoviso_sub" && oi.domainName ? String(oi.domainName).split(".")[0] : null;
+  // Elek B5 (ADR-0360 ⑤): next to a custom domain the chosen platform label rides in its own
+  // field — it used to be lost, and the site kept the old slug.
+  const preferredSlug = oi.platformLabel
+    ? String(oi.platformLabel)
+    : oi.domainType === "citoviso_sub" && oi.domainName ? String(oi.domainName).split(".")[0] : null;
   try {
     // convertLead requires an APPROVED artifact — activation implies the operator
     // approved the mock. It provisions tenant + entitlements + private snapshot.

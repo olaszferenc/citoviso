@@ -122,7 +122,13 @@ import { isMessageTopic } from "../tenant/messageTopics.js";
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
-import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
+import {
+  createDomainUpgradeOrder,
+  domainOrderBlocker,
+  quoteDomainUpgrade,
+  supersedePendingDomainPayments,
+} from "../domains/domainUpgrade.js";
+import { alertHouse } from "../console/houseAlert.js";
 import { activeDomainCommitment } from "../domains/domainCommitment.js";
 import {
   createSettlementOrder,
@@ -347,6 +353,22 @@ async function readFormBody(req: http.IncomingMessage): Promise<URLSearchParams>
   return new URLSearchParams(await readRawBody(req));
 }
 
+/** One own-domain order submission at a time per tenant (ADR-XXXX, Elek B1). */
+const domainOrderLocks = new Map<string, Promise<void>>();
+async function domainOrderLock(tenantId: string): Promise<() => void> {
+  const prev = domainOrderLocks.get(tenantId) ?? Promise.resolve();
+  let done!: () => void;
+  const mine = new Promise<void>((r) => (done = r));
+  const chained = prev.then(() => mine);
+  domainOrderLocks.set(tenantId, chained);
+  await prev;
+  return () => {
+    done();
+    if (domainOrderLocks.get(tenantId) === chained) domainOrderLocks.delete(tenantId);
+  };
+}
+
+
 function redirect(res: http.ServerResponse, to: string): void {
   res.writeHead(302, { Location: to });
   res.end();
@@ -562,6 +584,9 @@ interface TenantHostSite {
   /** ADR-0356: the request arrived on a FORMER slug of the site (site_slug_alias) — GET/HEAD
    *  301 to the site's current address; anything else is served in place. */
   readonly viaAlias?: boolean;
+  /** ADR-XXXX (Elek K5): the request arrived on `www.<custom domain>` — GET/HEAD 301 to the
+   *  bare custom domain (the zone points `www` at us too, ADR-0103 ③). */
+  readonly viaWww?: boolean;
 }
 
 /** ADR-0356: the live site a former platform slug (site_slug_alias) belongs to. */
@@ -621,7 +646,21 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
     )
     .executeTakeFirst();
   if (row) return { ...row, viaSlug: !!label } as TenantHostSite;
-  return label ? resolveAliasSite(label) : null;
+  if (label) return resolveAliasSite(label);
+  // ADR-XXXX (Elek K5): `www.<custom domain>` is the same site — answered with a 301 to the
+  // bare name (one canonical host), not with our marketing page. Any OTHER unknown host
+  // keeps today's behaviour (falls through to the platform routing).
+  if (host.startsWith("www.")) {
+    const bare = host.slice(4);
+    const www = await db
+      .selectFrom("site")
+      .select(["id as siteId", "path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
+      .where("status", "in", ["live", "suspended"])
+      .where(sql<string>`lower(site.custom_domain)`, "=", bare)
+      .executeTakeFirst();
+    if (www) return { ...www, viaSlug: false, viaWww: true } as TenantHostSite;
+  }
+  return null;
 }
 
 /** Platform labels that are ours, not a tenant slug. */
@@ -1668,9 +1707,10 @@ async function serveAdmin(
   if (tab === "webcim" && site?.id) {
     await loadPricing();
     const q = new URL(req.url ?? "/", "http://x").searchParams;
-    domain = await loadDomainAdmin(session.tenantId, session.displayName);
     const typed = q.get("check");
     const picked = q.get("d");
+    // Elek B4: the picked name's ENDING prices the review screen (the order charges that).
+    domain = await loadDomainAdmin(session.tenantId, session.displayName, undefined, picked);
     // ADR-0251: the review step shows a FRESH registrar verdict ("Szabad — most
     // ellenőrizve") — a name picked minutes ago may be gone, and a stale "free"
     // would be the one promise the pay button rests on.
@@ -1681,6 +1721,7 @@ async function serveAdmin(
       ...(typed ? { check: await checkTypedDomain(typed) } : {}),
       ...(q.get("payerror") === "1" ? { payError: true } : {}),
       ...(q.get("uj") === "1" ? { restart: true } : {}),
+      ...(q.get("kezi") === "1" ? { manual: true } : {}),
     };
   }
 
@@ -2167,6 +2208,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       res.writeHead(301, { Location: `https://${to}${pathname}${url.search}` });
       return void res.end();
     }
+  }
+  // ADR-XXXX (Elek K5): www.<custom domain> → the bare custom domain, path + query kept.
+  // Same POST rule as the alias: served in place, never turned into a GET.
+  if (tenantSite?.viaWww && tenantSite.customDomain && (req.method === "GET" || req.method === "HEAD")) {
+    res.writeHead(301, { Location: `https://${tenantSite.customDomain}${pathname}${url.search}` });
+    return void res.end();
   }
   // ⛔ EXCEPT the routes our mails link to (+ the assets their pages load): the mail
   // was built from THIS host (publicBaseUrl), and the tenant handler answered them
@@ -2721,50 +2768,87 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // "free" goes back to the review step, which re-checks and says why — we never
     // open a payment for a name we do not know to be buyable this minute.
     const wantedNorm = normalizeCustomDomain(wanted);
-    if (!wantedNorm.ok || !wantedNorm.domain || (await checkWebcimAvailability(wantedNorm.domain)) !== "free") {
-      return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}`);
+    // ADR-XXXX (Elek B1): ONE own-domain order per tenant. Serialized per tenant in this
+    // process, so a double click / two tabs cannot both pass the check below; the paid
+    // side (startDomainProvisioning + two unique indexes) is the last line behind it.
+    const release = await domainOrderLock(session.tenantId);
+    try {
+      const blocker = await domainOrderBlocker(session.tenantId);
+      if (blocker && blocker.kind !== "paying") {
+        console.warn(`[domain] ${session.tenantId}: új rendelés ELUTASÍTVA (${wanted}) — már ${blocker.kind}: ${blocker.domain ?? "—"}`);
+        // The Webcím tab shows that order's state (live / in progress / held).
+        return redirect(res, "/admin?tab=webcim");
+      }
+      if (blocker?.kind === "paying" && blocker.payUrl && wantedNorm.ok && blocker.domain === wantedNorm.domain) {
+        // The same name is already being paid (second tab, double click): back to THAT
+        // pay-link — never a second order and a second hold.
+        return redirect(res, blocker.payUrl);
+      }
+      if (!wantedNorm.ok || !wantedNorm.domain || (await checkWebcimAvailability(wantedNorm.domain)) !== "free") {
+        return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}`);
+      }
+      // ADR-0360 open item (Elek ISMERT row): package content (fee 0) has no payment-free
+      // claim path yet — the request goes to a colleague, never to "try again".
+      const quote = await quoteDomainUpgrade(session.tenantId, wanted);
+      if (quote && quote.price === 0) {
+        console.warn(`[domain] ${session.tenantId}: ${quote.domain} csomag-tartalom (0 Ft) — kézi intézésre továbbítva`);
+        await alertHouse({
+          tag: "domain-claim",
+          subject: `Citoviso: saját domain igénylés kézi intézésre — ${quote.domain}`,
+          text:
+            `Egy élő tenant (${session.tenantId}, ${session.displayName}) a csomagjában foglalt ` +
+            `saját domaint kérte: ${quote.domain}. A díj nélküli utólagos igénylésnek még nincs ` +
+            `automata útja (ADR-0360 nyitott pont) — a beszerzést kézzel kell elindítani, és a ` +
+            `tulajt értesíteni. A felület azt mondta neki: munkatársunk intézi, e-mailben értesítjük.\n`,
+        });
+        return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(quote.domain)}&kezi=1`);
+      }
+      // Another name picked while an earlier pay-link is still open: that one is superseded.
+      if (blocker?.kind === "paying") await supersedePendingDomainPayments(session.tenantId);
+      const orderId = await createDomainUpgradeOrder(session.tenantId, wanted);
+      if (!orderId) {
+        console.error(`[domain] ${session.tenantId}: nem sikerült rendelést létrehozni (${wanted})`);
+        return redirect(res, "/admin?tab=webcim&payerror=1");
+      }
+      // ADR-0093 waived fee (0 Ft): there is nothing to pay, so the gateway is
+      // skipped — a 0-amount pay-link only "works" on the mock; Barion would
+      // reject it live (mock-path-masks-live-path trap). The ORDER itself is the
+      // trigger: settle it and start the provisioning exactly as the paid webhook
+      // would. No invoice — no consideration to invoice.
+      const created = await db
+        .selectFrom("order_intent")
+        .select(["price"])
+        .where("id", "=", orderId)
+        .executeTakeFirstOrThrow();
+      if ((created.price ?? 0) === 0) {
+        // Settle with a 0-amount 'paid' payment row (gateway 'none') so the money
+        // trail stays queryable — the order is delivered, nothing was owed.
+        await db
+          .insertInto("payment")
+          .values({
+            order_intent_id: orderId,
+            amount: 0,
+            currency: "HUF",
+            period: "annual",
+            gateway: "none",
+            status: "paid",
+            paid_at: new Date(),
+          })
+          .execute();
+        provisionOrderDomain(orderId).catch((e) =>
+          console.error(`[domain] 0 Ft-os beszerzés-futtatás HIBA (${orderId}):`, e),
+        );
+        return redirect(res, "/admin?tab=webcim");
+      }
+      const pay = await requestPayment(orderId);
+      if (!pay) {
+        console.error(`[domain] ${session.tenantId}: nincs fizetési link (order ${orderId})`);
+        return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}&payerror=1`);
+      }
+      return redirect(res, pay.payUrl);
+    } finally {
+      release();
     }
-    const orderId = await createDomainUpgradeOrder(session.tenantId, wanted);
-    if (!orderId) {
-      console.error(`[domain] ${session.tenantId}: nem sikerült rendelést létrehozni (${wanted})`);
-      return redirect(res, "/admin?tab=webcim&payerror=1");
-    }
-    // ADR-0093 waived fee (0 Ft): there is nothing to pay, so the gateway is
-    // skipped — a 0-amount pay-link only "works" on the mock; Barion would
-    // reject it live (mock-path-masks-live-path trap). The ORDER itself is the
-    // trigger: settle it and start the provisioning exactly as the paid webhook
-    // would. No invoice — no consideration to invoice.
-    const created = await db
-      .selectFrom("order_intent")
-      .select(["price"])
-      .where("id", "=", orderId)
-      .executeTakeFirstOrThrow();
-    if ((created.price ?? 0) === 0) {
-      // Settle with a 0-amount 'paid' payment row (gateway 'none') so the money
-      // trail stays queryable — the order is delivered, nothing was owed.
-      await db
-        .insertInto("payment")
-        .values({
-          order_intent_id: orderId,
-          amount: 0,
-          currency: "HUF",
-          period: "annual",
-          gateway: "none",
-          status: "paid",
-          paid_at: new Date(),
-        })
-        .execute();
-      provisionOrderDomain(orderId).catch((e) =>
-        console.error(`[domain] 0 Ft-os beszerzés-futtatás HIBA (${orderId}):`, e),
-      );
-      return redirect(res, "/admin?tab=webcim");
-    }
-    const pay = await requestPayment(orderId);
-    if (!pay) {
-      console.error(`[domain] ${session.tenantId}: nincs fizetési link (order ${orderId})`);
-      return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}&payerror=1`);
-    }
-    return redirect(res, pay.payUrl);
   }
   // ── ADR-0044: per-module settings ──
   // POST /admin/module-config — save one module's declarative fields.

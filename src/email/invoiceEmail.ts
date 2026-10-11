@@ -45,6 +45,12 @@ export interface InvoiceEmailInput {
    * carries it in its comment (invoiceComment); the covering mail said only „Összeg”.
    */
   readonly discount?: { readonly label: string; readonly percent: number; readonly listGross: number } | null;
+  /**
+   * Elek K2: the own-domain fee inside `gross` (0/absent = none). It is never discounted
+   * (ADR-0109 ⑥), so the discount line is list − (gross − domainFee), and the fee gets its
+   * own line: list − discount + domain = gross.
+   */
+  readonly domainFee?: number;
 }
 
 // The invoice mail was the ONE letter that already wrote "Ft" while the six
@@ -57,9 +63,12 @@ function money(amount: number, currency: string, lang?: string): string {
 export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
   const { to, buyerName, invoiceNumber, gross, currency, period, siteUrl, lang } = input;
   const total = money(gross, currency);
-  const disc = input.discount && input.discount.listGross > gross ? input.discount : null;
+  const domainFee = input.domainFee && input.domainFee > 0 ? input.domainFee : 0;
+  const serviceGross = gross - domainFee;
+  const disc = input.discount && input.discount.listGross > serviceGross ? input.discount : null;
   const discLabel = disc ? `${disc.label} (−${disc.percent}%)` : "";
-  const discValue = disc ? `−${money(disc.listGross - gross, currency)}` : "";
+  const discValue = disc ? `−${money(disc.listGross - serviceGross, currency)}` : "";
+  const domainValue = domainFee ? money(domainFee, currency) : "";
   // Elek FK-001 E1: the subject NAMES the item, from the same register the
   // Dokumentumok row reads. Before this, every invoice mail said „Citoviso
   // előfizetés" — the 14 900 Ft one-off multilingual fee too.
@@ -92,6 +101,7 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     (disc
       ? `${T(lang, "Listaár:")} ${money(disc.listGross, currency)}\n${discLabel}: ${discValue}\n`
       : "") +
+    (domainFee ? `${T(lang, "Saját webcím")}: ${domainValue}\n` : "") +
     T(lang, "Összeg:") +
     ` ${total}\n` +
     // A TÉTEL, nem a puszta ütem: a megnevezés maga hordozza az „(éves)"/„(havi)"
@@ -139,6 +149,7 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
               { label: discLabel, value: discValue },
             ]
           : []),
+        ...(domainFee ? [{ label: T(lang, "Saját webcím"), value: domainValue }] : []),
         { label: T(lang, "Összeg"), value: total, emphasis: true },
       ]),
       ...(siteUrl ? [mailButton(siteUrl, T(lang, "Oldala megtekintése"))] : []),

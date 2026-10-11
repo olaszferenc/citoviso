@@ -1735,7 +1735,22 @@ export function modulesSection(
           (i) =>
             `<div class="adm-sub__row"><span>${esc(T(lang, i.label))}${i.isNew ? ` <span class="adm-sub__new">· ${T(lang, "új")}</span>` : ""}</span><b>${esc(huf(i.price))}</b></div>`,
         )
-        .join("");
+        .join("") +
+      // Elek B4: the own domain is ON the next invoice (the renewal mint bills it) — the
+      // list must show it, or the rows do not add up to the total above them. On an
+      // annual invoice it is 12 months, not the (12 − free) of the modules (ADR-0109 ⑥).
+      (sub.domainFee
+        ? `<div class="adm-sub__row" data-domain-fee><span>${T(lang, "Saját webcím")} (${esc(sub.domainFee.domain)})</span><b>${
+            sub.billingPeriod === "annual" || sub.pendingAnnual
+              ? T(lang, "{price}/hó × {n} hónap", { price: esc(huf(sub.domainFee.monthly)), n: "12" })
+              : esc(huf(sub.domainFee.monthly))
+          }</b></div>`
+        : "") +
+      // Elek K4: package content today — say BEFORE a downgrade that the fee then starts
+      // (the configurator's own sentence, ADR-0360 ②).
+      (sub.domainInPackage
+        ? `<p class="adm-sub__note" data-domain-pkg>${T(lang, "A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja {price}/hó.", { price: esc(huf(sub.domainInPackage.outsideMonthly)) })}</p>`
+        : "");
     // ── ADR-0088 §8 (approved B plan: design-refs/console/period-switch) ──
     // monthly + not armed → savings box with the switch CTA; armed → green
     // confirmation with the HONEST effective date, the finality sentence and
@@ -2316,6 +2331,23 @@ export function modulesSection(
   // KÜLÖNBÖZŐ számok, és épp azt mondják meg, MIBŐL áll a tartozás — azok
   // maradnak (freeze-state-v2 ③). A végösszeg helyére nem másik szám kerül,
   // hanem az, hogy ez UGYANAZ a pénz, tételekre bontva.
+  // Elek B4: the own domain is part of what the owner pays (sub.annualTotal / the
+  // monthly total carry it, as the renewal does) — so it is a part of the row too, billed
+  // 12 months on an annual invoice (never the free months, ADR-0109 ⑥).
+  const domMonthly = sub?.domainFee?.monthly ?? 0;
+  const domCycle = annualCell ? domMonthly * 12 : domMonthly;
+  const domSub = annualCell
+    ? T(lang, "{price}/hó × {n} hónap", { price: esc(huf(domMonthly)), n: "12" })
+    : T(lang, "{price}/év", { price: esc(huf(domMonthly * 12)) });
+  const domCell =
+    domMonthly > 0
+      ? `<div class="adm-sumbar__c" data-domain-fee>` +
+        `<div class="adm-sumbar__l">${T(lang, "Saját webcím")}</div>` +
+        `<div class="adm-sumbar__v">${esc(huf(domCycle))}</div>` +
+        `<div class="adm-sumbar__s">${domSub}</div></div>`
+      : "";
+  /** On an annual invoice the domain's 12 months do not divide by the modules' multiplier. */
+  const domSuffix = annualCell && domMonthly > 0 ? ` + ${domSub}` : "";
   const totalCell = frozen
     ? `<div class="adm-sumbar__c adm-sumbar__c--tot">` +
       `<div class="adm-sumbar__l">${T(lang, "Együtt")}</div>` +
@@ -2327,17 +2359,18 @@ export function modulesSection(
       // data-base/-mult are the SAME values the "Következő számla" cell carries —
       // sub.annualTotal, not a locally re-multiplied figure — so the two cells cannot
       // drift apart, either on render or under the live toggle sync.
-      `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(sumTotal))}</div>` +
+      `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}" data-dom="${annualCell ? domCycle : 0}">${esc(huf(sumTotal))}</div>` +
       // ⛔ The total's sub-line is DERIVED FROM THE TOTAL (sumTotal ÷ multiplier), not
       // from base+modules: if the two sources ever disagree, the guard must see it on
       // the screen instead of us papering over it here.
       `<div class="adm-sumbar__s" id="adm-sum-eq">${perMonthSub(
-        annualCell ? sumTotal / annualMult : sumTotal,
-      )}</div></div>`;
+        annualCell ? (sumTotal - (annualCell ? domCycle : 0)) / annualMult : sumTotal,
+      )}${domSuffix}</div></div>`;
   const sumBar =
     `<div class="adm-sumbar" data-modsum>` +
     sumCell(T(lang, "Modulok együtt ({n} db)", { n: String(billedCount) }), modulesMonthly) +
     sumCell(baseLabel, mv.baseMonthly) +
+    domCell +
     totalCell +
     (annualCell && !frozen
       ? // The gift and the true per-month cost, in their own sentence — the place
@@ -2701,6 +2734,8 @@ export function modulesSection(
     // invoice cell uses, so the tab can never show two different totals.
     `var sumT=document.getElementById("adm-sum-total");` +
     `var sumBase=sumT?+sumT.dataset.base:0,sumMult=sumT?(+sumT.dataset.mult||1):1;` +
+    // Elek B4: the domain's 12 annual months are outside the modules' multiplier.
+    `var sumDom=sumT?(+sumT.dataset.dom||0):0,DOMSFX=${JSON.stringify(domSuffix.replace(/&amp;/g, "&"))};` +
     // ⭐ modules-quiet-list §4: the head pill is the SAME number as the summary, so
     // it has to move with the switches too. A header that keeps the old total while
     // the summary below it changes is exactly the "one rule, two copies" failure
@@ -2824,7 +2859,7 @@ export function modulesSection(
     // its figure is derived from the new total (÷ multiplier) — a toggle must not
     // be able to put two different divisors back into one row.
     `var nt=sumBase+delta*sumMult;` +
-    `if(sumEq)sumEq.textContent=delta?SUMSUB.replace("\\u0003",HUF(sumMult>1?nt/sumMult:nt*12)):sumEq0;` +
+    `if(sumEq)sumEq.textContent=delta?SUMSUB.replace("\\u0003",HUF(sumMult>1?(nt-sumDom)/sumMult:nt*12))+DOMSFX:sumEq0;` +
     // Only the annual branch has the note (the ÷12 reading); it must follow too,
     // or the switches would leave a stale "ennyibe kerül havonta" under the bar.
     `if(sumNote&&sumMult>1)sumNote.textContent=delta` +
@@ -3857,6 +3892,7 @@ function progressDone(status: string): number {
     case "registering":
       return 0;
     case "registered":
+    case "setup_retry": // ADR-XXXX: bought, the setup is being retried
       return 1;
     case "dns_pending":
       return 2;
@@ -3880,6 +3916,8 @@ export interface DomainViewState {
   readonly pickedAvailability?: WebcimAvailability;
   /** ADR-0251: „Másik név választása" after a released failure → back to step 1. */
   readonly restart?: boolean;
+  /** ADR-XXXX (ISMERT row): a package-content name was asked for — handled by hand. */
+  readonly manual?: boolean;
 }
 
 export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): string {
@@ -3916,7 +3954,11 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     const bought = progressDone(d.status) >= 1;
     const amt = d.moneyAmount !== null ? money(d.moneyAmount, d.currency) : "";
     const slow = /\.hu$/i.test(d.activeDomain ?? "");
-    const setupSub = slow
+    // ADR-XXXX (Elek B2): bought + charged, the setup failed once and is being retried —
+    // the name is theirs, nothing for them to do (never "someone else took it").
+    const setupSub = d.status === "setup_retry"
+      ? T(lang, "A vártnál tovább tart — automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője.")
+      : slow
       ? T(lang, "A .hu neveknél ez néhány nap — e-mailben jelezzük, amint kész")
       : T(lang, "Általában néhány perc — e-mailben jelezzük, amint kész");
     const rows =
@@ -3953,9 +3995,17 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   if (d.status !== "none" && d.status !== "failed") {
     return (
       `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
-      `<p class="adm-lead">${T(lang, "Már intézzük — Önnek nincs teendője.")}</p>` +
+      `<p class="adm-lead">${
+        d.status === "setup_retry" && d.activeDomain
+          ? T(lang, "Az Öné: {domain}", { domain: `<strong>${esc(d.activeDomain)}</strong>` })
+          : T(lang, "Már intézzük — Önnek nincs teendője.")
+      }</p>` +
       domainProgress(progressDone(d.status), lang) +
-      `<p class="citui-hint" style="margin-top:12px">${T(lang, "Ez általában néhány percet vesz igénybe. E-mailben jelezzük, amint kész.")}</p>` +
+      `<p class="citui-hint" style="margin-top:12px">${
+        d.status === "setup_retry"
+          ? T(lang, "A vártnál tovább tart — automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője.")
+          : T(lang, "Ez általában néhány percet vesz igénybe. E-mailben jelezzük, amint kész.")
+      }</p>` +
       mockNote +
       `</div>`
     );
@@ -3972,7 +4022,9 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   // tenant who already HAS a domain keeps seeing its state if the package drops.
   // ADR-0251: a HELD order whose registration failed — its own screen (approved A1
   // contract, the failure state): what happened, and that NOTHING was charged.
-  if (d.status === "failed" && d.money === "released" && !st.restart) {
+  // Elek B3: a NEW choice (a picked name, a typed one, or „Másik név választása”) is never
+  // swallowed by this screen — it used to win over `?d=`, so the buyer looped back here.
+  if (d.status === "failed" && d.money === "released" && !st.restart && !st.picked && !st.check) {
     const dom = d.failedDomain ?? d.activeDomain ?? "";
     const taken = /foglalt|taken/i.test(d.error ?? "");
     const amt = d.moneyAmount !== null ? money(d.moneyAmount, d.currency) : "";
@@ -4001,7 +4053,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   if (!d.eligible) {
     return (
       `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
-      `<p class="adm-lead">${T(lang, "A saját név (pl. sajatnev.hu) {min}/hó feletti csomag mellé választható, kedvezmények nélkül számítva.", { min: esc(money(d.minPackageMonthly, d.currency)) })}</p>` +
+      `<p class="adm-lead">${T(lang, "A saját név (pl. sajatnev.hu) legalább {min}/hó csomag mellé választható, kedvezmények nélkül számítva.", { min: esc(money(d.minPackageMonthly, d.currency)) })}</p>` +
       (d.currentHost
         ? `<div class="adm-dcurrent"><b>${esc(d.currentHost)}</b>` +
           `<span>${T(lang, "most ez a címe")}</span></div>`
@@ -4019,8 +4071,9 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       `<div class="adm-dsteps"><span class="adm-dstep is-done">${T(lang, "1. Név")}</span>` +
       `<span class="adm-dstep is-now">${T(lang, "2. Áttekintés")}</span>` +
       `<span class="adm-dstep">${T(lang, "3. Kész")}</span></div>`;
+    // Elek B3: after a released failure „Vissza” returns to step 1, not to the failure.
     const back =
-      `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:flex;justify-content:center">` +
+      `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim${d.status === "failed" ? "&amp;uj=1" : ""}" style="width:100%;margin-top:9px;display:flex;justify-content:center">` +
       `${T(lang, "Vissza")}</a>`;
     const verdict = st.pickedAvailability ?? "unknown";
     // ADR-0251: the pay button exists ONLY for a name the registrar just called
@@ -4045,6 +4098,29 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
         `</div>`
       );
     }
+    // ADR-0360 open item (Elek ISMERT row): the package carries the name (fee 0) and a
+    // payment-free claim does not exist yet — no fee, no hold, no "try again": the request
+    // goes to a colleague (POST → house alert) and the screen says so.
+    if (d.packageContent) {
+      return (
+        steps +
+        `<form method="POST" action="/admin/domain/order" class="adm-card" id="adm-dorder">${head(T(lang, "Áttekintés"))}` +
+        `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong> ${availChip("free", lang, true)}</p>` +
+        `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
+        `<div class="adm-dterms"><dl>` +
+        `<dt>${T(lang, "A választott cím")}</dt><dd>${esc(st.picked)}</dd>` +
+        `<dt>${T(lang, "A cím díja")}</dt><dd>${T(lang, "a csomag része · {months} hó hűségidő", { months: d.commitmentMonths })}</dd>` +
+        `</dl></div>` +
+        (st.manual
+          ? `<div class="adm-dres adm-dres--ok"><b>${T(lang, "Önnek nincs több teendője.")}</b>` +
+            `${T(lang, "Az igénylést munkatársunk intézi: már tud róla, és e-mailben értesítjük, amint a cím él.")}</div>`
+          : `<p class="citui-hint">${T(lang, "Az igénylést munkatársunk intézi: már tud róla, és e-mailben értesítjük, amint a cím él.")}</p>` +
+            `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Ezt kérem")}</button>`) +
+        mockNote +
+        back +
+        `</form>`
+      );
+    }
     const amt = esc(money(d.priceMonthly, d.currency));
     return (
       steps +
@@ -4052,7 +4128,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong> ${availChip("free", lang, true)}</p>` +
       (st.payError
         ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
-          `${ic("alert", 18)} ${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</div>`
+          `${ic("alert", 18)} <span>${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</span></div>`
         : "") +
       `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
       `<div class="adm-dtwo"><div>` +
@@ -4102,11 +4178,13 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   const failedBox =
     d.status === "failed" && d.money !== "released"
       ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
-        `${ic("alert", 18)} ` +
+        // Elek A2: .adm-saved is inline-flex — the sentence goes in ONE span, or its
+        // text nodes and the <b> become three columns on a phone.
+        `${ic("alert", 18)} <span>` +
         (d.failedDomain
           ? T(lang, "{Art} {domain} nevet időközben más lefoglalta.", { Art: huArticle(d.failedDomain), domain: `<b>${esc(d.failedDomain)}</b>` })
           : T(lang, "A választott nevet időközben más lefoglalta.")) +
-        `</div>` +
+        `</span></div>` +
         // ⛔ Visszautalást NEM ígérünk: a Barion Refund API létezik, de nálunk nincs
         // megírva (ADR-0078) — §B.17: magunkról sem állítunk valótlant.
         `<p class="citui-hint">${T(lang, "A befizetett összeg nem vész el: egy másik névre fordítjuk. Válassza ki, melyiket kéri helyette:")}</p>`
@@ -4114,8 +4192,12 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       ? // The order could not even be created (POST /admin/domain/order → step 1) —
         // this used to land here silently, under a frame banner about "the new module".
         `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
-        `${ic("alert", 18)} ${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</div>`
+        `${ic("alert", 18)} <span>${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</span></div>`
       : "";
+
+  // Elek B3: after „Másik név választása” both step-1 forms carry `uj=1`, so the next
+  // GET is still the new choice — not the failure screen again.
+  const restartIn = st.restart ? `<input type="hidden" name="uj" value="1">` : "";
 
   // A JÓVÁHAGYOTT B terv szerint: rádiógombos lista + EGY „Tovább" gomb — nem soronkénti
   // gomb. (Az első megvalósításom soronkénti gombot adott; a kontraktus-kép a mérce, §2b 5.)
@@ -4153,7 +4235,10 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     ? st.check.reason
       ? `<p class="adm-dmsg adm-dmsg--bad">${esc(st.check.reason)}</p>`
       : st.check.domain
-        ? st.check.tooExpensive
+        ? st.check.notOffered
+          ? // ADR-0360 ③ (Elek K1): the lead configurator's sentence — not "premium".
+            `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "Ezt a végződést nem kínáljuk. Választható: {list}", { list: esc(d.offeredTlds.join(", ") || "—") })}</p>`
+          : st.check.tooExpensive
           ? // ADR-0093: over the operator-set purchase cap (premium domain) — not offerable.
             `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} prémium (emelt díjas) domain, ezért nálunk nem igényelhető — próbáljon másik nevet.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
           : st.check.availability === "taken"
@@ -4191,10 +4276,12 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     // frissíthető, és JS nélkül is működik (a rádió+submit natív viselkedés).
     `<form method="GET" action="/admin">` +
     `<input type="hidden" name="tab" value="webcim">` +
+    restartIn +
     list +
     `</form>` +
     `<form method="GET" action="/admin" class="adm-down">` +
     `<input type="hidden" name="tab" value="webcim">` +
+    restartIn +
     `<div class="citui-field"><label class="citui-label" for="dcheck">${T(lang, "Vagy írja be a saját ötletét")}</label>` +
     `<div class="adm-down__row">` +
     `<input class="citui-input" id="dcheck" name="check" value="${esc(st.check?.input ?? "")}" ` +
@@ -4207,7 +4294,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       // the honest line is the CONDITION, not a price the tenant cannot act on.
       d.eligible
         ? T(lang, "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A hűségidő letelte után a név díjmentesen az Öné, a havidíj a fenntartásért fut tovább.", { price: esc(money(d.priceMonthly, d.currency)), n: d.commitmentMonths })
-        : T(lang, "Saját cím {min}/hó feletti csomag mellé választható (kedvezmények nélkül számítva). Bővítse a csomagját, és a saját név is elérhetővé válik.", { min: esc(money(d.minPackageMonthly, d.currency)) })
+        : T(lang, "Saját cím legalább {min}/hó csomag mellé választható (kedvezmények nélkül számítva). Bővítse a csomagját, és a saját név is elérhetővé válik.", { min: esc(money(d.minPackageMonthly, d.currency)) })
     }</p>` +
     mockNote +
     `</div>`
@@ -5609,7 +5696,11 @@ export function walletSection(
   const next =
     `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő terhelés")}</div>` +
     `<div class="adm-sub__v adm-sub__v--date">${nextVal}</div></div>` +
-    `<p class="adm-wal__hint">${T(lang, "A terhelés előtt 3 nappal e-mailt küldünk. A díj a csomagja szerint változhat.")}</p>`;
+    `<p class="adm-wal__hint">${T(lang, "A terhelés előtt 3 nappal e-mailt küldünk. A díj a csomagja szerint változhat.")}</p>` +
+    // Elek K4: the own domain is package content now — its fee starts with a downgrade.
+    (sub?.domainInPackage
+      ? `<p class="adm-wal__hint" data-domain-pkg>${T(lang, "A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja {price}/hó.", { price: esc(hufAmount(sub.domainInPackage.outsideMonthly)) })}</p>`
+      : "");
   const rows = w.charges
     .map((c) => {
       const key = invoiceItemKey(c.orderKind);

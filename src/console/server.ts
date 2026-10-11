@@ -154,7 +154,7 @@ import { checkSubdomainAvailable, convertLead, plannedSiteSlug } from "../conver
 import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
-import { normalizeCustomDomain, suggestDomains } from "../domains.js";
+import { normalizeCustomDomain, slugify, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
@@ -1036,6 +1036,7 @@ async function handleOrderRequest(
     price?: unknown;
     domain_type?: unknown;
     domain_name?: unknown;
+    platform_label?: unknown;
     photo_rights_declared?: unknown;
     recurring_consent?: unknown;
   };
@@ -1142,6 +1143,13 @@ async function handleOrderRequest(
     typeof body.domain_name === "string" && body.domain_name.trim()
       ? body.domain_name.trim().toLowerCase().slice(0, 253)
       : null;
+  // Elek B5 (ADR-0360 ⑤ / ADR-0356): with a custom domain the platform address stays, and
+  // the buyer may have chosen it — a SEPARATE field (domain_name is the custom domain then).
+  // Only the label is kept; the activation re-checks it (renameSiteSlug / uniqueSiteSlug).
+  const platformLabel =
+    typeof body.platform_label === "string" && body.platform_label.trim()
+      ? slugify(body.platform_label.trim().replace(/\.citoviso\.com$/i, "")).slice(0, 63) || null
+      : null;
   // SECURITY (guard-agent finding, 2026-08-01): the charged price is computed
   // SERVER-side from the ONE pricing source (pricing.ts, operator-set) — the
   // client figure is display-only; a mismatch is logged as a tamper/drift signal.
@@ -1221,6 +1229,9 @@ async function handleOrderRequest(
     // too — dropping it here meant activation never saw the buyer's choice. A custom-domain
     // name refused for the package (or an "own" one) is NOT carried onto the free subdomain.
     domainName: domainEligible || domainType === "citoviso_sub" ? domainName : null,
+    // Elek B5: next to the custom domain, the chosen platform address. On the refused-to-sub
+    // path the order is a platform order — and then the chosen label is that order's name.
+    platformLabel: domainEligible ? platformLabel : null,
     commitmentMonths,
     committedMinMonthly,
     domainFee: domainFee || null,
@@ -1877,8 +1888,13 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const form = await readBody(req);
+    // Elek K3: a field the form did NOT send keeps its stored value — `Number(null)` is 0,
+    // which used to zero `custom_domain_monthly` and clamp `domain_max_price_eur` to 1 on
+    // every save of the new /pricing page (it no longer carries those legacy fields).
     const num = (name: string, fallback: number): number => {
-      const v = Number(form.get(name));
+      const raw = form.get(name);
+      if (raw === null || raw.trim() === "") return fallback;
+      const v = Number(raw);
       return Number.isFinite(v) && v >= 0 ? v : fallback;
     };
     const region = form.get("region") || undefined;
@@ -3089,7 +3105,7 @@ async function handle(
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
     // ADR-0360 ③: only the endings this market offers are suggested.
     await loadPricing();
-    const candidates = suggestDomains(a.leadName).filter((d) => offeredTldOf(d) !== null);
+    const candidates = suggestDomains(a.leadName, offeredTlds().map((t) => t.tld));
     const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
     const suggestions = candidates.map((domain, i) => ({ domain, availability: verdicts[i]! }));
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");

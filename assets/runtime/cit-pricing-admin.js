@@ -138,8 +138,9 @@
     function domLine(t) {
       if (domIn(t)) return '<div class="pr2-pkdom is-in">' + esc(fill(M.domainLineIn, { t: freeTlds().join(", ") || M.domainLineNoFree })) + "</div>";
       if (minPkg() > 0 && packagePrice(t) < minPkg()) return '<div class="pr2-pkdom">' + esc(fill(M.domainLineMin, { p: money(minPkg()) })) + "</div>";
-      var f = firstOn();
-      return '<div class="pr2-pkdom">' + esc(f ? fill(M.domainLineFee, { p: money(f.monthlyFee), t: f.tld }) : M.domainLineNone) + "</div>";
+      // Elek A1: every offered ending with its own fee, not the first one alone.
+      var on = tlds.filter(function (x) { return x.offered; });
+      return '<div class="pr2-pkdom">' + esc(on.length ? on.map(function (x) { return fill(M.domainLineFee, { p: money(x.monthlyFee), t: x.tld }); }).join(" · ") : M.domainLineNone) + "</div>";
     }
     function renderPackages() {
       var outside = D.modules.filter(function (m) { return m.packageable && assign[m.id] === undefined; }).map(function (m) { return m.id; });
@@ -231,11 +232,15 @@
     function renderRuns() {
       var aj = packagePrice("ajanlott"), freeM = num("annual_free_months", D.freeM);
       $("pr2-run-base").textContent = fill(M.runBase, { m: money(aj), k: 12 - freeM, y: money(aj * (12 - freeM)), n: freeM });
-      var f = firstOn();
+      // Elek A1: the fee is PER ENDING (ADR-0360 ③) — with endings at different fees the
+      // line names the range, not the first ending's fee alone (.eu 1 200 read "+1 000").
+      var fees = tlds.filter(function (x) { return x.offered; }).map(function (x) { return x.monthlyFee; });
+      var lo = fees.length ? Math.min.apply(null, fees) : null, hi = fees.length ? Math.max.apply(null, fees) : null;
+      var feeTxt = lo === null ? "—" : lo === hi ? money(lo) : money(lo) + "–" + money(hi);
       var lines = TIERS.map(function (t) {
         if (domIn(t)) return fill(M.runDomIn, { t: tierLabel[t], e: freeTlds()[0] || "" });
         if (minPkg() > 0 && packagePrice(t) < minPkg()) return fill(M.runDomMin, { t: tierLabel[t] });
-        return fill(M.runDomFee, { t: tierLabel[t], p: f ? money(f.monthlyFee) : "—" });
+        return fill(M.runDomFee, { t: tierLabel[t], p: feeTxt });
       }).join(" · ");
       $("pr2-run-dom").textContent = fill(M.runDom, { lines: lines, c: num("domain_min_commitment_months", D.commit), b: money(num("domain_buyout_price", D.buyout)) });
     }

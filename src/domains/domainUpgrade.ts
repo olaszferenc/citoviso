@@ -12,6 +12,7 @@
 // REFUSED up front for a domain known to exceed the purchase-price cap, so the
 // buyer never pays for a purchase that the provisioning guard would kill.
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { normalizeCustomDomain } from "../domains.js";
 import {
@@ -67,6 +68,85 @@ export async function quoteDomainUpgrade(
     price: domainFeeForCycle(1, region, { domain: norm.domain, ...ctx }),
     commitmentMonths: getDomainMinCommitmentMonths(region),
   };
+}
+
+/**
+ * How long an unpaid domain pay-link counts as "the buyer is paying right now". Older
+ * ones are abandoned checkouts: they no longer block a new order (and are superseded).
+ */
+export const DOMAIN_PAY_WINDOW_MINUTES = 30;
+
+/**
+ * ADR-XXXX (Elek B1): a tenant has at most ONE own-domain order alive — live, running,
+ * held (reserved) or being paid. What blocks a new one:
+ *   live / running / reserved → the Webcím tab shows that state, no second order;
+ *   paying → an unpaid pay-link younger than DOMAIN_PAY_WINDOW_MINUTES (same name: the
+ *            caller sends the buyer back to it instead of minting a second one).
+ * null = nothing in the way.
+ */
+export type DomainOrderBlocker =
+  | { readonly kind: "live" | "running" | "reserved"; readonly domain: string | null }
+  | { readonly kind: "paying"; readonly domain: string | null; readonly payUrl: string | null; readonly paymentId: string };
+
+export async function domainOrderBlocker(tenantId: string): Promise<DomainOrderBlocker | null> {
+  const site = await db
+    .selectFrom("site")
+    .select(["custom_domain", "custom_domain_status"])
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (site?.custom_domain_status === "live") return { kind: "live", domain: site.custom_domain };
+  const running = await db
+    .selectFrom("domain_provisioning")
+    .select(["domain"])
+    .where("tenant_id", "=", tenantId)
+    .where("status", "not in", ["live", "failed"])
+    .executeTakeFirst();
+  if (running) return { kind: "running", domain: running.domain };
+  const pays = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .select([
+      "payment.id as id",
+      "payment.status as status",
+      "payment.pay_url as payUrl",
+      "order_intent.domain_name as domain",
+      sql<boolean>`payment.created_at > now() - make_interval(mins => ${DOMAIN_PAY_WINDOW_MINUTES})`.as("fresh"),
+    ])
+    .where("order_intent.tenant_id", "=", tenantId)
+    .where("order_intent.kind", "=", "domain_upgrade")
+    .where("payment.status", "in", ["reserved", "pending"])
+    .orderBy("payment.created_at", "desc")
+    .execute();
+  const held = pays.find((p) => p.status === "reserved");
+  if (held) return { kind: "reserved", domain: held.domain };
+  const paying = pays.find((p) => p.status === "pending" && p.fresh);
+  if (paying) return { kind: "paying", domain: paying.domain, payUrl: paying.payUrl, paymentId: paying.id };
+  return null;
+}
+
+/**
+ * The buyer changed their mind while an earlier pay-link of theirs was still open: that
+ * link is superseded (marked `cancelled`), so only ONE domain payment can be in flight.
+ * If it is completed anyway, the webhook releases its hold (payment/service.ts).
+ */
+export async function supersedePendingDomainPayments(tenantId: string): Promise<number> {
+  const rows = await db
+    .updateTable("payment")
+    .set({ status: "cancelled" })
+    .where("status", "=", "pending")
+    .where("order_intent_id", "in", (eb) =>
+      eb
+        .selectFrom("order_intent")
+        .select("id")
+        .where("tenant_id", "=", tenantId)
+        .where("kind", "=", "domain_upgrade"),
+    )
+    .returning("id")
+    .execute();
+  if (rows.length) {
+    console.warn(`[domain] ${tenantId}: ${rows.length} korábbi, ki nem fizetett domain-fizetés felülírva (új név választva)`);
+  }
+  return rows.length;
 }
 
 /**

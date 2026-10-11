@@ -66,6 +66,8 @@ export async function deliverInvoiceEmail(input: {
         // Elek3 A2: the redeemed offer, named in the mail like on the invoice comment.
         "order_intent.offer_id as offerId",
         "order_intent.list_price as listPrice",
+        // Elek K2: the own-domain fee rides on top, undiscounted (ADR-0109 ⑥).
+        "order_intent.domain_fee as domainFee",
       ])
       .where("payment.id", "=", input.paymentId)
       .executeTakeFirst();
@@ -89,8 +91,12 @@ export async function deliverInvoiceEmail(input: {
       );
     }
     const mailLang = row?.tenantId ? await prepareMailLang(await langForTenant(row.tenantId)) : undefined;
+    // Elek K2: `list_price` is the SERVICE list price (no domain), while the gross carries
+    // the domain fee on top — the discount line must be computed on the service part only,
+    // and the domain fee named on its own line, so the lines add up to the invoice.
+    const domainFee = row?.domainFee && row.domainFee > 0 ? Number(row.domainFee) : 0;
     let discount: { label: string; percent: number; listGross: number } | null = null;
-    if (row?.offerId && row.listPrice && Number(row.listPrice) > input.gross) {
+    if (row?.offerId && row.listPrice && Number(row.listPrice) > input.gross - domainFee) {
       const o = await db.selectFrom("offer").select(["kind", "percent"]).where("id", "=", row.offerId).executeTakeFirst();
       if (o) {
         discount = {
@@ -114,6 +120,7 @@ export async function deliverInvoiceEmail(input: {
       ...(mailLang ? { lang: mailLang } : {}),
       pdfBase64: input.pdfBase64,
       discount,
+      domainFee,
       siteUrl:
         row?.siteStatus === "live"
           ? tenantSiteUrl(config.publicSiteUrl, row.siteSlug, row.siteCustomDomain)

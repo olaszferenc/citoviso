@@ -973,6 +973,8 @@ export async function recordOrderIntent(input: {
   /** Domain choice (ADR-0020). */
   domainType: "citoviso_sub" | "citoviso_registered" | "own";
   domainName: string | null;
+  /** Elek B5 (ADR-0360 ⑤): the platform label chosen NEXT TO a custom domain. */
+  platformLabel?: string | null;
   commitmentMonths: number | null;
   /** ADR-0094 ④: package floor frozen at order for a free-domain commitment. */
   committedMinMonthly?: number | null;
@@ -1052,6 +1054,7 @@ export async function recordOrderIntent(input: {
       submitted_at: new Date(),
       domain_type: input.domainType,
       domain_name: input.domainName,
+      platform_label: input.platformLabel ?? null,
       commitment_months: input.commitmentMonths,
       committed_min_monthly: input.committedMinMonthly ?? null,
       domain_fee: input.domainFee ?? null,

@@ -120,8 +120,13 @@ const TYPE_WORDS = new Set([
  * 3–5 candidate custom domains from the business name (owner: "három-négy-öt").
  * HU-first: .hu primary, .com/.eu fallback (multi-country ccTLDs = global phase).
  * Deterministic — no AI, no network; availability is checked separately.
+ *
+ * ADR-0360 ③ (Elek A4): with `endings` (the market's OFFERED endings) only those are
+ * suggested, and EVERY offered ending gets at least one candidate. The cut to five used
+ * to happen BEFORE the callers filtered for the offered endings, so a sixth-place .eu fell
+ * off while four .hu variants stayed.
  */
-export function suggestDomains(name: string): string[] {
+export function suggestDomains(name: string, endings?: readonly string[]): string[] {
   const slug = slugify(name);
   if (!slug) return [];
   const joined = slug.replace(/-/g, "");
@@ -138,7 +143,14 @@ export function suggestDomains(name: string): string[] {
   push(`${core}szallas.hu`);
   push(`${joined}.com`);
   push(`${joined}.eu`);
-  return out.slice(0, 5);
+  if (!endings) return out.slice(0, 5);
+  const offered = endings.map((e) => e.toLowerCase());
+  for (const e of offered) push(`${joined}${e}`);
+  const ok = out.filter((d) => offered.some((e) => d.endsWith(e)));
+  // One per ending first (in the market's order), then the rest in generation order.
+  const firsts = offered.map((e) => ok.find((d) => d.endsWith(e))).filter((d): d is string => !!d);
+  const picked = [...firsts, ...ok.filter((d) => !firsts.includes(d))].slice(0, 5);
+  return ok.filter((d) => picked.includes(d));
 }
 
 /** Fetch with a hard timeout; null on any failure (network is best-effort here). */

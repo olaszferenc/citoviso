@@ -21,8 +21,11 @@ import {
   getDomainMinPackageMonthly,
   getCurrency,
   getDomainMinCommitmentMonths,
+  offeredTldOf,
+  offeredTlds,
 } from "../pricing.js";
 import { renewableModuleIds } from "../payment/billing.js";
+import { getDisabledModules } from "../moduleSales.js";
 import { isMockDomainProvisioning, type DomainProvisioningStatus } from "./provisionDomain.js";
 import { exceedsCostCap } from "./costCap.js";
 
@@ -75,8 +78,20 @@ export interface DomainAdminData {
   /** The domain the newest beszerzés is about (in flight or failed). */
   readonly activeDomain: string | null;
   readonly suggestions: readonly DomainSuggestionView[];
-  /** ADR-0109 ①: the custom domain's MONTHLY fee (was: yearly). */
+  /**
+   * ADR-0109 ①: the custom domain's MONTHLY fee. ADR-0360: for the PICKED name's ending and
+   * this tenant's module set — the same figure the order charges (quoteDomainUpgrade);
+   * before a pick, the market's primary ending (Elek B4: it used to be that one always).
+   */
   readonly priceMonthly: number;
+  /**
+   * ADR-0360 (open item): the tenant's package carries the domain → its fee is 0, and a
+   * payment-free claim does not exist yet. The screen says it is handled by hand instead
+   * of showing a fee/hold the server refuses (Elek ISMERT row).
+   */
+  readonly packageContent: boolean;
+  /** ADR-0360 ③: the endings this market offers (".hu", ".eu" …), for the refusal line. */
+  readonly offeredTlds: readonly string[];
   /** ADR-0109 ②/⑧: may this tenant have a custom domain at all (LIST package)? */
   readonly eligible: boolean;
   /** The entry threshold to show when `eligible` is false. */
@@ -103,6 +118,11 @@ export interface DomainCheckResult {
    * — nem kínálható fel; a nézet mondja ki a vevőnek, miért nem.
    */
   readonly tooExpensive: boolean;
+  /**
+   * ADR-0360 ③ (Elek K1): the ending is not offered on this market — said as such ("we do
+   * not offer this ending, choose from …"), never as "premium" (a .com is not premium).
+   */
+  readonly notOffered: boolean;
 }
 
 /**
@@ -112,14 +132,17 @@ export interface DomainCheckResult {
 export async function checkTypedDomain(raw: string, region?: string): Promise<DomainCheckResult> {
   const norm = normalizeCustomDomain(raw);
   if (!norm.ok || !norm.domain) {
-    return { input: raw, domain: null, reason: norm.reason ?? null, availability: null, tooExpensive: false };
+    return { input: raw, domain: null, reason: norm.reason ?? null, availability: null, tooExpensive: false, notOffered: false };
   }
   await loadPricing();
+  if (!offeredTldOf(norm.domain, region)) {
+    return { input: raw, domain: norm.domain, reason: null, availability: null, tooExpensive: false, notOffered: true };
+  }
   const [availability, tooExpensive] = await Promise.all([
     checkWebcimAvailability(norm.domain),
     exceedsPriceCap(norm.domain),
   ]);
-  return { input: raw, domain: norm.domain, reason: null, availability, tooExpensive };
+  return { input: raw, domain: norm.domain, reason: null, availability, tooExpensive, notOffered: false };
 }
 
 /**
@@ -131,6 +154,8 @@ export async function loadDomainAdmin(
   tenantId: string,
   displayName: string,
   regionId?: string,
+  /** The name on the review step (`?d=`), so its ENDING prices the screen (Elek B4). */
+  picked?: string | null,
 ): Promise<DomainAdminData> {
   const site = await db
     .selectFrom("site")
@@ -140,6 +165,7 @@ export async function loadDomainAdmin(
 
   const status = (site?.custom_domain_status ?? "none") as DomainProvisioningStatus | "none";
   const inFlight = status !== "none" && status !== "failed";
+  await loadPricing();
 
   // A sikertelen kísérlet domainje az append-only naplóból (a site-on nincs eltárolva,
   // mert oda csak a SIKERES domain kerül — a 'failed' képernyőnek viszont meg kell
@@ -187,10 +213,11 @@ export async function loadDomainAdmin(
     }
   }
 
-  await loadPricing();
   const suggestions: DomainSuggestionView[] = [];
   if (!inFlight) {
-    const candidates = suggestDomains(displayName);
+    // ADR-0360 ③ (Elek A4): suggest only OFFERED endings, every one of them — the same
+    // rule as the lead configurator (console /configure/…/domains).
+    const candidates = suggestDomains(displayName, offeredTlds(regionId).map((t) => t.tld));
     const checks = await Promise.all(
       candidates.map(async (d) => ({
         availability: await checkWebcimAvailability(d),
@@ -203,6 +230,13 @@ export async function loadDomainAdmin(
       if (!checks[i]!.overCap) suggestions.push({ domain, availability: checks[i]!.availability });
     });
   }
+
+  // ADR-0360: the per-ending fee for THIS tenant's module set (0 = package content), and
+  // eligibility with the package context — the same reading the order path uses.
+  const owned = await renewableModuleIds(tenantId);
+  const ctx = { modules: owned, disabled: await getDisabledModules() };
+  const pickedTld = picked ? offeredTldOf(picked, regionId) : null;
+  const priceMonthly = domainFeeForCycle(1, regionId, { domain: pickedTld ? picked! : null, ...ctx });
 
   return {
     currentHost: site?.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null,
@@ -217,11 +251,10 @@ export async function loadDomainAdmin(
     // ADR-0109: the SAME fee the order will charge (quoteDomainUpgrade). What the
     // review screen shows must equal what the pay-link takes (§B.17 on ourselves).
     // Eligibility is judged on the LIST package total — a discount never buys it (⑧).
-    priceMonthly: domainFeeForCycle(1, regionId),
-    eligible: isDomainEligible(
-      computeMonthly(await renewableModuleIds(tenantId), regionId),
-      regionId,
-    ),
+    priceMonthly,
+    packageContent: priceMonthly === 0,
+    offeredTlds: offeredTlds(regionId).map((t) => t.tld),
+    eligible: isDomainEligible(computeMonthly(owned, regionId), regionId, ctx),
     minPackageMonthly: getDomainMinPackageMonthly(regionId),
     currency: getCurrency(regionId),
     commitmentMonths: getDomainMinCommitmentMonths(regionId),

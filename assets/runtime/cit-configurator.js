@@ -1777,7 +1777,7 @@
       var gap = domainGap();
       var condEl = card.querySelector(".cit-cfg-dgate__cond");
       if (condEl) {
-        condEl.textContent = tr("Feltétel: {min}/hó feletti csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó.")
+        condEl.textContent = tr("Feltétel: legalább {min}/hó csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó.")
           .replace("{min}", fmt(DOM.minPackageMonthly))
           .replace("{now}", fmt(monthlyTotal()));
       }
@@ -1829,6 +1829,20 @@
           .replace(/\{min\}/g, fmt(DOM.minPackageMonthly));
       if (domainType === "citoviso_registered" && okE) termsEl.removeAttribute("hidden");
       else termsEl.setAttribute("hidden", "");
+    }
+    paintKeep();
+  }
+
+  /** Elek B5: which platform address stays next to the custom domain (subHost = the chosen one). */
+  function paintKeep() {
+    var keepEl = panel.querySelector(".cit-cfg-dkeep");
+    if (!keepEl) return;
+    if (domainType === "citoviso_registered" && subHost) {
+      keepEl.textContent = tr("A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím ({host}) nem szűnik meg: automatikusan az újra irányít, így a korábbi hivatkozások is működnek tovább.")
+        .replace("{host}", subHost);
+      keepEl.removeAttribute("hidden");
+    } else {
+      keepEl.setAttribute("hidden", "");
     }
   }
 
@@ -1910,6 +1924,9 @@
       '<button type="button" class="cit-cfg-dgate__no">' + tr("Most nem") + "</button>" +
       "</div></div>" +
       '<p class="cit-cfg-dterms" hidden></p>' +
+      // Elek B5 (ADR-0360 ⑤): with a custom domain the platform address STAYS — and the
+      // buyer is told which one (the tenant-admin's own sentence).
+      '<p class="cit-cfg-dterms cit-cfg-dkeep" hidden></p>' +
       '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
       // Own name (tulaj, 2026-08-21): our 3–5 candidates are guesses from the business
       // name — the owner may already have a name in mind, and being offered only our
@@ -3204,6 +3221,7 @@
         dlist.setAttribute("hidden", "");
         if (ownBox) ownBox.setAttribute("hidden", "");
       }
+      paintKeep();
       refreshSubmit();
     }
     panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
@@ -3417,6 +3435,7 @@
         if (!renCand.ok) return;
         subHost = renCand.host;
         if (domainType === "citoviso_sub") domainName = subHost;
+        paintKeep();
         subOk = true;
         renEdit.hidden = true;
         renOpenRow.hidden = false;
@@ -3454,6 +3473,7 @@
               subOk = true;
               subHost = j.host;
               if (domainType === "citoviso_sub") domainName = subHost;
+              paintKeep();
               setSubStatus("ok", tr("Szabad:") + " " + j.host);
             } else {
               subOk = false;
@@ -4603,6 +4623,10 @@
         price: payableTotal(),
         domain_type: domainType,
         domain_name: domainName,
+        // Elek B5 (ADR-0360 ⑤): the platform address chosen NEXT TO a custom domain — its
+        // own field, since domain_name is the custom domain then.
+        platform_label:
+          domainType === "citoviso_registered" && subHost && DOM ? subHost.replace(DOM.subBase, "") : null,
         photo_rights_declared: rightsBox.checked === true,
         // 0029 billing identity — the server re-validates all of it.
         buyer_type: buyerType,

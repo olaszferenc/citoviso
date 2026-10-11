@@ -4,7 +4,7 @@ title: Saját webcím — hogyan kaphat egyedi domain nevet a honlapja
 audience: tenant
 category: billing
 anchors: admin.domain
-updated: 2026-09-27
+updated: 2026-10-11
 ---
 
 A honlapja induláskor egy nálunk lévő címen érhető el (például
@@ -40,6 +40,9 @@ Ha valami nem használható benne, egyszerű magyar mondatban megírjuk, miért.
 Úgynevezett **prémium (emelt díjas)** nevet — amiért a névkereskedő a szokásos
 többszörösét kéri — nálunk nem lehet igényelni; ha ilyet ír be, ezt az
 ellenőrzésnél azonnal jelezzük, és érdemes másik nevet választani.
+Nem minden végződést kínálunk (például a `.com`-ot nem mindenhol): ha olyat ír be,
+amelyet nem, azt is azonnal megírjuk, és felsoroljuk, melyik végződések közül
+választhat. A javaslataink is csak ezekből a végződésekből állnak.
 
 Az első szabad nevet eleve kijelöljük (a név előtti pötty). Ha másikat kér, koppintson
 arra, majd a lista alatti **„Tovább”** gombra. Ha a listában egyetlen szabad név sincs, a
@@ -54,6 +57,11 @@ cím **havi díját**, a vállalt előfizetési időt, és hogy most mennyit **z
 kártyáján. Ha meggondolta magát, a **„Vissza”** gombbal új nevet választhat. Ha rendben
 van, koppintson a **„Tovább a fizetéshez (zárolás)”** gombra — a Barion biztonságos
 fizetési oldalára jut.
+
+Egyszerre **egy** saját cím rendelése futhat. Ha ugyanazt a nevet két ablakból (vagy
+kétszer kattintva) is elküldi, ugyanarra a fizetésre visszük vissza — nem keletkezik két
+rendelés, és nem zárolunk kétszer. Amíg egy rendelés fut, vagy a címe már él, újat nem
+indíthat: a fül ilyenkor annak az állapotát mutatja.
 
 Ha a név az újbóli ellenőrzéskor már nem szabad, a lépésen **nincs fizetés-gomb**: a lap
 megírja, hogy a név foglalt vagy nálunk nem igényelhető, és a **„Vissza”** gombbal
@@ -90,6 +98,14 @@ tényleg nincs teendője; csak azt érdemes tudnia, hogy emiatt tart tovább.
 linkre kattintást sürget, az **nem tőlünk és nem a nyilvántartótól jön** — ilyet Önnek nem
 küldünk. Ne kattintson benne, hanem továbbítsa nekünk, és megnézzük.
 
+## Mi van, ha a beállítás elakad?
+
+Előfordulhat, hogy a nevet már megvásároltuk (és a kártyáját terheltük), de a cím
+beállítása vagy a biztonsági tanúsítvány a vártnál tovább tart. **A név ilyenkor is az
+Öné** — a fül ezt ki is írja („Az Öné: …”), és e-mailben is megírjuk. A beállítást
+automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője, és nem kell
+másik nevet választania vagy újra fizetnie.
+
 ## Meddig tart, és mi történik közben?
 
 Nem magyar (`.com`, `.eu` és hasonló) neveknél általában rövid: a név megvásárlása után
@@ -118,12 +134,20 @@ leáll, mint hogy rossz nevet vegyen Önnek.
 kártyáját nem terheljük. A bankjától függően néhány munkanapon belül eltűnik a
 számlájáról. Az előfizetési vállalás sem indul el. A fülön és e-mailben is
 megírjuk, melyik nevet nem sikerült megszerezni, és a **„Másik név választása”** gombbal
-rögtön választhat másikat.
+rögtön választhat másikat — a választott új név az Áttekintésre visz, nem vissza erre a
+képernyőre.
 
 ## Mennyibe kerül?
 
 Az árat mindig az **„Áttekintés”** képernyőn látja, mielőtt fizet: a cím havi díját
-és a vele járó előfizetési vállalást.
+és a vele járó előfizetési vállalást. **A díj a végződéstől függhet** (egy `.eu` cím
+díja lehet más, mint egy `.hu`-é) — az Áttekintés mindig a választott név díját mutatja,
+és pontosan ennyit zárolunk.
+
+A Pénztárca fül következő terhelése és a Modulok fül következő számlája a cím díjával
+együtt mutatja az összeget, és a számla tételei között a cím külön soron szerepel. Éves
+fizetésnél a cím díja 12 hónapra jár (az éves fizetés ajándék hónapjai a mi
+szolgáltatásunkra vonatkoznak, a cím díjára nem).
 
 **A saját cím HAVI díjas.** A díj minden hónapban ott van az előfizetési számláján,
 külön soron megnevezve — nincs egyszeri nagy tétel, és nincs évfordulós meglepetés.
@@ -132,8 +156,8 @@ kiszámlázza nekünk, ezért a fenntartásáért folyamatosan fizet.
 
 Három dolgot érdemes tudni:
 
-- **A saját cím csak egy bizonyos csomagmérettől választható** — a pontos összeget a
-  „Webcím” fülön írjuk ki. Ez belépési feltétel, nem kedvezmény: kisebb csomag mellett
+- **A saját cím csak egy bizonyos csomagmérettől választható** (legalább akkora havi
+  listaárú csomag mellé) — a pontos összeget a „Webcím” fülön írjuk ki. Ez belépési feltétel, nem kedvezmény: kisebb csomag mellett
   a név nem olcsóbb, hanem nem elérhető. A feltételt a csomag **listaára** dönti el,
   tehát egy időszakos kedvezmény nem számít bele.
 - **A díjra kedvezmény nem vonatkozik.** A bemutatkozó vagy egyéb engedmény a mi
@@ -142,6 +166,14 @@ Három dolgot érdemes tudni:
 - **A hűségidő letelte után a név díjmentesen az Öné**, és nincs többé sem kötbér, sem
   csomag-minimum. A havi díj viszont tovább fut, amíg a nevet nálunk tartja — ez a
   fenntartás díja, nem a névé.
+
+## Ha a csomagom tartalmazza a saját címet
+
+Egyes csomagokban a saját cím a csomag része: ilyenkor nincs külön havidíja. Ha később
+kisebb csomagra vált, a díja elindul — a Modulok és a Pénztárca fül ezt előre kiírja, a
+pontos havi összeggel. Ha már élő honlap mellé, utólag kér ilyen, díj nélküli címet, a fül
+nem kér fizetést és nem zárol semmit: az igénylést munkatársunk intézi, és e-mailben
+értesítjük, amint a cím él.
 
 ## Ha már van saját domainem
 

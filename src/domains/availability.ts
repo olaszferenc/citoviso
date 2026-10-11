@@ -22,6 +22,7 @@
 import { config } from "../config.js";
 import { checkAvailability as dnsRdapAvailability } from "../domains.js";
 import { WebsupportRegistrar } from "./registrar/websupport.js";
+import { LIVE_REGISTRAR_PROVIDERS } from "./registrar/index.js";
 
 export type WebcimAvailability = "free" | "taken" | "unavailable" | "unknown";
 
@@ -42,8 +43,21 @@ function registrarOracle(): WebsupportRegistrar | null {
   return oracle;
 }
 
+/**
+ * ADR-XXXX (Elek IT-kör K6): which oracle answers. A MOCK registrar implies the mock oracle —
+ * before, only DOMAIN_AVAILABILITY_SOURCE=mock switched it off, so a mock-registrar test run
+ * with dev keys in the env called the real registrar API. The real (read-only) oracle next
+ * to a mock registrar is an explicit opt-in: DOMAIN_AVAILABILITY_SOURCE=registrar.
+ */
+export function availabilitySource(): "mock" | "registrar" {
+  const src = (process.env.DOMAIN_AVAILABILITY_SOURCE ?? "").toLowerCase();
+  if (src === "mock") return "mock";
+  if (src === "registrar") return "registrar";
+  return LIVE_REGISTRAR_PROVIDERS.includes(config.domains.registrarProvider.toLowerCase()) ? "registrar" : "mock";
+}
+
 export async function checkWebcimAvailability(domain: string): Promise<WebcimAvailability> {
-  if ((process.env.DOMAIN_AVAILABILITY_SOURCE ?? "").toLowerCase() === "mock") {
+  if (availabilitySource() === "mock") {
     return /taken/i.test(domain) ? "taken" : "free";
   }
   const ws = registrarOracle();
