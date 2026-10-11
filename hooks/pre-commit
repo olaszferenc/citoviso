@@ -3164,7 +3164,7 @@ if [ -f scripts/admin-module-count-truth-check.mts ] && \
   echo "[pre-commit] admin-module-count-truth-check (modulszámok egy definícióból, Bővítés nem hazudik)…"
   npx tsx scripts/admin-module-count-truth-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (Elek 10-11) — SAJÁT DOMAIN: egy tenantnak egy domain-rendelése él (két fül sorban és
+# Elek 10-11 saját domain kör (ADR: sajat-domain-egy-rendeles-setup-retry-www-301) — SAJÁT DOMAIN: egy tenantnak egy domain-rendelése él (két fül sorban és
 #     párhuzamosan → 1 regisztráció, 1 terhelés, 0 ragadt zárolás); vétel utáni DNS/TLS-hiba =
 #     setup_retry + riasztás + igaz levél, nem „más lefoglalta”; „Másik név” nem visz körbe; a
 #     képernyő díja = a terhelt díj (végződésenként, megújulással együtt). A régi kódon 28 bukás
