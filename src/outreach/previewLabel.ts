@@ -24,9 +24,31 @@ import { PLATFORM_DOMAIN, RESERVED_SLUGS, isPlatformHosting, slugify } from "../
 /** Longest label we mint (DNS allows 63; a phone screen does not). */
 const MAX_LABEL = 40;
 
-/** Trim a slug to MAX_LABEL without leaving a trailing hyphen. */
-function clip(slug: string): string {
-  return slug.slice(0, MAX_LABEL).replace(/-+$/, "");
+/**
+ * THE label shaper — the outreach preview label (here) and the site's platform slug
+ * (conversion/provision.ts uniqueSiteSlug) both go through it (Elek IT K5 + A4, 2026-10-11).
+ *
+ * `slug` (+ an optional `suffix`: a city, a number, a random tail) is fitted into
+ * MAX_LABEL: the suffix always survives whole, the BASE gives up the room — cut at a word
+ * boundary (mid-word only when its first word alone is longer than the room), and never a
+ * double, leading or trailing hyphen.
+ *
+ * Measured before (scratch DB): the site side appended "-2" AFTER clipping the base to
+ * 40 → `…-csaladi-ve-2` (42 characters, mid-word); the outreach side cut mid-word too
+ * (`…-csaladi-ve`) and its city candidate kept the cut's hyphen (`…-napfenyes--szigliget`).
+ */
+export function fitLabel(slug: string, suffix = ""): string {
+  const tail = suffix.replace(/-{2,}/g, "-").replace(/^-+|-+$/g, "");
+  const room = MAX_LABEL - (tail ? tail.length + 1 : 0);
+  let base = slug.replace(/-{2,}/g, "-").replace(/^-+|-+$/g, "");
+  if (base.length > room) {
+    const cut = base.slice(0, room);
+    const lastDash = cut.lastIndexOf("-");
+    base = base[room] === "-" ? cut : lastDash > 0 ? cut.slice(0, lastDash) : cut;
+    base = base.replace(/-+$/, "");
+  }
+  if (!base) return "";
+  return tail ? `${base}-${tail}` : base;
 }
 
 /**
@@ -45,12 +67,19 @@ export function cityOfAddress(address: string | null | undefined): string | null
  * Pure — the DB decides which is free.
  */
 export function labelCandidates(name: string, address: string | null | undefined): string[] {
-  const base = clip(slugify(name));
+  const full = slugify(name);
+  const base = fitLabel(full);
   if (base.length < 3) return [];
   const out = [base];
   const city = cityOfAddress(address);
-  if (city && !base.endsWith(`-${city}`)) out.push(clip(`${base.slice(0, MAX_LABEL - city.length - 1)}-${city}`));
-  for (let i = 2; i <= 50; i++) out.push(`${base.slice(0, MAX_LABEL - String(i).length - 1).replace(/-+$/, "")}-${i}`);
+  if (city) {
+    // A name that already ends in the city gives up the city from its stem, so the
+    // candidate reads "<name>-<city>", not "<name>-<city>-<city>".
+    const stem = full.endsWith(`-${city}`) ? full.slice(0, -city.length - 1) : full;
+    const withCity = fitLabel(stem, city);
+    if (withCity && withCity !== base) out.push(withCity);
+  }
+  for (let i = 2; i <= 50; i++) out.push(fitLabel(full, String(i)));
   return [...new Set(out)].filter((l) => !RESERVED_SLUGS.has(l));
 }
 

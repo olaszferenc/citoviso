@@ -611,7 +611,7 @@ function requestCard(
   const fresh = !r.seen;
   const quote = !r.quotedTotal;
   const conflictNote = overlaps?.length
-    ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => o.guestName).join(", ") })}</span>`
+    ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => esc(o.guestName)).join(", ") })}</span>`
     : "";
   const when = `${huDay(r.dateFrom, lang)} → ${huDay(r.dateTo, lang)}`;
   const confirmLine = [
@@ -1212,7 +1212,12 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
   };
   return (
     `<script>(function(){` +
-    `var G=${JSON.stringify(popupData)},L=${JSON.stringify(L)};` +
+    // Elek IT XSS (2026-10-11): the guest's NAME rides in G — "<" is escaped so a name like
+    // `</script><img onerror=…>` cannot close this element (measured: it ran on every load of
+    // the Foglalások tab), and e() escapes it again where the modal builds HTML from it.
+    `var G=${JSON.stringify(popupData).replace(/</g, "\\u003c")},L=${JSON.stringify(L).replace(/</g, "\\u003c")};` +
+    `function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){` +
+    `return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}` +
     `var C=["var(--citui-cyan-500)","var(--citui-warn)","var(--citui-navy-700)"];` +
     `function nights(f,t){var o=[];for(var d=new Date(f+"T00:00:00Z");d.toISOString().slice(0,10)<t;d.setUTCDate(d.getUTCDate()+1))o.push(d.toISOString().slice(0,10));return o;}` +
     `function calGrid(g){var f=g[0].from;for(var i=1;i<g.length;i++)if(g[i].from<f)f=g[i].from;` +
@@ -1226,7 +1231,7 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     `h+='<span class="bk-ovday" style="'+st+'">'+d+'</span>';}` +
     `var mk='<div class="bk-ovmonth">'+f.slice(0,4)+'. '+L.months[m]+'</div>';` +
     `var key=g.map(function(r,i){return '<span><i style="background:color-mix(in srgb,'+C[i%3]+` +
-    `' 30%,var(--citui-white));border:1px solid '+C[i%3]+'"></i>'+r.name+'</span>';}).join('')+` +
+    `' 30%,var(--citui-white));border:1px solid '+C[i%3]+'"></i>'+e(r.name)+'</span>';}).join('')+` +
     `(g.length>1?'<span><i style="background:linear-gradient(135deg,color-mix(in srgb,'+C[0]+` +
     `' 34%,var(--citui-white)) 50%,color-mix(in srgb,'+C[1]+' 34%,var(--citui-white)) 50%)"></i>'+L.both+'</span>':'');` +
     `return mk+'<div class="bk-ovgrid">'+h+'</div><div class="bk-ovkey">'+key+'</div>';}` +
@@ -1239,9 +1244,9 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     `g.map(function(r,i){var sel=r.id===chosen;` +
     `return '<div class="bk-ovreq'+(sel?' is-sel':'')+'" data-id="'+r.id+'">'+` +
     `'<span class="bk-ovord" style="background:'+C[i%3]+'">'+(i+1)+'.</span>'+` +
-    `'<span class="bk-ovt"><b>'+r.name+'</b><span>'+fmt(r.from)+' → '+fmt(r.to)+' · '+r.nights+' '+L.nights+' · '+r.guests+' '+L.guests+' · '+L.asked+' '+r.got.slice(11,16)+'</span></span>'+` +
+    `'<span class="bk-ovt"><b>'+e(r.name)+'</b><span>'+fmt(r.from)+' → '+fmt(r.to)+' · '+r.nights+' '+L.nights+' · '+r.guests+' '+L.guests+' · '+L.asked+' '+r.got.slice(11,16)+'</span></span>'+` +
     `'<span class="bk-ovpick">'+(sel?L.picked:L.pick)+'</span></div>';}).join('')+` +
-    `'<div class="bk-ovwarn"><b>'+losers.length+' '+L.req+' '+L.warn1+'</b> '+losers.map(function(r){return r.name;}).join(', ')+'. '+L.warnTail+'</div>'+` +
+    `'<div class="bk-ovwarn"><b>'+losers.length+' '+L.req+' '+L.warn1+'</b> '+losers.map(function(r){return e(r.name);}).join(', ')+'. '+L.warnTail+'</div>'+` +
     `'<label class="bk-ovlabel">'+L.noteLabel+'</label><textarea class="bk-ovnote" maxlength="1000"></textarea>'+` +
     `'<div class="bk-ovrow"><button type="button" class="citui-btn bk-btn--ok" data-ok>'+L.confirmBtn+'</button>'+` +
     `'<button type="button" class="citui-btn bk-btn--ghost" data-no>'+L.cancelBtn+'</button></div></div>';` +

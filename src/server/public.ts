@@ -248,6 +248,17 @@ import {
 } from "../pricing.js";
 
 /**
+ * Elek IT A5 (2026-10-11): the 410 "this link is no longer valid" answer was the one
+ * failure branch on the login path that wrote nothing — a buyer stuck on a dead link
+ * left no trace. One line per refusal; ⛔ never the token itself (the journal is read
+ * by people, the token is a password-equivalent while it lives).
+ */
+function passwordLinkDeadLogLine(method: "GET" | "POST", reason: "unknown" | "used" | "expired", username?: string): string {
+  const why = reason === "used" ? "már felhasznált" : reason === "expired" ? "lejárt" : "ismeretlen";
+  return `[auth] jelszó-link elutasítva (410, ${method}) — ${why} link${username ? ` · ${username}` : ""}`;
+}
+
+/**
  * Console (operator) login URL for the cross-realm link on the customer login.
  * In production the console lives on its own admin subdomain behind TLS; the
  * ":4600" form is a LOCAL-DEV fallback only (that port is firewalled in prod, so
@@ -2341,10 +2352,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       const token = pwLinkPost[1]!;
       const v = await peekPasswordToken(token);
       const lang = await prepareMailLang(v.ok ? await langForTenant(v.tenantId) : DEFAULT_LANG);
-      if (!v.ok) return send(res, 410, passwordLinkDeadPage(lang));
+      if (!v.ok) {
+        console.warn(passwordLinkDeadLogLine("POST", v.reason));
+        return send(res, 410, passwordLinkDeadPage(lang));
+      }
       const r = await setPasswordWithToken(token, form.get("password") ?? "", form.get("password2") ?? "");
       if (!r.ok) {
-        if (r.error === "link") return send(res, 410, passwordLinkDeadPage(lang));
+        if (r.error === "link") {
+          console.warn(passwordLinkDeadLogLine("POST", "used", v.username));
+          return send(res, 410, passwordLinkDeadPage(lang));
+        }
         return send(res, 400, setPasswordPage({ token, username: v.username, siteName: v.siteName }, lang, r.error));
       }
       setSession(res, r.tenantUserId);
@@ -4007,7 +4024,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const pwLinkGet = /^\/login\/jelszo\/([A-Za-z0-9_-]{20,100})$/.exec(pathname);
     if (pwLinkGet) {
       const v = await peekPasswordToken(pwLinkGet[1]!);
-      if (!v.ok) return send(res, 410, passwordLinkDeadPage(loginLang));
+      if (!v.ok) {
+        console.warn(passwordLinkDeadLogLine("GET", v.reason));
+        return send(res, 410, passwordLinkDeadPage(loginLang));
+      }
       return send(res, 200, setPasswordPage({ token: pwLinkGet[1]!, username: v.username, siteName: v.siteName }, loginLang));
     }
     // GDPR Art. 13/14 notice. /adatvedelem is the canonical Hungarian path the

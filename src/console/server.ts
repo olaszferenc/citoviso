@@ -156,6 +156,7 @@ import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import { normalizeCustomDomain, slugify, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
+import { mockPayRoutesEnabled } from "../payment/index.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
 import { packageAssignmentErrors, parsePackageAssignment } from "../packages.js";
@@ -4617,6 +4618,13 @@ async function handle(
   }
   // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
   const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);
+  // Elek IT G1 (2026-10-11): the mock pay page and its "mark paid" buttons exist only where
+  // no real money can be involved (mock gateway, or Barion's TEST environment — the dev box).
+  // Against live Barion they were live too — harmless only as long as no `mock_` payment row
+  // existed; now they are simply not there (404).
+  if (/^\/pay\/mock\//i.test(path) && !mockPayRoutesEnabled()) {
+    return send(res, 404, layout("404", `<p>${T(consoleLang(), "Nincs ilyen fizetés.")}</p>`));
+  }
   if (method === "GET" && mockPayMatch) {
     // ⭐ The lead's name comes along: the pay screen must say WHAT is being paid
     // for (approved contract: assets/design-refs/console/pay-gateway-exit/ ②).
@@ -4689,6 +4697,22 @@ async function handle(
     // ADR-0226: the picked test card rides on the form body — the same shape the
     // mock gateway's parseWebhook would give (card mask on a paid result).
     const body = await readBody(req);
+    // Elek IT A2 (2026-10-11): a failed/cancelled payment is an END state. The "Újra
+    // próbálom / Folytatom — Fizetek" button (and an old tab's "Fizetek") on an ended
+    // payment is the buyer's RETRY — like at a real gateway, it gets a NEW payment for the
+    // same order (the stable /pay/go link's POST, every gate re-applied), never this row
+    // flipped to paid. The new payment's own page then takes the charge.
+    if (mockPayDoMatch[2] === "paid") {
+      const ended = await db
+        .selectFrom("payment")
+        .select(["id", "status"])
+        .where("gateway_ref", "=", mockPayDoMatch[1])
+        .executeTakeFirst();
+      if (ended && (ended.status === "failed" || ended.status === "cancelled")) {
+        const d = await resolvePayEntry(ended.id, { reissue: true });
+        return redirect(res, d.kind === "redirect" ? d.url : `/pay/go/${ended.id}`);
+      }
+    }
     const pickedCard = mockCard(body.get("card") ?? "") ?? mockCard("visa4242");
     const r = await applyWebhookResult({
       gatewayRef: mockPayDoMatch[1],

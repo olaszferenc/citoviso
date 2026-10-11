@@ -58,6 +58,9 @@ kontraktus: kb/entries/admin-multilang/entry.hu.md
 
 - [ ] Az elutasított fizetés újrapróbálható, és most sikerül
   tedd: kattints "Folytatom — Fizetek"
+  # Elek IT A2 (2026-10-11): a megszakított fizetés VÉGÁLLAPOT — a gomb ugyanarra a
+  # rendelésre ÚJ fizetést nyit (/pay/go), annak a pénztárán kell még egyszer fizetni.
+  tedd: kattints "form[action$='/paid'] button"
   tedd: várj "Sikeres fizetés" 60
   várd: látható "Sikeres fizetés"
   adat: ELEK-TESZT sikeres fizetés (újrapróba az elutasítás után)

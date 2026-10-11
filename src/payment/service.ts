@@ -398,7 +398,7 @@ export function paymentEndLogLine(
  */
 export async function applyWebhookResult(
   res: import("./gateway.js").WebhookResult,
-): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean; reason?: string; duplicateOf?: string }> {
+): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean; reason?: string; duplicateOf?: string; afterEndState?: boolean }> {
   const payment = await db
     .selectFrom("payment")
     .select(["id", "order_intent_id", "status", "reservation"])
@@ -426,6 +426,17 @@ export async function applyWebhookResult(
   if (payment.status === "paid") {
     const redelivered = await redeliverUpsellIfNeeded(payment.order_intent_id);
     return { ok: true, activated: redelivered, alreadySettled: true };
+  }
+
+  // Elek IT A2 (2026-10-11): `failed` / `cancelled` is an END state. A later "paid" for the
+  // same payment (an old tab's button, a replayed callback) used to flip it to paid, activate
+  // and invoice — silently. Barion's own Failed/Canceled/Expired are final there too, so a
+  // real callback never needs this transition; if one ever comes, money MAY have moved:
+  // nothing is activated by itself, the journal and the house hear it, a human settles it.
+  // The buyer's retry is a NEW payment for the same order (/pay/go), never this row.
+  if (res.status === "paid" && (payment.status === "failed" || payment.status === "cancelled")) {
+    await flagPaidAfterEndState(payment.id, payment.status, res.gatewayRef);
+    return { ok: true, activated: false, afterEndState: true };
   }
 
   if (res.status === "failed" || res.status === "cancelled") {
@@ -631,6 +642,39 @@ export async function earlierPaidInitialPayment(
     .orderBy("payment.id", "asc")
     .executeTakeFirst();
   return first && first.paymentId !== paymentId ? first : null;
+}
+
+/** Elek IT A2: payments already reported to the house this process (a /pay/done reload
+ *  re-reads the gateway each time — one alert per payment is enough). */
+const paidAfterEndAlerted = new Set<string>();
+
+/** Elek IT A2: a "paid" signal for a payment that already ENDED failed/cancelled — the
+ *  payment stays as it was, nothing activates; loud log + house mail (B1-PAR pattern). */
+async function flagPaidAfterEndState(paymentId: string, endState: string, gatewayRef: string): Promise<void> {
+  const info = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .leftJoin("lead", "lead.id", "prospect.lead_id")
+    .select([
+      "payment.amount as amount", "payment.currency as currency", "payment.gateway as gateway",
+      "payment.order_intent_id as orderIntentId", "order_intent.kind as kind", "lead.name as leadName",
+      "order_intent.buyer_email as email",
+    ])
+    .where("payment.id", "=", paymentId)
+    .executeTakeFirst();
+  const sum = `${info?.amount ?? "?"} ${info?.currency ?? "HUF"}`;
+  const text =
+    `SIKERES FIZETÉS-JELZÉS egy már LEZÁRT (${endState}) fizetésre (Elek IT A2).\n\n` +
+    `Lead: ${info?.leadName ?? "?"} · vevő e-mail: ${info?.email ?? "?"}\n` +
+    `Fizetés: ${publicPaymentRef(paymentId)} (${paymentId}) · ${sum} · ${info?.kind ?? "?"} · order ${info?.orderIntentId ?? "?"} · ` +
+    `${info?.gateway ?? "?"} ref ${gatewayRef}\n\n` +
+    `Mit tett a rendszer: a fizetés '${endState}' maradt, NEM aktivált, NEM állított ki számlát. ` +
+    `Teendő: a fizetési szolgáltató felületén nézd meg, történt-e terhelés — ha igen, aktiválás vagy visszautalás kézzel.`;
+  console.error(`[payment] ${text.replace(/\n+/g, " ")}`);
+  if (paidAfterEndAlerted.has(paymentId)) return;
+  paidAfterEndAlerted.add(paymentId);
+  await alertHouse({ tag: "paid-after-end-state", subject: `Sikeres fizetés-jelzés egy lezárt fizetésre — ${info?.leadName ?? "?"}`, text });
 }
 
 /** B1-PAR: a second charge for an already-paid first purchase — loud log + house mail. */

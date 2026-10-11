@@ -17,7 +17,7 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { RESERVED_SLUGS, slugify } from "../domains.js";
-import { labelHeldByOther, releasePreviewLabelUnlessKept } from "../outreach/previewLabel.js";
+import { fitLabel, labelHeldByOther, releasePreviewLabelUnlessKept } from "../outreach/previewLabel.js";
 import { defaultTimeZoneForCountry } from "../text/zoneTime.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
@@ -108,11 +108,16 @@ function makeToken(): string {
 }
 
 
-/** A platform label cut to the 40-character limit WITHOUT a trailing hyphen — the cut can
- *  land right after a word ("…-apartman-" at 40), and `x-.citoviso.com` is an invalid host
- *  label. Same rule as previewLabel.ts clip(). */
-function clipLabel(slug: string): string {
-  return slug.slice(0, 40).replace(/-+$/, "");
+/**
+ * The site-slug candidate number `i` (0 = the plain base) for a business name — the SAME
+ * shaper as the outreach label (previewLabel.ts fitLabel, Elek IT K5+A4): the "-N" suffix
+ * takes its room from the base, so every candidate stays within 40 characters and is cut
+ * at a word boundary. Pure; exported for the label gate (scripts/check-preview-label.mts).
+ */
+export function siteSlugCandidate(businessName: string, i: number): string {
+  const src = slugify(businessName);
+  const base = fitLabel(src) || "oldalam";
+  return i === 0 ? base : fitLabel(fitLabel(src) ? src : "oldalam", String(i + 1));
 }
 
 /** A platform subdomain label unique across sites (case-insensitive, 0017). A `preferred`
@@ -128,16 +133,15 @@ async function uniqueSiteSlug(
 ): Promise<string> {
   for (const wish of [preferred, previewLabel]) {
     if (!wish) continue;
-    const p = clipLabel(slugify(wish));
+    const p = fitLabel(slugify(wish));
     if (p && p.length >= 3 && !RESERVED_SLUGS.has(p) && !(await labelHeldByOther(p, leadId))) return p;
   }
-  const base = clipLabel(slugify(businessName)) || "oldalam";
   for (let i = 0; i < 100; i++) {
-    const candidate = i === 0 ? base : `${base}-${i + 1}`;
+    const candidate = siteSlugCandidate(businessName, i);
     if (RESERVED_SLUGS.has(candidate)) continue;
     if (!(await labelHeldByOther(candidate, leadId))) return candidate;
   }
-  return `${base}-${randomBytes(3).toString("hex")}`;
+  return fitLabel(fitLabel(slugify(businessName)) ? slugify(businessName) : "oldalam", randomBytes(3).toString("hex"));
 }
 
 /**
@@ -173,7 +177,7 @@ export async function checkSubdomainAvailable(
   label: string,
   leadId: string | null = null,
 ): Promise<{ ok: boolean; normalized: string; reason?: string }> {
-  const normalized = clipLabel(slugify(label));
+  const normalized = fitLabel(slugify(label));
   if (!normalized) return { ok: false, normalized: "", reason: "Adjon meg legalább egy betűt vagy számot." };
   if (normalized.length < 3) return { ok: false, normalized, reason: "Legalább 3 karakter kell." };
   if (RESERVED_SLUGS.has(normalized)) return { ok: false, normalized, reason: "Ez a név fenntartott." };
@@ -197,7 +201,7 @@ export async function checkSubdomainAvailable(
 export async function renameSiteSlug(siteId: string, leadId: string, preferred: string): Promise<string | null> {
   const current = await db.selectFrom("site").select("slug").where("id", "=", siteId).executeTakeFirst();
   if (!current) return null;
-  const wish = clipLabel(slugify(preferred));
+  const wish = fitLabel(slugify(preferred));
   if (current.slug && wish === current.slug.toLowerCase()) return current.slug;
   const check = await checkSubdomainAvailable(wish, leadId);
   if (!check.ok) {

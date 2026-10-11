@@ -125,6 +125,16 @@ refused = null;
 try { await assertUnderCostCap("pelda.de"); } catch (e) { refused = e; }
 check("⑧ nem kínált végződés → CostCapRefusal (fail-closed)", refused instanceof CostCapRefusal, String(refused));
 check("⑧ a tanácsadó előszűrő ugyanígy dönt", (await exceedsCostCap("premium.hu")) && !(await exceedsCostCap("pelda.hu")));
+// Elek IT K4 (2026-10-11): with the currency comparison in costCap.ts disabled
+// (`if (false && price.currency… !== cap.currency…)`) this gate stayed GREEN — a price in one
+// currency was compared with a cap in another as bare numbers. The mock registrar prices in
+// HUF; an ending whose cap is kept in EUR must be REFUSED (no FX), even though 1990 < 5000.
+pricing.overridePricingStateInProcess({ tlds: [hu({ costCurrency: "EUR" }), com] });
+refused = null;
+try { await assertUnderCostCap("pelda.hu"); } catch (e) { refused = e; }
+check("⑧ eltérő pénznem (HUF-ár, EUR-plafon) → CostCapRefusal, nincs átváltás nélküli összevetés",
+  refused instanceof CostCapRefusal && /átváltás nélkül/.test(String(refused)), String(refused));
+pricing.overridePricingStateInProcess({ tlds: [hu(), com] });
 
 // ⑨ trial package
 const c9 = parseFreeTrialSetting(JSON.stringify({ enabled: true, days: 14, package: "alap" }));
