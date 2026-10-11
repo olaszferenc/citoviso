@@ -3,7 +3,7 @@
 Tulajdonosi jóváhagyás: 2026-10-11 („Az én javaslatom: A + 1.”). Vázlat: `portal-sync.html`
 (felület-, változat-, portál-jel- és méretváltóval), képek: `A-lead-{mobil,asztali}.png`,
 `1-admin-{mobil,asztali}.png`. **Ez a terv KÖT** — elvárt viselkedés, nem stílus-javaslat.
-Döntés: ADR-0361 (`_planning/decisions/XXXX-portal-naptar-szinkron-ical-elso-kor.md`).
+Döntés: ADR-0361 (`_planning/decisions/0361-portal-naptarszinkron-ical-lal-elso-kor-a.md`).
 
 **Hatókör:** `src/server/moduleConfigViews.ts` · `src/modules.ts` · `assets/runtime/cit-configurator.js` · `assets/runtime/cit-runtime.js`
 
