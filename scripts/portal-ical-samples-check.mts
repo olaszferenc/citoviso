@@ -1,5 +1,5 @@
 // PORTÁL-iCAL VALÓDI MINTÁK ŐRE — a szinkron a portálok TÉNYLEGES feedjei és dokumentált elvárásai ellen
-// (2026-10-12, ADR-XXXX). Offline: nincs DB, nincs böngésző, nincs külső hálózat.
+// (2026-10-12, ADR-0371). Offline: nincs DB, nincs böngésző, nincs külső hálózat.
 //
 //   npx tsx scripts/portal-ical-samples-check.mts
 //

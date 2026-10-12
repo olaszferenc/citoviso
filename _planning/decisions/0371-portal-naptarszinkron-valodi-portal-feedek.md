@@ -1,4 +1,4 @@
-## ADR-XXXX — Portál-naptárszinkron valódi portál-feedek ellen: szállás-időzóna, csonka feed = hiba, webcal elfogadva, az üres kiadás is érvényes naptár
+## ADR-0371 — Portál-naptárszinkron valódi portál-feedek ellen: szállás-időzóna, csonka feed = hiba, webcal elfogadva, az üres kiadás is érvényes naptár
 
 **Dátum:** 2026-10-12 · **Státusz:** elfogadva (SUB a koordinátor briefjére, „Elek-teszt koordinátor”) ·
 **Kiegészíti:** ADR-0361 (a szinkron első köre), ADR-0367 (élesítés előtti javítások), ADR-0290 (a szállás időzónája)

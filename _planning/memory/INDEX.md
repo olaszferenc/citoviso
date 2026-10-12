@@ -6,7 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [2026-10-12_portal_ical_valodi_mintak.md](2026-10-12_portal_ical_valodi_mintak.md) — 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-XXXX)
+- [2026-10-12_portal_ical_valodi_mintak.md](2026-10-12_portal_ical_valodi_mintak.md) — 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-0371)
 - [2026-10-12_modell_html_injekcio.md](2026-10-12_modell_html_injekcio.md) — 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-0370)
 - [2026-10-12_levelar_dinamikus_javaslat_szoveg.md](2026-10-12_levelar_dinamikus_javaslat_szoveg.md) — 2026-10-12 — A hideg levél „-tól” ára dinamikus + a domain-javaslat mondatai (SUB, ADR-0368)
 - [2026-10-12_dontes_segito_sav_sajat_cim_jelveny.md](2026-10-12_dontes_segito_sav_sajat_cim_jelveny.md) — 2026-10-12 — Döntés-segítő felső sáv + saját cím jelvénye (SUB, §2b terv-kör → megvalósítás)

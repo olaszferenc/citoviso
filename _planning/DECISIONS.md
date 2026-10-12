@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-portal-ical-valodi-mintak-ellen.md) — Portál-naptárszinkron valódi portál-feedek ellen: szállás-időzóna, csonka feed = hiba, webcal elfogadva, az üres kiadás is érvényes naptár
+- [ADR-0371](decisions/0371-portal-naptarszinkron-valodi-portal-feedek.md) — Portál-naptárszinkron valódi portál-feedek ellen: szállás-időzóna, csonka feed = hiba, webcal elfogadva, az üres kiadás is érvényes naptár
 - [ADR-0370](decisions/0370-a-modell-irta-mock-html-nem-futtathat-kodot.md) — A modell írta mock-HTML nem futtathat kódot: szűrés generáláskor ÉS kiszolgáláskor
 - [ADR-0369](decisions/0369-a-dontes-segito-ajanlat-felso-sav-fatyol-nelkul.md) — A döntés-segítő ajánlat felső sáv (fátyol nélkül, bezáró ×); a saját cím jelvénye a csomag-kártyán, kizárólag a /pricing-ból
 - [ADR-0368](decisions/0368-a-hideg-level-tol-ara-a-legolcsobb-kinalt.md) — A hideg levél „-tól” ára a legolcsóbb KÍNÁLT csomag ára, a kiküldés pillanatában; a domain-javaslat nem ígér „megrendeléskor” névválasztást

@@ -1,4 +1,4 @@
-# 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-XXXX)
+# 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-0371)
 
 SUB a „Elek-teszt koordinátor” briefjére (`~/rc-briefs/portal-ical-valodi-minta-20261012.md`) + a koordinátor
 kiegészítése (közösségi tapasztalat). Portálba belépés, regisztráció, élesi írás: SEMMI.
