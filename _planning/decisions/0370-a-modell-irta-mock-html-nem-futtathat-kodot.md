@@ -1,4 +1,4 @@
-## ADR-XXXX — A modell írta mock-HTML nem futtathat kódot: szűrés generáláskor ÉS kiszolgáláskor
+## ADR-0370 — A modell írta mock-HTML nem futtathat kódot: szűrés generáláskor ÉS kiszolgáláskor
 
 **Dátum:** 2026-10-12 · **Kontextus:** az ADR-0365 SUB-jának gyanúja (az AI-mock HTML-jét szűrés nélkül mentjük), tulaj: „Mehet a 3as”, az Elek-teszt koordinátoron át. Nem felület-munka.
 

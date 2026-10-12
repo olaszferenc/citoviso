@@ -107,7 +107,7 @@ async function renderSnapshotHtml(
     };
   }
   if (!artifact.path) throw new Error("legacy artifact has no rendered path to provision");
-  // Model-authored HTML would otherwise go live verbatim (ADR-XXXX): same gate as serving.
+  // Model-authored HTML would otherwise go live verbatim (ADR-0370): same gate as serving.
   const copied = await readServableMock(path.resolve(process.cwd(), artifact.path), artifact.inputs);
   return { html: copied, source: "copy" };
 }

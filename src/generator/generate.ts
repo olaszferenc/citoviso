@@ -713,7 +713,7 @@ async function generateMockInner(
       const ai =
         cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
       if (ai && sel && /<html/i.test(ai.html)) {
-        // ADR-XXXX: the model read scraped text anyone can write — its HTML is untrusted.
+        // ADR-0370: the model read scraped text anyone can write — its HTML is untrusted.
         // Every executable construct goes BEFORE our runtime is injected, so ours stays intact.
         const clean = sanitizeModelHtml(ai.html);
         const cut = clean.removed;

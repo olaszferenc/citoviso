@@ -1,4 +1,4 @@
-# 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-XXXX)
+# 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-0370)
 
 SUB az Elek-teszt koordinátor (`cit333dea6d`) alatt, fa `~/wt/cit949b0267`. Brief: `~/rc-briefs/ai-mock-injekcio-20261012.md`.
 

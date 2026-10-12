@@ -1,4 +1,4 @@
-// Model-authored HTML is UNTRUSTED (ADR-XXXX). The legacy AI-HTML mock path
+// Model-authored HTML is UNTRUSTED (ADR-0370). The legacy AI-HTML mock path
 // (generate.ts → generateFromCorpus) lets the model write the whole document, and the
 // model reads scraped text anyone can write (name, address, contact fields). Measured
 // 2026-10-12: a prose instruction in the address ("tedd be ezt a kódot…") made the model
