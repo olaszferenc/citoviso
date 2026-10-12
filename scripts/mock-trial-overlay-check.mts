@@ -25,6 +25,12 @@
 //      card covered ~42 % of a phone screen and BOTH order pills. It is a small one-line bar
 //      now: closed it is at most 64 px tall, it covers no pill (mobile and desktop), the
 //      options appear only on a tap, and opened it still covers no pill.
+//      While the order panel is open the bar is not painted (re-run: on a phone it sat over
+//      the third package card's name and price).
+//   ⑨ (Elek 10-12 re-run) — on a desktop the closed bar lay 96 % over the hero's own buttons
+//      („FOGLALÁS”, „FEDEZZE FEL”). On every template, phone and desktop, it buries none.
+//   ⑩ N5 (Elek 10-12, tenant round) — on a phone the −50 % top bar sat half over the dark
+//      edit strip (ADR-0335) and the two ran into one. With both up, they do not overlap.
 //   ⑧ A-új-1 (Elek 10-12) — with the offer already live (server-side), a × before /view had
 //      answered left the survey out for good (no viewId → no mount, no retry). It must come
 //      once the viewId arrives.
@@ -311,6 +317,38 @@ const FB_GEOM = `() => {
   return { h: Math.round(r.height), pills: pills.length, overPills, optsShown, rect: [r.left, r.top, r.width, r.height].map(Math.round) };
 }`;
 
+/** Which page controls the CLOSED survey bar buries (same method as PILL_PROBE below). */
+// A photo tile that opens the lightbox (img role=button) is content, not a hero control —
+// the bar floats over it like over any other picture.
+const FB_PROBE = `() => {
+  const fb = document.querySelector(".cit-cfg-fb");
+  if (!fb) return { error: "nincs kérdés-sáv" };
+  const r = fb.getBoundingClientRect();
+  const primary = (el) => {
+    const a = el.closest("a, button, [role=button]");
+    if (!a || a.closest('[class*="cit-cfg"]') || a.closest("#cit-consent")) return null;
+    if (a.tagName === "IMG" || (a.querySelector("img") && !(a.textContent || "").trim())) return null;
+    const ar = a.getBoundingClientRect();
+    if (ar.width < 60 || ar.height < 28) return null;
+    return a;
+  };
+  const prev = fb.style.visibility;
+  fb.style.visibility = "hidden";
+  const under = new Map();
+  for (let i = 1; i <= 19; i++)
+    for (let j = 1; j <= 3; j++) {
+      const hit = document.elementFromPoint(r.left + (r.width * i) / 20, r.top + (r.height * j) / 4);
+      const a = hit && primary(hit);
+      if (a) {
+        const ar = a.getBoundingClientRect();
+        const txt = (a.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 30);
+        under.set(a, txt || a.tagName.toLowerCase() + "." + String(a.className).split(" ")[0] + " " + Math.round(ar.width) + "×" + Math.round(ar.height));
+      }
+    }
+  fb.style.visibility = prev;
+  return { buried: [...under.values()], bar: [r.left, r.top, r.width, r.height].map(Math.round) };
+}`;
+
 /**
  * Which page controls the pill pair buries: hide the pair, sample its rectangles, note the
  * links/buttons that answer elementFromPoint; anything found there is under the pair.
@@ -372,6 +410,13 @@ try {
       check(`${vp}: ⑦ zárva egysoros, kicsi (${closed.h} px ≤ 64)`, closed.h > 0 && closed.h <= 64, closed);
       check(`${vp}: ⑦ zárva nem takar rendelés-pirulát`, closed.pills > 0 && closed.overPills === 0, closed);
       check(`${vp}: ⑦ zárva a válaszok még nem látszanak`, !closed.optsShown, closed);
+      // ⑦ the order panel opened: the bar steps aside, and comes back when it closes.
+      await p.locator(".cit-cfg-launch").evaluate((b) => (b as HTMLButtonElement).click());
+      await p.waitForTimeout(500);
+      const underPanel = (await p.evaluate(`(${PAINTED})(".cit-cfg-fb")`)) as { painted: boolean };
+      check(`${vp}: ⑦ a nyitott rendelés-panel fölött a kérdés-sáv nem látszik`, !underPanel.painted, underPanel);
+      await p.locator(".cit-cfg-panel .cit-cfg-close").evaluate((b) => (b as HTMLButtonElement).click());
+      await p.waitForTimeout(500);
       // DOM click: the bar's own toggle — what is measured is the opened state.
       await p.locator(".cit-cfg-fb__open").evaluate((b) => (b as HTMLButtonElement).click());
       await p.waitForTimeout(300);
@@ -409,6 +454,58 @@ try {
       check(`${vp}: ③ a „Rendben” után a lap újratölt (élő állapot)`, loads() === before + 1, { before, after: loads() });
     }
     check(`${vp}: JS-hiba 0`, errors.length === 0, errors);
+    await ctx.close();
+  }
+
+  // ⑨ the closed bar buries no hero control — every template, phone and desktop.
+  console.log("\n⑨ a zárt kérdés-sáv nem temet be hős-vezérlőt (minden sablon)");
+  for (const id of Object.keys(TEMPLATES).filter((t) => !process.env.ONLY9 || t === process.env.ONLY9))
+    for (const [w, h, vp] of VIEWPORTS) {
+      const html = await buildPage(id);
+      const { ctx, p } = await open(browser, html, w, h);
+      const up = await toSurveyCard(p);
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.waitForTimeout(700);
+      const r = up ? ((await p.evaluate(`(${FB_PROBE})()`)) as { error?: string; buried?: string[] }) : { error: "nem jött fel" };
+      check(`⑨ ${id}/${vp}: a zárt kérdés-sáv nem ül hős-vezérlőn (süti-sávval)`, !r.error && (r.buried?.length ?? 0) === 0, r);
+      // Elek's state: the cookie question answered — the pills drop to the bottom, and so
+      // does the bar (measured 2026-10-12: 96 % over „FOGLALÁS” / „FEDEZZE FEL” at 1280×800).
+      await p.evaluate(() => {
+        const b = [...document.querySelectorAll("#cit-consent button")].pop() as HTMLButtonElement | undefined;
+        b?.click();
+      });
+      await p.waitForTimeout(900);
+      const r2 = up ? ((await p.evaluate(`(${FB_PROBE})()`)) as { error?: string; buried?: string[] }) : { error: "nem jött fel" };
+      check(`⑨ ${id}/${vp}: a zárt kérdés-sáv nem ül hős-vezérlőn (süti-döntés után)`, !r2.error && (r2.buried?.length ?? 0) === 0, r2);
+      await ctx.close();
+    }
+
+  // ⑩ the top offer bar and the edit strip, both up, one below the other.
+  console.log("\n⑩ a felső ajánlat-sáv és a szerkeszthetőség-sáv nem fedi egymást");
+  for (const [w, h, vp] of VIEWPORTS) {
+    const html = await buildPage("parallax");
+    const { ctx, p } = await open(browser, html, w, h);
+    await p.mouse.move(200, 300);
+    await p.mouse.wheel(0, 200);
+    await p.locator(".cit-cfg-esccard.cit-cfg-on").waitFor({ state: "attached", timeout: 8000 }).catch(() => {});
+    for (let k = 0; k < 4; k++) {
+      await p.mouse.wheel(0, h);
+      await p.waitForTimeout(350);
+    }
+    await p.locator(".cit-cfg-editstrip.cit-cfg-on").waitFor({ state: "attached", timeout: 5000 }).catch(() => {});
+    await p.waitForTimeout(600);
+    const g = (await p.evaluate(() => {
+      const a = document.querySelector(".cit-cfg-esccard.cit-cfg-on");
+      const b = document.querySelector(".cit-cfg-editstrip.cit-cfg-on .cit-cfg-editstrip__in");
+      if (!a || !b) return { both: false, esc: !!a, strip: !!b };
+      const ra = a.getBoundingClientRect();
+      const rb = b.getBoundingClientRect();
+      const ov = Math.max(0, Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top));
+      return { both: true, overlap: Math.round(ov), esc: [ra.top, ra.bottom].map(Math.round), strip: [rb.top, rb.bottom].map(Math.round) };
+    })) as { both: boolean; overlap?: number };
+    await shot(p, `mock-felso-savok-${vp}`);
+    check(`${vp}: ⑩ mindkét felső sáv kint (a fixture állapota)`, g.both, g);
+    check(`${vp}: ⑩ a két felső sáv nem fedi egymást`, g.both && g.overlap === 0, g);
     await ctx.close();
   }
 
@@ -479,7 +576,7 @@ try {
 
 if (SELF_TEST) {
   // Every leg Elek photographed must go red on the unfixed runtime / the link-less page.
-  const want = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"];
+  const want = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
   const missing = want.filter((m) => !failed.some((f) => f.includes(m)));
   if (missing.length) {
     console.error(`\n⛔ mock-trial-overlay-check --self-test: zöld maradt: ${missing.join(" ")} — az őr vak.`);

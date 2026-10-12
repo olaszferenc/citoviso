@@ -12,10 +12,14 @@
 
 **② A kérdés megvárja a viewId-t.** Ha a sávot a látogató a `/view` válasza előtt zárja be, a kérdés a válasz megérkezésekor jelenik meg (`fbWanted`).
 
+**②b Elek újrafuttatásának két lelete, ugyanebben a körben:** a sáv a nyitott rendelés-panel alatt nem látszik (mobilon a 3. csomagkártyát takarta), és hős-gombot sem takar: ha a helyén kitöltött/keretes gomb áll, asztalon jobbra, a pirulák fölé kerül, utána fölfelé lép (`placeFb`, ugyanaz a mérés, mint a pirula-elkerülésnél). Asztalon süti-döntés után 96%-ban a „FOGLALÁS” / „FEDEZZE FEL” gombon ült.
+
+**②c N5 (Elek tenant-köre, a koordinátor kérésére):** a felső ajánlat-sáv és a szerkeszthetőség-sáv (ADR-0335) mobilon egymásra csúszott. Amíg az ajánlat-sáv kint van, közzéteszi az alsó szélét (`--citui-esc-h`), és a szerkeszthetőség-sáv alatta jelenik meg; a fehér sáv vékony keretet kap.
+
 **③ Az önálló hideg SMS ugyanúgy GSM-7 és legfeljebb 2 szelet, mint a kísérő** (közös `foldedSms`: ékezettel fordít, utána hajtogat; hosszú nevet rövidít; a link betűre marad). Mérve: 218 / 252 / 306 / 226 karakter, mind GSM-7, 2 szelet (a régi kódon 4).
 
 ### Őrök
-- `scripts/mock-trial-overlay-check.mts` ⑦ (zárva ≤ 64 px, nem takar pirulát, a válaszok csak koppintásra; kinyitva sem takar) és ⑧ (gyors × a késő `/view` előtt → a kérdés megjön), mobilon és asztalon; a ② az „Inkább nem”-et a kinyitott sávon méri. `--self-test`: a `cit-cfg-trialfx-*` blokkok nélkül ①–⑧ mind piros.
+- `scripts/mock-trial-overlay-check.mts` ⑦ (zárva ≤ 64 px, nem takar pirulát, a válaszok csak koppintásra; kinyitva sem takar; a nyitott panel alatt nem látszik), ⑨ (minden sablon, mobil+asztali, süti-sávval és utána: nem ül hős-gombon), ⑩ (a két felső sáv nem fedi egymást) és ⑧ (gyors × a késő `/view` előtt → a kérdés megjön), mobilon és asztalon; a ② az „Inkább nem”-et a kinyitott sávon méri. `--self-test`: a `cit-cfg-trialfx-*` blokkok nélkül ①–⑩ mind piros (34 állítás).
 - `scripts/pair-sms-gsm7-check.mts`: a kísérő mellett az önálló SMS-t is méri (4 név × GSM-7, ≤ 2 szelet, link, §C személyre szabás, kontroll); a régi kódon az önálló ág piros.
 
 ### Visszafordíthatóság

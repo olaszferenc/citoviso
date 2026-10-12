@@ -9,7 +9,10 @@ SUB az Elek-teszt koordinátor alatt (fa `~/wt/cit20065f9d`). Döntés: ADR-XXXX
 - **A-új-1:** gyors × a `/view` válasza előtt → a kérdés a viewId megérkezésekor jön (`fbWanted`).
 - **A-új-2:** `renderSmsDraft` GSM-7, ≤ 2 szelet (közös `foldedSms` a kísérővel); régen UCS-2 / 4 szelet.
 - Őrök: `mock-trial-overlay-check` ⑦⑧ (+ önteszt), `pair-sms-gsm7-check` az önálló SMS-re is.
-- Elek `05s3`/`05c` szkriptjei scratch-DB-n újrafuttatva (eredmény a koordinátornak küldött zárójelentésben).
+- Elek `05s3`/`05c` szkriptjei scratch-DB-n újrafuttatva (scratch `citoviso_kerdsav_10122058`, eldobva):
+  a sáv zárva 44/48 px, 0 átfedés a pirulákkal, gyors × után is jön. Két új leletet javítottam:
+  a nyitott rendelés-panel fölött maradt (mobil), asztalon hős-gombokat takart → `placeFb` + panel-őr.
+- N5 (a koordinátor kérése, Elek tenant-köre): a felső ajánlat-sáv és a szerkeszthetőség-sáv egymás alá kerül.
 
 ## Módosított fájlok
 `assets/runtime/cit-configurator.js`, `assets/runtime/cit-configurator.css`, `src/outreach/draft.ts`,
@@ -17,6 +20,5 @@ SUB az Elek-teszt koordinátor alatt (fa `~/wt/cit20065f9d`). Döntés: ADR-XXXX
 `assets/design-refs/prospect-page/survey-bar/*`, `assets/design-refs/console/escalation-topbar/README.md`.
 
 ## Nyitott
-- Asztalon a sáv a pirula-sor magasságában, bal oldalt ül; egy sablon hős-gombjához közel kerülhet
-  (nem takarja a pirulát, a hős-gombot nem kerüli). Ha zavaró, tulaj-döntés.
 - Élesre a nagy deployjal.
+- Tanulság: a `pkill -f "<minta>"` a saját parancssort is megölte (exit 144); PID szerint ölj.

@@ -4077,6 +4077,7 @@
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
     syncTrialPill();
+    syncFbCard();
     // "trial" = the order link at the foot of the free-trial form (ADR-0342 measurement).
     track("panel_open", { via: via === "esc" || via === "tab" || via === "trial" ? via : "pill" });
     if (!panelOpenedAt) panelOpenedAt = Date.now();
@@ -4097,6 +4098,7 @@
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
     syncTrialPill();
+    syncFbCard();
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
     track("panel_collapse", { seconds: panelSeconds() });
     panelOpenedAt = 0;
@@ -4108,6 +4110,7 @@
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
     syncTrialPill();
+    syncFbCard();
     if (armPillAvoidance) setTimeout(placeLaunch, 0);
     // The X reset the tab: measured apart from the collapse (README ②).
     if (panelOpenedAt) track("panel_close", { seconds: panelSeconds() });
@@ -5095,8 +5098,18 @@
       }
       cdEl.textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor((s % 3600) / 60)) + ":" + pad(s % 60);
     }
+    // Elek 10-12 N5: the edit strip (ADR-0335) also slides in at the top — on a phone it lay
+    // half under this bar and the two dark/white layers ran into one. While the bar is up it
+    // publishes its lower edge, and the strip stacks below it (CSS --citui-esc-h).
+    function publishEscH(on) {
+      var root = document.documentElement;
+      if (!on) return root.style.removeProperty("--citui-esc-h");
+      var r = card.getBoundingClientRect();
+      root.style.setProperty("--citui-esc-h", Math.round(r.height + (parseFloat(getComputedStyle(card).top) || 0) + 8) + "px");
+    }
     function hide() {
       card.classList.remove("cit-cfg-on");
+      publishEscH(false);
     }
     card.querySelector(".cit-cfg-esclater").addEventListener("click", function () {
       track("escalation_dismiss", {});
@@ -5114,8 +5127,12 @@
     // After a short beat — the wow (the page itself) lands first.
     setTimeout(function () {
       card.classList.add("cit-cfg-on");
+      publishEscH(true);
       track("escalation_shown", {});
     }, 1400);
+    window.addEventListener("resize", function () {
+      if (card.classList.contains("cit-cfg-on")) publishEscH(true);
+    });
   }
 
   /**
@@ -5139,7 +5156,9 @@
    */
   function syncFbCard() {
     /* cit-cfg-trialfx-held-start */
-    if (fbCard) fbCard.classList.toggle("cit-cfg-fb--held", trialSheetOpen || tDone);
+    // Elek 10-12 (re-run): …and while the order panel is open — on a phone the bar sat over
+    // the third package card's name and price.
+    if (fbCard) fbCard.classList.toggle("cit-cfg-fb--held", trialSheetOpen || tDone || panel.classList.contains("cit-cfg-open"));
     /* cit-cfg-trialfx-held-end */
   }
   function mountFeedbackCard(source) {
@@ -5241,6 +5260,7 @@
     document.body.appendChild(card);
     fbCard = card;
     syncFbCard();
+    if (placeFbHook) placeFbHook();
     setTimeout(function () {
       card.classList.add("cit-cfg-on");
     }, 450);
@@ -5254,6 +5274,8 @@
    * no avoidance, which is exactly the state being proven broken.
    */
   var armPillAvoidance = null;
+  /** The survey bar's placement (defined inside the avoidance block, which may be cut). */
+  var placeFbHook = null;
 
   /* cit-cfg-avoid-start — THE PILL MUST NOT SIT ON A PRIMARY ACTION.
    *
@@ -5502,7 +5524,58 @@
       "--citui-cfg-clear",
       Math.max(0, Math.round(vh - clearTop + 12)) + "px",
     );
+    if (placeFbHook) placeFbHook();
   }
+
+  /**
+   * The survey bar (Elek 10-12, re-run of K-new-1): its CSS rests it just above the pills, but
+   * on the LEFT on a desktop — measured at 1280×800, the closed bar lay 96 % over the hero's
+   * own „FOGLALÁS” / „FEDEZZE FEL” buttons. Same rule as the pill: a primary control under
+   * the spot → the other side (desktop: right, above the pills), and only then upward.
+   * Tested on the CLOSED bar's height — the opened bar is the person's own choice.
+   */
+  function placeFb() {
+    if (!fbCard) return;
+    fbCard.style.removeProperty("bottom");
+    fbCard.style.removeProperty("left");
+    fbCard.style.removeProperty("right");
+    var vh = window.innerHeight;
+    var vw = document.documentElement.clientWidth;
+    var bottomY = vh - (parseFloat(getComputedStyle(fbCard).bottom) || 0);
+    var barEl = fbCard.querySelector(".cit-cfg-fb__bar");
+    var h = barEl && barEl.offsetHeight ? barEl.offsetHeight + 0 : fbCard.offsetHeight;
+    var w = fbCard.offsetWidth;
+    var m = isPhone() ? 12 : 18;
+    var sides = isPhone() ? ["l"] : ["l", "r"];
+    var side = null;
+    for (var i = 0; i < sides.length; i++) {
+      var left = sides[i] === "l" ? m : vw - m - w;
+      var box = { left: left, right: left + w, top: bottomY - h, bottom: bottomY };
+      if (!clashAt(blockingRects(box), bottomY, h)) {
+        side = sides[i];
+        break;
+      }
+    }
+    if (side === null) {
+      side = "l";
+      var rects = blockingRects({ left: m, right: m + w, top: 0, bottom: vh });
+      for (var step = 0; step < 8; step++) {
+        var clash = clashAt(rects, bottomY, h);
+        if (!clash) break;
+        var lifted = clash.top - AVOID_GAP;
+        if (lifted - h < 60) break; // never under the top bar / off the screen
+        bottomY = lifted;
+      }
+    }
+    fbCard.style.bottom = Math.round(vh - bottomY) + "px";
+    if (side === "r") {
+      fbCard.style.left = "auto";
+      fbCard.style.right = m + "px";
+    }
+  }
+  /* cit-cfg-trialfx-fbplace-start */
+  placeFbHook = placeFb;
+  /* cit-cfg-trialfx-fbplace-end */
 
   var placeQueued = 0;
   function schedulePlace() {

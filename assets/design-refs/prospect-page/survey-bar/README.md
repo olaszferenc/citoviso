@@ -30,8 +30,18 @@ lapról készültek (`scripts/mock-trial-overlay-check.mts --shots=…`): `sav-z
    megérkezésekor jelenik meg.
 7. Változatlan: a próba-űrlap és a sikerablak alatt a sáv nem látszik (Elek2 Ú3); a válasz a
    `/p/<token>/feedback` végpontra megy a viewId-vel, forrás `escalation_dismiss`.
+8. **A nyitott rendelés-panel alatt sem látszik** (Elek újrafuttatás: mobilon a 3. csomagkártya
+   nevét és árát takarta); a panel bezárásakor visszajön.
+9. **Hős-gombot sem takar** (Elek újrafuttatás: asztalon, süti-döntés után a zárt sáv 96%-ban a
+   „FOGLALÁS” / „FEDEZZE FEL” gombon ült). Ugyanaz a szabály, mint a pirulánál: ha a helyén egy
+   kitöltött/keretes gomb áll, asztalon a jobb oldalra kerül (a pirulák fölé), utána fölfelé lép.
+   A fotó-csempe nem gomb.
+10. **A felső ajánlat-sáv és a szerkeszthetőség-sáv (ADR-0335) egymás alatt**, nem egymáson (N5,
+   Elek tenant-köre): amíg az ajánlat-sáv kint van, a szerkeszthetőség-sáv alatta csúszik be; az
+   ajánlat-sáv vékony keretet kap. Képek: `felso-savok-mobil.png`, `felso-savok-asztali.png`.
 
 ## Őr
 `scripts/mock-trial-overlay-check.mts` ⑦ (zárva ≤ 64 px, egyik pirulát sem takarja, a válaszok
 csak koppintásra; kinyitva sem takar) és ⑧ (gyors × a `/view` válasza előtt → a kérdés megjön),
-mobilon és asztalon; `--self-test`: a `cit-cfg-trialfx-*` blokkok nélkül mind piros.
+mobilon és asztalon; ⑦ a nyitott panelt is; ⑨ minden sablonon, süti-sávval és süti-döntés után;
+⑩ a két felső sáv átfedése; `--self-test`: a `cit-cfg-trialfx-*` blokkok nélkül ①–⑩ mind piros.
