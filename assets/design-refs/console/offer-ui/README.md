@@ -15,7 +15,8 @@ alapérték — a valódi érték ma a /pricing „Lead-ajánlatok” szekciój�
    a matek, mint a szerveren (`src/payment/offers.ts applyOffer`); a terhelt összeget a
    szerver számolja és pecsételi. Amit mutatunk = amit terhelünk (§B.17).
 3. **EGY legnagyobb kedvezmény** jelenik meg; kedvezmények SOSEM adódnak össze.
-4. **Eszkalációs döntés-kártya** (a /pricing-on beállított N. megnyitás — alapból a 3. —, szerver-mintázta
+4. ⚠️ **Az elrendezést felülírta: `escalation-topbar/` (2026-10-12, felső sáv, fátyol nélkül, bezáró ×).** A pont többi része (küszöb, szerver-ajánlat, visszaszámláló, CTA, lejárat) érvényes.
+   **Eszkalációs döntés-kártya** (a /pricing-on beállított N. megnyitás — alapból a 3. —, szerver-mintázta
    ajánlat; a küszöb és a % 2026-09-30 óta operátor-állítható, ADR-0285, `escalation-offer-admin/`): asztali nézetben
    középre emelt fehér kártya fátyollal, mobilon alulra horgonyzott; élő óra/perc/mp
    visszaszámláló; CTA a panelt nyitja; „Most még gondolkodom" csak a kártyát rejti el —

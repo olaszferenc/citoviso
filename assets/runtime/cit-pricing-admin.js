@@ -71,6 +71,9 @@
     }
     function domFree() { return checked("domain_free_in_package"); }
     function domIn(t) { return domFree() && assign[DOM_ID] !== undefined && idx(assign[DOM_ID]) <= idx(t); }
+    // The domain pill alone gives the buyer nothing: without an ending marked „Csomagban ingyen”
+    // the address still costs its fee. Only this is „benne” (owner, 2026-10-12).
+    function domInFree(t) { return domIn(t) && freeTlds().length > 0; }
     function freeTlds() { return tlds.filter(function (x) { return x.offered && x.freeInPackage; }).map(function (x) { return x.tld; }); }
     function firstOn() { return tlds.filter(function (x) { return x.offered; })[0] || null; }
     function minPkg() { return num("domain_min_package_monthly", D.minPkg); }
@@ -136,7 +139,9 @@
         "<b>" + esc(label(id)) + "</b>" + (p ? " <small>" + esc(p) + "</small>" : "") + x + "</span>";
     }
     function domLine(t) {
-      if (domIn(t)) return '<div class="pr2-pkdom is-in">' + esc(fill(M.domainLineIn, { t: freeTlds().join(", ") || M.domainLineNoFree })) + "</div>";
+      if (domInFree(t)) return '<div class="pr2-pkdom is-in">' + esc(fill(M.domainLineIn, { t: freeTlds().join(", ") })) + "</div>";
+      // Pill in the package but no free ending: say what is missing and WHERE to fix it.
+      if (domIn(t)) return '<div class="pr2-pkdom is-warn">' + esc(M.domainLineNoFree) + "</div>";
       if (minPkg() > 0 && packagePrice(t) < minPkg()) return '<div class="pr2-pkdom">' + esc(fill(M.domainLineMin, { p: money(minPkg()) })) + "</div>";
       // Elek A1: every offered ending with its own fee, not the first one alone.
       var on = tlds.filter(function (x) { return x.offered; });
@@ -199,7 +204,7 @@
           rows.map(function (r) { return "<span>" + esc(r[0]) + "</span><b>" + esc(r[1]) + "</b>"; }).join("") + "</div></div>";
       }
       $("pr2-wg").innerHTML =
-        card(M.pkgTitle, money(packagePrice("ajanlott")), fill(M.monthly, { tier: tierLabel.ajanlott }) + (domIn("ajanlott") ? M.domIn : ""),
+        card(M.pkgTitle, money(packagePrice("ajanlott")), fill(M.monthly, { tier: tierLabel.ajanlott }) + (domInFree("ajanlott") ? M.domIn : ""),
           [[tierLabel.alap, money(packagePrice("alap"))], [tierLabel.teljes, money(packagePrice("teljes"))], [M.annual, fill(M.annualV, { n: freeM })]]) +
         card(M.modTitle, on.length + " / " + sold.length, M.sellable,
           [[M.outside, String(outside)], [M.stopped, String(sold.length - on.length)], [M.dom, domFree() && assign[DOM_ID] !== undefined ? M.domPkg : M.domFee]]) +
@@ -238,7 +243,7 @@
       var lo = fees.length ? Math.min.apply(null, fees) : null, hi = fees.length ? Math.max.apply(null, fees) : null;
       var feeTxt = lo === null ? "—" : lo === hi ? money(lo) : money(lo) + "–" + money(hi);
       var lines = TIERS.map(function (t) {
-        if (domIn(t)) return fill(M.runDomIn, { t: tierLabel[t], e: freeTlds()[0] || "" });
+        if (domInFree(t)) return fill(M.runDomIn, { t: tierLabel[t], e: freeTlds()[0] || "" });
         if (minPkg() > 0 && packagePrice(t) < minPkg()) return fill(M.runDomMin, { t: tierLabel[t] });
         return fill(M.runDomFee, { t: tierLabel[t], p: feeTxt });
       }).join(" · ");

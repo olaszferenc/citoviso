@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saját .hu cím a vevő oldalán — csomag-kártya, terv-lap, cím-lépés (terv-kör)</title><style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-muted:#5a6d82;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-bg:#fff;--citui-panel:#fff;--citui-field:#f6f7f8;
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-ok-ink:#19733f;
+  --citui-warn:#d29922;--citui-warn-ink:#7d5a12;--citui-bad:#e5484d;--citui-bad-ink:#b3262b;
+  --citui-link-ink:#10697a;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  --citui-radius-pill:999px;
+  --citui-font-text:"Inter",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+  /* stand-in for the GENERATED site's own skin (the mock's --cit-* theme, not ours) */
+  --cit-bg:#14110d;--cit-ink:#efe7dc;--cit-accent:#d99a86;--cit-photo-a:#4d6b7e;--cit-photo-b:#20323f;--cit-photo-c:#0d1a22;
+  --cit-font-display:Georgia,"Times New Roman",serif;
+}
+/* the order panel is dark (as the live one): the citui dark-theme values, scoped */
+.panel{
+  --citui-ink:#e6e9ef;--citui-muted:#8a93a3;--citui-surface:#12151c;--citui-surface-2:#1b1f29;
+  --citui-line:#262b37;--citui-line-strong:#343a48;--citui-panel:#151821;--citui-field:#1b1f29;
+  --citui-ok-soft:#14352a;--citui-ok-ink:#4fe3a3;--citui-bad-ink:#ff8e8e;--citui-warn-ink:#f5c06b;--citui-link-ink:#4fd0ea;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--citui-surface-2);color:var(--citui-ink);font:13px/1.45 var(--citui-font-text)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.draft-bar{display:flex;gap:8px;align-items:center;padding:8px 14px;flex-wrap:wrap;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px}
+.draft-bar b{font-weight:600}
+.draft-bar button{border:1px solid var(--citui-cyan-500);background:transparent;color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 12px}
+.draft-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.cfg{max-width:1280px;margin:10px auto;padding:10px 14px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px}
+.cfg b{font-weight:600}
+.cfg label{display:inline-flex;gap:6px;align-items:center}
+.cfg input[type=number]{width:72px;padding:2px 6px;border:1px solid var(--citui-line-strong);border-radius:6px;background:var(--citui-field)}
+.cfg select{padding:2px 6px;border:1px solid var(--citui-line-strong);border-radius:6px;background:var(--citui-field)}
+.cfg .note{flex-basis:100%;color:var(--citui-muted)}
+.legend{max-width:1280px;margin:0 auto 10px;padding:0 14px;font-size:12.5px}
+.legend p{margin:0 0 4px}
+#status{font-weight:600}
+.wrap{overflow-x:auto;padding:0 0 24px}
+
+/* ── device viewport ─────────────────────────────────────────────────── */
+#frame{position:relative;margin:0 auto;width:1280px;height:800px;overflow:hidden;container-type:inline-size;background:var(--cit-bg);border:1px solid var(--citui-line-strong)}
+#frame.mobile{width:390px;height:844px}
+.scroller{position:absolute;inset:0;overflow:auto;color:var(--cit-ink)}
+.mockbar{background:var(--citui-navy-950);color:var(--citui-white);text-align:center;padding:10px 12px;font-size:12px}
+.mockbar span{opacity:.6}
+.mockbar .addr{display:none;margin-top:6px;opacity:1}
+.mockbar .addr i{font-style:normal;display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:var(--citui-radius-pill);background:color-mix(in srgb,var(--citui-white) 10%,transparent);font-weight:600;color:var(--citui-cyan-400)}
+.mockbar .addr i svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+.mockbar .addr small{display:block;opacity:.7;margin-top:4px}
+.hero{min-height:760px;padding:40px 52px 120px;background:linear-gradient(170deg,var(--cit-photo-a),var(--cit-photo-b) 55%,var(--cit-photo-c))}
+.hero .name{font:400 30px/1.1 var(--cit-font-display);letter-spacing:.18em;margin:10px 0 6px}
+.hero .loc{font-size:11px;letter-spacing:.28em;opacity:.75}
+.hero h1{font:400 64px/1.12 var(--cit-font-display);margin:44px 0 18px;max-width:560px}
+.hero h1 em{font-style:normal;color:var(--cit-accent)}
+.hero p{font-size:15px;max-width:420px;opacity:.85}
+@container (max-width:600px){.hero{padding:24px 16px 160px}.hero .name{font-size:22px}.hero h1{font-size:34px;margin-top:230px}}
+.pills{position:absolute;left:0;right:420px;bottom:22px;display:flex;justify-content:center;gap:10px;z-index:6}
+.pill{position:relative;display:flex;align-items:center;gap:8px;padding:12px 20px;border-radius:var(--citui-radius-pill);border:2px solid color-mix(in srgb,var(--citui-white) 70%,transparent);font-weight:700;font-size:14px;white-space:nowrap}
+.pill svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.pill--trial{background:var(--citui-navy-900);color:var(--citui-white)}
+.pill--order{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.pill .tag{display:none;position:absolute;top:-11px;right:10px;padding:1px 8px;border-radius:var(--citui-radius-pill);background:var(--citui-ok);color:var(--citui-white);font-size:11px;font-weight:700}
+#frame.closed .pills{right:0}
+@container (max-width:600px){.pills{right:0;bottom:22px;padding:0 10px;gap:6px}.pill{flex:1;justify-content:center;padding:11px 8px;font-size:13.5px}}
+
+/* ── order panel (side sheet on desktop, bottom sheet on mobile) ─────── */
+.panel{position:absolute;z-index:20;top:0;right:0;bottom:0;width:420px;background:var(--citui-panel);color:var(--citui-ink);display:flex;flex-direction:column;border-left:1px solid var(--citui-line);transition:transform .3s ease}
+#frame.closed .panel{transform:translateX(105%)}
+@container (max-width:600px){.panel{left:0;width:auto;top:64px;border-left:0;border-radius:18px 18px 0 0}#frame.closed .panel{transform:translateY(105%)}}
+.ph{padding:16px 18px 12px;border-bottom:1px solid var(--citui-line);position:relative}
+.ph h3{margin:0;font:400 19px/1.25 var(--cit-font-display)}
+.ph p{margin:4px 0 0;color:var(--citui-muted);font-size:12.5px}
+.ph .close{position:absolute;top:10px;right:10px;width:36px;height:36px;border:0;background:transparent;border-radius:50%;display:grid;place-items:center}
+.ph .close svg{width:16px;height:16px;stroke:var(--citui-ink);stroke-width:2;fill:none}
+.urlchip{display:none;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-surface-2);align-items:center;gap:8px;font-size:13px}
+.urlchip svg{flex:none;width:15px;height:15px;stroke:var(--citui-muted);fill:none;stroke-width:1.8}
+.urlchip b{font-weight:700;overflow-wrap:anywhere;min-width:0}
+.urlchip small{margin-left:auto;white-space:nowrap;font-size:11.5px;font-weight:600}
+.urlchip small.inc{color:var(--citui-ok-ink)}.urlchip small.paid{color:var(--citui-warn-ink)}.urlchip small.sub{color:var(--citui-muted)}
+.pb{flex:1;overflow:auto;padding:14px 16px 18px}
+.q{font-weight:700;font-size:14px;margin:4px 2px 10px}
+.pk{position:relative;display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;padding:12px 12px 10px;border:1px solid var(--citui-line-strong);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--citui-panel)}
+.pk[aria-checked="true"]{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.dot{width:18px;height:18px;margin-top:2px;border-radius:50%;border:2px solid var(--citui-line-strong)}
+.pk[aria-checked="true"] .dot,.dopt[aria-pressed="true"] .dot{border-color:var(--citui-cyan-500);box-shadow:inset 0 0 0 3px var(--citui-panel),inset 0 0 0 9px var(--citui-cyan-500)}
+.pk b.lbl{font-size:14.5px}
+.pk .note{display:block;color:var(--citui-muted);font-size:12px}
+.pk .price{text-align:right;white-space:nowrap}
+.pk .price b{font-size:15px}.pk .price small{color:var(--citui-muted)}
+.more{border:0;background:transparent;padding:4px 0 0;color:var(--citui-link-ink);font-weight:600;font-size:12px}
+.list{display:grid;gap:3px;margin-top:6px;font-size:12px}
+.list[hidden]{display:none}
+.list span{display:flex;gap:6px;align-items:center}
+.list span.off{opacity:.45;text-decoration:line-through}
+.list svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.4;flex:none}
+/* the domain line on a card (variants A and C) */
+.dl{display:flex;gap:2px 6px;align-items:center;margin-top:6px;font-size:12.5px;font-weight:600}
+.dl svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;flex:none}
+.dl.inc{color:var(--citui-ok-ink)}
+.dl.paid{color:var(--citui-ink);font-weight:500}
+.dl.paid em{font-style:normal;color:var(--citui-muted)}
+.dl.lk{color:var(--citui-muted);font-weight:500}
+.dl .nm{overflow-wrap:anywhere;min-width:0}
+.pk>span{min-width:0}
+.dl.w{flex-wrap:wrap}
+.dl .nmg{display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+/* the badge (variant B) */
+.badge{position:absolute;top:-9px;right:12px;display:inline-flex;gap:5px;align-items:center;padding:2px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-ok);color:var(--citui-white);font-size:11.5px;font-weight:700}
+.badge svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2}
+
+/* address step */
+.dsec{margin-top:18px;padding-top:14px;border-top:1px solid var(--citui-line)}
+.dsec .sub{color:var(--citui-muted);font-size:12.5px;margin:-6px 2px 10px}
+.lead{display:none;gap:10px;align-items:flex-start;padding:10px 12px;margin-bottom:10px;border-radius:10px;background:var(--citui-ok-soft);color:var(--citui-ok-ink);font-size:13px;font-weight:600}
+.lead svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8}
+.lead span{font-weight:400;display:block;color:var(--citui-ink);font-size:12.5px}
+.dopts{display:flex;flex-direction:column;gap:8px}
+.dopt{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:11px 12px;border:1px solid var(--citui-line-strong);border-radius:12px;cursor:pointer}
+.dopt[aria-pressed="true"]{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.dopt b{display:block;font-size:13.5px}
+.dopt .fee{display:block;color:var(--citui-muted);font-size:12px}
+.dopt .fee.inc{color:var(--citui-ok-ink);font-weight:600}
+.dopt[hidden]{display:none}
+.subin{display:flex;border:1px solid var(--citui-line-strong);border-radius:10px;overflow:hidden;background:var(--citui-field)}
+.subin input{flex:1;min-width:0;border:0;background:transparent;padding:9px 10px;font-weight:600}
+.subin span{padding:9px 10px;border-left:1px solid var(--citui-line-strong);color:var(--citui-muted)}
+.gate{padding:11px 12px;border:1px dashed var(--citui-line-strong);border-radius:12px;color:var(--citui-muted);font-size:12.5px}
+.gate b{color:var(--citui-ink);display:block;font-size:13.5px}
+.gate .bar{height:6px;border-radius:3px;background:var(--citui-surface-2);margin:8px 0 4px;overflow:hidden}
+.gate .bar i{display:block;height:100%;background:var(--citui-cyan-500)}
+.cands{display:grid;gap:6px;margin-top:4px}
+.cand{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 11px;border:1px solid var(--citui-line);border-radius:10px;cursor:pointer;background:var(--citui-panel);text-align:left}
+.cand[aria-pressed="true"]{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.cand[disabled]{cursor:not-allowed;opacity:.5}
+.cand b{font-size:13px;overflow-wrap:anywhere}
+.cand small{font-size:11.5px;font-weight:600;white-space:nowrap}
+.cand small.inc{color:var(--citui-ok-ink)}.cand small.paid{color:var(--citui-warn-ink)}.cand small.taken{color:var(--citui-muted)}
+.own{margin-top:10px}
+.own .row{display:flex;gap:6px}
+.own input{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-field)}
+.own button{border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-surface-2);padding:0 12px;font-weight:600}
+.own .msg{min-height:18px;margin:4px 2px 0;font-size:12px}
+.own .msg.bad{color:var(--citui-bad-ink)}.own .msg.ok{color:var(--citui-ok-ink)}
+.terms{margin:10px 2px 0;color:var(--citui-muted);font-size:12px}
+.keep{margin:6px 2px 0;font-size:12px}
+.keep b{font-weight:600}
+.notice{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--citui-warn) 18%,transparent);color:var(--citui-warn-ink);font-size:12.5px}
+.notice[hidden],.terms[hidden],.keep[hidden],.cands[hidden],.own[hidden],.gate[hidden]{display:none}
+
+/* footer */
+.pf{border-top:1px solid var(--citui-line);padding:10px 16px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:end;background:var(--citui-panel)}
+.cyc{grid-column:1/-1;display:inline-flex;justify-self:start;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:2px}
+.cyc button{border:0;background:transparent;border-radius:var(--citui-radius-pill);padding:3px 12px;font-weight:700;color:var(--citui-muted)}
+.cyc button[aria-pressed="true"]{background:var(--citui-accent-soft);color:var(--citui-ink);box-shadow:inset 0 0 0 1px var(--citui-cyan-500)}
+.cyc em{font-style:normal;color:var(--citui-ok-ink)}
+.tot small{display:block;color:var(--citui-muted);font-size:11.5px}
+.tot b{font-size:20px}
+.tot .per{color:var(--citui-muted)}
+.tot .dline{display:block;font-size:12px;color:var(--citui-muted)}
+.tot .dline.inc{color:var(--citui-ok-ink);font-weight:600}
+.next{border:0;border-radius:10px;background:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:700;padding:11px 20px;font-size:14.5px}
+</style></head><body>
+<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (B — jelvény + a cím elöl, 2026-10-12) · Saját .hu cím a vevő oldalán (ADR-0360 „Nyitva”)</b>
+<span>· változat:</span><button id="vA" type="button" aria-pressed="false">A — sor a kártyán</button><button id="vB" type="button" aria-pressed="true">B — jelvény + a cím elöl</button><button id="vC" type="button" aria-pressed="false">C — a konkrét név</button>
+<span>· méret:</span><button id="szMob" type="button" aria-pressed="true">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="false">Asztali</button>
+<span style="opacity:.7">működő vázlat — a díj a lenti /pricing-beállításból számol, ugyanazzal a szabállyal, mint a src/pricing.ts</span></div>
+
+<div class="cfg" id="cfg">
+  <b>/pricing beállítás (szimuláció):</b>
+  <label><input type="checkbox" id="sFree" checked> Ingyen domain csomagban</label>
+  <label>Domain a csomagban ettől: <select id="sTier"><option value="none">egyikben sem</option><option value="alap">Alap</option><option value="ajanlott">Ajánlott</option><option value="teljes" selected>Teljes</option></select></label>
+  <label>.hu havidíj <input type="number" id="sHuFee" value="1000" step="100"> Ft</label>
+  <label><input type="checkbox" id="sHuFree" checked> .hu csomagban ingyen</label>
+  <label><input type="checkbox" id="sEuOn" checked> .eu kínálva</label>
+  <label>.eu havidíj <input type="number" id="sEuFee" value="1200" step="100"> Ft</label>
+  <label><input type="checkbox" id="sEuFree"> .eu csomagban ingyen</label>
+  <label>Küszöb <input type="number" id="sMin" value="7000" step="500"> Ft/hó</label>
+  <span class="note">A csomagárak (9 500 / 7 240 / 4 880 Ft) a mai modul-árakból adódnak; a .hu 1 000 Ft és a 7 000 Ft-os küszöb a dev-DB mai értéke, a .eu 1 200 Ft MINTA. Szabály (ADR-0360 ②): a díj 0, ha a kapcsoló BE, a csomag lefedi a domaint tartalmazó csomagot, és a végződés „csomagban ingyen”; különben a végződés havidíja. Küszöb alatt, ha nem csomag-tartalom, saját cím nem választható.</span>
+</div>
+<div class="legend"><p id="vdesc"></p><p id="status">Állapot: –</p></div>
+
+<div class="wrap"><div id="frame" class="mobile">
+  <div class="scroller">
+    <div class="mockbar"><b>Ez egy honlap-terv az Ön szállásáról.</b> <span>Készítette: citoviso.com. Ez még nem élő oldal.</span>
+      <div class="addr" id="mockAddr"></div></div>
+    <section class="hero">
+      <div class="name">STRAND APARTMAN KESZTHELY</div>
+      <div class="loc">KESZTHELY, A LIBÁS STRAND KÖZELÉBEN</div>
+      <h1><em>Kültéri medence,</em> kert és bérelhető kerékpárok a strand közelében</h1>
+      <p>Újépítésű családi ház a Libás Strand közelében, teljes babafelszereléssel.</p>
+    </section>
+  </div>
+  <div class="pills">
+    <button class="pill pill--trial" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/></svg>14 nap ingyen</button>
+    <button class="pill pill--order" type="button" id="orderPill"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Itt rendelheti meg<span class="tag" id="pillTag"></span></button>
+  </div>
+
+  <aside class="panel" aria-label="Rendelés">
+    <div class="ph">
+      <h3>Ez az Ön leendő weboldala</h3>
+      <p>Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.</p>
+      <button class="close" type="button" id="close" aria-label="Bezárás"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="urlchip" id="urlchip"></div>
+    </div>
+    <div class="pb" id="pb">
+      <div class="q">Milyen legyen az oldala?</div>
+      <div id="pkgs" role="radiogroup" aria-label="Csomag"></div>
+      <div class="dsec" id="dsec">
+        <div class="q">Címe az interneten</div>
+        <p class="sub">Ezen a webcímen lesz elérhető az elkészült oldala.</p>
+        <div class="lead" id="lead"></div>
+        <div class="dopts" id="dopts">
+          <div class="dopt" role="button" tabindex="0" data-dom="sub" id="optSub" aria-pressed="true"><span class="dot"></span><span><b id="subT">Ingyenes cím a citoviso.com-on</b><span class="fee" id="subF">Az árban — azonnal működik. Válassza meg szabadon:</span></span></div>
+          <div class="subin" id="subIn"><input id="subLabel" value="strand-apartman-keszthely" aria-label="Aldomain neve"><span>.citoviso.com</span></div>
+          <div class="dopt" role="button" tabindex="0" data-dom="own" id="optOwn" aria-pressed="false"><span class="dot"></span><span><b id="ownT">Saját domainnév</b><span class="fee" id="ownF"></span></span></div>
+          <div class="gate" id="gate" hidden></div>
+        </div>
+        <div class="cands" id="cands" hidden></div>
+        <div class="own" id="own" hidden>
+          <div style="font-size:12.5px;margin:0 2px 4px">Egyik sem tetszik? Adja meg a sajátját:</div>
+          <div class="row"><input id="ownIn" type="text" spellcheck="false" autocapitalize="off" inputmode="url" placeholder="pelda.hu" aria-label="Saját domain név"><button type="button" id="ownBtn">Ellenőrzés</button></div>
+          <p class="msg" id="ownMsg" aria-live="polite"></p>
+        </div>
+        <p class="terms" id="terms" hidden></p>
+        <p class="keep" id="keep" hidden></p>
+        <p class="notice" id="notice" hidden></p>
+      </div>
+    </div>
+    <div class="pf">
+      <div class="cyc"><button type="button" id="cM" aria-pressed="true">Havi</button><button type="button" id="cY" aria-pressed="false">Éves <em>−2 hó</em></button></div>
+      <div class="tot" id="tot"></div>
+      <button class="next" type="button" id="next">Tovább ›</button>
+    </div>
+  </aside>
+</div></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fr = $("frame");
+  var IC = {
+    globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>',
+    check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    lock: '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>'
+  };
+  // Real data: today's module prices give exactly these list totals (base 3 900 + modules).
+  var LABELS = ["Képek a szállásról", "Szobák, apartmanok", "Amit kínál (felszereltség)", "Árak, szezonok", "Időpontkérés, kapcsolat", "Térkép, megközelítés", "Nyitvatartás, érkezés", "Miért Önt válasszák", "Vendégek véleménye", "Heti programajánló", "Online foglalás"];
+  var PKG = [
+    { id: "teljes", label: "Teljes", note: "Minden, amit kínálunk — ajánlott", rank: 3, list: 9500, mods: LABELS },
+    { id: "ajanlott", label: "Ajánlott", note: "A lényeg, ami elad", rank: 2, list: 7240, mods: ["Képek a szállásról", "Időpontkérés, kapcsolat", "Térkép, megközelítés", "Szobák, apartmanok", "Amit kínál (felszereltség)", "Miért Önt válasszák", "Vendégek véleménye"] },
+    { id: "alap", label: "Alap", note: "A minimum: képek, elérhetőség, térkép", rank: 1, list: 4880, mods: ["Képek a szállásról", "Időpontkérés, kapcsolat", "Térkép, megközelítés"] }
+  ];
+  var RANK = { none: 99, alap: 1, ajanlott: 2, teljes: 3 };
+  var MONTHS = 12, FREE_MONTHS = 2;
+  // src/domains.ts suggestDomains("Strand Apartman Keszthely", [".hu", ".eu"]) — real output.
+  var CANDS = ["strandapartmankeszthely.hu", "strand-apartman-keszthely.hu", "strandkeszthely.hu", "strandkeszthelyszallas.hu", "strandapartmankeszthely.eu"];
+  var TAKEN = { "strand-apartman-keszthely.hu": 1, "strandapartman.hu": 1 };
+
+  var S = { v: "A", pkg: "teljes", cyc: "m", dom: "sub", name: null, open: {} };
+  function cfg() {
+    var t = [{ tld: ".hu", fee: +$("sHuFee").value || 0, free: $("sHuFree").checked, on: true }];
+    if ($("sEuOn").checked) t.push({ tld: ".eu", fee: +$("sEuFee").value || 0, free: $("sEuFree").checked, on: true });
+    return { freeIn: $("sFree").checked, tier: $("sTier").value, tlds: t, min: +$("sMin").value || 0 };
+  }
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; }
+  function pkgOf(id) { return PKG.filter(function (p) { return p.id === id; })[0]; }
+  // ADR-0360 ②: package content = switch on AND the set covers the lowest domain-carrying tier.
+  function isContent(p, c) { return c.freeIn && c.tier !== "none" && p.rank >= RANK[c.tier]; }
+  function tldOf(name, c) {
+    var best = null;
+    c.tlds.forEach(function (t) { if (name.length > t.tld.length && name.slice(-t.tld.length) === t.tld && (!best || t.tld.length > best.tld.length)) best = t; });
+    return best;
+  }
+  // domainMonthlyFee: 0 when package content AND the ending is free-in-package, else the ending's fee.
+  function feeFor(p, t, c) { return t.free && isContent(p, c) ? 0 : t.fee; }
+  // isDomainEligible: 0 threshold = everyone; else list ≥ threshold, or package content.
+  function eligible(p, c) { return c.min <= 0 || p.list >= c.min || isContent(p, c); }
+  function freeTlds(c) { return c.tlds.filter(function (t) { return t.free; }).map(function (t) { return t.tld; }); }
+  function cycMul() { return S.cyc === "y" ? MONTHS : 1; }
+  function pkgPrice(p) { return S.cyc === "y" ? p.list * (MONTHS - FREE_MONTHS) : p.list; }
+  function per() { return S.cyc === "y" ? "/év" : "/hó"; }
+  // The card's domain state for a package: inc | paid | gate
+  function cardState(p, c) {
+    var prim = c.tlds[0];
+    if (isContent(p, c) && freeTlds(c).length) return { k: "inc", tl: freeTlds(c).join("/") };
+    if (eligible(p, c)) return { k: "paid", fee: feeFor(p, prim, c), tl: prim.tld };
+    return { k: "gate" };
+  }
+  function lowestContentPkg(c) {
+    var ok = PKG.filter(function (p) { return isContent(p, c) && freeTlds(c).length; });
+    return ok.length ? ok[ok.length - 1] : null;
+  }
+  var SUB = function () { return ($("subLabel").value || "strand-apartman-keszthely") + ".citoviso.com"; };
+
+  function cardHtml(p, c) {
+    var st = cardState(p, c), sel = S.pkg === p.id, line = "", badge = "";
+    if (S.v === "A") {
+      line = st.k === "inc" ? '<span class="dl inc">' + IC.globe + "Saját " + st.tl + " cím — benne a csomagban</span>"
+        : st.k === "paid" ? '<span class="dl paid">' + IC.globe + "Saját cím: <em>+" + fmt(st.fee * cycMul()) + per() + "</em></span>"
+        : '<span class="dl lk">' + IC.lock + "Saját cím: " + fmt(c.min) + "/hó feletti csomagtól</span>";
+    } else if (S.v === "B") {
+      if (st.k === "inc") badge = '<span class="badge">' + IC.globe + "+ saját " + st.tl + " cím</span>";
+    } else {
+      var nm = CANDS[0];
+      line = st.k === "inc" ? '<span class="dl inc w"><span class="nmg">' + IC.check + nm + "</span><span>· benne</span></span>"
+        : st.k === "paid" ? '<span class="dl paid w"><span class="nmg">' + IC.globe + nm + "</span><em>+" + fmt(st.fee * cycMul()) + per() + "</em></span>"
+        : '<span class="dl lk">' + IC.globe + '<span class="nm">' + SUB() + "</span></span>";
+    }
+    var rows = LABELS.map(function (l) { var on = p.mods.indexOf(l) >= 0; return '<span class="' + (on ? "" : "off") + '">' + (on ? IC.check : IC.x) + l + "</span>"; });
+    // ADR-0366 ⑤ (exists today): the domain row in the list when the market sells it as content.
+    if (c.freeIn && c.tier !== "none" && freeTlds(c).length) {
+      var inc = isContent(p, c);
+      rows.push('<span class="' + (inc ? "" : "off") + '">' + (inc ? IC.check : IC.x) + "Saját domainnév (" + freeTlds(c).join(", ") + ")</span>");
+    }
+    return '<div class="pk" role="radio" tabindex="0" data-p="' + p.id + '" aria-checked="' + sel + '">' + badge +
+      '<span class="dot"></span><span><b class="lbl">' + p.label + '</b><span class="note">' + p.note + "</span>" + line +
+      '<button class="more" type="button" data-more="' + p.id + '">Mit tartalmaz? (' + p.mods.length + " szekció) ▾</button>" +
+      '<span class="list"' + (S.open[p.id] ? "" : " hidden") + ">" + rows.join("") + "</span></span>" +
+      '<span class="price"><b>' + fmt(pkgPrice(p)) + "</b><small>" + per() + "</small></span></div>";
+  }
+
+  function render() {
+    var c = cfg(), p = pkgOf(S.pkg), st = cardState(p, c), okE = eligible(p, c);
+    $("pkgs").innerHTML = PKG.map(function (q) { return cardHtml(q, c); }).join("");
+    // Dropping below the threshold revokes the choice (as the live configurator does).
+    if (!okE && S.dom === "own") { S.dom = "sub"; S.name = null; $("notice").hidden = false; $("notice").textContent = "Ehhez a csomaghoz saját cím nem választható, ezért visszaállítottuk az ingyenes címet."; }
+    var t = S.name ? tldOf(S.name, c) : c.tlds[0];
+    if (S.name && !t) { S.name = null; t = c.tlds[0]; }
+    var dFee = feeFor(p, t, c);
+    var content = st.k === "inc";
+
+    // order of the two options + the lead line (variant B puts the own address first when it is content)
+    var dopts = $("dopts"), lead = $("lead");
+    lead.style.display = "none";
+    var seq = S.v === "B" && content ? ["optOwn", "cands", "own", "optSub", "subIn", "gate"] : ["optSub", "subIn", "optOwn", "cands", "own", "gate"];
+    seq.forEach(function (id) { dopts.appendChild($(id)); });
+    if (S.v === "B" && content) {
+      lead.style.display = "flex";
+      lead.innerHTML = IC.globe + "<div>A választott csomagjához saját " + st.tl + " cím jár<span>Válasszon nevet lent — a citoviso.com-os cím mellette is megmarad.</span></div>";
+      $("subT").textContent = "Most csak a citoviso.com-os cím";
+    } else {
+      $("subT").textContent = "Ingyenes cím a citoviso.com-on";
+    }
+    $("optOwn").hidden = !okE;
+    var gate = $("gate");
+    gate.hidden = okE;
+    if (!okE) {
+      var pct = Math.min(100, Math.round(p.list / c.min * 100));
+      gate.innerHTML = "<b>Saját domainnév is választható</b>Feltétel: legalább " + fmt(c.min) + "/hó csomag, kedvezmények nélkül számítva — a jelenlegi csomag " + fmt(p.list) + "/hó." +
+        '<div class="bar"><i style="width:' + pct + '%"></i></div>' + fmt(p.list) + " / " + fmt(c.min) + " — " + fmt(c.min - p.list) + " hiányzik" +
+        (lowestContentPkg(c) ? "<br>A " + lowestContentPkg(c).label + " csomagban a saját " + freeTlds(c).join("/") + " cím benne van." : "");
+    }
+    var ownF = $("ownF");
+    ownF.className = "fee" + (dFee === 0 ? " inc" : "");
+    ownF.textContent = (dFee === 0 ? "a csomag része" : fmt(dFee) + "/hó") + " · " + MONTHS + " hó hűségidő";
+    if (S.v === "B" && content) $("ownT").textContent = "Saját domainnév — benne a csomagban";
+    else $("ownT").textContent = "Saját domainnév";
+    $("optSub").setAttribute("aria-pressed", S.dom === "sub");
+    $("optOwn").setAttribute("aria-pressed", S.dom === "own");
+    $("subIn").style.display = S.dom === "sub" ? "flex" : "none";
+    $("cands").hidden = S.dom !== "own";
+    $("own").hidden = S.dom !== "own";
+    var offered = c.tlds.map(function (x) { return x.tld; });
+    $("cands").innerHTML = CANDS.filter(function (n) { return tldOf(n, c); }).map(function (n) {
+      var tt = tldOf(n, c), f = feeFor(p, tt, c), tk = TAKEN[n];
+      return '<button type="button" class="cand" data-n="' + n + '" aria-pressed="' + (S.name === n) + '"' + (tk ? " disabled" : "") + "><b>" + n + "</b>" +
+        (tk ? '<small class="taken">foglalt</small>' : f === 0 ? '<small class="inc">benne a csomagban</small>' : '<small class="paid">+' + fmt(f) + "/hó</small>") + "</button>";
+    }).join("");
+    // honest terms — the live configurator's own sentences
+    var terms = $("terms");
+    terms.hidden = S.dom !== "own";
+    var outside = t.fee;
+    terms.textContent = dFee === 0
+      ? "A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja " + fmt(outside) + "/hó. " + MONTHS + " hónap hűségidő: ez alatt a csomag nem csökkenhet " + fmt(c.min) + "/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. Utána a név díjmentesen az Öné."
+      : "A saját cím " + fmt(dFee) + "/hó, amíg a név Öné — a havidíj a fenntartásért fut. " + MONTHS + " hónap hűségidő: ez alatt a csomag nem csökkenhet " + fmt(c.min) + "/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi.";
+    $("keep").hidden = S.dom !== "own";
+    $("keep").innerHTML = "A citoviso.com-os címe is megmarad: <b>" + SUB() + "</b>";
+
+    // footer
+    var tot = pkgPrice(p), dl = "";
+    if (S.dom === "own") {
+      tot += dFee * cycMul();
+      dl = dFee === 0 ? '<span class="dline inc">ebből saját cím: a csomag része</span>' : '<span class="dline">ebből saját cím ' + fmt(dFee * cycMul()) + per() + "</span>";
+    } else if (S.v !== "A" && content) {
+      dl = '<span class="dline inc">saját ' + st.tl + " cím választható — 0 Ft</span>";
+    }
+    $("tot").innerHTML = "<small>Összesen</small><b>" + fmt(tot) + '</b> <span class="per">' + per().replace("/", "/ ") + "</span>" + dl;
+    $("cM").setAttribute("aria-pressed", S.cyc === "m"); $("cY").setAttribute("aria-pressed", S.cyc === "y");
+
+    // variant C: the address chip in the panel head + the line on the plan page
+    var chip = $("urlchip"), addr = $("mockAddr"), tag = $("pillTag");
+    chip.style.display = "none"; addr.style.display = "none"; tag.style.display = "none";
+    if (S.v === "C") {
+      var nm = S.dom === "own" && S.name ? S.name : CANDS[0];
+      chip.style.display = "flex";
+      chip.innerHTML = IC.lock + (st.k === "gate" ? "<b>" + SUB() + '</b><small class="sub">a citoviso.com-on</small>'
+        : "<b>" + nm + "</b>" + (feeFor(p, tldOf(nm, c) || c.tlds[0], c) === 0 ? '<small class="inc">benne a csomagban</small>' : '<small class="paid">+' + fmt(feeFor(p, tldOf(nm, c) || c.tlds[0], c)) + "/hó</small>"));
+      var lc = lowestContentPkg(c);
+      addr.style.display = "block";
+      addr.innerHTML = "Saját címen: <i>" + IC.globe + CANDS[0] + "</i><small>" + (lc ? "a " + lc.label + " csomag része" : "+" + fmt(c.tlds[0].fee) + "/hó") + "</small>";
+    }
+    if (S.v === "B") {
+      var lc2 = lowestContentPkg(c);
+      if (lc2) { tag.style.display = "block"; tag.textContent = "+ saját " + freeTlds(c).join("/") + " cím"; }
+    }
+    $("status").textContent = "Állapot: " + p.label + " · " + (S.cyc === "y" ? "éves" : "havi") + " · cím: " + (S.dom === "own" ? (S.name || "saját — még nincs név") + " (" + (dFee === 0 ? "0 Ft" : fmt(dFee) + "/hó") + ")" : SUB()) + " · összesen " + fmt(tot) + per();
+  }
+
+  // ── events ──
+  $("pkgs").addEventListener("click", function (e) {
+    var m = e.target.closest("[data-more]");
+    if (m) { S.open[m.getAttribute("data-more")] = !S.open[m.getAttribute("data-more")]; render(); return; }
+    var k = e.target.closest(".pk"); if (!k) return;
+    S.pkg = k.getAttribute("data-p"); $("notice").hidden = true; render();
+  });
+  $("pkgs").addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("pk")) { e.preventDefault(); e.target.click(); } });
+  function setDom(d) { S.dom = d; if (d === "sub") S.name = null; $("notice").hidden = true; render(); }
+  $("optSub").addEventListener("click", function () { setDom("sub"); });
+  $("optOwn").addEventListener("click", function () { setDom("own"); });
+  $("cands").addEventListener("click", function (e) { var b = e.target.closest(".cand"); if (!b || b.disabled) return; S.name = b.getAttribute("data-n"); $("ownMsg").textContent = ""; render(); });
+  $("subLabel").addEventListener("input", render);
+  // own name — the same normalisation as src/domains.ts normalizeCustomDomain + the offered-ending check
+  function normalize(input) {
+    var raw = String(input || "").trim().toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/^www\./, "").replace(/[/?#].*$/, "").replace(/\.$/, "");
+    if (!raw) return { ok: false, reason: "Adjon meg egy domain nevet" };
+    if (raw.length > 253) return { ok: false, reason: "Túl hosszú domain név" };
+    var labels = raw.split(".");
+    if (labels.length < 2) return { ok: false, reason: "Végződés is kell, például: pelda.hu" };
+    for (var i = 0; i < labels.length; i++) {
+      var l = labels[i];
+      if (!l) return { ok: false, reason: "Hibás domain név (üres rész a pontok között)" };
+      if (l.length > 63) return { ok: false, reason: "Túl hosszú rész a domain névben" };
+      if (!/^[a-z0-9-]+$/.test(l) || l[0] === "-" || l[l.length - 1] === "-") return { ok: false, reason: "Csak angol betű, szám és kötőjel használható" };
+    }
+    if (!/^[a-z]{2,}$/.test(labels[labels.length - 1])) return { ok: false, reason: "Hibás végződés (például: .hu, .com)" };
+    return { ok: true, domain: raw };
+  }
+  function checkOwn() {
+    var c = cfg(), p = pkgOf(S.pkg), msg = $("ownMsg"), r = normalize($("ownIn").value);
+    msg.className = "msg";
+    if (!r.ok) { msg.classList.add("bad"); msg.textContent = r.reason; return; }
+    $("ownIn").value = r.domain;
+    var t = tldOf(r.domain, c);
+    if (!t) { msg.classList.add("bad"); msg.textContent = "Ezt a végződést nem kínáljuk — választható: " + c.tlds.map(function (x) { return x.tld; }).join(", "); return; }
+    if (TAKEN[r.domain]) { msg.classList.add("bad"); msg.textContent = r.domain + " már foglalt — válasszon másikat."; return; }
+    var f = feeFor(p, t, c);
+    S.name = r.domain; render();
+    msg.className = "msg ok"; msg.textContent = r.domain + " szabadnak látszik — " + (f === 0 ? "benne a csomagban." : "+" + fmt(f) + "/hó.");
+  }
+  $("ownBtn").addEventListener("click", checkOwn);
+  $("ownIn").addEventListener("keydown", function (e) { if (e.key === "Enter") checkOwn(); });
+  $("cM").onclick = function () { S.cyc = "m"; render(); };
+  $("cY").onclick = function () { S.cyc = "y"; render(); };
+  $("close").onclick = function () { fr.classList.add("closed"); $("status").textContent = "Állapot: panel bezárva — a terv-lap látszik"; };
+  $("orderPill").onclick = function () { fr.classList.remove("closed"); render(); };
+  $("next").onclick = function () {
+    if (S.dom === "own" && !S.name) { $("notice").hidden = false; $("notice").textContent = "Válasszon nevet a listából, vagy írja be a sajátját."; return; }
+    $("status").textContent = "Állapot: Tovább → 2. lépés (változatlan) · " + $("status").textContent.replace("Állapot: ", "");
+  };
+  ["sFree", "sTier", "sHuFee", "sHuFree", "sEuOn", "sEuFee", "sEuFree", "sMin"].forEach(function (id) { $(id).addEventListener("input", render); $(id).addEventListener("change", render); });
+
+  var DESC = {
+    A: "A — Sor a kártyán: minden csomag-kártyán, a leírás alatt, mindig látható egy cím-sor: „Saját .hu cím — benne a csomagban” (zöld) · „Saját cím: +1 000 Ft/hó” · küszöb alatt „Saját cím: 7 000 Ft/hó feletti csomagtól”. A cím-lépés sorrendje marad; a terv-lapon nincs változás.",
+    B: "B — Jelvény + a cím elöl: csak a tartalmazó csomag kap zöld jelvényt („+ saját .hu cím”), a többi kártya tiszta. Ilyen csomagnál a cím-lépés a saját címmel KEZD („A Teljes csomag saját .hu címet ad”), a citoviso.com-os a második. A terv-lapon az „Itt rendelheti meg” gomb is kap egy kis „+ saját .hu cím” címkét.",
+    C: "C — A konkrét név: a vevő a SAJÁT leendő címét látja (strandapartmankeszthely.hu — a src/domains.ts javaslata): a terv-lap fejében, a panel tetején egy címsor-szerű sávban, és minden kártyán (benne · +1 000 Ft/hó · csak citoviso.com). Kijelölni továbbra is neki kell (a saját cím 12 hó hűségidővel jár)."
+  };
+  function setV(v) {
+    S.v = v;
+    ["A", "B", "C"].forEach(function (k) { $("v" + k).setAttribute("aria-pressed", k === v); });
+    $("vdesc").textContent = DESC[v];
+    render();
+  }
+  function setSize(m) { fr.classList.toggle("mobile", m); $("szMob").setAttribute("aria-pressed", m); $("szDesk").setAttribute("aria-pressed", !m); }
+  $("vA").onclick = function () { setV("A"); }; $("vB").onclick = function () { setV("B"); }; $("vC").onclick = function () { setV("C"); };
+  $("szMob").onclick = function () { setSize(true); }; $("szDesk").onclick = function () { setSize(false); };
+  var q = new URLSearchParams(location.search);
+  setSize(q.get("size") ? q.get("size") === "mobile" : window.innerWidth < 700);
+  setV(q.get("v") || "B");
+})();
+</script>
+</body></html>

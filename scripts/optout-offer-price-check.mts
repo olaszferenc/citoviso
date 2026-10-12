@@ -9,13 +9,14 @@
 //
 // Real browser, 390px + desktop, the SAME escalation offer rendered twice:
 //   tracked   → the decision card mounts (control: proves the card path is alive);
-//               on a phone it sits low with NO veil, so the plan stays visible
-//               (Elek 2026-10-10, 02x), on desktop it keeps its veil (offer-ui ④)
+//               as a one-line strip on TOP with NO veil on any size, not over the
+//               order pill, with a ≥ 40 px × (escalation-topbar, owner 2026-10-12)
 //   offerQuiet→ NO decision card, but the struck list price + the discounted
 //               payable figure are on screen, and the pay button charges it
 //
 // Run:  npx tsx scripts/optout-offer-price-check.mts
 //       npx tsx scripts/optout-offer-price-check.mts --self-test   (must go RED)
+//       npx tsx scripts/optout-offer-price-check.mts --shot <dir>  (the strip, 390px + desktop)
 
 import { chromium, type Browser } from "playwright-core";
 
@@ -26,6 +27,7 @@ import { injectRuntime } from "../src/generator/runtime.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
+const SHOT_DIR = process.argv.includes("--shot") ? process.argv[process.argv.indexOf("--shot") + 1] : null;
 const ARTIFACT_ID = "00000000-0000-4000-8000-000000000000";
 const ORIGIN = "http://optout-offer.test";
 
@@ -93,29 +95,29 @@ async function run(browser: Browser, html: string, tag: string, size: { width: n
   if (quiet) check(cards === 0, `${label}: NINCS döntés-segítő kártya (mért: ${cards})`);
   else check(cards === 1, `${label}: a döntés-segítő kártya megjelenik (kontroll, mért: ${cards})`);
   if (!quiet && cards) {
-    // Elek 2026-10-10 (02x): on a phone the veil + blur hid the whole plan. offer-ui ④:
-    // veil on desktop, bottom-anchored card on mobile — and the plan must stay visible.
+    // Frozen plan design-refs/console/escalation-topbar (owner 2026-10-12 „A”): a one-line
+    // strip on TOP, no veil on any size — it replaced the desktop card + veil and the mobile
+    // bottom card that covered 34% of a phone and the order pills (Elek 10-11).
     await page.locator(".cit-cfg-esccard.cit-cfg-on").waitFor({ state: "visible", timeout: 5000 });
     await page.waitForTimeout(500);
     const m = await page.evaluate(() => {
-      const v = document.querySelector(".cit-cfg-escveil") as HTMLElement;
-      const vs = getComputedStyle(v);
       const r = (document.querySelector(".cit-cfg-esccard") as HTMLElement).getBoundingClientRect();
-      return { veil: vs.display !== "none" && Number(vs.opacity) > 0, top: r.top, bottom: r.bottom, vh: innerHeight };
+      const pill = document.querySelector(".cit-cfg-launch") as HTMLElement | null;
+      const q = pill ? pill.getBoundingClientRect() : null;
+      const overlap = !!q && !(q.right <= r.left || q.left >= r.right || q.bottom <= r.top || q.top >= r.bottom);
+      const x = document.querySelector(".cit-cfg-esccard .cit-cfg-esclater") as HTMLElement | null;
+      const xr = x ? x.getBoundingClientRect() : null;
+      return { veil: !!document.querySelector(".cit-cfg-escveil"), top: r.top, h: r.height, vh: innerHeight, overlap, x: xr ? Math.min(xr.width, xr.height) : 0 };
     });
-    if (size.width <= 560) {
-      check(!m.veil, `${label}: mobilon NINCS fátyol a terv előtt (mért: ${m.veil ? "van" : "nincs"})`);
-      check(
-        m.top >= m.vh * 0.55 && m.bottom <= m.vh,
-        `${label}: a kártya alul ül, a képernyő felső 55%-a a terv (régi kártya: 383/844) (teteje ${Math.round(m.top)} / ${m.vh} px)`,
-      );
-    } else {
-      check(m.veil, `${label}: asztalon a kártya fátyollal (offer-ui ④)`);
-    }
+    check(!m.veil, `${label}: nincs fátyol a terv előtt`);
+    check(m.top <= 20 && m.h <= m.vh * 0.15, `${label}: felső sáv, a képernyő legfeljebb 15%-a (teteje ${Math.round(m.top)}, ${Math.round(m.h)} / ${m.vh} px)`);
+    check(!m.overlap, `${label}: a sáv nem takarja az „Itt rendelheti meg” gombot`);
+    check(m.x >= 40, `${label}: jól látható bezáró ×, legalább 40 px (mért: ${Math.round(m.x)})`);
+    if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/eszkalacio-sav-${tag}.png` });
   }
 
   // Close the card if present, then look at the price the buyer is going to pay.
-  if (cards) await page.evaluate(() => document.querySelectorAll(".cit-cfg-escveil,.cit-cfg-esccard").forEach((n) => n.remove()));
+  if (cards) await page.evaluate(() => document.querySelectorAll(".cit-cfg-esccard").forEach((n) => n.remove()));
   await page.locator(".cit-cfg-launch").click();
   await page.waitForTimeout(300);
   const sum = page.locator(".cit-cfg-sum--offer");

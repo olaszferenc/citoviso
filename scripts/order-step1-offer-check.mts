@@ -63,7 +63,7 @@ async function run(browser: Browser, html: string, tag: string, size: { width: n
   );
   await page.goto(`${ORIGIN}/`);
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 10000 });
-  await page.evaluate(() => document.querySelectorAll(".cit-cfg-escveil,.cit-cfg-esccard").forEach((n) => n.remove()));
+  await page.evaluate(() => document.querySelectorAll(".cit-cfg-esccard").forEach((n) => n.remove()));
   await page.locator(".cit-cfg-launch").click();
   await page.waitForTimeout(300);
   const label = `${tag} · ${offer ? "ajánlattal" : "ajánlat nélkül"}`;

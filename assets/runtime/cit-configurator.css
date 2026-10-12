@@ -1728,6 +1728,10 @@
   gap: 9px;
   margin-top: 6px;
 }
+.cit-cfg-dsubw {
+  display: grid;
+  gap: 9px;
+}
 .cit-cfg-dopt {
   display: flex;
   align-items: center;
@@ -1896,6 +1900,90 @@
   font-weight: 400;
   color: #9aa4b2;
   margin-top: 3px;
+}
+
+/* ── package-domain-badge B (frozen plan design-refs/console/package-domain-badge, owner
+ * 2026-10-12): the free own address as package content — badge on the carrying package card,
+ * a tag on the order pill, a lead line in the address step, fee per suggestion row. All of it
+ * appears ONLY when /pricing makes the address free (runtime: freePkgTlds()). */
+.cit-cfg-domfee--inc {
+  color: #4fe3a3;
+  font-weight: 600;
+}
+.cit-cfg-preset {
+  position: relative;
+}
+.cit-cfg-preset__dbadge {
+  position: absolute;
+  top: -9px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #2fa96b;
+  color: #fff;
+  font: 700 11.5px/1.5 system-ui, sans-serif;
+  pointer-events: none;
+}
+.cit-cfg-preset__dbadge svg,
+.cit-cfg-dlead svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  flex: none;
+}
+.cit-cfg-launch__tag {
+  position: absolute;
+  top: -11px;
+  right: 14px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #2fa96b;
+  color: #fff;
+  font: normal 700 11px/1.5 system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cit-cfg-dlead {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #14352a;
+  color: #4fe3a3;
+  font-size: 13px;
+}
+.cit-cfg-dlead[hidden] {
+  display: none;
+}
+.cit-cfg-dlead svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+.cit-cfg-dlead b {
+  display: block;
+  font-weight: 600;
+}
+.cit-cfg-dlead span {
+  display: block;
+  color: #e7ebf1;
+  font-size: 12.5px;
+}
+.cit-cfg-dsug__fee {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #f5c06b;
+  white-space: nowrap;
+}
+.cit-cfg-dsug__fee--inc {
+  color: #4fe3a3;
 }
 
 /* Real commitment terms under the custom-domain option (ADR-0093/0094). */
@@ -2637,175 +2725,150 @@
   color: #8b95a4;
 }
 
-/* ── ADR-0088 escalation decision card + veil ────────────────────────────────
- * Desktop: centered dialog. Mobile: bottom-anchored (same breakpoint as the
- * panel's bottom-sheet mode). Appears after a beat; countdown ticks live. */
-.cit-cfg-escveil {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483200;
-  background: rgba(8, 16, 24, 0.55);
-  backdrop-filter: blur(3px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-}
-.cit-cfg-escveil.cit-cfg-on {
-  opacity: 1;
-  pointer-events: auto;
-}
+/* ── ADR-0088 escalation offer — a ONE-LINE STRIP on top (frozen plan: design-refs/console/
+ * escalation-topbar, owner 2026-10-12 „A”). It replaced the centred card + veil (desktop) and
+ * the bottom card (mobile) that covered a third of a phone, the order pills and the hero CTA.
+ * No veil anywhere: the plan stays usable under it. The × is a drawn ring, 40px hit area. */
 .cit-cfg-esccard {
   position: fixed;
   z-index: 2147483300;
+  top: 10px;
   left: 50%;
-  top: 44%;
-  transform: translate(-50%, -46%);
-  width: min(88vw, 460px);
+  transform: translate(-50%, -8px);
+  width: min(920px, calc(100vw - 20px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
   background: #fff;
-  border-radius: 18px;
-  padding: 26px 26px 22px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
-  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+  font: 14px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: #10243a;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .cit-cfg-esccard.cit-cfg-on {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, -50%);
-}
-.cit-cfg-esccard h4 {
-  margin: 0 0 6px;
-  font: 600 19px/1.25 system-ui, sans-serif;
-}
-.cit-cfg-esccard p {
-  margin: 0 0 14px;
-  font-size: 13.5px;
-  color: #60748b;
+  transform: translate(-50%, 0);
 }
 .cit-cfg-escpct {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 0 0 6px;
-}
-.cit-cfg-escpct b {
-  font-size: 40px;
+  flex: none;
+  font: 800 28px/1 system-ui, sans-serif;
   color: #0e2a47;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
 }
-.cit-cfg-escpct span {
-  font-size: 13px;
+.cit-cfg-esctxt {
+  flex: 1;
+  min-width: 0;
+}
+.cit-cfg-esctxt b {
+  display: block;
+  font-size: 14px;
+}
+.cit-cfg-esctxt span {
+  display: block;
+  font-size: 12px;
   color: #60748b;
+}
+.cit-cfg-esctxt .cit-cfg-escsh {
+  display: none;
+}
+.cit-cfg-esctxt span span {
+  display: inline;
 }
 .cit-cfg-esccd {
-  display: inline-flex;
-  gap: 6px;
-  margin: 0 0 16px;
+  font-weight: 700;
+  color: #0e2a47;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.cit-cfg-esccd i {
-  font-style: normal;
-  background: #f6fbfd;
-  border: 1px solid rgba(14, 42, 71, 0.12);
-  border-radius: 8px;
-  padding: 6px 9px;
-  font: 700 16px/1 system-ui, sans-serif;
-  color: #10243a;
-  text-align: center;
-}
-.cit-cfg-esccd i small {
-  display: block;
-  font: 400 9px/1.6 system-ui, sans-serif;
-  color: #60748b;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
 .cit-cfg-escgo {
-  display: block;
-  width: 100%;
+  flex: none;
   border: none;
   border-radius: 10px;
-  padding: 13px;
-  background: #2f6feb;
-  color: #fff;
-  font: 600 15px/1.1 system-ui, sans-serif;
+  padding: 11px 16px;
+  background: #1fb6d6;
+  color: #0a1f36;
+  font: 700 14px/1.1 system-ui, sans-serif;
+  white-space: nowrap;
   cursor: pointer;
 }
 .cit-cfg-escgo:hover {
-  background: #3f7cf5;
+  background: #35c4e0;
+}
+.cit-cfg-escgo .cit-cfg-escs {
+  display: none;
 }
 .cit-cfg-esclater {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
   border: none;
+  border-radius: 50%;
   background: transparent;
-  color: #60748b;
-  font: 500 12.5px/1 system-ui, sans-serif;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  padding: 8px;
+  padding: 0;
+}
+.cit-cfg-esclater::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: #eef7fa;
+  border: 1px solid rgba(14, 42, 71, 0.22);
+}
+.cit-cfg-esclater svg {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  stroke: #10243a;
+  fill: none;
+  stroke-width: 2.4;
+}
+.cit-cfg-escgo:focus-visible,
+.cit-cfg-esclater:focus-visible {
+  outline: 2px solid #1fb6d6;
+  outline-offset: 2px;
 }
 @media (max-width: 560px) {
-  /* Elek 2026-10-10 (02x): on a phone the veil + blur hid the WHOLE plan and the
-   * card took two thirds of the screen — the lead came for the plan and saw none
-   * of it. The plan (offer-ui ④) asks a veil on DESKTOP only and a bottom-anchored
-   * card on mobile; so no veil here, the page above stays visible and scrollable,
-   * and the card is compact (countdown beside the percent). Logic untouched. */
-  .cit-cfg-escveil {
-    display: none;
-  }
   .cit-cfg-esccard {
-    top: auto;
-    /* Above the consent bar (cit-consent.js publishes its height): under it the card's
-     * „Most még gondolkodom” sat behind the bar on a phone (Elek2, 2026-10-10). */
-    bottom: calc(10px + var(--citui-consent-h, 0px));
-    width: calc(100vw - 24px);
-    padding: 16px 18px 10px;
-    box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.28), 0 10px 30px rgba(0, 0, 0, 0.3);
-    transform: translate(-50%, 6px);
-  }
-  .cit-cfg-esccard.cit-cfg-on {
-    transform: translate(-50%, 0);
-  }
-  .cit-cfg-esccard h4 {
-    font-size: 16.5px;
-    margin-bottom: 4px;
-  }
-  .cit-cfg-esccard p {
-    font-size: 12.5px;
-    line-height: 1.45;
-    margin-bottom: 8px;
+    top: 8px;
+    gap: 8px;
+    padding: 6px 4px 6px 12px;
+    border-radius: 12px;
   }
   .cit-cfg-escpct {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 10px;
-    margin-bottom: 10px;
+    font-size: 22px;
   }
-  .cit-cfg-escpct b {
-    font-size: 30px;
+  .cit-cfg-esctxt b,
+  .cit-cfg-esctxt .cit-cfg-esclong {
+    display: none;
   }
-  .cit-cfg-escpct span {
-    font-size: 12px;
-    flex: 1 1 140px;
+  .cit-cfg-esctxt .cit-cfg-escsh {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #10243a;
   }
-  .cit-cfg-esccd {
-    margin-bottom: 10px;
-  }
-  .cit-cfg-esccd i {
-    padding: 4px 7px;
-    font-size: 14px;
+  .cit-cfg-esctxt span {
+    font-size: 11.5px;
   }
   .cit-cfg-escgo {
-    padding: 11px;
-    font-size: 14.5px;
+    padding: 10px 12px;
+    font-size: 13px;
   }
-  .cit-cfg-esclater {
-    margin-top: 2px;
-    padding: 9px 8px;
+  .cit-cfg-escgo .cit-cfg-escl {
+    display: none;
+  }
+  .cit-cfg-escgo .cit-cfg-escs {
+    display: inline;
   }
 }
 
@@ -2848,7 +2911,6 @@
 .cit-cfg-scrim,
 .cit-cfg-tscrim,
 .cit-cfg-tsheet,
-.cit-cfg-escveil,
 .cit-cfg-esccard,
 .cit-cfg-editstrip {
   position: fixed !important;
@@ -2858,11 +2920,10 @@
 .cit-cfg-scrim { z-index: 2147482999 !important; }
 .cit-cfg-launch { z-index: 2147483000 !important; }
 .cit-cfg-trialpill { z-index: 2147483000 !important; }
-/* ADR-0342 trial form: above both pills and the order panel, below the escalation veil. */
+/* ADR-0342 trial form: above both pills and the order panel, below the escalation strip. */
 .cit-cfg-tscrim { z-index: 2147483140 !important; }
 .cit-cfg-tsheet { z-index: 2147483150 !important; }
 .cit-cfg-panel { z-index: 2147483001 !important; }
-.cit-cfg-escveil { z-index: 2147483200 !important; }
 .cit-cfg-esccard { z-index: 2147483300 !important; }
 .cit-cfg-editstrip { z-index: 2147482990 !important; }
 /* cit-cfg-armour-end */

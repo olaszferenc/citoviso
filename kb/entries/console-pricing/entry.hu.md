@@ -152,6 +152,14 @@ A vevő maga választ nevet és végződést, a kínált végződések közül. 
   végződésnek nincs havidíja. Ez a kapcsoló csak akkor nyomható, ha fent az „Ingyen domain
   csomagban” be van kapcsolva.
 
+  A vevő ezt a tervén látja: a domaint tartalmazó csomag kártyáján és az „Itt rendelheti meg”
+  gombon zöld „+ saját .hu cím” jelvény jelenik meg (a végződés a te jelölésedből jön). Ha ilyen
+  csomagot választ, a „Címe az interneten” lépés a saját címmel kezd. Ha a domain-pirula egy
+  csomagban van, de egyetlen végződésen sincs bejelölve a „Csomagban ingyen”, a vevő nem kap ingyen
+  címet, és jelvényt sem lát. Ilyenkor a csomag-kártyán sárga sor áll: „Saját cím: nincs
+  ingyenesnek jelölt végződés — jelöld lent, a Saját domain résznél, a „Csomagban ingyen”
+  oszlopban”, és a „Figyelmet kér” listában is megjelenik.
+
 - **„+ Végződés”** — új végződést veszel fel (például .at); utána kérdezd le az árát, mielőtt
   kínálod. **„Törlés”** — kiveszi a sort.
 
@@ -173,7 +181,9 @@ bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése men
 Hogyan működik: a kiküldött levél egy bemutatkozó kedvezményt ígér, ez az első megnyitástól határidő nélkül él. Ha
 a lead a tervet a megadott számú alkalommal megnyitja (alapbeállításban: a megadott számú KÜLÖNBÖZŐ NAPON, lásd lent a
 2. pontot), és még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat
-neki: nagyobb kedvezményt az első díjból, a megadott ideig. Megnyitásnak az számít, amikor a lead a lapon görget,
+neki: nagyobb kedvezményt az első díjból, a megadott ideig. Az ajánlat egy keskeny sávban jelenik meg a lap
+tetején (kedvezmény, visszaszámláló, „Megrendelem a kedvezménnyel” gomb és bezáró ×); a rendelés-gombokat nem
+takarja. Ha a lead bezárja, az ajánlat él tovább, és a rendelés-panel árában látszik. Megnyitásnak az számít, amikor a lead a lapon görget,
 koppint, kattint vagy billentyűt üt, vagy a lap 5 másodpercig látható; ezért a döntés-segítő ajánlat is ekkor, menet
 közben jelenik meg, nem a lap betöltésekor (a részletek a Megkeresés-piszkozat súgójában, „Mi számít megnyitásnak?”). Ha addig sem rendel, a megadott késleltetés után
 e-mailben is emlékeztetjük rá, ha van e-mail címe, nem iratkozott le, és az ajánlat még nem járt le. Az emlékeztetőt

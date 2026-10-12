@@ -2578,6 +2578,14 @@ if [ -f scripts/package-domain-row-check.mts ] && \
   echo "[pre-commit] package-domain-row-check (csomag-tartalom: saját cím a listán)…"
   npx tsx scripts/package-domain-row-check.mts >"$GATE_LOG" || gate_failed
 fi
+# (package-domain-badge, tulaj 2026-10-12 „B”): a saját cím jelvénye / vezető sora / „benne” KIZÁRÓLAG a
+# /pricing-ból: kapcsoló KI vagy nincs „Csomagban ingyen” végződés → sehol semmi (a tulaj mai
+# állapota); + az admin csomag-kártya figyelmeztető sora. 390px + asztali + admin (~60 s).
+if [ -f scripts/package-domain-badge-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-(configurator|pricing-admin)\.js$|^src/generator/configurator\.ts$|^src/console/pricingPage\.ts$|^scripts/package-domain-badge-check'; then
+  echo "[pre-commit] package-domain-badge-check (saját cím jelvénye csak a /pricing-ból)…"
+  npx tsx scripts/package-domain-badge-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0112 (módosítva 2026-09-25): a leiratkozott látogató ugyanazt az árat LÁTJA, amit a
 # rendelés terhel (az ajánlat mindkét ágon), de NINCS döntés-segítő kártya. Mérve: a lap
 # 6 840 Ft-ot mutatott, a szerver 5 130 Ft-ot vont volna le. 390px + asztali (~15 s).

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eszkalációs ajánlat — kisebb, bezárható kártya (terv-kör)</title><style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-muted:#5a6d82;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-bg:#fff;--citui-panel:#fff;
+  --citui-ok:#2fa96b;--citui-ok-ink:#19733f;--citui-warn:#d29922;--citui-warn-ink:#7d5a12;--citui-bad:#e5484d;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  --citui-radius-pill:999px;
+  --citui-font-text:"Inter",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+  /* stand-in for the GENERATED site's own skin (--cit-* theme tokens of the mock, not ours) */
+  --cit-bg:#14110d;--cit-ink:#efe7dc;--cit-accent:#d99a86;--cit-photo-a:#4d6b7e;--cit-photo-b:#20323f;--cit-photo-c:#0d1a22;
+  --cit-font-display:Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--citui-surface-2);color:var(--citui-ink);font:13px/1.45 var(--citui-font-text)}
+button{font:inherit;color:inherit;cursor:pointer}
+.draft-bar{display:flex;gap:8px;align-items:center;padding:8px 14px;flex-wrap:wrap;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px}
+.draft-bar b{font-weight:600}
+.draft-bar button{border:1px solid var(--citui-cyan-500);background:transparent;color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 12px}
+.draft-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.legend{max-width:1280px;margin:10px auto;padding:0 14px;display:grid;gap:6px;font-size:12.5px}
+.legend p{margin:0}
+.meter{display:flex;gap:14px;flex-wrap:wrap;font-weight:600}
+.meter span{padding:2px 10px;border-radius:var(--citui-radius-pill);background:var(--citui-panel);border:1px solid var(--citui-line)}
+.meter .ok{color:var(--citui-ok-ink)}.meter .bad{color:var(--citui-bad)}
+.wrap{overflow-x:auto;padding:0 0 24px}
+
+/* ── the device viewport ─────────────────────────────────────────────── */
+#frame{position:relative;margin:0 auto;width:1280px;height:800px;overflow:hidden;container-type:inline-size;background:var(--cit-bg);border:1px solid var(--citui-line-strong)}
+#frame.mobile{width:390px;height:844px}
+.scroller{position:absolute;inset:0;overflow:auto;color:var(--cit-ink)}
+.mockbar{background:var(--citui-navy-950);color:var(--citui-white);text-align:center;padding:10px 12px;font-size:12px}
+.mockbar b{display:inline}.mockbar span{opacity:.6}
+.hero{position:relative;min-height:760px;padding:40px 52px 120px;background:linear-gradient(170deg,var(--cit-photo-a),var(--cit-photo-b) 55%,var(--cit-photo-c))}
+.hero .name{font:400 34px/1.1 var(--cit-font-display);letter-spacing:.18em;text-align:center;margin:10px 0 6px}
+.hero .loc{font-size:11px;letter-spacing:.28em;text-align:center;opacity:.75}
+.hero h1{font:400 76px/1.12 var(--cit-font-display);margin:44px 0 18px;max-width:640px}
+.hero h1 em{font-style:normal;color:var(--cit-accent)}
+.hero p{font-size:15px;max-width:440px;opacity:.85}
+.hero .ctas{display:flex;gap:14px;margin-top:24px}
+.hero .ctas a{padding:14px 34px;font-size:12px;letter-spacing:.24em;font-weight:700;border:1px solid var(--cit-accent);color:var(--cit-ink);text-decoration:none}
+.hero .ctas a:first-child{background:var(--cit-accent);color:var(--cit-bg)}
+.more{padding:40px 52px;display:grid;gap:14px}
+.more div{height:140px;border:1px solid color-mix(in srgb,var(--cit-ink) 14%,transparent);border-radius:6px}
+.sitebar{display:none}
+@container (max-width:600px){
+  .hero{padding:24px 16px 160px}
+  .hero .name{font-size:24px}
+  .hero h1{font-size:36px;margin-top:250px}
+  .hero .ctas{display:none}
+  .more{padding:24px 16px}
+  .sitebar{display:flex;position:absolute;left:0;right:0;bottom:0;height:68px;align-items:center;justify-content:space-between;padding:0 16px;background:var(--cit-bg);border-top:1px solid color-mix(in srgb,var(--cit-ink) 14%,transparent);color:var(--cit-ink);z-index:5}
+  .sitebar small{display:block;opacity:.7;font-size:11px}
+  .sitebar a{padding:11px 22px;background:var(--cit-accent);color:var(--cit-bg);font-weight:700;letter-spacing:.2em;font-size:12px;text-decoration:none;border-radius:4px}
+}
+
+/* ── Citoviso order pills (exist today) ──────────────────────────────── */
+.pills{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;display:flex;gap:10px;z-index:6}
+.pill{display:flex;align-items:center;gap:8px;padding:12px 20px;border-radius:var(--citui-radius-pill);border:2px solid color-mix(in srgb,var(--citui-white) 70%,transparent);font-weight:700;font-size:14px;white-space:nowrap}
+.pill svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.pill--trial{background:var(--citui-navy-900);color:var(--citui-white)}
+.pill--order{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+@container (max-width:600px){.pills{bottom:80px;width:calc(100% - 20px);gap:6px}.pill{flex:1;justify-content:center;padding:11px 8px;font-size:13.5px}}
+
+/* ── shared bits of the offer ────────────────────────────────────────── */
+.esc{position:absolute;z-index:20;background:var(--citui-panel);color:var(--citui-ink);opacity:0;pointer-events:none;transition:opacity .35s ease,transform .35s cubic-bezier(.22,1,.36,1)}
+.esc.on{opacity:1;pointer-events:auto}
+.esc .pct{font-weight:800;color:var(--citui-navy-900);letter-spacing:-.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.esc .cd{font-variant-numeric:tabular-nums;font-weight:700;color:var(--citui-navy-900)}
+.esc .go{border:0;border-radius:10px;background:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:700;white-space:nowrap}
+.esc .go:hover{background:var(--citui-cyan-400)}
+/* the close button: ALWAYS visible, 40px hit area, drawn ring — not a faint text link */
+.esc .x{position:relative;flex:none;width:40px;height:40px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center}
+.esc .x::before{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--citui-surface-2);border:1px solid var(--citui-line-strong)}
+.esc .x svg{position:relative;width:14px;height:14px;stroke:var(--citui-ink);stroke-width:2.4;fill:none}
+.esc .x:focus-visible,.esc .go:focus-visible{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+
+/* Variant A — one-line strip on TOP (pills + site bar stay at the bottom, untouched) */
+.escA{top:10px;left:50%;transform:translate(-50%,-8px);width:min(920px,calc(100% - 20px));border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.35);display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px}
+.escA.on{transform:translate(-50%,0)}
+.escA .pct{font-size:28px}
+.escA .t{flex:1;min-width:0;line-height:1.3}
+.escA .t b{display:block;font-size:14px}
+.escA .t span{display:block;font-size:12px;color:var(--citui-muted)}
+.escA .cd{white-space:nowrap}
+.escA .t span span{display:inline}
+.escA .t .sh{display:none}
+.escA .go{padding:11px 16px;font-size:14px}
+.escA .go .s{display:none}
+@container (max-width:600px){
+  .escA{top:8px;gap:8px;padding:6px 4px 6px 12px;border-radius:12px}
+  .escA .pct{font-size:22px}
+  .escA .t b{display:none}
+  .escA .t .sh{display:block;font-size:13px;font-weight:700;color:var(--citui-ink)}
+  .escA .t span{font-size:11.5px}
+  .escA .t .long{display:none}
+  .escA .go{padding:10px 12px;font-size:13px}
+  .escA .go .l{display:none}.escA .go .s{display:inline}
+}
+
+/* Variant B — small card: mobile docked ABOVE the pills; desktop bottom-right corner */
+.escB{right:24px;bottom:24px;width:360px;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.4);padding:16px 16px 16px 18px;transform:translateY(10px)}
+.escB.on{transform:none}
+.escB .x{position:absolute;top:6px;right:6px}
+.escB h4{margin:0 40px 6px 0;font-size:15px;line-height:1.3}
+.escB .row{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.escB .pct{font-size:34px;line-height:1}
+.escB .row span{font-size:12px;color:var(--citui-muted)}
+.escB .cdl{font-size:12px;color:var(--citui-muted);margin-bottom:12px}
+.escB .go{display:block;width:100%;padding:12px;font-size:14.5px}
+.escB .cdl .lbl,.escB .cdl .m,.escB .go .s{display:none}
+@container (max-width:600px){
+  .escB{left:10px;right:10px;width:auto;bottom:136px;padding:10px 6px 10px 14px;border-radius:14px;display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"pct t x" "pct go go";column-gap:10px;row-gap:8px;align-items:center}
+  .escB .x{position:relative;top:auto;right:auto;grid-area:x}
+  .escB h4,.escB .row span,.escB .cdl .why{display:none}
+  .escB .row{grid-area:pct;margin:0}
+  .escB .pct{font-size:30px}
+  .escB .cdl{grid-area:t;margin:0;font-size:12px;line-height:1.35}
+  .escB .cdl .lbl{display:block;font-size:13px;color:var(--citui-ink)}
+  .escB .cdl .m{display:inline}
+  .escB .go .l{display:none}.escB .go .s{display:inline}
+  .escB .go{grid-area:go;padding:10px;font-size:14px;margin-right:8px}
+}
+
+@container (min-width:601px){#escNow{left:50%!important;right:auto!important;bottom:auto!important;top:50%;width:460px;transform:translate(-50%,-50%)}}
+/* stand-in for the EXISTING order panel the CTA opens (unchanged by this plan) */
+.panel{position:absolute;z-index:30;right:0;top:0;bottom:0;width:420px;background:var(--citui-navy-950);color:var(--citui-white);padding:22px;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;gap:10px}
+.panel.on{transform:none}
+.panel h3{margin:0;font-size:17px}
+.panel .pc{margin-top:auto;border-top:1px solid color-mix(in srgb,var(--citui-white) 16%,transparent);padding-top:12px}
+.panel .pc s{opacity:.6}.panel .pc b{font-size:22px;margin-left:6px}
+.panel .pc .o{color:var(--citui-warn);font-size:12.5px}
+.panel .close{align-self:flex-end;background:transparent;border:1px solid color-mix(in srgb,var(--citui-white) 40%,transparent);color:var(--citui-white);border-radius:8px;padding:4px 10px}
+@container (max-width:600px){.panel{left:0;width:auto;top:120px;border-radius:18px 18px 0 0;transform:translateY(110%)}.panel.on{transform:none}}
+</style></head><body>
+<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A — felső sáv, 2026-10-12) · Döntés-segítő (−50%) ajánlat a 3. visszatérésnél — kisebb, bezárható</b>
+<span>· változat:</span><button id="vA" type="button" aria-pressed="true">A — felső sáv</button><button id="vB" type="button" aria-pressed="false">B — kis kártya a gombok fölött</button><button id="vNow" type="button" aria-pressed="false">MA (összevetésnek)</button>
+<span>· méret:</span><button id="szMob" type="button" aria-pressed="true">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="false">Asztali</button>
+<button id="replay" type="button">Újra: 3. látogatás</button>
+<span style="opacity:.7">működő vázlat — a visszaszámláló él, a × és a gomb működik; a honlap mögötte csak helykitöltő</span></div>
+
+<div class="legend">
+  <p id="vdesc"></p>
+  <div class="meter"><span id="mCover">Takarás: –</span><span id="mPills">Rendelés-gombok: –</span><span id="mState">Állapot: várakozik</span></div>
+</div>
+
+<div class="wrap"><div id="frame" class="mobile">
+  <div class="scroller">
+    <div class="mockbar"><b>Ez egy honlap-terv az Ön szállásáról.</b> <span>Készítette: citoviso.com. Ez még nem élő oldal.</span></div>
+    <section class="hero">
+      <div class="name">STRAND APARTMAN KESZTHELY</div>
+      <div class="loc">KESZTHELY, A LIBÁS STRAND KÖZELÉBEN</div>
+      <h1><em>Kültéri medence,</em> kert és bérelhető kerékpárok a strand közelében</h1>
+      <p>Újépítésű családi ház a Libás Strand közelében, teljes babafelszereléssel.</p>
+      <div class="ctas"><a href="#">FOGLALÁS</a><a href="#">FEDEZZE FEL</a></div>
+    </section>
+    <section class="more"><div></div><div></div><div></div></section>
+  </div>
+  <div class="sitebar"><div>4,8 ★<small>Google-értékelés · 20 vélemény</small></div><a href="#">FOGLALÁS</a></div>
+  <div class="pills" id="pills">
+    <button class="pill pill--trial" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1zm0 0c2-4 6-4 6-1s-6 1-6 1z"/></svg>14 nap ingyen</button>
+    <button class="pill pill--order" type="button" id="orderPill"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Itt rendelheti meg</button>
+  </div>
+
+  <!-- Variant A -->
+  <div class="esc escA" id="escA" role="dialog" aria-label="Döntés-segítő ajánlat">
+    <b class="pct">−50%</b>
+    <div class="t"><b>Szeretnénk segíteni a döntésben</b><span class="sh">az első díjból</span><span><span class="long">az első havi vagy éves díjból · a megújulás listaáron · </span>még <span class="cd" data-cd></span></span></div>
+    <button class="go" type="button" data-go><span class="l">Megrendelem a kedvezménnyel</span><span class="s">Megrendelem</span></button>
+    <button class="x" type="button" data-x aria-label="Bezárás — most még gondolkodom"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <!-- Variant B -->
+  <div class="esc escB" id="escB" role="dialog" aria-label="Döntés-segítő ajánlat">
+    <button class="x" type="button" data-x aria-label="Bezárás — most még gondolkodom"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h4>Szeretnénk segíteni a döntésben</h4>
+    <div class="row"><b class="pct">−50%</b><span>az első havi vagy éves díjból · a megújulás listaáron</span></div>
+    <div class="cdl"><b class="lbl">Az első díjból</b><span class="why">Még ennyi ideig él: </span><span class="m">még </span><span class="cd" data-cd></span></div>
+    <button class="go" type="button" data-go><span class="l">Megrendelem a kedvezménnyel</span><span class="s">Megrendelem</span></button>
+  </div>
+
+  <!-- Today, for comparison (the live card's geometry) -->
+  <div class="esc escNow" id="escNow" role="dialog" aria-label="Döntés-segítő ajánlat (ma)" style="left:12px;right:12px;bottom:10px;border-radius:18px;padding:16px 18px 10px;box-shadow:0 10px 30px rgba(0,0,0,.3)">
+    <h4 style="margin:0 0 4px;font-size:16.5px">Szeretnénk segíteni a döntésben</h4>
+    <p style="margin:0 0 8px;font-size:12.5px;color:var(--citui-muted)">Látjuk, hogy már többször megnézte a honlap-tervét. Ha most rendeli meg, az első díjból a bemutatkozó kedvezmény helyett ennyit engedünk:</p>
+    <div style="display:flex;gap:10px;align-items:baseline"><b class="pct" style="font-size:34px">−50%</b><span style="font-size:12.5px;color:var(--citui-muted)">az első havi vagy éves díjból · a megújulás listaáron</span></div>
+    <div style="margin:8px 0 12px;font-weight:700" class="cd" data-cd></div>
+    <button class="go" type="button" data-go style="display:block;width:100%;padding:12px;background:var(--citui-navy-700);color:var(--citui-white)">Megrendelem a kedvezménnyel</button>
+    <button type="button" data-x style="display:block;width:100%;border:0;background:transparent;color:var(--citui-muted);padding:8px;font-size:12.5px">Most még gondolkodom</button>
+  </div>
+
+  <aside class="panel" id="panel" aria-label="Rendelés-panel (a meglévő)">
+    <button class="close" type="button" id="panelClose">Bezár</button>
+    <h3>Ez az Ön leendő weboldala</h3>
+    <p style="margin:0;opacity:.75">A meglévő rendelés-panel — ez a terv nem változtat rajta. Az ajánlat itt, az ár-kártyában tovább látszik, akkor is, ha a kártyát bezárta.</p>
+    <div class="pc">Összesen <div><s>9 500 Ft</s><b>4 750 Ft</b> / hó</div><div class="o">Döntés-segítő ajánlat (−50%) −4 750 Ft az első díjból · érvényes <span id="until"></span>-ig</div><div style="opacity:.7;font-size:12px">Egyszeri kedvezmény — a hosszabbítás listaáron megy.</div></div>
+  </aside>
+</div></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fr = $("frame");
+  var variant = "A";
+  var DESC = {
+    A: "A — Felső sáv: egy sor a képernyő tetején (−50% · cím · visszaszámláló · gomb · ×). Alul semmi nem változik: a „14 nap ingyen” és az „Itt rendelheti meg” gomb, meg a honlap saját foglalás-sávja szabadon marad. Asztalon ugyanez középen fent, fátyol nélkül. A magyarázó mondat a rendelés-panel ár-kártyájába kerül (ott ma is ott van).",
+    B: "B — Kis kártya a gombok fölött: kétsoros kártya közvetlenül a rendelés-gombok FÖLÖTT (−50% · visszaszámláló · gomb · ×), a gombokat nem takarja. Asztalon a jobb alsó sarokban, fátyol nélkül — a honlap használható marad mellette.",
+    Now: "MA — a mostani kártya geometriája összevetésnek (mobilon a képernyő alsó harmada; asztalon élesben középen, fátyollal). Nincs × — csak a „Most még gondolkodom” szöveg-link."
+  };
+  // Live countdown: 61 h 59 min from opening, like the shot of 10-11.
+  var deadline = Date.now() + (61 * 3600 + 59 * 60 + 2) * 1000;
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function tick() {
+    var s = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+    var txt = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor((s % 3600) / 60)) + ":" + pad(s % 60);
+    document.querySelectorAll("[data-cd]").forEach(function (e) { e.textContent = txt; });
+  }
+  var d = new Date(deadline);
+  $("until").textContent = "okt. " + d.getDate() + ". " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  tick(); setInterval(tick, 1000);
+
+  function card() { return $("esc" + variant); }
+  function state(t) { $("mState").textContent = "Állapot: " + t; }
+  function hideAll() { ["escA", "escB", "escNow"].forEach(function (id) { $(id).classList.remove("on"); }); }
+  var timer = null;
+  function show() {
+    hideAll(); $("panel").classList.remove("on");
+    state("megjelenés 1,4 mp múlva");
+    clearTimeout(timer);
+    timer = setTimeout(function () { card().classList.add("on"); state("látszik"); measure(); }, 1400);
+  }
+  function measure() {
+    var c = card(), vp = fr.getBoundingClientRect();
+    if (!c.classList.contains("on")) { $("mCover").textContent = "Takarás: 0%"; $("mPills").textContent = "Rendelés-gombok: szabadon"; $("mPills").className = "ok"; return; }
+    var r = c.getBoundingClientRect();
+    var pct = Math.round((r.width * r.height) / (vp.width * vp.height) * 100);
+    var hpct = Math.round(r.height / vp.height * 100);
+    $("mCover").textContent = "Takarás: " + pct + "% a képernyőből (" + Math.round(r.height) + " px magas, a képmagasság " + hpct + "%-a)";
+    var hit = false;
+    document.querySelectorAll(".pill").forEach(function (p) {
+      var q = p.getBoundingClientRect();
+      if (!(q.right <= r.left || q.left >= r.right || q.bottom <= r.top || q.top >= r.bottom)) hit = true;
+    });
+    $("mPills").textContent = "Rendelés-gombok: " + (hit ? "TAKARVA" : "szabadon");
+    $("mPills").className = hit ? "bad" : "ok";
+  }
+  document.querySelectorAll("[data-x]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      card().classList.remove("on");
+      state("bezárva — az ajánlat él, a panel ár-kártyájában látszik (élesben itt jön a meglévő egykoppintásos kérdés)");
+      measure();
+    });
+  });
+  document.querySelectorAll("[data-go]").forEach(function (b) {
+    b.addEventListener("click", function () { card().classList.remove("on"); $("panel").classList.add("on"); state("a rendelés-panel nyitva, ajánlattal"); measure(); });
+  });
+  $("orderPill").addEventListener("click", function () { $("panel").classList.add("on"); state("a rendelés-panel nyitva (pirulával)"); });
+  $("panelClose").addEventListener("click", function () { $("panel").classList.remove("on"); state("panel bezárva"); });
+  function setV(v) {
+    variant = v;
+    $("vA").setAttribute("aria-pressed", v === "A"); $("vB").setAttribute("aria-pressed", v === "B"); $("vNow").setAttribute("aria-pressed", v === "Now");
+    $("vdesc").textContent = DESC[v];
+    show();
+  }
+  function setSize(m) {
+    fr.classList.toggle("mobile", m);
+    $("szMob").setAttribute("aria-pressed", m); $("szDesk").setAttribute("aria-pressed", !m);
+    setTimeout(measure, 450);
+  }
+  $("vA").onclick = function () { setV("A"); };
+  $("vB").onclick = function () { setV("B"); };
+  $("vNow").onclick = function () { setV("Now"); };
+  $("szMob").onclick = function () { setSize(true); };
+  $("szDesk").onclick = function () { setSize(false); };
+  $("replay").onclick = show;
+  window.addEventListener("resize", measure);
+  // Phones open in mobile mode; a wide screen in desktop mode.
+  var q = new URLSearchParams(location.search);
+  setSize(q.get("size") ? q.get("size") === "mobile" : window.innerWidth < 700);
+  setV(q.get("v") || "A");
+})();
+</script>
+</body></html>

@@ -261,6 +261,8 @@
     spark:
       '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6zM18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',
     x: '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    globe:
+      '<svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>',
     chev:
       '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
     chevR:
@@ -1722,6 +1724,26 @@
     if (!(DOM.minPackageMonthly > 0)) return true;
     return monthlyTotal() >= DOM.minPackageMonthly || domainIsPackage();
   }
+  /**
+   * Frozen plan design-refs/console/package-domain-badge (owner 2026-10-12 „B”, DYNAMIC): the
+   * endings that make the own address FREE as package content. Empty when the market switch is
+   * off (DOM.pkgModules null) or no ending is marked „Csomagban ingyen” — then there is no badge,
+   * no lead line and no „benne” anywhere: everything below reads only this, never a constant.
+   */
+  function freePkgTlds() {
+    if (!DOM || !DOM.pkgModules || !DOM.tlds) return [];
+    return DOM.tlds.filter(function (t) { return t.freeInPackage; }).map(function (t) { return t.tld; });
+  }
+  /** Does this preset's module list cover the domain-carrying set (and is any ending free)? */
+  function presetCarriesDomain(p) {
+    if (!freePkgTlds().length) return false;
+    var have = {};
+    (p.modules || []).forEach(function (id) { have[id] = true; });
+    return DOM.pkgModules.every(function (id) { return !!have[id]; });
+  }
+  function domainBadgeText() {
+    return tr("+ saját {tld} cím").replace("{tld}", freePkgTlds().join("/"));
+  }
   function domainFeeMonthly() {
     if (!DOM) return 0;
     var t = (domainType === "citoviso_registered" && domainTldOf(domainName)) || (DOM.tlds && DOM.tlds[0]) || null;
@@ -1831,6 +1853,46 @@
       else termsEl.setAttribute("hidden", "");
     }
     paintKeep();
+    syncDomainLead();
+  }
+
+  /**
+   * package-domain-badge B (owner 2026-10-12): when the CURRENT selection carries the own address
+   * free, the address step leads with it — a line naming it, the own-address option first, the
+   * platform address second („Most csak…”). Every suggestion row says what that name costs with
+   * THIS selection (its ending's fee, or „benne a csomagban”). Otherwise today's order, untouched.
+   */
+  function syncDomainLead() {
+    var box = panel.querySelector(".cit-cfg-domain");
+    if (!box) return;
+    var lead = box.querySelector(".cit-cfg-dlead");
+    var subw = box.querySelector(".cit-cfg-dsubw");
+    var tl = freePkgTlds();
+    var content = tl.length > 0 && domainIsPackage() && domainEligible();
+    if (lead && subw) {
+      if (content) {
+        lead.innerHTML =
+          I.globe +
+          "<div><b>" + esc(tr("A választott csomagjához saját {tld} cím jár").replace("{tld}", tl.join("/"))) + "</b>" +
+          "<span>" + tr("Válasszon nevet lent — a citoviso.com-os cím mellette is megmarad.") + "</span></div>";
+        lead.removeAttribute("hidden");
+        if (box.lastElementChild !== subw) box.appendChild(subw);
+      } else {
+        lead.setAttribute("hidden", "");
+        if (lead.nextElementSibling !== subw) box.insertBefore(subw, lead.nextElementSibling);
+      }
+    }
+    var subT = panel.querySelector('.cit-cfg-dopt[data-dom="sub"] .cit-cfg-dopt__t');
+    var ownT = panel.querySelector('.cit-cfg-dopt[data-dom="custom"] .cit-cfg-dopt__t');
+    if (subT) subT.textContent = content ? tr("Most csak a citoviso.com-os cím") : tr("Ingyenes cím a citoviso.com-on");
+    if (ownT) ownT.textContent = content ? tr("Saját domainnév — benne a csomagban") : tr("Saját domainnév");
+    panel.querySelectorAll(".cit-cfg-dsug__fee").forEach(function (f) {
+      var t = domainTldOf(f.getAttribute("data-domain"));
+      if (!t) { f.textContent = ""; return; }
+      var free = t.freeInPackage && domainIsPackage();
+      f.classList.toggle("cit-cfg-dsug__fee--inc", free);
+      f.textContent = free ? tr("benne a csomagban") : "+" + fmt(t.monthly) + tr("/hó");
+    });
   }
 
   /** Elek B5: which platform address stays next to the custom domain (subHost = the chosen one). */
@@ -1880,9 +1942,13 @@
       '<div class="cit-cfg-q">' + tr("Címe az interneten") + "</div>" +
       '<p class="cit-cfg-dsec__sub">' + tr("Ezen a webcímen lesz elérhető az elkészült oldala.") + "</p>" +
       '<div class="cit-cfg-domain">' +
+      // package-domain-badge B: when the selection carries the address free, this line leads
+      // and the own-address option moves first (syncDomainLead).
+      '<div class="cit-cfg-dlead" hidden></div>' +
+      '<div class="cit-cfg-dsubw">' +
       '<div class="cit-cfg-dopt cit-cfg-dopt--on" role="button" tabindex="0" data-dom="sub" aria-pressed="true">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      '<span class="cit-cfg-dopt__txt"><b>' + tr("Ingyenes cím a citoviso.com-on") + "</b>" +
+      '<span class="cit-cfg-dopt__txt"><b class="cit-cfg-dopt__t">' + tr("Ingyenes cím a citoviso.com-on") + "</b>" +
       "<span>" + tr("Az árban — azonnal működik. Válassza meg szabadon:") + "</span></span></div>" +
       // ADR-0356 (contract proba-c/4-nevvaltas a): on the trialist's checkout the site
       // already HAS an address — it is shown as such, and changing it is an explicit,
@@ -1894,12 +1960,13 @@
       'autocapitalize="off" value="' + esc(DOM.subLabel) + '" aria-label="' + tr("Aldomain neve") + '">' +
       '<span class="cit-cfg-sub__base">' + esc(DOM.subBase) + "</span></span>" +
       '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>') +
+      "</div>" +
       '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
       // Fee + terms are LIVE (ADR-0093/0094): painted by refreshDomainTerms from
       // updateSummary — a static figure here lied whenever the package crossed
       // the free-domain threshold.
-      '<span class="cit-cfg-dopt__txt"><b>' + tr("Saját domainnév") + "</b>" +
+      '<span class="cit-cfg-dopt__txt"><b class="cit-cfg-dopt__t">' + tr("Saját domainnév") + "</b>" +
       '<span class="cit-cfg-dopt__fee"></span></span></div>' +
       // ADR-0109 ⑨ / frozen plan (design-refs/configurator/domain-monthly): below
       // the entry threshold the option row above is hidden and THIS card stands in
@@ -1956,7 +2023,10 @@
   var launch = el(
     '<button class="cit-cfg-launch" type="button" aria-label="' + tr("Itt rendelheti meg a saját weboldalát") + '">' +
       I.spark +
-      "<span>" + tr("Itt rendelheti meg") + "</span></button>"
+      "<span>" + tr("Itt rendelheti meg") + "</span>" +
+      // package-domain-badge B: the pill names the free own address when ANY package carries it.
+      (PRESETS.some(presetCarriesDomain) ? '<em class="cit-cfg-launch__tag">' + esc(domainBadgeText()) + "</em>" : "") +
+      "</button>"
   );
   // ── ADR-0342: the free-trial entry beside the order pill (frozen plan:
   // assets/design-refs/prospect-page/proba-gomb/, variant B) ─────────────────────
@@ -3005,7 +3075,10 @@
     var b = el(
       '<div class="cit-cfg-preset" role="button" tabindex="0" data-preset="' +
         esc(p.id) +
-        '"><span class="cit-cfg-preset__dot" aria-hidden="true"></span>' +
+        '">' +
+        // package-domain-badge B: only on a package that carries the own address FREE.
+        (presetCarriesDomain(p) ? '<span class="cit-cfg-preset__dbadge">' + I.globe + esc(domainBadgeText()) + "</span>" : "") +
+        '<span class="cit-cfg-preset__dot" aria-hidden="true"></span>' +
         '<span class="cit-cfg-preset__txt"><b>' +
         esc(p.label) +
         '</b><span class="cit-cfg-preset__note">' +
@@ -3176,7 +3249,9 @@
             (taken ? "-1" : "0") +
             '"><span class="cit-cfg-dsug__name">' +
             esc(s.domain) +
-            '</span><span class="cit-cfg-dsug__tag cit-cfg-dsug__tag--' +
+            "</span>" +
+            (taken ? "" : '<span class="cit-cfg-dsug__fee" data-domain="' + esc(s.domain) + '"></span>') +
+            '<span class="cit-cfg-dsug__tag cit-cfg-dsug__tag--' +
             a[1] +
             '">' +
             a[0] +
@@ -3205,6 +3280,7 @@
             "</p>",
         ),
       );
+      syncDomainLead();
       if (firstFree) pickSuggestion(firstFree.node, firstFree.domain);
     }
 
@@ -3937,6 +4013,13 @@
         " · " +
         tr("{months} hó hűségidő").replace("{months}", String(DOM.minCommitmentMonths)) +
         (OFFER ? " · " + tr("kedvezmény nélkül") : "") +
+        "</span>";
+    } else if (DOM && freePkgTlds().length && domainIsPackage() && domainEligible()) {
+      // package-domain-badge B: the platform address is chosen, but this selection carries the
+      // own address free — the footer says so (it is a choice left on the table, not a charge).
+      sumEl.innerHTML +=
+        '<span class="cit-cfg-domfee cit-cfg-domfee--inc">' +
+        esc(tr("saját {tld} cím választható — 0 Ft").replace("{tld}", freePkgTlds().join("/"))) +
         "</span>";
     }
     refreshDomainTerms();
@@ -4959,10 +5042,11 @@
       where;
   }
 
-  // ── ADR-0088 escalation decision card (approved plan: design-refs/console/
-  // offer-ui). Centered on desktop, bottom-anchored on mobile; live countdown;
-  // the CTA opens the panel, the dismiss only hides the card — the offer itself
-  // stays alive (the server row governs) and keeps showing in the price card.
+  // ── ADR-0088 escalation offer — a one-line STRIP on top (frozen plan: design-refs/console/
+  // escalation-topbar, owner 2026-10-12 „A”; it replaced the offer-ui centred card + veil and
+  // the mobile bottom card that hid the order pills). Live countdown; the CTA opens the panel;
+  // the × only hides the strip — the offer itself stays alive (the server row governs) and keeps
+  // showing in the price card, with its full explanation.
   var escMounted = false;
   function mountEscalationCard() {
     if (escMounted) return;
@@ -4979,16 +5063,16 @@
     var dl = offerDeadline();
     if (!dl || dl.getTime() <= Date.now()) return;
     escMounted = true;
-    var veil = el('<div class="cit-cfg-escveil"></div>');
     var card = el(
-      '<div class="cit-cfg-esccard" role="dialog" aria-label="' + tr("Döntés-segítő ajánlat") + '">' +
-        "<h4>" + tr("Szeretnénk segíteni a döntésben") + "</h4>" +
-        "<p>" + tr("Látjuk, hogy már többször megnézte a honlap-tervét. Ha most rendeli meg, az első díjból a bemutatkozó kedvezmény helyett ennyit engedünk:") + "</p>" +
-        '<div class="cit-cfg-escpct"><b>−' + OFFER.percent + "%</b><span>" +
-        tr("az első havi vagy éves díjból · a megújulás listaáron") + "</span></div>" +
-        '<div class="cit-cfg-esccd"></div>' +
-        '<button class="cit-cfg-escgo" type="button">' + tr("Megrendelem a kedvezménnyel") + "</button>" +
-        '<button class="cit-cfg-esclater" type="button">' + tr("Most még gondolkodom") + "</button>" +
+      '<div class="cit-cfg-esccard" role="region" aria-label="' + tr("Döntés-segítő ajánlat") + '">' +
+        '<b class="cit-cfg-escpct">−' + OFFER.percent + "%</b>" +
+        '<div class="cit-cfg-esctxt"><b>' + tr("Szeretnénk segíteni a döntésben") + "</b>" +
+        '<span class="cit-cfg-escsh">' + tr("az első díjból") + "</span>" +
+        '<span><span class="cit-cfg-esclong">' + tr("az első havi vagy éves díjból · a megújulás listaáron") + " · </span>" +
+        tr("még") + ' <span class="cit-cfg-esccd"></span></span></div>' +
+        '<button class="cit-cfg-escgo" type="button"><span class="cit-cfg-escl">' + tr("Megrendelem a kedvezménnyel") +
+        '</span><span class="cit-cfg-escs">' + tr("Megrendelem") + "</span></button>" +
+        '<button class="cit-cfg-esclater" type="button" aria-label="' + tr("Bezárás — most még gondolkodom") + '">' + I.x + "</button>" +
       "</div>",
     );
     var cdEl = card.querySelector(".cit-cfg-esccd");
@@ -5005,13 +5089,9 @@
         updateSummary();
         return;
       }
-      cdEl.innerHTML =
-        "<i>" + pad(Math.floor(s / 3600)) + "<small>" + tr("óra") + "</small></i>" +
-        "<i>" + pad(Math.floor((s % 3600) / 60)) + "<small>" + tr("perc") + "</small></i>" +
-        "<i>" + pad(s % 60) + "<small>" + tr("mp") + "</small></i>";
+      cdEl.textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor((s % 3600) / 60)) + ":" + pad(s % 60);
     }
     function hide() {
-      veil.classList.remove("cit-cfg-on");
       card.classList.remove("cit-cfg-on");
     }
     card.querySelector(".cit-cfg-esclater").addEventListener("click", function () {
@@ -5024,14 +5104,11 @@
       hide();
       open("esc");
     });
-    veil.addEventListener("click", hide);
-    document.body.appendChild(veil);
     document.body.appendChild(card);
     cdTick();
     cdTimer = setInterval(cdTick, 1000);
     // After a short beat — the wow (the page itself) lands first.
     setTimeout(function () {
-      veil.classList.add("cit-cfg-on");
       card.classList.add("cit-cfg-on");
       track("escalation_shown", {});
     }, 1400);
