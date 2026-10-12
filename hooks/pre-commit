@@ -2481,7 +2481,7 @@ if [ -f scripts/ical-check.mts ] && \
   echo "[pre-commit] ical-check (foglaltság-feed értelmezése)…"
   npx tsx scripts/ical-check.mts >"$GATE_LOG" || gate_failed
 fi
-# Portál-iCal VALÓDI minták (ADR-XXXX): 21 nyilvános forrásból gyűjtött Airbnb/Booking/
+# Portál-iCal VALÓDI minták (2026-10-12): 21 nyilvános forrásból gyűjtött Airbnb/Booking/
 # VRBO-export a független orákulummal igazolt éjszakákat adja; UTC-időpont a szállás napja;
 # csonka feed hiba, nem felszabadítás; webcal:// elfogadva; az üres kiadás is RFC 5545.
 # Offline, DB és böngésző nélkül (~5 s).
