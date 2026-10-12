@@ -286,8 +286,15 @@ await block("B2", async () => {
     "⭐ B2 vétel utáni DNS-hiba → setup_retry (NEM failed)", `dp=${dp.status} site=${site.custom_domain_status}`);
   ok((await payRow(a.orderId)).status === "paid", "B2 a név megvéve → a zárolt összeg lehívva (nem feloldva)");
   ok(alerts.some((x) => /ribizli-dns\.hu/.test(x.subject)), "⭐ B2 operátor-riasztás ment ki (házi riasztó)", JSON.stringify(alerts));
-  const mail = await db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
+  // The owner mail is sent and logged AFTER the status flips to setup_retry: poll for it
+  // (same pattern as the alert wait above) instead of reading once — a loaded box lost the race.
+  const readMail = () => db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
     .where("kind", "=", "domain").orderBy("sent_at", "desc").executeTakeFirst();
+  let mail = await readMail();
+  for (let i = 0; i < 100 && !mail; i++) {
+    await new Promise((r) => setTimeout(r, 100));
+    mail = await readMail();
+  }
   ok(!!mail && /az Öné/.test(mail.subject ?? "") && !/elkelt|más lefoglalta/.test(`${mail.subject} ${mail.body_text}`),
     "⭐ B2 a tulaj levele igazat mond (a név az övé, a beállítás késik)", JSON.stringify(mail));
   dns.createZone = orig;
