@@ -15,12 +15,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getDisabledModules } from "../moduleSales.js";
+import { offeredModuleIds, offeredPackagesFrom } from "../packageOffer.js";
 import {
   MODULE_CATALOG,
   GROUP_LABELS,
   applicableRequirements,
   detectPresentModules,
-  sellableModuleIds,
 } from "../modules.js";
 import {
   loadPricing,
@@ -31,7 +31,6 @@ import {
   getDomainMinPackageMonthly,
   getDomainMinCommitmentMonths,
   getModulePrice,
-  currentPresets,
   offeredTlds,
   getDomainFreeInPackage,
   getPackageAssignment,
@@ -420,15 +419,8 @@ export async function buildManifest(
   // ⛔ ADR-0192: a disabled module also takes DOWN everything that hard-requires it.
   // Measured leak: with `rooms` off the shelf the offer still listed `pricing` and
   // `booking` — a calendar whose price table cannot be bought.
-  const sellable = new Set(
-    sellableModuleIds(
-      MODULE_CATALOG.filter((m) => !m.tenantOnly && !m.retired).map((m) => m.id),
-      disabledSales,
-    ),
-  );
-  const offered = MODULE_CATALOG.filter(
-    (m) => !m.tenantOnly && !m.retired && (m.spine || sellable.has(m.id)),
-  );
+  const offeredIds = offeredModuleIds(disabledSales);
+  const offered = MODULE_CATALOG.filter((m) => offeredIds.has(m.id));
   const renewal = await renewalQuoteForLead(
     opts.renewalLeadId ?? null,
     offered.map((m) => m.id),
@@ -529,14 +521,15 @@ export async function buildManifest(
         href: "#cit-enquiry",
       },
     },
-    // ADR-0360 ①: the operator-set composition, not the code seed.
-    presets: currentPresets().map((p) => ({
+    // ADR-0360 ①: the operator-set composition, not the code seed. A preset must not
+    // tick a module the list below no longer offers — and not one whose hard requirement
+    // fell off the shelf with it (ADR-0192). ONE computation with the cold letter's
+    // „…-tól” price (src/packageOffer.ts), so the two cannot disagree.
+    presets: offeredPackagesFrom(disabledSales).map((p) => ({
       id: p.id,
       label: p.label,
       note: p.note,
-      // A preset must not tick a module the list below no longer offers — and not
-      // one whose hard requirement fell off the shelf with it (ADR-0192).
-      modules: sellableModuleIds(p.modules, disabledSales),
+      modules: p.modules,
     })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
     // Tenant-only/one-time modules (ADR-0063) are not offered here: the purchase
@@ -568,7 +561,7 @@ export async function buildManifest(
       // the mock itself SHOWS three room cards. Reading "unknown" as "no" would
       // contradict the screen the buyer is looking at.
       //
-      // ⚠️ Every id here is guaranteed to BE in `offered`: `sellable` above is
+      // ⚠️ Every id here is guaranteed to BE in `offered`: `offeredModuleIds` is
       // closed under hard requirements, so a module whose requirement fell off the
       // shelf fell with it. The guard asserts that closure rather than trusting it.
       ...(() => {

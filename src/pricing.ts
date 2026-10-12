@@ -197,6 +197,10 @@ export function overridePricingStateInProcess(
     readonly tlds?: readonly TldRow[];
     readonly domainFreeInPackage?: boolean;
     readonly domainMinPackageMonthly?: number;
+    /** The market's base subscription price (outreach-from-price-check edits /pricing in-process). */
+    readonly baseMonthly?: number;
+    /** Module add-on prices to overlay on the current map (same purpose). */
+    readonly modulePrices?: ReadonlyMap<string, number>;
   } | null,
 ): void {
   if (!o) {
@@ -213,6 +217,8 @@ export function overridePricingStateInProcess(
     ...(o.tlds ? { tlds: [...o.tlds] } : {}),
     ...(o.domainFreeInPackage !== undefined ? { domainFreeInPackage: o.domainFreeInPackage } : {}),
     ...(o.domainMinPackageMonthly !== undefined ? { domainMinPackageMonthly: o.domainMinPackageMonthly } : {}),
+    ...(o.baseMonthly !== undefined ? { baseMonthly: o.baseMonthly } : {}),
+    ...(o.modulePrices ? { modulePrices: new Map([...cur.modulePrices, ...o.modulePrices]) } : {}),
   });
 }
 let loadedAt = 0;

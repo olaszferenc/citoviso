@@ -21,7 +21,8 @@ import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
-import { loadPricing, getBaseMonthly } from "../pricing.js";
+import { loadPricing } from "../pricing.js";
+import { cheapestOfferedMonthly, cheapestOfferedMonthlyFrom } from "../packageOffer.js";
 import { applyOffer, OUTREACH_OFFER_PERCENT, outreachPercentForProspect } from "../payment/offers.js";
 
 /**
@@ -193,6 +194,33 @@ export interface DraftInput {
    * Absent, or off-platform (dev: no wildcard DNS) → the /p/<slug>/<token> link.
    */
   readonly previewLabel?: string | null;
+  /**
+   * The advertised „…-tól” LIST price: the cheapest package the configurator offers this
+   * lead right now (src/packageOffer.ts — the same figure its cheapest card shows). Resolved
+   * by buildDraftForProspect against the live /pricing + module-sales state. null = there
+   * is no valid offered package → the letter carries NO_PACKAGE_PRICE and the §C gate stops
+   * it. Absent (offline sample renders only) → computed from the loaded snapshot.
+   */
+  readonly fromMonthly?: number | null;
+}
+
+/**
+ * Loud marker in place of the price when no valid package is offered. Never a number: an
+ * old figure would advertise a price the configurator does not carry (Fttv.). The §C gate
+ * (outreachCheck) rejects any message that contains it.
+ */
+export const NO_PACKAGE_PRICE = "[NINCS KÍNÁLT CSOMAG — Konzol ▸ Árazás]"; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+
+/** The from-price pair (list, offer) as printed, or the loud marker when there is none. */
+export function fromPricePair(
+  fromMonthly: number | null,
+  percent: number,
+): { priceList: string; priceOffer: string } {
+  if (fromMonthly === null) return { priceList: NO_PACKAGE_PRICE, priceOffer: NO_PACKAGE_PRICE };
+  return {
+    priceList: formatHuf(fromMonthly),
+    priceOffer: formatHuf(applyOffer(fromMonthly, { percent })),
+  };
 }
 
 /** The site-check outcome the letter may quote (see DraftInput.siteCheck). */
@@ -295,10 +323,10 @@ function offerText(d: DraftInput): string {
 }
 
 /**
- * Grouped HUF amount ("3 900"). The advertised from-price comes from the ONE
- * pricing source (modules.ts BASE_PRICE_MONTHLY = the cheapest real package,
- * monthly billing) — the mail can never claim a price the configurator does
- * not actually offer (Fttv.: an advertised from-price must be attainable).
+ * Grouped HUF amount ("3 900"). The advertised from-price is the cheapest package
+ * the configurator offers (src/packageOffer.ts, monthly billing) — the mail can
+ * never claim a price the configurator does not actually offer (Fttv.: an
+ * advertised from-price must be attainable).
  */
 export function formatHuf(n: number): string {
   return formatNumber(n);
@@ -341,8 +369,10 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   const subject = T(d.lang, "{name} – honlap-terv", { name: d.leadName });
 
   const percent = String(draftOfferPercent(d));
-  const priceList = formatHuf(getBaseMonthly());
-  const priceOffer = formatHuf(applyOffer(getBaseMonthly(), { percent: draftOfferPercent(d) }));
+  const { priceList, priceOffer } = fromPricePair(
+    d.fromMonthly !== undefined ? d.fromMonthly : cheapestOfferedMonthlyFrom(new Set()),
+    draftOfferPercent(d),
+  );
 
   // ⛔ NYELVI TILALMAK (ADR-0101, tulaj-kifogás: "gépi szöveg"): nincs "a(z)", nincs
   // csupa nagybetűs kiabálás, nincs "személyre szabott", nincs 40+ szavas körmondat.
@@ -597,6 +627,8 @@ export async function buildDraftForProspect(
     // ADR-0330: reserved on the first draft — the console's preview and the sent
     // message must show the same address.
     previewLabel: opts.reserveLabel === false ? await peekPreviewLabel(r.leadId) : await ensurePreviewLabel(r.leadId),
+    // Owner 2026-10-12: the from-price follows /pricing — read at send time, every time.
+    fromMonthly: await cheapestOfferedMonthly(),
   };
   // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
   // send path gets the same verdict. The gate itself stays synchronous (it is a pure

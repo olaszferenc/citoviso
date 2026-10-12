@@ -20,7 +20,7 @@ import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
 import { toGsm7 } from "../sms/encoding.js";
 import { isPricingConfirmed } from "../pricing.js";
-import type { OutreachDraft } from "./draft.js";
+import { NO_PACKAGE_PRICE, type OutreachDraft } from "./draft.js";
 
 /** ADR-0111: a market decision as the synchronous gate sees it. */
 export interface MarketVerdict {
@@ -838,6 +838,15 @@ export function checkOutreachDraft(
   // Legal-basis note (Grt./GDPR transparency line) — a sentence, not a link.
   if (!/jogos érdek|GDPR|Grt/iu.test(prose)) {
     reasons.push("JOGALAP: hiányzik a tájékoztatás (Grt./GDPR sor)");
+  }
+
+  // C4/Fttv. — the from-price is the cheapest package the configurator offers
+  // (src/packageOffer.ts, owner 2026-10-12). No valid package → the draft carries the
+  // loud marker instead of a number, and the letter must not go out with an old figure.
+  if (text.includes(NO_PACKAGE_PRICE)) {
+    reasons.push(
+      "ÁR-HIRDETÉS: nincs érvényes kínált csomag, így a levél „-tól” ára nem számolható — a Konzol ▸ Árazás felületen állíts be legalább egy csomagot (pozitív havi árral, eladható modulokkal)",
+    );
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.

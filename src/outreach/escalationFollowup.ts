@@ -23,12 +23,10 @@ import {
   advertiserIdentity,
   buildDraftForProspect,
   composeBody,
-  formatHuf,
+  fromPricePair,
   senderParts,
   type OutreachParts,
 } from "./draft.js";
-import { applyOffer } from "../payment/offers.js";
-import { getBaseMonthly } from "../pricing.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { isEmailSuppressed } from "./sendBatch.js";
 import { trialCampaignReached } from "./trialCampaign.js";
@@ -127,8 +125,11 @@ export async function sendEscalationFollowups(
     // ending, and guessing one is exactly what produced the "a(z) Név" boilerplate the
     // owner rejected (ADR-0101). It rides in the SALUTATION instead (nominative, no
     // ending to guess) — which since 2026-09-11 opens the letter on both paths.
-    const listPrice = formatHuf(getBaseMonthly());
-    const offerPrice = formatHuf(applyOffer(getBaseMonthly(), { percent: f.percent }));
+    // The same from-price as the cold letter: the cheapest offered package (owner 2026-10-12).
+    const { priceList: listPrice, priceOffer: offerPrice } = fromPricePair(
+      base.input.fromMonthly ?? null,
+      f.percent,
+    );
     const parts: OutreachParts = {
       greet: T(lang, "Tisztelt {name}!", { name }),
       hook: T(lang, "Köszönjük, hogy többször is megnézte a honlap-tervét."),

@@ -3161,7 +3161,7 @@
       dlist.innerHTML = "";
       if (!suggestions.length) {
         dlist.appendChild(
-          el('<p class="cit-cfg-dlist__load">' + tr("Most nem találtunk javaslatot — a megrendeléskor beállíthatja.") + "</p>"),
+          el('<p class="cit-cfg-dlist__load">' + tr("Most nem találtunk javaslatot. Írjon be egy nevet a lenti mezőbe.") + "</p>"),
         );
         return;
       }
@@ -3201,7 +3201,7 @@
       dlist.appendChild(
         el(
           '<p class="cit-cfg-dlist__note">' +
-            tr("Az elérhetőséget közvetlenül a domain-regisztrátornál ellenőriztük, most. Más nevet is választhat a megrendeléskor.") +
+            tr("Az elérhetőséget közvetlenül a domain-regisztrátornál ellenőriztük, most. Más nevet is választhat: írja be a lenti mezőbe.") +
             "</p>",
         ),
       );

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-hideg-level-tol-ara-a-legolcsobb-kinalt-csomag.md) — A hideg levél „-tól” ára a legolcsóbb KÍNÁLT csomag ára, a kiküldés pillanatában; a domain-javaslat nem ígér „megrendeléskor” névválasztást
 - [ADR-0367](decisions/0367-portal-naptarszinkron-elesites-elott-export-a.md) — Portál-naptárszinkron élesítés előtt: export a tenant-hoszton, ütközésnél nem döntünk, csak publikus cím, a kiküldött mock friss runtime-ot kap, tartós hibáról levél
 - [ADR-0366](decisions/0366-a-rendeles-nem-esik-csendben-vissza-domain-ar.md) — A rendelés nem esik csendben vissza (domain/ár → 409), egy rendelés = egy pay-link, a dev-útválasztás = az éles nginx, a csak-mobilos vevő is kap belépést, a kísérő SMS GSM-7
 - [ADR-0365](decisions/0365-szerver-oldali-adat-inline-script-be-csak-a.md) — Szerver-oldali adat inline `<script>`-be csak a `jsonForScript()`-en át
