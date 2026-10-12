@@ -1,4 +1,4 @@
-## ADR-XXXX — Saját domain: a `dns_pending`/`tls_pending`-ben ragadt beállítás 24 óránál riaszt, 72 óránál ismét + egy tulaj-levél
+## ADR-0372 — Saját domain: a `dns_pending`/`tls_pending`-ben ragadt beállítás 24 óránál riaszt, 72 óránál ismét + egy tulaj-levél
 
 **Dátum:** 2026-10-12 · **Kontextus:** Elek „it” ellenőrző kör (2026-10-12), ÚJ-K1; a koordinátor (Elek-teszt
 koordinátor FŐ session) döntése. **Kiegészíti:** ADR-0362 ② (`setup_retry`), ADR-0071 (beszerzés-állapotgép),

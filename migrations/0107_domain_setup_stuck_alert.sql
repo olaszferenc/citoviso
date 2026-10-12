@@ -1,5 +1,5 @@
 -- 0107 SAJÁT DOMAIN: a megvett, de dns_pending / tls_pending állapotban RAGADT beállítás nem
--- maradhat ott némán (ADR-XXXX, Elek „it” kör 2026-10-12, ÚJ-K1).
+-- maradhat ott némán (ADR-0372, Elek „it” kör 2026-10-12, ÚJ-K1).
 --
 -- Mérve: a megvett és kifizetett név, amelynek NS-delegációja vagy tanúsítványa nem élesedik,
 -- minden resume-futáson `dns_pending`-ben maradt (+1, +7, +30 nap): 0 riasztás, 0 levél. A

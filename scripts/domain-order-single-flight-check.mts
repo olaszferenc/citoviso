@@ -307,7 +307,7 @@ await block("B2", async () => {
   ok(t.registrations === 1 && t.captured === 1, "B2 az újrapróba nem vesz és nem terhel újra", JSON.stringify(t));
 });
 
-// ÚJ-K1 (Elek „it” kör, 2026-10-12, ADR-XXXX) — a bought name STUCK in dns_pending
+// ÚJ-K1 (Elek „it” kör, 2026-10-12, ADR-0372) — a bought name STUCK in dns_pending
 // (the mock DNS keeps every "dnsfail" label pending forever). Before: +1/+7/+30 days, 0 alert,
 // 0 letter. Now: 24 h → one operator alert; 72 h → a repeated alert + ONE tenant letter; never daily.
 await block("ÚJ-K1", async () => {

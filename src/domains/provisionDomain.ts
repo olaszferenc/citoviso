@@ -13,7 +13,7 @@
 // second paid order for a tenant that already has a live or running one is refused here
 // and its hold released (two tabs, a double click, two parallel webhooks).
 //
-// ADR-XXXX (Elek ÚJ-K1, 2026-10-12): a `dns_pending`/`tls_pending` („még nem aktív”) NEM hiba, ezért
+// ADR-0372 (Elek ÚJ-K1, 2026-10-12): a `dns_pending`/`tls_pending` („még nem aktív”) NEM hiba, ezért
 // a setup_retry nem fogta — a megvett név örökre ott ragadhatott, riasztás és levél nélkül. Mostantól
 // a várakozás órája (`waiting_since`) 24 óra után operátor-riasztást, 72 óra után ismételt riasztást
 // és EGY igaz tulaj-levelet ad („a webcím az Öné, a beállítás tovább tart”) — egyszer, nem naponta.
@@ -216,7 +216,7 @@ export const DOMAIN_STUCK_ALERT_HOURS = 24;
 export const DOMAIN_STUCK_NOTICE_HOURS = 72;
 
 /**
- * ADR-XXXX (Elek ÚJ-K1): a bought-and-paid name whose NS delegation or certificate does not
+ * ADR-0372 (Elek ÚJ-K1): a bought-and-paid name whose NS delegation or certificate does not
  * activate. `dns_pending`/`tls_pending` are "not yet", not errors, so setup_retry never
  * fired — measured: +1, +7, +30 days in `dns_pending`, no alert, no letter.
  *
