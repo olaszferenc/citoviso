@@ -510,7 +510,7 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
   // legitimate-interest notice AND the working opt-out (injectTrackingNotice),
   // so the message stays short. See ADR-0112; checkOutreachSms enforces that the
   // link is reachable, since it is now the sole carrier of the opt-out.
-  // ADR-XXXX (Elek 10-12 A-új-2): GSM-7 and at most 2 segments, folded the same way as the
+  // ADR-0373 (Elek 10-12 A-új-2): GSM-7 and at most 2 segments, folded the same way as the
   // companion SMS (ADR-0366). Measured before: 225 characters, UCS-2, 4 segments.
   return foldedSms(
     d,

@@ -1,5 +1,5 @@
 // HIDEG SMS GSM-7 ŐR — a hideg MMS+SMS pár szöveges fele ÉS az önálló (MMS nélküli) hideg SMS
-// GSM-7 és legfeljebb 2 szelet (ADR-0366, Elek 10-11 K2; ADR-XXXX, Elek 10-12 A-új-2: az önálló
+// GSM-7 és legfeljebb 2 szelet (ADR-0366, Elek 10-11 K2; ADR-0373, Elek 10-12 A-új-2: az önálló
 // SMS még UCS-2 / 225 karakter / 4 szelet volt; ugyanaz a szabály, mint a kampány-SMS-é, ADR-0344 C2b).
 //
 //   npx tsx scripts/pair-sms-gsm7-check.mts

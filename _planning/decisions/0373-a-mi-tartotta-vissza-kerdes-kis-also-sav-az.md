@@ -1,4 +1,4 @@
-## ADR-XXXX — A „Mi tartotta vissza?” kérdés kis alsó sáv; az önálló hideg SMS is GSM-7; a kérdés nem marad el gyors × után
+## ADR-0373 — A „Mi tartotta vissza?” kérdés kis alsó sáv; az önálló hideg SMS is GSM-7; a kérdés nem marad el gyors × után
 
 **Dátum:** 2026-10-12 · **Kontextus:** Elek lead-köre (10-12, K-új-1, A-új-1, A-új-2), tulaj-döntés a koordinátoron át: „ok rendben” (K-új-1). **Felülírja:** az `escalation-topbar/` kontraktus (ADR-0369) 4. pontjában a „változatlan” kérdés-kártyát. **Megtartja:** ADR-0322 ④/B (a kérdés, az 5 opció, a mentett adat), Elek2 Ú3 (a próba-űrlap alatt nem látszik, a süti-sáv nem takarja), ADR-0366 (a kísérő SMS GSM-7 szabálya).
 

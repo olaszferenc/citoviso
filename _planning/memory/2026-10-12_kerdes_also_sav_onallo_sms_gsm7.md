@@ -1,6 +1,6 @@
 # 2026-10-12 — „Mi tartotta vissza?” kis alsó sáv + önálló hideg SMS GSM-7 + kérdés-verseny (Elek lead-kör)
 
-SUB az Elek-teszt koordinátor alatt (fa `~/wt/cit20065f9d`). Döntés: ADR-XXXX.
+SUB az Elek-teszt koordinátor alatt (fa `~/wt/cit20065f9d`). Döntés: ADR-0373.
 
 ## Elvégezve
 - **K-új-1 (tulaj „ok rendben”):** a kérdés-kártya (mobilon 366×353 px, mindkét pirula alatta) helyett
