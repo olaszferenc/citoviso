@@ -2481,6 +2481,15 @@ if [ -f scripts/ical-check.mts ] && \
   echo "[pre-commit] ical-check (foglaltság-feed értelmezése)…"
   npx tsx scripts/ical-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Portál-iCal VALÓDI minták (ADR-XXXX): 21 nyilvános forrásból gyűjtött Airbnb/Booking/
+# VRBO-export a független orákulummal igazolt éjszakákat adja; UTC-időpont a szállás napja;
+# csonka feed hiba, nem felszabadítás; webcal:// elfogadva; az üres kiadás is RFC 5545.
+# Offline, DB és böngésző nélkül (~5 s).
+if [ -f scripts/portal-ical-samples-check.mts ] && \
+   changed_files | grep -qE '^src/booking/(ical|sync)\.ts$|^scripts/fixtures/ical-samples/|^scripts/portal-ical-samples-check'; then
+  echo "[pre-commit] portal-ical-samples-check (valódi portál-feedek, kiadás)…"
+  npx tsx scripts/portal-ical-samples-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR: a SAJÁT kimaradásunk nem lelet a leadről. A kimerült Places-kvótát a panel
 # „ehhez a leadhez nem találtunk fotót"-ként írta ki, miközben a lista 10 képet
 # mutatott mellette. A `null` jelentse a „megkérdeztük, nincs találat"-ot, a fel nem

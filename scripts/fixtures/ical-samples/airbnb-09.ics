@@ -1,0 +1,253 @@
+BEGIN:VCALENDAR
+PRODID;X-RICAL-TZSOURCE=TZINFO:-//Airbnb Inc//Hosting Calendar 0.8.8//EN
+CALSCALE:GREGORIAN
+VERSION:2.0
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160720
+DTSTART;VALUE=DATE:20160716
+UID:cn31z4tbyhod--eusv3c9eu9i0@airbnb.com
+DESCRIPTION:CHECKIN: 07/16/2016\nCHECKOUT: 07/20/2016\nNIGHTS: 4\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég A (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160724
+DTSTART;VALUE=DATE:20160722
+UID:cn31z4tbyhod-fz1hn0cqi6yg@airbnb.com
+DESCRIPTION:CHECKIN: 07/22/2016\nCHECKOUT: 07/24/2016\nNIGHTS: 2\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég B (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160803
+DTSTART;VALUE=DATE:20160731
+UID:cn31z4tbyhod-1y3w3tplq0zu@airbnb.com
+DESCRIPTION:CHECKIN: 07/31/2016\nCHECKOUT: 08/03/2016\nNIGHTS: 3\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég C (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160808
+DTSTART;VALUE=DATE:20160805
+UID:cn31z4tbyhod--h72i8aomz756@airbnb.com
+DESCRIPTION:CHECKIN: 08/05/2016\nCHECKOUT: 08/08/2016\nNIGHTS: 3\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég D (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160815
+DTSTART;VALUE=DATE:20160808
+UID:cn31z4tbyhod-mac5tl2dw3eo@airbnb.com
+DESCRIPTION:CHECKIN: 08/08/2016\nCHECKOUT: 08/15/2016\nNIGHTS: 7\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég E (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160821
+DTSTART;VALUE=DATE:20160819
+UID:cn31z4tbyhod-lafyl609ekpi@airbnb.com
+DESCRIPTION:CHECKIN: 08/19/2016\nCHECKOUT: 08/21/2016\nNIGHTS: 2\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég F (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160829
+DTSTART;VALUE=DATE:20160826
+UID:cn31z4tbyhod--ays9sq2g0gtg@airbnb.com
+DESCRIPTION:CHECKIN: 08/26/2016\nCHECKOUT: 08/29/2016\nNIGHTS: 3\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég G (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161008
+DTSTART;VALUE=DATE:20161005
+UID:cn31z4tbyhod--qkhp871f4c32@airbnb.com
+DESCRIPTION:CHECKIN: 10/05/2016\nCHECKOUT: 10/08/2016\nNIGHTS: 3\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég H (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161105
+DTSTART;VALUE=DATE:20161102
+UID:cn31z4tbyhod-j79p4h76jnxy@airbnb.com
+DESCRIPTION:CHECKIN: 11/02/2016\nCHECKOUT: 11/05/2016\nNIGHTS: 3\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég I (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161110
+DTSTART;VALUE=DATE:20161105
+UID:cn31z4tbyhod-z0uoqh0ijg0k@airbnb.com
+DESCRIPTION:CHECKIN: 11/05/2016\nCHECKOUT: 11/10/2016\nNIGHTS: 5\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég J (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161118
+DTSTART;VALUE=DATE:20161111
+UID:cn31z4tbyhod--5el3occjewuc@airbnb.com
+DESCRIPTION:CHECKIN: 11/11/2016\nCHECKOUT: 11/18/2016\nNIGHTS: 7\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: (no email alias available)\nPROPERTY: Tropical
+  Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég K (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161129
+DTSTART;VALUE=DATE:20161124
+UID:cn31z4tbyhod--4m4p1x5hmon2@airbnb.com
+DESCRIPTION:CHECKIN: 11/24/2016\nCHECKOUT: 11/29/2016\nNIGHTS: 5\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: xxxxx-xxxxxxxxxxxxxxxx@guest.airbnb.com\nPROPE
+ RTY: Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég L (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161205
+DTSTART;VALUE=DATE:20161202
+UID:cn31z4tbyhod-hhhkyes8uijs@airbnb.com
+DESCRIPTION:CHECKIN: 12/02/2016\nCHECKOUT: 12/05/2016\nNIGHTS: 3\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: xxxxxxx-xxxxxxxxxxxxxxxx@guest.airbnb.com\nPRO
+ PERTY: Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég M (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20170102
+DTSTART;VALUE=DATE:20161226
+UID:cn31z4tbyhod-oou2j35paua6@airbnb.com
+DESCRIPTION:CHECKIN: 12/26/2016\nCHECKOUT: 01/02/2017\nNIGHTS: 7\nPHONE: 
+ +XXX X XXX XXXX\nEMAIL: xxxxxxx-xxxxxxxxxxxxxxxx@guest.airbnb.com\nPROPE
+ RTY: Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég N (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20170111
+DTSTART;VALUE=DATE:20170104
+UID:cn31z4tbyhod-firr1585xa7w@airbnb.com
+DESCRIPTION:CHECKIN: 01/04/2017\nCHECKOUT: 01/11/2017\nNIGHTS: 7\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: xxxxxx-xxxxxxxxxxxxxxxx@guest.airbnb.com\nPROP
+ ERTY: Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég O (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20170121
+DTSTART;VALUE=DATE:20170117
+UID:cn31z4tbyhod-qyvl6rznyesq@airbnb.com
+DESCRIPTION:CHECKIN: 01/17/2017\nCHECKOUT: 01/21/2017\nNIGHTS: 4\nPHONE: 
+ +X (XXX) XXX-XXXX\nEMAIL: xxxxxx-xxxxxxxxxxxxxxxx@guest.airbnb.com\nPROP
+ ERTY: Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég P (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20170305
+DTSTART;VALUE=DATE:20170216
+UID:cn31z4tbyhod--7eof74b6h3q6@airbnb.com
+DESCRIPTION:CHECKIN: 02/16/2017\nCHECKOUT: 03/05/2017\nNIGHTS: 17\nPHONE:
+  +XX X XX XX XX XX\nEMAIL: xxxxxxx-xxxxxxxxxxxxxxxx@guest.airbnb.com\nPR
+ OPERTY: Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach\n
+SUMMARY:Vendég Q (XXXXXX)
+LOCATION:Tropical Retreat- 1.5 mi to Las Olas Blvd & Beach
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160711
+DTSTART;VALUE=DATE:20160708
+UID:-sg3p5bpek2gn-x055w817b23p@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160725
+DTSTART;VALUE=DATE:20160724
+UID:-sg3p5bpek2gn-xobd7jo6cv1t@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160731
+DTSTART;VALUE=DATE:20160728
+UID:-sg3p5bpek2gn-24l1rot6mqtt@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160819
+DTSTART;VALUE=DATE:20160816
+UID:-sg3p5bpek2gn--pih0m6c16ygf@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160823
+DTSTART;VALUE=DATE:20160822
+UID:-sg3p5bpek2gn--47s532pniut7@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20160925
+DTSTART;VALUE=DATE:20160829
+UID:-sg3p5bpek2gn--7tcr0ezisq1j@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161003
+DTSTART;VALUE=DATE:20160929
+UID:-sg3p5bpek2gn-w06qr66c509x@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161005
+DTSTART;VALUE=DATE:20161004
+UID:-sg3p5bpek2gn--ixkq49h4tbs3@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161024
+DTSTART;VALUE=DATE:20161008
+UID:-sg3p5bpek2gn--gtx4mmcry3sv@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161102
+DTSTART;VALUE=DATE:20161025
+UID:-sg3p5bpek2gn-cylycusbl2jh@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20161130
+DTSTART;VALUE=DATE:20161129
+UID:-sg3p5bpek2gn--yx25kuc3pp67@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20170128
+DTSTART;VALUE=DATE:20170122
+UID:-sg3p5bpek2gn--34z0d6olbk3f@airbnb.com
+SUMMARY:FlipKey reservation (Vendég X). Move from 628 to 632A.
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20171223
+DTSTART;VALUE=DATE:20171222
+UID:-sg3p5bpek2gn-4mjfwyuewkk1@airbnb.com
+SUMMARY:Not available
+END:VEVENT
+END:VCALENDAR

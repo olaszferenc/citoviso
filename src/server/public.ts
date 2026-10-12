@@ -213,7 +213,7 @@ import {
   type UnitPriceStatus,
 } from "../tenant/prices.js";
 import { sitePriceGaps } from "../tenant/priceGap.js";
-import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
+import { buildUnitFeed, normaliseFeedUrl, syncCalendarLink } from "../booking/sync.js";
 import {
   getSiteModuleConfig,
   hasPreviousModuleConfig,
@@ -3115,7 +3115,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
-    const url = (form.get("url") ?? "").trim();
+    // A `webcal://` link (Apple, Google, Vrbo) is the same feed over https — stored as such.
+    const url = normaliseFeedUrl(form.get("url") ?? "");
     const unit = form.get("unit") ?? "";
     const back = `/admin?tab=modulok&m=booking&e=${encodeURIComponent(unit)}`;
     if (siteId && url && (await tenantHasModule(session.tenantId, "booking"))) {

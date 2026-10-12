@@ -28,7 +28,7 @@ import https from "node:https";
 import dns from "node:dns";
 import net from "node:net";
 import { buildIcs, importIcsBlockedDays } from "./ical.js";
-import { todayForUnit } from "../tenant/timeZone.js";
+import { todayForUnit, unitTimeZone } from "../tenant/timeZone.js";
 import { config } from "../config.js";
 import { isPlatformHosting } from "../domains.js";
 import {
@@ -63,6 +63,7 @@ export const SYNC_MSG = {
   timeout: "A portál nem válaszolt időben.",
   tooBig: "A naptár szokatlanul nagy — ellenőrizze a linket.",
   notCalendar: "Ez a link nem naptár. A portálon a naptár-exportot keresse.",
+  truncated: "A portál csonka naptárat küldött. A korábban látott foglalt napok érvényben maradnak, a következő szinkron újra próbálja.",
   missing: "Hiányzik a link.",
 } as const;
 
@@ -82,6 +83,17 @@ export interface SyncOutcome {
   /** Owner-facing message when ok === false. */
   readonly error?: string;
   readonly warnings: string[];
+}
+
+/**
+ * The link as the owner pasted it → the address we fetch. Apple, Google and Vrbo hand
+ * out `webcal://` links (Vrbo's own help says to swap it for https), and that is the
+ * same feed over HTTPS — refusing it as "not a web address" would turn away a correct
+ * link. Surrounding whitespace from a copy is dropped too.
+ */
+export function normaliseFeedUrl(url: string): string {
+  const t = url.trim();
+  return /^webcals?:\/\//i.test(t) ? t.replace(/^webcals?:\/\//i, "https://") : t;
 }
 
 // ── address policy (K3) ──────────────────────────────────────────────────────
@@ -273,7 +285,8 @@ function getOnce(
 }
 
 /** Download a calendar feed defensively. Never throws — returns a plain outcome. */
-export async function fetchFeed(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Fetched> {
+export async function fetchFeed(rawUrl: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Fetched> {
+  const url = normaliseFeedUrl(rawUrl);
   if (!/^https?:\/\//i.test(url)) return { error: SYNC_MSG.badUrl };
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs);
@@ -300,6 +313,12 @@ export async function fetchFeed(url: string, timeoutMs = FETCH_TIMEOUT_MS): Prom
       if (!/BEGIN:VCALENDAR/i.test(r.body)) {
         // The most common owner mistake: pasting the listing page instead of the feed.
         return { error: SYNC_MSG.notCalendar };
+      }
+      if (!/END:VCALENDAR/i.test(r.body)) {
+        // A feed cut short (a portal's broken export, a proxy dropping the tail) reads
+        // as "these bookings are gone" — and the sync would RELEASE their nights. A
+        // calendar without its closing line is a failed sync: nothing changes.
+        return { error: SYNC_MSG.truncated };
       }
       return { text: r.body };
     }
@@ -333,7 +352,8 @@ export async function syncCalendarLink(
     return { ok: false, dayCount: 0, error: got.error, warnings: [] };
   }
 
-  const parsed = importIcsBlockedDays(got.text);
+  // A `Z` time is an instant: its night is the accommodation's day, not UTC's.
+  const parsed = importIcsBlockedDays(got.text, { timeZone: await unitTimeZone(unitId) });
   const out = await applyImportedDays(linkId, unitId, parsed.days);
   await recordSyncResult(linkId, {
     ok: true,

@@ -1,0 +1,26 @@
+BEGIN:VCALENDAR
+PRODID;X-RICAL-TZSOURCE=TZINFO:-//Airbnb Inc//Hosting Calendar 0.8.8//EN
+CALSCALE:GREGORIAN
+VERSION:2.0
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20240605
+DTSTART;VALUE=DATE:20240602
+UID:pkkdyw4deffj--nuk5cjdn57f8@airbnb.com
+DESCRIPTION:CHECKIN:  06/02/2014\nCHECKOUT: 06/05/2014\nNIGHTS:   3\nPHON
+ E:    +X XXX XXX XXXX\nEMAIL:    (no email alias available)\nPROPERTY: P
+ rivacy\, Pool\, and Vines in Sonoma\n
+SUMMARY:Vendég A (XXXXXX)
+LOCATION:Privacy\, Pool\, and Vines in Sonoma
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20240608
+DTSTART;VALUE=DATE:20240605
+UID:pkkdyw4deaab-btqaddf158vw@airbnb.com
+DESCRIPTION:CHECKIN:  06/05/2014\nCHECKOUT: 06/08/2014\nNIGHTS:   3\nPHON
+ E:    +X XXX XXX XXXX\nEMAIL:    (no email alias available)\nPROPERTY: P
+ rivacy\, Pool\, and Vines in Sonoma\n
+SUMMARY:Vendég B (XXXXXX)
+LOCATION:Privacy\, Pool\, and Vines in Sonoma
+END:VEVENT
+END:VCALENDAR
+

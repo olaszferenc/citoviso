@@ -33,6 +33,12 @@
 // - No external dependency, no npm package, no timezone database.
 // - All date math is UTC-based (Date.UTC) so the host machine's local timezone
 //   can never shift a calendar day.
+// - One exception, opt-in: a `Z` (UTC) DATE-TIME is an INSTANT, and its calendar
+//   day depends on where the accommodation is. With `timeZone` given, the day is
+//   read in that zone (Intl, no bundled database) — a PMS writing local midnight
+//   as `20261014T220000Z` means the night of Oct 15 in Budapest, not Oct 14.
+
+import { isoDayIn } from "../text/zoneTime.js";
 
 /** Property value kind of a parsed DTSTART/DTEND. */
 export type IcsDateKind = "date" | "date-time";
@@ -123,8 +129,22 @@ export interface BlockedDaysResult {
 /** Safety cap: one VEVENT may not block more nights than this (~5 years). */
 export const ICS_MAX_EVENT_DAYS = 1830;
 
+/** Options for reading a feed. */
+export interface IcsParseOptions {
+  /**
+   * IANA zone of the accommodation. Used ONLY for `Z` (UTC) DATE-TIME values,
+   * whose calendar day differs by zone; DATE and floating/TZID values are
+   * written in local wall-clock already. Omitted → the UTC day (legacy).
+   */
+  readonly timeZone?: string;
+}
+
 const DEFAULT_PRODID = "-//Citoviso//Booking Availability 1.0//HU";
 const DEFAULT_SUMMARY = "Foglalt";
+/** SUMMARY of the placeholder an otherwise empty feed carries (see buildIcs). */
+export const EMPTY_FEED_SUMMARY = "Nincs foglalás";
+/** UID of that placeholder, so our own reader never takes it for a busy night. */
+const EMPTY_FEED_UID = /^empty-[0-9a-f]{16}@/;
 const DEFAULT_UID_DOMAIN = "citoviso.com";
 const CRLF = "\r\n";
 
@@ -343,6 +363,7 @@ interface IcsDateValue {
 function parseIcsDateValue(
   raw: string,
   params: ReadonlyMap<string, string>,
+  timeZone?: string,
 ): IcsDateValue | null {
   const value = raw.trim();
   const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(value);
@@ -363,12 +384,29 @@ function parseIcsDateValue(
   const ss = Number(m[6] ?? "0");
   if (hh > 23 || mm > 59 || ss > 60) return null;
 
+  const utc = m[7] === "Z";
+  // A UTC instant's night is the ACCOMMODATION's calendar day (see the module note).
+  const localDay =
+    utc && kind === "date-time" && timeZone
+      ? zonedDay(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), hh, mm, ss), timeZone)
+      : null;
+
   return {
-    day,
+    day: localDay ?? day,
     kind,
     hasTimeOfDay: kind === "date-time" && (hh > 0 || mm > 0 || ss > 0),
-    utc: m[7] === "Z",
+    utc,
   };
+}
+
+/** Calendar day of an instant in `timeZone`; null for an unknown zone (caller keeps UTC). */
+function zonedDay(ms: number, timeZone: string): string | null {
+  try {
+    const day = isoDayIn(new Date(ms), timeZone);
+    return isCalendarDay(day) ? day : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -404,12 +442,12 @@ function parseIcsDurationDays(raw: string): number | null {
  * warning instead of aborting the feed. Use {@link parseIcsDetailed} when you
  * want the feed-level warnings as well.
  */
-export function parseIcs(text: string): IcsEvent[] {
-  return parseIcsDetailed(text).events;
+export function parseIcs(text: string, opts: IcsParseOptions = {}): IcsEvent[] {
+  return parseIcsDetailed(text, opts).events;
 }
 
 /** {@link parseIcs} plus feed-level diagnostics. */
-export function parseIcsDetailed(text: string): IcsParseResult {
+export function parseIcsDetailed(text: string, opts: IcsParseOptions = {}): IcsParseResult {
   const warnings: string[] = [];
   const events: IcsEvent[] = [];
   let veventCount = 0;
@@ -443,10 +481,10 @@ export function parseIcsDetailed(text: string): IcsParseResult {
         if (current) {
           // Nested/unterminated VEVENT — flush what we have, keep going.
           unterminated = true;
-          const built = buildEvent(current, events.length);
+          const built = buildEvent(current, events.length, opts);
           if (built.event) events.push(built.event);
           else if (built.cancelled) skippedCancelled++;
-          else skippedInvalid++;
+          else if (!built.placeholder) skippedInvalid++;
           veventCount++;
         }
         current = [];
@@ -459,10 +497,12 @@ export function parseIcsDetailed(text: string): IcsParseResult {
       if (comp === "VEVENT") {
         if (current) {
           veventCount++;
-          const built = buildEvent(current, events.length);
+          const built = buildEvent(current, events.length, opts);
           if (built.event) events.push(built.event);
           else if (built.cancelled) skippedCancelled++;
-          else {
+          else if (built.placeholder) {
+            // our own empty-feed placeholder: not a night, not an error
+          } else {
             skippedInvalid++;
             if (built.reason) warnings.push(built.reason);
           }
@@ -479,10 +519,10 @@ export function parseIcsDetailed(text: string): IcsParseResult {
     // Truncated download: the last VEVENT never got its END. Still usable.
     unterminated = true;
     veventCount++;
-    const built = buildEvent(current, events.length);
+    const built = buildEvent(current, events.length, opts);
     if (built.event) events.push(built.event);
     else if (built.cancelled) skippedCancelled++;
-    else skippedInvalid++;
+    else if (!built.placeholder) skippedInvalid++;
   }
 
   if (!sawCalendar) {
@@ -513,10 +553,12 @@ export function parseIcsDetailed(text: string): IcsParseResult {
 interface BuiltEvent {
   readonly event: IcsEvent | null;
   readonly cancelled: boolean;
+  /** Our own empty-feed placeholder (buildIcs) — read back as no night at all. */
+  readonly placeholder?: boolean;
   readonly reason?: string;
 }
 
-function buildEvent(props: readonly ContentLine[], index: number): BuiltEvent {
+function buildEvent(props: readonly ContentLine[], index: number, opts: IcsParseOptions): BuiltEvent {
   const warnings: string[] = [];
   let uid = "";
   let summary = "";
@@ -561,6 +603,9 @@ function buildEvent(props: readonly ContentLine[], index: number): BuiltEvent {
   if (status === "CANCELLED") {
     return { event: null, cancelled: true };
   }
+  if (EMPTY_FEED_UID.test(uid)) {
+    return { event: null, cancelled: false, placeholder: true };
+  }
 
   if (!dtStart) {
     return {
@@ -570,7 +615,7 @@ function buildEvent(props: readonly ContentLine[], index: number): BuiltEvent {
     };
   }
 
-  const start = parseIcsDateValue(dtStart.value, dtStart.params);
+  const start = parseIcsDateValue(dtStart.value, dtStart.params, opts.timeZone);
   if (!start) {
     return {
       event: null,
@@ -598,7 +643,7 @@ function buildEvent(props: readonly ContentLine[], index: number): BuiltEvent {
   // --- resolve the EXCLUSIVE end day -------------------------------------
   let endExclusive = "";
   let rawEnd = "";
-  const end = dtEnd ? parseIcsDateValue(dtEnd.value, dtEnd.params) : null;
+  const end = dtEnd ? parseIcsDateValue(dtEnd.value, dtEnd.params, opts.timeZone) : null;
 
   if (dtEnd && !end) {
     warnings.push(
@@ -874,6 +919,26 @@ export function buildIcs(opts: BuildIcsOptions): string {
     );
   }
 
+  if (!ranges.length) {
+    // RFC 5545 §3.6: a VCALENDAR carries at least ONE component, so a header-only
+    // feed is not valid iCalendar, and importers reject it at connect time ("the
+    // link is not valid" — Airbnb refuses an export with no booking in it). A
+    // brand-new site has no busy night yet, which is exactly when the owner pastes
+    // the link, so the empty feed carries one placeholder: yesterday, transparent,
+    // never a night anyone can still sell.
+    const day = addDays(stamp.slice(0, 4) + "-" + stamp.slice(4, 6) + "-" + stamp.slice(6, 8), -1);
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${escapeIcsText(`empty-${fnv1a64(unitName)}@${uidDomain}`)}`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${compactDay(day)}`,
+      `DTEND;VALUE=DATE:${compactDay(addDays(day, 1))}`,
+      `SUMMARY:${escapeIcsText(EMPTY_FEED_SUMMARY)}`,
+      "TRANSP:TRANSPARENT",
+      "END:VEVENT",
+    );
+  }
+
   lines.push("END:VCALENDAR");
 
   return lines.map(foldIcsLine).join(CRLF) + CRLF;
@@ -961,8 +1026,8 @@ export interface IcsImportResult {
  * One-shot import: raw feed text → occupied nights + every warning collected
  * along the way (feed-level, per-event and expansion-level).
  */
-export function importIcsBlockedDays(text: string): IcsImportResult {
-  const parsed = parseIcsDetailed(text);
+export function importIcsBlockedDays(text: string, opts: IcsParseOptions = {}): IcsImportResult {
+  const parsed = parseIcsDetailed(text, opts);
   const expanded = icsToBlockedDaysDetailed(parsed.events);
   const eventWarnings = parsed.events.flatMap((e) =>
     e.warnings.map((w) => `${e.uid}: ${w}`),

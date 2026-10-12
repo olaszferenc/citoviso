@@ -1,0 +1,9 @@
+BEGIN:VEVENT
+DTSTAMP:20260531T010029Z
+DTSTART;VALUE=DATE:20260623
+DTEND;VALUE=DATE:20260627
+SUMMARY:Reserved
+UID:xxxxxxxx-xxxxxxxxxxxxxxxxxx@airbnb.com
+DESCRIPTION:Reservation URL: https://www.airbnb.com/hosting/reservations/de
+ tails/xxxxxxxx\nPhone Number (Last 4 Digits): XXXX
+END:VEVENT

@@ -782,7 +782,12 @@ eq(
     threw = true;
   }
   check("buildIcs hibás bemenetre sem dob", !threw);
-  check("buildIcs üres, de érvényes naptárt ad", out.includes("BEGIN:VCALENDAR") && !out.includes("BEGIN:VEVENT"));
+  // RFC 5545 §3.6: a VCALENDAR needs ≥ 1 component — the empty feed carries exactly
+  // one transparent placeholder (see buildIcs), which our own reader skips.
+  check(
+    "buildIcs üres, de érvényes naptárt ad (1 helyőrző VEVENT)",
+    out.includes("BEGIN:VCALENDAR") && (out.match(/BEGIN:VEVENT/g) ?? []).length === 1 && out.includes("TRANSP:TRANSPARENT"),
+  );
   eq("üres naptár is beolvasható", parseIcs(out).length, 0);
 }
 

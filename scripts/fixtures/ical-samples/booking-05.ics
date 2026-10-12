@@ -1,0 +1,17 @@
+BEGIN:VEVENT
+DTSTAMP:20190112T110842Z
+CREATED:20190112T110818Z
+UID:1111111111@booking.com
+SEQUENCE:2
+LAST-MODIFIED:20190112T110842Z
+DESCRIPTION:Ankunft: Sonntag\, 28. Juli 2019\, anreise zwischen 15:30 - 21:
+ 00\n\nAbreise: Samstag\, 3. August 2019\, abreise zwischen 10:00 - 10:30\n
+ \nSie können Ihre Buchung hier ansehen\, ändern oder stornieren
+SUMMARY:Some Hotel
+LOCATION:Puchen 209\, Altaussee\, 8992\, Austria
+GEO:47.634239\;13.767147
+DTSTART;VALUE=DATE:20190728
+DTEND;VALUE=DATE:20190804
+TRANSP:OPAQUE
+CLASS:PRIVATE
+END:VEVENT
