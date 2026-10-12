@@ -3249,6 +3249,19 @@ if [ -f scripts/plan-link-owned-content-check.mts ] && \
   echo "[pre-commit] plan-link-owned-content-check (a terv-link a tulajdonos MOSTANI oldalát mutatja)…"
   npx tsx scripts/plan-link-owned-content-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Elek ÚJ-A1: idegen tenant objektumára (foglalás, szoba) küldött admin-POST HIBÁT mutat, nem „Mentve”-t
+#     (booking/decide·cancel, units/save·seasonal, prices/base·season·request, availability), és nem ír;
+#     a saját szobán a mentés megy (pozitív kontroll). Saját scratch-DB, valódi publikus szerver, ~15 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/admin-foreign-object-check.mts ] && \
+   changed_files | grep -qE '^src/server/public\.ts$|^src/auth/tenantAuth\.ts$|^scripts/admin-foreign-object-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/admin-foreign-object-check\.mts$'; then
+    echo "[pre-commit] admin-foreign-object-check --self-test (az idegen-objektum-őr pirosra tud-e menni)…"
+    npx tsx scripts/admin-foreign-object-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] admin-foreign-object-check (idegen objektumra küldött admin-írás: hiba, nem „Mentve”)…"
+  npx tsx scripts/admin-foreign-object-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Lejárt próba 90 napos megőrzése + TÖRLÉS (src/trial/retention.ts): a nap-számítás (hétvége → péntek,
 #     késő levél a törlést tolja), a p7 levél egyszer, levél nélkül / 7 napon belül NEM töröl, mind az 5 fizetett
 #     nyom MEGTAGAD, törlés = pontosan a jelentett sorok + a sites/<id> mappa, a free_trial sor marad, a lead

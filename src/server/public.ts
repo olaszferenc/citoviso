@@ -680,6 +680,10 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
 }
 
 /** Platform labels that are ours, not a tenant slug. */
+/** Elek ÚJ-A1: the refusal of an admin write that names another tenant's object. */
+const UNIT_NOT_FOUND = "Ez a szoba nem található.";
+const BOOKING_NOT_FOUND = "Ez a foglalás nem található.";
+
 const RESERVED_SUBDOMAINS = new Set(["www", "admin", "api", "mail", "app", "static", "assets"]);
 
 /**
@@ -3096,9 +3100,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const month = normaliseMonth(form.get("month"), viewZone());
     const unit = form.get("unit") ?? "";
     if (siteId && (await tenantHasModule(session.tenantId, "booking"))) {
-      if (await unitBelongsToSite(siteId, unit)) {
-        await setManualMonthBlocks(unit, month, form.getAll("day"));
+      if (!(await unitBelongsToSite(siteId, unit))) {
+        const tab = form.get("back") === "foglalasok" ? "foglalasok" : "modulok&m=booking";
+        return redirect(res, `/admin?tab=${tab}&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       }
+      await setManualMonthBlocks(unit, month, form.getAll("day"));
     }
     // The Foglalások tab posts the same month-set semantics; only the way back differs.
     if (form.get("back") === "foglalasok") {
@@ -3149,6 +3155,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     );
   }
   // POST /admin/units/save — create or rename a bookable unit.
+  // Elek ÚJ-A1 (2026-10-12): a POST naming ANOTHER tenant's unit/booking wrote nothing but
+  // came back "Mentve" (saved=1). A refused write says so, with the message units/delete
+  // already gives (A9 did the same for calendar-link/delete).
   if (req.method === "POST" && pathname === "/admin/units/save") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
@@ -3162,7 +3171,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       const cap = Number.isFinite(capRaw) && capRaw > 0 ? Math.round(capRaw) : null;
       if (id && (await unitBelongsToSite(siteId, id))) {
         await updateUnit(siteId, id, name, cap, form.get("description"));
-      } else if (!id) {
+      } else if (id) {
+        const back = form.get("back") === "rooms" ? "rooms" : "booking";
+        return redirect(res, `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
+      } else {
         const before = await getUnits(siteId);
         const whole = form.get("whole");
         // ADR-0256 (approved plan whole-property-second-question): on "Nem" the owner also
@@ -3409,12 +3421,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const siteId = await tenantSiteId(session.tenantId);
     const unit = form.get("unit") ?? "";
     if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
-      if (await unitBelongsToSite(siteId, unit)) {
-        const raw = Number(form.get("amount") ?? "");
-        // Blank or zero clears the price: an owner must be able to take a number
-        // back down, and an unset price renders nothing rather than a wrong figure.
-        await setBasePrice(unit, Number.isFinite(raw) && raw > 0 ? Math.round(raw) : null);
+      if (!(await unitBelongsToSite(siteId, unit))) {
+        return redirect(res, `/admin?tab=modulok&m=pricing&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       }
+      const raw = Number(form.get("amount") ?? "");
+      // Blank or zero clears the price: an owner must be able to take a number
+      // back down, and an unset price renders nothing rather than a wrong figure.
+      await setBasePrice(unit, Number.isFinite(raw) && raw > 0 ? Math.round(raw) : null);
     }
     // The price is a LINE on the room card and a row in the price table.
     return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
@@ -3426,20 +3439,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const siteId = await tenantSiteId(session.tenantId);
     const unit = form.get("unit") ?? "";
     if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
-      if (await unitBelongsToSite(siteId, unit)) {
-        const result = await addSeasonPrice(
-          unit,
-          form.get("label") ?? "",
-          (form.get("from") ?? "").trim(),
-          (form.get("to") ?? "").trim(),
-          Number(form.get("amount") ?? ""),
-          // ADR-0049: optional per-season minimum stay; empty → the module default.
-          form.get("min_nights") ? Number(form.get("min_nights")) : null,
-        );
-        if (!result.ok) {
-          const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
-          return redirect(res, `/admin?tab=modulok&m=pricing&${q}`);
-        }
+      if (!(await unitBelongsToSite(siteId, unit))) {
+        return redirect(res, `/admin?tab=modulok&m=pricing&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
+      }
+      const result = await addSeasonPrice(
+        unit,
+        form.get("label") ?? "",
+        (form.get("from") ?? "").trim(),
+        (form.get("to") ?? "").trim(),
+        Number(form.get("amount") ?? ""),
+        // ADR-0049: optional per-season minimum stay; empty → the module default.
+        form.get("min_nights") ? Number(form.get("min_nights")) : null,
+      );
+      if (!result.ok) {
+        const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
+        return redirect(res, `/admin?tab=modulok&m=pricing&${q}`);
       }
     }
     return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
@@ -3522,9 +3536,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const siteId = await tenantSiteId(session.tenantId);
     const unit = form.get("unit") ?? "";
     if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
-      if (await unitBelongsToSite(siteId, unit)) {
-        await setUnitPriceOnRequest(unit, form.get("on") !== null);
+      if (!(await unitBelongsToSite(siteId, unit))) {
+        return redirect(res, `/admin?tab=modulok&m=pricing&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       }
+      await setUnitPriceOnRequest(unit, form.get("on") !== null);
     }
     const back = form.get("back");
     const target =
@@ -3541,11 +3556,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     const unit = form.get("unit") ?? "";
-    if (siteId && (await unitBelongsToSite(siteId, unit))) {
-      await setUnitSeasonalOnly(unit, form.get("seasonal_only") !== null);
-      // The page shows which nights are free, so it has to be rebuilt.
-      await rerenderTenantSnapshot(session.tenantId);
+    if (!siteId || !(await unitBelongsToSite(siteId, unit))) {
+      return redirect(res, `/admin?tab=modulok&m=pricing&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
     }
+    await setUnitSeasonalOnly(unit, form.get("seasonal_only") !== null);
+    // The page shows which nights are free, so it has to be rebuilt.
+    await rerenderTenantSnapshot(session.tenantId);
     return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
   }
 
@@ -3688,27 +3704,26 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           .where("site_id", "=", siteId)
           .executeTakeFirst()
       : null;
-    if (owned) {
-      const r = await decideRequest(token, verdict, publicBaseUrl(req), form.get("uzenet"));
-      // Booking-offer ②: a request with no price is answered with an offer, not a verdict.
-      if (r.outcome === "needs_offer") return redirect(res, `/foglalas/${token}/ajanlat`);
-      if (r.outcome === "conflict") {
-        return redirect(
-          res,
-          `/admin?tab=foglalasok&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
-        );
-      }
-      // Elek FK-007: a verdict that confirmed one guest and auto-refused two others
-      // used to end in "Mentve — az oldalad frissült." The ids (not names — this is
-      // a URL) let the screen say WHO got what, from rows it already loads.
-      if (r.id) {
-        const auto = (r.autoDeclinedIds ?? []).slice(0, 8).join(",");
-        return redirect(
-          res,
-          `/admin?tab=foglalasok&d=${encodeURIComponent(r.id)}&mit=${r.outcome === "accepted" ? "visszaigazolva" : "elutasitva"}` +
-            (auto ? `&auto=${encodeURIComponent(auto)}` : ""),
-        );
-      }
+    if (!owned) return redirect(res, `/admin?tab=foglalasok&hiba=${encodeURIComponent(BOOKING_NOT_FOUND)}`);
+    const r = await decideRequest(token, verdict, publicBaseUrl(req), form.get("uzenet"));
+    // Booking-offer ②: a request with no price is answered with an offer, not a verdict.
+    if (r.outcome === "needs_offer") return redirect(res, `/foglalas/${token}/ajanlat`);
+    if (r.outcome === "conflict") {
+      return redirect(
+        res,
+        `/admin?tab=foglalasok&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
+      );
+    }
+    // Elek FK-007: a verdict that confirmed one guest and auto-refused two others
+    // used to end in "Mentve — az oldalad frissült." The ids (not names — this is
+    // a URL) let the screen say WHO got what, from rows it already loads.
+    if (r.id) {
+      const auto = (r.autoDeclinedIds ?? []).slice(0, 8).join(",");
+      return redirect(
+        res,
+        `/admin?tab=foglalasok&d=${encodeURIComponent(r.id)}&mit=${r.outcome === "accepted" ? "visszaigazolva" : "elutasitva"}` +
+          (auto ? `&auto=${encodeURIComponent(auto)}` : ""),
+      );
     }
     return redirect(res, "/admin?tab=foglalasok&saved=1");
   }
@@ -3739,19 +3754,20 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
             .where("site_id", "=", siteId)
             .executeTakeFirst()
         : null;
-    if (owned) {
-      const r = await cancelRequest({
-        id,
-        by: "owner",
-        note: form.get("uzenet"),
-        publicBaseUrl: publicBaseUrl(req),
-      });
-      if (r.outcome === "cancelled") {
-        return redirect(
-          res,
-          `/admin?tab=foglalasok&d=${encodeURIComponent(id)}&mit=lemondva${backQs}`,
-        );
-      }
+    if (!owned) {
+      return redirect(res, `/admin?tab=foglalasok&hiba=${encodeURIComponent(BOOKING_NOT_FOUND)}${backQs}`);
+    }
+    const r = await cancelRequest({
+      id,
+      by: "owner",
+      note: form.get("uzenet"),
+      publicBaseUrl: publicBaseUrl(req),
+    });
+    if (r.outcome === "cancelled") {
+      return redirect(
+        res,
+        `/admin?tab=foglalasok&d=${encodeURIComponent(id)}&mit=lemondva${backQs}`,
+      );
     }
     return redirect(res, `/admin?tab=foglalasok&saved=1${backQs}`);
   }
