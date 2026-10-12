@@ -3383,11 +3383,22 @@ export function payResultPage(
   // ⛔ Elek 4: a continued trial got NO credentials mail (activation only issues a
   // login that did not exist) — telling them we sent one sends them hunting for it.
   const existing = Boolean(info?.accountExisted && info?.username);
+  // ⛔ ADR-XXXX (Elek 10-11 B2): no username = activation issued NO login (no address to send it
+  // to, or the issue failed) — then no mail went out either, and the page may not say it did.
+  // What is true: payment fine, the login is not out yet, and who to write to for it.
+  const noLogin = !existing && !info?.username;
+  const supportMail = info?.supportEmail ?? null;
   const mailNote = existing
     ? T(lang, "A fiókja változatlan: ugyanazzal a felhasználónévvel és jelszóval lép be, mint eddig.")
-    : info?.contactEmail
-      ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
-      : T(lang, "A belépési adatait e-mailben küldtük el.");
+    : noLogin
+      ? T(lang, "A belépési adatait még nem tudtuk kiadni, mert nincs e-mail-cím, ahová elküldhetnénk.") +
+        " " +
+        (supportMail
+          ? T(lang, "Írjon nekünk ide: {email}, és elküldjük.", { email: `<a href="mailto:${esc(supportMail)}">${esc(supportMail)}</a>` })
+          : T(lang, "Kérjük, vegye fel velünk a kapcsolatot, és elküldjük."))
+      : info?.contactEmail
+        ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
+        : T(lang, "A belépési adatait e-mailben küldtük el.");
   // ⛔ Elek T-3: no password travels by mail any more — the line says where it IS set.
   const setUrl = !existing && /^https?:\/\//.test(info?.passwordSetUrl ?? "") ? info!.passwordSetUrl! : null;
   const userLine = info?.username
@@ -3401,7 +3412,7 @@ export function payResultPage(
               : T(lang, "(a jelszó-beállító link az e-mailben)")
         }</span>`,
       )
-    : payRow(T(lang, "Felhasználónév"), T(lang, "A felhasználónevet és a jelszó-beállító linket e-mailben küldtük."));
+    : payRow(T(lang, "Felhasználónév"), noLogin ? T(lang, "Még nincs kiadva — lásd lent.") : T(lang, "A felhasználónevet és a jelszó-beállító linket e-mailben küldtük."));
   const setForm = setUrl
     ? `<form class="pd-pwset" method="post" action="${esc(setUrl)}">
         <p class="pd-sect" style="margin-top:12px">${T(lang, "Állítsa be most a jelszavát")}</p>
@@ -3467,7 +3478,7 @@ export function payResultPage(
       ${
         setForm
           ? setForm
-          : loginHref
+          : loginHref && !noLogin
             ? `<a class="pd-cta" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a>`
             : ""
       }
@@ -8430,6 +8441,8 @@ export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
   billing_invalid: T(lang, "Hibás számlázási adat"),
   order_intent_submitted: T(lang, "ELKÜLDTE A MEGRENDELÉST"),
   order_send_failed: T(lang, "A rendelés beküldése nem sikerült"),
+  domain_refused: T(lang, "A saját domaint nem vettük fel — fizetés nem indult"),
+  price_changed: T(lang, "Az ár megváltozott — fizetés nem indult"),
   checkout_redirect: T(lang, "Továbbment a fizetéshez (Barion)"),
   escalation_shown: T(lang, "Megjelent neki az eszkalációs ajánlat"),
   escalation_cta: T(lang, "Rákattintott az eszkalációs ajánlatra"),
@@ -8446,7 +8459,7 @@ export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
 /** Events shown emphasised (the order went out / to payment). */
 export const EVENT_STRONG: readonly string[] = ["order_intent_submitted", "checkout_redirect", "trial_start"];
 /** Events shown as an error (red token). */
-export const EVENT_BAD: readonly string[] = ["billing_invalid", "order_send_failed", "module_dependency_unmet", "client_error", "trial_send_failed"];
+export const EVENT_BAD: readonly string[] = ["billing_invalid", "order_send_failed", "module_dependency_unmet", "domain_refused", "price_changed", "client_error", "trial_send_failed"];
 
 /** The label of one event, with the panel's opening route when it was not the pill. */
 export function eventLabel(type: string, payload: unknown, lang = "hu"): string {

@@ -966,6 +966,61 @@ export interface OrderIntentView {
  * is a later slice), inserts the order_intent (price + billing_period + modules),
  * and advances the prospect status. Returns the lead for operator logging.
  */
+/**
+ * ADR-XXXX ⑥ (Elek 5. kör K2) — the lead's still-open FIRST purchase that is identical to the
+ * one being submitted (same basket, cycle, price, address, buyer e-mail), from the last 30
+ * minutes, with no settled payment. A second submit of the same order (two tabs, a double tap)
+ * reuses it instead of opening a second payable order. Called under the per-lead order lock.
+ */
+export async function pendingTwinInitialOrder(input: {
+  leadId: string;
+  modules: string[];
+  billingPeriod: "monthly" | "annual";
+  price: number;
+  domainType: "citoviso_sub" | "citoviso_registered" | "own";
+  domainName: string | null;
+  platformLabel: string | null;
+  buyerEmail: string;
+}): Promise<{ leadId: string; leadName: string; orderIntentId: string } | null> {
+  const rows = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    .select([
+      "order_intent.id as id",
+      "order_intent.modules as modules",
+      "order_intent.domain_name as domainName",
+      "order_intent.platform_label as platformLabel",
+      "lead.name as leadName",
+    ])
+    .where("prospect.lead_id", "=", input.leadId)
+    .where("order_intent.kind", "=", "initial")
+    .where("order_intent.status", "=", "submitted")
+    .where("order_intent.price", "=", input.price)
+    .where("order_intent.billing_period", "=", input.billingPeriod)
+    .where("order_intent.domain_type", "=", input.domainType)
+    .where(sql<boolean>`lower(order_intent.buyer_email) = ${input.buyerEmail.toLowerCase()}`)
+    .where(sql<boolean>`order_intent.created_at > now() - interval '30 minutes'`)
+    .where(({ not, exists, selectFrom }) =>
+      not(
+        exists(
+          selectFrom("payment")
+            .select("payment.id")
+            .whereRef("payment.order_intent_id", "=", "order_intent.id")
+            .where("payment.status", "!=", "pending"),
+        ),
+      ),
+    )
+    .orderBy("order_intent.created_at", "desc")
+    .execute();
+  const want = [...input.modules].sort().join(",");
+  const hit = rows.find(
+    (r) => [...(r.modules as unknown as string[])].sort().join(",") === want && (r.domainName ?? null) === input.domainName &&
+      (r.platformLabel ?? null) === input.platformLabel,
+  );
+  return hit ? { leadId: input.leadId, leadName: hit.leadName, orderIntentId: hit.id } : null;
+}
+
 export async function recordOrderIntent(input: {
   artifactId: string;
   modules: string[];

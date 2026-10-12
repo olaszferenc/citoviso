@@ -13,6 +13,7 @@
 - [2026-10-11_json_for_script_xss.md](2026-10-11_json_for_script_xss.md) — 2026-10-11 — JSON az inline `<script>`-ben: közös `jsonForScript()` + őr (ADR-0365)
 - [2026-10-11_horvat_piac_elokutatas.md](2026-10-11_horvat_piac_elokutatas.md) — 2026-10-11 — Horvát piac: számlázási, ÁFA- és jogi előkutatás
 - [2026-10-11_elek_sajat_domain_javitasok.md](2026-10-11_elek_sajat_domain_javitasok.md) — 2026-10-11 — Elek 10-11 saját domain kör: javítások (B1–B5, K1–K6, A1–A4)
+- [2026-10-11_elek_megkereses_javitasok.md](2026-10-11_elek_megkereses_javitasok.md) — 2026-10-11 — Elek megkeresés-kör javításai (B1 · B2 · K1 · K2), ADR-XXXX
 - [2026-10-11_elek_it_javitasok_opsuti_xss_fizetes.md](2026-10-11_elek_it_javitasok_opsuti_xss_fizetes.md) — 2026-10-11 — Elek IT-kereszt kör javításai: operátor-süti (B1), XSS, lezárt fizetés, mock-pénztár, címkeképző
 - [2026-10-11_elek3_proba_javitasok.md](2026-10-11_elek3_proba_javitasok.md) — 2026-10-11 — Elek 3. kör javításai: próba „C” + névváltás, élesítés előtt
 - [2026-10-11_arazas_redesign_csomag_domain.md](2026-10-11_arazas_redesign_csomag_domain.md) — 2026-10-11 — Árazás redesign: csomag × modul húzással, saját domain csomag-tartalomként, végződés-tábla

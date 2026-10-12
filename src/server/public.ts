@@ -33,6 +33,7 @@ import {
   type SuspendedPageData,
 } from "./suspendedPage.js";
 import { TENANT_LEGAL_PATHS } from "../engine/legalPages.js";
+import { routesToConsole } from "./edgeRoutes.js";
 import { hostingProvider, loadTenantLegal, saveTenantLegal } from "../tenant/legalIdentity.js";
 import {
   adatfeldolgozasPage,
@@ -742,6 +743,51 @@ async function proxyPreviewPage(
     res.end(Buffer.from(await r.arrayBuffer()));
   } catch (err) {
     console.error(`[public] preview host → console /p/ failed:`, (err as Error).message);
+    send(res, 502, "<h1>Az oldal átmenetileg nem érhető el.</h1><p>Kérjük, próbálja újra néhány perc múlva.</p>");
+  }
+}
+
+/**
+ * ADR-XXXX — what nginx does for a CONSOLE_EDGE_PREFIXES path (edgeRoutes.ts): pass the
+ * request to the console as-is (method, body, Host, client headers) and relay the answer.
+ * Only reachable without nginx in front (see the call site).
+ */
+async function proxyEdgeToConsole(req: http.IncomingMessage, res: http.ServerResponse, pathAndSearch: string): Promise<void> {
+  const consolePort = Number(process.env.CONSOLE_PORT ?? "4600");
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (typeof v === "string" && !["connection", "content-length", "transfer-encoding", "keep-alive"].includes(k)) headers[k] = v;
+  }
+  headers["x-real-ip"] ??= req.socket.remoteAddress ?? "";
+  try {
+    let body: Buffer | undefined;
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      for await (const c of req) {
+        size += (c as Buffer).length;
+        // nginx: client_max_body_size 25m
+        if (size > 25 * 1024 * 1024) return send(res, 413, "too large");
+        chunks.push(c as Buffer);
+      }
+      body = Buffer.concat(chunks);
+    }
+    const r = await fetch(`http://127.0.0.1:${consolePort}${pathAndSearch}`, {
+      method: req.method,
+      headers,
+      ...(body ? { body: new Uint8Array(body) } : {}),
+      redirect: "manual",
+    });
+    const out: Record<string, string | string[]> = {};
+    r.headers.forEach((v, k) => {
+      if (!["set-cookie", "content-length", "content-encoding", "transfer-encoding", "connection"].includes(k)) out[k] = v;
+    });
+    const cookies = r.headers.getSetCookie();
+    if (cookies.length) out["set-cookie"] = cookies;
+    res.writeHead(r.status, out);
+    res.end(Buffer.from(await r.arrayBuffer()));
+  } catch (err) {
+    console.error(`[public] preview host → console ${pathAndSearch.split("?")[0]} failed:`, (err as Error).message);
     send(res, 502, "<h1>Az oldal átmenetileg nem érhető el.</h1><p>Kérjük, próbálja újra néhány perc múlva.</p>");
   }
 }
@@ -2268,12 +2314,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // ADR-0330: a lead's OWN preview subdomain (lead.preview_label) — the outreach link.
   // "/" is the lead's live /p/<token> page, served in place by the console (the address
   // bar keeps the friendly host); every other path behaves as on citoviso.com, exactly
-  // as nginx already routes it (/p/… → console, the rest → here), so the page's own
-  // calls (/p/<token>/view, /assets, /api …) keep working on this host.
+  // as nginx routes it: the CONSOLE_EDGE_PREFIXES (edgeRoutes.ts — /p/, /configure/,
+  // /pay/, /privacy, /mock/, /site/) → console, the rest → here. So the page's own
+  // calls (/p/<token>/view, the configurator's /configure/<id>/domains|subdomain|request,
+  // /assets, /api …) keep working on this host.
   const previewToken =
     !tenantSite && isUnclaimedTenantHost(req) ? await prospectTokenForLabel(hostLabel(req)) : null;
   if (previewToken && req.method === "GET" && pathname === "/") {
     return proxyPreviewPage(req, res, previewToken, url.search);
+  }
+  // ADR-XXXX (Elek 10-11 B1): in production nginx never lets a console prefix reach this
+  // process. Without nginx (dev, test harnesses) it does — and here it used to 404, so the
+  // configurator's domain picker was dead and the order fell back silently. Forward it the
+  // way nginx would; in production this branch is unreachable, so behaviour is identical.
+  if (previewToken && routesToConsole(pathname)) {
+    return proxyEdgeToConsole(req, res, `${pathname}${url.search}`);
   }
   if (!tenantSite && !previewToken && isUnclaimedTenantHost(req)) {
     return send(

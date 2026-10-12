@@ -75,7 +75,8 @@ for (const [name, sms] of [
   // The wording carries what the relaxed gate still relies on.
   say(sms.text.includes(sms.link), `${name}: a követett link benne van (a jogi kötelezők hordozója)`);
   say(/citoviso/i.test(sms.text), `${name}: a feladó azonosítható (márkanév)`);
-  say(sms.text.includes(LEAD), `${name}: személyre szabott (a lead neve)`);
+  // ADR-XXXX: the pair SMS is GSM-7 — the name stands in it folded (sms.name says how).
+  say(sms.text.includes(sms.name ?? LEAD), `${name}: személyre szabott (a lead neve)`);
   say(/látványterv|terv/iu.test(sms.text), `${name}: terv-keretezés (§A demo-framing)`);
 }
 
@@ -204,12 +205,13 @@ const BAD: readonly Bad[] = [
   },
   {
     why: "tömeg-szöveg (nincs benne a lead neve)",
-    sms: { ...base, text: base.text.replace(LEAD, "Tisztelt Szállásadó") },
+    sms: { ...base, text: base.text.replace(base.name ?? LEAD, "Tisztelt Szallasado") },
     expect: /SZEMÉLYRE SZABÁS: az SMS nem hivatkozik a lead nevére/,
   },
   {
     why: "kész oldalt állít (§A demo-framing sérül)",
-    sms: { ...base, text: base.text.replace(/honlap-látványtervet.*?kötelezettségmentesen!/u, "elkészült az új honlapja!") },
+    // ADR-XXXX: the pair SMS is accent-free (GSM-7) — so is the regression the gate must catch.
+    sms: { ...base, text: base.text.replace(/honlap-l[aá]tv[aá]nytervet.*?k[oö]telezetts[eé]gmentesen!/u, "elkeszult az uj honlapja!") },
     expect: /FÉLREVEZETÉS: kész\/élő oldalt sugall|KERETEZÉS: hiányzik az explicit terv/,
   },
 ];

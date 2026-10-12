@@ -2966,7 +2966,7 @@
     (p.modules || []).forEach(function (id) {
       set[id] = true;
     });
-    return MODULES.map(function (m) {
+    var rows = MODULES.map(function (m) {
       var inc = !!set[m.id] || !!(m.spine && m.present);
       return (
         '<span class="cit-cfg-pli' +
@@ -2977,7 +2977,28 @@
         esc(m.label) +
         "</span></span>"
       );
-    }).join("");
+    });
+    // ADR-XXXX (Elek 10-11 K1): when the market sells the domain AS PACKAGE CONTENT (ADR-0360,
+    // DOM.pkgModules), the card's list says so — one more row of the same kind, ticked on the
+    // packages that cover it. Before, only the address step two screens later showed „a csomag
+    // része”, so the campaign's point (the buyer's own .hu address with the package) stayed invisible.
+    // Not drawn when the domain is not package content (then it is a paid extra, as before).
+    var pkgTlds = DOM && DOM.pkgModules && DOM.tlds
+      ? DOM.tlds.filter(function (t) { return t.freeInPackage; }).map(function (t) { return t.tld; })
+      : [];
+    if (pkgTlds.length) {
+      var dInc = DOM.pkgModules.every(function (id) { return !!set[id]; });
+      rows.push(
+        '<span class="cit-cfg-pli' +
+          (dInc ? "" : " cit-cfg-pli--off") +
+          '" data-pli="domain">' +
+          (dInc ? I.check : I.x) +
+          "<span>" +
+          esc(tr("Saját domainnév") + " (" + pkgTlds.join(", ") + ")") +
+          "</span></span>",
+      );
+    }
+    return rows.join("");
   }
   PRESETS.forEach(function (p) {
     var count = (p.modules || []).length;
@@ -4773,6 +4794,53 @@
           track("module_dependency_unmet", { missing: (data.missing || []).join(",") });
           return;
         }
+        // ADR-XXXX (Elek 10-11 B1) — a szerver NEM rögzítette a rendelést, mert a
+        // fizetendő összeg vagy a cím nem az lett volna, amit a vevő lát. Régen ilyenkor
+        // csendben az ingyenes címre állt, és kevesebbet/mást terhelt, mint a gomb
+        // felirata. Most: a panel átáll arra, amit a szerver ad (ingyenes cím, ill. a
+        // friss ajánlat), visszavisszük a tervhez, és kimondjuk, hogy fizetés nem indult —
+        // a vevő a gombon már az ÚJ összeget látja, és újra dönt.
+        if (data && (data.error === "domain_refused" || data.error === "price_changed")) {
+          payBtn.removeAttribute("data-busy");
+          var why;
+          if (data.error === "domain_refused") {
+            setDomainType("citoviso_sub");
+            why =
+              data.reason === "no_name"
+                ? tr("A saját domainnévhez nem választott ki nevet, ezért az ingyenes címet állítottuk be.")
+                : data.reason === "tld_not_offered"
+                  ? tr("Ezt a domain-végződést nem tudjuk regisztrálni, ezért az ingyenes címet állítottuk be.")
+                  : tr("A választott csomaghoz nem jár saját domainnév, ezért az ingyenes címet állítottuk be.");
+          } else {
+            if (data.offer && typeof data.offer.percent === "number") {
+              OFFER = {
+                kind: data.offer.kind,
+                percent: data.offer.percent,
+                expiresAt: data.offer.expiresAt || null,
+                label: (OFFER && OFFER.kind === data.offer.kind && OFFER.label) || (OFFER && OFFER.label) || "",
+              };
+            } else {
+              OFFER = null;
+            }
+            why = tr("Az ár időközben megváltozott.");
+          }
+          updateSummary();
+          syncStrapAmount();
+          syncConsents();
+          step3El.setAttribute("hidden", "");
+          panel.classList.remove("cit-cfg-panel--billing");
+          placeSummary();
+          showStep2(true);
+          showRefusedNotice(
+            why +
+              " " +
+              (payableTotal() === data.price
+                ? tr("Az új fizetendő összeg: {p}.").replace("{p}", fmt(data.price))
+                : ""),
+          );
+          track(data.error, { reason: data.reason || "" });
+          return;
+        }
         // ⛔ "Megkaptuk a rendelését" ONLY on the server's own confirmation: the
         // order row exists and the house has been alerted (payLinkAlert.ts).
         // Measured 2026-09-25: a click that landed while the console restarted got
@@ -4838,6 +4906,21 @@
             names.join(", "),
           )
         : tr("A választása hiányos volt, ezért nem tudtuk rögzíteni.")) +
+      " " +
+      tr("Fizetést most nem indítottunk, és nem terheltük meg a kártyáját. Nézze meg az új összeget, és küldje be újra.");
+  }
+
+  /** ADR-XXXX — ugyanaz a minta, mint a showDepNotice: mi történt, és hogy semmit nem terheltünk. */
+  function showRefusedNotice(what) {
+    var foot = panel.querySelector(".cit-cfg-foot");
+    if (!foot) return;
+    var n = foot.querySelector(".cit-cfg-depwarn");
+    if (!n) {
+      n = el('<p class="cit-cfg-depwarn" role="status"></p>');
+      foot.insertBefore(n, foot.firstChild);
+    }
+    n.textContent =
+      what.trim() +
       " " +
       tr("Fizetést most nem indítottunk, és nem terheltük meg a kártyáját. Nézze meg az új összeget, és küldje be újra.");
   }

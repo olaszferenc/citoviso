@@ -102,6 +102,7 @@ import {
   setProspectArchived,
   getProspectChannelState,
   recordEvent,
+  pendingTwinInitialOrder,
   recordOrderIntent,
   recordView,
   resubscribeProspect,
@@ -1180,9 +1181,9 @@ async function handleOrderRequest(
   // pass-through registrar cost.
   //
   // ⛔ Not an additive write: an ineligible package does not get a cheaper
-  // domain, it gets NO domain — the order is rewritten to the free subdomain
-  // rather than silently carrying a name we would not sell (feedback:
-  // additive_write_is_not_a_gate).
+  // domain, it gets NO domain — and since ADR-XXXX no ORDER either: the buyer is
+  // told and decides again (below), rather than being silently rewritten to the free
+  // subdomain (feedback: additive_write_is_not_a_gate).
   //
   // ADR-0360: the fee is per ENDING and 0 when the module set is package content; an ending
   // this market does not offer is refused the same way (the buyer picks from the offered
@@ -1196,8 +1197,8 @@ async function handleOrderRequest(
     console.warn(
       tldOffered
         ? `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
-            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés az ingyenes aldomainre áll`
-        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-0360 ③) — a rendelés az ingyenes aldomainre áll`,
+            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-XXXX)`
+        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-0360 ③) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-XXXX)`,
     );
   }
   const effectiveDomainType = domainEligible ? domainType : "citoviso_sub";
@@ -1205,13 +1206,51 @@ async function handleOrderRequest(
     ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1, undefined, { domain: domainName, ...pkgCtx })
     : 0;
   const price = (offer ? applyOffer(listPrice, offer) : listPrice) + domainFee;
-  // Tamper/drift signal: the client figure is display-only. Until the offer UI
-  // lands the configurator shows the list price, so both figures are "honest".
-  if (clientPrice !== null && clientPrice !== price && clientPrice !== listPrice + domainFee) {
+  // ⛔ ADR-XXXX ① (Elek 10-11 B1) — NO SILENT FALLBACK. Both branches below used to
+  // log and carry on: a refused custom domain was rewritten to the free subdomain and a
+  // client/server price gap was "resolved" by charging the server figure. Measured on
+  // the scratch DB: the buyer read „Fizetek — 6 430 Ft” for a custom name, was charged
+  // 5 430 Ft and got the subdomain — paid for one thing, received another, nobody said
+  // a word. ADR-0032: what is shown is what is charged. So: no order_intent, no
+  // pay-link, and the configurator gets what it needs to show the new state and let
+  // the buyer decide again (the same shape as module_dependency_unmet above).
+  // The server price stays the ONLY charged figure — the refusal just makes the buyer
+  // see it before paying instead of after.
+  const subPrice = offer ? applyOffer(listPrice, offer) : listPrice;
+  if (wantsOwnDomain && !domainEligible) {
+    send(
+      res,
+      409,
+      JSON.stringify({
+        ok: false,
+        error: "domain_refused",
+        reason: !tldOffered ? (domainName === null ? "no_name" : "tld_not_offered") : "below_threshold",
+        // What the order costs on the free subdomain the client falls back to.
+        price: subPrice,
+      }),
+      "application/json",
+    );
+    return;
+  }
+  if (clientPrice !== null && clientPrice !== price) {
     console.warn(
       `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} (lista ${listPrice + domainFee}) ` +
-        `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — a SZERVER-ár került rögzítésre`,
+        `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — ELUTASÍTVA, a vevő az új összeggel dönt (ADR-XXXX)`,
     );
+    send(
+      res,
+      409,
+      JSON.stringify({
+        ok: false,
+        error: "price_changed",
+        price,
+        // The offer the server prices with NOW (null = none / lapsed): the client re-prices
+        // with it so its own figure — the one on the pay button — equals `price`.
+        offer: offer ? { kind: offer.kind, percent: offer.percent, expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null } : null,
+      }),
+      "application/json",
+    );
+    return;
   }
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
   const commitmentMonths = domainEligible ? getDomainMinCommitmentMonths() : null;
@@ -1221,7 +1260,37 @@ async function handleOrderRequest(
   // free/paid split any more: the threshold is the entry condition itself).
   // ADR-0360 ④: a threshold of 0 is "no threshold" — and then there is no floor either.
   const committedMinMonthly = domainEligible && getDomainMinPackageMonthly() > 0 ? getDomainMinPackageMonthly() : null;
-  const rec = await recordOrderIntent({
+  // ⛔ ADR-XXXX ⑥ (Elek 5. kör K2): two simultaneous submits (two tabs, a double tap) each
+  // recorded an order AND minted a payable pay-link — the money could move twice. Per lead,
+  // record → approve → pay-link now run ONE AT A TIME, and an identical, still-open first
+  // purchase of the same lead is REUSED (its own pending pay-link comes back, via
+  // requestPayment's pending-reuse) instead of a second one being opened. A DIFFERENT order
+  // (the buyer changed the basket) still opens its own: handing back the old link would charge
+  // an amount the screen no longer shows (ADR-0032).
+  const storedDomainName = domainEligible || domainType === "citoviso_sub" ? domainName : null;
+  const storedPlatformLabel = domainEligible ? platformLabel : null;
+  const lockLead = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  const releaseOrderLock = await acquireOrderLock(lockLead?.lead_id ?? artifactId);
+  try {
+  const twin = lockLead
+    ? await pendingTwinInitialOrder({
+        leadId: lockLead.lead_id,
+        modules,
+        billingPeriod,
+        price,
+        domainType: effectiveDomainType,
+        domainName: storedDomainName,
+        platformLabel: storedPlatformLabel,
+        buyerEmail: buyer.buyerEmail,
+      })
+    : null;
+  if (twin) {
+    console.warn(
+      `[console] ISMÉTELT BEKÜLDÉS: a(z) ${twin.orderIntentId} azonos, még függő első rendelés — ` +
+        `nem nyílik új, ugyanaz a pay-link megy vissza (ADR-XXXX)`,
+    );
+  }
+  const rec = twin ?? await recordOrderIntent({
     artifactId,
     modules,
     billingPeriod,
@@ -1230,9 +1299,8 @@ async function handleOrderRequest(
     // Elek3 B1 (ADR-0032 / ADR-0356): a freely-chosen platform subdomain is a domain NAME
     // too — dropping it here meant activation never saw the buyer's choice. A custom-domain
     // name refused for the package (or an "own" one) is NOT carried onto the free subdomain.
-    domainName: domainEligible || domainType === "citoviso_sub" ? domainName : null,
-    // Elek B5: next to the custom domain, the chosen platform address. On the refused-to-sub
-    // path the order is a platform order — and then the chosen label is that order's name.
+    domainName: storedDomainName,
+    // Elek B5: next to the custom domain, the chosen platform address.
     platformLabel: domainEligible ? platformLabel : null,
     commitmentMonths,
     committedMinMonthly,
@@ -1312,6 +1380,28 @@ async function handleOrderRequest(
     JSON.stringify({ ok: true, ...(payUrl ? { payUrl } : { pending: true }) }),
     "application/json",
   );
+  } finally {
+    releaseOrderLock();
+  }
+}
+
+/**
+ * ADR-XXXX ⑥ — one order submit per lead at a time (in-process: one console process
+ * serves every order route). Resolves to the release function; the next waiter of the
+ * same key runs only after it.
+ */
+const orderLocks = new Map<string, Promise<void>>();
+async function acquireOrderLock(key: string): Promise<() => void> {
+  const prev = orderLocks.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const mine = new Promise<void>((r) => (release = r));
+  const chained = prev.then(() => mine);
+  orderLocks.set(key, chained);
+  await prev;
+  return () => {
+    release();
+    if (orderLocks.get(key) === chained) orderLocks.delete(key);
+  };
 }
 
 /** Neutral page after unsubscribe (no tracking, no sell). ADR-0322 ④/B: UNDER the

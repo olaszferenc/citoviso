@@ -1,0 +1,13 @@
+# Éles nginx — OLVASOTT MÁSOLAT (referencia)
+
+Az éles VPS `/etc/nginx/sites-enabled/` két fájlja, betűre, 2026-10-11-én olvasva (ADR-XXXX).
+
+- `citoviso.conf` ← `/etc/nginx/sites-enabled/citoviso` (`citoviso.com`, `www.`, `*.citoviso.com`)
+- `citoviso-admin.conf` ← `/etc/nginx/sites-enabled/citoviso-admin` (`admin.citoviso.com` → konzol)
+
+⛔ **Ez NEM a deploy forrása.** Élesre innen semmi nem megy; az éles fájlt ez a repó nem írja.
+Azért van itt, hogy a dev-útválasztás (`src/server/edgeRoutes.ts`) ehhez legyen mérve:
+a `scripts/edge-routing-check.mts` összeveti a kettőt, és bukik, ha eltérnek.
+
+Ha élesen változik az nginx (tulaj-engedéllyel), ezt a másolatot ÉS az `edgeRoutes.ts`-t
+ugyanabban a commitban kell frissíteni — különben az őr piros.

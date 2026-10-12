@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
+import { toGsm7 } from "../sms/encoding.js";
 import { isPricingConfirmed } from "../pricing.js";
 import type { OutreachDraft } from "./draft.js";
 
@@ -57,6 +58,19 @@ const MISLEADING_PATTERNS: readonly RegExp[] = [
 
 /** Framing words that make the preview nature explicit (§A demo-framing). */
 const FRAMING_PATTERN = /terv|előzetes|látványterv|minta|demó|preview/iu;
+
+/**
+ * ADR-XXXX: a GSM-7 SMS carries Hungarian WITHOUT accents (toGsm7: „elkészült” → „elkeszult”),
+ * so a rule written with accents would never fire on it. The SMS gate tests the accent-free
+ * twin of each rule on the accent-free prose as well — the folded text may not slip past
+ * what the accented one would be stopped for.
+ */
+const deaccent = (t: string): string => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const plainTwin = (re: RegExp): RegExp => new RegExp(deaccent(re.source), re.flags);
+const MISLEADING_PATTERNS_PLAIN: readonly RegExp[] = MISLEADING_PATTERNS.map(plainTwin);
+const FRAMING_PATTERN_PLAIN = plainTwin(FRAMING_PATTERN);
+const PRICE_AD = /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu;
+const PRICE_AD_PLAIN = plainTwin(PRICE_AD);
 
 /**
  * Is this `*.ts.net` host actually published to the open internet by Tailscale
@@ -667,26 +681,32 @@ export function checkOutreachSms(
 
   // C3 — personalization. Also on the prose: the lead's name rides in the link's
   // readable slug, so the raw text would score every mass-text as personalized.
-  if (leadName && !prose.toLowerCase().includes(leadName.toLowerCase())) {
+  // ADR-XXXX: a GSM-7 text carries the name folded (Bánó → Bano) and maybe shortened — the
+  // draft says how (`sms.name`), and the comparison is accent-blind on both sides.
+  const nameInText = (sms as { name?: string }).name ?? leadName;
+  const fold = (t: string): string => toGsm7(t).toLowerCase();
+  if (leadName && !fold(prose).includes(fold(nameInText))) {
     reasons.push("SZEMÉLYRE SZABÁS: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
 
   // C4 + §A — no finished-site claim; explicit preview framing required. Both on
   // the prose: the claim is something the message MAKES, and a slug is not a claim.
-  for (const p of MISLEADING_PATTERNS) {
-    if (p.test(prose)) {
+  // ADR-XXXX: and on its accent-free twin — the GSM-7 SMS says it without accents.
+  const plainProse = deaccent(prose);
+  for (let i = 0; i < MISLEADING_PATTERNS.length; i++) {
+    if (MISLEADING_PATTERNS[i]!.test(prose) || MISLEADING_PATTERNS_PLAIN[i]!.test(plainProse)) {
       reasons.push("FÉLREVEZETÉS: kész/élő oldalt sugall — a levélnek TERVET kell ígérnie, nem kész oldalt");
       break;
     }
   }
   // The framing must be SAID, so it is measured on the prose: a lead named
   // "Látványterv Panzió" would otherwise satisfy the gate through its own slug.
-  if (!FRAMING_PATTERN.test(prose)) {
+  if (!FRAMING_PATTERN.test(prose) && !FRAMING_PATTERN_PLAIN.test(plainProse)) {
     reasons.push("KERETEZÉS: hiányzik az explicit terv/előzetes megfogalmazás (a mock nem kész oldal)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
-  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
+  if (!isPricingConfirmed() && (PRICE_AD.test(prose) || PRICE_AD_PLAIN.test(plainProse))) {
     reasons.push(
       "ÁR-HIRDETÉS: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
     );

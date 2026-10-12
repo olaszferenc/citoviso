@@ -17,6 +17,7 @@ import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import { ensurePreviewLabel, peekPreviewLabel, previewLink } from "./previewLabel.js";
 import { formatNumber } from "../text/money.js";
+import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
@@ -446,6 +447,12 @@ export interface SmsDraft {
   readonly text: string;
   readonly link: string;
   readonly unsubscribeLink: string;
+  /**
+   * The lead's name AS IT STANDS in `text`, when the text was folded to GSM-7 (and maybe
+   * shortened) — the §C personalization check looks for THIS, not the accented original.
+   * Absent = the name stands in the text unchanged.
+   */
+  readonly name?: string;
 }
 
 /** Shared pieces of every SMS-shaped outreach message (link, opt-out). */
@@ -490,13 +497,33 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
  */
 export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   const { link, unsubscribeLink } = smsDraftParts(d);
-  const text = T(
-    d.lang,
-    "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}",
-    { name: d.leadName, link },
-  );
-  return { text, link, unsubscribeLink };
+  // ADR-XXXX (Elek 10-11 K2): GSM-7, like the campaign SMS (ADR-0344 C2b) — translated WITH
+  // accents (the catalog key is the Hungarian source), then folded. With the „–” and the
+  // accents it went out UCS-2 in 4 segments (measured: 224 characters) — twice the cost, and
+  // an older handset may show the parts apart. Folded it is 2. A long name is shortened until
+  // the text fits; the link is the message's purpose and is never cut (nor folded: it is
+  // substituted after the fold, byte for byte).
+  const MARK = "@@LINK@@";
+  const build = (name: string): string =>
+    toGsm7(
+      T(
+        d.lang,
+        "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}",
+        { name, link: MARK },
+      ),
+    ).replace(MARK, link);
+  const fits = (t: string): boolean => smsEncoding(t).segments <= PAIR_SMS_MAX_SEGMENTS;
+  let name = d.leadName;
+  let text = build(name);
+  for (let n = [...d.leadName].length - 1; !fits(text) && n > 8; n--) {
+    name = `${[...d.leadName].slice(0, n).join("").trimEnd()}...`;
+    text = build(name);
+  }
+  return { text, link, unsubscribeLink, name: toGsm7(name) };
 }
+
+/** The companion SMS may cost at most this many segments (ADR-XXXX, as the campaign SMS). */
+export const PAIR_SMS_MAX_SEGMENTS = 2;
 
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */

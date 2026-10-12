@@ -2534,6 +2534,50 @@ if [ -f scripts/order-send-failed-check.mts ] && \
   echo "[pre-commit] order-send-failed-check (nincs „Megkaptuk” visszaigazolás nélkül)…"
   npx tsx scripts/order-send-failed-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX (Elek 10-11 B1): a rendelés nem mehet tovább CSENDBEN más címmel vagy más összeggel,
+# mint amit a vevő lát — domain-elutasítás és ár-eltérés → 409, nincs fizetés; a panel visszalép
+# és az új összeget mutatja. Valódi kezelő (efemer port) + 390px/asztali böngésző (~25 s).
+if [ -f scripts/order-silent-fallback-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.js$|^src/generator/configurator\.ts$|^src/console/server\.ts$|^src/pricing\.ts$|^src/payment/offers\.ts$|^scripts/order-silent-fallback-check'; then
+  echo "[pre-commit] order-silent-fallback-check (nincs csendes domain-/ár-visszaesés)…"
+  npx tsx scripts/order-silent-fallback-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX ⑥ (Elek 5. kör K2): két egyidejű beküldés EGY rendelést és EGY pay-linket ad; más
+# tartalmú rendelés saját linket kap. Valódi kezelő, mock átjáró (~10 s).
+if [ -f scripts/order-double-submit-check.mts ] && \
+   changed_files | grep -qE '^src/console/(server|data)\.ts$|^src/payment/service\.ts$|^scripts/order-double-submit-check'; then
+  echo "[pre-commit] order-double-submit-check (kettős beküldés → egy pay-link)…"
+  npx tsx scripts/order-double-submit-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX (Elek 10-11 B1): a dev-útválasztás = az éles nginx (deploy/nginx/ olvasott másolat ↔
+# src/server/edgeRoutes.ts), és a lead előnézeti hostján a /configure/… a konzolra jut (~10 s).
+if [ -f scripts/edge-routing-check.mts ] && \
+   changed_files | grep -qE '^src/server/(edgeRoutes|public)\.ts$|^deploy/nginx/|^src/generator/configurator\.ts$|^scripts/edge-routing-check'; then
+  echo "[pre-commit] edge-routing-check (dev-útválasztás = éles nginx)…"
+  npx tsx scripts/edge-routing-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX (Elek 10-11 B2): a csak-mobilos (MMS/SMS) vevő is kap belépést a pénztári címére, és
+# a sikerlap belépés nélkül nem állítja, hogy e-mailben küldtük (~10 s, mock posta + átjáró).
+if [ -f scripts/mobile-buyer-login-check.mts ] && \
+   changed_files | grep -qE '^src/payment/service\.ts$|^src/console/views\.ts$|^src/tenant/credentials\.ts$|^scripts/mobile-buyer-login-check'; then
+  echo "[pre-commit] mobile-buyer-login-check (csak-mobilos vevő belépője)…"
+  EMAIL_PROVIDER=mock PAYMENT_GATEWAY=mock SMS_PROVIDER=mock MMS_PROVIDER=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+    npx tsx scripts/mobile-buyer-login-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX (Elek 10-11 K2): a hideg kísérő SMS GSM-7 és ≤ 2 szelet; a §C-kapu a hajtogatott
+# szöveget is méri (ékezet nélkül sem csúszhat át kész-oldal állítás) (~3 s).
+if [ -f scripts/pair-sms-gsm7-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(draft|outreachCheck)\.ts$|^src/sms/encoding\.ts$|^scripts/pair-sms-gsm7-check'; then
+  echo "[pre-commit] pair-sms-gsm7-check (kísérő SMS: GSM-7, ≤ 2 szelet)…"
+  npx tsx scripts/pair-sms-gsm7-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX (Elek 10-11 K1): ha a domain csomag-tartalom (ADR-0360), a csomag-kártya „Mit
+# tartalmaz?” listája kimondja; ha nem, nincs ilyen sor. 390px + asztali (~15 s).
+if [ -f scripts/package-domain-row-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.js$|^src/generator/configurator\.ts$|^scripts/package-domain-row-check'; then
+  echo "[pre-commit] package-domain-row-check (csomag-tartalom: saját cím a listán)…"
+  npx tsx scripts/package-domain-row-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0112 (módosítva 2026-09-25): a leiratkozott látogató ugyanazt az árat LÁTJA, amit a
 # rendelés terhel (az ajánlat mindkét ágon), de NINCS döntés-segítő kártya. Mérve: a lap
 # 6 840 Ft-ot mutatott, a szerver 5 130 Ft-ot vont volna le. 390px + asztali (~15 s).
