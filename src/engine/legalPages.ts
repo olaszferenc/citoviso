@@ -11,6 +11,7 @@
 // desktop = sticky table of contents + flat document, mobile = collapsible sections,
 // plain-language "Röviden" box on top. The mock uses @container because its frame is
 // a div; here the viewport IS the window, so the same breakpoints are @media.
+import { mapOutsideScripts } from "./htmlOutsideScripts.js";
 import {
   TENANT_LEGAL_EFFECTIVE_FROM,
   TENANT_LEGAL_MISSING,
@@ -196,9 +197,9 @@ export function stripTenantLegalLinks(html: string): string {
   const paths = Object.values(TENANT_LEGAL_PATHS)
     .map((p) => p.replace(/^\//, ""))
     .join("|");
-  return html
-    .replace(new RegExp(`<a\\b[^>]*href="/(?:${paths})"[^>]*>[\\s\\S]*?</a>`, "gi"), "")
-    .replace(/<li\b[^>]*>\s*<\/li>/gi, "");
+  // ÚJ-B1 (2026-10-12): markup only — cit-runtime.js quotes the same <a> in a JS string.
+  const link = new RegExp(`<a\\b[^>]*href="/(?:${paths})"[^>]*>[\\s\\S]*?</a>`, "gi");
+  return mapOutsideScripts(html, (markup) => markup.replace(link, "").replace(/<li\b[^>]*>\s*<\/li>/gi, ""));
 }
 
 const PAGE_CSS = `

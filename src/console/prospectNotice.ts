@@ -13,6 +13,7 @@
 // the real output.
 
 import { config } from "../config.js";
+import { mapOutsideScripts } from "../engine/htmlOutsideScripts.js";
 
 /** Local escape on purpose: this module must stay importable without dragging in
  *  the console views or the template kit (i18n packs, icons) — a guard that costs
@@ -443,12 +444,16 @@ export function disableIntroAnimation(html: string): string {
  */
 export function lazyLoadBelowFold(html: string, eager = 2): string {
   let seen = 0;
-  return html.replace(/<img\b([^>]*)>/gi, (tag, attrs: string) => {
-    seen++;
-    if (seen <= eager || /\bloading\s*=/i.test(attrs)) return tag;
-    const decoding = /\bdecoding\s*=/i.test(attrs) ? "" : ' decoding="async"';
-    return `<img loading="lazy"${decoding}${attrs}>`;
-  });
+  // ÚJ-B1 (2026-10-12): markup only — the runtime builds `<img …>` inside JS strings, and
+  // a `"` written into a double-quoted literal there would end the string.
+  return mapOutsideScripts(html, (markup) =>
+    markup.replace(/<img\b([^>]*)>/gi, (tag, attrs: string) => {
+      seen++;
+      if (seen <= eager || /\bloading\s*=/i.test(attrs)) return tag;
+      const decoding = /\bdecoding\s*=/i.test(attrs) ? "" : ' decoding="async"';
+      return `<img loading="lazy"${decoding}${attrs}>`;
+    }),
+  );
 }
 
 /**

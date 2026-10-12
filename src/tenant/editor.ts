@@ -814,13 +814,17 @@ export async function renderTenantSiteForPlanLink(
   const s = await loadSiteForEdit(tenantId);
   if (!s) return null;
   const { effective, hideGallery, hideAnchors } = await assembleEffective(s, s.overrides, s.status);
+  // ÚJ-B1 (Elek, 2026-10-12): the legal-link cut runs on the RENDERED markup, before the
+  // runtime is embedded — run after it, it cut the same <a> out of a cit-runtime.js string
+  // literal and the whole runtime died (no booking form, grey gallery). The cut itself is
+  // script-blind-proof too (mapOutsideScripts); the order states the intent.
   const html = await injectRuntime(
-    renderSite(s.recipe, effective, { phase: "live", demoForms: true, hideGallery, hideAnchors }),
+    stripTenantLegalLinks(renderSite(s.recipe, effective, { phase: "live", demoForms: true, hideGallery, hideAnchors })),
     effective.lang,
     "live",
   );
   const base = publicBase.replace(/\/+$/, "");
-  const pinned = stripTenantLegalLinks(html).replace(
+  const pinned = html.replace(
     /(["'(\s,])\/uploads\//g,
     (_m, pre: string) => `${pre}${base}/uploads/`,
   );

@@ -16,6 +16,13 @@
 //      the tenant-host-only legal links are not on it;
 //   ② lapsed trial (lapseExpiredTrials): the same edited content under the „szünetel" bar
 //      with the „Folytatom — fizetés" action.
+//   ③ ÚJ-B1 (Elek, 2026-10-12): in both states EVERY inline <script> of the page compiles.
+//      The legal-link cut used to run over the embedded cit-runtime too and removed
+//      `<a href="/adatvedelem">…</a>` from a JS string literal — the runtime died on a
+//      SyntaxError (no booking form, grey gallery). The legal-link leg looks at MARKUP only:
+//      the runtime's own source quoting that link is not a link on the page.
+//      Detector check (always): the same page put through the old, script-blind cut must
+//      fail ③ — so a parse leg that cannot see the defect cannot stay green.
 //
 // ISOLATION: own throwaway database (scratch-db), created BEFORE any import that opens the
 // db client; providers forced to mock and READ BACK. The mock file and sites/<tenant> are
@@ -31,6 +38,7 @@ import pg from "pg";
 import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import vm from "node:vm";
 import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./lib/scratch-db.mts";
 
 const SELF_TEST = process.argv.includes("--self-test");
@@ -101,6 +109,22 @@ const { lapseExpiredTrials } = await import("../src/trial/expiry.js");
 const { saveTenantContent } = await import("../src/tenant/editor.js");
 type SiteData = import("../src/engine/recipe.js").SiteData;
 type Recipe = import("../src/engine/recipe.js").Recipe;
+
+/** Inline scripts that do not compile: `<script src>` and JSON blocks are not JS source. */
+function brokenInlineScripts(html: string): string[] {
+  const bad: string[] = [];
+  for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+    const attrs = m[1] ?? "";
+    if (/\bsrc\s*=/i.test(attrs) || /type\s*=\s*["']?application\/(ld\+)?json/i.test(attrs)) continue;
+    try {
+      new vm.Script(m[2] ?? "");
+    } catch (e) {
+      bad.push(`<script${attrs.slice(0, 30)}>: ${(e as Error).message}`);
+    }
+  }
+  return bad;
+}
+const withoutScripts = (html: string): string => html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "");
 
 const stamp = Date.now().toString(36);
 const OLD_TAGLINE = "Osztálykirándulásnak és baráti összejövetelnek remek bázis";
@@ -180,12 +204,22 @@ try {
     check(`${label}: nincs konfigurátor (nem árul)`, !r.body.includes("data-cit-configurator"));
     check(`${label}: nincs gyökér-relatív /uploads/ (a konzol nem szolgálja ki)`, !/["'(\s,]\/uploads\//.test(r.body));
     check(`${label}: a feltöltött kép a publikus szerverre mutat`, r.body.includes(`${config.publicSiteUrl}/uploads/`));
-    check(`${label}: nincs tenant-hoszt jogi link (/adatvedelem, /impresszum)`, !/href="\/(adatvedelem|impresszum)"/.test(r.body));
+    check(`${label}: nincs tenant-hoszt jogi link (/adatvedelem, /impresszum)`, !/href="\/(adatvedelem|impresszum)"/.test(withoutScripts(r.body)));
+    const broken = brokenInlineScripts(r.body);
+    check(`${label}: minden inline szkript lefordul (a beágyazott runtime él)`, broken.length === 0, broken.join(" | "));
+    check(`${label}: a beágyazott runtime rajta van`, r.body.includes("data-cit-runtime"));
     check(`${label}: indexelhetetlen (noindex)`, r.body.includes('content="noindex,nofollow"'));
   };
 
   console.log("① futó próba");
   contentLegs("futó próba", await get(`/p/${token}`));
+
+  console.log("③ detektor-próba: a régi, szkript-vak jogi-link vágás ugyanezen az oldalon");
+  {
+    const page = (await get(`/p/${token}`)).body;
+    const naive = page.replace(/<a\b[^>]*href="\/(?:adatvedelem|impresszum)"[^>]*>[\s\S]*?<\/a>/gi, "");
+    check("a szkript-vak vágás után a parse-ág HIBÁT lát (az őr nem vak)", brokenInlineScripts(naive).length > 0);
+  }
 
   console.log("② lejárt próba");
   const trial = await db.selectFrom("free_trial").select("id").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
