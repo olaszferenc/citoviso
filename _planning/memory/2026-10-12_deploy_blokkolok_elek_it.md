@@ -18,8 +18,9 @@ Elek jelentése: `~/wt/cit333dea6d/_from-sub/4eeced55/_elek/JELENTES.md`.
   + 1 apró): pótolva `admin-modules` („A Modulok fül az ingyenes próba alatt”), `admin-overview` („Másik címet
   szeretne? — folytatáskor egyszer, ingyen”), `console-settings` (ragadt saját domain riasztás + jelszócsere
   kiléptet / 30 napos belépés). A konzol riasztás-panel „MINDEN üzemi riasztás” mondata a domainnel bővült.
-  ⚠️ A `kb-shot` console-markets / admin-modules-rooms / console-scrape képei futásonként apró (hover, 1–2 px)
-  zajt adnak — a deploy-kapu a commitolt változatot frissnek mérte, ezek NEM kerültek újra commitba.
+  ⚠️ A console-markets kép a beállítások lap 3. panelje: a fölötte álló riasztás-panel szövegének bármilyen
+  változása elcsúsztatja (1 CSS px) — ez VALÓDI eltérés, nem zaj; egyszer tévesen zajnak vettem, a végső
+  dry-run fogta meg. Valódi zaj csak a console-scrape egér-hover háttere és az admin-modules-rooms 48 px-e.
 - **ÚJ-K1** (ADR-0372, koordinátori döntés) — `dns_pending`/`tls_pending`-ben ragadt megvett név: 24 óra →
   operátor-riasztás, 72 óra → ismételt riasztás + EGY „A webcím az Öné — a beállítás tovább tart” levél (ha a
   setup_retry már küldte, nem újra), soha nem naponta. Migráció `0107_domain_setup_stuck_alert.sql`. Őr:
