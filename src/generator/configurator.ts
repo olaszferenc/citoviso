@@ -51,6 +51,7 @@ import {
 import { packForClientAsync } from "../i18n/packs.js";
 import { PHONE_NORM_JS } from "../text/phone.js";
 import { config } from "../config.js";
+import { injectRuntime } from "./runtime.js";
 import { renewalQuoteForLead, type RenewalQuote } from "../payment/renewalQuote.js";
 import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
 import { jsonForScript } from "../text/jsonForScript.js";
@@ -593,6 +594,10 @@ export async function injectConfigurator(
   opts: ConfiguratorOpts = {},
 ): Promise<string> {
   if (html.includes("data-cit-configurator")) return html; // already injected
+  // Elek 2026-10-11 K4: the stored mock carries the runtime of its send day — the lead
+  // sees today's (the portal-sync band, the „a portálon foglalták” nights). The stored
+  // file stays as it is; the swap happens here, at serve time, like the overlay itself.
+  if (html.includes("data-cit-runtime")) html = await injectRuntime(html);
   const manifest = await buildManifest(html, artifactId, leadName, opts);
   const manifestTag =
     `<script type="application/json" data-cit-configurator>` +

@@ -15,6 +15,7 @@
 //                       a non-technical owner ends up double-booked.
 
 import { randomBytes } from "node:crypto";
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { APP_TZ, partsIn, todayIn } from "../text/zoneTime.js";
 import { unitTimeZone } from "./timeZone.js";
@@ -387,19 +388,28 @@ export async function isRangeFree(unitId: string, from: string, to: string): Pro
   return !hit;
 }
 
-/** Every blocked day of a unit from `from` onwards — the source for our own feed. */
-export async function getBlockedDaysFrom(unitId: string, from: string): Promise<string[]> {
+/**
+ * Every blocked day of a unit from `from` onwards — the source for our own feed.
+ * `excludeSources` leaves out days held ONLY by those sources (Elek 2026-10-11 A6: the
+ * feed a portal reads must not hand that portal back the nights it sent us).
+ */
+export async function getBlockedDaysFrom(
+  unitId: string,
+  from: string,
+  excludeSources: readonly string[] = [],
+): Promise<string[]> {
   // ADR-0114 — the guest's calendar must not OFFER a night the whole place already
   // holds (or, for the whole place, a night one of its rooms holds). Refusing only on
   // submit is the familiar trap: the form shows a free night and then says no.
   const rows = await db
     .selectFrom("availability_day")
-    .select("day")
+    .select(["day", "source"])
     .where("unit_id", "in", await blockingUnitIds(unitId))
     .where("day", ">=", from)
     .orderBy("day")
     .execute();
-  const blocked = new Set(rows.map((r) => dayString(r.day)));
+  const skip = new Set(excludeSources);
+  const blocked = new Set(rows.filter((r) => !skip.has(r.source)).map((r) => dayString(r.day)));
 
   // ADR-0049 — nights outside the owner's letting season are not for sale either, and
   // the guest must not be able to PICK one. Refusing only on submit would be the
@@ -426,6 +436,7 @@ export async function getBlockedDaysFrom(unitId: string, from: string): Promise<
   return [...blocked].sort();
 }
 
+
 // ── portal calendar links ───────────────────────────────────────────────────
 
 export interface CalendarLinkRow {
@@ -438,6 +449,49 @@ export interface CalendarLinkRow {
   readonly lastSyncAt: Date | null;
   readonly lastError: string | null;
   readonly lastDayCount: number | null;
+  /** K7: the last SUCCESSFUL sync — a failing card says when that was. */
+  readonly lastOkAt: Date | null;
+  /** K7: start of the current failure streak (null = healthy). */
+  readonly failingSince: Date | null;
+  /** A5: the parser's warnings from the last successful sync. */
+  readonly lastWarnings: string[];
+  /** A4: an empty calendar released this many nights (until the next non-empty sync). */
+  readonly emptiedFrom: number | null;
+}
+
+type CalendarLinkDbRow = {
+  id: string;
+  unit_id: string;
+  provider: string;
+  direction: string;
+  url: string | null;
+  feed_token: string | null;
+  last_sync_at: unknown;
+  last_error: string | null;
+  last_day_count: number | null;
+  last_ok_at: unknown;
+  failing_since: unknown;
+  last_warnings: unknown;
+  emptied_from: number | null;
+};
+
+function linkRow(r: CalendarLinkDbRow): CalendarLinkRow {
+  const date = (v: unknown): Date | null => (v ? new Date(v as string) : null);
+  return {
+    id: r.id,
+    unitId: r.unit_id,
+    provider: r.provider,
+    direction: r.direction,
+    url: r.url,
+    feedToken: r.feed_token,
+    lastSyncAt: date(r.last_sync_at),
+    lastError: r.last_error,
+    lastDayCount: r.last_day_count,
+    lastOkAt: date(r.last_ok_at),
+    failingSince: date(r.failing_since),
+    lastWarnings: Array.isArray(r.last_warnings) ? (r.last_warnings as unknown[]).map(String) : [],
+    emptiedFrom: r.emptied_from,
+  };
 }
 
 export async function getCalendarLinks(unitId: string): Promise<CalendarLinkRow[]> {
@@ -447,17 +501,7 @@ export async function getCalendarLinks(unitId: string): Promise<CalendarLinkRow[
     .where("unit_id", "=", unitId)
     .orderBy("created_at", "desc")
     .execute();
-  return rows.map((r) => ({
-    id: r.id,
-    unitId: r.unit_id,
-    provider: r.provider,
-    direction: r.direction,
-    url: r.url,
-    feedToken: r.feed_token,
-    lastSyncAt: r.last_sync_at ? new Date(r.last_sync_at) : null,
-    lastError: r.last_error,
-    lastDayCount: r.last_day_count,
-  }));
+  return rows.map((r) => linkRow(r as unknown as CalendarLinkDbRow));
 }
 
 export async function addCalendarLink(
@@ -473,8 +517,12 @@ export async function addCalendarLink(
   return row.id;
 }
 
-/** Delete a link, but only if it belongs to a unit of this site (ownership guard). */
-export async function deleteCalendarLink(siteId: string, id: string): Promise<void> {
+/**
+ * Delete a link, but only if it belongs to a unit of this site (ownership guard).
+ * Returns whether anything was deleted — a refused delete must not answer "Mentve"
+ * (Elek 2026-10-11 A9).
+ */
+export async function deleteCalendarLink(siteId: string, id: string): Promise<boolean> {
   const owned = await db
     .selectFrom("calendar_link")
     .innerJoin("site_unit", "site_unit.id", "calendar_link.unit_id")
@@ -482,21 +530,40 @@ export async function deleteCalendarLink(siteId: string, id: string): Promise<vo
     .where("calendar_link.id", "=", id)
     .where("site_unit.site_id", "=", siteId)
     .executeTakeFirst();
-  if (!owned) return;
+  if (!owned) return false;
   // Imported days lose their owner with the link — drop them so the calendar does
   // not keep showing blocks nobody can explain or remove.
   await db.deleteFrom("availability_day").where("source", "=", `ical:${id}`).execute();
   await db.deleteFrom("calendar_link").where("id", "=", id).execute();
+  return true;
+}
+
+/**
+ * The portals a unit's export feed can be addressed to (A6): each one gets its own
+ * path, so the feed can leave out the nights that very portal sent us. The key is
+ * the path segment; the value is the stored `calendar_link.provider`.
+ */
+export const EXPORT_PORTALS: Readonly<Record<string, string>> = {
+  booking: "Booking.com",
+  szallas: "Szállás.hu", // i18n-exempt: stored calendar_link.provider value + brand name
+  airbnb: "Airbnb",
+};
+
+/** The export path key of a provider, or null for a provider without one. */
+export function exportPortalKey(provider: string): string | null {
+  return Object.entries(EXPORT_PORTALS).find(([, p]) => p === provider)?.[0] ?? null;
 }
 
 /**
  * Our own outgoing feed URL for a unit — the link the owner hands to a portal so
  * it can see the bookings made here. Created on first view; without this direction
  * the loop is only half closed and the portal can still double-book us.
+ * With `portalKey` the URL is that portal's own (A6): `/naptar/<token>/<portal>.ics`.
  */
 export async function getExportFeedUrl(
   unitId: string,
   baseUrl: string | null,
+  portalKey?: string | null,
 ): Promise<string | null> {
   let token = (
     await db
@@ -514,7 +581,8 @@ export async function getExportFeedUrl(
       .values({ unit_id: unitId, direction: "export", provider: "citoviso", feed_token: token })
       .execute();
   }
-  return `${baseUrl ?? `https://${PLATFORM_DOMAIN}`}/naptar/${token}.ics`;
+  const tail = portalKey && EXPORT_PORTALS[portalKey] ? `${token}/${portalKey}` : token;
+  return `${baseUrl ?? `https://${PLATFORM_DOMAIN}`}/naptar/${tail}.ics`;
 }
 
 /** Resolve an export feed token to its unit (for serving /naptar/<token>.ics). */
@@ -528,46 +596,298 @@ export async function unitByFeedToken(token: string): Promise<string | null> {
   return row?.unit_id ?? null;
 }
 
+/** The sources a portal's own feed must not be handed back (A6): its import links on this unit. */
+export async function importSourcesOf(unitId: string, provider: string): Promise<string[]> {
+  const rows = await db
+    .selectFrom("calendar_link")
+    .select("id")
+    .where("unit_id", "=", unitId)
+    .where("direction", "=", "import")
+    .where("provider", "=", provider)
+    .execute();
+  return rows.map((r) => `ical:${r.id}`);
+}
+
+/** A portal night that an ACCEPTED booking of ours already holds (K1). */
+export interface SyncConflict {
+  readonly day: string;
+  /** 'booking:<request_id>' */
+  readonly holder: string;
+}
+
+export interface ImportOutcome {
+  /** Nights this link actually holds now (K1: not the nights it merely reported). */
+  readonly taken: number;
+  /** Nights the link held before this sync. */
+  readonly before: number;
+  /** Reported nights an accepted booking of ours already holds — a double booking. */
+  readonly conflicts: SyncConflict[];
+}
+
 /**
  * Replace everything a given import link contributed with the days it reports now.
  * Scoped to `ical:<linkId>`, so a portal can only ever add or release ITS OWN days —
  * it can never clear the owner's manual blocks or an accepted booking.
+ *
+ * Elek 2026-10-11 K1: a reported night an accepted booking already holds was swallowed
+ * in silence (`doNothing`), and the count still said it came over. Coordinator decision:
+ * we decide for NEITHER guest — nothing is deleted — but the conflict is returned so the
+ * card can show it and the owner gets a mail; the count is the nights actually taken.
  */
 export async function applyImportedDays(
   linkId: string,
   unitId: string,
   days: string[],
-): Promise<number> {
+): Promise<ImportOutcome> {
   const source = `ical:${linkId}`;
   // "Past" = before the accommodation's today (ADR-0290).
   const today = todayIn(await unitTimeZone(unitId));
   const wanted = [...new Set(days.filter((d) => d >= today))].sort();
+  // ADR-0114: an accepted booking of the whole place (or, for the whole place, of a room)
+  // holds these nights just as much as one on the unit itself.
+  const blockers = await blockingUnitIds(unitId);
 
+  let taken = 0;
+  let before = 0;
+  let conflicts: SyncConflict[] = [];
   await db.transaction().execute(async (trx) => {
-    await trx.deleteFrom("availability_day").where("source", "=", source).execute();
+    const del = await trx.deleteFrom("availability_day").where("source", "=", source).executeTakeFirst();
+    before = Number(del.numDeletedRows ?? 0);
     for (const day of wanted) {
-      await trx
+      const ins = await trx
         .insertInto("availability_day")
         .values({ unit_id: unitId, day, state: "blocked", source })
         // A day already held manually or by an accepted booking keeps its owner:
         // the stricter claim wins, and we never downgrade a real booking.
         .onConflict((oc) => oc.columns(["unit_id", "day"]).doNothing())
+        .executeTakeFirst();
+      taken += Number(ins.numInsertedOrUpdatedRows ?? 0);
+    }
+    if (wanted.length) {
+      const held = await trx
+        .selectFrom("availability_day")
+        .select(["day", "source"])
+        .where("unit_id", "in", blockers)
+        .where("day", "in", wanted)
+        .where("source", "like", "booking:%")
+        .orderBy("day")
         .execute();
+      conflicts = held.map((h) => ({ day: dayString(h.day), holder: h.source }));
     }
   });
-  return wanted.length;
+  return { taken, before, conflicts };
 }
 
-export async function recordSyncResult(
-  linkId: string,
-  dayCount: number | null,
-  error: string | null,
-): Promise<void> {
-  await db
-    .updateTable("calendar_link")
-    .set({ last_sync_at: new Date(), last_error: error, last_day_count: dayCount })
-    .where("id", "=", linkId)
+/**
+ * Keep the conflict ledger in step with the latest sync and hand back the conflicts
+ * the owner has NOT been told about yet (K1: one mail per conflict, not one per hour).
+ * A conflict that disappeared (the portal released the night, the booking was
+ * cancelled) is dropped — if it ever comes back it is news again.
+ */
+export async function reconcileConflicts(linkId: string, now: SyncConflict[]): Promise<SyncConflict[]> {
+  const key = (c: SyncConflict): string => `${c.day}|${c.holder}`;
+  const want = new Map(now.map((c) => [key(c), c]));
+  const rows = await db
+    .selectFrom("calendar_conflict")
+    .select(["day", "holder", "notified_at"])
+    .where("link_id", "=", linkId)
     .execute();
+  const have = new Map(rows.map((r) => [key({ day: dayString(r.day), holder: r.holder }), r]));
+  for (const [k, r] of have) {
+    if (!want.has(k)) {
+      await db
+        .deleteFrom("calendar_conflict")
+        .where("link_id", "=", linkId)
+        .where("day", "=", dayString(r.day))
+        .where("holder", "=", r.holder)
+        .execute();
+    }
+  }
+  for (const [k, c] of want) {
+    if (!have.has(k)) {
+      await db
+        .insertInto("calendar_conflict")
+        .values({ link_id: linkId, day: c.day, holder: c.holder })
+        .onConflict((oc) => oc.columns(["link_id", "day", "holder"]).doNothing())
+        .execute();
+    }
+  }
+  const fresh = await db
+    .selectFrom("calendar_conflict")
+    .select(["day", "holder"])
+    .where("link_id", "=", linkId)
+    .where("notified_at", "is", null)
+    .orderBy("day")
+    .execute();
+  return fresh.map((r) => ({ day: dayString(r.day), holder: r.holder }));
+}
+
+/** Mark conflicts as told to the owner (after the mail went out). */
+export async function markConflictsNotified(linkId: string, told: SyncConflict[]): Promise<void> {
+  for (const c of told) {
+    await db
+      .updateTable("calendar_conflict")
+      .set({ notified_at: new Date() })
+      .where("link_id", "=", linkId)
+      .where("day", "=", c.day)
+      .where("holder", "=", c.holder)
+      .execute();
+  }
+}
+
+/** A conflict as the card shows it: which night, which guest (K1). */
+export interface ConflictView {
+  readonly day: string;
+  readonly guestName: string | null;
+  readonly requestId: string | null;
+}
+
+export async function getLinkConflicts(linkIds: readonly string[]): Promise<Map<string, ConflictView[]>> {
+  const out = new Map<string, ConflictView[]>();
+  if (!linkIds.length) return out;
+  const rows = await db
+    .selectFrom("calendar_conflict")
+    .select(["link_id", "day", "holder"])
+    .where("link_id", "in", [...linkIds])
+    .orderBy("day")
+    .execute();
+  const ids = [...new Set(rows.map((r) => r.holder.replace(/^booking:/, "")))].filter((x) =>
+    /^[0-9a-f-]{36}$/i.test(x),
+  );
+  const guests = ids.length
+    ? await db.selectFrom("booking_request").select(["id", "guest_name"]).where("id", "in", ids).execute()
+    : [];
+  const byId = new Map(guests.map((g) => [g.id, g.guest_name]));
+  for (const r of rows) {
+    const rid = r.holder.replace(/^booking:/, "");
+    const list = out.get(r.link_id) ?? [];
+    list.push({ day: dayString(r.day), guestName: byId.get(rid) ?? null, requestId: byId.has(rid) ? rid : null });
+    out.set(r.link_id, list);
+  }
+  return out;
+}
+
+/** What one sync run left behind — recorded on the link and in its log (K7, A4, A5). */
+export interface SyncRecord {
+  readonly ok: boolean;
+  /** Nights held after a successful run. */
+  readonly dayCount: number | null;
+  readonly error: string | null;
+  readonly warnings?: readonly string[];
+  /** A4: the nights held before a successful run (an empty feed after N>0 is suspicious). */
+  readonly before?: number;
+  readonly ms?: number;
+}
+
+/** Runs kept per link in the sync log (K7). */
+export const SYNC_LOG_KEEP = 10;
+
+/**
+ * Record a sync on the link row + in its short log. On failure the link keeps its last
+ * day count and its last success time: the imported nights stay in force (they are only
+ * ever replaced by a successful sync), and the card says so.
+ */
+export async function recordSyncResult(linkId: string, r: SyncRecord): Promise<void> {
+  const now = new Date();
+  if (r.ok) {
+    const count = r.dayCount ?? 0;
+    await db
+      .updateTable("calendar_link")
+      .set({
+        last_sync_at: now,
+        last_ok_at: now,
+        last_error: null,
+        last_day_count: count,
+        failing_since: null,
+        failure_notified_at: null,
+        last_warnings: JSON.stringify([...(r.warnings ?? [])]),
+        // A4: an empty calendar from a link that held nights is a lawful "all cancelled" —
+        // or a portal's momentary empty answer. Nothing is held back; the card says it once,
+        // until a sync brings nights again.
+        emptied_from: count === 0 && (r.before ?? 0) > 0 ? r.before! : count === 0 ? sql`emptied_from` : null,
+      } as never)
+      .where("id", "=", linkId)
+      .execute();
+  } else {
+    await db
+      .updateTable("calendar_link")
+      .set({
+        last_sync_at: now,
+        last_error: r.error ?? "?",
+        failing_since: sql`coalesce(failing_since, ${now})`,
+      } as never)
+      .where("id", "=", linkId)
+      .execute();
+  }
+  await db
+    .insertInto("calendar_sync_run")
+    .values({ link_id: linkId, at: now as never, ok: r.ok, day_count: r.dayCount, error: r.error, ms: r.ms ?? null })
+    .execute();
+  await db
+    .deleteFrom("calendar_sync_run")
+    .where("link_id", "=", linkId)
+    .where(
+      "id",
+      "not in",
+      db
+        .selectFrom("calendar_sync_run")
+        .select("id")
+        .where("link_id", "=", linkId)
+        .orderBy("at", "desc")
+        .orderBy("id", "desc")
+        .limit(SYNC_LOG_KEEP),
+    )
+    .execute();
+}
+
+/** The short sync log of links, newest first (K7). */
+export interface SyncRunView {
+  readonly at: Date;
+  readonly ok: boolean;
+  readonly dayCount: number | null;
+  readonly error: string | null;
+}
+
+export async function getSyncRuns(linkIds: readonly string[]): Promise<Map<string, SyncRunView[]>> {
+  const out = new Map<string, SyncRunView[]>();
+  if (!linkIds.length) return out;
+  const rows = await db
+    .selectFrom("calendar_sync_run")
+    .select(["link_id", "at", "ok", "day_count", "error"])
+    .where("link_id", "in", [...linkIds])
+    .orderBy("at", "desc")
+    .orderBy("id", "desc")
+    .execute();
+  for (const r of rows) {
+    const list = out.get(r.link_id) ?? [];
+    if (list.length < SYNC_LOG_KEEP) {
+      list.push({ at: new Date(r.at as unknown as string), ok: r.ok, dayCount: r.day_count, error: r.error });
+    }
+    out.set(r.link_id, list);
+  }
+  return out;
+}
+
+/**
+ * Links failing for at least `hours` whose owner has not been told yet (K7) — and
+ * the claim on them, so two overlapping runs cannot both mail.
+ */
+export async function claimLastingFailures(hours: number): Promise<CalendarLinkRow[]> {
+  const rows = await db
+    .updateTable("calendar_link")
+    .set({ failure_notified_at: new Date() })
+    .where("direction", "=", "import")
+    .where("failing_since", "is not", null)
+    .where("failure_notified_at", "is", null)
+    .where(sql<boolean>`failing_since <= now() - make_interval(hours => ${hours})`)
+    .returningAll()
+    .execute();
+  return rows.map((r) => linkRow(r as unknown as CalendarLinkDbRow));
+}
+
+/** Give a claim back when the mail could not go out (the next run retries). */
+export async function releaseFailureClaim(linkId: string): Promise<void> {
+  await db.updateTable("calendar_link").set({ failure_notified_at: null }).where("id", "=", linkId).execute();
 }
 
 /** All import links across every tenant — the periodic sync's work list. */
@@ -577,15 +897,5 @@ export async function allImportLinks(): Promise<CalendarLinkRow[]> {
     .selectAll()
     .where("direction", "=", "import")
     .execute();
-  return rows.map((r) => ({
-    id: r.id,
-    unitId: r.unit_id,
-    provider: r.provider,
-    direction: r.direction,
-    url: r.url,
-    feedToken: r.feed_token,
-    lastSyncAt: r.last_sync_at ? new Date(r.last_sync_at) : null,
-    lastError: r.last_error,
-    lastDayCount: r.last_day_count,
-  }));
+  return rows.map((r) => linkRow(r as unknown as CalendarLinkDbRow));
 }

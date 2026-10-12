@@ -112,8 +112,36 @@ foglalt, az itt is lezár, és ami itt foglalt, az a portálon is. A naptár ala
    ugyanazon menüjében, a naptár importálásánál illeszti be.
 
 Minden dobozban ott a **„Segítség: így köti össze lépésről lépésre”** sor: kinyitva a portál
-saját menüpontjaival vezeti végig. Egy rossz linket a **„Leválasztás”** gombbal bonthat; a
-portálról hozott napok ekkor eltűnnek a naptárából.
+saját menüpontjaival vezeti végig. Egy rossz linket a **„Leválasztás”** gombbal bonthat: helyben
+megkérdezzük, és kiírjuk, hány, a portálról hozott nap szabadul fel — csak az **„Igen, leválasztom”**
+gomb választja le (a **„Mégsem”** bezárja a kérdést). A portálról hozott napok ekkor eltűnnek a naptárából.
+
+A dobozban azt is látja, mikor frissült utoljára, és hogy a mai naptól összesen hány foglalt
+napot hoztunk át (a naptár fölötti jelvény csak a látott hónapot számolja). A Szinkron-napló
+sort kinyitva az utolsó tíz frissítés látszik: mikor sikerült, és mikor nem.
+
+### Ha a doboz hibát vagy figyelmeztetést mutat
+
+- **Piros „Hiba” felirat:** a legutóbbi frissítés nem sikerült. A doboz kiírja, mikor, mi történt,
+  és hogy a korábban áthozott foglalt napok érvényben maradnak — egy hibás frissítés soha nem
+  szabadít fel napot. Azt is látja, mikor sikerült utoljára. Ha a portálon új linket kapott,
+  válassza le a régit, és kösse össze az újjal. Ha a hiba egy napig tart, e-mailt is küldünk
+  róla — egyszer; ha a link újra működik, és később megint elakad, újra szólunk.
+- **„A link nem érhető el, vagy nem naptár”:** a link nem a portál naptár-exportja, vagy nem
+  nyitható meg. Másolja be újra a portál naptár-szinkron menüjéből.
+- **Ütközés:** a portál olyan éjszakát jelez foglaltnak, amelyre Ön nálunk már elfogadott egy
+  foglalást. A doboz kiírja a napot és a vendég nevét, és e-mailt is kap róla (ütközésenként
+  egyszer). Egyik foglalást sem töröljük: Ön dönti el, melyik vendéget tudja fogadni, és a
+  másikkal a portálon vagy a Foglalásoknál rendezi.
+- **„Figyelem: a portál most üres naptárat adott”:** a portál egyszerre minden foglalást
+  szabadnak mutat, ezért az addig áthozott napok felszabadultak. Ez szabályos, ha ott tényleg
+  lemondták őket — ha nem, nézze meg a portál naptárát.
+- **„… bejegyzést nem tudtunk pontosan értelmezni”:** a portál naptárában van olyan bejegyzés,
+  amelyet kihagytunk, vagy egy éjszakának vettünk. Kinyitva látja, melyiket. Ha egy portálon
+  látott foglalás itt hiányzik, ez lehet az oka.
+
+A **„Másolás”** gombbal kapott link portálonként más: a portálnak szóló naptárunkból kimaradnak
+azok a napok, amelyeket épp attól a portáltól kaptunk — a többi portál viszont látja őket.
 
 Jó tudni:
 

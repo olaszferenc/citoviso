@@ -28,14 +28,23 @@ import { syncAllCalendarLinks } from "../src/booking/sync.js";
 
 const started = Date.now();
 try {
-  const sync = await syncAllCalendarLinks();
-  console.log(
-    `[booking] naptár-szinkron: ${sync.links} link · ${sync.ok} rendben · ${sync.failed} hibás`,
-  );
-  if (sync.failed) {
-    // Not fatal: a broken link is the tenant's to fix, and the admin shows the
-    // error on the link card. Surfaced here so a cron log makes it visible too.
-    console.warn(`[booking] ${sync.failed} naptár-link nem frissült — a hiba a tenant adminjában látszik`);
+  // K8 (Elek 2026-10-11): bounded parallelism + an overall budget inside — a few hanging
+  // feeds can no longer push the expiry jobs below past the unit's TimeoutStartSec.
+  // Its own try: a sync failure must not cost the expiries either.
+  try {
+    const sync = await syncAllCalendarLinks();
+    console.log(
+      `[booking] naptár-szinkron: ${sync.links} link · ${sync.ok} rendben · ${sync.failed} hibás` +
+        (sync.skipped ? ` · ${sync.skipped} kimaradt (időkeret)` : ""),
+    );
+    if (sync.failed) {
+      // Not fatal: a broken link is the tenant's to fix; the card shows it, and a link
+      // failing for a day mails its owner (K7, once per streak).
+      console.warn(`[booking] ${sync.failed} naptár-link nem frissült — a hiba a tenant adminjában látszik`);
+    }
+    if (sync.alerted) console.log(`[booking] tartós szinkron-hiba: ${sync.alerted} tulaj-levél`);
+  } catch (err) {
+    console.error("[booking] naptár-szinkron elszállt — a lejáratás ettől még fut:", err);
   }
 
   const expired = await expireStaleRequests();

@@ -178,6 +178,8 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   { table: "site_unit", where: `site_id IN ${SITES}` },
   { table: "availability_day", where: `unit_id IN ${UNITS}` },
   { table: "calendar_link", where: `unit_id IN ${UNITS}` },
+  { table: "calendar_sync_run", where: `link_id IN (SELECT id FROM calendar_link WHERE unit_id IN ${UNITS})` },
+  { table: "calendar_conflict", where: `link_id IN (SELECT id FROM calendar_link WHERE unit_id IN ${UNITS})` },
   { table: "unit_price", where: `unit_id IN ${UNITS}` },
   { table: "booking_request", where: `site_id IN ${SITES}` },
   { table: "site_module_config", where: `site_id IN ${SITES}` },

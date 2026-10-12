@@ -222,9 +222,12 @@ import {
 import {
   addCalendarLink,
   deleteCalendarLink,
+  EXPORT_PORTALS,
   getCalendarLinks,
   getBlockedDaysFrom,
   getExportFeedUrl,
+  getLinkConflicts,
+  getSyncRuns,
   getMonthAvailability,
   normaliseMonth,
   setManualMonthBlocks,
@@ -934,6 +937,17 @@ async function serveTenantHost(
   const tenantLang = (): Promise<string> =>
     (langMemo ??= langForTenant(site.tenantId).then(prepareMailLang));
 
+  // B1 (Elek 2026-10-11): the export feed the owner pasted into a portal lives on THIS
+  // host. Before the freeze branch on purpose: a portal reading it keeps the nights we
+  // already sold closed there, whatever the state of the bill.
+  const feedHit = RE_EXPORT_FEED.exec(pathname);
+  if (feedHit) {
+    const siteId = await tenantSiteId(site.tenantId);
+    // A portal reads this, not a guest — a language-free 404 (guest-host i18n rule).
+    if (!siteId) return send(res, 404, "404");
+    return serveExportFeed(res, feedHit[1]!, feedHit[2] ?? null, siteId);
+  }
+
   // ── ADR-0080 billing freeze: EVERYTHING on a suspended host answers 503 ──
   // A courtesy page, not a silent 404: the guest learns the site is temporarily
   // down (in the site's own language), and Retry-After tells Google to come back
@@ -1305,6 +1319,42 @@ async function servePreviewSite(res: http.ServerResponse, token: string): Promis
   }
 }
 
+/**
+ * GET /naptar/<token>.ics and /naptar/<token>/<portal>.ics — our outgoing calendar for one
+ * unit. Public by design (a portal fetches it unauthenticated), but the token is opaque and
+ * the feed carries only busy dates — no guest name, no contact, nothing personal.
+ *
+ * ⛔ Elek 2026-10-11 B1: the owner is handed THIS link on the tenant's own host
+ * (`<slug>.citoviso.com/naptar/…`, a custom domain, or the dev `/t/<slug>/naptar/…`), and
+ * only the platform host served it — every portal got a 404, so a booking taken on the
+ * owner's site never closed the night on the portal. Served from all of them now; on a
+ * tenant host only a unit of THAT site (`siteId`), so one site's host cannot serve another's.
+ * A6: `<portal>` leaves out the nights that very portal sent us.
+ */
+const RE_EXPORT_FEED = /^\/naptar\/([A-Za-z0-9_-]{10,64})(?:\/([a-z]{2,20}))?\.ics$/;
+
+async function serveExportFeed(
+  res: http.ServerResponse,
+  token: string,
+  portalKey: string | null,
+  siteId: string | null,
+): Promise<void> {
+  if (portalKey && !EXPORT_PORTALS[portalKey]) return send(res, 404, "404");
+  const unit = await unitByFeedToken(token);
+  if (!unit || (siteId && !(await unitBelongsToSite(siteId, unit)))) return send(res, 404, "404");
+  const row = await db
+    .selectFrom("site_unit")
+    .select("name")
+    .where("id", "=", unit)
+    .executeTakeFirst();
+  const ics = await buildUnitFeed(unit, row?.name ?? "Szállás", portalKey ? EXPORT_PORTALS[portalKey] : null);
+  res.writeHead(200, {
+    "Content-Type": "text/calendar; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  });
+  res.end(ics);
+}
+
 /** GET /admin — the session-gated tenant dashboard. */
 async function serveAdmin(
   req: http.IncomingMessage,
@@ -1445,6 +1495,7 @@ async function serveAdmin(
           units.find((u) => bookable.has(u.id)) ||
           units[0]!;
         const deletion = await unitDeletionImpacts(site.id);
+        const links = await getCalendarLinks(unit.id);
         booking = {
           month: await getMonthAvailability(unit.id, normaliseMonth(month, viewZone())),
           units: units.map((u) => ({
@@ -1466,8 +1517,26 @@ async function serveAdmin(
             bookable: bookable.has(u.id),
           })),
           unitId: unit.id,
-          links: await getCalendarLinks(unit.id),
+          links,
           exportUrl: await getExportFeedUrl(unit.id, siteUrl),
+          // A6: one address per portal — that portal's own nights are left out of it.
+          exportUrls: Object.fromEntries(
+            await Promise.all(
+              Object.entries(EXPORT_PORTALS).map(
+                async ([key, provider]) => [provider, (await getExportFeedUrl(unit.id, siteUrl, key)) ?? ""] as const,
+              ),
+            ),
+          ),
+          // K1 · K7: conflicts with accepted bookings, and each link's short sync log.
+          conflicts: await getLinkConflicts(links.map((l) => l.id)),
+          runs: await getSyncRuns(links.map((l) => l.id)),
+          // A12: a refused link is answered in its own card (`ph` = the portal it was typed into).
+          linkError: (() => {
+            const qp = new URL(req.url ?? "/", "http://x").searchParams;
+            const provider = qp.get("ph");
+            const message = qp.get("phiba");
+            return provider && message ? { provider, message } : null;
+          })(),
           requests: await getRequests(site.id),
         };
       }
@@ -3051,9 +3120,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (siteId && url && (await tenantHasModule(session.tenantId, "booking"))) {
       if (!(await unitBelongsToSite(siteId, unit))) return redirect(res, back);
       if (!/^https?:\/\//i.test(url)) {
+        // Elek 2026-10-11 A12: answered inside the portal's own card, not at the top of the page.
         return redirect(
           res,
-          `${back}&hiba=${encodeURIComponent("A link nem érvényes webcím. Másolja be újra, teljes egészében.")}`,
+          `${back}&ph=${encodeURIComponent(form.get("provider") ?? "")}` +
+            `&phiba=${encodeURIComponent("A link nem érvényes webcím. Másolja be újra, teljes egészében.")}`,
         );
       }
       // Sync immediately: the owner must see "14 foglalt napot látunk" right now —
@@ -3068,10 +3139,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
-    if (siteId) await deleteCalendarLink(siteId, form.get("id") ?? "");
+    // Elek 2026-10-11 A9: a refused delete (a foreign or unknown link) must not say "Mentve".
+    const deleted = siteId ? await deleteCalendarLink(siteId, form.get("id") ?? "") : false;
     return redirect(
       res,
-      `/admin?tab=modulok&m=booking&e=${encodeURIComponent(form.get("unit") ?? "")}&saved=1`,
+      `/admin?tab=modulok&m=booking&e=${encodeURIComponent(form.get("unit") ?? "")}${deleted ? "&saved=1" : ""}`,
     );
   }
   // POST /admin/units/save — create or rename a bookable unit.
@@ -3985,23 +4057,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // GET /naptar/<token>.ics — our outgoing calendar for one unit. Public by
     // design (a portal fetches it unauthenticated), but the token is opaque and
     // the feed carries only busy dates — no guest name, no contact, nothing personal.
-    const feedMatch = /^\/naptar\/([A-Za-z0-9_-]{10,64})\.ics$/.exec(pathname);
-    if (feedMatch) {
-      const unit = await unitByFeedToken(feedMatch[1]!);
-      if (!unit) return send(res, 404, "Nincs ilyen naptár.");
-      const row = await db
-        .selectFrom("site_unit")
-        .select("name")
-        .where("id", "=", unit)
-        .executeTakeFirst();
-      const ics = await buildUnitFeed(unit, row?.name ?? "Szállás");
-      res.writeHead(200, {
-        "Content-Type": "text/calendar; charset=utf-8",
-        "Cache-Control": "public, max-age=300",
-      });
-      res.end(ics);
-      return;
-    }
+    const feedMatch = RE_EXPORT_FEED.exec(pathname);
+    if (feedMatch) return serveExportFeed(res, feedMatch[1]!, feedMatch[2] ?? null, null);
 
     // GET /foglalas/<token>/elfogadom|elutasitom — the owner's verdict link straight
     // from the notification e-mail, with no login. ⛔ GET only CONFIRMS (Elek V-1,

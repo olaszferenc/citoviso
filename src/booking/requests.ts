@@ -155,7 +155,7 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function huDate(iso: string): string {
+export function huDate(iso: string): string {
   return `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
 }
 
@@ -282,7 +282,7 @@ export function parseNotifyList(configured: unknown, fallback: string | null): s
 }
 
 /** Everything a booking mail needs to know about the site, in one query round. */
-interface SiteMailContext {
+export interface SiteMailContext {
   readonly tenantId: string | null;
   /** The property's display name — the guest booked with THEM, not with us. */
   readonly hostName: string;
@@ -295,7 +295,7 @@ interface SiteMailContext {
   readonly expireHours: number;
 }
 
-async function siteMailContext(siteId: string): Promise<SiteMailContext> {
+export async function siteMailContext(siteId: string): Promise<SiteMailContext> {
   const row = await db
     .selectFrom("site")
     .innerJoin("tenant", "tenant.id", "site.tenant_id")
@@ -480,7 +480,7 @@ async function guestLetterHtml(
  * admin's Foglalások tab as the main button. It carries the GUEST's personal
  * data to their controller (the tenant) — audience stays "guest": no pilot BCC.
  */
-function ownerLetter(o: {
+export function ownerLetter(o: {
   to: string;
   subject: string;
   text: string;
@@ -532,6 +532,9 @@ export async function mailSafe(label: string, requestId: string, send: () => Pro
  * live calendar, so an obviously impossible request never reaches the owner's
  * inbox — but acceptance re-checks anyway (see decideRequest).
  */
+/** K6: a second identical submit inside this many minutes is the same request. */
+const REPEAT_WINDOW_MIN = 10;
+
 export async function createBookingRequest(
   input: BookingRequestInput,
   publicBaseUrl: string | null,
@@ -652,48 +655,72 @@ export async function createBookingRequest(
       })
     : null;
 
+  // Elek 2026-10-11 K6: the same request sent twice (a mobile network re-sending the POST,
+  // two tabs) made two requests and two guest mails, and the owner had to refuse one.
+  // Same unit + guest e-mail + nights within a short window = the SAME request: answer
+  // with the first one and send nothing again. The advisory lock serialises the two
+  // racing submits, so the second one sees the first one's row.
+  const guestEmail = input.guestEmail.trim().slice(0, 200);
+  const repeatKey = `${input.unitId}|${guestEmail.toLowerCase()}|${dateFrom}|${dateTo}`;
   const token = randomBytes(24).toString("base64url");
-  const row = await db
-    .insertInto("booking_request")
-    .values({
-      site_id: input.siteId,
-      unit_id: input.unitId,
-      guest_name: input.guestName.trim().slice(0, 160),
-      guest_email: input.guestEmail.trim().slice(0, 200),
-      guest_phone: input.guestPhone?.trim().slice(0, 60) || null,
-      date_from: dateFrom,
-      date_to: dateTo,
-      guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
-      message: input.message?.trim().slice(0, 2000) || null,
-      action_token: token,
-      ...(quote
-        ? {
-            quoted_total: quote.total,
-            quoted_currency: quote.currency,
-            quoted_lines: JSON.stringify(
-              quote.lines.map((l) => ({
-                label: l.label,
-                nights: l.nights,
-                per_night: l.perNight,
-                guests: l.guests,
-                sum: l.sum,
-              })),
-            ),
-          }
-        : {}),
-      // Elek V-3: the tax the panel showed is frozen with the price it sat next to.
-      quoted_tax_per_person_night: declaredTouristTax(rules),
-    })
-    .returning("id")
-    .executeTakeFirstOrThrow();
+  const { row, repeated } = await db.transaction().execute(async (trx) => {
+    await sql`select pg_advisory_xact_lock(hashtext(${repeatKey}))`.execute(trx);
+    const prev = await trx
+      .selectFrom("booking_request")
+      .select("id")
+      .where("unit_id", "=", input.unitId)
+      .where(sql<string>`lower(guest_email)`, "=", guestEmail.toLowerCase())
+      .where("date_from", "=", dateFrom)
+      .where("date_to", "=", dateTo)
+      .where("status", "in", ["pending", "offered"])
+      .where(sql<boolean>`created_at > now() - make_interval(mins => ${REPEAT_WINDOW_MIN})`)
+      .executeTakeFirst();
+    if (prev) return { row: prev, repeated: true };
+    const inserted = await trx
+      .insertInto("booking_request")
+      .values({
+        site_id: input.siteId,
+        unit_id: input.unitId,
+        guest_name: input.guestName.trim().slice(0, 160),
+        guest_email: input.guestEmail.trim().slice(0, 200),
+        guest_phone: input.guestPhone?.trim().slice(0, 60) || null,
+        date_from: dateFrom,
+        date_to: dateTo,
+        guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
+        message: input.message?.trim().slice(0, 2000) || null,
+        action_token: token,
+        ...(quote
+          ? {
+              quoted_total: quote.total,
+              quoted_currency: quote.currency,
+              quoted_lines: JSON.stringify(
+                quote.lines.map((l) => ({
+                  label: l.label,
+                  nights: l.nights,
+                  per_night: l.perNight,
+                  guests: l.guests,
+                  sum: l.sum,
+                })),
+              ),
+            }
+          : {}),
+        // Elek V-3: the tax the panel showed is frozen with the price it sat next to.
+        quoted_tax_per_person_night: declaredTouristTax(rules),
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    return { row: inserted, repeated: false };
+  });
 
-  // Fire-and-forget (measured, FK-007: two synchronous Zoho sends held the guest's
-  // "Küldés…" spinner >10 s): the request row IS committed — the mails follow.
-  void mailSafe("owner-notify", row.id, () => notifyOwner(row.id, token, String(rules.notifyEmail ?? ""), publicBaseUrl));
-  // Approved plan C ① (owner decision 2026-09-06): the guest gets an immediate
-  // "rögzítettük" mail — on-screen confirmation alone dies with the browser tab,
-  // and the 48-hour promise needs to live somewhere the guest can re-read it.
-  void mailSafe("guest-ack", row.id, () => sendGuestAck(row.id));
+  if (!repeated) {
+    // Fire-and-forget (measured, FK-007: two synchronous Zoho sends held the guest's
+    // "Küldés…" spinner >10 s): the request row IS committed — the mails follow.
+    void mailSafe("owner-notify", row.id, () => notifyOwner(row.id, token, String(rules.notifyEmail ?? ""), publicBaseUrl));
+    // Approved plan C ① (owner decision 2026-09-06): the guest gets an immediate
+    // "rögzítettük" mail — on-screen confirmation alone dies with the browser tab,
+    // and the 48-hour promise needs to live somewhere the guest can re-read it.
+    void mailSafe("guest-ack", row.id, () => sendGuestAck(row.id));
+  }
 
   const unitRow = await db
     .selectFrom("site_unit")
@@ -1067,7 +1094,7 @@ async function notifyOwner(
   }
 }
 
-function esc(s: string): string {
+export function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
   );
@@ -1280,7 +1307,15 @@ async function acceptCore(
       throw new AcceptRaceLost();
     }
   }).catch((err) => {
-    if (!(err instanceof AcceptRaceLost)) throw err;
+    if (err instanceof AcceptRaceLost) return;
+    // Elek 2026-10-11 A1: a portal sync wrote one of these nights between the check above
+    // and our insert — the day's primary key refused it (23505). That is the same
+    // "időközben elkelt" conflict as a night found taken, not an Internal Server Error.
+    if ((err as { code?: string } | null)?.code === "23505") {
+      conflict = true;
+      return;
+    }
+    throw err;
   });
 
   if (lost) return { ok: true, outcome: "already", ...base };

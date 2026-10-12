@@ -3267,6 +3267,21 @@ if [ -f scripts/domain-order-single-flight-check.mts ] && \
   echo "[pre-commit] domain-order-single-flight-check (Elek 10-11: egy domain-rendelés, setup_retry, díj = terhelés)…"
   npx tsx scripts/domain-order-single-flight-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Portál-naptárszinkron (Elek 2026-10-11, ADR-XXXX): az export-link a tenant-hoszton / saját domainen / dev-úton is
+#     él (B1), ütközésnél egyszeri levél és nem dönt (K1), streamelt méretkorlát (K2), csak publikus cím DNS után és
+#     átirányításnál is (K3), a kiküldött mock friss runtime-ot kap (K4), fordulónap (K5), dupla POST → egy kérés
+#     (K6), tartós hiba → egy levél (K7), keretes párhuzamos futás (K8), elfogadás-verseny → „conflict” (A1), A6, A7.
+#     Saját scratch-DB + Chromium, ~25 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/portal-sync-guard-check.mts ] && \
+   changed_files | grep -qE '^src/booking/(sync|syncMail|ical|requests)\.ts$|^src/tenant/availability\.ts$|^src/server/(public|mailLinkRoutes)\.ts$|^src/generator/(runtime|configurator)\.ts$|^assets/runtime/cit-runtime\.js$|^migrations/0106_calendar_sync_health\.sql$|^scripts/booking-maintenance\.mts$|^scripts/portal-sync-guard-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/portal-sync-guard-check\.mts$'; then
+    echo "[pre-commit] portal-sync-guard-check --self-test (a portál-szinkron őr pirosra tud-e menni)…"
+    npx tsx scripts/portal-sync-guard-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] portal-sync-guard-check (export minden hoszton, ütközés, korlát, SSRF, runtime, fordulónap, dupla POST)…"
+  npx tsx scripts/portal-sync-guard-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

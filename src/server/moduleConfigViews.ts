@@ -400,6 +400,19 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .psync__fld .citui-input{flex:1;min-width:0}
 .psync__status{margin:10px 0 0;font-size:.82rem;color:var(--citui-muted)}
 .psync__status--bad{color:var(--citui-bad-ink)}
+.psync__status--warn{color:var(--citui-warn-ink)}
+.psync__fld--wrap{flex-wrap:wrap}
+.psync__fld .u-delx{flex-basis:auto;order:0}
+.psync__fld .u-delx[open]{flex-basis:100%}
+.psync__fld .u-delx[open]>summary{margin-left:auto;display:flex;width:max-content}
+.psync__fld-err{margin-left:26px}
+.psync__note{margin:0 12px 8px;font-size:.82rem;color:var(--citui-muted)}
+.psync__warn summary,.psync__log summary{color:var(--citui-ink)}
+.psync__clash{margin-top:10px;border:2px solid var(--citui-bad);border-radius:12px;padding:10px 12px;
+  background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-panel))}
+.psync__clash-t{margin:0;display:flex;gap:8px;align-items:flex-start;font-weight:700;font-size:.86rem;color:var(--citui-bad-ink)}
+.psync__clash ul{margin:6px 0 4px;padding-left:20px;font-size:.85rem}
+.psync__clash .psync__note{margin:4px 0 0}
 .psync__limits{margin:14px 0 0;padding:10px 0 0 18px;border-top:1px solid var(--citui-line);font-size:.8rem;color:var(--citui-muted)}
 .psync__limits li{margin:2px 0}
 
@@ -1290,6 +1303,9 @@ function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"):
  */
 function calendarLegend(mv: MonthView, lang = "hu"): string {
   const linkedCount = mv.cells.filter((c) => c.source === "linked").length;
+  const portalNames = [
+    ...new Set(mv.cells.filter((c) => c.source === "ical" && c.detail?.provider).map((c) => c.detail!.provider!)),
+  ];
   return (
     `<div class="cal-legend">` +
     `<span><i></i>${T(lang, "Szabad")}</span>` +
@@ -1300,7 +1316,12 @@ function calendarLegend(mv: MonthView, lang = "hu"): string {
     // ADR-0114: a night another unit holds looks different, because it behaves
     // differently — it cannot be released here.
     (linkedCount > 0 ? `<span><i class="is-linked"></i>${T(lang, "Másik szoba foglalása")}</span>` : "") +
-    (mv.importedCount > 0 ? `<span><i class="is-portal"></i>${T(lang, "Portálról érkezett")}</span>` : "") +
+    // Elek 2026-10-11 A11: the stripes say WHICH portal sent them.
+    (mv.importedCount > 0
+      ? `<span><i class="is-portal"></i>${T(lang, "Portálról érkezett")}${
+          portalNames.length ? `: ${esc(portalNames.join(", "))}` : ""
+        }</span>`
+      : "") +
     `</div>`
   );
 }
@@ -2366,9 +2387,23 @@ export interface BookingEditorData {
     lastSyncAt: Date | null;
     lastError: string | null;
     lastDayCount: number | null;
+    /** K7: the last SUCCESSFUL sync. */
+    lastOkAt?: Date | null;
+    /** A5: parser warnings of the last successful sync. */
+    lastWarnings?: string[];
+    /** A4: an empty calendar released this many nights. */
+    emptiedFrom?: number | null;
   }[];
+  /** K1: per link, the nights a portal reported that an accepted booking of ours holds. */
+  readonly conflicts?: ReadonlyMap<string, readonly { day: string; guestName: string | null }[]>;
+  /** K7: per link, the short sync log (newest first). */
+  readonly runs?: ReadonlyMap<string, readonly { at: Date; ok: boolean; dayCount: number | null; error: string | null }[]>;
+  /** A12: a link the server refused to save — shown inside THAT portal's card. */
+  readonly linkError?: { readonly provider: string; readonly message: string } | null;
   /** Our own feed URL for THIS unit, handed to a portal (export direction). */
   readonly exportUrl: string | null;
+  /** A6: the feed URL per portal (provider → URL) — each portal gets back everything but its own nights. */
+  readonly exportUrls?: Readonly<Record<string, string>>;
   readonly requests: EditorRequest[];
 }
 
@@ -2677,25 +2712,124 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
   const portals = syncPortals(lang);
   const known = new Set(portals.map((p) => p.provider));
   const unitField = `<input type="hidden" name="unit" value="${esc(booking.unitId)}">`;
-  const exportField = booking.exportUrl
-    ? `<div class="psync__fld"><input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
-      `<button class="citui-btn citui-btn--ghost" type="button" data-copy="${esc(booking.exportUrl)}" ` +
-      `onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.copy);this.textContent=this.dataset.done" ` +
-      `data-done="${esc(T(lang, "Másolva"))}">${T(lang, "Másolás")}</button></div>`
-    : "";
+  const when = (d: Date | string): string => new Date(d).toLocaleString("hu-HU", { timeZone: viewZone() });
+  // A6: each portal gets its own address of our feed (it leaves out that portal's nights).
+  const exportField = (provider: string): string => {
+    const url = booking.exportUrls?.[provider] ?? booking.exportUrl;
+    return url
+      ? `<div class="psync__fld"><input class="citui-input" readonly value="${esc(url)}" onclick="this.select()">` +
+          `<button class="citui-btn citui-btn--ghost" type="button" data-copy="${esc(url)}" ` +
+          `onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.copy);this.textContent=this.dataset.done" ` +
+          `data-done="${esc(T(lang, "Másolva"))}">${T(lang, "Másolás")}</button></div>`
+      : "";
+  };
   const unlinkForm = (id: string): string =>
     `<form id="unlink_${esc(id)}" method="POST" action="/admin/calendar-link/delete">` +
     `<input type="hidden" name="id" value="${esc(id)}">${unitField}</form>`;
-  const state = (l: (typeof imported)[number]): string =>
-    l.lastError
-      ? `<p class="psync__status psync__status--bad">${esc(T(lang, "Nem sikerült frissíteni: {err}", { err: l.lastError }))}</p>`
-      : `<p class="psync__status">` +
-        (l.lastSyncAt
-          ? esc(T(lang, "Összekötve · utoljára frissült: {date}", {
-              date: new Date(l.lastSyncAt).toLocaleString("hu-HU", { timeZone: viewZone() }),
-            })) + (l.lastDayCount !== null ? esc(T(lang, " · {n} foglalt napot hoztunk át", { n: l.lastDayCount })) : "")
-          : esc(T(lang, "Még nem frissült"))) +
-        `</p>`;
+  // A9: unlinking releases every night the link brought — a confirmation in place, the
+  // same details/summary pattern as the room delete (Elek A-1), so it works without JS.
+  const unlinkControl = (l: (typeof imported)[number], cls: string): string => {
+    const n = l.lastDayCount ?? 0;
+    return (
+      `<details class="u-delx psync__unl"><summary class="${cls}">${T(lang, "Leválasztás")}</summary>` +
+      `<div class="u-cf" role="group"><p class="u-cf__q">${esc(T(lang, "Leválasztja {art} {portal} naptárát?", { art: huArticleLower(l.provider), portal: l.provider }))}</p>` +
+      `<p class="u-cf__c">${esc(
+        n
+          ? T(lang, "A portálról áthozott {n} foglalt nap felszabadul az Ön naptárában, és a vendégei foglalhatnak rájuk.", { n })
+          : T(lang, "A portál foglalásai ezután nem jutnak át ide."),
+      )}</p>` +
+      `<div class="u-cf__row"><button class="citui-btn citui-btn--ghost" type="button" onclick="this.closest('details').open=false">${T(lang, "Mégsem")}</button>` +
+      `<button class="citui-btn u-cf__yes" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Igen, leválasztom")}</button></div></div></details>`
+    );
+  };
+  const state = (l: (typeof imported)[number]): string => {
+    const parts: string[] = [];
+    if (l.lastError) {
+      // A2: a human sentence, the time, and what still holds — never a bare HTTP code.
+      parts.push(
+        `<p class="psync__status psync__status--bad">${esc(
+          T(lang, "Nem sikerült frissíteni ({date}): {err}", {
+            date: l.lastSyncAt ? when(l.lastSyncAt) : "—",
+            err: l.lastError,
+          }),
+        )}</p>`,
+      );
+      const kept =
+        l.lastDayCount !== null && l.lastDayCount > 0
+          ? T(lang, "A korábban áthozott {n} foglalt nap érvényben marad.", { n: l.lastDayCount })
+          : "";
+      const lastOk = l.lastOkAt
+        ? T(lang, "Utoljára sikeresen frissült: {date}.", { date: when(l.lastOkAt) })
+        : T(lang, "Ezzel a linkkel még egyszer sem sikerült frissíteni.");
+      parts.push(`<p class="psync__status">${esc([kept, lastOk].filter(Boolean).join(" "))}</p>`);
+      parts.push(
+        `<p class="psync__status">${esc(T(lang, "Ha a portálon új linket kapott: válassza le ezt, és kösse össze az újjal. Ha egy napig nem javul, e-mailben is szólunk."))}</p>`,
+      );
+    } else {
+      parts.push(
+        `<p class="psync__status">` +
+          (l.lastSyncAt
+            ? esc(T(lang, "Összekötve · utoljára frissült: {date}", { date: when(l.lastSyncAt) })) +
+              // A11: the card counts every future night — it says so; the month badge counts one month.
+              (l.lastDayCount !== null ? esc(T(lang, " · a mai naptól összesen {n} foglalt napot hoztunk át", { n: l.lastDayCount })) : "")
+            : esc(T(lang, "Még nem frissült"))) +
+          `</p>`,
+      );
+    }
+    // A4: an empty calendar after nights — lawful (all cancelled), but say it once.
+    if (!l.lastError && l.emptiedFrom) {
+      parts.push(
+        `<p class="psync__status psync__status--warn">${esc(
+          T(lang, "Figyelem: a portál most üres naptárat adott, ezért az eddig áthozott {n} foglalt nap felszabadult. Ha ott nem mondták le ezeket a foglalásokat, nézze meg a portál naptárát.", { n: l.emptiedFrom }),
+        )}</p>`,
+      );
+    }
+    // A5: entries we could not read exactly — counted, with the details one tap away.
+    // (stored already filtered to what matters to the owner — sync.ts ownerRelevantWarnings)
+    const warns = l.lastWarnings ?? [];
+    if (!l.lastError && warns.length) {
+      parts.push(
+        `<details class="psync__help psync__warn"><summary>${ic("alert", 16)}${esc(
+          T(lang, "{n} bejegyzést nem tudtunk pontosan értelmezni", { n: warns.length }),
+        )}</summary><p class="psync__note">${esc(
+          T(lang, "Ezeket kihagytuk, vagy egy éjszakának vettük. Ha egy portálon látott foglalás itt hiányzik, ez lehet az oka."),
+        )}</p>` +
+          `<ol>${warns.slice(0, 12).map((w) => `<li>${esc(w)}</li>`).join("")}</ol></details>`,
+      );
+    }
+    // K1: a night we already sold came in from the portal. Nothing was deleted.
+    const clash = booking.conflicts?.get(l.id) ?? [];
+    if (clash.length) {
+      parts.push(
+        `<div class="psync__clash" role="alert"><p class="psync__clash-t">${ic("alert", 16)}${esc(
+          T(lang, "Ütközés: {art} {portal} olyan éjszakát jelez foglaltnak, amelyre Ön nálunk már elfogadott egy foglalást.", { art: huArticleLower(l.provider), portal: l.provider }),
+        )}</p><ul>${clash
+          .map((c) => `<li><b>${esc(huDay(c.day))}</b> — ${esc(c.guestName ?? T(lang, "elfogadott foglalás"))}</li>`)
+          .join("")}</ul><p class="psync__note">${esc(
+          T(lang, "Egyik foglalást sem töröltük. Döntse el, melyik vendéget tudja fogadni, és a másikkal a portálon vagy a Foglalásoknál rendezze."),
+        )}</p></div>`,
+      );
+    }
+    // K7: the short log — when it worked, when it did not.
+    const runs = booking.runs?.get(l.id) ?? [];
+    if (runs.length) {
+      parts.push(
+        `<details class="psync__help psync__log"><summary>${ic("clock", 16)}${esc(
+          T(lang, "Szinkron-napló (utolsó {n} frissítés)", { n: runs.length }),
+        )}</summary><ol>${runs
+          .map(
+            (r) =>
+              `<li>${esc(when(r.at))} — ${esc(
+                r.ok
+                  ? T(lang, "rendben, {n} foglalt nap", { n: r.dayCount ?? 0 })
+                  : T(lang, "hiba: {err}", { err: r.error ?? "—" }),
+              )}</li>`,
+          )
+          .join("")}</ol></details>`,
+      );
+    }
+    return parts.join("");
+  };
 
   const cards = portals.map((p) => {
     const l = imported.find((x) => x.provider === p.provider);
@@ -2711,19 +2845,23 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
       `<div class="psync__step"><p class="psync__t"><span class="psync__n">1</span>${T(lang, "Hozza ide a portál naptár-linkjét")}</p>` +
       `<p class="psync__where">${T(lang, "Hol találja:")} <code>${esc(p.where)}</code></p>` +
       (l
-        ? `<div class="psync__fld"><input class="citui-input" readonly value="${esc(l.url ?? "")}">` +
-          `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Leválasztás")}</button></div>` +
+        ? `<div class="psync__fld psync__fld--wrap"><input class="citui-input" readonly value="${esc(l.url ?? "")}">` +
+          unlinkControl(l, "citui-btn citui-btn--ghost") + `</div>` +
           unlinkForm(l.id)
         : `<form class="psync__fld" method="POST" action="/admin/calendar-link">${unitField}` +
           `<input type="hidden" name="provider" value="${esc(p.provider)}">` +
           `<input class="citui-input" name="url" type="url" inputmode="url" placeholder="https://…" required ` +
           `aria-label="${esc(T(lang, "{portal} naptár-linkje", { portal: p.provider }))}">` +
-          `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Összekötés")}</button></form>`) +
+          `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Összekötés")}</button></form>` +
+          // A12: a link the server refused is answered HERE, in the card it was typed into.
+          (booking.linkError && booking.linkError.provider === p.provider
+            ? `<p class="psync__status psync__status--bad psync__fld-err" role="alert">${esc(booking.linkError.message)}</p>`
+            : "")) +
       `</div>`;
     const step2 = booking.exportUrl
       ? `<div class="psync__step"><p class="psync__t"><span class="psync__n">2</span>${T(lang, "Ezt a linket adja meg a portálon")}</p>` +
         `<p class="psync__where">${T(lang, "Ugyanott, a naptár importálásánál — így az itteni foglalások ott is lezárnak.")}</p>` +
-        exportField +
+        exportField(p.provider) +
         `</div>`
       : "";
     return (
@@ -2744,7 +2882,7 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
         `<span class="adm-ico">${ic(l.lastError ? "alert" : "check", 18)}</span>` +
         `<span class="plink__txt"><strong>${esc(T(lang, "{provider} összekötve", { provider: l.provider }))}</strong>` +
         `<span>${esc(l.url ?? "")}</span></span>` +
-        `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Leválasztás")}</button>` +
+        unlinkControl(l, "citui-btn citui-btn--ghost") +
         unlinkForm(l.id) +
         `</div>`,
     )
@@ -4154,7 +4292,10 @@ function ownerLinkShell(title: string, inner: string, adminHref: string, adminLa
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
-    `<title>${esc(title)}</title></head><body>` +
+    // Elek 2026-10-11 A13 (ADR-0145 ④ pattern): the consent bar publishes its measured
+    // height (--citui-consent-h); the page keeps that much room below its card, so the bar
+    // never sits on the decide button or the "Amíg nem nyomja meg…" line under it.
+    `<title>${esc(title)}</title></head><body style="padding-bottom:var(--citui-consent-h,0px)">` +
     `<div class="citui-container" style="max-width:500px;padding:48px 20px">` +
     `<div class="citui-card">${inner}` +
     `<p style="margin:18px 0 0"><a class="citui-btn citui-btn--ghost" href="${esc(adminHref)}" style="text-decoration:none">${adminLabel}</a></p>` +

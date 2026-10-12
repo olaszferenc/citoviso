@@ -334,6 +334,15 @@
   font-weight: 700;
 }
 .cit-book__day--range { background: color-mix(in srgb, var(--cit-accent) 16%, transparent); }
+/* Elek 2026-10-11 K5: a taken night that can still be the DEPARTURE day — tappable, and
+   read as such (no strike-through); picked, it reads like any selected day. */
+.cit-book__day--busy.cit-book__day--out { text-decoration: none; color: var(--cit-ink); }
+.cit-book__day--sel.cit-book__day--busy,
+.cit-book__day--sel.cit-book__day--portal {
+  background: var(--cit-accent);
+  color: var(--cit-on-accent, #fff);
+  text-decoration: none;
+}
 /* ⛔ KONTRAKTUS ⑦: OLVASHATÓ JELMAGYARÁZAT. Mérve a régi lapon: 11,84 px,
    kontraszt 3,99 (az AA-küszöb 4,5), és a „szabad" minta FEHÉR A FEHÉREN egy halvány
    1 px-es kerettel. Itt: nagyobb betű, sötétebb szöveg (a szöveg-tokenből, nem a

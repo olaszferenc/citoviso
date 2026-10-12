@@ -1265,6 +1265,37 @@ export interface CalendarLinkTable {
   last_error: string | null;
   last_day_count: number | null;
   created_at: Generated<Timestamp>;
+  /** 0106 (K7): the last SUCCESSFUL sync — the failing card says when that was. */
+  last_ok_at: Timestamp | null;
+  /** 0106 (K7): start of the current unbroken failure streak; NULL = healthy. */
+  failing_since: Timestamp | null;
+  /** 0106 (K7): the owner was mailed about the lasting failure (once, until it heals). */
+  failure_notified_at: Timestamp | null;
+  /** 0106 (A5): the parser's warnings from the last successful sync. */
+  last_warnings: JSONColumnType<string[]> | null;
+  /** 0106 (A4): a link that had brought days returned an EMPTY calendar — this many were released. */
+  emptied_from: number | null;
+}
+
+/** 0106 (K7): the per-link sync log — the code keeps the last 10 runs. */
+export interface CalendarSyncRunTable {
+  id: Generated<string>;
+  link_id: string;
+  at: Generated<Timestamp>;
+  ok: boolean;
+  day_count: number | null;
+  error: string | null;
+  ms: number | null;
+}
+
+/** 0106 (K1): a portal night that an ACCEPTED booking of ours already holds. */
+export interface CalendarConflictTable {
+  link_id: string;
+  day: string;
+  /** 'booking:<request_id>' — our claim on the night. */
+  holder: string;
+  first_seen_at: Generated<Timestamp>;
+  notified_at: Timestamp | null;
 }
 
 /**
@@ -1870,6 +1901,8 @@ export interface Database {
   availability_day: AvailabilityDayTable;
   booking_request: BookingRequestTable;
   calendar_link: CalendarLinkTable;
+  calendar_sync_run: CalendarSyncRunTable;
+  calendar_conflict: CalendarConflictTable;
   site_place_rating: SitePlaceRatingTable;
   photo_hero_score: PhotoHeroScoreTable;
   settlement: SettlementTable;

@@ -2,7 +2,8 @@
 // (emailed / hosted / opened from file://), so the shared module runtime is
 // INLINED into each document rather than linked — no external dependency, works
 // everywhere. The generator emits only the theme tokens (:root) + module slots
-// (data-cit-module); this helper injects the CSS + JS before </body>. Idempotent.
+// (data-cit-module); this helper injects the CSS + JS before </body>. Idempotent:
+// a second pass swaps the runtime for today's instead of stacking a second copy.
 
 import { readFile } from "node:fs/promises";
 
@@ -142,20 +143,44 @@ const CIT_CREDIT =
   `style="color:inherit;text-decoration:underline">Citoviso</a> készítette — modern honlap percek alatt.` +
   `</div>`;
 
+/** Every block injectRuntime added: head guards, i18n map, style, script, credit strip. */
+const RUNTIME_BLOCKS: readonly RegExp[] = [
+  /<script data-cit-runtime>[\s\S]*?<\/script>\n?/g,
+  /<style data-cit-runtime>[\s\S]*?<\/style>\n?/g,
+  /<noscript data-cit-runtime>[\s\S]*?<\/noscript>\n?/g,
+  /<div data-cit-runtime[^>]*>[\s\S]*?<\/div>\n?/g,
+];
+
+/** The page without the runtime blocks injectRuntime added (the rest is untouched). */
+export function stripRuntime(html: string): string {
+  return RUNTIME_BLOCKS.reduce((h, re) => h.replace(re, ""), html);
+}
+
 /**
  * Inline the module runtime (CSS+JS) before </body>, seed no-JS fallbacks, add the head
  * guards, and append the Citoviso credit strip (live always; mock only when
  * config.mockCitovisoCredit is on — an unmarked caller counts as a mock, so a forgotten
- * phase can never put the ad back on a lead's preview). No-op if already processed.
+ * phase can never put the ad back on a lead's preview).
  * `lang` (ADR-0036): non-Hungarian pages get a window.CIT_I18N map injected BEFORE the
  * runtime script, so the client widgets (booking, lightbox) resolve their labels via tr().
+ *
+ * ⛔ Elek 2026-10-11 K4: an already processed page is REFRESHED, not skipped. The runtime
+ * is baked into every stored mock, so "already injected → return" froze each sent mock on
+ * the runtime of its send day: the portal-sync band and the „a portálon foglalták” nights
+ * never reached the leads the feature was built for. The old blocks are swapped for
+ * today's; a page that carried the credit strip keeps it, and the language comes from the
+ * page itself when the caller does not know it.
  */
 export async function injectRuntime(
   html: string,
   lang?: string,
   phase: RenderPhase = "mock",
 ): Promise<string> {
-  if (html.includes("data-cit-runtime")) return html; // already injected
+  if (html.includes("data-cit-runtime")) {
+    const hadCredit = html.includes(">Citoviso</a> készítette");
+    const pageLang = lang ?? /<html[^>]*\blang="([a-z]{2})"/i.exec(html)?.[1]?.toLowerCase();
+    return injectRuntime(stripRuntime(html), pageLang, hadCredit ? "live" : phase);
+  }
   let out = fillBookingFallback(html);
   out = injectHeadGuards(out);
   const block = await runtimeBlock();

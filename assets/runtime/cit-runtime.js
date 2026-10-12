@@ -729,6 +729,13 @@
       }
       return h;
     }
+    /* Every night of [from, to) is free — `to` itself is the departure, not a night. */
+    function nightsFree(from, to) {
+      for (var i = 0; shift(from, i) < to; i++) {
+        if (blocked[shift(from, i)]) return false;
+      }
+      return true;
+    }
     function monthHtml(mOffset) {
       var now = new Date(todayISO() + "T00:00:00Z");
       var first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + mOffset, 1));
@@ -744,15 +751,22 @@
         var busy = !!blocked[isoDay];
         var viaPortal = demo && busy && !!portalDays[isoDay];
         var off = isoDay < earliest || isoDay > latest;
+        // Elek 2026-10-11 K5: the DEPARTURE day is not a night of the stay — the first
+        // night of someone else's booking is a valid checkout day (same-day turnover; the
+        // server already accepts it). Once an arrival is picked, a busy day stays tappable
+        // as the departure when every night before it is free.
+        var out = busy && a && !b && isoDay > a && nightsFree(a, isoDay);
         var cls = "cit-book__day" +
           (busy ? " cit-book__day--busy" : "") +
+          (out ? " cit-book__day--out" : "") +
           (viaPortal ? " cit-book__day--portal" : "") +
           (a && isoDay === a ? " cit-book__day--sel" : "") +
           (b && isoDay === b ? " cit-book__day--sel" : "") +
           (a && b && isoDay > a && isoDay < b ? " cit-book__day--range" : "");
         cells += '<button type="button" class="' + cls + '" data-day="' + isoDay + '"' +
-          (busy || off ? " disabled" : "") +
-          ' aria-label="' + isoDay + (busy ? " — " + (viaPortal ? tr("a portálon foglalták") : tr("foglalt")) : "") + '">' + day + "</button>";
+          ((busy && !out) || off ? " disabled" : "") +
+          ' aria-label="' + isoDay + (busy ? " — " + (viaPortal ? tr("a portálon foglalták") : tr("foglalt")) : "") +
+          (out ? ", " + tr("távozási napnak választható") : "") + '">' + day + "</button>";
       }
       return '<div class="cit-book__month"><p class="cit-book__mlabel">' + esc(label) + "</p>" +
         '<div class="cit-book__mgrid">' + dowHeads() + cells + "</div></div>";
