@@ -1,4 +1,4 @@
-# Döntés-segítő ajánlat: felső sáv (kontraktus, ADR-XXXX)
+# Döntés-segítő ajánlat: felső sáv (kontraktus, ADR-0369)
 
 Tulajdonosi jóváhagyás: 2026-10-12, „A — felső sáv” (a koordinátoron keresztül). A `plan.html` a
 jóváhagyott, működő vázlat. Megnyitáskor az A változatot mutatja; a „MA” gombbal összevethető a

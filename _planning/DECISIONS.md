@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-dontes-segito-felso-sav-sajat-cim-jelveny.md) — A döntés-segítő ajánlat felső sáv (fátyol nélkül, bezáró ×); a saját cím jelvénye a csomag-kártyán, kizárólag a /pricing-ból
+- [ADR-0369](decisions/0369-a-dontes-segito-ajanlat-felso-sav-fatyol-nelkul.md) — A döntés-segítő ajánlat felső sáv (fátyol nélkül, bezáró ×); a saját cím jelvénye a csomag-kártyán, kizárólag a /pricing-ból
 - [ADR-0368](decisions/0368-a-hideg-level-tol-ara-a-legolcsobb-kinalt.md) — A hideg levél „-tól” ára a legolcsóbb KÍNÁLT csomag ára, a kiküldés pillanatában; a domain-javaslat nem ígér „megrendeléskor” névválasztást
 - [ADR-0367](decisions/0367-portal-naptarszinkron-elesites-elott-export-a.md) — Portál-naptárszinkron élesítés előtt: export a tenant-hoszton, ütközésnél nem döntünk, csak publikus cím, a kiküldött mock friss runtime-ot kap, tartós hibáról levél
 - [ADR-0366](decisions/0366-a-rendeles-nem-esik-csendben-vissza-domain-ar.md) — A rendelés nem esik csendben vissza (domain/ár → 409), egy rendelés = egy pay-link, a dev-útválasztás = az éles nginx, a csak-mobilos vevő is kap belépést, a kísérő SMS GSM-7

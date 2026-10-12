@@ -1,4 +1,4 @@
-# Saját cím a vevő oldalán: jelvény + a cím elöl (kontraktus, ADR-XXXX)
+# Saját cím a vevő oldalán: jelvény + a cím elöl (kontraktus, ADR-0369)
 
 Tulajdonosi jóváhagyás: 2026-10-12, „B — jelvény + a cím elöl”, kifejezetten DINAMIKUSAN. A
 `plan.html` a jóváhagyott, működő vázlat. Megnyitáskor a B változatot mutatja. A tetején álló

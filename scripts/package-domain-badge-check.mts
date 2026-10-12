@@ -1,5 +1,5 @@
 // SAJÁT CÍM A VEVŐ OLDALÁN — jelvény + a cím elöl (befagyott terv: assets/design-refs/console/
-// package-domain-badge, tulaj 2026-10-12 „B”, ADR-XXXX). A jelvény és minden „benne”/„0 Ft” szöveg
+// package-domain-badge, tulaj 2026-10-12 „B”, ADR-0369). A jelvény és minden „benne”/„0 Ft” szöveg
 // KIZÁRÓLAG a /pricing beállításából jön: a domain-pirula helye, az „Ingyen domain csomagban”
 // kapcsoló és a „Csomagban ingyen” végződések.
 //

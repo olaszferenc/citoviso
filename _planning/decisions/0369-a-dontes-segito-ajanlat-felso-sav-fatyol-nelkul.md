@@ -1,4 +1,4 @@
-## ADR-XXXX — A döntés-segítő ajánlat felső sáv (fátyol nélkül, bezáró ×); a saját cím jelvénye a csomag-kártyán, kizárólag a /pricing-ból
+## ADR-0369 — A döntés-segítő ajánlat felső sáv (fátyol nélkül, bezáró ×); a saját cím jelvénye a csomag-kártyán, kizárólag a /pricing-ból
 
 **Dátum:** 2026-10-12 · **Kontextus:** §2b terv-kör (két mock, 2+3 változat), tulaj-döntés az Elek-teszt koordinátoron át: eszkaláció = „A — felső sáv”, saját cím = „B — jelvény + a cím elöl”, kifejezetten dinamikusan. **Felülírja:** az `offer-ui/` kontraktus 4. pontjának ELRENDEZÉSÉT (asztalon középre emelt kártya fátyollal, mobilon alsó kártya). **Lezárja:** az ADR-0360 „Nyitva” pontját („a vevő oldala: saját .hu címmel”). **Megtartja:** ADR-0088 / ADR-0285 (az ajánlat logikája, küszöb, %, lejárat), ADR-0112 (leiratkozottnak nincs nyomás), ADR-0360 ② (mi számít csomag-tartalomnak), ADR-0366 ⑤ (a „Mit tartalmaz?” sor).
 
