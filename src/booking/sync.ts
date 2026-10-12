@@ -10,7 +10,7 @@
 // sell a night a guest already took on the owner's own site.
 //
 // Fetching a URL the tenant supplied is an outbound request to an address we do not
-// control, so it is treated as untrusted input (ADR-XXXX, Elek 2026-10-11 K2/K3):
+// control, so it is treated as untrusted input (ADR-0367, Elek 2026-10-11 K2/K3):
 //   - http(s) only, and only to a PUBLIC address: loopback, private, link-local, CGNAT,
 //     metadata and the like are refused — checked on the resolved address (the DNS
 //     lookup itself is the gate, so a name cannot resolve one way for the check and

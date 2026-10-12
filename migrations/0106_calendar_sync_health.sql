@@ -1,4 +1,4 @@
--- 0106 PORTÁL-NAPTÁRSZINKRON: ÁLLAPOT, NAPLÓ, ÜTKÖZÉS (ADR-XXXX, Elek 2026-10-11 K1 · K7 · A4 · A5).
+-- 0106 PORTÁL-NAPTÁRSZINKRON: ÁLLAPOT, NAPLÓ, ÜTKÖZÉS (ADR-0367, Elek 2026-10-11 K1 · K7 · A4 · A5).
 --
 -- calendar_link új mezői:
 --   last_ok_at          — az utolsó SIKERES szinkron ideje (a hibás kártya ezt mondja ki, K7).
@@ -46,4 +46,4 @@ CREATE TABLE IF NOT EXISTS calendar_conflict (
 );
 
 COMMENT ON TABLE calendar_conflict IS
-  'ADR-XXXX (K1): a portál-naptár egy nálunk ELFOGADOTT foglalás éjszakáját hozta. Nem döntünk helyette: kártya + egyszeri tulaj-levél.';
+  'ADR-0367 (K1): a portál-naptár egy nálunk ELFOGADOTT foglalás éjszakáját hozta. Nem döntünk helyette: kártya + egyszeri tulaj-levél.';

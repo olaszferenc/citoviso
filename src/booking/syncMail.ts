@@ -1,4 +1,4 @@
-// Owner mails of the portal calendar sync (ADR-XXXX, Elek 2026-10-11 K1 · K7).
+// Owner mails of the portal calendar sync (ADR-0367, Elek 2026-10-11 K1 · K7).
 //
 // Both go out in the existing owner-letter frame (ownerLetter: the platform frame,
 // the property's name, the Foglalások button) and are logged to the tenant's message

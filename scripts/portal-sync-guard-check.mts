@@ -1,4 +1,4 @@
-// PORTÁL-NAPTÁRSZINKRON ŐR — Elek 2026-10-11 foglalás + portál-iCal köre (ADR-XXXX).
+// PORTÁL-NAPTÁRSZINKRON ŐR — Elek 2026-10-11 foglalás + portál-iCal köre (ADR-0367).
 //
 //   npx tsx scripts/portal-sync-guard-check.mts
 //   npx tsx scripts/portal-sync-guard-check.mts --self-test     (a szabotált világban PIROSRA kell mennie)

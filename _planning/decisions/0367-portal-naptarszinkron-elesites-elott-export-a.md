@@ -1,4 +1,4 @@
-## ADR-XXXX — Portál-naptárszinkron élesítés előtt: export a tenant-hoszton, ütközésnél nem döntünk, csak publikus cím, a kiküldött mock friss runtime-ot kap, tartós hibáról levél
+## ADR-0367 — Portál-naptárszinkron élesítés előtt: export a tenant-hoszton, ütközésnél nem döntünk, csak publikus cím, a kiküldött mock friss runtime-ot kap, tartós hibáról levél
 
 **Dátum:** 2026-10-11 · **Státusz:** elfogadva (koordinátori döntés a K1-re, Elek-teszt koordinátor; a többi Elek 4. körének
 javítása) · **Kiváltó:** Elek 2026-10-11-i foglalás + portál-iCal köre (1 blokkoló, 8 közepes, 13 apró) ·

@@ -86,7 +86,7 @@ export const I18N_SOURCES = [
   // opens, every lead would have received Hungarian with every guard green.
   "src/outreach/draft.ts",
   "src/booking/requests.ts",
-  // ADR-XXXX (Elek 2026-10-11 K1 · K7): the portal-sync owner letters (conflict, lasting failure).
+  // ADR-0367 (Elek 2026-10-11 K1 · K7): the portal-sync owner letters (conflict, lasting failure).
   "src/booking/syncMail.ts",
   "src/reviews/reviews.ts",
   "src/tenant/multilangCore.ts",

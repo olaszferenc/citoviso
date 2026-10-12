@@ -98,7 +98,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // A vendég-levél .ics melléklete miatt került a levél-gráfba (2026-09-06): az
   // egyetlen magyarja a portál-FEED „Foglalt" default-SUMMARY-je — azt a Booking.com
   // gépe olvassa, nem a vendég; a vendég-eseményt a hívó a szállás NEVÉVEL tölti.
-  // ADR-XXXX (Elek 2026-10-11): a portál-szinkron levelei (syncMail.ts) TÍPUST importálnak innen,
+  // ADR-0367 (Elek 2026-10-11): a portál-szinkron levelei (syncMail.ts) TÍPUST importálnak innen,
   // ettől került a levél-gráfba. A magyarja az admin-naptár hónapnevei + a portál-név tárolt
   // értéke (calendar_link.provider) — levélbe egyik sem kerül, a levél szövege syncMail.ts-é.
   "src/tenant/availability.ts": "admin-naptár hónapnevek + tárolt portál-név; a levélbe csak típus-import, a levél szövege syncMail.ts",

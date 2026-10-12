@@ -1,7 +1,7 @@
 # 2026-10-11 — Portál-naptárszinkron: Elek 4. körének javításai (B1 + K1–K8 + A1–A13)
 
 **Szál:** SUB az „Elek-teszt koordinátor” alatt (brief `~/rc-briefs/foglalas-portal-javitasok-elek-20261011.md`).
-Elek jelentése: `~/wt/cit333dea6d/_from-sub/f75e9b8a/_elek/JELENTES.md`. Döntés: ADR-XXXX (a land osztja ki).
+Elek jelentése: `~/wt/cit333dea6d/_from-sub/f75e9b8a/_elek/JELENTES.md`. Döntés: ADR-0367 (a land osztja ki).
 
 ## Elkészült
 - **B1** — `/naptar/<token>.ics` (és `/naptar/<token>/<portál>.ics`) a tenant-hoszton, saját domainen, dev `/t/<slug>/`

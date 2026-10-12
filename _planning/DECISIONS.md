@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-portal-naptarszinkron-elek-javitasok.md) — Portál-naptárszinkron élesítés előtt: export a tenant-hoszton, ütközésnél nem döntünk, csak publikus cím, a kiküldött mock friss runtime-ot kap, tartós hibáról levél
+- [ADR-0367](decisions/0367-portal-naptarszinkron-elesites-elott-export-a.md) — Portál-naptárszinkron élesítés előtt: export a tenant-hoszton, ütközésnél nem döntünk, csak publikus cím, a kiküldött mock friss runtime-ot kap, tartós hibáról levél
 - [ADR-0366](decisions/0366-a-rendeles-nem-esik-csendben-vissza-domain-ar.md) — A rendelés nem esik csendben vissza (domain/ár → 409), egy rendelés = egy pay-link, a dev-útválasztás = az éles nginx, a csak-mobilos vevő is kap belépést, a kísérő SMS GSM-7
 - [ADR-0365](decisions/0365-szerver-oldali-adat-inline-script-be-csak-a.md) — Szerver-oldali adat inline `<script>`-be csak a `jsonForScript()`-en át
 - [ADR-0364](decisions/0364-a-proba-azt-igeri-amit-ad-a-beallitott.md) — A próba azt ígéri, amit ad (a beállított csomagból); a bukott próba-indítás nem hagy semmit
