@@ -25,6 +25,7 @@ import { icAdmin as ic } from "../ui/icons.js";
 import { formatAmount } from "../tenant/prices.js";
 import { huArticle } from "../hu.js";
 import { formatDay } from "../text/day.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 export interface BookingsTabData {
   readonly units: readonly { id: string; name: string }[];
@@ -1215,7 +1216,7 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     // Elek IT XSS (2026-10-11): the guest's NAME rides in G — "<" is escaped so a name like
     // `</script><img onerror=…>` cannot close this element (measured: it ran on every load of
     // the Foglalások tab), and e() escapes it again where the modal builds HTML from it.
-    `var G=${JSON.stringify(popupData).replace(/</g, "\\u003c")},L=${JSON.stringify(L).replace(/</g, "\\u003c")};` +
+    `var G=${jsonForScript(popupData)},L=${jsonForScript(L)};` +
     `function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){` +
     `return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}` +
     `var C=["var(--citui-cyan-500)","var(--citui-warn)","var(--citui-navy-700)"];` +
@@ -1304,7 +1305,7 @@ function cancelScript(lang: string): string {
   // "<" is escaped so a translated string can never close this <script> element.
   return (
     `<script>(function(){` +
-    `var L=${JSON.stringify(L).replace(/</g, "\\u003c")};` +
+    `var L=${jsonForScript(L)};` +
     `function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){` +
     `return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}` +
     `function open(f){var ov=document.createElement("div");ov.className="bk-ovl";` +

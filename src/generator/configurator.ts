@@ -53,6 +53,7 @@ import { PHONE_NORM_JS } from "../text/phone.js";
 import { config } from "../config.js";
 import { renewalQuoteForLead, type RenewalQuote } from "../payment/renewalQuote.js";
 import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 /**
  * Countries selectable at checkout: Hungary first (the pilot market), then the
@@ -104,7 +105,7 @@ async function configuratorBlock(): Promise<string> {
   const phoneNorm = `window.CIT_PHONE_NORM=(function(){${PHONE_NORM_JS};return norm;})();`;
   cached =
     `<style data-cit-configurator-css>\n${css}\n</style>\n` +
-    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${JSON.stringify(banner.trim())};\n${phoneNorm}\n${money}\n${js}\n</script>\n`;
+    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${jsonForScript(banner.trim())};\n${phoneNorm}\n${money}\n${js}\n</script>\n`;
   return cached;
 }
 
@@ -595,7 +596,7 @@ export async function injectConfigurator(
   const manifest = await buildManifest(html, artifactId, leadName, opts);
   const manifestTag =
     `<script type="application/json" data-cit-configurator>` +
-    JSON.stringify(manifest) +
+    jsonForScript(manifest) +
     `</script>\n`;
   const block = manifestTag + (await configuratorBlock());
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);

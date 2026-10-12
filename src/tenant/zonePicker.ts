@@ -8,6 +8,7 @@
 
 import { T } from "../i18n/mail.js";
 import { COUNTRY_DEFAULT_TIME_ZONE, offsetLabelIn } from "../text/zoneTime.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 export interface ZonePickerData {
   /** The stored zone (tenant.time_zone). */
@@ -119,7 +120,7 @@ export function zonePickerHtml(id: string, d: ZonePickerData, lang: string): str
       d.timeZone !== d.countryDefault ? escAttr(msgs.warn.replace("{def}", zoneLabel(d.countryDefault, lang))) : ""
     }</div>` +
     `<button class="tzp__reset" type="button" hidden data-tzp-js data-tzp-reset>${T(lang, "Vissza az ország alapértékére")}</button>` +
-    `<script type="application/json" data-tzp-data>${JSON.stringify(data).replace(/</g, "\\u003c")}</script>` +
+    `<script type="application/json" data-tzp-data>${jsonForScript(data)}</script>` +
     `<script>${ZONE_PICKER_JS.replace("__ID__", id)}</script>` +
     `</div>`
   );

@@ -6,6 +6,7 @@
 
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { ratingScale } from "./rating.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 /** Escape a string for an HTML attribute value (meta content). */
 function attr(s: string): string {
@@ -68,8 +69,8 @@ function jsonLd(d: SiteData, canonicalUrl?: string): string {
       ...(d.rating.count != null ? { reviewCount: d.rating.count } : {}),
     };
   }
-  // Escape "<" so the JSON can never break out of the <script> context.
-  return JSON.stringify(node).replace(/</g, "\\u003c");
+  // Escaped so the JSON can never break out of the <script> context.
+  return jsonForScript(node);
 }
 
 /**

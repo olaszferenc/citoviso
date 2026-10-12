@@ -15,6 +15,7 @@ import { COPY_LIMITS, manualCopyOf, type CopyKey } from "../engine/copyFields.js
 import { T } from "../i18n/mail.js";
 import { ic } from "../ui/icons.js";
 import { copyFieldLabel, fieldWhere } from "./copyEditViews.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 function esc(s: unknown): string {
   return String(s ?? "")
@@ -22,11 +23,6 @@ function esc(s: unknown): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-/** JSON for an inline <script>: "</" must never close the script element. */
-function scriptJson(v: unknown): string {
-  return JSON.stringify(v).replace(/</g, "\\u003c");
 }
 
 /** The fields the form offers, in the plan's order (the template path's recipe). */
@@ -170,11 +166,11 @@ export function sourcePackPane(leadId: string, lang: string): string {
     <script>
     (function () {
       var root = document.querySelector('[data-cur-pack]'); if (!root) return;
-      var LEAD = root.getAttribute('data-cur-pack'), S = ${scriptJson(S)}, LABELS = ${scriptJson(labels)};
+      var LEAD = root.getAttribute('data-cur-pack'), S = ${jsonForScript(S)}, LABELS = ${jsonForScript(labels)};
       var body = root.querySelector('[data-cur-pack-body]'), loaded = false;
       function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
       function f(t, o) { return String(t).replace(/\\{(\\w+)\\}/g, function (m, k) { return o && o[k] != null ? o[k] : m; }); }
-      var WARN = ${scriptJson(ic("alert", 15))};
+      var WARN = ${jsonForScript(ic("alert", 15))};
       function blk(title, pill, why, inner, cls) {
         return '<section class="cur-blk ' + (cls || '') + '"><h3>' + esc(title) + (pill ? ' ' + pill : '') + '</h3>' + (why ? '<div class="why">' + why + '</div>' : '') + inner + '</section>';
       }
@@ -309,7 +305,7 @@ export function curatorForm(o: CuratorFormOpts): string {
     (function () {
       var root = document.querySelector('[data-cur-form]'); if (!root || root.getAttribute('data-ready')) return;
       root.setAttribute('data-ready', '1');
-      var B = ${scriptJson(boot)}, S = ${scriptJson(S)}, LB = ${scriptJson(labels)}, XI = ${scriptJson(x)};
+      var B = ${jsonForScript(boot)}, S = ${jsonForScript(S)}, LB = ${jsonForScript(labels)}, XI = ${jsonForScript(x)};
       var body = root.querySelector('[data-cur-form-body]'), sum = root.querySelector('[data-cur-sum]'), go = root.querySelector('[data-cur-go]');
       var FV = null, V = {}, HL = [''], SP = [{ label: '', quote: '' }], ACC = '', SEL = {}, verdict = null, timer = 0, seq = 0, busy = false;
       function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }

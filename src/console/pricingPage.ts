@@ -20,6 +20,7 @@ import { consoleLang } from "./i18nCtx.js";
 import { GROUP_LABELS, MODULE_CATALOG, MULTILANG_TIERS, applicableRequirements, sellableModuleIds } from "../modules.js";
 import { DOMAIN_PSEUDO_MODULE, TIERS, packageableIds, tierModules, type Tier } from "../packages.js";
 import { computeMonthly, type PricingSnapshot, type TldRow } from "../pricing.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 type Lang = ReturnType<typeof consoleLang>;
 
@@ -443,5 +444,5 @@ export function pricingPageData(lang: Lang, snap: PricingSnapshot, x: PricingPag
       unsavedLeave: T(lang, "Mentetlen változás van az Árazás lapon."),
     },
   };
-  return `<script type="application/json" id="pr2_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+  return `<script type="application/json" id="pr2_data">${jsonForScript(data)}</script>`;
 }

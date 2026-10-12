@@ -11,6 +11,7 @@ import type { TestLogSave, TestLogHistoryRow } from "../elek/testLogStore.js";
 import { esc, layout, helpLink } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 const CSS = `<style>
 .tlog-wrap{display:block}
@@ -204,7 +205,7 @@ function clientJs(fk: FkScenario, opts: TestLogPageOpts, total: number): string 
   };
   return `
 (function(){
-var CFG=${JSON.stringify(cfg)};
+var CFG=${jsonForScript(cfg)};
 function boxes(){return Array.prototype.slice.call(document.querySelectorAll('.tlog-step input[type=checkbox]'));}
 function cmts(){return Array.prototype.slice.call(document.querySelectorAll('textarea.tlog-cmt[data-si]'));}
 function state(){

@@ -12,6 +12,7 @@ import { T } from "../i18n/mail.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { CONTACT_ERRORS, type ContactErrorKey, type ContactFacts } from "../tenant/contact.js";
 import { PHONE_NORM_JS } from "../text/phone.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 function esc(s: unknown): string {
   return String(s ?? "")
@@ -183,7 +184,7 @@ export function placeScript(v: ContactView): string {
   // until the owner places a pin.
   const start = g ? { lat: g.lat, lng: g.lon } : null;
   const js =
-    `(function(){var L=${JSON.stringify(L)},S=${JSON.stringify(start)};` +
+    `(function(){var L=${jsonForScript(L)},S=${jsonForScript(start)};` +
     `var $=function(i){return document.getElementById(i)};` +
     `var form=$('pl_addr')&&$('pl_addr').form;if(!form)return;` +
     `var saved={lat:S?S.lat:null,lng:S?S.lng:null,addr:$('pl_addr').value,phone:$('ct_phone')?$('ct_phone').value:'',email:$('ct_email')?$('ct_email').value:''};` +

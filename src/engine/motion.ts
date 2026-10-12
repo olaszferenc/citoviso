@@ -33,6 +33,8 @@
 //      full-page capture happens before any scroll, so reveal-pending elements are
 //      photographed hidden — the preview lightbox showed empty photo frames.
 
+import { jsonForScript } from "../text/jsonForScript.js";
+
 /** Motion intensity. `calm` is the default; `film` is the same choreography, larger. */
 export type MotionLevel = "calm" | "film";
 
@@ -354,7 +356,7 @@ export function introCss(): string {
  */
 export function introJs(o: IntroOptions): string {
   const k = 1 / (o.speed ?? 0.6);
-  const shots = JSON.stringify(o.photos);
+  const shots = jsonForScript(o.photos);
   return `(function(){
   var intro=document.getElementById('cit-intro');
   if(!intro)return;

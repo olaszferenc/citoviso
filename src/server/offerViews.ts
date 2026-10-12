@@ -15,6 +15,7 @@ import { currencySign, formatMoney } from "../text/money.js";
 import { missingRuns, type GuestOfferView, type OfferView, type SendOfferResult } from "../booking/requests.js";
 import { readFileSync } from "node:fs";
 import { guestPageShell } from "./moduleConfigViews.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 // The BROWSER half of the money rule — the page's live total must spell "142 000 Ft"
 // exactly as the server and the mails do. It travels with the script (adminViews.ts
@@ -303,7 +304,7 @@ export function ownerOfferPage(
     `</div>` +
     `<p class="of-fine">${esc(expireLine)}</p>` +
     `</form></div>` +
-    `<script type="application/json" id="of-cfg">${JSON.stringify(cfg).replace(/</g, "\\u003c")}</script>` +
+    `<script type="application/json" id="of-cfg">${jsonForScript(cfg)}</script>` +
     `<script>${MONEY_JS}</script>` +
     `<script>${OFFER_JS}</script>`;
   return pageShell(T(lang, "Árajánlat küldése"), inner);

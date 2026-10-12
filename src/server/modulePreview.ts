@@ -17,6 +17,7 @@
 // cached render serves the overlay and all twelve thumbnails.
 
 import { MODULE_CATALOG } from "../modules.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { T } from "../i18n/mail.js";
 
 /** The `data-cit-module` anchors a catalog module renders under, if any. */
@@ -86,7 +87,7 @@ export function decoratePreview(
     if (a.length) anchors[id] = [...a];
   }
   const notOwned = [...opts.shown].filter((id) => !opts.owned.has(id));
-  const payload = JSON.stringify({
+  const payload = jsonForScript({
     anchors,
     notOwned,
     badge: T(opts.lang, "MINTA — az Ön adataival töltjük fel"),

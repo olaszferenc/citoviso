@@ -51,6 +51,7 @@ import {
   splitAmenities,
   type AmenityItem as AmenityItem_,
 } from "../tenant/amenityCatalog.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 // ADR-0067: tenant-facing module settings — every label from the language pack.
 // eslint-disable-next-line
@@ -1490,7 +1491,7 @@ function amenityPickerScript(lang: string): string {
     `function boxes(){return [].slice.call(list.querySelectorAll("input[type=checkbox]"))}` +
     `function render(){var on=boxes().filter(function(b){return b.checked});` +
     `var total=Number(count.dataset.total||0);` +
-    `count.textContent=${JSON.stringify(one)}.replace("{n}",on.length)+(total-on.length>0?" · "+${JSON.stringify(more)}.replace("{n}",total-on.length):"");` +
+    `count.textContent=${jsonForScript(one)}.replace("{n}",on.length)+(total-on.length>0?" · "+${jsonForScript(more)}.replace("{n}",total-on.length):"");` +
     `chips.innerHTML="";if(!on.length){chips.classList.add("ampick__chips--empty");chips.textContent=chips.dataset.empty;return}` +
     `chips.classList.remove("ampick__chips--empty");` +
     `on.forEach(function(b){var t=b.closest(".ampick__tile"),c=document.createElement("button");` +
@@ -1709,7 +1710,7 @@ function wholeQuestion(
     `<p class="rs-wq2__err" data-cit-whole-q2-err role="alert" hidden></p>` +
     `</div></fieldset>` +
     `<script>(function(){var s=document.currentScript,fs=s&&s.previousElementSibling,f=fs&&fs.closest("form");if(!f)return;` +
-    `var L=${scriptJson(L)},err=fs.querySelector("[data-cit-whole-q2-err]");` +
+    `var L=${jsonForScript(L)},err=fs.querySelector("[data-cit-whole-q2-err]");` +
     `function v(n){var e=f.querySelector("input[name="+n+"]:checked");return e?e.value:""}` +
     `function nm(x){return String(x||"").replace(/\\s+/g," ").trim()}` +
     `function fail(m,el){err.textContent=m;err.hidden=false;if(el&&el.focus)el.focus()}` +
@@ -2257,7 +2258,7 @@ function roomEditorScript(lang: string): string {
   // ⚠️ A T() hívás LÁTHATÓ alakban kell maradjon (az i18n-őr a forrás-stringet a
   // T() argumentumából gyűjti): a `j(T(lang,"…"))` burkolás azt adja, a saját
   // rövidítő segéd (s("…")) viszont ELREJTENÉ a kulcsot a katalógus elől.
-  const j = (v: string): string => JSON.stringify(v);
+  const j = (v: string): string => jsonForScript(v);
   return (
     `<script>(function(){` +
     // ESC: a felugró a :target-en ül, tehát a bezárás = a horgony elhagyása.
@@ -2898,11 +2899,6 @@ function isoNice(iso: string): string {
   return `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
 }
 
-/** JSON inside a <script> block: "<" escaped so a label can never close the tag. */
-function scriptJson(v: unknown): string {
-  return JSON.stringify(v).replace(/</g, "\\u003c");
-}
-
 /**
  * The fields of a season — the add form and the edit form share them (approved plan
  * season-datepicker, assets/design-refs/tenant-admin/season-datepicker/): a label
@@ -3148,8 +3144,8 @@ function seasonEditorScript(lang: string, today: string, names: readonly SeasonN
     saveDays: T(lang, "Napok mentése"),
   };
   return (
-    `<script type="application/json" data-season-l>${scriptJson({ lang, L, today })}</script>` +
-    `<script type="application/json" data-season-names>${scriptJson(names)}</script>` +
+    `<script type="application/json" data-season-l>${jsonForScript({ lang, L, today })}</script>` +
+    `<script type="application/json" data-season-names>${jsonForScript(names)}</script>` +
     `<script>${SEASON_JS}</script>` +
     `<script>(function(){` +
     `var D=JSON.parse(document.querySelector("[data-season-l]").textContent),L=D.L,S=window.CitSeason;if(!S)return;` +
@@ -3609,7 +3605,7 @@ export interface ProgramsEditorData {
 export const PROGRAMS_MAX = 10;
 
 function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
-  const j = (v: unknown): string => JSON.stringify(v).replace(/</g, "\\u003c");
+  const j = (v: unknown): string => jsonForScript(v);
   const head =
     `<div class="adm-card__head"><span class="adm-ico">${ic("bookings")}</span>` +
     `<h2>${T(lang, "Automata heti programajánló")}</h2></div>`;

@@ -17,6 +17,7 @@ import { SCOUT_KEYWORDS, SCOUT_SAT_THRESHOLD } from "../scout/rules.js";
 import type { PlaceView, ScoutRegion, ScoutStats, TileView } from "../scout/store.js";
 import { consoleLang } from "./i18nCtx.js";
 import { esc, helpLink, layout } from "./views.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 export interface ScoutPageData {
   readonly regions: readonly ScoutRegion[];
@@ -25,11 +26,6 @@ export interface ScoutPageData {
   readonly stats: ScoutStats;
   readonly sel: string | null;
   readonly places: readonly PlaceView[];
-}
-
-/** JSON inside a <script>: never let a value close the tag. */
-function scriptJson(v: unknown): string {
-  return JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
 
 const SCOUT_CSS = `<style>
@@ -251,8 +247,8 @@ export function scoutPage(d: ScoutPageData): string {
 </div>
 <script>
 ${PHONE_NORM_JS}
-var SC=${scriptJson(state)};
-var L=${scriptJson(scoutStrings(lang))};
+var SC=${jsonForScript(state)};
+var L=${jsonForScript(scoutStrings(lang))};
 ${SCOUT_JS}
 </script>`;
   return layout(title, body, { active: "/scout", head: SCOUT_CSS });

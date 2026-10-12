@@ -127,7 +127,8 @@ import { T } from "../i18n/mail.js";
 import type { RepliesBlock, ReplySendView, ReplyView } from "../replies/store.js";
 import { SMS_MAX_PARTS, smsParts } from "../replies/answerRules.js";
 import { displayPhone } from "../tenant/contact.js";
-import { copyEditPill, mockCopyEditBlock, mockCopyEditScript, scriptJson } from "./copyEditViews.js";
+import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { curatorForm, curatorPill, sourcePackPane } from "./curatorViews.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
@@ -171,13 +172,19 @@ export function esc(s: unknown): string {
  * attribute itself still goes through esc(); the browser decodes the entities
  * before the JS is parsed, so only the JS-level metacharacters matter here.
  * Needed because translated labels may contain an apostrophe, which would
- * silently end the literal and kill the handler.
+ * silently end the literal and kill the handler. "<", a bare CR and U+2028/2029
+ * are escaped too, so the literal is also safe inside a raw <script> block
+ * (no "</script", no "<!--", no line terminator ending the string).
  */
 export function jsStr(s: string): string {
   return String(s)
     .replace(/\\/g, "\\\\")
     .replace(/'/g, "\\'")
-    .replace(/\r?\n/g, "\\n");
+    .replace(/\r?\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/</g, "\\x3c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 // ALL console styling comes from the central design core (ADR-0021 ①):
@@ -473,8 +480,8 @@ function shellScript(tree: readonly NavNode[], lang: string): string {
   }));
   return (
     `<script>(function(){var d=document.documentElement;` +
-    `var ICO={sun:${JSON.stringify(icf("sun", 16))},moon:${JSON.stringify(icf("moon", 16))},col:${JSON.stringify(icf("collapse", 14))},exp:${JSON.stringify(icf("expand", 14))}};` +
-    `var IDX=${JSON.stringify(index)};var NONE=${JSON.stringify(T(lang, "Nincs ilyen funkció"))};` +
+    `var ICO={sun:${jsonForScript(icf("sun", 16))},moon:${jsonForScript(icf("moon", 16))},col:${jsonForScript(icf("collapse", 14))},exp:${jsonForScript(icf("expand", 14))}};` +
+    `var IDX=${jsonForScript(index)};var NONE=${jsonForScript(T(lang, "Nincs ilyen funkció"))};` +
     `function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
     `function theme(){return d.getAttribute('data-citui-theme')==='dark'?'dark':'light'}` +
     `function paint(){var t=theme();$$('[data-theme-toggle]').forEach(function(b){b.hidden=false;var i=b.querySelector('[data-ic]');if(i)i.innerHTML=t==='dark'?ICO.sun:ICO.moon;` +
@@ -998,7 +1005,7 @@ function escalationSection(
           </div>
           <div class="pr-esc__preview" id="esc_preview"></div>
           <div class="pr-esc__live" id="esc_live" hidden></div>
-          <script type="application/json" id="esc_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>
+          <script type="application/json" id="esc_data">${jsonForScript(data)}</script>
           <script>${ESCALATION_MONEY_JS}\n${ESCALATION_SECTION_JS}</script>
         </section>`;
 }
@@ -1165,7 +1172,7 @@ function freeTrialSection(lang: ReturnType<typeof consoleLang>, cfg: FreeTrialCo
           </div>
           <div class="pr-esc__preview" id="trial_preview"></div>
           <div class="pr-esc__live" id="trial_live"></div>
-          <script type="application/json" id="trial_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>
+          <script type="application/json" id="trial_data">${jsonForScript(data)}</script>
           <script>${FREE_TRIAL_SECTION_JS}</script>
         </section>`;
 }
@@ -1281,7 +1288,7 @@ function couponSection(lang: ReturnType<typeof consoleLang>, cfg: CouponConfig, 
           </div>
           <div class="pr-esc__preview" id="coupon_preview"></div>
           <div class="pr-esc__live" id="coupon_live"></div>
-          <script type="application/json" id="coupon_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>
+          <script type="application/json" id="coupon_data">${jsonForScript(data)}</script>
           <script>${COUPON_SECTION_JS}</script>
         </section>`;
 }
@@ -3730,8 +3737,8 @@ function noPhotoReasonScript(artifactId: string): string {
       btn.disabled=!ok;
       cnt.className='pg-count'+(ok?'':' short');
       cnt.textContent=ok
-        ? ${JSON.stringify(T(lang, "Indoklás rendben — {n} karakter."))}.replace('{n}',n)
-        : ${JSON.stringify(T(lang, "Még {n} karakter kell az indokláshoz."))}.replace('{n}',MIN-n);
+        ? ${jsonForScript(T(lang, "Indoklás rendben — {n} karakter."))}.replace('{n}',n)
+        : ${jsonForScript(T(lang, "Még {n} karakter kell az indokláshoz."))}.replace('{n}',MIN-n);
     }
     ta.addEventListener('input',sync); sync();
   })();`;
@@ -4558,16 +4565,16 @@ function leadPhotosPanel(
       <script>
       (function () {
         var LEAD = '${esc(leadId)}';
-        var S = ${JSON.stringify(S)};
-        var PIN = ${JSON.stringify(pinIc)};
-        var DOWN = ${JSON.stringify(downIc)};
+        var S = ${jsonForScript(S)};
+        var PIN = ${jsonForScript(pinIc)};
+        var DOWN = ${jsonForScript(downIc)};
         // An OUTAGE is not a finding about the lead — say which one happened, and
         // whether it took the WHOLE strip or only the Places half of it.
-        var OUTAGE = ${JSON.stringify(outage)};
-        var SUBJ = ${JSON.stringify(heroSubjectLabels(lang))};
+        var OUTAGE = ${jsonForScript(outage)};
+        var SUBJ = ${jsonForScript(heroSubjectLabels(lang))};
         var NEVER = ['toilet','bathroom','parking','sign_map','people_doc','ad_banner'];
-        var HERO_KEY = ${JSON.stringify(heroKey)};
-        var MOCK_N = ${JSON.stringify(mockN)};
+        var HERO_KEY = ${jsonForScript(heroKey)};
+        var MOCK_N = ${jsonForScript(mockN)};
         // The source is part of what the operator judges (a portal listing image is
         // the owner's own marketing shot; a Places one is usually a guest snapshot),
         // so the rights class rides along into the caption.
@@ -5104,7 +5111,7 @@ function mockReviewBlock(
       <button class="ok" type="submit">${T(lang, "Ítélet rögzítése")}</button>
     </form>
     ${who}
-    <script>(function(){var f=document.getElementById(${scriptJson(fid)});if(!f)return;var m=${scriptJson(msgs)};
+    <script>(function(){var f=document.getElementById(${jsonForScript(fid)});if(!f)return;var m=${jsonForScript(msgs)};
       var o=document.querySelector('[data-vr-open="'+f.id+'"]');if(o)o.addEventListener('click',function(){f.hidden=false;o.parentNode.hidden=true;});
       f.addEventListener('submit',function(ev){var v=(f.querySelector('input[name=verdict]:checked')||{}).value||'',r=f.ref.value.trim(),n=f.note.value.trim(),e={};
         if(v!=='pass'&&v!=='flag')e.verdict=m.verdict;if(!r)e.ref=m.ref;else if(r.length>${REVIEW_REF_MAX})e.ref=m.refLong;if(v==='flag'&&n.length<${REVIEW_FLAG_NOTE_MIN})e.note=m.note;
@@ -5941,9 +5948,9 @@ export function leadPage(
    */
   const shotPollScript = `(function(){
     var PERIOD=3000, DEADLINE=Date.now()+15*60*1000,
-        ALT=${JSON.stringify(T(lang, "A mock nyitóképernyője"))},
-        NOSHOT=${JSON.stringify(T(lang, "Nincs pillanatkép"))},
-        RETRY=${JSON.stringify(T(lang, "Újra"))};
+        ALT=${jsonForScript(T(lang, "A mock nyitóképernyője"))},
+        NOSHOT=${jsonForScript(T(lang, "Nincs pillanatkép"))},
+        RETRY=${jsonForScript(T(lang, "Újra"))};
     function pending(){
       return Array.prototype.slice.call(document.querySelectorAll('[data-mk-shot]')).filter(function(b){
         var s=b.getAttribute('data-shot-state'); return s==='none'||s==='running';
@@ -6857,7 +6864,7 @@ function cpScript(prefix: string): string {
   // The panel is emitted ABOVE the generate form, so #cp-in does not exist yet when this
   // script is parsed — wire up after the document is built, or every chip is a dead button.
   return `document.addEventListener('DOMContentLoaded',function(){
-    var P=${JSON.stringify(prefix)};
+    var P=${jsonForScript(prefix)};
     var box=document.getElementById('cp-in');
     document.querySelectorAll('.cp-v').forEach(function(b){
       b.addEventListener('click',function(){
@@ -8170,8 +8177,8 @@ export function outreachDraftPage(
           var lockable = [];
           for (var i = 0; i < btns.length; i++) if (!btns[i].disabled) lockable.push(btns[i]);
           if (!lockable.length) return;
-          var LOCKED = ${JSON.stringify(T(lang, "Zárva: a levél végét (leiratkozás + jogalap) még nem láttad — görgess végig a levélen."))};
-          var OPEN = ${JSON.stringify(T(lang, "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki."))};
+          var LOCKED = ${jsonForScript(T(lang, "Zárva: a levél végét (leiratkozás + jogalap) még nem láttad — görgess végig a levélen."))};
+          var OPEN = ${jsonForScript(T(lang, "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki."))};
           var set = function (on) {
             for (var j = 0; j < lockable.length; j++) lockable[j].disabled = !on;
             bar.setAttribute("data-cit-sendbar", on ? "open" : "locked");
@@ -9406,10 +9413,10 @@ export function mapPage(
     </div>
     ${LEAFLET_JS}
     <script>
-      var LEADS = ${JSON.stringify(leads)};
-      var AREAS = ${JSON.stringify(regions)};
-      var COLORS = ${JSON.stringify(QUAL_COLOR)};
-      var LABELS = ${JSON.stringify(QUAL_LABEL(lang))};
+      var LEADS = ${jsonForScript(leads)};
+      var AREAS = ${jsonForScript(regions)};
+      var COLORS = ${jsonForScript(QUAL_COLOR)};
+      var LABELS = ${jsonForScript(QUAL_LABEL(lang))};
       var map = L.map('map').setView([47.16, 19.5], 7);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
@@ -9464,7 +9471,7 @@ export function regionsPage(
         <td>${r.leadCount}</td>
         <td>${r.active ? '<span class="pill approved">${T(lang, "aktív")}</span>' : '<span class="pill">${T(lang, "inaktív")}</span>'}</td>
         <td class="small">
-          <button type="button" class="btn-link" onclick='citEditArea(${JSON.stringify(r)})'>Szerkeszt</button>
+          <button type="button" class="btn-link" onclick='citEditArea(${esc(jsonForScript(r))})'>Szerkeszt</button>
           ${
             r.active
               ? `<form method="post" action="/scrape/regions/${esc(r.id)}/deactivate" style="display:inline">
@@ -9524,7 +9531,7 @@ export function regionsPage(
     </div>
     ${LEAFLET_JS}
     <script>
-      var AREAS = ${JSON.stringify(regions)};
+      var AREAS = ${jsonForScript(regions)};
       var map = L.map('map').setView([47.16, 19.5], 7);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);

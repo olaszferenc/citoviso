@@ -12,6 +12,7 @@ import { huArticleLower } from "../hu.js";
 import { packForClientAsync } from "../i18n/packs.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -160,7 +161,7 @@ export async function injectRuntime(
   const block = await runtimeBlock();
   const i18n =
     lang && lang !== "hu"
-      ? `<script data-cit-runtime>window.CIT_I18N=${JSON.stringify(await packForClientAsync(lang)).replaceAll("</", "<\\/")}</script>\n`
+      ? `<script data-cit-runtime>window.CIT_I18N=${jsonForScript(await packForClientAsync(lang))}</script>\n`
       : "";
   const credit = phase === "live" || config.mockCitovisoCredit ? `${CIT_CREDIT}\n` : "";
   const tail = `${credit}${i18n}${block}`;

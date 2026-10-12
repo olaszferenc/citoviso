@@ -67,6 +67,7 @@ import {
 } from "../tenant/messageTopics.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 import { lockup, markThemed } from "../ui/brand.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -516,7 +517,7 @@ function subscriptionCard(
 /** The frame's own behaviour: theme + rail toggles, the ← button, the drawer. */
 const SHELL_SCRIPT = (lang: string): string =>
   `<script>(function(){var d=document.documentElement;` +
-  `var ICO={sun:${JSON.stringify(ic("sun", 16))},moon:${JSON.stringify(ic("moon", 16))},col:${JSON.stringify(ic("collapse", 14))},exp:${JSON.stringify(ic("expand", 14))}};` +
+  `var ICO={sun:${jsonForScript(ic("sun", 16))},moon:${jsonForScript(ic("moon", 16))},col:${jsonForScript(ic("collapse", 14))},exp:${jsonForScript(ic("expand", 14))}};` +
   `function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
   `function subnav(o){$$('[data-subnav]').forEach(function(w){w.classList.toggle('is-open',o);var b=w.querySelector('[data-subtg]');if(b)b.setAttribute('aria-expanded',o?'true':'false')})}` +
   `function theme(){return d.getAttribute('data-citui-theme')==='dark'?'dark':'light'}` +
@@ -698,16 +699,16 @@ function overlaysHtml(): string {
 const PHOTO_SCRIPT = (lang = "hu"): string =>
   `<script>(function(){` +
   `var root=document.getElementById('adm-photos');` +
-  `var ICO={alert:${JSON.stringify(ic("alert", 18))},ok:${JSON.stringify(ic("checkc", 18))},close:${JSON.stringify(ic("close", 18))},` +
-  `l:${JSON.stringify(ic("back", 20))},r:${JSON.stringify(ic("fwd", 20))},star:${JSON.stringify(ic("star", 16))},starf:${JSON.stringify(ic("starf", 16))},` +
-  `trash:${JSON.stringify(ic("trash", 16))},a16:${JSON.stringify(ic("alert", 16))}};` +
-  `var L={cover:${JSON.stringify(T(lang, "Nyitókép"))},own:${JSON.stringify(T(lang, "saját fotó"))},demo:${JSON.stringify(T(lang, "bemutató kép"))},close:${JSON.stringify(T(lang, "Bezárás"))},prev:${JSON.stringify(T(lang, "Előző"))},next:${JSON.stringify(T(lang, "Következő"))},` +
-  `ph:${JSON.stringify(T(lang, "Mi látszik a képen?"))},mkCover:${JSON.stringify(T(lang, "Legyen ez a nyitókép"))},isCover:${JSON.stringify(T(lang, "Ez a nyitókép"))},del:${JSON.stringify(T(lang, "Törlés"))},cancel:${JSON.stringify(T(lang, "Mégsem"))},` +
-  `capSaved:${JSON.stringify(T(lang, "Képaláírás mentve"))},capFail:${JSON.stringify(T(lang, "Nem sikerült menteni a képaláírást."))},demoDel:${JSON.stringify(T(lang, "A bemutató képeket nem kell törölnie — az első saját feltöltés lecseréli őket."))},` +
-  `del1t:${JSON.stringify(T(lang, "Fotó törlése"))},del1:${JSON.stringify(T(lang, "A fotó lekerül az oldaláról. Ez nem vonható vissza."))},delNt:${JSON.stringify(T(lang, "{n} fotó törlése"))},delN:${JSON.stringify(T(lang, "A kijelölt {n} fotó lekerül az oldaláról. Ez nem vonható vissza."))},` +
-  `selN:${JSON.stringify(T(lang, "{n} kijelölve"))},batch:${JSON.stringify(T(lang, "Egyszerre legfeljebb 12 képet tölthet fel; {n} kimaradt."))},notImg:${JSON.stringify(T(lang, "nem kép (JPEG, PNG vagy WEBP kell)"))},` +
-  `tooBig:${JSON.stringify(T(lang, "túl nagy ({mb} MB, a határ 6 MB)"))},full:${JSON.stringify(T(lang, "a könyvtár tele van (24 kép)"))},done:${JSON.stringify(T(lang, "kész"))},upFail:${JSON.stringify(T(lang, "a feltöltés nem sikerült"))},` +
-  `upN:${JSON.stringify(T(lang, "{n} fotó feltöltve"))},rejN:${JSON.stringify(T(lang, " — {n} elutasítva"))},none:${JSON.stringify(T(lang, "Egy kép sem került fel: {r}"))},allRej:${JSON.stringify(T(lang, "minden fájl elutasítva"))}};` +
+  `var ICO={alert:${jsonForScript(ic("alert", 18))},ok:${jsonForScript(ic("checkc", 18))},close:${jsonForScript(ic("close", 18))},` +
+  `l:${jsonForScript(ic("back", 20))},r:${jsonForScript(ic("fwd", 20))},star:${jsonForScript(ic("star", 16))},starf:${jsonForScript(ic("starf", 16))},` +
+  `trash:${jsonForScript(ic("trash", 16))},a16:${jsonForScript(ic("alert", 16))}};` +
+  `var L={cover:${jsonForScript(T(lang, "Nyitókép"))},own:${jsonForScript(T(lang, "saját fotó"))},demo:${jsonForScript(T(lang, "bemutató kép"))},close:${jsonForScript(T(lang, "Bezárás"))},prev:${jsonForScript(T(lang, "Előző"))},next:${jsonForScript(T(lang, "Következő"))},` +
+  `ph:${jsonForScript(T(lang, "Mi látszik a képen?"))},mkCover:${jsonForScript(T(lang, "Legyen ez a nyitókép"))},isCover:${jsonForScript(T(lang, "Ez a nyitókép"))},del:${jsonForScript(T(lang, "Törlés"))},cancel:${jsonForScript(T(lang, "Mégsem"))},` +
+  `capSaved:${jsonForScript(T(lang, "Képaláírás mentve"))},capFail:${jsonForScript(T(lang, "Nem sikerült menteni a képaláírást."))},demoDel:${jsonForScript(T(lang, "A bemutató képeket nem kell törölnie — az első saját feltöltés lecseréli őket."))},` +
+  `del1t:${jsonForScript(T(lang, "Fotó törlése"))},del1:${jsonForScript(T(lang, "A fotó lekerül az oldaláról. Ez nem vonható vissza."))},delNt:${jsonForScript(T(lang, "{n} fotó törlése"))},delN:${jsonForScript(T(lang, "A kijelölt {n} fotó lekerül az oldaláról. Ez nem vonható vissza."))},` +
+  `selN:${jsonForScript(T(lang, "{n} kijelölve"))},batch:${jsonForScript(T(lang, "Egyszerre legfeljebb 12 képet tölthet fel; {n} kimaradt."))},notImg:${jsonForScript(T(lang, "nem kép (JPEG, PNG vagy WEBP kell)"))},` +
+  `tooBig:${jsonForScript(T(lang, "túl nagy ({mb} MB, a határ 6 MB)"))},full:${jsonForScript(T(lang, "a könyvtár tele van (24 kép)"))},done:${jsonForScript(T(lang, "kész"))},upFail:${jsonForScript(T(lang, "a feltöltés nem sikerült"))},` +
+  `upN:${jsonForScript(T(lang, "{n} fotó feltöltve"))},rejN:${jsonForScript(T(lang, " — {n} elutasítva"))},none:${jsonForScript(T(lang, "Egy kép sem került fel: {r}"))},allRej:${jsonForScript(T(lang, "minden fájl elutasítva"))}};` +
   `function $(s,r){return (r||document).querySelector(s)}function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
   `function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}` +
   `function fmt(s,v){return s.replace(/\\{(\\w+)\\}/g,function(_,k){return v[k]})}` +
@@ -2104,7 +2105,7 @@ export function modulesSection(
       //   ⚠️ A `load` esemény NEM óvatoskodás: az első változatom `setTimeout(…,0)`-val
       // futott, és MÉRVE semmit nem javított — a lap ekkor még parse alatt áll, tehát
       // ugyanarra a félkész elrendezésre görget, mint amit a böngésző elrontott.
-      `<script>(function(){var h=${JSON.stringify(`#${DECLINED_NOTE_ANCHOR}`)};` +
+      `<script>(function(){var h=${jsonForScript(`#${DECLINED_NOTE_ANCHOR}`)};` +
       `if(location.hash!==h)return;` +
       `addEventListener("load",function(){var e=document.querySelector(h);if(e)e.scrollIntoView()})})();</script>`;
   }
@@ -2779,13 +2780,13 @@ export function modulesSection(
     `var sumT=document.getElementById("adm-sum-total");` +
     `var sumBase=sumT?+sumT.dataset.base:0,sumMult=sumT?(+sumT.dataset.mult||1):1;` +
     // Elek B4: the domain's 12 annual months are outside the modules' multiplier.
-    `var sumDom=sumT?(+sumT.dataset.dom||0):0,DOMSFX=${JSON.stringify(domSuffix.replace(/&amp;/g, "&"))};` +
+    `var sumDom=sumT?(+sumT.dataset.dom||0):0,DOMSFX=${jsonForScript(domSuffix.replace(/&amp;/g, "&"))};` +
     // ⭐ modules-quiet-list §4: the head pill is the SAME number as the summary, so
     // it has to move with the switches too. A header that keeps the old total while
     // the summary below it changes is exactly the "one rule, two copies" failure
     // this tab has already produced twice (60 700 vs 53 800 · 5 570 vs 55 700).
     `var nowP=document.getElementById("adm-mine-now"),nowP0=nowP?nowP.textContent:"";` +
-    `var NOWLBL=${JSON.stringify(
+    `var NOWLBL=${jsonForScript(
       annualCell
         ? T(lang, "Jelenleg {price}/év", { price: "" })
         : T(lang, "Jelenleg {price}/hó", { price: "" }),
@@ -2799,15 +2800,15 @@ export function modulesSection(
     // the label must stay TRANSLATABLE, so the text comes from T() and only the
     // number is patched in at runtime.
     `var SUMN=${billedCount},SUMMOD=${modulesMonthly};` +
-    `var SUMLBL=${JSON.stringify(T(lang, "Modulok együtt ({n} db)", { n: "\u0002" }))};` +
+    `var SUMLBL=${jsonForScript(T(lang, "Modulok együtt ({n} db)", { n: "\u0002" }))};` +
     // ONE sub-line template for ALL THREE cells (see perMonthSub): the toggles must
     // not be able to re-introduce the two-divisor row the server no longer renders.
-    `var SUMSUB=${JSON.stringify(
+    `var SUMSUB=${jsonForScript(
       annualCell
         ? T(lang, "{price}/hó × {n} hónap", { price: "\u0003", n: String(annualMult) })
         : T(lang, "{price}/év", { price: "\u0003" }),
     )};` +
-    `var SUMNOTE=${JSON.stringify(
+    `var SUMNOTE=${jsonForScript(
       sub && annualCell
         ? T(
             lang,
@@ -2818,7 +2819,7 @@ export function modulesSection(
     )};` +
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
         `${MONEY_JS}` +
-        `var CUR=${JSON.stringify(getCurrency())};` +
+        `var CUR=${jsonForScript(getCurrency())};` +
     `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     // ADR-0113 server-injected constants: the SAME proration and coupon rounding
@@ -2843,7 +2844,7 @@ export function modulesSection(
     `var lay=document.getElementById("adm-modlay"),pill=document.getElementById("adm-cartpill");` +
     `var pillN=document.getElementById("adm-cartpill-n"),pillT=document.getElementById("adm-cartpill-t");` +
     `var veil=document.getElementById("adm-cartveil"),cx=document.getElementById("adm-cart-x");` +
-    `var PILLPAY=${JSON.stringify(T(lang, "Kosár · most {sum}", { sum: "\u007f" }))};` +
+    `var PILLPAY=${jsonForScript(T(lang, "Kosár · most {sum}", { sum: "\u007f" }))};` +
     // Phone: the cart opens as a sheet over the page; desktop CSS ignores .open.
     `function cartOpen(){bar.classList.add("open");if(veil)veil.hidden=false;if(pill)pill.setAttribute("aria-expanded","true");if(cx)cx.focus()}` +
     `function cartClose(){if(!bar.classList.contains("open"))return;bar.classList.remove("open");if(veil)veil.hidden=true;if(pill)pill.setAttribute("aria-expanded","false")}` +
@@ -2918,10 +2919,10 @@ export function modulesSection(
     // ÚT, nem az egyetlen védelem.
     `var REQ={};cbs.forEach(function(c){try{REQ[c.value]=JSON.parse(c.dataset.requires||"[]")}catch(e){REQ[c.value]=[]}});` +
     // ── modules-cart-dependency (owner „3. B”, 2026-10-02 — Elek ADM-1) ──────────
-    `var SUMG=${JSON.stringify(T(lang, "{list} — együtt +{monthly}/hó, most {now}.", { list: "\u0001", monthly: "\u0002", now: "\u0003" }))};` +
-    `var NT1=${JSON.stringify(T(lang, "{module}: ehhez {list} modul is kell — ez is a kosárba került. Együtt most {now}, a havidíj {monthly}.", { module: "\u0001", list: "\u0002", now: "\u0003", monthly: "\u0004" }))};` +
-    `var NT2=${JSON.stringify(T(lang, "{module}: ehhez {list} modul is kell — ezek is a kosárba kerültek. Együtt most {now}, a havidíj {monthly}.", { module: "\u0001", list: "\u0002", now: "\u0003", monthly: "\u0004" }))};` +
-    `var AND=${JSON.stringify(" " + T(lang, "és") + " ")},WHYL=${JSON.stringify(T(lang, "Mit miért? — a kosárban"))};` +
+    `var SUMG=${jsonForScript(T(lang, "{list} — együtt +{monthly}/hó, most {now}.", { list: "\u0001", monthly: "\u0002", now: "\u0003" }))};` +
+    `var NT1=${jsonForScript(T(lang, "{module}: ehhez {list} modul is kell — ez is a kosárba került. Együtt most {now}, a havidíj {monthly}.", { module: "\u0001", list: "\u0002", now: "\u0003", monthly: "\u0004" }))};` +
+    `var NT2=${jsonForScript(T(lang, "{module}: ehhez {list} modul is kell — ezek is a kosárba kerültek. Együtt most {now}, a havidíj {monthly}.", { module: "\u0001", list: "\u0002", now: "\u0003", monthly: "\u0004" }))};` +
+    `var AND=${jsonForScript(" " + T(lang, "és") + " ")},WHYL=${jsonForScript(T(lang, "Mit miért? — a kosárban"))};` +
     // The basket in groups: a root is the owner's own pick (or anything nothing in the
     // basket drives); under it, recursively, what it brought in.
     `function groupRows(add,lineOf){var R=REQ||{},done={},html="";` +
@@ -2972,7 +2973,7 @@ export function modulesSection(
     `var isDep=c.checked&&drv.length>0&&c.dataset.self!=="1"&&c.dataset.committed!=="1";` +
     `row.classList.toggle("is-dep",isDep);var w=row.querySelector("[data-dep-why]");` +
     `if(isDep&&w){var d=drv[0],r=(REQ[d]||[]).filter(function(x){return x.id===c.value})[0];` +
-    `w.textContent=labOf(d)+${JSON.stringify(" — " + T(lang, "ehhez jár.") + " ")}+(r?r.why:"")}})}` +
+    `w.textContent=labOf(d)+${jsonForScript(" — " + T(lang, "ehhez jár.") + " ")}+(r?r.why:"")}})}` +
     `cbs.forEach(function(c){c.addEventListener("change",function(){` +
     `if(c.checked){c.dataset.self="1";` +
     `var br=[];closure([c.value]).forEach(function(id){var b=cbFor(id);if(b&&!b.checked){b.checked=true;b.dataset.self="0";br.push(id)}});` +
@@ -2992,16 +2993,16 @@ export function modulesSection(
     `function art(id){var b=cbFor(id);return (b&&b.dataset.art?b.dataset.art:"")+" "}` +
     `function depOpen(id,gone){if(!dm)return;depGone=gone;` +
     `var others=gone.filter(function(x){return x!==id});` +
-    `dm.querySelector("[data-dep-t]").textContent=labOf(id)+${JSON.stringify(
+    `dm.querySelector("[data-dep-t]").textContent=labOf(id)+${jsonForScript(
       " " + T(lang, "nem kapcsolható ki, amíg"),
-    )}+" "+others.map(function(x){return art(labOf(x))+labOf(x)}).join(${JSON.stringify(
+    )}+" "+others.map(function(x){return art(labOf(x))+labOf(x)}).join(${jsonForScript(
       " " + T(lang, "és") + " ",
-    )})+${JSON.stringify(" " + T(lang, "él."))};` +
+    )})+${jsonForScript(" " + T(lang, "él."))};` +
     `var r=null;others.forEach(function(o){(REQ[o]||[]).forEach(function(x){if(x.id===id)r=x})});` +
     `dm.querySelector("[data-dep-b]").textContent=r?r.why:"";` +
     `dm.querySelector("[data-dep-l]").innerHTML=gone.map(function(g){var b=cbFor(g);` +
     `return '<li><span>'+labOf(g)+'</span><b>−'+HUF(b?+b.dataset.price:0)+'</b></li>'}).join("");` +
-    `dm.querySelector("[data-dep-all]").textContent=${JSON.stringify(
+    `dm.querySelector("[data-dep-all]").textContent=${jsonForScript(
       T(lang, "Mind a {n}-t lemondom", { n: "\u0005" }),
     )}.replace("\u0005",String(gone.length));` +
     `dm.hidden=false;dv.hidden=false;dm.querySelector("[data-dep-keep]").focus()}` +
@@ -3069,12 +3070,12 @@ export function modulesSection(
     `var foot=document.getElementById("adm-pv-foot"),ttl=document.getElementById("adm-pv-ttl");` +
     `var base=${mv.baseMonthly},focus=null;` +
         `${MONEY_JS}` +
-        `var CUR=${JSON.stringify(getCurrency())};` +
+        `var CUR=${jsonForScript(getCurrency())};` +
     `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
-    `var OWNED=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, m.active])))};` +
-    `var LABEL=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, T(lang, m.label)])))};` +
-    `var PRICE=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, m.spine ? 0 : m.priceMonthly])))};` +
+    `var OWNED=${jsonForScript(Object.fromEntries(mv.modules.map((m) => [m.id, m.active])))};` +
+    `var LABEL=${jsonForScript(Object.fromEntries(mv.modules.map((m) => [m.id, T(lang, m.label)])))};` +
+    `var PRICE=${jsonForScript(Object.fromEntries(mv.modules.map((m) => [m.id, m.spine ? 0 : m.priceMonthly])))};` +
     `function cbOf(id){return f.querySelector('input[name="module"][value="'+id+'"][data-committed]')}` +
     `function wanted(){var ids=[];cbs.forEach(function(c){if(c.checked)ids.push(c.value)});return ids}` +
     `function total(){var s=base;cbs.forEach(function(c){if(c.checked)s+=+c.dataset.price});return s}` +
@@ -3340,11 +3341,11 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `var box=row.querySelector('input');` +
     `var PEN=${view.penaltyTotal},BUY=${view.buyoutPrice};` +
     `${MONEY_JS}` +
-    `var CUR=${JSON.stringify(getCurrency())};` +
+    `var CUR=${jsonForScript(getCurrency())};` +
     `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
-    `var FATE_ON=${JSON.stringify(T(lang, "A webcímet elviszi: {art} {domain} tulajdonjoga a fizetés után az Öné.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
-    `var FATE_OFF=${JSON.stringify(T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
-    `var BTN=${JSON.stringify(T(lang, "Elszámolás és lemondás — {total}", { total: "@@" }))};` +
+    `var FATE_ON=${jsonForScript(T(lang, "A webcímet elviszi: {art} {domain} tulajdonjoga a fizetés után az Öné.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
+    `var FATE_OFF=${jsonForScript(T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
+    `var BTN=${jsonForScript(T(lang, "Elszámolás és lemondás — {total}", { total: "@@" }))};` +
     // The row is a <label>: the native click toggles the box itself — only the
     // change event recomputes (a manual toggle here would flip it back; measured
     // double-toggle in the plan mock, 2026-09-03).
@@ -3708,7 +3709,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     (ml.paid
       ? ""
       : `<script>(function(){var f=document.getElementById("tobbnyelvu");if(!f)return;` +
-        `var TIERS=${JSON.stringify(
+        `var TIERS=${jsonForScript(
           ml.tiers.map((t) => ({ id: t.id, cap: t.cap, all: t.isAll, name: t.name, price: t.effPrice })),
         )};` +
         `var TOTAL=${ml.totalTargets};` +
@@ -3721,7 +3722,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         `var allBox=f.querySelector('[data-ml-all]');` +
         `var btns=[].slice.call(f.querySelectorAll('[type=submit]'));` +
         `${MONEY_JS}` +
-        `var CUR=${JSON.stringify(getCurrency())};` +
+        `var CUR=${jsonForScript(getCurrency())};` +
         `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
         `function cur(){var v=(radios.filter(function(r){return r.checked})[0]||{}).value;` +
         `for(var i=0;i<TIERS.length;i++){if(TIERS[i].id===v)return TIERS[i]}return TIERS[0]}` +
@@ -3733,10 +3734,10 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         `l.classList.toggle('is-on',c.checked)}});` +
         `var left=t.cap-n;` +
         `if(capEl)capEl.textContent=t.all` +
-        `?${JSON.stringify(T(lang, "A teljes csomagban nincs mit választani — mind a {n} nyelv elkészül.")).replace(/\{n\}/, '"+TOTAL+"')}` +
-        `:(left>0?${JSON.stringify(T(lang, "Még {n} nyelvet választhat UGYANEZÉRT az árért.")).replace(/\{n\}/, '"+left+"')}` +
-        `:${JSON.stringify(T(lang, "Betelt a csomag — nagyobb csomagra váltva választhat többet."))});` +
-        `btns.forEach(function(b){if(!b.disabled)b.textContent=${JSON.stringify(
+        `?${jsonForScript(T(lang, "A teljes csomagban nincs mit választani — mind a {n} nyelv elkészül.")).replace(/\{n\}/, '"+TOTAL+"')}` +
+        `:(left>0?${jsonForScript(T(lang, "Még {n} nyelvet választhat UGYANEZÉRT az árért.")).replace(/\{n\}/, '"+left+"')}` +
+        `:${jsonForScript(T(lang, "Betelt a csomag — nagyobb csomagra váltva választhat többet."))});` +
+        `btns.forEach(function(b){if(!b.disabled)b.textContent=${jsonForScript(
           ml.state
             ? T(lang, "Újragenerálás fizetéssel ({price})")
             : T(lang, "Fizetés és generálás ({price})"),

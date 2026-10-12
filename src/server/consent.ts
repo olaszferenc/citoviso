@@ -20,6 +20,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { config } from "../config.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 const PUBLIC_DIR = path.resolve(process.cwd(), "public");
 
@@ -118,8 +119,8 @@ export function consentSnippet(): { head: string; body: string } {
  * szállás nevében) különben kinyitná a szkript-blokkot.
  */
 export function pixelQueueScript(eventName: string, data: unknown): string {
-  const json = JSON.stringify(data).replace(/</g, "\\u003c");
-  const name = JSON.stringify(eventName).replace(/</g, "\\u003c");
+  const json = jsonForScript(data);
+  const name = jsonForScript(eventName);
   return (
     `<script>window.citPixelQueue=window.citPixelQueue||[];` +
     `window.citPixelQueue.push([${name},${json}]);</script>`

@@ -1830,6 +1830,20 @@ if [ -f scripts/booking-guest-xss-check.mts ] && \
   echo "[pre-commit] booking-guest-xss-check (a vendég neve a tulaj adminjában szöveg, nem kód)…"
   npx tsx scripts/booking-guest-xss-check.mts
 fi
+# 2026-10-11: server data goes into an inline <script> only through jsonForScript() — a raw
+# JSON.stringify let a scraped "</script>" in a lead name run on the console lead map (measured).
+# Static half on any src/*.ts change (~4s); the scratch-DB + Chromium lead-map probe (~45s)
+# only when the map's path changes.
+if [ -f scripts/json-for-script-check.mts ] && \
+   changed_files | grep -qE '^src/.*\.ts$|^scripts/json-for-script-check'; then
+  echo "[pre-commit] json-for-script-check --static (nyers JSON nem kerül inline <script>-be)…"
+  npx tsx scripts/json-for-script-check.mts --static
+fi
+if [ -f scripts/json-for-script-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|data|server)\.ts|^src/text/jsonForScript\.ts|^scripts/json-for-script-check'; then
+  echo "[pre-commit] json-for-script-check (mérgezett lead-név a konzol lead-térképén: 0 lefutás)…"
+  npx tsx scripts/json-for-script-check.mts
+fi
 # ADR-0100: the domain's 2nd+ year fee rides the anchor renewal whose period holds
 # the anniversary (before this, nobody billed it while the registrar bills US).
 # Spins up a scratch DB (~20s), so only when the renewal/pricing path changes.

@@ -25,6 +25,7 @@ import { renderSite } from "../engine/render.js";
 import { T } from "../i18n/mail.js";
 import { ic } from "../ui/icons.js";
 import { reviewStateOf } from "../outreach/mockVerdictGate.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 function esc(s: unknown): string {
   return String(s ?? "")
@@ -32,11 +33,6 @@ function esc(s: unknown): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-/** JSON for an inline <script>: "</" must never close the script element. */
-export function scriptJson(v: unknown): string {
-  return JSON.stringify(v).replace(/</g, "\\u003c");
 }
 
 function sectionName(kind: string, lang: string): string {
@@ -266,7 +262,7 @@ export function mockCopyEditBlock(
       lang,
       "A „Szöveg újragenerálása” (AI) a kézzel átírt mezőket nem írja felül — azok rögzítve maradnak, az AI csak a többit írja újra. Új mock generálásakor a kézi szöveg nem vándorol át.",
     )} <a href="/artifact/${esc(artifactId)}/edit" target="_blank">${T(lang, "szöveg szerkesztése ▸")}</a></p>
-    <script type="application/json" data-cit-copy-labels>${scriptJson(labels)}</script>
+    <script type="application/json" data-cit-copy-labels>${jsonForScript(labels)}</script>
   </details>`;
 }
 
@@ -521,7 +517,7 @@ export function copyEditorOverlay(
     <div class="cit-ced-hid" id="cit-ced-hid"></div>
   </div>
 </div>
-<script type="application/json" id="cit-ced-cfg">${scriptJson(cfg)}</script>
+<script type="application/json" id="cit-ced-cfg">${jsonForScript(cfg)}</script>
 <script data-cit-copyedit>${EDITOR_JS}</script>`;
 }
 
