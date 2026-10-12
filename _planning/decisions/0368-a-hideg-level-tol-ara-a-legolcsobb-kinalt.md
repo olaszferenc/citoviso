@@ -1,4 +1,4 @@
-## ADR-XXXX — A hideg levél „-tól” ára a legolcsóbb KÍNÁLT csomag ára, a kiküldés pillanatában; a domain-javaslat nem ígér „megrendeléskor” névválasztást
+## ADR-0368 — A hideg levél „-tól” ára a legolcsóbb KÍNÁLT csomag ára, a kiküldés pillanatában; a domain-javaslat nem ígér „megrendeléskor” névválasztást
 
 **Dátum:** 2026-10-12 · **Kontextus:** Elek 10-11 (A3) + tulaj-döntés 2026-10-12 („legyen dinamikus”), SUB az Elek-teszt koordinátor alatt. **Visszaolvasva:** ADR-0360 ① (a csomagok összetétele adat), ADR-0366 ① (a kiírt = a terhelt, nincs csendes visszaesés), ADR-0192 (nem eladó modul a ráépülőt is viszi), ADR-0101 (ár-doboz + ár-mondat egy forrásból).
 

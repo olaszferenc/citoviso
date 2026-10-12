@@ -1,4 +1,4 @@
-# 2026-10-12 — A hideg levél „-tól” ára dinamikus + a domain-javaslat mondatai (SUB, ADR-XXXX)
+# 2026-10-12 — A hideg levél „-tól” ára dinamikus + a domain-javaslat mondatai (SUB, ADR-0368)
 
 **Szál:** SUB az Elek-teszt koordinátor alatt (fa `~/wt/cit45f55789`). Élesre semmi.
 

@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-12 (💲 **A hideg levél „-tól” ára dinamikus** (ADR-XXXX, SUB az Elek-teszt koordinátor alatt): a levél és az emlékeztető ára = a konfigurátor legolcsóbb kínált csomagja (`src/packageOffer.ts`), kiküldéskor frissen; érvényes csomag nélkül a §C-kapu megáll. A domain-lista mondatai: „Írjon be egy nevet a lenti mezőbe.” Őr: `outreach-from-price-check`. Élesre semmi.)
+Utolsó frissítés: 2026-10-12 (💲 **A hideg levél „-tól” ára dinamikus** (ADR-0368, SUB az Elek-teszt koordinátor alatt): a levél és az emlékeztető ára = a konfigurátor legolcsóbb kínált csomagja (`src/packageOffer.ts`), kiküldéskor frissen; érvényes csomag nélkül a §C-kapu megáll. A domain-lista mondatai: „Írjon be egy nevet a lenti mezőbe.” Őr: `outreach-from-price-check`. Élesre semmi.)
 
 Utolsó frissítés: 2026-10-11 (📅 **Portál-naptárszinkron — Elek 4. körének javításai** (SUB az Elek-teszt koordinátor alatt, ADR-0367): B1 az export-link a tenant-hoszton/saját domainen/dev-úton is él; K1 ütközésnél nem döntünk, kártya + egyszeri tulaj-levél; K2 streamelt 4 MB-os korlát (400 MB-os feed: +2 MB RSS); K3 csak publikus cím DNS után és átirányításnál, egységes mondat; K4 a kiküldött mock kiszolgáláskor friss runtime-ot kap (élesen nincs újrarenderelés); K5 fordulónap; K6 dupla POST → egy kérés; K7 tartós hiba → egy levél + szinkron-napló; K8 párhuzamos, keretes futás; A1–A13 (A3/A8 marad, A10 tulajé); migráció 0106 (dev DB-n lefuttatva); őr `portal-sync-guard-check`; nem élesítve; jegyzet `_planning/memory/2026-10-11_portal_szinkron_elek_javitasok.md`)
 
@@ -7318,8 +7318,8 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Tények és döntések
-- 2026-10-12 · hideg levél ára: a „-tól” ár = a /pricing szerint a leadnek kínált LEGOLCSÓBB csomag havi ára, a kiküldés pillanatában (nem az alapdíj); nincs érvényes csomag → nem megy ki (tulaj: „legyen dinamikus”, ADR-XXXX)
-- 2026-10-12 · domain-név: a rendelés UTÁN nincs névválasztás; a felület ne ígérje „a megrendeléskor” (tulaj, ADR-XXXX)
+- 2026-10-12 · hideg levél ára: a „-tól” ár = a /pricing szerint a leadnek kínált LEGOLCSÓBB csomag havi ára, a kiküldés pillanatában (nem az alapdíj); nincs érvényes csomag → nem megy ki (tulaj: „legyen dinamikus”, ADR-0368)
+- 2026-10-12 · domain-név: a rendelés UTÁN nincs névválasztás; a felület ne ígérje „a megrendeléskor” (tulaj, ADR-0368)
 
 ## Előzmények
 

@@ -6,7 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [2026-10-12_levelar_dinamikus_javaslat_szoveg.md](2026-10-12_levelar_dinamikus_javaslat_szoveg.md) — 2026-10-12 — A hideg levél „-tól” ára dinamikus + a domain-javaslat mondatai (SUB, ADR-XXXX)
+- [2026-10-12_levelar_dinamikus_javaslat_szoveg.md](2026-10-12_levelar_dinamikus_javaslat_szoveg.md) — 2026-10-12 — A hideg levél „-tól” ára dinamikus + a domain-javaslat mondatai (SUB, ADR-0368)
 - [2026-10-11_proba_koordinator_5_zaras.md](2026-10-11_proba_koordinator_5_zaras.md) — 2026-10-11 — Ingyenes próba koordinátor (5. folytatás) lezárva: C felület + névváltás + Elek 3. kör, minden landolt
 - [2026-10-11_proba_javitasok_elek_tenant_kor.md](2026-10-11_proba_javitasok_elek_tenant_kor.md) — Próba-javítások Elek 10-11 tenant-köréből (B1/B2/K1/A1–A3/A5/A7 + IT A3 időzóna)
 - [2026-10-11_portal_szinkron_elek_javitasok.md](2026-10-11_portal_szinkron_elek_javitasok.md) — 2026-10-11 — Portál-naptárszinkron: Elek 4. körének javításai (B1 + K1–K8 + A1–A13)
