@@ -24,6 +24,7 @@ import { renderSite } from "../engine/render.js";
 import { renderableModules, unboughtPageAnchors } from "../modules.js";
 import { dropNeverShown, photoUrlKey, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
+import { readServableMock } from "../generator/modelHtml.js";
 
 export interface ConversionResult {
   readonly tenantId: string;
@@ -106,7 +107,8 @@ async function renderSnapshotHtml(
     };
   }
   if (!artifact.path) throw new Error("legacy artifact has no rendered path to provision");
-  const copied = await readFile(path.resolve(process.cwd(), artifact.path), "utf8");
+  // Model-authored HTML would otherwise go live verbatim (ADR-XXXX): same gate as serving.
+  const copied = await readServableMock(path.resolve(process.cwd(), artifact.path), artifact.inputs);
   return { html: copied, source: "copy" };
 }
 

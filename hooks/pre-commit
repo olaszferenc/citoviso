@@ -609,6 +609,14 @@ if [ -f scripts/mock-photo-transport-check.mts ] && \
   echo "[pre-commit] mock-photo-transport (http-s fotó nem kerülhet a https-es mockra)…"
   npx tsx scripts/mock-photo-transport-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX: a modell írta mock-HTML nem futtathat kódot (mérve 2026-10-12: prózai utasítás →
+# <script> + onclick + onload + javascript: link, mind lefutott). Generáláskor és kiszolgáláskor szűrve.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/model-html-sanitize-check.mts ] && \
+   changed_files | grep -qE '^(src/generator/(modelHtml|generate|runtime|mockFromCorpus)\.ts|src/console/(server|data)\.ts|src/server/public\.ts|src/conversion/provision\.ts|scripts/model-html-sanitize-check\.mts)'; then
+  echo "[pre-commit] model-html-sanitize (modell-HTML nem futtathat kódot)…"
+  npx tsx scripts/model-html-sanitize-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
 # not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified

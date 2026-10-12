@@ -30,6 +30,7 @@ import {
   selectCorpusDesign,
 } from "./mockFromCorpus.js";
 import { injectRuntime } from "./runtime.js";
+import { sanitizeModelHtml } from "./modelHtml.js";
 import { auditAiriness } from "./qaAiriness.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { checkDemoFraming } from "./provenanceCheck.js";
@@ -712,8 +713,17 @@ async function generateMockInner(
       const ai =
         cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
       if (ai && sel && /<html/i.test(ai.html)) {
+        // ADR-XXXX: the model read scraped text anyone can write — its HTML is untrusted.
+        // Every executable construct goes BEFORE our runtime is injected, so ours stays intact.
+        const clean = sanitizeModelHtml(ai.html);
+        const cut = clean.removed;
+        if (cut.scripts + cut.handlers + cut.urls + cut.embeds) {
+          console.log(
+            `  ⛔ modell-HTML szűrve: ${cut.scripts} szkript · ${cut.handlers} eseménykezelő · ${cut.urls} URL · ${cut.embeds} beágyazás`,
+          );
+        }
         // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
-        const securedAi = await secureMockPhotos(await injectRuntime(ai.html), artifactIdPre, aiPhotos);
+        const securedAi = await secureMockPhotos(await injectRuntime(clean.html), artifactIdPre, aiPhotos);
         await writeFile(path, securedAi.html, "utf8");
         // QA-gate (ADR-0011): measure vertical-rhythm dead space at mobile width.
         // Best-effort + non-blocking — a headless-render hiccup must never fail a

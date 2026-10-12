@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-12_modell_html_injekcio.md](2026-10-12_modell_html_injekcio.md) — 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-XXXX)
 - [2026-10-12_levelar_dinamikus_javaslat_szoveg.md](2026-10-12_levelar_dinamikus_javaslat_szoveg.md) — 2026-10-12 — A hideg levél „-tól” ára dinamikus + a domain-javaslat mondatai (SUB, ADR-0368)
 - [2026-10-12_dontes_segito_sav_sajat_cim_jelveny.md](2026-10-12_dontes_segito_sav_sajat_cim_jelveny.md) — 2026-10-12 — Döntés-segítő felső sáv + saját cím jelvénye (SUB, §2b terv-kör → megvalósítás)
 - [2026-10-11_proba_koordinator_5_zaras.md](2026-10-11_proba_koordinator_5_zaras.md) — 2026-10-11 — Ingyenes próba koordinátor (5. folytatás) lezárva: C felület + névváltás + Elek 3. kör, minden landolt

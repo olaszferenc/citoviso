@@ -1731,6 +1731,8 @@ export interface ProspectPage {
   readonly unsubscribed: boolean;
   /** ADR-0364 (B2): an ENGINE mock (recipe + data) — only that can become a live trial site. */
   readonly engine: boolean;
+  /** The artifact's generation inputs — the serve-time model-HTML gate reads them (ADR-XXXX). */
+  readonly artifactInputs: unknown;
 }
 
 /** Resolve a tracked link's token to the prospect + its approved mock artifact. */
@@ -1761,6 +1763,7 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
     artifactPath: r.artifactPath,
     unsubscribed: r.unsubscribedAt != null,
     engine: isEngineArtifact(r.artifactInputs),
+    artifactInputs: r.artifactInputs,
   };
 }
 

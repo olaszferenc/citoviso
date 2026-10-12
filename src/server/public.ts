@@ -43,6 +43,7 @@ import {
 } from "./legalViews.js";
 import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
+import { readServableMock } from "../generator/modelHtml.js";
 import {
   authenticate,
   changeTenantPassword,
@@ -547,7 +548,7 @@ async function servePreview(res: http.ServerResponse, token: string): Promise<vo
   const row = await db
     .selectFrom("mock_request")
     .leftJoin("mock_artifact", "mock_artifact.id", "mock_request.artifact_id")
-    .select(["mock_request.status as status", "mock_artifact.path as path"])
+    .select(["mock_request.status as status", "mock_artifact.path as path", "mock_artifact.inputs as inputs"])
     .where("mock_request.token", "=", token)
     .executeTakeFirst();
   if (!row) return send(res, 404, "<h1>Nincs ilyen előnézet.</h1>");
@@ -561,7 +562,7 @@ async function servePreview(res: http.ServerResponse, token: string): Promise<vo
     );
   }
   try {
-    const html = await readFile(path.resolve(process.cwd(), row.path), "utf8");
+    const html = await readServableMock(path.resolve(process.cwd(), row.path), row.inputs);
     send(res, 200, await frameDemoMock(html)); // demo-framing footer at serve time (§A)
   } catch {
     send(res, 404, "<h1>Az előnézet fájl nem található.</h1>");

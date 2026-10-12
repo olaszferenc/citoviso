@@ -367,6 +367,7 @@ import { MULTILANG_TIERS } from "../modules.js";
 import { prepareMailLang, T } from "../i18n/mail.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { faviconSvg } from "../ui/brand.js";
+import { readServableMock } from "../generator/modelHtml.js";
 import {
   fetchPhoto,
   photoFailReason,
@@ -918,7 +919,7 @@ async function serveMock(res: http.ServerResponse, artifactId: string): Promise<
     .executeTakeFirst();
   if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
   try {
-    const html = await readFile(a.path, "utf8");
+    const html = await readServableMock(a.path, a.inputs);
     send(
       res,
       200,
@@ -949,7 +950,7 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
     .executeTakeFirst();
   if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
   try {
-    const html = await readFile(a.path, "utf8");
+    const html = await readServableMock(a.path, a.inputs);
     // ADR-0036: the configurator UI renders in the buyer's language (persisted on the artifact).
     const lang = ((a.inputs ?? {}) as { siteData?: { lang?: string } }).siteData?.lang;
     send(
@@ -3493,7 +3494,7 @@ async function handle(
     const trialEndIso = budapestIsoDay(new Date(ft.trial_until as unknown as string));
     const contLang = p.lang ?? "hu";
     try {
-      const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
+      const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(p.artifactPath, p.artifactInputs)));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pContMatch[1]}/request`,
         // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
@@ -3559,7 +3560,7 @@ async function handle(
           })
         : null;
       const html = containHorizontalOverflow(
-        lazyLoadBelowFold(ownedSite ?? (await readFile(p.artifactPath, "utf8"))),
+        lazyLoadBelowFold(ownedSite ?? (await readServableMock(p.artifactPath, p.artifactInputs))),
       );
       if (owned) {
         console.log(
