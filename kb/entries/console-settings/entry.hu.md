@@ -4,7 +4,7 @@ title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
 category: system
 anchors: console.settings
-updated: 2026-10-02
+updated: 2026-10-12
 ---
 
 A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
@@ -50,6 +50,19 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
   próba nem szünetelt, a lejárat előtti figyelmeztetés nem ment ki, az elindult próba oldala
   nem él, a kifizetett folytatásból nem lett számla vagy előfizetés, a próbázó nem kapta meg a
   belépő-levelet. Mindegyiknél mit jelent és mit tegyél: a Súgóban az „Ingyenes próba” téma.
+
+- a **megvett, de a beállításban elakadt saját domain** — a vevő kifizette a saját
+  domainnevét, a regisztrátornál megvettük, de a cím nem élesedett. Két út vezet ide: ha a
+  zóna, a névszerver vagy a tanúsítvány beállítása **hibára futott**, azonnal jön egy levél
+  („… megvéve, de a beállítás elakadt (DNS/TLS)” tárggyal); ha nem hibázik, csak a
+  névszerver-delegáció vagy a tanúsítvány **nem élesedik**, akkor **24 óra** várakozás után
+  jön az első levél, **72 óra** után egy ismételt („ISMÉTELT riasztás”), és ekkor a vevő is
+  kap egyetlen levelet: a webcím az övé, a beállítás tovább tart, munkatársunk foglalkozik
+  vele. Ennél több nem jön — se naponta, se a vevőnek másodszor. Teendő a levélben: a
+  regisztrátornál a névszerverek, a DNS-szolgáltatónál a zóna és a tanúsítvány állapotának
+  megnézése, majd az időzítő kézi futtatása (`npx tsx scripts/resume-domains.mts`); a cím
+  magától élesedik, amint a delegáció és a tanúsítvány aktív, és a vevő ekkor megkapja az
+  „elkészült” levelet.
 
 ### Mit tegyél megrekedt rendelésnél?
 
@@ -141,8 +154,12 @@ A **„Jelszó módosítása”** panelben:
 4. Koppints a **„Jelszó mentése”** gombra. Siker esetén zöld visszajelzést kapsz; hibánál a
    panel megmondja, mi nem stimmelt (pl. a két új jelszó nem egyezik).
 
-A csere azonnal él, a következő belépésnél már az új jelszó kell. Kijelentkezni a fejléc
-„Kilépés” linkjével tudsz.
+A csere azonnal él, a következő belépésnél már az új jelszó kell. **A többi eszközödön
+(másik böngésző, telefon) a csere kiléptet** — ott újra be kell lépned, az új jelszóval; azon
+az eszközön, ahol cseréltél, bent maradsz. Kijelentkezni a fejléc „Kilépés” linkjével tudsz.
+
+A belépés **30 napig** érvényes, akkor is, ha közben használod: 30 nap után a konzol újra kéri
+a jelszót.
 
 ## Elfelejtett jelszó
 

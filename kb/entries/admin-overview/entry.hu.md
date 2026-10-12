@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-10-09
+updated: 2026-10-12
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -180,6 +180,21 @@ egyszer, ennél az első fizetésnél használható fel. A fizetés után:
   és nem választott ki, az kikapcsol — a beállításai megmaradnak;
 - elindul az előfizetése, és a **fordulónapja a fizetés napja** lesz, nem a próba első napja: ettől a naptól
   számítva újul meg minden hónapban (vagy évben). Az előfizetéséről a **Modulok** fül **Előfizetés** kártyája szól.
+
+### Másik címet szeretne? — folytatáskor egyszer, ingyen
+
+A lejárt próba piros dobozában ez áll: **„Tetszik a cím?”**, mellette a honlapja mostani címe. A próba végén
+(vagy ha még a próba alatt rendel) **egyszer, díj nélkül** másik citoviso.com-os címet választhat:
+
+1. A „Folytatom — fizetés” (vagy „Folytatom”) gombbal nyíló rendelő panel első lépésében a mostani cím mellett
+   az „Ingyen megváltoztatható” felirat áll.
+2. Koppintson a „Megváltoztatom a címet” gombra, írja be az „Új cím” mezőbe a kívánt nevet, és
+   nyomja meg az „Ezt választom” gombot (a „Marad a mostani” gombbal meggondolhatja magát). A panel
+   azonnal jelzi, ha a cím foglalt vagy nem használható.
+3. A cím a fizetéssel együtt vált át. Ezután a cím marad — ez a díjmentes csere egyszeri.
+
+**A régi cím nem szűnik meg:** örökre az újra irányít, és senki más nem kaphatja meg. A már kiküldött levelek,
+a névjegyére vagy a Google-profiljába beírt cím tehát továbbra is működik.
 
 ### Meddig marad meg az oldala, ha nem folytatja?
 

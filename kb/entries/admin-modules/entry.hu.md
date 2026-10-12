@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-10-02
+updated: 2026-10-12
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -23,6 +23,26 @@ hozzáadhat — mindegyik mellett egy kerek, kék **+** jel. Ha egy ilyen sorra 
 ott történik, a szokásos **„Kosárba teszem”** gombbal. Maga a sor nem vásárol semmit.
 Telefonon ugyanez a lista a **Menü** gomb mögött van. A lista a Modulok fülön és a modulok
 beállító képernyőin nyitva van, a többi fülön a Modulok melletti nyíllal nyitható le.
+
+## A Modulok fül az ingyenes próba alatt
+
+Amíg az ingyenes próba fut, a Modulok fül **másképp néz ki**, mint ez a cikk lent leírja: nincs „Az én
+moduljaim” / „Bővítés” rész, nincsenek árak, és soronként sem lehet vásárolni — a próbában a modulok díj
+nélkül be vannak kapcsolva, nincs előfizetés, amihez egyenként hozzá lehetne adni.
+
+- Fent a **„Modulok a próbában”** kártya elmondja, mi van bekapcsolva, és hogy a megtartani kívántakat a gomb
+  mögött választja ki; amit nem választ, az is bekapcsolva marad a próba végéig. Ha a próbához kedvezményt is
+  kapott, a kártya azt is kiírja, hány százalékot kap az első díjból.
+- A **„Folytatom — csomag és modulok”** gomb ugyanarra a rendelő panelre visz, mint a lap tetején lévő sáv
+  „Folytatom” gombja: ott választja ki a csomagot és a modulokat, és ott fizet (lásd az Áttekintés súgóját,
+  „Ha folytatja: a folytatás a fizetés”).
+- Alatta a bekapcsolt modulok listája. A sor végén a **„be”** címke jelzi, hogy a modul most működik; ahol a
+  modulnak saját beállítása van (például szobák, árak, foglalás), ott egy **„Beállítás”** link is áll — a
+  próba arra való, hogy ezeket kitöltse, és lássa az oldalán.
+- Ha a próba nem minden modullal indult, a kártya megnevezi a próba csomagját, és azt is, hogy ami nincs
+  benne, azt ugyanitt hozzáadhatja.
+
+A fizetés után a fül a lent leírt, megszokott formájára vált.
 
 ## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
 
