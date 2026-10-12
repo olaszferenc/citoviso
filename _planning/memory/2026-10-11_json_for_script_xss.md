@@ -1,4 +1,4 @@
-# 2026-10-11 — JSON az inline `<script>`-ben: közös `jsonForScript()` + őr (ADR-XXXX)
+# 2026-10-11 — JSON az inline `<script>`-ben: közös `jsonForScript()` + őr (ADR-0365)
 
 SUB az Elek-teszt koordinátornak (`cit333dea6d`), fa `~/wt/cit90a04c3b`. Brief: `~/rc-briefs/json-for-script-xss-20261011.md`.
 

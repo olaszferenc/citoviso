@@ -1,4 +1,4 @@
-## ADR-XXXX — Szerver-oldali adat inline `<script>`-be csak a `jsonForScript()`-en át
+## ADR-0365 — Szerver-oldali adat inline `<script>`-be csak a `jsonForScript()`-en át
 
 **Dátum:** 2026-10-11 · **Státusz:** elfogadva (az Elek-teszt koordinátor briefje: „JSON a `<script>`-ben escape nélkül”)
 · **Forrás:** ADR-0363 (a tulaj-admin Foglalások fülének valódi XSS-e), scratch-DB-mérés a konzol lead-térképén
