@@ -609,7 +609,7 @@ if [ -f scripts/mock-photo-transport-check.mts ] && \
   echo "[pre-commit] mock-photo-transport (http-s fotó nem kerülhet a https-es mockra)…"
   npx tsx scripts/mock-photo-transport-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX: a modell írta mock-HTML nem futtathat kódot (mérve 2026-10-12: prózai utasítás →
+# A modell írta mock-HTML nem futtathat kódot (ADR: az őr fejléce) (mérve 2026-10-12: prózai utasítás →
 # <script> + onclick + onload + javascript: link, mind lefutott). Generáláskor és kiszolgáláskor szűrve.
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/model-html-sanitize-check.mts ] && \
