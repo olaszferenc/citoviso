@@ -25,7 +25,8 @@ halvány „Most még gondolkodom” link. A vázlat mérése: a régi kártya m
    alsó foglalás-sávját. A felső „Ez egy honlap-terv…” sávra rákerülhet (a tulaj elfogadta).
 4. **Jól látható bezáró ×**: rajzolt kör, legalább 40 px koppintási felület. A × ugyanazt teszi,
    mint régen a „Most még gondolkodom”: csak a sávot rejti el, az ajánlat él, és a panel
-   ár-kártyájában tovább látszik. Utána a meglévő egykoppintásos kérdés jön (változatlan).
+   ár-kártyájában tovább látszik. Utána a „Mi tartotta vissza?” kérdés jön — 2026-10-12 óta kis
+   alsó sávként (`assets/design-refs/prospect-page/survey-bar/`, Elek K-új-1).
 5. A gomb a rendelés-panelt nyitja; a visszaszámláló élő. Lejáratkor a kedvezmény MINDENHOL
    egyszerre eltűnik (sáv + ár-kártya), mint eddig.
 6. A megjelenés feltételei változatlanok: a próba-levélből jött, a próbázó saját pénztára és a

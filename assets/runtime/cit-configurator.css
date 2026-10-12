@@ -2948,27 +2948,27 @@
 }
 .cit-cfg-paylogos svg { display: block; width: 100%; height: auto; }
 
-/* ── ADR-0322 ④/B micro-survey card (riport README 19) ────────────────────────
- * Shown after the escalation offer is dismissed. NON-blocking: no veil, the page
- * stays usable under it. Desktop: a small card bottom-left (the order pill lives
- * bottom-right). Mobile: full-width above the bottom edge. Colours: the mock's
- * own --cit-* theme tokens, so it sits in the property's skin. */
+/* ── ADR-0322 ④/B micro-survey bar (riport README 19) ─────────────────────────
+ * Shown after the escalation offer is dismissed. Owner, 2026-10-12 (Elek K-új-1, contract
+ * assets/design-refs/prospect-page/survey-bar/): ONE small line at the bottom — the question,
+ * a chevron, a × — the options open on a tap. The same language as the escalation top bar
+ * (ADR-0369): white, navy, a drawn × circle. NON-blocking: no veil, the page stays usable.
+ * Desktop: bottom-left corner; phone: full width. Its height above the bottom is set
+ * below (it rests ABOVE the order pills and every bottom-fixed bar). */
 .cit-cfg-fb {
   position: fixed;
   z-index: 2147483100;
   left: 18px;
   bottom: 18px;
-  width: min(92vw, 380px);
+  width: min(540px, calc(100vw - 36px));
   box-sizing: border-box;
-  background: var(--cit-surface);
-  color: var(--cit-ink);
-  border: 1px solid var(--cit-line);
-  border-radius: var(--cit-radius);
-  padding: 14px 16px;
-  box-shadow: 0 18px 50px color-mix(in srgb, var(--cit-ink) 22%, transparent);
-  font: 14px/1.45 var(--cit-font-body);
+  background: #fff;
+  color: #10243a;
+  border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+  font: 14px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
   pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
@@ -2977,47 +2977,126 @@
   transform: none;
   pointer-events: auto;
 }
+.cit-cfg-fb__bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 14px;
+}
+.cit-cfg-fb__open {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .cit-cfg-fb__q {
-  margin: 0 0 10px;
-  font-size: 13.5px;
-  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+.cit-cfg-fb__q b {
+  font-weight: 700;
+}
+.cit-cfg-fb__more {
+  color: #60748b;
+}
+.cit-cfg-fb__chev {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.cit-cfg-fb__chev svg {
+  width: 18px;
+  height: 18px;
+  stroke: #10243a;
+  fill: none;
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+.cit-cfg-fb--open .cit-cfg-fb__chev svg {
+  transform: none;
+}
+.cit-cfg-fb__x {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.cit-cfg-fb__x::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: #eef7fa;
+  border: 1px solid rgba(14, 42, 71, 0.22);
+}
+.cit-cfg-fb__x svg {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  stroke: #10243a;
+  fill: none;
+  stroke-width: 2.4;
+}
+.cit-cfg-fb__body {
+  display: none;
+  padding: 2px 14px 12px;
+}
+.cit-cfg-fb--open .cit-cfg-fb__body {
+  display: block;
 }
 .cit-cfg-fb__opts {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .cit-cfg-fb__opts button {
   appearance: none;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--cit-line);
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(14, 42, 71, 0.22);
   border-radius: 999px;
-  background: var(--cit-bg);
-  color: var(--cit-ink);
-  font: 500 13px var(--cit-font-body);
+  background: #eef7fa;
+  color: #10243a;
+  font: 500 13px/1.2 system-ui, sans-serif;
   text-align: left;
   cursor: pointer;
 }
 .cit-cfg-fb__opts button:hover {
-  border-color: var(--cit-accent);
+  border-color: #1fb6d6;
 }
 .cit-cfg-fb__opts button[aria-pressed="true"] {
-  background: var(--cit-accent);
-  border-color: var(--cit-accent);
-  color: var(--cit-on-accent);
+  background: #0e2a47;
+  border-color: #0e2a47;
+  color: #fff;
 }
 .cit-cfg-fb__txt {
   display: none;
   width: 100%;
   box-sizing: border-box;
   min-height: 56px;
-  margin-top: 6px;
+  margin-top: 8px;
   padding: 8px 10px;
-  border: 1px solid var(--cit-line);
+  border: 1px solid rgba(14, 42, 71, 0.22);
   border-radius: 10px;
-  background: var(--cit-bg);
-  color: var(--cit-ink);
-  font: 13px var(--cit-font-body);
+  background: #fff;
+  color: #10243a;
+  font: 13px system-ui, sans-serif;
 }
 .cit-cfg-fb--other .cit-cfg-fb__txt {
   display: block;
@@ -3034,13 +3113,13 @@
   min-height: 40px;
   padding: 0 16px;
   border-radius: 10px;
-  font: 600 13px var(--cit-font-body);
+  font: 700 13px system-ui, sans-serif;
   cursor: pointer;
 }
 .cit-cfg-fb__send {
   border: none;
-  background: var(--cit-accent);
-  color: var(--cit-on-accent);
+  background: #1fb6d6;
+  color: #0a1f36;
 }
 .cit-cfg-fb__send:disabled {
   opacity: 0.45;
@@ -3049,46 +3128,62 @@
 .cit-cfg-fb__skip {
   border: none;
   background: transparent;
-  color: var(--cit-muted);
+  color: #60748b;
+}
+.cit-cfg-fb__open:focus-visible,
+.cit-cfg-fb__x:focus-visible,
+.cit-cfg-fb__opts button:focus-visible,
+.cit-cfg-fb__send:focus-visible,
+.cit-cfg-fb__skip:focus-visible {
+  outline: 2px solid #1fb6d6;
+  outline-offset: 2px;
 }
 .cit-cfg-fb__done {
   margin: 0;
+  padding: 12px 14px;
   font-size: 13px;
   font-weight: 600;
 }
-.cit-cfg-fb--done .cit-cfg-fb__q,
-.cit-cfg-fb--done .cit-cfg-fb__opts,
-.cit-cfg-fb--done .cit-cfg-fb__txt,
-.cit-cfg-fb--done .cit-cfg-fb__foot {
+.cit-cfg-fb--done .cit-cfg-fb__bar,
+.cit-cfg-fb--done .cit-cfg-fb__body {
   display: none;
 }
 @media (max-width: 560px) {
   .cit-cfg-fb {
-    left: 50%;
-    bottom: 12px;
+    left: 12px;
     width: calc(100vw - 24px);
-    transform: translate(-50%, 10px);
+    border-radius: 12px;
   }
-  .cit-cfg-fb.cit-cfg-on {
-    transform: translate(-50%, 0);
+  .cit-cfg-fb__bar {
+    padding: 2px 2px 2px 12px;
+  }
+  /* One line on a phone: the question alone; the hint joins it when the bar opens. */
+  .cit-cfg-fb__more {
+    display: none;
+  }
+  .cit-cfg-fb--open .cit-cfg-fb__more {
+    display: block;
+    margin-top: 2px;
+    font-size: 12.5px;
   }
 }
 /* cit-cfg-trialfx-consent-start
- * Elek2 Ú3: the card sits ON the consent bar, never under it. The bar publishes its
- * measured height as --citui-consent-h while it is up (cit-consent.js publishHeight,
- * ADR-0145 ④) and removes it when answered — the card then drops back to its corner.
- * Measured 2026-10-10 at 1280×800: „Elküldöm” / „Inkább nem” lay under the bar and the
- * card could not be closed before the cookie decision. A tall card on a short screen
+ * WHERE IT RESTS: just above the order pills and every layer fixed to the bottom of the
+ * screen (a template's booking bar, the consent bar). The pill placement publishes that
+ * stack's height as --citui-cfg-clear (placeLaunch); the consent bar its own as
+ * --citui-consent-h (cit-consent.js publishHeight, ADR-0145 ④), the floor when the pills
+ * never placed. Elek 10-12 K-új-1: the old card sat at 12 px and buried both pills;
+ * Elek2 Ú3 (10-10): its buttons slid under the consent bar. An open bar on a short screen
  * scrolls inside itself instead of leaving the top of the screen. */
 .cit-cfg-fb {
-  bottom: calc(18px + var(--citui-consent-h, 0px));
-  max-height: calc(100vh - 36px - var(--citui-consent-h, 0px));
+  bottom: max(var(--citui-cfg-clear, 0px), calc(18px + var(--citui-consent-h, 0px)));
+  max-height: calc(100vh - 24px - max(var(--citui-cfg-clear, 0px), calc(18px + var(--citui-consent-h, 0px))));
   overflow-y: auto;
 }
 @media (max-width: 560px) {
   .cit-cfg-fb {
-    bottom: calc(12px + var(--citui-consent-h, 0px));
-    max-height: calc(100vh - 24px - var(--citui-consent-h, 0px));
+    bottom: max(var(--citui-cfg-clear, 0px), calc(12px + var(--citui-consent-h, 0px)));
+    max-height: calc(100vh - 20px - max(var(--citui-cfg-clear, 0px), calc(12px + var(--citui-consent-h, 0px))));
   }
 }
 /* cit-cfg-trialfx-consent-end */

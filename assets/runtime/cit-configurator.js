@@ -89,6 +89,10 @@
           q.forEach(function (e) {
             track(e[0], e[1]);
           });
+          /* cit-cfg-trialfx-fbrace-start — Elek 10-12 A-új-1: the offer bar was dismissed
+           * before this answer arrived; the survey it asked for comes now, not never. */
+          if (fbWanted) mountFeedbackCard(fbWanted);
+          /* cit-cfg-trialfx-fbrace-end */
           // The nth visit may have just minted the escalation offer (the server decides):
           // show it now — the same card and price the old server-side render showed.
           if (j.offer && !sameOffer(OFFER, j.offer)) {
@@ -5116,13 +5120,18 @@
 
   /**
    * ADR-0322 ④/B — the one-tap micro-survey (riport README 19), shown AFTER the
-   * escalation offer is dismissed. A small, NON-blocking card (no veil): the page stays
+   * escalation offer is dismissed. Owner, 2026-10-12 (Elek K-új-1): a SMALL one-line bar at
+   * the bottom, never over the order pills — the question and a ×; the options open on a
+   * tap (contract: assets/design-refs/prospect-page/survey-bar/). No veil: the page stays
    * usable under it. "Elküldöm" is disabled until an option is chosen; the text field
    * opens only for "Más…". The answer goes to /p/:token/feedback with the viewId; the
    * server keeps one answer per view per source.
    */
   var fbMounted = false;
   var fbCard = null;
+  // Elek 10-12 A-új-1: the offer bar can be up (server-side offer) and dismissed BEFORE
+  // /view has answered with the viewId the answer needs — the survey then waits for it.
+  var fbWanted = null;
   /**
    * Elek2 Ú3: the survey card steps aside while the trial form or its success modal is
    * open — and stays aside after a started trial. Two dialogs at once, one of them asking
@@ -5134,8 +5143,13 @@
     /* cit-cfg-trialfx-held-end */
   }
   function mountFeedbackCard(source) {
-    if (fbMounted || !TRACK || !TRACK.feedbackUrl || !VIEW_ID) return;
+    if (fbMounted || !TRACK || !TRACK.feedbackUrl) return;
+    if (!VIEW_ID) {
+      fbWanted = source;
+      return;
+    }
     fbMounted = true;
+    fbWanted = null;
     var opts = [
       ["expensive", tr("Drágának találom")],
       ["not_now", tr("Most nem időszerű")],
@@ -5145,7 +5159,15 @@
     ];
     var card = el(
       '<div class="cit-cfg-fb" role="region" aria-label="' + esc(tr("Mi tartotta vissza?")) + '">' +
-        '<p class="cit-cfg-fb__q">' + esc(tr("Mi tartotta vissza? Egy koppintás, segít jobbat kínálnunk.")) + "</p>" +
+        '<div class="cit-cfg-fb__bar">' +
+        '<button type="button" class="cit-cfg-fb__open" aria-expanded="false">' +
+        '<span class="cit-cfg-fb__q"><b>' + esc(tr("Mi tartotta vissza?")) + "</b> " +
+        '<span class="cit-cfg-fb__more">' + esc(tr("Egy koppintás, segít jobbat kínálnunk.")) + "</span></span>" +
+        '<span class="cit-cfg-fb__chev">' + I.chev + "</span>" +
+        "</button>" +
+        '<button type="button" class="cit-cfg-fb__x" aria-label="' + esc(tr("Bezárás")) + '">' + I.x + "</button>" +
+        "</div>" +
+        '<div class="cit-cfg-fb__body">' +
         '<div class="cit-cfg-fb__opts">' +
         opts
           .map(function (o) {
@@ -5159,12 +5181,22 @@
         '<button type="button" class="cit-cfg-fb__send" disabled>' + esc(tr("Elküldöm")) + "</button>" +
         '<button type="button" class="cit-cfg-fb__skip">' + esc(tr("Inkább nem")) + "</button>" +
         "</div>" +
+        "</div>" +
         '<p class="cit-cfg-fb__done" hidden></p>' +
       "</div>",
     );
     var pick = null;
     var txt = card.querySelector(".cit-cfg-fb__txt");
     var send = card.querySelector(".cit-cfg-fb__send");
+    var openBtn = card.querySelector(".cit-cfg-fb__open");
+    openBtn.addEventListener("click", function () {
+      var on = !card.classList.contains("cit-cfg-fb--open");
+      card.classList.toggle("cit-cfg-fb--open", on);
+      openBtn.setAttribute("aria-expanded", on ? "true" : "false");
+    });
+    card.querySelector(".cit-cfg-fb__x").addEventListener("click", function () {
+      card.classList.remove("cit-cfg-on");
+    });
     card.querySelector(".cit-cfg-fb__opts").addEventListener("click", function (e) {
       var b = e.target && e.target.closest ? e.target.closest("button") : null;
       if (!b) return;

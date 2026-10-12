@@ -510,12 +510,14 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
   // legitimate-interest notice AND the working opt-out (injectTrackingNotice),
   // so the message stays short. See ADR-0112; checkOutreachSms enforces that the
   // link is reachable, since it is now the sole carrier of the opt-out.
-  const text = T(
-    d.lang,
-    "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}",
-    { name: d.leadName, link },
+  // ADR-XXXX (Elek 10-12 A-új-2): GSM-7 and at most 2 segments, folded the same way as the
+  // companion SMS (ADR-0366). Measured before: 225 characters, UCS-2, 4 segments.
+  return foldedSms(
+    d,
+    (name, mark) => T(d.lang, "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark }),
+    link,
+    unsubscribeLink,
   );
-  return { text, link, unsubscribeLink };
 }
 
 /**
@@ -533,15 +535,27 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   // an older handset may show the parts apart. Folded it is 2. A long name is shortened until
   // the text fits; the link is the message's purpose and is never cut (nor folded: it is
   // substituted after the fold, byte for byte).
+  return foldedSms(
+    d,
+    (name, mark) => T(d.lang, "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark }),
+    link,
+    unsubscribeLink,
+  );
+}
+
+/**
+ * One cold SMS body, translated WITH accents (the catalog key is the Hungarian source) and
+ * then folded to GSM-7; a long name is shortened until the text fits PAIR_SMS_MAX_SEGMENTS.
+ * The link is substituted after the fold, byte for byte, and never cut.
+ */
+function foldedSms(
+  d: DraftInput,
+  body: (name: string, mark: string) => string,
+  link: string,
+  unsubscribeLink: string,
+): SmsDraft {
   const MARK = "@@LINK@@";
-  const build = (name: string): string =>
-    toGsm7(
-      T(
-        d.lang,
-        "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}",
-        { name, link: MARK },
-      ),
-    ).replace(MARK, link);
+  const build = (name: string): string => toGsm7(body(name, MARK)).replace(MARK, link);
   const fits = (t: string): boolean => smsEncoding(t).segments <= PAIR_SMS_MAX_SEGMENTS;
   let name = d.leadName;
   let text = build(name);
@@ -552,7 +566,7 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   return { text, link, unsubscribeLink, name: toGsm7(name) };
 }
 
-/** The companion SMS may cost at most this many segments (ADR-0366, as the campaign SMS). */
+/** A cold SMS (solo or companion) may cost at most this many segments (ADR-0366, as the campaign SMS). */
 export const PAIR_SMS_MAX_SEGMENTS = 2;
 
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail

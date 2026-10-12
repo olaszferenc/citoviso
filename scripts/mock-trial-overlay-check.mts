@@ -21,6 +21,14 @@
 //      (desktop, consent bar up). The pair must not bury an interactive hero control —
 //      also after a layout change that came without a scroll or a resize (see ④ below).
 //
+//   ⑦ K-új-1 (Elek 10-12, owner's ruling „ok rendben”) — after the offer bar's × the survey
+//      card covered ~42 % of a phone screen and BOTH order pills. It is a small one-line bar
+//      now: closed it is at most 64 px tall, it covers no pill (mobile and desktop), the
+//      options appear only on a tap, and opened it still covers no pill.
+//   ⑧ A-új-1 (Elek 10-12) — with the offer already live (server-side), a × before /view had
+//      answered left the survey out for good (no viewId → no mount, no retry). It must come
+//      once the viewId arrives.
+//
 // and two server-rendered ones (hermetic, no browser):
 //
 //   ⑤ #18 — the „Mi tartja vissza?” thank-you page was a dead end: one sentence, no link.
@@ -138,9 +146,18 @@ function cut(src: string): string {
   return src.replace(/\/\* cit-cfg-trialfx-(\w+)-start\b[\s\S]*?\/\* cit-cfg-trialfx-\1-end \*\//g, "");
 }
 
-async function buildPage(templateId: string): Promise<string> {
+const ESC_OFFER = {
+  kind: "escalation" as const,
+  percent: 50,
+  expiresAt: new Date(Date.now() + 72 * 3600_000).toISOString(),
+  label: "Döntés-segítő",
+};
+
+/** `serverOffer`: the offer already live when the page is served (a later visit within its 72 h). */
+async function buildPage(templateId: string, serverOffer = false): Promise<string> {
   const base = await injectRuntime(renderSite(recipe(templateId), DATA, { phase: "mock" }));
   let html = await injectConfigurator(base, "00000000-0000-4000-8000-000000000001", DATA.name, {
+    ...(serverOffer ? { offer: ESC_OFFER } : {}),
     trial: { enabled: true as const, days: 14, url: `/p/${TOK}/trial`, privacyUrl: "/privacy" },
     track: { url: `/p/${TOK}/event`, viewUrl: `/p/${TOK}/view`, feedbackUrl: `/p/${TOK}/feedback` },
   });
@@ -168,7 +185,7 @@ async function buildPage(templateId: string): Promise<string> {
 const consentCss = await readFile(path.join(ROOT, "public/assets/runtime/cit-consent.css"), "utf8");
 const consentJs = await readFile(path.join(ROOT, "public/assets/runtime/cit-consent.js"), "utf8");
 
-async function open(browser: Browser, html: string, w: number, h: number, escalation = true) {
+async function open(browser: Browser, html: string, w: number, h: number, escalation = true, viewDelay = 0) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h } });
   const p = await ctx.newPage();
   const errors: string[] = [];
@@ -183,14 +200,16 @@ async function open(browser: Browser, html: string, w: number, h: number, escala
     }
     if (u.pathname === "/assets/runtime/cit-consent.css") return r.fulfill({ contentType: "text/css", body: consentCss });
     if (u.pathname === "/assets/runtime/cit-consent.js") return r.fulfill({ contentType: "text/javascript", body: consentJs });
-    if (u.pathname === `/p/${TOK}/view`)
+    if (u.pathname === `/p/${TOK}/view`) {
+      if (viewDelay) await new Promise((res) => setTimeout(res, viewDelay));
       return r.fulfill({
         contentType: "application/json",
         body: JSON.stringify({
           viewId: "11111111-2222-4333-8444-555555555555",
-          offer: !escalation ? null : { kind: "escalation", percent: 50, expiresAt: new Date(Date.now() + 72 * 3600_000).toISOString(), label: "Döntés-segítő" },
+          offer: !escalation ? null : ESC_OFFER,
         }),
       });
+    }
     if (u.pathname === `/p/${TOK}/trial`)
       return r.fulfill({
         contentType: "application/json",
@@ -276,6 +295,22 @@ async function fillTrial(p: Page): Promise<void> {
   await p.check('.cit-cfg-tsheet [name="photo_rights"]');
 }
 
+/** The survey bar's geometry against the order pills (measured, never asked of the runtime). */
+type FbGeom = { h: number; pills: number; overPills: number; optsShown: boolean; rect?: number[] };
+const FB_GEOM = `() => {
+  const fb = document.querySelector(".cit-cfg-fb");
+  if (!fb) return { h: 0, pills: 0, overPills: 0, optsShown: false };
+  const r = fb.getBoundingClientRect();
+  const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"]
+    .map((s) => document.querySelector(s))
+    .filter((m) => m && !m.hidden && getComputedStyle(m).visibility !== "hidden" && m.getBoundingClientRect().width > 0)
+    .map((m) => m.getBoundingClientRect());
+  const overPills = pills.filter((q) => q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top).length;
+  const opt = fb.querySelector(".cit-cfg-fb__opts button");
+  const optsShown = !!opt && opt.getBoundingClientRect().height > 0 && getComputedStyle(opt).visibility !== "hidden";
+  return { h: Math.round(r.height), pills: pills.length, overPills, optsShown, rect: [r.left, r.top, r.width, r.height].map(Math.round) };
+}`;
+
 /**
  * Which page controls the pill pair buries: hide the pair, sample its rectangles, note the
  * links/buttons that answer elementFromPoint; anything found there is under the pair.
@@ -331,6 +366,18 @@ try {
         return b ? Math.round(b.getBoundingClientRect().top) : null;
       });
       check(`${vp}: a süti-sáv kint van (a fixture Elek állapotában)`, consent !== null && consent < h);
+      // ⑦ closed: one small line, no pill under it, the options not yet shown.
+      const closed = (await p.evaluate(`(${FB_GEOM})()`)) as FbGeom;
+      await shot(p, `mock-kerdes-sav-zarva-${vp}`);
+      check(`${vp}: ⑦ zárva egysoros, kicsi (${closed.h} px ≤ 64)`, closed.h > 0 && closed.h <= 64, closed);
+      check(`${vp}: ⑦ zárva nem takar rendelés-pirulát`, closed.pills > 0 && closed.overPills === 0, closed);
+      check(`${vp}: ⑦ zárva a válaszok még nem látszanak`, !closed.optsShown, closed);
+      // DOM click: the bar's own toggle — what is measured is the opened state.
+      await p.locator(".cit-cfg-fb__open").evaluate((b) => (b as HTMLButtonElement).click());
+      await p.waitForTimeout(300);
+      const opened = (await p.evaluate(`(${FB_GEOM})()`)) as FbGeom;
+      check(`${vp}: ⑦ koppintásra kinyílnak a válaszok`, opened.optsShown, opened);
+      check(`${vp}: ⑦ kinyitva sem takar rendelés-pirulát`, opened.overPills === 0, opened);
       const send = (await p.evaluate(`(${SEEN})(".cit-cfg-fb__skip")`)) as { seen: boolean };
       const cardBottom = await p.evaluate(() => Math.round(document.querySelector(".cit-cfg-fb")!.getBoundingClientRect().bottom));
       await shot(p, `mock-kerdezo-kartya-${vp}`);
@@ -362,6 +409,29 @@ try {
       check(`${vp}: ③ a „Rendben” után a lap újratölt (élő állapot)`, loads() === before + 1, { before, after: loads() });
     }
     check(`${vp}: JS-hiba 0`, errors.length === 0, errors);
+    await ctx.close();
+  }
+
+  // ⑧ the offer already live (served with the page), /view slow, × right after the bar shows.
+  console.log("\n⑧ gyors × az ajánlat-sávon, mielőtt a /view válaszolt — a kérdés így is jön");
+  for (const [w, h, vp] of VIEWPORTS) {
+    const html = await buildPage("parallax", true);
+    const { ctx, p, errors } = await open(browser, html, w, h, true, 4000);
+    await p.mouse.move(200, 300);
+    await p.mouse.wheel(0, 200);
+    let barUp = true;
+    try {
+      await p.locator(".cit-cfg-esccard.cit-cfg-on").waitFor({ state: "attached", timeout: 3500 });
+    } catch {
+      barUp = false;
+    }
+    const before = await p.evaluate(() => !!document.querySelector(".cit-cfg-fb"));
+    check(`${vp}: ⑧ a sáv a /view válasza ELŐTT kint (a verseny állapota)`, barUp && !before, { barUp, before });
+    if (barUp) await p.locator(".cit-cfg-esclater").evaluate((b) => (b as HTMLButtonElement).click());
+    await p.waitForTimeout(5500);
+    const fbOn = await p.evaluate(() => !!document.querySelector(".cit-cfg-fb.cit-cfg-on"));
+    check(`${vp}: ⑧ a × után, a viewId megérkeztével a kérdés megjelenik`, fbOn);
+    check(`${vp}: ⑧ JS-hiba 0`, errors.length === 0, errors);
     await ctx.close();
   }
 
@@ -409,7 +479,7 @@ try {
 
 if (SELF_TEST) {
   // Every leg Elek photographed must go red on the unfixed runtime / the link-less page.
-  const want = ["①", "②", "③", "④", "⑤", "⑥"];
+  const want = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"];
   const missing = want.filter((m) => !failed.some((f) => f.includes(m)));
   if (missing.length) {
     console.error(`\n⛔ mock-trial-overlay-check --self-test: zöld maradt: ${missing.join(" ")} — az őr vak.`);

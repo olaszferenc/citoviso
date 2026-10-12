@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>„Mi tartotta vissza?” — alsó kérdés-sáv (jóváhagyott terv)</title>
+<style>
+  /* Self-contained plan: the bar mirrors assets/runtime/cit-configurator.css (.cit-cfg-fb). */
+  body { margin: 0; background: #e9edf1; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #10243a; }
+  .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 16px; }
+  .tools button { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #9fb0c0; background: #fff; cursor: pointer; font: 600 13px system-ui, sans-serif; }
+  .tools button[aria-pressed="true"] { background: #0e2a47; color: #fff; border-color: #0e2a47; }
+  .tools small { color: #60748b; }
+  .stage-wrap { display: flex; justify-content: center; padding: 0 16px 24px; }
+  .stage { position: relative; width: 1280px; max-width: 100%; height: 800px; overflow: hidden; border-radius: 10px; container-type: inline-size;
+    background: linear-gradient(180deg, #7d8790 0%, #3a4149 70%, #20262c 100%); box-shadow: 0 6px 30px rgba(0,0,0,.25); }
+  .stage.m { width: 390px; height: 844px; }
+  .notice { background: #111418; color: #fff; text-align: center; padding: 10px 12px; font-size: 13px; }
+  .notice span { color: #9aa3ab; }
+  .hero { position: absolute; left: 6%; bottom: 150px; right: 6%; color: #fff; }
+  .hero h1 { margin: 0 0 12px; font: 800 64px/1 system-ui, sans-serif; }
+  .hero p { margin: 0 0 18px; max-width: 560px; font-size: 18px; }
+  .hero .cta { display: inline-block; padding: 14px 28px; background: #d9770a; color: #fff; font-weight: 700; letter-spacing: 2px; border-radius: 2px; }
+  .pills { position: absolute; right: 22px; bottom: 92px; display: flex; gap: 10px; }
+  .pill { min-height: 48px; padding: 0 20px; border-radius: 999px; display: flex; align-items: center; font-weight: 700; }
+  .pill.t { background: #0e2a47; color: #fff; border: 2px solid #9fb0c0; }
+  .pill.o { background: #1fb6d6; color: #0a1f36; }
+  .consent { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: #0b2440; color: #cfd8e2; display: flex; align-items: center; padding: 0 24px; font-size: 13px; }
+  @container (max-width: 560px) {
+    .hero { bottom: 230px; }
+    .hero h1 { font-size: 34px; }
+    .hero p { font-size: 15px; }
+    .pills { left: 12px; right: 12px; bottom: 136px; gap: 8px; }
+    .pill { flex: 1; justify-content: center; padding: 0 8px; font-size: 14px; white-space: nowrap; }
+    .consent { height: 124px; align-items: flex-start; padding: 12px 14px; }
+  }
+
+  /* ── the bar (= .cit-cfg-fb) ── */
+  .fb { position: absolute; z-index: 5; left: 18px; width: min(540px, calc(100cqw - 36px)); box-sizing: border-box; background: #fff; color: #10243a;
+    border-radius: 14px; box-shadow: 0 12px 34px rgba(0,0,0,.35); bottom: 152px; max-height: calc(100% - 176px); overflow-y: auto; transition: opacity .3s; }
+  .fb[hidden] { display: block; opacity: 0; pointer-events: none; }
+  .fb .bar { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 14px; }
+  .fb .open { flex: 1; min-width: 0; min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .fb .q { flex: 1; min-width: 0; }
+  .fb .more { color: #60748b; }
+  .fb .chev svg { width: 18px; height: 18px; stroke: #10243a; fill: none; stroke-width: 2; transform: rotate(180deg); transition: transform .2s; }
+  .fb.on .chev svg { transform: none; }
+  .fb .x { position: relative; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .fb .x::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: #eef7fa; border: 1px solid rgba(14,42,71,.22); }
+  .fb .x svg { position: relative; width: 14px; height: 14px; stroke: #10243a; fill: none; stroke-width: 2.4; }
+  .fb .body { display: none; padding: 2px 14px 12px; }
+  .fb.on .body { display: block; }
+  .fb .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fb .opts button { min-height: 36px; padding: 0 12px; border: 1px solid rgba(14,42,71,.22); border-radius: 999px; background: #eef7fa; color: #10243a; font: 500 13px system-ui, sans-serif; cursor: pointer; }
+  .fb .opts button[aria-pressed="true"] { background: #0e2a47; border-color: #0e2a47; color: #fff; }
+  .fb textarea { display: none; width: 100%; box-sizing: border-box; min-height: 56px; margin-top: 8px; padding: 8px 10px; border: 1px solid rgba(14,42,71,.22); border-radius: 10px; font: 13px system-ui, sans-serif; }
+  .fb.other textarea { display: block; }
+  .fb .foot { display: flex; gap: 8px; margin-top: 10px; }
+  .fb .send, .fb .skip { min-height: 40px; padding: 0 16px; border-radius: 10px; border: 0; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+  .fb .send { background: #1fb6d6; color: #0a1f36; }
+  .fb .send:disabled { opacity: .45; cursor: not-allowed; }
+  .fb .skip { background: transparent; color: #60748b; }
+  .fb .done { margin: 0; padding: 12px 14px; font-size: 13px; font-weight: 600; }
+  .fb.fin .bar, .fb.fin .body { display: none; }
+  @container (max-width: 560px) {
+    .fb { left: 12px; width: calc(100cqw - 24px); bottom: 196px; max-height: calc(100% - 216px); border-radius: 12px; }
+    .fb .bar { padding: 2px 2px 2px 12px; }
+    .fb .more { display: none; }
+    .fb.on .more { display: block; margin-top: 2px; font-size: 12.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="tools">
+  <button type="button" data-size="m" aria-pressed="false">Mobil 390px</button>
+  <button type="button" data-size="d" aria-pressed="false">Asztali</button>
+  <button type="button" id="again">Újra (a × után)</button>
+  <small>A felső ajánlat-sáv × gombja után ez jelenik meg. Koppintson a kérdésre.</small>
+</div>
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <div class="notice"><b>Ez egy honlap-terv az Ön szállásáról.</b> <span>Ez még nem élő oldal.</span></div>
+    <div class="hero">
+      <h1>ÜDÜLŐTÁBOR A BALATONNÁL</h1>
+      <p>Fenyves közepén álló üdülőtábor, faházas és kőépületi szállással.</p>
+      <span class="cta">SZABAD IDŐPONTOT KÉREK</span>
+    </div>
+    <div class="pills"><span class="pill t">14 nap ingyen</span><span class="pill o">Itt rendelheti meg</span></div>
+    <div class="consent">A biztonságos kártyás fizetéshez sütiket használnánk. (süti-sáv)</div>
+
+    <div class="fb" id="fb" role="region" aria-label="Mi tartotta vissza?">
+      <div class="bar">
+        <button type="button" class="open" aria-expanded="false">
+          <span class="q"><b>Mi tartotta vissza?</b> <span class="more">Egy koppintás, segít jobbat kínálnunk.</span></span>
+          <span class="chev"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+        <button type="button" class="x" aria-label="Bezárás"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="body">
+        <div class="opts">
+          <button type="button" aria-pressed="false" data-r="expensive">Drágának találom</button>
+          <button type="button" aria-pressed="false" data-r="not_now">Most nem időszerű</button>
+          <button type="button" aria-pressed="false" data-r="distrust">Nem bízom benne, vagy nem értem</button>
+          <button type="button" aria-pressed="false" data-r="have_site">Van már honlapom, nem kell</button>
+          <button type="button" aria-pressed="false" data-r="other">Más…</button>
+        </div>
+        <textarea maxlength="300" placeholder="Írja le röviden (nem kötelező)" aria-label="Más…"></textarea>
+        <div class="foot">
+          <button type="button" class="send" disabled>Elküldöm</button>
+          <button type="button" class="skip">Inkább nem</button>
+        </div>
+      </div>
+      <p class="done" hidden></p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById("stage");
+  var fb = document.getElementById("fb");
+  var openBtn = fb.querySelector(".open");
+  var send = fb.querySelector(".send");
+  var pick = null;
+  function size(s) {
+    stage.classList.toggle("m", s === "m");
+    document.querySelectorAll("[data-size]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-size") === s ? "true" : "false");
+    });
+  }
+  document.querySelectorAll("[data-size]").forEach(function (b) {
+    b.addEventListener("click", function () { size(b.getAttribute("data-size")); });
+  });
+  size(window.innerWidth < 700 ? "m" : "d");
+  function reset() {
+    pick = null;
+    fb.className = "fb";
+    fb.hidden = false;
+    openBtn.setAttribute("aria-expanded", "false");
+    send.disabled = true;
+    fb.querySelector(".done").hidden = true;
+    fb.querySelectorAll(".opts button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+  }
+  openBtn.addEventListener("click", function () {
+    var on = !fb.classList.contains("on");
+    fb.classList.toggle("on", on);
+    openBtn.setAttribute("aria-expanded", on ? "true" : "false");
+  });
+  fb.querySelector(".x").addEventListener("click", function () { fb.hidden = true; });
+  fb.querySelector(".opts").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) return;
+    pick = b.getAttribute("data-r");
+    fb.querySelectorAll(".opts button").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    fb.classList.toggle("other", pick === "other");
+    send.disabled = false;
+  });
+  function finish(msg) {
+    fb.classList.add("fin");
+    var d = fb.querySelector(".done");
+    d.textContent = msg;
+    d.hidden = false;
+    setTimeout(function () { fb.hidden = true; }, 4000);
+  }
+  send.addEventListener("click", function () {
+    if (pick) finish("Köszönjük — a válasz csak ehhez a megkereséshez kapcsolódik, nevet nem kérünk.");
+  });
+  fb.querySelector(".skip").addEventListener("click", function () { finish("Rendben, nem kérdezzük többet."); });
+  document.getElementById("again").addEventListener("click", reset);
+})();
+</script>
+</body>
+</html>
