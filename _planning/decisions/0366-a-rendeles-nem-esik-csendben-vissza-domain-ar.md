@@ -1,4 +1,4 @@
-## ADR-XXXX — A rendelés nem esik csendben vissza (domain/ár → 409), egy rendelés = egy pay-link, a dev-útválasztás = az éles nginx, a csak-mobilos vevő is kap belépést, a kísérő SMS GSM-7
+## ADR-0366 — A rendelés nem esik csendben vissza (domain/ár → 409), egy rendelés = egy pay-link, a dev-útválasztás = az éles nginx, a csak-mobilos vevő is kap belépést, a kísérő SMS GSM-7
 
 **Dátum:** 2026-10-11 · **Kontextus:** Elek 10-11 „megkeresés a lead szemével” köre (BLOKKOLÓ B1, B2; KÖZEPES K1, K2). **Visszaolvasva:** ADR-0032 (a kiírt = a terhelt), ADR-0330 (lead saját előnézeti aldomainje), ADR-0212 (nginx: vevő-oldali konzol-utak), ADR-0360 (domain csomag-tartalomként), ADR-0344 C2b (kampány-SMS GSM-7, ≤ 2 szelet). **Megtartja:** ADR-0109 „nem additív írás” (elutasított domain = nincs domain) — de rendelés sincs.
 

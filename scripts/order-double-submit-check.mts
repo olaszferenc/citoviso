@@ -1,5 +1,5 @@
 // KETTŐS BEKÜLDÉS ŐR — két egyidejű beküldés ugyanarra a rendelésre EGY rendelést és EGY
-// fizethető pay-linket ad (ADR-XXXX ⑥, Elek 5. kör K2).
+// fizethető pay-linket ad (ADR-0366 ⑥, Elek 5. kör K2).
 //
 //   npx tsx scripts/order-double-submit-check.mts
 //

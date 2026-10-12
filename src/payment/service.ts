@@ -1791,7 +1791,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
       "prospect.contact_email as contactEmail",
-      // ADR-XXXX (Elek 10-11 B2): the address the buyer typed at checkout (required there).
+      // ADR-0366 (Elek 10-11 B2): the address the buyer typed at checkout (required there).
       "order_intent.buyer_email as buyerEmail",
       // The credentials letter greets the buyer by name (a person only).
       "order_intent.buyer_name as buyerName",
@@ -1945,7 +1945,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
         .select("id")
         .where("tenant_id", "=", conv.tenantId)
         .executeTakeFirst();
-      // ⛔ ADR-XXXX (Elek 10-11 B2): the login used to go to prospect.contact_email ONLY. A lead
+      // ⛔ ADR-0366 (Elek 10-11 B2): the login used to go to prospect.contact_email ONLY. A lead
       // reached by MMS/SMS has none — they paid, typed their e-mail at checkout, and got the
       // invoice but no login, while the success page said "e-mailben küldtük". The buyer's own
       // checkout address is the fallback; the prospect's address stays first (it is the one

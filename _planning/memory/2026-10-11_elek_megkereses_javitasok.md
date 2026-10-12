@@ -1,4 +1,4 @@
-# 2026-10-11 — Elek megkeresés-kör javításai (B1 · B2 · K1 · K2), ADR-XXXX
+# 2026-10-11 — Elek megkeresés-kör javításai (B1 · B2 · K1 · K2), ADR-0366
 
 **Szál:** SUB a „Elek-teszt koordinátor” alatt (brief `~/rc-briefs/megkereses-javitasok-elek-20261011.md`), fa `~/wt/cit542145eb`.
 

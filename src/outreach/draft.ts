@@ -497,7 +497,7 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
  */
 export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   const { link, unsubscribeLink } = smsDraftParts(d);
-  // ADR-XXXX (Elek 10-11 K2): GSM-7, like the campaign SMS (ADR-0344 C2b) — translated WITH
+  // ADR-0366 (Elek 10-11 K2): GSM-7, like the campaign SMS (ADR-0344 C2b) — translated WITH
   // accents (the catalog key is the Hungarian source), then folded. With the „–” and the
   // accents it went out UCS-2 in 4 segments (measured: 224 characters) — twice the cost, and
   // an older handset may show the parts apart. Folded it is 2. A long name is shortened until
@@ -522,7 +522,7 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   return { text, link, unsubscribeLink, name: toGsm7(name) };
 }
 
-/** The companion SMS may cost at most this many segments (ADR-XXXX, as the campaign SMS). */
+/** The companion SMS may cost at most this many segments (ADR-0366, as the campaign SMS). */
 export const PAIR_SMS_MAX_SEGMENTS = 2;
 
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail

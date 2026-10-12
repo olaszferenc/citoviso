@@ -748,7 +748,7 @@ async function proxyPreviewPage(
 }
 
 /**
- * ADR-XXXX — what nginx does for a CONSOLE_EDGE_PREFIXES path (edgeRoutes.ts): pass the
+ * ADR-0366 — what nginx does for a CONSOLE_EDGE_PREFIXES path (edgeRoutes.ts): pass the
  * request to the console as-is (method, body, Host, client headers) and relay the answer.
  * Only reachable without nginx in front (see the call site).
  */
@@ -2323,7 +2323,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (previewToken && req.method === "GET" && pathname === "/") {
     return proxyPreviewPage(req, res, previewToken, url.search);
   }
-  // ADR-XXXX (Elek 10-11 B1): in production nginx never lets a console prefix reach this
+  // ADR-0366 (Elek 10-11 B1): in production nginx never lets a console prefix reach this
   // process. Without nginx (dev, test harnesses) it does — and here it used to 404, so the
   // configurator's domain picker was dead and the order fell back silently. Forward it the
   // way nginx would; in production this branch is unreachable, so behaviour is identical.

@@ -1,4 +1,4 @@
-// EDGE-ROUTING ŐR — a dev-útválasztás = az éles nginx (ADR-XXXX, Elek 10-11 B1).
+// EDGE-ROUTING ŐR — a dev-útválasztás = az éles nginx (ADR-0366, Elek 10-11 B1).
 //
 //   npx tsx scripts/edge-routing-check.mts
 //   npx tsx scripts/edge-routing-check.mts --selftest   (csak ①–②, DB és szerver nélkül)

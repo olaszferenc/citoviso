@@ -1,5 +1,5 @@
 // CSOMAG-TARTALOM: SAJÁT CÍM — B állapotban („a domain a csomag része”, ADR-0360) a csomag-kártya
-// „Mit tartalmaz?” listája kimondja, melyik csomagban van benne a saját cím (ADR-XXXX, Elek 10-11 K1).
+// „Mit tartalmaz?” listája kimondja, melyik csomagban van benne a saját cím (ADR-0366, Elek 10-11 K1).
 //
 //   npx tsx scripts/package-domain-row-check.mts [--shot <dir>]
 //   npx tsx scripts/package-domain-row-check.mts --self-test   (a sor nélkül PIROS kell)

@@ -967,7 +967,7 @@ export interface OrderIntentView {
  * and advances the prospect status. Returns the lead for operator logging.
  */
 /**
- * ADR-XXXX ⑥ (Elek 5. kör K2) — the lead's still-open FIRST purchase that is identical to the
+ * ADR-0366 ⑥ (Elek 5. kör K2) — the lead's still-open FIRST purchase that is identical to the
  * one being submitted (same basket, cycle, price, address, buyer e-mail), from the last 30
  * minutes, with no settled payment. A second submit of the same order (two tabs, a double tap)
  * reuses it instead of opening a second payable order. Called under the per-lead order lock.

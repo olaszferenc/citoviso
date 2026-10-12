@@ -1,5 +1,5 @@
 /**
- * ADR-XXXX (Elek 10-11 B1) — WHICH SERVER ANSWERS A PATH on (*.)citoviso.com.
+ * ADR-0366 (Elek 10-11 B1) — WHICH SERVER ANSWERS A PATH on (*.)citoviso.com.
  *
  * In production nginx decides (deploy/nginx/citoviso.conf, a read-only copy of
  * /etc/nginx/sites-enabled/citoviso): these prefixes go to the console (:4600), everything

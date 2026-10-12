@@ -2978,7 +2978,7 @@
         "</span></span>"
       );
     });
-    // ADR-XXXX (Elek 10-11 K1): when the market sells the domain AS PACKAGE CONTENT (ADR-0360,
+    // ADR-0366 (Elek 10-11 K1): when the market sells the domain AS PACKAGE CONTENT (ADR-0360,
     // DOM.pkgModules), the card's list says so — one more row of the same kind, ticked on the
     // packages that cover it. Before, only the address step two screens later showed „a csomag
     // része”, so the campaign's point (the buyer's own .hu address with the package) stayed invisible.
@@ -4794,7 +4794,7 @@
           track("module_dependency_unmet", { missing: (data.missing || []).join(",") });
           return;
         }
-        // ADR-XXXX (Elek 10-11 B1) — a szerver NEM rögzítette a rendelést, mert a
+        // ADR-0366 (Elek 10-11 B1) — a szerver NEM rögzítette a rendelést, mert a
         // fizetendő összeg vagy a cím nem az lett volna, amit a vevő lát. Régen ilyenkor
         // csendben az ingyenes címre állt, és kevesebbet/mást terhelt, mint a gomb
         // felirata. Most: a panel átáll arra, amit a szerver ad (ingyenes cím, ill. a
@@ -4910,7 +4910,7 @@
       tr("Fizetést most nem indítottunk, és nem terheltük meg a kártyáját. Nézze meg az új összeget, és küldje be újra.");
   }
 
-  /** ADR-XXXX — ugyanaz a minta, mint a showDepNotice: mi történt, és hogy semmit nem terheltünk. */
+  /** ADR-0366 — ugyanaz a minta, mint a showDepNotice: mi történt, és hogy semmit nem terheltünk. */
   function showRefusedNotice(what) {
     var foot = panel.querySelector(".cit-cfg-foot");
     if (!foot) return;

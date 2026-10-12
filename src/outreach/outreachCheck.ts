@@ -60,7 +60,7 @@ const MISLEADING_PATTERNS: readonly RegExp[] = [
 const FRAMING_PATTERN = /terv|előzetes|látványterv|minta|demó|preview/iu;
 
 /**
- * ADR-XXXX: a GSM-7 SMS carries Hungarian WITHOUT accents (toGsm7: „elkészült” → „elkeszult”),
+ * ADR-0366: a GSM-7 SMS carries Hungarian WITHOUT accents (toGsm7: „elkészült” → „elkeszult”),
  * so a rule written with accents would never fire on it. The SMS gate tests the accent-free
  * twin of each rule on the accent-free prose as well — the folded text may not slip past
  * what the accented one would be stopped for.
@@ -681,7 +681,7 @@ export function checkOutreachSms(
 
   // C3 — personalization. Also on the prose: the lead's name rides in the link's
   // readable slug, so the raw text would score every mass-text as personalized.
-  // ADR-XXXX: a GSM-7 text carries the name folded (Bánó → Bano) and maybe shortened — the
+  // ADR-0366: a GSM-7 text carries the name folded (Bánó → Bano) and maybe shortened — the
   // draft says how (`sms.name`), and the comparison is accent-blind on both sides.
   const nameInText = (sms as { name?: string }).name ?? leadName;
   const fold = (t: string): string => toGsm7(t).toLowerCase();
@@ -691,7 +691,7 @@ export function checkOutreachSms(
 
   // C4 + §A — no finished-site claim; explicit preview framing required. Both on
   // the prose: the claim is something the message MAKES, and a slug is not a claim.
-  // ADR-XXXX: and on its accent-free twin — the GSM-7 SMS says it without accents.
+  // ADR-0366: and on its accent-free twin — the GSM-7 SMS says it without accents.
   const plainProse = deaccent(prose);
   for (let i = 0; i < MISLEADING_PATTERNS.length; i++) {
     if (MISLEADING_PATTERNS[i]!.test(prose) || MISLEADING_PATTERNS_PLAIN[i]!.test(plainProse)) {

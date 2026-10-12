@@ -1181,7 +1181,7 @@ async function handleOrderRequest(
   // pass-through registrar cost.
   //
   // ⛔ Not an additive write: an ineligible package does not get a cheaper
-  // domain, it gets NO domain — and since ADR-XXXX no ORDER either: the buyer is
+  // domain, it gets NO domain — and since ADR-0366 no ORDER either: the buyer is
   // told and decides again (below), rather than being silently rewritten to the free
   // subdomain (feedback: additive_write_is_not_a_gate).
   //
@@ -1197,8 +1197,8 @@ async function handleOrderRequest(
     console.warn(
       tldOffered
         ? `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
-            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-XXXX)`
-        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-0360 ③) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-XXXX)`,
+            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-0366)`
+        : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-0360 ③) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-0366)`,
     );
   }
   const effectiveDomainType = domainEligible ? domainType : "citoviso_sub";
@@ -1206,7 +1206,7 @@ async function handleOrderRequest(
     ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1, undefined, { domain: domainName, ...pkgCtx })
     : 0;
   const price = (offer ? applyOffer(listPrice, offer) : listPrice) + domainFee;
-  // ⛔ ADR-XXXX ① (Elek 10-11 B1) — NO SILENT FALLBACK. Both branches below used to
+  // ⛔ ADR-0366 ① (Elek 10-11 B1) — NO SILENT FALLBACK. Both branches below used to
   // log and carry on: a refused custom domain was rewritten to the free subdomain and a
   // client/server price gap was "resolved" by charging the server figure. Measured on
   // the scratch DB: the buyer read „Fizetek — 6 430 Ft” for a custom name, was charged
@@ -1235,7 +1235,7 @@ async function handleOrderRequest(
   if (clientPrice !== null && clientPrice !== price) {
     console.warn(
       `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} (lista ${listPrice + domainFee}) ` +
-        `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — ELUTASÍTVA, a vevő az új összeggel dönt (ADR-XXXX)`,
+        `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — ELUTASÍTVA, a vevő az új összeggel dönt (ADR-0366)`,
     );
     send(
       res,
@@ -1260,7 +1260,7 @@ async function handleOrderRequest(
   // free/paid split any more: the threshold is the entry condition itself).
   // ADR-0360 ④: a threshold of 0 is "no threshold" — and then there is no floor either.
   const committedMinMonthly = domainEligible && getDomainMinPackageMonthly() > 0 ? getDomainMinPackageMonthly() : null;
-  // ⛔ ADR-XXXX ⑥ (Elek 5. kör K2): two simultaneous submits (two tabs, a double tap) each
+  // ⛔ ADR-0366 ⑥ (Elek 5. kör K2): two simultaneous submits (two tabs, a double tap) each
   // recorded an order AND minted a payable pay-link — the money could move twice. Per lead,
   // record → approve → pay-link now run ONE AT A TIME, and an identical, still-open first
   // purchase of the same lead is REUSED (its own pending pay-link comes back, via
@@ -1287,7 +1287,7 @@ async function handleOrderRequest(
   if (twin) {
     console.warn(
       `[console] ISMÉTELT BEKÜLDÉS: a(z) ${twin.orderIntentId} azonos, még függő első rendelés — ` +
-        `nem nyílik új, ugyanaz a pay-link megy vissza (ADR-XXXX)`,
+        `nem nyílik új, ugyanaz a pay-link megy vissza (ADR-0366)`,
     );
   }
   const rec = twin ?? await recordOrderIntent({
@@ -1386,7 +1386,7 @@ async function handleOrderRequest(
 }
 
 /**
- * ADR-XXXX ⑥ — one order submit per lead at a time (in-process: one console process
+ * ADR-0366 ⑥ — one order submit per lead at a time (in-process: one console process
  * serves every order route). Resolves to the release function; the next waiter of the
  * same key runs only after it.
  */

@@ -1,5 +1,5 @@
 // CSENDES VISSZAESÉS ŐR — a rendelés nem mehet tovább MÁS tartalommal vagy MÁS összeggel,
-// mint amit a vevő lát (ADR-XXXX, Elek 10-11 B1; ADR-0032: a kiírt = a terhelt).
+// mint amit a vevő lát (ADR-0366, Elek 10-11 B1; ADR-0032: a kiírt = a terhelt).
 //
 //   npx tsx scripts/order-silent-fallback-check.mts
 //   npx tsx scripts/order-silent-fallback-check.mts --self-test   (a kliens-ág nélkül PIROS kell)

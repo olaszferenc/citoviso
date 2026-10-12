@@ -3383,7 +3383,7 @@ export function payResultPage(
   // ⛔ Elek 4: a continued trial got NO credentials mail (activation only issues a
   // login that did not exist) — telling them we sent one sends them hunting for it.
   const existing = Boolean(info?.accountExisted && info?.username);
-  // ⛔ ADR-XXXX (Elek 10-11 B2): no username = activation issued NO login (no address to send it
+  // ⛔ ADR-0366 (Elek 10-11 B2): no username = activation issued NO login (no address to send it
   // to, or the issue failed) — then no mail went out either, and the page may not say it did.
   // What is true: payment fine, the login is not out yet, and who to write to for it.
   const noLogin = !existing && !info?.username;

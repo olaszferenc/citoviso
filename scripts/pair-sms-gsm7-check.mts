@@ -1,5 +1,5 @@
 // KÍSÉRŐ SMS GSM-7 ŐR — a hideg MMS+SMS pár szöveges fele GSM-7 és legfeljebb 2 szelet
-// (ADR-XXXX, Elek 10-11 K2; ugyanaz a szabály, mint a kampány-SMS-é, ADR-0344 C2b).
+// (ADR-0366, Elek 10-11 K2; ugyanaz a szabály, mint a kampány-SMS-é, ADR-0344 C2b).
 //
 //   npx tsx scripts/pair-sms-gsm7-check.mts
 //

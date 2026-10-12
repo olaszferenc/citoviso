@@ -1,5 +1,5 @@
 // CSAK-MOBILOS VEVŐ BELÉPŐJE — aki MMS/SMS-ből jött és fizetett, kapjon belépést, és a
-// sikerlap ne állítson olyat, ami nem történt meg (ADR-XXXX, Elek 10-11 B2).
+// sikerlap ne állítson olyat, ami nem történt meg (ADR-0366, Elek 10-11 B2).
 //
 //   EMAIL_PROVIDER=mock PAYMENT_GATEWAY=mock npx tsx scripts/mobile-buyer-login-check.mts
 //
