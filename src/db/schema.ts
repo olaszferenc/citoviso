@@ -1775,6 +1775,12 @@ export interface DomainProvisioningTable {
   error: string | null;
   created_at: Generated<Timestamp>;
   finished_at: Timestamp | null;
+  /** 0107 (ÚJ-K1): since when the setup waits for NS delegation / the certificate. */
+  waiting_since: Timestamp | null;
+  /** 0107: stuck-setup escalation sent — 0 none, 1 = 24 h operator alert, 2 = 72 h alert + tenant mail. */
+  stuck_stage: Generated<number>;
+  /** 0107: the tenant got the "setup takes longer" mail (setup_retry or the 72 h step) — once. */
+  delay_notice_at: Timestamp | null;
 }
 
 /** 0094 (ADR-0339): a reply to our outreach, collected read-only from the dev box's

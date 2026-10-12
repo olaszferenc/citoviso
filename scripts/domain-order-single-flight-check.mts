@@ -19,6 +19,8 @@
 //       has its own line; list − discount + domain = gross.
 //   K3  a /pricing save keeps the legacy fields the form does not send.
 //   K5  www.<custom domain> → 301 to the bare domain.
+//   ÚJ-K1 (Elek „it”, 2026-10-12) a bought name stuck in dns_pending: 24 h → one operator alert,
+//       72 h → a repeated alert + ONE tenant letter (none if setup_retry already sent it), never daily.
 //
 // The behaviour blocks run against the REAL modules on a throwaway database (mock
 // registrar / DNS / gateway / invoice / mail). Measured against the code before this
@@ -303,6 +305,58 @@ await block("B2", async () => {
     "⭐ B2 az időzítő újrapróbálja a DNS/TLS lépést → live", JSON.stringify(swept));
   const t = await tally(tenantId);
   ok(t.registrations === 1 && t.captured === 1, "B2 az újrapróba nem vesz és nem terhel újra", JSON.stringify(t));
+});
+
+// ÚJ-K1 (Elek „it” kör, 2026-10-12, ADR-XXXX) — a bought name STUCK in dns_pending
+// (the mock DNS keeps every "dnsfail" label pending forever). Before: +1/+7/+30 days, 0 alert,
+// 0 letter. Now: 24 h → one operator alert; 72 h → a repeated alert + ONE tenant letter; never daily.
+await block("ÚJ-K1", async () => {
+  const { tenantId } = await makeTenant("Ragadó");
+  const DOMAIN = "ragado-dnsfail.hu";
+  const a = await newPaidLink(tenantId, DOMAIN);
+  await pay.applyWebhookResult({ gatewayRef: a.ref, status: "paid" });
+  await waitSettled([a.orderId]);
+  const row = () => db.selectFrom("domain_provisioning").select(["id", "status", "waiting_since", "stuck_stage", "delay_notice_at"] as never)
+    .where("tenant_id", "=", tenantId).executeTakeFirstOrThrow() as Promise<{ id: string; status: string; waiting_since: Date | null; stuck_stage: number; delay_notice_at: Date | null }>;
+  const r0 = await row();
+  ok(r0.status === "dns_pending" && !!r0.waiting_since, "ÚJ-K1 a megvett név dns_pending-ben vár, az óra fut (waiting_since)", JSON.stringify(r0));
+  const t0 = new Date(r0.waiting_since ?? Date.now()).getTime();
+  const letters = async () => Number((await db.selectFrom("tenant_message").select((eb) => eb.fn.countAll().as("n"))
+    .where("tenant_id", "=", tenantId).where("kind", "=", "domain").executeTakeFirstOrThrow()).n);
+  const mine = () => alerts.filter((x) => x.subject.includes(DOMAIN));
+  const at = async (h: number) => prov.resumePendingDomainProvisionings({ now: new Date(t0 + h * 3_600_000) });
+  alerts.length = 0;
+  await at(1);
+  ok(mine().length === 0 && (await letters()) === 0, "ÚJ-K1 +1 óra: se riasztás, se levél", JSON.stringify(mine()));
+  await at(25);
+  ok(mine().length === 1 && (await row()).stuck_stage === 1, "⭐ ÚJ-K1 +25 óra: EGY operátor-riasztás", JSON.stringify(mine()));
+  ok((await letters()) === 0, "ÚJ-K1 +25 óra: a tulaj még nem kap levelet");
+  await at(30);
+  ok(mine().length === 1, "⭐ ÚJ-K1 +30 óra: nincs második 24 órás riasztás", JSON.stringify(mine()));
+  await at(73);
+  ok(mine().length === 2 && /ISMÉTELT/.test(mine()[1]?.subject ?? ""), "⭐ ÚJ-K1 +73 óra: ismételt riasztás", JSON.stringify(mine()));
+  const mail = await db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
+    .where("kind", "=", "domain").executeTakeFirst();
+  ok((await letters()) === 1 && /az Öné/.test(mail?.subject ?? "") && /nincs teendője/.test(mail?.body_text ?? ""),
+    "⭐ ÚJ-K1 +73 óra: EGY igaz tulaj-levél (a név az Öné, a beállítás tovább tart)", JSON.stringify(mail));
+  ok(/most kapta meg/.test(mine()[1]?.text ?? ""), "ÚJ-K1 a riasztás kimondja, hogy a tulaj most kapott levelet", mine()[1]?.text ?? "");
+  await at(24 * 7);
+  await at(24 * 30);
+  ok(mine().length === 2 && (await letters()) === 1, "⭐ ÚJ-K1 +7 / +30 nap: se új riasztás, se új levél (nem naponta)",
+    `riasztás ${mine().length}, levél ${await letters()}`);
+  ok((await row()).status === "dns_pending", "ÚJ-K1 a sor nem lép magától tovább (nem hazudunk élőt)");
+  // A setup_retry letter already went out for this beszerzés → the 72 h step sends no second one.
+  const other = await makeTenant("Ragadó2");
+  const b = await newPaidLink(other.tenantId, "ragado2-dnsfail.hu");
+  await pay.applyWebhookResult({ gatewayRef: b.ref, status: "paid" });
+  await waitSettled([b.orderId]);
+  await db.updateTable("domain_provisioning").set({ delay_notice_at: new Date() } as never).where("tenant_id", "=", other.tenantId).execute();
+  const before2 = Number((await db.selectFrom("tenant_message").select((eb) => eb.fn.countAll().as("n")).where("tenant_id", "=", other.tenantId).executeTakeFirstOrThrow()).n);
+  const ws2 = (await db.selectFrom("domain_provisioning").select("waiting_since" as never).where("tenant_id", "=", other.tenantId).executeTakeFirstOrThrow()) as { waiting_since: Date };
+  await prov.resumePendingDomainProvisionings({ now: new Date(new Date(ws2.waiting_since).getTime() + 73 * 3_600_000) });
+  const after2 = Number((await db.selectFrom("tenant_message").select((eb) => eb.fn.countAll().as("n")).where("tenant_id", "=", other.tenantId).executeTakeFirstOrThrow()).n);
+  ok(after2 === before2 && alerts.some((x) => x.subject.includes("ragado2-dnsfail.hu") && /már korábban megkapta/.test(x.text)),
+    "⭐ ÚJ-K1 ha a „tovább tart” levél már kiment (setup_retry), a 72 órás lépcső nem küld másodikat", `${before2} → ${after2}`);
 });
 
 // B3 / K1 / ISMERT — the Webcím view

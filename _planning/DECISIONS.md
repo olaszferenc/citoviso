@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-sajat-domain-ragadt-beallitas-riasztas-es-level.md) — Saját domain: a `dns_pending`/`tls_pending`-ben ragadt beállítás 24 óránál riaszt, 72 óránál ismét + egy tulaj-levél
 - [ADR-0371](decisions/0371-portal-naptarszinkron-valodi-portal-feedek.md) — Portál-naptárszinkron valódi portál-feedek ellen: szállás-időzóna, csonka feed = hiba, webcal elfogadva, az üres kiadás is érvényes naptár
 - [ADR-0370](decisions/0370-a-modell-irta-mock-html-nem-futtathat-kodot.md) — A modell írta mock-HTML nem futtathat kódot: szűrés generáláskor ÉS kiszolgáláskor
 - [ADR-0369](decisions/0369-a-dontes-segito-ajanlat-felso-sav-fatyol-nelkul.md) — A döntés-segítő ajánlat felső sáv (fátyol nélkül, bezáró ×); a saját cím jelvénye a csomag-kártyán, kizárólag a /pricing-ból

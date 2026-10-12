@@ -13,6 +13,11 @@
 // second paid order for a tenant that already has a live or running one is refused here
 // and its hold released (two tabs, a double click, two parallel webhooks).
 //
+// ADR-XXXX (Elek ÚJ-K1, 2026-10-12): a `dns_pending`/`tls_pending` („még nem aktív”) NEM hiba, ezért
+// a setup_retry nem fogta — a megvett név örökre ott ragadhatott, riasztás és levél nélkül. Mostantól
+// a várakozás órája (`waiting_since`) 24 óra után operátor-riasztást, 72 óra után ismételt riasztást
+// és EGY igaz tulaj-levelet ad („a webcím az Öné, a beállítás tovább tart”) — egyszer, nem naponta.
+//
 // A `site.custom_domain` CSAK a tls_pending→live átmenetnél íródik be — előbb nem,
 // különben a public.ts (ADR-0041) egy még nem élő hosztra 301-ezne. A live lépés
 // re-rendereli a snapshotot, hogy a canonical/og:url az új domainre álljon
@@ -86,7 +91,9 @@ async function notifyTenant(
   domain: string,
   /** ADR-0251: the failed purchase's hold was released — nothing was charged. */
   released = false,
-): Promise<void> {
+  /** ÚJ-K1: the beszerzés row — the setup_retry letter is recorded on it (sent once). */
+  provisioningId?: string,
+): Promise<boolean> {
   try {
     const user = await db
       .selectFrom("tenant_user")
@@ -95,7 +102,7 @@ async function notifyTenant(
       .where("contact_email", "is not", null)
       .executeTakeFirst();
     const to = user?.contact_email;
-    if (!to) return; // nincs hova — a beszerzés ettől még érvényes
+    if (!to) return false; // nincs hova — a beszerzés ettől még érvényes
 
     const site = await db
       .selectFrom("site")
@@ -121,6 +128,11 @@ async function notifyTenant(
             lang,
           });
     await getEmailSender().send(msg);
+    if (outcome === "setup_retry" && provisioningId) {
+      // ÚJ-K1: the "setup takes longer" letter goes ONCE per beszerzés — the stuck-setup
+      // escalation reads this and does not send a second one.
+      await db.updateTable("domain_provisioning").set({ delay_notice_at: new Date() }).where("id", "=", provisioningId).execute();
+    }
     // ADR-0084: the same notice into the tenant's own mailbox.
     await logTenantMessage({
       tenantId,
@@ -130,8 +142,10 @@ async function notifyTenant(
       bodyText: msg.text,
       recipient: to,
     });
+    return true;
   } catch (e) {
     console.error(`[domain] értesítő e-mail nem ment ki (${tenantId}, ${outcome}):`, e);
+    return false;
   }
 }
 
@@ -194,6 +208,72 @@ async function alertSetupRetry(domain: string, tenantId: string, error: string):
       `Állapot: setup_retry — a resume-domains időzítő a 'registered' lépéstől újrapróbálja. ` +
       `A tulaj felülete és levele azt mondja: a név az övé, a beállítás késik, nincs teendője.\n` +
       `Ha nem áll helyre: a hiba okának megnézése, majd  npx tsx scripts/resume-domains.mts\n`,
+  });
+}
+
+/** ÚJ-K1: hours a bought name may wait for NS delegation / its certificate before we act. */
+export const DOMAIN_STUCK_ALERT_HOURS = 24;
+export const DOMAIN_STUCK_NOTICE_HOURS = 72;
+
+/**
+ * ADR-XXXX (Elek ÚJ-K1): a bought-and-paid name whose NS delegation or certificate does not
+ * activate. `dns_pending`/`tls_pending` are "not yet", not errors, so setup_retry never
+ * fired — measured: +1, +7, +30 days in `dns_pending`, no alert, no letter.
+ *
+ * Two steps, each claimed by a conditional UPDATE (two parallel resume runs send once):
+ *   24 h → operator alert;  72 h → a repeated alert + the tenant's ONE true letter (the same
+ *   "a webcím az Öné — a beállítás tovább tart" letter setup_retry sends; skipped when that
+ *   one already went out for this beszerzés). Never daily.
+ */
+async function escalateStuckSetup(
+  p: { id: string; siteId: string; tenantId: string; domain: string },
+  status: "dns_pending" | "tls_pending",
+  now: Date,
+): Promise<void> {
+  const row = await db
+    .selectFrom("domain_provisioning")
+    .select(["waiting_since", "stuck_stage", "delay_notice_at"])
+    .where("id", "=", p.id)
+    .executeTakeFirst();
+  if (!row) return;
+  if (!row.waiting_since) {
+    // A row that was already waiting before the clock existed: its clock starts now.
+    await db.updateTable("domain_provisioning").set({ waiting_since: now }).where("id", "=", p.id).where("waiting_since", "is", null).execute();
+    return;
+  }
+  const hours = (now.getTime() - new Date(row.waiting_since as unknown as string).getTime()) / 3_600_000;
+  const stage = hours >= DOMAIN_STUCK_NOTICE_HOURS ? 2 : hours >= DOMAIN_STUCK_ALERT_HOURS ? 1 : 0;
+  if (stage <= row.stuck_stage) return;
+  const claimed = await db
+    .updateTable("domain_provisioning")
+    .set({ stuck_stage: stage })
+    .where("id", "=", p.id)
+    .where("stuck_stage", "<", stage)
+    .returning("id")
+    .executeTakeFirst();
+  if (!claimed) return; // a parallel run took this step
+  const what = status === "dns_pending" ? "a névszerver-delegáció (NS) nem élesedett" : "a tanúsítvány (TLS) nem készült el";
+  const waited = Math.floor(hours);
+  console.error(`[domain] ⛔ ${p.domain}: ${waited} órája ${status} — ${what} (lépcső ${stage})`);
+  // The letter first: the alert then states what the tenant was actually told.
+  const tenantTold =
+    stage === 2 && !row.delay_notice_at && (await notifyTenant(p.tenantId, p.siteId, "setup_retry", p.domain, false, p.id));
+  await alertHouse({
+    tag: "domain-setup",
+    subject:
+      stage === 2
+        ? `Citoviso: ${p.domain} beállítása ${waited} órája áll — ISMÉTELT riasztás, a tulaj levelet kapott`
+        : `Citoviso: ${p.domain} megvéve, de a beállítás ${waited} órája áll (${status})`,
+    text:
+      `A(z) ${p.domain} nevet megvettük és a díjat lehívtuk, de ${what}: a beszerzés ${waited} órája ` +
+      `'${status}' állapotban vár.\n\nTenant: ${p.tenantId}\nBeszerzés: ${p.id}\n\n` +
+      `Ez nem hiba-válasz, hanem „még nem aktív”: az időzítő tovább kérdezi, de amíg nem aktív, nem lép tovább. Teendő: a regisztrátornál ` +
+      `a névszerverek, a DNS-szolgáltatónál a zóna / tanúsítvány állapotának megnézése, majd  npx tsx scripts/resume-domains.mts\n` +
+      (stage === 2
+        ? (tenantTold || row.delay_notice_at
+            ? `A tulaj ${tenantTold ? "most kapta meg" : "már korábban megkapta"} a levelet: a webcím az övé, a beállítás tovább tart, munkatársunk foglalkozik vele.\n`
+            : `A tulaj NEM kapott levelet (nincs e-mail címe, vagy a küldés hibázott) — szólni kell neki.\n`)
+        : `A ${DOMAIN_STUCK_NOTICE_HOURS}. órában ismételt riasztás megy, és a tulaj egy levelet kap.\n`),
   });
 }
 
@@ -337,7 +417,12 @@ export async function startOrderDomainProvisioning(orderIntentId: string): Promi
  * mean "propagation not done yet, call again later" (a poller/cron re-invokes); `live`
  * or `failed` are terminal. With the mock adapters the whole chain completes in one call.
  */
-export async function runDomainProvisioning(provisioningId: string): Promise<DomainProvisioningStatus> {
+export async function runDomainProvisioning(
+  provisioningId: string,
+  /** ÚJ-K1: the clock of the stuck-setup escalation (tests drive it; default: now). */
+  opts: { now?: Date } = {},
+): Promise<DomainProvisioningStatus> {
+  const now = opts.now ?? new Date();
   const p = await db
     .selectFrom("domain_provisioning")
     .innerJoin("site", "site.id", "domain_provisioning.site_id")
@@ -406,13 +491,19 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
       await registrar.setNameservers(p.domain, zone.nameservers);
       if (config.domains.serverIp) await dns.pointToServer(p.domain, config.domains.serverIp);
       await setStatus(p.id, p.siteId, "dns_pending", { registrarRef });
+      // ÚJ-K1: the wait starts here; a setup_retry re-entry keeps the first clock.
+      await db.updateTable("domain_provisioning").set({ waiting_since: now }).where("id", "=", p.id).where("waiting_since", "is", null).execute();
       status = "dns_pending";
     }
 
     // 3) dns_pending → tls_pending: wait for NS delegation to activate.
     if (status === "dns_pending") {
       const zs = await dns.zoneStatus(p.domain);
-      if (zs !== "active") return "dns_pending"; // propagation not done — re-run later
+      if (zs !== "active") {
+        // Propagation not done — re-run later; a wait past 24/72 h is escalated (ÚJ-K1).
+        await escalateStuckSetup(p, "dns_pending", now);
+        return "dns_pending";
+      }
       await setStatus(p.id, p.siteId, "tls_pending", { registrarRef });
       status = "tls_pending";
     }
@@ -420,7 +511,11 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
     // 4) tls_pending → live: wait for the certificate, then flip the domain live.
     if (status === "tls_pending") {
       const cs = await dns.certificateStatus(p.domain);
-      if (cs !== "active") return "tls_pending"; // cert not issued yet — re-run later
+      if (cs !== "active") {
+        // Cert not issued yet — re-run later; a wait past 24/72 h is escalated (ÚJ-K1).
+        await escalateStuckSetup(p, "tls_pending", now);
+        return "tls_pending";
+      }
       // The domain goes live: NOW the public host serves it and the slug host 301s.
       await db
         .updateTable("site")
@@ -451,7 +546,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
       if (!wasRetrying) {
         console.error(`[domain] ⛔ ${p.domain}: megvéve, de a beállítás elakadt → setup_retry (${msg})`);
         await alertSetupRetry(p.domain, p.tenantId, msg);
-        await notifyTenant(p.tenantId, p.siteId, "setup_retry", p.domain);
+        await notifyTenant(p.tenantId, p.siteId, "setup_retry", p.domain, false, p.id);
       } else {
         console.warn(`[domain] ${p.domain}: setup_retry újrapróba sem sikerült (${msg})`);
       }
@@ -484,7 +579,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
  * Runs sequentially: a handful of in-flight domains at pilot scale, and each step is a
  * couple of API calls — no need to fan out.
  */
-export async function resumePendingDomainProvisionings(): Promise<
+export async function resumePendingDomainProvisionings(opts: { now?: Date } = {}): Promise<
   { id: string; domain: string; status: DomainProvisioningStatus }[]
 > {
   const rows = await db
@@ -495,7 +590,7 @@ export async function resumePendingDomainProvisionings(): Promise<
     .execute();
   const out: { id: string; domain: string; status: DomainProvisioningStatus }[] = [];
   for (const r of rows) {
-    const status = await runDomainProvisioning(r.id);
+    const status = await runDomainProvisioning(r.id, opts);
     out.push({ id: r.id, domain: r.domain, status });
   }
   return out;

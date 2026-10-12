@@ -3311,7 +3311,7 @@ fi
 #     (mérve). Saját scratch-DB, mock regisztrátor/DNS/átjáró, ~20 mp.
 #     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/domain-order-single-flight-check.mts ] && \
-   changed_files | grep -qE '^src/domains/|^src/domains\.ts$|^src/payment/(service|billing)\.ts$|^src/tenant/subscriptionAdmin\.ts$|^src/server/(public|adminViews)\.ts$|^src/email/(domain|invoice)Email\.ts$|^src/billing/invoiceDelivery\.ts$|^src/console/(server|data)\.ts$|^migrations/0106_domain_order_single_flight\.sql$|^scripts/domain-order-single-flight-check\.mts$'; then
+   changed_files | grep -qE '^src/domains/|^src/domains\.ts$|^src/payment/(service|billing)\.ts$|^src/tenant/subscriptionAdmin\.ts$|^src/server/(public|adminViews)\.ts$|^src/email/(domain|invoice)Email\.ts$|^src/billing/invoiceDelivery\.ts$|^src/console/(server|data)\.ts$|^migrations/0106_domain_order_single_flight\.sql$|^migrations/0107_domain_setup_stuck_alert\.sql$|^scripts/domain-order-single-flight-check\.mts$'; then
   echo "[pre-commit] domain-order-single-flight-check (Elek 10-11: egy domain-rendelés, setup_retry, díj = terhelés)…"
   npx tsx scripts/domain-order-single-flight-check.mts >"$GATE_LOG" || gate_failed
 fi
