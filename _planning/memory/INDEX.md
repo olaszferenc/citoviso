@@ -10,6 +10,7 @@
 - [2026-10-11_proba_javitasok_elek_tenant_kor.md](2026-10-11_proba_javitasok_elek_tenant_kor.md) — Próba-javítások Elek 10-11 tenant-köréből (B1/B2/K1/A1–A3/A5/A7 + IT A3 időzóna)
 - [2026-10-11_portal_naptarszinkron_ical.md](2026-10-11_portal_naptarszinkron_ical.md) — 2026-10-11 — Portál-naptárszinkron iCal-lal, első kör (ADR-0361)
 - [2026-10-11_marketing_elemzes_elso_hullam.md](2026-10-11_marketing_elemzes_elso_hullam.md) — 2026-10-11 — Marketing-elemzés: az első megkeresési hullám (177 link, 0 rendelés)
+- [2026-10-11_json_for_script_xss.md](2026-10-11_json_for_script_xss.md) — 2026-10-11 — JSON az inline `<script>`-ben: közös `jsonForScript()` + őr (ADR-XXXX)
 - [2026-10-11_horvat_piac_elokutatas.md](2026-10-11_horvat_piac_elokutatas.md) — 2026-10-11 — Horvát piac: számlázási, ÁFA- és jogi előkutatás
 - [2026-10-11_elek_sajat_domain_javitasok.md](2026-10-11_elek_sajat_domain_javitasok.md) — 2026-10-11 — Elek 10-11 saját domain kör: javítások (B1–B5, K1–K6, A1–A4)
 - [2026-10-11_elek_it_javitasok_opsuti_xss_fizetes.md](2026-10-11_elek_it_javitasok_opsuti_xss_fizetes.md) — 2026-10-11 — Elek IT-kereszt kör javításai: operátor-süti (B1), XSS, lezárt fizetés, mock-pénztár, címkeképző

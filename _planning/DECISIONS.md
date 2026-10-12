@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-szerver-oldali-adat-inline-script-be-csak-jsonforscript.md) — Szerver-oldali adat inline `<script>`-be csak a `jsonForScript()`-en át
 - [ADR-0364](decisions/0364-a-proba-azt-igeri-amit-ad-a-beallitott.md) — A próba azt ígéri, amit ad (a beállított csomagból); a bukott próba-indítás nem hagy semmit
 - [ADR-0363](decisions/0363-az-operator-munkamenet-veget-er-kiadasi-ido-a.md) — Az operátor-munkamenet véget ér: kiadási idő a sütiben, a kapu minden kérésnél az operátor-sort nézi
 - [ADR-0362](decisions/0362-sajat-domain-egy-tenantnak-egy-rendeles-a-vetel.md) — Saját domain: egy tenantnak egy rendelés, a vétel utáni hiba „setup_retry” (nem bukás), `www.<domain>` → 301
