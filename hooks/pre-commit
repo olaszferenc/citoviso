@@ -3267,7 +3267,7 @@ if [ -f scripts/domain-order-single-flight-check.mts ] && \
   echo "[pre-commit] domain-order-single-flight-check (Elek 10-11: egy domain-rendelés, setup_retry, díj = terhelés)…"
   npx tsx scripts/domain-order-single-flight-check.mts >"$GATE_LOG" || gate_failed
 fi
-# Portál-naptárszinkron (Elek 2026-10-11, ADR-XXXX): az export-link a tenant-hoszton / saját domainen / dev-úton is
+# Portál-naptárszinkron (Elek 2026-10-11, ADR: portal-naptarszinkron-elek-javitasok): az export-link a tenant-hoszton / saját domainen / dev-úton is
 #     él (B1), ütközésnél egyszeri levél és nem dönt (K1), streamelt méretkorlát (K2), csak publikus cím DNS után és
 #     átirányításnál is (K3), a kiküldött mock friss runtime-ot kap (K4), fordulónap (K5), dupla POST → egy kérés
 #     (K6), tartós hiba → egy levél (K7), keretes párhuzamos futás (K8), elfogadás-verseny → „conflict” (A1), A6, A7.
