@@ -1,4 +1,4 @@
-# 2026-10-13 — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül (ADR-XXXX)
+# 2026-10-13 — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül (ADR-0383)
 
 SUB a deploy-koordinátornak (`citfb4ed7ab`), brief: `~/rc-briefs/cinematic-jelzocsik-20261013.md`. Az ADR-0382 záró megfigyelése.
 

@@ -47,7 +47,7 @@ Kattintható terv: `plan.html` (stílus-, méret- és süti-sáv-váltó; a gomb
    Őr: `mock-trial-overlay-check` ⑪ — 21 sablon × fekvő / álló / asztali × nyugalom / süti-sáv: a cím
    betűin nem ül, a keretező sáv alatt marad, hős-gombot nem temet be (fekvőn: jobb sarok); a javítás
    nélküli runtime-on piros.
-8. **A hős-képváltó jelzőire sem ül** (ADR-XXXX): a képváltó jelzősora (legalább két szöveg nélküli kis
+8. **A hős-képváltó jelzőire sem ül** (ADR-0383): a képváltó jelzősora (legalább két szöveg nélküli kis
    vezérlő egymás mellett, pl. a cinematic három csíkja) akadály, mint egy gomb — a pár oldalt vált vagy
    fölé lép, a 6–7. pont szabályai szerint.
    Őr: `mock-trial-overlay-check` ⑪ — minden sablon × fekvő / álló / asztali × nyugalom / süti-sáv: a pár

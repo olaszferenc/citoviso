@@ -5621,7 +5621,7 @@
   /**
    * ② an in-flow obstacle under the resting spot → try the other side(s); ③ every side
    * taken → the upward sweep on the first side, or on a side the hero title does not reach
-   * into when that one needs a smaller lift (ADR-XXXX). For the pair the tested box is the UNION of
+   * into when that one needs a smaller lift (ADR-0383). For the pair the tested box is the UNION of
    * both pills: it moves together or not at all. `withTitle` adds the hero title's words
    * to the obstacles; such a spot is only `ok` when nothing is left under it and it stays
    * below the header.

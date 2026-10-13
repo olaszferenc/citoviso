@@ -1,4 +1,4 @@
-## ADR-XXXX — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül
+## ADR-0383 — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül
 
 **Dátum:** 2026-10-13 · **Kontextus:** az ADR-0382 záró megfigyelése (a cinematic hős-képváltó három jelzőcsíkjára a pár a mainen ráér); a tulaj a koordinátoron át: „csináld úgy, hogy jó legyen”. **Kiterjeszti:** ADR-0242 ④ (gomb-kitérés), ADR-0382 ② (két menet). **Megtartja:** ADR-0377 ①② (fekvő: jobb sarok, egymás alatt), ADR-0382 ①③④ (cím-akadály, fejléc-határ, határra állás).
 

@@ -7,7 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-13_riaszto_sms_csendes_ora.md](2026-10-13_riaszto_sms_csendes_ora.md) — 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-0376)
-- [2026-10-13_pirula_jelzocsik.md](2026-10-13_pirula_jelzocsik.md) — 2026-10-13 — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül (ADR-XXXX)
+- [2026-10-13_pirula_jelzocsik.md](2026-10-13_pirula_jelzocsik.md) — 2026-10-13 — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül (ADR-0383)
 - [2026-10-13_pirula_hos_cim.md](2026-10-13_pirula_hos_cim.md) — 2026-10-13 — A pirula-pár nem ül a hős-címen (tulaj „A”, ADR-0377)
 - [2026-10-13_lejarat_ertesito_datumos_ar.md](2026-10-13_lejarat_ertesito_datumos_ar.md) — 2026-10-13 — Lejárat előtti ár-értesítő: eldőlt, nincs levél; a levél mondata feltételes (ADR-0375)
 - [2026-10-13_foglalas_kerdezz_felelek.md](2026-10-13_foglalas_kerdezz_felelek.md) — 2026-10-13 — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (ADR-0380)
