@@ -17,7 +17,7 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { runWithViewZone, viewToday, viewZone } from "../tenant/zoneCtx.js";
-import { setTenantTimeZone, tenantTimeZone, zonePickerDataFor } from "../tenant/timeZone.js";
+import { setTenantTimeZone, tenantTimeZone, todayForSite, zonePickerDataFor } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { midnightIn, todayIn, yearIn } from "../text/zoneTime.js";
@@ -88,6 +88,10 @@ import {
   loginPage,
 } from "./adminViews.js";
 import { calendarFocus, pendingInOrder } from "./bookingViews.js";
+import { HELPER_MAX_QUESTION, askBookingHelper, helperFacts } from "../ai/bookingHelper.js";
+import { loadBookingSetup, saveBookingSetupSection, seasonOp } from "../tenant/bookingSetup.js";
+import { bookingSetupPage, bookingSetupQuestions } from "./bookingSetupViews.js";
+import { siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -205,6 +209,7 @@ import { createEnquiry } from "../booking/enquiry.js";
 import {
   addSeasonPrice,
   deletePrice,
+  formatAmount,
   getUnitPrices,
   moveSeasonPrice,
   setBasePrice,
@@ -881,6 +886,75 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
     "Cache-Control": "no-store",
   });
   res.end(text);
+}
+
+/** ADR-XXXX — who may use the booking setup page: a signed-in owner whose booking module is live. */
+interface BookingSetupCtx {
+  readonly session: NonNullable<Awaited<ReturnType<typeof currentTenant>>>;
+  readonly siteId: string;
+  readonly lang: string;
+  readonly accountEmail: string;
+}
+async function bookingSetupCtx(req: http.IncomingMessage, json = true): Promise<BookingSetupCtx | null> {
+  if (json && !String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) return null;
+  const session = await currentTenant(req);
+  if (!session) return null;
+  const siteId = await tenantSiteId(session.tenantId);
+  if (!siteId || !(await tenantRendersModule(session.tenantId, "booking"))) return null;
+  const content = await getTenantContent(session.tenantId);
+  return { session, siteId, lang: content?.lang ?? "hu", accountEmail: session.contactEmail ?? "" };
+}
+
+/** A render failure after a JSON save must not lose the save — loud in the log instead. */
+function logRerenderFailure(tenantId: string): (e: unknown) => void {
+  return (e) => console.error(`[admin] snapshot ÚJRARENDERELÉS HIBA (tenant ${tenantId}):`, e);
+}
+
+/**
+ * The trial booking of the setup page: the GUEST path's own checks (stayRuleErrors,
+ * stayIsTaken, stayQuote — the very functions createBookingRequest calls), run without
+ * creating anything. The capacity note is the one thing the guest path does NOT check —
+ * said here plainly instead (ADR-XXXX).
+ */
+async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { lang, siteId } = ctx;
+  const unitId = String(body.unitId ?? "");
+  const dateFrom = String(body.dateFrom ?? "");
+  const n = Math.round(Number(body.nights));
+  const guests = Math.max(1, Math.min(50, Math.round(Number(body.guests) || 1)));
+  if (!(await unitBelongsToSite(siteId, unitId))) return { errors: [] };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) || !Number.isFinite(Date.parse(`${dateFrom}T00:00:00Z`))) {
+    return { errors: [T(lang, "Kérjük, adja meg az érkezés és a távozás napját.")] };
+  }
+  if (!(n >= 1 && n <= 365)) return { errors: [T(lang, "A távozás napja az érkezés után kell legyen.")] };
+  const end = new Date(`${dateFrom}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() + n);
+  const dateTo = end.toISOString().slice(0, 10);
+  const errors = await stayRuleErrors(siteId, unitId, dateFrom, dateTo, lang);
+  if (!errors.length && (await stayIsTaken(unitId, dateFrom, dateTo))) {
+    errors.push(T(lang, "Sajnos ezek a napok már foglaltak. Válasszon másik időpontot."));
+  }
+  const notes: string[] = [];
+  const unit = (await ensureUnits(siteId)).find((u) => u.id === unitId);
+  if (unit?.capacity && guests > unit.capacity) {
+    notes.push(
+      T(lang, "A férőhely {cap} fő, a vendég {g} főre kér. Ma a rendszer ezt nem szűri ki — a kérést Ön látja és dönti el.", {
+        cap: unit.capacity,
+        g: guests,
+      }),
+    );
+  }
+  if (errors.length) return { errors, notes };
+  const { quote } = await stayQuote(siteId, unitId, dateFrom, dateTo, guests, lang);
+  if (!quote) return { errors: [], notes, quote: null };
+  const tax = await siteTouristTax(siteId);
+  const taxText =
+    tax === null
+      ? T(lang, "Idegenforgalmi adó: a helyszínen fizetendő, összeg nélkül.")
+      : tax > 0
+        ? T(lang, "Idegenforgalmi adó (a helyszínen): {amount}", { amount: formatAmount(tax * guests * n, quote.currency) })
+        : "";
+  return { errors: [], notes, quote: { totalText: formatAmount(quote.total, quote.currency) }, taxText };
 }
 
 /**
@@ -3029,6 +3103,59 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
   // ── ADR-0044: per-module settings ──
   // POST /admin/module-config — save one module's declarative fields.
+  // ADR-XXXX — the guided booking setup ("Foglalás beállítása"): JSON endpoints of one page.
+  // Only `application/json` is accepted: a cross-site <form> cannot send it, and a cross-site
+  // fetch with it needs a CORS preflight this server never grants (the session cookie is
+  // SameSite=Lax on top). Every write goes through the existing write functions.
+  if (req.method === "POST" && pathname === "/admin/booking-setup/save") {
+    const ctx = await bookingSetupCtx(req);
+    if (!ctx) return sendJson(res, 401, { ok: false });
+    const body = await readJsonBody(req);
+    const r = await saveBookingSetupSection(ctx.siteId, String(body.section ?? ""), body, ctx.session.tenantUserId, ctx.lang);
+    if (r.ok && r.rerender) await rerenderTenantSnapshot(ctx.session.tenantId).catch(logRerenderFailure(ctx.session.tenantId));
+    return sendJson(res, 200, { ok: r.ok, errors: r.errors, state: await loadBookingSetup(ctx.siteId, ctx.accountEmail, ctx.lang) });
+  }
+  if (req.method === "POST" && pathname === "/admin/booking-setup/season") {
+    const ctx = await bookingSetupCtx(req);
+    if (!ctx) return sendJson(res, 401, { ok: false });
+    const r = await seasonOp(ctx.siteId, await readJsonBody(req), ctx.lang);
+    if (r.rerender) await rerenderTenantSnapshot(ctx.session.tenantId).catch(logRerenderFailure(ctx.session.tenantId));
+    return sendJson(res, 200, { ok: r.ok, errors: r.errors, state: await loadBookingSetup(ctx.siteId, ctx.accountEmail, ctx.lang) });
+  }
+  if (req.method === "POST" && pathname === "/admin/booking-setup/trial") {
+    const ctx = await bookingSetupCtx(req);
+    if (!ctx) return sendJson(res, 401, { ok: false });
+    return sendJson(res, 200, await bookingSetupTrial(ctx, await readJsonBody(req)));
+  }
+  if (req.method === "POST" && pathname === "/admin/booking-setup/ask") {
+    const ctx = await bookingSetupCtx(req);
+    if (!ctx) return sendJson(res, 401, { ok: false });
+    const body = await readJsonBody(req);
+    const question = String(body.question ?? "").replace(/\s+/g, " ").trim().slice(0, HELPER_MAX_QUESTION);
+    if (!question) return sendJson(res, 200, { ok: false, message: "" });
+    const history = (Array.isArray(body.history) ? body.history : [])
+      .filter((t): t is Record<string, unknown> => !!t && typeof t === "object")
+      .map((t) => ({ q: String(t.q ?? ""), a: String(t.a ?? "") }));
+    const state = await loadBookingSetup(ctx.siteId, ctx.accountEmail, ctx.lang);
+    const r = await askBookingHelper({
+      siteId: ctx.siteId,
+      lang: ctx.lang,
+      question,
+      ctx: typeof body.ctx === "string" ? body.ctx.slice(0, 20) : null,
+      history,
+      questions: bookingSetupQuestions(ctx.lang, state.mode),
+      facts: helperFacts(state),
+    });
+    if (r.ok) return sendJson(res, 200, { ok: true, answer: r.answer, go: r.go, advanced: r.advanced });
+    return sendJson(res, 200, {
+      ok: false,
+      message:
+        r.reason === "limit"
+          ? T(ctx.lang, "Ma már sokat kérdezett — holnap újra válaszolok. Addig a Súgóban is megtalálja a választ.")
+          : T(ctx.lang, "Most nem tudok válaszolni. Próbálja újra kicsit később, vagy nézze meg a Súgót."),
+    });
+  }
+
   if (req.method === "POST" && pathname === "/admin/module-config") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
@@ -4279,6 +4406,36 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // ADR-0094 ② (approved plan B — contract: design-refs/console/domain-settlement):
     // the interposed settlement page. Only reachable with a RUNNING domain
     // commitment; without one the modules tab's own cancel box is the way.
+    // ADR-XXXX — the guided booking setup page (approved plan foglalas-kerdezz-felelek).
+    if (pathname === "/admin/booking-setup") {
+      const ctx = await bookingSetupCtx(req, false);
+      if (!ctx) return redirect(res, (await currentTenant(req)) ? "/admin?tab=modulok" : "/login");
+      const content = await getTenantContent(ctx.session.tenantId);
+      const roomsOn = await tenantRendersModule(ctx.session.tenantId, "rooms");
+      send(
+        res,
+        200,
+        adminDashboard(ctx.session, content, {
+          tab: "modulok",
+          moduleSettingsHtml: bookingSetupPage({
+            lang: ctx.lang,
+            state: await loadBookingSetup(ctx.siteId, ctx.accountEmail, ctx.lang),
+            links: {
+              rooms: roomsOn ? "/admin?tab=modulok&m=rooms" : "/admin?tab=modulok&m=booking",
+              pricing: "/admin?tab=modulok&m=pricing",
+              booking: "/admin?tab=modulok&m=booking#halado",
+            },
+            backUrl: "/admin?tab=modulok&m=booking",
+            today: await todayForSite(ctx.siteId),
+          }),
+          modules: await getTenantModules(ctx.session.tenantId),
+          supportEmail: config.supportEmail,
+          unreadMessages: await countUnreadMessages(ctx.session.tenantId),
+          subSummary: await getSubscriptionSummary(ctx.session.tenantId),
+        }),
+      );
+      return;
+    }
     if (pathname === "/admin/subscription/settlement") {
       const session = await currentTenant(req);
       if (!session) return redirect(res, "/login");

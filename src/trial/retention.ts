@@ -192,6 +192,8 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   { table: "site_slug_alias", where: `site_id IN ${SITES}` },
   { table: "site_visit", where: `tenant_id = $1 OR site_id IN ${SITES}` },
   { table: "multilang_generation", where: `tenant_id = $1 OR site_id IN ${SITES}` },
+  // ADR-XXXX: the booking-setup helper's cost rows (no question text) go with the site.
+  { table: "tenant_ai_call", where: `site_id IN ${SITES}` },
   { table: "module_entitlement", where: "tenant_id = $1" },
   { table: "tenant_user", where: "tenant_id = $1" },
   { table: "login_token", where: "tenant_user_id IN (SELECT id FROM tenant_user WHERE tenant_id = $1)" },

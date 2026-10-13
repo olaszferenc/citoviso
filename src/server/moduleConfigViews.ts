@@ -558,6 +558,7 @@ form:has(input[name=whole][value=csak]:checked) .unit-new__price{display:none}
 .adm-modrow.is-replaced{opacity:.62}
 .adm-chip--off{background:var(--citui-surface-2);color:var(--citui-muted)}
 /* KB help row (ADR-0045 §J): textual entry into the guide for THIS screen */
+.mcfg-adv{margin:14px 0}.mcfg-adv>summary{cursor:pointer;font-weight:600;padding:10px 0;color:var(--citui-link-ink)}.mcfg-adv[open]>summary{margin-bottom:8px}
 .mcfg-help{margin:2px 0 14px}
 .mcfg-help a{display:inline-flex;align-items:center;gap:7px;color:var(--citui-ink);text-decoration:none;
   font-size:.88rem;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:7px 14px}
@@ -4391,6 +4392,20 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
   // of four stacked rows. The other settings screens keep their current opening,
   // because their KB screenshots are frozen against it.
   if (def.editor === "booking" && opts.booking) {
+    // ADR-XXXX (approved plan foglalas-kerdezz-felelek, owner 2026-10-13): the rules are set
+    // on the guided "Foglalás beállítása" page; this form stays, folded behind "Haladó
+    // beállítások" — open when a save of it just failed, or when a link asks for #halado.
+    // The card sits BELOW the calendar and the requests: those are the daily screen
+    // (booking-screen contract), the setup is occasional.
+    const guided =
+      `<section class="adm-card mcfg-guided"><div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +
+      `<h2>${T(lang, "Foglalás beállítása")}</h2></div>` +
+      `<p class="adm-lead">${T(lang, "Szobák, árak, időszakok és foglalási szabályok — kérdésről kérdésre, egy oldalon. Ha elakad, a Segítő elmagyarázza.")}</p>` +
+      `<a class="citui-btn citui-btn--primary" href="/admin/booking-setup">${T(lang, "Beállítom kérdésről kérdésre")}</a></section>`;
+    const advanced = form
+      ? `<details class="mcfg-adv" id="halado"${errs ? " open" : ""}><summary>${T(lang, "Haladó beállítások")}</summary>${form}</details>` +
+        `<script>(function(){var d=document.getElementById("halado");if(d&&location.hash==="#halado")d.open=true;})();</script>`
+      : "";
     return (
       moduleHeader(
         T(lang, cat.publicLabel),
@@ -4401,7 +4416,8 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       ) +
       errs +
       bespoke +
-      form +
+      guided +
+      advanced +
       pendingNote
     );
   }

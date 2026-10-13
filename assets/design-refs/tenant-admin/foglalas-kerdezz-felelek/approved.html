@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TERV B — Foglalás beállítása: Ellenőrzőlista</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A kiküldött terv (/p/<token>) alján ülő RÖGZÍTETT réteg MÉRT magassága: a
+     süti-sáv + a sablon saját Foglalás-sávja + a fölé mászó hívó pirula, együtt.
+     A konfigurátor-futó (`assets/runtime/cit-configurator.js`, placeLaunch) írja
+     a gyökérre, mert egyedül ő tudja, meddig kellett felmásznia. A jogi lábléc
+     (`prospectNotice.ts`) ebből tart magának alsó térközt — mérve 2026-09-26,
+     390 px-en 19 sablonból 19-en e nélkül a leiratkozó link a réteg ALATT volt.
+     Alapból 0: pirula nélkül (már megvett oldal, JS nélkül) a süti-sáv magassága
+     a tartalék. */
+  --citui-cfg-clear: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #e6e9ef;
+  --citui-muted:       #8a93a3;
+  --citui-surface:     #12151c;
+  --citui-surface-2:   #1b1f29;
+  --citui-line:        #262b37;
+  --citui-line-strong: #343a48;
+  /* ADR-0224: a tenant-admin sötét módja. Semleges (nem navy-tintált) sötét
+     rétegek — a Linear-terv sötét képei ezekből készültek. */
+  --citui-bg:     #0f1116;
+  --citui-panel:  #151821;
+  --citui-side:   #12151c;
+  --citui-field:  #1b1f29;
+  --citui-hover:  #1e2330;
+  /* A jelzés-hue-k VILÁGOSABB változata: a világos-módú telített zöld/piros a
+     sötét panelen 2,5–3,5 kontrasztot adna keretként és pöttyként. */
+  --citui-ok:      #3ddc97;
+  --citui-warn:    #f0b35a;
+  --citui-bad:     #ff7b7b;
+  --citui-ok-soft: #14352a;
+  /* ⛔ A négy FELIRAT-token a sötét panelre (#151821) KIMÉRVE (WCAG, ≥ 4,5, tartalékkal;
+     mérés: node-os luminancia-számítás, 2026-09-24):
+       ok-ink   #4fe3a3 → 10,85 · bad-ink #ff8e8e → 8,03 · warn-ink #f5c06b → 10,67 ·
+       link-ink #4fd0ea → 9,74 (a --citui-field #1b1f29 mezőn a legrosszabb: bad-ink 7,46;
+       a --citui-muted #8a93a3 a panelen 5,73). */
+  --citui-ok-ink:   #4fe3a3;
+  --citui-bad-ink:  #ff8e8e;
+  --citui-warn-ink: #f5c06b;
+  --citui-link-ink: #4fd0ea;
+  /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
+  --citui-on-bad: var(--citui-navy-900);
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
+  --citui-ink-brand:   var(--citui-ink);
+  --citui-ink-brand-2: color-mix(in srgb, var(--citui-ink) 80%, var(--citui-muted));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-ink-brand);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  /* A label that wraps (a long label on a phone) stays centred too: `justify-content`
+     centres the text box, `text-align` the lines inside it (a <button> does it by default,
+     an <a> does not — Elek FK-016: „Vissza a szállás oldalára” hung left). */
+  text-align: center;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+/* The Citoviso lockup "B" (src/ui/brand.ts, ADR-0236): the E4 mark IS the letter C,
+   then "itoviso". Mark = 1.6× the letter size, the word centred on it (the /pay/* ratio
+   the owner approved). Size it with font-size on the lockup. Dark surface → the dark mark
+   + white word; light surface → the light mark + navy word; "themed" follows the theme. */
+.citui-lockup {
+  display: inline-flex; color: var(--citui-navy-900); text-decoration: none;
+  font-family: var(--citui-font-display); font-weight: 700; letter-spacing: -0.01em; line-height: 1;
+  white-space: nowrap;
+}
+.citui-lockup.citui-lockup:hover { text-decoration: none; }
+.citui-lockup--lg { font-size: 1.32rem; } /* header / login size: word 21 px, mark 34 px (= /pay/*) */
+.citui-lockup__row { display: inline-flex; align-items: center; }
+.citui-lockup__mark { height: 1.6em; width: auto; flex: 0 0 auto; margin-right: 0.02em; }
+.citui-lockup__word { line-height: 1; }
+.citui-lockup__word small {
+  display: block; margin-top: 2px; font: 400 11px/1.3 var(--citui-font-text); letter-spacing: 0; color: var(--citui-muted);
+}
+/* ⚠️ Doubled class + :hover: a surface link rule (`.con a` 0,1,1 · `.con a:hover` 0,2,1)
+   otherwise paints the word link-cyan. */
+.citui-lockup.citui-lockup--on-dark, .citui-lockup.citui-lockup--on-dark:hover { color: var(--citui-white); }
+.citui-lockup.citui-lockup--on-light, .citui-lockup.citui-lockup--on-light:hover { color: var(--citui-navy-900); }
+.citui-lockup.citui-lockup--on-themed, .citui-lockup.citui-lockup--on-themed:hover { color: var(--citui-ink-brand); }
+.citui-mark-themed { display: inline-flex; flex: 0 0 auto; }
+.citui-mark-themed svg { height: var(--citui-mark-size, 26px); width: auto; }
+/* Theme switch. ⚠️ Element-qualified on purpose: a sizing rule like `.x svg{display:block}`
+   (0,1,1) beat a bare `.citui-mark--dark{display:none}` and showed BOTH marks. */
+svg.citui-mark--dark { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--light { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--dark { display: block; }
+.citui-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+</style><style>/* Shared mock styles — tokens only (--citui-*), no raw colors. */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--citui-surface);color:var(--citui-ink);font-family:var(--citui-font-text);font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+.mockbar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);font-size:13px}
+.mockbar b{font-family:var(--citui-font-display);margin-right:6px}
+.mockbar .seg{display:inline-flex;border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 35%,transparent);border-radius:var(--citui-radius-pill);overflow:hidden}
+.mockbar .seg button{background:transparent;border:0;padding:4px 12px;cursor:pointer;color:var(--citui-ink-inverse)}
+.mockbar .seg button[aria-pressed=true]{background:var(--citui-cyan-500);color:var(--citui-accent-ink);font-weight:600}
+.mockbar .note{opacity:.8;flex-basis:100%}
+.stage{padding:16px 0 40px}
+.frame{margin:0 auto;container-type:inline-size;background:var(--citui-bg,var(--citui-white));border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:clip;min-height:760px;position:relative;box-shadow:var(--citui-shadow-sm)}
+.frame.mob{width:390px}
+.frame.desk{width:min(1240px,calc(100vw - 32px))}
+/* admin chrome */
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--citui-panel);border-bottom:1px solid var(--citui-line)}
+.topbar .site{font-family:var(--citui-font-display);font-weight:600}
+.topbar .crumb{color:var(--citui-muted);font-size:13px;display:none}
+@container (min-width: 600px){.topbar .crumb{display:inline}}
+.topbar .sp{flex:1}
+.linkbtn{background:none;border:0;padding:0;color:var(--citui-link-ink);text-decoration:underline;cursor:pointer;font-size:14px}
+.ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* generic controls */
+.q h2{font-family:var(--citui-font-display);font-size:21px;line-height:1.25;margin:0 0 6px}
+.q .lead{color:var(--citui-muted);margin:0 0 14px}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);background:var(--citui-panel);cursor:pointer;text-align:left;width:100%}
+.opt:hover{background:var(--citui-hover)}
+.opt[aria-checked=true]{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.opt .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--citui-line-strong);margin-top:2px;flex:none}
+.opt[aria-checked=true] .dot{border-color:var(--citui-cyan-500);box-shadow:inset 0 0 0 4px var(--citui-panel);background:var(--citui-cyan-500)}
+.opt small{display:block;color:var(--citui-muted)}
+label.f{display:block;margin:10px 0 4px;font-weight:600;font-size:14px}
+.inp{width:100%;padding:10px 12px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-field)}
+.inp:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+.inp.bad{border-color:var(--citui-bad)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.row>*{flex:1 1 110px}
+.hint{color:var(--citui-muted);font-size:13px;margin:4px 0 0}
+.err{color:var(--citui-bad-ink);font-size:13px;margin:6px 0 0}
+.warnbox,.okbox,.infobox{border-radius:12px;padding:10px 12px;margin:12px 0 0;font-size:14px;display:flex;gap:8px}
+.warnbox{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));color:var(--citui-warn-ink)}
+.okbox{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.infobox{background:var(--citui-surface-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);background:var(--citui-panel);cursor:pointer;font-weight:600}
+.btn.pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px}
+.unitcard{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;margin:8px 0;background:var(--citui-panel)}
+.unitcard h3{margin:0 0 4px;font-size:15px}
+.season{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px dashed var(--citui-line);font-size:14px}
+.season:first-of-type{border-top:0}
+.pill{display:inline-block;padding:2px 9px;border-radius:var(--citui-radius-pill);font-size:12px;font-weight:600;background:var(--citui-surface-2);color:var(--citui-muted)}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.pill.warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-panel));color:var(--citui-warn-ink)}
+.pill.bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad-ink)}
+.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,40%{box-shadow:0 0 0 4px color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 16px;border-radius:12px;font-size:14px;z-index:80;max-width:90%;box-shadow:var(--citui-shadow-md)}
+/* chat */
+.chat{display:flex;flex-direction:column;background:var(--citui-panel);min-height:0}
+.chat-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--citui-line)}
+.chat-head b{font-family:var(--citui-font-display)}
+.chat-head small{color:var(--citui-muted);display:block;font-size:12px;line-height:1.3}
+.chat-log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.msg{max-width:88%;padding:9px 12px;border-radius:14px;font-size:14px}
+.msg.me{align-self:flex-end;background:var(--citui-navy-800);color:var(--citui-ink-inverse);border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:var(--citui-surface-2);border-bottom-left-radius:4px}
+.msg.ai .go{margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}
+.chip{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:5px 11px;font-size:13px;cursor:pointer}
+.chip:hover{background:var(--citui-hover)}
+.chat-form{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--citui-line)}
+.chat-form .inp{flex:1}
+.chat-foot{padding:0 14px 10px;color:var(--citui-muted);font-size:12px}
+.typing{opacity:.6;font-style:italic}
+/* sheet (mobile chat) */
+.sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(390px,100vw);height:78vh;z-index:60;border-radius:18px 18px 0 0;box-shadow:var(--citui-shadow-md);display:none}
+.sheet.open{display:flex}
+.scrim{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 40%,transparent);z-index:55;display:none}
+.scrim.open{display:block}
+.fabwrap{position:sticky;bottom:16px;display:flex;justify-content:flex-end;padding:0 16px 16px;pointer-events:none;z-index:40}
+.fab{pointer-events:auto;display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:var(--citui-radius-pill);border:0;background:var(--citui-navy-800);color:var(--citui-ink-inverse);font-weight:600;box-shadow:var(--citui-shadow-md);cursor:pointer}
+/* test-booking */
+.trial{margin-top:12px}
+.trial .res{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--citui-surface-2);font-size:14px}
+.trial .res.bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));color:var(--citui-bad-ink)}
+.sumlist{list-style:none;margin:0;padding:0}
+.sumlist li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--citui-line);font-size:14px}
+.sumlist li:first-child{border-top:0}
+.sumlist .k{color:var(--citui-muted)}
+.sumlist .v{text-align:right;font-weight:600}
+.b-main{padding:16px}
+.b-h1{font-family:var(--citui-font-display);font-size:24px;margin:0 0 2px}
+.b-head{margin-bottom:14px}
+.b-chat{display:none}
+.b-chat.sheet.open{display:flex}
+.b-sec{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:var(--citui-panel);margin-bottom:10px;scroll-margin-top:52px}
+.b-sec.open{border-color:var(--citui-line-strong);box-shadow:var(--citui-shadow-sm)}
+.b-sh{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:14px;cursor:pointer}
+.b-num{width:28px;height:28px;border-radius:50%;background:var(--citui-surface-2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.b-sec.open .b-num{background:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.b-st{flex:1;min-width:0}
+.b-st b{display:block;font-family:var(--citui-font-display);font-size:16px}
+.b-st small{display:block;color:var(--citui-muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b-body{padding:0 14px 14px}
+.b-q{padding:14px 0;border-top:1px solid var(--citui-line);border-radius:6px}
+.b-q .q h2{font-size:18px}
+.b-foot{padding-top:12px;border-top:1px solid var(--citui-line);display:flex;justify-content:flex-end}
+@container (min-width: 900px){
+  .b-grid{display:grid;grid-template-columns:1fr 360px;gap:0}
+  .b-main{padding:28px 40px;max-width:820px;width:100%;justify-self:center}
+  .b-chat{display:flex;border-left:1px solid var(--citui-line);position:sticky;top:44px;align-self:start;height:calc(100vh - 60px);max-height:820px}
+  .b-st small{white-space:normal}
+}
+.b-askbar{position:sticky;bottom:0;z-index:30;padding:10px 16px;background:var(--citui-panel);border-top:1px solid var(--citui-line)}
+.b-askbar .btn{width:100%}
+@container (min-width: 900px){.b-askbar{display:none}}
+</style></head>
+<body><div class="stage"><div class="frame"></div></div>
+<script>/* A SZEZON-ILLESZTÉS SZABÁLYA — EGY példányban, mindkét oldalnak.
+ *
+ * WHY THIS FILE EXISTS. "Which price row applies to this night?" lived TWICE, and the
+ * two copies were never compared: src/tenant/prices.ts (seasonCovers + priceOn, the
+ * number that is FROZEN onto the booking request and mailed to the guest) and
+ * assets/runtime/cit-runtime.js (the same two functions, the number the guest READS
+ * before submitting). The money FORMATTER is also duplicated (cit-money.js), but that
+ * one is deliberate and held by a parity guard — an unequal formatter prints an ugly
+ * string. An unequal PRICE SELECTOR quotes a different amount than it charges, which is
+ * the ADR-0193 ② harm class. So this predicate is loaded by both sides and cannot drift,
+ * because there is only one of it.
+ *
+ * ⛔ THE GUARD IS NOT A THIRD CONSUMER. scripts/booking-price-coherence-check.mts keeps
+ * its OWN re-implementation on purpose, and must keep it: an oracle that imports the
+ * code under test cannot disagree with it. When this rule changes, that oracle is
+ * updated INDEPENDENTLY — that separation is the whole point of it.
+ *
+ * ⚠️ WHAT IS DELIBERATELY ENCODED HERE, in one place, so the next change has one site:
+ * a season is a RECURRING MONTH-DAY ("06-15"), with no year, so it holds every year
+ * (moduleConfigViews.ts: "making them re-enter it each January would guarantee stale
+ * prices"). Measured 2026-09-22: a stay in July 2027 — inside the 12-month booking
+ * horizon — is quoted the SAME amount as July 2026, and that amount is frozen onto the
+ * request. Year-bound rows (migration 0072: valid_from/valid_to) landed HERE, once —
+ * see rowFor's precedence — instead of in two places that would silently disagree.
+ *
+ * `.cjs` on purpose: package.json says "type": "module", so a `.js` here could not be
+ * require()d from the server at all. The browser gets the text spliced into the runtime
+ * <script>, where the trailing module.exports line is inert.
+ */
+var CitSeason = (function () {
+  /* Does a recurring 'MM-DD' range cover this month-day? Handles the year-end wrap
+   * (a "Téli szünet 12-20 – 01-05" range runs December → January). */
+  function covers(from, to, monthDay) {
+    if (!from || !to || !monthDay) return false;
+    return from <= to
+      ? monthDay >= from && monthDay <= to
+      : monthDay >= from || monthDay <= to;
+  }
+
+  /* 'YYYY-MM-DD' (or a full ISO stamp) → 'MM-DD'. The `slice(5, 10)` assumption lived
+   * in three files; it lives here now, so a year-aware rule has ONE place to change. */
+  function monthDayOf(isoDate) {
+    return String(isoDate).slice(5, 10);
+  }
+
+  /* Is a 'YYYY-MM-DD' date inside a row's YEAR-BOUND window (inclusive)? A row with
+   * no window (both ends null) is timeless and always "inside". Plain string compare
+   * is exact for zero-padded ISO dates. (migration 0072) */
+  function inWindow(row, isoDay) {
+    var a = row.validFrom, b = row.validTo;
+    if (!a || !b) return true;
+    return isoDay >= a && isoDay <= b;
+  }
+
+  function hasWindow(row) {
+    return !!(row.validFrom && row.validTo);
+  }
+
+  /* The row in effect on a given NIGHT ('YYYY-MM-DD'), or null for an unpriced night,
+   * which every caller must turn into "no quote at all" (§B.17).
+   *
+   * Precedence, most specific first (approved plan booking-offer, 2026-09-23):
+   *   1. a YEAR-BOUND season covering the night ("Főszezon 2027" beats the recurring one)
+   *   2. a recurring season covering the night
+   *   3. a DATED base whose window holds the night (the offer page writes these: a price
+   *      for the nights no season covers, until the owner's chosen day)
+   *   4. the timeless base
+   * Rows whose window does not hold the night do not exist for it. Inside each tier the
+   * owner's own order decides (first wins), so an overlap resolves the way the list
+   * reads top-down instead of by some hidden rule.
+   *
+   * `rows` is shape-agnostic on purpose — the server calls it with UnitPrice objects
+   * (`isBase`/`from`/`to`/`validFrom`/`validTo`) and the browser with the JSON the
+   * endpoint ships (`base`/…). `isBaseRow` tells the two apart without a second copy of
+   * the selection logic.
+   *
+   * ⛔ The second argument used to be a MONTH-DAY. It is a full date now, because a
+   * year-bound row cannot be judged from 'MM-DD' — a caller still passing '07-10' would
+   * silently skip every dated row, so a short argument is refused loudly. */
+  function rowFor(rows, isoDay, isBaseRow) {
+    if (!rows || !rows.length) return null;
+    if (String(isoDay).length < 10) throw new Error("CitSeason.rowFor: full YYYY-MM-DD date required, got " + isoDay);
+    var day = String(isoDay).slice(0, 10);
+    var md = monthDayOf(day);
+    var yearSeason = null, season = null, datedBase = null, base = null;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (!inWindow(r, day)) continue;
+      if (isBaseRow(r)) {
+        if (hasWindow(r)) { if (!datedBase) datedBase = r; }
+        else if (!base) base = r;
+        continue;
+      }
+      if (!covers(r.from, r.to, md)) continue;
+      if (hasWindow(r)) { if (!yearSeason) yearSeason = r; }
+      else if (!season) season = r;
+    }
+    return yearSeason || season || datedBase || base;
+  }
+
+  /* One YEAR's occurrence of a recurring season, named by the year it STARTS in
+   * (migration 0074, approved plan season-year-price). A range that wraps the year end
+   * (11-01 → 03-01) ends in the next calendar year, so its label is "2026/27" and its
+   * window runs 2026-11-01 … 2027-03-01. The Árazás page, the year-price writer and the
+   * public price table all name and date a year the SAME way — from here. */
+  function occurrence(from, to, year) {
+    var y = Number(year);
+    var wraps = from > to;
+    return {
+      year: y,
+      start: y + "-" + from,
+      end: (wraps ? y + 1 : y) + "-" + to,
+      label: wraps ? y + "/" + String(y + 1).slice(2) : String(y)
+    };
+  }
+
+  /* The first year whose occurrence has not ended by `isoToday` — the leftmost year the
+   * owner can still price (a season that closed yesterday offers next year first). */
+  function firstOpenYear(from, to, isoToday) {
+    var y = Number(String(isoToday).slice(0, 4)) - 1;
+    while (occurrence(from, to, y).end < String(isoToday).slice(0, 10)) y++;
+    return y;
+  }
+
+  /* What the owner typed → 'MM-DD', or null when it is not a real day of the year.
+   * "11-01", "11.01", "11. 01.", "11/1", "1101" all mean November 1 (approved plan
+   * season-year-price). Here, once: the Árazás page previews with it while the owner
+   * types, and the server stores with it — a preview that normalised differently
+   * would promise days the saved season does not have. */
+  var DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  function normMonthDay(raw) {
+    var t = String(raw == null ? "" : raw).replace(/\s+/g, "").replace(/\.$/, "");
+    var m = /^(\d{1,2})[.\-\/](\d{1,2})$/.exec(t) || /^(\d{2})(\d{2})$/.exec(t);
+    if (!m) return null;
+    var mo = Number(m[1]), d = Number(m[2]);
+    if (mo < 1 || mo > 12 || d < 1 || d > DIM[mo - 1]) return null;
+    return (mo < 10 ? "0" : "") + mo + "-" + (d < 10 ? "0" : "") + d;
+  }
+
+  return {
+    covers: covers, monthDayOf: monthDayOf, inWindow: inWindow, rowFor: rowFor,
+    occurrence: occurrence, firstOpenYear: firstOpenYear, normMonthDay: normMonthDay
+  };
+})();
+
+/* Node (server) requires this file; a browser gets the same binding from the var. */
+if (typeof module !== "undefined" && module.exports) module.exports = CitSeason;
+</script><script>/* Shared mock core: state, questions, real validation rules, silent-blocker
+ * detection, trial booking (real CitSeason.rowFor) and the canned chat.
+ * Rules mirror: src/tenant/prices.ts (season errors), src/moduleConfig.ts
+ * (booking defaults/ranges/validate), src/booking/requests.ts (guest errors). */
+var KF = (function () {
+  var ACCOUNT_EMAIL = "kovacs.anna@example.com";
+
+  function emptyState() {
+    return {
+      mode: null, // "single" | "rooms" | "both"
+      units: [{ id: "u1", name: "A szállás egésze", whole: true, cap: null, base: null, por: false, seasons: [] }],
+      currency: "HUF", priceUnit: null,
+      seasonalOnly: null,
+      minNights: 1, maxNights: 30, horizon: 12, lead: 0,
+      taxState: null, tax: "", includes: "",
+      notify: "", expiry: 48,
+      answered: {}
+    };
+  }
+  /* The nyugalom-demo tenant (scripts/demo-tenant.mts) — "later modification" scenario. */
+  function demoState() {
+    var s = emptyState();
+    s.mode = "rooms";
+    s.units = [
+      { id: "u1", name: "Kertre néző apartman", cap: 4, base: 19000, por: false, seasons: [{ label: "Főszezon", from: "06-15", to: "08-31", amount: 28000, min: 3 }] },
+      { id: "u2", name: "Padlásszoba", cap: 2, base: 12000, por: false, seasons: [] },
+      { id: "u3", name: "Kis faház", cap: 3, base: 15000, por: false, seasons: [{ label: "Ünnepek", from: "12-20", to: "01-05", amount: 22000, min: null }] }
+    ];
+    s.priceUnit = "per_night"; s.seasonalOnly = false;
+    s.minNights = 2; s.maxNights = 14; s.horizon = 12; s.lead = 0;
+    s.taxState = "amount"; s.tax = "500"; s.includes = "Az ár tartalmazza a reggelit.";
+    s.notify = "info@nyugalom.example"; s.expiry = 48;
+    QS.forEach(function (q) { s.answered[q.id] = true; });
+    return s;
+  }
+
+  var S = emptyState();
+  var uid = 10;
+
+  /* ── formatting ─────────────────────────────────────────── */
+  function money(n) {
+    if (n == null || n === "") return "—";
+    var v = Math.round(Number(n));
+    var t = String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return S.currency === "EUR" ? t + " €" : t + " Ft";
+  }
+  var UNIT_TXT = { per_night: "éjszakánként", per_person_night: "fő / éjszaka", per_stay: "a teljes tartózkodásra" };
+  var MON = ["jan.", "febr.", "márc.", "ápr.", "máj.", "jún.", "júl.", "aug.", "szept.", "okt.", "nov.", "dec."];
+  function md(mmdd) { var p = mmdd.split("-"); return MON[Number(p[0]) - 1] + " " + Number(p[1]) + "."; }
+  function huDate(iso) { var p = iso.split("-"); return p[0] + ". " + MON[Number(p[1]) - 1] + " " + Number(p[2]) + "."; }
+  function iso(d) { return d.toISOString().slice(0, 10); }
+  function addDays(isoD, n) { var d = new Date(isoD + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return iso(d); }
+  function today() { return iso(new Date()); }
+  function esc(t) { return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function bookable() {
+    return S.units.filter(function (u) { return S.mode === "single" ? u.whole : S.mode === "rooms" ? !u.whole : true; });
+  }
+
+  /* ── mode change keeps units coherent with the real model ─ */
+  function setMode(m) {
+    S.mode = m;
+    var whole = S.units.filter(function (u) { return u.whole; })[0];
+    var rooms = S.units.filter(function (u) { return !u.whole; });
+    if (m === "single") {
+      if (!whole) S.units.unshift({ id: "w" + uid++, name: "A szállás egésze", whole: true, cap: null, base: null, por: false, seasons: [] });
+    } else {
+      if (!rooms.length) S.units.push({ id: "u" + uid++, name: "", cap: null, base: null, por: false, seasons: [] });
+      if (m === "both" && !whole) S.units.unshift({ id: "w" + uid++, name: "A szállás egésze", whole: true, cap: null, base: null, por: false, seasons: [] });
+      if (m === "rooms" && whole) S.units = S.units.filter(function (u) { return !u.whole; });
+    }
+  }
+
+  /* ── validation (real messages) ─────────────────────────── */
+  function seasonErrors(u, sz, skipIdx) {
+    var errs = [];
+    if (!String(sz.label || "").trim()) errs.push("Adjon nevet az időszaknak (például: Főszezon).");
+    if (!CitSeason.normMonthDay(sz.from) || !CitSeason.normMonthDay(sz.to)) errs.push("Az időszak dátumait HÓNAP-NAP alakban kérjük (például: 06-15).");
+    if (!(Number(sz.amount) > 0)) errs.push("Adjon meg egy árat.");
+    if (sz.min !== null && sz.min !== "" && !(Number.isInteger(Number(sz.min)) && sz.min >= 1 && sz.min <= 60)) errs.push("A minimum 1 és 60 éj között lehet.");
+    var twin = u.seasons.filter(function (x, i) { return i !== skipIdx && x.label.trim().toLowerCase() === String(sz.label).trim().toLowerCase(); })[0];
+    if (twin) errs.push("Ennél a szobánál már van „" + twin.label + "” nevű időszak — a listán szerkesztheti.");
+    return errs;
+  }
+  function stayErrors() {
+    var e = [];
+    if (!(S.minNights >= 1 && S.minNights <= 30)) e.push("A legrövidebb foglalás 1 és 30 éj között lehet.");
+    if (!(S.maxNights >= 1 && S.maxNights <= 365)) e.push("A leghosszabb foglalás 1 és 365 éj között lehet.");
+    if (S.minNights > S.maxNights) e.push("A legrövidebb foglalás nem lehet hosszabb, mint a leghosszabb.");
+    return e;
+  }
+  function emailErrors() {
+    if (!S.notify.trim()) return [];
+    var bad = S.notify.split(",").map(function (x) { return x.trim(); }).filter(function (x) { return x && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x); });
+    return bad.length ? ["Ez nem tűnik e-mail címnek: " + bad.join(", ")] : [];
+  }
+
+  /* ── silent blockers, made loud ─────────────────────────── */
+  function blockers() {
+    var out = [];
+    bookable().forEach(function (u) {
+      var nm = u.name || "Névtelen szoba";
+      if (S.seasonalOnly && !u.seasons.length) out.push({ q: "seasonal", sev: "bad", t: nm + ": egyetlen napra sem lehet foglalni — csak az időszakokban adja ki, de nincs időszaka." });
+      if (!S.seasonalOnly && !(u.base > 0) && !u.por && S.answered.base) out.push({ q: "base", sev: "warn", t: nm + ": az időszakokon kívüli éjszakáknak nincs ára. A vendég nem lát végösszeget, ajánlatot kér." });
+      u.seasons.forEach(function (sz) {
+        if (sz.min && sz.min > S.maxNights) out.push({ q: "stay", sev: "bad", t: nm + " · " + sz.label + ": legalább " + sz.min + " éj kell, de a leghosszabb foglalás " + S.maxNights + " éj — erre az időszakra senki nem tud foglalni." });
+      });
+    });
+    if (S.minNights > S.maxNights) out.push({ q: "stay", sev: "bad", t: "A legrövidebb foglalás hosszabb, mint a leghosszabb." });
+    return out;
+  }
+
+  /* ── trial booking: the guest-side rules (requests.ts) ──── */
+  function rowsOf(u) {
+    var rows = u.seasons.map(function (sz) { return { from: sz.from, to: sz.to, amount: sz.amount, min: sz.min, label: sz.label }; });
+    if (u.base > 0) rows.push({ base: true, amount: u.base });
+    return rows;
+  }
+  function trial(unitId, arrive, nights, guests) {
+    var u = S.units.filter(function (x) { return x.id === unitId; })[0];
+    if (!u || !arrive) return { errors: ["Kérjük, adja meg az érkezés és a távozás napját."] };
+    nights = Number(nights); guests = Number(guests);
+    if (!(nights >= 1)) return { errors: ["A távozás napja az érkezés után kell legyen."] };
+    var errors = [], notes = [];
+    var rows = rowsOf(u);
+    var isBase = function (r) { return !!r.base; };
+    var need = 0, total = 0, unpriced = false, closed = false;
+    for (var i = 0; i < nights; i++) {
+      var night = addDays(arrive, i);
+      var inSeason = u.seasons.some(function (sz) { return CitSeason.covers(sz.from, sz.to, CitSeason.monthDayOf(night)); });
+      if (S.seasonalOnly && !inSeason) closed = true;
+      var r = CitSeason.rowFor(rows, night, isBase);
+      var m = r && !r.base && r.min ? r.min : S.minNights;
+      if (m > need) need = m;
+      if (!r) { unpriced = true; continue; }
+      if (S.priceUnit === "per_stay") { if (i === 0) total = r.amount; }
+      else total += r.amount * (S.priceUnit === "per_person_night" ? guests : 1);
+    }
+    if (closed) errors.push("Ebben az időszakban nem adjuk ki.");
+    if (nights < need) errors.push("Legalább " + need + " éjszakára lehet foglalni.");
+    if (nights > S.maxNights) errors.push("Legfeljebb " + S.maxNights + " éjszakára lehet foglalni.");
+    var earliest = addDays(today(), Number(S.lead) || 0);
+    if (arrive < earliest) errors.push("A legkorábbi foglalható érkezés: " + huDate(earliest).replace(/\.$/, "") + ".");
+    var limit = new Date(today() + "T12:00:00Z"); limit.setUTCMonth(limit.getUTCMonth() + Number(S.horizon));
+    if (arrive > iso(limit)) errors.push("Ennyire előre még nem lehet foglalni.");
+    if (u.cap && guests > u.cap) notes.push("A férőhely " + u.cap + " fő, a vendég " + guests + " főre kér. Ma a rendszer ezt nem szűri ki — a kérést Ön látja és dönti el.");
+    var tax = null;
+    if (S.taxState === "amount" && Number(S.tax) > 0) tax = Number(S.tax) * guests * nights;
+    return { errors: errors, notes: notes, unpriced: unpriced, total: unpriced ? null : total, tax: tax, need: need, u: u };
+  }
+
+  /* ── questions ──────────────────────────────────────────── */
+  var SECS = [
+    { id: "rooms", t: "Szállás és szobák" },
+    { id: "prices", t: "Árak" },
+    { id: "rules", t: "Foglalás szabályai" },
+    { id: "guest", t: "Amit a vendég lát" },
+    { id: "notify", t: "Értesítés" },
+    { id: "check", t: "Kipróbálás" }
+  ];
+  var QS = [
+    { id: "mode", sec: "rooms", t: "Hogyan adja ki a szállását?" },
+    { id: "rooms", sec: "rooms", t: function () { return S.mode === "single" ? "Hány vendég fér el?" : "Melyek a kiadó szobái?"; } },
+    { id: "unit", sec: "prices", t: "Mire szól az ára?" },
+    { id: "base", sec: "prices", t: "Mennyi az ára egy átlagos éjszakára?" },
+    { id: "seasons", sec: "prices", t: "Van olyan időszak, amikor más az ár?" },
+    { id: "seasonal", sec: "prices", t: "Az időszakokon kívül is kiadja?", skip: function () { return !bookable().some(function (u) { return u.seasons.length; }); } },
+    { id: "stay", sec: "rules", t: "Hány éjszakára lehet foglalni?" },
+    { id: "ahead", sec: "rules", t: "Mennyivel előre lehet foglalni?" },
+    { id: "tax", sec: "guest", t: "Kér idegenforgalmi adót?" },
+    { id: "includes", sec: "guest", t: "Mi van benne az árban?", optional: true },
+    { id: "notify", sec: "notify", t: "Hová küldjük a foglalási kéréseket?" },
+    { id: "check", sec: "check", t: "Próbáljuk ki: így foglalna egy vendég" }
+  ];
+  function qById(id) { return QS.filter(function (q) { return q.id === id; })[0]; }
+  function title(q) { return typeof q.t === "function" ? q.t() : q.t; }
+  function visibleQs() { return QS.filter(function (q) { return !(q.skip && q.skip()); }); }
+
+  function isDone(id) {
+    switch (id) {
+      case "mode": return !!S.mode;
+      case "rooms": if (S.mode === "single") { var w = bookable()[0]; return w && w.cap ? w.cap + " fő" : "férőhely nincs megadva"; }
+        return bookable().length > 0 && bookable().every(function (u) { return u.whole || String(u.name).trim(); });
+      case "unit": return !!S.priceUnit;
+      case "base": return !!S.answered.base && bookable().every(function (u) { return u.base > 0 || u.por; });
+      case "seasons": return !!S.answered.seasons;
+      case "seasonal": return S.seasonalOnly !== null;
+      case "stay": return !!S.answered.stay && !stayErrors().length;
+      case "ahead": return !!S.answered.ahead;
+      case "tax": return S.taxState !== null && (S.taxState !== "amount" || Number(S.tax) > 0);
+      case "includes": return !!S.answered.includes;
+      case "notify": return !!S.answered.notify && !emailErrors().length;
+      case "check": return !blockers().some(function (b) { return b.sev === "bad"; }) && visibleQs().every(function (q) { return q.id === "check" || q.optional || isDone(q.id); });
+    }
+    return false;
+  }
+  function answerLine(id) {
+    switch (id) {
+      case "mode": return { single: "Egyben, egy egységként", rooms: "Szobánként", both: "Szobánként és egyben is" }[S.mode] || "—";
+      case "rooms": if (S.mode === "single") { var w = bookable()[0]; return w && w.cap ? w.cap + " fő" : "férőhely nincs megadva"; }
+        return bookable().map(function (u) { return (u.name || "névtelen") + (u.cap ? " (" + u.cap + " fő)" : ""); }).join(", ");
+      case "unit": return S.priceUnit ? UNIT_TXT[S.priceUnit] + " · " + (S.currency === "EUR" ? "euró" : "forint") : "—";
+      case "base": return bookable().map(function (u) { return (u.name || "névtelen") + ": " + (u.por ? "ajánlatot küld" : money(u.base)); }).join(" · ");
+      case "seasons": var n = 0; bookable().forEach(function (u) { n += u.seasons.length; }); return n ? n + " időszak" : (S.answered.seasons ? "nincs, egész évben az alapár" : "—");
+      case "seasonal": return S.seasonalOnly === null ? "—" : S.seasonalOnly ? "Csak az időszakokban" : "Egész évben";
+      case "stay": return S.minNights + "–" + S.maxNights + " éj";
+      case "ahead": return "legfeljebb " + S.horizon + " hónappal előre · " + (Number(S.lead) ? "legkorábban " + S.lead + " nap múlva" : "akár mára is");
+      case "tax": return S.taxState === "none" ? "Nincs" : S.taxState === "amount" ? money(S.tax) + " / fő / éj, a helyszínen" : S.taxState === "unknown" ? "Még nem tudja" : "—";
+      case "includes": return S.includes || (S.answered.includes ? "nem írt semmit" : "—");
+      case "notify": return (S.notify || ACCOUNT_EMAIL) + " · " + (Number(S.expiry) ? S.expiry + " óra után lejár" : "nem jár le");
+      case "check": var b = blockers(); return b.length ? b.length + " teendő" : "rendben";
+    }
+    return "";
+  }
+
+  /* Render one question's controls into `el`. `onChange(structural)` notifies the variant. */
+  function render(id, el, onChange) {
+    var q = qById(id);
+    var h = '<div class="q" data-q="' + id + '"><h2>' + esc(title(q)) + "</h2>";
+    var lead = {
+      mode: "Ebből tudjuk, mit foglalhat le a vendég: az egész házat, egy-egy szobát, vagy mindkettőt.",
+      rooms: S.mode === "single" ? "A férőhely a honlapon jelenik meg." : "Írja be a szobák (apartmanok, házak) nevét, ahogy a vendég látni fogja.",
+      unit: "A honlap és a foglalási kérés ebből számolja a végösszeget.",
+      base: "Ez az ár érvényes minden olyan napon, amelyre nem ad meg külön időszakot.",
+      seasons: "Például főszezon nyáron, vagy ünnepek. Minden évben ugyanazokon a napokon érvényes.",
+      seasonal: "Ha csak nyáron adja ki, a többi napra nem lehet foglalni.",
+      stay: "A vendég ennél rövidebb vagy hosszabb foglalást nem tud elküldeni.",
+      ahead: "Meddig nyúlik előre a foglalási naptár, és foglalhatnak-e akár mára is.",
+      tax: "Az adót a vendég a helyszínen fizeti; a foglalásnál külön soron látja.",
+      includes: "Egy rövid sor a végösszeg alatt. Ha nincs mit írni, hagyja üresen.",
+      notify: "Ide érkezik minden foglalási kérés. A kérést a levélből fogadja el vagy utasítja el.",
+      check: "Adjon meg egy kitalált foglalást — megmutatjuk, mit lát a vendég, és mi akadályozná."
+    }[id];
+    h += '<p class="lead">' + esc(lead) + "</p>";
+
+    if (id === "mode") {
+      h += '<div class="opts" role="radiogroup">' +
+        opt("mode", "single", "Egyben, egy egységként", "Egy ház vagy apartman, egyszerre egy vendégkör.", S.mode) +
+        opt("mode", "rooms", "Szobánként", "Több szoba vagy apartman, külön-külön foglalható.", S.mode) +
+        opt("mode", "both", "Szobánként, és egyben is", "A szobák külön is, a ház egyben is foglalható. Ha egy szoba foglalt, az egész ház arra a napra nem foglalható — és fordítva.", S.mode) +
+        "</div><p class=\"hint\">Csak egyben adja ki, de a szobákat szeretné bemutatni? Válassza az elsőt — a szobákat a Szobák menüben bemutathatja.</p>";
+    }
+    if (id === "rooms" && !S.mode) {
+      h += '<p class="hint">Előbb válassza ki, hogyan adja ki a szállását — utána itt adhatja meg a szobákat.</p> <button class="linkbtn" data-go="mode">Ugrás a kérdéshez</button>';
+    } else if (id === "rooms") {
+      bookable().forEach(function (u, i) {
+        h += '<div class="unitcard" data-u="' + u.id + '">' + (u.whole
+          ? "<h3>" + esc(u.name) + "</h3>"
+          : '<label class="f">' + (i + 1) + '. szoba neve</label><input class="inp" data-k="name" maxlength="120" placeholder="Pl. Kertre néző apartman" value="' + esc(u.name) + '">') +
+          '<div class="row"><div><label class="f">Férőhely (fő)</label><input class="inp" data-k="cap" type="number" min="1" max="50" inputmode="numeric" value="' + (u.cap || "") + '"></div>' +
+          (!u.whole && bookable().filter(function (x) { return !x.whole; }).length > 1 ? '<div style="flex:0 0 auto"><button class="btn sm" data-act="delroom">Törlés</button></div>' : "") +
+          "</div></div>";
+      });
+      if (S.mode !== "single") h += '<button class="btn sm" data-act="addroom">+ Újabb szoba</button>';
+    }
+    if (id === "unit") {
+      h += '<div class="opts" role="radiogroup">' +
+        opt("priceUnit", "per_night", "Éjszakánként", "Pl. 19 000 Ft egy éjszakára, akárhányan vannak.", S.priceUnit) +
+        opt("priceUnit", "per_person_night", "Fejenként, éjszakánként", "Pl. 6 000 Ft / fő / éj — 2 fő 3 éjre 36 000 Ft.", S.priceUnit) +
+        opt("priceUnit", "per_stay", "A teljes tartózkodásra", "Egy összeg, akárhány éjszaka. Az érkezés napjának ára számít.", S.priceUnit) +
+        '</div><label class="f">Pénznem</label><select class="inp" data-g="currency"><option value="HUF"' + (S.currency === "HUF" ? " selected" : "") + '>forint (Ft)</option><option value="EUR"' + (S.currency === "EUR" ? " selected" : "") + ">euró (€)</option></select>";
+    }
+    if (id === "base") {
+      var ut = S.priceUnit ? UNIT_TXT[S.priceUnit] : "éjszakánként";
+      bookable().forEach(function (u) {
+        h += '<div class="unitcard" data-u="' + u.id + '"><h3>' + esc(u.name || "Névtelen szoba") + "</h3>" +
+          '<div class="row"><div><label class="f">Ár (' + ut + ")</label><input class=\"inp\" data-k=\"base\" inputmode=\"numeric\" placeholder=\"Pl. 19 000\" value=\"" + (u.base ? u.base : "") + '"' + (u.por ? " disabled" : "") + "></div></div>" +
+          '<label class="hint" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" data-k="por"' + (u.por ? " checked" : "") + "> Nem adok meg árat — a vendég ajánlatot kér, és én küldök árat</label></div>";
+      });
+      if (S.answered.base && !isDone("base")) h += '<p class="err">Minden szobánál adjon meg árat, vagy jelölje, hogy ajánlatot küld.</p>';
+    }
+    if (id === "seasons") {
+      bookable().forEach(function (u) {
+        h += '<div class="unitcard" data-u="' + u.id + '"><h3>' + esc(u.name || "Névtelen szoba") + "</h3>";
+        if (!u.seasons.length) h += '<p class="hint">Nincs külön időszak — egész évben az alapár: ' + (u.por ? "ajánlatot küld" : money(u.base)) + ".</p>";
+        u.seasons.forEach(function (sz, i) {
+          h += '<div class="season"><span><b>' + esc(sz.label) + "</b> · " + md(sz.from) + " – " + md(sz.to) + (sz.from > sz.to ? " (átnyúlik az újévre)" : "") + (sz.min ? " · legalább " + sz.min + " éj" : "") + "</span><span>" + money(sz.amount) + ' <button class="linkbtn" data-act="delseason" data-i="' + i + '">törlés</button></span></div>';
+        });
+        h += '<details' + (u._open ? " open" : "") + '><summary class="linkbtn" style="margin-top:6px">+ Új időszak</summary>' +
+          '<div class="row"><div><label class="f">Neve</label><input class="inp" data-n="label" placeholder="Pl. Főszezon"></div></div>' +
+          '<div class="row"><div><label class="f">Mettől</label><input class="inp" data-n="from" placeholder="06-15"></div><div><label class="f">Meddig</label><input class="inp" data-n="to" placeholder="08-31"></div></div>' +
+          '<div class="row"><div><label class="f">Ár</label><input class="inp" data-n="amount" inputmode="numeric" placeholder="28 000"></div><div><label class="f">Legalább (éj)</label><input class="inp" data-n="min" type="number" min="1" max="60" placeholder="nem kötelező"></div></div>' +
+          '<p class="hint">Hónap-nap, például 06-15. Évet nem kell írni: minden évben ismétlődik.</p>' +
+          '<div class="errs"></div><div class="row" style="margin-top:8px"><div style="flex:0 0 auto"><button class="btn sm pri" data-act="addseason">Hozzáadom</button></div>' +
+          (bookable().length > 1 ? '<div style="flex:0 0 auto"><button class="btn sm" data-act="addseasonall">Minden szobához hozzáadom</button></div>' : "") + "</div></details></div>";
+      });
+    }
+    if (id === "seasonal") {
+      h += '<div class="opts" role="radiogroup">' +
+        opt("seasonalOnly", "false", "Igen, egész évben", "Az időszakokon kívül az alapár érvényes.", String(S.seasonalOnly)) +
+        opt("seasonalOnly", "true", "Nem, csak a felsorolt időszakokban", "A többi napra nem lehet foglalni.", String(S.seasonalOnly)) + "</div>";
+    }
+    if (id === "stay") {
+      h += '<div class="row"><div><label class="f">Legalább (éjszaka)</label><input class="inp" data-g="minNights" type="number" min="1" max="30" value="' + S.minNights + '"></div>' +
+        '<div><label class="f">Legfeljebb (éjszaka)</label><input class="inp" data-g="maxNights" type="number" min="1" max="365" value="' + S.maxNights + '"></div></div>' +
+        '<p class="hint">Ahol egy időszakhoz külön „legalább” értéket adott, ott az érvényes.</p><div class="errs"></div>';
+    }
+    if (id === "ahead") {
+      h += '<div class="row"><div><label class="f">Legfeljebb ennyi hónappal előre</label><input class="inp" data-g="horizon" type="number" min="1" max="24" value="' + S.horizon + '"></div>' +
+        '<div><label class="f">Legkorábban ennyi nap múlva érkezhet</label><input class="inp" data-g="lead" type="number" min="0" max="60" value="' + S.lead + '"></div></div>' +
+        '<p class="hint">0 nap = akár mára is foglalhatnak.</p>';
+    }
+    if (id === "tax") {
+      h += '<div class="opts" role="radiogroup">' +
+        opt("taxState", "amount", "Igen", "Megadom, mennyi fejenként, éjszakánként.", S.taxState) +
+        opt("taxState", "none", "Nincs idegenforgalmi adó", "A vendég nem lát adó-sort.", S.taxState) +
+        opt("taxState", "unknown", "Még nem tudom", "Később pótolhatja; addig nem írunk róla semmit.", S.taxState) + "</div>" +
+        (S.taxState === "amount" ? '<label class="f">Összeg (Ft / fő / éj)</label><input class="inp" data-g="tax" type="number" min="0" max="100000" value="' + esc(S.tax) + '"><p class="hint">Az önkormányzat honlapján, vagy a helyi adóügyön tudják.</p>' : "");
+    }
+    if (id === "includes") {
+      h += '<input class="inp" data-g="includes" maxlength="200" placeholder="Pl. Az ár tartalmazza a reggelit." value="' + esc(S.includes) + '">';
+    }
+    if (id === "notify") {
+      h += '<label class="f">E-mail cím (több is lehet, vesszővel)</label><input class="inp" data-g="notify" inputmode="email" placeholder="' + ACCOUNT_EMAIL + '" value="' + esc(S.notify) + '">' +
+        '<p class="hint">Ha üresen hagyja, a fiókja címére küldjük: ' + ACCOUNT_EMAIL + "</p><div class=\"errs\"></div>" +
+        '<label class="f">Ha nem válaszol, ennyi óra után magától lejár a kérés</label><input class="inp" data-g="expiry" type="number" min="0" max="336" value="' + S.expiry + '"><p class="hint">0 = soha nem jár le. A vendég ekkor értesítést kap.</p>';
+    }
+    if (id === "check") {
+      var b = blockers();
+      if (b.length) b.forEach(function (x) { h += '<div class="' + (x.sev === "bad" ? "warnbox" : "infobox") + '"><span>' + esc(x.t) + ' <button class="linkbtn" data-go="' + x.q + '">Javítom</button></span></div>'; });
+      else h += '<div class="okbox">Nem találtunk akadályt: a vendégek foglalhatnak.</div>';
+      var bu = bookable();
+      var dflt = addDays(today(), 30);
+      h += '<div class="card trial"><div class="row"><div><label class="f">Szoba</label><select class="inp" data-t="unit">' +
+        bu.map(function (u) { return '<option value="' + u.id + '">' + esc(u.name || "Névtelen szoba") + "</option>"; }).join("") + "</select></div></div>" +
+        '<div class="row"><div><label class="f">Érkezés</label><input class="inp" data-t="arrive" type="date" value="' + dflt + '"></div>' +
+        '<div><label class="f">Éjszaka</label><input class="inp" data-t="nights" type="number" min="1" value="2"></div>' +
+        '<div><label class="f">Vendég</label><input class="inp" data-t="guests" type="number" min="1" max="20" value="2"></div></div><div class="res"></div></div>';
+    }
+    h += "</div>";
+    el.innerHTML = h;
+    bind(id, el, onChange);
+    if (id === "check") runTrial(el);
+    if (id === "stay") showErrs(el, stayErrors());
+    if (id === "notify") showErrs(el, emailErrors());
+  }
+  function opt(key, val, label, sub, cur) {
+    return '<button type="button" class="opt" role="radio" data-opt="' + key + '" data-val="' + val + '" aria-checked="' + (String(cur) === val) + '"><span class="dot"></span><span>' + esc(label) + "<small>" + esc(sub) + "</small></span></button>";
+  }
+  function showErrs(el, errs) {
+    var box = el.querySelector(".errs");
+    if (box) box.innerHTML = errs.map(function (e) { return '<p class="err">' + esc(e) + "</p>"; }).join("");
+  }
+  function num(v) { var n = Number(String(v).replace(/[\s .]/g, "").replace(",", ".")); return Number.isFinite(n) ? Math.round(n) : NaN; }
+
+  function bind(id, el, onChange) {
+    el.querySelectorAll("[data-opt]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var k = b.dataset.opt, v = b.dataset.val;
+        if (k === "mode") setMode(v);
+        else if (k === "seasonalOnly") S.seasonalOnly = v === "true";
+        else S[k] = v;
+        S.answered[id] = true;
+        onChange(true);
+      });
+    });
+    el.querySelectorAll("[data-g]").forEach(function (inp) {
+      var k = inp.dataset.g;
+      inp.addEventListener(inp.tagName === "SELECT" ? "change" : "input", function () {
+        var numeric = ["minNights", "maxNights", "horizon", "lead", "expiry"].indexOf(k) >= 0;
+        S[k] = numeric ? (inp.value === "" ? 0 : Number(inp.value)) : inp.value;
+        S.answered[id] = true;
+        if (id === "stay") { showErrs(el, stayErrors()); inp.classList.toggle("bad", stayErrors().length > 0); }
+        if (id === "notify") { showErrs(el, emailErrors()); inp.classList.toggle("bad", k === "notify" && emailErrors().length > 0); }
+        onChange(k === "currency");
+      });
+    });
+    el.querySelectorAll("[data-u]").forEach(function (card) {
+      var u = S.units.filter(function (x) { return x.id === card.dataset.u; })[0];
+      card.querySelectorAll("[data-k]").forEach(function (inp) {
+        var k = inp.dataset.k;
+        inp.addEventListener(inp.type === "checkbox" ? "change" : "input", function () {
+          if (k === "name") u.name = inp.value.slice(0, 120);
+          if (k === "cap") { var c = Number(inp.value); u.cap = c >= 1 ? Math.min(50, c) : null; }
+          if (k === "base") { var n = num(inp.value); u.base = n > 0 ? n : null; inp.classList.toggle("bad", inp.value.trim() !== "" && !(n > 0)); }
+          if (k === "por") { u.por = inp.checked; }
+          S.answered[id] = true;
+          onChange(k === "por");
+        });
+        if (k === "base") inp.addEventListener("blur", function () { if (u.base) inp.value = String(u.base).replace(/\B(?=(\d{3})+(?!\d))/g, " "); });
+      });
+      var act = function (sel, fn) { var b = card.querySelector(sel); if (b) b.addEventListener("click", fn); };
+      act('[data-act="delroom"]', function () { S.units = S.units.filter(function (x) { return x !== u; }); onChange(true); });
+      card.querySelectorAll('[data-act="delseason"]').forEach(function (b) {
+        b.addEventListener("click", function () { u.seasons.splice(Number(b.dataset.i), 1); onChange(true); });
+      });
+      var addFn = function (all) {
+        return function () {
+          var g = function (n) { return card.querySelector('[data-n="' + n + '"]').value; };
+          var sz = { label: g("label").trim().slice(0, 80), from: g("from"), to: g("to"), amount: num(g("amount")), min: g("min") === "" ? null : Number(g("min")) };
+          var targets = all ? bookable() : [u];
+          var errs = seasonErrors(u, sz, -1);
+          if (all) targets.forEach(function (t) { if (t !== u) seasonErrors(t, sz, -1).forEach(function (e) { if (errs.indexOf(e) < 0) errs.push(e); }); });
+          if (errs.length) { showErrs(card, errs); return; }
+          sz.from = CitSeason.normMonthDay(sz.from); sz.to = CitSeason.normMonthDay(sz.to);
+          targets.forEach(function (t) { t.seasons.push({ label: sz.label, from: sz.from, to: sz.to, amount: sz.amount, min: sz.min }); });
+          S.answered.seasons = true; u._open = false;
+          onChange(true);
+        };
+      };
+      act('[data-act="addseason"]', addFn(false));
+      act('[data-act="addseasonall"]', addFn(true));
+      var det = card.querySelector("details"); if (det) det.addEventListener("toggle", function () { u._open = det.open; });
+    });
+    var add = el.querySelector('[data-act="addroom"]');
+    if (add) add.addEventListener("click", function () { S.units.push({ id: "u" + uid++, name: "", cap: null, base: null, por: false, seasons: [] }); S.answered.rooms = true; onChange(true); });
+    el.querySelectorAll("[data-go]").forEach(function (b) { b.addEventListener("click", function () { V.goTo(b.dataset.go); }); });
+    el.querySelectorAll("[data-t]").forEach(function (inp) { inp.addEventListener("input", function () { runTrial(el); }); });
+  }
+
+  function runTrial(el) {
+    var g = function (k) { var x = el.querySelector('[data-t="' + k + '"]'); return x ? x.value : ""; };
+    var res = el.querySelector(".trial .res");
+    if (!res) return;
+    var r = trial(g("unit"), g("arrive"), g("nights"), g("guests"));
+    if (r.errors && r.errors.length) {
+      res.className = "res bad";
+      res.innerHTML = "<b>A vendég ezt látja, és nem tudja elküldeni:</b><br>" + r.errors.map(esc).join("<br>");
+    } else if (r.unpriced) {
+      res.className = "res";
+      res.innerHTML = "<b>Elküldhető, de végösszeg nélkül.</b><br>Nem minden éjszakának van ára, ezért a vendég ajánlatot kér; Ön a levélből küld árat.";
+    } else {
+      res.className = "res";
+      res.innerHTML = "<b>Elküldhető.</b> A vendég ezt látja:<br>Szállás: <b>" + money(r.total) + "</b>" +
+        (r.tax ? "<br>Idegenforgalmi adó (a helyszínen): " + money(r.tax) : "") +
+        (S.includes ? "<br><span class=\"hint\">" + esc(S.includes) + "</span>" : "") +
+        "<br><span class=\"hint\">A kérésről e-mailt kap (" + esc(S.notify || ACCOUNT_EMAIL) + "), és a levélből elfogadja vagy elutasítja.</span>";
+    }
+    if (r.notes && r.notes.length) res.innerHTML += '<br><span class="hint">' + r.notes.map(esc).join("<br>") + "</span>";
+  }
+
+  /* ── chat (canned, keyword-matched — stands in for the AI in the mock) ── */
+  var TOPICS = [
+    { k: /(állíts|írd be|írja be|töltsd|töltse ki|módosítsd|változtasd|legyen (az|a)? ?ár)/i, write: true },
+    { k: /(időszak|szezon|nyár|ünnep|karácsony|szilveszter)/i, go: "seasons", a: function () {
+      return "Az időszak egy ismétlődő dátum-sáv saját árral, például „Főszezon, jún. 15. – aug. 31.”. Évet nem kell megadni: minden évben ugyanakkor érvényes. Átnyúlhat az újévre is (dec. 20. – jan. 5.). Ha két időszak fedi egymást, a listán feljebb lévő érvényes."; } },
+    { k: /(ajánlat|nem adok meg|egyedi ár|ár nélkül)/i, go: "base", a: function () {
+      return "Ha egy szobánál bejelöli, hogy „nem adok meg árat”, a vendég végösszeg nélkül küld kérést. Ön a levélből válaszol egy árral, amit elfogad vagy nem. Hasznos, ha minden foglalásnál alkudni szokott — de a vendég így kevésbé szívesen foglal."; } },
+    { k: /(fejenként|fő ?\/|személyenként|teljes tartózkodás|mire szól|mire vonatkozik)/i, go: "unit", a: function () {
+      return "Három módon szólhat az ár: éjszakánként (akárhányan vannak), fejenként éjszakánként (a vendégszámmal szorozzuk), vagy egy összeg a teljes tartózkodásra. " + (S.priceUnit ? "Most: " + UNIT_TXT[S.priceUnit] + "." : "Még nem választott."); } },
+    { k: /(minimum|legalább|legrövidebb|leghosszabb|hány éj|éjszakát)/i, go: "stay", a: function () {
+      return "A legrövidebb és leghosszabb foglalás az egész szállásra szól; ha egy időszaknál külön „legalább” értéket ad, ott az az erősebb. Most: legalább " + S.minNights + ", legfeljebb " + S.maxNights + " éj. Vigyázat: ha egy időszak minimuma nagyobb a leghosszabb foglalásnál, arra az időszakra senki nem tud foglalni."; } },
+    { k: /(előre|legkorábbi|mára|holnapra|utolsó pillanat)/i, go: "ahead", a: function () {
+      return "Két beállítás: meddig nyúlik előre a foglalási naptár (most " + S.horizon + " hónap), és legkorábban hány nap múlva érkezhet a vendég (most " + (Number(S.lead) ? S.lead + " nap" : "akár mára") + ")."; } },
+    { k: /(ifa|adó|idegenforgalmi)/i, go: "tax", a: function () {
+      return "Az idegenforgalmi adót a vendég a helyszínen fizeti, a végösszegbe nem számoljuk bele — külön soron látja. Három választás van: megadja az összeget, kimondja hogy nincs, vagy még nem tudja (ilyenkor nem írunk róla semmit). Az összeget a helyi önkormányzat tudja."; } },
+    { k: /(egyben|egész ház|egész szállás|szobánként|apartman)/i, go: "mode", a: function () {
+      return "Ha szobánként és egyben is kiadja, a kettő kizárja egymást: ha egy szoba foglalt, aznap az egész ház nem foglalható, és fordítva. Ezt a rendszer magától kezeli."; } },
+    { k: /(férőhely|hány fő|hányan|pótágy|gyerek)/i, go: "rooms", a: function () {
+      return "A férőhely a honlapon jelenik meg. Őszintén: ma a rendszer nem szűri ki, ha valaki több főre kér — a kérést Ön látja, és eldönti. Gyerekár vagy pótágy-díj ma nincs a rendszerben; ha ilyen van, a „Mi van benne az árban?” sorba írhatja."; } },
+    { k: /(e-?mail|értesít|lejár|nem válaszol|48)/i, go: "notify", a: function () {
+      return "Minden kérésről e-mailt kap, és a levélből fogadja el vagy utasítja el. Ha " + (Number(S.expiry) ? S.expiry + " órán" : "soha") + " belül nem dönt, a kérés magától lejár, és a vendég értesítést kap."; } },
+    { k: /(booking|airbnb|szallas\.hu|szállás\.hu|portál|ical|szinkron|naptár)/i, advanced: true, a: function () {
+      return "A más oldalakon (Booking, Airbnb, Szállás.hu) kapott foglalások naptárát össze lehet kötni ezzel, hogy ne foglalják le kétszer ugyanazt a napot. Ez nincs a kérdések között — a Haladó beállítások alatt, a „Naptár” részben találja."; } },
+    { k: /(előleg|foglaló|kártyá|fizet|átutal)/i, a: function () {
+      return "Ma a vendég nem fizet online: kérést küld, Ön visszaigazolja, a fizetést pedig Ön egyezteti vele (például átutalás vagy helyszíni fizetés). Előleget a rendszer most nem kezel."; } },
+    { k: /(lemond|storn)/i, a: function () {
+      return "Lemondási feltételt ma nem lehet itt beállítani. A vendég azt látja, hogy a lemondás módját a visszaigazoló levélben találja — ott Ön írhatja meg."; } },
+    { k: /(alapár|árat|mennyibe|mennyi legyen|ár)/i, go: "base", a: function () {
+      return "Az alapár az az ár, ami minden olyan napra érvényes, amire nem adott meg külön időszakot. Azt, hogy mennyi legyen, Önnek kell eldöntenie — érdemes megnézni, mennyiért adják ki a környékbeli hasonló szállásokat."; } }
+  ];
+  var SCOPE = /(foglal|szob|ár|időszak|szezon|éj|vendég|adó|ifa|előre|e-?mail|kérés|apartman|ház|szállás|naptár|booking|airbnb|lemond|előleg|fizet|férőhely|minimum)/i;
+  var CHIPS = {
+    mode: ["Mi a különbség?", "Booking-naptár?"], rooms: ["Ellenőrzi a férőhelyet?", "Gyerekár?"],
+    unit: ["Mire szól az ár?", "Mi a teljes tartózkodás?"], base: ["Mi az alapár?", "Mi van, ha nem adok árat?"],
+    seasons: ["Mi az időszak?", "Átnyúlhat újévre?"], seasonal: ["Mi van az időszakon kívül?"],
+    stay: ["Mi a minimum éjszaka?"], ahead: ["Foglalhatnak mára is?"], tax: ["Mennyi az IFA?", "Benne van az árban?"],
+    includes: ["Mit írjak ide?"], notify: ["Mi van, ha nem válaszolok?"], check: ["Kérnek előleget?", "Lemondás?"]
+  };
+  function answer(text, ctx) {
+    var t = String(text);
+    if (/^(mi a különbség|mit írjak ide|mi van az időszakon kívül|átnyúlhat újévre)/i.test(t)) {
+      var map = { "mi a különbség": "egyben", "mit írjak ide": null, "mi van az időszakon kívül": null, "átnyúlhat újévre": "szezon" };
+      for (var key in map) if (t.toLowerCase().indexOf(key) === 0) {
+        if (key === "mit írjak ide") return { a: "Egy rövid mondatot arról, mi jár az árért: például „Az ár tartalmazza a reggelit és a parkolást.” Ha nincs ilyen, hagyja üresen.", go: "includes" };
+        if (key === "mi van az időszakon kívül") return { a: S.seasonalOnly ? "Most úgy áll, hogy az időszakokon kívül nem lehet foglalni." : "Az időszakokon kívül az alapár érvényes" + (S.seasonalOnly === null ? " — ha a „Nem, csak a felsorolt időszakokban” választást teszi, akkor ott nem lehet foglalni." : "."), go: "seasonal" };
+        t = map[key];
+      }
+    }
+    var write = TOPICS[0].k.test(t);
+    for (var i = 1; i < TOPICS.length; i++) {
+      var tp = TOPICS[i];
+      if (tp.k.test(t)) {
+        var a = tp.a();
+        if (write) a = "Ezt nem én írom be — a döntés és a beírás az Öné. Megmutatom, hol tudja megadni. " + a;
+        return { a: a, go: tp.go, advanced: tp.advanced };
+      }
+    }
+    if (write) return { a: "Ezt nem én írom be — a döntés és a beírás az Öné. Megmutatom, hol tudja megadni.", go: ctx };
+    if (!SCOPE.test(t)) return { a: "Ebben a beszélgetésben csak a foglalás beállításában segítek: szobák, árak, időszakok, foglalási szabályok. Más kérdéssel a Súgót vagy az ügyfélszolgálatot keresse.", off: true };
+    return { a: "Nem biztos, hogy jól értem. Ezekről szívesen mesélek: időszakok és árak, a legrövidebb foglalás, idegenforgalmi adó, értesítések, más oldalak naptára.", go: null };
+  }
+
+  /* Wire a chat panel (any variant). `root` contains .chat-log, .chips, form. */
+  function mountChat(root, getCtx) {
+    var log = root.querySelector(".chat-log"), chips = root.querySelector(".chips"), form = root.querySelector("form"), inp = form.querySelector("input");
+    function push(cls, html) { var d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
+    function ask(text) {
+      push("me", esc(text));
+      var typing = push("ai typing", "…");
+      setTimeout(function () {
+        typing.remove();
+        var r = answer(text, getCtx());
+        var d = push("ai", esc(r.a));
+        if (r.go) {
+          var b = document.createElement("button"); b.className = "btn sm go"; b.textContent = "Mutasd, hol adom meg: " + title(qById(r.go));
+          b.addEventListener("click", function () { V.goTo(r.go); }); d.appendChild(b);
+        }
+        if (r.advanced) {
+          var b2 = document.createElement("button"); b2.className = "btn sm go"; b2.textContent = "Haladó beállítások › Naptár";
+          b2.addEventListener("click", function () { V.toast("Itt a mai űrlap nyílna meg (Haladó › Naptár)."); }); d.appendChild(b2);
+        }
+      }, 450);
+    }
+    form.addEventListener("submit", function (e) { e.preventDefault(); var t = inp.value.trim(); if (!t) return; inp.value = ""; ask(t); });
+    function refreshChips() {
+      var c = CHIPS[getCtx()] || ["Mi az időszak?", "Mi a minimum éjszaka?"];
+      chips.innerHTML = c.map(function (x) { return '<button type="button" class="chip">' + esc(x) + "</button>"; }).join("");
+      chips.querySelectorAll(".chip").forEach(function (b) { b.addEventListener("click", function () { ask(b.textContent); }); });
+    }
+    push("ai", "Jó napot! Kérdezzen bármit a foglalás beállításáról — elmagyarázom, és megmutatom, hol adhatja meg. Az adatokat Ön írja be, én nem módosítok semmit.");
+    refreshChips();
+    return { refreshChips: refreshChips, ask: ask };
+  }
+  var CHAT_HTML =
+    '<div class="chat-head"><svg class="ico" viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V16.5H5A1.5 1.5 0 0 1 3.5 15V7A1.5 1.5 0 0 1 5 5.5z"/></svg>' +
+    "<div><b>Segítő</b><small>Csak a foglalás beállításáról · nem ír be semmit</small></div><span style=\"flex:1\"></span>" +
+    '<button class="linkbtn chat-close" aria-label="Bezárás" style="display:none"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+    '<div class="chat-log"></div><div class="chips"></div>' +
+    '<form class="chat-form"><input class="inp" placeholder="Kérdezzen…" aria-label="Kérdés"><button class="btn pri sm" type="submit">Küld</button></form>' +
+    '<div class="chat-foot">A mockban előre megírt mintaválaszok; élesben mesterséges intelligencia válaszol.</div>';
+
+  /* ── mock chrome: size + scenario switches ─────────────── */
+  function mockbar(name, onScenario) {
+    var bar = document.createElement("div");
+    bar.className = "mockbar";
+    var phone = window.matchMedia("(max-width: 700px)").matches;
+    bar.innerHTML = "<b>" + esc(name) + '</b><span class="seg" id="sz"><button data-v="mob">Mobil 390px</button><button data-v="desk">Asztali</button></span>' +
+      '<span class="seg" id="sc"><button data-v="new">Első beállítás</button><button data-v="edit">Módosítás (kitöltött)</button></span>';
+    document.body.prepend(bar);
+    var frame = document.querySelector(".frame");
+    function size(v) { frame.className = "frame " + v; bar.querySelectorAll("#sz button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.v === v); }); }
+    function scen(v) { S = v === "edit" ? demoState() : emptyState(); KF.S = S; bar.querySelectorAll("#sc button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.v === v); }); onScenario(v); }
+    bar.querySelectorAll("#sz button").forEach(function (b) { b.addEventListener("click", function () { size(b.dataset.v); }); });
+    bar.querySelectorAll("#sc button").forEach(function (b) { b.addEventListener("click", function () { scen(b.dataset.v); }); });
+    var p = new URLSearchParams(location.search);
+    size(p.get("size") || (phone ? "mob" : "desk"));
+    scen(p.get("sc") || "new");
+  }
+  function toast(frame, t) {
+    var d = document.createElement("div"); d.className = "toast"; d.textContent = t; frame.appendChild(d);
+    setTimeout(function () { d.remove(); }, 2600);
+  }
+
+  return {
+    get S() { return S; }, set S(v) { S = v; },
+    SECS: SECS, QS: QS, qById: qById, title: title, visibleQs: visibleQs, isDone: isDone, answerLine: answerLine,
+    render: render, blockers: blockers, mountChat: mountChat, CHAT_HTML: CHAT_HTML, mockbar: mockbar, toast: toast,
+    answer: answer, esc: esc, ACCOUNT_EMAIL: ACCOUNT_EMAIL
+  };
+})();
+</script><script>/* Variant B — one page checklist: 6 sections, one open at a time, all its questions stacked. */
+(function () {
+  var frame = document.querySelector(".frame");
+  var CHAT_SVG = '<svg class="ico" viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V16.5H5A1.5 1.5 0 0 1 3.5 15V7A1.5 1.5 0 0 1 5 5.5z"/></svg>';
+  frame.innerHTML =
+    '<div class="topbar"><span class="site">Nyugalom Vendégház</span><span class="crumb">› Foglalás beállítása</span><span class="sp"></span><button class="linkbtn" id="adv">Haladó beállítások</button></div>' +
+    '<div class="b-grid"><main class="b-main"><div class="b-head"></div><div class="b-list"></div></main><div class="b-askbar"><button class="btn" id="fab">' + CHAT_SVG + "Kérdezzen a Segítőtől</button></div>" +
+    '<aside class="chat b-chat">' + KF.CHAT_HTML + '</aside></div><div class="scrim"></div>';
+  var open = null, ctx = "mode";
+  var chatEl = frame.querySelector(".b-chat"), scrim = frame.querySelector(".scrim");
+  var chat = KF.mountChat(chatEl, function () { return ctx; });
+  function isMob() { return frame.classList.contains("mob"); }
+  function sheet(o) { chatEl.classList.toggle("sheet", isMob()); chatEl.classList.toggle("open", o); scrim.classList.toggle("open", o && isMob()); chatEl.querySelector(".chat-close").style.display = isMob() ? "" : "none"; }
+  frame.querySelector("#fab").addEventListener("click", function () { sheet(true); });
+  scrim.addEventListener("click", function () { sheet(false); });
+  chatEl.querySelector(".chat-close").addEventListener("click", function () { sheet(false); });
+  frame.querySelector("#adv").addEventListener("click", function () { V.toast("Itt a mai űrlap nyílna meg (Szobák · Árak · Online foglalás) — megmarad, csak hátrébb kerül."); });
+
+  function secQs(sid) { return KF.visibleQs().filter(function (q) { return q.sec === sid; }); }
+  function secState(sid) {
+    var qs = secQs(sid);
+    var bad = KF.blockers().filter(function (b) { return qs.some(function (q) { return q.id === b.q; }) && b.sev === "bad"; }).length;
+    var missing = qs.filter(function (q) { return !q.optional && !KF.isDone(q.id); }).length;
+    if (bad) return { cls: "bad", t: bad + " akadály" };
+    if (missing) return { cls: "warn", t: missing === qs.length ? "Még nincs kitöltve" : missing + " kérdés hiányzik" };
+    return { cls: "ok", t: "Kész" };
+  }
+  function head() {
+    var done = KF.SECS.filter(function (s) { return secState(s.id).cls === "ok"; }).length;
+    var bl = KF.blockers();
+    frame.querySelector(".b-head").innerHTML = '<h1 class="b-h1">Foglalás beállítása</h1><p class="lead" style="color:var(--citui-muted);margin:0">' + done + " / " + KF.SECS.length + " rész kész" +
+      (bl.length ? " · " + bl.length + " dolog miatt a vendég nem, vagy nem jól tud foglalni" : done === KF.SECS.length ? " · a vendégek foglalhatnak" : "") + "</p>";
+  }
+  function draw() {
+    head();
+    var h = "";
+    KF.SECS.forEach(function (s, i) {
+      var st = secState(s.id), isOpen = open === s.id;
+      h += '<section class="b-sec' + (isOpen ? " open" : "") + '" data-s="' + s.id + '"><button class="b-sh" aria-expanded="' + isOpen + '"><span class="b-num">' + (i + 1) + "</span><span class=\"b-st\"><b>" + KF.esc(s.t) + "</b>";
+      if (!isOpen && s.id !== "check") h += "<small>" + secQs(s.id).filter(function (q) { return KF.S.answered[q.id] || KF.isDone(q.id); }).map(function (q) { return KF.esc(KF.answerLine(q.id)); }).join(" · ") + "</small>";
+      h += '</span><span class="pill ' + st.cls + '">' + st.t + "</span></button>";
+      if (isOpen) {
+        h += '<div class="b-body">';
+        secQs(s.id).forEach(function (q) { h += '<div class="b-q" data-qbox="' + q.id + '"></div>'; });
+        var nxt = KF.SECS[i + 1];
+        h += '<div class="b-foot">' + (nxt ? '<button class="btn pri" data-next="' + nxt.id + '">Mentés, tovább: ' + KF.esc(nxt.t) + "</button>" : '<button class="btn pri" data-fin="1"' + (KF.isDone("check") ? "" : " disabled") + ">Kész, bekapcsolom a foglalást</button>") + "</div></div>";
+      }
+      h += "</section>";
+    });
+    var list = frame.querySelector(".b-list");
+    list.innerHTML = h;
+    list.querySelectorAll(".b-sh").forEach(function (b) { b.addEventListener("click", function () { var sid = b.parentNode.dataset.s; openSec(open === sid ? null : sid); }); });
+    list.querySelectorAll("[data-qbox]").forEach(function (box) {
+      var id = box.dataset.qbox;
+      KF.render(id, box, function (structural) { KF.S.answered[id] = true; if (structural) draw(); else head(); });
+      box.addEventListener("focusin", function () { if (ctx !== id) { ctx = id; chat.refreshChips(); } });
+    });
+    list.querySelectorAll("[data-next]").forEach(function (b) { b.addEventListener("click", function () { markSeen(open); openSec(b.dataset.next); }); });
+    list.querySelectorAll("[data-fin]").forEach(function (b) { b.addEventListener("click", function () { V.toast("A foglalás bekapcsolva. (Mock: semmi nem íródik.)"); }); });
+  }
+  function markSeen(sid) { secQs(sid).forEach(function (q) { if (["seasons", "stay", "ahead", "includes", "notify", "base"].indexOf(q.id) >= 0) KF.S.answered[q.id] = true; }); }
+  function openSec(sid) {
+    open = sid; draw();
+    if (sid) { var q = secQs(sid)[0]; ctx = q ? q.id : ctx; chat.refreshChips(); var el = frame.querySelector('[data-s="' + sid + '"]'); el.scrollIntoView({ block: "start", behavior: "smooth" }); }
+  }
+  function goTo(qid) {
+    sheet(false);
+    var q = KF.qById(qid); open = q.sec; ctx = qid; draw(); chat.refreshChips();
+    var box = frame.querySelector('[data-qbox="' + qid + '"]');
+    if (box) { box.scrollIntoView({ block: "center", behavior: "smooth" }); box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); }
+  }
+  window.V = { goTo: goTo, toast: function (t) { KF.toast(frame, t); } };
+  KF.mockbar("B · Ellenőrzőlista", function (v) {
+    sheet(false);
+    open = v === "edit" ? null : "rooms"; ctx = "mode"; draw();
+  });
+  new MutationObserver(function () { sheet(chatEl.classList.contains("open")); }).observe(frame, { attributes: true, attributeFilter: ["class"] });
+})();
+</script></body></html>

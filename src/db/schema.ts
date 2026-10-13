@@ -1497,6 +1497,21 @@ export interface TranslationSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
+/** 0109: one row per AI call a TENANT made (ADR-XXXX — the booking-setup helper). The
+ *  per-site daily limit counts these BEFORE a call; the cost is USD (ADR-0085).
+ *  Writer/reader: src/ai/bookingHelper.ts. The question text is NOT stored. */
+export interface TenantAiCallTable {
+  id: Generated<string>;
+  site_id: string;
+  feature: string;
+  model: string;
+  input_tokens: ColumnType<number, number | undefined, number>;
+  output_tokens: ColumnType<number, number | undefined, number>;
+  cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
+  ok: ColumnType<boolean, boolean | undefined, boolean>;
+  created_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 /** 0093: the scout worksheet's tile grid (ADR-0336, `/scout`) — a region's box cut into
  *  ~10 × 11 km tiles; a saturated tile splits into four children in its place.
  *  Reader/writer: src/scout/store.ts. */
@@ -1955,6 +1970,7 @@ export interface Database {
   places_detail_cache: PlacesDetailCacheTable;
   scrape_checkpoint: ScrapeCheckpointTable;
   translation_spend: TranslationSpendTable;
+  tenant_ai_call: TenantAiCallTable;
   scout_tile: ScoutTileTable;
   scout_place: ScoutPlaceTable;
   site_review: SiteReviewTable;

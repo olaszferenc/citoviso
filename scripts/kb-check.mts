@@ -28,6 +28,9 @@ const VIEW_GROUPS = {
     // Approved plan 2026-09-06: the Foglalások tab is its own view file — a new
     // surface file MUST enter this list (feedback_guard_scope_is_the_doctrine).
     "src/server/bookingViews.ts",
+    // ADR-XXXX: the guided booking setup page — its own view file (its words, incl. the
+    // client script's `L` strings, are T() calls here).
+    "src/server/bookingSetupViews.ts",
     // Booking-offer (2026-09-23): the owner's offer page is its own view file, reached
     // from the Foglalások tab and the owner's mail — its labels are quoted by the KB.
     "src/server/offerViews.ts",
