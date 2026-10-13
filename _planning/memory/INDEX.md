@@ -13,6 +13,7 @@
 - [2026-10-13_foglalas_kerdezz_felelek.md](2026-10-13_foglalas_kerdezz_felelek.md) — 2026-10-13 — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (ADR-0380)
 - [2026-10-13_ellatas_es_felarak.md](2026-10-13_ellatas_es_felarak.md) — 2026-10-13 — Ellátás és felárak (reggeli, félpanzió, gyerekár) · ADR-0378
 - [2026-10-13_eles_orkodes_sms.md](2026-10-13_eles_orkodes_sms.md) — 2026-10-13 — Élesi őrködés: megakadt külső folyamat → levél + szűrt SMS (ADR-0374)
+- [2026-10-13_elek_eles_teszt_harom_szerep.md](2026-10-13_elek_eles_teszt_harom_szerep.md) — Elek — éles teszt három szerepben (próba · ellátás · foglalás) · JELENTÉS 2026-10-13
 - [2026-10-13_domain_csomag_dijsor.md](2026-10-13_domain_csomag_dijsor.md) — 2026-10-13 — Webcím díjsor csomag-tartalom névnél: nincs „0 Ft/hó” (tulaj „ok”)
 - [2026-10-12_portal_ical_valodi_mintak.md](2026-10-12_portal_ical_valodi_mintak.md) — 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-0371)
 - [2026-10-12_modell_html_injekcio.md](2026-10-12_modell_html_injekcio.md) — 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-0370)
