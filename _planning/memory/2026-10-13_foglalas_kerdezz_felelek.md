@@ -1,4 +1,4 @@
-# 2026-10-13 — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (ADR-XXXX)
+# 2026-10-13 — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (ADR-0380)
 
 SUB `citd9a8f335` a „deploy” FŐ session (`citfb4ed7ab`) alatt; brief `~/rc-briefs/foglalas-kerdezz-felelek-20261013.md`.
 §2b kör: három működő mock (A lépésenként · B ellenőrzőlista · C beszélgetés) → a tulaj a **B**-t választotta,

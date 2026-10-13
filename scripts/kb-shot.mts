@@ -871,7 +871,7 @@ function moduleShotHtml(entryId: string): string {
   });
 }
 
-// ADR-XXXX: the guided booking setup — the nyugalom-demo rooms, priced, with the guest
+// ADR-0380: the guided booking setup — the nyugalom-demo rooms, priced, with the guest
 // section still open (no tourist-tax answer yet), so the shot shows done sections with their
 // answers AND an open one with its questions, exactly what the guide walks through.
 const bookingSetupFixture: SetupState = {
@@ -1407,7 +1407,7 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
             : undefined,
   );
 }
-// ADR-XXXX: the guided booking setup page — the checklist (done sections with their
+// ADR-0380: the guided booking setup page — the checklist (done sections with their
 // answers, the open one with its questions) and the Segítő opened from the bottom bar.
 await shoot(
   "modulok",

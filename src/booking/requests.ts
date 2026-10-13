@@ -551,7 +551,7 @@ export async function mailSafe(label: string, requestId: string, send: () => Pro
 /**
  * The guest-side RULES for a stay — seasons (ADR-0049) plus the module's site-wide rules —
  * as the guest reads them. ONE copy: the booking form (createBookingRequest) and the owner's
- * trial booking on the guided setup page (ADR-XXXX) both ask here, so the trial can never
+ * trial booking on the guided setup page (ADR-0380) both ask here, so the trial can never
  * promise a stay the form would refuse. `rules` may be passed when the caller already has them.
  */
 export async function stayRuleErrors(

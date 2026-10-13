@@ -4392,7 +4392,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
   // of four stacked rows. The other settings screens keep their current opening,
   // because their KB screenshots are frozen against it.
   if (def.editor === "booking" && opts.booking) {
-    // ADR-XXXX (approved plan foglalas-kerdezz-felelek, owner 2026-10-13): the rules are set
+    // ADR-0380 (approved plan foglalas-kerdezz-felelek, owner 2026-10-13): the rules are set
     // on the guided "Foglalás beállítása" page; this form stays, folded behind "Haladó
     // beállítások" — open when a save of it just failed, or when a link asks for #halado.
     // The card sits BELOW the calendar and the requests: those are the daily screen

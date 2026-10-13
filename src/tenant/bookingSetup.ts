@@ -1,4 +1,4 @@
-// The guided booking setup ("Foglalás beállítása", ADR-XXXX, approved plan
+// The guided booking setup ("Foglalás beállítása", ADR-0380, approved plan
 // assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/ — variant B, owner 2026-10-13).
 //
 // ONE checklist over the three modules a bookable stay needs: rooms (site_unit), prices

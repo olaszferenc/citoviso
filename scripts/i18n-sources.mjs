@@ -118,7 +118,7 @@ export const I18N_SOURCES = [
   // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
-  // ADR-XXXX — the guided booking setup page: its words (server) and its client script
+  // ADR-0380 — the guided booking setup page: its words (server) and its client script
   // (every visible word arrives in `L`, so the script itself carries none).
   "src/server/bookingSetupViews.ts",
   "src/tenant/bookingSetup.ts",

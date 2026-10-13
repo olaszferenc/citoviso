@@ -1,4 +1,4 @@
-// "Foglalás beállítása" — the guided booking setup page (ADR-XXXX).
+// "Foglalás beállítása" — the guided booking setup page (ADR-0380).
 //
 // Approved plan (the CONTRACT): assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/
 // (variant B, owner 2026-10-13): one page, six sections with a status pill each, one open

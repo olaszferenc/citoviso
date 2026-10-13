@@ -1,4 +1,4 @@
--- 0109 A SZÁLLÁSADÓ AI-HÍVÁSAI, MÉRVE (ADR-XXXX): a „Foglalás beállítása” oldal Segítője
+-- 0109 A SZÁLLÁSADÓ AI-HÍVÁSAI, MÉRVE (ADR-0380): a „Foglalás beállítása” oldal Segítője
 -- (Claude Haiku 5.5) a tulaj kérdésére válaszol. Minden hívás egy sor: mennyi token ment ki
 -- és jött vissza, mennyibe került (USD, ADR-0085 — más pénznem nincs), melyik szállásé.
 -- Ebből számol a szállásonkénti napi korlát is (a hívás ELŐTT), és ebből olvasható ki,

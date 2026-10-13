@@ -1,4 +1,4 @@
-## ADR-XXXX — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (Haiku 5.5, 1. kör: csak magyaráz)
+## ADR-0380 — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (Haiku 5.5, 1. kör: csak magyaráz)
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (tulaj a koordinátoron át: „MEHET A B”) · **Brief:**
 `~/rc-briefs/foglalas-kerdezz-felelek-20261013.md` · **Kontraktus:**

@@ -1,5 +1,5 @@
 /**
- * The "Segítő" of the guided booking setup (ADR-XXXX, owner ruling 2026-10-13, round 1).
+ * The "Segítő" of the guided booking setup (ADR-0380, owner ruling 2026-10-13, round 1).
  *
  * WHAT IT IS: a focused help chat next to the setup checklist. It EXPLAINS a setting and
  * POINTS at the question where the owner enters it. It writes nothing — it has no tools

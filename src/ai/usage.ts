@@ -23,7 +23,7 @@ const PRICE_PER_MTOK: Readonly<Record<string, { input: number; output: number }>
   "claude-opus-4-7": { input: 5, output: 25 },
   "claude-sonnet-4-6": { input: 3, output: 15 },
   "claude-haiku-4-5": { input: 1, output: 5 },
-  // ADR-XXXX: the booking-setup helper. Verified against the claude-api skill (2026-10-13):
+  // ADR-0380: the booking-setup helper. Verified against the claude-api skill (2026-10-13):
   // $0.10 / $0.50 per MTok for prompts up to 100K tokens — the helper's prompts are ~5K.
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
 };

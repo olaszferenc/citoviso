@@ -888,7 +888,7 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
   res.end(text);
 }
 
-/** ADR-XXXX — who may use the booking setup page: a signed-in owner whose booking module is live. */
+/** ADR-0380 — who may use the booking setup page: a signed-in owner whose booking module is live. */
 interface BookingSetupCtx {
   readonly session: NonNullable<Awaited<ReturnType<typeof currentTenant>>>;
   readonly siteId: string;
@@ -914,7 +914,7 @@ function logRerenderFailure(tenantId: string): (e: unknown) => void {
  * The trial booking of the setup page: the GUEST path's own checks (stayRuleErrors,
  * stayIsTaken, stayQuote — the very functions createBookingRequest calls), run without
  * creating anything. The capacity note is the one thing the guest path does NOT check —
- * said here plainly instead (ADR-XXXX).
+ * said here plainly instead (ADR-0380).
  */
 async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { lang, siteId } = ctx;
@@ -3103,7 +3103,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
   // ── ADR-0044: per-module settings ──
   // POST /admin/module-config — save one module's declarative fields.
-  // ADR-XXXX — the guided booking setup ("Foglalás beállítása"): JSON endpoints of one page.
+  // ADR-0380 — the guided booking setup ("Foglalás beállítása"): JSON endpoints of one page.
   // Only `application/json` is accepted: a cross-site <form> cannot send it, and a cross-site
   // fetch with it needs a CORS preflight this server never grants (the session cookie is
   // SameSite=Lax on top). Every write goes through the existing write functions.
@@ -4406,7 +4406,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // ADR-0094 ② (approved plan B — contract: design-refs/console/domain-settlement):
     // the interposed settlement page. Only reachable with a RUNNING domain
     // commitment; without one the modules tab's own cancel box is the way.
-    // ADR-XXXX — the guided booking setup page (approved plan foglalas-kerdezz-felelek).
+    // ADR-0380 — the guided booking setup page (approved plan foglalas-kerdezz-felelek).
     if (pathname === "/admin/booking-setup") {
       const ctx = await bookingSetupCtx(req, false);
       if (!ctx) return redirect(res, (await currentTenant(req)) ? "/admin?tab=modulok" : "/login");

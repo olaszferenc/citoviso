@@ -1497,7 +1497,7 @@ export interface TranslationSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
-/** 0109: one row per AI call a TENANT made (ADR-XXXX — the booking-setup helper). The
+/** 0109: one row per AI call a TENANT made (ADR-0380 — the booking-setup helper). The
  *  per-site daily limit counts these BEFORE a call; the cost is USD (ADR-0085).
  *  Writer/reader: src/ai/bookingHelper.ts. The question text is NOT stored. */
 export interface TenantAiCallTable {

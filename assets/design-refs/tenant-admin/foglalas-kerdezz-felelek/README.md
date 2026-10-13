@@ -3,7 +3,7 @@
 **Jóváhagyva:** 2026-10-13, tulajdonosi döntés a koordinátoron át (CIT deploy-main): MEHET A B,
 a javított alsó Segítő-sávval; Segítő = Haiku 5.5, az 1. kör csak magyaráz/elvezet, nem ír, a költség mérve.
 Elvetve: „A” (lépésenként), „C” (beszélgetés-folyam). ·
-**Kapcsolódó:** ADR-XXXX, ADR-0044 (egység), ADR-0049 (időszak), ADR-0114/0256/0257 (az egész szállás),
+**Kapcsolódó:** ADR-0380, ADR-0044 (egység), ADR-0049 (időszak), ADR-0114/0256/0257 (az egész szállás),
 ADR-0208/0222 (ár nélkül ajánlatkérés), ADR-0085 (AI-költség mérése), ADR-0045 (súgó).
 **Hatókör:** `src/server/bookingSetupViews.ts` · `src/server/moduleConfigViews.ts`
 

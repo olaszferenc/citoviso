@@ -1,4 +1,4 @@
-// „Foglalás beállítása” — a vezetett foglalás-beállítás + a Segítő — ŐR (ADR-XXXX,
+// „Foglalás beállítása” — a vezetett foglalás-beállítás + a Segítő — ŐR (ADR-0380,
 // jóváhagyott terv: assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/, „B”).
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver + böngésző, mindkét méreten):

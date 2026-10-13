@@ -33,7 +33,7 @@ const EDITOR_TS = path.join(ROOT, "src/tenant/editor.ts");
  */
 const NO_RENDER_NEEDED: Record<string, string> = {
   "/admin/password": "belépési jelszó — nem oldal-tartalom",
-  // ADR-XXXX: the booking setup page's trial booking and Segítő only READ (the trial runs the
+  // ADR-0380: the booking setup page's trial booking and Segítő only READ (the trial runs the
   // guest rules without creating a request; the helper writes nothing but its cost row).
   "/admin/booking-setup/trial": "próba-foglalás — csak olvas, semmit nem hoz létre",
   "/admin/booking-setup/ask": "Segítő-kérdés — csak olvas (a költség-sor nem oldal-tartalom)",
