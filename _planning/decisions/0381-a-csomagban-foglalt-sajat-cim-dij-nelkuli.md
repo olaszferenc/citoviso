@@ -46,4 +46,5 @@ Felderítve — hol kézi ma a csomag-tartalom domain:
    hűségidő nélkül; csomag nélkül nincs díjmentes igénylés; kisebb csomagnál a díj elindul. A régi kódon 9 bukás.
 
 **Kívül marad:** az 1. lépés díjsora csomag-tartalomnál ma „A név díja 0 Ft/hó…” mondatot ír — ez nem ennek a
-döntésnek a része (külön szöveg-kör).
+döntésnek a része (külön szöveg-kör). → 2026-10-13 rendezve (tulaj „ok”): „A név a csomag része, külön díja nincs. Ha kisebb
+csomagra vált, a név díja ({ár}/hó) elindul.” — `_planning/memory/2026-10-13_domain_csomag_dijsor.md`.

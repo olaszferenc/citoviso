@@ -171,7 +171,10 @@ Három dolgot érdemes tudni:
 
 Egyes csomagokban a saját cím a csomag része: ilyenkor nincs külön havidíja. Ha később
 kisebb csomagra vált, a díja elindul — a Modulok és a Pénztárca fül ezt előre kiírja, a
-pontos havi összeggel. Ha már élő honlap mellé, utólag kér ilyen, díj nélküli címet, az
+pontos havi összeggel. A Webcím fülön, a névlista alatt is ezt olvassa:
+„A név a csomag része, külön díja nincs.” — utána pedig, hogy kisebb csomagnál mennyi a név
+havi díja: a kijelölt név végződésének díja, vagy amíg nincs kijelölt név, a végződések
+díjsávja. Ha másik nevet jelöl ki, az összeg a végződéséhez igazodik. Ha már élő honlap mellé, utólag kér ilyen, díj nélküli címet, az
 Áttekintésen a cím díja helyén ez áll: „a csomag része · 12 hó hűségidő” (a hónapok száma
 a csomagjától függ). Díjat nem fizet, és semmit nem zárolunk, de a cím igénylésével elindul
 a hűségidő — a feltételeit fent, a „Mennyibe kerül?” részben írjuk le. Az **„Ezt kérem”**

@@ -7363,6 +7363,7 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
 - 2026-10-12 · eszkalációs ajánlat elrendezése: felső sáv, fátyol nélkül, bezáró × (≥ 40 px); az `offer-ui` 4. pont elrendezését felülírja (tulaj „A”, ADR-0369)
 - 2026-10-12 · saját cím a vevő oldalán: jelvény/címke/„benne” csak ha kapcsoló BE + pirula csomagban + van „Csomagban ingyen” végződés; ingyenes végződés nélkül a pirula a vevőnek semmit nem ad (tulaj „B”, dinamikus, ADR-0369)
 - 2026-10-12 · a tulaj éles /pricing-állapota: a „Saját domain” pirula mind a 3 csomagban, ingyenes végződés NINCS jelölve → a vevő ma nem kap ingyen címet (koordinátori üzenet)
+- 2026-10-13 · Webcím 1. lépés díjsora csomag-tartalom névnél: „A név a csomag része, külön díja nincs. Ha kisebb csomagra vált, a név díja ({ár}/hó) elindul.” — {ár} = a kijelölt végződés /pricing-díja, kijelölés nélkül a díjsáv; „0 Ft” sosem; a fizetős sor változatlan (tulaj „ok”, §2b-kivétel; őr: domain-package-claim-check)
 
 ## Előzmények
 

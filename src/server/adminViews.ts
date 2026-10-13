@@ -3977,7 +3977,23 @@ export interface DomainViewState {
  *     (no purchase price after the commitment). The old „díjmentesen az Öné, a havidíj …
  *     fut tovább” read as a contradiction.
  */
-function domainFeeLine(d: DomainAdminData, lang: string, fee: number | null): string {
+function domainFeeLine(d: DomainAdminData, lang: string, fee: number | null, listFee: number | null = null): string {
+  // Owner „ok” 2026-10-13 (ADR-0381 „kívül marad”): a name the package carries (fee 0, or no
+  // selection on a package that carries the name) — never „0 Ft/hó”; the line says what starts
+  // on a smaller package: the selected ending's /pricing fee, or the band before a selection.
+  if (fee === 0 || (fee === null && d.packageContent)) {
+    const r = d.listFeeRange;
+    const price = fee === 0 && listFee !== null
+      ? money(listFee, d.currency)
+      : r.min !== r.max
+      ? `${formatMoney(r.min, null)}–${money(r.max, d.currency)}`
+      : money(r.min, d.currency);
+    return T(
+      lang,
+      "A név a csomag része, külön díja nincs. Ha kisebb csomagra vált, a név díja ({price}/hó) elindul.",
+      { price },
+    );
+  }
   const tail = { n: d.commitmentMonths };
   if (fee === null && d.feeRange.min !== d.feeRange.max) {
     return T(
@@ -4307,7 +4323,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
             `<label class="adm-dopt${off ? " is-off" : ""}${i === firstFree ? " is-sel" : ""}">` +
             `<input type="radio" name="d" value="${esc(s.domain)}"` +
             // N1: the line under the list follows the selected name's ending.
-            (off ? "" : ` data-dline="${esc(domainFeeLine(d, lang, d.feeByDomain[s.domain] ?? null))}"`) +
+            (off ? "" : ` data-dline="${esc(domainFeeLine(d, lang, d.feeByDomain[s.domain] ?? null, d.listFeeByDomain[s.domain] ?? null))}"`) +
             `${i === firstFree ? " checked" : ""}${off ? " disabled" : ""}>` +
             `<span class="adm-dopt__name">${esc(s.domain)}</span>` +
             `<span class="adm-dopt__meta">${availChip(s.availability, lang)}</span>` +
@@ -4387,7 +4403,12 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       // ADR-0109 ②/⑧: below the entry threshold we do not sell the name at all —
       // the honest line is the CONDITION, not a price the tenant cannot act on.
       d.eligible
-        ? `<span data-dfee-line>${esc(domainFeeLine(d, lang, firstFree >= 0 ? (d.feeByDomain[d.suggestions[firstFree]!.domain] ?? null) : null))}</span>`
+        ? `<span data-dfee-line>${esc(domainFeeLine(
+            d,
+            lang,
+            firstFree >= 0 ? (d.feeByDomain[d.suggestions[firstFree]!.domain] ?? null) : null,
+            firstFree >= 0 ? (d.listFeeByDomain[d.suggestions[firstFree]!.domain] ?? null) : null,
+          ))}</span>`
         : T(lang, "Saját cím legalább {min}/hó csomag mellé választható (kedvezmények nélkül számítva). Bővítse a csomagját, és a saját név is elérhetővé válik.", { min: esc(money(d.minPackageMonthly, d.currency)) })
     }</p>` +
     (d.eligible

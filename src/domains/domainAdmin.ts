@@ -23,6 +23,7 @@ import {
   getDomainMinCommitmentMonths,
   offeredTldOf,
   offeredTlds,
+  getCustomDomainMonthly,
 } from "../pricing.js";
 import { renewableModuleIds } from "../payment/billing.js";
 import { getDisabledModules } from "../moduleSales.js";
@@ -93,6 +94,14 @@ export interface DomainAdminData {
   readonly feeByDomain: Readonly<Record<string, number>>;
   /** Elek 10-12 N1: the lowest and highest ending fee — the line before any name is selected. */
   readonly feeRange: { readonly min: number; readonly max: number };
+  /**
+   * The /pricing fee of each suggested name's ending WITHOUT the package (owner „ok”
+   * 2026-10-13): when the package carries the name, the step-1 line says what starts on a
+   * smaller package — never „0 Ft/hó”.
+   */
+  readonly listFeeByDomain: Readonly<Record<string, number>>;
+  /** The lowest and highest ending fee without the package — the line before a selection. */
+  readonly listFeeRange: { readonly min: number; readonly max: number };
   /**
    * ADR-0360: the tenant's package carries the domain → its fee is 0. ADR-0381: the review
    * step then claims it without payment (domainUpgrade.claimPackageDomain) — no fee, no hold.
@@ -256,6 +265,13 @@ export async function loadDomainAdmin(
   const feeRange = tldFees.length
     ? { min: Math.min(...tldFees), max: Math.max(...tldFees) }
     : { min: priceMonthly, max: priceMonthly };
+  const listFeeByDomain = Object.fromEntries(
+    suggestions.map((sg) => [sg.domain, offeredTldOf(sg.domain, regionId)?.monthlyFee ?? getCustomDomainMonthly(regionId)] as const),
+  );
+  const listFees = offeredTlds(regionId).map((t) => t.monthlyFee);
+  const listFeeRange = listFees.length
+    ? { min: Math.min(...listFees), max: Math.max(...listFees) }
+    : { min: getCustomDomainMonthly(regionId), max: getCustomDomainMonthly(regionId) };
 
   return {
     currentHost: site?.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null,
@@ -273,6 +289,8 @@ export async function loadDomainAdmin(
     priceMonthly,
     feeByDomain,
     feeRange,
+    listFeeByDomain,
+    listFeeRange,
     packageContent: priceMonthly === 0,
     offeredTlds: offeredTlds(regionId).map((t) => t.tld),
     eligible: isDomainEligible(computeMonthly(owned, regionId), regionId, ctx),

@@ -968,6 +968,7 @@
   "a naptár-szinkron ({names})",
   "a naptárából {n} lezárt nap",
   "A nem elérhető linkű képeket a mock kihagyja.",
+  "A név a csomag része, külön díja nincs. Ha kisebb csomagra vált, a név díja ({price}/hó) elindul.",
   "A név a honlapjára mutat",
   "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A havidíj addig jár, amíg a név az Ön honlapjához tartozik; ha a {n} hónap után lemond, a név vételár nélkül az Öné lesz.",
   "A név díja {range}/hó, végződéstől függően, és {n} hónapos előfizetés vállalásával jár. A havidíj addig jár, amíg a név az Ön honlapjához tartozik; ha a {n} hónap után lemond, a név vételár nélkül az Öné lesz.",

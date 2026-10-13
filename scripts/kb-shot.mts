@@ -1341,6 +1341,8 @@ const domainFixture: DomainAdminData = {
   priceMonthly: 1000,
   feeByDomain: { "nyugalomvendeghaz.hu": 1000, "nyugalom-vendeghaz.hu": 1000, "nyugalomvendeghaz.com": 1200, "nyugalomvendeghaz.eu": 1200 },
   feeRange: { min: 1000, max: 1200 },
+  listFeeByDomain: { "nyugalomvendeghaz.hu": 1000, "nyugalom-vendeghaz.hu": 1000, "nyugalomvendeghaz.com": 1200, "nyugalomvendeghaz.eu": 1200 },
+  listFeeRange: { min: 1000, max: 1200 },
   packageContent: false,
   offeredTlds: [".hu", ".eu", ".com"],
   eligible: true,

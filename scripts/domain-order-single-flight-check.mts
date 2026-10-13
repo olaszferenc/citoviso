@@ -367,6 +367,7 @@ await block("B3 / K1 / ISMERT", async () => {
     failedDomain: "ribizli.hu", money: "released" as const, moneyAmount: 1000, activeDomain: "ribizli.hu",
     suggestions: [{ domain: "ribizli2.hu", availability: "free" as const }], priceMonthly: 1000, packageContent: false,
     feeByDomain: { "ribizli2.hu": 1000 } as Record<string, number>, feeRange: { min: 1000, max: 1200 },
+    listFeeByDomain: { "ribizli2.hu": 1000 } as Record<string, number>, listFeeRange: { min: 1000, max: 1200 },
     offeredTlds: [".hu", ".eu"], eligible: true, minPackageMonthly: 7000, currency: "HUF", commitmentMonths: 12, mockMode: true,
   };
   const failScreen = domainSection(base, {});

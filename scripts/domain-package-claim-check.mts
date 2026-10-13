@@ -270,12 +270,44 @@ await block("⑤ nézet", async () => {
     failedDomain: null, money: null, moneyAmount: null, activeDomain: null,
     suggestions: [{ domain: "ribizli.hu", availability: "free" as const }], priceMonthly: 0, packageContent: true,
     feeByDomain: { "ribizli.hu": 0 } as Record<string, number>, feeRange: { min: 0, max: 0 },
+    listFeeByDomain: { "ribizli.hu": 1000 } as Record<string, number>, listFeeRange: { min: 1000, max: 1200 },
     offeredTlds: [".hu"], eligible: true, minPackageMonthly: 7000, currency: "HUF", commitmentMonths: 12, mockMode: true,
   };
   const review = domainSection(base, { picked: "ribizli.hu", pickedAvailability: "free" });
   ok(/type="submit"/.test(review) && /a csomag része/.test(review) && !/munkatársunk intézi/.test(review) &&
       !/Most zárolunk|Tovább a fizetéshez/.test(review),
     "⭐ ⑤ az Áttekintés díj és zárolás nélkül igényeltet — nincs „munkatársunk intézi”", review.slice(0, 600));
+  // Owner „ok” 2026-10-13: the step-1 fee line of a package-carried name — the package
+  // sentence with the SELECTED ending's /pricing fee, the band before a selection, never „0 Ft”.
+  {
+    const two = {
+      ...base,
+      suggestions: [
+        { domain: "ribizli.hu", availability: "free" as const },
+        { domain: "ribizli.eu", availability: "free" as const },
+      ],
+      feeByDomain: { "ribizli.hu": 0, "ribizli.eu": 0 } as Record<string, number>,
+      listFeeByDomain: { "ribizli.hu": 1000, "ribizli.eu": 1200 } as Record<string, number>,
+    };
+    // "1 000 Ft" must not read as "0 Ft": drop the thousands separators first.
+    const zeroFt = (h: string) => /\b0\s*Ft/.test(h.replace(/(\d)[\s\u00a0\u202f](?=\d{3})/g, "$1"));
+    const step1 = domainSection(two, {});
+    const line = /<span data-dfee-line>([^<]*)<\/span>/.exec(step1)?.[1] ?? "";
+    ok(/^A név a csomag része, külön díja nincs\. Ha kisebb csomagra vált, a név díja \(1[\s\u00a0\u202f]000 Ft\/hó\) elindul\.$/.test(line),
+      "⭐ csomag-tartalom: a díjsor „A név a csomag része, külön díja nincs. Ha kisebb csomagra vált, a név díja (1 000 Ft/hó) elindul.”", line);
+    const eu = /value="ribizli\.eu" data-dline="([^"]*)"/.exec(step1)?.[1] ?? "";
+    ok(/a név díja \(1[\s\u00a0\u202f]200 Ft\/hó\) elindul/.test(eu), "⭐ csomag-tartalom: a .eu kijelölése a saját /pricing díját hozza (1 200 Ft/hó)", eu);
+    const none = domainSection({ ...two, suggestions: two.suggestions.map((x) => ({ ...x, availability: "taken" as const })) }, {});
+    const noneLine = /<span data-dfee-line>([^<]*)<\/span>/.exec(none)?.[1] ?? "";
+    ok(/a név díja \(1[\s\u00a0\u202f]000–1[\s\u00a0\u202f]200 Ft\/hó\) elindul/.test(noneLine),
+      "⭐ csomag-tartalom, kijelölés nélkül: díjsáv (1 000–1 200 Ft/hó)", noneLine);
+    ok(![line, eu, noneLine].some(zeroFt) && !/A név díja/.test(line + eu + noneLine) && !/vállalásával jár/.test(line + eu + noneLine),
+      "⭐ csomag-tartalomnál a díjsorban nincs „0 Ft”, sem a fizetős mondat", `${line} | ${eu} | ${noneLine}`);
+    const paid = domainSection({ ...two, packageContent: false, priceMonthly: 1000, feeByDomain: { "ribizli.hu": 1000, "ribizli.eu": 1200 } }, {});
+    const paidLine = /<span data-dfee-line>([^<]*)<\/span>/.exec(paid)?.[1] ?? "";
+    ok(/^A név díja 1[\s\u00a0\u202f]000 Ft\/hó, és 12 hónapos előfizetés vállalásával jár\./.test(paidLine) && !/csomag része/.test(paid),
+      "fizetős névnél a díjsor változatlan", paidLine);
+  }
   const running = domainSection({ ...base, status: "dns_pending", money: "free", moneyAmount: 0, activeDomain: "ribizli.hu" }, {});
   ok(/Már intézzük/.test(running) && !/Összeg zárolva|terheltük/.test(running),
     "⑤ folyamatban: a fizetős út meglévő képernyője, pénz-sorok nélkül", running.slice(0, 400));
