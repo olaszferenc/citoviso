@@ -549,6 +549,133 @@ export async function mailSafe(label: string, requestId: string, send: () => Pro
 }
 
 /**
+ * The guest-side RULES for a stay — seasons (ADR-0049) plus the module's site-wide rules —
+ * as the guest reads them. ONE copy: the booking form (createBookingRequest) and the owner's
+ * trial booking on the guided setup page (ADR-XXXX) both ask here, so the trial can never
+ * promise a stay the form would refuse. `rules` may be passed when the caller already has them.
+ */
+export async function stayRuleErrors(
+  siteId: string,
+  unitId: string,
+  dateFrom: string,
+  dateTo: string,
+  lang: string,
+  rules?: Record<string, unknown>,
+): Promise<string[]> {
+  const errors: string[] = [];
+  const n = nights(dateFrom, dateTo);
+  const r = rules ?? (await bookingRules(siteId));
+  const maxNights = Number(r.maxNights ?? 30);
+  const horizonMonths = Number(r.horizonMonths ?? 12);
+  const leadTimeDays = Number(r.leadTimeDays ?? 0);
+
+  // ADR-0049 — the SEASON decides two things the site-wide rules cannot: whether the
+  // unit is let at all in that part of the year, and how few nights are accepted then
+  // (a fortnight in August is not a February weekend). Both hang off the same season
+  // rows the owner already fills in for pricing — one list, not two.
+  const season = await seasonRulesFor(unitId, dateFrom, dateTo);
+  if (season.closed) {
+    errors.push(
+      season.openLabel
+        ? T(lang, "Ebben az időszakban nem adjuk ki. Foglalható: {label}.", {
+            label: season.openLabel,
+          })
+        : T(lang, "Ebben az időszakban nem adjuk ki."),
+    );
+  }
+  const minNights = season.minNights ?? Number(r.minNights ?? 1);
+
+  if (n > 0 && n < minNights) {
+    errors.push(T(lang, "Legalább {n} éjszakára lehet foglalni.", { n: minNights }));
+  }
+  if (n > maxNights) {
+    errors.push(T(lang, "Legfeljebb {n} éjszakára lehet foglalni.", { n: maxNights }));
+  }
+  // The accommodation's "today" (ADR-0290), not UTC's: at 00:30 Budapest UTC is still yesterday.
+  const today = await todayForSite(siteId);
+  const earliest = addDays(today, leadTimeDays);
+  if (dateFrom < earliest) {
+    // huDate ends with a dot and so does the sentence — "2026. 09. 24.." was Elek FK-008 H6.
+    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest).replace(/\.$/, "") }));
+  }
+  if (dateFrom > addMonths(today, horizonMonths)) {
+    errors.push(T(lang, "Ennyire előre még nem lehet foglalni."));
+  }
+  return errors;
+}
+
+/**
+ * Fast rejection on the live calendar. Not the real guard — that is the accept
+ * transaction — but it spares the guest a pointless wait and the owner a dead request.
+ * ADR-0114: the whole place and its rooms block each other, so this asks about all
+ * of the units that stand in the way, not just the one the guest picked.
+ */
+export async function stayIsTaken(unitId: string, dateFrom: string, dateTo: string): Promise<boolean> {
+  const taken = await db
+    .selectFrom("availability_day")
+    .select("day")
+    .where("unit_id", "in", await blockingUnitIds(unitId))
+    .where("day", ">=", dateFrom)
+    .where("day", "<", dateTo)
+    .executeTakeFirst();
+  return Boolean(taken);
+}
+
+/**
+ * The STAY price IN FORCE NOW (the meal lines, ADR-0378, are added by createBookingRequest) —
+ * what freezes onto a request, and what the trial booking shows the owner. Owner decree 2026-09-06: seasonal rows win per night; no
+ * (complete) price list → no quote anywhere.
+ *
+ * ⛔⛔ THE PRICE MAY ONLY BE FROZEN IF THE SITE ACTUALLY QUOTES PRICES (ADR-0193).
+ * A frozen quote is a BINDING offer: it goes out in the guest's confirmation mail
+ * and the guest may hold the owner to it. Measured 2026-09-21 (ADR-0192 ②): with
+ * `pricing` cancelled the page showed no price at all and this line still froze
+ * 84 000 Ft onto the request — the letter contradicted the site it came from.
+ * The booking itself is NOT refused: a request is not a purchase (ADR-0044 §6), and
+ * a module the tenant DID pay for (`booking`) must not die with one they did not.
+ * §B.17: no number is better than a wrong number.
+ */
+export async function stayQuote(
+  siteId: string,
+  unitId: string,
+  dateFrom: string,
+  dateTo: string,
+  guests: number,
+  lang: string,
+): Promise<{ pricingLive: boolean; pricing: Record<string, unknown>; quote: ReturnType<typeof quoteStayFrom> }> {
+  const pricingLive = await siteRendersModule(siteId, "pricing");
+  const pricingRow = pricingLive
+    ? await db
+        .selectFrom("site_module_config")
+        .select("config")
+        .where("site_id", "=", siteId)
+        .where("module", "=", "pricing")
+        .executeTakeFirst()
+    : null;
+  const pricing = effectiveModuleConfig(
+    "pricing",
+    (pricingRow?.config ?? null) as Record<string, unknown> | null,
+    null,
+  );
+  const quote = pricingLive
+    ? quoteStayFrom(await getUnitPrices(unitId), {
+        dateFrom,
+        dateTo,
+        guests: Math.max(1, Math.round(guests || 1)),
+        currency: String(pricing.currency ?? "HUF"),
+        unitMode: String(pricing.unit ?? "per_night"),
+        baseLabel: T(lang, "Alapár"),
+      })
+    : null;
+  return { pricingLive, pricing, quote };
+}
+
+/** The owner's tourist-tax answer for a site — three states, see declaredTouristTax. */
+export async function siteTouristTax(siteId: string): Promise<number | null> {
+  return declaredTouristTax(await bookingRules(siteId));
+}
+
+/**
  * Record a guest's request. Validated against the owner's rules AND against the
  * live calendar, so an obviously impossible request never reaches the owner's
  * inbox — but acceptance re-checks anyway (see decideRequest).
@@ -584,97 +711,17 @@ export async function createBookingRequest(
   }
 
   const rules = await bookingRules(input.siteId);
-  const maxNights = Number(rules.maxNights ?? 30);
-  const horizonMonths = Number(rules.horizonMonths ?? 12);
-  const leadTimeDays = Number(rules.leadTimeDays ?? 0);
-
-  // ADR-0049 — the SEASON decides two things the site-wide rules cannot: whether the
-  // unit is let at all in that part of the year, and how few nights are accepted then
-  // (a fortnight in August is not a February weekend). Both hang off the same season
-  // rows the owner already fills in for pricing — one list, not two.
-  const season = await seasonRulesFor(input.unitId, dateFrom, dateTo);
-  if (season.closed) {
-    errors.push(
-      season.openLabel
-        ? T(lang, "Ebben az időszakban nem adjuk ki. Foglalható: {label}.", {
-            label: season.openLabel,
-          })
-        : T(lang, "Ebben az időszakban nem adjuk ki."),
-    );
-  }
-  const minNights = season.minNights ?? Number(rules.minNights ?? 1);
-
-  if (n > 0 && n < minNights) {
-    errors.push(T(lang, "Legalább {n} éjszakára lehet foglalni.", { n: minNights }));
-  }
-  if (n > maxNights) {
-    errors.push(T(lang, "Legfeljebb {n} éjszakára lehet foglalni.", { n: maxNights }));
-  }
-  // The accommodation's "today" (ADR-0290), not UTC's: at 00:30 Budapest UTC is still yesterday.
-  const today = await todayForSite(input.siteId);
-  const earliest = addDays(today, leadTimeDays);
-  if (dateFrom < earliest) {
-    // huDate ends with a dot and so does the sentence — "2026. 09. 24.." was Elek FK-008 H6.
-    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest).replace(/\.$/, "") }));
-  }
-  if (dateFrom > addMonths(today, horizonMonths)) {
-    errors.push(T(lang, "Ennyire előre még nem lehet foglalni."));
-  }
+  errors.push(...(await stayRuleErrors(input.siteId, input.unitId, dateFrom, dateTo, lang, rules)));
   if (errors.length) return { ok: false, errors };
 
-  // Fast rejection on the live calendar. Not the real guard — that is the accept
-  // transaction — but it spares the guest a pointless wait and the owner a dead request.
-  // ADR-0114: the whole place and its rooms block each other, so this asks about all
-  // of the units that stand in the way, not just the one the guest picked.
-  const taken = await db
-    .selectFrom("availability_day")
-    .select("day")
-    .where("unit_id", "in", await blockingUnitIds(input.unitId))
-    .where("day", ">=", dateFrom)
-    .where("day", "<", dateTo)
-    .executeTakeFirst();
-  if (taken) {
+  if (await stayIsTaken(input.unitId, dateFrom, dateTo)) {
     return {
       ok: false,
       errors: [T(lang, "Sajnos ezek a napok már foglaltak. Válasszon másik időpontot.")],
     };
   }
 
-  // Owner decree 2026-09-06: freeze the price IN FORCE NOW onto the request —
-  // seasonal rows win per night; no (complete) price list → no quote anywhere.
-  //
-  // ⛔⛔ THE PRICE MAY ONLY BE FROZEN IF THE SITE ACTUALLY QUOTES PRICES (ADR-0193).
-  // A frozen quote is a BINDING offer: it goes out in the guest's confirmation mail
-  // and the guest may hold the owner to it. Measured 2026-09-21 (ADR-0192 ②): with
-  // `pricing` cancelled the page showed no price at all and this line still froze
-  // 84 000 Ft onto the request — the letter contradicted the site it came from.
-  // The booking itself is NOT refused: a request is not a purchase (ADR-0044 §6), and
-  // a module the tenant DID pay for (`booking`) must not die with one they did not.
-  // §B.17: no number is better than a wrong number.
-  const pricingLive = await siteRendersModule(input.siteId, "pricing");
-  const pricingRow = pricingLive
-    ? await db
-        .selectFrom("site_module_config")
-        .select("config")
-        .where("site_id", "=", input.siteId)
-        .where("module", "=", "pricing")
-        .executeTakeFirst()
-    : null;
-  const pricing = effectiveModuleConfig(
-    "pricing",
-    (pricingRow?.config ?? null) as Record<string, unknown> | null,
-    null,
-  );
-  const stayQuote = pricingLive
-    ? quoteStayFrom(await getUnitPrices(input.unitId), {
-        dateFrom,
-        dateTo,
-        guests: Math.max(1, Math.round(input.guests || 1)),
-        currency: String(pricing.currency ?? "HUF"),
-        unitMode: String(pricing.unit ?? "per_night"),
-        baseLabel: T(lang, "Alapár"),
-      })
-    : null;
+  const { pricingLive, pricing, quote: stayOnly } = await stayQuote(input.siteId, input.unitId, dateFrom, dateTo, input.guests, lang);
   // ADR-0378: the meal travels with the pricing module. The plan is validated against the
   // owner's setting (an unknown or withdrawn plan falls back to the base), the lines are
   // computed HERE — the browser's figure is never trusted — and freeze with the stay.
@@ -685,8 +732,8 @@ export async function createBookingRequest(
     ? Math.min(guestCount - 1, Math.max(0, Math.round(Number(input.children) || 0)))
     : null;
   const mLines = mealLines(meals, { unitId: input.unitId, plan: mealPlan, nights: n, guests: guestCount, children: children ?? 0, lang });
-  const quote = stayQuote
-    ? { ...stayQuote, total: stayQuote.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayQuote.lines, ...mLines] }
+  const quote = stayOnly
+    ? { ...stayOnly, total: stayOnly.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayOnly.lines, ...mLines] }
     : null;
 
   // Elek 2026-10-11 K6: the same request sent twice (a mobile network re-sending the POST,
