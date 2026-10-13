@@ -12,6 +12,17 @@ el. Itt a naptárát, a kiadott szobáit és az értesítési címeit kezeli.
 
 ![Képernyőkép: a „Mikor nem kiadó?” naptár telefonon — az Ön jelölte, a vendég által foglalt és a másik szoba által foglalt napokkal](assets/hu/screen.png)
 
+## A beállítások: kérdésről kérdésre
+
+A naptár és a kérések alatt áll a **„Foglalás beállítása”** kártya. A **„Beállítom kérdésről
+kérdésre”** gomb egy külön oldalt nyit, ahol a szobákat, az árakat, az időszakokat és a foglalás
+szabályait egymás után, kérdésekre válaszolva adja meg — egy Segítővel, aki elmagyarázza, amit nem
+ért. Ezt az oldalt a „Foglalás beállítása” súgója írja le.
+
+A korábbi beállító űrlap (az alábbi mezők: értesítési cím, idegenforgalmi adó, mi van az árban,
+legrövidebb és leghosszabb foglalás) megmaradt: a kártya alatti **„Haladó beállítások”** sorra
+koppintva nyílik ki. Ugyanazokat az adatokat írja, mint a kérdezős oldal.
+
 ## Hol válaszolok a foglalási kérésekre?
 
 A beérkezett kérések a **„Foglalások”** fülön várják — ott igazolja vissza vagy utasítja el őket,
@@ -22,18 +33,18 @@ ott az **„Igen, elfogadom”** vagy az **„Igen, elutasítom”** gombbal dö
 
 ## Hová érkezzenek az értesítések?
 
-A **„Hová küldjük a foglalási kéréseket?”** mezőben adja meg a címet — több címet is megadhat
+A **„Hová küldjük a foglalási kéréseket?”** mezőben (a képernyő alján a **„Haladó beállítások”** sorra koppintva nyílik ki; ugyanezt kérdezi a **„Foglalás beállítása”** oldal is) adja meg a címet — több címet is megadhat
 vesszővel elválasztva (pl. recepció és tulajdonos). A vendég válasza is az első címre fut be.
 Üresen hagyva a fiókja e-mail címére küldjük.
 
 ## Mit fizet a vendég a helyszínen? (idegenforgalmi adó)
 
-Az **„Idegenforgalmi adó”** mezőbe azt az összeget írja be, amit a vendég a **helyszínen**
+Az **„Idegenforgalmi adó”** mezőbe (a képernyő alján a **„Haladó beállítások”** sorra koppintva nyílik ki; ugyanezt kérdezi a **„Foglalás beállítása”** oldal is) azt az összeget írja be, amit a vendég a **helyszínen**
 fizet a szállásdíjon felül — **Ft / fő / éj** bontásban. A honlapján ez az összeg nem olvad
 bele az árba: külön dobozban áll, „A helyszínen fizetendő ezen felül” felirattal, kiszámolva
 (pl. *500 Ft / fő / éj × 2 fő × 3 éj = 3 000 Ft*).
 
-**Ha üresen hagyja**, a mező alatt egy borostyán keretes emlékeztető jelenik meg, és a honlapján
+**Ha üresen hagyja**, a kinyitott Haladó beállítások alatt, a mező alatt egy borostyán keretes emlékeztető jelenik meg, és a honlapján
 **nem látszik összeg** — a vendég csak annyit lát, hogy a helyszínen idegenforgalmi adó fizetendő.
 Összeget nem találunk ki Ön helyett: egy rossz szám többet árt, mint a hiányzó. Az emlékeztető
 magától eltűnik, amint ment egy értéket.
@@ -50,7 +61,7 @@ adót. Az üres mező azt jelenti, hogy még nem nyilatkozott — olyankor a lap
 helyszínen adó fizetendő, összeg nélkül.
 
 ⚠️ **Az ár-bontás csak akkor jelenik meg, ha van árlistája.** Az árakat az **Árak, szezonok**
-modulban adja meg (külön modul). Amíg ott nincs egyetlen ár sem, a vendég a naptárban választhat
+modulban adja meg (külön modul) — vagy a „Foglalás beállítása” oldal „Árak” részében. Amíg ott nincs egyetlen ár sem, a vendég a naptárban választhat
 napokat, de ár — és vele az idegenforgalmi adó doboza — nem jelenik meg.
 
 Azt, hogy mi van még benne az árban (pl. *takarítás, ágynemű, törölköző*), mostantól az

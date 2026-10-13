@@ -3358,6 +3358,18 @@ if [ -f scripts/portal-sync-guard-check.mts ] && \
   echo "[pre-commit] portal-sync-guard-check (export minden hoszton, ütközés, korlát, SSRF, runtime, fordulónap, dupla POST)…"
   npx tsx scripts/portal-sync-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
+# FOGLALÁS BEÁLLÍTÁSA (ADR-XXXX, kontraktus: design-refs/tenant-admin/foglalas-kerdezz-felelek, „B”):
+#     a vezetett oldal a MEGLÉVŐ írás-függvényeken át ír (szobák, árak, időszakok, szabályok,
+#     IFA, értesítés — a DB-ből visszaolvasva), a néma akadályok hangosak, a próba-foglalás a
+#     vendég-út szabálya (stayRuleErrors/stayQuote), idegen objektum nem íródik, a Segítő nem
+#     ír és az őr SOSEM költ AI-t (kulcs nélkül fut); böngésző 390 + asztali, 0 JS-hiba.
+#     Eldobható fixtúra a közös dev-DB-n, ~40 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/booking-setup-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(bookingSetup|units|prices|siteModuleConfig|unitVisibility)\.ts$|^src/ai/bookingHelper\.ts$|^src/booking/requests\.ts$|^src/server/(bookingSetupViews|moduleConfigViews|public)\.ts$|^src/moduleConfig\.ts$|^assets/runtime/cit-booking-setup\.js$|^assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/|^migrations/0109_tenant_ai_call\.sql$|^scripts/booking-setup-check\.mts$'; then
+  echo "[pre-commit] booking-setup-check (vezetett foglalás-beállítás, akadályok, próba-foglalás, Segítő)…"
+  npx tsx scripts/booking-setup-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

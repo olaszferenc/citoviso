@@ -49,6 +49,8 @@ import type { DomainAdminData } from "../src/domains/domainAdmin.js";
 import type { WalletAdminData } from "../src/tenant/wallet.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import { ownerOfferPage } from "../src/server/offerViews.js";
+import { bookingSetupPage } from "../src/server/bookingSetupViews.js";
+import type { SetupState } from "../src/tenant/bookingSetup.js";
 import {
   dashboardPage,
   duplicatesPage,
@@ -869,6 +871,40 @@ function moduleShotHtml(entryId: string): string {
   });
 }
 
+// ADR-XXXX: the guided booking setup — the nyugalom-demo rooms, priced, with the guest
+// section still open (no tourist-tax answer yet), so the shot shows done sections with their
+// answers AND an open one with its questions, exactly what the guide walks through.
+const bookingSetupFixture: SetupState = {
+  mode: "rooms",
+  units: [
+    { id: "u1", name: "Kertre néző apartman", cap: 4, whole: false, base: 19000, por: false, seasonalOnly: false, otherRows: 0,
+      seasons: [{ id: "s1", label: "Főszezon", from: "06-15", to: "08-31", amount: 28000, min: 3 }] },
+    { id: "u2", name: "Padlásszoba", cap: 2, whole: false, base: 12000, por: false, seasonalOnly: false, otherRows: 0, seasons: [] },
+  ],
+  currency: "HUF",
+  priceUnit: "per_night",
+  seasonalOnly: false,
+  minNights: 2,
+  maxNights: 14,
+  horizon: 12,
+  lead: 0,
+  taxState: null,
+  tax: "",
+  includes: "",
+  notify: "info@nyugalom.example",
+  expiry: 48,
+  answered: { unit: true, stay: true, ahead: true, tax: false, includes: false, notify: true },
+  accountEmail: "kovacs.anna@example.com",
+  blockers: [],
+};
+const bookingSetupHtml = bookingSetupPage({
+  lang: "hu",
+  state: bookingSetupFixture,
+  links: { rooms: "/admin?tab=modulok&m=rooms", pricing: "/admin?tab=modulok&m=pricing", booking: "/admin?tab=modulok&m=booking#halado" },
+  backUrl: "/admin?tab=modulok&m=booking",
+  today: "2026-09-23",
+});
+
 const MODULE_SHOT_ENTRIES = [
   "admin-modules-amenities",
   "admin-modules-booking",
@@ -1371,6 +1407,27 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
             : undefined,
   );
 }
+// ADR-XXXX: the guided booking setup page — the checklist (done sections with their
+// answers, the open one with its questions) and the Segítő opened from the bottom bar.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-booking-setup", "assets", LANG, "screen.png"),
+  undefined,
+  bookingSetupHtml,
+  ".bs-main",
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  // the real way: the owner taps the section with the missing question
+  { click: '.bs-sec[data-s="guest"] .bs-sh', mustShow: '.bs-sec[data-s="guest"].is-open [data-q="tax"]' },
+);
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-booking-setup", "assets", LANG, "segito.png"),
+  undefined,
+  bookingSetupHtml,
+  ".bs-chat",
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  { click: "[data-ask]", mustShow: ".bs-chat.is-open" },
+);
 // ADR-0208 ⑥.2: the pricing entry's "ha szándékosan nem ad meg árat" section is about
 // ONE card — the state line and the box — and both sit below the 390×844 fold of the
 // screen shot above. The element capture carries them.
