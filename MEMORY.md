@@ -7323,6 +7323,8 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Tények és döntések
+- 2026-10-12 · nagy deploy: éles = `465e5394` (prod/20261012-2326), előtte `4dc8a9d7`; 11 migráció (0099–0107); minden konzol-operátor egyszer újra belép (ADR-0363) (deploy-prod.sh, tulaj „Mehet a main Deploy”)
+- 2026-10-13 · dátumos ár lejárata: az ajánlatból mentett dátumos árra (a kért éjszakákra szól) NEM megy lejárati levél, az Árazás lap igaz mondattal magyaráz; a szezon-árak „lejárat előtti” ígérete a szezon végi levél (seasonNudge, 07:00 a záró nap után); a szezonok évente ismétlődnek, nem járnak le (tulaj: „Igen”)
 - 2026-10-12 · saját domain ragadt beállítás: `dns_pending`/`tls_pending` 24 óra → operátor-riasztás, 72 óra → ismételt riasztás + EGY tulaj-levél („a webcím az Öné, a beállítás tovább tart”; ha a setup_retry már küldte, nem újra), utána semmi (koordinátori döntés, ADR-0372)
 - 2026-10-12 · AI-mock injekció: a régi AI-HTML út (generateMock) modell-kimenete NEM megbízható — prózai utasítás a scrape-elt mezőben 1/2-ben szkriptet íratott; szűrés generáláskor + kiszolgáláskor kötelező; élesen 823 mock mind engine, 0 idegen szkript (mérés, ADR-0370)
 - 2026-10-12 · portál-iCal: a portálok saját feedje mind `VALUE=DATE` (Airbnb/Booking/VRBO, 21 valódi minta); a Booking üres feedje csak fejléc; foglalás és kézi zárás a feedben nem különböztethető meg — mindkettő foglalt éjszaka (minták: `scripts/fixtures/ical-samples/SOURCES.md`, ADR-0371)
