@@ -1008,6 +1008,11 @@
       /* Elek V-3: the on-site tax line rides into the phone's step-2 summary too, and it
        * follows the guest stepper below it (the stepper re-renders the quote box). */
       var later = !demo && !ask && q && q.querySelector(".cit-book__later");
+      /* Elek 10-13 V-1: the bar is ITEMISED like the desktop box — a meal surcharge that
+       * only shows up as a bigger number is a number the guest cannot check. */
+      var qlines = !ask && q ? q.querySelectorAll(".cit-book__qline") : [];
+      var itemised = "";
+      for (var qi = 0; qi < qlines.length; qi++) itemised += '<span class="cit-book__sumline">' + qlines[qi].innerHTML + "</span>";
       /* KONTRAKTUS ③ (booking-unit-default): with several units the summary names the one
        * the request is for — the picker is no longer on this step to say it. */
       var unitName = "";
@@ -1015,13 +1020,20 @@
       sum.innerHTML = a && b
         ? (unitName ? '<span class="cit-book__sumunit">' + esc(unitName) + "</span>" : "") +
           "<b>" + esc(huDay(a)) + " → " + esc(huDay(b)) + " · " + esc(n) + "</b>" +
+          itemised +
           // the total line is mirrored as MARKUP (not textContent): the amount keeps its .cit-amt element
-          "<span>" + (ask ? tr("Egyedi ár — a szállásadó árajánlattal válaszol") : tot ? tot.innerHTML : "") + "</span>" +
+          '<span class="cit-book__sumtotal">' + (ask ? tr("Egyedi ár — a szállásadó árajánlattal válaszol") : tot ? tot.innerHTML : "") + "</span>" +
           (later ? '<span class="cit-book__sumtax">' + later.innerHTML + "</span>" : "") +
           '<button type="button" class="cit-book__edit">' + tr("Módosítom a napokat") + "</button>"
         : "";
     }
     new MutationObserver(syncSteps).observe(note, { childList: true, characterData: true, subtree: true, attributes: true });
+    /* Elek 10-13 V-1 (BLOCKER): the summary bar mirrors the quote box, but it only
+     * re-synced on the steppers' clicks and the dates — the meal <select> re-rendered the
+     * box and left the bar on the stay-only total (68 000 shown, 90 500 sent). The bar now
+     * follows the BOX itself: whatever re-renders the quote, the bar re-reads it. */
+    var quoteBox = form.querySelector("[data-quote]");
+    if (quoteBox) new MutationObserver(syncSteps).observe(quoteBox, { childList: true, characterData: true, subtree: true });
     form.from.addEventListener("change", syncSteps);
     form.to.addEventListener("change", syncSteps);
     if (unitSel) unitSel.addEventListener("change", function () { setTimeout(syncSteps, 0); });

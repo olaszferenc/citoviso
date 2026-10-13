@@ -10,10 +10,14 @@
 //      megnevezve, és okot NEM állít (§B.17);
 //   ④ ⭐⭐ a böngésző (cit-runtime.js) UGYANAZT számolja, mint a szerver — valódi widgeten,
 //      több esetben. Ez a két implementáció közti szakadékot fogja meg.
+//   ⑤ ⭐⭐ Elek 10-13 V-1 (BLOKKOLÓ): TELEFONON a 2. lépés összesítő-sávja is a szerver
+//      összegét mutatja MINDEN változtatás (fő, gyermek, ellátás) után — mérve: az ellátás
+//      választása után a sáv 68 000-en maradt, a beküldött kérés 90 500 lett.
 //
 //   npx tsx scripts/meals-check.mts
 //   npx tsx scripts/meals-check.mts --selftest   (pirosra kell mennie: a böngésző a
-//                                                  gyermeket felnőtt-áron számolja)
+//                                                  gyermeket felnőtt-áron számolja, ÉS a
+//                                                  telefonos sáv nem követi az ár-dobozt)
 
 process.env.CIT_SHOT = "1";
 
@@ -170,8 +174,11 @@ async function pageFor(m: MealsSetting): Promise<string> {
     readFile(path.join(ROOT, "assets/runtime/cit-modules.css"), "utf8"),
   ]);
   // ⛔ ÖNTESZT: a böngésző a gyermeket felnőtt-áron számolja — az őrnek pirosra kell mennie.
+  // ⛔ ÖNTESZT ⑤: a sáv nem követi az ár-dobozt (a V-1 előtti állapot).
   const runtimeJs = SELFTEST
-    ? runtimeJsRaw.replace("var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;", "var k = 0;")
+    ? runtimeJsRaw
+        .replace("var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;", "var k = 0;")
+        .replace("if (quoteBox) new MutationObserver(syncSteps)", "if (false) new MutationObserver(syncSteps)")
     : runtimeJsRaw;
   const d = siteData(m);
   const stub =
@@ -257,16 +264,51 @@ try {
   check("④ a kivett szobánál nincs választó, a mondat ott áll", await page.locator("#cit-meal").isHidden() &&
     /Ehhez a szálláshoz nem kérhető ellátás\./.test((await page.locator("[data-cit-mealf]").textContent()) ?? ""));
   check("④ JS-hiba 0", errs.length === 0, errs.join(" | "));
+
+  /* ⑤ V-1: the phone's step-2 summary bar. The guest sets the head count, the children and
+   * the meal IN THAT ORDER (the meal last — that is what the bar missed), and after EVERY
+   * change the bar's total equals the server's; the desktop box is asserted alongside. */
+  console.log("\n⑤ ⭐⭐ Telefonon a 2. lépés összesítője = a szerver összege (V-1):");
+  const sumOf = async (p: Page): Promise<number> =>
+    Number(((await p.locator(".cit-book__sumtotal .cit-amt").textContent()) ?? "").replace(/\D/g, ""));
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const perrs: string[] = [];
+  phone.on("pageerror", (e) => perrs.push(e.message));
+  await phone.goto(pathToFileURL(file).href);
+  await phone.waitForTimeout(500);
+  await setRange(phone, iso(20), iso(23));
+  await phone.click(".cit-book__go");
+  await phone.waitForTimeout(150);
+  check("⑤ a 2. lépés nyitva (a sáv látszik)", await phone.locator(".cit-book__sum").isVisible());
+  const steps: { name: string; act: () => Promise<void>; plan: MealPlanId; guests: number; kids: number }[] = [
+    { name: "2 fő, csak szállás", act: async () => {}, plan: "none", guests: 2, kids: 0 },
+    { name: "+1 fő", act: () => phone.click('[data-step="1"]'), plan: "none", guests: 3, kids: 0 },
+    { name: "+1 gyermek", act: () => phone.click('[data-kstep="1"]'), plan: "none", guests: 3, kids: 1 },
+    { name: "reggeli választva", act: async () => { await phone.selectOption("#cit-meal", "bb"); }, plan: "bb", guests: 3, kids: 1 },
+    { name: "félpanzió választva", act: async () => { await phone.selectOption("#cit-meal", "hb"); }, plan: "hb", guests: 3, kids: 1 },
+    { name: "−1 gyermek", act: () => phone.click('[data-kstep="-1"]'), plan: "hb", guests: 3, kids: 0 },
+    { name: "−1 fő", act: () => phone.click('[data-step="-1"]'), plan: "hb", guests: 2, kids: 0 },
+  ];
+  for (const st of steps) {
+    await st.act();
+    await phone.waitForTimeout(80);
+    const server = 3 * 16000 + L(st.plan, st.guests, st.kids).reduce((t, l) => t + l.sum, 0);
+    const bar = await sumOf(phone);
+    const box = await totalOf(phone);
+    check(`⑤ ${st.name}: a sáv ${bar} Ft, az ár-doboz ${box} Ft, a szerver ${server} Ft`, bar === server && box === server);
+  }
+  check("⑤ JS-hiba 0", perrs.length === 0, perrs.join(" | "));
+  await phone.close();
 } finally {
   await browser.close();
 }
 
 if (SELFTEST) {
-  if (failures.some((f) => f.startsWith("④"))) {
-    console.log("\n✅ meals-check ÖNTESZT: a szabotázst (gyermek felnőtt-áron) a ④ elkapta.");
+  if (failures.some((f) => f.startsWith("④")) && failures.some((f) => f.startsWith("⑤") && /reggeli választva: a sáv 48000 Ft/.test(f))) {
+    console.log("\n✅ meals-check ÖNTESZT: a szabotázst (gyermek felnőtt-áron · a sáv nem követ) a ④ és a ⑤ elkapta.");
     process.exit(0);
   }
-  console.log("\n⛔ meals-check ÖNTESZT: a szabotázs ÁTMENT — a ④ dísz.");
+  console.log("\n⛔ meals-check ÖNTESZT: a szabotázs ÁTMENT — a ④ vagy a ⑤ dísz.");
   process.exit(1);
 }
 if (failures.length) {
