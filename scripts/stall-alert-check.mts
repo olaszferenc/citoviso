@@ -19,7 +19,13 @@
 //   ⑤ a channel-less alert releases its claim (the next run retries);
 //   ⑥ wiring: the hourly tick runs the sweep in its own try; every adapter that can see a
 //      401/403 (Places ×2, Brave, registrar, DNS, SMTP) reports it; the failed domain branch
-//      alerts the house.
+//      alerts the house;
+//   ⑦ quiet hours (ADR-XXXX, owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."): between
+//      22:00 and 07:00 Budapest a severe alert → mail yes, SMS NO (not even "mail-down"); the
+//      window is read on the Budapest clock in winter AND summer time; after 07:00 the hourly
+//      tick sends ONE digest SMS about the night, only if there was anything, once; a failed
+//      digest is retried; the tick is wired to it. On the pre-ADR code the night alert texts
+//      the owner → red.
 //
 // ISOLATION: own throwaway database (scratch-db), migrated from migrations/ (0108 included);
 // the providers are forced to mock, and alertHouse runs on injected deps (nothing leaves the
@@ -109,6 +115,9 @@ const world = {
   baseUrl: "https://citoviso.com",
   phone: (SELF_TEST ? null : "+36301234567") as string | null,
   mailThrows: false,
+  smsFails: false,
+  // Legs ①–⑥ run at noon Budapest: the real clock would put them in the quiet hours at night.
+  now: new Date("2026-10-13T10:00:00Z"),
 };
 H.setHouseAlertDeps({
   publicBaseUrl: () => world.baseUrl,
@@ -120,9 +129,11 @@ H.setHouseAlertDeps({
   },
   recipientPhone: async () => world.phone,
   sendSms: async (m) => {
+    if (world.smsFails) return false;
     texts.push(m);
     return true;
   },
+  now: () => world.now,
 });
 const drain = (): { mails: Mail[]; texts: Sms[] } => ({ mails: mails.splice(0), texts: texts.splice(0) });
 const resetLedger = async (): Promise<void> => {
@@ -314,6 +325,76 @@ console.log("⑥ bekötés");
   const prov = readFileSync("src/domains/provisionDomain.ts", "utf8");
   const failedBranch = prov.slice(prov.indexOf('await setStatus(p.id, p.siteId, "failed"'), prov.indexOf('return "failed";'));
   check("a bukott domain-regisztráció a házat is riasztja (levél + SMS)", /await alertDomainFailed\(/.test(failedBranch) && /tag: "domain-failed",\s*sms: true/.test(prov));
+}
+
+// ── ⑦ quiet hours ───────────────────────────────────────────────────────────────────
+console.log("⑦ csendes óra: 22–07 között SMS nincs, reggel EGY összesítő");
+{
+  const HX = H as unknown as {
+    smsQuietHours?: (d: Date) => boolean;
+    flushNightSmsDigest?: (now?: Date) => Promise<{ sent: boolean; count: number }>;
+  };
+  check("a csendes óra és a reggeli összesítő létezik", typeof HX.smsQuietHours === "function" && typeof HX.flushNightSmsDigest === "function");
+  const quiet = HX.smsQuietHours ?? (() => false);
+  const flush = HX.flushNightSmsDigest ?? (async () => ({ sent: false, count: 0 }));
+  check(
+    "a határok a BUDAPESTI órán (télen és nyáron is): 21:59 nem, 22:00 igen, 06:59 igen, 07:00 nem",
+    !quiet(new Date("2026-10-13T19:59:00Z")) && quiet(new Date("2026-10-13T20:00:00Z")) &&
+      quiet(new Date("2026-10-14T04:59:00Z")) && !quiet(new Date("2026-10-14T05:00:00Z")) &&
+      quiet(new Date("2026-01-15T21:00:00Z")) && !quiet(new Date("2026-01-15T20:59:00Z")) &&
+      quiet(new Date("2026-01-15T05:59:00Z")) && !quiet(new Date("2026-01-15T06:00:00Z")),
+  );
+
+  await resetLedger();
+  drain();
+  world.now = new Date("2026-10-13T21:30:00Z"); // 23:30 Budapest
+  const sev: HouseAlert = { tag: "t", sms: true, smsKey: "n1", subject: "Citoviso: fizetés megakadt — Éjjeli Ügyfél", text: "x" };
+  const n1 = await H.alertHouse(sev);
+  await H.alertHouse({ ...sev, smsKey: "n2", subject: "Citoviso: domain-beszerzés áll — ejjel-panzio.hu" });
+  world.mailThrows = true;
+  await H.alertHouse({ tag: "t", subject: "Citoviso: éjjel a levél is bukik", text: "x" });
+  world.mailThrows = false;
+  let d = drain();
+  check("éjjeli súlyos riasztás → a levél kimegy, SMS NINCS (a „mail-down” sem)", n1 && d.mails.length === 2 && d.texts.length === 0, `${d.mails.length} levél, ${d.texts.length} SMS: ${d.texts.map((t) => t.text).join(" | ")}`);
+
+  world.now = new Date("2026-10-14T01:00:00Z"); // 03:00 Budapest
+  const early = await flush(world.now);
+  d = drain();
+  check("éjjel az összesítő sem megy ki", !early.sent && d.texts.length === 0);
+
+  world.now = new Date("2026-10-14T05:05:00Z"); // 07:05 Budapest
+  world.smsFails = true;
+  const failed = await flush(world.now);
+  world.smsFails = false;
+  check("bukó összesítő → nem számít kiküldöttnek", !failed.sent);
+  const morning = await flush(world.now);
+  d = drain();
+  const t = d.texts[0]?.text ?? "";
+  check("07:00 után EGY összesítő SMS (a bukott után újrapróbálva)", morning.sent && d.texts.length === 1, d.texts.map((x) => x.text).join(" | "));
+  check("az összesítő: hány riasztás, miről, részletek levélben; GSM-7, ≤ 300", /ejjel \(22-07\) 3 riasztas/.test(t) && /fizetes megakadt - Ejjeli Ugyfel/.test(t) && /Reszletek e-mailben\.$/.test(t) && gsm7(t) && t.length <= 300, t);
+  const again = await flush(new Date("2026-10-14T06:05:00Z"));
+  d = drain();
+  check("az éjszaka egyszer összegződik (a következő óra semmit nem küld)", !again.sent && d.texts.length === 0);
+  await H.alertHouse({ ...sev, smsKey: "n-day", subject: "Citoviso: reggeli riasztás" });
+  d = drain();
+  check("07:00 után a riasztó SMS a megszokott módon megy", d.texts.length === 1 && /reggeli riasztas/.test(d.texts[0]?.text ?? ""));
+
+  await resetLedger();
+  const empty = await flush(world.now);
+  d = drain();
+  check("csendes éjszaka után nincs összesítő", !empty.sent && d.texts.length === 0);
+
+  world.now = new Date("2026-10-13T21:30:00Z");
+  for (let i = 0; i < 12; i++) await H.alertHouse({ ...sev, smsKey: `many${i}`, subject: `Citoviso: időzített feladat elhasalt — citoviso-hosszu-egyseg-neve-${i}.service` });
+  world.now = new Date("2026-10-14T05:05:00Z");
+  await flush(world.now);
+  d = drain();
+  const long = d.texts[0]?.text ?? "";
+  check("sok éjjeli riasztás → az összesítő ≤ 300 karakter, „+N tovabbi”", long.length <= 300 && /12 riasztas/.test(long) && /\+\d+ tovabbi/.test(long), `${long.length}: ${long}`);
+
+  const tick = readFileSync("scripts/offer-followup.mts", "utf8");
+  check("az óránkénti tick saját try-ban küldi a reggeli összesítőt", /try \{\s*\/\/[^\n]*\n\s*const nd = await flushNightSmsDigest\(now\);/.test(tick));
+  world.now = new Date("2026-10-13T10:00:00Z");
 }
 
 await db.destroy();

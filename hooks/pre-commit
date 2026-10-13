@@ -874,7 +874,7 @@ fi
 # óránkénti sapka, nem éles hoston SMS nincs); az óránkénti söprés a megakadt fizetést, domaint,
 # SMS-sort, iCal-linket és halott API-kulcsot egyszer jelzi; a 401/403-at látó adapterek bekötve.
 if [ -f scripts/stall-alert-check.mts ] && \
-   changed_files | grep -qE '^src/console/(houseAlert|stallWatch|keyDeath)\.ts$|^src/domains/provisionDomain\.ts$|^src/scraper/sources/(googleMaps|webSearch)\.ts$|^src/generator/images\.ts$|^src/domains/(registrar|dns)/websupport\.ts$|^src/email/sender\.ts$|^scripts/(offer-followup|stall-alert-check)\.mts$|^migrations/0108_'; then
+   changed_files | grep -qE '^src/console/(houseAlert|stallWatch|keyDeath)\.ts$|^src/domains/provisionDomain\.ts$|^src/scraper/sources/(googleMaps|webSearch)\.ts$|^src/generator/images\.ts$|^src/domains/(registrar|dns)/websupport\.ts$|^src/email/sender\.ts$|^scripts/(offer-followup|stall-alert-check)\.mts$|^migrations/010[89]_'; then
   echo "[pre-commit] stall-alert-check (megakadt külső folyamat → levél + szűrt SMS, egyszer)…"
   npx tsx scripts/stall-alert-check.mts >"$GATE_LOG" || gate_failed
 fi

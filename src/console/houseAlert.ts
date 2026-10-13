@@ -25,6 +25,15 @@
 // dead) falls back to one SMS under the key "mail-down", whatever the alert's severity:
 // otherwise a dead mail server would silence every alert, this one included.
 //
+// ADR-XXXX (owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."): QUIET HOURS. Between
+// SMS_QUIET_FROM_HOUR and SMS_QUIET_TO_HOUR on the Budapest wall clock (the live VPS runs
+// in UTC — the process clock would shift the window by 1–2 h) no alert SMS goes out, not
+// even "mail-down": the mail carries the alert, the SMS decision is a 'night' row. After
+// the night the hourly tick (scripts/offer-followup.mts → flushNightSmsDigest) sends ONE
+// digest SMS about what was held — only if anything was — and marks those rows
+// 'night_digested'. The 6 h repeat filter and the hourly cap do not apply at night: nothing
+// goes out, and the digest is a single text.
+//
 // ⛔ NO LOOP: an alert that fails is ONLY logged. alertHouse never throws and never
 // alerts about itself — the booking mail guard and the webhook route call it
 // fire-and-forget, and the unit-failure template carries no OnFailure= of its own.
@@ -40,6 +49,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { getEmailSender, type EmailMessage } from "../email/sender.js";
 import { isLiveHost } from "../invoicing/keyGuard.js";
+import { budapestMinutes } from "../text/budapestTime.js";
 import { getAlertRecipients } from "./appSettings.js";
 
 export interface HouseAlert {
@@ -57,6 +67,18 @@ export interface HouseAlert {
 export const SMS_REPEAT_HOURS = 6;
 /** At most this many alert SMS per rolling hour (all keys together). */
 export const SMS_HOURLY_CAP = 4;
+/** Quiet hours start (Budapest, inclusive): 22:00 — a phone that buzzes after this wakes
+ *  the owner, and nothing an alert asks for is done by a person in the night anyway. */
+export const SMS_QUIET_FROM_HOUR = 22;
+/** Quiet hours end (Budapest, exclusive): 07:00 — the digest goes with the first hourly
+ *  tick from here on, when the owner is up and can act on it. */
+export const SMS_QUIET_TO_HOUR = 7;
+
+/** Is `now` inside the alert-SMS quiet hours (Budapest wall clock, whatever the server's zone)? */
+export function smsQuietHours(now: Date): boolean {
+  const m = budapestMinutes(now);
+  return m >= SMS_QUIET_FROM_HOUR * 60 || m < SMS_QUIET_TO_HOUR * 60;
+}
 
 /** Injectable for the guard script (scripts/house-alert-check.mts) — the real ones by default. */
 export interface HouseAlertDeps {
@@ -68,6 +90,8 @@ export interface HouseAlertDeps {
   recipientPhone?(): Promise<string | null>;
   /** ADR-0374: the SMS channel; resolves false when the message did not go out. */
   sendSms?(msg: { to: string; text: string }): Promise<boolean>;
+  /** ADR-XXXX: the clock the quiet hours are read on (new Date() by default). */
+  now?(): Date;
 }
 
 const realDeps: HouseAlertDeps = {
@@ -136,6 +160,14 @@ async function smsHouse(tag: string, key: string, subject: string): Promise<bool
       );
       return false;
     }
+    if (smsQuietHours((deps.now ?? (() => new Date()))())) {
+      await db.insertInto("house_alert_sms").values({ tag, dedupe_key: key, status: "night", subject }).execute();
+      console.log(
+        `[house-alert:${tag}] SMS éjjelre visszatartva (${SMS_QUIET_FROM_HOUR}–${SMS_QUIET_TO_HOUR} csendes óra) — ` +
+          `a levél viszi, reggel összesítő SMS: ${subject}`,
+      );
+      return false;
+    }
     const verdict = await db.transaction().execute(async (trx) => {
       await sql`select pg_advisory_xact_lock(hashtext('house_alert_sms'))`.execute(trx);
       const repeat = await trx
@@ -193,6 +225,76 @@ async function smsHouse(tag: string, key: string, subject: string): Promise<bool
     // ⛔ Log only — never alert about a failed alert (that is the loop).
     console.error(`[house-alert:${tag}] a riasztó SMS maga is elhasalt (${subject}):`, e);
     return false;
+  }
+}
+
+/** The morning digest SMS: how many alerts the night held, the distinct subjects as fit. */
+export function nightDigestText(subjects: readonly string[]): string {
+  const cores = [
+    ...new Set(subjects.map((s) => asciiFold(s.replace(/^\[TESZT\] /, "").replace(/^Citoviso:\s*/, "")))),
+  ];
+  const test = subjects.some((s) => s.startsWith("[TESZT] ")) ? "[TESZT] " : "";
+  const head = `${test}Citoviso RIASZTAS: ejjel (${SMS_QUIET_FROM_HOUR}-${String(SMS_QUIET_TO_HOUR).padStart(2, "0")}) ${subjects.length} riasztas: `;
+  const tail = " Reszletek e-mailben.";
+  let list = "";
+  let shown = 0;
+  for (const c of cores) {
+    const more = cores.length - shown - 1;
+    const rest = more > 0 ? ` (+${more} tovabbi)` : "";
+    const next = (list ? `${list}; ` : "") + c;
+    if (head.length + next.length + rest.length + 1 + tail.length > 300) break;
+    list = next;
+    shown++;
+  }
+  if (shown === 0) list = cores[0]!.slice(0, 300 - head.length - tail.length - 30) + "...";
+  const left = cores.length - Math.max(shown, 1);
+  return `${head}${list}${left > 0 ? ` (+${left} tovabbi)` : ""}.${tail}`;
+}
+
+/**
+ * ADR-XXXX: after the quiet hours, ONE SMS about the alerts the night held back (the
+ * hourly tick calls it). Nothing held → nothing sent. A failed send hands the rows back
+ * to 'night' so the next tick retries. Live host only, like every alert SMS. Never throws.
+ */
+export async function flushNightSmsDigest(now?: Date): Promise<{ sent: boolean; count: number }> {
+  try {
+    if (!deps.recipientPhone || !deps.sendSms) return { sent: false, count: 0 };
+    if (smsQuietHours(now ?? (deps.now ?? (() => new Date()))())) return { sent: false, count: 0 };
+    if (!isLiveHost((deps.publicBaseUrl ?? realDeps.publicBaseUrl!)())) return { sent: false, count: 0 };
+    const phone = await deps.recipientPhone();
+    if (!phone) return { sent: false, count: 0 };
+    const claimed = await db.transaction().execute(async (trx) => {
+      await sql`select pg_advisory_xact_lock(hashtext('house_alert_sms'))`.execute(trx);
+      const rows = await trx
+        .updateTable("house_alert_sms")
+        .set({ status: "night_digested" })
+        .where("status", "=", "night")
+        .returning(["id", "subject"])
+        .execute();
+      if (rows.length === 0) return null;
+      const digest = await trx
+        .insertInto("house_alert_sms")
+        .values({ tag: "night-digest", dedupe_key: "night-digest", status: "sent", subject: `éjjeli összesítő (${rows.length})` })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      return { ids: rows.map((r) => r.id), subjects: rows.sort((a, b) => Number(a.id) - Number(b.id)).map((r) => r.subject), digestId: digest.id };
+    });
+    if (!claimed) return { sent: false, count: 0 };
+    const ok = await deps.sendSms({ to: phone, text: nightDigestText(claimed.subjects) });
+    if (!ok) {
+      await db.transaction().execute(async (trx) => {
+        await trx.updateTable("house_alert_sms").set({ status: "night" }).where("id", "in", claimed.ids).execute();
+        await trx.updateTable("house_alert_sms").set({ status: "failed" }).where("id", "=", claimed.digestId).execute();
+      });
+      console.error(`[house-alert:night-digest] az éjjeli összesítő SMS NEM ment ki → ${phone} (a következő óra újrapróbál)`);
+      return { sent: false, count: claimed.ids.length };
+    }
+    console.log(`[house-alert:night-digest] éjjeli összesítő SMS → ${phone}: ${claimed.ids.length} riasztás`);
+    return { sent: true, count: claimed.ids.length };
+  } catch (e) {
+    // ⛔ Log only — never alert about a failed alert (that is the loop).
+    console.error("[house-alert:night-digest] az éjjeli összesítő SMS maga is elhasalt:", e);
+    return { sent: false, count: 0 };
   }
 }
 

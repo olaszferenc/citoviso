@@ -671,12 +671,14 @@ export interface AamAlertTable {
 
 /** 0108 (ADR-0374): every SMS decision of the house alert — the noise filter reads it
  *  (same key at most once per 6 h, at most 4 alert SMS per hour, the held-back count rides
- *  on the next one). The e-mail goes out regardless. */
+ *  on the next one). The e-mail goes out regardless.
+ *  0109 (ADR-XXXX): 'night' = held by the 22–07 quiet hours, 'night_digested' = counted
+ *  into the morning digest SMS. */
 export interface HouseAlertSmsTable {
   id: Generated<string>;
   tag: string;
   dedupe_key: string;
-  status: "sent" | "suppressed" | "failed";
+  status: "sent" | "suppressed" | "failed" | "night" | "night_digested";
   subject: string;
   created_at: Generated<Timestamp>;
 }

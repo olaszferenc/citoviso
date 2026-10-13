@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-13_riaszto_sms_csendes_ora.md](2026-10-13_riaszto_sms_csendes_ora.md) — 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-XXXX)
 - [2026-10-13_lejarat_ertesito_datumos_ar.md](2026-10-13_lejarat_ertesito_datumos_ar.md) — 2026-10-13 — Lejárat előtti ár-értesítő: eldőlt, nincs levél; a levél mondata feltételes (ADR-0375)
 - [2026-10-13_eles_orkodes_sms.md](2026-10-13_eles_orkodes_sms.md) — 2026-10-13 — Élesi őrködés: megakadt külső folyamat → levél + szűrt SMS (ADR-0374)
 - [2026-10-12_portal_ical_valodi_mintak.md](2026-10-12_portal_ical_valodi_mintak.md) — 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-0371)

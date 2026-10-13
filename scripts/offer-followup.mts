@@ -32,6 +32,7 @@ import { purgeWarningDeps, trialNoticeDeps } from "../src/trial/notices.js";
 import { runPurgeWarnings } from "../src/trial/retention.js";
 import { runTrialWatch } from "../src/trial/watch.js";
 import { runStallWatch } from "../src/console/stallWatch.js";
+import { flushNightSmsDigest } from "../src/console/houseAlert.js";
 import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -70,6 +71,14 @@ try {
   if (st.failedKinds.length > 0) process.exitCode = 1;
 } catch (e) {
   console.error("stall-watch HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  // ADR-XXXX: the alert SMS the 22–07 quiet hours held back → ONE morning digest SMS.
+  const nd = await flushNightSmsDigest(now);
+  console.log(`night-sms-digest @ ${now.toISOString()}:`, JSON.stringify(nd));
+} catch (e) {
+  console.error("night-sms-digest HIBA:", e);
   process.exitCode = 1;
 }
 try {

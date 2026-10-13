@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-riaszto-sms-csendes-ora.md) — A riasztó SMS csendes órája: 22–07 között csak levél, reggel egy összesítő SMS (2026-10-13)
 - [ADR-0375](decisions/0375-az-ajanlatbol-mentett-datumos-arra-nincs.md) — Az ajánlatból mentett dátumos árra nincs lejárati levél; az Árazás lap ezt mondja ki, és a megmaradt emlékeztető-levél csak alapár nélkül állítja, hogy „a vendég nem lát árat”
 - [ADR-0374](decisions/0374-elesi-orkodes-a-megakadt-kulso-folyamatrol.md) — Élesi őrködés: a megakadt külső folyamatról levél + szűrt SMS (2026-10-13)
 - [ADR-0373](decisions/0373-a-mi-tartotta-vissza-kerdes-kis-also-sav-az.md) — A „Mi tartotta vissza?” kérdés kis alsó sáv; az önálló hideg SMS is GSM-7; a kérdés nem marad el gyors × után

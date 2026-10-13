@@ -259,6 +259,8 @@ van-e időtlen alapár).
 > 24 órája hibás iCal-link. A súlyos riasztás levél + szűrt SMS (6 órás ismétlés-tiltás, óránként legfeljebb 4,
 > „+N” összevonás, csak éles hoston); óránkénti söprés a `citoviso-offer-followup` tickben; a 401/403-at látó
 > adapterek naponta egyszer jelzik a halott kulcsot. Őr: `scripts/stall-alert-check.mts`.
+> **2026-10-13 (ADR-XXXX):** a riasztó SMS 22:00–07:00 (Budapest) között hallgat, csak levél megy; 07:00 után egy
+> összesítő SMS az éjszakáról (óránkénti tick). Migráció `0109_house_alert_sms_night` (a 0108 után).
 > **Élesen beállítandó (deploy):** a `0108_house_alert_sms` migráció; a riasztási telefonszám a konzol
 > `/settings` „SMS-szám” mezőjében (vagy `OWNER_ALERT_PHONE`) — amíg üres, csak levél megy; tulaj teszt-mobil
 > +36 30 516 1631 (a +36 30 120 0971 a modem SIM-je, oda NE). Új systemd-egység nincs. Nyitott: időzítő-szívverés,
@@ -332,4 +334,4 @@ Ha egy szálnak deploy-előfeltétele vagy deploy utáni teendője van, **ide, e
 | Places medium (ADR-0258) | `places-medium-backfill` szárazon, majd `--apply --backup` | §4.8 |
 | Eszkalációs ajánlat admin (ADR-0285) | ✅ **élesítve 2026-09-30 14:33** (`prod/20260930-1433`); migráció nincs | §4b.4 |
 | Fordítás-költség (2026-10-07) | éles `.env`: `I18N_BOOT_TOPUP=0`; migráció `0092_translation_spend` | §2 |
-| Élesi őrködés + SMS (ADR-0374, 2026-10-13) | migráció `0108_house_alert_sms`; riasztási SMS-szám a `/settings`-ben (vagy `OWNER_ALERT_PHONE`) | §4b.3 |
+| Élesi őrködés + SMS (ADR-0374, 2026-10-13) | migráció `0108_house_alert_sms` + `0109_house_alert_sms_night` (csendes óra, ADR-XXXX); riasztási SMS-szám a `/settings`-ben (vagy `OWNER_ALERT_PHONE`) | §4b.3 |
