@@ -1,4 +1,4 @@
-# 2026-10-13 — Lejárat előtti ár-értesítő: eldőlt, nincs levél; a levél mondata feltételes (ADR-XXXX)
+# 2026-10-13 — Lejárat előtti ár-értesítő: eldőlt, nincs levél; a levél mondata feltételes (ADR-0375)
 
 SUB `cit063e33a1`, koordinátor: deploy FŐ session (`citfb4ed7ab`). Brief: `~/rc-briefs/lejarat-ertesito-20261013.md`.
 

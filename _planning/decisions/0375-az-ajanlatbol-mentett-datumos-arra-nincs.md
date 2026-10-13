@@ -1,4 +1,4 @@
-## ADR-XXXX — Az ajánlatból mentett dátumos árra nincs lejárati levél; az Árazás lap ezt mondja ki, és a megmaradt emlékeztető-levél csak alapár nélkül állítja, hogy „a vendég nem lát árat”
+## ADR-0375 — Az ajánlatból mentett dátumos árra nincs lejárati levél; az Árazás lap ezt mondja ki, és a megmaradt emlékeztető-levél csak alapár nélkül állítja, hogy „a vendég nem lát árat”
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (lokál; élesre a következő deployjal) ·
 **Megerősíti:** ADR-0267 ③ (a „kért napokra” sor bélyeggel születik) · **Lezárja:** `_planning/DEPLOY-READY.md`

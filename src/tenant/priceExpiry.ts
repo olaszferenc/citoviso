@@ -3,7 +3,7 @@
 // A price set on the offer page WITH an end date must stop being quoted once it has ended;
 // that is kept here, from the hourly booking tick (scripts/booking-maintenance.mts).
 // ⭐ The reminder (①) is NOT owed to the offer path's „a kért napokra" rows (ADR-0267 ③,
-// owner 2026-10-13, ADR-XXXX): such a window IS the stay, its lapse leaves no future night
+// owner 2026-10-13, ADR-0375): such a window IS the stay, its lapse leaves no future night
 // unpriced, so the row is born stamped. ① serves only unstamped dated rows (pre-ADR-0267).
 //
 //   ① REMIND once, REMIND_DAYS before the last day (stamp: expiry_notified_at).

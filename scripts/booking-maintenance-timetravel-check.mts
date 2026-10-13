@@ -15,9 +15,9 @@
 //     egy emlékeztető és pontosan egy lejárat-levélpár;
 //   · a site SAJÁT határideje (autoDeclineHours 24 / 0 = soha) — nem a beégetett 48;
 //   · a NEGATÍV kontrollok: a „kért napokra” (bélyeggel született) sor és a szezon ÉVES ára
-//     nem kap levelet (ADR-0267 ③, 0074; tulaj 2026-10-13: ADR-XXXX), az időtlen alapár és a
+//     nem kap levelet (ADR-0267 ③, 0074; tulaj 2026-10-13: ADR-0375), az időtlen alapár és a
 //     szezon sosem kerül le;
-//   · a levél IGAZ mondata (4b.2, ADR-XXXX): időtlen alapár mellett „ismét az alapár érvényes”,
+//   · a levél IGAZ mondata (4b.2, ADR-0375): időtlen alapár mellett „ismét az alapár érvényes”,
 //     összeggel — csak alapár NÉLKÜL mondja, hogy „a vendég nem lát árat” (pozitív kontroll).
 //
 // ⭐ AZ ÓRA ELTOLÁSA = A FIXTÚRA DÁTUMAINAK VISSZATOLÁSA, nem előretolt `today`/`now`. Mindkét
@@ -372,7 +372,7 @@ try {
   check("…és a Modulok → Árak linket", !!lm && /\/admin\?tab=modulok&m=pricing/.test(lm.body));
   const remLog = await db.selectFrom("tenant_message").select("subject").where("tenant_id", "=", tenant.id).where("subject", "=", "Hamarosan lejár egy ár: Emeleti szoba").execute();
   check("…a tenant üzenetei közé EGYSZER naplózva", remLog.length === 1, remLog.length);
-  // 4b.2 (ADR-XXXX): the mail says what takes over. With a timeless base the guest keeps
+  // 4b.2 (ADR-0375): the mail says what takes over. With a timeless base the guest keeps
   // seeing a price — "a vendég nem lát árat" would be false there (§B.17).
   check("4b.2: alapár mellett a levél NEM állítja, hogy a vendég nem lát árat", !!lm && !/nem lát árat/.test(lm.body), (lm?.body ?? "").slice(0, 600));
   check("…hanem kimondja, hogy az alapár lép életbe, összeggel", !!lm && /ismét az alapár érvényes/.test(lm.body) && shows(lm.body, BASE_AMT), (lm?.body ?? "").slice(0, 600));

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-az-ajanlatbol-mentett-datumos-arra-nincs-lejarati-level.md) — Az ajánlatból mentett dátumos árra nincs lejárati levél; az Árazás lap ezt mondja ki, és a megmaradt emlékeztető-levél csak alapár nélkül állítja, hogy „a vendég nem lát árat”
+- [ADR-0375](decisions/0375-az-ajanlatbol-mentett-datumos-arra-nincs.md) — Az ajánlatból mentett dátumos árra nincs lejárati levél; az Árazás lap ezt mondja ki, és a megmaradt emlékeztető-levél csak alapár nélkül állítja, hogy „a vendég nem lát árat”
 - [ADR-0374](decisions/0374-elesi-orkodes-a-megakadt-kulso-folyamatrol.md) — Élesi őrködés: a megakadt külső folyamatról levél + szűrt SMS (2026-10-13)
 - [ADR-0373](decisions/0373-a-mi-tartotta-vissza-kerdes-kis-also-sav-az.md) — A „Mi tartotta vissza?” kérdés kis alsó sáv; az önálló hideg SMS is GSM-7; a kérdés nem marad el gyors × után
 - [ADR-0372](decisions/0372-sajat-domain-a-dns-pending-tls-pending-ben.md) — Saját domain: a `dns_pending`/`tls_pending`-ben ragadt beállítás 24 óránál riaszt, 72 óránál ismét + egy tulaj-levél
