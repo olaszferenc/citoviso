@@ -74,7 +74,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: the alert SMS the 22–07 quiet hours held back → ONE morning digest SMS.
+  // ADR-0376: the alert SMS the 22–07 quiet hours held back → ONE morning digest SMS.
   const nd = await flushNightSmsDigest(now);
   console.log(`night-sms-digest @ ${now.toISOString()}:`, JSON.stringify(nd));
 } catch (e) {

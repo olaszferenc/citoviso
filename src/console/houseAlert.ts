@@ -25,7 +25,7 @@
 // dead) falls back to one SMS under the key "mail-down", whatever the alert's severity:
 // otherwise a dead mail server would silence every alert, this one included.
 //
-// ADR-XXXX (owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."): QUIET HOURS. Between
+// ADR-0376 (owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."): QUIET HOURS. Between
 // SMS_QUIET_FROM_HOUR and SMS_QUIET_TO_HOUR on the Budapest wall clock (the live VPS runs
 // in UTC — the process clock would shift the window by 1–2 h) no alert SMS goes out, not
 // even "mail-down": the mail carries the alert, the SMS decision is a 'night' row. After
@@ -90,7 +90,7 @@ export interface HouseAlertDeps {
   recipientPhone?(): Promise<string | null>;
   /** ADR-0374: the SMS channel; resolves false when the message did not go out. */
   sendSms?(msg: { to: string; text: string }): Promise<boolean>;
-  /** ADR-XXXX: the clock the quiet hours are read on (new Date() by default). */
+  /** ADR-0376: the clock the quiet hours are read on (new Date() by default). */
   now?(): Date;
 }
 
@@ -252,7 +252,7 @@ export function nightDigestText(subjects: readonly string[]): string {
 }
 
 /**
- * ADR-XXXX: after the quiet hours, ONE SMS about the alerts the night held back (the
+ * ADR-0376: after the quiet hours, ONE SMS about the alerts the night held back (the
  * hourly tick calls it). Nothing held → nothing sent. A failed send hands the rows back
  * to 'night' so the next tick retries. Live host only, like every alert SMS. Never throws.
  */

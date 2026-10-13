@@ -1,4 +1,4 @@
-## ADR-XXXX — A riasztó SMS csendes órája: 22–07 között csak levél, reggel egy összesítő SMS (2026-10-13)
+## ADR-0376 — A riasztó SMS csendes órája: 22–07 között csak levél, reggel egy összesítő SMS (2026-10-13)
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (SUB, koordinátor: a „deploy” fő session; brief
 `~/rc-briefs/riaszto-sms-ejjel-20261013.md`) · **Kapcsolódó:** ADR-0374 (élesi őrködés, levél + szűrt SMS),

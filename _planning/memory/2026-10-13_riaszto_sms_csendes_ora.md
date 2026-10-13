@@ -1,4 +1,4 @@
-# 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-XXXX)
+# 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-0376)
 
 SUB `cit6e0f9c28` a „deploy” FŐ session alatt; brief `~/rc-briefs/riaszto-sms-ejjel-20261013.md`.
 Tulaj: „Igen erre a számra [+36 30 516 1631]. Éjjel nagyon jönnek az SMS-ek.”

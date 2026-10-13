@@ -20,7 +20,7 @@
 //   ⑥ wiring: the hourly tick runs the sweep in its own try; every adapter that can see a
 //      401/403 (Places ×2, Brave, registrar, DNS, SMTP) reports it; the failed domain branch
 //      alerts the house;
-//   ⑦ quiet hours (ADR-XXXX, owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."): between
+//   ⑦ quiet hours (ADR-0376, owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."): between
 //      22:00 and 07:00 Budapest a severe alert → mail yes, SMS NO (not even "mail-down"); the
 //      window is read on the Budapest clock in winter AND summer time; after 07:00 the hourly
 //      tick sends ONE digest SMS about the night, only if there was anything, once; a failed
