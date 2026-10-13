@@ -335,4 +335,4 @@ Ha egy szálnak deploy-előfeltétele vagy deploy utáni teendője van, **ide, e
 | Eszkalációs ajánlat admin (ADR-0285) | ✅ **élesítve 2026-09-30 14:33** (`prod/20260930-1433`); migráció nincs | §4b.4 |
 | Fordítás-költség (2026-10-07) | éles `.env`: `I18N_BOOT_TOPUP=0`; migráció `0092_translation_spend` | §2 |
 | Élesi őrködés + SMS (ADR-0374, 2026-10-13) | migráció `0108_house_alert_sms` + `0109_house_alert_sms_night` (csendes óra, ADR-0376); riasztási SMS-szám a `/settings`-ben (vagy `OWNER_ALERT_PHONE`) | §4b.3 |
-| Mobil küldési ablak vissza (tulaj „IGEN”, 2026-10-13, ADR-XXXX) | ✅ **kész 2026-10-13** (a koordinátor): az éles `.env`-ből a `MOBILE_SEND_WINDOW_OFF=1` kivéve, szolgáltatások újraindítva — a lead-SMS 8–20 ablaka és az MMS 19:30-as határa élesen újra él; kód-teendő nincs | §2 |
+| Mobil küldési ablak vissza (tulaj „IGEN”, 2026-10-13, ADR-0379) | ✅ **kész 2026-10-13** (a koordinátor): az éles `.env`-ből a `MOBILE_SEND_WINDOW_OFF=1` kivéve, szolgáltatások újraindítva — a lead-SMS 8–20 ablaka és az MMS 19:30-as határa élesen újra él; kód-teendő nincs | §2 |

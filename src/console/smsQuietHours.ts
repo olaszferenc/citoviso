@@ -1,5 +1,5 @@
 // SMS QUIET HOURS — the ONE definition of the night window for every operator alert SMS
-// (ADR-XXXX; owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."). The house alert
+// (ADR-0379; owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek."). The house alert
 // (houseAlert.ts) and every other operator alert (operatorSms.ts) read it from here; the
 // morning digest (houseAlert.flushNightSmsDigest) reads the 'night' rows written here.
 // Kept free of the SMS adapter import, so houseAlert keeps loading the adapter lazily.

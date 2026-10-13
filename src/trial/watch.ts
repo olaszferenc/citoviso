@@ -99,7 +99,7 @@ const REAL_DEPS: TrialWatchDeps = {
     return { email: r.email, phone: r.phone };
   },
   sendEmail: (msg) => getEmailSender().send(msg),
-  // ADR-XXXX: the operator SMS road — held for the morning digest in the 22–07 quiet hours.
+  // ADR-0379: the operator SMS road — held for the morning digest in the 22–07 quiet hours.
   sendSms: (msg) => sendOperatorSms({ ...msg, tag: "trial-watch" }),
   publicBaseUrl: () => config.publicBaseUrl,
 };

@@ -1,4 +1,4 @@
-## ADR-XXXX — Minden operátori riasztó SMS egy úton: csendes óra 22–07 + reggeli összesítő; a desztilláló hétfő 08:00-ra (2026-10-13)
+## ADR-0379 — Minden operátori riasztó SMS egy úton: csendes óra 22–07 + reggeli összesítő; a desztilláló hétfő 08:00-ra (2026-10-13)
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (tulaj-döntések a „deploy” koordinátoron át, 2026-10-13) ·
 **Kapcsolódó:** ADR-0376 (a ház-riasztás csendes órája), ADR-0374 (élesi őrködés), ADR-0098 (riasztási címzettek).

@@ -1,4 +1,4 @@
-// OPERATOR SMS — the ONE road every operator alert SMS takes to the alert phone (ADR-XXXX).
+// OPERATOR SMS — the ONE road every operator alert SMS takes to the alert phone (ADR-0379).
 //
 // Owner 2026-10-13: "Éjjel nagyon jönnek az SMS-ek." — no alert SMS between
 // SMS_QUIET_FROM_HOUR and SMS_QUIET_TO_HOUR (Budapest wall clock; the live VPS runs in UTC,
