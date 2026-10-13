@@ -778,7 +778,7 @@ function moduleShotHtml(entryId: string): string {
           unpriced: [{ id: "u0", name: editorUnits[0]!.name }],
           nowhere: ["u0"],
         },
-        // ADR-XXXX: the "Ellátás" table the entry walks through — reggeli and félpanzió
+        // ADR-0378: the "Ellátás" table the entry walks through — reggeli and félpanzió
         // offered with child prices, one room taken off. REQUIRED for the same reason as
         // `status` (scripts/ is not type-checked; without it the table is not drawn).
         meals: {
@@ -1381,7 +1381,7 @@ await shoot(
   moduleShotHtml("admin-modules-pricing"),
   "#ar-u0",
 );
-// ADR-XXXX: the "Ellátás" table — the last card of the screen, far below the fold.
+// ADR-0378: the "Ellátás" table — the last card of the screen, far below the fold.
 await shoot(
   "modulok",
   path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "ellatas.png"),

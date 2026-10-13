@@ -412,7 +412,7 @@ export async function moduleContentFor(
       out.pricing = { currency, unit: priceUnit, note, ...(priced?.length ? { units: priced } : {}) };
     }
 
-    // ADR-XXXX: the meal plans travel with the pricing module — the price of a meal is a
+    // ADR-0378: the meal plans travel with the pricing module — the price of a meal is a
     // price. Only what a guest can choose (offeredPlans), the base first.
     const meals = readMeals(cfg("pricing").meals);
     if (meals) {

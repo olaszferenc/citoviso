@@ -1,4 +1,4 @@
-## ADR-XXXX — Ellátás és felárak: a szállásadó megadja, mit tartalmaz az alapár és mi kérhető felárral (gyerekárral); a vendég a foglalásnál választ, a felár a kéréssel együtt fagy
+## ADR-0378 — Ellátás és felárak: a szállásadó megadja, mit tartalmaz az alapár és mi kérhető felárral (gyerekárral); a vendég a foglalásnál választ, a felár a kéréssel együtt fagy
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (lokál; élesre a következő deployjal, külön tulaj-döntéssel) ·
 **Terv:** `assets/design-refs/tenant-admin/ellatas/` (tulaj: „B” — táblázat + lenyíló; gyerekár: igen) ·

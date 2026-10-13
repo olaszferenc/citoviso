@@ -1,4 +1,4 @@
--- 0110 ELLÁTÁS A FOGLALÁSON (ADR-XXXX, terv: design-refs/tenant-admin/ellatas).
+-- 0110 ELLÁTÁS A FOGLALÁSON (ADR-0378, terv: design-refs/tenant-admin/ellatas).
 --
 -- A vendég a foglalásnál ellátást választ (csak szállás / reggeli / félpanzió / teljes panzió),
 -- és ha a szállásadó gyerekárat ad, megmondja, hányan gyermekek közülük. Mindkettő a kéréssel

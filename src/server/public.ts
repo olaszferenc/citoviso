@@ -1090,7 +1090,7 @@ async function serveTenantHost(
         dateTo: form.get("to") ?? "",
         guests: Number(form.get("guests") ?? "1"),
         message: form.get("message"),
-        // ADR-XXXX: validated against the owner's meal setting inside createBookingRequest.
+        // ADR-0378: validated against the owner's meal setting inside createBookingRequest.
         mealPlan: form.get("meal"),
         children: Number(form.get("children") ?? "0"),
       },
@@ -1640,7 +1640,7 @@ async function serveAdmin(
             presentationRooms: isWholeOnlySite(list)
               ? list.filter((u) => !isBookableUnit(u, list)).map((u) => u.id)
               : [],
-            // ADR-XXXX: the "Ellátás" table. A refused save comes back with the raw form
+            // ADR-0378: the "Ellátás" table. A refused save comes back with the raw form
             // and the errors in `mf` (base64url JSON), so nothing typed is lost.
             meals: {
               setting: readMeals(cfg.config.meals),
@@ -2292,7 +2292,7 @@ async function tenantHasModule(tenantId: string, moduleId: string): Promise<bool
  * unchecked checkbox simply does not post, hence the explicit `false`. Anything
  * the registry does not declare is ignored here and again in the store.
  */
-/** ADR-XXXX: the refused "Ellátás" form, carried back in `mf` — anything malformed is ignored. */
+/** ADR-0378: the refused "Ellátás" form, carried back in `mf` — anything malformed is ignored. */
 function mealsEcho(mf: string | null): { form?: MealsFormEcho; errors?: Record<string, string> } {
   if (!mf) return {};
   try {
@@ -3059,7 +3059,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         return redirect(res, `/admin?tab=modulok&m=location${contactErrorQuery(place.errors)}`);
       }
     }
-    // ADR-XXXX: keys a bespoke screen owns (`editorKeys`) survive this generic save —
+    // ADR-0378: keys a bespoke screen owns (`editorKeys`) survive this generic save —
     // the form does not post them, and the store keeps only what it is given.
     const kept: Record<string, unknown> = {};
     const editorKeys = MODULE_CONFIG_REGISTRY[moduleId]?.editorKeys ?? [];
@@ -3453,7 +3453,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     );
   }
   // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
-  // ADR-XXXX — the Árak page's "Ellátás" table: one form, validated as a whole
+  // ADR-0378 — the Árak page's "Ellátás" table: one form, validated as a whole
   // (src/tenant/meals.ts); a refusal writes NOTHING and echoes the form back.
   if (req.method === "POST" && pathname === "/admin/prices/meals") {
     const session = await currentTenant(req);

@@ -1002,7 +1002,7 @@ form:has(input[name=whole][value=csak]:checked) .unit-new__price{display:none}
 .ys-days__in .citui-input{width:74px;text-align:center;padding-left:6px;padding-right:6px}
 .ys-more{flex:0 0 60px;display:grid;place-items:center;color:var(--citui-muted)}
 .ys-more svg{transform:rotate(-90deg)}
-/* ── ADR-XXXX meal plans — approved plan tenant-admin/ellatas (B: table + drop-down).
+/* ── ADR-0378 meal plans — approved plan tenant-admin/ellatas (B: table + drop-down).
    The table measures ITS OWN width (@container): below 560px each row breaks into
    labelled cells, price + basis + child price side by side. */
 .ml{container-type:inline-size}
@@ -3083,7 +3083,7 @@ export interface PricingEditorData {
    * Required: a card that cannot say "hiányos" would contradict the to-do row.
    */
   readonly status: Readonly<Record<string, UnitPriceStatus>>;
-  /** ADR-XXXX: the "Ellátás" table — absent in old fixtures (then no table). */
+  /** ADR-0378: the "Ellátás" table — absent in old fixtures (then no table). */
   readonly meals?: MealsEditorView;
 }
 
@@ -3705,7 +3705,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
 }
 
 /**
- * ADR-XXXX — the "Ellátás" table (approved plan tenant-admin/ellatas, variant B). What the
+ * ADR-0378 — the "Ellátás" table (approved plan tenant-admin/ellatas, variant B). What the
  * base price includes, which richer plans a guest may add for a surcharge (per person or
  * per room, optional child price), which rooms offer meals, and "Mi van még benne az
  * árban?". One form, one POST (/admin/prices/meals); the rule lives in src/tenant/meals.ts.

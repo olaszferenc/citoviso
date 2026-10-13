@@ -694,7 +694,7 @@ function requestCard(
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(bookingRef(r.id))}</span>` +
-    // ADR-XXXX ⑩: the meal on a pill, the frozen breakdown one tap away.
+    // ADR-0378 ⑩: the meal on a pill, the frozen breakdown one tap away.
     (r.mealPlan
       ? `<span class="bk-req__meal" data-bk-meal="${esc(r.mealPlan)}">${esc(mealPlanLabel(lang, r.mealPlan))}` +
         (r.children ? ` · ${T(lang, "{n} gyermek", { n: r.children })}` : "") +
@@ -1480,7 +1480,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-req__t strong{display:block;font-size:.97rem}
 .bk-req__dates{display:block;font-size:.85rem;font-weight:600;margin-top:2px}
 .bk-req__meta{display:block;font-size:.78rem;color:var(--citui-muted);margin-top:2px;line-height:1.5}
-/* ADR-XXXX ⑩ — the meal pill and the frozen breakdown (approved plan tenant-admin/ellatas). */
+/* ADR-0378 ⑩ — the meal pill and the frozen breakdown (approved plan tenant-admin/ellatas). */
 .bk-req__meal{display:inline-flex;align-items:center;margin-top:6px;font-size:.8rem;font-weight:700;border-radius:var(--citui-radius-pill);
   padding:3px 10px;background:color-mix(in srgb,var(--citui-cyan-400) 14%,var(--citui-panel));color:var(--citui-ink)}
 .bk-req__lines{margin-top:6px;font-size:.84rem}

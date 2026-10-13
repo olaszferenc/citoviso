@@ -1,4 +1,4 @@
-# 2026-10-13 — Ellátás és felárak (reggeli, félpanzió, gyerekár) · ADR-XXXX
+# 2026-10-13 — Ellátás és felárak (reggeli, félpanzió, gyerekár) · ADR-0378
 
 **Szál:** SUB a „deploy” koordinátor alatt (fa `~/wt/cit27f0a821`). Brief: `~/rc-briefs/ellatas-felar-20261013.md`.
 Tulaj-döntések (koordinátoron át): elrendezés **B** (táblázat + lenyíló), **gyerekár: igen**.
@@ -29,7 +29,7 @@ Tulaj-döntések (koordinátoron át): elrendezés **B** (táblázat + lenyíló
 `src/engine/recipe.ts` · `src/tenant/editor.ts` · `src/moduleConfig.ts` · `src/server/moduleConfigViews.ts` ·
 `src/server/public.ts` · `src/server/bookingViews.ts` · `assets/runtime/cit-runtime.js` · `assets/runtime/cit-modules.css` ·
 `hooks/pre-commit` · `scripts/kb-shot.mts` · `src/i18n/catalog.json` · `kb/entries/admin-modules-pricing/*` ·
-`kb/entries/admin-modules-booking/entry.hu.md` · `assets/design-refs/tenant-admin/ellatas/*` · ADR-XXXX.
+`kb/entries/admin-modules-booking/entry.hu.md` · `assets/design-refs/tenant-admin/ellatas/*` · ADR-0378.
 
 ## Nyitott
 - Élesítés: külön tulaj-döntés (a nagy deploy szabálya). A 0110 migráció kell hozzá.

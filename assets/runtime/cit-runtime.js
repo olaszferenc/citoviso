@@ -119,7 +119,7 @@
     var ifaDeclared = ifaRaw !== null && ifaRaw !== "";
     var ifaPerPersonNight = ifaDeclared ? Number(ifaRaw) || 0 : 0;
     var priceIncludes = slot.getAttribute("data-cit-includes") || "";
-    /* ADR-XXXX — meal plans (approved plan tenant-admin/ellatas, B ⑧). The server hands the
+    /* ADR-0378 — meal plans (approved plan tenant-admin/ellatas, B ⑧). The server hands the
      * plans a guest can choose (base first, names and price texts already in the page's
      * language); the lines below mirror src/tenant/meals.ts `mealLines`, and the server
      * recomputes them at submit — this is the guest's preview, never the frozen figure. */
@@ -321,7 +321,7 @@
       });
     });
 
-    /* ── ADR-XXXX meal plans ─────────────────────────────────────────────── */
+    /* ── ADR-0378 meal plans ─────────────────────────────────────────────── */
     function mealsHere() {
       return !!(meals && meals.plans && meals.off && meals.off.indexOf(currentUnit()) < 0);
     }
@@ -541,7 +541,7 @@
         ? '<span class="cit-book__qrow"><span>' + esc(priceIncludes) + "</span><b>" +
           tr("benne van") + "</b></span>"
         : "";
-      // ADR-XXXX ⑧: the meal basis is said before sending, and a base that includes a meal
+      // ADR-0378 ⑧: the meal basis is said before sending, and a base that includes a meal
       // reads as a row "benne van" — the guest sees what the price already covers.
       var mealNow = mealsHere() ? mealPlan(chosenMeal()) : null;
       var mealBasis = mls.length
@@ -1099,7 +1099,7 @@
         from: form.from.value,
         to: form.to.value,
         guests: String(guests),
-        // ADR-XXXX: the server recomputes the meal lines from its own setting.
+        // ADR-0378: the server recomputes the meal lines from its own setting.
         meal: mealsHere() ? chosenMeal() : "",
         children: String(asksKids() ? kids : 0),
         name: form.name.value,

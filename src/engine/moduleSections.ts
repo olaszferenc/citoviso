@@ -197,7 +197,7 @@ const CSS = `<style data-cit-modsec>
   .cit-ev__row.is-more{display:grid}
   .cit-ev__more,.cit-ev__toggle{display:none}
 }
-/* ADR-XXXX — meal plans (approved plan tenant-admin/ellatas ⑦): name and surcharge on ONE
+/* ADR-0378 — meal plans (approved plan tenant-admin/ellatas ⑦): name and surcharge on ONE
    line, the description and the child price under it. Chips on the shared room card. */
 .cit-meals{display:grid;gap:10px;margin:0;padding:0;list-style:none}
 .cit-meals li{padding:var(--_card-pad);border:var(--_card-border);border-radius:var(--_card-radius);background:var(--_card-bg)}
@@ -294,7 +294,7 @@ function money(amount: number, currency?: string, lang?: string): string {
   return formatMoney(amount, currency, lang);
 }
 
-/** ADR-XXXX: a meal plan's name in the page's language (literal keys for the catalogue). */
+/** ADR-0378: a meal plan's name in the page's language (literal keys for the catalogue). */
 function mealName(d: SiteData, id: "none" | "bb" | "hb" | "fb"): string {
   return id === "bb"
     ? T(d, "Reggeli")
@@ -312,7 +312,7 @@ function mealPriceText(d: SiteData, m: NonNullable<SiteData["meals"]>, p: NonNul
   return `+ ${money(p.price ?? 0, m.currency, d.lang)} / ${per}`;
 }
 
-/** ADR-XXXX ⑦: the meal chips of one room card — the base, then the surcharged plans. */
+/** ADR-0378 ⑦: the meal chips of one room card — the base, then the surcharged plans. */
 export function mealChips(d: SiteData, unitId: string | undefined): string {
   const m = d.meals;
   if (!m || !unitId) return "";
@@ -331,7 +331,7 @@ export function mealChips(d: SiteData, unitId: string | undefined): string {
 }
 
 /**
- * ADR-XXXX ⑧ — the booking widget's meal data: the plans a guest can choose with their
+ * ADR-0378 ⑧ — the booking widget's meal data: the plans a guest can choose with their
  * names and price texts in the page's language (the runtime adds no wording of its own
  * for them), the child age and the units without meals. Absent → no meal field at all.
  */
@@ -356,7 +356,7 @@ function mealsAttr(d: SiteData): string {
 }
 
 /**
- * ADR-XXXX ⑦ — the "Ellátás" section: one row per plan a guest can choose (name and
+ * ADR-0378 ⑦ — the "Ellátás" section: one row per plan a guest can choose (name and
  * surcharge on one line, the description and the child price under it), what else the
  * price includes, and which rooms offer no meals. Renders on every template (showcase
  * slot), because 12 of them draw their own room cards.

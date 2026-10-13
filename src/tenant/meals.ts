@@ -1,5 +1,5 @@
 // Meal plans — what the price includes and what a guest can add for a surcharge
-// (ADR-XXXX, approved plan: assets/design-refs/tenant-admin/ellatas/, variant B).
+// (ADR-0378, approved plan: assets/design-refs/tenant-admin/ellatas/, variant B).
 //
 // ONE rule set, pure: the owner's form (validation), the public page (labels, chips), the
 // booking request (frozen lines) and the offer all read THIS file. The browser twin lives

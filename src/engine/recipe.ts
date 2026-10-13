@@ -407,7 +407,7 @@ export interface SiteData {
     }[];
   };
   /**
-   * ADR-XXXX — meal plans (approved plan tenant-admin/ellatas). `plans` are the ones a
+   * ADR-0378 — meal plans (approved plan tenant-admin/ellatas). `plans` are the ones a
    * guest can choose, ascending, the base first (it is IN the price). Names are not here:
    * the renderer translates the plan id (moduleSections `mealName`). Present only
    * while the pricing module renders and the owner saved a setting.

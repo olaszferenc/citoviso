@@ -1,4 +1,4 @@
-// ŐR — az ellátás és a felárak (ADR-XXXX, jóváhagyott terv: assets/design-refs/tenant-admin/ellatas/, „B").
+// ŐR — az ellátás és a felárak (ADR-0378, jóváhagyott terv: assets/design-refs/tenant-admin/ellatas/, „B").
 //
 // Amit állít:
 //   ① a szállásadó űrlapjának szabálya (src/tenant/meals.ts parseMealsForm): az összeg az

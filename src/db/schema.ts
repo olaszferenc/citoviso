@@ -1266,7 +1266,7 @@ export interface BookingRequestTable {
       per_night: number;
       guests: number;
       sum: number;
-      /** 0110: a meal line (ADR-XXXX); absent = the stay itself. */
+      /** 0110: a meal line (ADR-0378); absent = the stay itself. */
       kind?: "meal";
     }[]
   > | null;
@@ -1281,7 +1281,7 @@ export interface BookingRequestTable {
    *  'dates' (the asked nights, into the price list), 'base' (timeless base); null = not an
    *  offer, or an offer from before the choice existed. */
   offer_saved_as: "request" | "dates" | "base" | null;
-  /** 0110 (ADR-XXXX): the meal plan the guest chose ('none'|'bb'|'hb'|'fb'), frozen with the
+  /** 0110 (ADR-0378): the meal plan the guest chose ('none'|'bb'|'hb'|'fb'), frozen with the
    *  request; null = no meal setting at request time (or not offered for this unit). */
   meal_plan: "none" | "bb" | "hb" | "fb" | null;
   /** 0110: how many of `guests` are children (under the owner's child-price age); null = not asked. */

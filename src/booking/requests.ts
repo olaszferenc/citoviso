@@ -80,9 +80,9 @@ export interface BookingRequestInput {
   readonly dateTo: string;
   readonly guests: number;
   readonly message?: string | null;
-  /** ADR-XXXX: the meal plan the guest picked (validated against the owner's setting). */
+  /** ADR-0378: the meal plan the guest picked (validated against the owner's setting). */
   readonly mealPlan?: string | null;
-  /** ADR-XXXX: how many of `guests` are children (only counted when a child price applies). */
+  /** ADR-0378: how many of `guests` are children (only counted when a child price applies). */
   readonly children?: number | null;
 }
 
@@ -401,7 +401,7 @@ function stayRows(req: RequestRow, lang: string, rule: boolean): MailDetailRow[]
         ? T(lang, "{n} fő, ebből {k} gyermek", { n: req.guests, k: req.children })
         : T(lang, "{n} fő", { n: req.guests }),
     },
-    // ADR-XXXX: the meal the guest asked for — frozen on the request, so a later change
+    // ADR-0378: the meal the guest asked for — frozen on the request, so a later change
     // of the owner's setting does not rewrite it.
     ...(req.meal_plan ? [{ label: T(lang, "Ellátás"), value: mealPlanLabel(lang, req.meal_plan) }] : []),
   ];
@@ -675,7 +675,7 @@ export async function createBookingRequest(
         baseLabel: T(lang, "Alapár"),
       })
     : null;
-  // ADR-XXXX: the meal travels with the pricing module. The plan is validated against the
+  // ADR-0378: the meal travels with the pricing module. The plan is validated against the
   // owner's setting (an unknown or withdrawn plan falls back to the base), the lines are
   // computed HERE — the browser's figure is never trusted — and freeze with the stay.
   const meals = pricingLive ? readMeals(pricing.meals) : null;
@@ -923,7 +923,7 @@ interface RequestRow {
   quoted_lines:
     | { label: string; nights: number; per_night: number; guests: number; sum: number; kind?: "meal" }[]
     | null;
-  /** 0110 (ADR-XXXX): the chosen meal plan and the children among the guests. */
+  /** 0110 (ADR-0378): the chosen meal plan and the children among the guests. */
   meal_plan: MealPlanId | null;
   children: number | null;
   offered_at: Date | null;
@@ -1886,7 +1886,7 @@ export interface InboxItem {
   readonly quotedCurrency: string | null;
   /** 0072: when the price offer went out (status 'offered'). */
   readonly offeredAt: Date | null;
-  /** 0110 (ADR-XXXX): the meal the guest chose; null = none asked / not offered. */
+  /** 0110 (ADR-0378): the meal the guest chose; null = none asked / not offered. */
   readonly mealPlan?: MealPlanId | null;
   /** 0110: children among the guests; null = not asked. */
   readonly children?: number | null;
@@ -2002,7 +2002,7 @@ export async function getSentOffers(siteId: string, limit = 60): Promise<SentOff
     status: r.status,
     decidedBy: (r.decidedBy as string | null) ?? null,
     savedAs: (r.savedAs as OfferSaveAs | null) ?? null,
-    // ADR-XXXX: a meal line is not the offer's nightly price — the per-night figure reads the stay only.
+    // ADR-0378: a meal line is not the offer's nightly price — the per-night figure reads the stay only.
     lines: ((r.lines as RequestRow["quoted_lines"]) ?? [])
       .filter((l) => l.kind !== "meal")
       .map((l) => ({ perNight: l.per_night, guests: l.guests })),
@@ -2209,7 +2209,7 @@ export async function unpricedNights(unitId: string, dateFrom: string, dateTo: s
   return out;
 }
 
-// The amount rule moved to ./amount.ts (shared with the meal surcharges, ADR-XXXX).
+// The amount rule moved to ./amount.ts (shared with the meal surcharges, ADR-0378).
 export { parseOfferAmount };
 
 export interface OfferLine {
@@ -2502,7 +2502,7 @@ export async function sendOffer(
     // it: "Alapár" there reads as a price-list price, which an offer is not (ADR-0267).
     labelOn: (day) => (offered.has(day) ? T(lang, "Egyedi ár") : undefined),
   });
-  // ADR-XXXX: the meal the guest asked for rides on the offer. Lines already frozen on the
+  // ADR-0378: the meal the guest asked for rides on the offer. Lines already frozen on the
   // request win (that is what the guest was shown); otherwise they are priced now.
   const frozenMeal = (req.quoted_lines ?? [])
     .filter((l) => l.kind === "meal")

@@ -4,7 +4,7 @@
 B (táblázat + lenyíló) közül a **B**-t választotta, és ugyanaznap a gyerekárra is igent mondott
 (ellátásonként gyerekár, 0 = ingyenes, korhatár; a vendég megadja, hányan gyerekek). A gyerekár
 kódban egy kapcsolóval kivehető marad (`MEAL_CHILD_PRICING`). ·
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0193 (ár csak élő Árak-modullal), ADR-0199 (egy
+**Kapcsolódó:** ADR-0378 (ez a döntés), ADR-0193 (ár csak élő Árak-modullal), ADR-0199 (egy
 egység ára az ár-végponton), ADR-0267 (ajánlat ára csak arra a kérésre), ADR-0299 (az IFA a
 kérésre fagy), `tenant-site/booking-price-clarity` (a nyitott ár-bontás), §B.17. · **Migráció:** 0108.
 

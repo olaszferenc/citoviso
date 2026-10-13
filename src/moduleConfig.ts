@@ -80,7 +80,7 @@ export interface ModuleConfigDef {
   /** Bespoke editor id for what a generic form cannot express (a calendar). */
   readonly editor?: string;
   /**
-   * Stored keys that a BESPOKE screen writes, not this module's generic form (ADR-XXXX).
+   * Stored keys that a BESPOKE screen writes, not this module's generic form (ADR-0378).
    * The generic save stores only the posted fields, so without this list saving the
    * currency would silently wipe the meal setting the Árak page wrote next to it.
    */
@@ -178,7 +178,7 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         help: "Például: Az ár tartalmazza az idegenforgalmi adót.",
       },
     ],
-    // `meals` (ADR-XXXX): the meal plans and surcharges — written by the Árak page's
+    // `meals` (ADR-0378): the meal plans and surcharges — written by the Árak page's
     // "Ellátás" table (src/tenant/meals.ts), null until the owner saves it.
     defaults: { currency: "HUF", unit: "per_night", note: "", meals: null },
     editorKeys: ["meals"],
@@ -444,7 +444,7 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
           "Most nincs kitöltve, ezért a honlapján NEM jelenik meg összeg: a vendég csak annyit lát, hogy a helyszínen idegenforgalmi adó fizetendő. Számot nem találunk ki Ön helyett.",
       },
       // `priceIncludes` ("Mi van még benne az árban?") moved to the Árak page's "Ellátás"
-      // table (ADR-XXXX) — same key, same row, written there; listed in `editorKeys` so a
+      // table (ADR-0378) — same key, same row, written there; listed in `editorKeys` so a
       // save of THIS form keeps it.
       {
         key: "autoDeclineHours",

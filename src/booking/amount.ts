@@ -1,4 +1,4 @@
-// The ONE amount rule for an owner-typed price (offer page, meal surcharges — ADR-XXXX).
+// The ONE amount rule for an owner-typed price (offer page, meal surcharges — ADR-0378).
 
 /**
  * The amount rule of the offer page — the mock's `parseAmount`, byte for byte in
