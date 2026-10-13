@@ -7325,6 +7325,8 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Tények és döntések
+- 2026-10-13 · riasztó SMS (ADR-0374): címzett a tulaj teszt-mobilja +36 30 516 1631 (élesen a konzol /settings SMS-szám mezőjébe, a következő deploynál); éjjel NE jöjjön SMS — csendes óra 22–07, reggeli összesítő (tulaj: „Éjjel nagyon jönnek az SMS-ek”)
+- 2026-10-13 · ellátás-felár: vendég-oldali elrendezés B (táblázat + lenyíló); foglalás-beállítás: B (ellenőrzőlista, alsó „Kérdezzen a Segítőtől” sáv, Haiku 5.5 csak magyaráz) (tulaj)
 - 2026-10-12 · nagy deploy: éles = `465e5394` (prod/20261012-2326), előtte `4dc8a9d7`; 11 migráció (0099–0107); minden konzol-operátor egyszer újra belép (ADR-0363) (deploy-prod.sh, tulaj „Mehet a main Deploy”)
 - 2026-10-13 · dátumos ár lejárata: az ajánlatból mentett dátumos árra (a kért éjszakákra szól) NEM megy lejárati levél, az Árazás lap igaz mondattal magyaráz; a szezon-árak „lejárat előtti” ígérete a szezon végi levél (seasonNudge, 07:00 a záró nap után); a szezonok évente ismétlődnek, nem járnak le (tulaj: „Igen”)
 - 2026-10-13 · ház-riasztás SMS: csak a súlyos (vevő vár / pénz mozdult / kulcs halott) megy SMS-ben is; ugyanaz az eset 6 órán belül egyszer, óránként ≤4 SMS, a kimaradtak száma a következő SMS-en; SMS CSAK éles hoston (a dev gépen SMS_PROVIDER=gammu = valódi modem + beállított riasztási szám, a kapuk SMS-t küldenének) (ADR-0374)
