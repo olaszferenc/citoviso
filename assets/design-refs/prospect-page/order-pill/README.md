@@ -31,7 +31,14 @@ Kattintható terv: `plan.html` (stílus-, méret- és süti-sáv-váltó; a gomb
    A Foglalás-sáv a süti-sávra rétegződik (`bottom: var(--citui-consent-h)`): a pirula mindkettő fölött ül.
    Őr: `lead-mobile-check` R8 (a koppintás pillanatában a pirula egyetlen rögzített alsó réteget sem fed át;
    piros önteszt: a sáv-érzékelés kivágva).
-5. Telefonon (≤ 560 px) a jobb sarokban, asztalon középen. A fekvő telefonra is áll (844×390).
+5. Telefonon (≤ 560 px) a jobb sarokban, asztalon középen. **Fekvő telefonon** (≤ 500 px magas, fekvő
+   képernyő, pl. 844×390) a jobb alsó sarokban, telefonos méretben (ADR-XXXX, a tulaj „A” döntése,
+   2026-09-29; addig az asztali közép-hely miatt nyugalomban is a hős-címre ült).
+6. **A hős-címre nem ül** (ADR-XXXX): fekvő telefonon mindig, álló telefonon a süti-sáv ideje alatt
+   (a sáv a saját magasságával felemeli a párt — mérve 784 → 661 px, épp a címre) a hős-cím és a
+   mellette álló bekezdések SZAVAI akadálynak számítanak, mint egy gomb: a pár föléjük lép, alá soha
+   (ott a sáv). Sáv nélkül, álló telefonon és asztalon a 4. pont változatlan.
+   Őr: `mock-trial-overlay-check` ⑪ (minden sablon, fekvő nyugalomban + süti-sávval, álló süti-sávval).
 
 ## Képek
 

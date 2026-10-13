@@ -354,7 +354,7 @@ const FB_PROBE = `() => {
  * links/buttons that answer elementFromPoint; anything found there is under the pair.
  * Independent of the runtime's own placement code (it never asks the pill where it is).
  */
-const PILL_PROBE = `() => {
+const PILL_PROBE = `(photosAreContent) => {
   const members = [".cit-cfg-launch", ".cit-cfg-trialpill"]
     .map((s) => document.querySelector(s))
     .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0);
@@ -365,6 +365,8 @@ const PILL_PROBE = `() => {
     if (!a || a.closest('[class*="cit-cfg"]') || a.closest("#cit-consent")) return null;
     const ar = a.getBoundingClientRect();
     if (ar.width < 60 || ar.height < 28) return null;
+    // ⑪: a photo tile that opens the lightbox is content (same rule as FB_PROBE)
+    if (photosAreContent && (a.tagName === "IMG" || (a.querySelector("img") && !(a.textContent || "").trim()))) return null;
     return a;
   };
   const prev = members.map((m) => m.style.visibility);
@@ -570,13 +572,71 @@ try {
     check(`④ ${id}/asztali: a pirula-pár nem ül hős-vezérlőn`, !r.error && (r.buried?.length ?? 0) === 0, r);
     await ctx.close();
   }
+
+  // ⑪ Owner's ruling „A” (2026-09-29, after the pilot): the pair never sits on the hero
+  // title. Sideways (844×390) it takes a corner, not the centre, at rest and with the consent
+  // bar; upright (390×844) the consent bar's lift no longer puts it on the title. The title
+  // = the h1's words and the paragraphs beside it, measured on their TEXT lines (glyphs).
+  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő 844×390: sarok; álló: süti-sáv alatt)");
+  const TITLE_PROBE = `() => {
+    const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
+      .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
+    const hits = [];
+    for (const h of document.querySelectorAll("h1")) {
+      if (h.closest('[class*="cit-cfg"]')) continue;
+      const group = [h];
+      for (let s = h.nextElementSibling; s; s = s.nextElementSibling) if (s.tagName === "P") group.push(s);
+      for (const el of group) {
+        const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+          const rg = document.createRange(); rg.selectNodeContents(n);
+          for (const r of rg.getClientRects()) {
+            if (r.width < 2 || r.bottom <= 0 || r.top >= innerHeight) continue;
+            // the glyphs, not the line box: ~10 % of it is leading above and below the words
+            const gt = r.top + r.height * 0.1, gb = r.bottom - r.height * 0.1;
+            if (pills.some((q) => q.left < r.right && q.right > r.left && q.top < gb && q.bottom > gt))
+              hits.push((n.nodeValue || "").trim().slice(0, 24));
+          }
+        }
+      }
+    }
+    const vw = document.documentElement.clientWidth;
+    const right = Math.max(...pills.map((q) => q.right)), left = Math.min(...pills.map((q) => q.left));
+    const top = Math.min(...pills.map((q) => q.top));
+    return { hits, pills: pills.length, corner: right >= vw - 40 || left <= 40, onScreen: top >= 0,
+      rects: pills.map((q) => [q.left, q.top, q.width, q.height].map(Math.round)) };
+  }`;
+  type TitleGeom = { hits: string[]; pills: number; corner: boolean; onScreen: boolean; rects: number[][] };
+  for (const id of Object.keys(TEMPLATES)) {
+    const html = await buildPage(id);
+    for (const [w, h, vp] of [[844, 390, "fekvő"], [390, 844, "álló"]] as const) {
+      const { ctx, p } = await open(browser, html, w, h, false);
+      await p.waitForTimeout(1400);
+      if (vp === "fekvő") {
+        const rest = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
+        check(`⑪ ${id}/${vp}, nyugalomban: a pár sarokban, nem középen`, rest.pills === 2 && rest.corner, rest);
+        check(`⑪ ${id}/${vp}, nyugalomban: a pár nem ül a címen`, rest.pills === 2 && rest.hits.length === 0 && rest.onScreen, rest);
+        const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as { error?: string; buried?: { label: string }[] };
+        check(`⑪ ${id}/${vp}, nyugalomban: a sarok-pár sem temet be hős-gombot (FK-004b H-3)`, !b.error && (b.buried?.length ?? 0) === 0, b);
+        if (id === "dark-luxury") await shot(p, "mock-pirula-cim-dark-luxury-fekvo");
+      }
+      // A key press is an engagement: the deferred consent bar comes, the page does not scroll.
+      await p.keyboard.press("Shift");
+      await p.waitForTimeout(1400);
+      const up = await p.evaluate(() => !!document.getElementById("cit-consent"));
+      const withBar = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
+      if (id === "dark-luxury") await shot(p, `mock-pirula-cim-dark-luxury-${vp}-suti`);
+      check(`⑪ ${id}/${vp}, süti-sávval: a pár nem ül a címen`, up && withBar.pills === 2 && withBar.hits.length === 0 && withBar.onScreen, { up, ...withBar });
+      await ctx.close();
+    }
+  }
 } finally {
   await browser.close();
 }
 
 if (SELF_TEST) {
   // Every leg Elek photographed must go red on the unfixed runtime / the link-less page.
-  const want = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
+  const want = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪"];
   const missing = want.filter((m) => !failed.some((f) => f.includes(m)));
   if (missing.length) {
     console.error(`\n⛔ mock-trial-overlay-check --self-test: zöld maradt: ${missing.join(" ")} — az őr vak.`);

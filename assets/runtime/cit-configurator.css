@@ -3705,6 +3705,34 @@
   }
 }
 
+/* cit-cfg-trialfx-pillspotcss-start
+ * Owner's ruling „A” (2026-09-29): a phone held sideways (844×390) is wider than the
+ * 560 px phone rules, so the pills came at desktop size into the bottom centre — on the
+ * hero's title. On a low landscape screen they take the phone size, closer to the bottom
+ * edge; the runtime puts them in the right corner (placeLaunch → sideSlots). */
+@media (max-height: 500px) and (orientation: landscape) and (min-width: 561px) {
+  .cit-cfg-launch,
+  .cit-cfg-trialpill {
+    bottom: calc(14px + var(--citui-consent-h, 0px));
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
+    gap: 8px;
+  }
+  .cit-cfg-launch.cit-cfg-launch--pair,
+  .cit-cfg-trialpill {
+    min-height: 44px;
+    padding: 0 14px;
+    gap: 6px;
+  }
+  .cit-cfg-launch svg,
+  .cit-cfg-trialpill svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+/* cit-cfg-trialfx-pillspotcss-end */
+
 /* proba-C (design-refs/console/proba-c, approved 2026-10-10) — the trialist's checkout. */
 .cit-cfg-cnote {
   margin: 0 2px 8px;

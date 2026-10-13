@@ -5375,11 +5375,83 @@
   function isPhone() {
     return window.matchMedia("(max-width:560px)").matches;
   }
+  /* cit-cfg-trialfx-pillspot-start
+   * Owner's ruling „A” (2026-09-29, given after the pilot 2026-10-13): on a phone held
+   * sideways (844×390) the pill pair sat bottom-centre — on the hero's title or intro even
+   * at rest, because the narrow-screen rules (≤560 px) do not apply there and the desktop
+   * centre slot does. A low landscape screen takes the right corner instead (the CSS gives
+   * it the phone-sized pills under the same query) — the right one only: on the left the
+   * pair landed on editorial's nav row („A ház”); a taken corner means the upward step. */
+  var LANDSCAPE_PHONE = "(max-height:500px) and (orientation:landscape) and (min-width:561px)";
+  function isLandscapePhone() {
+    return window.matchMedia(LANDSCAPE_PHONE).matches;
+  }
+  /* …and held upright, the consent bar lifts the pair by its own height — measured on the
+   * real Laguna Panzió arch-frames page, from 784 to 661 px, right onto the hero title. While
+   * the bar is up, the title and the lines beside it count as obstacles like a button does:
+   * the pair steps above them (never below — that is the bar). Without the bar nothing
+   * changes. Sideways the title is an obstacle at all times: the corner pair is ~370 px
+   * wide, so a hero button row under it (cinematic, transit, fullbleed at 844×390) or the
+   * consent bar (dark-luxury) lifted it onto the end of the intro line. The text LINES are measured,
+   * not the block: a paragraph's box spans the column even where its words end. */
+  function heroTitleRects(box) {
+    var out = [];
+    var sideways = isLandscapePhone();
+    if (!sideways && !(isPhone() && consentH() > 0)) return out;
+    var heads = document.querySelectorAll("h1");
+    for (var i = 0; i < heads.length; i++) {
+      var h1 = heads[i];
+      if (h1.closest('[class*="cit-cfg"]') || h1.closest("#cit-consent")) continue;
+      var group = [h1];
+      for (var sib = h1.nextElementSibling; sib; sib = sib.nextElementSibling) {
+        if (sib.tagName === "P") group.push(sib);
+      }
+      for (var g = 0; g < group.length; g++) {
+        var cs = getComputedStyle(group[g]);
+        if (cs.visibility === "hidden" || cs.display === "none" || parseFloat(cs.opacity) === 0) continue;
+        // Text nodes only: a range over the whole element also returns the boxes of its
+        // block-level children (gate-opening's title spans are 785 px wide for 288 px of word).
+        var walk = document.createTreeWalker(group[g], NodeFilter.SHOW_TEXT);
+        for (var tn = walk.nextNode(); tn; tn = walk.nextNode()) {
+          if (!/\S/.test(tn.nodeValue || "")) continue;
+          var range = document.createRange();
+          range.selectNodeContents(tn);
+          var lines = range.getClientRects();
+          for (var l = 0; l < lines.length; l++) {
+            var r = lines[l];
+            if (r.width < 2 || r.height < 4 || r.bottom <= 0 || r.top >= window.innerHeight) continue;
+            if (r.right <= box.left || r.left >= box.right) continue;
+            // The line box carries the leading above and below the glyphs, and clashAt adds
+            // AVOID_GAP on top: a 50 px title ending 4 px into the corner column then lifted
+            // the pair to the menu button (aurora, claymorphism at 844×390). What must stay
+            // readable is the words: ~10 % leading off each side, and a small gap to the glyphs
+            // instead of AVOID_GAP (clashAt's arithmetic holds for an inverted box too) — 6 px
+            // upright (only photo above the title; 3 px read as touching on dark-luxury), 3 px
+            // sideways, where the menu button above sets the ceiling.
+            var trim = r.height * 0.1 + (AVOID_GAP - (sideways ? 3 : 6));
+            out.push({ left: r.left, right: r.right, top: r.top + trim, bottom: r.bottom - trim });
+          }
+        }
+      }
+    }
+    return out;
+  }
+  /* cit-cfg-trialfx-pillspot-end */
+  function pillObstacles(box) {
+    var rects = blockingRects(box);
+    /* cit-cfg-trialfx-pillcall-start */
+    rects = rects.concat(heroTitleRects(box));
+    /* cit-cfg-trialfx-pillcall-end */
+    return rects;
+  }
   function pairOn() {
     return !!trialPill && !trialPill.hidden && trialPill.isConnected;
   }
   function sideSlots() {
     if (pairOn() && isPhone()) return [""];
+    /* cit-cfg-trialfx-pillside-start */
+    if (isLandscapePhone()) return ["r"];
+    /* cit-cfg-trialfx-pillside-end */
     return isPhone() ? ["", "l"] : ["", "r", "l"];
   }
   function setSide(side) {
@@ -5404,6 +5476,19 @@
     launch.style.removeProperty("width");
     var wt = trialPill.offsetWidth;
     var wl = launch.offsetWidth;
+    /* cit-cfg-trialfx-pillstack-start
+     * Landscape phone: side by side the pair is ~370 px wide, and on a 390 px tall screen
+     * the hero's button row reaches under the corner on most templates — the pair then
+     * climbed to the header (measured 2026-10-13 at 844×390: 8 of 21 templates at rest, 12 with the consent bar). Stacked,
+     * trial on top, it is one ~195 px column that fits beside the row. Same widths, so it
+     * reads as one unit. */
+    if (isLandscapePhone()) {
+      var ws = Math.max(wt, wl);
+      trialPill.style.width = ws + "px";
+      launch.style.width = ws + "px";
+      return { wt: ws, wl: ws, gap: 6, w: ws, stacked: true };
+    }
+    /* cit-cfg-trialfx-pillstack-end */
     if (!isPhone()) return { wt: wt, wl: wl, gap: PAIR_GAP_DESK, w: wt + PAIR_GAP_DESK + wl };
     var avail = document.documentElement.clientWidth - 2 * PAIR_EDGE_PHONE - PAIR_GAP_PHONE;
     var spare = avail - wt - wl;
@@ -5445,6 +5530,7 @@
     var pair = pairOn();
     var pl = pair ? pairLayout() : null;
     var h = pair ? Math.max(launch.offsetHeight, trialPill.offsetHeight) : launch.offsetHeight;
+    if (pl && pl.stacked) h = launch.offsetHeight + pl.gap + trialPill.offsetHeight;
     var w = pair ? pl.w : launch.offsetWidth;
     // ① rest just above the bottom-fixed stack (booking bar, consent bar)
     var bottomY = Math.min(
@@ -5458,16 +5544,16 @@
     for (var si = 0; si < slots.length; si++) {
       var sr = slotRect(slots[si], w);
       var pr = { left: sr.left, right: sr.right, top: bottomY - h, bottom: bottomY };
-      if (!clashAt(blockingRects(pr), bottomY, h)) {
+      if (!clashAt(pillObstacles(pr), bottomY, h)) {
         side = slots[si];
         break;
       }
     }
     // ③ every side taken → the old upward sweep, on the default side
     if (side === null) {
-      side = "";
-      var dr = slotRect("", w);
-      var rects = blockingRects({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
+      side = slots[0]; // '' everywhere but a landscape phone, where it is the right corner
+      var dr = slotRect(side, w);
+      var rects = pillObstacles({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
       for (var step = 0; step < 8; step++) {
         var clash = clashAt(rects, bottomY, h);
         if (!clash) break;
@@ -5486,9 +5572,11 @@
       var at = slotRect(side, w).left;
       trialPill.style.left = Math.round(at) + "px";
       trialPill.style.right = "auto";
-      launch.style.left = Math.round(at + pl.wt + pl.gap) + "px";
+      launch.style.left = Math.round(pl.stacked ? at : at + pl.wt + pl.gap) + "px";
       launch.style.right = "auto";
       trialPill.style.bottom = pillBottom;
+      // landscape stack: the trial pill rides on top of the order pill
+      if (pl.stacked) trialPill.style.bottom = Math.round(window.innerHeight - bottomY + launch.offsetHeight + pl.gap) + "px";
     } else {
       launch.style.removeProperty("left");
       launch.style.removeProperty("right");

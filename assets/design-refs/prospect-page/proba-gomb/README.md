@@ -20,6 +20,10 @@ a `/p/:token` route adja át, ha a próba be van kapcsolva és a leadnek nincs `
    rögzített rétegbe kerül a „{n} nap ingyen” pirula — EGY egységként, egymás mellett, egy sorban
    (`white-space: nowrap`; 390 px-en is egy sor, mérve). Sorrend: bal = próba, jobb = rendelés.
    Telefonon (≤ 560 px) a pár a teljes szélességet kitölti (széleken 12 px), asztalon középen áll.
+   **Kivétel — fekvő telefon** (≤ 500 px magas, fekvő képernyő; ADR-XXXX, a tulaj „A” döntése, 2026-09-29):
+   a pár a jobb alsó sarokban áll, EGYMÁS ALATT (fent a próba, lent a rendelés, azonos szélességgel,
+   44 px magasan, 6 px réssel). Egymás mellett ~370 px széles volt, és a 390 px magas képernyőn a
+   hős-gombok és a cím miatt 21 sablonból nyugalomban 8-on, süti-sávval 12-n a fejlécig mászott.
 2. **Szín.** A rendelés-pirula változatlan (platform-cián, ADR-0242 ③ szabálya a lila-cserével együtt).
    A próba-pirula navy (`--citui-navy-900`), fehér felirat, cián ajándék-ikon (`src/ui/icons.ts`-be
    kerülő saját SVG; emoji tilos), fehér perem. A két pirula soha nem azonos színű.
