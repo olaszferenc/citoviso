@@ -14,7 +14,7 @@
 // racing for the same nights cannot both win.
 
 import { parseOfferAmount } from "./amount.js";
-import { asksChildren, chosenPlan, mealLines, mealPlanLabel, readMeals, type MealPlanId } from "../tenant/meals.js";
+import { asksChildren, chosenPlan, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealPlanId } from "../tenant/meals.js";
 import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
@@ -105,6 +105,8 @@ export interface BookingSummary {
   readonly dateTo: string;
   readonly nights: number;
   readonly guests: number;
+  /** Elek 10-13 T-3: the children among `guests` (only when asked) — they pay no tourist tax. */
+  readonly children?: number;
   /** Where the answer will be sent — the guest's own address, echoed back. */
   readonly guestEmail: string;
   readonly total: number | null;
@@ -246,14 +248,19 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
   }
   const n = nights(dayStr(req.date_from), dayStr(req.date_to));
   const cur = req.quoted_currency ?? "HUF";
+  // Elek 10-13 T-3: a guest under 18 pays no tourist tax — the counted children are left out.
+  const payers = taxPayers(req.guests, req.children);
+  const childAge =
+    req.children === null ? null : (readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals)?.childAge ?? null);
   return [
     {
       label: T(lang, "Helyszínen fizetendő: idegenforgalmi adó ({per} / fő / éj × {g} fő × {n} éj)", {
         per: formatAmount(tax, cur),
-        g: req.guests,
+        g: payers,
         n,
       }),
-      value: formatAmount(tax * req.guests * n, cur),
+      value: formatAmount(tax * payers * n, cur),
+      note: minorsTaxNote(lang, childAge),
       rule: true,
     },
   ];
@@ -261,7 +268,14 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
 
 /** The same tax rows as plain text for the letter's text part. */
 function onSiteTaxText(rows: readonly MailDetailRow[]): string {
-  return rows.map((r) => `${r.label}: ${r.value}\n`).join("");
+  return rows.map((r) => `${r.label}: ${r.value}\n${r.note ? `${r.note}\n` : ""}`).join("");
+}
+
+/** Elek 10-13 T-7: the head count with the children in it — the same words in every letter. */
+function headcount(req: { guests: number; children: number | null }, lang: string): string {
+  return req.children
+    ? T(lang, "{n} fő, ebből {k} gyermek", { n: req.guests, k: req.children })
+    : T(lang, "{n} fő", { n: req.guests });
 }
 
 async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
@@ -397,9 +411,7 @@ function stayRows(req: RequestRow, lang: string, rule: boolean): MailDetailRow[]
     { label: T(lang, "Távozás"), value: huDate(to), note: T(lang, "({n} éj)", { n: nights(from, to) }) },
     {
       label: T(lang, "Létszám"),
-      value: req.children
-        ? T(lang, "{n} fő, ebből {k} gyermek", { n: req.guests, k: req.children })
-        : T(lang, "{n} fő", { n: req.guests }),
+      value: headcount(req, lang),
     },
     // ADR-0378: the meal the guest asked for — frozen on the request, so a later change
     // of the owner's setting does not rewrite it.
@@ -822,6 +834,8 @@ export async function createBookingRequest(
       dateTo,
       nights: n,
       guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
+      // Elek 10-13 T-3: the receipt leaves the counted children out of the tax line.
+      ...(children ? { children } : {}),
       guestEmail,
       total: quote?.total ?? null,
       currency: quote?.currency ?? String(pricing.currency ?? "HUF"),
@@ -878,7 +892,7 @@ async function sendGuestAck(id: string): Promise<void> {
     `\n\n` +
     `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
     `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
-    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     quoteBlock(req, lang) +
     onSiteTaxText(tax) +
     `\n` +
@@ -1069,7 +1083,7 @@ async function notifyOwner(
     // it a phone call ("a hétvégi foglalásom ügyében…") has nothing to match on.
     `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
     `${T(lang, "Érkezés:")} ${huDate(from)}\n${T(lang, "Távozás:")} ${huDate(until)}\n` +
-    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     (req.meal_plan ? `${T(lang, "Ellátás:")} ${mealPlanLabel(lang, req.meal_plan)}\n` : "") +
     (req.quoted_total
       ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? "HUF")}\n`
@@ -1485,7 +1499,7 @@ async function sendGuestVerdict(
       T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit }) +
       `\n\n` +
       `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
-      `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+      `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
       quoteBlock(req, lang) +
       onSiteTaxText(tax) +
       `\n` +
@@ -2675,7 +2689,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
     T(lang, "{host} árajánlatot küldött a kért időszakra{unit}.", { host: ctx.hostName, unit }) +
     `\n\n` +
     `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
-    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     quoteBlock(req, lang) +
     `\n` +
     (req.decision_note ? `${T(lang, "A szállásadó üzenete:")} „${req.decision_note}"\n\n` : "") +

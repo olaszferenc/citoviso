@@ -22,6 +22,19 @@ import { langName } from "../i18n/lang.js";
 import { APP_TZ } from "../text/zoneTime.js";
 import { callCostUsd, recordAiUsage } from "./usage.js";
 import { setupBookable, type SetupState } from "../tenant/bookingSetup.js";
+import { MODULE_CATALOG } from "../modules.js";
+import { offeredPlans, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
+
+/**
+ * Elek 10-13 T-1: the screen names the Segítő quotes, taken from the code that draws them —
+ * the "Haladó beállítások" menu items (src/server/bookingSetupViews.ts) and the left-menu name
+ * of the pricing screen (the module's publicLabel). It said "Árak és időszakok", the owner read
+ * „Árak, szezonok” in the menu, and the answer looked invented. booking-setup-check asserts
+ * every quoted label still exists in the source.
+ */
+export const HELPER_ADV_LABELS = { rooms: "Szobák", pricing: "Árak és időszakok", booking: "Online foglalás" } as const;
+const PRICING_MENU = MODULE_CATALOG.find((m) => m.id === "pricing")?.publicLabel ?? "Árak";
+const PRICING_WHERE = `Haladó beállítások › ${HELPER_ADV_LABELS.pricing} (a bal oldali menüben ugyanez: „${PRICING_MENU}”)`; // i18n-exempt: model prompt
 
 export const HELPER_MODEL = "claude-haiku-5-5";
 export const HELPER_FEATURE = "booking-setup-helper";
@@ -101,14 +114,14 @@ export function helperSystemPrompt(lang: string): string {
     "- Férőhely: a honlapon jelenik meg. Őszintén: ma a rendszer NEM szűri ki, ha valaki több főre kér — a kérést a szállásadó látja és dönti el.", // i18n-exempt: model prompt
     "- Az ár mire szól: éjszakánként (akárhányan vannak), fejenként éjszakánként (a vendégszámmal szorozzuk), vagy egy összeg a teljes tartózkodásra (ekkor az érkezés napjának ára számít). Pénznem: forint vagy euró.", // i18n-exempt: model prompt
     "- Alapár: minden olyan éjszakára érvényes, amire nincs külön időszak. Szobánként lehet „Nem adok meg árat” is: ilyenkor a vendég végösszeg nélkül küld kérést, a szállásadó a levélből válaszol egy ajánlattal.", // i18n-exempt: model prompt
-    "- Időszak: ismétlődő dátum-sáv saját árral (pl. Főszezon, jún. 15. – aug. 31.), évet nem kell megadni, minden évben ugyanakkor érvényes, átnyúlhat az újévre (dec. 20. – jan. 5.). Adható neki „legalább N éjszaka” (1–60). Ha két időszak fedi egymást, a listán feljebb lévő érvényes. Évhez kötött árat és az időszakok sorrendjét a Haladó beállítások › Árak képernyőn lehet megadni.", // i18n-exempt: model prompt
+    `- Időszak: ismétlődő dátum-sáv saját árral (pl. Főszezon, jún. 15. – aug. 31.), évet nem kell megadni, minden évben ugyanakkor érvényes, átnyúlhat az újévre (dec. 20. – jan. 5.). Adható neki „legalább N éjszaka” (1–60). Ha két időszak fedi egymást, a listán feljebb lévő érvényes. Évhez kötött árat és az időszakok sorrendjét a ${PRICING_WHERE} képernyőn lehet megadni.`, // i18n-exempt: model prompt
     "- „Csak a felsorolt időszakokban adom ki”: az időszakokon kívüli napokra nem lehet foglalni. Ha egy szobának nincs időszaka, de ez be van kapcsolva, egyetlen napra sem lehet foglalni — ezt az oldal akadályként jelzi.", // i18n-exempt: model prompt
     "- Ha egy éjszakának nincs ára (sem alapár, sem időszak), a vendég ajánlatot kér végösszeg nélkül.", // i18n-exempt: model prompt
     "- Legrövidebb foglalás 1–30 éj, leghosszabb 1–365 éj; a legrövidebb nem lehet hosszabb a leghosszabbnál. Ha egy időszaknak saját „legalább” értéke van, ott az érvényes. Ha egy időszak minimuma nagyobb a leghosszabb foglalásnál, arra az időszakra senki nem tud foglalni.", // i18n-exempt: model prompt
     "- Meddig előre lehet foglalni: 1–24 hónap. Legkorábbi érkezés: 0–60 nap múlva (0 = akár mára is).", // i18n-exempt: model prompt
-    "- Idegenforgalmi adó: a vendég a helyszínen fizeti, a végösszegbe nem számoljuk, külön soron látja. Három válasz van: megadja az összeget (Ft / fő / éj), „nincs” (akkor a honlap nem is említi), vagy „még nem tudom” (akkor csak annyit írunk, hogy a helyszínen fizetendő, számot nem).", // i18n-exempt: model prompt
-    "- Mi van benne az árban: egy rövid sor a végösszeg alatt (pl. takarítás, ágynemű). Ezt ezen az oldalon és az Árak képernyő „Ellátás” részében is megadhatja — ugyanaz a mező.", // i18n-exempt: model prompt
-    "- Ellátás és felárak (ADR-0378): mit tartalmaz az alapár (szállás / reggeli / félpanzió / teljes panzió), mi kérhető felárral (fő / éj vagy szoba / éj), és ellátásonként gyerekár korhatárral (0 = ingyenes). Ez NEM ezen az oldalon van: Haladó beállítások › Árak és időszakok, „Ellátás” rész. A vendég a foglalásnál választ, a felár külön sorként a kérésre kerül.", // i18n-exempt: model prompt
+    "- Idegenforgalmi adó: a vendég a helyszínen fizeti, a végösszegbe nem számoljuk, külön soron látja. A 18 év alatti vendég mentes (Htv. 31. § a)): a vendég által gyermekként megadott vendégekre nem számoljuk. Három válasz van: megadja az összeget (Ft / fő / éj), „nincs” (akkor a honlap nem is említi), vagy „még nem tudom” (akkor csak annyit írunk, hogy a helyszínen fizetendő, számot nem).", // i18n-exempt: model prompt
+    `- Mi van benne az árban: egy rövid sor a végösszeg alatt (pl. takarítás, ágynemű). Ezt ezen az oldalon és a ${PRICING_WHERE} képernyő „Ellátás” részében is megadhatja — ugyanaz a mező.`, // i18n-exempt: model prompt
+    `- Ellátás és felárak (ADR-0378): mit tartalmaz az alapár (szállás / reggeli / félpanzió / teljes panzió), mi kérhető felárral (fő / éj vagy szoba / éj), és ellátásonként gyerekár korhatárral (0 = ingyenes). Ez NEM ezen az oldalon van: ${PRICING_WHERE}, „Ellátás” rész. A vendég a foglalásnál választ, a felár külön sorként a kérésre kerül. A szállásadó MENTETT ellátás-beállítása a <beallitasok> „Ellátás” sorában áll — ha ott felár szerepel, NE mondja, hogy nincs megadva; számoljon vele, ha a vendég-példához kell.`, // i18n-exempt: model prompt
     "- Értesítés: minden foglalási kérésről e-mail megy (több cím is lehet, vesszővel; üresen a fiók címére), a szállásadó a levélből fogadja el vagy utasítja el. Ha a beállított órán belül nem dönt (0–336 óra, 0 = soha), a kérés magától lejár, és a vendég értesítést kap.", // i18n-exempt: model prompt
     "- A foglalás KÉRÉS, nem azonnali foglalás: a szállásadó dönt róla.", // i18n-exempt: model prompt
     "- Más oldalak (Booking, Airbnb, Szállás.hu) naptárának összekötése, és a naptárban a napok kézi lezárása: Haladó beállítások › Online foglalás képernyő.", // i18n-exempt: model prompt
@@ -124,7 +137,24 @@ export function helperSystemPrompt(lang: string): string {
  * (loadBookingSetup), never from what the browser sends, so an answer like "most 2 éj" is
  * true of what is saved.
  */
-export function helperFacts(s: SetupState): string {
+/** Elek 10-13 T-1: the saved meal setting as the helper reads it (null = never set). */
+export function helperMealsFact(m: MealsSetting | null, currency: string): string {
+  if (!m) return "Ellátás: nincs beállítva (az ár csak a szállásé)"; // i18n-exempt: model prompt
+  const name: Record<MealPlanId, string> = { none: "csak szállás", bb: "reggeli", hb: "félpanzió", fb: "teljes panzió" }; // i18n-exempt: model prompt
+  const extra = offeredPlans(m)
+    .filter((id) => id !== m.base)
+    .map((id) => {
+      const p = m.plans[id];
+      const kid = p.per === "person" && p.child !== null && m.childAge
+        ? `, gyermek ${p.child ? `${p.child} ${currency}` : "ingyenes"} (${m.childAge} éves korig)` // i18n-exempt: model prompt
+        : "";
+      return `${name[id]} +${p.price} ${currency} / ${p.per === "room" ? "szoba" : "fő"} / éj${kid}`; // i18n-exempt: model prompt
+    });
+  return `Ellátás (mentve): az alapár tartalmazza: ${name[m.base]}; felárral kérhető: ${extra.join("; ") || "semmi"}` + // i18n-exempt: model prompt
+    (m.off.length ? `; ${m.off.length} szobánál nem kérhető ellátás` : ""); // i18n-exempt: model prompt
+}
+
+export function helperFacts(s: SetupState, mealsFact = ""): string {
   const mode = { single: "egyben", rooms: "szobánként", both: "szobánként és egyben is" }[s.mode]; // i18n-exempt: model prompt
   const unitTxt = { per_night: "éjszakánként", per_person_night: "fejenként éjszakánként", per_stay: "a teljes tartózkodásra" }[s.priceUnit] ?? s.priceUnit; // i18n-exempt: model prompt
   const lines = [
@@ -148,6 +178,7 @@ export function helperFacts(s: SetupState): string {
     `Értesítési cím: ${s.notify || `(üres — a fiók címe: ${s.accountEmail})`}; lejárat: ${s.expiry ? `${s.expiry} óra` : "soha"}`, // i18n-exempt: model prompt
     `Akadályok most: ${s.blockers.map((b) => b.t).join(" | ") || "nincs"}`, // i18n-exempt: model prompt
   );
+  if (mealsFact) lines.push(mealsFact);
   return lines.join("\n");
 }
 

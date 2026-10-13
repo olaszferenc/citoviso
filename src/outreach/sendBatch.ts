@@ -31,6 +31,7 @@ import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
+import { alreadyCustomerBlocks } from "./customerGate.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -319,6 +320,9 @@ export async function sendOutreachMail(
   if (p.unsubscribedAt) {
     return { ...base, outcome: { kind: "skipped", reason: "leiratkozott — küldés tilos" } };
   }
+  // Elek 10-13 O-1: a trialing or paying lead gets no cold letter — on the server, not only on the screen.
+  const customer = await alreadyCustomerBlocks(p.leadId);
+  if (customer) return { ...base, outcome: { kind: "skipped", reason: customer } };
   // Re-send guard keys on WHETHER THE MAIL WAS SENT (email_sent_at), not the view-status: an
   // operator can legitimately send the initial outreach even if the prospect already
   // 'opened'/'engaged' by viewing the /p link (e.g. the operator tested it) — as long as no

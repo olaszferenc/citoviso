@@ -52,6 +52,7 @@ import { sharedContactBlocks } from "./sharedContactGate.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { isLiveHost } from "../invoicing/keyGuard.js";
 import { copyOutreachSms } from "./pilotCopy.js";
+import { alreadyCustomerBlocks } from "./customerGate.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -207,6 +208,9 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
 
   if (!p) return no("nincs ilyen prospect");
   if (p.unsubscribedAt) return no("a címzett leiratkozott — küldés tilos");
+  // Elek 10-13 O-1: a trialing or paying lead gets no cold message on any channel.
+  const customer = await alreadyCustomerBlocks(p.leadId);
+  if (customer) return no(customer);
 
   // CURATOR SIGN-OFF gate — the message carries the tracked mock link (or its very
   // image), so an un-reviewed mock must not be pushed onto a phone.

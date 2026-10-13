@@ -192,6 +192,10 @@ function strings(lang: string): Record<string, string> {
     trialOk: T(lang, "Elküldhető."),
     trialSees: T(lang, "A vendég ezt látja:"),
     stayCost: T(lang, "Szállás:"),
+    grandTotal: T(lang, "Összesen:"),
+    trialMeal: T(lang, "Ellátás"),
+    trialKids: T(lang, "Ebből gyermek ({n} éves korig)"),
+    notTried: T(lang, "Még nem próbálta ki"),
     trialMail: T(lang, "A kérésről e-mailt kap ({email}), és a levélből elfogadja vagy elutasítja."),
     nBlockers: T(lang, "{n} akadály"),
     nMissing: T(lang, "{n} kérdés hiányzik"),
@@ -339,6 +343,14 @@ export function bookingSetupPage(o: {
   readonly links: SetupLinks;
   readonly backUrl: string;
   readonly today: string;
+  /** Elek 10-13 T-4: the meal plans + child count the guest's form offers (null = none). */
+  readonly trialMeals?: {
+    readonly plans: readonly { id: string; name: string }[];
+    readonly base: string;
+    readonly askKids: boolean;
+    readonly childAge: number | null;
+    readonly off: readonly string[];
+  } | null;
 }): string {
   const { lang } = o;
   const data = {
@@ -348,6 +360,7 @@ export function bookingSetupPage(o: {
     adv: o.links,
     chips: chips(lang),
     today: o.today,
+    meals: o.trialMeals ?? null,
     doneUrl: o.backUrl,
     maxQuestion: HELPER_MAX_QUESTION,
   };

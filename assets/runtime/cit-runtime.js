@@ -371,6 +371,9 @@
       var p = mealPlan(chosenMeal());
       var d = form.querySelector("[data-cit-mdesc]");
       d.textContent = here ? (choice ? (p && p.desc) || "" : (p ? p.name + " — " + p.priceText + (p.desc ? ". " + p.desc : "") : "")) : "";
+      /* Elek 10-13 T-6: the chosen plan's child price, under the picker — a closed <select>
+       * cuts a longer option text, and the page's "Ellátás" section is far from the form. */
+      if (here && p && p.childText) d.textContent += (d.textContent ? " · " : "") + p.childText;
       d.hidden = !d.textContent;
       form.querySelector("[data-cit-mnone]").hidden = here;
       var ask = asksKids();
@@ -378,7 +381,7 @@
       if (kids > guests - 1) kids = Math.max(0, guests - 1);
       if (!ask) kids = 0;
       form.querySelector("[data-kids]").textContent = String(kids);
-      form.querySelector("[data-cit-kidage]").textContent = meals.childAge ? tr("({n} év alatt)").replace("{n}", meals.childAge) : "";
+      form.querySelector("[data-cit-kidage]").textContent = meals.childAge ? tr("({n} éves korig)").replace("{n}", meals.childAge) : "";
     }
     form.querySelectorAll("[data-kstep]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -455,6 +458,18 @@
      * approved plan m1-elek-javitasok ④: the panel said it, the receipt dropped it).
      * Declared 0 → nothing (an IFA-free place is not told it levies one); not declared →
      * the fact without a number (§B.17); an amount → itemised. */
+    /* Elek 10-13 T-3: a guest under 18 pays no tourist tax (Htv. 31. § a)). The children the
+     * guest counted with the stepper are left out of the sum; the sentence says the rule and
+     * what the sum did with it — it never claims more than the figure (a 15-year-old counted
+     * as an adult is still IN the sum, so the sentence says that one is exempt too). */
+    function taxPayers(g, k) { return Math.max(1, g - Math.max(0, Math.min(k || 0, g - 1))); }
+    function minorsHtml() {
+      var age = meals && meals.childAge && asksKids() ? Number(meals.childAge) : 0;
+      if (!age) return tr("A 18 év alatti vendég mentes az adó alól; a fenti összeg minden vendéggel számol.");
+      if (age >= 17) return tr("A 18 év alatti vendég mentes az adó alól: a gyermekként megadott vendégeket nem számoltuk bele.");
+      return tr("A 18 év alatti vendég mentes az adó alól: a gyermekként megadott vendégeket nem számoltuk bele, és a {from}–17 évesek után sem kell megfizetni.")
+        .replace("{from}", String(age + 1));
+    }
     function onSiteHtml(declared, per, g, n, cur) {
       if (declared && !per) return "";
       if (!per) {
@@ -469,7 +484,8 @@
           .replace("{g}", esc(String(g)))
           .replace("{n}", esc(String(n)))
           .replace("{sum}", moneyHtml(per * g * n, cur)) +
-        "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") + "</div>";
+        "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") +
+        "<br>" + esc(minorsHtml()) + "</div>";
     }
     function renderQuote(a, b, n) {
       var el = form.querySelector("[data-quote]");
@@ -561,7 +577,7 @@
         ? '<div class="cit-book__later">' +
           tr("Az éles oldalon itt jelenik meg, ami a helyszínen fizetendő (pl. idegenforgalmi adó) — az összeget Ön adja meg.") +
           "</div>"
-        : onSiteHtml(ifaDeclared, ifaPerPersonNight, guests, n, cur);
+        : onSiteHtml(ifaDeclared, ifaPerPersonNight, taxPayers(guests, asksKids() ? kids : 0), n, cur);
       /* DEMO (§B.17): the sample figure is named as such where the number is read — the
        * heading, the total line (which the phone's step-2 summary bar mirrors verbatim) and
        * one sentence about what stands here on the live page. Not a footnote. */
@@ -612,7 +628,7 @@
       var total = s.total
         ? rows + '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + moneyHtml(s.total, cur) + "</b></span>" +
           // Elek V-3: the on-site tax the panel showed, frozen by the server with the request.
-          onSiteHtml(s.touristTaxPerPersonNight !== undefined, s.touristTaxPerPersonNight || 0, s.guests, s.nights, cur)
+          onSiteHtml(s.touristTaxPerPersonNight !== undefined, s.touristTaxPerPersonNight || 0, taxPayers(s.guests, s.children || 0), s.nights, cur)
         : "";
       // The deadline is the module's real setting, not a hard-coded 48.
       var when = s.expireHours

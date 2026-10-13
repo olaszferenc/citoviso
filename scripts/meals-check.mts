@@ -145,7 +145,7 @@ function siteData(m: MealsSetting): SiteData {
       includes: "Ágynemű, törülköző",
       currency: "HUF",
     },
-    booking: { units: UNITS, minNights: 1, maxNights: 14, horizonMonths: 12, leadTimeDays: 0, responseNote: "" },
+    booking: { units: UNITS, minNights: 1, maxNights: 14, horizonMonths: 12, leadTimeDays: 0, responseNote: "", touristTaxPerPersonNight: 400 },
   } as unknown as SiteData;
 }
 
@@ -297,6 +297,23 @@ try {
     const box = await totalOf(phone);
     check(`⑤ ${st.name}: a sáv ${bar} Ft, az ár-doboz ${box} Ft, a szerver ${server} Ft`, bar === server && box === server);
   }
+  /* ⑥ Elek 10-13 T-2 · T-3 · T-6 on the same phone page: the age limit reads like the owner's
+   * rule, the counted child pays no tourist tax (Htv. 31. § a)), the plan list names the child price. */
+  console.log("\n⑥ Gyerek-korhatár, IFA-mentesség, gyerekár a listában (T-2 · T-3 · T-6):");
+  const kidAge = ((await phone.locator("[data-cit-kidage]").textContent()) ?? "").trim();
+  check(`⑥ T-2 a felirat az admin szabálya: „(12 éves korig)” („${kidAge}”)`, kidAge === "(12 éves korig)");
+  await phone.selectOption("#cit-meal", "bb");
+  const descBb = ((await phone.locator("[data-cit-mdesc]").textContent()) ?? "").trim();
+  await phone.selectOption("#cit-meal", "hb");
+  const descHb = ((await phone.locator("[data-cit-mdesc]").textContent()) ?? "").trim();
+  check("⑥ T-6 a választó alatt a választott ellátás gyerekára, az oldal szavaival",
+    /Gyermeknek \(12 éves korig\): 2 000 Ft \/ fő \/ éj$/.test(descBb) && /Gyermeknek \(12 éves korig\): ingyenes$/.test(descHb), [descBb, descHb]);
+  await phone.click('[data-step="1"]'); // 3 guests
+  await phone.click('[data-kstep="1"]'); // 1 child
+  await phone.waitForTimeout(80);
+  const tax = await phone.locator(".cit-book__sumtax").innerText();
+  check("⑥ T-3 a gyermek IFA-mentes: 400 × 2 fő × 3 éj = 2 400 Ft (nem 3 600)", /× 2 fő × 3 éj = 2 400 Ft/.test(tax), tax);
+  check("⑥ T-3 a mondat kimondja a szabályt és a 13–17 éveseket", /18 év alatti vendég mentes/.test(tax) && /13–17 évesek/.test(tax), tax);
   check("⑤ JS-hiba 0", perrs.length === 0, perrs.join(" | "));
   await phone.close();
 } finally {

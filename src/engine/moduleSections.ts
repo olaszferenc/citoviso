@@ -347,6 +347,16 @@ function mealsAttr(d: SiteData): string {
       per: p.per,
       ...(p.price !== undefined ? { price: p.price } : {}),
       ...(p.child !== undefined ? { child: p.child } : {}),
+      // Elek 10-13 T-6: the child price under the booking form's plan picker — the same words
+      // the "Ellátás" section uses, so the two never disagree.
+      ...(p.id !== m.base && p.child !== undefined && m.childAge
+        ? {
+            childText: T(d, "Gyermeknek ({age} éves korig): {price}", {
+              age: m.childAge,
+              price: p.child ? `${money(p.child, m.currency, d.lang)} / ${T(d, "fő / éj")}` : T(d, "ingyenes"),
+            }),
+          }
+        : {}),
       ...(p.desc ? { desc: p.desc } : {}),
     })),
     ...(m.childAge ? { childAge: m.childAge } : {}),

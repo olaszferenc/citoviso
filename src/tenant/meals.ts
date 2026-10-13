@@ -48,7 +48,7 @@ export interface MealPlanSetting {
 
 export interface MealsSetting {
   readonly base: MealPlanId;
-  /** Children are under this age; null = no child prices. */
+  /** Children are up to this age ("N éves korig", the owner's wording); null = no child prices. */
   readonly childAge: number | null;
   readonly plans: Readonly<Record<MealPlanId, MealPlanSetting>>;
   /** Units the owner took meals off (site_unit ids). */
@@ -243,4 +243,34 @@ export function parseMealsForm(f: MealsFormInput): { setting?: MealsSetting; err
   if (Object.keys(errors).length) return { errors };
   const on = new Set(f.unitsOn);
   return { setting: { base, childAge, plans, off: f.allUnits.filter((u) => !on.has(u)) }, errors };
+}
+
+/* ------------------------------------------------------------------ *
+ * Tourist tax and minors (Elek 10-13 T-3)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Who pays the tourist tax: a guest under 18 is exempt (Htv. 31. § a)). The children the
+ * guest counted (all of them under the owner's child age, which is at most 17) are left out;
+ * at least one guest — the adult who books — always pays. The browser twin is `taxPayers`
+ * in assets/runtime/cit-runtime.js.
+ */
+export function taxPayers(guests: number, children: number | null | undefined): number {
+  const g = Math.max(1, Math.round(guests || 1));
+  const k = Math.max(0, Math.min(Math.round(children ?? 0), g - 1));
+  return g - k;
+}
+
+/**
+ * The one sentence under the tax line: the rule, and what the sum did with it — never more
+ * than the figure does (a 15-year-old counted as an adult is IN the sum, so the sentence says
+ * that age is exempt too). `childAge` null = the guest was not asked about children.
+ * The browser twin is `minorsHtml` in assets/runtime/cit-runtime.js.
+ */
+export function minorsTaxNote(lang: string, childAge: number | null): string {
+  if (!childAge) return T(lang, "A 18 év alatti vendég mentes az adó alól; a fenti összeg minden vendéggel számol.");
+  if (childAge >= 17) return T(lang, "A 18 év alatti vendég mentes az adó alól: a gyermekként megadott vendégeket nem számoltuk bele.");
+  return T(lang, "A 18 év alatti vendég mentes az adó alól: a gyermekként megadott vendégeket nem számoltuk bele, és a {from}–17 évesek után sem kell megfizetni.", {
+    from: childAge + 1,
+  });
 }

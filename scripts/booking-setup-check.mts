@@ -41,7 +41,11 @@ const { config } = await import("../src/config.js");
 const { setTenantModules } = await import("../src/tenant/modules.js");
 const { rerenderTenantSnapshot } = await import("../src/tenant/editor.js");
 const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
-const { parseHelperOutput, helperSystemPrompt } = await import("../src/ai/bookingHelper.js");
+const { parseHelperOutput, helperSystemPrompt, helperMealsFact, HELPER_ADV_LABELS } = await import("../src/ai/bookingHelper.js");
+const { readMeals } = await import("../src/tenant/meals.js");
+const { MODULE_CATALOG } = await import("../src/modules.js");
+const { sql } = await import("kysely");
+const { readFile } = await import("node:fs/promises");
 
 const ids: Record<string, string> = {};
 let server: Server | null = null;
@@ -76,6 +80,16 @@ try {
   check("prompt: csak a foglalásról, más témára udvarias nem", sp.includes("csak a foglalás beállításában segítek"));
   check("prompt: kimondja, ami NINCS (előleg, lemondás, pótágy, férőhely-szűrés)", /előleg/.test(sp) && /lemondási feltétel/.test(sp) && /pótágy-díj/.test(sp) && /NEM szűri ki/.test(sp));
   check("prompt: az ellátás és a gyerekár (ADR-0378) az Árak „Ellátás” részére mutat, nem tagadja", /Ellátás és felárak/.test(sp) && /gyerekár korhatárral/.test(sp));
+  // Elek 10-13 T-1: every screen name the prompt quotes exists in the code that draws it.
+  const viewsSrc = await readFile(path.join(ROOT, "src/server/bookingSetupViews.ts"), "utf8");
+  for (const lbl of Object.values(HELPER_ADV_LABELS)) {
+    check(`prompt-felirat a kódból: „Haladó beállítások › ${lbl}” = a menü T(lang, "${lbl}") eleme`, viewsSrc.includes(`T(lang, "${lbl}")<small>`) || viewsSrc.includes(`T(lang, "${lbl}")}<small>`), lbl);
+  }
+  const pricingMenu = MODULE_CATALOG.find((m) => m.id === "pricing")!.publicLabel;
+  check(`prompt: a bal menü neve a modul-katalógusból („${pricingMenu}”)`, sp.includes(`„${pricingMenu}”`));
+  check("prompt: kitalált „Árak képernyő” név nincs", !/Haladó beállítások › Árak képernyő/.test(sp));
+  const mf = helperMealsFact(readMeals({ base: "none", childAge: 12, off: [], plans: { bb: { on: true, price: 3000, per: "person", child: 1500 }, hb: { on: true, price: 7000, per: "person", child: 3500 } } }), "HUF");
+  check("T-1 a Segítő tényei közt a mentett ellátás + gyerekár", /reggeli \+3000 HUF \/ fő \/ éj, gyermek 1500 HUF \(12 éves korig\)/.test(mf) && /félpanzió \+7000/.test(mf), mf);
 
   // ── fixture: a fresh site — one default unit, booking + pricing ──────────────
   const stamp = Date.now().toString(36);
@@ -209,6 +223,17 @@ try {
   check("IFA 500 + „mi van az árban” elmentve", r.ok && (await cfg(A.siteId, "booking")).touristTaxPerPersonNight === 500 && (await cfg(A.siteId, "booking")).priceIncludes === "Az ár tartalmazza a reggelit.");
   t = await api("/admin/booking-setup/trial", { unitId: apt.id, dateFrom: oct, nights: 2, guests: 2 });
   check("próba: IFA külön soron (500 × 2 fő × 2 éj = 2 000 Ft)", String(t.taxText ?? "").replace(/\s/g, "").includes("2000"), t.taxText);
+  // Elek 10-13 T-4 + T-3: the trial takes the meal and the children like the guest path does —
+  // reggeli 3 000 / gyermek 1 500 (12 éves korig), 3 fő ebből 1 gyermek, 2 éj; the child pays no IFA.
+  await sql`update site_module_config set config = config || ${JSON.stringify({
+    meals: { base: "none", childAge: 12, off: [], plans: { none: { on: false }, bb: { on: true, price: 3000, per: "person", child: 1500, desc: "" }, hb: { on: false }, fb: { on: false } } },
+  })}::jsonb where site_id = ${A.siteId} and module = 'pricing'`.execute(db);
+  t = await api("/admin/booking-setup/trial", { unitId: apt.id, dateFrom: oct, nights: 2, guests: 3, meal: "bb", children: 1 });
+  const mq = t.quote as { totalText: string; mealLines?: string[]; grandText?: string | null } | null;
+  check("T-4 próba ellátással: szállás 38 000 + reggeli 2×(2×3 000 + 1 500) = 53 000 Ft, tételesen",
+    !!mq && mq.totalText.replace(/\s/g, "").includes("38000") && (mq.mealLines ?? []).length === 2 && (mq.grandText ?? "").replace(/\s/g, "") === "53000Ft", t);
+  check("T-3 a gyermek IFA-mentes: 500 × 2 fizető fő × 2 éj = 2 000 Ft (nem 3 000), és a mondat kimondja",
+    String(t.taxText ?? "").replace(/\s/g, "").includes("2000Ft") && /18 év alatti vendég mentes/.test(String(t.taxText)) && /13–17 évesek/.test(String(t.taxText)), t.taxText);
   r = await api("/admin/booking-setup/save", { section: "guest", taxState: "none", tax: "", includes: "" });
   check("„nincs IFA” → 0 (kimondott nem)", r.ok && (await cfg(A.siteId, "booking")).touristTaxPerPersonNight === 0 && r.state.taxState === "none");
   r = await api("/admin/booking-setup/save", { section: "guest", taxState: "unknown", tax: "", includes: "" });
@@ -233,6 +258,26 @@ try {
   t = await api("/admin/booking-setup/trial", { unitId: bUnit.id, dateFrom: oct, nights: 2, guests: 2 });
   check("más site szobájára próba-foglalás → semmi", (t.errors as string[]).length === 0 && !("quote" in t));
 
+  // ── Elek 10-13 T-5: with ONE unit the Szobák screen shows the unit row; its save comes back
+  //    to Szobák, not to Online foglalás ─────────────────────────────────────────
+  console.log("\n⑤b Szobák lap, egy szobával — a mentés a Szobákra tér vissza (T-5)");
+  await setTenantModules(B.tenantId, ["booking", "pricing", "gallery", "rooms"]);
+  const COOKIE_B = `cit_session=${mintTenantCookieValue(B.tuId)}`;
+  const roomsHtml = await (await fetch(BASE + "/admin?tab=modulok&m=rooms", { headers: { cookie: COOKIE_B } })).text();
+  const rowForms = roomsHtml.match(/<form method="POST" action="\/admin\/units\/save" class="unit-row">[\s\S]*?<\/form>/g) ?? [];
+  check("a Szobák lapon van szoba-sor űrlap, és mind back=rooms-szal ment", rowForms.length >= 1 && rowForms.every((f) => f.includes('name="back" value="rooms"')), rowForms.length);
+  const saveB = await fetch(BASE + "/admin/units/save", {
+    method: "POST", redirect: "manual",
+    headers: { cookie: COOKIE_B, "Content-Type": "application/x-www-form-urlencoded" },
+    // the unit's own values — ⑦ opens B's page as a first visit and must find it unchanged
+    body: await (async () => {
+      const cur = await db.selectFrom("site_unit").select(["name", "capacity", "description"]).where("id", "=", bUnit.id).executeTakeFirstOrThrow();
+      return new URLSearchParams({ id: bUnit.id, name: cur.name, capacity: cur.capacity === null ? "" : String(cur.capacity), back: "rooms" }).toString();
+    })(),
+  });
+  check("mentés után a Szobák lap jön (m=rooms&saved=1)", saveB.status === 302 && /m=rooms&saved=1/.test(saveB.headers.get("location") ?? ""), saveB.headers.get("location"));
+  await setTenantModules(B.tenantId, ["booking", "pricing", "gallery"]);
+
   // ── ⑥ helper endpoint without a key ────────────────────────────────────────
   console.log("\n⑥ Segítő végpont (kulcs nélkül)");
   check("a gate kulcs nélkül fut (nem költ)", config.anthropicApiKey === "");
@@ -255,6 +300,9 @@ try {
       await p.waitForSelector(".bs-sec");
       check(`${name}: 6 szakasz, állapot-címkével`, (await p.locator(".bs-sec").count()) === 6 && (await p.locator(".bs-pill").count()) === 6);
       check(`${name}: első látogatás — az első hiányos szakasz nyitva`, (await p.locator(".bs-sec.is-open").count()) === 1);
+      // Elek 10-13 T-4: the try-out part is not "Kész" before a trial booking ran.
+      const checkPill = (await p.locator('.bs-sec[data-s="check"] .bs-pill').innerText()).trim();
+      check(`${name}: a „Kipróbálás” rész kipróbálás előtt nem „Kész” („${checkPill}”)`, checkPill === "Még nem próbálta ki");
       await p.screenshot({ path: path.join(shotDir, `${name}-1-new.png`), fullPage: false });
       if (name === "mobile") {
         check("mobil: az alsó „Kérdezzen a Segítőtől” sáv látszik, a Segítő nem", await p.locator("[data-ask]").isVisible() && !(await p.locator(".bs-chat").isVisible()));

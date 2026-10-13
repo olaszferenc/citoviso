@@ -31,6 +31,7 @@ const { config } = await import("../src/config.js");
 const { bookingSlot } = await import("../src/engine/templateKit.js");
 const { moduleSections } = await import("../src/engine/moduleSections.js");
 const { db, pool } = await import("../src/db/client.js");
+const { sql } = await import("kysely");
 const { setTenantModules } = await import("../src/tenant/modules.js");
 const { setBasePrice } = await import("../src/tenant/prices.js");
 const { createUnit } = await import("../src/tenant/units.js");
@@ -247,6 +248,35 @@ try {
     check(`visszaigazoló levél megjött (${label})`, Boolean(conf), mails.map((m) => m.subject));
     check(`⭐ visszaigazoló levél, IFA ${label}${stored === 500 ? " — a beküldéskori összeg, nem a később átírt" : ""}`,
       Boolean(conf && mailWant(conf.body) && !(stored === 500 && /900 Ft/.test(conf.body))));
+  }
+  /* Elek 10-13 T-3 · T-7: 3 guests, 1 of them a child (reggeli, gyerekár 12 éves korig). The child
+   * pays no tourist tax (Htv. 31. § a)) — 500 × 2 × 3 = 3 000 Ft, not 4 500 —, both guest letters
+   * say the rule, and the guest's AND the owner's letter say how many of the 3 are children. */
+  await setSiteModuleConfig(site.id, "booking", { notifyEmail: `owner-${stamp}@example.com`, touristTaxPerPersonNight: 500 }, "test");
+  await sql`insert into site_module_config (site_id, module, version, config) values (${site.id}, 'pricing', 1, ${JSON.stringify({
+    meals: { base: "none", childAge: 12, off: [], plans: { none: { on: false }, bb: { on: true, price: 3000, per: "person", child: 1500, desc: "" }, hb: { on: false }, fb: { on: false } } },
+  })}::jsonb) on conflict (site_id, module) do update set config = site_module_config.config || excluded.config`.execute(db);
+  {
+    const guest = `kids-${stamp}@example.com`;
+    const res = await createBookingRequest(
+      { siteId: site.id, unitId: unit, guestName: "Teszt Vendég", guestEmail: guest, guestPhone: "+36301112222", dateFrom: iso(offset), dateTo: iso(offset + 3), guests: 3, mealPlan: "bb", children: 1 },
+      null,
+    );
+    check("T-3 a kérés létrejött (3 fő, ebből 1 gyermek, reggeli)", res.ok && res.summary?.children === 1, res);
+    const row = await db.selectFrom("booking_request").select(["action_token", "children"]).where("id", "=", res.id!).executeTakeFirstOrThrow();
+    await decideRequest(row.action_token, "accepted", null);
+    const mails = await mailsTo(guest);
+    const ack = mails.find((m) => /rögzítettük/.test(m.subject));
+    const conf = mails.find((m) => /Visszaigazolt foglalás/.test(m.subject));
+    for (const [what, m] of [["„rögzítettük”", ack], ["visszaigazoló", conf]] as const) {
+      const b = (m?.body ?? "").replace(/=\r?\n/g, "");
+      check(`⭐ T-3 ${what} levél: IFA a gyermek nélkül (× 2 fő × 3 éj = 3 000 Ft), a szabály kimondva`,
+        /idegenforgalmi adó \(500 Ft \/ fő \/ éj × 2 fő × 3 éj\)/.test(b) && !/× 3 fő × 3 éj\)/.test(b) && /3 000 Ft/.test(b) && /18 év alatti vendég mentes/.test(b),
+        b.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 600));
+      check(`⭐ T-7 ${what} levél: „3 fő, ebből 1 gyermek”`, /3 fő, ebből 1 gyermek/.test(b));
+    }
+    const owner = (await mailsTo(`owner-${stamp}@example.com`)).find((m) => /Foglalási kérés/.test(m.subject) && m.body.includes("ebből"));
+    check("⭐ T-7 a tulaj-levél is mondja: „3 fő, ebből 1 gyermek”", Boolean(owner) && /3 fő, ebből 1 gyermek/.test((owner?.body ?? "").replace(/=\r?\n/g, "")));
   }
 } finally {
   if (ids.siteId) {

@@ -2551,6 +2551,9 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
       (u) =>
         `<form method="POST" action="/admin/units/save" class="unit-row">` +
         `<input type="hidden" name="id" value="${esc(u.id)}">` +
+        // Elek 10-13 T-5: the save comes back to the screen the row is on — with ONE unit the
+        // Szobák screen shows this card too, and a missing `back` sent the owner to booking.
+        `<input type="hidden" name="back" value="${nu?.back ?? "booking"}">` +
         `<input class="citui-input unit-row__name" name="name" value="${esc(u.name)}" aria-label="${T(lang, "Szoba neve")}">` +
         `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
         `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +

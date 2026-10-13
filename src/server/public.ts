@@ -88,7 +88,7 @@ import {
   loginPage,
 } from "./adminViews.js";
 import { calendarFocus, pendingInOrder } from "./bookingViews.js";
-import { HELPER_MAX_QUESTION, askBookingHelper, helperFacts } from "../ai/bookingHelper.js";
+import { HELPER_MAX_QUESTION, askBookingHelper, helperFacts, helperMealsFact } from "../ai/bookingHelper.js";
 import { loadBookingSetup, saveBookingSetupSection, seasonOp } from "../tenant/bookingSetup.js";
 import { bookingSetupPage, bookingSetupQuestions } from "./bookingSetupViews.js";
 import { siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
@@ -242,7 +242,7 @@ import {
   unitByFeedToken,
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
-import { MEAL_PLAN_IDS, parseMealsForm, readMeals } from "../tenant/meals.js";
+import { asksChildren, chosenPlan, MEAL_PLAN_IDS, mealLines, mealPlanLabel, minorsTaxNote, offeredPlans, parseMealsForm, readMeals, taxPayers } from "../tenant/meals.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { distanceKm } from "../events/gates.js";
@@ -945,16 +945,43 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
     );
   }
   if (errors.length) return { errors, notes };
-  const { quote } = await stayQuote(siteId, unitId, dateFrom, dateTo, guests, lang);
+  const { pricingLive, pricing, quote } = await stayQuote(siteId, unitId, dateFrom, dateTo, guests, lang);
   if (!quote) return { errors: [], notes, quote: null };
+  // Elek 10-13 T-4: the meal and the children, computed the way createBookingRequest does
+  // (chosenPlan / asksChildren / mealLines) — the owner can try the surcharge, not only the stay.
+  const meals = pricingLive ? readMeals(pricing.meals) : null;
+  const plan = chosenPlan(meals, unitId, body.meal);
+  const children = plan && asksChildren(meals)
+    ? Math.min(guests - 1, Math.max(0, Math.round(Number(body.children) || 0)))
+    : null;
+  const mLines = mealLines(meals, { unitId, plan, nights: n, guests, children: children ?? 0, lang });
+  const mealSum = mLines.reduce((t, l) => t + l.sum, 0);
   const tax = await siteTouristTax(siteId);
+  // Elek 10-13 T-3: the counted children pay no tourist tax.
+  const payers = taxPayers(guests, children);
   const taxText =
     tax === null
       ? T(lang, "Idegenforgalmi adó: a helyszínen fizetendő, összeg nélkül.")
       : tax > 0
-        ? T(lang, "Idegenforgalmi adó (a helyszínen): {amount}", { amount: formatAmount(tax * guests * n, quote.currency) })
+        ? T(lang, "Idegenforgalmi adó (a helyszínen): {amount}", { amount: formatAmount(tax * payers * n, quote.currency) }) +
+          " " + minorsTaxNote(lang, children === null ? null : (meals?.childAge ?? null))
         : "";
-  return { errors: [], notes, quote: { totalText: formatAmount(quote.total, quote.currency) }, taxText };
+  return {
+    errors: [],
+    notes,
+    quote: {
+      // "Szállás:" stays the stay alone; the meal lines and the total follow when a meal is chosen.
+      totalText: formatAmount(quote.total, quote.currency),
+      mealLines: mLines.map((l) => {
+        const v = { label: l.label, n: l.nights, per: formatAmount(l.perNight, quote.currency), g: l.guests, sum: formatAmount(l.sum, quote.currency) };
+        return l.guests > 1
+          ? T(lang, "{label}: {n} éj × {per} × {g} fő = {sum}", v)
+          : T(lang, "{label}: {n} éj × {per} = {sum}", v);
+      }),
+      grandText: mealSum ? formatAmount(quote.total + mealSum, quote.currency) : null,
+    },
+    taxText,
+  };
 }
 
 /**
@@ -3116,7 +3143,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       ctx: typeof body.ctx === "string" ? body.ctx.slice(0, 20) : null,
       history,
       questions: bookingSetupQuestions(ctx.lang, state.mode),
-      facts: helperFacts(state),
+      // Elek 10-13 T-1: the saved meal setting is part of what the helper knows.
+      facts: helperFacts(
+        state,
+        (await tenantRendersModule(ctx.session.tenantId, "pricing"))
+          ? helperMealsFact(readMeals((await getSiteModuleConfig(ctx.siteId, "pricing")).config.meals), state.currency)
+          : "",
+      ),
     });
     if (r.ok) return sendJson(res, 200, { ok: true, answer: r.answer, go: r.go, advanced: r.advanced });
     return sendJson(res, 200, {
@@ -4399,6 +4432,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
             },
             backUrl: "/admin?tab=modulok&m=booking",
             today: await todayForSite(ctx.siteId),
+            trialMeals: await (async () => {
+              // Elek 10-13 T-4: the trial booking offers the meal plans and the child count
+              // the guest's form offers (the same predicates: offeredPlans / asksChildren).
+              if (!(await tenantRendersModule(ctx.session.tenantId, "pricing"))) return null;
+              const m = readMeals((await getSiteModuleConfig(ctx.siteId, "pricing")).config.meals);
+              if (!m) return null;
+              const plans = offeredPlans(m);
+              return {
+                plans: plans.map((id) => ({ id, name: mealPlanLabel(ctx.lang, id) })),
+                base: m.base,
+                askKids: asksChildren(m),
+                childAge: m.childAge,
+                off: m.off,
+              };
+            })(),
           }),
           modules: await getTenantModules(ctx.session.tenantId),
           supportEmail: config.supportEmail,

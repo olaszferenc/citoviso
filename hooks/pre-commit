@@ -3381,6 +3381,15 @@ if [ -f scripts/booking-setup-check.mts ] && \
   echo "[pre-commit] booking-setup-check (vezetett foglalás-beállítás, akadályok, próba-foglalás, Segítő)…"
   npx tsx scripts/booking-setup-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Próbázó vagy már ügyfél leadnek nincs hideg megkeresés (Elek 10-13 O-1): az e-mail és a mobil
+# küldő-út szerver-oldalon tilt (src/outreach/customerGate.ts), negatív kontrollal. Eldobható
+# fixtúra (saját scrape_run), AI és küldés nélkül, ~5 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/outreach-customer-gate-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(customerGate|sendBatch|sendOutreachSms|sendOutreachPair)\.ts$|^src/console/views\.ts$|^src/conversion/owned\.ts$|^scripts/outreach-customer-gate-check\.mts$'; then
+  echo "[pre-commit] outreach-customer-gate-check (próbázónak/ügyfélnek nincs hideg megkeresés)…"
+  npx tsx scripts/outreach-customer-gate-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

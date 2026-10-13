@@ -89,7 +89,7 @@ import {
 } from "./pricingPage.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
-import { SEND_WINDOW } from "../sms/sendWindow.js";
+import { MOCK_OUTREACH_WINDOW, SEND_WINDOW } from "../sms/sendWindow.js";
 import {
   ESCALATION_CONFIG_DEFAULT,
   ESCALATION_FOLLOWUP_HOURS_MIN,
@@ -5390,7 +5390,7 @@ function exactOf(iso: string | null | undefined): string {
  *
  * A `data-station` horgok GÉPIEK: a felirat fordítható, az állapot nem.
  */
-function workflowBand(
+export function workflowBand(
   d: LeadDetail,
   latestMock: ArtifactView | undefined,
   approvedMock: ArtifactView | undefined,
@@ -5399,24 +5399,26 @@ function workflowBand(
   payments: PaymentView[],
   gen: GenerateState,
   lang: string,
+  /** Elek 10-13 O-1: the lead already has a site (trial or paid) — no cold letter is "next". */
+  customer = false,
 ): string {
   const approvedAt = approvedMock?.decisions.find((x) => x.decision === "approve")?.decidedAt ?? null;
   const sent = prospects.map((p) => p.sentAt).filter(Boolean).sort()[0] ?? null;
   const ordered = orders.map((o) => o.submittedAt).filter(Boolean).sort()[0] ?? null;
   const paid = payments.map((p) => p.paidAt).filter(Boolean).sort()[0] ?? null;
 
-  type Station = { key: string; label: string; at: string | null; running?: boolean };
+  type Station = { key: string; label: string; at: string | null; running?: boolean; skip?: boolean };
   const stations: Station[] = [
     { key: "collected", label: T(lang, "Begyűjtve"), at: d.surveyedAt },
     { key: "mock", label: T(lang, "Mock"), at: latestMock?.generatedAt ?? null, running: gen.running },
     { key: "approved", label: T(lang, "Jóváhagyva"), at: approvedAt },
-    { key: "sent", label: T(lang, "Kiküldve"), at: sent },
+    { key: "sent", label: T(lang, "Kiküldve"), at: sent, skip: customer && !sent },
     { key: "ordered", label: T(lang, "Rendelés"), at: ordered },
     { key: "paid", label: T(lang, "Fizetve"), at: paid },
   ];
   // A SORON KÖVETKEZŐ = az első állomás, ami még nem történt meg. Ha minden megvan,
   // egyik sem jelöli magát „következő”-nek (nincs mit sürgetni).
-  const nextIdx = stations.findIndex((st) => !st.at && !st.running);
+  const nextIdx = stations.findIndex((st) => !st.at && !st.running && !st.skip);
 
   const cells = stations
     .map((st, i) => {
@@ -5433,6 +5435,13 @@ function workflowBand(
           `<div class="con-wf__st done" data-station="${st.key}" data-state="done">` +
           `<div class="con-wf__k">${esc(st.label)}</div>` +
           `<div class="con-wf__v" title="${esc(exactOf(st.at))}">${esc(dayOf(st.at))}</div></div>`
+        );
+      }
+      if (st.skip) {
+        return (
+          `<div class="con-wf__st todo" data-station="${st.key}" data-state="skip">` +
+          `<div class="con-wf__k">${esc(st.label)}</div>` +
+          `<div class="con-wf__v">${T(lang, "nem kell — már ügyfél (próba vagy saját oldal)")}</div></div>`
         );
       }
       const isNext = i === nextIdx;
@@ -6117,7 +6126,7 @@ export function leadPage(
         </div>
       </div>
       ${runBand}
-      ${workflowBand(d, latestMock, approvedMock, prospects, orders, payments, gen, lang)}
+      ${workflowBand(d, latestMock, approvedMock, prospects, orders, payments, gen, lang, conversion !== null || payments.some((p) => p.paidAt))}
       ${trustLine(d, lang)}
       <!-- ⛔ GÉPI TÉNY-HORGONY: VAN-E jóváhagyott mock. A látható felirat az ÁLLAPOTOT
            mondja (mock: generated/approved), és csak eltéréskor teszi hozzá külön
@@ -8076,7 +8085,7 @@ export function outreachDraftPage(
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0 4px">
         ${badge("✓", pairDone ? "done" : "")}
         <div><b class="small">${T(lang, "A pár = EGY megkeresés")}</b>
-          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy foglalás, egy ellenőrzés-sor: leiratkozás, jogszerűségi kapu, a mock ellenőrzései, a 8–20 óra közti küldési ablak és az engedélyezett számok listája. Újraküldés nincs.")}</p>
+          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy foglalás, egy ellenőrzés-sor: leiratkozás, jogszerűségi kapu, a mock ellenőrzései, a megkeresési ablak (hétköznap {mf}–{mt} óra; a kísérő SMS {sf}–{st} óra között) és az engedélyezett számok listája. Újraküldés nincs.", { mf: MOCK_OUTREACH_WINDOW.fromHour, mt: MOCK_OUTREACH_WINDOW.toHour, sf: SEND_WINDOW.fromHour, st: SEND_WINDOW.toHour })}</p>
         </div>
       </div>
     </div>

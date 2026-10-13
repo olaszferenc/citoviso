@@ -299,7 +299,9 @@
         bu.map(function (u) { return '<option value="' + esc(u.id) + '">' + esc(unitName(u)) + "</option>"; }).join("") + "</select></div></div>" +
         '<div class="bs-row"><div><label class="bs-f" for="bs-t-arr">' + esc(L.arrive) + '</label><input class="bs-inp" id="bs-t-arr" data-t="arrive" type="date" value="' + addDays(D.today, 30) + '"></div>' +
         '<div><label class="bs-f" for="bs-t-n">' + esc(L.nights) + '</label><input class="bs-inp" id="bs-t-n" data-t="nights" type="number" min="1" max="365" value="2"></div>' +
-        '<div><label class="bs-f" for="bs-t-g">' + esc(L.guests) + '</label><input class="bs-inp" id="bs-t-g" data-t="guests" type="number" min="1" max="50" value="2"></div></div><div class="bs-res" aria-live="polite"></div></div>';
+        '<div><label class="bs-f" for="bs-t-g">' + esc(L.guests) + '</label><input class="bs-inp" id="bs-t-g" data-t="guests" type="number" min="1" max="50" value="2"></div></div>' +
+        trialMealRow() +
+        '<div class="bs-res" aria-live="polite"></div></div>';
     }
     h += "</div>";
     el.innerHTML = h;
@@ -421,13 +423,27 @@
     }).catch(function () { busy = false; toast(L.errSave); });
   }
 
+  /* Elek 10-13 T-4: the meal plan and the children, as the guest's form asks them — the owner
+   * can try the surcharge too. The server decides what applies to the chosen room. */
+  function trialMealRow() {
+    var M = D.meals;
+    if (!M || !M.plans || M.plans.length < 2) return "";
+    return '<div class="bs-row"><div><label class="bs-f" for="bs-t-meal">' + esc(L.trialMeal) + '</label><select class="bs-inp" id="bs-t-meal" data-t="meal">' +
+      M.plans.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === M.base ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select></div>" +
+      (M.askKids && M.childAge
+        ? '<div><label class="bs-f" for="bs-t-k">' + esc(fmt(L.trialKids, { n: M.childAge })) + '</label><input class="bs-inp" id="bs-t-k" data-t="kids" type="number" min="0" max="49" value="0"></div>'
+        : "") +
+      "</div>";
+  }
   /* ── trial booking: the guest path's own rule, on the server ── */
   function runTrial(el) {
     var res = el.querySelector(".bs-res");
     if (!res) return;
     var g = function (k) { var x = el.querySelector('[data-t="' + k + '"]'); return x ? x.value : ""; };
     if (!g("unit")) { res.className = "bs-res"; res.textContent = L.trialNoUnit; return; }
-    post("/admin/booking-setup/trial", { unitId: g("unit"), dateFrom: g("arrive"), nights: g("nights"), guests: g("guests") }).then(function (r) {
+    post("/admin/booking-setup/trial", { unitId: g("unit"), dateFrom: g("arrive"), nights: g("nights"), guests: g("guests"), meal: g("meal"), children: g("kids") }).then(function (r) {
+      local.tried = true;
+      head();
       if (r.errors && r.errors.length) {
         res.className = "bs-res is-bad";
         res.innerHTML = "<b>" + esc(L.trialBlocked) + "</b><br>" + r.errors.map(esc).join("<br>");
@@ -437,6 +453,8 @@
       } else {
         res.className = "bs-res";
         res.innerHTML = "<b>" + esc(L.trialOk) + "</b> " + esc(L.trialSees) + "<br>" + esc(L.stayCost) + " <b>" + esc(r.quote.totalText) + "</b>" +
+          (r.quote.mealLines || []).map(function (t) { return "<br>" + esc(t); }).join("") +
+          (r.quote.grandText ? "<br>" + esc(L.grandTotal) + " <b>" + esc(r.quote.grandText) + "</b>" : "") +
           (r.taxText ? "<br>" + esc(r.taxText) : "") +
           (S.includes ? '<br><span class="bs-hint">' + esc(S.includes) + "</span>" : "") +
           '<br><span class="bs-hint">' + esc(fmt(L.trialMail, { email: S.notify || S.accountEmail })) + "</span>";
@@ -454,6 +472,8 @@
     }).length;
     var missing = qs.filter(function (q) { return !q.optional && !isDone(q.id); }).length;
     if (bad) return { cls: "bad", t: fmt(L.nBlockers, { n: bad }) };
+    // Elek 10-13 T-4: the try-out part is not "Kész" until a trial booking ran on this page.
+    if (sid === "check" && !local.tried) return { cls: "warn", t: L.notTried };
     if (missing) return { cls: "warn", t: missing === qs.length ? L.notFilled : fmt(L.nMissing, { n: missing }) };
     return { cls: "ok", t: L.done };
   }
