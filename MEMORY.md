@@ -7336,6 +7336,7 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
 
 ## Tények és döntések
 - 2026-10-13 · deploy: éles = `8b516169` (prod/20261013-1059), előtte `465e5394`; migrációk 0108–0110 (két 0109); benne ADR-0374–0380 (őrködés-SMS + csendes óra, lejárat-mondat, ellátás/gyerekár, foglalás-beállítás + Segítő, gombpár fekvőben); élesen `app_setting.alert_phone` = +36305161631 (tulaj: „nyomjuk ki élesre”)
+- 2026-10-13 · deploy: éles = `97cc4ddf` (prod/20261013-1733), előtte `8b516169`; migráció nincs; benne ADR-0382 (pirula a hős-címre/bevezetőre sehol nem ül, 21 sablon × 3 méret mérve); visszagörgetés: `deploy-prod.sh 8b516169 --go` (tulaj: „Mehet”)
 - 2026-10-13 · mock rendelés/próba gombpár: fekvő telefonon jobb alsó sarok, EGYMÁS ALATT; a hős-címre és bevezetőre SEHOL nem ül (álló süti-sávval/nélküle, asztal) (tulaj: „csináld úgy hogy jó legyen” = a SUB javaslatai)
 - 2026-10-13 · éles `MOBILE_SEND_WINDOW_OFF=1` (09-30-i ideiglenes teszt-kapcsoló) KIVÉVE az éles .env-ből, a szolgáltatások újraindítva → a lead-SMS/MMS időablak újra él (mentés: /opt/citoviso/backups/env-window-20261013-064122/) (tulaj: „Igen”)
 - 2026-10-13 · „desztillalo” heti jelentés SMS: vasárnap 04:05 helyett hétfő 08:00; operátori riasztás-SMS-ek is 22–07 csendes óra (tulaj)
