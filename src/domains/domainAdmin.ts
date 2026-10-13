@@ -85,6 +85,14 @@ export interface DomainAdminData {
    */
   readonly priceMonthly: number;
   /**
+   * Elek 10-12 N1: the monthly fee of EACH suggested name (its own ending), so the step-1
+   * line can name the fee of the name actually selected — a .eu next to a ".hu price" line
+   * read as 1 000 Ft while it costs 1 200 Ft.
+   */
+  readonly feeByDomain: Readonly<Record<string, number>>;
+  /** Elek 10-12 N1: the lowest and highest ending fee — the line before any name is selected. */
+  readonly feeRange: { readonly min: number; readonly max: number };
+  /**
    * ADR-0360 (open item): the tenant's package carries the domain → its fee is 0, and a
    * payment-free claim does not exist yet. The screen says it is handled by hand instead
    * of showing a fee/hold the server refuses (Elek ISMERT row).
@@ -237,6 +245,15 @@ export async function loadDomainAdmin(
   const ctx = { modules: owned, disabled: await getDisabledModules() };
   const pickedTld = picked ? offeredTldOf(picked, regionId) : null;
   const priceMonthly = domainFeeForCycle(1, regionId, { domain: pickedTld ? picked! : null, ...ctx });
+  const feeByDomain = Object.fromEntries(
+    suggestions.map((sg) => [sg.domain, domainFeeForCycle(1, regionId, { domain: sg.domain, ...ctx })] as const),
+  );
+  const tldFees = offeredTlds(regionId).map((t) =>
+    domainFeeForCycle(1, regionId, { domain: `x${t.tld.startsWith(".") ? "" : "."}${t.tld}`, ...ctx }),
+  );
+  const feeRange = tldFees.length
+    ? { min: Math.min(...tldFees), max: Math.max(...tldFees) }
+    : { min: priceMonthly, max: priceMonthly };
 
   return {
     currentHost: site?.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null,
@@ -252,6 +269,8 @@ export async function loadDomainAdmin(
     // review screen shows must equal what the pay-link takes (§B.17 on ourselves).
     // Eligibility is judged on the LIST package total — a discount never buys it (⑧).
     priceMonthly,
+    feeByDomain,
+    feeRange,
     packageContent: priceMonthly === 0,
     offeredTlds: offeredTlds(regionId).map((t) => t.tld),
     eligible: isDomainEligible(computeMonthly(owned, regionId), regionId, ctx),

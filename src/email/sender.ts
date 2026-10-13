@@ -203,8 +203,11 @@ class MockEmailSender implements EmailSender {
     const id = `${stamp}-${safeSlug(msg.to)}`;
     const fromAddr = msg.fromAddress || config.outreachFrom || "hello@citoviso.com";
     const from = formatFrom(msg.fromName, fromAddr);
+    // Elek 10-12 N3: a header value is one line — the mock folds a stray CR/LF the way
+    // nodemailer does in production, so a mock-based test never sees a forged header.
+    const hv = (v: string): string => v.replace(/[\r\n]+/g, " ");
     const extra = Object.entries(msg.headers ?? {})
-      .map(([k, v]) => `${k}: ${v}\n`)
+      .map(([k, v]) => `${k}: ${hv(String(v))}\n`)
       .join("");
     const attachNote = (msg.attachments ?? [])
       .map(
@@ -221,18 +224,18 @@ class MockEmailSender implements EmailSender {
     }
     const bcc = pilotBcc(msg);
     const eml =
-      `From: ${from}\n` +
-      `To: ${msg.to}\n` +
-      (msg.replyTo ? `Reply-To: ${msg.replyTo}\n` : "") +
+      `From: ${hv(from)}\n` +
+      `To: ${hv(msg.to)}\n` +
+      (msg.replyTo ? `Reply-To: ${hv(msg.replyTo)}\n` : "") +
       (bcc ? `Bcc: ${bcc}\n` : "") +
       `X-Citoviso-Audience: ${msg.audience}\n` +
-      `Subject: ${msg.subject}\n` +
+      `Subject: ${hv(msg.subject)}\n` +
       extra +
       attachNote +
       `Content-Type: ${msg.html ? "text/html" : "text/plain"}; charset=utf-8\n\n` +
       body;
     await writeFile(path.join(OUTBOX_DIR, `${id}.eml`), eml, "utf8");
-    console.log(`[email:mock] → ${msg.to} · "${msg.subject}" · outbox/${id}.eml`);
+    console.log(`[email:mock] → ${hv(msg.to)} · "${hv(msg.subject)}" · outbox/${id}.eml`);
     return { id, provider: "mock" };
   }
 }

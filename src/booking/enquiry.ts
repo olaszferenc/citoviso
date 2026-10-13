@@ -14,6 +14,7 @@
 // it is the tenant's Üzenetek row; the delivery is the notify e-mail.
 
 import { db } from "../db/client.js";
+import { oneLine } from "../text/oneLine.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
@@ -63,9 +64,10 @@ export async function createEnquiry(input: EnquiryInput): Promise<EnquiryResult>
   if (input.dateTo <= input.dateFrom) {
     errors.push(T(lang, "A távozás napja az érkezés után kell legyen."));
   }
-  const name = input.guestName.trim();
+  // Elek 10-12 N3: one-line fields — a CR/LF never reaches a mail subject.
+  const name = oneLine(input.guestName);
   if (!name) errors.push(T(lang, "Kérjük, adja meg a nevét."));
-  const email = (input.guestEmail ?? "").trim();
+  const email = oneLine(input.guestEmail);
   const phoneDigits = (input.guestPhone ?? "").replace(/\D/g, "");
   if (!email && !phoneDigits) {
     errors.push(
@@ -89,7 +91,7 @@ export async function createEnquiry(input: EnquiryInput): Promise<EnquiryResult>
     .executeTakeFirst();
   if (!owner?.tenantId) return { ok: false, errors: [T(lang, "Ismeretlen szállás.")] };
 
-  const phone = (input.guestPhone ?? "").trim();
+  const phone = oneLine(input.guestPhone);
   const subject = T(lang, "Foglalási érdeklődés: {guest}, {from}–{to}", {
     guest: name,
     from: huDate(input.dateFrom),

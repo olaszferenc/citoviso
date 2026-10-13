@@ -878,15 +878,19 @@ export function setPasswordPage(
   );
 }
 
-/** After a successful set: the session is live, every older one ended. */
-export function passwordSetDonePage(lang = "hu"): string {
+/**
+ * After a successful set: the session is live, every older one ended. The "older
+ * logins ended" line only on a CHANGE — on the very first set there were none, and
+ * the sentence read as "were we hacked?" (Elek 10-12 N4).
+ */
+export function passwordSetDonePage(lang = "hu", firstSet = false): string {
   return shell(
     T(lang, "Jelszó beállítva"),
     `<div class="citui-container" style="max-width:420px;padding:64px 0;text-align:center">` +
       `<div style="margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Kész — beléptetjük")}</h1>` +
       `<p class="citui-hint">${T(lang, "A jelszava beállítva. Mostantól a felhasználónevével és ezzel a jelszóval léphet be.")}</p>` +
-      `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>` +
+      (firstSet ? "" : `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>`) +
       `<p class="citui-hint" data-pw-autogo>${T(lang, "Pár másodperc múlva magától továbblépünk a szerkesztőbe.")}</p>` +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
       `</div></div>` +
@@ -3965,6 +3969,32 @@ export interface DomainViewState {
   readonly manual?: boolean;
 }
 
+/**
+ * The custom-name fee line (Elek 10-12 N1 + N6, owner „Mehet” 2026-10-12).
+ * N1: the fee of the name SELECTED (its own ending) — before any selection, the band of the
+ *     offered endings ("1 000–1 200 Ft/hó, végződéstől függően").
+ * N6: the rule as ÁSZF 1.5 §9 and billing.domainFeeForRenewal have it — the name's monthly
+ *     fee does NOT stop after the commitment (it runs while the name serves the site, unless
+ *     the package carries it), and the name becomes the owner's only when they leave
+ *     (no purchase price after the commitment). The old „díjmentesen az Öné, a havidíj …
+ *     fut tovább” read as a contradiction.
+ */
+function domainFeeLine(d: DomainAdminData, lang: string, fee: number | null): string {
+  const tail = { n: d.commitmentMonths };
+  if (fee === null && d.feeRange.min !== d.feeRange.max) {
+    return T(
+      lang,
+      "A név díja {range}/hó, végződéstől függően, és {n} hónapos előfizetés vállalásával jár. A havidíj addig jár, amíg a név az Ön honlapjához tartozik; ha a {n} hónap után lemond, a név vételár nélkül az Öné lesz.",
+      { range: `${formatMoney(d.feeRange.min, null)}–${money(d.feeRange.max, d.currency)}`, ...tail },
+    );
+  }
+  return T(
+    lang,
+    "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A havidíj addig jár, amíg a név az Ön honlapjához tartozik; ha a {n} hónap után lemond, a név vételár nélkül az Öné lesz.",
+    { price: money(fee ?? d.feeRange.min, d.currency), ...tail },
+  );
+}
+
 export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): string {
   const head = (title: string) =>
     `<div class="adm-card__head"><span class="adm-ico">${ic("domain")}</span>` +
@@ -4103,7 +4133,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
         ? `<div class="adm-dcurrent"><b>${esc(d.currentHost)}</b>` +
           `<span>${T(lang, "most ez a címe")}</span></div>`
         : "") +
-      `<p class="citui-hint" style="margin-top:12px">${T(lang, "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A hűségidő letelte után a név díjmentesen az Öné, a havidíj a fenntartásért fut tovább.", { price: esc(money(d.priceMonthly, d.currency)), n: d.commitmentMonths })}</p>` +
+      `<p class="citui-hint" style="margin-top:12px">${esc(domainFeeLine(d, lang, null))}</p>` +
       `<a class="citui-btn citui-btn--primary" href="/admin?tab=modulok" style="margin-top:12px">` +
       `${T(lang, "Csomag bővítése")}</a>` +
       mockNote +
@@ -4259,6 +4289,8 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
           return (
             `<label class="adm-dopt${off ? " is-off" : ""}${i === firstFree ? " is-sel" : ""}">` +
             `<input type="radio" name="d" value="${esc(s.domain)}"` +
+            // N1: the line under the list follows the selected name's ending.
+            (off ? "" : ` data-dline="${esc(domainFeeLine(d, lang, d.feeByDomain[s.domain] ?? null))}"`) +
             `${i === firstFree ? " checked" : ""}${off ? " disabled" : ""}>` +
             `<span class="adm-dopt__name">${esc(s.domain)}</span>` +
             `<span class="adm-dopt__meta">${availChip(s.availability, lang)}</span>` +
@@ -4338,9 +4370,13 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       // ADR-0109 ②/⑧: below the entry threshold we do not sell the name at all —
       // the honest line is the CONDITION, not a price the tenant cannot act on.
       d.eligible
-        ? T(lang, "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A hűségidő letelte után a név díjmentesen az Öné, a havidíj a fenntartásért fut tovább.", { price: esc(money(d.priceMonthly, d.currency)), n: d.commitmentMonths })
+        ? `<span data-dfee-line>${esc(domainFeeLine(d, lang, firstFree >= 0 ? (d.feeByDomain[d.suggestions[firstFree]!.domain] ?? null) : null))}</span>`
         : T(lang, "Saját cím legalább {min}/hó csomag mellé választható (kedvezmények nélkül számítva). Bővítse a csomagját, és a saját név is elérhetővé válik.", { min: esc(money(d.minPackageMonthly, d.currency)) })
     }</p>` +
+    (d.eligible
+      ? `<script>(function(){var l=document.querySelector("[data-dfee-line]");if(!l)return;` +
+        `document.querySelectorAll("input[name=d][data-dline]").forEach(function(r){r.addEventListener("change",function(){if(r.checked)l.textContent=r.dataset.dline})})})();</script>`
+      : "") +
     mockNote +
     `</div>`
   );

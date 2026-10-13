@@ -163,9 +163,9 @@ Három dolgot érdemes tudni:
 - **A díjra kedvezmény nem vonatkozik.** A bemutatkozó vagy egyéb engedmény a mi
   szolgáltatásunk árát csökkenti; a név díja a nyilvántartónak fizetett, továbbhárított
   költség, ezért mindig teljes összegben szerepel.
-- **A hűségidő letelte után a név díjmentesen az Öné**, és nincs többé sem kötbér, sem
-  csomag-minimum. A havi díj viszont tovább fut, amíg a nevet nálunk tartja — ez a
-  fenntartás díja, nem a névé.
+- **A hűségidő letelte után nincs többé sem kötbér, sem csomag-minimum.** A havi díj
+  tovább fut, amíg a nevet nálunk tartja. Ha lemond, a név vételár nélkül az Öné lesz;
+  a hűségidő alatt lemondva a nevet a vételár megfizetésével viheti magával.
 
 ## Ha a csomagom tartalmazza a saját címet
 

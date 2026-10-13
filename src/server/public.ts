@@ -229,6 +229,7 @@ import {
   getExportFeedUrl,
   getLinkConflicts,
   getSyncRuns,
+  sharedImportLinks,
   getMonthAvailability,
   normaliseMonth,
   setManualMonthBlocks,
@@ -1535,6 +1536,8 @@ async function serveAdmin(
           // K1 · K7: conflicts with accepted bookings, and each link's short sync log.
           conflicts: await getLinkConflicts(links.map((l) => l.id)),
           runs: await getSyncRuns(links.map((l) => l.id)),
+          // ADR-0371: the same import link under another room of the place (Szállás.hu trap).
+          sharedLinks: await sharedImportLinks(unit.id),
           // A12: a refused link is answered in its own card (`ph` = the portal it was typed into).
           linkError: (() => {
             const qp = new URL(req.url ?? "/", "http://x").searchParams;
@@ -2495,7 +2498,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
       setSession(res, r.tenantUserId);
       console.log(`[auth] jelszó beállítva egyszeri linkkel · ${v.username}`);
-      return send(res, 200, passwordSetDonePage(lang));
+      return send(res, 200, passwordSetDonePage(lang, r.firstSet));
     }
   }
   // POST /admin/password — tenant password change (Fiók card).

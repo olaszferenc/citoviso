@@ -504,6 +504,39 @@ export async function getCalendarLinks(unitId: string): Promise<CalendarLinkRow[
   return rows.map((r) => linkRow(r as unknown as CalendarLinkDbRow));
 }
 
+/**
+ * ADR-0371 proposal (Szállás.hu trap): the portal's room picker jumps back to the
+ * first room, so the SAME export link is easily pasted under two rooms — and then both
+ * rooms carry the first room's bookings. For each import link of `unitId`, the names of
+ * the OTHER units of the site that hold the same link. Only a warning on the card; the
+ * save itself is never refused (a deliberate shared link stays possible).
+ * Comparison: as fetched (webcal → https, like sync.normaliseFeedUrl), case- and
+ * trailing-slash-insensitive.
+ */
+export async function sharedImportLinks(unitId: string): Promise<Map<string, string[]>> {
+  const key = (u: string | null): string =>
+    (u ?? "").trim().replace(/^webcals?:\/\//i, "https://").replace(/\/+$/, "").toLowerCase();
+  const rows = await db
+    .selectFrom("calendar_link")
+    .innerJoin("site_unit", "site_unit.id", "calendar_link.unit_id")
+    .select(["calendar_link.id as id", "calendar_link.unit_id as unitId", "calendar_link.url as url", "site_unit.name as unitName"])
+    .where("calendar_link.direction", "=", "import")
+    .where(
+      "site_unit.site_id",
+      "=",
+      db.selectFrom("site_unit").select("site_id").where("id", "=", unitId),
+    )
+    .execute();
+  const out = new Map<string, string[]>();
+  for (const mine of rows.filter((r) => r.unitId === unitId && key(r.url))) {
+    const others = [
+      ...new Set(rows.filter((r) => r.unitId !== unitId && key(r.url) === key(mine.url)).map((r) => r.unitName)),
+    ];
+    if (others.length) out.set(mine.id, others);
+  }
+  return out;
+}
+
 export async function addCalendarLink(
   unitId: string,
   provider: string,

@@ -76,14 +76,16 @@ export async function peekPasswordToken(token: string): Promise<PasswordLinkPeek
 }
 
 export type PasswordSetResult =
-  | { readonly ok: true; readonly tenantUserId: string }
+  | { readonly ok: true; readonly tenantUserId: string; readonly firstSet: boolean }
   | { readonly ok: false; readonly error: "short" | "mismatch" | "link" };
 
 /**
  * Spend the token and set the password (the POST). Atomic: the token is claimed
  * with a conditional UPDATE, so a double submit cannot set two passwords. Every
  * OTHER open link of the user dies with it, and password_set_at moves — every
- * cookie issued before this moment stops working.
+ * cookie issued before this moment stops working. `firstSet` = the owner had never
+ * chosen a password before (password_set_at was NULL): there were no earlier logins
+ * to end, so the done page must not claim it (Elek 10-12 N4).
  */
 export async function setPasswordWithToken(token: string, pw: string, pw2: string): Promise<PasswordSetResult> {
   if (pw.length < MIN_PASSWORD_LENGTH) return { ok: false, error: "short" };
@@ -99,6 +101,12 @@ export async function setPasswordWithToken(token: string, pw: string, pw2: strin
       .executeTakeFirst();
     if (!claimed) return { ok: false as const, error: "link" as const };
     const uid = claimed.tenant_user_id;
+    const before = await trx
+      .selectFrom("tenant_user")
+      .select("password_set_at")
+      .where("id", "=", uid)
+      .executeTakeFirst();
+    const firstSet = before?.password_set_at == null;
     await trx
       .updateTable("tenant_user")
       .set({
@@ -114,7 +122,7 @@ export async function setPasswordWithToken(token: string, pw: string, pw2: strin
       .where("tenant_user_id", "=", uid)
       .where("used_at", "is", null)
       .execute();
-    return { ok: true as const, tenantUserId: uid };
+    return { ok: true as const, tenantUserId: uid, firstSet };
   });
 }
 

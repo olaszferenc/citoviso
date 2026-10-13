@@ -17,6 +17,7 @@ import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { oneLine } from "../text/oneLine.js";
 import { tenantSiteUrl } from "../domains.js";
 import { huArticleLower } from "../hu.js";
 import { getEmailSender, type EmailMessage } from "../email/sender.js";
@@ -491,6 +492,8 @@ export function ownerLetter(o: {
   blocks: string[];
   /** ADR-0344 C2c: footerReasonForTenant() — required, so no owner letter forgets the trial. */
   footerReason: FooterReason;
+  /** The main button when the letter sends the owner somewhere else than the Foglalások tab. */
+  button?: { readonly href: string; readonly label: string };
 }): EmailMessage {
   return {
     ...platformMail({
@@ -500,7 +503,10 @@ export function ownerLetter(o: {
       lang: o.lang,
       kicker: o.kicker,
       heading: o.heading,
-      blocks: [...o.blocks, mailButton(adminBookingsUrl(), T(o.lang, "Foglalások megnyitása"))],
+      blocks: [
+        ...o.blocks,
+        o.button ? mailButton(o.button.href, o.button.label) : mailButton(adminBookingsUrl(), T(o.lang, "Foglalások megnyitása")),
+      ],
       siteName: o.hostName,
       footerReason: o.footerReason,
     }),
@@ -550,8 +556,8 @@ export async function createBookingRequest(
   }
   const n = nights(dateFrom, dateTo);
   if (n < 1) errors.push(T(lang, "A távozás napja az érkezés után kell legyen."));
-  if (!input.guestName.trim()) errors.push(T(lang, "Kérjük, adja meg a nevét."));
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.guestEmail.trim())) {
+  if (!oneLine(input.guestName)) errors.push(T(lang, "Kérjük, adja meg a nevét."));
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(oneLine(input.guestEmail))) {
     errors.push(T(lang, "Kérjük, adjon meg egy érvényes e-mail címet."));
   }
   // Phone is REQUIRED (owner decree 2026-08-23): this is a request the owner has to
@@ -660,7 +666,7 @@ export async function createBookingRequest(
   // Same unit + guest e-mail + nights within a short window = the SAME request: answer
   // with the first one and send nothing again. The advisory lock serialises the two
   // racing submits, so the second one sees the first one's row.
-  const guestEmail = input.guestEmail.trim().slice(0, 200);
+  const guestEmail = oneLine(input.guestEmail).slice(0, 200);
   const repeatKey = `${input.unitId}|${guestEmail.toLowerCase()}|${dateFrom}|${dateTo}`;
   const token = randomBytes(24).toString("base64url");
   const { row, repeated } = await db.transaction().execute(async (trx) => {
@@ -681,9 +687,10 @@ export async function createBookingRequest(
       .values({
         site_id: input.siteId,
         unit_id: input.unitId,
-        guest_name: input.guestName.trim().slice(0, 160),
-        guest_email: input.guestEmail.trim().slice(0, 200),
-        guest_phone: input.guestPhone?.trim().slice(0, 60) || null,
+        // Elek 10-12 N3: one-line fields — a CR/LF never reaches the row or a mail subject.
+        guest_name: oneLine(input.guestName).slice(0, 160),
+        guest_email: guestEmail,
+        guest_phone: oneLine(input.guestPhone).slice(0, 60) || null,
         date_from: dateFrom,
         date_to: dateTo,
         guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
@@ -737,7 +744,7 @@ export async function createBookingRequest(
       dateTo,
       nights: n,
       guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
-      guestEmail: input.guestEmail.trim().slice(0, 200),
+      guestEmail,
       total: quote?.total ?? null,
       currency: quote?.currency ?? String(pricing.currency ?? "HUF"),
       lines: (quote?.lines ?? []).map((l) => ({

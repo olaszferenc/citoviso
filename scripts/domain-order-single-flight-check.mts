@@ -366,6 +366,7 @@ await block("B3 / K1 / ISMERT", async () => {
     currentHost: "ribizli.citoviso.com", customDomain: null, status: "failed" as const, error: "foglalt",
     failedDomain: "ribizli.hu", money: "released" as const, moneyAmount: 1000, activeDomain: "ribizli.hu",
     suggestions: [{ domain: "ribizli2.hu", availability: "free" as const }], priceMonthly: 1000, packageContent: false,
+    feeByDomain: { "ribizli2.hu": 1000 } as Record<string, number>, feeRange: { min: 1000, max: 1200 },
     offeredTlds: [".hu", ".eu"], eligible: true, minPackageMonthly: 7000, currency: "HUF", commitmentMonths: 12, mockMode: true,
   };
   const failScreen = domainSection(base, {});
@@ -384,6 +385,29 @@ await block("B3 / K1 / ISMERT", async () => {
     { picked: "ribizli2.hu", pickedAvailability: "free" });
   ok(!/Most zárolunk|próbálja újra/.test(manual) && /munkatársunk intézi/.test(manual),
     "ISMERT csomag-tartalom → nincs díj/zárolás/„próbálja újra”, kézi intézést mond");
+  // Elek 10-12 N1: the fee line follows the SELECTED name's ending; before a selection, the band.
+  {
+    const two = {
+      ...base, status: "none" as const, money: null,
+      suggestions: [
+        { domain: "ribizli2.hu", availability: "free" as const },
+        { domain: "ribizli2.eu", availability: "free" as const },
+      ],
+      feeByDomain: { "ribizli2.hu": 1000, "ribizli2.eu": 1200 },
+    };
+    const step1 = domainSection(two, {});
+    const line = /<span data-dfee-line>([^<]*)<\/span>/.exec(step1)?.[1] ?? "";
+    ok(/A név díja 1 000 Ft\/hó/.test(line), "⭐ N1 a díjsor a kijelölt (első szabad) név díját mondja: .hu → 1 000 Ft/hó", line);
+    ok(/value="ribizli2\.eu" data-dline="A név díja 1 200 Ft\/hó/.test(step1), "⭐ N1 a .eu sor a saját díját hozza (1 200 Ft/hó) — kijelöléskor erre vált a sor");
+    ok(/l\.textContent=r\.dataset\.dline/.test(step1), "N1 a kijelölés váltása átírja a díjsort");
+    const none = domainSection({ ...two, suggestions: two.suggestions.map((x) => ({ ...x, availability: "taken" as const })) }, {});
+    ok(/A név díja 1 000–1 200 Ft\/hó, végződéstől függően/.test(none), "⭐ N1 kijelölt név nélkül díjsáv: „1 000–1 200 Ft/hó, végződéstől függően”");
+    const notEligible = domainSection({ ...two, eligible: false }, {});
+    ok(/1 000–1 200 Ft\/hó, végződéstől függően/.test(notEligible), "N1 a küszöb alatti kártya is a díjsávot mondja");
+    // N6: no „díjmentesen az Öné” next to a running monthly fee (ÁSZF 1.5 §9: the fee runs on).
+    ok(![step1, none, notEligible].some((h) => /díjmentesen/.test(h)) && /vételár nélkül az Öné lesz/.test(step1),
+      "⭐ N6 nincs „díjmentesen az Öné” a havidíj mellett; a szabály: a díj fut, amíg a név a honlaphoz tartozik, lemondáskor vételár nélkül az Öné");
+  }
   const retry = domainSection({ ...base, status: "setup_retry", money: "paid", activeDomain: "ribizli.hu" }, {});
   ok(/Az Öné/.test(retry) && !/más lefoglalta|nem tudtuk megvásárolni/.test(retry),
     "⭐ B2 a felület setup_retry-nél azt mondja: a név az Öné, a beállítás késik");

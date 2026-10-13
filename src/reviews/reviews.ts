@@ -16,6 +16,7 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { oneLine } from "../text/oneLine.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
@@ -72,9 +73,9 @@ export async function createReview(
   publicBaseUrl: string | null,
 ): Promise<CreateResult> {
   const errors: string[] = [];
-  const name = input.authorName.trim();
+  const name = oneLine(input.authorName); // Elek 10-12 N3
   const body = input.body.trim();
-  const email = input.authorEmail?.trim() ?? "";
+  const email = oneLine(input.authorEmail);
   const rating = Math.round(Number(input.rating));
   // ADR-0067: these errors are shown to the GUEST on the tenant's own page — in
   // the page's language, never Hungarian by default.

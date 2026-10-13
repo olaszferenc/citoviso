@@ -184,9 +184,13 @@ await setSiteModuleConfig(A.siteId, "booking", { notifyEmail: OWNER }, "test");
 // ── levélszámlálás: a futásra egyedi címzett, a futás kezdeténél frissebb fájl ─────────────
 const STARTED = Date.now() - 1000;
 async function mails(to: string, subj: RegExp): Promise<string[]> {
+  return (await mailBodies(to, subj)).map((m) => m.sub);
+}
+/** The matching mails with their raw source (quoted-printable soft breaks and =3D undone). */
+async function mailBodies(to: string, subj: RegExp): Promise<{ sub: string; raw: string }[]> {
   await new Promise((r) => setTimeout(r, 200));
   const dir = path.join(ROOT, "outbox");
-  const out: string[] = [];
+  const out: { sub: string; raw: string }[] = [];
   for (const f of await readdir(dir).catch(() => [] as string[])) {
     const p = path.join(dir, f);
     const st = await stat(p).catch(() => null);
@@ -194,7 +198,7 @@ async function mails(to: string, subj: RegExp): Promise<string[]> {
     const raw = await readFile(p, "utf8");
     const toH = /^To: (.*)$/m.exec(raw)?.[1] ?? "";
     const sub = /^Subject: (.*)$/m.exec(raw)?.[1] ?? "";
-    if (toH.includes(to) && subj.test(sub)) out.push(sub);
+    if (toH.includes(to) && subj.test(sub)) out.push({ sub, raw: raw.replace(/=\r?\n/g, "").replace(/=3D/g, "=").replace(/&amp;/g, "&") });
   }
   return out;
 }
@@ -414,6 +418,13 @@ try {
   const k7 = s1 === 1 && s2 === 0 && k7m.length === 1;
   check("24 óra hiba után PONTOSAN egy tulaj-levél, a második futás nem küld", k7, { s1, s2, mails: k7m.length });
   if (SELF_TEST && !k7) sabotageRed.push("K7");
+  // Elek 10-12 N2: the letter says "Modulok › Online foglalás, a portál kártyáján" — the
+  // button goes there too (it led to the Foglalások list, where the card is not).
+  {
+    const k7raw = (await mailBodies(OWNER, /Nem friss=C3=BCl|Nem frissül/))[0]?.raw ?? "";
+    const want = `/admin?tab=modulok&m=booking&e=${encodeURIComponent(A.u1)}#portal-naptar`;
+    check("N2: a tartós-hiba levél gombja a portál-kártyára visz, nem a Foglalásokra", k7raw.includes(want) && !k7raw.includes("tab=foglalasok"), want);
+  }
   const lr = await db.selectFrom("calendar_link").select(["last_ok_at", "last_day_count", "last_error"]).where("id", "=", bkId).executeTakeFirstOrThrow();
   check("hibánál a régi darabszám és az utolsó SIKERES idő megmarad", lr.last_day_count === 2 && !!lr.last_ok_at && !!lr.last_error, lr);
   FEEDS.set("bk.ics", ics([[D(20), D(22)]]));
@@ -422,6 +433,22 @@ try {
   check("a sikeres szinkron nullázza a hiba-sorozatot és a levél-jelet", !healed.failing_since && !healed.failure_notified_at, healed);
   const runs = await avail.getSyncRuns([bkId]);
   check("linkenként szinkron-napló (≤10 futás, a legújabb elöl, ok)", (runs.get(bkId) ?? []).length >= 3 && runs.get(bkId)![0]!.ok, (runs.get(bkId) ?? []).length);
+
+  // ═══ ADR-0371: ugyanaz az import-link két szobán (Szállás.hu-csapda) ═══════════════════
+  console.log("ADR-0371 — ugyanaz az import-link két szobán: figyelmeztetés, nem tiltás");
+  {
+    const dup = await avail.addCalendarLink(A.u2, "Booking.com", F("/f/bk.ics"));
+    const foreign = await avail.addCalendarLink(B.u1, "Booking.com", F("/f/bk.ics"));
+    const onU1 = await avail.sharedImportLinks(A.u1);
+    const onU2 = await avail.sharedImportLinks(A.u2);
+    check("a mentés nem tiltott, és mindkét szoba kártyája megnevezi a másikat",
+      !!dup && (onU1.get(bkId) ?? []).join() === "Tóparti szoba" && (onU2.get(dup) ?? []).join() === "Kerti szoba",
+      { u1: [...onU1], u2: [...onU2] });
+    check("másik szállás azonos linkje nem számít (csak a saját szobák között)", !(onU1.get(bkId) ?? []).includes("Kerti szoba") && !(await avail.sharedImportLinks(B.u1)).size);
+    check("eltérő link nem figyelmeztet", !onU2.has(szId));
+    await db.deleteFrom("calendar_link").where("id", "in", [dup, foreign]).execute();
+    check("a második példány leválasztása után nincs figyelmeztetés", !(await avail.sharedImportLinks(A.u1)).size);
+  }
 
   if (!SELF_TEST) {
     // ═══ K8 ═════════════════════════════════════════════════════════════════════════════

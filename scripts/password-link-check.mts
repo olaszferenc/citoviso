@@ -134,6 +134,7 @@ ok(Boolean(await currentTenant(reqWith(legacyCookie))), "régi (T-3 előtti) sü
 await new Promise((r) => setTimeout(r, 5));
 const set = await setPasswordWithToken(t1, "kilatas a balatonra", "kilatas a balatonra");
 ok(set.ok, "érvényes jelszó beállítva a linkkel", JSON.stringify(set));
+ok(set.ok && set.firstSet === true, "Elek 10-12 N4: az ELSŐ beállítás firstSet=true (nem volt korábbi belépés)", JSON.stringify(set));
 ok(Boolean(await authenticate("napfeny-panzio", "kilatas a balatonra")), "az új jelszóval be lehet lépni");
 ok((await setPasswordWithToken(t1, "masik jelszo 2026", "masik jelszo 2026")).ok === false, "a link EGYSZER használható");
 const peekUsed = await peekPasswordToken(t1);
@@ -163,6 +164,17 @@ if (!SELF_TEST) {
   const again = await issueTenantLogin(tenant.id, "Napfény Panzió", "tulaj@napfeny.hu");
   ok(again.password === null && Boolean(await authenticate("napfeny-panzio", "kilatas a balatonra")),
     "egy újrafutó aktiválás NEM írja felül a tulaj saját jelszavát");
+}
+
+// ── 4b. N4 — "older logins ended" only on a CHANGE ─────────────────────────
+if (!SELF_TEST) {
+  const t3 = await issuePasswordToken(login.tenantUserId);
+  const again = await setPasswordWithToken(t3, "kilatas a balatonra", "kilatas a balatonra");
+  ok(again.ok && again.firstSet === false, "Elek 10-12 N4: jelszó-CSERE linkkel → firstSet=false", JSON.stringify(again));
+  const { passwordSetDonePage } = await import("../src/server/adminViews.js");
+  const ended = "a korábban megnyitott belépések megszűntek";
+  ok(!passwordSetDonePage("hu", true).includes(ended), "Elek 10-12 N4: első beállítás után a lap NEM írja, hogy a korábbi belépések megszűntek");
+  ok(passwordSetDonePage("hu", false).includes(ended), "Elek 10-12 N4: jelszó-csere után kimondja");
 }
 
 // ── 5. FORGOT ────────────────────────────────────────────────────────────────

@@ -2490,6 +2490,17 @@ if [ -f scripts/portal-ical-samples-check.mts ] && \
   echo "[pre-commit] portal-ical-samples-check (valódi portál-feedek, kiadás)…"
   npx tsx scripts/portal-ical-samples-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Elek 10-12 N3: a vendég egysoros mezője (név, e-mail, telefon, vélemény-szerző) CR/LF-et is
+# elfogadott — a sortörés a sorba került, a mock-postafiók hamis fejlécet mutatott. Offline (~3 s).
+if [ -f scripts/guest-oneline-check.mts ] && \
+   changed_files | grep -qE '^src/text/oneLine\.ts$|^src/booking/(requests|enquiry)\.ts$|^src/reviews/reviews\.ts$|^src/email/sender\.ts$|^scripts/guest-oneline-check'; then
+  if changed_files | grep -qE '^scripts/guest-oneline-check\.mts$'; then
+    echo "[pre-commit] guest-oneline-check --self-test (az őr pirosra tud-e menni)…"
+    npx tsx scripts/guest-oneline-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] guest-oneline-check (vendég-mező sortörés nélkül)…"
+  npx tsx scripts/guest-oneline-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR: a SAJÁT kimaradásunk nem lelet a leadről. A kimerült Places-kvótát a panel
 # „ehhez a leadhez nem találtunk fotót"-ként írta ki, miközben a lista 10 képet
 # mutatott mellette. A `null` jelentse a „megkérdeztük, nincs találat"-ot, a fel nem

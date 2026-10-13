@@ -1841,15 +1841,15 @@
         termsEl.textContent =
           (domainFeeMonthly() === 0
             ? tr("A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja {price}/hó.").replace("{price}", fmt(outsideFee))
-            : tr("A saját cím {price}/hó, amíg a név Öné — a havidíj a fenntartásért fut.").replace("{price}", fmt(domainFeeMonthly()))) +
+            : tr("A saját cím {price}/hó, amíg a név az Ön honlapjához tartozik.").replace("{price}", fmt(domainFeeMonthly()))) +
           " " +
           (noFloor
-            ? tr("{months} hónap hűségidő: ha ez alatt felmond és a nevet elviszi, a domain vételára fizetendő. Utána a név díjmentesen az Öné.")
-            : tr("{months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. Utána a név díjmentesen az Öné.")
+            ? tr("{months} hónap hűségidő: ha ez alatt felmond és a nevet elviszi, a domain vételára fizetendő. Ha utána mond le, a név vételár nélkül az Öné lesz.")
+            : tr("{months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. Ha utána mond le, a név vételár nélkül az Öné lesz.")
                 .replace(/\{min\}/g, fmt(DOM.minPackageMonthly))
           ).replace(/\{months\}/g, months);
       } else termsEl.textContent =
-        tr("A saját cím {price}/hó, amíg a név Öné — a havidíj a fenntartásért fut. {months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. A {months} hónap letelte után nincs hűségidő és nincs csomag-minimum: a név díjmentesen az Öné, a havidíj addig fut, amíg nálunk tartja.")
+        tr("A saját cím {price}/hó, amíg a név az Ön honlapjához tartozik. {months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. A {months} hónap letelte után nincs hűségidő és nincs csomag-minimum; ha lemond, a név vételár nélkül az Öné lesz.")
           .replace(/\{price\}/g, fmt(domainFeeMonthly()))
           .replace(/\{months\}/g, months)
           .replace(/\{min\}/g, fmt(DOM.minPackageMonthly));

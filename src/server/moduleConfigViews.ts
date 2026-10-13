@@ -2398,6 +2398,8 @@ export interface BookingEditorData {
   readonly conflicts?: ReadonlyMap<string, readonly { day: string; guestName: string | null }[]>;
   /** K7: per link, the short sync log (newest first). */
   readonly runs?: ReadonlyMap<string, readonly { at: Date; ok: boolean; dayCount: number | null; error: string | null }[]>;
+  /** ADR-0371: per import link, the other rooms of the place that hold the SAME link. */
+  readonly sharedLinks?: ReadonlyMap<string, readonly string[]>;
   /** A12: a link the server refused to save — shown inside THAT portal's card. */
   readonly linkError?: { readonly provider: string; readonly message: string } | null;
   /** Our own feed URL for THIS unit, handed to a portal (export direction). */
@@ -2784,6 +2786,17 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
         )}</p>`,
       );
     }
+    // ADR-0371 (Szállás.hu trap): the portal's room picker jumps back to the first room, so
+    // one room's link easily lands under two rooms. Said, never refused — a shared link can
+    // be deliberate.
+    const shared = booking.sharedLinks?.get(l.id) ?? [];
+    if (shared.length) {
+      parts.push(
+        `<p class="psync__status psync__status--warn" data-shared-link>${esc(
+          T(lang, "Figyelem: ugyanezt a linket másik szobánál is megadta ({rooms}). A portálon minden szobának saját naptár-linkje van; ha a portál szobaválasztója visszaugrott az első szobára, mindkét szobánál ugyanannak a foglalásai jelennek meg. Nézze meg a portálon, és ha kell, válassza le ezt, és kösse össze a szoba saját linkjével.", { rooms: shared.join(", ") }),
+        )}</p>`,
+      );
+    }
     // A5: entries we could not read exactly — counted, with the details one tap away.
     // (stored already filtered to what matters to the owner — sync.ts ownerRelevantWarnings)
     const warns = l.lastWarnings ?? [];
@@ -2889,7 +2902,8 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
     .join("");
 
   return (
-    `<div class="adm-card">` +
+    // id: the sync-failure letter's button lands here (Elek 10-12 N2).
+    `<div class="adm-card" id="portal-naptar">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
     `<p class="adm-lead">${esc(T(lang, "Ha {what} a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") }))}</p>` +
     `<div class="psync">${cards}</div>` +

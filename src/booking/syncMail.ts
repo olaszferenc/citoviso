@@ -1,7 +1,7 @@
 // Owner mails of the portal calendar sync (ADR-0367, Elek 2026-10-11 K1 · K7).
 //
 // Both go out in the existing owner-letter frame (ownerLetter: the platform frame,
-// the property's name, the Foglalások button) and are logged to the tenant's message
+// the property's name, the main button) and are logged to the tenant's message
 // list, like every other owner-facing booking mail.
 //
 //   K1 — a portal sold a night an ACCEPTED booking of ours already holds. We decide for
@@ -9,6 +9,7 @@
 //   K7 — a link has been failing for a day: new portal bookings no longer reach us,
 //        and the owner would only learn it by opening the admin.
 
+import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { mailDetails, mailNote, mailPara } from "../email/platformLayout.js";
@@ -22,6 +23,7 @@ import { esc, huDate, ownerLetter, siteMailContext } from "./requests.js";
 
 interface LinkContext {
   readonly siteId: string;
+  readonly unitId: string;
   readonly unitName: string;
   readonly provider: string;
 }
@@ -30,10 +32,15 @@ async function linkContext(linkId: string): Promise<LinkContext | null> {
   const row = await db
     .selectFrom("calendar_link")
     .innerJoin("site_unit", "site_unit.id", "calendar_link.unit_id")
-    .select(["site_unit.site_id as siteId", "site_unit.name as unitName", "calendar_link.provider as provider"])
+    .select(["site_unit.site_id as siteId", "site_unit.id as unitId", "site_unit.name as unitName", "calendar_link.provider as provider"])
     .where("calendar_link.id", "=", linkId)
     .executeTakeFirst();
   return row ?? null;
+}
+
+/** The admin's Online foglalás screen of the unit, scrolled to the portal cards. */
+export function portalCardUrl(unitId: string): string {
+  return `${config.publicSiteUrl}/admin?tab=modulok&m=booking&e=${encodeURIComponent(unitId)}#portal-naptar`;
 }
 
 /** K1: "a portál egy már elfogadott éjszakát is hozott" — which night, which guest. */
@@ -143,6 +150,9 @@ export async function sendOwnerSyncFailing(link: CalendarLinkRow): Promise<void>
       hostName: ctx.hostName,
       kicker: mailLabel(T(lang, "Naptár-szinkron"), "wait"),
       heading: T(lang, "Nem frissül a portál naptára"),
+      // Elek 10-12 N2: the text sends the owner to the portal card — so does the button
+      // (it led to the Foglalások list, where the card is not).
+      button: { href: portalCardUrl(lc.unitId), label: T(lang, "Online foglalás megnyitása") },
       blocks: [
         mailPara(esc(lead)),
         ...(kept ? [mailPara(esc(kept))] : []),
