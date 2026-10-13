@@ -7334,6 +7334,7 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Tények és döntések
+- 2026-10-13 · mock rendelés/próba gombpár: fekvő telefonon jobb alsó sarok, EGYMÁS ALATT; a hős-címre és bevezetőre SEHOL nem ül (álló süti-sávval/nélküle, asztal) (tulaj: „csináld úgy hogy jó legyen” = a SUB javaslatai)
 - 2026-10-13 · éles `MOBILE_SEND_WINDOW_OFF=1` (09-30-i ideiglenes teszt-kapcsoló) KIVÉVE az éles .env-ből, a szolgáltatások újraindítva → a lead-SMS/MMS időablak újra él (mentés: /opt/citoviso/backups/env-window-20261013-064122/) (tulaj: „Igen”)
 - 2026-10-13 · „desztillalo” heti jelentés SMS: vasárnap 04:05 helyett hétfő 08:00; operátori riasztás-SMS-ek is 22–07 csendes óra (tulaj)
 - 2026-10-13 · operátori riasztó SMS (AAM, megrekedt rendelés, bővítés, törött pár, próba-őrszem, .hu link, modul-ütközés, nyelv-generálás): mind a `sendOperatorSms` közös úton, 22–07 között visszatartva, a ház-riasztással egy reggeli összesítőben; a desztilláló heti jelentés hétfő 08:00 (crontab `0 8 * * 1`) (tulaj-döntések, ADR-0379)
