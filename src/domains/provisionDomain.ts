@@ -214,7 +214,7 @@ async function alertSetupRetry(domain: string, tenantId: string, error: string):
 }
 
 /**
- * ADR-XXXX: the registration failed BEFORE the purchase (`failed` is terminal — the timer
+ * ADR-0374: the registration failed BEFORE the purchase (`failed` is terminal — the timer
  * will not retry it). Operator text — outside the §B.18 buyer-facing i18n scope.
  */
 async function alertDomainFailed(
@@ -602,7 +602,7 @@ export async function runDomainProvisioning(
     // A second order on a site whose domain is live: the tenant has a working domain —
     // a "we could not buy it" letter about the duplicate would only confuse.
     if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released);
-    // ADR-XXXX: the tenant was told — the house was not. A paid-for name that we could not
+    // ADR-0374: the tenant was told — the house was not. A paid-for name that we could not
     // buy is a buyer waiting on us; the house hears it (mail + SMS).
     await alertDomainFailed(p.domain, p.tenantId, p.id, msg, released, liveAlready);
     return "failed";

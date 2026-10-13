@@ -11,7 +11,7 @@
 // ONE channel, the one that already exists: app_setting.alert_email (getAlertRecipients),
 // the address the stuck-order, AAM and held-cancellation alerts already use.
 //
-// ADR-XXXX (owner 2026-09-30: "ha valamely külső folyamat megakad, arról jöjjön értesítés +
+// ADR-0374 (owner 2026-09-30: "ha valamely külső folyamat megakad, arról jöjjön értesítés +
 // SMS"): a SEVERE alert (`sms: true` — money, a buyer waiting, a dead key) also goes as an
 // accent-free SMS to the same recipients' phone (console /settings, fallback
 // OWNER_ALERT_PHONE). The SMS waits in the modem's queue between MMS lanes and is not
@@ -47,7 +47,7 @@ export interface HouseAlert {
   readonly tag: string;
   readonly subject: string;
   readonly text: string;
-  /** ADR-XXXX: severe — also an SMS (filtered: see the header). Default: e-mail only. */
+  /** ADR-0374: severe — also an SMS (filtered: see the header). Default: e-mail only. */
   readonly sms?: boolean;
   /** The SMS repeat-filter key; defaults to the tag (one SMS per tag per window). */
   readonly smsKey?: string;
@@ -64,9 +64,9 @@ export interface HouseAlertDeps {
   send(msg: EmailMessage): Promise<unknown>;
   /** The base URL the live-host verdict is made from (config.publicBaseUrl by default). */
   publicBaseUrl?(): string;
-  /** ADR-XXXX: the SMS recipient. A deps set without it (the ADR-0276 guard) sends no SMS. */
+  /** ADR-0374: the SMS recipient. A deps set without it (the ADR-0276 guard) sends no SMS. */
   recipientPhone?(): Promise<string | null>;
-  /** ADR-XXXX: the SMS channel; resolves false when the message did not go out. */
+  /** ADR-0374: the SMS channel; resolves false when the message did not go out. */
   sendSms?(msg: { to: string; text: string }): Promise<boolean>;
 }
 

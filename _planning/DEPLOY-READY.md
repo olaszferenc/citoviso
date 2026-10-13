@@ -253,9 +253,9 @@ A `maintainDatedPrices` levele: „…Utána azokra az éjszakákra, amelyekre n
 életbe). Ma a halott ág miatt élesben nem jelentkezik — a 4b.1 élesztésével EGYÜTT javítandó (feltételes mondat:
 van-e időtlen alapár).
 
-### 4b.3 Élesi őrködés — e-mail + SMS, ha egy külső folyamat megakad — ✅ KÓD KÉSZ 2026-10-13 (ADR-XXXX), élesítés a deployjal
+### 4b.3 Élesi őrködés — e-mail + SMS, ha egy külső folyamat megakad — ✅ KÓD KÉSZ 2026-10-13 (ADR-0374), élesítés a deployjal
 
-> **2026-10-13 (ADR-XXXX):** a lenti hézag-lista 1., 2., 3. és 5. pontja kész, plusz az SMS-sor elakadása és a
+> **2026-10-13 (ADR-0374):** a lenti hézag-lista 1., 2., 3. és 5. pontja kész, plusz az SMS-sor elakadása és a
 > 24 órája hibás iCal-link. A súlyos riasztás levél + szűrt SMS (6 órás ismétlés-tiltás, óránként legfeljebb 4,
 > „+N” összevonás, csak éles hoston); óránkénti söprés a `citoviso-offer-followup` tickben; a 401/403-at látó
 > adapterek naponta egyszer jelzik a halott kulcsot. Őr: `scripts/stall-alert-check.mts`.
@@ -332,4 +332,4 @@ Ha egy szálnak deploy-előfeltétele vagy deploy utáni teendője van, **ide, e
 | Places medium (ADR-0258) | `places-medium-backfill` szárazon, majd `--apply --backup` | §4.8 |
 | Eszkalációs ajánlat admin (ADR-0285) | ✅ **élesítve 2026-09-30 14:33** (`prod/20260930-1433`); migráció nincs | §4b.4 |
 | Fordítás-költség (2026-10-07) | éles `.env`: `I18N_BOOT_TOPUP=0`; migráció `0092_translation_spend` | §2 |
-| Élesi őrködés + SMS (ADR-XXXX, 2026-10-13) | migráció `0108_house_alert_sms`; riasztási SMS-szám a `/settings`-ben (vagy `OWNER_ALERT_PHONE`) | §4b.3 |
+| Élesi őrködés + SMS (ADR-0374, 2026-10-13) | migráció `0108_house_alert_sms`; riasztási SMS-szám a `/settings`-ben (vagy `OWNER_ALERT_PHONE`) | §4b.3 |

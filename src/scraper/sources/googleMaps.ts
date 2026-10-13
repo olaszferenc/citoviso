@@ -228,7 +228,7 @@ function classifyFailure(status: number, body: string): PlacesFailure {
   if (/RESOURCE_EXHAUSTED|quota/i.test(body)) return "quota";
   if (status === 429) return "quota";
   if (status === 401 || status === 403) {
-    // ADR-XXXX: a dead key is a house alarm (once a day, live host only) — not just this caller's error.
+    // ADR-0374: a dead key is a house alarm (once a day, live host only) — not just this caller's error.
     noteDeadKey("places", `HTTP ${status}: ${body.replace(/\s+/g, " ").slice(0, 200)}`);
     return "auth";
   }

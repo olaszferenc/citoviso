@@ -669,7 +669,7 @@ export interface AamAlertTable {
   sent_at: Generated<Timestamp>;
 }
 
-/** 0108 (ADR-XXXX): every SMS decision of the house alert — the noise filter reads it
+/** 0108 (ADR-0374): every SMS decision of the house alert — the noise filter reads it
  *  (same key at most once per 6 h, at most 4 alert SMS per hour, the held-back count rides
  *  on the next one). The e-mail goes out regardless. */
 export interface HouseAlertSmsTable {
@@ -681,7 +681,7 @@ export interface HouseAlertSmsTable {
   created_at: Generated<Timestamp>;
 }
 
-/** 0108 (ADR-XXXX): "one incident = one alert" — the stall sweep claims the key BEFORE
+/** 0108 (ADR-0374): "one incident = one alert" — the stall sweep claims the key BEFORE
  *  alerting and releases it when no channel carried the alert. */
 export interface HouseAlertOnceTable {
   key: string;

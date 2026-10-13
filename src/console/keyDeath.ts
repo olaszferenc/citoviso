@@ -1,4 +1,4 @@
-// The ONE call the API adapters make when a provider answers 401/403 (ADR-XXXX).
+// The ONE call the API adapters make when a provider answers 401/403 (ADR-0374).
 // Fire-and-forget and import-light on purpose: the adapters (Places, Brave, the registrar
 // and DNS client, the mail sender) sit under the scraper, the generator and the mailer,
 // and must neither wait for the alert nor pull the console's alert chain into their static

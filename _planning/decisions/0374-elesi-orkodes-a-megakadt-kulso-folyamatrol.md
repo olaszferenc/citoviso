@@ -1,4 +1,4 @@
-## ADR-XXXX — Élesi őrködés: a megakadt külső folyamatról levél + szűrt SMS (2026-10-13)
+## ADR-0374 — Élesi őrködés: a megakadt külső folyamatról levél + szűrt SMS (2026-10-13)
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (SUB, koordinátor: a „deploy” fő session; tulaj: „Mehet mind
 subban”, 2026-10-13; brief `~/rc-briefs/eles-orkodes-sms-20261013.md`) · **Kapcsolódó:** ADR-0276 (ház-riasztás, egy

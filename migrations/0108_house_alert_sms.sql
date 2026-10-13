@@ -1,5 +1,5 @@
 -- 0108 ÉLESI ŐRKÖDÉS: a ház-riasztás SMS-t is kap, ha a hiba súlyos, és a megakadt külső
--- folyamatokat óránkénti söprés keresi (ADR-XXXX, tulaj 2026-09-30: „ha valamely külső
+-- folyamatokat óránkénti söprés keresi (ADR-0374, tulaj 2026-09-30: „ha valamely külső
 -- folyamat megakad, arról jöjjön értesítés + SMS”).
 --
 -- ① house_alert_sms — minden SMS-döntés naplója (kiment / visszatartva / bukott). Ebből

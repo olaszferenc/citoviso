@@ -1,4 +1,4 @@
-// STALL ALERT GUARD (ADR-XXXX, migration 0108) — a stuck EXTERNAL process reaches the
+// STALL ALERT GUARD (ADR-0374, migration 0108) — a stuck EXTERNAL process reaches the
 // house by mail AND (when severe) by SMS, once, without flooding the modem. What this
 // proves, each leg a way the house could stay blind or be spammed:
 //   ① the SMS leg of alertHouse: a severe alert → one mail + one accent-free SMS; the same

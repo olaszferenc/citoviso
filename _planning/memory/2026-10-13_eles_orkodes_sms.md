@@ -1,4 +1,4 @@
-# 2026-10-13 — Élesi őrködés: megakadt külső folyamat → levél + szűrt SMS (ADR-XXXX)
+# 2026-10-13 — Élesi őrködés: megakadt külső folyamat → levél + szűrt SMS (ADR-0374)
 
 SUB `cit910826e9` a „deploy” FŐ session (`citfb4ed7ab`) alatt; brief `~/rc-briefs/eles-orkodes-sms-20261013.md`.
 Tulaj 2026-09-30: „ha valamely külső folyamat megakad, arról jöjjön értesítés + SMS”. Kiindulás: `_planning/DEPLOY-READY.md` 4b.3.

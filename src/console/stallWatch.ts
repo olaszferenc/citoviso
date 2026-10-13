@@ -1,5 +1,5 @@
 // STALL WATCH — the house hears about an EXTERNAL process that stopped moving
-// (ADR-XXXX; owner 2026-09-30: "ha valamely külső folyamat megakad, arról jöjjön
+// (ADR-0374; owner 2026-09-30: "ha valamely külső folyamat megakad, arról jöjjön
 // értesítés + SMS: ha a tenant fizetési folyamata megakad, ha a saját domain regisztrálás
 // nem megy le, ha a számlázás nem megy, ha valamelyik API kulcs hal meg stb.").
 //

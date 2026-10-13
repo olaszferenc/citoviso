@@ -21,7 +21,7 @@
 // EVERY step has its own try/catch (as billing-cycle.ts): one shared block let a throwing
 // escalation follow-up skip the trial warnings and the purge warning every hour while the
 // fault lasted (IT C6.1). A failed step → non-zero exit, the rest still run.
-// ADR-XXXX — and the STALL WATCH (src/console/stallWatch.ts): a payment the gateway never
+// ADR-0374 — and the STALL WATCH (src/console/stallWatch.ts): a payment the gateway never
 // closed, a domain stuck before registration, an SMS queue not draining, an iCal link failing
 // for a day, a dead Anthropic key → house mail (+ filtered SMS for the severe ones), once each.
 //   tsx scripts/offer-followup.mts [--now=2026-10-01T09:00:00+02:00]
@@ -64,7 +64,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: stuck external processes (payment, domain, SMS queue, iCal, API key) → house alert.
+  // ADR-0374: stuck external processes (payment, domain, SMS queue, iCal, API key) → house alert.
   const st = await runStallWatch(now);
   console.log(`stall-watch @ ${now.toISOString()}:`, JSON.stringify(st));
   if (st.failedKinds.length > 0) process.exitCode = 1;

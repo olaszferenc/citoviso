@@ -286,7 +286,7 @@ class SmtpEmailSender implements EmailSender {
           : {}),
       })
       .catch((e: { code?: string; responseCode?: number; message?: string }) => {
-        // ADR-XXXX: a rejected login (EAUTH / 535) is a dead mail key, not one bad letter.
+        // ADR-0374: a rejected login (EAUTH / 535) is a dead mail key, not one bad letter.
         // The alert's own mail then fails too — houseAlert falls back to the SMS.
         if (e?.code === "EAUTH" || e?.responseCode === 535) noteDeadKey("smtp", `${e.code ?? ""} ${e.responseCode ?? ""} ${e.message ?? ""}`.trim());
         throw e;
