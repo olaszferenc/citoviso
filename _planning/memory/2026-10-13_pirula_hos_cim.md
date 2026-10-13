@@ -34,7 +34,7 @@ horizontal, artdeco) a pár a hős-gombsor fölé lépve a bevezető sorra ül (
 `assets/design-refs/prospect-page/order-pill/README.md`, `assets/design-refs/prospect-page/proba-gomb/README.md`,
 `_planning/decisions/XXXX-pirula-par-fekvo-telefonon-sarokban-cimet-nem-takar.md`, `MEMORY.md`, ez a jegyzet.
 
-## 2. kör (ugyanaznap, ADR-XXXX) — a szabály kiterjesztése
+## 2. kör (ugyanaznap, ADR-0382) — a szabály kiterjesztése
 Tulaj a koordinátoron át: „csináld úgy, hogy jó legyen” → fekvőn egymás alatt marad; a „szövegre nem ül” álló sáv nélkül és asztalon is.
 - `heroTitleRects` feltétel nélkül; `findSpot(withTitle)` két menet (gomb+cím, majd csak gomb); `pillCeiling` = keretező sáv +
   a felső 30 % látszó (elementFromPoint) vezérlőinek SZÖVEG-kiterjedése −2 px; határra állás ≤ 6 px cím-rés mellett.

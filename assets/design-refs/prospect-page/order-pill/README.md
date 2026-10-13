@@ -34,12 +34,12 @@ Kattintható terv: `plan.html` (stílus-, méret- és süti-sáv-váltó; a gomb
 5. Telefonon (≤ 560 px) a jobb sarokban, asztalon középen. **Fekvő telefonon** (≤ 500 px magas, fekvő
    képernyő, pl. 844×390) a jobb alsó sarokban, telefonos méretben (ADR-0377, a tulaj „A” döntése,
    2026-09-29; addig az asztali közép-hely miatt nyugalomban is a hős-címre ült).
-6. **A hős-címre nem ül — sehol** (ADR-0377 + ADR-XXXX, tulaj 2026-10-13: „csináld úgy, hogy jó legyen”):
+6. **A hős-címre nem ül — sehol** (ADR-0377 + ADR-0382, tulaj 2026-10-13: „csináld úgy, hogy jó legyen”):
    minden méreten és állapotban (fekvő, álló, asztali; nyugalomban és süti-sávval) a hős-cím (`h1`) és a
    mellette álló bekezdések SZAVAI akadálynak számítanak, mint egy gomb (a sorköz nem; a betűktől álló
    telefonon és asztalon 6, fekvőn 3 px rés). A pár először oldalt vált (4. pont), aztán a szavak FÖLÉ lép,
    alájuk soha.
-7. **Fejlécre és gombra nem tolja a cím-kitérés** (ADR-XXXX): a fölfelé lépés határa a keretező sáv
+7. **Fejlécre és gombra nem tolja a cím-kitérés** (ADR-0382): a fölfelé lépés határa a keretező sáv
    („Ez egy honlap-terv…”) alja és a fejléc LÁTHATÓ vezérlőinek alja (menü-gomb, logó-link SZÖVEGE — a
    link üres doboza nem). Ha a cím fölött nincs hely, a pár a 4. pont helyén marad (a gomb-szabály
    sarka / helye); ha csak néhány pixel hiányzik, a határra áll, ha így a cím résébe legfeljebb 6 px-t

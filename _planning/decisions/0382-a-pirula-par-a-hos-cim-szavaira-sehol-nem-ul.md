@@ -1,4 +1,4 @@
-## ADR-XXXX — A pirula-pár a hős-cím szavaira sehol nem ül: álló telefonon süti-sáv nélkül és asztalon is a cím fölé lép, de fejlécre és gombra nem
+## ADR-0382 — A pirula-pár a hős-cím szavaira sehol nem ül: álló telefonon süti-sáv nélkül és asztalon is a cím fölé lép, de fejlécre és gombra nem
 
 **Dátum:** 2026-10-13 · **Kontextus:** az ADR-0377 nyitott pontja; a tulaj a koordinátoron át: „csináld úgy, hogy jó legyen” (mindkét javaslat elfogadva: fekvőn egymás alatt marad, a szabály kiterjed). **Kiterjeszti:** ADR-0377 ③ (eddig: fekvőn mindig, állón csak süti-sávval). **Megtartja:** ADR-0242 ④ (gomb-kitérés, R8), ADR-0377 ①② (fekvő: jobb sarok, egymás alatt), ADR-0373 (kérdés-sáv).
 
