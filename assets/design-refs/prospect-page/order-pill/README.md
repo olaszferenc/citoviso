@@ -34,11 +34,19 @@ Kattintható terv: `plan.html` (stílus-, méret- és süti-sáv-váltó; a gomb
 5. Telefonon (≤ 560 px) a jobb sarokban, asztalon középen. **Fekvő telefonon** (≤ 500 px magas, fekvő
    képernyő, pl. 844×390) a jobb alsó sarokban, telefonos méretben (ADR-0377, a tulaj „A” döntése,
    2026-09-29; addig az asztali közép-hely miatt nyugalomban is a hős-címre ült).
-6. **A hős-címre nem ül** (ADR-0377): fekvő telefonon mindig, álló telefonon a süti-sáv ideje alatt
-   (a sáv a saját magasságával felemeli a párt — mérve 784 → 661 px, épp a címre) a hős-cím és a
-   mellette álló bekezdések SZAVAI akadálynak számítanak, mint egy gomb: a pár föléjük lép, alá soha
-   (ott a sáv). Sáv nélkül, álló telefonon és asztalon a 4. pont változatlan.
-   Őr: `mock-trial-overlay-check` ⑪ (minden sablon, fekvő nyugalomban + süti-sávval, álló süti-sávval).
+6. **A hős-címre nem ül — sehol** (ADR-0377 + ADR-XXXX, tulaj 2026-10-13: „csináld úgy, hogy jó legyen”):
+   minden méreten és állapotban (fekvő, álló, asztali; nyugalomban és süti-sávval) a hős-cím (`h1`) és a
+   mellette álló bekezdések SZAVAI akadálynak számítanak, mint egy gomb (a sorköz nem; a betűktől álló
+   telefonon és asztalon 6, fekvőn 3 px rés). A pár először oldalt vált (4. pont), aztán a szavak FÖLÉ lép,
+   alájuk soha.
+7. **Fejlécre és gombra nem tolja a cím-kitérés** (ADR-XXXX): a fölfelé lépés határa a keretező sáv
+   („Ez egy honlap-terv…”) alja és a fejléc LÁTHATÓ vezérlőinek alja (menü-gomb, logó-link SZÖVEGE — a
+   link üres doboza nem). Ha a cím fölött nincs hely, a pár a 4. pont helyén marad (a gomb-szabály
+   sarka / helye); ha csak néhány pixel hiányzik, a határra áll, ha így a cím résébe legfeljebb 6 px-t
+   ér bele, és gombot nem takar.
+   Őr: `mock-trial-overlay-check` ⑪ — 21 sablon × fekvő / álló / asztali × nyugalom / süti-sáv: a cím
+   betűin nem ül, a keretező sáv alatt marad, hős-gombot nem temet be (fekvőn: jobb sarok); a javítás
+   nélküli runtime-on piros.
 
 ## Képek
 

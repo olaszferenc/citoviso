@@ -365,7 +365,7 @@ const PILL_PROBE = `(photosAreContent) => {
     if (!a || a.closest('[class*="cit-cfg"]') || a.closest("#cit-consent")) return null;
     const ar = a.getBoundingClientRect();
     if (ar.width < 60 || ar.height < 28) return null;
-    // ⑪: a photo tile that opens the lightbox is content (same rule as FB_PROBE)
+    // ⑪: a photo tile that opens the lightbox is content (same rule as FB_PROBE); see also below
     if (photosAreContent && (a.tagName === "IMG" || (a.querySelector("img") && !(a.textContent || "").trim()))) return null;
     return a;
   };
@@ -375,8 +375,20 @@ const PILL_PROBE = `(photosAreContent) => {
   for (const rr of rects)
     for (let i = 1; i <= 9; i++)
       for (let j = 1; j <= 3; j++) {
-        const hit = document.elementFromPoint(rr.left + (rr.width * i) / 10, rr.top + (rr.height * j) / 4);
+        const x = rr.left + (rr.width * i) / 10, y = rr.top + (rr.height * j) / 4;
+        const hit = document.elementFromPoint(x, y);
         const a = hit && primary(hit);
+        // ⑪: a text link counts where its words are — the masthead name link is a 728 px box
+        // around a 185 px name (claymorphism), its empty end is no control (same as the runtime)
+        if (a && photosAreContent && (a.textContent || "").trim()) {
+          const tw = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+          let on = false;
+          for (let n = tw.nextNode(); n && !on; n = tw.nextNode()) {
+            const rg = document.createRange(); rg.selectNodeContents(n);
+            for (const q of rg.getClientRects()) if (x >= q.left - 4 && x <= q.right + 4 && y >= q.top - 4 && y <= q.bottom + 4) on = true;
+          }
+          if (!on) continue;
+        }
         if (a) under.set(a, (a.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 30));
       }
   members.forEach((m, k) => (m.style.visibility = prev[k]));
@@ -573,11 +585,13 @@ try {
     await ctx.close();
   }
 
-  // ⑪ Owner's ruling „A” (2026-09-29, after the pilot): the pair never sits on the hero
-  // title. Sideways (844×390) it takes a corner, not the centre, at rest and with the consent
-  // bar; upright (390×844) the consent bar's lift no longer puts it on the title. The title
-  // = the h1's words and the paragraphs beside it, measured on their TEXT lines (glyphs).
-  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő 844×390: sarok; álló: süti-sáv alatt)");
+  // ⑪ Owner's ruling „A” (2026-09-29, after the pilot) and its extension (2026-10-13,
+  // „csináld úgy, hogy jó legyen”): the pair never sits on the hero title — sideways
+  // (844×390) it takes the right corner, not the centre; upright and on a desktop it steps
+  // above the title, at rest and with the consent bar — and never onto a hero control or
+  // the framing bar on the way. The title = the h1's words and the paragraphs beside it,
+  // measured on their TEXT lines (glyphs).
+  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő: sarok; álló + asztali: a cím fölé), gombra és fejlécre sem");
   const TITLE_PROBE = `() => {
     const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
       .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
@@ -603,30 +617,33 @@ try {
     const vw = document.documentElement.clientWidth;
     const right = Math.max(...pills.map((q) => q.right)), left = Math.min(...pills.map((q) => q.left));
     const top = Math.min(...pills.map((q) => q.top));
-    return { hits, pills: pills.length, corner: right >= vw - 40 || left <= 40, onScreen: top >= 0,
+    const fr = document.querySelector("[data-cit-framing]");
+    const frBottom = fr ? fr.getBoundingClientRect().bottom : 0;
+    return { hits, pills: pills.length, corner: right >= vw - 40 || left <= 40, onScreen: top >= 0 && top >= frBottom,
       rects: pills.map((q) => [q.left, q.top, q.width, q.height].map(Math.round)) };
   }`;
   type TitleGeom = { hits: string[]; pills: number; corner: boolean; onScreen: boolean; rects: number[][] };
+  type Buried = { error?: string; buried?: { label: string }[] };
   for (const id of Object.keys(TEMPLATES)) {
     const html = await buildPage(id);
-    for (const [w, h, vp] of [[844, 390, "fekvő"], [390, 844, "álló"]] as const) {
+    for (const [w, h, vp] of [[844, 390, "fekvő"], [390, 844, "álló"], [1280, 800, "asztali"]] as const) {
       const { ctx, p } = await open(browser, html, w, h, false);
       await p.waitForTimeout(1400);
-      if (vp === "fekvő") {
-        const rest = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
-        check(`⑪ ${id}/${vp}, nyugalomban: a pár sarokban, nem középen`, rest.pills === 2 && rest.corner, rest);
-        check(`⑪ ${id}/${vp}, nyugalomban: a pár nem ül a címen`, rest.pills === 2 && rest.hits.length === 0 && rest.onScreen, rest);
-        const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as { error?: string; buried?: { label: string }[] };
-        check(`⑪ ${id}/${vp}, nyugalomban: a sarok-pár sem temet be hős-gombot (FK-004b H-3)`, !b.error && (b.buried?.length ?? 0) === 0, b);
-        if (id === "dark-luxury") await shot(p, "mock-pirula-cim-dark-luxury-fekvo");
-      }
+      const rest = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
+      if (vp === "fekvő") check(`⑪ ${id}/${vp}, nyugalomban: a pár sarokban, nem középen`, rest.pills === 2 && rest.corner, rest);
+      check(`⑪ ${id}/${vp}, nyugalomban: a pár nem ül a címen, a fejléc alatt marad`, rest.pills === 2 && rest.hits.length === 0 && rest.onScreen, rest);
+      const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;
+      check(`⑪ ${id}/${vp}, nyugalomban: hős-gombot sem temet be (FK-004b H-3)`, !b.error && (b.buried?.length ?? 0) === 0, b);
+      if (id === "dark-luxury") await shot(p, `mock-pirula-cim-dark-luxury-${vp}`);
       // A key press is an engagement: the deferred consent bar comes, the page does not scroll.
       await p.keyboard.press("Shift");
       await p.waitForTimeout(1400);
       const up = await p.evaluate(() => !!document.getElementById("cit-consent"));
       const withBar = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
       if (id === "dark-luxury") await shot(p, `mock-pirula-cim-dark-luxury-${vp}-suti`);
-      check(`⑪ ${id}/${vp}, süti-sávval: a pár nem ül a címen`, up && withBar.pills === 2 && withBar.hits.length === 0 && withBar.onScreen, { up, ...withBar });
+      check(`⑪ ${id}/${vp}, süti-sávval: a pár nem ül a címen, a fejléc alatt marad`, up && withBar.pills === 2 && withBar.hits.length === 0 && withBar.onScreen, { up, ...withBar });
+      const b2 = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;
+      check(`⑪ ${id}/${vp}, süti-sávval: hős-gombot sem temet be`, !b2.error && (b2.buried?.length ?? 0) === 0, b2);
       await ctx.close();
     }
   }

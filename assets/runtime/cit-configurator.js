@@ -5397,7 +5397,6 @@
   function heroTitleRects(box) {
     var out = [];
     var sideways = isLandscapePhone();
-    if (!sideways && !(isPhone() && consentH() > 0)) return out;
     var heads = document.querySelectorAll("h1");
     for (var i = 0; i < heads.length; i++) {
       var h1 = heads[i];
@@ -5517,6 +5516,109 @@
     return clash;
   }
 
+  /** Union of an element's visible text lines, or null when it has no words (an icon). */
+  function textExtent(el) {
+    var walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    var u = null;
+    for (var tn = walk.nextNode(); tn; tn = walk.nextNode()) {
+      if (!/\S/.test(tn.nodeValue || "")) continue;
+      var range = document.createRange();
+      range.selectNodeContents(tn);
+      var rs = range.getClientRects();
+      for (var k = 0; k < rs.length; k++) {
+        var q = rs[k];
+        if (q.width < 1) continue;
+        u = u
+          ? { left: Math.min(u.left, q.left), right: Math.max(u.right, q.right), top: Math.min(u.top, q.top), bottom: Math.max(u.bottom, q.bottom) }
+          : { left: q.left, right: q.right, top: q.top, bottom: q.bottom };
+      }
+    }
+    return u;
+  }
+
+  /** The highest top edge the pair may climb to in a column: below the framing bar and the
+   * header's own controls (logo link, menu button, nav) — never onto them. Their box
+   * bottom − 2 px, not + AVOID_GAP: sideways the round menu button sits right above the
+   * title (aurora, claymorphism at 844×390); a gap sent the pair back onto the intro, and
+   * the box's last 2 px at the pair's edge are outside the painted circle. */
+  function pillCeiling(left, right) {
+    var ceil = 8;
+    var fr = document.querySelector("[data-cit-framing]");
+    if (fr) {
+      var r0 = fr.getBoundingClientRect();
+      if (r0.bottom > 0 && r0.height > 0) ceil = Math.max(ceil, r0.bottom + 2);
+    }
+    var vh = window.innerHeight;
+    var all = document.querySelectorAll("a, button, [role=button]");
+    for (var i = 0; i < all.length; i++) {
+      var node = all[i];
+      if (node.closest('[class*="cit-cfg"]') || node.closest("#cit-consent")) continue;
+      var r = node.getBoundingClientRect();
+      if (r.width < 24 || r.height < 24 || r.top >= vh * 0.3 || r.bottom <= 0) continue;
+      var cs = getComputedStyle(node);
+      if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue;
+      // Only what is really on top: the framing bar's folded „Miért kaptam?” body keeps its
+      // links in the layout under the masthead (claymorphism at 844×390).
+      var hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (!hit || !node.contains(hit)) continue;
+      // A text link counts where its words are: the masthead name link is a 730 px box
+      // around 185 px of name, and its empty right end is no control.
+      var ext = textExtent(node) || r;
+      if (ext.right <= left || ext.left >= right) continue;
+      ceil = Math.max(ceil, ext.bottom - 2);
+    }
+    return ceil;
+  }
+
+  /**
+   * ② an in-flow obstacle under the resting spot → try the other side(s); ③ every side
+   * taken → the upward sweep on the first side. For the pair the tested box is the UNION of
+   * both pills: it moves together or not at all. `withTitle` adds the hero title's words
+   * to the obstacles; such a spot is only `ok` when nothing is left under it and it stays
+   * below the header.
+   */
+  function findSpot(withTitle, bottomY, slots, w, h) {
+    var obstacles = withTitle ? pillObstacles : blockingRects;
+    for (var si = 0; si < slots.length; si++) {
+      var sr = slotRect(slots[si], w);
+      var pr = { left: sr.left, right: sr.right, top: bottomY - h, bottom: bottomY };
+      if (!clashAt(obstacles(pr), bottomY, h)) return { side: slots[si], bottomY: bottomY, ok: true };
+    }
+    var side = slots[0]; // '' everywhere but a landscape phone, where it is the right corner
+    var dr = slotRect(side, w);
+    var rects = obstacles({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
+    var floor = withTitle ? pillCeiling(dr.left, dr.right) : 8;
+    var ok = true;
+    for (var step = 0; step < 8; step++) {
+      var clash = clashAt(rects, bottomY, h);
+      if (!clash) break;
+      var lifted = clash.top - AVOID_GAP;
+      // Climbing off the top of the screen (or onto the header) would hide the buy entry or
+      // the site's own controls — stay on stage and accept the last position.
+      if (lifted - h < floor) {
+        ok = false;
+        if (withTitle) {
+          // A few pixels short of the header (claymorphism sideways: the menu button sits
+          // right above the title): rest ON the limit when that only eats into the title's
+          // gap (≤ 6 px) and buries no control — otherwise give the title-aware search up.
+          var atLimit = floor + h;
+          if (atLimit <= bottomY && !clashAt(blockingRects({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight }), atLimit, h)) {
+            var depth = 0;
+            for (var ri = 0; ri < rects.length; ri++) {
+              var rr = rects[ri];
+              depth = Math.max(depth, Math.min(atLimit, rr.bottom + AVOID_GAP) - Math.max(atLimit - h, rr.top - AVOID_GAP));
+            }
+            if (depth <= 6) return { side: side, bottomY: atLimit, ok: true };
+          }
+        }
+        break;
+      }
+      bottomY = lifted;
+    }
+    if (ok && clashAt(rects, bottomY, h)) ok = false;
+    return { side: side, bottomY: bottomY, ok: ok };
+  }
+
   function placeLaunch() {
     if (launch.hidden || !launch.classList.contains("cit-cfg-in")) return;
     if (launchBase === null) {
@@ -5537,33 +5639,19 @@
       window.innerHeight - (launchBase + consentH()),
       fixedBottomTop() - AVOID_GAP,
     );
-    // ② an in-flow primary control under that spot → try the other side(s). For the pair
-    // the tested box is the UNION of both pills: it moves together or not at all.
     var slots = sideSlots();
-    var side = null;
-    for (var si = 0; si < slots.length; si++) {
-      var sr = slotRect(slots[si], w);
-      var pr = { left: sr.left, right: sr.right, top: bottomY - h, bottom: bottomY };
-      if (!clashAt(pillObstacles(pr), bottomY, h)) {
-        side = slots[si];
-        break;
-      }
-    }
-    // ③ every side taken → the old upward sweep, on the default side
-    if (side === null) {
-      side = slots[0]; // '' everywhere but a landscape phone, where it is the right corner
-      var dr = slotRect(side, w);
-      var rects = pillObstacles({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
-      for (var step = 0; step < 8; step++) {
-        var clash = clashAt(rects, bottomY, h);
-        if (!clash) break;
-        var lifted = clash.top - AVOID_GAP;
-        // Climbing off the top of the screen would hide the buy entry altogether —
-        // a worse failure than an overlap. Stay on stage and accept the last position.
-        if (lifted - h < 8) break;
-        bottomY = lifted;
-      }
-    }
+    /* cit-cfg-trialfx-pilltwo-start
+     * Owner via the coordinator (2026-10-13, „csináld úgy, hogy jó legyen”): the hero title
+     * and its intro are obstacles everywhere — upright without the consent bar and on a
+     * desktop too, not only sideways / under the bar. But a spot above the title must not be
+     * bought with the header or a hero button: if the title-aware search ends there (or
+     * still on something), the pair keeps the spot the button-only rule gives (ADR-0242 ④). */
+    var spot = findSpot(true, bottomY, slots, w, h);
+    if (!spot.ok) spot = findSpot(false, bottomY, slots, w, h);
+    /* cit-cfg-trialfx-pilltwo-end */
+    if (!spot) spot = findSpot(false, bottomY, slots, w, h);
+    var side = spot.side;
+    bottomY = spot.bottomY;
     var pillBottom = Math.round(window.innerHeight - bottomY) + "px";
     if (pair) {
       // Both members get exact pixels: one shared bottom edge, the pair's left from the
