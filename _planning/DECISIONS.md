@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-gyermekkent-megadott-vendeg-ifa-mentes.md) — A gyermekként megadott vendég IFA-mentes; próbázónak és ügyfélnek nincs hideg megkeresés
+- [ADR-0384](decisions/0384-a-gyermekkent-megadott-vendeg-ifa-mentes.md) — A gyermekként megadott vendég IFA-mentes; próbázónak és ügyfélnek nincs hideg megkeresés
 - [ADR-0383](decisions/0383-a-pirula-par-a-hos-kepvalto-jelzocsikjaira-sem.md) — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül
 - [ADR-0382](decisions/0382-a-pirula-par-a-hos-cim-szavaira-sehol-nem-ul.md) — A pirula-pár a hős-cím szavaira sehol nem ül: álló telefonon süti-sáv nélkül és asztalon is a cím fölé lép, de fejlécre és gombra nem
 - [ADR-0381](decisions/0381-a-csomagban-foglalt-sajat-cim-dij-nelkuli.md) — A csomagban foglalt saját cím díj nélküli igénylése AUTOMATIKUS: ugyanaz a beszerzés, terhelés és zárolás nélkül (2026-10-13)

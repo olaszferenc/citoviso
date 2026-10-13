@@ -1,4 +1,4 @@
-## ADR-XXXX — A gyermekként megadott vendég IFA-mentes; próbázónak és ügyfélnek nincs hideg megkeresés
+## ADR-0384 — A gyermekként megadott vendég IFA-mentes; próbázónak és ügyfélnek nincs hideg megkeresés
 
 **Dátum:** 2026-10-13 · **Kontextus:** az Elek éles teszt (2026-10-13, három szerepben) leletei, `_planning/memory/2026-10-13_elek_eles_teszt_harom_szerep.md` — T-3 és O-1. **Kiterjeszti:** ADR-0378 (ellátás, gyerekár, gyerek-számláló), a V-3 IFA-sor (terv m1-elek-javitasok ④).
 
