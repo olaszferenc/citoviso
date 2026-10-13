@@ -13,6 +13,7 @@
 
 import { config } from "../../config.js";
 import { decodeEntities } from "./portals/extract.js";
+import { noteDeadKey } from "../../console/keyDeath.js";
 
 const CSE_ENDPOINT = "https://www.googleapis.com/customsearch/v1";
 const BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
@@ -80,6 +81,7 @@ async function braveSearch(
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    if (res.status === 401 || res.status === 403) noteDeadKey("brave", `HTTP ${res.status}: ${body.slice(0, 200)}`);
     warnOnce(
       `brave-${res.status}`,
       `⛔ BRAVE SEARCH HIBA (HTTP ${res.status})` +

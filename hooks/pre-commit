@@ -869,6 +869,15 @@ if [ -f scripts/house-alert-check.mts ] && \
   echo "[pre-commit] house-alert-check (időzítő / foglalási levél / webhook → a ház riasztást kap)…"
   npx tsx scripts/house-alert-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ÉLESI ŐRKÖDÉS (2026-10-13, ADR-XXXX — tulaj: „ha valamely külső folyamat megakad, arról jöjjön
+# értesítés + SMS”). Saját scratch-DB: a súlyos ház-riasztás levél + szűrt SMS (ismétlés-tiltás,
+# óránkénti sapka, nem éles hoston SMS nincs); az óránkénti söprés a megakadt fizetést, domaint,
+# SMS-sort, iCal-linket és halott API-kulcsot egyszer jelzi; a 401/403-at látó adapterek bekötve.
+if [ -f scripts/stall-alert-check.mts ] && \
+   changed_files | grep -qE '^src/console/(houseAlert|stallWatch|keyDeath)\.ts$|^src/domains/provisionDomain\.ts$|^src/scraper/sources/(googleMaps|webSearch)\.ts$|^src/generator/images\.ts$|^src/domains/(registrar|dns)/websupport\.ts$|^src/email/sender\.ts$|^scripts/(offer-followup|stall-alert-check)\.mts$|^migrations/0108_'; then
+  echo "[pre-commit] stall-alert-check (megakadt külső folyamat → levél + szűrt SMS, egyszer)…"
+  npx tsx scripts/stall-alert-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A bukott számla riaszt és újrakiadható — sosem kétszer. Mérve élesen 2026-09-30: a fizetett
 # 97 Ft-os rendelés számlája „Számlázz error 378”-cal elbukott, és csak egy failed sor maradt.
 # Mock számlázó (a Számlázz szamlaKulsoAzon-viselkedésével), saját fixtúra, a tick a saját id-kra szűkítve.

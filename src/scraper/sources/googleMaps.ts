@@ -2,6 +2,7 @@ import { config } from "../../config.js";
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
 import { GENERIC_NAME_WORD, PLACES_TRADE_WORD } from "../genericWords.js";
+import { noteDeadKey } from "../../console/keyDeath.js";
 
 // Google Maps via the official Places API (New) — legally clean route. Requires
 // GOOGLE_MAPS_API_KEY. Without a key the source skips itself so OSM still runs.
@@ -226,7 +227,11 @@ export class PlacesUnavailableError extends Error {
 function classifyFailure(status: number, body: string): PlacesFailure {
   if (/RESOURCE_EXHAUSTED|quota/i.test(body)) return "quota";
   if (status === 429) return "quota";
-  if (status === 401 || status === 403) return "auth";
+  if (status === 401 || status === 403) {
+    // ADR-XXXX: a dead key is a house alarm (once a day, live host only) — not just this caller's error.
+    noteDeadKey("places", `HTTP ${status}: ${body.replace(/\s+/g, " ").slice(0, 200)}`);
+    return "auth";
+  }
   return "upstream";
 }
 

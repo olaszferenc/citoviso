@@ -9,6 +9,7 @@ import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { config } from "../config.js";
 import { hasTrackedLink, markOwnViewLinks } from "../console/prospectPath.js";
+import { noteDeadKey } from "../console/keyDeath.js";
 
 export interface EmailAttachment {
   readonly filename: string;
@@ -268,21 +269,28 @@ class SmtpEmailSender implements EmailSender {
   async send(msg: EmailMessage): Promise<SendResult> {
     const bcc = pilotBcc(msg);
     // With a fromName only the BARE address may ride along (see bareAddress).
-    const info = await this.transporter.sendMail({
-      from: msg.fromName
-        ? { name: msg.fromName, address: bareAddress(msg.fromAddress || this.from) }
-        : msg.fromAddress || this.from,
-      to: msg.to,
-      ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
-      ...(bcc ? { bcc } : {}),
-      subject: msg.subject,
-      text: msg.text,
-      ...(msg.html ? { html: msg.html } : {}),
-      ...(msg.headers ? { headers: { ...msg.headers } } : {}),
-      ...(msg.attachments?.length
-        ? { attachments: msg.attachments.map((a) => ({ ...a })) }
-        : {}),
-    });
+    const info = await this.transporter
+      .sendMail({
+        from: msg.fromName
+          ? { name: msg.fromName, address: bareAddress(msg.fromAddress || this.from) }
+          : msg.fromAddress || this.from,
+        to: msg.to,
+        ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
+        ...(bcc ? { bcc } : {}),
+        subject: msg.subject,
+        text: msg.text,
+        ...(msg.html ? { html: msg.html } : {}),
+        ...(msg.headers ? { headers: { ...msg.headers } } : {}),
+        ...(msg.attachments?.length
+          ? { attachments: msg.attachments.map((a) => ({ ...a })) }
+          : {}),
+      })
+      .catch((e: { code?: string; responseCode?: number; message?: string }) => {
+        // ADR-XXXX: a rejected login (EAUTH / 535) is a dead mail key, not one bad letter.
+        // The alert's own mail then fails too — houseAlert falls back to the SMS.
+        if (e?.code === "EAUTH" || e?.responseCode === 535) noteDeadKey("smtp", `${e.code ?? ""} ${e.responseCode ?? ""} ${e.message ?? ""}`.trim());
+        throw e;
+      });
     console.log(`[email:smtp] → ${msg.to} · "${msg.subject}" · ${info.messageId}`);
     return { id: info.messageId ?? "smtp-sent", provider: "smtp" };
   }

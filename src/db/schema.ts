@@ -669,6 +669,26 @@ export interface AamAlertTable {
   sent_at: Generated<Timestamp>;
 }
 
+/** 0108 (ADR-XXXX): every SMS decision of the house alert — the noise filter reads it
+ *  (same key at most once per 6 h, at most 4 alert SMS per hour, the held-back count rides
+ *  on the next one). The e-mail goes out regardless. */
+export interface HouseAlertSmsTable {
+  id: Generated<string>;
+  tag: string;
+  dedupe_key: string;
+  status: "sent" | "suppressed" | "failed";
+  subject: string;
+  created_at: Generated<Timestamp>;
+}
+
+/** 0108 (ADR-XXXX): "one incident = one alert" — the stall sweep claims the key BEFORE
+ *  alerting and releases it when no channel carried the alert. */
+export interface HouseAlertOnceTable {
+  key: string;
+  tag: string;
+  created_at: Generated<Timestamp>;
+}
+
 /** 0052 (ADR-0098/c): platform-level key-value settings edited on the console
  *  /settings page. The matching env var (if any) is the fallback; the DB value
  *  overrides it without a deploy. Keys so far: 'alert_phone', 'alert_email'. */
@@ -1937,4 +1957,6 @@ export interface Database {
   site_multilang: SiteMultilangTable;
   multilang_generation: MultilangGenerationTable;
   domain_provisioning: DomainProvisioningTable;
+  house_alert_sms: HouseAlertSmsTable;
+  house_alert_once: HouseAlertOnceTable;
 }

@@ -674,7 +674,7 @@ async function flagPaidAfterEndState(paymentId: string, endState: string, gatewa
   console.error(`[payment] ${text.replace(/\n+/g, " ")}`);
   if (paidAfterEndAlerted.has(paymentId)) return;
   paidAfterEndAlerted.add(paymentId);
-  await alertHouse({ tag: "paid-after-end-state", subject: `Sikeres fizetés-jelzés egy lezárt fizetésre — ${info?.leadName ?? "?"}`, text });
+  await alertHouse({ tag: "paid-after-end-state", sms: true, smsKey: `paid-after-end:${paymentId}`, subject: `Sikeres fizetés-jelzés egy lezárt fizetésre — ${info?.leadName ?? "?"}`, text });
 }
 
 /** B1-PAR: a second charge for an already-paid first purchase — loud log + house mail. */
@@ -702,7 +702,7 @@ async function flagDuplicateInitialPayment(
     `Mit tett a rendszer: a második fizetés 'paid' (a pénz beérkezett), de NEM konvertált, NEM égetett kupont, ` +
     `NEM állított ki számlát. Teendő: a második összeg visszautalása a Barion felületén (vagy számla kézzel, ha a vevő mást kér).`;
   console.error(`[payment] ${text.replace(/\n+/g, " ")}`);
-  await alertHouse({ tag: "duplicate-initial", subject: `Második terhelés egy már kifizetett rendelésre — ${info?.leadName ?? "?"}`, text });
+  await alertHouse({ tag: "duplicate-initial", sms: true, smsKey: `duplicate-initial:${paymentId}`, subject: `Második terhelés egy már kifizetett rendelésre — ${info?.leadName ?? "?"}`, text });
 }
 
 /**

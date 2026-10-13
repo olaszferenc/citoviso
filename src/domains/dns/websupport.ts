@@ -27,6 +27,7 @@ import { createHmac } from "node:crypto";
 import { Resolver } from "node:dns/promises";
 import { connect as tlsConnect } from "node:tls";
 import type { DnsAdapter, ZoneCreation } from "./dns.js";
+import { noteDeadKey } from "../../console/keyDeath.js";
 
 const BASE = "https://rest.websupport.hu";
 
@@ -92,6 +93,7 @@ export class WebsupportDns implements DnsAdapter {
     }
     if (!res.ok) {
       const msg = (parsed as { message?: string })?.message ?? text.slice(0, 200);
+      if (res.status === 401 || res.status === 403) noteDeadKey("websupport", `DNS ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`);
       throw new Error(`DNS ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`);
     }
     // The API answers 200 with status:"error" + an errors object for validation failures,

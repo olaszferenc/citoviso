@@ -1,5 +1,6 @@
 import { config } from "../config.js";
 import { PlacesUnavailableError } from "../scraper/sources/googleMaps.js";
+import { noteDeadKey } from "../console/keyDeath.js";
 
 // Resolve a Google Places photo resource name to a key-less image URL via the
 // Photo Media endpoint (skipHttpRedirect=true → the googleusercontent URL).
@@ -31,7 +32,7 @@ export async function resolvePlacesPhoto(
       /RESOURCE_EXHAUSTED|quota/i.test(body) || res.status === 429
         ? "quota"
         : res.status === 401 || res.status === 403
-          ? "auth"
+          ? (noteDeadKey("places", `photo media HTTP ${res.status}: ${body.slice(0, 200)}`), "auth")
           : "upstream",
       res.status,
       body.slice(0, 300),

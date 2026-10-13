@@ -63,6 +63,44 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
   megnézése, majd az időzítő kézi futtatása (`npx tsx scripts/resume-domains.mts`); a cím
   magától élesedik, amint a delegáció és a tanúsítvány aktív, és a vevő ekkor megkapja az
   „elkészült” levelet.
+- a **sikertelen domain-regisztráció** (tárgy: „Citoviso: domain-regisztráció NEM sikerült — …”) —
+  a regisztrátor a vásárlást elutasította, magától többet nem próbálkozunk. A levél megírja,
+  hogy a zárolt díjat feloldottuk-e, és hogy a vevő kapott-e levelet;
+- a **regisztrációnál álló domain-beszerzés** (tárgy: „… domain-beszerzés áll …”) — 2 óra után
+  sem jutott túl a regisztráción (ez percek kérdése szokott lenni);
+- a **megakadt fizetés** (tárgy: „Citoviso: … fizetés megakadt …”) — a vevő elindította a
+  fizetést, de a fizetési szolgáltató 60 perc után sem zárta le, és visszahívás sem jött. A
+  rendszer óránként rákérdez a szolgáltatónál: ha ott a fizetés sikeres volt, magától
+  befejezi az aktiválást, és erről külön levél jön („… nem jött visszahívás — a söprés
+  pótolta”); ha a vevő csak otthagyta a fizetőoldalt, nem szól;
+- a **halott API-kulcs** (tárgy: „Citoviso: API-kulcs elutasítva (401/403) — …”) — egy külső
+  szolgáltató (Google Places, Brave keresés, a domain-regisztrátor, a levélküldő, az
+  Anthropic) elutasította a kulcsunkat. Szolgáltatónként naponta egyszer jön; a levél
+  megírja, hol kell kicserélni;
+- az **álló SMS-sor** (tárgy: „Citoviso: az SMS-sor nem ürül …”) — 30 percnél régebbi SMS vár,
+  vagyis a modemes gép nem viszi ki az üzeneteket. Erről csak levél jön: az SMS ugyanabban a
+  sorban várna;
+- a **24 órája hibás naptár-szinkron** (tárgy: „… naptár-szinkron 24 órája hibás”) — egy szállás
+  portál-naptára nem húzható be (a szállás tulaja ugyanekkor levelet kap).
+
+### Melyik riasztás jön SMS-ben is?
+
+Levél **minden** riasztásról megy. SMS csak a súlyosakról, ahol vevő vár vagy pénz
+mozdult: a megakadt fizetés, a nem feldolgozható fizetési visszahívás, a hiányzó számla, a
+második terhelés, a már lezárt fizetésre utólag érkező „sikeres” jelzés, a domain-beszerzés
+bármelyik elakadása, a halott API-kulcs, a leállt időzített feladat, egy szolgáltatás
+összeomlása, a ki nem ment foglalási levél, az el nem indult ingyenes próba és a kézi
+intézésre váró domain-igénylés. Hogy a telefon ne teljen meg:
+
+- **ugyanarról az esetről 6 órán belül nem jön második SMS** (a levél igen);
+- **óránként legfeljebb 4 riasztó SMS** megy ki; ami fölötte van, csak levélben jön;
+- a következő kimenő SMS megírja, hány riasztás maradt ki az előző SMS óta (akár az
+  ismétlés-tiltás, akár az óránkénti korlát miatt): „+2 tovabbi riasztas csak e-mailben”;
+- ha maga a **riasztó levél nem megy ki** (a levélküldő áll), egy SMS szól erről — ez az
+  egyetlen csatorna, ami ilyenkor még elér.
+
+Az SMS ékezet nélküli, rövid (a levél tárgya), a részletek a levélben vannak. SMS csak az
+éles rendszerből megy; a tesztgépről érkező riasztás csak levél, „[TESZT]” jelöléssel.
 
 ### Mit tegyél megrekedt rendelésnél?
 

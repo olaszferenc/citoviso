@@ -400,6 +400,8 @@ async function alertTrialNotStarted(leadId: string, what: string): Promise<void>
   const lead = await db.selectFrom("lead").select("name").where("id", "=", leadId).executeTakeFirst().catch(() => undefined);
   await alertHouse({
     tag: "trial-start",
+    sms: true,
+    smsKey: `trial-start:${leadId}`,
     subject: `Citoviso: a próba NEM indult el — ${lead?.name ?? leadId}`, // i18n-exempt: operátori riasztás
     text:
       `Egy lead elindította volna az ingyenes próbát, de nem sikerült.\n\n` + // i18n-exempt: operátori riasztás

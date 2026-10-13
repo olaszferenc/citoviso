@@ -200,6 +200,8 @@ async function siteIsLive(siteId: string): Promise<boolean> {
 async function alertSetupRetry(domain: string, tenantId: string, error: string): Promise<void> {
   await alertHouse({
     tag: "domain-setup",
+    sms: true,
+    smsKey: `domain:${domain}`,
     subject: `Citoviso: ${domain} megvéve, de a beállítás elakadt (DNS/TLS)`,
     text:
       `A(z) ${domain} nevet a regisztrátornál megvettük, a zárolt díjat lehívtuk, a cím ` +
@@ -208,6 +210,37 @@ async function alertSetupRetry(domain: string, tenantId: string, error: string):
       `Állapot: setup_retry — a resume-domains időzítő a 'registered' lépéstől újrapróbálja. ` +
       `A tulaj felülete és levele azt mondja: a név az övé, a beállítás késik, nincs teendője.\n` +
       `Ha nem áll helyre: a hiba okának megnézése, majd  npx tsx scripts/resume-domains.mts\n`,
+  });
+}
+
+/**
+ * ADR-XXXX: the registration failed BEFORE the purchase (`failed` is terminal — the timer
+ * will not retry it). Operator text — outside the §B.18 buyer-facing i18n scope.
+ */
+async function alertDomainFailed(
+  domain: string,
+  tenantId: string,
+  provisioningId: string,
+  error: string,
+  released: boolean,
+  liveAlready: boolean,
+): Promise<void> {
+  await alertHouse({
+    tag: "domain-failed",
+    sms: true,
+    smsKey: `domain:${domain}`,
+    subject: `Citoviso: domain-regisztráció NEM sikerült — ${domain}`,
+    text:
+      `A(z) ${domain} megvásárlása a regisztrátornál hibára futott, a beszerzés 'failed' — ` +
+      `magától többet NEM próbálkozunk.\n\n` +
+      `Tenant: ${tenantId}\nBeszerzés: ${provisioningId}\nHiba: ${error}\n\n` +
+      (released
+        ? `A zárolt díjat feloldottuk (terhelés nem történt). `
+        : `A díj zárolását NEM sikerült feloldani, vagy nem volt mit — nézd meg a fizetést a szolgáltató felületén. `) +
+      (liveAlready
+        ? `A site-nak már van élő saját domainje, ezért a tulaj nem kapott levelet.\n`
+        : `A tulaj levelet kapott a sikertelen beszerzésről.\n`) +
+      `Teendő: a hiba okának megnézése (regisztrátor-fiók, egyenleg, kulcs), és a tulajjal egyeztetve új név vagy új próba.\n`,
   });
 }
 
@@ -260,6 +293,8 @@ async function escalateStuckSetup(
     stage === 2 && !row.delay_notice_at && (await notifyTenant(p.tenantId, p.siteId, "setup_retry", p.domain, false, p.id));
   await alertHouse({
     tag: "domain-setup",
+    sms: true,
+    smsKey: `domain:${p.domain}`,
     subject:
       stage === 2
         ? `Citoviso: ${p.domain} beállítása ${waited} órája áll — ISMÉTELT riasztás, a tulaj levelet kapott`
@@ -567,6 +602,9 @@ export async function runDomainProvisioning(
     // A second order on a site whose domain is live: the tenant has a working domain —
     // a "we could not buy it" letter about the duplicate would only confuse.
     if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released);
+    // ADR-XXXX: the tenant was told — the house was not. A paid-for name that we could not
+    // buy is a buyer waiting on us; the house hears it (mail + SMS).
+    await alertDomainFailed(p.domain, p.tenantId, p.id, msg, released, liveAlready);
     return "failed";
   }
 }

@@ -26,6 +26,7 @@
 import { createHmac } from "node:crypto";
 import type { DomainRegistration, RegistrarAdapter } from "./registrar.js";
 import { DomainTakenError } from "./registrar.js";
+import { noteDeadKey } from "../../console/keyDeath.js";
 
 const BASE = "https://rest.websupport.hu";
 
@@ -115,6 +116,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
     }
     if (!res.ok) {
       const msg = (parsed as { message?: string })?.message ?? text.slice(0, 200);
+      if (res.status === 401 || res.status === 403) noteDeadKey("websupport", `registrar ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`);
       throw new Error(`Websupport ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`);
     }
     return parsed as T;

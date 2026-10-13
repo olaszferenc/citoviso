@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-elesi-orkodes-megakadt-kulso-folyamat-level-es-sms.md) — Élesi őrködés: a megakadt külső folyamatról levél + szűrt SMS (2026-10-13)
 - [ADR-0373](decisions/0373-a-mi-tartotta-vissza-kerdes-kis-also-sav-az.md) — A „Mi tartotta vissza?” kérdés kis alsó sáv; az önálló hideg SMS is GSM-7; a kérdés nem marad el gyors × után
 - [ADR-0372](decisions/0372-sajat-domain-a-dns-pending-tls-pending-ben.md) — Saját domain: a `dns_pending`/`tls_pending`-ben ragadt beállítás 24 óránál riaszt, 72 óránál ismét + egy tulaj-levél
 - [ADR-0371](decisions/0371-portal-naptarszinkron-valodi-portal-feedek.md) — Portál-naptárszinkron valódi portál-feedek ellen: szállás-időzóna, csonka feed = hiba, webcal elfogadva, az üres kiadás is érvényes naptár

@@ -2943,6 +2943,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         console.warn(`[domain] ${session.tenantId}: ${quote.domain} csomag-tartalom (0 Ft) — kézi intézésre továbbítva`);
         await alertHouse({
           tag: "domain-claim",
+          sms: true,
+          smsKey: `domain-claim:${quote.domain}`,
           subject: `Citoviso: saját domain igénylés kézi intézésre — ${quote.domain}`,
           text:
             `Egy élő tenant (${session.tenantId}, ${session.displayName}) a csomagjában foglalt ` +
