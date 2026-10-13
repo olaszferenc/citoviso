@@ -15,6 +15,7 @@
 - [2026-10-13_eles_orkodes_sms.md](2026-10-13_eles_orkodes_sms.md) — 2026-10-13 — Élesi őrködés: megakadt külső folyamat → levél + szűrt SMS (ADR-0374)
 - [2026-10-13_elek_koordinator_zaras.md](2026-10-13_elek_koordinator_zaras.md) — 2026-10-13 — Elek-koordinátor zárása (lead / tenant / IT ellenőrző kör, deploy előtti javítások)
 - [2026-10-13_elek_eles_teszt_harom_szerep.md](2026-10-13_elek_eles_teszt_harom_szerep.md) — Elek — éles teszt három szerepben (próba · ellátás · foglalás) · JELENTÉS 2026-10-13
+- [2026-10-13_elek_eles_leletek_javitasa.md](2026-10-13_elek_eles_leletek_javitasa.md) — Elek éles teszt (10-13) leleteinek javítása — V-1, T-1…T-7, O-1, O-3
 - [2026-10-13_domain_csomag_dijsor.md](2026-10-13_domain_csomag_dijsor.md) — 2026-10-13 — Webcím díjsor csomag-tartalom névnél: nincs „0 Ft/hó” (tulaj „ok”)
 - [2026-10-12_portal_ical_valodi_mintak.md](2026-10-12_portal_ical_valodi_mintak.md) — 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-0371)
 - [2026-10-12_modell_html_injekcio.md](2026-10-12_modell_html_injekcio.md) — 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-0370)
