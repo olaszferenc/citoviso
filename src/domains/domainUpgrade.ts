@@ -164,7 +164,7 @@ export async function createDomainUpgradeOrder(
 ): Promise<string | null> {
   const quote = await quoteDomainUpgrade(tenantId, rawDomain, region);
   if (!quote) return null;
-  // ADR-XXXX: a 0 Ft order (the domain is package content, ADR-0360) is created too — it
+  // ADR-0381: a 0 Ft order (the domain is package content, ADR-0360) is created too — it
   // never gets a pay-link; claimPackageDomain settles it and starts the beszerzés itself.
 
   // ADR-0093 offer-side cap check. Advisory here (the adapter may not price a
@@ -256,7 +256,7 @@ export async function createDomainUpgradeOrder(
 }
 
 /**
- * ADR-XXXX: the payment-free claim of a PACKAGE-CONTENT name (fee 0, ADR-0360). It runs the
+ * ADR-0381: the payment-free claim of a PACKAGE-CONTENT name (fee 0, ADR-0360). It runs the
  * same beszerzés as a paid order (provisionDomain.ts: registrar, DNS, TLS, the ADR-0372
  * stuck-setup alerts) — only without a hold and a charge. Before this, the request went to
  * a colleague by house alert and the name was bought by hand.

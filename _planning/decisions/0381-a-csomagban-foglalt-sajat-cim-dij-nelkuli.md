@@ -1,4 +1,4 @@
-## ADR-XXXX — A csomagban foglalt saját cím díj nélküli igénylése AUTOMATIKUS: ugyanaz a beszerzés, terhelés és zárolás nélkül (2026-10-13)
+## ADR-0381 — A csomagban foglalt saját cím díj nélküli igénylése AUTOMATIKUS: ugyanaz a beszerzés, terhelés és zárolás nélkül (2026-10-13)
 
 **Dátum:** 2026-10-13 · **Státusz:** elfogadva (tulaj-döntés a koordinátoron át, 2026-10-13: „kell az automata út”) ·
 **Kapcsolódó:** ADR-0360 (csomag-összetétel, a domain mint csomag-tartalom — ennek nyitott pontját zárja), ADR-0362

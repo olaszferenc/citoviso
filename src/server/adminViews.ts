@@ -4171,7 +4171,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
         `</div>`
       );
     }
-    // ADR-XXXX: the package carries the name (fee 0, ADR-0360) — it is claimed WITHOUT
+    // ADR-0381: the package carries the name (fee 0, ADR-0360) — it is claimed WITHOUT
     // payment and bought by the same automatic beszerzés as a paid one (no fee, no hold).
     // After the POST the tab shows the paid path's own progress / done / failure screens.
     if (d.packageContent) {
@@ -4254,7 +4254,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   // A released hold has its own failure screen above (ADR-0251); after „Másik név
   // választása" step 1 is clean — the legacy text below belongs to an order that was
   // charged up front, where the money really does go to another name (ADR-0078 ②).
-  // ADR-XXXX: a package-content claim (0 Ft) that could not be bought — the same alert, but
+  // ADR-0381: a package-content claim (0 Ft) that could not be bought — the same alert, but
   // no money sentence: nothing was paid or held, and the hűségidő did not start.
   const freeFailed = d.status === "failed" && d.money === "free";
   const failedBox =

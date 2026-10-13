@@ -1,4 +1,4 @@
-// Regression guard for the PAYMENT-FREE claim of a package-content name (ADR-XXXX).
+// Regression guard for the PAYMENT-FREE claim of a package-content name (ADR-0381).
 //
 // Before: a tenant whose package carries the own name (fee 0, ADR-0360) pressed „Ezt kérem”
 // on the Webcím tab, and the server only sent a house alert — an operator bought and wired
@@ -20,7 +20,7 @@
 //   ⑤ the Webcím review step offers the claim (no fee, no hold, no "munkatársunk intézi"),
 //     and the route claims instead of alerting the house
 //
-// Measured on the code before ADR-XXXX: ①, ②, ③ and ⑤ go RED (no claimPackageDomain; the
+// Measured on the code before ADR-0381: ①, ②, ③ and ⑤ go RED (no claimPackageDomain; the
 // route alerts the house; the screen promises a colleague).
 //
 // Run:  npx tsx scripts/domain-package-claim-check.mts

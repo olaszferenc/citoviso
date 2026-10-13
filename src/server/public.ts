@@ -3035,7 +3035,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (!wantedNorm.ok || !wantedNorm.domain || (await checkWebcimAvailability(wantedNorm.domain)) !== "free") {
         return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}`);
       }
-      // ADR-XXXX: package content (fee 0, ADR-0360) is claimed WITHOUT payment and runs the
+      // ADR-0381: package content (fee 0, ADR-0360) is claimed WITHOUT payment and runs the
       // same beszerzés as a paid order — no hold, no charge, no house alert on success. The
       // beszerzés row exists before we answer, so the Webcím tab lands on the progress screen.
       const quote = await quoteDomainUpgrade(session.tenantId, wanted);

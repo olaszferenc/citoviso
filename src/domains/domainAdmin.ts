@@ -57,7 +57,7 @@ export interface DomainSuggestionView {
  *   reserved — held, registration running · paid — captured after the purchase
  *   released — the purchase failed, the hold was given back (nothing charged)
  *   charged  — a legacy order charged up front (before the hold flow)
- *   free     — ADR-XXXX: a 0 Ft order (package content / waived fee): no hold, no charge
+ *   free     — ADR-0381: a 0 Ft order (package content / waived fee): no hold, no charge
  */
 export type DomainMoneyState = "reserved" | "paid" | "released" | "charged" | "free" | null;
 
@@ -94,7 +94,7 @@ export interface DomainAdminData {
   /** Elek 10-12 N1: the lowest and highest ending fee — the line before any name is selected. */
   readonly feeRange: { readonly min: number; readonly max: number };
   /**
-   * ADR-0360: the tenant's package carries the domain → its fee is 0. ADR-XXXX: the review
+   * ADR-0360: the tenant's package carries the domain → its fee is 0. ADR-0381: the review
    * step then claims it without payment (domainUpgrade.claimPackageDomain) — no fee, no hold.
    */
   readonly packageContent: boolean;

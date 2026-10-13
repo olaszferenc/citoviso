@@ -63,7 +63,7 @@ export function buildDomainFailedEmail(input: {
   adminUrl: string;
   /** ADR-0251: the order was paid by a HOLD, and the hold was released. */
   released?: boolean;
-  /** ADR-XXXX: a package-content (0 Ft) claim — nothing was charged or held. */
+  /** ADR-0381: a package-content (0 Ft) claim — nothing was charged or held. */
   free?: boolean;
   lang?: string;
 }): EmailMessage {

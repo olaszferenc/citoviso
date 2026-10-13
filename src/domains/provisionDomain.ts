@@ -93,7 +93,7 @@ async function notifyTenant(
   released = false,
   /** ÚJ-K1: the beszerzés row — the setup_retry letter is recorded on it (sent once). */
   provisioningId?: string,
-  /** ADR-XXXX: a package-content (0 Ft) claim — the letter says nothing about money. */
+  /** ADR-0381: a package-content (0 Ft) claim — the letter says nothing about money. */
   free = false,
 ): Promise<boolean> {
   try {
@@ -227,7 +227,7 @@ async function alertDomainFailed(
   error: string,
   released: boolean,
   liveAlready: boolean,
-  /** ADR-XXXX: a package-content (0 Ft) claim — there was no money to release. */
+  /** ADR-0381: a package-content (0 Ft) claim — there was no money to release. */
   free = false,
 ): Promise<void> {
   await alertHouse({
@@ -252,7 +252,7 @@ async function alertDomainFailed(
 }
 
 /**
- * ADR-XXXX: a package-content claim (0 Ft, gateway 'none' — domainUpgrade.claimPackageDomain)
+ * ADR-0381: a package-content claim (0 Ft, gateway 'none' — domainUpgrade.claimPackageDomain)
  * whose purchase failed BEFORE the registrar sold us the name: its 0-amount `paid` row is
  * marked `cancelled`, so the hűségidő it started (domainCommitment.ts) is gone with it.
  * True when there was such a row (the letter and the alert then say: nothing was owed).

@@ -384,7 +384,7 @@ await block("B3 / K1 / ISMERT", async () => {
   const manual = domainSection({ ...base, status: "none", money: null, priceMonthly: 0, packageContent: true },
     { picked: "ribizli2.hu", pickedAvailability: "free" });
   ok(!/Most zárolunk|próbálja újra|munkatársunk intézi/.test(manual) && /type="submit"/.test(manual),
-    "csomag-tartalom → nincs díj/zárolás/„próbálja újra”, nincs kézi intézés: azonnal igényelhető (ADR-XXXX)");
+    "csomag-tartalom → nincs díj/zárolás/„próbálja újra”, nincs kézi intézés: azonnal igényelhető (ADR-0381)");
   // Elek 10-12 N1: the fee line follows the SELECTED name's ending; before a selection, the band.
   {
     const two = {
