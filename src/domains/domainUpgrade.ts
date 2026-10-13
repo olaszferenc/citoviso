@@ -13,7 +13,7 @@
 // buyer never pays for a purchase that the provisioning guard would kill.
 
 import { sql } from "kysely";
-import { db } from "../db/client.js";
+import { db, pool } from "../db/client.js";
 import { normalizeCustomDomain } from "../domains.js";
 import {
   loadPricing,
@@ -27,6 +27,7 @@ import {
 import { getDisabledModules } from "../moduleSales.js";
 import { renewableModuleIds } from "../payment/billing.js";
 import { exceedsCostCap } from "./costCap.js";
+import { startOrderDomainProvisioning } from "./provisionDomain.js";
 
 export interface DomainUpgradeQuote {
   /** The normalized domain that will be registered. */
@@ -163,13 +164,8 @@ export async function createDomainUpgradeOrder(
 ): Promise<string | null> {
   const quote = await quoteDomainUpgrade(tenantId, rawDomain, region);
   if (!quote) return null;
-  // ADR-0360 (open item): the purchase runs from the PAID webhook, so a 0 Ft order (the
-  // domain is package content) has no path to the registrar yet. Refused loudly rather
-  // than minting a pay-link nobody can pay; the payment-free claim path is the next round.
-  if (!(quote.price > 0)) {
-    console.warn(`[domain] ${tenantId}: ${quote.domain} csomag-tartalom (0 Ft) — utólagos igénylés még nincs, kézi intézés`);
-    return null;
-  }
+  // ADR-XXXX: a 0 Ft order (the domain is package content, ADR-0360) is created too — it
+  // never gets a pay-link; claimPackageDomain settles it and starts the beszerzés itself.
 
   // ADR-0093 offer-side cap check. Advisory here (the adapter may not price a
   // domain yet — the INWX stub); the authoritative fail-closed gate runs in
@@ -257,4 +253,90 @@ export async function createDomainUpgradeOrder(
     .returning("id")
     .executeTakeFirstOrThrow();
   return row.id;
+}
+
+/**
+ * ADR-XXXX: the payment-free claim of a PACKAGE-CONTENT name (fee 0, ADR-0360). It runs the
+ * same beszerzés as a paid order (provisionDomain.ts: registrar, DNS, TLS, the ADR-0372
+ * stuck-setup alerts) — only without a hold and a charge. Before this, the request went to
+ * a colleague by house alert and the name was bought by hand.
+ *
+ *   ok        → the beszerzés row exists (the site is `pending`); the caller runs it
+ *               (runDomainProvisioning) detached, as the held-payment path does.
+ *   not_package → the name is not package content for this tenant (it has a fee, or it is
+ *               not quotable) — the caller takes the paid path.
+ *   blocked   → the tenant already has a live, running or held domain order (ADR-0362):
+ *               ONE package name at a time.
+ *   no_order / refused → the order could not be created / the beszerzés refused it.
+ *
+ * Single-flight: serialised per tenant with a Postgres advisory lock on a dedicated
+ * connection (two tabs, a double click, two server processes), so the blocker check and
+ * the beszerzés row are one step; the two partial unique indexes of domain_provisioning
+ * stay the last line behind it.
+ *
+ * Money trail: a 0-amount `paid` payment (gateway 'none') — it starts the hűségidő
+ * (domainCommitment.ts reads paid domain orders), and a purchase that fails before the
+ * registrar sold us the name marks it `cancelled` (provisionDomain.ts), so no commitment
+ * is left behind. No invoice: there is no consideration to invoice.
+ */
+export type PackageDomainClaim =
+  | { readonly ok: true; readonly orderId: string; readonly provisioningId: string; readonly domain: string }
+  | { readonly ok: false; readonly reason: "not_package" | "blocked" | "no_order" | "refused" };
+
+export async function claimPackageDomain(
+  tenantId: string,
+  rawDomain: string,
+  region?: string,
+): Promise<PackageDomainClaim> {
+  const key = `citoviso-domain-order:${tenantId}`;
+  const lock = await pool.connect();
+  try {
+    await lock.query("SELECT pg_advisory_lock(hashtext($1))", [key]);
+    try {
+      return await claimPackageDomainLocked(tenantId, rawDomain, region);
+    } finally {
+      await lock.query("SELECT pg_advisory_unlock(hashtext($1))", [key]);
+    }
+  } finally {
+    lock.release();
+  }
+}
+
+async function claimPackageDomainLocked(
+  tenantId: string,
+  rawDomain: string,
+  region?: string,
+): Promise<PackageDomainClaim> {
+  const quote = await quoteDomainUpgrade(tenantId, rawDomain, region);
+  if (!quote || quote.price !== 0) return { ok: false, reason: "not_package" };
+  const blocker = await domainOrderBlocker(tenantId);
+  if (blocker && blocker.kind !== "paying") {
+    console.warn(`[domain] ${tenantId}: csomag-tartalom igénylés ELUTASÍTVA (${quote.domain}) — már ${blocker.kind}: ${blocker.domain ?? "—"}`);
+    return { ok: false, reason: "blocked" };
+  }
+  // An open pay-link for a paid name is superseded by this claim (one domain order at a time).
+  if (blocker?.kind === "paying") await supersedePendingDomainPayments(tenantId);
+  const orderId = await createDomainUpgradeOrder(tenantId, quote.domain, region);
+  if (!orderId) return { ok: false, reason: "no_order" };
+  await db
+    .insertInto("payment")
+    .values({
+      order_intent_id: orderId,
+      amount: 0,
+      currency: "HUF",
+      period: "monthly",
+      gateway: "none",
+      status: "paid",
+      paid_at: new Date(),
+    })
+    .execute();
+  const provisioningId = await startOrderDomainProvisioning(orderId);
+  if (!provisioningId) {
+    // Refused by the beszerzés (a parallel order won the unique index): nothing was claimed.
+    await db.updateTable("payment").set({ status: "cancelled" }).where("order_intent_id", "=", orderId).execute();
+    await db.updateTable("order_intent").set({ status: "abandoned" }).where("id", "=", orderId).execute();
+    return { ok: false, reason: "refused" };
+  }
+  console.log(`[domain] ${tenantId}: csomag-tartalom név igényelve (${quote.domain}) — beszerzés indul, terhelés nélkül`);
+  return { ok: true, orderId, provisioningId, domain: quote.domain };
 }

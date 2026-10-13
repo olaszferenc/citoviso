@@ -3965,8 +3965,6 @@ export interface DomainViewState {
   readonly pickedAvailability?: WebcimAvailability;
   /** ADR-0251: „Másik név választása" after a released failure → back to step 1. */
   readonly restart?: boolean;
-  /** ADR-0362 (ISMERT row): a package-content name was asked for — handled by hand. */
-  readonly manual?: boolean;
 }
 
 /**
@@ -4173,26 +4171,32 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
         `</div>`
       );
     }
-    // ADR-0360 open item (Elek ISMERT row): the package carries the name (fee 0) and a
-    // payment-free claim does not exist yet — no fee, no hold, no "try again": the request
-    // goes to a colleague (POST → house alert) and the screen says so.
+    // ADR-XXXX: the package carries the name (fee 0, ADR-0360) — it is claimed WITHOUT
+    // payment and bought by the same automatic beszerzés as a paid one (no fee, no hold).
+    // After the POST the tab shows the paid path's own progress / done / failure screens.
     if (d.packageContent) {
       return (
         steps +
         `<form method="POST" action="/admin/domain/order" class="adm-card" id="adm-dorder">${head(T(lang, "Áttekintés"))}` +
         `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong> ${availChip("free", lang, true)}</p>` +
+        (st.payError
+          ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+            `${ic("alert", 18)} <span>${T(lang, "Az igénylést nem sikerült elindítani. Kérjük, próbálja újra.")}</span></div>`
+          : "") +
         `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
         `<div class="adm-dterms"><dl>` +
         `<dt>${T(lang, "A választott cím")}</dt><dd>${esc(st.picked)}</dd>` +
         `<dt>${T(lang, "A cím díja")}</dt><dd>${T(lang, "a csomag része · {months} hó hűségidő", { months: d.commitmentMonths })}</dd>` +
         `</dl></div>` +
-        (st.manual
-          ? `<div class="adm-dres adm-dres--ok"><b>${T(lang, "Önnek nincs több teendője.")}</b>` +
-            `${T(lang, "Az igénylést munkatársunk intézi: már tud róla, és e-mailben értesítjük, amint a cím él.")}</div>`
-          : `<p class="citui-hint">${T(lang, "Az igénylést munkatársunk intézi: már tud róla, és e-mailben értesítjük, amint a cím él.")}</p>` +
-            `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Ezt kérem")}</button>`) +
+        `<p class="citui-hint">${T(lang, "Nem kell fizetnie, és semmit nem zárolunk: a gombra kattintva azonnal megvásároljuk a nevet, és e-mailben jelezzük, amint a cím él.")}</p>` +
+        `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%" ` +
+        `data-busy="${esc(T(lang, "Még egyszer ellenőrizzük a nevet…"))}">${T(lang, "Ezt kérem")}</button>` +
         mockNote +
         back +
+        // The server re-checks at the registrar first; the button says so and cannot be pressed twice.
+        `<script>(function(){var f=document.getElementById("adm-dorder");if(!f)return;` +
+        `f.addEventListener("submit",function(){var b=f.querySelector("button[type=submit]");` +
+        `if(b){b.disabled=true;b.textContent=b.getAttribute("data-busy");}});})();</script>` +
         `</form>`
       );
     }
@@ -4250,8 +4254,21 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   // A released hold has its own failure screen above (ADR-0251); after „Másik név
   // választása" step 1 is clean — the legacy text below belongs to an order that was
   // charged up front, where the money really does go to another name (ADR-0078 ②).
+  // ADR-XXXX: a package-content claim (0 Ft) that could not be bought — the same alert, but
+  // no money sentence: nothing was paid or held, and the hűségidő did not start.
+  const freeFailed = d.status === "failed" && d.money === "free";
   const failedBox =
-    d.status === "failed" && d.money !== "released"
+    freeFailed
+      ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+        `${ic("alert", 18)} <span>` +
+        (d.failedDomain
+          ? /foglalt|taken/i.test(d.error ?? "")
+            ? T(lang, "{Art} {domain} nevet időközben más lefoglalta.", { Art: huArticle(d.failedDomain), domain: `<b>${esc(d.failedDomain)}</b>` })
+            : T(lang, "{Art} {domain} nevet nem tudtuk megvásárolni", { Art: huArticle(d.failedDomain), domain: `<b>${esc(d.failedDomain)}</b>` })
+          : T(lang, "A választott nevet időközben más lefoglalta.")) +
+        `</span></div>` +
+        `<p class="citui-hint">${T(lang, "Nem fizetett érte semmit: a saját cím a csomagja része. Válassza ki, melyiket kéri helyette:")}</p>`
+      : d.status === "failed" && d.money !== "released"
       ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
         // Elek A2: .adm-saved is inline-flex — the sentence goes in ONE span, or its
         // text nodes and the <b> become three columns on a phone.

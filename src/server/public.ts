@@ -129,12 +129,12 @@ import { isMessageTopic } from "../tenant/messageTopics.js";
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import {
+  claimPackageDomain,
   createDomainUpgradeOrder,
   domainOrderBlocker,
   quoteDomainUpgrade,
   supersedePendingDomainPayments,
 } from "../domains/domainUpgrade.js";
-import { alertHouse } from "../console/houseAlert.js";
 import { activeDomainCommitment } from "../domains/domainCommitment.js";
 import {
   createSettlementOrder,
@@ -144,7 +144,7 @@ import {
 } from "../domains/domainSettlement.js";
 import { sendSettlementMail } from "../domains/settlementNotify.js";
 import { payEntryUrl } from "../payment/payEntryUrl.js";
-import { isMockDomainProvisioning, provisionOrderDomain } from "../domains/provisionDomain.js";
+import { isMockDomainProvisioning, runDomainProvisioning } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
   bookingDecideConfirmPage,
@@ -1942,7 +1942,6 @@ async function serveAdmin(
       ...(typed ? { check: await checkTypedDomain(typed) } : {}),
       ...(q.get("payerror") === "1" ? { payError: true } : {}),
       ...(q.get("uj") === "1" ? { restart: true } : {}),
-      ...(q.get("kezi") === "1" ? { manual: true } : {}),
     };
   }
 
@@ -3036,23 +3035,26 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (!wantedNorm.ok || !wantedNorm.domain || (await checkWebcimAvailability(wantedNorm.domain)) !== "free") {
         return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}`);
       }
-      // ADR-0360 open item (Elek ISMERT row): package content (fee 0) has no payment-free
-      // claim path yet — the request goes to a colleague, never to "try again".
+      // ADR-XXXX: package content (fee 0, ADR-0360) is claimed WITHOUT payment and runs the
+      // same beszerzés as a paid order — no hold, no charge, no house alert on success. The
+      // beszerzés row exists before we answer, so the Webcím tab lands on the progress screen.
       const quote = await quoteDomainUpgrade(session.tenantId, wanted);
       if (quote && quote.price === 0) {
-        console.warn(`[domain] ${session.tenantId}: ${quote.domain} csomag-tartalom (0 Ft) — kézi intézésre továbbítva`);
-        await alertHouse({
-          tag: "domain-claim",
-          sms: true,
-          smsKey: `domain-claim:${quote.domain}`,
-          subject: `Citoviso: saját domain igénylés kézi intézésre — ${quote.domain}`,
-          text:
-            `Egy élő tenant (${session.tenantId}, ${session.displayName}) a csomagjában foglalt ` +
-            `saját domaint kérte: ${quote.domain}. A díj nélküli utólagos igénylésnek még nincs ` +
-            `automata útja (ADR-0360 nyitott pont) — a beszerzést kézzel kell elindítani, és a ` +
-            `tulajt értesíteni. A felület azt mondta neki: munkatársunk intézi, e-mailben értesítjük.\n`,
-        });
-        return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(quote.domain)}&kezi=1`);
+        const claim = await claimPackageDomain(session.tenantId, quote.domain);
+        if (!claim.ok) {
+          console.error(`[domain] ${session.tenantId}: csomag-tartalom igénylés nem indult (${quote.domain}) — ${claim.reason}`);
+          // blocked/refused: the tab shows the order that is in the way; otherwise the review step says it failed.
+          return redirect(
+            res,
+            claim.reason === "blocked" || claim.reason === "refused"
+              ? "/admin?tab=webcim"
+              : `/admin?tab=webcim&d=${encodeURIComponent(quote.domain)}&payerror=1`,
+          );
+        }
+        runDomainProvisioning(claim.provisioningId)
+          .then((status) => console.log(`[domain] csomag-tartalom beszerzés → ${status}: ${claim.domain}`))
+          .catch((e) => console.error(`[domain] csomag-tartalom beszerzés-futtatás HIBA (${claim.orderId}):`, e));
+        return redirect(res, "/admin?tab=webcim");
       }
       // Another name picked while an earlier pay-link is still open: that one is superseded.
       if (blocker?.kind === "paying") await supersedePendingDomainPayments(session.tenantId);
@@ -3060,36 +3062,6 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (!orderId) {
         console.error(`[domain] ${session.tenantId}: nem sikerült rendelést létrehozni (${wanted})`);
         return redirect(res, "/admin?tab=webcim&payerror=1");
-      }
-      // ADR-0093 waived fee (0 Ft): there is nothing to pay, so the gateway is
-      // skipped — a 0-amount pay-link only "works" on the mock; Barion would
-      // reject it live (mock-path-masks-live-path trap). The ORDER itself is the
-      // trigger: settle it and start the provisioning exactly as the paid webhook
-      // would. No invoice — no consideration to invoice.
-      const created = await db
-        .selectFrom("order_intent")
-        .select(["price"])
-        .where("id", "=", orderId)
-        .executeTakeFirstOrThrow();
-      if ((created.price ?? 0) === 0) {
-        // Settle with a 0-amount 'paid' payment row (gateway 'none') so the money
-        // trail stays queryable — the order is delivered, nothing was owed.
-        await db
-          .insertInto("payment")
-          .values({
-            order_intent_id: orderId,
-            amount: 0,
-            currency: "HUF",
-            period: "annual",
-            gateway: "none",
-            status: "paid",
-            paid_at: new Date(),
-          })
-          .execute();
-        provisionOrderDomain(orderId).catch((e) =>
-          console.error(`[domain] 0 Ft-os beszerzés-futtatás HIBA (${orderId}):`, e),
-        );
-        return redirect(res, "/admin?tab=webcim");
       }
       const pay = await requestPayment(orderId);
       if (!pay) {

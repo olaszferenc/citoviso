@@ -63,15 +63,23 @@ export function buildDomainFailedEmail(input: {
   adminUrl: string;
   /** ADR-0251: the order was paid by a HOLD, and the hold was released. */
   released?: boolean;
+  /** ADR-XXXX: a package-content (0 Ft) claim — nothing was charged or held. */
+  free?: boolean;
   lang?: string;
 }): EmailMessage {
-  const { to, domain, adminUrl, released, lang } = input;
+  const { to, domain, adminUrl, released, free, lang } = input;
 
   // ADR-0251: a held order that failed costs NOTHING — the hold is released, the
   // commitment never starts. The legacy text stays for an order that was charged
   // up front (before the reservation flow): that money goes to another name
   // (ADR-0078 ②), and promising a refund we do not run would be false (§B.17).
-  const body = released
+  const body = free
+    ? T(
+        lang,
+        "{Art} {domain} nevet sajnos nem tudtuk megvásárolni. A saját cím a csomagja része, ezért nem fizetett érte semmit, és a hűségidő sem indult el.",
+        { Art: huArticle(domain), domain },
+      )
+    : released
     ? T(
         lang,
         "{Art} {domain} nevet sajnos nem tudtuk megvásárolni. A kártyáját nem terheltük: a zárolást feloldottuk, a bankjától függően néhány munkanapon belül eltűnik a számlájáról. Az előfizetési vállalás sem indult el.",
@@ -85,7 +93,9 @@ export function buildDomainFailedEmail(input: {
 
   // A held order can fail for more than "someone took it" (registrar outage, price
   // cap) — its title names the outcome that matters to the buyer instead.
-  const title = released
+  const title = free
+    ? T(lang, "Nem tudtuk megvásárolni a választott webcímet")
+    : released
     ? T(lang, "Nem tudtuk megvásárolni a választott webcímet — nem terheltünk semmit")
     : T(lang, "A választott webcím időközben elkelt");
   const text =

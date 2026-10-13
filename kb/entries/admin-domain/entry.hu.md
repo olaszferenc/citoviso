@@ -171,9 +171,21 @@ Három dolgot érdemes tudni:
 
 Egyes csomagokban a saját cím a csomag része: ilyenkor nincs külön havidíja. Ha később
 kisebb csomagra vált, a díja elindul — a Modulok és a Pénztárca fül ezt előre kiírja, a
-pontos havi összeggel. Ha már élő honlap mellé, utólag kér ilyen, díj nélküli címet, a fül
-nem kér fizetést és nem zárol semmit: az igénylést munkatársunk intézi, és e-mailben
-értesítjük, amint a cím él.
+pontos havi összeggel. Ha már élő honlap mellé, utólag kér ilyen, díj nélküli címet, az
+Áttekintésen a cím díja helyén ez áll: „a csomag része · 12 hó hűségidő” (a hónapok száma
+a csomagjától függ). Díjat nem fizet, és semmit nem zárolunk, de a cím igénylésével elindul
+a hűségidő — a feltételeit fent, a „Mennyibe kerül?” részben írjuk le. Az **„Ezt kérem”**
+gombra kattintva azonnal megvásároljuk a nevet, és a fül ugyanúgy mutatja a folyamatot,
+mint a fizetős névnél. E-mailben jelezzük, amint a cím él.
+
+A gomb felirata a kattintás után erre vált: „Még egyszer ellenőrizzük a nevet…” — várja
+meg, ne nyomja meg újra. Ha ugyanitt ezt látja: „Az igénylést nem sikerült elindítani.
+Kérjük, próbálja újra.”, kattintson ismét az **„Ezt kérem”** gombra.
+
+Ha a nevet mégsem tudjuk megvásárolni (például közben más lefoglalta), a fül ezt kiírja,
+és ugyanott választhat másik nevet. Ilyenkor sem fizetett semmit, és a hűségidő sem indult
+el. Egyszerre egy ilyen név igényelhető: amíg az egyik folyamatban van vagy él, a fül azt
+mutatja.
 
 ## Ha már van saját domainem
 

@@ -93,6 +93,8 @@ async function notifyTenant(
   released = false,
   /** ÚJ-K1: the beszerzés row — the setup_retry letter is recorded on it (sent once). */
   provisioningId?: string,
+  /** ADR-XXXX: a package-content (0 Ft) claim — the letter says nothing about money. */
+  free = false,
 ): Promise<boolean> {
   try {
     const user = await db
@@ -125,6 +127,7 @@ async function notifyTenant(
             domain,
             adminUrl: `${config.publicSiteUrl}/admin?tab=webcim`,
             released,
+            free,
             lang,
           });
     await getEmailSender().send(msg);
@@ -224,6 +227,8 @@ async function alertDomainFailed(
   error: string,
   released: boolean,
   liveAlready: boolean,
+  /** ADR-XXXX: a package-content (0 Ft) claim — there was no money to release. */
+  free = false,
 ): Promise<void> {
   await alertHouse({
     tag: "domain-failed",
@@ -234,7 +239,9 @@ async function alertDomainFailed(
       `A(z) ${domain} megvásárlása a regisztrátornál hibára futott, a beszerzés 'failed' — ` +
       `magától többet NEM próbálkozunk.\n\n` +
       `Tenant: ${tenantId}\nBeszerzés: ${provisioningId}\nHiba: ${error}\n\n` +
-      (released
+      (free
+        ? `Csomag-tartalom igénylés volt (0 Ft): díj, zárolás nem volt, a hűségidő nem indult el. `
+        : released
         ? `A zárolt díjat feloldottuk (terhelés nem történt). `
         : `A díj zárolását NEM sikerült feloldani, vagy nem volt mit — nézd meg a fizetést a szolgáltató felületén. `) +
       (liveAlready
@@ -242,6 +249,25 @@ async function alertDomainFailed(
         : `A tulaj levelet kapott a sikertelen beszerzésről.\n`) +
       `Teendő: a hiba okának megnézése (regisztrátor-fiók, egyenleg, kulcs), és a tulajjal egyeztetve új név vagy új próba.\n`,
   });
+}
+
+/**
+ * ADR-XXXX: a package-content claim (0 Ft, gateway 'none' — domainUpgrade.claimPackageDomain)
+ * whose purchase failed BEFORE the registrar sold us the name: its 0-amount `paid` row is
+ * marked `cancelled`, so the hűségidő it started (domainCommitment.ts) is gone with it.
+ * True when there was such a row (the letter and the alert then say: nothing was owed).
+ */
+async function cancelFreeClaim(orderIntentId: string): Promise<boolean> {
+  const rows = await db
+    .updateTable("payment")
+    .set({ status: "cancelled" })
+    .where("order_intent_id", "=", orderIntentId)
+    .where("gateway", "=", "none")
+    .where("amount", "=", 0)
+    .where("status", "in", ["paid", "cancelled"])
+    .returning("id")
+    .execute();
+  return rows.length > 0;
 }
 
 /** ÚJ-K1: hours a bought name may wait for NS delegation / its certificate before we act. */
@@ -593,18 +619,20 @@ export async function runDomainProvisioning(
     // (After the purchase the name is the tenant's; a later DNS/TLS failure is ours
     // to fix, not a reason to refund a name we hold for them.)
     let released = false;
+    let free = false;
     if (!registrarRef && p.orderIntentId) {
       const { releaseDomainReservation } = await import("../payment/service.js");
       released = await releaseDomainReservation(p.orderIntentId);
+      if (!released) free = await cancelFreeClaim(p.orderIntentId);
     }
     // A tenant fizetett és vár — a kudarcról MAGUNKTÓL szólunk, nem hagyjuk, hogy
     // legközelebbi belépéskor szembesüljön vele.
     // A second order on a site whose domain is live: the tenant has a working domain —
     // a "we could not buy it" letter about the duplicate would only confuse.
-    if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released);
+    if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released, undefined, free);
     // ADR-0374: the tenant was told — the house was not. A paid-for name that we could not
     // buy is a buyer waiting on us; the house hears it (mail + SMS).
-    await alertDomainFailed(p.domain, p.tenantId, p.id, msg, released, liveAlready);
+    await alertDomainFailed(p.domain, p.tenantId, p.id, msg, released, liveAlready, free);
     return "failed";
   }
 }

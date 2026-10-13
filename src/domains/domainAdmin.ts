@@ -57,8 +57,9 @@ export interface DomainSuggestionView {
  *   reserved — held, registration running · paid — captured after the purchase
  *   released — the purchase failed, the hold was given back (nothing charged)
  *   charged  — a legacy order charged up front (before the hold flow)
+ *   free     — ADR-XXXX: a 0 Ft order (package content / waived fee): no hold, no charge
  */
-export type DomainMoneyState = "reserved" | "paid" | "released" | "charged" | null;
+export type DomainMoneyState = "reserved" | "paid" | "released" | "charged" | "free" | null;
 
 export interface DomainAdminData {
   /** A honlap jelenlegi címe (<slug>.citoviso.com), ha van slug. */
@@ -93,9 +94,8 @@ export interface DomainAdminData {
   /** Elek 10-12 N1: the lowest and highest ending fee — the line before any name is selected. */
   readonly feeRange: { readonly min: number; readonly max: number };
   /**
-   * ADR-0360 (open item): the tenant's package carries the domain → its fee is 0, and a
-   * payment-free claim does not exist yet. The screen says it is handled by hand instead
-   * of showing a fee/hold the server refuses (Elek ISMERT row).
+   * ADR-0360: the tenant's package carries the domain → its fee is 0. ADR-XXXX: the review
+   * step then claims it without payment (domainUpgrade.claimPackageDomain) — no fee, no hold.
    */
   readonly packageContent: boolean;
   /** ADR-0360 ③: the endings this market offers (".hu", ".eu" …), for the refusal line. */
@@ -213,7 +213,9 @@ export async function loadDomainAdmin(
       .executeTakeFirst();
     if (pay) {
       moneyAmount = pay.amount;
-      money = !pay.reservation
+      money = pay.amount === 0
+        ? "free"
+        : !pay.reservation
         ? pay.status === "paid" ? "charged" : null
         : pay.status === "reserved" || pay.status === "paid" || pay.status === "released"
           ? pay.status
