@@ -1,9 +1,10 @@
 // DATED PRICES OVER TIME — approved plan booking-offer ⑥ (tulaj, 2026-09-23).
 //
-// A price the owner set on the offer page WITH an end date promises two things on
-// screen: "a lejárat előtt emlékeztetjük", and — implicitly — that the page stops
-// quoting it once it has ended. Both are kept here, from the hourly booking tick
-// (scripts/booking-maintenance.mts):
+// A price set on the offer page WITH an end date must stop being quoted once it has ended;
+// that is kept here, from the hourly booking tick (scripts/booking-maintenance.mts).
+// ⭐ The reminder (①) is NOT owed to the offer path's „a kért napokra" rows (ADR-0267 ③,
+// owner 2026-10-13, ADR-XXXX): such a window IS the stay, its lapse leaves no future night
+// unpriced, so the row is born stamped. ① serves only unstamped dated rows (pre-ADR-0267).
 //
 //   ① REMIND once, REMIND_DAYS before the last day (stamp: expiry_notified_at).
 //   ② When the window has closed, the row is REMOVED and the tenant's page is
@@ -54,6 +55,7 @@ export async function maintainDatedPrices(
     .innerJoin("site", "site.id", "site_unit.site_id")
     .select([
       "unit_price.id as id",
+      "unit_price.unit_id as unitId",
       "unit_price.amount as amount",
       "unit_price.valid_to as validTo",
       "site_unit.name as unitName",
@@ -84,7 +86,7 @@ export async function maintainDatedPrices(
       .executeTakeFirst();
     if (!Number(claim.numUpdatedRows)) continue;
     try {
-      await remindOwner(r.tenantId, r.siteId, r.unitName, r.amount, r.validTo!);
+      await remindOwner(r.tenantId, r.siteId, r.unitId, r.unitName, r.amount, r.validTo!);
       reminded++;
     } catch (err) {
       console.error(`[price-expiry] az emlékeztető NEM ment ki (${r.id}):`, err);
@@ -124,6 +126,7 @@ export async function maintainDatedPrices(
 async function remindOwner(
   tenantId: string,
   siteId: string,
+  unitId: string,
   unitName: string,
   amount: number,
   validTo: string,
@@ -146,15 +149,38 @@ async function remindOwner(
   const currency = String((cfg?.config as { currency?: string } | null)?.currency ?? "HUF");
   const lang = await prepareMailLang(await langForTenant(tenantId));
   const adminUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/admin?tab=modulok&m=pricing`;
+  // What takes over after the window decides the mail's promise (§B.17): with a timeless base
+  // price the guest keeps seeing a price — only without one is a night left unpriced.
+  const timelessBase = await db
+    .selectFrom("unit_price")
+    .select("amount")
+    .where("unit_id", "=", unitId)
+    .where("date_from", "is", null)
+    .where("date_to", "is", null)
+    .where("valid_from", "is", null)
+    .where("valid_to", "is", null)
+    .executeTakeFirst();
+  const after = timelessBase
+    ? T(
+        lang,
+        "Utána azokon az éjszakákon, amelyekre nincs időszaki ár, ismét az alapár érvényes: {base}/éj.",
+        { base: formatAmount(timelessBase.amount, currency, lang) },
+      )
+    : T(
+        lang,
+        "Utána azokra az éjszakákra, amelyekre nincs időszaki ár, a vendég nem lát árat, és árajánlatot kér.",
+      );
   const subject = T(lang, "Hamarosan lejár egy ár: {unit}", { unit: unitName });
   const text =
     T(lang, "Kedves Partnerünk!") +
     "\n\n" +
-    T(
-      lang,
-      "Ez az ár {date} után lejár: {unit}, {amount}/éj. Utána azokra az éjszakákra, amelyekre nincs időszaki ár, a vendég nem lát árat, és árajánlatot kér.",
-      { unit: unitName, amount: formatAmount(amount, currency, lang), date: niceIso(validTo) },
-    ) +
+    T(lang, "Ez az ár {date} után lejár: {unit}, {amount}/éj.", {
+      unit: unitName,
+      amount: formatAmount(amount, currency, lang),
+      date: niceIso(validTo),
+    }) +
+    " " +
+    after +
     "\n\n" +
     T(lang, "Ha az ár a következő időszakra is érvényes, adja meg újra a Modulok fülön, az „Árak, szezonok” modulnál:") +
     `\n${adminUrl}\n\n` +

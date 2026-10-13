@@ -234,7 +234,7 @@ hívásaid `mock_view` sorokat írnak a lead-statisztikába.
 
 A tulaj kérései a nagy deploy UTÁNRA — nem blokkolják a deployt, de a következő szálak innen indulnak.
 
-### 4b.1 Lejárat előtti értesítő a dátumos árakra
+### 4b.1 Lejárat előtti értesítő a dátumos árakra — ✅ ELDŐLT (ADR-XXXX, tulaj 2026-10-13): nincs levél, igaz mondat a lapon
 > „legyen lejárat előtti értesítő, mint ahogy ígérjük”
 
 - **Előzmény:** az Árazás lap mondata („…Lejárat előtt e-mailben emlékeztetjük.”) 2026-09-30-án KIKERÜLT
@@ -247,7 +247,7 @@ A tulaj kérései a nagy deploy UTÁNRA — nem blokkolják a deployt, de a köv
 - **Megoldási irányok (döntés kell):** (a) a bélyeg-szűrő újragondolása — az ajánlatból született sor is kapjon
   emlékeztetőt; vagy (b) a levél-ág a bélyeges sorokra is, külön szöveggel.
 
-### 4b.2 Az emlékeztető levél hamis mondata
+### 4b.2 Az emlékeztető levél hamis mondata — ✅ JAVÍTVA (ADR-XXXX): időtlen alapár mellett az alapárat nevezi
 A `maintainDatedPrices` levele: „…Utána azokra az éjszakákra, amelyekre nincs időszaki ár, **a vendég nem lát árat**,
 és árajánlatot kér.” (`src/tenant/priceExpiry.ts`). Hamis, ha a szobának időtlen alapára is van (akkor az lép
 életbe). Ma a halott ág miatt élesben nem jelentkezik — a 4b.1 élesztésével EGYÜTT javítandó (feltételes mondat:

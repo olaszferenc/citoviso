@@ -15,7 +15,10 @@
 //     egy emlékeztető és pontosan egy lejárat-levélpár;
 //   · a site SAJÁT határideje (autoDeclineHours 24 / 0 = soha) — nem a beégetett 48;
 //   · a NEGATÍV kontrollok: a „kért napokra” (bélyeggel született) sor és a szezon ÉVES ára
-//     nem kap levelet (ADR-0267 ③, 0074), az időtlen alapár és a szezon sosem kerül le.
+//     nem kap levelet (ADR-0267 ③, 0074; tulaj 2026-10-13: ADR-XXXX), az időtlen alapár és a
+//     szezon sosem kerül le;
+//   · a levél IGAZ mondata (4b.2, ADR-XXXX): időtlen alapár mellett „ismét az alapár érvényes”,
+//     összeggel — csak alapár NÉLKÜL mondja, hogy „a vendég nem lát árat” (pozitív kontroll).
 //
 // ⭐ AZ ÓRA ELTOLÁSA = A FIXTÚRA DÁTUMAINAK VISSZATOLÁSA, nem előretolt `today`/`now`. Mindkét
 // söprés GLOBÁLIS (a gate-lane-check SWEEPS listáján is): egy előretolt `today` a közös dev DB
@@ -203,6 +206,7 @@ try {
   const stamped = await db.insertInto("site_unit").values({ site_id: site.id, name: "Padlásszoba", capacity: 2, sort_order: 2 }).returning("id").executeTakeFirstOrThrow();
   const seasonal = await db.insertInto("site_unit").values({ site_id: site.id, name: "Földszinti szoba", capacity: 2, sort_order: 3 }).returning("id").executeTakeFirstOrThrow();
   const annex = await db.insertInto("site_unit").values({ site_id: site.id, name: "Kerti ház", capacity: 2, sort_order: 4 }).returning("id").executeTakeFirstOrThrow();
+  const bare = await db.insertInto("site_unit").values({ site_id: site.id, name: "Tetőtéri szoba", capacity: 2, sort_order: 5 }).returning("id").executeTakeFirstOrThrow();
   const tu = await db.insertInto("tenant_user").values({ tenant_id: tenant.id, username: `timetravel_${STAMP}`, contact_email: OWNER, password_hash: null }).returning("id").executeTakeFirstOrThrow();
   ids.tuId = tu.id;
   await setSiteModuleConfig(site.id, "booking", { notifyEmail: OWNER }, "test");
@@ -296,6 +300,7 @@ try {
   const LEGACY_AMT = 23_457;
   const STAMPED_AMT = 23_458;
   const YEAR_AMT = 23_459;
+  const BARE_AMT = 23_460;
   const BASE_AMT = 11_113;
   // Rows are placed with their window already ending in 20 days; each simulated day then
   // moves the window one day closer — exactly what the real clock does to a stored row.
@@ -303,6 +308,8 @@ try {
   const vFrom = (d: number): string => addDays(today, d - 30);
   // ① a pre-ADR-0267 row: no stamp → owed the reminder (inserted as it was written then).
   const lg = await db.insertInto("unit_price").values({ unit_id: legacy.id, label: null, date_from: null, date_to: null, amount: LEGACY_AMT, min_nights: null, sort_order: 0, valid_from: vFrom(START), valid_to: addDays(today, START) }).returning("id").executeTakeFirstOrThrow();
+  // ①b the same, on a unit WITHOUT a timeless base: only here is a night left unpriced (4b.2).
+  await db.insertInto("unit_price").values({ unit_id: bare.id, label: null, date_from: null, date_to: null, amount: BARE_AMT, min_nights: null, sort_order: 0, valid_from: vFrom(START), valid_to: addDays(today, START) }).execute();
   // ② the offer path's „a kért napokra” row: born stamped (ADR-0267 ③) → no mail, still removed.
   await addDatedBasePrice(stamped.id, STAMPED_AMT, vFrom(START), addDays(today, START), { remind: false });
   // ③ a season's YEAR price (0074): no "lejár egy ár" mail, removed when it lapses.
@@ -318,9 +325,10 @@ try {
   await setBasePrice(legacy.id, BASE_AMT);
 
   const datedIds = async (): Promise<Record<string, string | undefined>> => {
-    const rows = await db.selectFrom("unit_price").select(["id", "unit_id", "parent_id", "valid_to"]).where("unit_id", "in", [legacy.id, stamped.id, seasonal.id]).where("valid_to", "is not", null).execute();
+    const rows = await db.selectFrom("unit_price").select(["id", "unit_id", "parent_id", "valid_to"]).where("unit_id", "in", [legacy.id, bare.id, stamped.id, seasonal.id]).where("valid_to", "is not", null).execute();
     return {
       legacy: rows.find((r) => r.unit_id === legacy.id)?.id,
+      bare: rows.find((r) => r.unit_id === bare.id)?.id,
       stamped: rows.find((r) => r.unit_id === stamped.id)?.id,
       year: rows.find((r) => r.unit_id === seasonal.id && r.parent_id)?.id,
     };
@@ -331,7 +339,7 @@ try {
   };
   await place(START);
   const d0 = await datedIds();
-  check("fixtúra: mindhárom dátumos sor él (bélyeg nélküli · bélyeggel született · éves)", !!d0.legacy && !!d0.stamped && !!d0.year, d0);
+  check("fixtúra: mind a négy dátumos sor él (bélyeg nélküli alapár mellett · bélyeg nélküli alapár nélkül · bélyeggel született · éves)", !!d0.legacy && !!d0.bare && !!d0.stamped && !!d0.year, d0);
   if (!(await rerenderTenantSnapshot(tenant.id, { as: "live" }))) throw new Error("render bukott");
   const page = async (): Promise<string> => readFile(path.join(siteDir, "index.html"), "utf8").catch(() => "");
   const shows = (html: string, n: number): boolean => new RegExp(String(n).replace(/(\d{2})(\d{3})$/, "$1[\\s\\u00a0\\u202f.,]?$2")).test(html);
@@ -351,7 +359,7 @@ try {
       reminderDays.push({ d, to: m.to, subject: m.subject, body: m.body });
     }
     const now = await datedIds();
-    presentAt[d] = { legacy: !!now.legacy, stamped: !!now.stamped, year: !!now.year };
+    presentAt[d] = { legacy: !!now.legacy, bare: !!now.bare, stamped: !!now.stamped, year: !!now.year };
   }
 
   const legacyMails = reminderDays.filter((m) => m.subject === "Hamarosan lejár egy ár: Emeleti szoba");
@@ -364,14 +372,22 @@ try {
   check("…és a Modulok → Árak linket", !!lm && /\/admin\?tab=modulok&m=pricing/.test(lm.body));
   const remLog = await db.selectFrom("tenant_message").select("subject").where("tenant_id", "=", tenant.id).where("subject", "=", "Hamarosan lejár egy ár: Emeleti szoba").execute();
   check("…a tenant üzenetei közé EGYSZER naplózva", remLog.length === 1, remLog.length);
+  // 4b.2 (ADR-XXXX): the mail says what takes over. With a timeless base the guest keeps
+  // seeing a price — "a vendég nem lát árat" would be false there (§B.17).
+  check("4b.2: alapár mellett a levél NEM állítja, hogy a vendég nem lát árat", !!lm && !/nem lát árat/.test(lm.body), (lm?.body ?? "").slice(0, 600));
+  check("…hanem kimondja, hogy az alapár lép életbe, összeggel", !!lm && /ismét az alapár érvényes/.test(lm.body) && shows(lm.body, BASE_AMT), (lm?.body ?? "").slice(0, 600));
+  const bareMails = reminderDays.filter((m) => m.subject === "Hamarosan lejár egy ár: Tetőtéri szoba");
+  const bm = bareMails[0];
+  check(`alapár NÉLKÜL is PONTOSAN EGY emlékeztető, a ${REMIND_DAYS}. napon`, bareMails.length === 1 && bm?.d === REMIND_DAYS, bareMails.map((m) => m.d));
+  check("POZITÍV KONTROLL: alapár nélkül a levél kimondja, hogy a vendég nem lát árat", !!bm && shows(bm.body, BARE_AMT) && /a vendég nem lát árat, és árajánlatot kér/.test(bm.body) && !/alapár/.test(bm.body), (bm?.body ?? "").slice(0, 600));
   check("NEGATÍV: a „kért napokra” (bélyeggel született) sor nem kap levelet", !reminderDays.some((m) => /Padlásszoba/.test(m.subject)), reminderDays.map((m) => m.subject));
   check("NEGATÍV: a szezon ÉVES ára nem kap levelet", !reminderDays.some((m) => /Földszinti szoba/.test(m.subject)), reminderDays.map((m) => m.subject));
-  check("NEGATÍV: más levél nem ment a tulajnak", reminderDays.length === 1, reminderDays.map((m) => m.subject));
+  check("NEGATÍV: más levél nem ment a tulajnak", reminderDays.length === 2, reminderDays.map((m) => m.subject));
 
-  const all = (d: number) => presentAt[d]!.legacy && presentAt[d]!.stamped && presentAt[d]!.year;
-  const none = (d: number) => !presentAt[d]!.legacy && !presentAt[d]!.stamped && !presentAt[d]!.year;
-  check("a lejárat NAPJÁN (valid_to = ma) mindhárom sor még él — az utolsó nap is érvényes", all(0), presentAt[0]);
-  check("másnap (valid_to = tegnap) mindhárom lekerül — a bélyeggel született és az éves is", none(-1), presentAt[-1]);
+  const all = (d: number) => Object.values(presentAt[d]!).every(Boolean);
+  const none = (d: number) => !Object.values(presentAt[d]!).some(Boolean);
+  check("a lejárat NAPJÁN (valid_to = ma) mind a négy sor még él — az utolsó nap is érvényes", all(0), presentAt[0]);
+  check("másnap (valid_to = tegnap) mind a négy lekerül — a bélyeggel született és az éves is", none(-1), presentAt[-1]);
   check("NEGATÍV: előtte egyik sem tűnt el idő előtt", Array.from({ length: START + 1 }, (_, i) => i).every((d) => all(d)), presentAt);
   const legacyLeft = await getUnitPrices(legacy.id);
   const seasonLeft = await getUnitPrices(seasonal.id);

@@ -72,6 +72,18 @@ hetente e-mailben emlékeztetjük.
 Kivétel az egész szállás, ha nem adja ki egyben, és a vendég elől el van rejtve: azt senki nem
 foglalhatja, ezért nem kérünk rá árat — se sárga sor, se teendő, se emlékeztető.
 
+## „Alapár, dátummal” — az árajánlatból mentett ár
+
+Ha egy árajánlatnál a **„Mentsem az árlistába is?”** négyzetet a **„Csak a kért napokra”**
+választással pipálja be, az ár a szoba kártyáján **„Alapár, dátummal”** sorként jelenik meg, a
+dátumokkal. Csak a vendég által kért éjszakákra szól (ahol nincs időszaki ár), és a tartózkodás
+után magától lekerül — a honlapja is frissül. Ezért erről az árról **nem küldünk lejárati
+levelet**: a lejárta után nem marad olyan jövőbeli éjszaka, amelynek emiatt ne lenne ára. A sort a
+**„Törlés”** gombbal bármikor eltávolíthatja.
+
+Az időszaki árakról a szezon végén írunk (lásd lent: **Levél a szezon végén**): ott kérdezzük meg,
+mi legyen az ár jövőre.
+
 ## Időszaki árak (pl. főszezon)
 
 Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes szakaszaira:

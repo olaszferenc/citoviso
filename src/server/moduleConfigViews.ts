@@ -3559,7 +3559,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         ) +
         (datedRows
           ? datedRows +
-            `<p class="citui-hint" style="margin:6px 0 18px">${T(lang, "A dátumos alapár az árajánlatból került ide: a megadott napig érvényes, ahol nincs időszaki ár.")}</p>`
+            `<p class="citui-hint" style="margin:6px 0 18px">${T(lang, "A dátumos alapár az árajánlatból került ide: csak a kért éjszakákra szól, ahol nincs időszaki ár, és a tartózkodás után magától lekerül.")}</p>`
           : "") +
         // ② seasons
         `<h3 class="mcfg-sub">${T(lang, "Időszaki árak")}</h3>` +
