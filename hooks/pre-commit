@@ -1422,7 +1422,7 @@ if [ -f scripts/booking-price-clarity-check.mts ] && \
   echo "[pre-commit] booking-price-clarity-check (a vendég látja, mi van az árban)…"
   npx tsx scripts/booking-price-clarity-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX — az ellátás és a felárak (jóváhagyott terv: design-refs/tenant-admin/ellatas, „B"):
+# Az ellátás és a felárak (ADR: src/tenant/meals.ts fejléce) (jóváhagyott terv: design-refs/tenant-admin/ellatas, „B"):
 # az űrlap szabálya, a szerver ár-sorai, a honlap „Ellátás” blokkja, és ⭐⭐ a böngésző
 # UGYANAZT számolja, mint a szerver (valódi widgeten, piros önteszttel).
 if [ -f scripts/meals-check.mts ] && \
