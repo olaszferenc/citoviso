@@ -4,7 +4,7 @@ title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
 category: system
 anchors: console.settings
-updated: 2026-10-12
+updated: 2026-10-13
 ---
 
 A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
@@ -97,7 +97,13 @@ intézésre váró domain-igénylés. Hogy a telefon ne teljen meg:
 - a következő kimenő SMS megírja, hány riasztás maradt ki az előző SMS óta (akár az
   ismétlés-tiltás, akár az óránkénti korlát miatt): „+2 tovabbi riasztas csak e-mailben”;
 - ha maga a **riasztó levél nem megy ki** (a levélküldő áll), egy SMS szól erről — ez az
-  egyetlen csatorna, ami ilyenkor még elér.
+  egyetlen csatorna, ami ilyenkor még elér (éjjel ez is a reggeli összesítőbe kerül, lásd lent).
+
+**Éjjel nincs riasztó SMS.** 22:00 és 07:00 között (budapesti idő) egyetlen operátori
+riasztás sem küld SMS-t — a levél ilyenkor is megy. 07:00 után **egy** összesítő SMS jön
+arról, ami éjjel történt (pl. „Citoviso RIASZTAS: ejjel (22-07) 3 riasztas: … Reszletek
+e-mailben.”); ha éjjel nem volt riasztás, nem jön semmi. Ha éjjel a levélküldő áll, erről
+is csak reggel értesülsz SMS-ben.
 
 Az SMS ékezet nélküli, rövid (a levél tárgya), a részletek a levélben vannak. SMS csak az
 éles rendszerből megy; a tesztgépről érkező riasztás csak levél, „[TESZT]” jelöléssel.

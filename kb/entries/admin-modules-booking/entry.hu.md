@@ -19,7 +19,7 @@ kérdésre”** gomb egy külön oldalt nyit, ahol a szobákat, az árakat, az i
 szabályait egymás után, kérdésekre válaszolva adja meg — egy Segítővel, aki elmagyarázza, amit nem
 ért. Ezt az oldalt a „Foglalás beállítása” súgója írja le.
 
-A korábbi beállító űrlap (az alábbi mezők: értesítési cím, idegenforgalmi adó, mi van az árban,
+A korábbi beállító űrlap (az alábbi mezők: értesítési cím, idegenforgalmi adó,
 legrövidebb és leghosszabb foglalás) megmaradt: a kártya alatti **„Haladó beállítások”** sorra
 koppintva nyílik ki. Ugyanazokat az adatokat írja, mint a kérdezős oldal.
 
