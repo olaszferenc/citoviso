@@ -357,7 +357,7 @@ export function bookingSetupPage(o: {
     `<div class="bs-top"><a class="mcfg-back" href="${o.backUrl}">${ic("back", 16)} ${T(lang, "Online foglalás")}</a><span class="bs-sp"></span>` +
     `<details class="bs-adv"><summary>${T(lang, "Haladó beállítások")}</summary><div class="bs-adv__menu">` +
     `<a href="${o.links.rooms}">${T(lang, "Szobák")}<small>${T(lang, "fotók, leírás, felszereltség, szoba törlése")}</small></a>` +
-    `<a href="${o.links.pricing}">${T(lang, "Árak és időszakok")}<small>${T(lang, "évhez kötött ár, időszakok sorrendje")}</small></a>` +
+    `<a href="${o.links.pricing}">${T(lang, "Árak és időszakok")}<small>${T(lang, "ellátás és felárak, évhez kötött ár, időszakok sorrendje")}</small></a>` +
     `<a href="${o.links.booking}">${T(lang, "Online foglalás")}<small>${T(lang, "naptár, más oldalak naptára, a mai űrlap")}</small></a>` +
     `</div></details></div>` +
     `<div class="bs-grid"><main class="bs-main"><div class="bs-head"><h1 class="bs-h1">${T(lang, "Foglalás beállítása")}</h1>` +

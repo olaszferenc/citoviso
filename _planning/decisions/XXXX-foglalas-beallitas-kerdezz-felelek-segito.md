@@ -34,7 +34,8 @@ nélkül (minden éjszaka zárva, a tulaj nem tudja), időszak-minimum a leghoss
    író függvényt. A `go` mutató csak az oldal kérdés-azonosítója lehet (a válasz-sémában enum, utána
    újra ellenőrizve). A tulaj jelenlegi beállításait a szerver olvassa a DB-ből, a böngésző nem
    küldheti. A felhasználó szövege adat, nem utasítás. Témán kívül udvarias nem. Kimondja, ami ma
-   nincs: előleg, lemondási feltétel, gyerekár, férőhely-szűrés.
+   nincs: előleg, lemondási feltétel, pótágy-díj, férőhely-szűrés. Az ellátást és a gyerekárat
+   (ADR-0378, ugyanaznap landolt) nem tagadja: az Árak képernyő „Ellátás” részére mutat.
 7. **Modell: Claude Haiku 5.5** (`claude-haiku-5-5`, effort `low`, strukturált JSON-kimenet).
    Ár a claude-api skill szerint (2026-10-13): $0.10 / $0.50 per MTok. Mérve 6 éles kérdésen:
    ~3 620 bemenő és ~140 kimenő token, **~$0.00043 / kérdés**, 1,7–2,9 mp. Ugyanez Sonnet 5.5-tel

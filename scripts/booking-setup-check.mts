@@ -74,7 +74,8 @@ try {
   const sp = helperSystemPrompt("hu");
   check("prompt: „Ezt nem én írom be” + soha nem állítja, hogy beállított", sp.includes("Ezt nem én írom be") && sp.includes("Soha ne állítsa"));
   check("prompt: csak a foglalásról, más témára udvarias nem", sp.includes("csak a foglalás beállításában segítek"));
-  check("prompt: kimondja, ami NINCS (előleg, lemondás, gyerekár, férőhely-szűrés)", /előleg/.test(sp) && /lemondási feltétel/.test(sp) && /gyerekár/.test(sp) && /NEM szűri ki/.test(sp));
+  check("prompt: kimondja, ami NINCS (előleg, lemondás, pótágy, férőhely-szűrés)", /előleg/.test(sp) && /lemondási feltétel/.test(sp) && /pótágy-díj/.test(sp) && /NEM szűri ki/.test(sp));
+  check("prompt: az ellátás és a gyerekár (ADR-0378) az Árak „Ellátás” részére mutat, nem tagadja", /Ellátás és felárak/.test(sp) && /gyerekár korhatárral/.test(sp));
 
   // ── fixture: a fresh site — one default unit, booking + pricing ──────────────
   const stamp = Date.now().toString(36);

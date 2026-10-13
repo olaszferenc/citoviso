@@ -120,6 +120,7 @@ Segítő az oldal jobb oldalán áll. Írja be a kérdését, vagy koppintson eg
 ## Haladó beállítások
 
 Az oldal tetején a **„Haladó beállítások”** linkkel a korábbi képernyők nyílnak meg: **„Szobák”**
-(fotók, leírás, felszereltség, szoba törlése), **„Árak és időszakok”** és **„Online foglalás”**
+(fotók, leírás, felszereltség, szoba törlése), **„Árak és időszakok”** (itt adja meg az ellátást —
+reggeli, félpanzió — a felárakat és a gyerekárat is) és **„Online foglalás”**
 (naptár, más oldalak naptára és a korábbi beállító űrlap). Ugyanazokat az adatokat látják, mint ez
 az oldal — ha ott módosít valamit, itt is az látszik.
