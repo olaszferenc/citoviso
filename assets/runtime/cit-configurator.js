@@ -5436,8 +5436,56 @@
     return out;
   }
   /* cit-cfg-trialfx-pillspot-end */
-  function pillObstacles(box) {
+  /* cit-cfg-trialfx-pilldots-start
+   * A slideshow's indicator row is a control too, but blockingRects never sees it: each
+   * member is a word-less button under 100 px (cinematic: three 4 px bars, 44 px tap
+   * targets), and on every screen size the pair rested on them (ADR-0382's closing note).
+   * A row = ≥ 2 visible, word-less sibling controls of ≤ 60 px; its union box is the obstacle. */
+  function indicatorRects(box) {
+    var rows = [];
+    var parents = [];
+    var all = document.querySelectorAll("button, [role=button], [role=tab], a");
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.closest('[class*="cit-cfg"]') || el.closest("#cit-consent")) continue;
+      if (/\S/.test(el.textContent || "") || el.querySelector("img, svg")) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.width > 60 || r.height > 60) continue;
+      if (r.bottom <= 0 || r.top >= window.innerHeight) continue;
+      var cs = getComputedStyle(el);
+      if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue;
+      var k = parents.indexOf(el.parentElement);
+      if (k < 0) {
+        parents.push(el.parentElement);
+        rows.push({ n: 1, left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+      } else {
+        var u = rows[k];
+        u.n++;
+        u.left = Math.min(u.left, r.left);
+        u.right = Math.max(u.right, r.right);
+        u.top = Math.min(u.top, r.top);
+        u.bottom = Math.max(u.bottom, r.bottom);
+      }
+    }
+    var out = [];
+    for (var j = 0; j < rows.length; j++) {
+      var q = rows[j];
+      if (q.n < 2 || q.right <= box.left || q.left >= box.right) continue;
+      out.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+    }
+    return out;
+  }
+  /* cit-cfg-trialfx-pilldots-end */
+  /** The pair's control obstacles: the primary buttons and the slideshow indicators. */
+  function pillControls(box) {
     var rects = blockingRects(box);
+    /* cit-cfg-trialfx-pilldotcall-start */
+    rects = rects.concat(indicatorRects(box));
+    /* cit-cfg-trialfx-pilldotcall-end */
+    return rects;
+  }
+  function pillObstacles(box) {
+    var rects = pillControls(box);
     /* cit-cfg-trialfx-pillcall-start */
     rects = rects.concat(heroTitleRects(box));
     /* cit-cfg-trialfx-pillcall-end */
@@ -5572,51 +5620,71 @@
 
   /**
    * ② an in-flow obstacle under the resting spot → try the other side(s); ③ every side
-   * taken → the upward sweep on the first side. For the pair the tested box is the UNION of
+   * taken → the upward sweep on the first side, or on a side the hero title does not reach
+   * into when that one needs a smaller lift (ADR-XXXX). For the pair the tested box is the UNION of
    * both pills: it moves together or not at all. `withTitle` adds the hero title's words
    * to the obstacles; such a spot is only `ok` when nothing is left under it and it stays
    * below the header.
    */
   function findSpot(withTitle, bottomY, slots, w, h) {
-    var obstacles = withTitle ? pillObstacles : blockingRects;
+    var obstacles = withTitle ? pillObstacles : pillControls;
     for (var si = 0; si < slots.length; si++) {
       var sr = slotRect(slots[si], w);
       var pr = { left: sr.left, right: sr.right, top: bottomY - h, bottom: bottomY };
       if (!clashAt(obstacles(pr), bottomY, h)) return { side: slots[si], bottomY: bottomY, ok: true };
     }
-    var side = slots[0]; // '' everywhere but a landscape phone, where it is the right corner
-    var dr = slotRect(side, w);
-    var rects = obstacles({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
-    var floor = withTitle ? pillCeiling(dr.left, dr.right) : 8;
-    var ok = true;
-    for (var step = 0; step < 8; step++) {
-      var clash = clashAt(rects, bottomY, h);
-      if (!clash) break;
-      var lifted = clash.top - AVOID_GAP;
-      // Climbing off the top of the screen (or onto the header) would hide the buy entry or
-      // the site's own controls — stay on stage and accept the last position.
-      if (lifted - h < floor) {
-        ok = false;
-        if (withTitle) {
-          // A few pixels short of the header (claymorphism sideways: the menu button sits
-          // right above the title): rest ON the limit when that only eats into the title's
-          // gap (≤ 6 px) and buries no control — otherwise give the title-aware search up.
-          var atLimit = floor + h;
-          if (atLimit <= bottomY && !clashAt(blockingRects({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight }), atLimit, h)) {
-            var depth = 0;
-            for (var ri = 0; ri < rects.length; ri++) {
-              var rr = rects[ri];
-              depth = Math.max(depth, Math.min(atLimit, rr.bottom + AVOID_GAP) - Math.max(atLimit - h, rr.top - AVOID_GAP));
+    function sweep(side, bottomY) {
+      var dr = slotRect(side, w);
+      var rects = obstacles({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
+      var floor = withTitle ? pillCeiling(dr.left, dr.right) : 8;
+      var ok = true;
+      for (var step = 0; step < 8; step++) {
+        var clash = clashAt(rects, bottomY, h);
+        if (!clash) break;
+        var lifted = clash.top - AVOID_GAP;
+        // Climbing off the top of the screen (or onto the header) would hide the buy entry or
+        // the site's own controls — stay on stage and accept the last position.
+        if (lifted - h < floor) {
+          ok = false;
+          if (withTitle) {
+            // A few pixels short of the header (claymorphism sideways: the menu button sits
+            // right above the title): rest ON the limit when that only eats into the title's
+            // gap (≤ 6 px) and buries no control — otherwise give the title-aware search up.
+            var atLimit = floor + h;
+            if (atLimit <= bottomY && !clashAt(pillControls({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight }), atLimit, h)) {
+              var depth = 0;
+              for (var ri = 0; ri < rects.length; ri++) {
+                var rr = rects[ri];
+                depth = Math.max(depth, Math.min(atLimit, rr.bottom + AVOID_GAP) - Math.max(atLimit - h, rr.top - AVOID_GAP));
+              }
+              if (depth <= 6) return { side: side, bottomY: atLimit, ok: true };
             }
-            if (depth <= 6) return { side: side, bottomY: atLimit, ok: true };
           }
+          break;
         }
-        break;
+        bottomY = lifted;
       }
-      bottomY = lifted;
+      if (ok && clashAt(rects, bottomY, h)) ok = false;
+      return { side: side, bottomY: bottomY, ok: ok };
     }
-    if (ok && clashAt(rects, bottomY, h)) ok = false;
-    return { side: side, bottomY: bottomY, ok: ok };
+    var first = sweep(slots[0], bottomY); // '' everywhere but a landscape phone, where it is the right corner
+    /* cit-cfg-trialfx-pillsweep-start
+     * Every side taken: another side wins when the hero title does not reach into its column
+     * at all and it needs a smaller lift. Cinematic at 1280×800 with the consent bar: the
+     * indicator row blocks the right corner, and the centre sweep lifted the pair right
+     * beside „Balatonnál”, while just above the indicators on the right the photo was empty.
+     * A column the title reaches into stays out (measured on fullbleed, horizontal, artdeco:
+     * the smallest lift there squeezed the pair beside the title or the intro line). */
+    if (withTitle) {
+      for (var sj = 1; sj < slots.length; sj++) {
+        var col = slotRect(slots[sj], w);
+        if (heroTitleRects({ left: col.left, right: col.right, top: 0, bottom: window.innerHeight }).length) continue;
+        var other = sweep(slots[sj], bottomY);
+        if (other.ok && (!first.ok || other.bottomY > first.bottomY)) first = other;
+      }
+    }
+    /* cit-cfg-trialfx-pillsweep-end */
+    return first;
   }
 
   function placeLaunch() {

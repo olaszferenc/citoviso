@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-pirula-par-kepvalto-jelzoire-nem-ul.md) — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül
 - [ADR-0382](decisions/0382-a-pirula-par-a-hos-cim-szavaira-sehol-nem-ul.md) — A pirula-pár a hős-cím szavaira sehol nem ül: álló telefonon süti-sáv nélkül és asztalon is a cím fölé lép, de fejlécre és gombra nem
 - [ADR-0381](decisions/0381-a-csomagban-foglalt-sajat-cim-dij-nelkuli.md) — A csomagban foglalt saját cím díj nélküli igénylése AUTOMATIKUS: ugyanaz a beszerzés, terhelés és zárolás nélkül (2026-10-13)
 - [ADR-0380](decisions/0380-foglalas-beallitasa-kerdezz-felelek.md) — Foglalás beállítása: kérdezz-felelek ellenőrzőlista + Segítő (Haiku 5.5, 1. kör: csak magyaráz)

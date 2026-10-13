@@ -622,8 +622,40 @@ try {
     return { hits, pills: pills.length, corner: right >= vw - 40 || left <= 40, onScreen: top >= 0 && top >= frBottom,
       rects: pills.map((q) => [q.left, q.top, q.width, q.height].map(Math.round)) };
   }`;
+  // The hero slideshow's indicators (cinematic: three 4 px bars, each a 44 px tap target —
+  // the pair sat on them on main, ADR-0382's closing note). PILL_PROBE never saw them: it
+  // takes nothing under 60 px wide as a control. An indicator row = ≥ 2 word-less sibling
+  // controls, each ≤ 60 px; the row's union box (bars + tap area) is what the pair must miss.
+  const DOTS_PROBE = `() => {
+    const members = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
+      .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0);
+    const pills = members.map((m) => m.getBoundingClientRect());
+    const rows = new Map();
+    for (const el of document.querySelectorAll("button, [role=button], [role=tab], a")) {
+      if (el.closest('[class*="cit-cfg"]') || el.closest("#cit-consent")) continue;
+      if ((el.textContent || "").trim() || el.querySelector("img, svg")) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.width > 60 || r.height > 60 || r.bottom <= 0 || r.top >= innerHeight) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue;
+      const key = el.parentElement;
+      if (!rows.has(key)) rows.set(key, []);
+      rows.get(key).push(r);
+    }
+    const hits = [];
+    for (const [parent, rs] of rows) {
+      if (rs.length < 2) continue;
+      const u = { left: Math.min(...rs.map((q) => q.left)), right: Math.max(...rs.map((q) => q.right)),
+        top: Math.min(...rs.map((q) => q.top)), bottom: Math.max(...rs.map((q) => q.bottom)) };
+      if (pills.some((q) => q.left < u.right && q.right > u.left && q.top < u.bottom && q.bottom > u.top))
+        hits.push(String(parent.className || parent.tagName) + " " + [u.left, u.top, u.right - u.left, u.bottom - u.top].map(Math.round).join(","));
+    }
+    return { hits, rows: [...rows.values()].filter((rs) => rs.length >= 2).length };
+  }`;
+  type DotsGeom = { hits: string[]; rows: number };
   type TitleGeom = { hits: string[]; pills: number; corner: boolean; onScreen: boolean; rects: number[][] };
   type Buried = { error?: string; buried?: { label: string }[] };
+  const dotRows = new Set<string>();
   for (const id of Object.keys(TEMPLATES)) {
     const html = await buildPage(id);
     for (const [w, h, vp] of [[844, 390, "fekvő"], [390, 844, "álló"], [1280, 800, "asztali"]] as const) {
@@ -634,19 +666,26 @@ try {
       check(`⑪ ${id}/${vp}, nyugalomban: a pár nem ül a címen, a fejléc alatt marad`, rest.pills === 2 && rest.hits.length === 0 && rest.onScreen, rest);
       const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;
       check(`⑪ ${id}/${vp}, nyugalomban: hős-gombot sem temet be (FK-004b H-3)`, !b.error && (b.buried?.length ?? 0) === 0, b);
-      if (id === "dark-luxury") await shot(p, `mock-pirula-cim-dark-luxury-${vp}`);
+      const d = (await p.evaluate(`(${DOTS_PROBE})()`)) as DotsGeom;
+      if (d.rows) dotRows.add(id);
+      check(`⑪ ${id}/${vp}, nyugalomban: a képváltó jelzőcsíkjait sem takarja`, d.hits.length === 0, { ...d, pills: rest.rects });
+      if (id === "dark-luxury" || id === "cinematic") await shot(p, `mock-pirula-cim-${id}-${vp}`);
       // A key press is an engagement: the deferred consent bar comes, the page does not scroll.
       await p.keyboard.press("Shift");
       await p.waitForTimeout(1400);
       const up = await p.evaluate(() => !!document.getElementById("cit-consent"));
       const withBar = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
-      if (id === "dark-luxury") await shot(p, `mock-pirula-cim-dark-luxury-${vp}-suti`);
+      if (id === "dark-luxury" || id === "cinematic") await shot(p, `mock-pirula-cim-${id}-${vp}-suti`);
       check(`⑪ ${id}/${vp}, süti-sávval: a pár nem ül a címen, a fejléc alatt marad`, up && withBar.pills === 2 && withBar.hits.length === 0 && withBar.onScreen, { up, ...withBar });
       const b2 = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;
       check(`⑪ ${id}/${vp}, süti-sávval: hős-gombot sem temet be`, !b2.error && (b2.buried?.length ?? 0) === 0, b2);
+      const d2 = (await p.evaluate(`(${DOTS_PROBE})()`)) as DotsGeom;
+      check(`⑪ ${id}/${vp}, süti-sávval: a képváltó jelzőcsíkjait sem takarja`, d2.hits.length === 0, { ...d2, pills: withBar.rects });
       await ctx.close();
     }
   }
+  // The probe must see the row it guards: cinematic's fixture has 5 photos → 3 hero slides.
+  check(`⑪ a jelzőcsík-mérő látja a cinematic képváltó-jelzőit`, dotRows.has("cinematic"), [...dotRows]);
 } finally {
   await browser.close();
 }
