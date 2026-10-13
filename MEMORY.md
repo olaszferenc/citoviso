@@ -153,6 +153,12 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-13 — SUB `citd9a8f335`: Foglalás beállítása — kérdezz-felelek + Segítő, ADR-XXXX) — LANDOLVA, élesre csak külön tulaj-döntéssel
+- A tulaj a „B” változatot választotta (ellenőrzőlista). Az oldal: `/admin/booking-setup`. Terv: `assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/`.
+- Segítő = Haiku 5.5, csak magyaráz és a kérdéshez visz, nem ír; mérve ~$0.00043/kérdés (`tenant_ai_call`, napi 40/szállás).
+- A mai szabály-űrlap az Online foglalás képernyőn a „Haladó beállítások” alatt maradt. Őr: `scripts/booking-setup-check.mts`. Jegyzet: `_planning/memory/2026-10-13_foglalas_kerdezz_felelek.md`.
+- Következő: 2. kör (javaslat-kártya „Alkalmaz”, majd írás) — új terv-kör kell.
+
 ## Párhuzamos szál (2026-10-04/05 — `cit1e4fd2ba`: Kimi-mock koordinátor, folyamatos Kimi-csővezeték) — LEZÁRVA, kód nem változott
 - A Kimi (Moonshot CLI) folyamatos mock-gyártása a Három Huszár leaden: `~/kimi-sandbox/run-folyamatos.sh`, munkamappa `~/kimi-sandbox/folyamatos/`. **⏹ LEÁLLÍTVA 2026-10-05 13:00 a tulaj döntésére** (`STOP` fájl): a Kimi a HAVI keretét érte el (12:13), az m004 félbemaradt.
 - Kész és a tulajnál: m001 „Foglalási lap” (zöld) · m002 „A fotó térképpé éled” (mobilon 619 px: `.map-box` aspect-ratio 16/8 + min-height 300px) · m003 „Boltívek és karikázott jelek” (zöld, a legerősebb). Forrás: `~/kimi-sandbox/folyamatos/mockok/`.
@@ -7335,6 +7341,8 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
 - 2026-10-13 · ellátás-felár: vendég-oldali elrendezés B (táblázat + lenyíló), gyerekár IGEN (ellátásonként gyerekár + korhatár); foglalás-beállítás: B (ellenőrzőlista, alsó „Kérdezzen a Segítőtől” sáv, Haiku 5.5 csak magyaráz) (tulaj)
 - 2026-10-13 · riasztó SMS csendes óra: 22:00–07:00 (Budapest) között a ház-riasztás csak levél, az SMS-döntés `night` sor; 07:00 után az óránkénti tick EGY összesítő SMS-t küld az éjjel visszatartottakról (ha volt); a „mail-down” SMS is hallgat éjjel (tulaj: „Éjjel nagyon jönnek az SMS-ek.”, ADR-0376)
 - 2026-10-13 · éjjeli SMS-ek a tulajnak (mérve, modem `sentitems` + éles sorok, 10-06…10-13): 22–07 között 1 db — a vasárnapi „desztillalo” jelentés (04:05, crontab `0 4 * * 0`, csendes óra nélkül); élesről éjjel 0; a „sok éjjeli SMS” forrása ezekben a naplókban nem látszik (ADR-0376)
+- 2026-10-13 · Segítő (foglalás-beállítás) MÉRT költsége: Haiku 5.5, kérdésenként ~3 620 bemenő + ~140 kimenő token = ~$0.00043 (6 éles próbakérdés összesen $0.0026, 1,7–2,9 mp); a költség soronként a `tenant_ai_call` táblában (site_id, cost_usd), szállásonként napi 40 kérdés korlát (ADR-XXXX)
+- 2026-10-13 · foglalás-beállítás kérdezz-felelek: a tulaj a B változatot (egyoldalas ellenőrzőlista, 6 rész állapot-címkével, mobilon alsó „Kérdezzen a Segítőtől” sáv) választotta; Segítő = Claude Haiku 5.5 ($0.10/$0.50 per MTok, ~$0.00065/kérdés), 1. kör csak magyaráz/elvezet, adatot nem ír, költség aiUsage-ben; a mai űrlap a „Haladó beállítások” mögé (koordinátor-relé, ADR-XXXX)
 - 2026-10-12 · nagy deploy: éles = `465e5394` (prod/20261012-2326), előtte `4dc8a9d7`; 11 migráció (0099–0107); minden konzol-operátor egyszer újra belép (ADR-0363) (deploy-prod.sh, tulaj „Mehet a main Deploy”)
 - 2026-10-13 · dátumos ár lejárata: az ajánlatból mentett dátumos árra (a kért éjszakákra szól) NEM megy lejárati levél, az Árazás lap igaz mondattal magyaráz; a szezon-árak „lejárat előtti” ígérete a szezon végi levél (seasonNudge, 07:00 a záró nap után); a szezonok évente ismétlődnek, nem járnak le (tulaj: „Igen”)
 - 2026-10-13 · ház-riasztás SMS: csak a súlyos (vevő vár / pénz mozdult / kulcs halott) megy SMS-ben is; ugyanaz az eset 6 órán belül egyszer, óránként ≤4 SMS, a kimaradtak száma a következő SMS-en; SMS CSAK éles hoston (a dev gépen SMS_PROVIDER=gammu = valódi modem + beállított riasztási szám, a kapuk SMS-t küldenének) (ADR-0374)
