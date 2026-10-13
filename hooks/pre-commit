@@ -3358,7 +3358,7 @@ if [ -f scripts/portal-sync-guard-check.mts ] && \
   echo "[pre-commit] portal-sync-guard-check (export minden hoszton, ütközés, korlát, SSRF, runtime, fordulónap, dupla POST)…"
   npx tsx scripts/portal-sync-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
-# FOGLALÁS BEÁLLÍTÁSA (ADR-XXXX, kontraktus: design-refs/tenant-admin/foglalas-kerdezz-felelek, „B”):
+# FOGLALÁS BEÁLLÍTÁSA (lásd az ADR-t: _planning/decisions/*foglalas-beallitas-kerdezz-felelek*; kontraktus: design-refs/tenant-admin/foglalas-kerdezz-felelek, „B”):
 #     a vezetett oldal a MEGLÉVŐ írás-függvényeken át ír (szobák, árak, időszakok, szabályok,
 #     IFA, értesítés — a DB-ből visszaolvasva), a néma akadályok hangosak, a próba-foglalás a
 #     vendég-út szabálya (stayRuleErrors/stayQuote), idegen objektum nem íródik, a Segítő nem
