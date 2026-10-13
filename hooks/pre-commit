@@ -3343,7 +3343,7 @@ if [ -f scripts/domain-order-single-flight-check.mts ] && \
   echo "[pre-commit] domain-order-single-flight-check (Elek 10-11: egy domain-rendelés, setup_retry, díj = terhelés)…"
   npx tsx scripts/domain-order-single-flight-check.mts >"$GATE_LOG" || gate_failed
 fi
-# Csomag-tartalom saját cím díj nélküli igénylése (ADR-XXXX, tulaj 2026-10-13: „kell az automata út”):
+# Csomag-tartalom saját cím díj nélküli igénylése (tulaj 2026-10-13: „kell az automata út”; az ADR a check fejlécében):
 #     a 0 Ft-os név ugyanazon a beszerzésen fut végig, mint a fizetős (mock regisztrátoron live, 0 terhelés, 0
 #     ház-riasztás sikernél); egyszerre EGY csomag-név (párhuzamos igénylés → egy beszerzés); regisztrátor-hiba →
 #     a fizetős hibaág, de pénz-mondat nélkül, hűségidő nélkül; a route nem riaszt kézi intézésre. A régi kódon
