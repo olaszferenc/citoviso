@@ -7327,7 +7327,7 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
 
 ## Tények és döntések
 - 2026-10-13 · riasztó SMS (ADR-0374): címzett a tulaj teszt-mobilja +36 30 516 1631 (élesen a konzol /settings SMS-szám mezőjébe, a következő deploynál); éjjel NE jöjjön SMS — csendes óra 22–07, reggeli összesítő (tulaj: „Éjjel nagyon jönnek az SMS-ek”)
-- 2026-10-13 · ellátás-felár: vendég-oldali elrendezés B (táblázat + lenyíló); foglalás-beállítás: B (ellenőrzőlista, alsó „Kérdezzen a Segítőtől” sáv, Haiku 5.5 csak magyaráz) (tulaj)
+- 2026-10-13 · ellátás-felár: vendég-oldali elrendezés B (táblázat + lenyíló), gyerekár IGEN (ellátásonként gyerekár + korhatár); foglalás-beállítás: B (ellenőrzőlista, alsó „Kérdezzen a Segítőtől” sáv, Haiku 5.5 csak magyaráz) (tulaj)
 - 2026-10-13 · riasztó SMS csendes óra: 22:00–07:00 (Budapest) között a ház-riasztás csak levél, az SMS-döntés `night` sor; 07:00 után az óránkénti tick EGY összesítő SMS-t küld az éjjel visszatartottakról (ha volt); a „mail-down” SMS is hallgat éjjel (tulaj: „Éjjel nagyon jönnek az SMS-ek.”, ADR-0376)
 - 2026-10-13 · éjjeli SMS-ek a tulajnak (mérve, modem `sentitems` + éles sorok, 10-06…10-13): 22–07 között 1 db — a vasárnapi „desztillalo” jelentés (04:05, crontab `0 4 * * 0`, csendes óra nélkül); élesről éjjel 0; a „sok éjjeli SMS” forrása ezekben a naplókban nem látszik (ADR-0376)
 - 2026-10-12 · nagy deploy: éles = `465e5394` (prod/20261012-2326), előtte `4dc8a9d7`; 11 migráció (0099–0107); minden konzol-operátor egyszer újra belép (ADR-0363) (deploy-prod.sh, tulaj „Mehet a main Deploy”)
