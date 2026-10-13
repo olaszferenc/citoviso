@@ -7327,6 +7327,8 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Tények és döntések
+- 2026-10-13 · éles `MOBILE_SEND_WINDOW_OFF=1` (09-30-i ideiglenes teszt-kapcsoló) KIVÉVE az éles .env-ből, a szolgáltatások újraindítva → a lead-SMS/MMS időablak újra él (mentés: /opt/citoviso/backups/env-window-20261013-064122/) (tulaj: „Igen”)
+- 2026-10-13 · „desztillalo” heti jelentés SMS: vasárnap 04:05 helyett hétfő 08:00; operátori riasztás-SMS-ek is 22–07 csendes óra (tulaj)
 - 2026-10-13 · riasztó SMS (ADR-0374): címzett a tulaj teszt-mobilja +36 30 516 1631 (élesen a konzol /settings SMS-szám mezőjébe, a következő deploynál); éjjel NE jöjjön SMS — csendes óra 22–07, reggeli összesítő (tulaj: „Éjjel nagyon jönnek az SMS-ek”)
 - 2026-10-13 · ellátás-felár: vendég-oldali elrendezés B (táblázat + lenyíló), gyerekár IGEN (ellátásonként gyerekár + korhatár); foglalás-beállítás: B (ellenőrzőlista, alsó „Kérdezzen a Segítőtől” sáv, Haiku 5.5 csak magyaráz) (tulaj)
 - 2026-10-13 · riasztó SMS csendes óra: 22:00–07:00 (Budapest) között a ház-riasztás csak levél, az SMS-döntés `night` sor; 07:00 után az óránkénti tick EGY összesítő SMS-t küld az éjjel visszatartottakról (ha volt); a „mail-down” SMS is hallgat éjjel (tulaj: „Éjjel nagyon jönnek az SMS-ek.”, ADR-0376)
