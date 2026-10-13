@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-pirula-par-fekvo-telefonon-sarokban-cimet-nem-takar.md) — A pirula-pár nem ül a hős-címen: fekvő telefonon jobb alsó sarok (egymás alatt), álló telefonon a süti-sáv idején a cím fölé lép
+- [ADR-0377](decisions/0377-a-pirula-par-nem-ul-a-hos-cimen-fekvo-telefonon.md) — A pirula-pár nem ül a hős-címen: fekvő telefonon jobb alsó sarok (egymás alatt), álló telefonon a süti-sáv idején a cím fölé lép
 - [ADR-0376](decisions/0376-a-riaszto-sms-csendes-oraja-22-07-kozott-csak.md) — A riasztó SMS csendes órája: 22–07 között csak levél, reggel egy összesítő SMS (2026-10-13)
 - [ADR-0375](decisions/0375-az-ajanlatbol-mentett-datumos-arra-nincs.md) — Az ajánlatból mentett dátumos árra nincs lejárati levél; az Árazás lap ezt mondja ki, és a megmaradt emlékeztető-levél csak alapár nélkül állítja, hogy „a vendég nem lát árat”
 - [ADR-0374](decisions/0374-elesi-orkodes-a-megakadt-kulso-folyamatrol.md) — Élesi őrködés: a megakadt külső folyamatról levél + szűrt SMS (2026-10-13)

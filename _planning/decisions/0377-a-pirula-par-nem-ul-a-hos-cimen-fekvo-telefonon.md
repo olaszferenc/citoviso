@@ -1,4 +1,4 @@
-## ADR-XXXX — A pirula-pár nem ül a hős-címen: fekvő telefonon jobb alsó sarok (egymás alatt), álló telefonon a süti-sáv idején a cím fölé lép
+## ADR-0377 — A pirula-pár nem ül a hős-címen: fekvő telefonon jobb alsó sarok (egymás alatt), álló telefonon a süti-sáv idején a cím fölé lép
 
 **Dátum:** 2026-10-13 · **Kontextus:** a tulaj „A” döntése (2026-09-29, 3. telefonos kör), a pilot utánra halasztva; „Mehet mind subban” (2026-10-13, a koordinátoron át). **Módosítja:** ADR-0242 ④–⑤ (a hely), ADR-0342 pár-kontraktus 1. pontja (fekvő telefonon egymás alatt). **Megtartja:** ADR-0242 ④ gomb-kitérés (FK-004b H-3), R8 (rögzített alsó réteg fölött), ADR-0373 (kérdés-sáv a `--citui-cfg-clear` fölött).
 

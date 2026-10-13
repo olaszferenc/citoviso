@@ -1,4 +1,4 @@
-# 2026-10-13 — A pirula-pár nem ül a hős-címen (tulaj „A”, ADR-XXXX)
+# 2026-10-13 — A pirula-pár nem ül a hős-címen (tulaj „A”, ADR-0377)
 
 SUB a deploy-koordinátornak (`citfb4ed7ab`), brief: `~/rc-briefs/pirula-elhelyezes-20261013.md`.
 
