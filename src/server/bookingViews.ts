@@ -16,6 +16,7 @@
 // auto-declines); the small script below only adds the approved popup and the
 // collapse animation on top.
 
+import { mealPlanLabel } from "../tenant/meals.js";
 import { T } from "../i18n/mail.js";
 import { yearIn } from "../text/zoneTime.js";
 import { viewToday, viewZone } from "../tenant/zoneCtx.js";
@@ -693,6 +694,28 @@ function requestCard(
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(bookingRef(r.id))}</span>` +
+    // ADR-XXXX ⑩: the meal on a pill, the frozen breakdown one tap away.
+    (r.mealPlan
+      ? `<span class="bk-req__meal" data-bk-meal="${esc(r.mealPlan)}">${esc(mealPlanLabel(lang, r.mealPlan))}` +
+        (r.children ? ` · ${T(lang, "{n} gyermek", { n: r.children })}` : "") +
+        `</span>`
+      : "") +
+    (r.lines?.length && r.quotedTotal
+      ? `<details class="bk-req__lines"><summary>${T(lang, "Az ár tételesen")}</summary>` +
+        r.lines
+          .map(
+            (l) =>
+              // The mails' rule (quoteRows): a per-stay price is one sum, not nights × price.
+              `<span class="bk-req__line"><span>${esc(l.label)}: ` +
+              (l.perNight * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1
+                ? T(lang, "a teljes tartózkodásra")
+                : `${T(lang, "{n} éj", { n: l.nights })} × ${esc(formatAmount(l.perNight, r.quotedCurrency ?? "HUF"))}` +
+                  `${l.guests > 1 ? ` × ${T(lang, "{n} fő", { n: l.guests })}` : ""}`) +
+              `</span><b>${esc(formatAmount(l.sum, r.quotedCurrency ?? "HUF"))}</b></span>`,
+          )
+          .join("") +
+        `</details>`
+      : "") +
     (left != null
       ? `<span class="bk-deadline bk-deadline--${heat}">${ic("clock", 13)}` +
         `<b>${esc(heatWord)}</b> — ${T(lang, "még {n} óra a válaszra", { n: left })}</span> `
@@ -1457,6 +1480,13 @@ export const BOOKINGS_STYLE = `<style>
 .bk-req__t strong{display:block;font-size:.97rem}
 .bk-req__dates{display:block;font-size:.85rem;font-weight:600;margin-top:2px}
 .bk-req__meta{display:block;font-size:.78rem;color:var(--citui-muted);margin-top:2px;line-height:1.5}
+/* ADR-XXXX ⑩ — the meal pill and the frozen breakdown (approved plan tenant-admin/ellatas). */
+.bk-req__meal{display:inline-flex;align-items:center;margin-top:6px;font-size:.8rem;font-weight:700;border-radius:var(--citui-radius-pill);
+  padding:3px 10px;background:color-mix(in srgb,var(--citui-cyan-400) 14%,var(--citui-panel));color:var(--citui-ink)}
+.bk-req__lines{margin-top:6px;font-size:.84rem}
+.bk-req__lines>summary{cursor:pointer;color:var(--citui-link-ink);font-weight:600}
+.bk-req__line{display:flex;justify-content:space-between;gap:10px;margin-top:4px}
+.bk-req__line b{white-space:nowrap}
 /* KONTRAKTUS ③: a sürgősség a kártyán is látszik — sáv a bal szélen ÉS felirat.
    A megkülönböztetés SOHA nem csak a színen múlik. */
 .bk-req--hot{border-color:color-mix(in srgb,var(--citui-bad) 45%,transparent);

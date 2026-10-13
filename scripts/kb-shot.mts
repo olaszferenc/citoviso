@@ -778,6 +778,23 @@ function moduleShotHtml(entryId: string): string {
           unpriced: [{ id: "u0", name: editorUnits[0]!.name }],
           nowhere: ["u0"],
         },
+        // ADR-XXXX: the "Ellátás" table the entry walks through — reggeli and félpanzió
+        // offered with child prices, one room taken off. REQUIRED for the same reason as
+        // `status` (scripts/ is not type-checked; without it the table is not drawn).
+        meals: {
+          setting: {
+            base: "none",
+            childAge: 12,
+            off: ["u2"],
+            plans: {
+              none: { on: false, price: null, per: "person", child: null, desc: "" },
+              bb: { on: true, price: 3500, per: "person", child: 2000, desc: "Svédasztalos reggeli 8 és 10 óra között." },
+              hb: { on: true, price: 9000, per: "person", child: 5000, desc: "Reggeli és háromfogásos vacsora, italok nélkül." },
+              fb: { on: false, price: null, per: "person", child: null, desc: "" },
+            },
+          },
+          priceIncludes: "Ágynemű, törölköző, takarítás.",
+        },
       },
     });
   if (entryId === "admin-modules-programs") {
@@ -1363,6 +1380,14 @@ await shoot(
   undefined,
   moduleShotHtml("admin-modules-pricing"),
   "#ar-u0",
+);
+// ADR-XXXX: the "Ellátás" table — the last card of the screen, far below the fold.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "ellatas.png"),
+  undefined,
+  moduleShotHtml("admin-modules-pricing"),
+  "#ellatas",
 );
 // Approved plan pricing-rooms-link (2026-09-25): the rooms button sits in the note ABOVE
 // the first card — outside both captures above — and the guide's sentence about it

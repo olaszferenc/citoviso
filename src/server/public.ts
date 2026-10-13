@@ -148,6 +148,7 @@ import {
   guestCancelDonePage,
   hasSettingsScreen,
   moduleSettingsSection,
+  type MealsFormEcho,
   type NewUnitView,
   reviewThanksPage,
   reviewVerdictPage,
@@ -236,6 +237,7 @@ import {
   unitByFeedToken,
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
+import { MEAL_PLAN_IDS, parseMealsForm, readMeals } from "../tenant/meals.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { distanceKm } from "../events/gates.js";
@@ -1088,6 +1090,9 @@ async function serveTenantHost(
         dateTo: form.get("to") ?? "",
         guests: Number(form.get("guests") ?? "1"),
         message: form.get("message"),
+        // ADR-XXXX: validated against the owner's meal setting inside createBookingRequest.
+        mealPlan: form.get("meal"),
+        children: Number(form.get("children") ?? "0"),
       },
       publicBaseUrl(req),
     );
@@ -1635,6 +1640,14 @@ async function serveAdmin(
             presentationRooms: isWholeOnlySite(list)
               ? list.filter((u) => !isBookableUnit(u, list)).map((u) => u.id)
               : [],
+            // ADR-XXXX: the "Ellátás" table. A refused save comes back with the raw form
+            // and the errors in `mf` (base64url JSON), so nothing typed is lost.
+            meals: {
+              setting: readMeals(cfg.config.meals),
+              priceIncludes: String((await getSiteModuleConfig(site.id, "booking")).config.priceIncludes ?? ""),
+              ...mealsEcho(qp.get("mf")),
+              ...(qp.get("ms") === "1" ? { saved: true } : {}),
+            },
           };
         }
       }
@@ -2279,6 +2292,19 @@ async function tenantHasModule(tenantId: string, moduleId: string): Promise<bool
  * unchecked checkbox simply does not post, hence the explicit `false`. Anything
  * the registry does not declare is ignored here and again in the store.
  */
+/** ADR-XXXX: the refused "Ellátás" form, carried back in `mf` — anything malformed is ignored. */
+function mealsEcho(mf: string | null): { form?: MealsFormEcho; errors?: Record<string, string> } {
+  if (!mf) return {};
+  try {
+    const o = JSON.parse(Buffer.from(mf, "base64url").toString("utf8")) as { form?: MealsFormEcho; errors?: Record<string, string> };
+    if (!o.form || typeof o.form !== "object" || !o.errors || typeof o.errors !== "object") return {};
+    const errors = Object.fromEntries(Object.entries(o.errors).filter(([, v]) => typeof v === "string")) as Record<string, string>;
+    return { form: o.form, errors };
+  } catch {
+    return {};
+  }
+}
+
 function formToConfig(moduleId: string, form: URLSearchParams): ModuleConfigValues {
   const def = MODULE_CONFIG_REGISTRY[moduleId];
   const out: ModuleConfigValues = {};
@@ -3033,10 +3059,18 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         return redirect(res, `/admin?tab=modulok&m=location${contactErrorQuery(place.errors)}`);
       }
     }
+    // ADR-XXXX: keys a bespoke screen owns (`editorKeys`) survive this generic save —
+    // the form does not post them, and the store keeps only what it is given.
+    const kept: Record<string, unknown> = {};
+    const editorKeys = MODULE_CONFIG_REGISTRY[moduleId]?.editorKeys ?? [];
+    if (editorKeys.length) {
+      const current = (await getSiteModuleConfig(siteId, moduleId)).config;
+      for (const k of editorKeys) if (current[k] !== undefined) kept[k] = current[k];
+    }
     const result = await setSiteModuleConfig(
       siteId,
       moduleId,
-      formToConfig(moduleId, form),
+      { ...kept, ...formToConfig(moduleId, form) },
       session.tenantUserId,
     );
     const back = `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}`;
@@ -3419,6 +3453,49 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     );
   }
   // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
+  // ADR-XXXX — the Árak page's "Ellátás" table: one form, validated as a whole
+  // (src/tenant/meals.ts); a refusal writes NOTHING and echoes the form back.
+  if (req.method === "POST" && pathname === "/admin/prices/meals") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (!siteId || !(await tenantHasModule(session.tenantId, "pricing"))) return redirect(res, "/admin?tab=modulok");
+    const all = (await ensureUnits(siteId)).map((u) => u.id);
+    const echo = {
+      base: form.get("base") ?? "",
+      childAge: form.get("childAge") ?? "",
+      plans: Object.fromEntries(
+        MEAL_PLAN_IDS.map((id) => [
+          id,
+          {
+            on: form.get(`on_${id}`) !== null,
+            price: form.get(`price_${id}`) ?? "",
+            per: form.get(`per_${id}`) ?? "person",
+            child: form.get(`child_${id}`) ?? "",
+            desc: (form.get(`desc_${id}`) ?? "").slice(0, 200),
+          },
+        ]),
+      ),
+      // Only this site's units count — a foreign id from a tampered form is dropped.
+      unitsOn: form.getAll("unit").filter((u) => all.includes(u)),
+      includes: (form.get("includes") ?? "").trim().slice(0, 200),
+    };
+    const parsed = parseMealsForm({ ...echo, allUnits: all });
+    if (!parsed.setting) {
+      const mf = Buffer.from(JSON.stringify({ form: echo, errors: parsed.errors })).toString("base64url");
+      return redirect(res, `/admin?tab=modulok&m=pricing&mf=${mf}#ellatas`);
+    }
+    const pricingNow = (await getSiteModuleConfig(siteId, "pricing")).config;
+    await setSiteModuleConfig(siteId, "pricing", { ...pricingNow, meals: parsed.setting }, session.tenantUserId);
+    // "Mi van még benne az árban?" stays the booking module's key (the widget, the mails
+    // and the generator read it there) — only its field moved to this screen.
+    const bookingNow = (await getSiteModuleConfig(siteId, "booking")).config;
+    if (String(bookingNow.priceIncludes ?? "") !== echo.includes) {
+      await setSiteModuleConfig(siteId, "booking", { ...bookingNow, priceIncludes: echo.includes }, session.tenantUserId);
+    }
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&ms=1#ellatas");
+  }
   if (req.method === "POST" && pathname === "/admin/prices/base") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");

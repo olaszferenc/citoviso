@@ -756,6 +756,9 @@ a.cit-grat:hover {
 .cit-book__qline{display:block;font-size:.83rem;color:var(--cit-ink,#10243a);line-height:1.55}
 .cit-book__qbasis{display:block;font-size:.78rem;color:var(--cit-muted,#60748b);
   line-height:1.5;margin:4px 0 6px}
+/* ADR-XXXX: the chosen meal's description under the meal drop-down. */
+.cit-book__mdesc{margin:6px 0 0;font-size:.8rem;line-height:1.45;color:var(--cit-muted,#60748b)}
+.cit-book__mdesc[hidden]{display:none}
 .cit-book__qrow{display:flex;justify-content:space-between;gap:12px;font-size:.83rem;
   line-height:1.55;padding:2px 0}
 .cit-book__qtotal{display:block;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;

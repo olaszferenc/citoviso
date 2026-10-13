@@ -1260,7 +1260,15 @@ export interface BookingRequestTable {
   quoted_currency: string | null;
   /** 0052: breakdown lines the mails/UI render verbatim (no recompute). */
   quoted_lines: JSONColumnType<
-    { label: string; nights: number; per_night: number; guests: number; sum: number }[]
+    {
+      label: string;
+      nights: number;
+      per_night: number;
+      guests: number;
+      sum: number;
+      /** 0110: a meal line (ADR-XXXX); absent = the stay itself. */
+      kind?: "meal";
+    }[]
   > | null;
   /** 0084 (Elek V-3): on-site tourist tax per person per night in force at request time;
    *  0 = the owner declared none; null = not given (or an older row). */
@@ -1273,6 +1281,11 @@ export interface BookingRequestTable {
    *  'dates' (the asked nights, into the price list), 'base' (timeless base); null = not an
    *  offer, or an offer from before the choice existed. */
   offer_saved_as: "request" | "dates" | "base" | null;
+  /** 0110 (ADR-XXXX): the meal plan the guest chose ('none'|'bb'|'hb'|'fb'), frozen with the
+   *  request; null = no meal setting at request time (or not offered for this unit). */
+  meal_plan: "none" | "bb" | "hb" | "fb" | null;
+  /** 0110: how many of `guests` are children (under the owner's child-price age); null = not asked. */
+  children: number | null;
 }
 
 /** Portal calendar links per UNIT; both directions close the double-booking loop (0024). */

@@ -4,7 +4,7 @@ title: Árak — alapár és időszaki árak szobánként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
-updated: 2026-09-28
+updated: 2026-10-13
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
@@ -211,3 +211,35 @@ vendég a teljes szállást foglalja, ennek a szobának az árát látja. Az ár
 a kártyáján az alapár alatt egy tájékoztató sor mutatja, mennyibe kerülnek a szobák külön, együtt
 („Tájékoztatásul: a szobák külön, együtt … / éj.”) — ezt csak Ön látja, a vendég nem. Ha itt nincs
 ár, a teljes ház foglalásához nem tudunk árat mutatni: a vendég árajánlatot kér.
+
+## Ellátás — reggeli, félpanzió, teljes panzió
+
+A szobakártyák alatt, az **„Ellátás”** részben adja meg, mit tartalmaz az ár, és mit kérhet a
+vendég felárral. A beállítás minden szobára érvényes; ahol nem kérhető, ott kiveheti.
+
+![Képernyőkép: az Ellátás rész telefonon](assets/hu/ellatas.png)
+
+1. **„Mit tartalmaz az alapár?”** — válassza ki: *Csak szállás*, *Reggeli*, *Félpanzió* vagy
+   *Teljes panzió*. A szobák árai (fent) ezzel értendők. Ami ennél kevesebb, az nem kínálható
+   (negatív felár nincs), ezért el is tűnik a táblázatból.
+2. **„Választható ellátás”** — pipálja be, amit kínál, és írja be a felárát. Mellette
+   a **„Mire”** oszlopban válassza ki, hogy **fő / éj** vagy **szoba / éj** az ár. A **„Mit tartalmaz?”** linkre
+   koppintva rövid leírást adhat (pl. *reggeli és vacsora, italok nélkül*) — ezt a vendég is
+   olvassa. Ha bepipál egy ellátást, de nem ír be felárat, a mentés nem megy át, és a mező
+   piros lesz: semmi nem mentődik, amíg ki nem javítja.
+3. **Gyerekár** — a **„Gyermeknek”** oszlopba írhat külön, olcsóbb árat (a 0 azt jelenti:
+   ingyenes), alatta pedig **kötelező** megadnia, hány éves korig számít valaki gyermeknek (1 és
+   17 között) — enélkül a mentés nem megy át. Ahol a gyerekár üres, ott a gyermek is felnőtt-árat
+   fizet. A gyerekár csak ott számít, ahol az ár **fő / éj**; a **szoba / éj** árnál a létszám nem
+   számít, ezért ott ez a mező nem is látszik. A vendég a foglalásnál megadja, hányan gyermekek.
+4. **„Mely szobákhoz kérhető ellátás?”** (csak ha több szobája van) — vegye ki a pipát annál a szobánál, ahol nem kérhető.
+   Ott a vendég nem lát ellátás-választást, csak annyit, hogy ehhez a szálláshoz nem kérhető.
+5. **„Mi van még benne az árban?”** — a saját szavaival (pl. *takarítás, ágynemű, törölköző*).
+   A vendég a szobáknál és a foglalásnál, a tételes ár alatt olvassa. Üresen hagyva elmarad.
+
+Koppintson az Ellátás rész alján lévő **„Mentés”** gombra. A honlapján megjelenik egy **„Ellátás”** rész a felárakkal, a
+foglalásnál a vendég egy lenyílóból választ, és a tételes árban külön sorban látja az ellátást.
+A választott ellátás a foglalási kérésen is látszik (a **Foglalások** fülön címkén, az
+**„Az ár tételesen”** sorra koppintva tételesen, és a levélben is), a felárral együtt rögzítve — ha később változtat az árakon, a már beérkezett kérés nem
+változik.
+

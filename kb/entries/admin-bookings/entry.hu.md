@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-10-11
+updated: 2026-10-13
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -32,6 +32,12 @@ következik, hogy a döntés gombjai görgetés nélkül a képernyőn legyenek.
 időpont, a létszám, a szoba, az üzenete, és egy jelvény arról, mennyi ideje maradt:
 **„Ma lejár”**, **„Holnap lejár”** vagy **„Van még idő”** — a sürgőseket a kártya bal szélén
 piros sáv is jelzi.
+
+Ha a szállásán ellátás is választható (reggeli, félpanzió — az Árak, szezonok modulban állítja
+be), a kártyán egy címke mutatja, mit kért a vendég, a gyerekek számával együtt. Az **„Az ár
+tételesen”** sorra koppintva kinyílik, miből jön ki a végösszeg: éjszakák, ellátás, gyermek-felár
+— ahogy a vendég a kérés elküldésekor látta. Ha később módosítja az árakat, ez a beérkezett
+kérésen már nem változik.
 
 Ha előbb beszélne a vendéggel, a **„Felhívom”** gombbal egy koppintással hívhatja (a telefon
 tárcsázója nyílik), az **„Írok neki”** gombbal e-mailt írhat. A kártya alján lévő link a naptárat

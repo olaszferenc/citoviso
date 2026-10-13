@@ -9,6 +9,7 @@
 - [2026-10-13_riaszto_sms_csendes_ora.md](2026-10-13_riaszto_sms_csendes_ora.md) — 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-0376)
 - [2026-10-13_pirula_hos_cim.md](2026-10-13_pirula_hos_cim.md) — 2026-10-13 — A pirula-pár nem ül a hős-címen (tulaj „A”, ADR-0377)
 - [2026-10-13_lejarat_ertesito_datumos_ar.md](2026-10-13_lejarat_ertesito_datumos_ar.md) — 2026-10-13 — Lejárat előtti ár-értesítő: eldőlt, nincs levél; a levél mondata feltételes (ADR-0375)
+- [2026-10-13_ellatas_es_felarak.md](2026-10-13_ellatas_es_felarak.md) — 2026-10-13 — Ellátás és felárak (reggeli, félpanzió, gyerekár) · ADR-XXXX
 - [2026-10-13_eles_orkodes_sms.md](2026-10-13_eles_orkodes_sms.md) — 2026-10-13 — Élesi őrködés: megakadt külső folyamat → levél + szűrt SMS (ADR-0374)
 - [2026-10-12_portal_ical_valodi_mintak.md](2026-10-12_portal_ical_valodi_mintak.md) — 2026-10-12 · Portál-iCal: valódi minták, közösségi hibaminták, élesítés utáni proxy-teszt terve (ADR-0371)
 - [2026-10-12_modell_html_injekcio.md](2026-10-12_modell_html_injekcio.md) — 2026-10-12 — A modell írta mock-HTML nem futtathat kódot (ADR-0370)

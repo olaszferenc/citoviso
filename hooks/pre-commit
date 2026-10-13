@@ -1422,6 +1422,14 @@ if [ -f scripts/booking-price-clarity-check.mts ] && \
   echo "[pre-commit] booking-price-clarity-check (a vendég látja, mi van az árban)…"
   npx tsx scripts/booking-price-clarity-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX — az ellátás és a felárak (jóváhagyott terv: design-refs/tenant-admin/ellatas, „B"):
+# az űrlap szabálya, a szerver ár-sorai, a honlap „Ellátás” blokkja, és ⭐⭐ a böngésző
+# UGYANAZT számolja, mint a szerver (valódi widgeten, piros önteszttel).
+if [ -f scripts/meals-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/meals\.ts|src/booking/amount\.ts|src/booking/requests\.ts|assets/runtime/cit-runtime\.js|src/engine/moduleSections\.ts|src/engine/recipe\.ts|src/tenant/editor\.ts|scripts/meals-check\.mts|assets/design-refs/tenant-admin/ellatas/)'; then
+  echo "[pre-commit] meals-check (ellátás: a böngésző és a szerver ugyanazt számolja)…"
+  npx tsx scripts/meals-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A JÓVÁHAGYOTT várólista-terv (design-refs/tenant-admin/booking-queue-urgency):
 # a SORRENDET a válasz-határidő adja, nem az érkezés napja — a mért hibában a 21 órás
 # kérés a lista harmadik helyén állt. Screenshot erre vak: minden sorrend „rendezett".

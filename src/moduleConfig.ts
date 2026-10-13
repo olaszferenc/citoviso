@@ -79,6 +79,12 @@ export interface ModuleConfigDef {
   readonly industryDefaults?: Readonly<Record<string, ModuleConfigValues>>;
   /** Bespoke editor id for what a generic form cannot express (a calendar). */
   readonly editor?: string;
+  /**
+   * Stored keys that a BESPOKE screen writes, not this module's generic form (ADR-XXXX).
+   * The generic save stores only the posted fields, so without this list saving the
+   * currency would silently wipe the meal setting the Árak page wrote next to it.
+   */
+  readonly editorKeys?: readonly string[];
   /** Short owner-facing note shown above a bespoke editor. */
   readonly editorNote?: string;
   /** Forward-migrate a stored config written by an older version. */
@@ -172,7 +178,10 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         help: "Például: Az ár tartalmazza az idegenforgalmi adót.",
       },
     ],
-    defaults: { currency: "HUF", unit: "per_night", note: "" },
+    // `meals` (ADR-XXXX): the meal plans and surcharges — written by the Árak page's
+    // "Ellátás" table (src/tenant/meals.ts), null until the owner saves it.
+    defaults: { currency: "HUF", unit: "per_night", note: "", meals: null },
+    editorKeys: ["meals"],
     // The amounts themselves are per UNIT (unit_price, 0025) — an owner prices a
     // room, not an abstract season — so they live in the bespoke editor, not in a
     // field here. What stays here is what genuinely applies site-wide.
@@ -434,12 +443,9 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         emptyNote:
           "Most nincs kitöltve, ezért a honlapján NEM jelenik meg összeg: a vendég csak annyit lát, hogy a helyszínen idegenforgalmi adó fizetendő. Számot nem találunk ki Ön helyett.",
       },
-      {
-        key: "priceIncludes",
-        type: "text",
-        label: "Mi van benne az árban?",
-        help: "Pl. „takarítás, ágynemű, törölköző”. A vendég a foglalás előtt látja, a tételes ár alatt. Üresen hagyva ez a sor elmarad.",
-      },
+      // `priceIncludes` ("Mi van még benne az árban?") moved to the Árak page's "Ellátás"
+      // table (ADR-XXXX) — same key, same row, written there; listed in `editorKeys` so a
+      // save of THIS form keeps it.
       {
         key: "autoDeclineHours",
         type: "number",
@@ -462,6 +468,7 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
       autoDeclineHours: 48,
     },
     editor: "booking",
+    editorKeys: ["priceIncludes"],
     editorNote: "Koppintson a naptárban azokra a napokra, amikor tele van.",
     validate: (c) => {
       const errs: string[] = [];

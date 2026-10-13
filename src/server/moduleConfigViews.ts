@@ -52,6 +52,7 @@ import {
   type AmenityItem as AmenityItem_,
 } from "../tenant/amenityCatalog.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { MEAL_CHILD_PRICING, MEAL_PLAN_IDS, mealPlanLabel, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
 
 // ADR-0067: tenant-facing module settings — every label from the language pack.
 // eslint-disable-next-line
@@ -1001,6 +1002,49 @@ form:has(input[name=whole][value=csak]:checked) .unit-new__price{display:none}
 .ys-days__in .citui-input{width:74px;text-align:center;padding-left:6px;padding-right:6px}
 .ys-more{flex:0 0 60px;display:grid;place-items:center;color:var(--citui-muted)}
 .ys-more svg{transform:rotate(-90deg)}
+/* ── ADR-XXXX meal plans — approved plan tenant-admin/ellatas (B: table + drop-down).
+   The table measures ITS OWN width (@container): below 560px each row breaks into
+   labelled cells, price + basis + child price side by side. */
+.ml{container-type:inline-size}
+.ml-base{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
+.ml-base label{display:flex;align-items:center;gap:7px;border:1.5px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);
+  padding:7px 13px;font-size:.9rem;font-weight:600;cursor:pointer;background:var(--citui-panel)}
+.ml-base label:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-400) 12%,var(--citui-panel))}
+.ml-base input{accent-color:var(--citui-cyan-500);margin:0}
+.ml-tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+.ml-tbl th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--citui-muted);
+  padding:6px;border-bottom:1px solid var(--citui-line);font-weight:700}
+.ml-tbl td{padding:9px 6px;border-bottom:1px solid var(--citui-line);vertical-align:middle}
+.ml-tbl tr.is-off td:not(:first-child):not(:last-child){opacity:.45}
+.ml-tbl .mcfg-suffix .citui-input{max-width:100px;text-align:right}
+.ml-tbl select.citui-input{padding-top:8px;padding-bottom:8px}
+.ml-name{display:flex;align-items:center;gap:8px;font-weight:700}
+.ml-name input{width:18px;height:18px;accent-color:var(--citui-cyan-500);margin:0}
+.ml-tag{display:inline-block;font-size:.74rem;font-weight:700;padding:2px 9px;border-radius:var(--citui-radius-pill);
+  background:color-mix(in srgb,var(--citui-ok) 14%,var(--citui-panel));color:var(--citui-ok-ink)}
+.ml-desc>summary{font-size:.82rem;font-weight:600;color:var(--citui-link-ink);cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;list-style:none}
+.ml-desc>summary::-webkit-details-marker{display:none}
+.ml-desc textarea{margin-top:8px;width:100%;min-height:58px}
+.ml-ferr{color:var(--citui-bad-ink);font-size:.8rem;font-weight:600;margin:5px 0 0}
+.citui-input.is-bad{border-color:var(--citui-bad)}
+.ml-units{display:flex;flex-wrap:wrap;gap:6px}
+.ml-units label{display:flex;align-items:center;gap:6px;font-size:.86rem;border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-pill);padding:5px 11px;cursor:pointer}
+.ml-units label:has(input:not(:checked)){color:var(--citui-muted);text-decoration:line-through}
+.ml-units input{accent-color:var(--citui-cyan-500);margin:0}
+.ml-age{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.9rem}
+.ml-age .citui-input{width:64px;text-align:center}
+.ml textarea.citui-input{width:100%;min-height:62px;resize:vertical}
+@container (max-width:560px){
+  .ml-tbl thead{display:none}
+  .ml-tbl,.ml-tbl tbody,.ml-tbl tr,.ml-tbl td{display:block;width:100%;box-sizing:border-box}
+  .ml-tbl tr{border-top:1px solid var(--citui-line);padding:6px 0}
+  .ml-tbl td{border:0;padding:5px 2px}
+  .ml-tbl td[data-l]::before{content:attr(data-l);display:block;font-size:.7rem;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--citui-muted);font-weight:700;margin-bottom:3px}
+  .ml-tbl td.ml-c{display:inline-block;width:auto;vertical-align:top;margin-right:10px}
+}
 </style>`;
 
 const huf = (n: number) => formatMoney(n, "HUF");
@@ -3039,6 +3083,28 @@ export interface PricingEditorData {
    * Required: a card that cannot say "hiányos" would contradict the to-do row.
    */
   readonly status: Readonly<Record<string, UnitPriceStatus>>;
+  /** ADR-XXXX: the "Ellátás" table — absent in old fixtures (then no table). */
+  readonly meals?: MealsEditorView;
+}
+
+/** What the "Ellátás" table shows: the stored setting, or the owner's refused input. */
+export interface MealsEditorView {
+  readonly setting: MealsSetting | null;
+  /** "Mi van még benne az árban?" — the booking module's `priceIncludes`, edited here. */
+  readonly priceIncludes: string;
+  /** After a refused save: the raw form, so nothing the owner typed is lost. */
+  readonly form?: MealsFormEcho;
+  readonly errors?: Readonly<Record<string, string>>;
+  readonly saved?: boolean;
+}
+
+/** The raw "Ellátás" form, echoed back after a refused save. */
+export interface MealsFormEcho {
+  readonly base: string;
+  readonly childAge: string;
+  readonly plans: Readonly<Record<string, { on: boolean; price: string; per: string; child: string; desc: string }>>;
+  readonly unitsOn: readonly string[];
+  readonly includes: string;
 }
 
 /** "28 000" — grouped, no currency (the field shows the unit next to it). */
@@ -3622,6 +3688,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     `</p>` +
     priceWhereBox(data.siteView, lang) +
     cards +
+    (data.meals ? mealsCard(data.meals, priced, cur, lang) : "") +
     (shown.size
       ? `<p class="mcfg-note" data-cit-presentation-note>${T(lang, "A házat csak egyben adja ki, ezért árat csak az egész házra kérünk. A {n} szoba csak bemutatásra van: a vendég képpel és felszereltséggel látja őket, de külön nem foglalhatja — áruk nem kell.", { n: shown.size })}</p>`
       : "") +
@@ -3634,6 +3701,133 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
           .map((r) => ({ label: r.label, from: r.from!, to: r.to!, unit: u.id, unitName: u.name })),
       ),
     )
+  );
+}
+
+/**
+ * ADR-XXXX — the "Ellátás" table (approved plan tenant-admin/ellatas, variant B). What the
+ * base price includes, which richer plans a guest may add for a surcharge (per person or
+ * per room, optional child price), which rooms offer meals, and "Mi van még benne az
+ * árban?". One form, one POST (/admin/prices/meals); the rule lives in src/tenant/meals.ts.
+ * No JS: every row is shown and the server ignores the rows at or below the base.
+ */
+/** The words for a meal-form error code (src/tenant/meals.ts) — unknown code → generic. */
+function mealErrText(lang: string, code: string): string {
+  switch (code) {
+    case "base": return T(lang, "Válassza ki, mit tartalmaz az alapár.");
+    case "empty": return T(lang, "Adja meg a felárat, vagy vegye ki a pipát.");
+    case "num": return T(lang, "Csak egész számot írjon, például 3 500.");
+    case "big": return T(lang, "Ez túl nagy összeg — ellenőrizze a nullákat.");
+    case "pos": return T(lang, "A felár legyen több nullánál — ami ingyenes, azt jelölje az alapárban.");
+    case "childOver": return T(lang, "A gyerekár nem lehet több a felnőtt-árnál.");
+    case "age": return T(lang, "Egy életkort írjon 1 és 17 között, például 12.");
+    case "ageMissing": return T(lang, "Adja meg, hány éves korig számít valaki gyermeknek.");
+    default: return T(lang, "Ellenőrizze ezt a mezőt.");
+  }
+}
+
+function mealsCard(v: MealsEditorView, units: readonly EditorUnit[], cur: string, lang: string): string {
+  const st = v.setting;
+  const grp = (n: number | null) => (n === null ? "" : grouped(n));
+  const f: MealsFormEcho = v.form ?? {
+    base: st?.base ?? "none",
+    childAge: st?.childAge != null ? String(st.childAge) : "",
+    plans: Object.fromEntries(
+      MEAL_PLAN_IDS.map((id) => {
+        const p = st?.plans[id];
+        return [id, { on: p?.on ?? false, price: grp(p?.price ?? null), per: p?.per ?? "person", child: grp(p?.child ?? null), desc: p?.desc ?? "" }];
+      }),
+    ),
+    unitsOn: units.filter((u) => !(st?.off ?? []).includes(u.id)).map((u) => u.id),
+    includes: v.priceIncludes,
+  };
+  const err = v.errors ?? {};
+  const b = Math.max(0, MEAL_PLAN_IDS.indexOf(f.base as MealPlanId));
+  const name = (id: MealPlanId) => mealPlanLabel(lang, id);
+  const ferr = (k: string) => (err[k] ? `<p class="ml-ferr">${esc(mealErrText(lang, err[k]!))}</p>` : "");
+  const money = (n: string, val: string, bad: boolean) =>
+    `<span class="mcfg-suffix"><input class="citui-input${bad ? " is-bad" : ""}" name="${n}" inputmode="numeric" ` +
+    `value="${esc(val)}" placeholder="0"><span>${esc(cur)}</span></span>`;
+  const rows = MEAL_PLAN_IDS.map((id, i) => {
+    const p = f.plans[id] ?? { on: false, price: "", per: "person", child: "", desc: "" };
+    const hidden = i < b ? " hidden" : "";
+    const isBase = i === b;
+    const desc =
+      id === "none"
+        ? ""
+        : `<details class="ml-desc"${p.desc ? " open" : ""}><summary>${T(lang, "Mit tartalmaz?")}</summary>` +
+          `<textarea class="citui-input" name="desc_${id}" maxlength="200" placeholder="${esc(T(lang, "Például: reggeli és vacsora, italok nélkül"))}">${esc(p.desc)}</textarea></details>`;
+    if (isBase) {
+      return (
+        `<tr data-ml-row="${id}" data-ml-i="${i}"${hidden}>` +
+        `<td data-l="${esc(T(lang, "Ellátás"))}"><span class="ml-name">${name(id)}</span></td>` +
+        `<td colspan="${MEAL_CHILD_PRICING ? 3 : 2}" data-ml-cells><span class="ml-tag">${T(lang, "az alapár része")}</span></td>` +
+        `<td>${desc}</td></tr>`
+      );
+    }
+    return (
+      `<tr data-ml-row="${id}" data-ml-i="${i}" class="${p.on ? "" : "is-off"}"${hidden}>` +
+      `<td data-l="${esc(T(lang, "Ellátás"))}"><label class="ml-name"><input type="checkbox" name="on_${id}" value="1"${p.on ? " checked" : ""}>${name(id)}</label></td>` +
+      `<td class="ml-c" data-l="${esc(T(lang, "Felár"))}">${money(`price_${id}`, p.price, Boolean(err[`price:${id}`]))}${ferr(`price:${id}`)}</td>` +
+      `<td class="ml-c" data-l="${esc(T(lang, "Mire"))}"><select class="citui-input" name="per_${id}">` +
+      `<option value="person"${p.per !== "room" ? " selected" : ""}>${T(lang, "fő / éj")}</option>` +
+      `<option value="room"${p.per === "room" ? " selected" : ""}>${T(lang, "szoba / éj")}</option></select></td>` +
+      (MEAL_CHILD_PRICING
+        ? `<td class="ml-c" data-l="${esc(T(lang, "Gyermeknek"))}" data-ml-child${p.per === "room" ? " hidden" : ""}>${money(`child_${id}`, p.child, Boolean(err[`child:${id}`]))}${ferr(`child:${id}`)}</td>`
+        : "") +
+      `<td>${desc}</td></tr>`
+    );
+  }).join("");
+  const anyErr = Object.keys(err).length > 0;
+  return (
+    `<div class="adm-card ml" id="ellatas">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("pricing")}</span><h2>${T(lang, "Ellátás")}</h2></div>` +
+    `<p class="adm-lead">${T(lang, "Reggeli, félpanzió, teljes panzió — mit tartalmaz az ár, és mi kérhető felárral. Minden szobára ugyanez érvényes, kivéve, amelyiket alul kiveszi.")}</p>` +
+    (v.saved ? `<p class="s-flash" role="status" style="margin:0 0 12px">${T(lang, "Elmentve — a honlapon és a foglalásnál már így látszik.")}</p>` : "") +
+    (anyErr ? `<div class="mcfg-err" role="alert">${T(lang, "Javítsa a pirossal jelölt mezőt — semmi nem mentődött.")}</div>` : "") +
+    `<form method="POST" action="/admin/prices/meals" data-ml-form>` +
+    `<h3 class="mcfg-sub">${T(lang, "Mit tartalmaz az alapár?")}</h3>` +
+    `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "A szobák árai (fent) ezzel az ellátással értendők. Ami ennél több, azt felárral kínálhatja.")}</p>` +
+    `<div class="ml-base" role="radiogroup">` +
+    MEAL_PLAN_IDS.map((id) => `<label><input type="radio" name="base" value="${id}"${f.base === id ? " checked" : ""}>${name(id)}</label>`).join("") +
+    `</div>${ferr("base")}` +
+    `<h3 class="mcfg-sub">${T(lang, "Választható ellátás")}</h3>` +
+    `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Pipálja be, amit kínál, és adja meg a felárát.")}</p>` +
+    `<table class="ml-tbl"><thead><tr><th>${T(lang, "Ellátás")}</th><th>${T(lang, "Felár")}</th><th>${T(lang, "Mire")}</th>` +
+    (MEAL_CHILD_PRICING ? `<th>${T(lang, "Gyermeknek")}</th>` : "") +
+    `<th></th></tr></thead><tbody>${rows}</tbody></table>` +
+    (MEAL_CHILD_PRICING
+      ? `<h3 class="mcfg-sub">${T(lang, "Gyerekár")}</h3>` +
+        `<p class="ml-age">${T(lang, "Gyermeknek számít")} <input class="citui-input${err.childAge ? " is-bad" : ""}" name="childAge" inputmode="numeric" value="${esc(f.childAge)}"> ${T(lang, "éves korig.")}</p>` +
+        ferr("childAge") +
+        `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Ahol a gyerekár üres, ott a gyermek is felnőtt-árat fizet. A 0 azt jelenti: ingyenes.")}</p>`
+      : "") +
+    (units.length > 1
+      ? `<h3 class="mcfg-sub">${T(lang, "Mely szobákhoz kérhető ellátás?")}</h3>` +
+        `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Ahol kiveszi, ott a vendég nem lát ellátás-választást.")}</p>` +
+        `<div class="ml-units">` +
+        units.map((u) => `<label><input type="checkbox" name="unit" value="${esc(u.id)}"${f.unitsOn.includes(u.id) ? " checked" : ""}>${esc(u.name)}</label>`).join("") +
+        `</div>`
+      : units.map((u) => `<input type="hidden" name="unit" value="${esc(u.id)}">`).join("")) +
+    `<h3 class="mcfg-sub">${T(lang, "Mi van még benne az árban?")}</h3>` +
+    `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Pl. „takarítás, ágynemű, törölköző”. A vendég a szobáknál és a foglalásnál is olvassa, a tételes ár alatt. Üresen hagyva ez a sor elmarad.")}</p>` +
+    `<textarea class="citui-input" name="includes" maxlength="200">${esc(f.includes)}</textarea>` +
+    `<div style="margin-top:18px"><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button></div>` +
+    `</form>` +
+    // Progressive: the base hides the rows below it and turns its own row into "az alapár része";
+    // the tick dims a row. Without JS the server's rendering stands and the POST ignores those rows.
+    `<script>(function(){var f=document.querySelector("[data-ml-form]");if(!f)return;` +
+    `var tag=${jsonForScript(T(lang, "az alapár része"))};` +
+    `function sync(){var c=f.querySelector("input[name=base]:checked");var b=c?["none","bb","hb","fb"].indexOf(c.value):0;` +
+    `f.querySelectorAll("[data-ml-row]").forEach(function(r){var i=+r.getAttribute("data-ml-i");r.hidden=i<b;` +
+    `var on=r.querySelector("input[type=checkbox]");if(on)r.classList.toggle("is-off",!on.checked&&i!==b);` +
+    `var cells=r.querySelectorAll("td.ml-c");var t=r.querySelector("[data-ml-tag]");` +
+    `if(i===b&&cells.length){cells.forEach(function(c){c.hidden=true});if(on)on.hidden=true;if(!t){t=document.createElement("span");t.className="ml-tag";t.setAttribute("data-ml-tag","");t.textContent=tag;r.children[0].appendChild(document.createTextNode(" "));r.children[0].appendChild(t);}}` +
+    `else{cells.forEach(function(c){c.hidden=false});if(on)on.hidden=false;if(t){t.remove();}}` +
+    // A child price only counts per person — on a "szoba / éj" row the field would do nothing.
+    `var per=r.querySelector("select[name^=per_]"),kid=r.querySelector("[data-ml-child]");if(per&&kid&&i!==b)kid.hidden=per.value==="room";});}` +
+    `f.addEventListener("change",sync);sync();})();</script>` +
+    `</div>`
   );
 }
 

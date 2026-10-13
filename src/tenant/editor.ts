@@ -6,6 +6,7 @@
 // recipe + siteData. Editing = storing tenant overrides on site.edited_site_data and
 // re-rendering the snapshot.
 
+import { childPricing, offeredPlans, readMeals } from "./meals.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/client.js";
@@ -409,6 +410,32 @@ export async function moduleContentFor(
     const note = text("pricing", "note");
     if (note || (priced && priced.length)) {
       out.pricing = { currency, unit: priceUnit, note, ...(priced?.length ? { units: priced } : {}) };
+    }
+
+    // ADR-XXXX: the meal plans travel with the pricing module — the price of a meal is a
+    // price. Only what a guest can choose (offeredPlans), the base first.
+    const meals = readMeals(cfg("pricing").meals);
+    if (meals) {
+      const kids = childPricing(meals);
+      const includes = String(cfg("booking").priceIncludes ?? "").trim().slice(0, 200);
+      out.meals = {
+        base: meals.base,
+        plans: offeredPlans(meals).map((id) => {
+          const p = meals.plans[id];
+          const extra = id !== meals.base;
+          return {
+            id,
+            per: p.per,
+            ...(extra && p.price !== null ? { price: p.price } : {}),
+            ...(extra && kids && p.per === "person" && p.child !== null ? { child: p.child } : {}),
+            ...(p.desc ? { desc: p.desc } : {}),
+          };
+        }),
+        ...(kids ? { childAge: meals.childAge! } : {}),
+        off: meals.off.filter((id) => offerUnits.some((u) => u.id === id)),
+        ...(includes ? { includes } : {}),
+        currency,
+      };
     }
   }
 

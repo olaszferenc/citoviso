@@ -119,6 +119,13 @@
     var ifaDeclared = ifaRaw !== null && ifaRaw !== "";
     var ifaPerPersonNight = ifaDeclared ? Number(ifaRaw) || 0 : 0;
     var priceIncludes = slot.getAttribute("data-cit-includes") || "";
+    /* ADR-XXXX — meal plans (approved plan tenant-admin/ellatas, B ⑧). The server hands the
+     * plans a guest can choose (base first, names and price texts already in the page's
+     * language); the lines below mirror src/tenant/meals.ts `mealLines`, and the server
+     * recomputes them at submit — this is the guest's preview, never the frozen figure. */
+    var meals = null;
+    try { meals = JSON.parse(slot.getAttribute("data-cit-meals") || "null"); } catch (e) { meals = null; }
+    var kids = 0;
     var hostEmail = slot.getAttribute("data-cit-email") || "";
     var hostPhone = slot.getAttribute("data-cit-phone") || "";
 
@@ -218,6 +225,17 @@
       '<span class="cit-book__count" data-guests>2</span>' +
       '<button class="cit-book__step" type="button" data-step="1" aria-label="' + tr("több") + '">+</button>' +
       "</div></div>" +
+      '<div class="cit-book__field" data-cit-kidsf hidden><label class="cit-book__label">' + tr("Ebből gyermek") +
+      ' <span data-cit-kidage></span></label>' +
+      '<div class="cit-book__stepper" role="group" aria-label="' + tr("Gyermekek száma") + '">' +
+      '<button class="cit-book__step" type="button" data-kstep="-1" aria-label="' + tr("kevesebb") + '">−</button>' +
+      '<span class="cit-book__count" data-kids>0</span>' +
+      '<button class="cit-book__step" type="button" data-kstep="1" aria-label="' + tr("több") + '">+</button>' +
+      "</div></div>" +
+      '<div class="cit-book__field" data-cit-mealf hidden><label class="cit-book__label" for="cit-meal">' + tr("Ellátás") + "</label>" +
+      '<select class="cit-book__input" id="cit-meal" name="meal"></select>' +
+      '<p class="cit-book__mdesc" data-cit-mdesc></p>' +
+      '<p class="cit-book__mdesc" data-cit-mnone hidden>' + tr("Ehhez a szálláshoz nem kérhető ellátás.") + "</p></div>" +
       '<div class="cit-book__field"><label class="cit-book__label" for="cit-name">' + tr("Az Ön neve") +
       '</label><input class="cit-book__input" id="cit-name" name="name" autocomplete="name"></div>' +
       '<div class="cit-book__field"><label class="cit-book__label" for="cit-email">' + tr("E-mail cím") +
@@ -292,15 +310,92 @@
     var portalDays = {}; // demo only: sample portal-booked nights (ADR-0361)
     var pricing = null; // {currency, unit, rows} — live price list from the availability API
 
-    form.querySelectorAll(".cit-book__step").forEach(function (btn) {
+    form.querySelectorAll(".cit-book__step[data-step]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         guests = Math.min(20, Math.max(1, guests + Number(btn.getAttribute("data-step"))));
         countEl.textContent = String(guests);
+        syncMeals(); // a child is one of the guests: the child count follows the head count
         // per_person_night pricing: the total follows the guest count live
         var qa = form.from.value, qb = form.to.value;
         renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
       });
     });
+
+    /* ── ADR-XXXX meal plans ─────────────────────────────────────────────── */
+    function mealsHere() {
+      return !!(meals && meals.plans && meals.off && meals.off.indexOf(currentUnit()) < 0);
+    }
+    function mealPlan(id) {
+      var hit = null;
+      ((meals && meals.plans) || []).forEach(function (p) { if (p.id === id) hit = p; });
+      return hit;
+    }
+    function chosenMeal() {
+      var sel = form.querySelector("#cit-meal");
+      return sel && sel.value ? sel.value : meals ? meals.base : "";
+    }
+    function kidPriced(p) { return !!(meals && meals.childAge && p && p.per === "person" && typeof p.child === "number"); }
+    function asksKids() {
+      return mealsHere() && ((meals && meals.plans) || []).some(function (p) { return p.id !== meals.base && kidPriced(p); });
+    }
+    /* Mirrors mealLines() in src/tenant/meals.ts: nothing for the base (it is in the price);
+     * per room one line; per person adults and children on separate lines. */
+    function mealLinesFor(n) {
+      if (!mealsHere() || !(n > 0)) return [];
+      var id = chosenMeal();
+      if (id === meals.base) return [];
+      var p = mealPlan(id);
+      if (!p || !p.price) return [];
+      if (p.per === "room") return [{ label: p.name, n: n, per: p.price, guests: 1, sum: n * p.price }];
+      var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;
+      var ad = guests - k;
+      var out = [{ label: p.name, n: n, per: p.price, guests: ad, sum: n * ad * p.price }];
+      if (k > 0) out.push({ label: tr("{name}, gyermek").replace("{name}", p.name), n: n, per: p.child, guests: k, sum: n * k * p.child });
+      return out;
+    }
+    function syncMeals() {
+      var f = form.querySelector("[data-cit-mealf]");
+      var kf = form.querySelector("[data-cit-kidsf]");
+      if (!f || !meals || !meals.plans || !meals.plans.length) return;
+      var here = mealsHere();
+      var sel = form.querySelector("#cit-meal");
+      var choice = meals.plans.length > 1;
+      f.hidden = false;
+      sel.hidden = !here || !choice;
+      if (!sel.options.length) {
+        sel.innerHTML = meals.plans.map(function (p) {
+          return '<option value="' + esc(p.id) + '">' + esc(p.name) + " — " + esc(p.priceText) + "</option>";
+        }).join("");
+        sel.value = meals.base;
+      }
+      var p = mealPlan(chosenMeal());
+      var d = form.querySelector("[data-cit-mdesc]");
+      d.textContent = here ? (choice ? (p && p.desc) || "" : (p ? p.name + " — " + p.priceText + (p.desc ? ". " + p.desc : "") : "")) : "";
+      d.hidden = !d.textContent;
+      form.querySelector("[data-cit-mnone]").hidden = here;
+      var ask = asksKids();
+      kf.hidden = !ask;
+      if (kids > guests - 1) kids = Math.max(0, guests - 1);
+      if (!ask) kids = 0;
+      form.querySelector("[data-kids]").textContent = String(kids);
+      form.querySelector("[data-cit-kidage]").textContent = meals.childAge ? tr("({n} év alatt)").replace("{n}", meals.childAge) : "";
+    }
+    form.querySelectorAll("[data-kstep]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        kids = Math.min(Math.max(0, guests - 1), Math.max(0, kids + Number(btn.getAttribute("data-kstep"))));
+        syncMeals();
+        var qa = form.from.value, qb = form.to.value;
+        renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
+      });
+    });
+    (function () {
+      var sel = form.querySelector("#cit-meal");
+      if (sel) sel.addEventListener("change", function () {
+        syncMeals();
+        var qa = form.from.value, qb = form.to.value;
+        renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
+      });
+    })();
 
     /* Stay price at booking time (owner decree 2026-09-06): seasonal row wins per
      * night, else base; ANY unpriced night → no quote at all (§B.17: better no
@@ -411,7 +506,9 @@
       el.classList.remove("cit-book__quote--ask");
       setAskMode(false);
       var cur = pricing.currency;
-      var rows = q.lines.map(function (l) {
+      var mls = mealLinesFor(n);
+      var mealSum = mls.reduce(function (t, l) { return t + l.sum; }, 0);
+      var rows = q.lines.concat(mls).map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
           tr("{n} éj").replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
           (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
@@ -444,6 +541,17 @@
         ? '<span class="cit-book__qrow"><span>' + esc(priceIncludes) + "</span><b>" +
           tr("benne van") + "</b></span>"
         : "";
+      // ADR-XXXX ⑧: the meal basis is said before sending, and a base that includes a meal
+      // reads as a row "benne van" — the guest sees what the price already covers.
+      var mealNow = mealsHere() ? mealPlan(chosenMeal()) : null;
+      var mealBasis = mls.length
+        ? (mealNow && mealNow.per === "room"
+          ? tr("Az ellátás felára a szobára szól — a létszám nem befolyásolja.")
+          : tr("Az ellátás felára személyenként számít."))
+        : "";
+      var baseMeal = mealNow && meals.base !== "none" && mealNow.id === meals.base
+        ? '<span class="cit-book__qrow"><span>' + esc(mealNow.name) + "</span><b>" + tr("benne van") + "</b></span>"
+        : "";
       // A helyszíni tétel: ÖSSZEG csak akkor, ha a szállásadó megadta.
       // Nyilatkozott ÉS nulla → a lap nem is említi az IFA-t: az IFA-mentes szállásról
       // állítani, hogy adót szed, ugyanolyan valótlanság, mint kitalált összeget írni.
@@ -460,9 +568,10 @@
       el.innerHTML =
         '<span class="cit-book__qh">' + (demo ? tr("Minta-ár") : tr("Az ár")) + " — " + esc(huDay(a)) + " → " + esc(huDay(b)) + "</span>" +
         rows +
-        '<span class="cit-book__qbasis">' + esc(basis.replace("{n}", String(guests))) + "</span>" +
+        '<span class="cit-book__qbasis">' + esc(basis.replace("{n}", String(guests))) + (mealBasis ? " " + esc(mealBasis) : "") + "</span>" +
+        baseMeal +
         included +
-        '<span class="cit-book__qtotal">' + (demo ? tr("Összesen a szállásért (minta-ár)") : tr("Összesen a szállásért")) + " <b>" + moneyHtml(q.total, cur) + "</b></span>" +
+        '<span class="cit-book__qtotal">' + (demo ? tr("Összesen a szállásért (minta-ár)") : tr("Összesen a szállásért")) + " <b>" + moneyHtml(q.total + mealSum, cur) + "</b></span>" +
         (demo
           ? '<span class="cit-book__qsample">' +
             tr("Ez minta-ár, nem az Ön szállásának ára — az éles oldalon itt a saját árlistája jelenik meg, éjszakánkénti bontásban.") +
@@ -652,6 +761,8 @@
     }
     var unitSel = form.querySelector("select[name='unit']");
     if (unitSel) unitSel.addEventListener("change", loadAvailability);
+    if (unitSel) unitSel.addEventListener("change", syncMeals);
+    syncMeals();
     /* KONTRAKTUS ① (design-refs/tenant-site/booking-unit-default, tulaj 2026-09-28): the
      * widget opens on the first PRICED unit, in the owner's order. Measured on the dev
      * tenant: it opened on the whole-place unit, the one unit without a price —
@@ -988,6 +1099,9 @@
         from: form.from.value,
         to: form.to.value,
         guests: String(guests),
+        // ADR-XXXX: the server recomputes the meal lines from its own setting.
+        meal: mealsHere() ? chosenMeal() : "",
+        children: String(asksKids() ? kids : 0),
         name: form.name.value,
         email: form.email.value,
         phone: form.phone.value,

@@ -13,6 +13,9 @@
 // re-checks the nights and writes the day rows in one atomic step, so two requests
 // racing for the same nights cannot both win.
 
+import { parseOfferAmount } from "./amount.js";
+import { asksChildren, chosenPlan, mealLines, mealPlanLabel, readMeals, type MealPlanId } from "../tenant/meals.js";
+import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
 import { sql } from "kysely";
@@ -77,6 +80,10 @@ export interface BookingRequestInput {
   readonly dateTo: string;
   readonly guests: number;
   readonly message?: string | null;
+  /** ADR-XXXX: the meal plan the guest picked (validated against the owner's setting). */
+  readonly mealPlan?: string | null;
+  /** ADR-XXXX: how many of `guests` are children (only counted when a child price applies). */
+  readonly children?: number | null;
 }
 
 /**
@@ -388,7 +395,15 @@ function stayRows(req: RequestRow, lang: string, rule: boolean): MailDetailRow[]
     ...(req.unit_name ? [{ label: T(lang, "Szállás"), value: req.unit_name }] : []),
     { label: T(lang, "Érkezés"), value: huDate(from) },
     { label: T(lang, "Távozás"), value: huDate(to), note: T(lang, "({n} éj)", { n: nights(from, to) }) },
-    { label: T(lang, "Létszám"), value: T(lang, "{n} fő", { n: req.guests }) },
+    {
+      label: T(lang, "Létszám"),
+      value: req.children
+        ? T(lang, "{n} fő, ebből {k} gyermek", { n: req.guests, k: req.children })
+        : T(lang, "{n} fő", { n: req.guests }),
+    },
+    // ADR-XXXX: the meal the guest asked for — frozen on the request, so a later change
+    // of the owner's setting does not rewrite it.
+    ...(req.meal_plan ? [{ label: T(lang, "Ellátás"), value: mealPlanLabel(lang, req.meal_plan) }] : []),
   ];
 }
 
@@ -650,7 +665,7 @@ export async function createBookingRequest(
     (pricingRow?.config ?? null) as Record<string, unknown> | null,
     null,
   );
-  const quote = pricingLive
+  const stayQuote = pricingLive
     ? quoteStayFrom(await getUnitPrices(input.unitId), {
         dateFrom,
         dateTo,
@@ -659,6 +674,19 @@ export async function createBookingRequest(
         unitMode: String(pricing.unit ?? "per_night"),
         baseLabel: T(lang, "Alapár"),
       })
+    : null;
+  // ADR-XXXX: the meal travels with the pricing module. The plan is validated against the
+  // owner's setting (an unknown or withdrawn plan falls back to the base), the lines are
+  // computed HERE — the browser's figure is never trusted — and freeze with the stay.
+  const meals = pricingLive ? readMeals(pricing.meals) : null;
+  const mealPlan = chosenPlan(meals, input.unitId, input.mealPlan);
+  const guestCount = Math.max(1, Math.min(50, Math.round(input.guests || 1)));
+  const children = mealPlan && asksChildren(meals)
+    ? Math.min(guestCount - 1, Math.max(0, Math.round(Number(input.children) || 0)))
+    : null;
+  const mLines = mealLines(meals, { unitId: input.unitId, plan: mealPlan, nights: n, guests: guestCount, children: children ?? 0, lang });
+  const quote = stayQuote
+    ? { ...stayQuote, total: stayQuote.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayQuote.lines, ...mLines] }
     : null;
 
   // Elek 2026-10-11 K6: the same request sent twice (a mobile network re-sending the POST,
@@ -696,6 +724,8 @@ export async function createBookingRequest(
         guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
         message: input.message?.trim().slice(0, 2000) || null,
         action_token: token,
+        meal_plan: mealPlan,
+        children,
         ...(quote
           ? {
               quoted_total: quote.total,
@@ -707,6 +737,7 @@ export async function createBookingRequest(
                   per_night: l.perNight,
                   guests: l.guests,
                   sum: l.sum,
+                  ...("kind" in l ? { kind: l.kind } : {}),
                 })),
               ),
             }
@@ -890,8 +921,11 @@ interface RequestRow {
   quoted_tax_per_person_night: number | null;
   quoted_currency: string | null;
   quoted_lines:
-    | { label: string; nights: number; per_night: number; guests: number; sum: number }[]
+    | { label: string; nights: number; per_night: number; guests: number; sum: number; kind?: "meal" }[]
     | null;
+  /** 0110 (ADR-XXXX): the chosen meal plan and the children among the guests. */
+  meal_plan: MealPlanId | null;
+  children: number | null;
   offered_at: Date | null;
   offer_token: string | null;
   decision_note?: string | null;
@@ -989,6 +1023,7 @@ async function notifyOwner(
     `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
     `${T(lang, "Érkezés:")} ${huDate(from)}\n${T(lang, "Távozás:")} ${huDate(until)}\n` +
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    (req.meal_plan ? `${T(lang, "Ellátás:")} ${mealPlanLabel(lang, req.meal_plan)}\n` : "") +
     (req.quoted_total
       ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? "HUF")}\n`
       : "") +
@@ -1851,6 +1886,12 @@ export interface InboxItem {
   readonly quotedCurrency: string | null;
   /** 0072: when the price offer went out (status 'offered'). */
   readonly offeredAt: Date | null;
+  /** 0110 (ADR-XXXX): the meal the guest chose; null = none asked / not offered. */
+  readonly mealPlan?: MealPlanId | null;
+  /** 0110: children among the guests; null = not asked. */
+  readonly children?: number | null;
+  /** 0052: the frozen breakdown — the card opens it under "Az ár tételesen". */
+  readonly lines?: readonly { label: string; nights: number; perNight: number; guests: number; sum: number; meal: boolean }[];
 }
 
 /** The owner's request list for the admin (pending first, newest first). */
@@ -1886,6 +1927,16 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     quotedTotal: r.quoted_total ?? null,
     quotedCurrency: r.quoted_currency ?? null,
     offeredAt: r.offered_at ? new Date(r.offered_at as unknown as string) : null,
+    mealPlan: r.meal_plan ?? null,
+    children: r.children ?? null,
+    lines: ((r.quoted_lines as RequestRow["quoted_lines"]) ?? []).map((l) => ({
+      label: l.label,
+      nights: l.nights,
+      perNight: l.per_night,
+      guests: l.guests,
+      sum: l.sum,
+      meal: l.kind === "meal",
+    })),
   }));
 }
 
@@ -1951,7 +2002,10 @@ export async function getSentOffers(siteId: string, limit = 60): Promise<SentOff
     status: r.status,
     decidedBy: (r.decidedBy as string | null) ?? null,
     savedAs: (r.savedAs as OfferSaveAs | null) ?? null,
-    lines: ((r.lines as RequestRow["quoted_lines"]) ?? []).map((l) => ({ perNight: l.per_night, guests: l.guests })),
+    // ADR-XXXX: a meal line is not the offer's nightly price — the per-night figure reads the stay only.
+    lines: ((r.lines as RequestRow["quoted_lines"]) ?? [])
+      .filter((l) => l.kind !== "meal")
+      .map((l) => ({ perNight: l.per_night, guests: l.guests })),
   }));
 }
 
@@ -2155,24 +2209,8 @@ export async function unpricedNights(unitId: string, dateFrom: string, dateTo: s
   return out;
 }
 
-/**
- * The amount rule of the offer page — the mock's `parseAmount`, byte for byte in
- * behaviour: thousand separators (space, dot, NBSP) and a trailing "Ft" are dropped,
- * only a positive whole number up to 10 000 000 passes.
- */
-export function parseOfferAmount(raw: string): {
-  value?: number;
-  error?: "num" | "pos" | "big";
-  empty?: boolean;
-} {
-  const s = String(raw ?? "").replace(/[\s.\u00a0]/g, "").replace(/ft$/i, "");
-  if (s === "") return { empty: true };
-  if (!/^\d+$/.test(s)) return { error: "num" };
-  const n = parseInt(s, 10);
-  if (!(n > 0)) return { error: "pos" };
-  if (n > 10_000_000) return { error: "big" };
-  return { value: n };
-}
+// The amount rule moved to ./amount.ts (shared with the meal surcharges, ADR-XXXX).
+export { parseOfferAmount };
 
 export interface OfferLine {
   readonly label: string;
@@ -2453,7 +2491,7 @@ export async function sendOffer(
   const offered = new Set(amount.value ? missing : []);
   const priceRows =
     missing.length && amount.value && save === "request" ? [...listed, ...offerOverlayRows(missing, amount.value)] : listed;
-  const quote = quoteStayFrom(priceRows, {
+  const stayQuote = quoteStayFrom(priceRows, {
     dateFrom: from,
     dateTo: to,
     guests: Math.max(1, Math.round(req.guests || 1)),
@@ -2464,6 +2502,24 @@ export async function sendOffer(
     // it: "Alapár" there reads as a price-list price, which an offer is not (ADR-0267).
     labelOn: (day) => (offered.has(day) ? T(lang, "Egyedi ár") : undefined),
   });
+  // ADR-XXXX: the meal the guest asked for rides on the offer. Lines already frozen on the
+  // request win (that is what the guest was shown); otherwise they are priced now.
+  const frozenMeal = (req.quoted_lines ?? [])
+    .filter((l) => l.kind === "meal")
+    .map((l) => ({ label: l.label, nights: l.nights, perNight: l.per_night, guests: l.guests, sum: l.sum, kind: "meal" as const }));
+  const mLines = frozenMeal.length
+    ? frozenMeal
+    : mealLines(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), {
+        unitId: req.unit_id,
+        plan: req.meal_plan,
+        nights: nights(from, to),
+        guests: req.guests,
+        children: req.children ?? 0,
+        lang,
+      });
+  const quote = stayQuote
+    ? { ...stayQuote, total: stayQuote.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayQuote.lines, ...mLines] }
+    : null;
   if (!quote) {
     // The price was written, yet the rule still finds an unpriced night: a defect,
     // not an owner mistake. Loud, and nothing goes to the guest (§B.17).
@@ -2493,6 +2549,7 @@ export async function sendOffer(
           per_night: l.perNight,
           guests: l.guests,
           sum: l.sum,
+          ...("kind" in l ? { kind: l.kind } : {}),
         })),
       ),
     })

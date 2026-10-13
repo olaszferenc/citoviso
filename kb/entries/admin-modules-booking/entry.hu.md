@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-10-11
+updated: 2026-10-13
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -53,9 +53,9 @@ helyszínen adó fizetendő, összeg nélkül.
 modulban adja meg (külön modul). Amíg ott nincs egyetlen ár sem, a vendég a naptárban választhat
 napokat, de ár — és vele az idegenforgalmi adó doboza — nem jelenik meg.
 
-A **„Mi van benne az árban?”** mezőbe a saját szavaival írhatja be, amit az ár már tartalmaz
-(pl. *takarítás, ágynemű, törölköző*). Ez a foglalás előtt, a tételes ár alatt jelenik meg a
-vendégnek. Üresen hagyva ez a sor elmarad.
+Azt, hogy mi van még benne az árban (pl. *takarítás, ágynemű, törölköző*), mostantól az
+**Árak, szezonok** modul **„Ellátás”** részében, a **„Mi van még benne az árban?”** mezőben adja
+meg — ugyanott, ahol a reggelit és a félpanziót. A korábban beírt szöveg változatlanul megmaradt.
 
 ## A naptár kezelése
 

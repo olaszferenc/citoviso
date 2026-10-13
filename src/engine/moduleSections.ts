@@ -197,6 +197,17 @@ const CSS = `<style data-cit-modsec>
   .cit-ev__row.is-more{display:grid}
   .cit-ev__more,.cit-ev__toggle{display:none}
 }
+/* ADR-XXXX — meal plans (approved plan tenant-admin/ellatas ⑦): name and surcharge on ONE
+   line, the description and the child price under it. Chips on the shared room card. */
+.cit-meals{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.cit-meals li{padding:var(--_card-pad);border:var(--_card-border);border-radius:var(--_card-radius);background:var(--_card-bg)}
+.cit-meals__h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.cit-meals__h b{white-space:nowrap}
+.cit-meals small{display:block;color:var(--cit-muted);font-size:.86rem;margin-top:3px;line-height:1.45}
+.cit-meals__in{margin:12px 0 0;color:var(--cit-muted)}
+.cit-mchips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.cit-mchip{font-size:.76rem;font-weight:600;border:1px solid var(--cit-line);border-radius:999px;padding:2px 8px;color:var(--cit-ink)}
+.cit-mchip--in{border-color:var(--cit-accent)}
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
@@ -281,6 +292,107 @@ function niceDay(md: string): string {
  *  anything that was not EUR printed as "Ft", whatever it actually was. */
 function money(amount: number, currency?: string, lang?: string): string {
   return formatMoney(amount, currency, lang);
+}
+
+/** ADR-XXXX: a meal plan's name in the page's language (literal keys for the catalogue). */
+function mealName(d: SiteData, id: "none" | "bb" | "hb" | "fb"): string {
+  return id === "bb"
+    ? T(d, "Reggeli")
+    : id === "hb"
+      ? T(d, "Félpanzió")
+      : id === "fb"
+        ? T(d, "Teljes panzió")
+        : T(d, "Csak szállás");
+}
+
+/** "+ 9 000 Ft / fő / éj" — or what the base means: "az alapár" / "benne az árban". */
+function mealPriceText(d: SiteData, m: NonNullable<SiteData["meals"]>, p: NonNullable<SiteData["meals"]>["plans"][number]): string {
+  if (p.id === m.base) return m.base === "none" ? T(d, "az alapár") : T(d, "benne az árban");
+  const per = p.per === "person" ? T(d, "fő / éj") : T(d, "szoba / éj");
+  return `+ ${money(p.price ?? 0, m.currency, d.lang)} / ${per}`;
+}
+
+/** ADR-XXXX ⑦: the meal chips of one room card — the base, then the surcharged plans. */
+export function mealChips(d: SiteData, unitId: string | undefined): string {
+  const m = d.meals;
+  if (!m || !unitId) return "";
+  if (m.off.includes(unitId)) return `<span class="cit-mchips"><span class="cit-mchip">${T(d, "Ellátás nem kérhető")}</span></span>`;
+  return (
+    `<span class="cit-mchips">` +
+    m.plans
+      .map((p) =>
+        p.id === m.base
+          ? `<span class="cit-mchip cit-mchip--in">${m.base === "none" ? T(d, "Ellátás nélkül az alapár") : T(d, "{name} az árban", { name: mealName(d, p.id) })}</span>`
+          : `<span class="cit-mchip">${mealName(d, p.id)} ${esc(mealPriceText(d, m, p))}</span>`,
+      )
+      .join("") +
+    `</span>`
+  );
+}
+
+/**
+ * ADR-XXXX ⑧ — the booking widget's meal data: the plans a guest can choose with their
+ * names and price texts in the page's language (the runtime adds no wording of its own
+ * for them), the child age and the units without meals. Absent → no meal field at all.
+ */
+function mealsAttr(d: SiteData): string {
+  const m = d.meals;
+  if (!m || !m.plans.length) return "";
+  const data = {
+    base: m.base,
+    plans: m.plans.map((p) => ({
+      id: p.id,
+      name: mealName(d, p.id),
+      priceText: mealPriceText(d, m, p),
+      per: p.per,
+      ...(p.price !== undefined ? { price: p.price } : {}),
+      ...(p.child !== undefined ? { child: p.child } : {}),
+      ...(p.desc ? { desc: p.desc } : {}),
+    })),
+    ...(m.childAge ? { childAge: m.childAge } : {}),
+    off: m.off,
+  };
+  return ` data-cit-meals="${esc(JSON.stringify(data))}"`;
+}
+
+/**
+ * ADR-XXXX ⑦ — the "Ellátás" section: one row per plan a guest can choose (name and
+ * surcharge on one line, the description and the child price under it), what else the
+ * price includes, and which rooms offer no meals. Renders on every template (showcase
+ * slot), because 12 of them draw their own room cards.
+ */
+function mealsBlock(d: SiteData): string {
+  const m = d.meals;
+  if (!m || !m.plans.length) return "";
+  // A lone "Csak szállás" row with nothing else to say is not a section.
+  if (m.plans.length === 1 && m.base === "none" && !m.plans[0]!.desc && !m.includes) return "";
+  const rows = m.plans
+    .map((p) => {
+      const kid =
+        p.id !== m.base && p.child !== undefined && m.childAge
+          ? `<small>${T(d, "Gyermeknek ({age} éves korig): {price}", {
+              age: m.childAge,
+              price: p.child ? `${money(p.child, m.currency, d.lang)} / ${T(d, "fő / éj")}` : T(d, "ingyenes"),
+            })}</small>`
+          : "";
+      return (
+        `<li data-cit-meal="${p.id}"><div class="cit-meals__h"><span>${mealName(d, p.id)}</span>` +
+        `<b>${esc(mealPriceText(d, m, p))}</b></div>` +
+        (p.desc ? `<small>${esc(p.desc)}</small>` : "") +
+        kid +
+        `</li>`
+      );
+    })
+    .join("");
+  const offNames = (d.rooms ?? []).filter((r) => r.unitId && m.off.includes(r.unitId)).map((r) => r.name);
+  return (
+    `<section class="cit-modsec" data-cit-module="meals">` +
+    `<div class="cit-modsec__in"><h2>${T(d, "Ellátás")}</h2>` +
+    `<ul class="cit-meals">${rows}</ul>` +
+    (m.includes ? `<p class="cit-meals__in"><b>${T(d, "Az árban benne van:")}</b> ${esc(m.includes)}</p>` : "") +
+    (offNames.length ? `<p class="cit-meals__in">${T(d, "Ellátás nem kérhető: {rooms}.", { rooms: esc(offNames.join(", ")) })}</p>` : "") +
+    `</div></section>`
+  );
 }
 
 /**
@@ -834,7 +946,8 @@ function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
             : "") +
             `<strong>${esc(r.name)}</strong>` +
             (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
-            (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : ""),
+            (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : "") +
+            (r.presentation ? "" : mealChips(d, r.unitId)),
         ) +
         cta(r, i) +
         roomDetails(d, r, i) +
@@ -1110,7 +1223,8 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
         (b.touristTaxPerPersonNight === undefined
           ? ""
           : ` data-cit-ifa="${esc(String(b.touristTaxPerPersonNight))}"`) +
-        (b.priceIncludes ? ` data-cit-includes="${esc(b.priceIncludes)}"` : "")
+        (b.priceIncludes ? ` data-cit-includes="${esc(b.priceIncludes)}"` : "") +
+        mealsAttr(d)
       : b
         ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(b.units))}"` +
           ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
@@ -1190,6 +1304,7 @@ export function moduleSectionGroups(
       // ADR-0059 leftover: usp items the template's native section did not fit.
       listBlock(d, "usp", T(d, "Miért minket válasszon?"), opts.sellingLeftover ?? [], ICON_STAR),
       d.pricing ? pricingBlock(d) : s.has("pricing") ? pricingSampleBlock(d) : "",
+      mealsBlock(d),
     ],
     // Why they should believe it — next to the template's own review section.
     trust: [

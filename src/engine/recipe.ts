@@ -406,6 +406,31 @@ export interface SiteData {
       }[];
     }[];
   };
+  /**
+   * ADR-XXXX — meal plans (approved plan tenant-admin/ellatas). `plans` are the ones a
+   * guest can choose, ascending, the base first (it is IN the price). Names are not here:
+   * the renderer translates the plan id (moduleSections `mealName`). Present only
+   * while the pricing module renders and the owner saved a setting.
+   */
+  readonly meals?: {
+    readonly base: "none" | "bb" | "hb" | "fb";
+    readonly plans: readonly {
+      readonly id: "none" | "bb" | "hb" | "fb";
+      /** Surcharge per night; absent on the base. */
+      readonly price?: number;
+      readonly per: "person" | "room";
+      /** Child surcharge per person per night (0 = free); absent = adult price. */
+      readonly child?: number;
+      readonly desc?: string;
+    }[];
+    /** Children are under this age; absent = no child prices. */
+    readonly childAge?: number;
+    /** Units (site_unit ids) the owner took meals off. */
+    readonly off: readonly string[];
+    /** "Mi van még benne az árban?" — the booking module's `priceIncludes`. */
+    readonly includes?: string;
+    readonly currency: string;
+  };
   readonly location?: {
     readonly showMap?: boolean;
     readonly approachNote?: string;
