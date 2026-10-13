@@ -25,7 +25,12 @@
 //      window is read on the Budapest clock in winter AND summer time; after 07:00 the hourly
 //      tick sends ONE digest SMS about the night, only if there was anything, once; a failed
 //      digest is retried; the tick is wired to it. On the pre-ADR code the night alert texts
-//      the owner → red.
+//      the owner → red;
+//   ⑧ the OTHER operator alert SMS (AAM, stuck order, undelivered upsell, broken pair, trial
+//      watch, .hu confirmation link, module clash, multilang) take ONE road, sendOperatorSms:
+//      at night on a real channel → not sent, a 'night' row, counted as delivered, and the
+//      morning digest names it next to the house alerts; by day / on the mock channel → sent;
+//      no alert file calls sendSms() directly any more. On the old code → red.
 //
 // ISOLATION: own throwaway database (scratch-db), migrated from migrations/ (0108 included);
 // the providers are forced to mock, and alertHouse runs on injected deps (nothing leaves the
@@ -395,6 +400,69 @@ console.log("⑦ csendes óra: 22–07 között SMS nincs, reggel EGY összesít
   const tick = readFileSync("scripts/offer-followup.mts", "utf8");
   check("az óránkénti tick saját try-ban küldi a reggeli összesítőt", /try \{\s*\/\/[^\n]*\n\s*const nd = await flushNightSmsDigest\(now\);/.test(tick));
   world.now = new Date("2026-10-13T10:00:00Z");
+}
+
+// ── ⑧ every operator alert SMS: one road ────────────────────────────────────────────
+console.log("⑧ a többi operátori riasztó SMS is a közös úton: éjjel visszatartva, reggel az összesítőben");
+{
+  let O: typeof import("../src/console/operatorSms.js") | null = null;
+  try {
+    O = await import("../src/console/operatorSms.js");
+  } catch {
+    O = null;
+  }
+  check("van közös operátori SMS-út (src/console/operatorSms.ts)", !!O && typeof O.sendOperatorSms === "function");
+  if (O) {
+    const sent: Sms[] = [];
+    const op = { now: new Date("2026-10-13T21:30:00Z"), real: true };
+    O.setOperatorSmsDeps({
+      now: () => op.now,
+      realChannel: () => op.real,
+      send: async (m) => {
+        sent.push(m);
+        return { id: "mock", provider: "gammu" };
+      },
+    });
+    await resetLedger();
+    drain();
+    const r = await O.sendOperatorSms({ tag: "aam", to: "+36301234567", text: "Citoviso: AAM 85% ATLEPVE (10 200 000 Ft). Nezd meg a szamlazast." });
+    await O.sendOperatorSms({ tag: "registry-confirm", to: "+36301234567", text: "Citoviso: .hu MEGEROSITO LINK erkezett a Nyilvantartotol. Amig nem kattintasz ra, a domain NEM delegalodik. Reszletek e-mailben. https://example.invalid/confirm?x=1" });
+    const rows = await db.selectFrom("house_alert_sms").select(["tag", "status", "subject"]).execute();
+    check("éjjel valódi csatornán: SMS NEM megy, „night” sor, a hívónak kézbesítettnek számít", sent.length === 0 && r.provider === "night" && rows.length === 2 && rows.every((x) => x.status === "night"), JSON.stringify(rows));
+    check("az összesítő-sor az első mondat, link nélkül", rows.some((x) => x.subject === "Citoviso: .hu MEGEROSITO LINK erkezett a Nyilvantartotol.") && !rows.some((x) => /https?:/.test(x.subject)), JSON.stringify(rows.map((x) => x.subject)));
+    op.real = false;
+    await O.sendOperatorSms({ tag: "aam", to: "+36301234567", text: "Citoviso: mock csatorna." });
+    check("mock csatornán (kapuk) éjjel is megy — a kapu éjjel ugyanazt látja", sent.length === 1);
+    op.real = true;
+    op.now = new Date("2026-10-14T05:05:00Z");
+    await O.sendOperatorSms({ tag: "aam", to: "+36301234567", text: "Citoviso: nappali riasztas." });
+    check("nappal valódi csatornán megy", sent.length === 2);
+    world.now = new Date("2026-10-13T21:30:00Z");
+    await H.alertHouse({ tag: "t", sms: true, smsKey: "o-house", subject: "Citoviso: fizetés megakadt — Hajnali Vevő", text: "x" });
+    world.now = new Date("2026-10-14T05:05:00Z");
+    drain();
+    await H.flushNightSmsDigest?.(world.now);
+    const d = drain();
+    const t = d.texts[0]?.text ?? "";
+    check("a reggeli összesítő EGY SMS-ben viszi a ház-riasztást és a többi operátori riasztást", d.texts.length === 1 && /3 riasztas/.test(t) && /AAM 85% ATLEPVE/.test(t) && /fizetes megakadt - Hajnali Vevo/.test(t), t);
+    O.setOperatorSmsDeps(null);
+    world.now = new Date("2026-10-13T10:00:00Z");
+  }
+  const roads: [string, string][] = [
+    ["src/console/aamAlert.ts", "aam"],
+    ["src/console/payLinkAlert.ts", "pay-link"],
+    ["src/console/payLinkAlert.ts", "upsell"],
+    ["src/outreach/pairRepair.ts", "pair-repair"],
+    ["src/domains/registryConfirmWatch.ts", "registry-confirm"],
+    ["src/tenant/moduleRequirements.ts", "module-deps"],
+    ["src/tenant/multilangResume.ts", "multilang-resume"],
+  ];
+  for (const [f, tag] of roads) {
+    const src = readFileSync(f, "utf8");
+    check(`${f} (${tag}) a közös úton, közvetlen sendSms() nélkül`, new RegExp(`sendOperatorSms\\(\\{\\s*tag: "${tag}"`).test(src) && !/\bsendSms\(/.test(src));
+  }
+  const tw = readFileSync("src/trial/watch.ts", "utf8");
+  check("src/trial/watch.ts (trial-watch) a valódi függőségben a közös úton", /sendSms: \(msg\) => sendOperatorSms\(\{ \.\.\.msg, tag: "trial-watch" \}\)/.test(tw) && !/\bsendSms\(msg\)(?!: )/.test(tw.replace(/sendSms\(msg: SmsMessage\)/, "")));
 }
 
 await db.destroy();

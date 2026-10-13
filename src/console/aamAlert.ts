@@ -16,7 +16,7 @@
 import { db } from "../db/client.js";
 import { budapestYear } from "../text/budapestTime.js";
 import { getEmailSender } from "../email/sender.js";
-import { sendSms } from "../sms/sender.js";
+import { sendOperatorSms } from "./operatorSms.js";
 import { getAlertRecipients } from "./appSettings.js";
 import { AAM_ANNUAL_LIMIT_HUF, getAamYearNet } from "./partnerData.js";
 
@@ -106,7 +106,7 @@ export async function checkAamAlert(now: Date): Promise<AamAlertResult> {
     }
 
     if (rcpt.phone && !(await stamped(year, tier, "sms"))) {
-      await sendSms({ to: rcpt.phone, text: smsText(tier, pct, netHuf) });
+      await sendOperatorSms({ tag: "aam", to: rcpt.phone, text: smsText(tier, pct, netHuf) });
       await stamp(year, tier, "sms");
       sent.push(`${tier}/sms`);
     }

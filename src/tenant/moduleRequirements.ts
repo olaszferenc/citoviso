@@ -17,7 +17,7 @@ import { sql } from "kysely";
 import { getAlertRecipients } from "../console/appSettings.js";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
-import { sendSms } from "../sms/sender.js";
+import { sendOperatorSms } from "../console/operatorSms.js";
 import {
   MODULE_CATALOG,
   missingRequiredModules,
@@ -217,7 +217,8 @@ export async function alertHeldCancellations(
   }
   // Internal, operator-facing text — outside the §B.18 customer-side i18n scope.
   if (rcpt.phone) {
-    await sendSms({
+    await sendOperatorSms({
+      tag: "module-deps",
       to: rcpt.phone,
       text:
         `Citoviso: modul-fuggoseg utkozes a megujitasnal — tenant ${tenantId}. ` +

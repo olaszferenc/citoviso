@@ -28,7 +28,8 @@
 import { APP_TZ, budapestHhmm, budapestMinutes, budapestWeekday } from "../text/budapestTime.js";
 import { config } from "../config.js";
 
-/** The owner's temporary MOBILE_SEND_WINDOW_OFF switch (live test): SMS/MMS go out at any hour. */
+/** The owner's temporary MOBILE_SEND_WINDOW_OFF switch (live test 2026-09-30): SMS/MMS go out at any hour.
+ *  Owner 2026-10-13: removed from the live .env the same day (ADR-XXXX, DEPLOY-READY §6). */
 export function mobileWindowOff(): boolean {
   return config.mobileSendWindowOff;
 }

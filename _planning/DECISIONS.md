@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-operatori-sms-kozos-ut-csendes-ora.md) — Minden operátori riasztó SMS egy úton: csendes óra 22–07 + reggeli összesítő; a desztilláló hétfő 08:00-ra (2026-10-13)
 - [ADR-0378](decisions/0378-ellatas-es-felarak-a-szallasado-megadja-mit.md) — Ellátás és felárak: a szállásadó megadja, mit tartalmaz az alapár és mi kérhető felárral (gyerekárral); a vendég a foglalásnál választ, a felár a kéréssel együtt fagy
 - [ADR-0377](decisions/0377-a-pirula-par-nem-ul-a-hos-cimen-fekvo-telefonon.md) — A pirula-pár nem ül a hős-címen: fekvő telefonon jobb alsó sarok (egymás alatt), álló telefonon a süti-sáv idején a cím fölé lép
 - [ADR-0376](decisions/0376-a-riaszto-sms-csendes-oraja-22-07-kozott-csak.md) — A riasztó SMS csendes órája: 22–07 között csak levél, reggel egy összesítő SMS (2026-10-13)

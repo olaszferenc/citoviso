@@ -49,7 +49,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { getEmailSender, type EmailMessage } from "../email/sender.js";
 import { isLiveHost } from "../invoicing/keyGuard.js";
-import { budapestMinutes } from "../text/budapestTime.js";
+import { holdForNight, smsQuietHours, SMS_QUIET_FROM_HOUR, SMS_QUIET_TO_HOUR } from "./smsQuietHours.js";
 import { getAlertRecipients } from "./appSettings.js";
 
 export interface HouseAlert {
@@ -67,18 +67,9 @@ export interface HouseAlert {
 export const SMS_REPEAT_HOURS = 6;
 /** At most this many alert SMS per rolling hour (all keys together). */
 export const SMS_HOURLY_CAP = 4;
-/** Quiet hours start (Budapest, inclusive): 22:00 — a phone that buzzes after this wakes
- *  the owner, and nothing an alert asks for is done by a person in the night anyway. */
-export const SMS_QUIET_FROM_HOUR = 22;
-/** Quiet hours end (Budapest, exclusive): 07:00 — the digest goes with the first hourly
- *  tick from here on, when the owner is up and can act on it. */
-export const SMS_QUIET_TO_HOUR = 7;
-
-/** Is `now` inside the alert-SMS quiet hours (Budapest wall clock, whatever the server's zone)? */
-export function smsQuietHours(now: Date): boolean {
-  const m = budapestMinutes(now);
-  return m >= SMS_QUIET_FROM_HOUR * 60 || m < SMS_QUIET_TO_HOUR * 60;
-}
+// The quiet hours live in ONE module (smsQuietHours.ts) for every operator SMS; re-exported
+// for the existing readers of this file.
+export { smsQuietHours, SMS_QUIET_FROM_HOUR, SMS_QUIET_TO_HOUR };
 
 /** Injectable for the guard script (scripts/house-alert-check.mts) — the real ones by default. */
 export interface HouseAlertDeps {
@@ -161,7 +152,7 @@ async function smsHouse(tag: string, key: string, subject: string): Promise<bool
       return false;
     }
     if (smsQuietHours((deps.now ?? (() => new Date()))())) {
-      await db.insertInto("house_alert_sms").values({ tag, dedupe_key: key, status: "night", subject }).execute();
+      await holdForNight(tag, key, subject);
       console.log(
         `[house-alert:${tag}] SMS éjjelre visszatartva (${SMS_QUIET_FROM_HOUR}–${SMS_QUIET_TO_HOUR} csendes óra) — ` +
           `a levél viszi, reggel összesítő SMS: ${subject}`,
@@ -231,7 +222,7 @@ async function smsHouse(tag: string, key: string, subject: string): Promise<bool
 /** The morning digest SMS: how many alerts the night held, the distinct subjects as fit. */
 export function nightDigestText(subjects: readonly string[]): string {
   const cores = [
-    ...new Set(subjects.map((s) => asciiFold(s.replace(/^\[TESZT\] /, "").replace(/^Citoviso:\s*/, "")))),
+    ...new Set(subjects.map((s) => asciiFold(s.replace(/^\[TESZT\] /, "").replace(/^Citoviso:\s*/, "")).replace(/[.!]+$/, ""))),
   ];
   const test = subjects.some((s) => s.startsWith("[TESZT] ")) ? "[TESZT] " : "";
   const head = `${test}Citoviso RIASZTAS: ejjel (${SMS_QUIET_FROM_HOUR}-${String(SMS_QUIET_TO_HOUR).padStart(2, "0")}) ${subjects.length} riasztas: `;

@@ -45,7 +45,8 @@ import { getAlertRecipients } from "../console/appSettings.js";
 import { db } from "../db/client.js";
 import { getEmailSender, type EmailMessage } from "../email/sender.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
-import { sendSms, type SmsMessage } from "../sms/sender.js";
+import { type SmsMessage } from "../sms/sender.js";
+import { sendOperatorSms } from "../console/operatorSms.js";
 
 export const LAPSE_OVERDUE_HOURS = 26;
 export const NOTICE_CLAIM_STALE_MINUTES = 60;
@@ -98,7 +99,8 @@ const REAL_DEPS: TrialWatchDeps = {
     return { email: r.email, phone: r.phone };
   },
   sendEmail: (msg) => getEmailSender().send(msg),
-  sendSms: (msg) => sendSms(msg),
+  // ADR-XXXX: the operator SMS road — held for the morning digest in the 22–07 quiet hours.
+  sendSms: (msg) => sendOperatorSms({ ...msg, tag: "trial-watch" }),
   publicBaseUrl: () => config.publicBaseUrl,
 };
 

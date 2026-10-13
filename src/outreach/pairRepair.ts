@@ -26,7 +26,7 @@
 
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
-import { sendSms } from "../sms/sender.js";
+import { sendOperatorSms } from "../console/operatorSms.js";
 import { getAlertRecipients } from "../console/appSettings.js";
 import { sendPairSmsHalf } from "./sendOutreachPair.js";
 import { huArticle } from "../hu.js";
@@ -121,7 +121,8 @@ async function alertOperator(p: BrokenPair, lastError: string): Promise<boolean>
   }
   // Internal operator text — outside the §B.18 customer-facing i18n scope.
   if (rcpt.phone) {
-    await sendSms({
+    await sendOperatorSms({
+      tag: "pair-repair",
       to: rcpt.phone,
       text:
         `Citoviso: TOROTT PAR — ${p.leadName}. Az MMS kiment, a kiserő SMS ${MAX_PAIR_SMS_RETRIES} ` +

@@ -13,7 +13,7 @@
 // branch is loud, including "there is nobody to alert".
 
 import { getEmailSender } from "../email/sender.js";
-import { sendSms } from "../sms/sender.js";
+import { sendOperatorSms } from "./operatorSms.js";
 import { getAlertRecipients } from "./appSettings.js";
 
 export interface StuckOrderAlert {
@@ -83,7 +83,7 @@ export async function alertStuckOrder(a: StuckOrderAlert): Promise<void> {
       const { subject, text } = emailParts(a);
       await getEmailSender().send({ to: rcpt.email, audience: "platform", subject, text });
     }
-    if (rcpt.phone) await sendSms({ to: rcpt.phone, text: smsText(a) });
+    if (rcpt.phone) await sendOperatorSms({ tag: "pay-link", to: rcpt.phone, text: smsText(a) });
     console.log(
       `[pay-link] megrekedt rendelés jelezve (${a.orderIntentId}, ok: ${a.reason}) — ` +
         `${[rcpt.email ? "e-mail" : null, rcpt.phone ? "SMS" : null].filter(Boolean).join(" + ")}`,
@@ -134,7 +134,8 @@ export async function alertUndeliveredUpsell(
       });
     }
     if (rcpt.phone) {
-      await sendSms({
+      await sendOperatorSms({
+        tag: "upsell",
         to: rcpt.phone,
         text:
           `Citoviso: KIFIZETETT BOVITES KEZBESITETLEN — rendeles ${orderIntentId}. ` +

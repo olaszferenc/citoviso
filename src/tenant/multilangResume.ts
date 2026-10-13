@@ -27,7 +27,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { getAlertRecipients } from "../console/appSettings.js";
 import { getEmailSender } from "../email/sender.js";
-import { sendSms } from "../sms/sender.js";
+import { sendOperatorSms } from "../console/operatorSms.js";
 import { runMultilangGeneration } from "./multilangGenerate.js";
 import { huArticle } from "../hu.js";
 
@@ -146,7 +146,8 @@ async function alertOperator(c: ResumeCandidate, lastError: string): Promise<boo
   const langs = c.languages.join(", ");
   // Belső, operátori szöveg — a §B.18 vevő-oldali i18n hatókörén kívül.
   if (rcpt.phone) {
-    await sendSms({
+    await sendOperatorSms({
+      tag: "multilang-resume",
       to: rcpt.phone,
       text:
         `Citoviso: KIFIZETETT nyelv-generalas nem keszult el — ${c.tenantName} (${langs}). ` +

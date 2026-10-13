@@ -29,7 +29,7 @@ import { dirname } from "node:path";
 import { config } from "../config.js";
 import { getAlertRecipients } from "../console/appSettings.js";
 import { getEmailSender } from "../email/sender.js";
-import { sendSms } from "../sms/sender.js";
+import { sendOperatorSms } from "../console/operatorSms.js";
 
 /** The registry's confirmation URL. The token is the dedupe key. */
 const CONFIRM_LINK = /https:\/\/cfm\.drr\.hu\/(?:hu|en)\/confirmations\/([0-9a-f]{16,})/gi;
@@ -164,7 +164,8 @@ async function alertOwner(link: string, mailAt: string): Promise<boolean> {
   }
   // Internal operator text — outside the §B.18 customer-facing i18n scope.
   if (rcpt.phone) {
-    await sendSms({
+    await sendOperatorSms({
+      tag: "registry-confirm",
       to: rcpt.phone,
       text:
         "Citoviso: .hu MEGEROSITO LINK erkezett a Nyilvantartotol. Amig nem kattintasz ra, " +
