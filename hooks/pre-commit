@@ -869,7 +869,7 @@ if [ -f scripts/house-alert-check.mts ] && \
   echo "[pre-commit] house-alert-check (időzítő / foglalási levél / webhook → a ház riasztást kap)…"
   npx tsx scripts/house-alert-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ÉLESI ŐRKÖDÉS (2026-10-13, ADR-XXXX — tulaj: „ha valamely külső folyamat megakad, arról jöjjön
+# ÉLESI ŐRKÖDÉS (2026-10-13, scripts/stall-alert-check.mts — tulaj: „ha valamely külső folyamat megakad, arról jöjjön
 # értesítés + SMS”). Saját scratch-DB: a súlyos ház-riasztás levél + szűrt SMS (ismétlés-tiltás,
 # óránkénti sapka, nem éles hoston SMS nincs); az óránkénti söprés a megakadt fizetést, domaint,
 # SMS-sort, iCal-linket és halott API-kulcsot egyszer jelzi; a 401/403-at látó adapterek bekötve.
