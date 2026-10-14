@@ -42,7 +42,10 @@ nélkül be vannak kapcsolva, nincs előfizetés, amihez egyenként hozzá lehet
 - Ha a próba nem minden modullal indult, a kártya megnevezi a próba csomagját, és azt is, hogy ami nincs
   benne, azt ugyanitt hozzáadhatja.
 
-A fizetés után a fül a lent leírt, megszokott formájára vált.
+A fizetés után a fül a lent leírt, megszokott formájára vált. Ha a próba ideje alatt fizet, és nem
+minden modult választott ki, a ki nem választottak a próba végéig még működnek: „Az én moduljaim”
+listájában ár helyett **„próbában ingyen”** áll mellettük, alattuk pedig az, hogy melyik napon
+kapcsolnak ki, hacsak nem veszi meg őket.
 
 ## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
 

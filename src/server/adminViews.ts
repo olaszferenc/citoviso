@@ -2197,7 +2197,10 @@ export function modulesSection(
       ? `<span class="adm-chip adm-chip--off">${T(lang, "nem számítjuk")}</span>`
       : m.spine
         ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
-        : `<span class="adm-price">${priceForm(m.priceMonthly, false)}</span>`;
+        : // Elek P-3: a trial module was listed with its monthly price, as if bought.
+          m.trialGrant
+          ? `<span class="adm-chip adm-chip--free" data-trial-grant>${T(lang, "próbában ingyen")}</span>`
+          : `<span class="adm-price">${priceForm(m.priceMonthly, false)}</span>`;
 
   // ADR-0088 ⑨: in the SHOP the tenant's live coupon must be VISIBLE and priced
   // in — until now it applied silently at checkout, so the discount could not
@@ -2253,7 +2256,15 @@ export function modulesSection(
               // notice. The entitlement survives; only its visibility is paused.
               frozen
               ? T(lang, "Szünetel — a felfüggesztés alatt a vendégek nem látják.")
-              : m.awaitingFirstCharge
+              : // Elek P-3 (2026-10-14): after buying only the base package, the trial's modules
+                // stood here as „aktív” with their prices, and nothing said they switch off.
+                m.trialGrant
+                ? mv.trialUntil
+                  ? T(lang, "Próba-modul — {date}-ig ingyen él az oldalán, utána kikapcsol, hacsak nem veszi meg.", {
+                      date: esc(formatDay(mv.trialUntil, lang)),
+                    })
+                  : T(lang, "Próba-modul — a próba végéig ingyen él az oldalán, utána kikapcsol, hacsak nem veszi meg.")
+                : m.awaitingFirstCharge
                 ? T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", {
                     date: esc(renewDateS),
                   })
@@ -4735,7 +4746,9 @@ function overviewSection(
         `<strong>${T(lang, "Töltse ki: {module}", { module: esc(T(lang, m.label)) })}</strong> ` +
         // ⛔ Trial (Elek 2026-10-09, lelet 1): he has paid nothing, so no price and no
         // „kifizette" — the module is on because the trial switched it on.
-        (trialActive
+        // Elek P-3: after a purchase made DURING the trial the trial state is gone (converted),
+        // but the modules the trial switched on are still not bought — the row says so.
+        (trialActive || m.trialGrant
           ? `${T(lang, "— a próbában be van kapcsolva, de üres, ezért a vendég ma nem látja")}`
           : `<span class="adm-todo__price">${modulePriceForm(m.priceMonthly, false, annualMult, lang)}</span> ` +
             `${T(lang, "— kifizette, de üres, ezért a vendég ma nem látja")}`) +

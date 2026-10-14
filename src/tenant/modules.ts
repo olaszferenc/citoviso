@@ -4,6 +4,7 @@
 // still comes from the site's recipe, so a newly enabled module shows up on the next
 // re-render/publish — the UI says so honestly rather than implying instant layout change.
 
+import { budapestIsoDay } from "../text/budapestTime.js";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG, supersederOf, type ModuleGroup } from "../modules.js";
 import { getDisabledModules } from "../moduleSales.js";
@@ -48,6 +49,11 @@ export interface TenantModuleView {
    * hand-made fixtures that predate it keep compiling; absent = none.
    */
   readonly notOrderable?: readonly NotOrderableModule[];
+  /**
+   * Elek P-3 (2026-10-14): the day the trial grants switch off ('YYYY-MM-DD', Budapest), present
+   * only while some module is on by the trial — the Modulok tab says it per row.
+   */
+  readonly trialUntil?: string | null;
 }
 
 /** A module the shop cannot offer right now — named, so its absence is explained. */
@@ -279,7 +285,13 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
       .executeTakeFirst();
     if (trial) notOrderable = notOrderable.map((m) => ({ ...m, heldInTrial: true }));
   }
-  return { modules, baseMonthly, totalMonthly, notOrderable };
+  // Elek P-3: when the trial's modules stop — read only when there is one to name.
+  let trialUntil: string | null = null;
+  if (trialGrantIds.size) {
+    const t = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirst();
+    if (t?.trial_until) trialUntil = budapestIsoDay(new Date(t.trial_until as unknown as string));
+  }
+  return { modules, baseMonthly, totalMonthly, notOrderable, trialUntil };
 }
 
 /**

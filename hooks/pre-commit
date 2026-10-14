@@ -1186,6 +1186,13 @@ if [ -f scripts/booking-tax-receipt-check.mts ] && \
   echo "[pre-commit] booking-tax-receipt-check (ár-alap a foglalt egységre, IFA a nyugtán és a levelekben)…"
   npx tsx scripts/booking-tax-receipt-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Próba-modulok vásárlás után (Elek P-3, 2026-10-14): nem „kifizette”, nincs ár, és a
+# Modulok fül kimondja, melyik napon kapcsolnak ki — negatív kontrollal (megvett modul).
+if [ -f scripts/trial-grant-truth-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/modules\.ts|src/trial/(admin|expiry)\.ts)$|^scripts/trial-grant-truth-check'; then
+  echo "[pre-commit] trial-grant-truth-check (próba-modul: nem „kifizette”, a kikapcsolás napja)…"
+  npx tsx scripts/trial-grant-truth-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Fiók-műveletek írásban (Elek P-5, 2026-10-14): lemondás, visszalépés, megbízás-visszavonás →
 # visszaigazoló levél, naplózva; a visszavonás levele a kártyát a visszavonás ELŐTT olvassa.
 if [ -f scripts/account-action-mail-check.mts ] && \
