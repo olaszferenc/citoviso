@@ -32,6 +32,7 @@ import { purgeWarningDeps, trialNoticeDeps } from "../src/trial/notices.js";
 import { runPurgeWarnings } from "../src/trial/retention.js";
 import { runTrialWatch } from "../src/trial/watch.js";
 import { runStallWatch } from "../src/console/stallWatch.js";
+import { runClientNotices } from "../src/console/clientNotify.js";
 import { flushNightSmsDigest } from "../src/console/houseAlert.js";
 import { db } from "../src/db/client.js";
 
@@ -71,6 +72,15 @@ try {
   if (st.failedKinds.length > 0) process.exitCode = 1;
 } catch (e) {
   console.error("stall-watch HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  // ADR-XXXX: a new trial the instant notice missed + a booking request silent for 24 h → house.
+  const cn = await runClientNotices(now);
+  console.log(`client-notices @ ${now.toISOString()}:`, JSON.stringify(cn));
+  if (cn.failed > 0) process.exitCode = 1;
+} catch (e) {
+  console.error("client-notices HIBA:", e);
   process.exitCode = 1;
 }
 try {

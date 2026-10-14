@@ -3408,3 +3408,90 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pr2-pl b { font-weight: inherit; }
 .pr2-errsum { font-size: 11.5px; color: var(--citui-bad-ink); }
 .pr2-errsum:empty { display: none; }
+
+/* ── PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (ADR-XXXX) ─────────────────────────────────────
+   Approved plan assets/design-refs/console/proba-foglalas-lathato/: the badge under the
+   lead's name (list), the filter row above the table, the client card under the strip. */
+.con .con-cpill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+  border-radius: var(--citui-radius-pill); border: 1px solid transparent;
+  font-size: 11.5px; font-weight: 700; line-height: 1.25; white-space: nowrap;
+}
+.con .con-cpill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+.con .con-cpill.trial {
+  background: var(--citui-accent-soft); color: var(--citui-ink-brand);
+  border-color: color-mix(in srgb, var(--citui-cyan-500) 45%, transparent);
+}
+.con .con-cpill.trial i { background: var(--citui-cyan-500); }
+.con .con-cpill.soon, .con .con-cpill.wait {
+  background: color-mix(in srgb, var(--citui-warn) 14%, var(--citui-panel)); color: var(--citui-warn-ink);
+  border-color: color-mix(in srgb, var(--citui-warn) 45%, transparent);
+}
+.con .con-cpill.paid { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
+.con .con-cpill.lapsed { background: var(--citui-surface-2); color: var(--citui-muted); border-color: var(--citui-line-strong); }
+.con .con-cpill.bk { background: var(--citui-panel); color: var(--citui-ink-brand); border-color: var(--citui-line-strong); }
+.con .con-cbadges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+
+.con .con-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.con .con-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-pill);
+  background: var(--citui-panel); color: var(--citui-ink); font-size: 12.5px; font-weight: 600;
+  text-decoration: none; white-space: nowrap;
+}
+.con .con-chip b { font-weight: 800; }
+.con .con-chip.on { background: var(--citui-cyan-500); border-color: var(--citui-cyan-500); color: var(--citui-navy-950); }
+
+.con .con-wf__st.trial {
+  background: var(--citui-accent-soft);
+  box-shadow: inset 0 -3px 0 var(--citui-cyan-500);
+}
+.con .con-wf__st.trial .con-wf__v { color: var(--citui-ink-brand); }
+
+.con .con-client {
+  margin-top: 14px; border-radius: var(--citui-radius); overflow: hidden; background: var(--citui-panel);
+  border: 1px solid color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
+  container-type: inline-size;
+}
+.con .con-client.soon { border-color: color-mix(in srgb, var(--citui-warn) 50%, transparent); }
+.con .con-client.lapsed { border-color: var(--citui-line-strong); }
+.con .con-client__h {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 14px 18px;
+  background: var(--citui-accent-soft);
+}
+.con .con-client.soon .con-client__h { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel)); }
+.con .con-client.lapsed .con-client__h { background: var(--citui-surface-2); }
+.con .con-client__t { flex: 1 1 260px; min-width: 0; }
+.con .con-client__t h3 { margin: 0 0 4px; font-family: var(--citui-font-display); font-size: 1.1rem; color: var(--citui-ink-brand); }
+.con .con-client__meter { height: 6px; max-width: 280px; border-radius: 9px; background: var(--citui-line); overflow: hidden; margin: 4px 0 3px; }
+.con .con-client__meter i { display: block; height: 100%; background: var(--citui-cyan-500); }
+.con .con-client.soon .con-client__meter i { background: var(--citui-warn); }
+.con .con-client__live { display: inline-flex; align-items: center; gap: 6px; }
+.con .con-client__b { padding: 14px 18px; }
+.con .con-client__b h4 { margin: 14px 0 6px; font-family: var(--citui-font-display); font-size: 1rem; color: var(--citui-ink-brand); }
+.con .con-client__kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 18px; margin: 0; }
+.con .con-client__kv > div:nth-child(n + 5) { grid-column: span 2; }
+.con .con-client__kv dt {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--citui-muted); font-weight: 700;
+}
+.con .con-client__kv dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.con .con-client__tw { overflow-x: auto; }
+.con .con-client__bk { width: 100%; border-collapse: collapse; font-size: 13px; }
+.con .con-client__bk th {
+  text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--citui-muted);
+  padding: 7px 6px; border-bottom: 1px solid var(--citui-line); white-space: nowrap;
+}
+.con .con-client__bk td { padding: 8px 6px; border-bottom: 1px solid var(--citui-line); vertical-align: top; }
+.con .con-client__hint {
+  margin: 10px 0 0; padding: 9px 12px; border-radius: var(--citui-radius-sm);
+  background: var(--citui-surface-2); font-size: 13px; color: var(--citui-ink-brand);
+}
+.con .con-client__hint.warn { background: color-mix(in srgb, var(--citui-warn) 13%, var(--citui-panel)); color: var(--citui-warn-ink); }
+@container (max-width: 620px) {
+  .con .con-client__kv { grid-template-columns: minmax(0, 1fr); }
+  .con .con-client__kv > div:nth-child(n + 5) { grid-column: auto; }
+  .con .con-client__bk thead { display: none; }
+  .con .con-client__bk tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--citui-line); }
+  .con .con-client__bk td { display: block; border: 0; padding: 2px 0; }
+  .con .con-client__bk td[data-l]::before { content: attr(data-l) ": "; color: var(--citui-muted); font-size: 12px; }
+}

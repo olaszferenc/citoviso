@@ -38,6 +38,7 @@ import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
 import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
+import { CLIENT_FILTERS, isClientFilter, loadLeadClients, passesClientFilter, type ClientFilter, type ClientKind } from "./leadClient.js";
 import { isEngineArtifact } from "../conversion/provision.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
@@ -111,6 +112,16 @@ export interface LeadListRow {
   /** The channels that carried it — read from the per-channel stamps (ADR-0082/0083),
    *  in the fixed order email → sms → mms; empty when only `sent_at` is set. */
   readonly outreachChannels: readonly SentChannel[];
+  /** ADR-XXXX: trial / subscription / bookings — the badge under the name and the filter row. */
+  readonly client?: LeadClientSummary | null;
+}
+
+/** What the list needs of the client state (`loadLeadClients`, without the booking rows). */
+export interface LeadClientSummary {
+  readonly kind: ClientKind | null;
+  readonly daysLeft: number | null;
+  readonly bookingTotal: number;
+  readonly bookingPending: number;
 }
 
 export interface LeadDetail {
@@ -177,6 +188,8 @@ export interface LeadQuery {
   mock?: string[];
   minPhotos?: number;
   minMaterial?: number;
+  /** ADR-XXXX: the filter row — próbázik / foglalás érkezett / előfizető / próba lejárt. */
+  client?: string;
   /** Minimum portal-match confidence (0–1). A lead with NO portal hit never passes:
    *  its match cell is -1, so it cannot reach any positive threshold. */
   minMatch?: number;
@@ -228,6 +241,8 @@ export interface LeadListResult {
   /** Every matching row — the header filters build their live option counts on this. */
   readonly matched: LeadListRow[];
   readonly counts: LeadCounts;
+  /** ADR-XXXX: leads per filter-row value, over the WHOLE active list (not the filtered rows). */
+  readonly clientCounts?: Readonly<Record<ClientFilter, number>>;
 }
 
 /**
@@ -304,6 +319,9 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
   }
   const CHANNEL_ORDER: readonly SentChannel[] = ["email", "sms", "mms"];
 
+  // ADR-XXXX: trial / subscription / booking counts per lead (badge + filter row).
+  const clients = await loadLeadClients();
+
   // Scrape-area labels: the list shows the human name of the area, not its id.
   const areaLabels = new Map(
     (await db.selectFrom("region").select(["id", "label"]).execute()).map((a) => [
@@ -345,6 +363,12 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       mockArtifact: mockByLead.get(l.id) ?? null,
       outreachSentAt: sentByLead.get(l.id) ?? null,
       outreachChannels: CHANNEL_ORDER.filter((c) => channelsByLead.get(l.id)?.has(c)),
+      client: (() => {
+        const c = clients.get(l.id);
+        return c
+          ? { kind: c.kind, daysLeft: c.trial?.daysLeft ?? null, bookingTotal: c.bookingTotal, bookingPending: c.bookingPending }
+          : null;
+      })(),
     };
   });
 
@@ -411,6 +435,14 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
   // Column filters — every one of them from the registry, so the predicate and the
   // label the view prints about it read the SAME column cell.
   let rows = applyLeadFilters(pool, q);
+  // ADR-XXXX: the filter row (one value at a time) — the same rule as the badge.
+  if (isClientFilter(q.client)) {
+    const f = q.client;
+    rows = rows.filter((r) => passesClientFilter(r.client, f));
+  }
+  const clientCounts = Object.fromEntries(
+    CLIENT_FILTERS.map((f) => [f, pool.filter((r) => passesClientFilter(r.client, f)).length]),
+  ) as Record<ClientFilter, number>;
 
   // Sort. ALWAYS explicit, even with nothing in the query: the default order is
   // "legutóbb felmért elöl", and while that lived only in the DB `order by`, the page
@@ -428,6 +460,7 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
   return {
     rows,
     matched: rows,
+    clientCounts,
     counts: {
       matching: rows.length,
       active: active.length,

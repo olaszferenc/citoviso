@@ -46,6 +46,17 @@ import {
 import { portalPhotoCount } from "../scraper/portalPhotos.js";
 import type { ContactCandidate, PortalListing, QualifiedLead } from "../scraper/types.js";
 import { formatMoney } from "../text/money.js";
+import {
+  BOOKING_SILENT_HOURS,
+  CLIENT_FILTERS,
+  retentionDay,
+  type BookingStatus,
+  type ClientFilter,
+  type ClientKind,
+  type LeadClientView,
+} from "./leadClient.js";
+import { isMealPlanId, mealPlanLabel } from "../tenant/meals.js";
+import { budapestHhmm, budapestIsoDay } from "../text/budapestTime.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -1934,7 +1945,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     ? listRows
         .map(
           (r) => `<tr>
-        ${td("name", r, "", `<a href="/lead/${esc(r.id)}">${esc(r.name)}</a>`)}
+        ${td("name", r, "", `<a href="/lead/${esc(r.id)}">${esc(r.name)}</a>${clientBadges(r, lang)}`)}
         ${td("surveyed", r, "small mut", surveyedCell(r.surveyedAt, lang))}
         ${td("region", r, "small mut", areaValueHtml(r, lang))}
         ${td("country", r, "small", r.country ? esc(r.country) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott országot.")}">–</span>`)}
@@ -1994,6 +2005,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
               title="${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}">?</button>
       ${headLinks}
     </div>
+    ${disqView ? "" : clientFilterRow(q, result.clientCounts, lang)}
     ${scrollHint}
     <form method="get" id="leadFilters">${hidden}
       <div class="tblwrap tblwrap--leads"><table class="con-leadtbl">${head}<tbody>${bodyRows}</tbody></table></div>
@@ -2003,6 +2015,37 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     ${leadLegend(lang)}
     ${LEAD_FILTER_JS}</div>`;
   return layout(title, body, { active: "/leads" });
+}
+
+/** ADR-XXXX (approved plan, list = C badge): the client state under the lead's name. */
+function clientBadges(r: LeadListRow, lang: string): string {
+  const c = r.client;
+  if (!c || (!c.kind && c.bookingTotal <= 0)) return "";
+  return `<div class="con-cbadges">${clientPill(c, lang)}${bookingPill(c, lang)}</div>`;
+}
+
+/**
+ * ADR-XXXX (approved plan, list = B filter row): Mind · Próbázik · Foglalás érkezett ·
+ * Előfizető · Próba lejárt, each with its count over the WHOLE active list. A chip opens
+ * that client view of the full list (`/leads?client=…`) — the column filters are left
+ * out on purpose: carried over, the injected default filter (no website + photos) would
+ * hide a trying lead that has a website, and the count on the chip would lie.
+ */
+function clientFilterRow(q: LeadQuery, counts: Readonly<Record<ClientFilter, number>> | undefined, lang: string): string {
+  const label: Record<ClientFilter, string> = {
+    trial: T(lang, "Próbázik"),
+    booking: T(lang, "Foglalás érkezett"),
+    paid: T(lang, "Előfizető"),
+    lapsed: T(lang, "Próba lejárt"),
+  };
+  const active = q.client ?? "";
+  const all = `<a class="con-chip${active ? "" : " on"}" href="${esc(active ? qs(q, { client: undefined }) : "/leads")}">${T(lang, "Mind")}</a>`;
+  const chips = CLIENT_FILTERS.map(
+    (f) =>
+      `<a class="con-chip${active === f ? " on" : ""}" data-cit-client-filter="${f}" href="/leads?client=${f}">` +
+      `${label[f]}<b>${counts?.[f] ?? 0}</b></a>`,
+  ).join("");
+  return `<nav class="con-chips" aria-label="${T(lang, "Ügyfél-szűrő")}">${all}${chips}</nav>`;
 }
 
 /**
@@ -5371,6 +5414,192 @@ function exactOf(iso: string | null | undefined): string {
   return iso ? iso.slice(0, 16).replace("T", " ") : "";
 }
 
+// ── PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (ADR-XXXX) ─────────────────────────────────────
+// Approved plan `assets/design-refs/console/proba-foglalas-lathato/` (owner 2026-10-14):
+// the list carries a badge under the name (C), the page a client card under the strip (B).
+// ONE vocabulary: both read `clientPill` / `bookingPill`, so the list and the page cannot
+// name the same state two ways (the lead-list / lead-page shared-dictionary rule).
+
+/** A timestamp on the Budapest wall clock: "2026. 10. 13. 18:00" (or "10. 13. 18:00"). */
+function budapestStamp(iso: string, withYear: boolean): string {
+  const d = new Date(iso);
+  const day = huDayText(budapestIsoDay(d));
+  return `${withYear ? day : day.slice(6)} ${budapestHhmm(d)}`;
+}
+
+/** Calendar-day dates in the console's compact form: "2026. 10. 27." */
+function huDayText(iso: string): string {
+  return `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
+}
+
+/** The client-state pill: próbázik (days left) · előfizető · próba lejárt. */
+export function clientPill(c: { kind: ClientKind | null; daysLeft: number | null } | null | undefined, lang: string): string {
+  if (!c?.kind) return "";
+  if (c.kind === "trial") {
+    const d = c.daysLeft ?? 0;
+    const text =
+      d <= 0 ? T(lang, "próbázik · ma lejár") : d === 1 ? T(lang, "próbázik · holnap lejár") : T(lang, "próbázik · még {n} nap", { n: d });
+    return `<span class="con-cpill ${d <= 3 ? "soon" : "trial"}" data-cit-client="trial"><i aria-hidden="true"></i>${text}</span>`;
+  }
+  if (c.kind === "paid") return `<span class="con-cpill paid" data-cit-client="paid"><i aria-hidden="true"></i>${T(lang, "előfizető")}</span>`;
+  return `<span class="con-cpill lapsed" data-cit-client="lapsed"><i aria-hidden="true"></i>${T(lang, "próba lejárt")}</span>`;
+}
+
+/** The booking pill: "N foglalás", or — when the owner owes an answer — "N foglalás válaszra vár". */
+export function bookingPill(c: { bookingTotal: number; bookingPending: number } | null | undefined, lang: string): string {
+  if (!c || c.bookingTotal <= 0) return "";
+  if (c.bookingPending > 0)
+    return `<span class="con-cpill wait" data-cit-bookings="${c.bookingTotal}">${T(lang, "{n} foglalás válaszra vár", { n: c.bookingPending })}</span>`;
+  return `<span class="con-cpill bk" data-cit-bookings="${c.bookingTotal}">${T(lang, "{n} foglalás", { n: c.bookingTotal })}</span>`;
+}
+
+export function bookingStatusLabel(status: BookingStatus, lang: string): string {
+  switch (status) {
+    case "pending":
+      return T(lang, "válaszra vár");
+    case "offered":
+      return T(lang, "ajánlat kiment");
+    case "accepted":
+      return T(lang, "visszaigazolva");
+    case "declined":
+      return T(lang, "elutasítva");
+    case "expired":
+      return T(lang, "lejárt");
+    case "cancelled":
+      return T(lang, "lemondva");
+  }
+}
+const BOOKING_PILL_CLASS: Record<BookingStatus, string> = {
+  pending: "wait", offered: "bk", accepted: "paid", declined: "lapsed", expired: "wait", cancelled: "lapsed",
+};
+
+function clientTitle(c: LeadClientView, lang: string): string {
+  if (c.kind === "trial" && c.trial) {
+    const d = c.trial.daysLeft;
+    if (d <= 0) return T(lang, "Próbázik — ma lejár");
+    if (d === 1) return T(lang, "Próbázik — holnap lejár");
+    return T(lang, "Próbázik — még {n} nap", { n: d });
+  }
+  if (c.kind === "paid") return T(lang, "Előfizető — élő oldal");
+  if (c.kind === "lapsed" && c.trial) {
+    const ago = -c.trial.daysLeft;
+    return ago <= 0 ? T(lang, "A próba lejárt") : T(lang, "A próba lejárt {n} napja", { n: ago });
+  }
+  return T(lang, "Foglalások az élő oldalon");
+}
+
+function bookingTable(c: LeadClientView, lang: string): string {
+  if (!c.bookings.length) return `<p class="mut small">${T(lang, "Még nem érkezett foglalási kérés az élő oldalon.")}</p>`;
+  const rows = c.bookings
+    .map((b) => {
+      const people =
+        b.children && b.children > 0
+          ? T(lang, "{n} fő (ebből {k} gyerek)", { n: b.guests, k: b.children })
+          : T(lang, "{n} fő", { n: b.guests });
+      const meal = b.mealPlan && isMealPlanId(b.mealPlan) ? mealPlanLabel(lang, b.mealPlan) : "–";
+      const money = b.total != null ? formatMoney(b.total, b.currency ?? "HUF", lang) : "–";
+      const age = b.status === "pending" ? T(lang, " · {n} órája", { n: b.ageHours }) : "";
+      return (
+        `<tr data-cit-booking="${esc(b.status)}">` +
+        `<td data-l="${T(lang, "Kód")}"><b>${esc(b.ref)}</b></td>` +
+        `<td data-l="${T(lang, "Időszak")}">${esc(huDayText(b.dateFrom))}–${esc(huDayText(b.dateTo).slice(6))} ${T(lang, "({n} éj)", { n: b.nights })}</td>` +
+        `<td data-l="${T(lang, "Vendég")}">${esc(b.guestName)} · ${people}</td>` +
+        `<td data-l="${T(lang, "Ellátás")}">${esc(meal)}</td>` +
+        `<td data-l="${T(lang, "Összeg")}">${esc(money)}</td>` +
+        `<td data-l="${T(lang, "Állapot")}"><span class="con-cpill ${BOOKING_PILL_CLASS[b.status]}">${bookingStatusLabel(b.status, lang)}${age}</span></td>` +
+        `<td data-l="${T(lang, "Beérkezett")}">${esc(budapestStamp(b.createdAt, false))}</td></tr>`
+      );
+    })
+    .join("");
+  const more = c.bookingTotal > c.bookings.length ? `<p class="mut small">${T(lang, "A legutóbbi {n} látszik, összesen {m}.", { n: c.bookings.length, m: c.bookingTotal })}</p>` : "";
+  return (
+    `<div class="con-client__tw"><table class="con-client__bk"><thead><tr><th>${T(lang, "Kód")}</th><th>${T(lang, "Időszak")}</th>` +
+    `<th>${T(lang, "Vendég")}</th><th>${T(lang, "Ellátás")}</th><th>${T(lang, "Összeg")}</th><th>${T(lang, "Állapot")}</th>` +
+    `<th>${T(lang, "Beérkezett")}</th></tr></thead><tbody>${rows}</tbody></table></div>${more}`
+  );
+}
+
+/** The "Érdemes felhívni" line: a request the owner has left unanswered for 24 h or more. */
+function silentBookingHint(c: LeadClientView, lang: string): string {
+  const b = c.bookings.find((x) => x.status === "pending" && x.ageHours >= BOOKING_SILENT_HOURS);
+  if (!b) return "";
+  const h = c.autoDeclineHours ?? 48;
+  const lapse =
+    h > 0
+      ? T(lang, "A kérés {h} óra után magától lejár, és a vendéget máshová küldjük.", { h })
+      : T(lang, "A kérés magától nem jár le — a vendég addig vár.");
+  return (
+    `<p class="con-client__hint warn" data-cit-silent-booking="${esc(b.ref)}">` +
+    `${T(lang, "A tulaj {n} órája nem válaszolt erre a kérésre: {ref}.", { n: b.ageHours, ref: b.ref })} ${lapse} ` +
+    `<b>${T(lang, "Érdemes felhívni.")}</b></p>`
+  );
+}
+
+/**
+ * The client card under the strip (approved plan, variant B): days left, the live site,
+ * the trial contact and the bookings. Rendered only when the lead has a trial or a tenant.
+ */
+export function clientCard(c: LeadClientView, lang: string): string {
+  const t = c.trial;
+  const soon = c.kind === "trial" && !!t && t.daysLeft <= 3;
+  const meter =
+    c.kind === "trial" && t
+      ? (() => {
+          const day = Math.min(t.lengthDays, Math.max(1, t.lengthDays - t.daysLeft));
+          const pct = t.lengthDays > 0 ? Math.round((day / t.lengthDays) * 100) : 100;
+          return (
+            `<div class="con-client__meter"><i style="width:${pct}%"></i></div>` +
+            `<div class="mut small">${T(lang, "{d}. nap a {n}-ből · {until}-ig", { d: day, n: t.lengthDays, until: huDayText(t.untilDay).replace(/\.$/, "") })}</div>`
+          );
+        })()
+      : "";
+  const live =
+    c.siteUrl && c.kind !== "lapsed"
+      ? `<a class="citui-btn citui-btn--primary con-client__live" href="${esc(c.siteUrl)}" target="_blank" rel="noopener">${T(lang, "Élő oldal")}${ic("external", 14)}</a>`
+      : "";
+  const kv: [string, string][] = [];
+  if (t && c.kind === "trial") {
+    kv.push([T(lang, "Indult"), esc(budapestStamp(t.startedAt, true))]);
+    kv.push([T(lang, "Lejár"), `${esc(huDayText(t.untilDay))} ${T(lang, "(még {n} nap)", { n: Math.max(0, t.daysLeft) })}`]);
+  }
+  if (c.siteUrl && c.kind !== "lapsed") {
+    kv.push([T(lang, "Élő oldal"), `<a href="${esc(c.siteUrl)}" target="_blank" rel="noopener">${esc(c.siteUrl.replace(/^https?:\/\//, ""))}</a>`]);
+  }
+  if (t && c.kind === "trial") {
+    kv.push([T(lang, "Folytatási kedvezmény"), t.discountPercent ? T(lang, "{p}% · a lejáratig", { p: t.discountPercent }) : T(lang, "nincs")]);
+    kv.push([T(lang, "Kapcsolattartó (a próba-űrlapról)"), esc([t.contactName, t.contactEmail, t.contactPhone].filter(Boolean).join(" · "))]);
+    kv.push([
+      T(lang, "Honnan indította"),
+      t.outreachAt
+        ? T(lang, "a minta-honlap próba-űrlapja (előtte megkeresés: {d})", { d: huDayText(t.outreachAt.slice(0, 10)).slice(6) })
+        : T(lang, "a minta-honlap próba-űrlapja (megkeresés nélkül)"),
+    ]);
+  }
+  if (c.kind === "paid") {
+    if (c.paidSince) kv.push([T(lang, "Előfizető"), T(lang, "{d} óta", { d: huDayText(c.paidSince) })]);
+    if (c.billingPeriod) kv.push([T(lang, "Fizetés"), c.billingPeriod === "annual" ? T(lang, "éves") : T(lang, "havi")]);
+  }
+  if (c.kind === "lapsed" && t) {
+    kv.push([T(lang, "Próba"), `${esc(huDayText(t.startedAt.slice(0, 10)))} – ${esc(huDayText(t.untilDay))}`]);
+    kv.push([
+      T(lang, "Állapot"),
+      t.status === "purged" ? T(lang, "lejárt, az adatok törölve") : T(lang, "lejárt, az oldal szünetel"),
+    ]);
+    if (t.status !== "purged") kv.push([T(lang, "Adatok törlése"), esc(huDayText(retentionDay(t.untilDay)))]);
+  }
+  const kvHtml = kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  return (
+    `<section class="con-client${soon ? " soon" : ""}${c.kind === "lapsed" ? " lapsed" : ""}" data-cit-client-card="${c.kind ?? "none"}">` +
+    `<div class="con-client__h"><div class="con-client__t"><h3>${clientTitle(c, lang)}</h3>${meter}</div>${live}</div>` +
+    `<div class="con-client__b"><dl class="con-client__kv">${kvHtml}</dl>` +
+    `<h4>${T(lang, "Foglalások")}${c.bookingTotal ? ` (${c.bookingTotal})` : ""}</h4>${bookingTable(c, lang)}${silentBookingHint(c, lang)}` +
+    (c.kind === "trial"
+      ? `<p class="con-client__hint">${T(lang, "Próbázó ügyfél: hideg megkeresés neki már nem megy.")}</p>`
+      : "") +
+    `</div></section>`
+  );
+}
+
 /**
  * MUNKAMENET-SÁV — jóváhagyott terv ① (`assets/design-refs/console/lead-page/`,
  * tulajdonosi döntés 2026-09-14, „B" változat).
@@ -5401,24 +5630,27 @@ export function workflowBand(
   lang: string,
   /** Elek 10-13 O-1: the lead already has a site (trial or paid) — no cold letter is "next". */
   customer = false,
+  /** ADR-XXXX: a trial runs — the Rendelés station points at the client card below. */
+  trialRunning = false,
 ): string {
   const approvedAt = approvedMock?.decisions.find((x) => x.decision === "approve")?.decidedAt ?? null;
   const sent = prospects.map((p) => p.sentAt).filter(Boolean).sort()[0] ?? null;
   const ordered = orders.map((o) => o.submittedAt).filter(Boolean).sort()[0] ?? null;
   const paid = payments.map((p) => p.paidAt).filter(Boolean).sort()[0] ?? null;
 
-  type Station = { key: string; label: string; at: string | null; running?: boolean; skip?: boolean };
+  type Station = { key: string; label: string; at: string | null; running?: boolean; skip?: boolean; trial?: boolean };
   const stations: Station[] = [
     { key: "collected", label: T(lang, "Begyűjtve"), at: d.surveyedAt },
     { key: "mock", label: T(lang, "Mock"), at: latestMock?.generatedAt ?? null, running: gen.running },
     { key: "approved", label: T(lang, "Jóváhagyva"), at: approvedAt },
     { key: "sent", label: T(lang, "Kiküldve"), at: sent, skip: customer && !sent },
-    { key: "ordered", label: T(lang, "Rendelés"), at: ordered },
+    { key: "ordered", label: T(lang, "Rendelés"), at: ordered, trial: trialRunning && !ordered },
     { key: "paid", label: T(lang, "Fizetve"), at: paid },
   ];
   // A SORON KÖVETKEZŐ = az első állomás, ami még nem történt meg. Ha minden megvan,
   // egyik sem jelöli magát „következő”-nek (nincs mit sürgetni).
-  const nextIdx = stations.findIndex((st) => !st.at && !st.running && !st.skip);
+  // A running trial has no "next" station: what follows is the owner's continuation, not ours.
+  const nextIdx = trialRunning ? -1 : stations.findIndex((st) => !st.at && !st.running && !st.skip);
 
   const cells = stations
     .map((st, i) => {
@@ -5435,6 +5667,13 @@ export function workflowBand(
           `<div class="con-wf__st done" data-station="${st.key}" data-state="done">` +
           `<div class="con-wf__k">${esc(st.label)}</div>` +
           `<div class="con-wf__v" title="${esc(exactOf(st.at))}">${esc(dayOf(st.at))}</div></div>`
+        );
+      }
+      if (st.trial) {
+        return (
+          `<div class="con-wf__st trial" data-station="${st.key}" data-state="trial">` +
+          `<div class="con-wf__k">${esc(st.label)}</div>` +
+          `<div class="con-wf__v">${T(lang, "próba fut — lent")}</div></div>`
         );
       }
       if (st.skip) {
@@ -5529,6 +5768,8 @@ export function leadPage(
   walk: WalkPageView = { lead: null, byArtifact: new Map() },
   /** lead-lastedit (A): the newest log entry per tab + who created each mock (migration 0089). */
   activity: LeadActivityView = EMPTY_ACTIVITY,
+  /** ADR-XXXX: trial / subscription / bookings of the lead's site — the client card under the strip. */
+  client: LeadClientView | null = null,
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -6126,7 +6367,7 @@ export function leadPage(
         </div>
       </div>
       ${runBand}
-      ${workflowBand(d, latestMock, approvedMock, prospects, orders, payments, gen, lang, conversion !== null || payments.some((p) => p.paidAt))}
+      ${workflowBand(d, latestMock, approvedMock, prospects, orders, payments, gen, lang, conversion !== null || payments.some((p) => p.paidAt), client?.kind === "trial")}
       ${trustLine(d, lang)}
       <!-- ⛔ GÉPI TÉNY-HORGONY: VAN-E jóváhagyott mock. A látható felirat az ÁLLAPOTOT
            mondja (mock: generated/approved), és csak eltéréskor teszi hozzá külön
@@ -7123,6 +7364,7 @@ function cpScript(prefix: string): string {
   const body = `
     <a class="con-back" href="/leads"><span aria-hidden="true">←</span> Vissza a leadekhez</a>
     ${heroPanel}
+    ${client?.kind || client?.bookingTotal ? clientCard(client, lang) : ""}
     ${flashBanner}
     ${leadTabs(tabs, activity)}
     ${galleryScript()}

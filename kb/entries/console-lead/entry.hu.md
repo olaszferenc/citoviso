@@ -28,6 +28,9 @@ hol tart ez a lead, és mi a következő lépés.
 - Kivétel: ha a lead már **ügyfél** (próbát indított, vagy saját oldala van, vagy fizetett), a
   **Kiküldve** állomás ezt írja: **„nem kell — már ügyfél (próba vagy saját oldal)”**, és nem lesz
   „ez a következő”. Neki hideg megkeresés nem mehet; a próbázót a próba-kampány keresi meg.
+- Ha a lead **próbázik**, a **Rendelés** állomás ezt írja: **„próba fut — lent”**, és egyik állomás sem
+  „ez a következő”: a folytatás (a fizetés) a tulaj lépése, nem a tiéd. A részletek a sáv alatti
+  ügyfél-kártyán állnak (lásd lent).
 - ⭐ Újragenerálás közben a **Mock** állomás vált futás-állapotra (eltelt idővel), a
   **Jóváhagyva** állomás viszont **a helyén marad a dátumával** — a megkeresés ugyanis attól
   mehet ki, és ez a tény nem tűnhet el csak azért, mert épp készül egy újabb mock.
@@ -35,6 +38,36 @@ hol tart ez a lead, és mi a következő lépés.
 A sáv alatt egy sor mondja meg az **adat-megbízhatóságot**, és mindig kimondja, mi következik
 belőle: ha nincs mért egyezés, akkor azt, hogy kiküldés előtt nézd át az Adatok fület.
 ⚠️ A **0,85** a képlet **alapértéke**, nem mért egyezés — a lead-listánál leírt szabály itt is áll.
+
+### Próba és foglalások — az ügyfél-kártya
+
+2026-10-14 óta, ha a leadnek **próbája** vagy **saját oldala** van, a sáv alatt egy kártya mondja
+meg, hol tart ügyfélként (Elek 10-13: addig a lap csak „jóváhagyva”-t írt, a próba és a foglalás
+sehol nem látszott).
+
+- A kártya címe az állapot: „Próbázik — még 12 nap” (3 napnál kevesebbnél sárga, az utolsó
+  két napon „holnap lejár” / „ma lejár”), **„Előfizető — élő oldal”**, vagy „A próba lejárt 6 napja”.
+  Próbánál egy csík mutatja, hányadik napnál tart.
+- Az **„Élő oldal”** gomb új lapon nyitja a szállás élő oldalát (lejárt próbánál nincs, mert az
+  oldal szünetel).
+- Próbánál a kártya kiírja, mikor **indult** és mikor **jár le**, a **„Folytatási kedvezmény”**
+  százalékát (ha még érvényes), a **„Kapcsolattartó (a próba-űrlapról)”** nevét, e-mailjét és
+  telefonját, és hogy előtte ment-e ki hozzá megkeresés. Lejárt próbánál azt is, mikor törlődnek
+  az adatok (a lejárat után 90 nappal).
+- A **„Foglalások”** táblázat az élő oldalra érkezett kéréseket mutatja, a legújabbal kezdve
+  (legfeljebb 10-et): kód, időszak, vendég, ellátás, összeg, állapot (**„válaszra vár”**,
+  **„ajánlat kiment”**, **„visszaigazolva”**, **„elutasítva”**, **„lejárt”**, **„lemondva”**),
+  és mikor érkezett. Telefonon a táblázat soronként kártyává áll.
+- ⚠️ Ha a tulaj egy kérésre **24 órája nem válaszolt**, sárga sor mondja meg, mennyi ideje vár a
+  vendég, és mikor jár le magától a kérés (a webhely beállítása szerint, alapból 48 óra után):
+  **„Érdemes felhívni.”** A próba alatt egy elveszett vendég a legrosszabb első élmény.
+
+**Értesítés.** Új próba indulásakor levél megy a **Beállítások** riasztási e-mail címére
+(„Citoviso: új ingyenes próba — …”), és SMS a riasztási telefonszámra (ékezet nélkül, egy szelet,
+a lejárattal és az élő oldal címével). Éjjel 22 és 07 óra között az SMS vár, és reggel 7-kor a
+többi éjszakai riasztással együtt, egy összesítőben érkezik; a levél ilyenkor is azonnal megy.
+Ha a tulaj egy foglalási kérésre 24 órája nem válaszolt, arról egy levél jön (SMS nem), kérésenként
+egyszer. SMS csak az éles rendszerből megy.
 
 ⚠️ **A „Régió” itt a GYŰJTÉS doboza, nem a szállás földrajza.** Az az azonosító, amivel a
 felderítés felvette a szereplőt — nyers alakban (például `balaton-north`). Ne olvasd

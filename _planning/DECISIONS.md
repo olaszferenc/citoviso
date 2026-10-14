@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-az-operator-latja-a-probat-es-a-foglalast.md) — Az operátor látja a próbát és a foglalást, és értesítést kap az új próbáról
 - [ADR-0385](decisions/0385-a-forgalmi-level-a-valos-idoszakot-nevezi-meg.md) — A forgalmi levél a valós időszakot nevezi meg, és csak a legalább 3 hete élő oldalnak megy
 - [ADR-0384](decisions/0384-a-gyermekkent-megadott-vendeg-ifa-mentes.md) — A gyermekként megadott vendég IFA-mentes; próbázónak és ügyfélnek nincs hideg megkeresés
 - [ADR-0383](decisions/0383-a-pirula-par-a-hos-kepvalto-jelzocsikjaira-sem.md) — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül

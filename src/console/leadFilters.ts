@@ -446,6 +446,29 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
       mark: "–",
       meaning: T(lang, "Nincs adat: a gyűjtés nem hozott értéket ebbe az oszlopba (nulla anyagnál is ez áll)."),
     },
+    // ADR-XXXX: the client badge under the name — what the operator never saw before (Elek O-2).
+    {
+      mark: T(lang, "próbázik · még {n} nap", { n: "N" }),
+      meaning: T(
+        lang,
+        "A Név alatt: a lead ingyenes próbát futtat, ennyi nap van hátra. 3 napnál kevesebbnél sárga. A lapján a próba és az élő oldal részletei.",
+      ),
+    },
+    {
+      mark: T(lang, "előfizető"),
+      meaning: T(lang, "A Név alatt: fizető ügyfél, élő oldallal."),
+    },
+    {
+      mark: T(lang, "próba lejárt"),
+      meaning: T(lang, "A Név alatt: a próba véget ért folytatás nélkül; az oldal szünetel, az adatok 90 nap után törlődnek."),
+    },
+    {
+      mark: T(lang, "{n} foglalás", { n: "N" }),
+      meaning: T(
+        lang,
+        "A Név alatt: ennyi foglalási kérés érkezett az élő oldalra. Ha sárgán „válaszra vár”, a tulaj még nem döntött róla — 24 óra után a ház levelet kap.",
+      ),
+    },
   ];
 }
 
@@ -528,6 +551,9 @@ export function applyLeadFilters(rows: LeadListRow[], q: LeadQuery): LeadListRow
 
 /** Is any column filter active in this query? (View switching / default injection.) */
 export function anyLeadFilter(q: LeadQuery): boolean {
+  // ADR-XXXX: the client filter row counts too — "Próbázik" must not be narrowed by the
+  // default (no-website + photos) filter, or a trying lead with a website would vanish.
+  if (q.client) return true;
   return LEAD_FILTERS.some((f) => filterValue(q, f) !== undefined);
 }
 

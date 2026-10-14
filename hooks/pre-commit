@@ -878,6 +878,14 @@ if [ -f scripts/stall-alert-check.mts ] && \
   echo "[pre-commit] stall-alert-check (megakadt külső folyamat → levél + szűrt SMS, egyszer)…"
   npx tsx scripts/stall-alert-check.mts >"$GATE_LOG" || gate_failed
 fi
+# PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (scripts/client-visibility-check.mts — Elek 10-13 O-2, terv assets/design-refs/console/proba-foglalas-lathato/):
+# a lista jelvénye + szűrő-sora és a lead-lap ügyfél-kártyája egy szabályból; új próba → levél + SMS,
+# 24 órája megválaszolatlan foglalás → levél, mindkettő egyszer. Saját scratch-DB, mock levél/SMS.
+if [ -f scripts/client-visibility-check.mts ] && \
+   changed_files | grep -qE '^src/console/(leadClient|clientNotify|houseAlert|data|leadFilters)\.ts$|^src/trial/start\.ts$|^src/booking/requests\.ts$|^scripts/(offer-followup|client-visibility-check)\.mts$'; then
+  echo "[pre-commit] client-visibility-check (próba + foglalás a konzolon, értesítés egyszer)…"
+  npx tsx scripts/client-visibility-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A bukott számla riaszt és újrakiadható — sosem kétszer. Mérve élesen 2026-09-30: a fizetett
 # 97 Ft-os rendelés számlája „Számlázz error 378”-cal elbukott, és csak egy failed sor maradt.
 # Mock számlázó (a Számlázz szamlaKulsoAzon-viselkedésével), saját fixtúra, a tick a saját id-kra szűkítve.

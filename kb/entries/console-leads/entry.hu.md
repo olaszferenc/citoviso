@@ -4,7 +4,7 @@ title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
 category: lead-path
 anchors: console.leads
-updated: 2026-10-05
+updated: 2026-10-14
 ---
 
 A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
@@ -174,6 +174,22 @@ Cellán belüli jelölések:
 - **Szín** a Fotók és a Kontakt oszlopban — zöld = jó (3+ fotó, illetve e-mail), sárga = gyenge,
   piros = nincs.
 - **–** bármelyik szám-oszlopban — nincs adat; az Anyag oszlopban a nulla is így jelenik meg.
+
+## Próbázók, előfizetők, foglalások
+
+2026-10-14 óta a lista megmutatja, melyik lead **ügyfél** már (Elek 10-13: addig a próbázó leadnél
+is csak „jóváhagyva” állt).
+
+- **A név alatt jelvény** áll: „próbázik · még N nap” (3 napnál kevesebbnél sárga),
+  **„előfizető”** vagy **„próba lejárt”**, és ha az élő oldalra foglalás érkezett, „N foglalás”.
+  Ha a tulaj még nem döntött egy kérésről, sárgán: „N foglalás válaszra vár”.
+- **A cím alatti szűrő-sor:** **„Mind”**, **„Próbázik”**, **„Foglalás érkezett”**, **„Előfizető”**,
+  **„Próba lejárt”**, mindegyik mellett a darabszámmal. A szám mindig az EGÉSZ aktív listára
+  vonatkozik, nem a most szűrt sorokra. Egy gombra koppintva a teljes aktív lista azon része jön
+  be. Az oszlop-szűrők és az alapszűrés ilyenkor nem érvényesek, mert egy saját honlappal
+  rendelkező próbázó is ügyfél, és az alapszűrés kiejtené. A **„Mind”** visszavált.
+
+A részleteket (napok, élő oldal, foglalások táblázata) a lead-lapon az ügyfél-kártya mutatja.
 
 ## Nincs lapozás
 

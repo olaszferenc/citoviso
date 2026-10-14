@@ -126,6 +126,7 @@ import { siteShotPath } from "../payment/siteShot.js";
 import { renderTenantSiteForPlanLink, rerenderTenantSnapshot, tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import { alertWebhookFailure } from "./houseAlert.js";
+import { isClientFilter, loadLeadClients } from "./leadClient.js";
 import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
 import { resolvePayEntry } from "../payment/payEntry.js";
 import {
@@ -2122,6 +2123,8 @@ async function handle(
       qualification: sp.getAll("qualification").filter(Boolean),
       contact: sp.getAll("contact").filter(Boolean),
       mock: sp.getAll("mock").filter(Boolean),
+      // ADR-XXXX: the filter row — an unknown value is dropped, not echoed back.
+      client: isClientFilter(sp.get("client")) ? (sp.get("client") as string) : undefined,
       minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
       minMaterial: sp.get("minMaterial") ? Number(sp.get("minMaterial")) : undefined,
       minMatch: sp.get("minMatch") ? Number(sp.get("minMatch")) : undefined,
@@ -2610,6 +2613,8 @@ async function handle(
         await walkReadinessView(d.artifacts),
         // lead-lastedit (A): who touched each tab last, and who created each mock.
         await getLeadActivity(leadMatch[1]!),
+        // ADR-XXXX: trial / subscription / bookings → the client card under the strip.
+        (await loadLeadClients({ leadIds: [leadMatch[1]!], withBookingList: true })).get(leadMatch[1]!) ?? null,
       ),
     );
   }

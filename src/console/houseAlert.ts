@@ -61,6 +61,9 @@ export interface HouseAlert {
   readonly sms?: boolean;
   /** The SMS repeat-filter key; defaults to the tag (one SMS per tag per window). */
   readonly smsKey?: string;
+  /** ADR-XXXX: the daytime SMS text when the alert is news, not a fault (a new trial) —
+   *  folded to GSM-7 here. The night digest still lists the subject. Default: alertSmsText. */
+  readonly smsText?: string;
 }
 
 /** The same SMS key goes out at most once in this many hours. */
@@ -129,11 +132,21 @@ export function alertSmsText(subject: string, held: number): string {
   return body + tail;
 }
 
+/** A caller-worded SMS (`HouseAlert.smsText`): folded, the test mark kept, held alerts counted, ≤ 2 segments. */
+export function ownSmsText(subject: string, text: string, held: number): string {
+  const head = subject.startsWith("[TESZT] ") ? "[TESZT] " : "";
+  const tail = held > 0 ? ` (+${held} tovabbi riasztas csak e-mailben)` : "";
+  let body = asciiFold(`${head}${text}`);
+  const max = 300 - tail.length;
+  if (body.length > max) body = body.slice(0, max - 3) + "...";
+  return body + tail;
+}
+
 /**
  * The SMS leg: the noise filter decides under an advisory lock (two processes alerting at
  * once must not both pass the cap), writes its verdict, THEN sends. Never throws.
  */
-async function smsHouse(tag: string, key: string, subject: string): Promise<boolean> {
+async function smsHouse(tag: string, key: string, subject: string, text?: string): Promise<boolean> {
   try {
     if (!deps.recipientPhone || !deps.sendSms) return false;
     // ⛔ LIVE HOST ONLY. Off the live host the mail still goes ("[TESZT] ", ADR-0279), the
@@ -204,7 +217,10 @@ async function smsHouse(tag: string, key: string, subject: string): Promise<bool
       );
       return false;
     }
-    const ok = await deps.sendSms({ to: phone, text: alertSmsText(subject, verdict.held) });
+    const ok = await deps.sendSms({
+      to: phone,
+      text: text ? ownSmsText(subject, text, verdict.held) : alertSmsText(subject, verdict.held),
+    });
     if (!ok) {
       await db.updateTable("house_alert_sms").set({ status: "failed" }).where("id", "=", verdict.id).execute();
       console.error(`[house-alert:${tag}] a riasztó SMS NEM ment ki → ${phone}: ${subject}`);
@@ -320,7 +336,7 @@ export async function alertHouse(input: HouseAlert): Promise<boolean> {
   }
   let smsed = false;
   if (input.sms) {
-    smsed = await smsHouse(input.tag, input.smsKey ?? input.tag, subject);
+    smsed = await smsHouse(input.tag, input.smsKey ?? input.tag, subject, input.smsText);
   }
   if (mailTried && !mailed) {
     // The mail server (or its key) is down: one SMS says so, under ONE key — a burst of

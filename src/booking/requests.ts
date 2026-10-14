@@ -278,7 +278,7 @@ function headcount(req: { guests: number; children: number | null }, lang: strin
     : T(lang, "{n} fő", { n: req.guests });
 }
 
-async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
+export async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
   const row = await db
     .selectFrom("site_module_config")
     .select(["config", "version"])

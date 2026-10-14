@@ -1,0 +1,504 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Próba és foglalás az operátornak (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16324f; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-accent-soft:#e3f6fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-ink:#1d7a4b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-ink:#8a5a00; --citui-warn-soft:#fff7e6;
+    --citui-bad:#e5484d; --citui-bad-ink:#b3261e;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  a{color:var(--citui-link-ink,#0b7894)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button,.sub button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:1100px;margin:12px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .sub button{border-color:var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink)}
+  .sub button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:13px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:10px auto 30px;container-type:inline-size;width:100%;max-width:1100px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0}
+  .con{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:18px;overflow:hidden;min-height:560px}
+  .nav{display:flex;align-items:center;gap:6px;padding:12px 16px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white);overflow-x:auto}
+  .nav .lg{font:700 1.05rem/1 var(--citui-font-display);margin-right:10px}
+  .nav span{padding:7px 11px;border-radius:10px;font:600 .82rem/1 var(--citui-font-text);color:#c9d6e3;white-space:nowrap;cursor:pointer}
+  .nav span.on{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .body{padding:14px} @container (min-width:640px){ .body{padding:20px 24px} }
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;box-shadow:var(--citui-shadow-sm);padding:16px 18px;margin-bottom:14px}
+  .card h3{margin:0 0 8px;font:700 1.05rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .muted{color:var(--citui-muted);font-size:.86rem}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:8px 14px;font:700 .84rem/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink);text-decoration:none}
+  .btn.pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  /* pills — one vocabulary for list and page */
+  .pl{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:var(--citui-radius-pill);font:700 .74rem/1.15 var(--citui-font-text);white-space:nowrap;border:1px solid transparent}
+  .pl i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+  .pl.trial{background:var(--citui-accent-soft);color:var(--citui-navy-900);border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+  .pl.trial i{background:var(--citui-cyan-500)}
+  .pl.soon{background:var(--citui-warn-soft);color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 45%,transparent)}
+  .pl.paid{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+  .pl.lapsed{background:var(--citui-surface-2);color:var(--citui-muted);border-color:var(--citui-line-strong)}
+  .pl.mock{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+  .pl.sent{background:var(--citui-surface-2);color:var(--citui-navy-900)}
+  .pl.bk{background:var(--citui-white);color:var(--citui-navy-900);border-color:var(--citui-line-strong)}
+  .pl.wait{background:var(--citui-warn-soft);color:var(--citui-warn-ink)}
+  .pl.none{color:var(--citui-muted);background:transparent;padding-left:0}
+  /* list */
+  .lhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:10px}
+  .lhead h2{margin:0;font:700 1.2rem/1.2 var(--citui-font-display);color:var(--citui-navy-900)}
+  .lhead .sp{flex:1}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px;margin-bottom:10px}
+  .chip{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:7px 12px;font:600 .8rem/1 var(--citui-font-text);cursor:pointer;white-space:nowrap;color:var(--citui-ink)}
+  .chip.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .chip b{font-weight:800;margin-left:3px}
+  select.flt{border:1px solid var(--citui-line-strong);border-radius:10px;padding:7px 10px;font:600 .82rem var(--citui-font-text);background:var(--citui-white);color:var(--citui-ink)}
+  .tw{overflow-x:auto;border:1px solid var(--citui-line);border-radius:12px;background:var(--citui-white)}
+  table.ll{border-collapse:separate;border-spacing:0;width:100%;font-size:.85rem}
+  table.ll th{position:sticky;top:0;background:var(--citui-surface-2);text-align:left;font:700 .68rem/1 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);padding:11px 10px;white-space:nowrap;border-bottom:1px solid var(--citui-line)}
+  table.ll td{padding:10px;border-bottom:1px solid var(--citui-line);vertical-align:middle;white-space:nowrap}
+  table.ll td:first-child,table.ll th:first-child{position:sticky;left:0;background:var(--citui-white);z-index:1;min-width:150px;max-width:180px;white-space:normal}
+  table.ll th:first-child{background:var(--citui-surface-2)}
+  table.ll tr.hl td{background:color-mix(in srgb,var(--citui-cyan-500) 6%,var(--citui-white))}
+  .nm{color:#0b7894;font-weight:600;cursor:pointer;text-decoration:none}
+  .nm2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .cell2{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+  .tiny{font-size:.74rem;color:var(--citui-muted)}
+  .foot{font-size:.8rem;color:var(--citui-muted);margin-top:8px}
+  /* lead page */
+  .back{font-size:.85rem;color:#0b7894;cursor:pointer;display:inline-block;margin-bottom:8px}
+  .lh{border-radius:16px;overflow:hidden;border:1px solid var(--citui-line);background:var(--citui-white)}
+  .lh-top{padding:14px 18px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white)}
+  .lh-top h1{margin:0;font:700 1.3rem/1.25 var(--citui-font-display)} .lh-top .s{font-size:.85rem;color:#c9d6e3}
+  .lh-top .bd{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .lh-top .bd .pl.trial{background:var(--citui-cyan-500);color:var(--citui-navy-950);border-color:transparent}
+  .lh-top .bd .pl.trial i{background:var(--citui-navy-950)}
+  .lh-top .bd .pl.bk{background:rgba(255,255,255,.12);color:var(--citui-white);border-color:rgba(255,255,255,.3)}
+  .lh-top .bd .pl.soon{background:var(--citui-warn);color:var(--citui-navy-950)}
+  .strip{display:grid;grid-template-columns:repeat(2,1fr)}
+  @container (min-width:640px){ .strip{grid-template-columns:repeat(6,1fr)} }
+  .st{padding:10px 12px;border-top:1px solid var(--citui-line);border-right:1px solid var(--citui-line);background:var(--citui-white);min-width:0}
+  .st .k{font:700 .66rem/1.3 var(--citui-font-text);letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted)}
+  .st .v{font:700 .86rem/1.35 var(--citui-font-text);color:var(--citui-muted)}
+  .st.done{background:var(--citui-ok-soft)} .st.done .v{color:var(--citui-ok-ink)}
+  .st.trial{background:var(--citui-accent-soft);box-shadow:inset 0 -3px 0 var(--citui-cyan-500);cursor:pointer} .st.trial .v{color:var(--citui-navy-900)}
+  .st.soon{background:var(--citui-warn-soft);box-shadow:inset 0 -3px 0 var(--citui-warn);cursor:pointer} .st.soon .v{color:var(--citui-warn-ink)}
+  .st.skip .v{color:var(--citui-muted);font-weight:600}
+  .st .v small{display:block;font-weight:600;font-size:.76rem;color:var(--citui-muted)}
+  .st .open{font-size:.72rem;color:#0b7894;font-weight:700}
+  .meter{height:6px;border-radius:9px;background:var(--citui-line);overflow:hidden;margin-top:5px}
+  .meter i{display:block;height:100%;background:var(--citui-cyan-500)}
+  .meter.soon i{background:var(--citui-warn)}
+  .drawer{display:none;padding:14px 18px;border-top:1px solid var(--citui-line);background:var(--citui-surface)}
+  .drawer.on{display:block}
+  .tabs{display:flex;gap:2px;overflow-x:auto;margin:14px 0 12px;border-bottom:1px solid var(--citui-line)}
+  .tabs span{padding:10px 12px;font:600 .84rem/1 var(--citui-font-text);color:var(--citui-muted);white-space:nowrap;cursor:pointer;border-bottom:2px solid transparent}
+  .tabs span.on{color:var(--citui-navy-900);border-color:var(--citui-cyan-500)}
+  .tabs span b{display:inline-block;margin-left:5px;padding:2px 6px;border-radius:9px;background:var(--citui-cyan-500);color:var(--citui-navy-950);font-size:.7rem}
+  .kv{display:grid;grid-template-columns:1fr;gap:10px 18px;margin:10px 0}
+  @container (min-width:640px){ .kv{grid-template-columns:repeat(4,1fr)} }
+  .kv .k{font:700 .68rem/1.3 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+  .kv .v{font-size:.9rem;font-weight:600;word-break:break-word}
+  .client{border-radius:16px;border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent);background:var(--citui-white);overflow:hidden;margin-top:14px}
+  .client.soon{border-color:color-mix(in srgb,var(--citui-warn) 50%,transparent)}
+  .client-h{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:14px 18px;background:var(--citui-accent-soft)}
+  .client.soon .client-h{background:var(--citui-warn-soft)}
+  .client-h .t{flex:1 1 260px}
+  .client-h h3{margin:0;font:700 1.1rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .client-h .meter{width:100%;max-width:280px}
+  .client-b{padding:14px 18px}
+  table.bk{width:100%;border-collapse:collapse;font-size:.86rem}
+  table.bk th{text-align:left;font:700 .68rem/1 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);padding:8px 6px;border-bottom:1px solid var(--citui-line)}
+  table.bk td{padding:9px 6px;border-bottom:1px solid var(--citui-line);vertical-align:top}
+  @container (max-width:560px){
+    table.bk thead{display:none}
+    table.bk tr{display:block;padding:10px 0;border-bottom:1px solid var(--citui-line)}
+    table.bk td{display:block;border:0;padding:2px 0}
+    table.bk td[data-l]::before{content:attr(data-l) ": ";color:var(--citui-muted);font-size:.78rem}
+  }
+  .hint{margin-top:10px;padding:9px 12px;border-radius:12px;background:var(--citui-warn-soft);font-size:.84rem;color:var(--citui-warn-ink)}
+  .hint.ok{background:var(--citui-surface-2);color:var(--citui-navy-900)}
+  /* dashboard */
+  .dash{display:grid;grid-template-columns:1fr;gap:14px} @container (min-width:760px){ .dash{grid-template-columns:1.3fr 1fr} }
+  .dl{list-style:none;margin:0;padding:0}
+  .dl li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--citui-line)}
+  .dl li:first-child{border-top:0} .dl .n{flex:1 1 180px;font-weight:600}
+  /* notification view */
+  .ngrid{display:grid;grid-template-columns:1fr;gap:14px} @container (min-width:760px){ .ngrid{grid-template-columns:300px 1fr} }
+  .opt{display:block;padding:10px 12px;border:1px solid var(--citui-line-strong);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--citui-white);font-size:.88rem}
+  .opt.on{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+  .opt b{display:block;color:var(--citui-navy-900)}
+  .opt input{margin-right:6px}
+  .mail{border:1px solid var(--citui-line);border-radius:12px;background:var(--citui-white);overflow:hidden}
+  .mail .mh{padding:10px 14px;background:var(--citui-surface-2);font-size:.82rem;border-bottom:1px solid var(--citui-line)}
+  .mail .mh b{color:var(--citui-navy-900)}
+  .mail pre{margin:0;padding:14px;font:13.5px/1.55 var(--citui-font-text);white-space:pre-wrap;word-break:break-word}
+  .phone{max-width:330px;border-radius:22px;background:var(--citui-navy-950);padding:14px;margin-top:12px}
+  .phone .from{color:#9fb3c8;font-size:.75rem;margin-bottom:6px}
+  .bub{background:#e9edf1;color:#111;border-radius:16px 16px 16px 4px;padding:10px 12px;font-size:.88rem;line-height:1.4;word-break:break-word}
+  .bub + .when{color:#9fb3c8;font-size:.72rem;margin-top:6px}
+  .when-box{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--citui-surface-2);font-size:.86rem}
+  .when-box b{color:var(--citui-navy-900)}
+  .seg{font-size:.76rem;color:var(--citui-muted);margin-top:4px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-white);padding:10px 16px;border-radius:12px;font-size:.88rem;display:none;z-index:99;max-width:92vw}
+  .toast.on{display:block}
+  .hide{display:none!important}
+</style></head><body>
+<div class="bar">
+  <b>Próba és foglalás az operátornak</b>
+  <button data-var="A" class="on">A · a meglévő sávban</button>
+  <button data-var="B">B · külön ügyfél-kártya</button>
+  <button data-var="C">C · jelvény + Irányítópult</button>
+  <button data-var="N">Értesítés új próbáról</button>
+  <span class="sp"></span>
+  <button data-size="m">Mobil 390px</button>
+  <button data-size="d" class="on">Asztali</button>
+</div>
+<div class="sub" id="sub"></div>
+<div class="note" id="note"></div>
+<div class="stage" id="stage"><div class="con" id="con"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Sample data. Keresztes = REAL (Elek live test, 2026-10-13). Other rows: lead names from dev, client states are illustrative.
+const TODAY = new Date("2026-10-14T10:00:00+02:00");
+const LEADS = [
+  { id:"kereszt", name:"[TESZT] Keresztes Apartmanház", city:"Balatonlelle", qual:"nincs honlap", mock:"jóváhagyva", sent:null,
+    client:{ kind:"trial", started:"2026-10-13 18:00", until:"2026-10-27", len:14, slug:"teszt-keresztes-apartmanhaz", discount:25,
+      contact:"Teszt Elek · elek@citoviso.com · +36 30 516 1631", via:"„14 nap ingyen” a minta-honlapon" },
+    bookings:[ { code:"FG-8E70E6", from:"nov. 1.", to:"nov. 4.", nights:3, guest:"Vendég Elek", people:"2 felnőtt + 1 gyerek", meal:"Reggeli", amount:"90 500 Ft", status:"accepted", at:"okt. 13. 18:14", decided:"18:19" } ] },
+  { id:"myrna", name:"Myrna Haus", city:"Balatonfüred", qual:"nincs honlap", mock:"jóváhagyva", sent:"10-06",
+    client:{ kind:"trial", started:"2026-10-01 11:20", until:"2026-10-15", len:14, slug:"myrna-haus", discount:25,
+      contact:"Myrna (tulaj) · e-mail + telefon megadva", via:"a hideg levél linkje (10-06)" },
+    bookings:[ { code:"FG-31C0A2", from:"okt. 24.", to:"okt. 26.", nights:2, guest:"K. Anna", people:"2 felnőtt", meal:"csak szállás", amount:"48 000 Ft", status:"pending", at:"okt. 13. 08:02", ageH:26 } ] },
+  { id:"lido", name:"Lidó Wellness és Bor Villa", city:"Balatonalmádi", qual:"nincs honlap", mock:"jóváhagyva", sent:"09-20",
+    client:{ kind:"paid", since:"2026-09-27", slug:"lido-wellness-es-bor-villa", plan:"Alap csomag" },
+    bookings:[
+      { code:"FG-A11B02", from:"okt. 18.", to:"okt. 20.", nights:2, guest:"T. Gábor", people:"2 felnőtt", meal:"Félpanzió", amount:"62 000 Ft", status:"accepted", at:"okt. 9. 21:40", decided:"okt. 10." },
+      { code:"FG-77D0E1", from:"okt. 11.", to:"okt. 12.", nights:1, guest:"S. Réka", people:"2 felnőtt", meal:"csak szállás", amount:"26 000 Ft", status:"accepted", at:"okt. 2. 10:05", decided:"okt. 2." },
+      { code:"FG-0C4F19", from:"szept. 30.", to:"okt. 2.", nights:2, guest:"B. Márk", people:"3 felnőtt", meal:"Reggeli", amount:"64 000 Ft", status:"cancelled", at:"szept. 28. 14:12", decided:"szept. 29." },
+      { code:"FG-5E2A90", from:"szept. 28.", to:"szept. 29.", nights:1, guest:"H. Dóra", people:"2 felnőtt", meal:"csak szállás", amount:"26 000 Ft", status:"accepted", at:"szept. 27. 19:30", decided:"szept. 27." } ] },
+  { id:"huszar", name:"Három Huszár Apartments", city:"Keszthely", qual:"elavult", mock:"jóváhagyva", sent:"09-22",
+    client:{ kind:"lapsed", started:"2026-09-24", until:"2026-10-08", len:14, slug:"harom-huszar-apartments", purgeOn:"2027-01-06" },
+    bookings:[ { code:"FG-9B1D33", from:"okt. 3.", to:"okt. 5.", nights:2, guest:"P. Zsolt", people:"2 felnőtt", meal:"csak szállás", amount:"40 000 Ft", status:"expired", at:"szept. 28. 16:45" } ] },
+  { id:"dencs", name:"Dencs Apartmanház", city:"Gyenesdiás", qual:"nincs honlap", mock:"jóváhagyva", sent:"10-08", client:null, bookings:[] },
+  { id:"boroka", name:"Boróka ház", city:"Siófok", qual:"nincs honlap", mock:"jóváhagyva", sent:null, client:null, bookings:[] },
+  { id:"elek", name:"ELEK-TESZT Vendégház", city:"Balatonboglár", qual:"nincs honlap", mock:"legenerálva", sent:null, client:null, bookings:[] },
+];
+const BK_LABEL = { pending:"válaszra vár", offered:"ajánlat kiment", accepted:"visszaigazolva", declined:"elutasítva", expired:"lejárt — nem válaszolt", cancelled:"lemondva" };
+const BK_CLASS = { pending:"wait", offered:"sent", accepted:"paid", declined:"lapsed", expired:"wait", cancelled:"lapsed" };
+
+const S = { v:"A", size:"d", view:"list", lead:"kereszt", filter:"all", drawer:null, tab:"adatok",
+  notif:{ mode:"E2", at:"day", pend:true } };
+
+function daysLeft(c){ // calendar days from today to the last trial day (0 = today is the last day)
+  const end = new Date(c.until+"T00:00:00+02:00"), t0 = new Date("2026-10-14T00:00:00+02:00"); return Math.max(0, Math.round((end-t0)/864e5)); }
+function lapsedDays(c){ const end = new Date(c.until+"T23:59:59+02:00"); return Math.max(1, Math.floor((TODAY-end)/864e5)+1); }
+function huDate(iso){ const [y,m,d]=iso.split("-"); const mn=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."][+m-1]; return `${y}. ${mn} ${+d}.`; }
+function huIg(iso){ return huDate(iso).replace(/\.$/,"")+"-ig"; }
+function siteUrl(c){ return `https://${c.slug}.citoviso.com`; }
+function esc(s){ return String(s).replace(/[&<>"]/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
+
+// One vocabulary: client-state pill + booking pill (used by list AND page in every variant).
+function clientPill(l, short){
+  const c=l.client; if(!c) return "";
+  if(c.kind==="trial"){ const d=daysLeft(c); const cls=d<=3?"soon":"trial";
+    return `<span class="pl ${cls}"><i></i>próbázik · ${d===0?"ma jár le":d===1?"holnap lejár":"még "+d+" nap"}</span>`; }
+  if(c.kind==="paid") return `<span class="pl paid"><i></i>előfizető</span>`;
+  if(c.kind==="lapsed") return `<span class="pl lapsed"><i></i>próba lejárt${short?"":" · "+lapsedDays(c)+" napja"}</span>`;
+  return "";
+}
+function bookingPill(l){
+  const b=l.bookings; if(!b.length) return "";
+  const pend=b.filter(x=>x.status==="pending");
+  if(pend.length) return `<span class="pl wait">${pend.length} foglalás válaszra vár</span>`;
+  const n=b.length;
+  return `<span class="pl bk">${n} foglalás</span>`;
+}
+function matches(l){
+  const f=S.filter, c=l.client;
+  if(f==="all") return true;
+  if(f==="trial") return c&&c.kind==="trial";
+  if(f==="booking") return l.bookings.length>0;
+  if(f==="paid") return c&&c.kind==="paid";
+  if(f==="lapsed") return c&&c.kind==="lapsed";
+  return true;
+}
+function counts(){ const k=f=>{const o=S.filter;S.filter=f;const n=LEADS.filter(matches).length;S.filter=o;return n;};
+  return {trial:k("trial"),booking:k("booking"),paid:k("paid"),lapsed:k("lapsed")}; }
+
+function navBar(active){
+  return `<div class="nav"><span class="lg">Citoviso</span>${["Irányítópult","CRM","Pénzügy","Riport","Beállítások"].map(n=>`<span data-nav="${n}" class="${n===active?"on":""}">${n}</span>`).join("")}</div>`;
+}
+
+/* ---------------- LIST ---------------- */
+function mockCell(l){ // existing column; A puts the client state INTO it
+  if(S.v==="A" && l.client){
+    return `<div class="cell2">${clientPill(l)}${l.bookings.length?bookingPill(l):`<span class="tiny">mock: ${l.mock}</span>`}</div>`;
+  }
+  return `<div class="cell2"><span class="pl ${l.sent?"sent":"mock"}">${l.sent?"kiküldve "+l.sent:l.mock}</span></div>`;
+}
+function listView(){
+  const rows=LEADS.filter(matches);
+  const c=counts();
+  let filterUi="";
+  if(S.v==="A"){
+    filterUi=`<select class="flt" id="flt" aria-label="Mock-szűrő">
+      <option value="all">Mock: mind</option>
+      <option value="trial">Mock: próbázik (${c.trial})</option>
+      <option value="booking">Mock: foglalás érkezett (${c.booking})</option>
+      <option value="paid">Mock: előfizető (${c.paid})</option>
+      <option value="lapsed">Mock: próba lejárt (${c.lapsed})</option></select>`;
+  }
+  let chips="";
+  if(S.v==="B"){
+    chips=`<div class="chips">${[["all","Mind",""],["trial","Próbázik",c.trial],["booking","Foglalás érkezett",c.booking],["paid","Előfizető",c.paid],["lapsed","Próba lejárt",c.lapsed]]
+      .map(([k,t,n])=>`<button class="chip ${S.filter===k?"on":""}" data-f="${k}">${t}${n!==""?`<b>${n}</b>`:""}</button>`).join("")}</div>`;
+  }
+  if(S.v==="C"){
+    filterUi=`<select class="flt" id="flt" aria-label="Ügyfél-szűrő">
+      <option value="all">Ügyfél: mind</option>
+      <option value="trial">próbázik (${c.trial})</option>
+      <option value="booking">foglalás érkezett (${c.booking})</option>
+      <option value="paid">előfizető (${c.paid})</option>
+      <option value="lapsed">próba lejárt (${c.lapsed})</option></select>`;
+  }
+  const head = S.v==="B"
+    ? `<th>Név</th><th>Ügyfél</th><th>Foglalás</th><th>Város</th><th>Kvalifikáció</th><th>Mock</th>`
+    : `<th>Név</th><th>Város</th><th>Kvalifikáció</th><th>Mock</th><th>Kontakt</th>`;
+  const body = rows.map(l=>{
+    const name = `<a class="nm" data-lead="${l.id}">${esc(l.name)}</a>` +
+      (S.v==="C" && (l.client||l.bookings.length) ? `<div class="nm2">${clientPill(l,true)}${bookingPill(l)}</div>` : "");
+    const hl = l.client&&l.client.kind==="trial" ? "hl" : "";
+    if(S.v==="B"){
+      const last=l.bookings[0];
+      const bk = l.bookings.length ? `<div class="cell2">${bookingPill(l)}<span class="tiny">utolsó: ${last.from}–${last.to} · ${BK_LABEL[last.status]}</span></div>` : `<span class="pl none">—</span>`;
+      const cl = l.client ? `<div class="cell2">${clientPill(l)}${l.client.kind==="trial"?`<span class="tiny">${huIg(l.client.until)}</span>`:""}</div>` : `<span class="pl none">—</span>`;
+      return `<tr class="${hl}"><td>${name}</td><td>${cl}</td><td>${bk}</td><td>${l.city}</td><td>${l.qual}</td><td><span class="pl ${l.sent?"sent":"mock"}">${l.sent?"kiküldve "+l.sent:l.mock}</span></td></tr>`;
+    }
+    return `<tr class="${hl}"><td>${name}</td><td>${l.city}</td><td>${l.qual}</td><td>${mockCell(l)}</td><td>e-mail</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="muted">Ehhez a szűrőhöz nincs lead.</td></tr>`;
+  return `${navBar("CRM")}<div class="body">
+    <div class="lhead"><h2>Aktív leadek</h2><span class="sp"></span>${filterUi}</div>
+    ${chips}
+    <div class="tw"><table class="ll"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <div class="foot">${rows.length} sor a ${LEADS.length} mintából. A Keresztes-sor valós (Elek éles teszt, 10-13), a többi sor ügyfél-állapota példa.</div>
+  </div>`;
+}
+
+/* ---------------- LEAD PAGE ---------------- */
+function bookingTable(l){
+  if(!l.bookings.length) return `<p class="muted">Még nem érkezett foglalási kérés az élő oldalon.</p>`;
+  return `<table class="bk"><thead><tr><th>Kód</th><th>Időszak</th><th>Vendég</th><th>Ellátás</th><th>Összeg</th><th>Állapot</th><th>Beérkezett</th></tr></thead><tbody>${
+    l.bookings.map(b=>`<tr><td data-l="Kód"><b>${b.code}</b></td><td data-l="Időszak">${b.from}–${b.to} (${b.nights} éj)</td><td data-l="Vendég">${esc(b.guest)} · ${b.people}</td><td data-l="Ellátás">${b.meal}</td><td data-l="Összeg">${b.amount}</td>
+      <td data-l="Állapot"><span class="pl ${BK_CLASS[b.status]}">${BK_LABEL[b.status]}${b.status==="pending"&&b.ageH?` · ${b.ageH} órája`:""}</span></td><td data-l="Beérkezett">${b.at}</td></tr>`).join("")
+  }</tbody></table>${pendingHint(l)}`;
+}
+function pendingHint(l){
+  const p=l.bookings.find(b=>b.status==="pending"&&b.ageH>=24);
+  if(!p) return "";
+  return `<div class="hint">A tulaj ${p.ageH} órája nem válaszolt erre a kérésre. A kérés 48 óra után magától lejár (a tulaj beállítása, alapból 48 óra), és a vendéget máshová küldjük. Érdemes felhívni.</div>`;
+}
+function trialFacts(l){
+  const c=l.client;
+  if(c.kind==="trial") return `<div class="kv">
+      <div><div class="k">Indult</div><div class="v">${huDate(c.started.slice(0,10))} ${c.started.slice(11)}</div></div>
+      <div><div class="k">Lejár</div><div class="v">${huDate(c.until)} (még ${daysLeft(c)} nap)</div></div>
+      <div><div class="k">Élő oldal</div><div class="v"><a href="#" data-live="${c.slug}">${c.slug}.citoviso.com ↗</a></div></div>
+      <div><div class="k">Folytatási kedvezmény</div><div class="v">${c.discount}% · lejáratig</div></div>
+      <div style="grid-column:1/-1"><div class="k">Kapcsolattartó (a próba-űrlapról)</div><div class="v">${esc(c.contact)}</div></div>
+      <div style="grid-column:1/-1"><div class="k">Honnan indította</div><div class="v">${esc(c.via)}</div></div></div>`;
+  if(c.kind==="paid") return `<div class="kv"><div><div class="k">Előfizető</div><div class="v">${huDate(c.since)} óta</div></div>
+      <div><div class="k">Csomag</div><div class="v">${c.plan}</div></div>
+      <div><div class="k">Élő oldal</div><div class="v"><a href="#" data-live="${c.slug}">${c.slug}.citoviso.com ↗</a></div></div></div>`;
+  return `<div class="kv"><div><div class="k">Próba</div><div class="v">${huDate(c.started)} – ${huDate(c.until)}</div></div>
+      <div><div class="k">Állapot</div><div class="v">lejárt, az oldal szünetel</div></div>
+      <div><div class="k">Adatok törlése</div><div class="v">${huDate(c.purgeOn)}</div></div></div>`;
+}
+function clientTitle(l){
+  const c=l.client;
+  if(c.kind==="trial"){ const d=daysLeft(c); return d<=3?`Próbázik — ${d===0?"ma lejár":d===1?"holnap lejár":"még "+d+" nap, hamarosan lejár"}`:`Próbázik — még ${d} nap`; }
+  if(c.kind==="paid") return "Előfizető — élő oldal";
+  return `A próba lejárt ${lapsedDays(c)} napja`;
+}
+function clientCard(l){
+  const c=l.client; if(!c) return "";
+  const d=c.kind==="trial"?daysLeft(c):0, soon=c.kind==="trial"&&d<=3;
+  const used = c.kind==="trial"? Math.round((c.len-d)/c.len*100):100;
+  return `<div class="client ${soon?"soon":""}"><div class="client-h"><div class="t"><h3>${clientTitle(l)}</h3>
+      ${c.kind==="trial"?`<div class="meter ${soon?"soon":""}"><i style="width:${used}%"></i></div><div class="tiny">${c.len - d}. nap a ${c.len}-ből · ${huIg(c.until)}</div>`:""}</div>
+      ${c.kind!=="lapsed"?`<a class="btn pri" href="#" data-live="${c.slug}">Élő oldal ↗</a>`:""}</div>
+    <div class="client-b">${trialFacts(l)}
+      <h3 style="margin-top:14px">Foglalások ${l.bookings.length?`(${l.bookings.length})`:""}</h3>${bookingTable(l)}
+      ${c.kind==="trial"?`<div class="hint ok">Próbázó ügyfél: hideg megkeresést neki ne küldj.</div>`:""}</div></div>`;
+}
+function stripCells(l){
+  const c=l.client;
+  const cells=[
+    ["Begyűjtve","2026-08-21","done"],["Mock","legenerálva","done"],["Jóváhagyva",l.mock==="jóváhagyva"?"igen":"még nem",l.mock==="jóváhagyva"?"done":""],
+  ];
+  const sentCell = c && (c.kind==="trial"||c.kind==="paid") && !l.sent ? ["Kiküldve","nem kell — már ügyfél","skip"] : ["Kiküldve", l.sent?l.sent:"még nem", l.sent?"done":""];
+  cells.push(sentCell);
+  if(S.v==="A" && c){
+    if(c.kind==="trial"){ const d=daysLeft(c), soon=d<=3; const used=Math.round((c.len-d)/c.len*100);
+      cells.push(["Próba",`fut · ${d===0?"ma lejár":d===1?"holnap lejár":"még "+d+" nap"}<small>${huIg(c.until)}</small><div class="meter ${soon?"soon":""}"><i style="width:${used}%"></i></div><span class="open">részletek ▾</span>`, soon?"soon":"trial","trial"]); }
+    else if(c.kind==="paid") cells.push(["Fizetve",`${huDate(c.since)}<small>előfizető</small><span class="open">részletek ▾</span>`,"done","trial"]);
+    else cells.push(["Próba",`lejárt ${lapsedDays(c)} napja<small>az oldal szünetel</small><span class="open">részletek ▾</span>`,"","trial"]);
+    const b=l.bookings, pend=b.filter(x=>x.status==="pending");
+    cells.push(["Foglalás", b.length?`${b.length} db${pend.length?` · ${pend.length} válaszra vár`:""}<small>utolsó: ${b[0].from}–${b[0].to}, ${BK_LABEL[b[0].status]}</small><span class="open">lista ▾</span>`:"még nincs", pend.length?"soon":(b.length?"trial":""), b.length?"book":null]);
+  } else {
+    if(c&&c.kind==="paid"){ cells.push(["Rendelés","kész","done"]); cells.push(["Fizetve",huDate(c.since),"done"]); }
+    else if(c&&c.kind==="trial"){ cells.push(["Rendelés", S.v==="C"?"próba fut":"próba fut — lent", "trial"]); cells.push(["Fizetve","még nem",""]); }
+    else { cells.push(["Rendelés","még nem",""]); cells.push(["Fizetve","még nem",""]); }
+  }
+  return cells.map(([k,v,cls,dr])=>`<div class="st ${cls||""}" ${dr?`data-drawer="${dr}"`:""}><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+}
+function leadView(){
+  const l=LEADS.find(x=>x.id===S.lead);
+  const badges = S.v==="C" && (l.client||l.bookings.length) ? `<div class="bd">${clientPill(l)}${bookingPill(l)}</div>` : "";
+  let drawer="";
+  if(S.v==="A" && l.client){
+    drawer = `<div class="drawer ${S.drawer==="trial"?"on":""}" id="dr-trial">${trialFacts(l)}${l.client.kind==="trial"?`<a class="btn pri" href="#" data-live="${l.client.slug}">Élő oldal ↗</a>`:""}</div>
+      <div class="drawer ${S.drawer==="book"?"on":""}" id="dr-book">${bookingTable(l)}</div>`;
+  }
+  const tabs = ["Adatok","Mock és generálás","Megkeresés","Csomag és fizetés","Fotók","Audit"];
+  if(S.v==="C" && (l.client||l.bookings.length)) tabs.splice(1,0,"Ügyfél");
+  const tabHtml = `<div class="tabs">${tabs.map(t=>{const k=t.toLowerCase();return `<span data-tab="${k}" class="${S.tab===k?"on":""}">${t}${t==="Ügyfél"&&l.bookings.length?`<b>${l.bookings.length}</b>`:""}</span>`;}).join("")}</div>`;
+  let content;
+  if(S.v==="C" && S.tab==="ügyfél") content = clientCard(l);
+  else if(S.tab==="adatok") content = `<div class="card"><h3>Képanyag</h3><p class="muted" style="margin:0">A begyűjtött adatok fül — itt változatlan.</p></div>`;
+  else content = `<div class="card"><p class="muted" style="margin:0">„${S.tab}” fül — ebben a tervben változatlan.</p></div>`;
+  return `${navBar("CRM")}<div class="body">
+    <span class="back" data-back>← Vissza a leadekhez</span>
+    <div class="lh"><div class="lh-top"><h1>${esc(l.name)}</h1><div class="s">${l.city} · Balaton terület · ${l.qual}</div>${badges}</div>
+      <div class="strip">${stripCells(l)}</div>${drawer}</div>
+    ${S.v==="B"?clientCard(l):""}
+    ${tabHtml}${content}
+  </div>`;
+}
+
+/* ---------------- DASHBOARD (C) ---------------- */
+function dashView(){
+  const live = LEADS.filter(l=>l.client&&l.client.kind!=="lapsed");
+  const bk = LEADS.flatMap(l=>l.bookings.map(b=>({l,b}))).slice(0,6);
+  return `${navBar("Irányítópult")}<div class="body"><div class="dash">
+    <div class="card"><h3>Élő ügyfelek</h3><p class="muted" style="margin:0 0 6px">Próbázók elöl, a lejárathoz legközelebbi az első.</p><ul class="dl">${
+      live.sort((a,b)=>(a.client.kind==="trial"?daysLeft(a.client):999)-(b.client.kind==="trial"?daysLeft(b.client):999))
+      .map(l=>`<li><a class="nm n" data-lead="${l.id}">${esc(l.name)}</a>${clientPill(l)}${bookingPill(l)}</li>`).join("")}</ul></div>
+    <div class="card"><h3>Legutóbbi foglalások</h3><ul class="dl">${bk.map(({l,b})=>`<li><span class="n">${esc(l.name)}<br><span class="tiny">${b.from}–${b.to} · ${b.amount}</span></span><span class="pl ${BK_CLASS[b.status]}">${BK_LABEL[b.status]}</span></li>`).join("")}</ul></div>
+  </div></div>`;
+}
+
+/* ---------------- NOTIFICATION ---------------- */
+const GSM_BASIC = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+const GSM_EXT = "^{}\\[~]|€";
+function deaccent(s){ return s.normalize("NFD").replace(/[̀-ͯ]/g,""); }
+function smsParts(t){ let n=0; for(const ch of t){ if(GSM_EXT.includes(ch)) n+=2; else if(GSM_BASIC.includes(ch)) n+=1; else return {gsm:false,len:t.length,parts:Math.ceil(t.length/67)}; }
+  return {gsm:true,len:n,parts:n<=160?1:Math.ceil(n/153)}; }
+function notifView(){
+  const l=LEADS[0], c=l.client, N=S.notif;
+  const t = {day:{lbl:"kedd 18:00",night:false},night:{lbl:"kedd 23:40",night:true},wkend:{lbl:"szombat 10:15",night:false}}[N.at];
+  const subject = `Citoviso — új ingyenes próba: ${l.name} (${l.city})`;
+  const body =
+`Új ingyenes próba indult.
+
+Szállás: ${l.name}, ${l.city}
+Indult: ${huDate(c.started.slice(0,10))} ${c.started.slice(11)} · lejár: ${huDate(c.until)} (${c.len} nap)
+Kapcsolattartó: ${c.contact}
+Honnan: ${c.via}
+Élő oldal: ${siteUrl(c)}
+Folytatási kedvezmény: ${c.discount}%, a lejáratig
+
+Ezzel a leaddel nincs teendőd. Hideg megkeresést neki ne küldj: már ügyfél.
+A lejárat előtt 3 és 1 nappal a rendszer magától emlékezteti.
+
+Konzol: https://admin.citoviso.com/lead/94d32846-85f6-4e18-ba89-e0955947fae6`;
+  const sms = deaccent(`Citoviso: UJ PROBA - ${l.name.replace(/\[|\]/g,"")}, ${l.city}. Lejar: ${c.until.slice(5).replace("-",".")}. ${c.slug}.citoviso.com`);
+  const sp = smsParts(sms);
+  const digest = deaccent(`Citoviso RIASZTAS: ejjel (22-07) 1 riasztas: UJ PROBA - ${l.name.replace(/\[|\]/g,"")}. Reszletek e-mailben.`);
+  const dp = smsParts(digest);
+  let when;
+  if(N.mode==="E1") when = `<b>${t.lbl}:</b> a levél azonnal megy. SMS nincs: a telefonra továbbra is csak riasztás jön.`;
+  else if(t.night) when = `<b>${t.lbl}:</b> a levél azonnal megy. Az SMS a csendes óra (22:00–07:00) miatt vár, és <b>reggel 07:00-kor</b> a meglévő éjszakai összesítőben érkezik.`;
+  else when = `<b>${t.lbl}:</b> a levél és az SMS is azonnal megy. Hétvégén is, mert ez nem megkeresés, hanem a te értesítésed.`;
+  const smsBlock = N.mode==="E1" ? "" : t.night
+    ? `<div class="phone"><div class="from">Citoviso modem → a /settings riasztási száma · 07:00</div><div class="bub">${esc(digest)}</div><div class="seg">${dp.gsm?"GSM-7":"UCS-2"} · ${dp.len} karakter · ${dp.parts} szelet. Ez a meglévő reggeli összesítő formája, ezért a próba itt „riasztásként” jön.</div></div>`
+    : `<div class="phone"><div class="from">Citoviso modem → a /settings riasztási száma · ${t.lbl.split(" ")[1]}</div><div class="bub">${esc(sms)}</div><div class="seg">${sp.gsm?"GSM-7":"UCS-2"} · ${sp.len} karakter · ${sp.parts} szelet</div></div>`;
+  const pendMail = N.pend ? `<div class="card" style="margin-top:14px"><h3>+ Ha a tulaj 24 órája nem válaszol egy foglalásra</h3>
+    <div class="mail"><div class="mh"><b>Tárgy:</b> Citoviso — válasz nélküli foglalás: Myrna Haus (24 órája)</div>
+    <pre>A Myrna Haus tulaja 24 órája nem válaszolt egy foglalási kérésre.
+
+Kérés: FG-31C0A2 · okt. 24.–26. (2 éj) · 2 felnőtt · 48 000 Ft
+Beérkezett: okt. 13. 08:02 · lejár: okt. 15. 08:02, ha addig sem válaszol
+
+Érdemes felhívni: a próba alatt egy elveszett vendég a legrosszabb első élmény.
+Konzol: https://admin.citoviso.com/lead/…</pre></div>
+    <p class="muted" style="margin:8px 0 0">Csak levél, egy kérésről egyszer. Előfizetőnél ugyanígy.</p></div>` : "";
+  return `${navBar("Beállítások")}<div class="body"><div class="ngrid">
+    <div>
+      <label class="opt ${N.mode==="E1"?"on":""}"><input type="radio" name="m" value="E1" ${N.mode==="E1"?"checked":""}><b>E1 · csak levél</b>A riasztási e-mail címre. A telefon a bajoké marad.</label>
+      <label class="opt ${N.mode==="E2"?"on":""}"><input type="radio" name="m" value="E2" ${N.mode==="E2"?"checked":""}><b>E2 · levél + SMS (javaslat)</b>Nappal azonnal, éjjel a reggeli összesítőben.</label>
+      <label class="opt ${N.pend?"on":""}"><input type="checkbox" id="pend" ${N.pend?"checked":""}><b>+ válasz nélküli foglalás</b>Levél, ha a tulaj 24 órája nem válaszolt egy kérésre.</label>
+      <div class="muted" style="margin:12px 0 6px">Mikor indult a próba?</div>
+      <div class="chips">${[["day","kedd 18:00"],["night","kedd 23:40"],["wkend","szombat 10:15"]].map(([k,t])=>`<button class="chip ${N.at===k?"on":""}" data-at="${k}">${t}</button>`).join("")}</div>
+      <div class="when-box">${when}</div>
+    </div>
+    <div>
+      <div class="mail"><div class="mh"><b>Tárgy:</b> ${esc(subject)}<br><b>Címzett:</b> a /settings riasztási e-mail címe</div><pre>${esc(body)}</pre></div>
+      ${smsBlock}
+      ${pendMail}
+    </div></div></div>`;
+}
+
+/* ---------------- shell ---------------- */
+const NOTES = {
+  A:"<b>A:</b> semmi új doboz. A lead lapján a meglévő munkamenet-sáv két utolsó lépése „Próba” és „Foglalás” lesz; koppintásra lenyílik a részlet. A listában a Mock-oszlop pirulája mondja meg, hogy próbázik, a meglévő szűrő kap egy „próbázik” opciót.",
+  B:"<b>B:</b> a lead lapján a sáv alatt külön ügyfél-kártya (napok, élő oldal, foglalások táblázata). A listában két új oszlop (Ügyfél, Foglalás) és egy szűrő-sor a táblázat fölött.",
+  C:"<b>C:</b> a legkisebb beavatkozás. A név mellé jelvény kerül, a lead lapján egy új „Ügyfél” fül van. Az élő ügyfelek az Irányítópulton állnak egy helyen.",
+  N:"<b>Értesítés:</b> mi menjen, amikor új próba indul. Válts módot és időpontot: a levél és az SMS szövege, és az is, hogy mikor érkezik, élőben változik. A csendes óra a meglévő szabály (22–07)."
+};
+function render(){
+  document.querySelectorAll("[data-var]").forEach(b=>b.classList.toggle("on",b.dataset.var===S.v));
+  document.querySelectorAll("[data-size]").forEach(b=>b.classList.toggle("on",b.dataset.size===S.size));
+  document.getElementById("stage").classList.toggle("m",S.size==="m");
+  document.getElementById("note").innerHTML=NOTES[S.v];
+  const views = S.v==="N"?[]:S.v==="C"?[["list","Lead-lista"],["lead","Lead-lap"],["dash","Irányítópult"]]:[["list","Lead-lista"],["lead","Lead-lap"]];
+  const leadPick = (S.view==="lead") ? `<span style="margin-left:8px">Lead:</span>${LEADS.slice(0,4).map(l=>`<button data-pick="${l.id}" class="${S.lead===l.id?"on":""}">${esc(l.name.replace("[TESZT] ",""))}</button>`).join("")}` : "";
+  document.getElementById("sub").innerHTML = views.map(([k,t])=>`<button data-view="${k}" class="${S.view===k?"on":""}">${t}</button>`).join("")+leadPick;
+  const con=document.getElementById("con");
+  con.innerHTML = S.v==="N"?notifView():S.view==="dash"?dashView():S.view==="lead"?leadView():listView();
+  const f=document.getElementById("flt"); if(f) f.value=S.filter;
+}
+function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast.h); toast.h=setTimeout(()=>el.classList.remove("on"),2200); }
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-var],[data-size],[data-view],[data-pick],[data-lead],[data-back],[data-f],[data-drawer],[data-tab],[data-live],[data-at],[data-nav]");
+  if(!t) return;
+  const d=t.dataset;
+  if(d.var){ S.v=d.var; if(S.v!=="C"&&S.view==="dash") S.view="list"; S.filter="all"; S.drawer=null; S.tab="adatok"; }
+  else if(d.size) S.size=d.size;
+  else if(d.view){ S.view=d.view; S.drawer=null; }
+  else if(d.pick){ S.lead=d.pick; S.drawer=null; S.tab = S.v==="C"?"ügyfél":"adatok"; }
+  else if(d.lead){ S.lead=d.lead; S.view="lead"; S.drawer=null; S.tab = S.v==="C"?"ügyfél":"adatok"; if(S.v==="N") S.v="A"; }
+  else if("back" in d){ S.view="list"; }
+  else if(d.f) S.filter=d.f;
+  else if(d.drawer){ S.drawer = S.drawer===d.drawer?null:d.drawer; }
+  else if(d.tab){ S.tab=d.tab; }
+  else if(d.live){ e.preventDefault(); toast(`Új lapon nyílna: https://${d.live}.citoviso.com`); return; }
+  else if(d.at){ S.notif.at=d.at; }
+  else if(d.nav){ if(d.nav==="Irányítópult"&&S.v==="C") S.view="dash"; else if(d.nav==="CRM"&&S.v!=="N") S.view="list"; else { toast(`„${d.nav}” — ebben a tervben nem változik`); return; } }
+  render();
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="flt"){ S.filter=e.target.value; render(); }
+  else if(e.target.name==="m"){ S.notif.mode=e.target.value; render(); }
+  else if(e.target.id==="pend"){ S.notif.pend=e.target.checked; render(); }
+});
+const qs=new URLSearchParams(location.search);
+if(qs.get("v")) S.v=qs.get("v"); if(qs.get("view")) S.view=qs.get("view"); if(qs.get("lead")) S.lead=qs.get("lead");
+if(qs.get("tab")) S.tab=qs.get("tab"); if(qs.get("drawer")) S.drawer=qs.get("drawer"); if(qs.get("at")) S.notif.at=qs.get("at");
+S.size = qs.get("size") || (matchMedia("(max-width:600px)").matches?"m":"d");
+render();
+</script>
+</body></html>
