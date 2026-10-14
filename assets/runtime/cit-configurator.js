@@ -4303,6 +4303,10 @@
     var fPhoto = form.querySelector('[name="photo_rights"]');
     var submit = form.querySelector(".cit-cfg-tsubmit");
     var sendErr = form.querySelector(".cit-cfg-tsenderr");
+    // Elek N-1 (2026-10-14): the outreach mail went to this address, and the checkout already
+    // prefills it (CFG.billing.prefill, from the prospect) — the trial form asked for it again.
+    var pfMail = ((CFG.billing || {}).prefill || {}).email || "";
+    if (pfMail && !fEmail.value) fEmail.value = pfMail;
     var FIELD = { name: fName, email: fEmail, phone: fPhone, terms: fTerms, photo_rights: fPhoto };
     var MSG = {
       name: tr("Kérjük, írja be a nevét."),
