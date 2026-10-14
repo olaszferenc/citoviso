@@ -59,7 +59,9 @@ Két lehetőség közül választ:
   a kérés marad, ahol volt.
 - **„Elutasítom”** — ugyanígy rákérdez. Indoklást is írhat (**„+ Megírom, miért (nem kötelező)”**
   — a vendég ezt olvassa majd); az **„Igen, elutasítom”** gombbal küldi el, a napok szabadok
-  maradnak. Itt is van **„Mégsem”**.
+  maradnak. Itt is van **„Mégsem”**. Ha megírja, miért, a vendég levele azt mondja, hogy most nem
+  tudja fogadni, és az Ön indokát idézi (például: túl sokan lennének). Indoklás nélkül a levél azt
+  írja, hogy a kért időpont nem szabad.
 
 Amíg a megerősítés nyitva van, az ellentétes döntés gombja nem látszik — így nem koppinthat
 véletlenül rá.

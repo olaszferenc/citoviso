@@ -449,7 +449,9 @@ async function hostContact(siteId: string, hostName: string): Promise<HostContac
   const row = await db
     .selectFrom("site")
     .leftJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
-    .select(["site.edited_site_data as edited", "mock_artifact.inputs as inputs"])
+    .leftJoin("tenant", "tenant.id", "site.tenant_id")
+    .leftJoin("lead", "lead.id", "tenant.lead_id")
+    .select(["site.edited_site_data as edited", "mock_artifact.inputs as inputs", "lead.address as leadAddress"])
     .where("site.id", "=", siteId)
     .executeTakeFirst();
   const edited = (row?.edited ?? {}) as { contact?: { address?: string; phone?: string; email?: string } };
@@ -457,9 +459,13 @@ async function hostContact(siteId: string, hostName: string): Promise<HostContac
     .siteData?.contact;
   const c = effectiveContact(edited.contact, base);
   const website = await siteUrlFor(siteId);
+  // Elek F-7 (2026-10-14): the confirmation's calendar file carried the address (the lead's,
+  // siteMailContext) while the letter itself named none — the page's contact had no address.
+  // The letter falls back to the same address the .ics uses, so the two never disagree.
+  const address = c.address || row?.leadAddress || "";
   return {
     name: hostName,
-    ...(c.address ? { address: c.address } : {}),
+    ...(address ? { address } : {}),
     ...(c.phone ? { phone: displayPhone(c.phone) } : {}),
     ...(c.email ? { email: c.email } : {}),
     ...(website ? { website } : {}),
@@ -1540,18 +1546,27 @@ async function sendGuestVerdict(
   if (outcome === "accepted") {
     // Elek V-3: the on-site tax the panel showed rides into the confirmation too.
     const tax = await onSiteTaxRows(req, lang);
+    // Elek F-7 (2026-10-14): the text part had no address — a guest on a plain-text client
+    // (or a phone's preview) did not learn where to go. The same facts the HTML card shows.
+    const hc = await hostContact(req.site_id, host);
+    const contactText =
+      (hc.address ? `${T(lang, "Cím:")} ${hc.address}\n` : "") +
+      (hc.phone ? `${T(lang, "Telefon:")} ${hc.phone}\n` : "") +
+      (hc.email ? `${T(lang, "E-mail:")} ${hc.email}\n` : "") +
+      (hc.website ? `${T(lang, "Honlap:")} ${hc.website}\n` : "");
     subject = T(lang, "Visszaigazolt foglalás: {from} — {to}", { from, to });
     body =
       T(lang, "Kedves {name}!", { name: req.guest_name }) +
       `\n\n` +
       T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit }) +
       `\n\n` +
+      `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
       `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
       `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
       quoteBlock(req, lang) +
       onSiteTaxText(tax) +
       `\n` +
-      (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
+      (note ? `${T(lang, "A szállásadó üzenete:")} „${note}”\n\n` : "") +
       T(lang, "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.") +
       `\n\n` +
       T(
@@ -1563,7 +1578,8 @@ async function sendGuestVerdict(
           T(lang, "Ha mégsem tudnak jönni, kérjük, mondja le itt:") +
           `\n${cancelUrl}`
         : "") +
-      `\n\n${host}\n`;
+      `\n\n${host}\n` +
+      contactText;
     html = await guestLetterHtml(req, ctx, {
       subtitle: T(lang, "Visszaigazolt foglalás"),
       kicker: mailLabel(T(lang, "Végleges foglalás"), "ok"),
@@ -1610,22 +1626,35 @@ async function sendGuestVerdict(
       },
     ];
   } else if (outcome === "declined") {
-    subject = T(lang, "A kért időpont sajnos nem szabad: {from} — {to}", { from, to });
+    // Elek F-4 (2026-10-14): the letter always said the dates were taken, even when the owner
+    // wrote another reason (here: too many guests) — the guest could not tell whether another
+    // date or fewer people would do. With a reason, the letter claims nothing of its own: it
+    // says the owner cannot take the request, and quotes the owner. Without one, as before.
+    const lead = note
+      ? T(lang, "Sajnáljuk, {host} nem tudja fogadni a kérését ({from} — {to}){unit}. Az indokát alább olvashatja.", { host, from, to, unit })
+      : T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", { from, to, unit });
+    const leadHtml = note
+      ? T(lang, "Sajnáljuk, {host} nem tudja fogadni a kérését ({from} — {to}){unit}. Az indokát alább olvashatja.", { host, from, to, unit: "" })
+      : T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", { from, to, unit: "" });
+    subject = note
+      ? T(lang, "A szállásadó nem tudja fogadni a kérését: {from} — {to}", { from, to })
+      : T(lang, "A kért időpont sajnos nem szabad: {from} — {to}", { from, to });
     body =
       T(lang, "Kedves {name}!", { name: req.guest_name }) +
       `\n\n` +
-      T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", { from, to, unit }) +
+      lead +
       `\n\n` +
-      (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
+      `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n\n` +
+      (note ? `${T(lang, "A szállásadó üzenete:")} „${note}”\n\n` : "") +
       T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
       `\n\n${host}\n`;
     html = await guestLetterHtml(req, ctx, {
       subtitle: T(lang, "Foglalási kérés"),
-      kicker: mailLabel(T(lang, "Nem szabad"), "wait"),
-      heading: T(lang, "A kért időpont sajnos nem szabad"),
+      kicker: mailLabel(note ? T(lang, "Nem fogadható") : T(lang, "Nem szabad"), "wait"),
+      heading: note ? T(lang, "A szállásadó nem tudja fogadni a kérését") : T(lang, "A kért időpont sajnos nem szabad"),
       blocks: [
         greeting,
-        mailPara(esc(T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", { from, to, unit: "" }))),
+        mailPara(esc(leadHtml)),
         mailDetails(stayRows(req, lang, false)),
         ...noteBlock,
         mailPara(esc(T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal."))),
@@ -1841,7 +1870,7 @@ export async function cancelRequest(opts: {
         hu,
       ) +
       `\n\n` +
-      (note ? `${T(ctx.lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
+      (note ? `${T(ctx.lang, "A szállásadó üzenete:")} „${note}”\n\n` : "") +
       T(
         ctx.lang,
         "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést.",
@@ -1922,7 +1951,7 @@ export async function cancelRequest(opts: {
           ...hu,
         }) +
         `\n\n` +
-        (note ? `${T(ctx.lang, "A vendég üzenete:")} „${note}"\n\n` : "") +
+        (note ? `${T(ctx.lang, "A vendég üzenete:")} „${note}”\n\n` : "") +
         T(ctx.lang, "A napok újra szabadok a naptárban — a honlapon máris foglalhatók.");
       const subject = T(ctx.lang, "Foglalás lemondva: {guest}, {from} — {to}", {
         guest: req.guest_name,
@@ -2743,7 +2772,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
     `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     quoteBlock(req, lang) +
     `\n` +
-    (req.decision_note ? `${T(lang, "A szállásadó üzenete:")} „${req.decision_note}"\n\n` : "") +
+    (req.decision_note ? `${T(lang, "A szállásadó üzenete:")} „${req.decision_note}”\n\n` : "") +
     (expires
       ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz) }) + " "
       : "") +
