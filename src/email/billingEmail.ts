@@ -288,3 +288,71 @@ export function buildSubscriptionCancelledEmail(input: {
     lines,
   });
 }
+
+/* ── Elek P-5 (2026-10-14): the owner's own account actions are confirmed in writing. The
+ *    cancellation and the mandate revoke only flashed on screen — nothing in the mailbox to
+ *    look back on, and nothing that said what happens next. ─────────────────────────────── */
+
+/** „Előfizetés lemondása” armed: closes at the period end, nothing is charged after it. */
+export function buildSubscriptionCancelArmedEmail(input: {
+  to: string;
+  siteName: string;
+  /** ISO day the subscription closes (the current period end). */
+  closesOn: string;
+  lang?: string;
+}): EmailMessage {
+  const { to, siteName, closesOn, lang } = input;
+  const subject = T(lang, "Lemondását rögzítettük — {site}", { site: siteName });
+  const lines = [
+    T(lang, "Rögzítettük, hogy honlap-előfizetését lemondta. Az előfizetés {date} napján zárul; addig a honlap változatlanul él, hiszen ez az időszak már ki van fizetve.", { date: formatDay(closesOn, lang) }),
+    T(lang, "Ezután nem terhelünk, és fizetési linket sem küldünk."),
+    T(lang, "Ha meggondolja magát, a fordulónapig a kezelőfelület Modulok fülén, a „Meggondoltam magam — folytatom” gombbal visszaléphet."),
+  ];
+  return billingMail({ to, lang, subject, siteName, text: lines.join("\n\n") + "\n", lines });
+}
+
+/** The cancellation withdrawn („Meggondoltam magam — folytatom”). */
+export function buildSubscriptionResumedEmail(input: {
+  to: string;
+  siteName: string;
+  /** ISO day of the next renewal. */
+  renewsOn: string;
+  autoCharge: boolean;
+  lang?: string;
+}): EmailMessage {
+  const { to, siteName, renewsOn, autoCharge, lang } = input;
+  const subject = T(lang, "Előfizetése folytatódik — {site}", { site: siteName });
+  const lines = [
+    T(lang, "Rögzítettük, hogy visszavonta a lemondást: honlap-előfizetése a megszokott módon folytatódik."),
+    autoCharge
+      ? T(lang, "A következő fordulónap: {date}. A díjat ekkor a mentett kártyáról vonjuk le; előtte 3 nappal e-mailben szólunk.", { date: formatDay(renewsOn, lang) })
+      : T(lang, "A következő fordulónap: {date}. Ekkor fizetési linket küldünk e-mailben.", { date: formatDay(renewsOn, lang) }),
+  ];
+  return billingMail({ to, lang, subject, siteName, text: lines.join("\n\n") + "\n", lines });
+}
+
+/** The stored-card mandate revoked (Modulok / Pénztárca „Megbízás visszavonása”). */
+export function buildAutoChargeRevokedEmail(input: {
+  to: string;
+  siteName: string;
+  /** e.g. "Visa ····4242" — omitted when the mask is not known. */
+  cardLabel: string | null;
+  /** ISO day of the next renewal (or of the close, when `closing`). */
+  nextOn: string;
+  /** The subscription is cancelled too — no pay link follows either. */
+  closing: boolean;
+  lang?: string;
+}): EmailMessage {
+  const { to, siteName, cardLabel, nextOn, closing, lang } = input;
+  const subject = T(lang, "Az automatikus kártyaterhelést kikapcsoltuk — {site}", { site: siteName });
+  const lines = [
+    cardLabel
+      ? T(lang, "Rögzítettük, hogy visszavonta az automatikus kártyaterhelést. A kártyáról ({card}) többé nem vonunk le díjat.", { card: cardLabel })
+      : T(lang, "Rögzítettük, hogy visszavonta az automatikus kártyaterhelést. A mentett kártyáról többé nem vonunk le díjat."),
+    closing
+      ? T(lang, "Előfizetését korábban lemondta: {date} napján zárul, és fizetési linket sem küldünk.", { date: formatDay(nextOn, lang) })
+      : T(lang, "A következő fordulónapon ({date}) fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. Az előfizetése ettől nem szűnik meg.", { date: formatDay(nextOn, lang) }),
+    T(lang, "Ha újra szeretné, hogy a díj magától menjen, a Pénztárcában adhat meg kártyát."),
+  ];
+  return billingMail({ to, lang, subject, siteName, text: lines.join("\n\n") + "\n", lines });
+}

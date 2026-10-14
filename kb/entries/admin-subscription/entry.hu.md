@@ -131,6 +131,8 @@ Ha nem szeretné, a **„Megbízás visszavonása”** gombra koppintva megjelen
 kis ablak, amely felsorolja, mi változik ettől; ott a
 **„Igen, visszavonom a megbízást”** gombbal érvényesíti, vagy a
 **„Mégsem — marad az automatikus fizetés”** gombbal marad minden a régiben.
+A visszavonásról e-mailben is visszaigazolást küldünk, benne azzal, mi történik a következő
+fordulónapon.
 
 Visszavonás után **Önnek kell fizetnie** minden fordulónapon a kiküldött
 fizetési linkkel. A díjfizetési kötelezettség megmarad, és ha a díj nem érkezik
@@ -227,6 +229,7 @@ Lemondás után a felület mindenhol a zárást mondja: a **„Következő szám
 **„Következő terhelés”** sora „nincs”, mellette ez áll: *„Az előfizetését lemondta: … napján
 zárul. Nem terhelünk, és fizetési linket sem küldünk.”* — az oldalsávon pedig „zárul …, nem
 terhelünk”. A fordulónap előtti „hamarosan megújul” levelet sem kapja meg.
+A lemondásról (és ha visszalép, a folytatásról is) e-mailben visszaigazolást küldünk.
 
 **Kivétel a hűségidő.** Ha tőlünk rendelt saját webcímet, ahhoz hűségidő
 tartozik, és amíg az fut, a lemondás elszámolással jár: az **„Előfizetés

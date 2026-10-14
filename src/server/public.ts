@@ -250,6 +250,7 @@ import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.j
 import { messageTitle } from "../tenant/messagePreview.js";
 import { clientIp } from "./clientIp.js";
 import { brakeKey, RequestBrake } from "./requestBrake.js";
+import { sendAccountActionMail, storedCardLabel } from "../payment/accountMail.js";
 import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
 import {
   computeAnnual,
@@ -2873,6 +2874,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       await voidUnpaidSettlement(session.tenantId);
     }
     await setSubscriptionCancel(session.tenantId, cancel);
+    // Elek P-5: confirmed in writing — what was recorded and what happens next.
+    await sendAccountActionMail(session.tenantId, cancel ? "cancel" : "resume");
     return redirect(res, "/admin?tab=modulok");
   }
   // ADR-0094 ② (approved plan B): close the cancellation THROUGH the settlement.
@@ -2926,7 +2929,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (req.method === "POST" && pathname === "/admin/subscription/auto-charge-off") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
-    await revokeAutoCharge(session.tenantId);
+    // Elek P-5: the card's mask is read before the revoke drops it, for the confirmation letter.
+    const cardLabel = await storedCardLabel(session.tenantId);
+    if (await revokeAutoCharge(session.tenantId)) await sendAccountActionMail(session.tenantId, "revoke", { cardLabel });
     // ADR-0226: the revoke can start from the Pénztárca too — go back to where
     // the tenant was (a fixed value, never a raw redirect target).
     const form = await readFormBody(req);
