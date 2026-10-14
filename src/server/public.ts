@@ -249,6 +249,7 @@ import { distanceKm } from "../events/gates.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
 import { messageTitle } from "../tenant/messagePreview.js";
 import { clientIp } from "./clientIp.js";
+import { brakeKey, RequestBrake } from "./requestBrake.js";
 import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
 import {
   computeAnnual,
@@ -851,21 +852,12 @@ function tenantCanonicalHost(site: TenantHostSite): string | null {
 /** Serve a tenant host: the live snapshot at "/", robots/sitemap (ADR-0041), its uploads,
  *  else 404 in-site. A slug host with a live custom domain 301s there (ADR-0041 — otherwise
  *  the ranking equity accrued on the slug would be lost at the domain upsell). */
-/** Crude per-IP throttle for the public booking endpoints — a guest form is an open
- *  door, and a booking row is cheap to create but expensive to clean up. Keyed on
- *  `clientIp()` (ADR-0280) — the same rule as the login brake. */
-const bookingHits = new Map<string, { n: number; until: number }>();
-function throttled(req: http.IncomingMessage, limit: number, windowMs: number): boolean {
-  const ip = clientIp(req);
-  const now = Date.now();
-  const hit = bookingHits.get(ip);
-  if (!hit || hit.until < now) {
-    bookingHits.set(ip, { n: 1, until: now + windowMs });
-    if (bookingHits.size > 5000) bookingHits.clear(); // bounded: this is a guard, not a ledger
-    return false;
-  }
-  hit.n++;
-  return hit.n > limit;
+/** Throttle for the public guest endpoints — a guest form is an open door, and a row is
+ *  cheap to create but expensive to clean up. Keyed on endpoint · tenant · `clientIp()`
+ *  (ADR-0280; Elek F-5: it was one per-IP counter shared by every tenant and endpoint). */
+const guestBrake = new RequestBrake();
+function throttled(req: http.IncomingMessage, route: string, tenantId: string, limit: number, windowMs: number): boolean {
+  return guestBrake.hit(brakeKey(route, tenantId, clientIp(req)), limit, windowMs);
 }
 
 /** ADR-0080 ⑦: bearer-secret check of the SMS-relay API (constant-time). */
@@ -1140,7 +1132,7 @@ async function serveTenantHost(
   // unit, no hold — record + notify, the owner simply replies to the guest.
   if (req.method === "POST" && pathname === "/api/erdeklodes") {
     const lang = await tenantLang();
-    if (throttled(req, 5, 10 * 60_000)) {
+    if (throttled(req, "erdeklodes", site.tenantId, 5, 10 * 60_000)) {
       return sendJson(res, 429, {
         errors: [T(lang, "Túl sok próbálkozás. Kérjük, várjon pár percet.")],
       });
@@ -1162,7 +1154,11 @@ async function serveTenantHost(
 
   if (req.method === "POST" && pathname === "/api/foglalas") {
     const lang = await tenantLang();
-    if (throttled(req, 5, 10 * 60_000)) {
+    // Elek F-5 (2026-10-14): a mistyped phone number counted as one of the 5 requests, so a
+    // guest who corrected the form four times was locked out. Two counters per tenant · IP:
+    // every POST against a high raw ceiling (hammering), and only CREATED requests against 5.
+    const createdKey = brakeKey("foglalas", site.tenantId, clientIp(req));
+    if (throttled(req, "foglalas-raw", site.tenantId, 30, 10 * 60_000) || guestBrake.over(createdKey, 5)) {
       return sendJson(res, 429, {
         errors: [T(lang, "Túl sok próbálkozás. Kérjük, várjon pár percet.")],
       });
@@ -1199,6 +1195,7 @@ async function serveTenantHost(
       },
       publicBaseUrl(req),
     );
+    if (result.ok) guestBrake.add(createdKey, 10 * 60_000);
     return sendJson(res, result.ok ? 200 : 400, result);
   }
 
@@ -1213,7 +1210,7 @@ async function serveTenantHost(
     // EGYETLEN ág, ami már helyesen csinálta — most a többi is ugyanazt hívja,
     // hogy ne legyen két mechanizmus, ami elcsúszhat.)
     const guestLang = await tenantLang();
-    if (throttled(req, 3, 10 * 60_000)) {
+    if (throttled(req, "velemeny", site.tenantId, 3, 10 * 60_000)) {
       return send(
         res,
         429,
