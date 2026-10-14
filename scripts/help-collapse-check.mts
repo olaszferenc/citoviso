@@ -22,7 +22,7 @@ process.env.PUBLIC_PORT = "0";
 import { once } from "node:events";
 import type { Server } from "node:http";
 
-import { chromium, type Page } from "playwright-core";
+import { chromium, type BrowserContext, type BrowserContextOptions, type Page } from "playwright-core";
 
 import { config } from "../src/config.js";
 
@@ -50,7 +50,28 @@ if (!op || !tu) {
   process.exit(1);
 }
 
+// ⛔⛔ DETERMINIZMUS (2026-10-14): a kapu terhelés alatt ~1/30 eséllyel elhasalt a JS nélküli
+// ág `scrollIntoViewIfNeeded`-jén („element is not stable" → „not attached" / 30 mp timeout),
+// magában zöld volt. Két ok, mindkettő MÉRVE (8 szálas próbapadon):
+//   1) `html { scroll-behavior: smooth }` (citui.css): MINDEN görgetés — a Playwright saját
+//      görgetése és a `mouse.wheel` is — animál, az elem mozog, a stabilitás-várás egy
+//      leterhelt böngészőben kifut. → `calmContext`: reduced-motion + a sima görgetés kikapcsolva
+//      a kiszolgált CSS végén (hálózati szinten, mert a JS nélküli lapra szkript nem injektálható).
+//   2) A `domcontentloaded` UTÁN még ~100–400 ms-ig jön a citui-console.css és a webfont — az
+//      elrendezés közben százpixeleket ugrik. → Minden `goto` a `load`-ig vár.
+// ⚠️ Egyik sem gyengíti az állításokat: ugyanazt mérjük, csak NYUGALMI állapotban. A görgetés
+//    animációja semmilyen állításnak nem tárgya.
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
+
+/** Böngésző-kontextus mozgás nélkül: reduced-motion (átmenetek ≈0) és azonnali görgetés. */
+async function calmContext(opts: BrowserContextOptions): Promise<BrowserContext> {
+  const ctx = await browser.newContext({ reducedMotion: "reduce", ...opts });
+  await ctx.route(/\/assets\/ui\/citui\.css(\?|$)/, async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ response: res, body: `${await res.text()}\nhtml{scroll-behavior:auto!important}\n` });
+  });
+  return ctx;
+}
 
 /** Hány cikkcímnek KELL látszania érkezéskor. A legszűkebb valós csoport a tenant-admin
  *  első csoportja („Az oldalam", 4 cikk) — 3 tehát mindkét felületen teljesíthető, és
@@ -93,7 +114,7 @@ async function measure(
   searchUrl: string,
 ): Promise<void> {
   console.log(`\n── ${name}`);
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  const ctx = await calmContext({ viewport: { width: 390, height: 900 } });
   await ctx.addCookies([{ ...cookie, url: base }]);
   const pg: Page = await ctx.newPage();
   // A süti-döntést ELŐRE megválaszoltuk (2026-09-14, ADR-0145): a sáv a lap aljára
@@ -104,7 +125,7 @@ async function measure(
   await pg.addInitScript("try{localStorage.setItem('cit-consent-v1','necessary')}catch(e){}");
   const errs: string[] = [];
   pg.on("pageerror", (e) => errs.push(String(e)));
-  await pg.goto(`${base}${url}`, { waitUntil: "domcontentloaded" });
+  await pg.goto(`${base}${url}`, { waitUntil: "load" });
 
   const groups = pg.locator(sel.group);
   const openN = async (): Promise<number> => await pg.locator(`${sel.group}[open]`).count();
@@ -167,7 +188,7 @@ async function measure(
 
   // ⑥ KERESÉS: a találat LÁTSZIK. Ez a kontraktus legfontosabb pontja — enélkül a lap
   // találatot ígérne csukott fejlécek mögött.
-  await pg.goto(`${base}${searchUrl}`, { waitUntil: "domcontentloaded" });
+  await pg.goto(`${base}${searchUrl}`, { waitUntil: "load" });
   await pg.waitForTimeout(120);
   const hitGroups = await pg.locator(sel.group).count();
   ok("keresés: van találati csoport", hitGroups > 0, `${hitGroups}`);
@@ -179,10 +200,10 @@ async function measure(
   //    SZERVER-oldalon dől el. ⛔ Ha az „első csoport nyitva" kliens-oldali kinyitogatás
   //    lenne, itt nulla cikkcím látszana — vagyis pont a bejelentett hiba maradna meg
   //    azoknál, akiknél nem fut a JS.
-  const noJs = await browser.newContext({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
+  const noJs = await calmContext({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await noJs.addCookies([{ ...cookie, url: base }]);
   const p2 = await noJs.newPage();
-  await p2.goto(`${base}${url}`, { waitUntil: "domcontentloaded" });
+  await p2.goto(`${base}${url}`, { waitUntil: "load" });
   await p2.waitForTimeout(120);
   const noJsVisible = await p2.locator(`${sel.link}:visible`).count();
   ok(`JS NÉLKÜL is LÁTSZIK legalább ${MIN_VISIBLE} cikkcím érkezéskor`, noJsVisible >= MIN_VISIBLE,
@@ -239,10 +260,10 @@ async function measureConsoleOnly(): Promise<void> {
   // ⑧ A SÚGÓ ELÉRHETŐ A FŐMENÜBŐL. Eddig csak URL-ből vagy egy ⓘ-ikonból nyílt, és a
   //    /help egyetlen menüpontot sem emelt ki: az operátor olyan lapon állt, ami a
   //    navigációban nem létezik.
-  const dsk = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const dsk = await calmContext({ viewport: { width: 1280, height: 900 } });
   await dsk.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const d = await dsk.newPage();
-  await d.goto(`${conBase}/`, { waitUntil: "domcontentloaded" });
+  await d.goto(`${conBase}/`, { waitUntil: "load" });
   const navHelp = d.locator('.con-nav a[href="/help"]');
   ok("a főmenüben VAN Súgó menüpont (az irányítópulton is)", (await navHelp.count()) > 0);
   // ⛔ A DOM-beli jelenlét nem elérhetőség: a menü mobilon görgethető sáv, és egy korábbi
@@ -252,7 +273,7 @@ async function measureConsoleOnly(): Promise<void> {
     const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return !!hit && (hit === el || el.contains(hit));
   }));
-  await d.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await d.goto(`${conBase}/help`, { waitUntil: "load" });
   ok("a /help lapon a Súgó menüpont AKTÍV (a lap szerepel a navigációban)",
      (await d.locator('.con-nav a[href="/help"].is-active').count()) === 1);
 
@@ -272,12 +293,12 @@ async function measureConsoleOnly(): Promise<void> {
   ok("asztalon a bal listából így egy cikkcím sem duplázódik",
      (await d.locator(".con-kb-toc details a:visible").count()) === 0);
   // ⑨d …de KERESÉSKOR nyitva marad: ott a találat megmutatása fontosabb, mint a kettőzés.
-  await d.goto(`${conBase}/help?q=szamla`, { waitUntil: "domcontentloaded" });
+  await d.goto(`${conBase}/help?q=szamla`, { waitUntil: "load" });
   await d.waitForTimeout(150);
   ok("kereséskor a bal lista NEM zár be (a találat fontosabb)",
      (await d.locator(".con-kb-toc details[open]").count()) > 0,
      `${await d.locator(".con-kb-toc details[open]").count()}`);
-  await d.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await d.goto(`${conBase}/help`, { waitUntil: "load" });
   await d.waitForTimeout(150);
   ok("asztalon az indulólap MINDEN cikkcímet mutatja", startLinks === tocLinks && startLinks > 20,
      `indulólap=${startLinks}, lista=${tocLinks}`);
@@ -326,10 +347,10 @@ async function measureConsoleOnly(): Promise<void> {
   ok("a kereső helyőrzője BEFÉR a mezőbe (1280px)", fitD.text <= fitD.avail, JSON.stringify(fitD));
 
   // ⑫ JS NÉLKÜL is ott az indulólap (szerver-oldalon renderel).
-  const noJs = await browser.newContext({ viewport: { width: 1280, height: 900 }, javaScriptEnabled: false });
+  const noJs = await calmContext({ viewport: { width: 1280, height: 900 }, javaScriptEnabled: false });
   await noJs.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const nj = await noJs.newPage();
-  await nj.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await nj.goto(`${conBase}/help`, { waitUntil: "load" });
   ok("JS NÉLKÜL is ott az indulólap a jobb hasábban",
      (await nj.locator(".con-kb-start a:visible").count()) === startLinks);
   // ⛔ A DEGRADÁCIÓ IRÁNYA: a kettőzés-bontás JS-es, mert a szerver nem ismeri a képernyő
@@ -345,10 +366,10 @@ async function measureConsoleOnly(): Promise<void> {
 
   // ⑬ TELEFONON az indulólap NEM jelenik meg — ott a lista maga az indulólap, a kártya
   //    ugyanazoknak a címeknek a második példánya lenne egy képernyőn.
-  const mob = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const mob = await calmContext({ viewport: { width: 390, height: 844 } });
   await mob.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const m = await mob.newPage();
-  await m.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await m.goto(`${conBase}/help`, { waitUntil: "load" });
   ok("telefonon az indulólap-kártyák NEM jelennek meg", (await m.locator(".con-kb-start a:visible").count()) === 0);
   // …és az őket bevezető mondat sem: telefonon nincs jobb hasáb, amire mutatna.
   ok("telefonon az eligazító mondat sem jelenik meg", !(await m.locator(".con-kb-startlead").first().isVisible()));
@@ -369,7 +390,7 @@ await measureConsoleOnly();
  */
 async function measureFinanceHelpIcons(): Promise<void> {
   console.log("\n── KONZOL — súgó-ikon a Pénzügy képernyőin");
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await calmContext({ viewport: { width: 1280, height: 900 } });
   await ctx.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const pg = await ctx.newPage();
 
@@ -386,7 +407,7 @@ async function measureFinanceHelpIcons(): Promise<void> {
   if (!p) console.log("  ⚠️ nincs partner a dev DB-ben — a Partner-lap esete KIMARADT (nem zöld)");
 
   for (const s of screens) {
-    const resp = await pg.goto(`${conBase}${s.url}`, { waitUntil: "domcontentloaded" });
+    const resp = await pg.goto(`${conBase}${s.url}`, { waitUntil: "load" });
     ok(`${s.label}: a lap betölt (${resp?.status()})`, resp?.status() === 200);
     const link = pg.locator(`a[data-kb-anchor="${s.anchor}"]`);
     ok(`${s.label}: van súgó-link a "${s.anchor}" horgonnyal`, (await link.count()) >= 1);
@@ -446,11 +467,11 @@ await measureFinanceHelpIcons();
 // csukva) — az akkori őr erre ZÖLDET adott, a tulaj meg hibaként jelentette be.
 if (SELF_TEST) {
   console.log("\n⚑ ÖNTESZT — a romlott állapotokat MEGFOGJA-E?");
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await calmContext({ viewport: { width: 1280, height: 900 } });
   await ctx.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const pg = await ctx.newPage();
   const reload = async (u = "/help"): Promise<void> => {
-    await pg.goto(`${conBase}${u}`, { waitUntil: "domcontentloaded" });
+    await pg.goto(`${conBase}${u}`, { waitUntil: "load" });
     await pg.waitForTimeout(80);
   };
 
@@ -458,10 +479,10 @@ if (SELF_TEST) {
   //    2026-09-13 óta a HELYES állapot (ott a jobb oldali rács a tartalomjegyzék), tehát egy
   //    1280-as önteszt nem a bejelentett hibát mérné, hanem egy legitim állapotot — és zölden
   //    azt állítaná magáról, hogy fog. A hiba ott hiba, ahol nincs rács: 390px-en.
-  const mob0 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const mob0 = await calmContext({ viewport: { width: 390, height: 844 } });
   await mob0.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const m0 = await mob0.newPage();
-  await m0.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await m0.goto(`${conBase}/help`, { waitUntil: "load" });
   await m0.waitForTimeout(120);
   const before1 = await m0.locator(".con-kb-toc details a:visible").count();
   await m0.evaluate(() =>
@@ -562,13 +583,13 @@ if (SELF_TEST) {
      (await pg.locator(".con-kb-startlead").count()) === 0);
 
   // ⑭ — a súgó-ikon eltűnik a Pénzügy-képernyőről (a bejelentett, évekig zöld állapot).
-  await pg.goto(`${conBase}/partners`, { waitUntil: "domcontentloaded" });
+  await pg.goto(`${conBase}/partners`, { waitUntil: "load" });
   await pg.evaluate(() => document.querySelector('a[data-kb-anchor="console.partners"]')?.remove());
   ok("⑭ megfogná, ha a Pénzügy-képernyőről eltűnne a súgó-ikon",
      (await pg.locator('a[data-kb-anchor="console.partners"]').count()) === 0);
 
   // ⑮ — a súgó-ikon visszakapja a cián link-színt (a `.con a` csapda, kontraszt 2,41).
-  await pg.goto(`${conBase}/partners`, { waitUntil: "domcontentloaded" });
+  await pg.goto(`${conBase}/partners`, { waitUntil: "load" });
   const cyan = await pg.locator("a.con-help").first().evaluate((el) => {
     (el as HTMLElement).style.color = "rgb(31, 182, 214)";
     return getComputedStyle(el).color;
@@ -578,10 +599,10 @@ if (SELF_TEST) {
   await ctx.close();
 
   // ⑬ — telefonon MEGJELENNE az indulólap (kettőzés).
-  const mob = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const mob = await calmContext({ viewport: { width: 390, height: 844 } });
   await mob.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const m = await mob.newPage();
-  await m.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await m.goto(`${conBase}/help`, { waitUntil: "load" });
   await m.evaluate(() => {
     (document.querySelector(".con-kb-start") as HTMLElement).style.display = "grid";
   });
