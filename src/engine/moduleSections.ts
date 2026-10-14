@@ -147,6 +147,7 @@ const CSS = `<style data-cit-modsec>
   border-color:var(--cit-accent);color:var(--cit-on-accent)}
 .cit-price__unit[hidden]{display:none}
 .cit-price__min{color:var(--cit-muted);font-size:.82rem;font-weight:500}
+[data-cit-route] a{color:var(--cit-accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 /* With tabs the block's own heading is redundant — the selected tab names it. */
 .cit-price--tabbed .cit-price__name{display:none}
 .cit-price--tabbed .cit-price__unit table{margin-top:0}
@@ -762,10 +763,13 @@ function locationBlock(d: SiteData, opts: { sampleMap?: boolean } = {}): string 
         // row below, where it survives an opaque error page too. Putting it in both
         // printed the same street twice within 200 px whenever the frame was blank.
         `<div class="cit-map-pin">${ICON_PIN}<strong>${esc(d.name)}</strong></div></div>` +
-        (d.contact.address
-          ? `<ul class="cit-modsec__grid" style="list-style:none;margin:16px 0 0;padding:0">` +
-            `<li class="cit-modsec__item">${ICON_PIN}<span>${esc(d.contact.address)}</span></li></ul>`
-          : "")
+        `<ul class="cit-modsec__grid" style="list-style:none;margin:16px 0 0;padding:0">` +
+        (d.contact.address ? `<li class="cit-modsec__item">${ICON_PIN}<span>${esc(d.contact.address)}</span></li>` : "") +
+        // Elek F-8 (2026-10-14): the box had no way to plan the trip — a guest on a phone wants
+        // the route, not a picture. Same position the map shows; outside the frame, so it
+        // works when the frame is blocked too.
+        `<li class="cit-modsec__item" data-cit-route>${ICON_PIN}<a href="https://www.google.com/maps/dir/?api=1&amp;destination=${encodeURIComponent(query)}" ` +
+        `target="_blank" rel="noopener">${T(d, "Útvonaltervezés ide")}</a></li></ul>`
       : "") +
     (l?.approachNote ? `<p class="cit-modsec__note">${esc(l.approachNote)}</p>` : "") +
     (l?.parkingNote
