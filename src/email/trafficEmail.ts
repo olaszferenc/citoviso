@@ -35,7 +35,7 @@ export interface TrafficEmailInput {
   readonly to: string;
   /** A szállás neve — a tárgysorban ez a horog. */
   readonly siteName: string;
-  /** Az időszak, amiről a számok szólnak, pl. „szeptember 14. – október 14." (ADR-XXXX:
+  /** Az időszak, amiről a számok szólnak, pl. „szeptember 14. – október 14." (ADR-0385:
    *  dátumtartomány, nem hónapnév — a jelentés a megelőző 30 napot méri). */
   readonly periodLabel: string;
   readonly report: TrafficReport;

@@ -11,7 +11,7 @@
 //      újraindítható, és egy kimaradt nap sem eredményez dupla levelet.
 //   3. EGY TENANT HIBÁJA NEM ÁLLÍTJA MEG A TÖBBIT. Minden címzett külön try/catch —
 //      egy rossz e-mail cím nem viheti el az egész havi kört.
-//   4. CSAK AZ IGAZ IDŐSZAKRÓL, ÉS CSAK HA AZ OLDAL MÁR ÉLT BENNE (ADR-XXXX). A jelentés
+//   4. CSAK AZ IGAZ IDŐSZAKRÓL, ÉS CSAK HA AZ OLDAL MÁR ÉLT BENNE (ADR-0385). A jelentés
 //      a megelőző 30 napot méri, ezért a levél a DÁTUMTARTOMÁNYT nevezi meg, nem egy
 //      naptári hónapot (2026-10-14: a 13-án indult próbázó „szeptemberi forgalom" levelet
 //      kapott csupa október 13-i adattal). Az oldalnak legalább TRAFFIC_MAIL_MIN_LIVE_DAYS
@@ -42,7 +42,7 @@ export interface TrafficMailResult {
 export const TRAFFIC_WINDOW_DAYS = 30;
 
 /**
- * Minimum days a site must have been live before its first traffic mail (ADR-XXXX):
+ * Minimum days a site must have been live before its first traffic mail (ADR-0385):
  * 21 of the 30 days = the window is mostly real data, and the first mail still lands
  * within the owner's first month instead of waiting for the next calendar month.
  */

@@ -1,4 +1,4 @@
-## ADR-XXXX — A forgalmi levél a valós időszakot nevezi meg, és csak a legalább 3 hete élő oldalnak megy
+## ADR-0385 — A forgalmi levél a valós időszakot nevezi meg, és csak a legalább 3 hete élő oldalnak megy
 
 **Dátum:** 2026-10-14 · **Kontextus:** az Elek éles teszt 2. köre (2026-10-14), N-1 lelet (`~/wt/cit1cfac043/_elek/JELENTES-2.md`, levél: `mail2/460.txt`). **Kiterjeszti:** ADR-0108 (saját forgalom-mérés, havi levél), ADR-0289 (budapesti naptár).
 

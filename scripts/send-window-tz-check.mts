@@ -12,7 +12,7 @@
 //   ⑤ STRUCTURE: no outbound file reads the process-local clock (getHours/setHours/…);
 //   ⑥ ADR-0289 the shared clock (src/text/budapestTime.ts) and what owners/buyers see: the
 //      buyer's payment stamp, the traffic report's day start (Budapest midnight, 23/25-hour
-//      DST days), the monthly mail's period days (ADR-XXXX: a date range, not a month
+//      DST days), the monthly mail's period days (ADR-0385: a date range, not a month
 //      name) — right around midnight, where UTC and Budapest disagree;
 //   ⑦ STRUCTURE: the owner/buyer-facing files read no local getter, every date formatter in
 //      them names the zone, every SQL day/month boundary says AT TIME ZONE;
