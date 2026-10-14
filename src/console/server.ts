@@ -3,6 +3,7 @@
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
 import { couponConfigErrors, couponFromForm, getCouponConfig, liveTenantCoupons, setCouponConfig } from "../payment/couponConfig.js";
+import { crossOriginRefusal } from "../server/originGuard.js";
 import {
   freeTrialConfigErrors,
   freeTrialFromForm,
@@ -1489,6 +1490,15 @@ async function handle(
   }
 
   // ── Operator login (control-plane realm, ADR-0021) ──────────────────────────
+  // Elek IT S-1 (2026-10-14): a state-changing request from another origin is refused — before
+  // the operator login and every /p/, /pay/, /configure/ and console route.
+  const refused = crossOriginRefusal(req, path);
+  if (refused) {
+    console.warn(`[csrf] elutasítva: ${method} ${path} — ${refused}`);
+    res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+    res.end("Forbidden: cross-origin request");
+    return;
+  }
   const publicLoginUrl = `${config.publicSiteUrl.replace(/\/+$/, "")}/login`;
   if (path === "/login") {
     if (method === "GET") return send(res, 200, operatorLoginPage(null, publicLoginUrl));

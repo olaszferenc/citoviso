@@ -250,6 +250,7 @@ import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.j
 import { messageTitle } from "../tenant/messagePreview.js";
 import { clientIp } from "./clientIp.js";
 import { brakeKey, RequestBrake } from "./requestBrake.js";
+import { crossOriginRefusal } from "./originGuard.js";
 import { sendAccountActionMail, storedCardLabel } from "../payment/accountMail.js";
 import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
 import {
@@ -2451,6 +2452,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     } catch {
       return send(res, 404, "not found");
     }
+  }
+
+  // Elek IT S-1 (2026-10-14): a state-changing request from another origin is refused — before
+  // any routing, so tenant hosts, the dev /t/ path, /admin and the guest APIs are all covered.
+  const refused = crossOriginRefusal(req, pathname);
+  if (refused) {
+    console.warn(`[csrf] elutasítva: ${req.method} ${pathname} — ${refused}`);
+    return send(res, 403, "Forbidden: cross-origin request", "text/plain");
   }
 
   // ── Tenant host routing (0017): <slug>.citoviso.com / a custom domain serves

@@ -1186,6 +1186,13 @@ if [ -f scripts/booking-tax-receipt-check.mts ] && \
   echo "[pre-commit] booking-tax-receipt-check (ár-alap a foglalt egységre, IFA a nyugtán és a levelekben)…"
   npx tsx scripts/booking-tax-receipt-check.mts >"$GATE_LOG" || gate_failed
 fi
+# CSRF (Elek IT S-1, 2026-10-14): idegen eredetű állapotváltó kérés 403 mindkét szerveren — a
+# testvér-aldomain is idegen; fejléc nélkül és a webhook/relay utakon átmegy. Negatív kontrollal.
+if [ -f scripts/csrf-origin-check.mts ] && \
+   changed_files | grep -qE '^(src/server/(originGuard|public)\.ts|src/console/server\.ts)$|^scripts/csrf-origin-check'; then
+  echo "[pre-commit] csrf-origin-check (idegen Origin → 403, saját host átmegy)…"
+  npx tsx scripts/csrf-origin-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Portál-molinó elérhetőséggel = reklám (Elek F-3, tulaj-döntés „B”, 2026-10-14): v4 prompt;
 # a v3 ítéletek érvényesek a sign_map kivételével; az újrapontozó --sign-map az eredeti URL-lel.
 if [ -f scripts/hero-contact-banner-check.mts ] && \
