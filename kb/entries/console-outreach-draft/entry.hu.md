@@ -4,7 +4,7 @@ title: Megkeresés-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
 category: lead-path
 anchors: console.outreach_draft
-updated: 2026-10-07
+updated: 2026-10-14
 ---
 
 A **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
@@ -28,6 +28,10 @@ A lap legfelső sora **azt** mondja meg, amit tudni akarsz. **Három** válasza 
    leiratkozott, a mock még kurátori jóváhagyásra vár, nincs renderelt lapja, a mock
    kurátori szövegére még nincs Vera-ítélet (a sor megmondja, hol rögzítsd), vagy a
    jogszerűségi kapu FLAG-et adott.
+   Akkor is megáll, ha a lead **már ügyfél vagy próbázó**: „a lead már ügyfél (saját oldala van
+   vagy fizetett) — hideg megkeresés tilos”, illetve „a lead próbázó (…) — hideg megkeresés tilos,
+   a próbázót a próba-kampány kezeli”. Ez e-mailre és SMS-re is áll, és nem oldható fel: aki már
+   kipróbálta a terméket, annak a „honlap-terv az Ön szállásáról” levél a rossz levél.
    Akkor is megáll, ha a cím (vagy SMS-nél a telefonszám) egy **másik szálláshoz is
    tartozik** — ilyenkor könnyen lehet, hogy a szomszédé, és a mock a konkurenshez menne.
    A sor megnevezi a másik szállást. Ha a kettőnek tényleg ugyanaz a tulajdonosa, jelöld

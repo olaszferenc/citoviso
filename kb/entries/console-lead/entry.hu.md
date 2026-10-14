@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-10-05
+updated: 2026-10-14
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -25,6 +25,9 @@ hol tart ez a lead, és mi a következő lépés.
 
 - Minden állomás vagy **dátumot** mond, vagy azt, hogy **„még nem”** — üres gondolatjel sehol.
 - A soron következő állomás kiírja magáról, hogy **„ez a következő”**, hogy ne kelljen keresned.
+- Kivétel: ha a lead már **ügyfél** (próbát indított, vagy saját oldala van, vagy fizetett), a
+  **Kiküldve** állomás ezt írja: **„nem kell — már ügyfél (próba vagy saját oldal)”**, és nem lesz
+  „ez a következő”. Neki hideg megkeresés nem mehet; a próbázót a próba-kampány keresi meg.
 - ⭐ Újragenerálás közben a **Mock** állomás vált futás-állapotra (eltelt idővel), a
   **Jóváhagyva** állomás viszont **a helyén marad a dátumával** — a megkeresés ugyanis attól
   mehet ki, és ez a tény nem tűnhet el csak azért, mert épp készül egy újabb mock.
