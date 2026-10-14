@@ -355,16 +355,19 @@ export interface SubscriptionSummary {
   readonly periodStart: string;
   /** ISO date of the next renewal. */
   readonly periodEnd: string;
+  /** Elek P-4: the owner cancelled — the period end CLOSES the subscription, nothing renews. */
+  readonly cancelAtPeriodEnd: boolean;
 }
 
 export async function getSubscriptionSummary(tenantId: string): Promise<SubscriptionSummary | null> {
   const sub = await db
     .selectFrom("subscription")
-    .select(["status", "billing_period", "current_period_start", "current_period_end"])
+    .select(["status", "billing_period", "current_period_start", "current_period_end", "cancel_at_period_end"])
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (!sub) return null;
   return {
+    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
     status: sub.status,
     billingPeriod: sub.billing_period,
     periodStart: isoDate(new Date(sub.current_period_start as unknown as string)),

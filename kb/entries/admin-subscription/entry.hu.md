@@ -223,6 +223,11 @@ a fordulónapon lép életbe: addig a honlap változatlanul él — hiszen az az
 időszak már ki van fizetve. Ha meggondolja magát, a **„Meggondoltam magam —
 folytatom”** gombbal a fordulónapig visszaléphet.
 
+Lemondás után a felület mindenhol a zárást mondja: a **„Következő számla”** és a Pénztárca
+**„Következő terhelés”** sora „nincs”, mellette ez áll: *„Az előfizetését lemondta: … napján
+zárul. Nem terhelünk, és fizetési linket sem küldünk.”* — az oldalsávon pedig „zárul …, nem
+terhelünk”. A fordulónap előtti „hamarosan megújul” levelet sem kapja meg.
+
 **Kivétel a hűségidő.** Ha tőlünk rendelt saját webcímet, ahhoz hűségidő
 tartozik, és amíg az fut, a lemondás elszámolással jár: az **„Előfizetés
 lemondása…”** gomb ilyenkor egy külön elszámolás-oldalra visz, ahol tételesen

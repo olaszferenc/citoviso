@@ -1186,6 +1186,13 @@ if [ -f scripts/booking-tax-receipt-check.mts ] && \
   echo "[pre-commit] booking-tax-receipt-check (ár-alap a foglalt egységre, IFA a nyugtán és a levelekben)…"
   npx tsx scripts/booking-tax-receipt-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Lemondott előfizetés (Elek P-4, 2026-10-14): minden felület a zárást mondja (Modulok,
+# Pénztárca, oldalsáv, megerősítők), és a létra T−3-kor sem küld „megújul” levelet / rendelést.
+if [ -f scripts/subscription-cancel-truth-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/(subscriptionAdmin|wallet)\.ts|src/payment/(billing|subscription)\.ts)$|^scripts/subscription-cancel-truth-check'; then
+  echo "[pre-commit] subscription-cancel-truth-check (lemondás után: zárul, nem terhelünk)…"
+  npx tsx scripts/subscription-cancel-truth-check.mts >"$GATE_LOG" || gate_failed
+fi
 # „Megközelítés”: útvonaltervező link a térkép pozíciójára (Elek F-8, 2026-10-14).
 if [ -f scripts/map-route-link-check.mts ] && \
    changed_files | grep -qE '^(src/engine/(moduleSections|primitives)\.ts)$|^scripts/map-route-link-check'; then

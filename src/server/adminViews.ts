@@ -497,13 +497,18 @@ function subscriptionCard(
     let k = (z.year - start.getFullYear()) * 12 + (z.month - 1 - start.getMonth());
     if (z.day < start.getDate()) k -= 1;
     k = Math.min(12, Math.max(1, k + 1));
-    line = T(lang, "megújul {date} · {n} modul aktív · {k}. hónap a 12-ből", { date: renews, n: activeModules, k });
+    line = sum.cancelAtPeriodEnd
+      ? T(lang, "zárul {date}, nem terhelünk · {n} modul aktív", { date: renews, n: activeModules })
+      : T(lang, "megújul {date} · {n} modul aktív · {k}. hónap a 12-ből", { date: renews, n: activeModules, k });
     meter = `<div class="adm-plan__bars">${Array.from({ length: 12 }, (_, i) => `<i${i < k ? ' class="on"' : ""}></i>`).join("")}</div>`;
   } else {
     const total = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000));
     const left = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86_400_000));
     const pct = Math.min(100, Math.max(0, Math.round(((total - left) / total) * 100)));
-    line = T(lang, "megújul {date} · {n} modul aktív · még {d} nap", { date: renews, n: activeModules, d: left });
+    // Elek P-4: a cancelled subscription does not renew — the card says it closes.
+    line = sum.cancelAtPeriodEnd
+      ? T(lang, "zárul {date}, nem terhelünk · {n} modul aktív", { date: renews, n: activeModules })
+      : T(lang, "megújul {date} · {n} modul aktív · még {d} nap", { date: renews, n: activeModules, d: left });
     meter = `<div class="adm-plan__meter"><i style="width:${pct}%"></i></div>`;
   }
   const title = sum.billingPeriod === "annual" ? T(lang, "Éves előfizetés") : T(lang, "Havi előfizetés");
@@ -1862,6 +1867,10 @@ export function modulesSection(
     // opens a confirm dialog that spells out the consequences (owner ruling
     // 2026-09-01) — a one-click revoke would drop the tenant into the dunning
     // ladder without them realising what they gave up.
+    // Elek P-4 (2026-10-14): after „Előfizetés lemondása” every surface still promised the
+    // next charge („Következő számla … 5 180 Ft”, „díjfizetési kötelezettség változatlan”).
+    // A cancelled subscription closes at the period end — that is what each line says now.
+    const closing = sub.cancelAtPeriodEnd && !frozen;
     const mandateBlock = sub.autoCharge
       ? frozen
         ? // An "enabled, nothing to do" mandate under a suspension notice is the
@@ -1917,7 +1926,7 @@ export function modulesSection(
           `<div class="adm-mand__txt">` +
           `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>` +
           `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
-          `<p>${T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
+          `<p>${closing ? T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: esc(renewDate) }) : T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
           `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button> ` +
           // ADR-0226 (wallet ⑨): the card itself lives on ONE surface — link, do not copy.
           `<a class="adm-mand__btn" href="/admin?tab=penztarca">${T(lang, "Pénztárca — melyik kártya, csere")}</a>` +
@@ -1927,7 +1936,7 @@ export function modulesSection(
         `<div class="adm-mand__txt">` +
         `<span class="adm-mand__pill">${T(lang, "KIKAPCSOLVA")}</span>` +
         `<h3>${T(lang, "Fizetés díjbekérővel")}</h3>` +
-        `<p>${T(lang, "A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.")}</p>` +
+        `<p>${closing ? T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: esc(renewDate) }) : T(lang, "A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.")}</p>` +
         // HONEST re-grant: a stored credential is bound by the card scheme to a
         // 3DS-challenged, customer-initiated payment, so there is no button that
         // can switch this back on by itself. The next pay-link payment re-grants
@@ -1986,7 +1995,11 @@ export function modulesSection(
           // the annual switch armed (or an annual sub) the base is the annual total
           // and every module delta counts 10× (ADR-0088 §8; a +490 Ft chip on a
           // 10-month invoice would understate the change — §B.17).
-          `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.pendingAnnual || annual ? sub.annualTotal : sub.nextInvoiceTotal}" data-mult="${sub.pendingAnnual || annual ? 12 - sub.annualFreeMonths : 1}">${nextCell}</div></div>`) +
+          (closing
+            ? `<div class="adm-sub__cell" data-closing><div class="adm-sub__l">${T(lang, "Következő számla")}</div>` +
+              `<div class="adm-sub__v adm-sub__v--date">${T(lang, "nincs")}</div>` +
+              `<div class="adm-sub__note">${T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: esc(renewDate) })}</div></div>`
+            : `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.pendingAnnual || annual ? sub.annualTotal : sub.nextInvoiceTotal}" data-mult="${sub.pendingAnnual || annual ? 12 - sub.annualFreeMonths : 1}">${nextCell}</div></div>`)) +
       `</div>` +
       periodBlock +
       mandateBlock +
@@ -1996,13 +2009,14 @@ export function modulesSection(
       // ⭐ APPROVED CONTRACT (modules-quiet-list §5): OPEN by default. The itemised
       // invoice is the answer to "mi ez a szám?", and it sat collapsed at y=684 on
       // a phone — a fold the owner had to know to open.
-      `<details class="adm-sub__items" open><summary>${
+      // Elek P-4: a cancelled subscription has no next invoice to itemise.
+      (closing ? "" : `<details class="adm-sub__items" open><summary>${
         annual || sub.pendingAnnual
           ? T(lang, "A következő számla tételei (éves díj = {n} havi díj)", {
               n: String(12 - sub.annualFreeMonths),
             })
           : T(lang, "A következő számla tételei")
-      }</summary>${itemRows}</details>` +
+      }</summary>${itemRows}</details>`) +
       `</div>`;
   }
 
@@ -2658,8 +2672,11 @@ export function modulesSection(
         `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-mand-t" data-mand-modal hidden>` +
         `<h3 id="adm-mand-t">${T(lang, "Biztosan visszavonja az automatikus terhelést?")}</h3>` +
         `<ul>` +
-        `<li>${T(lang, "Ezután Önnek kell fizetnie minden fordulónapon, a kiküldött fizetési linkkel.")}</li>` +
-        `<li>${T(lang, "Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot átmenetileg felfüggesztjük.")}</li>` +
+        // Elek P-4: a cancelled subscription has no next turning day to pay on.
+        (sub.cancelAtPeriodEnd
+          ? `<li>${T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: esc(renewDate) })}</li>`
+          : `<li>${T(lang, "Ezután Önnek kell fizetnie minden fordulónapon, a kiküldött fizetési linkkel.")}</li>` +
+            `<li>${T(lang, "Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot átmenetileg felfüggesztjük.")}</li>`) +
         `<li>${T(lang, "A visszavonás nem szünteti meg a fizetési kötelezettséget, és nem mondja le az előfizetést.")}</li>` +
         `<li>${T(lang, "A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés miatt egy új fizetéssel adhat újra megbízást.")}</li>` +
         `</ul>` +
@@ -5769,7 +5786,11 @@ export function walletSection(
       `<div class="adm-wal__brand">${T(lang, "NINCS MENTETT KÁRTYA")}</div>` +
       `<div class="adm-wal__none">${T(lang, "A díjakat fizetési linkkel, e-mailből tudja rendezni.")}</div></div>`;
   // ── what the state MEANS (contract ③ + the mask-less honesty of ②) ──
-  const meaning = !card
+  // Elek P-4: a cancelled subscription closes at the period end — no charge, no pay link.
+  const closing = Boolean(sub?.cancelAtPeriodEnd) && !w.frozen;
+  const meaning = closing
+    ? `<p class="adm-wal__hint" data-closing>${T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: d(w.nextChargeOn) })}</p>`
+    : !card
     ? `<p class="adm-wal__hint">${T(lang, "A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.")}</p>`
     : (w.frozen
         ? `<p class="adm-wal__hint adm-wal__hint--bad">${T(lang, "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A díj rendezése a Modulok fülön történik; egy másik kártya megadása itt lehetséges.")} <a href="/admin?tab=modulok">${T(lang, "A díj rendezése →")}</a></p>`
@@ -5814,8 +5835,8 @@ export function walletSection(
     : `${d(w.nextChargeOn)} · ${T(lang, "fizetési link e-mailben")}`;
   const next =
     `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő terhelés")}</div>` +
-    `<div class="adm-sub__v adm-sub__v--date">${nextVal}</div></div>` +
-    `<p class="adm-wal__hint">${T(lang, "A terhelés előtt 3 nappal e-mailt küldünk. A díj a csomagja szerint változhat.")}</p>` +
+    `<div class="adm-sub__v adm-sub__v--date">${closing ? T(lang, "nincs") : nextVal}</div></div>` +
+    (closing ? "" : `<p class="adm-wal__hint">${T(lang, "A terhelés előtt 3 nappal e-mailt küldünk. A díj a csomagja szerint változhat.")}</p>`) +
     // Elek K4: the own domain is package content now — its fee starts with a downgrade.
     (sub?.domainInPackage
       ? `<p class="adm-wal__hint" data-domain-pkg>${T(lang, "A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja {price}/hó.", { price: esc(hufAmount(sub.domainInPackage.outsideMonthly)) })}</p>`
@@ -5855,8 +5876,10 @@ export function walletSection(
       `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-mand-t" data-mand-modal hidden>` +
       `<h3 id="adm-mand-t">${T(lang, "Biztosan visszavonja az automatikus terhelést?")}</h3>` +
       `<ul>` +
-      `<li>${T(lang, "Ezután Önnek kell fizetnie minden fordulónapon, a kiküldött fizetési linkkel.")}</li>` +
-      `<li>${T(lang, "Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot átmenetileg felfüggesztjük.")}</li>` +
+      (closing
+        ? `<li>${T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: d(w.nextChargeOn) })}</li>`
+        : `<li>${T(lang, "Ezután Önnek kell fizetnie minden fordulónapon, a kiküldött fizetési linkkel.")}</li>` +
+          `<li>${T(lang, "Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot átmenetileg felfüggesztjük.")}</li>`) +
       `<li>${T(lang, "A visszavonás nem szünteti meg a fizetési kötelezettséget, és nem mondja le az előfizetést.")}</li>` +
       // Contract ⑥: the fourth point names the REAL way back (the wallet's own button).
       `<li>${T(lang, "A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés miatt új kártya-megadás kell (a „Kártya megadása” gombbal).")}</li>` +

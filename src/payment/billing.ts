@@ -265,6 +265,9 @@ async function renewalBuyerBlock(
 async function findOrCreateRenewalOrder(
   sub: SubRow,
 ): Promise<{ id: string; price: number; period: "monthly" | "annual" } | null> {
+  // Elek P-4: a cancelled subscription has no next period to sell — no order, from any caller
+  // (the ladder, the harness door mintRenewalForTenant).
+  if (sub.cancelAtPeriodEnd) return null;
   const periodStart = sub.periodEnd;
   const existing = await db
     .selectFrom("order_intent")
@@ -531,9 +534,15 @@ async function advanceOne(
 
   // The tenant asked to stop: at the period end the subscription closes without
   // any dunning — there is nothing to collect (ADR-0080 ③).
-  if (sub.cancelAtPeriodEnd && offset >= 0) {
-    await cancelSubscription(sub.tenantId, "tenant_cancelled");
-    result.cancelled++;
+  // Elek P-4 (2026-10-14): BEFORE the period end the ladder must not run either. The guard
+  // used to hold only from T on, so at T−3 a cancelled subscription still minted a renewal
+  // order and mailed „Előfizetése hamarosan megújul” — a charge promised after the owner
+  // was told „zárul, nem terhelünk”.
+  if (sub.cancelAtPeriodEnd) {
+    if (offset >= 0) {
+      await cancelSubscription(sub.tenantId, "tenant_cancelled");
+      result.cancelled++;
+    }
     return 0;
   }
 
