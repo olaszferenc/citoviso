@@ -1,4 +1,4 @@
-## ADR-XXXX — A lefotózott portál-molinó elérhetőséggel reklám; csak a sign_map-ítéleteket kérdezzük újra
+## ADR-0390 — A lefotózott portál-molinó elérhetőséggel reklám; csak a sign_map-ítéleteket kérdezzük újra
 
 **Dátum:** 2026-10-14 · **Kontextus:** éles végigteszt, Elek-foglaló F-3. **Tulaj-döntés:** „B” (a koordinátoron át, 2026-10-14). **Kiterjeszti:** a képszűrő `ad_banner` szabályát (heroPick, v2-adbanner / v3-watermark).
 

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-portal-molino-reklam-sign-map-ujrakerdezes.md) — A lefotózott portál-molinó elérhetőséggel reklám; csak a sign_map-ítéleteket kérdezzük újra
+- [ADR-0390](decisions/0390-a-lefotozott-portal-molino-elerhetoseggel.md) — A lefotózott portál-molinó elérhetőséggel reklám; csak a sign_map-ítéleteket kérdezzük újra
 - [ADR-0389](decisions/0389-a-ferohely-a-foglalas-felso-hatara.md) — A férőhely a foglalás felső határa
 - [ADR-0388](decisions/0388-a-foglalasnal-a-gyerekszamot-mindig-megkerdezzuk.md) — A foglalásnál a gyerekszámot mindig megkérdezzük
 - [ADR-0387](decisions/0387-a-pirula-par-az-elso-kepernyon-latszo-oldalsav.md) — A pirula-pár az első képernyőn látszó oldalsáv-kártya címére sem ül
