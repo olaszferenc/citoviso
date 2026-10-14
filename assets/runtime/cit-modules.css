@@ -153,6 +153,8 @@
 
 .cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
 .cit-book__note--err { color: var(--cit-accent); }
+/* Elek F-6: the field the error is about is marked, not only the sentence under the button. */
+.cit-book__input[aria-invalid="true"] { border-color: var(--cit-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cit-accent) 35%, transparent); }
 
 /* Booking widget layout (owner decree 2026-08-23 — "milyen gagyi az elrendezése"):
    the CALENDAR leads on the left (it is what sells the module), a compact request

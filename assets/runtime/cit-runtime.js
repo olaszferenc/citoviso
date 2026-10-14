@@ -839,6 +839,14 @@
       note.innerHTML = msg ? esc(msg) : restNote;
       note.classList.toggle("cit-book__note--err", !!bad);
     }
+    /* Elek F-6: several errors, one per line. */
+    function sayAll(msgs) {
+      note.innerHTML = msgs.map(esc).join("<br>");
+      note.classList.add("cit-book__note--err");
+    }
+    ["name", "email", "phone"].forEach(function (n) {
+      form[n].addEventListener("input", function () { form[n].removeAttribute("aria-invalid"); });
+    });
     function nights(a, b) {
       return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
     }
@@ -1181,13 +1189,26 @@
         showReceipt();
         return;
       }
-      if (!form.name.value.trim()) return say(tr("Kérjük, adja meg a nevét."), true);
-      if (!form.email.value.trim()) return say(tr("Kérjük, adja meg az e-mail címét."), true);
+      /* Elek F-6 (2026-10-14): one error at a time, and the field it was about was not
+       * marked — the guest fixed the name, sent, then learnt about the phone. Every missing
+       * field is said at once, marked (aria-invalid + the error ring), and the first one
+       * gets the focus. The marks clear as the guest types. */
+      var bad = [];
+      if (!form.name.value.trim()) bad.push([form.name, tr("Kérjük, adja meg a nevét.")]);
+      if (!form.email.value.trim()) bad.push([form.email, tr("Kérjük, adja meg az e-mail címét.")]);
+      else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.value.trim())) bad.push([form.email, tr("Kérjük, adjon meg egy érvényes e-mail címet.")]);
       // Phone is required (owner decree): the owner often needs to ask something
       // before confirming, and an unanswered e-mail kills the booking. The server
       // enforces the same rule — this only spares the guest a round-trip.
       if (form.phone.value.replace(/\D/g, "").length < 6) {
-        return say(tr("Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá."), true);
+        bad.push([form.phone, tr("Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá.")]);
+      }
+      [form.name, form.email, form.phone].forEach(function (f) { f.removeAttribute("aria-invalid"); });
+      if (bad.length) {
+        bad.forEach(function (b) { b[0].setAttribute("aria-invalid", "true"); });
+        sayAll(bad.map(function (b) { return b[1]; }));
+        bad[0][0].focus();
+        return;
       }
 
       submit.disabled = true;
@@ -1235,8 +1256,8 @@
             return;
           }
           submit.disabled = false;
-          var errs = out.j && out.j.errors && out.j.errors.length ? out.j.errors[0] : tr("Nem sikerült elküldeni. Kérjük, próbálja újra.");
-          say(errs, true);
+          // Elek F-6: every server error, not just the first one.
+          sayAll(out.j && out.j.errors && out.j.errors.length ? out.j.errors : [tr("Nem sikerült elküldeni. Kérjük, próbálja újra.")]);
         })
         .catch(function () {
           submit.disabled = false;
