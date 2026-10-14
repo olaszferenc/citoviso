@@ -67,6 +67,9 @@ e-mailben”** felirat áll.
 Alatta a **„Terhelések ezen a kártyán”** táblázat sorolja fel, mikor, milyen tételért,
 mennyit vontunk le erről a kártyáról, és hogy a terhelés **„sikeres”** vagy **„elutasítva”**
 lett. Ha még nem történt terhelés, a **„Még nem volt terhelés.”** sor áll ott.
+Ha nincs mentett kártyája (például visszavonta a megbízást), a táblázat címe **„Korábbi
+fizetések”**: ilyenkor az összes eddigi fizetését mutatja, bármelyik kártyával vagy
+fizetési linkkel fizetett — a korábbi terhelések tehát nem tűnnek el a kártyával együtt.
 
 ## Hogyan vonom vissza az automatikus terhelést?
 

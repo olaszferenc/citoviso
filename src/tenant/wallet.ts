@@ -121,8 +121,7 @@ export async function getWalletAdmin(tenantId: string): Promise<WalletAdminData 
   // Charges ON this card: the initiating payment and every merchant-initiated
   // charge (pay_url NULL) since the card was saved. Tenant-bound orders carry
   // tenant_id; the initial order reaches the tenant only through its lead.
-  const chargeRows = autoCharge
-    ? await db
+  const chargeRows = await db
         .selectFrom("payment")
         .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
         .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
@@ -142,21 +141,25 @@ export async function getWalletAdmin(tenantId: string): Promise<WalletAdminData 
         )
         .where("payment.status", "in", ["paid", "failed"])
         .where((eb) =>
-          eb.or([
-            // The token IS the initiating payment's id (service.ts recurrenceId) —
-            // compared as text: a token is text, and a non-uuid one (a foreign or
-            // legacy value) must not blow the query up (measured by wallet-check).
-            eb(sql<string>`payment.id::text`, "=", sub.recurrence_token!),
-            eb.and([
-              eb("payment.pay_url", "is", null),
-              ...(savedAt ? [eb("payment.created_at", ">=", savedAt as unknown as never)] : []),
-            ]),
-          ]),
+          autoCharge
+            ? eb.or([
+                // The token IS the initiating payment's id (service.ts recurrenceId) —
+                // compared as text: a token is text, and a non-uuid one (a foreign or
+                // legacy value) must not blow the query up (measured by wallet-check).
+                eb(sql<string>`payment.id::text`, "=", sub.recurrence_token!),
+                eb.and([
+                  eb("payment.pay_url", "is", null),
+                  ...(savedAt ? [eb("payment.created_at", ">=", savedAt as unknown as never)] : []),
+                ]),
+              ])
+            : // Elek P-6 (2026-10-14): with no card on file the list went EMPTY — a revoke made
+              // the paid history vanish with the card. Without a card it is the tenant's own
+              // payment history ("Korábbi fizetések"), whatever card or link paid it.
+              eb.val(true),
         )
         .orderBy("payment.created_at", "desc")
         .limit(24)
-        .execute()
-    : [];
+        .execute();
   const charges: WalletCharge[] = chargeRows
     .filter((r) => r.kind !== "card_update") // the hold is not a charge — nothing moved
     .map((r) => ({

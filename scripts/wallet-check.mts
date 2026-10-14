@@ -145,7 +145,8 @@ console.log("A) render — állapotok és a kontraktus feliratai");
   const noneT = strip(none);
   ok(noneT.includes("NINCS MENTETT KÁRTYA") && noneT.includes("fizetési link e-mailben"), "nincs kártya: pill + következő terhelés = link (③/⑦)");
   ok(noneT.includes("Kártya megadása") && !none.includes("data-mand-revoke>"), "nincs kártya: Kártya megadása, visszavonás nincs (④)");
-  ok(noneT.includes("Még nem volt terhelés."), "nincs kártya: üres terhelés-lista (⑦)");
+  // Elek P-6: with no card the list is the payment history — named so, not „ezen a kártyán”.
+  ok(noneT.includes("Korábbi fizetések") && noneT.includes("Még nem volt fizetés.") && !noneT.includes("Terhelések ezen a kártyán"), "nincs kártya: „Korábbi fizetések” (üresen: „Még nem volt fizetés.”)");
 
   const frozen = strip(walletSection({ ...base, frozen: true }, sub, null));
   ok(frozen.includes("A TERHELÉS NEM SIKERÜLT") && frozen.includes("A díj rendezése"), "elakadt: pill + kiút a Modulok fülre");
@@ -357,6 +358,20 @@ try {
   ok(!!w1 && w1.card?.last4 === "8810" && w1.history.length === 1 && w1.history[0]!.reason === "replaced", "getWalletAdmin: az új kártya + 1 „cserélve” előzmény");
   ok(!!w1 && !w1.charges.some((c) => c.orderKind === "card_update"), "a zárolás NEM szerepel terhelésként (⑦)");
 
+  // Elek P-6: one merchant-initiated renewal paid on the card BEFORE the revoke — the history
+  // the Pénztárca must keep showing afterwards.
+  const ren = await db
+    .insertInto("order_intent")
+    .values({ prospect_id: prospectId, tenant_id: tenantId, kind: "renewal", price: 3900, billing_period: "monthly", modules: JSON.stringify([]), status: "submitted", submitted_at: new Date(), ...buyer } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await db
+    .insertInto("payment")
+    .values({ order_intent_id: ren.id as string, amount: 3900, period: "monthly", gateway: "mock", gateway_ref: `mock_p6_${Date.now()}`, status: "paid", paid_at: new Date(), pay_url: null } as never)
+    .execute();
+  const w1b = await getWalletAdmin(tenantId);
+  ok(!!w1b && w1b.charges.some((c) => c.orderKind === "renewal" && c.amount === 3900), "P-6 előfeltétel: a kártyás megújítás a kártya terhelései közt");
+
   // Revoke: token + mask dropped, history says "revoked".
   ok(await revokeAutoCharge(tenantId), "revokeAutoCharge: true");
   const s2 = await db.selectFrom("subscription").selectAll().where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
@@ -365,6 +380,11 @@ try {
   ok(h3.length === 2 && h3[0]!.end_reason === "revoked" && h3[0]!.card_last4 === "8810", "előzmény: ····8810 „revoked” (2 sor)");
   const w2 = await getWalletAdmin(tenantId);
   ok(!!w2 && !w2.autoCharge && w2.card === null && w2.history.length === 2, "getWalletAdmin visszavonás után: nincs kártya, 2 előzmény");
+  // Elek P-6 (2026-10-14): the paid history vanished with the card („Terhelések ezen a kártyán” empty).
+  const paidBefore = (w1b?.charges ?? []).filter((c) => c.status === "paid").length;
+  ok(!!w2 && w2.charges.filter((c) => c.status === "paid").length >= paidBefore && w2.charges.length > 0,
+    `⭐ P-6: visszavonás után a fizetések NEM tűnnek el (előtte ${paidBefore} fizetett, utána ${w2?.charges.length ?? 0} sor)`);
+  ok(!!w2 && !w2.charges.some((c) => c.orderKind === "card_update"), "P-6: a zárolás kártya nélkül sem fizetés");
 
   // Upsell "másik kártyával": the pay-link initiates a token even though the kind is upsell.
   const up = await db

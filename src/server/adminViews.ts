@@ -5866,9 +5866,10 @@ export function walletSection(
     })
     .join("");
   const table =
-    `<table class="adm-wal__tbl"><thead><tr><th>${T(lang, "Terhelések ezen a kártyán")}</th>` +
+    // Elek P-6: with no card on file the list is the whole payment history — named so.
+    `<table class="adm-wal__tbl"><thead><tr><th>${card ? T(lang, "Terhelések ezen a kártyán") : T(lang, "Korábbi fizetések")}</th>` +
     `<th class="adm-wal__r">${T(lang, "Összeg")}</th><th class="adm-wal__r">${T(lang, "Állapot")}</th></tr></thead>` +
-    `<tbody>${rows || `<tr><td colspan="3" class="adm-wal__sub">${T(lang, "Még nem volt terhelés.")}</td></tr>`}</tbody></table>`;
+    `<tbody>${rows || `<tr><td colspan="3" class="adm-wal__sub">${card ? T(lang, "Még nem volt terhelés.") : T(lang, "Még nem volt fizetés.")}</td></tr>`}</tbody></table>`;
   // ── dialogs (contract ④ / ⑥). Forms live OUTSIDE the dialogs' markup and are
   //    referenced by id, so the no-JS path still posts. ──
   const changeDialog = w.canChangeCard
