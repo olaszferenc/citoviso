@@ -81,7 +81,12 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
   vagyis a modemes gép nem viszi ki az üzeneteket. Erről csak levél jön: az SMS ugyanabban a
   sorban várna;
 - a **24 órája hibás naptár-szinkron** (tárgy: „… naptár-szinkron 24 órája hibás”) — egy szállás
-  portál-naptára nem húzható be (a szállás tulaja ugyanekkor levelet kap).
+  portál-naptára nem húzható be (a szállás tulaja ugyanekkor levelet kap);
+- az **új ingyenes próba** (tárgy: „Citoviso: új ingyenes próba — <név> (<város>)”): ki indította,
+  meddig tart, az élő oldal címe — ez nem baj, hanem hír, de a próbázót a konzolon is követni kell;
+- a **24 órája megválaszolatlan foglalási kérés** (tárgy: „Citoviso: válasz nélküli foglalás — <név>
+  (N órája)”): a szállás tulaja nem döntött egy vendég kéréséről, érdemes felhívni. Csak levél,
+  kérésenként egyszer.
 
 ### Melyik riasztás jön SMS-ben is?
 
@@ -90,7 +95,7 @@ mozdult: a megakadt fizetés, a nem feldolgozható fizetési visszahívás, a hi
 második terhelés, a már lezárt fizetésre utólag érkező „sikeres” jelzés, a domain-beszerzés
 bármelyik elakadása, a halott API-kulcs, a leállt időzített feladat, egy szolgáltatás
 összeomlása, a ki nem ment foglalási levél, az el nem indult ingyenes próba és a kézi
-intézésre váró domain-igénylés. Hogy a telefon ne teljen meg:
+intézésre váró domain-igénylés; és — bár nem baj, hanem hír — az **új ingyenes próba**. Hogy a telefon ne teljen meg:
 
 - **ugyanarról az esetről 6 órán belül nem jön második SMS** (a levél igen);
 - **óránként legfeljebb 4 riasztó SMS** megy ki; ami fölötte van, csak levélben jön;

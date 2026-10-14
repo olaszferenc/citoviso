@@ -33,6 +33,12 @@ A hosszt (alapból 14 nap) és a kupon százalékát (alapból 25%) a **„Áraz
 
 ## Hol látod a próbát a konzolon
 
+- **Lead-lista**: a próbázó lead neve alatt „próbázik · még N nap” jelvény áll, és a cím alatti
+  szűrő-sor **„Próbázik”** gombja csak a próbázókat mutatja (részletek a Lead-lista súgójában).
+- **A lead lapja**: a munkamenet-sáv alatt az ügyfél-kártya mutatja a hátralévő napokat, az élő
+  oldalt, a próba-űrlap kapcsolattartóját és az élő oldalra érkezett foglalásokat (részletek a
+  Lead-lap súgójában).
+- **Értesítés**: új próba indulásakor levél és SMS jön a Beállítások „Üzemi riasztások” címzettjeinek.
 - **Riport → „Tölcsér”**: a **„Kipróbálja-e?”** kártya (próba / kiküldött, cél 5%) a
   **„Megrendeli-e?”** mellett — ugyanarra a nevezőre mér, hogy a két út egymás mellett olvasható
   legyen. A **„Bontás”** táblában a **„Próba”**, a **„Kohorsz”** táblában a **„Próba 14 n.”** oszlop.

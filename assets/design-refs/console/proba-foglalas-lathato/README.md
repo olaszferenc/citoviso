@@ -28,7 +28,7 @@ szólt, a foglalás a konzolban sehol nem látszott, csak a `/pricing` írta ki,
 ### ① Lista: jelvény a név alatt (C)
 
 - Egy szótár a lead-lappal (`clientPill` / `bookingPill`, `src/console/views.ts`).
-- Próba: „próbázik · még N nap”; 3 napnál kevesebbnél sárga, utána „holnap lejár” / „ma lejár”.
+- Próba: „próbázik · még N nap”; legfeljebb 3 nap hátralévőnél sárga, az utolsó két napon „holnap lejár” / „ma lejár”.
   Ezen kívül **„előfizető”** és **„próba lejárt”**.
 - Foglalás: „N foglalás”. Ha a tulaj még nem döntött egy kérésről, sárgán „N foglalás válaszra vár”.
 - Ügyfél nélküli sorban nincs jelvény.

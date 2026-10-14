@@ -180,14 +180,22 @@ Cellán belüli jelölések:
 2026-10-14 óta a lista megmutatja, melyik lead **ügyfél** már (Elek 10-13: addig a próbázó leadnél
 is csak „jóváhagyva” állt).
 
-- **A név alatt jelvény** áll: „próbázik · még N nap” (3 napnál kevesebbnél sárga),
-  **„előfizető”** vagy **„próba lejárt”**, és ha az élő oldalra foglalás érkezett, „N foglalás”.
-  Ha a tulaj még nem döntött egy kérésről, sárgán: „N foglalás válaszra vár”.
+- **A név alatt jelvény** áll:
+  - próbánál „próbázik · még N nap”, az utolsó két napon „próbázik · holnap lejár” / „próbázik · ma lejár”.
+    Ha legfeljebb 3 nap van hátra, a jelvény sárga;
+  - **„előfizető”**: fizető ügyfél, akkor is, ha a díjjal késésben van;
+  - **„próba lejárt”**: a próba folytatás nélkül véget ért.
+- Ha az élő oldalra foglalás érkezett, mellette „N foglalás” áll (az összes kérés száma). Ha a tulaj egy
+  vagy több kérésről még nem döntött, helyette sárgán „N foglalás válaszra vár” látszik. Ilyenkor N a
+  válaszra váró kérések száma.
+  **Mit tegyél ilyenkor:** koppints a lead nevére. A lapon az ügyfél-kártya mutatja a kéréseket. Ha ott
+  az **„Érdemes felhívni.”** sor is áll, a tulaj egy napja nem válaszolt: hívd fel.
 - **A cím alatti szűrő-sor:** **„Mind”**, **„Próbázik”**, **„Foglalás érkezett”**, **„Előfizető”**,
-  **„Próba lejárt”**, mindegyik mellett a darabszámmal. A szám mindig az EGÉSZ aktív listára
-  vonatkozik, nem a most szűrt sorokra. Egy gombra koppintva a teljes aktív lista azon része jön
-  be. Az oszlop-szűrők és az alapszűrés ilyenkor nem érvényesek, mert egy saját honlappal
-  rendelkező próbázó is ügyfél, és az alapszűrés kiejtené. A **„Mind”** visszavált.
+  **„Próba lejárt”**, mindegyik mellett a darabszámmal.
+  - A szám mindig az EGÉSZ aktív listára vonatkozik, nem a most szűrt sorokra.
+  - Egy gombra koppintva a teljes aktív lista azon része jön be. Az oszlop-szűrők és az alapszűrés
+    ilyenkor nem érvényesek: egy saját honlappal rendelkező próbázó is ügyfél, és az alapszűrés kiejtené.
+  - A **„Mind”** visszavált.
 
 A részleteket (napok, élő oldal, foglalások táblázata) a lead-lapon az ügyfél-kártya mutatja.
 

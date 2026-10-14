@@ -451,7 +451,7 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
       mark: T(lang, "próbázik · még {n} nap", { n: "N" }),
       meaning: T(
         lang,
-        "A Név alatt: a lead ingyenes próbát futtat, ennyi nap van hátra. 3 napnál kevesebbnél sárga. A lapján a próba és az élő oldal részletei.",
+        "A Név alatt: a lead ingyenes próbát futtat, ennyi nap van hátra. Legfeljebb 3 napnál sárga. A lapján a próba és az élő oldal részletei.",
       ),
     },
     {
@@ -466,7 +466,7 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
       mark: T(lang, "{n} foglalás", { n: "N" }),
       meaning: T(
         lang,
-        "A Név alatt: ennyi foglalási kérés érkezett az élő oldalra. Ha sárgán „válaszra vár”, a tulaj még nem döntött róla — 24 óra után a ház levelet kap.",
+        "A Név alatt: ennyi foglalási kérés érkezett az élő oldalra. Ha sárgán „válaszra vár”, a tulaj ennyi kérésről még nem döntött — 24 óra után a Beállításokban megadott riasztási címre levél megy.",
       ),
     },
   ];

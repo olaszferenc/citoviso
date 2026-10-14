@@ -1632,7 +1632,18 @@ const leadRowsPaged: LeadListRow[] = Array.from({ length: 64 }, (_, i) =>
     ["email", "sms", "voice"][i % 3]!,
     i % 7 === 0 ? { id: `ap${i}`, status: "approved" } : null,
   ),
-);
+).map((r, i): LeadListRow => {
+  // ADR-0386: a few CLIENT rows, so the shot shows the badge under the name and the filter
+  // row's counts are not all zero — a trial (plenty of days, one confirmed booking), a trial
+  // about to end with a request the owner has not answered, a subscriber, a lapsed trial.
+  const client =
+    i === 0 ? { kind: "trial" as const, daysLeft: 9, bookingTotal: 1, bookingPending: 0 }
+    : i === 1 ? { kind: "trial" as const, daysLeft: 2, bookingTotal: 1, bookingPending: 1 }
+    : i === 4 ? { kind: "paid" as const, daysLeft: null, bookingTotal: 3, bookingPending: 0 }
+    : i === 6 ? { kind: "lapsed" as const, daysLeft: -5, bookingTotal: 0, bookingPending: 0 }
+    : null;
+  return client ? { ...r, client } : r;
+});
 
 const leadDetail: LeadDetail = {
   id: "l1",
