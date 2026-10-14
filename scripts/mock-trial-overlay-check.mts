@@ -145,6 +145,8 @@ const DATA: SiteData = {
   geo: { lat: 46.7761204, lon: 17.6527838 },
   photos: [1, 2, 3, 4, 5].map((i) => ({ url: PIX, alt: `kép ${i}`, provenance: "portal" as const })),
   contact: { email: "a@b.hu", phone: "+36 30 111 2222", address: "Erzsébet utca 23, Balatonboglár, 8630" },
+  // Elek L-1 2nd round: a rated place — card-sidebar's booking card then opens with a star line.
+  rating: { value: 3.8, count: 293 },
 } as unknown as SiteData;
 const recipe = (templateId: string): Recipe =>
   ({ skin: TEMPLATES[templateId]!.skins[0]!, archetype: "stacked", template: templateId, sections: [] }) as unknown as Recipe;
@@ -674,6 +676,11 @@ try {
         titles.push(n.parentElement.closest("h1, h2, h3, h4, p, div, figcaption") || n.parentElement);
         break;
       }
+      // L-1 2nd round: the card's TOP BAND (its top edge → its lowest title line) is the
+      // obstacle — Elek's pair sat on the star line above the title.
+      const cardEl = a.firstElementChild && a.firstElementChild.getBoundingClientRect().height > 0 ? a.firstElementChild : a;
+      const card = cardEl.getBoundingClientRect();
+      let bandBottom = -1;
       for (const el of titles) {
         const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
         for (let n = tw.nextNode(); n; n = tw.nextNode()) {
@@ -682,14 +689,37 @@ try {
           for (const r of rg.getClientRects()) {
             if (r.width < 2 || r.bottom <= 0 || r.top >= innerHeight) continue;
             seen++;
+            if (r.top - card.top <= innerHeight * 0.5) bandBottom = Math.max(bandBottom, r.bottom - r.height * 0.1);
             const gt = r.top + r.height * 0.1, gb = r.bottom - r.height * 0.1;
             if (pills.some((q) => q.left < r.right && q.right > r.left && q.top < gb && q.bottom > gt))
               hits.push((n.nodeValue || "").trim().slice(0, 24));
           }
         }
       }
+      if (bandBottom > card.top && pills.some((q) => q.left < card.right && q.right > card.left && q.top < bandBottom && q.bottom > Math.max(0, card.top)))
+        hits.push("[a kártya felső sávja]");
     }
     return { hits, seen };
+  }`;
+  // L-1 2nd round: climbing off the card, the pair must not land on another line of words
+  // (it did — on the hero's address line). Every visible text line outside our chrome.
+  const TEXT_PROBE = `() => {
+    const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
+      .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
+    const hits = [];
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (!/\\S/.test(n.nodeValue || "")) continue;
+      const pe = n.parentElement;
+      if (!pe || pe.closest('[class*="cit-cfg"], #cit-consent, script, style, noscript')) continue;
+      const rg = document.createRange(); rg.selectNodeContents(n);
+      for (const r of rg.getClientRects()) {
+        if (r.width < 2 || r.height < 4 || r.bottom <= 0 || r.top >= innerHeight) continue;
+        const gt = r.top + r.height * 0.1, gb = r.bottom - r.height * 0.1;
+        if (pills.some((q) => q.left < r.right && q.right > r.left && q.top < gb && q.bottom > gt)) hits.push((n.nodeValue || "").trim().slice(0, 24));
+      }
+    }
+    return { hits };
   }`;
   type CardGeom = { hits: string[]; seen: number };
   type TitleGeom = { hits: string[]; pills: number; corner: boolean; onScreen: boolean; rects: number[][] };
@@ -748,6 +778,18 @@ try {
         const t = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
         const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;
         if (c.seen) cardSeen.add(id);
+        if (c.seen) {
+          const tl = (await p.evaluate(`(${TEXT_PROBE})()`)) as { hits: string[] };
+          check(`⑪ ${id}/${w}×${h}, ${state}: a kártya elől lépve sem ül szövegsorra`, tl.hits.length === 0, tl);
+        }
+        // L-4: the CLOSED panel throws no shadow into the page (the dark band at the right edge).
+        if (state === "nyugalomban") {
+          const sh = await p.evaluate(() => {
+            const el = document.querySelector(".cit-cfg-panel");
+            return el && !el.classList.contains("cit-cfg-open") ? getComputedStyle(el).boxShadow : "none";
+          });
+          check(`⑪ ${id}/${w}×${h}: a csukott panelnek nincs árnyéka (nincs sötét sáv a jobb szélen)`, sh === "none", sh);
+        }
         if (id === "card-sidebar" && w === 1366) await shot(p, `mock-pirula-kartya-${id}-${w}-${state === "nyugalomban" ? "nyug" : "suti"}`);
         check(`⑪ ${id}/${w}×${h}, ${state}: az oldalsáv-kártya címét nem takarja, a hős-címet és -gombot sem`,
           t.pills === 2 && c.hits.length === 0 && t.hits.length === 0 && t.onScreen && !b.error && (b.buried?.length ?? 0) === 0,

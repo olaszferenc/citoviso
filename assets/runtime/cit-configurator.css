@@ -220,12 +220,16 @@
   background: #14171c;
   color: #e7ebf1;
   font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  box-shadow: -18px 0 44px rgba(0, 0, 0, 0.4);
+  /* Elek L-1/L-4 (2026-10-14): closed, the panel sits just past the right edge — and its
+   * shadow (−18 px) bled back in as a dark band down the page's right side. The shadow
+   * belongs to the OPEN panel only. */
+  box-shadow: none;
   transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s;
 }
 .cit-cfg-panel.cit-cfg-open {
   transform: translateX(0);
+  box-shadow: -18px 0 44px rgba(0, 0, 0, 0.4);
 }
 
 /* A SHORT viewport — a phone held sideways (844×390 measured, 2026-09-26): the
@@ -1382,10 +1386,11 @@
     max-height: 74vh;
     border-radius: 18px 18px 0 0;
     transform: translateY(100%);
-    box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.5);
+    box-shadow: none; /* closed: no band bleeding up over the page's bottom edge (L-4) */
   }
   .cit-cfg-panel.cit-cfg-open {
     transform: translateY(0);
+    box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.5);
   }
   .cit-cfg-head {
     padding-top: 20px;

@@ -5449,6 +5449,28 @@
    * top: counted at any scroll position, the pair would climb with the card as it scrolls up
    * and then drop back (every other heading passes under the floating pair while scrolling,
    * by design). Recognised by the `aside` element, not a template class. */
+  /* Every visible line of words on the first screen inside the pair's column (our own chrome
+   * and the consent bar excluded) — used only while climbing off a sidebar card (L-1). */
+  function textLineRects(box) {
+    var out = [];
+    var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (var n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (!/\S/.test(n.nodeValue || "")) continue;
+      var pe = n.parentElement;
+      if (!pe || pe.closest('[class*="cit-cfg"], #cit-consent, script, style, noscript')) continue;
+      var range = document.createRange();
+      range.selectNodeContents(n);
+      var rs = range.getClientRects();
+      for (var i = 0; i < rs.length; i++) {
+        var r = rs[i];
+        if (r.width < 2 || r.height < 4 || r.bottom <= 0 || r.top >= window.innerHeight) continue;
+        if (r.right <= box.left || r.left >= box.right) continue;
+        var trim = r.height * 0.1;
+        out.push({ left: r.left, right: r.right, top: r.top + trim, bottom: r.bottom - trim });
+      }
+    }
+    return out;
+  }
   function sideCardTitleRects(box) {
     var out = [];
     if ((window.scrollY || document.documentElement.scrollTop || 0) > 4) return out;
@@ -5468,6 +5490,14 @@
         titles.push(pe.closest("h1, h2, h3, h4, p, div, figcaption") || pe);
         break;
       }
+      // Elek L-1, 2nd round (2026-10-14, 1366): with the title kept clear, the pair stepped up
+      // onto the card's STAR line („3,8 · 293 vélemény”) — the line above the title. The card's
+      // whole top band is the obstacle now: from the card's top edge to the bottom of its
+      // lowest title line, across the card's width (stars, name, heading and the gaps between).
+      var card = aside.firstElementChild && aside.firstElementChild.getBoundingClientRect().height > 0
+        ? aside.firstElementChild.getBoundingClientRect()
+        : ar;
+      var bandBottom = -1;
       for (var t = 0; t < titles.length; t++) {
         var tcs = getComputedStyle(titles[t]);
         if (tcs.visibility === "hidden" || tcs.display === "none" || parseFloat(tcs.opacity) === 0) continue;
@@ -5480,12 +5510,15 @@
           for (var l = 0; l < lines.length; l++) {
             var r = lines[l];
             if (r.width < 2 || r.height < 4 || r.bottom <= 0 || r.top >= window.innerHeight) continue;
-            if (r.right <= box.left || r.left >= box.right) continue;
-            // same glyph trim as the hero title (6 px gap to the words)
+            // the band runs only over the card's top — a heading far down the card is not „top”
+            if (r.top - card.top > window.innerHeight * 0.5) continue;
             var trim = r.height * 0.1 + (AVOID_GAP - 6);
-            out.push({ left: r.left, right: r.right, top: r.top + trim, bottom: r.bottom - trim });
+            if (r.bottom - trim > bandBottom) bandBottom = r.bottom - trim;
           }
         }
+      }
+      if (bandBottom > card.top && card.right > box.left && card.left < box.right) {
+        out.push({ left: card.left, right: card.right, top: Math.max(0, card.top), bottom: bandBottom });
       }
     }
     return out;
@@ -5785,14 +5818,17 @@
     cbox = { left: cbox.left, right: cbox.right, top: 0, bottom: window.innerHeight };
     var cards = sideCardTitleRects(cbox);
     if (cards.length && clashAt(cards, bottomY, h)) {
+      // Elek L-1 2nd round: stepping up off the card, the pair landed on the hero's meta line
+      // (the address) — on the way up EVERY line of words counts, so it stops on a free spot.
+      var climb = cards.concat(textLineRects(cbox));
       var cy = bottomY;
-      for (var cs2 = 0; cs2 < 4; cs2++) {
-        var ch = clashAt(cards, cy, h);
+      for (var cs2 = 0; cs2 < 12; cs2++) {
+        var ch = clashAt(climb, cy, h);
         if (!ch) break;
         cy = ch.top - AVOID_GAP;
       }
       if (
-        !clashAt(cards, cy, h) &&
+        !clashAt(climb, cy, h) &&
         !clashAt(pillObstacles(cbox), cy, h) &&
         cy - h >= pillCeiling(cbox.left, cbox.right)
       ) bottomY = cy;
