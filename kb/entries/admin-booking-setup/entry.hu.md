@@ -74,8 +74,8 @@ tűnik el vele (naptár, árak, korábbi foglalások).
   vendég külön soron, kiszámolva látja. **„Nincs idegenforgalmi adó”**: a honlapja nem is említi.
   **„Még nem tudom”**: a vendég csak annyit lát, hogy a helyszínen adó fizetendő, összeget nem —
   számot nem találunk ki Ön helyett. Az adót a vendég a helyszínen fizeti, a végösszegbe nem számoljuk.
-  A 18 év alatti vendég mentes az adó alól: akiket a vendég gyermekként ad meg, azokra nem számoljuk,
-  és ezt egy mondat ki is mondja a vendégnek.
+  A 18 év alatti vendég mentes az adó alól: a foglalásnál a vendég mindig megadja, hányan gyermekek
+  („Ebből gyermek”), azokra nem számoljuk, és ezt egy mondat ki is mondja a vendégnek.
 - **Mi van benne az árban?** — egy rövid sor a végösszeg alatt (például: takarítás, ágynemű, reggeli).
   Nem kötelező; üresen hagyva ez a sor elmarad.
 
@@ -100,8 +100,8 @@ van, vagy egy kötelező kérdés még nincs megválaszolva. Ha nyomható, az On
 
 ## Kipróbálás
 
-Adjon meg egy kitalált foglalást: szobát, érkezést, éjszakák és vendégek számát. Ha ellátást is
-kínál, az **„Ellátás”** és (gyerekár esetén) az **„Ebből gyermek”** mezővel a felárat is kipróbálhatja.
+Adjon meg egy kitalált foglalást: szobát, érkezést, éjszakák és vendégek számát, és azt, hogy
+**„Ebből gyermek”** hány fő. Ha ellátást is kínál, az **„Ellátás”** mezővel a felárat is kipróbálhatja.
 Az oldal megmutatja, amit a vendég látna: a szállás árát, az ellátás sorait és az összeget, az
 idegenforgalmi adót, vagy azt, hogy miért nem tudná elküldeni. Ugyanazt a szabályt használja, mint a honlapja foglalási űrlapja.
 Ez csak próba: semmit nem küldünk el, és nem foglal le napot.

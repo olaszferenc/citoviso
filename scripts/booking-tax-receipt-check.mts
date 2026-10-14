@@ -184,6 +184,28 @@ try {
     check("⭐ a léptetővel frissül (2 → 3 fő)", /× 3 fő/.test(s2), s2);
     await page.close();
   }
+
+  // ── ③b ADR-XXXX: the child count is always asked, also without a child price ──
+  console.log("\n③b ADR-XXXX · „Ebből gyermek” gyerekár nélkül is (18 év alatt, csak az IFA-ra hat)");
+  for (const width of [390, 1280]) {
+    const page = await open(browser, await pageHtml(500), width);
+    await page.selectOption("select[name='unit']", WHOLE);
+    await page.waitForTimeout(400);
+    await pickDays(page);
+    if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
+    const kf = page.locator("[data-cit-kidsf]");
+    check(`⭐ ${width}px: az „Ebből gyermek” látszik ellátás nélkül is`, await kf.isVisible());
+    const lab = (await kf.locator(".cit-book__label").textContent()) ?? "";
+    check(`⭐ ${width}px: a felirat „(18 év alatt)”`, /Ebből gyermek\s*\(18 év alatt\)/.test(lab), lab);
+    await page.locator(".cit-book__step[data-step='1']").first().click();
+    await page.locator("[data-kstep='1']").click();
+    await page.waitForTimeout(300);
+    const q = (await page.locator(".cit-book__quote").first().textContent()) ?? "";
+    check(`⭐ ${width}px: IFA a gyermek nélkül (500 × 2 fő × 3 éj = 3 000 Ft), a díj 3 főre`, /× 2 fő/.test(q) && /3 000 Ft/.test(q) && !/–17 évesek/.test(q) && /nem számoltuk bele/.test(q), q);
+    const r = await submit(page);
+    check(`${width}px: a beküldés a gyerekszámot is viszi`, /Elküldtük a kérését/.test(r), r.slice(0, 80));
+    await page.close();
+  }
 } finally {
   await browser.close();
 }
@@ -217,7 +239,7 @@ try {
   const site = await db.insertInto("site").values({ tenant_id: tenant.id, preview_token: `btx_${stamp}`, slug: `btx-${stamp}` }).returning("id").executeTakeFirstOrThrow();
   ids.siteId = site.id;
   await setTenantModules(tenant.id, ["booking", "pricing"]);
-  const unit = (await createUnit(site.id, "Erkélyes kétágyas szoba", 2, null))!;
+  const unit = (await createUnit(site.id, "Családi szoba", 4, null))!;
   await setBasePrice(unit, 18000);
   let offset = 30;
   for (const [label, tax, stored, mailWant] of [
@@ -248,6 +270,26 @@ try {
     check(`visszaigazoló levél megjött (${label})`, Boolean(conf), mails.map((m) => m.subject));
     check(`⭐ visszaigazoló levél, IFA ${label}${stored === 500 ? " — a beküldéskori összeg, nem a később átírt" : ""}`,
       Boolean(conf && mailWant(conf.body) && !(stored === 500 && /900 Ft/.test(conf.body))));
+  }
+  /* ADR-XXXX: no meal setting at all — the child count is still stored, the tax leaves the
+   * child out, and every letter says "3 fő, ebből 1 gyermek" (the 18-year sentence, no 13–17). */
+  await setSiteModuleConfig(site.id, "booking", { notifyEmail: `owner-${stamp}@example.com`, touristTaxPerPersonNight: 500 }, "test");
+  {
+    const guest = `nokids-${stamp}@example.com`;
+    const res = await createBookingRequest(
+      { siteId: site.id, unitId: unit, guestName: "Teszt Vendég", guestEmail: guest, guestPhone: "+36301112222", dateFrom: iso(offset), dateTo: iso(offset + 3), guests: 3, children: 1 },
+      null,
+    );
+    offset += 10;
+    check("⭐ ADR-XXXX ellátás nélkül is tárolja a gyerekszámot", res.ok && res.summary?.children === 1, res);
+    const row = await db.selectFrom("booking_request").select(["action_token", "children"]).where("id", "=", res.id!).executeTakeFirstOrThrow();
+    check("ADR-XXXX a sorban children = 1", row.children === 1, row.children);
+    await decideRequest(row.action_token, "accepted", null);
+    const conf = (await mailsTo(guest)).find((m) => /Visszaigazolt foglalás/.test(m.subject));
+    const b = (conf?.body ?? "").replace(/=\r?\n/g, "");
+    check("⭐ ADR-XXXX levél: IFA × 2 fő, a 18 év alatti mondat, „3 fő, ebből 1 gyermek”",
+      /× 2 fő × 3 éj\)/.test(b) && /nem számoltuk bele/.test(b) && !/–17 évesek/.test(b) && /3 fő, ebből 1 gyermek/.test(b),
+      b.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 600));
   }
   /* Elek 10-13 T-3 · T-7: 3 guests, 1 of them a child (reggeli, gyerekár 12 éves korig). The child
    * pays no tourist tax (Htv. 31. § a)) — 500 × 2 × 3 = 3 000 Ft, not 4 500 —, both guest letters

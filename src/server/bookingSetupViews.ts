@@ -195,6 +195,7 @@ function strings(lang: string): Record<string, string> {
     grandTotal: T(lang, "Összesen:"),
     trialMeal: T(lang, "Ellátás"),
     trialKids: T(lang, "Ebből gyermek ({n} éves korig)"),
+    trialKidsMinor: T(lang, "Ebből gyermek (18 év alatt)"),
     notTried: T(lang, "Még nem próbálta ki"),
     trialMail: T(lang, "A kérésről e-mailt kap ({email}), és a levélből elfogadja vagy elutasítja."),
     nBlockers: T(lang, "{n} akadály"),

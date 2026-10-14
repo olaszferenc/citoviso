@@ -225,7 +225,7 @@
       '<span class="cit-book__count" data-guests>2</span>' +
       '<button class="cit-book__step" type="button" data-step="1" aria-label="' + tr("több") + '">+</button>' +
       "</div></div>" +
-      '<div class="cit-book__field" data-cit-kidsf hidden><label class="cit-book__label">' + tr("Ebből gyermek") +
+      '<div class="cit-book__field" data-cit-kidsf><label class="cit-book__label">' + tr("Ebből gyermek") +
       ' <span data-cit-kidage></span></label>' +
       '<div class="cit-book__stepper" role="group" aria-label="' + tr("Gyermekek száma") + '">' +
       '<button class="cit-book__step" type="button" data-kstep="-1" aria-label="' + tr("kevesebb") + '">−</button>' +
@@ -353,9 +353,21 @@
       if (k > 0) out.push({ label: tr("{name}, gyermek").replace("{name}", p.name), n: n, per: p.child, guests: k, sum: n * k * p.child });
       return out;
     }
+    /* ADR-XXXX (owner 2026-10-14): the child count is ALWAYS asked — the owner needs to know,
+     * and the under-18 tourist-tax exemption rests on it. With the owner's child price it
+     * counts to his age ("(N éves korig)", the meal lines follow it); without one the
+     * label is "(18 év alatt)" and only the tax follows it. Twin: countedChildAge (meals.ts). */
+    function kidAge() { return asksKids() ? Number(meals.childAge) : 17; }
+    function syncKids() {
+      if (kids > guests - 1) kids = Math.max(0, guests - 1);
+      form.querySelector("[data-kids]").textContent = String(kids);
+      form.querySelector("[data-cit-kidage]").textContent = asksKids()
+        ? tr("({n} éves korig)").replace("{n}", meals.childAge)
+        : tr("(18 év alatt)");
+    }
     function syncMeals() {
       var f = form.querySelector("[data-cit-mealf]");
-      var kf = form.querySelector("[data-cit-kidsf]");
+      syncKids();
       if (!f || !meals || !meals.plans || !meals.plans.length) return;
       var here = mealsHere();
       var sel = form.querySelector("#cit-meal");
@@ -376,12 +388,6 @@
       if (here && p && p.childText) d.textContent += (d.textContent ? " · " : "") + p.childText;
       d.hidden = !d.textContent;
       form.querySelector("[data-cit-mnone]").hidden = here;
-      var ask = asksKids();
-      kf.hidden = !ask;
-      if (kids > guests - 1) kids = Math.max(0, guests - 1);
-      if (!ask) kids = 0;
-      form.querySelector("[data-kids]").textContent = String(kids);
-      form.querySelector("[data-cit-kidage]").textContent = meals.childAge ? tr("({n} éves korig)").replace("{n}", meals.childAge) : "";
     }
     form.querySelectorAll("[data-kstep]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -464,7 +470,7 @@
      * as an adult is still IN the sum, so the sentence says that one is exempt too). */
     function taxPayers(g, k) { return Math.max(1, g - Math.max(0, Math.min(k || 0, g - 1))); }
     function minorsHtml() {
-      var age = meals && meals.childAge && asksKids() ? Number(meals.childAge) : 0;
+      var age = kidAge();
       if (!age) return tr("A 18 év alatti vendég mentes az adó alól; a fenti összeg minden vendéggel számol.");
       if (age >= 17) return tr("A 18 év alatti vendég mentes az adó alól: a gyermekként megadott vendégeket nem számoltuk bele.");
       return tr("A 18 év alatti vendég mentes az adó alól: a gyermekként megadott vendégeket nem számoltuk bele, és a {from}–17 évesek után sem kell megfizetni.")
@@ -577,7 +583,7 @@
         ? '<div class="cit-book__later">' +
           tr("Az éles oldalon itt jelenik meg, ami a helyszínen fizetendő (pl. idegenforgalmi adó) — az összeget Ön adja meg.") +
           "</div>"
-        : onSiteHtml(ifaDeclared, ifaPerPersonNight, taxPayers(guests, asksKids() ? kids : 0), n, cur);
+        : onSiteHtml(ifaDeclared, ifaPerPersonNight, taxPayers(guests, kids), n, cur);
       /* DEMO (§B.17): the sample figure is named as such where the number is read — the
        * heading, the total line (which the phone's step-2 summary bar mirrors verbatim) and
        * one sentence about what stands here on the live page. Not a footnote. */
@@ -602,6 +608,10 @@
      * side, and no mention of WHERE the answer goes. Every figure below comes from
      * the server's frozen quote (`summary`), never from a second client-side
      * computation: the receipt must show the number that is ON the request. */
+    /* Elek 10-13 T-7: the letters' words — "3 fő, ebből 1 gyermek" (requests.ts `headcount`). */
+    function headcount(g, k) {
+      return k ? tr("{n} fő, ebből {k} gyermek").replace("{n}", g).replace("{k}", k) : tr("{n} fő").replace("{n}", g);
+    }
     function huDay(iso) {
       return iso.slice(0, 4) + ". " + iso.slice(5, 7) + ". " + iso.slice(8, 10) + ".";
     }
@@ -619,7 +629,7 @@
         '<span class="cit-book__rrow"><span>' + tr("Éjszakák") + "</span><b>" +
           esc(tr("{n} éj").replace("{n}", s.nights)) + "</b></span>" +
         '<span class="cit-book__rrow"><span>' + tr("Létszám") + "</span><b>" +
-          esc(tr("{n} fő").replace("{n}", s.guests)) + "</b></span>" +
+          esc(headcount(s.guests, s.children || 0)) + "</b></span>" +
         (s.unitName
           ? '<span class="cit-book__rrow"><span>' + tr("Egység") + "</span><b>" + esc(s.unitName) + "</b></span>"
           : "") +
@@ -1094,7 +1104,7 @@
           '<div class="cit-book__receipt">' +
           rrow(tr("Időszak"), huDay(qa) + " — " + huDay(qb)) +
           rrow(tr("Éjszakák"), tr("{n} éj").replace("{n}", qn)) +
-          rrow(tr("Létszám"), tr("{n} fő").replace("{n}", guests)) +
+          rrow(tr("Létszám"), headcount(guests, kids)) +
           (unitName ? rrow(tr("Egység"), unitName) : "") +
           (dq
             ? '<span class="cit-book__qtotal">' + tr("Összesen (minta-ár):") + " <b>" + moneyHtml(dq.total, pricing.currency) + "</b></span>"
@@ -1129,7 +1139,7 @@
         guests: String(guests),
         // ADR-0378: the server recomputes the meal lines from its own setting.
         meal: mealsHere() ? chosenMeal() : "",
-        children: String(asksKids() ? kids : 0),
+        children: String(kids),
         name: form.name.value,
         email: form.email.value,
         phone: form.phone.value,

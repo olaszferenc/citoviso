@@ -262,6 +262,22 @@ export function taxPayers(guests: number, children: number | null | undefined): 
 }
 
 /**
+ * ADR-XXXX: the guest is ALWAYS asked how many children come. The age a counted child is
+ * under: the owner's child age when a child meal price applies to this request (a meal plan
+ * was chosen and some plan carries a child price), else 17 — "(18 év alatt)", which only
+ * affects the tourist tax. The browser twin is `kidAge` in assets/runtime/cit-runtime.js.
+ */
+export function countedChildAge(m: MealsSetting | null, plan: MealPlanId | null | undefined): number {
+  return plan && asksChildren(m) && m?.childAge ? m.childAge : 17;
+}
+
+/** The children a request may store: always counted, at most guests − 1 (one adult books). */
+export function clampChildren(guests: number, raw: unknown): number {
+  const g = Math.max(1, Math.round(guests || 1));
+  return Math.min(g - 1, Math.max(0, Math.round(Number(raw) || 0)));
+}
+
+/**
  * The one sentence under the tax line: the rule, and what the sum did with it — never more
  * than the figure does (a 15-year-old counted as an adult is IN the sum, so the sentence says
  * that age is exempt too). `childAge` null = the guest was not asked about children.

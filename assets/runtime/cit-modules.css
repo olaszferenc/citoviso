@@ -93,6 +93,9 @@
  * the screenshot everyone believed. Explicit rule, same specificity, later. */
 .cit-book__fields[hidden] { display: none; }
 .cit-book__field { display: grid; gap: 5px; }
+/* Same trap, one level down (teszt3 2026-10-14): the "Ellátás" field is `hidden` on a site
+ * without meals, yet every such page showed an empty meal <select>. */
+.cit-book__field[hidden] { display: none; }
 .cit-book__label {
   font-size: 0.72rem;
   text-transform: uppercase;

@@ -242,7 +242,7 @@ import {
   unitByFeedToken,
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
-import { asksChildren, chosenPlan, MEAL_PLAN_IDS, mealLines, mealPlanLabel, minorsTaxNote, offeredPlans, parseMealsForm, readMeals, taxPayers } from "../tenant/meals.js";
+import { asksChildren, chosenPlan, clampChildren, countedChildAge, MEAL_PLAN_IDS, mealLines, mealPlanLabel, minorsTaxNote, offeredPlans, parseMealsForm, readMeals, taxPayers } from "../tenant/meals.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { distanceKm } from "../events/gates.js";
@@ -951,10 +951,9 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
   // (chosenPlan / asksChildren / mealLines) — the owner can try the surcharge, not only the stay.
   const meals = pricingLive ? readMeals(pricing.meals) : null;
   const plan = chosenPlan(meals, unitId, body.meal);
-  const children = plan && asksChildren(meals)
-    ? Math.min(guests - 1, Math.max(0, Math.round(Number(body.children) || 0)))
-    : null;
-  const mLines = mealLines(meals, { unitId, plan, nights: n, guests, children: children ?? 0, lang });
+  // ADR-XXXX: the child count is always asked, as on the guest's form.
+  const children = clampChildren(guests, body.children);
+  const mLines = mealLines(meals, { unitId, plan, nights: n, guests, children, lang });
   const mealSum = mLines.reduce((t, l) => t + l.sum, 0);
   const tax = await siteTouristTax(siteId);
   // Elek 10-13 T-3: the counted children pay no tourist tax.
@@ -964,7 +963,7 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
       ? T(lang, "Idegenforgalmi adó: a helyszínen fizetendő, összeg nélkül.")
       : tax > 0
         ? T(lang, "Idegenforgalmi adó (a helyszínen): {amount}", { amount: formatAmount(tax * payers * n, quote.currency) }) +
-          " " + minorsTaxNote(lang, children === null ? null : (meals?.childAge ?? null))
+          " " + minorsTaxNote(lang, countedChildAge(meals, plan))
         : "";
   return {
     errors: [],

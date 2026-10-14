@@ -91,6 +91,11 @@ function huDay(iso: string, lang = "hu"): string {
 }
 
 
+/** Elek 10-13 T-7 / ADR-XXXX: the letters' head count — "3 fő, ebből 1 gyermek". */
+function heads(r: InboxItem, lang: string): string {
+  return r.children ? T(lang, "{n} fő, ebből {k} gyermek", { n: r.guests, k: r.children }) : T(lang, "{n} fő", { n: r.guests });
+}
+
 function nightsOf(r: InboxItem): number {
   return Math.max(
     1,
@@ -560,7 +565,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
         .map((r) =>
           row(
             esc(r.guestName),
-            `${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} fő", { n: r.guests })}`,
+            `${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${heads(r, lang)}`,
             `<span class="bk-chip bk-chip--ok">${esc(huDay(r.dateFrom, lang))}</span>`,
             tabHref(
               `&u=${encodeURIComponent(r.unitName ? d.unitId : d.unitId)}&ho=${r.dateFrom.slice(0, 7)}&naptar=1&nap=${r.dateFrom}#naptar`,
@@ -583,7 +588,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
   const line = (r: InboxItem, live: boolean): string =>
     row(
       esc(r.guestName),
-      `${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} fő", { n: r.guests })}`,
+      `${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${heads(r, lang)}`,
       live
         ? `<span class="bk-chip bk-chip--ok">${T(lang, "Visszaigazolva")}</span>`
         : `<span class="bk-chip bk-chip--bad">${r.decidedBy === "guest" ? T(lang, "A vendég lemondta") : T(lang, "Lemondva")}</span>`,
@@ -690,15 +695,13 @@ function requestCard(
     `<div class="bk-req__t">` +
     `<span class="bk-req__who"><strong>${esc(r.guestName)}</strong>` +
     `<span class="bk-req__kind${quote ? " bk-req__kind--q" : ""}">${quote ? T(lang, "Árajánlat-kérés") : T(lang, "Foglalási kérés")}</span></span>` +
-    `<span class="bk-req__dates">${esc(when)} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+    `<span class="bk-req__dates">${esc(when)} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(bookingRef(r.id))}</span>` +
     // ADR-0378 ⑩: the meal on a pill, the frozen breakdown one tap away.
     (r.mealPlan
-      ? `<span class="bk-req__meal" data-bk-meal="${esc(r.mealPlan)}">${esc(mealPlanLabel(lang, r.mealPlan))}` +
-        (r.children ? ` · ${T(lang, "{n} gyermek", { n: r.children })}` : "") +
-        `</span>`
+      ? `<span class="bk-req__meal" data-bk-meal="${esc(r.mealPlan)}">${esc(mealPlanLabel(lang, r.mealPlan))}</span>`
       : "") +
     (r.lines?.length && r.quotedTotal
       ? `<details class="bk-req__lines"><summary>${T(lang, "Az ár tételesen")}</summary>` +
@@ -770,7 +773,7 @@ function offeredCard(r: InboxItem, expireHours: number, lang: string): string {
     `<span class="bk-req__ico">${ic("account", 20)}</span>` +
     `<div class="bk-req__t">` +
     `<strong>${esc(r.guestName)}</strong>` +
-    `<span class="bk-req__dates">${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+    `<span class="bk-req__dates">${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${esc(r.guestEmail)}${r.guestPhone ? ` · ${esc(r.guestPhone)}` : ""}${r.unitName ? ` · ${esc(r.unitName)}` : ""}</span>` +
@@ -923,7 +926,7 @@ function historyRow(r: InboxItem, expireHours: number, view: string, lang: strin
   return (
     `<div class="bk-hist">` +
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
-    `<span>${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+    `<span>${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
       r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
     }${decided}</span>` +
     (quotes ? `<div class="bk-quotes">${quotes}</div>` : "") +

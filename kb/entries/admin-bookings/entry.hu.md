@@ -29,12 +29,12 @@ A **„Döntésre váró kérések”** rész áll a fül tetején — telefonon
 következik, hogy a döntés gombjai görgetés nélkül a képernyőn legyenek. A kéréseket a
 **válasz-határidő** szerint látja: aki hamarabb lejár, az van felül — akkor is, ha később
 érkezne. (A lista fölött ez a mondat ki is van írva.) Minden kérésnél ott a vendég neve, az
-időpont, a létszám, a szoba, az üzenete, és egy jelvény arról, mennyi ideje maradt:
+időpont, a létszám (gyerekkel együtt: *3 fő, ebből 1 gyermek*), a szoba, az üzenete, és egy jelvény arról, mennyi ideje maradt:
 **„Ma lejár”**, **„Holnap lejár”** vagy **„Van még idő”** — a sürgőseket a kártya bal szélén
 piros sáv is jelzi.
 
 Ha a szállásán ellátás is választható (reggeli, félpanzió — az Árak, szezonok modulban állítja
-be), a kártyán egy címke mutatja, mit kért a vendég, a gyerekek számával együtt. Az **„Az ár
+be), a kártyán egy címke mutatja, mit kért a vendég. Az **„Az ár
 tételesen”** sorra koppintva kinyílik, miből jön ki a végösszeg: éjszakák, ellátás, gyermek-felár
 — ahogy a vendég a kérés elküldésekor látta. Ha később módosítja az árakat, ez a beérkezett
 kérésen már nem változik.

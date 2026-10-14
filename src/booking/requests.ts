@@ -14,7 +14,7 @@
 // racing for the same nights cannot both win.
 
 import { parseOfferAmount } from "./amount.js";
-import { asksChildren, chosenPlan, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealPlanId } from "../tenant/meals.js";
+import { chosenPlan, clampChildren, countedChildAge, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealPlanId } from "../tenant/meals.js";
 import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
@@ -251,7 +251,9 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
   // Elek 10-13 T-3: a guest under 18 pays no tourist tax — the counted children are left out.
   const payers = taxPayers(req.guests, req.children);
   const childAge =
-    req.children === null ? null : (readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals)?.childAge ?? null);
+    req.children === null
+      ? null
+      : countedChildAge(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), req.meal_plan);
   return [
     {
       label: T(lang, "Helyszínen fizetendő: idegenforgalmi adó ({per} / fő / éj × {g} fő × {n} éj)", {
@@ -740,10 +742,10 @@ export async function createBookingRequest(
   const meals = pricingLive ? readMeals(pricing.meals) : null;
   const mealPlan = chosenPlan(meals, input.unitId, input.mealPlan);
   const guestCount = Math.max(1, Math.min(50, Math.round(input.guests || 1)));
-  const children = mealPlan && asksChildren(meals)
-    ? Math.min(guestCount - 1, Math.max(0, Math.round(Number(input.children) || 0)))
-    : null;
-  const mLines = mealLines(meals, { unitId: input.unitId, plan: mealPlan, nights: n, guests: guestCount, children: children ?? 0, lang });
+  // ADR-XXXX: the child count is always asked (the tourist tax depends on it); mealLines
+  // prices them as children only where a child meal price applies.
+  const children = clampChildren(guestCount, input.children);
+  const mLines = mealLines(meals, { unitId: input.unitId, plan: mealPlan, nights: n, guests: guestCount, children, lang });
   const quote = stayOnly
     ? { ...stayOnly, total: stayOnly.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayOnly.lines, ...mLines] }
     : null;

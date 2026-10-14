@@ -425,14 +425,18 @@
 
   /* Elek 10-13 T-4: the meal plan and the children, as the guest's form asks them — the owner
    * can try the surcharge too. The server decides what applies to the chosen room. */
+  /* ADR-XXXX: the child count is ALWAYS asked, as on the guest's form — without the owner's
+   * child age it is "(18 év alatt)" and only the tourist tax follows it. */
   function trialMealRow() {
     var M = D.meals;
-    if (!M || !M.plans || M.plans.length < 2) return "";
-    return '<div class="bs-row"><div><label class="bs-f" for="bs-t-meal">' + esc(L.trialMeal) + '</label><select class="bs-inp" id="bs-t-meal" data-t="meal">' +
-      M.plans.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === M.base ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select></div>" +
-      (M.askKids && M.childAge
-        ? '<div><label class="bs-f" for="bs-t-k">' + esc(fmt(L.trialKids, { n: M.childAge })) + '</label><input class="bs-inp" id="bs-t-k" data-t="kids" type="number" min="0" max="49" value="0"></div>'
+    var meal = M && M.plans && M.plans.length >= 2;
+    var kidLabel = M && M.askKids && M.childAge ? fmt(L.trialKids, { n: M.childAge }) : L.trialKidsMinor;
+    return '<div class="bs-row">' +
+      (meal
+        ? '<div><label class="bs-f" for="bs-t-meal">' + esc(L.trialMeal) + '</label><select class="bs-inp" id="bs-t-meal" data-t="meal">' +
+          M.plans.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === M.base ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select></div>"
         : "") +
+      '<div><label class="bs-f" for="bs-t-k">' + esc(kidLabel) + '</label><input class="bs-inp" id="bs-t-k" data-t="kids" type="number" min="0" max="49" value="0"></div>' +
       "</div>";
   }
   /* ── trial booking: the guest path's own rule, on the server ── */
