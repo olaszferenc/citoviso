@@ -512,7 +512,13 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
 }
 
 /** Ownership guard: does this unit belong to that site? */
+// Elek IT R-1 (2026-10-14): a POST without a unit ("" or any non-uuid) reached Postgres as a
+// uuid and came back as a raw HTTP 500. Not a uuid = not one of this site's units — every
+// caller then answers with its own validation message.
+const UNIT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function unitBelongsToSite(siteId: string, unitId: string): Promise<boolean> {
+  if (!UNIT_ID.test(unitId) || !UNIT_ID.test(siteId)) return false;
   const row = await db
     .selectFrom("site_unit")
     .select("id")

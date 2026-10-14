@@ -1186,6 +1186,12 @@ if [ -f scripts/booking-tax-receipt-check.mts ] && \
   echo "[pre-commit] booking-tax-receipt-check (ár-alap a foglalt egységre, IFA a nyugtán és a levelekben)…"
   npx tsx scripts/booking-tax-receipt-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Egység nélküli ár-POST nem nyers 500 (Elek IT R-1, 2026-10-14): nem-uuid egység = nincs ilyen.
+if [ -f scripts/admin-unit-param-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/units\.ts|src/server/public\.ts)$|^scripts/admin-unit-param-check'; then
+  echo "[pre-commit] admin-unit-param-check (egység nélküli ár-POST → hibaüzenet, nem 500)…"
+  npx tsx scripts/admin-unit-param-check.mts >"$GATE_LOG" || gate_failed
+fi
 # CSRF (Elek IT S-1, 2026-10-14): idegen eredetű állapotváltó kérés 403 mindkét szerveren — a
 # testvér-aldomain is idegen; fejléc nélkül és a webhook/relay utakon átmegy. Negatív kontrollal.
 if [ -f scripts/csrf-origin-check.mts ] && \
