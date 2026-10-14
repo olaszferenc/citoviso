@@ -173,6 +173,9 @@ try {
   console.log("\n③ V-3 · mobil 2. lépés");
   {
     const page = await open(browser, await pageHtml(500), 390);
+    // ADR-XXXX: the 2-person room stops at 2 guests — the 2 → 3 step is measured on the house (5).
+    await page.selectOption("select[name='unit']", WHOLE);
+    await page.waitForTimeout(400);
     await pickDays(page);
     await page.click(".cit-book__go");
     await page.waitForTimeout(300);

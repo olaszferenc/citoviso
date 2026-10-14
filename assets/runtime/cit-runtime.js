@@ -224,7 +224,8 @@
       '<button class="cit-book__step" type="button" data-step="-1" aria-label="' + tr("kevesebb") + '">−</button>' +
       '<span class="cit-book__count" data-guests>2</span>' +
       '<button class="cit-book__step" type="button" data-step="1" aria-label="' + tr("több") + '">+</button>' +
-      "</div></div>" +
+      "</div>" +
+      '<p class="cit-book__mdesc" data-cit-capnote hidden></p></div>' +
       '<div class="cit-book__field" data-cit-kidsf><label class="cit-book__label">' + tr("Ebből gyermek") +
       ' <span data-cit-kidage></span></label>' +
       '<div class="cit-book__stepper" role="group" aria-label="' + tr("Gyermekek száma") + '">' +
@@ -312,14 +313,33 @@
 
     form.querySelectorAll(".cit-book__step[data-step]").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        guests = Math.min(20, Math.max(1, guests + Number(btn.getAttribute("data-step"))));
-        countEl.textContent = String(guests);
+        guests = Math.min(capOf(), Math.max(1, guests + Number(btn.getAttribute("data-step"))));
+        syncCap();
         syncMeals(); // a child is one of the guests: the child count follows the head count
         // per_person_night pricing: the total follows the guest count live
         var qa = form.from.value, qb = form.to.value;
         renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
       });
     });
+
+    /* ADR-XXXX (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house and the
+     * owner was warned nowhere): the head count stops at the chosen unit's capacity, and the
+     * server refuses past it with the same number. A unit without a capacity keeps the old
+     * ceiling of 20 — no invented limit (§B.17). */
+    function capOf() {
+      var c = Number(unitObj().capacity);
+      return c > 0 ? Math.min(20, c) : 20;
+    }
+    function syncCap() {
+      var cap = capOf(), capped = Number(unitObj().capacity) > 0;
+      if (guests > cap) guests = cap;
+      countEl.textContent = String(guests);
+      var plus = form.querySelector(".cit-book__step[data-step='1']");
+      if (plus) plus.disabled = guests >= cap;
+      var cn = form.querySelector("[data-cit-capnote]");
+      cn.hidden = !(capped && guests >= cap);
+      cn.textContent = cn.hidden ? "" : tr("Ide legfeljebb {n} vendég foglalhat.").replace("{n}", cap);
+    }
 
     /* ── ADR-0378 meal plans ─────────────────────────────────────────────── */
     function mealsHere() {
@@ -788,6 +808,13 @@
     var unitSel = form.querySelector("select[name='unit']");
     if (unitSel) unitSel.addEventListener("change", loadAvailability);
     if (unitSel) unitSel.addEventListener("change", syncMeals);
+    // ADR-XXXX: a smaller unit lowers the head count to its capacity at once.
+    if (unitSel) unitSel.addEventListener("change", function () {
+      syncCap();
+      syncMeals();
+      var qa = form.from.value, qb = form.to.value;
+      renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
+    });
     syncMeals();
     /* KONTRAKTUS ① (design-refs/tenant-site/booking-unit-default, tulaj 2026-09-28): the
      * widget opens on the first PRICED unit, in the owner's order. Measured on the dev
@@ -801,6 +828,7 @@
         if (!units[ui].unpriced) { unitSel.value = units[ui].id; break; }
       }
     }
+    syncCap(); // a one-person room opens on 1 guest, not the default 2
 
     function say(msg, bad) {
       // `restNote`, nem `baseNote`: árajánlat-módban a hiba elmúltával sem térhet

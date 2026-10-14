@@ -280,6 +280,25 @@ function headcount(req: { guests: number; children: number | null }, lang: strin
     : T(lang, "{n} fő", { n: req.guests });
 }
 
+/**
+ * ADR-XXXX: the head count a request asks for over the unit's capacity — the capacity when
+ * it is exceeded, else null. The capacity is per unit (a room, or the whole place as its own
+ * unit); a unit without one has no limit (we do not invent a number, §B.17).
+ */
+export function overCapacity(guests: number, capacity: number | null | undefined): number | null {
+  return capacity && capacity > 0 && guests > capacity ? capacity : null;
+}
+
+/** ADR-XXXX: the one sentence the guest reads when the head count is over the capacity. */
+export function capacityError(lang: string, capacity: number): string {
+  return T(lang, "Ide legfeljebb {n} vendég foglalhat. Kérjük, csökkentse a létszámot.", { n: capacity });
+}
+
+/** ADR-XXXX: the owner's warning on an over-capacity request (an older one, or a lowered capacity). */
+export function capacityWarning(lang: string, guests: number, capacity: number): string {
+  return T(lang, "Figyelem: a vendég {g} főre kér, a férőhely {n} fő.", { g: guests, n: capacity });
+}
+
 export async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
   const row = await db
     .selectFrom("site_module_config")
@@ -726,6 +745,13 @@ export async function createBookingRequest(
 
   const rules = await bookingRules(input.siteId);
   errors.push(...(await stayRuleErrors(input.siteId, input.unitId, dateFrom, dateTo, lang, rules)));
+  // ADR-XXXX (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house): the widget
+  // stops at the capacity, and the server refuses past it — the owner never gets one.
+  const cap = overCapacity(
+    Math.max(1, Math.min(50, Math.round(input.guests || 1))),
+    (await db.selectFrom("site_unit").select("capacity").where("id", "=", input.unitId).executeTakeFirst())?.capacity,
+  );
+  if (cap) errors.push(capacityError(lang, cap));
   if (errors.length) return { ok: false, errors };
 
   if (await stayIsTaken(input.unitId, dateFrom, dateTo)) {
@@ -993,6 +1019,8 @@ interface RequestRow {
   offer_token: string | null;
   decision_note?: string | null;
   unit_name?: string;
+  /** ADR-XXXX: the unit's head count as the owner set it (null = not given). */
+  unit_capacity?: number | null;
 }
 
 function dayStr(v: unknown): string {
@@ -1004,14 +1032,15 @@ async function loadRequest(where: { id?: string; token?: string }): Promise<Requ
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select("site_unit.name as unit_name");
+    .select(["site_unit.name as unit_name", "site_unit.capacity as unit_capacity"]);
   if (where.id) q = q.where("booking_request.id", "=", where.id);
   if (where.token) q = q.where("booking_request.action_token", "=", where.token);
   return ((await q.executeTakeFirst()) as RequestRow | undefined) ?? null;
 }
 
-/** Owner's notification, carrying the two one-tap verdict links. */
-async function notifyOwner(
+/** Owner's notification, carrying the two one-tap verdict links. Exported for the guard
+ *  (scripts/booking-capacity-check.mts re-sends it for an over-capacity request). */
+export async function notifyOwner(
   id: string,
   token: string,
   configuredEmail: string,
@@ -1076,9 +1105,15 @@ async function notifyOwner(
         : T(lang, "Adja meg az árat, és a rendszer elküldi neki az ajánlatot."))
     : "";
 
+  // ADR-XXXX: an over-capacity request (an older one, or the capacity lowered since) is
+  // said first — the one-tap accept must not confirm an overfull room unnoticed.
+  const capOver = overCapacity(req.guests, req.unit_capacity);
+  const capNote = capOver ? capacityWarning(lang, req.guests, capOver) : "";
+
   const text =
     (isQuote ? T(lang, "Új árajánlat-kérés") : T(lang, "Új foglalási kérés")) +
     `${unit}\n\n` +
+    (capNote ? `${capNote}\n\n` : "") +
     (isQuote ? `${quoteNote}\n\n` : "") +
     `${T(lang, "Vendég:")} ${req.guest_name}\n` +
     // The guest reads the same reference on screen and in their own mail — without
@@ -1112,6 +1147,12 @@ async function notifyOwner(
         }),
       ),
     ),
+    ...(capNote
+      ? [
+          `<p style="margin:0 0 16px;border-left:4px solid #cf222e;background:#fdeeee;padding:10px 12px;` +
+            `border-radius:6px;font-size:14px;line-height:1.55" data-cap-warn><b>${esc(capNote)}</b></p>`,
+        ]
+      : []),
     ...(isQuote
       ? [
           `<p style="margin:0 0 16px;border-left:4px solid #d29922;background:#fdf6e6;padding:10px 12px;` +
@@ -1312,6 +1353,9 @@ export async function decideRequest(
 export interface DecisionView extends DecisionResult {
   readonly unitName?: string;
   readonly guests?: number;
+  readonly children?: number;
+  /** ADR-XXXX: present only when the request is over the unit's capacity. */
+  readonly capacity?: number;
   readonly ref?: string;
   readonly quotedTotal?: number;
   readonly currency?: string;
@@ -1339,6 +1383,8 @@ export async function peekDecision(token: string, verdict: "accepted" | "decline
     guests: req.guests,
     ref: bookingRef(req.id),
     ...(req.quoted_total ? { quotedTotal: req.quoted_total, currency: req.quoted_currency ?? "HUF" } : {}),
+    ...(req.children ? { children: req.children } : {}),
+    ...(overCapacity(req.guests, req.unit_capacity) ? { capacity: req.unit_capacity! } : {}),
   };
   if (req.status !== "pending") {
     return { ok: true, outcome: req.status === verdict ? "already" : req.status, ...base };
@@ -1953,6 +1999,8 @@ export interface InboxItem {
   readonly mealPlan?: MealPlanId | null;
   /** 0110: children among the guests; null = not asked. */
   readonly children?: number | null;
+  /** ADR-XXXX: the unit's capacity (null = not given) — the card warns when guests exceed it. */
+  readonly capacity?: number | null;
   /** 0052: the frozen breakdown — the card opens it under "Az ár tételesen". */
   readonly lines?: readonly { label: string; nights: number; perNight: number; guests: number; sum: number; meal: boolean }[];
 }
@@ -1963,7 +2011,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select("site_unit.name as unit_name")
+    .select(["site_unit.name as unit_name", "site_unit.capacity as unit_capacity"])
     .where("booking_request.site_id", "=", siteId)
     .orderBy("booking_request.status")
     .orderBy("booking_request.created_at", "desc")
@@ -1992,6 +2040,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     offeredAt: r.offered_at ? new Date(r.offered_at as unknown as string) : null,
     mealPlan: r.meal_plan ?? null,
     children: r.children ?? null,
+    capacity: r.unit_capacity ?? null,
     lines: ((r.quoted_lines as RequestRow["quoted_lines"]) ?? []).map((l) => ({
       label: l.label,
       nights: l.nights,

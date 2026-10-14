@@ -620,6 +620,12 @@ function requestCard(
   const conflictNote = overlaps?.length
     ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => esc(o.guestName)).join(", ") })}</span>`
     : "";
+  // ADR-XXXX (Elek F-1: a 7-person request on a 4-person house, „Visszaigazolom" live): an
+  // over-capacity request is flagged on the card and again in the accept step.
+  const capNote =
+    r.capacity && r.guests > r.capacity
+      ? `<span class="bk-conflict" data-bk-cap>${ic("alert", 13)}${T(lang, "Figyelem: a vendég {g} főre kér, a férőhely {n} fő.", { g: r.guests, n: r.capacity })}</span>`
+      : "";
   const when = `${huDay(r.dateFrom, lang)} → ${huDay(r.dateTo, lang)}`;
   const confirmLine = [
     when,
@@ -645,6 +651,7 @@ function requestCard(
         : T(lang, "Elutasítja {name} kérését?", { name: esc(r.guestName) })
     }</p>` +
     `<p class="bk-cf__s">${esc(confirmLine)}</p>` +
+    (accept && capNote ? `<p class="bk-cf__cap">${capNote}</p>` : "") +
     `<p class="bk-cf__c">${
       accept
         ? T(lang, "A visszaigazolással a napok foglalttá válnak a naptárban, a vendég e-mailt kap naptár-melléklettel, benne az Ön üzenetével és a lemondó-linkkel.")
@@ -723,6 +730,7 @@ function requestCard(
       ? `<span class="bk-deadline bk-deadline--${heat}">${ic("clock", 13)}` +
         `<b>${esc(heatWord)}</b> — ${T(lang, "még {n} óra a válaszra", { n: left })}</span> `
       : "") +
+    capNote +
     conflictNote +
     `</div></div>` +
     (r.message
@@ -1504,6 +1512,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-conflict{display:inline-flex;align-items:flex-start;gap:6px;font-size:.74rem;font-weight:700;line-height:1.45;
   border-radius:11px;padding:7px 11px;margin-top:6px;
   background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad)}
+.bk-cf__cap{margin:0 0 10px}.bk-cf__cap .bk-conflict{margin-top:0}
 .bk-req__msg{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;margin:0 14px 12px;
   font-size:.83rem;line-height:1.55;color:var(--citui-ink)}
 .bk-req__msgwho{display:block;font-size:.66rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;

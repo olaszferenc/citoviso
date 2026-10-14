@@ -87,6 +87,10 @@ Itt van egy helyen a szoba **neve**, a **férőhelye** és a **leírása** — p
 jellemzi ezt a szobát, mit szeretnek benne a vendégek. Számítógépen a jobb oldalon rögtön látja is
 azt a kártyát, amit a vendég kapni fog.
 
+A férőhely a foglalás felső határa is: a vendég ennél több főre nem kérhet foglalást ebbe a
+szobába. Ha később csökkenti, a már beérkezett, több főre szóló kérésnél a **„Foglalások”** fülön
+figyelmeztetés jelzi a különbséget.
+
 ### „Képek”
 
 Felül nagyban látszik a **borítókép**, azzal a felirattal, hogy **„Ezt mutatja a honlap ezen a

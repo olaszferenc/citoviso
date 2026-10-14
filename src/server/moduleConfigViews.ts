@@ -4560,6 +4560,8 @@ export function bookingDecideConfirmPage(
     lang?: string;
     unitName?: string;
     guests?: number;
+    children?: number;
+    capacity?: number;
     ref?: string;
     quotedTotal?: number;
     currency?: string;
@@ -4583,7 +4585,12 @@ export function bookingDecideConfirmPage(
     ) +
     factRow(T(lang, "Éjszakák:"), T(lang, "{n} éj", { n: nightsN })) +
     (v.unitName ? factRow(T(lang, "Egység:"), esc(v.unitName)) : "") +
-    (v.guests ? factRow(T(lang, "Létszám:"), T(lang, "{n} fő", { n: v.guests })) : "") +
+    (v.guests
+      ? factRow(
+          T(lang, "Létszám:"),
+          v.children ? T(lang, "{n} fő, ebből {k} gyermek", { n: v.guests, k: v.children }) : T(lang, "{n} fő", { n: v.guests }),
+        )
+      : "") +
     (v.quotedTotal ? factRow(T(lang, "Ár összesen:"), esc(formatMoney(v.quotedTotal, v.currency ?? "HUF", lang))) : "") +
     (v.ref ? factRow(T(lang, "Hivatkozás:"), esc(v.ref)) : "");
   const what = accept
@@ -4593,6 +4600,12 @@ export function bookingDecideConfirmPage(
     title,
     `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${title}</h1>` +
       `<div style="font-size:.95rem;margin:12px 0 14px">${facts}</div>` +
+      // ADR-XXXX: an over-capacity request says so before the owner confirms it.
+      (v.capacity && v.guests
+        ? `<p data-cap-warn style="font-size:.95rem;line-height:1.55;margin:0 0 12px;padding:10px 12px;border-radius:8px;` +
+          `border-left:4px solid var(--citui-bad);background:color-mix(in srgb, var(--citui-bad) 10%, transparent)"><b>` +
+          `${T(lang, "Figyelem: a vendég {g} főre kér, a férőhely {n} fő.", { g: v.guests, n: v.capacity })}</b></p>`
+        : "") +
       `<p style="font-size:.95rem;line-height:1.65;margin:0">${what}</p>` +
       decideForm(
         `/foglalas/${token}/${accept ? "elfogadom" : "elutasitom"}`,

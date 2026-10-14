@@ -161,7 +161,8 @@ try {
     // hiba-osztályt, de a visszaállítót sosem hívta meg —, és a saját hibáján bukott.
     // the guest stepper lives in STEP 2 on a phone — go there the guest's way first
     if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
-    await page.locator('.cit-book__step[data-step="1"]').first().click();
+    // ADR-XXXX: the 2-person unit stops at 2 guests ("+" disabled) — "−" re-renders the same way.
+    await page.locator('.cit-book__step[data-step="-1"]').first().click();
     await page.waitForTimeout(700);
     check(
       "⭐⭐ újrarajzolás után is az ÁRAJÁNLAT-mondat áll, nem a foglalási ígéret",

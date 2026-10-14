@@ -91,7 +91,7 @@ import { calendarFocus, pendingInOrder } from "./bookingViews.js";
 import { HELPER_MAX_QUESTION, askBookingHelper, helperFacts, helperMealsFact } from "../ai/bookingHelper.js";
 import { loadBookingSetup, saveBookingSetupSection, seasonOp } from "../tenant/bookingSetup.js";
 import { bookingSetupPage, bookingSetupQuestions } from "./bookingSetupViews.js";
-import { siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
+import { capacityError, overCapacity, siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -913,8 +913,8 @@ function logRerenderFailure(tenantId: string): (e: unknown) => void {
 /**
  * The trial booking of the setup page: the GUEST path's own checks (stayRuleErrors,
  * stayIsTaken, stayQuote — the very functions createBookingRequest calls), run without
- * creating anything. The capacity note is the one thing the guest path does NOT check —
- * said here plainly instead (ADR-0380).
+ * creating anything. The capacity is checked too, with the guest path's own sentence (ADR-XXXX;
+ * until then it was only a note here, ADR-0380).
  */
 async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { lang, siteId } = ctx;
@@ -936,14 +936,9 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
   }
   const notes: string[] = [];
   const unit = (await ensureUnits(siteId)).find((u) => u.id === unitId);
-  if (unit?.capacity && guests > unit.capacity) {
-    notes.push(
-      T(lang, "A férőhely {cap} fő, a vendég {g} főre kér. Ma a rendszer ezt nem szűri ki — a kérést Ön látja és dönti el.", {
-        cap: unit.capacity,
-        g: guests,
-      }),
-    );
-  }
+  // ADR-XXXX: the guest path refuses past the capacity now — the trial says the same sentence.
+  const cap = overCapacity(guests, unit?.capacity);
+  if (cap) errors.push(capacityError(lang, cap));
   if (errors.length) return { errors, notes };
   const { pricingLive, pricing, quote } = await stayQuote(siteId, unitId, dateFrom, dateTo, guests, lang);
   if (!quote) return { errors: [], notes, quote: null };

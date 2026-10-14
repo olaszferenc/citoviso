@@ -44,6 +44,8 @@ kettő kizárja egymást: ha egy szoba foglalt, aznap az egész ház nem foglalh
 Ha csak egyben adja ki, de a szobáit be szeretné mutatni, az elsőt válassza.
 
 Utána a szobák nevét és a férőhelyet adja meg; az **„+ Újabb szoba”** gombbal vehet fel újat.
+A férőhely a foglalás felső határa is: a vendég ennél több főt nem adhat meg, és a rendszer
+többre nem fogad el kérést („Ide legfeljebb 4 vendég foglalhat.”). Ahol üresen hagyja, ott nincs korlát.
 Szobát törölni itt nem lehet: azt a **„Szobák”** képernyőn teheti meg, mert ott látja, mi
 tűnik el vele (naptár, árak, korábbi foglalások).
 

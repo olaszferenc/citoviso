@@ -33,6 +33,11 @@ időpont, a létszám (gyerekkel együtt: *3 fő, ebből 1 gyermek*), a szoba, a
 **„Ma lejár”**, **„Holnap lejár”** vagy **„Van még idő”** — a sürgőseket a kártya bal szélén
 piros sáv is jelzi.
 
+Ha egy kérés több főre szól, mint a szoba férőhelye (ilyen csak régebbi kérésnél fordulhat elő,
+vagy ha a férőhelyet utólag csökkentette), a kártyán és a **„Visszaigazolom”** lépésben is piros
+figyelmeztetés áll: *„Figyelem: a vendég 7 főre kér, a férőhely 4 fő.”* Ugyanez áll az értesítő
+levél tetején és a levélből nyíló megerősítő oldalon.
+
 Ha a szállásán ellátás is választható (reggeli, félpanzió — az Árak, szezonok modulban állítja
 be), a kártyán egy címke mutatja, mit kért a vendég. Az **„Az ár
 tételesen”** sorra koppintva kinyílik, miből jön ki a végösszeg: éjszakák, ellátás, gyermek-felár
