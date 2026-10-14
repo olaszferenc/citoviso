@@ -124,6 +124,8 @@ export function helperSystemPrompt(lang: string): string {
     `- Ellátás és felárak (ADR-0378): mit tartalmaz az alapár (szállás / reggeli / félpanzió / teljes panzió), mi kérhető felárral (fő / éj vagy szoba / éj), és ellátásonként gyerekár korhatárral (0 = ingyenes). Ez NEM ezen az oldalon van: ${PRICING_WHERE}, „Ellátás” rész. A vendég a foglalásnál választ, a felár külön sorként a kérésre kerül. A szállásadó MENTETT ellátás-beállítása a <beallitasok> „Ellátás” sorában áll — ha ott felár szerepel, NE mondja, hogy nincs megadva; számoljon vele, ha a vendég-példához kell.`, // i18n-exempt: model prompt
     "- Értesítés: minden foglalási kérésről e-mail megy (több cím is lehet, vesszővel; üresen a fiók címére), a szállásadó a levélből fogadja el vagy utasítja el. Ha a beállított órán belül nem dönt (0–336 óra, 0 = soha), a kérés magától lejár, és a vendég értesítést kap.", // i18n-exempt: model prompt
     "- A foglalás KÉRÉS, nem azonnali foglalás: a szállásadó dönt róla.", // i18n-exempt: model prompt
+    // Elek T-1r (2026-10-14): asked „12 éves gyerek vagy felnőtt?”, the helper evaded — it had no rule to apply.
+    "- Gyerek vagy felnőtt: a vendég a foglalásnál mindig megadja, hányan gyermekek („Ebből gyermek”). KÉT külön szabály van, és egy konkrét életkorra (pl. „12 éves gyerek vagy felnőtt?”) MINDKETTŐT mondja ki, kitérés nélkül: (1) az ellátás felára — ha a mentett ellátásnál van gyerekár „N éves korig”, akkor aki legfeljebb N éves, gyermek-árat fizet, aki idősebb, felnőtt-árat; ha nincs gyerekár, az ellátásban nincs különbség; (2) az idegenforgalmi adó — aki még nem töltötte be a 18. évét (0–17 éves), MENTES, ez nem a szállásadó beállítása; csak a 18 éves és idősebb vendég után fizetendő. Példák 12 éves ellátás-korhatárral: 12 éves → ellátásban gyermek-ár, IFA-mentes; 15 éves → ellátásban felnőtt-ár, de IFA-mentes (a helyszínen érte sem kell adót fizetni); 18 éves → felnőtt-ár és IFA fizetendő. Ha a korhatár nincs megadva, ezt mondja ki, és hogy hol adható meg.", // i18n-exempt: model prompt
     "- Más oldalak (Booking, Airbnb, Szállás.hu) naptárának összekötése, és a naptárban a napok kézi lezárása: Haladó beállítások › Online foglalás képernyő.", // i18n-exempt: model prompt
     "- NINCS a rendszerben: online fizetés, előleg vagy foglaló kezelése (a fizetést a szállásadó egyezteti a vendéggel), lemondási feltétel beállítása, pótágy-díj, és a szállás árában külön gyerekár (gyerekár csak az ellátás felárában van). Ezekről mondja ki őszintén, hogy ma nincs.", // i18n-exempt: model prompt
     "- A „Kipróbálás” rész egy kitalált foglalással megmutatja, mit lát a vendég, és mi akadályozná; ez semmit nem küld el.", // i18n-exempt: model prompt
@@ -151,7 +153,11 @@ export function helperMealsFact(m: MealsSetting | null, currency: string): strin
       return `${name[id]} +${p.price} ${currency} / ${p.per === "room" ? "szoba" : "fő"} / éj${kid}`; // i18n-exempt: model prompt
     });
   return `Ellátás (mentve): az alapár tartalmazza: ${name[m.base]}; felárral kérhető: ${extra.join("; ") || "semmi"}` + // i18n-exempt: model prompt
-    (m.off.length ? `; ${m.off.length} szobánál nem kérhető ellátás` : ""); // i18n-exempt: model prompt
+    (m.off.length ? `; ${m.off.length} szobánál nem kérhető ellátás` : "") + // i18n-exempt: model prompt
+    // Elek T-1r: the age rule stated on its own, so an age question has a number to apply.
+    (m.childAge
+      ? `; gyerek-korhatár (ellátás): ${m.childAge} éves korig gyermek, ${m.childAge + 1} évestől felnőtt-ár` // i18n-exempt: model prompt
+      : "; gyerek-korhatár (ellátás): nincs megadva — az ellátásban mindenki felnőtt-árat fizet"); // i18n-exempt: model prompt
 }
 
 export function helperFacts(s: SetupState, mealsFact = ""): string {

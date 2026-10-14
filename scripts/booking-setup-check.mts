@@ -92,6 +92,9 @@ try {
   check("prompt: kitalált „Árak képernyő” név nincs", !/Haladó beállítások › Árak képernyő/.test(sp));
   const mf = helperMealsFact(readMeals({ base: "none", childAge: 12, off: [], plans: { bb: { on: true, price: 3000, per: "person", child: 1500 }, hb: { on: true, price: 7000, per: "person", child: 3500 } } }), "HUF");
   check("T-1 a Segítő tényei közt a mentett ellátás + gyerekár", /reggeli \+3000 HUF \/ fő \/ éj, gyermek 1500 HUF \(12 éves korig\)/.test(mf) && /félpanzió \+7000/.test(mf), mf);
+  // Elek T-1r (2026-10-14): „12 éves gyerek vagy felnőtt?” — the helper has the age rule to apply.
+  check("T-1r a tényekben a korhatár kimondva (12 éves korig gyermek, 13 évestől felnőtt-ár)", /12 éves korig gyermek, 13 évestől felnőtt-ár/.test(mf), mf);
+  check("T-1r a prompt mindkét szabályt kéri (ellátás korhatár + IFA 18 év alatt), kitérés nélkül", /Gyerek vagy felnőtt/.test(sp) && /0–17 éves\), MENTES/.test(sp) && /15 éves → ellátásban felnőtt-ár, de IFA-mentes/.test(sp) && /kitérés nélkül/.test(sp));
 
   // ── fixture: a fresh site — one default unit, booking + pricing ──────────────
   const stamp = Date.now().toString(36);
