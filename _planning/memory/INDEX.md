@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-14_operator_proba_foglalas_lathato.md](2026-10-14_operator_proba_foglalas_lathato.md) — Az operátor látja a próbát és a foglalást, és értesítést kap (ADR-0386) — 2026-10-14
+- [2026-10-14_elek_foglalo_vendeg.md](2026-10-14_elek_foglalo_vendeg.md) — Elek mint foglaló vendég — éles teszt · JELENTÉS 2026-10-14
 - [2026-10-14_elek_eles_teszt_2_kor.md](2026-10-14_elek_eles_teszt_2_kor.md) — Elek — éles teszt 2. kör (c0095a28): V-1 és a T-leletek javultak, L-1 és O-2 maradt
 - [2026-10-13_riaszto_sms_csendes_ora.md](2026-10-13_riaszto_sms_csendes_ora.md) — 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-0376)
 - [2026-10-13_pirula_jelzocsik.md](2026-10-13_pirula_jelzocsik.md) — 2026-10-13 — A pirula-pár a hős-képváltó jelzőcsíkjaira sem ül (ADR-0383)
