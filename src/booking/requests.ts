@@ -742,7 +742,7 @@ export async function createBookingRequest(
   const meals = pricingLive ? readMeals(pricing.meals) : null;
   const mealPlan = chosenPlan(meals, input.unitId, input.mealPlan);
   const guestCount = Math.max(1, Math.min(50, Math.round(input.guests || 1)));
-  // ADR-XXXX: the child count is always asked (the tourist tax depends on it); mealLines
+  // ADR-0388: the child count is always asked (the tourist tax depends on it); mealLines
   // prices them as children only where a child meal price applies.
   const children = clampChildren(guestCount, input.children);
   const mLines = mealLines(meals, { unitId: input.unitId, plan: mealPlan, nights: n, guests: guestCount, children, lang });

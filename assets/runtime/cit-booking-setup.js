@@ -425,7 +425,7 @@
 
   /* Elek 10-13 T-4: the meal plan and the children, as the guest's form asks them — the owner
    * can try the surcharge too. The server decides what applies to the chosen room. */
-  /* ADR-XXXX: the child count is ALWAYS asked, as on the guest's form — without the owner's
+  /* ADR-0388: the child count is ALWAYS asked, as on the guest's form — without the owner's
    * child age it is "(18 év alatt)" and only the tourist tax follows it. */
   function trialMealRow() {
     var M = D.meals;

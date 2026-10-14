@@ -353,7 +353,7 @@
       if (k > 0) out.push({ label: tr("{name}, gyermek").replace("{name}", p.name), n: n, per: p.child, guests: k, sum: n * k * p.child });
       return out;
     }
-    /* ADR-XXXX (owner 2026-10-14): the child count is ALWAYS asked — the owner needs to know,
+    /* ADR-0388 (owner 2026-10-14): the child count is ALWAYS asked — the owner needs to know,
      * and the under-18 tourist-tax exemption rests on it. With the owner's child price it
      * counts to his age ("(N éves korig)", the meal lines follow it); without one the
      * label is "(18 év alatt)" and only the tax follows it. Twin: countedChildAge (meals.ts). */

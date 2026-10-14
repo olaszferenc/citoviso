@@ -1,4 +1,4 @@
-## ADR-XXXX — A foglalásnál a gyerekszámot mindig megkérdezzük
+## ADR-0388 — A foglalásnál a gyerekszámot mindig megkérdezzük
 
 **Dátum:** 2026-10-14 · **Kontextus:** az éles végigteszt (2026-10-14) lelete, tulaj-döntés: „mehet”. **Kiterjeszti:** ADR-0384 (a gyermekként megadott vendég IFA-mentes), ADR-0378 (gyerekár).
 

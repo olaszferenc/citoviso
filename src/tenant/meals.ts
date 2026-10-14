@@ -262,7 +262,7 @@ export function taxPayers(guests: number, children: number | null | undefined): 
 }
 
 /**
- * ADR-XXXX: the guest is ALWAYS asked how many children come. The age a counted child is
+ * ADR-0388: the guest is ALWAYS asked how many children come. The age a counted child is
  * under: the owner's child age when a child meal price applies to this request (a meal plan
  * was chosen and some plan carries a child price), else 17 — "(18 év alatt)", which only
  * affects the tourist tax. The browser twin is `kidAge` in assets/runtime/cit-runtime.js.

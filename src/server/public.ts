@@ -951,7 +951,7 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
   // (chosenPlan / asksChildren / mealLines) — the owner can try the surcharge, not only the stay.
   const meals = pricingLive ? readMeals(pricing.meals) : null;
   const plan = chosenPlan(meals, unitId, body.meal);
-  // ADR-XXXX: the child count is always asked, as on the guest's form.
+  // ADR-0388: the child count is always asked, as on the guest's form.
   const children = clampChildren(guests, body.children);
   const mLines = mealLines(meals, { unitId, plan, nights: n, guests, children, lang });
   const mealSum = mLines.reduce((t, l) => t + l.sum, 0);

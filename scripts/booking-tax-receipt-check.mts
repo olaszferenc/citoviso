@@ -185,8 +185,8 @@ try {
     await page.close();
   }
 
-  // ── ③b ADR-XXXX: the child count is always asked, also without a child price ──
-  console.log("\n③b ADR-XXXX · „Ebből gyermek” gyerekár nélkül is (18 év alatt, csak az IFA-ra hat)");
+  // ── ③b ADR-0388: the child count is always asked, also without a child price ──
+  console.log("\n③b ADR-0388 · „Ebből gyermek” gyerekár nélkül is (18 év alatt, csak az IFA-ra hat)");
   for (const width of [390, 1280]) {
     const page = await open(browser, await pageHtml(500), width);
     await page.selectOption("select[name='unit']", WHOLE);
@@ -271,7 +271,7 @@ try {
     check(`⭐ visszaigazoló levél, IFA ${label}${stored === 500 ? " — a beküldéskori összeg, nem a később átírt" : ""}`,
       Boolean(conf && mailWant(conf.body) && !(stored === 500 && /900 Ft/.test(conf.body))));
   }
-  /* ADR-XXXX: no meal setting at all — the child count is still stored, the tax leaves the
+  /* ADR-0388: no meal setting at all — the child count is still stored, the tax leaves the
    * child out, and every letter says "3 fő, ebből 1 gyermek" (the 18-year sentence, no 13–17). */
   await setSiteModuleConfig(site.id, "booking", { notifyEmail: `owner-${stamp}@example.com`, touristTaxPerPersonNight: 500 }, "test");
   {
@@ -281,13 +281,13 @@ try {
       null,
     );
     offset += 10;
-    check("⭐ ADR-XXXX ellátás nélkül is tárolja a gyerekszámot", res.ok && res.summary?.children === 1, res);
+    check("⭐ ADR-0388 ellátás nélkül is tárolja a gyerekszámot", res.ok && res.summary?.children === 1, res);
     const row = await db.selectFrom("booking_request").select(["action_token", "children"]).where("id", "=", res.id!).executeTakeFirstOrThrow();
-    check("ADR-XXXX a sorban children = 1", row.children === 1, row.children);
+    check("ADR-0388 a sorban children = 1", row.children === 1, row.children);
     await decideRequest(row.action_token, "accepted", null);
     const conf = (await mailsTo(guest)).find((m) => /Visszaigazolt foglalás/.test(m.subject));
     const b = (conf?.body ?? "").replace(/=\r?\n/g, "");
-    check("⭐ ADR-XXXX levél: IFA × 2 fő, a 18 év alatti mondat, „3 fő, ebből 1 gyermek”",
+    check("⭐ ADR-0388 levél: IFA × 2 fő, a 18 év alatti mondat, „3 fő, ebből 1 gyermek”",
       /× 2 fő × 3 éj\)/.test(b) && /nem számoltuk bele/.test(b) && !/–17 évesek/.test(b) && /3 fő, ebből 1 gyermek/.test(b),
       b.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 600));
   }

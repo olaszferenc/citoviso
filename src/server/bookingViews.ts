@@ -91,7 +91,7 @@ function huDay(iso: string, lang = "hu"): string {
 }
 
 
-/** Elek 10-13 T-7 / ADR-XXXX: the letters' head count — "3 fő, ebből 1 gyermek". */
+/** Elek 10-13 T-7 / ADR-0388: the letters' head count — "3 fő, ebből 1 gyermek". */
 function heads(r: InboxItem, lang: string): string {
   return r.children ? T(lang, "{n} fő, ebből {k} gyermek", { n: r.guests, k: r.children }) : T(lang, "{n} fő", { n: r.guests });
 }

@@ -46,7 +46,7 @@ utánra halasztva.
    a KÖZÖS szobakártyán állnak; a saját szobakártyát rajzoló sablonokon ezt az „Ellátás” blokk
    pótolja (megvalósításkor mérve: a kártyát 12 sablon maga rajzolja).
 8. **Foglalás.** Egy lenyílóban a választható ellátások a felárukkal, alatta a kiválasztott
-   leírása. Az „Ebből gyermek” léptető MINDIG ott van (ADR-XXXX, tulaj 2026-10-14): gyerekárral
+   leírása. Az „Ebből gyermek” léptető MINDIG ott van (ADR-0388, tulaj 2026-10-14): gyerekárral
    a szállásadó korhatára szerint számol, nélküle „(18 év alatt)” felirattal, és csak az IFA-ra hat. Az ár-dobozba külön sor
    kerül az ellátásnak („Félpanzió · 3 éj × 2 felnőtt × 9 000 Ft”), a gyerekeknek pedig egy
    második sor. Az ár alapja ki van mondva: személyenként vagy a szobára számít.
