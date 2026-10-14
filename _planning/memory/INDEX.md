@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-14_operator_proba_foglalas_lathato.md](2026-10-14_operator_proba_foglalas_lathato.md) — Az operátor látja a próbát és a foglalást, és értesítést kap (ADR-0386) — 2026-10-14
+- [2026-10-14_elek_szallasado_fizetes.md](2026-10-14_elek_szallasado_fizetes.md) — Elek mint szállásadó — éles teszt 3. kör (0038426a): valódi fizetés sikeres, a számla bukott (Számlázz 136)
 - [2026-10-14_elek_foglalo_vendeg.md](2026-10-14_elek_foglalo_vendeg.md) — Elek mint foglaló vendég — éles teszt · JELENTÉS 2026-10-14
 - [2026-10-14_elek_eles_teszt_2_kor.md](2026-10-14_elek_eles_teszt_2_kor.md) — Elek — éles teszt 2. kör (c0095a28): V-1 és a T-leletek javultak, L-1 és O-2 maradt
 - [2026-10-13_riaszto_sms_csendes_ora.md](2026-10-13_riaszto_sms_csendes_ora.md) — 2026-10-13 — Riasztó SMS csendes óra (22–07) + reggeli összesítő; éjjeli SMS-források felmérése (ADR-0376)
