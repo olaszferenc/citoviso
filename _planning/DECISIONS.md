@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-pirula-par-az-oldalsav-kartya-cimere-sem-ul.md) — A pirula-pár az első képernyőn látszó oldalsáv-kártya címére sem ül
+- [ADR-0387](decisions/0387-a-pirula-par-az-elso-kepernyon-latszo-oldalsav.md) — A pirula-pár az első képernyőn látszó oldalsáv-kártya címére sem ül
 - [ADR-0386](decisions/0386-az-operator-latja-a-probat-es-a-foglalast-es.md) — Az operátor látja a próbát és a foglalást, és értesítést kap az új próbáról
 - [ADR-0385](decisions/0385-a-forgalmi-level-a-valos-idoszakot-nevezi-meg.md) — A forgalmi levél a valós időszakot nevezi meg, és csak a legalább 3 hete élő oldalnak megy
 - [ADR-0384](decisions/0384-a-gyermekkent-megadott-vendeg-ifa-mentes.md) — A gyermekként megadott vendég IFA-mentes; próbázónak és ügyfélnek nincs hideg megkeresés

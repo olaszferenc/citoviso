@@ -1,4 +1,4 @@
-## ADR-XXXX — A pirula-pár az első képernyőn látszó oldalsáv-kártya címére sem ül
+## ADR-0387 — A pirula-pár az első képernyőn látszó oldalsáv-kártya címére sem ül
 
 **Dátum:** 2026-10-14 · **Kontextus:** az Elek éles teszt 2. köre (2026-10-14), L-1 lelet (`~/wt/cit1cfac043/_elek/JELENTES-2.md`, kép: `shots2/lead-01-open-d-fold.png`). **Kiterjeszti:** ADR-0382 (cím-akadály, fejléc-határ), ADR-0383 (képváltó-jelző). **Megtartja:** ADR-0377 ①② (fekvő: jobb sarok, egymás alatt), ADR-0242 ④ (gomb-kitérés), ADR-0382/0383 minden szabályát.
 
