@@ -3409,7 +3409,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pr2-errsum { font-size: 11.5px; color: var(--citui-bad-ink); }
 .pr2-errsum:empty { display: none; }
 
-/* ── PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (ADR-XXXX) ─────────────────────────────────────
+/* ── PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (ADR-0386) ─────────────────────────────────────
    Approved plan assets/design-refs/console/proba-foglalas-lathato/: the badge under the
    lead's name (list), the filter row above the table, the client card under the strip. */
 .con .con-cpill {

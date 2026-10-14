@@ -1,5 +1,5 @@
 // CLIENT NEWS FOR THE HOUSE — a new free trial (mail + SMS) and a booking request the owner
-// leaves unanswered (mail) reach the operator (ADR-XXXX; approved plan
+// leaves unanswered (mail) reach the operator (ADR-0386; approved plan
 // `assets/design-refs/console/proba-foglalas-lathato/`, owner 2026-10-14 „mehet”: E2 + the
 // silent-booking letter).
 //

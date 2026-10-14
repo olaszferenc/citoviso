@@ -446,7 +446,7 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
       mark: "–",
       meaning: T(lang, "Nincs adat: a gyűjtés nem hozott értéket ebbe az oszlopba (nulla anyagnál is ez áll)."),
     },
-    // ADR-XXXX: the client badge under the name — what the operator never saw before (Elek O-2).
+    // ADR-0386: the client badge under the name — what the operator never saw before (Elek O-2).
     {
       mark: T(lang, "próbázik · még {n} nap", { n: "N" }),
       meaning: T(
@@ -551,7 +551,7 @@ export function applyLeadFilters(rows: LeadListRow[], q: LeadQuery): LeadListRow
 
 /** Is any column filter active in this query? (View switching / default injection.) */
 export function anyLeadFilter(q: LeadQuery): boolean {
-  // ADR-XXXX: the client filter row counts too — "Próbázik" must not be narrowed by the
+  // ADR-0386: the client filter row counts too — "Próbázik" must not be narrowed by the
   // default (no-website + photos) filter, or a trying lead with a website would vanish.
   if (q.client) return true;
   return LEAD_FILTERS.some((f) => filterValue(q, f) !== undefined);

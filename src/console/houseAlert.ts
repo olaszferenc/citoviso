@@ -61,7 +61,7 @@ export interface HouseAlert {
   readonly sms?: boolean;
   /** The SMS repeat-filter key; defaults to the tag (one SMS per tag per window). */
   readonly smsKey?: string;
-  /** ADR-XXXX: the daytime SMS text when the alert is news, not a fault (a new trial) —
+  /** ADR-0386: the daytime SMS text when the alert is news, not a fault (a new trial) —
    *  folded to GSM-7 here. The night digest still lists the subject. Default: alertSmsText. */
   readonly smsText?: string;
 }

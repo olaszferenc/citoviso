@@ -1,4 +1,4 @@
-# Az operátor látja a próbát és a foglalást, és értesítést kap (ADR-XXXX) — 2026-10-14
+# Az operátor látja a próbát és a foglalást, és értesítést kap (ADR-0386) — 2026-10-14
 
 **Szál:** SUB a deploy-koordinátornak (`citfb4ed7ab`), Elek 10-13 O-2 lelet. §2b terv-kör 10-13-án,
 tulaj-jóváhagyás 10-14-én („mehet”): lead-lap **B** (ügyfél-kártya), lista **C** jelvény + **B** szűrő-sor,

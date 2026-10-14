@@ -1,5 +1,5 @@
 // CLIENT-VISIBILITY GUARD — the operator sees a lead's trial and bookings, and hears about a
-// new trial and an unanswered booking (ADR-XXXX; approved plan
+// new trial and an unanswered booking (ADR-0386; approved plan
 // assets/design-refs/console/proba-foglalas-lathato/, owner 2026-10-14).
 //
 // Why: Elek's live test (2026-10-13, O-2) — a lead in a running trial read "jóváhagyva" on

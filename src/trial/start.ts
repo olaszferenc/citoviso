@@ -319,7 +319,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 
     // 8. Measurement on the mock_event spine (F SUB funnel).
     await recordTrialStart(p.id, input.viewId ?? null, trialId);
-    // ADR-XXXX: the house hears about the new trial (mail + SMS, once; the hourly sweep retries).
+    // ADR-0386: the house hears about the new trial (mail + SMS, once; the hourly sweep retries).
     void import("../console/clientNotify.js").then((m) => m.notifyTrialStarted(trialId)).catch(() => undefined);
 
     console.log(`[trial] ${prior ? "FOLYTATVA" : "INDULT"} · lead ${p.lead_id} · tenant ${tenantId} · ${modules.length} modul · eddig ${new Date(trial.trial_until as unknown as string).toISOString()}`); // i18n-exempt: operátori napló

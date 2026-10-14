@@ -75,7 +75,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: a new trial the instant notice missed + a booking request silent for 24 h → house.
+  // ADR-0386: a new trial the instant notice missed + a booking request silent for 24 h → house.
   const cn = await runClientNotices(now);
   console.log(`client-notices @ ${now.toISOString()}:`, JSON.stringify(cn));
   if (cn.failed > 0) process.exitCode = 1;

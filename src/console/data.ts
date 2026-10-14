@@ -112,7 +112,7 @@ export interface LeadListRow {
   /** The channels that carried it — read from the per-channel stamps (ADR-0082/0083),
    *  in the fixed order email → sms → mms; empty when only `sent_at` is set. */
   readonly outreachChannels: readonly SentChannel[];
-  /** ADR-XXXX: trial / subscription / bookings — the badge under the name and the filter row. */
+  /** ADR-0386: trial / subscription / bookings — the badge under the name and the filter row. */
   readonly client?: LeadClientSummary | null;
 }
 
@@ -188,7 +188,7 @@ export interface LeadQuery {
   mock?: string[];
   minPhotos?: number;
   minMaterial?: number;
-  /** ADR-XXXX: the filter row — próbázik / foglalás érkezett / előfizető / próba lejárt. */
+  /** ADR-0386: the filter row — próbázik / foglalás érkezett / előfizető / próba lejárt. */
   client?: string;
   /** Minimum portal-match confidence (0–1). A lead with NO portal hit never passes:
    *  its match cell is -1, so it cannot reach any positive threshold. */
@@ -241,7 +241,7 @@ export interface LeadListResult {
   /** Every matching row — the header filters build their live option counts on this. */
   readonly matched: LeadListRow[];
   readonly counts: LeadCounts;
-  /** ADR-XXXX: leads per filter-row value, over the WHOLE active list (not the filtered rows). */
+  /** ADR-0386: leads per filter-row value, over the WHOLE active list (not the filtered rows). */
   readonly clientCounts?: Readonly<Record<ClientFilter, number>>;
 }
 
@@ -319,7 +319,7 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
   }
   const CHANNEL_ORDER: readonly SentChannel[] = ["email", "sms", "mms"];
 
-  // ADR-XXXX: trial / subscription / booking counts per lead (badge + filter row).
+  // ADR-0386: trial / subscription / booking counts per lead (badge + filter row).
   const clients = await loadLeadClients();
 
   // Scrape-area labels: the list shows the human name of the area, not its id.
@@ -435,7 +435,7 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
   // Column filters — every one of them from the registry, so the predicate and the
   // label the view prints about it read the SAME column cell.
   let rows = applyLeadFilters(pool, q);
-  // ADR-XXXX: the filter row (one value at a time) — the same rule as the badge.
+  // ADR-0386: the filter row (one value at a time) — the same rule as the badge.
   if (isClientFilter(q.client)) {
     const f = q.client;
     rows = rows.filter((r) => passesClientFilter(r.client, f));

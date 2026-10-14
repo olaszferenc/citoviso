@@ -1,5 +1,5 @@
 // LEAD → CLIENT STATE — the operator sees that a lead is TRYING the product, PAYS for it,
-// or let the trial lapse, and what bookings its live site received (ADR-XXXX; approved plan
+// or let the trial lapse, and what bookings its live site received (ADR-0386; approved plan
 // `assets/design-refs/console/proba-foglalas-lathato/`, owner 2026-10-14: lead page B card,
 // list C badge + B filter row).
 //

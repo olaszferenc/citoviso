@@ -1,4 +1,4 @@
-## ADR-XXXX — Az operátor látja a próbát és a foglalást, és értesítést kap az új próbáról
+## ADR-0386 — Az operátor látja a próbát és a foglalást, és értesítést kap az új próbáról
 
 **Dátum:** 2026-10-14 · **Kontextus:** Elek éles teszt (2026-10-13), O-2 lelet (`_planning/memory/2026-10-13_elek_eles_teszt_harom_szerep.md`). A §2b terv-kör után a tulaj 2026-10-14-én a deploy-koordinátoron át jóváhagyta („mehet”). Terv: `assets/design-refs/console/proba-foglalas-lathato/`. **Kiterjeszti:** ADR-0342…0359 (próba), ADR-0374/0376/0379 (riasztó levél + SMS, csendes óra), ADR-0384 (próbázónak nincs hideg megkeresés).
 

@@ -2017,7 +2017,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   return layout(title, body, { active: "/leads" });
 }
 
-/** ADR-XXXX (approved plan, list = C badge): the client state under the lead's name. */
+/** ADR-0386 (approved plan, list = C badge): the client state under the lead's name. */
 function clientBadges(r: LeadListRow, lang: string): string {
   const c = r.client;
   if (!c || (!c.kind && c.bookingTotal <= 0)) return "";
@@ -2025,7 +2025,7 @@ function clientBadges(r: LeadListRow, lang: string): string {
 }
 
 /**
- * ADR-XXXX (approved plan, list = B filter row): Mind · Próbázik · Foglalás érkezett ·
+ * ADR-0386 (approved plan, list = B filter row): Mind · Próbázik · Foglalás érkezett ·
  * Előfizető · Próba lejárt, each with its count over the WHOLE active list. A chip opens
  * that client view of the full list (`/leads?client=…`) — the column filters are left
  * out on purpose: carried over, the injected default filter (no website + photos) would
@@ -5414,7 +5414,7 @@ function exactOf(iso: string | null | undefined): string {
   return iso ? iso.slice(0, 16).replace("T", " ") : "";
 }
 
-// ── PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (ADR-XXXX) ─────────────────────────────────────
+// ── PRÓBA ÉS FOGLALÁS AZ OPERÁTORNAK (ADR-0386) ─────────────────────────────────────
 // Approved plan `assets/design-refs/console/proba-foglalas-lathato/` (owner 2026-10-14):
 // the list carries a badge under the name (C), the page a client card under the strip (B).
 // ONE vocabulary: both read `clientPill` / `bookingPill`, so the list and the page cannot
@@ -5630,7 +5630,7 @@ export function workflowBand(
   lang: string,
   /** Elek 10-13 O-1: the lead already has a site (trial or paid) — no cold letter is "next". */
   customer = false,
-  /** ADR-XXXX: a trial runs — the Rendelés station points at the client card below. */
+  /** ADR-0386: a trial runs — the Rendelés station points at the client card below. */
   trialRunning = false,
 ): string {
   const approvedAt = approvedMock?.decisions.find((x) => x.decision === "approve")?.decidedAt ?? null;
@@ -5768,7 +5768,7 @@ export function leadPage(
   walk: WalkPageView = { lead: null, byArtifact: new Map() },
   /** lead-lastedit (A): the newest log entry per tab + who created each mock (migration 0089). */
   activity: LeadActivityView = EMPTY_ACTIVITY,
-  /** ADR-XXXX: trial / subscription / bookings of the lead's site — the client card under the strip. */
+  /** ADR-0386: trial / subscription / bookings of the lead's site — the client card under the strip. */
   client: LeadClientView | null = null,
 ): string {
   const lang = consoleLang();
