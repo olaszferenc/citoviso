@@ -45,12 +45,15 @@ console.log("\n① Pénztárca");
   const w = strip(walletSection(wal, cancelled, null, "hu"));
   check("⭐ kimondja: lemondta, zárul, nem terhelünk", CLOSE.test(w), w.slice(0, 400));
   check("⭐ „Következő terhelés nincs”", /Következő terhelés nincs/.test(w));
+  // P-4 follow-up (owner, 2026-10-14): the pill said „AUTOMATIKUS TERHELÉS BEKAPCSOLVA” over „nem terhelünk”.
+  check("⭐ a pirula a lemondást mondja, nem „BEKAPCSOLVA”", /LEMONDVA — NEM TERHELÜNK/.test(w) && !/AUTOMATIKUS TERHELÉS BEKAPCSOLVA/.test(w));
   check("⭐ nincs „3 nappal e-mailt küldünk” ígéret", !/terhelés előtt 3 nappal/.test(w));
   check("⭐ a visszavonás-megerősítő nem ígér fizetési linket / felfüggesztést", !/Ezután Önnek kell fizetnie/.test(w) && !/felfüggesztjük/.test(w));
   const noCard = strip(walletSection({ ...wal, autoCharge: false, card: null }, { ...cancelled, autoCharge: false, cardLabel: null }, null, "hu"));
   check("kártya nélkül sem: „díjfizetési kötelezettség változatlan” / „fizetési link e-mailben”", !/kötelezettség változatlan/.test(noCard) && !/fizetési link e-mailben/.test(noCard) && CLOSE.test(noCard), noCard.slice(0, 300));
   const live = strip(walletSection(wal, sub, null, "hu"));
   check("negatív kontroll: lemondás nélkül a régi ígéret áll", /terhelés előtt 3 nappal/.test(live) && !CLOSE.test(live));
+  check("negatív kontroll: lemondás nélkül a pirula „AUTOMATIKUS TERHELÉS BEKAPCSOLVA”", /AUTOMATIKUS TERHELÉS BEKAPCSOLVA/.test(live) && !/LEMONDVA/.test(live));
 }
 console.log("\n② Modulok fül");
 {
@@ -60,6 +63,7 @@ console.log("\n② Modulok fül");
   const m = page(cancelled);
   check("⭐ „Következő számla nincs”, nincs dátumos összeg", /Következő számla nincs/.test(m) && !/Következő számla \(/.test(m), m.slice(m.indexOf("Következő"), m.indexOf("Következő") + 200));
   check("⭐ a megbízás-blokk a zárást mondja, nem a fordulónapi levonást", CLOSE.test(m) && !/magától levonjuk a díjat/.test(m));
+  check("⭐ a megbízás-blokk pirulája is „LEMONDVA — NEM TERHELÜNK”", /LEMONDVA — NEM TERHELÜNK Automatikus kártyaterhelés/.test(m) && !/BEKAPCSOLVA Automatikus kártyaterhelés/.test(m));
   check("⭐ a megerősítő nem ígér fordulónapi fizetést", !/Ezután Önnek kell fizetnie/.test(m));
   check("⭐ nincs „A következő számla tételei” lenyíló", !/A következő számla tételei/.test(m));
   const mOff = page({ ...cancelled, autoCharge: false, cardLabel: null });

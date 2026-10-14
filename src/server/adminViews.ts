@@ -1924,7 +1924,9 @@ export function modulesSection(
         : `<div class="adm-mand">` +
           `<div class="adm-mand__ico">${ic("card")}</div>` +
           `<div class="adm-mand__txt">` +
-          `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>` +
+          (closing
+            ? `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "LEMONDVA — NEM TERHELÜNK")}</span>`
+            : `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>`) +
           `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
           `<p>${closing ? T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: esc(renewDate) }) : T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
           `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button> ` +
@@ -1934,7 +1936,9 @@ export function modulesSection(
       : `<div class="adm-mand">` +
         `<div class="adm-mand__ico">${ic("card")}</div>` +
         `<div class="adm-mand__txt">` +
-        `<span class="adm-mand__pill">${T(lang, "KIKAPCSOLVA")}</span>` +
+        (closing
+          ? `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "LEMONDVA — NEM TERHELÜNK")}</span>`
+          : `<span class="adm-mand__pill">${T(lang, "KIKAPCSOLVA")}</span>`) +
         `<h3>${T(lang, "Fizetés díjbekérővel")}</h3>` +
         `<p>${closing ? T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: esc(renewDate) }) : T(lang, "A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.")}</p>` +
         // HONEST re-grant: a stored credential is bound by the card scheme to a
@@ -5779,8 +5783,13 @@ export function walletSection(
         : flash === "err"
           ? `<div class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)"><b>${T(lang, "A kártyacserét most nem tudtuk elindítani.")}</b> ${T(lang, "Semmi nem változott — próbálja meg később, vagy írjon nekünk.")}</div>`
           : "";
+  // Elek P-4: a cancelled subscription closes at the period end — no charge, no pay link.
+  const closing = Boolean(sub?.cancelAtPeriodEnd) && !w.frozen;
   // ── state pill (contract ③) ──
-  const pill = !card
+  // Elek P-4 follow-up (owner, 2026-10-14): „BEKAPCSOLVA” over „nem terhelünk” said two things.
+  const pill = closing
+    ? `<span class="adm-mand__pill adm-mand__pill--off" data-closing>${T(lang, "LEMONDVA — NEM TERHELÜNK")}</span>`
+    : !card
     ? `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "NINCS MENTETT KÁRTYA")}</span>`
     : w.frozen
       ? `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "A TERHELÉS NEM SIKERÜLT")}</span>`
@@ -5799,8 +5808,6 @@ export function walletSection(
       `<div class="adm-wal__brand">${T(lang, "NINCS MENTETT KÁRTYA")}</div>` +
       `<div class="adm-wal__none">${T(lang, "A díjakat fizetési linkkel, e-mailből tudja rendezni.")}</div></div>`;
   // ── what the state MEANS (contract ③ + the mask-less honesty of ②) ──
-  // Elek P-4: a cancelled subscription closes at the period end — no charge, no pay link.
-  const closing = Boolean(sub?.cancelAtPeriodEnd) && !w.frozen;
   const meaning = closing
     ? `<p class="adm-wal__hint" data-closing>${T(lang, "Az előfizetését lemondta: {date} napján zárul. Nem terhelünk, és fizetési linket sem küldünk.", { date: d(w.nextChargeOn) })}</p>`
     : !card

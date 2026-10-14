@@ -228,7 +228,7 @@ folytatom”** gombbal a fordulónapig visszaléphet.
 Lemondás után a felület mindenhol a zárást mondja: a **„Következő számla”** és a Pénztárca
 **„Következő terhelés”** sora „nincs”, mellette ez áll: *„Az előfizetését lemondta: … napján
 zárul. Nem terhelünk, és fizetési linket sem küldünk.”* — az oldalsávon pedig „zárul …, nem
-terhelünk”. A fordulónap előtti „hamarosan megújul” levelet sem kapja meg.
+terhelünk”, a kártya-pirula pedig **„LEMONDVA — NEM TERHELÜNK”**. A fordulónap előtti „hamarosan megújul” levelet sem kapja meg.
 A lemondásról (és ha visszalép, a folytatásról is) e-mailben visszaigazolást küldünk.
 
 **Kivétel a hűségidő.** Ha tőlünk rendelt saját webcímet, ahhoz hűségidő
