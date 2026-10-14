@@ -396,6 +396,8 @@ export interface SiteData {
         readonly from: string;
         readonly to: string;
         readonly amount: number;
+        /** Elek F-2: the season's own minimum stay (null/absent = the site-wide one). */
+        readonly minNights?: number | null;
         /** 0074: ONE YEAR's occurrence ("2027", "2026/27" over the year end) with its
          *  full dates ('YYYY-MM-DD'). Present only when the season has a year price —
          *  then the table lists each year within the booking horizon, because a

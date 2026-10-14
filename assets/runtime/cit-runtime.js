@@ -310,6 +310,7 @@
     var blocked = {};
     var portalDays = {}; // demo only: sample portal-booked nights (ADR-0361)
     var pricing = null; // {currency, unit, rows} — live price list from the availability API
+    var seasonMins = []; // Elek F-2: [{from,to,validFrom,validTo,min}] — the seasons' own minimum stays
 
     form.querySelectorAll(".cit-book__step[data-step]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -787,6 +788,7 @@
         blocked = demoBlocked(currentUnit());
         portalDays = demoPortal(currentUnit());
         pricing = demoPricing(currentUnit());
+        seasonMins = [];
         validate();
         renderCal();
         return;
@@ -797,6 +799,7 @@
           if (!j || !j.blocked) return;
           j.blocked.forEach(function (d) { blocked[d] = true; });
           pricing = j.pricing || null;
+          seasonMins = j.mins || [];
           validate();
           renderCal();
         })
@@ -839,6 +842,23 @@
     function nights(a, b) {
       return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
     }
+    /* Elek F-2 (2026-10-14): the minimum stay was only said after submit, and a season's own
+     * minimum never reached the widget. Mirrors seasonRulesFor + stayRuleErrors (requests.ts):
+     * per NIGHT the first season (owner order) covering it decides; the stay needs the
+     * strictest of them; when no night falls in a season with a minimum, the site-wide one. */
+    function minFor(a, b) {
+      var strictest = 0, d = a;
+      while (d < b) {
+        var hit = null;
+        for (var i = 0; i < seasonMins.length && !hit; i++) {
+          var r = seasonMins[i];
+          if (CitSeason.inWindow(r, d) && CitSeason.covers(r.from, r.to, CitSeason.monthDayOf(d))) hit = r;
+        }
+        if (hit && hit.min && hit.min > strictest) strictest = hit.min;
+        d = shift(d, 1);
+      }
+      return strictest || minN;
+    }
     /** Returns an owner-language problem, or "" when the range is bookable. */
     function problem() {
       var a = form.from.value, b = form.to.value;
@@ -851,7 +871,8 @@
       if (minFrom && a < minFrom) return tr("A legkorábbi foglalható érkezés: {date}.").replace("{date}", huDay(minFrom).replace(/\.$/, ""));
       var n = nights(a, b);
       if (n < 1) return tr("A távozás legyen későbbi az érkezésnél.");
-      if (n < minN) return tr("Legalább {n} éjszakára lehet foglalni.").replace("{n}", minN);
+      var minHere = minFor(a, b);
+      if (n < minHere) return tr("Legalább {n} éjszakára lehet foglalni.").replace("{n}", minHere);
       if (n > maxN) return tr("Legfeljebb {n} éjszakára lehet foglalni.").replace("{n}", maxN);
       for (var i = 0; i < n; i++) {
         if (blocked[shift(a, i)]) return tr("Sajnos ezek a napok már foglaltak. Válasszon másik időpontot.");
@@ -921,7 +942,13 @@
         // server already accepts it). Once an arrival is picked, a busy day stays tappable
         // as the departure when every night before it is free.
         var out = busy && a && !b && isoDay > a && nightsFree(a, isoDay);
+        // Elek F-2: after the arrival, a departure that would make the stay too short is not
+        // offered — the guest sees the minimum while choosing, not after submitting.
+        var shortMin = a && !b && isoDay > a ? minFor(a, isoDay) : 0;
+        var short = shortMin > 0 && nights(a, isoDay) < shortMin;
+        if (short) out = false;
         var cls = "cit-book__day" +
+          (short ? " cit-book__day--short" : "") +
           (busy ? " cit-book__day--busy" : "") +
           (out ? " cit-book__day--out" : "") +
           (viaPortal ? " cit-book__day--portal" : "") +
@@ -929,8 +956,9 @@
           (b && isoDay === b ? " cit-book__day--sel" : "") +
           (a && b && isoDay > a && isoDay < b ? " cit-book__day--range" : "");
         cells += '<button type="button" class="' + cls + '" data-day="' + isoDay + '"' +
-          ((busy && !out) || off ? " disabled" : "") +
+          ((busy && !out) || off || short ? " disabled" : "") +
           ' aria-label="' + isoDay + (busy ? " — " + (viaPortal ? tr("a portálon foglalták") : tr("foglalt")) : "") +
+          (short && !busy ? ", " + tr("legalább {n} éjszaka").replace("{n}", shortMin) : "") +
           (out ? ", " + tr("távozási napnak választható") : "") + '">' + day + "</button>";
       }
       return '<div class="cit-book__month"><p class="cit-book__mlabel">' + esc(label) + "</p>" +
@@ -957,7 +985,11 @@
       if (nightsEl) {
         var a = form.from.value, b = form.to.value;
         var n = a && b ? nights(a, b) : 0;
-        nightsEl.textContent = n > 0 ? tr("{n} éjszaka").replace("{n}", n) : "";
+        // Elek F-2: between the two taps the strip says the minimum for this arrival.
+        var minA = a && !b ? minFor(a, shift(a, 1)) : 0;
+        nightsEl.textContent = n > 0
+          ? tr("{n} éjszaka").replace("{n}", n)
+          : minA > 1 ? tr("legalább {n} éjszaka").replace("{n}", minA) : "";
         renderQuote(a, b, n);
       }
     }

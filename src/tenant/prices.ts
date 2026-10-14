@@ -475,6 +475,8 @@ export interface PublicSeason {
   readonly from: string;
   readonly to: string;
   readonly amount: number;
+  /** Elek F-2: the season's own minimum stay (null = the site-wide one applies). */
+  readonly minNights?: number | null;
   readonly year?: string;
   readonly start?: string;
   readonly end?: string;
@@ -498,7 +500,7 @@ export function publicSeasons(rows: readonly UnitPrice[], today: string, horizon
   for (const s of seasons) {
     const years = rows.filter((r) => r.parentId === s.id && r.validFrom && r.validTo);
     if (!years.length) {
-      out.push({ label: s.label, from: s.from!, to: s.to!, amount: s.amount });
+      out.push({ label: s.label, from: s.from!, to: s.to!, amount: s.amount, minNights: s.minNights });
       continue;
     }
     for (let y = seasonRule.firstOpenYear(s.from!, s.to!, today); ; y++) {
@@ -511,6 +513,7 @@ export function publicSeasons(rows: readonly UnitPrice[], today: string, horizon
         from: own?.from ?? s.from!,
         to: own?.to ?? s.to!,
         amount: own?.amount ?? s.amount,
+        minNights: own?.minNights ?? s.minNights,
         year: o.label,
         start: o.start,
         end: o.end,
@@ -521,7 +524,7 @@ export function publicSeasons(rows: readonly UnitPrice[], today: string, horizon
   // prices its nights, so it is shown — with its year.
   for (const r of rows.filter((x) => !x.isBase && x.from && x.to && !x.parentId && x.validFrom && x.validTo)) {
     const o = seasonRule.occurrence(r.from!, r.to!, Number(r.validFrom!.slice(0, 4)));
-    out.push({ label: r.label, from: r.from!, to: r.to!, amount: r.amount, year: o.label, start: r.validFrom!, end: r.validTo! });
+    out.push({ label: r.label, from: r.from!, to: r.to!, amount: r.amount, minNights: r.minNights, year: o.label, start: r.validFrom!, end: r.validTo! });
   }
   return out;
 }

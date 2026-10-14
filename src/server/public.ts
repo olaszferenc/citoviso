@@ -1106,8 +1106,16 @@ async function serveTenantHost(
       (pricingRow?.config ?? null) as Record<string, unknown> | null,
       null,
     );
+    // Elek F-2 (2026-10-14): a season's own minimum stay was only said after submit — the
+    // widget knew the site-wide one alone. The season rows (owner order, the server's
+    // seasonRulesFor rule: the first season covering a night decides) ship always: the
+    // minimum is a booking rule, not a price, so it does not hang on the pricing module.
+    const minRows = (await getUnitPrices(unitId))
+      .filter((p) => !p.isBase && p.from && p.to)
+      .map((p) => ({ from: p.from, to: p.to, validFrom: p.validFrom, validTo: p.validTo, min: p.minNights }));
     return sendJson(res, 200, {
       blocked: await getBlockedDaysFrom(unitId, today),
+      mins: minRows,
       pricing: priceRows.length
         ? {
             currency: String(pricingCfg.currency ?? "HUF"),

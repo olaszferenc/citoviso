@@ -146,6 +146,7 @@ const CSS = `<style data-cit-modsec>
 .cit-price__tab[aria-selected="true"]{background:var(--cit-accent);
   border-color:var(--cit-accent);color:var(--cit-on-accent)}
 .cit-price__unit[hidden]{display:none}
+.cit-price__min{color:var(--cit-muted);font-size:.82rem;font-weight:500}
 /* With tabs the block's own heading is redundant — the selected tab names it. */
 .cit-price--tabbed .cit-price__name{display:none}
 .cit-price--tabbed .cit-price__unit table{margin-top:0}
@@ -444,6 +445,14 @@ function pricingBlock(d: SiteData): string {
         ? T(d, "a teljes tartózkodásra")
         : T(d, "éjszakánként");
 
+  // Elek F-2 (2026-10-14): the minimum stay was nowhere on the page — the guest met it
+  // after submitting. Each row names the minimum that applies to it (the season's own, else
+  // the booking module's), only when it is more than one night and only with booking on.
+  const siteMin = d.booking?.minNights ?? 1;
+  const minNote = (n: number | null | undefined): string => {
+    const m = d.booking ? (n ?? siteMin) : 1;
+    return m > 1 ? `<br><small class="cit-price__min">${T(d, "legalább {n} éj", { n: m })}</small>` : "";
+  };
   const groups = (p.units ?? [])
     .map((u) => {
       const rows: string[] = [];
@@ -457,7 +466,7 @@ function pricingBlock(d: SiteData): string {
               esc(niceDay(s.end.slice(5, 10)))
             : `${esc(niceDay(s.from))} – ${esc(niceDay(s.to))}`;
         rows.push(
-          `<tr><td>${esc(s.label)}${s.year ? ` ${esc(s.year)}` : ""}</td><td>${when}</td>` +
+          `<tr><td>${esc(s.label)}${s.year ? ` ${esc(s.year)}` : ""}${minNote(s.minNights)}</td><td>${when}</td>` +
             `<td>${esc(money(s.amount, p.currency))}</td></tr>`,
         );
       }
@@ -468,7 +477,7 @@ function pricingBlock(d: SiteData): string {
           ? `– ${esc(u.baseUntil.slice(0, 4))}. ${esc(niceDay(u.baseUntil.slice(5, 10)))}`
           : "";
         rows.push(
-          `<tr><td>${T(d, "Egyéb időszakban")}</td><td>${until}</td>` +
+          `<tr><td>${T(d, "Egyéb időszakban")}${minNote(null)}</td><td>${until}</td>` +
             `<td>${esc(money(u.base, p.currency))}</td></tr>`,
         );
       } else if (u.onRequest) {

@@ -467,7 +467,16 @@ try {
     // textContent per cell, tab-joined: the runtime hides every unit but one behind a tab,
     // and innerText of a hidden row loses its cell breaks.
     const rows = await sec.locator("table tbody tr").evaluateAll((trs) =>
-      trs.map((tr) => [...tr.querySelectorAll("td")].map((td) => (td.textContent ?? "").trim()).join("\t")),
+      // Elek F-2: the label cell also carries „legalább N éj” — the label is read without it.
+      trs.map((tr) =>
+        [...tr.querySelectorAll("td")]
+          .map((td) => {
+            const c = td.cloneNode(true) as Element;
+            c.querySelectorAll(".cit-price__min").forEach((m) => m.remove());
+            return (c.textContent ?? "").trim();
+          })
+          .join("\t"),
+      ),
     );
     const mainRows = rows.filter((r) => /Nyári főszezon/i.test(r));
     check(`${label}: a Nyári főszezon évvel szerepel, a saját árával`, mainRows.some((r) => r.includes(`Nyári főszezon ${yMain}`) && /35\s000/.test(r)), mainRows);

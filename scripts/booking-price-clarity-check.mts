@@ -165,8 +165,15 @@ async function pickTwoDays(page: Page): Promise<void> {
     await page.click(".cit-book__calnav--next");
     await page.waitForTimeout(150);
   }
+  // Elek F-2: after the arrival the too-short departures are disabled, so "the 4th free day"
+  // moves — the departure is picked by DATE, three nights after the arrival.
+  const a = (await free.nth(1).getAttribute("data-day"))!;
   await free.nth(1).click();
-  await free.nth(4).click();
+  const d = new Date(`${a}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 3);
+  const to = page.locator(`.cit-book__day[data-day="${d.toISOString().slice(0, 10)}"]`).first();
+  if (!(await to.isVisible())) { await page.click(".cit-book__calnav--next"); await page.waitForTimeout(150); }
+  await to.click();
   await page.waitForTimeout(250);
 }
 
