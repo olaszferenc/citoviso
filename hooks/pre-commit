@@ -1778,7 +1778,7 @@ if [ -f scripts/send-window-tz-check.mts ] && \
   echo "[pre-commit] send-window-tz-check (kimenő ablakok, határidők és a tulaj/vevő-felé mutatott idők Budapest szerint, UTC-s szerveren is)…"
   npx tsx scripts/send-window-tz-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX: the monthly traffic mail names the period it really covers (a date range, not the
+# The forgalmi-level-valos-idoszak ADR: the monthly traffic mail names the period it really covers (a date range, not the
 # month of now − 30 days) and only goes to a site live for most of the window. Pure — no DB.
 if [ -f scripts/traffic-mail-period-check.mts ] && \
    changed_files | grep -qE '^src/analytics/traffic(Report|Mail)\.ts$|^src/email/trafficEmail\.ts$|^scripts/traffic-mail(-period-check)?\.mts$'; then
