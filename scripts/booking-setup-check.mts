@@ -79,7 +79,7 @@ try {
   check("prompt: „Ezt nem én írom be” + soha nem állítja, hogy beállított", sp.includes("Ezt nem én írom be") && sp.includes("Soha ne állítsa"));
   check("prompt: csak a foglalásról, más témára udvarias nem", sp.includes("csak a foglalás beállításában segítek"));
   check("prompt: kimondja, ami NINCS (előleg, lemondás, pótágy)", /előleg/.test(sp) && /lemondási feltétel/.test(sp) && /pótágy-díj/.test(sp));
-  // ADR-XXXX: the capacity IS enforced now — the helper must not deny it any more.
+  // ADR-0389: the capacity IS enforced now — the helper must not deny it any more.
   check("prompt: a férőhely korlát, nem „NEM szűri ki”", /férőhelyéig/.test(sp) && !/NEM szűri ki/.test(sp));
   check("prompt: az ellátás és a gyerekár (ADR-0378) az Árak „Ellátás” részére mutat, nem tagadja", /Ellátás és felárak/.test(sp) && /gyerekár korhatárral/.test(sp));
   // Elek 10-13 T-1: every screen name the prompt quotes exists in the code that draws it.
@@ -213,7 +213,7 @@ try {
   t = await api("/admin/booking-setup/trial", { unitId: apt.id, dateFrom: oct, nights: 2, guests: 4 });
   const q = t.quote as { totalText: string } | null;
   check("2 éj alapáron → a vendég-út ára (38 000 Ft)", (t.errors as string[]).length === 0 && !!q && q.totalText.replace(/\s/g, "").includes("38000"), t);
-  // ADR-XXXX: the guest path refuses past the capacity — the trial says the same sentence.
+  // ADR-0389: the guest path refuses past the capacity — the trial says the same sentence.
   t = await api("/admin/booking-setup/trial", { unitId: apt.id, dateFrom: oct, nights: 2, guests: 6 });
   check("6 fő egy 4 fős szobába → a vendég sem küldheti el („Ide legfeljebb 4 vendég foglalhat.”)",
     ((t.errors as string[]) ?? []).some((n) => n.startsWith("Ide legfeljebb 4 vendég foglalhat.")), t);

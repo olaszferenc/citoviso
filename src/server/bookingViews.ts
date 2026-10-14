@@ -620,7 +620,7 @@ function requestCard(
   const conflictNote = overlaps?.length
     ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => esc(o.guestName)).join(", ") })}</span>`
     : "";
-  // ADR-XXXX (Elek F-1: a 7-person request on a 4-person house, „Visszaigazolom" live): an
+  // ADR-0389 (Elek F-1: a 7-person request on a 4-person house, „Visszaigazolom" live): an
   // over-capacity request is flagged on the card and again in the accept step.
   const capNote =
     r.capacity && r.guests > r.capacity

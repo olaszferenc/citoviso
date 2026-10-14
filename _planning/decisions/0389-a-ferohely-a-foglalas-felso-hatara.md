@@ -1,4 +1,4 @@
-## ADR-XXXX — A férőhely a foglalás felső határa
+## ADR-0389 — A férőhely a foglalás felső határa
 
 **Dátum:** 2026-10-14 · **Kontextus:** éles végigteszt (2026-10-14), Elek-foglaló F-1 és Elek-szállásadó §3. Egy 4 fős szállásra 7 fős kérés ment át (FG-E0FA1A). A szállásadó sehol nem kapott figyelmeztetést: az admin-kártyán aktív volt a „Visszaigazolom”, a megerősítő lépésben és a tulaj-levélben sem állt semmi, a levélben pedig ott volt az egykattintásos „Elfogadom”. **Felülírja:** ADR-0380 próba-foglalás megjegyzését („ma a rendszer ezt nem szűri ki”).
 

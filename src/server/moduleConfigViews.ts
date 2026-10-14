@@ -4600,7 +4600,7 @@ export function bookingDecideConfirmPage(
     title,
     `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${title}</h1>` +
       `<div style="font-size:.95rem;margin:12px 0 14px">${facts}</div>` +
-      // ADR-XXXX: an over-capacity request says so before the owner confirms it.
+      // ADR-0389: an over-capacity request says so before the owner confirms it.
       (v.capacity && v.guests
         ? `<p data-cap-warn style="font-size:.95rem;line-height:1.55;margin:0 0 12px;padding:10px 12px;border-radius:8px;` +
           `border-left:4px solid var(--citui-bad);background:color-mix(in srgb, var(--citui-bad) 10%, transparent)"><b>` +

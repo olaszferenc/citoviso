@@ -1,4 +1,4 @@
-// ADR-XXXX — férőhely-túllépés (Elek F-1, 2026-10-14: 7 fős kérés egy 4 fős házra ment át, és a
+// ADR-0389 — férőhely-túllépés (Elek F-1, 2026-10-14: 7 fős kérés egy 4 fős házra ment át, és a
 // szállásadó SEHOL nem kapott figyelmeztetést). Az őr végponttól végpontig nézi:
 //   ① a szelvény léptetője a választott egység férőhelyénél megáll (390 px és 1280 px), egységváltásra követ;
 //   ② a szerver a férőhely fölött elutasít, a férőhelyen elfogad (negatív kontroll);

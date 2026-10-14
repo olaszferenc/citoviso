@@ -913,7 +913,7 @@ function logRerenderFailure(tenantId: string): (e: unknown) => void {
 /**
  * The trial booking of the setup page: the GUEST path's own checks (stayRuleErrors,
  * stayIsTaken, stayQuote — the very functions createBookingRequest calls), run without
- * creating anything. The capacity is checked too, with the guest path's own sentence (ADR-XXXX;
+ * creating anything. The capacity is checked too, with the guest path's own sentence (ADR-0389;
  * until then it was only a note here, ADR-0380).
  */
 async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -936,7 +936,7 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
   }
   const notes: string[] = [];
   const unit = (await ensureUnits(siteId)).find((u) => u.id === unitId);
-  // ADR-XXXX: the guest path refuses past the capacity now — the trial says the same sentence.
+  // ADR-0389: the guest path refuses past the capacity now — the trial says the same sentence.
   const cap = overCapacity(guests, unit?.capacity);
   if (cap) errors.push(capacityError(lang, cap));
   if (errors.length) return { errors, notes };

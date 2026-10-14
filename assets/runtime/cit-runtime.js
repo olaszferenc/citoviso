@@ -322,7 +322,7 @@
       });
     });
 
-    /* ADR-XXXX (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house and the
+    /* ADR-0389 (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house and the
      * owner was warned nowhere): the head count stops at the chosen unit's capacity, and the
      * server refuses past it with the same number. A unit without a capacity keeps the old
      * ceiling of 20 — no invented limit (§B.17). */
@@ -808,7 +808,7 @@
     var unitSel = form.querySelector("select[name='unit']");
     if (unitSel) unitSel.addEventListener("change", loadAvailability);
     if (unitSel) unitSel.addEventListener("change", syncMeals);
-    // ADR-XXXX: a smaller unit lowers the head count to its capacity at once.
+    // ADR-0389: a smaller unit lowers the head count to its capacity at once.
     if (unitSel) unitSel.addEventListener("change", function () {
       syncCap();
       syncMeals();

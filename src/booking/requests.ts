@@ -281,7 +281,7 @@ function headcount(req: { guests: number; children: number | null }, lang: strin
 }
 
 /**
- * ADR-XXXX: the head count a request asks for over the unit's capacity — the capacity when
+ * ADR-0389: the head count a request asks for over the unit's capacity — the capacity when
  * it is exceeded, else null. The capacity is per unit (a room, or the whole place as its own
  * unit); a unit without one has no limit (we do not invent a number, §B.17).
  */
@@ -289,12 +289,12 @@ export function overCapacity(guests: number, capacity: number | null | undefined
   return capacity && capacity > 0 && guests > capacity ? capacity : null;
 }
 
-/** ADR-XXXX: the one sentence the guest reads when the head count is over the capacity. */
+/** ADR-0389: the one sentence the guest reads when the head count is over the capacity. */
 export function capacityError(lang: string, capacity: number): string {
   return T(lang, "Ide legfeljebb {n} vendég foglalhat. Kérjük, csökkentse a létszámot.", { n: capacity });
 }
 
-/** ADR-XXXX: the owner's warning on an over-capacity request (an older one, or a lowered capacity). */
+/** ADR-0389: the owner's warning on an over-capacity request (an older one, or a lowered capacity). */
 export function capacityWarning(lang: string, guests: number, capacity: number): string {
   return T(lang, "Figyelem: a vendég {g} főre kér, a férőhely {n} fő.", { g: guests, n: capacity });
 }
@@ -745,7 +745,7 @@ export async function createBookingRequest(
 
   const rules = await bookingRules(input.siteId);
   errors.push(...(await stayRuleErrors(input.siteId, input.unitId, dateFrom, dateTo, lang, rules)));
-  // ADR-XXXX (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house): the widget
+  // ADR-0389 (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house): the widget
   // stops at the capacity, and the server refuses past it — the owner never gets one.
   const cap = overCapacity(
     Math.max(1, Math.min(50, Math.round(input.guests || 1))),
@@ -1019,7 +1019,7 @@ interface RequestRow {
   offer_token: string | null;
   decision_note?: string | null;
   unit_name?: string;
-  /** ADR-XXXX: the unit's head count as the owner set it (null = not given). */
+  /** ADR-0389: the unit's head count as the owner set it (null = not given). */
   unit_capacity?: number | null;
 }
 
@@ -1105,7 +1105,7 @@ export async function notifyOwner(
         : T(lang, "Adja meg az árat, és a rendszer elküldi neki az ajánlatot."))
     : "";
 
-  // ADR-XXXX: an over-capacity request (an older one, or the capacity lowered since) is
+  // ADR-0389: an over-capacity request (an older one, or the capacity lowered since) is
   // said first — the one-tap accept must not confirm an overfull room unnoticed.
   const capOver = overCapacity(req.guests, req.unit_capacity);
   const capNote = capOver ? capacityWarning(lang, req.guests, capOver) : "";
@@ -1354,7 +1354,7 @@ export interface DecisionView extends DecisionResult {
   readonly unitName?: string;
   readonly guests?: number;
   readonly children?: number;
-  /** ADR-XXXX: present only when the request is over the unit's capacity. */
+  /** ADR-0389: present only when the request is over the unit's capacity. */
   readonly capacity?: number;
   readonly ref?: string;
   readonly quotedTotal?: number;
@@ -1999,7 +1999,7 @@ export interface InboxItem {
   readonly mealPlan?: MealPlanId | null;
   /** 0110: children among the guests; null = not asked. */
   readonly children?: number | null;
-  /** ADR-XXXX: the unit's capacity (null = not given) — the card warns when guests exceed it. */
+  /** ADR-0389: the unit's capacity (null = not given) — the card warns when guests exceed it. */
   readonly capacity?: number | null;
   /** 0052: the frozen breakdown — the card opens it under "Az ár tételesen". */
   readonly lines?: readonly { label: string; nights: number; perNight: number; guests: number; sum: number; meal: boolean }[];
