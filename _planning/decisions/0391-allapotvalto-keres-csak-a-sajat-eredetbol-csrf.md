@@ -1,4 +1,4 @@
-## ADR-XXXX — Állapotváltó kérés csak a saját eredetből (CSRF)
+## ADR-0391 — Állapotváltó kérés csak a saját eredetből (CSRF)
 
 **Dátum:** 2026-10-14 · **Kontextus:** IT-tesztelő S-1 (éles 0038426a). Élőben igazolta: egy idegen Origin-fejléces POST átírta egy tenant árát.
 
