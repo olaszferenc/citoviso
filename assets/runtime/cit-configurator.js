@@ -5436,6 +5436,57 @@
     return out;
   }
   /* cit-cfg-trialfx-pillspot-end */
+  /* cit-cfg-trialfx-pillcard-start
+   * A sidebar card's titles on the FIRST screen are titles too (Elek, 2026-10-14, L-1): at
+   * 1366×900 card-sidebar's booking card starts at the bottom of the screen, and the pair at
+   * rest sat on its name („[TESZT” hidden) — on the fixture, on the booking slot's „Foglalás”.
+   * The card's titles = its first block of words (the name / rating line) and its headings
+   * (h1–h4, a `…title` class); its fields and body text are not. Only while the page is at its
+   * top: counted at any scroll position, the pair would climb with the card as it scrolls up
+   * and then drop back (every other heading passes under the floating pair while scrolling,
+   * by design). Recognised by the `aside` element, not a template class. */
+  function sideCardTitleRects(box) {
+    var out = [];
+    if ((window.scrollY || document.documentElement.scrollTop || 0) > 4) return out;
+    var asides = document.querySelectorAll("aside, [role=complementary]");
+    for (var i = 0; i < asides.length; i++) {
+      var aside = asides[i];
+      if (aside.closest('[class*="cit-cfg"]') || aside.closest("#cit-consent")) continue;
+      var ar = aside.getBoundingClientRect();
+      if (ar.width === 0 || ar.bottom <= 0 || ar.top >= window.innerHeight) continue;
+      var titles = [].slice.call(aside.querySelectorAll('h1, h2, h3, h4, [class*="title"]'));
+      var walk = document.createTreeWalker(aside, NodeFilter.SHOW_TEXT);
+      for (var tn = walk.nextNode(); tn; tn = walk.nextNode()) {
+        if (!/\S/.test(tn.nodeValue || "")) continue;
+        var pe = tn.parentElement;
+        if (!pe || pe.getClientRects().length === 0) continue;
+        // the nearest block around the first visible words (a rated card's star line counts)
+        titles.push(pe.closest("h1, h2, h3, h4, p, div, figcaption") || pe);
+        break;
+      }
+      for (var t = 0; t < titles.length; t++) {
+        var tcs = getComputedStyle(titles[t]);
+        if (tcs.visibility === "hidden" || tcs.display === "none" || parseFloat(tcs.opacity) === 0) continue;
+        var tw = document.createTreeWalker(titles[t], NodeFilter.SHOW_TEXT);
+        for (var n = tw.nextNode(); n; n = tw.nextNode()) {
+          if (!/\S/.test(n.nodeValue || "")) continue;
+          var range = document.createRange();
+          range.selectNodeContents(n);
+          var lines = range.getClientRects();
+          for (var l = 0; l < lines.length; l++) {
+            var r = lines[l];
+            if (r.width < 2 || r.height < 4 || r.bottom <= 0 || r.top >= window.innerHeight) continue;
+            if (r.right <= box.left || r.left >= box.right) continue;
+            // same glyph trim as the hero title (6 px gap to the words)
+            var trim = r.height * 0.1 + (AVOID_GAP - 6);
+            out.push({ left: r.left, right: r.right, top: r.top + trim, bottom: r.bottom - trim });
+          }
+        }
+      }
+    }
+    return out;
+  }
+  /* cit-cfg-trialfx-pillcard-end */
   /* cit-cfg-trialfx-pilldots-start
    * A slideshow's indicator row is a control too, but blockingRects never sees it: each
    * member is a word-less button under 100 px (cinematic: three 4 px bars, 44 px tap
@@ -5720,6 +5771,29 @@
     if (!spot) spot = findSpot(false, bottomY, slots, w, h);
     var side = spot.side;
     bottomY = spot.bottomY;
+    /* cit-cfg-trialfx-pillcardcall-start
+     * A first-screen sidebar card title under the chosen spot: the pair steps UP in the same
+     * column, just above the title — not to another side (measured on card-sidebar: the left
+     * corner sat on the intro paragraph, the right one on the card's own fields). Only when the
+     * lifted spot is free of every other obstacle and stays below the header; otherwise the
+     * spot stays as it was. Nothing else moves: without such a title no rect is returned. */
+    var cbox = slotRect(side, w);
+    cbox = { left: cbox.left, right: cbox.right, top: 0, bottom: window.innerHeight };
+    var cards = sideCardTitleRects(cbox);
+    if (cards.length && clashAt(cards, bottomY, h)) {
+      var cy = bottomY;
+      for (var cs2 = 0; cs2 < 4; cs2++) {
+        var ch = clashAt(cards, cy, h);
+        if (!ch) break;
+        cy = ch.top - AVOID_GAP;
+      }
+      if (
+        !clashAt(cards, cy, h) &&
+        !clashAt(pillObstacles(cbox), cy, h) &&
+        cy - h >= pillCeiling(cbox.left, cbox.right)
+      ) bottomY = cy;
+    }
+    /* cit-cfg-trialfx-pillcardcall-end */
     var pillBottom = Math.round(window.innerHeight - bottomY) + "px";
     if (pair) {
       // Both members get exact pixels: one shared bottom edge, the pair's left from the

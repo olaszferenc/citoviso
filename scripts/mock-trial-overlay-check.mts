@@ -29,6 +29,8 @@
 //      the third package card's name and price).
 //   ⑨ (Elek 10-12 re-run) — on a desktop the closed bar lay 96 % over the hero's own buttons
 //      („FOGLALÁS”, „FEDEZZE FEL”). On every template, phone and desktop, it buries none.
+//   ⑪ (Elek 10-13/10-14, ADR-0377/0382/0383 + L-1) — the trial/order pair sits on no hero title,
+//      hero control, slideshow indicator, nor (L-1) a first-screen sidebar card's title.
 //   ⑩ N5 (Elek 10-12, tenant round) — on a phone the −50 % top bar sat half over the dark
 //      edit strip (ADR-0335) and the two ran into one. With both up, they do not overlap.
 //   ⑧ A-új-1 (Elek 10-12) — with the offer already live (server-side), a × before /view had
@@ -653,6 +655,43 @@ try {
     return { hits, rows: [...rows.values()].filter((rs) => rs.length >= 2).length };
   }`;
   type DotsGeom = { hits: string[]; rows: number };
+  // L-1 (Elek 2026-10-14, 1366×900): the pair sat on the sidebar booking card's title
+  // („[TESZT…” hidden). A sidebar card = an `aside` outside our chrome; its titles = its
+  // first block of words and its headings (h1–h4, a `…title` class), glyphs only. Measured
+  // only at the top of the page — the rule's scope (the runtime does not chase the card
+  // while scrolling).
+  const CARD_PROBE = `() => {
+    const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
+      .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
+    const hits = [];
+    let seen = 0;
+    for (const a of document.querySelectorAll("aside, [role=complementary]")) {
+      if (a.closest('[class*="cit-cfg"]') || a.closest("#cit-consent")) continue;
+      const titles = [...a.querySelectorAll('h1, h2, h3, h4, [class*="title"]')];
+      const w0 = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+      for (let n = w0.nextNode(); n; n = w0.nextNode()) {
+        if (!/\\S/.test(n.nodeValue || "") || !n.parentElement.getClientRects().length) continue;
+        titles.push(n.parentElement.closest("h1, h2, h3, h4, p, div, figcaption") || n.parentElement);
+        break;
+      }
+      for (const el of titles) {
+        const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+          if (!/\\S/.test(n.nodeValue || "")) continue;
+          const rg = document.createRange(); rg.selectNodeContents(n);
+          for (const r of rg.getClientRects()) {
+            if (r.width < 2 || r.bottom <= 0 || r.top >= innerHeight) continue;
+            seen++;
+            const gt = r.top + r.height * 0.1, gb = r.bottom - r.height * 0.1;
+            if (pills.some((q) => q.left < r.right && q.right > r.left && q.top < gb && q.bottom > gt))
+              hits.push((n.nodeValue || "").trim().slice(0, 24));
+          }
+        }
+      }
+    }
+    return { hits, seen };
+  }`;
+  type CardGeom = { hits: string[]; seen: number };
   type TitleGeom = { hits: string[]; pills: number; corner: boolean; onScreen: boolean; rects: number[][] };
   type Buried = { error?: string; buried?: { label: string }[] };
   const dotRows = new Set<string>();
@@ -669,6 +708,8 @@ try {
       const d = (await p.evaluate(`(${DOTS_PROBE})()`)) as DotsGeom;
       if (d.rows) dotRows.add(id);
       check(`⑪ ${id}/${vp}, nyugalomban: a képváltó jelzőcsíkjait sem takarja`, d.hits.length === 0, { ...d, pills: rest.rects });
+      const c = (await p.evaluate(`(${CARD_PROBE})()`)) as CardGeom;
+      check(`⑪ ${id}/${vp}, nyugalomban: az oldalsáv-kártya címét sem takarja`, c.hits.length === 0, { ...c, pills: rest.rects });
       if (id === "dark-luxury" || id === "cinematic") await shot(p, `mock-pirula-cim-${id}-${vp}`);
       // A key press is an engagement: the deferred consent bar comes, the page does not scroll.
       await p.keyboard.press("Shift");
@@ -681,11 +722,42 @@ try {
       check(`⑪ ${id}/${vp}, süti-sávval: hős-gombot sem temet be`, !b2.error && (b2.buried?.length ?? 0) === 0, b2);
       const d2 = (await p.evaluate(`(${DOTS_PROBE})()`)) as DotsGeom;
       check(`⑪ ${id}/${vp}, süti-sávval: a képváltó jelzőcsíkjait sem takarja`, d2.hits.length === 0, { ...d2, pills: withBar.rects });
+      const c2 = (await p.evaluate(`(${CARD_PROBE})()`)) as CardGeom;
+      check(`⑪ ${id}/${vp}, süti-sávval: az oldalsáv-kártya címét sem takarja`, c2.hits.length === 0, { ...c2, pills: withBar.rects });
       await ctx.close();
     }
   }
   // The probe must see the row it guards: cinematic's fixture has 5 photos → 3 hero slides.
   check(`⑪ a jelzőcsík-mérő látja a cinematic képváltó-jelzőit`, dotRows.has("cinematic"), [...dotRows]);
+  // L-1: the sidebar card reaches the first screen on wider desktops (Elek's 1366×900; at
+  // 1280×800 it starts below the fold). Every template, the common laptop sizes, at rest and
+  // with the consent bar; the pair keeps clear of the card's titles there too, and of the hero
+  // title and controls on its way up.
+  const cardSeen = new Set<string>();
+  for (const id of Object.keys(TEMPLATES)) {
+    const html = await buildPage(id);
+    for (const [w, h] of [[1366, 900], [1536, 864]] as const) {
+      const { ctx, p } = await open(browser, html, w, h, false);
+      await p.waitForTimeout(1400);
+      for (const state of ["nyugalomban", "süti-sávval"] as const) {
+        if (state === "süti-sávval") {
+          await p.keyboard.press("Shift");
+          await p.waitForTimeout(1400);
+        }
+        const c = (await p.evaluate(`(${CARD_PROBE})()`)) as CardGeom;
+        const t = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
+        const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;
+        if (c.seen) cardSeen.add(id);
+        if (id === "card-sidebar" && w === 1366) await shot(p, `mock-pirula-kartya-${id}-${w}-${state === "nyugalomban" ? "nyug" : "suti"}`);
+        check(`⑪ ${id}/${w}×${h}, ${state}: az oldalsáv-kártya címét nem takarja, a hős-címet és -gombot sem`,
+          t.pills === 2 && c.hits.length === 0 && t.hits.length === 0 && t.onScreen && !b.error && (b.buried?.length ?? 0) === 0,
+          { card: c, title: t.hits, onScreen: t.onScreen, buried: b, pills: t.rects });
+      }
+      await ctx.close();
+    }
+  }
+  // The probe must see the card it guards: card-sidebar's booking card is on the first screen at 1366×900.
+  check(`⑪ a kártyacím-mérő látja a card-sidebar foglalási kártyáját`, cardSeen.has("card-sidebar"), [...cardSeen]);
 } finally {
   await browser.close();
 }
