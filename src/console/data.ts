@@ -217,6 +217,30 @@ export function defaultLeadQuery(): LeadQuery {
 }
 
 /**
+ * Elek IT P-1 (2026-10-14): the default list's row count in ONE query — what the dashboard chip
+ * links to. The SAME predicate as `defaultLeadQuery()` through `buildLeadListResult`: not
+ * disqualified, qualification no_site/outdated, material (`raw.material.totalImages`, a number)
+ * at least 1. Held equal to `listLeadPage(defaultLeadQuery()).counts.matching` by
+ * scripts/lead-count-parity-check.mts — if the default filter changes, that guard goes red.
+ */
+export async function countWorkableLeads(): Promise<number> {
+  const r = await db
+    .selectFrom("lead")
+    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+    .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+    .select(db.fn.countAll<string>().as("n"))
+    // `is distinct from`: a NULL lifecycle is active in the list (String(null) ≠ "disqualified").
+    .where(sql<boolean>`lead.lifecycle_status is distinct from 'disqualified'`)
+    .where("lead.qualification", "in", ["no_site", "outdated"])
+    .where(
+      sql<boolean>`(case when jsonb_typeof(lead.raw->'material'->'totalImages') = 'number'
+        then (lead.raw->'material'->>'totalImages')::numeric else 0 end) >= 1`,
+    )
+    .executeTakeFirstOrThrow();
+  return Number(r.n);
+}
+
+/**
  * Named row counts behind the lead list. Every number the console prints about leads
  * comes from HERE — five unreconciled totals used to sit on two screens (267 / 595 /
  * 260 / 593 / 2) with nothing saying what each one counted (Elek FK-003, 2026-09-11).
@@ -272,7 +296,18 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       "lead.lifecycle_status as lifecycle",
       "scraper_definition.region as region",
       "lead.created_at as surveyedAt",
-      "lead.raw as raw",
+      // Elek IT P-1 (2026-10-14): the list read the WHOLE scrape payload of ~9000 leads to use
+      // seven fields of it. Only those travel now — same keys, absent where absent (strip_nulls),
+      // so the mapping below is unchanged.
+      sql<Record<string, unknown>>`jsonb_strip_nulls(jsonb_build_object(
+        'material', jsonb_build_object(
+          'placesPhotos', lead.raw->'material'->'placesPhotos',
+          'totalImages', lead.raw->'material'->'totalImages',
+          'streetView', lead.raw->'material'->'streetView'),
+        'contactChannel', lead.raw->'contactChannel',
+        'photoCount', lead.raw->'photoCount',
+        'country', lead.raw->'country',
+        'city', lead.raw->'city'))`.as("raw"),
     ])
     .orderBy("lead.created_at", "desc")
     .execute();
@@ -2176,7 +2211,10 @@ export async function getFunnelReport(): Promise<FunnelReport> {
   // it — the old SQL counted qualification alone (disqualified rows and zero-material
   // rows included), so the chip said 267 and the list it linked to said 260, with
   // nothing explaining the gap (Elek FK-003, 2026-09-11).
-  const workable = await listLeadPage(defaultLeadQuery());
+  // Elek IT P-1: one COUNT with the default query's predicate — the dashboard loaded the whole
+  // lead list (every row, every mock, every prospect) for this one number.
+  // scripts/lead-count-parity-check.mts holds it equal to listLeadPage(defaultLeadQuery()).
+  const workableCount = await countWorkableLeads();
   const mocks = await db.selectFrom("mock_artifact").select(db.fn.countAll().as("n")).executeTakeFirst();
   const approved = await db
     .selectFrom("mock_artifact")
@@ -2191,7 +2229,7 @@ export async function getFunnelReport(): Promise<FunnelReport> {
       .sort((a, b) => b.prospects - a.prospects),
     leadTotals: {
       players: Number(players?.n ?? 0),
-      leads: workable.counts.matching,
+      leads: workableCount,
       mocks: Number(mocks?.n ?? 0),
       approved: Number(approved?.n ?? 0),
     },
