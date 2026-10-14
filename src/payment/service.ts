@@ -28,7 +28,7 @@ import {
   runDomainProvisioning,
   startOrderDomainProvisioning,
 } from "../domains/provisionDomain.js";
-import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
+import { deliverInvoiceEmail, deliverPaymentReceiptEmail } from "../billing/invoiceDelivery.js";
 import { alertHouse, alertInvoiceFailure, INVOICE_AUTO_RETRY_LIMIT } from "../console/houseAlert.js";
 import { publicPaymentRef } from "./publicRef.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
@@ -1637,6 +1637,17 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     // reads the answer on screen).
     const firstFailure = attempts === 1 && trigger !== "console";
     const budgetJustSpent = !manualOnly && attempts === INVOICE_AUTO_RETRY_LIMIT + 1;
+    // Elek P-2 (2026-10-14): the buyer paid and heard nothing — the invoice mail was the only
+    // letter. On the first failure they get the payment confirmation now; the invoice follows.
+    if (firstFailure) {
+      await deliverPaymentReceiptEmail({
+        paymentId,
+        ref: publicPaymentRef(paymentId) ?? paymentId,
+        amount: p.amount,
+        currency: p.currency,
+        buyerEmail: p.buyerEmail ?? p.email,
+      });
+    }
     if (firstFailure || budgetJustSpent) {
       await alertInvoiceFailure({
         paymentId,

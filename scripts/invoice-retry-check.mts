@@ -64,6 +64,18 @@ setHouseAlertDeps({
   },
 });
 
+// ── the BUYER's mailbox (Elek P-2: the payment confirmation that does not wait for the invoice)
+const { getEmailSender } = await import("../src/email/sender.js");
+const buyerBox: Mail[] = [];
+{
+  const sender = getEmailSender();
+  const orig = sender.send.bind(sender);
+  sender.send = async (m) => {
+    if (/vevo@example\.test/.test(m.to)) buyerBox.push({ subject: m.subject, text: m.text });
+    return orig(m);
+  };
+}
+
 // ── the scripted provider (Számlázz semantics for szamlaKulsoAzon) ─────────────
 type Mode = "fail" | "ok" | "issue-then-lose-answer";
 let mode: Mode = "fail";
@@ -179,6 +191,9 @@ try {
   ok(!!m1 && m1.text.includes(`Őr Vevő ${STAMP}`), "a levélben a vevő neve");
   ok(!!m1 && m1.text.includes("error 378"), "a levélben a Számlázz hibaszöveg");
   ok(!!m1 && /CIT-[0-9A-F]{8}/.test(m1.subject), "a tárgyban a vevő-oldali hivatkozás (CIT-…)", m1?.subject);
+  // Elek P-2: the buyer paid — they hear it now, not only when the invoice finally issues.
+  ok(buyerBox.length === 1 && /Fizetését megkaptuk/.test(buyerBox[0]!.subject), "⭐ P-2: a vevő az első bukáskor fizetés-visszaigazolást kap", buyerBox.map((b) => b.subject).join(" | "));
+  ok(/97 Ft|97 HUF/.test(buyerBox[0]?.text ?? "") && /CIT-[0-9A-F]{8}/.test(buyerBox[0]?.text ?? "") && /számlát hamarosan/.test(buyerBox[0]?.text ?? ""), "⭐ P-2: összeg, hivatkozás, „a számlát hamarosan küldjük”", buyerBox[0]?.text);
 
   // ② spacing: an immediate tick does not call the provider
   console.log("② térköz (negatív kontroll)");
@@ -204,6 +219,7 @@ try {
     mailsBefore = outbox.length;
   }
   ok(/elfogytak/.test(outbox.at(-1)?.subject ?? ""), "a záró riasztás kimondja: újrapróbák elfogytak", outbox.at(-1)?.subject);
+  ok(buyerBox.filter((b) => /Fizetését megkaptuk/.test(b.subject)).length === 1, "P-2 negatív kontroll: a napi újrapróbák NEM küldenek újabb visszaigazolást a vevőnek", String(buyerBox.length));
   ok((await rows(A, "failed")) === 1 + INVOICE_AUTO_RETRY_LIMIT, `${1 + INVOICE_AUTO_RETRY_LIMIT} failed sor (a sorok száma = a kísérletek száma)`);
   const c3 = calls;
   const tEx = await retryFailedInvoices(hours(step * 10), { paymentIds: [A] });

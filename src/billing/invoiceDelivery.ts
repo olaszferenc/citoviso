@@ -11,6 +11,7 @@ import { config } from "../config.js";
 import { tenantSiteUrl } from "../domains.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { buildInvoiceEmail } from "../email/invoiceEmail.js";
+import { buildPaymentReceivedEmail } from "../email/billingEmail.js";
 import { invoiceItemKey } from "./invoiceItem.js";
 import { getEmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
@@ -151,3 +152,56 @@ export async function deliverInvoiceEmail(input: {
   }
 }
 
+
+/**
+ * Elek P-2 (2026-10-14): the payment confirmation that does NOT wait for the invoice. Sent on
+ * the first failed issue (the provider was down, the account lapsed, no declaration) — until
+ * then the invoice mail was the only letter after a payment, and the buyer got nothing. The
+ * same recipients, language and message log as the invoice mail; the invoice follows later
+ * with the automatic retry, as before.
+ */
+export async function deliverPaymentReceiptEmail(input: {
+  paymentId: string;
+  ref: string;
+  amount: number;
+  currency: string;
+  buyerEmail: string | null;
+}): Promise<boolean> {
+  try {
+    const row = await db
+      .selectFrom("payment")
+      .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .leftJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+      .select(["tenant.id as tenantId", "tenant.display_name as siteName"])
+      .where("payment.id", "=", input.paymentId)
+      .executeTakeFirst();
+    const to = row?.tenantId
+      ? await invoiceRecipientsForTenant(row.tenantId, input.buyerEmail)
+      : input.buyerEmail
+        ? [input.buyerEmail]
+        : [];
+    if (!to.length) {
+      console.error(`[invoice] ${input.ref}: a fizetés-visszaigazolás NEM KÜLDHETŐ — nincs címzett`);
+      return false;
+    }
+    const lang = row?.tenantId ? await prepareMailLang(await langForTenant(row.tenantId)) : undefined;
+    const msg = buildPaymentReceivedEmail({
+      to: to.join(", "),
+      siteName: row?.siteName ?? "Citoviso", // i18n-exempt: brand name
+      amount: input.amount,
+      currency: input.currency,
+      ref: input.ref,
+      ...(lang ? { lang } : {}),
+    });
+    await getEmailSender().send(msg);
+    console.log(`[invoice] ${input.ref}: fizetés-visszaigazolás elküldve (a számla később jön) → ${to.join(", ")}`);
+    if (row?.tenantId) {
+      await logTenantMessage({ tenantId: row.tenantId, channel: "email", kind: "invoice", subject: msg.subject, bodyText: msg.text, recipient: to.join(", ") });
+    }
+    return true;
+  } catch (e) {
+    console.error(`[invoice] ${input.ref}: a fizetés-visszaigazolás KÜLDÉSI HIBA: ${(e as Error).message}`);
+    return false;
+  }
+}

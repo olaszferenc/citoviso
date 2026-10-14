@@ -356,3 +356,23 @@ export function buildAutoChargeRevokedEmail(input: {
   ];
   return billingMail({ to, lang, subject, siteName, text: lines.join("\n\n") + "\n", lines });
 }
+
+/** Elek P-2 (2026-10-14): the payment arrived but the invoice could not be issued (yet) — the
+ *  invoice mail was the ONLY letter after a payment, so the buyer heard nothing at all. */
+export function buildPaymentReceivedEmail(input: {
+  to: string;
+  siteName: string;
+  amount: number;
+  currency: string;
+  /** The reference the buyer can quote (publicPaymentRef). */
+  ref: string;
+  lang?: string;
+}): EmailMessage {
+  const { to, siteName, amount, currency, ref, lang } = input;
+  const subject = T(lang, "Fizetését megkaptuk — {site}", { site: siteName });
+  const lines = [
+    T(lang, "Köszönjük, {amount} összegű fizetését megkaptuk (hivatkozás: {ref}).", { amount: formatMoney(amount, currency, lang), ref }),
+    T(lang, "A számlát hamarosan, külön levélben küldjük — Önnek ezzel nincs teendője."),
+  ];
+  return billingMail({ to, lang, subject, siteName, text: lines.join("\n\n") + "\n", lines });
+}
