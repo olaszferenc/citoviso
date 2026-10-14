@@ -1186,6 +1186,13 @@ if [ -f scripts/booking-tax-receipt-check.mts ] && \
   echo "[pre-commit] booking-tax-receipt-check (ár-alap a foglalt egységre, IFA a nyugtán és a levelekben)…"
   npx tsx scripts/booking-tax-receipt-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Portál-molinó elérhetőséggel = reklám (Elek F-3, tulaj-döntés „B”, 2026-10-14): v4 prompt;
+# a v3 ítéletek érvényesek a sign_map kivételével; az újrapontozó --sign-map az eredeti URL-lel.
+if [ -f scripts/hero-contact-banner-check.mts ] && \
+   changed_files | grep -qE '^(src/generator/heroPick\.ts|scripts/rescore-photo-verdicts\.mts)$|^scripts/hero-contact-banner-check'; then
+  echo "[pre-commit] hero-contact-banner-check (portál-molinó = reklám · v3 sign_map újrakérdezve)…"
+  npx tsx scripts/hero-contact-banner-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Próba-modulok vásárlás után (Elek P-3, 2026-10-14): nem „kifizette”, nincs ár, és a
 # Modulok fül kimondja, melyik napon kapcsolnak ki — negatív kontrollal (megvett modul).
 if [ -f scripts/trial-grant-truth-check.mts ] && \

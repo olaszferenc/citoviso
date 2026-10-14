@@ -152,8 +152,8 @@ console.log("── ⑥ FEL VAN-E TÉVE A KÉRDÉS a látásnak ──");
   // A prompt-verziónak lépnie KELLETT: a régi sorokban nincs vízjel-ítélet, és egy hiányos
   // ítélet egy jogi kapu alatt rosszabb, mint az újrapontozás ára.
   check(
-    /PROMPT_VERSION = "v3-watermark"/.test(src),
-    "a PROMPT_VERSION lépett — a hiányos ítéletű régi sorok nem töltődnek be",
+    /PROMPT_VERSION = "v4-contactbanner"/.test(src) && /LEGACY_V3_MODEL = `\$\{HERO_MODEL\}#v3-watermark`/.test(src),
+    "a PROMPT_VERSION lépett (v4) — a v3-nál régebbi, vízjel-ítélet nélküli sorok nem töltődnek be (a v3 a vízjelet már tudja)",
   );
   // A vízjel NEM subject: különben egy vízjeles külső fotó elveszítené az `exterior`-t.
   check(

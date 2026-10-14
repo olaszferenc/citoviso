@@ -50,8 +50,22 @@ const HERO_MODEL = "claude-haiku-4-5";
  * újrapontozás nagyságrendileg 1 USD alatt van — ez nem ok arra, hogy hiányos ítéletet
  * hordozzunk tovább egy jogi kapu alatt.
  */
-const PROMPT_VERSION = "v3-watermark";
+// v4-contactbanner (Elek F-3, 2026-10-14): a photographed portal banner with a phone number and
+// an e-mail (szallas.hu molinó) was "sign_map" 5 points — kept in the gallery, showing the guest a
+// second set of contacts and a competing portal. It is an ad now; the bump re-asks every photo.
+const PROMPT_VERSION = "v4-contactbanner";
 const CACHE_MODEL = `${HERO_MODEL}#${PROMPT_VERSION}`;
+/**
+ * F-3 owner ruling „B” (2026-10-14): the v3 verdicts STAY valid — the v4 rule changes only what
+ * a photographed sign WITH contacts / a portal name is — except the `sign_map` ones: exactly
+ * those may be such a banner, so they are re-asked (277 rows live, ~$0.4; the full rescore
+ * would have been ~$25). `scripts/rescore-photo-verdicts.mts --sign-map --go` does it after the
+ * deploy; a new generation re-asks any it meets on its own.
+ */
+const LEGACY_V3_MODEL = `${HERO_MODEL}#v3-watermark`;
+export function acceptsCachedVerdict(model: string, subject: string): boolean {
+  return model === CACHE_MODEL || (model === LEGACY_V3_MODEL && subject !== "sign_map");
+}
 
 /**
  * Ennyi fotót nézünk meg egy leadnél.
@@ -285,6 +299,7 @@ Pontozás (a vendég szemével: melyik kép miatt kattint tovább):
 - 30–59: semleges vagy szűk kép: közeli tárgy-részlet, konyhapult, folyosó, lépcsőház, sötét vagy homályos felvétel.
 - 0–15: nyitóképnek ALKALMATLAN: WC/külső illemhely, fürdőszoba, parkoló, kuka, tábla/logó/térkép, dokumentum vagy képernyőkép, emberekről készült portré, felismerhetetlen kép.
 - 0 pont és "ad_banner": REKLÁM. Ha a képre SZÖVEG, logó, ár, webcím vagy szlogen van ráégetve, az hirdetés — akkor is, ha egyébként szép tájkép. Egy portál a saját hirdetéseit is a galéria közé keveri, és egy MÁSIK szolgáltató reklámja a mi ügyfelünk lapján a legrosszabb, ami történhet.
+- 0 pont és "ad_banner" akkor is, ha a képen egy LEFÉNYKÉPEZETT reklámtábla, molinó, plakát vagy szórólap a fő elem, és rajta foglalási portál neve (pl. szallas.hu, booking), webcím, telefonszám vagy e-mail-cím olvasható — akkor is, ha mögötte az épület is látszik. Ez egy portál reklámja és egy MÁSIK elérhetőség, ami ellentmond a honlap saját kapcsolati adatainak. A szállás puszta névtáblája vagy cégére (csak a név, elérhetőség és portál nélkül) NEM ez: az "sign_map" vagy "exterior".
 
 A "subject" a fő tárgyat nevezze meg; ha a kép fele kert, fele épület, az erősebb élményt add meg.
 
@@ -309,11 +324,12 @@ async function readCache(keys: readonly string[]): Promise<Map<string, HeroScore
   if (!keys.length) return out;
   const rows = await db
     .selectFrom("photo_hero_score")
-    .select(["url_key", "subject", "score", "reason", "watermarked"])
+    .select(["url_key", "subject", "score", "reason", "watermarked", "model"])
     .where("url_key", "in", [...keys])
-    .where("model", "=", CACHE_MODEL)
+    .where("model", "in", [CACHE_MODEL, LEGACY_V3_MODEL])
     .execute();
   for (const r of rows) {
+    if (!acceptsCachedVerdict(r.model, r.subject)) continue;
     out.set(r.url_key, {
       subject: r.subject,
       score: r.score,

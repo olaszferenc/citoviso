@@ -16,14 +16,25 @@
 //
 //   npx tsx scripts/rescore-photo-verdicts.mts          # SZÁRAZ: megmutatja, mit tenne
 //   npx tsx scripts/rescore-photo-verdicts.mts --go     # ÉLES: fizetős vision-hívás
+//
+// ── --sign-map (Elek F-3, tulaj-döntés „B”, 2026-10-14) ──────────────────────────────
+// A v4 prompt (a lefotózott portál-molinó elérhetőséggel = ad_banner) a v3-as ítéleteket
+// ELFOGADJA, kivéve a `sign_map`-eket — csak azokat kell újrakérdezni (élesen 277 sor, ~$0,4).
+// ⚠️ A `url_key` KISBETŰSÍTETT URL, a Google-fotó azonosítója viszont kis-nagybetű-érzékeny:
+// a kulcsból nem lehet letölteni. Az EREDETI URL-t a mockok fotólistáiból (mock_artifact.inputs)
+// és a tenantok saját adataiból (site.edited_site_data) keressük ki, kulcs szerint.
+//   npx tsx scripts/rescore-photo-verdicts.mts --sign-map        # SZÁRAZ
+//   npx tsx scripts/rescore-photo-verdicts.mts --sign-map --go   # ÉLES (deploy UTÁN, utána tenant-rerender)
 
 import { db } from "../src/db/client.js";
-import { scoreHeroCandidates } from "../src/generator/heroPick.js";
+import { photoUrlKey, scoreHeroCandidates } from "../src/generator/heroPick.js";
 
 const ARGV = process.argv.slice(2);
 let go = false;
+let signMap = false;
 for (const a of ARGV) {
   if (a === "--go") go = true;
+  else if (a === "--sign-map") signMap = true;
   else {
     console.error(`⛔ ismeretlen kapcsoló: ${a}\nÍrni CSAK a --go kapcsolóval lehet.`);
     process.exit(2);
@@ -36,6 +47,66 @@ const rows = await db
   .selectFrom("photo_hero_score")
   .select(["url_key", "model", "subject", "watermarked"])
   .execute();
+
+if (signMap) {
+  const targets = rows.filter((r) => r.model.endsWith("#v3-watermark") && r.subject === "sign_map");
+  const want = new Set(targets.map((r) => r.url_key));
+  console.log(`v3 „sign_map” ítélet: ${targets.length} — ezeket kell a v4 szabállyal újrakérdezni.`);
+  // The ORIGINAL urls (case intact) — every photo list we hold, keyed the cache's way.
+  const urlByKey = new Map<string, string>();
+  const take = (photos: unknown): void => {
+    if (!Array.isArray(photos)) return;
+    for (const p of photos as { url?: unknown }[]) {
+      const u = typeof p?.url === "string" ? p.url : null;
+      if (!u) continue;
+      const k = photoUrlKey(u);
+      if (want.has(k) && !urlByKey.has(k)) urlByKey.set(k, u);
+    }
+  };
+  for (const a of await db.selectFrom("mock_artifact").select("inputs").execute()) {
+    take(((a.inputs ?? {}) as { siteData?: { photos?: unknown } }).siteData?.photos);
+  }
+  for (const s of await db.selectFrom("site").select("edited_site_data").execute()) {
+    take(((s.edited_site_data ?? {}) as { photos?: unknown }).photos);
+  }
+  const found = [...urlByKey.values()];
+  console.log(`eredeti URL megvan: ${found.length} · nincs meg (nincs rá élő fotólista — nem is kerül lapra): ${targets.length - found.length}`);
+  if (!go) {
+    console.log(`\nSZÁRAZ FUTÁS — semmit nem írtam és nem hívtam. Nagyságrendileg $${(found.length * 0.0015).toFixed(2)}.\n` +
+      `Éles futás: npx tsx scripts/rescore-photo-verdicts.mts --sign-map --go`);
+    await db.destroy();
+    process.exit(0);
+  }
+  let got = 0;
+  for (let i = 0; i < found.length; i += 24) {
+    const batch = found.slice(i, i + 24).map((url) => ({ url }));
+    got += (await scoreHeroCandidates(batch, "újrapontozás (sign_map → v4)")).size;
+    console.log(`  ${Math.min(i + 24, found.length)}/${found.length}`);
+  }
+  const left = await db
+    .selectFrom("photo_hero_score")
+    .select("url_key")
+    .where("model", "like", "%#v3-watermark")
+    .where("subject", "=", "sign_map")
+    .execute();
+  const banners = await db
+    .selectFrom("photo_hero_score")
+    .select("url_key")
+    .where("model", "like", "%#v4-contactbanner")
+    .where("subject", "=", "ad_banner")
+    .where("url_key", "in", found.length ? [...urlByKey.keys()] : ["-"])
+    .execute();
+  console.log(`\n✅ Kész. v3 „sign_map” maradt: ${left.length} (előtte ${targets.length}) · ebből most reklámnak ítélt (lekerül a lapokról): ${banners.length}`);
+  console.log("Utána: a tenant-oldalak újrarenderelése, hogy az élő lapokról is lekerüljön.");
+  // UTÓ-FELTÉTEL: ha egyetlen megtalált fotó sem kapott új ítéletet, a futás NEM sikerült.
+  if (found.length && left.length > targets.length - found.length) {
+    console.error("⛔ A megtalált fotók egy része NEM kapott v4 ítéletet (letöltés / API) — futtasd újra, vagy nézd meg a naplót.");
+    await db.destroy();
+    process.exit(1);
+  }
+  await db.destroy();
+  process.exit(0);
+}
 
 const byModel = new Map<string, number>();
 for (const r of rows) byModel.set(r.model, (byModel.get(r.model) ?? 0) + 1);
