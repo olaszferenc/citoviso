@@ -12,8 +12,8 @@
 //   ⑤ STRUCTURE: no outbound file reads the process-local clock (getHours/setHours/…);
 //   ⑥ ADR-0289 the shared clock (src/text/budapestTime.ts) and what owners/buyers see: the
 //      buyer's payment stamp, the traffic report's day start (Budapest midnight, 23/25-hour
-//      DST days), the monthly mail's month name — right around midnight, where UTC and
-//      Budapest disagree;
+//      DST days), the monthly mail's period days (ADR-XXXX: a date range, not a month
+//      name) — right around midnight, where UTC and Budapest disagree;
 //   ⑦ STRUCTURE: the owner/buyer-facing files read no local getter, every date formatter in
 //      them names the zone, every SQL day/month boundary says AT TIME ZONE;
 //   ⑧ ADR-0334 the MOCK-OUTREACH window (owner 2026-10-06): weekdays 09:00–16:00 Budapest —
@@ -36,7 +36,7 @@ import { deadlineText, followupWindowBlocks } from "../src/outreach/escalationFo
 import { budapestIsoDay, budapestMidnight, budapestDayStart, budapestYear } from "../src/text/budapestTime.js";
 import { fmtStamp } from "../src/tenant/multilangCard.js";
 import { since } from "../src/analytics/trafficReport.js";
-import { monthLabel } from "../src/analytics/trafficMail.js";
+import { dayLabel } from "../src/analytics/trafficMail.js";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown): void {
@@ -90,8 +90,8 @@ try {
     check(`⑥ [${tz}] 7 napos ablak kezdete DST-váltáson át`, budapestDayStart(6, new Date("2026-10-27T10:00:00+01:00")).toISOString(), "2026-10-20T22:00:00.000Z");
     check(`⑥ [${tz}] szilveszter 23:30 / újév 00:30 Budapest: az év a budapesti`,
       [budapestYear(new Date("2026-12-31T23:30:00+01:00")), budapestYear(new Date("2027-01-01T00:30:00+01:00"))], [2026, 2027]);
-    check(`⑥ [${tz}] a havi levél hónapneve budapesti: augusztus 31. 23:30 → augusztus, szept. 1. 00:30 → szeptember`,
-      [monthLabel(new Date("2026-08-31T23:30:00+02:00"), "hu"), monthLabel(new Date("2026-09-01T00:30:00+02:00"), "hu")], ["augusztus", "szeptember"]);
+    check(`⑥ [${tz}] a havi levél időszak-napja budapesti: augusztus 31. 23:30 → augusztus 31., szept. 1. 00:30 → szeptember 1.`,
+      [dayLabel(new Date("2026-08-31T23:30:00+02:00"), "hu"), dayLabel(new Date("2026-09-01T00:30:00+02:00"), "hu")], ["augusztus 31.", "szeptember 1."]);
   }
   const origOff = config.mobileSendWindowOff;
   try {

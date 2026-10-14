@@ -4,7 +4,7 @@ title: Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg
 audience: tenant
 category: my-site
 anchors: admin.traffic
-updated: 2026-09-07
+updated: 2026-10-14
 ---
 
 A **„Forgalom”** fülön egy kérdésre kap választ: **megérte-e?** Nem táblázatokat mutatunk,
@@ -69,9 +69,13 @@ Kétféle eltérés fordul elő, és mindkettő szándékos:
 
 ## Kap róla levelet?
 
-Igen. **Havonta egyszer** e-mailben is elküldjük ugyanezeket a számokat, hogy ne kelljen
-belépnie értük. A levélben ott a gomb, amivel egy kattintással megnyithatja ezt a
-képernyőt.
+Igen. **Havonta egyszer** e-mailben is elküldjük ugyanezeket a számokat (az elmúlt 30 napét),
+hogy ne kelljen belépnie értük. A levél tárgyában és első sorában ott a pontos időszak
+(például „szeptember 14. – október 14.”). A levélben ott a gomb, amivel egy kattintással
+megnyithatja ezt a képernyőt.
+
+Az **első levelet akkor kapja, amikor az oldala már legalább 3 hete él** — addig a 30 napos
+időszak nagyobb részében az oldal még nem is létezett, így a számok nem mondanának semmit.
 
 ⚠️ **Olyan hónapról nem küldünk levelet, amikor senki nem nyitotta meg az oldalát.** Egy
 „0 vendég" levél nem mondana semmit — ilyenkor inkább hallgatunk.

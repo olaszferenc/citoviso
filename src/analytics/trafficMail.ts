@@ -11,6 +11,13 @@
 //      újraindítható, és egy kimaradt nap sem eredményez dupla levelet.
 //   3. EGY TENANT HIBÁJA NEM ÁLLÍTJA MEG A TÖBBIT. Minden címzett külön try/catch —
 //      egy rossz e-mail cím nem viheti el az egész havi kört.
+//   4. CSAK AZ IGAZ IDŐSZAKRÓL, ÉS CSAK HA AZ OLDAL MÁR ÉLT BENNE (ADR-XXXX). A jelentés
+//      a megelőző 30 napot méri, ezért a levél a DÁTUMTARTOMÁNYT nevezi meg, nem egy
+//      naptári hónapot (2026-10-14: a 13-án indult próbázó „szeptemberi forgalom" levelet
+//      kapott csupa október 13-i adattal). Az oldalnak legalább TRAFFIC_MAIL_MIN_LIVE_DAYS
+//      napja élnie kell — addig a 30 napos ablak nagyobb része olyan idő, amikor az oldal
+//      nem is létezett. A futtató naponta fut, így a még fiatal oldal a küszöb napján
+//      megkapja az első levelét (nem kell a következő hónapig várnia).
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
@@ -20,43 +27,84 @@ import { getEmailSender } from "../email/sender.js";
 import { buildTrafficEmail } from "../email/trafficEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
-import { getTrafficReport } from "./trafficReport.js";
+import { getTrafficReport, since } from "./trafficReport.js";
 
 export interface TrafficMailResult {
   readonly sent: number;
   readonly skippedEmpty: number;
   readonly skippedAlready: number;
+  /** 4. szabály: az oldal még nem élt elég régóta. */
+  readonly skippedYoung: number;
   readonly failed: number;
 }
 
-/** „augusztus" — a lezárt hónap neve a címzett nyelvén, BUDAPEST szerinti hónap (ADR-0289). */
-export function monthLabel(d: Date, lang: string): string {
+/** The report window (days) — the same 30 days the Forgalom tab shows by default. */
+export const TRAFFIC_WINDOW_DAYS = 30;
+
+/**
+ * Minimum days a site must have been live before its first traffic mail (ADR-XXXX):
+ * 21 of the 30 days = the window is mostly real data, and the first mail still lands
+ * within the owner's first month instead of waiting for the next calendar month.
+ */
+export const TRAFFIC_MAIL_MIN_LIVE_DAYS = 21;
+
+/** „szeptember 14." — a nap a címzett nyelvén, BUDAPEST szerinti naptár (ADR-0289). */
+export function dayLabel(d: Date, lang: string): string {
   try {
-    return d.toLocaleDateString(lang, { month: "long", timeZone: APP_TZ });
+    return d.toLocaleDateString(lang, { month: "long", day: "numeric", timeZone: APP_TZ });
   } catch {
-    return String(budapestParts(d).month);
+    const p = budapestParts(d);
+    return `${p.month}.${p.day}.`;
   }
+}
+
+/** Is the site old enough for a traffic mail? `liveSince` null = no live stamp → never. */
+export function trafficMailEligible(liveSince: Date | null, now: Date): boolean {
+  return liveSince !== null && now.getTime() - liveSince.getTime() >= TRAFFIC_MAIL_MIN_LIVE_DAYS * 86_400_000;
+}
+
+/**
+ * „szeptember 14. – október 14." — the period the numbers really cover: from the report's
+ * day start (Budapest midnight, 30 days back) or the site's go-live day, whichever is later,
+ * up to today (the report has no upper bound, so today's visits so far are in it).
+ */
+export function trafficPeriodLabel(liveSince: Date | null, now: Date, lang: string): string {
+  const windowStart = since(TRAFFIC_WINDOW_DAYS, now);
+  const from = liveSince && liveSince.getTime() > windowStart.getTime() ? liveSince : windowStart;
+  return `${dayLabel(from, lang)} – ${dayLabel(now, lang)}`;
 }
 
 /**
  * Egy körben minden élő tenantnak. `now` injektálható, hogy a hónapforduló tesztelhető
  * legyen. A jelentés a MEGELŐZŐ 30 napról szól — nem naptári hónapról, mert a mérés
- * indulása óta eltelt idő tenantonként más, és a 30 nap mindig értelmezhető.
+ * indulása óta eltelt idő tenantonként más, és a 30 nap mindig értelmezhető. A levél
+ * ezért a dátumtartományt írja ki (4. szabály), nem hónapnevet.
  */
 export async function sendMonthlyTrafficMails(now = new Date()): Promise<TrafficMailResult> {
-  const out = { sent: 0, skippedEmpty: 0, skippedAlready: 0, failed: 0 };
+  const out = { sent: 0, skippedEmpty: 0, skippedAlready: 0, skippedYoung: 0, failed: 0 };
 
   const tenants = await db
     .selectFrom("site")
     .innerJoin("tenant", "tenant.id", "site.tenant_id")
-    .select(["site.tenant_id as tenantId", "site.slug as slug", "tenant.display_name as name"])
+    .select([
+      "site.tenant_id as tenantId",
+      "site.slug as slug",
+      "tenant.display_name as name",
+      // A site without a live stamp (legacy) counts from its provisioning.
+      sql<Date | null>`coalesce(site.live_at, site.provisioned_at)`.as("liveSince"),
+    ])
     .where("site.status", "=", "live")
     .execute();
 
-  const periodStart = new Date(now.getTime() - 30 * 86_400_000);
-
   for (const t of tenants) {
     try {
+      const liveSince = t.liveSince ? new Date(t.liveSince) : null;
+      // 4. szabály: a fiatal oldalnak még nincs 30 napja, amiről beszámolhatnánk.
+      if (!trafficMailEligible(liveSince, now)) {
+        out.skippedYoung++;
+        continue;
+      }
+
       // 2. szabály: ebben a hónapban ment már ki?
       const already = await db
         .selectFrom("tenant_message")
@@ -73,7 +121,7 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
         continue;
       }
 
-      const report = await getTrafficReport(t.tenantId, 30);
+      const report = await getTrafficReport(t.tenantId, TRAFFIC_WINDOW_DAYS);
       // 1. szabály: üres hónapról hallgatunk.
       if (report.isEmpty) {
         out.skippedEmpty++;
@@ -96,7 +144,7 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
       const msg = buildTrafficEmail({
         to,
         siteName: t.name ?? t.slug ?? "",
-        periodLabel: monthLabel(periodStart, lang),
+        periodLabel: trafficPeriodLabel(liveSince, now, lang),
         report,
         adminUrl: `${config.publicSiteUrl}/admin?tab=forgalom`,
         lang,

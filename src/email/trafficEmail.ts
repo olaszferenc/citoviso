@@ -35,7 +35,8 @@ export interface TrafficEmailInput {
   readonly to: string;
   /** A szállás neve — a tárgysorban ez a horog. */
   readonly siteName: string;
-  /** Az időszak emberi neve, pl. „augusztus". */
+  /** Az időszak, amiről a számok szólnak, pl. „szeptember 14. – október 14." (ADR-XXXX:
+   *  dátumtartomány, nem hónapnév — a jelentés a megelőző 30 napot méri). */
   readonly periodLabel: string;
   readonly report: TrafficReport;
   /** A tenant-admin Forgalom fülének teljes URL-je. */
@@ -76,9 +77,11 @@ export function buildTrafficEmail(input: TrafficEmailInput): EmailMessage {
     : "";
   const botNote = T(lang, "A keresőrobotokat nem számoljuk bele.");
 
-  const subject = T(lang, "{name} — {period}i forgalom", { name: siteName, period: periodLabel });
+  const subject = T(lang, "{name} — forgalom, {period}", { name: siteName, period: periodLabel });
+  const periodLine = T(lang, "Időszak: {period}", { period: periodLabel });
 
   const text =
+    `${periodLine}\n\n` +
     `${sentence}\n\n` +
     rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
     `\n\n` +
@@ -119,6 +122,7 @@ export function buildTrafficEmail(input: TrafficEmailInput): EmailMessage {
       ) +
       `</td></tr>` +
       `<tr><td style="padding:20px 20px 0">` +
+      `<p style="margin:0 0 8px;font-family:${FONT};font-size:13px;color:${MUTED}">${esc(periodLine)}</p>` +
       `<p style="margin:0 0 16px;font-family:${FONT};font-size:21px;line-height:1.35;color:${INK}">` +
       `${esc(sentence)}</p></td></tr>` +
       `<tr><td style="padding:0 20px">${tbl(`width="100%"`, rowHtml)}</td></tr>` +

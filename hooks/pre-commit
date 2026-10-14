@@ -1778,6 +1778,13 @@ if [ -f scripts/send-window-tz-check.mts ] && \
   echo "[pre-commit] send-window-tz-check (kimenő ablakok, határidők és a tulaj/vevő-felé mutatott idők Budapest szerint, UTC-s szerveren is)…"
   npx tsx scripts/send-window-tz-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX: the monthly traffic mail names the period it really covers (a date range, not the
+# month of now − 30 days) and only goes to a site live for most of the window. Pure — no DB.
+if [ -f scripts/traffic-mail-period-check.mts ] && \
+   changed_files | grep -qE '^src/analytics/traffic(Report|Mail)\.ts$|^src/email/trafficEmail\.ts$|^scripts/traffic-mail(-period-check)?\.mts$'; then
+  echo "[pre-commit] traffic-mail-period-check (forgalmi levél: valós dátumtartomány, csak legalább 3 hete élő oldalnak)…"
+  npx tsx scripts/traffic-mail-period-check.mts >"$GATE_LOG" || gate_failed
+fi
 # The szallas-idozona ADR: every accommodation lives in its OWN zone (tenant.time_zone) — the ONE
 # "today" (todayIn), the resolvers, the owner's calendar, the view context, validated saves.
 # Read-only against the shared dev DB (process-local zone override).
