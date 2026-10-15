@@ -91,8 +91,9 @@ ilyen modulok külön sort kapnak a Teendők között.
 
 A sor a „Töltse ki:” felszólítással kezdődik, utána annak a modulnak a neve áll, amelyikről szó
 van (például a Szobák, apartmanok), majd a modul ára, végül a lényeg:
-**„— kifizette, de üres, ezért a vendég ma nem látja”**. Alatta egy mondat megmondja,
-pontosan mi hiányzik belőle: „Amíg nincs benne szoba, a szakasz nem jelenik meg az oldalán.”
+**„— kifizette, de üres, ezért a vendég ma nem látja”**. Ha a modult a próbaidőben ingyen
+kapta, ár nem áll mellette, és a sor vége: **„— a próbában be van kapcsolva, de üres, ezért a
+vendég ma nem látja”**. Alatta egy mondat megmondja, pontosan mi hiányzik belőle: „Amíg nincs benne szoba, a szakasz nem jelenik meg az oldalán.”
 Éves számlázásnál az éves összeg a vezető szám, a havi díj halkabban mellette.
 
 Két gomb tartozik hozzá:
