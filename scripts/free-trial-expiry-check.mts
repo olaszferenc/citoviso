@@ -396,7 +396,7 @@ try {
   // C2c ②: the OTHER platform letters of a running trial (password reset, the owner's booking
   // letters) say „próbálja ki" too — the reason comes from the account, not the letter.
   check("footerReasonForTenant: aktív próba → trial, ismeretlen fiók → order", (await footerReasonForTenant(tenantId)) === "trial" && (await footerReasonForTenant(null)) === "order");
-  const resetBase = { to: "x@example.invalid", username: "u", setPasswordUrl: "https://citoviso.test/j", siteName: "Napfény Vendégház", lang: "hu" };
+  const resetBase = { to: "x@example.invalid", username: "u", setPasswordUrl: "https://citoviso.test/j", loginUrl: "https://citoviso.test/login", siteName: "Napfény Vendégház", lang: "hu" };
   const resetTrial = buildPasswordResetEmail({ ...resetBase, footerReason: await footerReasonForTenant(tenantId) }).html ?? "";
   const resetBuyer = buildPasswordResetEmail(resetBase).html ?? "";
   check("jelszó-visszaállítás próbázónak: „…próbálja ki.”", resetTrial.includes("Citovisónál próbálja ki.") && !resetTrial.includes("rendelte meg"));

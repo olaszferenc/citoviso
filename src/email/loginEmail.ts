@@ -23,10 +23,15 @@
 // ADR-0354 "C" (owner-approved 2026-10-10, assets/design-refs/console/proba-c/3-levelek-sms.html):
 // a C trial's discount is the "Próba-kedvezmény" row ("−{p}%, ha {date}-ig megrendeli …") and
 // one closing sentence in the trial paragraph; a pre-C trial keeps its coupon row.
+//
+// Owner finding 2026-10-15 ([TESZT] Matróz): after closing the admin window the owner could not
+// find where to log in again — the address sat only in a small note at the very bottom, and the
+// reset letter did not carry it at all. Both letters now put the login address in the details
+// box, right under the username, and early in the plain-text part (loginDetailRow / loginTextLine).
 
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
-import { mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
+import { loginAddressLabel, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
 import type { FooterReason, MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 import { boldVars, couponValue, isTrialOffer, type TrialCouponView } from "./trialEmail.js";
@@ -41,6 +46,16 @@ import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "..
 export interface TrialPackageView {
   readonly label: string | null;
   readonly modules: readonly string[];
+}
+
+/** The details-box row naming where to log in — directly under „Felhasználónév”. */
+function loginDetailRow(lang: string | undefined, loginUrl: string): MailDetailRow {
+  return { label: T(lang, "Belépés"), value: loginAddressLabel(loginUrl), href: loginUrl, mono: true };
+}
+
+/** The plain-text line naming where to log in — next to the username, never at the end. */
+function loginTextLine(lang: string | undefined, loginUrl: string): string {
+  return `${T(lang, "Belépés:")} ${loginUrl}`;
 }
 
 export function buildCredentialsEmail(input: {
@@ -107,7 +122,10 @@ export function buildCredentialsEmail(input: {
         p: String(trial.coupon.percent),
       })
     : null;
-  const details: MailDetailRow[] = [{ label: T(lang, "Felhasználónév"), value: username, mono: true }];
+  const details: MailDetailRow[] = [
+    { label: T(lang, "Felhasználónév"), value: username, mono: true },
+    loginDetailRow(lang, loginUrl),
+  ];
   if (trial) {
     details.push({ label: T(lang, "A próba vége"), value: formatDayShortWeekday(trial.untilIso, lang) });
     if (pkg) details.push({ label: T(lang, "A próbában"), value: pkg.modules.map((m) => T(lang, m)).join(" · ") });
@@ -134,14 +152,15 @@ export function buildCredentialsEmail(input: {
     "A gomb 7 napig érvényes, és egyszer használható. Ha lejárt, a belépő lapon az „Elfelejtett jelszó?” linkre kattintva bármikor kérhet újat. Jelszót e-mailben nem küldünk.",
   );
   const button = T(lang, "Jelszó beállítása");
-  const later = T(lang, "Később itt léphet be:");
+  const later = T(lang, "Később is ezen a címen léphet be — érdemes elmenteni a könyvjelzők közé:");
 
   // The plain-text part names the modules too (the details box is HTML-only) — the same list.
   const pkgLine = pkg ? `${T(lang, "A próbában")}: ${pkg.modules.map((m) => T(lang, m)).join(" · ")}\n\n` : "";
   const text =
     `${greeting}\n\n${intro}\n\n` +
     pkgLine +
-    `${T(lang, "Felhasználónév:")} ${username}\n\n` +
+    `${T(lang, "Felhasználónév:")} ${username}\n` +
+    `${loginTextLine(lang, loginUrl)}\n\n` +
     `${button}: ${setPasswordUrl}\n\n` +
     (trialVars ? `${trialPara(trialVars)}${offerC ? ` ${offerC}` : ""}\n\n` : "") +
     `${note}\n\n${later} ${loginUrl}\n`;
@@ -155,13 +174,15 @@ export function buildCredentialsEmail(input: {
     greeting,
     siteName,
     footerReason: trial ? "trial" : "order",
+    // The address already stands in the details box, under the username.
+    ownerLogin: false,
     blocks: [
       mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
       mailDetails(details),
       mailButton(setPasswordUrl, button),
       ...(trialVars ? [mailPara(boldVars(trialPara, trialVars, ["until"]) + (offerC ? ` ${esc(offerC)}` : ""))] : []),
       mailNote(esc(note)),
-      mailNote(`${esc(later)} <a href="${esc(loginUrl)}">${esc(loginUrl.replace(/^https?:\/\//, ""))}</a>`),
+      mailNote(`${esc(later)} <a href="${esc(loginUrl)}">${esc(loginAddressLabel(loginUrl))}</a>`),
     ],
   });
 }
@@ -171,12 +192,14 @@ export function buildPasswordResetEmail(input: {
   to: string;
   username: string;
   setPasswordUrl: string;
+  /** The tenant login page — named next to the username (owner finding 2026-10-15). */
+  loginUrl: string;
   siteName: string;
   lang?: string;
   /** ADR-0344 C2c: an account in its free trial did not order yet — footerReasonForTenant(). */
   footerReason?: FooterReason;
 }): EmailMessage {
-  const { to, username, setPasswordUrl, siteName, lang, footerReason } = input;
+  const { to, username, setPasswordUrl, loginUrl, siteName, lang, footerReason } = input;
   const subject = T(lang, "Új jelszó beállítása – {site}", { site: siteName });
   const intro = T(
     lang,
@@ -189,7 +212,8 @@ export function buildPasswordResetEmail(input: {
   );
   const button = T(lang, "Jelszó beállítása");
   const text =
-    `${intro}\n\n${T(lang, "Felhasználónév:")} ${username}\n\n${button}: ${setPasswordUrl}\n\n${note}\n`;
+    `${intro}\n\n${T(lang, "Felhasználónév:")} ${username}\n${loginTextLine(lang, loginUrl)}\n\n` +
+    `${button}: ${setPasswordUrl}\n\n${note}\n`;
   return platformMail({
     to,
     subject,
@@ -200,10 +224,15 @@ export function buildPasswordResetEmail(input: {
     siteName,
     blocks: [
       mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
-      mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }]),
+      mailDetails([
+        { label: T(lang, "Felhasználónév"), value: username, mono: true },
+        loginDetailRow(lang, loginUrl),
+      ]),
       mailButton(setPasswordUrl, button),
       mailNote(esc(note)),
     ],
     footerReason,
+    // The address already stands in the details box, under the username.
+    ownerLogin: false,
   });
 }

@@ -1052,6 +1052,12 @@ async function serveTenantHost(
   // will most likely pay and return. The booking/review APIs are inside the 503
   // too: a frozen site must not keep taking reservations.
   if (site.status === "suspended") {
+    // 2026-10-15: the owner of a paused site (lapsed trial, freeze) must still find the way in —
+    // /admin and /login go to the tenant login exactly as on a live site, never into the 503.
+    if (pathname === "/admin" || pathname === "/login") {
+      res.writeHead(302, { Location: TENANT_LOGIN_URL });
+      return void res.end();
+    }
     // ADR-0157: answer in the language the guest ARRIVED in, when the tenant paid
     // for it — not always the primary one (the freeze branch used to run before
     // the /<lang>/ router, so it never saw the prefix).
@@ -1062,7 +1068,9 @@ async function serveTenantHost(
     res.statusCode = 503;
     res.setHeader("Retry-After", "86400");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.end(await suspendedPage(site.tenantId, lang));
+    // The same quiet owner-login line as the live site carries (ownerLogin.ts): a guest skips
+    // it, the owner of the paused site finds the way back to the admin and the continuation.
+    res.end(await injectOwnerLogin(await suspendedPage(site.tenantId, lang)));
     return;
   }
 
@@ -2633,7 +2641,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
       setSession(res, r.tenantUserId);
       console.log(`[auth] jelszó beállítva egyszeri linkkel · ${v.username}`);
-      return send(res, 200, passwordSetDonePage(lang, r.firstSet));
+      return send(res, 200, passwordSetDonePage(lang, r.firstSet, v.username));
     }
   }
   // POST /admin/password — tenant password change (Fiók card).

@@ -13,6 +13,7 @@ import { generateMemorablePassword, hashPassword } from "../auth/tenantAuth.js";
 import { findUserForReset, issuePasswordToken, passwordLinkUrl } from "../auth/passwordLink.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildCredentialsEmail, buildPasswordResetEmail } from "../email/loginEmail.js";
+import { tenantLoginUrl } from "../email/platformLayout.js";
 import { footerReasonForTenant } from "../trial/footer.js";
 import type { TrialCouponView } from "../email/trialEmail.js";
 import type { TrialPackageView } from "../email/loginEmail.js";
@@ -110,9 +111,9 @@ export async function issueAndSendTenantLogin(
   } | null,
 ): Promise<IssuedLogin> {
   const login = await issueTenantLogin(tenantId, businessName, contactEmail);
-  const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
   // ADR-0067: the owner reads their credentials in their own site's language.
   const lang = await prepareMailLang(await langForTenant(tenantId));
+  const loginUrl = tenantLoginUrl(lang);
   const token = await issuePasswordToken(login.tenantUserId);
   const msg = buildCredentialsEmail({
     to: login.contactEmail,
@@ -157,6 +158,7 @@ export async function sendPasswordResetLinks(identifier: string): Promise<number
       to: u.email,
       username: u.username,
       setPasswordUrl: passwordLinkUrl(token, lang),
+      loginUrl: tenantLoginUrl(lang),
       siteName: u.siteName,
       lang,
       // ADR-0344 C2c: a trialist did not order yet — the footer says „próbálja ki".

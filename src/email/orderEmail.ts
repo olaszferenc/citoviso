@@ -104,6 +104,8 @@ export function buildOrderReceivedEmail(input: OrderMailBase): EmailMessage {
     heading: T(lang, "Megkaptuk a rendelését"),
     greeting,
     siteName: input.siteName,
+    // Before payment the buyer has no login yet — the address would be a false promise (§I).
+    ownerLogin: false,
     blocks: [mailPara(esc(l1)), orderRows(input), mailPara(esc(l2)), mailNote(contact.html)],
   }));
 }
@@ -134,6 +136,8 @@ export function buildOrderPayLinkEmail(input: OrderMailBase & { readonly payUrl:
     heading: T(lang, "Fizetési link a rendeléséhez"),
     greeting,
     siteName: input.siteName,
+    // Before payment the buyer has no login yet — the address would be a false promise (§I).
+    ownerLogin: false,
     blocks: [
       mailPara(esc(l1)),
       orderRows(input),

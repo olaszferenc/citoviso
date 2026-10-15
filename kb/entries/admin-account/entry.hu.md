@@ -4,13 +4,23 @@ title: Fiók — e-mail-cím és jelszó kezelése
 audience: tenant
 category: account
 anchors: admin.account
-updated: 2026-10-02
+updated: 2026-10-15
 ---
 
 A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, a szállása
 időzónáját, és — a lap alján — a honlapján közzétett jogi adatait (impresszum, adatkezelési tájékoztató).
 
 ![Képernyőkép: a Fiók fül telefonon](assets/hu/screen.png)
+
+## Hol lépek be?
+
+A kezelőfelületre mindig a **citoviso.com/login** címen lép be, a felhasználónevével és a jelszavával.
+Ezt a címet több helyen is megtalálja, ha elkeveredne:
+
+- a **Fiók** fülön, a **„Belépés címe”** mezőben (érdemes a böngésző könyvjelzői közé menteni);
+- minden levelünk alján, a „Belépés a szerkesztő felületre” sorban;
+- a saját honlapja legalján, a „Tulajdonosi belépés” linken;
+- ha a honlapja címe után ezt írja: **/admin** (például `pelda.citoviso.com/admin`), a belépő lapra jut.
 
 ## Felhasználónév
 
@@ -23,7 +33,7 @@ Jelszót e-mailben nem küldünk. A megrendelés után két helyen állíthatja 
 
 1. **Rögtön a sikeres fizetés lapján.** Az „Állítsa be most a jelszavát” részben írja be kétszer az új
    jelszót, és koppintson a „Beállítom és belépek” gombra. Ez a lehetőség csak a fizetés utáni két órában él.
-2. **A „Belépési adatai” levélből.** A levélben a felhasználóneve és egy **„Jelszó beállítása”** gomb áll.
+2. **A „Belépési adatai” levélből.** A levélben a felhasználóneve, alatta a **„Belépés”** sorban a belépő cím, és egy **„Jelszó beállítása”** gomb áll.
    A gomb 7 napig érvényes, és egyszer használható. A megnyíló lapon írja be kétszer az új jelszót (legalább
    8 karakter), majd koppintson a **„Beállítom és belépek”** gombra.
 
@@ -39,8 +49,8 @@ más eszközön tehát újra be kell lépnie.
 3. A lap mindig ugyanazt írja: **„Ha van ilyen fiók, elküldtük”**. Ez szándékos, így senki nem tudja kipróbálni,
    kinek van fiókja nálunk. Ha a cím egy fiókhoz tartozik, néhány percen belül megjön a levél egy **„Jelszó
    beállítása”** gombbal (7 napig érvényes, egyszer használható).
-4. Ha a link lejárt vagy már felhasználták, a lap ezt írja: **„Ez a link már nem érvényes”**. Az **„Új linket
-   kérek”** gombbal kérhet újat.
+4. Ha a link lejárt vagy már felhasználták, a lap ezt írja: **„Ez a link már nem érvényes”**. Ha a jelszavát
+   már beállította, a **„Belépés”** gombbal a belépő lapra jut; ha nem, az **„Új linket kérek”** gombbal kérhet újat.
 
 Ha nem Ön kérte a linket, nincs teendője: a jelenlegi jelszava változatlan marad.
 

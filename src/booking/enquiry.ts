@@ -16,6 +16,7 @@
 import { db } from "../db/client.js";
 import { oneLine } from "../text/oneLine.js";
 import { getEmailSender } from "../email/sender.js";
+import { ownerLoginLine } from "../email/platformLayout.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { formatDay } from "../text/day.js";
@@ -105,7 +106,8 @@ export async function createEnquiry(input: EnquiryInput): Promise<EnquiryResult>
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: guests })}\n` +
     (email ? `${T(lang, "E-mail:")} ${email}\n` : "") +
     (phone ? `${T(lang, "Telefon:")} ${phone}\n` : "") +
-    `\n${T(lang, "Ez előzetes érdeklődés, nem foglalás — elég, ha válaszol a vendégnek.")}`;
+    `\n${T(lang, "Ez előzetes érdeklődés, nem foglalás — elég, ha válaszol a vendégnek.")}` +
+    `\n\n${ownerLoginLine(lang).text}`;
 
   // ⚠️ Ordering is deliberate and DIFFERS from the booking notify: the Üzenetek
   // row is the enquiry's ONLY record (there is no booking_request behind it), so
@@ -131,7 +133,9 @@ export async function createEnquiry(input: EnquiryInput): Promise<EnquiryResult>
       (email ? `<br>${T(lang, "E-mail:")} ${esc(email)}` : "") +
       (phone ? `<br>${T(lang, "Telefon:")} ${esc(phone)}` : "") +
       `</p>` +
-      `<p style="font-size:14px;color:#666">${esc(T(lang, "Ez előzetes érdeklődés, nem foglalás — elég, ha válaszol a vendégnek."))}</p>`;
+      `<p style="font-size:14px;color:#666">${esc(T(lang, "Ez előzetes érdeklődés, nem foglalás — elég, ha válaszol a vendégnek."))}</p>` +
+      // Owner finding 2026-10-15: every letter to the owner names the way back to the admin.
+      ownerLoginLine(lang).html;
     // Fire-and-forget (FK-007 lesson: a synchronous send holds the guest's
     // spinner); the enquiry is already recorded above.
     void getEmailSender()

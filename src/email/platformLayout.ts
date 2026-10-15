@@ -138,6 +138,47 @@ export function mailGreeting(lang: string | undefined, name: string | null | und
 
 // ── The frame ────────────────────────────────────────────────────────────────
 
+/**
+ * The tenant admin login page for a reader of `lang`. /login lives on the platform host with no
+ * tenant context, so a non-Hungarian owner needs the ?lang= hint (the live site's owner strip,
+ * ownerLogin.ts, carries the same one).
+ */
+export function tenantLoginUrl(lang: string | undefined): string {
+  const base = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
+  return lang && lang !== "hu" ? `${base}?lang=${encodeURIComponent(lang)}` : base;
+}
+
+/** The login label: no scheme, no query ("citoviso.com/login"). */
+export function loginAddressLabel(loginUrl: string): string {
+  return loginUrl.replace(/^https?:\/\//, "").replace(/[?#].*$/, "");
+}
+
+/**
+ * Owner finding 2026-10-15 ([TESZT] Matróz): an owner who closed the admin window did not know
+ * where to log in again. Every letter to an account holder therefore ends with the login address,
+ * just above the footer — a reader who finds ANY of our letters finds the way back.
+ */
+export function ownerLoginLine(lang: string | undefined): { readonly text: string; readonly html: string } {
+  const url = tenantLoginUrl(lang);
+  const label = T(lang, "Belépés a szerkesztő felületre:");
+  return {
+    text: `${label} ${url}`,
+    html:
+      `<p style="margin:24px 0 0;font-size:14px;color:${MUTED}">${esc(label)} ` +
+      `<a href="${esc(url)}" style="color:${LINK};font-weight:600;text-decoration:none">${esc(loginAddressLabel(url))}</a></p>`,
+  };
+}
+
+function ownerLoginHtml(lang: string | undefined): string {
+  const url = tenantLoginUrl(lang);
+  return (
+    `<tr><td class="m-pad" style="padding:0 32px 20px;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED}">` +
+    `${esc(T(lang, "Belépés a szerkesztő felületre:"))} ` +
+    `<a href="${esc(url)}" style="color:${LINK};font-weight:600;text-decoration:none">${esc(loginAddressLabel(url))}</a>` +
+    `</td></tr>`
+  );
+}
+
 /** Why the reader gets our letters — a buyer ORDERED the site, a trialist is TRYING it
  *  (ADR-0344 kiegészítés: "…a Citovisónál rendelte meg" was false for a free trial). */
 export type FooterReason = "order" | "trial";
@@ -258,11 +299,21 @@ export interface PlatformMailInput {
   /** The footer's "why you got this": ordered (default) or trying it (a free trial). */
   readonly footerReason?: FooterReason;
   readonly attachments?: readonly EmailAttachment[];
+  /**
+   * The closing "Belépés a szerkesztő felületre: citoviso.com/login" line (default ON). Off ONLY
+   * where the reader has no login yet (an order before payment) or the letter already names the
+   * address in its details box (the login letters) — owner-login-mail-check holds the list.
+   */
+  readonly ownerLogin?: boolean;
 }
 
 /** Wrap the body in the approved platform frame and return a complete message. */
 export function platformMail(input: PlatformMailInput): EmailMessage {
-  const { to, subject, text, lang, heading, greeting, blocks, siteName, kicker, footerReason } = input;
+  const { to, subject, lang, heading, greeting, blocks, siteName, kicker, footerReason } = input;
+  const ownerLogin = input.ownerLogin ?? true;
+  const text = ownerLogin
+    ? `${input.text.replace(/\s+$/, "")}\n\n${T(lang, "Belépés a szerkesztő felületre:")} ${tenantLoginUrl(lang)}\n`
+    : input.text;
   const hasLogo = existsSync(LOGO_PATH);
 
   const card =
@@ -275,6 +326,7 @@ export function platformMail(input: PlatformMailInput): EmailMessage {
     (greeting ? `<p style="margin:0 0 12px">${esc(greeting)}</p>` : "") +
     blocks.join("") +
     `</td></tr>` +
+    (ownerLogin ? ownerLoginHtml(lang) : "") +
     `<tr><td class="m-pad" style="padding:18px 32px 22px;border-top:1px solid ${LINE};font-family:${FONT};` +
     `font-size:12px;line-height:1.6;color:${FAINT}">${footerHtml(lang, siteName, footerReason)}</td></tr>` +
     `</table>`;

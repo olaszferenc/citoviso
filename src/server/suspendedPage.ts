@@ -125,7 +125,9 @@ export function renderSuspendedPage(d: SuspendedPageData, lang: string): string 
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
     `<title>${esc(title)}</title></head>` +
-    `<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;` +
+    // flex-direction:column — the owner-login line (ownerLogin.ts, appended before </body> at
+    // serve time) must sit UNDER the card, not beside it as a second column.
+    `<body style="margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;` +
     `padding:28px;background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)">` +
     `<div style="max-width:520px;text-align:center">` +
     (d.name

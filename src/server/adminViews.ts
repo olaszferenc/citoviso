@@ -38,6 +38,7 @@ import { flagSvg } from "../ui/flags.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
 import { T, langNameLocalized, langRegionName, multilangTierName } from "../i18n/mail.js";
+import { loginAddressLabel, tenantLoginUrl } from "../email/platformLayout.js";
 import { offerLabel } from "../payment/offers.js";
 import { foldIncludes } from "../text/fold.js";
 import { huArticle, huArticleLower } from "../hu.js";
@@ -844,6 +845,26 @@ export function loginPage(
 }
 
 /**
+ * Owner finding 2026-10-15 ([TESZT] Matróz): after closing the admin window the owner did not
+ * know where to log in again. Every page of the password-link flow names the login address —
+ * a framed box, so it reads as "write this down", not as one more hint line.
+ */
+function loginAddressBox(lang: string, username?: string): string {
+  const url = tenantLoginUrl(lang);
+  return (
+    `<div style="margin:16px 0 4px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:var(--citui-radius);` +
+    `background:var(--citui-surface-2);text-align:left" data-login-address>` +
+    (username
+      ? `<div class="citui-hint" style="margin:0">${T(lang, "Felhasználónév")}: <b>${esc(username)}</b></div>`
+      : "") +
+    `<div class="citui-hint" style="margin:0">${T(lang, "Belépés később is itt:")} ` +
+    `<a href="${esc(url)}" style="font-weight:600">${esc(loginAddressLabel(url))}</a></div>` +
+    `<div class="citui-hint" style="margin:4px 0 0">${T(lang, "Érdemes elmenteni a könyvjelzők közé.")}</div>` +
+    `</div>`
+  );
+}
+
+/**
  * Elek T-3 (owner-approved 2026-10-02, B; contract: design-refs/tenant-admin/password-link):
  * the owner SETS their password through a one-time link — the credentials mail no
  * longer carries one. ⛔ The GET of this page spends nothing; only the POST does.
@@ -866,6 +887,7 @@ export function setPasswordPage(
       `<div class="citui-card">` +
       `<h1 style="font-size:1.4rem">${T(lang, "Jelszó beállítása")}</h1>` +
       `<p class="citui-hint">${T(lang, "Fiók:")} <b>${esc(v.username)}</b> · ${esc(v.siteName)}</p>` +
+      `<p class="citui-hint">${T(lang, "Később itt léphet be:")} <b>${esc(loginAddressLabel(tenantLoginUrl(lang)))}</b></p>` +
       `<form method="POST" action="/login/jelszo/${esc(v.token)}" data-pwset>` +
       `<div class="citui-field"><label class="citui-label" for="pw1">${T(lang, "Új jelszó")}</label>` +
       `<input class="citui-input" id="pw1" name="password" type="password" required minlength="8" autocomplete="new-password"></div>` +
@@ -888,7 +910,7 @@ export function setPasswordPage(
  * logins ended" line only on a CHANGE — on the very first set there were none, and
  * the sentence read as "were we hacked?" (Elek 10-12 N4).
  */
-export function passwordSetDonePage(lang = "hu", firstSet = false): string {
+export function passwordSetDonePage(lang = "hu", firstSet = false, username?: string): string {
   return shell(
     T(lang, "Jelszó beállítva"),
     `<div class="citui-container" style="max-width:420px;padding:64px 0;text-align:center">` +
@@ -896,6 +918,7 @@ export function passwordSetDonePage(lang = "hu", firstSet = false): string {
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Kész — beléptetjük")}</h1>` +
       `<p class="citui-hint">${T(lang, "A jelszava beállítva. Mostantól a felhasználónevével és ezzel a jelszóval léphet be.")}</p>` +
       (firstSet ? "" : `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>`) +
+      loginAddressBox(lang, username) +
       `<p class="citui-hint" data-pw-autogo>${T(lang, "Pár másodperc múlva magától továbblépünk a szerkesztőbe.")}</p>` +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
       `</div></div>` +
@@ -903,8 +926,10 @@ export function passwordSetDonePage(lang = "hu", firstSet = false): string {
       // live, so the page goes on by itself after a moment to read, and SAYS so (a reader who
       // saw only a button took it for one more required click). The meta refresh carries it
       // without JS too; the script is the faster path; the button is for the impatient.
-      `<meta http-equiv="refresh" content="3;url=/admin">` +
-      `<script>setTimeout(function(){location.replace("/admin")},2500);</script>`,
+      // 2026-10-15: 8 s, not 2.5 — the page now carries the login address to note down, and
+      // 2.5 s was too short to read it (the owner closed the admin and could not come back).
+      `<meta http-equiv="refresh" content="9;url=/admin">` +
+      `<script>setTimeout(function(){location.replace("/admin")},8000);</script>`,
     lang,
   );
 }
@@ -917,7 +942,12 @@ export function passwordLinkDeadPage(lang = "hu"): string {
       `<div style="margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Ez a link már nem érvényes")}</h1>` +
       `<p class="citui-hint">${T(lang, "A jelszó-beállító link lejárt, vagy már felhasználták. Biztonsági okból minden link csak egyszer használható.")}</p>` +
-      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/login/help">${T(lang, "Új linket kérek")}</a></p>` +
+      // 2026-10-15: most readers of this page ALREADY set their password (the link is single-use)
+      // and are looking for the way back in — the login is the first way on, a new link the second.
+      `<p class="citui-hint">${T(lang, "Ha a jelszavát már beállította, a felhasználónevével és a jelszavával itt léphet be.")}</p>` +
+      loginAddressBox(lang) +
+      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="${esc(tenantLoginUrl(lang))}">${T(lang, "Belépés")}</a></p>` +
+      `<p style="margin-top:8px"><a class="citui-btn citui-btn--ghost" href="/login/help">${T(lang, "Új linket kérek")}</a></p>` +
       `</div></div>`,
     lang,
   );
@@ -6002,6 +6032,10 @@ function accountSection(session: TenantSession, lang = "hu"): string {
     `<div class="adm-card__head"><span class="adm-ico">${ic("account")}</span><h2>${T(lang, "Fiók")}</h2>${helpLink("admin.account", lang)}</div>` +
     `<div class="citui-field"><label class="citui-label">${T(lang, "Felhasználónév (belépéshez)")}</label>` +
     `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
+    // 2026-10-15: the address to come back to — an owner who lost the e-mail finds it here.
+    `<div class="citui-field"><label class="citui-label">${T(lang, "Belépés címe")}</label>` +
+    `<input class="citui-input" value="${esc(loginAddressLabel(tenantLoginUrl(lang)))}" readonly style="background:var(--citui-surface-2)">` +
+    `<p class="citui-hint" style="margin:4px 0 0">${T(lang, "Érdemes elmenteni a könyvjelzők közé.")}</p></div>` +
     `<form method="POST" action="/admin/contact">` +
     `<div class="citui-field"><label class="citui-label" for="contact_email">${T(lang, "Kommunikációs e-mail (ide küldünk értesítést)")}</label>` +
     `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +

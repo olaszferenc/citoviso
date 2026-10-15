@@ -18,6 +18,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { oneLine } from "../text/oneLine.js";
 import { getEmailSender } from "../email/sender.js";
+import { ownerLoginLine } from "../email/platformLayout.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
@@ -201,7 +202,8 @@ async function notifyOwner(
     `${rev.author_name} · ${STARS(rev.rating)}\n\n` +
     `${rev.body}\n\n` +
     `${T(lang, "Kiteszem az oldalra:")} ${yes}\n${T(lang, "Nem teszem ki:")} ${no}\n\n` +
-    T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.");
+    T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.") +
+    `\n\n${ownerLoginLine(lang).text}`;
 
   const html =
     `<p style="font-size:17px"><strong>${T(lang, "Új vendégvélemény")}${esc(unit)}</strong></p>` +
@@ -218,7 +220,9 @@ async function notifyOwner(
     `<a href="${esc(no)}" style="display:inline-block;padding:16px 28px;border:1px solid #ccc;` +
     `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">${T(lang, "Nem teszem ki")}</a>` +
     `</p>` +
-    `<p style="font-size:14px;color:#666">${T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.")}</p>`;
+    `<p style="font-size:14px;color:#666">${T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.")}</p>` +
+    // Owner finding 2026-10-15: every letter to the owner names the way back to the admin.
+    ownerLoginLine(lang).html;
 
   const msg = {
     to,
