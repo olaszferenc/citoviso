@@ -154,10 +154,9 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
     // Back-fill slugs for units created before 0026 — a unit without an address
     // cannot have a subpage, and silently skipping it would drop it from the sitemap.
     for (const u of existing) if (!u.slug) await assignSlug(siteId, u.id, u.name);
-    // ADR-0232 (2026-09-25): the whole place is a CHOICE, not a given. The former
-    // back-fill marked the first unit as the whole place whenever none was — that is
-    // exactly how a renamed default ("Apartman 1") kept blocking the other rooms.
-    return existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
+    // ADR-XXXX: with rooms, the whole house is its own bookable unit — never one of the rooms.
+    const settled = existing.length > 1 && (await settleHouse(siteId, existing));
+    return settled || existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
   }
   const row = await db
     .insertInto("site_unit")
@@ -173,6 +172,84 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
     .executeTakeFirstOrThrow();
   await assignSlug(siteId, row.id, DEFAULT_UNIT_NAME);
   return getUnits(siteId);
+}
+
+/**
+ * ADR-XXXX (owner, 2026-10-15: „egy szobát vagy az egész házat foglal — ez magától értetődő";
+ * the three-state card and the „melyik szoba" picker were „túl van bonyolítva"). With two or
+ * more units the place has exactly ONE whole-house unit (`represents_whole`), separate from the
+ * rooms, and a guest can always book either a room or the whole house: it is always let as one
+ * (`is_whole_property`). The only choice left to the owner is „csak egyben adom ki"
+ * (`whole_only`). A room is never the whole house.
+ *
+ * Brings older data to that shape, idempotently, and says whether it wrote anything:
+ *   · a room the owner once picked as „the whole place" (the removed picker) becomes the house
+ *     when there is no other — otherwise it goes back to being a room, and its „only" moves over;
+ *   · a second whole-place unit becomes a room (only one can be the house);
+ *   · a whole-place unit hidden by „nem adom ki egyben" (ADR-0256) is offered again;
+ *   · two or more rooms and no house → the house is created, without a price (the guest asks
+ *     for a quote until the owner sets one — ADR-0222).
+ * A site with one room and no house is left alone: there is nothing to let „as one" besides it.
+ */
+export async function settleHouse(siteId: string, units?: readonly Unit[]): Promise<boolean> {
+  const list = units ?? (await getUnits(siteId));
+  if (list.length < 2) return false;
+  let wrote = false;
+  const set = async (id: string, v: { represents_whole?: boolean; is_whole_property?: boolean; whole_only?: boolean }) => {
+    await db.updateTable("site_unit").set(v).where("id", "=", id).where("site_id", "=", siteId).execute();
+    wrote = true;
+  };
+  const houses = list.filter((u) => u.representsWhole);
+  const pickedRoom = list.find((u) => u.isWholeProperty && !u.representsWhole) ?? null;
+  const only = list.some((u) => u.wholeOnly);
+  const house: Unit | null = houses.find((u) => u.isWholeProperty) ?? houses[0] ?? pickedRoom;
+  // Clear every flag that is not on the house first: the 0059 partial unique index allows
+  // one is_whole_property per site, and whole_only needs is_whole_property (CHECK).
+  for (const u of list) {
+    if (house && u.id === house.id) continue;
+    if (u.representsWhole || u.isWholeProperty || u.wholeOnly) {
+      await set(u.id, { represents_whole: false, is_whole_property: false, whole_only: false });
+    }
+  }
+  const rooms = list.filter((u) => !house || u.id !== house.id);
+  if (!house && rooms.length >= 2) {
+    const row = await db
+      .insertInto("site_unit")
+      .values({
+        site_id: siteId,
+        name: DEFAULT_UNIT_NAME,
+        sort_order: 0,
+        is_whole_property: true,
+        represents_whole: true,
+        whole_only: only,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await assignSlug(siteId, row.id, DEFAULT_UNIT_NAME);
+    return true;
+  }
+  if (house && (!house.representsWhole || !house.isWholeProperty || house.wholeOnly !== only)) {
+    await set(house.id, { represents_whole: true, is_whole_property: true, whole_only: only });
+  }
+  return wrote;
+}
+
+/**
+ * ADR-XXXX — the owner's one switch on the whole-house card: „Csak egyben adom ki".
+ * On → the house is the only bookable unit, the rooms are shown for presentation (ADR-0257);
+ * off → a guest books a room or the whole house. Returns false when the site has no house.
+ */
+export async function setHouseOnly(siteId: string, only: boolean): Promise<boolean> {
+  await settleHouse(siteId);
+  const house = (await getUnits(siteId)).find((u) => u.representsWhole && u.isWholeProperty);
+  if (!house) return false;
+  await db
+    .updateTable("site_unit")
+    .set({ whole_only: only })
+    .where("id", "=", house.id)
+    .where("site_id", "=", siteId)
+    .execute();
+  return true;
 }
 
 /**
@@ -479,8 +556,12 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   if (units.length <= 1) {
     return { ok: false, reason: "Legalább egy szobának maradnia kell." };
   }
-  // ADR-0232: the whole place is deletable like any unit (the owner chose it, the owner
-  // can drop it) — afterwards the rooms are independent, and the screen says so.
+  // ADR-XXXX: with two or more rooms the whole house is what a group books — it stays
+  // (settleHouse would only bring it back, without its photos and price). With one room
+  // left it can go: the room then is the place.
+  if (target.representsWhole && units.filter((u) => !u.representsWhole).length >= 2) {
+    return { ok: false, reason: "Az egész ház nem törölhető, amíg több szobája van." };
+  }
   const today = await todayForSite(siteId); // the accommodation's today (ADR-0290)
   const booked = await db
     .selectFrom("booking_request")

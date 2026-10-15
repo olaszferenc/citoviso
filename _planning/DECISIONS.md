@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-az-egesz-haz-kulon-tetel-egy-pipa.md) — Az egész ház külön tétel, mindig foglalható a szobák mellett; egyetlen pipa: „Csak egyben adom ki” (2026-10-15)
 - [ADR-0391](decisions/0391-allapotvalto-keres-csak-a-sajat-eredetbol-csrf.md) — Állapotváltó kérés csak a saját eredetből (CSRF)
 - [ADR-0390](decisions/0390-a-lefotozott-portal-molino-elerhetoseggel.md) — A lefotózott portál-molinó elérhetőséggel reklám; csak a sign_map-ítéleteket kérdezzük újra
 - [ADR-0389](decisions/0389-a-ferohely-a-foglalas-felso-hatara.md) — A férőhely a foglalás felső határa

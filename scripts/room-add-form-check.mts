@@ -2,7 +2,7 @@
 // owner ruling 2026-09-28).
 //
 // Measured on the phone night-run (FK-013): with one room already there, the REQUIRED
-// "Az egész szállást is kiadja egyben?" answer stood ABOVE the fields, off-screen at 390 px;
+// "Az egész szállást is kiadja egyben?" answer (ADR-XXXX: „Mi az eddigi …?") stood ABOVE the fields, off-screen at 390 px;
 // „Hozzáadás" then did nothing visible (the browser's validation jumped to a field the owner
 // could not see). And the page had two look-alike forms, so the first attempt typed the new
 // room into the EXISTING one.
@@ -16,7 +16,8 @@
 //     says what is missing — on screen, not below the fold; the question is marked;
 //  ④ picking an answer clears the message.
 // ⛔ Never submits a valid form: the dev DB is shared, so the guard measures the refusal path
-//    only and asserts that not a single POST /admin/units/save went out.
+//    only and asserts that not a single POST /admin/units/save went out. The subject's lone unit
+//    is renamed for the run and restored afterwards (ADR-XXXX: only a renamed one is asked).
 // Run: npx tsx scripts/room-add-form-check.mts [--self-test]
 //   --self-test re-imposes the pre-fix screen (question above the fields, no message) → must go RED.
 
@@ -69,6 +70,17 @@ const booking = await db
   .executeTakeFirst();
 const screens = ["/admin?tab=modulok&m=rooms", ...(booking ? ["/admin?tab=modulok&m=booking"] : [])];
 console.log(`alany: ${subject.slug} (1 szoba) · ${screens.join(" · ")}`);
+// ADR-XXXX: the question is asked only when the lone unit stands for the place AND carries a
+// name the owner gave it (the default-named one IS the house, nothing to ask). The dev DB has
+// only default-named lone units, so the subject's unit is renamed for the run and restored in
+// `finally` — the only write this guard makes.
+const lone = await db
+  .selectFrom("site_unit as u")
+  .innerJoin("site as s", "s.id", "u.site_id")
+  .select(["u.id as id", "u.name as name", "u.represents_whole as rw"])
+  .where("s.slug", "=", subject.slug)
+  .executeTakeFirstOrThrow();
+await db.updateTable("site_unit").set({ name: "Őr-próba ház", represents_whole: true }).where("id", "=", lone.id).execute();
 
 const browser: Browser = await chromium.launch({ args: [`--host-resolver-rules=MAP ${PLATFORM_DOMAIN} 127.0.0.1`] });
 try {
@@ -131,7 +143,7 @@ try {
       ok(st.inView, `③ az üzenet a képernyőn van, és semmi nem takarja (süti-sáv, fül-sáv)`);
       ok(st.marked, `③ a kérdés meg van jelölve`);
 
-      await q.locator("input[value=nem]").check();
+      await q.locator("input[value=egesz]").check();
       ok((await err.count()) > 0 && !(await err.isVisible()), `④ választás után az üzenet eltűnik`);
       ok(saves === 0, `a mérés egyetlen mentést sem küldött`);
       ok(errs.length === 0, `JS-hiba 0`, errs.join(" | "));
@@ -139,6 +151,7 @@ try {
     }
   }
 } finally {
+  await db.updateTable("site_unit").set({ name: lone.name, represents_whole: lone.rw }).where("id", "=", lone.id).execute();
   await browser.close();
   server.close();
   await db.destroy();

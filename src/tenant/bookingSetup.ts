@@ -32,6 +32,7 @@ import {
   setUnitSeasonalOnly,
   setWholeProperty,
   settleFormerWhole,
+  settleHouse,
   updateUnit,
   type Unit,
 } from "./units.js";
@@ -115,8 +116,9 @@ export function deriveMode(units: readonly Unit[]): SetupMode {
   const whole = wholeUnitOf(units);
   const rooms = units.filter((u) => u !== whole);
   if (!rooms.length) return "single";
-  if (whole && whole.isWholeProperty) return whole.wholeOnly ? "single" : "both";
-  return "rooms";
+  // ADR-XXXX: with rooms, a guest books a room or the whole house („both") — unless the
+  // place is let only as one. The former „rooms only" answer no longer exists.
+  return whole && whole.isWholeProperty && whole.wholeOnly ? "single" : "both";
 }
 
 /** The units the questions price and the trial books — the same split the client uses. */
@@ -299,8 +301,9 @@ async function mergeConfig(
 
 /** ① Szállás és szobák: how the place is let, the rooms and their capacity. */
 async function saveRooms(siteId: string, body: Record<string, unknown>, lang: string): Promise<SaveResult> {
-  const mode = body.mode;
-  if (mode !== "single" && mode !== "rooms" && mode !== "both") {
+  // ADR-XXXX: an older client may still send „rooms" — it means rooms + the whole house now.
+  const mode = body.mode === "rooms" ? "both" : body.mode;
+  if (mode !== "single" && mode !== "both") {
     return fail([T(lang, "Válassza ki, hogyan adja ki a szállását.")]);
   }
   const rows = Array.isArray(body.units) ? (body.units as Record<string, unknown>[]) : [];
@@ -356,11 +359,9 @@ async function saveRooms(siteId: string, body: Record<string, unknown>, lang: st
   } else if (mode === "both") {
     const id = await ensureWhole();
     await setWholeProperty(siteId, id, false);
-  } else if (wholeId) {
-    // ADR-0256 "rejt": the place is not let as one — the whole unit stays (nothing is
-    // deleted: its calendar and prices come back if "egyben is" is switched on again).
-    await settleFormerWhole(siteId, wholeId, "rejt", "");
   }
+  // ADR-XXXX: two or more rooms always have the whole house beside them.
+  await settleHouse(siteId);
   if (wholeId && wholeRow) {
     const w = (await ensureUnits(siteId)).find((u) => u.id === wholeId)!;
     await updateUnit(siteId, w.id, w.name, wholeRow.cap, w.description);

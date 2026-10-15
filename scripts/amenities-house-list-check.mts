@@ -189,8 +189,9 @@ try {
     `paidEmpty = [${all.paidEmpty.join(", ")}]`,
   );
   check(
-    "a szobák a SAJÁT listájukat viszik (mindkét kártyán 3 tétel)",
-    all.roomAmenityCounts.length === 2 && all.roomAmenityCounts.every((n) => n === 3),
+    // ADR-XXXX: two rooms always have the whole house beside them — three cards on the page.
+    "a szobák a SAJÁT listájukat viszik (a két szoba és az egész ház kártyáján is 3 tétel)",
+    all.roomAmenityCounts.length === 3 && all.roomAmenityCounts.every((n) => n === 3),
     JSON.stringify(all.roomAmenityCounts),
   );
 

@@ -1,5 +1,7 @@
 # KONTRAKTUS — a 2. szoba felvételekor: mi volt az eddigi egység? (második kérdés a „Nem” után)
 
+> ⛔ **FELÜLÍRVA — ADR-XXXX (2026-10-15, tulaj):** a második kérdés („Ez az első szobám” / „Nincs ilyen szobám — rejtse el”) MEGSZŰNT. Az egész ház mindig külön tétel, a szobák mellett mindig foglalható; a 2. szobánál csak az átnevezett egyetlen egységről kérdezünk („az egész ház” / „az első szobám”). Kontraktus: `assets/design-refs/tenant-admin/whole-house-simple/`. Az alábbi szöveg történeti.
+
 **Jóváhagyva:** 2026-09-28, tulajdonosi döntés. A kiinduló szabály a tulajé: *„Tűnjön el ha nem kiadó az
 egész egyben.”* A három felismerési útból (a) név-függő · (b) kérdés a 2. szoba felvételekor · (c) kapcsoló
 a Szobák kártyán) a **(b)**-t választotta („B”), a terv képein „ok”. A futó foglalások kérdésére szintén
@@ -18,9 +20,9 @@ Kapcsolódó: ADR-0256, ADR-0232 (az „egész szállás” választható egysé
 1. **A „Nem, csak külön egységeket adok ki” választás után nyílik a második kérdés** — CSS-sel, JS nélkül is.
    Az „Igen” ág változatlan.
 2. Két válasz:
-   - **„Ez az első szobám — nevet adok neki”** — név-mező nyílik; mentéskor az egység sima szoba lesz az új
+   - „Ez az első szobám — nevet adok neki” — név-mező nyílik; mentéskor az egység sima szoba lesz az új
      néven (naptár, képek, ár megmarad), és a vendég szobaként látja.
-   - **„Nincs ilyen szobám — rejtse el”** — az egység megmarad, de a vendég NEM látja: se szoba-kártya,
+   - „Nincs ilyen szobám — rejtse el” — az egység megmarad, de a vendég NEM látja: se szoba-kártya,
      se választó-opció, se ár-sor, se aloldal. Nem törlődik; az „Az egész szállás egyben” kártyán
      visszakapcsolva újra látszik.
 3. **Futó foglalás esetén a rejtés ENGEDETT**, és az opció alatt a VALÓDI szám áll (ha 0, a mondat sincs ott):
@@ -28,8 +30,8 @@ Kapcsolódó: ADR-0256, ADR-0232 (az „egész szállás” választható egysé
    A foglalás egy vendéggel kötött megállapodás; egy admin-kapcsoló nem bontja fel.
 4. **Hiányos válasznál kimondott üzenet**, a mentés előtt (a böngészőben) ÉS a szerveren is (JS nélkül):
    - nincs második válasz → „Válassza ki, mi legyen az eddigi »…« egységgel.” (a név behelyettesítve)
-   - **„Adjon nevet az első szobájának.”**
-   - **„A két szoba neve nem lehet ugyanaz.”**
+   - „Adjon nevet az első szobájának.”
+   - „A két szoba neve nem lehet ugyanaz.”
    A szerver ilyenkor SEMMIT nem ír (az új szobát sem hozza létre).
 5. **A felismerés NÉV-FÜGGETLEN**: `site_unit.represents_whole` (0078) — „ez az egység maga a hely”.
    A vendég elől rejtve: `represents_whole AND NOT is_whole_property` — EGY predikátum (`isGuestVisibleUnit`,

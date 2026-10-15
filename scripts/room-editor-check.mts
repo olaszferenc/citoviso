@@ -297,7 +297,8 @@ try {
 
       // ① A RÁCS — a kártya azt mutatja, amit a vendég lát
       const cards = page.locator(".rs-gcard:not(.rs-gcard--preview)");
-      check("három szoba-kártya a rácsban", (await cards.count()) === 3, `kapott: ${await cards.count()}`);
+      // ADR-XXXX: the whole house has its own card above the grid — two room cards here.
+      check("két szoba-kártya a rácsban (az egész ház a rács fölött, saját kártyán)", (await cards.count()) === 2 && (await page.locator("#egesz-haz").count()) === 1, `kapott: ${await cards.count()}`);
       const cols = await page.evaluate(() => {
         const xs = new Set<number>();
         for (const el of document.querySelectorAll(".rs-grid > .rs-gcard")) {
@@ -306,8 +307,9 @@ try {
         return xs.size;
       });
       check(
-        width === 390 ? "mobilon KÉT oszlop" : "asztalin NÉGY oszlopos rács (3 egységnél 3 hasáb)",
-        width === 390 ? cols === 2 : cols === 3,
+        // two room cards: both widths show them side by side (the 4-column desktop grid fills 2)
+        width === 390 ? "mobilon KÉT oszlop" : "asztalin NÉGY oszlopos rács (2 szobánál 2 hasáb, egymás mellett)",
+        cols === 2,
         `oszlop: ${cols}`,
       );
 

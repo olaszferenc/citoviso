@@ -180,16 +180,15 @@ pedig helyben rögzíti, hogy egyedi ajánlatot küld.
 Több szobánál a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
 Fület csak az kap, amit a vendég le is foglalhat. Ha a házat csak egyben adja ki, a szobák a fülek
 alatt egy mondatban szerepelnek („a házzal együtt foglalható, ezért nincs külön naptára”), mert
-foglalás csak a házra érkezhet. Ha az egész szállást nem adja ki egyben, annak nincs naptára.
+foglalás csak a házra érkezhet.
 A szoba nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
 
 ### Az egész szállás — és miért csíkos néha egy nap
 
-Ha a házat egyben is kiadja, az egyik szobája **az egész szállás** — a fülön ez ki is van írva
-(„az egész ház”). Melyik szoba az, azt a Szobák, apartmanok modul beállító-képernyőjén, a rács
-fölötti **„Az egész szállás egyben”** kártyán dönti el; a második szoba felvételekor a rendszer
-meg is kérdezi (a kérdést és a **„Nem, csak külön szobákat adok ki”** után nyíló második kérdést a
-Szobák, apartmanok súgója írja le részletesen). Ez a szoba azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
+Több szobánál a vendég egy szobát vagy **az egész házat** foglalhatja. Az egész háznak saját
+füle és naptára van („az egész ház”); nem az egyik szobája, hanem külön tétel, amelyet a Szobák,
+apartmanok modul beállító-képernyőjén, a rács fölötti **„Az egész ház”** kártyán talál (ott adja
+meg az árát, és ott pipálhatja be, ha csak egyben adja ki). Ezért:
 
 - ha az **egész szállást** foglalják le egy napra, az összes szobája **automatikusan foglalt** lesz
   arra a napra;
@@ -197,9 +196,9 @@ Szobák, apartmanok súgója írja le részletesen). Ez a szoba azt jelenti, hog
 
 Ezek a napok a másik szoba naptárában **csíkosan** jelennek meg. Ott nem lehet felszabadítani őket
 (különben ugyanaz az éjszaka kétszer kelne el) — a napra koppintva viszont látja, ki tartja, és egy
-gombbal átválthat annak a szobának a naptárára. Ha nincs egész szállásnak jelölt szobája, a
-szobák egymástól függetlenül telnek be, és csíkos nap sincs. Bármelyik szoba törölhető a sora
-**„Törlés”** gombjával — az egész szállás is. A gomb előbb megerősítést kér, és felsorolja, mi vész
+gombbal átválthat annak a szobának a naptárára. Két szoba egymást nem zárja: azok egymástól
+függetlenül telnek be. Bármelyik szoba törölhető a sora **„Törlés”** gombjával; az egész ház csak
+akkor, ha már csak egy szobája van. A gomb előbb megerősítést kér, és felsorolja, mi vész
 el a szobával (lezárt napok, árak, naptár-szinkron, korábbi foglalások); a törlés az **„Igen,
 törlöm”** gombbal történik meg. Nem törölhető az utolsó szoba, az, amelyikre egy kérés még a
 döntésére (vagy egy ajánlata a vendég válaszára) vár, és az, amelyikhez elfogadott, le nem zárult

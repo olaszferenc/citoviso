@@ -5,7 +5,7 @@
 //   ① a hozzáférés: csak bejelentkezett tulaj, élő booking-modullal, és csak JSON-kérés
 //      (űrlap-POST-ot nem fogad — kereszt-oldali űrlap nem tud JSON-t küldeni);
 //   ② szakaszonkénti mentés a MEGLÉVŐ írás-függvényeken át — a DB-ből visszaolvasva:
-//      kiadás módja (szobánként / egyben is / csak egyben), szobák, alapár, „nem adok meg árat”,
+//      kiadás módja (szobánként — a ház is foglalható / csak egyben; ADR-XXXX), szobák, alapár, „nem adok meg árat”,
 //      időszak (a valódi normalizálással és hibaüzenettel), szabályok, IFA három állapota,
 //      értesítési cím (a rossz címet kimondja), lejárat;
 //   ③ a néma akadályok hangosan: „csak az időszakokban” időszak nélkül, időszak-minimum >
@@ -156,27 +156,30 @@ try {
   console.log("\n② szobák és kiadás módja");
   let st = (await api("/admin/booking-setup/save", { section: "rules", minNights: 1, maxNights: 30, horizon: 12, lead: 0 })).state;
   check("friss oldal: egyben, egy egység", st.mode === "single" && st.units.length === 1 && st.units[0]!.whole);
-  let r = await api("/admin/booking-setup/save", { section: "rooms", mode: "rooms", units: [{ id: null, whole: false, name: "", cap: 2 }] });
+  let r = await api("/admin/booking-setup/save", { section: "rooms", mode: "both", units: [{ id: null, whole: false, name: "", cap: 2 }] });
   check("névtelen szoba → valódi hibaüzenet, semmi nem íródik", !r.ok && r.errors.includes("Adjon nevet minden szobának.") && (await units(A.siteId)).length === 1, r.errors);
+  // ADR-XXXX: the former „rooms only" answer is gone — an older client's „rooms" means
+  // rooms + the whole house, like „Szobánként" (both) does now.
   r = await api("/admin/booking-setup/save", {
     section: "rooms", mode: "rooms",
     units: [{ id: null, whole: false, name: "Kertre néző apartman", cap: 4 }, { id: null, whole: false, name: "Padlásszoba", cap: 2 }],
   });
   let us = await units(A.siteId);
   const whole0 = us.find((u) => u.represents_whole);
-  check("szobánként: két új szoba, az egész szállás rejtve marad (nem törlődik)", r.ok && r.state.mode === "rooms" && us.length === 3 && !!whole0 && !whole0.is_whole_property, us.map((u) => [u.name, u.is_whole_property, u.represents_whole]));
+  check("szobánként (régi „rooms”): két új szoba + az egész ház FOGLALHATÓAN", r.ok && r.state.mode === "both" && us.length === 3 && !!whole0 && whole0.is_whole_property && !whole0.whole_only, us.map((u) => [u.name, u.is_whole_property, u.represents_whole]));
   const apt = us.find((u) => u.name === "Kertre néző apartman")!;
   const attic = us.find((u) => u.name === "Padlásszoba")!;
   check("férőhely mentve", apt.capacity === 4 && attic.capacity === 2);
   r = await api("/admin/booking-setup/save", { section: "rooms", mode: "both", units: [{ id: whole0!.id, whole: true, name: "x", cap: 6 }, { id: apt.id, whole: false, name: "Kertre néző apartman", cap: 4 }, { id: attic.id, whole: false, name: "Padlásszoba", cap: 2 }] });
   us = await units(A.siteId);
   let w = us.find((u) => u.id === whole0!.id)!;
-  check("szobánként és egyben is: az egész foglalható, nem csak-egyben, 6 fő", r.ok && r.state.mode === "both" && w.is_whole_property && !w.whole_only && w.capacity === 6 && w.name !== "x");
+  check("szobánként: az egész foglalható, nem csak-egyben, 6 fő", r.ok && r.state.mode === "both" && w.is_whole_property && !w.whole_only && w.capacity === 6 && w.name !== "x");
   r = await api("/admin/booking-setup/save", { section: "rooms", mode: "single", units: [{ id: whole0!.id, whole: true, name: "", cap: 6 }] });
   w = (await units(A.siteId)).find((u) => u.id === whole0!.id)!;
   check("egyben: az egész az egyetlen foglalható, a szobák bemutatásra (whole_only)", r.ok && r.state.mode === "single" && w.is_whole_property && w.whole_only);
-  r = await api("/admin/booking-setup/save", { section: "rooms", mode: "rooms", units: [{ id: apt.id, whole: false, name: "Kertre néző apartman", cap: 4 }, { id: attic.id, whole: false, name: "Padlásszoba", cap: 2 }] });
-  check("vissza szobánként", r.ok && r.state.mode === "rooms" && (await units(A.siteId)).length === 3);
+  r = await api("/admin/booking-setup/save", { section: "rooms", mode: "both", units: [{ id: apt.id, whole: false, name: "Kertre néző apartman", cap: 4 }, { id: attic.id, whole: false, name: "Padlásszoba", cap: 2 }] });
+  w = (await units(A.siteId)).find((u) => u.id === whole0!.id)!;
+  check("vissza szobánként: a ház foglalható marad, a csak-egyben lement", r.ok && r.state.mode === "both" && (await units(A.siteId)).length === 3 && w.is_whole_property && !w.whole_only);
 
   // ── ② prices + seasons ─────────────────────────────────────────────────────
   console.log("\n② árak és időszakok");
@@ -326,9 +329,10 @@ try {
         check("asztali: a Segítő jobb oldalt látszik, az alsó sáv nem", await p.locator(".bs-chat").isVisible() && !(await p.locator("[data-ask]").isVisible()));
       }
       // first section: choose "Szobánként", name the room, save → prices opens
-      await p.click('[data-opt="mode"][data-val="rooms"]');
+      check(`${name}: két válasz, nincs „csak szobánként” (ADR-XXXX)`, (await p.locator('[data-opt="mode"]').count()) === 2 && (await p.locator('[data-opt="mode"][data-val="rooms"]').count()) === 0);
+      await p.click('[data-opt="mode"][data-val="both"]');
       await p.fill('[data-k="name"]', "Erdei szoba");
-      await p.fill('[data-k="cap"] >> nth=0', "3");
+      await p.fill('.bs-unit:has([data-k="name"]) [data-k="cap"]', "3");
       await p.click('[data-next="prices"]');
       await p.waitForSelector('.bs-sec[data-s="prices"].is-open');
       const bAfter = await units(B.siteId);

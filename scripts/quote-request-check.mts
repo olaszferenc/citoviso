@@ -139,13 +139,14 @@ try {
     const note = page.locator(".cit-book__note").first();
 
     // ⑥ ÁRAZOTT: semmi nem változik
-    await sel.selectOption({ index: 0 }); await page.waitForTimeout(700);
+    // by id, not index: two rooms have the whole house beside them in the picker (ADR-XXXX)
+    await sel.selectOption(priced.id); await page.waitForTimeout(700);
     check("⑥ árazott egységnél megjelenik az összeg", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));
     check("⑥ …a gomb foglalást ígér", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());
     check("⑥ …és az alatta álló mondat is", /véglegessé/.test(await note.innerText()));
 
     // ②③④ ÁRAZATLAN: a néma üresség helyén magyarázat, a gomb és az ígéret EGYÜTT vált
-    await sel.selectOption({ index: 1 }); await page.waitForTimeout(900);
+    await sel.selectOption(unpriced.id); await page.waitForTimeout(900);
     const quoteTxt = await page.locator("[data-quote]").innerText();
     check("② az üresség helyén MAGYARÁZAT áll", /egyedi árat ad/.test(quoteTxt), quoteTxt.slice(0, 120));
     check("② …és kimondja, hogy ez még nem kötelezettség", /nem vállal fizetési kötelezettséget/.test(quoteTxt));
@@ -182,7 +183,7 @@ try {
 
     // ⑥ vissza — a jelzés ne ragadjon be (telefonon „Módosítom a napokat” → vissza az 1. lépésbe, ahol a választó áll)
     if (await page.locator(".cit-book__edit").isVisible()) { await page.click(".cit-book__edit"); await page.waitForTimeout(300); }
-    await sel.selectOption({ index: 0 }); await page.waitForTimeout(900);
+    await sel.selectOption(priced.id); await page.waitForTimeout(900);
     check("⑥ visszaváltva a gomb ÚJRA foglalást ígér (nem ragad be)", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());
     check("⑥ …és az ár is visszajön", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));
     check("nincs JS-hiba", jsErr.length === 0, jsErr);

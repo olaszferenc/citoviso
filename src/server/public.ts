@@ -157,6 +157,7 @@ import {
   reviewThanksPage,
   reviewVerdictPage,
   reviewDecideConfirmPage,
+  type HouseSaved,
 } from "./moduleConfigViews.js";
 import { createReview, decideReview, getReviews, peekReviewDecision } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
@@ -168,9 +169,10 @@ import {
   setUnitAmenities,
   setUnitSeasonalOnly,
   setUnitPriceOnRequest,
-  setWholeProperty,
   settleFormerWhole,
-  futureAcceptedBookings,
+  settleHouse,
+  setHouseOnly,
+  DEFAULT_UNIT_NAME,
   getUnits,
   adminUnitOrder,
   bookableUnits,
@@ -1860,10 +1862,18 @@ async function serveAdmin(
           flash: flashUnit
             ? { state: state as NonNullable<NewUnitView["flash"]>["state"], unitId: flashUnit.id, unitName: flashUnit.name }
             : null,
-          // ADR-0256: the second question names the running bookings of the only unit so far.
-          formerWholeBookings: await (async () => {
-            const only = await getUnits(site.id);
-            return only.length === 1 ? futureAcceptedBookings(only[0]!.id) : 0;
+          // ADR-XXXX: the whole-house card's price line and what was just saved on it.
+          house: await (async () => {
+            const h = (await getUnits(site.id)).find((u) => u.representsWhole && u.isWholeProperty);
+            if (!h) return null;
+            const rows = await getUnitPrices(h.id);
+            const base = rows.find((p) => p.isBase && !p.validFrom)?.amount ?? null;
+            const saved = q.get("haz");
+            return {
+              base,
+              otherPrices: rows.filter((p) => !(p.isBase && !p.validFrom)).length,
+              saved: saved && ["ar", "nincsar", "csak", "mindketto"].includes(saved) ? (saved as HouseSaved) : null,
+            };
           })(),
         };
       }
@@ -3368,49 +3378,26 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         return redirect(res, `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       } else {
         const before = await getUnits(siteId);
-        const whole = form.get("whole");
-        // ADR-0256 (approved plan whole-property-second-question): on "Nem" the owner also
-        // says what the unit so far WAS — his first room (with a name) or nothing he lets
-        // (hidden from the guest). The browser checks this before sending; this is the
-        // same rule for a form sent without JS, and it refuses BEFORE anything is written,
-        // so a half-answered form never leaves a new room behind with the old unit unsettled.
+        // ADR-XXXX: when the second unit is added to a lone unit that stands for the place
+        // AND carries a name the owner gave it, only the owner knows what it is — the whole
+        // house (it stays, and the new unit is the first room) or his first room (then the
+        // whole house is created next to the two rooms). The default-named unit is the house.
+        // Refused BEFORE anything is written, so a half-answered form leaves nothing behind.
+        const lone = before.length === 1 ? before[0]! : null;
+        const asks = !!lone && lone.representsWhole && lone.name !== DEFAULT_UNIT_NAME && !!name.trim();
         const first = form.get("first");
-        const firstName = (form.get("first_name") ?? "").replace(/\s+/g, " ").trim();
-        if (before.length === 1 && whole === "nem" && name.trim()) {
-          const why =
-            first !== "szoba" && first !== "rejt"
-              ? `Válassza ki, mi legyen az eddigi „${before[0]!.name}” egységgel.`
-              : first === "szoba" && !firstName
-                ? "Adjon nevet az első szobájának."
-                : first === "szoba" && firstName.toLowerCase() === name.replace(/\s+/g, " ").trim().toLowerCase()
-                  ? "A két szoba neve nem lehet ugyanaz."
-                  : "";
-          if (why) {
-            const back = form.get("back") === "rooms" ? "rooms" : "booking";
-            return redirect(res, `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(why)}`);
-          }
+        if (asks && first !== "egesz" && first !== "szoba") {
+          const back = form.get("back") === "rooms" ? "rooms" : "booking";
+          const why = `Mondja meg, mi az eddigi „${lone!.name}”: az egész ház, vagy az első szobája.`;
+          return redirect(res, `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(why)}`);
         }
         const created = await createUnit(siteId, name, cap, form.get("description"));
-        // ADR-0232: the SECOND unit is the moment the owner decides whether the place is
-        // also let as one — the add form asks (required radio), the answer sets or clears
-        // the flag on the unit that was there before. No answer (an older form, or a
-        // 3rd+ unit) leaves the flag as it is.
-        // ADR-0257: "csak" = the place is let ONLY as one — the unit so far is the whole
-        // place and the one offer; the new room (and every later one) is presentation.
-        if (created && before.length === 1 && (whole === "igen" || whole === "nem" || whole === "csak")) {
-          const letAsOne = whole === "igen" || whole === "csak";
-          await setWholeProperty(siteId, letAsOne ? before[0]!.id : null, whole === "csak");
-          await settleFormerWhole(
-            siteId,
-            before[0]!.id,
-            letAsOne ? "egesz" : first === "rejt" ? "rejt" : "szoba",
-            firstName,
-          );
-        }
+        if (created && asks && first === "szoba") await settleFormerWhole(siteId, lone!.id, "szoba", "");
+        // ADR-XXXX: the whole house exists, separate from the rooms, and is let as one.
+        if (created) await settleHouse(siteId);
         // ADR-0257 (owner: „szobák nem kérnek árát"): a presentation room is asked no price —
         // the form shows no field, and a price sent anyway (an old form) is not stored.
-        const presentation =
-          whole === "csak" || (before.length > 1 && before.some((u) => u.wholeOnly && u.isWholeProperty));
+        const presentation = before.some((u) => u.wholeOnly && u.isWholeProperty);
         // ADR-0208 ⑥.3 (approved plan price-on-request ②): with pricing on, the new-unit
         // row asks for the price or "nem adok meg árat". ⛔ It never refuses the save
         // (ADR-0193 ①) — a unit without either is created, and the flash says what
@@ -3460,23 +3447,38 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=${back}&saved=1`);
   }
-  // POST /admin/units/whole — ADR-0232: which unit is the whole place, if any (the card
-  // above the rooms grid, approved plan whole-property-choice B). Unchecked → none.
+  // POST /admin/units/whole — ADR-XXXX: the whole-house card above the rooms grid. Two
+  // separate forms post here: `what=only` (the „Csak egyben adom ki" box; unchecked = a guest
+  // books a room or the whole house) and `what=price` (the house's base price; empty = none,
+  // the guest asks for a quote). Which unit is the house is never asked — settleHouse knows.
   if (req.method === "POST" && pathname === "/admin/units/whole") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
+    let saved = "";
     if (siteId) {
-      const unit = form.get("unit") ?? "";
-      // ADR-0257: three states (none / also / only); an older form sends the `on` checkbox.
-      const mode = form.get("mode") ?? (form.get("on") !== null ? "also" : "none");
-      const on = (mode === "also" || mode === "only") && unit && (await unitBelongsToSite(siteId, unit));
-      await setWholeProperty(siteId, on ? unit : null, mode === "only");
+      if (form.get("what") === "price") {
+        await settleHouse(siteId);
+        const house = (await getUnits(siteId)).find((u) => u.representsWhole && u.isWholeProperty);
+        const amount = parseOfferAmount(form.get("price") ?? "");
+        if (!house) {
+          return redirect(res, `/admin?tab=modulok&m=rooms&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
+        }
+        if (amount.error) {
+          const why = "Az ár egy pozitív egész szám legyen (pl. 60 000).";
+          return redirect(res, `/admin?tab=modulok&m=rooms&hiba=${encodeURIComponent(why)}#egesz-haz`);
+        }
+        await setBasePrice(house.id, amount.value ?? null);
+        saved = amount.value ? "ar" : "nincsar";
+      } else {
+        await setHouseOnly(siteId, form.get("only") !== null);
+        saved = form.get("only") !== null ? "csak" : "mindketto";
+      }
     }
     // The flag changes what the guest's calendar blocks and what the room card says —
     // the snapshot is rebuilt like after any unit edit.
-    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=rooms&saved=1#szobak");
+    return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=rooms&saved=1&haz=${saved}#egesz-haz`);
   }
   // POST /admin/photos/order — reorder; photos[0] is the cover in every template.
   if (req.method === "POST" && pathname === "/admin/photos/order") {

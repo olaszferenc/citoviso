@@ -4,9 +4,8 @@
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver, a RENDERELT lapon — dev-bérlőt
 // NEM renderel újra):
-//   ① a 2. szoba felvételekor a kérdés HARMADIK válasza („csak") ott van, és böngészőben
-//      (390 px, touch) a választás eltünteti az ár-mezőt, és kimondja, miért nincs;
-//   ② „csak" → az eddigi egység az egész ÉS csak egyben kiadó; a felküldött ár NEM tárolódik;
+//   ① ADR-XXXX: a 2. szobánál nincs háromutas kérdés (a „csak" a ház kártyáján egy pipa);
+//   ② a pipa → az eddigi egység az egész ÉS csak egyben kiadó;
 //      a kizárás (`blockingUnitIds`) az ADR-0114 szerint változatlan;
 //   ③ a vendég-lap: a foglalási választóban CSAK a ház; a bemutató szoba kártyája ott van
 //      (látszik), de ár-sora nincs — akkor sem, ha a szobán régről maradt ár (az ártáblában sem);
@@ -112,48 +111,22 @@ try {
   const house = (await ensureUnits(site.id))[0]!;
   await setBasePrice(house.id, 62000);
 
-  // ── ① the third answer, in a real browser ─────────────────────────────
-  console.log("\n① a harmadik válasz böngészőben (390 px, touch)");
+  // ── ① ADR-XXXX: no three-way question any more ───────────────────────
+  console.log("\n① a 2. szobánál nincs háromutas kérdés (ADR-XXXX)");
   let html = await get(ROOMS);
-  check("a kérdésben ott a harmadik válasz (csak, kötelező rádió)", /name="whole" value="csak" required/.test(html));
-  check("…a szövege: „Csak egyben adom ki — a szobák bemutatásra”", html.includes("Csak egyben adom ki — a szobák bemutatásra"));
-  check("az „igen” és a „nem” megmaradt", /name="whole" value="igen" required/.test(html) && /name="whole" value="nem" required/.test(html));
-  {
-    const { chromium } = await import("playwright-core");
-    const browser = await chromium.launch({ executablePath: config.chromiumPath });
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-    await ctx.addCookies([{ name: "cit_session", value: COOKIE.split("=").slice(1).join("="), url: BASE }]);
-    const page = await ctx.newPage();
-    const jsErr: string[] = [];
-    page.on("pageerror", (e) => jsErr.push(e.message));
-    await page.goto(BASE + ROOMS, { waitUntil: "networkidle" });
-    await page.locator("details.unit-more > summary").first().click();
-    const form = page.locator("form.unit-row--new").first();
-    const price = form.locator('input[name="price"]');
-    const note = form.locator("[data-cit-when-csak]");
-    check("választás előtt az ár-mező látható", await price.isVisible());
-    check("…a „nem kell ár” mondat rejtett", !(await note.isVisible()));
-    await form.locator('input[name="whole"][value="csak"]').check();
-    check("„csak” → az ár-mező ELTŰNT", !(await price.isVisible()));
-    check("„csak” → a „nem adok meg árat” pipa is", !(await form.locator('input[name="price_on_request"]').isVisible()));
-    check("„csak” → kimondja, miért nincs ár", (await note.isVisible()) && /árat csak arra kérünk/.test(await note.innerText()));
-    await form.locator('input[name="whole"][value="igen"]').check();
-    check("„igen” → az ár-mező visszajön (a próba tud pirosat adni)", await price.isVisible());
-    check("nincs JS-hiba", jsErr.length === 0, jsErr);
-    await browser.close();
-    check("a böngésző-próba nem írt semmit (1 egység)", (await getUnits(site.id)).length === 1);
-  }
+  check("nincs „csak” válasz a felvevő űrlapon", !/name="whole" value="csak"/.test(html));
+  check("az alapnevű egységnél nincs kérdés sem", !html.includes("data-cit-whole-q"));
 
   // ── ② the answer is stored ────────────────────────────────────────────
-  console.log("\n② „csak” → a ház az egyetlen ajánlat");
-  await post("/admin/units/save", { name: "Diófa szoba", capacity: "3", back: "rooms", whole: "csak", price: "18000" });
+  console.log("\n② „Csak egyben adom ki” a ház kártyáján → a ház az egyetlen ajánlat");
+  await post("/admin/units/save", { name: "Diófa szoba", capacity: "3", back: "rooms" });
+  await post("/admin/units/whole", { what: "only", only: "1" });
   let units = await getUnits(site.id);
   const room = units.find((u) => u.name === "Diófa szoba")!;
   const h1 = units.find((u) => u.id === house.id)!;
   check("2 egység", units.length === 2, units.length);
   check("a ház: az egész, csak egyben kiadó, maga a hely", h1.isWholeProperty && h1.wholeOnly && h1.representsWhole, h1);
   check("a szoba: nem egész, nem whole_only", !room.isWholeProperty && !room.wholeOnly);
-  check("a felküldött ár NEM tárolódott a szobán", ((await getSitePrices(site.id)).get(room.id) ?? []).length === 0);
   check("a szoba nem foglalható, a ház igen", !isBookableUnit(room, units) && isBookableUnit(h1, units));
   check("bookableUnits = csak a ház", bookableUnits(units).map((u) => u.id).join() === house.id);
   check("a kizárás változatlan: a ház mindkettőt zárja", (await blockingUnitIds(house.id)).sort().join() === [house.id, room.id].sort().join());
@@ -197,10 +170,13 @@ try {
   // ── ⑥ the rooms screen ────────────────────────────────────────────────
   console.log("\n⑥ a Szobák lap");
   html = await get(ROOMS);
-  check("a kártya „Csak egyben adom ki” állásban", /name="mode" value="only" checked/.test(html));
+  check("a ház kártyáján a „Csak egyben adom ki” bepipálva", /name="only" value="1" checked/.test(html));
+  check("…és kimondja: csak az egész házat foglalhatja", /A vendég csak az egész házat foglalhatja/.test(html));
   check("a rácson a szoba: „csak bemutatásra”", /Diófa szoba<\/b><span>[^<]*csak bemutatásra/.test(grid(html)));
-  check("a rácson a ház: „csak egyben kiadó”", new RegExp(`${h1.name}</b><span>[^<]*csak egyben kiadó`).test(grid(html)));
-  check("a 3. szoba űrlapján nincs ár-mező és nincs „nem adok meg árat”", !/name="price"/.test(html) && !/name="price_on_request"/.test(html));
+  check("a ház NEM kártya a rácson (ADR-XXXX)", !grid(html).includes(`data-rs-card="${h1.id}"`));
+  // the add form only — the whole-house card above has its OWN price field (ADR-XXXX)
+  const addForm = html.slice(html.indexOf('class="unit-more"'));
+  check("a 3. szoba űrlapján nincs ár-mező és nincs „nem adok meg árat”", !/name="price"/.test(addForm) && !/name="price_on_request"/.test(addForm));
   check("…helyette a mondat", /data-cit-new-noprice/.test(html));
   await post("/admin/units/save", { name: "Tetőtéri szoba", capacity: "2", back: "rooms", price: "15000" });
   units = await getUnits(site.id);
@@ -226,8 +202,8 @@ try {
   }
 
   // ── ⑦ switched on the card; negative control ──────────────────────────
-  console.log("\n⑦ a kártyán átállítva „Egyben is kiadom” — negatív kontroll");
-  await post("/admin/units/whole", { mode: "also", unit: house.id });
+  console.log("\n⑦ a pipa kivéve — negatív kontroll");
+  await post("/admin/units/whole", { what: "only" });
   units = await getUnits(site.id);
   const h2 = units.find((u) => u.id === house.id)!;
   check("a ház egész marad, de már nem csak egyben", h2.isWholeProperty && !h2.wholeOnly);
@@ -250,15 +226,13 @@ try {
   check("negatív kontroll: a szobára nem „Ismeretlen egység”", !(rRoom2.status === 400 && /Ismeretlen egység/.test(await rRoom2.text())));
   await db.deleteFrom("booking_request").where("site_id", "=", site.id).execute();
   // back to only, then off
-  await post("/admin/units/whole", { mode: "only", unit: house.id });
+  await post("/admin/units/whole", { what: "only", only: "1" });
   check("vissza „csak egyben”", (await getUnits(site.id)).find((u) => u.id === house.id)!.wholeOnly);
+  // ADR-XXXX: „Nem adom ki egyben" no longer exists — an older form's „none" leaves the house
+  // bookable (a guest books a room or the whole house), only the „only" box clears.
   await post("/admin/units/whole", { mode: "none", unit: house.id });
-  units = await getUnits(site.id);
-  check("„Nem adom ki egyben” → se egész, se whole_only", units.every((u) => !u.isWholeProperty && !u.wholeOnly));
-  // an older form (the `on` switch) still means "also"
-  await post("/admin/units/whole", { on: "1", unit: house.id });
   const h3 = (await getUnits(site.id)).find((u) => u.id === house.id)!;
-  check("a régi űrlap (`on`) → „Egyben is kiadom”", h3.isWholeProperty && !h3.wholeOnly);
+  check("a régi „none” űrlap → a ház foglalható marad, csak a pipa megy le", h3.isWholeProperty && h3.representsWhole && !h3.wholeOnly);
 
   // ── ⑧ the DB constraint ───────────────────────────────────────────────
   console.log("\n⑧ a DB-kényszer");

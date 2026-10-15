@@ -136,6 +136,10 @@ try {
   const small = await db.insertInto("site_unit").values({ site_id: site.id, name: "Kis faház", capacity: 2, sort_order: 1, is_whole_property: false }).returning("id").executeTakeFirstOrThrow();
   const big = await db.insertInto("site_unit").values({ site_id: site.id, name: "Nagy lakosztály", capacity: 6, sort_order: 2 }).returning("id").executeTakeFirstOrThrow();
   const attic = await db.insertInto("site_unit").values({ site_id: site.id, name: "Tetőtéri szoba", capacity: 3, sort_order: 3 }).returning("id").executeTakeFirstOrThrow();
+  // ADR-XXXX: rooms always have the whole house beside them — created here WITH a price, so the
+  // counts below are about the three rooms (an unpriced house would be one more gap).
+  const house = await db.insertInto("site_unit").values({ site_id: site.id, name: "A szállás egésze", capacity: 11, sort_order: 0, is_whole_property: true, represents_whole: true }).returning("id").executeTakeFirstOrThrow();
+  await setBasePrice(house.id, 40_000);
   const tu = await db.insertInto("tenant_user").values({ tenant_id: tenant.id, username: `por_${stamp}`, contact_email: `o-${stamp}@example.com`, password_hash: null }).returning("id").executeTakeFirstOrThrow();
   ids.tuId = tu.id;
   await setBasePrice(small.id, 15_000);

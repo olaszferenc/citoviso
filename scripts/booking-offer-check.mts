@@ -523,7 +523,12 @@ try {
 
   // ── S⑥ ADR-0257: a whole-only house must not silently become bookable ──────────
   console.log("\nS⑥ Csak egyben kiadó ház — az ajánlat nem kapcsolja foglalhatóvá");
-  const house = await db.insertInto("site_unit").values({ site_id: site.id, name: "A szállás egésze", capacity: 8, sort_order: 0, is_whole_property: true, represents_whole: true, whole_only: true }).returning("id").executeTakeFirstOrThrow();
+  // ADR-XXXX: two rooms already have the whole house beside them (settleHouse ran on an admin
+  // visit) — that one is let only as one here; a site never has two.
+  const existing = await db.selectFrom("site_unit").select("id").where("site_id", "=", site.id).where("represents_whole", "=", true).executeTakeFirst();
+  const house = existing
+    ? (await db.updateTable("site_unit").set({ name: "A szállás egésze", capacity: 8, is_whole_property: true, whole_only: true }).where("id", "=", existing.id).returning("id").executeTakeFirstOrThrow())
+    : await db.insertInto("site_unit").values({ site_id: site.id, name: "A szállás egésze", capacity: 8, sort_order: 0, is_whole_property: true, represents_whole: true, whole_only: true }).returning("id").executeTakeFirstOrThrow();
   await rerenderTenantSnapshot(tenant.id, { as: "live" });
   const hq = await mk(house.id, addDays(ARR, 90), addDays(ARR, 92));
   const hView = await req.loadOfferView(await tok(hq));

@@ -39,8 +39,9 @@ Ugyanez az oldal való a későbbi módosításra is: ha egy év múlva emelné 
 ## Szállás és szobák
 
 Először azt kérdezzük, hogyan adja ki a szállását: **„Egyben, egy egységként”** (az egész ház
-egyszerre egy vendégkörnek), **„Szobánként”**, vagy **„Szobánként, és egyben is”** — ennél a
-kettő kizárja egymást: ha egy szoba foglalt, aznap az egész ház nem foglalható, és fordítva.
+egyszerre egy vendégkörnek) vagy **„Szobánként”**. Szobánként a vendég egy szobát vagy az egész
+házat foglalhatja; a kettő kizárja egymást: ha egy szoba foglalt, aznap az egész ház nem
+foglalható, és fordítva.
 Ha csak egyben adja ki, de a szobáit be szeretné mutatni, az elsőt válassza.
 
 Utána a szobák nevét és a férőhelyet adja meg; az **„+ Újabb szoba”** gombbal vehet fel újat.

@@ -28,10 +28,10 @@ A vendég-oldali rész (`moduleSections.ts`, `templateKit.ts`, `cit-runtime.js`)
 4. **A kizárás változatlan** (`blockingUnitIds`, ADR-0114): egy régi, még élő szobafoglalás továbbra is zárja a házat.
 
 ### Admin (X)
-5. A 2. szoba felvételekor a kérdés harmadik válasza: **„Csak egyben adom ki — a szobák bemutatásra”**. Választásakor az
+5. ⛔ *FELÜLÍRVA (ADR-XXXX, 2026-10-15): a 2. szobánál nincs háromutas kérdés; a „Csak egyben adom ki” a ház kártyáján egy pipa (`whole-house-simple`).* Eredetileg: a kérdés harmadik válasza „Csak egyben adom ki — a szobák bemutatásra”. Választásakor az
    ár-mező eltűnik (CSS `:has`, JS nélkül is), és a helyén a mondat: **„Ennek a szobának nem kell ár”** — a vendég csak az egész házat foglalja, árat csak arra kérünk.
-6. A Szobák lap „Az egész szállás egyben” kártyáján a kapcsoló helyett három állás: **„Nem adom ki egyben”** ·
-   **„Egyben is kiadom”** · **„Csak egyben adom ki”** — itt állítható át később. Egy régi űrlap `on` mezője „Egyben is kiadom”.
+6. ⛔ *FELÜLÍRVA (ADR-XXXX): a három állás helyett EGY pipa a ház kártyáján:* **„Csak egyben adom ki”** — itt állítható át később.
+   (Eredetileg: „Nem adom ki egyben” · „Egyben is kiadom” · „Csak egyben adom ki”.)
 7. A rácson a ház **„csak egyben kiadó”**, a szobák **„csak bemutatásra”** jelölést kapnak; az Árak lapon egy mondat mondja meg,
    miért nincs a szobáknak kártyája.
 

@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-15_egesz_haz_egyszerusitve.md](2026-10-15_egesz_haz_egyszerusitve.md) — 2026-10-15 — Az egész ház egyszerűsítve (Szobák kártya, varázsló)
 - [2026-10-15_belepes_visszatalalas.md](2026-10-15_belepes_visszatalalas.md) — 2026-10-15 — A szállásadó visszatalál a belépéshez (tulaj-lelet, [TESZT] Matróz)
 - [2026-10-14_teszt3_javito_szal.md](2026-10-14_teszt3_javito_szal.md) — 2026-10-14 — Éles végigteszt (teszt3) leleteinek javítása — SUB cit48b0dc69
 - [2026-10-14_operator_proba_foglalas_lathato.md](2026-10-14_operator_proba_foglalas_lathato.md) — Az operátor látja a próbát és a foglalást, és értesítést kap (ADR-0386) — 2026-10-14

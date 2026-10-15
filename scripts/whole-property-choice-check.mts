@@ -1,25 +1,24 @@
-// Az „egész szállás” VÁLASZTHATÓ egység — ŐR
-// (ADR-0232, jóváhagyott terv: assets/design-refs/tenant-admin/whole-property-choice/, „B").
+// AZ EGÉSZ HÁZ — EGYSZERŰSÍTVE — ŐR
+// (ADR-XXXX, jóváhagyott terv: assets/design-refs/tenant-admin/whole-house-simple/, tulaj 2026-10-15:
+// „csináld"; felülírja az ADR-0232 kártyáját és „melyik szoba" választóját, az ADR-0256 rejtését).
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver, a RENDERELT lapon):
-//   ① EGY egységnél a fogalom láthatatlan: nincs kártya, nincs „az egész ház” a rácson,
-//      nincs törlés-gomb, de az add-form felteszi a kérdést (kötelező rádió);
-//   ② a 2. egység felvétele „nem” válasszal: SENKI nem az egész → a kizárás
-//      (`blockingUnitIds`) mindkét egységnél csak önmaga; „igen” → az első az egész;
-//   ③ a kártya (POST /admin/units/whole): bekapcsolva + egység → a jelölés ÁTTEHETŐ;
-//      kikapcsolva → nincs jelölt, a rács sehol nem ír „az egész ház”-at;
-//   ④ az egész szállás TÖRÖLHETŐ (ADR-0114 ⑦ hatályon kívül), utána 1 egység marad és a
-//      kártya eltűnik; az utolsó egység törlése elutasítva;
-//   ⑤ a tájékoztató szumma az Árak lapon: az egész alatt a szobák alapárának összege,
-//      egész nélkül NINCS ilyen sor (a vendég-lapon SOHA — mérve a snapshoton);
-//   ⑥ `ensureUnits` nem jelöl vissza: két jelöletlen egység jelöletlen marad;
-//   ⑦ negatív kontroll: `peekUnits` sem talál ki egészet.
-//   ⑧ ADR-0256 (terv: design-refs/tenant-admin/whole-property-second-question/, „B”): a „Nem”
-//      után a MÁSODIK kérdés — hiányos válasznál a szerver SEMMIT nem ír (három kimondott
-//      üzenet); a futó foglalás VALÓDI számmal áll a lapon (0-nál nincs mondat); „rejtse el” →
-//      az egység megmarad, a foglalása él, de a vendég nem látja (választó, szoba-kártya),
-//      és új kérést sem vesz fel (/api/foglalas 400); a kártyán visszakapcsolva újra látszik;
-//      „ez az első szobám” → átnevezve, új slug, látható; + negatív kontroll a predikátumra.
+//   ① EGY egységnél nincs ház-kártya; az alapnevű egységnél nincs kérdés; a tulaj által
+//      átnevezett egyetlen egységnél két KÖTELEZŐ rádió: „az egész ház” / „az első szobám”;
+//   ② a válasz nélküli felvételt a szerver elutasítja, és SEMMIT nem ír;
+//   ③ „az egész ház” → az eddigi marad a ház, az új az első szoba; a ház és a szoba kizárja
+//      egymást, két szoba egymást nem (`blockingUnitIds`);
+//   ④ a Szobák lap: ház-kártya, NINCS „melyik szoba” választó és háromutas rádió, a ház nem
+//      kártya a rácson; a ház alapára a kártyán: hibás → elutasítva, jó → mentve, üres → törölve;
+//   ⑤ „Csak egyben adom ki” pipa ki/be (`whole_only`);
+//   ⑥ több szobánál a ház nem törölhető, egy szobánál igen;
+//   ⑦ „az első szobám” → az eddigi szoba lesz, a ház KÜLÖN jön létre (alapnévvel, ár nélkül);
+//   ⑧ `ensureUnits` rendbe teszi a régi adatot: a régi választóval szobára tett jelölés,
+//      a rejtett („nem adom ki egyben”) ház, ház nélküli két szoba — negatív kontrollal:
+//      `peekUnits` nem ír; egy szoba ház nélkül marad;
+//   ⑨ a vendég-lap választójában a szobák ÉS a ház; az Árak lapon a tulaj-oldali szumma
+//      (ADR-0232 ⑦) megvan, a vendég-lapon nincs;
+//   ⑩ böngészőben (390 px, touch): a pipa magától ment, 0 JS-hiba.
 //
 // Usage: npx tsx scripts/whole-property-choice-check.mts
 
@@ -35,9 +34,9 @@ import type { Server } from "node:http";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const { db, pool } = await import("../src/db/client.js");
 const { setTenantModules } = await import("../src/tenant/modules.js");
-const { setBasePrice } = await import("../src/tenant/prices.js");
+const { setBasePrice, getSitePrices } = await import("../src/tenant/prices.js");
 const { rerenderTenantSnapshot } = await import("../src/tenant/editor.js");
-const { ensureUnits, getUnits, peekUnits, deleteUnit, setWholeProperty, isGuestVisibleUnit, guestUnits } = await import("../src/tenant/units.js");
+const { ensureUnits, getUnits, peekUnits, deleteUnit, DEFAULT_UNIT_NAME } = await import("../src/tenant/units.js");
 const { blockingUnitIds } = await import("../src/tenant/unitScope.js");
 const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
 
@@ -99,224 +98,162 @@ try {
     const j = html.indexOf('class="unit-more"', i); // the add form under the grid (room-add-B)
     return i < 0 ? "" : html.slice(i, j < 0 ? undefined : j);
   };
-  const wholeOf = async (): Promise<string | null> => (await getUnits(site.id)).find((u) => u.isWholeProperty)?.id ?? null;
 
-  // ── ① one unit: the concept is invisible ──────────────────────────────
+  const unitsAttr = (h: string) => (/data-cit-units="([^"]*)"/.exec(h)?.[1] ?? "").replace(/&quot;/g, '"');
+  const snapshot = async (): Promise<string> => {
+    if (!(await rerenderTenantSnapshot(tenant.id, { as: "live" }))) throw new Error("render bukott");
+    return readFile(path.join(siteDir, "index.html"), "utf8");
+  };
+
+  // ── ① one unit ─────────────────────────────────────────────────────────
   console.log("\n① egy egység");
   const first = (await ensureUnits(site.id))[0]!;
-  check("ensureUnits az első (egyetlen) egységet egészként hozza létre", first.isWholeProperty === true);
   let html = await get(ROOMS);
-  check("nincs kártya a rács fölött", !html.includes("data-cit-whole-card"));
-  check("a rácson nincs „az egész ház”", !/az egész ház/.test(grid(html)));
-  check("nincs törlés-gomb (az utolsó egység)", !html.includes('formaction="/admin/units/delete"'));
-  check("az add-form felteszi a kérdést", html.includes("data-cit-whole-q"));
-  check("a kérdés két KÖTELEZŐ rádió (igen/nem)", /name="whole" value="igen" required/.test(html) && /name="whole" value="nem" required/.test(html));
-  check("a kérdés megnevezi az eddigi egységet", html.includes(`Eddig egy szobája volt: <b>${first.name}</b>`));
+  check("nincs ház-kártya", !html.includes("data-cit-whole-card"));
+  check("az alapnevű egységnél nincs kérdés", !html.includes("data-cit-whole-q"));
+  await db.updateTable("site_unit").set({ name: "Matróz ház" }).where("id", "=", first.id).execute();
+  html = await get(ROOMS);
+  check("átnevezett egyetlen egység → kérdés", html.includes("data-cit-whole-q"));
+  check("…két KÖTELEZŐ rádió (egesz / szoba)", /name="first" value="egesz" required/.test(html) && /name="first" value="szoba" required/.test(html));
+  check("…megnevezi az eddigi egységet", html.includes("Mi az eddigi „Matróz ház”?"));
+  check("nincs régi háromutas kérdés", !/name="whole"/.test(html));
 
-  // ── ①b the second question in a REAL browser (phone, touch) — ADR-0256 ──
-  // The server refuses a half answer (⑧), but the owner should hear it BEFORE sending, in
-  // words, and the name field must be a field (the radio rule once sized it 16×16 px).
-  console.log("\n①b a második kérdés böngészőben (390 px, touch)");
+  // ── ② no answer → nothing written ──────────────────────────────────────
+  console.log("\n② válasz nélkül");
+  let loc = await post("/admin/units/save", { name: "Szoba A", capacity: "2", back: "rooms" });
+  check("elutasítva, kimondott üzenettel", /hiba=/.test(loc) && decodeURIComponent(loc).includes("Mondja meg, mi az eddigi „Matróz ház”"), loc);
+  check("…és SEMMI nem íródott (1 egység)", (await getUnits(site.id)).length === 1);
+
+  // ── ③ „az egész ház” ───────────────────────────────────────────────────
+  console.log("\n③ „az egész ház”");
+  await post("/admin/units/save", { name: "Szoba A", capacity: "2", back: "rooms", first: "egesz" });
+  let units = await getUnits(site.id);
+  const house = units.find((u) => u.id === first.id)!;
+  const roomA = units.find((u) => u.name === "Szoba A")!;
+  check("2 egység", units.length === 2, units.length);
+  check("az eddigi a ház: a hely, egyben kiadó, nem csak-egyben", house.representsWhole && house.isWholeProperty && !house.wholeOnly, house);
+  check("az új a szoba", !roomA.representsWhole && !roomA.isWholeProperty);
+  await post("/admin/units/save", { name: "Szoba C", capacity: "3", back: "rooms" });
+  units = await getUnits(site.id);
+  const roomC = units.find((u) => u.name === "Szoba C")!;
+  check("a 3. egységnél nincs kérdés, és nem jön második ház", units.filter((u) => u.representsWhole).length === 1 && units.length === 3);
+  check("a ház mindkét szobát zárja", (await blockingUnitIds(house.id)).sort().join() === [house.id, roomA.id, roomC.id].sort().join());
+  check("egy szoba a házat zárja, a másik szobát NEM", (await blockingUnitIds(roomA.id)).sort().join() === [house.id, roomA.id].sort().join());
+
+  // ── ④ the rooms screen + the house price ────────────────────────────────
+  console.log("\n④ a Szobák lap");
+  html = await get(ROOMS);
+  check("ház-kártya", html.includes("data-cit-whole-card") && html.includes('id="egesz-haz"'));
+  check("„egy szobát, vagy az egész házat” mondat", html.includes("A vendég foglalhat egy szobát, vagy az egész házat egyben."));
+  check("NINCS „melyik szoba” választó", !html.includes("data-cit-whole-pick") && !/melyik szoba/.test(html));
+  check("NINCS háromutas rádió", !/name="mode"/.test(html) && !html.includes("Egyben is kiadom") && !html.includes("Nem adom ki egyben"));
+  check("a ház NEM kártya a rácson", !grid(html).includes(`data-rs-card="${house.id}"`) && grid(html).includes(`data-rs-card="${roomA.id}"`));
+  check("a ház szerkesztője elérhető a kártyáról", html.includes(`href="#szoba-${house.id}"`) && html.includes(`id="szoba-${house.id}"`));
+  check("a kártya: 2 szoba · 5 fő", /2 szoba · 5 fő/.test(html));
+  check("ár nélkül: „a vendég árajánlatot kér”", html.includes("nincs megadva — a vendég árajánlatot kér"));
+  loc = await post("/admin/units/whole", { what: "price", price: "abc" });
+  check("hibás ár → elutasítva, kimondva", decodeURIComponent(loc).includes("Az ár egy pozitív egész szám legyen"), loc);
+  check("…és nem mentődött", ((await getSitePrices(site.id)).get(house.id) ?? []).length === 0);
+  loc = await post("/admin/units/whole", { what: "price", price: "60.000 Ft" });
+  check("jó ár (ezres pont, Ft) → mentve", ((await getSitePrices(site.id)).get(house.id) ?? []).some((p) => p.isBase && p.amount === 60000), loc);
+  html = await get(ROOMS + "&haz=ar");
+  check("a kártya mutatja az árat és azt, hogy mentve", /60[\s  ]000/.test(html) && html.includes("Mentve: az egész ház ára."));
+  await post("/admin/units/whole", { what: "price", price: "" });
+  check("üres ár → törölve", ((await getSitePrices(site.id)).get(house.id) ?? []).length === 0);
+  await setBasePrice(house.id, 60000);
+
+  // ── ⑤ „Csak egyben adom ki” ────────────────────────────────────────────
+  console.log("\n⑤ „Csak egyben adom ki”");
+  await post("/admin/units/whole", { what: "only", only: "1" });
+  check("bepipálva → whole_only", (await getUnits(site.id)).find((u) => u.id === house.id)!.wholeOnly);
+  html = await get(ROOMS);
+  check("a kártya kimondja", html.includes("A vendég csak az egész házat foglalhatja.") && /name="only" value="1" checked/.test(html));
+  await post("/admin/units/whole", { what: "only" });
+  const hOff = (await getUnits(site.id)).find((u) => u.id === house.id)!;
+  check("kivéve → a ház foglalható marad, csak a pipa megy le", hOff.isWholeProperty && hOff.representsWhole && !hOff.wholeOnly);
+
+  // ── ⑥ delete rules ─────────────────────────────────────────────────────
+  console.log("\n⑥ törlés");
+  const del = await deleteUnit(site.id, house.id);
+  check("két szobánál a ház NEM törölhető", !del.ok && /Az egész ház nem törölhető/.test(del.reason ?? ""), del);
+  check("egy szoba törölhető", (await deleteUnit(site.id, roomC.id)).ok);
+  check("…utána a ház is (egy szoba maradt)", (await deleteUnit(site.id, house.id)).ok);
+  units = await getUnits(site.id);
+  check("egy egység maradt: a szoba, ház nélkül — és ensureUnits sem csinál házat", units.length === 1 && (await ensureUnits(site.id)).length === 1);
+
+  // ── ⑦ „az első szobám” ─────────────────────────────────────────────────
+  console.log("\n⑦ „az első szobám”");
+  await db.updateTable("site_unit").set({ represents_whole: true, is_whole_property: true, name: "Nádas apartman" }).where("id", "=", roomA.id).execute();
+  await post("/admin/units/save", { name: "Szoba B", capacity: "2", back: "rooms", first: "szoba" });
+  units = await getUnits(site.id);
+  const nadas = units.find((u) => u.id === roomA.id)!;
+  const house2 = units.find((u) => u.representsWhole)!;
+  check("3 egység: két szoba + a ház", units.length === 3, units.map((u) => u.name));
+  check("az eddigi szoba lett (nevét megtartja)", !nadas.representsWhole && !nadas.isWholeProperty && nadas.name === "Nádas apartman", nadas);
+  check("a ház KÜLÖN jött létre, alapnévvel, foglalhatóan", !!house2 && house2.id !== roomA.id && house2.name === DEFAULT_UNIT_NAME && house2.isWholeProperty, house2);
+  check("…ár nélkül", ((await getSitePrices(site.id)).get(house2.id) ?? []).length === 0);
+
+  // ── ⑧ ensureUnits settles older data ───────────────────────────────────
+  console.log("\n⑧ régi adat rendbetétele");
+  const roomB = units.find((u) => u.name === "Szoba B")!;
+  // the removed picker: a ROOM marked as the whole place, no house
+  await db.deleteFrom("site_unit").where("id", "=", house2.id).execute();
+  await db.updateTable("site_unit").set({ is_whole_property: true, whole_only: true }).where("id", "=", roomB.id).execute();
+  const peekN = (await peekUnits(site.id)).length;
+  check("negatív kontroll: peekUnits nem ír", peekN === 2 && (await getUnits(site.id)).length === 2);
+  units = await ensureUnits(site.id);
+  const picked = units.find((u) => u.id === roomB.id)!;
+  check("a régi választóval jelölt szoba lett a ház (csak-egyben megmarad)", picked.representsWhole && picked.isWholeProperty && picked.wholeOnly, picked);
+  check("…a másik szoba szoba maradt", units.filter((u) => u.representsWhole).length === 1);
+  // hidden house (ADR-0256 „nem adom ki egyben")
+  await db.updateTable("site_unit").set({ is_whole_property: false, whole_only: false }).where("id", "=", roomB.id).execute();
+  units = await ensureUnits(site.id);
+  check("a rejtett ház újra foglalható", units.find((u) => u.id === roomB.id)!.isWholeProperty);
+  // two rooms, no house
+  await db.updateTable("site_unit").set({ represents_whole: false, is_whole_property: false, whole_only: false }).where("site_id", "=", site.id).execute();
+  units = await ensureUnits(site.id);
+  check("két szoba, ház nélkül → a ház létrejön", units.length === 3 && units.filter((u) => u.representsWhole && u.isWholeProperty).length === 1, units.map((u) => [u.name, u.representsWhole]));
+  const house3 = units.find((u) => u.representsWhole)!;
+  await setBasePrice(house3.id, 60000);
+  await setBasePrice(nadas.id, 20000);
+  await setBasePrice(roomB.id, 25000);
+
+  // ── ⑨ guest page + owner-side sum ──────────────────────────────────────
+  console.log("\n⑨ vendég-lap és Árak");
+  const snap = await snapshot();
+  const u9 = unitsAttr(snap);
+  check("a vendég választójában a két szoba ÉS a ház", u9.includes(nadas.id) && u9.includes(roomB.id) && u9.includes(house3.id), u9);
+  html = await get("/admin?tab=modulok&m=pricing");
+  check("az Árak lapon a tulaj-oldali tájékoztató szumma (45 000)", /Tájékoztatásul/.test(html) && /45[\s  ]000/.test(html));
+  const markup = snap.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "");
+  check("a vendég-lapon NINCS szumma", !/Tájékoztatásul/.test(markup) && !/45[\s  ]000/.test(markup));
+
+  // ── ⑩ in a real browser ────────────────────────────────────────────────
+  console.log("\n⑩ böngészőben (390 px, touch)");
   {
     const { chromium } = await import("playwright-core");
-    const browser = await chromium.launch();
+    const { config } = await import("../src/config.js");
+    const browser = await chromium.launch({ executablePath: config.chromiumPath });
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     await ctx.addCookies([{ name: "cit_session", value: COOKIE.split("=").slice(1).join("="), url: BASE }]);
     const page = await ctx.newPage();
     const jsErr: string[] = [];
     page.on("pageerror", (e) => jsErr.push(e.message));
     await page.goto(BASE + ROOMS, { waitUntil: "networkidle" });
-    const q2 = page.locator("[data-cit-whole-q2]");
-    const err = page.locator("[data-cit-whole-q2-err]");
-    const form = page.locator("form.unit-row--new");
-    // the add form is collapsed by default (approved plan room-add-B) — open it the owner's way
-    await page.locator("details.unit-more > summary").first().click();
-    check("alapból a második kérdés rejtett", !(await q2.isVisible()));
-    await page.locator('input[name="whole"][value="nem"]').check();
-    check("„Nem” → a második kérdés látható (CSS)", await q2.isVisible());
-    await form.locator('input[name="name"]').fill("Kisházi szoba");
-    await form.locator('input[name="name"]').press("Enter");
-    await page.waitForTimeout(300);
-    check("válasz nélkül a böngésző NEM küld (a lap marad)", page.url().endsWith(ROOMS), page.url());
-    check("…és kimondja, mi hiányzik", (await err.isVisible()) && /Válassza ki, mi legyen az eddigi/.test(await err.innerText()), await err.innerText());
-    await page.locator('input[name="first"][value="szoba"]').check();
-    // the finished surface, next to the approved picture (design-refs/…/shots/b-mobile-1-err-first.png)
-    await page.locator("[data-cit-whole-q]").evaluate((e) => e.scrollIntoView({ block: "start" }));
-    await page.screenshot({ path: path.join(ROOT, "assets", "Temp", `_wpc-${path.basename(ROOT)}-q2-mobile.png`) });
-    const nameBox = await page.locator('input[name="first_name"]').boundingBox();
-    check("„Ez az első szobám” → a név-mező MEZŐ méretű (nem 16×16)", (nameBox?.width ?? 0) > 150 && (nameBox?.height ?? 0) > 24, nameBox);
-    await form.locator('button[type="submit"]').click();
-    await page.waitForTimeout(300);
-    check("név nélkül: „Adjon nevet az első szobájának.”", /Adjon nevet az első szobájának\./.test(await err.innerText()) && page.url().endsWith(ROOMS));
-    await page.locator('input[name="first_name"]').fill("kisházi szoba");
-    await form.locator('button[type="submit"]').click();
-    await page.waitForTimeout(300);
-    check("azonos névvel: „A két szoba neve nem lehet ugyanaz.”", /A két szoba neve nem lehet ugyanaz\./.test(await err.innerText()) && page.url().endsWith(ROOMS));
-    await page.locator('input[name="whole"][value="igen"]').check();
-    check("„Igen” → a második kérdés újra rejtett", !(await q2.isVisible()));
+    check("JS-sel a „Mentés” gomb rejtve (a pipa magától ment)", !(await page.locator("[data-cit-house-save]").isVisible()));
+    await Promise.all([page.waitForURL(/haz=csak/), page.locator('[data-cit-house-only] input[name="only"]').check()]);
+    check("a pipa magától mentett", (await getUnits(site.id)).find((u) => u.id === house3.id)!.wholeOnly);
+    check("…és kimondja", await page.locator(".rs-house__saved").isVisible());
+    await page.screenshot({ path: path.join(ROOT, "assets", "Temp", `_whs-${path.basename(ROOT)}-mobile.png`), fullPage: true });
     check("nincs JS-hiba", jsErr.length === 0, jsErr);
+    // the desktop picture next to the approved plan (design-refs/tenant-admin/whole-house-simple/)
+    const dctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await dctx.addCookies([{ name: "cit_session", value: COOKIE.split("=").slice(1).join("="), url: BASE }]);
+    const dpage = await dctx.newPage();
+    await dpage.goto(BASE + ROOMS + "#egesz-haz", { waitUntil: "networkidle" });
+    await dpage.screenshot({ path: path.join(ROOT, "assets", "Temp", `_whs-${path.basename(ROOT)}-desktop.png`) });
     await browser.close();
-    check("a böngésző-próba nem írt semmit (1 egység)", (await getUnits(site.id)).length === 1);
   }
-
-  // ── ② the second unit ─────────────────────────────────────────────────
-  console.log("\n② a második egység felvétele");
-  // ADR-0256: „nem” now carries the second answer — here „ez az első szobám”, keeping its
-  // name, which is exactly what „nem” meant before (the first unit becomes a plain room).
-  await post("/admin/units/save", { name: "Apartman 2", capacity: "2", back: "rooms", whole: "nem", first: "szoba", first_name: first.name });
-  let units = await getUnits(site.id);
-  const second = units.find((u) => u.name === "Apartman 2")!;
-  check("2 egység", units.length === 2, units.length);
-  check("„nem” → SENKI nem az egész", (await wholeOf()) === null);
-  check("„nem” → az első egység csak önmagát zárja", (await blockingUnitIds(first.id)).join() === first.id);
-  check("„nem” → a második is csak önmagát", (await blockingUnitIds(second.id)).join() === second.id);
-  html = await get(ROOMS);
-  check("2 egységnél VAN kártya", html.includes("data-cit-whole-card"));
-  // ADR-0257: the card has three states (none / also / only) instead of the old switch.
-  check("a kártya „Nem adom ki egyben” állásban", /name="mode" value="none" checked/.test(html) && !/name="mode" value="(also|only)" checked/.test(html));
-  check("a rácson sehol „az egész ház”", !/az egész ház/.test(grid(html)));
-  check("a kérdés már NEM jelenik meg", !html.includes("data-cit-whole-q"));
-  check("mindkét egységnek van törlés-gombja", (html.match(/formaction="\/admin\/units\/delete"/g) ?? []).length === 2);
-  // „igen” — the same moment, the other answer
-  await setWholeProperty(site.id, null);
-  await deleteUnit(site.id, second.id);
-  await post("/admin/units/save", { name: "Apartman 2", capacity: "2", back: "rooms", whole: "igen" });
-  units = await getUnits(site.id);
-  const second2 = units.find((u) => u.name === "Apartman 2")!;
-  check("„igen” → az ELSŐ egység az egész", (await wholeOf()) === first.id);
-  check("„igen” → az első foglalása mindkettőt zárja", (await blockingUnitIds(first.id)).sort().join() === [first.id, second2.id].sort().join());
-  check("„igen” → a szoba foglalása az egészet is zárja", (await blockingUnitIds(second2.id)).sort().join() === [first.id, second2.id].sort().join());
-  html = await get(ROOMS);
-  check("a kártya „Egyben is kiadom” állásban", /name="mode" value="also" checked/.test(html));
-  check("a rácson az első kártyán „az egész ház”", new RegExp(`${first.name}</b><span>[^<]*az egész ház`).test(grid(html)));
-
-  // ── ③ the card moves / clears the flag ────────────────────────────────
-  console.log("\n③ a kártya");
-  await post("/admin/units/whole", { on: "1", unit: second2.id });
-  check("áttéve a másodikra", (await wholeOf()) === second2.id);
-  html = await get(ROOMS);
-  check("a rácson most a MÁSODIK kártyán áll „az egész ház”", new RegExp(`Apartman 2</b><span>[^<]*az egész ház`).test(grid(html)));
-  check("az elsőn már nincs", !new RegExp(`${first.name}</b><span>[^<]*az egész ház`).test(grid(html)));
-  await post("/admin/units/whole", { unit: second2.id });
-  check("kikapcsolva (nincs `on`) → senki nem az egész", (await wholeOf()) === null);
-  html = await get(ROOMS);
-  check("a rács sehol nem ír „az egész ház”-at", !/az egész ház/.test(grid(html)));
-  const foreign = "00000000-0000-0000-0000-000000000000";
-  await post("/admin/units/whole", { on: "1", unit: foreign });
-  check("idegen egység-id → nem jelöl", (await wholeOf()) === null);
-
-  // ── ⑤ the informational sum on the pricing screen ─────────────────────
-  console.log("\n⑤ tájékoztató szumma az Árak lapon");
-  await setWholeProperty(site.id, first.id);
-  await setBasePrice(second2.id, 14_500);
-  let pr = await get("/admin?tab=modulok&m=pricing");
-  check("az egész alatt ott a szumma-sor", pr.includes("data-cit-whole-sum"));
-  check("a sor a szobák alapárának összegét írja (14 500)", /data-cit-whole-sum[^>]*>[^<]*14\s?500/.test(pr));
-  check("a sor kimondja: az egész ára ettől független", /Az egész szállás ára ettől független/.test(pr));
-  check("a szumma-sor CSAK az egész kártyáján van (1 db)", (pr.match(/data-cit-whole-sum/g) ?? []).length === 1);
-  if (!(await rerenderTenantSnapshot(tenant.id, { as: "live" }))) throw new Error("render bukott");
-  const pub = await readFile(path.join(siteDir, "index.html"), "utf8");
-  check("a vendég-lapon NINCS szumma", !/Tájékoztatásul: a szobák külön/.test(pub) && !pub.includes("data-cit-whole-sum"));
-  await setWholeProperty(site.id, null);
-  pr = await get("/admin?tab=modulok&m=pricing");
-  check("egész nélkül nincs szumma-sor", !pr.includes("data-cit-whole-sum"));
-
-  // ── ④ deleting the whole place ────────────────────────────────────────
-  console.log("\n④ az egész szállás törölhető");
-  await setWholeProperty(site.id, first.id);
-  const loc = await post("/admin/units/delete", { id: first.id, back: "rooms" });
-  check("a törlés a Szobák lapra tér vissza", loc.includes("m=rooms") && loc.includes("saved=1"), loc);
-  units = await getUnits(site.id);
-  check("1 egység maradt, és nem az egész", units.length === 1 && !units[0]!.isWholeProperty);
-  html = await get(ROOMS);
-  check("egy egységnél a kártya eltűnt", !html.includes("data-cit-whole-card"));
-  const last = await deleteUnit(site.id, units[0]!.id);
-  check("az utolsó egység törlése ELUTASÍTVA", !last.ok && /Legalább egy/.test(last.reason ?? ""));
-  const loc2 = await post("/admin/units/delete", { id: units[0]!.id, back: "rooms" });
-  check("…és a HTTP-út a hibával a Szobák lapra visz", loc2.includes("m=rooms") && loc2.includes("hiba="), loc2);
-
-  // ── ⑥/⑦ nothing invents a whole place ─────────────────────────────────
-  console.log("\n⑥⑦ senki nem talál ki egészet");
-  await post("/admin/units/save", { name: "Apartman 3", capacity: "3", back: "rooms", whole: "nem", first: "szoba", first_name: "Apartman 2" });
-  await setWholeProperty(site.id, null);
-  const after = await ensureUnits(site.id);
-  check("ensureUnits: két jelöletlen egység jelöletlen marad", after.length === 2 && after.every((u) => !u.isWholeProperty));
-  const peek = await peekUnits(site.id);
-  check("peekUnits sem jelöl", peek.every((u) => !u.isWholeProperty));
-  check("a DB-ben sincs jelölt", (await wholeOf()) === null);
-
-  // ── ⑧ the second question (ADR-0256) ──────────────────────────────────
-  console.log("\n⑧ a második kérdés: mi volt az eddigi egység?");
-  const fresh = async () => {
-    await db.deleteFrom("booking_request").where("site_id", "=", site.id).execute();
-    await db.deleteFrom("site_unit").where("site_id", "=", site.id).execute();
-    return (await ensureUnits(site.id))[0]!;
-  };
-  let base = await fresh();
-  check("az alapértelmezett egység MAGA A HELY (represents_whole)", base.representsWhole === true && base.isWholeProperty === true);
-  html = await get(ROOMS);
-  check("a második kérdés a lapon (data-cit-whole-q2)", html.includes("data-cit-whole-q2"));
-  check("két második válasz: szoba / rejt", /name="first" value="szoba"/.test(html) && /name="first" value="rejt"/.test(html));
-  check("0 futó foglalásnál NINCS foglalás-mondat", !/jövőbeli foglalása van/.test(html));
-  const refused = async (body: Record<string, string>, want: RegExp, label: string) => {
-    const l = decodeURIComponent(await post("/admin/units/save", { name: "Kisházi szoba", capacity: "2", back: "rooms", whole: "nem", ...body }));
-    check(`${label} → a hiba a lapra megy`, l.includes("m=rooms") && want.test(l), l);
-    check(`${label} → SEMMI nem íródott (1 egység, érintetlen)`, (await getUnits(site.id)).length === 1 && (await getUnits(site.id))[0]!.name === base.name);
-  };
-  await refused({}, /Válassza ki, mi legyen az eddigi „A szállás egésze” egységgel\./, "második válasz nélkül");
-  await refused({ first: "szoba", first_name: "  " }, /Adjon nevet az első szobájának\./, "„szoba” név nélkül");
-  await refused({ first: "szoba", first_name: " kisházi  SZOBA " }, /A két szoba neve nem lehet ugyanaz\./, "„szoba” az új szoba nevével");
-  // a running booking on the unit so far — the screen names the REAL count
-  const today = new Date();
-  const iso = (n: number) => new Date(today.getTime() + n * 86_400_000).toISOString().slice(0, 10);
-  await db.insertInto("booking_request").values({ site_id: site.id, unit_id: base.id, guest_name: "_wpc vendég", guest_email: "wpc@example.com", guest_phone: null, date_from: iso(30), date_to: iso(32), message: null, status: "accepted", action_token: `wpc_${stamp}_a`, decided_at: new Date(), seen_at: null, decision_note: null, decided_by: "owner", quoted_total: null, quoted_currency: null, quoted_lines: null, offered_at: null, offer_token: null }).execute();
-  html = await get(ROOMS);
-  check("1 futó foglalásnál a mondat a VALÓDI számmal", /Ennek az egységnek 1 jövőbeli foglalása van — azok érvényben maradnak, csak új foglalás nem érkezhet rá\./.test(html));
-  // „rejtse el” — allowed with a running booking (owner: „ok B”)
-  await post("/admin/units/save", { name: "Kisházi szoba", capacity: "2", back: "rooms", whole: "nem", first: "rejt" });
-  units = await getUnits(site.id);
-  const hidden = units.find((u) => u.id === base.id)!;
-  const room = units.find((u) => u.name === "Kisházi szoba")!;
-  check("„rejt” → 2 egység, a régi MEGMARADT", units.length === 2 && Boolean(hidden));
-  check("„rejt” → a régi a hely, de nem kiadó egyben", hidden.representsWhole && !hidden.isWholeProperty);
-  check("„rejt” → a vendég NEM látja (isGuestVisibleUnit)", !isGuestVisibleUnit(hidden) && isGuestVisibleUnit(room));
-  check("„rejt” → a futó foglalás érvényben", Boolean(await db.selectFrom("booking_request").select("id").where("unit_id", "=", base.id).where("status", "=", "accepted").executeTakeFirst()));
-  check("„rejt” → a szobák függetlenek (senki nem zár senkit)", (await blockingUnitIds(room.id)).join() === room.id);
-  if (!(await rerenderTenantSnapshot(tenant.id, { as: "live" }))) throw new Error("render bukott");
-  let snap = await readFile(path.join(siteDir, "index.html"), "utf8");
-  const unitsAttr = (h: string) => (/data-cit-units="([^"]*)"/.exec(h)?.[1] ?? "").replace(/&quot;/g, '"');
-  check("a vendég-lap foglalási választójában NINCS a rejtett egység", !unitsAttr(snap).includes(base.id) && unitsAttr(snap).includes(room.id), unitsAttr(snap));
-  // the MARKUP, not the inlined runtime: the runtime carries tr("A szállás egésze") as a label
-  const markup = snap.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "");
-  check("a vendég-lap markupjában nincs „A szállás egésze” (szoba-kártya, ár-sor)", !/A szállás egésze/.test(markup), [...markup.matchAll(/A szállás egésze/g)].map((m) => markup.slice(Math.max(0, m.index! - 160), m.index! + 40)).join(" ‖ "));
-  check("…a látható szoba viszont ott van", markup.includes("Kisházi szoba"));
-  const book = await fetch(`${BASE}/t/${slug}/api/foglalas`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ unit: base.id, from: iso(40), to: iso(42), name: "X", email: "x@example.com", phone: "+36301234567", guests: "2" }) });
-  check("rejtett egységre ÚJ kérés nem jön (/api/foglalas 400)", book.status === 400, book.status);
-  // switched back on the card → the guest sees it again
-  await post("/admin/units/whole", { on: "1", unit: base.id });
-  check("a kártyán visszakapcsolva újra LÁTHATÓ", isGuestVisibleUnit((await getUnits(site.id)).find((u) => u.id === base.id)!));
-  if (!(await rerenderTenantSnapshot(tenant.id, { as: "live" }))) throw new Error("render bukott");
-  snap = await readFile(path.join(siteDir, "index.html"), "utf8");
-  check("…és a vendég-lap választójában újra ott van", unitsAttr(snap).includes(base.id));
-  check("negatív kontroll: láthatóan a markupban IS ott a neve (a fenti hiány-próba tud pirosat adni)",
-    /A szállás egésze/.test(snap.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "")));
-  // „ez az első szobám” — renamed, re-slugged, visible
-  base = await fresh();
-  await post("/admin/units/save", { name: "Kisházi szoba", capacity: "2", back: "rooms", whole: "nem", first: "szoba", first_name: "  Nádas   apartman " });
-  const renamed = (await getUnits(site.id)).find((u) => u.id === base.id)!;
-  check("„szoba” → átnevezve (szóközök normalizálva)", renamed.name === "Nádas apartman", renamed.name);
-  check("„szoba” → új slug a névből", renamed.slug === "nadas-apartman", renamed.slug);
-  check("„szoba” → nem a hely, nem az egész, LÁTHATÓ", !renamed.representsWhole && !renamed.isWholeProperty && isGuestVisibleUnit(renamed));
-  // „igen” — it keeps standing for the place and is let as one
-  base = await fresh();
-  await post("/admin/units/save", { name: "Kisházi szoba", capacity: "2", back: "rooms", whole: "igen" });
-  const kept = (await getUnits(site.id)).find((u) => u.id === base.id)!;
-  check("„igen” → a hely, egyben kiadó, látható", kept.representsWhole && kept.isWholeProperty && isGuestVisibleUnit(kept));
-  // negative control: the predicate is not a constant, and the fallback never empties
-  const U = (r: boolean, w: boolean) => ({ representsWhole: r, isWholeProperty: w });
-  check("negatív kontroll: a predikátum mind a négy állapotot megkülönbözteti",
-    isGuestVisibleUnit(U(true, true)) && !isGuestVisibleUnit(U(true, false)) && isGuestVisibleUnit(U(false, false)) && isGuestVisibleUnit(U(false, true)));
-  check("negatív kontroll: csak rejtett egység → a lista nem ürül ki", guestUnits([U(true, false)]).length === 1 && guestUnits([U(true, false), U(false, false)]).length === 1);
 } finally {
   if (server?.listening) server.close();
   if (siteDir) await rm(siteDir, { recursive: true, force: true }).catch(() => {});
@@ -336,5 +273,5 @@ try {
   if (ids.defId) await db.deleteFrom("scraper_definition").where("id", "=", ids.defId).execute();
   await pool.end();
 }
-console.log(fail ? `\n⛔ WHOLE-PROPERTY-CHOICE: ${fail} bukás` : "\n🟢 WHOLE-PROPERTY-CHOICE: az egész szállás választható, törölhető, áttehető; a szumma csak a tulajnak; a nem kiadó egész a vendég elől rejtve");
+console.log(fail ? `\n⛔ WHOLE-HOUSE: ${fail} bukás` : "\n🟢 WHOLE-HOUSE (ADR-XXXX): a vendég egy szobát vagy az egész házat foglal; a ház külön tétel, saját árral; egy pipa: csak egyben");
 process.exit(fail ? 1 : 0);

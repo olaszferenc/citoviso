@@ -28,7 +28,7 @@ import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
-import type { UnitDeletionImpact } from "../tenant/units.js";
+import { DEFAULT_UNIT_NAME, type UnitDeletionImpact } from "../tenant/units.js";
 import { bookingRef } from "../booking/requests.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
@@ -476,10 +476,14 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .unit-new__err[hidden]{display:none}
 .unit-new__price{display:contents}
 .unit-new__noprice{flex:1 1 100%;margin:0;padding:10px 12px;border-radius:10px;background:var(--citui-surface-2);color:var(--citui-muted);font-size:.86rem;line-height:1.45}
-.unit-new__noprice[data-cit-when-csak]{display:none}
-form:has(input[name=whole][value=csak]:checked) .unit-new__noprice[data-cit-when-csak]{display:block}
-form:has(input[name=whole][value=csak]:checked) .unit-new__price{display:none}
-.rs-wmodes{display:grid;gap:4px}
+/* ADR-XXXX (approved plan whole-house-simple): the whole-house card — its price form and
+   the one box. Layout comes from .rs-wcard; these are the parts it did not have. */
+.rs-house__price{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:.84rem;color:var(--citui-ink)}
+.rs-house__price .citui-input{width:120px}
+.rs-house__more{flex-basis:100%;font-size:.8rem}
+.rs-house__saved{display:flex;gap:6px;align-items:center;margin:8px 0 0;font-size:.82rem;font-weight:600;color:var(--citui-ok-ink)}
+.rs-house .rs-wcard__c{align-self:start;grid-template-columns:minmax(0,1fr) auto}
+.rs-house .rs-wq__o{background:var(--citui-panel)}
 .unit-new__err svg{flex:none;margin-top:1px}
 .rs-wq.is-missing{border-color:var(--citui-bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-bad) 22%,transparent)}
 .rs-wq.is-missing legend{color:var(--citui-bad-ink)}
@@ -1652,142 +1656,111 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
 }
 
 /**
- * ADR-0232 (approved plan whole-property-choice B): the card above the rooms grid where
- * the owner says whether the place is ALSO let as one, and which unit that is. Only
- * with 2+ units — a single-unit owner never meets the concept. Plain form: works with
- * zero JS; unchecked → no unit is the whole place, the rooms are independent.
+ * ADR-XXXX (approved plan tenant-admin/whole-house-simple, owner 2026-10-15: the three-state
+ * card with its „melyik szoba" picker was „túl van bonyolítva"). The whole house is its own
+ * card above the rooms grid — never one of the rooms. A guest books a room OR the whole house;
+ * the owner's only choice is „Csak egyben adom ki". The house's price is set right here.
+ * Two plain forms: works with zero JS (the box also saves itself on change when JS runs).
  */
-function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
-  if (units.length < 2) return "";
-  const whole = units.find((u) => u.isWholeProperty) ?? null;
-  // ADR-0257 (approved plan tenant-site/whole-only, admin „X"): three states instead of a
-  // switch — the same three answers the second-room question offers, so an owner who
-  // answered once can change it HERE later. Plain form: works with zero JS.
-  const mode = !whole ? "none" : whole.wholeOnly ? "only" : "also";
-  const opts = units
-    .map(
-      (u) =>
-        `<option value="${esc(u.id)}"${u.isWholeProperty ? " selected" : ""}>${esc(u.name)}` +
-        (u.capacity ? ` · ${esc(T(lang, "{n} fő", { n: u.capacity }))}` : "") +
-        `</option>`,
-    )
-    .join("");
-  const state = (value: string, title: string, why: string): string =>
-    `<label class="rs-wq__o"><input type="radio" name="mode" value="${value}"${mode === value ? " checked" : ""}>` +
-    `<span><b>${title}</b><small>${why}</small></span></label>`;
+function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, lang: string): string {
+  const house = units.find((u) => u.representsWhole && u.isWholeProperty);
+  const rooms = units.filter((u) => u !== house);
+  if (!house || !rooms.length) return "";
+  const only = !!house.wholeOnly;
+  const caps = rooms.map((u) => u.capacity ?? 0);
+  const capSum = caps.reduce((a, b) => a + b, 0);
+  const capText = capSum
+    ? caps.every((c) => c > 0)
+      ? T(lang, "{n} fő", { n: capSum })
+      : T(lang, "legalább {n} fő", { n: capSum })
+    : "";
+  const h = nu?.house ?? null;
+  const cur = esc(currencySign(nu?.currency ?? "HUF"));
+  const saved = h?.saved
+    ? `<p class="rs-house__saved" role="status">${ic("check", 14)}<span>` +
+      ({
+        ar: T(lang, "Mentve: az egész ház ára."),
+        nincsar: T(lang, "Az ár törölve — a vendég árajánlatot kér."),
+        csak: T(lang, "Mentve: csak az egész ház foglalható."),
+        mindketto: T(lang, "Mentve: a vendég egy szobát vagy az egész házat foglalhatja."),
+      } as Record<HouseSaved, string>)[h.saved] +
+      `</span></p>`
+    : "";
+  const priceNow = h?.base
+    ? `<b>${esc(formatNumber(h.base))} ${cur}</b>`
+    : `<b>${T(lang, "nincs megadva — a vendég árajánlatot kér")}</b>`;
+  const price = nu?.pricingActive
+    ? `<form method="POST" action="/admin/units/whole" class="rs-house__price" novalidate>` +
+      `<input type="hidden" name="what" value="price">` +
+      `<span>${T(lang, "Alapára:")} ${priceNow}</span>` +
+      `<span class="mcfg-suffix"><input class="citui-input" name="price" inputmode="numeric" ` +
+      `value="${h?.base ? esc(formatNumber(h.base)) : ""}" placeholder="${T(lang, "pl. 60 000")}" ` +
+      `aria-label="${T(lang, "Az egész ház alapára")}"><span>${cur}</span></span>` +
+      `<button class="citui-btn citui-btn--ghost citui-btn--sm" type="submit">${T(lang, "Ár mentése")}</button>` +
+      (h?.otherPrices
+        ? `<a class="rs-house__more" href="/admin?tab=modulok&m=pricing#ar-${esc(house.id)}">` +
+          `${T(lang, "Időszakos árai is vannak — Árak, szezonok")}</a>`
+        : "") +
+      `</form>`
+    : "";
   return (
-    `<form method="POST" action="/admin/units/whole" class="rs-wcard${whole ? " is-on" : ""}" data-cit-whole-card data-cit-whole-mode="${mode}">` +
-    `<div class="rs-wcard__t"><b>${ic("modules", 15)}${T(lang, "Az egész szállás egyben")}</b>` +
+    `<section class="rs-wcard rs-house is-on" id="egesz-haz" data-cit-whole-card data-cit-whole-mode="${only ? "only" : "also"}">` +
+    `<div class="rs-wcard__t"><b>${ic("modules", 15)}${T(lang, "Az egész ház")}</b>` +
     `<p>` +
-    (mode === "only" && whole
-      ? T(lang, "A vendég csak ezt foglalhatja: {name}. A többi szoba a honlapon képpel és felszereltséggel látszik, de ár és foglalás nélkül — külön nem foglalható, és nem kell ára.", {
-          name: `<b>${esc(whole.name)}</b>`,
-        })
-      : whole
-        ? T(lang, "Az egész szállás most: {name}. Ha lefoglalják, minden más szoba tele lesz arra az éjszakára — és bármelyik szoba foglalása az egészet zárja.", {
-            name: `<b>${esc(whole.name)}</b>`,
-          })
-        : T(lang, "Most minden szoba külön naptárral, egymástól függetlenül telik be. Ha a házat egyben is kiadja, válassza ki, hogyan, és mondja meg, melyik az.")) +
-    `</p></div>` +
-    `<div class="rs-wcard__c">` +
-    `<div class="rs-wmodes" role="radiogroup" aria-label="${T(lang, "Az egész szállás egyben")}">` +
-    state("none", T(lang, "Nem adom ki egyben"), T(lang, "A szobák külön telnek be.")) +
-    state("also", T(lang, "Egyben is kiadom"), T(lang, "A szobák külön is foglalhatók.")) +
-    state("only", T(lang, "Csak egyben adom ki"), T(lang, "A szobák csak bemutatásra.")) +
+    (only
+      ? T(lang, "A vendég csak az egész házat foglalhatja. A szobák a honlapon képpel és felszereltséggel látszanak, de külön nem foglalhatók, és nem kell áruk.")
+      : T(lang, "A vendég foglalhat egy szobát, vagy az egész házat egyben. Ha az egész házat foglalják, minden szoba betelik arra az időre; ha egy szobát, az egész ház nem foglalható arra az időre.")) +
+    `</p>` +
+    `<p>${T(lang, "{n} szoba", { n: rooms.length })}${capText ? ` · ${capText}` : ""} · ` +
+    `<a href="#szoba-${esc(house.id)}" data-rs-card="${esc(house.id)}">${T(lang, "Képek, leírás")}</a></p>` +
+    saved +
+    price +
     `</div>` +
-    `<select class="citui-input rs-wpick" name="unit" aria-label="${T(lang, "Melyik szoba az egész szállás")}" data-cit-whole-pick>` +
-    (whole ? "" : `<option value="">${T(lang, "— melyik szoba —")}</option>`) +
-    opts +
-    `</select>` +
-    `<button class="citui-btn citui-btn--ghost citui-btn--sm" type="submit">${T(lang, "Mentés")}</button>` +
-    `</div></form>`
+    `<form method="POST" action="/admin/units/whole" class="rs-wcard__c" data-cit-house-only>` +
+    `<input type="hidden" name="what" value="only">` +
+    `<label class="rs-wq__o"><input type="checkbox" name="only" value="1"${only ? " checked" : ""}>` +
+    `<span><b>${T(lang, "Csak egyben adom ki")}</b>` +
+    `<small>${T(lang, "Pipálja be, ha a szobákat külön soha nem adja ki — akkor csak az egész ház foglalható.")}</small></span></label>` +
+    `<button class="citui-btn citui-btn--ghost citui-btn--sm" type="submit" data-cit-house-save>${T(lang, "Mentés")}</button>` +
+    `</form>` +
+    `<script>(function(){var f=document.querySelector("[data-cit-house-only]");if(!f)return;` +
+    `var b=f.querySelector("[data-cit-house-save]");if(b)b.style.display="none";` +
+    `f.only.addEventListener("change",function(){f.submit()})})()</script>` +
+    `</section>`
   );
 }
 
 /**
- * ADR-0232: the question asked at the moment of adding the SECOND unit — inside the
- * add form (required radios), because that is where the decision is made. With any
- * other count the form has no such block and the flag stays as it is.
- *
- * ADR-0256 (approved plan whole-property-second-question, owner 2026-09-28 „B"): on
- * "Nem" a second question opens — what the unit so far WAS: the owner's first room (he
- * names it) or nothing he lets (hidden from the guest, not deleted). It opens with CSS
- * (`:has`), so it works without JS; the server applies the same rule on save
- * (/admin/units/save), and the small script only says it in words before sending.
- * The running-bookings sentence carries the REAL count and is absent at zero.
+ * ADR-XXXX: the question asked when the SECOND unit is added — only when the lone unit so far
+ * stands for the place AND carries a name the owner gave it: then only he knows whether it is
+ * the whole house or his first room. The default-named unit is the house; nothing is asked.
+ * Required radios inside the add form, so it works without JS; the server refuses a form
+ * without the answer before writing anything.
  */
 function wholeQuestion(
   units: readonly { id: string; name: string; representsWhole?: boolean }[],
   lang: string,
-  nu?: NewUnitView,
 ): string {
   if (units.length !== 1) return "";
   const first = units[0]!;
-  // Elek A-2 (approved plan m1-elek-javitasok ②, owner 2026-10-02): the question is about
-  // what the unit so far MEANS — asked only of a unit that stands for the whole place. A
-  // room the owner already named (left alone after a delete) stays a room; offering „marad
-  // az egész szállás" for it was measured live (Muschel, „Családi szoba"). Without an
-  // answer the server leaves every flag as it is, so the two rooms fill independently.
-  if (first.representsWhole === false) return "";
+  if (!first.representsWhole || first.name === DEFAULT_UNIT_NAME) return "";
+  const name = `<b>${esc(first.name)}</b>`;
   const opt = (value: string, title: string, why: string): string =>
-    `<label class="rs-wq__o"><input type="radio" name="whole" value="${value}" required>` +
+    `<label class="rs-wq__o"><input type="radio" name="first" value="${value}" required>` +
     `<span><b>${title}</b><small>${why}</small></span></label>`;
-  const running = nu?.formerWholeBookings ?? 0;
-  const runningNote = running
-    ? `<small class="rs-wq2__run">${T(lang, "Ennek az egységnek {n} jövőbeli foglalása van — azok érvényben maradnak, csak új foglalás nem érkezhet rá.", { n: running })}</small>`
-    : "";
-  const L = {
-    pick: T(lang, "Válassza ki, mi legyen az eddigi „{name}” egységgel.", { name: first.name }),
-    name: T(lang, "Adjon nevet az első szobájának."),
-    same: T(lang, "A két szoba neve nem lehet ugyanaz."),
-  };
   return (
-    `<fieldset class="rs-wq" data-cit-whole-q><legend>${T(lang, "Az egész szállást is kiadja egyben?")}</legend>` +
-    `<p>${T(lang, "Eddig egy szobája volt: {name}. A második felvételekor el kell dönteni, mi a viszonyuk.", { name: `<b>${esc(first.name)}</b>` })}</p>` +
+    `<fieldset class="rs-wq" data-cit-whole-q><legend>${T(lang, "Mi az eddigi „{name}”?", { name: esc(first.name) })}</legend>` +
     opt(
-      "igen",
-      T(lang, "Igen, az egészet is kiadom egyben"),
-      T(lang, "{name} marad az egész szállás. A foglalása minden szobát lezár, és bármelyik szoba foglalása az egészet.", { name: esc(first.name) }),
-    ) +
-    // ADR-0257 (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): the case
-    // that was missing — the rooms are shown, never booked, never priced.
-    opt(
-      "csak",
-      T(lang, "Csak egyben adom ki — a szobák bemutatásra"),
-      T(lang, "A vendég csak ezt foglalhatja: {name}. A szobák képpel, férőhellyel, felszereltséggel látszanak, de külön nem foglalhatók, és nem kell áruk.", { name: esc(first.name) }),
+      "egesz",
+      T(lang, "Az egész ház"),
+      T(lang, "{name} marad az egész ház, a most felvett pedig az első szobája. A vendég egy szobát vagy az egész házat foglalhatja.", { name }),
     ) +
     opt(
-      "nem",
-      T(lang, "Nem, csak külön szobákat adok ki"),
-      T(lang, "A szobák egymástól függetlenül telnek be."),
+      "szoba",
+      T(lang, "Az első szobám"),
+      T(lang, "{name} szoba lesz — a naptára, képei és ára megmarad. Az egész házat külön felvesszük, saját árral.", { name }),
     ) +
-    `<div class="rs-wq2" data-cit-whole-q2>` +
-    `<p class="rs-wq2__q">${T(lang, "És mi legyen az eddigi {name} egységgel?", { name: `<b>${esc(first.name)}</b>` })}</p>` +
-    `<label class="rs-wq__o"><input type="radio" name="first" value="szoba"><span>` +
-    `<b>${T(lang, "Ez az első szobám — nevet adok neki")}</b>` +
-    `<small>${T(lang, "Ugyanúgy megmarad a naptára, a képei és az ára, csak a neve változik. A vendég szobaként látja.")}</small>` +
-    `<input class="citui-input rs-wq2__name" name="first_name" placeholder="${T(lang, "Pl. Nádas apartman")}" aria-label="${T(lang, "Az első szoba neve")}" autocomplete="off">` +
-    `</span></label>` +
-    `<label class="rs-wq__o"><input type="radio" name="first" value="rejt"><span>` +
-    `<b>${T(lang, "Nincs ilyen szobám — rejtse el")}</b>` +
-    `<small>${T(lang, "A vendég nem látja: se a honlapon, se a foglalásnál. Nem törlődik: ha később mégis egyben adja ki, az „Az egész szállás egyben” kártyán visszakapcsolhatja.")}</small>` +
-    runningNote +
-    `</span></label>` +
-    `<p class="rs-wq2__err" data-cit-whole-q2-err role="alert" hidden></p>` +
-    `</div></fieldset>` +
-    `<script>(function(){var s=document.currentScript,fs=s&&s.previousElementSibling,f=fs&&fs.closest("form");if(!f)return;` +
-    `var L=${jsonForScript(L)},err=fs.querySelector("[data-cit-whole-q2-err]");` +
-    `function v(n){var e=f.querySelector("input[name="+n+"]:checked");return e?e.value:""}` +
-    `function nm(x){return String(x||"").replace(/\\s+/g," ").trim()}` +
-    `function fail(m,el){err.textContent=m;err.hidden=false;if(el&&el.focus)el.focus()}` +
-    // only the question's OWN fields clear the message: the name field's blur-change
-    // (Enter → message → focus moves) must not wipe it (measured on the mock)
-    `f.addEventListener("change",function(e){var n=e.target&&e.target.name;if(n==="whole"||n==="first"||n==="first_name")err.hidden=true});` +
-    `f.first_name.addEventListener("input",function(){err.hidden=true});` +
-    `f.addEventListener("submit",function(e){if(v("whole")!=="nem"||!nm(f.name.value))return;var c=v("first"),n=nm(f.first_name.value);` +
-    `var m=c!=="szoba"&&c!=="rejt"?[L.pick,f.querySelector("input[name=first]")]:c==="szoba"&&!n?[L.name,f.first_name]:` +
-    `c==="szoba"&&n.toLowerCase()===nm(f.name.value).toLowerCase()?[L.same,f.first_name]:null;` +
-    `if(m){e.preventDefault();fail(m[0],m[1])}});})();</script>`
+    `</fieldset>`
   );
 }
 
@@ -2134,10 +2107,17 @@ export interface NewUnitView {
     readonly unitId: string;
     readonly unitName: string;
   } | null;
-  /** ADR-0256: accepted bookings still running on the ONLY unit so far — the second
-   *  question says they stay in force if the owner hides it. 0/absent → no sentence. */
-  readonly formerWholeBookings?: number;
+  /** ADR-XXXX: the whole-house card's base price, its other price rows (seasons, dated
+   *  prices — edited on Árak), and what the card just saved. null → there is no house. */
+  readonly house?: {
+    readonly base: number | null;
+    readonly otherPrices: number;
+    readonly saved: HouseSaved | null;
+  } | null;
 }
+
+/** ADR-XXXX: the whole-house card's last save (the `haz` query flag). */
+export type HouseSaved = "ar" | "nincsar" | "csak" | "mindketto";
 
 /**
  * The price half of the new-unit row: an amount, or the stated "nem adok meg árat".
@@ -2181,11 +2161,7 @@ function newUnitForm(
   nu: NewUnitView | undefined,
   lang: string,
 ): string {
-  const q =
-    wholeQuestion(units, lang, nu) ||
-    (units.length === 1 && units[0]!.representsWhole === false
-      ? `<p class="unit-new__room">${T(lang, "Minden szobának külön naptára van, így külön telhet be. Ha az egész házat is kiadja egyben, azt a felvétel után az „Az egész szállás egyben” kártyán állíthatja be.")}</p>`
-      : "");
+  const q = wholeQuestion(units, lang);
   // ADR-0257: the place is let only as one → the new room is presentation: no price field,
   // no "nem adok meg árat" — one sentence says why. At the second room the same happens
   // the moment "Csak egyben" is picked (CSS `:has`, works without JS; the server ignores
@@ -2207,12 +2183,11 @@ function newUnitForm(
         (nu?.pricingActive ? noPrice("data-cit-new-noprice") : "")
       : `<span class="unit-new__price" data-cit-new-price>` + newUnitPriceFields(nu, lang) + newUnitDecl(nu, lang) + `</span>`) +
     q +
-    (q && nu?.pricingActive ? noPrice("data-cit-new-noprice data-cit-when-csak") : "") +
     `<div class="unit-new__go">` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
     (q
       ? `<p class="unit-new__err" role="alert" data-cit-whole-err hidden>${ic("alert", 16)}<span>` +
-        `${T(lang, "Még egy döntés hiányzik: kiadja-e az egész szállást egyben is? Válasszon, és nyomja meg újra a „Hozzáadás”-t.")}` +
+        `${T(lang, "Még egy döntés hiányzik: mi az eddigi szobája? Válasszon, és nyomja meg újra a „Hozzáadás”-t.")}` +
         `</span></p>`
       : "") +
     `</div></form></div></details>` +
@@ -2223,7 +2198,7 @@ function newUnitForm(
         // The MESSAGE is brought into view (the question sits right above it); the page's
         // scroll-padding keeps it clear of the consent bar and the bottom bar.
         `e.scrollIntoView({block:"nearest"});},true);` +
-        `f.addEventListener("change",function(ev){if(ev.target.name==="whole"){q.classList.remove("is-missing");e.hidden=true}});` +
+        `f.addEventListener("change",function(ev){if(ev.target.name==="first"){q.classList.remove("is-missing");e.hidden=true}});` +
         `})})()</script>`
       : "")
   );
@@ -2281,7 +2256,10 @@ function roomsEditor(
   lang: string,
   nu?: NewUnitView,
 ): string {
-  const cards = units.map((u) => roomCard(u, units, lang)).join("");
+  // ADR-XXXX: the whole house has its own card above the grid — it is not one of the rooms.
+  const house = units.find((u) => u.representsWhole && u.isWholeProperty);
+  const rooms = house && units.length > 1 ? units.filter((u) => u !== house) : units;
+  const cards = rooms.map((u) => roomCard(u, units, lang)).join("");
   const pops = units.map((u) => roomPopup(u, units, library, ctx, view, lang)).join("");
   return (
     // A `.rs-wrap` a felugrók NÉLKÜLI rész: ez a súgó-kép tárgya is (a felugró
@@ -2291,7 +2269,7 @@ function roomsEditor(
     `<h1>${T(lang, "A szobái")}</h1>` +
     `<p>${T(lang, "A kártya azt mutatja, amit a vendég lát a honlapon. Koppintson rá — a szerkesztő felugrik.")}</p></div></div>` +
     newUnitFlash(nu, lang) +
-    wholePropertyCard(units, lang) +
+    houseCard(units, nu, lang) +
     `<div class="rs-grid" id="szobak">${cards}</div>` +
     // The add form: collapsed under the grid, the SAME component as on the booking screen
     // (approved plan room-add-B).

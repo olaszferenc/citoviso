@@ -155,7 +155,7 @@
   var UNIT_TXT = { per_night: L.unitNight, per_person_night: L.unitPerson, per_stay: L.unitStay };
   function answerLine(id) {
     switch (id) {
-      case "mode": return { single: L.modeSingle, rooms: L.modeRooms, both: L.modeBoth }[S.mode] || "—";
+      case "mode": return { single: L.modeSingle, both: L.modeBoth }[S.mode] || "—";
       case "rooms":
         if (S.mode === "single") { var w = bookable()[0]; return w && w.cap ? fmt(L.nPersons, { n: w.cap }) : L.capMissing; }
         return bookable().map(function (u) { return (u.name || L.unnamed) + (u.cap ? " (" + fmt(L.nPersons, { n: u.cap }) + ")" : ""); }).join(", ");
@@ -188,7 +188,6 @@
     if (id === "mode") {
       h += '<div class="bs-opts" role="radiogroup">' +
         opt("mode", "single", L.modeSingle, L.modeSingleSub, S.mode) +
-        opt("mode", "rooms", L.modeRooms, L.modeRoomsSub, S.mode) +
         opt("mode", "both", L.modeBothLong, L.modeBothSub, S.mode) +
         '</div><p class="bs-hint">' + esc(L.modeHint) + "</p>";
     }
