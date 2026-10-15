@@ -4,7 +4,7 @@ title: Foglalás beállítása — kérdésről kérdésre, a Segítővel
 audience: tenant
 category: bookings
 anchors: admin.booking.setup
-updated: 2026-10-13
+updated: 2026-10-15
 ---
 
 Ezen az egy oldalon mindent beállít, ami ahhoz kell, hogy a vendégek foglalhassanak: a szobákat,

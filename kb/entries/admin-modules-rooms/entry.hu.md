@@ -4,7 +4,7 @@ title: Szobák, apartmanok — és saját aloldalaik
 audience: tenant
 category: bookings
 anchors: admin.modules.rooms
-updated: 2026-10-02
+updated: 2026-10-15
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri

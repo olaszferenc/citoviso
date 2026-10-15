@@ -38,6 +38,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
+// The help pictures show what a REAL owner sees: the production login address, never this dev
+// box's IP (tudasbazis-or, 2026-10-15: the Fiók picture said 100.97.188.105:4800/login while the
+// entry said citoviso.com/login). Views read it at render time, so setting it here is enough.
+(config as { publicSiteUrl: string }).publicSiteUrl = "https://citoviso.com";
 import { CARD_VERIFY_AMOUNT_HUF } from "../src/payment/service.js";
 import {
   adminDashboard,

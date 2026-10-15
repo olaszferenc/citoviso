@@ -1758,7 +1758,7 @@ function wholeQuestion(
     opt(
       "szoba",
       T(lang, "Az első szobám"),
-      T(lang, "{name} szoba lesz — a naptára, képei és ára megmarad. Az egész házat külön felvesszük, saját árral.", { name }),
+      T(lang, "{name} szoba lesz — a naptára, képei és ára megmarad. Az egész házat külön felvesszük, ár nélkül: az árát utána a ház kártyáján adja meg.", { name }),
     ) +
     `</fieldset>`
   );
