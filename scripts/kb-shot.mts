@@ -604,6 +604,8 @@ const editorUnits = [
     amenities: [],
     photoCount: 0,
     isWholeProperty: true,
+    // ADR-0392: the whole house is its own unit beside the rooms (card above the grid)
+    representsWhole: true,
   },
   {
     id: "u1",
@@ -875,8 +877,10 @@ function moduleShotHtml(entryId: string): string {
 // section still open (no tourist-tax answer yet), so the shot shows done sections with their
 // answers AND an open one with its questions, exactly what the guide walks through.
 const bookingSetupFixture: SetupState = {
-  mode: "rooms",
+  // ADR-0392: „Szobánként" = the rooms AND the whole house, which the guest can book instead
+  mode: "both",
   units: [
+    { id: "u0", name: "A szállás egésze", cap: 6, whole: true, base: 45000, por: false, seasonalOnly: false, otherRows: 0, seasons: [] },
     { id: "u1", name: "Kertre néző apartman", cap: 4, whole: false, base: 19000, por: false, seasonalOnly: false, otherRows: 0,
       seasons: [{ id: "s1", label: "Főszezon", from: "06-15", to: "08-31", amount: 28000, min: 3 }] },
     { id: "u2", name: "Padlásszoba", cap: 2, whole: false, base: 12000, por: false, seasonalOnly: false, otherRows: 0, seasons: [] },

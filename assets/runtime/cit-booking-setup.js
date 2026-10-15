@@ -73,6 +73,8 @@
   }
 
   /* ── the model, mirrored from the server's state ───────────── */
+  // ADR-0392: the former „rooms only" answer is gone — an older state means rooms + the house.
+  if (S.mode === "rooms") S.mode = "both";
   function bookable() {
     return S.units.filter(function (u) { return S.mode === "single" ? u.whole : S.mode === "rooms" ? !u.whole : true; });
   }
