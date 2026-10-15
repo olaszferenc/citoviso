@@ -20,9 +20,9 @@ A bal oldali kártya-kép a mentett kártya: a márka (például VISA), a kárty
 négy számjegye („···· ···· ···· 4242”), a **„Lejárat:”** és a **„Mentve:”** dátum.
 Alatta egy színes címke mondja meg az állapotot:
 
-- **„LEMONDVA — NEM TERHELÜNK”**: az előfizetését lemondta. Ez a címke minden másikat
-  megelőz: alatta az áll, melyik napon zárul az előfizetés, és hogy nem terhelünk, fizetési
-  linket sem küldünk.
+- **„LEMONDVA — NEM TERHELÜNK”**: az előfizetését lemondta. Alatta az áll, melyik napon zárul az előfizetés, és hogy nem terhelünk, fizetési
+  linket sem küldünk. Kivétel, ha egy terhelés már nem sikerült: akkor lemondás után is az
+  **„A TERHELÉS NEM SIKERÜLT”** címke marad, amíg a lemondás le nem zárul.
 - **„AUTOMATIKUS TERHELÉS BEKAPCSOLVA”** (zöld): a fordulónapon magától levonjuk a díjat
   erről a kártyáról, nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.
 - **„LEJÁR:”** és egy dátum (sárga): a kártya a következő terhelés előtt lejár. Ha nem
@@ -65,7 +65,7 @@ kell a megerősítés akkor is, ha épp nem vásárol semmit.
 A jobb oldali **„Következő terhelés”** mező a fordulónapot és a várható összeget mutatja.
 Az összeg a csomagja szerint változhat (például ha modult kapcsol be vagy mond le), a
 terhelés előtt 3 nappal e-mailben jelezzük. Kártya nélkül itt a **„fizetési link
-e-mailben”** felirat áll. Ha az előfizetését lemondta, a mező értéke **„nincs”**: a zárás
+e-mailben”** felirat áll. Ha az előfizetését lemondta (és nincs sikertelen terhelése), a mező értéke **„nincs”**: a zárás
 napja után nem terhelünk, és előtte e-mailt sem küldünk a terhelésről.
 
 Alatta a **„Terhelések ezen a kártyán”** táblázat sorolja fel, mikor, milyen tételért,
