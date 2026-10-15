@@ -3,7 +3,7 @@
 **Kérés:** a tulaj a Szobák lap háromállású „Az egész szállás egyben” kártyáját és a „melyik szoba” választót
 értelmetlennek, túlbonyolítottnak találta (képernyőkép, [TESZT] Matróz). Terv → jóváhagyás („csináld és mehet élesre”).
 
-**Elvégezve (ADR-XXXX):**
+**Elvégezve (ADR-0392):**
 - `src/tenant/units.ts`: `settleHouse()` (régi adat rendbetétele, ház létrehozása 2+ szobánál), `setHouseOnly()`,
   `deleteUnit`: több szobánál a ház nem törölhető; `ensureUnits` hívja a `settleHouse`-t.
 - `src/server/public.ts`: `/admin/units/save` (kérdés csak átnevezett egyetlen egységnél: `first=egesz|szoba`),

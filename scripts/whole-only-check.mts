@@ -4,7 +4,7 @@
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver, a RENDERELT lapon — dev-bérlőt
 // NEM renderel újra):
-//   ① ADR-XXXX: a 2. szobánál nincs háromutas kérdés (a „csak" a ház kártyáján egy pipa);
+//   ① ADR-0392: a 2. szobánál nincs háromutas kérdés (a „csak" a ház kártyáján egy pipa);
 //   ② a pipa → az eddigi egység az egész ÉS csak egyben kiadó;
 //      a kizárás (`blockingUnitIds`) az ADR-0114 szerint változatlan;
 //   ③ a vendég-lap: a foglalási választóban CSAK a ház; a bemutató szoba kártyája ott van
@@ -111,8 +111,8 @@ try {
   const house = (await ensureUnits(site.id))[0]!;
   await setBasePrice(house.id, 62000);
 
-  // ── ① ADR-XXXX: no three-way question any more ───────────────────────
-  console.log("\n① a 2. szobánál nincs háromutas kérdés (ADR-XXXX)");
+  // ── ① ADR-0392: no three-way question any more ───────────────────────
+  console.log("\n① a 2. szobánál nincs háromutas kérdés (ADR-0392)");
   let html = await get(ROOMS);
   check("nincs „csak” válasz a felvevő űrlapon", !/name="whole" value="csak"/.test(html));
   check("az alapnevű egységnél nincs kérdés sem", !html.includes("data-cit-whole-q"));
@@ -173,8 +173,8 @@ try {
   check("a ház kártyáján a „Csak egyben adom ki” bepipálva", /name="only" value="1" checked/.test(html));
   check("…és kimondja: csak az egész házat foglalhatja", /A vendég csak az egész házat foglalhatja/.test(html));
   check("a rácson a szoba: „csak bemutatásra”", /Diófa szoba<\/b><span>[^<]*csak bemutatásra/.test(grid(html)));
-  check("a ház NEM kártya a rácson (ADR-XXXX)", !grid(html).includes(`data-rs-card="${h1.id}"`));
-  // the add form only — the whole-house card above has its OWN price field (ADR-XXXX)
+  check("a ház NEM kártya a rácson (ADR-0392)", !grid(html).includes(`data-rs-card="${h1.id}"`));
+  // the add form only — the whole-house card above has its OWN price field (ADR-0392)
   const addForm = html.slice(html.indexOf('class="unit-more"'));
   check("a 3. szoba űrlapján nincs ár-mező és nincs „nem adok meg árat”", !/name="price"/.test(addForm) && !/name="price_on_request"/.test(addForm));
   check("…helyette a mondat", /data-cit-new-noprice/.test(html));
@@ -228,7 +228,7 @@ try {
   // back to only, then off
   await post("/admin/units/whole", { what: "only", only: "1" });
   check("vissza „csak egyben”", (await getUnits(site.id)).find((u) => u.id === house.id)!.wholeOnly);
-  // ADR-XXXX: „Nem adom ki egyben" no longer exists — an older form's „none" leaves the house
+  // ADR-0392: „Nem adom ki egyben" no longer exists — an older form's „none" leaves the house
   // bookable (a guest books a room or the whole house), only the „only" box clears.
   await post("/admin/units/whole", { mode: "none", unit: house.id });
   const h3 = (await getUnits(site.id)).find((u) => u.id === house.id)!;

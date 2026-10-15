@@ -297,7 +297,7 @@ try {
 
       // ① A RÁCS — a kártya azt mutatja, amit a vendég lát
       const cards = page.locator(".rs-gcard:not(.rs-gcard--preview)");
-      // ADR-XXXX: the whole house has its own card above the grid — two room cards here.
+      // ADR-0392: the whole house has its own card above the grid — two room cards here.
       check("két szoba-kártya a rácsban (az egész ház a rács fölött, saját kártyán)", (await cards.count()) === 2 && (await page.locator("#egesz-haz").count()) === 1, `kapott: ${await cards.count()}`);
       const cols = await page.evaluate(() => {
         const xs = new Set<number>();

@@ -1862,7 +1862,7 @@ async function serveAdmin(
           flash: flashUnit
             ? { state: state as NonNullable<NewUnitView["flash"]>["state"], unitId: flashUnit.id, unitName: flashUnit.name }
             : null,
-          // ADR-XXXX: the whole-house card's price line and what was just saved on it.
+          // ADR-0392: the whole-house card's price line and what was just saved on it.
           house: await (async () => {
             const h = (await getUnits(site.id)).find((u) => u.representsWhole && u.isWholeProperty);
             if (!h) return null;
@@ -3378,7 +3378,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         return redirect(res, `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       } else {
         const before = await getUnits(siteId);
-        // ADR-XXXX: when the second unit is added to a lone unit that stands for the place
+        // ADR-0392: when the second unit is added to a lone unit that stands for the place
         // AND carries a name the owner gave it, only the owner knows what it is — the whole
         // house (it stays, and the new unit is the first room) or his first room (then the
         // whole house is created next to the two rooms). The default-named unit is the house.
@@ -3393,7 +3393,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         }
         const created = await createUnit(siteId, name, cap, form.get("description"));
         if (created && asks && first === "szoba") await settleFormerWhole(siteId, lone!.id, "szoba", "");
-        // ADR-XXXX: the whole house exists, separate from the rooms, and is let as one.
+        // ADR-0392: the whole house exists, separate from the rooms, and is let as one.
         if (created) await settleHouse(siteId);
         // ADR-0257 (owner: „szobák nem kérnek árát"): a presentation room is asked no price —
         // the form shows no field, and a price sent anyway (an old form) is not stored.
@@ -3447,7 +3447,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=${back}&saved=1`);
   }
-  // POST /admin/units/whole — ADR-XXXX: the whole-house card above the rooms grid. Two
+  // POST /admin/units/whole — ADR-0392: the whole-house card above the rooms grid. Two
   // separate forms post here: `what=only` (the „Csak egyben adom ki" box; unchecked = a guest
   // books a room or the whole house) and `what=price` (the house's base price; empty = none,
   // the guest asks for a quote). Which unit is the house is never asked — settleHouse knows.

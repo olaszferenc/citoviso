@@ -139,7 +139,7 @@ try {
     const note = page.locator(".cit-book__note").first();
 
     // ⑥ ÁRAZOTT: semmi nem változik
-    // by id, not index: two rooms have the whole house beside them in the picker (ADR-XXXX)
+    // by id, not index: two rooms have the whole house beside them in the picker (ADR-0392)
     await sel.selectOption(priced.id); await page.waitForTimeout(700);
     check("⑥ árazott egységnél megjelenik az összeg", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));
     check("⑥ …a gomb foglalást ígér", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());

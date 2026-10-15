@@ -5,7 +5,7 @@
 //   ① a hozzáférés: csak bejelentkezett tulaj, élő booking-modullal, és csak JSON-kérés
 //      (űrlap-POST-ot nem fogad — kereszt-oldali űrlap nem tud JSON-t küldeni);
 //   ② szakaszonkénti mentés a MEGLÉVŐ írás-függvényeken át — a DB-ből visszaolvasva:
-//      kiadás módja (szobánként — a ház is foglalható / csak egyben; ADR-XXXX), szobák, alapár, „nem adok meg árat”,
+//      kiadás módja (szobánként — a ház is foglalható / csak egyben; ADR-0392), szobák, alapár, „nem adok meg árat”,
 //      időszak (a valódi normalizálással és hibaüzenettel), szabályok, IFA három állapota,
 //      értesítési cím (a rossz címet kimondja), lejárat;
 //   ③ a néma akadályok hangosan: „csak az időszakokban” időszak nélkül, időszak-minimum >
@@ -158,7 +158,7 @@ try {
   check("friss oldal: egyben, egy egység", st.mode === "single" && st.units.length === 1 && st.units[0]!.whole);
   let r = await api("/admin/booking-setup/save", { section: "rooms", mode: "both", units: [{ id: null, whole: false, name: "", cap: 2 }] });
   check("névtelen szoba → valódi hibaüzenet, semmi nem íródik", !r.ok && r.errors.includes("Adjon nevet minden szobának.") && (await units(A.siteId)).length === 1, r.errors);
-  // ADR-XXXX: the former „rooms only" answer is gone — an older client's „rooms" means
+  // ADR-0392: the former „rooms only" answer is gone — an older client's „rooms" means
   // rooms + the whole house, like „Szobánként" (both) does now.
   r = await api("/admin/booking-setup/save", {
     section: "rooms", mode: "rooms",
@@ -329,7 +329,7 @@ try {
         check("asztali: a Segítő jobb oldalt látszik, az alsó sáv nem", await p.locator(".bs-chat").isVisible() && !(await p.locator("[data-ask]").isVisible()));
       }
       // first section: choose "Szobánként", name the room, save → prices opens
-      check(`${name}: két válasz, nincs „csak szobánként” (ADR-XXXX)`, (await p.locator('[data-opt="mode"]').count()) === 2 && (await p.locator('[data-opt="mode"][data-val="rooms"]').count()) === 0);
+      check(`${name}: két válasz, nincs „csak szobánként” (ADR-0392)`, (await p.locator('[data-opt="mode"]').count()) === 2 && (await p.locator('[data-opt="mode"][data-val="rooms"]').count()) === 0);
       await p.click('[data-opt="mode"][data-val="both"]');
       await p.fill('[data-k="name"]', "Erdei szoba");
       await p.fill('.bs-unit:has([data-k="name"]) [data-k="cap"]', "3");

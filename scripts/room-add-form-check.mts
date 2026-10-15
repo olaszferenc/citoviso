@@ -2,7 +2,7 @@
 // owner ruling 2026-09-28).
 //
 // Measured on the phone night-run (FK-013): with one room already there, the REQUIRED
-// "Az egész szállást is kiadja egyben?" answer (ADR-XXXX: „Mi az eddigi …?") stood ABOVE the fields, off-screen at 390 px;
+// "Az egész szállást is kiadja egyben?" answer (ADR-0392: „Mi az eddigi …?") stood ABOVE the fields, off-screen at 390 px;
 // „Hozzáadás" then did nothing visible (the browser's validation jumped to a field the owner
 // could not see). And the page had two look-alike forms, so the first attempt typed the new
 // room into the EXISTING one.
@@ -17,7 +17,7 @@
 //  ④ picking an answer clears the message.
 // ⛔ Never submits a valid form: the dev DB is shared, so the guard measures the refusal path
 //    only and asserts that not a single POST /admin/units/save went out. The subject's lone unit
-//    is renamed for the run and restored afterwards (ADR-XXXX: only a renamed one is asked).
+//    is renamed for the run and restored afterwards (ADR-0392: only a renamed one is asked).
 // Run: npx tsx scripts/room-add-form-check.mts [--self-test]
 //   --self-test re-imposes the pre-fix screen (question above the fields, no message) → must go RED.
 
@@ -70,7 +70,7 @@ const booking = await db
   .executeTakeFirst();
 const screens = ["/admin?tab=modulok&m=rooms", ...(booking ? ["/admin?tab=modulok&m=booking"] : [])];
 console.log(`alany: ${subject.slug} (1 szoba) · ${screens.join(" · ")}`);
-// ADR-XXXX: the question is asked only when the lone unit stands for the place AND carries a
+// ADR-0392: the question is asked only when the lone unit stands for the place AND carries a
 // name the owner gave it (the default-named one IS the house, nothing to ask). The dev DB has
 // only default-named lone units, so the subject's unit is renamed for the run and restored in
 // `finally` — the only write this guard makes.

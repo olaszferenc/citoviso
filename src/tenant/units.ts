@@ -154,7 +154,7 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
     // Back-fill slugs for units created before 0026 — a unit without an address
     // cannot have a subpage, and silently skipping it would drop it from the sitemap.
     for (const u of existing) if (!u.slug) await assignSlug(siteId, u.id, u.name);
-    // ADR-XXXX: with rooms, the whole house is its own bookable unit — never one of the rooms.
+    // ADR-0392: with rooms, the whole house is its own bookable unit — never one of the rooms.
     const settled = existing.length > 1 && (await settleHouse(siteId, existing));
     return settled || existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
   }
@@ -175,7 +175,7 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
 }
 
 /**
- * ADR-XXXX (owner, 2026-10-15: „egy szobát vagy az egész házat foglal — ez magától értetődő";
+ * ADR-0392 (owner, 2026-10-15: „egy szobát vagy az egész házat foglal — ez magától értetődő";
  * the three-state card and the „melyik szoba" picker were „túl van bonyolítva"). With two or
  * more units the place has exactly ONE whole-house unit (`represents_whole`), separate from the
  * rooms, and a guest can always book either a room or the whole house: it is always let as one
@@ -235,7 +235,7 @@ export async function settleHouse(siteId: string, units?: readonly Unit[]): Prom
 }
 
 /**
- * ADR-XXXX — the owner's one switch on the whole-house card: „Csak egyben adom ki".
+ * ADR-0392 — the owner's one switch on the whole-house card: „Csak egyben adom ki".
  * On → the house is the only bookable unit, the rooms are shown for presentation (ADR-0257);
  * off → a guest books a room or the whole house. Returns false when the site has no house.
  */
@@ -556,7 +556,7 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   if (units.length <= 1) {
     return { ok: false, reason: "Legalább egy szobának maradnia kell." };
   }
-  // ADR-XXXX: with two or more rooms the whole house is what a group books — it stays
+  // ADR-0392: with two or more rooms the whole house is what a group books — it stays
   // (settleHouse would only bring it back, without its photos and price). With one room
   // left it can go: the room then is the place.
   if (target.representsWhole && units.filter((u) => !u.representsWhole).length >= 2) {

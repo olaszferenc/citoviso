@@ -11,7 +11,7 @@
 //      törlő gomb, a kérés hivatkozása és a vendég neve ott áll), és a szerver is elutasít
 //      (deleteUnit + POST) — a szoba és a kérés megmarad;
 //   ③ A-2: törlés után a megmaradt ISMERT szobánál az új-szoba űrlap nem kérdez „mi a
-//      viszonyuk" kérdést; negatív kontroll: az egészet jelölő (átnevezett) egységnél igen (ADR-XXXX);
+//      viszonyuk" kérdést; negatív kontroll: az egészet jelölő (átnevezett) egységnél igen (ADR-0392);
 //   ④ A-3: az időszak „jún. 15. – aug. 31." alakban, nem „06-15 – 08-31";
 //   ⑤ A-4: a Foglalások üres sorában nincs „✔" szövegjel, ikon van helyette.
 //
@@ -165,7 +165,7 @@ try {
   html = await get(ROOMS);
   check("⭐ az új-szoba űrlap nem kérdezi az egész szállást", !html.includes("<fieldset class=\"rs-wq\" data-cit-whole-q>"));
   check("a „marad az egész szállás” felkínálás sincs", !html.includes("marad az egész szállás"));
-  // ADR-XXXX: two named rooms got the whole house beside them (settleHouse) — remove it so the
+  // ADR-0392: two named rooms got the whole house beside them (settleHouse) — remove it so the
   // known room stands alone again: a lone NAMED room is still not asked about.
   const houseId = (await getUnits(site.id)).find((u) => u.representsWhole)?.id;
   if (houseId) await deleteUnit(site.id, houseId);

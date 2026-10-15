@@ -1,5 +1,5 @@
 // AZ EGÉSZ HÁZ — EGYSZERŰSÍTVE — ŐR
-// (ADR-XXXX, jóváhagyott terv: assets/design-refs/tenant-admin/whole-house-simple/, tulaj 2026-10-15:
+// (ADR-0392, jóváhagyott terv: assets/design-refs/tenant-admin/whole-house-simple/, tulaj 2026-10-15:
 // „csináld"; felülírja az ADR-0232 kártyáját és „melyik szoba" választóját, az ADR-0256 rejtését).
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver, a RENDERELT lapon):
@@ -273,5 +273,5 @@ try {
   if (ids.defId) await db.deleteFrom("scraper_definition").where("id", "=", ids.defId).execute();
   await pool.end();
 }
-console.log(fail ? `\n⛔ WHOLE-HOUSE: ${fail} bukás` : "\n🟢 WHOLE-HOUSE (ADR-XXXX): a vendég egy szobát vagy az egész házat foglal; a ház külön tétel, saját árral; egy pipa: csak egyben");
+console.log(fail ? `\n⛔ WHOLE-HOUSE: ${fail} bukás` : "\n🟢 WHOLE-HOUSE (ADR-0392): a vendég egy szobát vagy az egész házat foglal; a ház külön tétel, saját árral; egy pipa: csak egyben");
 process.exit(fail ? 1 : 0);

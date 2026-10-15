@@ -78,7 +78,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
   # gomb fölött áll, kihagyva a gomb alatt piros sor mondja meg, mi hiányzik.
   # ⚠️ MÉRT (2026-09-28, friss bérlő — Myrna Haus): az ELSŐ saját szobánál a kérdés már
   # NEM jön elő („Még egy döntés hiányzik” nincs), a szoba azonnal felvéve, és az egész-ház
-  # döntést a lista fölötti „Az egész ház” kártya mutatja (ADR-XXXX, 2026-10-15: a ház külön
+  # döntést a lista fölötti „Az egész ház” kártya mutatja (ADR-0392, 2026-10-15: a ház külön
   # tétel, egyetlen pipa „Csak egyben adom ki”; kérdés csak ÁTNEVEZETT egyetlen egységnél). A régi,
   # elhasznált parkon (Három Huszár) a kérdés még előjött — ezért itt best-effort, és a
   # gépi bizonyíték a „Felvettük”.

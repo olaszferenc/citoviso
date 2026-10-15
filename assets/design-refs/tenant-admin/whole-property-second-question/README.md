@@ -1,6 +1,6 @@
 # KONTRAKTUS — a 2. szoba felvételekor: mi volt az eddigi egység? (második kérdés a „Nem” után)
 
-> ⛔ **FELÜLÍRVA — ADR-XXXX (2026-10-15, tulaj):** a második kérdés („Ez az első szobám” / „Nincs ilyen szobám — rejtse el”) MEGSZŰNT. Az egész ház mindig külön tétel, a szobák mellett mindig foglalható; a 2. szobánál csak az átnevezett egyetlen egységről kérdezünk („az egész ház” / „az első szobám”). Kontraktus: `assets/design-refs/tenant-admin/whole-house-simple/`. Az alábbi szöveg történeti.
+> ⛔ **FELÜLÍRVA — ADR-0392 (2026-10-15, tulaj):** a második kérdés („Ez az első szobám” / „Nincs ilyen szobám — rejtse el”) MEGSZŰNT. Az egész ház mindig külön tétel, a szobák mellett mindig foglalható; a 2. szobánál csak az átnevezett egyetlen egységről kérdezünk („az egész ház” / „az első szobám”). Kontraktus: `assets/design-refs/tenant-admin/whole-house-simple/`. Az alábbi szöveg történeti.
 
 **Jóváhagyva:** 2026-09-28, tulajdonosi döntés. A kiinduló szabály a tulajé: *„Tűnjön el ha nem kiadó az
 egész egyben.”* A három felismerési útból (a) név-függő · (b) kérdés a 2. szoba felvételekor · (c) kapcsoló

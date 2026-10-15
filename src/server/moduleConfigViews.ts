@@ -476,7 +476,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .unit-new__err[hidden]{display:none}
 .unit-new__price{display:contents}
 .unit-new__noprice{flex:1 1 100%;margin:0;padding:10px 12px;border-radius:10px;background:var(--citui-surface-2);color:var(--citui-muted);font-size:.86rem;line-height:1.45}
-/* ADR-XXXX (approved plan whole-house-simple): the whole-house card — its price form and
+/* ADR-0392 (approved plan whole-house-simple): the whole-house card — its price form and
    the one box. Layout comes from .rs-wcard; these are the parts it did not have. */
 .rs-house__price{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:.84rem;color:var(--citui-ink)}
 .rs-house__price .citui-input{width:120px}
@@ -1656,7 +1656,7 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
 }
 
 /**
- * ADR-XXXX (approved plan tenant-admin/whole-house-simple, owner 2026-10-15: the three-state
+ * ADR-0392 (approved plan tenant-admin/whole-house-simple, owner 2026-10-15: the three-state
  * card with its „melyik szoba" picker was „túl van bonyolítva"). The whole house is its own
  * card above the rooms grid — never one of the rooms. A guest books a room OR the whole house;
  * the owner's only choice is „Csak egyben adom ki". The house's price is set right here.
@@ -1731,7 +1731,7 @@ function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, la
 }
 
 /**
- * ADR-XXXX: the question asked when the SECOND unit is added — only when the lone unit so far
+ * ADR-0392: the question asked when the SECOND unit is added — only when the lone unit so far
  * stands for the place AND carries a name the owner gave it: then only he knows whether it is
  * the whole house or his first room. The default-named unit is the house; nothing is asked.
  * Required radios inside the add form, so it works without JS; the server refuses a form
@@ -2107,7 +2107,7 @@ export interface NewUnitView {
     readonly unitId: string;
     readonly unitName: string;
   } | null;
-  /** ADR-XXXX: the whole-house card's base price, its other price rows (seasons, dated
+  /** ADR-0392: the whole-house card's base price, its other price rows (seasons, dated
    *  prices — edited on Árak), and what the card just saved. null → there is no house. */
   readonly house?: {
     readonly base: number | null;
@@ -2116,7 +2116,7 @@ export interface NewUnitView {
   } | null;
 }
 
-/** ADR-XXXX: the whole-house card's last save (the `haz` query flag). */
+/** ADR-0392: the whole-house card's last save (the `haz` query flag). */
 export type HouseSaved = "ar" | "nincsar" | "csak" | "mindketto";
 
 /**
@@ -2256,7 +2256,7 @@ function roomsEditor(
   lang: string,
   nu?: NewUnitView,
 ): string {
-  // ADR-XXXX: the whole house has its own card above the grid — it is not one of the rooms.
+  // ADR-0392: the whole house has its own card above the grid — it is not one of the rooms.
   const house = units.find((u) => u.representsWhole && u.isWholeProperty);
   const rooms = house && units.length > 1 ? units.filter((u) => u !== house) : units;
   const cards = rooms.map((u) => roomCard(u, units, lang)).join("");

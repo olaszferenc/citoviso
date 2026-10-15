@@ -1,4 +1,4 @@
-## ADR-XXXX — Az egész ház külön tétel, mindig foglalható a szobák mellett; egyetlen pipa: „Csak egyben adom ki” (2026-10-15)
+## ADR-0392 — Az egész ház külön tétel, mindig foglalható a szobák mellett; egyetlen pipa: „Csak egyben adom ki” (2026-10-15)
 
 **Dátum:** 2026-10-15 · **Státusz:** elfogadva, megvalósítva (őrrel) · **Felülírja:** ADR-0232 ③–⑤ (a kártya
 kapcsolója, a „melyik egység” választó, „bármely egység törölhető, az egész is”), ADR-0256 (a „Nem” utáni második

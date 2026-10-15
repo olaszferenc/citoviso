@@ -1,6 +1,6 @@
 # KONTRAKTUS — az „egész szállás” VÁLASZTHATÓ egység (B változat)
 
-> ⛔ **FELÜLÍRVA — ADR-XXXX (2026-10-15, tulaj: „túl van bonyolítva”):** a kártya kapcsolója/háromállású választója és a „melyik szoba” választó MEGSZŰNT; a ház sosem az egyik szoba. Kontraktus: `assets/design-refs/tenant-admin/whole-house-simple/`. A 4. (törlés: több szobánál a ház nem törölhető), az 5. és a 6. pont ma is él.
+> ⛔ **FELÜLÍRVA — ADR-0392 (2026-10-15, tulaj: „túl van bonyolítva”):** a kártya kapcsolója/háromállású választója és a „melyik szoba” választó MEGSZŰNT; a ház sosem az egyik szoba. Kontraktus: `assets/design-refs/tenant-admin/whole-house-simple/`. A 4. (törlés: több szobánál a ház nem törölhető), az 5. és a 6. pont ma is él.
 
 > ⚠️ **Felirat-csere (tulaj, 2026-09-28):** a tenant-admin minden feliratán „egység” → „szoba” (terv: `assets/design-refs/tenant-admin/room-add-B/`). Az alábbi idézetek már az új szöveget mondják.
 

@@ -116,7 +116,7 @@ export function deriveMode(units: readonly Unit[]): SetupMode {
   const whole = wholeUnitOf(units);
   const rooms = units.filter((u) => u !== whole);
   if (!rooms.length) return "single";
-  // ADR-XXXX: with rooms, a guest books a room or the whole house („both") — unless the
+  // ADR-0392: with rooms, a guest books a room or the whole house („both") — unless the
   // place is let only as one. The former „rooms only" answer no longer exists.
   return whole && whole.isWholeProperty && whole.wholeOnly ? "single" : "both";
 }
@@ -301,7 +301,7 @@ async function mergeConfig(
 
 /** ① Szállás és szobák: how the place is let, the rooms and their capacity. */
 async function saveRooms(siteId: string, body: Record<string, unknown>, lang: string): Promise<SaveResult> {
-  // ADR-XXXX: an older client may still send „rooms" — it means rooms + the whole house now.
+  // ADR-0392: an older client may still send „rooms" — it means rooms + the whole house now.
   const mode = body.mode === "rooms" ? "both" : body.mode;
   if (mode !== "single" && mode !== "both") {
     return fail([T(lang, "Válassza ki, hogyan adja ki a szállását.")]);
@@ -360,7 +360,7 @@ async function saveRooms(siteId: string, body: Record<string, unknown>, lang: st
     const id = await ensureWhole();
     await setWholeProperty(siteId, id, false);
   }
-  // ADR-XXXX: two or more rooms always have the whole house beside them.
+  // ADR-0392: two or more rooms always have the whole house beside them.
   await settleHouse(siteId);
   if (wholeId && wholeRow) {
     const w = (await ensureUnits(siteId)).find((u) => u.id === wholeId)!;

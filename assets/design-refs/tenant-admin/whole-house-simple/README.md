@@ -4,7 +4,7 @@
 háromállású „Az egész szállás egyben” kártya és a „melyik szoba” választó — a tulaj: „Olyan szinten túl
 van bonyolítva”, és: „egy szobát és az egész házat hogy tudná már egyben foglalni” (a vendég VAGY egy
 szobát, VAGY az egész házat foglalja; ez magától értetődő, nem kérdés).
-**ADR:** ADR-XXXX · **Felülírja:** a `whole-property-choice` kártyáját, a `whole-property-second-question`
+**ADR:** ADR-0392 · **Felülírja:** a `whole-property-choice` kártyáját, a `whole-property-second-question`
 második kérdését, a `tenant-site/whole-only` admin-részét (5–6. pont) ·
 **Terv:** `plan.html` (önhordó, kattintható, Mobil 390 / Asztali váltó) · **Képek:** `shots/terv-*.png`
 (a terv), `shots/kesz-*.png` (a kész felület, az őr fixtúráján) ·

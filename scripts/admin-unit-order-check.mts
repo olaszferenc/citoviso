@@ -6,7 +6,7 @@
 // ment, amit senki nem foglalhat.
 //
 // Mit köt:
-//   ① ADR-XXXX: REJTETT egész már nincs — a régi rejtett egész az első admin-megnyitáskor
+//   ① ADR-0392: REJTETT egész már nincs — a régi rejtett egész az első admin-megnyitáskor
 //      foglalható ház lesz (settleHouse), saját kártyával (nem a rácson), saját naptár-füllel;
 //   ② EGYBEN IS KIADÓ egész: ELÖL a felugrók, az Árak és a naptár-fül listájában;
 //   ③ CSAK EGYBEN kiadó ház (ADR-0257): elöl; a naptár-fülön csak a ház — a bemutató szobáknak nincs
@@ -98,7 +98,7 @@ try {
     const booking = await get("/admin?tab=modulok&m=booking");
     const tabsHtml = /<div class="unit-tabs"[\s\S]*?<\/div>/.exec(booking)?.[0] ?? "";
     return {
-      // the grid only: the whole-house card above it links the house's editor (ADR-XXXX)
+      // the grid only: the whole-house card above it links the house's editor (ADR-0392)
       grid: orderBy(rooms.slice(Math.max(0, rooms.indexOf('class="rs-grid"'))), /data-rs-card="([0-9a-f-]{36})"/g),
       pops: orderBy(rooms, /data-rs-modal="([0-9a-f-]{36})"/g),
       prices: orderBy(pricing, /id="ar-([0-9a-f-]{36})"/g),
@@ -125,8 +125,8 @@ try {
   const pos = (list: string[], id: string): string =>
     list.indexOf(id) === 0 ? "elöl" : list.indexOf(id) === list.length - 1 ? "a végén" : list.indexOf(id) < 0 ? "nincs" : "középen";
 
-  // ── ① ADR-XXXX: a hidden whole place no longer exists — it settles back ─
-  console.log("\n① a régi rejtett egész (ADR-0256) magától rendbe jön (ADR-XXXX): foglalható ház");
+  // ── ① ADR-0392: a hidden whole place no longer exists — it settles back ─
+  console.log("\n① a régi rejtett egész (ADR-0256) magától rendbe jön (ADR-0392): foglalható ház");
   await setWhole(false, false);
   let l = await lists();
   const settled = (await db.selectFrom("site_unit").select(["is_whole_property"]).where("id", "=", whole.id).executeTakeFirstOrThrow()).is_whole_property;
@@ -139,7 +139,7 @@ try {
   console.log("\n② egyben is kiadó egész — ELÖL (negatív kontroll: ugyanaz a próba)");
   await setWhole(true, false);
   l = await lists();
-  check("Szobák rács: a ház nincs a rácson (saját kártyája van — ADR-XXXX)", !l.grid.includes(whole.id) && l.grid.length === 2, l.grid);
+  check("Szobák rács: a ház nincs a rácson (saját kártyája van — ADR-0392)", !l.grid.includes(whole.id) && l.grid.length === 2, l.grid);
   check("Szoba-felugrók: az egész elöl", pos(l.pops, whole.id) === "elöl", l.pops);
   check("Árak kártyák: az egész elöl", pos(l.prices, whole.id) === "elöl", l.prices);
   check("Naptár-fül: három fül, az egész elöl", l.tabs.length === 3 && l.tabs[0] === whole.id, l.tabs);
@@ -149,7 +149,7 @@ try {
   console.log("\n③ csak egyben kiadó ház — elöl, a szobáknak nincs naptára");
   await setWhole(true, true);
   l = await lists();
-  check("Szobák rács: a ház nincs a rácson (saját kártyája van — ADR-XXXX)", !l.grid.includes(whole.id) && l.grid.length === 2, l.grid);
+  check("Szobák rács: a ház nincs a rácson (saját kártyája van — ADR-0392)", !l.grid.includes(whole.id) && l.grid.length === 2, l.grid);
   check("Szoba-felugrók: a ház elöl", pos(l.pops, whole.id) === "elöl", l.pops);
   check("Árak kártyák: a ház elöl", pos(l.prices, whole.id) === "elöl", l.prices);
   check("Naptár-fül: nincs fülsor (egyetlen foglalható egység)", l.tabs.length === 0, l.tabs);
