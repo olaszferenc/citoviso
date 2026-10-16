@@ -122,7 +122,7 @@ export function deriveMode(units: readonly Unit[]): SetupMode {
 }
 
 /** The units the questions price and the trial books — the same split the client uses.
- *  ADR-XXXX: by rooms, the rooms only — the whole house is no offer of its own beside them
+ *  ADR-0393: by rooms, the rooms only — the whole house is no offer of its own beside them
  *  (the guest ticks every room), so it is neither priced nor tried here. */
 export function setupBookable<T extends { whole: boolean }>(mode: SetupMode, units: readonly T[]): T[] {
   return units.filter((u) => (mode === "single" ? u.whole : !u.whole));

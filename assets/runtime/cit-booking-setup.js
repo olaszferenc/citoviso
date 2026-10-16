@@ -76,7 +76,7 @@
   // ADR-0392: the former „rooms only" answer is gone — an older state means rooms + the house.
   if (S.mode === "rooms") S.mode = "both";
   function bookable() {
-    // ADR-XXXX: by rooms, the rooms only — the whole house is booked by ticking every room.
+    // ADR-0393: by rooms, the rooms only — the whole house is booked by ticking every room.
     return S.units.filter(function (u) { return S.mode === "single" ? u.whole : !u.whole; });
   }
   function setMode(m) {

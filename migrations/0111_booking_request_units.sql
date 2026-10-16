@@ -1,4 +1,4 @@
--- 0111 TÖBB SZOBA EGY FOGLALÁSI KÉRÉSBEN (ADR-XXXX, terv: design-refs/tenant-site/multi-room).
+-- 0111 TÖBB SZOBA EGY FOGLALÁSI KÉRÉSBEN (ADR-0393, terv: design-refs/tenant-site/multi-room).
 --
 -- A vendég egy kérésben több szobát is kérhet; a szállásadó egyben igazolja vissza.
 --

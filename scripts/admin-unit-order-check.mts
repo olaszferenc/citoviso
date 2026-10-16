@@ -7,9 +7,9 @@
 //
 // Mit köt:
 //   ① ADR-0392: REJTETT egész már nincs — a régi rejtett egész az első admin-megnyitáskor
-//      ház lesz (settleHouse), saját kártyával (nem a rácson); ADR-XXXX: a szobák mellett nincs
+//      ház lesz (settleHouse), saját kártyával (nem a rácson); ADR-0393: a szobák mellett nincs
 //      saját naptár-füle és ár-kártyája (a vendég minden szobát kipipál), egy mondat megnevezi;
-//   ② a szobák melletti ház: ELÖL a felugrók listájában; Árak és naptár-fül nélkül (ADR-XXXX);
+//   ② a szobák melletti ház: ELÖL a felugrók listájában; Árak és naptár-fül nélkül (ADR-0393);
 //   ③ CSAK EGYBEN kiadó ház (ADR-0257): elöl; a naptár-fülön csak a ház — a bemutató szobáknak nincs
 //      naptára, és egy mondat megnevezi őket („a házzal együtt foglalható”); egy régi link egy
 //      bemutató szoba naptárára a házat nyitja;
@@ -133,9 +133,9 @@ try {
   const settled = (await db.selectFrom("site_unit").select(["is_whole_property"]).where("id", "=", whole.id).executeTakeFirstOrThrow()).is_whole_property;
   check("az első admin-megnyitás után a ház foglalható", settled);
   check("Szobák rács: a ház NINCS a rácson (saját kártyája van), a szobák a tulaj sorrendjében", !l.grid.includes(whole.id) && l.grid[0] === roomA && l.grid[1] === roomB, l.grid);
-  // ADR-XXXX: beside its rooms the house takes no request of its own — no calendar tab, and the
+  // ADR-0393: beside its rooms the house takes no request of its own — no calendar tab, and the
   // sentence names it (the guest books the whole house by ticking every room).
-  check("Naptár-fül: két fül, csak a szobák (a háznak nincs külön naptára — ADR-XXXX)", l.tabs.length === 2 && !l.tabs.includes(whole.id), l.tabs);
+  check("Naptár-fül: két fül, csak a szobák (a háznak nincs külön naptára — ADR-0393)", l.tabs.length === 2 && !l.tabs.includes(whole.id), l.tabs);
   check("…a „nincs külön naptára” mondat megnevezi a házat", /data-cit-unit-nocal/.test(l.booking) && /minden szobát kijelöl/.test(l.booking));
 
   // ── ② let as one as well — the negative control ──────────────────────────
@@ -144,8 +144,8 @@ try {
   l = await lists();
   check("Szobák rács: a ház nincs a rácson (saját kártyája van — ADR-0392)", !l.grid.includes(whole.id) && l.grid.length === 2, l.grid);
   check("Szoba-felugrók: az egész elöl", pos(l.pops, whole.id) === "elöl", l.pops);
-  check("Árak kártyák: a háznak nincs kártyája (ADR-XXXX)", !l.prices.includes(whole.id) && l.prices.length === 2, l.prices);
-  check("Naptár-fül: két fül, csak a szobák (ADR-XXXX)", l.tabs.length === 2 && !l.tabs.includes(whole.id), l.tabs);
+  check("Árak kártyák: a háznak nincs kártyája (ADR-0393)", !l.prices.includes(whole.id) && l.prices.length === 2, l.prices);
+  check("Naptár-fül: két fül, csak a szobák (ADR-0393)", l.tabs.length === 2 && !l.tabs.includes(whole.id), l.tabs);
   check("…a „nincs külön naptára” mondat megnevezi a házat", /data-cit-unit-nocal/.test(l.booking));
 
   // ── ③ let ONLY as one ─────────────────────────────────────────────────

@@ -15,7 +15,7 @@
 //      választása után a sáv 68 000-en maradt, a beküldött kérés 90 500 lett.
 //
 //
-//   ADR-XXXX (több szoba egy kérésben, kontraktus: assets/design-refs/tenant-site/multi-room/):
+//   ADR-0393 (több szoba egy kérésben, kontraktus: assets/design-refs/tenant-site/multi-room/):
 //   a 2+ egységes widgeten nincs `#cit-unit` választó — előbb a dátum, AZTÁN a szoba-lista
 //   pipája ([data-cit-room-pick]); pipa nélkül nincs ár. Az őr ezért dátum után pipál; a régi
 //   „egység váltása a választóban” = „csak azt az egy szobát pipálom”. Új állítás (⑦): a pipált
@@ -227,7 +227,7 @@ async function setRange(page: Page, from: string, to: string): Promise<void> {
 async function clickN(page: Page, sel: string, n: number): Promise<void> {
   for (let i = 0; i < n; i++) await page.click(sel);
 }
-/* ADR-XXXX: tick exactly these rooms in the room list (it renders once both dates are set). */
+/* ADR-0393: tick exactly these rooms in the room list (it renders once both dates are set). */
 async function pickOnly(page: Page, ids: string[]): Promise<void> {
   for (const u of UNITS) await page.locator(`[data-cit-room-pick][value="${u.id}"]`).setChecked(ids.includes(u.id));
   await page.waitForTimeout(200);
@@ -246,7 +246,7 @@ try {
   await page.goto(pathToFileURL(file).href);
   await page.waitForTimeout(500);
   await setRange(page, iso(20), iso(23)); // 3 nights
-  await pickOnly(page, [UNITS[0]!.id]); // ADR-XXXX: the room is ticked after the dates
+  await pickOnly(page, [UNITS[0]!.id]); // ADR-0393: the room is ticked after the dates
 
   const cases: { name: string; plan: MealPlanId; guests: number; kids: number }[] = [
     { name: "csak szállás, 2 fő", plan: "none", guests: 2, kids: 0 },
@@ -277,13 +277,13 @@ try {
   const offShown = async (): Promise<boolean> =>
     (await page.locator("#cit-meal").isHidden()) &&
     /Ehhez a szálláshoz nem kérhető ellátás\./.test((await page.locator("[data-cit-mealf]").textContent()) ?? "");
-  await pickOnly(page, [UNITS[1]!.id]); // ADR-XXXX: was „switch the unit in the select”
+  await pickOnly(page, [UNITS[1]!.id]); // ADR-0393: was „switch the unit in the select”
   check("④ a kivett szobánál nincs választó, a mondat ott áll", await offShown());
   await pickOnly(page, [UNITS[0]!.id, UNITS[1]!.id]);
-  check("④ ADR-XXXX: ha a pipált szobák egyike kivett, nincs választó", await offShown());
+  check("④ ADR-0393: ha a pipált szobák egyike kivett, nincs választó", await offShown());
   {
     const q2 = (await page.locator("[data-quote]").textContent()) ?? "";
-    check("④ ADR-XXXX: két szoba, kivett ellátással → ár-sorban nincs ellátás", !/Reggeli|Félpanzió/.test(q2), q2.slice(0, 200));
+    check("④ ADR-0393: két szoba, kivett ellátással → ár-sorban nincs ellátás", !/Reggeli|Félpanzió/.test(q2), q2.slice(0, 200));
   }
   check("④ JS-hiba 0", errs.length === 0, errs.join(" | "));
 
@@ -299,7 +299,7 @@ try {
   await phone.goto(pathToFileURL(file).href);
   await phone.waitForTimeout(500);
   await setRange(phone, iso(20), iso(23));
-  await pickOnly(phone, [UNITS[0]!.id]); // ADR-XXXX: step 1 holds the room list; „Tovább” needs a ticked room
+  await pickOnly(phone, [UNITS[0]!.id]); // ADR-0393: step 1 holds the room list; „Tovább” needs a ticked room
   await phone.click(".cit-book__go");
   await phone.waitForTimeout(150);
   check("⑤ a 2. lépés nyitva (a sáv látszik)", await phone.locator(".cit-book__sum").isVisible());
@@ -340,9 +340,9 @@ try {
   check("⑤ JS-hiba 0", perrs.length === 0, perrs.join(" | "));
   await phone.close();
 
-  /* ⑦ ADR-XXXX: both rooms take meals, breakfast is per ROOM → charged once per ticked room,
+  /* ⑦ ADR-0393: both rooms take meals, breakfast is per ROOM → charged once per ticked room,
    * mirroring the server's roomsMealLines (mealLines × rooms, label „{plan}, {n} szobára”). */
-  console.log("\n⑦ ADR-XXXX: szobánkénti ellátás két pipált szobára:");
+  console.log("\n⑦ ADR-0393: szobánkénti ellátás két pipált szobára:");
   const R2 = readMeals({ ...S, off: [], plans: { ...S.plans, bb: { ...S.plans.bb, per: "room", price: 5000 } } }) as MealsSetting;
   const file2 = path.join(dir, "site-rooms.html");
   await writeFile(file2, await pageFor(R2), "utf8");

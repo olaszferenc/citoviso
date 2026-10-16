@@ -24,7 +24,7 @@
 // nem jöhet elő, ott ZÖLDNEK kell maradnia. Egy piros önmagában nem bizonyít semmit —
 // attól is pirosra mehetne, hogy a visszarontás bármit eltört.
 //
-// ⭐ ADR-XXXX (több szoba egy kérésben, kontraktus design-refs/tenant-site/multi-room, tulaj
+// ⭐ ADR-0393 (több szoba egy kérésben, kontraktus design-refs/tenant-site/multi-room, tulaj
 // „B”, 2026-10-16): 2+ egységnél NINCS `#cit-unit` választó. A widgetben dátum UTÁN szoba-lista
 // áll (`[data-cit-roomlist]`, `[data-cit-room-pick][value=<id>]` pipák), a kártya/felugró
 // „Foglalás”-a ezt a listát pipálja (`cit:pickroom`). „Viszi a szobát” tehát MOST ezt jelenti:
@@ -85,13 +85,13 @@ const DESC_ONE = "Külön bejárat, teakonyha, csendes sarok a kert végében.";
 
 /** A három forgatókönyv EGY lapon: a mérés így ugyanazon a renderen látja mindet.
  *  A láthatósági tények (representsWhole / isWholeProperty) a TERMÉK szabályához kellenek:
- *  a fixture a `guestUnits()`-on át áll elő, ahogy az editor is (ADR-0256, ADR-XXXX). */
+ *  a fixture a `guestUnits()`-on át áll elő, ahogy az editor is (ADR-0256, ADR-0393). */
 const UNITS = [
   { id: "u-teljes", name: "Teljes Szállás", capacity: 12, representsWhole: false, isWholeProperty: false },
   { id: "u-kerti", name: "Kerti Appartman", capacity: 4, representsWhole: false, isWholeProperty: false },
   { id: "u-teto", name: "Tetőtéri Appartman", capacity: 6, representsWhole: false, isWholeProperty: false },
   { id: "u-kamra", name: "Kamra Szoba", capacity: 2, representsWhole: false, isWholeProperty: false },
-  // ⭐ Az egész ház, „egyben is kiadó” jelöléssel, SZOBÁK MELLETT: ADR-XXXX óta nem ajánlat.
+  // ⭐ Az egész ház, „egyben is kiadó” jelöléssel, SZOBÁK MELLETT: ADR-0393 óta nem ajánlat.
   { id: "u-egesz", name: "Az egész ház", representsWhole: true, isWholeProperty: true },
 ];
 
@@ -126,7 +126,7 @@ const ROOMS: Room[] = [
   },
   {
     // ⭐ AZ EGÉSZ HÁZ, ár és fotó nélkül (a Három Huszár mért esete). 2026-09-28 óta a
-    // rácsból ki, saját sávba (whole-unit-band) — ADR-XXXX óta szobák mellett SEHOL: a
+    // rácsból ki, saját sávba (whole-unit-band) — ADR-0393 óta szobák mellett SEHOL: a
     // `guestUnits()` kiveszi, a vendég minden szobát kipipál helyette. A fixture-ben marad,
     // hogy a visszarontás (a szabály kikapcsolása) vissza tudja hozni. UTOLSÓ, hogy a
     // kártyák indexe ne csússzon.
@@ -141,7 +141,7 @@ const EMPTY_SENTENCE = "Ehhez az egységhez még nincs leírás és felszerelts�
 const AM_HEADING = "Amit ez az egység kínál";
 
 type UnitFilter = (units: typeof UNITS) => typeof UNITS;
-/** A TERMÉK szabálya (ADR-0256 + ADR-XXXX): mit kínál a lap a vendégnek. */
+/** A TERMÉK szabálya (ADR-0256 + ADR-0393): mit kínál a lap a vendégnek. */
 const PRODUCT_FILTER: UnitFilter = (u) => guestUnits(u);
 
 function siteData(filter: UnitFilter = PRODUCT_FILTER): SiteData {
@@ -295,7 +295,7 @@ const PROBE = `(function (cfg) {
   // ⛔ Mérve 2026-09-22: a 2. szoba „Foglalás"-a leugrott a foglalás-szekcióra, és a
   // választót az 1. egységen hagyta — rossz naptár, rossz ár, és a beküldés a ROSSZ
   // egységre ment volna. A kérdés nem az, hogy odaugrik-e, hanem hogy MIT VISZ MAGÁVAL.
-  // ⛔ A FOGLALÁS SAJÁT listája ([data-cit-roomlist], ADR-XXXX), nem az első name="unit":
+  // ⛔ A FOGLALÁS SAJÁT listája ([data-cit-roomlist], ADR-0393), nem az első name="unit":
   // a vélemény-űrlap választója előtte áll, és a runtime egyszer azt állította — az őr
   // ugyanazt kérdezte, ezért ZÖLDEN védte a hibát (2026-09-28).
   var list = document.querySelector("[data-cit-roomlist]");
@@ -518,7 +518,7 @@ function expectations(minVisible: number): Expect[] {
   ];
 }
 
-// ── a widget szoba-listája (ADR-XXXX) ───────────────────────────────────────────
+// ── a widget szoba-listája (ADR-0393) ───────────────────────────────────────────
 // A dátumokat a widget SAJÁT mezőin, `change` eseménnyel állítjuk — ugyanaz az út, mint
 // egy begépelt dátumé (a runtime erre rajzolja újra a naptárat ÉS a szoba-listát).
 // +10 → +12 nap: a lead-idő (0) és a horizont (6 hónap) belül, két éj.
@@ -670,7 +670,7 @@ async function measure(page: Page, url: string, width: number, rooms: Room[]) {
       }
 
       // ⛔⛔ AZ OUTCOME: a felugró „Foglalás”-a után a widget a képernyőn, és a szoba-
-      // listájában EZ a szoba áll pipálva (ADR-XXXX; a dátumok már beállítva). Az attribútum
+      // listájában EZ a szoba áll pipálva (ADR-0393; a dátumok már beállítva). Az attribútum
       // megléte (fent) nem elég — 2026-09-28-ig minden attribútum stimmelt, és a leugrás a
       // vélemény-űrlap választóját állította.
       await page.evaluate(CLEAR_PICKS);
@@ -709,7 +709,7 @@ async function measure(page: Page, url: string, width: number, rooms: Room[]) {
     }
   }
 
-  // ── ③ SZOBÁK MELLETT AZ EGÉSZ HÁZ NEM AJÁNLAT (ADR-XXXX, multi-room ①) ──────────
+  // ── ③ SZOBÁK MELLETT AZ EGÉSZ HÁZ NEM AJÁNLAT (ADR-0393, multi-room ①) ──────────
   // Felülírja a régi whole-unit-band „C”-t (sáv, „Egyedi ár”, „Árajánlatot kérek”): nincs
   // sávja, nincs kártyája, és a widget listájában nincs pipája — aki az egészet akarja,
   // minden szobát kipipál. ⭐ A szobák viszont MIND ott vannak a listában: egy szűrő, ami
@@ -820,7 +820,7 @@ const REVERTS = [
   {
     key: "a leugrás az ELSŐ name=unit választót állítja",
     why: "a 2026-09-28-i hiba: a vélemény-űrlap választója előzi meg a foglalásét, és azt állította",
-    // ADR-XXXX: a runtime a widget szoba-listáját keresi (`cit:pickroom`); a visszarontás a
+    // ADR-0393: a runtime a widget szoba-listáját keresi (`cit:pickroom`); a visszarontás a
     // lap ELSŐ name="unit"-jét adja neki — a vélemény-űrlapét, ahogy a 09-28-i hiba tette.
     apply: (html: string) =>
       html.replace(`var rl = document.querySelector("[data-cit-roomlist]");`,
@@ -846,11 +846,11 @@ const REVERTS = [
       ),
   },
   {
-    // ADR-XXXX: a régi „az ár nélküli egész ház »Foglalás«-t ígér” visszarontás kivezetve —
+    // ADR-0393: a régi „az ár nélküli egész ház »Foglalás«-t ígér” visszarontás kivezetve —
     // szobák mellett nincs többé sáv, amelynek gombja lehetne (a csak-egyben mód gombját a
     // whole-only-guest-check méri). Helyette a SZABÁLY visszarontása:
     key: "az egész ház újra ajánlat a szobák mellett",
-    why: "ADR-XXXX előtti állapot: a guestUnits() a házat is kínálja — saját sáv és saját pipa",
+    why: "ADR-0393 előtti állapot: a guestUnits() a házat is kínálja — saját sáv és saját pipa",
     apply: (html: string) => html,
     filter: ((u) => u.filter((x) => !x.representsWhole || x.isWholeProperty)) as UnitFilter,
   },

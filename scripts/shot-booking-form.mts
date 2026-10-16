@@ -177,7 +177,7 @@ check("az űrlap hidratálódott", await page.locator("form.cit-book--request").
 // Plan B (owner, 2026-09-26; contract design-refs/tenant-site/booking-mobile-two-step): on a
 // phone the fields live in STEP 2, behind the "Tovább" button — the guest's real path. They
 // are asserted where the guest meets them (after a valid range, below), not on page load.
-// ADR-XXXX (plan multi-room „B”, owner 2026-10-16): several units → no unit <select>; the guest
+// ADR-0393 (plan multi-room „B”, owner 2026-10-16): several units → no unit <select>; the guest
 // picks the dates, then ticks the free rooms. On a phone the room list sits in STEP 1.
 check("több egységnél szobalista van, legördülő nincs", (await page.locator("[data-cit-roomlist]").count()) === 1 && (await page.locator("select[name=unit]").count()) === 0);
 check("⭐ telefonon a szobalista az 1. lépésben látható", await page.locator("[data-cit-roomlist]").isVisible());

@@ -763,7 +763,7 @@ function moduleShotHtml(entryId: string): string {
               validFrom: `${SHOT_YEAR}-06-15`, validTo: `${SHOT_YEAR}-08-31`, parentId: "p2" },
             { id: "p5", label: "Holtszezon", from: "11-01", to: "03-01", amount: 18000, isBase: false },
           ],
-          // ADR-XXXX: the whole house gets no price card beside its rooms any more — the
+          // ADR-0393: the whole house gets no price card beside its rooms any more — the
           // "no price" example is a ROOM (the entry's caption already says „egy szoba ár nélkül”).
           u2: [],
         },

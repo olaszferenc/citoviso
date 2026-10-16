@@ -1,6 +1,6 @@
 # KONTRAKTUS — az egész ház, egyszerűsítve
 
-> ⚠️ **RÉSZBEN FELÜLÍRVA (ADR-XXXX, 2026-10-16):** a ház a szobák mellett NEM külön, saját árú ajánlat — a vendég minden szobát kipipál (`tenant-site/multi-room/`). A 2. pont („egy szobát VAGY az egész házat”) nem köt; a ház ára (3. pont) csak „Csak egyben adom ki” módban látszik. A többi pont érvényes.
+> ⚠️ **RÉSZBEN FELÜLÍRVA (ADR-0393, 2026-10-16):** a ház a szobák mellett NEM külön, saját árú ajánlat — a vendég minden szobát kipipál (`tenant-site/multi-room/`). A 2. pont („egy szobát VAGY az egész házat”) nem köt; a ház ára (3. pont) csak „Csak egyben adom ki” módban látszik. A többi pont érvényes.
 
 **Jóváhagyta:** a tulaj, 2026-10-15 (§2b; a tulaj szava: „csináld és mehet élesre”). Előzmény: a
 háromállású „Az egész szállás egyben” kártya és a „melyik szoba” választó — a tulaj: „Olyan szinten túl

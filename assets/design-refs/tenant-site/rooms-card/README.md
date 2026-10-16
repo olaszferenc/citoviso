@@ -198,7 +198,7 @@ alak — a kötő szöveg a `T()` argumentuma, különben az őr egy sosem léte
 - **A három szikár sablon kártyája ár-sort kap** (tulajdonosi döntés: „szobáknál is legyen
   ár") — a meglévő felirat-stílusban, a sablon rajzának átírása nélkül.
 
-**FELÜLÍRVA — 2026-10-16 (ADR-XXXX, kontraktus `../multi-room/README.md`, tulaj „B”):**
+**FELÜLÍRVA — 2026-10-16 (ADR-0393, kontraktus `../multi-room/README.md`, tulaj „B”):**
 
 - A fenti „viszi, melyik szobáról jött” pontok **szándéka marad**, a mechanizmusa nem: 2+ egységnél
   nincs egység-választó (`#cit-unit`). A kártya / felugró „Foglalás”-a a widgetre visz, és a widget

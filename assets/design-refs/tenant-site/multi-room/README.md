@@ -2,7 +2,7 @@
 
 **Jóváhagyta:** a tulaj, 2026-10-16 (§2b; két változat + a tulaj-nézet egy lapon, a válasz: „B”). Előzmény: egy kérés EGY
 egységre szólt, és az „egész ház” külön, saját árú tétel volt — a tulaj: „ez így szerintem fos”.
-**ADR:** ADR-XXXX · **Felülírja:** `booking-unit-default` ①–③, `tenant-admin/whole-house-simple` ②–③ (a ház ára csak „Csak
+**ADR:** ADR-0393 · **Felülírja:** `booking-unit-default` ①–③, `tenant-admin/whole-house-simple` ②–③ (a ház ára csak „Csak
 egyben” módban) · **Terv:** `plan.html` (önhordó, kattintható; „A / B / Tulaj” és „Mobil 390 / Asztali” váltó — a **B** a
 jóváhagyott) · **Képek:** `shots/terv-*.png` (a terv), `shots/kesz-*.png` (a kész felület, az őr fixtúráján) ·
 **Hatókör:** `assets/runtime/cit-runtime.js` · `assets/runtime/cit-modules.css` · `src/booking/requests.ts` · `src/server/bookingViews.ts` · `src/server/offerViews.ts` · `src/server/public.ts` · `src/tenant/unitVisibility.ts` ·

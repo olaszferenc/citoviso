@@ -31,7 +31,7 @@
 //    `/api/foglaltsag` hívása útvonalazható legyen — a file:// és az about:blank nem tudja.
 //  · Az önteszt a beszőtt runtime FORRÁSÁT rontja el (három külön szabotázs), és mindegyiknél
 //    igazolja, hogy a csere TÉNYLEG megtörtént — különben a piros önteszt zölden „bizonyítana".
-//  · Több szoba (ADR-XXXX, `assets/design-refs/tenant-site/multi-room/README.md`): 2+ egységnél
+//  · Több szoba (ADR-0393, `assets/design-refs/tenant-site/multi-room/README.md`): 2+ egységnél
 //    nincs egység-<select>; a vendég a dátumok UTÁN pipálja a szobát (`[data-cit-room-pick]`),
 //    és amíg nincs pipa, az ár-doboz ÜRES, a küldés tiltva. A próba ezért a két naptár-érintés
 //    után az ELSŐ szabad szobát bepipálja (kattintással, ami a change eseményt is kiváltja) —
@@ -120,7 +120,7 @@ type Probe = {
   submitMode: string | null;
   note: string;
   sum: string | null;
-  /** Multi-room list (ADR-XXXX): how many room checkboxes, which one we ticked. */
+  /** Multi-room list (ADR-0393): how many room checkboxes, which one we ticked. */
   rooms: { boxes: number; enabled: number; ticked: string | null } | null;
   receipt: { title: string; note: string; text: string; mode: string | null } | null;
 };
@@ -139,7 +139,7 @@ const PROBE = (submit: boolean): string => `(async () => { const opts = { submit
   if (!day(a) || !day(b)) return { noDays: [a, b] };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   day(a).click(); await wait(60); day(b).click(); await wait(200);
-  // ADR-XXXX: with 2+ units the guest ticks a room after the dates; a real click toggles the
+  // ADR-0393: with 2+ units the guest ticks a room after the dates; a real click toggles the
   // box and fires the bubbling change event the runtime listens to.
   let rooms = null;
   const list = form.querySelector('[data-cit-roomlist]');
@@ -201,7 +201,7 @@ type Verdict = { name: string; ok: boolean; detail?: unknown };
 function judgeMock(p: Probe, phone: boolean): Verdict[] {
   const v: Verdict[] = [];
   v.push({ name: "van widget és két érintés tartományt adott", ok: !p.noForm && !p.noDays && !!p.from && !!p.to, detail: p.noDays ?? { from: p.from, to: p.to } });
-  // ADR-XXXX: two sample rooms → the room list must be there and one room ticked, else every
+  // ADR-0393: two sample rooms → the room list must be there and one room ticked, else every
   // later claim would read an (intentionally) empty quote box and say nothing about the price.
   v.push({ name: "több szoba: van szobalista, és egy szabad szoba bepipálva", ok: !!p.rooms && p.rooms.boxes >= 2 && !!p.rooms.ticked, detail: p.rooms });
   v.push({ name: "① ár-doboz ÖSSZEGGEL", ok: MONEY.test(p.quote ?? ""), detail: p.quote });
@@ -270,7 +270,7 @@ if (SELFTEST) {
     sab(
       sab(
         sab(mockHtml, '(demo ? tr("Minta-ár") : tr("Az ár"))', 'tr("Az ár")', "minta-cím kivéve"),
-        // Drop only the demo branch: whatever follows it (ADR-XXXX added a multi-room branch
+        // Drop only the demo branch: whatever follows it (ADR-0393 added a multi-room branch
         // in front of q.perStay) becomes the basis line, as on a real-price page.
         /var basis = demo && multi\s*\? tr\("A minta-ár szobánként[^"]*"\)\s*: demo\s*\? tr\("A minta-ár a TELJES SZÁLLÁSRA[^"]*"\)\s*: /,
         "var basis = ",

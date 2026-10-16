@@ -1,6 +1,6 @@
 # KONTRAKTUS — a foglalási widget az első ÁRAS egységre nyit, és telefonon már az 1. lépésben választ
 
-> ⛔ **FELÜLÍRVA (ADR-XXXX, 2026-10-16):** az egység-legördülő megszűnt — több szobánál a vendég előbb a dátumot választja, aztán pipálja a szabad szobákat (`tenant-site/multi-room/`). Az ①–③ pont nem köt; a régi őr (`booking-unit-default-check`) kivezetve.
+> ⛔ **FELÜLÍRVA (ADR-0393, 2026-10-16):** az egység-legördülő megszűnt — több szobánál a vendég előbb a dátumot választja, aztán pipálja a szabad szobákat (`tenant-site/multi-room/`). Az ①–③ pont nem köt; a régi őr (`booking-unit-default-check`) kivezetve.
 
 **Jóváhagyva:** 2026-09-28, tulajdonosi döntés („1 az irány”, majd a terv képein „ok”). Két változatot
 látott egy lapon: **MA** (mért állapot) és **1** (javasolt). A **1**-et hagyta jóvá.

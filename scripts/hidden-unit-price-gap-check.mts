@@ -39,7 +39,7 @@ const unit = (id: string, name: string, representsWhole: boolean, isWholePropert
   ok(gaps.includes("u1"), "① kontroll: a látható, ár nélküli szoba igen", gaps.join(","));
   ok(!gaps.includes("u2"), "① kontroll: az árazott szoba nem");
 
-  // ADR-XXXX: beside its rooms the whole house is no offer of its own (the guest ticks every
+  // ADR-0393: beside its rooms the whole house is no offer of its own (the guest ticks every
   // room) — no price asked; let ONLY as one, it is the offer and asks for a price.
   const letWhole = unit("u0", "A szállás egésze", true, true);
   const g2 = priceGapsOf([letWhole, roomPriced], prices, TODAY).map((g) => g.unitId);

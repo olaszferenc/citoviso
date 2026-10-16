@@ -1659,7 +1659,7 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
  * ADR-0392 (approved plan tenant-admin/whole-house-simple, owner 2026-10-15: the three-state
  * card with its „melyik szoba" picker was „túl van bonyolítva"). The whole house is its own
  * card above the rooms grid — never one of the rooms. The owner's only choice is „Csak egyben
- * adom ki". ADR-XXXX: otherwise the guest ticks one or more rooms in one request, and the house
+ * adom ki". ADR-0393: otherwise the guest ticks one or more rooms in one request, and the house
  * has no price of its own; the price field shows only when the place is let only as one.
  * Two plain forms: works with zero JS (the box also saves itself on change when JS runs).
  */
@@ -1690,7 +1690,7 @@ function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, la
   const priceNow = h?.base
     ? `<b>${esc(formatNumber(h.base))} ${cur}</b>`
     : `<b>${T(lang, "nincs megadva — a vendég árajánlatot kér")}</b>`;
-  // ADR-XXXX: beside its rooms the house has no price of its own any more (the guest ticks
+  // ADR-0393: beside its rooms the house has no price of its own any more (the guest ticks
   // every room); the price field belongs to the „Csak egyben adom ki" mode only.
   const price = nu?.pricingActive && only
     ? `<form method="POST" action="/admin/units/whole" class="rs-house__price" novalidate>` +
@@ -2487,7 +2487,7 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
   const tabUnits = booking.units.filter((u) => u.bookable !== false);
   const left = booking.units.filter((u) => u.bookable === false);
   // Let only as one → the left-out units are presentation rooms; otherwise it is the whole
-  // place, which beside its rooms takes no request of its own (ADR-0256, ADR-XXXX).
+  // place, which beside its rooms takes no request of its own (ADR-0256, ADR-0393).
   const wholeOnlySite = booking.units.some((u) => u.wholeOnly);
   const leftNames = esc(left.map((u) => u.name).join(", "));
   const leftNote = (margin: string): string =>
@@ -2495,11 +2495,11 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
       ? `<p class="adm-lead" style="margin:${margin}" data-cit-unit-nocal>${
           wholeOnlySite
             ? T(lang, "{names}: a házzal együtt foglalható, ezért nincs külön naptára.", { names: leftNames })
-            : // ADR-XXXX: the whole place is booked by ticking every room — its nights are theirs.
+            : // ADR-0393: the whole place is booked by ticking every room — its nights are theirs.
               T(lang, "{names}: aki az egészet kéri, minden szobát kijelöl, ezért nincs külön naptára.", { names: leftNames })
         }</p>`
       : "";
-  // ADR-XXXX: the whole house beside its rooms has no tab, but its calendar opens from a direct
+  // ADR-0393: the whole house beside its rooms has no tab, but its calendar opens from a direct
   // link (an older booking or block on it) — say whose calendar this is, or the owner reads it
   // as one of the rooms'.
   const offTab = booking.units.find((u) => u.id === booking.unitId && !tabUnits.includes(u));
@@ -3523,7 +3523,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   const bk = data.bookingActive;
   // ADR-0257 (owner: „szobák nem kérnek árát"): a presentation room gets no price card.
   const shown = new Set(data.presentationRooms ?? []);
-  // ADR-XXXX: beside its rooms the whole house is no offer of its own — no price card for it
+  // ADR-0393: beside its rooms the whole house is no offer of its own — no price card for it
   // (the guest ticks every room); it is priced only when the place is let only as one.
   const offered = new Set(
     guestUnits(

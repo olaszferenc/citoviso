@@ -29,7 +29,7 @@ export function isGuestVisibleUnit(u: UnitVisibilityFacts): boolean {
 export function guestUnits<T extends UnitVisibilityFacts & { readonly wholeOnly?: boolean }>(
   units: readonly T[],
 ): T[] {
-  // ADR-XXXX (owner, 2026-10-16: the whole place as a separate, own-priced offer next to
+  // ADR-0393 (owner, 2026-10-16: the whole place as a separate, own-priced offer next to
   // its rooms „faszság”): with rooms beside it, the whole place is no offer of its own — the
   // guest ticks every room instead. It stays only when the place is let ONLY as one.
   const lettingOnlyAsOne = units.some((u) => u.wholeOnly && u.isWholeProperty);
@@ -66,7 +66,7 @@ export function isBookableUnit<T extends UnitBookabilityFacts>(
 ): boolean {
   const only = siblings.find((s) => s.wholeOnly && s.isWholeProperty);
   if (only) return u.id === only.id;
-  // ADR-XXXX: beside rooms the whole place takes no request of its own (see guestUnits).
+  // ADR-0393: beside rooms the whole place takes no request of its own (see guestUnits).
   return guestUnits(siblings).some((x) => x.id === u.id);
 }
 

@@ -141,7 +141,7 @@
       return d.toISOString().slice(0, 10);
     })();
 
-    /* ADR-XXXX (approved plan tenant-site/multi-room „B”, owner 2026-10-16): with several
+    /* ADR-0393 (approved plan tenant-site/multi-room „B”, owner 2026-10-16): with several
      * rooms the guest picks the DATES first, then ticks the rooms that are free for the whole
      * stay — one request, the owner confirms it as one. The calendar closes a night only when
      * NO room is free; the whole place is no separate offer beside its rooms any more. */
@@ -299,7 +299,7 @@
       restNote = !demo && on ? esc(askNote) : baseNote;
       /* A demó-lap saját jegyzetét nem bántjuk: ott a mondat arról szól, hogy innen
        * semmi nem megy el — igazabb állítás, mint bármelyik ígéretünk. */
-      /* ADR-XXXX: nor over the "tick a room" hint — leaving the quote mode by unticking every
+      /* ADR-0393: nor over the "tick a room" hint — leaving the quote mode by unticking every
        * room printed the BOOKING promise under a disabled button (quote-request-check, 10-16). */
       if (!note.classList.contains("cit-book__note--err") && !needRoom()) note.innerHTML = restNote;
     }
@@ -309,7 +309,7 @@
     var portalDays = {}; // demo only: sample portal-booked nights (ADR-0361)
     var pricing = null; // {currency, unit, rows} — live price list from the availability API
     var seasonMins = []; // Elek F-2: [{from,to,validFrom,validTo,min}] — the seasons' own minimum stays
-    /* ADR-XXXX: per room — {blocked, portal, pricing, mins} — and the rooms the guest ticked. */
+    /* ADR-0393: per room — {blocked, portal, pricing, mins} — and the rooms the guest ticked. */
     var byUnit = {};
     var picked = {};
     function pickedUnits() { return units.filter(function (u) { return !!picked[u.id]; }); }
@@ -329,7 +329,7 @@
      * owner was warned nowhere): the head count stops at the chosen unit's capacity, and the
      * server refuses past it with the same number. A unit without a capacity keeps the old
      * ceiling of 20 — no invented limit (§B.17). */
-    /* ADR-XXXX: several rooms hold their summed capacity; a room without one lifts the
+    /* ADR-0393: several rooms hold their summed capacity; a room without one lifts the
      * ceiling (the server's rule, requests.ts). Nothing ticked yet → the old ceiling. */
     function capRaw() {
       if (!multi) return Number(unitObj().capacity) || 0;
@@ -359,7 +359,7 @@
     /* ── ADR-0378 meal plans ─────────────────────────────────────────────── */
     function mealsHere() {
       if (!(meals && meals.plans && meals.off)) return false;
-      // ADR-XXXX: a multi-room request takes meals only when EVERY ticked room does.
+      // ADR-0393: a multi-room request takes meals only when EVERY ticked room does.
       var ids = multi && pickedUnits().length ? pickedUnits().map(function (u) { return u.id; }) : [currentUnit()];
       return ids.every(function (id) { return meals.off.indexOf(id) < 0; });
     }
@@ -477,7 +477,7 @@
     function moneyHtml(amount, currency) {
       return '<span class="cit-amt">' + money(amount, currency) + "</span>";
     }
-    /* ADR-XXXX: several rooms cost the sum of their own prices, each line named by its room.
+    /* ADR-0393: several rooms cost the sum of their own prices, each line named by its room.
      * Per-person pricing over several rooms needs the head count PER ROOM, which is not
      * asked — no number then; the owner answers with an offer (the server's rule). */
     function quoteFor(a, b) {
@@ -609,7 +609,7 @@
       // DEMO: the basis line names the sample too — the price list it explains is per_night
       // (demoPricing), and a sentence starting "Az ár…" between two "minta-ár" labels was the
       // weakest point of the box (tenyhuseg-or, 2026-09-26).
-      // ADR-XXXX: on a multi-room sample the sample price is a ROOM's — never "a TELJES SZÁLLÁSRA".
+      // ADR-0393: on a multi-room sample the sample price is a ROOM's — never "a TELJES SZÁLLÁSRA".
       var basis = demo && multi
         ? tr("A minta-ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).")
         : demo
@@ -782,7 +782,7 @@
       if (done.focus) done.focus({ preventScroll: true });
     }
     function currentUnit() {
-      // ADR-XXXX: several rooms — the first ticked one stands for "the" unit (meals, currency).
+      // ADR-0393: several rooms — the first ticked one stands for "the" unit (meals, currency).
       if (multi) { var ps = pickedUnits(); return ps.length ? ps[0].id : units[0].id; }
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
@@ -830,7 +830,7 @@
       units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
       return { currency: "HUF", unit: "per_night", rows: [{ base: true, amount: 24000 + idx * 4000 }] };
     }
-    /* ADR-XXXX: every room's calendar and price list, then the guest-facing calendar: a
+    /* ADR-0393: every room's calendar and price list, then the guest-facing calendar: a
      * night is closed only when NO room is free. */
     function mergeRooms() {
       blocked = {};
@@ -1044,7 +1044,7 @@
       }
       return "";
     }
-    /* ADR-XXXX: dates chosen, no room ticked yet — not an error, the next step. */
+    /* ADR-0393: dates chosen, no room ticked yet — not an error, the next step. */
     function needRoom() {
       return multi && !!form.from.value && !!form.to.value && !pickedUnits().length;
     }
@@ -1240,7 +1240,7 @@
     function placeUnit() {
       if (!unitField) return;
       if (phoneMq && phoneMq.matches) {
-        // ADR-XXXX: the rooms follow the dates (plan B) — after the calendar, before the price.
+        // ADR-0393: the rooms follow the dates (plan B) — after the calendar, before the price.
         if (roomList) {
           var qb = form.querySelector("[data-quote]");
           if (unitField.nextSibling !== qb) qb.parentNode.insertBefore(unitField, qb);
@@ -1400,7 +1400,7 @@
         phone: form.phone.value,
         message: form.message.value,
       });
-      // ADR-XXXX: `unit` repeated, one per ticked room, in the owner's order.
+      // ADR-0393: `unit` repeated, one per ticked room, in the owner's order.
       (multi ? pickedUnits().map(function (u) { return u.id; }) : [currentUnit()]).forEach(function (id) {
         body.append("unit", id);
       });
@@ -2081,7 +2081,7 @@
      * `unit: currentUnit()` would submit the wrong unit: the owner receives a booking
      * request for a room nobody asked for. The anchor carried no room at all.
      *
-     * ADR-XXXX: the widget's ROOM LIST ticks the card's room (a `cit:pickroom` event) —
+     * ADR-0393: the widget's ROOM LIST ticks the card's room (a `cit:pickroom` event) —
      * the calendar, the price rows and the submit all follow the ticked rooms. (Without JS
      * there is no booking widget at all, so this is inherently a JS-side step.)
      */

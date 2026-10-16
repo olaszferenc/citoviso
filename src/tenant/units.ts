@@ -311,7 +311,7 @@ export async function futureAcceptedBookings(unitId: string): Promise<number> {
   const row = await db
     .selectFrom("booking_request")
     .select(db.fn.countAll<string>().as("n"))
-    // ADR-XXXX: a multi-room booking counts for each of its rooms.
+    // ADR-0393: a multi-room booking counts for each of its rooms.
     .where(sql<boolean>`${unitId}::uuid = any(unit_ids)`)
     .where("status", "=", "accepted")
     .where("date_to", ">=", today)
@@ -513,7 +513,7 @@ export async function unitDeletionImpacts(siteId: string): Promise<Map<string, U
     db
       .selectFrom("booking_request")
       .select(["id", "unit_id", "unit_ids", "guest_name", "date_from", "date_to", "status"])
-      // ADR-XXXX: a multi-room request belongs to each of its rooms.
+      // ADR-0393: a multi-room request belongs to each of its rooms.
       .where(sql<boolean>`unit_ids && ${sql.val(ids)}::uuid[]`)
       .orderBy("date_from")
       .execute(),

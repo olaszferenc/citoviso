@@ -1,5 +1,5 @@
 // ⛔⛔ TÖBB SZOBA EGY FOGLALÁSI KÉRÉSBEN — kontraktus: assets/design-refs/tenant-site/multi-room/
-// (tulajdonosi jóváhagyás 2026-10-16, „B” — előbb a dátum, aztán a szabad szobák; ADR-XXXX).
+// (tulajdonosi jóváhagyás 2026-10-16, „B” — előbb a dátum, aztán a szabad szobák; ADR-0393).
 //
 // A MÉRT LELET, amiért létezik (tulaj, 2026-10-16): egy foglalási kérés EGY egységre szólt — a
 // vendég-űrlapon egy <select> —, ezért aki két szobát akart, két kérést küldött, és az „egész ház”

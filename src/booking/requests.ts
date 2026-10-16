@@ -73,7 +73,7 @@ export interface BookingRequestInput {
   readonly siteId: string;
   /** The first (or only) room — always `unitIds[0]` when `unitIds` is given. */
   readonly unitId: string;
-  /** ADR-XXXX: every room the guest ticked, in their order (absent = just `unitId`). */
+  /** ADR-0393: every room the guest ticked, in their order (absent = just `unitId`). */
   readonly unitIds?: readonly string[];
   readonly guestName: string;
   readonly guestEmail: string;
@@ -298,7 +298,7 @@ export function capacityError(lang: string, capacity: number): string {
 }
 
 /** ADR-0389: the owner's warning on an over-capacity request (an older one, or a lowered capacity). */
-/** ADR-XXXX: the same sentence when the ceiling is the sum of several rooms. */
+/** ADR-0393: the same sentence when the ceiling is the sum of several rooms. */
 export function capacityErrorRooms(lang: string, capacity: number): string {
   return T(lang, "A kiválasztott szobákba legfeljebb {n} vendég foglalhat. Kérjük, csökkentse a létszámot, vagy jelöljön ki még egy szobát.", {
     n: capacity,
@@ -732,11 +732,11 @@ export async function siteTouristTax(siteId: string): Promise<number | null> {
 /** K6: a second identical submit inside this many minutes is the same request. */
 const REPEAT_WINDOW_MIN = 10;
 
-/** ADR-XXXX: a sanity bound on the rooms of one request (no place we serve has more). */
+/** ADR-0393: a sanity bound on the rooms of one request (no place we serve has more). */
 const MAX_REQUEST_UNITS = 30;
 
 /**
- * ADR-XXXX: the meal lines of a request over `rooms` rooms. A per-person plan counts the
+ * ADR-0393: the meal lines of a request over `rooms` rooms. A per-person plan counts the
  * guests (the rooms do not matter); a per-room plan is charged once per room.
  */
 function roomsMealLines(
@@ -782,7 +782,7 @@ export async function createBookingRequest(
     errors.push(T(lang, "Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá."));
   }
 
-  // ADR-XXXX: the rooms of the request, the first one first, each once. Every gate below
+  // ADR-0393: the rooms of the request, the first one first, each once. Every gate below
   // runs for EVERY room — a request is only as possible as its least possible room.
   const unitIds = [...new Set([input.unitId, ...(input.unitIds ?? [])].filter(Boolean))].slice(0, MAX_REQUEST_UNITS);
   const units = await db
@@ -810,7 +810,7 @@ export async function createBookingRequest(
   });
   // ADR-0389 (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house): the widget
   // stops at the capacity, and the server refuses past it — the owner never gets one.
-  // ADR-XXXX: several rooms hold their summed capacity; a room without one lifts the ceiling.
+  // ADR-0393: several rooms hold their summed capacity; a room without one lifts the ceiling.
   const capacity = units.some((u) => !u.capacity) ? null : units.reduce((t, u) => t + (u.capacity ?? 0), 0);
   const cap = overCapacity(Math.max(1, Math.min(50, Math.round(input.guests || 1))), capacity);
   if (cap) errors.push(multi ? capacityErrorRooms(lang, cap) : capacityError(lang, cap));
@@ -833,7 +833,7 @@ export async function createBookingRequest(
 
   const quotes = await Promise.all(unitIds.map((id) => stayQuote(input.siteId, id, dateFrom, dateTo, input.guests, lang)));
   const { pricingLive, pricing } = quotes[0]!;
-  // ADR-XXXX: several rooms cost the sum of their own prices, each line named by its room.
+  // ADR-0393: several rooms cost the sum of their own prices, each line named by its room.
   // Per-person pricing over several rooms would need the head count PER ROOM, which the
   // guest is not asked — no frozen number then; the owner answers with an offer (§B.17).
   const perPerson = String(pricing.unit ?? "per_night") === "per_person_night";
@@ -850,7 +850,7 @@ export async function createBookingRequest(
   // ADR-0378: the meal travels with the pricing module. The plan is validated against the
   // owner's setting (an unknown or withdrawn plan falls back to the base), the lines are
   // computed HERE — the browser's figure is never trusted — and freeze with the stay.
-  // ADR-XXXX: meals apply to a multi-room request only when EVERY room takes them.
+  // ADR-0393: meals apply to a multi-room request only when EVERY room takes them.
   const meals = pricingLive ? readMeals(pricing.meals) : null;
   const mealPlan = unitIds.every((id) => chosenPlan(meals, id, input.mealPlan) !== null)
     ? chosenPlan(meals, input.unitId, input.mealPlan)
@@ -1111,7 +1111,7 @@ interface RequestRow {
   offered_at: Date | null;
   offer_token: string | null;
   decision_note?: string | null;
-  /** 0111 (ADR-XXXX): every room of the request; [0] = unit_id. */
+  /** 0111 (ADR-0393): every room of the request; [0] = unit_id. */
   unit_ids: string[];
   unit_name?: string;
   /** ADR-0389: the unit's head count as the owner set it (null = not given). */
@@ -1123,13 +1123,13 @@ function dayStr(v: unknown): string {
 }
 
 /**
- * ADR-XXXX: a request may hold several rooms (`unit_ids`, the guest's order). Every reader
+ * ADR-0393: a request may hold several rooms (`unit_ids`, the guest's order). Every reader
  * that used to show ONE unit's name shows all of them, comma-joined, and the head-count
  * check reads their summed capacity (null when any room has none — no ceiling then).
  * One expression, so the mails, the admin card and the offer page can never disagree.
  */
 const UNIT_NAMES = sql<string>`(select string_agg(u.name, ', ' order by array_position(booking_request.unit_ids, u.id)) from site_unit u where u.id = any(booking_request.unit_ids))`;
-/** ADR-XXXX: the rooms of a request (a row from before 0111 may lack the array). */
+/** ADR-0393: the rooms of a request (a row from before 0111 may lack the array). */
 function requestUnitIds(req: { unit_id: string; unit_ids?: readonly string[] | null }): string[] {
   return req.unit_ids?.length ? [...req.unit_ids] : [req.unit_id];
 }
@@ -1396,7 +1396,7 @@ async function overlappingPending(
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
     .select(UNIT_NAMES.as("unit_name"))
-    // ADR-XXXX: a multi-room request overlaps when ANY of its rooms is in the set.
+    // ADR-0393: a multi-room request overlaps when ANY of its rooms is in the set.
     .where(sql<boolean>`booking_request.unit_ids && ${sql.val(unitIds)}::uuid[]`)
     .where("booking_request.status", "=", "pending")
     .where("booking_request.id", "!=", exceptId)
@@ -1531,7 +1531,7 @@ async function acceptCore(
   let lost = false;
   // ADR-0114: read the whole-place relation ONCE, outside the transaction — it is
   // structure (which units exclude this one), not state that the transaction protects.
-  // ADR-XXXX: every room of the request, and everything that excludes any of them.
+  // ADR-0393: every room of the request, and everything that excludes any of them.
   const rooms = requestUnitIds(req);
   const blockers = [...new Set((await Promise.all(rooms.map((id) => blockingUnitIds(id)))).flat())];
   await db.transaction().execute(async (trx) => {
@@ -1943,7 +1943,7 @@ export async function cancelRequest(opts: {
     // portal-imported day out of this delete.
     await trx
       .deleteFrom("availability_day")
-      // ADR-XXXX: every room of the request is freed together.
+      // ADR-0393: every room of the request is freed together.
       .where("unit_id", "in", requestUnitIds(req))
       .where("source", "=", `booking:${req.id}`)
       .execute();
@@ -2119,7 +2119,7 @@ export interface InboxItem {
   readonly id: string;
   /** The requested unit — the calendar opens on it (FK-015, ADR-0274 ④). */
   readonly unitId?: string;
-  /** ADR-XXXX: every room of the request ([0] = unitId); one entry for a one-room request. */
+  /** ADR-0393: every room of the request ([0] = unitId); one entry for a one-room request. */
   readonly unitIds?: readonly string[];
   readonly unitName: string;
   readonly guestName: string;
@@ -2515,7 +2515,7 @@ export interface OfferView {
    *  opens on (it is the first bookable unit in the owner's order with any price row, and
    *  there is more than one to choose from). Said out loud on the "alapár" choice. */
   readonly opensWidget?: boolean;
-  /** ADR-XXXX: rooms in the request. Above 1 the owner prices the WHOLE set of rooms per
+  /** ADR-0393: rooms in the request. Above 1 the owner prices the WHOLE set of rooms per
    *  night, for this request only (`missing` = every night, `known` empty, per_night). */
   readonly rooms?: number;
 }
@@ -2595,7 +2595,7 @@ export async function loadOfferView(token: string): Promise<OfferView> {
   const rooms = requestUnitIds(req).length;
   const prices = await getUnitPrices(req.unit_id);
   const { currency, unitMode: listMode } = await pricingConfigFor(req.site_id);
-  // ADR-XXXX: several rooms — one per-night price for all of them, every night asked.
+  // ADR-0393: several rooms — one per-night price for all of them, every night asked.
   const unitMode = rooms > 1 ? "per_night" : listMode;
   const known: OfferLine[] = [];
   const missing: string[] = [];
@@ -2730,7 +2730,7 @@ export async function sendOffer(
   const from = dayStr(req.date_from);
   const to = dayStr(req.date_to);
   const today = await todayForSite(req.site_id);
-  // ADR-XXXX: a multi-room request is priced as a whole — every night, for this request only.
+  // ADR-0393: a multi-room request is priced as a whole — every night, for this request only.
   const rooms = requestUnitIds(req);
   const multi = rooms.length > 1;
   const missing = multi

@@ -1178,7 +1178,7 @@ async function serveTenantHost(
     const siteId = await tenantSiteId(site.tenantId);
     if (!siteId) return sendJson(res, 404, { errors: [T(lang, "Ismeretlen szállás.")] });
     const form = await readFormBody(req);
-    // ADR-XXXX: one request may carry several rooms — `unit` repeated, in the guest's order.
+    // ADR-0393: one request may carry several rooms — `unit` repeated, in the guest's order.
     const unitIds = [...new Set(form.getAll("unit").filter(Boolean))];
     const unitId = unitIds[0] ?? "";
     if (!unitIds.length) return sendJson(res, 400, { errors: [T(lang, "Jelöljön ki legalább egy szobát.")] });
@@ -1620,7 +1620,7 @@ async function serveAdmin(
         // ask the owner to mark nights nobody can take. An old link to one opens the first
         // bookable unit instead.
         const bookable = new Set(bookableUnits(units).map((u) => u.id));
-        // ADR-XXXX: the whole house beside its rooms has no TAB any more, but its calendar still
+        // ADR-0393: the whole house beside its rooms has no TAB any more, but its calendar still
         // opens from a direct link — an older booking or a manual block on it keeps the rooms
         // closed, and the day card's „Átváltok a naptárára" must reach where it can be freed.
         const openable = (u: (typeof units)[number]): boolean => bookable.has(u.id) || u.representsWhole;

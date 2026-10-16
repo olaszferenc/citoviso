@@ -9,7 +9,7 @@
 // worktree szerverén, efemer porton, bejelentkezett tenantként.
 //
 // Saját eldobható fixture-t vet (szállás + egész-egység + szoba + elfogadott
-// foglalás), és a végén mindent visszatakarít. Levelet nem küld. ADR-XXXX: a ház a szoba
+// foglalás), és a végén mindent visszatakarít. Levelet nem küld. ADR-0393: a ház a szoba
 // mellett nem ajánlat (nincs füle), de a régi, házra szóló foglalás naptára linkről nyílik.
 //
 //   npx tsx scripts/booking-screen-check.mts
@@ -248,7 +248,7 @@ try {
       );
       check("a súgó-link a KB-horgonyt viszi", (await page.locator("[data-kb-anchor='admin.modules.booking']").count()) === 1);
 
-      // ② ADR-XXXX: a szoba mellett a háznak NINCS füle (nem külön ajánlat), de a naptára egy
+      // ② ADR-0393: a szoba mellett a háznak NINCS füle (nem külön ajánlat), de a naptára egy
       // régi foglalás miatt közvetlen linkről megnyílik — és kimondja, kinek a naptára.
       const tabs = page.locator(".unit-tabs a");
       check("egy foglalható szobánál nincs fülsor", (await tabs.count()) === 0, `kapott: ${await tabs.count()}`);

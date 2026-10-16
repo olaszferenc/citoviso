@@ -4,7 +4,7 @@
 //   ② a szerver a férőhely fölött elutasít, a férőhelyen elfogad (negatív kontroll);
 //   ③ a régi / utólag szűkített túllépő kérésnél a tulaj-levél, az admin-kártya + a visszaigazolás
 //      lépése és a levél-link megerősítő oldala figyelmeztet — a férőhelyen belüli kérésnél NEM.
-// ADR-XXXX (több szoba egy foglalási kérésben; kontraktus: assets/design-refs/tenant-site/multi-room/README.md):
+// ADR-0393 (több szoba egy foglalási kérésben; kontraktus: assets/design-refs/tenant-site/multi-room/README.md):
 //   2+ szobánál nincs <select>; előbb a napok, utána a szobák jelölőnégyzetei ([data-cit-room-pick]).
 //   A plafon a kijelölt szobák férőhelyének ÖSSZEGE (férőhely nélküli szoba → nincs plafon, a régi 20);
 //   semmi nincs kijelölve → 20. Telefonon a léptető a 2. lépésben van, a „Tovább” szobát kér.
@@ -192,7 +192,7 @@ try {
   check("negatív kontroll: 4 fő a 4 fős házra → elfogadva", fits.ok, fits.errors);
   const fitMail = (await mailsTo(owner)).find((m) => /Foglalási kérés/.test(m.subject));
   check("negatív kontroll: a férőhelyen belüli kérés tulaj-levelében nincs figyelmeztetés", Boolean(fitMail) && !/a férőhely 4 fő/.test(fitMail!.body));
-  // ADR-XXXX: two rooms (4 + 2) hold 6.
+  // ADR-0393: two rooms (4 + 2) hold 6.
   const overBoth = await ask(7, 50, [unit, unit2]);
   check(
     "⭐ két szoba (4+2), 7 fő → elutasítva: „A kiválasztott szobákba legfeljebb 6 vendég foglalhat. … vagy jelöljön ki még egy szobát.”",
@@ -215,7 +215,7 @@ try {
   const reqs = await getRequests(site.id);
   const mine = reqs.find((r) => r.id === row.id);
   check("az admin-lista viszi a férőhelyet", mine?.capacity === 3, mine?.capacity);
-  // ADR-XXXX: the two-room request (6 guests) now holds 3 + 2 = 5 — the warning counts the sum.
+  // ADR-0393: the two-room request (6 guests) now holds 3 + 2 = 5 — the warning counts the sum.
   const both = reqs.find((r) => r.id === fitsBoth.id);
   check("⭐ két szobás kérés: az admin-lista az összeget viszi (3+2=5)", both?.capacity === 5, both?.capacity);
   if (fitsBoth.ok) {

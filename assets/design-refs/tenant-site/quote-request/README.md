@@ -44,7 +44,7 @@ szám megy ki, hanem **semmilyen** — a kár a néma hiány, nem a hamis adat.
    a lap két dolgot állít egyszerre. A két szöveg EGYÜTT vált.
 5. **Az egység-választó már a választás pillanatában jelzi** (a C változat lényege), hogy arra
    az egységre egyedi ár jár — nem utólag derül ki.
-   ↪ **ADR-XXXX (2026-10-16, `multi-room/`) óta:** 2+ egységnél nincs `<select>`, hanem
+   ↪ **ADR-0393 (2026-10-16, `multi-room/`) óta:** 2+ egységnél nincs `<select>`, hanem
    szobalista a napok kiválasztása UTÁN — a jelölés a szoba ár-helyén áll (árazatlan szobánál
    egyedi ár, árazottnál a tartózkodás összege). Az árajánlat-mód akkor lép életbe, ha
    BÁRMELYIK kijelölt szobára nincs ár; kijelölés nélkül se ár, se árajánlat-mód. A ⑦ a

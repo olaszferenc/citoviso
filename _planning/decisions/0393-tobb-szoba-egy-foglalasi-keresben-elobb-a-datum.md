@@ -1,4 +1,4 @@
-## ADR-XXXX — Több szoba egy foglalási kérésben (előbb a dátum, aztán a szabad szobák); az egész ház nem külön, saját árú tétel
+## ADR-0393 — Több szoba egy foglalási kérésben (előbb a dátum, aztán a szabad szobák); az egész ház nem külön, saját árú tétel
 
 **Dátum:** 2026-10-16 · **Státusz:** elfogadva, megvalósítva (őrrel) · **Terv:** `assets/design-refs/tenant-site/multi-room/`
 („B”, a tulaj jóváhagyása 2026-10-16) · **Felülírja:** ADR-0392 ①–② és ④ (a ház a szobák mellett mindig foglalható, saját

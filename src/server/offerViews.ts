@@ -163,7 +163,7 @@ export function ownerOfferPage(
     )
     .join("");
 
-  // ADR-XXXX: several rooms are priced together, per night, for this request only.
+  // ADR-0393: several rooms are priced together, per night, for this request only.
   const rooms = v.rooms ?? 1;
   const missRow = missing.length
     ? `<li class="of-miss"><div>${rooms > 1 ? esc(T(lang, "{n} szoba együtt", { n: rooms })) : T(lang, "Új ár")} · ${esc(T(lang, "{n} éj", { n: missing.length }))}` +

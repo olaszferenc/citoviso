@@ -241,7 +241,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
   // already booked or blocked keeps its own kind — that is the conflict to see.
   const reqByDay = new Map<string, InboxItem>();
   for (const r of pendingInOrder(d.requests, d.expireHours)) {
-    // ADR-XXXX: a multi-room request is drawn on each of its rooms' calendars.
+    // ADR-0393: a multi-room request is drawn on each of its rooms' calendars.
     if (!(r.unitIds ?? (r.unitId ? [r.unitId] : [])).includes(d.unitId)) continue;
     for (const n of stayNights(r)) if (!reqByDay.has(n)) reqByDay.set(n, r);
   }
@@ -618,7 +618,7 @@ function requestCard(
   const left = hoursLeft(r, expireHours);
   const fresh = !r.seen;
   const quote = !r.quotedTotal;
-  // ADR-XXXX: a request may hold several rooms — said on the badge and on the one verdict.
+  // ADR-0393: a request may hold several rooms — said on the badge and on the one verdict.
   const rooms = r.unitIds?.length ?? 1;
   const conflictNote = overlaps?.length
     ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => esc(o.guestName)).join(", ") })}</span>`

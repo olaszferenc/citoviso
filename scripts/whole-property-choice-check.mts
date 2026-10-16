@@ -9,7 +9,7 @@
 //   ③ „az egész ház” → az eddigi marad a ház, az új az első szoba; a ház és a szoba kizárja
 //      egymást, két szoba egymást nem (`blockingUnitIds`);
 //   ④ a Szobák lap: ház-kártya, NINCS „melyik szoba” választó és háromutas rádió, a ház nem
-//      kártya a rácson; ADR-XXXX: szobánként kiadva a háznak NINCS ár-mezője (a vendég minden
+//      kártya a rácson; ADR-0393: szobánként kiadva a háznak NINCS ár-mezője (a vendég minden
 //      szobát kipipál); „Csak egyben” módban az alapára: hibás → elutasítva, jó → mentve, üres → törölve;
 //   ⑤ „Csak egyben adom ki” pipa ki/be (`whole_only`);
 //   ⑥ több szobánál a ház nem törölhető, egy szobánál igen;
@@ -17,7 +17,7 @@
 //   ⑧ `ensureUnits` rendbe teszi a régi adatot: a régi választóval szobára tett jelölés,
 //      a rejtett („nem adom ki egyben”) ház, ház nélküli két szoba — negatív kontrollal:
 //      `peekUnits` nem ír; egy szoba ház nélkül marad;
-//   ⑨ ADR-XXXX: a vendég-lap listájában a szobák, a ház NEM; az Árak lapon a háznak nincs
+//   ⑨ ADR-0393: a vendég-lap listájában a szobák, a ház NEM; az Árak lapon a háznak nincs
 //      ár-kártyája (és tájékoztató szumma sincs), a vendég-lapon sincs;
 //   ⑩ böngészőben (390 px, touch): a pipa magától ment, 0 JS-hiba.
 //
@@ -145,7 +145,7 @@ try {
   console.log("\n④ a Szobák lap");
   html = await get(ROOMS);
   check("ház-kártya", html.includes("data-cit-whole-card") && html.includes('id="egesz-haz"'));
-  // ADR-XXXX: the house is no separate offer beside its rooms — the card says so, and has no price field.
+  // ADR-0393: the house is no separate offer beside its rooms — the card says so, and has no price field.
   check("„egy vagy több szobát … egy kérésben” mondat", html.includes("A vendég egy vagy több szobát foglalhat egy kérésben"));
   check("szobánként kiadva NINCS ár-mező a ház kártyáján", !html.includes(`class="rs-house__price"`));
   await post("/admin/units/whole", { what: "only", only: "1" });
@@ -277,5 +277,5 @@ try {
   if (ids.defId) await db.deleteFrom("scraper_definition").where("id", "=", ids.defId).execute();
   await pool.end();
 }
-console.log(fail ? `\n⛔ WHOLE-HOUSE: ${fail} bukás` : "\n🟢 WHOLE-HOUSE (ADR-0392): a ház külön egység, nem szoba; szobák mellett nem külön ajánlat (ADR-XXXX); egy pipa: csak egyben, ár csak ott");
+console.log(fail ? `\n⛔ WHOLE-HOUSE: ${fail} bukás` : "\n🟢 WHOLE-HOUSE (ADR-0392): a ház külön egység, nem szoba; szobák mellett nem külön ajánlat (ADR-0393); egy pipa: csak egyben, ár csak ott");
 process.exit(fail ? 1 : 0);

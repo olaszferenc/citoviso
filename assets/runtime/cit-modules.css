@@ -1214,7 +1214,7 @@ section + .cit-wholeband, .h-rail + .cit-wholeband { width: min(1120px, calc(100
 .cit-modsec__sub {
   margin: 28px 0 12px; font-family: var(--cit-font-display, inherit); font-size: 1.25rem; font-weight: 600;
 }
-/* ADR-XXXX (plan tenant-site/multi-room „B”): the rooms free for the chosen stay, ticked
+/* ADR-0393 (plan tenant-site/multi-room „B”): the rooms free for the chosen stay, ticked
    one by one or all at once. A busy room stays in the list, greyed and said — the guest
    sees WHY it cannot be ticked instead of wondering where it went. */
 .cit-book__roomlist { display: grid; gap: 8px; }

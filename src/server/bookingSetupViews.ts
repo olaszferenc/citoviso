@@ -73,7 +73,7 @@ function strings(lang: string): Record<string, string> {
     lead_check: T(lang, "Adjon meg egy kitalált foglalást — megmutatjuk, mit lát a vendég, és mi akadályozná. Semmit nem küldünk el."),
     modeSingle: T(lang, "Egyben, egy egységként"),
     modeSingleSub: T(lang, "Egy ház vagy apartman, egyszerre egy vendégkör."),
-    // ADR-0392: two answers, not three. ADR-XXXX: by rooms, a guest ticks one or more rooms in
+    // ADR-0392: two answers, not three. ADR-0393: by rooms, a guest ticks one or more rooms in
     // one request — the whole house is every room, not a separate offer.
     modeBoth: T(lang, "Szobánként"),
     modeBothLong: T(lang, "Szobánként"),
