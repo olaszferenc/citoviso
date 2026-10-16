@@ -2930,7 +2930,7 @@ if [ -f scripts/quote-request-check.mts ] && \
   npx tsx scripts/quote-request-check.mts >"$GATE_LOG" || gate_failed
 fi
 # TÖBB SZOBA EGY KÉRÉSBEN (kontraktus: design-refs/tenant-site/multi-room, tulaj 2026-10-16 „B”;
-# ADR-XXXX — felváltja a booking-unit-default őrt): egy kérés több szobát hordoz, előbb a dátum,
+# lásd a multi-room README ADR-jét — felváltja a booking-unit-default őrt): egy kérés több szobát hordoz, előbb a dátum,
 # aztán a szabad szobák; az egész ház nem külön ajánlat; a tulaj egyben dönt. Mérve előtte: egy
 # kérés = egy egység, a vendég két szobára két kérést küldött.
 if [ -f scripts/multi-room-request-check.mts ] && \
