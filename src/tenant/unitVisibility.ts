@@ -26,11 +26,23 @@ export function isGuestVisibleUnit(u: UnitVisibilityFacts): boolean {
  * unit: if the owner deleted every room and only the hidden whole-place unit is left, it is
  * the one thing there is to book — hiding it would leave the booking widget with no unit.
  */
-export function guestUnits<T extends UnitVisibilityFacts>(
+export function guestUnits<T extends UnitVisibilityFacts & { readonly wholeOnly?: boolean }>(
   units: readonly T[],
 ): T[] {
-  const shown = units.filter(isGuestVisibleUnit);
+  // ADR-XXXX (owner, 2026-10-16: the whole place as a separate, own-priced offer next to
+  // its rooms „faszság”): with rooms beside it, the whole place is no offer of its own — the
+  // guest ticks every room instead. It stays only when the place is let ONLY as one.
+  const lettingOnlyAsOne = units.some((u) => u.wholeOnly && u.isWholeProperty);
+  const hasRooms = units.some((u) => !isWholePlace(u));
+  const shown = units.filter(
+    (u) => isGuestVisibleUnit(u) && (lettingOnlyAsOne || !hasRooms || !isWholePlace(u)),
+  );
   return shown.length ? shown : [...units];
+}
+
+/** The unit stands for the whole place (0078) or is marked as it (0059). */
+function isWholePlace(u: UnitVisibilityFacts): boolean {
+  return u.representsWhole || u.isWholeProperty;
 }
 
 /** The facts the bookability rule reads on top of visibility. */
@@ -54,7 +66,8 @@ export function isBookableUnit<T extends UnitBookabilityFacts>(
 ): boolean {
   const only = siblings.find((s) => s.wholeOnly && s.isWholeProperty);
   if (only) return u.id === only.id;
-  return isGuestVisibleUnit(u);
+  // ADR-XXXX: beside rooms the whole place takes no request of its own (see guestUnits).
+  return guestUnits(siblings).some((x) => x.id === u.id);
 }
 
 /**

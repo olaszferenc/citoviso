@@ -189,9 +189,10 @@ try {
     `paidEmpty = [${all.paidEmpty.join(", ")}]`,
   );
   check(
-    // ADR-0392: two rooms always have the whole house beside them — three cards on the page.
-    "a szobák a SAJÁT listájukat viszik (a két szoba és az egész ház kártyáján is 3 tétel)",
-    all.roomAmenityCounts.length === 3 && all.roomAmenityCounts.every((n) => n === 3),
+    // ADR-0392: two rooms always have the whole house beside them in the DB; ADR-XXXX: beside its
+    // rooms the house is no offer of its own, so the page shows the two ROOM cards only.
+    "a szobák a SAJÁT listájukat viszik (a két szoba kártyáján 3-3 tétel; ház-kártya nincs)",
+    all.roomAmenityCounts.length === 2 && all.roomAmenityCounts.every((n) => n === 3),
     JSON.stringify(all.roomAmenityCounts),
   );
 

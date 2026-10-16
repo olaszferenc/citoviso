@@ -198,6 +198,17 @@ alak — a kötő szöveg a `T()` argumentuma, különben az őr egy sosem léte
 - **A három szikár sablon kártyája ár-sort kap** (tulajdonosi döntés: „szobáknál is legyen
   ár") — a meglévő felirat-stílusban, a sablon rajzának átírása nélkül.
 
+**FELÜLÍRVA — 2026-10-16 (ADR-XXXX, kontraktus `../multi-room/README.md`, tulaj „B”):**
+
+- A fenti „viszi, melyik szobáról jött” pontok **szándéka marad**, a mechanizmusa nem: 2+ egységnél
+  nincs egység-választó (`#cit-unit`). A kártya / felugró „Foglalás”-a a widgetre visz, és a widget
+  szoba-listájában **azt a szobát pipálja** (`[data-cit-room-pick]`); dátum előtt a pipát megjegyzi,
+  és a dátumok után kipipálva mutatja. Foglalt szobát (a már megadott dátumokra) nem pipál.
+- **Szobák mellett az egész ház nem ajánlat**: nincs kártyája, nincs sávja (a `whole-unit-band`
+  „Egyben is kiadó” sávja ezzel kivezetve), nincs pipája — aki az egészet akarja, minden szobát
+  kipipál. „Csak egyben” módban változatlanul csak a ház foglalható.
+- Őr: `scripts/room-details-check.mts` (③ = az egész ház hiánya a szobák mellett).
+
 ⛔ **Idézd a `T()` argumentumát, ne a képernyőn látott összefűzött mondatot**
 (`feedback_composed_sentence_is_not_a_quotable_label`: háromszor buktam el ezen egy
 sessionben). Ha a felirat i18n-kulcs, a magyar forrás-string a kötő szöveg.

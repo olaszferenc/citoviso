@@ -141,19 +141,15 @@
       return d.toISOString().slice(0, 10);
     })();
 
-    var unitPicker = units.length > 1
-      ? '<div class="cit-book__field"><label class="cit-book__label" for="cit-unit">' +
-        tr("Melyiket foglalná?") + "</label>" +
-        '<select class="cit-book__input" id="cit-unit" name="unit">' +
-        units.map(function (u) {
-          /* KONTRAKTUS ⑤: az egyedi ár MÁR A VÁLASZTÁSKOR látszik, nem utólag, az
-           * eltűnő ár-dobozból. A jelölést a szerver adja (`unpriced`), mert az
-           * ár-végpont egyszerre EGY egységre válaszol. */
-          return '<option value="' + esc(u.id) + '">' + esc(u.name) +
-            (u.capacity ? " · " + u.capacity + " " + tr("fő") : "") +
-            (u.unpriced ? " · " + tr("egyedi ár") : "") + "</option>";
-        }).join("") +
-        "</select></div>"
+    /* ADR-XXXX (approved plan tenant-site/multi-room „B”, owner 2026-10-16): with several
+     * rooms the guest picks the DATES first, then ticks the rooms that are free for the whole
+     * stay — one request, the owner confirms it as one. The calendar closes a night only when
+     * NO room is free; the whole place is no separate offer beside its rooms any more. */
+    var multi = units.length > 1;
+    var unitPicker = multi
+      ? '<div class="cit-book__field cit-book__rooms" data-cit-roomsf><span class="cit-book__label">' +
+        tr("Melyik szobákat foglalná?") + "</span>" +
+        '<div class="cit-book__roomlist" data-cit-roomlist></div></div>'
       : (units[0].wholeOnly
           // ADR-0257 (contract whole-only ⑪): the house is the one thing to book — say so.
           ? '<div class="cit-book__field cit-book__only"><span class="cit-book__label">' + tr("Amit foglal") + "</span>" +
@@ -303,7 +299,9 @@
       restNote = !demo && on ? esc(askNote) : baseNote;
       /* A demó-lap saját jegyzetét nem bántjuk: ott a mondat arról szól, hogy innen
        * semmi nem megy el — igazabb állítás, mint bármelyik ígéretünk. */
-      if (!note.classList.contains("cit-book__note--err")) note.innerHTML = restNote;
+      /* ADR-XXXX: nor over the "tick a room" hint — leaving the quote mode by unticking every
+       * room printed the BOOKING promise under a disabled button (quote-request-check, 10-16). */
+      if (!note.classList.contains("cit-book__note--err") && !needRoom()) note.innerHTML = restNote;
     }
     var countEl = form.querySelector("[data-guests]");
     var guests = 2;
@@ -311,6 +309,10 @@
     var portalDays = {}; // demo only: sample portal-booked nights (ADR-0361)
     var pricing = null; // {currency, unit, rows} — live price list from the availability API
     var seasonMins = []; // Elek F-2: [{from,to,validFrom,validTo,min}] — the seasons' own minimum stays
+    /* ADR-XXXX: per room — {blocked, portal, pricing, mins} — and the rooms the guest ticked. */
+    var byUnit = {};
+    var picked = {};
+    function pickedUnits() { return units.filter(function (u) { return !!picked[u.id]; }); }
 
     form.querySelectorAll(".cit-book__step[data-step]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -327,24 +329,39 @@
      * owner was warned nowhere): the head count stops at the chosen unit's capacity, and the
      * server refuses past it with the same number. A unit without a capacity keeps the old
      * ceiling of 20 — no invented limit (§B.17). */
+    /* ADR-XXXX: several rooms hold their summed capacity; a room without one lifts the
+     * ceiling (the server's rule, requests.ts). Nothing ticked yet → the old ceiling. */
+    function capRaw() {
+      if (!multi) return Number(unitObj().capacity) || 0;
+      var ps = pickedUnits();
+      if (!ps.length || ps.some(function (u) { return !(Number(u.capacity) > 0); })) return 0;
+      return ps.reduce(function (t, u) { return t + Number(u.capacity); }, 0);
+    }
     function capOf() {
-      var c = Number(unitObj().capacity);
+      var c = capRaw();
       return c > 0 ? Math.min(20, c) : 20;
     }
     function syncCap() {
-      var cap = capOf(), capped = Number(unitObj().capacity) > 0;
+      var cap = capOf(), capped = capRaw() > 0;
       if (guests > cap) guests = cap;
       countEl.textContent = String(guests);
       var plus = form.querySelector(".cit-book__step[data-step='1']");
       if (plus) plus.disabled = guests >= cap;
       var cn = form.querySelector("[data-cit-capnote]");
       cn.hidden = !(capped && guests >= cap);
-      cn.textContent = cn.hidden ? "" : tr("Ide legfeljebb {n} vendég foglalhat.").replace("{n}", cap);
+      cn.textContent = cn.hidden
+        ? ""
+        : (multi && pickedUnits().length > 1
+          ? tr("A kiválasztott szobákba legfeljebb {n} vendég foglalhat.")
+          : tr("Ide legfeljebb {n} vendég foglalhat.")).replace("{n}", cap);
     }
 
     /* ── ADR-0378 meal plans ─────────────────────────────────────────────── */
     function mealsHere() {
-      return !!(meals && meals.plans && meals.off && meals.off.indexOf(currentUnit()) < 0);
+      if (!(meals && meals.plans && meals.off)) return false;
+      // ADR-XXXX: a multi-room request takes meals only when EVERY ticked room does.
+      var ids = multi && pickedUnits().length ? pickedUnits().map(function (u) { return u.id; }) : [currentUnit()];
+      return ids.every(function (id) { return meals.off.indexOf(id) < 0; });
     }
     function mealPlan(id) {
       var hit = null;
@@ -367,7 +384,12 @@
       if (id === meals.base) return [];
       var p = mealPlan(id);
       if (!p || !p.price) return [];
-      if (p.per === "room") return [{ label: p.name, n: n, per: p.price, guests: 1, sum: n * p.price }];
+      var rooms = multi ? Math.max(1, pickedUnits().length) : 1;
+      if (p.per === "room") {
+        return rooms > 1
+          ? [{ label: tr("{name}, {n} szobára").replace("{name}", p.name).replace("{n}", rooms), n: n, per: p.price * rooms, guests: 1, sum: n * p.price * rooms }]
+          : [{ label: p.name, n: n, per: p.price, guests: 1, sum: n * p.price }];
+      }
       var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;
       var ad = guests - k;
       var out = [{ label: p.name, n: n, per: p.price, guests: ad, sum: n * ad * p.price }];
@@ -455,7 +477,26 @@
     function moneyHtml(amount, currency) {
       return '<span class="cit-amt">' + money(amount, currency) + "</span>";
     }
+    /* ADR-XXXX: several rooms cost the sum of their own prices, each line named by its room.
+     * Per-person pricing over several rooms needs the head count PER ROOM, which is not
+     * asked — no number then; the owner answers with an offer (the server's rule). */
     function quoteFor(a, b) {
+      if (!multi) return quoteForPricing(a, b, pricing);
+      var ps = pickedUnits();
+      if (!ps.length) return null;
+      var lines = [], total = 0;
+      for (var i = 0; i < ps.length; i++) {
+        var pr = (byUnit[ps[i].id] || {}).pricing;
+        if (ps.length > 1 && pr && pr.unit === "per_person_night") return null;
+        var q = quoteForPricing(a, b, pr);
+        if (!q) return null;
+        if (q.perStay) q.lines = [{ label: tr("a teljes tartózkodásra"), per: q.total, n: 1, sum: q.total, guests: 1 }];
+        q.lines.forEach(function (l) { if (ps.length > 1) l.label = ps[i].name + " — " + l.label; lines.push(l); });
+        total += q.total;
+      }
+      return { total: total, lines: lines, perStay: false };
+    }
+    function quoteForPricing(a, b, pricing) {
       if (!pricing || !pricing.rows || !pricing.rows.length) return null;
       var lines = [], d = new Date(a + "T00:00:00Z"), end = Date.parse(b + "T00:00:00Z");
       var guests = pricing.unit === "per_person_night"
@@ -525,7 +566,7 @@
        * box said "egyedi árat ad", the button "Árajánlatot kérek", and the note
        * "már foglaltak" — three answers to one question. The range's problem is
        * the only message; no price and no quote path until it is fixed. */
-      if (problem()) { el.innerHTML = ""; el.classList.remove("cit-book__quote--ask"); setAskMode(false); return; }
+      if (problem() || needRoom()) { el.innerHTML = ""; el.classList.remove("cit-book__quote--ask"); setAskMode(false); return; }
       var q = quoteFor(a, b);
       /* ⛔ KONTRAKTUS ①–③: ez a pont eddig NÉMÁN kiürítette a dobozt. Mérve (valódi
        * böngésző, 2026-09-22): asztalon üres lyuk maradt a dátum-sáv alatt, mobilon
@@ -568,8 +609,13 @@
       // DEMO: the basis line names the sample too — the price list it explains is per_night
       // (demoPricing), and a sentence starting "Az ár…" between two "minta-ár" labels was the
       // weakest point of the box (tenyhuseg-or, 2026-09-26).
-      var basis = demo
+      // ADR-XXXX: on a multi-room sample the sample price is a ROOM's — never "a TELJES SZÁLLÁSRA".
+      var basis = demo && multi
+        ? tr("A minta-ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).")
+        : demo
         ? tr("A minta-ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).")
+        : multi && pickedUnits().length > 1
+        ? tr("Az ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).")
         : q.perStay
         ? tr("Az ár a TELJES TARTÓZKODÁSRA szól — a létszám nem befolyásolja (jelenleg {n} fő).")
         : pricing.unit === "per_person_night"
@@ -652,7 +698,7 @@
         '<span class="cit-book__rrow"><span>' + tr("Létszám") + "</span><b>" +
           esc(headcount(s.guests, s.children || 0)) + "</b></span>" +
         (s.unitName
-          ? '<span class="cit-book__rrow"><span>' + tr("Egység") + "</span><b>" + esc(s.unitName) + "</b></span>"
+          ? '<span class="cit-book__rrow"><span>' + (multi && pickedUnits().length > 1 ? tr("Szobák") : tr("Egység")) + "</span><b>" + esc(s.unitName) + "</b></span>"
           : "") +
         '<span class="cit-book__rrow"><span>' + tr("Hivatkozás") + "</span><b>" + esc(s.ref) + "</b></span>";
       // §B.17: an unpriced stay prints NO total — silence beats a confident zero.
@@ -736,6 +782,8 @@
       if (done.focus) done.focus({ preventScroll: true });
     }
     function currentUnit() {
+      // ADR-XXXX: several rooms — the first ticked one stands for "the" unit (meals, currency).
+      if (multi) { var ps = pickedUnits(); return ps.length ? ps[0].id : units[0].id; }
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
     }
@@ -782,7 +830,112 @@
       units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
       return { currency: "HUF", unit: "per_night", rows: [{ base: true, amount: 24000 + idx * 4000 }] };
     }
+    /* ADR-XXXX: every room's calendar and price list, then the guest-facing calendar: a
+     * night is closed only when NO room is free. */
+    function mergeRooms() {
+      blocked = {};
+      portalDays = {};
+      var first = true;
+      units.forEach(function (u) {
+        var b = (byUnit[u.id] || {}).blocked || {};
+        if (first) { Object.keys(b).forEach(function (d) { blocked[d] = true; }); first = false; }
+        else Object.keys(blocked).forEach(function (d) { if (!b[d]) delete blocked[d]; });
+      });
+      Object.keys(blocked).forEach(function (d) {
+        if (units.every(function (u) { return ((byUnit[u.id] || {}).portal || {})[d]; })) portalDays[d] = true;
+      });
+      var ps = pickedUnits();
+      pricing = (byUnit[(ps[0] || units[0]).id] || {}).pricing || null;
+      seasonMins = [];
+      ps.forEach(function (u) { seasonMins = seasonMins.concat((byUnit[u.id] || {}).mins || []); });
+    }
+    function loadRooms() {
+      if (demo) {
+        units.forEach(function (u) {
+          byUnit[u.id] = { blocked: demoBlocked(u.id), portal: demoPortal(u.id), pricing: demoPricing(u.id), mins: [] };
+        });
+        mergeRooms();
+        validate();
+        renderCal();
+        return;
+      }
+      var left = units.length;
+      units.forEach(function (u) {
+        fetch(API_BASE + "/api/foglaltsag/" + encodeURIComponent(u.id), { credentials: "omit" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (j) {
+            if (!j || !j.blocked) return;
+            var b = {};
+            j.blocked.forEach(function (d) { b[d] = true; });
+            byUnit[u.id] = { blocked: b, portal: {}, pricing: j.pricing || null, mins: j.mins || [] };
+          })
+          .catch(function () { /* unreachable: do NOT block the guest — accept re-checks */ })
+          .then(function () {
+            if (--left) return;
+            mergeRooms();
+            validate();
+            renderCal();
+          });
+      });
+    }
+    /* Each room against the chosen stay: free for every night? */
+    function roomFree(id, a, b) {
+      var bl = (byUnit[id] || {}).blocked || {};
+      for (var d = a; d < b; d = shift(d, 1)) if (bl[d]) return false;
+      return true;
+    }
+    function renderRooms() {
+      var list = form.querySelector("[data-cit-roomlist]");
+      if (!list) return;
+      var a = form.from.value, b = form.to.value, stay = a && b && nights(a, b) > 0;
+      if (!stay) {
+        list.innerHTML = '<p class="cit-book__mdesc">' + tr("Előbb válassza ki a napokat — utána megmutatjuk, melyik szoba szabad.") + "</p>";
+        return;
+      }
+      var free = units.filter(function (u) { return roomFree(u.id, a, b); });
+      var act = document.activeElement, keep = act && list.contains(act)
+        ? (act.getAttribute("data-cit-room-pick") !== null ? act.value : act.hasAttribute("data-cit-room-all") ? "*all" : null)
+        : null;
+      // A ticked room the new dates made busy is unticked — the request can only hold free rooms.
+      units.forEach(function (u) { if (picked[u.id] && !roomFree(u.id, a, b)) delete picked[u.id]; });
+      list.innerHTML = units.map(function (u) {
+        var ok = roomFree(u.id, a, b);
+        var q = ok ? quoteForPricing(a, b, (byUnit[u.id] || {}).pricing) : null;
+        var price = !ok ? "" : q
+          ? "<b>" + moneyHtml(q.total, ((byUnit[u.id] || {}).pricing || {}).currency || "HUF") + "</b>" + esc(tr("{n} éj").replace("{n}", nights(a, b)))
+          : "<b>" + tr("egyedi ár") + "</b>";
+        return '<label class="cit-book__room' + (ok ? "" : " is-off") + '">' +
+          '<input type="checkbox" value="' + esc(u.id) + '" data-cit-room-pick' + (picked[u.id] ? " checked" : "") + (ok ? "" : " disabled") + ">" +
+          '<span class="cit-book__roomn">' + esc(u.name) + "</span>" +
+          '<span class="cit-book__roomp">' + price + "</span>" +
+          '<span class="cit-book__roomc">' + (u.capacity ? esc(tr("{n} fő").replace("{n}", u.capacity)) : "") + "</span>" +
+          (ok ? "" : '<span class="cit-book__roomx">' + tr("Erre az időszakra foglalt") + "</span>") +
+          "</label>";
+      }).join("") +
+      (free.length > 1
+        ? '<button type="button" class="cit-book__roomall" data-cit-room-all>' +
+          esc(free.every(function (u) { return picked[u.id]; })
+            ? tr("Jelölések törlése")
+            : free.length === units.length
+              ? tr("Mind a {n} szobát kérem (az egész ház)").replace("{n}", free.length)
+              : tr("Mind a {n} szabad szobát kérem").replace("{n}", free.length)) +
+          "</button>"
+        : "");
+      // The list is rebuilt on every change: the keyboard focus goes back where it was.
+      if (keep) {
+        var back = keep === "*all" ? list.querySelector("[data-cit-room-all]") : list.querySelector('[data-cit-room-pick][value="' + keep + '"]');
+        if (back && back.focus) back.focus({ preventScroll: true });
+      }
+    }
+    function roomsChanged() {
+      mergeRooms();
+      syncCap();
+      syncMeals();
+      validate();
+      renderCal();
+    }
     function loadAvailability() {
+      if (multi) return loadRooms();
       blocked = {};
       if (demo) {
         blocked = demoBlocked(currentUnit());
@@ -808,29 +961,33 @@
           // is the real gate, and acceptance re-checks the nights anyway.
         });
     }
-    var unitSel = form.querySelector("select[name='unit']");
-    if (unitSel) unitSel.addEventListener("change", loadAvailability);
-    if (unitSel) unitSel.addEventListener("change", syncMeals);
-    // ADR-0389: a smaller unit lowers the head count to its capacity at once.
-    if (unitSel) unitSel.addEventListener("change", function () {
-      syncCap();
-      syncMeals();
-      var qa = form.from.value, qb = form.to.value;
-      renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
-    });
-    syncMeals();
-    /* KONTRAKTUS ① (design-refs/tenant-site/booking-unit-default, tulaj 2026-09-28): the
-     * widget opens on the first PRICED unit, in the owner's order. Measured on the dev
-     * tenant: it opened on the whole-place unit, the one unit without a price —
-     * so every guest got a quote box first, and on a phone the picker to escape it was not
-     * even on the screen. The unpriced unit STAYS in the list (quote-request ⑦); nothing is
-     * reordered. All unpriced → the first unit, as before. Set BEFORE the first load, so
-     * the calendar and the price come from the unit the guest actually sees. */
-    if (unitSel) {
-      for (var ui = 0; ui < units.length; ui++) {
-        if (!units[ui].unpriced) { unitSel.value = units[ui].id; break; }
-      }
+    var roomList = form.querySelector("[data-cit-roomlist]");
+    if (roomList) {
+      roomList.addEventListener("change", function (e) {
+        var cb = e.target.closest && e.target.closest("[data-cit-room-pick]");
+        if (!cb) return;
+        if (cb.checked) picked[cb.value] = true;
+        else delete picked[cb.value];
+        roomsChanged();
+      });
+      roomList.addEventListener("click", function (e) {
+        if (!(e.target.closest && e.target.closest("[data-cit-room-all]"))) return;
+        var a = form.from.value, b = form.to.value;
+        var free = units.filter(function (u) { return roomFree(u.id, a, b); });
+        var all = free.every(function (u) { return picked[u.id]; });
+        free.forEach(function (u) { if (all) delete picked[u.id]; else picked[u.id] = true; });
+        roomsChanged();
+      });
+      /* A room card's „Foglalás” ticks that room (carryUnitToBooking sends the event). */
+      roomList.addEventListener("cit:pickroom", function (e) {
+        var id = e.detail, a = form.from.value, b = form.to.value;
+        if (!units.some(function (u) { return u.id === id; })) return;
+        if (a && b && !roomFree(id, a, b)) return;
+        picked[id] = true;
+        roomsChanged();
+      });
     }
+    syncMeals();
     syncCap(); // a one-person room opens on 1 guest, not the default 2
 
     function say(msg, bad) {
@@ -887,8 +1044,17 @@
       }
       return "";
     }
+    /* ADR-XXXX: dates chosen, no room ticked yet — not an error, the next step. */
+    function needRoom() {
+      return multi && !!form.from.value && !!form.to.value && !pickedUnits().length;
+    }
     function validate() {
       var p = problem();
+      if (!p && needRoom()) {
+        say(tr("Jelöljön ki legalább egy szobát."), false);
+        submit.disabled = true;
+        return false;
+      }
       say(p, !!p);
       submit.disabled = !!p;
       return !p;
@@ -998,6 +1164,7 @@
         nightsEl.textContent = n > 0
           ? tr("{n} éjszaka").replace("{n}", n)
           : minA > 1 ? tr("legalább {n} éjszaka").replace("{n}", minA) : "";
+        if (multi) renderRooms();
         renderQuote(a, b, n);
       }
     }
@@ -1067,13 +1234,17 @@
      * MOVES (one <select>, one name="unit", one change listener); on a wide screen it
      * returns to its place in the form column. The width is the stylesheet's two-step
      * breakpoint, so the picker and the steps can never disagree about "phone". */
-    var unitField = unitSel && unitSel.closest(".cit-book__field");
+    var unitField = roomList && roomList.closest(".cit-book__field");
     var unitHome = unitField && unitField.parentNode;
     var phoneMq = window.matchMedia ? window.matchMedia("(max-width: 559px)") : null;
     function placeUnit() {
       if (!unitField) return;
       if (phoneMq && phoneMq.matches) {
-        if (unitField.parentNode !== calcol) calcol.insertBefore(unitField, calcol.firstChild);
+        // ADR-XXXX: the rooms follow the dates (plan B) — after the calendar, before the price.
+        if (roomList) {
+          var qb = form.querySelector("[data-quote]");
+          if (unitField.nextSibling !== qb) qb.parentNode.insertBefore(unitField, qb);
+        } else if (unitField.parentNode !== calcol) calcol.insertBefore(unitField, calcol.firstChild);
       } else if (unitField.parentNode !== unitHome) {
         unitHome.insertBefore(unitField, unitHome.firstChild);
       }
@@ -1090,9 +1261,11 @@
       status.textContent = err ? note.textContent : "";
       status.hidden = !err;
       var n = nightsEl ? nightsEl.textContent : "";
-      go.disabled = !(a && b) || err;
+      go.disabled = !(a && b) || err || needRoom();
       go.textContent = err
         ? tr("Javítsa a dátumot a folytatáshoz")
+        : needRoom()
+        ? tr("Jelölje ki a szobákat a folytatáshoz")
         : a && b
           ? tr("Tovább a kérés adataihoz ({n})").replace("{n}", n)
           : tr("Válassza ki a napokat a naptárban");
@@ -1110,7 +1283,7 @@
       /* KONTRAKTUS ③ (booking-unit-default): with several units the summary names the one
        * the request is for — the picker is no longer on this step to say it. */
       var unitName = "";
-      if (unitSel) units.forEach(function (u) { if (u.id === unitSel.value) unitName = u.name; });
+      if (multi) unitName = pickedUnits().map(function (u) { return u.name; }).join(", ");
       sum.innerHTML = a && b
         ? (unitName ? '<span class="cit-book__sumunit">' + esc(unitName) + "</span>" : "") +
           "<b>" + esc(huDay(a)) + " → " + esc(huDay(b)) + " · " + esc(n) + "</b>" +
@@ -1130,8 +1303,9 @@
     if (quoteBox) new MutationObserver(syncSteps).observe(quoteBox, { childList: true, characterData: true, subtree: true });
     form.from.addEventListener("change", syncSteps);
     form.to.addEventListener("change", syncSteps);
-    if (unitSel) unitSel.addEventListener("change", function () { setTimeout(syncSteps, 0); });
     calWrap.addEventListener("click", function () { setTimeout(syncSteps, 0); });
+    if (roomList) roomList.addEventListener("change", function () { setTimeout(syncSteps, 0); });
+    if (roomList) roomList.addEventListener("click", function () { setTimeout(syncSteps, 0); });
     form.querySelectorAll(".cit-book__step").forEach(function (btn) { btn.addEventListener("click", function () { setTimeout(syncSteps, 0); }); });
     go.addEventListener("click", function () {
       if (go.disabled) return;
@@ -1165,6 +1339,7 @@
         var dq = askMode ? null : quoteFor(qa, qb);
         var unitName = "";
         units.forEach(function (u) { if (u.id === currentUnit()) unitName = u.name; });
+        if (multi) unitName = pickedUnits().map(function (u) { return u.name; }).join(", ");
         function rrow(label, value) {
           return '<span class="cit-book__rrow"><span>' + label + "</span><b>" + esc(value) + "</b></span>";
         }
@@ -1173,7 +1348,7 @@
           rrow(tr("Időszak"), huDay(qa) + " — " + huDay(qb)) +
           rrow(tr("Éjszakák"), tr("{n} éj").replace("{n}", qn)) +
           rrow(tr("Létszám"), headcount(guests, kids)) +
-          (unitName ? rrow(tr("Egység"), unitName) : "") +
+          (unitName ? rrow(multi && pickedUnits().length > 1 ? tr("Szobák") : tr("Egység"), unitName) : "") +
           (dq
             ? '<span class="cit-book__qtotal">' + tr("Összesen (minta-ár):") + " <b>" + moneyHtml(dq.total, pricing.currency) + "</b></span>"
             : "") +
@@ -1214,7 +1389,6 @@
       submit.disabled = true;
       say(tr("Küldés…"), false);
       var body = new URLSearchParams({
-        unit: currentUnit(),
         from: form.from.value,
         to: form.to.value,
         guests: String(guests),
@@ -1225,6 +1399,10 @@
         email: form.email.value,
         phone: form.phone.value,
         message: form.message.value,
+      });
+      // ADR-XXXX: `unit` repeated, one per ticked room, in the owner's order.
+      (multi ? pickedUnits().map(function (u) { return u.id; }) : [currentUnit()]).forEach(function (id) {
+        body.append("unit", id);
       });
       fetch(API_BASE + "/api/foglalas", {
         method: "POST",
@@ -1903,8 +2081,8 @@
      * `unit: currentUnit()` would submit the wrong unit: the owner receives a booking
      * request for a room nobody asked for. The anchor carried no room at all.
      *
-     * We set the SELECT, because that is what everything else already reads — the
-     * availability refetch, the price rows and the submit all follow it. (Without JS
+     * ADR-XXXX: the widget's ROOM LIST ticks the card's room (a `cit:pickroom` event) —
+     * the calendar, the price rows and the submit all follow the ticked rooms. (Without JS
      * there is no booking widget at all, so this is inherently a JS-side step.)
      */
     function carryUnitToBooking(anchor) {
@@ -1916,21 +2094,15 @@
           : null;
       var unitId = holder && holder.getAttribute("data-cit-room-unit");
       if (!unitId) return;
-      // ⛔ THE BOOKING WIDGET'S OWN SELECT, by its id — never the first name="unit" on
+      // ⛔ THE BOOKING WIDGET'S OWN LIST, by its marker — never the first name="unit" on
       // the page. Measured 2026-09-28 (Három Huszár): the review form ("Hol szállt meg
       // nálunk?") sits ABOVE the widget and also has a name="unit" select, so every card's
-      // "Foglalás" set the REVIEW form's unit and left the widget on its default — the
-      // guest tapped "A szállás egésze" and landed on the Nádas apartman's calendar.
-      var sel = document.getElementById("cit-unit");
-      if (!sel || sel.value === unitId) return;
-      // ⚠️ Csak akkor állítunk, ha a választóban TÉNYLEG van ilyen érték — különben némán
-      // egy nem létező egységre váltanánk, és a naptár üresen maradna.
-      for (var i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === unitId) {
-          sel.value = unitId;
-          sel.dispatchEvent(new Event("change", { bubbles: true }));
-          return;
-        }
+      // "Foglalás" set the REVIEW form's unit and left the widget on its default.
+      var rl = document.querySelector("[data-cit-roomlist]");
+      if (rl) {
+        var ev;
+        try { ev = new CustomEvent("cit:pickroom", { detail: unitId }); } catch (err) { ev = null; }
+        if (ev) rl.dispatchEvent(ev);
       }
     }
     document.addEventListener("click", function (e) {

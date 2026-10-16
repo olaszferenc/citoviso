@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Több szoba egy kérésben — terv (Myrna Haus)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Jost:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Guest site theme: Myrna Haus (dev tenant) --cit-* tokens */
+:root{
+  --cit-accent:#143c50;--cit-on-accent:#ffffff;--cit-ink:#241a17;--cit-muted:#6b5d55;
+  --cit-bg:#f7f2ea;--cit-surface:#fffdf9;--cit-line:#e2d9cb;--cit-radius:10px;
+  --cit-font-display:'Fraunces',Georgia,serif;--cit-font-body:'Jost',system-ui,sans-serif;
+  --cit-bad:#a3262b;--cit-ok:#2f7a4b;
+  /* Owner admin --citui-* tokens (public/assets/ui/citui.css) */
+  --citui-ink:#10243a;--citui-muted:#5a6d82;--citui-bg:#ffffff;--citui-panel:#ffffff;--citui-side:#fafafa;
+  --citui-field:#f6f7f8;--citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-cyan-500:#1fb6d6;--citui-accent-ink:#06131b;--citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-ok-ink:#19733f;
+  --citui-bad:#e5484d;--citui-bad-ink:#b3262b;--citui-warn-ink:#7d5a12;--citui-surface-2:#eef7fa;
+  --citui-radius-sm:14px;--citui-radius-pill:999px;--citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-font-display:"Space Grotesk",system-ui,sans-serif;--citui-font-text:"Inter",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e7e2da;font-family:var(--cit-font-body);color:var(--cit-ink)}
+.tools{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:#1f1a17;color:#fff;font:600 13px/1 system-ui}
+.tools button{font:inherit;padding:9px 11px;border-radius:8px;border:1px solid #777;background:#333;color:#fff;cursor:pointer}
+.tools button[aria-pressed=true]{background:#1fb6d6;border-color:#1fb6d6;color:#06131b}
+.tools i{width:1px;height:22px;background:#666;margin:0 2px}
+#stage{container-type:inline-size;container-name:vp;margin:0 auto;width:100%;max-width:1200px;min-height:100vh;background:var(--cit-bg)}
+#stage.is-mobile{width:390px;max-width:100%}
+.note{margin:12px 16px 0;padding:12px 14px;border-radius:8px;background:#fff3cd;color:#4f3c00;font:14px/1.5 system-ui}
+.note b{color:#2e2300}
+.view{display:none}.view.on{display:block}
+
+/* ── guest site ── */
+.hd{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:58px;background:var(--cit-accent);color:#fff}
+.hd b{font-family:var(--cit-font-display);font-size:21px;font-weight:500}
+.hd span{font-size:14px;opacity:.85}
+.sec{padding:28px 16px}
+.sec h2{font-family:var(--cit-font-display);font-weight:400;font-size:28px;margin:0 0 18px;text-align:center}
+.rooms{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.room{background:var(--cit-surface);border:1px solid var(--cit-line);padding:18px;display:flex;flex-direction:column;gap:6px}
+.room .ph{aspect-ratio:3/2;border-radius:6px;background:linear-gradient(135deg,#c9b9a3,#8d7c69);margin-bottom:6px}
+.room strong{font-family:var(--cit-font-display);font-weight:500;font-size:20px}
+.room .m{color:var(--cit-muted);font-size:15px}
+.room .p{font-weight:600}
+.room a{margin-top:8px;align-self:flex-start;background:var(--cit-accent);color:var(--cit-on-accent);text-decoration:none;padding:10px 16px;border-radius:var(--cit-radius);font-weight:500}
+.room .tick{font-size:14px;color:var(--cit-ok);font-weight:600;min-height:1.2em}
+@container vp (min-width:760px){.rooms{grid-template-columns:repeat(3,1fr)}.sec{padding:44px 40px}}
+
+.book{background:var(--cit-surface);border:1px solid var(--cit-line);border-radius:var(--cit-radius);padding:18px}
+.book h3{font-family:var(--cit-font-display);font-weight:500;font-size:22px;margin:0 0 4px}
+.cols{display:grid;gap:22px}
+@container vp (min-width:860px){.cols{grid-template-columns:1.1fr 1fr}.book{padding:28px}}
+.lbl{display:block;font-weight:600;font-size:15px;margin:16px 0 8px}
+.sub{color:var(--cit-muted);font-size:14px;margin:0}
+.pick{display:grid;gap:8px}
+.pick label{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:12px 14px;border:1.5px solid var(--cit-line);border-radius:var(--cit-radius);background:#fff;cursor:pointer}
+.pick label:has(input:checked){border-color:var(--cit-accent);background:color-mix(in srgb,var(--cit-accent) 6%,#fff)}
+.pick label.off{opacity:.55;cursor:not-allowed;background:#f4f0ea}
+.pick input{width:20px;height:20px;accent-color:var(--cit-accent)}
+.pick .n{font-weight:600}
+.pick .c{grid-column:2;color:var(--cit-muted);font-size:14px}
+.pick .pr{grid-row:1/3;grid-column:3;text-align:right;font-size:14px}
+.pick .pr b{display:block;font-size:15px}
+.pick .why{grid-column:2/4;font-size:13px;color:var(--cit-bad)}
+.linkbtn{background:none;border:0;padding:6px 0;color:var(--cit-accent);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+.cal{display:grid;gap:16px}
+@container vp (min-width:560px){.cal{grid-template-columns:1fr 1fr}}
+.mo b{display:block;text-align:center;font-weight:600;margin-bottom:6px;text-transform:capitalize}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:14px}
+.grid .dn{text-align:center;color:var(--cit-muted);font-size:12px;padding:4px 0}
+.grid button{aspect-ratio:1;border:0;background:#fff;border-radius:6px;font:inherit;cursor:pointer;color:var(--cit-ink)}
+.grid button:disabled{background:transparent;color:#bdb3a8;cursor:default}
+.grid button.busy{background:repeating-linear-gradient(135deg,#efe6da 0 4px,#e3d6c5 4px 8px);color:#9a8c7d;text-decoration:line-through;cursor:not-allowed}
+.grid button.in{background:color-mix(in srgb,var(--cit-accent) 18%,#fff)}
+.grid button.edge{background:var(--cit-accent);color:#fff;font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--cit-muted);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;background:repeating-linear-gradient(135deg,#efe6da 0 4px,#e3d6c5 4px 8px)}
+.dates{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.dates div{border:1px solid var(--cit-line);border-radius:var(--cit-radius);padding:8px 12px;background:#fff}
+.dates small{display:block;color:var(--cit-muted);font-size:12px}
+.msg{margin:10px 0 0;padding:10px 12px;border-radius:8px;font-size:14px;line-height:1.45}
+.msg.bad{background:color-mix(in srgb,var(--cit-bad) 9%,#fff);color:var(--cit-bad)}
+.msg.info{background:color-mix(in srgb,var(--cit-accent) 8%,#fff);color:var(--cit-accent)}
+.f{display:block;margin-top:12px}
+.f span{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+.f input,.f textarea{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--cit-line);border-radius:var(--cit-radius);background:#fff}
+.f input[aria-invalid=true]{border-color:var(--cit-bad)}
+.err{color:var(--cit-bad);font-size:13px;margin-top:4px;min-height:0}
+.step{display:flex;align-items:center;gap:10px}
+.step button{width:42px;height:42px;border-radius:50%;border:1px solid var(--cit-line);background:#fff;font-size:20px;cursor:pointer}
+.step button:disabled{opacity:.35;cursor:default}
+.step output{min-width:2ch;text-align:center;font-weight:600;font-size:18px}
+.capnote{font-size:13px;color:var(--cit-muted);margin-top:6px}
+.quote{margin-top:16px;border:1px solid var(--cit-line);border-radius:var(--cit-radius);padding:14px;background:#fff;font-size:14.5px}
+.quote h4{margin:0 0 8px;font-size:15px}
+.qroom{padding:6px 0;border-bottom:1px dashed var(--cit-line)}
+.qroom div{display:flex;justify-content:space-between;gap:8px}
+.qroom small{color:var(--cit-muted)}
+.qtot{display:flex;justify-content:space-between;font-weight:700;font-size:17px;padding-top:10px}
+.qifa{color:var(--cit-muted);font-size:13px;margin-top:8px}
+.submit{margin-top:16px;width:100%;padding:14px;border:0;border-radius:var(--cit-radius);background:var(--cit-accent);color:#fff;font:inherit;font-weight:600;font-size:16px;cursor:pointer}
+.small{font-size:13px;color:var(--cit-muted);line-height:1.5;margin:10px 0 0}
+.receipt{border:1px solid var(--cit-line);border-radius:var(--cit-radius);background:#fff;padding:20px}
+.receipt h3{margin:0 0 10px}
+.receipt dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:15px}
+.receipt dt{color:var(--cit-muted)}
+.receipt dd{margin:0;font-weight:500}
+
+/* ── owner admin (citui) ── */
+.adm{font-family:var(--citui-font-text);color:var(--citui-ink);background:var(--citui-bg);min-height:100vh}
+.adm .top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--citui-line)}
+.adm .top b{font-family:var(--citui-font-display);font-size:18px}
+.adm .top span{color:var(--citui-muted);font-size:14px}
+.adm .wrap{padding:16px;display:grid;gap:18px}
+@container vp (min-width:900px){.adm .wrap{grid-template-columns:1fr 360px;padding:24px 32px}}
+.adm h2{font-family:var(--citui-font-display);font-size:18px;margin:0 0 10px}
+.rq{border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);padding:16px;background:var(--citui-panel);box-shadow:var(--citui-shadow-sm);margin-bottom:14px}
+.rq .bdg{display:inline-block;font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);color:var(--citui-ink)}
+.rq .bdg.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.rq .bdg.no{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad-ink)}
+.rq h3{margin:8px 0 2px;font-size:17px}
+.rq .when{color:var(--citui-muted);font-size:14px}
+.rq ul{margin:10px 0;padding-left:18px;font-size:14.5px;line-height:1.6}
+.rq .tot{display:flex;justify-content:space-between;font-weight:700;padding:8px 0;border-top:1px solid var(--citui-line)}
+.rq .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.rq .acts button{font:inherit;font-weight:600;padding:10px 14px;border-radius:10px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);cursor:pointer}
+.rq .acts .pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.rq .warn{font-size:13.5px;color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn-ink) 8%,transparent);padding:8px 10px;border-radius:8px;margin-top:8px}
+.rq .conf{font-size:14px;margin-top:8px}
+.rq.dim{opacity:.6}
+.side{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px;background:var(--citui-side);font-size:14px}
+.strip{display:grid;grid-template-columns:110px repeat(5,1fr);gap:3px;font-size:12px;align-items:center}
+.strip .h{color:var(--citui-muted);text-align:center}
+.strip .r{font-weight:600;font-size:12.5px}
+.strip .c{height:24px;border-radius:4px;background:var(--citui-field)}
+.strip .c.b{background:var(--citui-cyan-500)}
+.strip .c.p{background:repeating-linear-gradient(135deg,#d6dde4 0 4px,#c3ccd6 4px 8px)}
+.banner{padding:10px 12px;border-radius:10px;background:var(--citui-ok-soft);color:var(--citui-ok-ink);font-size:14px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="tools" role="toolbar" aria-label="Terv-váltó">
+  <button data-v="A" aria-pressed="true">A · szobák pipával</button>
+  <button data-v="B" aria-pressed="false">B · előbb a dátum</button>
+  <button data-v="O" aria-pressed="false">Tulaj: a kérés</button>
+  <i></i>
+  <button data-sz="m" aria-pressed="false">Mobil 390</button>
+  <button data-sz="d" aria-pressed="true">Asztali</button>
+</div>
+<div id="stage">
+  <div class="note" id="note"></div>
+
+  <!-- GUEST VIEW (A and B share it; the widget body differs) -->
+  <div class="view on" id="guest">
+    <div class="hd"><b>Myrna Haus</b><span>Szobák · Foglalás</span></div>
+    <section class="sec">
+      <h2>Szobák, apartmanok</h2>
+      <ul class="rooms" id="roomCards"></ul>
+    </section>
+    <section class="sec" id="foglalas" style="padding-top:0">
+      <h2>Foglalás</h2>
+      <div class="book" id="book"></div>
+    </section>
+  </div>
+
+  <!-- OWNER VIEW -->
+  <div class="view" id="owner">
+    <div class="adm">
+      <div class="top"><b>Myrna Haus</b><span>Foglalások</span></div>
+      <div class="wrap">
+        <div>
+          <div id="obanner"></div>
+          <h2>Döntésre váró kérések</h2>
+          <div id="oreqs"></div>
+        </div>
+        <aside class="side">
+          <h2>Naptár: okt. 23–27.</h2>
+          <div class="strip" id="ostrip"></div>
+          <p style="color:var(--citui-muted);margin:10px 0 0;line-height:1.5" id="ostripnote"></p>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ── real Myrna Haus units (dev DB), whole-house unit intentionally gone ──
+  var ROOMS=[
+    {id:"nadas",name:"Nádas apartman",cap:4,base:24000,seasons:[{from:"10-23",to:"11-02",price:28000}],busy:["2026-10-28","2026-10-29"],busyBy:"a Booking.com-on foglalták"},
+    {id:"kis",name:"Kisházi szoba",cap:2,base:16000,seasons:[],busy:["2026-10-30","2026-10-31"],busyBy:"a Szállás.hu-n foglalták"},
+    {id:"kerti",name:"Kerti stúdió",cap:3,base:19000,seasons:[],busy:[],busyBy:""}
+  ];
+  var IFA=600, MIN_NIGHTS=2, TODAY="2026-10-16";
+  var HU_MON=["január","február","március","április","május","június","július","augusztus","szeptember","október","november","december"];
+  var HU_SHORT=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
+  function ft(n){return n.toLocaleString("hu-HU")+" Ft"}
+  function iso(d){return d.toISOString().slice(0,10)}
+  function addDays(s,n){var d=new Date(s+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return iso(d)}
+  function nights(a,b){var out=[];for(var d=a;d<b;d=addDays(d,1))out.push(d);return out}
+  function short(s){var p=s.split("-");return HU_SHORT[+p[1]-1]+" "+(+p[2])+"."}
+  function priceOn(r,day){var md=day.slice(5);for(var i=0;i<r.seasons.length;i++){var s=r.seasons[i];if(md>=s.from&&md<=s.to)return s.price}return r.base}
+  function roomBusy(r,day){return r.busy.indexOf(day)>=0}
+  function roomFreeFor(r,a,b){return nights(a,b).every(function(d){return !roomBusy(r,d)})}
+  function byId(id){return ROOMS.filter(function(r){return r.id===id})[0]}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+  var NOTES={
+    A:"<b>A — a szobákat pipálja ki, egy közös naptár.</b> A vendég bejelöli, melyik szobá(ka)t kéri; a naptár azokat a napokat zárja, amikor a kijelölt szobák <b>bármelyike</b> foglalt. Az „egész ház” külön tétele megszűnik: aki az egészet akarja, mind a 3 szobát kipipálja (egy gomb). Próbálja: pipálja be a Nádast és a Kerti stúdiót, és válasszon okt. 21–24-et; aztán próbálja okt. 27–30-at (a Nádas akkor a Booking.com-on foglalt).",
+    B:"<b>B — előbb a dátum, aztán a szabad szobák.</b> A naptár azokat a napokat zárja, amikor <b>egyik</b> szoba sem szabad. A dátum után a vendég azt látja, melyik szoba szabad a teljes időszakra, árral együtt, és ezek közül pipál. Próbálja: okt. 27–30 (a Nádas foglalt), vagy okt. 29–nov. 1. (a Nádas és a Kisházi is foglalt).",
+    O:"<b>A tulaj oldala (mindkét változatnál ugyanaz).</b> Egy kérés, benne több szoba; a tulaj <b>egyben</b> igazolja vissza vagy utasítja el. Visszaigazoláskor minden kért szoba lezár, és az ütköző másik kérés automatikusan elutasítást kap (ez ma is így működik). Portálok: minden szoba saját naptár-linkje viszi a foglaltságot — a Booking.com és a Szállás.hu a következő olvasáskor mindkét szobát foglaltnak látja."
+  };
+
+  var state={v:"A",sel:{},from:null,to:null,guests:2,kids:0,sent:null,touched:false};
+
+  // ── room cards (CTA ticks the room in the widget) ──
+  function renderCards(){
+    document.getElementById("roomCards").innerHTML=ROOMS.map(function(r){
+      return '<li class="room"><div class="ph" role="img" aria-label="'+esc(r.name)+' fotó"></div><strong>'+esc(r.name)+'</strong>'+
+        '<span class="m">'+r.cap+' fő</span><span class="p">'+ft(r.base)+'-tól / éj</span>'+
+        '<span class="tick" data-tick="'+r.id+'">'+(state.sel[r.id]?"Kijelölve a foglaláshoz":"")+'</span>'+
+        '<a href="#foglalas" data-cta="'+r.id+'">Foglalás</a></li>';
+    }).join("");
+  }
+
+  // ── calendar ──
+  function nightBlocked(day){
+    if(day<TODAY)return true;
+    var ids=Object.keys(state.sel).filter(function(k){return state.sel[k]});
+    if(state.v==="A"){
+      if(!ids.length)return false;
+      return ids.some(function(id){return roomBusy(byId(id),day)});
+    }
+    return ROOMS.every(function(r){return roomBusy(r,day)});
+  }
+  function calHtml(){
+    var months=[[2026,9],[2026,10]];
+    return '<div class="cal">'+months.map(function(m){
+      var first=new Date(Date.UTC(m[0],m[1],1)), dim=new Date(Date.UTC(m[0],m[1]+1,0)).getUTCDate();
+      var lead=(first.getUTCDay()+6)%7, h='<div class="mo"><b>'+m[0]+'. '+HU_MON[m[1]]+'</b><div class="grid">';
+      ["H","K","Sze","Cs","P","Szo","V"].forEach(function(d){h+='<span class="dn">'+d+'</span>'});
+      for(var i=0;i<lead;i++)h+='<span></span>';
+      for(var d=1;d<=dim;d++){
+        var s=iso(new Date(Date.UTC(m[0],m[1],d))), cls=[], dis=s<TODAY;
+        if(!dis&&nightBlocked(s))cls.push("busy");
+        if(state.from&&state.to&&s>state.from&&s<state.to)cls.push("in");
+        if(s===state.from||s===state.to)cls.push("edge");
+        h+='<button type="button" data-day="'+s+'" class="'+cls.join(" ")+'"'+(dis?" disabled":"")+' aria-label="'+short(s)+(cls.indexOf("busy")>=0?" foglalt":"")+'">'+d+'</button>';
+      }
+      return h+'</div></div>';
+    }).join("")+'</div>'+
+    '<div class="legend"><span><i></i>'+(state.v==="A"?"Foglalt a kijelölt szobák valamelyikében":"Mindegyik szoba foglalt")+'</span></div>'+
+    '<div class="dates"><div><small>Érkezés</small>'+(state.from?short(state.from):"—")+'</div><div><small>Távozás</small>'+(state.to?short(state.to):"—")+'</div></div>';
+  }
+  function clickDay(s){
+    state.msg=null;
+    if(!state.from||state.to||s<=state.from){
+      // a departure day may itself be busy (that night is not stayed), an arrival may not
+      if(nightBlocked(s)){state.msg="Erre a napra nem lehet érkezni: "+(state.v==="A"?"a kijelölt szobák valamelyike foglalt.":"mindegyik szoba foglalt.");state.from=null;state.to=null;return}
+      state.from=s;state.to=null;return;
+    }
+    var ns=nights(state.from,s);
+    if(ns.length<MIN_NIGHTS){state.msg="Legalább "+MIN_NIGHTS+" éjszakára lehet foglalni.";return}
+    if(ns.some(nightBlocked)){
+      state.msg=state.v==="A"?"Ebben az időszakban "+blockerText(ns)+" — vegye ki a jelölést, vagy válasszon más napokat.":"Ebben az időszakban egyik szoba sem szabad végig.";
+      return;
+    }
+    state.to=s;
+    if(state.v==="B"){ // drop a ticked room that is not free for the new stay
+      ROOMS.forEach(function(r){if(state.sel[r.id]&&!roomFreeFor(r,state.from,state.to))state.sel[r.id]=false});
+    }
+  }
+  function blockerText(ns){
+    return ROOMS.filter(function(r){return state.sel[r.id]&&ns.some(function(d){return roomBusy(r,d)})})
+      .map(function(r){var d=ns.filter(function(x){return roomBusy(r,x)});return "a(z) "+r.name+" "+d.map(short).join(", ")+" éjszakáján foglalt"}).join(", ");
+  }
+
+  // ── room picker ──
+  function pickHtml(){
+    var hasStay=state.from&&state.to;
+    if(state.v==="B"&&!hasStay)return '<p class="sub" style="margin-top:6px">Előbb válassza ki a napokat — utána megmutatjuk, melyik szoba szabad.</p>';
+    var h='<div class="pick">';
+    ROOMS.forEach(function(r){
+      var free=!hasStay||roomFreeFor(r,state.from,state.to), off=state.v==="B"&&!free;
+      var price=hasStay&&free?'<b>'+ft(stayPrice(r))+'</b>'+nights(state.from,state.to).length+' éj':'<b>'+ft(r.base)+'</b>-tól / éj';
+      h+='<label class="'+(off?"off":"")+'"><input type="checkbox" data-room="'+r.id+'"'+(state.sel[r.id]?" checked":"")+(off?" disabled":"")+'>'+
+        '<span class="n">'+esc(r.name)+'</span><span class="pr">'+(off?"":price)+'</span><span class="c">'+r.cap+' fő</span>'+
+        (off?'<span class="why">Erre az időszakra foglalt</span>':"")+'</label>';
+    });
+    h+='</div>';
+    var avail=ROOMS.filter(function(r){return state.v==="A"||!hasStay||roomFreeFor(r,state.from,state.to)});
+    var all=avail.every(function(r){return state.sel[r.id]});
+    if(avail.length>1)h+='<button type="button" class="linkbtn" data-all>'+(all?"Jelölések törlése":(avail.length===ROOMS.length?"Mind a "+ROOMS.length+" szobát kérem (az egész ház)":"Mind a "+avail.length+" szabad szobát kérem"))+'</button>';
+    return h;
+  }
+  function selected(){return ROOMS.filter(function(r){return state.sel[r.id]})}
+  function capSum(){return selected().reduce(function(a,r){return a+r.cap},0)}
+  function stayPrice(r){return nights(state.from,state.to).reduce(function(a,d){return a+priceOn(r,d)},0)}
+
+  function quoteHtml(){
+    var sel=selected();
+    if(!sel.length||!state.from||!state.to)return "";
+    var ns=nights(state.from,state.to), tot=0;
+    var rows=sel.map(function(r){
+      var p=stayPrice(r);tot+=p;
+      var per=ns.map(function(d){return priceOn(r,d)});
+      var uniform=per.every(function(x){return x===per[0]});
+      return '<div class="qroom"><div><span>'+esc(r.name)+'</span><b>'+ft(p)+'</b></div><small>'+(uniform?ns.length+" éj × "+ft(per[0]):per.map(ft).join(" + "))+'</small></div>';
+    }).join("");
+    var g=state.guests-state.kids;
+    return '<div class="quote" data-quote><h4>Az ár — '+short(state.from)+' → '+short(state.to)+'</h4>'+rows+
+      '<div class="qtot"><span>Összesen a szállásért</span><span data-total>'+ft(tot)+'</span></div>'+
+      '<div class="qifa">A helyszínen fizetendő ezen felül: Idegenforgalmi adó — '+ft(IFA)+' / fő / éj × '+g+' fő × '+ns.length+' éj = '+ft(IFA*g*ns.length)+' (18 év alatt nem kell)</div></div>';
+  }
+
+  function formHtml(){
+    var cap=capSum(), sel=selected();
+    if(cap>0&&state.guests>cap)state.guests=cap;
+    if(state.kids>state.guests-1)state.kids=Math.max(0,state.guests-1);
+    return '<label class="lbl" style="margin-top:18px">Vendégek</label>'+
+      '<div class="step"><button type="button" data-g="-1"'+(state.guests<=1?" disabled":"")+' aria-label="Kevesebb vendég">−</button><output data-guests>'+state.guests+'</output><button type="button" data-g="1"'+(cap>0&&state.guests>=cap?" disabled":"")+' aria-label="Több vendég">+</button></div>'+
+      '<div class="capnote">'+(sel.length?(sel.length>1?"A kijelölt "+sel.length+" szobába":"Ide")+" legfeljebb "+cap+" vendég foglalhat.":"Előbb jelölje ki a szobát.")+'</div>'+
+      '<label class="lbl">Ebből gyermek <span style="font-weight:400;color:var(--cit-muted)">(18 év alatt)</span></label>'+
+      '<div class="step"><button type="button" data-k="-1"'+(state.kids<=0?" disabled":"")+' aria-label="Kevesebb gyermek">−</button><output data-kids>'+state.kids+'</output><button type="button" data-k="1"'+(state.kids>=state.guests-1?" disabled":"")+' aria-label="Több gyermek">+</button></div>'+
+      field("name","Az Ön neve","text")+field("email","E-mail cím","email")+field("phone","Telefon","tel")+
+      '<label class="f"><span>Üzenet (nem kötelező)</span><textarea rows="3" data-f="message">'+esc(state.f.message||"")+'</textarea></label>'+
+      quoteHtml()+
+      '<div class="msg bad" data-formerr style="display:'+(state.formErr?"block":"none")+'">'+(state.formErr||"")+'</div>'+
+      '<button type="button" class="submit" data-send>Foglalási kérés elküldése</button>'+
+      '<p class="small">'+(sel.length>1?"A szállásadó a kérést <b>egyben</b> igazolja vissza: vagy mind a "+sel.length+" szobát, vagy egyiket sem. ":"")+'A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.</p>'+
+      '<p class="small">Ez egy terv: a beküldés nem rögzít és nem küld el semmit.</p>';
+  }
+  function field(k,label,type){
+    var e=state.touched?fieldErr(k):"";
+    return '<label class="f"><span>'+label+'</span><input type="'+type+'" data-f="'+k+'" value="'+esc(state.f[k]||"")+'"'+(e?' aria-invalid="true"':"")+'><div class="err">'+e+'</div></label>';
+  }
+  function fieldErr(k){
+    var v=(state.f[k]||"").trim();
+    if(k==="name"&&!v)return "Adja meg a nevét.";
+    if(k==="email"&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return "Adjon meg érvényes e-mail címet.";
+    if(k==="phone"&&(v.replace(/\D/g,"").length<6))return "Adjon meg telefonszámot (legalább 6 számjegy).";
+    return "";
+  }
+
+  function renderBook(){
+    var b=document.getElementById("book");
+    if(state.sent){b.innerHTML=receiptHtml();return}
+    var cal='<div><label class="lbl" style="margin-top:0">Válassza ki az érkezés és a távozás napját</label>'+calHtml()+(state.msg?'<div class="msg bad" data-calmsg>'+state.msg+'</div>':"")+'</div>';
+    var pick='<div><label class="lbl"'+(state.v==="A"?' style="margin-top:0"':"")+'>Melyik szobákat foglalná?</label>'+(state.v==="A"?'<p class="sub">Egy vagy több szobát is kijelölhet — egy kérésben megy a szállásadóhoz.</p>':"")+pickHtml()+'</div>';
+    var showForm=state.v==="A"||(state.from&&state.to);
+    var left=state.v==="A"?pick+'<div style="margin-top:18px">'+cal+'</div>':cal;
+    var right=(state.v==="B"?pick:"")+(showForm?formHtml():"");
+    b.innerHTML='<h3>Foglalás</h3><p class="sub">Közvetlenül a szállásadónál — nincs közvetítői jutalék</p><div class="cols" style="margin-top:14px"><div>'+left+'</div><div>'+right+'</div></div>';
+  }
+  function receiptHtml(){
+    var s=state.sent;
+    return '<div class="receipt" data-receipt><h3>Elküldtük a kérését</h3><dl>'+
+      '<dt>Időszak</dt><dd>'+short(s.from)+' → '+short(s.to)+'</dd><dt>Éjszakák</dt><dd>'+s.n+'</dd>'+
+      '<dt>Létszám</dt><dd>'+s.guests+' fő'+(s.kids?", ebből "+s.kids+" gyermek":"")+'</dd>'+
+      '<dt>'+(s.rooms.length>1?"Szobák":"Szoba")+'</dt><dd>'+s.rooms.map(esc).join(", ")+'</dd>'+
+      '<dt>Összesen</dt><dd>'+ft(s.total)+'</dd><dt>Hivatkozás</dt><dd>MYR-2026-0412</dd></dl>'+
+      '<p class="small"><b>Mi a következő lépés?</b> A szállásadó '+(s.rooms.length>1?"a "+s.rooms.length+" szobát egyben":"")+' visszaigazolja vagy jelzi, ha nem szabad — erről e-mailt kap.</p>'+
+      '<button type="button" class="linkbtn" data-reset>Újra kipróbálom</button></div>';
+  }
+  function send(){
+    state.touched=true;state.formErr=null;
+    var sel=selected();
+    if(!state.from||!state.to)state.formErr="Válassza ki az érkezés és a távozás napját.";
+    else if(!sel.length)state.formErr="Jelöljön ki legalább egy szobát.";
+    else if(["name","email","phone"].some(function(k){return fieldErr(k)}))state.formErr="Kérjük, javítsa a pirossal jelölt mezőket.";
+    if(state.formErr){renderBook();return}
+    state.sent={from:state.from,to:state.to,n:nights(state.from,state.to).length,guests:state.guests,kids:state.kids,rooms:sel.map(function(r){return r.name}),total:sel.reduce(function(a,r){return a+stayPrice(r)},0)};
+    renderBook();
+  }
+
+  // ── owner view ──
+  var OWN={decided:null,confirming:null};
+  function renderOwner(){
+    var a={name:"Kovács Anna",from:"2026-10-23",to:"2026-10-26",rooms:["nadas","kerti"],guests:6,kids:2};
+    var ns=nights(a.from,a.to), tot=0;
+    var lines=a.rooms.map(function(id){var r=byId(id);var p=ns.reduce(function(s,d){return s+priceOn(r,d)},0);tot+=p;return '<li><b>'+esc(r.name)+'</b> — '+ns.length+' éj: '+ft(p)+'</li>'}).join("");
+    var h="";
+    if(OWN.decided==="ok")document.getElementById("obanner").innerHTML='<div class="banner">Visszaigazolva: Kovács Anna — Nádas apartman és Kerti stúdió, okt. 23 → 26. Automatikusan elutasítva: Szabó Péter — e-mailt kapott.</div>';
+    else if(OWN.decided==="no")document.getElementById("obanner").innerHTML='<div class="banner" style="background:var(--citui-surface-2);color:var(--citui-ink)">Elutasítva: Kovács Anna — a vendég e-mailt kapott. A két szoba szabad maradt.</div>';
+    else document.getElementById("obanner").innerHTML="";
+    h+='<div class="rq'+(OWN.decided?" dim":"")+'" data-rq="anna"><span class="bdg'+(OWN.decided==="ok"?" ok":OWN.decided==="no"?" no":"")+'">'+(OWN.decided==="ok"?"Visszaigazolva":OWN.decided==="no"?"Elutasítva":"Foglalási kérés · 2 szoba")+'</span>'+
+      '<h3>'+a.name+'</h3><div class="when">'+short(a.from)+' → '+short(a.to)+' · '+ns.length+' éj · '+a.guests+' fő, ebből '+a.kids+' gyermek</div>'+
+      '<ul>'+lines+'</ul><div class="tot"><span>Összesen</span><span>'+ft(tot)+'</span></div>'+
+      (OWN.decided?'':'<div class="warn">Fedés: a Kerti stúdiót okt. 24 → 26-ra Szabó Péter is kéri — ha ezt igazolja vissza, az ő kérése automatikusan elutasítást kap.</div>');
+    if(!OWN.decided){
+      if(OWN.confirming==="ok")h+='<div class="conf">Mindkét szoba lezár okt. 23 → 26-ra, a portálok naptárában is.</div><div class="acts"><button class="pri" data-o="ok2">Igen, visszaigazolom</button><button data-o="cancel">Mégsem</button></div>';
+      else if(OWN.confirming==="no")h+='<div class="conf">A vendég e-mailt kap, hogy erre az időszakra nem tud fogadni.</div><div class="acts"><button class="pri" data-o="no2">Igen, elutasítom</button><button data-o="cancel">Mégsem</button></div>';
+      else h+='<div class="acts"><button class="pri" data-o="ok">Visszaigazolom (mindkét szoba)</button><button data-o="no">Elutasítom</button><button>Felhívom</button></div>';
+    }
+    h+='</div>';
+    h+='<div class="rq'+(OWN.decided==="ok"?" dim":"")+'"><span class="bdg'+(OWN.decided==="ok"?" no":"")+'">'+(OWN.decided==="ok"?"Automatikusan elutasítva":"Foglalási kérés · 1 szoba")+'</span><h3>Szabó Péter</h3><div class="when">okt. 24 → 26 · 2 éj · 2 fő</div><ul><li><b>Kerti stúdió</b> — 2 éj: '+ft(38000)+'</li></ul></div>';
+    document.getElementById("oreqs").innerHTML=h;
+    var days=["2026-10-23","2026-10-24","2026-10-25","2026-10-26","2026-10-27"];
+    var s='<span></span>'+days.map(function(d){return '<span class="h">'+short(d)+'</span>'}).join("");
+    ROOMS.forEach(function(r){
+      s+='<span class="r">'+esc(r.name)+'</span>';
+      days.forEach(function(d){
+        var booked=OWN.decided==="ok"&&a.rooms.indexOf(r.id)>=0&&d>=a.from&&d<a.to;
+        var portal=r.id==="kis"&&(d==="2026-10-23");
+        s+='<span class="c'+(booked?" b":portal?" p":"")+'" title="'+(booked?"Kovács Anna":portal?"a Szállás.hu-n foglalták":"szabad")+'"></span>';
+      });
+    });
+    document.getElementById("ostrip").innerHTML=s;
+    document.getElementById("ostripnote").innerHTML=OWN.decided==="ok"?"A Nádas és a Kerti stúdió naptár-linkje a következő olvasáskor foglaltnak mutatja ezt a 3 éjt a Booking.com-on és a Szállás.hu-n is. Nincs „egész ház” sor, nincs külön link hozzá.":"Kék = visszaigazolt itt · csíkos = a portálon foglalták. Minden szobának saját portál-linkje van.";
+  }
+
+  // ── wiring ──
+  state.f={};
+  function setV(v){
+    state.v=v;state.from=null;state.to=null;state.msg=null;state.sent=null;state.formErr=null;state.touched=false;
+    document.querySelectorAll("[data-v]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.v===v))});
+    document.getElementById("guest").classList.toggle("on",v!=="O");
+    document.getElementById("owner").classList.toggle("on",v==="O");
+    document.getElementById("note").innerHTML=NOTES[v];
+    if(v==="O")renderOwner();else{renderCards();renderBook()}
+  }
+  function setSz(sz){
+    document.getElementById("stage").classList.toggle("is-mobile",sz==="m");
+    document.querySelectorAll("[data-sz]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.sz===sz))});
+  }
+  document.addEventListener("click",function(e){
+    var t=e.target.closest("button,a,input");if(!t)return;
+    if(t.dataset.v){setV(t.dataset.v);return}
+    if(t.dataset.sz){setSz(t.dataset.sz);return}
+    if(t.dataset.cta){e.preventDefault();state.sel[t.dataset.cta]=true;
+      if(state.v==="B"&&state.from&&state.to&&!roomFreeFor(byId(t.dataset.cta),state.from,state.to)){state.sel[t.dataset.cta]=false;state.msg="A(z) "+byId(t.dataset.cta).name+" erre az időszakra foglalt."}
+      renderCards();renderBook();document.getElementById("foglalas").scrollIntoView({block:"start"});return}
+    if(t.dataset.day){clickDay(t.dataset.day);renderBook();return}
+    if(t.dataset.room!==undefined){state.sel[t.dataset.room]=t.checked;
+      if(state.v==="A"&&state.from&&state.to&&nights(state.from,state.to).some(nightBlocked)){state.msg="A kijelölés után a választott napokon "+blockerText(nights(state.from,state.to))+" — a napokat töröltük, válasszon újra.";state.from=null;state.to=null}
+      renderCards();renderBook();return}
+    if(t.hasAttribute("data-all")){
+      var avail=ROOMS.filter(function(r){return state.v==="A"||!(state.from&&state.to)||roomFreeFor(r,state.from,state.to)});
+      var all=avail.every(function(r){return state.sel[r.id]});
+      avail.forEach(function(r){state.sel[r.id]=!all});
+      if(state.v==="A"&&state.from&&state.to&&nights(state.from,state.to).some(nightBlocked)){state.msg="A kijelölés után a választott napokon "+blockerText(nights(state.from,state.to))+" — a napokat töröltük, válasszon újra.";state.from=null;state.to=null}
+      renderCards();renderBook();return}
+    if(t.dataset.g){state.guests=Math.max(1,Math.min(capSum()||20,state.guests+ +t.dataset.g));renderBook();return}
+    if(t.dataset.k){state.kids=Math.max(0,Math.min(state.guests-1,state.kids+ +t.dataset.k));renderBook();return}
+    if(t.hasAttribute("data-send")){send();return}
+    if(t.hasAttribute("data-reset")){state.sent=null;state.from=null;state.to=null;state.sel={};state.touched=false;renderCards();renderBook();return}
+    if(t.dataset.o){var o=t.dataset.o;
+      if(o==="ok"||o==="no")OWN.confirming=o;else if(o==="cancel")OWN.confirming=null;
+      else if(o==="ok2"){OWN.decided="ok";OWN.confirming=null}else if(o==="no2"){OWN.decided="no";OWN.confirming=null}
+      renderOwner();return}
+  });
+  document.addEventListener("input",function(e){var k=e.target.dataset&&e.target.dataset.f;if(k){state.f[k]=e.target.value;
+    if(state.touched&&k!=="message"){var err=fieldErr(k);e.target.setAttribute("aria-invalid",err?"true":"false");e.target.parentNode.querySelector(".err").textContent=err}}});
+  var q=new URLSearchParams(location.search);
+  setSz(q.get("sz")||(window.innerWidth<700?"m":"d"));
+  setV(q.get("v")||"A");
+})();
+</script>
+</body>
+</html>

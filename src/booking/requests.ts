@@ -14,7 +14,7 @@
 // racing for the same nights cannot both win.
 
 import { parseOfferAmount } from "./amount.js";
-import { chosenPlan, clampChildren, countedChildAge, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealPlanId } from "../tenant/meals.js";
+import { chosenPlan, clampChildren, countedChildAge, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealLine, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
 import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
@@ -71,7 +71,10 @@ import { siteTimeZone, todayForSite } from "../tenant/timeZone.js";
 
 export interface BookingRequestInput {
   readonly siteId: string;
+  /** The first (or only) room — always `unitIds[0]` when `unitIds` is given. */
   readonly unitId: string;
+  /** ADR-XXXX: every room the guest ticked, in their order (absent = just `unitId`). */
+  readonly unitIds?: readonly string[];
   readonly guestName: string;
   readonly guestEmail: string;
   readonly guestPhone?: string | null;
@@ -295,6 +298,13 @@ export function capacityError(lang: string, capacity: number): string {
 }
 
 /** ADR-0389: the owner's warning on an over-capacity request (an older one, or a lowered capacity). */
+/** ADR-XXXX: the same sentence when the ceiling is the sum of several rooms. */
+export function capacityErrorRooms(lang: string, capacity: number): string {
+  return T(lang, "A kiválasztott szobákba legfeljebb {n} vendég foglalhat. Kérjük, csökkentse a létszámot, vagy jelöljön ki még egy szobát.", {
+    n: capacity,
+  });
+}
+
 export function capacityWarning(lang: string, guests: number, capacity: number): string {
   return T(lang, "Figyelem: a vendég {g} főre kér, a férőhely {n} fő.", { g: guests, n: capacity });
 }
@@ -722,6 +732,29 @@ export async function siteTouristTax(siteId: string): Promise<number | null> {
 /** K6: a second identical submit inside this many minutes is the same request. */
 const REPEAT_WINDOW_MIN = 10;
 
+/** ADR-XXXX: a sanity bound on the rooms of one request (no place we serve has more). */
+const MAX_REQUEST_UNITS = 30;
+
+/**
+ * ADR-XXXX: the meal lines of a request over `rooms` rooms. A per-person plan counts the
+ * guests (the rooms do not matter); a per-room plan is charged once per room.
+ */
+function roomsMealLines(
+  meals: MealsSetting | null,
+  o: Parameters<typeof mealLines>[1] & { readonly rooms: number },
+): MealLine[] {
+  const lines = mealLines(meals, o);
+  if (o.rooms <= 1 || !meals || !o.plan || meals.plans[o.plan]?.per !== "room") return lines;
+  // Kept as ONE line per night-price (guests stays 1, so no "× n fő" is printed): the room
+  // count goes into the label and the per-night figure.
+  return lines.map((l) => ({
+    ...l,
+    label: T(o.lang, "{name}, {n} szobára", { name: l.label, n: o.rooms }),
+    perNight: l.perNight * o.rooms,
+    sum: l.sum * o.rooms,
+  }));
+}
+
 export async function createBookingRequest(
   input: BookingRequestInput,
   publicBaseUrl: string | null,
@@ -749,35 +782,92 @@ export async function createBookingRequest(
     errors.push(T(lang, "Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá."));
   }
 
+  // ADR-XXXX: the rooms of the request, the first one first, each once. Every gate below
+  // runs for EVERY room — a request is only as possible as its least possible room.
+  const unitIds = [...new Set([input.unitId, ...(input.unitIds ?? [])].filter(Boolean))].slice(0, MAX_REQUEST_UNITS);
+  const units = await db
+    .selectFrom("site_unit")
+    .select(["id", "name", "capacity", "represents_whole", "is_whole_property"])
+    .where("site_id", "=", input.siteId)
+    .where("id", "in", unitIds)
+    .execute();
+  const unitById = new Map(units.map((u) => [u.id, u]));
+  if (units.length !== unitIds.length) return { ok: false, errors: [T(lang, "Ismeretlen egység.")] };
+  const multi = unitIds.length > 1;
+  // The whole place already holds every room: asking for it AND a room is one request too many.
+  if (multi && units.some((u) => u.represents_whole || u.is_whole_property)) {
+    return { ok: false, errors: [T(lang, "Ismeretlen egység.")] };
+  }
+  const nameOf = (id: string): string => unitById.get(id)?.name ?? "";
+
   const rules = await bookingRules(input.siteId);
-  errors.push(...(await stayRuleErrors(input.siteId, input.unitId, dateFrom, dateTo, lang, rules)));
+  // A rule that fails for every room is said once; one that fails for one room names it.
+  const perUnit = await Promise.all(unitIds.map((id) => stayRuleErrors(input.siteId, id, dateFrom, dateTo, lang, rules)));
+  const common = perUnit[0]!.filter((e) => perUnit.every((errs) => errs.includes(e)));
+  errors.push(...common);
+  perUnit.forEach((errs, i) => {
+    for (const e of errs) if (!common.includes(e)) errors.push(multi ? `${nameOf(unitIds[i]!)}: ${e}` : e);
+  });
   // ADR-0389 (Elek F-1, 2026-10-14: a 7-person request reached a 4-person house): the widget
   // stops at the capacity, and the server refuses past it — the owner never gets one.
-  const cap = overCapacity(
-    Math.max(1, Math.min(50, Math.round(input.guests || 1))),
-    (await db.selectFrom("site_unit").select("capacity").where("id", "=", input.unitId).executeTakeFirst())?.capacity,
-  );
-  if (cap) errors.push(capacityError(lang, cap));
+  // ADR-XXXX: several rooms hold their summed capacity; a room without one lifts the ceiling.
+  const capacity = units.some((u) => !u.capacity) ? null : units.reduce((t, u) => t + (u.capacity ?? 0), 0);
+  const cap = overCapacity(Math.max(1, Math.min(50, Math.round(input.guests || 1))), capacity);
+  if (cap) errors.push(multi ? capacityErrorRooms(lang, cap) : capacityError(lang, cap));
   if (errors.length) return { ok: false, errors };
 
-  if (await stayIsTaken(input.unitId, dateFrom, dateTo)) {
-    return {
-      ok: false,
-      errors: [T(lang, "Sajnos ezek a napok már foglaltak. Válasszon másik időpontot.")],
-    };
+  for (const id of unitIds) {
+    if (await stayIsTaken(id, dateFrom, dateTo)) {
+      return {
+        ok: false,
+        errors: [
+          multi
+            ? T(lang, "Sajnos ezekre a napokra már foglalt: {name}. Vegye ki a jelölést, vagy válasszon másik időpontot.", {
+                name: nameOf(id),
+              })
+            : T(lang, "Sajnos ezek a napok már foglaltak. Válasszon másik időpontot."),
+        ],
+      };
+    }
   }
 
-  const { pricingLive, pricing, quote: stayOnly } = await stayQuote(input.siteId, input.unitId, dateFrom, dateTo, input.guests, lang);
+  const quotes = await Promise.all(unitIds.map((id) => stayQuote(input.siteId, id, dateFrom, dateTo, input.guests, lang)));
+  const { pricingLive, pricing } = quotes[0]!;
+  // ADR-XXXX: several rooms cost the sum of their own prices, each line named by its room.
+  // Per-person pricing over several rooms would need the head count PER ROOM, which the
+  // guest is not asked — no frozen number then; the owner answers with an offer (§B.17).
+  const perPerson = String(pricing.unit ?? "per_night") === "per_person_night";
+  const stayOnly =
+    quotes.every((q) => q.quote) && !(multi && perPerson)
+      ? {
+          ...quotes[0]!.quote!,
+          total: quotes.reduce((t, q) => t + q.quote!.total, 0),
+          lines: quotes.flatMap((q, i) =>
+            q.quote!.lines.map((l) => (multi ? { ...l, label: `${nameOf(unitIds[i]!)} — ${l.label}` } : l)),
+          ),
+        }
+      : null;
   // ADR-0378: the meal travels with the pricing module. The plan is validated against the
   // owner's setting (an unknown or withdrawn plan falls back to the base), the lines are
   // computed HERE — the browser's figure is never trusted — and freeze with the stay.
+  // ADR-XXXX: meals apply to a multi-room request only when EVERY room takes them.
   const meals = pricingLive ? readMeals(pricing.meals) : null;
-  const mealPlan = chosenPlan(meals, input.unitId, input.mealPlan);
+  const mealPlan = unitIds.every((id) => chosenPlan(meals, id, input.mealPlan) !== null)
+    ? chosenPlan(meals, input.unitId, input.mealPlan)
+    : null;
   const guestCount = Math.max(1, Math.min(50, Math.round(input.guests || 1)));
   // ADR-0388: the child count is always asked (the tourist tax depends on it); mealLines
   // prices them as children only where a child meal price applies.
   const children = clampChildren(guestCount, input.children);
-  const mLines = mealLines(meals, { unitId: input.unitId, plan: mealPlan, nights: n, guests: guestCount, children, lang });
+  const mLines = roomsMealLines(meals, {
+    unitId: input.unitId,
+    plan: mealPlan,
+    nights: n,
+    guests: guestCount,
+    children,
+    lang,
+    rooms: unitIds.length,
+  });
   const quote = stayOnly
     ? { ...stayOnly, total: stayOnly.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayOnly.lines, ...mLines] }
     : null;
@@ -788,14 +878,15 @@ export async function createBookingRequest(
   // with the first one and send nothing again. The advisory lock serialises the two
   // racing submits, so the second one sees the first one's row.
   const guestEmail = oneLine(input.guestEmail).slice(0, 200);
-  const repeatKey = `${input.unitId}|${guestEmail.toLowerCase()}|${dateFrom}|${dateTo}`;
+  const repeatKey = `${[...unitIds].sort().join(",")}|${guestEmail.toLowerCase()}|${dateFrom}|${dateTo}`;
   const token = randomBytes(24).toString("base64url");
   const { row, repeated } = await db.transaction().execute(async (trx) => {
     await sql`select pg_advisory_xact_lock(hashtext(${repeatKey}))`.execute(trx);
     const prev = await trx
       .selectFrom("booking_request")
       .select("id")
-      .where("unit_id", "=", input.unitId)
+      // The same set of rooms, in whatever order the guest ticked them.
+      .where(sql<boolean>`unit_ids @> ${sql.val(unitIds)}::uuid[] and unit_ids <@ ${sql.val(unitIds)}::uuid[]`)
       .where(sql<string>`lower(guest_email)`, "=", guestEmail.toLowerCase())
       .where("date_from", "=", dateFrom)
       .where("date_to", "=", dateTo)
@@ -808,6 +899,7 @@ export async function createBookingRequest(
       .values({
         site_id: input.siteId,
         unit_id: input.unitId,
+        unit_ids: unitIds,
         // Elek 10-12 N3: one-line fields — a CR/LF never reaches the row or a mail subject.
         guest_name: oneLine(input.guestName).slice(0, 160),
         guest_email: guestEmail,
@@ -853,17 +945,12 @@ export async function createBookingRequest(
     void mailSafe("guest-ack", row.id, () => sendGuestAck(row.id));
   }
 
-  const unitRow = await db
-    .selectFrom("site_unit")
-    .select("name")
-    .where("id", "=", input.unitId)
-    .executeTakeFirst();
   return {
     ok: true,
     id: row.id,
     summary: {
       ref: bookingRef(row.id),
-      unitName: unitRow?.name ?? null,
+      unitName: unitIds.map(nameOf).join(", ") || null,
       dateFrom,
       dateTo,
       nights: n,
@@ -1024,6 +1111,8 @@ interface RequestRow {
   offered_at: Date | null;
   offer_token: string | null;
   decision_note?: string | null;
+  /** 0111 (ADR-XXXX): every room of the request; [0] = unit_id. */
+  unit_ids: string[];
   unit_name?: string;
   /** ADR-0389: the unit's head count as the owner set it (null = not given). */
   unit_capacity?: number | null;
@@ -1033,12 +1122,26 @@ function dayStr(v: unknown): string {
   return typeof v === "string" ? v.slice(0, 10) : new Date(v as string).toISOString().slice(0, 10);
 }
 
+/**
+ * ADR-XXXX: a request may hold several rooms (`unit_ids`, the guest's order). Every reader
+ * that used to show ONE unit's name shows all of them, comma-joined, and the head-count
+ * check reads their summed capacity (null when any room has none — no ceiling then).
+ * One expression, so the mails, the admin card and the offer page can never disagree.
+ */
+const UNIT_NAMES = sql<string>`(select string_agg(u.name, ', ' order by array_position(booking_request.unit_ids, u.id)) from site_unit u where u.id = any(booking_request.unit_ids))`;
+/** ADR-XXXX: the rooms of a request (a row from before 0111 may lack the array). */
+function requestUnitIds(req: { unit_id: string; unit_ids?: readonly string[] | null }): string[] {
+  return req.unit_ids?.length ? [...req.unit_ids] : [req.unit_id];
+}
+
+const UNIT_CAPACITY = sql<number | null>`(select case when bool_or(u.capacity is null) then null else sum(u.capacity)::int end from site_unit u where u.id = any(booking_request.unit_ids))`;
+
 async function loadRequest(where: { id?: string; token?: string }): Promise<RequestRow | null> {
   let q = db
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select(["site_unit.name as unit_name", "site_unit.capacity as unit_capacity"]);
+    .select([UNIT_NAMES.as("unit_name"), UNIT_CAPACITY.as("unit_capacity")]);
   if (where.id) q = q.where("booking_request.id", "=", where.id);
   if (where.token) q = q.where("booking_request.action_token", "=", where.token);
   return ((await q.executeTakeFirst()) as RequestRow | undefined) ?? null;
@@ -1089,7 +1192,8 @@ export async function notifyOwner(
   // instead of a one-tap accept that would confirm the stay at no price at all.
   const isQuote = !req.quoted_total;
   const offerUrl = `${base}/foglalas/${token}/ajanlat`;
-  const missing = isQuote ? await unpricedNights(req.unit_id, from, until) : [];
+  const multiRooms = requestUnitIds(req).length > 1;
+  const missing = isQuote && !multiRooms ? await unpricedNights(req.unit_id, from, until) : [];
   const unitName = req.unit_name ?? "";
   // ADR-0267: the offer's price is for THIS request by default; it reaches the price list only
   // when the owner ticks „Mentsem az árlistába is?” on the offer page — the letter must not
@@ -1108,7 +1212,12 @@ export async function notifyOwner(
               to: huDate(addDays(missing[missing.length - 1]!, 1)),
             },
           )
-        : T(lang, "Adja meg az árat, és a rendszer elküldi neki az ajánlatot."))
+        : multiRooms
+          ? T(lang, "{n} szobát kér egyszerre ({unit}). Adja meg egy éjszaka árát a szobákra együtt, és a rendszer elküldi neki az ajánlatot. Ez az ár csak erre a kérésre szól.", {
+              n: requestUnitIds(req).length,
+              unit: unitName,
+            })
+          : T(lang, "Adja meg az árat, és a rendszer elküldi neki az ajánlatot."))
     : "";
 
   // ADR-0389: an over-capacity request (an older one, or the capacity lowered since) is
@@ -1275,7 +1384,7 @@ export interface DecisionResult {
   readonly autoDeclinedIds?: readonly string[];
 }
 
-/** Pending requests of the same unit whose nights intersect [from, to). */
+/** Pending requests holding any of `unitIds` whose nights intersect [from, to). */
 async function overlappingPending(
   unitIds: string[],
   exceptId: string,
@@ -1286,8 +1395,9 @@ async function overlappingPending(
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select("site_unit.name as unit_name")
-    .where("booking_request.unit_id", "in", unitIds)
+    .select(UNIT_NAMES.as("unit_name"))
+    // ADR-XXXX: a multi-room request overlaps when ANY of its rooms is in the set.
+    .where(sql<boolean>`booking_request.unit_ids && ${sql.val(unitIds)}::uuid[]`)
     .where("booking_request.status", "=", "pending")
     .where("booking_request.id", "!=", exceptId)
     .where("booking_request.date_from", "<", to)
@@ -1421,7 +1531,9 @@ async function acceptCore(
   let lost = false;
   // ADR-0114: read the whole-place relation ONCE, outside the transaction — it is
   // structure (which units exclude this one), not state that the transaction protects.
-  const blockers = await blockingUnitIds(req.unit_id);
+  // ADR-XXXX: every room of the request, and everything that excludes any of them.
+  const rooms = requestUnitIds(req);
+  const blockers = [...new Set((await Promise.all(rooms.map((id) => blockingUnitIds(id)))).flat())];
   await db.transaction().execute(async (trx) => {
     const taken = await trx
       .selectFrom("availability_day")
@@ -1434,17 +1546,20 @@ async function acceptCore(
       conflict = true;
       return;
     }
+    // All rooms or none: one transaction, so a multi-room request is never half-booked.
     const nightCount = nights(from, to);
-    for (let i = 0; i < nightCount; i++) {
-      await trx
-        .insertInto("availability_day")
-        .values({
-          unit_id: req.unit_id,
-          day: addDays(from, i),
-          state: "booked",
-          source: `booking:${req.id}`,
-        })
-        .execute();
+    for (const unitId of rooms) {
+      for (let i = 0; i < nightCount; i++) {
+        await trx
+          .insertInto("availability_day")
+          .values({
+            unit_id: unitId,
+            day: addDays(from, i),
+            state: "booked",
+            source: `booking:${req.id}`,
+          })
+          .execute();
+      }
     }
     const upd = await trx
       .updateTable("booking_request")
@@ -1828,7 +1943,8 @@ export async function cancelRequest(opts: {
     // portal-imported day out of this delete.
     await trx
       .deleteFrom("availability_day")
-      .where("unit_id", "=", req.unit_id)
+      // ADR-XXXX: every room of the request is freed together.
+      .where("unit_id", "in", requestUnitIds(req))
       .where("source", "=", `booking:${req.id}`)
       .execute();
     await trx
@@ -2003,6 +2119,8 @@ export interface InboxItem {
   readonly id: string;
   /** The requested unit — the calendar opens on it (FK-015, ADR-0274 ④). */
   readonly unitId?: string;
+  /** ADR-XXXX: every room of the request ([0] = unitId); one entry for a one-room request. */
+  readonly unitIds?: readonly string[];
   readonly unitName: string;
   readonly guestName: string;
   readonly guestEmail: string;
@@ -2040,7 +2158,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select(["site_unit.name as unit_name", "site_unit.capacity as unit_capacity"])
+    .select([UNIT_NAMES.as("unit_name"), UNIT_CAPACITY.as("unit_capacity")])
     .where("booking_request.site_id", "=", siteId)
     .orderBy("booking_request.status")
     .orderBy("booking_request.created_at", "desc")
@@ -2049,6 +2167,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
   return rows.map((r) => ({
     id: r.id,
     unitId: r.unit_id,
+    unitIds: r.unit_ids,
     unitName: r.unit_name,
     guestName: r.guest_name,
     guestEmail: r.guest_email,
@@ -2112,7 +2231,7 @@ export async function getSentOffers(siteId: string, limit = 60): Promise<SentOff
     .select([
       "booking_request.id as id",
       "booking_request.guest_name as guestName",
-      "site_unit.name as unitName",
+      UNIT_NAMES.as("unitName"),
       "booking_request.date_from as dateFrom",
       "booking_request.date_to as dateTo",
       "booking_request.guests as guests",
@@ -2396,6 +2515,9 @@ export interface OfferView {
    *  opens on (it is the first bookable unit in the owner's order with any price row, and
    *  there is more than one to choose from). Said out loud on the "alapár" choice. */
   readonly opensWidget?: boolean;
+  /** ADR-XXXX: rooms in the request. Above 1 the owner prices the WHOLE set of rooms per
+   *  night, for this request only (`missing` = every night, `known` empty, per_night). */
+  readonly rooms?: number;
 }
 
 /** Where an offer's price goes (ADR-0267, owner 2026-09-29: „OK A)", „Kért Napok"). */
@@ -2470,12 +2592,19 @@ export async function loadOfferView(token: string): Promise<OfferView> {
       hostName: ctx.hostName,
     };
   }
+  const rooms = requestUnitIds(req).length;
   const prices = await getUnitPrices(req.unit_id);
-  const { currency, unitMode } = await pricingConfigFor(req.site_id);
+  const { currency, unitMode: listMode } = await pricingConfigFor(req.site_id);
+  // ADR-XXXX: several rooms — one per-night price for all of them, every night asked.
+  const unitMode = rooms > 1 ? "per_night" : listMode;
   const known: OfferLine[] = [];
   const missing: string[] = [];
   const baseLabel = T(ctx.lang, "Alapár");
   for (let i = 0; i < nights(from, to); i++) {
+    if (rooms > 1) {
+      missing.push(addDays(from, i));
+      continue;
+    }
     const day = addDays(from, i);
     const p = priceOn(prices, day);
     if (!p) {
@@ -2515,6 +2644,7 @@ export async function loadOfferView(token: string): Promise<OfferView> {
       .map((p) => ({ label: p.label, from: p.from!, to: p.to!, amount: p.amount })),
     today,
     expireHours: ctx.expireHours,
+    rooms,
     ...(await offerUnitFacts(req.site_id, req.unit_id)),
   };
 }
@@ -2600,20 +2730,26 @@ export async function sendOffer(
   const from = dayStr(req.date_from);
   const to = dayStr(req.date_to);
   const today = await todayForSite(req.site_id);
-  const missing = await unpricedNights(req.unit_id, from, to);
+  // ADR-XXXX: a multi-room request is priced as a whole — every night, for this request only.
+  const rooms = requestUnitIds(req);
+  const multi = rooms.length > 1;
+  const missing = multi
+    ? Array.from({ length: nights(from, to) }, (_, i) => addDays(from, i))
+    : await unpricedNights(req.unit_id, from, to);
 
   const errors: string[] = [];
   const amount = parseOfferAmount(input.amount);
   // Anything but an explicit choice is 'request' — the default writes nothing, so an old
   // form (or a tampered value) can never put a price into the list unasked.
-  const save: OfferSaveAs = input.save === "dates" || input.save === "base" ? input.save : "request";
+  const save: OfferSaveAs = !multi && (input.save === "dates" || input.save === "base") ? input.save : "request";
   if (missing.length) {
     if (amount.empty) errors.push(T(lang, "Írja be az árat."));
     else if (amount.error === "num") errors.push(T(lang, "Csak számot írjon, pl. 26 000."));
     else if (amount.error === "pos") errors.push(T(lang, "Az ár legyen nagyobb nullánál."));
     else if (amount.error === "big") errors.push(T(lang, "Ez túl nagy összeg — ellenőrizze a nullákat."));
     // Ticked, but no way chosen: ask — never fall back to a write the owner did not pick.
-    if (input.into && save === "request") {
+    // (A multi-room price never goes into a list — the box is not offered, so not asked.)
+    if (input.into && save === "request" && !multi) {
       errors.push(T(lang, "Válassza ki, hogyan kerüljön az árlistába: a kért napokra vagy alapárként."));
     }
   }
@@ -2627,8 +2763,9 @@ export async function sendOffer(
     await setBasePrice(req.unit_id, amount.value!);
   }
 
-  const { currency, unitMode } = await pricingConfigFor(req.site_id);
-  const listed = await getUnitPrices(req.unit_id);
+  const { currency, unitMode: listMode } = await pricingConfigFor(req.site_id);
+  const unitMode = multi ? "per_night" : listMode;
+  const listed = multi ? [] : await getUnitPrices(req.unit_id);
   const offered = new Set(amount.value ? missing : []);
   const priceRows =
     missing.length && amount.value && save === "request" ? [...listed, ...offerOverlayRows(missing, amount.value)] : listed;
@@ -2641,7 +2778,12 @@ export async function sendOffer(
     baseLabel: T(lang, "Alapár"),
     // The nights this offer priced carry the offer's own label, whichever path saved
     // it: "Alapár" there reads as a price-list price, which an offer is not (ADR-0267).
-    labelOn: (day) => (offered.has(day) ? T(lang, "Egyedi ár") : undefined),
+    labelOn: (day) =>
+      offered.has(day)
+        ? multi
+          ? T(lang, "Egyedi ár — {n} szoba", { n: rooms.length })
+          : T(lang, "Egyedi ár")
+        : undefined,
   });
   // ADR-0378: the meal the guest asked for rides on the offer. Lines already frozen on the
   // request win (that is what the guest was shown); otherwise they are priced now.
@@ -2650,13 +2792,14 @@ export async function sendOffer(
     .map((l) => ({ label: l.label, nights: l.nights, perNight: l.per_night, guests: l.guests, sum: l.sum, kind: "meal" as const }));
   const mLines = frozenMeal.length
     ? frozenMeal
-    : mealLines(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), {
+    : roomsMealLines(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), {
         unitId: req.unit_id,
         plan: req.meal_plan,
         nights: nights(from, to),
         guests: req.guests,
         children: req.children ?? 0,
         lang,
+        rooms: rooms.length,
       });
   const quote = stayQuote
     ? { ...stayQuote, total: stayQuote.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayQuote.lines, ...mLines] }
@@ -2838,7 +2981,7 @@ async function loadByOfferToken(offerToken: string): Promise<RequestRow | null> 
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select("site_unit.name as unit_name")
+    .select(UNIT_NAMES.as("unit_name"))
     .where("booking_request.offer_token", "=", offerToken)
     .executeTakeFirst();
   return (row as unknown as RequestRow | undefined) ?? null;
@@ -3105,7 +3248,7 @@ export async function expireStaleOffers(): Promise<number> {
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select("site_unit.name as unit_name")
+    .select(UNIT_NAMES.as("unit_name"))
     .where("booking_request.status", "=", "offered")
     .execute();
   let n = 0;

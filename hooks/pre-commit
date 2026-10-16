@@ -2929,14 +2929,14 @@ if [ -f scripts/quote-request-check.mts ] && \
   echo "[pre-commit] quote-request (ár nélkül nem foglalást ígérünk)…"
   npx tsx scripts/quote-request-check.mts >"$GATE_LOG" || gate_failed
 fi
-# NYITÓ-EGYSÉG (kontraktus: design-refs/tenant-site/booking-unit-default, tulaj 2026-09-28):
-# a widget az első ÁRAS egységre nyit, és telefonon a választó az 1. lépésben, a naptár
-# fölött áll. Mérve előtte: az ár nélküli „egész” egységre nyitott, a választó 0×0 volt,
-# minden vendég árajánlat-dobozt kapott — hiba nélkül, néma kerülőúton.
-if [ -f scripts/booking-unit-default-check.mts ] && \
-   changed_files | grep -qE '^assets/runtime/cit-(runtime\.js|modules\.css)$|^src/tenant/(editor|units)\.ts$|^src/engine/recipe\.ts$|^assets/design-refs/tenant-site/booking-unit-default/|^scripts/booking-unit-default-check'; then
-  echo "[pre-commit] booking-unit-default (áras egységre nyit, választó az 1. lépésben)…"
-  npx tsx scripts/booking-unit-default-check.mts >"$GATE_LOG" || gate_failed
+# TÖBB SZOBA EGY KÉRÉSBEN (kontraktus: design-refs/tenant-site/multi-room, tulaj 2026-10-16 „B”;
+# ADR-XXXX — felváltja a booking-unit-default őrt): egy kérés több szobát hordoz, előbb a dátum,
+# aztán a szabad szobák; az egész ház nem külön ajánlat; a tulaj egyben dönt. Mérve előtte: egy
+# kérés = egy egység, a vendég két szobára két kérést küldött.
+if [ -f scripts/multi-room-request-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-(runtime\.js|modules\.css)$|^src/tenant/(editor|units|unitVisibility)\.ts$|^src/booking/requests\.ts$|^src/server/(public|bookingViews|offerViews)\.ts$|^src/engine/recipe\.ts$|^migrations/0111_|^assets/design-refs/tenant-site/multi-room/|^scripts/multi-room-request-check'; then
+  echo "[pre-commit] multi-room-request (több szoba egy kérésben, egyben dönt a tulaj)…"
+  npx tsx scripts/multi-room-request-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ÁRAJÁNLAT-ÚT (kontraktus: design-refs/tenant-admin/booking-offer): ár nélküli
 # kérésnél a tulaj levele koppintással ÁR NÉLKÜL véglegesített. A lánc (tulaj-levél →

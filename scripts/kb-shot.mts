@@ -763,14 +763,16 @@ function moduleShotHtml(entryId: string): string {
               validFrom: `${SHOT_YEAR}-06-15`, validTo: `${SHOT_YEAR}-08-31`, parentId: "p2" },
             { id: "p5", label: "Holtszezon", from: "11-01", to: "03-01", amount: 18000, isBase: false },
           ],
-          u2: [{ id: "p3", label: "Alapár", from: null, to: null, amount: 16000, isBase: true }],
+          // ADR-XXXX: the whole house gets no price card beside its rooms any more — the
+          // "no price" example is a ROOM (the entry's caption already says „egy szoba ár nélkül”).
+          u2: [],
         },
         // A fixed day, so the strip's first card (and so the shot) does not drift daily.
         today: `${SHOT_YEAR - 1}-09-23`,
         // ADR-0208 ⑥.2: the whole place has no price yet — the shot shows the state line
         // and the "nem adok meg alapárat" box the entry describes. REQUIRED: the view reads
         // it per unit, and scripts/ is not type-checked.
-        status: { u0: "none", u1: "complete", u2: "complete" },
+        status: { u0: "none", u1: "complete", u2: "none" },
         // Approved plan price-where-2: the „Hol látják a vendégek az árait?" box the entry
         // describes. Consistent with the prices above — u1 has seasons, so the page DOES
         // carry the table; the whole place has no price anywhere. REQUIRED for the same
@@ -781,10 +783,9 @@ function moduleShotHtml(entryId: string): string {
           cards: [
             // Several prices → the card shows the FLOOR with "-tól" (owner ruling 2026-09-22).
             { name: editorUnits[1]!.name, price: "18 000 Ft-tól / éj" },
-            { name: editorUnits[2]!.name, price: "16 000 Ft / éj" },
           ],
-          unpriced: [{ id: "u0", name: editorUnits[0]!.name }],
-          nowhere: ["u0"],
+          unpriced: [{ id: "u2", name: editorUnits[2]!.name }],
+          nowhere: ["u2"],
         },
         // ADR-0378: the "Ellátás" table the entry walks through — reggeli and félpanzió
         // offered with child prices, one room taken off. REQUIRED for the same reason as
@@ -1446,7 +1447,7 @@ await shoot(
   path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "nincs-ar.png"),
   undefined,
   moduleShotHtml("admin-modules-pricing"),
-  "#ar-u0",
+  "#ar-u2",
 );
 // ADR-0378: the "Ellátás" table — the last card of the screen, far below the fold.
 await shoot(

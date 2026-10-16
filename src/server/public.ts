@@ -1178,22 +1178,29 @@ async function serveTenantHost(
     const siteId = await tenantSiteId(site.tenantId);
     if (!siteId) return sendJson(res, 404, { errors: [T(lang, "Ismeretlen szállás.")] });
     const form = await readFormBody(req);
-    const unitId = form.get("unit") ?? "";
-    if (!(await unitBelongsToSite(siteId, unitId))) {
-      return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
+    // ADR-XXXX: one request may carry several rooms — `unit` repeated, in the guest's order.
+    const unitIds = [...new Set(form.getAll("unit").filter(Boolean))];
+    const unitId = unitIds[0] ?? "";
+    if (!unitIds.length) return sendJson(res, 400, { errors: [T(lang, "Jelöljön ki legalább egy szobát.")] });
+    for (const id of unitIds) {
+      if (!(await unitBelongsToSite(siteId, id))) {
+        return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
+      }
     }
     // ADR-0256: a hidden unit (the whole place, not let as one) takes no NEW request — the
     // page does not offer it, and a hand-made POST must not either. Running bookings on it
     // are untouched (owner, 2026-09-28: „ok B").
     // ADR-0257: likewise a presentation room when the place is let ONLY as one — the page
     // offers the whole house alone, and a hand-made POST must not book a room of it.
-    if (!bookableUnits(await getUnits(siteId)).some((u) => u.id === unitId)) {
+    const bookable = bookableUnits(await getUnits(siteId));
+    if (!unitIds.every((id) => bookable.some((u) => u.id === id))) {
       return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
     }
     const result = await createBookingRequest(
       {
         siteId,
         unitId,
+        unitIds,
         guestName: form.get("name") ?? "",
         guestEmail: form.get("email") ?? "",
         guestPhone: form.get("phone"),
@@ -1613,8 +1620,12 @@ async function serveAdmin(
         // ask the owner to mark nights nobody can take. An old link to one opens the first
         // bookable unit instead.
         const bookable = new Set(bookableUnits(units).map((u) => u.id));
+        // ADR-XXXX: the whole house beside its rooms has no TAB any more, but its calendar still
+        // opens from a direct link — an older booking or a manual block on it keeps the rooms
+        // closed, and the day card's „Átváltok a naptárára" must reach where it can be freed.
+        const openable = (u: (typeof units)[number]): boolean => bookable.has(u.id) || u.representsWhole;
         const unit =
-          (unitId && units.find((u) => u.id === unitId && bookable.has(u.id))) ||
+          (unitId && units.find((u) => u.id === unitId && openable(u))) ||
           units.find((u) => bookable.has(u.id)) ||
           units[0]!;
         const deletion = await unitDeletionImpacts(site.id);

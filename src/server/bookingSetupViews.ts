@@ -58,7 +58,7 @@ function strings(lang: string): Record<string, string> {
     secGuest: T(lang, "Amit a vendég lát"),
     secNotify: T(lang, "Értesítés"),
     secCheck: T(lang, "Kipróbálás"),
-    lead_mode: T(lang, "Ebből tudjuk, mit foglalhat le a vendég: az egész házat, egy-egy szobát, vagy mindkettőt."),
+    lead_mode: T(lang, "Ebből tudjuk, mit foglalhat le a vendég: csak az egész házat, vagy szobánként egy vagy több szobát."),
     lead_rooms: T(lang, "Írja be a szobák (apartmanok, házak) nevét, ahogy a vendég látni fogja."),
     lead_rooms_single: T(lang, "A férőhely a honlapon jelenik meg."),
     lead_unit: T(lang, "A honlap és a foglalási kérés ebből számolja a végösszeget."),
@@ -73,10 +73,11 @@ function strings(lang: string): Record<string, string> {
     lead_check: T(lang, "Adjon meg egy kitalált foglalást — megmutatjuk, mit lát a vendég, és mi akadályozná. Semmit nem küldünk el."),
     modeSingle: T(lang, "Egyben, egy egységként"),
     modeSingleSub: T(lang, "Egy ház vagy apartman, egyszerre egy vendégkör."),
-    // ADR-0392: two answers, not three — with rooms a guest books a room OR the whole house.
+    // ADR-0392: two answers, not three. ADR-XXXX: by rooms, a guest ticks one or more rooms in
+    // one request — the whole house is every room, not a separate offer.
     modeBoth: T(lang, "Szobánként"),
     modeBothLong: T(lang, "Szobánként"),
-    modeBothSub: T(lang, "Több szoba vagy apartman. A vendég egy szobát vagy az egész házat foglalja; ha egy szoba foglalt, az egész ház arra a napra nem foglalható, és fordítva."),
+    modeBothSub: T(lang, "Több szoba vagy apartman. A vendég egy kérésben egy vagy több szobát foglalhat — ha az egész házat szeretné, mindet kijelöli."),
     modeHint: T(lang, "Csak egyben adja ki, de a szobákat szeretné bemutatni? Válassza az elsőt — a szobákat a Szobák menüben bemutathatja."),
     wholeName: T(lang, "A szállás egésze"),
     roomName: T(lang, "{n}. szoba neve"),

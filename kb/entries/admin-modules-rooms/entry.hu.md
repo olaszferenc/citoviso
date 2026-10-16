@@ -4,7 +4,7 @@ title: Szobák, apartmanok — és saját aloldalaik
 audience: tenant
 category: bookings
 anchors: admin.modules.rooms
-updated: 2026-10-15
+updated: 2026-10-16
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -128,25 +128,51 @@ többet ártana, mint használna.
 
 ## Az egész ház
 
-Ha egynél több szobája van, a vendég **egy szobát vagy az egész házat** foglalhatja. Az egész ház
-nem az egyik szobája, hanem külön tétel: a rács fölött saját kártyája van, **„Az egész ház”**
-címmel. Ha az egész házat foglalják le, minden szoba betelik arra az időre; ha egy szobát, az egész
-ház nem foglalható arra az időre.
+Ha egynél több szobája van, a rács fölött egy külön kártya áll, **„Az egész ház”** címmel. Ez nem
+az egyik szobája, hanem maga a ház: itt dönti el, hogyan adja ki.
 
-A kártyán:
+A kártyán egyetlen négyzet van: **„Csak egyben adom ki”**. Ha ez nincs bepipálva (ez az alap): a vendég szobánként foglal — egy kérésben egy szobát,
+többet, vagy akár mindet. Az egész háznak ilyenkor **nincs külön ára**, és nem is kell megadnia:
+aki az egész házat szeretné, minden szobát kijelöl, és a szobák árát fizeti (szobánként
+felsorolva, a végén az összeggel). A kártyán ezt egy mondat ki is mondja.
+
+Ha bepipálja a **„Csak egyben adom ki”** négyzetet: a vendég csak az
+egész házat foglalhatja. A szobák a rácson „csak bemutatásra” jelölést kapnak: a honlapon képpel és felszereltséggel látszanak, de ár és foglalás nélkül. Árat ilyenkor
+csak a házra kérünk — az Árak lapon a szobáknak nincs kártyája, és az ár hiánya miatt sem a
+teendők között, sem levélben nem szólunk. A pipa magától ment.
+
+A kártyán még:
 
 - látja, hány szoba és hány fő tartozik a házhoz; a **„Képek, leírás”** linkre koppintva a ház
   saját szerkesztője nyílik meg (képek, leírás, felszereltség);
-- megadhatja a ház **alapárát** (ha az Árak modul be van kapcsolva): írja be a mezőbe, és nyomja
-  meg az **„Ár mentése”** gombot. Ha üresen menti, az ár törlődik, és a vendég árajánlatot kér.
-  Az ár nem a szobák összege — azt Ön adja meg;
-- egyetlen pipa van: **„Csak egyben adom ki”**. Pipálja be, ha a szobákat külön soha nem adja ki.
-  Ekkor a vendég csak az egész házat foglalhatja; a szobák a rácson „csak bemutatásra” jelölést
-  kapnak: a honlapon képpel és felszereltséggel látszanak, de ár és foglalás nélkül. Árat ilyenkor
-  csak a házra kérünk — az Árak lapon a szobáknak nincs kártyája, és az ár hiánya miatt sem a
-  teendők között, sem levélben nem szólunk. A pipa magától ment.
+- **csak „Csak egyben” módban** itt adja meg a ház árát (ha az Árak modul be van kapcsolva): az
+  **„Alapára:”** sor mutatja a mostanit; írja be az újat a mezőbe, és nyomja meg az
+  **„Ár mentése”** gombot. Ha üresen menti, az ár törlődik, és a vendég árajánlatot kér. Ha a pipa nincs
+  bekapcsolva, ez a mező nem is látszik — hiszen a ház ára a kijelölt szobák árából adódik.
 
 Egyetlen szobánál a kártya nem jelenik meg — ilyenkor nincs mit eldönteni.
+
+## Hogyan foglal a vendég több szobát egyszerre?
+
+A honlapján, a foglalási részben a vendég:
+
+1. előbb a naptárban kiválasztja az érkezés és a távozás napját. Addig a szobák listája helyén ez
+   áll: „Előbb válassza ki a napokat — utána megmutatjuk, melyik szoba szabad.” A naptár egy
+   éjszakát csak akkor mutat foglaltnak, ha arra **egyik** szoba sem szabad;
+2. utána a „Melyik szobákat foglalná?” listában minden szobája látszik. A szabad szobák mellett
+   ott az ár a teljes tartózkodásra (ahol nincs ára, ott „egyedi ár”), és egy pipával
+   kijelölhetők. A foglalt szoba szürke, „Erre az időszakra foglalt” felirattal, és nem jelölhető;
+3. egyenként pipál, vagy egy gombbal mindet kéri: „Mind a … szabad szobát kérem”, illetve ha
+   minden szoba szabad, „Mind a … szobát kérem (az egész ház)”. A „Jelölések törlése” gomb
+   mindent levesz;
+4. az ár szobánként tételesen látszik, alatta az összeg. A létszám felső határa a kijelölt
+   szobák férőhelyének összege.
+
+Ön ezt **egy** kérésként kapja meg a **„Foglalások”** fülön, a szobák felsorolásával. Mindet
+egyszerre igazolja vissza vagy utasítja el — fele-fele nincs. A részletek a Foglalások fül
+súgójában.
+
+## Szoba törlése
 
 Bármelyik szobát törölheti a felugrója alján lévő **„Szoba törlése”** gombbal. Az egész házat
 csak akkor, ha már csak egy szobája van — több szobánál a szerver elutasítja: „Az egész ház nem
@@ -165,4 +191,5 @@ a jelzés áll ott, ha a szobához elfogadott, még le nem zárult foglalás tar
 
 Ha a törlés után egyetlen szobája marad, az a szoba **marad szoba**: ha később újat vesz fel,
 az űrlap nem kérdez semmit, és a két szoba mellé a rendszer magától felveszi az egész házat, ár
-nélkül — az árát a ház kártyáján adhatja meg.
+nélkül. Árat a háznak csak akkor kell adnia, ha bepipálja a **„Csak egyben adom ki”** négyzetet —
+akkor a ház kártyáján adja meg.

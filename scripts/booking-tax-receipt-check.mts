@@ -6,6 +6,11 @@
 //   ① V-2 (valódi böngésző, a valódi widget): SZOBA választásakor a mondat a szobát
 //      nevezi („a szoba egészére … („Erkélyes kétágyas szoba”)”), és NEM mondja, hogy
 //      „a TELJES SZÁLLÁSRA”; az egész-szállás egységnél igen (kétirányú mérés).
+//      ADR-XXXX (több szoba egy foglalási kérésben, kontraktus design-refs/tenant-site/
+//      multi-room): 2+ egységnél nincs többé `select[name=unit]` — előbb a napok, aztán a
+//      szoba BEPIPÁLÁSA (`[data-cit-room-pick]`); két pipánál a mondat „szobánként”. Az egész
+//      ház a szobák mellett nem kínálható többé, ezért az egész-szállás mondatot az EGYETLEN,
+//      egész-szállás egységű fixtúrán mérjük (ott még az a foglalható egység).
 //   ② V-3 nyugta, a HÁROM állapot: megadott IFA → tételes sor összeggel; 0 („nincs IFA”)
 //      → a nyugta nem is említi; kitöltetlen → kimondja, összeg NÉLKÜL (§B.17).
 //   ③ V-3 mobil 2. lépés: az összesítő alatt ott az IFA-sor, és a léptetővel frissül.
@@ -52,8 +57,19 @@ const iso = (o: number): string => {
 
 /* ── the real widget, built by hand like booking-price-clarity-check ───────── */
 const ROOM = "22222220-2222-2222-2222-222222222220";
+const ROOM2 = "22222222-2222-2222-2222-222222222222";
 const WHOLE = "22222221-2222-2222-2222-222222222221";
-function siteData(): SiteData {
+/* ADR-XXXX: two fixtures — a site with two rooms (the room list) and a site whose ONE
+ * bookable unit is the whole place (the only place the whole-place basis is still offered). */
+type Fixture = "rooms" | "whole";
+const UNITS: Record<Fixture, unknown[]> = {
+  rooms: [
+    { id: ROOM, name: "Erkélyes kétágyas szoba", capacity: 2 },
+    { id: ROOM2, name: "Kerti háromágyas szoba", capacity: 3 },
+  ],
+  whole: [{ id: WHOLE, name: "A szállás egésze", capacity: 5, whole: true }],
+};
+function siteData(fx: Fixture): SiteData {
   return {
     name: "Muschel Teszt Panzió",
     tagline: "",
@@ -62,10 +78,7 @@ function siteData(): SiteData {
     photos: [],
     contact: { email: "info@example.com" },
     booking: {
-      units: [
-        { id: ROOM, name: "Erkélyes kétágyas szoba", capacity: 2 },
-        { id: WHOLE, name: "A szállás egésze", capacity: 5, whole: true },
-      ],
+      units: UNITS[fx],
       minNights: 1,
       maxNights: 14,
       horizonMonths: 12,
@@ -74,14 +87,14 @@ function siteData(): SiteData {
     },
   } as unknown as SiteData;
 }
-async function pageHtml(summaryTax: number | undefined): Promise<string> {
+async function pageHtml(summaryTax: number | undefined, fx: Fixture = "rooms"): Promise<string> {
   const [moneyJs, seasonJs, runtimeJs, modulesCss] = await Promise.all([
     readFile(path.join(ROOT, "assets/runtime/cit-money.js"), "utf8"),
     readFile(path.join(ROOT, "assets/runtime/cit-season.cjs"), "utf8"),
     readFile(path.join(ROOT, "assets/runtime/cit-runtime.js"), "utf8"),
     readFile(path.join(ROOT, "assets/runtime/cit-modules.css"), "utf8"),
   ]);
-  const d = siteData();
+  const d = siteData(fx);
   const summary = {
     dateFrom: iso(20), dateTo: iso(23), nights: 3, guests: 2, unitName: "Erkélyes kétágyas szoba",
     ref: "FG-ABC123", total: 54000, currency: "HUF", expireHours: 48, guestEmail: "vendeg@example.com",
@@ -120,6 +133,13 @@ async function pickDays(page: Page): Promise<void> {
   await free.nth(4).click();
   await page.waitForTimeout(250);
 }
+/** ADR-XXXX: the room list appears once both dates are set — tick the given rooms. */
+async function tickRooms(page: Page, ids: string[]): Promise<void> {
+  for (const id of ids) {
+    await page.locator(`input[data-cit-room-pick][value="${id}"]`).check();
+    await page.waitForTimeout(200);
+  }
+}
 async function submit(page: Page): Promise<string> {
   if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
   await page.fill("#cit-name", "Teszt Vendég");
@@ -138,14 +158,20 @@ try {
   console.log("\n① V-2 · az ár-alap a foglalt egységet mondja");
   {
     const page = await open(browser, await pageHtml(500), 1280);
-    await page.selectOption("select[name='unit']", ROOM);
-    await page.waitForTimeout(250);
+    check("ADR-XXXX: több szobánál nincs egység-legördülő", (await page.locator("select[name='unit']").count()) === 0);
     await pickDays(page);
+    check("ADR-XXXX: pipa nélkül nincs árajánlat", (await page.locator(".cit-book__qbasis:visible").count()) === 0);
+    await tickRooms(page, [ROOM]);
     const room = (await page.locator(".cit-book__qbasis").textContent()) ?? "";
     check("⭐ szobánál a szobát nevezi", room.includes("a szoba egészére") && room.includes("„Erkélyes kétágyas szoba”"), room);
     check("⭐ szobánál NEM mondja „a TELJES SZÁLLÁSRA”", !room.includes("TELJES SZÁLLÁSRA"), room);
-    await page.selectOption("select[name='unit']", WHOLE);
-    await page.waitForTimeout(400);
+    await tickRooms(page, [ROOM2]);
+    const two = (await page.locator(".cit-book__qbasis").textContent()) ?? "";
+    check("⭐ ADR-XXXX: két szobánál „szobánként”, és NEM „a TELJES SZÁLLÁSRA”", two.includes("Az ár szobánként, éjszakánként értendő") && !two.includes("TELJES SZÁLLÁSRA"), two);
+    await page.close();
+  }
+  {
+    const page = await open(browser, await pageHtml(500, "whole"), 1280);
     await pickDays(page);
     const whole = (await page.locator(".cit-book__qbasis").textContent()) ?? "";
     check("negatív kontroll: az egész-szállás egységnél „a TELJES SZÁLLÁSRA”", whole.includes("TELJES SZÁLLÁSRA"), whole);
@@ -160,9 +186,8 @@ try {
     ["kitöltetlen", undefined, (r: string) => /az összegéről a szállásadó tájékoztatja/.test(r) && !/500/.test(r)],
   ] as const) {
     const page = await open(browser, await pageHtml(tax), 1280);
-    await page.selectOption("select[name='unit']", ROOM);
-    await page.waitForTimeout(250);
     await pickDays(page);
+    await tickRooms(page, [ROOM]);
     const r = await submit(page);
     check(`a nyugta megjelent (${label})`, /Elküldtük a kérését/.test(r), r.slice(0, 80));
     check(`⭐ nyugta, IFA ${label}`, want(r), r.slice(r.indexOf("Összesen"), r.indexOf("Összesen") + 200));
@@ -172,10 +197,9 @@ try {
   // ── ③ V-3 phone step 2 ─────────────────────────────────────────────────
   console.log("\n③ V-3 · mobil 2. lépés");
   {
-    const page = await open(browser, await pageHtml(500), 390);
-    // ADR-0389: the 2-person room stops at 2 guests — the 2 → 3 step is measured on the house (5).
-    await page.selectOption("select[name='unit']", WHOLE);
-    await page.waitForTimeout(400);
+    // ADR-0389: the 2-person room stops at 2 guests — the 2 → 3 step is measured on the house (5),
+    // and (ADR-XXXX) the house is bookable only on a site where it is the one unit.
+    const page = await open(browser, await pageHtml(500, "whole"), 390);
     await pickDays(page);
     await page.click(".cit-book__go");
     await page.waitForTimeout(300);
@@ -191,9 +215,7 @@ try {
   // ── ③b ADR-0388: the child count is always asked, also without a child price ──
   console.log("\n③b ADR-0388 · „Ebből gyermek” gyerekár nélkül is (18 év alatt, csak az IFA-ra hat)");
   for (const width of [390, 1280]) {
-    const page = await open(browser, await pageHtml(500), width);
-    await page.selectOption("select[name='unit']", WHOLE);
-    await page.waitForTimeout(400);
+    const page = await open(browser, await pageHtml(500, "whole"), width);
     await pickDays(page);
     if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
     const kf = page.locator("[data-cit-kidsf]");

@@ -163,12 +163,14 @@ export function ownerOfferPage(
     )
     .join("");
 
+  // ADR-XXXX: several rooms are priced together, per night, for this request only.
+  const rooms = v.rooms ?? 1;
   const missRow = missing.length
-    ? `<li class="of-miss"><div>${T(lang, "Új ár")} · ${esc(T(lang, "{n} éj", { n: missing.length }))}` +
-      `<small>${esc(huDate(missing[0]!, lang))} – ${esc(huDate(addDays(lastMissing!, 1), lang))} — ${T(lang, "erre nincs ára")}</small></div>` +
+    ? `<li class="of-miss"><div>${rooms > 1 ? esc(T(lang, "{n} szoba együtt", { n: rooms })) : T(lang, "Új ár")} · ${esc(T(lang, "{n} éj", { n: missing.length }))}` +
+      `<small>${esc(huDate(missing[0]!, lang))} – ${esc(huDate(addDays(lastMissing!, 1), lang))} — ${rooms > 1 ? esc(v.unitName ?? "") : T(lang, "erre nincs ára")}</small></div>` +
       `<span class="of-sum" data-sum>—</span>` +
       `<div class="of-full">` +
-      `<label class="of-fld"><span>${T(lang, "Ár éjszakánként")}</span>` +
+      `<label class="of-fld"><span>${rooms > 1 ? esc(T(lang, "Ár éjszakánként, a {n} szobára együtt", { n: rooms })) : T(lang, "Ár éjszakánként")}</span>` +
       `<span class="of-inp"><input name="amount" type="text" inputmode="numeric" autocomplete="off" ` +
       `placeholder="${esc(T(lang, "pl. 26 000"))}" value="${esc(opts.amount ?? "")}" data-amount>` +
       `<em>${esc(perLabel(lang, cur, mode))}</em></span></label>` +
@@ -226,7 +228,8 @@ export function ownerOfferPage(
   const yourPrice = T(lang, "az Ön által megadott");
   const consHtml = (k: keyof typeof cons): string =>
     `<b>${esc(cons[k].head)}</b>${cons[k].body ? " " + esc(cons[k].body.split("{price}").join(yourPrice)) : ""}`;
-  const saveBlock = missing.length
+  // A multi-room price never goes into a price list: it belongs to no single room.
+  const saveBlock = missing.length && rooms <= 1
     ? `<div class="of-save">` +
       `<label class="of-chk"><input type="checkbox" name="into" value="1" data-into${into ? " checked" : ""}>` +
       `<span><b>${T(lang, "Mentsem az árlistába is?")}</b><small>${T(lang, "Alapból nem: az ár csak ennek a kérésnek szól.")}</small></span></label>` +
@@ -323,11 +326,12 @@ function pick(){if(!I||!I.checked)return"request";var r=f.querySelector("input[n
 function run(){
  if(!C.missing){S.disabled=false;return;}
  var r=parse(A.value),ae=f.querySelector("[data-amount-err]");ae.textContent=r.error||"";A.setAttribute("aria-invalid",r.error?"true":"false");
- B.hidden=!I.checked;
- var k=pick(),m=C.msg.cons[k],price=r.value?money(r.value)+C.per:C.msg.yourPrice;
+ var k=pick();
+ if(I){B.hidden=!I.checked;
+ var m=C.msg.cons[k],price=r.value?money(r.value)+C.per:C.msg.yourPrice;
  K.textContent="";var b=document.createElement("b");b.textContent=m.head;K.appendChild(b);
  if(m.body)K.appendChild(document.createTextNode(" "+m.body.split("{price}").join(price)));
- K.className="of-cons"+(k==="request"?"":" of-cons--warn");
+ K.className="of-cons"+(k==="request"?"":" of-cons--warn");}
  var add=0;if(r.value){add=C.mode==="per_stay"?(C.arrivalMissing?r.value:0):r.value*C.missing*C.mul;}
  var total=r.value?(C.mode==="per_stay"?(C.arrivalMissing?r.value:C.known):C.known+add):null;
  f.querySelector("[data-sum]").textContent=r.value?money(C.mode==="per_stay"?(C.arrivalMissing?r.value:0):add):"\\u2014";
@@ -335,7 +339,7 @@ function run(){
  S.disabled=!total||k==="pick";
 }
 if(C.missing){A.addEventListener("input",run);A.addEventListener("blur",function(){var r=parse(A.value);if(r.value)A.value=grp(r.value);});
-I.addEventListener("change",function(){if(I.checked&&!f.querySelector("input[name=save]:checked"))f.querySelector("input[name=save][value=dates]").checked=true;run();});
+if(I)I.addEventListener("change",function(){if(I.checked&&!f.querySelector("input[name=save]:checked"))f.querySelector("input[name=save][value=dates]").checked=true;run();});
 f.querySelectorAll("input[name=save]").forEach(function(x){x.addEventListener("change",run);});}
 f.addEventListener("submit",function(e){if(S.disabled){e.preventDefault();return;}S.disabled=true;});
 run();

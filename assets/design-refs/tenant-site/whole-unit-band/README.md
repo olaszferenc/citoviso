@@ -1,5 +1,7 @@
 # KONTRAKTUS — az „egész szállás” a szobák alatt, saját sávban, kimondott egyedi árral
 
+> ⛔ **FELÜLÍRVA (ADR-XXXX, 2026-10-16):** a szobák mellett nincs „Egyben is kiadó” sáv — az egész ház nem külön ajánlat, a vendég minden szobát kipipál (`tenant-site/multi-room/`). A sáv csak „Csak egyben adom ki” módban él („main”, `whole-only`).
+
 **Jóváhagyva:** 2026-09-28, tulajdonosi döntés (a koordinátor-sessionön át): „C”. Három változatot látott egy
 lapon: **A** (árajánlat a kártyán: „Egyedi ár” + „Árajánlatot kérek” gomb, a kártya a helyén),
 **B** („Foglalás” marad minden kártyán, az ár helyén „Egyedi ár — a szállásadó árajánlattal válaszol”),

@@ -1,9 +1,14 @@
 // ADR-0389 — férőhely-túllépés (Elek F-1, 2026-10-14: 7 fős kérés egy 4 fős házra ment át, és a
 // szállásadó SEHOL nem kapott figyelmeztetést). Az őr végponttól végpontig nézi:
-//   ① a szelvény léptetője a választott egység férőhelyénél megáll (390 px és 1280 px), egységváltásra követ;
+//   ① a szelvény léptetője a kijelölt szoba férőhelyénél megáll (390 px és 1280 px), kijelölés-váltásra követ;
 //   ② a szerver a férőhely fölött elutasít, a férőhelyen elfogad (negatív kontroll);
 //   ③ a régi / utólag szűkített túllépő kérésnél a tulaj-levél, az admin-kártya + a visszaigazolás
 //      lépése és a levél-link megerősítő oldala figyelmeztet — a férőhelyen belüli kérésnél NEM.
+// ADR-XXXX (több szoba egy foglalási kérésben; kontraktus: assets/design-refs/tenant-site/multi-room/README.md):
+//   2+ szobánál nincs <select>; előbb a napok, utána a szobák jelölőnégyzetei ([data-cit-room-pick]).
+//   A plafon a kijelölt szobák férőhelyének ÖSSZEGE (férőhely nélküli szoba → nincs plafon, a régi 20);
+//   semmi nincs kijelölve → 20. Telefonon a léptető a 2. lépésben van, a „Tovább” szobát kér.
+//   A szerver több szobánál az összeget nézi, és a tulaj figyelmeztetése is az összegből számol.
 // Futtatás: npx tsx scripts/booking-capacity-check.mts
 import { mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -43,7 +48,8 @@ check("férőhely nélküli egység → nincs korlát (nem találunk ki számot)
 
 /* ── ① the widget ─────────────────────────────────────────────────────────── */
 const ROOM = "33333330-3333-3333-3333-333333333330";
-const HOUSE = "33333331-3333-3333-3333-333333333331";
+const ROOM2 = "33333331-3333-3333-3333-333333333331";
+const ATTIC = "33333332-3333-3333-3333-333333333332";
 async function pageHtml(): Promise<string> {
   const [moneyJs, seasonJs, runtimeJs, css] = await Promise.all(
     ["cit-money.js", "cit-season.cjs", "cit-runtime.js", "cit-modules.css"].map((f) => readFile(path.join(ROOT, "assets/runtime", f), "utf8")),
@@ -51,7 +57,8 @@ async function pageHtml(): Promise<string> {
   const d = {
     name: "Férőhely Teszt", tagline: "", intro: "", highlights: [], photos: [], contact: { email: "info@example.com" },
     booking: {
-      units: [{ id: ROOM, name: "Kétágyas szoba", capacity: 2 }, { id: HOUSE, name: "Vendégház", capacity: 5 }],
+      // ATTIC has no capacity: ticking it must lift the ceiling, not invent one (§B.17).
+      units: [{ id: ROOM, name: "Kétágyas szoba", capacity: 2 }, { id: ROOM2, name: "Háromágyas szoba", capacity: 3 }, { id: ATTIC, name: "Padlásszoba" }],
       minNights: 1, maxNights: 14, horizonMonths: 12, leadTimeDays: 0,
     },
   } as unknown as SiteData;
@@ -72,39 +79,61 @@ try {
   await writeFile(file, await pageHtml(), "utf8");
   for (const width of [390, 1280]) {
     console.log(`\n① szelvény · ${width}px`);
-    const page: Page = await browser.newPage({ viewport: { width, height: 900 }, isMobile: width === 390 });
+    const phone = width === 390;
+    const page: Page = await browser.newPage({ viewport: { width, height: 900 }, isMobile: phone });
     const errs: string[] = [];
     page.on("pageerror", (e) => errs.push(String(e)));
     await page.goto(pathToFileURL(file).href);
     await page.waitForTimeout(400);
+    check("2+ szobánál nincs egység-választó <select>", (await page.locator("select[name='unit'], #cit-unit").count()) === 0);
     const free = page.locator(".cit-book__day:not(:disabled):visible");
     for (let i = 0; i < 3 && (await free.count()) < 5; i++) { await page.click(".cit-book__calnav--next"); await page.waitForTimeout(150); }
     await free.nth(1).click();
     await free.nth(4).click();
     await page.waitForTimeout(250);
-    if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
+    const box = (id: string) => page.locator(`input[data-cit-room-pick][value="${id}"]`);
+    check("a napok után megjelennek a szobák jelölőnégyzetei", (await box(ROOM).count()) === 1 && (await box(ROOM2).count()) === 1, await page.locator("input[data-cit-room-pick]").count());
     const plus = page.locator(".cit-book__step[data-step='1']").first();
-    const count = async (): Promise<number> => Number(await page.locator("[data-guests]").first().textContent());
-    // On the phone's step 2 the unit picker sits in step 1 — the change event is what counts.
-    const pick = (id: string) =>
-      page.evaluate((v) => {
-        const sel = document.querySelector<HTMLSelectElement>("select[name='unit']")!;
-        sel.value = v;
-        sel.dispatchEvent(new Event("change"));
-      }, id);
-    await pick(ROOM);
-    await page.waitForTimeout(250);
-    check("⭐ a 2 fős szobánál a „+” tiltva 2 főnél", (await count()) === 2 && (await plus.isDisabled()), await count());
     const note = page.locator("[data-cit-capnote]");
-    check("⭐ kimondja: „Ide legfeljebb 2 vendég foglalhat.”", (await note.isVisible()) && /Ide legfeljebb 2 vendég foglalhat\./.test((await note.textContent()) ?? ""));
-    await pick(HOUSE);
+    const count = async (): Promise<number> => Number(await page.locator("[data-guests]").first().textContent());
+    const noteText = async (): Promise<string> => (await note.textContent()) ?? "";
+    // Nothing ticked yet: the old ceiling (20), no sentence.
+    check("negatív kontroll: semmi nincs kijelölve → a „+” él, a mondat nincs ott", (await plus.isEnabled()) && (await note.isHidden()));
+    if (phone) {
+      check("telefon: a „Tovább” szoba nélkül tiltva", await page.locator(".cit-book__go").isDisabled());
+    }
+    await box(ROOM).check();
     await page.waitForTimeout(250);
-    check("negatív kontroll: az 5 fős háznál a „+” él, a mondat nincs ott", (await plus.isEnabled()) && (await note.isHidden()));
+    if (phone) {
+      check("telefon: szoba kijelölése után a „Tovább” él", await page.locator(".cit-book__go").isEnabled());
+      await page.click(".cit-book__go");
+      await page.waitForTimeout(300);
+      check("telefon: a 2. lépésben látszik a léptető", await plus.isVisible());
+    }
+    // On the phone's step 2 the room list sits in step 1 — the change event is what counts.
+    const toggle = (id: string, on: boolean) =>
+      page.evaluate(([v, c]) => {
+        const cb = document.querySelector<HTMLInputElement>(`input[data-cit-room-pick][value="${v}"]`)!;
+        cb.checked = c as boolean;
+        cb.dispatchEvent(new Event("change", { bubbles: true }));
+      }, [id, on] as const).then(() => page.waitForTimeout(250));
+    check("⭐ a 2 fős szobánál a „+” tiltva 2 főnél", (await count()) === 2 && (await plus.isDisabled()), await count());
+    check("⭐ kimondja: „Ide legfeljebb 2 vendég foglalhat.”", (await note.isVisible()) && /Ide legfeljebb 2 vendég foglalhat\./.test(await noteText()), await noteText());
+    await toggle(ROOM2, true);
+    check("⭐ két szoba (2+3) → a „+” újra él, a mondat eltűnik", (await plus.isEnabled()) && (await note.isHidden()));
     for (let i = 0; i < 6; i++) if (await plus.isEnabled()) await plus.click();
-    check("⭐ a háznál 5-nél megáll", (await count()) === 5 && (await plus.isDisabled()), await count());
-    await pick(ROOM);
-    await page.waitForTimeout(250);
-    check("⭐ vissza a szobára → a létszám 2-re igazodik", (await count()) === 2, await count());
+    check("⭐ két szobánál az összegnél (5) áll meg", (await count()) === 5 && (await plus.isDisabled()), await count());
+    check(
+      "⭐ kimondja: „A kiválasztott szobákba legfeljebb 5 vendég foglalhat.”",
+      (await note.isVisible()) && /A kiválasztott szobákba legfeljebb 5 vendég foglalhat\./.test(await noteText()),
+      await noteText(),
+    );
+    await toggle(ATTIC, true);
+    check("negatív kontroll: férőhely nélküli szoba is kijelölve → nincs plafon, nincs mondat", (await plus.isEnabled()) && (await note.isHidden()));
+    await toggle(ATTIC, false);
+    check("a férőhely nélküli szoba levéve → vissza 5-re, a „+” tiltva", (await count()) === 5 && (await plus.isDisabled()), await count());
+    await toggle(ROOM2, false);
+    check("⭐ a 3 fős szoba levéve → a létszám 2-re igazodik", (await count()) === 2 && (await plus.isDisabled()), await count());
     check("JS-hiba 0", errs.length === 0, errs);
     await page.close();
   }
@@ -144,9 +173,14 @@ try {
   await setSiteModuleConfig(site.id, "booking", { notifyEmail: owner }, "test");
   const unit = (await createUnit(site.id, "Vendégház", 4, null))!;
   await setBasePrice(unit, 20000);
-  const ask = (guests: number, off: number) =>
+  const unit2 = (await createUnit(site.id, "Kétágyas szoba", 2, null))!;
+  await setBasePrice(unit2, 15000);
+  const ask = (guests: number, off: number, unitIds?: string[]) =>
     createBookingRequest(
-      { siteId: site.id, unitId: unit, guestName: "Teszt Vendég", guestEmail: `g${off}-${stamp}@example.com`, guestPhone: "+36301112222", dateFrom: iso(off), dateTo: iso(off + 3), guests },
+      {
+        siteId: site.id, unitId: unitIds?.[0] ?? unit, ...(unitIds ? { unitIds } : {}), guestName: "Teszt Vendég",
+        guestEmail: `g${off}-${stamp}@example.com`, guestPhone: "+36301112222", dateFrom: iso(off), dateTo: iso(off + 3), guests,
+      },
       null,
     );
 
@@ -158,6 +192,18 @@ try {
   check("negatív kontroll: 4 fő a 4 fős házra → elfogadva", fits.ok, fits.errors);
   const fitMail = (await mailsTo(owner)).find((m) => /Foglalási kérés/.test(m.subject));
   check("negatív kontroll: a férőhelyen belüli kérés tulaj-levelében nincs figyelmeztetés", Boolean(fitMail) && !/a férőhely 4 fő/.test(fitMail!.body));
+  // ADR-XXXX: two rooms (4 + 2) hold 6.
+  const overBoth = await ask(7, 50, [unit, unit2]);
+  check(
+    "⭐ két szoba (4+2), 7 fő → elutasítva: „A kiválasztott szobákba legfeljebb 6 vendég foglalhat. … vagy jelöljön ki még egy szobát.”",
+    !overBoth.ok && (overBoth.errors ?? []).includes("A kiválasztott szobákba legfeljebb 6 vendég foglalhat. Kérjük, csökkentse a létszámot, vagy jelöljön ki még egy szobát."),
+    overBoth.errors,
+  );
+  const fitsBoth = await ask(6, 50, [unit, unit2]);
+  check("⭐ két szoba (4+2), 6 fő → elfogadva (az egyik szoba férőhelye fölött, az összegen belül)", fitsBoth.ok, fitsBoth.errors);
+  const bothRow = fitsBoth.ok ? await db.selectFrom("booking_request").select(["unit_ids"]).where("id", "=", fitsBoth.id!).executeTakeFirst() : undefined;
+  check("… a kérés mindkét szobát viszi", (bothRow?.unit_ids ?? []).length === 2, bothRow?.unit_ids);
+  check("negatív kontroll: egy szobánál a régi mondat marad", !over.ok && !(over.errors ?? []).some((e) => e.startsWith("A kiválasztott szobákba")), over.errors);
 
   console.log("\n③ régi / utólag szűkített túllépő kérés");
   // The capacity is lowered after the request (or the request predates the check): 4 guests, 3 places.
@@ -167,7 +213,17 @@ try {
   const warnMail = (await mailsTo(owner)).filter((m) => /Foglalási kérés/.test(m.subject)).pop();
   check("⭐ tulaj-levél: „Figyelem: a vendég 4 főre kér, a férőhely 3 fő.”", /Figyelem: a vendég 4 főre kér, a férőhely 3 fő\./.test(warnMail?.body ?? ""), (warnMail?.body ?? "").slice(0, 300));
   const reqs = await getRequests(site.id);
-  check("az admin-lista viszi a férőhelyet", reqs[0]?.capacity === 3, reqs[0]?.capacity);
+  const mine = reqs.find((r) => r.id === row.id);
+  check("az admin-lista viszi a férőhelyet", mine?.capacity === 3, mine?.capacity);
+  // ADR-XXXX: the two-room request (6 guests) now holds 3 + 2 = 5 — the warning counts the sum.
+  const both = reqs.find((r) => r.id === fitsBoth.id);
+  check("⭐ két szobás kérés: az admin-lista az összeget viszi (3+2=5)", both?.capacity === 5, both?.capacity);
+  if (fitsBoth.ok) {
+    const bt = await db.selectFrom("booking_request").select(["id", "action_token"]).where("id", "=", fitsBoth.id!).executeTakeFirstOrThrow();
+    await notifyOwner(bt.id, bt.action_token, owner, null);
+    const bothMail = (await mailsTo(owner)).filter((m) => /Foglalási kérés/.test(m.subject)).pop();
+    check("⭐ két szobás kérés tulaj-levele: „Figyelem: a vendég 6 főre kér, a férőhely 5 fő.”", /Figyelem: a vendég 6 főre kér, a férőhely 5 fő\./.test(bothMail?.body ?? ""), (bothMail?.body ?? "").slice(0, 300));
+  }
   const month = iso(0).slice(0, 7);
   const monthView = {
     month, label: "teszt hónap", prevMonth: month, nextMonth: month, leadingBlanks: 0, blockedCount: 0, importedCount: 0,
@@ -183,10 +239,10 @@ try {
       } as unknown as Parameters<typeof bookingsSection>[0],
       "hu",
     );
-  const html = tab(reqs);
+  const html = tab(reqs.filter((r) => r.id === row.id));
   check("⭐ admin-kártya: a figyelmeztetés a kártyán", /data-bk-cap[^>]*>[\s\S]{0,400}Figyelem: a vendég 4 főre kér, a férőhely 3 fő\./.test(html));
   check("⭐ admin: a „Visszaigazolom” lépésben is ott", /bk-cf__cap/.test(html));
-  check("negatív kontroll: férőhelyen belül nincs jelzés", !/data-bk-cap/.test(tab(reqs.map((r) => ({ ...r, capacity: 4 })))));
+  check("negatív kontroll: férőhelyen belül nincs jelzés", !/data-bk-cap/.test(tab(reqs.filter((r) => r.id === row.id).map((r) => ({ ...r, capacity: 4 })))));
   const peek = await peekDecision(row.action_token, "accepted");
   check("a levél-link nézete viszi a férőhelyet", peek.capacity === 3, peek);
   const page = bookingDecideConfirmPage(peek, row.action_token, "accepted");

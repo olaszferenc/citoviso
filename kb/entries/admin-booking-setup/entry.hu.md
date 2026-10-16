@@ -4,7 +4,7 @@ title: Foglalás beállítása — kérdésről kérdésre, a Segítővel
 audience: tenant
 category: bookings
 anchors: admin.booking.setup
-updated: 2026-10-15
+updated: 2026-10-16
 ---
 
 Ezen az egy oldalon mindent beállít, ami ahhoz kell, hogy a vendégek foglalhassanak: a szobákat,
@@ -39,10 +39,12 @@ Ugyanez az oldal való a későbbi módosításra is: ha egy év múlva emelné 
 ## Szállás és szobák
 
 Először azt kérdezzük, hogyan adja ki a szállását: **„Egyben, egy egységként”** (az egész ház
-egyszerre egy vendégkörnek) vagy **„Szobánként”**. Szobánként a vendég egy szobát vagy az egész
-házat foglalhatja; a kettő kizárja egymást: ha egy szoba foglalt, aznap az egész ház nem
-foglalható, és fordítva.
-Ha csak egyben adja ki, de a szobáit be szeretné mutatni, az elsőt válassza.
+egyszerre egy vendégkörnek) vagy **„Szobánként”**. Szobánként a vendég egy kérésben egy vagy
+több szobát foglalhat, akár mindet: aki az egész házat szeretné, minden szobát kijelöl, és a
+szobák árát fizeti — az egész háznak ezért nem kell külön árat adnia. A több szobás kérést Ön
+egyben igazolja vissza vagy utasítja el a Foglalások fülön.
+Ha csak egyben adja ki, de a szobáit be szeretné mutatni, az elsőt válassza: akkor csak az egész
+ház foglalható, és árat is csak a házra kérünk.
 
 Utána a szobák nevét és a férőhelyet adja meg; az **„+ Újabb szoba”** gombbal vehet fel újat.
 A férőhely a foglalás felső határa is: a vendég ennél több főt nem adhat meg, és a rendszer

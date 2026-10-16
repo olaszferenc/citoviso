@@ -14,6 +14,13 @@
 //      összegét mutatja MINDEN változtatás (fő, gyermek, ellátás) után — mérve: az ellátás
 //      választása után a sáv 68 000-en maradt, a beküldött kérés 90 500 lett.
 //
+//
+//   ADR-XXXX (több szoba egy kérésben, kontraktus: assets/design-refs/tenant-site/multi-room/):
+//   a 2+ egységes widgeten nincs `#cit-unit` választó — előbb a dátum, AZTÁN a szoba-lista
+//   pipája ([data-cit-room-pick]); pipa nélkül nincs ár. Az őr ezért dátum után pipál; a régi
+//   „egység váltása a választóban” = „csak azt az egy szobát pipálom”. Új állítás (⑦): a pipált
+//   szobák mind kérnek ellátást → a szobánkénti ellátás szobánként számít („…, 2 szobára”).
+//
 //   npx tsx scripts/meals-check.mts
 //   npx tsx scripts/meals-check.mts --selftest   (pirosra kell mennie: a böngésző a
 //                                                  gyermeket felnőtt-áron számolja, ÉS a
@@ -175,11 +182,13 @@ async function pageFor(m: MealsSetting): Promise<string> {
   ]);
   // ⛔ ÖNTESZT: a böngésző a gyermeket felnőtt-áron számolja — az őrnek pirosra kell mennie.
   // ⛔ ÖNTESZT ⑤: a sáv nem követi az ár-dobozt (a V-1 előtti állapot).
-  const runtimeJs = SELFTEST
-    ? runtimeJsRaw
-        .replace("var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;", "var k = 0;")
-        .replace("if (quoteBox) new MutationObserver(syncSteps)", "if (false) new MutationObserver(syncSteps)")
-    : runtimeJsRaw;
+  const SABOTAGE: [string, string][] = [
+    ["var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;", "var k = 0;"],
+    ["if (quoteBox) new MutationObserver(syncSteps)", "if (false) new MutationObserver(syncSteps)"],
+  ];
+  // A sabotage string that no longer exists would make the self-test silently green-able.
+  if (SELFTEST) for (const [a] of SABOTAGE) if (!runtimeJsRaw.includes(a)) throw new Error(`önteszt: a szabotázs-minta eltűnt a runtime-ból: ${a}`);
+  const runtimeJs = SELFTEST ? SABOTAGE.reduce((t, [a, b]) => t.replace(a, b), runtimeJsRaw) : runtimeJsRaw;
   const d = siteData(m);
   const stub =
     `<script>(function(){var real=window.fetch;window.fetch=function(u,o){var s=String(u);` +
@@ -218,6 +227,11 @@ async function setRange(page: Page, from: string, to: string): Promise<void> {
 async function clickN(page: Page, sel: string, n: number): Promise<void> {
   for (let i = 0; i < n; i++) await page.click(sel);
 }
+/* ADR-XXXX: tick exactly these rooms in the room list (it renders once both dates are set). */
+async function pickOnly(page: Page, ids: string[]): Promise<void> {
+  for (const u of UNITS) await page.locator(`[data-cit-room-pick][value="${u.id}"]`).setChecked(ids.includes(u.id));
+  await page.waitForTimeout(200);
+}
 const totalOf = async (page: Page): Promise<number> =>
   Number(((await page.locator(".cit-book__qtotal b").textContent()) ?? "").replace(/\D/g, ""));
 
@@ -232,6 +246,7 @@ try {
   await page.goto(pathToFileURL(file).href);
   await page.waitForTimeout(500);
   await setRange(page, iso(20), iso(23)); // 3 nights
+  await pickOnly(page, [UNITS[0]!.id]); // ADR-XXXX: the room is ticked after the dates
 
   const cases: { name: string; plan: MealPlanId; guests: number; kids: number }[] = [
     { name: "csak szállás, 2 fő", plan: "none", guests: 2, kids: 0 },
@@ -259,10 +274,17 @@ try {
   const q = (await page.locator("[data-quote]").textContent()) ?? "";
   check("④ az ellátás alapja kimondva a beadás előtt", /Az ellátás felára személyenként számít/.test(q), q.slice(0, 200));
 
-  await page.selectOption("#cit-unit", UNITS[1]!.id);
-  await page.waitForTimeout(250);
-  check("④ a kivett szobánál nincs választó, a mondat ott áll", await page.locator("#cit-meal").isHidden() &&
-    /Ehhez a szálláshoz nem kérhető ellátás\./.test((await page.locator("[data-cit-mealf]").textContent()) ?? ""));
+  const offShown = async (): Promise<boolean> =>
+    (await page.locator("#cit-meal").isHidden()) &&
+    /Ehhez a szálláshoz nem kérhető ellátás\./.test((await page.locator("[data-cit-mealf]").textContent()) ?? "");
+  await pickOnly(page, [UNITS[1]!.id]); // ADR-XXXX: was „switch the unit in the select”
+  check("④ a kivett szobánál nincs választó, a mondat ott áll", await offShown());
+  await pickOnly(page, [UNITS[0]!.id, UNITS[1]!.id]);
+  check("④ ADR-XXXX: ha a pipált szobák egyike kivett, nincs választó", await offShown());
+  {
+    const q2 = (await page.locator("[data-quote]").textContent()) ?? "";
+    check("④ ADR-XXXX: két szoba, kivett ellátással → ár-sorban nincs ellátás", !/Reggeli|Félpanzió/.test(q2), q2.slice(0, 200));
+  }
   check("④ JS-hiba 0", errs.length === 0, errs.join(" | "));
 
   /* ⑤ V-1: the phone's step-2 summary bar. The guest sets the head count, the children and
@@ -277,6 +299,7 @@ try {
   await phone.goto(pathToFileURL(file).href);
   await phone.waitForTimeout(500);
   await setRange(phone, iso(20), iso(23));
+  await pickOnly(phone, [UNITS[0]!.id]); // ADR-XXXX: step 1 holds the room list; „Tovább” needs a ticked room
   await phone.click(".cit-book__go");
   await phone.waitForTimeout(150);
   check("⑤ a 2. lépés nyitva (a sáv látszik)", await phone.locator(".cit-book__sum").isVisible());
@@ -316,6 +339,33 @@ try {
   check("⑥ T-3 a mondat kimondja a szabályt és a 13–17 éveseket", /18 év alatti vendég mentes/.test(tax) && /13–17 évesek/.test(tax), tax);
   check("⑤ JS-hiba 0", perrs.length === 0, perrs.join(" | "));
   await phone.close();
+
+  /* ⑦ ADR-XXXX: both rooms take meals, breakfast is per ROOM → charged once per ticked room,
+   * mirroring the server's roomsMealLines (mealLines × rooms, label „{plan}, {n} szobára”). */
+  console.log("\n⑦ ADR-XXXX: szobánkénti ellátás két pipált szobára:");
+  const R2 = readMeals({ ...S, off: [], plans: { ...S.plans, bb: { ...S.plans.bb, per: "room", price: 5000 } } }) as MealsSetting;
+  const file2 = path.join(dir, "site-rooms.html");
+  await writeFile(file2, await pageFor(R2), "utf8");
+  const p2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const e2: string[] = [];
+  p2.on("pageerror", (e) => e2.push(e.message));
+  await p2.goto(pathToFileURL(file2).href);
+  await p2.waitForTimeout(500);
+  await setRange(p2, iso(20), iso(23));
+  await pickOnly(p2, [UNITS[0]!.id, UNITS[1]!.id]);
+  await p2.selectOption("#cit-meal", "bb");
+  await p2.waitForTimeout(150);
+  const perRoom = L("bb", 2, 0, UNITS[0]!.id, R2).reduce((t, l) => t + l.sum, 0) * 2;
+  const server2 = 2 * 3 * 16000 + perRoom;
+  const shown2 = await totalOf(p2);
+  check(`⑦ két szoba, szobánkénti reggeli: a böngésző ${shown2} Ft, a szerver ${server2} Ft`, shown2 === server2);
+  const q3 = (await p2.locator("[data-quote]").textContent()) ?? "";
+  check("⑦ a sor neve „Reggeli, 2 szobára”", /Reggeli, 2 szobára/.test(q3), q3.slice(0, 300));
+  await pickOnly(p2, [UNITS[1]!.id]);
+  const one = 3 * 16000 + L("bb", 2, 0, UNITS[1]!.id, R2).reduce((t, l) => t + l.sum, 0);
+  check(`⑦ egy szoba: egyszer számít (${await totalOf(p2)} Ft = ${one} Ft)`, (await totalOf(p2)) === one);
+  check("⑦ JS-hiba 0", e2.length === 0, e2.join(" | "));
+  await p2.close();
 } finally {
   await browser.close();
 }

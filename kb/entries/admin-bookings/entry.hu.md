@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-10-13
+updated: 2026-10-16
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -29,12 +29,14 @@ A **„Döntésre váró kérések”** rész áll a fül tetején — telefonon
 következik, hogy a döntés gombjai görgetés nélkül a képernyőn legyenek. A kéréseket a
 **válasz-határidő** szerint látja: aki hamarabb lejár, az van felül — akkor is, ha később
 érkezne. (A lista fölött ez a mondat ki is van írva.) Minden kérésnél ott a vendég neve, az
-időpont, a létszám (gyerekkel együtt: *3 fő, ebből 1 gyermek*), a szoba, az üzenete, és egy jelvény arról, mennyi ideje maradt:
+időpont, a létszám (gyerekkel együtt: *3 fő, ebből 1 gyermek*), a szoba (több szobás kérésnél az
+összes kért szoba, vesszővel felsorolva), az üzenete, és egy jelvény arról, mennyi ideje maradt:
 **„Ma lejár”**, **„Holnap lejár”** vagy **„Van még idő”** — a sürgőseket a kártya bal szélén
 piros sáv is jelzi.
 
-Ha egy kérés több főre szól, mint a szoba férőhelye (ilyen csak régebbi kérésnél fordulhat elő,
-vagy ha a férőhelyet utólag csökkentette), a kártyán és a **„Visszaigazolom”** lépésben is piros
+Ha egy kérés több főre szól, mint a szoba férőhelye — több szobánál a kért szobák férőhelyének
+összege — (ilyen csak régebbi kérésnél fordulhat elő, vagy ha a férőhelyet utólag
+csökkentette), a kártyán és a **„Visszaigazolom”** lépésben is piros
 figyelmeztetés áll: *„Figyelem: a vendég 7 főre kér, a férőhely 4 fő.”* Ugyanez áll az értesítő
 levél tetején és a levélből nyíló megerősítő oldalon.
 
@@ -65,6 +67,24 @@ Két lehetőség közül választ:
 
 Amíg a megerősítés nyitva van, az ellentétes döntés gombja nem látszik — így nem koppinthat
 véletlenül rá.
+
+## Több szobás kérés — mindet vagy egyiket sem
+
+A vendég a honlapon egy kérésben több szobát is kérhet, akár mindet (aki az egész házat
+szeretné, minden szobát kijelöl). Az ilyen kérést így ismeri fel:
+
+- a vendég neve melletti jelvényen a szobák száma is áll, például „Foglalási kérés · 2 szoba”
+  (ár nélküli kérésnél „Árajánlat-kérés · 2 szoba”);
+- a kártyán a kért szobák vesszővel felsorolva szerepelnek;
+- a **„Visszaigazolom”** gomb mellett zárójelben a szobák száma áll, például „(2 szoba)”, és a
+  megerősítés kimondja, hogy az összes kért szoba napjai foglalttá válnak — a portálok
+  (Booking.com, Szállás.hu, Airbnb) felé is.
+
+A döntés **az egész kérésre** szól: vagy minden kért szobát visszaigazol, vagy az egész kérést
+elutasítja. Egy-egy szobát külön nem fogadhat el — ha csak néhány szobát tudna adni, írjon a
+vendégnek (**„Írok neki”**), és kérje meg, hogy azokra küldjön új kérést. A végösszeg a kártya
+felső sorában áll; ha koppint az **„Az ár tételesen”** sorra, kinyílik a szobánkénti bontás
+(ez csak áras kérésnél van — árajánlat-kérésnél az árat Ön adja meg).
 
 Ugyanezt a döntést a kérésről kapott e-mailből is elintézheti, belépés nélkül: a levél
 **„Foglalások megnyitása”** gombja alatt, a **„Gyors döntés innen is:”** sorban az **„Elfogadom”** vagy
@@ -99,11 +119,17 @@ ajánlatot:
      napokra a honlapon ajánlatkérés nélkül is foglalható lesz, más napokra továbbra is
      árajánlatot kérnek. A tartózkodás utolsó éjszakája után az ár lekerül az árlistáról.
    - **„Alapárként”** — dátum nélkül, a következő módosításig: minden olyan éjszakára érvényes,
-     amelyre nincs szezonár. Ettől a szoba (vagy az egész szállás) a honlapon **foglalhatóvá
+     amelyre nincs szezonár. Ettől a szoba (vagy, ha csak egyben adja ki, az egész ház) a honlapon **foglalhatóvá
      válik** — a vendégek onnantól ajánlatkérés nélkül küldhetnek foglalási kérést, amit Ön igazol
      vissza.
 
    A választás alatti keretes mondat mindig kimondja, mi lesz a választásának a következménye.
+
+   **Több szobás árajánlat-kérésnél** (ha valamelyik kért szobának nincs ára, vagy fejenkénti
+   áras szobákból kér többet) a lap nem szobánként kérdez: a mező felirata „Ár éjszakánként, a …
+   szobára együtt” — egyetlen éjszakánkénti árat ad meg az összes kért szobára együtt. Ez az ár
+   csak erre a kérésre szól, árlistába nem kerülhet, ezért a **„Mentsem az árlistába is?”**
+   négyzet itt nem is jelenik meg.
 5. Koppintson az **„Ajánlat küldése”** gombra. Ha mégsem tudja fogadni, ugyanitt a
    **„Nem szabad”** gombbal elutasíthatja.
 
@@ -138,7 +164,8 @@ sorként látja, a dátumokkal együtt; ott törölheti is.
 
 ## Ha többen kérik ugyanazt az időszakot
 
-Ha egy kérés napjai fedik egy másik kérését, a kérésen piros jelzés figyelmeztet. A
+Ha egy kérés napjai fedik egy másik kérését (több szobás kérésnél: bármelyik kért szobán), a
+kérésen piros jelzés figyelmeztet. A
 **„Visszaigazolom”** gombra ilyenkor egy választó ablak nyílik: a naptáron színnel látja, ki
 melyik éjszakákat kéri, és kiválaszthatja, kinek adja az időszakot. A **„Visszaigazolom — a
 többit elutasítom”** gomb megerősítés után a választott vendégnek visszaigazolást küld, a
@@ -160,8 +187,9 @@ következő döntése van: a legsürgősebb kérésén — vagy ha egy sem vár,
   a **„Rövid indoklás a vendégnek küldött levélbe (nem kötelező)”** mező. A **„Lemondom a
   foglalást”** gombbal a napok felszabadulnak, és a vendég lemondó e-mailt kap az indoklással; a
   **„Mégsem — megtartom”** gombbal minden marad a régiben. A lemondás nem vonható vissza.
-- **Csíkos nap:** azt a napot a szállás egy **másik szobája** tartja (például az egész
-  szállásra érkezett foglalás a szobákat is lefoglalja). Ez a nap **nem koppintható** — sem
+- **Csíkos nap:** azt a napot a szállás egy **másik szobája** tartja (például egy korábban az
+  egész házra érkezett foglalás a szobákat is lefoglalja). Egy több szobás foglalás nem csíkos:
+  mindegyik kért szoba naptárában saját vendég-foglalásként látszik. Ez a nap **nem koppintható** — sem
   feloldani, sem megnyitni nem lehet itt. A napot az a szoba szabadítja fel, amelyik tartja.
 
 ## Az összegző csempék
@@ -174,6 +202,7 @@ foglalást.
 
 A **„Korábbi kérések”** listában minden eldöntött kérés látszik a döntéssel együtt. Visszaigazolt
 foglalást a **„Lemondom”** linkkel mondhat le (indoklást is írhat — a vendég e-mailben kapja meg).
+Több szobás foglalás lemondásakor az összes szobájának napjai együtt szabadulnak fel.
 A vendég maga is lemondhat a visszaigazoló levelében lévő linkkel — ilyenkor Ön kap e-mailt, és a
 napok automatikusan felszabadulnak.
 
@@ -193,6 +222,7 @@ fiókja e-mail címére mennek.
 ## Csíkos napok a naptárban
 
 A csíkos nap azt jelenti, hogy a szállás **másik szobája** tartja azt az éjszakát: vagy az egész
-szállást foglalták le, vagy — ha épp az egész szállás naptárát nézi — az egyik szobája foglalt.
+házra szól egy (korábbi) foglalás, vagy — ha épp az egész ház naptárát nézi, mert csak egyben adja
+ki — az egyik szobája foglalt.
 Ezek a napok itt nem koppinthatók; a Modulok → Online foglalás naptárában a napra koppintva látja,
 melyik szoba és ki tartja.

@@ -241,7 +241,8 @@ function calendarCard(d: BookingsTabData, lang: string): string {
   // already booked or blocked keeps its own kind — that is the conflict to see.
   const reqByDay = new Map<string, InboxItem>();
   for (const r of pendingInOrder(d.requests, d.expireHours)) {
-    if (!r.unitId || r.unitId !== d.unitId) continue;
+    // ADR-XXXX: a multi-room request is drawn on each of its rooms' calendars.
+    if (!(r.unitIds ?? (r.unitId ? [r.unitId] : [])).includes(d.unitId)) continue;
     for (const n of stayNights(r)) if (!reqByDay.has(n)) reqByDay.set(n, r);
   }
   const reqCells = m.cells.filter((c) => !c.past && !c.source && reqByDay.has(c.day));
@@ -617,6 +618,8 @@ function requestCard(
   const left = hoursLeft(r, expireHours);
   const fresh = !r.seen;
   const quote = !r.quotedTotal;
+  // ADR-XXXX: a request may hold several rooms — said on the badge and on the one verdict.
+  const rooms = r.unitIds?.length ?? 1;
   const conflictNote = overlaps?.length
     ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => esc(o.guestName)).join(", ") })}</span>`
     : "";
@@ -643,7 +646,9 @@ function requestCard(
   // closes the panel in place).
   const verdictPanel = (accept: boolean): string =>
     `<details class="bk-verdict"><summary class="${accept ? "bk-btn--ok" : "bk-btn--ghost"}">` +
-    `${ic(accept ? "check" : "close", 15)}${accept ? T(lang, "Visszaigazolom") : T(lang, "Elutasítom")}</summary>` +
+    `${ic(accept ? "check" : "close", 15)}${
+      accept ? (rooms > 1 ? T(lang, "Visszaigazolom ({n} szoba)", { n: rooms }) : T(lang, "Visszaigazolom")) : T(lang, "Elutasítom")
+    }</summary>` +
     `<div class="bk-cf${accept ? "" : " bk-cf--no"}" role="group">` +
     `<p class="bk-cf__q">${
       accept
@@ -654,7 +659,9 @@ function requestCard(
     (accept && capNote ? `<p class="bk-cf__cap">${capNote}</p>` : "") +
     `<p class="bk-cf__c">${
       accept
-        ? T(lang, "A visszaigazolással a napok foglalttá válnak a naptárban, a vendég e-mailt kap naptár-melléklettel, benne az Ön üzenetével és a lemondó-linkkel.")
+        ? rooms > 1
+          ? T(lang, "A visszaigazolással mind a {n} szoba napjai foglalttá válnak a naptárban (a portálok felé is), a vendég e-mailt kap naptár-melléklettel, benne az Ön üzenetével és a lemondó-linkkel.", { n: rooms })
+          : T(lang, "A visszaigazolással a napok foglalttá válnak a naptárban, a vendég e-mailt kap naptár-melléklettel, benne az Ön üzenetével és a lemondó-linkkel.")
         : T(lang, "A vendég udvarias elutasító e-mailt kap; ha ír ide üzenetet, az bekerül a levélbe. A napok szabadok maradnak.")
     }</p>` +
     `<form method="post" action="/admin/booking/decide"${accept && overlaps?.length ? ` data-bk-overlap="${esc(r.id)}"` : ""}>` +
@@ -701,7 +708,9 @@ function requestCard(
     `<span class="bk-req__ico">${ic("account", 20)}</span>` +
     `<div class="bk-req__t">` +
     `<span class="bk-req__who"><strong>${esc(r.guestName)}</strong>` +
-    `<span class="bk-req__kind${quote ? " bk-req__kind--q" : ""}">${quote ? T(lang, "Árajánlat-kérés") : T(lang, "Foglalási kérés")}</span></span>` +
+    `<span class="bk-req__kind${quote ? " bk-req__kind--q" : ""}">${quote ? T(lang, "Árajánlat-kérés") : T(lang, "Foglalási kérés")}${
+      rooms > 1 ? ` · ${T(lang, "{n} szoba", { n: rooms })}` : ""
+    }</span></span>` +
     `<span class="bk-req__dates">${esc(when)} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +

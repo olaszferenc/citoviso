@@ -39,9 +39,14 @@ const unit = (id: string, name: string, representsWhole: boolean, isWholePropert
   ok(gaps.includes("u1"), "① kontroll: a látható, ár nélküli szoba igen", gaps.join(","));
   ok(!gaps.includes("u2"), "① kontroll: az árazott szoba nem");
 
+  // ADR-XXXX: beside its rooms the whole house is no offer of its own (the guest ticks every
+  // room) — no price asked; let ONLY as one, it is the offer and asks for a price.
   const letWhole = unit("u0", "A szállás egésze", true, true);
   const g2 = priceGapsOf([letWhole, roomPriced], prices, TODAY).map((g) => g.unitId);
-  ok(g2.includes("u0"), "① egyben KIADOTT egész szállás ár nélkül → kér árat", g2.join(","));
+  ok(!g2.includes("u0"), "① a szobák melletti egész ház NEM kér árat (nem külön ajánlat)", g2.join(","));
+  const onlyWhole = { ...unit("u0", "A szállás egésze", true, true), wholeOnly: true };
+  const g2b = priceGapsOf([onlyWhole, { ...roomPriced, wholeOnly: false }], prices, TODAY).map((g) => g.unitId);
+  ok(g2b.includes("u0"), "① CSAK egyben kiadott egész szállás ár nélkül → kér árat", g2b.join(","));
 
   const g3 = priceGapsOf([hiddenWhole], new Map() as never, TODAY).map((g) => g.unitId);
   ok(g3.includes("u0"), "① ha csak a rejtett egység maradt (guestUnits sosem üres) → azt árazni kell", g3.join(","));

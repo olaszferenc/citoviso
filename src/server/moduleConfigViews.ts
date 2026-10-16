@@ -28,7 +28,7 @@ import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
-import { DEFAULT_UNIT_NAME, type UnitDeletionImpact } from "../tenant/units.js";
+import { DEFAULT_UNIT_NAME, guestUnits, type UnitDeletionImpact } from "../tenant/units.js";
 import { bookingRef } from "../booking/requests.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
@@ -1658,8 +1658,9 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
 /**
  * ADR-0392 (approved plan tenant-admin/whole-house-simple, owner 2026-10-15: the three-state
  * card with its „melyik szoba" picker was „túl van bonyolítva"). The whole house is its own
- * card above the rooms grid — never one of the rooms. A guest books a room OR the whole house;
- * the owner's only choice is „Csak egyben adom ki". The house's price is set right here.
+ * card above the rooms grid — never one of the rooms. The owner's only choice is „Csak egyben
+ * adom ki". ADR-XXXX: otherwise the guest ticks one or more rooms in one request, and the house
+ * has no price of its own; the price field shows only when the place is let only as one.
  * Two plain forms: works with zero JS (the box also saves itself on change when JS runs).
  */
 function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, lang: string): string {
@@ -1682,14 +1683,16 @@ function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, la
         ar: T(lang, "Mentve: az egész ház ára."),
         nincsar: T(lang, "Az ár törölve — a vendég árajánlatot kér."),
         csak: T(lang, "Mentve: csak az egész ház foglalható."),
-        mindketto: T(lang, "Mentve: a vendég egy szobát vagy az egész házat foglalhatja."),
+        mindketto: T(lang, "Mentve: a vendég szobánként foglal — egy kérésben akár az összes szobát."),
       } as Record<HouseSaved, string>)[h.saved] +
       `</span></p>`
     : "";
   const priceNow = h?.base
     ? `<b>${esc(formatNumber(h.base))} ${cur}</b>`
     : `<b>${T(lang, "nincs megadva — a vendég árajánlatot kér")}</b>`;
-  const price = nu?.pricingActive
+  // ADR-XXXX: beside its rooms the house has no price of its own any more (the guest ticks
+  // every room); the price field belongs to the „Csak egyben adom ki" mode only.
+  const price = nu?.pricingActive && only
     ? `<form method="POST" action="/admin/units/whole" class="rs-house__price" novalidate>` +
       `<input type="hidden" name="what" value="price">` +
       `<span>${T(lang, "Alapára:")} ${priceNow}</span>` +
@@ -1709,7 +1712,7 @@ function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, la
     `<p>` +
     (only
       ? T(lang, "A vendég csak az egész házat foglalhatja. A szobák a honlapon képpel és felszereltséggel látszanak, de külön nem foglalhatók, és nem kell áruk.")
-      : T(lang, "A vendég foglalhat egy szobát, vagy az egész házat egyben. Ha az egész házat foglalják, minden szoba betelik arra az időre; ha egy szobát, az egész ház nem foglalható arra az időre.")) +
+      : T(lang, "A vendég egy vagy több szobát foglalhat egy kérésben — akár mind a {n} szobát. Az egész háznak nincs külön ára: aki az egészet kéri, minden szobát kijelöl, és a szobák árát fizeti.", { n: rooms.length })) +
     `</p>` +
     `<p>${T(lang, "{n} szoba", { n: rooms.length })}${capText ? ` · ${capText}` : ""} · ` +
     `<a href="#szoba-${esc(house.id)}" data-rs-card="${esc(house.id)}">${T(lang, "Képek, leírás")}</a></p>` +
@@ -2484,7 +2487,7 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
   const tabUnits = booking.units.filter((u) => u.bookable !== false);
   const left = booking.units.filter((u) => u.bookable === false);
   // Let only as one → the left-out units are presentation rooms; otherwise it is the whole
-  // place, hidden because it is not let as one (ADR-0256).
+  // place, which beside its rooms takes no request of its own (ADR-0256, ADR-XXXX).
   const wholeOnlySite = booking.units.some((u) => u.wholeOnly);
   const leftNames = esc(left.map((u) => u.name).join(", "));
   const leftNote = (margin: string): string =>
@@ -2492,11 +2495,19 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
       ? `<p class="adm-lead" style="margin:${margin}" data-cit-unit-nocal>${
           wholeOnlySite
             ? T(lang, "{names}: a házzal együtt foglalható, ezért nincs külön naptára.", { names: leftNames })
-            : T(lang, "{names}: nem kiadó egyben, ezért nincs naptára.", { names: leftNames })
+            : // ADR-XXXX: the whole place is booked by ticking every room — its nights are theirs.
+              T(lang, "{names}: aki az egészet kéri, minden szobát kijelöl, ezért nincs külön naptára.", { names: leftNames })
         }</p>`
       : "";
+  // ADR-XXXX: the whole house beside its rooms has no tab, but its calendar opens from a direct
+  // link (an older booking or block on it) — say whose calendar this is, or the owner reads it
+  // as one of the rooms'.
+  const offTab = booking.units.find((u) => u.id === booking.unitId && !tabUnits.includes(u));
+  const offTabNote = offTab
+    ? `<p class="adm-lead" style="margin:0 0 8px" data-cit-unit-offtab>${T(lang, "Most ezt a naptárat látja: {name}. Itt az egész házra szóló régebbi foglalások és zárások kezelhetők; új foglalás a szobák naptárába érkezik.", { name: esc(offTab.name) })}</p>`
+    : "";
   if (tabUnits.length < 2) {
-    return left.length ? `<div class="adm-card unit-tabs-card">${leftNote("0")}</div>` : "";
+    return left.length || offTabNote ? `<div class="adm-card unit-tabs-card">${offTabNote}${leftNote("0")}</div>` : "";
   }
   const tabs = tabUnits
     .map((u) => {
@@ -2517,7 +2528,7 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
     `<div class="adm-card unit-tabs-card">` +
     `<h3 class="unit-tabs__h">${T(lang, "Mit ad ki?")}</h3>` +
     `<p class="adm-lead">${T(lang, "Minden szobának külön naptára van, így külön telhet be.")}</p>` +
-    `<div class="unit-tabs" role="tablist">${tabs}</div>${leftNote("12px 0 0")}</div>`
+    `<div class="unit-tabs" role="tablist">${tabs}</div>${offTabNote ? `<div style="margin-top:12px">${offTabNote}</div>` : ""}${leftNote("12px 0 0")}</div>`
   );
 }
 
@@ -3452,30 +3463,6 @@ function priceDecision(
  * year; making them re-enter it each January would guarantee stale prices.
  */
 /**
- * ADR-0232 (owner 2026-09-25): the whole place has its OWN price, never the rooms'
- * sum — a derived figure would be a number nobody set (§B.17). This line is owner-side
- * orientation only: what the rooms cost together, so the owner knows what to price
- * against. The guest never sees it.
- */
-function wholeSumHint(data: PricingEditorData, cur: string, today: string, lang: string): string {
-  const rooms = data.units.filter((u) => !u.isWholeProperty);
-  const bases = rooms.map((r) =>
-    (data.prices[r.id] ?? []).find((p) => p.isBase && !p.validFrom && (!p.validTo || p.validTo >= today)),
-  );
-  const sum = bases.reduce((s, b) => s + (b?.amount ?? 0), 0);
-  if (!sum) return "";
-  const missing = bases.filter((b) => !b).length;
-  return (
-    `<p class="citui-hint" data-cit-whole-sum style="margin:-8px 0 14px">` +
-    T(lang, "Tájékoztatásul: a szobák külön, együtt {sum} {cur} / éj.", { sum: grouped(sum), cur: esc(cur) }) +
-    (missing ? " " + T(lang, "({n} szobának nincs alapára.)", { n: missing }) : "") +
-    " " +
-    T(lang, "Az egész szállás ára ettől független — azt Ön adja meg.") +
-    `</p>`
-  );
-}
-
-/**
  * „Hol látják a vendégek az árait?" — approved plan price-where-2 (owner, 2026-09-28).
  *
  * The owner pays for the Árak module and, with base prices only, finds no price table on
@@ -3536,7 +3523,14 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   const bk = data.bookingActive;
   // ADR-0257 (owner: „szobák nem kérnek árát"): a presentation room gets no price card.
   const shown = new Set(data.presentationRooms ?? []);
-  const priced = data.units.filter((u) => !shown.has(u.id));
+  // ADR-XXXX: beside its rooms the whole house is no offer of its own — no price card for it
+  // (the guest ticks every room); it is priced only when the place is let only as one.
+  const offered = new Set(
+    guestUnits(
+      data.units.map((u) => ({ ...u, representsWhole: !!u.representsWhole, isWholeProperty: !!u.isWholeProperty })),
+    ).map((u) => u.id),
+  );
+  const priced = data.units.filter((u) => !shown.has(u.id) && offered.has(u.id));
   const cards = priced
     .map((u) => {
       // 0072: a lapsed dated row can never price a night again — it is not shown
@@ -3595,7 +3589,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `</form>` +
         `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
         // ADR-0257: let only as one, the rooms have no price to add up — no hint.
-        (u.isWholeProperty && data.units.length > 1 && !shown.size ? wholeSumHint(data, cur, today, lang) : "") +
+
         priceDecision(
           u,
           Boolean(base),

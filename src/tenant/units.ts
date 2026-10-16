@@ -8,6 +8,7 @@
 // ("A szállás egésze") and the admin hides unit UI entirely while there is only one.
 // Multi-unit is available the moment it is needed and invisible until then.
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { todayForSite, todayForUnit } from "./timeZone.js";
 import { slugify } from "../domains.js";
@@ -310,7 +311,8 @@ export async function futureAcceptedBookings(unitId: string): Promise<number> {
   const row = await db
     .selectFrom("booking_request")
     .select(db.fn.countAll<string>().as("n"))
-    .where("unit_id", "=", unitId)
+    // ADR-XXXX: a multi-room booking counts for each of its rooms.
+    .where(sql<boolean>`${unitId}::uuid = any(unit_ids)`)
     .where("status", "=", "accepted")
     .where("date_to", ">=", today)
     .executeTakeFirst();
@@ -510,13 +512,14 @@ export async function unitDeletionImpacts(siteId: string): Promise<Map<string, U
       .execute(),
     db
       .selectFrom("booking_request")
-      .select(["id", "unit_id", "guest_name", "date_from", "date_to", "status"])
-      .where("unit_id", "in", ids)
+      .select(["id", "unit_id", "unit_ids", "guest_name", "date_from", "date_to", "status"])
+      // ADR-XXXX: a multi-room request belongs to each of its rooms.
+      .where(sql<boolean>`unit_ids && ${sql.val(ids)}::uuid[]`)
       .orderBy("date_from")
       .execute(),
   ]);
   for (const id of ids) {
-    const mine = reqs.filter((r) => r.unit_id === id);
+    const mine = reqs.filter((r) => r.unit_ids.includes(id));
     const open = mine.filter((r) => r.status === "pending" || r.status === "offered");
     const future = mine.filter((r) => r.status === "accepted" && iso(r.date_to) >= today);
     const myPrices = prices.filter((p) => p.unit_id === id && !p.parent_id);
@@ -566,7 +569,7 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   const booked = await db
     .selectFrom("booking_request")
     .select("id")
-    .where("unit_id", "=", unitId)
+    .where(sql<boolean>`${unitId}::uuid = any(unit_ids)`)
     .where("status", "=", "accepted")
     .where("date_to", ">=", today)
     .executeTakeFirst();
@@ -579,7 +582,7 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   const open = await db
     .selectFrom("booking_request")
     .select("id")
-    .where("unit_id", "=", unitId)
+    .where(sql<boolean>`${unitId}::uuid = any(unit_ids)`)
     .where("status", "in", ["pending", "offered"])
     .executeTakeFirst();
   if (open) {

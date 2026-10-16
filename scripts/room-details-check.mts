@@ -23,6 +23,16 @@
 // ⚠️ A `--selftest` minden visszarontáshoz KONTROLLT is visz: ahol a hiba szerkezetileg
 // nem jöhet elő, ott ZÖLDNEK kell maradnia. Egy piros önmagában nem bizonyít semmit —
 // attól is pirosra mehetne, hogy a visszarontás bármit eltört.
+//
+// ⭐ ADR-XXXX (több szoba egy kérésben, kontraktus design-refs/tenant-site/multi-room, tulaj
+// „B”, 2026-10-16): 2+ egységnél NINCS `#cit-unit` választó. A widgetben dátum UTÁN szoba-lista
+// áll (`[data-cit-roomlist]`, `[data-cit-room-pick][value=<id>]` pipák), a kártya/felugró
+// „Foglalás”-a ezt a listát pipálja (`cit:pickroom`). „Viszi a szobát” tehát MOST ezt jelenti:
+// a kattintás után a widget a képernyőn, és a dátumok beállítása után PONTOSAN annak a szobának
+// a pipája áll. A kártya-gombot dátum ELŐTT nyomjuk (a pipának meg kell maradnia a lista
+// kirajzolásáig), a felugróét dátum UTÁN — így mindkét út mérve van. ÉS: szobák mellett az
+// egész ház NEM külön ajánlat (nincs kártyája, nincs sávja, nincs pipája) — a régi ③ (az egész
+// ház sávja) ezzel kivezetve; a csak-egyben mód a whole-only-guest-check őré.
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -37,6 +47,7 @@ import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { amenityByLabel, amenitySvg } from "../src/tenant/amenityCatalog.js";
 import type { Recipe, Room, SiteData } from "../src/engine/recipe.js";
+import { guestUnits } from "../src/tenant/unitVisibility.js";
 
 const KEEP = process.argv.includes("--keep");
 const SELFTEST = process.argv.includes("--selftest");
@@ -72,13 +83,16 @@ const P = [photo(1, "#2f6b57"), photo(2, "#3a5f7d"), photo(3, "#7d5f3a"), photo(
 const DESC_MANY = "A teljes ház a kertre nyíló nappalival és tágas konyhával.";
 const DESC_ONE = "Külön bejárat, teakonyha, csendes sarok a kert végében.";
 
-/** A három forgatókönyv EGY lapon: a mérés így ugyanazon a renderen látja mindet. */
+/** A három forgatókönyv EGY lapon: a mérés így ugyanazon a renderen látja mindet.
+ *  A láthatósági tények (representsWhole / isWholeProperty) a TERMÉK szabályához kellenek:
+ *  a fixture a `guestUnits()`-on át áll elő, ahogy az editor is (ADR-0256, ADR-XXXX). */
 const UNITS = [
-  { id: "u-teljes", name: "Teljes Szállás", capacity: 12 },
-  { id: "u-kerti", name: "Kerti Appartman", capacity: 4 },
-  { id: "u-teto", name: "Tetőtéri Appartman", capacity: 6 },
-  { id: "u-kamra", name: "Kamra Szoba", capacity: 2 },
-  { id: "u-egesz", name: "Az egész ház" },
+  { id: "u-teljes", name: "Teljes Szállás", capacity: 12, representsWhole: false, isWholeProperty: false },
+  { id: "u-kerti", name: "Kerti Appartman", capacity: 4, representsWhole: false, isWholeProperty: false },
+  { id: "u-teto", name: "Tetőtéri Appartman", capacity: 6, representsWhole: false, isWholeProperty: false },
+  { id: "u-kamra", name: "Kamra Szoba", capacity: 2, representsWhole: false, isWholeProperty: false },
+  // ⭐ Az egész ház, „egyben is kiadó” jelöléssel, SZOBÁK MELLETT: ADR-XXXX óta nem ajánlat.
+  { id: "u-egesz", name: "Az egész ház", representsWhole: true, isWholeProperty: true },
 ];
 
 const ROOMS: Room[] = [
@@ -111,9 +125,11 @@ const ROOMS: Room[] = [
     name: "Kamra Szoba", unitId: "u-kamra", capacity: "2 fő", price: "9 000 Ft / éj",
   },
   {
-    // ⭐ AZ EGÉSZ HÁZ, ár és fotó nélkül (a Három Huszár mért esete): a rácsból KI, a saját
-    // sávjába (design-refs/tenant-site/whole-unit-band). UTOLSÓ, hogy a kártyák indexe
-    // ne csússzon: a sáv indexe = a szobák száma.
+    // ⭐ AZ EGÉSZ HÁZ, ár és fotó nélkül (a Három Huszár mért esete). 2026-09-28 óta a
+    // rácsból ki, saját sávba (whole-unit-band) — ADR-XXXX óta szobák mellett SEHOL: a
+    // `guestUnits()` kiveszi, a vendég minden szobát kipipál helyette. A fixture-ben marad,
+    // hogy a visszarontás (a szabály kikapcsolása) vissza tudja hozni. UTOLSÓ, hogy a
+    // kártyák indexe ne csússzon.
     name: "Az egész ház", unitId: "u-egesz", wholeProperty: true, description: DESC_MANY,
   },
 ];
@@ -124,7 +140,15 @@ const WHOLE = ROOMS.find((r) => r.wholeProperty)!;
 const EMPTY_SENTENCE = "Ehhez az egységhez még nincs leírás és felszereltség megadva.";
 const AM_HEADING = "Amit ez az egység kínál";
 
-function siteData(): SiteData {
+type UnitFilter = (units: typeof UNITS) => typeof UNITS;
+/** A TERMÉK szabálya (ADR-0256 + ADR-XXXX): mit kínál a lap a vendégnek. */
+const PRODUCT_FILTER: UnitFilter = (u) => guestUnits(u);
+
+function siteData(filter: UnitFilter = PRODUCT_FILTER): SiteData {
+  const units = filter(UNITS);
+  const shown = new Set(units.map((u) => u.id));
+  const rooms = ROOMS.filter((r) => !r.unitId || shown.has(r.unitId));
+  const offer = units.map(({ id, name, capacity }) => (capacity ? { id, name, capacity } : { id, name }));
   return {
     name: "ELEK-TESZT Vendégház",
     tagline: "Csend a Balatonnál",
@@ -133,14 +157,14 @@ function siteData(): SiteData {
     photos: P,
     contact: { email: "info@example.invalid", phone: "+36 30 000 0000", address: "Fő utca 1." },
     place: { city: "Balatonboglár", country: "HU" },
-    rooms: ROOMS,
+    rooms,
     // ⚠️ A foglalás-modul NÉLKÜL a „melyik szobáról ugrottam le" állítás nem mérhető:
-    // nincs egység-választó, amit meg lehetne nézni. A hiba pont ott él, ahol pénz van.
-    booking: { units: UNITS, minNights: 1, maxNights: 14, horizonMonths: 6, leadTimeDays: 0 },
+    // nincs szoba-lista, amit meg lehetne nézni. A hiba pont ott él, ahol pénz van.
+    booking: { units: offer, minNights: 1, maxNights: 14, horizonMonths: 6, leadTimeDays: 0 },
     // ⛔ A vélemény-űrlapnak SAJÁT name="unit" választója van, és a lapon a foglalás
     // ELŐTT áll (mérve a Három Huszáron, 2026-09-28). Nélküle a „melyik választót
     // állította a leugrás” kérdés szerkezetileg nem tehető fel: egy választó van.
-    reviewForm: { units: UNITS.map((u) => ({ id: u.id, name: u.name })) },
+    reviewForm: { units: offer.map((u) => ({ id: u.id, name: u.name })) },
   } as unknown as SiteData;
 }
 
@@ -153,7 +177,7 @@ const WIDTHS = [
 // STRING, mert a tsx/esbuild `keepNames`-e `__name(...)` hívást injektálna a nyilazott
 // függvényekbe, ami `page.evaluate`-ben ReferenceError.
 const PROBE = `(function (cfg) {
-  var out = { fatal: null, findings: [], shells: 0, cards: 0, cardCtas: 0 };
+  var out = { fatal: null, findings: [], shells: 0, cards: 0, cardCtas: 0, carry: null };
   function bad(kind, detail) { out.findings.push({ kind: kind, detail: detail }); }
 
   var sec = document.querySelector('[data-cit-module="rooms"]');
@@ -271,22 +295,27 @@ const PROBE = `(function (cfg) {
   // ⛔ Mérve 2026-09-22: a 2. szoba „Foglalás"-a leugrott a foglalás-szekcióra, és a
   // választót az 1. egységen hagyta — rossz naptár, rossz ár, és a beküldés a ROSSZ
   // egységre ment volna. A kérdés nem az, hogy odaugrik-e, hanem hogy MIT VISZ MAGÁVAL.
-  // ⛔ A FOGLALÁS SAJÁT választója (#cit-unit), nem az első name="unit": a vélemény-
-  // űrlapé előtte áll, és a runtime is azt állította — az őr ugyanazt kérdezte, ezért
-  // ZÖLDEN védte a hibát (2026-09-28).
-  var sel = document.getElementById("cit-unit");
+  // ⛔ A FOGLALÁS SAJÁT listája ([data-cit-roomlist], ADR-XXXX), nem az első name="unit":
+  // a vélemény-űrlap választója előtte áll, és a runtime egyszer azt állította — az őr
+  // ugyanazt kérdezte, ezért ZÖLDEN védte a hibát (2026-09-28).
+  var list = document.querySelector("[data-cit-roomlist]");
   var firstUnit = document.querySelector('[name="unit"]');
-  if (!firstUnit || firstUnit === sel) {
-    bad("a-fixture-nem-allitja-elo-a-csapdat", "a vélemény-űrlap választója nem előzi meg a foglalásét");
+  if (!firstUnit || !list || !(firstUnit.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+    bad("a-fixture-nem-allitja-elo-a-csapdat", "a vélemény-űrlap választója nem előzi meg a foglalás szoba-listáját");
   }
+  // 2+ egységnél a régi választó NEM élhet tovább (kontraktus multi-room ②–③).
+  if (document.getElementById("cit-unit")) bad("regi-egyseg-valaszto-a-szoba-lista-mellett", "#cit-unit");
   var ctas = sec.querySelectorAll('a[href="#cit-booking"], a[href="#cit-enquiry"]');
   // ⚠️ A KÉRDÉS NEM A GOMB, HANEM AZ ÚT. Három sablon (arch-frames, tilted-gallery,
   // wordmark-grow) kártyája szándékosan szikár: fotó + név + férőhely + ár, CTA nélkül —
   // ott a felugró „Foglalás"-a az út, és azt a felugró-szonda méri (ott KÖT, mind a 19-en).
   // Itt csak azt kötjük ki: AHOL VAN kártya-gomb, ott vinnie KELL a szobát.
+  // ⭐ DÁTUM ELŐTT kattintunk: a pipát a widget megjegyzi, és a lista a dátumok után
+  // rajzolja ki — az ELLENŐRZÉS a measure()-ben, a dátumok beállítása után (carry).
   out.cardCtas = ctas.length;
+  out.carry = null;
   if (cfg.expectCta && ctas.length) {
-    if (!sel) bad("nincs-egyseg-valaszto", "van foglalás-gomb, de nincs mihez vinni a szobát");
+    if (!list) bad("nincs-szoba-lista", "van foglalás-gomb, de nincs mihez vinni a szobát");
     else {
       // a MÁSODIK szoba gombja — az elsőn a hiba szerkezetileg láthatatlan volna
       var want = cfg.unitByIndex["1"];
@@ -298,13 +327,11 @@ const PROBE = `(function (cfg) {
       }
       if (!target) bad("a-foglalas-gomb-nem-tudja-melyik-szoba", "szoba #1 (" + want + ")");
       else {
-        var before = sel.value;
-        target.click();
-        if (sel.value !== want) {
-          bad("a-leugras-nem-vitte-at-a-szobat",
-            "kattintás a 2. szoba gombján: választó " + before + " → " + sel.value + " (várt: " + want + ")");
+        if (list.querySelector("[data-cit-room-pick]")) {
+          bad("a-meres-nem-datum-elott-kattintott", "a szoba-lista már pipákat mutat dátum nélkül");
         }
-        sel.value = before;
+        target.click();
+        out.carry = want;
       }
     }
   }
@@ -491,12 +518,51 @@ function expectations(minVisible: number): Expect[] {
   ];
 }
 
+// ── a widget szoba-listája (ADR-XXXX) ───────────────────────────────────────────
+// A dátumokat a widget SAJÁT mezőin, `change` eseménnyel állítjuk — ugyanaz az út, mint
+// egy begépelt dátumé (a runtime erre rajzolja újra a naptárat ÉS a szoba-listát).
+// +10 → +12 nap: a lead-idő (0) és a horizont (6 hónap) belül, két éj.
+const SET_DATES = `(function(){
+  var f = document.getElementById("cit-from"), t = document.getElementById("cit-to");
+  if (!f || !t) return false;
+  function iso(n){ var d = new Date(); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  f.value = iso(10); f.dispatchEvent(new Event("change", { bubbles: true }));
+  t.value = iso(12); t.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+})()`;
+/** A lista pipái: mi van benne, és mi áll kipipálva. */
+const READ_PICKS = `(function(){
+  var l = document.querySelector("[data-cit-roomlist]");
+  if (!l) return null;
+  var all = [], on = [];
+  l.querySelectorAll("[data-cit-room-pick]").forEach(function(c){ all.push(c.value); if (c.checked) on.push(c.value); });
+  return { all: all, on: on };
+})()`;
+/** Minden pipa le — a vendég útján (change esemény), hogy a widget állapota is ürüljön.
+ *  A lista minden változásra újrarajzolódik, ezért mindig újra keresünk. */
+const CLEAR_PICKS = `(function(){
+  var l = document.querySelector("[data-cit-roomlist]");
+  for (var g = 0; l && g < 20; g++) {
+    var c = l.querySelector("[data-cit-room-pick]:checked");
+    if (!c) break;
+    c.checked = false; c.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+})()`;
+/** A foglalás-widget a képernyőn van-e (a „Foglalás” oda visz). */
+const WIDGET_IN_VIEW = `(function(){
+  var w = document.querySelector("[data-cit-roomlist]");
+  w = w && (w.closest("form") || w);
+  if (!w) return false;
+  var r = w.getBoundingClientRect();
+  return r.bottom > 0 && r.top < window.innerHeight;
+})()`;
+
 /** A kontraktus §2: görgetés nélkül legalább 6 tétel; asztalin MIND a 9. */
 function minVisibleFor(width: number): number {
   return width >= 900 ? 9 : 6;
 }
 
-async function measure(page: Page, url: string, width: number) {
+async function measure(page: Page, url: string, width: number, rooms: Room[]) {
   const errs: string[] = [];
   const onErr = (e: Error) => errs.push(String(e));
   const onConsole = (m: { type: () => string; text: () => string }) => {
@@ -522,15 +588,15 @@ async function measure(page: Page, url: string, width: number) {
 
   const hintByIndex: Record<string, string> = {};
   const hrefByIndex: Record<string, string> = {};
-  ROOMS.forEach((r, i) => {
+  rooms.forEach((r, i) => {
     const n = r.photos?.length ?? (r.photo ? 1 : 0);
     if (n) hintByIndex[String(i)] = n > 1 ? `${n} kép` : "Részletek";
     if (r.slug) hrefByIndex[String(i)] = `/apartman/${r.slug}`;
   });
   const forbiddenOnCard = [DESC_MANY, DESC_ONE, ...NINE.map((a) => a.label)];
   const unitByIndex: Record<string, string> = {};
-  ROOMS.forEach((r, i) => { if (r.unitId) unitByIndex[String(i)] = r.unitId; });
-  const priceByIndex = ROOMS.map((r) => r.price ?? "");
+  rooms.forEach((r, i) => { if (r.unitId) unitByIndex[String(i)] = r.unitId; });
+  const priceByIndex = rooms.map((r) => r.price ?? "");
 
   const card = (await page.evaluate(
     `${PROBE}(${JSON.stringify({
@@ -542,9 +608,28 @@ async function measure(page: Page, url: string, width: number) {
       // sablonon 2026-09-22-ig NULLA volt, vagyis ott a folyamat nem is létezett.
       expectCta: true,
     })})`,
-  )) as { fatal: string | null; findings: Finding[]; shells: number; cards: number };
+  )) as { fatal: string | null; findings: Finding[]; shells: number; cards: number; carry: string | null };
 
   const findings: Finding[] = [...card.findings];
+  // ── ①b folytatás: a DÁTUM ELŐTT pipált szoba a dátumok után is pipálva áll ──────
+  // ⛔⛔ Az OUTCOME, nem az esemény: a kérés azokra a szobákra megy, amelyek a listában
+  // pipálva állnak. Ha a pipa a lista kirajzolásakor elveszne, a vendég a dátum után üres
+  // listát látna, és a „Foglalás” semmit nem vitt volna.
+  if (!card.fatal) {
+    await page.waitForTimeout(120);
+    if (!(await page.evaluate(SET_DATES))) findings.push({ kind: "nincs-datum-mezo", detail: "#cit-from / #cit-to" });
+    await page.waitForTimeout(120);
+    if (card.carry) {
+      const pk = (await page.evaluate(READ_PICKS)) as { all: string[]; on: string[] } | null;
+      if (!pk || !pk.on.includes(card.carry)) {
+        findings.push({ kind: "a-leugras-nem-vitte-at-a-szobat",
+          detail: `a 2. szoba gombja dátum előtt → dátum után pipálva: ${pk ? pk.on.join(",") || "semmi" : "nincs lista"} (várt: ${card.carry})` });
+      } else if (pk.on.length !== 1) {
+        findings.push({ kind: "a-leugras-mast-is-kipipalt", detail: pk.on.join(",") });
+      }
+      await page.evaluate(CLEAR_PICKS);
+    }
+  }
   if (!card.fatal) {
     for (const want of expectations(minVisibleFor(width))) {
       const opened = await page.evaluate(`window.__citOpen(${want.idx})`);
@@ -584,19 +669,39 @@ async function measure(page: Page, url: string, width: number) {
         findings.push({ kind: "a-fokusz-nem-tert-vissza", detail: `${want.name}: ${closed.focus ?? "sehova"}` });
       }
 
-      // ⛔⛔ AZ OUTCOME: a felugró „Foglalás”-a után a FOGLALÁS választója ezen az
-      // egységen áll. Az attribútum megléte (fent) nem elég — 2026-09-28-ig minden
-      // attribútum stimmelt, és a leugrás a vélemény-űrlap választóját állította.
+      // ⛔⛔ AZ OUTCOME: a felugró „Foglalás”-a után a widget a képernyőn, és a szoba-
+      // listájában EZ a szoba áll pipálva (ADR-XXXX; a dátumok már beállítva). Az attribútum
+      // megléte (fent) nem elég — 2026-09-28-ig minden attribútum stimmelt, és a leugrás a
+      // vélemény-űrlap választóját állította.
+      await page.evaluate(CLEAR_PICKS);
       await page.evaluate(`window.__citOpen(${want.idx})`);
       await page.waitForTimeout(200);
-      const carried = (await page.evaluate(
-        `(function(){var s=document.getElementById("cit-unit");var a=document.querySelector(".cit-rd[data-open] .cit-rd__cta a");` +
-        `if(!s||!a)return {v:null};var b=s.value;s.value="";a.click();var v=s.value;s.value=b;return {v:v};})()`,
-      )) as { v: string | null };
-      await page.waitForTimeout(120);
-      if (carried.v !== want.unitId) {
-        findings.push({ kind: "a-felugro-foglalasa-nem-allitotta-a-valasztot", detail: `${want.name}: ${carried.v ?? "nincs választó"}` });
+      // ⚠️ VALÓDI kattintás (egér), nem `a.click()`: mérve 2026-10-16, a szintetikus
+      // kattintás után a sima görgetés félúton megállt (y=1963, a widget 3247-nél), a valódi
+      // kattintással ugyanaz a lap a widgetnél áll meg — a vendég az utóbbit éli meg.
+      const clicked = await page
+        .click(".cit-rd[data-open] .cit-rd__cta a", { timeout: 3000 })
+        .then(() => true, () => false);
+      // A sima görgetés (scroll-behavior:smooth) időbe telik: legfeljebb ~5 mp-ig várunk rá —
+      // a párhuzamos kapu-futtatás terhelése alatt 2 mp kevés volt (2/42 hamis piros, 10-16).
+      let inView = false;
+      for (let t = 0; clicked && t < 40 && !inView; t++) {
+        await page.waitForTimeout(125);
+        inView = (await page.evaluate(WIDGET_IN_VIEW)) as boolean;
       }
+      const pk = (await page.evaluate(READ_PICKS)) as { all: string[]; on: string[] } | null;
+      if (!clicked) {
+        findings.push({ kind: "a-felugro-foglalasa-nem-kattinthato", detail: want.name });
+      } else if (!pk || !pk.on.includes(want.unitId)) {
+        findings.push({ kind: "a-felugro-foglalasa-nem-pipalta-a-szobat",
+          detail: `${want.name}: ${pk ? pk.on.join(",") || "semmi nincs pipálva" : "nincs szoba-lista"}` });
+      } else if (pk.on.length !== 1) {
+        findings.push({ kind: "a-felugro-foglalasa-mast-is-kipipalt", detail: `${want.name}: ${pk.on.join(",")}` });
+      }
+      if (clicked && !inView) {
+        findings.push({ kind: "a-felugro-foglalasa-nem-vitt-a-widgethez", detail: want.name });
+      }
+      await page.evaluate(CLEAR_PICKS);
       if (await page.evaluate(`!!document.querySelector(".cit-rd[data-open]")`)) {
         await page.keyboard.press("Escape");
         await page.waitForTimeout(150);
@@ -604,45 +709,27 @@ async function measure(page: Page, url: string, width: number) {
     }
   }
 
-  // ── ③ AZ EGÉSZ HÁZ SÁVJA (whole-unit-band, a tulaj „C”-je) ─────────────────────
-  // EGY sáv; a rácsban NINCS kártyája; ár nélkül a sáv gombja nem „Foglalás”; a felugró
-  // „Egyedi ár”-at mond és „Árajánlatot kérek”-et, és a gombja a FOGLALÁS választóját
-  // az egész házra állítja (outcome, nem attribútum).
+  // ── ③ SZOBÁK MELLETT AZ EGÉSZ HÁZ NEM AJÁNLAT (ADR-XXXX, multi-room ①) ──────────
+  // Felülírja a régi whole-unit-band „C”-t (sáv, „Egyedi ár”, „Árajánlatot kérek”): nincs
+  // sávja, nincs kártyája, és a widget listájában nincs pipája — aki az egészet akarja,
+  // minden szobát kipipál. ⭐ A szobák viszont MIND ott vannak a listában: egy szűrő, ami
+  // a házzal együtt egy szobát is elvinne, ugyanúgy hiba.
   if (!card.fatal) {
-    const band = (await page.evaluate(`(function(){
-      var bands = document.querySelectorAll(".cit-wholeband");
-      var inGrid = 0;
-      document.querySelectorAll(".cit-room__open").forEach(function(e){
-        if (!e.closest(".cit-wholeband") && (e.getAttribute("data-cit-room-name") || "") === ${JSON.stringify(WHOLE.name)}) inGrid++;
+    const whole = (await page.evaluate(`(function(){
+      var shells = 0;
+      document.querySelectorAll("[data-cit-room-name]").forEach(function(e){
+        if ((e.getAttribute("data-cit-room-name") || "") === ${JSON.stringify(WHOLE.name)}) shells++;
       });
-      var cta = bands[0] ? bands[0].querySelector(".cit-wholeband__cta") : null;
-      return { n: bands.length, inGrid: inGrid, cta: cta ? (cta.textContent || "").trim() : null };
-    })()`)) as { n: number; inGrid: number; cta: string | null };
-    if (band.n !== 1) findings.push({ kind: "nem-egy-egesz-haz-sav", detail: `${band.n} sáv` });
-    if (band.inGrid) findings.push({ kind: "az-egesz-haz-a-racsban", detail: `${band.inGrid} kártya` });
-    if (band.cta === "Foglalás") findings.push({ kind: "ar-nelkuli-sav-foglalast-mond", detail: band.cta });
-    if (band.n === 1) {
-      await page.evaluate(`(function(){var c=document.querySelector(".cit-wholeband__cta");c.scrollIntoView({block:"center",behavior:"instant"});c.click();})()`);
-      await page.waitForTimeout(220);
-      const pop = (await page.evaluate(`(function(){
-        var rd = document.querySelector(".cit-rd[data-open]");
-        if (!rd) return null;
-        var a = rd.querySelector(".cit-rd__cta a");
-        var t = (rd.querySelector(".cit-rd__panel").innerText || "").toLowerCase();
-        var s = document.getElementById("cit-unit");
-        var label = a ? (a.textContent || "").trim() : "";
-        if (s) s.value = "";
-        if (a) a.click();
-        return { label: label, custom: t.indexOf("egyedi ár") >= 0, v: s ? s.value : null };
-      })()`)) as { label: string; custom: boolean; v: string | null } | null;
-      if (!pop) findings.push({ kind: "a-sav-felugroja-nem-nyilt-meg", detail: WHOLE.name });
-      else {
-        if (pop.label !== "Árajánlatot kérek") findings.push({ kind: "a-sav-felugroja-nem-arajanlatot-ker", detail: pop.label });
-        if (!pop.custom) findings.push({ kind: "a-sav-felugroja-nem-mondja-az-egyedi-arat", detail: WHOLE.name });
-        if (pop.v !== WHOLE.unitId) findings.push({ kind: "a-sav-foglalasa-nem-az-egesz-hazat-allitja", detail: String(pop.v) });
-      }
-      await page.waitForTimeout(120);
-      if (await page.evaluate(`!!document.querySelector(".cit-rd[data-open]")`)) await page.keyboard.press("Escape");
+      return { bands: document.querySelectorAll(".cit-wholeband").length, shells: shells };
+    })()`)) as { bands: number; shells: number };
+    if (whole.bands) findings.push({ kind: "az-egesz-haz-kulon-sav-a-szobak-mellett", detail: `${whole.bands} sáv` });
+    if (whole.shells) findings.push({ kind: "az-egesz-haz-kartya-a-szobak-mellett", detail: `${whole.shells} kártya` });
+    const pk = (await page.evaluate(READ_PICKS)) as { all: string[]; on: string[] } | null;
+    if (!pk) findings.push({ kind: "nincs-szoba-lista", detail: "dátumok után sincs [data-cit-roomlist]" });
+    else {
+      if (pk.all.includes(WHOLE.unitId!)) findings.push({ kind: "az-egesz-haz-pipalhato-a-szobak-mellett", detail: WHOLE.unitId! });
+      const missing = expectations(0).map((e) => e.unitId).filter((id) => !pk.all.includes(id));
+      if (missing.length) findings.push({ kind: "szoba-hianyzik-a-listabol", detail: missing.join(",") });
     }
   }
 
@@ -733,8 +820,11 @@ const REVERTS = [
   {
     key: "a leugrás az ELSŐ name=unit választót állítja",
     why: "a 2026-09-28-i hiba: a vélemény-űrlap választója előzi meg a foglalásét, és azt állította",
+    // ADR-XXXX: a runtime a widget szoba-listáját keresi (`cit:pickroom`); a visszarontás a
+    // lap ELSŐ name="unit"-jét adja neki — a vélemény-űrlapét, ahogy a 09-28-i hiba tette.
     apply: (html: string) =>
-      html.replace(`document.getElementById("cit-unit");`, `document.querySelector('[name="unit"]');`),
+      html.replace(`var rl = document.querySelector("[data-cit-roomlist]");`,
+        `var rl = document.querySelector('[name="unit"]'); if (rl) rl.value = unitId;`),
   },
   {
     key: "fotó nélkül is kifestett galéria",
@@ -756,18 +846,23 @@ const REVERTS = [
       ),
   },
   {
-    key: "az ár nélküli egész ház „Foglalás”-t ígér",
-    why: "a 2026-09-28-i mért állapot: ár nélkül foglalás-gomb, miközben a widget árajánlatot kér",
-    apply: (html: string) =>
-      html
-        .replace(`quoteOnly ? tr("Árajánlatot kérek") : tr("Foglalás")`, `tr("Foglalás")`)
-        .replace(/(<button class="cit-wholeband__cta"[^>]*>)[^<]*/g, "$1Foglalás"),
+    // ADR-XXXX: a régi „az ár nélküli egész ház »Foglalás«-t ígér” visszarontás kivezetve —
+    // szobák mellett nincs többé sáv, amelynek gombja lehetne (a csak-egyben mód gombját a
+    // whole-only-guest-check méri). Helyette a SZABÁLY visszarontása:
+    key: "az egész ház újra ajánlat a szobák mellett",
+    why: "ADR-XXXX előtti állapot: a guestUnits() a házat is kínálja — saját sáv és saját pipa",
+    apply: (html: string) => html,
+    filter: ((u) => u.filter((x) => !x.representsWhole || x.isWholeProperty)) as UnitFilter,
   },
   {
     key: "a sáv-alakú ár visszatérése",
     why: "a kártya megint két számot ír oda, ahol a vendég egyet keres, padló-jelzés nélkül",
+    // ⚠️ A gate-opening sablon a számot és az egységet KÉT nem-törő <span>-ba teszi
+    // („<span class=ko-nw>24 000</span> <span class=ko-nw>Ft-tól / éj</span>”) — a sima
+    // replaceAll ott csak a data-attribútumot írta át, és a kapu 40/42-vel „bizonyított”
+    // (mérve 2026-10-16). A minta a két span közti címkéket is átlépi.
     apply: (html: string) =>
-      html.replaceAll("24 000 Ft-tól / éj", "24 000–32 000 Ft / éj"),
+      html.replace(/24 000((?:<\/span>\s*<span[^>]*>)|\s)\s*Ft-tól \/ éj/g, "24 000–32 000 Ft / éj"),
   },
   {
     key: "a dátum-mondat egy árnál is megjelenik",
@@ -815,9 +910,10 @@ async function runMatrix(
   ids: string[],
   wreck: ((html: string) => string) | null,
   verbose: boolean,
+  filter: UnitFilter = PRODUCT_FILTER,
 ): Promise<Stats> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "cit-roomdet-"));
-  const d = siteData();
+  const d = siteData(filter);
   const pages: { file: string; id: string }[] = [];
   for (const id of ids) {
     const tpl = TEMPLATES[id]!;
@@ -855,7 +951,7 @@ async function runMatrix(
       });
       workerPages.set(`${w}/${vp.label}`, page);
     }
-    return measure(page, `file://${p.file}`, vp.w);
+    return measure(page, `file://${p.file}`, vp.w, d.rooms ?? []);
   });
   for (const pg of workerPages.values()) await pg.close();
   for (const vp of WIDTHS) stats.perWidth.set(vp.label, 0);
@@ -931,7 +1027,7 @@ async function main(): Promise<void> {
         console.log(`  ✗ ${rv.key.padEnd(38)} NEM MÉRHETŐ — a szűkített sablon-halmaz üres (${kind})`);
         continue;
       }
-      const st = await runMatrix(scope, rv.apply, false);
+      const st = await runMatrix(scope, rv.apply, false, "filter" in rv ? rv.filter : PRODUCT_FILTER);
       const ok = st.failures === st.total; // MINDEN mérésnek pirosra kell mennie
       if (!ok) bad++;
       console.log(

@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-10-15
+updated: 2026-10-16
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -157,7 +157,8 @@ azok a napok, amelyeket épp attól a portáltól kaptunk — a többi portál v
 
 Jó tudni:
 
-- Minden szobát külön kell összekötni — a portálokon is szobánként van naptár.
+- Minden szobát külön kell összekötni — a portálokon is szobánként van naptár. Az egész háznak
+  nem kell saját link: ha szobánként adja ki, a ház napjai a szobák napjai.
 - Csak a foglalt napok mennek át; az árat és a vendég adatait a portálon továbbra is ott kezeli.
 - Nem azonnali: mi óránként nézzük meg a portált, a Booking.com kétóránként a mi naptárunkat
   (ott az „Import now” gombbal azonnal is frissítheti).
@@ -180,19 +181,31 @@ pedig helyben rögzíti, hogy egyedi ajánlatot küld.
 Több szobánál a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
 Fület csak az kap, amit a vendég le is foglalhat. Ha a házat csak egyben adja ki, a szobák a fülek
 alatt egy mondatban szerepelnek („a házzal együtt foglalható, ezért nincs külön naptára”), mert
-foglalás csak a házra érkezhet.
+foglalás csak a házra érkezhet. Ha szobánként adja ki, fordítva: az egész háznak nincs füle, és a
+fülek alatt egy mondat mondja meg, miért („aki az egészet kéri, minden szobát kijelöl, ezért nincs
+külön naptára”).
 A szoba nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
 
-### Az egész szállás — és miért csíkos néha egy nap
+### Több szoba egy kérésben — és az egész ház
 
-Több szobánál a vendég egy szobát vagy **az egész házat** foglalhatja. Az egész háznak saját
-füle és naptára van („az egész ház”); nem az egyik szobája, hanem külön tétel, amelyet a Szobák,
-apartmanok modul beállító-képernyőjén, a rács fölötti **„Az egész ház”** kártyán talál (ott adja
-meg az árát, és ott pipálhatja be, ha csak egyben adja ki). Ezért:
+Több szobánál a vendég egy kérésben **egy vagy több szobát** foglalhat, akár mindet. Az egész
+háznak ilyenkor nincs külön ára és naptára: aki az egész házat kéri, minden szobát kijelöl, és a
+szobák árát fizeti. A vendég a honlapon előbb a napokat választja ki, utána a listában pipálja be a
+szabad szobákat; a naptár egy éjszakát csak akkor mutat foglaltnak, ha arra egyik szoba sem
+szabad. A több szobás kérést Ön egyben igazolja vissza (vagy utasítja el) a **„Foglalások”**
+fülön — ilyenkor mindegyik kijelölt szoba naptárában foglalt lesz az időszak, és mindegyiknél
+sima **„Vendég foglalása”** napként látszik (nem csíkosan).
 
-- ha az **egész szállást** foglalják le egy napra, az összes szobája **automatikusan foglalt** lesz
-  arra a napra;
-- ha **bármelyik szobája** foglalt, az egész szállás **nem adható ki** arra a napra.
+Ha a házat **csak egyben** adja ki, fordított a helyzet: akkor csak az egész ház foglalható, a
+szobák csak bemutatásra szerepelnek. Ezt a Szobák, apartmanok modul beállító-képernyőjén, a rács
+fölötti **„Az egész ház”** kártyán pipálhatja be (**„Csak egyben adom ki”**) — ilyenkor ott adja
+meg a ház árát is.
+
+### Miért csíkos néha egy nap
+
+Az egész ház és a szobái kizárják egymást: ha az **egész házra** van foglalás egy napra (például
+egy korábbi, még az egész házra érkezett kérésből), az összes szobája **automatikusan foglalt**
+arra a napra; és ha **bármelyik szobája** foglalt, az egész ház **nem adható ki** arra a napra.
 
 Ezek a napok a másik szoba naptárában **csíkosan** jelennek meg. Ott nem lehet felszabadítani őket
 (különben ugyanaz az éjszaka kétszer kelne el) — a napra koppintva viszont látja, ki tartja, és egy

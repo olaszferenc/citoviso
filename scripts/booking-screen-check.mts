@@ -9,7 +9,8 @@
 // worktree szerverén, efemer porton, bejelentkezett tenantként.
 //
 // Saját eldobható fixture-t vet (szállás + egész-egység + szoba + elfogadott
-// foglalás), és a végén mindent visszatakarít. Levelet nem küld.
+// foglalás), és a végén mindent visszatakarít. Levelet nem küld. ADR-XXXX: a ház a szoba
+// mellett nem ajánlat (nincs füle), de a régi, házra szóló foglalás naptára linkről nyílik.
 //
 //   npx tsx scripts/booking-screen-check.mts
 //   npx tsx scripts/booking-screen-check.mts --shots   (képeket is ment az assets/Temp-be)
@@ -247,12 +248,13 @@ try {
       );
       check("a súgó-link a KB-horgonyt viszi", (await page.locator("[data-kb-anchor='admin.modules.booking']").count()) === 1);
 
-      // ② egység-FÜLEK, a fölérendelt egység megjelölve (ADR-0114)
+      // ② ADR-XXXX: a szoba mellett a háznak NINCS füle (nem külön ajánlat), de a naptára egy
+      // régi foglalás miatt közvetlen linkről megnyílik — és kimondja, kinek a naptára.
       const tabs = page.locator(".unit-tabs a");
-      check("egység-fülek (2 egység)", (await tabs.count()) === 2, `kapott: ${await tabs.count()}`);
+      check("egy foglalható szobánál nincs fülsor", (await tabs.count()) === 0, `kapott: ${await tabs.count()}`);
       check(
-        "az egész szállás füle kimondja, hogy ő az egész ház",
-        /az egész ház/.test((await tabs.first().textContent()) ?? ""),
+        "a ház naptára fül nélkül is megnyílik, és megnevezi magát",
+        /Most ezt a naptárat látja: A szállás egésze/.test((await page.locator("[data-cit-unit-offtab]").textContent()) ?? ""),
       );
 
       // ③ a naptár ÖSSZECSUKHATÓ, és csukva is megmondja, mennyire tele van

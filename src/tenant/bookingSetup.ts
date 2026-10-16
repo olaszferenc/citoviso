@@ -121,9 +121,11 @@ export function deriveMode(units: readonly Unit[]): SetupMode {
   return whole && whole.isWholeProperty && whole.wholeOnly ? "single" : "both";
 }
 
-/** The units the questions price and the trial books — the same split the client uses. */
+/** The units the questions price and the trial books — the same split the client uses.
+ *  ADR-XXXX: by rooms, the rooms only — the whole house is no offer of its own beside them
+ *  (the guest ticks every room), so it is neither priced nor tried here. */
 export function setupBookable<T extends { whole: boolean }>(mode: SetupMode, units: readonly T[]): T[] {
-  return units.filter((u) => (mode === "single" ? u.whole : mode === "rooms" ? !u.whole : true));
+  return units.filter((u) => (mode === "single" ? u.whole : !u.whole));
 }
 
 function isRecurringSeason(p: UnitPrice): boolean {

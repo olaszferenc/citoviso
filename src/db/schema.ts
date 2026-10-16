@@ -1237,6 +1237,9 @@ export interface BookingRequestTable {
   id: Generated<string>;
   site_id: string;
   unit_id: string;
+  /** 0111 (ADR-XXXX): EVERY unit of the request, in the guest's order; [1] = unit_id.
+   *  Filled by a trigger when an insert leaves it out (a one-unit request). */
+  unit_ids: Generated<string[]>;
   guest_name: string;
   guest_email: string;
   guest_phone: string | null;

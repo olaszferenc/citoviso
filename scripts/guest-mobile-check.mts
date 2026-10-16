@@ -422,6 +422,9 @@ const PROBE_BOOKING = `(async () => { ${LIB}
   out.past = { errShown: !!err2, text: (err2?.textContent||'').trim().slice(0,80), submitDisabled: submit?.disabled };
   // valid range typed → quote/ask + submit enabled; then the sample submit
   setDate(q('#cit-from'), shift(tISO, 40)); setDate(q('#cit-to'), shift(tISO, 42)); await new Promise(r => setTimeout(r, 80));
+  // ADR-XXXX (plan multi-room „B”): with several rooms the guest ticks a free room after the dates.
+  const roomPick = form.querySelector('[data-cit-room-pick]:not(:disabled)');
+  if (roomPick) { roomPick.click(); await new Promise(r => setTimeout(r, 80)); }
   // plan B (phone only): a "go" button after the price, thumb-sized, and step 2 shows the summary + the send button
   const go = form.querySelector('.cit-book__go');
   const phoneLayout = W < 560;

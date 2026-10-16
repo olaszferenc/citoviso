@@ -4,7 +4,7 @@ title: Árak — alapár és időszaki árak szobánként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
-updated: 2026-10-13
+updated: 2026-10-16
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
@@ -69,8 +69,9 @@ nincs ára.”** Ilyenkor a vendég ezekre az éjszakákra nem lát árat, és �
 kiút van: adjon meg alapárat, vagy pipálja be, hogy szándékosan nem ad meg. Amíg egyik sincs,
 hetente e-mailben emlékeztetjük.
 
-Kivétel az egész szállás, ha nem adja ki egyben, és a vendég elől el van rejtve: azt senki nem
-foglalhatja, ezért nem kérünk rá árat — se sárga sor, se teendő, se emlékeztető.
+Kivétel az egész ház, ha szobánként adja ki (nincs bepipálva a „Csak egyben adom ki”): külön
+senki nem foglalhatja — aki az egészet kéri, minden szobát kijelöl —, ezért nem kérünk rá árat:
+se sárga sor, se teendő, se emlékeztető.
 
 ## „Alapár, dátummal” — az árajánlatból mentett ár
 
@@ -203,14 +204,19 @@ szerkesztőre mutat.
 
 ![Képernyőkép: a képernyő tetején a bevezető sor, alatta a „Szobák, apartmanok szerkesztése” gomb](assets/hu/szobak-gomb.png)
 
-## Az egész szállás árát is adja meg
+## Az egész ház ára — csak ha egyben adja ki
 
-Ha a házat egyben is kiadja, az egész szállásnak jelölt szobát ugyanúgy árazza, mint a többit: ha a
-vendég a teljes szállást foglalja, ennek a szobának az árát látja. Az árat Ön adja meg — a szobák
-ára nem adódik össze helyette, mert az egész ház ára a valóságban sem a részek összege. Segítségül
-a kártyáján az alapár alatt egy tájékoztató sor mutatja, mennyibe kerülnek a szobák külön, együtt
-(„Tájékoztatásul: a szobák külön, együtt … / éj.”) — ezt csak Ön látja, a vendég nem. Ha itt nincs
-ár, a teljes ház foglalásához nem tudunk árat mutatni: a vendég árajánlatot kér.
+**Ha szobánként adja ki** (ez az alap), az egész háznak nem kell árat adnia. A vendég egy kérésben
+több szobát, akár mindet kijelölheti, és a kijelölt szobák árát fizeti: a foglalásnál szobánként
+tételesen látja, alatta az összeget. Elég tehát a szobákat árazni — ezen a képernyőn ilyenkor
+a háznak nincs is külön kártyája, csak a szobáknak.
+
+**Ha csak egyben adja ki** (a Szobák, apartmanok modulban, a rács fölötti **„Az egész ház”**
+kártyán be van pipálva a **„Csak egyben adom ki”**), akkor csak az egész ház foglalható, és
+csak a házra kérünk árat. Megadhatja itt, a ház kártyáján, vagy a Szobák modul
+**„Az egész ház”** kártyáján, az **„Alapára:”** sor alatt (az **„Ár mentése”** gombbal). A szobák ilyenkor
+csak bemutatásra szerepelnek, ezért itt nincs kártyájuk. Ha a háznak nincs ára, a vendég
+árajánlatot kér.
 
 ## Ellátás — reggeli, félpanzió, teljes panzió
 

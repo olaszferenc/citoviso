@@ -15,6 +15,12 @@
 // A `--selftest` nem szimulál: a KIRENDERELT pillanatképben cseréli vissza a történeti
 // viselkedést (néma kiürítés), és újra lefuttatja ugyanazokat az állításokat.
 //
+// ADR-XXXX (több szoba egy foglalási kérésben, kontraktus: tenant-site/multi-room/): a 2+
+// egységes lapon nincs többé <select id="cit-unit">, hanem szobalista ([data-cit-roomlist]):
+// előbb a napok, aztán a szobák kijelölése. Az ⑤ pont („a választóban jelölve”) ma a
+// szobalista ár-helyén él („egyedi ár” vs. összeg); az árajánlat-mód akkor lép életbe, ha
+// BÁRMELYIK kijelölt szobára nincs ár; kijelölés nélkül se ár, se árajánlat-mód.
+//
 //   npx tsx scripts/quote-request-check.mts
 //   npx tsx scripts/quote-request-check.mts --selftest   ← PIROSNAK KELL LENNIE
 
@@ -115,10 +121,11 @@ try {
     await page.goto(`http://127.0.0.1:${port}/t/${slug}/`, { waitUntil: "networkidle" });
     await page.waitForTimeout(500);
 
-    // ⑤ a jelölés MÁR A VÁLASZTÓBAN
-    const opts = await page.locator('select[name="unit"] option').allTextContents();
-    check("⑤ az árazatlan egység a VÁLASZTÓBAN jelölve", opts.some((o) => /Árazatlan faház/.test(o) && /egyedi ár/.test(o)), opts);
-    check("…és az árazott NINCS megjelölve", opts.some((o) => /Árazott apartman/.test(o) && !/egyedi ár/.test(o)), opts);
+    // ADR-XXXX (multi-room): dates FIRST, then rooms. Before the dates the list only says
+    // what comes next — no price, no "egyedi ár" claim about a stay nobody chose yet.
+    const roomList = page.locator("[data-cit-roomlist]").first();
+    check("ADR-XXXX a régi egység-választó nincs többé", (await page.locator('select[name="unit"]').count()) === 0);
+    check("ADR-XXXX dátum előtt a szobalista a következő lépést mondja", /Előbb válassza ki a napokat/.test(await roomList.innerText()), await roomList.innerText());
 
     // ⛔ HÓNAP-VÉGI CSAPDA (2026-09-26, szept. 26-án piros): a 6. szabad nap a KÖVETKEZŐ hónapba
     // esett, amit a telefon-nézet elrejt — a naptár lapoz egyet, ha a látható hónapban nincs elég.
@@ -129,24 +136,40 @@ try {
       days = page.locator("[data-day]:not([disabled]):not(.is-blocked):visible");
     }
     if ((await days.count()) >= 6) { await days.nth(3).click(); await page.waitForTimeout(150); await days.nth(5).click(); await page.waitForTimeout(600); }
-    // booking-unit-default ② (2026-09-28): on a phone the unit selector now LEADS step 1 (above
-    // the calendar) — the guest switches units where the price box is. Plan B's step 2 keeps
-    // the button and the note; innerText of a non-rendered node is its text, so the ①–④
-    // sentences are judged exactly as before, without leaving step 1.
+    // ADR-XXXX: on a phone the room list sits in STEP 1, between the dates and the price box;
+    // Plan B's step 2 keeps the button and the note. innerText of a non-rendered node is its
+    // text, so the ①–④ sentences are judged exactly as before, without leaving step 1.
 
-    const sel = page.locator('select[name="unit"]').first();
     const cta = page.locator(".cit-book__submit").first();
     const note = page.locator(".cit-book__note").first();
+    const pick = (id: string) => page.locator(`input[data-cit-room-pick][value="${id}"]`).first();
+    const priceSlot = (id: string) =>
+      page.locator("label.cit-book__room", { has: page.locator(`input[data-cit-room-pick][value="${id}"]`) }).locator(".cit-book__roomp").first();
+    const setPick = async (id: string, on: boolean) => { await pick(id).setChecked(on); await page.waitForTimeout(700); };
+
+    // ⑤ a jelölés MÁR A VÁLASZTÁS PILLANATÁBAN — ma: a szobalista ár-helye (ADR-XXXX)
+    const unpricedSlot = (await priceSlot(unpriced.id).innerText().catch(() => "")).trim();
+    const pricedSlot = (await priceSlot(priced.id).innerText().catch(() => "")).trim();
+    check("⑤ az árazatlan egység a SZOBALISTÁBAN jelölve („egyedi ár”)", /egyedi ár/.test(unpricedSlot), unpricedSlot);
+    check("…és az árazott NINCS megjelölve, összeget mutat", !/egyedi ár/.test(pricedSlot) && /\d[\d\s]*Ft/.test(pricedSlot), pricedSlot);
+    check("⑦ az árazatlan egység NEM kerül ki a listából (kijelölhető)", (await pick(unpriced.id).count()) === 1 && (await pick(unpriced.id).isEnabled()));
+
+    // ADR-XXXX: no ticked room — no price, no quote claim, nothing to send; the note says the next step
+    const emptyQ = (await page.locator("[data-quote]").innerText()).trim();
+    check("ADR-XXXX kijelölés nélkül az ár-doboz üres (se ár, se árajánlat-mód)", emptyQ === "" && (await page.locator(".cit-book__ask").count()) === 0, emptyQ.slice(0, 120));
+    check("ADR-XXXX …a gomb nem küldhető", await cta.isDisabled());
+    check("ADR-XXXX …és a mondat a következő lépést mondja", /Jelöljön ki legalább egy szobát/.test(await note.innerText()), await note.innerText());
 
     // ⑥ ÁRAZOTT: semmi nem változik
-    // by id, not index: two rooms have the whole house beside them in the picker (ADR-0392)
-    await sel.selectOption(priced.id); await page.waitForTimeout(700);
-    check("⑥ árazott egységnél megjelenik az összeg", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));
+    await setPick(priced.id, true);
+    check("⑥ árazott szobánál megjelenik az összeg", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));
     check("⑥ …a gomb foglalást ígér", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());
     check("⑥ …és az alatta álló mondat is", /véglegessé/.test(await note.innerText()));
 
-    // ②③④ ÁRAZATLAN: a néma üresség helyén magyarázat, a gomb és az ígéret EGYÜTT vált
-    await sel.selectOption(unpriced.id); await page.waitForTimeout(900);
+    // ②③④ ÁRAZATLAN is kijelölve: ha BÁRMELYIK kijelölt szobára nincs ár, a néma üresség
+    // helyén magyarázat, a gomb és az ígéret EGYÜTT vált — és az árazott szoba összege sem
+    // marad ott részösszegként (egy fél szám ugyanaz a hazugság, mint az ár nélküli ígéret).
+    await setPick(unpriced.id, true);
     const quoteTxt = await page.locator("[data-quote]").innerText();
     check("② az üresség helyén MAGYARÁZAT áll", /egyedi árat ad/.test(quoteTxt), quoteTxt.slice(0, 120));
     check("② …és kimondja, hogy ez még nem kötelezettség", /nem vállal fizetési kötelezettséget/.test(quoteTxt));
@@ -162,7 +185,6 @@ try {
     // hiba-osztályt, de a visszaállítót sosem hívta meg —, és a saját hibáján bukott.
     // the guest stepper lives in STEP 2 on a phone — go there the guest's way first
     if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
-    // ADR-0389: the 2-person unit stops at 2 guests ("+" disabled) — "−" re-renders the same way.
     await page.locator('.cit-book__step[data-step="-1"]').first().click();
     await page.waitForTimeout(700);
     check(
@@ -176,15 +198,30 @@ try {
       await cta.innerText(),
     );
 
-    check("⛔ és NINCS kitalált összeg", !/\d[\d\s]*Ft/.test(quoteTxt), quoteTxt.slice(0, 120));
-    const box = await page.locator(".cit-book__ask").first().boundingBox();
+    check("⛔ és NINCS kitalált összeg (az árazott szoba részösszege sem)", !/\d[\d\s]*Ft/.test(quoteTxt), quoteTxt.slice(0, 120));
+    // no ask box (selftest) → measure nothing instead of waiting 30 s and crashing past the verdict
+    const askBox = page.locator(".cit-book__ask").first();
+    const box = (await askBox.count()) ? await askBox.boundingBox() : null;
     console.log(`     a magyarázó doboz: ${Math.round(box?.width ?? 0)}×${Math.round(box?.height ?? 0)} px`);
     await page.screenshot({ path: path.join(OUT, `ui-ask-${label}.png`) });
 
-    // ⑥ vissza — a jelzés ne ragadjon be (telefonon „Módosítom a napokat” → vissza az 1. lépésbe, ahol a választó áll)
+    // telefonon „Módosítom a napokat” → vissza az 1. lépésbe, ahol a szobalista áll
     if (await page.locator(".cit-book__edit").isVisible()) { await page.click(".cit-book__edit"); await page.waitForTimeout(300); }
-    await sel.selectOption(priced.id); await page.waitForTimeout(900);
+
+    // ⛔ a „nincs kijelölt szoba” állapot SOHA nem árajánlat-mód: mindent levéve a mód is elmúlik
+    await setPick(priced.id, false); await setPick(unpriced.id, false);
+    check("⛔ minden jelölést levéve nincs árajánlat-mód", (await page.locator(".cit-book__ask").count()) === 0 && !/Árajánlatot kérek/.test(await cta.innerText()), await cta.innerText());
+    const offNote = await note.innerText();
+    check("⛔ …és az árajánlat-mondat sem ragad be", !/árajánlattal válaszol/.test(offNote), offNote);
+    // MÉRT (2026-10-16, javítva ugyanaznap): az árajánlat-módból „mindent levéve” kilépve a
+    // setAskMode(false) a semleges „Jelöljön ki…” mondatot a FOGLALÁSI ígérettel írta felül, egy
+    // tiltott gomb alatt. Kijelölés nélkül a mondat a következő lépést mondja, nem ígér foglalást.
+    check("⛔ …és a mondat a következő lépést mondja („Jelöljön ki…”), nem foglalást ígér", /Jelöljön ki legalább egy szobát/.test(offNote) && !/véglegessé/.test(offNote), offNote);
+
+    // ⑥ vissza csak az árazottra — a jelzés ne ragadjon be
+    await setPick(priced.id, true);
     check("⑥ visszaváltva a gomb ÚJRA foglalást ígér (nem ragad be)", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());
+    check("⑥ …az alatta álló mondat is", /véglegessé/.test(await note.innerText()) && !/árajánlattal válaszol/.test(await note.innerText()), await note.innerText());
     check("⑥ …és az ár is visszajön", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));
     check("nincs JS-hiba", jsErr.length === 0, jsErr);
     await ctx.close();
