@@ -680,7 +680,7 @@ async function measure(page: Page, url: string, width: number, rooms: Room[]) {
       // kattintás után a sima görgetés félúton megállt (y=1963, a widget 3247-nél), a valódi
       // kattintással ugyanaz a lap a widgetnél áll meg — a vendég az utóbbit éli meg.
       const clicked = await page
-        .click(".cit-rd[data-open] .cit-rd__cta a", { timeout: 3000 })
+        .click(".cit-rd[data-open] .cit-rd__cta a", { timeout: 15000 })
         .then(() => true, () => false);
       // A sima görgetés (scroll-behavior:smooth) időbe telik: legfeljebb ~5 mp-ig várunk rá —
       // a párhuzamos kapu-futtatás terhelése alatt 2 mp kevés volt (2/42 hamis piros, 10-16).
