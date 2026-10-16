@@ -15,4 +15,8 @@
   `booking-setup-check` igazítva. KB: admin-modules-rooms, admin-modules-booking, admin-booking-setup.
 - Kontraktus: `assets/design-refs/tenant-admin/whole-house-simple/`; a régi három kontraktus „FELÜLÍRVA” jelölést kapott.
 
-**Nyitott:** élesítés után a [TESZT] Matróz tenant-rerender (a ház a vendég-lapon csak rerender után jelenik meg).
+**Élesítve:** 2026-10-15 18:27, `c3dfde67` (`prod/20261015-1827`). A [TESZT] Matróz: `ensureUnits` (ház létrejött, ár nélkül) + `rerender-tenant` élesen lefutott; a vendég-választóban a két szoba és „A szállás egésze”.
+
+**Mellékszál:** a súgó-őr FLAG-je miatt a `kb-shot.mts` az éles belépő címet rögzíti (a Fiók-képen a dev IP látszott). A két „archivált, nem landolt” fa (cit8b8f5c14: a memóriasor már a mainen; cit333dea6d: csak egy `_show/` képernyőkép) — landolni való nincs.
+
+**Nyitott:** nincs.
