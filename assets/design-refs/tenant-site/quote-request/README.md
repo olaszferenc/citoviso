@@ -49,6 +49,10 @@ szám megy ki, hanem **semmilyen** — a kár a néma hiány, nem a hamis adat.
    egyedi ár, árazottnál a tartózkodás összege). Az árajánlat-mód akkor lép életbe, ha
    BÁRMELYIK kijelölt szobára nincs ár; kijelölés nélkül se ár, se árajánlat-mód. A ⑦ a
    szobalistára ugyanúgy áll (az árazatlan szoba kijelölhető marad).
+   ↪ **2026-10-17 óta (tulaj, „2: igen”, `multi-room/` ⑨):** árazott ÉS árazatlan szoba együtt
+   kijelölve az árazott szobák tételes sorai és „Az ismert rész” összege látszik, az árazatlan
+   szoba neve mellett „egyedi ár”; „Összesen a szállásért” sor NINCS (a végösszeg az ajánlaté).
+   A gomb és az ígéret ugyanúgy árajánlatra vált.
 6. **Ár esetén SEMMI nem változik.** A mai bontás, az alap-mondat, a helyszíni tétel és az
    „Összesen" változatlan. A jelzés **eltűnik**, amint van ár — ha nem tűnik el, zajt gyárt.
 7. ⛔ **Az árazatlan egység NEM kerül ki a választóból.** A tenant kifizette az Online foglalás

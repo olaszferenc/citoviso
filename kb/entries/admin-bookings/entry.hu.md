@@ -125,11 +125,13 @@ ajánlatot:
 
    A választás alatti keretes mondat mindig kimondja, mi lesz a választásának a következménye.
 
-   **Több szobás árajánlat-kérésnél** (ha valamelyik kért szobának nincs ára, vagy fejenkénti
-   áras szobákból kér többet) a lap nem szobánként kérdez: a mező felirata „Ár éjszakánként, a …
-   szobára együtt” — egyetlen éjszakánkénti árat ad meg az összes kért szobára együtt. Ez az ár
-   csak erre a kérésre szól, árlistába nem kerülhet, ezért a **„Mentsem az árlistába is?”**
-   négyzet itt nem is jelenik meg.
+   **Több szobás árajánlat-kérésnél** (ha valamelyik kért szobának nincs ára) az árlistában árazott
+   szobák a saját árukkal, tételesen állnak a lapon — ezekhez nem kell nyúlnia. Csak az ár nélküli
+   szobákra ad meg egyetlen éjszakánkénti árat, együtt: a mező felirata ilyenkor „Ár éjszakánként:”
+   és a szoba neve (több ár nélküli szobánál „Ár éjszakánként, együtt:” és a nevük). Ha egyik kért
+   szobának sincs ára, vagy fejenként áraz, a felirat „Ár éjszakánként, a … szobára együtt”, és az
+   ár az összes kért szobára szól. Ez az ár csak erre a kérésre szól, árlistába nem kerülhet, ezért
+   a **„Mentsem az árlistába is?”** négyzet itt nem is jelenik meg.
 5. Koppintson az **„Ajánlat küldése”** gombra. Ha mégsem tudja fogadni, ugyanitt a
    **„Nem szabad”** gombbal elutasíthatja.
 

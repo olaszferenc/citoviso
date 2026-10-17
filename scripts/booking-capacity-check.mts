@@ -100,7 +100,8 @@ try {
     // Nothing ticked yet: the old ceiling (20), no sentence.
     check("negatív kontroll: semmi nincs kijelölve → a „+” él, a mondat nincs ott", (await plus.isEnabled()) && (await note.isHidden()));
     if (phone) {
-      check("telefon: a „Tovább” szoba nélkül tiltva", await page.locator(".cit-book__go").isDisabled());
+      // ADR-0393 kiegészítés (Elek 10-17): szoba nélkül a gomb nem tilt, hanem a szobát kéri.
+      check("telefon: szoba nélkül a gomb a szobát kéri", /Jelöljön ki legalább egy szobát/.test(await page.locator(".cit-book__go").innerText()));
     }
     await box(ROOM).check();
     await page.waitForTimeout(250);

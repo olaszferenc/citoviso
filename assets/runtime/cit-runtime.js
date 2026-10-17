@@ -126,6 +126,10 @@
     var meals = null;
     try { meals = JSON.parse(slot.getAttribute("data-cit-meals") || "null"); } catch (e) { meals = null; }
     var kids = 0;
+    /* What the guest ASKED for with the steppers (Elek 10-17, Kati): a narrower room choice
+     * clamps the counts to its beds, and a wider one must give them back — 9 guests became
+     * 2 on one small room and stayed 2 when every room was ticked again. */
+    var wantGuests = 0, wantKids = 0;
     var hostEmail = slot.getAttribute("data-cit-email") || "";
     var hostPhone = slot.getAttribute("data-cit-phone") || "";
 
@@ -147,7 +151,7 @@
      * NO room is free; the whole place is no separate offer beside its rooms any more. */
     var multi = units.length > 1;
     var unitPicker = multi
-      ? '<div class="cit-book__field cit-book__rooms" data-cit-roomsf><span class="cit-book__label">' +
+      ? '<div class="cit-book__field cit-book__field--wide cit-book__rooms" data-cit-roomsf><span class="cit-book__label">' +
         tr("Melyik szobákat foglalná?") + "</span>" +
         '<div class="cit-book__roomlist" data-cit-roomlist></div></div>'
       : (units[0].wholeOnly
@@ -312,11 +316,15 @@
     /* ADR-0393: per room — {blocked, portal, pricing, mins} — and the rooms the guest ticked. */
     var byUnit = {};
     var picked = {};
+    /* Rooms the last date change unticked (busy on the new dates) — said in the list until
+     * the guest touches the ticks again (Elek 10-17: a silent untick left the old ceiling). */
+    var dropped = [];
     function pickedUnits() { return units.filter(function (u) { return !!picked[u.id]; }); }
 
     form.querySelectorAll(".cit-book__step[data-step]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         guests = Math.min(capOf(), Math.max(1, guests + Number(btn.getAttribute("data-step"))));
+        wantGuests = guests;
         syncCap();
         syncMeals(); // a child is one of the guests: the child count follows the head count
         // per_person_night pricing: the total follows the guest count live
@@ -343,6 +351,7 @@
     }
     function syncCap() {
       var cap = capOf(), capped = capRaw() > 0;
+      if (wantGuests > guests) guests = wantGuests;
       if (guests > cap) guests = cap;
       countEl.textContent = String(guests);
       var plus = form.querySelector(".cit-book__step[data-step='1']");
@@ -357,12 +366,19 @@
     }
 
     /* ── ADR-0378 meal plans ─────────────────────────────────────────────── */
-    function mealsHere() {
-      if (!(meals && meals.plans && meals.off)) return false;
-      // ADR-0393: a multi-room request takes meals only when EVERY ticked room does.
-      var ids = multi && pickedUnits().length ? pickedUnits().map(function (u) { return u.id; }) : [currentUnit()];
-      return ids.every(function (id) { return meals.off.indexOf(id) < 0; });
+    /* ADR-0393 (owner 2026-10-17, „2: igen”): meals go with the rooms the owner offers them
+     * in — a ticked room without meals no longer takes them from the others. Twin of
+     * requestMealLines (requests.ts). */
+    function fedRooms() {
+      if (!(meals && meals.plans && meals.off)) return [];
+      var us = multi && pickedUnits().length ? pickedUnits() : units.filter(function (u) { return u.id === currentUnit(); });
+      return us.filter(function (u) { return meals.off.indexOf(u.id) < 0; });
     }
+    function unfedRooms() {
+      if (!multi || !meals || !meals.off) return [];
+      return pickedUnits().filter(function (u) { return meals.off.indexOf(u.id) >= 0; });
+    }
+    function mealsHere() { return fedRooms().length > 0; }
     function mealPlan(id) {
       var hit = null;
       ((meals && meals.plans) || []).forEach(function (p) { if (p.id === id) hit = p; });
@@ -384,16 +400,23 @@
       if (id === meals.base) return [];
       var p = mealPlan(id);
       if (!p || !p.price) return [];
-      var rooms = multi ? Math.max(1, pickedUnits().length) : 1;
+      var fed = fedRooms(), all = !unfedRooms().length;
+      var names = fed.map(function (u) { return u.name; }).join(", ");
+      var named = function (label) { return all ? label : tr("{name} ({rooms})").replace("{name}", label).replace("{rooms}", names); };
+      var rooms = multi ? Math.max(1, fed.length) : 1;
       if (p.per === "room") {
-        return rooms > 1
-          ? [{ label: tr("{name}, {n} szobára").replace("{name}", p.name).replace("{n}", rooms), n: n, per: p.price * rooms, guests: 1, sum: n * p.price * rooms }]
+        return multi && pickedUnits().length > 1
+          ? [{ label: all ? tr("{name}, {n} szobára").replace("{name}", p.name).replace("{n}", rooms) : named(p.name), n: n, per: p.price * rooms, guests: 1, sum: n * p.price * rooms }]
           : [{ label: p.name, n: n, per: p.price, guests: 1, sum: n * p.price }];
       }
-      var k = kidPriced(p) ? Math.min(kids, guests - 1) : 0;
-      var ad = guests - k;
-      var out = [{ label: p.name, n: n, per: p.price, guests: ad, sum: n * ad * p.price }];
-      if (k > 0) out.push({ label: tr("{name}, gyermek").replace("{name}", p.name), n: n, per: p.child, guests: k, sum: n * k * p.child });
+      // Some ticked room takes no meals: at most the beds of the rooms that do eat.
+      var beds = fed.some(function (u) { return !(Number(u.capacity) > 0); }) ? Infinity
+        : fed.reduce(function (t, u) { return t + Number(u.capacity); }, 0);
+      var g = all ? guests : Math.max(1, Math.min(guests, beds));
+      var k = kidPriced(p) ? Math.min(kids, g - 1) : 0;
+      var ad = g - k;
+      var out = [{ label: named(p.name), n: n, per: p.price, guests: ad, sum: n * ad * p.price }];
+      if (k > 0) out.push({ label: named(tr("{name}, gyermek").replace("{name}", p.name)), n: n, per: p.child, guests: k, sum: n * k * p.child });
       return out;
     }
     /* ADR-0388 (owner 2026-10-14): the child count is ALWAYS asked — the owner needs to know,
@@ -402,6 +425,7 @@
      * label is "(18 év alatt)" and only the tax follows it. Twin: countedChildAge (meals.ts). */
     function kidAge() { return asksKids() ? Number(meals.childAge) : 17; }
     function syncKids() {
+      if (wantKids > kids) kids = wantKids;
       if (kids > guests - 1) kids = Math.max(0, guests - 1);
       form.querySelector("[data-kids]").textContent = String(kids);
       form.querySelector("[data-cit-kidage]").textContent = asksKids()
@@ -429,12 +453,26 @@
       /* Elek 10-13 T-6: the chosen plan's child price, under the picker — a closed <select>
        * cuts a longer option text, and the page's "Ellátás" section is far from the form. */
       if (here && p && p.childText) d.textContent += (d.textContent ? " · " : "") + p.childText;
+      var unfed = here ? unfedRooms() : [];
+      if (unfed.length) {
+        d.textContent += (d.textContent ? " · " : "") +
+          tr("Ehhez nem kérhető ellátás: {rooms}.").replace("{rooms}", unfed.map(function (u) { return u.name; }).join(", "));
+      }
       d.hidden = !d.textContent;
-      form.querySelector("[data-cit-mnone]").hidden = here;
+      var none = form.querySelector("[data-cit-mnone]");
+      none.hidden = here;
+      // Several ticked rooms, none with meals: name them — "ehhez a szálláshoz" read as the house.
+      if (!here && multi) {
+        var ps = pickedUnits();
+        none.textContent = ps.length
+          ? tr("Ehhez nem kérhető ellátás: {rooms}.").replace("{rooms}", ps.map(function (u) { return u.name; }).join(", "))
+          : tr("Ehhez a szálláshoz nem kérhető ellátás.");
+      }
     }
     form.querySelectorAll("[data-kstep]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         kids = Math.min(Math.max(0, guests - 1), Math.max(0, kids + Number(btn.getAttribute("data-kstep"))));
+        wantKids = kids;
         syncMeals();
         var qa = form.from.value, qb = form.to.value;
         renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
@@ -480,21 +518,26 @@
     /* ADR-0393: several rooms cost the sum of their own prices, each line named by its room.
      * Per-person pricing over several rooms needs the head count PER ROOM, which is not
      * asked — no number then; the owner answers with an offer (the server's rule). */
+    /* ADR-0393 (owner 2026-10-17, „2: igen”): a room without a price no longer hides the
+     * others' — the known rooms are itemised, the open ones listed in `open` (the owner prices
+     * them in the offer). Every room open → null (the plain quote request). Per-person and
+     * per-stay lists cannot be split by room: all open, as the server's multiOfferSplit. */
     function quoteFor(a, b) {
       if (!multi) return quoteForPricing(a, b, pricing);
       var ps = pickedUnits();
       if (!ps.length) return null;
-      var lines = [], total = 0;
+      var lines = [], total = 0, open = [];
       for (var i = 0; i < ps.length; i++) {
         var pr = (byUnit[ps[i].id] || {}).pricing;
-        if (ps.length > 1 && pr && pr.unit === "per_person_night") return null;
+        if (ps.length > 1 && pr && pr.unit !== "per_night") return null;
         var q = quoteForPricing(a, b, pr);
-        if (!q) return null;
+        if (!q) { open.push(ps[i].name); continue; }
         if (q.perStay) q.lines = [{ label: tr("a teljes tartózkodásra"), per: q.total, n: 1, sum: q.total, guests: 1 }];
         q.lines.forEach(function (l) { if (ps.length > 1) l.label = ps[i].name + " — " + l.label; lines.push(l); });
         total += q.total;
       }
-      return { total: total, lines: lines, perStay: false };
+      if (!lines.length) return null;
+      return { total: total, lines: lines, perStay: false, open: open };
     }
     function quoteForPricing(a, b, pricing) {
       if (!pricing || !pricing.rows || !pricing.rows.length) return null;
@@ -587,10 +630,38 @@
         setAskMode(true);
         return;
       }
-      el.classList.remove("cit-book__quote--ask");
-      setAskMode(false);
       var cur = pricing.currency;
       var mls = mealLinesFor(n);
+      /* ADR-0393 (owner 2026-10-17): some ticked room has no price. The known rooms (and the
+       * meals) are itemised with their subtotal, the open rooms are named, and the request
+       * stays a quote request — the final sum is the owner's offer. */
+      var open = q.open || [];
+      if (open.length) {
+        var part = q.lines.concat(mls).map(function (l) {
+          return '<span class="cit-book__qline">' + esc(l.label) + ": " +
+            tr("{n} éj").replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
+            (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
+            " = " + moneyHtml(l.sum, cur) + "</span>";
+        }).join("") +
+          open.map(function (name) {
+            return '<span class="cit-book__qline">' + esc(name) + ": " + tr("egyedi ár") + "</span>";
+          }).join("");
+        el.innerHTML =
+          '<span class="cit-book__qh">' + tr("Az ár") + " — " + esc(huDay(a)) + " → " + esc(huDay(b)) + "</span>" +
+          part +
+          '<span class="cit-book__qtotal">' + tr("Az ismert rész") + " <b>" + moneyHtml(q.total + mls.reduce(function (t, l) { return t + l.sum; }, 0), cur) + "</b></span>" +
+          // the on-site tax is a fact about the stay, not about the price — said here too
+          onSiteHtml(ifaDeclared, ifaPerPersonNight, taxPayers(guests, kids), n, cur) +
+          '<div class="cit-book__ask cit-book__ask--part">' +
+          "<b>" + esc(tr("{rooms}: az árat a szállásadó adja meg.").replace("{rooms}", open.join(", "))) + "</b>" +
+          "<span>" + tr("Küldje el a kérését: a szállásadó árajánlattal válaszol, abban lesz a végösszeg.") + "</span>" +
+          '<span class="cit-book__ask-sub">' + tr("Az elküldéssel még nem vállal fizetési kötelezettséget.") + "</span></div>";
+        el.classList.add("cit-book__quote--ask");
+        setAskMode(true);
+        return;
+      }
+      el.classList.remove("cit-book__quote--ask");
+      setAskMode(false);
       var mealSum = mls.reduce(function (t, l) { return t + l.sum; }, 0);
       var rows = q.lines.concat(mls).map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
@@ -698,7 +769,7 @@
         '<span class="cit-book__rrow"><span>' + tr("Létszám") + "</span><b>" +
           esc(headcount(s.guests, s.children || 0)) + "</b></span>" +
         (s.unitName
-          ? '<span class="cit-book__rrow"><span>' + (multi && pickedUnits().length > 1 ? tr("Szobák") : tr("Egység")) + "</span><b>" + esc(s.unitName) + "</b></span>"
+          ? '<span class="cit-book__rrow cit-book__rrow--text"><span>' + (multi && pickedUnits().length > 1 ? tr("Szobák") : tr("Egység")) + "</span><b>" + esc(s.unitName) + "</b></span>"
           : "") +
         '<span class="cit-book__rrow"><span>' + tr("Hivatkozás") + "</span><b>" + esc(s.ref) + "</b></span>";
       // §B.17: an unpriced stay prints NO total — silence beats a confident zero.
@@ -897,7 +968,20 @@
         ? (act.getAttribute("data-cit-room-pick") !== null ? act.value : act.hasAttribute("data-cit-room-all") ? "*all" : null)
         : null;
       // A ticked room the new dates made busy is unticked — the request can only hold free rooms.
-      units.forEach(function (u) { if (picked[u.id] && !roomFree(u.id, a, b)) delete picked[u.id]; });
+      // The ceiling, the meals and the price follow at once, and the list says which went.
+      // A range the widget itself rejects (too long, mid-typing) unticks nothing.
+      var gone = problem() ? [] : units.filter(function (u) { return picked[u.id] && !roomFree(u.id, a, b); });
+      // The notice holds while the room is busy on the shown dates — free again, it goes
+      // (Elek 10-17: back on the old dates the room read free under "az új napokon foglalt").
+      dropped = dropped.filter(function (u) { return !roomFree(u.id, a, b); });
+      if (gone.length) {
+        gone.forEach(function (u) { delete picked[u.id]; });
+        dropped = dropped.concat(gone);
+        mergeRooms();
+        syncCap();
+        syncMeals();
+        validate();
+      }
       list.innerHTML = units.map(function (u) {
         var ok = roomFree(u.id, a, b);
         var q = ok ? quoteForPricing(a, b, (byUnit[u.id] || {}).pricing) : null;
@@ -912,6 +996,10 @@
           (ok ? "" : '<span class="cit-book__roomx">' + tr("Erre az időszakra foglalt") + "</span>") +
           "</label>";
       }).join("") +
+      (dropped.length
+        ? '<p class="cit-book__mdesc cit-book__roomgone" role="status">' +
+          esc(tr("Levettük a jelölést: {names} — az új napokon foglalt.").replace("{names}", dropped.map(function (u) { return u.name; }).join(", "))) + "</p>"
+        : "") +
       (free.length > 1
         ? '<button type="button" class="cit-book__roomall" data-cit-room-all>' +
           esc(free.every(function (u) { return picked[u.id]; })
@@ -928,6 +1016,7 @@
       }
     }
     function roomsChanged() {
+      dropped = [];
       mergeRooms();
       syncCap();
       syncMeals();
@@ -1261,16 +1350,20 @@
       status.textContent = err ? note.textContent : "";
       status.hidden = !err;
       var n = nightsEl ? nightsEl.textContent : "";
-      go.disabled = !(a && b) || err || needRoom();
+      /* Elek 10-17 (Józsi): a dimmed button that did nothing on a tap left the guest
+       * stuck — with no room ticked it stays live and leads to the list instead. */
+      go.disabled = !(a && b) || err;
       go.textContent = err
         ? tr("Javítsa a dátumot a folytatáshoz")
         : needRoom()
-        ? tr("Jelölje ki a szobákat a folytatáshoz")
+        ? tr("Jelöljön ki legalább egy szobát")
         : a && b
           ? tr("Tovább a kérés adataihoz ({n})").replace("{n}", n)
           : tr("Válassza ki a napokat a naptárban");
       var q = form.querySelector("[data-quote]");
-      var ask = q && q.querySelector(".cit-book__ask");
+      // ADR-0393: a PARTIAL quote (a room without a price) keeps its lines and subtotal.
+      var ask = q && q.querySelector(".cit-book__ask:not(.cit-book__ask--part)");
+      var part = q && q.querySelector(".cit-book__ask--part");
       var tot = q && q.querySelector(".cit-book__qtotal");
       /* Elek V-3: the on-site tax line rides into the phone's step-2 summary too, and it
        * follows the guest stepper below it (the stepper re-renders the quote box). */
@@ -1290,6 +1383,7 @@
           itemised +
           // the total line is mirrored as MARKUP (not textContent): the amount keeps its .cit-amt element
           '<span class="cit-book__sumtotal">' + (ask ? tr("Egyedi ár — a szállásadó árajánlattal válaszol") : tot ? tot.innerHTML : "") + "</span>" +
+          (part ? '<span class="cit-book__sumline">' + esc(part.querySelector("b").textContent) + "</span>" : "") +
           (later ? '<span class="cit-book__sumtax">' + later.innerHTML + "</span>" : "") +
           '<button type="button" class="cit-book__edit">' + tr("Módosítom a napokat") + "</button>"
         : "";
@@ -1307,8 +1401,24 @@
     if (roomList) roomList.addEventListener("change", function () { setTimeout(syncSteps, 0); });
     if (roomList) roomList.addEventListener("click", function () { setTimeout(syncSteps, 0); });
     form.querySelectorAll(".cit-book__step").forEach(function (btn) { btn.addEventListener("click", function () { setTimeout(syncSteps, 0); }); });
+    /* Elek 10-17 (Józsi, 390 px): after the second date tap nothing on the screen said that a
+     * room comes next — the list sat below the fold. On a phone the list is brought into
+     * view, its first free tick focused. */
+    function leadToRooms() {
+      if (!unitField || !needRoom() || !(phoneMq && phoneMq.matches)) return;
+      unitField.scrollIntoView({ block: "center", behavior: "smooth" });
+      var cb = unitField.querySelector("[data-cit-room-pick]:not([disabled])");
+      if (cb && cb.focus) cb.focus({ preventScroll: true });
+      // A visible answer even when the list is already in view (Elek 10-17, Józsi).
+      unitField.classList.add("cit-book__rooms--nudge");
+      setTimeout(function () { unitField.classList.remove("cit-book__rooms--nudge"); }, 1800);
+    }
+    calWrap.addEventListener("click", function (e) {
+      if (e.target.closest("[data-day]") && form.from.value && form.to.value) setTimeout(leadToRooms, 0);
+    });
     go.addEventListener("click", function () {
       if (go.disabled) return;
+      if (needRoom()) return leadToRooms();
       form.classList.add("cit-book--step2");
       syncSteps();
       formcol.scrollIntoView({ block: "start" });

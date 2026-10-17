@@ -13,7 +13,8 @@
 //   ⑤ egy kérés megy el, benne minden pipált szoba (unit_ids), a nyugta „Szobák” sorral;
 //   ⑥ a visszaigazolás egyben: minden szoba lezár; az ütköző függő kérés automatikusan elutasítva;
 //   ⑦ a lemondás minden szobát felszabadít;
-//   ⑧ több szobás árajánlat: a tulaj egy éjszakai árat ad a szobákra együtt, árlistába nem kerül.
+//   ⑧ több szobás árajánlat: az áras szobák a saját árukon állnak, a tulaj egy éjszakai árat ad az
+//     ár nélküliekre együtt (tulaj 2026-10-17, „2: igen”), árlistába nem kerül.
 //
 // A `--selftest` a KIRENDERELT pillanatképben kikapcsolja a több szobás módot (a régi egy-egységes
 // út fut), és ugyanazokat az állításokat futtatja — PIROSNAK KELL LENNIE.
@@ -232,15 +233,21 @@ try {
   const left = await db.selectFrom("availability_day").select("unit_id").where("source", "=", `booking:${first!.id}`).execute();
   check("⑦ mindkét szoba felszabadult", left.length === 0, left.length);
 
-  // ⑧ a multi-room quote request (Kisházi has no price for the stay) → one per-night price for the set
+  // ⑧ a multi-room quote request (Kisházi has no price for the stay): the Kerti keeps its list
+  // price, the owner's one per-night price covers the open room only (owner 2026-10-17).
   await db.deleteFrom("unit_price").where("unit_id", "=", kis.id).execute();
   const q = await createBookingRequest({ siteId: site.id, unitId: kis.id, unitIds: [kis.id, kerti.id], guestName: "Ajánlat", guestEmail: "aj@example.com", guestPhone: "06301234567", dateFrom: iso(60), dateTo: iso(62), guests: 3 }, null);
   check("⑧ ár nélküli szobával árajánlat-kérés (nincs fagyasztott ár)", q.ok && q.summary?.total === null, q);
   const qrow = await db.selectFrom("booking_request").select("action_token").where("id", "=", q.id!).executeTakeFirstOrThrow();
   const view = await loadOfferView(qrow.action_token);
-  check("⑧ az ajánlat-lap a 2 szobát együtt árazza, minden éjre", view.rooms === 2 && view.missing?.length === 2 && (view.known ?? []).length === 0, view);
+  check(
+    "⑧ az ajánlat-lapon a Kerti a saját árán áll, a tulaj csak a Kisházit árazza, minden éjre",
+    view.rooms === 2 && view.missing?.length === 2 && view.openRooms?.join() === "Kisházi szoba" &&
+      (view.known ?? []).length === 1 && view.known![0]!.label.startsWith("Kerti stúdió") && view.known![0]!.perNight === 19_000,
+    view,
+  );
   const sent = await sendOffer(qrow.action_token, { amount: "40 000", into: true, save: "base" }, null);
-  check("⑧ az ajánlat 2 éj × 40 000 = 80 000", sent.ok && sent.total === 80_000, sent);
+  check("⑧ az ajánlat 2 × 19 000 (Kerti) + 2 éj × 40 000 (Kisházi) = 118 000", sent.ok && sent.total === 118_000, sent);
   check("⑧ …és semmi nem került árlistába", (await getUnitPrices(kis.id)).length === 0 && sent.savedAs === "request", sent.savedAs);
 } finally {
   if (server?.listening) server.close();

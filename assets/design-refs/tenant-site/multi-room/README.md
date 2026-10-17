@@ -27,11 +27,21 @@ jóváhagyott) · **Képek:** `shots/terv-*.png` (a terv), `shots/kesz-*.png` (a
 6. **A tulaj egyben dönt:** a kártya jelvénye „… · N szoba”, a gomb „Visszaigazolom (N szoba)”; visszaigazoláskor minden szoba
    lezár (egy tranzakció), az ütköző függő kérés automatikusan elutasítást kap.
 7. **Lemondás:** minden szoba felszabadul.
-8. **Több szobás árajánlat:** egy éjszakai ár a szobákra együtt, csak erre a kérésre — árlistába nem kerül.
+8. **Több szobás árajánlat:** az áras szobák a saját árukon állnak; a tulaj egy éjszakai árat ad az ár nélküli
+   szobákra együtt, csak erre a kérésre — árlistába nem kerül. (Ha mindegyik ár nélküli, vagy a lista fejenként /
+   tartózkodásra áraz, egy ár szól az összes szobára.)
+9. **Ár nélküli szoba a többi mellett** (tulaj 2026-10-17, „2: igen”, Elek 5 perszónás kör): a vendég a többi szoba
+   tételes árát és **„Az ismert rész”** összegét látja, az ár nélküli szoba neve mellett „egyedi ár” áll, a kérés
+   árajánlat-kérés. Ellátás azokhoz a szobákhoz kérhető, amelyekhez a szállásadó felajánlotta; a többiről a mondat:
+   „Ehhez nem kérhető ellátás: <szobák>.”
+10. **Dátumváltás:** a foglalttá vált szoba pipája lekerül, a létszám-plafon, az ár és az ellátás azonnal követi, és a
+    lista kimondja: „Levettük a jelölést: <szobák> — az új napokon foglalt.”
+11. **A tulaj választó ablaka** csak azt a kérést nevezi elutasítandónak, amelyik a választottal közös éjszakán
+    KÖZÖS SZOBÁT kér (a szerver szabálya); minden sor a szobákat is kiírja.
 
 ## Mérve a kész felületen (2026-10-16, az őr fixtúráján: ház 90 000 + Nádas 4 fő 24 000 + Kisházi 2 fő 16 000 + Kerti 3 fő 19 000)
 
 - a listában 3 szoba, a ház nincs; a Nádas egy foglalt éjjel szürke, „Erre az időszakra foglalt”, a naptárban az az éj NYITVA;
 - Nádas + Kerti, 3 éj → 72 000 + 57 000 = 129 000 Ft, a létszám 7-nél megáll; egy POST két `unit` mezővel, nyugta „Szobák”;
 - szerver: visszaigazolás → 2 × 3 éj lezárva, az ütköző kérés automatikusan elutasítva; lemondás → mind felszabadul;
-- ár nélküli szobával árajánlat; 2 éj × 40 000 = 80 000, árlista változatlan; 0 JS-hiba, 390 és 1280 px.
+- ár nélküli szobával árajánlat; a Kerti 2 × 19 000 a saját árán + a Kisházi 2 éj × 40 000 = 118 000 (2026-10-17), árlista változatlan; 0 JS-hiba, 390 és 1280 px.

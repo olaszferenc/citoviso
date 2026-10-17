@@ -46,3 +46,18 @@ faszság.” — és: „ez így szerintem fos… Hülyeség.”
   390+1280; `--selftest` a pillanatképben kikapcsolja a több szobás módot → piros).
 - Nyitott: fejenkénti árazású szálláson a több szobás kérés árajánlat-kérés lesz — ha ilyen ügyfél jön, szobánkénti létszám kell.
 - Nyitott: a régi (ADR-0392) ház-ár sorok az adatbázisban maradnak; „Csak egyben” módra váltva újra érvényesek.
+
+### Kiegészítés 2026-10-17 — Elek 5 perszónás köre után (tulaj: „1: igen; 2: igen; 3: igen”)
+
+- **Ár nélküli szoba a többi mellett** (felülírja a 6. pontot és a „minden szoba ellátást kap, vagy egyik sem” saját szabályomat):
+  a vendég a többi szoba tételes árát és „Az ismert rész” összegét látja, az ár nélküli szoba „egyedi ár”; a kérés árajánlat-kérés.
+  Az ajánlat-lapon az árazott szobák a saját listaárukon állnak (`multiOfferSplit`), a tulaj egy éjszakai árat ad csak az ár
+  nélküliekre együtt. Fejenkénti / tartózkodásra szóló árlistánál nincs szétválasztás: egy ár az összes szobára (mint eddig).
+- **Ellátás szobánként:** azokhoz a szobákhoz kérhető, amelyekhez a tulaj felajánlotta (`requestMealLines`); szobás felár ×
+  ilyen szobák; fejenkénti felár a vendégszámra, de ha van ellátás nélküli szoba, legfeljebb az ellátásos szobák férőhelyére —
+  a sor neve megnevezi a szobákat, mert a vendéget nem kérdezzük, ki hol alszik.
+- **Ütközés a tulaj választóablakában:** közös éjszaka ÉS közös szoba kell hozzá (eddig a dátum elég volt — a felület olyan
+  elutasítást ígért, amit a szerver nem tett meg). A több szobás automatikus elutasító levél nem „az időszak betelt”, hanem
+  „a kért szobák egyike időközben foglalt lett”.
+- Telefonos apróságok: a nyugta sorai törnek (nem lóg ki), fekvőben a szobalista teljes szélességű, a dátum után az oldal a
+  szobákhoz visz, dátumváltáskor a lekerült pipát a lista kimondja, a létszám-plafon azonnal követi.

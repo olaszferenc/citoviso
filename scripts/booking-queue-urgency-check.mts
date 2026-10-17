@@ -250,6 +250,19 @@ console.log("\n③–⑨ Amit a lapnak KI KELL MONDANIA:");
     html.includes("bk-ovkey") && html.includes('"both"'),
   );
 
+  // ⑥c ADR-0393 kiegészítés (Elek 10-17, Marika): fedés = közös éj ÉS közös szoba. Két kérés
+  // ugyanarra a napra, MÁS szobára: nincs választó; közös szobával: van.
+  {
+    const two = (b: string[]) => [
+      reqFixture({ id: "m1", guestName: "Elso", unitId: "a", unitIds: ["a"], createdAt: at(-3) }),
+      reqFixture({ id: "m2", guestName: "Masodik", unitId: b[0], unitIds: b, createdAt: at(-2) }),
+    ];
+    const apart = bookingsSection(tabData({ requests: two(["b"]) }), "hu");
+    const shared = bookingsSection(tabData({ requests: two(["b", "a"]) }), "hu");
+    check("⑥c más szobára, ugyanarra a napra: nincs fedés-választó", !apart.includes("data-bk-overlap"));
+    check("⑥c közös szobával: van fedés-választó", shared.includes("data-bk-overlap"));
+  }
+
   // ⑦ a lezárt sor továbbvisz a vendéghez
   check(
     "⑦ a LEJÁRT sor viszi az elérhetőséget és kínál utat",

@@ -274,16 +274,28 @@ try {
   const q = (await page.locator("[data-quote]").textContent()) ?? "";
   check("④ az ellátás alapja kimondva a beadás előtt", /Az ellátás felára személyenként számít/.test(q), q.slice(0, 200));
 
-  const offShown = async (): Promise<boolean> =>
-    (await page.locator("#cit-meal").isHidden()) &&
-    /Ehhez a szálláshoz nem kérhető ellátás\./.test((await page.locator("[data-cit-mealf]").textContent()) ?? "");
+  // ADR-0393 kiegészítés (tulaj 2026-10-17, „2: igen”): meals go with the rooms that take
+  // them — a ticked room without meals names itself and no longer takes them from the others.
+  const mealf = async (): Promise<string> => (await page.locator("[data-cit-mealf]").textContent()) ?? "";
   await pickOnly(page, [UNITS[1]!.id]); // ADR-0393: was „switch the unit in the select”
-  check("④ a kivett szobánál nincs választó, a mondat ott áll", await offShown());
+  check(
+    "④ a kivett szobánál nincs választó, a mondat a szobát nevezi meg",
+    (await page.locator("#cit-meal").isHidden()) && /Ehhez nem kérhető ellátás: Nádas apartman\./.test(await mealf()),
+    await mealf(),
+  );
   await pickOnly(page, [UNITS[0]!.id, UNITS[1]!.id]);
-  check("④ ADR-0393: ha a pipált szobák egyike kivett, nincs választó", await offShown());
+  check(
+    "④ ADR-0393: egy kivett szoba mellett a választó marad, és kimondja, melyikhez nem kérhető",
+    (await page.locator("#cit-meal").isVisible()) && /Ehhez nem kérhető ellátás: Nádas apartman\./.test(await mealf()),
+    await mealf(),
+  );
   {
     const q2 = (await page.locator("[data-quote]").textContent()) ?? "";
-    check("④ ADR-0393: két szoba, kivett ellátással → ár-sorban nincs ellátás", !/Reggeli|Félpanzió/.test(q2), q2.slice(0, 200));
+    check(
+      "④ ADR-0393: két szoba, az egyik kivett → az ellátás-sor csak az ellátásos szobát nevezi meg",
+      /Reggeli \(Kerti stúdió\)/.test(q2) && !/Reggeli \([^)]*Nádas/.test(q2),
+      q2.slice(0, 260),
+    );
   }
   check("④ JS-hiba 0", errs.length === 0, errs.join(" | "));
 

@@ -166,12 +166,12 @@ try {
     check("⑥ …a gomb foglalást ígér", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());
     check("⑥ …és az alatta álló mondat is", /véglegessé/.test(await note.innerText()));
 
-    // ②③④ ÁRAZATLAN is kijelölve: ha BÁRMELYIK kijelölt szobára nincs ár, a néma üresség
-    // helyén magyarázat, a gomb és az ígéret EGYÜTT vált — és az árazott szoba összege sem
-    // marad ott részösszegként (egy fél szám ugyanaz a hazugság, mint az ár nélküli ígéret).
+    // ②③④ ÁRAZATLAN is kijelölve: ha BÁRMELYIK kijelölt szobára nincs ár, a gomb és az ígéret
+    // EGYÜTT vált árajánlatra. 2026-10-17 óta (tulaj, „2: igen”) az árazott szoba tételes sora és
+    // „Az ismert rész” összege látszik — de végösszegként SEMMI nem áll (az az ajánlaté).
     await setPick(unpriced.id, true);
     const quoteTxt = await page.locator("[data-quote]").innerText();
-    check("② az üresség helyén MAGYARÁZAT áll", /egyedi árat ad/.test(quoteTxt), quoteTxt.slice(0, 120));
+    check("② MAGYARÁZAT áll: az árazatlan szoba árát a szállásadó adja meg", /az árat a szállásadó adja meg/.test(quoteTxt), quoteTxt.slice(0, 400));
     check("② …és kimondja, hogy ez még nem kötelezettség", /nem vállal fizetési kötelezettséget/.test(quoteTxt));
     check("③ ⭐ a gomb árajánlatot kér", /Árajánlatot kérek/.test(await cta.innerText()), await cta.innerText());
     check("④ ⭐ a gomb alatti ígéret is árajánlatról szól", /árajánlattal válaszol/.test(await note.innerText()), await note.innerText());
@@ -198,7 +198,11 @@ try {
       await cta.innerText(),
     );
 
-    check("⛔ és NINCS kitalált összeg (az árazott szoba részösszege sem)", !/\d[\d\s]*Ft/.test(quoteTxt), quoteTxt.slice(0, 120));
+    check(
+      "⛔ végösszeg NINCS: csak „Az ismert rész”, az árazatlan szoba „egyedi ár”",
+      /Az ismert rész/.test(quoteTxt) && /egyedi ár/.test(quoteTxt) && !/Összesen a szállásért/.test(quoteTxt),
+      quoteTxt.slice(0, 400),
+    );
     // no ask box (selftest) → measure nothing instead of waiting 30 s and crashing past the verdict
     const askBox = page.locator(".cit-book__ask").first();
     const box = (await askBox.count()) ? await askBox.boundingBox() : null;

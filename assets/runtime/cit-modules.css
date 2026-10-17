@@ -136,6 +136,13 @@
   line-height: 1;
 }
 .cit-book__step:hover { background: var(--cit-surface); }
+/* At the room's (or rooms') ceiling the "+" visibly stops (Elek 10-17, Bence: it stopped
+   silently and looked live). */
+.cit-book__step:disabled { opacity: .35; cursor: not-allowed; }
+.cit-book__step:disabled:hover { background: none; }
+/* ADR-0393: the room list is pointed at when the guest tries to go on without a room. */
+.cit-book__rooms--nudge .cit-book__roomlist { outline: 2px solid var(--cit-accent); outline-offset: 4px;
+  border-radius: calc(var(--cit-radius) * 0.6); }
 .cit-book__count { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 
 .cit-book__submit {
@@ -769,7 +776,9 @@ a.cit-grat:hover {
 .cit-book__mdesc[hidden]{display:none}
 .cit-book__qrow{display:flex;justify-content:space-between;gap:12px;font-size:.83rem;
   line-height:1.55;padding:2px 0}
-.cit-book__qtotal{display:block;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;
+/* flow-root: when the label wraps (390 px, large text) the floated amount drops to its own
+   line and must stay INSIDE the row — it overlapped the tax box below (Elek 10-17). */
+.cit-book__qtotal{display:flow-root;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;
   color:var(--cit-ink,#10243a);border-top:1px solid var(--cit-line)}
 .cit-book__qtotal b{float:right}
 /* An amount never breaks between its digits and its unit ("72 000 / Ft" on the phone's
@@ -842,11 +851,14 @@ a.cit-grat:hover {
    saw before sending and the number they read after are visibly the same one. */
 .cit-book__receipt{display:block;margin:10px 0;padding:12px 14px;border-radius:12px;
   background:var(--cit-surface-2,rgba(16,36,58,.04));border:1px solid var(--cit-line,rgba(16,36,58,.12))}
-.cit-book__rrow{display:flex;gap:12px;align-items:baseline;justify-content:space-between;
+.cit-book__rrow{display:flex;flex-wrap:wrap;column-gap:12px;align-items:baseline;justify-content:space-between;
   font-size:.86rem;line-height:1.65}
 .cit-book__rrow>span{color:var(--cit-muted,#60748b);flex:0 1 auto}
 .cit-book__rrow>b{color:var(--cit-ink,#10243a);text-align:right;flex:1 1 auto;
   white-space:nowrap;font-variant-numeric:tabular-nums}
+/* ADR-0393 (Elek 10-17, 390 px): a list of room names is TEXT, not a figure — kept on one
+   line it pushed the whole card past the screen edge. Text rows wrap; figures never do. */
+.cit-book__rrow--text>b{white-space:normal;overflow-wrap:anywhere;min-width:0}
 .cit-book__receipt .cit-book__qline{margin-top:2px}
 .cit-book__receipt .cit-book__qtotal{margin-top:8px;padding-top:8px;font-size:1rem;
   border-top:1px solid var(--cit-line,rgba(16,36,58,.12))}

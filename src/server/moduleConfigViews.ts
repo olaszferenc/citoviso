@@ -2526,8 +2526,9 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
     .join("");
   return (
     `<div class="adm-card unit-tabs-card">` +
-    `<h3 class="unit-tabs__h">${T(lang, "Mit ad ki?")}</h3>` +
-    `<p class="adm-lead">${T(lang, "Minden szobának külön naptára van, így külön telhet be.")}</p>` +
+    // Elek 10-17 (Marika): "Mit ad ki?" stood twice on one screen (here and on the rooms
+    // card below); this card picks a CALENDAR, and now says so.
+    `<h3 class="unit-tabs__h">${T(lang, "Melyik szoba naptárát nézi?")}</h3>` +
     `<div class="unit-tabs" role="tablist">${tabs}</div>${offTabNote ? `<div style="margin-top:12px">${offTabNote}</div>` : ""}${leftNote("12px 0 0")}</div>`
   );
 }
@@ -2535,9 +2536,21 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
 /** Add / rename / remove the bookable units. */
 function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): string {
   const multi = booking.units.length > 1;
+  const wholeOnlySite = booking.units.some((u) => u.wholeOnly);
   const rows = booking.units
-    .map(
-      (u) =>
+    .map((u) =>
+      // ADR-0393 (Elek 10-17, Marika): the old whole-house unit beside the rooms stood here as
+      // one more room with a capacity and a Mentés — under a sentence saying it has no
+      // calendar. It is named for what it is now; only its removal is offered.
+      multi && !wholeOnlySite && u.isWholeProperty && u.bookable === false
+        ? // A form only for the delete control's formaction (it posts this row's id).
+          `<form method="POST" action="/admin/units/delete" class="unit-row unit-row--whole" data-cit-unit-whole>` +
+          `<input type="hidden" name="id" value="${esc(u.id)}">` +
+          `<input type="hidden" name="back" value="${nu?.back ?? "booking"}">` +
+          `<p class="adm-lead" style="margin:0"><b>${esc(u.name)}</b> — ${T(lang, "nem külön ajánlat: aki az egész házat kéri, minden szobát kijelöl. A régebbi foglalásai miatt maradt meg; ha már nincs rajta foglalás, törölheti.")}</p>` +
+          unitDeleteControl(u, T(lang, "Törlés"), "citui-btn citui-btn--ghost unit-row__del", lang) +
+          `</form>`
+        :
         `<form method="POST" action="/admin/units/save" class="unit-row">` +
         `<input type="hidden" name="id" value="${esc(u.id)}">` +
         // Elek 10-13 T-5: the save comes back to the screen the row is on — with ONE unit the

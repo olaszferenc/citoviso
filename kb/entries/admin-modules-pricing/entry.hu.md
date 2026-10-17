@@ -239,7 +239,10 @@ vendég felárral. A beállítás minden szobára érvényes; ahol nem kérhető
    fizet. A gyerekár csak ott számít, ahol az ár **fő / éj**; a **szoba / éj** árnál a létszám nem
    számít, ezért ott ez a mező nem is látszik. A vendég a foglalásnál megadja, hányan gyermekek.
 4. **„Mely szobákhoz kérhető ellátás?”** (csak ha több szobája van) — vegye ki a pipát annál a szobánál, ahol nem kérhető.
-   Ott a vendég nem lát ellátás-választást, csak annyit, hogy ehhez a szálláshoz nem kérhető.
+   Ott a vendég nem lát ellátás-választást, csak annyit, hogy ehhez a szálláshoz nem kérhető. Ha a vendég
+   több szobát kér egyszerre, és ezek közül csak némelyikhez kérhető ellátás, a felár csak azokra a
+   szobákra számít (a vendég látja, melyikekre), a többiről pedig ezt olvassa: „Ehhez nem kérhető
+   ellátás:” és a szobák neve.
 5. **„Mi van még benne az árban?”** — a saját szavaival (pl. *takarítás, ágynemű, törölköző*).
    A vendég a szobáknál és a foglalásnál, a tételes ár alatt olvassa. Üresen hagyva elmarad.
 

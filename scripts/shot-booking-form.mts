@@ -251,7 +251,15 @@ check("a minimum éjszakát kikényszeríti", /Legalább 2/.test(short), short.s
 await page.fill("#cit-from", iso(20));
 await page.fill("#cit-to", iso(23));
 await page.waitForTimeout(250);
-check("szoba nélkül a „Tovább” még tiltott", await page.locator(".cit-book__go").isDisabled());
+// ADR-0393 kiegészítés (Elek 10-17, Józsi: a halvány, néma gomb elakasztotta): szoba nélkül a gomb
+// nem tilt, hanem a szobalistához visz — a 2. lépésbe NEM enged.
+check("szoba nélkül a gomb a szobát kéri", /Jelöljön ki legalább egy szobát/.test(await page.locator(".cit-book__go").innerText()));
+await page.locator(".cit-book__go").click();
+await page.waitForTimeout(250);
+check(
+  "szoba nélkül a gomb nem lép a 2. lépésre, a szobalistát emeli ki",
+  !(await page.locator(".cit-book--step2").count()) && (await page.locator(".cit-book__rooms--nudge").count()) === 1,
+);
 await page.locator("[data-cit-room-pick]:not([disabled])").first().check();
 await page.waitForTimeout(250);
 check("szabad időszaknál, szobával újra küldhető", !(await page.locator(".cit-book__submit").isDisabled()));

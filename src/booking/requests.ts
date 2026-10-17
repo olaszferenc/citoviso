@@ -735,24 +735,62 @@ const REPEAT_WINDOW_MIN = 10;
 /** ADR-0393: a sanity bound on the rooms of one request (no place we serve has more). */
 const MAX_REQUEST_UNITS = 30;
 
+/** A room of a request, as the meal and offer rules read it. */
+interface RequestRoom {
+  readonly id: string;
+  readonly name: string;
+  readonly capacity: number | null;
+}
+
+/** The rooms of a request, in the request's own order. */
+async function requestRooms(ids: readonly string[]): Promise<RequestRoom[]> {
+  if (!ids.length) return [];
+  const rows = await db.selectFrom("site_unit").select(["id", "name", "capacity"]).where("id", "in", [...ids]).execute();
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.flatMap((id) => {
+    const r = byId.get(id);
+    return r ? [{ id, name: r.name, capacity: r.capacity }] : [];
+  });
+}
+
+/** ADR-0393 (owner 2026-10-17, „2: igen”): the plan a request stores — the guest's choice
+ *  when ANY of its rooms takes meals (the first such room validates it), else none. */
+function requestPlan(meals: MealsSetting | null, rooms: readonly RequestRoom[], raw: unknown): MealPlanId | null {
+  const first = rooms.find((r) => chosenPlan(meals, r.id, raw) !== null);
+  return first ? chosenPlan(meals, first.id, raw) : null;
+}
+
 /**
- * ADR-0393: the meal lines of a request over `rooms` rooms. A per-person plan counts the
- * guests (the rooms do not matter); a per-room plan is charged once per room.
+ * ADR-0393: the meal lines of a request. Only the rooms the owner offers meals in take
+ * them (owner 2026-10-17): a per-room plan is charged once per such room; a per-person
+ * plan counts the guests, capped — when some room takes no meals — at the beds of the
+ * rooms that do, and the label names those rooms (the guest is not asked who sleeps where).
  */
-function roomsMealLines(
+function requestMealLines(
   meals: MealsSetting | null,
-  o: Parameters<typeof mealLines>[1] & { readonly rooms: number },
+  o: Omit<Parameters<typeof mealLines>[1], "unitId"> & { readonly rooms: readonly RequestRoom[] },
 ): MealLine[] {
-  const lines = mealLines(meals, o);
-  if (o.rooms <= 1 || !meals || !o.plan || meals.plans[o.plan]?.per !== "room") return lines;
-  // Kept as ONE line per night-price (guests stays 1, so no "× n fő" is printed): the room
-  // count goes into the label and the per-night figure.
-  return lines.map((l) => ({
-    ...l,
-    label: T(o.lang, "{name}, {n} szobára", { name: l.label, n: o.rooms }),
-    perNight: l.perNight * o.rooms,
-    sum: l.sum * o.rooms,
-  }));
+  const fed = o.rooms.filter((r) => chosenPlan(meals, r.id, o.plan) !== null);
+  if (!meals || !o.plan || !fed.length) return [];
+  const all = fed.length === o.rooms.length;
+  const beds = fed.some((r) => !r.capacity) ? Infinity : fed.reduce((t, r) => t + (r.capacity ?? 0), 0);
+  const guests = all ? o.guests : Math.max(1, Math.min(o.guests, beds));
+  const lines = mealLines(meals, { ...o, unitId: fed[0]!.id, guests, children: Math.min(o.children, guests - 1) });
+  const names = fed.map((r) => r.name).join(", ");
+  if (meals.plans[o.plan]?.per === "room") {
+    if (o.rooms.length <= 1) return lines;
+    // Kept as ONE line per night-price (guests stays 1, so no "× n fő" is printed): the room
+    // count goes into the label and the per-night figure.
+    return lines.map((l) => ({
+      ...l,
+      label: all
+        ? T(o.lang, "{name}, {n} szobára", { name: l.label, n: fed.length })
+        : T(o.lang, "{name} ({rooms})", { name: l.label, rooms: names }),
+      perNight: l.perNight * fed.length,
+      sum: l.sum * fed.length,
+    }));
+  }
+  return all ? lines : lines.map((l) => ({ ...l, label: T(o.lang, "{name} ({rooms})", { name: l.label, rooms: names }) }));
 }
 
 export async function createBookingRequest(
@@ -850,24 +888,15 @@ export async function createBookingRequest(
   // ADR-0378: the meal travels with the pricing module. The plan is validated against the
   // owner's setting (an unknown or withdrawn plan falls back to the base), the lines are
   // computed HERE — the browser's figure is never trusted — and freeze with the stay.
-  // ADR-0393: meals apply to a multi-room request only when EVERY room takes them.
+  // ADR-0393: meals apply to the rooms that take them (owner 2026-10-17).
   const meals = pricingLive ? readMeals(pricing.meals) : null;
-  const mealPlan = unitIds.every((id) => chosenPlan(meals, id, input.mealPlan) !== null)
-    ? chosenPlan(meals, input.unitId, input.mealPlan)
-    : null;
+  const rooms: RequestRoom[] = unitIds.map((id) => ({ id, name: nameOf(id), capacity: unitById.get(id)?.capacity ?? null }));
+  const mealPlan = requestPlan(meals, rooms, input.mealPlan);
   const guestCount = Math.max(1, Math.min(50, Math.round(input.guests || 1)));
   // ADR-0388: the child count is always asked (the tourist tax depends on it); mealLines
   // prices them as children only where a child meal price applies.
   const children = clampChildren(guestCount, input.children);
-  const mLines = roomsMealLines(meals, {
-    unitId: input.unitId,
-    plan: mealPlan,
-    nights: n,
-    guests: guestCount,
-    children,
-    lang,
-    rooms: unitIds.length,
-  });
+  const mLines = requestMealLines(meals, { plan: mealPlan, nights: n, guests: guestCount, children, lang, rooms });
   const quote = stayOnly
     ? { ...stayOnly, total: stayOnly.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayOnly.lines, ...mLines] }
     : null;
@@ -1194,6 +1223,8 @@ export async function notifyOwner(
   const offerUrl = `${base}/foglalas/${token}/ajanlat`;
   const multiRooms = requestUnitIds(req).length > 1;
   const missing = isQuote && !multiRooms ? await unpricedNights(req.unit_id, from, until) : [];
+  // ADR-0393: the rooms the owner has to price (the rest keep their list price).
+  const openRooms = isQuote && multiRooms ? (await multiOfferSplit(req, "hu")).open.map((r) => r.name) : [];
   const unitName = req.unit_name ?? "";
   // ADR-0267: the offer's price is for THIS request by default; it reaches the price list only
   // when the owner ticks „Mentsem az árlistába is?” on the offer page — the letter must not
@@ -1212,7 +1243,13 @@ export async function notifyOwner(
               to: huDate(addDays(missing[missing.length - 1]!, 1)),
             },
           )
-        : multiRooms
+        : multiRooms && openRooms.length && openRooms.length < requestUnitIds(req).length
+          ? T(lang, "{n} szobát kér egyszerre ({unit}). Ezeknek nincs ára: {rooms} — adja meg egy éjszaka árát rájuk együtt, a többi szoba a saját árlistája szerint számít. Az ár csak erre a kérésre szól.", {
+              n: requestUnitIds(req).length,
+              unit: unitName,
+              rooms: openRooms.join(", "),
+            })
+          : multiRooms
           ? T(lang, "{n} szobát kér egyszerre ({unit}). Adja meg egy éjszaka árát a szobákra együtt, és a rendszer elküldi neki az ajánlatot. Ez az ár csak erre a kérésre szól.", {
               n: requestUnitIds(req).length,
               unit: unitName,
@@ -1775,6 +1812,23 @@ async function sendGuestVerdict(
         mailPara(esc(T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal."))),
       ],
     });
+  } else if (requestUnitIds(req).length > 1) {
+    // auto_declined, several rooms (ADR-0393, Elek 10-17): the winner took SOME of them —
+    // "the period is full" claimed more than happened (the other rooms may well be free).
+    subject = T(lang, "A kért szobák egyike időközben foglalt lett: {from} — {to}", { from, to });
+    const why = T(
+      lang,
+      "Sajnáljuk — a kért időszakra ({from} — {to}) a szállásadó időközben másik foglalást igazolt vissza, amely a kért szobák közül legalább egyet érint, ezért a kérését ebben a formában nem tudja teljesíteni.",
+      { from, to },
+    );
+    const again = T(lang, "Ha más szobák vagy más időpont is szóba jöhetnek, keressen minket bizalommal.");
+    body = T(lang, "Kedves {name}!", { name: req.guest_name }) + `\n\n${why}\n\n${again}\n\n${host}\n`;
+    html = await guestLetterHtml(req, ctx, {
+      subtitle: T(lang, "Foglalási kérés"),
+      kicker: mailLabel(T(lang, "Nem szabad"), "wait"),
+      heading: T(lang, "A kért szobák egyike időközben foglalt lett"),
+      blocks: [greeting, mailPara(esc(why)), mailDetails(stayRows(req, lang, false)), mailPara(esc(again))],
+    });
   } else {
     // auto_declined — another request won the same nights (approved plan ⑥).
     subject = T(lang, "A kért időszak időközben betelt: {from} — {to}", { from, to });
@@ -2121,6 +2175,8 @@ export interface InboxItem {
   readonly unitId?: string;
   /** ADR-0393: every room of the request ([0] = unitId); one entry for a one-room request. */
   readonly unitIds?: readonly string[];
+  /** ADR-0393: the rooms' names, in `unitIds` order (the calendar links name each room). */
+  readonly unitNames?: readonly string[];
   readonly unitName: string;
   readonly guestName: string;
   readonly guestEmail: string;
@@ -2158,7 +2214,11 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select([UNIT_NAMES.as("unit_name"), UNIT_CAPACITY.as("unit_capacity")])
+    .select([
+      UNIT_NAMES.as("unit_name"),
+      UNIT_CAPACITY.as("unit_capacity"),
+      sql<string[]>`(select array_agg(u.name order by array_position(booking_request.unit_ids, u.id)) from site_unit u where u.id = any(booking_request.unit_ids))`.as("unit_names"),
+    ])
     .where("booking_request.site_id", "=", siteId)
     .orderBy("booking_request.status")
     .orderBy("booking_request.created_at", "desc")
@@ -2168,6 +2228,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     id: r.id,
     unitId: r.unit_id,
     unitIds: r.unit_ids,
+    unitNames: r.unit_names ?? [],
     unitName: r.unit_name,
     guestName: r.guest_name,
     guestEmail: r.guest_email,
@@ -2515,9 +2576,14 @@ export interface OfferView {
    *  opens on (it is the first bookable unit in the owner's order with any price row, and
    *  there is more than one to choose from). Said out loud on the "alapár" choice. */
   readonly opensWidget?: boolean;
-  /** ADR-0393: rooms in the request. Above 1 the owner prices the WHOLE set of rooms per
-   *  night, for this request only (`missing` = every night, `known` empty, per_night). */
+  /** ADR-0393: rooms in the request. Above 1 the priced rooms are `known` (their own lines)
+   *  and the owner gives ONE per-night price for `openRooms` together, for this request
+   *  only (`missing` = every night when any room is open; per_night). */
   readonly rooms?: number;
+  /** ADR-0393: the rooms of a multi-room request that the offer prices (no list price). */
+  readonly openRooms?: string[];
+  /** ADR-0378: the meal lines the offer will carry — the page shows and sums them. */
+  readonly mealLines?: { label: string; nights: number; perNight: number; guests: number; sum: number }[];
 }
 
 /** Where an offer's price goes (ADR-0267, owner 2026-09-29: „OK A)", „Kért Napok"). */
@@ -2575,6 +2641,39 @@ async function pricingConfigFor(siteId: string): Promise<{ currency: string; uni
 }
 
 /** The owner's offer page (GET) — the action token is the owner's key. */
+/**
+ * ADR-0393 (owner 2026-10-17, „2: igen”): a multi-room request splits into the rooms the
+ * price list already prices for the whole stay — their lines stand as they are — and the
+ * rooms the owner prices in the offer, per night, together. Per-person or per-stay pricing
+ * cannot be split by room (the head count per room is not asked): every room is open then.
+ */
+async function multiOfferSplit(
+  req: RequestRow,
+  lang: string,
+): Promise<{ open: RequestRoom[]; known: OfferLine[]; lines: { label: string; nights: number; perNight: number; guests: number; sum: number }[] }> {
+  const rooms = await requestRooms(requestUnitIds(req));
+  const from = dayStr(req.date_from);
+  const to = dayStr(req.date_to);
+  const { unitMode } = await pricingConfigFor(req.site_id);
+  if (unitMode !== "per_night") return { open: rooms, known: [], lines: [] };
+  const open: RequestRoom[] = [];
+  const known: OfferLine[] = [];
+  const lines: { label: string; nights: number; perNight: number; guests: number; sum: number }[] = [];
+  for (const r of rooms) {
+    const q = (await stayQuote(req.site_id, r.id, from, to, req.guests, lang)).quote;
+    if (!q) {
+      open.push(r);
+      continue;
+    }
+    for (const l of q.lines) {
+      const label = `${r.name} — ${l.label}`;
+      known.push({ label, nights: l.nights, perNight: l.perNight, from, to });
+      lines.push({ label, nights: l.nights, perNight: l.perNight, guests: l.guests, sum: l.sum });
+    }
+  }
+  return { open, known, lines };
+}
+
 export async function loadOfferView(token: string): Promise<OfferView> {
   const req = await loadRequest({ token });
   if (!req) return { outcome: "unknown", lang: "hu" };
@@ -2595,14 +2694,15 @@ export async function loadOfferView(token: string): Promise<OfferView> {
   const rooms = requestUnitIds(req).length;
   const prices = await getUnitPrices(req.unit_id);
   const { currency, unitMode: listMode } = await pricingConfigFor(req.site_id);
-  // ADR-0393: several rooms — one per-night price for all of them, every night asked.
+  // ADR-0393: several rooms — the priced rooms stand, one per-night price for the open ones.
   const unitMode = rooms > 1 ? "per_night" : listMode;
-  const known: OfferLine[] = [];
+  const split = rooms > 1 ? await multiOfferSplit(req, ctx.lang) : null;
+  const known: OfferLine[] = split ? [...split.known] : [];
   const missing: string[] = [];
   const baseLabel = T(ctx.lang, "Alapár");
   for (let i = 0; i < nights(from, to); i++) {
-    if (rooms > 1) {
-      missing.push(addDays(from, i));
+    if (split) {
+      if (split.open.length) missing.push(addDays(from, i));
       continue;
     }
     const day = addDays(from, i);
@@ -2645,6 +2745,16 @@ export async function loadOfferView(token: string): Promise<OfferView> {
     today,
     expireHours: ctx.expireHours,
     rooms,
+    ...(split ? { openRooms: split.open.map((r) => r.name) } : {}),
+    // The SAME lines sendOffer adds (requestMealLines over the request's rooms).
+    mealLines: requestMealLines(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), {
+      plan: req.meal_plan,
+      nights: nights(from, to),
+      guests: req.guests,
+      children: req.children ?? 0,
+      lang: ctx.lang,
+      rooms: await requestRooms(requestUnitIds(req)),
+    }).map((l) => ({ label: l.label, nights: l.nights, perNight: l.perNight, guests: l.guests, sum: l.sum })),
     ...(await offerUnitFacts(req.site_id, req.unit_id)),
   };
 }
@@ -2730,11 +2840,15 @@ export async function sendOffer(
   const from = dayStr(req.date_from);
   const to = dayStr(req.date_to);
   const today = await todayForSite(req.site_id);
-  // ADR-0393: a multi-room request is priced as a whole — every night, for this request only.
+  // ADR-0393: a multi-room request — the priced rooms keep their list lines, the owner's
+  // per-night price covers the open rooms together, every night, for this request only.
   const rooms = requestUnitIds(req);
   const multi = rooms.length > 1;
-  const missing = multi
-    ? Array.from({ length: nights(from, to) }, (_, i) => addDays(from, i))
+  const split = multi ? await multiOfferSplit(req, lang) : null;
+  const missing = split
+    ? split.open.length
+      ? Array.from({ length: nights(from, to) }, (_, i) => addDays(from, i))
+      : []
     : await unpricedNights(req.unit_id, from, to);
 
   const errors: string[] = [];
@@ -2769,7 +2883,7 @@ export async function sendOffer(
   const offered = new Set(amount.value ? missing : []);
   const priceRows =
     missing.length && amount.value && save === "request" ? [...listed, ...offerOverlayRows(missing, amount.value)] : listed;
-  const stayQuote = quoteStayFrom(priceRows, {
+  const offeredQuote = quoteStayFrom(priceRows, {
     dateFrom: from,
     dateTo: to,
     guests: Math.max(1, Math.round(req.guests || 1)),
@@ -2780,11 +2894,24 @@ export async function sendOffer(
     // it: "Alapár" there reads as a price-list price, which an offer is not (ADR-0267).
     labelOn: (day) =>
       offered.has(day)
-        ? multi
-          ? T(lang, "Egyedi ár — {n} szoba", { n: rooms.length })
+        ? split
+          ? split.open.length === rooms.length
+            ? T(lang, "Egyedi ár — {n} szoba", { n: rooms.length })
+            : T(lang, "Egyedi ár — {rooms}", { rooms: split.open.map((r) => r.name).join(", ") })
           : T(lang, "Egyedi ár")
         : undefined,
   });
+  // The priced rooms' own lines come first, then the offered price (none when every room
+  // was priced already — the stay is the list's then).
+  const stayQuote = split
+    ? split.lines.length || offeredQuote
+      ? {
+          currency,
+          total: split.lines.reduce((t, l) => t + l.sum, 0) + (offeredQuote?.total ?? 0),
+          lines: [...split.lines, ...(offeredQuote?.lines ?? [])],
+        }
+      : null
+    : offeredQuote;
   // ADR-0378: the meal the guest asked for rides on the offer. Lines already frozen on the
   // request win (that is what the guest was shown); otherwise they are priced now.
   const frozenMeal = (req.quoted_lines ?? [])
@@ -2792,14 +2919,13 @@ export async function sendOffer(
     .map((l) => ({ label: l.label, nights: l.nights, perNight: l.per_night, guests: l.guests, sum: l.sum, kind: "meal" as const }));
   const mLines = frozenMeal.length
     ? frozenMeal
-    : roomsMealLines(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), {
-        unitId: req.unit_id,
+    : requestMealLines(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), {
         plan: req.meal_plan,
         nights: nights(from, to),
         guests: req.guests,
         children: req.children ?? 0,
         lang,
-        rooms: rooms.length,
+        rooms: await requestRooms(rooms),
       });
   const quote = stayQuote
     ? { ...stayQuote, total: stayQuote.total + mLines.reduce((t, l) => t + l.sum, 0), lines: [...stayQuote.lines, ...mLines] }

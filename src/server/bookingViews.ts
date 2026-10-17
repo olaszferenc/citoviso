@@ -173,12 +173,23 @@ function urgency(left: number | null): "hot" | "warm" | "cool" {
   return left <= 24 ? "hot" : left <= 36 ? "warm" : "cool";
 }
 
-/** reqId → the other PENDING requests sharing at least one night. */
+/** The rooms of a request (ADR-0393: several; an older row: its one unit). */
+const roomsOf = (r: InboxItem): readonly string[] => r.unitIds ?? (r.unitId ? [r.unitId] : []);
+
+/** reqId → the other PENDING requests sharing at least one night IN A SHARED ROOM.
+ *  Elek 10-17 (Marika): the dates alone made two requests for different rooms a
+ *  "conflict", and the chooser promised to decline one the server never touched. */
 function overlapGroups(pend: readonly InboxItem[]): Map<string, InboxItem[]> {
   const out = new Map<string, InboxItem[]>();
   for (const r of pend) {
+    const mine = roomsOf(r);
     const others = pend.filter(
-      (x) => x.id !== r.id && x.dateFrom < r.dateTo && x.dateTo > r.dateFrom,
+      (x) =>
+        x.id !== r.id &&
+        x.dateFrom < r.dateTo &&
+        x.dateTo > r.dateFrom &&
+        // A request without room data (never from the DB) stays a conflict — the cautious side.
+        (!mine.length || !roomsOf(x).length || roomsOf(x).some((u) => mine.includes(u))),
     );
     if (others.length) out.set(r.id, others);
   }
@@ -197,9 +208,30 @@ function monthName(iso: string, lang: string): string {
 }
 
 /** The calendar opened on a request's unit and month (ADR-0274 ④). */
-function calendarHrefFor(r: InboxItem): string {
-  const unit = r.unitId ? `&u=${encodeURIComponent(r.unitId)}` : "";
+function calendarHrefFor(r: InboxItem, unitId = r.unitId): string {
+  const unit = unitId ? `&u=${encodeURIComponent(unitId)}` : "";
   return tabHref(`${unit}&ho=${r.dateFrom.slice(0, 7)}&naptar=1#naptar`);
+}
+
+/** The card's way to the calendar. ADR-0393 (Elek 10-17, Marika): one calendar per room, so
+ *  a multi-room request links EACH room — one link named after all of them opened only the
+ *  first. */
+function calendarLinks(r: InboxItem, lang: string): string {
+  const ids = r.unitIds ?? [];
+  const names = r.unitNames ?? [];
+  if (ids.length > 1 && names.length === ids.length) {
+    return (
+      `<p class="bk-req__cal">${ic("bookings", 15)}${esc(T(lang, "Megnézem a naptárban ({month}):", { month: monthName(r.dateFrom, lang) }))} ` +
+      ids.map((id, i) => `<a href="${calendarHrefFor(r, id)}">${esc(names[i]!)}</a>`).join(" · ") +
+      `</p>`
+    );
+  }
+  return (
+    `<a class="bk-req__cal" href="${calendarHrefFor(r)}">${ic("bookings", 15)}${T(lang, "Megnézem a naptárban ({month}, {unit})", {
+      month: esc(monthName(r.dateFrom, lang)),
+      unit: esc(r.unitName),
+    })}</a>`
+  );
 }
 
 /** Every night of a stay (check-in … the night before check-out), ISO days. */
@@ -488,7 +520,8 @@ function cancelForm(b: InboxItem, view: string, lang: string, label: string): st
     `<details class="bk-cancel"><summary>${esc(label)}</summary>` +
     `<form method="post" action="/admin/booking/cancel" data-bk-cancel ` +
     `data-bk-name="${esc(b.guestName)}" ` +
-    `data-bk-when="${esc(huDay(b.dateFrom, lang))} — ${esc(huDay(b.dateTo, lang))} · ${esc(T(lang, "{n} éj", { n: nightsOf(b) }))} · ${esc(T(lang, "{n} fő", { n: b.guests }))}">` +
+    // Elek 10-17 (Marika): the dialog now names the room(s) the cancel frees.
+    `data-bk-when="${b.unitName ? `${esc(b.unitName)} · ` : ""}${esc(huDay(b.dateFrom, lang))} — ${esc(huDay(b.dateTo, lang))} · ${esc(T(lang, "{n} éj", { n: nightsOf(b) }))} · ${esc(T(lang, "{n} fő", { n: b.guests }))}">` +
     `<input type="hidden" name="id" value="${esc(b.id)}">` +
     // Where to come back to: the unit, the month and the open calendar (see viewState).
     `<input type="hidden" name="nezet" value="${esc(view)}">` +
@@ -758,10 +791,7 @@ function requestCard(
       : `<div class="bk-req__act">${verdictPanel(true)}${verdictPanel(false)}</div>`) +
     reach +
     `</div></div>` +
-    `<a class="bk-req__cal" href="${calendarHrefFor(r)}">${ic("bookings", 15)}${T(lang, "Megnézem a naptárban ({month}, {unit})", {
-      month: esc(monthName(r.dateFrom, lang)),
-      unit: esc(r.unitName),
-    })}</a>` +
+    calendarLinks(r, lang) +
     `</div>`
   );
 }
@@ -943,7 +973,8 @@ function historyRow(r: InboxItem, expireHours: number, view: string, lang: strin
   return (
     `<div class="bk-hist">` +
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
-    `<span>${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
+    // Elek 10-17 (Marika): the row — and its „Lemondom” — named no room.
+    `<span>${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
       r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
     }${decided}</span>` +
     (quotes ? `<div class="bk-quotes">${quotes}</div>` : "") +
@@ -999,6 +1030,10 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
         nights: nightsOf(r),
         guests: r.guests,
         got: r.createdAt.toISOString(),
+        // ADR-0393: the rooms, named on the row and used for "who loses" when the owner
+        // picks someone else than the request the chooser was opened from.
+        rooms: r.unitName ?? "",
+        units: roomsOf(r),
       }));
   }
 
@@ -1235,7 +1270,7 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     pick: T(lang, "Ezt választom"),
     picked: T(lang, "✓ Ő kapja"),
     warn1: T(lang, "automatikusan elutasításra kerül:"),
-    warnTail: T(lang, "A vendégek udvarias e-mailt kapnak arról, hogy az időszak betelt."),
+    warnTail: T(lang, "A vendégek udvarias e-mailt kapnak arról, hogy a kért szoba erre az időszakra már foglalt."),
     noteLabel: T(lang, "Üzenet a visszaigazolt vendégnek (nem kötelező)"),
     confirmBtn: T(lang, "Visszaigazolom — a többit elutasítom"),
     cancelBtn: T(lang, "Mégsem"),
@@ -1283,12 +1318,15 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     `function open(form,id){var g=G[id];if(!g)return true;var chosen=id;` +
     `var preNote=(form.querySelector('[name=uzenet]')||{}).value||"";` +
     `var ov=document.createElement("div");ov.className="bk-ovl";` +
-    `function render(){var losers=g.filter(function(r){return r.id!==chosen;});` +
+    // Only the requests that share a night AND a room with the chosen one are declined —
+    // the server's rule (acceptCore); the chooser must not name more.
+    `function clash(a,b){var x=a.units||[],y=b.units||[];return a.from<b.to&&a.to>b.from&&(!x.length||!y.length||x.some(function(u){return y.indexOf(u)>=0;}));}` +
+    `function render(){var win=g.filter(function(r){return r.id===chosen;})[0];var losers=g.filter(function(r){return r.id!==chosen&&clash(r,win);});` +
     `ov.innerHTML='<div class="bk-ovm"><h3>'+L.title+'</h3><p class="bk-ovsub">'+L.sub+'</p>'+calGrid(g)+` +
     `g.map(function(r,i){var sel=r.id===chosen;` +
     `return '<div class="bk-ovreq'+(sel?' is-sel':'')+'" data-id="'+r.id+'">'+` +
     `'<span class="bk-ovord" style="background:'+C[i%3]+'">'+(i+1)+'.</span>'+` +
-    `'<span class="bk-ovt"><b>'+e(r.name)+'</b><span>'+fmt(r.from)+' → '+fmt(r.to)+' · '+r.nights+' '+L.nights+' · '+r.guests+' '+L.guests+' · '+L.asked+' '+r.got.slice(11,16)+'</span></span>'+` +
+    `'<span class="bk-ovt"><b>'+e(r.name)+'</b>'+(r.rooms?'<span>'+e(r.rooms)+'</span>':'')+'<span>'+fmt(r.from)+' → '+fmt(r.to)+' · '+r.nights+' '+L.nights+' · '+r.guests+' '+L.guests+' · '+L.asked+' '+r.got.slice(11,16)+'</span></span>'+` +
     `'<span class="bk-ovpick">'+(sel?L.picked:L.pick)+'</span></div>';}).join('')+` +
     `'<div class="bk-ovwarn"><b>'+losers.length+' '+L.req+' '+L.warn1+'</b> '+losers.map(function(r){return e(r.name);}).join(', ')+'. '+L.warnTail+'</div>'+` +
     `'<label class="bk-ovlabel">'+L.noteLabel+'</label><textarea class="bk-ovnote" maxlength="1000"></textarea>'+` +
@@ -1569,6 +1607,8 @@ export const BOOKINGS_STYLE = `<style>
 .bk-req__reacht{flex:1 1 100%;font-size:.76rem;color:var(--citui-muted);word-break:break-word}
 .bk-req__cal{display:flex;align-items:center;gap:6px;margin:0 14px 12px;font-size:.8rem;font-weight:700;
   color:var(--citui-link-ink)}
+p.bk-req__cal{flex-wrap:wrap;color:var(--citui-ink)}
+p.bk-req__cal a{color:var(--citui-link-ink)}
 /* Wide card (landscape phone, desktop column): decisions in their own column at the
    TOP of the card — in 390 px of height the buttons would otherwise sit under the
    message. While a confirmation is open the card falls back to one column, so the

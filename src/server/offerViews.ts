@@ -163,14 +163,42 @@ export function ownerOfferPage(
     )
     .join("");
 
-  // ADR-0393: several rooms are priced together, per night, for this request only.
+  // ADR-0378 (Elek 10-17, Marika): the meal the guest asked for rides on the offer — it was
+  // added only AT SEND, so the page said 237 000 and the guest got 313 500. Shown and summed here.
+  const mealLines = v.mealLines ?? [];
+  const mealSum = mealLines.reduce((t, l) => t + l.sum, 0);
+  const mealRows = mealLines
+    .map(
+      (l) =>
+        `<li><div>${esc(l.label)} · ${esc(T(lang, "{n} éj", { n: l.nights }))} × ${esc(money(l.perNight))}` +
+        (l.guests > 1 ? ` × ${esc(T(lang, "{n} fő", { n: l.guests }))}` : "") +
+        `<small>${T(lang, "a vendég kérte — az ellátás beállított felára")}</small></div>` +
+        `<span class="of-sum">${esc(money(l.sum))}</span></li>`,
+    )
+    .join("");
+
+  // ADR-0393: several rooms — the priced ones stand in `known`, the owner prices the open
+  // ones together, per night, for this request only (owner 2026-10-17).
   const rooms = v.rooms ?? 1;
+  const open = v.openRooms ?? [];
+  const allOpen = rooms > 1 && open.length >= rooms;
+  const openNames = open.join(", ");
+  const missHead =
+    rooms <= 1 ? T(lang, "Új ár") : allOpen ? esc(T(lang, "{n} szoba együtt", { n: rooms })) : esc(T(lang, "Egyedi ár: {rooms}", { rooms: openNames }));
+  const missLabel =
+    rooms <= 1
+      ? T(lang, "Ár éjszakánként")
+      : allOpen
+        ? esc(T(lang, "Ár éjszakánként, a {n} szobára együtt", { n: rooms }))
+        : open.length === 1
+          ? esc(T(lang, "Ár éjszakánként: {rooms}", { rooms: openNames }))
+          : esc(T(lang, "Ár éjszakánként, együtt: {rooms}", { rooms: openNames }));
   const missRow = missing.length
-    ? `<li class="of-miss"><div>${rooms > 1 ? esc(T(lang, "{n} szoba együtt", { n: rooms })) : T(lang, "Új ár")} · ${esc(T(lang, "{n} éj", { n: missing.length }))}` +
-      `<small>${esc(huDate(missing[0]!, lang))} – ${esc(huDate(addDays(lastMissing!, 1), lang))} — ${rooms > 1 ? esc(v.unitName ?? "") : T(lang, "erre nincs ára")}</small></div>` +
+    ? `<li class="of-miss"><div>${missHead} · ${esc(T(lang, "{n} éj", { n: missing.length }))}` +
+      `<small>${esc(huDate(missing[0]!, lang))} – ${esc(huDate(addDays(lastMissing!, 1), lang))} — ${rooms > 1 ? (allOpen ? esc(v.unitName ?? "") : open.length > 1 ? T(lang, "ezekre nincs ára") : T(lang, "erre nincs ára")) : T(lang, "erre nincs ára")}</small></div>` +
       `<span class="of-sum" data-sum>—</span>` +
       `<div class="of-full">` +
-      `<label class="of-fld"><span>${rooms > 1 ? esc(T(lang, "Ár éjszakánként, a {n} szobára együtt", { n: rooms })) : T(lang, "Ár éjszakánként")}</span>` +
+      `<label class="of-fld"><span>${missLabel}</span>` +
       `<span class="of-inp"><input name="amount" type="text" inputmode="numeric" autocomplete="off" ` +
       `placeholder="${esc(T(lang, "pl. 26 000"))}" value="${esc(opts.amount ?? "")}" data-amount>` +
       `<em>${esc(perLabel(lang, cur, mode))}</em></span></label>` +
@@ -257,6 +285,7 @@ export function ownerOfferPage(
     missing: missing.length,
     arrivalMissing: missing[0] === v.dateFrom,
     known: knownSum,
+    meal: mealSum,
     mul: guestsMul,
     mode,
     lang,
@@ -295,9 +324,9 @@ export function ownerOfferPage(
     `</section>` +
     `<form class="of-card" method="POST" data-offer-form novalidate>` +
     `<h2>${T(lang, "Az ár")}</h2>` +
-    `<ul class="of-lines">${missRow}${knownRows}</ul>` +
+    `<ul class="of-lines">${missRow}${knownRows}${mealRows}</ul>` +
     `<div class="of-total"><span>${T(lang, "Összesen")}</span>` +
-    `<b class="${missing.length ? "of-empty" : ""}" data-total>${missing.length ? esc(msg.empty) : esc(money(knownSum))}</b></div>` +
+    `<b class="${missing.length ? "of-empty" : ""}" data-total>${missing.length ? esc(msg.empty) : esc(money(knownSum + mealSum))}</b></div>` +
     `<label class="of-lbl" for="of-note">${T(lang, "Üzenet a vendégnek (nem kötelező)")}</label>` +
     `<textarea id="of-note" name="note" maxlength="1000" placeholder="${esc(T(lang, "pl. A kiságyat szívesen odakészítjük, díjmentesen."))}">${esc(opts.note ?? "")}</textarea>` +
     saveBlock +
@@ -333,7 +362,7 @@ function run(){
  if(m.body)K.appendChild(document.createTextNode(" "+m.body.split("{price}").join(price)));
  K.className="of-cons"+(k==="request"?"":" of-cons--warn");}
  var add=0;if(r.value){add=C.mode==="per_stay"?(C.arrivalMissing?r.value:0):r.value*C.missing*C.mul;}
- var total=r.value?(C.mode==="per_stay"?(C.arrivalMissing?r.value:C.known):C.known+add):null;
+ var total=r.value?(C.mode==="per_stay"?(C.arrivalMissing?r.value:C.known):C.known+add)+(C.meal||0):null;
  f.querySelector("[data-sum]").textContent=r.value?money(C.mode==="per_stay"?(C.arrivalMissing?r.value:0):add):"\\u2014";
  var t=f.querySelector("[data-total]");t.textContent=total?money(total):C.msg.empty;t.classList.toggle("of-empty",!total);
  S.disabled=!total||k==="pick";
