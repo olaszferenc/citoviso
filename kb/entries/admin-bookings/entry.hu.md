@@ -110,7 +110,9 @@ ajánlatot:
    van, belépés nélkül). Megnyílik az ajánlat-lap.
 2. A lap felsorolja a kért éjszakákat. Amire már van ára (például a főszezonra), az a meglévő
    áron fixen áll. Csak a hiányzó éjszakákhoz kell árat írnia az **„Ár éjszakánként”** mezőbe —
-   az összeg azonnal kiszámolódik alatta.
+   az összeg azonnal kiszámolódik alatta. Ha a vendég ellátást is kért (például reggelit), az
+   külön sorban áll („a vendég kérte — az ellátás beállított felára”), és az **„Összesen”** már
+   tartalmazza.
 3. Írhat üzenetet a vendégnek (például „A kiságyat szívesen odakészítjük.”).
 4. Az ár alapból **csak erre a kérésre** szól: az árlistája nem változik, és ahol nincs ára, ott
    a vendégek a honlapon továbbra is árajánlatot kérnek. Ha az árat az árlistába is fel akarja
@@ -171,7 +173,10 @@ kérésen piros jelzés figyelmeztet. A
 **„Visszaigazolom”** gombra ilyenkor egy választó ablak nyílik: a naptáron színnel látja, ki
 melyik éjszakákat kéri, és kiválaszthatja, kinek adja az időszakot. A **„Visszaigazolom — a
 többit elutasítom”** gomb megerősítés után a választott vendégnek visszaigazolást küld, a
-többi fedésben lévő kérést pedig automatikusan elutasítja — azok a vendégek is e-mailt kapnak.
+többi fedésben lévő kérést pedig automatikusan elutasítja — azok a vendégek is e-mailt kapnak
+arról, hogy a kért szoba erre az időszakra már foglalt. Több szobás szálláson csak az a kérés
+kerül elutasításra, amelyik ugyanazt a szobát kéri: a más szobára szóló kérés megmarad, Ön dönt
+róla külön. Az ablak minden kérés mellett kiírja, melyik szobára szól.
 
 ## A naptár
 

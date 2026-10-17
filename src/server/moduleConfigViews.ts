@@ -2547,8 +2547,12 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
           `<form method="POST" action="/admin/units/delete" class="unit-row unit-row--whole" data-cit-unit-whole>` +
           `<input type="hidden" name="id" value="${esc(u.id)}">` +
           `<input type="hidden" name="back" value="${nu?.back ?? "booking"}">` +
-          `<p class="adm-lead" style="margin:0"><b>${esc(u.name)}</b> — ${T(lang, "nem külön ajánlat: aki az egész házat kéri, minden szobát kijelöl. A régebbi foglalásai miatt maradt meg; ha már nincs rajta foglalás, törölheti.")}</p>` +
-          unitDeleteControl(u, T(lang, "Törlés"), "citui-btn citui-btn--ghost unit-row__del", lang) +
+          // deleteUnit refuses the whole house while two or more rooms remain — no delete
+          // control (and no "törölheti") is offered there, so the row never promises a refusal.
+          (u.representsWhole && booking.units.filter((x) => !x.representsWhole).length >= 2
+            ? `<p class="adm-lead" style="margin:0"><b>${esc(u.name)}</b> — ${T(lang, "nem külön ajánlat: aki az egész házat kéri, minden szobát kijelöl. A régebbi foglalásai miatt marad meg, amíg több szobája van.")}</p>`
+            : `<p class="adm-lead" style="margin:0"><b>${esc(u.name)}</b> — ${T(lang, "nem külön ajánlat: aki az egész házat kéri, minden szobát kijelöl. A régebbi foglalásai miatt maradt meg; ha már nincs rajta foglalás, törölheti.")}</p>` +
+              unitDeleteControl(u, T(lang, "Törlés"), "citui-btn citui-btn--ghost unit-row__del", lang)) +
           `</form>`
         :
         `<form method="POST" action="/admin/units/save" class="unit-row">` +
