@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end self-test of the tenant-domain HTTPS job WITHOUT root and without the internet
-# (ADR-XXXX). A REAL nginx (the Debian package, unpacked — same 1.26 as the VPS) runs on
+# (ADR-0394). A REAL nginx (the Debian package, unpacked — same 1.26 as the VPS) runs on
 # high ports with the repo's own config files; certbot is a stub that performs the HTTP-01
 # round-trip THROUGH that nginx and signs with a throw-away CA; the upstreams are a stub
 # that echoes the Host header. Proves: issuance, the generated block, HTTPS with a

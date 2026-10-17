@@ -1,8 +1,8 @@
 [Unit]
-# ADR-XXXX: a saját domain tls_pending-ben vár, amíg érvényes tanúsítványt nem szolgál ki —
+# ADR-0394: a saját domain tls_pending-ben vár, amíg érvényes tanúsítványt nem szolgál ki —
 # ez a feladat kéri le (Let's Encrypt, HTTP-01) és írja meg hozzá az nginx-blokkot.
 # ROOTKÉNT fut (certbot + nginx reload); az adatbázist nem érinti, a névlistát az app-user adja.
-Description=Citoviso saját domainek tanúsítványa és nginx-blokkja (ADR-XXXX)
+Description=Citoviso saját domainek tanúsítványa és nginx-blokkja (ADR-0394)
 After=network-online.target nginx.service
 Wants=network-online.target
 # ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).

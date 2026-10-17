@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tenant custom domains → Let's Encrypt certificate + nginx HTTPS block (ADR-XXXX).
+# Tenant custom domains → Let's Encrypt certificate + nginx HTTPS block (ADR-0394).
 #
 #   bash deploy/tenant-tls/citoviso-tenant-tls.sh      # as root, from the app dir (timer)
 #

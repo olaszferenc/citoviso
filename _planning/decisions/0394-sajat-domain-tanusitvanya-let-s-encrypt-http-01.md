@@ -1,4 +1,4 @@
-## ADR-XXXX — Saját domain tanúsítványa: Let's Encrypt (HTTP-01) a VPS-en, gyökér-időzítővel és generált nginx-blokkal
+## ADR-0394 — Saját domain tanúsítványa: Let's Encrypt (HTTP-01) a VPS-en, gyökér-időzítővel és generált nginx-blokkal
 
 **Dátum:** 2026-10-17 · **Kontextus:** a tulaj aggodalma („az alapcsomag tartalmazza a saját domaint, de soha nem
 teszteltük, hogy a mi tárhelyünkre automatizáltan tudjuk-e irányítani”), brief `domain-20261017-095752.md`.

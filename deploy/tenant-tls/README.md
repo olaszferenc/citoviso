@@ -1,4 +1,4 @@
-# Saját domain HTTPS — tanúsítvány + nginx-blokk (ADR-XXXX)
+# Saját domain HTTPS — tanúsítvány + nginx-blokk (ADR-0394)
 
 A beszerzés (`src/domains/provisionDomain.ts`) a név megvétele és a DNS átírása után `tls_pending`-ben vár, amíg
 a név érvényes tanúsítványt nem szolgál ki. Ezt a tanúsítványt ez a mappa adja.

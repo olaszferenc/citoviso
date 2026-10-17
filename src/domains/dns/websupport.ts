@@ -200,7 +200,7 @@ export class WebsupportDns implements DnsAdapter {
    *
    * Deliberately provider-agnostic: it opens a real TLS connection and lets Node verify
    * the chain and the hostname. Terv-B issues certificates with Let's Encrypt ON THE VPS
-   * (ADR-XXXX: the root timer deploy/tenant-tls/citoviso-tenant-tls.sh), so there is no
+   * (ADR-0394: the root timer deploy/tenant-tls/citoviso-tenant-tls.sh), so there is no
    * certificate API to poll. Measuring the socket
    * means this keeps working whatever issues the cert, and it can never report "active"
    * for a certificate a browser would reject.

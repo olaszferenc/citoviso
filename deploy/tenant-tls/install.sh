@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time root setup of the tenant-domain HTTPS edge on the live VPS (ADR-XXXX).
+# One-time root setup of the tenant-domain HTTPS edge on the live VPS (ADR-0394).
 #
 #   bash deploy/tenant-tls/install.sh        # dry-run: what is missing, nothing changes
 #   bash deploy/tenant-tls/install.sh --go   # as root, from /opt/citoviso/app (deployed commit)
@@ -32,7 +32,7 @@ fi
 command -v certbot >/dev/null || { apt-get update -q && apt-get install -y -q certbot; }
 install -d -m 0755 /var/www/acme /etc/nginx/citoviso-tenants
 install -d -m 0755 "$(dirname "$HOOK")"
-printf '#!/bin/sh\n# ADR-XXXX: a renewed tenant certificate is only served after a reload.\nsystemctl reload nginx\n' >"$HOOK"
+printf '#!/bin/sh\n# ADR-0394: a renewed tenant certificate is only served after a reload.\nsystemctl reload nginx\n' >"$HOOK"
 chmod 0755 "$HOOK"
 
 install -m 0644 "$HERE/acme-default.conf" "$SITE"

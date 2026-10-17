@@ -78,7 +78,7 @@ check(
   /server_name[^;]*\*\.citoviso\.com/.test(main),
 );
 check("① az admin-host egésze a konzolra megy", locations(admin).get("/") === 4600);
-// ADR-XXXX: a tenant saját domainje (generált nginx-blokk) UGYANÚGY útválaszt, mint a
+// ADR-0394: a tenant saját domainje (generált nginx-blokk) UGYANÚGY útválaszt, mint a
 // citoviso.com blokk — egy új konzol-előtag nem hiányozhat a saját domainről.
 const tenantTmpl = await readFile(new URL("../deploy/tenant-tls/tenant-site.conf.tmpl", import.meta.url), "utf8");
 const tenantLocs = locations(tenantTmpl);

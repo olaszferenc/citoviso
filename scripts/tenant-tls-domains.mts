@@ -1,5 +1,5 @@
 // The tenant custom domains the edge must serve over HTTPS — one per line, for the ROOT
-// certificate job (deploy/tenant-tls/citoviso-tenant-tls.sh, ADR-XXXX).
+// certificate job (deploy/tenant-tls/citoviso-tenant-tls.sh, ADR-0394).
 //
 //   npx tsx scripts/tenant-tls-domains.mts
 //
