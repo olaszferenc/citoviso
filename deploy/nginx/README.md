@@ -11,3 +11,9 @@ a `scripts/edge-routing-check.mts` összeveti a kettőt, és bukik, ha eltérnek
 
 Ha élesen változik az nginx (tulaj-engedéllyel), ezt a másolatot ÉS az `edgeRoutes.ts`-t
 ugyanabban a commitban kell frissíteni — különben az őr piros.
+
+## Saját domainek (ADR-XXXX)
+
+A tenantok saját domainjeit NEM ez a két fájl szolgálja ki, hanem a `deploy/tenant-tls/` alatt leírt
+generált, névenkénti blokk (`/etc/nginx/citoviso-tenants/`) és a :80 catch-all (`citoviso-acme-default`).
+Az útválasztásuk betűre ezé a blokké — az `edge-routing-check` ezt is méri.

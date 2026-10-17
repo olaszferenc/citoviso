@@ -78,6 +78,15 @@ check(
   /server_name[^;]*\*\.citoviso\.com/.test(main),
 );
 check("① az admin-host egésze a konzolra megy", locations(admin).get("/") === 4600);
+// ADR-XXXX: a tenant saját domainje (generált nginx-blokk) UGYANÚGY útválaszt, mint a
+// citoviso.com blokk — egy új konzol-előtag nem hiányozhat a saját domainről.
+const tenantTmpl = await readFile(new URL("../deploy/tenant-tls/tenant-site.conf.tmpl", import.meta.url), "utf8");
+const tenantLocs = locations(tenantTmpl);
+check(
+  "① a saját-domain sablon útvonalai = a citoviso.com blokké",
+  JSON.stringify([...tenantLocs].sort()) === JSON.stringify([...locs].sort()),
+  `sablon: ${JSON.stringify([...tenantLocs])}`,
+);
 // Negative controls of the predicate itself — a matcher that says "console" to everything is blind.
 check("① kontroll: /configure/x/domains → konzol", routesToConsole("/configure/x/domains"));
 check("① kontroll: /aszf → public", !routesToConsole("/aszf"));
