@@ -32,6 +32,7 @@ import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { alreadyCustomerBlocks } from "./customerGate.js";
+import { isTestLeadName } from "./ownerTestPhone.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -341,7 +342,12 @@ export async function sendOutreachMail(
   // prospect row" (Elek FK-004 ③). The atomic claim below enforces the same rule
   // against concurrent senders; this check exists to give a HONEST reason instead of
   // the generic "párhuzamos küldés claimelte" the race path would report.
-  if (await emailAlreadyMailed(p.contactEmail)) {
+  // A "[TESZT]" lead goes to the owner's own mailbox, which every test round reuses — the
+  // address-level one-shot, the shared-contact gate and the weekday window protect REAL
+  // recipients, not him (owner 2026-10-14/10-17: a test is never held by them). The
+  // per-prospect stamp above still holds: one test prospect is mailed once.
+  const testLead = isTestLeadName(p.leadName);
+  if (!testLead && (await emailAlreadyMailed(p.contactEmail))) {
     return {
       ...base,
       outcome: {
@@ -362,7 +368,7 @@ export async function sendOutreachMail(
   // SHARED-CONTACT gate (2026-09-28): the address also belongs to another live lead
   // → the mock may be heading for the neighbour. Stops until the operator rules the
   // pair same_owner or fixes the contact (sharedContactGate.ts).
-  const shared = await sharedContactBlocks(p.leadId, "email", p.contactEmail);
+  const shared = await sharedContactBlocks(p.leadId, "email", p.contactEmail, testLead);
   if (shared) return { ...base, outcome: { kind: "skipped", reason: shared } };
 
   // CURATOR SIGN-OFF gate (owner rule, 2026-08-06): a mock may be mailed ONLY after a HUMAN
@@ -556,8 +562,10 @@ export async function sendOutreachMail(
   // 9–16 Budapest. Below the dryRun line ON PURPOSE, unlike the content gates above:
   // it is a pure function of the clock, not of the prospect — „Mehet ki most?” and the
   // dry-run guards judge the MAIL, and the send itself says when the hour is wrong.
-  const mockBlock = mockOutreachWindowBlocks(new Date());
-  if (mockBlock) return { ...base, outcome: { kind: "skipped", reason: mockBlock } };
+  if (!testLead) {
+    const mockBlock = mockOutreachWindowBlocks(new Date());
+    if (mockBlock) return { ...base, outcome: { kind: "skipped", reason: mockBlock } };
+  }
 
   // Hero shot of the mock's opening screen (best-effort — its absence must never
   // block a §C-PASS send; the mail is valid text+link without it).
@@ -611,7 +619,7 @@ export async function sendOutreachMail(
       .where("email_sent_at", "is not", null)
       .limit(1)
       .executeTakeFirst();
-    if (already) return { won: false, reason: "address" as const };
+    if (already && !testLead) return { won: false, reason: "address" as const };
     const r = await trx
       .updateTable("prospect")
       .set({ email_sent_at: now })

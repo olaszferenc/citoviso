@@ -194,6 +194,7 @@ import { formatMoney } from "../text/money.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
+import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
 import { startOutreachPair, sendPairSmsHalf, pairJobState } from "../outreach/sendOutreachPair.js";
 import { renderPairSmsDraft } from "../outreach/draft.js";
@@ -4178,7 +4179,9 @@ async function handle(
           // e-mailben" button, and the operator would learn from the rejection banner
           // that the button was dead. That is the exact failure the mobile card's
           // `smsBlockedReason` was built to avoid; the e-mail side needed its twin.
-          emailAddressMailed: p?.contact_email ? await emailAlreadyMailed(p.contact_email) : false,
+          // A "[TESZT]" lead is exempt from the address one-shot (sendBatch.ts) — say so here too.
+          emailAddressMailed:
+            p?.contact_email && !isTestLeadName(d.input.leadName) ? await emailAlreadyMailed(p.contact_email) : false,
           smsSentAt: chState?.smsSentAt ?? null,
           mmsSentAt: chState?.mmsSentAt ?? null,
           pairJob: await pairJobState(draftMatch[1]),
