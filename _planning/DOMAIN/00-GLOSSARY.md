@@ -18,6 +18,28 @@
 - **Outreach** — a mockup-link kiküldése a tulajnak (GDPR/Grt.-tudatos, leiratkozható).
 - **Convert** — megrendelés: a tulaj saját (jogtiszta) képei + admin-hozzáférés.
 
+<!-- distill:begin 5fe0f7bc7063c0c6 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Pipeline-fogalmak
+> **Forrás-memória:** 2026-10-07_osm_lead_forras.md · 2026-10-08_csonka_lead_email.md
+> **Review:** `_inbox/20261011T020001Z.md` (30. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **OSM-forrás** — $0-s lead-forrás (`src/scraper/sources/osm.ts`, Overpass), `SCRAPE_PAID_APIS=off` mellett az EGYETLEN felfedező forrás; megyénként `area["ISO3166-2"="HU-XX"]` határra kérdez. ⚠️ **Licenc: ODbL 1.0** — a discovery-sor `matched_entity`-je hordozza (`license`, `attribution`), a konzol kiírja. ⚠️ **Elérhetőségi gotchák:** a tükör HTTP 200-zal ÜRES választ is adhat → az üres határ-válasz bukás, nem „0 szállás”; a honlap nélküli OSM-leadek ~77%-ának nincs kontaktja (2026-10-08, országosan mérve, a $0-s dúsítás után sem), tehát a kontakt perszóna-munka; az OSM-tag maga is lehet csonka (`email=llaberek…`) — a forrás nem igazság.
+<!-- distill:end -->
+
+
+<!-- distill:begin f7d1c93cddb95946 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Pipeline-fogalmak
+> **Forrás-memória:** feedback_digital_colleague_is_a_person_not_a_pipeline.md · 2026-10-04_neo_az_inas.md · 2026-10-05_poe_szovegkurator.md · 2026-10-05_ai_orok_kivaltasa_vera.md · 2026-10-07_magellan_terv.md
+> **Review:** `_inbox/20261011T020001Z.md` (24. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **Digitális munkatárs (perszóna)** — saját RC-sessionnel, saját tartós Chrome-profillal és saját konzol-fiókkal dolgozó szereplő, aki a felületen kattint, néz és olvas, és ismeri az ontológiát. ⛔ **NEM API-pipeline** a meglévő végpontokra: a tervezés kiindulópontja a charter (`<név>/charter/`), nem a végpont-térkép. Szerepek: **Neo** — kurátori előkészítés (ADR-0325), **Poe** — szövegkurátor, **Vera** — ítél a kurátori szövegről, **Magellan** — felderítő (térképes leadkeresés). ⚠️ **Kurátori út (ADR-0329):** ha Poe írja a szöveget, a három AI-őr (piac, tény, vendég-kritikus) NEM fut, helyette a `reviewVerdict` (Vera) a kapu. Hiányzó vagy szövegváltozás miatt elavult ítélet = `pending` = küldés-tiltó (`src/outreach/mockVerdictGate.ts`). A kurátori út AI-őr költsége mérve $0.
+<!-- distill:end -->
+
+
 ## Üzleti fogalmak
 - **Jutalék-horog** — a marketing-üzenet: a booking-portál 15–18% jutalékának kiváltása (nem a honlap ára).
 - **Provenance / kép-jogállás** — `owner` | `guest` | `portal` | `places` | `streetview` | `generated`; a FÁZISSAL EGYÜTT dönti el, mi mehet élesre (mock: mind, demo-framinggel; live: a rendelés-szintű §A önnyilatkozat mellett MIND, vízjeles SOHA; nyilatkozat nélkül csak `owner`/`generated`). Kód: `src/engine/recipe.ts` (`PhotoProvenance`), a kapu `src/engine/photoPolicy.ts::isLiveSafePhoto`. Lásd [03-INVARIANTS] §A. ⚠️ Nem tévesztendő össze a **vision tárgy-kategóriával** (`ad_banner`, fürdő, parkoló…), ami nem jogállás, hanem TARTALOM-ítélet — és külön következménnyel jár (kizárás, nem hátrasorolás).
@@ -33,6 +55,21 @@
 - **Piac (market)** — egy ORSZÁG, mint jogrendszer-egység, `approved | (nem jóváhagyott)` státusszal és append-only döntés-naplóval (`market`, `market_log` — migráció 0057). ⚠️ **Nem nyelv**: AT és DE nyelve közös, joga nem. A piac nyitottsága kapuzza a hideg megkeresést, a pay-linket és az élesítést; a megújulás kivétel. **Fail-closed**: ami nem explicit `approved` sor, az zárt (`src/markets.ts::isMarketApproved`). Lásd ADR-0111, [03-INVARIANTS] §H.
 - **Suppression (leiratkozás)** — SZEMÉLY-szintű **push-tilalom** (nem kizárás, nem rekord-szintű jelölés): normalizált cím vagy szám bárhol + opt-out → nem keresünk meg és nem mérünk. A címzett ettől még megnyithatja a kapott linket, megnézheti a tervet és **meg is rendelheti**. Visszavonni CSAK a címzett saját kérésére szabad, kötelező indoklással, naplózva (`prospect_optout_log`, migráció 0053 — a mozgás MINDKÉT iránya auditált). Lásd [03-INVARIANTS] §C.
 - **Kontraktus (befagyasztott terv)** — a §2b kapun JÓVÁHAGYOTT vázlat az `assets/design-refs/**` alatt (HTML + README + képek), ami a megvalósítás **KÖTELMÉT** írja le (elvárt viselkedés és feliratok, nem stílus-javaslat). A README `**„…"**`-vel jelöli a KÖTŐ feliratokat és `**Hatókör:**`-rel azokat a fájlokat, amelyek kötelesek hordozni őket (`scripts/contract-drift-check.mts`). ⛔ A rendszer közös eleme (masthead, szekció-sorrend, intro) nem írhatja felül a jóváhagyott tervet — az **tulaj-kérdés, nem fejlesztői döntés**.
+
+<!-- distill:begin 687d503c5f105622 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Üzleti fogalmak
+> **Forrás-memória:** 2026-10-09-ingyenes-proba-A-allapot-konvertalas.md · 2026-10-09-ingyenes-proba-C-lejarat-folytatas.md · 2026-10-09-ingyenes-proba-C3-megorzes-aszf.md · 2026-10-09_egy-kupon-mindenkinek.md · 2026-10-11_elek3_proba_javitasok.md
+> **Review:** `_inbox/20261011T020001Z.md` (14. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **Ingyenes próba (free trial)** — kártya nélküli, teljes funkciós kipróbálás a mock-lapról (`POST /p/<token>/trial`), hossza és kuponja a `/pricing`-on állítható (ADR-0342). ⚠️ **NEM előfizetés-állapot:** saját tábla (`free_trial`, migráció 0097), a próbázónak NINCS `subscription` sora → a billing-tick nem lát rá, és minden előfizetés-alapú kérdés (fagyott-e, mi a következő terhelés) külön ágat kér rá. A próba modulai `module_entitlement.trial_grant` jelet viselnek, és **nem számlázott tételek** (`isBilledModule`). Állapotgép: `active → converted | lapsed → purged`.
+  - **Lejárat** (`lapseExpiredTrials`, napi tick): `lapsed`, a site `suspended` (a meglévő 503-as freeze-lap), a `trial_grant` modulok le; a fizetett marad.
+  - **Értesítés:** T−3 és T−1 MINDIG kimegy, hétköznap 9–16; hétvégére eső lépés VISSZA péntekre, ütközésnél a T−3 egy hétköznappal korábbra (ADR-0344, ADR-0359 ②).
+  - **Megőrzés:** a próba vége után 90 napig (= a próba-kupon érvényessége, ÁSZF 1.4), előtte `p7` figyelmeztetés; a törlés fizetett nyomnál MEGTAGAD (ADR-0345, `src/trial/retention.ts`).
+  - **Folytatás:** a fordulónap a FIZETÉS napja; az ár a tenant egyetlen kuponja. Egy tenant = egy kupon (`offer_tenant_coupon_uq`), a közvetlen vevő üdvözlő kuponja és a próbázóé UGYANABBÓL a beállításból jön (`app_setting 'welcome_coupon'`, `src/payment/couponConfig.ts`, ADR-0346). A próba alatt a vevő a kiírt %-ot kapja, kliens-szám nem áraz (ADR-0359 ①).
+<!-- distill:end -->
+
 
 ## Architektúra-fogalmak (iparág-agnosztikus mag)
 - **Control plane** — „a MI világunk": leadek, tenantok, entitlement (előfizetés/jogosultság), megvett modulok, iparág-definíciók, ország-lokalizációk, outreach, számlázás, **mock-gyártás**. Központi, a miénk.
@@ -50,3 +87,36 @@
   > ⚠️ **NYITOTT rés (mérve 2026-09-17):** a lenti Tier-definíció „közös, tier-agnosztikus pool + lágy súly"-t ír elő (ADR-0013), a kód viszont MA IS **keményen szűr** tierre — `mockFromCorpus.ts:136` `pool = live.filter((e) => e.tier === t)`, egy `tierFallback(cls.tier)` sorrenddel enyhítve. Tehát a „lágy súly" SZÁNDÉK, nem a futó viselkedés; a fallback-lánc nem ugyanaz, mint a közös pool. Ember-döntés (a 2026-07-19-i review DRIFT-je óta nyitva).
 - **Recept / Recipe (ADR-0016)** — strukturált, tárolt, **szerkeszthető** kompozíció-leírás: mely primitívek, milyen sorrendben, mely modulok, milyen skin/paletta/variáns/szövegek. A kompozíciós motor központi objektuma. Adatfolyam: `adat → [AI-tervező] → RECEPT → determinisztikus render(recept + adat + skin) → HTML`. Az LLM szerepe: HTML-íróból → **kompozíció-tervezővé** (nem ír nyers HTML-t). A **`mock=live` innen garantált**: ugyanaz a recept + DEMÓ-adat = mock, ugyanaz a recept + VALÓS adat = live → bájtra azonos VÁZ, csak a tartalom más (§I.23 hordozója). Kód: `src/engine/recipe.ts`. Elvetve: WP/per-tenant CMS (mock=live nem garantálható) + mock-HTML másolása live-ra (a régi `convertLead`).
 - **Kompozíciós minőség vs moduláris minőség** — a generált oldal „profinak" vagy „bedobáltnak" érzése NEM a modulok minőségének függvénye (azt már optimalizáltuk), hanem a WHOLE tulajdonsága: a szekciók közti VISZONY + oldal-szintű HIERARCHIA (fókusz/elhagyás) + hogy az oldal REAGÁL-e a konkrét szállásra. Elv: **„amatőr hozzáad, profi elhagy és kiemel."** ⚠️ Buktató: a rossz tengelyt optimalizálni (több/változatosabb modul ≠ jobb kompozíció). Ez a `Recipe` szótárában ÉL: `RecipeSection.emphasis ∈ focal | normal | quiet` (`src/engine/recipe.ts:58`, ADR-0025 ② — pontosan egy nem-gerinc szekció lehet `focal`), tehát a szekció SÚLYA/FÓKUSZA elsőosztályú mező, nem csak sorrend/variáns.
+
+<!-- distill:begin f955df3ffe108a50 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Architektúra-fogalmak (iparág-agnosztikus mag)
+> **Forrás-memória:** 2026-10-04_mock_sablonok_passzivalva.md
+> **Review:** `_inbox/20261011T020001Z.md` (36. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **Passzivált (retired) sablon / modul** — `retired: true` (`ArtTemplate.retired`, `src/engine/templateKit.ts`; választhatóság: `isPickableTemplate`): a választóból kiesik, de a registryben MARAD. ⛔ Sablont/modult nem törlünk, amíg mock vagy élő oldal épül rá — a törlés a ráépült lapokat törné el. Ugyanez a minta, mint a `newsletter` modulé (05-MODULES).
+<!-- distill:end -->
+
+
+
+<!-- distill:begin fe94aedb38b1495f 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Üzleti fogalmak — Ingyenes próba
+> **Forrás-memória:** 2026-10-11_proba_koordinator_5_zaras.md, 2026-10-11_proba_javitasok_elek_tenant_kor.md, 2026-10-14_elek_szallasado_fizetes.md, 2026-10-14_teszt3_javito_szal.md
+> **Review:** `_inbox/20261019T060001Z.md` (70. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **Ingyenes próba (free trial)** — 14 napos, élő próba-oldal + admin a leadnek (`free_trial`), egy
+  beállított **próba-csomag** moduljaival (`src/trial/package.ts` az egyetlen forrás; „minden modul”
+  csak `everything` esetén). Buktatók:
+  ① **Az ajánlat a próba INDULÁSAKOR rögzül** (`pinTrialOffer`, a többi élő ajánlat lezárul); a
+  folytatás csak ezt nézi (`liveTrialOffer`). A próba azt a %-ot viszi, amit az űrlap kiírt
+  (ADR-0359), egy kedvezmény, egy határidő (ADR-0354, `trialDiscount()`).
+  ② **A próba-modul (`module_entitlement.trial_grant`) nem megvett modul**: a fizetés után a próba
+  végéig él, utána kikapcsol. A felület nem írhatja rá, hogy „kifizette”, a mellette álló sor:
+  „próbában ingyen” + a kikapcsolás napja.
+  ③ **Névváltás a próba végén** (ADR-0356): a régi slug ÖRÖKRE 301-gyel az újra mutat
+  (`site_slug_alias`), foglalva marad; a felhasználónév nem változik.
+  ④ Próbázó leadnek hideg megkeresés nem megy ([03-INVARIANTS] §C, „már ügyfél” kapu).
+<!-- distill:end -->

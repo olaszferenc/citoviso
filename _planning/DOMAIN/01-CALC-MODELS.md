@@ -124,6 +124,49 @@
 - **Globális billing (Paddle/Stripe MoR)** PARKOLVA a valós proof-ig — ne dönts irreverzibilist
   validáció előtt.
 
+<!-- distill:begin 36d5bc3e65542b7a 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Adó / számlázás (HU-first pilot) — a szakasz végére
+> **Forrás-memória:** `2026-09-21_szamlazz_uj_fiok.md` · `2026-09-22_coupon_visible.md` · `2026-09-22_barion_pixel_pos_szamlazas.md`
+> **Review:** `_inbox/20260927T020001Z.md` (85. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+### A bizonylat-szolgáltató (Számlázz.hu) SZERKEZETI korlátai — nem választás kérdése
+- **Az adószám TÖRZSSZÁMA (első 8 jegy) a fiókban SOHA nem módosítható** (az áfakód és a megyekód
+  igen). Más törzsszám = más adóalany ⇒ **ÚJ számlázási fiók, kivétel nincs**; „alfiók" nem
+  létezik — a helyes forma egy külön fiók UGYANAZZAL a belépéssel („Hozzám kötődő cégek").
+  Előfizetés fiókonként külön, a számlasor 1-től indul. *Mért ára ennek: 2026-09-16-án az `.env`
+  adószámát javítottuk, a FIÓK maga öt napig a megszűnt adószámon állt — egy éles fizetés a
+  megszűnt vállalkozás nevére számlázott volna.*
+- **A tesztüzem kapuja EGYIRÁNYÚ:** csak addig kapcsolható be, amíg a fiókban nincs kiállított
+  számla ÉS nincs NAV Online Számla összekötés. Aki a felkínált NAV-összekötésre kattint előbb,
+  **végleg elveszti a tesztüzemet abban a fiókban**. Élesre álláskor a szolgáltató TÖRLI az összes
+  teszt bizonylatot. ⚠️ Tesztüzemben a számlaértesítő e-mail MINDIG a fiók kapcsolattartási
+  címére megy, nem a vevőére — a fizetés-visszaigazoló folyamat tesztelésekor ez félrevezető, és
+  NEM a mi kódunk hibája.
+- **⛔⛔ KEDVEZMÉNY SOHA NEM LEHET KÜLÖN SZÁMLA-SOR.** A szolgáltató a tételeket ÖSSZEADJA, tehát
+  egy −4 925 Ft-os sor a 14 775 Ft-os végösszeget **9 850-re** vinné: a „láthatóvá tételből"
+  rosszul számlázás lenne. A kedvezmény a **tétel NEVÉBEN** (`… — {n}% kedvezménnyel`) és a
+  **megjegyzésben** él (`invoiceComment`, `src/payment/service.ts:923`), és az őr minden esetben
+  visszaméri a végösszeg-egyezést. *(Azt, hogy az API támogat-e kedvezmény-MEZŐT, a kódból nem
+  lehet eldönteni — ki kell mondani, nem tippelni.)*
+- **A kulcs OPÁLOS: a fiók szerepe (prod/teszt) a kódból MÉRHETETLEN.** Két érvényes kulcs
+  ugyanazt a hitelesítés-választ adja („7: ismeretlen számlaszám"; a rossz kulcs 3-ast), és
+  mellékhatás-mentes fiók-azonosító NINCS — egy próba-számla mindkét éles fiókban valódi
+  bizonylatot szülne. 2026-09-22-én a prod/dev kulcs **fel volt cserélve**, és ezt csak a
+  szolgáltató vezérlőpultjának képe mondta meg. Ezért a védelem **szerkezeti, nem fegyelmi**
+  (`src/invoicing/keyGuard.ts`, boot-ponton dobó): az éles hoston TILTÓLISTA (teszt-módú
+  ujjlenyomatok), az éles hoston KÍVÜL **ENGEDÉLYEZŐ lista** — ismeretlen Agent-kulccsal a
+  `szamlazz` szolgáltató nem is konstruálható (dev három útja: `INVOICE_PROVIDER=mock` ·
+  `SZAMLAZZ_DEMO=1` · a saját teszt-fiók kulcsa felvéve a `TEST_ACCOUNT_KEY_SHA256` listára).
+  ⛔ A repóban SOHA nem kulcs, csak SHA-256 ujjlenyomat: az azonosít, de nem hatalmaz fel.
+- **Kulcs-próba mellékhatás nélkül:** `fetchIssuedInvoicePdf("<nem létező számlaszám>")` — nem
+  gyárt semmit, és a `szlahu_error_code` elválasztja a két esetet (**7** = a hitelesítés átment ·
+  **3** = sikertelen bejelentkezés). ⛔ A 7-es önmagában semmit nem bizonyít: negatív kontroll
+  (szándékosan rossz kulcs) nélkül a mérés üres.
+<!-- distill:end -->
+
+
 ## Fizetési mechanika (pilot)
 - **Gateway = Barion** (nincs belépő/havi díj, first-party Számlázz-integráció). ⚠️ A díj
   **változó** (bázis + választott modulok) → NEM sima kártya-recurring, hanem
@@ -135,6 +178,54 @@
   (1 kiadott számla / fizetés). A számlázás best-effort (hiba → `failed` sor, nem töri az
   aktiválást). ⚠️ A VEVŐNEK mutatott hivatkozás a saját `payment.id`-ból képződik (`CIT-XXXXXXXX`),
   nem a gateway kezelőjéből.
+
+<!-- distill:begin dd4d0d6fc3b957a0 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** (új szakasz a „Fizetési mechanika” után)
+> **Forrás-memória:** 2026-10-09-ingyenes-proba-C2b-sms-eles.md · 2026-10-09-ingyenes-proba-C-lejarat-folytatas.md
+> **Review:** `_inbox/20261011T020001Z.md` (126. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+## SMS-szelet számítás (költség + kézbesítés)
+- **GSM-7** (csak a GSM-ábécé karakterei): 160 karakter / 1 szelet, összefűzve 153 / rész.
+  **UCS-2** (bármely más karakter, pl. `ő`, `ű`): 70 / 1 szelet, 67 / rész. `szeletek = n ≤ egy ? 1 : ⌈n / rész⌉`.
+  Forrás: `smsEncoding`, `src/sms/encoding.ts`. Egyetlen ékezetes betű az EGÉSZ üzenetet UCS-2-be viszi.
+- ⚠️ 2026-10-09-ig a modem MINDEN SMS-t unicode-dal küldött, tehát ékezet nélkül is UCS-2-ben számolt — a kódolást
+  a szövegből kell levezetni, nem fixen beállítani.
+- A link mindig az UTOLSÓ szeletbe esik → több szeletnél a link elvesztése a legvalószínűbb hiba (ld. [03-INVARIANTS] §C „sent” = igazolt).
+<!-- distill:end -->
+
+
+<!-- distill:begin 758e9af8b72fa3f1 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** Fizetési mechanika (pilot) — a szakasz végére
+> **Forrás-memória:** `2026-09-24_barion_advanced_approved.md` · `2026-09-26_rendeles_fizetesi_link.md` · `2026-09-24_penztarca_sandbox_bizonyitek.md`
+> **Review:** `_inbox/20260927T020001Z.md` (155. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **Gateway-díj (2026-09-24 óta jóváhagyva): Advanced Fix 1,19 % + 0,2 % ismétlődő felár =
+  ⭐ 1,39 %.** Mivel ELŐFIZETÉST árulunk, a mérvadó szám az **1,39**, nem az 1,19 (korábban
+  mindenhol 1,19-cel számoltunk). ⚠️ A díjcsomag a Full Pixel implementációján múlt: a Barion a
+  Starter csomagban hagyta az elfogadóhelyet, amíg a KÖTELEZŐ `grantConsent` és
+  `setEncryptedEmail` események nem voltak bekötve — a partner követelményét a PARTNER listájához
+  kell kötni, tételesen (a mi saját eseménylistánk mérése ezt szerkezetileg nem látja).
+  ⛔ A kódban nincs díjból levezetett számítás, tehát semmi nem tudja megcáfolni ezt a számot: aki
+  árazási döntést épít rá, a szolgáltató felületéről igazolja.
+- **A PAY-LINK NEM A GATEWAY NYERS LINKJE (ADR-0234).** A nyers átjáró-link ~30 perc után
+  „Lejárt fizetési tranzakció", és a pending-újrahasznosítás UGYANAZT a halott linket adta vissza.
+  Ezért MINDEN levél (rendelés-visszaigazoló, megújítás/felszólítás + SMS, domain-lezárás) a saját,
+  **tartós belépőnket** viszi: `/pay/go/<payment-id>` (`src/payment/payEntry.ts`,
+  `payEntryUrl.ts`) — a friss átjáró-tranzakciót a belépő állítja elő.
+- **Kártya-csere vásárlás nélkül** (`kind='card_update'`): a dokumentált út egy valódi
+  **Reservation** (`CARD_VERIFY_AMOUNT_HUF = 10` Ft, `src/payment/service.ts`) +
+  `finishReservation(ref, 0)` = teljes visszatérítés; a token és a maszk a `GetPaymentState →
+  FundingInformation.BankCard.{MaskedPan, BankCardType, ValidThruYear/Month}`-ból jön.
+  ⛔ **`card_update`-ra SZÁMLA NEM készül**, és olyan átjárón, amely nem tud zárolást feloldani, a
+  művelet MEGTAGADVA (különben valódi terhelés maradna a vevőn). Sandboxban végig igazolva
+  (Reservation → Finish(0) → Succeeded → token + maszk → MIT Successful); ⚠️ az éles 3DS és a
+  tárca-fedezet a sandbox teszt-kártyán NEM fut le — élesítés előtti előfeltétel.
+<!-- distill:end -->
+
 
 ## Magyar adószám-ellenőrzőszám (HU tax-ID checksum)
 - Az adószám első 8 jegye a törzsszám; a 8. jegy az ellenőrzőszám.
@@ -152,3 +243,66 @@
 - **Support** — skálázódik a tenant-számmal; önkiszolgáló admin nélkül megöli a margint. Modellben: `support_óra/hó × tenant` → tartsd ~0 közelében.
 
 > TODO: LTV/churn, akvizíciós költség (outreach konverzió), infra-lépcsők (N tenant → szerver-szint).
+
+<!-- distill:begin 73907689c79a28ae 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** új szakasz a „Rejtett költség" ELŐTT
+> **Forrás-memória:** `2026-09-22_programajanlo_modul.md` · `2026-09-23_programajanlo_build.md`
+> **Review:** `_inbox/20260927T020001Z.md` (124. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+## AI-költséges modul — a programajánló mint a marginális költség ellenpróbája (ADR-0214)
+A fenti „marginális költség / ügyfél ≈ néhány €" a BEMUTATÓ-magra igaz. Egy **ismétlődő
+adatgyűjtésre épülő modul** ezt megfordíthatja, és ezt mérni kell, nem levezetni:
+- **A gyűjtés TELEPÜLÉS-kulcsos, nem tenantonkénti** — ez maga az amortizáció: 3 tenant köre
+  96 helyett **42** települést jelent. A kör a tenant 30 km-es sugara, a lekérdezett halmaz a
+  **≥1000 fős** települések + a tenant SAJÁT települése mérettől függetlenül (`MIN_POPULATION`,
+  `src/events/settlements.ts`): 120-ból **41**, 78,5 % lakosság-lefedettség.
+  ⚠️ **NEM mért feltevés**, hogy a lakosság-lefedettség előrejelzi az ESEMÉNY-lefedettséget — az
+  `event_gather_run` hozamából korrigálandó.
+- **Mért egységköltség:** Rozé Fogadó köre = 41 lekérdezés / 99 lap / 40 egyedi program /
+  **$0,43 hét**. ⛔ **Magányos tenantnál ez ~650 Ft/hó, a modul listaára 490 Ft/hó** (`poi`,
+  `src/modules.ts`) — vagyis egy régióban egyedül álló tenanton a modul **negatív margós**. Az ár
+  a tulajé; a KÖLTSÉGET a `event_gather_run` (cost_usd / queries / pages / hozam) írja.
+- **Az eszköz-választás mérve dőlt el, nem elvből:** Brave keresés ($5/1000) vs. modell-beépített
+  web_search ($10/1000) — **2,55 vs. 5,65 Ft/program**, és **0 vs. 2 rossz dátum** ment ki. A
+  költség 93 %-a abból jött, hogy a találatok beömlenek a kontextusba; a szűk keresztmetszet a
+  **kötegméret**, nem a keresés (45 lap egy hívásban: 3 program; 5-ös kötegek: 24).
+- **⛔ A „nulla-tokenes" strukturált út marginális:** a `schema.org/Event` JSON-LD a
+  JEGYÉRTÉKESÍTÉSSEL korrelál, nem a helyi programmal — a `tixa.hu` 94 `Event` node-ot ad, a
+  helyi programot hirdető oldalak (gotravel, csodalatosbalaton, welovebalaton, programturizmus)
+  **nullát**; 20 Balaton-környéki önkormányzatból **2** futtat gépi naptárt, az egyik üres.
+  Aki helyi programot hirdet, nem tesz ki strukturált markupot.
+- **A séma a dátum MEGLÉTÉT kényszeríti ki, a HELYESSÉGÉT nem** → a kódszintű dátum-ablak kapu
+  teherviselő, nem dísz (mérve egy teljes körön: `unknown_place` 58 · `expired` 23 ·
+  `date_not_in_text` 2 · `duplicate` 2).
+<!-- distill:end -->
+
+
+
+<!-- distill:begin f906e6b15fe57077 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** (új szakasz) Foglalási ár: ellátás, gyerekár, IFA
+> **Forrás-memória:** 2026-10-13_ellatas_es_felarak.md, 2026-10-13_elek_eles_leletek_javitasa.md, 2026-10-14_teszt3_javito_szal.md, 2026-10-14_elek_foglalo_vendeg.md
+> **Review:** `_inbox/20261019T060001Z.md` (10. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+## Foglalási ár — ellátás, gyerekár, IFA (ADR-0378 / ADR-0384 / ADR-0388)
+- **Végösszeg** = Σ éjszakánként (az éjszaka érvényes ára: szezonár, ha van, különben alapár)
+  + ellátás-felár. **Ellátás-felár** = éj × (felnőtt × felnőtt-felár + gyermek × gyerekár);
+  gyerekár nélküli tervnél minden vendég felnőtt-felárat fizet. Az EGY szabály `src/tenant/meals.ts`
+  (`mealLines`), böngésző-ikre `cit-runtime.js` `mealLinesFor`. A kettőnek egyeznie kell
+  (őr: `scripts/meals-check.mts`, böngésző = szerver).
+  Példa (mérve, éles): 2 × 24 000 + 20 000 = 68 000; reggeli 3 éj × (2 × 3 000 + 1 × 1 500) = 22 500 → **90 500 Ft**.
+- **IFA** = tétel × fizető vendég × éj. A **18 év alatti vendég mentes** (Htv. 31. § a)):
+  `taxPayers(guests, children) = guests − clamp(children, 0, guests − 1)`, tehát a foglaló felnőtt
+  mindig fizet. ⚠️ A gyermekként megadott vendég a tulaj ellátás-korhatára alatt van (legfeljebb 17).
+  A korhatár FELETTI kiskorú (pl. 13–17 éves egy 12 éves korhatárnál) az összegben felnőttként
+  szerepel, ezért a lap mondata ezt külön kimondja (`minorsTaxNote`). A mondat soha nem állít
+  többet, mint amit a szám tesz.
+- **A gyerekszámot MINDIG megkérdezzük** (ADR-0388). A számolt gyermek korhatára a tulaj
+  gyerek-korhatára, ha a kérésre gyerekár vonatkozik, különben 17 („18 év alatt”, ez csak az
+  IFA-ra hat) — `countedChildAge`. A létszám mindenhol „N fő, ebből K gyermek”.
+- **Felső határ = a választott egység férőhelye** (ADR-0389, `overCapacity`/`capacityError`,
+  `src/booking/requests.ts`). A szelvény megáll, a szerver elutasít.
+<!-- distill:end -->

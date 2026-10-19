@@ -142,6 +142,84 @@
      mérve 560px keret vs. 785/1056px levél, görgetősáv nélkül. A fail-safe irány: a beégetett
      méret nagyvonalú **PADLÓ**, amit a JS lefelé igazít.
 
+<!-- distill:begin 487c31735b0022cf 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §B — Dizájn (6e után, új betűs alpont)
+> **Forrás-memória:** 2026-10-04_tobb_email_cim_egy_leadhez.md · 2026-10-04_mock_szoveg_kezi_atiras.md · 2026-10-04_generator_tenyhuseg_3hiba.md
+> **Review:** `_inbox/20261011T020001Z.md` (113. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+6f. **A kurátor keze erősebb a gépi újrafuttatásnál; az elutasított jelölt nem jut a vendég elé.** (a) Amit egy ember
+   kézzel megváltoztatott, azt egyetlen gépi út sem írja felül: a kurátor e-mailje (`raw.emailCuratedAt`) után a
+   re-enrich/backfill/scrub a `raw.email`/`raw.otherEmails`-t nem mozdítja, csak a kontakt-naplóba ADHAT
+   (`src/scraper/curatorEmail.ts`, ADR-0321 ③); a kézi mock-szöveg (`inputs.copyManual`) az AI-recopy UTÁN is
+   rávetül (ADR-0323 D3). Az ürítés is kurátori döntés — az üresen hagyott mező üres marad. (b) A 6e auditálható
+   elvetése a KIMENETRE is köt: a főkönyvben elutasított kontakt nem kerül a vendég-oldalra
+   (`guestVisibleContact`, `src/engine/siteData.ts`). ⚠️ Az elutasítás minősége is mérendő: az ISP-postafiókot
+   (`axelero.hu`, `t-email.hu`) a hiányos FREEMAIL-lista „idegen domain”-nek ítélte.
+<!-- distill:end -->
+
+
+<!-- distill:begin 385ae37b5f00e2cc 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §B — Dizájn (a 17. pont alpontjai közé, a VALÓDISÁG után)
+> **Forrás-memória:** 2026-10-05_piac_vk_elsobbseg.md
+> **Review:** `_inbox/20261011T020001Z.md` (107. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - **Tényhűség > piaci vonzerő (ADR-0328, tulajdonosi döntés).** Ha a vendég-kritikus forrás-alapon kifogásol egy tételt, a piaci kapu azt nem hiányolhatja számon: a tétel kikerül a Piac `missed` listájából, és a csak-hiányra épülő Piac-FLAG PASS lesz, ha nem marad tétel (`subordinateToCritic`, `src/generator/marketCheck.ts`). A piaci bíró csak FORRÁS-tényt hiányolhat (`isSourcedMiss`), és a forrás-egyezés tagmondat-szintű ÁLLÍTÁS, nem szóegyezés (`proseAffirms`: tagadás, „reggeli után”, „állatkert” ≠ kert, ≥1 km ≠ közel). Két őr ellentmondásánál a sorrend kötött, nem esetenkénti.
+<!-- distill:end -->
+
+
+<!-- distill:begin a5d37640b6b4afd8 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §B — Dizájn (a 6b pont ① felsorolásának végére, negyedik rétegként)
+> **Forrás-memória:** `2026-09-26_elek_lead_telefonon.md`
+> **Review:** `_inbox/20260927T020001Z.md` (65. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - ④ **KÉPMINŐSÉG A TELJES KÉPEN — determinisztikus, AI nélkül (2026-09-26).** A vision-pontszám
+     a képnek AZT a részét ítéli, amit kérdezünk: a Laguna Places-fotója **92 pontot** kapott
+     („tiszta égbolt"), miközben az ALSÓ FELE 85 %-ban fekete volt (átlag-luma 23) — posterizált
+     sötétkék folt, és a 19 stílusból 12-ben ez lett az első kép. A modell az EGET ítélte, a
+     talajt nem. Ezért a pontszám determinisztikus levonást kap (`src/generator/photoHealth.ts`,
+     sharp, 320 px-en): fél-fekete (`BLACKOUT_DARK_PCT = 60` % sötét **ÉS** `BLACKOUT_MEAN_L = 45`
+     alatti átlag) → **−45**; egészében sötét → **−15**.
+     ⭐ **A levonás a TÁROLT verdiktbe kerül** (`scoreHeroCandidates` a már letöltött bájtokból;
+     `healthAdjustCachedScores` a régi sorokat idempotensen javítja `[képminőség]` jellel) — így
+     mind a NÉGY olvasó (generálás · élesítés · szerkesztő · felülbírálat) ugyanazt látja, és a
+     sorrend nem billen vissza. Mérve: a Laguna-hero 92 → 47 (a kurátori küszöb alá), az új hero a
+     2. Places-kép; Tihany 19/19 változatlan (nincs levonás). ⚠️ Ez a §B.6b „a MÉRET nem a
+     TARTALOM" tételének ikre: a **pontszám sem a tartalom**, ha a modellt a kép egy részére
+     kérdeztük.
+<!-- distill:end -->
+
+
+<!-- distill:begin 2ebe3c10a3a6bc2e 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §B.18 (új felsorolás-pont a „A nyelv FORRÁSA felületenként eltér" után)
+> **Forrás-memória:** `feedback_widening_a_shared_list_needs_per_consumer_decision.md`
+> **Review:** `_inbox/20260920T020001Z.md` (75. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - **A nyelv-HALMAZ is felületenként más — két lista, két kérdés (ADR-0128).**
+     `siteLangs()` = mit adhatunk el a VENDÉGNEK (a `LANG_NAME` kulcsai, a multilang-modul
+     célhalmaza); `uiLangs()` = miben van MEGÍRVA a saját felületünk. ⛔ A másodikat **VEZESD
+     LE, ne írd meg kézzel**: az `uiLangs()` a `COUNTRY_LANG` értékeiből származik — *piacot
+     nyitni az, ami UI-nyelvet érdemel* (§H.27). Két kézzel karbantartott lista előbb-utóbb
+     elcsúszik; egy levezetett nem tud. Kód: `src/i18n/lang.ts`.
+   - **Adat-térképből jövő NÉV is vevő-oldali felirat.** A nyelvek neve nyers magyar
+     adat-térképből jött, tehát egy lengyel tulaj magyarul olvasta volna. A `T()` katalógus-
+     kinyerő CSAK literált lát, ezért egy `T(lang, adat.name)` egyetlen nevet sem fordítana le
+     — külön lokalizáló kell (`langNameLocalized`, `src/i18n/mail.ts`).
+   - **Egy közös lista BŐVÍTÉSE sosem „csak adat".** Mielőtt elemet adsz hozzá, **sorold fel a
+     fogyasztóit, és mindegyiknél KÜLÖN mondd ki, hogy a bővítés neki is helyes-e.** Mérve: a
+     `LANG_NAME` 10 → 29 bővítése négy fogyasztóból **háromnál** némán rontott volna (üres
+     zászló-SVG ismeretlen kódra · 28 konzol-nyelv, mind AI-csomagot indítva · magyar nyelvnevek
+     idegen tulajnak). Amelyik fogyasztót nem nézted meg, ott lesz a csendes rontás.
+<!-- distill:end -->
+
+
 ## §C — Outreach (jog)
 8. Hideg megkeresés = célzott, személyre szabott, **leiratkozható** (nem tömeg-spam). GDPR/Grt.-tudatos.
 9. Külön küldő-domain + SPF/DKIM/DMARC (deliverability), a fő domain égetése tilos.
@@ -200,6 +278,69 @@
        újra. Élesítés-kötés: az ÁSZF-szöveg és az admin-visszavonás EGYÜTT megy ki.
    - **Enforce NOW:** ha bármilyen outreach-drafot (email/SMS szöveg) írunk, a jog/provenance-őr ELŐBB ellenőrzi a fenti 4 elemet + a §A demo-framing állítást (a linkelt mock előzetes terv, nem „a te oldalad kész").
    - **Enforce NOW (küldő-pipeline kapu — MEGÉPÜLT 2026-08-01, újramérve 2026-09-17):** EGYETLEN őrzött küldő-út (`sendOutreachMail`, `src/outreach/sendBatch.ts`) — konzol-gomb + batch + CLI mind ezen konvergál; minden előfeltétel a küldés pillanatában újra fut. A §C ma **KILENC kapu EGYIKE** ezen az úton, ezért a „küldhető" jelvény önmagában nem verdikt: a döntő sornak a művelet SAJÁT predikátumát kell lefuttatnia száraz módban (`sendOutreachMail(id, { dryRun: true, probe: true })`). ⛔ **Suppression SZEMÉLY-szintű** (lásd fent). `List-Unsubscribe` + `List-Unsubscribe-Post: One-Click` fejléc nélkül a pipeline nem ad át levelet az adapternek (RFC 8058; `src/email/outreachEmail.ts`, ellenőrzés `sendBatch.ts`). Atomi `created→sent` claim a küldés előtt (nincs duplázás). `SmtpEmailSender` valós (nodemailer, `src/email/sender.ts`; hiányzó `SMTP_URL`/`OUTREACH_FROM` → konstruktorban bukik), lokálban `ReservedRecipientGuard` védi. A korábbi „ma nincs küldő-modul, `smtpUrl` üres" megjegyzés ELAVULT.
+
+<!-- distill:begin 2bc9fd2f2c09a87c 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §C (új alpont) — a „már ügyfél” kapu
+> **Forrás-memória:** 2026-10-13_elek_eles_teszt_harom_szerep.md, 2026-10-13_elek_eles_leletek_javitasa.md
+> **Review:** `_inbox/20261019T060001Z.md` (33. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+- **⛔ Hideg megkeresés ügyfélnek SOHA (O-1, 2026-10-13).** Ha a lead SAJÁT oldallal rendelkezik
+  (tenant vagy kifizetett első rendelés, `ownedSiteForLead`) VAGY van BÁRMILYEN `free_trial` sora
+  (aktív, lejárt, konvertált vagy purge-ölt), a hideg „itt egy terv” levél/SMS/MMS tilos. Az ilyen
+  embert a próba-kampány kezeli. EGY predikátum minden hideg úton: `alreadyCustomerBlocks`
+  (`src/outreach/customerGate.ts`), hívói `sendOutreachMail` (`sendBatch.ts`) és a mobil kapuk
+  (`sendOutreachSms.ts`), a konzol munkasávja ugyanezt mondja („nem kell — már ügyfél”).
+  Mérve: előtte egyetlen küldő-kapu sem kérdezte a próbát, a piszkozat „minden kapu zöld”-et írt
+  egy próbázó tulajra.
+<!-- distill:end -->
+
+
+<!-- distill:begin 95a3a3a03c7f1a6d 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §C — Outreach (jog)
+> **Forrás-memória:** 2026-10-05_sajat_megnyitas_nem_szamit.md · project_after_deploy_mock_view_backfill.md · 2026-10-04_riport_modul_1_kor.md
+> **Review:** `_inbox/20261011T020001Z.md` (101. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - **A mérés alanya is az EMBER — és csak az, akit mérni állítunk.** (1) A saját megnyitás nem lead-látogatás: a pilot-másolat, a konzol-link és a levél-előnézet `?sajat=1` jelölést kap, a lap beacon nélkül szolgálódik ki (ADR-0327; mérve: a tulaj SMS-másolatának megnyitása a lead látogatásaként számolódott). (2) A `mock_view` nyers User-Agentet/referrert NEM tárol, csak kinyert mezőket (`device`/`os`/`browser`/`referrer_host`, migráció 0087, ADR-0322 ③) — a mock-lap adatkezelési tájékoztatója ezt állítja, tehát §B.17c alapján a régi sorok backfillje nélkül hamis lenne (`scripts/mock-view-backfill-ua.mts`). (3) Gépi megnyitás (link-ellenőrző, headless) és bot nem számít (ADR-0291).
+<!-- distill:end -->
+
+
+<!-- distill:begin b97ef0e3e0a3610c 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §C — Outreach (jog)
+> **Forrás-memória:** feedback_outreach_legal_basis_settled.md
+> **Review:** `_inbox/20261011T020001Z.md` (94. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - **⛔ LEZÁRT KÉRDÉS — a megkeresés jogalapja (tulajdonosi rendelet, 2026-10-09).** A Grt. / jogos érdek / e.v.-vs-cég kérdés ELDÖNTVE, a megkeresés megy; a jog-őr ilyen FLAG-jét nem visszük a tulaj elé, és nem nyitjuk újra (a §A.20 mintájára). A fenti négy kötelező elem (leiratkozás, feladó, személyre szabás, nem félrevezető) ettől VÁLTOZATLANUL kötelező.
+   - **Válasz ≠ leiratkozás.** Az elutasító vagy bármilyen válasz (`outreach_reply`) NEM opt-out és nem suppression. Csak a leiratkozó-link vagy a kifejezett leiratkozási kérés az (ld. DRIFT: az utóbbinak ma nincs gépi útja).
+<!-- distill:end -->
+
+
+<!-- distill:begin 52f9bef26a208e4f 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §C — Outreach (jog)
+> **Forrás-memória:** reference_mms_relay_cuts_pair_sms_link.md · 2026-10-06_mms_par_modem_sav.md · 2026-10-07_mms_kuldo_javitas.md · 2026-10-09-ingyenes-proba-C2b-sms-eles.md
+> **Review:** `_inbox/20261011T020001Z.md` (88. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - **A „sent” = IGAZOLT kiküldés, nem átadás (ADR-0332).** Mérve 2026-10-06: tömeges pár-küldésnél a relay az MMS-hez leállította a modemet, a 3–4 részes kísérő SMS LINKES vége elveszett, az `sms_outbox` mégis `sent`-et mondott — csak az injektálást nyugtázta. A címzett kiút nélküli reklám-képet kapott. Szabály: az MMS és a kísérő SMS egy egység a modem-sávon (`src/sms/modemLane.ts`: MMS csak üres sávon indul; a következő lead csak a pár igazolt kiküldése után), és a státusz CSAK a gammu `sentitems` minden részre kiterjedő igazolása után lesz `sent`. Ez a §B.17c alkalmazása a csatornára: a saját státusz-mezőnk is állítás. Kapcsolódó kapuk: mobil-pár és hideg SMS CSAK magyar mobilszámra (`isHuMobileE164`); a végleges elutasítás (2517) `failed` + riasztás.
+<!-- distill:end -->
+
+
+<!-- distill:begin d5e1ddd343cc87da 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §C — Outreach (jog)
+> **Forrás-memória:** feedback_mock_send_window_weekday_9_16.md · 2026-10-06_mock_kuldesi_ablak_hetkoznap_9_16.md · 2026-10-08_valasz_az_iranyitopultrol.md · 2026-10-09-ingyenes-proba-C-lejarat-folytatas.md
+> **Review:** `_inbox/20261011T020001Z.md` (82. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+   - **KÜLDÉSI ABLAK — megkeresés CSAK hétköznap 9:00–16:00 (Europe/Budapest) (ADR-0334, tulajdonosi rendelet 2026-10-06).** Hideg megkeresés (e-mail, MMS-pár, önálló SMS) ezen kívül nem indul, a sor áll, és a következő hétköznap 9-kor folytatódik. Ugyanez az ablak vonatkozik a megkeresésre adott konzol-válaszra (ADR-0340) és a próba-értesítőkre. ⛔ Az élő-teszt kapcsoló (`MOBILE_SEND_WINDOW_OFF`) ezt NEM oldja fel — az csak a régi 8–20-as mobil-ablakot kapcsolja. Kivétel: a már elindult pár kísérő SMS-e és a pár-javítás (a kiút helyreállítása nem új megkeresés). Igazságforrás: `MOCK_OUTREACH_WINDOW` (`src/sms/sendWindow.ts`), szerver-kapuk: `sendOutreachMail` / `startOutreachPair` / `sendOutreachSms`.
+<!-- distill:end -->
+
 
 ## §D — Deploy (a CLAUDE.md §0 tükre)
 10. Lokál-először; élesre **VERZIÓ megy, nem fájl-másolat** (ADR-0053): az élesítés egy
@@ -268,6 +409,37 @@
     NINCS (part-oldal geometriát igényelne) — csak prompt-szabály véd, tehát statisztikus. Ha
     megint előjön: a factCheck kapjon földrajz-ellenőrzést. (§B.17 és §F metszete.)
 
+<!-- distill:begin 1b4b3b64c7cb10a8 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §F (új alpont a 17e után)
+> **Forrás-memória:** `feedback_outage_recorded_as_permanent_loss.md`, `2026-09-13_dead_photo_liveness.md`, `reference_source_portal_photos_die.md`
+> **Review:** `_inbox/20260920T020001Z.md` (18. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+17f. **⛔⛔ AZ IDEGEN FORRÁS KIMARADÁSA SEM lelet a rekordról — és a rá épülő írásnak vissza
+    kell tudnia görgetni.** A §F.17d a MI kimaradásunkról szól; ez az ikertétele: egy
+    PILLANATNYI 404 nem bizonyítja, hogy a forrás elveszett. Mérve 2026-09-13, ugyanazzal a
+    mérőeszközzel, három adatbázis-pillanatképből **bájtra igazoltan azonos** URL-halmazon:
+    ~21:05-kor **72 halott (8%)**, 21:45-kor **21 halott (2%)**; a hovamenjek-mintán
+    **59/73 → 2/73**. A portálnak részleges kimaradása volt — és ezt két szál is
+    „a portál letörölte a fotóit" TÉNYKÉNT írta ADR-be, memóriába, commit-üzenetbe.
+    - **Gazdagép-szintű fék:** ha egy hoszt képeinek TÖBBSÉGE bukik egyszerre (legalább 3 mért
+      képnél), az **kimaradás-aláírás**, nem tömeges törlés → arról a hosztról EGYET SEM ejtünk;
+      a kész lapról a kiküldés-kapu (§I.24) döntsön, hangosan. **Csendben elszegényíteni
+      rosszabb, mint hangosan megállni.** Kód: `src/generator/photoLiveness.ts`.
+    - **Csak a VÉGLEGES hiba ejt.** 404/410 igen; 429/hálózat/upstream SOHA — a múlandó hiba
+      miatt fotót dobni fordítva ugyanakkora kár. A portál a párhuzamos kép-burstre ad 429-et,
+      ezért gazdagépenként sorosíts.
+    - **A romboló írás legyen visszagörgethető:** pillanatkép → írás → **ÚJRAMÉRÉS** → ha nem
+      lett JOBB, VISSZAÁLLÍTÁS. Így a „javítás" szerkezetileg nem tud rontani. Élesben kétszer
+      bizonyított: egy feltétel nélküli `--fix` **0 visszanyert élő fotó** mellett a Mákszem
+      45 élő képét 0-ra írta volna (másodszorra a fék állította vissza).
+    - **Mintából ne általánosíts MECHANIZMUSRA.** A „404-et ad" és a „megszűnt a séma" két külön
+      állítás: az elsőhöz 8 URL elég, a másodikhoz a TELJES halmaz kell (73 kérés ~40 mp). A
+      `select distinct … limit 8` leadenként CSOMÓSODIK, nem szór.
+<!-- distill:end -->
+
+
 ## §G — Izoláció, jog, ember a hurokban
 18. **A Vendég (a tulaj ügyfele) NEM a mi üzleti aktorunk.** Következmény: kötelező **tenant-izoláció** — minden Site vendég-adata (PII) tenantonként elkülönül (RLS + per-tenant titkosítás; prémium: külön séma/DB). A megvalósítás architektúra-döntés, de az izoláció-elv nem alkudható.
 19. **Mi legfeljebb technikai adatfeldolgozó vagyunk, NEM adatkezelő a vendég felé.** Agentek a control plane-ben élnek; a **vendég-PII-hez üzletileg nem férnek hozzá** (data plane izolált). Két fizetési sík is elkülönül: Tenant→Citoviso (a mi bevételünk) ↔ Vendég→Tulaj (a tulaj fiókján folyik, nem rajtunk át — jogi tisztaság).
@@ -283,6 +455,72 @@
     - **A mérce a RENDERELT artefaktum** (`mock_artifact.path`), nem a generálás bemeneti fotólistája — a kapu azon az úton mérjen, amin az adat tényleg kimegy.
     - **A mérés a KIKÜLDÉS pillanatában fut**, nem a jóváhagyáskori emlékből: a forrás-portál azóta is elrohaszthatta a TÁROLT URL-t (a hovamenjek.hu átnevezte a fájljait: mérve 73 tárolt URL-ből 59 halott, miközben az adatlapok élnek).
     - **Az ember a hurokban marad (§G.20), de KIMONDOTTAN:** a kurátor tudomásul veheti a törést, a tudomásulvétel azonban NÉVSORRA szól — ami azóta esett ki, arra nem érvényes. A „nincs renderelt lap" eset nem nyugtázható le, azt újra kell generálni.
+
+<!-- distill:begin f192c5a01b321c86 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §I — Ígéret ⇔ Szállítás hűség (új 25. pont a 24. után)
+> **Forrás-memória:** `feedback_atomicity_without_redrive_moves_the_silence.md` · `feedback_idempotency_made_the_second_charge_worthless.md` · `2026-09-20_owned_prospect_link.md` · `2026-09-22_upsell_atomicity_and_billing_predicate.md`
+> **Review:** `_inbox/20260927T020001Z.md` (34. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+25. **⛔⛔ A PÉNZ BEÉRKEZÉSE NEM KÉZBESÍTÉSI BIZONYÍTÉK (ADR-0191/0196).** A `payment.status='paid'`
+    azt mondja, hogy fizettek — nem azt, hogy a vevő megkapta, amit vett. A kettő összekeverése
+    két, egymást kiegészítő kárt termel, mindkettő MÉRVE:
+    - **Az idempotencia elrejti a kár IRÁNYÁT.** Egy már vásárolt lead újra megnyitotta a
+      megkeresés linkjét és újra fizetett: `convertLead` idempotens a `lead_id`-ra,
+      `ensureSubscriptionForOrder` `onConflict(tenant_id).doNothing()` (a fordulónap NEM tolódik),
+      `issueAndSendTenantLogin` `existingLogin` ág — vagyis minden „védelem" némán elnyelte a
+      második futást, **csak a nem-idempotens ágak futottak végig: a TERHELÉS és a SZÁMLA.**
+      A vevő fizet, VALÓDI számlát kap, és semmit nem kap — még hosszabb előfizetést sem. A kár
+      tehát NEM „kétszer kapja meg". ⭐ Duplikált/ismételt művelet vizsgálatakor menj végig a
+      MINDEN write-on, és írd fel, melyik idempotens és melyik nem.
+    - **Az atomicitás újrahajtás nélkül csak ODÉBB TOLJA a némaságot.** A nem-atomi
+      `activateUpsell()` után a vevő a kifizetett modulok egy RÉSZÉT kapta meg; egy puszta
+      tranzakció TELJES visszagörgetést adott volna, amit senki nem hajt újra, mert a webhook
+      első sora `if (payment.status === "paid") return { alreadySettled: true }`. Az
+      idempotencia-őr tehát ne a PÉNZRE, hanem a KÉZBESÍTÉSRE nézzen. **Három réteg kell, egy
+      sem elég:** ① atomi írás ② újrahajtás a VALÓDI úton (`undeliveredUpsellModules()`,
+      `src/tenant/moduleUpsell.ts:240`; a replay `redeliverUpsellIfNeeded`,
+      `src/payment/service.ts:742`) ③ ember-riasztás a végén.
+    - **Amiért nem tudunk szállítani, ne vegyünk el pénzt.** A már ügyfél leadnek NINCS `initial`
+      pay-link: egy predikátum, két hívó (képernyő + pénz-út), két lábbal — tenant VAGY fizetett
+      `initial` (`src/conversion/owned.ts`; `requestPayment()` megtagad). A második láb a
+      fontosabb: a megakadt aktiválású vevő FIZETETT és nincs oldala — pont ő nyitja meg újra a
+      levelet. A tiltás a rendelés RÖGZÍTÉSE ELŐTT áll, különben `order_intent` + operátori
+      riasztás keletkezne egy nem-problémából.
+<!-- distill:end -->
+
+
+<!-- distill:begin f443e2eb5a74741f 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §I (új alpont `24b`, a 24. közvetlen ikre)
+> **Forrás-memória:** `feedback_gate_must_not_refuse_the_paying_customer.md`
+> **Review:** `_inbox/20260920T020001Z.md` (46. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+24b. **⛔⛔ A KAPU A KIKÜLDÉST ŐRIZZE, NE A PÉNZTÁRT (ADR-0129).** A 24. pont azt mondja ki,
+    hogy gyenge mock nem mehet ki; ez a párja: ugyanaz a szabály a FIZETÉSNÉL már azt tagadja
+    meg, aki a számlázási adatait begépelte és fizetni akar. Mérve 2026-09-13: **3 beküldött
+    `initial` rendelés ült egyetlen `payment` sor nélkül**, mind `generated` mockon — pénz az
+    asztalon, amiről senki nem tudott. **Egy kapu, amit a happy path is megüt, nem kapu, hanem
+    fal.** A kurátori kapu a szerepét a KIKÜLDÉSNÉL betöltötte: a vevő a saját szemével látta
+    azt a mockot, és pont azt kérte — **a vevő rendelése maga a jóváhagyás**.
+    - ⛔ **A kimondott emberi NEM viszont marad NEM.** A `rejected` státusz a kurátor kimondott
+      nemje a TARTALOMRA (pl. §B.17 ténysértés); azt a vevői szándék nem írja felül —
+      különben a mock hibáját emelnénk a vevő ÉLES honlapjára. Kód: `curateArtifact`
+      (`src/console/data.ts`), a fulfilment-kapu `src/payment/service.ts`.
+    - **A „nem mehet tovább" ág HÁROM tartozást ró le, nem egyet:** ① a vevőnek IGAZAT mond
+      (a megtagadó szöveg csak azt állíthatja, amit kód tényleg megtesz — az „e-mailben
+      elküldjük" mondathoz nem tartozott küldő kód, teljes grep: nem létezik; §B.17c),
+      ② egy EMBERT riaszt (egy `console.warn` a szerver stdout-jában nem értesítés),
+      ③ megnézi, hogy a kapu a HELYES lépésnél áll-e.
+    - **A helyreállítási utat ugyanúgy MÉRD, mint a fő utat.** A riasztáshoz írt súgó valódi
+      feliratokat idézett, és a kódban egyik lépés sem működött (elutasított mockon nincs
+      újradöntő gomb; a bent ragadt `pending` sor eltünteti az egyetlen gombot). Egy „mit tegyél,
+      ha baj van" szakasz, ami nem viszi át az embert, pontosan az a hiba, ami miatt a kapu
+      megszólalt (§J.24).
+<!-- distill:end -->
+
 
 ## §H — Láthatóság, SEO, lokalizáció
 21. **A honlap szükséges, de nem elegendő — a generátornak ALAPBÓL felfedezhető (SEO-optimális) oldalt kell gyártania.** Kötelező, automatizált réteg: technikai SEO (sebesség/mobil/sitemap/HTTPS/canonical) + **Schema.org strukturált adat (LocalBusiness/Hotel/Restaurant JSON-LD)** egyenesen a strukturált lead-adatból + meta. GBP-kezelés és Search Console-indexelés tulaj-hozzáférést igényel → konverzió UTÁN. ⚠️ Reális keret: a láthatóság időigényes és nem garantált top-találat — a kontrollálható emelőket optimalizáljuk, nem „#1 helyet ígérünk".
@@ -317,6 +555,31 @@
      országonként még nem létezik (`src/legal.ts` ma egy magyar csomagot ismer). A második piac
      megnyitása előtt a szövegeknek ország szerint kell szétválniuk.
 
+<!-- distill:begin 7725731d0cebab97 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §H — Láthatóság, SEO, lokalizáció (a 21b pont végére, új (d) alpont)
+> **Forrás-memória:** `feedback_dev_play_hides_host_bound_bugs.md` (`feedback_dev_path_hides_host_bound_bugs.md`) + `2026-09-24_elek_vendeg_szemevel.md`
+> **Review:** `_inbox/20260927T020001Z.md` (13. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+    (d) **⛔⛔ A TENANT HOST NEM CSAK A GYÖKERET SZOLGÁLJA — a levél-linkek is rajta élnek
+    (pilot-blokkoló volt, mérve 2026-09-24/25).** A vendég- és tulaj-levelek linkjei a KÉRÉS
+    hostjából épülnek (`publicBaseUrl(req)`), a vendég viszont a `<slug>.citoviso.com`-on foglal
+    → a link a tenant hostra mutat. A `serveTenantHost()` korábban MINDEN nem-gyökér útra 404-et
+    adott, és `/assets/`-et sem szolgált: élesben SEM a tulaj elfogad/elutasít, SEM a vendég
+    lemondó/ajánlat/vélemény linkje nem működött — **12 zöld FK-007 futás mellett**. Ma egyetlen
+    lista dönt (`servesOnTenantHostToo`, `src/server/mailLinkRoutes.ts`: `/foglalas/<t>/lemondom`
+    · `/ajanlat/<t>` · `/foglalas/<t>/ajanlat` · `/foglalas/<t>/(elfogadom|elutasitom)` ·
+    `/velemeny/<t>/(kiteszem|nem-teszem-ki)`), és az elosztó ezeket + az `/assets/`-et átengedi a
+    platform-kezelőkhöz (`src/server/public.ts:1938`); a „nem birtokolt aldomain" 404 CSAK
+    FELOLDATLAN hostra üt (`!tenantSite && isUnclaimedTenantHost`, `:1967`).
+    ⛔ **Következmény a mérésre:** a dev `/t/<slug>/` út a PLATFORM hoston fut, ezért minden
+    host-függő ág (elosztó, aldomain-kapu, asset-kiszolgálás, link-építés) ott láthatatlan. A
+    vendég-utat nyers `http.request`-tel, `Host: <slug>.citoviso.com` fejléccel is mérni kell (a
+    `fetch` a Host-ot eldobja) — minta: `scripts/guest-link-host-check.mts`.
+<!-- distill:end -->
+
+
 ## §J — Tudásbázis & felhasználó-vezetés (ADR-0045)
 24. **Tenant-felé néző admin-funkció nem születhet súgó nélkül.** Minden felület-szekció/folyamat
     KB-lefedettséggel jön (`data-kb-anchor` + `kb/entries/` bejegyzés: folyamatleírás + screenshot) —
@@ -337,6 +600,23 @@
 26. **Screenshot csak reprodukálható lehet.** A súgó-képek script-generáltak (Playwright, nyelv-
     paraméteres) — UI-változásnál és új nyelvnél újragenerálódnak. Kézi kép csak átmeneti és
     nyelv-jelölt; külső (repón kívüli) képhivatkozás tilos. Ok: a kézi kép elavul és nyelv-hamis.
+
+<!-- distill:begin 8521e8a248a02ea2 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §J (új alpont) — visszatalálás a belépéshez
+> **Forrás-memória:** 2026-10-15_belepes_visszatalalas.md, feedback_test_return_path_as_fresh_user.md
+> **Review:** `_inbox/20261019T060001Z.md` (140. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+24b. **A tulaj visszatalál a belépéshez — a levélből, cím ismerete nélkül.** Minden szállásadói
+    levél a platform-keretben viseli a „Belépés a szerkesztő felületre: citoviso.com/login” sort
+    (`platformMail`, egy URL-forrás `tenantLoginUrl(lang)`, inline tulaj-levélben `ownerLoginLine()`,
+    `src/email/platformLayout.ts`). Kivétel csak `ownerLogin:false`-szal: a belépő-levelek (ott a
+    dobozban áll) és a fizetés előtti rendelés-levelek (még nincs fiók). A szünetelő oldalon is él a
+    `/admin`/`/login`. Mérve: a tulaj ablak-zárás után nem talált vissza, mert három tesztkör
+    „tudta” a címet. Őr: `scripts/owner-login-mail-check.mts`.
+<!-- distill:end -->
+
 
 ## §K — Számlázási identitás & bizonylat (ADR-0055)
 
@@ -484,3 +764,95 @@
 > mellékterméke.
 
 > Új invariáns felbukkanásakor ide vedd fel, és linkeld a memóriában.
+
+<!-- distill:begin b558989c48fbc416 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §N.37 — Az őr hitelessége (a mért hibaminták listájának végére)
+> **Forrás-memória:** `feedback_pipe_to_tail_makes_gate_unfailable.md` · `feedback_phone_widens_layout_viewport_not_scrolls.md`
+> **Review:** `_inbox/20260927T020001Z.md` (182. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+    - **⛔⛔ A CSŐ ELNYELI A KILÉPÉSI KÓDOT — így a kapu nem tud BUKNI.** `cmd 2>&1 | tail -12
+      || fail` a `tail` kódját látja: mérve az éles gépen `sh -c 'exit 1' | tail -12` → **0**,
+      `set -o pipefail`-lel → **1**. A `deploy-prod.sh`-ban **hat blokkolónak szánt kapu** volt
+      így némán zöld: `pg_dump` (üres mentés!), `db:migrate` (restart bukott migráció után),
+      `npm install`, GATE 5/5b (súgó-fordítás), és egy helyi `| sort` (ssh-hibánál üres lista) —
+      és épp aznap helyeztük a súgó-fordítás EGYETLEN kényszerét erre a kapura. A kimenet
+      (az utolsó 12 sor) olvasható, ezért a kapu MŰKÖDŐNEK LÁTSZIK.
+      ⭐ **Szabály: felelősséget kapura áthelyezni csak azután szabad, hogy bebizonyítottad,
+      BUKNI tud** — futtasd egy garantáltan bukó paranccsal, és nézd a kilépési kódot.
+      `pipefail` soronként (távoli: a parancs elején; helyi: `( set -o pipefail … )` alhéjban),
+      globálisan ne (a `| grep -q` SIGPIPE-ja hamis bukást ad). Őr: `scripts/deploy-pipe-check.mts`.
+    - **A TELEFON NEM GÖRGET OLDALRA, HANEM KISZÉLESÍTI A LAYOUT VIEWPORTOT.** A klasszikus
+      túlfolyás-próba (`scrollWidth − innerWidth`) **0-t ad**, mert a lap nem görgethető oldalra —
+      csak SZÉLESEBB: mérve a brutalism marquee-ja a 390 px-es készüléken **515 px**-es layout
+      viewportot rakott ki, és ezzel MINDEN `position:fixed` réteg (süti-sáv, konfigurátor-pirula)
+      a széles dobozra került → a süti-sáv nem volt a képernyőn, a pirula fele levágva,
+      koppinthatatlan. **Mobil-mérésnél az igazság `window.innerWidth === készülék-szélesség`;
+      ha nem az, az MAGA a hiba.** Javítás a kiszolgáló rétegben `html,body{overflow-x:clip}`
+      (⛔ NEM `hidden`: az scroll-konténert csinál és megöli a sticky-t).
+      ⚠️ Ikercsapda: a sablonok `scroll-behavior:smooth`-a miatt egy `scrollTo` ANIMÁL, és a próba
+      fél úton olvas → hamis „nem érhető el a lap alja" lelet (`behavior:"instant"` + ismétlés,
+      amíg a `scrollHeight` stabil). És egy 1280-on betöltött, majd 390-re méretezett lap NEM
+      bizonyítja a ≤560 px-es betöltési ágat: friss betöltés kell (isMobile+touch).
+<!-- distill:end -->
+
+
+<!-- distill:begin 80f4e80ca3568bd7 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** §N.37 (új felsorolás-pont, a „A nulla összehasonlítás nem zöld" mellé)
+> **Forrás-memória:** `feedback_restructure_blinds_a_foreign_guard.md`, `feedback_my_edit_emptied_my_negative_control.md`, `feedback_label_change_breaks_its_quoters.md`
+> **Review:** `_inbox/20260920T020001Z.md` (97. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+    - **AZ ÜRES HALMAZON A NEGATÍV ÁLLÍTÁS MINDIG IGAZ — és a felület ÁTSZERVEZÉSE üríti ki.**
+      A felirat átírása eltöri az IDÉZŐIT (súgó, fixture, forgatókönyv, i18n-katalógus); egy
+      szinttel lejjebb a SZERKEZET átírása eltöri a **szelektorra kötött IDEGEN** mérőt — és a
+      kár **aszimmetrikus**: a pozitív állítás pirosra megy (látszik), a `every()` /
+      `filter().length === 0` alakú VALÓDI állítás viszont **üresen zöldre** (nem látszik).
+      Mérve: egy másik szál aznap landolt őre 34 pass / 1 fail lett, és a fail nem a hiba volt,
+      hanem a VAKSÁG jele — önbizonyító ág nélkül az őr 35/35 zöldet jelentett volna egy
+      MÉRETLEN lapra. Ugyanez visszafelé: a **negatív kontroll a vizsgált kód ALAKJÁRA épül**,
+      tehát ugyanaz a javítás teheti vakká, ami miatt megírtad (egy `replace()` semmire nem
+      illeszkedett → a kontroll csendben megszűnt kontrollnak lenni).
+      - Felület-átszervezés **ELŐTT grepeld a SZELEKTORAIDAT is** az `scripts/`-ben, ne csak a
+        feliratokat — és minden találatnál KÜLÖN döntsd el, mi legyen (a megosztott lista
+        bővítésének szerkezeti párja, §B.18).
+      - **Minden mérés mondja ki a saját ELŐFELTÉTELÉT:** ha a próbált érték üres, a minta nem
+        illeszkedett, vagy 0 esetet mért — az **BUKÁS**, nem kihagyás.
+      - Negatív kontrollt **injektálással** írj, ne cserével: a hibás állapotot ÁLLÍTSD ELŐ, ne
+        abban bízz, hogy van mit lecserélni. Ha a kör közben a vizsgált kódot módosítod,
+        **futtasd újra a kontrollt**, és nézd meg, még mindig PIROSRA tudja-e vinni a szabályt.
+      - A piros KONTROLLT is át kell vinni az új helyre — különben a zöld önteszt „lefedettnek"
+        mutat egy le sem futó állítást.
+<!-- distill:end -->
+
+
+
+<!-- distill:begin 3097885408007d9a 20261019T060329Z -->
+### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)
+> **Kért hely a review szerint:** (új szakasz) §O — Nem megbízható bemenet a kimenetben
+> **Forrás-memória:** 2026-10-11_json_for_script_xss.md, 2026-10-12_modell_html_injekcio.md, 2026-10-14_elek_it_eles_teszt.md, 2026-10-14_teszt3_javito_szal.md
+> **Review:** `_inbox/20261019T060001Z.md` (46. sor)
+> A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
+
+## §O — Nem megbízható bemenet a saját kimenetünkben (ADR-0365/0370/0391)
+
+39. **A scrape-elt, vendég által írt és modell által írt szöveg idegen bemenet — nem kerülhet
+    futtatható pozícióba.** Mért esetek: egy `</script><img onerror>` nevű Google-cég a konzol
+    lead-térképén LEFUTOTT; a vendég nevében küldött `<img onerror>` a tulaj-admin Foglalások fülén
+    minden betöltéskor lefutott; az AI-HTML út egy prózai prompt-injekcióra `<script>`-et és
+    `onload`-ot írt a mockba.
+    - **Inline `<script>`-be írt JSON CSAK `jsonForScript()`-en át** (`src/text/jsonForScript.ts`:
+      `<` `>` `&` `'` U+2028/2029 escape, értéktartó). A `JSON.stringify` magában nem elég. Őr:
+      `scripts/json-for-script-check.mts`.
+    - **Modell által írt HTML kiszolgálás előtt szűrve** (`sanitizeModelHtml`,
+      `src/generator/modelHtml.ts`, tokenizáló + újraszerializálás), a runtime-injektálás ELŐTT, és
+      minden kiszolgáló úton (`servableMockHtml`). Az engine-út escape-el, ott nincs mit szűrni.
+      Őr: `scripts/model-html-sanitize-check.mts`.
+    - **Állapotváltó kérés csak a saját eredetből** (ADR-0391, `crossOriginRefusal`,
+      `src/server/originGuard.ts`): a nem biztonságos metódusoknál Origin (ennek hiányában Referer)
+      host = `Host`, routolás ELŐTT. A `SameSite=Lax` NEM elég, mert minden `*.citoviso.com` aldomain
+      azonos site. A Host az nginx `Host $host`-ja; `X-Forwarded-Host`-ra tilos építeni (hamisítható).
+      Fejléc nélküli kérés átmegy; a webhook és a relay kivétel.
+<!-- distill:end -->
