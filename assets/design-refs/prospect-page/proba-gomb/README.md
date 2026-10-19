@@ -35,7 +35,7 @@ a `/p/:token` route adja át, ha a próba be van kapcsolva és a leadnek nincs `
    szabadítja fel, a pár feljebb lép; asztal: közép → jobb → bal → feljebb). A pár sosem szakad szét,
    és a fő gombot sosem temeti be. Őr: a `lead-mobile-check` R8 és a `lead-page-surface-check` ②
    a PÁR mindkét tagját méri.
-   **Részben felülírva: ADR-XXXX (2026-10-19, a tulaj „A” döntése) — álló telefonon (≤ 560 px, nem fekvő)**
+   **Részben felülírva: ADR-0396 (2026-10-19, a tulaj „A” döntése) — álló telefonon (≤ 560 px, nem fekvő)**
    a pár NEM lép feljebb: egy sötét, a képernyő aljára rögzített sávon áll (a süti-sáv és a Foglalás-sáv
    fölött, a sáv 10 px-rel magasabb a pároknál fent és lent), nyitott panelnél a sávval együtt eltűnik.
    A lapon mozgó tartalom (a hős második gombja is) a sáv alá görgethető, mint bármely rögzített alsó

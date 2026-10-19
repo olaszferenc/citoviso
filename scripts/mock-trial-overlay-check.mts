@@ -595,7 +595,7 @@ try {
   // above the title, at rest and with the consent bar — and never onto a hero control or
   // the framing bar on the way. The title = the h1's words and the paragraphs beside it,
   // measured on their TEXT lines (glyphs).
-  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő: sarok; asztali: a cím fölé; álló: alsó sáv, ADR-XXXX), gombra és fejlécre sem");
+  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő: sarok; asztali: a cím fölé; álló: alsó sáv, ADR-0396), gombra és fejlécre sem");
   const TITLE_PROBE = `() => {
     const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
       .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
@@ -721,7 +721,7 @@ try {
     }
     return { hits };
   }`;
-  // ADR-XXXX (owner „A”, 2026-10-19): upright the pair no longer looks for a free spot — it
+  // ADR-0396 (owner „A”, 2026-10-19): upright the pair no longer looks for a free spot — it
   // rests on a strip docked to the bottom, right on the fixed bottom stack (the consent bar,
   // a booking bar, or the screen edge). Measured: the strip is there, both pills lie inside
   // it, and its lower edge is the top of that stack — not floated up into the page.

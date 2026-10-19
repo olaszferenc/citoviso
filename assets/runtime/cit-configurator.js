@@ -5461,7 +5461,7 @@
     return !!trialPill && !trialPill.hidden && trialPill.isConnected;
   }
   /* cit-cfg-dock-start
-   * ADR-XXXX (owner, 2026-10-19, „A”): on an upright phone the pill(s) no longer float over
+   * ADR-0396 (owner, 2026-10-19, „A”): on an upright phone the pill(s) no longer float over
    * the page looking for a free spot — they rest on a solid strip docked to the bottom of the
    * screen (above the consent bar and a template's booking bar). Floating, the pair climbed
    * over the hero title, and with the consent bar onto the tagline under the name (owner's

@@ -1,4 +1,4 @@
-## ADR-XXXX — Álló telefonon a pirula-pár egy alsó, rögzített sávon áll, nem lebeg a hős fölött
+## ADR-0396 — Álló telefonon a pirula-pár egy alsó, rögzített sávon áll, nem lebeg a hős fölött
 
 **Dátum:** 2026-10-19 · **Kontextus:** a tulaj a [TESZT] Rebeka Panzió mockot nézte a telefonján (fullbleed sablon, süti-sávval): a „14 nap ingyen” + „Itt rendelheti meg” pár a szállás neve alatti „Tihany, az apátság közelében” soron és a főcím tetején ült. Szó szerint: „Ez most valami vicc?”. Két változatot kapott (A: alsó sáv, B: felső sáv), és az **A**-t választotta. **Részben felülírja:** ADR-0242 ④ és ADR-0382 (a kikerülés álló telefonon); **megtartja:** ADR-0377 (fekvő telefon: jobb sarok, egymás alatt) és az asztali kikerülést.
 

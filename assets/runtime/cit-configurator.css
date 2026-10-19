@@ -4096,7 +4096,7 @@ html.cit-cfg-is-open .cit-cfg-esccard { display: none !important; }
 .cit-cfg-co-scroll > .cit-cfg-sum { margin-top: 12px; }
 .cit-cfg-dwant[hidden], .cit-cfg-dcard[hidden], .cit-cfg-dsubline[hidden] { display: none; }
 
-/* ── ADR-XXXX: upright phone — the pill(s) rest on a strip docked to the bottom ──
+/* ── ADR-0396: upright phone — the pill(s) rest on a strip docked to the bottom ──
  * The runtime sets the strip's bottom (above the consent bar / a booking bar) and height
  * (pill + 2 × 10 px); it shows only while the pill does. Colour: the framing bar's ink. */
 .cit-cfg-dock {
