@@ -87,19 +87,14 @@ async function auditLegacyBackend(page: Page): Promise<string[]> {
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 8000 });
   await page.locator(".cit-cfg-launch").click();
   await page.waitForTimeout(350);
-  const custom = page.locator('.cit-cfg-dopt[data-dom="custom"]');
-  if (await custom.count()) {
-    await custom.scrollIntoViewIfNeeded();
-    await custom.click();
-    await page.waitForTimeout(350);
+  // ADR-0395: the address is step 2 — one offered name, an own-name field only with a check endpoint.
+  await page.locator(".cit-cfg-next").click();
+  await page.waitForSelector(".cit-cfg-next:not([disabled])", { timeout: 15000 });
+  if (await page.locator(".cit-cfg-dedit__open").isVisible()) {
+    failures.push("régi backenden is felajánlja a saját név mezőt (nem tudná ellenőrizni)");
   }
-  if (await page.locator(".cit-cfg-own").count()) {
-    failures.push("régi backenden is megjelenik a saját-domain mező (nem tudná ellenőrizni)");
-  }
-  if (await page.locator(".cit-cfg-dsug").count()) {
-    // The suggestions still work there — proof the block is disabled, not the section.
-  } else {
-    failures.push("régi backenden a domain-javaslatok is eltűntek (túl sokat tiltottunk le)");
+  if (((await page.locator(".cit-cfg-dcard__name").textContent()) ?? "").trim() !== "hotel-pelda.hu") {
+    failures.push("régi backenden a felajánlott név is eltűnt (túl sokat tiltottunk le)");
   }
   if (errors.length) failures.push(`JS-hiba a régi backend ágán: ${errors[0]}`);
   return failures;
@@ -149,14 +144,18 @@ async function audit(page: Page, viewport: string): Promise<Result> {
   await page.locator(".cit-cfg-launch").click();
   await page.waitForTimeout(450);
 
-  // 1) itemised switches visible with NO extra tap
+  // 1) ADR-0395: the itemised switches sit behind „Testre szabom”, CLOSED by default
+  //    (on a phone the open list was ~1 700 px in a ~320 px window) — one tap opens them.
   const rows = page.locator(".cit-cfg-detail .cit-cfg-row");
   const rowCount = await rows.count();
   if (!rowCount) failures.push("nincs tételes modul-sor a panelben");
-  const firstRowVisible = rowCount ? await rows.first().isVisible() : false;
-  if (!firstRowVisible) failures.push("a tételes kapcsolók nincsenek nyitva a panel megnyitásakor");
   const expanded = await page.locator(".cit-cfg-customize").getAttribute("aria-expanded");
-  if (expanded !== "true") failures.push(`a „Testre szabom" aria-expanded=${expanded} (nyitva kellene)`);
+  if (expanded !== "false") failures.push(`a „Testre szabom" aria-expanded=${expanded} (alapból csukva kellene)`);
+  if (rowCount && (await rows.first().isVisible())) failures.push("a tételes kapcsolók alapból nyitva vannak");
+  await page.locator(".cit-cfg-customize").click();
+  await page.waitForTimeout(200);
+  const firstRowVisible = rowCount ? await rows.first().isVisible() : false;
+  if (!firstRowVisible) failures.push("a „Testre szabom” koppintásra sem nyílnak meg a kapcsolók");
 
   // 2) the running total is on screen right then — step 1's one-row total since
   //    the two-step order (contract order-two-step ①); the big card is on step 2.
@@ -168,48 +167,18 @@ async function audit(page: Page, viewport: string): Promise<Result> {
     failures.push(`az összeg kilóg a képernyőből (y=${box?.y}, h=${box?.height}, vh=${vh})`);
   }
 
-  // 2b) ADR-0211 / contract design-refs/console/period-badge: MONTHLY is the
-  // default, and the annual card's badge names the saving in forints =
-  // monthly list total × free months (read independently from the manifest).
-  // The cards are on step 2 (order-two-step ②): measured THERE, where the badge
-  // is visible — a hidden badge would pass the "does not cover" test vacuously.
+  // 2b) ADR-0211: MONTHLY is the default. ADR-0395: the ONE period switch is on the pay step.
   {
-    const monthlyStep1 = amount(await sum.innerText());
     await page.locator(".cit-cfg-next").click();
-    await page.waitForTimeout(250);
-    if (!(await page.locator(".cit-cfg-permat").isVisible())) failures.push("a 2. lépésen nem látszik a Havi/Éves kártya-pár");
-    const st = await page.evaluate(() => {
-      const el = document.querySelector("[data-cit-configurator]");
-      const cfg = el ? JSON.parse(el.textContent || "{}") : {};
-      const on = document.querySelector(".cit-cfg-permat .cit-cfg-popt--on");
-      const badge = document.querySelector(".cit-cfg-permat .cit-cfg-popt__badge") as HTMLElement | null;
-      const title = document.querySelector('.cit-cfg-permat .cit-cfg-popt[data-period="annual"] .cit-cfg-popt__t');
-      const a = badge?.getBoundingClientRect();
-      const t = title?.getBoundingClientRect();
-      return {
-        free: Number(cfg?.pricing?.annualFreeMonths ?? 0),
-        hasOffer: !!cfg?.pricing?.offer,
-        on: on?.getAttribute("data-period") ?? null,
-        badge: badge && !badge.hidden ? badge.textContent || "" : null,
-        covers: !!(a && t && a.bottom > t.top + 1 && a.right > t.left && a.left < t.right),
-      };
-    });
-    if (st.on !== "monthly") failures.push(`induláskor nem a Havi van kiválasztva (hanem: ${st.on})`);
-    if (st.free > 0) {
-      if (st.badge === null) failures.push("az Éves kártyán nincs látható „hó ingyen” jelvény");
-      else {
-        const monthly = monthlyStep1;
-        const saving = amount(st.badge);
-        if (!st.hasOffer && saving !== monthly * st.free) {
-          failures.push(`a jelvény megtakarítása ${saving} (várt: ${monthly} × ${st.free} = ${monthly * st.free})`);
-        }
-        if (!st.badge.includes(`${st.free} hó ingyen`)) failures.push(`a jelvény nem nevezi az ingyen hónapokat: "${st.badge}"`);
-      }
-      if (st.covers) failures.push("a jelvény rálóg az „Éves” feliratra");
-    } else if (st.badge !== null) {
-      failures.push(`0 ingyen hónapnál is van jelvény: "${st.badge}"`);
-    }
-    await page.locator(".cit-cfg-back").click();
+    await page.waitForSelector(".cit-cfg-next:not([disabled])", { timeout: 15000 });
+    await page.locator(".cit-cfg-next").click();
+    await page.waitForTimeout(300);
+    if (!(await page.locator(".cit-cfg-period3").isVisible())) failures.push("a fizetés-lapon nem látszik a Havi/Éves váltó");
+    const on = await page.evaluate(() => document.querySelector(".cit-cfg-period3 .cit-cfg-popt--on")?.getAttribute("data-period") ?? null);
+    if (on !== "monthly") failures.push(`induláskor nem a Havi van kiválasztva (hanem: ${on})`);
+    await page.locator(".cit-cfg-back3").click();
+    await page.waitForTimeout(200);
+    await page.locator(".cit-cfg-hback").click();
     await page.waitForTimeout(250);
   }
 
@@ -270,61 +239,46 @@ async function audit(page: Page, viewport: string): Promise<Result> {
   const boxed = await page.locator(".cit-cfg-custombox .cit-cfg-detail").count();
   if (!boxed) failures.push("a testre szabó rész nem külön felületen ül (nincs cit-cfg-custombox)");
 
-  // 5) own domain name: a buyer who likes none of our suggestions can type one and
-  //    have it checked — and only a checkable, free name may become the selection.
-  const custom = page.locator('.cit-cfg-dopt[data-dom="custom"]');
-  if (!(await custom.count())) {
-    failures.push("nincs saját-domain választó");
+  // 5) ADR-0395 address step: ONE registrar-free name on offer (a taken one is skipped), an
+  //    own name may override it — checked, cleaned, a taken one never becomes the selection.
+  await page.locator(".cit-cfg-next").click();
+  await page.waitForSelector(".cit-cfg-next:not([disabled])", { timeout: 15000 });
+  const nameEl = page.locator(".cit-cfg-dcard__name");
+  if (((await nameEl.textContent()) ?? "").trim() !== "hotel-pelda.hu") {
+    failures.push(`a felajánlott név nem az első SZABAD javaslat: "${await nameEl.textContent()}"`);
+  }
+  if (await page.locator(".cit-cfg-dsug").count()) failures.push("a cím-lépés névlistát mutat (egy név kellene)");
+  await page.locator(".cit-cfg-dedit__open").click();
+  const input = page.locator(".cit-cfg-own__in");
+  const btn = page.locator(".cit-cfg-own__btn");
+  const status = page.locator(".cit-cfg-own__status");
+  if (!(await input.isVisible())) {
+    failures.push("„Másik nevet szeretnék” után nem jelenik meg a saját név mezője");
   } else {
-    await custom.scrollIntoViewIfNeeded();
-    await custom.click();
+    if (await page.locator(".cit-cfg-next").isEnabled()) failures.push("szerkesztés közben a „Tovább” nem tiltott");
+    // a) a name without a TLD is refused with a plain reason
+    await input.fill("masik");
+    await btn.click();
+    await page.waitForTimeout(300);
+    if (!(await status.innerText()).trim()) failures.push("hibás domain névre nincs visszajelzés");
+    // b) a taken name must not become the selection
+    await input.fill("foglaltnev.hu");
+    await btn.click();
+    await page.waitForTimeout(500);
+    if (((await nameEl.textContent()) ?? "").includes("foglaltnev.hu")) failures.push("FOGLALT domain lett a kiválasztott név");
+    if (!/foglalt/i.test(await status.innerText())) failures.push(`foglalt névre nincs „foglalt” visszajelzés: "${await status.innerText()}"`);
+    // c) messy but valid input is cleaned and becomes THE name
+    await input.fill("https://WWW.Sajat-Nevem.hu/");
+    await btn.click();
     await page.waitForTimeout(400);
-    const own = page.locator(".cit-cfg-own");
-    if (!(await own.isVisible())) {
-      failures.push("saját domain választásakor nem jelenik meg a saját név mező");
-    } else {
-      const input = page.locator(".cit-cfg-own__in");
-      const btn = page.locator(".cit-cfg-own__btn");
-      const status = page.locator(".cit-cfg-own__status");
-      // a) messy but valid input is cleaned and accepted
-      await input.fill("https://WWW.Sajat-Nevem.hu/");
-      await btn.click();
-      await page.waitForTimeout(400);
-      if (!/sajat-nevem\.hu/.test(await status.innerText())) {
-        failures.push(`saját név ellenőrzése nem adott találatot: "${await status.innerText()}"`);
-      }
-      // The order summary (the card with the domain breakdown) is on step 2 since the
-      // two-step order (order-two-step ②) — read it THERE, as the buyer sees it.
-      await page.locator(".cit-cfg-next").click();
-      await page.waitForTimeout(200);
-      const cardText = await page.locator(".cit-cfg-sum").innerText();
-      await page.locator(".cit-cfg-back").click();
-      await page.waitForTimeout(200);
-      if (!/sajat-nevem\.hu/.test(cardText)) {
-        failures.push("az ellenőrzött saját domain nem került be a megrendelés összegzőjébe");
-      }
-      // b) editing after a verdict drops the stale selection
-      await input.fill("masik");
-      await page.waitForTimeout(200);
-      // ⛔ The card, not the one-row total: the row never names a domain, so asking
-      // IT whether a stale domain is gone would be green whatever happened.
-      if (/sajat-nevem\.hu/.test((await page.locator(".cit-cfg-sum").textContent()) ?? "")) {
-        failures.push("szerkesztés után is az ELŐZŐ (már nem ellenőrzött) domain marad az összegzőben");
-      }
-      // c) a name without a TLD is refused with a plain reason
-      await btn.click();
-      await page.waitForTimeout(300);
-      if (!(await status.innerText()).trim()) {
-        failures.push("hibás domain névre nincs visszajelzés");
-      }
-      // d) a taken name must not become the selection
-      await input.fill("foglaltnev.hu");
-      await btn.click();
-      await page.waitForTimeout(400);
-      if (/foglaltnev\.hu/.test((await page.locator(".cit-cfg-sum").textContent()) ?? "")) {
-        failures.push("FOGLALT domain is bekerült a megrendelésbe");
-      }
+    if (((await nameEl.textContent()) ?? "").trim() !== "sajat-nevem.hu") {
+      failures.push(`az ellenőrzött saját név nem lett a kiválasztott: "${await nameEl.textContent()}"`);
     }
+    // d) the pay step names it (item box address line)
+    await page.locator(".cit-cfg-next").click();
+    await page.waitForTimeout(300);
+    const addr = (await page.locator(".cit-cfg-item-addr").textContent()) ?? "";
+    if (!/sajat-nevem\.hu/.test(addr)) failures.push(`a fizetés-lap nem a választott címet mutatja: "${addr}"`);
   }
   return { viewport, failures };
 }
@@ -352,7 +306,7 @@ for (const r of results) {
     console.error(`⛔ ${r.viewport}`);
     for (const f of r.failures) console.error(`   · ${f}`);
   } else {
-    console.log(`✅ ${r.viewport} — tételes kapcsolók nyitva, az ár látható és követi a kapcsolást`);
+    console.log(`✅ ${r.viewport} — a kapcsolók a „Testre szabom” mögött, az ár látható és követi a kapcsolást, a cím-lépés egy nevet ad`);
   }
 }
 // ── CSOMAG-SZABÁLY (tulaj, 2026-09-07) ────────────────────────────────────────

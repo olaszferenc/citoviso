@@ -242,6 +242,7 @@ const tap = async (page: Page, id: string): Promise<void> => {
 /** A kosár egy méreten: bepipálás · indoklás · zárolás · visszavétel. */
 async function auditCart(page: Page, size: string): Promise<{ chosen: string[]; annual: string }> {
   await page.click(".cit-cfg-launch");
+  await page.click('.cit-cfg-customize[aria-expanded="false"]'); // ADR-0395: closed by default
   await page.waitForSelector(".cit-cfg-row", { state: "visible" });
 
   // ⭐ A manifest SZÁLLÍTJA a szabályt — a kliensnek nincs saját példánya belőle.

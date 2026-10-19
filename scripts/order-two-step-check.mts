@@ -1,18 +1,20 @@
-// Two-step order guard — contract: assets/design-refs/console/order-two-step (variant B).
+// Order-steps guard — contract: assets/design-refs/console/rendeles-egyszerusitett (ADR-0395,
+// owner 2026-10-19 „A”). (File name kept from the two-step contract it replaces, order-two-step,
+// so the pre-commit wiring stays one line.)
 //
-// Why it exists (owner, 2026-09-26, from a phone): the configurator's pinned money
-// block (period cards + "MOST FIZETENDŐ" card + VAT + next charge + button) filled
-// the 74vh bottom sheet and left ONE row of the package list — "semmi nem látszik a
-// modulok csomagokból". The approved fix splits the order in two:
-//   step 1 — the package/module list owns the sheet; the foot is ONE row
-//            (small Havi|Éves switch + running total + "Tovább");
-//   step 2 — the list leaves; the period cards come FIRST, then the card, VAT,
-//            next charge and the §A declaration; the action row stays pinned.
+// Why it exists: measured 2026-10-19 on a 390 px phone, the old step 1 asked for the package, 11
+// section switches AND the address at once — ~1 700 px of content in a ~320 px window, the address
+// at the very bottom under a 10-row list of domain names. 5 of 63 real leads opened the panel, for
+// ~1 minute; nobody paid. The approved order is three steps, one decision per screen:
+//   step 1 — the packages; the switch list behind „Testre szabom”, CLOSED; foot = total + „Tovább”
+//            (no Havi|Éves switch there);
+//   step 2 — the address only: one offered name, a fixed platform-address line;
+//   step 3 — the pay step: the ONE period switch, every consent (§A first), the pay button.
+// On a phone the panel is FULL SCREEN on every step.
 //
-// ⛔ Measured the way the buyer meets it: hit-tests with `elementFromPoint` at an
-// UNTOUCHED scroll position (no Playwright auto-scroll — it scrolls overflow boxes
-// and turns an off-screen control green), on a portrait phone, a phone held
-// sideways and a desktop.
+// ⛔ Measured the way the buyer meets it: hit-tests with `elementFromPoint` at an UNTOUCHED scroll
+// position (no Playwright auto-scroll — it scrolls overflow boxes and turns an off-screen control
+// green), on a portrait phone, a phone held sideways and a desktop.
 //
 //   npx tsx scripts/order-two-step-check.mts               # the gate
 //   npx tsx scripts/order-two-step-check.mts --self-test   # must go RED on each mutation
@@ -82,61 +84,30 @@ const PROBE = `(function () {
     var t = document.elementFromPoint(x, y);
     return !!t && (t === e || e.contains(t));
   }
-  function top(s) { var e = document.querySelector(s); return e ? e.getBoundingClientRect().top : null; }
-  function h(s) { var e = document.querySelector(s); return e ? e.getBoundingClientRect().height : 0; }
-  function num(s) {
-    var e = document.querySelector(s);
-    var m = e ? /([0-9][0-9\\s\\u00a0\\u202f]*)/.exec(e.textContent || "") : null;
-    return m ? Number(m[1].replace(/\\D/g, "")) : null;
-  }
   var panel = document.querySelector(".cit-cfg-panel");
+  var pr = panel.getBoundingClientRect();
   return {
-    s2: panel.classList.contains("cit-cfg-panel--s2"),
-    body: vis(".cit-cfg-body"),
-    bodyH: h(".cit-cfg-body"),
-    panelH: h(".cit-cfg-panel"),
-    s2scroll: vis(".cit-cfg-s2scroll"),
-    permat: vis(".cit-cfg-permat"),
-    permatHit: hit('.cit-cfg-permat [data-period="annual"]'),
-    permatTop: top(".cit-cfg-permat"),
-    sumTop: top(".cit-cfg-s2scroll .cit-cfg-sum"),
-    sumVis: vis(".cit-cfg-sum"),
+    addr: panel.classList.contains("cit-cfg-panel--addr"),
+    billing: panel.classList.contains("cit-cfg-panel--billing"),
+    presets: vis(".cit-cfg-presets"),
+    rowsVis: vis(".cit-cfg-detail .cit-cfg-row"),
+    expanded: (document.querySelector(".cit-cfg-customize") || {}).getAttribute ? document.querySelector(".cit-cfg-customize").getAttribute("aria-expanded") : null,
+    dsec: vis(".cit-cfg-dsec"),
     pill: vis(".cit-cfg-ppill"),
-    pillHit: hit('.cit-cfg-ppill [data-period="annual"]'),
+    period3: vis(".cit-cfg-period3"),
     mini: vis(".cit-cfg-mini__amt"),
-    miniN: num(".cit-cfg-mini__amt"),
-    cardN: num(".cit-cfg-sum b"),
-    miniText: (document.querySelector(".cit-cfg-mini__amt") || {}).textContent || "",
     nextHit: hit(".cit-cfg-next"),
-    submitHit: hit(".cit-cfg-submit"),
-    rights: vis(".cit-cfg-rights"),
-    recap: ((document.querySelector(".cit-cfg-recap b") || {}).textContent || "").trim(),
-    head: ((document.querySelector(".cit-cfg-head p") || {}).textContent || "").trim(),
-    annualCardOn: !!document.querySelector('.cit-cfg-permat [data-period="annual"].cit-cfg-popt--on'),
-    annualPillOn: !!document.querySelector('.cit-cfg-ppill [data-period="annual"].cit-cfg-popt--on'),
-    // LINES of the annual card's "áráért" line (the form that is shown: wide OR
-    // narrow). ⛔ Not getClientRects().length: an inline span with a nested span
-    // returns one rect per RUN, so a single line read 2 — count distinct line tops.
-    gainLines: (function () {
-      var w = document.querySelector(".cit-cfg-permat .cit-cfg-gain-w");
-      var n = document.querySelector(".cit-cfg-permat .cit-cfg-gain-n");
-      var shown = w && getComputedStyle(w).display !== "none" ? w : n;
-      if (!shown) return 0;
-      var tops = {};
-      Array.prototype.forEach.call(shown.getClientRects(), function (r) {
-        if (r.width > 0) tops[Math.round(r.top)] = 1;
-      });
-      return Object.keys(tops).length;
-    })(),
-    gainText: ((document.querySelector(".cit-cfg-permat .cit-cfg-popt__gain") || {}).innerText || "").trim(),
+    backHit: hit(".cit-cfg-hback"),
+    prog: ((document.querySelector(".cit-cfg-progtxt") || {}).textContent || "").trim(),
+    h2: ((document.querySelector(".cit-cfg-head h2") || {}).textContent || "").trim(),
+    rightsInPay: !!document.querySelector(".cit-cfg-co-act .cit-cfg-rights"),
+    full: pr.left <= 1 && pr.top <= 1 && pr.right >= innerWidth - 1 && pr.bottom >= innerHeight - 1,
   };
 })()`;
 type Probe = {
-  s2: boolean; body: boolean; bodyH: number; panelH: number; s2scroll: boolean; permat: boolean;
-  permatHit: boolean; permatTop: number | null; sumTop: number | null; sumVis: boolean; pill: boolean;
-  pillHit: boolean; mini: boolean; miniN: number | null; cardN: number | null; miniText: string;
-  nextHit: boolean; submitHit: boolean; rights: boolean; recap: string; head: string;
-  annualCardOn: boolean; annualPillOn: boolean; gainLines: number; gainText: string;
+  addr: boolean; billing: boolean; presets: boolean; rowsVis: boolean; expanded: string | null; dsec: boolean;
+  pill: boolean; period3: boolean; mini: boolean; nextHit: boolean; backHit: boolean; prog: string; h2: string;
+  rightsInPay: boolean; full: boolean;
 };
 
 async function audit(browser: Browser, file: string): Promise<string[]> {
@@ -160,83 +131,63 @@ async function audit(browser: Browser, file: string): Promise<string[]> {
       if (vp.short) await page.evaluate(`(function(){var p=document.querySelector(".cit-cfg-panel");p.scrollTop=p.scrollHeight;})()`);
       await page.waitForTimeout(80);
     };
+    const toTop = async () => {
+      if (vp.short) await page.evaluate(`document.querySelector(".cit-cfg-panel").scrollTop=0`);
+      await page.waitForTimeout(80);
+    };
 
-    // ── step 1 ──
-    await toFoot();
+    // ── step 1: the packages ──
     let p = (await page.evaluate(PROBE)) as Probe;
-    f(!p.s2, "induláskor már a 2. lépés állapotában van a panel");
-    f(p.body, "az 1. lépésen nem látszik a csomag/modul-lista");
-    f(!p.s2scroll && !p.permat, "az 1. lépésen látszik a fizetési blokk (Havi/Éves kártyák / MOST FIZETENDŐ) — pont ez szorította ki a listát");
-    f(p.mini, "az 1. lépésen nincs futó összeg");
-    f(p.pill && p.pillHit, "az 1. lépésen nem koppintható a kis Havi|Éves váltó");
-    f(p.nextHit, "az 1. lépésen a „Tovább” nem koppintható (takarja valami, vagy a képen kívül van)");
-    if (vp.sheet) {
-      // The measured defect: the list had ~1 row of a 74vh sheet. Now it owns it.
-      const share = p.panelH ? p.bodyH / p.panelH : 0;
-      f(share >= 0.5, `a lista a lapnak csak ${(share * 100).toFixed(0)}%-át kapja (min. 50%)`);
-    }
-    // the small switch drives the same period as the cards (one state)
-    await page.evaluate(`document.querySelector('.cit-cfg-ppill [data-period="annual"]').click()`);
-    await page.waitForTimeout(120);
-    p = (await page.evaluate(PROBE)) as Probe;
-    f(/év/.test(p.miniText), `éves váltás után a futó összeg nem „/ év” (${p.miniText.trim()})`);
-    f(p.annualPillOn && p.annualCardOn, "a kis váltó és a 2. lépés kártyái nem ugyanazt az ütemet mutatják");
-    await page.evaluate(`document.querySelector('.cit-cfg-ppill [data-period="monthly"]').click()`);
-    await page.waitForTimeout(120);
-
-    // ── step 2 ──
-    await page.evaluate(`document.querySelector(".cit-cfg-next").click()`);
-    await page.waitForTimeout(250);
-    if (vp.short) await page.evaluate(`document.querySelector(".cit-cfg-panel").scrollTop=0`);
-    p = (await page.evaluate(PROBE)) as Probe;
-    f(p.s2, "a „Tovább” után nem a 2. lépés állapota van");
-    f(!p.body, "a 2. lépésen is látszik a csomag-lista");
-    f(p.permat && p.permatHit, "a 2. lépésen a Havi/Éves kártya nem látszik / nem koppintható érintetlen görgetésnél");
-    f(p.permatTop !== null && p.sumTop !== null && p.permatTop < p.sumTop, "a 2. lépés első látványa nem a Havi/Éves kártya-pár (az összeg-kártya fölötte van)");
-    f(p.sumVis, "a 2. lépésen nem látszik a MOST FIZETENDŐ kártya");
-    // owner, 2026-09-26: "10 hónap áráért 12 hónap —" / "95 000 Ft/év" broke in two on desktop
-    f(p.gainLines === 1, `az Éves kártya „áráért” sora nem egy sorban áll (${p.gainLines} sor: „${p.gainText}”)`);
-    f(p.miniN !== null && p.miniN === p.cardN, `a két lépés összege eltér (1. lépés: ${p.miniN}, kártya: ${p.cardN})`);
-    f(/szekció/.test(p.recap), `a 2. lépés nem nevezi meg a választott csomagot („${p.recap}”)`);
-    f(!/Most nem fizet semmit/.test(p.head) && /Még nem fizet/.test(p.head), `a 2. lépés fejléce: „${p.head}”`);
+    f(!p.addr && !p.billing, "induláskor nem az 1. lépés állapotában van a panel");
+    f(p.presets, "az 1. lépésen nem látszanak a csomag-kártyák");
+    f(p.expanded === "false" && !p.rowsVis, `a „Testre szabom” kapcsoló-lista alapból nyitva (aria-expanded=${p.expanded})`);
+    f(!p.dsec, "az 1. lépésen látszik a cím-rész (a csomag mellett a webcímet is kéri)");
+    f(!p.pill, "az 1. lépésen ott a Havi|Éves váltó (a fizetés-lapra tartozik)");
+    f(/^1\. \/ 3/.test(p.prog), `a haladásjelző nem „1. / 3 …” („${p.prog}”)`);
+    f(p.h2 === "Válasszon csomagot", `az 1. lépés címe: „${p.h2}”`);
+    if (vp.sheet) f(p.full, "telefonon a panel nem teljes képernyős");
     await toFoot();
     p = (await page.evaluate(PROBE)) as Probe;
-    f(p.submitHit, "a 2. lépésen a „Tovább a számlázási adatokhoz” nem koppintható");
-    f(p.rights, "a 2. lépésen nem található a §A nyilatkozat");
+    f(p.mini, "az 1. lépésen nincs futó összeg");
+    f(p.nextHit, "az 1. lépésen a „Tovább” nem koppintható (takarja valami, vagy a képen kívül van)");
 
-    // ── back ──
-    await page.evaluate(`document.querySelector(".cit-cfg-back").click()`);
+    // ── step 2: the address ──
+    await page.evaluate(`document.querySelector(".cit-cfg-next").click()`);
+    await page.waitForFunction(`!document.querySelector(".cit-cfg-next").disabled`, null, { timeout: 15000 }).catch(() => {});
+    await toTop();
+    p = (await page.evaluate(PROBE)) as Probe;
+    f(p.addr, "a „Tovább” után nem a cím-lépés jön");
+    f(!p.presets, "a cím-lépésen is látszanak a csomag-kártyák");
+    f(p.dsec, "a cím-lépésen nem látszik a cím-rész");
+    f(/^2\. \/ 3/.test(p.prog) && p.h2 === "Az oldal címe", `a cím-lépés fejléce: „${p.h2}” · „${p.prog}”`);
+    f(p.backHit, "a cím-lépésen a vissza-nyíl nem koppintható");
+    await toFoot();
+    p = (await page.evaluate(PROBE)) as Probe;
+    f(p.nextHit, "a cím-lépésen a „Tovább” nem koppintható");
+
+    // ── back, then forward again ──
+    await page.evaluate(`document.querySelector(".cit-cfg-hback").click()`);
     await page.waitForTimeout(200);
     p = (await page.evaluate(PROBE)) as Probe;
-    f(p.body && !p.permat && !p.s2, "a „Vissza a csomagokhoz” után nem a lista-lépés jön vissza");
-
-    // ── the pay step: nothing of step 2 may stay behind and eat the form ──
-    // Measured regression (B thread, 2026-09-26): the §A declaration's inline
-    // `display:flex` beat the pay step's hide rule, and at 360×780 the billing form
-    // was left a 24 px window under the consents — the buyer could not fill it in.
+    f(!p.addr && p.presets, "a vissza-nyíl után nem a csomag-lépés jön vissza");
     await page.evaluate(`document.querySelector(".cit-cfg-next").click()`);
-    await page.waitForTimeout(200);
-    await page.evaluate(
-      `(function(){var r=document.querySelector(".cit-cfg-rights");r.checked=true;r.dispatchEvent(new Event("change",{bubbles:true}));document.querySelector(".cit-cfg-submit").click();})()`,
-    );
+    await page.waitForFunction(`!document.querySelector(".cit-cfg-next").disabled`, null, { timeout: 15000 }).catch(() => {});
+
+    // ── step 3: pay ──
+    await page.evaluate(`document.querySelector(".cit-cfg-next").click()`);
     await page.waitForTimeout(400);
-    const pay = (await page.evaluate(`(function(){
-      var d = document.querySelector(".cit-cfg-s2decl"), t = document.querySelector(".cit-cfg-s2top");
-      var s = document.querySelector(".cit-cfg-co-scroll"), a = document.querySelector(".cit-cfg-co-act");
-      var sr = s.getBoundingClientRect(), ar = a.getBoundingClientRect();
-      return { decl: !!d && d.getBoundingClientRect().height > 0, top: !!t && t.getBoundingClientRect().height > 0,
-        formH: Math.round(s.clientHeight), overlap: Math.round(sr.bottom - ar.top) };
-    })()`)) as { decl: boolean; top: boolean; formH: number; overlap: number };
-    f(!pay.decl, "a fizetés-lapon is ott maradt a §A nyilatkozat (elveszi az űrlap helyét)");
-    f(!pay.top, "a fizetés-lapon is ott maradt a 2. lépés teteje (vissza / csomag / Havi-Éves kártyák)");
+    p = (await page.evaluate(PROBE)) as Probe;
+    f(p.billing, "a cím-lépés „Tovább”-ja nem a fizetés-lapra visz");
+    f(p.period3, "a fizetés-lapon nincs Havi/Éves váltó");
+    f(p.rightsInPay, "a §A nyilatkozat nem a fizetés-lap jóváhagyásai között van");
     if (vp.sheet) {
-      // Portrait phones only: on desktop the two columns sit side by side (a vertical
-      // "overlap" means nothing), and sideways the 24 px window predates this contract
-      // (measured identical before ADR-0240) — that one is the pay step's own open item.
-      f(pay.overlap <= 0, `a pipa+Fizetek blokk rálóg a számlázási űrlapra (${pay.overlap} px)`);
-      // before ADR-0240 the form window was 127 px at 360×780 and 240 px at 390×844
-      f(pay.formH >= 110, `a számlázási űrlap ablaka csak ${pay.formH} px (min. 110)`);
+      const fold = (await page.evaluate(`document.querySelector(".cit-cfg-panel").classList.contains("cit-cfg-panel--fold")`)) as boolean;
+      f(fold, "telefonon a fizetés-lap nem egy oszlopban görget");
     }
+    await page.evaluate(`document.querySelector(".cit-cfg-back3").click()`);
+    await page.waitForTimeout(200);
+    p = (await page.evaluate(PROBE)) as Probe;
+    f(p.addr && !p.billing, "a „Vissza a tervhez” nem a cím-lépésre visz");
     f(errors.length === 0, `JS-hiba: ${errors.slice(0, 2).join(" | ")}`);
     await page.close();
   }
@@ -246,29 +197,29 @@ async function audit(browser: Browser, file: string): Promise<string[]> {
 // Each mutation reverts ONE part of the contract; every one must turn the gate red.
 const MUTATIONS: { name: string; from: RegExp; to: string }[] = [
   {
-    name: "a pénzügyi blokk visszakerül az 1. lépésre",
-    from: /\.cit-cfg-panel:not\(\.cit-cfg-panel--s2\):not\(\.cit-cfg-panel--billing\) \.cit-cfg-s2scroll \{\n  display: none;/,
-    to: ".cit-cfg-nomatch-s2scroll {\n  display: none;",
+    name: "a kapcsoló-lista alapból nyitva",
+    from: /'<button class="cit-cfg-customize" type="button" aria-expanded="false">'/,
+    to: `'<button class="cit-cfg-customize" type="button" aria-expanded="true">'`,
   },
   {
-    name: "a 2. lépésen megmarad a lista",
-    from: /\.cit-cfg-panel--s2 \.cit-cfg-body,\n/,
+    name: "a cím-rész az 1. lépésen is látszik",
+    from: /\.cit-cfg-panel:not\(\.cit-cfg-panel--addr\) \.cit-cfg-dsec \{ display: none; \}/,
     to: "",
   },
   {
-    name: "az Éves kártya nem kap több helyet (az „áráért” sor kettétörik)",
-    from: /\.cit-cfg-permat \.cit-cfg-popt--deal \{ flex-grow: 1\.2; \}/,
+    name: "a Havi|Éves váltó visszakerül az 1. lépésre",
+    from: /\.cit-cfg-panel:not\(\.cit-cfg-panel--cont\) \.cit-cfg-ppill \{ display: none !important; \}/,
     to: "",
   },
   {
-    name: "a §A nyilatkozat inline display-t kap (a fizetés-lapon is ott marad)",
-    from: /'<label class="cit-cfg-note cit-cfg-s2decl">'/,
-    to: `'<label class="cit-cfg-note cit-cfg-s2decl" style="display:flex">'`,
+    name: "a §A nyilatkozat nem kerül a fizetés-lapra",
+    from: /actEl\.insertBefore\(rightsRow, actEl\.firstChild\);/,
+    to: "void 0;",
   },
   {
-    name: "a futó összeg nem követi a kártyát",
-    from: /esc\(fmt\(currentCharge\(\)\)\)/,
-    to: "esc(fmt(currentCharge() + 1))",
+    name: "telefonon a panel újra alsó lap",
+    from: /\.cit-cfg-panel \{\n    top: 0;\n    max-height: none;\n    border-radius: 0;\n  \}/,
+    to: ".cit-cfg-nomatch {\n  }",
   },
 ];
 
@@ -299,7 +250,7 @@ try {
     const fails = await audit(browser, file);
     for (const x of fails) console.error(`⛔ ${x}`);
     if (fails.length) bad = true;
-    else console.log(`✅ order-two-step: ${VIEWPORTS.length} nézet — lista az 1. lépésen, a pénzügyi döntés a 2.-on, a gombok koppinthatók`);
+    else console.log(`✅ order-steps (ADR-0395): ${VIEWPORTS.length} nézet — csomag → cím → fizetés, egy képernyőn egy döntés, a gombok koppinthatók`);
   }
 } finally {
   await browser.close();

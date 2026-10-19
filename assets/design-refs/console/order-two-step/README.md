@@ -1,5 +1,8 @@
 # Kontraktus: rendelés két lépésben (csomagok és modulok, „Tovább”, majd fizetés módja)
 
+> ⚠️ **Részben felülírva: ADR-0395** (2026-10-19, `console/rendeles-egyszerusitett`): a rendelés három lépés (csomag → cím → fizetés), a Havi/Éves váltó csak a fizetés-lapon van, a §A nyilatkozat a fizetés-lap első jóváhagyása, telefonon a fizetés-lap mindig egy oszlop, és nyitott panel mellett nincs felső ajánlat-sáv. Ami itt ennek ellentmond, az már nem érvényes.
+
+
 **Jóváhagyva:** tulaj, 2026-09-26, a **B változat** („lábléc + kis váltó”).
 **Hatókör:** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css`
 **Döntés:** ADR-0240. Felülírja a `period-toggle-step1` ① és ② pontját (lásd lent).

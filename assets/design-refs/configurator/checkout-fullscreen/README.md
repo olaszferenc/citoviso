@@ -1,5 +1,8 @@
 # Fizetési lépés — jóváhagyott terv (2026-09-11, tulaj: „C — teljes felületű fizetés-lap”)
 
+> ⚠️ **Részben felülírva: ADR-0395** (2026-10-19, `console/rendeles-egyszerusitett`): a rendelés három lépés (csomag → cím → fizetés), a Havi/Éves váltó csak a fizetés-lapon van, a §A nyilatkozat a fizetés-lap első jóváhagyása, telefonon a fizetés-lap mindig egy oszlop, és nyitott panel mellett nincs felső ajánlat-sáv. Ami itt ennek ellentmond, az már nem érvényes.
+
+
 **Hatókör:** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css` · `src/console/views.ts`
 
 A `plan.html` a KONTRAKTUS (kattintható, önhordó; képek: `plan-mobile.png`,

@@ -1692,11 +1692,14 @@
   // ADR-0032: buyer-chosen platform subdomain state.
   var subHost = DOM ? DOM.sub : null; // last VALID chosen host (label + base)
   var subOk = true; // is the current subdomain label available?
-  function refreshSubmit() {
-    var btn = panel.querySelector(".cit-cfg-submit");
-    var rb = panel.querySelector(".cit-cfg-rights");
-    if (!btn) return;
-    btn.disabled = !(rb && rb.checked) || (domainType === "citoviso_sub" && !subOk);
+  var cfgStep = 1; // ADR-0395: 1 = package, 2 = address, 3 = pay
+  var prepareAddress = function () {}; // wired with the address step (below)
+  /** ADR-0395: „Tovább” waits while the address step is still finding or editing a name. */
+  function refreshNext() {
+    var b = panel.querySelector(".cit-cfg-next");
+    // Without any name on offer (the registrar did not answer) the platform address carries
+    // the order — the buyer is never stuck on this step.
+    if (b) b.disabled = cfgStep === 2 && (addrLoading || (addrEditing && !!addrCand));
   }
 
   // ADR-0109, mirrored from pricing.ts. Two separate questions now:
@@ -1769,147 +1772,154 @@
   }
 
   /**
-   * The custom-domain slot, per the frozen plan
-   * (assets/design-refs/configurator/domain-monthly/, owner: "c2").
-   *
-   * Below the threshold the selectable row is NOT shown (§I: we do not offer as
-   * orderable what we would not sell this buyer); an invitation card takes its
-   * place — accent frame, a real example name, the condition spelled out, and a
-   * progress read-out. Above it, the real option row returns.
+   * ADR-0395 (frozen plan design-refs/console/rendeles-egyszerusitett, owner 2026-10-19 „A”):
+   * the address step offers ONE registrar-verified free own name — pre-selected when the
+   * selection carries it as package content, behind „Kérem a saját címet” otherwise. The
+   * platform address is never a choice: it is a fixed line that follows the chosen name's
+   * label. The commitment terms live in the „Feltételek” popup (read from the live /pricing
+   * values), not as standing text on the panel — the fixed sentences contradicted each other
+   * every time the settings moved.
    */
+  var addrCand = null; // { domain, availability } — the one name on offer
+  var addrWant = false; // does the order carry the own name
+  var addrWantTouched = false; // the buyer flipped the switch or typed a name — never overridden
+  var addrEditing = false;
+  var addrLoading = false;
+  var baseHost = subHost; // the platform address without an own name (the trial's, if renamed)
+  var subFollowLabel = null; // label the platform address was last derived from
+  var subFollowSeq = 0;
+  function addrIncluded() {
+    var t = addrCand ? domainTldOf(addrCand.domain) : null;
+    return freePkgTlds().length > 0 && domainIsPackage() && (!t || t.freeInPackage);
+  }
   function refreshDomainTerms() {
     if (!DOM) return;
     var okE = domainEligible();
-    var months = String(DOM.minCommitmentMonths);
-    var optOwn = panel.querySelector('.cit-cfg-dopt[data-dom="custom"]');
-    var card = panel.querySelector(".cit-cfg-dgate");
-    if (optOwn) optOwn.hidden = !okE;
-    if (card) card.hidden = okE || card.getAttribute("data-dismissed") === "1";
-
-    // Dropping below the threshold REVOKES the choice — an entitlement the buyer
-    // no longer qualifies for must not ride along silently.
-    if (!okE && domainType === "citoviso_registered") setDomainType("citoviso_sub");
-
-    var feeEl = panel.querySelector(".cit-cfg-dopt__fee");
-    if (feeEl) {
-      feeEl.textContent = domainFeeMonthly() === 0
-        ? tr("a csomag része · {months} hó hűségidő").replace("{months}", months)
-        : tr("{price}/hó · {months} hó hűségidő")
-            .replace("{price}", fmt(domainFeeMonthly()))
-            .replace("{months}", months);
+    if (!addrWantTouched) addrWant = addrIncluded();
+    var reg = okE && addrWant && !!addrCand;
+    domainType = reg ? "citoviso_registered" : "citoviso_sub";
+    if (reg) followSubLabel(addrCand.domain);
+    else {
+      subFollowLabel = null;
+      subHost = baseHost;
     }
-
-    if (card && !card.hidden) {
-      var gap = domainGap();
-      var condEl = card.querySelector(".cit-cfg-dgate__cond");
-      if (condEl) {
-        condEl.textContent = tr("Feltétel: legalább {min}/hó csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó.")
-          .replace("{min}", fmt(DOM.minPackageMonthly))
-          .replace("{now}", fmt(monthlyTotal()));
-      }
-      var fill = card.querySelector(".cit-cfg-dgate__fill");
-      if (fill) {
-        fill.style.width =
-          Math.min(100, Math.round((monthlyTotal() / DOM.minPackageMonthly) * 100)) + "%";
-      }
-      var numEl = card.querySelector(".cit-cfg-dgate__num");
-      if (numEl) {
-        numEl.textContent = tr("{now} / {min} — {gap} hiányzik")
-          .replace("{now}", fmt(monthlyTotal()))
-          .replace("{min}", fmt(DOM.minPackageMonthly))
-          .replace("{gap}", fmt(gap));
-      }
-      // The instruction, not a decision: the buyer picks WHICH modules.
-      var askEl = card.querySelector(".cit-cfg-dgate__ask");
-      if (askEl) {
-        askEl.textContent = tr("Válasszon még minimum {gap} értékben a modulok közül.")
-          .replace("{gap}", fmt(gap));
-      }
-      var badge = card.querySelector(".cit-cfg-dgate__badge");
-      if (badge) badge.textContent = fmt(domainFeeMonthly()) + tr("/hó");
-    }
-
-    // The REAL commitment terms (ADR-0094 kötbér + ADR-0109 ⑤), shown while the
-    // custom option is selected — the buyer must see what the hűségidő binds them to.
-    var termsEl = panel.querySelector(".cit-cfg-dterms");
-    if (termsEl) {
-      // ADR-0360: package content (fee 0) and "no threshold" (no package floor) each get
-      // their own honest sentence; the ADR-0109 sentence stays for the case it describes.
-      var outsideFee = DOM.tlds && DOM.tlds.length ? (domainTldOf(domainName) || DOM.tlds[0]).monthly : DOM.customMonthly || 0;
-      var noFloor = !(DOM.minPackageMonthly > 0);
-      if (domainFeeMonthly() === 0 || noFloor) {
-        termsEl.textContent =
-          (domainFeeMonthly() === 0
-            ? tr("A saját cím a választott csomag része, ezért nincs külön havidíja; ha később kisebb csomagra vált, a díja {price}/hó.").replace("{price}", fmt(outsideFee))
-            : tr("A saját cím {price}/hó, amíg a név az Ön honlapjához tartozik.").replace("{price}", fmt(domainFeeMonthly()))) +
-          " " +
-          (noFloor
-            ? tr("{months} hónap hűségidő: ha ez alatt felmond és a nevet elviszi, a domain vételára fizetendő. Ha utána mond le, a név vételár nélkül az Öné lesz.")
-            : tr("{months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. Ha utána mond le, a név vételár nélkül az Öné lesz.")
-                .replace(/\{min\}/g, fmt(DOM.minPackageMonthly))
-          ).replace(/\{months\}/g, months);
-      } else termsEl.textContent =
-        tr("A saját cím {price}/hó, amíg a név az Ön honlapjához tartozik. {months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. A {months} hónap letelte után nincs hűségidő és nincs csomag-minimum; ha lemond, a név vételár nélkül az Öné lesz.")
-          .replace(/\{price\}/g, fmt(domainFeeMonthly()))
-          .replace(/\{months\}/g, months)
-          .replace(/\{min\}/g, fmt(DOM.minPackageMonthly));
-      if (domainType === "citoviso_registered" && okE) termsEl.removeAttribute("hidden");
-      else termsEl.setAttribute("hidden", "");
-    }
-    paintKeep();
-    syncDomainLead();
+    domainName = reg ? addrCand.domain : subHost;
+    paintAddress();
+    refreshNext();
   }
-
-  /**
-   * package-domain-badge B (owner 2026-10-12): when the CURRENT selection carries the own address
-   * free, the address step leads with it — a line naming it, the own-address option first, the
-   * platform address second („Most csak…”). Every suggestion row says what that name costs with
-   * THIS selection (its ending's fee, or „benne a csomagban”). Otherwise today's order, untouched.
-   */
-  function syncDomainLead() {
-    var box = panel.querySelector(".cit-cfg-domain");
-    if (!box) return;
-    var lead = box.querySelector(".cit-cfg-dlead");
-    var subw = box.querySelector(".cit-cfg-dsubw");
-    var tl = freePkgTlds();
-    var content = tl.length > 0 && domainIsPackage() && domainEligible();
-    if (lead && subw) {
-      if (content) {
-        lead.innerHTML =
-          I.globe +
-          "<div><b>" + esc(tr("A választott csomagjához saját {tld} cím jár").replace("{tld}", tl.join("/"))) + "</b>" +
-          "<span>" + tr("Válasszon nevet lent — a citoviso.com-os cím mellette is megmarad.") + "</span></div>";
-        lead.removeAttribute("hidden");
-        if (box.lastElementChild !== subw) box.appendChild(subw);
-      } else {
-        lead.setAttribute("hidden", "");
-        if (lead.nextElementSibling !== subw) box.insertBefore(subw, lead.nextElementSibling);
-      }
-    }
-    var subT = panel.querySelector('.cit-cfg-dopt[data-dom="sub"] .cit-cfg-dopt__t');
-    var ownT = panel.querySelector('.cit-cfg-dopt[data-dom="custom"] .cit-cfg-dopt__t');
-    if (subT) subT.textContent = content ? tr("Most csak a citoviso.com-os cím") : tr("Ingyenes cím a citoviso.com-on");
-    if (ownT) ownT.textContent = content ? tr("Saját domainnév — benne a csomagban") : tr("Saját domainnév");
-    panel.querySelectorAll(".cit-cfg-dsug__fee").forEach(function (f) {
-      var t = domainTldOf(f.getAttribute("data-domain"));
-      if (!t) { f.textContent = ""; return; }
-      var free = t.freeInPackage && domainIsPackage();
-      f.classList.toggle("cit-cfg-dsug__fee--inc", free);
-      f.textContent = free ? tr("benne a csomagban") : "+" + fmt(t.monthly) + tr("/hó");
+  /** The platform address takes the own name's label (owner: „a választott címet próbáljuk
+   *  ráilleszteni a citoviso-s címre is”); a taken label falls back to „<label>-szallas”, then
+   *  to the address the site has now. The server re-checks it at order time (ADR-0032). */
+  function followSubLabel(domain) {
+    var label = String(domain).split(".")[0];
+    if (!DOM.subCheckUrl || label === subFollowLabel) return;
+    subFollowLabel = label;
+    var seq = ++subFollowSeq;
+    var tryLabel = function (l, next) {
+      fetch(DOM.subCheckUrl + "?label=" + encodeURIComponent(l))
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (j) {
+          if (seq !== subFollowSeq) return;
+          if (j && j.ok) {
+            subHost = j.host;
+            paintAddress();
+          } else next();
+        })
+        .catch(function () {
+          if (seq === subFollowSeq) next();
+        });
+    };
+    tryLabel(label, function () {
+      tryLabel(label + "-szallas", function () {
+        subHost = baseHost;
+        paintAddress();
+      });
     });
   }
-
-  /** Elek B5: which platform address stays next to the custom domain (subHost = the chosen one). */
-  function paintKeep() {
-    var keepEl = panel.querySelector(".cit-cfg-dkeep");
-    if (!keepEl) return;
-    if (domainType === "citoviso_registered" && subHost) {
-      keepEl.textContent = tr("A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím ({host}) nem szűnik meg: automatikusan az újra irányít, így a korábbi hivatkozások is működnek tovább.")
-        .replace("{host}", subHost);
-      keepEl.removeAttribute("hidden");
+  function paintAddress() {
+    var sec = panel.querySelector(".cit-cfg-dsec");
+    if (!sec) return;
+    var okE = domainEligible();
+    var inc = addrIncluded();
+    var reg = domainType === "citoviso_registered";
+    var lead = sec.querySelector(".cit-cfg-alead");
+    var card = sec.querySelector(".cit-cfg-dcard");
+    card.hidden = !okE;
+    if (!okE) {
+      lead.textContent = DOM.minPackageMonthly > 0
+        ? tr("Saját címet legalább {min}/hó csomaghoz kérhet; az oldala most a citoviso-s címen indul.").replace("{min}", fmt(DOM.minPackageMonthly))
+        : "";
     } else {
-      keepEl.setAttribute("hidden", "");
+      lead.textContent = inc
+        ? tr("A csomagjához saját {tld} cím jár. Ezt a szabad nevet foglaltuk le Önnek:").replace("{tld}", freePkgTlds().join("/"))
+        : tr("Saját címet is kérhet az oldalához. Ez a név szabad:");
     }
+    var nameEl = card.querySelector(".cit-cfg-dcard__name");
+    var stEl = card.querySelector(".cit-cfg-dcard__st");
+    if (addrLoading) {
+      nameEl.textContent = tr("Szabad név keresése…");
+      stEl.innerHTML = "";
+    } else if (addrCand) {
+      nameEl.textContent = addrCand.domain;
+      var t = domainTldOf(addrCand.domain);
+      var fee = t ? (t.freeInPackage && domainIsPackage() ? 0 : t.monthly) : DOM.customMonthly || 0;
+      stEl.innerHTML =
+        '<span class="cit-cfg-dok">' + I.check + esc(addrCand.availability === "free" ? tr("szabad") : tr("ellenőrizzük")) + "</span>" +
+        (fee === 0
+          ? '<span class="cit-cfg-dok">' + esc(tr("benne a csomagban · 0 Ft")) + "</span>"
+          : '<span class="cit-cfg-dfee">+' + esc(fmt(fee)) + esc(tr("/hó")) + "</span>");
+    } else {
+      nameEl.textContent = "";
+      stEl.textContent = tr("Most nem találtunk szabad nevet — adjon meg egyet lent.");
+    }
+    var want = card.querySelector(".cit-cfg-dwant");
+    want.hidden = inc || !addrCand;
+    want.querySelector("input").checked = addrWant;
+    card.classList.toggle("cit-cfg-dcard--off", !reg);
+    var edit = card.querySelector(".cit-cfg-dedit");
+    edit.hidden = !addrEditing;
+    var openBtn = card.querySelector(".cit-cfg-dedit__open");
+    openBtn.textContent = addrEditing ? tr("Maradok ennél") : tr("Másik nevet szeretnék");
+    // An older backend without the check endpoint cannot verify a typed name — no field then.
+    openBtn.hidden = (addrEditing && !addrCand) || !DOM.checkUrl;
+    var line = sec.querySelector(".cit-cfg-dsubline");
+    line.innerHTML = reg
+      ? tr("Mindig megmarad a citoviso-s cím is: {host} — a saját címre irányít.").replace("{host}", "<b>" + esc(subHost || "") + "</b>")
+      : tr("Az oldala ezen a címen érhető el: {host}").replace("{host}", "<b>" + esc(subHost || "") + "</b>");
+    // ADR-0356: on the trialist's checkout the once-free rename stays for the case with no own name.
+    var ren = sec.querySelector(".cit-cfg-ren");
+    if (ren) ren.hidden = reg;
+    line.hidden = !!ren && !reg;
+  }
+  /** The „Feltételek” popup: today's /pricing values, nothing written into the panel. */
+  function domainTermsHtml() {
+    var months = String(DOM.minCommitmentMonths);
+    var t = (addrCand && domainTldOf(addrCand.domain)) || (DOM.tlds && DOM.tlds[0]) || null;
+    var outside = t ? t.monthly : DOM.customMonthly || 0;
+    var inc = addrIncluded();
+    var noFloor = !(DOM.minPackageMonthly > 0);
+    var buyout = DOM.buyoutPrice > 0 ? fmt(DOM.buyoutPrice) : null;
+    var rows = [
+      [tr("Díj"), inc ? tr("a csomag része (0 Ft)") : fmt(outside) + tr("/hó")],
+      [tr("Hűségidő"), tr("{months} hónap").replace("{months}", months)],
+      [tr("Utána"), tr("a név vételár nélkül az Öné, ha lemond")],
+      [
+        tr("Korábbi lemondás"),
+        (noFloor ? "" : tr("a hátralévő hónapok díja fizetendő; ")) +
+          (buyout ? tr("ha a nevet elviszi, a vételára {price}").replace("{price}", buyout) : tr("ha a nevet elviszi, a vételára fizetendő")),
+      ],
+    ];
+    if (inc) rows.push([tr("Kisebb csomagnál"), tr("a név díja {price}/hó").replace("{price}", fmt(outside))]);
+    return (
+      '<div class="cit-cfg-dpop__box" role="document"><h4>' + esc(tr("A saját cím feltételei")) + "</h4><dl>" +
+      rows.map(function (r) {
+        return "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>";
+      }).join("") +
+      "</dl><p>" + esc(tr("Ezek a ma érvényes feltételek; a megrendeléskor rögzülnek.")) + "</p>" +
+      '<button type="button" class="cit-cfg-dpop__ok">' + esc(tr("Rendben")) + "</button></div>"
+    );
   }
 
   /** ADR-0356: the trial site's address + the once-free change (contract proba-c/4a). */
@@ -1943,82 +1953,28 @@
     if (!DOM) return "";
     return (
       '<div class="cit-cfg-dsec">' +
-      '<div class="cit-cfg-q">' + tr("Címe az interneten") + "</div>" +
-      '<p class="cit-cfg-dsec__sub">' + tr("Ezen a webcímen lesz elérhető az elkészült oldala.") + "</p>" +
-      '<div class="cit-cfg-domain">' +
-      // package-domain-badge B: when the selection carries the address free, this line leads
-      // and the own-address option moves first (syncDomainLead).
-      '<div class="cit-cfg-dlead" hidden></div>' +
-      '<div class="cit-cfg-dsubw">' +
-      '<div class="cit-cfg-dopt cit-cfg-dopt--on" role="button" tabindex="0" data-dom="sub" aria-pressed="true">' +
-      '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      '<span class="cit-cfg-dopt__txt"><b class="cit-cfg-dopt__t">' + tr("Ingyenes cím a citoviso.com-on") + "</b>" +
-      "<span>" + tr("Az árban — azonnal működik. Válassza meg szabadon:") + "</span></span></div>" +
-      // ADR-0356 (contract proba-c/4-nevvaltas a): on the trialist's checkout the site
-      // already HAS an address — it is shown as such, and changing it is an explicit,
-      // once-free step with what happens to the old one spelled out.
-      (CONT ? renameBlockHtml() : "") +
-      // ADR-0032: free-choice subdomain label + live availability check.
-      (CONT ? "" : '<div class="cit-cfg-sub">' +
-      '<span class="cit-cfg-sub__in"><input class="cit-cfg-sub__label" type="text" spellcheck="false" ' +
-      'autocapitalize="off" value="' + esc(DOM.subLabel) + '" aria-label="' + tr("Aldomain neve") + '">' +
-      '<span class="cit-cfg-sub__base">' + esc(DOM.subBase) + "</span></span>" +
-      '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>') +
+      '<p class="cit-cfg-alead"></p>' +
+      '<div class="cit-cfg-dcard">' +
+      '<span class="cit-cfg-dcard__lbl">' + tr("Saját cím") + "</span>" +
+      '<div class="cit-cfg-dcard__name"></div>' +
+      '<div class="cit-cfg-dcard__st"></div>' +
+      '<label class="cit-cfg-dwant" hidden><input type="checkbox"><span>' + tr("Kérem a saját címet") + "</span></label>" +
+      // Own name (tulaj, 2026-08-21) — ONE field, an explicit check, one alternative on a taken name.
+      '<div class="cit-cfg-dedit" hidden>' +
+      '<div class="cit-cfg-own__row">' +
+      '<input class="cit-cfg-own__in" type="text" spellcheck="false" autocapitalize="off" ' +
+      'autocorrect="off" inputmode="url" placeholder="pelda.hu" aria-label="' + tr("Saját domain név") + '">' +
+      '<button class="cit-cfg-own__btn" type="button">' + tr("Ellenőrzés") + "</button>" +
       "</div>" +
-      '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
-      '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      // Fee + terms are LIVE (ADR-0093/0094): painted by refreshDomainTerms from
-      // updateSummary — a static figure here lied whenever the package crossed
-      // the free-domain threshold.
-      '<span class="cit-cfg-dopt__txt"><b class="cit-cfg-dopt__t">' + tr("Saját domainnév") + "</b>" +
-      '<span class="cit-cfg-dopt__fee"></span></span></div>' +
-      // ADR-0109 ⑨ / frozen plan (design-refs/configurator/domain-monthly): below
-      // the entry threshold the option row above is hidden and THIS card stands in
-      // its slot. Prominence comes from the accent frame, the icon, a real example
-      // name and the progress read-out — never from bigger type.
-      '<div class="cit-cfg-dgate" hidden>' +
-      '<div class="cit-cfg-dgate__head">' +
-      '<svg class="cit-cfg-dgate__ic" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/>' +
-      "</svg>" +
-      '<span class="cit-cfg-dgate__t">' + tr("Saját domainnév is választható") + "</span>" +
-      '<span class="cit-cfg-dgate__badge"></span></div>' +
-      '<div class="cit-cfg-dgate__body">' +
-      tr("A citoviso.com-os cím helyett a sajátja:") +
-      ' <span class="cit-cfg-dgate__ex">' + esc(DOM.exampleName || DOM.subLabel + ".hu") + "</span>" +
-      '<div class="cit-cfg-dgate__cond"></div>' +
-      '<div class="cit-cfg-dgate__bar"><i class="cit-cfg-dgate__fill"></i></div>' +
-      '<div class="cit-cfg-dgate__num"></div>' +
+      '<p class="cit-cfg-own__status" aria-live="polite"></p>' +
       "</div>" +
-      '<div class="cit-cfg-dgate__ask"></div>' +
-      '<div class="cit-cfg-dgate__act">' +
-      '<button type="button" class="cit-cfg-dgate__no">' + tr("Most nem") + "</button>" +
+      '<div class="cit-cfg-dlinks">' +
+      '<button type="button" class="cit-cfg-dedit__open">' + tr("Másik nevet szeretnék") + "</button>" +
+      '<button type="button" class="cit-cfg-dterms__open">' + tr("Feltételek") + "</button>" +
       "</div></div>" +
-      '<p class="cit-cfg-dterms" hidden></p>' +
-      // Elek B5 (ADR-0360 ⑤): with a custom domain the platform address STAYS — and the
-      // buyer is told which one (the tenant-admin's own sentence).
-      '<p class="cit-cfg-dterms cit-cfg-dkeep" hidden></p>' +
-      '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
-      // Own name (tulaj, 2026-08-21): our 3–5 candidates are guesses from the business
-      // name — the owner may already have a name in mind, and being offered only our
-      // list would read as "you can have any name, as long as it is one of these".
-      //
-      // Only where the server can actually answer (DOM.checkUrl). This overlay is
-      // served by whatever backend hosts the mock, and an older one has no check
-      // endpoint — an "Ellenőrzés" button that can never say yes or no is worse than
-      // no button at all.
-      (DOM.checkUrl
-        ? '<div class="cit-cfg-own" hidden>' +
-          '<div class="cit-cfg-own__q">' + tr("Egyik sem tetszik? Adja meg a sajátját:") + "</div>" +
-          '<div class="cit-cfg-own__row">' +
-          '<input class="cit-cfg-own__in" type="text" spellcheck="false" autocapitalize="off" ' +
-          'autocorrect="off" inputmode="url" placeholder="pelda.hu" aria-label="' + tr("Saját domain név") + '">' +
-          '<button class="cit-cfg-own__btn" type="button">' + tr("Ellenőrzés") + "</button>" +
-          "</div>" +
-          '<p class="cit-cfg-own__status" aria-live="polite"></p>' +
-          "</div>"
-        : "") +
-      "</div>" +
+      '<p class="cit-cfg-dsubline"></p>' +
+      (CONT ? renameBlockHtml() : "") +
+      '<div class="cit-cfg-dpop" role="dialog" aria-modal="true" aria-label="' + tr("Feltételek") + '" hidden></div>' +
       "</div>"
     );
   }
@@ -2069,7 +2025,7 @@
   // CFG.continuation) "Ez az Ön leendő weboldala … Most nem fizet semmit" is false: the
   // site is already theirs and paying is why they came (Elek, 2026-10-09).
   function browseHead() {
-    return CFG.continuation ? tr("Az Ön honlapja — folytatás") : tr("Ez az Ön leendő weboldala");
+    return CFG.continuation ? tr("Az Ön honlapja — folytatás") : tr("Válasszon csomagot");
   }
   /** proba-C: the trial's checkout facts (server-side, ContinuationInfo) or null. */
   var CONT = CFG.continuation && typeof CFG.continuation === "object" ? CFG.continuation : null;
@@ -2086,7 +2042,8 @@
     trialPill.classList.toggle("cit-cfg-in", launch.classList.contains("cit-cfg-in"));
   }
   var panel = el(
-    '<aside class="cit-cfg-panel" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
+    // ADR-0395: the trial continuation keeps its step-1 period switch + savings box (proba-c).
+    '<aside class="cit-cfg-panel' + (CONT ? " cit-cfg-panel--cont" : "") + '" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
       // Protruding edge tab: collapse/expand without losing the configuration.
       // ⛔ `title` as well as `aria-label`: measured (2026-09-14) the tab carried a
       // bare chevron with NO visible text and NO title, so a sighted mouse user got
@@ -2097,8 +2054,13 @@
       '" aria-label="' + tr("Panel elrejtése / megnyitása") + '">' +
       I.chevR +
       "</button>" +
-      '<div class="cit-cfg-head"><h2>' + esc(browseHead()) + "</h2>" +
+      '<div class="cit-cfg-head">' +
+      // ADR-0395: three steps, one decision per screen — back arrow, title, progress.
+      '<button class="cit-cfg-hback" type="button" hidden aria-label="' + tr("Vissza") + '">' + I.chevR + "</button>" +
+      "<h2>" + esc(browseHead()) + "</h2>" +
       "<p>" + esc(browseSub()) + "</p>" +
+      '<div class="cit-cfg-prog" aria-hidden="true"><i></i><i></i><i></i></div>' +
+      '<span class="cit-cfg-progtxt"></span>' +
       '<button class="cit-cfg-close" type="button" aria-label="' + tr("Bezárás") + '">' +
       I.x +
       "</button></div>" +
@@ -2115,7 +2077,9 @@
       // choice from the package cards above it (one-click package vs. switch-by-switch),
       // so it reads as its own workbench instead of a run-on list.
       '<div class="cit-cfg-custombox">' +
-      '<button class="cit-cfg-customize" type="button" aria-expanded="true">' +
+      // ADR-0395: CLOSED by default now — the switch list behind „Testre szabom” is the
+      // optional path; on a phone the open list was ~1 700 px in a ~320 px window.
+      '<button class="cit-cfg-customize" type="button" aria-expanded="false">' +
       // The item COUNT rides on the header, exactly as the preset cards carry
       // "Mit tartalmaz? (N szekció)". Elek FK-005a H-2: on a short viewport the panel
       // body was cut off right under this box's first group label, so the offer read as
@@ -2129,7 +2093,7 @@
       '<span class="cit-cfg-chev" aria-hidden="true">' +
       I.chev +
       "</span></button>" +
-      '<div class="cit-cfg-detail"></div>' +
+      '<div class="cit-cfg-detail" hidden></div>' +
       "</div>" +
       // proba-C: what happens to the modules left out (trial) / that the trial ended (lapsed).
       // In the scrolling body, not the pinned foot: on a phone every foot line is a line
@@ -2292,7 +2256,7 @@
       '<button class="cit-cfg-back3" type="button">' + I.chevR +
       "<span>" + tr("Vissza a tervhez") + "</span></button>" +
       '<span class="cit-cfg-co-title">' + tr("Fizetés") + "</span>" +
-      '<span class="cit-cfg-co-step">' + tr("2/2 lépés") + "</span>" +
+      '<span class="cit-cfg-co-step">' + tr("3/3 lépés") + "</span>" +
       "</div>" +
       // The zone is the positioning context; the scroller is its only child, and
       // the scroll cue below is pinned to the ZONE (see the note by the cue).
@@ -2320,6 +2284,8 @@
       '<p class="cit-cfg-item-sub"></p>' +
       '<div class="cit-cfg-item-line cit-cfg-item-list"><span></span><span></span></div>' +
       '<div class="cit-cfg-item-line cit-cfg-item-disc" hidden><span></span><span></span></div>' +
+      // ADR-0395: the pay step names the address too — the address step is out of sight here.
+      '<div class="cit-cfg-item-line cit-cfg-item-addr"><span>' + tr("Cím") + "</span><span></span></div>" +
       // The Havi/Éves switch sits WHERE THE DECISION IS MADE. It carries the same
       // `cit-cfg-popt` class and `data-period` attribute as the module-step
       // switch, so ONE handler and ONE `period` state drive both — a second copy
@@ -2495,13 +2461,52 @@
     syncMoreCue();
     setTimeout(syncMoreCue, 60);
   }
+  // ADR-0395: „Tovább” walks package → address → pay; the old money step (period cards +
+  // §A declaration) is folded into the pay step, so showStep2 is no longer reached.
+  var hBack = panel.querySelector(".cit-cfg-hback");
+  function syncProgress() {
+    var names = [tr("Csomag"), tr("Cím"), tr("Fizetés")];
+    panel.querySelectorAll(".cit-cfg-prog i").forEach(function (b, i) {
+      b.classList.toggle("cit-cfg-on", i < cfgStep);
+    });
+    var t = panel.querySelector(".cit-cfg-progtxt");
+    if (t) t.textContent = tr("{n}. / 3 — {step}").replace("{n}", String(cfgStep)).replace("{step}", names[cfgStep - 1]);
+    if (hBack) hBack.hidden = cfgStep !== 2;
+  }
+  function goStep(n) {
+    if (n === 3) return openBilling();
+    if (step3El && !step3El.hasAttribute("hidden")) {
+      step3El.setAttribute("hidden", "");
+      panel.classList.remove("cit-cfg-panel--billing");
+      placeSummary();
+    }
+    cfgStep = n;
+    panel.classList.toggle("cit-cfg-panel--addr", n === 2);
+    setStrap(n === 2 ? "addr" : false);
+    if (n === 2) prepareAddress();
+    if (bodyEl) bodyEl.scrollTop = 0;
+    syncProgress();
+    refreshNext();
+    syncMoreCue();
+    setTimeout(syncMoreCue, 60);
+  }
   nextBtn.addEventListener("click", function () {
-    showStep2(true);
-    track("checkout_step", {});
+    if (cfgStep === 1) {
+      goStep(2);
+      track("checkout_step", {});
+    } else goStep(3);
+  });
+  if (hBack) hBack.addEventListener("click", function () {
+    goStep(cfgStep - 1);
   });
   panel.querySelector(".cit-cfg-back").addEventListener("click", function () {
     showStep2(false);
   });
+  /** ADR-0395: the pay step's address line — the own name, or the platform address. */
+  function syncItemAddr() {
+    var v = panel.querySelector(".cit-cfg-item-addr span + span");
+    if (v) v.textContent = (domainType === "citoviso_registered" ? domainName : subHost) || "";
+  }
   /** Step 2's first line names what was chosen on step 1 — the list is out of
    *  sight there, so the buyer must not have to go back to remember it. */
   function syncRecap() {
@@ -2528,7 +2533,8 @@
     if (redirectingToPay) return "payment";
     if (!panel.classList.contains("cit-cfg-open")) return null;
     if (step3El && !step3El.hasAttribute("hidden")) return "billing";
-    if (panel.classList.contains("cit-cfg-panel--s2")) return "choose";
+    // ADR-0395: the address step takes the old step 2's slot in the funnel reports.
+    if (panel.classList.contains("cit-cfg-panel--s2") || cfgStep === 2) return "choose";
     return "package";
   };
   var buyerType = "individual";
@@ -2626,8 +2632,6 @@
    * the hint band exists only in the pinned state, so one threshold would flip
    * back and forth on every resize at the boundary.
    */
-  var FOLD_BELOW = 150;
-  var UNFOLD_ABOVE = 190;
   function syncFold() {
     if (!coScroll) return;
     var billing = panel.classList.contains("cit-cfg-panel--billing");
@@ -2636,13 +2640,10 @@
       panel.classList.remove("cit-cfg-panel--fold");
       return;
     }
-    // Everything in the panel except the form scroller is fixed-height in BOTH
-    // states, so this is the form window the pinned layout leaves (negative when
-    // the pinned blocks alone overflow the screen).
-    var win = panel.clientHeight - (panel.scrollHeight - coScroll.offsetHeight);
-    var folded = panel.classList.contains("cit-cfg-panel--fold");
-    if (!folded && win < FOLD_BELOW) panel.classList.add("cit-cfg-panel--fold");
-    else if (folded && win > UNFOLD_ABOVE) panel.classList.remove("cit-cfg-panel--fold");
+    // ADR-0395 ⑤: a phone pays in ONE scrolling column, always — with the §A declaration
+    // among the consents the pinned block alone took half the screen and left the form a
+    // 230 px window under a „görgessen” pill (measured 390×844, 2026-10-19).
+    panel.classList.add("cit-cfg-panel--fold");
   }
   window.addEventListener("resize", function () {
     syncScrollHint();
@@ -2681,10 +2682,11 @@
         // Keep the authored order (sum → vat → next) inside the action block.
         if (i === 0) actEl.insertBefore(el, actEl.firstChild);
         else actEl.insertBefore(el, block[i - 1].nextSibling);
-      } else if (el.parentNode === actEl) {
-        // Home is the step-2 region, in the authored order, above the declaration.
-        var home = panel.querySelector(".cit-cfg-s2scroll");
-        home.insertBefore(el, home.querySelector(".cit-cfg-s2decl"));
+      } else {
+        // ADR-0395: on a phone the pay step is ONE scroll — the total travels into the form
+        // column right under the item box (authored order kept), never a second pinned block.
+        var item = coScroll && coScroll.querySelector(".cit-cfg-item");
+        if (item) coScroll.insertBefore(el, i === 0 ? item.nextSibling : block[i - 1].nextSibling);
       }
     });
     syncScrollHint();
@@ -2859,7 +2861,10 @@
     var p = panel.querySelector(".cit-cfg-head p");
     if (!h || !p) return;
     panel.querySelector(".cit-cfg-head").classList.toggle("cit-cfg-head--charge", paying === true);
-    if (paying === "choose") {
+    if (paying === "addr") {
+      h.textContent = tr("Az oldal címe");
+      p.textContent = tr("Ezen a címen lesz elérhető az elkészült oldala.");
+    } else if (paying === "choose") {
       h.textContent = tr("Fizetés módja");
       p.textContent = tr("Még nem fizet — a következő lépésben adja meg a számlázási adatokat.");
     } else if (paying) {
@@ -2877,11 +2882,8 @@
   }
 
   panel.querySelector(".cit-cfg-back3").addEventListener("click", function () {
-    step3El.setAttribute("hidden", "");
-    panel.classList.remove("cit-cfg-panel--billing");
-    placeSummary();
-    // back to the money decision (step 2), not to the package list
-    showStep2(true);
+    // ADR-0395: back to the address step, not to the package list
+    goStep(2);
   });
 
   // billing-period toggle (monthly | annual)
@@ -3175,259 +3177,173 @@
     syncMoreCue();
   });
 
-  // domain choice wiring (only when the manifest carries the domain step)
+  // ADR-0395: the address step's wiring (only when the manifest carries the domain step).
   if (DOM) {
-    var dlist = panel.querySelector(".cit-cfg-dlist");
-    // ADR-0251: the verdict is the REGISTRAR's own answer now (was DNS+RDAP, which
-    // could never say "free" for .hu). "unavailable" = the registrar refuses it for
-    // another reason — not "foglalt", and not choosable either. "unknown" = the
-    // registrar did not answer; kept choosable with the order-time confirmation.
-    var AVAIL_LABEL = {
-      free: [tr("Szabad"), "free"],
-      taken: [tr("Foglalt"), "taken"],
-      unavailable: [tr("Nálunk nem igényelhető"), "taken"],
-      unknown: [tr("ellenőrizzük"), "unknown"],
-    };
-    function blocked(av) {
-      return av === "taken" || av === "unavailable";
-    }
-
-    function setDomainOpt(which) {
-      panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
-        var on = o.getAttribute("data-dom") === which;
-        o.classList.toggle("cit-cfg-dopt--on", on);
-        o.setAttribute("aria-pressed", on ? "true" : "false");
-      });
-    }
-
-    // ⛔ DELEGATED on the panel, not bound to the card's own buttons: the domain
-    // section is re-rendered, so a listener attached to the button sat on a
-    // detached node and the click silently did nothing (measured, not assumed).
-    panel.addEventListener("click", function (e) {
-      var t = e.target;
-      if (!t || !t.closest) return;
-      var card = panel.querySelector(".cit-cfg-dgate");
-      if (t.closest(".cit-cfg-dgate__no") && card) {
-        card.setAttribute("data-dismissed", "1");
-        card.hidden = true;
-        track("domain_gate_dismiss", {});
-      }
-    });
-
-    var ownBox = panel.querySelector(".cit-cfg-own");
+    var dsec = panel.querySelector(".cit-cfg-dsec");
     var ownIn = panel.querySelector(".cit-cfg-own__in");
     var ownBtn = panel.querySelector(".cit-cfg-own__btn");
     var ownStatus = panel.querySelector(".cit-cfg-own__status");
-    /** The buyer's own name is chosen — clear the suggestion highlight (one wins). */
-    function clearSuggestionPick() {
-      dlist.querySelectorAll(".cit-cfg-dsug").forEach(function (s) {
-        s.classList.remove("cit-cfg-dsug--on");
-      });
+    var dpop = panel.querySelector(".cit-cfg-dpop");
+    // ADR-0251: the verdict is the REGISTRAR's own answer. Only "free" is offered unasked;
+    // "unknown" (no answer) is kept for a name the buyer TYPED, confirmed at order time.
+    function blocked(av) {
+      return av === "taken" || av === "unavailable";
     }
-
-    function pickSuggestion(node, domain) {
-      dlist.querySelectorAll(".cit-cfg-dsug").forEach(function (s) {
-        s.classList.toggle("cit-cfg-dsug--on", s === node);
+    /** The one name on offer: the first registrar-free suggestion, an ending that is package
+     *  content first when the selection carries one. */
+    function bestSuggestion(list) {
+      var free = list.filter(function (x) {
+        return x.availability === "free" && domainTldOf(x.domain);
       });
-      if (ownBox) ownBox.classList.remove("cit-cfg-own--on");
-      domainName = domain;
-      updateSummary();
-    }
-
-    function renderSuggestions(suggestions) {
-      dlist.innerHTML = "";
-      if (!suggestions.length) {
-        dlist.appendChild(
-          el('<p class="cit-cfg-dlist__load">' + tr("Most nem találtunk javaslatot. Írjon be egy nevet a lenti mezőbe.") + "</p>"),
-        );
-        return;
-      }
-      var firstFree = null;
-      suggestions.forEach(function (s) {
-        var a = AVAIL_LABEL[s.availability] || AVAIL_LABEL.unknown;
-        var taken = blocked(s.availability);
-        var node = el(
-          '<div class="cit-cfg-dsug' +
-            (taken ? " cit-cfg-dsug--taken" : "") +
-            '" role="button" tabindex="' +
-            (taken ? "-1" : "0") +
-            '"><span class="cit-cfg-dsug__name">' +
-            esc(s.domain) +
-            "</span>" +
-            (taken ? "" : '<span class="cit-cfg-dsug__fee" data-domain="' + esc(s.domain) + '"></span>') +
-            '<span class="cit-cfg-dsug__tag cit-cfg-dsug__tag--' +
-            a[1] +
-            '">' +
-            a[0] +
-            "</span></div>",
-        );
-        if (!taken) {
-          if (!firstFree && s.availability === "free") firstFree = { node: node, domain: s.domain };
-          node.addEventListener("click", function () {
-            pickSuggestion(node, s.domain);
-            track("domain_pick", { domain: s.domain });
-          });
-          node.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              pickSuggestion(node, s.domain);
-              track("domain_pick", { domain: s.domain });
-            }
-          });
-        }
-        dlist.appendChild(node);
+      var inPkg = free.filter(function (x) {
+        return domainTldOf(x.domain).freeInPackage;
       });
-      dlist.appendChild(
-        el(
-          '<p class="cit-cfg-dlist__note">' +
-            tr("Az elérhetőséget közvetlenül a domain-regisztrátornál ellenőriztük, most. Más nevet is választhat: írja be a lenti mezőbe.") +
-            "</p>",
-        ),
-      );
-      syncDomainLead();
-      if (firstFree) pickSuggestion(firstFree.node, firstFree.domain);
+      return (freePkgTlds().length && inPkg[0]) || free[0] || null;
     }
-
-    function loadSuggestions() {
-      if (domainListLoaded) return;
+    prepareAddress = function () {
+      if (domainListLoaded || !DOM.suggestUrl) return;
       domainListLoaded = true;
-      fetch(DOM.suggestUrl)
-        .then(function (r) {
+      addrLoading = true;
+      refreshDomainTerms();
+      // A registrar that does not answer in 8 s must not hold the step: no name is offered.
+      Promise.race([
+        fetch(DOM.suggestUrl).then(function (r) {
           return r.json();
-        })
+        }),
+        new Promise(function (_, no) {
+          setTimeout(no, 8000);
+        }),
+      ])
         .then(function (j) {
-          renderSuggestions((j && j.suggestions) || []);
+          return (j && j.suggestions) || [];
         })
         .catch(function () {
-          renderSuggestions([]);
+          return [];
+        })
+        .then(function (list) {
+          var best = bestSuggestion(list);
+          addrLoading = false;
+          if (best) {
+            addrCand = { domain: best.domain, availability: best.availability };
+            track("domain_pick", { domain: best.domain, auto: true });
+          } else addrEditing = !!DOM.checkUrl;
+          refreshDomainTerms();
+          updateSummary();
+        });
+    };
+    setDomainType = function (type) {
+      addrWant = type === "citoviso_registered";
+      addrWantTouched = true;
+      refreshDomainTerms();
+    };
+    function setOwnStatus(cls, html) {
+      ownStatus.className = "cit-cfg-own__status" + (cls ? " cit-cfg-own__status--" + cls : "");
+      ownStatus.innerHTML = html;
+    }
+    function takeName(domain, availability) {
+      addrCand = { domain: domain, availability: availability };
+      addrWant = true;
+      addrWantTouched = true;
+      addrEditing = false;
+      setOwnStatus("", "");
+      refreshDomainTerms();
+      updateSummary();
+      track("own_domain_pick", { domain: domain });
+    }
+    function checkName(name) {
+      return fetch(DOM.checkUrl + "?name=" + encodeURIComponent(name)).then(function (r) {
+        return r.json();
+      });
+    }
+    var ownBusy = false;
+    // Deliberately a BUTTON, not a debounced auto-check: each verdict is a registrar round
+    // trip, and a half-typed "pel", "pelda", "pelda.h" would flash "foglalt" at an unfinished name.
+    function checkOwn() {
+      var name = ownIn.value.trim();
+      if (!name) {
+        setOwnStatus("bad", esc(tr("Adjon meg egy domain nevet")));
+        return;
+      }
+      if (ownBusy) return;
+      ownBusy = true;
+      ownBtn.disabled = true;
+      setOwnStatus("wait", esc(tr("Ellenőrzés…")));
+      track("own_domain_check", {});
+      checkName(name)
+        .then(function (j) {
+          if (!j || !j.ok) {
+            setOwnStatus("bad", esc((j && j.reason) || tr("Nem használható domain név")));
+            return;
+          }
+          ownIn.value = j.domain; // the cleaned form we actually checked
+          if (!blocked(j.availability)) return takeName(j.domain, j.availability);
+          // Taken: ONE alternative, never a list (owner, 2026-10-19).
+          var parts = j.domain.split(".");
+          var alt = parts[0] + "szallas." + parts.slice(1).join(".");
+          return checkName(alt)
+            .catch(function () {
+              return null;
+            })
+            .then(function (a) {
+              if (a && a.ok && a.availability === "free") {
+                setOwnStatus(
+                  "bad",
+                  esc(tr("{name} foglalt. Ez szabad:").replace("{name}", j.domain)) +
+                    ' <button type="button" class="cit-cfg-dalt" data-domain="' + esc(a.domain) + '">' + esc(a.domain) + "</button>",
+                );
+              } else {
+                setOwnStatus("bad", esc(j.domain + " — " + (j.availability === "taken" ? tr("Foglalt") : tr("Nálunk nem igényelhető"))));
+              }
+            });
+        })
+        .catch(function () {
+          setOwnStatus("bad", esc(tr("Most nem tudtuk ellenőrizni — próbálja újra.")));
+        })
+        .then(function () {
+          ownBusy = false;
+          ownBtn.disabled = false;
         });
     }
-
-    // ONE place decides what a domain choice means, so the revoke path
-    // (falling below the ADR-0109 threshold) cannot drift from the click path.
-    setDomainType = function (type) {
-      applyDomainChoice(type === "citoviso_registered" ? "custom" : "sub");
-    };
-    function applyDomainChoice(which) {
-      setDomainOpt(which);
-      if (which === "custom") {
-        domainType = "citoviso_registered";
-        domainName = null; // set by pickSuggestion / the own-name check
-        dlist.removeAttribute("hidden");
-        if (ownBox) ownBox.removeAttribute("hidden");
-        loadSuggestions();
-      } else {
-        domainType = "citoviso_sub";
-        domainName = subHost;
-        dlist.setAttribute("hidden", "");
-        if (ownBox) ownBox.setAttribute("hidden", "");
+    ownBtn.addEventListener("click", checkOwn);
+    ownIn.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        checkOwn();
       }
-      paintKeep();
-      refreshSubmit();
-    }
-    panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
-      function choose() {
-        var which = o.getAttribute("data-dom");
-        track("domain_select", { choice: which });
-        applyDomainChoice(which);
-        updateSummary();
-      }
-      o.addEventListener("click", choose);
-      o.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          choose();
-        }
-      });
     });
-
-    // Own domain name + explicit "Ellenőrzés" (tulaj, 2026-08-21). Deliberately a
-    // BUTTON, not the subdomain field's debounced auto-check: each verdict costs a
-    // DNS + RDAP round trip, and a half-typed "pel", "pelda", "pelda.h" would burn
-    // three of them and flash "foglalt" at a name the buyer had not finished writing.
-    if (ownBox && ownIn && ownBtn && DOM.checkUrl) {
-      var ownBusy = false;
-      function setOwnStatus(cls, text) {
-        ownStatus.className = "cit-cfg-own__status" + (cls ? " cit-cfg-own__status--" + cls : "");
-        ownStatus.textContent = text;
-      }
-      function checkOwn() {
-        var name = ownIn.value.trim();
-        if (!name || ownBusy) {
-          if (!name) setOwnStatus("bad", tr("Adjon meg egy domain nevet"));
-          return;
-        }
-        ownBusy = true;
-        ownBtn.disabled = true;
-        setOwnStatus("wait", tr("Ellenőrzés…"));
-        track("own_domain_check", {});
-        fetch(DOM.checkUrl + "?name=" + encodeURIComponent(name))
-          .then(function (r) {
-            return r.json();
-          })
-          .then(function (j) {
-            if (!j || !j.ok) {
-              setOwnStatus("bad", (j && j.reason) || tr("Nem használható domain név"));
-              return;
-            }
-            ownIn.value = j.domain; // show the cleaned form we actually checked
-            if (blocked(j.availability)) {
-              // Taken / not available here = we cannot register it, so it must not
-              // become the selection.
-              setOwnStatus(
-                "bad",
-                j.domain + " — " + (j.availability === "taken" ? tr("Foglalt") : tr("Nálunk nem igényelhető")),
-              );
-              return;
-            }
-            clearSuggestionPick();
-            ownBox.classList.add("cit-cfg-own--on");
-            domainName = j.domain;
-            setOwnStatus(
-              "ok",
-              j.domain +
-                " — " +
-                (j.availability === "free" ? tr("Szabad") : tr("ellenőrizzük")),
-            );
-            updateSummary();
-            track("own_domain_pick", { domain: j.domain });
-          })
-          .catch(function () {
-            // Network hiccup: don't block the sale — the name is kept and re-checked
-            // at order time (the same honesty as the suggestion list's caveat).
-            clearSuggestionPick();
-            ownBox.classList.add("cit-cfg-own--on");
-            domainName = ownIn.value.trim();
-            setOwnStatus("wait", tr("Most nem sikerült ellenőrizni — a megrendeléskor visszaigazoljuk."));
-            updateSummary();
-          })
-          .then(function () {
-            ownBusy = false;
-            ownBtn.disabled = false;
-          });
-      }
-      ownBtn.addEventListener("click", checkOwn);
-      ownIn.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          checkOwn();
-        }
-      });
-      // Editing after a verdict invalidates it — a stale "Szabad" standing
-      // under a name it was not about is worse than no verdict at all. If the checked
-      // name was the current selection, the selection goes with it (the order would
-      // otherwise carry a domain nobody checked).
-      ownIn.addEventListener("input", function () {
-        var wasChosen = ownBox.classList.contains("cit-cfg-own--on");
-        if (!wasChosen && !ownStatus.textContent) return;
-        ownBox.classList.remove("cit-cfg-own--on");
+    ownIn.addEventListener("input", function () {
+      if (ownStatus.textContent) setOwnStatus("", "");
+    });
+    // ⛔ DELEGATED on the section: the status line is re-rendered, so a listener on the
+    // alternative's own button would sit on a detached node.
+    dsec.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest ? e.target : null;
+      if (!t) return;
+      var alt = t.closest(".cit-cfg-dalt");
+      if (alt) return takeName(alt.getAttribute("data-domain"), "free");
+      if (t.closest(".cit-cfg-dedit__open")) {
+        addrEditing = !addrEditing;
         setOwnStatus("", "");
-        if (wasChosen) {
-          domainName = null; // nothing selected until re-checked (or a suggestion is picked)
-          updateSummary();
-        }
-      });
-    }
+        if (addrEditing) ownIn.value = "";
+        refreshDomainTerms();
+        if (addrEditing) ownIn.focus();
+        return;
+      }
+      if (t.closest(".cit-cfg-dterms__open")) {
+        dpop.innerHTML = domainTermsHtml();
+        dpop.hidden = false;
+        track("domain_terms_open", {});
+        return;
+      }
+      if (t === dpop || t.closest(".cit-cfg-dpop__ok")) dpop.hidden = true;
+    });
+    panel.querySelector(".cit-cfg-dwant input").addEventListener("change", function (e) {
+      addrWant = !!e.target.checked;
+      addrWantTouched = true;
+      track("domain_select", { choice: addrWant ? "custom" : "sub" });
+      refreshDomainTerms();
+      updateSummary();
+    });
 
     // ADR-0356: the rename block. The typed label is only a CANDIDATE until "Ezt választom";
     // the order carries the committed one (subHost/domainName), so a half-typed name never
@@ -3535,67 +3451,18 @@
         }
         if (!renCand.ok) return;
         subHost = renCand.host;
+        baseHost = subHost;
         if (domainType === "citoviso_sub") domainName = subHost;
-        paintKeep();
         subOk = true;
+        paintAddress();
         renEdit.hidden = true;
         renOpenRow.hidden = false;
         renPaint();
-        refreshSubmit();
         track("subdomain_rename", { changed: renCurrent() !== renOrig });
       });
       renPaint();
     }
 
-    // ADR-0032: free-choice subdomain label with a debounced availability check.
-    var subInput = panel.querySelector(".cit-cfg-sub__label");
-    var subStatus = panel.querySelector(".cit-cfg-sub__status");
-    if (subInput && DOM.subCheckUrl) {
-      var subTimer = null;
-      function setSubStatus(cls, text) {
-        subStatus.className = "cit-cfg-sub__status" + (cls ? " cit-cfg-sub__status--" + cls : "");
-        subStatus.textContent = text;
-      }
-      function checkSub() {
-        var label = subInput.value.trim();
-        if (!label) {
-          subOk = false;
-          setSubStatus("bad", tr("Adjon meg egy nevet"));
-          refreshSubmit();
-          return;
-        }
-        setSubStatus("wait", tr("Ellenőrzés…"));
-        fetch(DOM.subCheckUrl + "?label=" + encodeURIComponent(label))
-          .then(function (r) {
-            return r.json();
-          })
-          .then(function (j) {
-            if (j && j.ok) {
-              subOk = true;
-              subHost = j.host;
-              if (domainType === "citoviso_sub") domainName = subHost;
-              paintKeep();
-              setSubStatus("ok", tr("Szabad:") + " " + j.host);
-            } else {
-              subOk = false;
-              setSubStatus("bad", (j && j.reason) || tr("Nem választható"));
-            }
-            refreshSubmit();
-          })
-          .catch(function () {
-            // Network hiccup: don't block the sale — treat as usable, re-checked at provision.
-            subOk = true;
-            setSubStatus("", "");
-            refreshSubmit();
-          });
-      }
-      subInput.addEventListener("input", function () {
-        if (subTimer) clearTimeout(subTimer);
-        subOk = false; // pending until the check returns
-        refreshSubmit();
-        subTimer = setTimeout(checkSub, 450);
-      });
-    }
   }
 
   var sumEl = panel.querySelector(".cit-cfg-sum");
@@ -4075,6 +3942,9 @@
     panel.classList.add("cit-cfg-seen"); // the edge tab lives from now on
     panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.add("cit-cfg-open");
+    // ADR-0395: an open panel is never covered — the offer bar steps aside (its line is in the foot).
+    document.documentElement.classList.add("cit-cfg-is-open");
+    syncProgress();
     launch.hidden = true;
     syncTrialPill();
     syncFbCard();
@@ -4094,6 +3964,7 @@
   // Plan: assets/design-refs/prospect-page/order-pill/ (ADR-0242).
   function collapse() {
     panel.classList.remove("cit-cfg-open");
+    document.documentElement.classList.remove("cit-cfg-is-open");
     panel.classList.add("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
@@ -4105,6 +3976,7 @@
   }
   function close() {
     panel.classList.remove("cit-cfg-open");
+    document.documentElement.classList.remove("cit-cfg-is-open");
     panel.classList.remove("cit-cfg-seen");
     panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
@@ -4660,14 +4532,26 @@
   panel.querySelector(".cit-cfg-rights-text").textContent =
     CFG.photoRightsText ||
     "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok."; // i18n-exempt: §A legal wording — country LEGAL pack scope
+  // ADR-0395: the §A declaration is the pay step's FIRST consent row — one screen holds every
+  // tick, and syncConsents() counts it with the others (the server re-checks the flag).
+  var rightsRow = panel.querySelector(".cit-cfg-s2decl");
+  if (rightsRow && actEl) {
+    rightsRow.classList.add("cit-cfg-consent");
+    rightsRow.setAttribute("data-c", "rights");
+    actEl.insertBefore(rightsRow, actEl.firstChild);
+    actEl.insertBefore(el('<em class="cit-cfg-err" data-e="photo_rights_declared"></em>'), rightsRow.nextSibling);
+  }
   rightsBox.addEventListener("change", function () {
-    // Submit needs the §A declaration AND (for the platform subdomain) a free label (ADR-0032).
-    submitBtn.disabled = !rightsBox.checked || (domainType === "citoviso_sub" && !subOk);
     if (rightsBox.checked) track("photo_rights_declared", {});
   });
-  // Step 2 → step 3: the order is NOT sent yet. We must know who is buying
+  submitBtn.addEventListener("click", openBilling);
+  // Address → pay: the order is NOT sent yet. We must know who is buying
   // before a pay-link exists, because the invoice is due the moment they pay.
-  submitBtn.addEventListener("click", function () {
+  function openBilling() {
+    cfgStep = 3;
+    panel.classList.remove("cit-cfg-panel--addr");
+    syncProgress();
+    syncItemAddr();
     step2El.setAttribute("hidden", "");
     step3El.removeAttribute("hidden");
     panel.classList.remove("cit-cfg-panel--s2");
@@ -4704,7 +4588,7 @@
         firstEmpty.focus();
       }
     }
-  });
+  }
 
   payBtn.addEventListener("click", function () {
     var chosen = MODULES.filter(function (m) {
@@ -4873,10 +4757,7 @@
           syncStrapAmount();
           syncConsents();
           // A döntés a terv-lépésen születik, és az ÚJ összeg is ott látszik.
-          step3El.setAttribute("hidden", "");
-          panel.classList.remove("cit-cfg-panel--billing");
-          placeSummary();
-          showStep2(true);
+          goStep(1); // ADR-0395: the package step is where modules are added
           showDepNotice(
             added
               .map(function (id) {
@@ -4921,10 +4802,7 @@
           updateSummary();
           syncStrapAmount();
           syncConsents();
-          step3El.setAttribute("hidden", "");
-          panel.classList.remove("cit-cfg-panel--billing");
-          placeSummary();
-          showStep2(true);
+          goStep(data.error === "domain_refused" ? 2 : 1); // ADR-0395: back where it is decided
           showRefusedNotice(
             why +
               " " +

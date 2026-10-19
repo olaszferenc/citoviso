@@ -176,7 +176,12 @@ try {
     check("② havi: „csak az első hónapra”", mline.includes("— csak az első hónapra · a próba végéig"), mline);
     await p.locator(".cit-cfg-toannual:visible").first().click();
     check("② „Évesre váltok” átvált (egy állapot)", (await p.getAttribute('.cit-cfg-ppill [data-period="annual"]', "aria-pressed")) === "true");
-    // ④ rename (step 1 body)
+    // ④ rename — ADR-0395: on the address step (step 2), shown while no own name is taken
+    await p.locator(".cit-cfg-next").click();
+    await p.waitForSelector(".cit-cfg-panel--addr");
+    await p.waitForSelector(".cit-cfg-next:not([disabled])", { timeout: 15_000 });
+    const wantBox = p.locator(".cit-cfg-dwant input");
+    if ((await wantBox.count()) && (await wantBox.isVisible()) && (await wantBox.isChecked())) await wantBox.uncheck();
     await p.locator(".cit-cfg-ren__open").scrollIntoViewIfNeeded();
     await p.locator(".cit-cfg-ren__open").click();
     await p.fill(".cit-cfg-ren__in", `pcc-${stamp}-lejart`);
@@ -198,23 +203,19 @@ try {
     const fate = (await p.textContent(".cit-cfg-ren__fate")) ?? "";
     check("④ „Ezt választom” után az új cím és a régi sorsa", fate.includes(want) && fate.includes("örökre az újra irányít"), fate.slice(0, 80));
     check("④ a fejléc-cím az új", ((await p.textContent(".cit-cfg-ren__host")) ?? "") === want);
-    // ③ step 2
-    await p.locator(".cit-cfg-next").click();
-    await p.waitForSelector(".cit-cfg-step2:not([hidden])");
-    const card = (await p.textContent(".cit-cfg-sum")) ?? "";
-    check("③ a kártya: határidő + „az első év”", card.includes("a próba végéig") && card.includes("az első év"), card.slice(0, 120));
-    const nc = (await p.textContent(".cit-cfg-nextcharge")) ?? "";
-    check("③ a fizetett időszak a próba vége után indul", nc.startsWith("A fizetett időszak a próba vége után indul"), nc);
-    // ④ the order carries the committed label: intercept the order POST
+    // ③ the pay step (ADR-0395: address → pay; the money card lives there now)
     let posted: string | null = null;
     await p.route("**/request", async (route) => {
       posted = route.request().postData();
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: false, error: "pcc-intercept" }) });
     });
-    const rights = p.locator(".cit-cfg-s2decl input[type=checkbox]");
-    if (await rights.count()) await rights.first().check({ force: true });
-    await p.locator(".cit-cfg-submit").click();
+    await p.locator(".cit-cfg-next:not([disabled])").click();
     await p.waitForSelector('.cit-cfg-i[data-f="buyer_name"]', { state: "visible", timeout: 10_000 });
+    const card = (await p.textContent(".cit-cfg-sum")) ?? "";
+    check("③ a kártya: határidő + „az első év”", card.includes("a próba végéig") && card.includes("az első év"), card.slice(0, 120));
+    const nc = (await p.textContent(".cit-cfg-nextcharge")) ?? "";
+    check("③ a fizetett időszak a próba vége után indul", nc.startsWith("A fizetett időszak a próba vége után indul"), nc);
+    // ④ the order carries the committed label (the POST is intercepted above)
     const fill = async (key: string, v: string) => {
       const i = p.locator(`.cit-cfg-i[data-f="${key}"]`);
       if ((await i.count()) && (await i.isVisible()) && !(await i.inputValue()).trim()) await i.fill(v);

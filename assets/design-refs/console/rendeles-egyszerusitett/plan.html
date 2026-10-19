@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendelési panel — egyszerűsített terv</title>
+<style>
+  :root {
+    --bg: #12151b; --panel: #1a1e26; --panel2: #20252f; --line: #2d3340; --text: #eef0f4; --muted: #98a1b0;
+    --accent: #2b7bf0; --accent2: #1fb6d9; --ok: #3ccf8e; --okbg: #12372a; --warn: #f3c25a; --bad: #ff8f8f;
+    --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0d11; color: var(--text); font: 15px/1.45 var(--font); }
+  button { font: inherit; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 50; font-size: 13px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .seg button { background: none; border: 0; color: var(--muted); padding: 5px 11px; cursor: pointer; }
+  .seg button.on { background: var(--accent2); color: #04222b; font-weight: 600; }
+  .note { width: 100%; margin: 0; color: var(--muted); }
+  .stage { display: flex; justify-content: center; padding: 18px 16px 40px; }
+  .frame { width: 100%; max-width: 1180px; container-type: inline-size; }
+  .frame.mob { max-width: 390px; }
+  .device { position: relative; height: 760px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: linear-gradient(170deg, #4f6a7a, #1d2a33 55%, #111820); }
+  .frame.mob .device { height: 844px; }
+  .site { padding: 28px 32px; color: #fff; }
+  .site small { letter-spacing: .2em; font-size: 11px; opacity: .8; }
+  .site h1 { font: 800 40px/1.05 var(--font); margin: 8px 0 14px; max-width: 14ch; text-transform: uppercase; }
+  .site p { max-width: 40ch; opacity: .9; }
+  .pills { position: absolute; right: 24px; bottom: 24px; display: flex; gap: 8px; }
+  .pill { border: 0; border-radius: 999px; padding: 12px 18px; font-weight: 700; cursor: pointer; }
+  .pill--trial { background: #0f2741; color: #fff; border: 1px solid #5b7da3; }
+  .pill--order { background: var(--accent); color: #fff; }
+  @container (max-width: 700px) {
+    .site { padding: 20px 18px; }
+    .site h1 { font-size: 30px; }
+    .pills { left: 12px; right: 12px; bottom: 12px; }
+    .pill { flex: 1; padding: 13px 8px; }
+  }
+  /* ── panel ─────────────────────────────────────────────── */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+  .sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 460px; background: var(--bg); display: flex; flex-direction: column; border-left: 1px solid var(--line); }
+  @container (max-width: 700px) {
+    .sheet { left: 0; width: auto; top: 0; border-left: 0; }
+  }
+  .sheet.wide { width: 860px; }
+  @container (max-width: 900px) { .sheet.wide { width: auto; left: 0; } }
+  .hd { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+  .hd h2 { margin: 0; font-size: 17px; flex: 1; }
+  .x { background: none; border: 0; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 4px 8px; }
+  .back { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px 6px 4px 0; font-size: 20px; }
+  .steps { display: flex; gap: 6px; padding: 10px 16px 0; }
+  .steps i { flex: 1; height: 4px; border-radius: 4px; background: var(--line); }
+  .steps i.on { background: var(--accent2); }
+  .stepname { padding: 6px 16px 0; color: var(--muted); font-size: 12.5px; }
+  .bd { flex: 1; overflow-y: auto; padding: 14px 16px 18px; }
+  .ft { border-top: 1px solid var(--line); padding: 12px 16px; display: flex; align-items: center; gap: 12px; background: var(--bg); }
+  .ft .tot { flex: 1; min-width: 0; }
+  .ft .tot b { font-size: 19px; }
+  .ft .tot s { color: var(--muted); margin-right: 6px; font-size: 14px; }
+  .ft .tot small { display: block; color: var(--warn); font-size: 12px; }
+  .cta { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 13px 20px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .cta:disabled { opacity: .45; cursor: not-allowed; }
+  .cta.full { width: 100%; }
+  h3 { margin: 0 0 4px; font-size: 16px; }
+  .lead { color: var(--muted); font-size: 13.5px; margin: 0 0 14px; }
+  /* packages */
+  .pk { display: block; width: 100%; text-align: left; background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; color: var(--text); cursor: pointer; }
+  .pk.on { border-color: var(--accent2); background: #14303a; }
+  .pk__top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .pk__name { font-weight: 700; font-size: 17px; }
+  .pk__price { text-align: right; white-space: nowrap; }
+  .pk__price b { font-size: 18px; }
+  .pk__price s { display: block; color: var(--muted); font-size: 12px; }
+  .pk__desc { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .tag { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--ok); background: var(--okbg); border-radius: 999px; padding: 3px 9px; }
+  .tag--rec { color: #04222b; background: var(--accent2); margin: 0 0 0 6px; vertical-align: 2px; }
+  .more { background: none; border: 0; color: var(--accent2); padding: 0; cursor: pointer; font-size: 13.5px; text-decoration: underline; }
+  .inc { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .custom { border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px; margin-top: 6px; }
+  .mrow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .mrow:last-child { border-bottom: 0; }
+  .mrow span { flex: 1; }
+  .mrow em { font-style: normal; color: var(--muted); font-size: 13px; }
+  .sw { width: 40px; height: 24px; border-radius: 999px; background: var(--line); position: relative; flex: none; border: 0; cursor: pointer; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .sw.on { background: var(--accent); }
+  .sw.on::after { left: 19px; }
+  /* address */
+  .addr { background: var(--panel); border: 1.5px solid var(--accent2); border-radius: 14px; padding: 16px; }
+  .addr__label { font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .addr__name { font-size: 22px; font-weight: 800; margin: 4px 0 6px; overflow-wrap: anywhere; }
+  .addr__st { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 13.5px; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .fee { color: var(--warn); font-weight: 600; }
+  .edit { margin-top: 12px; }
+  .edit__row { display: flex; gap: 8px; }
+  .in { width: 100%; min-width: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 11px 12px; font: inherit; }
+  .in:focus { outline: 2px solid var(--accent2); outline-offset: 0; }
+  .in.bad { border-color: var(--bad); }
+  .btn2 { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .msg { font-size: 13.5px; margin: 8px 0 0; min-height: 1.2em; }
+  .msg.bad { color: var(--bad); }
+  .msg.good { color: var(--ok); }
+  .alt { background: none; border: 0; color: var(--accent2); text-decoration: underline; padding: 0; cursor: pointer; font-weight: 600; }
+  .sub { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--panel); font-size: 13.5px; color: var(--muted); }
+  .sub b { color: var(--text); overflow-wrap: anywhere; }
+  .optin { display: flex; gap: 10px; align-items: center; margin-top: 12px; font-size: 14px; }
+  .links { margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap; }
+  /* pay */
+  .sum { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px; }
+  .sum__row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+  .sum__row span:first-child { color: var(--muted); }
+  .sum__row b { overflow-wrap: anywhere; text-align: right; }
+  .sum__tot { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; font-size: 16px; }
+  .sum__offer { color: var(--warn); font-size: 13px; margin-top: 4px; }
+  .period { display: flex; gap: 8px; margin: 2px 0 14px; }
+  .period button { flex: 1; background: var(--panel); border: 1.5px solid var(--line); color: var(--text); border-radius: 10px; padding: 9px; cursor: pointer; text-align: center; }
+  .period button.on { border-color: var(--accent2); background: #14303a; }
+  .period small { display: block; color: var(--ok); font-size: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid .w { grid-column: 1 / -1; }
+  .fld label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .fld .err { color: var(--bad); font-size: 12.5px; min-height: 0; margin-top: 3px; }
+  .chk { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; margin-top: 12px; }
+  .chk input { width: 20px; height: 20px; flex: none; margin-top: 1px; accent-color: var(--accent2); }
+  .chk a { color: var(--accent2); }
+  .hint { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  /* B: one page */
+  .sec { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 12px; background: var(--bg); }
+  .sec__hd { display: flex; align-items: center; gap: 10px; padding: 14px; }
+  .sec__no { width: 26px; height: 26px; border-radius: 50%; background: var(--panel2); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+  .sec.done .sec__no { background: var(--ok); color: #062b1b; }
+  .sec.open .sec__no { background: var(--accent2); color: #04222b; }
+  .sec__t { flex: 1; min-width: 0; }
+  .sec__t b { display: block; }
+  .sec__t span { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  .sec__bd { padding: 0 14px 14px; }
+  .sec.lock { opacity: .5; }
+  .cols { display: grid; grid-template-columns: 1fr 300px; gap: 18px; }
+  .aside { position: sticky; top: 0; align-self: start; }
+  @container (max-width: 900px) { .cols { grid-template-columns: 1fr; } .aside { display: none; } }
+  /* popup */
+  .pop { position: absolute; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 16px; z-index: 20; }
+  .pop__box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; max-width: 380px; width: 100%; }
+  .pop__box h4 { margin: 0 0 10px; font-size: 16px; }
+  .pop__box dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; font-size: 14px; }
+  .pop__box dt { color: var(--muted); }
+  .pop__box dd { margin: 0; }
+  .pop__box p { color: var(--muted); font-size: 12.5px; margin: 12px 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span><b>Változat</b> <span class="seg" id="vsel"><button data-v="A" class="on">A — lépésenként</button><button data-v="B">B — egy oldalon</button></span></span>
+  <span><b>Méret</b> <span class="seg" id="ssel"><button data-s="mob">Mobil 390px</button><button data-s="desk" class="on">Asztali</button></span></span>
+  <span><b>/pricing szimuláció — domain a csomagban</b> <span class="seg" id="dsel"><button data-d="1" class="on">igen</button><button data-d="0">nem</button></span></span>
+  <p class="note" id="vnote"></p>
+</div>
+<div class="stage"><div class="frame" id="frame"><div class="device" id="device"></div></div></div>
+
+<script>
+// ── data (prices = live /pricing values on the Üdülő tábor mock, 2026-10-19) ──
+var PK = [
+  { k: "teljes", n: "Teljes", d: "Minden, amit kínálunk", list: 9500, mods: 11, rec: true,
+    inc: ["Képek, szobák, felszereltség", "Árak, vélemények, programajánló", "Térkép, nyitvatartás", "Online foglalás naptár-szinkronnal"] },
+  { k: "ajanlott", n: "Ajánlott", d: "A lényeg, ami elad", list: 7240, mods: 7,
+    inc: ["Képek, szobák, felszereltség", "Árak, vélemények", "Térkép"] },
+  { k: "alap", n: "Alap", d: "Képek, elérhetőség, térkép", list: 4880, mods: 3,
+    inc: ["Képek a szállásról", "Időpontkérés, kapcsolat", "Térkép, megközelítés"] }
+];
+var MODS = [["Képek a szállásról",490],["Szobák, apartmanok",690],["Amit kínál (felszereltség)",490],["Árak, szezonok",490],["Miért Önt válasszák",490],["Vendégek véleménye",690],["Heti programajánló",490],["Térkép, megközelítés",490],["Nyitvatartás, érkezés",290],["Online foglalás",990]];
+var BASE = 3900, OFFER = 0.5, DOMAIN_FEE = 1000, COMMIT = 12, BUYOUT = 20000;
+var TAKEN = ["udulo.hu", "balaton.hu", "tabor.hu", "udulo-tabor.hu"];
+var TAKEN_SUB = ["balaton"];
+// Mirrors src/domains.ts normalizeCustomDomain (same rules, same messages).
+function normalize(input) {
+  var raw = String(input || "").trim().toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/^www\./, "").replace(/[/?#].*$/, "").replace(/\.$/, "");
+  if (!raw) return { ok: false, reason: "Adjon meg egy domain nevet" };
+  if (raw.length > 253) return { ok: false, reason: "Túl hosszú domain név" };
+  var labels = raw.split(".");
+  if (labels.length < 2) return { ok: false, reason: "Végződés is kell, például: pelda.hu" };
+  for (var i = 0; i < labels.length; i++) {
+    var l = labels[i];
+    if (!l) return { ok: false, reason: "Hibás domain név (üres rész a pontok között)" };
+    if (l.length > 63) return { ok: false, reason: "Túl hosszú rész a domain névben" };
+    if (!/^[a-z0-9-]+$/.test(l) || l[0] === "-" || l[l.length - 1] === "-") return { ok: false, reason: "Csak angol betű, szám és kötőjel használható" };
+  }
+  if (!/^[a-z]{2,}$/.test(labels[labels.length - 1])) return { ok: false, reason: "Hibás végződés (például: .hu, .com)" };
+  return { ok: true, domain: raw };
+}
+function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; }
+function subOf(domain) {
+  var l = domain.split(".")[0];
+  return (TAKEN_SUB.indexOf(l) >= 0 ? l + "-szallas" : l) + ".citoviso.com";
+}
+
+var NOTES = {
+  A: "A — lépésenként: teljes képernyős panel, 3 lépés (Csomag → Cím → Fizetés), alul mindig az ár és egy gomb. Egy képernyőn egy döntés.",
+  B: "B — egy oldalon: a 3 rész egymás alatt; a kész rész egy sorra csukódik (ott „Módosítom”), a következő kinyílik. Asztali gépen jobb oldalt áll az összesítő."
+};
+var S = { v: "A", open: false, step: 1, pk: "teljes", custom: null, showCustom: false, showInc: null,
+  dIncl: true, domain: "udulotabor.hu", wantDomain: true, editing: false, period: "m", pop: false,
+  f: { name: "", zip: "", city: "", street: "", email: "" }, chk: [false, false, false, false], tried: false };
+
+function pkg() { return PK.filter(function (p) { return p.k === S.pk; })[0]; }
+function monthly() {
+  var m = S.custom ? BASE + S.custom.reduce(function (s, on, i) { return s + (on ? MODS[i][1] : 0); }, 0) : pkg().list;
+  return m;
+}
+function domainFee() { return (!S.dIncl && S.wantDomain) ? DOMAIN_FEE : 0; }
+function hasDomain() { return S.dIncl || S.wantDomain; }
+function due() {
+  var m = monthly();
+  var svc = S.period === "y" ? m * 10 : m;
+  return { list: svc + domainFee() * (S.period === "y" ? 12 : 1), now: svc * (1 - OFFER) + domainFee() * (S.period === "y" ? 12 : 1) };
+}
+function pkgLabel() { return S.custom ? "Egyedi · " + S.custom.filter(Boolean).length + " rész" : pkg().n; }
+
+// ── pieces ──
+function packagesHtml() {
+  var h = '<h3>Milyen legyen az oldala?</h3><p class="lead">Bármikor bővítheti vagy szűkítheti.</p>';
+  PK.forEach(function (p) {
+    var on = !S.custom && S.pk === p.k;
+    h += '<button type="button" class="pk' + (on ? " on" : "") + '" data-pk="' + p.k + '"><div class="pk__top"><div><span class="pk__name">' + p.n + "</span>" +
+      (p.rec ? '<span class="tag tag--rec">ajánlott</span>' : "") + '<div class="pk__desc">' + p.d + "</div></div>" +
+      '<div class="pk__price"><s>' + fmt(p.list) + "</s><b>" + fmt(p.list * (1 - OFFER)) + "</b>/hó</div></div>" +
+      (S.dIncl ? '<span class="tag">+ saját .hu cím ingyen</span>' : "") + "</button>";
+    if (S.showInc === p.k) h += '<ul class="inc">' + p.inc.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul>";
+  });
+  h += '<div class="links"><button class="more" id="incbtn" type="button">' + (S.showInc ? "Elrejtem a tartalmat" : "Mit tartalmaz a kijelölt csomag?") + "</button>" +
+    '<button class="more" id="custbtn" type="button">' + (S.showCustom ? "Mégis kész csomagot kérek" : "Testre szabom") + "</button></div>";
+  if (S.showCustom) {
+    h += '<div class="custom">' + MODS.map(function (m, i) {
+      return '<div class="mrow"><span>' + m[0] + "</span><em>+" + fmt(m[1]) + '</em><button type="button" class="sw' + (S.custom[i] ? " on" : "") + '" data-m="' + i + '" aria-label="' + m[0] + '"></button></div>';
+    }).join("") + "</div>";
+  }
+  return h;
+}
+function addressHtml() {
+  var h = '<h3>Az oldal címe</h3><p class="lead">' + (S.dIncl ? "A csomagjához saját .hu cím jár. Ezt a szabad nevet foglaltuk le Önnek:" : "Saját .hu címet is kérhet az oldalához. Ez a név szabad:") + "</p>";
+  h += '<div class="addr"><div class="addr__label">Saját cím</div><div class="addr__name">' + S.domain + "</div>" +
+    '<div class="addr__st"><span class="ok">✓ szabad</span>' + (S.dIncl ? '<span class="ok">benne a csomagban · 0 Ft</span>' : '<span class="fee">+' + fmt(DOMAIN_FEE) + "/hó</span>") + "</div>";
+  if (!S.dIncl) h += '<label class="optin"><button type="button" class="sw' + (S.wantDomain ? " on" : "") + '" id="want" aria-label="Kérem a saját címet"></button>Kérem a saját címet</label>';
+  if (S.editing) {
+    h += '<div class="edit"><div class="edit__row"><input class="in" id="din" value="" placeholder="masiknev.hu" spellcheck="false" autocapitalize="off" inputmode="url"><button class="btn2" id="dchk" type="button">Ellenőrzés</button></div><p class="msg" id="dmsg" aria-live="polite"></p></div>';
+  }
+  h += '<div class="links">' + (S.editing ? '<button class="more" id="dcancel" type="button">Maradok ennél</button>' : '<button class="more" id="dedit" type="button">Másik nevet szeretnék</button>') +
+    '<button class="more" id="terms" type="button">Feltételek</button></div></div>';
+  h += '<div class="sub">Mindig megmarad a citoviso-s cím is: <b>' + subOf(S.domain) + "</b>" + (hasDomain() ? " — a saját címre irányít." : "") + "</div>";
+  return h;
+}
+function payHtml(withSummary) {
+  var d = due();
+  var h = "";
+  if (withSummary) {
+    h += '<div class="sum"><div class="sum__row"><span>Csomag</span><b>' + pkgLabel() + "</b></div>" +
+      '<div class="sum__row"><span>Cím</span><b>' + (hasDomain() ? S.domain : subOf(S.domain)) + "</b></div>" +
+      '<div class="sum__row sum__tot"><span>Most fizetendő</span><b><s style="color:var(--muted);font-weight:400">' + fmt(d.list) + "</s> " + fmt(d.now) + "</b></div>" +
+      '<div class="sum__offer">−50% az első díjból · még 71:59:00-ig</div></div>';
+  }
+  h += '<div class="period"><button type="button" data-p="m" class="' + (S.period === "m" ? "on" : "") + '">Havi<small style="color:var(--muted)">bármikor lemondható</small></button>' +
+    '<button type="button" data-p="y" class="' + (S.period === "y" ? "on" : "") + '">Éves<small>2 hónap ingyen</small></button></div>';
+  h += '<h3>Számlázási adatok</h3><div class="grid" style="margin-top:8px">' +
+    fld("name", "Név vagy cégnév", "w") + fld("zip", "Irányítószám", "", "numeric") + fld("city", "Település") + fld("street", "Utca, házszám", "w") + fld("email", "E-mail (ide küldjük a belépőt)", "w", "email") + "</div>";
+  var C = [
+    'A megjelenő fényképekhez felhasználási jogom van, vagy élesítésig sajátot töltök fel. <a href="#" data-t>Teljes szöveg</a>',
+    'Kérem az azonnali kezdést; tudomásul veszem, hogy így elveszítem a 14 napos elállási jogot. <a href="#" data-t>Teljes szöveg</a>',
+    'Elfogadom az ÁSZF-et, és megismertem az Adatkezelési tájékoztatót. <a href="#" data-t>Megnyitom</a>',
+    'Hozzájárulok, hogy a díjat a fordulónapon automatikusan levonják a kártyámról. <a href="#" data-t>Teljes szöveg</a>'
+  ];
+  h += C.map(function (t, i) { return '<label class="chk"><input type="checkbox" data-c="' + i + '"' + (S.chk[i] ? " checked" : "") + "><span>" + t + "</span></label>"; }).join("");
+  var ready = formOk() && S.chk.every(Boolean);
+  h += '<button class="cta full" id="pay" type="button" style="margin-top:16px"' + (ready ? "" : "") + ">Fizetek — " + fmt(due().now) + "</button>";
+  h += '<p class="hint" id="payhint">' + payHint() + "</p>";
+  return h;
+}
+function fld(k, label, cls, mode) {
+  var e = S.tried ? fieldErr(k) : "";
+  return '<div class="fld ' + (cls || "") + '"><label for="f-' + k + '">' + label + '</label><input class="in' + (e ? " bad" : "") + '" id="f-' + k + '" data-f="' + k + '" value="' + S.f[k].replace(/"/g, "&quot;") + '"' +
+    (mode === "numeric" ? ' inputmode="numeric" maxlength="4"' : "") + (mode === "email" ? ' type="email" inputmode="email"' : "") + '><div class="err">' + e + "</div></div>";
+}
+function fieldErr(k) {
+  var v = S.f[k].trim();
+  if (!v) return "Kötelező";
+  if (k === "zip" && !/^\d{4}$/.test(v)) return "4 számjegy";
+  if (k === "email" && !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v)) return "Hibás e-mail cím";
+  return "";
+}
+function formOk() { return Object.keys(S.f).every(function (k) { return !fieldErr(k); }); }
+function payHint() {
+  var miss = Object.keys(S.f).filter(function (k) { return fieldErr(k); }).length, c = S.chk.filter(Boolean).length;
+  if (!miss && c === 4) return "A biztonságos Barion-fizetéshez visszük; utána azonnal élesítjük az oldalt.";
+  return (miss ? miss + " mező hiányzik · " : "") + c + "/4 jóváhagyás";
+}
+function footer(label, id, dis) {
+  var d = due();
+  return '<div class="ft"><div class="tot"><s>' + fmt(d.list) + "</s><b>" + fmt(d.now) + '</b> <span style="color:var(--muted)">' + (S.period === "y" ? "/ év" : "/ hó") + "</span><small>−50% az első díjból · még 71:59:00</small></div>" +
+    '<button class="cta" id="' + id + '" type="button"' + (dis ? " disabled" : "") + ">" + label + "</button></div>";
+}
+function popHtml() {
+  return '<div class="pop" id="pop"><div class="pop__box"><h4>A saját cím feltételei</h4><dl>' +
+    "<dt>Díj</dt><dd>" + (S.dIncl ? "a csomag része (0 Ft)" : fmt(DOMAIN_FEE) + "/hó") + "</dd>" +
+    "<dt>Hűségidő</dt><dd>" + COMMIT + " hónap</dd>" +
+    "<dt>Utána</dt><dd>a név vételár nélkül az Öné</dd>" +
+    "<dt>Korábbi lemondás</dt><dd>a név " + fmt(BUYOUT) + "-ért megváltható, vagy elengedi</dd></dl>" +
+    "<p>Ezek a ma érvényes beállítások (/pricing), a rendeléskor rögzülnek.</p>" +
+    '<button class="cta full" id="popx" type="button">Rendben</button></div></div>';
+}
+
+// ── render ──
+function render() {
+  var dev = document.getElementById("device");
+  var h = '<div class="site"><small>ÜDÜLŐTÁBOR A BALATONNÁL</small><h1>Faházas szállás a Balaton közelében</h1><p>Csendes, zöld környezetben megbúvó üdülőtábor.</p></div>' +
+    '<div class="pills"><button class="pill pill--trial" type="button">14 nap ingyen</button><button class="pill pill--order" id="open" type="button">Itt rendelheti meg</button></div>';
+  if (S.open) {
+    h += '<div class="scrim"></div>';
+    h += S.v === "A" ? sheetA() : sheetB();
+    if (S.pop) h += popHtml();
+  }
+  dev.innerHTML = h;
+  wire();
+}
+function sheetA() {
+  var names = ["Csomag", "Cím", "Fizetés"];
+  var h = '<div class="sheet"><div class="hd">' + (S.step > 1 ? '<button class="back" id="back" type="button" aria-label="Vissza">‹</button>' : "") +
+    "<h2>" + ["Válasszon csomagot", "Az oldal címe", "Fizetés"][S.step - 1] + '</h2><button class="x" id="close" type="button" aria-label="Bezár">×</button></div>' +
+    '<div class="steps">' + [1, 2, 3].map(function (i) { return '<i class="' + (i <= S.step ? "on" : "") + '"></i>'; }).join("") + "</div>" +
+    '<div class="stepname">' + S.step + ". / 3 — " + names[S.step - 1] + "</div>" +
+    '<div class="bd" id="bd">' + (S.step === 1 ? packagesHtml() : S.step === 2 ? addressHtml() : payHtml(true)) + "</div>";
+  if (S.step < 3) h += footer("Tovább ›", "next", S.editing);
+  return h + "</div>";
+}
+function sheetB() {
+  var d1 = S.step > 1, d2 = S.step > 2;
+  var sec = function (no, t, summ, state, body) {
+    return '<div class="sec ' + state + '"><div class="sec__hd"><span class="sec__no">' + (state === "done" ? "✓" : no) + '</span><div class="sec__t"><b>' + t + "</b>" + (summ ? "<span>" + summ + "</span>" : "") + "</div>" +
+      (state === "done" ? '<button class="more" data-goto="' + no + '" type="button">Módosítom</button>' : "") + "</div>" + (state === "open" ? '<div class="sec__bd">' + body + "</div>" : "") + "</div>";
+  };
+  var main = sec(1, "Csomag", d1 ? pkgLabel() + " · " + fmt(monthly() * (1 - OFFER)) + "/hó első díj" : "", S.step === 1 ? "open" : "done",
+      packagesHtml() + '<button class="cta full" data-adv="2" type="button" style="margin-top:12px">Ezt választom</button>') +
+    sec(2, "Cím", d2 ? (hasDomain() ? S.domain + " + " + subOf(S.domain) : subOf(S.domain)) : "", S.step === 2 ? "open" : d2 ? "done" : "lock",
+      addressHtml() + '<button class="cta full" data-adv="3" type="button" style="margin-top:12px"' + (S.editing ? " disabled" : "") + ">Ez lesz a címem</button>") +
+    sec(3, "Fizetés", "", S.step === 3 ? "open" : "lock", payHtml(false));
+  var d = due();
+  var aside = '<div class="aside"><div class="sum"><div class="sum__row"><span>Csomag</span><b>' + pkgLabel() + "</b></div>" +
+    '<div class="sum__row"><span>Cím</span><b>' + (hasDomain() ? S.domain : subOf(S.domain)) + "</b></div>" +
+    '<div class="sum__row sum__tot"><span>Most fizetendő</span><b>' + fmt(d.now) + '</b></div><div class="sum__offer">−50% az első díjból · még 71:59:00</div></div></div>';
+  return '<div class="sheet wide"><div class="hd"><h2>Az Ön honlapja — rendelés</h2><button class="x" id="close" type="button" aria-label="Bezár">×</button></div>' +
+    '<div class="bd" id="bd"><div class="cols"><div>' + main + "</div>" + aside + "</div></div></div>";
+}
+
+function go(step) { S.step = step; S.editing = false; render(); var bd = document.getElementById("bd"); if (bd) bd.scrollTop = 0; }
+function wire() {
+  var q = function (id) { return document.getElementById(id); };
+  if (q("open")) q("open").onclick = function () { S.open = true; S.step = 1; render(); };
+  if (q("close")) q("close").onclick = function () { S.open = false; render(); };
+  if (q("back")) q("back").onclick = function () { go(S.step - 1); };
+  if (q("next")) q("next").onclick = function () { go(S.step + 1); };
+  document.querySelectorAll("[data-adv]").forEach(function (b) { b.onclick = function () { go(+b.dataset.adv); }; });
+  document.querySelectorAll("[data-goto]").forEach(function (b) { b.onclick = function () { go(+b.dataset.goto); }; });
+  document.querySelectorAll("[data-pk]").forEach(function (b) { b.onclick = function () { S.pk = b.dataset.pk; S.custom = null; S.showCustom = false; if (S.showInc) S.showInc = S.pk; render(); }; });
+  if (q("incbtn")) q("incbtn").onclick = function () { S.showInc = S.showInc ? null : S.pk; render(); };
+  if (q("custbtn")) q("custbtn").onclick = function () {
+    S.showCustom = !S.showCustom;
+    S.custom = S.showCustom ? MODS.map(function (_, i) { return i < pkg().mods; }) : null;
+    render();
+  };
+  document.querySelectorAll("[data-m]").forEach(function (b) { b.onclick = function () { S.custom[+b.dataset.m] = !S.custom[+b.dataset.m]; render(); }; });
+  if (q("want")) q("want").onclick = function () { S.wantDomain = !S.wantDomain; render(); };
+  if (q("dedit")) q("dedit").onclick = function () { S.editing = true; render(); q("din").focus(); };
+  if (q("dcancel")) q("dcancel").onclick = function () { S.editing = false; render(); };
+  if (q("terms")) q("terms").onclick = function () { S.pop = true; render(); };
+  if (q("popx")) q("popx").onclick = function () { S.pop = false; render(); };
+  if (q("pop")) q("pop").onclick = function (e) { if (e.target.id === "pop") { S.pop = false; render(); } };
+  if (q("dchk")) {
+    var check = function () {
+      var m = q("dmsg"), inp = q("din"), n = normalize(inp.value);
+      m.className = "msg"; inp.classList.remove("bad");
+      if (!n.ok) { m.className = "msg bad"; m.textContent = n.reason; inp.classList.add("bad"); return; }
+      if (!/\.hu$/.test(n.domain)) { m.className = "msg bad"; m.textContent = "Ezt a végződést nem kínáljuk. Választható: .hu"; inp.classList.add("bad"); return; }
+      m.textContent = "Ellenőrzés…";
+      setTimeout(function () {
+        if (TAKEN.indexOf(n.domain) >= 0) {
+          var alt = n.domain.replace(/\.hu$/, "szallas.hu");
+          m.className = "msg bad";
+          m.innerHTML = n.domain + ' foglalt. Ez szabad: <button class="alt" id="altpick" type="button">' + alt + "</button>";
+          q("altpick").onclick = function () { S.domain = alt; S.editing = false; render(); };
+          return;
+        }
+        S.domain = n.domain; S.editing = false; render();
+      }, 450);
+    };
+    q("dchk").onclick = check;
+    q("din").onkeydown = function (e) { if (e.key === "Enter") check(); };
+  }
+  document.querySelectorAll("[data-p]").forEach(function (b) { b.onclick = function () { S.period = b.dataset.p; render(); }; });
+  document.querySelectorAll("[data-f]").forEach(function (inp) {
+    inp.oninput = function () { S.f[inp.dataset.f] = inp.value; var h = q("payhint"); if (h) h.textContent = payHint(); };
+    // Errors are refreshed in place: a re-render on blur would swap the next field under the cursor.
+    inp.onblur = function () {
+      if (!S.tried) return;
+      var e = fieldErr(inp.dataset.f);
+      inp.classList.toggle("bad", !!e);
+      inp.parentNode.querySelector(".err").textContent = e;
+    };
+  });
+  document.querySelectorAll("[data-c]").forEach(function (c) { c.onchange = function () { S.chk[+c.dataset.c] = c.checked; q("payhint").textContent = payHint(); }; });
+  document.querySelectorAll("[data-t]").forEach(function (a) { a.onclick = function (e) { e.preventDefault(); }; });
+  if (q("pay")) q("pay").onclick = function () {
+    if (formOk() && S.chk.every(Boolean)) { q("payhint").textContent = "→ Barion-fizetőoldal (a vázlatban itt megáll)"; q("payhint").className = "hint ok"; return; }
+    S.tried = true; render();
+  };
+}
+
+function setV(v) { S.v = v; document.querySelectorAll("#vsel button").forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); }); document.getElementById("vnote").textContent = NOTES[v]; render(); }
+function setS(s) { document.querySelectorAll("#ssel button").forEach(function (b) { b.classList.toggle("on", b.dataset.s === s); }); document.getElementById("frame").classList.toggle("mob", s === "mob"); }
+document.querySelectorAll("#vsel button").forEach(function (b) { b.onclick = function () { setV(b.dataset.v); }; });
+document.querySelectorAll("#ssel button").forEach(function (b) { b.onclick = function () { setS(b.dataset.s); }; });
+document.querySelectorAll("#dsel button").forEach(function (b) { b.onclick = function () {
+  S.dIncl = b.dataset.d === "1"; S.wantDomain = S.dIncl;
+  document.querySelectorAll("#dsel button").forEach(function (y) { y.classList.toggle("on", y === b); }); render();
+}; });
+var qs = new URLSearchParams(location.search);
+setS(qs.get("s") || (window.innerWidth < 700 ? "mob" : "desk"));
+if (qs.get("open")) { S.open = true; S.step = +qs.get("step") || 1; }
+if (qs.get("d") === "0") document.querySelector('#dsel button[data-d="0"]').click();
+setV(qs.get("v") === "B" ? "B" : "A");  // approved 2026-10-19: A
+</script>
+</body>
+</html>

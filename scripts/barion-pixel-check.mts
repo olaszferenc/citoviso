@@ -336,6 +336,7 @@ async function togglePricedRow(page: Page): Promise<boolean> {
   await page.waitForTimeout(400);
   const row = page.locator(".cit-cfg-row[aria-pressed]").first();
   if (!(await row.count())) return false;
+  await page.locator('.cit-cfg-customize[aria-expanded="false"]').click(); // ADR-0395: closed by default
   await row.scrollIntoViewIfNeeded();
   await row.click();
   await page.waitForTimeout(250);
@@ -351,9 +352,10 @@ async function walkToPayment(page: Page): Promise<string | null> {
     await next.click();
     await page.waitForTimeout(250);
   }
+  // ADR-0395: package → address → pay; the §A declaration is a pay-step consent now.
+  await page.locator(".cit-cfg-next:not([disabled])").click();
+  await page.waitForTimeout(300);
   await page.locator(".cit-cfg-rights").check();
-  await page.waitForTimeout(150);
-  await page.locator(".cit-cfg-submit").click();
   await page.waitForTimeout(350);
   if (!(await page.locator(".cit-cfg-step3").isVisible())) return "a számlázási lépés nem nyílt meg";
   const fields: Record<string, string> = {

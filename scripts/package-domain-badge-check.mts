@@ -14,9 +14,9 @@
 //
 // MIT MÉR (valódi böngészőben, 390px + asztali, a valódi konfigurátoron és a valódi /pricing lapon):
 //   ① FREE (pirula a középső csomagtól, .hu ingyen): jelvény a lefedő csomagokon, a többin nincs;
-//      a rendelés-pirulán címke; a lefedő csomagot választva a cím-lépés a saját címmel KEZD
-//      (vezető sor + „Saját domainnév — benne a csomagban” a citoviso-s opció ELŐTT), az összegzés
-//      „saját .hu cím választható — 0 Ft”; a nem lefedő csomagon a mai sorrend
+//      a rendelés-pirulán címke; a lefedő csomagot választva a cím-lépés (ADR-0395) EGY előre
+//      kijelölt szabad nevet ad „benne a csomagban · 0 Ft”-tal, választó nélkül, a citoviso-s cím
+//      fix sor; a nem lefedő csomagon díjas név „Kérem a saját címet” kapcsolóval
 //   ② NOFREE (a tulaj mai esete: pirula mind a 3-ban, nincs ingyenes végződés): SEHOL nincs jelvény,
 //      címke, vezető sor, „benne”
 //   ③ OFF (kapcsoló KI: pkgModules = null): ugyanígy semmi
@@ -90,6 +90,12 @@ async function serve(page: Page, html: string): Promise<void> {
   await page.route(`${ORIGIN}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/") return route.fulfill({ status: 200, contentType: "text/html", body: html });
+    // ADR-0395: the address step offers the first registrar-FREE suggestion.
+    if (path.endsWith("/domains")) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ suggestions: [
+        { domain: "hotelpelda.hu", availability: "taken" }, { domain: "hotel-pelda.hu", availability: "free" },
+      ] }) });
+    }
     if (path.startsWith("/assets/ui/")) {
       const body = await readFile(new URL(`../public${path}`, import.meta.url)).catch(() => null);
       if (body) return route.fulfill({ status: 200, contentType: "text/css", body });
@@ -116,19 +122,27 @@ async function buyerSide(browser: Browser, vp: { tag: string; size: { width: num
       return { id: c.getAttribute("data-preset"), badge: b ? b.textContent.trim() : null };
     });
   })()`)) as { id: string; badge: string | null }[];
-  /** Select a preset and read the address step's state. */
+  /** Select a preset, walk to the address step (ADR-0395: step 2) and read it, then come back. */
   const step = async (presetId: string) => {
     await page.locator(`.cit-cfg-preset[data-preset="${presetId}"]`).click();
     await page.waitForTimeout(200);
-    return (await page.evaluate(`(function () {
-      var box = document.querySelector(".cit-cfg-domain");
-      var lead = box.querySelector(".cit-cfg-dlead");
-      var opts = Array.prototype.map.call(box.querySelectorAll(".cit-cfg-dopt"), function (o) { return o.getAttribute("data-dom"); });
-      var own = box.querySelector('.cit-cfg-dopt[data-dom="custom"] .cit-cfg-dopt__t');
-      var sub = box.querySelector('.cit-cfg-dopt[data-dom="sub"] .cit-cfg-dopt__t');
-      var foot = Array.prototype.map.call(document.querySelectorAll(".cit-cfg-domfee"), function (f) { return f.textContent; }).join(" | ");
-      return { lead: lead && !lead.hidden ? lead.textContent : null, order: opts.join(","), own: own ? own.textContent : "", sub: sub ? sub.textContent : "", foot: foot };
-    })()`)) as { lead: string | null; order: string; own: string; sub: string; foot: string };
+    await page.locator(".cit-cfg-next").click();
+    await page.waitForSelector(".cit-cfg-next:not([disabled])", { timeout: 15000 });
+    const r = (await page.evaluate(`(function () {
+      var sec = document.querySelector(".cit-cfg-dsec");
+      var want = sec.querySelector(".cit-cfg-dwant");
+      return {
+        lead: (sec.querySelector(".cit-cfg-alead") || {}).textContent || "",
+        name: (sec.querySelector(".cit-cfg-dcard__name") || {}).textContent || "",
+        st: (sec.querySelector(".cit-cfg-dcard__st") || {}).textContent || "",
+        want: !!want && !want.hidden,
+        line: (sec.querySelector(".cit-cfg-dsubline") || {}).textContent || "",
+        radios: sec.querySelectorAll(".cit-cfg-dopt").length,
+      };
+    })()`)) as { lead: string; name: string; st: string; want: boolean; line: string; radios: number };
+    await page.locator(".cit-cfg-hback").click();
+    await page.waitForTimeout(200);
+    return r;
   };
   if (state === "FREE") {
     for (const id of covering) {
@@ -138,26 +152,26 @@ async function buyerSide(browser: Browser, vp: { tag: string; size: { width: num
     for (const id of others) check(!badges.find((x) => x.id === id)?.badge, `① ${label}: „${id}” (nem fedi) — nincs jelvény`);
     check(tag === "+ saját .hu cím", `① ${label}: a rendelés-pirulán címke (mért: ${tag || "NINCS"})`);
     const s = await step(covering[0]!);
-    check(!!s.lead && /saját \.hu cím jár/.test(s.lead), `① ${label}: lefedő csomagnál vezető sor (${s.lead ?? "NINCS"})`);
-    check(s.order === "custom,sub", `① ${label}: a saját cím ELŐL (sorrend: ${s.order})`);
-    check(s.own === "Saját domainnév — benne a csomagban" && s.sub === "Most csak a citoviso.com-os cím", `① ${label}: opció-feliratok (${s.own} / ${s.sub})`);
-    check(/saját \.hu cím választható — 0 Ft/.test(s.foot), `① ${label}: összegzés „saját .hu cím választható — 0 Ft” (${s.foot || "NINCS"})`);
+    // ADR-0395: ONE pre-selected free name, „benne a csomagban · 0 Ft”, no radio pair, a fixed platform line.
+    check(/saját \.hu cím jár/.test(s.lead), `① ${label}: lefedő csomagnál vezető sor (${s.lead || "NINCS"})`);
+    check(s.name === "hotel-pelda.hu" && /benne a csomagban · 0 Ft/.test(s.st), `① ${label}: egy előre kijelölt szabad név, „benne a csomagban · 0 Ft” (${s.name} · ${s.st})`);
+    check(!s.want && s.radios === 0, `① ${label}: nincs választó (kapcsoló: ${s.want}, rádió: ${s.radios})`);
+    check(/Mindig megmarad a citoviso-s cím is: .+ — a saját címre irányít\./.test(s.line), `① ${label}: a citoviso-s cím fix sor (${s.line})`);
     if (SHOT_DIR) {
-      await page.locator(".cit-cfg-dlead").scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${SHOT_DIR}/badge-cim-lepes-${vp.tag}.png` });
       await page.locator(".cit-cfg-preset").first().scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${SHOT_DIR}/badge-kartyak-${vp.tag}.png` });
     }
     if (others.length) {
       const o = await step(others[0]!);
-      check(!o.lead && o.order === "sub,custom" && o.sub === "Ingyenes cím a citoviso.com-on", `① ${label}: nem lefedő csomagnál a mai sorrend (${o.order}, ${o.sub})`);
+      check(!/jár/.test(o.lead) && o.want && !/benne/.test(o.st) && /Az oldala ezen a címen érhető el/.test(o.line), `① ${label}: nem lefedő csomagnál díjas név, „Kérem a saját címet”, nincs „benne” (${o.lead} · ${o.st} · ${o.line})`);
     }
   } else {
     check(badges.every((x) => !x.badge), `${state === "NOFREE" ? "②" : "③"} ${label}: SEHOL nincs jelvény (${badges.map((x) => `${x.id}:${x.badge ?? "-"}`).join(" ")})`);
     check(!tag, `${state === "NOFREE" ? "②" : "③"} ${label}: a pirulán nincs címke (${tag || "-"})`);
     for (const p of badges) {
       const s = await step(p.id);
-      check(!s.lead && s.order === "sub,custom" && !/benne|0 Ft/.test(s.foot), `${state === "NOFREE" ? "②" : "③"} ${label}: „${p.id}”: nincs vezető sor, a mai sorrend, nincs „benne” (${s.order} · ${s.foot || "-"})`);
+      check(!/jár/.test(s.lead) && !/benne a csomagban/.test(s.st), `${state === "NOFREE" ? "②" : "③"} ${label}: „${p.id}”: nincs „jár”, nincs „benne” (${s.lead} · ${s.st})`);
     }
     if (SHOT_DIR && state === "NOFREE") await page.screenshot({ path: `${SHOT_DIR}/badge-nincs-ingyenes-${vp.tag}.png` });
   }

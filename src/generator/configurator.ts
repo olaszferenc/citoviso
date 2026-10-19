@@ -30,6 +30,7 @@ import {
   getCustomDomainMonthly,
   getDomainMinPackageMonthly,
   getDomainMinCommitmentMonths,
+  getDomainBuyoutPrice,
   getModulePrice,
   offeredTlds,
   getDomainFreeInPackage,
@@ -221,6 +222,7 @@ export interface ConfiguratorManifest {
     readonly customMonthly: number;
     /** Minimum subscription commitment (months) with a custom domain. */
     readonly minCommitmentMonths: number;
+    readonly buyoutPrice: number;
     /** ADR-0109 ②/⑧: minimum monthly package LIST total that ALLOWS a custom
      *  domain. Below it the option is not offered — the client shows the
      *  invitation card instead (frozen plan: design-refs/configurator/domain-monthly). */
@@ -491,6 +493,8 @@ export async function buildManifest(
       customMonthly: getCustomDomainMonthly(),
       // ADR-0093: operator-set commitment (pricing_config), no longer a constant.
       minCommitmentMonths: getDomainMinCommitmentMonths(),
+      // ADR-0395: the „Feltételek” popup names the buyout price the commitment binds to.
+      buyoutPrice: getDomainBuyoutPrice(),
       // ADR-0093 free-domain rule: the client resolves the fee against the LIVE
       // module selection (the threshold crossing must move with the toggles).
       minPackageMonthly: getDomainMinPackageMonthly(),

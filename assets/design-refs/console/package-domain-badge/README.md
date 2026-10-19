@@ -1,5 +1,8 @@
 # Saját cím a vevő oldalán: jelvény + a cím elöl (kontraktus, ADR-0369)
 
+> ⚠️ **Részben felülírva: ADR-0395** (2026-10-19, `console/rendeles-egyszerusitett`). A cím-lépés egyetlen felajánlott nevet ad, fix citoviso-sorral; az itt kötött, alább sima idézőjelbe tett feliratok már nem élnek.
+
+
 Tulajdonosi jóváhagyás: 2026-10-12, „B — jelvény + a cím elöl”, kifejezetten DINAMIKUSAN. A
 `plan.html` a jóváhagyott, működő vázlat. Megnyitáskor a B változatot mutatja. A tetején álló
 /pricing-szimulációval minden piac-állapot kipróbálható. A képek a döntéskori állapotot rögzítik.
@@ -24,11 +27,11 @@ nélkül. A végződés neve (.hu, .eu …) a beállításból jön, nem fix sz�
    csomag kapja, amelynek modul-listája lefedi a domaint tartalmazó csomagot. A többi kártya tiszta.
 2. **Címke az „Itt rendelheti meg” pirulán**: ugyanez a szöveg, ha bármelyik csomag hordozza.
 3. **A cím-lépés a saját címmel kezd**, ha a VÁLASZTOTT összeállítás hordozza az ingyen címet:
-   - vezető sor: **„A választott csomagjához saját {tld} cím jár”** + „Válasszon nevet lent — a
+   - vezető sor: „A választott csomagjához saját {tld} cím jár” + „Válasszon nevet lent — a
      citoviso.com-os cím mellette is megmarad.”;
-   - elöl a saját cím: **„Saját domainnév — benne a csomagban”**, alatta a névjavaslatok és a
+   - elöl a saját cím: „Saját domainnév — benne a csomagban”, alatta a névjavaslatok és a
      saját név mezője;
-   - utána a platform-cím: **„Most csak a citoviso.com-os cím”**.
+   - utána a platform-cím: „Most csak a citoviso.com-os cím”.
 
    Ha a választott összeállítás nem hordozza, a mai sorrend és a mai feliratok maradnak.
    (A vázlat mondata „A Teljes csomag saját .hu címet ad” volt. A megvalósítás a csomag nevét

@@ -215,11 +215,13 @@ async function openPayStep(page: Page, file: string): Promise<void> {
   // order (contract order-two-step) — and it proves the choice carries to the pay step.
   await page.locator(".cit-cfg-next").click();
   await page.waitForTimeout(200);
-  await page.locator('.cit-cfg-permat [data-period="annual"]').click();
-  await page.waitForTimeout(200);
+  // ADR-0395: package → address → pay; the §A declaration is a pay-step consent now.
+  await page.locator(".cit-cfg-next:not([disabled])").click();
+  await page.waitForTimeout(300);
   await page.locator(".cit-cfg-rights").check();
-  await page.waitForTimeout(120);
-  await page.locator(".cit-cfg-submit").click();
+  // ADR-0395: the Havi/Éves choice is made on the pay step (its ONE period switch).
+  await page.locator('.cit-cfg-period3 [data-period="annual"]').click();
+  await page.waitForTimeout(200);
   await page.waitForTimeout(500);
 }
 
@@ -412,8 +414,8 @@ async function checkCards(page: Page, tag: string): Promise<void> {
     start.length >= 2 && !start.includes("annual:on") && start.filter((p) => p === "monthly:on").length === start.length / 2,
     `${T} ⑥ induláskor MINDEN váltó a HAVIT mutatja (ADR-0211) (${start.join(" ")})`,
   );
-  // step 1's switch is the small one beside the running total (order-two-step ①)
-  await page.locator('.cit-cfg-ppill [data-period="annual"]').click();
+  // ADR-0395: the ONE period switch is on the pay step; the cards follow the shared state.
+  await page.evaluate(`document.querySelector('.cit-cfg-period3 [data-period="annual"]').click()`);
   await page.waitForTimeout(350);
   const annual = (await page.evaluate(STEP1)) as Step1;
   check(annual.cards.length > 0, `${T} ⑧ vannak csomag-kártyák (${annual.cards.length})`);
@@ -448,7 +450,7 @@ async function checkCards(page: Page, tag: string): Promise<void> {
     `${T} ⑨ az aktív kártya kedvezményes ára = a futó összeg fizetendője (${act.pay} vs ${annual.payPrice})`,
   );
 
-  await page.locator('.cit-cfg-ppill [data-period="monthly"]').click();
+  await page.evaluate(`document.querySelector('.cit-cfg-period3 [data-period="monthly"]').click()`);
   await page.waitForTimeout(350);
   const monthly = (await page.evaluate(STEP1)) as Step1;
   check(
@@ -462,8 +464,8 @@ async function checkCards(page: Page, tag: string): Promise<void> {
     actM.amount !== null && actM.amount === monthly.listPrice,
     `${T} ⑧ havi ütemben is egyezik az összegzővel (${actM.amount} vs ${monthly.listPrice})`,
   );
-  // step 1's switch is the small one beside the running total (order-two-step ①)
-  await page.locator('.cit-cfg-ppill [data-period="annual"]').click();
+  // ADR-0395: the ONE period switch is on the pay step; the cards follow the shared state.
+  await page.evaluate(`document.querySelector('.cit-cfg-period3 [data-period="annual"]').click()`);
   await page.waitForTimeout(350);
 }
 

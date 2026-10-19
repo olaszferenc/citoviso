@@ -1,5 +1,8 @@
 # Saját cím a konfigurátorban — jóváhagyott terv (2026-09-07, tulaj: „c2")
 
+> ⚠️ **Részben felülírva: ADR-0395** (2026-10-19, `console/rendeles-egyszerusitett`). A cím-lépés egyetlen felajánlott nevet ad, fix citoviso-sorral; az itt kötött, alább sima idézőjelbe tett feliratok már nem élnek.
+
+
 **Hatókör:** `assets/runtime/cit-configurator.js` · `src/generator/configurator.ts`
 
 A `plan.html` a KONTRAKTUS (kattintható, önhordó; képek: `plan-desktop.png`,
@@ -15,12 +18,12 @@ nem stílus-javaslatok:
    az volt, hogy „sokkal szembetűnőbb" legyen. ⛔ A hangsúly **kerettel, akcent-
    színnel, ikonnal és tartalommal** születik, NEM nagyobb betűvel
    (`size_inflation_is_not_design`). A kártya kötelező elemei:
-   - fejléc: földgömb-ikon + **„Saját domainnév is választható"** + `1 000 Ft/hó` badge,
+   - fejléc: földgömb-ikon + „Saját domainnév is választható” + `1 000 Ft/hó` badge,
    - **valódi példanév** a lead nevéből képezve (`hauselisabeth.hu`), keretes chipben —
      ez teszi kézzelfoghatóvá, nem a méret,
    - feltétel-mondat: **„{min}/hó feletti csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó."**
    - **haladás-sáv + számsor** (ez a C2 lényege): `4 890 Ft / 7 000 Ft — 2 110 Ft hiányzik`,
-   - **utasítás, nem döntés** (tulaj-felülírás 2026-09-08): **„Válasszon még minimum {gap} értékben a modulok közül."** ⛔ A korábbi `Bekapcsolom (+{összeg}/hó)`
+   - **utasítás, nem döntés** (tulaj-felülírás 2026-09-08): „Válasszon még minimum {gap} értékben a modulok közül.” ⛔ A korábbi `Bekapcsolom (+{összeg}/hó)`
      gomb KIVEZETVE: (a) sosem nevezte meg, MIT kapcsol be, (b) csökkenő ár szerint
      válogatott, ezért 2 370 Ft-ot adott el ott, ahol 2 150 is elég lett volna —
      miközben a saját kommentje „cheapest-first"-öt állított. Amit a vevő vesz, azt

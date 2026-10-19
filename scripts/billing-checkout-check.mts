@@ -185,9 +185,10 @@ async function openBillingStep(page: Page): Promise<void> {
   await page.waitForTimeout(300);
   await page.locator(".cit-cfg-next").click();
   await page.waitForTimeout(200);
+  // ADR-0395: package → address → pay; the §A declaration is a pay-step consent now.
+  await page.locator(".cit-cfg-next:not([disabled])").click();
+  await page.waitForTimeout(300);
   await page.locator(".cit-cfg-rights").check();
-  await page.waitForTimeout(120);
-  await page.locator(".cit-cfg-submit").click();
   await page.waitForTimeout(250);
 }
 

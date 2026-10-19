@@ -337,6 +337,7 @@ async function preChargeSentence(
     // Flip the named rows. Used to UNTICK a module the tenant already owns: the
     // renewal still bills it (unticking here is not a cancellation), so this is
     // the case where the checkout must count what the buyer did NOT choose.
+    if (toggle.length) await page.locator('.cit-cfg-customize[aria-expanded="false"]').click(); // ADR-0395: closed by default
     for (const id of toggle) {
       await page.locator(`.cit-cfg-row[data-id="${id}"]`).click();
       await page.waitForTimeout(100);
@@ -347,11 +348,13 @@ async function preChargeSentence(
     // (the period cards live on step 2 since the two-step order — order-two-step)
     await page.locator(".cit-cfg-next").click();
     await page.waitForTimeout(200);
-    await page.locator('.cit-cfg-permat [data-period="annual"]').click();
-    await page.waitForTimeout(150);
+    // ADR-0395: package → address → pay; the §A declaration is a pay-step consent now.
+    await page.locator(".cit-cfg-next:not([disabled])").click();
+    await page.waitForTimeout(300);
     await page.locator(".cit-cfg-rights").check();
-    await page.waitForTimeout(120);
-    await page.locator(".cit-cfg-submit").click();
+    // ADR-0395: the Havi/Éves choice is made on the pay step (its ONE period switch).
+    await page.locator('.cit-cfg-period3 [data-period="annual"]').click();
+    await page.waitForTimeout(200);
     await page.waitForTimeout(300);
     const text = (await page.locator(".cit-cfg-nextcharge").first().textContent()) ?? "";
     // What the buyer actually has ticked, read off the page — the order the

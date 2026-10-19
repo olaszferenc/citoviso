@@ -1,5 +1,8 @@
 # Kontraktus — Havi/Éves fizetés-váltó az 1. lépésen
 
+> ⚠️ **Részben felülírva: ADR-0395** (2026-10-19, `console/rendeles-egyszerusitett`): a rendelés három lépés (csomag → cím → fizetés), a Havi/Éves váltó csak a fizetés-lapon van, a §A nyilatkozat a fizetés-lap első jóváhagyása, telefonon a fizetés-lap mindig egy oszlop, és nyitott panel mellett nincs felső ajánlat-sáv. Ami itt ennek ellentmond, az már nem érvényes.
+
+
 **Jóváhagyva:** tulaj, 2026-09-01 — a **B változat** (kártyás választó).
 **Kiváltó hiba:** a lead mobilon nem találta, hogyan válthat éves→havi fizetésre;
 a `Havi/Éves` váltó a 2. lépésen (a „Tovább a megrendeléshez" után) rejtőzött, míg

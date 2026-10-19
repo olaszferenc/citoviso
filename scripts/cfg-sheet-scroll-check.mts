@@ -34,7 +34,8 @@
 //   S3  a mögöttes lap élő előnézete él: egy kikapcsolt modul bekapcsolására a lap
 //       odagörget (ΔscrollY ≠ 0) — nyitott panellel
 //   S4  a panel bezárása után a lap újra görgethető (semmi nem ragad be)
-//   S6  NEM lap-zár: a panel mellett/fölött látszó lap-sáv húzásra továbbra is görget
+//   S6  NEM lap-zár: a panel mellett/fölött látszó lap-sáv húzásra továbbra is görget (álló
+//       telefonon a panel teljes képernyős — ADR-0395 —, ott nincs mit mérni)
 //   S7  a 2. lépésen és a fizetés-lépésen (teljes felület) is: a panel fölső/közép/alsó sávján húzva a lap áll
 //   S8  …és az őr nem nyeli el a fizetés-űrlap SAJÁT görgetését: húzással a végéig ér
 //   S9  …és ott a „Fizetek” gomb a képernyőn van, és az ujj ŐT találja (fekvőn is — tulaj, 2026-09-26)
@@ -316,7 +317,13 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
 
     // S6 — NOT a page lock: the page strip left beside/above the panel still scrolls under
     // the finger (the owner browses the live preview without closing the panel)
-    {
+    // ADR-0395 (owner 2026-10-19 „A”): on an upright phone the order panel is FULL SCREEN — there
+    // is no page strip beside it, so the rule has nothing to measure there (it still binds wherever
+    // the panel leaves part of the page visible: sideways, desktop).
+    const fullScreen = (await page.evaluate(`(() => { const r = document.querySelector(".cit-cfg-panel").getBoundingClientRect();
+      return r.left <= 1 && r.top <= 1 && r.right >= innerWidth - 1 && r.bottom >= innerHeight - 1; })()`)) as boolean;
+    if (fullScreen) res.S6_page_beside_panel_still_scrolls = [true, { fullScreen: true }];
+    else {
       const pz = z.panel;
       const px = pz.left > 120 ? Math.round(pz.left / 2) : Math.round(vp.width / 2);
       const py = pz.left > 120 ? Math.round(vp.height / 2) : Math.round(pz.top / 2);
@@ -368,12 +375,12 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
         }
         return moved;
       };
+      // ADR-0395: step 2 is the address step (`cit-cfg-panel--addr`); „Tovább” again opens the pay step.
       const step2 = (await page.evaluate(`(() => { const b = document.querySelector(".cit-cfg-panel .cit-cfg-next"); if (!b) return false; b.click();
-        const s = document.querySelector(".cit-cfg-panel .cit-cfg-step2"); return !!s && !s.hidden; })()`)) as boolean;
+        return document.querySelector(".cit-cfg-panel").classList.contains("cit-cfg-panel--addr"); })()`)) as boolean;
       await page.waitForTimeout(400);
       const moved2 = step2 ? await bands() : ["2. lépés nem nyílt"];
-      const billing = (await page.evaluate(`(() => { const rb = document.querySelector(".cit-cfg-panel .cit-cfg-rights"); if (rb && !rb.checked) rb.click();
-        const sb = document.querySelector(".cit-cfg-panel .cit-cfg-submit"); if (!sb) return false; sb.disabled = false; sb.click();
+      const billing = (await page.evaluate(`(() => { const sb = document.querySelector(".cit-cfg-panel .cit-cfg-next"); if (!sb) return false; sb.disabled = false; sb.click();
         return document.querySelector(".cit-cfg-panel").classList.contains("cit-cfg-panel--billing"); })()`)) as boolean;
       await page.waitForTimeout(600);
       const moved3 = billing ? await bands() : ["fizetés-lépés nem nyílt"];

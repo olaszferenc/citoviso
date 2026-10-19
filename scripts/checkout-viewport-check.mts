@@ -107,7 +107,7 @@ async function buildPreview(): Promise<void> {
   await writeFile(PREVIEW, html, "utf8");
 }
 
-/** Walk the buyer's real path: launch → modules → §A rights → billing step. */
+/** Walk the buyer's real path: launch → package → address → pay step. */
 async function openCheckout(page: Page): Promise<void> {
   await page.goto(pathToFileURL(PREVIEW).href);
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 15000 });
@@ -115,12 +115,15 @@ async function openCheckout(page: Page): Promise<void> {
   await page.waitForTimeout(300);
   await page.locator(".cit-cfg-next").click();
   await page.waitForTimeout(200);
-  await page.locator(".cit-cfg-rights").check();
-  await page.waitForTimeout(120);
-  await page.locator(".cit-cfg-submit").click();
+  // ADR-0395: package → address → pay; the §A declaration is a pay-step consent now.
+  await page.locator(".cit-cfg-next:not([disabled])").click();
   await page.waitForTimeout(400);
+  // The §A row is one of the counted consents: left unticked, like the others.
 }
 
+// ADR-0395 ⑤: a phone pays in ONE scrolling column, so "one view" there means the decision
+// block — every consent and the pay button — fits one screen once the panel is scrolled to its
+// end (window.__citBottom). The desktop keeps the pinned right column, measured from the top.
 /**
  * The probe body is a STRING on purpose: tsx's esbuild adds `__name` wrappers to
  * arrow functions, which throws `ReferenceError: __name is not defined` inside
@@ -128,9 +131,11 @@ async function openCheckout(page: Page): Promise<void> {
  */
 const PROBE = `(function () {
   // Reset every scroll container FIRST — see the header note about auto-scroll.
+  // (The folded phone layout is then scrolled to its end by BOTTOM, never by a click.)
   window.scrollTo(0, 0);
   var all = document.querySelectorAll("*");
   for (var i = 0; i < all.length; i++) if (all[i].scrollTop) all[i].scrollTop = 0;
+  if (window.__citBottom) { var pp = document.querySelector(".cit-cfg-panel"); if (pp) pp.scrollTop = pp.scrollHeight; }
 
   var vw = window.innerWidth, vh = window.innerHeight;
   function probe(el, name) {
@@ -213,10 +218,24 @@ async function auditSize(page: Page, size: (typeof SIZES)[number]): Promise<void
   await page.setViewportSize({ width: size.width, height: size.height });
   await openCheckout(page);
 
+  const phone = size.width < 900;
   const before = (await page.evaluate(PROBE)) as Probe;
+  if (phone) {
+    const folded = await page.evaluate(`document.querySelector(".cit-cfg-panel").classList.contains("cit-cfg-panel--fold")`);
+    check(folded === true, `${size.tag}: a fizetés-lap EGY oszlopban görget (ADR-0395 ⑤)`);
+  }
+  // On the phone the decision block is measured at the column's end (BOTTOM); the total sits
+  // in the form column above it there, so it is judged in the top-of-page probe instead.
+  await page.evaluate(`window.__citBottom = ${phone}`);
+  const decision = (await page.evaluate(PROBE)) as Probe;
+  await page.evaluate(`window.__citBottom = false`);
 
   // ── ① ONE VIEW: consents + total + button, measured by pixel ────────────────
-  const offscreen = before.items.filter((i) => i.missing || !i.inView || !i.hits);
+  const offscreen = decision.items.filter((i) => (!phone || i.name !== "végösszeg") && (i.missing || !i.inView || !i.hits));
+  if (phone) {
+    const sum = before.items.find((i) => i.name === "végösszeg");
+    check(!!sum && !sum.missing && !sum.zeroBox, `${size.tag}: a végösszeg a fizetés-lapon van`);
+  }
   check(
     offscreen.length === 0,
     `${size.tag}: a pipák, a végösszeg és a Fizetek gomb EGY nézetben` +
@@ -226,7 +245,8 @@ async function auditSize(page: Page, size: (typeof SIZES)[number]): Promise<void
             .join(", ")}`
         : ""),
   );
-  check(before.consentCount === 3, `${size.tag}: három kötelező hozzájárulás látszik (${before.consentCount})`);
+  // ADR-0395: the §A photo-rights declaration is the first of FOUR consents now.
+  check(before.consentCount === 4, `${size.tag}: négy kötelező hozzájárulás látszik (${before.consentCount})`);
 
   // ── ② the header may not contradict the button under it ────────────────────
   check(
@@ -281,7 +301,7 @@ async function auditSize(page: Page, size: (typeof SIZES)[number]): Promise<void
 
   // ── ⑥ the gate: refused until all three, and the refusal says why ──────────
   check(before.payDisabled === true, `${size.tag}: 0 pipával a gomb TILTOTT`);
-  check(/0\s*\/\s*3/.test(before.payNote), `${size.tag}: a jegyzet megnevezi a hiányt („${before.payNote.slice(0, 44)}")`);
+  check(/0\s*\/\s*4/.test(before.payNote), `${size.tag}: a jegyzet megnevezi a hiányt („${before.payNote.slice(0, 44)}")`);
   check(
     (before.payLabel ?? "").includes("Ft"),
     `${size.tag}: a gomb felirata megnevezi az összeget („${before.payLabel}")`,
@@ -296,10 +316,12 @@ async function auditSize(page: Page, size: (typeof SIZES)[number]): Promise<void
 
   await page.evaluate(TICK_ALL);
   await page.waitForTimeout(200);
+  await page.evaluate(`window.__citBottom = ${phone}`);
   const after = (await page.evaluate(PROBE)) as Probe;
-  check(after.payDisabled === false, `${size.tag}: mind a 3 pipával a gomb ENGEDVE`);
+  await page.evaluate(`window.__citBottom = false`);
+  check(after.payDisabled === false, `${size.tag}: mind a 4 pipával a gomb ENGEDVE`);
   // And STILL in one view after ticking — the rows grow when they wrap.
-  const offAfter = after.items.filter((i) => i.missing || !i.inView || !i.hits);
+  const offAfter = after.items.filter((i) => (!phone || i.name !== "végösszeg") && (i.missing || !i.inView || !i.hits));
   check(offAfter.length === 0, `${size.tag}: bejelölés UTÁN is egy nézetben marad`);
 
   check(errors.length === 0, `${size.tag}: nincs JS-hiba (${errors.slice(0, 2).join(" | ")})`);
@@ -311,10 +333,12 @@ async function auditBusinessBranch(page: Page): Promise<void> {
   await openCheckout(page);
   await page.locator('.cit-cfg-bt[data-btype="business"]').click();
   await page.waitForTimeout(250);
+  await page.evaluate(`window.__citBottom = true`);
   const p = (await page.evaluate(PROBE)) as Probe;
-  check(p.consentCount === 2, `cég ág: két kötelező hozzájárulás (${p.consentCount})`);
-  check(/0\s*\/\s*2/.test(p.payNote), `cég ág: a számláló 2-re vált („${p.payNote.slice(0, 40)}")`);
-  const off = p.items.filter((i) => i.missing || !i.inView || !i.hits);
+  await page.evaluate(`window.__citBottom = false`);
+  check(p.consentCount === 3, `cég ág: három kötelező hozzájárulás (${p.consentCount})`);
+  check(/0\s*\/\s*3/.test(p.payNote), `cég ág: a számláló 3-ra vált („${p.payNote.slice(0, 40)}")`);
+  const off = p.items.filter((i) => i.name !== "végösszeg" && (i.missing || !i.inView || !i.hits));
   check(off.length === 0, `cég ág: a döntés 390px-en is egy nézetben (${off.map((i) => i.name).join(", ")})`);
   // The hidden waiver must not be smuggled through as ticked.
   const waiverChecked = await page.evaluate(

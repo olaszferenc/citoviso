@@ -3965,3 +3965,133 @@
 .cit-cfg-cnote {
   margin-top: 12px;
 }
+
+/* ══ ADR-0395 — simplified order: three steps, one decision per screen ═══════════════
+ * Frozen plan: assets/design-refs/console/rendeles-egyszerusitett (owner 2026-10-19 „A”).
+ *   step 1 = packages (the switch list behind „Testre szabom”), step 2 = the address,
+ *   step 3 = pay (the period cards and the §A declaration live there now).
+ * The old money step (.cit-cfg-s2top / .cit-cfg-step2) is never shown. */
+.cit-cfg-s2top,
+.cit-cfg-panel:not(.cit-cfg-panel--cont) .cit-cfg-ppill { display: none !important; }
+.cit-cfg-head { position: relative; }
+.cit-cfg-hback {
+  position: absolute;
+  top: 14px;
+  left: 8px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: #e7ebf1;
+  cursor: pointer;
+}
+.cit-cfg-hback svg { width: 20px; height: 20px; transform: rotate(180deg); stroke: currentColor; fill: none; }
+.cit-cfg-head:has(.cit-cfg-hback:not([hidden])) h2,
+.cit-cfg-head:has(.cit-cfg-hback:not([hidden])) p { padding-left: 34px; }
+.cit-cfg-prog { display: flex; gap: 6px; margin-top: 12px; }
+.cit-cfg-prog i { flex: 1; height: 4px; border-radius: 4px; background: #2c323c; }
+.cit-cfg-prog i.cit-cfg-on { background: #1fb6d6; }
+.cit-cfg-progtxt { display: block; margin-top: 6px; color: #9aa4b2; font-size: 12.5px; }
+.cit-cfg-panel--billing .cit-cfg-prog,
+.cit-cfg-panel--billing .cit-cfg-progtxt { display: none; }
+
+/* step 1 shows the packages, step 2 only the address */
+.cit-cfg-panel:not(.cit-cfg-panel--addr) .cit-cfg-dsec { display: none; }
+.cit-cfg-panel--addr .cit-cfg-body > :not(.cit-cfg-dsec) { display: none; }
+
+/* phone: the order is the screen — full height on every step, never under the consent bar */
+@media (max-width: 560px) {
+  .cit-cfg-panel {
+    top: 0;
+    max-height: none;
+    border-radius: 0;
+  }
+  .cit-cfg-panel--s2 { max-height: none; }
+}
+
+/* the address card */
+.cit-cfg-alead { margin: 0 0 12px; color: #9aa4b2; font-size: 14px; }
+.cit-cfg-dcard {
+  border: 1.5px solid #1fb6d6;
+  border-radius: 14px;
+  padding: 16px;
+  background: #10243a;
+}
+.cit-cfg-dcard--off { border-color: #2c323c; background: #181c23; }
+.cit-cfg-dcard__lbl { display: block; color: #9aa4b2; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.cit-cfg-dcard__name { margin: 4px 0 6px; font-size: 22px; font-weight: 800; overflow-wrap: anywhere; color: #e7ebf1; }
+.cit-cfg-dcard__st { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13.5px; color: #9aa4b2; }
+.cit-cfg-dok { display: inline-flex; align-items: center; gap: 4px; color: #7ee2a0; font-weight: 600; }
+.cit-cfg-dok svg { width: 14px; height: 14px; stroke: currentColor; fill: none; }
+.cit-cfg-dfee { color: #f0c46a; font-weight: 600; }
+.cit-cfg-dwant { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; cursor: pointer; }
+.cit-cfg-dwant input { width: 20px; height: 20px; accent-color: #1fb6d6; }
+.cit-cfg-dedit { margin-top: 12px; }
+.cit-cfg-dedit .cit-cfg-own__row { display: flex; gap: 8px; }
+.cit-cfg-dedit .cit-cfg-own__in {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #33404e;
+  border-radius: 10px;
+  background: #14171c;
+  color: #e7ebf1;
+  font: inherit;
+}
+.cit-cfg-dedit .cit-cfg-own__btn {
+  padding: 10px 14px;
+  border: 1px solid #33404e;
+  border-radius: 10px;
+  background: #1b2029;
+  color: #e7ebf1;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cit-cfg-dalt { border: 0; padding: 0; background: none; color: #35c4e0; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.cit-cfg-dlinks { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+.cit-cfg-dlinks button { border: 0; padding: 0; background: none; color: #35c4e0; font: inherit; font-size: 13.5px; text-decoration: underline; cursor: pointer; }
+.cit-cfg-dsubline {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #181c23;
+  color: #9aa4b2;
+  font-size: 13.5px;
+}
+.cit-cfg-dsubline b { color: #e7ebf1; overflow-wrap: anywhere; }
+.cit-cfg-dpop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+}
+.cit-cfg-dpop[hidden] { display: none; }
+.cit-cfg-dpop__box { width: 100%; max-width: 380px; padding: 18px; border: 1px solid #2c323c; border-radius: 14px; background: #1b2029; }
+.cit-cfg-dpop__box h4 { margin: 0 0 10px; font-size: 16px; }
+.cit-cfg-dpop__box dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; margin: 0; font-size: 14px; }
+.cit-cfg-dpop__box dt { color: #9aa4b2; }
+.cit-cfg-dpop__box dd { margin: 0; }
+.cit-cfg-dpop__box p { margin: 12px 0; color: #9aa4b2; font-size: 12.5px; }
+.cit-cfg-dpop__ok { width: 100%; padding: 12px; border: 0; border-radius: 10px; background: #2f6feb; color: #fff; font-weight: 700; cursor: pointer; }
+
+/* the §A declaration is the pay step's first consent row */
+.cit-cfg-co-act .cit-cfg-s2decl { display: flex; gap: 10px; }
+.cit-cfg-panel--billing .cit-cfg-co-act .cit-cfg-s2decl { display: flex; }
+.cit-cfg-item-addr span + span { overflow-wrap: anywhere; text-align: right; }
+
+/* an open panel is never covered by the offer bar — its line sits in the foot */
+html.cit-cfg-is-open .cit-cfg-esccard { display: none !important; }
+.cit-cfg-panel--addr .cit-cfg-dsec { margin-top: 0; padding-top: 0; border-top: 0; }
+.cit-cfg-hback[hidden] { display: none; }
+/* the §A row reads like its neighbours (it carried the old money step's larger type) */
+.cit-cfg-co-act .cit-cfg-s2decl { margin: 0; font-size: 11px; color: #7f8896; }
+/* phone pay step: ONE scroll — the total, VAT and next charge sit in the form column under the
+ * item box instead of a second pinned block above it (ADR-0395 ⑤) */
+.cit-cfg-co-scroll > .cit-cfg-sum { margin-top: 12px; }
+.cit-cfg-dwant[hidden], .cit-cfg-dcard[hidden], .cit-cfg-dsubline[hidden] { display: none; }
