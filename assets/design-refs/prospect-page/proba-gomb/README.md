@@ -35,6 +35,12 @@ a `/p/:token` route adja át, ha a próba be van kapcsolva és a leadnek nincs `
    szabadítja fel, a pár feljebb lép; asztal: közép → jobb → bal → feljebb). A pár sosem szakad szét,
    és a fő gombot sosem temeti be. Őr: a `lead-mobile-check` R8 és a `lead-page-surface-check` ②
    a PÁR mindkét tagját méri.
+   **Részben felülírva: ADR-XXXX (2026-10-19, a tulaj „A” döntése) — álló telefonon (≤ 560 px, nem fekvő)**
+   a pár NEM lép feljebb: egy sötét, a képernyő aljára rögzített sávon áll (a süti-sáv és a Foglalás-sáv
+   fölött, a sáv 10 px-rel magasabb a pároknál fent és lent), nyitott panelnél a sávval együtt eltűnik.
+   A lapon mozgó tartalom (a hős második gombja is) a sáv alá görgethető, mint bármely rögzített alsó
+   réteg alá; a lap utolsó blokkja a sáv tetejéig kipárnázza magát (`--citui-cfg-clear`). Fekvő telefonon
+   és asztalon a fenti kikerülés változatlan.
 5. **Kikapcsolt próba** (`getFreeTrialConfig().enabled === false`): a próba-pirula NEM jelenik meg,
    a rendelés-pirula a régi, egyedüli helyén áll — a lap pontosan olyan, mint a próba előtt.
    Már vásárolt lead (owned) és már futó/elhasznált próba (`trial_used`) esetén szintén nincs próba-pirula.

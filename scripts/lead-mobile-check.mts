@@ -985,8 +985,12 @@ async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   if (sabotage === "overflow") html = html.replace("</head>", "<style>body{min-width:120vw}</style></head>");
   // the placement's bar detection cut out of the served JS → the pill rests on the booking bar → R8 red
   if (sabotage === "pill-on-bar") {
-    const cut = html.replace("fixedBottomTop() - AVOID_GAP", "window.innerHeight");
-    if (cut === html) throw new Error("pill-on-bar: a visszarontás nem talált célt (fixedBottomTop) — az önteszt vak lenne");
+    // both placements: the floating one (landscape, desktop) and the docked strip (upright, ADR-XXXX)
+    const cut = html
+      .replace("fixedBottomTop() - AVOID_GAP", "window.innerHeight")
+      .replace("var dockEdge = Math.min(window.innerHeight - consentH(), fixedBottomTop());", "var dockEdge = window.innerHeight - consentH();");
+    if (!cut.includes("var dockEdge = window.innerHeight - consentH();") || cut.includes("fixedBottomTop() - AVOID_GAP"))
+      throw new Error("pill-on-bar: a visszarontás nem talált célt (fixedBottomTop) — az önteszt vak lenne");
     html = cut;
   }
   // ADR-0342: ONLY the trial pill drops onto the bottom stack (the order pill stays clear)

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-allo-telefonon-a-pirula-par-also-savon.md) — Álló telefonon a pirula-pár egy alsó, rögzített sávon áll, nem lebeg a hős fölött
 - [ADR-0395](decisions/0395-egyszerusitett-rendeles-harom-lepes-egy.md) — Egyszerűsített rendelés: három lépés, egy felajánlott saját cím, feltételek egy kis ablakban (2026-10-19)
 - [ADR-0394](decisions/0394-sajat-domain-tanusitvanya-let-s-encrypt-http-01.md) — Saját domain tanúsítványa: Let's Encrypt (HTTP-01) a VPS-en, gyökér-időzítővel és generált nginx-blokkal
 - [ADR-0393](decisions/0393-tobb-szoba-egy-foglalasi-keresben-elobb-a-datum.md) — Több szoba egy foglalási kérésben (előbb a dátum, aztán a szabad szobák); az egész ház nem külön, saját árú tétel

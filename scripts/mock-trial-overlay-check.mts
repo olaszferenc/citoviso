@@ -595,7 +595,7 @@ try {
   // above the title, at rest and with the consent bar — and never onto a hero control or
   // the framing bar on the way. The title = the h1's words and the paragraphs beside it,
   // measured on their TEXT lines (glyphs).
-  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő: sarok; álló + asztali: a cím fölé), gombra és fejlécre sem");
+  console.log("\n⑪ a pirula-pár nem ül a hős-címen (fekvő: sarok; asztali: a cím fölé; álló: alsó sáv, ADR-XXXX), gombra és fejlécre sem");
   const TITLE_PROBE = `() => {
     const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
       .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
@@ -721,6 +721,35 @@ try {
     }
     return { hits };
   }`;
+  // ADR-XXXX (owner „A”, 2026-10-19): upright the pair no longer looks for a free spot — it
+  // rests on a strip docked to the bottom, right on the fixed bottom stack (the consent bar,
+  // a booking bar, or the screen edge). Measured: the strip is there, both pills lie inside
+  // it, and its lower edge is the top of that stack — not floated up into the page.
+  const DOCK_PROBE = `() => {
+    const dk = document.querySelector(".cit-cfg-dock");
+    const d = dk && !dk.hidden && getComputedStyle(dk).display !== "none" ? dk.getBoundingClientRect() : null;
+    const pills = [".cit-cfg-launch", ".cit-cfg-trialpill"].map((s) => document.querySelector(s))
+      .filter((m) => m && !m.hidden && m.getBoundingClientRect().width > 0).map((m) => m.getBoundingClientRect());
+    const layers = [];
+    for (const el of document.querySelectorAll("body > *, body > * > *, body > * > * > *")) {
+      if (el.closest('[class*="cit-cfg"]')) continue;
+      const cs = getComputedStyle(el);
+      if (cs.position !== "fixed" || cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") continue;
+      const r = el.getBoundingClientRect();
+      if (r.height < 8 || r.height > innerHeight * 0.4 || r.width < 40 || r.bottom > innerHeight + 2) continue;
+      layers.push(r);
+    }
+    // the stack grows from the screen edge: a booking bar resting on the consent bar counts,
+    // whatever order the DOM lists them in
+    let stack = innerHeight;
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const r of layers) if (r.top < stack - 1 && r.bottom >= stack - 2 && r.bottom <= stack + 2) { stack = r.top; grew = true; }
+    }
+    const inside = !!d && pills.length === 2 && pills.every((q) => q.top >= d.top - 1 && q.bottom <= d.bottom + 1);
+    return { dock: d ? [d.top, d.bottom].map(Math.round) : null, inside, stack: Math.round(stack), onStack: !!d && Math.abs(d.bottom - stack) <= 2 };
+  }`;
+  type DockGeom = { dock: number[] | null; inside: boolean; stack: number; onStack: boolean };
   type CardGeom = { hits: string[]; seen: number };
   type TitleGeom = { hits: string[]; pills: number; corner: boolean; onScreen: boolean; rects: number[][] };
   type Buried = { error?: string; buried?: { label: string }[] };
@@ -731,6 +760,18 @@ try {
       const { ctx, p } = await open(browser, html, w, h, false);
       await p.waitForTimeout(1400);
       const rest = (await p.evaluate(`(${TITLE_PROBE})()`)) as TitleGeom;
+      if (vp === "álló") {
+        const k = (await p.evaluate(`(${DOCK_PROBE})()`)) as DockGeom;
+        check(`⑪ ${id}/${vp}, nyugalomban: a pár az alsó sávon áll, a rögzített alsó rétegen`, k.inside && k.onStack, k);
+        await p.keyboard.press("Shift");
+        await p.waitForTimeout(1400);
+        const up = await p.evaluate(() => !!document.getElementById("cit-consent"));
+        const k2 = (await p.evaluate(`(${DOCK_PROBE})()`)) as DockGeom;
+        check(`⑪ ${id}/${vp}, süti-sávval: a sáv a süti-sáv fölött áll, a pár rajta`, up && k2.inside && k2.onStack, { up, ...k2 });
+        if (id === "dark-luxury" || id === "cinematic") await shot(p, `mock-pirula-cim-${id}-${vp}-suti`);
+        await ctx.close();
+        continue;
+      }
       if (vp === "fekvő") check(`⑪ ${id}/${vp}, nyugalomban: a pár sarokban, nem középen`, rest.pills === 2 && rest.corner, rest);
       check(`⑪ ${id}/${vp}, nyugalomban: a pár nem ül a címen, a fejléc alatt marad`, rest.pills === 2 && rest.hits.length === 0 && rest.onScreen, rest);
       const b = (await p.evaluate(`(${PILL_PROBE})(true)`)) as Buried;

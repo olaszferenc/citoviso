@@ -5460,6 +5460,38 @@
   function pairOn() {
     return !!trialPill && !trialPill.hidden && trialPill.isConnected;
   }
+  /* cit-cfg-dock-start
+   * ADR-XXXX (owner, 2026-10-19, „A”): on an upright phone the pill(s) no longer float over
+   * the page looking for a free spot — they rest on a solid strip docked to the bottom of the
+   * screen (above the consent bar and a template's booking bar). Floating, the pair climbed
+   * over the hero title, and with the consent bar onto the tagline under the name (owner's
+   * phone, [TESZT] Rebeka Panzió on fullbleed). The strip buries no word: what scrolls under
+   * it scrolls out again, and the page's last block pads itself clear (--citui-cfg-clear).
+   * Sideways and on a desktop nothing changes. */
+  var DOCK_PAD = 10;
+  var dock = null;
+  function isDocked() {
+    return isPhone() && !isLandscapePhone();
+  }
+  function launchShown() {
+    return !launch.hidden && launch.classList.contains("cit-cfg-in") && !document.documentElement.classList.contains("cit-cfg-is-open");
+  }
+  function syncDock(on, bottomEdge, h) {
+    if (!on || !launchShown()) {
+      if (dock) dock.hidden = true;
+      return;
+    }
+    if (!dock) {
+      dock = document.createElement("div");
+      dock.className = "cit-cfg-dock";
+      dock.setAttribute("aria-hidden", "true");
+      document.body.appendChild(dock);
+    }
+    dock.hidden = false;
+    dock.style.bottom = Math.round(window.innerHeight - bottomEdge) + "px";
+    dock.style.height = Math.round(h + 2 * DOCK_PAD) + "px";
+  }
+  /* cit-cfg-dock-end */
   function sideSlots() {
     if (pairOn() && isPhone()) return [""];
     /* cit-cfg-trialfx-pillside-start */
@@ -5654,7 +5686,10 @@
   }
 
   function placeLaunch() {
-    if (launch.hidden || !launch.classList.contains("cit-cfg-in")) return;
+    if (launch.hidden || !launch.classList.contains("cit-cfg-in")) {
+      syncDock(false);
+      return;
+    }
     if (launchBase === null) {
       // The CSS offset WITHOUT the consent bar: the bar is added live below, because since
       // 2026-09-26 it may appear AFTER the pill (deferred to the first scroll on the tracked
@@ -5674,6 +5709,12 @@
       fixedBottomTop() - AVOID_GAP,
     );
     var slots = sideSlots();
+    var docked = isDocked();
+    var dockEdge = Math.min(window.innerHeight - consentH(), fixedBottomTop());
+    var side = "";
+    if (docked) {
+      bottomY = dockEdge - DOCK_PAD;
+    } else {
     /* cit-cfg-trialfx-pilltwo-start
      * Owner via the coordinator (2026-10-13, „csináld úgy, hogy jó legyen”): the hero title
      * and its intro are obstacles everywhere — upright without the consent bar and on a
@@ -5684,7 +5725,7 @@
     if (!spot.ok) spot = findSpot(false, bottomY, slots, w, h);
     /* cit-cfg-trialfx-pilltwo-end */
     if (!spot) spot = findSpot(false, bottomY, slots, w, h);
-    var side = spot.side;
+    side = spot.side;
     bottomY = spot.bottomY;
     /* cit-cfg-trialfx-pillcardcall-start
      * A first-screen sidebar card title under the chosen spot: the pair steps UP in the same
@@ -5712,6 +5753,8 @@
       ) bottomY = cy;
     }
     /* cit-cfg-trialfx-pillcardcall-end */
+    }
+    syncDock(docked, dockEdge, h);
     var pillBottom = Math.round(window.innerHeight - bottomY) + "px";
     if (pair) {
       // Both members get exact pixels: one shared bottom edge, the pair's left from the
@@ -5744,7 +5787,7 @@
     // the button the pill climbed over (its text wraps beside the button — measured at
     // 360 px on cinematic), so the footer must clear the highest edge of every fixed
     // layer that sits on the bottom of the screen.
-    var clearTop = bottomY - h;
+    var clearTop = docked ? bottomY - h - DOCK_PAD : bottomY - h;
     var vh = window.innerHeight;
     var fixedBottom = document.querySelectorAll("body > *, body > * > *, body > * > * > *");
     for (var k = 0; k < fixedBottom.length; k++) {
@@ -5839,6 +5882,10 @@
       schedulePlace();
     });
     window.addEventListener("load", schedulePlace);
+    // The docked strip follows the pill: hidden, faded out or under the open panel → gone.
+    if (window.MutationObserver) {
+      new MutationObserver(schedulePlace).observe(launch, { attributes: true, attributeFilter: ["hidden", "class"] });
+    }
     // The phone booking bar SLIDES in and out (ADR-0253: an IO callback toggles it after the
     // hero, 0,28 s transform) — neither a scroll nor a resize. Measured 2026-09-29
     // (lead-mobile-check at rest, loaded machine): when the scroll stopped before the bar

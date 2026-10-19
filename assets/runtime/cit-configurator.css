@@ -4095,3 +4095,23 @@ html.cit-cfg-is-open .cit-cfg-esccard { display: none !important; }
  * item box instead of a second pinned block above it (ADR-0395 ⑤) */
 .cit-cfg-co-scroll > .cit-cfg-sum { margin-top: 12px; }
 .cit-cfg-dwant[hidden], .cit-cfg-dcard[hidden], .cit-cfg-dsubline[hidden] { display: none; }
+
+/* ── ADR-XXXX: upright phone — the pill(s) rest on a strip docked to the bottom ──
+ * The runtime sets the strip's bottom (above the consent bar / a booking bar) and height
+ * (pill + 2 × 10 px); it shows only while the pill does. Colour: the framing bar's ink. */
+.cit-cfg-dock {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 68px;
+  margin: 0 !important;
+  z-index: 2147482998 !important;
+  background: #101216;
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+.cit-cfg-dock[hidden],
+html.cit-cfg-is-open .cit-cfg-dock {
+  display: none !important;
+}
