@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-egyszerusitett-rendeles-harom-lepes.md) — Egyszerűsített rendelés: három lépés, egy felajánlott saját cím, feltételek egy kis ablakban (2026-10-19)
+- [ADR-0395](decisions/0395-egyszerusitett-rendeles-harom-lepes-egy.md) — Egyszerűsített rendelés: három lépés, egy felajánlott saját cím, feltételek egy kis ablakban (2026-10-19)
 - [ADR-0394](decisions/0394-sajat-domain-tanusitvanya-let-s-encrypt-http-01.md) — Saját domain tanúsítványa: Let's Encrypt (HTTP-01) a VPS-en, gyökér-időzítővel és generált nginx-blokkal
 - [ADR-0393](decisions/0393-tobb-szoba-egy-foglalasi-keresben-elobb-a-datum.md) — Több szoba egy foglalási kérésben (előbb a dátum, aztán a szabad szobák); az egész ház nem külön, saját árú tétel
 - [ADR-0392](decisions/0392-az-egesz-haz-kulon-tetel-mindig-foglalhato-a.md) — Az egész ház külön tétel, mindig foglalható a szobák mellett; egyetlen pipa: „Csak egyben adom ki” (2026-10-15)

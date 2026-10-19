@@ -1,4 +1,4 @@
-## ADR-XXXX — Egyszerűsített rendelés: három lépés, egy felajánlott saját cím, feltételek egy kis ablakban (2026-10-19)
+## ADR-0395 — Egyszerűsített rendelés: három lépés, egy felajánlott saját cím, feltételek egy kis ablakban (2026-10-19)
 
 **Dátum:** 2026-10-19 · **Státusz:** elfogadva (tulaj: „A”) ·
 **Kapcsolódó:** ADR-0240 (két lépés), ADR-0369 (ajánlat-sáv, domain-jelvény), ADR-0360 (domain mint csomag-tartalom), ADR-0381 (díj nélküli igénylés), ADR-0366 (szerver-oldali ár)
