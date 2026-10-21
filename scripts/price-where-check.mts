@@ -89,7 +89,7 @@ try {
       cookie: `cit_session=${mintTenantCookieValue(sub.userId)}`,
     });
     const admin = decode(res.body);
-    // ADR-XXXX (szakasz-hierarchia): the box carries an id and sits in its own zone wrapper, so
+    // ADR-0397 (szakasz-hierarchia): the box carries an id and sits in its own zone wrapper, so
     // it is cut by its own data attribute and ends where the wrapper closes (or a card/script follows).
     const box = /<div class="pr-where"[^>]*data-cit-price-where="(table|cards)"[^>]*>([\s\S]*?)<\/div>\s*(?=<\/div>|<div class="adm-card|<script|$)/.exec(admin);
     if (!box) {

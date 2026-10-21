@@ -3539,12 +3539,12 @@ function priceWhereBox(v: PriceSiteView | null, lang: string): string {
   );
 }
 
-/** Where the generic rules form goes on a screen whose editor lays out zones (ADR-XXXX). */
+/** Where the generic rules form goes on a screen whose editor lays out zones (ADR-0397). */
 const RULES_MARK = "<!--cit:rules-->";
 
 type TocItem = { readonly id: string; readonly label: string } | { readonly zone: string };
 
-/** The sticky table of contents (ADR-XXXX): chips under the top bar on a phone, a rail on a wide screen. */
+/** The sticky table of contents (ADR-0397): chips under the top bar on a phone, a rail on a wide screen. */
 function tocNav(items: readonly TocItem[], lang: string): string {
   return (
     `<nav class="adm-toc" data-cit-toc aria-label="${esc(T(lang, "Ezen a lapon"))}">` +
@@ -3572,7 +3572,7 @@ function tocScript(): string {
   );
 }
 
-/** One line under a room's title: the base price and how many seasons it has (ADR-XXXX). */
+/** One line under a room's title: the base price and how many seasons it has (ADR-0397). */
 function roomSummary(base: number | null, seasons: number, cur: string, lang: string): string {
   const b = base !== null ? T(lang, "Alapár {amount} {cur}", { amount: grouped(base), cur: esc(cur) }) : T(lang, "Még nincs alapár");
   return `${b} · ${T(lang, "{n} időszak", { n: seasons })}`;
@@ -3639,7 +3639,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `<div class="adm-card adm-card--sec" id="ar-${esc(u.id)}" data-seasons="${esc(JSON.stringify(seasons.map((x) => ({ id: x.id, label: x.label, from: x.from, to: x.to }))))}">` +
         `<div class="adm-card__head"><span class="adm-ico">${ic("pricing")}</span>` +
         `<h2>${esc(u.name)}</h2>` +
-        // ADR-XXXX: one line of the current values under the title (what the owner scans for).
+        // ADR-0397: one line of the current values under the title (what the owner scans for).
         `<span class="adm-card__sum">${roomSummary(base?.amount ?? null, seasons.length, cur, lang)}</span></div>` +
         // ① base price — the first tonal block; its title says „Alapár", so the field's own
         // label is left to screen readers (a sighted owner would read the word twice).
@@ -3729,7 +3729,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="${roomsHref}">${roomsLabel}</a>` +
     `</p>`;
 
-  // ADR-XXXX (approved plan tenant-admin/szakasz-hierarchia, „E"): the screen is three ZONES —
+  // ADR-0397 (approved plan tenant-admin/szakasz-hierarchia, „E"): the screen is three ZONES —
   // the intro box, the rooms side by side on a wide screen, and what holds for the whole
   // place (meals + rules) — with a sticky table of contents grouped the same way.
   const zoneRooms = shown.size ? T(lang, "Az egész ház ára") : T(lang, "Szobánkénti árak");
@@ -3854,7 +3854,7 @@ function mealsCard(v: MealsEditorView, units: readonly EditorUnit[], cur: string
     (v.saved ? `<p class="s-flash" role="status" style="margin:0 0 12px">${T(lang, "Elmentve — a honlapon és a foglalásnál már így látszik.")}</p>` : "") +
     (anyErr ? `<div class="mcfg-err" role="alert">${T(lang, "Javítsa a pirossal jelölt mezőt — semmi nem mentődött.")}</div>` : "") +
     `<form method="POST" action="/admin/prices/meals" data-ml-form>` +
-    // ADR-XXXX: every question of the form is one tonal block.
+    // ADR-0397: every question of the form is one tonal block.
     `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Mit tartalmaz az alapár?")}</h3>` +
     `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "A szobák árai (fent) ezzel az ellátással értendők. Ami ennél több, azt felárral kínálhatja.")}</p>` +
     `<div class="ml-base" role="radiogroup">` +
@@ -4426,7 +4426,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         placeScript(opts.place)
       : "";
 
-  // ADR-XXXX: on the pricing screen the rules card is a SECTION of the „Az egész szállásra"
+  // ADR-0397: on the pricing screen the rules card is a SECTION of the „Az egész szállásra"
   // zone (big title, fields in one tonal block, reachable from the table of contents).
   const secForm = def.editor === "pricing";
   const form = locationForm || (def.fields.length && !amenityStored
@@ -4448,7 +4448,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       `</div></form>`
     : "");
 
-  // ADR-XXXX (szakasz-hierarchia): the head's meta row carries the price only — the h1
+  // ADR-0397 (szakasz-hierarchia): the head's meta row carries the price only — the h1
   // right above it already says the module's name.
   const priceNote =
     opts.priceMonthly && opts.priceMonthly > 0
@@ -4496,7 +4496,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       pendingNote
     );
   }
-  // ADR-XXXX (approved plan tenant-admin/szakasz-hierarchia, owner „E" 2026-10-21): the
+  // ADR-0397 (approved plan tenant-admin/szakasz-hierarchia, owner „E" 2026-10-21): the
   // MODULE's name is the page's h1, the back link is its kicker, price + guide share one
   // meta row. A bespoke editor that opens a zone for the rules card leaves RULES_MARK in
   // it; the generic form is set there, so the card is a section of that zone.

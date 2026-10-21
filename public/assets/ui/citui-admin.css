@@ -1620,7 +1620,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .tzp__reset{margin-top:8px;padding:0;border:0;background:none;color:var(--citui-navy-700);text-decoration:underline;font:inherit;font-size:.9em;cursor:pointer}
 #idozona .citui-btn:disabled{opacity:.45;cursor:not-allowed}
 
-/* ═══ 12. SZAKASZ-HIERARCHIA — the „E" language (ADR-XXXX, owner 2026-10-21) ═══════════════
+/* ═══ 12. SZAKASZ-HIERARCHIA — the „E" language (ADR-0397, owner 2026-10-21) ═══════════════
    Contract: assets/design-refs/tenant-admin/szakasz-hierarchia/ (README = what binds).
    The owner's complaint (with a screenshot): every section looked the same — same card,
    same head, same tone — so a long settings screen became "chaos" after a few scrolls.

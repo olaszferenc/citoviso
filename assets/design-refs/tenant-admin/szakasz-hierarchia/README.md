@@ -7,7 +7,7 @@ nem tudom, mit hogy kell nézni, mi mihez tartozik”. Kikötése: „nem az kel
 legyen, mert alapjaiban jó az egyszerű dizájn, csak ez így most túl egysíkú.”
 1. kör: négy szerkezet (A Fejezetek · B Oldal-térkép · C Harmonika · D Tónus-lépcső) → a tulaj:
 „a B és D hibrid lenne a jó”. 2. kör: három hibrid (E · F · G) → a tulaj választása: **E**.
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0224 (Linear-nyelv: szín csak jelentésre — ez a terv
+**Kapcsolódó:** ADR-0397 (ez a döntés), ADR-0224 (Linear-nyelv: szín csak jelentésre — ez a terv
 nem ír felül színt, szerkezetet ad), ADR-0021 ① (tokenek), ADR-0045 §J + ADR-0220 (a súgó-képek
 a kódból újralőve), season-datepicker és ellatas kontraktusok (a bennük kötött viselkedés marad).
 

@@ -186,7 +186,7 @@ console.log("④ böngészőben mérve: az új-időszak űrlap a kártyán belü
         if (vw === 1280) {
           // Approved plan season-datepicker: desktop keeps ONE row (name · dates · price ·
           // [minimum] · add), and a date button is wide enough for "márc. 31." (≥ 100px).
-          // ADR-XXXX (szakasz-hierarchia): the table-of-contents rail and the side-by-side room
+          // ADR-0397 (szakasz-hierarchia): the table-of-contents rail and the side-by-side room
           // cards make the FORM narrower than the old full-width card (measured: 702px with one
           // room, ~340px with two) — the approved E plan shows the room's form WRAPPED. One row
           // is claimed only where it can hold (the old full width, ≥ 900px); narrower, the

@@ -1,4 +1,4 @@
-## ADR-XXXX — Tenant-admin szakasz-hierarchia: zónák, tartalomjegyzék, tónus-tömbök (az „E” nyelv)
+## ADR-0397 — Tenant-admin szakasz-hierarchia: zónák, tartalomjegyzék, tónus-tömbök (az „E” nyelv)
 
 **Dátum:** 2026-10-21 · **Kontextus:** a tulaj képpel (az „Amit kínál” lapról): az admin „annyira plain egyszerű, hogy semennyire nem vezeti a szemét”, minden szekció ugyanúgy néz ki, egy összetett allap „pár görgetés után a szemnek teljes káoszba fullad, nem tudom, mit hogy kell nézni, mi mihez tartozik”. Kikötése: ne legyen csicsa, az egyszerű alap jó, „csak ez így most túl egysíkú”. Két §2b kör: négy szerkezet (A Fejezetek · B Oldal-térkép · C Harmonika · D Tónus-lépcső) → „a B és D hibrid lenne a jó” → három hibrid (E · F · G) → **E**. Kontraktus: `assets/design-refs/tenant-admin/szakasz-hierarchia/`. **Megtartja:** ADR-0224 (Linear: szín csak jelentésre), ADR-0021 ① (tokenek), a season-datepicker és az ellatas kontraktus viselkedését. **Érinti:** ADR-0045 §J / ADR-0220 (a modul-képernyők súgó-képei újralőve).
 
