@@ -59,6 +59,11 @@ csak a döntés nyoma). A `gen.mjs` a mock generátora (a `_drafts/` alá írt f
    felvétele”). Online foglalás: a saját fejléc-blokkja marad (booking-screen kontraktus), alatta zónák
    (naptár · **„Portálok”** · **„Szobák és beállítások”**) és tartalomjegyzék. A képek-, térkép-, nyitvatartás-
    és a többi egy-kártyás lap: szakasz-cím + tömb, tartalomjegyzék nélkül (egy szakasznak nincs térképe).
+9. **A nem modul fülek is ezt a nyelvet beszélik** (2026-10-21, a tulaj panasza „a tenant admin kinézet” volt, nem
+   csak a moduloké). A fül teste egy `.adm-pg` burok (citui-admin.css §12c; külön osztály, mert az `.adm-mod` a
+   Modulok-lista sora is): benne minden kártya szakasz. A zónák, tömbök és a tartalomjegyzék (`tocNav`/`tocScript`,
+   moduleConfigViews) fülenként kerülnek rá, a fül saját kontraktusa (Foglalások, Üzenetek, Dokumentumok, Webcím,
+   Pénztárca, Fiók, Súgó, Fotók…) által kötött viselkedés és feliratok érintetlenül.
 
 ## Képek
 

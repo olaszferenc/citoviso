@@ -6742,7 +6742,9 @@ export function adminDashboard(
         //   The Modulok tab renders its own (full) block inside the section, so it
         // is excluded here — otherwise the same block would appear twice.
         frozenBar +
-        section,
+        // ADR-0397 contract point 9: every other tab speaks the module screens' „E" language;
+        // the Modulok tab wraps its own screens (`.adm-mod`).
+        (tab === "modulok" ? section : `<div class="adm-pg">${section}</div>`),
       opts.subSummary ?? null,
       opts.now ?? new Date(),
     ) +

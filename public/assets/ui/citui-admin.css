@@ -1699,3 +1699,17 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-mod .ampick__list>.adm-blk{scroll-margin-top:104px}
 @media(min-width:1100px){.adm-mod .ampick__list>.adm-blk{scroll-margin-top:64px}}
 .adm-mod .rs-head{margin-bottom:12px}
+/* §12c — the same language on the tabs that are NOT module screens (Foglalások, Üzenetek,
+   Webcím, Fiók…; owner 2026-10-21: the complaint was „a tenant admin kinézet", not the
+   modules alone). Contract point 9. `.adm-pg` wraps every such tab's body (adminViews
+   dispatch): each card is a SECTION; zones, blocks and the table of contents are the
+   §12 classes, added per tab. A separate wrapper, because `.adm-mod` is also the
+   Modulok list's row item. */
+.adm-pg .adm-card{padding:18px 20px;border-radius:10px;margin-bottom:16px}
+.adm-pg .adm-card>.adm-card__head{border:0;padding:0;margin:0 0 14px;gap:10px;flex-wrap:wrap}
+.adm-pg .adm-card>.adm-card__head .adm-ico{color:var(--citui-ink-brand-2)}
+.adm-pg .adm-card>.adm-card__head h2{font-size:19px;font-weight:700;letter-spacing:-.015em}
+.adm-pg .adm-card.is-current,.adm-pg .adm-blk.is-current{box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+.adm-pg .adm-card.is-current>.adm-card__head .adm-ico{color:var(--citui-cyan-500)}
+.adm-pg [id]{scroll-margin-top:104px}
+@media(min-width:1100px){.adm-pg [id]{scroll-margin-top:64px}}

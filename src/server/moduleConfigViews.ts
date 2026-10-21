@@ -3572,10 +3572,10 @@ function priceWhereBox(v: PriceSiteView | null, lang: string): string {
 /** Where the generic rules form goes on a screen whose editor lays out zones (ADR-0397). */
 const RULES_MARK = "<!--cit:rules-->";
 
-type TocItem = { readonly id: string; readonly label: string } | { readonly zone: string };
+export type TocItem = { readonly id: string; readonly label: string } | { readonly zone: string };
 
 /** The sticky table of contents (ADR-0397): chips under the top bar on a phone, a rail on a wide screen. */
-function tocNav(items: readonly TocItem[], lang: string): string {
+export function tocNav(items: readonly TocItem[], lang: string): string {
   return (
     `<nav class="adm-toc" data-cit-toc aria-label="${esc(T(lang, "Ezen a lapon"))}">` +
     `<p class="adm-toc__t">${T(lang, "Ezen a lapon")}</p><ol>` +
@@ -3591,7 +3591,7 @@ function tocNav(items: readonly TocItem[], lang: string): string {
 }
 
 /** Scroll-spy for the table of contents: the section in view is marked, on the list and on itself. */
-function tocScript(): string {
+export function tocScript(): string {
   return (
     `<script>(function(){var n=document.querySelector("[data-cit-toc]");if(!n)return;` +
     `var as=[].slice.call(n.querySelectorAll("a[href^='#']")),ts=as.map(function(a){return document.getElementById(a.getAttribute("href").slice(1))}),cur=null;` +
