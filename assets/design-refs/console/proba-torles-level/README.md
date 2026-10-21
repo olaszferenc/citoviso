@@ -1,6 +1,6 @@
 # Ingyenes próba — törlés-figyelmeztető levél (7 nappal a törlés előtt) — jóváhagyott terv
 
-**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a levél egyetlen gombja is ez. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a levél egyetlen gombja is ez. (ADR-0398; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
 
 **Jóváhagyva:** 2026-10-09, tulajdonosi döntés (§2b terv-kapu, a koordinátoron át): **az „A” változat** (teljes:
 dátumok + kupon a fizetéshez; kupon nélkül az „A kupon nélkül” ág). Képek: `a-*.png`, `a-hetvege-*.png`,

@@ -1144,7 +1144,7 @@ function trialStrip(t: TrialAdminState, lang: string): string {
       ? // A2 (Elek 10-11): the discount carries its one name here too, in the invoice mail's form.
         " " + T(lang, "Ha a próba végéig megrendeli: Próba-kedvezmény (−{percent}%) az első díjból.", { percent: String(d.percent) })
       : " " + T(lang, "Ha folytatja, {percent}% kedvezményt kap az első díjból.", { percent: String(d.percent) });
-  // ADR-XXXX (owner 2026-10-21): the strip says what the end of the trial DOES before it
+  // ADR-0398 (owner 2026-10-21): the strip says what the end of the trial DOES before it
   // sells the discount — the site pauses (ADR-0344: suspended, the admin stays alive)
   // until the owner orders. Said with or without a discount; the button is „Megrendelem".
   const pause = " " + T(lang, "A próba végén a honlap szünetel, amíg nem rendeli meg.");

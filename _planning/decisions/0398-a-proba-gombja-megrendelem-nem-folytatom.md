@@ -1,4 +1,4 @@
-## ADR-XXXX — A próba gombja „Megrendelem”, nem „Folytatom”
+## ADR-0398 — A próba gombja „Megrendelem”, nem „Folytatom”
 
 **Dátum:** 2026-10-21 · **Státusz:** elfogadva (tulajdonosi döntés) · **Érinti:** ADR-0344 (④ a gomb), ADR-0354 (proba-c 2. döntés), ADR-0364 (A7)
 

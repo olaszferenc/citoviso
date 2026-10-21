@@ -1,6 +1,6 @@
 # Ingyenes próba — admin próba-sáv (A) + lejárt próba — jóváhagyott terv
 
-**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a sáv kimondja, hogy a próba végén a honlap szünetel. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a sáv kimondja, hogy a próba végén a honlap szünetel. (ADR-0398; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
 
 **Jóváhagyva:** 2026-10-09, tulajdonosi döntés (§2b terv-kapu): az admin-sáv „A” változata
 (vékony sáv minden fülön), képek: `a-A-10nap-*.png`, `a-A-3nap-*.png`, `a-A-lejart-*.png`, `a-fizetve-*.png`.
@@ -28,7 +28,7 @@ folytatáskor) ezt a kontraktust bővíti — jóváhagyva 2026-10-10, tulajdono
    **„Ha a próba végéig megrendeli: Próba-kedvezmény (−{percent}%) az első díjból.”** (A2, Elek 10-11: a kedvezmény egy neve, a számla-levél alakjában) A C előtti próba kuponja a régi mondatát
    tartja: „Ha folytatja, {percent}% kedvezményt kap az első díjból.” Kedvezmény nélkül a mondat elmarad — nem
    ígérünk olyat, amit a pénztár nem adna.
-5. **Egyetlen gomb:** **„Megrendelem”** → `/p/<token>/folytatas` (ADR-0344 ④; 2026-10-21-ig „Folytatom”, ADR-XXXX). A gomb előtt,
+5. **Egyetlen gomb:** **„Megrendelem”** → `/p/<token>/folytatas` (ADR-0344 ④; 2026-10-21-ig „Folytatom”, ADR-0398). A gomb előtt,
    a kedvezmény-mondat ELŐTT (kedvezmény nélkül is) a sáv kimondja, mit tesz a próba vége:
    **„A próba végén a honlap szünetel, amíg nem rendeli meg.”** (ADR-0344: lejáratkor a site `suspended`, az admin él).
 6. **Mobilon** (≤520px konténer) a haladás-csík eltűnik, a gomb teljes szélességű.

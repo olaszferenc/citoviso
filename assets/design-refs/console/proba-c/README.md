@@ -1,6 +1,6 @@
 # Próba „C” — egy kedvezmény, egy határidő + névváltás (jóváhagyott terv)
 
-**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a sáv kimondja, hogy a próba végén a honlap szünetel. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a sáv kimondja, hogy a próba végén a honlap szünetel. (ADR-0398; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
 
 **Jóváhagyva:** 2026-10-10, tulajdonosi döntés (§2b terv-kapu), a koordináló sessionön át.
 Döntések: 1 = A (a határidő az ár-sorban, szalag NINCS) · 2 = „Folytatom” (2026-10-21 óta „Megrendelem”, lásd fent) · 3 = A (a próba-levélből
