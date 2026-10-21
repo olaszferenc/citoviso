@@ -18,12 +18,12 @@ Minden szobának saját kártyája van.
 A képernyő címe a modul neve: **„Árak, szezonok”**. Fölötte a **„Vissza a modulokhoz”** link, a cím
 alatt a modul díja és az **„Útmutató ehhez a képernyőhöz”** gomb (ez a súgó).
 
-A bevezető jegyzet alatt egy sor kis gomb áll, **„Ezen a lapon”** címmel: **„Hol látják a vendégek?”**,
-a szobái neve, **„Ellátás”**, **„Szabályok”**. Ez a sor görgetés közben is a képernyő tetején marad;
-egy gombra koppintva a lap arra a részre ugrik, és mindig az a gomb van kiemelve, amelyik résznél
-éppen jár. Számítógépen ugyanez a lista a jobb szélen áll.
+A bevezető jegyzet alatt egy sor kis gomb áll: **„Hol látják a vendégek?”**, a szobái neve,
+**„Ellátás”**, **„Szabályok”**. Ez a sor görgetés közben is a képernyő tetején marad; egy gombra
+koppintva a lap arra a részre ugrik, és mindig az a gomb van kiemelve, amelyik résznél éppen jár.
+Számítógépen ugyanez a lista a jobb szélen áll, ott **„Ezen a lapon”** cím is van fölötte.
 
-A lap részei csoportokba vannak rendezve, mindegyik csoport egy kis, vonallal aláhúzott címet visel:
+A lap részei csoportokba vannak rendezve, mindegyik csoport egy kis címet visel, amely után egy vonal fut a lap széléig:
 **„Szobánkénti árak”** (mellette, hány szoba) — itt vannak a szobakártyák; és **„Az egész szállásra”**
 — itt az Ellátás és a Szabályok. Ha a házat csak egyben adja ki, az első csoport címe **„Az egész ház ára”**.
 
