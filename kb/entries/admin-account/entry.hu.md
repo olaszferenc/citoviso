@@ -4,11 +4,16 @@ title: Fiók — e-mail-cím és jelszó kezelése
 audience: tenant
 category: account
 anchors: admin.account
-updated: 2026-10-15
+updated: 2026-10-21
 ---
 
 A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, a szállása
 időzónáját, és — a lap alján — a honlapján közzétett jogi adatait (impresszum, adatkezelési tájékoztató).
+
+A lap két részből áll: a **„Belépés és értesítés”** alatt a saját belépési adatai vannak, **„A szállás
+adatai”** alatt az időzóna és a jogi adatok. Telefonon a lap tetején lévő gombsorral (**Fiók · Szállás
+időzónája · Jogi adatok**) egy koppintással a kívánt részhez ugorhat; gépen ugyanez a lista jobb oldalt áll,
+**„Ezen a lapon”** cím alatt, és görgetés közben is látható marad.
 
 ![Képernyőkép: a Fiók fül telefonon](assets/hu/screen.png)
 

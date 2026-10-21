@@ -18,7 +18,7 @@ import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import { moduleCounts, type TenantModule, type TenantModuleView } from "../tenant/modules.js";
-import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
+import { MODCFG_STYLE, hasSettingsScreen, tocNav, tocScript, type TocItem } from "./moduleConfigViews.js";
 import { bookingsSection, hoursLeft } from "./bookingViews.js";
 import type { InboxItem } from "../booking/requests.js";
 import type { BookingsTabData } from "./bookingViews.js";
@@ -3971,7 +3971,7 @@ function trafficSection(r: TrafficReport, lang: string): string {
       v: `<em>${T(lang, "{n} vendég", { n: String(r.visitors) })}</em>`,
       c: `<em>${r.contacts}</em>`,
     })}</p>` +
-    `<div class="adm-trows">${rows}</div>` +
+    `<div class="adm-blk"><div class="adm-trows">${rows}</div></div>` +
     `<p class="adm-thint">${ratio}${hosts}${T(lang, "A keresőrobotokat nem számoljuk bele.")}</p>` +
     `</div>`
   );
@@ -4455,7 +4455,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     restartIn +
     list +
     `</form>` +
-    `<form method="GET" action="/admin" class="adm-down">` +
+    `<form method="GET" action="/admin" class="adm-down adm-blk">` +
     `<input type="hidden" name="tab" value="webcim">` +
     restartIn +
     `<div class="citui-field"><label class="citui-label" for="dcheck">${T(lang, "Vagy írja be a saját ötletét")}</label>` +
@@ -4505,6 +4505,7 @@ const TRAFFIC_STYLE =
   `.adm-trow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;` +
   `padding:11px 13px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}` +
   `.adm-trow b{font-family:var(--citui-font-display);font-size:1.05rem}` +
+  `.adm-blk .adm-trow{background:var(--citui-panel)}` +
   `.adm-thint{margin-top:14px;font-size:.8rem;color:var(--citui-muted);line-height:1.55}` +
   `.adm-tempty{border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);` +
   `padding:22px 16px;text-align:center}` +
@@ -4529,7 +4530,7 @@ const DOMAIN_STYLE =
   `transition:var(--citui-transition)}` +
   `.adm-dopt:hover{border-color:var(--citui-cyan-500)}` +
   `.adm-dopt:has(input:checked){border-color:var(--citui-cyan-500);` +
-  `background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-white))}` +
+  `background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-panel))}` +
   `.adm-dopt.is-off{opacity:.55;cursor:not-allowed}` +
   `.adm-dopt.is-off:hover{border-color:var(--citui-line)}` +
   `.adm-dopt input{width:20px;height:20px;flex:none;accent-color:var(--citui-cyan-500)}` +
@@ -4542,6 +4543,7 @@ const DOMAIN_STYLE =
   `.adm-dchip--unknown{background:color-mix(in srgb, var(--citui-warn) 15%, transparent);color:var(--citui-warn)}` +
   `.adm-down{border-top:1px solid var(--citui-line);padding-top:15px;margin-top:4px}` +
   `.adm-down__row{display:flex;gap:8px}.adm-down__row .citui-input{flex:1;min-width:0}` +
+  `.adm-down.adm-blk{border-top:0;padding-top:12px;margin-top:14px}.adm-down.adm-blk .citui-field{margin-bottom:0}` +
   `.adm-dmsg{margin-top:9px;font-size:.86rem;padding:9px 11px;border-radius:var(--citui-radius-sm)}` +
   `.adm-dmsg--bad{background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)}` +
   `.adm-dterms{background:var(--citui-surface-2);border:1px solid var(--citui-line);` +
@@ -6000,11 +6002,11 @@ function legalSection(legal: LegalAdminData, lang = "hu"): string {
 
   return (
     `<div class="adm-card" id="jogi-adatok">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("doc")}</span>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("docs")}</span>` +
     `<h2>${T(lang, "Jogi adatok")}</h2>${helpLink("admin.legal", lang)}</div>` +
     `<p class="adm-lead">${T(lang, "Ezek az adatok jelennek meg a honlapja Impresszum és Adatkezelési tájékoztató oldalán. A megrendeléskor megadott adatokból töltöttük ki előre — ha eltér, itt javíthatja.")}</p>` +
     warning +
-    `<form method="POST" action="/admin/legal">` +
+    `<form method="POST" action="/admin/legal" class="adm-blk">` +
     field("legal_name", T(lang, "Név vagy cégnév"), legal.who.legalName) +
     field("address", T(lang, "Székhely (irányítószám, település, utca, házszám)"), legal.who.address) +
     field("tax_number", T(lang, "Adószám"), legal.who.taxNumber) +
@@ -6037,8 +6039,9 @@ function legalSection(legal: LegalAdminData, lang = "hu"): string {
 
 function accountSection(session: TenantSession, lang = "hu"): string {
   return (
-    `<div class="adm-card">` +
+    `<div class="adm-card" id="belepes">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("account")}</span><h2>${T(lang, "Fiók")}</h2>${helpLink("admin.account", lang)}</div>` +
+    `<div class="adm-blk">` +
     `<div class="citui-field"><label class="citui-label">${T(lang, "Felhasználónév (belépéshez)")}</label>` +
     `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
     // 2026-10-15: the address to come back to — an owner who lost the e-mail finds it here.
@@ -6049,9 +6052,9 @@ function accountSection(session: TenantSession, lang = "hu"): string {
     `<div class="citui-field"><label class="citui-label" for="contact_email">${T(lang, "Kommunikációs e-mail (ide küldünk értesítést)")}</label>` +
     `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
     `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "E-mail mentése")}</button>` +
-    `</form>` +
-    `<form method="POST" action="/admin/password" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--citui-line)">` +
-    `<h3 style="font-size:1rem;margin:0 0 10px;font-family:var(--citui-font-display)">${T(lang, "Jelszó módosítása")}</h3>` +
+    `</form></div>` +
+    `<form method="POST" action="/admin/password" class="adm-blk">` +
+    `<h3 class="adm-blk__h">${T(lang, "Jelszó módosítása")}</h3>` +
     `<div class="citui-field"><label class="citui-label" for="pw_current">${T(lang, "Jelenlegi jelszó")}</label>` +
     `<input class="citui-input" id="pw_current" name="current" type="password" autocomplete="current-password" required></div>` +
     `<div class="citui-field"><label class="citui-label" for="pw_next">${T(lang, "Új jelszó (min. 8 karakter)")}</label>` +
@@ -6077,10 +6080,44 @@ function zoneSection(zone: ZonePickerData, lang = "hu", error = false): string {
     (error
       ? `<div class="adm-saved" role="alert">${ic("alert", 18)} ${T(lang, "Nem mentettük: válassz egy időzónát a listából.")}</div>`
       : "") +
-    `<form method="POST" action="/admin/timezone">` +
+    `<form method="POST" action="/admin/timezone" class="adm-blk">` +
     zonePickerHtml("adm-tz", zone, lang) +
     `<button class="citui-btn citui-btn--primary" type="submit" style="margin-top:12px">${T(lang, "Időzóna mentése")}</button>` +
     `</form></div>`
+  );
+}
+
+/**
+ * ADR-0397 point 9 — the Fiók tab in the „E" language: two zones (the owner's login · the
+ * accommodation's own data) and a table of contents over the three cards. The cards, their
+ * labels and their forms are unchanged; only the structure is laid over them.
+ */
+function accountPage(
+  session: TenantSession,
+  zone: ZonePickerData | null,
+  zoneError: boolean,
+  legal: LegalAdminData | null,
+  lang = "hu",
+): string {
+  const zLogin = T(lang, "Belépés és értesítés");
+  const zPlace = T(lang, "A szállás adatai");
+  const toc: TocItem[] = [{ zone: zLogin }, { id: "belepes", label: T(lang, "Fiók") }];
+  if (zone || legal) toc.push({ zone: zPlace });
+  if (zone) toc.push({ id: "idozona", label: T(lang, "Szállás időzónája") });
+  if (legal) toc.push({ id: "jogi-adatok", label: T(lang, "Jogi adatok") });
+  return (
+    `<div class="adm-mcfg">` +
+    tocNav(toc, lang) +
+    `<div class="adm-mcfg__body">` +
+    `<div class="adm-zone"><h2 class="adm-zone__h">${esc(zLogin)}</h2>${accountSection(session, lang)}</div>` +
+    (zone || legal
+      ? `<div class="adm-zone"><h2 class="adm-zone__h">${esc(zPlace)}</h2>` +
+        (zone ? zoneSection(zone, lang, zoneError) : "") +
+        (legal ? legalSection(legal, lang) : "") +
+        `</div>`
+      : "") +
+    `</div></div>` +
+    tocScript()
   );
 }
 
@@ -6687,9 +6724,7 @@ export function adminDashboard(
           : tab === "penztarca"
             ? walletSection(opts.wallet ?? null, opts.subscription ?? null, opts.walletFlash ?? null, lang)
           : tab === "fiok"
-            ? accountSection(session, lang) +
-              (opts.zone ? zoneSection(opts.zone, lang, opts.zoneError ?? false) : "") +
-              (opts.legal ? legalSection(opts.legal, lang) : "")
+            ? accountPage(session, opts.zone ?? null, opts.zoneError ?? false, opts.legal ?? null, lang)
             : overviewSection(
                 content,
                 statusLabel[shownStatus] ?? content.status,

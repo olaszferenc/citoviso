@@ -1679,6 +1679,8 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-blk{background:var(--citui-surface-2);border-radius:8px;padding:12px 14px 14px;margin:0 0 12px}
 .adm-blk>.adm-blk__h,.adm-blk>.mcfg-sub,.adm-blk>form>.mcfg-sub{margin:0 0 10px;font:700 11.5px/1.4 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-ink-brand-2)}
 .adm-blk .citui-input,.adm-blk .citui-select,.adm-blk .citui-textarea{background:var(--citui-panel)}
+.adm-blk .tzp__q,.adm-blk .tzp__s{background:var(--citui-panel)}
+.adm-blk .tzp__reset{color:var(--citui-ink-brand-2)}
 .adm-blk .unit-row{padding-top:0}
 .adm-blk--plain{padding-bottom:4px}
 /* Screen-reader-only text (the field label a block title already says out loud). */

@@ -4,13 +4,13 @@ title: Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján
 audience: tenant
 category: account
 anchors: admin.legal
-updated: 2026-09-08
+updated: 2026-10-21
 ---
 
 A honlapjának két jogi oldala van: az **Impresszum** és az **Adatkezelési tájékoztató**.
 Mindkettőt mi állítjuk elő és tartjuk karban — Önnek csak az adatait kell megadnia, azokat
-pedig a **Fiók** fül **„Jogi adatok”** részében kezeli — telefonon ehhez görgessen a fiókadatok
-alá.
+pedig a **Fiók** fül **„Jogi adatok”** részében kezeli. A fül tetején, a gombsorban koppintson a
+**„Jogi adatok”** gombra, és a lap odaugrik — görgetéssel is megtalálja, a fiókadatok alatt.
 
 ![Képernyőkép: a Jogi adatok panel telefonon](assets/hu/screen.png)
 
