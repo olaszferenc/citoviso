@@ -10,6 +10,9 @@
 ## Módosított fájlok
 `public/assets/ui/citui-admin.css` · `src/server/moduleConfigViews.ts` · `src/server/adminViews.ts` · `src/i18n/catalog.json` · `scripts/price-where-check.mts` · `scripts/price-on-request-check.mts` · `scripts/season-year-price-check.mts` · `kb/entries/*/assets/hu/*.png` · `assets/design-refs/tenant-admin/szakasz-hierarchia/*` · `_planning/decisions/XXXX-tenant-admin-szakasz-hierarchia-az-e-nyelv.md` · `MEMORY.md`
 
+## Élesítés
+- 2026-10-21 11:33: `deploy-prod.sh 5d8ba2cb --go` → prod/20261021-1133 (előtte c8b227e8); száraz futás tiszta, migráció nincs, időzítők egyeznek, GATE 5 fordítás teljes (en 5428/5428, KB 24/24), kanári zöld. KB-kapu: tudasbazis-or 3 kör (FLAG→FLAG→PASS), token a c8b227e8..5d8ba2cb tartományra.
+
 ## Nyitott
 - A „Folytatom” gomb a próba-sávon (tulaj: nem egyértelmű) — javaslat kiment, döntésre vár (a proba-admin-sav kontraktus 5. pontját és 4 KB-bejegyzést érint).
 - A többi összetett modul-lap (Szobák, Online foglalás, Amit kínál) ugyanezt a réteget kapja a következő körben.
