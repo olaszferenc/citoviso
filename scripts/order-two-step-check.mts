@@ -102,12 +102,13 @@ const PROBE = `(function () {
     h2: ((document.querySelector(".cit-cfg-head h2") || {}).textContent || "").trim(),
     rightsInPay: !!document.querySelector(".cit-cfg-co-act .cit-cfg-rights"),
     full: pr.left <= 1 && pr.top <= 1 && pr.right >= innerWidth - 1 && pr.bottom >= innerHeight - 1,
+    rect: [Math.round(pr.left), Math.round(pr.top), Math.round(pr.right), Math.round(pr.bottom), innerWidth, innerHeight],
   };
 })()`;
 type Probe = {
   addr: boolean; billing: boolean; presets: boolean; rowsVis: boolean; expanded: string | null; dsec: boolean;
   pill: boolean; period3: boolean; mini: boolean; nextHit: boolean; backHit: boolean; prog: string; h2: string;
-  rightsInPay: boolean; full: boolean;
+  rightsInPay: boolean; full: boolean; rect: number[];
 };
 
 async function audit(browser: Browser, file: string): Promise<string[]> {
@@ -124,6 +125,15 @@ async function audit(browser: Browser, file: string): Promise<string[]> {
     await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 8000 });
     // evaluate(), not click(): no auto-scroll anywhere in this guard
     await page.evaluate(`document.querySelector(".cit-cfg-launch").click()`);
+    // The panel slides in; under a loaded machine (the full gate suite, 2026-10-21: twice red,
+    // alone green) 450 ms was not the end of the animation. Wait for the panel's rectangle to
+    // STOP MOVING (two polls alike) within a bound — the full-screen claim below stays as strict.
+    await page.waitForFunction(
+      `(function(){var p=document.querySelector(".cit-cfg-panel");if(!p)return false;var r=p.getBoundingClientRect();` +
+        `var k=Math.round(r.top)+"|"+Math.round(r.bottom)+"|"+Math.round(r.left);var same=r.height>0&&window.__citPanelKey===k;window.__citPanelKey=k;return same})()`,
+      undefined,
+      { timeout: 8000, polling: 150 },
+    );
     await page.waitForTimeout(450);
     // The short (sideways) panel scrolls as ONE column; the buyer scrolls it to the
     // foot. Everywhere else the foot is pinned and must be reachable untouched.
@@ -145,7 +155,7 @@ async function audit(browser: Browser, file: string): Promise<string[]> {
     f(!p.pill, "az 1. lépésen ott a Havi|Éves váltó (a fizetés-lapra tartozik)");
     f(/^1\. \/ 3/.test(p.prog), `a haladásjelző nem „1. / 3 …” („${p.prog}”)`);
     f(p.h2 === "Válasszon csomagot", `az 1. lépés címe: „${p.h2}”`);
-    if (vp.sheet) f(p.full, "telefonon a panel nem teljes képernyős");
+    if (vp.sheet) f(p.full, `telefonon a panel nem teljes képernyős (${p.rect.join(",")})`);
     await toFoot();
     p = (await page.evaluate(PROBE)) as Probe;
     f(p.mini, "az 1. lépésen nincs futó összeg");
