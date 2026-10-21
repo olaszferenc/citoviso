@@ -1176,19 +1176,44 @@
   font-size: 11.5px;
   color: #9aa4b2;
 }
+/* Owner 2026-10-21 („alig látható, mennyibe kerül a végén, egybeolvad”): the PAYABLE sum is
+ * the bar's largest, boldest element; the struck list price is small and faint before it (it
+ * may drop to its own line on a narrow phone); the unit sticks to the sum, smaller; the offer
+ * sentence sits apart under them. Colours are the panel's existing palette — no new literal. */
 .cit-cfg-mini__amt {
-  font-size: 17px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 0;
+  margin-top: 1px;
+  font-size: 22px;
+  line-height: 1.15;
   color: #e7ebf1;
+}
+.cit-cfg-mini__amt s {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #9aa4b2;
+  white-space: nowrap;
+}
+.cit-cfg-mini__due {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 .cit-cfg-mini__amt small {
-  font-size: 12px;
-  font-weight: 400;
+  font-size: 12.5px;
+  font-weight: 500;
   color: #9aa4b2;
 }
 .cit-cfg-mini__offer {
   display: block;
+  margin-top: 4px;
   font-size: 11.5px;
+  line-height: 1.3;
   color: #ffd889;
 }
 .cit-cfg-mini__offer:empty {

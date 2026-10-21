@@ -1144,13 +1144,17 @@ function trialStrip(t: TrialAdminState, lang: string): string {
       ? // A2 (Elek 10-11): the discount carries its one name here too, in the invoice mail's form.
         " " + T(lang, "Ha a próba végéig megrendeli: Próba-kedvezmény (−{percent}%) az első díjból.", { percent: String(d.percent) })
       : " " + T(lang, "Ha folytatja, {percent}% kedvezményt kap az első díjból.", { percent: String(d.percent) });
+  // ADR-XXXX (owner 2026-10-21): the strip says what the end of the trial DOES before it
+  // sells the discount — the site pauses (ADR-0344: suspended, the admin stays alive)
+  // until the owner orders. Said with or without a discount; the button is „Megrendelem".
+  const pause = " " + T(lang, "A próba végén a honlap szünetel, amíg nem rendeli meg.");
   const pct = Math.min(100, Math.max(4, Math.round(((t.totalDays - Math.max(n, 0)) / t.totalDays) * 100)));
   return (
     `<div class="adm-trial${n <= TRIAL_WARN_DAYS ? " adm-trial--warn" : ""}" data-trial-strip role="status">` +
-    `<div class="adm-trial__in"><span class="adm-trial__t">${head}${offer}</span>` +
+    `<div class="adm-trial__in"><span class="adm-trial__t">${head}${pause}${offer}</span>` +
     `<span class="adm-trial__meter" aria-hidden="true"><i style="width:${pct}%"></i></span>` +
     (t.continueUrl
-      ? `<a class="citui-btn citui-btn--primary adm-trial__go" href="${esc(t.continueUrl)}">${T(lang, "Folytatom")}</a>`
+      ? `<a class="citui-btn citui-btn--primary adm-trial__go" href="${esc(t.continueUrl)}">${T(lang, "Megrendelem")}</a>`
       : "") +
     `</div></div>`
   );
@@ -1182,7 +1186,7 @@ function trialLapsedBlock(t: TrialAdminState, lang: string, compact: boolean, gu
       ? `<p class="adm-trial__tip" data-trial-rename>${T(lang, "<b>Tetszik a cím?</b> {host} — folytatáskor ingyen megváltoztathatja.", { host: esc(host) })}</p>`
       : "") +
     (t.continueUrl
-      ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(t.continueUrl)}" data-trial-go>${T(lang, "Folytatom — fizetés")}</a>`
+      ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(t.continueUrl)}" data-trial-go>${T(lang, "Megrendelem — fizetés")}</a>`
       : "") +
     `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A fizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
   const kept = compact
@@ -1245,7 +1249,7 @@ function trialModulesCard(t: TrialAdminState, lang: string): string {
  * A7 (Elek 10-11) — the Foglalások tab of a trial whose package has no online booking. The
  * generic „…ha a Foglalás modul be van kapcsolva” left the trialist asking „hát nem minden be
  * van kapcsolva?”, while the guests' enquiries sat under Üzenetek. Says the module is not in
- * the trial's package, where the enquiries are, and the existing „Folytatom” way to add it.
+ * the trial's package, where the enquiries are, and the existing „Megrendelem” way to add it.
  */
 function trialNoBookingCard(t: TrialAdminState, lang: string): string {
   const head = t.pkg?.label
@@ -1254,11 +1258,11 @@ function trialNoBookingCard(t: TrialAdminState, lang: string): string {
   return (
     `<section class="adm-card adm-trial-keep" data-trial-nobooking>` +
     `<div class="adm-trial-keep__t"><h2>${T(lang, "Foglalások")}</h2>` +
-    `<p>${head} ${T(lang, "A vendégek érdeklődését az Üzenetek között találja. A foglalási naptárt a „Folytatom” gombbal adhatja hozzá.")}</p></div>` +
+    `<p>${head} ${T(lang, "A vendégek érdeklődését az Üzenetek között találja. A foglalási naptárt a „Megrendelem” gombbal adhatja hozzá.")}</p></div>` +
     `<div class="adm-trial-keep__acts">` +
     `<a class="citui-btn citui-btn--ghost adm-trial-keep__go" href="/admin?tab=uzenetek&amp;t=foglalas">${T(lang, "Érdeklődések az Üzenetekben")}</a>` +
     (t.continueUrl
-      ? `<a class="citui-btn citui-btn--primary adm-trial-keep__go" href="${esc(t.continueUrl)}">${T(lang, "Folytatom — csomag és modulok")}</a>`
+      ? `<a class="citui-btn citui-btn--primary adm-trial-keep__go" href="${esc(t.continueUrl)}">${T(lang, "Megrendelem — csomag és modulok")}</a>`
       : "") +
     `</div></section>`
   );
@@ -1269,7 +1273,7 @@ function trialNoBookingCard(t: TrialAdminState, lang: string): string {
  * approved 2026-10-10). Every module is on and nothing is billed, so the tab carries no
  * prices and no per-row buying (the old per-row „Hozzáadom" was a dead end: a trial has no
  * subscription to add to). ONE card says what the button does — the SAME full configurator
- * the strip's „Folytatom" opens — and the list below only states what is on. A module with
+ * the strip's „Megrendelem" opens — and the list below only states what is on. A module with
  * a settings screen keeps its „Beállítás" link: the trial is for setting the site up.
  */
 function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string): string {
@@ -1312,7 +1316,7 @@ function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string)
     `<section class="adm-card adm-trial-keep" data-trial-keep>` +
     `<div class="adm-trial-keep__t"><h2>${T(lang, "Modulok a próbában")}</h2><p>${text}</p></div>` +
     (t.continueUrl
-      ? `<a class="citui-btn citui-btn--primary adm-trial-keep__go" href="${esc(t.continueUrl)}">${T(lang, "Folytatom — csomag és modulok")}</a>`
+      ? `<a class="citui-btn citui-btn--primary adm-trial-keep__go" href="${esc(t.continueUrl)}">${T(lang, "Megrendelem — csomag és modulok")}</a>`
       : "") +
     `</section>` +
     (rows ? `<section class="adm-card"><ul class="adm-trial-mods__list adm-trial-keep__list">${rows}</ul></section>` : "")
@@ -4892,7 +4896,7 @@ function overviewSection(
     (suspended && lapsedTrial
       ? // ADR-0344 C2c: a LAPSED TRIAL is paused, not in debt — „Rendezze a díjat" would
         // be false (a trial owes nothing). The row reuses the approved paused-block
-        // wording (proba-admin-sav README §7) and its way out, „Folytatom — fizetés".
+        // wording (proba-admin-sav README §7) and its way out, „Megrendelem — fizetés".
         `<li class="pending" data-todo="trial-lapsed"><i class="adm-todo__st"></i><span>` +
         `<strong>${T(lang, "A honlapja szünetel — a próba {date} lejárt", { date: esc(formatDayShortWeekday(lapsedTrial.untilIso, lang)) })}</strong> ` +
         // ADR-0345: the kept data has a deadline — same sentence as the paused block, no open-ended promise.
@@ -4902,7 +4906,7 @@ function overviewSection(
           : T(lang, "Ha nem folytatja, ezeket {date} véglegesen töröljük — előtte levélben szólunk.", { date: esc(formatDayOn(lapsedTrial.purgeIso, lang)) })) +
         `</span>` +
         `<em class="adm-todo__m">${
-          lapsedTrial.continueUrl ? `<a href="${esc(lapsedTrial.continueUrl)}">${T(lang, "Folytatom — fizetés")}</a>` : ""
+          lapsedTrial.continueUrl ? `<a href="${esc(lapsedTrial.continueUrl)}">${T(lang, "Megrendelem — fizetés")}</a>` : ""
         }</em></li>`
       : todoItem(
           live,
@@ -6614,7 +6618,7 @@ export function adminDashboard(
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.
                   // proba-c README 3 (Elek3 K4): a RUNNING trial has no single purchase on
-                  // this tab — its way on is „Folytatom — csomag és modulok".
+                  // this tab — its way on is „Megrendelem — csomag és modulok".
                   (opts.multilang && opts.trial?.status !== "active"
                     ? (opts.multilangError
                         ? `<div class="adm-saved" role="alert">${ic("alert", 18)} ${esc(opts.multilangError)}</div>`

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-proba-gombja-megrendelem-nem-folytatom.md) — A próba gombja „Megrendelem”, nem „Folytatom”
 - [ADR-0397](decisions/0397-tenant-admin-szakasz-hierarchia-zonak.md) — Tenant-admin szakasz-hierarchia: zónák, tartalomjegyzék, tónus-tömbök (az „E” nyelv)
 - [ADR-0396](decisions/0396-allo-telefonon-a-pirula-par-egy-also-rogzitett.md) — Álló telefonon a pirula-pár egy alsó, rögzített sávon áll, nem lebeg a hős fölött
 - [ADR-0395](decisions/0395-egyszerusitett-rendeles-harom-lepes-egy.md) — Egyszerűsített rendelés: három lépés, egy felajánlott saját cím, feltételek egy kis ablakban (2026-10-19)

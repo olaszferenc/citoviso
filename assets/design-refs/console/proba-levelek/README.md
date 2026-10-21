@@ -1,5 +1,7 @@
 # Ingyenes próba — levelek (T−3, T−1, próbás belépő-levél) — jóváhagyott terv
 
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a levél egyetlen gombja is ez. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+
 **Jóváhagyva:** 2026-10-09, tulajdonosi döntés (§2b terv-kapu): „A levelek szövege JÓVÁHAGYVA” —
 T−3 e-mail (`t3-*.png`), T−1 e-mail (`t1-*.png`), próbás belépő-levél (`belepo-*.png`).
 **Vázlat:** `proba-levelek.html` (levélváltó + Mobil 390px / Asztali váltó); a `level-*.html` a VALÓDI
@@ -24,7 +26,7 @@ T−3 e-mail (`t3-*.png`), T−1 e-mail (`t1-*.png`), próbás belépő-levél (
    alakú), majd ha van próba-kupon: **„Ha folytatná, a próbához kapott kedvezménnyel teheti: {percent} az első díjból, {until}-ig.”**
    Kupon nélkül ez a bekezdés és a két kupon-sor elmarad — kedvezményt nem ígérünk, ami nincs.
 4. **Adat-panel:** „A próba vége” (2026. okt. 22. (csütörtök)) · „Kedvezmény” · „A kedvezmény érvényes”.
-5. **Egyetlen gomb:** **„Folytatom”** → `/p/<token>/folytatas` (ADR-0344 ④). Link nélkül a levél nem megy ki
+5. **Egyetlen gomb:** **„Megrendelem”** → `/p/<token>/folytatas` (ADR-0344 ④). Link nélkül a levél nem megy ki
    (a küldő hangosan bukik), mert gomb nélkül a levél célja veszne el.
 6. **Megnyugtató zárás:** **„Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk.”** + mi marad meg,
    HATÁRIDŐVEL (ADR-0345, ÁSZF 1.4; tulaj-döntés 2026-10-09): **„A szerkesztő felülete és minden feltöltött adata a próbaidő végétől számított 90 napig megmarad; ha addig fizet, a honlap azonnal visszakapcsol.”**

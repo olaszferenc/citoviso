@@ -4,7 +4,7 @@ title: Ingyenes próba — a teljes út az indulástól a folytatásig, a törl�
 audience: operator
 category: lead-path
 anchors: console.free_trial
-updated: 2026-10-11
+updated: 2026-10-21
 ---
 
 Az ingyenes próba a **rendelés alternatívája**: a kiküldött tervet megnyitó lead kártya és fizetés
@@ -20,7 +20,7 @@ konzolon, és mit kell tenned, ha a rendszer riaszt.
   mezője; mentés előtt minden modul), és belépő-levelet kap a kezelőfelületéhez. A próba-űrlap, a
   belépő-levél és a próbázó Modulok füle ezt a csomagot nevezi meg a benne lévő modulokkal; „minden
   funkció” csak akkor áll ott, ha a próba tényleg minden modult ad. Ha a csomagban nincs online foglalás,
-  a próbázó Foglalások füle ezt kimondja, és a „Folytatom” gombra mutat.
+  a próbázó Foglalások füle ezt kimondja, és a „Megrendelem” gombra mutat.
 - Régi (HTML-másolat) tervből próba nem indítható: az ilyen terv lapja nem kínál próbát.
 - Számla nem készül, előfizetés nem születik, terhelés nincs. Egy szállás (lead) **egyszer** próbázhat:
   aki már próbázott vagy vásárolt, annak a lapja nem kínál új próbát.
@@ -72,7 +72,7 @@ napja után legfeljebb kb. egy napig az oldal még él.
 
 ## Folytatás = fizetés
 
-A próbázó a kezelőfelületén a „Folytatom” (lejárt próbánál „Folytatom — fizetés”) gombbal, vagy
+A próbázó a kezelőfelületén a „Megrendelem” (lejárt próbánál „Megrendelem — fizetés”) gombbal, vagy
 a levél gombjával a `/p/<token>/folytatas` címre jut: a megszokott rendelő panel a próba kuponjával.
 Ez ugyanaz az első fizetés, mint egy rendelésnél:
 

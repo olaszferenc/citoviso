@@ -1,7 +1,7 @@
 // ADR-0344 C2c — what the tenant admin shows about a card-less free trial (approved plan
 // "A", owner 2026-10-09; contract: assets/design-refs/console/proba-admin-sav/).
 //
-//   · active    → a thin strip on EVERY tab: days left, the end date, the discount, „Folytatom";
+//   · active    → a thin strip on EVERY tab: days left, the end date, the discount, „Megrendelem";
 //                 warn tone from 3 days before the end. Not dismissable.
 //   · lapsed    → the paused-site block (the trial has no subscription row, so the
 //                 subscription freeze block never renders for it — measured 2026-10-09:
@@ -52,7 +52,7 @@ export interface TrialAdminState {
   /**
    * ADR-0364 (B1/A7): what this trial was granted, in words (trial/package.ts — its
    * trial_grant rows). The Modulok tab says „minden modul” only when `everything`; a tab of a
-   * module the trial lacks (Foglalások) says so and points to „Folytatom”.
+   * module the trial lacks (Foglalások) says so and points to „Megrendelem”.
    */
   readonly pkg: TrialPackage;
 }

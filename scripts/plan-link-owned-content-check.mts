@@ -15,7 +15,7 @@
 //      public server (no root-relative /uploads/ left — the console does not serve them);
 //      the tenant-host-only legal links are not on it;
 //   ② lapsed trial (lapseExpiredTrials): the same edited content under the „szünetel" bar
-//      with the „Folytatom — fizetés" action.
+//      with the „Megrendelem — fizetés" action.
 //   ③ ÚJ-B1 (Elek, 2026-10-12): in both states EVERY inline <script> of the page compiles.
 //      The legal-link cut used to run over the embedded cit-runtime too and removed
 //      `<a href="/adatvedelem">…</a>` from a JS string literal — the runtime died on a
@@ -229,8 +229,8 @@ try {
   const lapsed = await get(`/p/${token}`);
   contentLegs("lejárt próba", lapsed);
   check(
-    "lejárt próba: „szünetel” + Folytatom → /p/<t>/folytatas",
-    lapsed.body.includes("a honlapja szünetel") && lapsed.body.includes(`href="/p/${token}/folytatas">Folytatom — fizetés</a>`),
+    "lejárt próba: „szünetel” + Megrendelem → /p/<t>/folytatas",
+    lapsed.body.includes("a honlapja szünetel") && lapsed.body.includes(`href="/p/${token}/folytatas">Megrendelem — fizetés</a>`),
   );
 } catch (e) {
   failures++;

@@ -3563,9 +3563,15 @@
     if (!miniAmt) return;
     // L3-2 (contract order-step1-offer, owner „B” 2026-10-03): with an offer, step 1 strikes the
     // SAME list amount the step-2 card strikes, so the two steps cannot name two savings.
+    // Owner 2026-10-21: the struck list price and the payable sum used to share one size and
+    // one line, so the figure actually charged "melted into" the bar. The payable sum and its
+    // unit now ride in their own `.cit-cfg-mini__due` span — the bar's largest, boldest element
+    // (CSS) — while the struck list price stays small and faint before it. The `<s>` and the
+    // digit order are untouched: the guards read `.cit-cfg-mini__amt s` and the text's numbers.
     miniAmt.innerHTML =
       (OFFER ? "<s>" + esc(fmt(listCharge())) + "</s> " : "") +
-      esc(fmt(currentCharge())) + " <small>" + esc(period === "annual" ? tr("/ év") : tr("/ hó")) + "</small>";
+      '<span class="cit-cfg-mini__due">' + esc(fmt(currentCharge())) +
+      " <small>" + esc(period === "annual" ? tr("/ év") : tr("/ hó")) + "</small></span>";
     // No change chip under an offer: its green „−2 325 Ft/hó” read as the saving (Elek L3-2).
     if (diff && !OFFER) {
       miniAmt.innerHTML += deltaHtml(diff);

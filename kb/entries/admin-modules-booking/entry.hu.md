@@ -4,13 +4,23 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-10-16
+updated: 2026-10-21
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
 el. Itt a naptárát, a kiadott szobáit és az értesítési címeit kezeli.
 
 ![Képernyőkép: a „Mikor nem kiadó?” naptár telefonon — az Ön jelölte, a vendég által foglalt és a másik szoba által foglalt napokkal](assets/hu/screen.png)
+
+## Mi hol van a képernyőn?
+
+A sötét fejléc-blokk alatt egy sor kis gomb áll: **„Mikor nem kiadó?”**, **„Hirdeti máshol is?”**,
+**„Mit ad ki?”**, **„Foglalás beállítása”**, **„Haladó beállítások”**. Ez a sor görgetés közben is a képernyő
+tetején marad, egy gombra koppintva a lap arra a részre ugrik, és mindig az a gomb van kiemelve, amelyik
+résznél éppen jár. Számítógépen ugyanez a lista a jobb szélen áll, **„Ezen a lapon”** címmel. A lap részei
+csoportokba vannak rendezve, a csoport címe után egy vonal fut a lap széléig: a naptár, aztán
+**„Portálok”** (a Booking.com, a Szállás.hu és az Airbnb összekötése), aztán **„Szobák és beállítások”**
+(a kiadott szobái, a kérdésről kérdésre beállítás és a haladó beállítások).
 
 ## A beállítások: kérdésről kérdésre
 

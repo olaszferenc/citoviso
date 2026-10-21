@@ -83,8 +83,8 @@ async function noticeContext(t: Pick<TrialNoticeTarget, "trialId" | "trialUntil"
   const base = config.publicBaseUrl.replace(/\/+$/, "");
   // The button / link IS the message's purpose: without a reachable /folytatas link it
   // would tell them to continue and give them no way to — fail loudly instead.
-  if (!base) throw new Error("PUBLIC_BASE_URL hiányzik — a Folytatom link nem építhető");
-  if (!row.token) throw new Error("a próbához nincs prospect-token — a Folytatom link nem építhető");
+  if (!base) throw new Error("PUBLIC_BASE_URL hiányzik — a Megrendelem link nem építhető");
+  if (!row.token) throw new Error("a próbához nincs prospect-token — a Megrendelem link nem építhető");
 
   return {
     siteName: row.siteName,

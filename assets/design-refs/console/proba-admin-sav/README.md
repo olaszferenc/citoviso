@@ -1,5 +1,7 @@
 # Ingyenes próba — admin próba-sáv (A) + lejárt próba — jóváhagyott terv
 
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a sáv kimondja, hogy a próba végén a honlap szünetel. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+
 **Jóváhagyva:** 2026-10-09, tulajdonosi döntés (§2b terv-kapu): az admin-sáv „A” változata
 (vékony sáv minden fülön), képek: `a-A-10nap-*.png`, `a-A-3nap-*.png`, `a-A-lejart-*.png`, `a-fizetve-*.png`.
 **Vázlat:** `proba-C.html` (a próba-C mock: állapotváltó 10 nap / 3 nap / lejárt / fizetve + Mobil 390px / Asztali váltó).
@@ -26,12 +28,14 @@ folytatáskor) ezt a kontraktust bővíti — jóváhagyva 2026-10-10, tulajdono
    **„Ha a próba végéig megrendeli: Próba-kedvezmény (−{percent}%) az első díjból.”** (A2, Elek 10-11: a kedvezmény egy neve, a számla-levél alakjában) A C előtti próba kuponja a régi mondatát
    tartja: „Ha folytatja, {percent}% kedvezményt kap az első díjból.” Kedvezmény nélkül a mondat elmarad — nem
    ígérünk olyat, amit a pénztár nem adna.
-5. **Egyetlen gomb:** **„Folytatom”** → `/p/<token>/folytatas` (ADR-0344 ④).
+5. **Egyetlen gomb:** **„Megrendelem”** → `/p/<token>/folytatas` (ADR-0344 ④; 2026-10-21-ig „Folytatom”, ADR-XXXX). A gomb előtt,
+   a kedvezmény-mondat ELŐTT (kedvezmény nélkül is) a sáv kimondja, mit tesz a próba vége:
+   **„A próba végén a honlap szünetel, amíg nem rendeli meg.”** (ADR-0344: lejáratkor a site `suspended`, az admin él).
 6. **Mobilon** (≤520px konténer) a haladás-csík eltűnik, a gomb teljes szélességű.
 7. **Lejárt próba (lapsed):** a honlap szünetel, az admin él. A próbának nincs előfizetés-sora, ezért az előfizetéses
    fagyott-blokk nem jelenik meg (mérve 2026-10-09: az admin lejárt próbánál SEMMIT nem mondott) — helyette ugyanaz
    a piros blokk (`adm-frz`), de tartozás nélkül: cím „A honlapja szünetel — a próba {date} lejárt”, gomb
-   **„Folytatom — fizetés”**, **„Mi maradt meg”** lista, és **„Mit lát közben a látogató:”** sor.
+   **„Megrendelem — fizetés”**, **„Mi maradt meg”** lista, és **„Mit lát közben a látogató:”** sor.
    ⛔ **C (2026-10-10):** a „A próbához kapott kedvezmény · {pct}% · az első díjból · {date}-ig használható” doboz
    C-próbánál KIKERÜL — a Próba-kedvezmény a próba végével lejárt, a határidő valódi; árat nem írunk ki, és nem
    emlegetjük, hogy elveszett. Csak egy még élő, C előtti kupon tartja meg a dobozát.
@@ -57,7 +61,7 @@ folytatáskor) ezt a kontraktust bővíti — jóváhagyva 2026-10-10, tulajdono
     **„Hogy mit tart meg, a gomb mögött választja ki”** **„— a próba végéig −{percent}%-kal az első díjból.”**
     **„Amit nem választ, az is bekapcsolva marad a próba végéig.”**
     C előtti kuponnal a betoldás dátum nélküli („— −{percent}%-kal az első díjból.”), kedvezmény nélkül elmarad.
-    Elsődleges gomb: **„Folytatom — csomag és modulok”** → ugyanaz a `/p/<token>/folytatas`, mint a sáv gombja. Alatta a bekapcsolt
+    Elsődleges gomb: **„Megrendelem — csomag és modulok”** → ugyanaz a `/p/<token>/folytatas`, mint a sáv gombja. Alatta a bekapcsolt
     modulok listája, soronként zöld **„be”** címkével (beállító képernyős modulnál a „Beállítás” link megmarad —
     a próba a beállításra való). A próbán kívül a Modulok fül változatlan.
 11. **Lejárt próba — névváltás-tipp** (ADR-0356, `../proba-c/4-nevvaltas.html` (b) tipp-sora; csak az Áttekintésen,

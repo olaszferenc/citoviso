@@ -4,7 +4,7 @@ title: Felszereltség — mit kap a vendég az egész szálláson
 audience: tenant
 category: bookings
 anchors: admin.modules.amenities
-updated: 2026-08-26
+updated: 2026-10-21
 ---
 
 A felszereltség-képernyőt a Modulok fülön, az „Amit kínál (felszereltség)” modul melletti
@@ -12,6 +12,15 @@ A felszereltség-képernyőt a Modulok fülön, az „Amit kínál (felszerelts�
 a vendég ezt áttekinthető listaként látja a honlapján.
 
 ![Képernyőkép: a felszereltség-képernyő telefonon](assets/hu/screen.png)
+
+## Mi hol van a képernyőn?
+
+A képernyő címe a modul neve, fölötte a **„Vissza a modulokhoz”** link, a cím alatt a modul díja és az
+**„Útmutató ehhez a képernyőhöz”** gomb. A bevezető alatt egy sor kis gomb áll a csoportok nevével
+(„Internet, szórakozás”, „Konyha, étkezés”, „Fürdőszoba, komfort” és a többi): ez a sor görgetés
+közben is a képernyő tetején marad, egy gombra koppintva a lap arra a csoportra ugrik, és mindig az
+a gomb van kiemelve, amelyik csoportnál éppen jár. Számítógépen ugyanez a lista a jobb szélen áll,
+**„Ezen a lapon”** címmel. Lejjebb minden csoport egy halvány tömb a saját címével; a csempék ezekben állnak.
 
 ## Hogyan válasszon?
 

@@ -1,7 +1,7 @@
 // ADR-0344 — the free-trial letters: the T−3 / T−1 warning before the trial ends.
 //
 // Approved design (owner, 2026-10-09, §2b): assets/design-refs/console/proba-levelek/
-// — the wording, the details box and the ONE button ("Folytatom") are the contract.
+// — the wording, the details box and the ONE button ("Megrendelem") are the contract.
 // The frame is the platform letter (platformLayout.ts) with the TRIAL footer: a
 // trialist did not order anything, so "…a Citovisónál rendelte meg" would be false.
 //
@@ -127,7 +127,7 @@ export function buildTrialNoticeEmail(input: {
     lang,
     "Ha nem folytatja, nem terhelünk semmit — kártyát nem is kértünk. A próba végén a honlap szünetel: a látogatók helyette a szállás nevét, települését és az Ön elérhetőségeit látják. A szerkesztő felülete és minden feltöltött adata a próbaidő végétől számított 90 napig megmarad; ha addig fizet, a honlap azonnal visszakapcsol.",
   );
-  const button = T(lang, "Folytatom");
+  const button = T(lang, "Megrendelem");
 
   const details = [{ label: T(lang, "A próba vége"), value: formatDayShortWeekday(trialUntilIso, lang) }];
   if (isTrialOffer(coupon)) {
@@ -179,7 +179,7 @@ export function buildTrialNoticeEmail(input: {
  *
  * ADR-0354 "C": the Próba-kedvezmény ends with the trial, so by now it is dead — a C trial
  * (and any trial without a live legacy coupon) gets no discount sentence and no "Kedvezmény"
- * row, only the way back: "Ha folytatná, a Folytatom gombbal most is megteheti; …". A pre-C
+ * row, only the way back: "Ha folytatná, a Megrendelem gombbal most is megteheti; …". A pre-C
  * trial's live coupon keeps its approved sentence.
  */
 export function buildPurgeWarningEmail(input: {
@@ -221,9 +221,9 @@ export function buildPurgeWarningEmail(input: {
   const offerVars = legacy
     ? { percent: `${legacy.percent}%`, until: formatDayLongStem(legacy.untilIso, lang) }
     : null;
-  const comeBack = T(lang, "Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.");
+  const comeBack = T(lang, "Ha folytatná, a Megrendelem gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.");
   const calm = T(lang, "Ha nem folytatja, nincs teendője — díjat nem számítunk fel.");
-  const button = T(lang, "Folytatom");
+  const button = T(lang, "Megrendelem");
 
   const details = [
     { label: T(lang, "A próba vége"), value: formatDayShortWeekday(trialUntilIso, lang) },

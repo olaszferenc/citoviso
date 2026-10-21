@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-10-12
+updated: 2026-10-21
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -33,8 +33,8 @@ nélkül be vannak kapcsolva, nincs előfizetés, amihez egyenként hozzá lehet
 - Fent a **„Modulok a próbában”** kártya elmondja, mi van bekapcsolva, és hogy a megtartani kívántakat a gomb
   mögött választja ki; amit nem választ, az is bekapcsolva marad a próba végéig. Ha a próbához kedvezményt is
   kapott, a kártya azt is kiírja, hány százalékot kap az első díjból.
-- A **„Folytatom — csomag és modulok”** gomb ugyanarra a rendelő panelre visz, mint a lap tetején lévő sáv
-  „Folytatom” gombja: ott választja ki a csomagot és a modulokat, és ott fizet (lásd az Áttekintés súgóját,
+- A **„Megrendelem — csomag és modulok”** gomb ugyanarra a rendelő panelre visz, mint a lap tetején lévő sáv
+  „Megrendelem” gombja: ott választja ki a csomagot és a modulokat, és ott fizet (lásd az Áttekintés súgóját,
   „Ha folytatja: a folytatás a fizetés”).
 - Alatta a bekapcsolt modulok listája. A sor végén a **„be”** címke jelzi, hogy a modul most működik; ahol a
   modulnak saját beállítása van (például szobák, árak, foglalás), ott egy **„Beállítás”** link is áll — a

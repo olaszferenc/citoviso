@@ -1,7 +1,9 @@
 # Próba „C” — egy kedvezmény, egy határidő + névváltás (jóváhagyott terv)
 
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a sáv kimondja, hogy a próba végén a honlap szünetel. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+
 **Jóváhagyva:** 2026-10-10, tulajdonosi döntés (§2b terv-kapu), a koordináló sessionön át.
-Döntések: 1 = A (a határidő az ár-sorban, szalag NINCS) · 2 = „Folytatom” · 3 = A (a próba-levélből
+Döntések: 1 = A (a határidő az ár-sorban, szalag NINCS) · 2 = „Folytatom” (2026-10-21 óta „Megrendelem”, lásd fent) · 3 = A (a próba-levélből
 érkezőnek nincs felugró kártya, a % az űrlapon egy sorban) · 4 = OK (minden szöveg-javaslat; a
 kampány-levélben gombpár, a kampány-SMS a %-os változat) · 5 = A (a régi cím örökre átirányít — a
 háttér ADR-0356, 2026-10-10 óta él).
@@ -31,16 +33,16 @@ Bővíti: `../proba-admin-sav/`, `../proba-levelek/`, `../proba-torles-level/`, 
    vége után indul (ADR-0354 ⓐ, `subscription.ts`), a hátralévő ingyen napok megmaradnak. A 2. lépés
    jegyzete nem ígér belépőt (a próbázónak már van). Lejárt próbánál: listaár, a „szünetel” sor elöl,
    a fejléc „mit kapcsoljunk vissza”.
-3. **Admin (2):** a sáv gombja „Folytatom”, mondata „Ha a próba végéig megrendeli, −X% az első díjból.”;
+3. **Admin (2):** a sáv gombja „Megrendelem”, mondata „Ha a próba végéig megrendeli, −X% az első díjból.”;
    a Modulok fülön próba alatt nincs sor-ár és egyedi vétel, helyette **„Modulok a próbában”** kártya és
-   **„Folytatom — csomag és modulok”** gomb ugyanarra a folytatás-oldalra; a lejárt blokkból a kedvezmény-doboz
+   **„Megrendelem — csomag és modulok”** gomb ugyanarra a folytatás-oldalra; a lejárt blokkból a kedvezmény-doboz
    kikerül (részletek: `../proba-admin-sav/README.md` 10–11.).
 4. **Terv-lap (3, A):** a próba-levélből (`forras=proba`) érkezőnek nincs döntés-segítő kártya; a
    próba-űrlap alsó sora egy mondat: „−X% az első díjból, ha a próba végéig megrendeli (a próba
    indításától N nap). Egy kedvezmény, utána a listaár érvényes.” A levél „Kipróbálom…” gombja
    (`proba=nyit`) nyitott űrlappal hozza a lapot. Paraméter nélkül a kártya változatlan.
 5. **Levelek, SMS (4):** a `3-levelek-sms.html` javaslatai szó szerint (belépő-levél, T−3/T−1, SMS-ek,
-   90 napos levél: a kedvezmény-mondat helyén „Ha folytatná, a Folytatom gombbal most is megteheti; a honlap
+   90 napos levél: a kedvezmény-mondat helyén „Ha folytatná, a Megrendelem gombbal most is megteheti; a honlap
    a fizetés után azonnal visszakapcsol.”); a kampány-levél gombpárja **„Kipróbálom {days} napig ingyen”** +
    **„Megnézem a tervemet”**; a kampány-SMS a %-os változat (ha a lead-nek van élő ajánlata; 2 szegmensen
    túl a %-mentes, jóváhagyott szövegre esik vissza). A T−1 levélben: „Tetszik a cím? Most {host} —

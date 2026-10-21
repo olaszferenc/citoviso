@@ -297,7 +297,7 @@ try {
   const logged = await db.selectFrom("tenant_message").select(["related_kind", "channel"]).where("tenant_id", "=", tenantA).where("related_kind", "in", ["free_trial_t3", "free_trial_t1"]).execute();
   check("tenant postafiók: 4 bejegyzés (t3/t1 × email/sms)", logged.length === 4, logged.map((r) => `${r.related_kind}:${r.channel}`).sort().join(","));
   const noticeEml = (await ourEml()).filter((e) => e.body.includes(`To: ${EMAIL_A}\n`) && /\/p\/[^/]+\/folytatas/.test(e.body) && !e.file.includes(credEml[0]?.file ?? "\u0000"));
-  check("mock outbox: a 2 figyelmeztető .eml a Folytatom-linkkel", noticeEml.length === 2, String(noticeEml.length));
+  check("mock outbox: a 2 figyelmeztető .eml a Megrendelem-linkkel", noticeEml.length === 2, String(noticeEml.length));
 
   // ⑨ (setup) the trialist unticks the gallery in the admin while the trial runs.
   const allOn = (await db.selectFrom("module_entitlement").select("module").where("tenant_id", "=", tenantA).where("active", "=", true).execute()).map((r) => r.module);

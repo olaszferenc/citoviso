@@ -1,5 +1,7 @@
 # Ingyenes próba — törlés-figyelmeztető levél (7 nappal a törlés előtt) — jóváhagyott terv
 
+**Módosítás 2026-10-21 (tulaj):** a próba gombja mindenhol „Megrendelem” („Megrendelem — fizetés”, „Megrendelem — csomag és modulok”), mert a „Folytatom” nem mondta meg, mi történik; a levél egyetlen gombja is ez. (ADR-XXXX; a „Folytatom a fizetést” — a megrekedt rendelés folytatása — nem változik.)
+
 **Jóváhagyva:** 2026-10-09, tulajdonosi döntés (§2b terv-kapu, a koordinátoron át): **az „A” változat** (teljes:
 dátumok + kupon a fizetéshez; kupon nélkül az „A kupon nélkül” ág). Képek: `a-*.png`, `a-hetvege-*.png`,
 `a-kupon-nelkul-*.png` (a tulaj által jóváhagyott mock). A „B rövid” változat NEM lett jóváhagyva.
@@ -26,9 +28,9 @@ dátumok + kupon a fizetéshez; kupon nélkül az „A kupon nélkül” ág). K
    által ígért nap: késve kiment levélnél az `effectivePurgeDay` (a törlés csúszik, az értesítés nem rövidül).
 4. **Kupon (csak élő próba-kuponnal, `liveTrialCoupon`):** **„Ha folytatná, a próbához kapott kedvezménnyel még megteheti: {percent} az első díjból, {until}-ig.”**
    Kupon nélkül a bekezdés ÉS a „Kedvezmény” sor elmarad — kedvezményt nem ígérünk, ami nincs.
-4b. **C-próba / élő kupon nélkül (`../proba-c/3-levelek-sms.html`):** a kupon-bekezdés helyén **„Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.”**
+4b. **C-próba / élő kupon nélkül (`../proba-c/3-levelek-sms.html`):** a kupon-bekezdés helyén **„Ha folytatná, a Megrendelem gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.”**
 5. **Adat-panel:** „A próba vége” · „Törlés napja” · „Kedvezmény” („30% az első díjból, 2027. jan. 20-ig”).
-6. **Egyetlen gomb:** **„Folytatom”** → `/p/<token>/folytatas` (ADR-0344 ④). Link nélkül a levél nem megy ki (a küldő hangosan bukik).
+6. **Egyetlen gomb:** **„Megrendelem”** → `/p/<token>/folytatas` (ADR-0344 ④). Link nélkül a levél nem megy ki (a küldő hangosan bukik).
 7. **Zárás:** **„Ha nem folytatja, nincs teendője — díjat nem számítunk fel.”**
 8. **Ablak:** csak hétköznap 9–16 (ADR-0334), az óránkénti tick viszi, próbánként egyszer (`free_trial_notice` 'p7').
    A napi törlés CSAK kiment ('sent') figyelmeztetés után, legalább 7 nappal később fut.

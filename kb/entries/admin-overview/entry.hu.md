@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-10-12
+updated: 2026-10-21
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -126,12 +126,13 @@ jelenik meg, mert akkor a „Töltse ki:” sor szól róla.
 
 Amíg az oldalát ingyenes próbában használja, **minden lap tetején** egy vékony sáv mutatja, meddig tart
 még a próba: hány nap van hátra, és melyik napig (például „2026. okt. 22. (csütörtök)-ig”). A sávot nem lehet
-bezárni — a próba végét ne veszítse szem elől. Ha a próbához kedvezményt is kapott, és az még érvényes, a sáv kiírja, hány
-százalékot kap az első díjból, ha folytatja.
+bezárni — a próba végét ne veszítse szem elől. A sáv azt is kimondja, mi történik a próba végén:
+**„A próba végén a honlap szünetel, amíg nem rendeli meg.”** Ha a próbához kedvezményt is kapott, és az még érvényes,
+a sáv kiírja, hány százalékot kap az első díjból, ha a próba végéig megrendeli.
 
 - **3 nappal a vége előtt** a sáv sárgára vált. Az utolsó előtti napon „holnap jár le”, az utolsó napon
   **„Ma jár le az ingyenes próba.”** áll benne.
-- A **„Folytatom”** gombbal a saját honlapja előnézetére jut, mellette a rendelő panellel: itt kiválasztja,
+- A **„Megrendelem”** gombbal a saját honlapja előnézetére jut, mellette a rendelő panellel: itt kiválasztja,
   mely modulokat tartja meg, és kifizeti (a próbához kapott kedvezmény már be van számítva). Kártyát a próba
   alatt nem kértünk, és magától nem is terhelünk semmit. Ha mégsem fizet most, a böngésző Vissza gombjával
   visszatér a kezelőfelületre.
@@ -148,7 +149,7 @@ nevével, településével és az Ön elérhetőségeivel, hogy foglalási kérd
 A kezelőfelülete viszont él — ebben most is dolgozhat.
 
 Ilyenkor minden lap tetején egy piros doboz áll, a címében a próba utolsó napjával: a honlapja szünetel, mert a próba lejárt. Az Áttekintésen
-ebben látja a próbához kapott kedvezményt (ha volt), a **„Folytatom — fizetés”** gombot, és a
+ebben látja a próbához kapott kedvezményt (ha volt), a **„Megrendelem — fizetés”** gombot, és a
 **„Mi maradt meg”** listát: a szerkesztő felülete, minden szöveg, kép és beállítás, és a beérkezett üzenetek.
 Ezek **nem maradnak meg örökre**: a próba utolsó napjától számított 90 napig őrizzük őket (ÁSZF 1.4), és a lista
 alatt ott a nap, amikor véglegesen töröljük őket. A törlés előtt legalább egy héttel levélben is szólunk („… nap múlva töröljük a próba-honlap adatait” tárggyal) — ha addig
@@ -158,7 +159,7 @@ elérik-e Önt. A többi lapon a doboz rövidebb. **Tartozása nincs** — nem t
 magától, azonnal visszakapcsol.
 
 A **Teendők** listában is ugyanez áll: a honlapja szünetel, mert a próba lejárt, és nem terheltünk semmit. A sor
-végén lévő „Folytatom — fizetés” link ugyanoda visz, mint a piros doboz gombja. Fizetendő díja ilyenkor nincs —
+végén lévő „Megrendelem — fizetés” link ugyanoda visz, mint a piros doboz gombja. Fizetendő díja ilyenkor nincs —
 a díj csak akkor születik, ha folytatja. Az **„Állapot”** csempén és a bal oldali sávban ilyenkor „Szünetel” áll.
 
 ### A „Modulok” kártya lejárt próbánál
@@ -173,7 +174,7 @@ kipróbált, azt a Modulok fülön később is hozzáadhatja.”** Minden sor me
 
 ### Ha folytatja: a folytatás a fizetés
 
-A „Folytatom” vagy a „Folytatom — fizetés” gombbal a rendelő panelre jut, ahol kiválasztja a csomagját és a
+A „Megrendelem” vagy a „Megrendelem — fizetés” gombbal a rendelő panelre jut, ahol kiválasztja a csomagját és a
 moduljait, és bankkártyával kifizeti — a próbához kapott kedvezmény, ha még érvényes, már be van számítva, és
 egyszer, ennél az első fizetésnél használható fel. A fizetés után:
 
@@ -187,7 +188,7 @@ egyszer, ennél az első fizetésnél használható fel. A fizetés után:
 A lejárt próba piros dobozában ez áll: **„Tetszik a cím?”**, mellette a honlapja mostani címe. A próba végén
 (vagy ha még a próba alatt rendel) **egyszer, díj nélkül** másik citoviso.com-os címet választhat:
 
-1. A „Folytatom — fizetés” (vagy „Folytatom”) gombbal nyíló rendelő panel első lépésében a mostani cím mellett
+1. A „Megrendelem — fizetés” (vagy „Megrendelem”) gombbal nyíló rendelő panel első lépésében a mostani cím mellett
    az „Ingyen megváltoztatható” felirat áll.
 2. Koppintson a „Megváltoztatom a címet” gombra, írja be az „Új cím” mezőbe a kívánt nevet, és
    nyomja meg az „Ezt választom” gombot (a „Marad a mostani” gombbal meggondolhatja magát). A panel

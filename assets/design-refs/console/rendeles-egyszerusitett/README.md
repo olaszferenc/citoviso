@@ -30,6 +30,7 @@ A `plan.html` a jóváhagyott, működő vázlat. Felül váltható a méret és
 - Egyetlen sor: az összeg (ajánlatnál előtte áthúzva a listaár, alatta az ajánlat-sor) és a „Tovább” gomb.
 - A Havi/Éves váltó NINCS itt; csak a fizetés-lapon van.
 - Nyitott panel mellett a döntés-segítő ajánlat felső sávja nem látszik, semmit nem takar ki. Az ajánlat a lábléc soraként ott marad.
+- **Módosítás 2026-10-21 (tulaj):** a végösszeg a sáv legnagyobb, félkövér eleme (22 px), az egység („/ év” · „/ hó”) hozzátapadva, kisebb; az áthúzott listaár kisebb és halvány előtte (keskeny telefonon saját sorba eshet); az ajánlat-sor alatta, elválasztva. A sor szerkezete (összeg + ajánlat-sor + „Tovább”), a feliratok és a Havi/Éves viselkedés változatlan — a tulaj panasza: „alig látható, hogy mennyibe kerül a cucc a végén, teljesen egybeolvad”.
 
 ### 3. Az 1. lépés: csomag
 

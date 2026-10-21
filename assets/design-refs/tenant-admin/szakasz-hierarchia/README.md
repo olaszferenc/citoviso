@@ -52,10 +52,13 @@ csak a döntés nyoma). A `gen.mjs` a mock generátora (a `_drafts/` alá írt f
    a kártya bal élén cián csík (ez az egyetlen szín a lapon, ADR-0224 szerint).
 7. **Szín nem változik.** Semmi új hue: a tónus a `--citui-surface-2`, a vonal a `--citui-line-strong`,
    a jel a `--citui-cyan-500`. Sötét módban ugyanezek a tokenek.
-8. **Más modul-képernyők:** az 1. pont (a lap feje) minden modul-képernyőre áll; a 2–6. pont ebben a
-   körben az Árak lapon valósult meg — a többi összetett lap (Szobák, Online foglalás, Amit kínál)
-   ugyanezt a CSS-réteget (`.adm-zone`, `.adm-toc`, `.adm-card--sec`, `.adm-blk`) kapja a
-   következő körben, külön tulaj-döntés nélkül, mert a nyelv ugyanaz.
+8. **Minden modul-képernyő ugyanezt a nyelvet beszéli** (tulaj, 2026-10-21 12:00: „maradt minden
+   dizájn úgy, ahogy volt, csak az árak változott?”). A modul-képernyő teste egy `.adm-mod` burok: benne
+   minden kártya szakasz (nagy cím, fejléc-vonal nélkül), a mezők egy halvány tömbben. Amit kínál: csoportonként
+   egy tömb, a csoportok a tartalomjegyzék. Szobák: tartalomjegyzék („Az egész ház” · „A szobái” · „Új szoba
+   felvétele”). Online foglalás: a saját fejléc-blokkja marad (booking-screen kontraktus), alatta zónák
+   (naptár · **„Portálok”** · **„Szobák és beállítások”**) és tartalomjegyzék. A képek-, térkép-, nyitvatartás-
+   és a többi egy-kártyás lap: szakasz-cím + tömb, tartalomjegyzék nélkül (egy szakasznak nincs térképe).
 
 ## Képek
 

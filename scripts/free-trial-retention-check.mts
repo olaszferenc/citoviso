@@ -233,13 +233,13 @@ try {
     !!m && m.subject.startsWith(`7 nap múlva töröljük a próba-honlap adatait – _trialretention_${stamp}`), m?.subject);
   check("a levélben a törlés napja („2026. október 12-én, hétfőn”) és a „Törlés napja” sor",
     !!m && m.text.includes(formatDayOn("2026-10-12")) && (m.html ?? "").includes("Törlés napja"), m?.text);
-  check("a levélben a Folytatom link (/p/<token>/folytatas) és a megnyugtató zárás",
+  check("a levélben a Megrendelem link (/p/<token>/folytatas) és a megnyugtató zárás",
     !!m && /citoviso\.test\/p\/[^/\s]+\/folytatas/.test(m.text) && m.text.includes("Ha nem folytatja, nincs teendője — díjat nem számítunk fel."), m?.text);
   // ADR-0354 ("C", proba-c/3-levelek-sms.html): the Próba-kedvezmény died with the trial — the
   // wired letter carries no discount sentence and no Kedvezmény row, only the way back; a trial
   // started before C keeps its coupon (below).
-  const COME_BACK = "Ha folytatná, a Folytatom gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.";
-  check("új (C) próba → nincs kedvezmény-mondat és nincs Kedvezmény-sor, van „Ha folytatná, a Folytatom gombbal most is megteheti; …”",
+  const COME_BACK = "Ha folytatná, a Megrendelem gombbal most is megteheti; a honlap a fizetés után azonnal visszakapcsol.";
+  check("új (C) próba → nincs kedvezmény-mondat és nincs Kedvezmény-sor, van „Ha folytatná, a Megrendelem gombbal most is megteheti; …”",
     !!m && !m.text.includes("a próbához kapott kedvezménnyel") && !(m.html ?? "").includes("Kedvezmény") && !m.text.includes("Próba-kedvezmény") && m.text.includes(COME_BACK) && (m.html ?? "").includes(COME_BACK), m?.text);
   const cKind = buildPurgeWarningEmail({
     to: "x@example.invalid", daysToPurge: 7, siteName: "Teszt Panzió", contactName: null,

@@ -353,7 +353,7 @@ export function injectOwnedBanner(html: string, input: OwnedBannerInput): string
   // footer (injectOwnedNotice), so it is not lost.
   const action =
     input.trial?.status === "lapsed"
-      ? `<a class="ow-btn" data-cit-owned-continue href="${escapeHtml(input.trial.continueUrl)}">Folytatom — fizetés</a>`
+      ? `<a class="ow-btn" data-cit-owned-continue href="${escapeHtml(input.trial.continueUrl)}">Megrendelem — fizetés</a>`
       : input.loginUrl
         ? `<a class="ow-btn" href="${escapeHtml(input.loginUrl)}">Belépés a kezelőfelületre</a>`
         : "";

@@ -268,6 +268,17 @@ try {
       javaScriptEnabled: opts.js !== false,
     });
     await ctx.addCookies([{ name: "cit_session", value: cookie, url: base }]);
+    // The consent bar renders on the first ENGAGEMENT (scroll / pointerdown / keydown —
+    // cit-consent.js), so a click could summon it right under the pointer (measured
+    // 2026-10-21: the popup's Mentés was intercepted mid-click). The tenant decided once
+    // in reality and never sees it again — the context starts in that state.
+    await ctx.addInitScript(() => {
+      try {
+        localStorage.setItem("cit-consent-v1", "necessary");
+      } catch {
+        /* private mode: the bar may still render, dismissConsent() handles the rest */
+      }
+    });
     const page = await ctx.newPage();
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));

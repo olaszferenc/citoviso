@@ -30,12 +30,12 @@
 //      booking letters take the footer from the account (footerReasonForTenant, C2c ②);
 //   ②c the ADMIN STRIP (C2c): the REAL adminDashboard on every tab carries data-trial-strip
 //      while the trial runs; more than TRIAL_WARN_DAYS left → calm, ≤ → adm-trial--warn;
-//      „Folytatom" → /p/<t>/folytatas; after the lapse the paused block (data-trial-lapsed),
+//      „Megrendelem" → /p/<t>/folytatas; after the lapse the paused block (data-trial-lapsed),
 //      after paying (converted) neither; the lapsed block on Áttekintés is followed by the
 //      „Modulok" card (data-trial-modules) listing the REAL trial_grant modules — the spine
 //      „csomag · fizetéskor vissza", the rest „csak a próbában volt", a paid one absent —
 //      and no other tab, no active and no converted trial shows it;
-//      the Teendők row of a lapsed (suspended) trial says the paused wording + „Folytatom —
+//      the Teendők row of a lapsed (suspended) trial says the paused wording + „Megrendelem —
 //      fizetés", never the debt row „Rendezze a díjat";
 //   ⑤ continuation of the LAPSED trial: the REAL settlement (applyWebhookResult, mock
 //      gateway) at list price → site live, trial 'converted', subscription anchor = today,
@@ -348,7 +348,7 @@ try {
   const m1 = caps[0];
   const h1 = m1?.html ?? "";
   check("tárgy: „Holnap lejár az ingyenes próba – …”", !!m1 && m1.subject.startsWith("Holnap lejár az ingyenes próba – "), m1?.subject);
-  check("a Folytatom gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Folytatom</a>"));
+  check("a Megrendelem gomb a /p/<t>/folytatas-ra mutat", h1.includes(`https://citoviso.test/p/${a.token}/folytatas`) && h1.includes(">Megrendelem</a>"));
   // ADR-0354 "C" (proba-c/3-levelek-sms.html): the Próba-kedvezmény sentence + its two rows;
   // the pre-C coupon sentence is not said.
   check("C T−1 levél: „Ha a próba végéig, <b>2026. október 17-ig</b> megrendeli, {p}% kedvezményt kap — …”",
@@ -408,7 +408,7 @@ try {
     (bookSrc.match(/footerReason: await footerReasonForTenant\(/g) ?? []).length === 4, String((bookSrc.match(/footerReason: await footerReasonForTenant\(/g) ?? []).length));
 
   // ②c the admin strip (ADR-0344 C2c, contract assets/design-refs/console/proba-admin-sav/):
-  // on EVERY tab while active, warn from TRIAL_WARN_DAYS before the end, „Folytatom" → /folytatas.
+  // on EVERY tab while active, warn from TRIAL_WARN_DAYS before the end, „Megrendelem" → /folytatas.
   console.log("②c admin próba-sáv");
   const untilRow = await db.selectFrom("free_trial").select("trial_until").where("id", "=", trial.id).executeTakeFirstOrThrow();
   const untilAt = new Date(untilRow.trial_until as unknown as string).getTime();
@@ -442,10 +442,10 @@ try {
     ovHtml.includes("a próbában be van kapcsolva, de üres") && !ovHtml.includes("kifizette") && !ovHtml.includes("számlázott"));
   // ADR-0354 "C" (mock proba-c (a), approved 2026-10-10): no per-row price, no per-row buying —
   // one card whose button opens the SAME /folytatas the strip does.
-  check("próba-Modulok: nincs „megvett”, nincs sor-díj / kosár, egy „Folytatom — csomag és modulok” → /folytatas",
+  check("próba-Modulok: nincs „megvett”, nincs sor-díj / kosár, egy „Megrendelem — csomag és modulok” → /folytatas",
     !modHtml.includes("modult megvett") && modHtml.includes("A próbában minden modul be van kapcsolva") &&
       !modHtml.includes("A sorok melletti díj") && !modHtml.includes("adm-modform") && !modHtml.includes("Kosárba teszem") &&
-      modHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom — csomag és modulok</a>`));
+      modHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Megrendelem — csomag és modulok</a>`));
   // Elek3 K4 (proba-c README 3): during the trial the Modulok tab sells nothing one by one —
   // not even the one-off multilang generation; the purchase path refuses it as well.
   {
@@ -484,7 +484,7 @@ try {
   check("A1: a sáv dátuma egy kifejezés, zárójel a zárójelben nélkül",
     /\(\d{4}\. [^()]+ \d{1,2}\., [a-zőöüóéáúűí]+ig\)/.test(stripHead) && !/\)-ig\)/.test(stripHead), stripHead.slice(0, 120));
   check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
-  check("a „Folytatom” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Folytatom</a>`));
+  check("a „Megrendelem” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Megrendelem</a>`));
   // ADR-0354 "C" (mock proba-c (a)): the strip names the ONE discount and its ONE deadline;
   // the pre-C coupon sentence („…kedvezményt kap…") is not said for a C trial.
   check("C: a sáv „Ha a próba végéig megrendeli: Próba-kedvezmény (−{p}%) az első díjból.” (A2)",
@@ -559,13 +559,13 @@ try {
   await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).where("step", "=", "p7").execute();
   // ②c Teendők (the paused site is 'suspended'): a lapsed trial owes NOTHING — the debt row
   // „Rendezze a díjat" would be false (§B.17); the row says the approved paused wording
-  // (proba-admin-sav README §7) and offers „Folytatom — fizetés" → /p/<t>/folytatas.
+  // (proba-admin-sav README §7) and offers „Megrendelem — fizetés" → /p/<t>/folytatas.
   // --self-test: the overview is handed no trial → the debt sentence comes back → red.
   const todoHtml = renderAdmin(tenantId, "attekintes", SELF_TEST ? null : lapsedState, "suspended");
   const todoRow = todoHtml.match(/<li class="pending" data-todo="trial-lapsed">.*?<\/li>/)?.[0] ?? "";
-  check("admin Teendők: lejárt próba → nincs „Rendezze a díjat”, a sor a szünetet mondja + Folytatom — fizetés",
+  check("admin Teendők: lejárt próba → nincs „Rendezze a díjat”, a sor a szünetet mondja + Megrendelem — fizetés",
     !todoHtml.includes("Rendezze a díjat") && todoRow.includes("A honlapja szünetel") && todoRow.includes("Nem terheltünk semmit") &&
-      todoRow.includes("Folytatom — fizetés") && todoRow.includes("/folytatas"),
+      todoRow.includes("Megrendelem — fizetés") && todoRow.includes("/folytatas"),
     todoRow || "nincs trial-lapsed sor");
   // The status word (overview widget + sidebar) of a lapsed trial's paused site is
   // „Szünetel", not „Felfüggesztve" (coordinator, 2026-10-09). --self-test: no trial → red.
@@ -642,9 +642,9 @@ try {
   const plainA = await get(`/p/${a.token}`);
   const plainBodyA = plainA.status === 200 ? await plainA.text() : "";
   check(
-    "GET /p/<t> (lejárt próbázó) → „szünetel” + Folytatom → /p/<t>/folytatas, nincs „folyamatban”",
+    "GET /p/<t> (lejárt próbázó) → „szünetel” + Megrendelem → /p/<t>/folytatas, nincs „folyamatban”",
     plainA.status === 200 && plainBodyA.includes("a honlapja szünetel") &&
-      plainBodyA.includes(`href="/p/${a.token}/folytatas">Folytatom — fizetés</a>`) &&
+      plainBodyA.includes(`href="/p/${a.token}/folytatas">Megrendelem — fizetés</a>`) &&
       !plainBodyA.includes("folyamatban van") && !plainBodyA.includes("Azóta megrendelte"),
     String(plainA.status),
   );

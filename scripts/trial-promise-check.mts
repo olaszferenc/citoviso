@@ -16,7 +16,7 @@
 //        (Chromium, `?proba=nyit`) prints those names in the form, not „minden funkció”;
 //     ⑤ the admin Modulok tab of that trial does not say „minden modul”, names the package;
 //        A7: the Foglalások tab says the booking module is not in the trial's package and
-//        offers „Folytatom” + the enquiries in Üzenetek.
+//        offers „Megrendelem” + the enquiries in Üzenetek.
 //   K1 — ⑥ /p/<token>/folytatas preselects the package the trial ran on (continuation.preset), and on
 //        the real page the „Összesen” charges that package (the first cut only moved the highlight).
 //   B2 — a failed start locked the lead out („Ez az oldal már az Öné”, no login, no retry).
@@ -243,7 +243,7 @@ try {
     check("…a próba csomagját nevezi meg", mod.includes("A próba csomagja: Ajánlott."));
     const fog = render("foglalasok");
     check("A7 Foglalások fül: kimondja, hogy a foglalás nincs a próba csomagjában", fog.includes("Az online foglalás nincs benne a próba csomagjában (Ajánlott)."));
-    check("A7 …és a „Folytatom” utat + az Üzenetek-beli érdeklődéseket kínálja", fog.includes("Folytatom — csomag és modulok") && fog.includes("Érdeklődések az Üzenetekben"));
+    check("A7 …és a „Megrendelem” utat + az Üzenetek-beli érdeklődéseket kínálja", fog.includes("Megrendelem — csomag és modulok") && fog.includes("Érdeklődések az Üzenetekben"));
   }
 
   // ⑥ K1

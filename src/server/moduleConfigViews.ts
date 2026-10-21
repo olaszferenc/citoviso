@@ -1517,7 +1517,9 @@ function amenityPicker(o: AmenityPickerOpts): string {
     const items = AMENITY_CATALOG.filter((a) => a.category === cat.key && (fits(a) || inh.has(a.label)));
     if (!items.length) continue;
     selectable += items.length;
+    // ADR-0397: every category is one tonal block with an anchor (the screen's table of contents).
     tiles +=
+      `<div class="adm-blk" id="${esc(o.idPrefix)}-cat-${esc(cat.key)}">` +
       `<h3 class="ampick__cat">${T(lang, cat.label)}</h3><div class="ampick__grid">` +
       items
         .map(
@@ -1529,7 +1531,7 @@ function amenityPicker(o: AmenityPickerOpts): string {
             `</span></label>`,
         )
         .join("") +
-      `</div>`;
+      `</div></div>`;
   }
   const p = esc(o.idPrefix);
   return (
@@ -2174,7 +2176,7 @@ function newUnitForm(
     `<p class="unit-new__noprice" ${attr}>` +
     `${T(lang, "Ennek a szobának nem kell ár: a vendég csak az egész házat foglalja, árat csak arra kérünk.")}</p>`;
   return (
-    `<details class="unit-more"><summary>${ic("plus")}${T(lang, "Új szoba felvétele")}</summary>` +
+    `<details class="unit-more" id="uj-szoba"><summary>${ic("plus")}${T(lang, "Új szoba felvétele")}</summary>` +
     `<div class="unit-new"><h3>${ic("plus")}${T(lang, "Új szoba felvétele")}</h3>` +
     `<p>${wholeOnly ? T(lang, "Adja meg a nevét és férőhelyét — a vendég a honlapon külön kártyán látja, a ház részeként.") : T(lang, "Adja meg a nevét, férőhelyét és alapárát — a vendég a honlapon külön kártyán látja.")}</p>` +
     `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new" data-cit-new-unit>` +
@@ -2258,13 +2260,23 @@ function roomsEditor(
   view: RoomsView,
   lang: string,
   nu?: NewUnitView,
+  hasRules = true,
 ): string {
   // ADR-0392: the whole house has its own card above the grid — it is not one of the rooms.
   const house = units.find((u) => u.representsWhole && u.isWholeProperty);
   const rooms = house && units.length > 1 ? units.filter((u) => u !== house) : units;
   const cards = rooms.map((u) => roomCard(u, units, lang)).join("");
   const pops = units.map((u) => roomPopup(u, units, library, ctx, view, lang)).join("");
+  // ADR-0397: the screen's map — the house card, the grid, the add form, the rules.
+  const toc: TocItem[] = [];
+  if (house) toc.push({ id: "egesz-haz", label: T(lang, "Az egész ház") });
+  toc.push({ id: "szobak", label: T(lang, "A szobái") });
+  toc.push({ id: "uj-szoba", label: T(lang, "Új szoba felvétele") });
+  if (hasRules) toc.push({ zone: T(lang, "Az egész szállásra") }, { id: "szabalyok", label: T(lang, "Szabályok") });
   return (
+    `<div class="adm-mcfg">` +
+    tocNav(toc, lang) +
+    `<div class="adm-mcfg__body"><div class="adm-zone">` +
     // A `.rs-wrap` a felugrók NÉLKÜLI rész: ez a súgó-kép tárgya is (a felugró
     // fixed pozíciójú, és egy teljes-lapos kép a rács fölé festené).
     `<div class="rs-wrap">` +
@@ -2277,7 +2289,9 @@ function roomsEditor(
     // The add form: collapsed under the grid, the SAME component as on the booking screen
     // (approved plan room-add-B).
     newUnitForm(units, nu, lang) +
-    `</div>` +
+    `</div></div>` +
+    (hasRules ? `<div class="adm-zone"><h2 class="adm-zone__h">${T(lang, "Az egész szállásra")}</h2>${RULES_MARK}</div>` : "") +
+    `</div></div>` +
     pops
   );
 }
@@ -2573,7 +2587,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
     .join("");
 
   return (
-    `<div class="adm-card">` +
+    `<div class="adm-card" id="mit-ad-ki">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Mit ad ki?</h2></div>` +
     newUnitFlash(nu, lang) +
     `<p class="adm-lead">` +
@@ -2977,17 +2991,29 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
   );
 }
 
+/** Where the booking screen's guided card + advanced form go (ADR-0397, see moduleSettingsSection). */
+const GUIDED_MARK = "<!--cit:guided-->";
+
 function bookingEditor(
   moduleId: string,
   booking: BookingEditorData,
   lang = "hu",
   nu?: NewUnitView,
+  hasRules = true,
 ): string {
   const mv = booking.month;
   const multi = booking.units.length > 1;
   const unitName = booking.units.find((u) => u.id === booking.unitId)?.name ?? "";
+  // ADR-0397: three zones — the calendar, the portals, the rooms + settings — and their map.
+  const toc: TocItem[] = [{ id: "cit-naptar", label: T(lang, "Mikor nem kiadó?") }];
+  if (PORTAL_SYNC_UI) toc.push({ zone: T(lang, "Portálok") }, { id: "portal-naptar", label: T(lang, "Hirdeti máshol is?") });
+  toc.push({ zone: T(lang, "Szobák és beállítások") }, { id: "mit-ad-ki", label: T(lang, "Mit ad ki?") }, { id: "beallitas", label: T(lang, "Foglalás beállítása") });
+  if (hasRules) toc.push({ id: "halado", label: T(lang, "Haladó beállítások") });
 
   return (
+    `<div class="adm-mcfg">` +
+    tocNav(toc, lang) +
+    `<div class="adm-mcfg__body"><div class="adm-zone">` +
     // Approved plan 2026-09-06: the requests moved to their OWN "Foglalások" tab
     // (badge, time order, overlap chooser). ONE place decides — this screen points
     // there instead of keeping a second, weaker inbox.
@@ -3026,12 +3052,16 @@ function bookingEditor(
     `<span class="citui-hint" style="margin:0">${T(lang, "A foglalt napra koppintva látja, ki foglalta.")}</span>` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Naptár mentése")}</button>` +
     `</div></div></div></form></details>` +
+    `</div>` +
 
     // ② portal connections (ADR-0361; approved plan assets/design-refs/console/portal-sync, variant 1)
-    (!PORTAL_SYNC_UI ? "" : portalSyncCard(booking, lang, multi)) +
+    (!PORTAL_SYNC_UI ? "" : `<div class="adm-zone"><h2 class="adm-zone__h">${T(lang, "Portálok")}</h2>${portalSyncCard(booking, lang, multi)}</div>`) +
 
-    // ③ units
-    unitsCard(booking, lang, nu)
+    // ③ units + the guided setup and the advanced form (set in by moduleSettingsSection)
+    `<div class="adm-zone"><h2 class="adm-zone__h">${T(lang, "Szobák és beállítások")}</h2>` +
+    unitsCard(booking, lang, nu) +
+    GUIDED_MARK +
+    `</div></div></div>`
   );
 }
 
@@ -4327,7 +4357,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
 
   const bespoke =
     def.editor === "booking" && opts.booking
-      ? bookingEditor(moduleId, opts.booking, lang, opts.newUnit)
+      ? bookingEditor(moduleId, opts.booking, lang, opts.newUnit, def.fields.length > 0)
       : def.editor === "rooms" && opts.units
         ? // ADR-0198 — a kártyarács + felugró + fülek szerkesztő. EGY egységnél a mai
           // képernyő marad: ott nincs mit „átlátni", és saját aloldal sem születik
@@ -4342,11 +4372,23 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
               opts.roomsView ?? {},
               lang,
               opts.newUnit,
+              def.fields.length > 0,
             ) +
             amenityPickerScript(lang) +
-            roomEditorScript(lang)
-          : roomsNote(lang, opts.newUnit) +
-            unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData, lang, opts.newUnit)
+            roomEditorScript(lang) +
+            tocScript()
+          : // ADR-0397: one room — the units card and the rules, with the same map.
+            roomsNote(lang, opts.newUnit) +
+            `<div class="adm-mcfg">` +
+            tocNav(
+              [{ id: "mit-ad-ki", label: T(lang, "Mit ad ki?") }, ...(def.fields.length ? [{ id: "szabalyok", label: T(lang, "Szabályok") }] : [])],
+              lang,
+            ) +
+            `<div class="adm-mcfg__body">` +
+            unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData, lang, opts.newUnit) +
+            (def.fields.length ? RULES_MARK : "") +
+            `</div></div>` +
+            tocScript()
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews
@@ -4354,7 +4396,15 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
             : def.editor === "programs" && opts.programs
               ? programsEditor(opts.programs, lang)
               : amenityStored
-              ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
+              ? // ADR-0397: the categories are the screen's sections — chips under the top bar on a phone.
+                `<div class="adm-mcfg">` +
+                tocNav(
+                  AMENITY_CATEGORIES.filter((c) => AMENITY_CATALOG.some((a) => a.category === c.key && a.scope !== "unit"))
+                    .map((c) => ({ id: `amp_site-cat-${c.key}`, label: T(lang, c.label) })),
+                  lang,
+                ) +
+                `<div class="adm-mcfg__body">` +
+                `<form method="POST" action="/admin/module-config" class="adm-card">` +
                 `<input type="hidden" name="module" value="amenities">` +
                 `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span><h2>${esc(T(lang, cat.publicLabel))}</h2></div>` +
                 `<p class="adm-lead">${T(lang, "Koppintson arra, ami az egész szállásra igaz. A szobánkénti eltéréseket a Szobák modulban, az adott szobánál állítja be.")}</p>` +
@@ -4371,8 +4421,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
                 (opts.canRestore
                   ? ` <button class="citui-btn citui-btn--ghost" type="submit" formaction="/admin/module-config/restore">${T(lang, "Vissza az előzőre")}</button>`
                   : "") +
-                `</div></form>` +
-                amenityPickerScript(lang)
+                `</div></form></div></div>` +
+                amenityPickerScript(lang) +
+                tocScript()
               : "";
 
   // Literal anchors on purpose: the coverage gate extracts the helpLink call sites.
@@ -4406,6 +4457,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         placeCard(opts.place, T(lang, "Ezt a pontot mutatja a térkép a vendégnek, és ide vezet az „Útvonal” gomb.")) +
         `<section class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span><h2>${T(lang, "Megközelítés")}</h2></div>` +
         `<p class="adm-lead">${T(lang, "Amit a vendég a térkép mellett olvas.")}</p>` +
+        `<div class="adm-blk adm-blk--plain">` +
         def.fields
           .map((f) =>
             renderField(f, opts.values[f.key], lang).replace(
@@ -4414,7 +4466,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
             ),
           )
           .join("") +
-        `</section>` +
+        `</div></section>` +
         `<p class="citui-hint" style="margin:14px 0 0">${T(lang, "A telefonszám és az e-mail az {link} menüpontban szerkeszthető.", { link: `<a href="/admin?tab=elerhetoseg">${T(lang, "Elérhetőség")}</a>` })}</p>` +
         saveBar(
           lang,
@@ -4428,7 +4480,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
 
   // ADR-0397: on the pricing screen the rules card is a SECTION of the „Az egész szállásra"
   // zone (big title, fields in one tonal block, reachable from the table of contents).
-  const secForm = def.editor === "pricing";
+  const secForm = Boolean(bespoke);
   const form = locationForm || (def.fields.length && !amenityStored
     ? `<form method="POST" action="/admin/module-config" class="adm-card${secForm ? " adm-card--sec" : ""}"${secForm ? ' id="szabalyok"' : ""}>` +
       `<input type="hidden" name="module" value="${esc(moduleId)}">` +
@@ -4437,9 +4489,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       (bespoke
         ? `<p class="adm-lead">${T(lang, "Ezeket ritkán kell módosítani — alapból működnek.")}</p>`
         : `<p class="adm-lead">${esc(T(lang, cat.publicDesc))}</p>`) +
-      (secForm ? `<div class="adm-blk adm-blk--plain">` : "") +
+      `<div class="adm-blk adm-blk--plain">` +
       def.fields.map((f) => renderField(f, opts.values[f.key], lang)).join("") +
-      (secForm ? `</div>` : "") +
+      `</div>` +
       `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">` +
       `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Beállítások mentése")}</button>` +
       (opts.canRestore
@@ -4473,7 +4525,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
     // The card sits BELOW the calendar and the requests: those are the daily screen
     // (booking-screen contract), the setup is occasional.
     const guided =
-      `<section class="adm-card mcfg-guided"><div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +
+      `<section class="adm-card mcfg-guided" id="beallitas"><div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +
       `<h2>${T(lang, "Foglalás beállítása")}</h2></div>` +
       `<p class="adm-lead">${T(lang, "Szobák, árak, időszakok és foglalási szabályok — kérdésről kérdésre, egy oldalon. Ha elakad, a Segítő elmagyarázza.")}</p>` +
       `<a class="citui-btn citui-btn--primary" href="/admin/booking-setup">${T(lang, "Beállítom kérdésről kérdésre")}</a></section>`;
@@ -4490,10 +4542,12 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         opts.annualMult ?? 0,
       ) +
       errs +
-      bespoke +
-      guided +
-      advanced +
-      pendingNote
+      // ADR-0397: the guided card and the advanced form are sections of the last zone.
+      `<div class="adm-mod">` +
+      (bespoke.includes(GUIDED_MARK) ? bespoke.replace(GUIDED_MARK, guided + advanced) : bespoke + guided + advanced) +
+      pendingNote +
+      `</div>` +
+      tocScript()
     );
   }
   // ADR-0397 (approved plan tenant-admin/szakasz-hierarchia, owner „E" 2026-10-21): the
@@ -4504,7 +4558,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
     `<div class="adm-mhead">${back}<h1>${esc(T(lang, cat.publicLabel))}</h1>` +
     `<div class="adm-mhead__m">${priceNote}${help}</div></div>`;
   const [body, tail] = bespoke.includes(RULES_MARK) ? [bespoke.replace(RULES_MARK, form), ""] : [bespoke, form];
-  return head + errs + body + tail + pendingNote;
+  return head + errs + `<div class="adm-mod">` + body + tail + pendingNote + `</div>`;
 }
 
 /**

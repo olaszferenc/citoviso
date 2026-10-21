@@ -65,7 +65,7 @@ export async function createMultilangOrder(
   if (trial) {
     return {
       ok: false,
-      error: "az ingyenes próba alatt modult külön nem vásárolhat — a Folytatom gombbal választhatja ki, mit tart meg",
+      error: "az ingyenes próba alatt modult külön nem vásárolhat — a Megrendelem gombbal választhatja ki, mit tart meg",
     };
   }
   const primaryLang = site.effective.lang ?? DEFAULT_LANG;

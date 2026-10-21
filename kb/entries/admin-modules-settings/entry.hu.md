@@ -23,7 +23,7 @@ nyithatja le. A listában azok a modulok szerepelnek, amelyeknek van beállító
 
 A képernyő címe a modul neve. Fölötte mindig visszatalál a **„Vissza a modulokhoz”** linkkel (a felirat előtt egy ‹ nyíl áll);
 a cím alatt a modul díja (ha van) és az **„Útmutató ehhez a képernyőhöz”** gomb áll, ami ezt a súgót nyitja. (Az Online foglalás
-képernyője kivétel: ott egy sötét fejléc-blokkban a díj a cím mellett, a vissza-link és az útmutató a cím alatt áll.) Alatta jönnek a mezők: kapcsolók, szövegek, számok — mindegyik mellett rövid magyarázat,
+képernyője kivétel: ott egy sötét fejléc-blokkban a díj a cím mellett, a vissza-link és az útmutató a cím alatt áll.) Alatta, egy halvány tömbben jönnek a mezők: kapcsolók, szövegek, számok — mindegyik mellett rövid magyarázat,
 hogy mire való. A speciális képernyőknél (foglalási naptár, szobák, árak, felszereltség) a szabály-mezők a
 **„Szabályok”** cím alatt vannak; ezeket ritkán kell módosítani — alapból működnek.
 

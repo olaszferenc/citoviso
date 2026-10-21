@@ -4,7 +4,7 @@ title: Szobák, apartmanok — és saját aloldalaik
 audience: tenant
 category: bookings
 anchors: admin.modules.rooms
-updated: 2026-10-16
+updated: 2026-10-21
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -20,6 +20,14 @@ felirata **„Árak modul bekapcsolása”**, és a Modulok fülre visz — ott 
 ![Képernyőkép: a képernyő tetején a bevezető sor, alatta az „Árak, szezonok szerkesztése” gomb](assets/hu/arak-gomb.png)
 
 ![Képernyőkép: a szobák rácsa telefonon](assets/hu/screen.png)
+
+## Mi hol van a képernyőn?
+
+A képernyő címe a modul neve, fölötte a **„Vissza a modulokhoz”** link, a cím alatt a modul díja és az
+**„Útmutató ehhez a képernyőhöz”** gomb. A bevezető jegyzet alatt egy sor kis gomb áll: **„Az egész ház”**
+(ha több szobája van), **„A szobái”**, **„Új szoba felvétele”** és **„Szabályok”**. Egyetlen szobánál a sor
+két gombja **„Mit ad ki?”** és **„Szabályok”**. Ez a sor görgetés közben is a képernyő tetején marad, egy gombra koppintva a lap arra a részre ugrik, és mindig az a gomb van kiemelve, amelyik
+résznél éppen jár. Számítógépen ugyanez a lista a jobb szélen áll, **„Ezen a lapon”** címmel.
 
 ## A szobák rácsa
 
