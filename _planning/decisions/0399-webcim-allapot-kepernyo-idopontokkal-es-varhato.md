@@ -1,4 +1,4 @@
-## ADR-XXXX — Webcím: állapot-képernyő időpontokkal és várható elkészüléssel a vétel után
+## ADR-0399 — Webcím: állapot-képernyő időpontokkal és várható elkészüléssel a vétel után
 
 **Dátum:** 2026-10-21 · **Döntött:** tulaj (Olasz Ferenc), a „B” változat · **Kontraktus:**
 `assets/design-refs/console/domain/allapot-4-webcim-b.html` + `README.md` („Állapot-képernyő a vétel után”)

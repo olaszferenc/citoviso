@@ -12,7 +12,7 @@
 |---|---|
 | `JOVAHAGYOTT-domain-ui-B.html` | a választott felület: **külön „Webcím" fül, 3 lépés** (1. Név → 2. Áttekintés → 3. Kész) |
 | `allapot-1-folyamatban.html` | a beszerzés fut (a tulajnak nincs teendője) |
-| `allapot-4-webcim-b.html` | **2026-10-21, ADR-XXXX — a „B” változat** (a fájlban a „B) Egy mondat + 3 szakasz” fül): a megvett név beállítása alatt látható állapot-képernyő; az `allapot-1` folyamat-képernyőjét felülírja |
+| `allapot-4-webcim-b.html` | **2026-10-21, ADR-0399 — a „B” változat** (a fájlban a „B) Egy mondat + 3 szakasz” fül): a megvett név beállítása alatt látható állapot-képernyő; az `allapot-1` folyamat-képernyőjét felülírja |
 | `allapot-2-kesz.html` | kész — a honlap az új néven él, a régi cím odairányít |
 | `allapot-3-sikertelen.html` | a nevet időközben elvitték → másik név választható |
 

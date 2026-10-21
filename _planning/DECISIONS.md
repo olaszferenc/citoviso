@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-webcim-allapot-kepernyo-idopontokkal.md) — Webcím: állapot-képernyő időpontokkal és várható elkészüléssel a vétel után
+- [ADR-0399](decisions/0399-webcim-allapot-kepernyo-idopontokkal-es-varhato.md) — Webcím: állapot-képernyő időpontokkal és várható elkészüléssel a vétel után
 - [ADR-0398](decisions/0398-a-proba-gombja-megrendelem-nem-folytatom.md) — A próba gombja „Megrendelem”, nem „Folytatom”
 - [ADR-0397](decisions/0397-tenant-admin-szakasz-hierarchia-zonak.md) — Tenant-admin szakasz-hierarchia: zónák, tartalomjegyzék, tónus-tömbök (az „E” nyelv)
 - [ADR-0396](decisions/0396-allo-telefonon-a-pirula-par-egy-also-rogzitett.md) — Álló telefonon a pirula-pár egy alsó, rögzített sávon áll, nem lebeg a hős fölött
