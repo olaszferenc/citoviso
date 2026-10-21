@@ -528,6 +528,24 @@ export async function runDomainProvisioning(
       // — an unknown price is never a free pass (§B.17 missing-data branch).
       // ADR-0360 ③: the cap is per ending, NET, in the registrar's currency.
       await assertUnderCostCap(p.domain);
+      // ⛔ SINGLE FLIGHT (2026-10-21, overseer.hu): the payment webhook and the 2-minute
+      // resume timer ran this same row at the same second — `registering` was re-entered
+      // by both, two orders went to the registrar, the second came back „Duplicate order",
+      // and THAT run wrote `failed` and told the tenant „más lefoglalta" while the first
+      // run was paying. The claim is one atomic UPDATE: only `pending` is taken, or a
+      // `registering` older than 15 minutes with no order id (a run that died mid-buy —
+      // a live buy takes seconds). Losing the claim means another run holds the row.
+      const claimed = await sql<{ id: string }>`
+        update domain_provisioning set status = 'registering'
+        where id = ${p.id}
+          and (status = 'pending'
+               or (status = 'registering' and registrar_ref is null
+                   and created_at < now() - interval '15 minutes'))
+        returning id`.execute(db);
+      if (claimed.rows.length === 0) {
+        console.warn(`[domain] ${p.domain}: a vásárlás már fut egy másik futásban (registering) — ez a futás nem nyúl hozzá`);
+        return "registering";
+      }
       await setStatus(p.id, p.siteId, "registering");
       const reg = await registrar.register(p.domain, { years });
       registrarRef = reg.registrarRef;
@@ -536,7 +554,7 @@ export async function runDomainProvisioning(
         .set({ domain_registered_at: reg.registeredUntil ?? null })
         .where("id", "=", p.siteId)
         .execute();
-      await setStatus(p.id, p.siteId, "registered", { registrarRef });
+      await setStatus(p.id, p.siteId, "registered", { registrarRef, error: null });
       status = "registered";
       // ADR-0251: the name is ours → NOW the held amount is taken (never before).
       // A capture that fails stays `reserved`; the resume timer retries it.
@@ -551,7 +569,7 @@ export async function runDomainProvisioning(
       const zone = await dns.createZone(p.domain);
       await registrar.setNameservers(p.domain, zone.nameservers);
       if (config.domains.serverIp) await dns.pointToServer(p.domain, config.domains.serverIp);
-      await setStatus(p.id, p.siteId, "dns_pending", { registrarRef });
+      await setStatus(p.id, p.siteId, "dns_pending", { registrarRef, error: null });
       // ÚJ-K1: the wait starts here; a setup_retry re-entry keeps the first clock.
       await db.updateTable("domain_provisioning").set({ waiting_since: now }).where("id", "=", p.id).where("waiting_since", "is", null).execute();
       status = "dns_pending";
@@ -594,6 +612,46 @@ export async function runDomainProvisioning(
     return status;
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
+    // 2026-10-21 (overseer.hu): the registrar refused OUR OWN order as a duplicate — a
+    // parallel run had already placed it (now closed by the claim above), or an earlier run
+    // died between the order and its payment. Neither is "someone else took the name":
+    // no `failed`, no tenant letter. If another run finished the purchase meanwhile, its
+    // state stands; otherwise the order id is kept on the row and a human checks whether
+    // the registrar's order is paid — the row stays `registering`, which the claim never
+    // re-buys (it carries an order id).
+    if (/duplicate order/i.test(msg)) {
+      const dupOrder = msg.match(/in order (\d+)/i)?.[1] ?? null;
+      let cur = await db.selectFrom("domain_provisioning").select(["status", "registrar_ref"]).where("id", "=", p.id).executeTakeFirstOrThrow();
+      // The other run may still be paying (the live pay loop is up to 60 s): give it that long.
+      // The mock registrar is instant, so the guard does not sit through a minute of nothing.
+      const waits = registrar.name === "mock" ? 0 : 30;
+      for (let i = 0; i < waits && !cur.registrar_ref; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        cur = await db.selectFrom("domain_provisioning").select(["status", "registrar_ref"]).where("id", "=", p.id).executeTakeFirstOrThrow();
+      }
+      if (cur.registrar_ref) {
+        console.warn(
+          `[domain] ${p.domain}: a regisztrátor duplikált rendelést jelzett (${dupOrder ?? "?"}) — a vásárlást egy másik futás már lezárta (${cur.status}); ez a futás nem ír semmit`,
+        );
+        return cur.status as DomainProvisioningStatus;
+      }
+      await db.updateTable("domain_provisioning").set({ registrar_ref: dupOrder, error: msg }).where("id", "=", p.id).execute();
+      console.error(`[domain] ⛔ ${p.domain}: a regisztrátornál MÁR VAN rendelés (${dupOrder ?? "?"}), a fizetése nem igazolt — kézi ellenőrzés`);
+      await alertHouse({
+        tag: "domain-duplicate-order",
+        sms: true,
+        smsKey: `domain-dup:${p.domain}`,
+        subject: `Citoviso: ${p.domain} — a regisztrátornál már van rendelés (${dupOrder ?? "?"}), a fizetése nem igazolt`,
+        text:
+          `A(z) ${p.domain} rendelését a regisztrátor duplikáltként utasította el: a rendelés (${dupOrder ?? "?"}) ` +
+          `már létezik, de EZ a futás nem fizette ki, és a sorban nincs lezárt vásárlás.\n\n` +
+          `Tenant: ${p.tenantId}\nHiba: ${msg}\n\n` +
+          `Állapot: registering marad (az időzítő nem vásárol újra, mert a soron rendelés-azonosító van). ` +
+          `Teendő: a regisztrátor felületén nézd meg, ki van-e fizetve a rendelés; ha igen, a sor ` +
+          `registrar_ref-je jó, állítsd 'registered'-re és futtasd:  npx tsx scripts/resume-domains.mts\n`,
+      });
+      return "registering";
+    }
     // ADR-0362 (Elek B2): AFTER the purchase the name is the tenant's and the hold was
     // captured — this is a setup delay, not a failed purchase. Retried by the timer from
     // `registered`; alerted and told to the tenant ONCE (on entering the state).

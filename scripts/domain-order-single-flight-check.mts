@@ -21,6 +21,12 @@
 //   K5  www.<custom domain> → 301 to the bare domain.
 //   ÚJ-K1 (Elek „it”, 2026-10-12) a bought name stuck in dns_pending: 24 h → one operator alert,
 //       72 h → a repeated alert + ONE tenant letter (none if setup_retry already sent it), never daily.
+//   ÚJ-K2 (overseer.hu, 2026-10-21 15:54) the payment webhook and the resume timer ran ONE row at the
+//       same second: two orders at the registrar, the second refused as „Duplicate order", and that
+//       run wrote `failed` + mailed the tenant „más lefoglalta" while the first was paying. Now: a
+//       `registering` row is claimed atomically (the timer skips it), and a registrar „duplicate"
+//       answer is never `failed` and never a tenant letter — a run that died mid-buy leaves the
+//       order id on the row, alerts the operator once, and is not re-bought.
 //
 // The behaviour blocks run against the REAL modules on a throwaway database (mock
 // registrar / DNS / gateway / invoice / mail). Measured against the code before this
@@ -267,6 +273,79 @@ await block("B1 ④", async () => {
   ok((await up.domainOrderBlocker(tenantId))?.kind === "reserved", "B1 zárolt (reserved) fizetés → a blokkoló 'reserved'");
   await pay.settleDomainReservations();
   ok((await payRow(c.orderId)).status === "released", "⭐ B1 beszerzés nélküli, ragadt zárolást az időzítő feloldja");
+});
+
+// ÚJ-K2 ① — the resume timer ticks while the webhook's run is still at the registrar
+await block("ÚJ-K2 ①", async () => {
+  const { MockRegistrar } = await import("../src/domains/registrar/mock.js");
+  MockRegistrar.resetOrders();
+  MockRegistrar.refuseDuplicateOrders = true; // the live registrar's answer to a 2nd order
+  MockRegistrar.delayMs = 1500; // the buy takes long enough for the timer to arrive
+  try {
+    const { tenantId } = await makeTenant("Verseny");
+    alerts.length = 0;
+    const a = await newPaidLink(tenantId, "verseny-egy.hu");
+    await pay.applyWebhookResult({ gatewayRef: a.ref, status: "paid" }); // fires the buy, does not await it
+    const row = () => db.selectFrom("domain_provisioning").select(["id", "status", "registrar_ref", "error"])
+      .where("tenant_id", "=", tenantId).executeTakeFirst();
+    let dp = await row();
+    for (let i = 0; i < 50 && dp?.status !== "registering"; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      dp = await row();
+    }
+    ok(dp?.status === "registering", "ÚJ-K2 a webhook futása a regisztrátornál jár (registering)", JSON.stringify(dp));
+    // The timer's tick, exactly as systemd runs it, while the buy is in flight.
+    const tick = await prov.resumePendingDomainProvisionings();
+    const mine = tick.find((t) => t.domain === "verseny-egy.hu");
+    ok(mine?.status === "registering", "⭐ ÚJ-K2 az időzítő a futó vásárlást KIHAGYJA (nem vesz másodszor)", JSON.stringify(mine));
+    await waitSettled([a.orderId]);
+    const t = await tally(tenantId);
+    dp = await row();
+    ok(t.registrations === 1 && dp?.status !== "failed" && !!dp?.registrar_ref,
+      "⭐ ÚJ-K2 egy vásárlás, a sor NEM failed, a rendelés-azonosító rajta", JSON.stringify({ t, dp }));
+    ok(dp?.error === null, "ÚJ-K2 a továbblépő sor hibaszövege törölve (nem marad rajta egy régi hiba)", JSON.stringify(dp));
+    const letters = await db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
+      .where("kind", "=", "domain").execute();
+    ok(!letters.some((m) => /elkelt|más lefoglalta/.test(`${m.subject} ${m.body_text}`)),
+      "⭐ ÚJ-K2 a tulaj NEM kap „időközben elkelt” levelet", JSON.stringify(letters.map((m) => m.subject)));
+    ok(!alerts.some((x) => /NEM sikerült/.test(x.subject)), "ÚJ-K2 nincs hamis „regisztráció NEM sikerült” riasztás", JSON.stringify(alerts));
+  } finally {
+    MockRegistrar.delayMs = 0;
+    MockRegistrar.refuseDuplicateOrders = false;
+  }
+});
+
+// ÚJ-K2 ② — a run that died between the order and its payment: the order exists, nobody paid
+await block("ÚJ-K2 ②", async () => {
+  const { MockRegistrar } = await import("../src/domains/registrar/mock.js");
+  MockRegistrar.resetOrders();
+  MockRegistrar.refuseDuplicateOrders = true;
+  try {
+    const { tenantId, siteId } = await makeTenant("Megszakadt");
+    alerts.length = 0;
+    const a = await newPaidLink(tenantId, "megszakadt-egy.hu");
+    // The earlier run placed the order at the registrar and died before paying: the row is
+    // `registering`, 20 minutes old, with no order id.
+    const { MockRegistrar: M } = await import("../src/domains/registrar/mock.js");
+    await new M().register("megszakadt-egy.hu", { years: 1 });
+    const started = await prov.startOrderDomainProvisioning(a.orderId);
+    ok(!!started, "ÚJ-K2 ② a beszerzés-sor létrejött", String(started));
+    await sql`update domain_provisioning set status = 'registering', created_at = now() - interval '20 minutes' where id = ${started}`.execute(db);
+    await db.updateTable("site").set({ custom_domain_status: "registering" }).where("id", "=", siteId).execute();
+    const first = (await prov.resumePendingDomainProvisionings()).find((t) => t.domain === "megszakadt-egy.hu");
+    const dp = await db.selectFrom("domain_provisioning").select(["status", "registrar_ref", "error"]).where("id", "=", started!).executeTakeFirstOrThrow();
+    ok(first?.status === "registering" && dp.status === "registering" && /^\d+$/.test(dp.registrar_ref ?? ""),
+      "⭐ ÚJ-K2 ② duplikált rendelés → NEM failed; a regisztrátor rendelés-azonosítója a soron, kézi ellenőrzésre", JSON.stringify({ first, dp }));
+    ok(alerts.filter((x) => /már van rendelés/.test(x.subject)).length === 1, "⭐ ÚJ-K2 ② egy operátor-riasztás: a rendelés létezik, a fizetése nem igazolt", JSON.stringify(alerts));
+    const letters = await db.selectFrom("tenant_message").select(["subject"]).where("tenant_id", "=", tenantId).where("kind", "=", "domain").execute();
+    ok(letters.length === 0, "⭐ ÚJ-K2 ② a tulaj NEM kap levelet (sem „elkelt”, sem mást)", JSON.stringify(letters));
+    const second = (await prov.resumePendingDomainProvisionings()).find((t) => t.domain === "megszakadt-egy.hu");
+    const dp2 = await db.selectFrom("domain_provisioning").select(["status", "registrar_ref"]).where("id", "=", started!).executeTakeFirstOrThrow();
+    ok(second?.status === "registering" && dp2.registrar_ref === dp.registrar_ref && alerts.filter((x) => /már van rendelés/.test(x.subject)).length === 1,
+      "⭐ ÚJ-K2 ② a következő tick NEM vásárol újra és NEM riaszt újra (a soron rendelés-azonosító van)", JSON.stringify({ second, dp2, alerts: alerts.length }));
+  } finally {
+    MockRegistrar.refuseDuplicateOrders = false;
+  }
 });
 
 // B2 — DNS/TLS error AFTER the purchase
