@@ -117,8 +117,9 @@ foglalt, az itt is lezár, és ami itt foglalt, az a portálon is. A naptár ala
 **„Hirdeti máshol is?”** kártyán mindhárom portálnak saját doboza van, két lépéssel:
 
 1. **A portál naptár-linkjét hozza ide.** A portálon a naptár-szinkron menüben kap egy linket
-   (Booking.com: Rates & Availability › Sync calendars; Szállás.hu: Árak és kapacitás › Naptár
-   szinkron (iCal); Airbnb: Calendar › Availability › Connect calendars). Másolja be a mezőbe, és
+   (Booking.com: Árak és elérhetőség › Naptár › naptár-szinkronizálás; Szállás.hu: Árak és kapacitás › Naptár
+   szinkron (iCal); Airbnb: Naptár › Foglalhatóság › Naptárak bekötése — angol felületen Rates & Availability ›
+   Sync calendars, illetve Calendar › Availability › Connect calendars). Másolja be a mezőbe, és
    nyomja meg az **„Összekötés”** gombot — azonnal megnézzük, és kiírjuk, hány foglalt napot hoztunk át.
 2. **A mi linkünket adja meg a portálnak.** A **„Másolás”** gombbal vágólapra teszi, és a portál
    ugyanazon menüjében, a naptár importálásánál illeszti be.

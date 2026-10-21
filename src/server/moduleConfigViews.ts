@@ -2723,8 +2723,13 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
  * The portals the owner can connect by calendar link (ADR-0361 ⑤). Only portals whose
  * iCal export AND import is verified are NAMED (§B.17): Booking.com and Airbnb from
  * their official help, Szállás.hu from third-party guides. `provider` is the stored
- * `calendar_link.provider` value; `where` and `steps` are the portal's own menu path
- * (Booking/Airbnb keep their English labels — that is what their extranet shows).
+ * `calendar_link.provider` value; `where` and `steps` are the portal's own menu path in the
+ * TENANT's language (the portals localise their extranet to the host's account language —
+ * owner, 2026-10-21), with the English labels in parentheses for hosts who run it in English.
+ * Only VERIFIED labels are quoted as labels (§B.17): Airbnb's Hungarian path is from its own
+ * help (airbnb.hu article 99); Booking's Hungarian tab names („Árak és elérhetőség”, „Naptár”)
+ * are from its Hungarian partner help, its button names are NOT verified in Hungarian, so they
+ * stay quoted in English.
  */
 function syncPortals(lang: string): readonly {
   readonly provider: string;
@@ -2734,10 +2739,10 @@ function syncPortals(lang: string): readonly {
   return [
     {
       provider: "Booking.com",
-      where: "Extranet › Rates & Availability › Sync calendars › Add calendar connection",
+      where: T(lang, "Extranet › Árak és elérhetőség › Naptár › naptár-szinkronizálás (Rates & Availability › Sync calendars › Add calendar connection)"),
       steps: [
-        T(lang, "Booking.com extranet: Rates & Availability › Sync calendars."),
-        T(lang, "„Add calendar connection” → illessze be a 2. lépés linkjét (így az itteni foglalások ott is lezárnak)."),
+        T(lang, "Booking.com extranet: Árak és elérhetőség › Naptár › naptár-szinkronizálás (Rates & Availability › Sync calendars)."),
+        T(lang, "Új naptárkapcsolat („Add calendar connection”) → illessze be a 2. lépés linkjét (így az itteni foglalások ott is lezárnak)."),
         T(lang, "A Booking megmutatja a saját naptár-linkjét („export”) → másolja ide, az 1. lépés mezőjébe."),
       ],
     },
@@ -2752,11 +2757,11 @@ function syncPortals(lang: string): readonly {
     },
     {
       provider: "Airbnb",
-      where: "Calendar › a hirdetés › Availability › Connect calendars › Connect to another website", // i18n-exempt: Airbnb's own (English) menu labels
+      where: T(lang, "Naptár › a hirdetés › Foglalhatóság › Naptárak bekötése › Csatlakozás egy másik webhelyhez (Calendar › Availability › Connect calendars › Connect to another website)"),
       steps: [
-        T(lang, "Airbnb: Calendar › a hirdetés › Availability › Connect calendars."),
-        T(lang, "„Connect to another website” → illessze be a 2. lépés linkjét."),
-        T(lang, "Ugyanott az „Export calendar” linkjét másolja ide, az 1. lépés mezőjébe."),
+        T(lang, "Airbnb: Naptár › a hirdetés › Foglalhatóság › Naptárak bekötése (Calendar › Availability › Connect calendars)."),
+        T(lang, "„Csatlakozás egy másik webhelyhez” (Connect to another website) → illessze be a 2. lépés linkjét, nevezze el, majd „Naptár hozzáadása”."),
+        T(lang, "Ugyanott másolja ki az Airbnb-naptár hivatkozását (Export calendar), és illessze ide, az 1. lépés mezőjébe."),
       ],
     },
   ];
