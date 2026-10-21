@@ -281,7 +281,11 @@ try {
       return { calTop: c.top, calBottom: c.bottom, datesTop: d.top, datesBottom: d.bottom, roomAbove: d.top - Math.max(0, top) - 8, h: c.height,
                fixed: getComputedStyle(document.querySelector('[data-scal]:not([hidden])')!).position };
     });
-    if (width < 620) check(`${label}: a naptár a dátum-gombok ALATT, a folyamban nyílik`, geo.fixed === "static" && geo.calTop >= geo.datesBottom - 1, geo);
+    // ADR-XXXX (szakasz-hierarchia): on a wide screen the room cards stand side by side, so the
+    // FORM is narrow even at 1280 — and the calendar follows the form's width (season-datepicker
+    // contract: @container, not the viewport). The expectation is read off the form, not `width`.
+    const narrowForm = (await add.evaluate((el) => el.getBoundingClientRect().width)) < 620;
+    if (narrowForm) check(`${label}: a naptár a dátum-gombok ALATT, a folyamban nyílik (az űrlap keskeny)`, geo.fixed === "static" && geo.calTop >= geo.datesBottom - 1, geo);
     // owner, 2026-09-27: ABOVE the button whenever it fits under the sticky top bar
     else check(`${label}: a naptár a dátum-gombhoz kötve, ${geo.roomAbove >= geo.h ? "FÖLÖTTE" : "alatta (fölötte nem fér el)"} nyílik`,
       geo.fixed === "fixed" && (geo.roomAbove >= geo.h ? geo.calBottom <= geo.datesTop + 1 && geo.calBottom >= geo.datesTop - 16 : geo.calTop >= geo.datesBottom - 1), geo);
@@ -430,7 +434,9 @@ try {
     const yc = page.locator(`#s-${sMain.id} [data-ycal]`);
     check(`${label}: „Más napokon ebben az évben” → naptár a sáv alatt, „Nyári főszezon ${y} — saját napok”`, (await yc.isVisible()) && (await yc.innerText()).includes(`Nyári főszezon ${y} — saját napok`));
     const span = await yc.evaluate((el) => { const g = el.querySelector(".sdp-grid")!.getBoundingClientRect(); return g.width / el.getBoundingClientRect().width; });
-    check(`${label}: a hónap-rács kitölti a panelt (${Math.round(span * 100)}%${width < 620 ? ", egy hónap" : ", két hónap"})`, width < 620 ? span > 0.85 : span > 0.4 && span < 0.55, span);
+    // ADR-XXXX: one or two months is the PANEL's own width's call (@container), not the viewport's.
+    const narrowYc = (await yc.evaluate((el) => el.getBoundingClientRect().width)) < 620;
+    check(`${label}: a hónap-rács kitölti a panelt (${Math.round(span * 100)}%${narrowYc ? ", egy hónap" : ", két hónap"})`, narrowYc ? span > 0.85 : span > 0.4 && span < 0.55, span);
     check(`${label}: …a hét napjaival (7 fejléc) és évszámmal`, (await yc.locator(".sdp-wk").first().locator("span").count()) === 7 && new RegExp(`${y}\\.`).test(await yc.locator(".sdp-mon h5").first().innerText()));
     // the first Saturday of June and the last Saturday of August, that year
     const sat = (m: number, last: boolean): string => {

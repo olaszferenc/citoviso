@@ -3532,11 +3532,50 @@ function priceWhereBox(v: PriceSiteView | null, lang: string): string {
     body = `<p>${T(lang, "Még egyetlen ára sem látszik a honlapján — adja meg lent az alapárakat.")}</p>` + missing;
   }
   return (
-    `<div class="pr-where" data-cit-price-where="${v.table ? "table" : "cards"}">` +
+    `<div class="pr-where" id="hol-latjak" data-cit-price-where="${v.table ? "table" : "cards"}">` +
     `<p class="pr-where__t">${ic("preview", 16)}${T(lang, "Hol látják a vendégek az árait?")}</p>` +
     body +
     `</div>`
   );
+}
+
+/** Where the generic rules form goes on a screen whose editor lays out zones (ADR-XXXX). */
+const RULES_MARK = "<!--cit:rules-->";
+
+type TocItem = { readonly id: string; readonly label: string } | { readonly zone: string };
+
+/** The sticky table of contents (ADR-XXXX): chips under the top bar on a phone, a rail on a wide screen. */
+function tocNav(items: readonly TocItem[], lang: string): string {
+  return (
+    `<nav class="adm-toc" data-cit-toc aria-label="${esc(T(lang, "Ezen a lapon"))}">` +
+    `<p class="adm-toc__t">${T(lang, "Ezen a lapon")}</p><ol>` +
+    items
+      .map((it) =>
+        "zone" in it
+          ? `<li class="adm-toc__z">${esc(it.zone)}</li>`
+          : `<li><a href="#${esc(it.id)}">${esc(it.label)}</a></li>`,
+      )
+      .join("") +
+    `</ol></nav>`
+  );
+}
+
+/** Scroll-spy for the table of contents: the section in view is marked, on the list and on itself. */
+function tocScript(): string {
+  return (
+    `<script>(function(){var n=document.querySelector("[data-cit-toc]");if(!n)return;` +
+    `var as=[].slice.call(n.querySelectorAll("a[href^='#']")),ts=as.map(function(a){return document.getElementById(a.getAttribute("href").slice(1))}),cur=null;` +
+    `function spy(){var y=window.scrollY+120,best=null,bd=1e9;ts.forEach(function(t){if(!t)return;var r=t.getBoundingClientRect(),top=r.top+window.scrollY,d=Math.abs(top-y);if(top<=y+r.height&&d<bd){bd=d;best=t}});` +
+    `if(!best)best=ts[0];if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-2)best=ts[ts.length-1];if(best===cur)return;cur=best;` +
+    `ts.forEach(function(t,i){if(t)t.classList.toggle("is-current",t===best);as[i].classList.toggle("is-current",t===best)});}` +
+    `window.addEventListener("scroll",spy,{passive:true});window.addEventListener("resize",spy);spy();})();</script>`
+  );
+}
+
+/** One line under a room's title: the base price and how many seasons it has (ADR-XXXX). */
+function roomSummary(base: number | null, seasons: number, cur: string, lang: string): string {
+  const b = base !== null ? T(lang, "Alapár {amount} {cur}", { amount: grouped(base), cur: esc(cur) }) : T(lang, "Még nincs alapár");
+  return `${b} · ${T(lang, "{n} időszak", { n: seasons })}`;
 }
 
 function pricingEditor(data: PricingEditorData, lang = "hu"): string {
@@ -3597,13 +3636,17 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         : `<p class="citui-hint" style="margin:6px 0 12px">${T(lang, "Nincs külön időszaki ár — mindig az alapár érvényes.")}</p>`;
 
       return (
-        `<div class="adm-card" id="ar-${esc(u.id)}" data-seasons="${esc(JSON.stringify(seasons.map((x) => ({ id: x.id, label: x.label, from: x.from, to: x.to }))))}">` +
+        `<div class="adm-card adm-card--sec" id="ar-${esc(u.id)}" data-seasons="${esc(JSON.stringify(seasons.map((x) => ({ id: x.id, label: x.label, from: x.from, to: x.to }))))}">` +
         `<div class="adm-card__head"><span class="adm-ico">${ic("pricing")}</span>` +
-        `<h2>${esc(u.name)}</h2></div>` +
-        // ① base price
+        `<h2>${esc(u.name)}</h2>` +
+        // ADR-XXXX: one line of the current values under the title (what the owner scans for).
+        `<span class="adm-card__sum">${roomSummary(base?.amount ?? null, seasons.length, cur, lang)}</span></div>` +
+        // ① base price — the first tonal block; its title says „Alapár", so the field's own
+        // label is left to screen readers (a sighted owner would read the word twice).
+        `<div class="adm-blk"><h3 class="adm-blk__h">${T(lang, "Alapár")}</h3>` +
         `<form method="POST" action="/admin/prices/base" class="unit-row" style="border-bottom:0">` +
         `<input type="hidden" name="unit" value="${esc(u.id)}">` +
-        `<label class="citui-label" style="flex:1;min-width:150px">${T(lang, "Alapár")}` +
+        `<label class="citui-label" style="flex:1;min-width:150px"><span class="adm-vh">${T(lang, "Alapár")}</span>` +
         `<span class="mcfg-suffix" style="margin-top:5px">` +
         `<input class="citui-input" name="amount" type="number" inputmode="numeric" min="0" ` +
         `value="${base ? base.amount : ""}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
@@ -3625,8 +3668,9 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
           ? datedRows +
             `<p class="citui-hint" style="margin:6px 0 18px">${T(lang, "A dátumos alapár az árajánlatból került ide: csak a kért éjszakákra szól, ahol nincs időszaki ár, és a tartózkodás után magától lekerül.")}</p>`
           : "") +
-        // ② seasons
-        `<h3 class="mcfg-sub">${T(lang, "Időszaki árak")}</h3>` +
+        `</div>` +
+        // ② seasons — the second tonal block (the „csak a felsorolt időszakokban" switch is its last row)
+        `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Időszaki árak")}</h3>` +
         `<p class="citui-hint" style="margin:0 0 6px">${T(lang, "Egy időszakot elég egyszer megadni: minden évben ugyanazokon a napokon érvényes. Egy adott évre az alatta lévő évsávon adhat más árat vagy más napokat.")}</p>` +
         seasonRows +
         `<form method="POST" action="/admin/prices/season" class="price-new" data-sadd>` +
@@ -3657,7 +3701,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
             `<span class="adm-ico" style="vertical-align:middle">${ic("bookings")}</span> ` +
             `${T(lang, "Online foglalással azt is megadhatja, hogy csak ezekben az időszakokban adja ki, és időszakonként hány éjszaka a minimum.")} ` +
             `<br><a href="/admin?tab=modulok">${T(lang, "Online foglalás")} ›</a></p>`) +
-        `</div>`
+        `</div></div>`
       );
     })
     .join("");
@@ -3672,7 +3716,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     ? T(lang, "Szobák, apartmanok szerkesztése")
     : T(lang, "Szobák modul bekapcsolása");
 
-  return (
+  const note =
     `<p class="mcfg-note mcfg-note--act"><span>` +
     // ADR-0257: let only as one, the price is the HOUSE's — "per room" would contradict the note below.
     (shown.size
@@ -3683,13 +3727,39 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
       : T(lang, "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál."))) +
     `</span>` +
     `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="${roomsHref}">${roomsLabel}</a>` +
-    `</p>` +
-    priceWhereBox(data.siteView, lang) +
-    cards +
+    `</p>`;
+
+  // ADR-XXXX (approved plan tenant-admin/szakasz-hierarchia, „E"): the screen is three ZONES —
+  // the intro box, the rooms side by side on a wide screen, and what holds for the whole
+  // place (meals + rules) — with a sticky table of contents grouped the same way.
+  const zoneRooms = shown.size ? T(lang, "Az egész ház ára") : T(lang, "Szobánkénti árak");
+  const zoneAll = T(lang, "Az egész szállásra");
+  const toc: TocItem[] = [];
+  if (data.siteView) toc.push({ id: "hol-latjak", label: T(lang, "Hol látják a vendégek?") });
+  toc.push({ zone: zoneRooms });
+  for (const u of priced) toc.push({ id: `ar-${u.id}`, label: u.name });
+  toc.push({ zone: zoneAll });
+  if (data.meals) toc.push({ id: "ellatas", label: T(lang, "Ellátás") });
+  toc.push({ id: "szabalyok", label: T(lang, "Szabályok") });
+
+  return (
+    note +
+    `<div class="adm-mcfg">` +
+    tocNav(toc, lang) +
+    `<div class="adm-mcfg__body">` +
+    (data.siteView ? `<div class="adm-zone adm-zone--intro">${priceWhereBox(data.siteView, lang)}</div>` : "") +
+    `<div class="adm-zone"><h2 class="adm-zone__h">${esc(zoneRooms)}` +
+    (shown.size ? "" : `<span class="adm-zone__n">${T(lang, "{n} szoba", { n: priced.length })}</span>`) +
+    `</h2><div class="adm-zone__grid">${cards}</div></div>` +
+    `<div class="adm-zone"><h2 class="adm-zone__h">${esc(zoneAll)}</h2>` +
     (data.meals ? mealsCard(data.meals, priced, cur, lang) : "") +
+    RULES_MARK +
+    `</div>` +
     (shown.size
       ? `<p class="mcfg-note" data-cit-presentation-note>${T(lang, "A házat csak egyben adja ki, ezért árat csak az egész házra kérünk. A {n} szoba csak bemutatásra van: a vendég képpel és felszereltséggel látja őket, de külön nem foglalhatja — áruk nem kell.", { n: shown.size })}</p>`
       : "") +
+    `</div></div>` +
+    tocScript() +
     seasonEditorScript(
       lang,
       data.today ?? viewToday(),
@@ -3778,38 +3848,39 @@ function mealsCard(v: MealsEditorView, units: readonly EditorUnit[], cur: string
   }).join("");
   const anyErr = Object.keys(err).length > 0;
   return (
-    `<div class="adm-card ml" id="ellatas">` +
+    `<div class="adm-card adm-card--sec ml" id="ellatas">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("pricing")}</span><h2>${T(lang, "Ellátás")}</h2></div>` +
     `<p class="adm-lead">${T(lang, "Reggeli, félpanzió, teljes panzió — mit tartalmaz az ár, és mi kérhető felárral. Minden szobára ugyanez érvényes, kivéve, amelyiket alul kiveszi.")}</p>` +
     (v.saved ? `<p class="s-flash" role="status" style="margin:0 0 12px">${T(lang, "Elmentve — a honlapon és a foglalásnál már így látszik.")}</p>` : "") +
     (anyErr ? `<div class="mcfg-err" role="alert">${T(lang, "Javítsa a pirossal jelölt mezőt — semmi nem mentődött.")}</div>` : "") +
     `<form method="POST" action="/admin/prices/meals" data-ml-form>` +
-    `<h3 class="mcfg-sub">${T(lang, "Mit tartalmaz az alapár?")}</h3>` +
+    // ADR-XXXX: every question of the form is one tonal block.
+    `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Mit tartalmaz az alapár?")}</h3>` +
     `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "A szobák árai (fent) ezzel az ellátással értendők. Ami ennél több, azt felárral kínálhatja.")}</p>` +
     `<div class="ml-base" role="radiogroup">` +
     MEAL_PLAN_IDS.map((id) => `<label><input type="radio" name="base" value="${id}"${f.base === id ? " checked" : ""}>${name(id)}</label>`).join("") +
-    `</div>${ferr("base")}` +
-    `<h3 class="mcfg-sub">${T(lang, "Választható ellátás")}</h3>` +
+    `</div>${ferr("base")}</div>` +
+    `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Választható ellátás")}</h3>` +
     `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Pipálja be, amit kínál, és adja meg a felárát.")}</p>` +
     `<table class="ml-tbl"><thead><tr><th>${T(lang, "Ellátás")}</th><th>${T(lang, "Felár")}</th><th>${T(lang, "Mire")}</th>` +
     (MEAL_CHILD_PRICING ? `<th>${T(lang, "Gyermeknek")}</th>` : "") +
-    `<th></th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<th></th></tr></thead><tbody>${rows}</tbody></table></div>` +
     (MEAL_CHILD_PRICING
-      ? `<h3 class="mcfg-sub">${T(lang, "Gyerekár")}</h3>` +
+      ? `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Gyerekár")}</h3>` +
         `<p class="ml-age">${T(lang, "Gyermeknek számít")} <input class="citui-input${err.childAge ? " is-bad" : ""}" name="childAge" inputmode="numeric" value="${esc(f.childAge)}"> ${T(lang, "éves korig.")}</p>` +
         ferr("childAge") +
-        `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Ahol a gyerekár üres, ott a gyermek is felnőtt-árat fizet. A 0 azt jelenti: ingyenes.")}</p>`
+        `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Ahol a gyerekár üres, ott a gyermek is felnőtt-árat fizet. A 0 azt jelenti: ingyenes.")}</p></div>`
       : "") +
     (units.length > 1
-      ? `<h3 class="mcfg-sub">${T(lang, "Mely szobákhoz kérhető ellátás?")}</h3>` +
+      ? `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Mely szobákhoz kérhető ellátás?")}</h3>` +
         `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Ahol kiveszi, ott a vendég nem lát ellátás-választást.")}</p>` +
         `<div class="ml-units">` +
         units.map((u) => `<label><input type="checkbox" name="unit" value="${esc(u.id)}"${f.unitsOn.includes(u.id) ? " checked" : ""}>${esc(u.name)}</label>`).join("") +
-        `</div>`
+        `</div></div>`
       : units.map((u) => `<input type="hidden" name="unit" value="${esc(u.id)}">`).join("")) +
-    `<h3 class="mcfg-sub">${T(lang, "Mi van még benne az árban?")}</h3>` +
+    `<div class="adm-blk"><h3 class="mcfg-sub">${T(lang, "Mi van még benne az árban?")}</h3>` +
     `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Pl. „takarítás, ágynemű, törölköző”. A vendég a szobáknál és a foglalásnál is olvassa, a tételes ár alatt. Üresen hagyva ez a sor elmarad.")}</p>` +
-    `<textarea class="citui-input" name="includes" maxlength="200">${esc(f.includes)}</textarea>` +
+    `<textarea class="citui-input" name="includes" maxlength="200">${esc(f.includes)}</textarea></div>` +
     `<div style="margin-top:18px"><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button></div>` +
     `</form>` +
     // Progressive: the base hides the rows below it and turns its own row into "az alapár része";
@@ -4355,15 +4426,20 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         placeScript(opts.place)
       : "";
 
+  // ADR-XXXX: on the pricing screen the rules card is a SECTION of the „Az egész szállásra"
+  // zone (big title, fields in one tonal block, reachable from the table of contents).
+  const secForm = def.editor === "pricing";
   const form = locationForm || (def.fields.length && !amenityStored
-    ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
+    ? `<form method="POST" action="/admin/module-config" class="adm-card${secForm ? " adm-card--sec" : ""}"${secForm ? ' id="szabalyok"' : ""}>` +
       `<input type="hidden" name="module" value="${esc(moduleId)}">` +
       `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +
       `<h2>${bespoke ? T(lang, "Szabályok") : esc(T(lang, cat.publicLabel))}</h2></div>` +
       (bespoke
         ? `<p class="adm-lead">${T(lang, "Ezeket ritkán kell módosítani — alapból működnek.")}</p>`
         : `<p class="adm-lead">${esc(T(lang, cat.publicDesc))}</p>`) +
+      (secForm ? `<div class="adm-blk adm-blk--plain">` : "") +
       def.fields.map((f) => renderField(f, opts.values[f.key], lang)).join("") +
+      (secForm ? `</div>` : "") +
       `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">` +
       `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Beállítások mentése")}</button>` +
       (opts.canRestore
@@ -4372,9 +4448,11 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       `</div></form>`
     : "");
 
+  // ADR-XXXX (szakasz-hierarchia): the head's meta row carries the price only — the h1
+  // right above it already says the module's name.
   const priceNote =
     opts.priceMonthly && opts.priceMonthly > 0
-      ? `<p class="mcfg-price">${esc(T(lang, cat.publicLabel))} · ${priceInPeriod(opts.priceMonthly, opts.annualMult ?? 0, lang)}</p>`
+      ? `<span class="mcfg-price">${priceInPeriod(opts.priceMonthly, opts.annualMult ?? 0, lang)}</span>`
       : "";
 
   // An editor that is declared but not built yet is stated plainly, at the bottom,
@@ -4418,7 +4496,15 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       pendingNote
     );
   }
-  return back + help + priceNote + errs + bespoke + form + pendingNote;
+  // ADR-XXXX (approved plan tenant-admin/szakasz-hierarchia, owner „E" 2026-10-21): the
+  // MODULE's name is the page's h1, the back link is its kicker, price + guide share one
+  // meta row. A bespoke editor that opens a zone for the rules card leaves RULES_MARK in
+  // it; the generic form is set there, so the card is a section of that zone.
+  const head =
+    `<div class="adm-mhead">${back}<h1>${esc(T(lang, cat.publicLabel))}</h1>` +
+    `<div class="adm-mhead__m">${priceNote}${help}</div></div>`;
+  const [body, tail] = bespoke.includes(RULES_MARK) ? [bespoke.replace(RULES_MARK, form), ""] : [bespoke, form];
+  return head + errs + body + tail + pendingNote;
 }
 
 /**

@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-21_tenant_admin_szakasz_hierarchia.md](2026-10-21_tenant_admin_szakasz_hierarchia.md) — 2026-10-21 — Tenant-admin szakasz-hierarchia („E”) + portál-menüút a tenant nyelvén
 - [2026-10-19_tobb_szoba_elek_perszonak.md](2026-10-19_tobb_szoba_elek_perszonak.md) — 2026-10-19 — Több szobás foglalás: Elek több perszónával (ADR-0393 kiegészítés)
 - [2026-10-15_egesz_haz_egyszerusitve.md](2026-10-15_egesz_haz_egyszerusitve.md) — 2026-10-15 — Az egész ház egyszerűsítve (Szobák kártya, varázsló)
 - [2026-10-15_belepes_visszatalalas.md](2026-10-15_belepes_visszatalalas.md) — 2026-10-15 — A szállásadó visszatalál a belépéshez (tulaj-lelet, [TESZT] Matróz)

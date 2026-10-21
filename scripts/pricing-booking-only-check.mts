@@ -170,12 +170,13 @@ console.log("④ böngészőben mérve: az új-időszak űrlap a kártyán belü
             .map((sp) => sp.textContent);
           return { over: Math.round(over), pageX: document.documentElement.scrollWidth - innerWidth, broken, btnOver, btnSpan,
                    nBtn: dates.length,
+                   formW: Math.round(form.getBoundingClientRect().width),
                    dateW: dates.length ? Math.round(dates[0].getBoundingClientRect().width) : 0,
                    // one row = the name field, the date buttons and the add button share a bottom edge
                    sameRow: dates.length > 0 &&
                      Math.abs(form.querySelector('input[name="label"]').getBoundingClientRect().bottom - dates[0].getBoundingClientRect().bottom) < 2 &&
                      Math.abs(form.querySelector(".pn-go").getBoundingClientRect().bottom - dates[0].getBoundingClientRect().bottom) < 2 };
-        })()`)) as { over: number; pageX: number; nBtn: number; dateW: number; sameRow: boolean; broken: string[]; btnOver: number; btnSpan: number };
+        })()`)) as { over: number; pageX: number; nBtn: number; formW: number; dateW: number; sameRow: boolean; broken: string[]; btnOver: number; btnSpan: number };
         check(`${state} @${vw}px: semmi nem lóg ki a kártyából (túllógás ${m.over}px)`, m.over <= 0, m);
         check(`${state} @${vw}px: a Szobák-gomb a jegyzeten belül marad (túllógás ${m.btnOver}px)`, m.btnOver <= 0, m);
         if (vw === 390) check(`${state} @390px: a Szobák-gomb a jegyzet teljes szélességét kitölti (${m.btnSpan}%)`, m.btnSpan >= 95, m);
@@ -185,7 +186,13 @@ console.log("④ böngészőben mérve: az új-időszak űrlap a kártyán belü
         if (vw === 1280) {
           // Approved plan season-datepicker: desktop keeps ONE row (name · dates · price ·
           // [minimum] · add), and a date button is wide enough for "márc. 31." (≥ 100px).
-          check(`${state} @1280px: asztalon egy sor, a dátum-gomb ≥ 100px (${m.dateW}px)`, m.sameRow && m.dateW >= 100, m);
+          // ADR-XXXX (szakasz-hierarchia): the table-of-contents rail and the side-by-side room
+          // cards make the FORM narrower than the old full-width card (measured: 702px with one
+          // room, ~340px with two) — the approved E plan shows the room's form WRAPPED. One row
+          // is claimed only where it can hold (the old full width, ≥ 900px); narrower, the
+          // wrap must be clean (no overflow — checked above) and the date button still ≥ 100px.
+          if (m.formW >= 900) check(`${state} @1280px: asztalon egy sor, a dátum-gomb ≥ 100px (${m.dateW}px)`, m.sameRow && m.dateW >= 100, m);
+          else check(`${state} @1280px: keskenyebb űrlap (${m.formW}px, tartalomjegyzék-sáv / két oszlop) — tördelve, a dátum-gomb ≥ 100px (${m.dateW}px)`, m.dateW >= 100, m);
         }
         await p.close();
       }

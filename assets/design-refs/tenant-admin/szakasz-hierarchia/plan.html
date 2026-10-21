@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tenant-admin · Árak, szezonok — szerkezeti változat E</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --citui-navy-900:#0e2a47;--citui-navy-700:#203a59;--citui-cyan-500:#1fb6d6;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-muted:#5a6d82;--citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-ok-ink:#19733f;--citui-bad-ink:#b3262b;--citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;
+  --citui-bg:#fff;--citui-panel:#fff;--citui-side:#fafafa;--citui-field:#f6f7f8;--citui-hover:#f2f3f5;
+  --citui-accent-ink:#06131b;--citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  --citui-ink-brand:var(--citui-navy-900);--citui-ink-brand-2:var(--citui-navy-700);
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+[data-citui-theme="dark"]{
+  --citui-ink:#e6e9ef;--citui-muted:#8a93a3;--citui-surface:#12151c;--citui-surface-2:#1b1f29;
+  --citui-line:#262b37;--citui-line-strong:#343a48;--citui-bg:#0f1116;--citui-panel:#151821;--citui-side:#12151c;
+  --citui-field:#1b1f29;--citui-hover:#1e2330;--citui-ok:#3ddc97;--citui-warn:#f0b35a;--citui-bad:#ff7b7b;--citui-ok-soft:#14352a;
+  --citui-ok-ink:#4fe3a3;--citui-bad-ink:#ff8e8e;--citui-warn-ink:#f5c06b;--citui-link-ink:#4fd0ea;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);
+  --citui-ink-brand:var(--citui-ink);--citui-ink-brand-2:color-mix(in srgb,var(--citui-ink) 80%,var(--citui-muted));
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--citui-surface);color:var(--citui-ink);font:13px/1.5 var(--citui-font-text);-webkit-font-smoothing:antialiased}
+[data-citui-theme="dark"] body{background:#0a0c10}
+a{color:var(--citui-link-ink)}
+svg{flex:0 0 auto}
+
+/* ── mock chrome (not part of the design) ── */
+.chrome{max-width:1280px;margin:0 auto;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12px}
+.chrome__t{font-weight:700;flex:1 1 100%}
+.chrome__g{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.chrome__g>b{margin-right:4px;color:var(--citui-muted);font-weight:600}
+.chrome button{font:600 12px/1 var(--citui-font-text);padding:7px 10px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);border-radius:6px;cursor:pointer}
+.chrome button[aria-pressed="true"]{background:var(--citui-ink);color:var(--citui-bg);border-color:var(--citui-ink)}
+.chrome__hint{flex:1 1 100%;margin:0;color:var(--citui-muted)}
+#stage{container-type:inline-size;container-name:vp;width:100%;max-width:1280px;margin:0 auto 40px;background:var(--citui-bg);box-shadow:0 0 0 1px var(--citui-line-strong);overflow:clip;position:relative}
+#stage.is-mobile{width:390px}
+
+/* ── shell ── */
+.adm{display:grid;grid-template-columns:1fr;min-height:100vh;background:var(--citui-bg)}
+.side{display:none}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--citui-line);background:var(--citui-panel);position:sticky;top:0;z-index:5}
+.crumb{flex:1 1 auto;display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;font-size:12px}
+.crumb a{color:var(--citui-muted);text-decoration:none}.crumb span{color:var(--citui-muted)}.crumb b{font-weight:600}
+.crumb a:first-child,.crumb span:first-of-type{display:none}
+.tsearch{display:none;align-items:center;gap:8px;border:1px solid var(--citui-line);border-radius:6px;padding:5px 9px;width:200px;color:var(--citui-muted);background:var(--citui-field)}
+.ib{display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:6px;color:var(--citui-ink);border:1px solid transparent;background:transparent;cursor:pointer}
+.ib:hover{background:var(--citui-hover)}
+.main{min-width:0}
+.inner{max-width:1040px;margin:0 auto;padding:18px 14px 90px}
+.bnav{position:sticky;bottom:0;display:flex;background:var(--citui-panel);border-top:1px solid var(--citui-line);z-index:5}
+.bnav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;font-size:10px;color:var(--citui-muted);text-decoration:none;position:relative}
+.bnav a.is-active{color:var(--citui-link-ink)}
+.badge{position:absolute;top:4px;right:22%;min-width:16px;height:16px;border-radius:999px;background:var(--citui-cyan-500);color:var(--citui-accent-ink);font:700 10px/16px var(--citui-font-text);text-align:center;padding:0 4px;font-style:normal}
+@container vp (min-width:860px){
+  .adm{grid-template-columns:232px 1fr}
+  .side{display:flex;flex-direction:column;position:sticky;top:0;align-self:start;height:100vh;background:var(--citui-side);border-right:1px solid var(--citui-line);overflow:hidden}
+  .crumb a:first-child,.crumb span:first-of-type{display:inline}
+  .tsearch{display:flex}
+  .top{padding:8px 16px}
+  .inner{padding:24px 32px 48px}
+  .bnav{display:none}
+}
+.side__brand{display:flex;align-items:center;gap:10px;padding:14px 14px 10px}
+.side__brand b{display:block;font-size:13px}.side__brand small{color:var(--citui-muted);font-size:11px}
+.side__logo{width:30px;height:30px;border-radius:50%;background:var(--citui-cyan-500);color:var(--citui-accent-ink);display:grid;place-items:center;font-weight:800}
+.side__nav{flex:1;overflow:auto;padding:4px 8px}
+.side__grp{font-size:10px;color:var(--citui-muted);padding:12px 8px 4px}
+.side__a{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;color:var(--citui-ink);text-decoration:none;font-size:13px;position:relative}
+.side__a svg{width:16px;height:16px;color:var(--citui-muted)}
+.side__a em{margin-left:auto;font-style:normal;color:var(--citui-muted);font-size:11px}
+.side__a .badge{position:static;margin-left:auto}
+.side__a.is-open{font-weight:600}.side__a.is-open svg{color:var(--citui-cyan-500)}
+.side__subs{margin:2px 0 4px 16px;border-left:1px solid var(--citui-line);padding-left:4px}
+.side__sub{display:block;padding:5px 8px;font-size:12px;color:var(--citui-ink);text-decoration:none;border-radius:6px}
+.side__sub.is-active{background:var(--citui-accent-soft);font-weight:600;box-shadow:inset 2px 0 0 var(--citui-cyan-500)}
+.side__plan{margin:8px;padding:10px;border:1px solid var(--citui-line);border-radius:8px;background:var(--citui-panel);font-size:11px}
+.side__plan b{display:flex;gap:6px;align-items:center;font-size:12px}.side__plan b svg{width:14px;height:14px;color:var(--citui-cyan-500)}
+.side__plan small{display:block;color:var(--citui-muted);margin:3px 0 6px}
+.side__bar{display:block;height:5px;border-radius:3px;background:var(--citui-surface-2);margin-bottom:8px}.side__bar i{display:block;width:84%;height:100%;border-radius:3px;background:var(--citui-cyan-500)}
+.side__user{display:flex;gap:9px;align-items:center;padding:10px 14px;border-top:1px solid var(--citui-line)}
+.side__user b{display:block;font-size:12px}.side__user small{color:var(--citui-muted);font-size:11px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--citui-surface-2);display:grid;place-items:center;font-weight:700;font-size:11px}
+
+/* ── page head (common improvement: the module name IS the h1) ── */
+.phead{margin:0 0 18px}
+.phead__k{font-size:12px;color:var(--citui-muted);margin:0}
+.phead h1{margin:2px 0 6px;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.phead__m{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--citui-muted);font-size:12px}
+.phead__m .btn{margin-left:auto}
+.note{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--citui-surface-2);border-radius:8px;padding:10px 14px;margin:0 0 20px;font-size:12.5px}
+
+/* ── controls (today's Linear kit) ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:0 13px;border:1px solid var(--citui-line);border-radius:6px;background:var(--citui-panel);color:var(--citui-ink);font:600 12.5px/1 var(--citui-font-text);cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn svg{width:14px;height:14px}
+.btn:hover{background:var(--citui-hover)}
+.btn--p{background:var(--citui-cyan-500);border-color:transparent;color:var(--citui-accent-ink)}
+.btn--p:hover{background:var(--citui-cyan-500);filter:brightness(1.06)}
+.btn--sm{min-height:30px;padding:0 10px;font-size:12px}
+.inp{background:var(--citui-field);border:1px solid var(--citui-line);border-radius:6px;padding:7px 10px;font:inherit;color:var(--citui-ink);min-height:34px;width:100%}
+.inp:focus{outline:0;border-color:var(--citui-cyan-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 22%,transparent);background:var(--citui-panel)}
+.inp:disabled{opacity:.5}
+.inp--num{text-align:right;font-variant-numeric:tabular-nums}
+.inp--ta{resize:vertical}
+.inpw{display:inline-flex;align-items:center;gap:6px}.inpw .inp{width:110px}.inpw--s .inp{width:64px}
+.unit{color:var(--citui-muted);font-size:12px}
+.lbl{display:block;font-size:11px;color:var(--citui-muted);margin-bottom:4px;font-weight:600}
+.fld{display:block;min-width:0}
+.fld--b{margin-bottom:12px;max-width:420px}
+.hint{color:var(--citui-muted);font-size:11.5px;margin:6px 0 0;line-height:1.45}
+.lead{color:var(--citui-muted);margin:0 0 14px}
+.err{color:var(--citui-bad-ink);font-size:12px;margin:6px 0 0;font-weight:600}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row--price .fld{display:flex;align-items:center;gap:6px}.row--price .inp{width:130px}
+.row--save{margin-top:16px;gap:12px}
+.row--inline{display:flex;gap:8px;align-items:center;margin:0}
+.saved{color:var(--citui-ok-ink);background:var(--citui-ok-soft);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600}
+.chk{display:flex;gap:9px;align-items:flex-start;cursor:pointer}
+.chk input{margin:3px 0 0;accent-color:var(--citui-cyan-500);flex:0 0 auto}
+.chk b{font-weight:600;display:block}.chk small{display:block;color:var(--citui-muted);font-size:11.5px}
+.chk--card{margin-top:12px;border:1px solid var(--citui-line);border-radius:8px;padding:10px 12px;background:var(--citui-panel)}
+.chk--card input:checked+span b{color:var(--citui-ink)}
+.chk--line{margin-top:14px}
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 0;align-items:end}
+.srow .fld:first-child{grid-column:1/-1}
+.srow .inpw{display:flex}.srow .inpw .inp{width:100%}
+.srow .btn{grid-column:1/-1}
+@container vp (min-width:860px){.srow{grid-template-columns:1.6fr 1fr 1fr .9fr .7fr auto}.srow .fld:first-child,.srow .btn{grid-column:auto}}
+.year{margin-top:14px}
+.year__strip{display:grid;grid-template-columns:repeat(12,1fr);border:1px solid var(--citui-line);border-radius:6px;overflow:hidden}
+.year__m{font-size:10px;color:var(--citui-muted);text-align:center;padding:4px 0 18px;border-right:1px solid var(--citui-line);position:relative}
+.year__m:last-child{border-right:0}
+.year__m.is-on::after{content:"";position:absolute;left:3px;right:3px;bottom:5px;height:6px;border-radius:3px;background:var(--citui-cyan-500)}
+.year__leg{font-size:11px;color:var(--citui-muted);display:inline-flex;gap:6px;align-items:center;margin-top:6px}.year__leg i{width:14px;height:6px;border-radius:3px;background:var(--citui-cyan-500)}
+.seasons{list-style:none;margin:10px 0 0;padding:0}
+.seasons li{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--citui-line);border-radius:6px;margin-bottom:6px;font-size:12.5px}
+.seasons li b{flex:1}.seasons li .x{margin-left:auto;color:var(--citui-muted);cursor:pointer;background:none;border:0;font-size:14px}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.pill{border:1px solid var(--citui-line);border-radius:999px;padding:4px 10px;font-size:12px}.pill b{font-weight:600;margin-left:4px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.seg__o{position:relative}.seg__o input{position:absolute;opacity:0;inset:0}
+.seg__o span{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line);border-radius:999px;padding:6px 12px;cursor:pointer;background:var(--citui-panel)}
+.seg__o span::before{content:"";width:12px;height:12px;border-radius:50%;border:1px solid var(--citui-line-strong)}
+.seg__o input:checked+span{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft);font-weight:600}
+.seg__o input:checked+span::before{border:4px solid var(--citui-cyan-500)}
+.tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+.tbl th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);padding:6px 8px 6px 0;border-bottom:1px solid var(--citui-line)}
+.tbl td{padding:7px 8px 7px 0;border-bottom:1px solid var(--citui-line);vertical-align:middle}
+.tbl .inpw .inp{width:84px}.tbl select.inp{width:96px}
+.tagok{background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600}
+.lnk{font-weight:600;font-size:12px}
+@container vp (max-width:859px){
+  .tbl thead{display:none}
+  .tbl tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--citui-line)}
+  .tbl td{display:block;border:0;padding:0}
+  .tbl td:first-child{grid-column:1/-1}
+  .tbl .tbl__base td:nth-child(2){grid-column:1/-1}
+  .tbl .inpw .inp,.tbl select.inp{width:100%}
+  .tbl td:last-child{grid-column:1/-1}
+}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
+.chip{position:relative}.chip input{position:absolute;opacity:0;inset:0}
+.chip span{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line);border-radius:6px;padding:5px 10px;cursor:pointer}
+.chip input:checked+span{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft);font-weight:600}
+.chip input:checked+span::before{content:"✓";font-size:11px;color:var(--citui-link-ink)}
+
+/* ── BASE section anatomy (today's look: identical cards) ── */
+.zone__h{display:none}
+.sec{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:8px;padding:16px 18px;margin:0 0 14px;scroll-margin-top:72px}
+.sec__head{display:flex;align-items:center;gap:9px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--citui-line)}
+.sec__head h2{margin:0;font-size:14px;font-weight:600;flex:0 1 auto}
+.sec__ico{display:inline-flex;color:var(--citui-muted)}
+.sec__num,.sec__sum,.sec__tg{display:none}
+.sec__tg{background:none;border:0;color:var(--citui-muted);padding:4px;cursor:pointer;border-radius:6px}
+.sub{margin:0 0 18px}
+.sub__head{display:flex;align-items:center;gap:8px;margin:0 0 6px}
+.sub__head h3{margin:0;font-size:13px;font-weight:600}
+.sub__step{display:none}
+.sub--plain .sub__head{display:none}
+.toc{display:none}
+
+/* ════ A — FEJEZETEK ════ */
+[data-v="A"] .secs{counter-reset:sec}
+[data-v="A"] .sec{counter-increment:sec;background:transparent;border:0;border-radius:0;padding:0;margin:0 0 36px}
+[data-v="A"] .sec__head{border:0;padding:0;margin:0 0 12px;gap:12px}
+[data-v="A"] .sec__num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--citui-ink);color:var(--citui-bg);font-weight:700;font-size:13px;flex:0 0 auto}
+[data-v="A"] .sec__num::before{content:counter(sec)}
+[data-v="A"] .sec.is-current .sec__num{background:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+[data-v="A"] .sec__ico{display:none}
+[data-v="A"] .sec__head h2{font-size:18px;font-weight:700;letter-spacing:-.01em}
+[data-v="A"] .sec__body{margin-left:15px;border-left:2px solid var(--citui-line-strong);padding:4px 0 4px 22px;transition:border-color .2s}
+[data-v="A"] .sec.is-current .sec__body{border-left-color:var(--citui-cyan-500)}
+[data-v="A"] .sub{margin:0 0 24px;position:relative}
+[data-v="A"] .sub__head{margin:0 0 8px}
+[data-v="A"] .sub__head::before{content:"";position:absolute;left:-23px;top:9px;width:14px;height:2px;background:var(--citui-line-strong)}
+[data-v="A"] .sec.is-current .sub__head::before{background:var(--citui-cyan-500)}
+[data-v="A"] .sub__head h3{font-size:14px;font-weight:700}
+[data-v="A"] .sub--plain .sub__body{margin-top:4px}
+[data-v="A"] .sec--info .sec__body p:first-child{margin-top:0}
+@container vp (max-width:859px){[data-v="A"] .sec__body{margin-left:14px;padding-left:16px}[data-v="A"] .sub__head::before{left:-17px;width:10px}[data-v="A"] .sec__head h2{font-size:17px}}
+
+/* ════ TÉRKÉP (B·E·F·G) — ragadós tartalomjegyzék ════ */
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .inner{display:grid;grid-template-columns:minmax(0,1fr);gap:0 28px;align-items:start}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .inner>*{min-width:0}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc{display:block;grid-column:1;position:sticky;top:50px;z-index:4;background:var(--citui-bg);margin:0 -14px 14px;padding:8px 14px;border-bottom:1px solid var(--citui-line)}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc ol{list-style:none;margin:0;padding:0;display:flex;gap:6px;overflow:auto;scrollbar-width:none}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc li{flex:0 0 auto}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc li.toc__z{display:none}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--citui-line);border-radius:999px;font-size:12px;color:var(--citui-ink);text-decoration:none;white-space:nowrap;background:var(--citui-panel)}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--citui-line-strong)}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a.is-current{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft);font-weight:600}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a.is-current::before{background:var(--citui-cyan-500)}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc__t{display:none}
+body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .secs{grid-column:1}
+@container vp (min-width:860px){
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .inner{grid-template-columns:minmax(0,1fr) 176px}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .phead,body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .note{grid-column:1/-1}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc{grid-column:2;grid-row:3;position:sticky;top:64px;margin:0;padding:0;border:0;background:transparent}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc ol{flex-direction:column;gap:2px;border-left:2px solid var(--citui-line);padding-left:0}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc li{flex:none}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc li.toc__z{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;padding:12px 10px 3px}
+  body[data-v="B"] .toc li.toc__z{display:none}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a{display:flex;border:0;border-radius:0;padding:6px 10px;background:transparent;color:var(--citui-muted);margin-left:-2px;border-left:2px solid transparent;white-space:normal}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a::before{display:none}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc a.is-current{border-left-color:var(--citui-cyan-500);background:transparent;color:var(--citui-ink);font-weight:600}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .toc__t{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px 10px;font-weight:700}
+  body:is([data-v="B"],[data-v="E"],[data-v="F"],[data-v="G"]) .secs{grid-column:1;grid-row:3}
+}
+
+/* ════ SÁVOS FEJLÉC (B·F·G) — tónusos fejléc, ikon, aktuális értékek ════ */
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec{padding:0;overflow:clip;margin-bottom:16px}
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__head{background:var(--citui-surface-2);padding:10px 16px;margin:0;border-bottom:1px solid var(--citui-line);gap:10px}
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__ico{width:30px;height:30px;border-radius:7px;background:var(--citui-panel);border:1px solid var(--citui-line);display:grid;place-items:center;color:var(--citui-ink-brand-2)}
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec.is-current .sec__ico{color:var(--citui-cyan-500);border-color:var(--citui-cyan-500)}
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__head h2{font-size:15px;font-weight:700}
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__sum{display:inline;margin-left:auto;color:var(--citui-muted);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__body{padding:16px 16px 14px}
+@container vp (max-width:859px){body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__sum{flex:1 1 100%;margin:4px 0 0 40px;text-align:left}body:is([data-v="B"],[data-v="F"],[data-v="G"]) .sec__head{flex-wrap:wrap}}
+body[data-v="F"] .sec__sum{flex:1 1 100%;margin:2px 0 0 40px;text-align:left}
+body[data-v="F"] .sec__head{flex-wrap:wrap}
+body[data-v="F"] .sec--info .sec__sum{display:none}
+
+/* ════ VONALAS ALSZAKASZ (B·G) ════ */
+body:is([data-v="B"],[data-v="G"]) .sub{border-left:3px solid var(--citui-accent-soft);padding-left:14px;margin:0 0 20px}
+body:is([data-v="B"],[data-v="G"]) .sub--plain{border-left-color:transparent;padding-left:0}
+body:is([data-v="B"],[data-v="G"]) .sub__head{margin:0 0 6px}
+body:is([data-v="B"],[data-v="G"]) .sub__head h3{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted);font-weight:700}
+
+/* ════ C — HARMONIKA ════ */
+[data-v="C"] .secs{border:1px solid var(--citui-line);border-radius:10px;background:var(--citui-panel);overflow:clip}
+[data-v="C"] .zone__grid{display:block}
+[data-v="C"] .sec{border:0;border-radius:0;margin:0;padding:0;border-top:1px solid var(--citui-line);counter-reset:step;scroll-margin-top:56px}
+[data-v="C"] .zone:first-child .sec:first-of-type{border-top:0}
+[data-v="C"] .sec__head{padding:13px 16px;margin:0;border:0;cursor:pointer;user-select:none;gap:10px;background:var(--citui-panel);box-shadow:inset 3px 0 0 transparent}
+[data-v="C"] .sec__head:hover{background:var(--citui-hover)}
+[data-v="C"] .sec__ico{width:28px;height:28px;border-radius:7px;background:var(--citui-surface-2);display:grid;place-items:center;color:var(--citui-ink-brand-2)}
+[data-v="C"] .sec__head h2{font-size:14px;font-weight:600}
+[data-v="C"] .sec__sum{display:inline;margin-left:auto;color:var(--citui-muted);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+[data-v="C"] .sec__tg{display:inline-flex;transition:transform .2s}
+[data-v="C"] .sec:not(.is-open) .sec__body{display:none}
+[data-v="C"] .sec.is-open .sec__head{position:sticky;top:49px;z-index:3;border-bottom:1px solid var(--citui-line);box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+[data-v="C"] .sec.is-open .sec__head h2{font-size:15px;font-weight:700}
+[data-v="C"] .sec.is-open .sec__ico{color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+[data-v="C"] .sec.is-open .sec__tg{transform:rotate(180deg)}
+[data-v="C"] .sec.is-open .sec__body{background:var(--citui-surface);padding:14px 16px 18px}
+[data-v="C"] .sub{counter-increment:step;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:8px;padding:12px 14px;margin:0 0 10px}
+[data-v="C"] .sub__head{margin:0 0 8px}
+[data-v="C"] .sub__step{display:inline-grid;order:-1;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--citui-surface-2);color:var(--citui-ink-brand-2);font-size:11px;font-weight:700}
+[data-v="C"] .sub__step::before{content:counter(step)}
+[data-v="C"] .sub__head h3{font-size:13.5px;font-weight:700}
+[data-v="C"] .sub--plain{padding:12px 14px 2px}
+[data-v="C"] .row--save{position:sticky;bottom:0;background:var(--citui-surface);padding:10px 0 0;margin:0}
+@container vp (max-width:859px){[data-v="C"] .sec__head{flex-wrap:wrap}[data-v="C"] .sec__sum{flex:1 1 calc(100% - 80px);margin:0 0 0 38px;text-align:left;order:3}[data-v="C"] .sec__tg{order:2;margin-left:auto}[data-v="C"] .sec__head h2{flex:1}[data-v="C"] .row--save{bottom:0}}
+
+/* ════ ZÓNÁK (D·E·F·G) — cím-vonal, csoportok ════ */
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone{margin:0 0 30px}
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone__h{display:flex;align-items:center;gap:12px;margin:0 0 12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--citui-muted);font-weight:700}
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone__h::after{content:"";flex:1;height:1px;background:var(--citui-line-strong)}
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone__n{font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;background:var(--citui-surface-2);border-radius:999px;padding:1px 8px}
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone--intro .zone__h{display:none}
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone__grid{display:grid;grid-template-columns:1fr;gap:16px}
+body:is([data-v="D"],[data-v="E"],[data-v="F"],[data-v="G"]) .zone__grid .sec{margin:0}
+/* két oszlop a szobáknak (D·E·F) */
+@container vp (min-width:860px){body:is([data-v="D"],[data-v="E"],[data-v="F"]) .zone__grid{grid-template-columns:1fr 1fr}body:is([data-v="D"],[data-v="E"],[data-v="F"]) .zone--rooms .srow{grid-template-columns:1fr 1fr}body:is([data-v="D"],[data-v="E"],[data-v="F"]) .zone--rooms .srow .fld:first-child,body:is([data-v="D"],[data-v="E"],[data-v="F"]) .zone--rooms .srow .btn{grid-column:1/-1}}
+
+/* ════ NAGY SZAKASZ-CÍM (D·E) ════ */
+body:is([data-v="D"],[data-v="E"]) .sec{padding:18px 20px;border-radius:10px;margin:0 0 16px;background:var(--citui-panel)}
+body:is([data-v="D"],[data-v="E"]) .sec--info{background:var(--citui-surface-2);border-color:transparent;padding:14px 18px}
+body:is([data-v="D"],[data-v="E"]) .sec--info .sec__head{margin-bottom:6px}
+body:is([data-v="D"],[data-v="E"]) .sec--info .sec__head h2{font-size:14px}
+body:is([data-v="D"],[data-v="E"]) .sec--info p{margin:0}
+body:is([data-v="D"],[data-v="E"]) .sec__head{border:0;padding:0;margin:0 0 14px;gap:10px}
+body:is([data-v="D"],[data-v="E"]) .sec__ico{color:var(--citui-ink-brand-2)}
+body:is([data-v="D"],[data-v="E"]) .sec__head h2{font-size:19px;font-weight:700;letter-spacing:-.015em}
+/* E: összegző sor a cím alatt + az aktuális szakasz bal jele */
+body[data-v="E"] .sec__head{flex-wrap:wrap}
+body[data-v="E"] .sec__sum{display:block;flex:1 1 100%;margin:-8px 0 0 28px;color:var(--citui-muted);font-size:12px}
+body[data-v="E"] .sec--info .sec__sum{display:none}
+body[data-v="E"] .sec.is-current{box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+body[data-v="E"] .sec.is-current .sec__ico{color:var(--citui-cyan-500)}
+
+/* ════ TÓNUS-TÖMB ALSZAKASZ (D·E·F) ════ */
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .sub{background:var(--citui-surface-2);border-radius:8px;padding:12px 14px 14px;margin:0 0 12px}
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .sub__head{margin:0 0 10px}
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .sub__head h3{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-ink-brand-2);font-weight:700}
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .sub .inp{background:var(--citui-panel)}
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .chk--card,body:is([data-v="D"],[data-v="E"],[data-v="F"]) .seg__o span,body:is([data-v="D"],[data-v="E"],[data-v="F"]) .seasons li,body:is([data-v="D"],[data-v="E"],[data-v="F"]) .chip span{background:var(--citui-panel)}
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .sub--plain{padding-bottom:4px}
+body:is([data-v="D"],[data-v="E"],[data-v="F"]) .lead{margin-bottom:12px}
+</style>
+</head>
+<body data-v="E">
+<div class="chrome">
+  <div class="chrome__t">Tenant-admin · „Árak, szezonok” — B+D hibrid, 3 változat (E · F · G) — a két alap (B, D) összehasonlításra marad</div>
+  <div class="chrome__g"><b>Változat</b><button type="button" data-vbtn="B" aria-pressed="false">B · Oldal-térkép (alap)</button><button type="button" data-vbtn="D" aria-pressed="false">D · Tónus-lépcső (alap)</button><button type="button" data-vbtn="E" aria-pressed="true">E · Zónák + térkép</button><button type="button" data-vbtn="F" aria-pressed="false">F · Sávos fejléc + tónus-tömb</button><button type="button" data-vbtn="G" aria-pressed="false">G · B zónákkal, egy oszlopban</button></div>
+  <div class="chrome__g"><b>Méret</b><button type="button" data-size="m">Mobil 390px</button><button type="button" data-size="d">Asztali</button></div>
+  <div class="chrome__g"><button type="button" data-theme-btn>Világos / sötét</button></div>
+  <p class="chrome__hint" id="vhint"></p>
+</div>
+<div id="stage">
+<div class="adm">
+
+<aside class="side">
+  <div class="side__brand"><span class="side__logo">C</span><span><b>Camping Carina</b><small>camping-carina · Élő</small></span></div>
+  <nav class="side__nav">
+    <a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg><span>Áttekintés</span></a><div class="side__grp">Az oldalam</div><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>Szövegek</span></a><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg><span>Fotók</span><em>6</em></a><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span>Elérhetőség</span></a><a href="#" class="side__a is-open"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg><span>Modulok</span><em>9</em></a><div class="side__subs"><a href="#" class="side__sub">Képek a szállásról</a><a href="#" class="side__sub">Szobák, apartmanok</a><a href="#" class="side__sub">Amit kínál (felszereltség)</a><a href="#" class="side__sub is-active">Árak, szezonok</a><a href="#" class="side__sub">Térkép, megközelítés</a><a href="#" class="side__sub">Miért Önt válasszák</a><a href="#" class="side__sub">Vendégek véleménye</a><a href="#" class="side__sub">Heti programajánló</a><a href="#" class="side__sub">Online foglalás</a></div><div class="side__grp">Vendégek</div><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Foglalások</span></a><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Üzenetek</span><i class="badge">1</i></a><div class="side__grp">Üzlet</div><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>Webcím</span></a><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Forgalom</span></a><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg><span>Dokumentumok</span></a><a href="#" class="side__a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/></svg><span>Pénztárca</span></a>
+  </nav>
+  <div class="side__plan"><b><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/></svg> Havi előfizetés</b><small>megújul 2026. 10. 26. · 9 modul aktív · még 5 nap</small><span class="side__bar"><i></i></span><button class="btn btn--sm" type="button">Modulok kezelése</button></div>
+  <div class="side__user"><span class="av">CC</span><span><b>Camping Carina</b><small>camping-carina</small></span></div>
+</aside>
+<div class="main">
+
+<header class="top">
+  <a href="#" class="ib" aria-label="Vissza"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></a>
+  <nav class="crumb"><a href="#">Camping Carina</a><span>›</span><a href="#">Modulok</a><span>›</span><b>Árak, szezonok</b></nav>
+  <label class="tsearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg><span>Keresés…</span></label>
+  <button class="ib" type="button" data-theme-btn aria-label="Világos / sötét"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
+  <a href="#" class="btn btn--sm"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 13v7H4V6h7"/></svg> Oldal</a>
+</header>
+<div class="inner">
+  <div class="phead">
+    <p class="phead__k">Modulok › Árak, szezonok</p>
+    <h1>Árak, szezonok</h1>
+    <div class="phead__m"><span>490 Ft/hó</span><span>·</span><span>2 szoba</span><a href="#" class="btn btn--sm"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg> Útmutató ehhez a képernyőhöz</a></div>
+  </div>
+  <div class="note"><span>Az árat szobánként adja meg — a vendég is így látja majd. Minden szobának/apartmannak saját ára lehet.</span><a href="#" class="btn btn--sm">Szobák, apartmanok szerkesztése</a></div>
+  <nav class="toc" aria-label="Ezen a lapon"><p class="toc__t">Ezen a lapon</p><ol></ol></nav>
+  <div class="secs">
+<div class="zone zone--intro">
+  <h2 class="zone__h">Áttekintés</h2>
+<section class="sec sec--info" id="s-hol" data-title="Hol látják a vendégek?">
+  <header class="sec__head">
+    <span class="sec__num" aria-hidden="true"></span>
+    <span class="sec__ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>
+    <h2>Hol látják a vendégek az árait?</h2>
+    <span class="sec__sum" data-sum></span>
+    <button class="sec__tg" type="button" aria-label="Nyit / csuk"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+  </header>
+  <div class="sec__body">
+    <p>A honlapján az árai két helyen látszanak: a szobakártyákon, és egy külön ártáblázatban is — mert megjegyzést írt az árakhoz.</p>
+    <p class="pills"><span class="pill" data-pill="k1">Kuckó1 <b>90 000 Ft / éj</b></span><span class="pill" data-pill="k3">kuckó3 <b>80 000 Ft / éj</b></span></p>
+  </div>
+</section>
+</div>
+
+<div class="zone zone--rooms">
+  <h2 class="zone__h">Szobánkénti árak <span class="zone__n">2 szoba</span></h2>
+  <div class="zone__grid">
+  
+<section class="sec" id="s-k1" data-kind="room" data-title="Kuckó1">
+  <header class="sec__head">
+    <span class="sec__num" aria-hidden="true"></span>
+    <span class="sec__ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20l-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>
+    <h2>Kuckó1</h2>
+    <span class="sec__sum" data-sum></span>
+    <button class="sec__tg" type="button" aria-label="Nyit / csuk"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+  </header>
+  <div class="sec__body">
+    <div class="sub">
+      <div class="sub__head"><h3>Alapár</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <div class="row row--price">
+          <label class="fld"><input class="inp inp--num" type="text" inputmode="numeric" value="90000" data-base aria-label="Alapár"> <span class="unit">Ft</span></label>
+          <button class="btn" type="button" data-save>Mentés</button>
+          <span class="saved" hidden>Mentve</span>
+        </div>
+        <p class="hint">Ez érvényes, amikor egyik időszak sem.</p>
+        <label class="chk chk--card"><input type="checkbox" data-nobase><span><b>Nem adok meg alapárat — ahol nincs ár, egyedi ajánlatot küldök</b><small>Alapárral minden éjszakának van ára — ehhez előbb törölje az alapárat.</small></span></label>
+      </div>
+    </div>
+    <div class="sub">
+      <div class="sub__head"><h3>Időszaki árak</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="hint">Egy időszakot elég egyszer megadni: minden évben ugyanazokon a napokon érvényes. Egy adott évre az alatta lévő évsávon adhat más árat vagy más napokat. Nincs külön időszaki ár — mindig az alapár érvényes.</p>
+        <form class="srow" data-season-form novalidate>
+          <label class="fld"><span class="lbl">Időszak neve</span><input class="inp" name="name" placeholder="Pl. Holtszezon"></label>
+          <label class="fld fld--d"><span class="lbl">Mettől</span><input class="inp" type="date" name="from"></label>
+          <label class="fld fld--d"><span class="lbl">Meddig</span><input class="inp" type="date" name="to"></label>
+          <label class="fld fld--n"><span class="lbl">Ár / éjszaka</span><span class="inpw"><input class="inp inp--num" name="price" inputmode="numeric" placeholder="0"><span class="unit">Ft</span></span></label>
+          <label class="fld fld--n"><span class="lbl">Legalább</span><span class="inpw"><input class="inp inp--num" name="min" inputmode="numeric" placeholder="—"><span class="unit">éj</span></span></label>
+          <button class="btn btn--p" type="submit">Hozzáadás</button>
+        </form>
+        <p class="err" data-err hidden role="alert"></p>
+        <div class="year" data-year><span class="lbl">Az év, egy pillantásra</span>
+          <div class="year__strip"><span class="year__m">Jan</span><span class="year__m">Febr</span><span class="year__m">Márc</span><span class="year__m">Ápr</span><span class="year__m">Máj</span><span class="year__m">Jún</span><span class="year__m">Júl</span><span class="year__m">Aug</span><span class="year__m">Szept</span><span class="year__m">Okt</span><span class="year__m">Nov</span><span class="year__m">Dec</span></div>
+          <span class="year__leg"><i></i> az új időszak</span>
+        </div>
+        <ul class="seasons" data-seasons></ul>
+        <p class="hint">A „Legalább … éj” mező nem kötelező. Üresen hagyva az Online foglalás modulban beállított legrövidebb foglalás érvényes.</p>
+        <label class="chk chk--line"><input type="checkbox" data-only><span><b>Csak a felsorolt időszakokban adom ki</b><small>Bekapcsolva a többi napot a vendég nem tudja kiválasztani. Kikapcsolva egész évben foglalható.</small></span></label>
+      </div>
+    </div>
+  </div>
+</section>
+  
+<section class="sec" id="s-k3" data-kind="room" data-title="kuckó3">
+  <header class="sec__head">
+    <span class="sec__num" aria-hidden="true"></span>
+    <span class="sec__ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20l-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>
+    <h2>kuckó3</h2>
+    <span class="sec__sum" data-sum></span>
+    <button class="sec__tg" type="button" aria-label="Nyit / csuk"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+  </header>
+  <div class="sec__body">
+    <div class="sub">
+      <div class="sub__head"><h3>Alapár</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <div class="row row--price">
+          <label class="fld"><input class="inp inp--num" type="text" inputmode="numeric" value="80000" data-base aria-label="Alapár"> <span class="unit">Ft</span></label>
+          <button class="btn" type="button" data-save>Mentés</button>
+          <span class="saved" hidden>Mentve</span>
+        </div>
+        <p class="hint">Ez érvényes, amikor egyik időszak sem.</p>
+        <label class="chk chk--card"><input type="checkbox" data-nobase><span><b>Nem adok meg alapárat — ahol nincs ár, egyedi ajánlatot küldök</b><small>Alapárral minden éjszakának van ára — ehhez előbb törölje az alapárat.</small></span></label>
+      </div>
+    </div>
+    <div class="sub">
+      <div class="sub__head"><h3>Időszaki árak</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="hint">Egy időszakot elég egyszer megadni: minden évben ugyanazokon a napokon érvényes. Egy adott évre az alatta lévő évsávon adhat más árat vagy más napokat. Nincs külön időszaki ár — mindig az alapár érvényes.</p>
+        <form class="srow" data-season-form novalidate>
+          <label class="fld"><span class="lbl">Időszak neve</span><input class="inp" name="name" placeholder="Pl. Holtszezon"></label>
+          <label class="fld fld--d"><span class="lbl">Mettől</span><input class="inp" type="date" name="from"></label>
+          <label class="fld fld--d"><span class="lbl">Meddig</span><input class="inp" type="date" name="to"></label>
+          <label class="fld fld--n"><span class="lbl">Ár / éjszaka</span><span class="inpw"><input class="inp inp--num" name="price" inputmode="numeric" placeholder="0"><span class="unit">Ft</span></span></label>
+          <label class="fld fld--n"><span class="lbl">Legalább</span><span class="inpw"><input class="inp inp--num" name="min" inputmode="numeric" placeholder="—"><span class="unit">éj</span></span></label>
+          <button class="btn btn--p" type="submit">Hozzáadás</button>
+        </form>
+        <p class="err" data-err hidden role="alert"></p>
+        <div class="year" data-year><span class="lbl">Az év, egy pillantásra</span>
+          <div class="year__strip"><span class="year__m">Jan</span><span class="year__m">Febr</span><span class="year__m">Márc</span><span class="year__m">Ápr</span><span class="year__m">Máj</span><span class="year__m">Jún</span><span class="year__m">Júl</span><span class="year__m">Aug</span><span class="year__m">Szept</span><span class="year__m">Okt</span><span class="year__m">Nov</span><span class="year__m">Dec</span></div>
+          <span class="year__leg"><i></i> az új időszak</span>
+        </div>
+        <ul class="seasons" data-seasons></ul>
+        <p class="hint">A „Legalább … éj” mező nem kötelező. Üresen hagyva az Online foglalás modulban beállított legrövidebb foglalás érvényes.</p>
+        <label class="chk chk--line"><input type="checkbox" data-only><span><b>Csak a felsorolt időszakokban adom ki</b><small>Bekapcsolva a többi napot a vendég nem tudja kiválasztani. Kikapcsolva egész évben foglalható.</small></span></label>
+      </div>
+    </div>
+  </div>
+</section>
+  </div>
+</div>
+
+<div class="zone zone--all">
+  <h2 class="zone__h">Az egész szállásra</h2>
+<section class="sec" id="s-ell" data-title="Ellátás">
+  <header class="sec__head">
+    <span class="sec__num" aria-hidden="true"></span>
+    <span class="sec__ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a3 3 0 0 0 3 3v8M9 3v7M12 3v7M17 3c-2 1-3 4-3 7h3v11"/></svg></span>
+    <h2>Ellátás</h2>
+    <span class="sec__sum" data-sum></span>
+    <button class="sec__tg" type="button" aria-label="Nyit / csuk"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+  </header>
+  <div class="sec__body">
+    <p class="lead">Reggeli, félpanzió, teljes panzió — mit tartalmaz az ár, és mi kérhető felárral. Minden szobára ugyanaz érvényes, kivéve, amelyiket alul kiveszi.</p>
+    <div class="sub">
+      <div class="sub__head"><h3>Mit tartalmaz az alapár?</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="hint">A szobák árai (fent) ezzel az ellátással értendők. Ami ennél több, azt felárral kínálhatja.</p>
+        <div class="seg" data-base-meal>
+          <label class="seg__o"><input type="radio" name="basemeal" value="Csak szállás" checked><span>Csak szállás</span></label>
+          <label class="seg__o"><input type="radio" name="basemeal" value="Reggeli"><span>Reggeli</span></label><label class="seg__o"><input type="radio" name="basemeal" value="Félpanzió"><span>Félpanzió</span></label><label class="seg__o"><input type="radio" name="basemeal" value="Teljes panzió"><span>Teljes panzió</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="sub">
+      <div class="sub__head"><h3>Választható ellátás</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="hint">Pipálja be, amit kínál, és adja meg a felárát.</p>
+        <table class="tbl" data-meals>
+          <thead><tr><th>Ellátás</th><th>Felár</th><th>Mire</th><th>Gyermeknek</th><th></th></tr></thead>
+          <tbody>
+            <tr class="tbl__base"><td><b>Csak szállás</b></td><td colspan="4"><span class="tagok">az alapár része</span></td></tr>
+            <tr data-meal="r">
+              <td><label class="chk"><input type="checkbox" data-meal-on><span><b>Reggeli</b></span></label></td>
+              <td><span class="inpw"><input class="inp inp--num" inputmode="numeric" placeholder="0" disabled data-meal-price aria-label="Reggeli felár"><span class="unit">Ft</span></span></td>
+              <td><select class="inp" disabled aria-label="Reggeli mire"><option>fő / éj</option><option>fő / foglalás</option><option>szoba / éj</option></select></td>
+              <td><span class="inpw"><input class="inp inp--num" inputmode="numeric" placeholder="0" disabled aria-label="Reggeli gyermek"><span class="unit">Ft</span></span></td>
+              <td><a href="#" class="lnk" data-what>Mit tartalmaz?</a></td>
+            </tr><tr data-meal="f">
+              <td><label class="chk"><input type="checkbox" data-meal-on><span><b>Félpanzió</b></span></label></td>
+              <td><span class="inpw"><input class="inp inp--num" inputmode="numeric" placeholder="0" disabled data-meal-price aria-label="Félpanzió felár"><span class="unit">Ft</span></span></td>
+              <td><select class="inp" disabled aria-label="Félpanzió mire"><option>fő / éj</option><option>fő / foglalás</option><option>szoba / éj</option></select></td>
+              <td><span class="inpw"><input class="inp inp--num" inputmode="numeric" placeholder="0" disabled aria-label="Félpanzió gyermek"><span class="unit">Ft</span></span></td>
+              <td><a href="#" class="lnk" data-what>Mit tartalmaz?</a></td>
+            </tr><tr data-meal="t">
+              <td><label class="chk"><input type="checkbox" data-meal-on><span><b>Teljes panzió</b></span></label></td>
+              <td><span class="inpw"><input class="inp inp--num" inputmode="numeric" placeholder="0" disabled data-meal-price aria-label="Teljes panzió felár"><span class="unit">Ft</span></span></td>
+              <td><select class="inp" disabled aria-label="Teljes panzió mire"><option>fő / éj</option><option>fő / foglalás</option><option>szoba / éj</option></select></td>
+              <td><span class="inpw"><input class="inp inp--num" inputmode="numeric" placeholder="0" disabled aria-label="Teljes panzió gyermek"><span class="unit">Ft</span></span></td>
+              <td><a href="#" class="lnk" data-what>Mit tartalmaz?</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="sub">
+      <div class="sub__head"><h3>Gyerekár</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="row row--inline">Gyermeknek számít <span class="inpw inpw--s"><input class="inp inp--num" inputmode="numeric" data-childage aria-label="Gyermek életkor"></span> éves korig.</p>
+        <p class="err" data-err-age hidden role="alert"></p>
+        <p class="hint">Ahol a gyerekár üres, ott a gyermek is felnőtt-árat fizet. A 0 azt jelenti: ingyenes.</p>
+      </div>
+    </div>
+    <div class="sub">
+      <div class="sub__head"><h3>Mely szobákhoz kérhető ellátás?</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="hint">Ahol kiveszi, ott a vendég nem lát ellátás-választást.</p>
+        <p class="chips"><label class="chip"><input type="checkbox" checked><span>Kuckó1</span></label><label class="chip"><input type="checkbox" checked><span>kuckó3</span></label></p>
+      </div>
+    </div>
+    <div class="sub">
+      <div class="sub__head"><h3>Mi van még benne az árban?</h3><span class="sub__step" aria-hidden="true"></span></div>
+      <div class="sub__body">
+        <p class="hint">Pl. „takarítás, ágynemű, törölköző”. A vendég a szobáknál és a foglalásnál is olvassa, a tételes ár alatt.</p>
+        <textarea class="inp inp--ta" rows="3" aria-label="Mi van még benne az árban"></textarea>
+      </div>
+    </div>
+    <div class="row row--save"><button class="btn btn--p" type="button" data-save>Mentés</button><span class="saved" hidden>Mentve</span></div>
+  </div>
+</section>
+
+<section class="sec" id="s-szab" data-title="Szabályok">
+  <header class="sec__head">
+    <span class="sec__num" aria-hidden="true"></span>
+    <span class="sec__ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+    <h2>Szabályok</h2>
+    <span class="sec__sum" data-sum></span>
+    <button class="sec__tg" type="button" aria-label="Nyit / csuk"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+  </header>
+  <div class="sec__body">
+    <p class="lead">Ezeket ritkán kell módosítani — alapból működnek.</p>
+    <div class="sub sub--plain">
+      <div class="sub__body">
+        <label class="fld fld--b"><span class="lbl">Pénznem</span><select class="inp" data-cur><option>Forint (Ft)</option><option>Euró (€)</option></select></label>
+        <label class="fld fld--b"><span class="lbl">Mire vonatkozik az ár?</span><select class="inp" data-per><option>Éjszakánként</option><option>Főre, éjszakánként</option></select></label>
+        <label class="fld fld--b"><span class="lbl">Megjegyzés az árakhoz</span><input class="inp" placeholder="Például: Az ár tartalmazza az idegenforgalmi adót."><small class="hint">Például: Az ár tartalmazza az idegenforgalmi adót.</small></label>
+      </div>
+    </div>
+    <div class="row row--save"><button class="btn btn--p" type="button" data-save>Beállítások mentése</button><span class="saved" hidden>Mentve</span></div>
+  </div>
+</section>
+</div></div>
+</div>
+</div>
+</div>
+
+<nav class="bnav">
+  <a href="#"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg><span>Áttekintés</span></a><a href="#"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg><span>Fotók</span></a><a href="#"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Foglalások</span></a><a href="#"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Üzenetek</span><i class="badge">1</i></a><a href="#" class="is-active"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menü</span></a>
+</nav>
+</div>
+<script>
+(function(){
+  var root=document.documentElement,body=document.body,stage=document.getElementById('stage');
+  var V={"B":"Ragadós tartalomjegyzék, tónusos szakasz-fejléc az aktuális értékekkel, bal vonalas alszakasz — az egyik kiindulás.","D":"Zónák cím-vonallal, a két szoba asztalon egymás mellett, szint = egyre mélyebb tónus — a másik kiindulás.","E":"D alapon: zónák, két oszlop, nagy szakasz-cím, tónus-tömb alszakasz; B-ből a zónánként csoportosított tartalomjegyzék és az összegző sor a cím alatt.","F":"B tónusos fejléce (ikon + értékek) D zónáiban és két oszlopában; az alszakasz D tónus-tömbje; tartalomjegyzék zónánként.","G":"B minden eleme (sávos fejléc, bal vonalas alszakasz, térkép), plusz D zóna-vonalai; a szobák egymás alatt maradnak, a térkép zónánként csoportosít."};
+  function setV(v){body.dataset.v=v;document.querySelectorAll('[data-vbtn]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.vbtn===v))});document.getElementById('vhint').textContent=v+' — '+V[v];if(v==='C'){var o=document.querySelector('.sec.is-open');if(!o)openOnly(document.querySelector('#s-k1'))}spy();}
+  document.querySelectorAll('[data-vbtn]').forEach(function(b){b.addEventListener('click',function(){setV(b.dataset.vbtn)})});
+  // size switch — @container query inside #stage, so the inner layout really re-flows
+  function setSize(m){stage.classList.toggle('is-mobile',m==='m');document.querySelectorAll('[data-size]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.size===m))});spy();}
+  document.querySelectorAll('[data-size]').forEach(function(b){b.addEventListener('click',function(){setSize(b.dataset.size)})});
+  setSize(window.innerWidth<700?'m':'d');
+  // theme — same localStorage key as the real admin, so ui-shot --dark applies
+  var t=null;try{t=localStorage.getItem('citui-theme')}catch(e){}
+  if(t==='dark')root.setAttribute('data-citui-theme','dark');
+  function flipTheme(){var d=root.getAttribute('data-citui-theme')==='dark';if(d)root.removeAttribute('data-citui-theme');else root.setAttribute('data-citui-theme','dark');try{localStorage.setItem('citui-theme',d?'light':'dark')}catch(e){}}
+  document.querySelectorAll('[data-theme-btn]').forEach(function(b){b.addEventListener('click',flipTheme)});
+
+  // ── summaries (B/C show the current values in the head) ──
+  var fmt=function(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ')};
+  function sumOf(sec){
+    var id=sec.id;
+    if(id==='s-hol'){var a=document.querySelector('#s-k1 [data-base]').value,b=document.querySelector('#s-k3 [data-base]').value;return '2 szoba · '+fmt(a)+' és '+fmt(b)+' Ft / éj'}
+    if(sec.dataset.kind==='room'){var nb=sec.querySelector('[data-nobase]').checked,p=sec.querySelector('[data-base]').value,n=sec.querySelectorAll('[data-seasons] li').length;return (nb?'Nincs alapár (egyedi ajánlat)':'Alapár '+fmt(p)+' Ft')+' · '+n+' időszak'}
+    if(id==='s-ell'){var bm=sec.querySelector('[name=basemeal]:checked').value,k=sec.querySelectorAll('[data-meal-on]:checked').length;return bm+' az alapárban · '+k+' felár'}
+    if(id==='s-szab'){return sec.querySelector('[data-cur]').value.replace(/ \(.*\)/,'')+' · '+sec.querySelector('[data-per]').value.toLowerCase()}
+    return '';
+  }
+  function refreshSums(){document.querySelectorAll('.sec').forEach(function(s){var el=s.querySelector('[data-sum]');if(el)el.textContent=sumOf(s)});
+    var p1=document.querySelector('[data-pill=k1] b'),p3=document.querySelector('[data-pill=k3] b');
+    p1.textContent=fmt(document.querySelector('#s-k1 [data-base]').value||'—')+' Ft / éj';p3.textContent=fmt(document.querySelector('#s-k3 [data-base]').value||'—')+' Ft / éj';}
+  document.addEventListener('input',refreshSums);document.addEventListener('change',refreshSums);
+
+  // ── TOC (B) ──
+  var secs=[].slice.call(document.querySelectorAll('.sec'));
+  var ol=document.querySelector('.toc ol');
+  function tocLink(s){var li=document.createElement('li'),a=document.createElement('a');a.href='#'+s.id;a.textContent=s.dataset.title;a.addEventListener('click',function(e){e.preventDefault();if(body.dataset.v==='C')openOnly(s);s.scrollIntoView({behavior:'smooth',block:'start'})});li.appendChild(a);ol.appendChild(li)}
+  [].forEach.call(document.querySelectorAll('.zone'),function(z){var h=z.querySelector('.zone__h');if(h&&!z.classList.contains('zone--intro')){var zl=document.createElement('li');zl.className='toc__z';zl.textContent=h.firstChild.textContent.trim();ol.appendChild(zl)}[].forEach.call(z.querySelectorAll('.sec'),tocLink)});
+
+  // ── scrollspy (A spine + B toc) ──
+  var cur=null;
+  function spy(){if(!secs)return;var best=null,bd=1e9,y=window.scrollY+120;secs.forEach(function(s){var r=s.getBoundingClientRect(),top=r.top+window.scrollY;var d=Math.abs(top-y);if(top<=y+r.height&&d<bd){bd=d;best=s}});if(!best)best=secs[0];if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-2)best=secs[secs.length-1];if(best!==cur){cur=best;secs.forEach(function(s){s.classList.toggle('is-current',s===best)});ol.querySelectorAll('a').forEach(function(a){a.classList.toggle('is-current',a.getAttribute('href')==='#'+best.id)})}}
+  window.addEventListener('scroll',spy,{passive:true});window.addEventListener('resize',spy);
+
+  // ── accordion (C): one open at a time ──
+  function openOnly(s){secs.forEach(function(x){x.classList.toggle('is-open',x===s)})}
+  document.querySelectorAll('.sec__head').forEach(function(h){h.addEventListener('click',function(e){if(body.dataset.v!=='C')return;if(e.target.closest('[data-sum]'))return;var s=h.closest('.sec');if(s.classList.contains('is-open'))s.classList.remove('is-open');else{openOnly(s);s.scrollIntoView({behavior:'smooth',block:'start'})}})});
+
+  // ── behaviours (the real rules, not a prettier lie) ──
+  document.querySelectorAll('[data-save]').forEach(function(b){b.addEventListener('click',function(){var p=b.parentElement.querySelector('.saved');p.hidden=false;b.disabled=true;setTimeout(function(){p.hidden=true;b.disabled=false},1800)})});
+  document.querySelectorAll('[data-nobase]').forEach(function(c){c.addEventListener('change',function(){var sec=c.closest('.sec'),inp=sec.querySelector('[data-base]');inp.disabled=c.checked;if(c.checked)inp.dataset.was=inp.value,inp.value='';else inp.value=inp.dataset.was||'';refreshSums()})});
+  document.querySelectorAll('[data-meal-on]').forEach(function(c){c.addEventListener('change',function(){c.closest('tr').querySelectorAll('.inp').forEach(function(i){i.disabled=!c.checked});if(c.checked)c.closest('tr').querySelector('[data-meal-price]').focus()})});
+  document.querySelectorAll('[data-what]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();alert('Itt nyílik a „Mit tartalmaz?” ablak — a mock ezt nem részletezi.')})});
+  var age=document.querySelector('[data-childage]'),ageErr=document.querySelector('[data-err-age]');
+  age.addEventListener('blur',function(){var v=age.value.trim();if(v===''){ageErr.hidden=true;return}if(!/^\d+$/.test(v)||+v<1||+v>17){ageErr.textContent='Egy életkort írjon 1 és 17 között, például 12.';ageErr.hidden=false}else ageErr.hidden=true});
+  document.querySelectorAll('[data-base]').forEach(function(i){i.addEventListener('blur',function(){i.value=i.value.replace(/[^0-9]/g,'');refreshSums()})});
+  document.querySelectorAll('[data-season-form]').forEach(function(f){
+    var sec=f.closest('.sec'),err=sec.querySelector('[data-err]'),list=sec.querySelector('[data-seasons]'),strip=sec.querySelectorAll('.year__m');
+    function fail(m,el){err.textContent=m;err.hidden=false;if(el)el.focus()}
+    f.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
+      var name=f.name.value.trim(),from=f.from.value,to=f.to.value,price=f.price.value.trim(),min=f.min.value.trim();
+      if(!name)return fail('Adjon nevet az időszaknak, például „Nyári főszezon”.',f.name);
+      if(!from||!to)return fail('Adja meg, mettől meddig tart az időszak.',from?f.to:f.from);
+      if(price==='')return fail('Adja meg az éjszakánkénti árat.',f.price);
+      if(!/^\d+$/.test(price.replace(/\s/g,'')))return fail('Csak egész számot írjon, például 3 500.',f.price);
+      if(+price.replace(/\s/g,'')>9999999)return fail('Ez túl nagy összeg — ellenőrizze a nullákat.',f.price);
+      if(min!==''&&!/^\d+$/.test(min))return fail('A „Legalább” mezőbe egész számot írjon, például 2.',f.min);
+      var mf=+from.slice(5,7)-1,mt=+to.slice(5,7)-1,m=mf;for(var k=0;k<12;k++){strip[m].classList.add('is-on');if(m===mt)break;m=(m+1)%12}
+      var li=document.createElement('li');li.innerHTML='<b></b><span></span><span class="unit"></span><button class="x" type="button" aria-label="Törlés">×</button>';
+      li.firstChild.textContent=name;li.children[1].textContent=from.slice(5).replace('-','. ')+'. – '+to.slice(5).replace('-','. ')+'.';li.children[2].textContent=fmt(price.replace(/\s/g,''))+' Ft / éj'+(min?' · min. '+min+' éj':'');
+      li.lastChild.addEventListener('click',function(){li.remove();refreshSums()});list.appendChild(li);f.reset();refreshSums();});
+  });
+
+  refreshSums();
+  setV(body.dataset.v||'E');
+  if(location.hash&&/^#[B-G]$/.test(location.hash))setV(location.hash.slice(1));
+})();</script>
+</body>
+</html>

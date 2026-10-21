@@ -170,7 +170,9 @@ try {
   const card = (html: string, id: string): string => {
     const i = html.indexOf(`id="ar-${id}"`);
     if (i < 0) return "";
-    const j = html.indexOf(`class="adm-card" id="ar-`, i + 10);
+    // ADR-XXXX (szakasz-hierarchia): the card's class list grew („adm-card adm-card--sec"), so the
+    // cut is by the next card's ANCHOR, which no restyling moves.
+    const j = html.indexOf(`id="ar-`, i + 10);
     return html.slice(i, j < 0 ? i + 12_000 : j);
   };
 

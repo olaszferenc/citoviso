@@ -1619,3 +1619,67 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .tzp__warn:empty{display:none}
 .tzp__reset{margin-top:8px;padding:0;border:0;background:none;color:var(--citui-navy-700);text-decoration:underline;font:inherit;font-size:.9em;cursor:pointer}
 #idozona .citui-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ═══ 12. SZAKASZ-HIERARCHIA — the „E" language (ADR-XXXX, owner 2026-10-21) ═══════════════
+   Contract: assets/design-refs/tenant-admin/szakasz-hierarchia/ (README = what binds).
+   The owner's complaint (with a screenshot): every section looked the same — same card,
+   same head, same tone — so a long settings screen became "chaos" after a few scrolls.
+   The cure is STRUCTURE, not colour: ZONES with a titled rule, a sticky table of contents
+   grouped by zone (right rail on a wide screen, chip row under the top bar on a phone),
+   a big section title with a one-line summary of the current values, and TONAL BLOCKS for
+   the sub-sections (page → card → block → field, each one shade deeper). Colour stays
+   semantic (ADR-0224): the cyan marks only the section in view. */
+.adm-mhead{margin:0 0 16px}
+.adm-mhead .mcfg-back{font-size:12px;margin:0 0 2px}
+.adm-mhead h1{margin:0 0 6px;font-size:1.7em;font-weight:700;letter-spacing:-.01em}
+.adm-mhead__m{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--citui-muted);font-size:12px}
+.adm-mhead__m .mcfg-help{margin:0 0 0 auto}
+.adm-mhead__m .mcfg-price{margin:0}
+.adm-mcfg{display:grid;grid-template-columns:minmax(0,1fr);gap:0 28px;align-items:start}
+.adm-mcfg>*{min-width:0}
+.adm-mcfg [id]{scroll-margin-top:104px}
+.adm-toc{position:sticky;top:48px;z-index:4;background:var(--citui-bg);margin:0 -14px 14px;padding:8px 14px;border-bottom:1px solid var(--citui-line)}
+.adm-toc__t{display:none}
+.adm-toc ol{list-style:none;margin:0;padding:0;display:flex;gap:6px;overflow:auto;scrollbar-width:none}
+.adm-toc li{flex:0 0 auto}
+.adm-toc li.adm-toc__z{display:none}
+.adm-toc a{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);
+  font-size:12px;color:var(--citui-ink);text-decoration:none;white-space:nowrap;background:var(--citui-panel)}
+.adm-toc a::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--citui-line-strong)}
+.adm-toc a.is-current{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft);font-weight:600}
+.adm-toc a.is-current::before{background:var(--citui-cyan-500)}
+@media(min-width:1100px){
+  .adm-mcfg{grid-template-columns:minmax(0,1fr) 176px}
+  .adm-mcfg__body{grid-column:1;grid-row:1}
+  .adm-mcfg [id]{scroll-margin-top:64px}
+  .adm-toc{grid-column:2;grid-row:1;top:64px;margin:0;padding:0;border:0;background:transparent}
+  .adm-toc__t{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px 10px;font-weight:700}
+  .adm-toc ol{flex-direction:column;gap:2px;border-left:2px solid var(--citui-line);overflow:visible}
+  .adm-toc li{flex:none}
+  .adm-toc li.adm-toc__z{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;padding:12px 10px 3px}
+  .adm-toc a{display:flex;border:0;border-radius:0;padding:6px 10px;background:transparent;color:var(--citui-muted);margin-left:-2px;border-left:2px solid transparent;white-space:normal}
+  .adm-toc a::before{display:none}
+  .adm-toc a.is-current{border-left-color:var(--citui-cyan-500);background:transparent;color:var(--citui-ink);font-weight:600}
+}
+.adm-zone{margin:0 0 30px}
+.adm-zone__h{display:flex;align-items:center;gap:12px;margin:0 0 12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--citui-muted);font-weight:700}
+.adm-zone__h::after{content:"";flex:1;height:1px;background:var(--citui-line-strong)}
+.adm-zone__n{font-weight:500;letter-spacing:0;text-transform:none;background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:1px 8px}
+.adm-zone__grid{display:grid;grid-template-columns:1fr;gap:16px}
+.adm-zone__grid>.adm-card{margin:0}
+@media(min-width:900px){.adm-zone__grid{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}}
+.adm-mcfg .pr-where{background:var(--citui-surface-2);border-color:transparent;border-radius:10px;margin:0}
+.adm-card--sec{padding:18px 20px;border-radius:10px;margin-bottom:16px}
+.adm-card--sec>.adm-card__head{border:0;padding:0;margin:0 0 14px;gap:10px;flex-wrap:wrap}
+.adm-card--sec>.adm-card__head .adm-ico{color:var(--citui-ink-brand-2)}
+.adm-card--sec>.adm-card__head h2{font-size:19px;font-weight:700;letter-spacing:-.015em}
+.adm-card__sum{flex:1 1 100%;margin:-8px 0 0 28px;color:var(--citui-muted);font-size:12px;font-variant-numeric:tabular-nums}
+.adm-card--sec.is-current{box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+.adm-card--sec.is-current>.adm-card__head .adm-ico{color:var(--citui-cyan-500)}
+.adm-blk{background:var(--citui-surface-2);border-radius:8px;padding:12px 14px 14px;margin:0 0 12px}
+.adm-blk>.adm-blk__h,.adm-blk>.mcfg-sub,.adm-blk>form>.mcfg-sub{margin:0 0 10px;font:700 11.5px/1.4 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-ink-brand-2)}
+.adm-blk .citui-input,.adm-blk .citui-select,.adm-blk .citui-textarea{background:var(--citui-panel)}
+.adm-blk .unit-row{padding-top:0}
+.adm-blk--plain{padding-bottom:4px}
+/* Screen-reader-only text (the field label a block title already says out loud). */
+.adm-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

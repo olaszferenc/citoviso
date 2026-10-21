@@ -6707,7 +6707,11 @@ export function adminDashboard(
         ? // ADR-0274 ②: the guide link moved from the tab body to the title (ADR-0045 §J
           // coverage hook kept) — every line above the first request cost its buttons.
           `<div class="adm-ph"><h1>${esc(tabLabel)}${helpLink("admin.bookings", lang)}</h1></div>`
-        : `<div class="adm-ph"><h1>${esc(tabLabel)}</h1></div>`;
+        : tab === "modulok" && opts.moduleSettingsHtml
+          ? // ADR-XXXX (szakasz-hierarchia): an open module screen carries its own head —
+            // the MODULE's name is the h1, so the tab's „Modulok" h1 would be a second title.
+            ""
+          : `<div class="adm-ph"><h1>${esc(tabLabel)}</h1></div>`;
 
   return shell(
     T(lang, "Admin"),
