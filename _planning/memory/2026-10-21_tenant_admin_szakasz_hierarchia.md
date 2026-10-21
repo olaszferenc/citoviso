@@ -13,6 +13,13 @@
 ## Élesítés
 - 2026-10-21 11:33: `deploy-prod.sh 5d8ba2cb --go` → prod/20261021-1133 (előtte c8b227e8); száraz futás tiszta, migráció nincs, időzítők egyeznek, GATE 5 fordítás teljes (en 5428/5428, KB 24/24), kanári zöld. KB-kapu: tudasbazis-or 3 kör (FLAG→FLAG→PASS), token a c8b227e8..5d8ba2cb tartományra.
 
+## 2. kör (12:00 után, tulaj három panasza)
+- Minden modul-képernyő az E nyelven (`.adm-mod`, Amit kínál csoport-tömbök + tartalomjegyzék, Szobák tartalomjegyzék, Online foglalás zónák + tartalomjegyzék); a próba gombja „Megrendelem” (ADR-0398, SUB); a rendelő Összesen-sáv végösszeg-kiemelése (SUB). Őrök: room-editor-check süti-döntéssel indul, order-two-step-check a panel beállt állapotára vár; a teljes kapu-sor terhelése alatt 3 őr időzítési hibát adott (egyedül zöld). Tudásbázis-őr: FLAG→PASS. Súgó-képek újralőve.
+- ÉLESÍTÉS 14:41: `deploy-prod.sh 1b038d76 --go` → prod/20261021-1441 (előtte 5d8ba2cb); KB-kép-kapu felmentve egy képre (amenities screen.png, 198 px sub-pixel, szemre azonos); GATE 5 fordítás élesen; kanári zöld.
+- Átadás friss sessionnek: `~/rc-briefs/tenant-admin-e-folytatas-20261021.md`.
+
 ## Nyitott
-- A „Folytatom” gomb a próba-sávon (tulaj: nem egyértelmű) — javaslat kiment, döntésre vár (a proba-admin-sav kontraktus 5. pontját és 4 KB-bejegyzést érint).
-- A többi összetett modul-lap (Szobák, Online foglalás, Amit kínál) ugyanezt a réteget kapja a következő körben.
+- ~~„Folytatom” gomb~~ → „Megrendelem” (ADR-0398), élesen 14:41. ~~A többi modul-lap~~ → kész a 2. körben.
+- A nem modul fülek (Fotók, Foglalások, Üzenetek, Dokumentumok, Webcím, Pénztárca…) még a régi egysíkú kártyanyelven.
+- Rendelő 1. lépés asztalon: a csomag-kártyák ár-oszlopa levágva (`.cit-cfg-presets`).
+- kb-shot csipkesor-determinizmus (amenities screen.png, 198 px sub-pixel).
