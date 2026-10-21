@@ -4,7 +4,7 @@ title: Árak — alapár és időszaki árak szobánként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
-updated: 2026-10-16
+updated: 2026-10-21
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
@@ -12,6 +12,24 @@ Az árat szobánként (apartmanonként) adja meg — a vendég is így látja ma
 Minden szobának saját kártyája van.
 
 ![Képernyőkép: az ár-képernyő telefonon](assets/hu/screen.png)
+
+## Mi hol van a képernyőn?
+
+A képernyő címe a modul neve: **„Árak, szezonok”**. Fölötte a **„Vissza a modulokhoz”** link, a cím
+alatt a modul díja és az **„Útmutató ehhez a képernyőhöz”** gomb (ez a súgó).
+
+A bevezető jegyzet alatt egy sor kis gomb áll, **„Ezen a lapon”** címmel: **„Hol látják a vendégek?”**,
+a szobái neve, **„Ellátás”**, **„Szabályok”**. Ez a sor görgetés közben is a képernyő tetején marad;
+egy gombra koppintva a lap arra a részre ugrik, és mindig az a gomb van kiemelve, amelyik résznél
+éppen jár. Számítógépen ugyanez a lista a jobb szélen áll.
+
+A lap részei csoportokba vannak rendezve, mindegyik csoport egy kis, vonallal aláhúzott címet visel:
+**„Szobánkénti árak”** (mellette, hány szoba) — itt vannak a szobakártyák; és **„Az egész szállásra”**
+— itt az Ellátás és a Szabályok. Ha a házat csak egyben adja ki, az első csoport címe **„Az egész ház ára”**.
+
+Minden szobakártya címe alatt egy sor összegzi, ami be van állítva, például „Alapár 24 000 Ft · 2 időszak”;
+amíg nincs alapár, ott **„Még nincs alapár”** áll. A kártyán belül két halvány tömb van: az **„Alapár”** és az
+**„Időszaki árak”** — a lentiek ezeket írják le.
 
 ## Hol látják a vendégek az árait?
 

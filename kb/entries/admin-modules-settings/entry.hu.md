@@ -4,7 +4,7 @@ title: Modul-beállítások — mentés, visszaállítás, hogyan működik
 audience: tenant
 category: modules
 anchors: admin.modules.settings
-updated: 2026-09-28
+updated: 2026-10-21
 ---
 
 A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett
@@ -21,8 +21,8 @@ nyithatja le. A listában azok a modulok szerepelnek, amelyeknek van beállító
 
 ## Hogyan néz ki egy beállító-képernyő?
 
-Fent mindig visszatalál a **„Vissza a modulokhoz”** linkkel (a felirat előtt egy ‹ nyíl áll). Ha a modulnak havi díja van, azt is
-itt látja. Alatta jönnek a mezők: kapcsolók, szövegek, számok — mindegyik mellett rövid magyarázat,
+A képernyő címe a modul neve. Fölötte mindig visszatalál a **„Vissza a modulokhoz”** linkkel (a felirat előtt egy ‹ nyíl áll);
+a cím alatt a modul díja (ha van) és az **„Útmutató ehhez a képernyőhöz”** gomb áll, ami ezt a súgót nyitja. Alatta jönnek a mezők: kapcsolók, szövegek, számok — mindegyik mellett rövid magyarázat,
 hogy mire való. A speciális képernyőknél (foglalási naptár, szobák, árak, felszereltség) a szabály-mezők a
 **„Szabályok”** cím alatt vannak; ezeket ritkán kell módosítani — alapból működnek.
 
