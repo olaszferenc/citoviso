@@ -89,14 +89,15 @@ export function placeCard(v: ContactView, lead: string): string {
     `<section class="adm-card" data-place>` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("pin")}</span><h2>${T(lang, "A szállás helye")}</h2>${contactHelp(lang)}</div>` +
     `<p class="adm-lead">${lead}</p>` +
-    `<div class="citui-field"><label class="citui-label" for="pl_addr">${T(lang, "Cím")}</label>` +
+    // ADR-0397 ⑤: the question is a tone block, its fields on the panel colour.
+    `<div class="adm-blk adm-blk--plain"><div class="citui-field"><label class="citui-label" for="pl_addr">${T(lang, "Cím")}</label>` +
     `<div class="pl-row"><input class="citui-input" id="pl_addr" name="address" value="${esc(v.facts.address)}" autocomplete="street-address" maxlength="200"${v.facts.address ? " required" : ""}>` +
     (v.mapsKey
       ? `<button class="citui-btn citui-btn--ghost" type="button" id="pl_find">${ic("search", 16)}<span>${T(lang, "Megkeresem a térképen")}</span></button>`
       : "") +
     `</div>` +
     errLine("pl_addr_err", v.errors, "address", lang) +
-    `<p class="citui-hint pl-where">${T(lang, "Így jelenik meg az oldal tetején, a kapcsolat részben és a Google-nak szóló adatokban.")}</p></div>` +
+    `<p class="citui-hint pl-where">${T(lang, "Így jelenik meg az oldal tetején, a kapcsolat részben és a Google-nak szóló adatokban.")}</p></div></div>` +
     `<input type="hidden" name="lat" id="pl_lat" value="${g ? g.lat : ""}"><input type="hidden" name="lon" id="pl_lon" value="${g ? g.lon : ""}">` +
     map +
     errLine("pl_geo_err", v.errors, "geo", lang) +
@@ -107,7 +108,7 @@ export function placeCard(v: ContactView, lead: string): string {
 function contactFields(v: ContactView): string {
   const lang = v.lang ?? "hu";
   return (
-    `<div class="pl-2">` +
+    `<div class="adm-blk adm-blk--plain"><div class="pl-2">` +
     `<div class="citui-field"><label class="citui-label" for="ct_phone">${T(lang, "Telefon")}</label>` +
     `<input class="citui-input" id="ct_phone" name="phone" type="tel" inputmode="tel" value="${esc(v.facts.phone)}" autocomplete="tel" maxlength="40">` +
     errLine("ct_phone_err", v.errors, "phone", lang) +
@@ -116,7 +117,7 @@ function contactFields(v: ContactView): string {
     `<input class="citui-input" id="ct_email" name="email" type="email" inputmode="email" value="${esc(v.facts.email)}" autocomplete="email" maxlength="160">` +
     errLine("ct_email_err", v.errors, "email", lang) +
     `</div></div>` +
-    `<p class="citui-hint" style="margin:0">${T(lang, "Mindkettő {pub}: a honlap kapcsolat részében és a gombokon jelenik meg. Az értesítéseinket nem ide, hanem a {acct} címre küldjük.", { pub: `<b>${T(lang, "nyilvános")}</b>`, acct: `<b>${T(lang, "Fiók › Kommunikációs e-mail")}</b>` })}</p>`
+    `<p class="citui-hint" style="margin:0 0 10px">${T(lang, "Mindkettő {pub}: a honlap kapcsolat részében és a gombokon jelenik meg. Az értesítéseinket nem ide, hanem a {acct} címre küldjük.", { pub: `<b>${T(lang, "nyilvános")}</b>`, acct: `<b>${T(lang, "Fiók › Kommunikációs e-mail")}</b>` })}</p></div>`
   );
 }
 

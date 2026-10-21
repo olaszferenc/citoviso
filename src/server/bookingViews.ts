@@ -1059,6 +1059,11 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     ? `<p class="bk-order">${T(lang, "A sorrendet a válasz-határidő adja: aki hamarabb lejár, az van felül — akkor is, ha később érkezne.")}</p>`
     : `<p class="bk-order">${T(lang, "A sorrendet az érkezés napja adja. (Válasz-határidő nincs beállítva, így nincs mit sürgősség szerint rendezni.)")}</p>`;
 
+  // ADR-0397 (szakasz-hierarchia ⑨): the bk-sect headings are zones; this tab gets NO table
+  // of contents. Measured 2026-10-21: the 176 px side rail took the width of the bk-cols
+  // (the tiles' dates broke over two lines at 1280), and on a phone the sticky chip row
+  // pushed the first request down again — the thing ADR-0274 ② moved everything for.
+  // The tiles already jump to the requests and the calendar.
   return (
     BOOKINGS_STYLE +
     outcomeBanner(d, lang) +
@@ -1070,7 +1075,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     // kezdődött, a „Visszaigazolom" a hajtás alatt ült. A DOM-sorrend is ez (döntés →
     // naptár → többi); asztalon a rács teszi a naptárat a bal hasábba.
     `<div class="bk-cols"><div class="bk-cols__dec">` +
-    `<h2 class="bk-sect" id="kerelmek">${T(lang, "Döntésre váró kérések")}${
+    `<h2 class="bk-sect adm-zone__h" id="kerelmek">${T(lang, "Döntésre váró kérések")}${
       pend.length ? ` <span class="bk-sect__n">${pend.length}</span>` : ""
     }</h2>` +
     orderNote +
@@ -1085,10 +1090,10 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     tiles(d, pend, arrivals, lang) +
     note +
     (offered.length
-      ? `<h2 class="bk-sect">${T(lang, "Ajánlatra vár")}</h2>` +
+      ? `<h2 class="bk-sect adm-zone__h" id="ajanlatra-var">${T(lang, "Ajánlatra vár")}</h2>` +
         offered.map((r) => offeredCard(r, d.expireHours, lang)).join("")
       : "") +
-    `<h2 class="bk-sect">${T(lang, "Korábbi kérések")}</h2>` +
+    `<h2 class="bk-sect adm-zone__h" id="korabbi-kerelmek">${T(lang, "Korábbi kérések")}</h2>` +
     (decided.length
       ? decided.map((r) => historyRow(r, d.expireHours, viewState(d), lang)).join("")
       : `<div class="bk-empty">${T(lang, "Még nincs eldöntött kérés.")}</div>`) +
@@ -1749,6 +1754,10 @@ p.bk-req__cal a{color:var(--citui-link-ink)}
 /* „Kiküldött ajánlatok" — table where it fits, cards on a phone (two layouts) */
 .bk-of{container-type:inline-size;margin-top:22px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:16px;padding:16px}
 .bk-of__h{font-size:1.05rem;margin:0 0 4px}
+/* ADR-0397 ⑨ — the E language on this tab: the sent offers are a section (19 px title),
+   the bk-sect headings are zones (hairline after). */
+.adm-pg .bk-of__h{font-size:19px;font-weight:700;letter-spacing:-.015em}
+.bk-sect.adm-zone__h .bk-sect__n{margin-left:0}
 .bk-of__intro{font-size:.86rem;color:var(--citui-muted);margin:0 0 10px;line-height:1.5}
 .bk-of__fs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .bk-of__fs[hidden]{display:none}
