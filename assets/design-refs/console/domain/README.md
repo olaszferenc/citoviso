@@ -12,6 +12,7 @@
 |---|---|
 | `JOVAHAGYOTT-domain-ui-B.html` | a választott felület: **külön „Webcím" fül, 3 lépés** (1. Név → 2. Áttekintés → 3. Kész) |
 | `allapot-1-folyamatban.html` | a beszerzés fut (a tulajnak nincs teendője) |
+| `allapot-4-webcim-b.html` | **2026-10-21, ADR-XXXX — a „B” változat** (a fájlban a „B) Egy mondat + 3 szakasz” fül): a megvett név beállítása alatt látható állapot-képernyő; az `allapot-1` folyamat-képernyőjét felülírja |
 | `allapot-2-kesz.html` | kész — a honlap az új néven él, a régi cím odairányít |
 | `allapot-3-sikertelen.html` | a nevet időközben elvitték → másik név választható |
 
@@ -49,3 +50,22 @@ meg-nem-épített funkció; ha később kell, a Barion-adapter bővítése a hel
 
 **Amit a kód SOSEM tehet:** nem ígérhet a felületen visszautalást, amíg az nincs megvalósítva
 (§B.17 — magunkról sem állítunk valótlant), és nem költ automatikusan a tenant helyett.
+
+## Állapot-képernyő a vétel után — ELDÖNTVE (tulaj, 2026-10-21): „B”
+
+Kiváltó eset: az overseer.hu fizetés után a tenant csak annyit látott, hogy „Már intézzük”, és
+„ez általában néhány perc”. .hu névnél ez nem igaz (a Nyilvántartó jóváhagyása akár egy nap),
+és sehol nem volt időpont vagy határidő. A terv (`allapot-4-webcim-b.html`, B fül) KÖT:
+
+1. **Egy mondat felül**, ami megmondja, MIKOR él az új címen a honlap. .hu név bejegyzés előtt:
+   a vétel + 24 óra, egész órára felfelé kerekítve („Várhatóan csütörtök 16:00-ig …”); más
+   végződés, vagy már bejegyzett .hu: „Néhány perc …”.
+2. **Három szakasz:** Fizetés (és vétel) · Bejegyzés (.hu nyilvántartás / a cím beállítása) ·
+   Élesítés. Kész = zöld, folyamatban = cián, késik = figyelmeztető szín.
+3. **Késik:** 24 óra után (vagy setup_retry-ban) a mondat kimondja, hogy a vártnál tovább tart,
+   és munkatársunk már intézi. A név az övé marad, ezt a mondat ki is mondja.
+4. **Részletek időponttal:** a lépéslista, és minden KÉSZ lépés mellett az időpont, amikor
+   megtörtént. Ahol az időpontot nem rögzítettük, ott nincs időpont (nem találunk ki).
+5. **„Önnek nincs teendője. Amint kész, e-mailben szólunk.”**
+
+A kész állapot (élő név) képernyője változatlanul az `allapot-2-kesz.html`.

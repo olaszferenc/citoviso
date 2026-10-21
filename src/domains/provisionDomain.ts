@@ -584,6 +584,8 @@ export async function runDomainProvisioning(
         return "dns_pending";
       }
       await setStatus(p.id, p.siteId, "tls_pending", { registrarRef });
+      // 0112: the tenant's status screen shows when this step completed.
+      await db.updateTable("domain_provisioning").set({ ns_active_at: now }).where("id", "=", p.id).where("ns_active_at", "is", null).execute();
       status = "tls_pending";
     }
 

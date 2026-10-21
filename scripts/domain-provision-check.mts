@@ -120,7 +120,7 @@ ok(
 // tény a generált oldalon. Ezért a kettőt EGYÜTT mérjük: ha az ígéret ott van, a
 // küldésnek is lennie kell.
 const prov = readFileSync("src/domains/provisionDomain.ts", "utf8");
-const promisesMail = /E-mailben jelezzük/.test(views);
+const promisesMail = /e-mailben (jelezzük|szólunk)/i.test(views);
 ok(promisesMail, "a felület ígéri az értesítést (a folyamat percekig fut a háttérben)");
 if (promisesMail) {
   ok(

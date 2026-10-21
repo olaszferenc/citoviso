@@ -443,7 +443,7 @@ await block("B3 / K1 / ISMERT", async () => {
   const { domainSection } = await import("../src/server/adminViews.js");
   const base = {
     currentHost: "ribizli.citoviso.com", customDomain: null, status: "failed" as const, error: "foglalt",
-    failedDomain: "ribizli.hu", money: "released" as const, moneyAmount: 1000, activeDomain: "ribizli.hu",
+    failedDomain: "ribizli.hu", money: "released" as const, moneyAmount: 1000, activeDomain: "ribizli.hu", progress: null,
     suggestions: [{ domain: "ribizli2.hu", availability: "free" as const }], priceMonthly: 1000, packageContent: false,
     feeByDomain: { "ribizli2.hu": 1000 } as Record<string, number>, feeRange: { min: 1000, max: 1200 },
     listFeeByDomain: { "ribizli2.hu": 1000 } as Record<string, number>, listFeeRange: { min: 1000, max: 1200 },
@@ -489,7 +489,7 @@ await block("B3 / K1 / ISMERT", async () => {
       "⭐ N6 nincs „díjmentesen az Öné” a havidíj mellett; a szabály: a díj fut, amíg a név a honlaphoz tartozik, lemondáskor vételár nélkül az Öné");
   }
   const retry = domainSection({ ...base, status: "setup_retry", money: "paid", activeDomain: "ribizli.hu" }, {});
-  ok(/Az Öné/.test(retry) && !/más lefoglalta|nem tudtuk megvásárolni/.test(retry),
+  ok(/az Öné/i.test(retry) && /tovább tart/.test(retry) && !/más lefoglalta|nem tudtuk megvásárolni/.test(retry),
     "⭐ B2 a felület setup_retry-nél azt mondja: a név az Öné, a beállítás késik");
   const typedCom = await (await import("../src/domains/domainAdmin.js")).checkTypedDomain("ribizli.com");
   ok(typedCom.notOffered === true, "K1 a .com (nem kínált) a checkTypedDomain-ben notOffered", JSON.stringify(typedCom));

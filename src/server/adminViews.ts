@@ -3913,6 +3913,98 @@ function dRow(state: "ok" | "no" | "now" | "todo", title: string, sub: string): 
   );
 }
 
+/** A status row with the time its step completed (owner „B” 2026-10-21) — no time, no column. */
+function dRowAt(state: "ok" | "now" | "todo", title: string, sub: string, at: Date | null, lang: string): string {
+  const row = dRow(state, title, sub);
+  return at && state === "ok" ? row.replace(/<\/div>$/, `<span class="adm-dtime">${esc(fmtShortDateTime(at, lang))}</span></div>`) : row;
+}
+
+/** „okt. 21. 15:54” — the step times of the domain status list, on the accommodation's clock. */
+function fmtShortDateTime(d: Date, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: viewZone(),
+  }).format(d);
+}
+
+/**
+ * The in-flight status screen (owner „B” 2026-10-21, contract
+ * assets/design-refs/console/domain/allapot-4-webcim-b.html): ONE sentence that says when
+ * the site will run on the new name, three phases, and the step list with the time each step
+ * completed. Measured case: overseer.hu (2026-10-21) showed „általában néhány perc” for a .hu
+ * name that waits up to a day for the registry, with no time and no deadline anywhere.
+ * .hu: the expected finish is the purchase + 24 h (the registry's usual approval window),
+ * rounded up to the full hour; past that, or once the 24 h operator alert went out
+ * (stuck_stage ≥ 1), or in setup_retry, the screen says it takes longer and staff is on it.
+ */
+function domainStatusB(d: DomainAdminData, lang: string, now: Date = new Date()): string {
+  const dom = d.activeDomain ?? "";
+  const hu = /\.hu$/i.test(dom);
+  const p = d.progress;
+  const st = d.status;
+  const base = p ? p.boughtAt ?? p.createdAt : null;
+  const registryDone = st === "tls_pending";
+  const bought = st !== "pending" && st !== "registering";
+  const late =
+    st === "setup_retry" ||
+    (p?.stuckStage ?? 0) >= 1 ||
+    (hu && !registryDone && base !== null && now.getTime() - base.getTime() >= 24 * 3_600_000);
+
+  // The rows: done up to `done`, the next one is "now".
+  const rows: [string, string, Date | null][] = [
+    d.money === "free"
+      ? [T(lang, "A csomag része"), T(lang, "A névért külön díjat nem fizet"), p?.createdAt ?? null]
+      : [T(lang, "Kifizetve"), T(lang, "A díjat lehívtuk, a számlát e-mailben küldtük"), p?.paidAt ?? null],
+    [T(lang, "Megvásároltuk a nevet"), T(lang, "A regisztrátornál, az Ön honlapjához"), p?.boughtAt ?? null],
+    ...(hu
+      ? [[T(lang, "Bejegyzés a .hu nyilvántartásba"), T(lang, "A .hu neveket a Nyilvántartó hagyja jóvá — 2 percenként ellenőrizzük"), p?.nsActiveAt ?? null] as [string, string, Date | null]]
+      : []),
+    [T(lang, "A cím a honlapjára mutat"), hu ? T(lang, "Beállítottuk, a bejegyzés után azonnal érvényes") : T(lang, "A név a honlapjára mutat"), p?.nsActiveAt ?? null],
+    [T(lang, "Biztonsági tanúsítvány"), T(lang, "Hogy a böngésző lakatot mutasson"), null],
+    [T(lang, "A honlap az új címen"), T(lang, "A régi cím ide irányít, a régi linkek is működnek"), null],
+  ];
+  const done = !bought ? 1 : registryDone ? rows.length - 2 : 2;
+  const list = rows.map(([t, sub, at], i) => dRowAt(i < done ? "ok" : i === done ? "now" : "todo", t, sub, at, lang)).join("");
+
+  const Art = huArticle(dom);
+  const name = `<strong>${esc(dom)}</strong>`;
+  let big: string;
+  if (!bought) big = T(lang, "Már intézzük — Önnek nincs teendője.");
+  else if (late)
+    big = hu && !registryDone
+      ? T(lang, "{Art} {domain} az Öné, de a .hu jóváhagyás a vártnál tovább tart — munkatársunk már intézi.", { Art, domain: name })
+      : T(lang, "{Art} {domain} az Öné, de a beállítás a vártnál tovább tart — munkatársunk már intézi.", { Art, domain: name });
+  else if (hu && !registryDone && base) {
+    const eta = new Date(Math.ceil((base.getTime() + 24 * 3_600_000) / 3_600_000) * 3_600_000);
+    const sameDay = isoDayIn(eta, viewZone()) === isoDayIn(now, viewZone());
+    const day = sameDay ? T(lang, "ma") : new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { weekday: "long", timeZone: viewZone() }).format(eta);
+    const hour = new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { hour: "2-digit", minute: "2-digit", timeZone: viewZone() }).format(eta);
+    big = T(lang, "{Art} {domain} az Öné. Várhatóan {when}-ig az új címen él a honlapja.", { Art, domain: name, when: `${esc(day)} ${esc(hour)}` });
+  } else if (hu && !registryDone)
+    big = T(lang, "{Art} {domain} az Öné. A .hu bejegyzés általában 24 órán belül megtörténik, utána néhány perc, és az új címen él a honlapja.", { Art, domain: name });
+  else if (hu && registryDone)
+    big = T(lang, "{Art} {domain} bejegyezve. Néhány perc, és az új címen él a honlapja.", { Art, domain: name });
+  else big = T(lang, "{Art} {domain} az Öné. Néhány perc, és az új címen él a honlapja.", { Art, domain: name });
+
+  const ph = (cls: string, t: string, sub: string) => `<div class="${cls}"><b>${esc(t)}</b>${esc(sub)}</div>`;
+  const phases =
+    ph(bought ? "is-done" : "is-now", T(lang, "Fizetés"), T(lang, "és vétel")) +
+    ph(registryDone ? "is-done" : bought ? (late ? "is-late" : "is-now") : "", T(lang, "Bejegyzés"), hu ? T(lang, ".hu nyilvántartás") : T(lang, "a cím beállítása")) +
+    ph(registryDone ? (late ? "is-late" : "is-now") : "", T(lang, "Élesítés"), hu ? T(lang, "cím + tanúsítvány") : T(lang, "tanúsítvány"));
+
+  return (
+    `<div class="adm-dstat"><div>` +
+    `<p class="adm-dbig">${big}</p>` +
+    `<div class="adm-dphase">${phases}</div>` +
+    `<p class="citui-hint">${T(lang, "Önnek nincs teendője. Amint kész, e-mailben szólunk.")}</p>` +
+    `</div><div class="adm-dside"><details open><summary>${T(lang, "Részletek időponttal")}</summary>` +
+    `<div class="adm-dprog">${list}</div></details></div></div>`
+  );
+}
+
 /**
  * ADR-0108 „Forgalom" fül — jóváhagyott terv: assets/design-refs/tenant-admin/traffic/
  * („A: mondat először", tulaj 2026-09-07).
@@ -4105,7 +4197,12 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
 
   // ADR-0251: a HELD order — the status list says where the money is at every
   // step (approved A1 contract): held → bought → charged → address + certificate.
-  if (d.status !== "none" && d.status !== "failed" && (d.money === "reserved" || d.money === "paid")) {
+  // Owner „B” 2026-10-21: once the name is bought AND the money taken, the money rows have
+  // nothing left to say — the timed status screen below takes over.
+  if (
+    d.status !== "none" && d.status !== "failed" &&
+    (d.money === "reserved" || (d.money === "paid" && progressDone(d.status) < 1))
+  ) {
     const bought = progressDone(d.status) >= 1;
     const amt = d.moneyAmount !== null ? money(d.moneyAmount, d.currency) : "";
     const slow = /\.hu$/i.test(d.activeDomain ?? "");
@@ -4148,22 +4245,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   }
 
   if (d.status !== "none" && d.status !== "failed") {
-    return (
-      `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
-      `<p class="adm-lead">${
-        d.status === "setup_retry" && d.activeDomain
-          ? T(lang, "Az Öné: {domain}", { domain: `<strong>${esc(d.activeDomain)}</strong>` })
-          : T(lang, "Már intézzük — Önnek nincs teendője.")
-      }</p>` +
-      domainProgress(progressDone(d.status), lang) +
-      `<p class="citui-hint" style="margin-top:12px">${
-        d.status === "setup_retry"
-          ? T(lang, "A vártnál tovább tart — automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője.")
-          : T(lang, "Ez általában néhány percet vesz igénybe. E-mailben jelezzük, amint kész.")
-      }</p>` +
-      mockNote +
-      `</div>`
-    );
+    return `<div class="adm-card">${head(T(lang, "Saját webcím"))}` + domainStatusB(d, lang) + mockNote + `</div>`;
   }
 
   // ── LÉPÉS 2 — ÁTTEKINTÉS (a fizetési döntés önálló képernyője) ──
@@ -4580,6 +4662,22 @@ const DOMAIN_STYLE =
   `.adm-dterms .adm-dtotal small{display:block;font-size:.76rem;font-weight:400;color:var(--citui-muted);font-family:var(--citui-font-text)}` +
   `.adm-dtwo{display:grid;gap:4px 24px;align-items:start}` +
   `@media (min-width:1000px){.adm-dtwo{grid-template-columns:1.15fr 1fr}.adm-dtwo .adm-dguar{margin-top:16px}}` +
+  // Owner „B” 2026-10-21 (design-refs/console/domain/allapot-4-webcim-b.html): one sentence,
+  // three phases, the timed step list beside it on a wide screen.
+  `.adm-dbig{font-family:var(--citui-font-display);font-size:1.3rem;line-height:1.3;margin:2px 0 10px}` +
+  `.adm-dphase{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 14px}` +
+  `.adm-dphase div{border-radius:var(--citui-radius-sm);padding:9px 8px;font-size:.8rem;text-align:center;` +
+  `background:var(--citui-surface-2);color:var(--citui-muted);border:1px solid var(--citui-line)}` +
+  `.adm-dphase b{display:block;font-size:.88rem;color:var(--citui-ink)}` +
+  `.adm-dphase .is-done{background:var(--citui-ok-soft);color:var(--citui-ok);border-color:transparent}` +
+  `.adm-dphase .is-done b{color:var(--citui-ok)}` +
+  `.adm-dphase .is-now{border-color:var(--citui-cyan-500);background:color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-panel))}` +
+  `.adm-dphase .is-late{border-color:var(--citui-warn);background:color-mix(in srgb, var(--citui-warn) 13%, var(--citui-panel))}` +
+  `.adm-dside{margin-top:14px}.adm-dside summary{cursor:pointer;font-size:.86rem;padding:8px 0}` +
+  `.adm-dprog__row .adm-dtime{margin-left:auto;padding-left:10px;white-space:nowrap;font-family:var(--citui-font-display);font-size:.8rem;color:var(--citui-muted)}` +
+  `.adm-dprog__row>span:nth-child(2){flex:1;min-width:0}` +
+  `@media (min-width:1000px){.adm-dstat{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;align-items:start}` +
+  `.adm-dside{margin-top:0;border-left:1px solid var(--citui-line);padding-left:20px}.adm-dbig{font-size:1.5rem}}` +
   `.adm-dguar{border:1.5px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:var(--citui-radius);padding:14px 16px;margin:14px 0}` +
   `.adm-dguar h3{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:1rem;font-family:var(--citui-font-display)}` +
   `.adm-dguar h3 svg{color:var(--citui-ok);flex:none}` +

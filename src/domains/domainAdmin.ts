@@ -62,6 +62,18 @@ export interface DomainSuggestionView {
  */
 export type DomainMoneyState = "reserved" | "paid" | "released" | "charged" | "free" | null;
 
+export interface DomainProgressTimes {
+  readonly createdAt: Date;
+  /** payment.paid_at of the order (the money taken). */
+  readonly paidAt: Date | null;
+  /** waiting_since — set when the bought name entered dns_pending. */
+  readonly boughtAt: Date | null;
+  /** 0112 ns_active_at — NS delegation active (.hu: the registry approved it). */
+  readonly nsActiveAt: Date | null;
+  /** 0107 stuck_stage — 1+ = the 24 h operator alert already went out. */
+  readonly stuckStage: number;
+}
+
 export interface DomainAdminData {
   /** A honlap jelenlegi címe (<slug>.citoviso.com), ha van slug. */
   readonly currentHost: string | null;
@@ -79,6 +91,12 @@ export interface DomainAdminData {
   readonly moneyAmount: number | null;
   /** The domain the newest beszerzés is about (in flight or failed). */
   readonly activeDomain: string | null;
+  /**
+   * The newest beszerzés's step times for the status screen (owner „B” 2026-10-21): null
+   * where the step has not happened or its time was never recorded — the screen then
+   * shows the step without a time, never an invented one.
+   */
+  readonly progress: DomainProgressTimes | null;
   readonly suggestions: readonly DomainSuggestionView[];
   /**
    * ADR-0109 ①: the custom domain's MONTHLY fee. ADR-0360: for the PICKED name's ending and
@@ -204,10 +222,11 @@ export async function loadDomainAdmin(
   let money: DomainMoneyState = null;
   let moneyAmount: number | null = null;
   let activeDomain: string | null = null;
+  let progress: DomainProgressTimes | null = null;
   if (status !== "none") {
     const dp = await db
       .selectFrom("domain_provisioning")
-      .select(["domain"])
+      .select(["domain", "created_at", "waiting_since", "ns_active_at", "stuck_stage"])
       .where("tenant_id", "=", tenantId)
       .orderBy("created_at", "desc")
       .executeTakeFirst();
@@ -215,11 +234,20 @@ export async function loadDomainAdmin(
     const pay = await db
       .selectFrom("domain_provisioning")
       .innerJoin("payment", "payment.order_intent_id", "domain_provisioning.order_intent_id")
-      .select(["payment.status as status", "payment.reservation as reservation", "payment.amount as amount"])
+      .select(["payment.status as status", "payment.reservation as reservation", "payment.amount as amount", "payment.paid_at as paidAt"])
       .where("domain_provisioning.tenant_id", "=", tenantId)
       .orderBy("domain_provisioning.created_at", "desc")
       .orderBy("payment.created_at", "desc")
       .executeTakeFirst();
+    if (dp) {
+      progress = {
+        createdAt: new Date(dp.created_at as unknown as string),
+        paidAt: pay?.paidAt ? new Date(pay.paidAt as unknown as string) : null,
+        boughtAt: dp.waiting_since ? new Date(dp.waiting_since as unknown as string) : null,
+        nsActiveAt: dp.ns_active_at ? new Date(dp.ns_active_at as unknown as string) : null,
+        stuckStage: dp.stuck_stage,
+      };
+    }
     if (pay) {
       moneyAmount = pay.amount;
       money = pay.amount === 0
@@ -282,6 +310,7 @@ export async function loadDomainAdmin(
     money,
     moneyAmount,
     activeDomain,
+    progress,
     suggestions,
     // ADR-0109: the SAME fee the order will charge (quoteDomainUpgrade). What the
     // review screen shows must equal what the pay-link takes (§B.17 on ourselves).

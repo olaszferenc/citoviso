@@ -267,7 +267,7 @@ await block("④", async () => {
 await block("⑤ nézet", async () => {
   const base = {
     currentHost: "ribizli.citoviso.com", customDomain: null, status: "none" as const, error: null,
-    failedDomain: null, money: null, moneyAmount: null, activeDomain: null,
+    failedDomain: null, money: null, moneyAmount: null, activeDomain: null, progress: null,
     suggestions: [{ domain: "ribizli.hu", availability: "free" as const }], priceMonthly: 0, packageContent: true,
     feeByDomain: { "ribizli.hu": 0 } as Record<string, number>, feeRange: { min: 0, max: 0 },
     listFeeByDomain: { "ribizli.hu": 1000 } as Record<string, number>, listFeeRange: { min: 1000, max: 1200 },
@@ -309,8 +309,8 @@ await block("⑤ nézet", async () => {
       "fizetős névnél a díjsor változatlan", paidLine);
   }
   const running = domainSection({ ...base, status: "dns_pending", money: "free", moneyAmount: 0, activeDomain: "ribizli.hu" }, {});
-  ok(/Már intézzük/.test(running) && !/Összeg zárolva|terheltük/.test(running),
-    "⑤ folyamatban: a fizetős út meglévő képernyője, pénz-sorok nélkül", running.slice(0, 400));
+  ok(/az Öné/.test(running) && /A csomag része/.test(running) && !/Összeg zárolva|terheltük|Kifizetve/.test(running),
+    "⑤ folyamatban: a webcím állapot-képernyője (tulaj „B” 2026-10-21), pénz-sorok nélkül", running.slice(0, 400));
 });
 
 setHouseAlertDeps(null);

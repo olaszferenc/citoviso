@@ -1341,6 +1341,7 @@ const domainFixture: DomainAdminData = {
   money: null,
   moneyAmount: null,
   activeDomain: null,
+  progress: null,
   suggestions: [
     { domain: "nyugalomvendeghaz.hu", availability: "free" },
     { domain: "nyugalom-vendeghaz.hu", availability: "free" },
