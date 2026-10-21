@@ -22,14 +22,19 @@ A fül tetején két gomb választja szét a kétféle iratot:
 
 ## A számlák listája
 
-A lista tetején három adat összegez:
+A lista tetején egy halvány dobozban legfeljebb négy adat összegez:
 
 - **„Kiállított számla”** — hány számla készült (a szűrésnek megfelelően).
-- **„Összesen”** — ezek együttes összege.
+- **„Eddig kifizetett”** — ezek együttes összege. Ez **nem tartozás**: a már kifizetett
+  számlák összege, ezért a cella alatt ki is írjuk, hogy „nem tartozás”.
+- **„Jelenleg fizetendő”** — amit MOST kell rendeznie. Ha minden számla ki van fizetve,
+  0 Ft áll itt és alatta „minden kiállított számla rendezve”. Ha nem nulla, a honlapja
+  emiatt felfüggesztésre kerülhet — ezt rendezze először. (Csak előfizetés mellett látszik.)
 - **„Következő fordulónap”** — mikor esedékes a következő díj.
 
-Fontos: ha évre szűr, ez a három adat is az adott évre vált. Így pontosan azt látja,
-amit a könyvelőnek meg kell adnia.
+Fontos: ha évre szűr, a számla-darabszám és az „Eddig kifizetett” összeg az adott évre
+vált (az első cella címe ilyenkor az évet mondja). Így pontosan azt látja, amit a
+könyvelőnek meg kell adnia. A „Jelenleg fizetendő” és a fordulónap a szűréstől független.
 
 ## Mit lát egy soron
 

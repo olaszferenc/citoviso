@@ -1713,3 +1713,15 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-pg .adm-card.is-current>.adm-card__head .adm-ico{color:var(--citui-cyan-500)}
 .adm-pg [id]{scroll-margin-top:104px}
 @media(min-width:1100px){.adm-pg [id]{scroll-margin-top:64px}}
+/* A field label that IS the block's title (Szövegek: one block per field). */
+.adm-blk>label.adm-blk__h{display:block}
+/* Dokumentumok: the summary cells are fields on the block. */
+.adm-blk .adm-docsum{margin:0}
+.adm-blk .adm-docsum div{background:var(--citui-panel)}
+.adm-blk>.adm-tools{margin-bottom:10px}
+.adm-blk>.adm-frow:last-child{margin-bottom:0}
+/* Áttekintés: the widgets + cover zone, then the to-do list as a section (big title, no head rule). */
+.adm-pg .adm-ov .adm-zone{margin-bottom:16px}
+.adm-pg .adm-todobox{border-radius:10px}
+.adm-pg .adm-todo__h{border:0;padding:16px 14px 6px;font-size:19px;font-weight:700;letter-spacing:-.015em}
+.adm-pg .adm-todo__h .cnt{font-size:12px;letter-spacing:0}

@@ -4984,8 +4984,11 @@ function overviewSection(
     `<div class="adm-ph"><h1>${T(lang, "Áttekintés")}${helpLink("admin.overview", lang)}</h1>` +
     `<p>${T(lang, "Az oldala állapota egy képernyőn — ami teendő, az itt sorban áll.")}</p></div>` +
     pendingStrip +
+    // E language (ADR-0397 ②): the widgets and the cover are one zone; the to-do list under it is a section.
+    `<section class="adm-zone"><h2 class="adm-zone__h">${T(lang, "Egy pillantásra")}</h2>` +
     `<div class="adm-w">${wStatus}${wVisits}${wMsgs}</div>` +
     showcase +
+    `</section>` +
     `<div class="adm-todobox" id="teendok"><div class="adm-todo__h">${T(lang, "Teendők")} <span class="cnt">${T(lang, "{n} nyitott", { n: openCount })}</span>` +
     `<span class="adm-sp"></span><span class="cnt">${
       billedActiveCount === activeCount || trialActive
@@ -5004,13 +5007,13 @@ function textsSection(content: NonNullable<AdminContent>, lang = "hu"): string {
     `<form method="POST" action="/admin/text" class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>${T(lang, "Szövegek")}</h2>${helpLink("admin.texts", lang)}</div>` +
     `<p class="adm-lead">${T(lang, "Ezek a szövegek jelennek meg az oldalán.")}</p>` +
-    `<div class="citui-field"><label class="citui-label" for="name">${T(lang, "Vállalkozás neve")}</label>` +
+    `<div class="adm-blk"><label class="citui-label adm-blk__h" for="name">${T(lang, "Vállalkozás neve")}</label>` +
     `<input class="citui-input" id="name" name="name" value="${esc(content.name)}"></div>` +
-    `<div class="citui-field"><label class="citui-label" for="tagline">${T(lang, "Szlogen (rövid mondat a fejlécben)")}</label>` +
+    `<div class="adm-blk"><label class="citui-label adm-blk__h" for="tagline">${T(lang, "Szlogen (rövid mondat a fejlécben)")}</label>` +
     `<input class="citui-input" id="tagline" name="tagline" value="${esc(content.tagline)}"></div>` +
-    `<div class="citui-field"><label class="citui-label" for="intro">${T(lang, "Bemutatkozó szöveg")}</label>` +
+    `<div class="adm-blk"><label class="citui-label adm-blk__h" for="intro">${T(lang, "Bemutatkozó szöveg")}</label>` +
     `<textarea class="citui-textarea" id="intro" name="intro" style="min-height:140px">${esc(content.intro)}</textarea></div>` +
-    `<div class="citui-field"><label class="citui-label" for="highlights">${T(lang, "Kiemelések (soronként egy)")}</label>` +
+    `<div class="adm-blk"><label class="citui-label adm-blk__h" for="highlights">${T(lang, "Kiemelések (soronként egy)")}</label>` +
     `<textarea class="citui-textarea" id="highlights" name="highlights" style="min-height:110px">${esc(highlights)}</textarea></div>` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés és frissítés")}</button>` +
     `</form>`
@@ -5232,7 +5235,8 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
     // legnagyobb szám a képernyőn ne az legyen, amit NEM kell kifizetnie.
     // ⛔ A „fizetendő" MÉRT adat (`subscription.arrears`), nem a számla-listából
     // következtetett nulla: ha nem tudjuk, nem írjuk ki (§B.17).
-    `<div class="adm-docsum">` +
+    // E language (ADR-0397 ⑤): the summary is the section's tonal block, its cells the fields on it.
+    `<div class="adm-blk adm-blk--plain"><div class="adm-docsum">` +
     `<div><div class="l">${d.year === "mind" ? T(lang, "Kiállított számla") : T(lang, "{year}-ben", { year: d.year })}</div>` +
     `<div class="v">${T(lang, "{n} db", { n: issued.length })}</div></div>` +
     `<div><div class="l">${T(lang, "Eddig kifizetett")}</div><div class="v">${esc(fmtMoney(total, currency, lang))}</div>` +
@@ -5249,7 +5253,7 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
     (d.nextRenewal
       ? `<div><div class="l">${T(lang, "Következő fordulónap")}</div><div class="v">${esc(fmtDate(d.nextRenewal, lang))}</div></div>`
       : "") +
-    `</div>`;
+    `</div></div>`;
 
   const tools = filterBar(
     base,
@@ -5711,7 +5715,8 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     // Üres postaládán a kereső csak zaj — ugyanaz a szabály, mint a Dokumentumoknál.
     // ⚠️ Szűrt üres találatnál a sáv VÉGIG LÁTSZIK (contract ⑦): különben nincs mit
     // visszakapcsolni, és a lap úgy nézne ki, mintha a postaláda lenne üres.
-    (m.total === 0 && !dirty ? "" : tools) +
+    // E language (ADR-0397 ⑤): the search and the three filter rows are one tonal block above the list.
+    (m.total === 0 && !dirty ? "" : `<div class="adm-blk adm-blk--plain">${tools}</div>`) +
     (m.total === 0 && !dirty ? "" : countLine) +
     // ── A TÖMEGES JELÖLÉS IGE, ÉS MEGERŐSÍTÉST KÉR (kontraktus ⑤) ────────────
     // ⛔ A régi felirat („Mind olvasott (71)") ÁLLÍTÁS-alakú volt, ige nélkül,
