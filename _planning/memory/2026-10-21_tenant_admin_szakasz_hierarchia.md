@@ -21,5 +21,5 @@
 ## Nyitott
 - ~~„Folytatom” gomb~~ → „Megrendelem” (ADR-0398), élesen 14:41. ~~A többi modul-lap~~ → kész a 2. körben.
 - A nem modul fülek (Fotók, Foglalások, Üzenetek, Dokumentumok, Webcím, Pénztárca…) még a régi egysíkú kártyanyelven.
-- Rendelő 1. lépés asztalon: a csomag-kártyák ár-oszlopa levágva (`.cit-cfg-presets`).
+- ~~Rendelő 1. lépés ár-oszlop levágva~~ → javítva (3. kör): a konfigurátor box-sizing resetje a saját gyökér-elemeire; csak csupasz gazdalapon jött elő.
 - kb-shot csipkesor-determinizmus (amenities screen.png, 198 px sub-pixel).

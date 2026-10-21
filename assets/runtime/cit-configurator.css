@@ -13,8 +13,30 @@
  * archetype CSS can't bury them. No emoji (design doctrine) — inline SVG only.
  */
 
+/* The chrome is appended straight to <body> — no `.cit-cfg` wrapper exists — so the reset
+ * names every root the runtime mounts. Measured 2026-10-21: on a host page without its own
+ * `* { box-sizing: border-box }` the preset cards (width 100% + padding) ran 32 px past
+ * the panel's right edge and clipped the price column („95 000 F…”). */
 .cit-cfg,
-.cit-cfg * {
+.cit-cfg *,
+.cit-cfg-scrim,
+.cit-cfg-panel,
+.cit-cfg-panel *,
+.cit-cfg-launch,
+.cit-cfg-launch *,
+.cit-cfg-trialpill,
+.cit-cfg-trialpill *,
+.cit-cfg-tscrim,
+.cit-cfg-tsheet,
+.cit-cfg-tsheet *,
+.cit-cfg-esccard,
+.cit-cfg-esccard *,
+.cit-cfg-dock,
+.cit-cfg-dock *,
+.cit-cfg-editstrip,
+.cit-cfg-editstrip *,
+#cit-cfg-samplezone,
+#cit-cfg-samplezone * {
   box-sizing: border-box;
 }
 
