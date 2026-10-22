@@ -447,8 +447,8 @@ export async function processRegistrarMails(
         (row ? `Beszerzés: ${row.id}\n` : "") +
         `\n----\n${excerpt}\n----\n\n` +
         (support
-          ? `Teendő: válasz a levélre a postafiókból (olasz.ferenc@citoviso.com), vagy a hiány pótlása a Websupport ` +
-            `Webadminban (domain-profil azonosító). A tenant képernyője mostantól „munkatársunk intézi”-t mutat.\n`
+          ? `Teendő: olvasd el, és ha kérnek valamit, válaszolj a levélre a postafiókból (olasz.ferenc@citoviso.com). ` +
+            `A domain-profil azonosító-mezői a Webadminban zároltak, azokat csak a Websupport írhatja be.\n`
           : ""),
     });
     if (ok && support && row) {
