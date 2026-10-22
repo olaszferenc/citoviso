@@ -47,7 +47,11 @@ import { getEmailSender } from "../email/sender.js";
 import { sendOperatorSms } from "../console/operatorSms.js";
 
 /** The registry's confirmation URL. The token is the dedupe key. */
-const CONFIRM_LINK = /https:\/\/cfm\.drr\.hu\/(?:hu|en)\/confirmations\/([0-9a-f]{16,})/gi;
+// The `?code=<email>,<CODE>` query is part of the link (measured 2026-10-22, overseer.hu): the
+// form demands the e-mailed code, and the query pre-fills it. Cutting it off (as this regex did
+// until then) hands on a link that stops at a mandatory field. The value is URL-encoded
+// (`%40`, `%2C`), so the class stops before the QP `=20` tail and any HTML quote.
+const CONFIRM_LINK = /https:\/\/cfm\.drr\.hu\/(?:hu|en)\/confirmations\/([0-9a-f]{16,})(?:\?code=[A-Za-z0-9%,._-]+)?/gi;
 
 /** Operational state (not business data), so it lives outside the DB and the repo. */
 const STATE_PATH =

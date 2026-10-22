@@ -65,6 +65,15 @@ say(
   "önteszt: a QP-feloldás NÉLKÜL tényleg nem találná meg (a lépés nem dísz)",
 );
 
+// Mérve 2026-10-22 (overseer.hu): a link `?code=<e-mail>,<KÓD>` része előtölti a kötelező
+// kód-mezőt; levágva a továbbadott link egy kitöltendő mezőn akad el.
+const REAL = `https://cfm.drr.hu/hu/confirmations/${TOKEN}?code=3Dolasz.ferenc%40c=\r\nitoviso.com%2CNVYQB-6QUBJ-8JFP5=20\r\n A megerősítéshez`;
+const realHit = extractConfirmLinks(REAL)[0];
+say(
+  realHit?.token === TOKEN &&
+    realHit.link === `https://cfm.drr.hu/hu/confirmations/${TOKEN}?code=olasz.ferenc%40citoviso.com%2CNVYQB-6QUBJ-8JFP5`,
+  "a kódot hordozó `?code=` rész a linkkel megy tovább (a QP `=20` farok nélkül), a token változatlan",
+);
 say(hits("https://cfm.drr.hu/hu/confirmations/rovid").length === 0, "túl rövid token NEM link");
 say(hits("https://hamis.example/hu/confirmations/" + TOKEN).length === 0, "idegen hoszt NEM link");
 say(hits("Tisztelt Ügyfelünk! Köszönjük a megrendelést.").length === 0, "link nélküli levél nem riaszt");
