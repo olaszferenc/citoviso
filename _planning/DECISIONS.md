@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-hu-megerosites-neo-kollega-vegzi.md) — A .hu Nyilvántartó megerősítését Neo kolléga végzi, nem a tulaj és nem egy vak szkript (2026-10-22)
+- [ADR-0401](decisions/0401-a-hu-nyilvantarto-megerositeset-neo-kollega.md) — A .hu Nyilvántartó megerősítését Neo kolléga végzi, nem a tulaj és nem egy vak szkript (2026-10-22)
 - [ADR-0400](decisions/0400-domain-regisztracio-a-szal-vegig-a-mienk-a.md) — Domain-regisztráció: a szál VÉGIG a miénk — a rendeléstől az élesedésig a gép figyel, kérdez és szól (2026-10-22)
 - [ADR-0399](decisions/0399-webcim-allapot-kepernyo-idopontokkal-es-varhato.md) — Webcím: állapot-képernyő időpontokkal és várható elkészüléssel a vétel után
 - [ADR-0398](decisions/0398-a-proba-gombja-megrendelem-nem-folytatom.md) — A próba gombja „Megrendelem”, nem „Folytatom”

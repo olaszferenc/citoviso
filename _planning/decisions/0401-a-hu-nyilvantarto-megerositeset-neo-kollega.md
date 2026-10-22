@@ -1,4 +1,4 @@
-## ADR-XXXX — A .hu Nyilvántartó megerősítését Neo kolléga végzi, nem a tulaj és nem egy vak szkript (2026-10-22)
+## ADR-0401 — A .hu Nyilvántartó megerősítését Neo kolléga végzi, nem a tulaj és nem egy vak szkript (2026-10-22)
 
 **Kiváltó (tulaj, 2026-10-22 délután, a domain-szálban):** a kézi kattintásra: „ÉÉÉÉNNNNN???? EZ LeNNE A KURVA
 NAGY AI FOLYAMAT????”; majd: „vagy már most mehet a gépi kattintás... de azt odaadnám valamelyik virtuális
