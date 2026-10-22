@@ -4,7 +4,7 @@ title: Saját webcím — hogyan kaphat egyedi domain nevet a honlapja
 audience: tenant
 category: billing
 anchors: admin.domain
-updated: 2026-10-11
+updated: 2026-10-22
 ---
 
 A honlapja induláskor egy nálunk lévő címen érhető el (például
@@ -81,15 +81,25 @@ zároljuk az összeget. A bankja az alkalmazásában **függőben lévő tételk
 ez még nem levonás. És mivel valódi kártyazárolás, **csak bankkártyával** lehet fizetni
 (Barion-egyenleggel, Apple Pay-jel vagy Google Pay-jel nem).
 
-**3. lépés — Kész.** A fülön lépésről lépésre követheti, hol tart: összeg zárolva →
-megvásároltuk a nevet → terheltük a kártyáját (a számlát e-mailben küldjük) → beállítjuk
-a címet és a biztonsági tanúsítványt. Két e-mailt kap tőlünk: egyet a név megvásárlásakor
-(„Megvásároltuk a webcímét”, benne azzal, mi jön még és addig hol él a honlapja), és egyet,
-amikor a honlap már az új címen él.
+**3. lépés — Kész.** Amíg az összeg csak zárolva van, a fülön a lépéseket látja: összeg
+zárolva → megvásároljuk a nevet → terheljük a kártyáját. A név megvásárlása és a terhelés
+után a fül tetején egyetlen mondat mondja meg, hol tart, és mikorra várható a vége:
+„A sajatnev.hu az Öné. Várhatóan péntek 14:00-ig az új címen él a honlapja.” Alatta három szakasz:
+**Fizetés**, **Bejegyzés** (csak `.hu` névnél) és **Élesítés**. A kész szakasz pipát kap,
+a folyamatban lévő az aktuális lépést írja.
 
-A `.hu` nevek bejegyzése napokig tart (lásd lent) — a képernyő ezt ki is írja („A .hu
-neveknél ez néhány nap”). A kártyáját ettől függetlenül már a név megvásárlásakor
-terheljük, nem a várakozás végén.
+A **„Részletek időponttal”** sorra koppintva lenyílik a teljes lista, minden kész lépés
+mellett az időponttal: Kifizetve · Megvásároltuk a nevet · Bejegyzés a .hu nyilvántartásba ·
+A cím a honlapjára mutat · Biztonsági tanúsítvány · A honlap az új címen. Ebből látja, hogy
+a folyamat nem állt meg.
+
+Két e-mailt kap tőlünk: egyet a név megvásárlásakor („Megvásároltuk a webcímét”, benne
+azzal, mi jön még és addig hol él a honlapja), és egyet, amikor a honlap már az új címen él.
+A kártyáját a név megvásárlásakor terheljük, nem a várakozás végén.
+
+A `.hu` neveknél van egy plusz lépés, a **Bejegyzés**: a képernyő ezt így írja: „A .hu
+neveket a Nyilvántartó hagyja jóvá — 2 percenként ellenőrizzük”. Ez általában 24 órán belül
+megtörténik, utána néhány perc, és az új címen él a honlapja.
 
 Az ok: a magyar nyilvántartó (a `.hu` neveket kezelő szervezet) minden igénylést külön
 megerősítéshez köt. **Ezt a lépést mi végezzük el, nem Ön** — a nyilvántartó a mi
@@ -102,10 +112,12 @@ küldünk. Ne kattintson benne, hanem továbbítsa nekünk, és megnézzük.
 
 ## Mi van, ha a beállítás elakad?
 
-Előfordulhat, hogy a nevet már megvásároltuk (és a kártyáját terheltük), de a cím
-beállítása vagy a biztonsági tanúsítvány a vártnál tovább tart. **A név ilyenkor is az
-Öné** — a fül ezt ki is írja („Az Öné: …”), és e-mailben is megírjuk. A beállítást
-automatikusan újrapróbáljuk, és munkatársunk is figyeli. Önnek nincs teendője, és nem kell
+Előfordulhat, hogy a nevet már megvásároltuk (és a kártyáját terheltük), de a `.hu`
+jóváhagyás, a cím beállítása vagy a biztonsági tanúsítvány a vártnál tovább tart. **A név
+ilyenkor is az Öné.** A fül tetején ez áll: „A sajatnev.hu az Öné, de a beállítás a vártnál
+tovább tart — munkatársunk már intézi.” (`.hu` névnél: „…de a .hu jóváhagyás a vártnál
+tovább tart…”), és a késő szakasz narancs színű lesz. Ilyenkor a rendszer már szólt
+nekünk, munkatársunk intézi, és e-mailben is megírjuk. Önnek nincs teendője, és nem kell
 másik nevet választania vagy újra fizetnie.
 
 ## Meddig tart, és mi történik közben?
@@ -115,10 +127,9 @@ a címet és a biztonsági tanúsítványt néhány perc alatt beállítjuk, és
 átköltözik az új névre. A tanúsítvány az, ami miatt a böngésző lakatot mutat a cím
 mellett.
 
-⚠️ **`.hu` névnél napokban számoljon**, nem percekben: a nyilvántartói megerősítés után is
-van egy nyolcnapos várakozási idő, amíg a név véglegessé válik. Ez a magyar szabályozás
-rendje, minden szolgáltatónál ugyanez. A honlapja addig is elérhető marad a régi címén —
-a költözés **nem jár leállással**.
+`.hu` névnél ehhez jön a nyilvántartói jóváhagyás, ami általában 24 órán belül
+megtörténik — a fül a várható időpontot ki is írja. A honlapja addig is elérhető marad a
+régi címén — a költözés **nem jár leállással**.
 
 ## A régi cím megszűnik?
 
