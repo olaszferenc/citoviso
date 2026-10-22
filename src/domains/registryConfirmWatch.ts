@@ -44,7 +44,6 @@ import { db } from "../db/client.js";
 import { getAlertRecipients } from "../console/appSettings.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { getEmailSender } from "../email/sender.js";
-import { sendOperatorSms } from "../console/operatorSms.js";
 
 /** The registry's confirmation URL. The token is the dedupe key. */
 // The `?code=<email>,<CODE>` query is part of the link (measured 2026-10-22, overseer.hu): the
@@ -162,6 +161,14 @@ export interface Finding {
   readonly token: string;
   readonly link: string;
   readonly mailAt: string;
+  /** The .hu name the registry mail is about ("Az érintett domain név: …"), when stated. */
+  readonly domain?: string;
+}
+
+/** The registry mail names the domain in both languages; the English line is pure ASCII. */
+export function confirmMailDomain(linkText: string): string | undefined {
+  const m = /(?:affected domain name|domain n(?:év|=C3=A9v|ev)):\s*([a-z0-9][a-z0-9.-]*\.hu)\b/i.exec(linkText);
+  return m?.[1]?.toLowerCase();
 }
 
 /** A mail from the registrar / the registry, as the watcher sees it. */
@@ -207,7 +214,7 @@ export function matchRegistrarMail(mail: { from: string; subject: string; text: 
  * spam elsewhere before), 14 days back, and returns both the confirmation links and the
  * registrar's mails.
  */
-async function scanMailbox(): Promise<{ links: Finding[]; mails: RegistrarMail[] }> {
+export async function scanMailbox(): Promise<{ links: Finding[]; mails: RegistrarMail[] }> {
   const creds = imapCreds();
   if (!creds) throw new Error("nincs IMAP hitelesítő (SMTP_URL vagy REGISTRY_IMAP_URL)");
 
@@ -277,8 +284,9 @@ async function scanMailbox(): Promise<{ links: Finding[]; mails: RegistrarMail[]
         const textBlock = /BODY\[TEXT\]<0> \{\d+\}\r?\n([\s\S]*)$/.exec(r)?.[1] ?? r;
         // Quoted-printable soft breaks split URLs across lines; undo them first.
         const linkText = textBlock.replace(/=\r?\n/g, "").replace(/=3D/g, "=");
+        const domain = confirmMailDomain(linkText);
         for (const m of linkText.matchAll(CONFIRM_LINK)) {
-          links.push({ token: m[1].toLowerCase(), link: m[0], mailAt });
+          links.push({ token: m[1].toLowerCase(), link: m[0], mailAt, ...(domain ? { domain } : {}) });
         }
         const from = hdr("From");
         if (REGISTRAR_SENDER.test(from)) {
@@ -301,41 +309,28 @@ async function scanMailbox(): Promise<{ links: Finding[]; mails: RegistrarMail[]
 
 async function alertOwner(link: string, mailAt: string): Promise<boolean> {
   const rcpt = await getAlertRecipients();
-  if (!rcpt.phone && !rcpt.email) {
+  if (!rcpt.email) {
     console.error(
-      "[registry-confirm] MEGERŐSÍTŐ LINK érkezett, de nincs riasztási címzett " +
-        "(konzol /settings vagy OWNER_ALERT_PHONE) — értesítés NEM ment ki. Link: " +
-        link,
+      "[registry-confirm] MEGERŐSÍTŐ LINK érkezett, de nincs riasztási e-mail-cím " +
+        "(konzol /settings) — értesítés NEM ment ki. Link: " + link,
     );
     return false;
   }
+  // ADR-0401: Neo (digital colleague) confirms — the dev-box relay (scripts/cfm-relay.mts) hands
+  // him the link and SMSes the owner only when no "Sikeres beküldés" comes within 30 minutes.
+  // So this is a mail for the record, not a call to act: an SMS here would ask the owner to do
+  // Neo's job (owner 2026-10-22: „hát nem ez a dolga????").
   // Internal operator text — outside the §B.18 customer-facing i18n scope.
-  if (rcpt.phone) {
-    await sendOperatorSms({
-      tag: "registry-confirm",
-      to: rcpt.phone,
-      text:
-        "Citoviso: .hu MEGEROSITO LINK erkezett a Nyilvantartotol. Amig nem kattintasz ra, " +
-        "a domain NEM delegalodik. Reszletek e-mailben. " + link,
-    });
-  }
-  if (rcpt.email) {
-    await getEmailSender().send({
-      to: rcpt.email,
-      audience: "platform",
-      subject: "Citoviso: .hu megerősítő link érkezett — kattintás kell",
-      text:
-        `A .hu Nyilvántartó megerősítő levele megérkezett (a levél ideje: ${mailAt}).\n\n` +
-        `${link}\n\n` +
-        `Amíg erre nem kattintasz és nem jön a ZÖLD „Sikeres beküldés" képernyő, a domain NEM ` +
-        `delegálódik — a fizetés önmagában nem elég.\n\n` +
-        `A gép SZÁNDÉKOSAN nem kattintott rá: 2026-09-06-án a gépi kattintás némán elbukott ` +
-        `(a link „nem elérhető" lett, de a Nyilvántartó nem kapta meg a megerősítést, és 13 órán ` +
-        `át NXDOMAIN maradt). Amíg nincs pozitív siker-jelünk, a kód a tiéd.\n\n` +
-        `⚠️ Ha a link már nem él, kérj újat a szolgáltatónál — és szólj, mert az eldönti a nyitott ` +
-        `kérdést: időkorlátos-e a kód, vagy egyszer használatos.\n`,
-    });
-  }
+  await getEmailSender().send({
+    to: rcpt.email,
+    audience: "platform",
+    subject: "Citoviso: .hu megerősítő link érkezett — Neo intézi",
+    text:
+      `A .hu Nyilvántartó megerősítő levele megérkezett (a levél ideje: ${mailAt}).\n\n` +
+      `Neo kolléga megerősíti (kód + nyilatkozatok + egy „Megerősítés”), és csak a „Sikeres beküldés” ` +
+      `szövegre jelenti késznek, képernyőképpel (~/neo/jelentesek/). Neked nincs teendőd.\n\n` +
+      `Ha 30 percen belül nincs siker, SMS-t kapsz ezzel a linkkel:\n${link}\n`,
+  });
   return true;
 }
 

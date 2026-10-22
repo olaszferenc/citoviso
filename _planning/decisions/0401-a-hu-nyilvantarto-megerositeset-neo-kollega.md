@@ -20,5 +20,14 @@ Nyilvántartó levelében áll („A megerősítéshez szükséges kód: XXXXX-X
 része előtölti. A figyelőnk ezt a részt **levágta** (javítva: `CONFIRM_LINK`, őr: `registry-confirm-check`) —
 valószínűleg ugyanez volt a 09-06-i sikertelenség oka.
 
-**Nyitott:** a link átadása Neónak ma kézi (a domain-szál küldi); a tartós kötés (a figyelő → Neo beérkező
-mappája + 30 perces tulaj-tartalék SMS) a következő lépés.
+**A kötés (2026-10-22, tulaj „menjen 1+2”):**
+- **Éles figyelő** (`registryConfirmWatch.ts`): új link → a tulaj csak LEVELET kap („Neo intézi”), SMS-t nem.
+  A link a `?code=` résszel, a domain a levélből (`confirmMailDomain`).
+- **Relé a dev-gépen** (`scripts/cfm-relay.mts` → `src/domains/cfmRelay.ts`, cron 2 percenként a fő fából):
+  új link → feladat-fájl `~/neo/beerkezo/cfm-<domain>-<token8>.md` + prompt Neo RC-tmuxába; Neo az eredményt
+  a `~/neo/jelentesek/cfm-<token8>.result` első sorába írja (SIKER / NEM SIKER).
+- **Tartalék:** NEM SIKER, Neo nem él, vagy 30 perc SIKER nélkül → EGY SMS a tulajnak a linkkel (csendes órában
+  reggelig vár). Telefon: `~/.config/citoviso/cfm-relay.json`. Első futás és egy hétnél régebbi link: csak bejegyzés.
+- Neo koordinátora (cita291565c) a tulaj szava alapján állandó mehetet ad (memória
+  `feedback_neo_hu_domain_cfm_standing`). Őr: `registry-confirm-check` „Neo-relé” szakasz.
+- Ha a dev-gép áll, a tulaj az éles levelet megkapja, SMS nem jön — ezt vállaltuk (Neo is a dev-gépen él).

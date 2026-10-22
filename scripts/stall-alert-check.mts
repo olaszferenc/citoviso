@@ -504,7 +504,7 @@ console.log("⑧ a többi operátori riasztó SMS is a közös úton: éjjel vis
     ["src/console/payLinkAlert.ts", "pay-link"],
     ["src/console/payLinkAlert.ts", "upsell"],
     ["src/outreach/pairRepair.ts", "pair-repair"],
-    ["src/domains/registryConfirmWatch.ts", "registry-confirm"],
+    ["scripts/cfm-relay.mts", "registry-confirm"], // ADR-0401: the owner SMS moved to the Neo relay (fallback only)
     ["src/tenant/moduleRequirements.ts", "module-deps"],
     ["src/tenant/multilangResume.ts", "multilang-resume"],
   ];

@@ -122,6 +122,89 @@ say(
   "sikertelen riasztás NEM íródik sikerként (nincs néma elnyelés)",
 );
 
+// ── 2a. ADR-0401: a relé Neónak adja a linket; a tulaj csak tartalék. ──────────────
+console.log("\n── Neo-relé (ADR-0401, injektált hatásokkal) ──────────────────────");
+{
+  const { runRelay, FALLBACK_MINUTES } = await import("../src/domains/cfmRelay.js");
+  const { confirmMailDomain } = await import("../src/domains/registryConfirmWatch.js");
+  say(confirmMailDomain("Az =C3=A9rintett domain n=C3=A9v: overseer.hu=20") === "overseer.hu", "a levélből a domain kiolvasva (QP-alakban is)");
+  say(confirmMailDomain("The affected domain name: Overseer.HU ") === "overseer.hu", "az angol sorból is");
+  const CODE_LINK = `${LINK}?code=olasz.ferenc%40citoviso.com%2CNVYQB-6QUBJ-8JFP5`;
+  const t0 = new Date("2026-10-22T14:00:00Z");
+  let clock = t0;
+  const handed: string[] = [];
+  const sms: string[] = [];
+  let result: "SIKER" | "NEM SIKER" | null = null;
+  let neoUp = true;
+  const deps = {
+    now: () => clock,
+    handToNeo: async (_t: string, e: { link: string }) => { handed.push(e.link); return neoUp; },
+    readResult: () => result,
+    smsOwner: async (t: string) => { sms.push(t); return true; },
+  };
+  const fresh = [
+    { token: TOKEN, link: `https://cfm.drr.hu/en/confirmations/${TOKEN}`, mailAt: "22-Oct-2026 13:59:00 +0000", domain: "overseer.hu" },
+    { token: TOKEN, link: CODE_LINK, mailAt: "22-Oct-2026 13:59:00 +0000", domain: "overseer.hu" },
+  ];
+  let rs: Record<string, unknown> = {};
+  await runRelay(fresh, rs as never, deps);
+  say(handed.length === 0 && sms.length === 0, "első futás: bejegyez, nem ad át és nem SMS-ez (régi linkre nem)");
+  rs = { regi: { link: "x", domain: "x.hu", mailAt: "", handedAt: null } };
+  await runRelay(fresh, rs as never, deps);
+  say(handed.length === 1 && handed[0] === CODE_LINK, "⭐ új link → Neo EGYSZER kapja, a kódot hordozó magyar változattal");
+  clock = new Date(t0.getTime() + 10 * 60_000);
+  await runRelay(fresh, rs as never, deps);
+  say(handed.length === 1 && sms.length === 0, "10 perc múlva: nincs újra-átadás, a tulaj nem kap SMS-t");
+  clock = new Date(t0.getTime() + FALLBACK_MINUTES * 60_000);
+  await runRelay(fresh, rs as never, deps);
+  say(sms.length === 1 && sms[0].includes(CODE_LINK), `⭐⭐ ${FALLBACK_MINUTES} perc siker nélkül → EGY tartalék SMS a tulajnak, a linkkel`);
+  clock = new Date(t0.getTime() + 60 * 60_000);
+  await runRelay(fresh, rs as never, deps);
+  say(sms.length === 1, "a tartalék SMS nem ismétlődik");
+  // SIKER időben → soha nincs SMS.
+  sms.length = 0; handed.length = 0; clock = t0; result = null;
+  rs = { regi: { link: "x", domain: "x.hu", mailAt: "", handedAt: null } };
+  await runRelay(fresh, rs as never, deps);
+  result = "SIKER";
+  clock = new Date(t0.getTime() + 5 * 60_000);
+  await runRelay(fresh, rs as never, deps);
+  clock = new Date(t0.getTime() + 90 * 60_000);
+  await runRelay(fresh, rs as never, deps);
+  say(sms.length === 0, "⭐ Neo SIKER-t jelent → a tulaj SEMMIT nem kap");
+  // NEM SIKER → azonnal tartalék.
+  sms.length = 0; clock = t0; result = null;
+  rs = { regi: { link: "x", domain: "x.hu", mailAt: "", handedAt: null } };
+  await runRelay(fresh, rs as never, deps);
+  result = "NEM SIKER";
+  clock = new Date(t0.getTime() + 2 * 60_000);
+  await runRelay(fresh, rs as never, deps);
+  say(sms.length === 1 && /nem tudta/.test(sms[0]), "Neo NEM SIKER-t jelent → a tulaj azonnal SMS-t kap");
+  // Neo nem érhető el → azonnal tartalék.
+  sms.length = 0; clock = t0; result = null; neoUp = false;
+  rs = { regi: { link: "x", domain: "x.hu", mailAt: "", handedAt: null } };
+  await runRelay(fresh, rs as never, deps);
+  say(sms.length === 1, "Neo sessionje nem él → a tulaj azonnal SMS-t kap (nem 30 perc múlva)");
+  // SMS nem ment ki (csendes óra) → a következő futás újrapróbálja.
+  sms.length = 0; clock = t0; neoUp = true; result = null;
+  rs = { regi: { link: "x", domain: "x.hu", mailAt: "", handedAt: null } };
+  let smsOk = false;
+  const deps2 = { ...deps, smsOwner: async (t: string) => { sms.push(t); return smsOk; } };
+  await runRelay(fresh, rs as never, deps2);
+  clock = new Date(t0.getTime() + 40 * 60_000);
+  await runRelay(fresh, rs as never, deps2);
+  smsOk = true;
+  clock = new Date(t0.getTime() + 42 * 60_000);
+  await runRelay(fresh, rs as never, deps2);
+  clock = new Date(t0.getTime() + 44 * 60_000);
+  await runRelay(fresh, rs as never, deps2);
+  say(sms.length === 2, "a ki nem ment tartalék SMS újrapróbálódik, és a sikeres után nem ismétlődik", `kapott: ${sms.length}`);
+  // Régi link (> 1 hét) → nem adjuk át.
+  handed.length = 0; clock = new Date("2026-11-20T10:00:00Z");
+  rs = { regi: { link: "x", domain: "x.hu", mailAt: "", handedAt: null } };
+  await runRelay(fresh, rs as never, deps);
+  say(handed.length === 0, "egy hétnél régebbi link nem megy Neóhoz");
+}
+
 // ── 2b. ADR-0400: a REGISZTRÁTOR EMBERI LEVELE egy folyamatban lévő névről. ─────
 //
 // A mért valóság (2026-10-22 08:04, Zoho INBOX): „[Websupport] - hiányzó adat - overseer.hu -”
