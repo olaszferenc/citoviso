@@ -113,12 +113,69 @@ say(
   "sikertelen riasztás NEM íródik sikerként (nincs néma elnyelés)",
 );
 
+// ── 2b. ADR-XXXX: a REGISZTRÁTOR EMBERI LEVELE egy folyamatban lévő névről. ─────
+//
+// A mért valóság (2026-10-22 08:04, Zoho INBOX): „[Websupport] - hiányzó adat - overseer.hu -”
+// a Websupport supporttól, MIME-kódolt tárggyal — 16 órán át senki nem riasztott róla. A
+// detektor a SZÁLLÍTOTT függvény (matchRegistrarMail), a döntés injektált küldővel.
+console.log("\n── Regisztrátor-levél (ADR-XXXX) ────────────────────────────────");
+const { matchRegistrarMail, processRegistrarMails, decodeMimeHeader, parseImapDate } = await import(
+  "../src/domains/registryConfirmWatch.js"
+);
+const INFLIGHT = ["overseer.hu", "masikpanzio.hu"];
+const SUPPORT = {
+  from: "Websupport ügyfélszolgálat - Liptai <support@websupport.hu>",
+  subject: decodeMimeHeader("[Websupport] - =?utf-8?Q?hi=C3=A1nyz=C3=B3?= adat - overseer.hu -"),
+  text: "Kedves Ferenc!\nSzeretnénk Önt tájékoztatni arról, hogy overseer.hu domain regisztrációja, hiányos adatrögzítés miatt hibára futott.\nA domain profilban minden eseben szükségünk lenne egy azonosítóra",
+};
+say(SUPPORT.subject === "[Websupport] - hiányzó adat - overseer.hu -", "a MIME-kódolt tárgy (=?utf-8?Q?…?=) olvashatóra dekódolva", SUPPORT.subject);
+say(matchRegistrarMail(SUPPORT, INFLIGHT)?.kind === "support" && matchRegistrarMail(SUPPORT, INFLIGHT)?.domain === "overseer.hu",
+  "⭐⭐ a valódi „hiányzó adat” support-levél FELISMERVE (feladó regisztrátor + folyamatban lévő név)");
+say(matchRegistrarMail({ ...SUPPORT, subject: "Díjbekérő 30264784 [Websupport]", text: "overseer.hu .hu doména 1990 Ft" }, INFLIGHT) === null,
+  "a regisztrátor AUTOMATA levele (díjbekérő) NEM riaszt, pedig a nevet tartalmazza");
+say(matchRegistrarMail({ ...SUPPORT, from: "Valaki <valaki@example.com>" }, INFLIGHT) === null,
+  "idegen feladó, ami egy nevet megemlít, NEM a regisztrátor szava");
+say(matchRegistrarMail(SUPPORT, ["harmadik.hu"]) === null, "nem folyamatban lévő névről szóló levél nem riaszt");
+say(matchRegistrarMail({ from: "confirmation@domain.hu", subject: "[.hu] Domain regisztráció megerősítése szükséges", text: `overseer.hu https://cfm.drr.hu/hu/confirmations/${TOKEN}` }, INFLIGHT) === null,
+  "a Nyilvántartó LINKES levele az ① ág dolga (nem riaszt kétszer)");
+say(matchRegistrarMail({ from: "confirmation@domain.hu", subject: "[.hu] Domain adatok rögzítése (összefoglaló)", text: "a citoviso.hu domain név adatai az alábbiak szerint kerültek rögzítésre overseer.hu" }, INFLIGHT)?.kind === "registry",
+  "a Nyilvántartó link nélküli értesítése (adatok rögzítése) „registry” jelzés");
+say(parseImapDate("21-Oct-2026 13:55:04 +0000")?.toISOString() === "2026-10-21T13:55:04.000Z", "az IMAP INTERNALDATE pontosan olvasható");
+
+// A döntés: friss support-levél → riasztás + jegyzet a soron; régi → bejegyzés; másodszor → semmi.
+const alerts: { tag: string; sms?: boolean }[] = [];
+const notes: { id: string; note: string }[] = [];
+const mdeps = {
+  alert: async (a: { tag: string; sms?: boolean }) => { alerts.push(a); return true; },
+  note: async (id: string, note: string) => { notes.push({ id, note }); },
+};
+const NOW = new Date("2026-10-22T07:00:00Z");
+const mail = { msgId: "<x1@websupport>", from: SUPPORT.from, subject: SUPPORT.subject, mailAt: "22-Oct-2026 06:04:27 +0000", text: SUPPORT.text };
+const inflight = [{ id: "prov-1", domain: "overseer.hu" }];
+let mstate: Record<string, unknown> = {};
+await processRegistrarMails([mail], mstate as never, NOW, inflight, mdeps);
+say(alerts.length === 1 && alerts[0].sms === true, "⭐ friss support-levél → EGY ház-riasztás, SMS-sel", `kapott: ${JSON.stringify(alerts)}`);
+say(notes.length === 1 && notes[0].id === "prov-1" && /hiányzó adat/.test(notes[0].note), "⭐ a beszerzés sora jegyzetet kap (a tenant képernyője erre vált)");
+await processRegistrarMails([mail], mstate as never, new Date(NOW.getTime() + 120_000), inflight, mdeps);
+say(alerts.length === 1, "⭐⭐ ugyanaz a levél 2 perc múlva NEM riaszt újra");
+alerts.length = 0; notes.length = 0; mstate = {};
+await processRegistrarMails([{ ...mail, msgId: "<old@websupport>", mailAt: "10-Oct-2026 06:04:27 +0000" }], mstate as never, NOW, inflight, mdeps);
+say(alerts.length === 0 && Boolean(mstate["mail:<old@websupport>"]), "48 óránál régebbi levél első látásra BEJEGYEZVE, riasztás nélkül (a tulaj rég olvasta)");
+alerts.length = 0; notes.length = 0; mstate = {};
+await processRegistrarMails([{ ...mail, from: "confirmation@domain.hu", subject: "[.hu] Domain adatok rögzítése (összefoglaló)", text: "overseer.hu rögzítve" }], mstate as never, NOW, inflight, mdeps);
+say(alerts.length === 1 && !alerts[0].sms && notes.length === 0, "a Nyilvántartó értesítése: levél igen, SMS nem, jegyzet nem (nem „elakadt”)");
+
 // ── 3. Szerkezeti garanciák a forráson. ──────────────────────────────────────
 console.log("\n── Szerkezeti garanciák ──────────────────────────────────────────");
 say(
-  /EXAMINE INBOX/.test(src) && !/\bSELECT INBOX\b/.test(src),
+  /EXAMINE "\$\{box\}"|EXAMINE INBOX/.test(src) && !/\bSELECT (INBOX|"\$\{box\}")/.test(src),
   "a postafiók CSAK-OLVASÓ módban nyílik (EXAMINE, nem SELECT)",
   "SELECT-tel a figyelő flageket írhatna a tulaj saját postafiókjában",
+);
+// ADR-XXXX: a Nyilvántartó levele máshol a Spamben landolt — az INBOX egyedül vak.
+say(
+  /"INBOX"/.test(src) && /spam\|junk\|k&AOk-retlen/i.test(src),
+  "az INBOX MELLETT a Spam mappát is átnézi (a Zoho „Kéretlen levél” mappáját a szerver-nevén)",
 );
 say(/BODY\.PEEK/.test(src) && !/BODY\[TEXT\]/.test(src), "BODY.PEEK — a levelek nem lesznek olvasottá jelölve");
 // ⚠️ A KÓDON mérünk, nem a prózán: a modul kommentje SZÁNDÉKOSAN leírja a 09-06-i

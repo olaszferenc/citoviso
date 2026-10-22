@@ -14,8 +14,38 @@ export interface DomainRegistration {
   readonly registeredUntil: Date | null;
 }
 
+/**
+ * Is the registrar ACCOUNT able to register a name right now? (ADR-XXXX, overseer.hu
+ * 2026-10-22: the account's domain profile had NO identifier, so the registry request was
+ * never filed — the money was taken, the row sat in `dns_pending`, and only a support mail
+ * in the mailbox said why.) Measured BEFORE any purchase and hourly by the stall watch,
+ * so the gap is found before a customer pays, not after.
+ */
+export interface RegistrarReadiness {
+  readonly ok: boolean;
+  /** Operator sentences: what is missing at the registrar (each one an action). */
+  readonly problems: readonly string[];
+  /** Measured facts worth seeing next to the verdict (credit, profile, identifier). */
+  readonly facts: readonly string[];
+}
+
+/** The registrar account cannot register right now — nothing was ordered or charged. */
+export class RegistrarNotReadyError extends Error {
+  readonly problems: readonly string[];
+  constructor(domain: string, problems: readonly string[]) {
+    super(`a regisztrátor-fiók nem áll készen a(z) ${domain} regisztrálására: ${problems.join("; ")}`);
+    this.name = "RegistrarNotReadyError";
+    this.problems = problems;
+  }
+}
+
 export interface RegistrarAdapter {
   readonly name: string;
+  /**
+   * The account-level pre-flight (see RegistrarReadiness). register() MUST run it first
+   * and throw RegistrarNotReadyError on a problem — never order with a broken profile.
+   */
+  readiness(): Promise<RegistrarReadiness>;
   /**
    * Authoritative availability + registrability AT THE REGISTRAR. Distinct from
    * domains.ts::checkAvailability, which is only a cheap preliminary (DNS + RDAP).

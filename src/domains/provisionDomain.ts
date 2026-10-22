@@ -27,10 +27,10 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
-import { getRegistrar, DomainTakenError, LIVE_REGISTRAR_PROVIDERS } from "./registrar/index.js";
+import { getRegistrar, DomainTakenError, RegistrarNotReadyError, LIVE_REGISTRAR_PROVIDERS } from "./registrar/index.js";
 import { getDns } from "./dns/index.js";
 import { getEmailSender } from "../email/sender.js";
-import { buildDomainLiveEmail, buildDomainFailedEmail, buildDomainSetupDelayedEmail } from "../email/domainEmail.js";
+import { buildDomainLiveEmail, buildDomainFailedEmail, buildDomainSetupDelayedEmail, buildDomainBoughtEmail } from "../email/domainEmail.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
@@ -87,7 +87,7 @@ export interface StartDomainInput {
 async function notifyTenant(
   tenantId: string,
   siteId: string,
-  outcome: "live" | "failed" | "setup_retry",
+  outcome: "live" | "failed" | "setup_retry" | "bought",
   domain: string,
   /** ADR-0251: the failed purchase's hold was released — nothing was charged. */
   released = false,
@@ -115,6 +115,8 @@ async function notifyTenant(
     const msg =
       outcome === "setup_retry"
         ? buildDomainSetupDelayedEmail({ to, domain, lang })
+        : outcome === "bought"
+        ? buildDomainBoughtEmail({ to, domain, currentHost: site?.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null, lang })
         : outcome === "live"
         ? buildDomainLiveEmail({
             to,
@@ -193,6 +195,40 @@ async function siteIsLive(siteId: string): Promise<boolean> {
     .where("id", "=", siteId)
     .executeTakeFirst();
   return row?.custom_domain_status === "live";
+}
+
+/**
+ * ADR-XXXX: the registrar ACCOUNT blocks the purchase (profile / credit / ToS). Once per
+ * beszerzés per day — the 2-minute timer re-runs the row, and a mail every 2 minutes would
+ * drown the one that matters. The key lives in house_alert_once like the stall watch's.
+ */
+async function alertRegistrarNotReady(domain: string, tenantId: string, provisioningId: string, problems: readonly string[], now: Date): Promise<void> {
+  const day = now.toISOString().slice(0, 10);
+  const claimed = await db
+    .insertInto("house_alert_once")
+    .values({ key: `domain-not-ready:${provisioningId}:${day}`, tag: "domain-not-ready" })
+    .onConflict((oc) => oc.column("key").doNothing())
+    .returning("key")
+    .executeTakeFirst();
+  console.error(`[domain] ⛔ ${domain}: a regisztrátor-fiók nem áll készen — a sor pending marad (${problems.join("; ")})`);
+  if (!claimed) return;
+  const ok = await alertHouse({
+    tag: "domain-not-ready",
+    sms: true,
+    smsKey: `domain-not-ready:${domain}`,
+    subject: `Citoviso: ${domain} — a regisztrátor-fiókunk NEM tud regisztrálni, a vétel nem indult el`,
+    text:
+      `A vevő megrendelte a(z) ${domain} nevet, de a MI regisztrátor-fiókunk (Websupport) nem áll készen, ezért NEM rendeltük meg ` +
+      `és nem fizettünk — a zárolás/az igénylés áll, a vevő képernyője „már intézzük”-öt mutat.\n\n` +
+      `Ami hiányzik:\n${problems.map((x) => `- ${x}`).join("\n")}\n\n` +
+      `Tenant: ${tenantId}\nBeszerzés: ${provisioningId}\n\n` +
+      `Teendő: a Websupport fiók / domain-profil (Webadmin → Domainek → Domain profilok) kiegészítése; utána a 2 perces időzítő ` +
+      `magától folytatja — minden futás frissen méri a fiókot (kézzel:  npx tsx scripts/resume-domains.mts).\n` +
+      `Ez a levél naponta egyszer jön, amíg a hiány fennáll.\n`,
+  });
+  if (!ok) {
+    await db.deleteFrom("house_alert_once").where("key", "=", `domain-not-ready:${provisioningId}:${day}`).execute();
+  }
 }
 
 /**
@@ -572,6 +608,16 @@ export async function runDomainProvisioning(
       await setStatus(p.id, p.siteId, "dns_pending", { registrarRef, error: null });
       // ÚJ-K1: the wait starts here; a setup_retry re-entry keeps the first clock.
       await db.updateTable("domain_provisioning").set({ waiting_since: now }).where("id", "=", p.id).where("waiting_since", "is", null).execute();
+      // ADR-XXXX: the tenant hears about the PURCHASE now (bought, what comes next, where
+      // the site lives meanwhile) — once per row: a setup_retry re-entry claims nothing.
+      const boughtNotice = await db
+        .updateTable("domain_provisioning")
+        .set({ bought_notice_at: now })
+        .where("id", "=", p.id)
+        .where("bought_notice_at", "is", null)
+        .returning("id")
+        .executeTakeFirst();
+      if (boughtNotice) await notifyTenant(p.tenantId, p.siteId, "bought", p.domain);
       status = "dns_pending";
     }
 
@@ -614,6 +660,17 @@ export async function runDomainProvisioning(
     return status;
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
+    // ADR-XXXX (overseer.hu 2026-10-22): OUR registrar account cannot register right now
+    // (no identifier on the domain profile, 0 credit, ToS pending…). Nothing was ordered or
+    // charged, and the name was NOT taken by anyone — so this is never `failed` and never a
+    // tenant letter. The row goes back to `pending` (the hold stays, the 2-minute timer
+    // retries, the memoized readiness keeps the API quiet), the house hears it once a day,
+    // and the tenant's screen keeps saying "már intézzük".
+    if (err instanceof RegistrarNotReadyError) {
+      await setStatus(p.id, p.siteId, "pending", { error: msg });
+      await alertRegistrarNotReady(p.domain, p.tenantId, p.id, err.problems, now);
+      return "pending";
+    }
     // 2026-10-21 (overseer.hu): the registrar refused OUR OWN order as a duplicate — a
     // parallel run had already placed it (now closed by the claim above), or an earlier run
     // died between the order and its payment. Neither is "someone else took the name":

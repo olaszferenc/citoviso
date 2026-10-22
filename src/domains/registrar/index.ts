@@ -2,7 +2,7 @@
 // mock so the whole beszerzés loop runs locally without buying a real domain.
 
 import { config } from "../../config.js";
-import type { RegistrarAdapter } from "./registrar.js";
+import type { RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
 import { InwxRegistrar } from "./inwx.js";
 import { MockRegistrar } from "./mock.js";
 import { WebsupportRegistrar } from "./websupport.js";
@@ -34,5 +34,20 @@ export function getRegistrar(): RegistrarAdapter {
   return cached;
 }
 
-export type { RegistrarAdapter, DomainRegistration } from "./registrar.js";
-export { DomainTakenError } from "./registrar.js";
+let readinessMemo: { at: number; value: RegistrarReadiness } | null = null;
+
+/**
+ * The account pre-flight, memoized for `maxAgeMs` (the 2-minute resume timer and the
+ * hourly stall watch both ask; two GETs per ask). Only a LIVE registrar is asked — the mock
+ * answers from its test hook, instantly. Pass maxAgeMs=0 for a fresh measurement.
+ */
+export async function registrarReadiness(maxAgeMs = 10 * 60_000): Promise<RegistrarReadiness> {
+  const now = Date.now();
+  if (readinessMemo && now - readinessMemo.at < maxAgeMs) return readinessMemo.value;
+  const value = await getRegistrar().readiness();
+  readinessMemo = { at: now, value };
+  return value;
+}
+
+export type { RegistrarAdapter, DomainRegistration, RegistrarReadiness } from "./registrar.js";
+export { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";

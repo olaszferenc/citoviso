@@ -3,8 +3,8 @@
 // whose label contains "taken" behaves as already-registered (so DomainTakenError
 // and the failed-path are testable); everything else "registers" deterministically.
 
-import type { DomainRegistration, RegistrarAdapter } from "./registrar.js";
-import { DomainTakenError } from "./registrar.js";
+import type { DomainRegistration, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
+import { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";
 
 export class MockRegistrar implements RegistrarAdapter {
   readonly name = "mock";
@@ -24,6 +24,14 @@ export class MockRegistrar implements RegistrarAdapter {
     MockRegistrar.#placedOrders.clear();
   }
 
+  /** Test hook (ADR-XXXX): a broken account profile — register() must refuse, not buy. */
+  static readinessProblems: string[] = [];
+
+  async readiness(): Promise<RegistrarReadiness> {
+    const problems = [...MockRegistrar.readinessProblems];
+    return { ok: problems.length === 0, problems, facts: ["mock registrar: nincs valódi fiók"] };
+  }
+
   async isAvailable(domain: string): Promise<boolean> {
     return !/taken/i.test(domain);
   }
@@ -41,6 +49,8 @@ export class MockRegistrar implements RegistrarAdapter {
   }
 
   async register(domain: string, opts: { readonly years: number }): Promise<DomainRegistration> {
+    const ready = await this.readiness();
+    if (!ready.ok) throw new RegistrarNotReadyError(domain, ready.problems);
     if (/taken/i.test(domain)) throw new DomainTakenError(domain);
     if (MockRegistrar.refuseDuplicateOrders) {
       const prior = MockRegistrar.#placedOrders.get(domain);

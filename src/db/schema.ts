@@ -1835,6 +1835,11 @@ export interface DomainProvisioningTable {
   /** 0107: the tenant got the "setup takes longer" mail (setup_retry or the 72 h step) — once. */
   delay_notice_at: Timestamp | null;  /** 0112: when the NS delegation went active (dns_pending → tls_pending) — for .hu the registry's approval. */
   ns_active_at: Timestamp | null;
+  /** 0113: the registrar's HUMAN mail about this name (support asked for something) — set by the mailbox watcher. */
+  registrar_note: string | null;
+  registrar_note_at: Timestamp | null;
+  /** 0113: the tenant's "we bought your name" letter went out (once per row). */
+  bought_notice_at: Timestamp | null;
 }
 
 /** 0094 (ADR-0339): a reply to our outreach, collected read-only from the dev box's

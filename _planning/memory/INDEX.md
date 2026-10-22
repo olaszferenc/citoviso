@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-22_webcim_allapot_b_overseer_folytatas.md](2026-10-22_webcim_allapot_b_overseer_folytatas.md) — 2026-10-22 — Webcím állapot-képernyő „B” (ADR-0399) · overseer.hu folytatás · a domain-folyamat hiányai
+- [2026-10-22_domain_regisztracio_szal.md](2026-10-22_domain_regisztracio_szal.md) — 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-XXXX) — overseer.hu oka és a gépi folyamat
 - [2026-10-21_tenant_admin_szakasz_hierarchia.md](2026-10-21_tenant_admin_szakasz_hierarchia.md) — 2026-10-21 — Tenant-admin szakasz-hierarchia („E”) + portál-menüút a tenant nyelvén
 - [2026-10-21_overseer_domain_dupla_rendeles.md](2026-10-21_overseer_domain_dupla_rendeles.md) — 2026-10-21 — Éles eset: overseer.hu — a webhook és az időzítő kétszer vette a domaint, a tulaj hamis „elkelt” levelet kapott
 - [2026-10-19_tobb_szoba_elek_perszonak.md](2026-10-19_tobb_szoba_elek_perszonak.md) — 2026-10-19 — Több szobás foglalás: Elek több perszónával (ADR-0393 kiegészítés)

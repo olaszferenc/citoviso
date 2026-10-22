@@ -369,8 +369,9 @@ await block("B2", async () => {
   ok(alerts.some((x) => /ribizli-dns\.hu/.test(x.subject)), "⭐ B2 operátor-riasztás ment ki (házi riasztó)", JSON.stringify(alerts));
   // The owner mail is sent and logged AFTER the status flips to setup_retry: poll for it
   // (same pattern as the alert wait above) instead of reading once — a loaded box lost the race.
+  // (ADR-XXXX: the "Megvásároltuk" purchase letter precedes the delay letter — it is not the one measured here.)
   const readMail = () => db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
-    .where("kind", "=", "domain").orderBy("sent_at", "desc").executeTakeFirst();
+    .where("kind", "=", "domain").where("subject", "not like", "Megvásároltuk a webcímét%").orderBy("sent_at", "desc").executeTakeFirst();
   let mail = await readMail();
   for (let i = 0; i < 100 && !mail; i++) {
     await new Promise((r) => setTimeout(r, 100));
@@ -400,13 +401,18 @@ await block("ÚJ-K1", async () => {
   const r0 = await row();
   ok(r0.status === "dns_pending" && !!r0.waiting_since, "ÚJ-K1 a megvett név dns_pending-ben vár, az óra fut (waiting_since)", JSON.stringify(r0));
   const t0 = new Date(r0.waiting_since ?? Date.now()).getTime();
+  // ADR-XXXX: the purchase itself is announced to the tenant ("Megvásároltuk a webcímét") at
+  // the dns_pending entry — that letter is not a DELAY letter, so the counts below leave it out.
   const letters = async () => Number((await db.selectFrom("tenant_message").select((eb) => eb.fn.countAll().as("n"))
-    .where("tenant_id", "=", tenantId).where("kind", "=", "domain").executeTakeFirstOrThrow()).n);
+    .where("tenant_id", "=", tenantId).where("kind", "=", "domain").where("subject", "not like", "Megvásároltuk a webcímét%").executeTakeFirstOrThrow()).n);
+  const boughtLetters = async () => Number((await db.selectFrom("tenant_message").select((eb) => eb.fn.countAll().as("n"))
+    .where("tenant_id", "=", tenantId).where("kind", "=", "domain").where("subject", "like", "Megvásároltuk a webcímét%").executeTakeFirstOrThrow()).n);
   const mine = () => alerts.filter((x) => x.subject.includes(DOMAIN));
   const at = async (h: number) => prov.resumePendingDomainProvisionings({ now: new Date(t0 + h * 3_600_000) });
   alerts.length = 0;
   await at(1);
   ok(mine().length === 0 && (await letters()) === 0, "ÚJ-K1 +1 óra: se riasztás, se levél", JSON.stringify(mine()));
+  ok((await boughtLetters()) === 1, "ADR-XXXX: a vételről EGY tenant-levél ment („Megvásároltuk a webcímét”), a késés-levelek számától függetlenül");
   await at(25);
   ok(mine().length === 1 && (await row()).stuck_stage === 1, "⭐ ÚJ-K1 +25 óra: EGY operátor-riasztás", JSON.stringify(mine()));
   ok((await letters()) === 0, "ÚJ-K1 +25 óra: a tulaj még nem kap levelet");
@@ -415,7 +421,7 @@ await block("ÚJ-K1", async () => {
   await at(73);
   ok(mine().length === 2 && /ISMÉTELT/.test(mine()[1]?.subject ?? ""), "⭐ ÚJ-K1 +73 óra: ismételt riasztás", JSON.stringify(mine()));
   const mail = await db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
-    .where("kind", "=", "domain").executeTakeFirst();
+    .where("kind", "=", "domain").where("subject", "not like", "Megvásároltuk a webcímét%").executeTakeFirst();
   ok((await letters()) === 1 && /az Öné/.test(mail?.subject ?? "") && /nincs teendője/.test(mail?.body_text ?? ""),
     "⭐ ÚJ-K1 +73 óra: EGY igaz tulaj-levél (a név az Öné, a beállítás tovább tart)", JSON.stringify(mail));
   ok(/most kapta meg/.test(mine()[1]?.text ?? ""), "ÚJ-K1 a riasztás kimondja, hogy a tulaj most kapott levelet", mine()[1]?.text ?? "");

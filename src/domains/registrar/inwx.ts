@@ -10,7 +10,7 @@
 // The constructor throws on missing creds so REGISTRAR_PROVIDER=inwx can never
 // silently fall back to the mock (a misconfiguration, not a default).
 
-import type { DomainRegistration, RegistrarAdapter } from "./registrar.js";
+import type { DomainRegistration, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
 
 export class InwxRegistrar implements RegistrarAdapter {
   readonly name = "inwx";
@@ -25,6 +25,11 @@ export class InwxRegistrar implements RegistrarAdapter {
     }
     this.#user = user;
     this.#password = password;
+  }
+
+  /** Fail-closed like the rest of the stub: an unmeasured account is not a ready one. */
+  async readiness(): Promise<RegistrarReadiness> {
+    return { ok: false, problems: ["InwxRegistrar.readiness: nincs implementálva — a fiók készenléte nem mérhető (ADR-0024)"], facts: [] };
   }
 
   async isAvailable(_domain: string): Promise<boolean> {

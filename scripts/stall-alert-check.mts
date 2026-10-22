@@ -291,6 +291,57 @@ if (SELF_TEST) await db.deleteFrom("house_alert_once").execute();
 await S.runStallWatch(new Date(NOW.getTime() + 5 * 60_000), deps);
 d = drain();
 check("a második söprés semmi újat nem küld", d.mails.length === 0 && d.texts.length === 0, d.mails.map((m) => m.subject).join(" | "));
+
+// ── ②b / ②c ADR-XXXX: the registrar thread (overseer.hu 2026-10-21/22) ───────────────
+// A bought .hu name with NO registry confirmation mail after 2 h → the registrar did not
+// file (mail + SMS); a row the registrar already wrote about (registrar_note_at) and one
+// whose link arrived are not cases; the registrar account's pre-flight failing → mail + SMS,
+// once per day. Injected verdicts: no mailbox, no registrar API in a gate.
+console.log("②b .hu megerősítő levél nem jött · ②c a regisztrátor-fiók hiányos");
+const huRow = async (n: number, domain: string, waitMin: number, extra: Record<string, unknown> = {}): Promise<void> => {
+  await db.insertInto("domain_provisioning").values({
+    site_id: `00000000-0000-0000-0000-0000000000b${n}`, tenant_id: tenant, domain, status: "dns_pending", registrar_ref: `2279${n}`,
+    created_at: minAgo(waitMin + 10), waiting_since: minAgo(waitMin), ...extra,
+  } as never).execute();
+};
+await huRow(1, "nemjott-panzio.hu", 190);
+await huRow(2, "friss-hu-panzio.hu", 60);
+await huRow(3, "jegyzetes-panzio.hu", 390, { registrar_note: "22-Oct-2026 06:04 · support: hiányzó adat", registrar_note_at: minAgo(10) });
+await huRow(4, "linkes-panzio.hu", 390);
+await huRow(5, "nemhu-panzio.com", 390);
+const deps2 = {
+  ...deps,
+  registrarReady: async () => ({ ok: false, problems: ["a domain-profilban NINCS azonosító (teszt)"], facts: ["kredit 4010 Ft"] }),
+  // The link "arrived" for every wait that started 300+ minutes ago (linkes), not for the 190-minute one.
+  confirmLinkSeenSince: async (since: Date) => since.getTime() <= NOW.getTime() - 300 * 60_000,
+};
+await resetLedger();
+drain();
+const r2 = await S.runStallWatch(NOW, deps2);
+d = drain();
+const regMail = subj(/nem jött a Nyilvántartó megerősítő levele/);
+check(
+  "⭐ 3 órája megvett .hu, megerősítő levél nélkül → levél; a friss, a jegyzetes, a linkes és a .com NEM",
+  !!regMail && regMail.text.includes("nemjott-panzio.hu") && !/friss-hu-panzio|jegyzetes-panzio|linkes-panzio|nemhu-panzio/.test(regMail.text),
+  regMail?.text.slice(0, 300),
+);
+const readyMail = subj(/regisztrátor-fiókunk NEM tud/);
+check("⭐ a regisztrátor-fiók hiányos → levél, benne a hiány és a mért tény", !!readyMail && readyMail.text.includes("NINCS azonosító") && readyMail.text.includes("kredit 4010"), readyMail?.text.slice(0, 300));
+check("mindkettő SMS-sel is megy (a vevő vár / a következő vevő elakadna)", d.texts.length === 2, d.texts.map((t) => t.text).join(" | "));
+check("a söprés eredménye nem jelez bukást", r2.failedKinds.length === 0, JSON.stringify(r2));
+await S.runStallWatch(new Date(NOW.getTime() + 5 * 60_000), deps2);
+d = drain();
+check("5 perc múlva ugyanaz: semmi új (egy eset = egy riasztás)", d.mails.length === 0 && d.texts.length === 0, d.mails.map((m) => m.subject).join(" | "));
+// Next day, same ledger: the registry case stays claimed (one incident), the account check is a new day's key.
+// (A day later the 60-minute row is itself a legitimate new case — the claimed one must not repeat.)
+await S.runStallWatch(new Date(NOW.getTime() + 24 * 3600_000), deps2);
+d = drain();
+check("másnap a még mindig hiányos fiók ÚJRA riaszt (naponta egyszer, amíg a hiány áll)", !!subj(/regisztrátor-fiókunk NEM tud/), d.mails.map((m) => m.subject).join(" | "));
+check("másnap a már riasztott .hu sor NEM ismétlődik (egy eset = egy riasztás)", !(subj(/nem jött a Nyilvántartó/)?.text ?? "").includes("nemjott-panzio.hu"), subj(/nem jött a Nyilvántartó/)?.text.slice(0, 200));
+await db.deleteFrom("domain_provisioning").where("site_id", "in", [1, 2, 3, 4, 5].map((n) => `00000000-0000-0000-0000-0000000000b${n}`)).execute();
+await resetLedger();
+drain();
+
 S.resetCredentialMemo();
 const k1 = await S.reportCredentialFailure("places", "HTTP 403", { now: NOW, alert: H.alertHouse, live: true });
 const k2 = await S.reportCredentialFailure("places", "HTTP 403", { now: NOW, alert: H.alertHouse, live: true });

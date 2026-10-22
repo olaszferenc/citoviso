@@ -54,6 +54,47 @@ export function buildDomainLiveEmail(input: {
   });
 }
 
+/**
+ * ADR-XXXX: a név MEGVAN — a vétel pillanatában szólunk, nem csak a végén. (overseer.hu
+ * 2026-10-21: a tenant a fizetés után CSAK a számlát kapta, a domain-lépésről semmit, és
+ * egy napig nem tudta, hol tart.) A levél igazat mond a `.hu` várakozásról (a Nyilvántartó
+ * jóváhagyása, általában egy nap), és kimondja, hogy addig a honlap a mai címén él.
+ */
+export function buildDomainBoughtEmail(input: {
+  to: string;
+  domain: string;
+  /** A honlap MAI címe (<slug>.citoviso.com) — addig itt él, amíg az új cím nem aktív. */
+  currentHost: string | null;
+  lang?: string;
+}): EmailMessage {
+  const { to, domain, currentHost, lang } = input;
+  const hu = /\.hu$/i.test(domain);
+  const title = T(lang, "Megvásároltuk a webcímét: {domain}", { domain });
+  const lead = T(lang, "{Art} {domain} nevet megvásároltuk, az Öné.", { Art: huArticle(domain), domain });
+  const wait = hu
+    ? T(lang, "A .hu neveket a magyar Nyilvántartó hagyja jóvá — ez általában egy napon belül megtörténik, és mi 2 percenként ellenőrizzük. Utána néhány perc, és a honlapja az új címen él.")
+    : T(lang, "A cím beállítása és a biztonsági tanúsítvány néhány perc, utána a honlapja az új címen él.");
+  const meanwhile = currentHost
+    ? T(lang, "Addig a honlapja a jelenlegi címén érhető el: {host}", { host: currentHost })
+    : "";
+  const closing = T(lang, "Önnek nincs teendője. Amint az új címen él a honlapja, e-mailben szólunk.");
+  const text = `${title}\n\n${lead}\n\n${wait}\n\n${meanwhile ? `${meanwhile}\n\n` : ""}${closing}\n`;
+  return platformMail({
+    to,
+    subject: title,
+    text,
+    lang,
+    heading: title,
+    blocks: [
+      mailPara(lead),
+      mailDetails([{ label: T(lang, "Webcím"), value: domain, emphasis: true }]),
+      mailPara(wait),
+      ...(meanwhile ? [mailNote(meanwhile)] : []),
+      mailPara(closing),
+    ],
+  });
+}
+
 /** A beszerzés elakadt: a nevet időközben elvitték — a tulaj választhat másikat. */
 export function buildDomainFailedEmail(input: {
   to: string;

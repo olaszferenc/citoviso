@@ -17,15 +17,27 @@
 //      call is measured with ?dryRun=1 first.
 //
 // REGISTRANT GUARD (⛔ the 2026-09-06 lesson, feedback_approved_params_are_the_approval):
-// a domain profile CANNOT be passed to the API (validate/order reject domainProfileId, and
-// no domain-profile route exists), so the registrant is whatever the ACCOUNT's default
-// billing contact is. On 2026-09-06 that fact — unverified — put citoviso.hu under the
-// wrong legal entity. Every purchase now verifies the account's default contact against
-// WEBSUPPORT_EXPECTED_REGISTRANT first, and refuses on any mismatch.
+// a domain profile CANNOT be passed to the API per order (validate/order reject
+// domainProfileId), so the registrant is whatever the ACCOUNT's default contact is. On
+// 2026-09-06 that fact — unverified — put citoviso.hu under the wrong legal entity. Every
+// purchase verifies the account's default contact against WEBSUPPORT_EXPECTED_REGISTRANT
+// first, and refuses on any mismatch.
+//
+// READINESS (ADR-XXXX, ⛔ the 2026-10-22 lesson, overseer.hu): the order payload carries NO
+// registrant data at all — the registry takes the registrant from the account's DOMAIN
+// PROFILE (`GET /v1/user/{id}/domainProfile`, MEASURED 2026-10-21: lists one profile with
+// name/address/e-mail/phone and the ident* fields; the per-profile GET answers 404 on the .hu
+// API). The .hu registry requires ONE identifier (birthday / ID card / passport / VAT /
+// company registration) — ours had none, so Websupport never filed the request: the money
+// was taken, the row sat in `dns_pending`, and the only signal was a support mail
+// („hiányzó adat — overseer.hu”, 2026-10-22 08:04). The same gap bit citoviso.hu on
+// 2026-09-07 (ticket NGW-NKDHD-903: „a tulajdonosi adatok összekeveredtek”). So readiness()
+// now measures the account AND the domain profile, register() refuses on any problem, and
+// the hourly stall watch asks the same question so the gap is found BEFORE a customer pays.
 
 import { createHmac } from "node:crypto";
-import type { DomainRegistration, RegistrarAdapter } from "./registrar.js";
-import { DomainTakenError } from "./registrar.js";
+import type { DomainRegistration, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
+import { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";
 import { noteDeadKey } from "../../console/keyDeath.js";
 
 const BASE = "https://rest.websupport.hu";
@@ -212,30 +224,96 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * The registrant guard (ADR-0103 ⑤). Reads the account and requires its DEFAULT billing
-   * profile to carry the expected legal name. This is the only lever we have on who the
-   * domain ends up belonging to, because the API accepts no per-order contact.
+   * The account pre-flight (ADR-0103 ⑤ + ADR-XXXX). Two measured sources:
+   *   GET /v1/user/{id}            — login, credit, awaitingTosConfirmation, billing[] (the
+   *                                  default contact = who the domain belongs to);
+   *   GET /v1/user/{id}/domainProfile — the registrant the registry sees: name, address,
+   *                                  e-mail (the .hu confirmation mail goes HERE), phone and
+   *                                  the ident* fields, of which the .hu registry needs ONE.
+   * Every problem is a sentence an operator can act on; `ok` only when the list is empty.
+   * A network/API error is a problem too (fail-closed: unknown ≠ ready).
    */
-  async #assertRegistrant(domain: string): Promise<void> {
-    if (!this.#expectedRegistrant) {
-      throw new Error(
-        "WEBSUPPORT_EXPECTED_REGISTRANT nincs beállítva — a domain tulajdonosa nem igazolható, " +
-          `ezért a(z) ${domain} vásárlása blokkolva (ADR-0103 ⑤).`,
-      );
+  async readiness(): Promise<RegistrarReadiness> {
+    const problems: string[] = [];
+    const facts: string[] = [];
+    const expected = this.#expectedRegistrant.trim();
+    if (!expected) {
+      problems.push("WEBSUPPORT_EXPECTED_REGISTRANT nincs beállítva — a domain tulajdonosa nem igazolható (ADR-0103 ⑤)");
     }
-    const user = await this.#request<{
-      login?: string;
-      billing?: { profile?: string; isDefault?: boolean; name?: string }[];
-    }>("GET", `/v1/user/${this.#userId}`);
-    const def = (user.billing ?? []).find((b) => b.isDefault) ?? (user.billing ?? [])[0];
-    const actual = (def?.name ?? "").trim();
-    if (actual.toLowerCase() !== this.#expectedRegistrant.trim().toLowerCase()) {
-      throw new Error(
-        `a registrar-fiók (${user.login ?? this.#userId}) alapértelmezett kontaktja ` +
-          `„${actual || "hiányzik"}", a várt tulajdonos „${this.#expectedRegistrant}" — ` +
-          `a(z) ${domain} vásárlása NEM indult el (ADR-0103 ⑤).`,
-      );
+    const sameName = (a: string, b: string): boolean => a.trim().toLowerCase().replace(/\s+/g, " ") === b.trim().toLowerCase().replace(/\s+/g, " ");
+    try {
+      const user = await this.#request<{
+        login?: string;
+        credit?: number | string | null;
+        awaitingTosConfirmation?: string | number | null;
+        billing?: { profile?: string; isDefault?: boolean; name?: string }[];
+      }>("GET", `/v1/user/${this.#userId}`);
+      const def = (user.billing ?? []).find((b) => b.isDefault) ?? (user.billing ?? [])[0];
+      const actual = (def?.name ?? "").trim();
+      facts.push(`fiók ${user.login ?? this.#userId}: alapértelmezett kontakt „${actual || "hiányzik"}”, kredit ${user.credit ?? "?"} Ft`);
+      if (expected && !sameName(actual, expected)) {
+        problems.push(`a fiók alapértelmezett kontaktja „${actual || "hiányzik"}”, a várt tulajdonos „${expected}” (ADR-0103 ⑤)`);
+      }
+      if (String(user.awaitingTosConfirmation ?? "0") !== "0") {
+        problems.push("a fiók ÁSZF-megerősítése függőben van (awaitingTosConfirmation) — a kreditből fizetés elhasal");
+      }
+      const credit = Number(user.credit ?? 0);
+      if (!(credit > 0)) problems.push(`a fiók kreditje ${user.credit ?? 0} Ft — a vétel kreditből megy, 0 kredittel nincs vétel`);
+    } catch (e) {
+      problems.push(`a regisztrátor-fiók nem olvasható: ${(e as Error).message}`);
     }
+    try {
+      const prof = await this.#request<{
+        items?: {
+          id?: number | string;
+          firstName?: string | null;
+          lastName?: string | null;
+          orgName?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          identBirthday?: string | null;
+          identVat?: string | null;
+          identPassport?: string | null;
+          identCompanyRegistration?: string | null;
+          identIdentityCard?: string | null;
+        }[];
+      }>("GET", `/v1/user/${this.#userId}/domainProfile`);
+      const items = prof.items ?? [];
+      if (items.length === 0) {
+        problems.push("a fiókban NINCS domain-profil — a Nyilvántartó ebből venné a domain-használó adatait");
+      } else {
+        const p = items[0];
+        const name = (p.orgName ?? "").trim() || `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim();
+        const nameRev = `${p.lastName ?? ""} ${p.firstName ?? ""}`.trim();
+        const idents = {
+          "születési dátum": p.identBirthday,
+          "személyi igazolvány": p.identIdentityCard,
+          útlevél: p.identPassport,
+          adószám: p.identVat,
+          cégjegyzékszám: p.identCompanyRegistration,
+        };
+        const have = Object.entries(idents).filter(([, v]) => String(v ?? "").trim() !== "").map(([k]) => k);
+        facts.push(
+          `domain-profil #${p.id ?? "?"}: „${name || "név nélkül"}”, e-mail ${p.email || "HIÁNYZIK"}, ` +
+            `azonosító: ${have.length ? have.join(", ") : "NINCS"}` + (items.length > 1 ? ` (+${items.length - 1} további profil)` : ""),
+        );
+        if (expected && !sameName(name, expected) && !sameName(nameRev, expected)) {
+          problems.push(`a domain-profil neve „${name || "hiányzik"}”, a várt tulajdonos „${expected}”`);
+        }
+        if (!String(p.email ?? "").trim()) {
+          problems.push("a domain-profilban nincs e-mail — ide jönne a .hu Nyilvántartó megerősítő levele");
+        }
+        if (have.length === 0) {
+          problems.push(
+            "a domain-profilban NINCS azonosító (születési dátum / személyi / útlevél / adószám / cégjegyzékszám) — " +
+              "a .hu Nyilvántartó e nélkül elutasítja, a regisztrátor be sem adja (2026-09-07 citoviso.hu, 2026-10-22 overseer.hu)",
+          );
+        }
+      }
+    } catch (e) {
+      problems.push(`a domain-profil nem olvasható: ${(e as Error).message}`);
+    }
+    return { ok: problems.length === 0, problems, facts };
   }
 
   /**
@@ -256,8 +334,10 @@ export class WebsupportRegistrar implements RegistrarAdapter {
    * still click the registry's confirmation mail.
    */
   async register(domain: string, opts: { readonly years: number }): Promise<DomainRegistration> {
-    // The registrant guard runs FIRST — before anything can spend money.
-    await this.#assertRegistrant(domain);
+    // The account pre-flight runs FIRST — before anything can spend money. A broken
+    // profile is "not now", never "taken": the caller keeps the row pending and alerts.
+    const ready = await this.readiness();
+    if (!ready.ok) throw new RegistrarNotReadyError(domain, ready.problems);
 
     // Multi-year is not supported here (1 year fixed). Registering 1 year while the
     // caller asked for 2 would silently under-buy the domain that secures a 24-month

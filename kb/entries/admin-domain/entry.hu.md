@@ -83,7 +83,9 @@ ez még nem levonás. És mivel valódi kártyazárolás, **csak bankkártyával
 
 **3. lépés — Kész.** A fülön lépésről lépésre követheti, hol tart: összeg zárolva →
 megvásároltuk a nevet → terheltük a kártyáját (a számlát e-mailben küldjük) → beállítjuk
-a címet és a biztonsági tanúsítványt. E-mailben is szólunk, amint kész.
+a címet és a biztonsági tanúsítványt. Két e-mailt kap tőlünk: egyet a név megvásárlásakor
+(„Megvásároltuk a webcímét”, benne azzal, mi jön még és addig hol él a honlapja), és egyet,
+amikor a honlap már az új címen él.
 
 A `.hu` nevek bejegyzése napokig tart (lásd lent) — a képernyő ezt ki is írja („A .hu
 neveknél ez néhány nap”). A kártyáját ettől függetlenül már a név megvásárlásakor

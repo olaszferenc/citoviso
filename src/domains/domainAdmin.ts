@@ -72,6 +72,8 @@ export interface DomainProgressTimes {
   readonly nsActiveAt: Date | null;
   /** 0107 stuck_stage — 1+ = the 24 h operator alert already went out. */
   readonly stuckStage: number;
+  /** 0113 registrar_note_at — the registrar's support asked us for something (a human is on it). */
+  readonly registrarNoteAt: Date | null;
 }
 
 export interface DomainAdminData {
@@ -226,7 +228,7 @@ export async function loadDomainAdmin(
   if (status !== "none") {
     const dp = await db
       .selectFrom("domain_provisioning")
-      .select(["domain", "created_at", "waiting_since", "ns_active_at", "stuck_stage"])
+      .select(["domain", "created_at", "waiting_since", "ns_active_at", "stuck_stage", "registrar_note_at"])
       .where("tenant_id", "=", tenantId)
       .orderBy("created_at", "desc")
       .executeTakeFirst();
@@ -246,6 +248,7 @@ export async function loadDomainAdmin(
         boughtAt: dp.waiting_since ? new Date(dp.waiting_since as unknown as string) : null,
         nsActiveAt: dp.ns_active_at ? new Date(dp.ns_active_at as unknown as string) : null,
         stuckStage: dp.stuck_stage,
+        registrarNoteAt: dp.registrar_note_at ? new Date(dp.registrar_note_at as unknown as string) : null,
       };
     }
     if (pay) {

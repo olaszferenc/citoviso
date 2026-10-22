@@ -272,6 +272,45 @@ async function siteRow(siteId: string) {
   ok(Boolean(row.domain_provision_error), "a hibaüzenet eltárolva a diagnosztikához", `err=${row.domain_provision_error}`);
 }
 
+// ── ADR-XXXX: OUR registrar account is not ready (overseer.hu 2026-10-22) ──
+// No identifier on the domain profile → the registrar never files. That is NOT "taken":
+// nothing is bought or charged, the row waits in `pending`, the house hears it once a day,
+// the tenant gets NO letter — and once the profile is fixed the same row goes through.
+{
+  const { MockRegistrar } = await import("../src/domains/registrar/mock.js");
+  // The house alert needs a recipient to count as sent (mock mail provider): without one it
+  // releases its once-key by design, and the "once a day" claim below would read as a repeat.
+  const { setSetting } = await import("../src/console/appSettings.js");
+  await setSetting("alert_email", "haz@pelda.hu");
+  const { tenantId, siteId } = await makeSite("NotReady", "domTokNotReady1");
+  // The tenant letters go to tenant_user.contact_email — without a user there is no addressee.
+  await db.insertInto("tenant_user").values({ tenant_id: tenantId, username: "notready", contact_email: "tulaj@pelda.hu", password_hash: null } as never).execute();
+  const id = await startDomainProvisioning({ tenantId, siteId, orderIntentId: null, domain: "keszpanzio.hu", years: 1 });
+  MockRegistrar.readinessProblems = ["a domain-profilban NINCS azonosító (teszt)"];
+  try {
+    const status = SELF_TEST ? "failed" : await runDomainProvisioning(id);
+    ok(status === "pending", "⭐⭐ nem kész regisztrátor-fiók → a sor 'pending' MARAD (nem 'failed', nem „elkelt”)", `status=${status}`);
+    const row = await siteRow(siteId);
+    ok(row.custom_domain_status === "pending" && row.registrar_ref === null, "nem kész fióknál semmi nem lett megvéve (nincs registrar_ref)", `state=${row.custom_domain_status} ref=${row.registrar_ref}`);
+    ok(/azonosító/.test(row.domain_provision_error ?? ""), "a hiány oka a soron olvasható", `err=${row.domain_provision_error}`);
+    const letters = await db.selectFrom("tenant_message").select("subject").where("tenant_id", "=", tenantId).execute();
+    ok(letters.length === 0, "⭐ a tenant NEM kap levelet (a név nem kelt el, csak mi nem állunk készen)", `levelek: ${letters.map((l) => l.subject).join(" | ")}`);
+    const once = await db.selectFrom("house_alert_once").select("key").where("key", "like", `domain-not-ready:${id}:%`).execute();
+    ok(once.length === 1, "a ház riasztási kulcsa naponta EGYSZER igénylődik", `kulcsok: ${once.length}`);
+    const again = await runDomainProvisioning(id);
+    ok(again === "pending", "a 2 perces időzítő újrafuttatása ugyanúgy vár (nem vásárol, nem bukik)", `status=${again}`);
+    const onceAgain = await db.selectFrom("house_alert_once").select("key").where("key", "like", `domain-not-ready:${id}:%`).execute();
+    ok(onceAgain.length === 1, "⭐ a második futás NEM riaszt újra ugyanaznap", `kulcsok: ${onceAgain.length}`);
+  } finally {
+    MockRegistrar.readinessProblems = [];
+  }
+  const fixed = await runDomainProvisioning(id);
+  ok(fixed === "live", "⭐ a fiók pótlása után UGYANAZ a sor végigmegy live-ig (a vevőnek nem kell újra rendelnie)", `status=${fixed}`);
+  const letters = await db.selectFrom("tenant_message").select("subject").where("tenant_id", "=", tenantId).orderBy("sent_at", "asc").execute();
+  ok(letters.some((l) => /Megvásároltuk a webcímét/.test(l.subject ?? "")), "⭐ a vételről a tenant levelet kap („Megvásároltuk a webcímét”)", `levelek: ${letters.map((l) => l.subject).join(" | ")}`);
+  ok(letters.filter((l) => /Megvásároltuk a webcímét/.test(l.subject ?? "")).length === 1, "a vétel-levél EGYSZER megy ki", `db: ${letters.length}`);
+}
+
 // ── PROPAGATION: dns not yet active → parks, re-run is safe ──
 {
   const { tenantId, siteId } = await makeSite("Slow", "domTokSlow01");

@@ -41,7 +41,10 @@ export const SMS_QUEUE_STALL_MINUTES = 30;
 /** An import link failing this long (the owner's own letter goes at the same mark, 0106). */
 export const ICAL_STALL_HOURS = 24;
 
-export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key";
+/** ADR-XXXX: a .hu name bought this long ago with no registry confirmation mail = the registrar did not file it. */
+export const REGISTRY_CONFIRM_HOURS = 2;
+
+export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar";
 
 export interface StallWatchDeps {
   /** Ask the gateway about a pending payment (the same idempotent path /pay/done runs). */
@@ -53,6 +56,13 @@ export interface StallWatchDeps {
   alert(a: HouseAlert): Promise<boolean>;
   /** Live-host override for the key alert (the guard); default isLiveHost(config.publicBaseUrl). */
   live?: boolean;
+  /**
+   * ADR-XXXX: the registrar account's pre-flight (null = no live registrar here, nothing to
+   * measure). Default: the memoized live adapter; the guard injects a verdict.
+   */
+  registrarReady?(): Promise<{ ok: boolean; problems: readonly string[]; facts: readonly string[] } | null>;
+  /** ADR-XXXX: did a .hu confirmation link arrive since `since`? Default: the mailbox watcher's state. */
+  confirmLinkSeenSince?(since: Date): Promise<boolean>;
 }
 
 export const realStallDeps: StallWatchDeps = {
@@ -75,6 +85,17 @@ export const realStallDeps: StallWatchDeps = {
     }
   },
   alert: alertHouse,
+  registrarReady: async () => {
+    const { isMockDomainProvisioning } = await import("../domains/provisionDomain.js");
+    if (isMockDomainProvisioning()) return null;
+    const { registrarReadiness } = await import("../domains/registrar/index.js");
+    return registrarReadiness();
+  },
+  confirmLinkSeenSince: async (since) => {
+    // Lazy: the watcher module (IMAP) stays out of every stall-watch import.
+    const { confirmLinkSeenSince } = await import("../domains/registryConfirmWatch.js");
+    return confirmLinkSeenSince(since);
+  },
 };
 
 /** Claim an incident key; false = it was already alerted (or another run holds it). */
@@ -188,6 +209,65 @@ async function sweepDomains(now: Date): Promise<Case[]> {
       `- ${r.domain} · '${r.status}' · indult ${iso(r.createdAt)} · tenant ${r.tenantId} · beszerzés ${r.id}` +
       (r.error ? ` · utolsó hiba: ${r.error}` : ""),
   }));
+}
+
+// ── ②b the .hu registry confirmation (ADR-XXXX) ─────────────────────────────────────
+//
+// A bought .hu name waits in dns_pending for the registry's confirmation mail — measured:
+// minutes (citoviso.hu, 2026-09-06 21:27 → same evening), NEVER (overseer.hu, 2026-10-21:
+// the registrar did not file because our profile lacked an identifier; the only signal was
+// a support mail 16 hours later). No link within REGISTRY_CONFIRM_HOURS of the purchase is
+// the registrar's problem, not the registry's pace — the house hears it then, not at the
+// 24 h mark. A row the registrar already wrote about (registrar_note_at) is in human hands.
+
+async function sweepRegistryConfirmation(now: Date, deps: StallWatchDeps): Promise<Case[]> {
+  const rows = await db
+    .selectFrom("domain_provisioning")
+    .select(["id", "domain", "waiting_since as waitingSince", "tenant_id as tenantId", "registrar_ref as registrarRef"])
+    .where("status", "=", "dns_pending")
+    .where("domain", "like", "%.hu")
+    .where("ns_active_at", "is", null)
+    .where("registrar_note_at", "is", null)
+    .where("waiting_since", "<", ago(now, REGISTRY_CONFIRM_HOURS * 60) as never)
+    .orderBy("waiting_since", "asc")
+    .execute();
+  const seen = deps.confirmLinkSeenSince ?? realStallDeps.confirmLinkSeenSince!;
+  const out: Case[] = [];
+  for (const r of rows) {
+    const since = new Date(r.waitingSince as unknown as string);
+    if (await seen(since)) continue;
+    const hours = Math.floor((now.getTime() - since.getTime()) / 3_600_000);
+    out.push({
+      key: `domain-registry:${r.id}`,
+      line: `- ${r.domain} · megvéve ${iso(r.waitingSince)} (${hours} órája) · regisztrátor-rendelés ${r.registrarRef ?? "?"} · tenant ${r.tenantId} · beszerzés ${r.id}`,
+    });
+  }
+  return out;
+}
+
+// ── ②c the registrar account itself (ADR-XXXX) ─────────────────────────────────────
+//
+// Asked hourly, not only at a purchase: the gap (no identifier on the domain profile, 0
+// credit, ToS pending) must surface BEFORE a customer pays. One alert per problem-set per
+// day; a changed problem-set is a new alert.
+
+async function sweepRegistrarReadiness(now: Date, deps: StallWatchDeps): Promise<Case[]> {
+  const ask = deps.registrarReady ?? realStallDeps.registrarReady!;
+  let r: { ok: boolean; problems: readonly string[]; facts: readonly string[] } | null;
+  try {
+    r = await ask();
+  } catch (e) {
+    r = { ok: false, problems: [`a készenlét-ellenőrzés hibázott: ${(e as Error).message}`], facts: [] };
+  }
+  if (!r || r.ok) return [];
+  const day = budapestIsoDay(now);
+  const sig = r.problems.join("|").length.toString(36) + ":" + r.problems.length;
+  return [
+    {
+      key: `registrar-ready:${day}:${sig}`,
+      line: r.problems.map((p) => `- ${p}`).join("\n") + (r.facts.length ? `\n\nMért tények:\n${r.facts.map((f) => `- ${f}`).join("\n")}` : ""),
+    },
+  ];
 }
 
 // ── ③ SMS queue ─────────────────────────────────────────────────────────────────────
@@ -346,6 +426,39 @@ export async function runStallWatch(now: Date, deps: StallWatchDeps = realStallD
         `túl a regisztráción. Ez percek kérdése szokott lenni.\n\n${lines.join("\n")}\n\n` +
         `Teendő: journalctl -u citoviso-domain-resume -n 100; a regisztrátor (Websupport) fiók és egyenleg ` +
         `megnézése, majd  npx tsx scripts/resume-domains.mts\n`,
+    })),
+  );
+
+  note(
+    "registry",
+    await alertNew(deps, "registry", await sweepRegistryConfirmation(now, deps), (lines) => ({
+      tag: "domain-registry",
+      sms: true,
+      smsKey: "domain-registry",
+      subject: `Citoviso: ${lines.length} .hu név megvéve, de ${REGISTRY_CONFIRM_HOURS} óra alatt nem jött a Nyilvántartó megerősítő levele`,
+      text:
+        `A nevet megvettük és kifizettük a regisztrátornál, de a .hu Nyilvántartó megerősítő levele (cfm.drr.hu) ` +
+        `${REGISTRY_CONFIRM_HOURS} órán belül NEM érkezett a postafiókba (INBOX + Spam). Mérve: rendben menő igénylésnél ` +
+        `a levél PERCEKEN belül jön — ha nem jön, a regisztrátor nem adta be (hiányos domain-profil, elemzői elbírálás), ` +
+        `és a vevő képernyője hiába ígér holnapot.\n\n${lines.join("\n")}\n\n` +
+        `Teendő: a postafiók (olasz.ferenc@citoviso.com) support-levelei a Websupporttól; a Websupport Webadminban a ` +
+        `domain-profil (azonosító!) és a rendelés állapota; ha semmi, ticket a supportnak a rendelés-azonosítóval. ` +
+        `A gép a megerősítő linkre továbbra is riaszt, ha megjön.\n`,
+    })),
+  );
+
+  note(
+    "registrar",
+    await alertNew(deps, "registrar", await sweepRegistrarReadiness(now, deps), (lines) => ({
+      tag: "registrar-ready",
+      sms: true,
+      smsKey: "registrar-ready",
+      subject: "Citoviso: a regisztrátor-fiókunk NEM tud domaint regisztrálni — a következő vevő rendelése elakadna",
+      text:
+        `Az óránkénti ellenőrzés szerint a regisztrátor-fiók (Websupport) hiányos, ezért a következő saját-domain ` +
+        `vétel NEM indulna el (a sor pending maradna, a vevő várna).\n\n${lines.join("\n")}\n\n` +
+        `Teendő: a Websupport Webadmin → fiók / domain-profil kiegészítése (az azonosító a .hu Nyilvántartónak kell), ` +
+        `kredit feltöltése, ÁSZF megerősítése. A fiók 10 percen belül újra mérődik; ez a levél naponta egyszer jön, amíg a hiány áll.\n`,
     })),
   );
 
