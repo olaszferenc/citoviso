@@ -102,7 +102,23 @@ $SSH "sudo -u citoviso pg_dump -Fc -Z6 -d $REMOTE_DB" </dev/null > "$TMP/db.dump
 ( cd "$TMP" && sha256sum db.dump > db.dump.sha256 )
 
 echo "── sites/ fa (bizonylat-képek, tenant-fotók)…"
-rsync -a --delete -e "ssh -i $KEY -o BatchMode=yes" \
+# A változatlan fájlok HARDLINKEK a legutóbbi kész napi mentésre (--link-dest).
+# Mérve 2026-10-22: a sites/ 2,0G volt, és ennek ~99%-a (a _outreach-shots fotói)
+# napról napra változatlan — teljes másolattal 14 nap ≈ 28G ment el ugyanarra.
+# Csak OK-jelű (ellenőrzött) mentésre linkelünk; az rsync sosem ír meglévő fájlba
+# (új fájlt ír és átnevez), így a régi mentés tartalma nem változhat meg.
+LINK_ARGS=()
+# (Sima for-ciklus, nem `| while … &&` — a pipefail + set -e mellett az utolsó
+# hamis feltétel a ciklus kilépési kódja lenne, és a szkript némán megállna.)
+PREV=""
+for d in "$DAILY"/*/; do
+  if [ -f "$d/OK" ] && [ -d "$d/sites" ]; then PREV="${d%/}"; fi
+done
+if [ -n "$PREV" ]; then
+  LINK_ARGS=(--link-dest="$PREV/sites/")
+  echo "   változatlan fájlok hardlinkkel: $PREV"
+fi
+rsync -a --delete "${LINK_ARGS[@]}" -e "ssh -i $KEY -o BatchMode=yes" \
   "root@$HOST:$REMOTE_APP/sites/" "$TMP/sites/" || fail "a sites/ nem jött át"
 
 echo "── .env (a visszaállításhoz kell; 600-as jogosultsággal)…"
@@ -124,7 +140,10 @@ date -Is > "$DEST/OK"
 # kötelezettség évekről szól, a napi rotáció két hétről).
 MON="$(date +%Y-%m)"
 if [ ! -d "$MONTHLY/$MON" ]; then
-  cp -a "$DEST" "$MONTHLY/$MON"
+  # Hardlink-másolat (cp -l): a havi mentés ugyanazokat a fájlokat tartja életben,
+  # nem foglal második helyet. Biztonságos, mert egy kész mentés fájljait semmi nem
+  # írja felül helyben — a rotáció csak a napi könyvtár-bejegyzést törli.
+  cp -al "$DEST" "$MONTHLY/$MON"
   echo "── havi archív létrehozva: $MONTHLY/$MON"
 fi
 

@@ -47,6 +47,10 @@
   "services": {
     "citoviso-alert@.service": { "target": "prod" },
     "citoviso-public.service": { "target": "prod" },
-    "citoviso-console.service": { "target": "prod" }
+    "citoviso-console.service": { "target": "prod" },
+    "citoviso-db.service": {
+      "target": "dev",
+      "why": "a dev gép embedded Postgres-e (a fő fa .pgdata, :5433) — boot után ez indítja; élesen a rendszer-Postgres fut, nem ez"
+    }
   }
 }

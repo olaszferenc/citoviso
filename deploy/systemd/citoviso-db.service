@@ -1,0 +1,24 @@
+[Unit]
+# The DEV database (embedded Postgres, the main tree's .pgdata, socket /tmp:5433).
+# Until 2026-10-22 nothing started it at boot: after the 11:01 shutdown it stayed
+# down, and every DB-backed dev timer (pair-repair, booking-maintenance,
+# domain-resume, multilang-resume, backup-dev) failed on ENOENT /tmp/.s.PGSQL.5433
+# until someone noticed and ran `scripts/db.sh up` by hand.
+Description=Citoviso dev Postgres (embedded, :5433)
+After=local-fs.target
+Before=timers.target
+
+[Service]
+Type=forking
+User=citoviso
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/bin/bash /home/citoviso/citoviso/scripts/db.sh up
+ExecStop=/bin/bash /home/citoviso/citoviso/scripts/db.sh down
+PIDFile=/home/citoviso/citoviso/.pgdata/postmaster.pid
+TimeoutStartSec=120
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
