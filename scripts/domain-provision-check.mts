@@ -272,7 +272,7 @@ async function siteRow(siteId: string) {
   ok(Boolean(row.domain_provision_error), "a hibaüzenet eltárolva a diagnosztikához", `err=${row.domain_provision_error}`);
 }
 
-// ── ADR-XXXX: OUR registrar account is not ready (overseer.hu 2026-10-22) ──
+// ── ADR-0400: OUR registrar account is not ready (overseer.hu 2026-10-22) ──
 // No identifier on the domain profile → the registrar never files. That is NOT "taken":
 // nothing is bought or charged, the row waits in `pending`, the house hears it once a day,
 // the tenant gets NO letter — and once the profile is fixed the same row goes through.

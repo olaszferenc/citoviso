@@ -23,7 +23,7 @@
 // purchase verifies the account's default contact against WEBSUPPORT_EXPECTED_REGISTRANT
 // first, and refuses on any mismatch.
 //
-// READINESS (ADR-XXXX, ⛔ the 2026-10-22 lesson, overseer.hu): the order payload carries NO
+// READINESS (ADR-0400, ⛔ the 2026-10-22 lesson, overseer.hu): the order payload carries NO
 // registrant data at all — the registry takes the registrant from the account's DOMAIN
 // PROFILE (`GET /v1/user/{id}/domainProfile`, MEASURED 2026-10-21: lists one profile with
 // name/address/e-mail/phone and the ident* fields; the per-profile GET answers 404 on the .hu
@@ -224,7 +224,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * The account pre-flight (ADR-0103 ⑤ + ADR-XXXX). Two measured sources:
+   * The account pre-flight (ADR-0103 ⑤ + ADR-0400). Two measured sources:
    *   GET /v1/user/{id}            — login, credit, awaitingTosConfirmation, billing[] (the
    *                                  default contact = who the domain belongs to);
    *   GET /v1/user/{id}/domainProfile — the registrant the registry sees: name, address,

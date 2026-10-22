@@ -113,12 +113,12 @@ say(
   "sikertelen riasztás NEM íródik sikerként (nincs néma elnyelés)",
 );
 
-// ── 2b. ADR-XXXX: a REGISZTRÁTOR EMBERI LEVELE egy folyamatban lévő névről. ─────
+// ── 2b. ADR-0400: a REGISZTRÁTOR EMBERI LEVELE egy folyamatban lévő névről. ─────
 //
 // A mért valóság (2026-10-22 08:04, Zoho INBOX): „[Websupport] - hiányzó adat - overseer.hu -”
 // a Websupport supporttól, MIME-kódolt tárggyal — 16 órán át senki nem riasztott róla. A
 // detektor a SZÁLLÍTOTT függvény (matchRegistrarMail), a döntés injektált küldővel.
-console.log("\n── Regisztrátor-levél (ADR-XXXX) ────────────────────────────────");
+console.log("\n── Regisztrátor-levél (ADR-0400) ────────────────────────────────");
 const { matchRegistrarMail, processRegistrarMails, decodeMimeHeader, parseImapDate } = await import(
   "../src/domains/registryConfirmWatch.js"
 );
@@ -172,7 +172,7 @@ say(
   "a postafiók CSAK-OLVASÓ módban nyílik (EXAMINE, nem SELECT)",
   "SELECT-tel a figyelő flageket írhatna a tulaj saját postafiókjában",
 );
-// ADR-XXXX: a Nyilvántartó levele máshol a Spamben landolt — az INBOX egyedül vak.
+// ADR-0400: a Nyilvántartó levele máshol a Spamben landolt — az INBOX egyedül vak.
 say(
   /"INBOX"/.test(src) && /spam\|junk\|k&AOk-retlen/i.test(src),
   "az INBOX MELLETT a Spam mappát is átnézi (a Zoho „Kéretlen levél” mappáját a szerver-nevén)",

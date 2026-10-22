@@ -1,4 +1,4 @@
-## ADR-XXXX — Domain-regisztráció: a szál VÉGIG a miénk — a rendeléstől az élesedésig a gép figyel, kérdez és szól (2026-10-22)
+## ADR-0400 — Domain-regisztráció: a szál VÉGIG a miénk — a rendeléstől az élesedésig a gép figyel, kérdez és szól (2026-10-22)
 
 **Kiváltó (tulaj, 2026-10-22 reggel, brief `domain-reg-tiszt-z-sa`):** „A domainregisztrációs folyamat úgy
 szar, ahogy van. […] Nincs rá figyelő, nincs rá kontroll, nincs értesítése a leadnek, nincs értesítése a

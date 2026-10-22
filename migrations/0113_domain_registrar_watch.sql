@@ -1,4 +1,4 @@
--- 0113 SAJÁT DOMAIN — a regisztrátor-szál végigkövetése (ADR-XXXX, overseer.hu 2026-10-21/22).
+-- 0113 SAJÁT DOMAIN — a regisztrátor-szál végigkövetése (ADR-0400, overseer.hu 2026-10-21/22).
 --
 -- Ami hiányzott (mérve): a vétel után a kód ELENGEDTE a szálat — a regisztrátor support-levele
 -- („hiányzó adat — overseer.hu”, 2026-10-22 08:04) a postafiókban állt, senki nem riasztott,

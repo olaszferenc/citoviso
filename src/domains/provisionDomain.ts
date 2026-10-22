@@ -198,7 +198,7 @@ async function siteIsLive(siteId: string): Promise<boolean> {
 }
 
 /**
- * ADR-XXXX: the registrar ACCOUNT blocks the purchase (profile / credit / ToS). Once per
+ * ADR-0400: the registrar ACCOUNT blocks the purchase (profile / credit / ToS). Once per
  * beszerzés per day — the 2-minute timer re-runs the row, and a mail every 2 minutes would
  * drown the one that matters. The key lives in house_alert_once like the stall watch's.
  */
@@ -608,7 +608,7 @@ export async function runDomainProvisioning(
       await setStatus(p.id, p.siteId, "dns_pending", { registrarRef, error: null });
       // ÚJ-K1: the wait starts here; a setup_retry re-entry keeps the first clock.
       await db.updateTable("domain_provisioning").set({ waiting_since: now }).where("id", "=", p.id).where("waiting_since", "is", null).execute();
-      // ADR-XXXX: the tenant hears about the PURCHASE now (bought, what comes next, where
+      // ADR-0400: the tenant hears about the PURCHASE now (bought, what comes next, where
       // the site lives meanwhile) — once per row: a setup_retry re-entry claims nothing.
       const boughtNotice = await db
         .updateTable("domain_provisioning")
@@ -660,7 +660,7 @@ export async function runDomainProvisioning(
     return status;
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
-    // ADR-XXXX (overseer.hu 2026-10-22): OUR registrar account cannot register right now
+    // ADR-0400 (overseer.hu 2026-10-22): OUR registrar account cannot register right now
     // (no identifier on the domain profile, 0 credit, ToS pending…). Nothing was ordered or
     // charged, and the name was NOT taken by anyone — so this is never `failed` and never a
     // tenant letter. The row goes back to `pending` (the hold stays, the 2-minute timer

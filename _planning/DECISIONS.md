@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-domain-regisztracio-vegigkovetett-szal.md) — Domain-regisztráció: a szál VÉGIG a miénk — a rendeléstől az élesedésig a gép figyel, kérdez és szól (2026-10-22)
+- [ADR-0400](decisions/0400-domain-regisztracio-a-szal-vegig-a-mienk-a.md) — Domain-regisztráció: a szál VÉGIG a miénk — a rendeléstől az élesedésig a gép figyel, kérdez és szól (2026-10-22)
 - [ADR-0399](decisions/0399-webcim-allapot-kepernyo-idopontokkal-es-varhato.md) — Webcím: állapot-képernyő időpontokkal és várható elkészüléssel a vétel után
 - [ADR-0398](decisions/0398-a-proba-gombja-megrendelem-nem-folytatom.md) — A próba gombja „Megrendelem”, nem „Folytatom”
 - [ADR-0397](decisions/0397-tenant-admin-szakasz-hierarchia-zonak.md) — Tenant-admin szakasz-hierarchia: zónák, tartalomjegyzék, tónus-tömbök (az „E” nyelv)

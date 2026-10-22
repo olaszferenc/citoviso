@@ -15,7 +15,7 @@ export interface DomainRegistration {
 }
 
 /**
- * Is the registrar ACCOUNT able to register a name right now? (ADR-XXXX, overseer.hu
+ * Is the registrar ACCOUNT able to register a name right now? (ADR-0400, overseer.hu
  * 2026-10-22: the account's domain profile had NO identifier, so the registry request was
  * never filed — the money was taken, the row sat in `dns_pending`, and only a support mail
  * in the mailbox said why.) Measured BEFORE any purchase and hourly by the stall watch,

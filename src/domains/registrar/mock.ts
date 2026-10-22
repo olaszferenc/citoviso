@@ -24,7 +24,7 @@ export class MockRegistrar implements RegistrarAdapter {
     MockRegistrar.#placedOrders.clear();
   }
 
-  /** Test hook (ADR-XXXX): a broken account profile — register() must refuse, not buy. */
+  /** Test hook (ADR-0400): a broken account profile — register() must refuse, not buy. */
   static readinessProblems: string[] = [];
 
   async readiness(): Promise<RegistrarReadiness> {

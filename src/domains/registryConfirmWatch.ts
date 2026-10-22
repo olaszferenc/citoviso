@@ -1,4 +1,4 @@
-// A REGISZTRÁTOR-SZÁL FIGYELÉSE a postafiókban (tulaj-rendelet 2026-09-09; ADR-XXXX 2026-10-22).
+// A REGISZTRÁTOR-SZÁL FIGYELÉSE a postafiókban (tulaj-rendelet 2026-09-09; ADR-0400 2026-10-22).
 //
 // Két dolgot keres, 2 percenként, az INBOX-ban ÉS a Spam mappában:
 //
@@ -14,7 +14,7 @@
 //   meg a megerősítést (13 óra után is NXDOMAIN). A tulaj kézzel, új kóddal megismételte:
 //   ott zöld „Sikeres beküldés" jött. Amíg nincs POZITÍV siker-jelünk, a kód a tulajé.
 //
-// ② A REGISZTRÁTOR EMBERI LEVELE egy folyamatban lévő névről (ADR-XXXX). Mérve: 2026-10-22
+// ② A REGISZTRÁTOR EMBERI LEVELE egy folyamatban lévő névről (ADR-0400). Mérve: 2026-10-22
 //   08:04-kor a Websupport support „[Websupport] - hiányzó adat - overseer.hu -" tárggyal
 //   írt — a regisztrációt be sem adta, mert a domain-profilunkban nincs azonosító. A levél
 //   16 órán át olvasatlanul állt, a gép 2 percenként „dns_pending"-et írt, a tenant képernyője

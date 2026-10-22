@@ -292,7 +292,7 @@ await S.runStallWatch(new Date(NOW.getTime() + 5 * 60_000), deps);
 d = drain();
 check("a második söprés semmi újat nem küld", d.mails.length === 0 && d.texts.length === 0, d.mails.map((m) => m.subject).join(" | "));
 
-// ── ②b / ②c ADR-XXXX: the registrar thread (overseer.hu 2026-10-21/22) ───────────────
+// ── ②b / ②c ADR-0400: the registrar thread (overseer.hu 2026-10-21/22) ───────────────
 // A bought .hu name with NO registry confirmation mail after 2 h → the registrar did not
 // file (mail + SMS); a row the registrar already wrote about (registrar_note_at) and one
 // whose link arrived are not cases; the registrar account's pre-flight failing → mail + SMS,

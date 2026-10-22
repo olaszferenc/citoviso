@@ -369,7 +369,7 @@ await block("B2", async () => {
   ok(alerts.some((x) => /ribizli-dns\.hu/.test(x.subject)), "⭐ B2 operátor-riasztás ment ki (házi riasztó)", JSON.stringify(alerts));
   // The owner mail is sent and logged AFTER the status flips to setup_retry: poll for it
   // (same pattern as the alert wait above) instead of reading once — a loaded box lost the race.
-  // (ADR-XXXX: the "Megvásároltuk" purchase letter precedes the delay letter — it is not the one measured here.)
+  // (ADR-0400: the "Megvásároltuk" purchase letter precedes the delay letter — it is not the one measured here.)
   const readMail = () => db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
     .where("kind", "=", "domain").where("subject", "not like", "Megvásároltuk a webcímét%").orderBy("sent_at", "desc").executeTakeFirst();
   let mail = await readMail();
@@ -401,7 +401,7 @@ await block("ÚJ-K1", async () => {
   const r0 = await row();
   ok(r0.status === "dns_pending" && !!r0.waiting_since, "ÚJ-K1 a megvett név dns_pending-ben vár, az óra fut (waiting_since)", JSON.stringify(r0));
   const t0 = new Date(r0.waiting_since ?? Date.now()).getTime();
-  // ADR-XXXX: the purchase itself is announced to the tenant ("Megvásároltuk a webcímét") at
+  // ADR-0400: the purchase itself is announced to the tenant ("Megvásároltuk a webcímét") at
   // the dns_pending entry — that letter is not a DELAY letter, so the counts below leave it out.
   const letters = async () => Number((await db.selectFrom("tenant_message").select((eb) => eb.fn.countAll().as("n"))
     .where("tenant_id", "=", tenantId).where("kind", "=", "domain").where("subject", "not like", "Megvásároltuk a webcímét%").executeTakeFirstOrThrow()).n);
@@ -412,7 +412,7 @@ await block("ÚJ-K1", async () => {
   alerts.length = 0;
   await at(1);
   ok(mine().length === 0 && (await letters()) === 0, "ÚJ-K1 +1 óra: se riasztás, se levél", JSON.stringify(mine()));
-  ok((await boughtLetters()) === 1, "ADR-XXXX: a vételről EGY tenant-levél ment („Megvásároltuk a webcímét”), a késés-levelek számától függetlenül");
+  ok((await boughtLetters()) === 1, "ADR-0400: a vételről EGY tenant-levél ment („Megvásároltuk a webcímét”), a késés-levelek számától függetlenül");
   await at(25);
   ok(mine().length === 1 && (await row()).stuck_stage === 1, "⭐ ÚJ-K1 +25 óra: EGY operátor-riasztás", JSON.stringify(mine()));
   ok((await letters()) === 0, "ÚJ-K1 +25 óra: a tulaj még nem kap levelet");

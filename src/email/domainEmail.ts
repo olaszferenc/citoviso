@@ -55,7 +55,7 @@ export function buildDomainLiveEmail(input: {
 }
 
 /**
- * ADR-XXXX: a név MEGVAN — a vétel pillanatában szólunk, nem csak a végén. (overseer.hu
+ * ADR-0400: a név MEGVAN — a vétel pillanatában szólunk, nem csak a végén. (overseer.hu
  * 2026-10-21: a tenant a fizetés után CSAK a számlát kapta, a domain-lépésről semmit, és
  * egy napig nem tudta, hol tart.) A levél igazat mond a `.hu` várakozásról (a Nyilvántartó
  * jóváhagyása, általában egy nap), és kimondja, hogy addig a honlap a mai címén él.

@@ -1,4 +1,4 @@
-# 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-XXXX) — overseer.hu oka és a gépi folyamat
+# 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-0400) — overseer.hu oka és a gépi folyamat
 
 Brief: `~/rc-briefs/domain-reg-tiszt-z-sa-20261022-083453.md` (tulaj: „nincs figyelő, nincs kontroll, nincs
 értesítés — a vétel után baszunk az egész folyamatra”).
@@ -25,7 +25,7 @@ Brief: `~/rc-briefs/domain-reg-tiszt-z-sa-20261022-083453.md` (tulaj: „nincs f
   `registrar_note` a soron (`matchRegistrarMail`, `processRegistrarMails`); `confirmLinkSeenSince`.
 - `stallWatch`: `registry` (2 h `.hu` link nélkül) és `registrar` (készenlét naponta) söprés.
 - Migráció 0113; őrök bővítve (`registry-confirm-check`, `domain-provision-check`, `stall-alert-check`);
-  KB admin-domain: két levél; ADR-XXXX.
+  KB admin-domain: két levél; ADR-0400.
 
 ## Módosított fájlok
 `migrations/0113_domain_registrar_watch.sql`, `src/db/schema.ts`, `src/domains/registrar/{registrar,index,mock,inwx,websupport}.ts`,
@@ -38,6 +38,6 @@ Brief: `~/rc-briefs/domain-reg-tiszt-z-sa-20261022-083453.md` (tulaj: „nincs f
 1. overseer.hu: melyik azonosítót adjuk a Websupportnak és hogyan (válasz-levél vagy API PUT) — személyes adat.
 2. A tenant állapot-képernyőjének „munkatársunk már intézi” sora a `registrar_note_at` pillanatától (ADR-0399
    képernyő, egy feltétel — felület-kapu, a tulaj szava kell).
-3. Megújítás (autoExtend=false, nincs renew) és a név átadása a tenantnak (nincs kód) — ADR-XXXX Nyitott 3–4.
+3. Megújítás (autoExtend=false, nincs renew) és a név átadása a tenantnak (nincs kód) — ADR-0400 Nyitott 3–4.
 4. Élesítés: 0113 migráció + a 2 perces timer és az óránkénti tick az új kóddal; az első futás a mai
    support-levélre riasztani fog (48 órán belüli), és a sorra jegyzetet ír.

@@ -41,7 +41,7 @@ export const SMS_QUEUE_STALL_MINUTES = 30;
 /** An import link failing this long (the owner's own letter goes at the same mark, 0106). */
 export const ICAL_STALL_HOURS = 24;
 
-/** ADR-XXXX: a .hu name bought this long ago with no registry confirmation mail = the registrar did not file it. */
+/** ADR-0400: a .hu name bought this long ago with no registry confirmation mail = the registrar did not file it. */
 export const REGISTRY_CONFIRM_HOURS = 2;
 
 export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar";
@@ -57,11 +57,11 @@ export interface StallWatchDeps {
   /** Live-host override for the key alert (the guard); default isLiveHost(config.publicBaseUrl). */
   live?: boolean;
   /**
-   * ADR-XXXX: the registrar account's pre-flight (null = no live registrar here, nothing to
+   * ADR-0400: the registrar account's pre-flight (null = no live registrar here, nothing to
    * measure). Default: the memoized live adapter; the guard injects a verdict.
    */
   registrarReady?(): Promise<{ ok: boolean; problems: readonly string[]; facts: readonly string[] } | null>;
-  /** ADR-XXXX: did a .hu confirmation link arrive since `since`? Default: the mailbox watcher's state. */
+  /** ADR-0400: did a .hu confirmation link arrive since `since`? Default: the mailbox watcher's state. */
   confirmLinkSeenSince?(since: Date): Promise<boolean>;
 }
 
@@ -211,7 +211,7 @@ async function sweepDomains(now: Date): Promise<Case[]> {
   }));
 }
 
-// ── ②b the .hu registry confirmation (ADR-XXXX) ─────────────────────────────────────
+// ── ②b the .hu registry confirmation (ADR-0400) ─────────────────────────────────────
 //
 // A bought .hu name waits in dns_pending for the registry's confirmation mail — measured:
 // minutes (citoviso.hu, 2026-09-06 21:27 → same evening), NEVER (overseer.hu, 2026-10-21:
@@ -245,7 +245,7 @@ async function sweepRegistryConfirmation(now: Date, deps: StallWatchDeps): Promi
   return out;
 }
 
-// ── ②c the registrar account itself (ADR-XXXX) ─────────────────────────────────────
+// ── ②c the registrar account itself (ADR-0400) ─────────────────────────────────────
 //
 // Asked hourly, not only at a purchase: the gap (no identifier on the domain profile, 0
 // credit, ToS pending) must surface BEFORE a customer pays. One alert per problem-set per
