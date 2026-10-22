@@ -85,13 +85,15 @@ ez még nem levonás. És mivel valódi kártyazárolás, **csak bankkártyával
 zárolva → megvásároljuk a nevet → terheljük a kártyáját. A név megvásárlása és a terhelés
 után a fül tetején egyetlen mondat mondja meg, hol tart, és mikorra várható a vége:
 „A sajatnev.hu az Öné. Várhatóan péntek 14:00-ig az új címen él a honlapja.” Alatta három szakasz:
-**Fizetés**, **Bejegyzés** (csak `.hu` névnél) és **Élesítés**. A kész szakasz pipát kap,
-a folyamatban lévő az aktuális lépést írja.
+**Fizetés**, **Bejegyzés** és **Élesítés** (a Bejegyzés alatt `.hu` névnél „.hu
+nyilvántartás”, más névnél „a cím beállítása” áll). A kész szakasz zölden jelenik meg, a
+folyamatban lévő kiemelt kerettel.
 
-A **„Részletek időponttal”** sorra koppintva lenyílik a teljes lista, minden kész lépés
-mellett az időponttal: Kifizetve · Megvásároltuk a nevet · Bejegyzés a .hu nyilvántartásba ·
-A cím a honlapjára mutat · Biztonsági tanúsítvány · A honlap az új címen. Ebből látja, hogy
-a folyamat nem állt meg.
+Alatta (telefonon) vagy mellette (gépen) a **„Részletek időponttal”** lista mutatja az
+összes lépést, a kész lépések mellett az időponttal: Kifizetve (díj nélküli, csomag-része
+címnél: A csomag része) · Megvásároltuk a nevet · Bejegyzés a .hu nyilvántartásba (csak
+`.hu` névnél) · A cím a honlapjára mutat · Biztonsági tanúsítvány · A honlap az új címen.
+Ebből látja, hogy a folyamat nem állt meg.
 
 Két e-mailt kap tőlünk: egyet a név megvásárlásakor („Megvásároltuk a webcímét”, benne
 azzal, mi jön még és addig hol él a honlapja), és egyet, amikor a honlap már az új címen él.
