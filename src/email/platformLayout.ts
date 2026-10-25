@@ -154,7 +154,7 @@ export function loginAddressLabel(loginUrl: string): string {
 }
 
 /**
- * THE login sentence — „Belépés: citoviso.com/login” (owner decision 2026-10-21, ADR-XXXX "A"):
+ * THE login sentence — „Belépés: citoviso.com/login” (owner decision 2026-10-21, ADR-0402 "A"):
  * after a live purchase the owner could not tell where to log in, because every place worded it
  * differently („Belépés a szerkesztő felületre:”, „Belépés citoviso.com/login”, a footer line, a
  * details row). Every letter, page and help text builds it from here, so it can only ever say

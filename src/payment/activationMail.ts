@@ -1,5 +1,5 @@
 // Sends „Megrendelését aktiváltuk” (email/activationEmail.ts) once per activated order —
-// a new purchase AND a free trial continued into one (ADR-XXXX "A").
+// a new purchase AND a free trial continued into one (ADR-0402 "A").
 //
 // For a NEW account this letter is also the login letter: activate() only issues the login,
 // and the one-time password link travels here (one letter, not a credentials letter next to

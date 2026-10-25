@@ -56,7 +56,7 @@ Bővíti: `../proba-admin-sav/`, `../proba-levelek/`, `../proba-torles-level/`, 
 
 ## Eltérések a vázlattól (szándékosak)
 
-- *Módosítva 2026-10-21 (ADR-XXXX „A”, tulaj: „A kapott levelekben sem egyértelmű”):* a próba-folytatás
+- *Módosítva 2026-10-21 (ADR-0402 „A”, tulaj: „A kapott levelekben sem egyértelmű”):* a próba-folytatás
   fizetése után a vásárló a „Megrendelését aktiváltuk” levelet kapja (cím most · saját webcím állapota ·
   „Belépés: citoviso.com/login · Felhasználónév” · „A jelszava nem változott.” · következő terhelés) —
   addig belépés-levél nem ment, mert a fiók a próba óta megvolt. A fizetés utáni lap „A fiókja változatlan”

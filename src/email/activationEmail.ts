@@ -1,5 +1,5 @@
 // „Megrendelését aktiváltuk” — the ONE letter that tells a buyer, right after the payment went
-// through, everything they need in one place (owner decision 2026-10-21, ADR-XXXX "A").
+// through, everything they need in one place (owner decision 2026-10-21, ADR-0402 "A").
 //
 // WHAT WAS MEASURED (production, 2026-10-21, a trial continued into a purchase): the buyer got
 // the invoice (the site address in its body, the login only in its footer) and a domain letter.
@@ -31,7 +31,7 @@ export interface OwnerDomainView {
 }
 
 /**
- * The domain sentence — ONE wording for the letter and the confirmation page (ADR-XXXX ②).
+ * The domain sentence — ONE wording for the letter and the confirmation page (ADR-0402 ②).
  * Plain text; the caller escapes it.
  */
 export function domainStateText(lang: string | undefined, d: OwnerDomainView): string {

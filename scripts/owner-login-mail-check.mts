@@ -21,7 +21,7 @@
 //      used-link page's first button is the login;
 //   6. a PAUSED tenant site (lapsed trial, freeze) still routes /admin and /login to the login and
 //      carries the owner-login line;
-//   7. ADR-XXXX "A" (owner, production purchase 2026-10-21: „Semmi nincs, ahol be tudnék lépni”):
+//   7. ADR-0402 "A" (owner, production purchase 2026-10-21: „Semmi nincs, ahol be tudnék lépni”):
 //      ONE sentence — every login line is loginSentence() („Belépés: citoviso.com/login”); the
 //      „Megrendelését aktiváltuk” letter carries ① the site address now ② the own-domain state
 //      ③ „Belépés: … · Felhasználónév: …” (password link ONLY for a new account) ④ the next charge,
@@ -181,7 +181,7 @@ const seg = susp >= 0 ? pub.slice(susp, pub.indexOf("return;", pub.indexOf("susp
 ok(/pathname === "\/admin" \|\| pathname === "\/login"[\s\S]*?TENANT_LOGIN_URL[\s\S]*?statusCode = 503/.test(seg), "6. szünetelő oldal: /admin és /login a belépésre visz, nem a 503-ba");
 ok(seg.includes("injectOwnerLogin(await suspendedPage("), "6. szünetelő oldal: a tulajdonosi belépés-sor rajta van");
 
-// ── 7. one sentence + the activation letter (ADR-XXXX "A") ────────────────────
+// ── 7. one sentence + the activation letter (ADR-0402 "A") ────────────────────
 ok(LINE === "Belépés:" && layout.loginSentence("hu").text === `Belépés: ${LOGIN}`, "7. egy mondat: loginSentence() = „Belépés: citoviso.com/login”", LINE);
 const plSrc = read("src/email/platformLayout.ts");
 ok(!plSrc.includes('"Belépés a szerkesztő felületre:"'), "7. a régi „Belépés a szerkesztő felületre:” felirat nincs többé a keretben");

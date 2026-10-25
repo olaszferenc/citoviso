@@ -3262,7 +3262,7 @@ export function payResultPage(
      * of „Elküldtük a belépési adatait”, and offers no password link.
      */
     accountExisted?: boolean | null;
-    /** ADR-XXXX "A" ②: the own domain's state (the activation letter's sentence). */
+    /** ADR-0402 "A" ②: the own domain's state (the activation letter's sentence). */
     domain?: OwnerDomainView | null;
   },
 ): string {
@@ -3481,7 +3481,7 @@ export function payResultPage(
   const loginLine = loginHref
     ? payRow(T(lang, "Belépés"), `<a href="${esc(loginHref)}">${esc(loginLabel!)}</a>`)
     : payRow(T(lang, "Belépés"), T(lang, "A belépés pontos címét az e-mailben küldjük el."));
-  // ADR-XXXX "A" ②: what happens to the ordered own domain — the activation letter's sentence.
+  // ADR-0402 "A" ②: what happens to the ordered own domain — the activation letter's sentence.
   const domainNote = info?.domain
     ? `<div class="pd-note" data-pay-domain>${esc(domainStateText(lang, info.domain))}</div>`
     : "";

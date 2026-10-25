@@ -1,4 +1,4 @@
-## ADR-XXXX — Belépés: egy hely, egy mondat, a saját címen is
+## ADR-0402 — Belépés: egy hely, egy mondat, a saját címen is
 
 **Dátum:** 2026-10-21 · **Státusz:** elfogadva (tulajdonosi döntés: „A + B, mindkettő”) · **Érinti:** ADR-0023 (tenant-belépés), ADR-0041 (slug → saját domain 301), ADR-0071 (domain-beszerzés), ADR-0303 (jelszó-link), ADR-0344 (próba-folytatás)
 

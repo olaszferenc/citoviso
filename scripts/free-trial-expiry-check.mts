@@ -684,7 +684,7 @@ try {
   check("a fizetés aktivál", paid.ok && paid.activated === true, JSON.stringify(paid));
   const siteAfter = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
   check("a site újra LIVE", siteAfter.status === "live", siteAfter.status);
-  // ADR-XXXX "A" (owner, 2026-10-21): a continued trial got NO letter saying where to log in.
+  // ADR-0402 "A" (owner, 2026-10-21): a continued trial got NO letter saying where to log in.
   const actMail = await db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
     .where("kind", "=", "credentials").where("related_kind", "=", "order_intent").execute();
   check("„Megrendelését aktiváltuk” levél a folytatásra: pontosan 1, belépés + felhasználónév, link nélkül (a fiók megvolt)",

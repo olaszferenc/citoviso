@@ -612,7 +612,7 @@ export async function applyWebhookResult(
   // citoviso_registered). Now that the site is live, register + move it in. A no-op
   // (returns null) for citoviso_sub / own orders.
   if (activated) fireDomainProvisioning(payment.order_intent_id);
-  // ADR-XXXX "A": „Megrendelését aktiváltuk” — site address, own-domain state, login and the
+  // ADR-0402 "A": „Megrendelését aktiváltuk” — site address, own-domain state, login and the
   // next charge in ONE letter; after the subscription (the renewal figure needs it).
   if (activated) await sendActivationMail(payment.order_intent_id, payment.id, renewalPreview);
   return { ok: true, activated };
@@ -1973,7 +1973,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
           .select("display_name")
           .where("id", "=", conv.tenantId)
           .executeTakeFirst();
-        // ADR-XXXX "A": the login only — its password link travels in the ONE activation
+        // ADR-0402 "A": the login only — its password link travels in the ONE activation
         // letter (activationMail.ts), sent after the subscription exists, not in a second letter.
         const login = await issueTenantLogin(
           conv.tenantId,
@@ -2050,7 +2050,7 @@ export interface ActivationSummary {
     readonly period: "monthly" | "annual";
   } | null;
   /**
-   * ADR-XXXX "A" ②: the own domain's state — the confirmation says the same sentence as the
+   * ADR-0402 "A" ②: the own domain's state — the confirmation says the same sentence as the
    * activation letter (domainStateText). Null = none ordered.
    */
   readonly domain: OwnerDomainView | null;
