@@ -997,14 +997,71 @@ function run(opts: Options): number {
     .split("\n")
     .map((l) => l.replace(/^[*+]?\s*/, "").trim())
     .filter((l) => /^wt\/distill\d{8}$/.test(l) && l !== branch);
-  if (others.length > 0) {
+  // ⭐ The superseded branches are REMOVED, not just reported (2026-10-22). Measured: the
+  // message above was printed every week and nobody ran it, so one stale worktree per week
+  // piled up under ~/wt (0922, 0927, 1004, 1011 next to 1019) and showed up as "unlanded
+  // work" in every cleanup. Removal is PROVEN, not assumed: every review the old branch
+  // carries (its _inbox/applied/ files, committed or left staged by a failed commit) must
+  // also be in THIS branch, and its worktree may hold nothing but distiller output.
+  const newApplied = new Set(fs.readdirSync(appliedDir).filter((f) => f.endsWith(".md")));
+  const kept: string[] = [];
+  for (const old of others) {
+    const { keep, dir } = supersededBy(opts.repo, old, newApplied);
+    if (keep) {
+      kept.push(old);
+      process.stdout.write(`  ⚠️ ${old} MEGTARTVA: ${keep}\n`);
+      continue;
+    }
+    if (dir) git(["worktree", "remove", "--force", dir], opts.repo);
+    git(["branch", "-D", old], opts.repo);
+    process.stdout.write(`  🧹 ${old} törölve — minden tétele ebben az ágban (${branch}) is benne van\n`);
+  }
+  if (kept.length > 0) {
     process.stdout.write(
-      `ℹ️  Van ${others.length} korábbi, el nem fogadott desztilláló-ág: ${others.join(", ")}\n` +
-        `   Ezek tételei ebben az ágban IS benne vannak (semmi nem landolt), tehát a ${branch} a\n` +
-        `   teljes kép — a régiek nyugodtan törölhetők: git -C ${opts.repo} branch -D ${others.join(" ")}\n\n`,
+      `ℹ️  Van ${kept.length} korábbi, el nem fogadott desztilláló-ág, amit NEM töröltem: ${kept.join(", ")}\n\n`,
     );
   }
   return 0;
+}
+
+// `keep` is null when `old` is provably contained in the new branch (safe to delete),
+// otherwise the reason to keep it; `dir` is its worktree, if it has one.
+function supersededBy(
+  repo: string,
+  old: string,
+  newApplied: Set<string>,
+): { keep: string | null; dir: string | null } {
+  const run = (args: string[], cwd: string) =>
+    execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+  const appliedRel = "_planning/DOMAIN/_inbox/applied";
+  const oldApplied = new Set(
+    run(["ls-tree", "--name-only", `${old}:${appliedRel}`], repo)
+      .split("\n")
+      .filter((f) => f.endsWith(".md")),
+  );
+  const dir =
+    run(["worktree", "list", "--porcelain"], repo)
+    .split("\n\n")
+    .map((blk) => ({
+      dir: /^worktree (.+)$/m.exec(blk)?.[1] ?? "",
+      br: /^branch refs\/heads\/(.+)$/m.exec(blk)?.[1] ?? "",
+    }))
+    .find((w) => w.br === old)?.dir ?? null;
+  if (dir) {
+    for (const line of run(["status", "--porcelain", "--untracked-files=all"], dir).split("\n")) {
+      if (!line.trim()) continue;
+      const f = line.slice(3);
+      if (["node_modules", ".env", "sites"].includes(f)) continue;
+      if (!f.startsWith("_planning/DOMAIN/")) return { keep: `a fában nem-desztilláló változás van: ${f}`, dir };
+      const m = f.startsWith(`${appliedRel}/`) ? f.slice(appliedRel.length + 1) : null;
+      if (m && m.endsWith(".md")) oldApplied.add(m);
+    }
+  }
+  const missing = Array.from(oldApplied).filter((f) => !newApplied.has(f));
+  return {
+    keep: missing.length > 0 ? `${missing.length} review csak abban van: ${missing.join(", ")}` : null,
+    dir,
+  };
 }
 
 function renderPending(
