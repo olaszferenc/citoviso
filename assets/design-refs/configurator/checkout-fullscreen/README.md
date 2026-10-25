@@ -94,6 +94,11 @@ vágódott el. ④ a visszaigazolás hallgatott a tartós kötelezettségről. �
     `config.publicSiteUrl` adja; ha az üres, a lap NEM írhat ki fél útvonalat —
     ilyenkor a szöveg az e-mailre mutat. (Mérve: a dev visszaigazoláson
     „Belépés: /login” állt, ami a vevőnek semmit nem mond.)
+    *Módosítva 2026-10-21 (ADR-XXXX „A”):* EGY mondat mindenhol — „Belépés: citoviso.com/login”
+    (`loginSentence()`, `src/email/platformLayout.ts`); a levelek záró sora is ezt mondja (a régi
+    „Belépés a szerkesztő felületre:” kivezetve), és a fizetés után minden vásárló (új rendelés ÉS
+    próba-folytatás) megkapja a „Megrendelését aktiváltuk” levelet: cím most · saját webcím állapota ·
+    belépés + felhasználónév · következő terhelés.
 
 13. **Mindkét méret kötelező, és két KÜLÖN tervezői döntés.** `@container` query
     (NEM `@media`), a `plan.html` méret-váltója a VIEWPORTBÓL indul.

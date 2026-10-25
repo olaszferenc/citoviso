@@ -684,6 +684,14 @@ try {
   check("a fizetés aktivál", paid.ok && paid.activated === true, JSON.stringify(paid));
   const siteAfter = await db.selectFrom("site").select("status").where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
   check("a site újra LIVE", siteAfter.status === "live", siteAfter.status);
+  // ADR-XXXX "A" (owner, 2026-10-21): a continued trial got NO letter saying where to log in.
+  const actMail = await db.selectFrom("tenant_message").select(["subject", "body_text"]).where("tenant_id", "=", tenantId)
+    .where("kind", "=", "credentials").where("related_kind", "=", "order_intent").execute();
+  check("„Megrendelését aktiváltuk” levél a folytatásra: pontosan 1, belépés + felhasználónév, link nélkül (a fiók megvolt)",
+    actMail.length === 1 && actMail[0]!.subject!.startsWith("Megrendelését aktiváltuk") &&
+      /Belépés: \S+\/login · Felhasználónév: \S+/.test(actMail[0]!.body_text) && actMail[0]!.body_text.includes("A jelszava nem változott.") &&
+      !actMail[0]!.body_text.includes("/login/jelszo/"),
+    JSON.stringify(actMail.map((m) => m.body_text)));
   const contPaid = await get(`/p/${a.token}/folytatas`);
   check("fizetés után a /folytatas már nem pénztár → vissza a /p/<t>-re", contPaid.status >= 300 && contPaid.status < 400, String(contPaid.status));
   const plainPaid = await (await get(`/p/${a.token}`)).text();

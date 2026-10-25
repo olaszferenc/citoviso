@@ -53,6 +53,9 @@ export const I18N_SOURCES = [
   // contact card, step indicator) — the GUEST reads it in the site's language.
   "src/email/bookingLayout.ts",
   "src/email/loginEmail.ts",
+  // ADR-XXXX "A": „Megrendelését aktiváltuk” — the buyer reads it in the site language.
+  "src/email/activationEmail.ts",
+  "src/payment/activationMail.ts",
   // ADR-0344 C2: the free-trial T−3/T−1 letter (owner-approved wording).
   "src/email/trialEmail.ts",
   // ADR-0348: the retroactive "14 nap ingyen" letter + its accent-free SMS (owner-approved C).

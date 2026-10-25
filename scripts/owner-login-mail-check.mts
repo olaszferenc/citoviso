@@ -20,7 +20,12 @@
 //   5. the password-link pages: the success page and the used-link page name the address, the
 //      used-link page's first button is the login;
 //   6. a PAUSED tenant site (lapsed trial, freeze) still routes /admin and /login to the login and
-//      carries the owner-login line.
+//      carries the owner-login line;
+//   7. ADR-XXXX "A" (owner, production purchase 2026-10-21: „Semmi nincs, ahol be tudnék lépni”):
+//      ONE sentence — every login line is loginSentence() („Belépés: citoviso.com/login”); the
+//      „Megrendelését aktiváltuk” letter carries ① the site address now ② the own-domain state
+//      ③ „Belépés: … · Felhasználónév: …” (password link ONLY for a new account) ④ the next charge,
+//      and the activation path sends it (no separate credentials letter after a paid order).
 //
 // Run:  npx tsx scripts/owner-login-mail-check.mts
 //       npx tsx scripts/owner-login-mail-check.mts --self-test   (must go RED: a letter built
@@ -40,7 +45,7 @@ const read = (p: string): string => readFileSync(path.resolve(process.cwd(), p),
 const layout = await import("../src/email/platformLayout.js");
 const LOGIN = layout.tenantLoginUrl("hu");
 const LABEL = layout.loginAddressLabel(LOGIN);
-const LINE = "Belépés a szerkesztő felületre:";
+const LINE = layout.loginSentence("hu").label;
 
 /** The one rule every owner letter must pass. */
 function hasLoginLine(m: { html?: string; text: string }): boolean {
@@ -82,7 +87,7 @@ ok(hasLoginLine(plain), "1. platformMail: a záró belépés-sor alapból ott va
 const en = layout.platformMail({ to: "x@example.invalid", subject: "s", text: "t", heading: "h", blocks: [], lang: "en" });
 ok((en.html ?? "").includes(`${LOGIN}?lang=en`), "1. nem magyar olvasó: a link ?lang=-et visz (a /login-nak nincs tenant-kontextusa)");
 
-const ALLOW_OFF: Record<string, number> = { "src/email/loginEmail.ts": 2, "src/email/orderEmail.ts": 2 };
+const ALLOW_OFF: Record<string, number> = { "src/email/activationEmail.ts": 1, "src/email/loginEmail.ts": 2, "src/email/orderEmail.ts": 2 };
 const offFound: Record<string, number> = {};
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -93,7 +98,7 @@ for (const f of walk("src")) {
   const n = (read(f).match(/ownerLogin:\s*false/g) ?? []).length;
   if (n) offFound[f] = n;
 }
-ok(JSON.stringify(offFound) === JSON.stringify(ALLOW_OFF), "1. `ownerLogin: false` csak az engedélyezett levelekben (belépő-levelek, fizetés előtti rendelés)", JSON.stringify(offFound));
+ok(JSON.stringify(offFound) === JSON.stringify(ALLOW_OFF), "1. `ownerLogin: false` csak az engedélyezett levelekben (belépő-levelek, aktiváló levél, fizetés előtti rendelés)", JSON.stringify(offFound));
 
 // ── 2. the real owner-letter builders ─────────────────────────────────────────
 const trial = await import("../src/email/trialEmail.js");
@@ -175,6 +180,37 @@ const susp = pub.indexOf('if (site.status === "suspended") {');
 const seg = susp >= 0 ? pub.slice(susp, pub.indexOf("return;", pub.indexOf("suspendedPage(site.tenantId", susp)) + 7) : "";
 ok(/pathname === "\/admin" \|\| pathname === "\/login"[\s\S]*?TENANT_LOGIN_URL[\s\S]*?statusCode = 503/.test(seg), "6. szünetelő oldal: /admin és /login a belépésre visz, nem a 503-ba");
 ok(seg.includes("injectOwnerLogin(await suspendedPage("), "6. szünetelő oldal: a tulajdonosi belépés-sor rajta van");
+
+// ── 7. one sentence + the activation letter (ADR-XXXX "A") ────────────────────
+ok(LINE === "Belépés:" && layout.loginSentence("hu").text === `Belépés: ${LOGIN}`, "7. egy mondat: loginSentence() = „Belépés: citoviso.com/login”", LINE);
+const plSrc = read("src/email/platformLayout.ts");
+ok(!plSrc.includes('"Belépés a szerkesztő felületre:"'), "7. a régi „Belépés a szerkesztő felületre:” felirat nincs többé a keretben");
+const act = await import("../src/email/activationEmail.js");
+const base = {
+  to: "x@example.invalid", lang: "hu", siteName: "Napfény Vendégház", buyerName: "Kovács Anna", buyerIsPerson: true,
+  siteUrl: "https://napfeny.citoviso.com", username: "napfeny-vendeghaz",
+  renewal: { date: "2026-11-21", amount: 7000, period: "monthly" as const },
+};
+const actNew = act.buildActivationEmail({ ...base, domain: { domain: "napfeny.hu", live: false }, setPasswordUrl: SET });
+const actOld = act.buildActivationEmail({ ...base, domain: null, setPasswordUrl: null });
+const t1 = actNew.text;
+const at = (s: string): number => t1.indexOf(s);
+ok(actNew.subject === "Megrendelését aktiváltuk — Napfény Vendégház", "7. tárgy: „Megrendelését aktiváltuk — {site}”", actNew.subject);
+ok(at("https://napfeny.citoviso.com") >= 0 && at("napfeny.hu: beszerzés alatt") > at("https://napfeny.citoviso.com") &&
+  at(`Belépés: ${LOGIN} · Felhasználónév: napfeny-vendeghaz`) > at("napfeny.hu: beszerzés alatt") &&
+  at("Következő terhelés:") > at("Belépés:"), "7. aktiváló levél: ① cím → ② domain → ③ belépés + felhasználónév → ④ következő terhelés", t1);
+ok(t1.includes("7 000 Ft") && t1.includes("2026. 11. 21."), "7. aktiváló levél: a következő terhelés összege és napja", t1);
+ok(t1.includes(SET) && (actNew.html ?? "").includes(`href="${SET}"`), "7. új fiók: jelszó-beállító link a levélben");
+ok(!actOld.text.includes("/login/jelszo/") && actOld.text.includes("A jelszava nem változott.") && !actOld.text.includes("beszerzés alatt"),
+  "7. meglévő fiók: nincs link, „A jelszava nem változott.”; domain nélkül a sor elmarad", actOld.text);
+const actLive = act.buildActivationEmail({ ...base, siteUrl: "https://napfeny.hu", domain: { domain: "napfeny.hu", live: true }, setPasswordUrl: null });
+ok(actLive.text.includes("A honlapja ezen a címen él: napfeny.hu"), "7. élő saját domain: a cím, nem a „beszerzés alatt”");
+ok(!actNew.text.trimEnd().endsWith(`Belépés: ${LOGIN}`) && (actNew.text.match(/Belépés: /g) ?? []).length === 1, "7. aktiváló levél: a belépés EGYSZER szerepel (a záró sor ki)");
+const svc = read("src/payment/service.ts");
+ok(/if \(activated\) await sendActivationMail\(payment\.order_intent_id/.test(svc) && !svc.includes("issueAndSendTenantLogin("),
+  "7. a fizetés-aktiválás az aktiváló levelet küldi (nem külön belépő-levelet)");
+const views7 = read("src/console/views.ts");
+ok(views7.includes("domainStateText(lang, info.domain)"), "7. a fizetés utáni oldal ugyanazt a domain-mondatot mondja");
 
 console.log(failed ? `\n✗ owner-login-mail-check: ${failed} hiba` : "\n✓ owner-login-mail-check: zöld");
 process.exit(failed ? 1 : 0);

@@ -4,6 +4,7 @@
 
 import { recipientKey } from "../email/address.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
+import { domainStateText, type OwnerDomainView } from "../email/activationEmail.js";
 import { APP_TZ } from "../text/zoneTime.js";
 import { nowInLabel, zoneLabel, zonePickerHtml } from "../tenant/zonePicker.js";
 import type {
@@ -3261,6 +3262,8 @@ export function payResultPage(
      * of „Elküldtük a belépési adatait”, and offers no password link.
      */
     accountExisted?: boolean | null;
+    /** ADR-XXXX "A" ②: the own domain's state (the activation letter's sentence). */
+    domain?: OwnerDomainView | null;
   },
 ): string {
   const lang = consoleLang();
@@ -3478,6 +3481,10 @@ export function payResultPage(
   const loginLine = loginHref
     ? payRow(T(lang, "Belépés"), `<a href="${esc(loginHref)}">${esc(loginLabel!)}</a>`)
     : payRow(T(lang, "Belépés"), T(lang, "A belépés pontos címét az e-mailben küldjük el."));
+  // ADR-XXXX "A" ②: what happens to the ordered own domain — the activation letter's sentence.
+  const domainNote = info?.domain
+    ? `<div class="pd-note" data-pay-domain>${esc(domainStateText(lang, info.domain))}</div>`
+    : "";
   // ⑤ The address as an OBJECT: copyable, openable, and it survives a long URL.
   // With no live URL yet we say that instead of printing half a promise.
   const left = site
@@ -3491,8 +3498,8 @@ export function payResultPage(
         <span class="pd-u" id="paySiteUrl">${esc(site.replace(/^https?:\/\//, "").replace(/\/+$/, ""))}</span>
         <button type="button" class="pd-ghost" data-copy-target="paySiteUrl">${T(lang, "Cím másolása")}</button>
         <a class="pd-ghost" href="${esc(site)}" target="_blank" rel="noopener">${T(lang, "Megnyitom")} ↗</a>
-      </div>`
-    : `<div class="pd-note">${T(lang, "Az oldala elkészült. Néhány percen belül elérhető lesz — a pontos címet e-mailben küldjük.")}</div>`;
+      </div>${domainNote}`
+    : `${domainNote}<div class="pd-note">${T(lang, "Az oldala elkészült. Néhány percen belül elérhető lesz — a pontos címet e-mailben küldjük.")}</div>`;
   return paySplitLayout(lang, {
     title: T(lang, "Sikeres fizetés — az oldala él"),
     headline: site

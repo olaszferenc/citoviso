@@ -154,27 +154,48 @@ export function loginAddressLabel(loginUrl: string): string {
 }
 
 /**
+ * THE login sentence — „Belépés: citoviso.com/login” (owner decision 2026-10-21, ADR-XXXX "A"):
+ * after a live purchase the owner could not tell where to log in, because every place worded it
+ * differently („Belépés a szerkesztő felületre:”, „Belépés citoviso.com/login”, a footer line, a
+ * details row). Every letter, page and help text builds it from here, so it can only ever say
+ * one thing and point at one address (TENANT_LOGIN_URL's host, with the ?lang= hint).
+ */
+export function loginSentence(lang: string | undefined): {
+  /** „Belépés:” — the label, with its colon. */
+  readonly label: string;
+  /** The absolute login URL (tenantLoginUrl). */
+  readonly url: string;
+  /** „citoviso.com/login” — no scheme, no query. */
+  readonly address: string;
+  /** Plain text: „Belépés: https://citoviso.com/login”. */
+  readonly text: string;
+} {
+  const url = tenantLoginUrl(lang);
+  const label = T(lang, "Belépés:");
+  return { label, url, address: loginAddressLabel(url), text: `${label} ${url}` };
+}
+
+/**
  * Owner finding 2026-10-15 ([TESZT] Matróz): an owner who closed the admin window did not know
  * where to log in again. Every letter to an account holder therefore ends with the login address,
  * just above the footer — a reader who finds ANY of our letters finds the way back.
  */
 export function ownerLoginLine(lang: string | undefined): { readonly text: string; readonly html: string } {
-  const url = tenantLoginUrl(lang);
-  const label = T(lang, "Belépés a szerkesztő felületre:");
+  const l = loginSentence(lang);
   return {
-    text: `${label} ${url}`,
+    text: l.text,
     html:
-      `<p style="margin:24px 0 0;font-size:14px;color:${MUTED}">${esc(label)} ` +
-      `<a href="${esc(url)}" style="color:${LINK};font-weight:600;text-decoration:none">${esc(loginAddressLabel(url))}</a></p>`,
+      `<p style="margin:24px 0 0;font-size:14px;color:${MUTED}">${esc(l.label)} ` +
+      `<a href="${esc(l.url)}" style="color:${LINK};font-weight:600;text-decoration:none">${esc(l.address)}</a></p>`,
   };
 }
 
 function ownerLoginHtml(lang: string | undefined): string {
-  const url = tenantLoginUrl(lang);
+  const l = loginSentence(lang);
   return (
     `<tr><td class="m-pad" style="padding:0 32px 20px;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED}">` +
-    `${esc(T(lang, "Belépés a szerkesztő felületre:"))} ` +
-    `<a href="${esc(url)}" style="color:${LINK};font-weight:600;text-decoration:none">${esc(loginAddressLabel(url))}</a>` +
+    `${esc(l.label)} ` +
+    `<a href="${esc(l.url)}" style="color:${LINK};font-weight:600;text-decoration:none">${esc(l.address)}</a>` +
     `</td></tr>`
   );
 }
@@ -300,7 +321,7 @@ export interface PlatformMailInput {
   readonly footerReason?: FooterReason;
   readonly attachments?: readonly EmailAttachment[];
   /**
-   * The closing "Belépés a szerkesztő felületre: citoviso.com/login" line (default ON). Off ONLY
+   * The closing "Belépés: citoviso.com/login" line (loginSentence, default ON). Off ONLY
    * where the reader has no login yet (an order before payment) or the letter already names the
    * address in its details box (the login letters) — owner-login-mail-check holds the list.
    */
@@ -312,7 +333,7 @@ export function platformMail(input: PlatformMailInput): EmailMessage {
   const { to, subject, lang, heading, greeting, blocks, siteName, kicker, footerReason } = input;
   const ownerLogin = input.ownerLogin ?? true;
   const text = ownerLogin
-    ? `${input.text.replace(/\s+$/, "")}\n\n${T(lang, "Belépés a szerkesztő felületre:")} ${tenantLoginUrl(lang)}\n`
+    ? `${input.text.replace(/\s+$/, "")}\n\n${loginSentence(lang).text}\n`
     : input.text;
   const hasLogo = existsSync(LOGO_PATH);
 

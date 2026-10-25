@@ -15,7 +15,9 @@ import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
 import { ownedBlocksInitialPurchase, preTrialOrderOfContinuableTrial } from "../conversion/owned.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
-import { issueAndSendTenantLogin } from "../tenant/credentials.js";
+import { issueTenantLogin } from "../tenant/credentials.js";
+import { ownerDomainState, sendActivationMail } from "./activationMail.js";
+import type { OwnerDomainView } from "../email/activationEmail.js";
 import { tenantSiteUrl } from "../domains.js";
 import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
@@ -610,6 +612,9 @@ export async function applyWebhookResult(
   // citoviso_registered). Now that the site is live, register + move it in. A no-op
   // (returns null) for citoviso_sub / own orders.
   if (activated) fireDomainProvisioning(payment.order_intent_id);
+  // ADR-XXXX "A": „Megrendelését aktiváltuk” — site address, own-domain state, login and the
+  // next charge in ONE letter; after the subscription (the renewal figure needs it).
+  if (activated) await sendActivationMail(payment.order_intent_id, payment.id, renewalPreview);
   return { ok: true, activated };
 }
 
@@ -1945,9 +1950,9 @@ async function activate(orderIntentId: string): Promise<boolean> {
       console.error(`[payment] partner-rögzítés hiba (${orderIntentId}):`, err);
     }
 
-    // OWNER ACCESS (the last A–Z step): issue the tenant login and e-mail the
-    // credentials, so the buyer can sign in and edit their text/photos right after
-    // paying. Idempotent per tenant (issueTenantLogin keeps one owner user).
+    // OWNER ACCESS (the last A–Z step): issue the tenant login, so the buyer can sign
+    // in and edit their text/photos right after paying (the activation letter carries
+    // the username and the password link). Idempotent per tenant (issueTenantLogin keeps one owner user).
     // Best-effort: a mail/credential failure must never un-do a paid activation —
     // the operator can re-issue from the console.
     try {
@@ -1968,14 +1973,15 @@ async function activate(orderIntentId: string): Promise<boolean> {
           .select("display_name")
           .where("id", "=", conv.tenantId)
           .executeTakeFirst();
-        const login = await issueAndSendTenantLogin(
+        // ADR-XXXX "A": the login only — its password link travels in the ONE activation
+        // letter (activationMail.ts), sent after the subscription exists, not in a second letter.
+        const login = await issueTenantLogin(
           conv.tenantId,
           tenantRow?.display_name ?? "oldalam",
           loginEmail,
-          { name: oi.buyerName, isPerson: oi.buyerType === "individual" },
         );
         console.log(
-          `[payment] tenant-belépés kiadva · ${login.username} → ${login.contactEmail}`,
+          `[payment] tenant-belépés kiadva · ${login.username} → ${login.contactEmail} (a jelszó-link az aktiváló levélben megy)`,
         );
       } else if (!existingLogin) {
         console.warn(
@@ -2043,6 +2049,11 @@ export interface ActivationSummary {
     readonly amount: number;
     readonly period: "monthly" | "annual";
   } | null;
+  /**
+   * ADR-XXXX "A" ②: the own domain's state — the confirmation says the same sentence as the
+   * activation letter (domainStateText). Null = none ordered.
+   */
+  readonly domain: OwnerDomainView | null;
 }
 
 /**
@@ -2108,12 +2119,14 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
       "payment.amount as amount",
       "payment.created_at as paymentCreatedAt",
       "tenant.id as tenantId",
+      "order_intent.id as orderIntentId",
     ])
     .where("payment.gateway_ref", "=", gatewayRef)
     .executeTakeFirst();
   if (!row) return null;
   return {
     renewal: row.tenantId ? await renewalPreview(row.tenantId) : null,
+    domain: row.tenantId ? await ownerDomainState(row.tenantId, row.orderIntentId).catch(() => null) : null,
     businessName: row.businessName,
     tenantId: row.tenantId ?? null,
     siteUrl:

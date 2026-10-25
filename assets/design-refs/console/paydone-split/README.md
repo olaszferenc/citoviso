@@ -41,6 +41,12 @@ a tulaj a **D**-t választotta.
    egy beírt px-érték. A fix 230 px a nyitó mondat közepén vágta el a lapot.
 5. **A cím OBJEKTUM, nem csupasz link:** kiírt cím + „Cím másolása" (valódi vágólap, a gomb
    visszajelez) + „Megnyitom ↗". Hosszú címnél sem törhet szét az elrendezés.
+   *Módosítva 2026-10-21 (ADR-XXXX „A”, tulaj: „overseer.hu ott hol? vagy citoviso-s honlapon?”):* ha
+   saját webcímet rendelt, a cím-sor alatt egy jegyzet mondja az állapotát — UGYANAZT a mondatot, mint a
+   „Megrendelését aktiváltuk” levél (`domainStateText`): beszerzés alatt (.hu: „… a magyar Nyilvántartó hagyja
+   jóvá, ez általában egy napon belül megtörténik …”, más végződés: „… a cím beállítása néhány perc …”; mindkettő:
+   „a mostani cím automatikusan átirányít; nincs teendője, levélben jelezzük.” — ugyanaz a tény, mint a
+   „Megvásároltuk a webcímét” levélé, ADR-0400) vagy él; nincs rendelt cím → elmarad.
 6. **Az összeg a jobb kártya fejlécében áll**, fölötte a „Sikeres fizetés" pill, alatta egy sor,
    ami megmondja, MI volt megvéve (tétel-név; ha nem tudjuk, nem találjuk ki).
 7. **A mai tartalmi kontraktus HIÁNYTALANUL megmarad** (`subscriptionBox`, checkout-fullscreen ⑪):

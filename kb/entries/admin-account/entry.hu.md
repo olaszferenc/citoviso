@@ -23,7 +23,8 @@ A kezelőfelületre mindig a **citoviso.com/login** címen lép be, a felhaszná
 Ezt a címet több helyen is megtalálja, ha elkeveredne:
 
 - a **Fiók** fülön, a **„Belépés címe”** mezőben (érdemes a böngésző könyvjelzői közé menteni);
-- minden levelünk alján, a „Belépés a szerkesztő felületre” sorban;
+- a fizetés után kapott „Megrendelését aktiváltuk” levélben, a **„Belépés”** sorban, a felhasználóneve fölött;
+- minden levelünk alján, a „Belépés:” sorban;
 - a saját honlapja legalján, a „Tulajdonosi belépés” linken;
 - ha a honlapja címe után ezt írja: **/admin** (például `pelda.citoviso.com/admin`), a belépő lapra jut.
 
@@ -38,12 +39,17 @@ Jelszót e-mailben nem küldünk. A megrendelés után két helyen állíthatja 
 
 1. **Rögtön a sikeres fizetés lapján.** Az „Állítsa be most a jelszavát” részben írja be kétszer az új
    jelszót, és koppintson a „Beállítom és belépek” gombra. Ez a lehetőség csak a fizetés utáni két órában él.
-2. **A „Belépési adatai” levélből.** A levélben a felhasználóneve, alatta a **„Belépés”** sorban a belépő cím, és egy **„Jelszó beállítása”** gomb áll.
+2. **A levélből.** Megrendeléskor a „Megrendelését aktiváltuk”, ingyenes próbánál a „Belépési adatai” levélben
+   külön sorban áll a **„Belépés”** (a belépő cím) és a **„Felhasználónév”**, alattuk egy **„Jelszó beállítása”** gomb.
    A gomb 7 napig érvényes, és egyszer használható. A megnyíló lapon írja be kétszer az új jelszót (legalább
    8 karakter), majd koppintson a **„Beállítom és belépek”** gombra.
 
 A beállítás után a rendszer azonnal beléptet. Biztonsági okból a korábban megnyitott belépések megszűnnek,
 más eszközön tehát újra be kell lépnie.
+
+**Ha ingyenes próbát folytatott:** a fiókja már megvan, ezért a „Megrendelését aktiváltuk” levélben nincs gomb,
+csak ennyi áll: „A jelszava nem változott.” Ugyanazzal a felhasználónévvel és jelszóval lép be a
+**citoviso.com/login** címen, mint a próba alatt. Ha elfelejtette, lásd lent: Elfelejtett jelszó.
 
 ## Elfelejtett jelszó
 
