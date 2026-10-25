@@ -587,7 +587,7 @@ export async function runDomainProvisioning(
       registrarRef = reg.registrarRef;
       await db
         .updateTable("site")
-        .set({ domain_registered_at: reg.registeredUntil ?? null })
+        .set({ domain_expires_at: reg.registeredUntil ?? null })
         .where("id", "=", p.siteId)
         .execute();
       await setStatus(p.id, p.siteId, "registered", { registrarRef, error: null });

@@ -692,6 +692,20 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
   return null;
 }
 
+/** ADR-XXXX: is this host (or its www.) the own domain of a site whose subscription ended? */
+async function isRetiredCustomDomain(req: http.IncomingMessage): Promise<boolean> {
+  const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
+  if (!host || host === PLATFORM_DOMAIN || host.endsWith(`.${PLATFORM_DOMAIN}`)) return false;
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  const row = await db
+    .selectFrom("site")
+    .select("id")
+    .where("status", "=", "deactivated")
+    .where(sql<string>`lower(site.custom_domain)`, "=", bare)
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
 /** Platform labels that are ours, not a tenant slug. */
 /** Elek ÚJ-A1: the refusal of an admin write that names another tenant's object. */
 const UNIT_NOT_FOUND = "Ez a szoba nem található.";
@@ -2511,6 +2525,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // Same POST rule as the alias: served in place, never turned into a GET.
   if (tenantSite?.viaWww && tenantSite.customDomain && (req.method === "GET" || req.method === "HEAD")) {
     res.writeHead(301, { Location: `https://${tenantSite.customDomain}${pathname}${url.search}` });
+    return void res.end();
+  }
+  // ADR-XXXX (owner 2026-10-25): the own domain of an ENDED subscription goes to our landing —
+  // not our marketing page served under the tenant's name (duplicate content), not a dead page.
+  // 302: the tenant may come back, and the name lapses by the renewal rule anyway.
+  if (!tenantSite && (req.method === "GET" || req.method === "HEAD") && (await isRetiredCustomDomain(req))) {
+    res.writeHead(302, { Location: `https://${PLATFORM_DOMAIN}/` });
     return void res.end();
   }
   // ⛔ EXCEPT the routes our mails link to (+ the assets their pages load): the mail

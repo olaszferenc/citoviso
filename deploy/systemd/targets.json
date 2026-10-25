@@ -6,6 +6,7 @@
     "citoviso-booking-maintenance.timer": { "target": "prod" },
     "citoviso-domain-resume.timer": { "target": "prod" },
     "citoviso-tenant-tls.timer": { "target": "prod" },
+    "citoviso-domain-renewal.timer": { "target": "prod" },
     "citoviso-traffic-mail.timer": { "target": "prod" },
     "citoviso-events.timer": { "target": "prod" },
     "citoviso-events-pending.timer": { "target": "prod" },

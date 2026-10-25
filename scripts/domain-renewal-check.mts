@@ -159,7 +159,7 @@ async function makeTenant(opts: {
       status: "live",
       custom_domain: opts.domain ?? null,
       custom_domain_status: (opts.domainStatus ?? (opts.domain ? "live" : "none")) as never,
-      domain_registered_at: opts.registeredAt ?? null,
+      domain_expires_at: opts.registeredAt ?? null,
     } as never)
     .execute();
   const start = new Date(opts.periodEnd);

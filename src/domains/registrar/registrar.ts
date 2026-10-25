@@ -8,7 +8,7 @@
 // DomainTakenError and we surface it, never buying the wrong thing.
 
 export interface DomainRegistration {
-  /** The registrar's reference (INWX order/roId) — kept for auto-renew + ownership transfer. */
+  /** The registrar's ORDER reference — the auto-renew switch is on the service, see getService(). */
   readonly registrarRef: string;
   /** End of the registration period (separate from the 24-month subscription commitment). */
   readonly registeredUntil: Date | null;
@@ -74,6 +74,30 @@ export interface RegistrarAdapter {
   register(domain: string, opts: { readonly years: number }): Promise<DomainRegistration>;
   /** Delegate the domain's authoritative nameservers to our DNS (Cloudflare). */
   setNameservers(domain: string, nameservers: readonly string[]): Promise<void>;
+  /**
+   * The name's service in OUR registrar account (ADR-XXXX): the real expiry and the
+   * auto-renew switch as the registrar holds them. null = the name is not (or no longer)
+   * in the account. Read-only.
+   */
+  getService(domain: string): Promise<DomainService | null>;
+  /**
+   * Flip the auto-renew switch on the service (renewal is paid from the account credit
+   * before expiry). Returns the service as the registrar answers AFTER the change; throws
+   * when the registrar refuses or does not confirm the wanted state.
+   */
+  setAutoRenew(serviceRef: string, on: boolean): Promise<DomainService>;
+  /** The account's credit in the registrar's currency (renewals are paid from it); null = unknown. */
+  accountCredit(): Promise<number | null>;
+}
+
+/** A registered name as our registrar account holds it (ADR-XXXX). */
+export interface DomainService {
+  readonly serviceRef: string;
+  readonly domain: string;
+  readonly expiresAt: Date | null;
+  readonly autoRenew: boolean;
+  /** The yearly renewal price in the registrar's currency (net); null = unknown. */
+  readonly renewalPrice: number | null;
 }
 
 /** The domain was registrable at pre-check but taken by the time we tried to buy it. */

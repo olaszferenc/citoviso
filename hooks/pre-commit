@@ -1996,6 +1996,14 @@ if [ -f scripts/domain-renewal-check.mts ] && \
   echo "[pre-commit] domain-renewal-check (ADR-0100: a domain-év díja a megújuláson)…"
   npx tsx scripts/domain-renewal-check.mts
 fi
+# ADR-XXXX: the NAME's renewal at the registrar — the auto-renew switch per the owner's rule
+# (paying: on · ended ≥90 days before expiry: off · ended <90: one more renewal, then off),
+# the daily prod timer, the stall-watch sweep, the landing redirect. No DB, no network.
+if [ -f scripts/domain-autorenew-check.mts ] && \
+   changed_files | grep -qE '^src/domains/(domainRenewal|registrar/)|^src/console/stallWatch\.ts|^src/server/public\.ts|^scripts/domain-(renewal-sync|autorenew-check)|^deploy/systemd/'; then
+  echo "[pre-commit] domain-autorenew-check (ADR-XXXX: a név megújítása a regisztrátornál)…"
+  npx tsx scripts/domain-autorenew-check.mts
+fi
 # Süti-hozzájárulás + Barion Pixel (2026-09-11). A Pixel az ELSŐ követő szkriptünk;
 # eddig az oldal mérten 0 sütit tett le. Az őr négy TILTÁST mér élő böngészőben
 # (hozzájárulás előtt/elutasítás után nincs Pixel és nincs süti; elfogadás után

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-sajat-domain-megujitasa-automatikus-megujitas.md) — A saját domain megújítása: a regisztrátor kapcsolója a szabály szerint, naponta
 - [ADR-0402](decisions/0402-belepes-egy-hely-egy-mondat-a-sajat-cimen-is.md) — Belépés: egy hely, egy mondat, a saját címen is
 - [ADR-0401](decisions/0401-a-hu-nyilvantarto-megerositeset-neo-kollega.md) — A .hu Nyilvántartó megerősítését Neo kolléga végzi, nem a tulaj és nem egy vak szkript (2026-10-22)
 - [ADR-0400](decisions/0400-domain-regisztracio-a-szal-vegig-a-mienk-a.md) — Domain-regisztráció: a szál VÉGIG a miénk — a rendeléstől az élesedésig a gép figyel, kérdez és szól (2026-10-22)

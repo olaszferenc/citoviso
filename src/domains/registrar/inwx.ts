@@ -10,7 +10,7 @@
 // The constructor throws on missing creds so REGISTRAR_PROVIDER=inwx can never
 // silently fall back to the mock (a misconfiguration, not a default).
 
-import type { DomainRegistration, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
+import type { DomainRegistration, DomainService, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
 
 export class InwxRegistrar implements RegistrarAdapter {
   readonly name = "inwx";
@@ -51,5 +51,17 @@ export class InwxRegistrar implements RegistrarAdapter {
 
   async setNameservers(_domain: string, _nameservers: readonly string[]): Promise<void> {
     throw new Error("InwxRegistrar.setNameservers: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
+  }
+
+  async getService(_domain: string): Promise<DomainService | null> {
+    throw new Error("InwxRegistrar.getService: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
+  }
+
+  async setAutoRenew(_serviceRef: string, _on: boolean): Promise<DomainService> {
+    throw new Error("InwxRegistrar.setAutoRenew: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
+  }
+
+  async accountCredit(): Promise<number | null> {
+    throw new Error("InwxRegistrar.accountCredit: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
   }
 }

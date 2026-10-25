@@ -3,7 +3,7 @@
 // whose label contains "taken" behaves as already-registered (so DomainTakenError
 // and the failed-path are testable); everything else "registers" deterministically.
 
-import type { DomainRegistration, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
+import type { DomainRegistration, DomainService, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
 import { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";
 
 export class MockRegistrar implements RegistrarAdapter {
@@ -64,7 +64,40 @@ export class MockRegistrar implements RegistrarAdapter {
     if (MockRegistrar.delayMs > 0) await new Promise((r) => setTimeout(r, MockRegistrar.delayMs));
     const until = new Date();
     until.setFullYear(until.getFullYear() + opts.years);
+    // Like the live registrar (measured 2026-10-25): a new name arrives with auto-renew OFF.
+    MockRegistrar.services.set(domain.toLowerCase(), {
+      serviceRef: `mock-svc:${domain.toLowerCase()}`,
+      domain: domain.toLowerCase(),
+      expiresAt: until,
+      autoRenew: false,
+      renewalPrice: 1990,
+    });
     return { registrarRef: `mock-reg:${domain}`, registeredUntil: until };
+  }
+
+  /** Test hooks (ADR-XXXX): the account's services by name, the credit, a refusing switch. */
+  static readonly services = new Map<string, DomainService>();
+  static credit: number | null = 10_000;
+  static refuseAutoRenew = false;
+
+  async getService(domain: string): Promise<DomainService | null> {
+    return MockRegistrar.services.get(domain.toLowerCase()) ?? null;
+  }
+
+  async setAutoRenew(serviceRef: string, on: boolean): Promise<DomainService> {
+    if (MockRegistrar.refuseAutoRenew) throw new Error(`Mock PUT service/${serviceRef}: HTTP 500 — refused`);
+    for (const [k, v] of MockRegistrar.services) {
+      if (v.serviceRef === serviceRef) {
+        const next = { ...v, autoRenew: on };
+        MockRegistrar.services.set(k, next);
+        return next;
+      }
+    }
+    throw new Error(`Mock PUT service/${serviceRef}: HTTP 404 — Service not found`);
+  }
+
+  async accountCredit(): Promise<number | null> {
+    return MockRegistrar.credit;
   }
 
   async setNameservers(_domain: string, _nameservers: readonly string[]): Promise<void> {

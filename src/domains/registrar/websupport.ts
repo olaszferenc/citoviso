@@ -10,11 +10,12 @@
 //     - GET /v1/user/{id}                  -> account + billing profiles (registrant source)
 //     - POST /v1/order/hu/validate/domain  -> {status, item:{price, priceWithVat, currency,
 //                                              period, periodLength}, errors:{domain:[…]}}
-//   NOT MEASURED YET (the account has 0 credit and unconfirmed ToS, so no purchase can run):
-//     - the POST /v1/user/{id}/order request body, and the PUT …/pay/byCredit follow-up.
-//   => register() therefore REFUSES to buy rather than guessing the order payload. The
-//      purchase path unblocks when the owner tops up credit + confirms ToS, and the order
-//      call is measured with ?dryRun=1 first.
+//   MEASURED by the purchases since (citoviso.hu 2026-09-06, overseer.hu 2026-10-21):
+//     - POST /v1/user/{id}/order (+ ?dryRun=1 pre-flight) and PUT …/order/{id}/pay/byCredit.
+//   MEASURED 2026-10-25 (ADR-XXXX, renewal):
+//     - GET /v1/user/{id}/service -> {items:[{id,name,expireTime,price,autoExtend…}]}; a new
+//       name comes with autoExtend=false. PUT /v1/user/{id}/service/{sid} {"autoExtend":true}
+//       is the only machine path to renewal (paid from credit before expiry).
 //
 // REGISTRANT GUARD (⛔ the 2026-09-06 lesson, feedback_approved_params_are_the_approval):
 // a domain profile CANNOT be passed to the API per order (validate/order reject
@@ -36,7 +37,7 @@
 // the hourly stall watch asks the same question so the gap is found BEFORE a customer pays.
 
 import { createHmac } from "node:crypto";
-import type { DomainRegistration, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
+import type { DomainRegistration, DomainService, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
 import { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";
 import { noteDeadKey } from "../../console/keyDeath.js";
 
@@ -54,6 +55,32 @@ interface ValidateResponse {
     readonly periodLength?: string | null;
   };
   readonly errors?: { readonly domain?: readonly string[] } | readonly unknown[];
+}
+
+/**
+ * One service of the account, exactly as MEASURED 2026-10-25 (GET /v1/user/3213041/service):
+ * {"id":16572522,"serviceName":"domain","status":"active","name":"overseer.hu",
+ *  "createTime":1792590894,"expireTime":1824147820,"price":1990,"autoExtend":false}
+ * The times are unix seconds; the price is the yearly net HUF.
+ */
+interface ServiceItem {
+  readonly id?: number | string;
+  readonly serviceName?: string;
+  readonly status?: string;
+  readonly name?: string;
+  readonly expireTime?: number | null;
+  readonly price?: number | null;
+  readonly autoExtend?: boolean | null;
+}
+
+function toDomainService(it: ServiceItem): DomainService {
+  return {
+    serviceRef: String(it.id),
+    domain: String(it.name ?? "").toLowerCase(),
+    expiresAt: typeof it.expireTime === "number" && it.expireTime > 0 ? new Date(it.expireTime * 1000) : null,
+    autoRenew: it.autoExtend === true,
+    renewalPrice: typeof it.price === "number" ? it.price : null,
+  };
 }
 
 export interface WebsupportRegistrarOptions {
@@ -345,7 +372,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
     if (opts.years !== 1) {
       throw new Error(
         `a registrar csak 1 ÉVES regisztrációt fogad, a kérés ${opts.years} év volt — ` +
-          `a(z) ${domain} vásárlása nem indult el (a megújítást a fordulónapos folyamat viszi)`,
+          `a(z) ${domain} vásárlása nem indult el (a megújítás évente, az automatikus megújítás kapcsolójával megy — ADR-XXXX)`,
       );
     }
 
@@ -413,5 +440,55 @@ export class WebsupportRegistrar implements RegistrarAdapter {
       );
     }
     // Already delegated there by virtue of being registered here — nothing to do.
+  }
+
+  /**
+   * ADR-XXXX: the name's service — real expiry + the auto-renew switch. MEASURED 2026-10-25:
+   * GET /v1/user/{id}/service?perPage=100 → {items:[ServiceItem…], pager:{page,pagesize,items}};
+   * a freshly bought name answers `autoExtend: false` (overseer.hu), so nothing renews it
+   * unless the switch is flipped.
+   */
+  async getService(domain: string): Promise<DomainService | null> {
+    const want = domain.trim().toLowerCase();
+    for (let page = 1; page <= 20; page++) {
+      const r = await this.#request<{ items?: ServiceItem[] }>(
+        "GET",
+        `/v1/user/${this.#userId}/service?perPage=100&page=${page}`,
+      );
+      const items = r.items ?? [];
+      const hit = items.find((it) => String(it.name ?? "").toLowerCase() === want && /domain/i.test(String(it.serviceName ?? "")));
+      if (hit) return toDomainService(hit);
+      if (items.length < 100) return null;
+    }
+    return null;
+  }
+
+  /**
+   * ADR-XXXX: PUT /v1/user/{id}/service/{serviceId} {"autoExtend": bool} — the documented
+   * (rest.websupport.sk/docs/v1.service) and only machine path to renewal: the registrar pays
+   * the renewal from the account credit before expiry. Success answers {status:"success",
+   * item}; a validation error answers 200 with status "error" — both are checked, and the
+   * returned item must carry the wanted state, or this throws.
+   */
+  async setAutoRenew(serviceRef: string, on: boolean): Promise<DomainService> {
+    const r = await this.#request<{ status?: string; item?: ServiceItem; errors?: unknown }>(
+      "PUT",
+      `/v1/user/${this.#userId}/service/${encodeURIComponent(serviceRef)}`,
+      { autoExtend: on },
+    );
+    if (r.status !== "success" || !r.item) {
+      throw new Error(`Websupport autoExtend=${on} a(z) ${serviceRef} szolgáltatáson elutasítva: ${JSON.stringify(r.errors ?? r).slice(0, 200)}`);
+    }
+    const s = toDomainService(r.item);
+    if (s.autoRenew !== on) {
+      throw new Error(`Websupport autoExtend=${on} a(z) ${serviceRef} szolgáltatáson: a válasz szerint az állás ${s.autoRenew} maradt`);
+    }
+    return s;
+  }
+
+  async accountCredit(): Promise<number | null> {
+    const user = await this.#request<{ credit?: number | string | null }>("GET", `/v1/user/${this.#userId}`);
+    const n = Number(user.credit);
+    return user.credit === null || user.credit === undefined || Number.isNaN(n) ? null : n;
   }
 }

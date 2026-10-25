@@ -828,10 +828,21 @@ export interface SiteTable {
     | "live"
     | "failed"
   >;
-  /** Registrar (INWX) reference for auto-renew + ownership transfer (ADR-0020 §4). */
+  /** The registrar's ORDER reference of the purchase (ADR-0020 §4). */
   registrar_ref: string | null;
-  /** End of the domain's registration period (separate from the 24-month commitment). */
-  domain_registered_at: Timestamp | null;
+  /** 0114: end of the domain's registration period — read from the registrar by the daily
+   *  renewal sync (until its first run: purchase + 1 year). Separate from the commitment. */
+  domain_expires_at: Timestamp | null;
+  /** 0114: the registrar's SERVICE id — the auto-renew switch lives on it. */
+  registrar_service_ref: string | null;
+  /** 0114: the auto-renew switch as MEASURED at the registrar (not the wanted state). */
+  domain_auto_renew: boolean | null;
+  /** 0114 (owner 2026-10-25): set when the subscription ended — no renewal past this
+   *  expiry. NULL = paying tenant, we renew. */
+  domain_renew_end: Timestamp | null;
+  /** 0114: the renewal sync's last run on this row, and what it found (NULL = fine). */
+  domain_renew_checked_at: Timestamp | null;
+  domain_renew_problem: string | null;
   /** Last beszerzés error (diagnostics + the tenant-admin state indicator). */
   domain_provision_error: string | null;
   provisioned_at: Generated<Timestamp>;

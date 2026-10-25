@@ -264,7 +264,7 @@ export function domainPanel(lang: Lang, snap: PricingSnapshot): string {
       <div class="pr2-g3">
         ${field("pr-domain_min_package_monthly", "domain_min_package_monthly", T(lang, "Belépési küszöb (csomag havidíja legalább)"), snap.domainMinPackageMonthly, `${u} ${T(lang, "/ hó")}`, T(lang, "0 = nincs küszöb"))}
         ${field("pr-domain_min_commitment_months", "domain_min_commitment_months", T(lang, "Hűség saját domainnel"), snap.domainMinCommitmentMonths, T(lang, "hónap"))}
-        ${field("pr-domain_buyout_price", "domain_buyout_price", T(lang, "Kivásárlás (név elvitele hűség alatt)"), snap.domainBuyoutPrice, u)}
+        ${field("pr-domain_buyout_price", "domain_buyout_price", T(lang, "Név átírása a vevőre"), snap.domainBuyoutPrice, u, T(lang, "bármikor, a hűségtől függetlenül; hűség alatt a kötbér külön jár"))}
       </div>
       <input type="hidden" name="tld_json" id="tld_json">
       <table class="pr2-tb pr2-resp pr2-tld" id="pr2-tld">

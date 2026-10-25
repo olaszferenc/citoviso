@@ -49,5 +49,5 @@ export async function registrarReadiness(maxAgeMs = 10 * 60_000): Promise<Regist
   return value;
 }
 
-export type { RegistrarAdapter, DomainRegistration, RegistrarReadiness } from "./registrar.js";
+export type { RegistrarAdapter, DomainRegistration, DomainService, RegistrarReadiness } from "./registrar.js";
 export { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";

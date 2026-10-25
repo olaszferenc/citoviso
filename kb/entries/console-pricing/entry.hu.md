@@ -4,7 +4,7 @@ title: Árazás és értékesítés — csomagok, modulok, saját domain, ajánl
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-10-11
+updated: 2026-10-25
 ---
 
 Az **„Árazás és értékesítés”** képernyőn állítod be piaconként a valós árakat, a három csomag
@@ -132,8 +132,14 @@ A vevő maga választ nevet és végződést, a kínált végződések közül. 
   kedvezmény nem számít bele. Ha a csomag a domaint tartalmazza, a küszöb nem számít. Ha a küszöb
   nagyobb 0-nál, a hűségidő alatt a csomag nem csökkenhet alá.
 - **„Hűség saját domainnel”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér domaint.
-- **„Kivásárlás (név elvitele hűség alatt)”** — ennyit fizet, aki a hűségidő alatt kilép és a nevet
-  elviszi.
+- **„Név átírása a vevőre”** — ennyit fizet, aki a nevet a saját nevére íratja és elviszi. Ez
+  bármikor ugyanannyi, a hűségidőtől függetlenül. Aki a hűségidő alatt lép ki, annak a kötbér
+  ezen felül jár.
+
+**Megújítás.** A saját domaint a gép évente magától megújítja, amíg a vevő fizet. Ha az
+előfizetés megszűnik, és a név lejáratáig legalább 90 nap van hátra, nem újítjuk meg többé. Ha
+90 napnál kevesebb van hátra, még egyszer megújítjuk. A megszűnt előfizetés címe a nyitóoldalunkra
+irányít.
 
 **A végződés-tábla** soronként egy végződés (például .hu):
 

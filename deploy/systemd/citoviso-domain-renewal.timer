@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso saját domainek megújítása naponta
+
+[Timer]
+# Naponta elég: a lejárat évekre szól, a kapcsoló állása a lejárat előtt bármikor helyrehozható;
+# a riasztás a 30 napos ablakban jön (RENEW_WARN_DAYS), egy nap késés ebben nem számít.
+OnBootSec=600
+OnCalendar=*-*-* 04:20:00
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target

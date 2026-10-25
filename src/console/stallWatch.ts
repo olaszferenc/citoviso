@@ -44,7 +44,10 @@ export const ICAL_STALL_HOURS = 24;
 /** ADR-0400: a .hu name bought this long ago with no registry confirmation mail = the registrar did not file it. */
 export const REGISTRY_CONFIRM_HOURS = 2;
 
-export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar";
+/** ADR-XXXX: the daily renewal sync runs at 04:20; a held name it has not checked for this long = it is not running. */
+export const RENEWAL_SYNC_STALE_HOURS = 48;
+
+export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar" | "renewal";
 
 export interface StallWatchDeps {
   /** Ask the gateway about a pending payment (the same idempotent path /pay/done runs). */
@@ -270,6 +273,52 @@ async function sweepRegistrarReadiness(now: Date, deps: StallWatchDeps): Promise
   ];
 }
 
+// ── ②d the own domain's renewal (ADR-XXXX) ─────────────────────────────────────────
+//
+// The daily sync (scripts/domain-renewal-sync.mts) records on the site row what it found:
+// the switch could not be put right, the name is not in our account, it lapsed, the credit
+// does not cover the renewals due. One alert per name per problem text; a held name the sync
+// has not looked at for RENEWAL_SYNC_STALE_HOURS means the sync itself is not running.
+
+async function sweepRenewal(now: Date): Promise<Case[]> {
+  const { HELD_STATUSES } = await import("../domains/domainRenewal.js");
+  const rows = await db
+    .selectFrom("domain_provisioning as dp")
+    .innerJoin("site", "site.id", "dp.site_id")
+    .select([
+      "site.id as siteId",
+      "dp.domain as domain",
+      "dp.created_at as boughtAt",
+      "site.domain_renew_problem as problem",
+      "site.domain_renew_checked_at as checkedAt",
+      "site.domain_expires_at as expiresAt",
+    ])
+    .where("dp.status", "in", [...HELD_STATUSES])
+    .execute();
+  const day = budapestIsoDay(now);
+  const out: Case[] = [];
+  const seen = new Set<string>();
+  for (const r of rows) {
+    if (seen.has(r.siteId)) continue;
+    seen.add(r.siteId);
+    const exp = r.expiresAt ? ` · lejár ${iso(r.expiresAt).slice(0, 10)}` : "";
+    if (r.problem) {
+      const sig = `${r.problem.length.toString(36)}:${r.problem.slice(0, 40)}`;
+      out.push({ key: `domain-renew:${r.siteId}:${sig}`, line: `- ${r.domain}${exp} · ${r.problem}` });
+      continue;
+    }
+    const last = r.checkedAt ? new Date(r.checkedAt as unknown as string) : null;
+    const since = last ?? new Date(r.boughtAt as unknown as string);
+    if (now.getTime() - since.getTime() > RENEWAL_SYNC_STALE_HOURS * 3_600_000) {
+      out.push({
+        key: `domain-renew-stale:${r.siteId}:${day}`,
+        line: `- ${r.domain}${exp} · a megújítás-szinkron ${last ? `utoljára ${iso(last)}` : "még SOHA"} nézte meg`,
+      });
+    }
+  }
+  return out;
+}
+
 // ── ③ SMS queue ─────────────────────────────────────────────────────────────────────
 
 async function sweepSmsQueue(now: Date): Promise<Case[]> {
@@ -459,6 +508,23 @@ export async function runStallWatch(now: Date, deps: StallWatchDeps = realStallD
         `vétel NEM indulna el (a sor pending maradna, a vevő várna).\n\n${lines.join("\n")}\n\n` +
         `Teendő: a Websupport Webadmin → fiók / domain-profil kiegészítése (az azonosító a .hu Nyilvántartónak kell), ` +
         `kredit feltöltése, ÁSZF megerősítése. A fiók 10 percen belül újra mérődik; ez a levél naponta egyszer jön, amíg a hiány áll.\n`,
+    })),
+  );
+
+  note(
+    "renewal",
+    await alertNew(deps, "renewal", await sweepRenewal(now), (lines) => ({
+      tag: "domain-renewal",
+      sms: true,
+      smsKey: "domain-renewal",
+      subject: `Citoviso: ${lines.length} saját domain megújítása nincs rendben`,
+      text:
+        `A napi megújítás-ellenőrzés szerint ezeknél a neveknél a megújítás nem biztosított. A Websupportnál a név ` +
+        `akkor újul meg, ha az automatikus megújítás be van kapcsolva ÉS a kredit fedezi; ha egyik sem áll, a név ` +
+        `lejár, és a tenant honlapja a saját címén elérhetetlenné válik.\n\n${lines.join("\n")}\n\n` +
+        `Teendő: a Websupport Webadmin → Szolgáltatások: a név automatikus megújítása és a fiók kreditje; ` +
+        `a gép napló: journalctl -u citoviso-domain-renewal -n 50; kézi futtatás (csak olvas): ` +
+        `npx tsx scripts/domain-renewal-sync.mts --dry\n`,
     })),
   );
 
