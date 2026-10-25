@@ -3081,7 +3081,7 @@
   "Igen, törlöm",
   "Igen, visszaigazolom",
   "Igen, visszavonom a megbízást",
-  "Így fut: {lines}. Mindegyik mellé jár a <név>.citoviso.com cím. A domaint a fizetés után regisztráljuk; {c} hónap hűség alatt a név elvitele {b}.",
+  "Így fut: {lines}. Mindegyik mellé jár a <név>.citoviso.com cím. A domaint a fizetés után regisztráljuk, a hűség {c} hónap; a név átírása a vevőre {b}, bármikor.",
   "Így fut: aki ezután admin-hozzáférést kap — az első fizetéssel vagy egy ingyenes próba indulásával —, egy −{p}% kupont kap. Egyszer használható, bármire: a próba folytatására vagy egy modulra, amelyik előbb jön. {d} napig érvényes: a fizetéstől, próbánál a próba utolsó napjától.",
   "Így fut: aki ezután próbát indít, {d} napig használja a saját oldalát {pkgArt} csomag moduljaival, kártya és fizetés nélkül.",
   "Így fut: az ezután kiküldött levél −{o}% bemutatkozó kedvezményt ígér. A lead a {n}. (különböző napon történt) megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára; ha {f} óra múlva sem vásárolt, egy emlékeztető levél megy ki ugyanerről (óránként küldjük, {from} és {to} óra között — az éjjel esedékes reggel {from} után megy).",

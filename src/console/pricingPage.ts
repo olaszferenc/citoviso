@@ -435,7 +435,7 @@ export function pricingPageData(lang: Lang, snap: PricingSnapshot, x: PricingPag
       lmFee: T(lang, "Havidíj csomagon kívül"),
       lmFree: T(lang, "Csomagban ingyen"),
       runBase: T(lang, "Így fut: havi fizetésnél az Ajánlott {m}/hó; éves fizetésnél {k} hónap árát fizeti: {y}/év ({n} hónap ingyen).", { m: "{m}", k: "{k}", y: "{y}", n: "{n}" }),
-      runDom: T(lang, "Így fut: {lines}. Mindegyik mellé jár a <név>.citoviso.com cím. A domaint a fizetés után regisztráljuk; {c} hónap hűség alatt a név elvitele {b}.", { lines: "{lines}", c: "{c}", b: "{b}" }),
+      runDom: T(lang, "Így fut: {lines}. Mindegyik mellé jár a <név>.citoviso.com cím. A domaint a fizetés után regisztráljuk, a hűség {c} hónap; a név átírása a vevőre {b}, bármikor.", { lines: "{lines}", c: "{c}", b: "{b}" }),
       runDomIn: T(lang, "{t}: saját {e} cím az árban", { t: "{t}", e: "{e}" }),
       runDomMin: T(lang, "{t}: saját cím nem kérhető", { t: "{t}" }),
       runDomFee: T(lang, "{t}: saját cím +{p}/hó", { t: "{t}", p: "{p}" }),
