@@ -73,6 +73,32 @@ interface ServiceItem {
   readonly autoExtend?: boolean | null;
 }
 
+export interface AutoExtendResponse {
+  readonly status?: string;
+  readonly item?: ServiceItem;
+  readonly errors?: unknown;
+}
+
+/**
+ * The answer to the auto-renew PUT. Measured live 2026-10-25 on overseer.hu: the switch DID
+ * flip, yet the answer was HTTP 201 `{status:"error", errors:[], item:{autoExtend:true}}` —
+ * so `status` is not the verdict; the returned item's switch is. Only an item still in the
+ * wrong position (or no item) is a refusal.
+ */
+export function autoExtendResult(r: AutoExtendResponse, serviceRef: string, on: boolean): DomainService {
+  if (!r.item) {
+    throw new Error(`Websupport autoExtend=${on} a(z) ${serviceRef} szolgáltatáson elutasítva: ${JSON.stringify(r.errors ?? r).slice(0, 200)}`);
+  }
+  const s = toDomainService(r.item);
+  if (s.autoRenew !== on) {
+    throw new Error(
+      `Websupport autoExtend=${on} a(z) ${serviceRef} szolgáltatáson: a válasz szerint az állás ${s.autoRenew} maradt ` +
+        `(status ${r.status ?? "?"}, errors ${JSON.stringify(r.errors ?? null).slice(0, 160)})`,
+    );
+  }
+  return s;
+}
+
 function toDomainService(it: ServiceItem): DomainService {
   return {
     serviceRef: String(it.id),
@@ -471,19 +497,12 @@ export class WebsupportRegistrar implements RegistrarAdapter {
    * returned item must carry the wanted state, or this throws.
    */
   async setAutoRenew(serviceRef: string, on: boolean): Promise<DomainService> {
-    const r = await this.#request<{ status?: string; item?: ServiceItem; errors?: unknown }>(
+    const r = await this.#request<AutoExtendResponse>(
       "PUT",
       `/v1/user/${this.#userId}/service/${encodeURIComponent(serviceRef)}`,
       { autoExtend: on },
     );
-    if (r.status !== "success" || !r.item) {
-      throw new Error(`Websupport autoExtend=${on} a(z) ${serviceRef} szolgáltatáson elutasítva: ${JSON.stringify(r.errors ?? r).slice(0, 200)}`);
-    }
-    const s = toDomainService(r.item);
-    if (s.autoRenew !== on) {
-      throw new Error(`Websupport autoExtend=${on} a(z) ${serviceRef} szolgáltatáson: a válasz szerint az állás ${s.autoRenew} maradt`);
-    }
-    return s;
+    return autoExtendResult(r, serviceRef, on);
   }
 
   async accountCredit(): Promise<number | null> {

@@ -7,7 +7,8 @@
 //   * ENDED, <90 DAYS LEFT — the switch stays ON for exactly one renewal; once the expiry
 //     moved a year on, it goes OFF.
 //   * COMEBACK — a stored end is cleared when the subscription is no longer cancelled.
-//   * REFUSED SWITCH — a registrar refusal is a recorded problem, never a silent pass.
+//   * REFUSED SWITCH — a registrar refusal is a recorded problem, never a silent pass; the
+//     verdict is the returned switch, not `status` (live answer 2026-10-25: "error" on success).
 //   * MISSING / LAPSED — a paying tenant's name absent from the account (after a day) or past
 //     its expiry is a problem; an ended tenant's lapsed name is not.
 //   * CREDIT — renewals due within 30 days not covered by the credit are a problem.
@@ -111,6 +112,24 @@ const soon = await reconcileRenewal(row("hamar.hu"), reg, NOW);
 ok(creditProblem([soon], 1000, NOW) !== null, "30 napon belüli megújítás, kevés kredit: hiba");
 ok(creditProblem([soon], 5000, NOW) === null, "elég kredit: nincs hiba");
 ok(creditProblem([await reconcileRenewal(row("fizeto.hu"), reg, NOW)], 0, NOW) === null, "távoli lejárat: a kredit most nem számít");
+
+// ── 3b. the registrar's real answer (measured live 2026-10-25, overseer.hu) ──
+const { autoExtendResult } = await import("../src/domains/registrar/websupport.js");
+const item = { id: 16572522, serviceName: "domain", status: "active", name: "overseer.hu", createTime: 1792590894, expireTime: 1824147820, price: 1990 };
+let flippedOk = false;
+try {
+  flippedOk = autoExtendResult({ status: "error", errors: [], item: { ...item, autoExtend: true } }, "16572522", true).autoRenew;
+} catch {
+  flippedOk = false;
+}
+ok(flippedOk, "a váltás sikerült, a válasz mégis status:error, errors:[] → siker (a visszaadott állás dönt)");
+let refused = false;
+try {
+  autoExtendResult({ status: "error", errors: [], item: { ...item, autoExtend: false } }, "16572522", true);
+} catch {
+  refused = true;
+}
+ok(refused, "a visszaadott állás a régi maradt → elutasítás");
 
 // ── 4. wiring ────────────────────────────────────────────────────────────────
 const targets = JSON.parse(readFileSync("deploy/systemd/targets.json", "utf8")) as { timers: Record<string, { target: string }> };
