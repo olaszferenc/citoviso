@@ -1,9 +1,9 @@
 [Unit]
-# ADR-XXXX: a saját domainek megújítása. A Websupportnál a megújítás egyetlen gépi útja a név
+# ADR-0403: a saját domainek megújítása. A Websupportnál a megújítás egyetlen gépi útja a név
 # automatikus-megújítás kapcsolója (a lejárat előtt a kreditből fizet) — ez a feladat naponta
 # leolvassa a valódi lejáratot és a kapcsolót, és a szabály szerint állítja (fizető tenant: BE;
 # megszűnt előfizetés: ≥90 nap a lejáratig → KI, kevesebb → még egyszer megújul, utána KI).
-Description=Citoviso saját domainek megújítása (ADR-XXXX)
+Description=Citoviso saját domainek megújítása (ADR-0403)
 After=network-online.target
 Wants=network-online.target
 # ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).

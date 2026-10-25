@@ -692,7 +692,7 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
   return null;
 }
 
-/** ADR-XXXX: is this host (or its www.) the own domain of a site whose subscription ended? */
+/** ADR-0403: is this host (or its www.) the own domain of a site whose subscription ended? */
 async function isRetiredCustomDomain(req: http.IncomingMessage): Promise<boolean> {
   const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
   if (!host || host === PLATFORM_DOMAIN || host.endsWith(`.${PLATFORM_DOMAIN}`)) return false;
@@ -2527,7 +2527,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     res.writeHead(301, { Location: `https://${tenantSite.customDomain}${pathname}${url.search}` });
     return void res.end();
   }
-  // ADR-XXXX (owner 2026-10-25): the own domain of an ENDED subscription goes to our landing —
+  // ADR-0403 (owner 2026-10-25): the own domain of an ENDED subscription goes to our landing —
   // not our marketing page served under the tenant's name (duplicate content), not a dead page.
   // 302: the tenant may come back, and the name lapses by the renewal rule anyway.
   if (!tenantSite && (req.method === "GET" || req.method === "HEAD") && (await isRetiredCustomDomain(req))) {

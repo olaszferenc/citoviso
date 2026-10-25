@@ -12,7 +12,7 @@
 //                                              period, periodLength}, errors:{domain:[…]}}
 //   MEASURED by the purchases since (citoviso.hu 2026-09-06, overseer.hu 2026-10-21):
 //     - POST /v1/user/{id}/order (+ ?dryRun=1 pre-flight) and PUT …/order/{id}/pay/byCredit.
-//   MEASURED 2026-10-25 (ADR-XXXX, renewal):
+//   MEASURED 2026-10-25 (ADR-0403, renewal):
 //     - GET /v1/user/{id}/service -> {items:[{id,name,expireTime,price,autoExtend…}]}; a new
 //       name comes with autoExtend=false. PUT /v1/user/{id}/service/{sid} {"autoExtend":true}
 //       is the only machine path to renewal (paid from credit before expiry).
@@ -372,7 +372,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
     if (opts.years !== 1) {
       throw new Error(
         `a registrar csak 1 ÉVES regisztrációt fogad, a kérés ${opts.years} év volt — ` +
-          `a(z) ${domain} vásárlása nem indult el (a megújítás évente, az automatikus megújítás kapcsolójával megy — ADR-XXXX)`,
+          `a(z) ${domain} vásárlása nem indult el (a megújítás évente, az automatikus megújítás kapcsolójával megy — ADR-0403)`,
       );
     }
 
@@ -443,7 +443,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * ADR-XXXX: the name's service — real expiry + the auto-renew switch. MEASURED 2026-10-25:
+   * ADR-0403: the name's service — real expiry + the auto-renew switch. MEASURED 2026-10-25:
    * GET /v1/user/{id}/service?perPage=100 → {items:[ServiceItem…], pager:{page,pagesize,items}};
    * a freshly bought name answers `autoExtend: false` (overseer.hu), so nothing renews it
    * unless the switch is flipped.
@@ -464,7 +464,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * ADR-XXXX: PUT /v1/user/{id}/service/{serviceId} {"autoExtend": bool} — the documented
+   * ADR-0403: PUT /v1/user/{id}/service/{serviceId} {"autoExtend": bool} — the documented
    * (rest.websupport.sk/docs/v1.service) and only machine path to renewal: the registrar pays
    * the renewal from the account credit before expiry. Success answers {status:"success",
    * item}; a validation error answers 200 with status "error" — both are checked, and the

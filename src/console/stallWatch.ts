@@ -44,7 +44,7 @@ export const ICAL_STALL_HOURS = 24;
 /** ADR-0400: a .hu name bought this long ago with no registry confirmation mail = the registrar did not file it. */
 export const REGISTRY_CONFIRM_HOURS = 2;
 
-/** ADR-XXXX: the daily renewal sync runs at 04:20; a held name it has not checked for this long = it is not running. */
+/** ADR-0403: the daily renewal sync runs at 04:20; a held name it has not checked for this long = it is not running. */
 export const RENEWAL_SYNC_STALE_HOURS = 48;
 
 export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar" | "renewal";
@@ -273,7 +273,7 @@ async function sweepRegistrarReadiness(now: Date, deps: StallWatchDeps): Promise
   ];
 }
 
-// ── ②d the own domain's renewal (ADR-XXXX) ─────────────────────────────────────────
+// ── ②d the own domain's renewal (ADR-0403) ─────────────────────────────────────────
 //
 // The daily sync (scripts/domain-renewal-sync.mts) records on the site row what it found:
 // the switch could not be put right, the name is not in our account, it lapsed, the credit

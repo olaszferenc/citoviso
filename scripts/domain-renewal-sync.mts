@@ -1,4 +1,4 @@
-// Daily own-domain renewal sync (ADR-XXXX). Prod timer citoviso-domain-renewal.timer runs:
+// Daily own-domain renewal sync (ADR-0403). Prod timer citoviso-domain-renewal.timer runs:
 //
 //   npx tsx scripts/domain-renewal-sync.mts            # read + flip the auto-renew switch
 //   npx tsx scripts/domain-renewal-sync.mts --dry      # read only, nothing written anywhere

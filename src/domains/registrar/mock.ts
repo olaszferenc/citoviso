@@ -75,7 +75,7 @@ export class MockRegistrar implements RegistrarAdapter {
     return { registrarRef: `mock-reg:${domain}`, registeredUntil: until };
   }
 
-  /** Test hooks (ADR-XXXX): the account's services by name, the credit, a refusing switch. */
+  /** Test hooks (ADR-0403): the account's services by name, the credit, a refusing switch. */
   static readonly services = new Map<string, DomainService>();
   static credit: number | null = 10_000;
   static refuseAutoRenew = false;

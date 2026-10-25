@@ -1,4 +1,4 @@
-## ADR-XXXX — A saját domain megújítása: a regisztrátor kapcsolója a szabály szerint, naponta
+## ADR-0403 — A saját domain megújítása: a regisztrátor kapcsolója a szabály szerint, naponta
 
 **Dátum:** 2026-10-25 · **Státusz:** elfogadva (tulajdonosi döntés, chat: „Leíratkozás napjával kikapcsoljuk a megújítást akkor, ha még minimum 90 nap van a megújításig. Ha kevesebb akkor 1x megújítjuk. Leíratkozásnál átirányítjuk a mi landing oldalunkra.” · „Remélem azt is be lehet állítani, hogy a név átírásának mennyi a költsége (nem kötve hűség időhöz)”) · **Érinti:** ADR-0071, ADR-0080 ⑤, ADR-0094, ADR-0103, ADR-0109, ADR-0400 (6. lépés: megújítás)
 

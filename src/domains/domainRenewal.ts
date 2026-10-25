@@ -1,4 +1,4 @@
-// THE OWN DOMAIN'S RENEWAL (ADR-XXXX, owner 2026-10-25).
+// THE OWN DOMAIN'S RENEWAL (ADR-0403, owner 2026-10-25).
 //
 // Measured 2026-10-25: overseer.hu sat in our Websupport account with `autoExtend: false` —
 // nothing in code renewed a name, read its real expiry or watched it, so it would have

@@ -75,7 +75,7 @@ export interface RegistrarAdapter {
   /** Delegate the domain's authoritative nameservers to our DNS (Cloudflare). */
   setNameservers(domain: string, nameservers: readonly string[]): Promise<void>;
   /**
-   * The name's service in OUR registrar account (ADR-XXXX): the real expiry and the
+   * The name's service in OUR registrar account (ADR-0403): the real expiry and the
    * auto-renew switch as the registrar holds them. null = the name is not (or no longer)
    * in the account. Read-only.
    */
@@ -90,7 +90,7 @@ export interface RegistrarAdapter {
   accountCredit(): Promise<number | null>;
 }
 
-/** A registered name as our registrar account holds it (ADR-XXXX). */
+/** A registered name as our registrar account holds it (ADR-0403). */
 export interface DomainService {
   readonly serviceRef: string;
   readonly domain: string;

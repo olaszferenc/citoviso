@@ -1,4 +1,4 @@
-// Regression guard for the OWN DOMAIN'S RENEWAL at the registrar (ADR-XXXX, owner 2026-10-25).
+// Regression guard for the OWN DOMAIN'S RENEWAL at the registrar (ADR-0403, owner 2026-10-25).
 //
 // WHAT IT PROVES (no database, no network — the mock registrar holds the services):
 //   * PAYING TENANT — a name bought with the switch OFF (the live default, measured on

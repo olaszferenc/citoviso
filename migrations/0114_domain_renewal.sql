@@ -1,4 +1,4 @@
--- 0114 SAJÁT DOMAIN MEGÚJÍTÁSA (ADR-XXXX, tulaj 2026-10-25).
+-- 0114 SAJÁT DOMAIN MEGÚJÍTÁSA (ADR-0403, tulaj 2026-10-25).
 --
 -- Mérve 2026-10-25 (Websupport GET /v1/user/3213041/service): az overseer.hu `autoExtend: false`,
 -- lejár 2027-10-21 — semmi nem újította volna meg. A Websupportnál a megújítás egyetlen gépi útja
