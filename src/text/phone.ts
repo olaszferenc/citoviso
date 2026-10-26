@@ -128,6 +128,29 @@ export function normalizePhone(raw: string): string | null {
   return all.find(isHuMobileE164) ?? all[0] ?? null;
 }
 
+/** "+36301234567" → "+36 30 123 4567" — how the number is PRINTED on the page. The
+ *  `tel:` links strip the spaces, so the stored value stays dialable. */
+export function prettyPhone(e164: string): string {
+  if (!e164.startsWith("+36")) return e164;
+  const n = e164.slice(3);
+  if (n.startsWith("1")) return `+36 1 ${n.slice(1, 4)} ${n.slice(4)}`;
+  const area = n.slice(0, 2);
+  const rest = n.slice(2);
+  return `+36 ${area} ${rest.slice(0, 3)} ${rest.slice(3)}`;
+}
+
+/**
+ * The ONE number a page prints for a field that holds several („+36 23 312 465;+36 30 505
+ * 7524” — Margaréta-Bia a6354819, Virágoskert 884a44d3, Hotel Brill d45c1b8b, 2026-10-26;
+ * 289 live leads): the mobile first (normalizePhone's rule), printed readable. A field with
+ * one number is returned as written — this only cuts lists, it does not restyle.
+ */
+export function onePhone(raw: string): string {
+  if (splitPhones(raw).length < 2) return raw;
+  const n = normalizePhone(raw);
+  return n ? prettyPhone(n) : raw;
+}
+
 /**
  * The CLIENT MIRROR of normalizePhone(), as browser JS: `function norm(raw){…}`.
  * Embedded by src/server/contactViews.ts so the tenant contact form answers before

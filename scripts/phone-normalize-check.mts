@@ -32,7 +32,10 @@
 // (otherwise ④ would be green on fixtures that never triggered the defect).
 
 import { readFileSync } from "node:fs";
-import { normalizePhone, splitPhones, PHONE_NORM_JS } from "../src/text/phone.js";
+import { normalizePhone, onePhone, splitPhones, PHONE_NORM_JS } from "../src/text/phone.js";
+import { leadToSiteData } from "../src/engine/siteData.js";
+import { renderSite } from "../src/engine/render.js";
+import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { extractContacts, isBusinessEmail } from "../src/scraper/enrichWebSearch.js";
 import { enrichContact } from "../src/scraper/enrichContact.js";
 import { braveText } from "../src/scraper/sources/webSearch.js";
@@ -235,6 +238,27 @@ if (!selfTest) {
   check(stump !== undefined && stump.accepted === false, "⑥ a csonk nincs elutasítva a kontaktnaplóban");
   const intact = enrichContact([{ ...osmLead, email: "info@familiapizzeria.hu" } as QualifiedLead])[0];
   check(intact?.email === "info@familiapizzeria.hu", `⑥ ép OSM-cím felülíródott: ${intact?.email}`);
+}
+
+// A phone FIELD with several numbers printed on the mock (Margaréta-Bia a6354819, Virágoskert
+// 884a44d3, Hotel Brill d45c1b8b, 2026-10-26; 289 live leads): ONE number, the mobile first.
+const ONE: [string, string][] = [
+  ["+36 23 312 465;+36 30 505 7524", "+36 30 505 7524"],
+  ["+36 83 348 924;+36 20 452 7652", "+36 20 452 7652"],
+  ["+36 84 349 010; +36 84 349-020", "+36 84 349 010"],
+  ["+36 30 313 3204;+36 30 566 2197", "+36 30 313 3204"],
+  ["06 30 123 4567", "06 30 123 4567"],
+  ["+36/83-321-705", "+36/83-321-705"],
+];
+for (const [raw, want] of ONE) if (onePhone(raw) !== want) fails.push(`onePhone(${JSON.stringify(raw)}) = ${JSON.stringify(onePhone(raw))}, várt ${JSON.stringify(want)}`);
+const sd = leadToSiteData({ name: "Margaréta-Bia Kemping", phone: "+36 23 312 465;+36 30 505 7524", city: "Biatorbágy" } as unknown as QualifiedLead);
+if (sd.contact.phone !== "+36 30 505 7524") fails.push(`leadToSiteData: a kapcsolat-telefon ${JSON.stringify(sd.contact.phone)} (egy szám, a mobil kell)`);
+{
+  // An existing mock keeps the raw field in its stored siteData — the render cuts it.
+  const d = { name: "Hotel Brill", tagline: "", intro: "", highlights: [], photos: [], contact: { phone: "+36 23 312 465;+36 30 505 7524" } } as unknown as SiteData;
+  const recipe: Recipe = { template: "parallax", skin: "", archetype: "stacked", sections: [] };
+  const html = renderSite(recipe, d, { phase: "mock" });
+  if (/312 465;|;\+36/.test(html) || !/\+36 30 505 7524/.test(html)) fails.push("render: a meglévő mock pontosvesszős telefonja nem egy számra vágódik");
 }
 
 if (fails.length) {

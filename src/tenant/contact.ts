@@ -9,6 +9,7 @@
 // guard all share ONE rule. No DB access here.
 
 import { normalizePhone } from "../sms/sender.js";
+import { prettyPhone } from "../text/phone.js";
 
 export interface ContactFacts {
   readonly address: string;
@@ -41,16 +42,9 @@ export type ContactErrorKey = keyof typeof CONTACT_ERRORS;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-/** "+36301234567" → "+36 30 123 4567" — how the number is PRINTED on the page. The
- *  `tel:` links strip the spaces, so the stored value stays dialable. */
-export function prettyPhone(e164: string): string {
-  if (!e164.startsWith("+36")) return e164;
-  const n = e164.slice(3);
-  if (n.startsWith("1")) return `+36 1 ${n.slice(1, 4)} ${n.slice(4)}`;
-  const area = n.slice(0, 2);
-  const rest = n.slice(2);
-  return `+36 ${area} ${rest.slice(0, 3)} ${rest.slice(3)}`;
-}
+// The printed form lives with the other phone rules (pure, engine-safe); re-exported here
+// for the existing callers.
+export { prettyPhone } from "../text/phone.js";
 
 /** A stored phone as it is PRINTED (an unedited scrape keeps its raw "06305161631"
  *  form in the site data; a letter shows the same readable shape the admin saves). */

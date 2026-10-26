@@ -14,6 +14,7 @@ import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSecti
 import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
 import { addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
+import { onePhone } from "../text/phone.js";
 import { hungarianBedNote, hungarianRoomName } from "./roomNames.js";
 import { setHighlightSources } from "./copyFields.js";
 
@@ -720,6 +721,12 @@ export function renderSite(
   if (data.photos.length) {
     const photos = withoutFilenameAlts(data.photos, data.name);
     if (photos !== data.photos) data = { ...data, photos: [...photos] };
+  }
+  // A phone field listing several numbers („+36 23 312 465;+36 30 505 7524”) prints ONE, the
+  // mobile first; render-time, so a rerender fixes an existing mock (24 live, 2026-10-26).
+  if (data.contact.phone) {
+    const phone = onePhone(data.contact.phone);
+    if (phone !== data.contact.phone) data = { ...data, contact: { ...data.contact, phone } };
   }
   // ADR-0338: the guest-facing address drops the property's own country („… 8646 Hungary”).
   if (data.contact.address && data.place?.country) {
