@@ -264,7 +264,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     lang,
   );
   // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
-  const secured = await secureMockPhotos(html, String(row.id), (nextSiteData.photos ?? []).map((p) => p.url));
+  const secured = await secureMockPhotos(html, String(row.id), (nextSiteData.photos ?? []).map((p) => p.url), row.lead_id);
   await writeFile(row.path, secured.html, "utf8");
 
   const design = checkDesign(html);

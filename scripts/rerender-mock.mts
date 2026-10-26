@@ -140,7 +140,7 @@ for (const row of rows) {
   }
   const html = await injectRuntime(renderSite(recipe, siteData, { phase: "mock" }), siteData.lang);
   // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
-  const secured = await secureMockPhotos(html, String(row.id), (siteData.photos ?? []).map((p) => p.url));
+  const secured = await secureMockPhotos(html, String(row.id), (siteData.photos ?? []).map((p) => p.url), String(row.lead_id));
   await writeFile(row.path, secured.html, "utf8");
   const design = checkDesign(html);
   console.log(

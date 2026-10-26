@@ -725,7 +725,7 @@ async function generateMockInner(
           );
         }
         // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
-        const securedAi = await secureMockPhotos(await injectRuntime(clean.html), artifactIdPre, aiPhotos);
+        const securedAi = await secureMockPhotos(await injectRuntime(clean.html), artifactIdPre, aiPhotos, leadId);
         await writeFile(path, securedAi.html, "utf8");
         // QA-gate (ADR-0011): measure vertical-rhythm dead space at mobile width.
         // Best-effort + non-blocking — a headless-render hiccup must never fail a
@@ -877,7 +877,7 @@ async function generateMockInner(
     address: lead.address,
     mapUrl,
   };
-  const secured = await secureMockPhotos(render(data), artifactIdPre, [...(hero ? [hero] : []), ...photoUrls]);
+  const secured = await secureMockPhotos(render(data), artifactIdPre, [...(hero ? [hero] : []), ...photoUrls], leadId);
   await writeFile(path, secured.html, "utf8");
   const artifactId = await recordMockArtifact({
     id: artifactIdPre,

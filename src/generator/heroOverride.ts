@@ -159,7 +159,7 @@ export async function rerenderArtifactWithHero(
     nextData.lang,
   );
   // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
-  const secured = await secureMockPhotos(html, String(row.id), (nextData.photos ?? []).map((p) => p.url));
+  const secured = await secureMockPhotos(html, String(row.id), (nextData.photos ?? []).map((p) => p.url), row.lead_id);
   await writeFile(row.path, secured.html, "utf8");
 
   // Az ÚJ nyitókép ítélete kerül a panelre. Ha nincs verdikt (mert az operátor olyan

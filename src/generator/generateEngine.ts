@@ -699,6 +699,7 @@ async function generateEngineMockInner(
     rendered,
     artifactIdPre,
     siteData.photos.map((p) => p.url),
+    leadId,
   );
   await writeFile(path, html, "utf8");
 

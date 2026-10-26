@@ -28,7 +28,9 @@ import {
   planPhotoTransport,
   proxiedMockPhotoUrl,
   isPaidPhotoHost,
+  photoRotations,
   resolveProxiedSource,
+  rotatedPhoto,
   type HotlinkProbe,
   type PhotoFetcher,
 } from "../src/generator/photoTransport.js";
@@ -125,6 +127,25 @@ check(isPaidPhotoHost("https://places.googleapis.com/v1/x/media") && isPaidPhoto
 const hz = { siteData: { photos: HUSZAR.map((url) => ({ url })) } };
 check(resolveProxiedSource(hz, photoSourceHash(HUSZAR[0]!)) === HUSZAR[0], "a tárolt https-forrás feloldódik (rerender után a route kiszolgálja)");
 
+console.log("\n②c forgatott portálkép (Lakeside Home 79202242, 2026-10-27) → proxy, a route forgat");
+// 9 of 17 hovamenjek photos are 1440×1080 files whose pixels are turned 90°, no EXIF. The
+// curators set raw photos[].rotate; the mock gets the turned bytes (and so the turned aspect).
+const LK = "https://hovamenjek.hu/upload/places/36203_e9/fullHd/balatonszarszo-lakeside-home-apartman7.jpg";
+const LK2 = "https://hovamenjek.hu/upload/places/36203_e9/fullHd/balatonszarszo-lakeside-home-apartman2.jpg";
+const rawLk = { portalProfiles: [{ photos: [{ url: LK, rotate: 90 }, { url: LK2 }, { url: "https://x.hu/a.jpg", rotate: 45 }, { url: "https://x.hu/b.jpg", rotate: "270" }] }], photos: [{ url: "https://own.hu/c.jpg", rotate: 180 }, { url: SECURE, rotate: 90 }] };
+const rots = photoRotations(rawLk);
+check(rots.get(LK) === 90 && rots.get("https://x.hu/b.jpg") === 270 && rots.get("https://own.hu/c.jpg") === 180, "a mező: photos[].rotate = 90 | 180 | 270 (szám, vagy számjegy-szöveg), portál- és saját fotón");
+check(!rots.has(LK2) && !rots.has("https://x.hu/a.jpg"), "PIROS IKER: mező nélkül / 45°-kal nincs forgatás");
+const noProbe: HotlinkProbe = async () => true;
+const turned = await planPhotoTransport([LK, LK2, SECURE], AID, alive, noProbe, rots);
+check(turned.length === 1 && turned[0]!.source === LK && turned[0]!.served === `${proxiedMockPhotoUrl(AID, LK)}?r=90`, "a forgatott kép a proxyra megy (?r=90 a cache miatt), a többi érintetlen");
+check(!turned.some((r) => r.source === SECURE), "fizetős hoszt (Places) forgatva sem megy proxyra");
+check(resolveProxiedSource({ siteData: { photos: [{ url: LK }] } }, photoSourceHash(LK)) === LK, "a route a ?r nélküli lenyomatból oldja fel");
+const sharp = (await import("sharp")).default;
+const wide = await sharp({ create: { width: 40, height: 30, channels: 3, background: "#888" } }).jpeg().toBuffer();
+const meta = await sharp(await rotatedPhoto(wide, 90)).metadata();
+check(meta.width === 30 && meta.height === 40 && meta.format === "jpeg", "rotatedPhoto(90): 40×30 → 30×40, a formátum marad");
+
 console.log("\n③ nem nyílt proxy: csak a tárolt forrás oldódik fel");
 const inputs = { siteData: { photos: [{ url: BADCERT }, { url: SAME }] } };
 check(resolveProxiedSource(inputs, photoSourceHash(BADCERT)) === BADCERT, "tárolt forrás → feloldva");
@@ -189,9 +210,10 @@ for (const f of writers) {
 const redSrc = 'const html = render(x);\nawait writeFile(path, html, "utf8");';
 check(rawWrite(redSrc).length === 1, "PIROS IKER: a nyers render írása felismerve");
 const server = readFileSync("src/console/server.ts", "utf8");
-const route = server.slice(server.indexOf("const cfgPhotoMatch"), server.indexOf("const cfgPhotoMatch") + 900);
+const route = server.slice(server.indexOf("const cfgPhotoMatch"), server.indexOf("const cfgPhotoMatch") + 1400);
 check(/resolveProxiedSource\(/.test(route) && /\^https\?:/.test(route) && /isPaidPhotoHost\(source\)/.test(route), "a route tárolt forrást old fel, http(s)-t szolgál ki, fizetős hosztot soha");
 check(!/proxiedPhotoUrl|verifyPhotoSignature/.test(route) && !/places/i.test(route), "a route nem a konzol aláírt proxyja, és nem hív Places-t");
+check(/leadPhotoRotations\(row\.lead_id\)/.test(route) && /rotatedPhoto\(/.test(route), "a route a lead kézi forgatását alkalmazza (kérésidőben)");
 
 console.log(bad ? `\n⛔ ${bad} állítás bukott` : "\n✅ minden állítás teljesült");
 process.exit(bad ? 1 : 0);

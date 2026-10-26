@@ -42,7 +42,7 @@ import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
 import { isCopyKey, type CopyKey, type CopyValue } from "../engine/copyFields.js";
 import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "../generator/runtime.js";
-import { isPaidPhotoHost, resolveProxiedSource } from "../generator/photoTransport.js";
+import { isPaidPhotoHost, leadPhotoRotations, resolveProxiedSource, rotatedPhoto } from "../generator/photoTransport.js";
 import { copyEditorOverlay } from "./copyEditViews.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clearHeroPin, getHeroPin, repointHero, setHeroPin } from "../generator/heroOverride.js";
@@ -3287,18 +3287,21 @@ async function handle(
   if (method === "GET" && cfgPhotoMatch) {
     const row = await db
       .selectFrom("mock_artifact")
-      .select("inputs")
+      .select(["inputs", "lead_id"])
       .where("id", "=", cfgPhotoMatch[1]!)
       .executeTakeFirst();
     const source = row ? resolveProxiedSource(row.inputs, cfgPhotoMatch[2]!) : null;
-    if (!source || !/^https?:\/\//i.test(source) || isPaidPhotoHost(source)) return send(res, 404, "not found", "text/plain");
+    if (!row || !source || !/^https?:\/\//i.test(source) || isPaidPhotoHost(source)) return send(res, 404, "not found", "text/plain");
     const got = await fetchPhoto(source);
     if (!got.ok || !got.body) return send(res, 404, "not found", "text/plain");
+    // The curators' manual turn (lead raw photos[].rotate), read now: the bytes the page gets.
+    const turn = (await leadPhotoRotations(row.lead_id)).get(source);
+    const body = turn ? await rotatedPhoto(got.body, turn) : got.body;
     res.writeHead(200, {
       "content-type": got.contentType ?? "image/jpeg",
       "cache-control": "public, max-age=86400",
     });
-    res.end(got.body);
+    res.end(body);
     return;
   }
   // GET /configure/:artifactId — prospect configurator (mock + interactive sell).

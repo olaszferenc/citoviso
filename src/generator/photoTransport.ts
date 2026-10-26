@@ -24,14 +24,24 @@
 // EGY próba a mock Refererével; ha az bukik, de Referer nélkül a kép él, a hoszt minden
 // fotója a (b) úton jön. Fizetős hoszt (Places) soha nem próba és soha nem proxy.
 //
+// FORGATOTT PORTÁLKÉP (2026-10-27, Lakeside Home 79202242): a hovamenjek 17 képéből 9
+// 1440×1080-as fekvő fájl EXIF-tájolás nélkül, a pixelek 90°-kal elforgatva — köztük minden
+// hálószoba. Kézi mező a lead raw fotóján: `rotate: 90 | 180 | 270` (az óramutató járásával
+// egyező fok, a sharp `rotate()` értelmében); a kollégák állítják, automatikus felismerés
+// nincs. Az ilyen fotó a (b) úton jön, a route elforgatva szolgálja ki, így a lap a
+// forgatott bájtot és méretarányt kapja — CSS transform nincs (az elrontaná a layoutot).
+//
 // A siteData a FORRÁS-URL-t tartja meg (jogállás, hero-pontszám kulcsa, élesítés) — a
 // csere a RENDERELT HTML-en történik, minden íráskor (generálás, hero-csere, szöveg-
 // átírás), egyetlen függvénnyel.
 
 import { createHash } from "node:crypto";
 
+import sharp from "sharp";
+
 import { config } from "../config.js";
 import { fetchPhoto } from "../console/photoProxy.js";
+import { db } from "../db/client.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 
 export type PhotoTransportVia = "https" | "proxy";
@@ -102,10 +112,55 @@ export function photoSourceHash(source: string): string {
   return createHash("sha256").update(source).digest("hex").slice(0, 24);
 }
 
-/** A (b) út URL-je. Abszolút, ha van nyilvános origó: a hero-shot `file://`-ból renderel. */
-export function proxiedMockPhotoUrl(artifactId: string, source: string): string {
+/** A (b) út URL-je. Abszolút, ha van nyilvános origó: a hero-shot `file://`-ból renderel.
+ *  Forgatott fotónál `?r=<fok>`: a böngésző-cache ne a régi tájolást adja vissza. */
+export function proxiedMockPhotoUrl(artifactId: string, source: string, rotate?: PhotoRotation): string {
   const base = (config.publicBaseUrl ?? "").replace(/\/+$/, "");
-  return `${base}/configure/${artifactId}/photo/${photoSourceHash(source)}`;
+  return `${base}/configure/${artifactId}/photo/${photoSourceHash(source)}${rotate ? `?r=${rotate}` : ""}`;
+}
+
+/** Kézi forgatás fokban, az óramutató járásával egyezően (sharp `rotate()`). */
+export type PhotoRotation = 90 | 180 | 270;
+
+function asRotation(v: unknown): PhotoRotation | null {
+  const n = typeof v === "string" && /^\d+$/.test(v.trim()) ? Number(v.trim()) : v;
+  return n === 90 || n === 180 || n === 270 ? n : null;
+}
+
+/**
+ * A lead raw fotóinak kézi forgatása, forrás-URL szerint: `raw.portalProfiles[].photos[].rotate`
+ * és `raw.photos[].rotate`. Más érték (0, 45, "jobbra") nem forgat.
+ */
+export function photoRotations(raw: unknown): Map<string, PhotoRotation> {
+  const r = (raw ?? {}) as {
+    photos?: ReadonlyArray<{ url?: unknown; rotate?: unknown }>;
+    portalProfiles?: ReadonlyArray<{ photos?: ReadonlyArray<{ url?: unknown; rotate?: unknown }> }>;
+  };
+  const out = new Map<string, PhotoRotation>();
+  const lists = [r.photos ?? [], ...(r.portalProfiles ?? []).map((p) => p?.photos ?? [])];
+  for (const list of lists) {
+    for (const p of list) {
+      const rot = asRotation(p?.rotate);
+      if (rot && typeof p?.url === "string") out.set(p.url, rot);
+    }
+  }
+  return out;
+}
+
+/** A forrás bájtjai elforgatva, a formátum marad (a route írja ki). */
+export async function rotatedPhoto(body: Buffer, rotate: PhotoRotation): Promise<Buffer> {
+  return sharp(body).rotate(rotate).toBuffer();
+}
+
+/** A lead tárolt forgatásai (üres, ha nincs lead vagy a DB nem válaszol — a lap attól még kész). */
+export async function leadPhotoRotations(leadId: string | null | undefined): Promise<Map<string, PhotoRotation>> {
+  if (!leadId) return new Map();
+  try {
+    const row = await db.selectFrom("lead").select("raw").where("id", "=", leadId).executeTakeFirst();
+    return photoRotations(row?.raw);
+  } catch {
+    return new Map();
+  }
 }
 
 /** Felismeri a (b) út URL-jét (bármely origón vagy relatívan). */
@@ -155,8 +210,19 @@ export async function planPhotoTransport(
   artifactId: string,
   fetcher: PhotoFetcher = fetchPhoto,
   probe: HotlinkProbe = probeWithMockReferer,
+  rotations: ReadonlyMap<string, PhotoRotation> = new Map(),
 ): Promise<PhotoTransportRow[]> {
-  const http = [...new Set(urls.filter(isInsecurePhotoUrl))];
+  const rows: PhotoTransportRow[] = [];
+  // A rotated photo always rides the proxy (the route turns it); a paid host never does.
+  const rotated = new Set<string>();
+  for (const u of new Set(urls)) {
+    const rot = rotations.get(u);
+    if (!rot || isPaidPhotoHost(u)) continue;
+    rotated.add(u);
+    rows.push({ source: u, served: proxiedMockPhotoUrl(artifactId, u, rot), via: "proxy" });
+  }
+  const rest = urls.filter((u) => !rotated.has(u));
+  const http = [...new Set(rest.filter(isInsecurePhotoUrl))];
   const byHost = new Map<string, string[]>();
   for (const u of http) {
     let host = "";
@@ -167,7 +233,6 @@ export async function planPhotoTransport(
     }
     byHost.set(host, [...(byHost.get(host) ?? []), u]);
   }
-  const rows: PhotoTransportRow[] = [];
   // Hosts in parallel, one host's requests serially (the same politeness as the gate).
   await Promise.all(
     [...byHost.values()].map(async (list) => {
@@ -184,7 +249,7 @@ export async function planPhotoTransport(
     }),
   );
   const secureByHost = new Map<string, string[]>();
-  for (const u of new Set(urls)) {
+  for (const u of new Set(rest)) {
     if (!/^https:\/\//i.test(u) || isPaidPhotoHost(u)) continue;
     let host = "";
     try {
@@ -230,7 +295,9 @@ export async function secureMockPhotos(
   html: string,
   artifactId: string,
   photoUrls: readonly string[],
+  leadId?: string | null,
 ): Promise<{ html: string; transport: PhotoTransportRow[] }> {
-  const transport = await planPhotoTransport(photoUrls, artifactId);
+  const rotations = await leadPhotoRotations(leadId);
+  const transport = await planPhotoTransport(photoUrls, artifactId, fetchPhoto, probeWithMockReferer, rotations);
   return { html: transport.length ? applyPhotoTransport(html, transport) : html, transport };
 }
