@@ -682,10 +682,12 @@ async function measure(page: Page, url: string, width: number, rooms: Room[]) {
       const clicked = await page
         .click(".cit-rd[data-open] .cit-rd__cta a", { timeout: 15000 })
         .then(() => true, () => false);
-      // A sima görgetés (scroll-behavior:smooth) időbe telik: legfeljebb ~5 mp-ig várunk rá —
-      // a párhuzamos kapu-futtatás terhelése alatt 2 mp kevés volt (2/42 hamis piros, 10-16).
+      // A sima görgetés (scroll-behavior:smooth) időbe telik: legfeljebb ~15 mp-ig várunk rá —
+      // a párhuzamos kapu-futtatás terhelése alatt 2 mp kevés volt (2/42 hamis piros, 10-16),
+      // és 5 mp is (2026-10-21: a TISZTA mainen 2–3/42 „nem-vitt-a-widgethez” a 131 kapus
+      // futásban, egyedül zöld). Ugyanaz a plafon, mint a kattintás kivárásáé (08ef2045).
       let inView = false;
-      for (let t = 0; clicked && t < 40 && !inView; t++) {
+      for (let t = 0; clicked && t < 120 && !inView; t++) {
         await page.waitForTimeout(125);
         inView = (await page.evaluate(WIDGET_IN_VIEW)) as boolean;
       }

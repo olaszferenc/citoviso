@@ -587,24 +587,22 @@ function pricingSampleBlock(d: SiteData): string {
 }
 
 /**
- * ADR-0061 sample checklist: the facilities module in its real dress, with generic
- * facility TYPES (never a claim that THIS property has them — the section carries
- * the "Minta" pill and says the owner ticks the real ones).
+ * ADR-0061 sample checklist: the facilities module in its real dress, filled ONLY with the
+ * source's own offers (ADR-0338, ADR-XXXX) — the section carries the "Minta" pill and says
+ * the owner ticks the real ones. Never generic padding; nothing sourced → the empty frame.
  */
 function amenitiesSampleBlock(d: SiteData): string {
-  // ADR-0338: the source's own offers first, then the generic types it does not
-  // contradict (Partvilla: „Háziállat nem engedélyezett” → no „Kisállat” on the mock).
-  // The keys mirror SAMPLE_AMENITY_TYPES; the labels stay literal T() calls for the extractor.
-  const generic = [
-    { key: "wifi", label: T(d, "Ingyenes wifi") },
-    { key: "parking", label: T(d, "Parkolás") },
-    { key: "breakfast", label: T(d, "Reggeli") },
-    { key: "ac", label: T(d, "Klíma") },
-    { key: "terrace", label: T(d, "Terasz, kert") },
-    { key: "pets", label: T(d, "Kisállat") },
-  ];
-  const items = sampleAmenityItems(d.sampleAmenities ?? [], generic, d.sampleAmenityDeny ?? []);
-  if (!items.length) return "";
+  const items = sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []);
+  // Nothing sourced: the module still SHOWS (ADR-0061 all-in — a module the lead buys may
+  // not be silent), as its frame with no item in it, and the note says so — the pricing
+  // sample's pattern („ezen az előnézeten szándékosan nincs egyetlen ár sem”).
+  if (!items.length)
+    return asSample(
+      `<section class="cit-modsec" data-cit-module="amenities">` +
+        `<div class="cit-modsec__in"><h2>${T(d, "Amit kínálunk")}</h2></div></section>`,
+      d,
+      T(d, "Minta — ide kerülnek a szállás szolgáltatásai, Ön jelöli be őket; ezen az előnézeten szándékosan nincs kitalált szolgáltatás."),
+    );
   return asSample(
     listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t)),
     d,

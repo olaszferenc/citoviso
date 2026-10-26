@@ -15,6 +15,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
+  contactPhotoOf,
   accented,
   bookingSlot,
   copyHook,
@@ -218,7 +219,9 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   const photos = data.photos;
   const heroPhoto = photos[0]?.url ?? "";
-  const contactPhoto = photos[3]?.url ?? photos[photos.length - 1]?.url ?? "";
+  const conPhoto = contactPhotoOf(data, photos[3] ?? photos[photos.length - 1]);
+  const contactPhoto = conPhoto?.url ?? "";
+  const contactAlt = conPhoto?.alt ?? "";
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
@@ -367,7 +370,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
-        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
+        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(contactAlt)}"></div>` : ""}
       </div>
     </div>
   </section>`

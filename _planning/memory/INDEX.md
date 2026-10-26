@@ -10,6 +10,7 @@
 - [2026-10-22_domain_regisztracio_szal.md](2026-10-22_domain_regisztracio_szal.md) — 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-0400) — overseer.hu oka és a gépi folyamat
 - [2026-10-21_tenant_admin_szakasz_hierarchia.md](2026-10-21_tenant_admin_szakasz_hierarchia.md) — 2026-10-21 — Tenant-admin szakasz-hierarchia („E”) + portál-menüút a tenant nyelvén
 - [2026-10-21_overseer_domain_dupla_rendeles.md](2026-10-21_overseer_domain_dupla_rendeles.md) — 2026-10-21 — Éles eset: overseer.hu — a webhook és az időzítő kétszer vette a domaint, a tulaj hamis „elkelt” levelet kapott
+- [2026-10-21_minta_szolgaltatas_csak_forrasbol.md](2026-10-21_minta_szolgaltatas_csak_forrasbol.md) — 2026-10-21 — A minta-szolgáltatáslista csak a forrásból (ADR-XXXX)
 - [2026-10-19_tobb_szoba_elek_perszonak.md](2026-10-19_tobb_szoba_elek_perszonak.md) — 2026-10-19 — Több szobás foglalás: Elek több perszónával (ADR-0393 kiegészítés)
 - [2026-10-15_egesz_haz_egyszerusitve.md](2026-10-15_egesz_haz_egyszerusitve.md) — 2026-10-15 — Az egész ház egyszerűsítve (Szobák kártya, varázsló)
 - [2026-10-15_belepes_visszatalalas.md](2026-10-15_belepes_visszatalalas.md) — 2026-10-15 — A szállásadó visszatalál a belépéshez (tulaj-lelet, [TESZT] Matróz)

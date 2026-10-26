@@ -10,7 +10,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyHook, copyOf, highlightHook, hookPick, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, contactPhotoOf, copyHook, copyOf, highlightHook, hookPick, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -205,7 +205,9 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const photos = data.photos;
   const heroPhoto = photos[0]?.url ?? "";
   const introPhoto = photos[1]?.url ?? photos[0]?.url ?? "";
-  const contactPhoto = photos[3]?.url ?? photos[photos.length - 1]?.url ?? "";
+  const conPhoto = contactPhotoOf(data, photos[3] ?? photos[photos.length - 1]);
+  const contactPhoto = conPhoto?.url ?? "";
+  const contactAlt = conPhoto?.alt ?? "";
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
@@ -390,7 +392,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       </div>
-      ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
+      ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(contactAlt)}"></div>` : ""}
     </div>
   </section>`
     : "";

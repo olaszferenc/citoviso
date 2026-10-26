@@ -246,10 +246,27 @@ const NEGATION_AFTER = /^\p{L}*[\s:–—-]+(?:\p{L}+\s+){0,2}?(?:nincs|nincsen|
 const NEGATION_BEFORE = /(?<![\p{L}])(?:nincs|nincsen|nem|nelkul)\s+(?:\p{L}+\s+)?$/u;
 /** A meal word followed by a postposition of time is a moment of the day, not a service. */
 const TEMPORAL_AFTER = /^\p{L}*\s+(?:utan|elott|kozben|utani|elotti|idejen)(?![\p{L}])/u;
+/** „reggeli kávé a teraszon” is a morning moment, not a breakfast served (Szömörce 2026-10-21). */
+const MORNING_ADJ =
+  /^reggeli\s+(?:kave|kavez|tea|napsut|napfeny|feny|seta|uszas|furdoz|csend|madar|ebred|harmat|joga|torna|futas|kocog)/u;
 /** A view ONTO the yard / street / car park is no panorama. */
 const NEAR_VIEW = /^\p{L}*\s+(?:a|az)\s+(?:kert|udvar|belso|utca|parkolo|medence|haz)/u;
 const FAR_KM = /(\d+(?:[.,]\d+)?)\s*km(?![\p{L}])/gu;
 const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
+
+/**
+ * A FACILITY NEAR THE HOUSE IS SOMEONE ELSE'S (2026-10-21, Vera's J-findings on live mocks):
+ *   „A közelben található étterem és élelmiszerbolt is”   → Étterem  (Hargita, Hotel Garni)
+ *   „Önellátó szálláshely, de a közelben találhatnak éttermet” (Dunapart)
+ * A restaurant, a pool or a sauna that is „a közelben” / „200 m-re” is another business, not
+ * a service of this property. Only the place-like needles (beach, water's edge, view, pier)
+ * keep their short-distance reading — „a homokos strandtól 700 m-re” is a fair selling point,
+ * and isFar() still drops them beyond a kilometre. A distance needs its suffix („200 m-re”):
+ * a bare size („10 m-es medence”) is the house's own pool.
+ */
+const PLACE_NEEDLE = new Set(["vizpart", "topart", "strand", "steg", "molo", "panorama", "kilatas"]);
+const NEARBY =
+  /(?<![\p{L}])(?:kozel(?:eben|ben)?|kornyek(?:en|eben|beli)|szomszed\p{L}*|setatavolsag\p{L}*|meterre|percre)(?![\p{L}])|\d+\s*(?:m|km|perc)\s*-?\s*(?:re|ra|nyire|nyira)(?![\p{L}])|\d+\s*perc(?:es)?\s+(?:setara|setanyira|autoval|gyalog)/u;
 
 function isFar(clauseNorm: string): boolean {
   for (const m of clauseNorm.matchAll(FAR_KM)) if (parseFloat(m[1]!.replace(",", ".")) >= 1) return true;
@@ -261,23 +278,68 @@ function isFar(clauseNorm: string): boolean {
  * Does any clause of the prose AFFIRM `needle` (deaccented, lowercase) about this property?
  * Exported for the guard and for isSourcedMiss — one rule for "the prose says so".
  */
-export function proseAffirms(needle: string, descriptions: readonly string[]): boolean {
+export function proseAffirms(needle: string, descriptions: readonly string[], own = false): boolean {
   for (const raw of descriptions.map(withoutPlaceNames)) {
-    for (const clauseRaw of raw.split(DEAC_CLAUSE_SPLIT)) {
-      // Same length as the raw clause (deaccent maps 1:1), so case can be read off the raw text.
-      const lowered = deaccent(clauseRaw.toLowerCase());
-      if (lowered.length !== clauseRaw.length) {
-        // Defensive: if normalisation ever changes the length, fall back to case-blind checks.
-        if (affirmsIn(needle, lowered, null)) return true;
-        continue;
-      }
-      if (affirmsIn(needle, lowered, clauseRaw)) return true;
+    for (const sentence of raw.split(SENTENCE_SPLIT)) {
+      // A sentence about ANOTHER venue („A Gyulai Várfürdőben … hullám medence, szaunapark”)
+      // lists that venue's offer, not the property's — whatever its clauses say.
+      if ((own || !PLACE_NEEDLE.has(needle)) && isForeignVenueSentence(sentence)) continue;
+      if (sentenceAffirms(needle, sentence, own)) return true;
     }
   }
   return false;
 }
 
-function affirmsIn(needle: string, clause: string, rawClause: string | null): boolean {
+function sentenceAffirms(needle: string, raw: string, own: boolean): boolean {
+  for (const clauseRaw of raw.split(DEAC_CLAUSE_SPLIT)) {
+    // Same length as the raw clause (deaccent maps 1:1), so case can be read off the raw text.
+    const lowered = deaccent(clauseRaw.toLowerCase());
+    if (lowered.length !== clauseRaw.length) {
+      // Defensive: if normalisation ever changes the length, fall back to case-blind checks.
+      if (affirmsIn(needle, lowered, null, own)) return true;
+      continue;
+    }
+    if (affirmsIn(needle, lowered, clauseRaw, own)) return true;
+  }
+  return false;
+}
+
+/** The castle by NAME („a Gyulai Vár”, „A Várban”) — lowercase „vár” is also the verb „waits”. */
+const CASTLE = /(?<![\p{L}])Vár(?:ban|ba|ból|hoz|nál|tól|at|on)?(?![\p{L}])/u;
+
+function isForeignVenueSentence(sentence: string): boolean {
+  return CASTLE.test(sentence) || FOREIGN_VENUE.test(deaccent(sentence.toLowerCase()));
+}
+
+/**
+ * The mock's „Amit kínálunk” sample asks a narrower question than the writer: not „is it
+ * true near the house” but „does the house OFFER it”. Measured 2026-10-21, Tomi Apartman:
+ * „…a város strandjain tölthetik a forró napokat” became „Strand” on the services sample.
+ * In `own` mode the place-like needles lose their nearby exemption, and a facility the
+ * TOWN owns („a város strandjain”, „a település uszodája”) is not the property's.
+ */
+/**
+ * A sentence whose subject is another VENUE (2026-10-21, Kavics 8302c1f0 / Belvárosi 1ec76cb0,
+ * Gyula): „A fürdő … gyógymedencékkel, … szaunavilággal”, „A Gyulai Várfürdőben … hullám
+ * medence, … szaunapark”, „a toronyban csodás kilátás” → Medence, Szauna, Panoráma on the
+ * mock. „fürdőszoba / -köpeny / -kád / -ruha” are the flat's own and stay out of the pattern.
+ */
+const SENTENCE_SPLIT = /[.!?;\n]+/u;
+const FOREIGN_VENUE =
+  /(?<![\p{L}])(?:(?:var|gyogy|termal|strand|elmeny)?furdo(?!szob|kopeny|kad|ruha|nadrag|lepedo|torolkoz)\p{L}*|aquapark\p{L}*|muzeum\p{L}*|torony\p{L}*|tornya\p{L}*|kastely\p{L}*|szinhaz\p{L}*|varszinhaz\p{L}*|templom\p{L}*|bazilika\p{L}*|apatsag\p{L}*)/u;
+
+const TOWN_OWNED = /(?<![\p{L}])(?:varos|telepules|kozseg|falu|kornyekbeli|helyi|kozeli)\s+$/u;
+
+/**
+ * Is a DESCRIPTION-derived fact label one the prose attributes to THIS property (`own`
+ * mode, above)? Listed amenities are the listing's own claims and never pass through here.
+ */
+export function descriptionFactIsOwn(label: string, descriptions: readonly string[]): boolean {
+  const needles = DESCRIPTION_FACT_LABELS.filter(([, l]) => l === label).map(([n]) => n);
+  return needles.some((n) => proseAffirms(n, descriptions, true));
+}
+
+function affirmsIn(needle: string, clause: string, rawClause: string | null, own = false): boolean {
   let from = 0;
   for (;;) {
     const i = clause.indexOf(needle, from);
@@ -299,8 +361,14 @@ function affirmsIn(needle: string, clause: string, rawClause: string | null): bo
     const beforeText = clause.slice(0, ws);
     if (NEGATION_AFTER.test(after) || NEGATION_BEFORE.test(beforeText)) continue;
     if (TEMPORAL_AFTER.test(after)) continue;
+    if (needle === "reggeli" && MORNING_ADJ.test(after)) continue;
     if ((needle === "kilatas" || needle === "panorama") && NEAR_VIEW.test(after)) continue;
     if (isFar(clause)) continue;
+    if ((own || !PLACE_NEEDLE.has(needle)) && NEARBY.test(clause)) continue;
+    if (own && TOWN_OWNED.test(beforeText)) continue;
+    // „Balatonfüred központja, a strandok …”: the beaches (plural) are the town's; a house's
+    // own beach is one („saját strand”). Szömörce 2026-10-21.
+    if (own && needle === "strand" && /^strand(?:ok|jai)/u.test(word)) continue;
     return true;
   }
 }

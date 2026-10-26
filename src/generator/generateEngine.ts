@@ -8,7 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
-import { deniedSampleTypes, unitNamesFromProse } from "../engine/sampleFromSource.js";
+import { deniedSampleTypes, roomCountContradicted, unitNamesFromProse, wholeLetOnly } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
@@ -40,7 +40,7 @@ import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { MIN_GUEST_STARS } from "./guestVoice.js";
 import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
-import { groupAmenities, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { descriptionFactIsOwn, groupAmenities, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { fingerprintCandidates } from "./photoHash.js";
@@ -112,6 +112,63 @@ export function portalRooms(
   }
   const counted = high.find((p) => p.roomCount?.value && p.roomCount.value > 0);
   return { rooms: [], count: counted?.roomCount?.value ?? null };
+}
+
+/**
+ * The mock's SAMPLE hints (ADR-0338, ADR-XXXX), from the source alone — no AI, no network.
+ * One function for the generator AND for `rerender-mock.mts --resample`, so a sample-rule
+ * fix can reach an already generated mock without re-running the planner or the writer.
+ * A portal room count the prose contradicts is dropped (Hotel Garni: field 3, text „9
+ * szobában”), and with it the market gate's room fact.
+ */
+export function sampleHintsOf(
+  lead: LoadedLead["lead"],
+  lang: string,
+  sources: {
+    readonly listedAmenities: readonly string[];
+    readonly amenities: readonly string[];
+    readonly descriptions: readonly string[];
+    /** The labels lifted from the prose (writerSources) — the sample keeps only those the
+     *  prose attributes to the property itself (descriptionFactIsOwn). */
+    readonly descriptionFacts?: readonly string[];
+  },
+): {
+  units: { rooms: Room[]; count: number | null };
+  hints: Pick<SiteData, "sampleRoomCount" | "sampleRoomNames" | "sampleAmenities" | "sampleAmenityDeny">;
+} {
+  const raw = portalRooms(lead, { lang });
+  const units =
+    !raw.rooms.length && raw.count && roomCountContradicted(raw.count, sources.descriptions)
+      ? { rooms: raw.rooms, count: null }
+      : raw;
+  // A house let only as a whole has one bookable unit: its bedrooms are no sample cards
+  // (Szömörce: „Csak egyben adjuk ki” → not „1.–4. szoba”). The count stays a true fact for
+  // the copy (units), only the sample cards drop it.
+  const wholeOnly = wholeLetOnly(sources.descriptions);
+  const sampleRoomNames = wholeOnly ? [] : unitNamesFromProse(sources.descriptions, lead.name);
+  const sampleAmenityDeny = deniedSampleTypes(sources.listedAmenities, sources.descriptions);
+  // „Amit kínálunk” asks what the HOUSE offers: a prose fact about the town or the area
+  // („a város strandjain”, „közel a homokos strand”) is true, but not this house's offer.
+  const sampleAmenities = sampleFacilityItems(
+    sources.amenities.filter(
+      (a) => !sources.descriptionFacts?.includes(a) || descriptionFactIsOwn(a, sources.descriptions),
+    ),
+  );
+  return {
+    units,
+    hints: {
+      // No list, but a stated room count → the sample cards follow that number, so the
+      // SHAPE of the property is true even where the names are not known.
+      ...(!units.rooms.length && units.count && !wholeOnly ? { sampleRoomCount: units.count } : {}),
+      // Unit names from the owner's prose (Hungarian only — the type word is Hungarian)
+      // beat a bare count.
+      ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),
+      // The services sample: the listing's own offers (Hungarian source labels → Hungarian
+      // pages only); the types the source contradicts drop out on every page.
+      ...(lang === DEFAULT_LANG && sampleAmenities.length ? { sampleAmenities } : {}),
+      ...(sampleAmenityDeny.length ? { sampleAmenityDeny } : {}),
+    },
+  };
 }
 
 /** Attach the editorial copy to each section by kind, and prefer the editorial hero (with a
@@ -407,10 +464,12 @@ async function generateEngineMockInner(
   });
 
   // What the verified listing knows about the property's rooms (measured, gated).
-  const units = portalRooms(lead, dLang);
-  const sampleRoomNames = unitNamesFromProse(sourcedDescriptions, lead.name);
-  const sampleAmenityDeny = deniedSampleTypes(sources.listedAmenities, sourcedDescriptions);
-  const sampleAmenities = sampleFacilityItems(sourcedAmenities);
+  const { units, hints: sampleHints } = sampleHintsOf(lead, lang, {
+    listedAmenities: sources.listedAmenities,
+    amenities: sourcedAmenities,
+    descriptions: sourcedDescriptions,
+    descriptionFacts: sources.descriptionFacts,
+  });
 
   // MARKETING-RELEVANCE gate with TEETH (owner ruling 2026-08-31). The other gates ask
   // "is it true / pretty / properly framed"; this one asks whether a person looking for a
@@ -570,16 +629,8 @@ async function generateEngineMockInner(
     // portal field, nothing inferred). Only the NAMES/capacities are real; the room
     // PHOTOS are still borrowed from the gallery, so they keep the sample watermark.
     ...(units.rooms.length ? { rooms: units.rooms } : {}),
-    // No list, but a stated room count → the sample cards follow that number, so the
-    // SHAPE of the property is true even where the names are not known.
-    ...(!units.rooms.length && units.count ? { sampleRoomCount: units.count } : {}),
-    // ADR-0338: the mock's SAMPLE blocks read against the source. Unit names from the
-    // owner's prose (Hungarian only — the type word is Hungarian) beat a bare count.
-    ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),
-    // The services sample: the listing's own offers (Hungarian source labels → Hungarian
-    // pages only), and on every page the generic types the source contradicts drop out.
-    ...(lang === DEFAULT_LANG && sampleAmenities.length ? { sampleAmenities } : {}),
-    ...(sampleAmenityDeny.length ? { sampleAmenityDeny } : {}),
+    // ADR-0338: the mock's SAMPLE blocks read against the source (sampleHintsOf).
+    ...sampleHints,
   };
 
   // ADR-0027 template-first: with photos (the hero's fuel) the mock renders through the

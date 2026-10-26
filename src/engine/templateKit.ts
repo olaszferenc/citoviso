@@ -8,7 +8,7 @@ import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
-import { sampleTypeOf } from "./sampleFromSource.js";
+import { affirmedSampleTypes, sampleTypeOf } from "./sampleFromSource.js";
 // Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
 export { copyHook, highlightHook, hookPick } from "./copyFields.js";
@@ -111,6 +111,34 @@ export function honestStarCount(data: SiteData): number {
   return honestStars(data);
 }
 
+/** Outdoor subjects (heroPick vision verdict) that may stand for „the surroundings”. */
+const SURROUNDINGS_SUBJECTS = new Set(["exterior", "view", "pool_garden"]);
+/** Never the contact / surroundings picture, whatever slot it falls into. */
+const NEVER_SURROUNDINGS = new Set(["bathroom", "toilet"]);
+
+/**
+ * The contact block's picture („<név> környezete”). Measured 2026-10-21 (Vera, 8 leads:
+ * Germering, Balaton Panzió, Dinasztia, …): the templates took a FIXED slot (the last photo,
+ * or photos[3]), and the gated set often ends in a bathroom — a shower captioned „the
+ * surroundings”. Now: the last outdoor photo (exterior · view · pool_garden) other than the
+ * hero wins, captioned as the surroundings; otherwise the fixed slot stays (a bathroom or
+ * toilet stepping aside) with the plain name as alt — the caption claims nothing it cannot
+ * know. Photos without a vision verdict count as unknown, never as outdoor. Deterministic.
+ */
+export function contactPhotoOf(
+  d: SiteData,
+  slot: Photo | undefined,
+): { readonly url: string; readonly alt: string } | null {
+  const photos = d.photos;
+  if (!photos.length) return null;
+  const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
+  const scene = outdoor.filter((p) => p.url !== photos[0]!.url).at(-1) ?? outdoor.at(-1);
+  if (scene) return { url: scene.url, alt: T(d, "{name} környezete", { name: d.name }) };
+  const ok = (p: Photo | undefined): p is Photo => Boolean(p && !(p.subject && NEVER_SURROUNDINGS.has(p.subject)));
+  const pick = ok(slot) ? slot : [...photos].reverse().find(ok);
+  return pick ? { url: pick.url, alt: d.name } : null;
+}
+
 /**
  * Sample rooms for the MOCK, wearing the lead's REAL photos (ADR-0059 ③).
  *
@@ -136,6 +164,7 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   const names = d.sampleRoomNames?.length ? d.sampleRoomNames.slice(0, 8) : null;
   const n = names ? names.length : d.sampleRoomCount ? Math.max(1, Math.min(8, d.sampleRoomCount)) : 1;
   const deny = d.sampleAmenityDeny ?? [];
+  const affirmed = affirmedSampleTypes(d.sampleAmenities ?? []);
   const base: Room[] = Array.from({ length: n }, (_, i) => {
     const proto = SAMPLE_ROOMS[Math.min(i, SAMPLE_ROOMS.length - 1)]!;
     const name = names
@@ -143,13 +172,17 @@ export function sampleRooms(d: SiteData): readonly Room[] {
       : d.sampleRoomCount
         ? T(d, "{n}. szoba", { n: i + 1 })
         : T(d, "Az egész szállás");
-    // A sample amenity the source contradicts is not shown on any card either. On a card
-    // that names a REAL unit („Gold apartman") or the whole place, a generic chip is no
-    // longer an illustration but a claim about that unit („Gold apartman: Erkély") — those
-    // cards carry no sample chips (fact-check 2026-10-07, §B.17 (5)).
+    // On a card that names a REAL unit („Gold apartman") or the whole place, a generic chip
+    // is no longer an illustration but a claim about that unit („Gold apartman: Erkély") —
+    // those cards carry no sample chips (fact-check 2026-10-07, §B.17 (5)). On a numbered
+    // card a chip of a service type („Reggeli kérhető", „Klíma") stays only when the source
+    // itself offers that type (ADR-XXXX: Hotel Garni „Ellátást nem tudnak biztosítani").
     const amenities = names || !d.sampleRoomCount
       ? []
-      : proto.amenities?.filter((a) => !deny.includes(sampleTypeOf(a.label) ?? ""));
+      : proto.amenities?.filter((a) => {
+          const kind = sampleTypeOf(a.label);
+          return !kind || (affirmed.has(kind) && !deny.includes(kind));
+        });
     return { ...proto, name, ...(amenities ? { amenities } : {}) };
   });
   if (!d.photos.length) return base;

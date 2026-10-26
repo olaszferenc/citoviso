@@ -255,7 +255,9 @@ await page.waitForTimeout(250);
 // nem tilt, hanem a szobalistához visz — a 2. lépésbe NEM enged.
 check("szoba nélkül a gomb a szobát kéri", /Jelöljön ki legalább egy szobát/.test(await page.locator(".cit-book__go").innerText()));
 await page.locator(".cit-book__go").click();
-await page.waitForTimeout(250);
+// Wait for the nudge itself, not a fixed 250 ms: under load the class landed later and the
+// check read 0 (2026-10-21: 1 of 2 solo runs red, the widget unchanged). The assertion is the same.
+await page.locator(".cit-book__rooms--nudge").first().waitFor({ timeout: 5000 }).catch(() => undefined);
 check(
   "szoba nélkül a gomb nem lép a 2. lépésre, a szobalistát emeli ki",
   !(await page.locator(".cit-book--step2").count()) && (await page.locator(".cit-book__rooms--nudge").count()) === 1,

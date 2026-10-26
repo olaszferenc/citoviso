@@ -13,7 +13,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, copyHook, highlightHook, hookPick, bookingSlot, hasBookingSurface, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, contactPhotoOf, copyHook, highlightHook, hookPick, bookingSlot, hasBookingSurface, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -266,7 +266,9 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const heroPhoto = photos[0]?.url;
   const bandAUrl = photos[2]?.url ?? photos[1]?.url;
   const bandBUrl = photos[4]?.url ?? photos[3]?.url;
-  const contactPhoto = photos[photos.length - 1]?.url ?? "";
+  const conPhoto = contactPhotoOf(data, photos[photos.length - 1]);
+  const contactPhoto = conPhoto?.url ?? "";
+  const contactAlt = conPhoto?.alt ?? "";
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   // The hero sub prefers the intro's first sentence: the tagline is saved for the quote band
@@ -469,7 +471,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
-        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
+        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(contactAlt)}"></div>` : ""}
       </div>
     </div>
   </section>`

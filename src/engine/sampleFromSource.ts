@@ -33,6 +33,14 @@ export const SAMPLE_AMENITY_TYPES: readonly SampleAmenityType[] = [
 /** A negation that turns a listing item or a prose sentence into a refusal. */
 const NEGATION = /(?<![a-z])(?:nem|nincs|nincsen|nelkul|tilos|not|no)(?![a-z])/;
 
+/**
+ * Meals refused without the word „reggeli” (2026-10-21, live mocks): „Önellátó szálláshely”
+ * (Dunapart Villa) and „Ellátást nem tudnak biztosítani a szállodában” (Hotel Garni). Both
+ * deny the breakfast type; self-catering needs no negation word to say so.
+ */
+const SELF_CATERING = /onellat/;
+const MEAL_SERVICE = /(?<![a-z])ellatas/;
+
 function fold(s: string): string {
   return s
     .normalize("NFD")
@@ -52,11 +60,17 @@ export function deniedSampleTypes(
   listed: readonly string[],
   descriptions: readonly string[],
 ): string[] {
-  const units = [
+  const all = [
     ...listed.map(fold),
     ...descriptions.flatMap((d) => fold(d).split(/[.!?;\n]+/)),
-  ].filter((u) => NEGATION.test(u));
-  return SAMPLE_AMENITY_TYPES.filter((t) => units.some((u) => t.re.test(u))).map((t) => t.key);
+  ];
+  const units = all.filter((u) => NEGATION.test(u));
+  const deny = SAMPLE_AMENITY_TYPES.filter((t) => units.some((u) => t.re.test(u))).map((t) => t.key);
+  const noMeals =
+    all.some((u) => SELF_CATERING.test(u) && !/(?<![a-z])nem onellat/.test(u)) ||
+    units.some((u) => MEAL_SERVICE.test(u));
+  if (noMeals && !deny.includes("breakfast")) deny.push("breakfast");
+  return deny;
 }
 
 /** Is this listing item a refusal rather than an offer („Háziállat nem engedélyezett”)? */
@@ -104,33 +118,72 @@ export function unitNamesFromProse(descriptions: readonly string[], leadName: st
 }
 
 /**
- * The services sample's items: the source's own offers first (strongest first,
- * refusals out), topped up with generic types the source does not
- * contradict — six at most, the block's approved size.
+ * The services sample's items: ONLY the source's own offers (strongest first), refusals
+ * and denied types out, six at most — the block's approved size. No generic top-up
+ * (2026-10-21, ADR-XXXX): „Reggeli” stood under „Amit kínálunk” on a self-catering villa
+ * (Dunapart) and on a lead with no amenities at all (Hosszúhegyi), because the block was
+ * padded with generic types the source never stated. The „Minta” pill does not unsay a
+ * service the guest reads as this house's. Nothing sourced → no item (the block shows its
+ * empty frame and says so).
  */
 export function sampleAmenityItems(
   sourced: readonly string[],
-  generic: readonly { readonly key: string; readonly label: string }[],
   deny: readonly string[],
   max = 6,
 ): string[] {
   const items: string[] = [];
-  const kinds = new Set<string>();
   // The source items arrive already one per facility kind (the generator's buckets are
-  // finer than these six types — „Kerthelyiség” and „Erkély/terasz” are two facts); here
-  // they only block the generic type they cover.
+  // finer than these six types — „Kerthelyiség” and „Erkély/terasz” are two facts).
   for (const s of sourced) {
     if (items.length >= max) break;
     if (isNegatedItem(s) || items.includes(s)) continue;
     const kind = sampleTypeOf(s);
-    if (kind) kinds.add(kind);
+    if (kind && deny.includes(kind)) continue;
     items.push(s);
   }
-  for (const g of generic) {
-    if (items.length >= max) break;
-    if (kinds.has(g.key) || deny.includes(g.key)) continue;
-    kinds.add(g.key);
-    items.push(g.label);
-  }
   return items;
+}
+
+/** The generic sample types the source AFFIRMS — read off its own offers on the mock. */
+export function affirmedSampleTypes(sourced: readonly string[]): Set<string> {
+  const kinds = new Set<string>();
+  for (const s of sourced) {
+    if (isNegatedItem(s)) continue;
+    const kind = sampleTypeOf(s);
+    if (kind) kinds.add(kind);
+  }
+  return kinds;
+}
+
+/**
+ * Does the prose state a room number OTHER than `count`? Measured 2026-10-21, Hotel Garni:
+ * the portal's room-count field caught „3 db szoba légkondicionált” (a subset), while the
+ * same text says „9 szobában összesen 24 főt tudnak fogadni” — the mock showed „1.–3. szoba”.
+ * Any differing number before a room word means the field is not THE count, so the caller
+ * drops it (one „Az egész szállás” card) rather than picking a number. Conservative: a
+ * false hit only removes a number, never adds one.
+ */
+export function roomCountContradicted(count: number, descriptions: readonly string[]): boolean {
+  const ROOM_NUMBER =
+    /(?<![\d.,])(\d{1,3})\s*(?:db\.?\s+|darab\s+)?(?:[a-z]+\s+){0,2}?(?:szoba|szobas|vendegszoba|apartman|lakosztaly)/g;
+  for (const d of descriptions) {
+    for (const m of fold(d).matchAll(ROOM_NUMBER)) {
+      if (Number(m[1]) !== count) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Is the property let ONLY as a whole? Measured 2026-10-21, Szömörce fe105370: „Csak egyben
+ * adjuk ki, így a ház és a kert … csak a tiétek” — yet the mock showed four separately
+ * bookable „1.–4. szoba” cards from the four bedrooms. A whole-only house has ONE bookable
+ * unit, so the caller drops the numbered/named sample cards (one „Az egész szállás” card).
+ * „Egyben is kiadó” (rooms AND whole) and „nem csak egyben” keep the rooms.
+ */
+export function wholeLetOnly(descriptions: readonly string[]): boolean {
+  const WHOLE_ONLY =
+    /(?<![a-z])(?:csak|kizarolag)\s+(?:egyben|egeszben)(?![a-z])|(?<![a-z])(?:egyben|egeszben)\s+(?:adjuk|adom|adjak|kiado|berelheto|foglalhato)(?![a-z])/;
+  const NOT_ONLY = /(?<![a-z])nem\s+(?:csak|kizarolag)\s+(?:egyben|egeszben)(?![a-z])/g;
+  return descriptions.some((d) => WHOLE_ONLY.test(fold(d).replace(NOT_ONLY, " ")));
 }
