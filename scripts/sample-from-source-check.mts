@@ -97,9 +97,11 @@ const counted = sampleRooms({ ...base, sampleRoomCount: 2 });
 check("kimondott szám → annyi számozott kártya", counted.map((r) => r.name).join("|") === "1. szoba|2. szoba", counted.map((r) => r.name));
 const named = sampleRooms({ ...base, sampleRoomNames: names });
 check("prózai nevek → annyi kártya, azokkal a nevekkel", named.map((r) => r.name).join("|") === "Family apartman|Gold apartman", named.map((r) => r.name));
-const noBreakfast = sampleRooms({ ...base, sampleRoomCount: 1, sampleAmenityDeny: ["breakfast"] });
-check("a tiltott típus a minta-szoba felszereltségéből is kiesik", !noBreakfast[0]!.amenities?.some((a) => /reggeli/i.test(a.label)), noBreakfast[0]!.amenities);
-check("számozott minta-kártya megtartja az illusztratív chipeket", (counted[0]!.amenities?.length ?? 0) > 0, counted[0]!.amenities);
+// Aranyhíd f5887927 (A 633a0ad1 / B 6dff40f0): sampleRoomCount 4, source „Kert” → „1.–4. szoba”
+// with „Saját fürdőszoba” (untyped, always kept) and „Erkély” (the terrace type, met by „Kert”).
+const aranyhid = sampleRooms({ ...base, sampleRoomCount: 4, sampleAmenities: ["Kert"] });
+check("Aranyhíd: 4 számozott kártya, egyiken sincs chip („Saját fürdőszoba”, „Erkély”)", aranyhid.length === 4 && aranyhid.every((r) => !r.amenities?.length), aranyhid.map((r) => r.amenities));
+check("⛔ számozott minta-kártyán nincs chip (szobaszinten egyik sem forrásolt)", counted.every((r) => !r.amenities?.length), counted.map((r) => r.amenities));
 check("⛔ VALÓS nevű kártyán nincs generikus chip („Gold apartman: Erkély”)", named.every((r) => !r.amenities?.length), named.map((r) => r.amenities));
 check("⛔ az egyetlen semleges kártyán nincs generikus chip", !unknown[0]!.amenities?.length, unknown[0]!.amenities);
 check("⛔ „Az egész szállás” kártyán sincs generikus chip", !sampleRooms({ ...base, sampleUnitKind: "whole" })[0]!.amenities?.length);
@@ -240,8 +242,7 @@ check("Belvárosi: a vártorony kilátása a mintán nem „Panoráma”", !desc
 check("⛔ saját medence megmarad, ha a ház „vár” a vendégre („Saját medence vár a kertben.”)", descriptionSellingPoints(["Saját medence vár a kertben."]).includes("Medence"));
 check("⛔ fürdőköpeny nem idegen hely („Fürdőköpeny és szauna a házban.”)", descriptionSellingPoints(["Fürdőköpeny és szauna a házban."]).includes("Szauna"));
 const chips = sampleRooms({ ...base, sampleRoomCount: 2, sampleAmenities: ["Parkoló", "Klíma"] }).flatMap((r) => (r.amenities ?? []).map((a) => a.label));
-check("számozott kártya: a forrás típusa (Klíma) megmarad", chips.includes("Klíma"), chips);
-check("⛔ számozott kártya: forrásban nem álló típus („Reggeli kérhető”, „Ingyenes Wi-Fi”) kiesik", !chips.some((c) => /Reggeli|Wi-?Fi/i.test(c)), chips);
+check("⛔ számozott kártya: forrásolt ház-szintű típus (Klíma) sem lesz szoba-chip", chips.length === 0, chips);
 
 console.log("⑤ render: minden sablon, a valódi út");
 const PIX = "data:image/svg+xml;base64," + Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#8fa98c"/></svg>`).toString("base64");
