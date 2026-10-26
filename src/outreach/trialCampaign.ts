@@ -18,7 +18,8 @@
 //   order_intent|converted, or a submitted order) · operator exclusion (`--kizar`, a
 //   'excluded' trial_campaign row — e.g. a conversation handled by hand) · already got the
 //   campaign · a stuck claim (`--felold`) · the mail address changed since the cold letter ·
-//   no usable channel · a second lead of the same PERSON (mail address or mobile).
+//   no usable channel · a second lead of the same PERSON (mail address or mobile) · a lead
+//   whose latest cold outreach went out on or after TRIAL_CAMPAIGN_CUTOFF (owner 2026-10-26).
 // Every verdict is taken AGAIN right before the claim (a run takes hours).
 //
 // ⛔ ONE SHOT, in code: trial_campaign has one row per lead and one per (channel, address),
@@ -77,6 +78,7 @@ export type TrialCampaignExclusion =
   | "stuck"
   | "address_changed"
   | "replied"
+  | "after_cutoff"
   | "no_channel"
   | "duplicate_address";
 
@@ -93,10 +95,20 @@ export const EXCLUSION_LABEL: Record<TrialCampaignExclusion, string> = {
   already: "már megkapta a kampányt", // i18n-exempt: operátori CLI-kimenet
   stuck: "beragadt foglalás: lefoglalva, de nem igazoltan kiment — ellenőrzés után: --felold <id>", // i18n-exempt: operátori CLI-kimenet
   replied: "válaszolt egy megkeresésre — vele ember foglalkozik, kampány-levelet nem kap (tulaj 2026-10-26)", // i18n-exempt: operátori CLI-kimenet
+  after_cutoff: "a hideg megkeresés a kampány határa (2026-10-26) után ment ki — friss megkeresés, újrakereső levelet nem kap (tulaj 2026-10-26)", // i18n-exempt: operátori CLI-kimenet
   address_changed: "a cím a hideg levél óta változott (az új címre hideg levél nem ment)", // i18n-exempt: operátori CLI-kimenet
   no_channel: "nincs használható csatorna (cím / magyar mobil)", // i18n-exempt: operátori CLI-kimenet
   duplicate_address: "ugyanez a személy (cím vagy szám) már egy másik lead célpontja / kapta / kizárva", // i18n-exempt: operátori CLI-kimenet
 };
+
+/**
+ * Owner, 2026-10-26: the campaign is for the leads reached BEFORE the free trial existed. From
+ * 2026-10-26 the automatic dispatch (ADR-0405) reaches new leads with today's letter; an
+ * "azóta élesben is kipróbálhatja" re-contact hours later would be nonsense. A lead whose
+ * LATEST cold outreach (any channel) went out at or after this instant is excluded.
+ * 2026-10-26 00:00 Budapest (CEST, UTC+2).
+ */
+export const TRIAL_CAMPAIGN_CUTOFF = new Date("2026-10-25T22:00:00Z");
 
 /** A `claimed` row older than this, still without sent_at, is a run that died mid-send (IT D-3a). */
 export const STUCK_CLAIM_MS = 30 * 60_000;
@@ -293,6 +305,10 @@ export async function listTrialCampaignCandidates(
       continue;
     }
     if (repliedLeads.has(lead.id)) { no("replied"); continue; }
+    const lastCold = Math.max(
+      ...rows.flatMap((p) => [p.email_sent_at, p.sms_sent_at]).filter(Boolean).map((t) => +new Date(t as string)),
+    );
+    if (lastCold >= +TRIAL_CAMPAIGN_CUTOFF) { no("after_cutoff"); continue; }
     if (await ownedSiteForLead(lead.id)) { no("bought"); continue; }
     if (trials.has(lead.id)) { no("trial"); continue; }
     if (submitted.has(lead.id) || rows.some((p) => p.status === "order_intent" || p.status === "converted")) {

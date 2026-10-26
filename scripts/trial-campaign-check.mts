@@ -19,7 +19,8 @@
 //      stores ONE row with source 'trial_mail';
 //   ④ the target selection: an emailed lead is a mail target, a texted mobile-only one an SMS
 //      target; unsubscribed / test / trialing / intent / bought / archived / operator-excluded
-//      / never-contacted leads are out, and a second lead on the same address is out;
+//      / never-contacted leads are out, a lead reached on or after TRIAL_CAMPAIGN_CUTOFF is out
+//      (owner 2026-10-26), and a second lead on the same address is out;
 //   ⑤ ONE SHOT: outside the weekday 9–16 window nothing is claimed; inside, the mail goes
 //      once, a second run sends nothing, the address unique index refuses a second lead on
 //      the same address, a failed send releases the claim; the SMS goes once;
@@ -268,6 +269,8 @@ async function fixture(
     archived?: boolean;
     unsubscribed?: boolean;
     status?: "sent" | "order_intent" | "converted";
+    /** When the cold outreach went out (default: 2026-09-24, before TRIAL_CAMPAIGN_CUTOFF). */
+    sentAt?: Date;
     /** The mock artifact (the /p/<token> routes need its path; the mail branch its curator
      *  sign-off). Default: an approved one; false = none. */
     artifact?: false | { status?: string; inputs?: Record<string, unknown> };
@@ -297,7 +300,7 @@ async function fixture(
         .returning("id")
         .executeTakeFirstOrThrow()
     : null;
-  const sentAt = new Date("2026-09-24T09:30:00+02:00");
+  const sentAt = o.sentAt ?? new Date("2026-09-24T09:30:00+02:00");
   const p = await db
     .insertInto("prospect")
     .values({
@@ -390,6 +393,10 @@ if (!SELF_TEST) {
     const arch = await fixture("arch", { archived: true });
     const intent = await fixture("intent", { status: "order_intent" });
     const never = await fixture("never", { emailSent: false });
+    // Owner 2026-10-26: reached on the cutoff day (00:05 Budapest) → a fresh contact, no re-letter;
+    // one minute before the cutoff → still a target. The boundary itself, both sides.
+    const fresh = await fixture("fresh", { sentAt: new Date("2026-10-26T00:05:00+02:00") });
+    const preCutoff = await fixture("precut", { sentAt: new Date("2026-10-25T23:59:00+02:00") });
     const trial = await fixture("trial");
     await db
       .insertInto("free_trial")
@@ -420,6 +427,8 @@ if (!SELF_TEST) {
     check("④ vásárolt → kimarad", of(bought.leadId)?.excluded === "bought");
     check("④ operátori kizárás → kimarad", of(excl.leadId)?.excluded === "operator");
     check("④ meg sem keresett → nincs a listán", !of(never.leadId));
+    check("④ a határ (2026-10-26) után megkeresett → kimarad", of(fresh.leadId)?.excluded === "after_cutoff");
+    check("④ a határ előtt egy perccel megkeresett → célpont", of(preCutoff.leadId)?.excluded === null);
     const twins = [of(twin1.leadId), of(twin2.leadId)];
     check("④ két lead egy címen → egy célpont, a másik kimarad", twins.filter((t) => t?.excluded === null).length === 1 && twins.some((t) => t?.excluded === "duplicate_address"));
 
