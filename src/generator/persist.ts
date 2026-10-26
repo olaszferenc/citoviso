@@ -26,7 +26,7 @@ const UUID_RE =
  * → by id; anything else → newest lead whose name contains the string.
  */
 export async function loadLead(idOrName?: string): Promise<LoadedLead> {
-  let query = db.selectFrom("lead").select(["id", "raw"]);
+  let query = db.selectFrom("lead").select(["id", "raw", "name"]);
   if (idOrName && UUID_RE.test(idOrName)) {
     query = query.where("id", "=", idOrName);
   } else if (idOrName) {
@@ -43,7 +43,11 @@ export async function loadLead(idOrName?: string): Promise<LoadedLead> {
         : "No leads in the DB. Run the scraper first.",
     );
   }
-  return { id: row.id, lead: row.raw as unknown as QualifiedLead };
+  // The `name` COLUMN is the curator's word: the console rename wrote only the column until
+  // 2026-10-26, so a regenerated Hotel Fortuna mock still carried the scraped SEO name from
+  // raw.name. The column wins; raw.name is only the fallback.
+  const raw = row.raw as unknown as QualifiedLead;
+  return { id: row.id, lead: row.name?.trim() ? { ...raw, name: row.name.trim() } : raw };
 }
 
 /**

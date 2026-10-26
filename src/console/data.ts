@@ -962,7 +962,9 @@ export async function saveLeadEdits(
   else if (typeof raw.country === "string") raw.country = normalizeCountry(raw.country)?.toUpperCase() ?? raw.country;
   raw.curatorEditedAt = now.toISOString();
 
+  // raw.name too: every generator reader takes the lead from raw (Fortuna, 2026-10-26).
   const nameEdit = edits.name?.trim();
+  if (nameEdit) raw.name = nameEdit;
   await db
     .updateTable("lead")
     .set({

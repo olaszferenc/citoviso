@@ -41,6 +41,7 @@ process.env.CIT_SHOT = "1";
 
 const { db, pool } = await import("../src/db/client.js");
 const { saveLeadEdits } = await import("../src/console/data.js");
+const { loadLead } = await import("../src/generator/persist.js");
 const { checkLeadContact } = await import("../src/console/leadContactRules.js");
 const { leadPage } = await import("../src/console/views.js");
 const { checkEmailList, leadEmails, splitEmailList } = await import("../src/email/leadEmails.js");
@@ -158,6 +159,17 @@ try {
   const raw6 = (await read()).raw as Record<string, unknown>;
   ok(r6.ok === true && raw6.email === undefined && raw6.otherEmails === undefined, "üres lista mindkét mezőt törli", JSON.stringify(raw6));
   ok(typeof raw6.emailCuratedAt === "string" && curatorOwnsEmail(raw6), "a kiürítés kurátori döntésként bélyegzett (az újragyűjtés nem tölti vissza)", JSON.stringify(raw6));
+
+  // Ⓝ rename (Hotel Fortuna, 2026-10-26): the console rename wrote only the name COLUMN, the
+  // generator read raw.name → a regenerated mock carried the old SEO name.
+  console.log("Ⓝ névjavítás — oszlop ÉS raw.name, a generátor a kurátorét olvassa");
+  const r7 = await saveLeadEdits(lead.id, { name: "Hotel Fortuna" }, new Date());
+  const after7 = await db.selectFrom("lead").select(["name", "raw"]).where("id", "=", lead.id).executeTakeFirstOrThrow();
+  ok(r7.ok === true && after7.name === "Hotel Fortuna" && (after7.raw as Record<string, unknown>).name === "Hotel Fortuna", "a név az oszlopba és a raw.name-be is", JSON.stringify({ col: after7.name, raw: (after7.raw as Record<string, unknown>).name }));
+  // A lead renamed BEFORE the fix: column and raw.name drift apart — loadLead takes the column.
+  await pool.query(`update lead set raw = jsonb_set(raw, '{name}', '"Hotel Fortuna Szeged - szállás, wellness, rendezvény"') where id = $1`, [lead.id]);
+  const loaded = await loadLead(lead.id);
+  ok(loaded.lead.name === "Hotel Fortuna", "loadLead: a kurátori oszlop nyer az elsodródott raw.name felett (generátor, source-pack, rerender)", loaded.lead.name);
 } finally {
   await parent.drop();
 }
