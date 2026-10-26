@@ -76,6 +76,7 @@ export type TrialCampaignExclusion =
   | "already"
   | "stuck"
   | "address_changed"
+  | "replied"
   | "no_channel"
   | "duplicate_address";
 
@@ -91,6 +92,7 @@ export const EXCLUSION_LABEL: Record<TrialCampaignExclusion, string> = {
   operator: "operátori kizárás (--kizar)", // i18n-exempt: operátori CLI-kimenet
   already: "már megkapta a kampányt", // i18n-exempt: operátori CLI-kimenet
   stuck: "beragadt foglalás: lefoglalva, de nem igazoltan kiment — ellenőrzés után: --felold <id>", // i18n-exempt: operátori CLI-kimenet
+  replied: "válaszolt egy megkeresésre — vele ember foglalkozik, kampány-levelet nem kap (tulaj 2026-10-26)", // i18n-exempt: operátori CLI-kimenet
   address_changed: "a cím a hideg levél óta változott (az új címre hideg levél nem ment)", // i18n-exempt: operátori CLI-kimenet
   no_channel: "nincs használható csatorna (cím / magyar mobil)", // i18n-exempt: operátori CLI-kimenet
   duplicate_address: "ugyanez a személy (cím vagy szám) már egy másik lead célpontja / kapta / kizárva", // i18n-exempt: operátori CLI-kimenet
@@ -201,6 +203,12 @@ export async function listTrialCampaignCandidates(
         .execute()
     ).map((r) => [r.lead_id, r]),
   );
+  // Owner, 2026-10-26 („HOGY A GECIBE MERTED KIKÜLDENI ANNAK AKI MÁR EGYSZER NEM KÉRTE”): anyone who
+  // ANSWERED a cold message — a refusal, „not my property”, or a question a person is handling — gets no
+  // campaign letter. ADR-0348's „the refusal is no opt-out, they get it” is overruled for sending.
+  const repliedLeads = new Set(
+    (await db.selectFrom("outreach_reply").select("lead_id").where("lead_id", "in", leadIds).execute()).map((r) => r.lead_id),
+  );
   const nowMs = (opts.now ?? new Date()).getTime();
 
   const verdicts = new Map<string, TrialCampaignCandidate>();
@@ -284,6 +292,7 @@ export async function listTrialCampaignCandidates(
       no("unsubscribed");
       continue;
     }
+    if (repliedLeads.has(lead.id)) { no("replied"); continue; }
     if (await ownedSiteForLead(lead.id)) { no("bought"); continue; }
     if (trials.has(lead.id)) { no("trial"); continue; }
     if (submitted.has(lead.id) || rows.some((p) => p.status === "order_intent" || p.status === "converted")) {
