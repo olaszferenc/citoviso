@@ -132,7 +132,16 @@ export interface PhotoLike {
   readonly vouched?: boolean | undefined;
   /** Host of the portal that published the listing (when known). */
   readonly portalHost?: string | undefined;
+  /** §A.3 rights class; "website" = the business's own site. */
+  readonly provenance?: string | undefined;
 }
+
+/**
+ * Site builders serve the page's OWN media from their CDN, never from the customer's
+ * domain. Measured 2026-10-26 (prod): every own-site photo dropped by the cross-site rule
+ * was on wixstatic.com — 211 photos on 10 leads (Platán 92b32b6c: 6 of 6, source pack 0).
+ */
+const SITE_BUILDER_MEDIA = new Set(["wixstatic.com"]);
 
 /** Registrable-site approximation (last two labels — fine for .hu portals). */
 function site2(host: string): string {
@@ -164,7 +173,8 @@ export function judgePhoto(p: PhotoLike): PhotoVerdict {
   if (p.portalHost) {
     try {
       const imgSite = site2(new URL(p.url).hostname);
-      if (imgSite !== site2(p.portalHost)) {
+      const builderOwn = p.provenance === "website" && SITE_BUILDER_MEDIA.has(imgSite);
+      if (imgSite !== site2(p.portalHost) && !builderOwn) {
         return { usable: false, why: `idegen domain képe a galériában (${imgSite}) — hirdetés/widget, nem a szállásé` };
       }
     } catch {

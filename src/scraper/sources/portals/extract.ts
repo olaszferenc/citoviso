@@ -18,6 +18,7 @@
 
 import { mailtoAddress } from "../../../email/leadEmails.js";
 import { deaccent } from "../../enrichPresence.js";
+import { parseSrcset } from "../../srcset.js";
 
 import type {
   PortalPhoto,
@@ -482,9 +483,10 @@ export function ownContentOnly(html: string): string {
 export function domImages(html: string, pageUrl: string): ExtractedListing["images"] {
   const seen = new Set<string>();
   const out: ExtractedListing["images"] = [];
-  const add = (raw: string | undefined, caption?: string): void => {
+  const add = (raw: string | undefined, caption?: string, srcset = false): void => {
     if (!raw || out.length >= MAX_IMAGES) return;
-    const first = raw.split(",")[0]!.trim().split(/\s+/)[0]!; // srcset → first candidate
+    // A src is ONE URL (Wix URLs carry commas); only a srcset is a candidate list.
+    const first = srcset ? (parseSrcset(raw)[0]?.url ?? "") : raw.trim();
     if (!first || first.startsWith("data:")) return;
     if (!IMAGE_EXT.test(first)) return;
     if (NON_CONTENT_IMAGE.test(first)) return;
@@ -497,12 +499,11 @@ export function domImages(html: string, pageUrl: string): ExtractedListing["imag
   for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0]!;
     const alt = /alt\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1];
-    add(
+    const src =
       /\bdata-src\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1] ??
-        /\bsrc\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1] ??
-        /\bsrcset\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1],
-      alt,
-    );
+      /\bsrc\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    if (src) add(src, alt);
+    else add(/\bsrcset\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1], alt, true);
   }
   for (const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)) {
     add(m[1]);

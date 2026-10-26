@@ -39,6 +39,7 @@ import { keepUsablePhotos } from "./sources/portals/photoQuality.js";
 import { fetchPortalPage } from "./sources/portals/politeness.js";
 import { hostOf, resolvePortal } from "./sources/portals/registry.js";
 import type { PortalPhoto, PortalProfile, QualifiedLead, Region } from "./types.js";
+import { largestFromSrcset } from "./srcset.js";
 
 /** One request may carry this many links — Neo batches leads, not 50 links per lead. */
 export const MAX_LINKS = 10;
@@ -126,18 +127,6 @@ function absoluteUrl(raw: string, base: string): string | null {
   }
 }
 
-/** The largest candidate of a srcset ("a.jpg 480w, b.jpg 1200w" → b.jpg). */
-function largestFromSrcset(srcset: string): string | undefined {
-  let best: { url: string; w: number } | undefined;
-  for (const part of srcset.split(",")) {
-    const [url, size] = part.trim().split(/\s+/);
-    if (!url) continue;
-    const w = Number((size ?? "").replace(/[wx]$/i, "")) || 0;
-    if (!best || w > best.w) best = { url, w };
-  }
-  return best?.url;
-}
-
 /**
  * Every candidate image on an own-site page, in page order: <img> (lazy-load
  * attributes and the LARGEST srcset entry — own sites ship real sizes there, and
@@ -152,7 +141,9 @@ export function ownSiteImages(html: string, pageUrl: string): { url: string; cap
     if (!raw || raw.startsWith("data:")) return;
     const abs = absoluteUrl(raw, pageUrl);
     if (!abs || !IMAGE_EXT.test(abs) || NON_CONTENT_IMAGE.test(abs)) return;
-    const key = abs.split("?")[0]!.toLowerCase();
+    // Wix serves one media file under many transform paths („…~mv2.jpg/v1/fill/w_960,…/x.jpg”):
+    // the media id is the picture, so the srcset's largest and the src's thumbnail are one.
+    const key = abs.split("?")[0]!.toLowerCase().replace(/(wixstatic\.com\/media\/[^/]+)\/v1\/.*$/, "$1");
     if (seen.has(key)) return;
     seen.add(key);
     out.push({ url: abs, ...(caption?.trim() ? { caption: caption.trim().slice(0, 200) } : {}) });

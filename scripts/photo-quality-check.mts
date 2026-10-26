@@ -20,6 +20,9 @@ import {
   dimensionsFromUrl,
   judgePhoto,
 } from "../src/scraper/sources/portals/photoQuality.js";
+import { parseSrcset } from "../src/scraper/srcset.js";
+import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
+import { domImages } from "../src/scraper/sources/portals/extract.js";
 
 let failed = 0;
 function check(label: string, ok: boolean, detail: string): void {
@@ -304,6 +307,48 @@ check(
       "https://hovamenjek.hu/upload/places/2360_x/fullHd/already.jpg",
     ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/already.jpg",
   "a szabályba nem illő URL változatlan; a már-fullHd is önmaga",
+);
+
+// ── Wix (2026-10-26, éles mérés) ──────────────────────────────────────────────────
+// ① Platán 92b32b6c: a saját (Wix) honlap 6 képe a wixstatic.com CDN-en ül, a cross-site
+//    szabály „idegen domainnek” vette, a source-pack 0 képet adott (élesen 10 lead, 211 kép).
+const PLATAN = "https://static.wixstatic.com/media/760cef_4cc8cbfc08974f9f94519794af6b9e69~mv2.jpg/v1/fill/w_2500,h_1666,al_c/760cef_4cc8cbfc08974f9f94519794af6b9e69~mv2.jpg";
+check(
+  "MEGTART · Platán: a SAJÁT Wix-honlap képe a wixstatic.com CDN-en",
+  judgePhoto({ url: PLATAN, width: 2500, height: 1666, vouched: true, portalHost: "platansiofok.com", provenance: "website" }).usable === true,
+  "a honlapépítő a lap saját médiáját a saját CDN-jéről szolgálja ki — nem hirdetés",
+);
+check(
+  "ELDOB · ugyanaz a wixstatic-kép egy PORTÁL adatlapjában továbbra is idegen",
+  judgePhoto({ url: PLATAN, width: 2500, height: 1666, vouched: true, portalHost: "szalas.hu", provenance: "portal" }).usable === false,
+  "a kivétel csak a saját honlapra (provenance=website) szól",
+);
+// ② Manduláskert e2bb6b95 / Gyógynövények Völgye / LUX: a srcset-et minden vesszőnél vágtuk,
+//    a Wix URL-ben is van vessző → halott „<host>/quality_auto/<fájl>” (8 lead, 77 kép).
+const WIX480 = "https://static.wixstatic.com/media/5880ad_2d1586bfccdb4e18984134ba2c38b04e~mv2.png/v1/fit/w_480,h_480,q_90,enc_avif,quality_auto/5880ad_2d1586bfccdb4e18984134ba2c38b04e~mv2.png";
+const WIX960 = WIX480.replace("w_480,h_480", "w_960,h_960");
+const cands = parseSrcset(`${WIX480} 1x, ${WIX960} 2x`);
+check(
+  "parseSrcset: a vesszős Wix-URL egyben marad",
+  cands.length === 2 && cands[0]!.url === WIX480 && cands[1]!.url === WIX960 && cands[1]!.w === 2,
+  JSON.stringify(cands),
+);
+check(
+  "parseSrcset: a sima „a.jpg 480w, b.jpg 1200w” változatlan",
+  JSON.stringify(parseSrcset("a.jpg 480w, b.jpg 1200w")) === JSON.stringify([{ url: "a.jpg", w: 480 }, { url: "b.jpg", w: 1200 }]),
+  JSON.stringify(parseSrcset("a.jpg 480w, b.jpg 1200w")),
+);
+const own = ownSiteImages(`<img src="${WIX480}" srcset="${WIX480} 1x, ${WIX960} 2x" alt="kert">`, "https://www.mandulaskert.com/");
+check(
+  "ownSiteImages: Wix-srcset → EGY kép, a nagyobb, halott quality_auto URL nélkül",
+  own.length === 1 && own[0]!.url === WIX960 && !own.some((o) => /mandulaskert\.com\/quality_auto/.test(o.url)),
+  JSON.stringify(own),
+);
+const dom = domImages(`<img src="${WIX480}" alt="kert"><img srcset="${WIX960} 2x, ${WIX480} 1x">`, "https://www.mandulaskert.com/");
+check(
+  "domImages: a vesszős Wix-src egyben marad, a csak-srcset kép is ép URL",
+  dom.length === 2 && dom[0]!.url === WIX480 && dom[1]!.url === WIX960,
+  JSON.stringify(dom.map((d) => d.url)),
 );
 
 if (failed) {

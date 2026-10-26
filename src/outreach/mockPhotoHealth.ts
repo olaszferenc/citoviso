@@ -57,6 +57,7 @@ import {
   type PhotoVerdict,
 } from "../console/photoProxy.js";
 import { isInsecurePhotoUrl, parseProxiedMockPhoto, resolveProxiedSource } from "../generator/photoTransport.js";
+import { parseSrcset } from "../scraper/srcset.js";
 
 /** Egy kép-hivatkozás a renderelt lapon. */
 export interface ImageRef {
@@ -210,9 +211,7 @@ export function extractImageRefs(html: string): ImageRef[] {
     found.set(url, { where, refs: 1 });
   };
   const fromSrcset = (srcset: string | undefined, where: ImageRef["where"]): void => {
-    for (const part of (srcset ?? "").split(",")) {
-      add(part.trim().split(/\s+/)[0], where);
-    }
+    for (const c of parseSrcset(srcset ?? "")) add(c.url, where);
   };
   const attr = (tag: string, name: string): string | undefined =>
     new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, "i").exec(tag)?.[1];
