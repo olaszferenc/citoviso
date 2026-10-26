@@ -17,6 +17,7 @@ import { buildProgramsEmail } from "../email/programsEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { tenantRendersModule } from "../tenant/modules.js";
+import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { PROGRAMS_ON_PAGE, readPicks, resolvePicks, siteOwnSettlement, siteProgramPool } from "./picks.js";
 
 export interface ProgramsMailResult {
@@ -38,6 +39,8 @@ export async function sendWeeklyProgramMails(opts: { dryRun?: boolean; now?: Dat
 
   for (const s of sites) {
     try {
+      // Owner, 2026-10-26: our own [TESZT] tenants get no weekly mail (it lands in the owner's box).
+      if (isTestLeadName(s.name)) continue;
       if (!(await tenantRendersModule(s.tenantId, "poi"))) continue;
       const already = await db
         .selectFrom("tenant_message")

@@ -17,6 +17,7 @@
 import { db } from "../db/client.js";
 import { addIsoDays, budapestIsoDay, budapestWeekday } from "../text/budapestTime.js";
 import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
+import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 
 export interface LapseResult {
   readonly lapsed: number;
@@ -187,8 +188,25 @@ export async function runTrialNotices(
     .where("trial_until", ">", now);
   if (opts.onlyTrialIds) q = q.where("id", "in", [...opts.onlyTrialIds]);
   const today = budapestIsoDay(now);
+  // Owner, 2026-10-26: our own [TESZT] trials must not keep messaging the owner's phone and
+  // mailbox from the hourly tick. A test run that names its trials (onlyTrialIds) still gets them.
+  const testTrials = opts.onlyTrialIds
+    ? new Set<string>()
+    : new Set(
+        (
+          await db
+            .selectFrom("free_trial")
+            .innerJoin("lead", "lead.id", "free_trial.lead_id")
+            .select(["free_trial.id as id", "lead.name as name"])
+            .where("free_trial.status", "=", "active")
+            .execute()
+        )
+          .filter((r) => isTestLeadName(r.name))
+          .map((r) => r.id),
+      );
 
   for (const t of await q.execute()) {
+    if (testTrials.has(t.id)) continue;
     const started = new Date(t.started_at as unknown as string);
     const until = new Date(t.trial_until as unknown as string);
     const due = (["t1", "t3"] as const).filter((s) => {
