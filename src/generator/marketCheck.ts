@@ -254,9 +254,9 @@ const MORNING_ADJ =
 const NEAR_VIEW = /^\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:a|az)\s+(?:kert|udvar|belso|utca|parkolo|medence|haz)/u;
 /** The same view named BEFORE the word — the booked.hu stock phrase „kertre néző kilátás(t
  *  kínál)” (EszterHáz 74f7e92d, MARaBU 8dbffb31, 2026-10-26: one sentence each, read as
- *  Panoráma). Lake, mountain or town views („tóra néző kilátás”) stay a panorama. */
+ *  Panoráma), and „kertre nyíló kilátás” (Villa Suzy 02dbb6c2, 2026-10-27). Lake, mountain or town views („tóra néző kilátás”) stay a panorama. */
 const NEAR_VIEW_BEFORE =
-  /(?:^|[^\p{L}])(?:(?:kert|udvar|utca|parkolo|medence|park|taj)\p{L}*\s+(?:fele\s+)?nezo|kerti|udvari|utcai)\s+$/u;
+  /(?:^|[^\p{L}])(?:(?:kert|udvar|utca|parkolo|medence|park|taj)\p{L}*\s+(?:fele\s+)?(?:nezo|nyilo)|kerti|udvari|utcai)\s+$/u;
 const FAR_KM = /(\d+(?:[.,]\d+)?)\s*km(?![\p{L}])/gu;
 const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
 
@@ -420,6 +420,9 @@ function affirmsIn(needle: string, clause: string, rawClause: string | null, own
     if (own && needle === "strand" && /^strand(?:ok|jai)/u.test(word)) continue;
     // „strandröplabda”, „strandfoci” are activities of the area, not a beach of the house.
     if (own && word !== needle && AREA_ACTIVITY.test(word.slice(needle.length))) continue;
+    if (own && needle === "strand" && !STRAND_PLACE.test(word)) continue;
+    if (own && needle === "strand" && CAR_RIDE.test(clause)) continue;
+    if (own && needle === "strand" && rawClause && placesBeach(rawClause.slice(0, ws))) continue;
     return true;
   }
 }
@@ -456,6 +459,30 @@ export function groupAmenities(raw: readonly string[]): AmenityGroup[] {
 /** Sport/rental items a portal lists among the amenities — the AREA's offer, not the house's
  *  facility („Strandröplabda”, „Csónakbérlés” on balaton.hu). Kept out of the mock's sample. */
 const AREA_ACTIVITY = /roplabda|foci|labda|tenisz|kolcsonz|berles|lovag|hajoz|horgasz|tura/;
+/**
+ * In own mode a beach is the word „strand” itself, inflected — not the activity („a hotel
+ * strandoláshoz napernyőket biztosít”, Muschel 87fa84bb; „a strandolás mellett …”, Villa
+ * Clara d225636a) nor a compound („strandnapernyő”, „strandtörölköző”). 2026-10-27.
+ */
+const STRAND_PLACE =
+  /^strand(?:unk|j[ae](?:t|n|ra|re|ba|ban|bol|hoz|tol|nal|rol|ig|val)?)?(?:ot|on|ra|ba|ban|bol|hoz|tol|nal|rol|ig|tal|dal|unkat|unkon|unkra|unkkal)?$/u;
+/**
+ * „egy 10 perces kocsiútra található a … Strand” (Villa Suzy 02dbb6c2, 2026-10-27): a beach a
+ * drive away is the area's. Beach only — „A tóra kilátást nyújtó ingatlan … 10 perces
+ * autóútra a kolostor” (Rózsakő) keeps its view.
+ */
+const CAR_RIDE = /\d+\s*perc(?:es|nyi)?\s+(?:kocsiut|autout|vezetes|autoval|kocsival)\p{L}*/u;
+/** Words before „strandja” that make it the house's own (not a place's) beach. */
+const OWN_BEACH_LEAD = /^(?:sajat|privat|egyedi|a|az|egy|szallas|szallashely|haz|villa|panzio|hotel)$/u;
+/**
+ * „Az Aranypart strandja” / „Balatonlelle strandja”: a capitalised name right before the
+ * possessive is a PLACE's beach, not the house's (Villa Clara d225636a, 2026-10-27).
+ */
+function placesBeach(rawBefore: string): boolean {
+  const m = rawBefore.match(/(\p{L}[\p{L}-]*)\s+$/u);
+  if (!m || !/^\p{Lu}/u.test(m[1]!)) return false;
+  return !OWN_BEACH_LEAD.test(norm(m[1]!));
+}
 
 /**
  * The mock's services SAMPLE from the listing (ADR-0338): one item per RECOGNISED facility

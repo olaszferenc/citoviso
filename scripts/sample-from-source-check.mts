@@ -214,6 +214,24 @@ const farMiss = FAR_VIEWS.filter((t) => !descriptionFactIsOwn("Panoráma", [t]))
 check("⛔ tóra / hegyre / városra / Balatonra néző kilátás Panoráma marad", farMiss.length === 0, farMiss);
 const eszter = sampleHintsOf({ name: "EszterHáz" } as never, "hu", { listedAmenities: ["Parkoló", "Kert", "Terasz"], amenities: [], descriptions: ESZTER });
 check("EszterHáz: a mintában nincs „Panoráma”", !(eszter.hints.sampleAmenities ?? []).includes("Panoráma"), eszter.hints.sampleAmenities);
+// Második-terv strand-maradék (2026-10-27, after the area --resample): Muschel 87fa84bb
+// (dc07f6f3) „strandoláshoz napernyőket”, Villa Suzy 02dbb6c2 (fb5298f7) „10 perces kocsiútra
+// … a Balatonföldvár Keleti Strand” + „kertre nyíló kilátás”, Villa Clara d225636a (d90ec728)
+// „Az Aranypart strandja” + „A strandolás mellett …”.
+const MUSCHEL = ["A hotel strandoláshoz napernyőket biztosít. A hoteltől 850 méterre van a Libás Strand."];
+const SUZY = ["A hoteltől 550 méterre van a Zamárdi Nagystrand. Élvezze a kertre nyíló kilátást, mialatt a Zamárdi városi hotelben tartózkodik.", "A Villa Suzy hotel területétől nagyjából egy 10 perces kocsiútra található a Balatonföldvár Keleti Strand."];
+const CLARA = ["Az Aranypart strandja kiváló kisgyerekes családoknak lassan mélyülő víze és homokos partja miatt. A strandolás mellett csónakázás, horgászás, vízibiciklizés és még számos program biztosít kellemes időtöltést."];
+check("Muschel: „strandoláshoz napernyő” → nem „Strand”", !descriptionFactIsOwn("Strand", MUSCHEL));
+check("Villa Suzy: 550 m / 10 perces kocsiút → nem „Strand”", !descriptionFactIsOwn("Strand", SUZY));
+check("Villa Suzy: „kertre nyíló kilátás” → nem „Panoráma”", !descriptionFactIsOwn("Panoráma", SUZY));
+check("Villa Clara: „Az Aranypart strandja”, „strandolás” → nem „Strand”", !descriptionFactIsOwn("Strand", CLARA));
+check("strandnapernyő / strandtörölköző → nem „Strand”", !descriptionFactIsOwn("Strand", ["A vendégeknek strandnapernyőt és strandtörölközőt adunk."]));
+const OWN_BEACH = ["A szállásnak saját strandja van.", "Saját strandunk közvetlenül a ház előtt.", "A villa saját stranddal rendelkezik.", "A panzió strandja a kert végében."];
+const beachMiss = OWN_BEACH.filter((t) => !descriptionFactIsOwn("Strand", [t]));
+check("⛔ saját strand „Strand” marad", beachMiss.length === 0, beachMiss);
+check("⛔ Rózsakő: „A tóra kilátást nyújtó ingatlan … 10 perces autóútra” Panoráma marad", descriptionFactIsOwn("Panoráma", ["A tóra kilátást nyújtó ingatlan vendégeit a nagyjából egy 10 perces autóútra található Pálos kolostor romjai meglátogatására invitálja."]));
+const suzy = sampleHintsOf({ name: "Villa Suzy Zamárdi" } as never, "hu", { listedAmenities: ["Parkoló", "Kert"], amenities: [], descriptions: SUZY });
+check("Villa Suzy: a mintában nincs „Strand”, sem „Panoráma”", !(suzy.hints.sampleAmenities ?? []).some((a) => a === "Strand" || a === "Panoráma"), suzy.hints.sampleAmenities);
 const francia = sampleHintsOf({ name: "Francia ház", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 1, evidence: "numberOfRooms: 1" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: FRANCIA });
 check("Francia ház: 1-es szobaszám → nincs „1. szoba” (egy egység = az egész szállás)", !francia.hints.sampleRoomCount, francia.hints);
 const two = sampleHintsOf({ name: "Két szoba", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 2, evidence: "numberOfRooms: 2" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: [] });
