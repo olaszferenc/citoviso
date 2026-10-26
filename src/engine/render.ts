@@ -14,6 +14,7 @@ import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSecti
 import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
 import { addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
+import { hungarianBedNote, hungarianRoomName } from "./roomNames.js";
 import { setHighlightSources } from "./copyFields.js";
 
 /** Templates escape their text, so compare against the escaped form. */
@@ -724,6 +725,17 @@ export function renderSite(
   if (data.contact.address && data.place?.country) {
     const address = addressWithoutOwnCountry(data.contact.address, data.place.country, data.lang);
     if (address !== data.contact.address) data = { ...data, contact: { ...data.contact, address } };
+  }
+  // An English portal unit name on a Hungarian MOCK („Private Bathroom Twin Room”, booked.hu)
+  // → its Hungarian name; render-time, so a rerender fixes an existing mock. The live page
+  // shows the owner's own unit names, so the live phase is left alone.
+  if (phase === "mock" && data.rooms?.length && (data.lang ?? "hu") === "hu") {
+    const rooms = data.rooms.map((r) => {
+      const name = hungarianRoomName(r.name);
+      const note = r.note ? hungarianBedNote(r.note) : r.note;
+      return name === r.name && note === r.note ? r : { ...r, name, ...(note ? { note } : {}) };
+    });
+    if (rooms.some((r, i) => r !== data.rooms![i])) data = { ...data, rooms };
   }
   // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
   // so no card is left as a bare icon panel next to a page full of real imagery.

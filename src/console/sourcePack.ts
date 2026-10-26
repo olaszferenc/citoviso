@@ -58,8 +58,14 @@ export interface SourcePack {
   readonly photos: readonly string[];
   /** How many of `photos` the vision call sees (brief.ts sends the first 4). */
   readonly visionPhotos: number;
-  /** Portal rooms: rendered straight onto the mock, NOT part of the writer's input. */
-  readonly rooms: { readonly names: readonly string[]; readonly count: number | null };
+  /** Portal rooms: rendered straight onto the mock, NOT part of the writer's input.
+   *  `details` carries what the cards print (name, guests) and WHERE it was read, so a
+   *  fact-check can trace „4 fő” to its listing (Oázis d7cb475c, 2026-10-26). */
+  readonly rooms: {
+    readonly names: readonly string[];
+    readonly count: number | null;
+    readonly details: readonly { readonly name: string; readonly capacity: string | null; readonly source: string | null }[];
+  };
   readonly limits: { readonly descriptionChars: number };
 }
 
@@ -128,7 +134,11 @@ export async function buildSourcePack(loaded: LoadedLead): Promise<SourcePack> {
     },
     photos: media.photos.map((p) => p.url),
     visionPhotos: Math.min(VISION_PHOTOS, media.photos.length),
-    rooms: { names: rooms.rooms.map((r) => r.name), count: rooms.count },
+    rooms: {
+      names: rooms.rooms.map((r) => r.name),
+      count: rooms.count,
+      details: rooms.rooms.map((r) => ({ name: r.name, capacity: r.capacity ?? null, source: rooms.source ?? null })),
+    },
     limits: { descriptionChars: MAX_DESCRIPTION },
   };
 }

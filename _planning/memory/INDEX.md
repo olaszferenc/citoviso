@@ -11,6 +11,7 @@
 - [2026-10-26_portal_kozepes_egyezes_jovahagyas.md](2026-10-26_portal_kozepes_egyezes_jovahagyas.md) — 2026-10-26 — Közepes portál-egyezés: „Jóváhagyom az egyezést”
 - [2026-10-26_minta_kartya_egysegfajta.md](2026-10-26_minta_kartya_egysegfajta.md) — 2026-10-26 — Minta-kártya: „Az egész szállás” több egységes szállásnál
 - [2026-10-26_fajlnev_alt_es_egy_egyseg.md](2026-10-26_fajlnev_alt_es_egy_egyseg.md) — 2026-10-26 — Fájlnév-alt (Dobos) és egy egység / kerti kilátás (Francia ház)
+- [2026-10-26_booked_forras_magyarul.md](2026-10-26_booked_forras_magyarul.md) — 2026-10-26 — booked.hu forrás: angol szobanevek, szomszéd-ajánló, férőhely a packban
 - [2026-10-22_webcim_allapot_b_overseer_folytatas.md](2026-10-22_webcim_allapot_b_overseer_folytatas.md) — 2026-10-22 — Webcím állapot-képernyő „B” (ADR-0399) · overseer.hu folytatás · a domain-folyamat hiányai
 - [2026-10-22_domain_regisztracio_szal.md](2026-10-22_domain_regisztracio_szal.md) — 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-0400) — overseer.hu oka és a gépi folyamat
 - [2026-10-21_tenant_admin_szakasz_hierarchia.md](2026-10-21_tenant_admin_szakasz_hierarchia.md) — 2026-10-21 — Tenant-admin szakasz-hierarchia („E”) + portál-menüút a tenant nyelvén

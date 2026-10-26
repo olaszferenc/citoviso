@@ -2817,6 +2817,14 @@ if [ -f scripts/sample-from-source-check.mts ] && \
   echo "[pre-commit] sample-from-source-check (a minta nem mond ellent a forrásnak)…"
   npx tsx scripts/sample-from-source-check.mts >"$GATE_LOG" || gate_failed
 fi
+# booked-source-check (Vera 2026-10-26: Lunczer d86a6f11, Oázis d7cb475c): booked.hu angol
+# szobanevei a magyar mockon, szomszéd-ajánló a leírásban, a férőhely forrása hiányzott a packból.
+# Determinisztikus, hálózat/DB nélkül, ~5 s.
+if [ -f scripts/booked-source-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(roomNames|render)\.ts$|^src/engine/templates/|^src/generator/(generateEngine|writerSources)\.ts$|^src/scraper/sources/portals/extract\.ts$|^src/console/sourcePack\.ts$|^scripts/booked-source-check'; then
+  echo "[pre-commit] booked-source-check (booked.hu forrás magyarul, ajánló nélkül)…"
+  npx tsx scripts/booked-source-check.mts >"$GATE_LOG" || gate_failed
+fi
 # portal-approve-check (Neo 2026-10-26, Vivien 1108db5a): a közepes egyezésű portál-adatlapnak
 # nem volt jóváhagyó lépése, a lead örökre TARTVA maradt. Méri: a jóváhagyás újraolvas és cserél,
 # rossz/várakozó olvasás elutasít (a lead érintetlen), gyenge sáv soha; végpont + gomb. Dev DB, ~5 s.

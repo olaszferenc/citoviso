@@ -863,7 +863,26 @@ export function extractListing(html: string, pageUrl: string, nameHint?: string)
   mergeInto(base, fromJsonLd(html, pageUrl));
   mergeInto(base, fromOpenGraph(html, pageUrl));
   mergeInto(base, fromDom(html, pageUrl, nameHint));
+  if (base.description) base.description = withoutRatingCards(base.description);
   return base;
+}
+
+/**
+ * A neighbouring listing's teaser is not this property's prose (booked.hu, 2026-10-26: Oázis
+ * d7cb475c, Zoltán Borháza 647915c6 — „Holiday Or Working, Feel Good In The Retro Style
+ * Apartment Of A European Jiu Jitsu Champion! : 7.0 / 10 - Nagyon jó | 52 értékelés” at the
+ * end of the description; 10 profiles live). A line carrying a „<score> / 10 … | <n>
+ * értékelés” card is dropped whole; the property's own text stays as written.
+ */
+const RATING_CARD = /\d+(?:[.,]\d+)?\s*\/\s*10\b[^|\n]{0,60}\|\s*\d[\d\s.]*\s*(?:értékelés|vélemény|reviews?)\b/i;
+export function withoutRatingCards(description: string): string {
+  if (!RATING_CARD.test(description)) return description;
+  return description
+    .split("\n")
+    .filter((line) => !RATING_CARD.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**

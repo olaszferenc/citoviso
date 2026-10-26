@@ -13,6 +13,7 @@
 import type { PortalProfile } from "../scraper/types.js";
 import { selectGuestVoice, type VoiceSelection } from "./guestVoice.js";
 import { decisionWeightDesc, descriptionSellingPoints } from "./marketCheck.js";
+import { withoutRatingCards } from "../scraper/sources/portals/extract.js";
 
 /** Words that identify no property on their own — never a self-anchor for prose. */
 const GENERIC_LEAD_WORD = new Set([
@@ -113,7 +114,9 @@ export function collectWriterSources(lead: WriterSourceLead, googleVoice: readon
       return leadBrand.length > 0 && leadBrand.some((b) => hay.includes(b));
     });
   const descriptions = [...highProfiles, ...selfAnchored]
-    .map((p) => p.description?.trim())
+    // A stored description may still carry a neighbour's rating teaser (scraped before the
+    // extractor dropped it) — the same rule, read-time, so no re-scrape is needed.
+    .map((p) => (p.description ? withoutRatingCards(p.description).trim() : undefined))
     .filter((d): d is string => Boolean(d && d.length >= MIN_PORTAL_DESCRIPTION))
     .map((d) => d.slice(0, MAX_DESCRIPTION));
   // The curator-pasted owner self-introduction (console lead form) goes FIRST:

@@ -8,6 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
+import { hungarianBedNote, hungarianRoomName } from "../engine/roomNames.js";
 import { deniedSampleTypes, roomCountContradicted, unitKindOf, unitNamesFromProse, wholeLetOnly } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
@@ -95,20 +96,24 @@ export function portalRooms(
   // ADR-0067: the capacity label lands on the GUEST's page ("4 fő"), so it is a
   // customer-facing string, not a data value — it must speak the page's language.
   dLang: { lang: string },
-): { rooms: Room[]; count: number | null } {
+): { rooms: Room[]; count: number | null; source?: string } {
   const profiles = (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? [];
   const high = profiles.filter((p) => p.matchBand === "high");
   for (const p of high) {
     if (!p.rooms?.length) continue;
     const rooms: Room[] = p.rooms
       .map((r) => ({
-        name: (r.name ?? "").trim(),
+        // booked.hu publishes some unit names in English on the Hungarian page.
+        name: dLang.lang === DEFAULT_LANG ? hungarianRoomName((r.name ?? "").trim()) : (r.name ?? "").trim(),
         // The listing's own wording, never rephrased; capacity only when stated.
         ...(r.capacity ? { capacity: T(dLang, "{n} fő", { n: r.capacity }) } : {}),
-        ...(r.description?.trim() ? { note: r.description.trim() } : {}),
+        ...(r.description?.trim()
+          ? { note: dLang.lang === DEFAULT_LANG ? hungarianBedNote(r.description.trim()) : r.description.trim() }
+          : {}),
       }))
       .filter((r) => r.name.length > 1);
-    if (rooms.length) return { rooms: rooms.slice(0, 8), count: rooms.length };
+    // `source`: the listing the rooms were read from — the source pack names it (§B.17 trace).
+    if (rooms.length) return { rooms: rooms.slice(0, 8), count: rooms.length, source: p.url };
   }
   const counted = high.find((p) => p.roomCount?.value && p.roomCount.value > 0);
   return { rooms: [], count: counted?.roomCount?.value ?? null };
