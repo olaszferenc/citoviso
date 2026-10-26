@@ -226,6 +226,17 @@ check("Villa Suzy: 550 m / 10 perces kocsiút → nem „Strand”", !descriptio
 check("Villa Suzy: „kertre nyíló kilátás” → nem „Panoráma”", !descriptionFactIsOwn("Panoráma", SUZY));
 check("Villa Clara: „Az Aranypart strandja”, „strandolás” → nem „Strand”", !descriptionFactIsOwn("Strand", CLARA));
 check("strandnapernyő / strandtörölköző → nem „Strand”", !descriptionFactIsOwn("Strand", ["A vendégeknek strandnapernyőt és strandtörölközőt adunk."]));
+// Fater Motel 4b7f4f5c: „Strand (ingyenes!) a Fekete és a Fehér Körös torkolatánál” — a public
+// beach at a named river mouth; Elisabeth d912916b: „Közelünkben található a Zsindelyes étterem”.
+const FATER = ["Strand (ingyenes!) a Fekete és a Fehér Körös torkolatánál (innen már Kettős Körös a víz neve). A szállás külön stéggel rendelkezik a Fekete Körösnél."];
+check("Fater: ingyenes strand a Körös-torkolatnál → nem „Strand”", !descriptionFactIsOwn("Strand", FATER));
+check("Fater: a saját stég megmarad", descriptionFactIsOwn("Stég", FATER));
+check("Elisabeth: „Közelünkben … a Zsindelyes étterem” → nem „Étterem”", !descriptionFactIsOwn("Étterem", ["Az Elisabeth Vendégház Balatonudvarin, a Balaton utca 6. szám alatt található. Közelünkben található a Zsindelyes étterem magyaros konyhával."]));
+const PUBLIC = ["A szabadstrand a ház mögött van.", "A városi strand a szomszéd utcában.", "Az ingyenes strand pár lépésre."];
+const publicHit = PUBLIC.filter((t) => descriptionFactIsOwn("Strand", [t]));
+check("szabad- / városi / ingyenes strand → nem „Strand”", publicHit.length === 0, publicHit);
+check("⛔ „Saját strandunk a Balaton partján” Strand marad", descriptionFactIsOwn("Strand", ["Saját strandunk a Balaton partján várja a vendégeket."]));
+check("⛔ saját étterem marad („A panzióban saját étterem működik, magyaros konyhával.”)", descriptionFactIsOwn("Étterem", ["A panzióban saját étterem működik, magyaros konyhával."]));
 const OWN_BEACH = ["A szállásnak saját strandja van.", "Saját strandunk közvetlenül a ház előtt.", "A villa saját stranddal rendelkezik.", "A panzió strandja a kert végében."];
 const beachMiss = OWN_BEACH.filter((t) => !descriptionFactIsOwn("Strand", [t]));
 check("⛔ saját strand „Strand” marad", beachMiss.length === 0, beachMiss);
@@ -290,12 +301,15 @@ const shot = (n: string, subject?: string) => ({ url: `https://x.test/${n}.jpg`,
 // Germering a5cfe07f (shape): the gated set ends in a WC; a garden photo is in the middle.
 const GERMERING = [shot("h", "exterior"), shot("n", "interior"), shot("k", "pool_garden"), shot("s", "interior"), shot("f", "bathroom"), shot("w", "toilet")];
 const ger = contactPhotoOf({ ...base, name: "Germering Apartman", photos: GERMERING }, GERMERING.at(-1));
-check("Germering: a WC helyett a kerti kép, „kert és udvar” alttal", ger?.url.endsWith("/k.jpg") === true && ger.alt === "Germering Apartman – kert és udvar", ger);
+check("Germering: a WC helyett a kerti kép, semleges „– fotó” alttal (a pool_garden fedett medence is lehet)", ger?.url.endsWith("/k.jpg") === true && ger.alt === "Germering Apartman – fotó", ger);
 // Tomi Apartman d36898cc (mock 34abde3f): the only outdoor verdicts are two windowsill shots with
 // Pécs beyond ("view") — the alt says view, not „környezete”.
 const TOMI_SHOTS = [shot("pecs-10", "view"), shot("pecs-14", "view"), shot("pecs-3", "interior"), shot("pecs-7", "bathroom"), shot("pecs-9", "bathroom")];
 const tomi = contactPhotoOf({ ...base, name: "Tomi Apartman", photos: TOMI_SHOTS }, TOMI_SHOTS.at(-1));
-check("Tomi: az ablakos kilátás-kép altja „kilátás”, nem „környezete”", tomi?.url.endsWith("/pecs-14.jpg") === true && tomi.alt === "Tomi Apartman – kilátás", tomi);
+check("Tomi: az ablakos kép altja semleges „– fotó” (nem „környezete”, nem „kilátás”)", tomi?.url.endsWith("/pecs-14.jpg") === true && tomi.alt === "Tomi Apartman – fotó", tomi);
+// 2026-10-27: a street-facing balcony („view”) read „– kilátás”, a covered pool („pool_garden”) „– kert és udvar”.
+const coarse = (subject: string) => contactPhotoOf({ ...base, name: "Teszt", photos: [shot("h", "exterior"), shot("x", subject)] }, undefined)?.alt;
+check("view / pool_garden → semleges alt, sosem „kilátás” / „kert és udvar”", coarse("view") === "Teszt – fotó" && coarse("pool_garden") === "Teszt – fotó", [coarse("view"), coarse("pool_garden")]);
 const HOUSE = [shot("h", "view"), shot("e", "exterior"), shot("i", "interior")];
 check("házról készült kép: „kívülről”", contactPhotoOf({ ...base, name: "Teszt Ház", photos: HOUSE }, HOUSE.at(-1))?.alt === "Teszt Ház kívülről");
 // Kék Madár ab708be5 (shape): no outdoor photo at all → the slot steps past the bathroom, plain alt.
@@ -313,8 +327,9 @@ for (const id of ["parallax", "fullbleed", "dopamine", "dark-luxury"]) {
   const recipe: Recipe = { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] };
   const html = renderSite(recipe, { ...lead, name: "Germering Apartman", photos: GERMERING.map((p) => ({ ...p, url: `${PIX}#${p.alt}` })) }, { phase: "mock" });
   const alts = [...html.matchAll(/<img[^>]*#(w|f)"[^>]*alt="([^"]*)"/g)].map((m) => m[2]);
-  check(`${id}: render — fürdő/WC kép nem kap kültéri altot`, !alts.some((a) => /kert és udvar|kilátás|kívülről|környezete/.test(a ?? "")), alts);
-  check(`${id}: render — a kerti kép altja „kert és udvar”`, /#k"[^>]*alt="Germering Apartman – kert és udvar"/.test(html));
+  check(`${id}: render — fürdő/WC kép nem kap kültéri altot`, !alts.some((a) => /kert és udvar|kilátás|kívülről|környezete|– fotó/.test(a ?? "")), alts);
+  check(`${id}: render — a kerti kép altja semleges „– fotó”`, /#k"[^>]*alt="Germering Apartman – fotó"/.test(html));
+  check(`${id}: render — „kilátás” / „kert és udvar” alt sehol`, !/alt="[^"]*(?:– kilátás|– kert és udvar)"/.test(html));
   check(`${id}: render — „környezete” alt sehol`, !/alt="[^"]*környezete"/.test(html));
 }
 

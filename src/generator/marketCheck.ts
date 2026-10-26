@@ -299,14 +299,35 @@ export function proseAffirms(needle: string, descriptions: readonly string[], ow
       // „100 m-es körzeten belül található szupermarket, több étterem, gyorsbüfé” (Farkas
       // 7e3ff3c5): a sentence that OPENS on the area lists the area's offer in its later clauses.
       if (own && AREA_LEAD.test(deaccent((sentence.split(DEAC_CLAUSE_SPLIT)[0] ?? "").toLowerCase()))) continue;
+      if (own && needle === "strand" && placeBeachSentence(sentence)) continue;
       if (sentenceAffirms(needle, sentence, own)) return true;
     }
   }
   return false;
 }
 
-const AREA_LEAD = /(?<![\p{L}])(?:kornyek\p{L}*|korzet\p{L}*|kozel(?:eben|ben|i)|szomszed\p{L}*)(?![\p{L}])/u;
-const AREA_SENTENCE = /(?<![\p{L}])(?:kornyek\p{L}*|kozel(?:eben|ben|i)|szomszed\p{L}*|telepules\p{L}*)(?![\p{L}])/u;
+// „Közelünkben található a Zsindelyes étterem” (Elisabeth d912916b, 2026-10-27): the
+// possessive „közelünkben / közelében” is the area too.
+const AREA_LEAD = /(?<![\p{L}])(?:kornyek\p{L}*|korzet\p{L}*|kozel(?:eben|ben|i|unkben|etekben)|szomszed\p{L}*)(?![\p{L}])/u;
+const AREA_SENTENCE = /(?<![\p{L}])(?:kornyek\p{L}*|kozel(?:eben|ben|i|unkben|etekben)|szomszed\p{L}*|telepules\p{L}*)(?![\p{L}])/u;
+/** The house's own beach, said in so many words. */
+const OWN_BEACH_MARK = /(?<![\p{L}])(?:sajat|privat|strandunk\p{L}*|strandjaval|egyeni)(?![\p{L}])/u;
+/** A public beach by its kind — „szabadstrand”, „Nagystrand”, „városi strand”, „ingyenes strand”. */
+const PUBLIC_BEACH = /szabadstrand|kozstrand|nagystrand|(?:varosi|kozsegi|telepulesi|ingyenes)\s+strand|strand\s*\(?\s*ingyenes/u;
+/** A named river / lake feature where the beach lies — „a Fekete és a Fehér Körös torkolatánál”. */
+const PLACE_FEATURE = /(?<![\p{L}])\p{Lu}[\p{L}-]*\s+(?:torkolat|part|holtag|folyo|patak|obol|to(?:n|nal|parton))\p{L}*/u;
+/**
+ * A sentence that places the beach at a PUBLIC or NAMED place is the area's beach, not an
+ * offer of the house (Fater Motel 4b7f4f5c, 2026-10-27: „Strand (ingyenes!) a Fekete és a
+ * Fehér Körös torkolatánál”). „Saját strandunk a Balaton partján” stays the house's.
+ */
+function placeBeachSentence(sentence: string): boolean {
+  const d = deaccent(sentence.toLowerCase());
+  if (OWN_BEACH_MARK.test(d)) return false;
+  if (PUBLIC_BEACH.test(d)) return true;
+  // The first word may be capitalised by position only.
+  return PLACE_FEATURE.test(sentence.trim().replace(/^\S+\s*/u, ""));
+}
 
 /**
  * A bullet list the prose introduces as the AREA's offer is not the house's (2026-10-26):
@@ -373,7 +394,8 @@ function isForeignVenueSentence(sentence: string): boolean {
  * „A tó parkjában … kondipark, szabadtéri sakk, játszótér” (Laguna 326b0f25, 2026-10-26) is
  * the lake park's; „parkosított kert” and „parkoló” are the house's and do not match.
  */
-const SENTENCE_SPLIT = /[.!?;\n]+/u;
+// „Strand (ingyenes!) a … torkolatánál” — a mark inside parentheses ends no sentence.
+const SENTENCE_SPLIT = /[.!?;\n]+(?!\s*\))/u;
 const FOREIGN_VENUE =
   /(?<![\p{L}])(?:(?:var|gyogy|termal|strand|elmeny)?furdo(?!szob|kopeny|kad|ruha|nadrag|lepedo|torolkoz)\p{L}*|aquapark\p{L}*|muzeum\p{L}*|torony\p{L}*|tornya\p{L}*|kastely\p{L}*|szinhaz\p{L}*|varszinhaz\p{L}*|templom\p{L}*|bazilika\p{L}*|apatsag\p{L}*|park(?:ja|jaban|jaba|jat|ban|ba|ok|okban|jaiban)(?![\p{L}]))/u;
 

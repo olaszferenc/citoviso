@@ -115,16 +115,9 @@ const SURROUNDINGS_SUBJECTS = new Set(["exterior", "view", "pool_garden"]);
 /** Never the contact / surroundings picture, whatever slot it falls into. */
 const NEVER_SURROUNDINGS = new Set(["bathroom", "toilet"]);
 
-/** The outdoor contact picture's alt, by its vision subject (a literal per subject for the extractor). */
+/** The outdoor contact picture's alt: „kívülről” only on an exterior verdict, else neutral. */
 function sceneAlt(d: SiteData, subject: string | undefined): string {
-  switch (subject) {
-    case "view":
-      return T(d, "{name} – kilátás", { name: d.name });
-    case "pool_garden":
-      return T(d, "{name} – kert és udvar", { name: d.name });
-    default:
-      return T(d, "{name} kívülről", { name: d.name });
-  }
+  return subject === "exterior" ? T(d, "{name} kívülről", { name: d.name }) : T(d, "{name} – fotó", { name: d.name });
 }
 
 /**
@@ -135,9 +128,11 @@ function sceneAlt(d: SiteData, subject: string | undefined): string {
  * hero wins; otherwise the fixed slot stays (a bathroom or toilet stepping aside) with the
  * plain name as alt — the caption claims nothing it cannot know. Photos without a vision
  * verdict count as unknown, never as outdoor. Deterministic.
- * The alt names what the picture shows (Tomi d36898cc, 2026-10-26: a windowsill shot with
- * the city beyond, verdict "view", read „<név> környezete”): view → kilátás, exterior →
- * kívülről, pool_garden → kert és udvar.
+ * The alt claims only what the verdict guarantees (Tomi d36898cc, 2026-10-26: a windowsill
+ * shot, verdict "view", read „<név> környezete”). The vision categories are coarse — "view"
+ * covers a street-facing balcony, "pool_garden" a covered indoor pool (2026-10-27) — so
+ * those two get the neutral „<név> – fotó”; only "exterior" (the building from outside)
+ * says „kívülről”.
  */
 export function contactPhotoOf(
   d: SiteData,
