@@ -27,7 +27,9 @@ import {
   photoSourceHash,
   planPhotoTransport,
   proxiedMockPhotoUrl,
+  isPaidPhotoHost,
   resolveProxiedSource,
+  type HotlinkProbe,
   type PhotoFetcher,
 } from "../src/generator/photoTransport.js";
 import {
@@ -103,6 +105,26 @@ const optimist: PhotoFetcher = async (u) => ({ ok: true, body: img(u.startsWith(
 const planRed = await planPhotoTransport([DIFFBYTES], AID, optimist);
 check(planRed[0]?.via === "proxy", "PIROS IKER: két 200-as, de eltérő válasz nem elég a https-hez");
 
+console.log("\n②b hotlink-tiltó https-hoszt (Huszár 62a12b3e, 2026-10-27) → saját proxy");
+// Measured: huszar.info answers 200 without a Referer and 403 with the mock's — every photo
+// of both mocks was a grey placeholder while the gate (no Referer) measured them healthy.
+const HUSZAR = ["https://huszar.info/wp-content/uploads/nagyhaziko-001.jpg", "https://huszar.info/wp-content/uploads/kishaziko-001.jpg"];
+const PORTAL = "https://hovamenjek.hu/upload/places/1_ab/fullHd/a.jpg";
+const probed: string[] = [];
+const blocks: HotlinkProbe = async (u) => { probed.push(u); return !u.includes("huszar.info"); };
+const alive: PhotoFetcher = async (u) => ({ ok: true, body: img(u) });
+const hot = await planPhotoTransport([...HUSZAR, PORTAL, SECURE], AID, alive, blocks);
+check(hot.filter((r) => r.via === "proxy").map((r) => r.source).sort().join("|") === [...HUSZAR].sort().join("|"), "a tiltó hoszt MINDEN fotója a proxyra megy, a többi érintetlen");
+check(hot.every((r) => r.served === proxiedMockPhotoUrl(AID, r.source)), "a proxy-URL a szokásos (b) út");
+check(probed.filter((u) => u.includes("huszar.info")).length === 1, "hosztonként EGY próba");
+check(!probed.some((u) => isPaidPhotoHost(u)), "fizetős hoszt (Places) soha nem próba");
+const dead: PhotoFetcher = async () => ({ ok: false });
+check((await planPhotoTransport(HUSZAR, AID, dead, async () => false)).length === 0, "halott kép (Referer nélkül sem él) nem kerül proxyra — az a kapu dolga");
+check((await planPhotoTransport(HUSZAR, AID, alive, async () => true)).length === 0, "PIROS IKER: Refererrel is betöltődő https-kép érintetlen");
+check(isPaidPhotoHost("https://places.googleapis.com/v1/x/media") && isPaidPhotoHost("https://lh3.googleusercontent.com/p/x") && !isPaidPhotoHost(HUSZAR[0]!), "isPaidPhotoHost: Places/Google igen, a szállás hosztja nem");
+const hz = { siteData: { photos: HUSZAR.map((url) => ({ url })) } };
+check(resolveProxiedSource(hz, photoSourceHash(HUSZAR[0]!)) === HUSZAR[0], "a tárolt https-forrás feloldódik (rerender után a route kiszolgálja)");
+
 console.log("\n③ nem nyílt proxy: csak a tárolt forrás oldódik fel");
 const inputs = { siteData: { photos: [{ url: BADCERT }, { url: SAME }] } };
 check(resolveProxiedSource(inputs, photoSourceHash(BADCERT)) === BADCERT, "tárolt forrás → feloldva");
@@ -168,7 +190,7 @@ const redSrc = 'const html = render(x);\nawait writeFile(path, html, "utf8");';
 check(rawWrite(redSrc).length === 1, "PIROS IKER: a nyers render írása felismerve");
 const server = readFileSync("src/console/server.ts", "utf8");
 const route = server.slice(server.indexOf("const cfgPhotoMatch"), server.indexOf("const cfgPhotoMatch") + 900);
-check(/resolveProxiedSource\(/.test(route) && /\^http:/.test(route), "a route tárolt forrást old fel, és csak http-t szolgál ki");
+check(/resolveProxiedSource\(/.test(route) && /\^https\?:/.test(route) && /isPaidPhotoHost\(source\)/.test(route), "a route tárolt forrást old fel, http(s)-t szolgál ki, fizetős hosztot soha");
 check(!/proxiedPhotoUrl|verifyPhotoSignature/.test(route) && !/places/i.test(route), "a route nem a konzol aláírt proxyja, és nem hív Places-t");
 
 console.log(bad ? `\n⛔ ${bad} állítás bukott` : "\n✅ minden állítás teljesült");

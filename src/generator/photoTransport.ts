@@ -14,9 +14,15 @@
 //   (a) a https-változat UGYANAZT a képet adja (sha256-egyezés) → a https URL kerül a lapra;
 //   (b) különben a SAJÁT szerverünkön át jön: `/configure/<artifactId>/photo/<hash>`.
 //       ⛔ Nem nyílt proxy: a route CSAK az artefaktum TÁROLT fotó-URL-jei közül szolgál ki
-//       (`allowedPhotoSources`), és csak `http://` forrást — a Places (fizetős) URL-je
-//       https, tehát ide soha nem jut el. A `/configure/` azért, mert élesen ez a
+//       (`allowedPhotoSources`), és csak `http://` vagy nem fizetős `https://` forrást
+//       (`isPaidPhotoHost`) — a Places-média ide soha nem jut el. A `/configure/` azért, mert élesen ez a
 //       konzol nyilvános, nginx-en átengedett előtagja (a `/mock/` operátor-only).
+//
+// ⛔ HOTLINK-TILTÁS (2026-10-27, Huszár 62a12b3e): a huszar.info https-en, Referer nélkül 200-at
+// ad, a mi lapunk Refererével 403-at — mindkét mockon minden kép szürke helyőrző volt, a kapu
+// pedig „ép"-et mért (Referer nélkül kér). Ezért a https-forrásokat is megnézzük: hosztonként
+// EGY próba a mock Refererével; ha az bukik, de Referer nélkül a kép él, a hoszt minden
+// fotója a (b) úton jön. Fizetős hoszt (Places) soha nem próba és soha nem proxy.
 //
 // A siteData a FORRÁS-URL-t tartja meg (jogállás, hero-pontszám kulcsa, élesítés) — a
 // csere a RENDERELT HTML-en történik, minden íráskor (generálás, hero-csere, szöveg-
@@ -26,6 +32,7 @@ import { createHash } from "node:crypto";
 
 import { config } from "../config.js";
 import { fetchPhoto } from "../console/photoProxy.js";
+import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 
 export type PhotoTransportVia = "https" | "proxy";
 
@@ -49,6 +56,46 @@ export function isInsecurePhotoUrl(url: string): boolean {
     return true;
   }
 }
+
+/** Places / Google photo media: a PAID call — never probed, never proxied (§ cost). */
+export function isPaidPhotoHost(url: string): boolean {
+  try {
+    return /(?:^|\.)(?:googleapis|googleusercontent|gstatic)\.com$/i.test(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Does the photo load when OUR page asks for it (Referer = the mock's origin)? */
+export type HotlinkProbe = (url: string) => Promise<boolean>;
+
+const PROBE_TTL_MS = 30 * 60_000;
+const probeCache = new Map<string, { readonly ok: boolean; readonly at: number }>();
+
+/** The default probe: one GET with the mock origin as Referer, the scraper's own user agent. */
+export const probeWithMockReferer: HotlinkProbe = async (url) => {
+  const hit = probeCache.get(url);
+  if (hit && Date.now() - hit.at < PROBE_TTL_MS) return hit.ok;
+  let ok = false;
+  try {
+    const res = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(8_000),
+      headers: {
+        "user-agent": PORTAL_USER_AGENT,
+        accept: "image/avif,image/webp,image/*,*/*;q=0.8",
+        referer: `${(config.publicBaseUrl ?? "https://citoviso.com").replace(/\/+$/, "")}/`,
+      },
+    });
+    ok = res.ok && (res.headers.get("content-type") ?? "").startsWith("image/");
+    await res.body?.cancel();
+  } catch {
+    ok = false;
+  }
+  if (probeCache.size > 500) probeCache.clear();
+  probeCache.set(url, { ok, at: Date.now() });
+  return ok;
+};
 
 /** A proxy-URL azonosítója: a forrás-URL lenyomata (nem titok — a jogosultság a tárolt lista). */
 export function photoSourceHash(source: string): string {
@@ -99,13 +146,15 @@ export type PhotoFetcher = (url: string) => Promise<{ readonly ok: boolean; read
 const sha = (b: Buffer): string => createHash("sha256").update(b).digest("hex");
 
 /**
- * Eldönti a http-s fotók útját. https-forrással nem foglalkozik (az már jó).
- * Költség: http-fotónként egy https-kérés a szállás SAJÁT hosztjára — $0, Places nincs.
+ * Eldönti a http-s fotók útját, és a hotlink-tiltó https-hosztokét (fent). Költség:
+ * http-fotónként egy https-kérés a szállás SAJÁT hosztjára, https-hosztonként egy
+ * Referer-próba (+ egy Referer nélküli, ha a próba bukik) — $0, Places nincs.
  */
 export async function planPhotoTransport(
   urls: readonly string[],
   artifactId: string,
   fetcher: PhotoFetcher = fetchPhoto,
+  probe: HotlinkProbe = probeWithMockReferer,
 ): Promise<PhotoTransportRow[]> {
   const http = [...new Set(urls.filter(isInsecurePhotoUrl))];
   const byHost = new Map<string, string[]>();
@@ -132,6 +181,26 @@ export async function planPhotoTransport(
             : { source, served: proxiedMockPhotoUrl(artifactId, source), via: "proxy" },
         );
       }
+    }),
+  );
+  const secureByHost = new Map<string, string[]>();
+  for (const u of new Set(urls)) {
+    if (!/^https:\/\//i.test(u) || isPaidPhotoHost(u)) continue;
+    let host = "";
+    try {
+      host = new URL(u).host;
+    } catch {
+      continue;
+    }
+    secureByHost.set(host, [...(secureByHost.get(host) ?? []), u]);
+  }
+  await Promise.all(
+    [...secureByHost.values()].map(async (list) => {
+      const first = list[0]!;
+      if (await probe(first)) return;
+      // Blocked for our page — but is it alive at all? A dead photo is the gate's to report.
+      if (!(await fetcher(first)).ok) return;
+      for (const source of list) rows.push({ source, served: proxiedMockPhotoUrl(artifactId, source), via: "proxy" });
     }),
   );
   rows.sort((x, y) => x.source.localeCompare(y.source));
