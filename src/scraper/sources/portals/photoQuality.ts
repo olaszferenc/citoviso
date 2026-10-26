@@ -140,8 +140,18 @@ export interface PhotoLike {
  * Site builders serve the page's OWN media from their CDN, never from the customer's
  * domain. Measured 2026-10-26 (prod): every own-site photo dropped by the cross-site rule
  * was on wixstatic.com — 211 photos on 10 leads (Platán 92b32b6c: 6 of 6, source pack 0).
+ * Webnode serves uploads from `<hash>.<code>-cdnwnd.com`, the code varies per site
+ * (Árvalányhaj 54bbfabd: 80bef5b163.clvaw-cdnwnd.com), hence a pattern, not a host.
+ * ONE list for both gates: the own-site reader (attachPhotoLinks) and judgePhoto.
  */
-const SITE_BUILDER_MEDIA = new Set(["wixstatic.com"]);
+const SITE_BUILDER_MEDIA = ["wixstatic.com", "squarespace-cdn.com"];
+const WEBNODE_CDN = /(?:^|\.)[a-z0-9]+-cdnwnd\.com$/;
+
+/** Does this image host serve only a site builder customer's own uploads? */
+export function isSiteBuilderMedia(host: string): boolean {
+  const h = host.toLowerCase();
+  return SITE_BUILDER_MEDIA.some((b) => h === b || h.endsWith(`.${b}`)) || WEBNODE_CDN.test(h);
+}
 
 /** Registrable-site approximation (last two labels — fine for .hu portals). */
 function site2(host: string): string {
@@ -172,8 +182,9 @@ export function judgePhoto(p: PhotoLike): PhotoVerdict {
   // wearing another business's brand. Same-site CDN subdomains (i.szalas.hu) pass.
   if (p.portalHost) {
     try {
-      const imgSite = site2(new URL(p.url).hostname);
-      const builderOwn = p.provenance === "website" && SITE_BUILDER_MEDIA.has(imgSite);
+      const imgHost = new URL(p.url).hostname;
+      const imgSite = site2(imgHost);
+      const builderOwn = p.provenance === "website" && isSiteBuilderMedia(imgHost);
       if (imgSite !== site2(p.portalHost) && !builderOwn) {
         return { usable: false, why: `idegen domain képe a galériában (${imgSite}) — hirdetés/widget, nem a szállásé` };
       }

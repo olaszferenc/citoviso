@@ -15,3 +15,8 @@ Koordinátor (citdcb3daea, a tulaj „SOS … automata kiküldés” rendelete a
 ## Deploy után
 - A 8 halott-URL-es lead: a konzol link-behúzása ($0) ugyanarra a saját-honlap URL-re (a profil URL szerint felülíródik → a halott URL-ek eltűnnek).
 - A 10 wixstatic-lead mockja: a fotókészlet a generáláskor rögzül (siteData.photos), a sima rerender NEM hozza be az új képeket → új generálás kell (a source-pack már helyes).
+
+## Kiegészítés: Webnode (Neo, 2026-10-26)
+- Árvalányhaj 54bbfabd saját honlapjának képei a Webnode CDN-jén (`80bef5b163.clvaw-cdnwnd.com`, a kód oldalanként változik) — a behúzó (attachPhotoLinks) csak Wix/Squarespace CDN-t engedett, a képszűrő (judgePhoto) csak Wixet.
+- Egy lista a két kapunak: `photoQuality.isSiteBuilderMedia` (wixstatic.com, squarespace-cdn.com, `*-cdnwnd.com` minta). Mellékhatásként a Squarespace a képszűrőn is átmegy (eddig a behúzó felvette, a szűrő eldobta).
+- Deploy után: Árvalányhaj (és bármely Webnode-os saját honlap) link-behúzása újra a saját URL-re.

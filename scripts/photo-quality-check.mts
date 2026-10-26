@@ -18,8 +18,10 @@
 import {
   dimensionsFromHeader,
   dimensionsFromUrl,
+  isSiteBuilderMedia,
   judgePhoto,
 } from "../src/scraper/sources/portals/photoQuality.js";
+import { readFileSync } from "node:fs";
 import { parseSrcset } from "../src/scraper/srcset.js";
 import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
 import { domImages } from "../src/scraper/sources/portals/extract.js";
@@ -349,6 +351,38 @@ check(
   "domImages: a vesszős Wix-src egyben marad, a csak-srcset kép is ép URL",
   dom.length === 2 && dom[0]!.url === WIX480 && dom[1]!.url === WIX960,
   JSON.stringify(dom.map((d) => d.url)),
+);
+
+// ③ Webnode (Neo, 2026-10-26): Árvalányhaj 54bbfabd saját honlapjának 39 képe a Webnode
+//    CDN-jén ül (`80bef5b163.clvaw-cdnwnd.com`); a kód oldalanként változik → minta.
+const WEBNODE = "https://80bef5b163.clvaw-cdnwnd.com/0b2e0c8d7e4f5a6b/200000012-abc12abc13/IMG_2041.jpeg?ph=80bef5b163";
+check(
+  "MEGTART · Árvalányhaj: a SAJÁT Webnode-honlap képe a *-cdnwnd.com CDN-en",
+  judgePhoto({ url: WEBNODE, width: 1600, height: 1200, vouched: true, portalHost: "arvalanyhaj-vendeghaz.hu", provenance: "website" }).usable === true,
+  "a Webnode a lap saját feltöltéseit a <hash>.<kód>-cdnwnd.com hostról szolgálja ki",
+);
+check(
+  "ELDOB · ugyanaz a Webnode-kép egy portál adatlapjában idegen",
+  judgePhoto({ url: WEBNODE, width: 1600, height: 1200, vouched: true, portalHost: "szallas.hu", provenance: "portal" }).usable === false,
+  "a kivétel csak a saját honlapra szól",
+);
+check(
+  "isSiteBuilderMedia: Wix · Squarespace · Webnode (bármely kód) igen; hasonló nevű idegen host nem",
+  isSiteBuilderMedia("static.wixstatic.com") && isSiteBuilderMedia("images.squarespace-cdn.com") &&
+    isSiteBuilderMedia("80bef5b163.clvaw-cdnwnd.com") && isSiteBuilderMedia("0f5d6ecb02.cbaul-cdnwnd.com") &&
+    !isSiteBuilderMedia("cdnwnd.com.example.hu") && !isSiteBuilderMedia("notwixstatic.com") && !isSiteBuilderMedia("i0.wp.com"),
+  "egy lista a két kapunak",
+);
+check(
+  "MEGTART · Squarespace saját honlapon a képszűrőn is (eddig csak a behúzó engedte)",
+  judgePhoto({ url: "https://images.squarespace-cdn.com/content/v1/abc/1600.jpg", width: 1600, height: 1067, vouched: true, portalHost: "pelda-vendeghaz.hu", provenance: "website" }).usable === true,
+  "a behúzó és a képszűrő ugyanazt a listát olvassa",
+);
+check(
+  "bekötés: az attachPhotoLinks saját-oldali szűrője az isSiteBuilderMedia-t hívja (nincs külön lista)",
+  /isSiteBuilderMedia\(imgHost\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
+    !/const SITE_BUILDER_CDN/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")),
+  "egy igazság, két kapu",
 );
 
 if (failed) {

@@ -35,7 +35,7 @@ import { qualificationOf } from "./persist.js";
 import { classifyWebsite } from "./qualify.js";
 import { getRegion, loadRegions } from "./regions.js";
 import { IMAGE_EXT, NON_CONTENT_IMAGE, extractListing, ownContentOnly, textOf } from "./sources/portals/extract.js";
-import { keepUsablePhotos } from "./sources/portals/photoQuality.js";
+import { isSiteBuilderMedia, keepUsablePhotos } from "./sources/portals/photoQuality.js";
 import { fetchPortalPage } from "./sources/portals/politeness.js";
 import { hostOf, resolvePortal } from "./sources/portals/registry.js";
 import type { PortalPhoto, PortalProfile, QualifiedLead, Region } from "./types.js";
@@ -57,7 +57,7 @@ const MAX_OWN_SITE_PHOTOS = 40;
 // NOT listed on purpose: googleusercontent.com (also serves Google Places/Maps photos —
 // an embedded review widget would be relabelled "website"), wp.com (the i0.wp.com proxy
 // serves ANY site's images), cdninstagram.com (an embedded feed carries other accounts).
-const SITE_BUILDER_CDN = ["wixstatic.com", "squarespace-cdn.com"];
+// The list itself lives in photoQuality.isSiteBuilderMedia (Wix, Squarespace, Webnode).
 
 /** Shared-platform hosts: there "the same site" is the full host, not the last two labels. */
 const SHARED_PLATFORM = ["webnode.hu", "webnode.page", "wixsite.com", "blogspot.com", "weebly.com", "business.site"];
@@ -254,7 +254,7 @@ export async function readOwnSitePhotos(
   const own = candidates.filter((img) => {
     const imgHost = hostOf(img.url) ?? "";
     const sameSite = site2(imgHost) === pageSite;
-    const builderCdn = SITE_BUILDER_CDN.some((h) => imgHost === h || imgHost.endsWith(`.${h}`));
+    const builderCdn = isSiteBuilderMedia(imgHost);
     if (!sameSite && !builderCdn) {
       dropped.push(`idegen domain képe (${imgHost})`);
       return false;
