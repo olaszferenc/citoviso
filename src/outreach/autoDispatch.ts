@@ -26,6 +26,7 @@ import { ackCoversVerdicts, blockingVerdicts, hasPendingReview, verdictAckOf } f
 import { sendOutreachMail } from "./sendBatch.js";
 import { startOutreachPair } from "./sendOutreachPair.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
+import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 
 export const AUTO_SETTING_KEY = "outreach_auto";
 export const DEFAULT_DAILY_CAP = 40;
@@ -254,7 +255,24 @@ async function dispatchOne(
     };
   }
 
-  const prospect = await createProspect({ leadId, artifactId });
+  // The recipient the console's „Követett link készítése” field starts with: the lead's ONLY
+  // address. With several, the operator chooses there (owner decision 2026-10-04) — the timer
+  // never picks whom a cold mail reaches. (Measured 2026-10-26: without this the first
+  // automatic send went out as a pair only, the lead's single address left out.)
+  const lead = await db.selectFrom("lead").select("raw").where("id", "=", leadId).executeTakeFirst();
+  const raw = (lead?.raw ?? null) as Parameters<typeof leadEmails>[0];
+  const chosen = await db
+    .selectFrom("prospect")
+    .select("contact_email")
+    .where("lead_id", "=", leadId)
+    .where("mock_artifact_id", "=", artifactId)
+    .where("contact_email", "is not", null)
+    .executeTakeFirst();
+  if (!chosen && leadEmails(raw).length > 1) {
+    return { status: "held", note: "több e-mail-cím — a lead lapján válaszd ki, kinek menjen, majd küldd kézzel vagy tedd újra sorba" };
+  }
+  const contactEmail = chosen?.contact_email ?? (outreachPrefill(raw) || undefined);
+  const prospect = await createProspect({ leadId, artifactId, contactEmail });
   if (!prospect) return { status: "skipped", note: "a lead nem található" };
   const prospectId = prospect.id;
 
