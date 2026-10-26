@@ -17,6 +17,7 @@
 // Lives in its own module, like prospectNotice.ts, so the guard can run the real
 // functions on real templates without booting the server.
 
+import { jsonForScript } from "../text/jsonForScript.js";
 import { slugify } from "../domains.js";
 import { T } from "../i18n/mail.js";
 import { appendToBody, prependToBody, trackedBarParts } from "./prospectNotice.js";
@@ -231,7 +232,7 @@ export function injectPlanEndBlock(html: string, i: SwitcherInput): string {
  * visit that came from our own /p/ page is a switch, not a first open.
  */
 function nudgeScript(token: string): string {
-  const key = JSON.stringify(`citp-nudge:${token}`);
+  const key = jsonForScript(`citp-nudge:${token}`);
   return (
     `<script data-cit-plans-js>(function(){` +
     `var nav=document.querySelector("#cit-plans nav");if(!nav)return;` +

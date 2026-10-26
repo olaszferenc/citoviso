@@ -19,10 +19,10 @@
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { getSetting, setSetting } from "../console/appSettings.js";
-import { createProspect } from "../console/data.js";
+import { createProspect, setProspectVariants } from "../console/data.js";
 import { logLeadActivity, SYSTEM_ACTOR } from "../console/leadActivity.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
-import { ackCoversVerdicts, blockingVerdicts, hasPendingReview, verdictAckOf } from "./mockVerdictGate.js";
+import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, reviewOf, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
 import { startOutreachPair } from "./sendOutreachPair.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
@@ -276,6 +276,11 @@ async function dispatchOne(
   if (!prospect) return { status: "skipped", note: "a lead nem található" };
   const prospectId = prospect.id;
 
+  // Owner, 2026-10-26: „minimum kettő mockot kiküldünk” — the link carries a second plan
+  // (plan-tabs, ADR „több terv egy követett linken”), or nothing goes out.
+  const second = await attachSecondPlan(prospectId);
+  if (!second.ok) return { status: "held", note: second.note, prospectId };
+
   const mail = await sendOutreachMail(prospectId);
   const mailNote =
     mail.outcome.kind === "sent"
@@ -312,5 +317,54 @@ export async function dispatchStatus(): Promise<DispatchStatus> {
     settings: await getAutoDispatchSettings(),
     sentToday: await sentToday(),
     counts: Object.fromEntries(rows.map((r) => [r.status, Number(r.n)])),
+  };
+}
+
+/**
+ * Attach a second plan to a tracked link: another mock of the same lead that Vera PASSed on
+ * its CURRENT text (a stale review does not count), different template, same photo set
+ * (setProspectVariants enforces the last two). Already has alternatives → nothing to do.
+ * `extendOffered`: the link already went out — the owner's one-time extension (2026-10-26).
+ */
+export async function attachSecondPlan(
+  prospectId: string,
+  opts: { extendOffered?: boolean } = {},
+): Promise<{ ok: true; attached: string | null } | { ok: false; note: string }> {
+  const p = await db
+    .selectFrom("prospect")
+    .select(["lead_id", "mock_artifact_id"])
+    .where("id", "=", prospectId)
+    .executeTakeFirst();
+  if (!p) return { ok: false, note: "nincs ilyen prospect" };
+  const has = await db
+    .selectFrom("prospect_variant")
+    .select("mock_artifact_id")
+    .where("prospect_id", "=", prospectId)
+    .executeTakeFirst();
+  if (has) return { ok: true, attached: null };
+  const mocks = await db
+    .selectFrom("mock_artifact")
+    .select(["id", "inputs", "status"])
+    .where("lead_id", "=", p.lead_id)
+    .where("id", "!=", p.mock_artifact_id ?? "")
+    .where("status", "!=", "rejected")
+    .where("path", "is not", null)
+    .orderBy("generated_at", "desc")
+    .execute();
+  const passed = mocks.filter((m) => {
+    const r = reviewOf(m.inputs);
+    return r?.verdict === "pass" && r.copyHash === copyHashOf(m.inputs);
+  });
+  const refusals: string[] = [];
+  for (const m of passed) {
+    const r = await setProspectVariants(prospectId, [m.id], opts);
+    if (r.ok) return { ok: true, attached: m.id };
+    refusals.push(r.reason);
+  }
+  return {
+    ok: false,
+    note: passed.length
+      ? `a második terv nem csatolható (${refusals.join(", ")}) — más sablon és azonos fotókészlet kell`
+      : "nincs második, Vera által ellenőrzött terv — a lead lapján kell rögzíteni Vera ítéletét a másik mockra",
   };
 }

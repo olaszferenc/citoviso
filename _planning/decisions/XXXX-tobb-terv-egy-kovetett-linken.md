@@ -48,4 +48,14 @@ csatolatlan link a mai viselkedést adja.
 ütközés-kerülése a lap alji kártyákkal (kontraktus §F.20); súgó-cikk; a `deleteArtifact` ellenőrzés→törlés közti
 szűk verseny (a jog-őr szerint nem sértés, maradék).
 
-**Státusz:** ELFOGADVA (terv + szöveg) · megvalósítás folyamatban a `feat/multimocktabs` ágon.
+**Státusz:** ELFOGADVA (terv + szöveg) · 2026-10-26: a main-re emelve (tulaj, SOS: „Úgy volt, hogy minimum kettő
+mockot kiküldünk”). A mai kódra igazítva: a `/p/` GET semmit nem rögzít (ADR-0291), a tervváltás a `POST /view?plan=n`
+jelzéssel FOLYTATJA a látogatást (PLAN_SWITCH_VIEW_MINUTES), a `plan_view` esemény ott íródik; a levél bekezdései a
+mai (ADR-0306) szövegre épülnek, a tervszámot az ajánló-mondat is viszi; a migráció 0116.
+
+**Kiegészítés 2026-10-26 (tulaj):**
+- Az automata kiküldő (ADR-0405) csak legalább KÉT tervvel küld: a második terv a lead egy másik, Vera által a mostani
+  szövegére PASS-olt mockja (más sablon, azonos fotókészlet); ha nincs ilyen, a sor `held`.
+- A már kiküldött, egytervű linkek EGYSZER kiegészíthetők a második tervvel, külön értesítés nélkül („aki megnyitja,
+  látja … külön értesítés már zaklatás lenne”): `setProspectVariants(…, { extendOffered: true })` — csak hozzáadás,
+  az 1. terv áll, csere/törlés soha (§I). Eszköz: `outreach-dispatch.mts attach-second --sent`.

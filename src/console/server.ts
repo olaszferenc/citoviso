@@ -3822,15 +3822,7 @@ async function handle(
         // A multi-plan page names its plan to the view beacon: a plan switch CONTINUES the
         // visit (POST /view below) instead of counting a new one — three clicks through the
         // plans must not mint the 3rd-visit offer in seconds (ADR-0088 §4).
-        ...(measured
-          ? {
-              track: {
-                url: `/p/${pMatch[1]}/event`,
-                viewUrl: multi ? `/p/${pMatch[1]}/view?plan=${plan.n}` : `/p/${pMatch[1]}/view`,
-                feedbackUrl: `/p/${pMatch[1]}/feedback`,
-              },
-            }
-          : {}),
+        ...(measured ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: multi ? `/p/${pMatch[1]}/view?plan=${plan.n}` : `/p/${pMatch[1]}/view`, feedbackUrl: `/p/${pMatch[1]}/feedback` } } : {}),
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(
           pf?.leadAddress ?? null,

@@ -10,6 +10,9 @@
 //   tsx scripts/outreach-dispatch.mts on|off
 //   tsx scripts/outreach-dispatch.mts cap <n>
 //   tsx scripts/outreach-dispatch.mts list [--status=held]
+//   tsx scripts/outreach-dispatch.mts attach-second --sent [--dry-run]
+//        owner 2026-10-26: the links the timer already SENT with one plan get the second
+//        (Vera-PASSed) plan added, once, without any message to the lead
 //
 // `tick` sends nothing while the switch is off, outside weekday 9–16 Budapest, or over the
 // daily cap. `--force` ignores ONLY the switch (a supervised first run).
@@ -19,6 +22,7 @@ import { db } from "../src/db/client.js";
 import {
   cancelDispatch,
   dispatchStatus,
+  attachSecondPlan,
   enqueueDispatch,
   requeueDispatch,
   runDispatchTick,
@@ -128,8 +132,30 @@ async function main(): Promise<void> {
       }
       return;
     }
+    case "attach-second": {
+      if (!flag("sent")) throw new Error("attach-second --sent [--dry-run]");
+      const rows = await db
+        .selectFrom("outreach_dispatch as d")
+        .innerJoin("lead as l", "l.id", "d.lead_id")
+        .select(["d.prospect_id", "l.name"])
+        .where("d.status", "=", "sent")
+        .where("d.prospect_id", "is not", null)
+        .execute();
+      let ok = 0;
+      for (const r of rows) {
+        if (flag("dry-run")) {
+          console.log(`DRY ${r.name}`);
+          continue;
+        }
+        const a = await attachSecondPlan(r.prospect_id!, { extendOffered: true });
+        console.log(a.ok ? `OK   ${r.name}${a.attached ? "" : " (már volt)"}` : `NEM  ${r.name} — ${a.note}`);
+        if (a.ok) ok++;
+      }
+      console.log(`\nmásodik terv: ${ok}/${rows.length}`);
+      return;
+    }
     default:
-      throw new Error("parancs: tick | status | add | import | requeue | cancel | on | off | cap | list");
+      throw new Error("parancs: tick | status | add | import | requeue | cancel | on | off | cap | list | attach-second");
   }
 }
 

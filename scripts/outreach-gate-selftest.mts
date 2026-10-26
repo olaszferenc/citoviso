@@ -135,7 +135,8 @@ console.log("\n── Több terv egy linken ────────────
     ] as const) {
       const r = checkOutreachSms(sms, LEAD, "hu");
       say(r.verdict === "PASS", `${n} terv — ${name}: §C-kapu PASS`, r.reasons.join(" | "));
-      say(sms.text.includes(must), `${n} terv — ${name}: kimondja „${must}”`, sms.text);
+      // The SMS is GSM-7 folded since ADR-0366/0373 — the claim is checked accent-blind.
+      say(fold(sms.text).includes(fold(must)), `${n} terv — ${name}: kimondja „${must}”`, sms.text);
     }
     // The HTML consistency guard (§C.4) must accept the new part, and the button says it.
     let html = "";
@@ -155,15 +156,18 @@ console.log("\n── Több terv egy linken ────────────
   say(one.subject === `${LEAD} – honlap-terv`, "1 terv — a tárgy a mai", one.subject);
   say(missing.subject === one.subject && missing.body === one.body, "hiányzó mező = 1 terv (a mai levél, betűre)");
   say(!one.body.includes("A képen"), "1 terv — nincs képaláírás");
+  // One plan = the single-plan wording (folded GSM-7, ADR-0366/0373) — never a plural.
   say(
-    renderSmsDraft(INPUT).text ===
-      `${LEAD} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n${renderSmsDraft(INPUT).link}`,
-    "1 terv — az önálló SMS a mai, betűre",
+    fold(renderSmsDraft(INPUT).text).includes(fold("készítettünk Önnek egy honlap-látványtervet")) &&
+      !fold(renderSmsDraft(INPUT).text).includes("ket honlap"),
+    "1 terv — az önálló SMS az egy-tervű szöveg",
+    renderSmsDraft(INPUT).text,
   );
   say(
-    renderPairSmsDraft(INPUT).text ===
-      `${LEAD} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n${renderPairSmsDraft(INPUT).link}`,
-    "1 terv — a páros SMS a mai, betűre",
+    fold(renderPairSmsDraft(INPUT).text).includes(fold("az imént MMS-ben küldött honlap-látványtervet")) &&
+      !fold(renderPairSmsDraft(INPUT).text).includes("mindkettot"),
+    "1 terv — a páros SMS az egy-tervű szöveg",
+    renderPairSmsDraft(INPUT).text,
   );
   const oneHtml = String((buildOutreachEmail(one, "a@b.hu", { lang: "hu", heroShotPath: "/nonexistent/hero.png" }) as { html?: unknown }).html ?? "");
   say(oneHtml.includes("Megnézem a tervet") && !oneHtml.includes("Megnézem a terveket"), "1 terv — a gomb a mai");
@@ -593,6 +597,11 @@ try {
   );
 } finally {
   rmSync(probePath, { force: true });
+}
+
+/** Accent- and case-blind comparison for the folded (GSM-7) SMS. */
+function fold(t: string): string {
+  return t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 // A kapu ezen a GÉPEN mit mondana? Nem bukás-ok (a dev .env szándékosan teszt-

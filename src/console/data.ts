@@ -1936,6 +1936,14 @@ function photoSetOf(inputs: unknown): string | null {
 export async function setProspectVariants(
   prospectId: string,
   artifactIds: readonly string[],
+  /**
+   * Owner, 2026-10-26: „implementáljuk a már kiküldöttekbe, de nem kell külön értesítés. aki
+   * megnyitja látja”. A link already offered with ONE plan may get alternatives ADDED — once,
+   * never removed or swapped (the offered plan 1 stands), and no message announces it. The
+   * letter that went out promised one plan and the link now gives more: an extension, not a
+   * switch (§I).
+   */
+  opts: { extendOffered?: boolean } = {},
 ): Promise<{ ok: true } | { ok: false; reason: SetVariantsRefusal }> {
   if (artifactIds.length > MAX_PLANS - 1) return { ok: false, reason: "too-many" };
   if (new Set(artifactIds).size !== artifactIds.length) return { ok: false, reason: "duplicate" };
@@ -1947,7 +1955,16 @@ export async function setProspectVariants(
       .forUpdate()
       .executeTakeFirst();
     if (!p) return { ok: false as const, reason: "no-prospect" as const };
-    if (await isPlanSetOffered(prospectId, trx)) return { ok: false as const, reason: "already-sent" as const };
+    if (await isPlanSetOffered(prospectId, trx)) {
+      const existing = await trx
+        .selectFrom("prospect_variant")
+        .select("mock_artifact_id")
+        .where("prospect_id", "=", prospectId)
+        .execute();
+      if (!opts.extendOffered || existing.length > 0 || artifactIds.length === 0) {
+        return { ok: false as const, reason: "already-sent" as const };
+      }
+    }
     if (artifactIds.includes(p.mock_artifact_id ?? "")) {
       return { ok: false as const, reason: "is-primary" as const };
     }

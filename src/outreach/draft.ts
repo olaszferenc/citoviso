@@ -605,9 +605,9 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
     d,
     (name, mark) =>
       plans === 3
-        ? T(d.lang, "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
+        ? T(d.lang, "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
         : plans === 2
-          ? T(d.lang, "{name} – két honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
+          ? T(d.lang, "{name} – két honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
           : T(d.lang, "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark }),
     link,
     unsubscribeLink,

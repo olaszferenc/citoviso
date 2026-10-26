@@ -36,6 +36,7 @@ function check(name: string, cond: boolean, detail?: unknown): void {
   }
 }
 
+// gate-subject-allow: any lead is only the FK target of our own synthetic mocks/prospect — its content is never read, the rows are ours (deleted by id)
 const lead = await db.selectFrom("lead").select("id").orderBy("created_at").limit(1).executeTakeFirst();
 if (!lead) {
   console.error("❌ plan-variants-check: nincs egyetlen lead sem a DB-ben — a próba nem futtatható.");
