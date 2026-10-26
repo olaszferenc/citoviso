@@ -168,6 +168,10 @@ export interface LeadDetail {
   readonly heroScores: Record<string, { subject: string; score: number; reason: string }>;
   /** Az operátor saját nyitókép-választása erre a leadre (0061), ha van. */
   readonly heroPin: { url: string; actor: string } | null;
+  /** ADR-XXXX: the lead's row on the automatic outreach go list, if any. */
+  readonly dispatch?: { artifactId: string; status: string; note: string | null; queuedBy: string } | null;
+  /** True when any prospect of this lead was already contacted (no first contact again). */
+  readonly contacted?: boolean;
 }
 
 /** Filter + sort options for the lead list (from the console query string). */
@@ -609,6 +613,24 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     heroScores[r.url_key] = { subject: r.subject, score: r.score, reason: r.reason ?? "" };
   }
   const heroPin = await getHeroPin(id);
+  const dispatchRow = await db
+    .selectFrom("outreach_dispatch")
+    .select(["artifact_id", "status", "note", "queued_by"])
+    .where("lead_id", "=", id)
+    .executeTakeFirst();
+  const contactedRow = await db
+    .selectFrom("prospect")
+    .select("id")
+    .where("lead_id", "=", id)
+    .where((eb) =>
+      eb.or([
+        eb("sent_at", "is not", null),
+        eb("email_sent_at", "is not", null),
+        eb("mms_sent_at", "is not", null),
+        eb("sms_sent_at", "is not", null),
+      ]),
+    )
+    .executeTakeFirst();
 
   return {
     id: lead.id,
@@ -629,6 +651,10 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     artifacts,
     heroScores,
     heroPin,
+    dispatch: dispatchRow
+      ? { artifactId: dispatchRow.artifact_id, status: dispatchRow.status, note: dispatchRow.note, queuedBy: dispatchRow.queued_by }
+      : null,
+    contacted: Boolean(contactedRow),
   };
 }
 

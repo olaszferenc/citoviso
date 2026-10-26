@@ -197,6 +197,7 @@ import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from ".
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
 import { startOutreachPair, sendPairSmsHalf, pairJobState } from "../outreach/sendOutreachPair.js";
+import { cancelDispatch, enqueueDispatch, requeueDispatch } from "../outreach/autoDispatch.js";
 import { renderPairSmsDraft } from "../outreach/draft.js";
 import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
@@ -2987,6 +2988,39 @@ async function handle(
       res,
       `/lead/${row.lead_id}?flash=${encodeURIComponent(flash)}${bad ? "&flashKind=bad" : ""}#a-${id}`,
     );
+  }
+  // POST /artifact/:id/dispatch — ADR-XXXX: the automatic outreach go list. op=add puts the
+  // lead with THIS approved mock in the queue (the prod timer sends it through the send-all
+  // gates), op=cancel takes a queued row out, op=requeue puts a held/cancelled row back.
+  const dispatchMatch = /^\/artifact\/([0-9a-f-]{36})\/dispatch$/i.exec(path);
+  if (method === "POST" && dispatchMatch) {
+    const id = dispatchMatch[1]!;
+    const form = await readBody(req);
+    const row = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", id).executeTakeFirst();
+    if (!row) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
+    const op = await currentOperator(req);
+    const by = op?.displayName || op?.username || "operátor";
+    const action = form.get("op");
+    let flash: string;
+    let bad = false;
+    if (action === "add") {
+      const r = await enqueueDispatch({ leadId: row.lead_id, artifactId: id, by });
+      flash = r.ok ? "Kiküldési sorba téve — hétköznap 9–16 között az automata küldi." : `Nem került sorba: ${r.reason}`;
+      bad = !r.ok;
+    } else if (action === "cancel") {
+      const ok = await cancelDispatch(row.lead_id, by, "a konzolon kivette");
+      flash = ok ? "Kivéve a kiküldési sorból." : "Nincs várakozó sora.";
+      bad = !ok;
+    } else if (action === "requeue") {
+      const ok = await requeueDispatch(row.lead_id, by);
+      flash = ok ? "Újra a kiküldési sorban." : "Nincs visszatartott vagy visszavont sora.";
+      bad = !ok;
+    } else {
+      flash = "Ismeretlen művelet.";
+      bad = true;
+    }
+    if (!bad) await logLeadActivity({ leadId: row.lead_id, tab: "ls-outreach", action: `dispatch.${action}`, actor: operatorActor(op) });
+    return redirect(res, `/lead/${row.lead_id}?flash=${encodeURIComponent(flash)}${bad ? "&flashKind=bad" : ""}#a-${id}`);
   }
   // POST /artifact/:id/copy — the curator's HAND edit of a mock's copy (ADR-0323; approved
   // plan assets/design-refs/console/mock-copy-edit/). ONE path for both surfaces: the field

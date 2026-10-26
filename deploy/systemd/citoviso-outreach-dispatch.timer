@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso automata megkeresés-kiküldő, 4 percenként (ADR-XXXX)
+
+[Timer]
+# 4 percenként, egész nap: az ablakot (hétköznap 9:00–16:00 Europe/Budapest) a KÓD tartja,
+# nem ez a naptár — az éles gép UTC-ben fut. Ablakon kívül, kikapcsolt főkapcsolóval vagy
+# elért napi plafonnal a futás semmit nem küld. Futásonként egy lead → ~15 lead/óra felső
+# határ; az MMS-relay percenként egyet visz, így a sor nem torlódik.
+OnCalendar=*:0/4
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

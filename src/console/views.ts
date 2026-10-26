@@ -5181,6 +5181,45 @@ function mockReviewBlock(
   </div>`;
 }
 
+/**
+ * ADR-XXXX — the automatic outreach go list on the approved mock's card. The dispatcher puts
+ * the lead in the queue with ONE click after Poe's pick and Vera's PASS; the prod timer sends
+ * it through the send-all gates (weekday 9–16, daily cap). A row the timer held shows why.
+ */
+function mockDispatchBlock(
+  artifactId: string,
+  review: "pending" | "pass" | "flag" | null,
+  dispatch: { artifactId: string; status: string; note: string | null; queuedBy: string } | null,
+  contacted: boolean,
+  lang: string,
+): string {
+  if (dispatch) {
+    if (dispatch.artifactId !== artifactId) return "";
+    const label: Record<string, string> = {
+      queued: T(lang, "Kiküldési sorban — a hétköznap 9–16 közötti automata küldi"),
+      sending: T(lang, "Kiküldés folyamatban"),
+      sent: T(lang, "Az automata kiküldte"),
+      held: T(lang, "Az automata visszatartotta — ember dönt"),
+      skipped: T(lang, "Az automata kihagyta"),
+      cancelled: T(lang, "Visszavonva a kiküldési sorból"),
+    };
+    const again =
+      dispatch.status === "held" || dispatch.status === "cancelled" || dispatch.status === "skipped"
+        ? `<form method="post" action="/artifact/${esc(artifactId)}/dispatch"><input type="hidden" name="op" value="requeue"><button class="ok" type="submit">${T(lang, "Újra sorba")}</button></form>`
+        : dispatch.status === "queued"
+          ? `<form method="post" action="/artifact/${esc(artifactId)}/dispatch"><input type="hidden" name="op" value="cancel"><button class="bad" type="submit">${T(lang, "Kivétel a sorból")}</button></form>`
+          : "";
+    return `<div class="con-vr"><p class="con-vr__who">${esc(label[dispatch.status] ?? dispatch.status)} · ${esc(dispatch.queuedBy)}${
+      dispatch.note ? ` — ${esc(dispatch.note)}` : ""
+    }</p>${again}</div>`;
+  }
+  if (contacted || review !== "pass") return "";
+  return `<div class="con-vr"><form method="post" action="/artifact/${esc(artifactId)}/dispatch"><input type="hidden" name="op" value="add"><button class="ok" type="submit">${T(
+    lang,
+    "Kiküldési sorba (automata)",
+  )}</button></form></div>`;
+}
+
 /** A kapu-verdiktek értéke is szöveg, nem `pass`/`flag` enum. */
 function mockInputValue(key: string, v: unknown, lang = "hu"): string {
   if (key.endsWith("Verdict")) {
@@ -6000,6 +6039,7 @@ export function leadPage(
             </dl>
             ${factList}
             ${review ? mockReviewBlock(a.id, review, reviewOf(a.inputs), lang) : ""}
+            ${a.status === "approved" ? mockDispatchBlock(a.id, review, d.dispatch ?? null, d.contacted === true, lang) : ""}
             ${noPhotos}
             ${gateOpen ? photoGateBox(photoGate!, a.id) : ""}
             <div class="con-mk__act">

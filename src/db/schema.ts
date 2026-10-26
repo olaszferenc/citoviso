@@ -552,6 +552,22 @@ export interface TrialCampaignTable {
   sent_at: Timestamp | null;
 }
 
+/** 0115 (ADR-XXXX): the automatic outreach go list — one row per lead, sent by the prod
+ *  timer through the send-all gates (src/outreach/autoDispatch.ts). */
+export interface OutreachDispatchTable {
+  id: Generated<string>;
+  lead_id: string;
+  artifact_id: string;
+  prospect_id: string | null;
+  status: Generated<"queued" | "sending" | "sent" | "held" | "skipped" | "cancelled">;
+  queued_by: string;
+  queued_at: Generated<Timestamp>;
+  attempts: Generated<number>;
+  last_attempt_at: Timestamp | null;
+  note: string | null;
+  sent_at: Timestamp | null;
+}
+
 // --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---
 
 /** ADR-0344 (0098): the trial's T−3 / T−1 warning log — one row per trial, step and
@@ -1941,6 +1957,7 @@ export interface Database {
   free_trial_notice: FreeTrialNoticeTable;
   free_trial_alert: FreeTrialAlertTable;
   trial_campaign: TrialCampaignTable;
+  outreach_dispatch: OutreachDispatchTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;

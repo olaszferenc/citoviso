@@ -10,6 +10,7 @@
     "citoviso-traffic-mail.timer": { "target": "prod" },
     "citoviso-events.timer": { "target": "prod" },
     "citoviso-events-pending.timer": { "target": "prod" },
+    "citoviso-outreach-dispatch.timer": { "target": "prod" },
     "citoviso-backup-dev.timer": {
       "target": "dev",
       "why": "a DEV adatbázist menti a dev gépen; az éles mentése a deploy GATE 3 pg_dump-ja és a VPS saját mentése"
