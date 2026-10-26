@@ -9,7 +9,7 @@
 - [2026-10-26_wix_kepek_srcset_es_cdn.md](2026-10-26_wix_kepek_srcset_es_cdn.md) — 2026-10-26 — Wix-honlapok képei: srcset-vágás és CDN-szűrő
 - [2026-10-26_szallas_iker_fotoszam_wix_egysegtipus.md](2026-10-26_szallas_iker_fotoszam_wix_egysegtipus.md) — 2026-10-26 — szallas.hu iker nélkül, fotószám-csökkenés, halott Wix-sorok, egységtípus
 - [2026-10-26_scout_csempe_lezaras_verseny.md](2026-10-26_scout_csempe_lezaras_verseny.md) — 2026-10-26 — Felderítő csempe lezárása: versenyhelyzet
-- [2026-10-26_proba_belseje_riport.md](2026-10-26_proba_belseje_riport.md) — 2026-10-26 — A próba belseje mérve + Riport „Próba” fül (ADR-XXXX)
+- [2026-10-26_proba_belseje_riport.md](2026-10-26_proba_belseje_riport.md) — 2026-10-26 — A próba belseje mérve + Riport „Próba” fül (ADR-0407)
 - [2026-10-26_portal_kozepes_egyezes_jovahagyas.md](2026-10-26_portal_kozepes_egyezes_jovahagyas.md) — 2026-10-26 — Közepes portál-egyezés: „Jóváhagyom az egyezést”
 - [2026-10-26_minta_kartya_egysegfajta.md](2026-10-26_minta_kartya_egysegfajta.md) — 2026-10-26 — Minta-kártya: „Az egész szállás” több egységes szállásnál
 - [2026-10-26_hovamenjek_szomszed_kepek.md](2026-10-26_hovamenjek_szomszed_kepek.md) — 2026-10-26 — hovamenjek: a „Közeli szállások” képei nem a lead képei

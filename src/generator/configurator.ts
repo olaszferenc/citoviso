@@ -204,7 +204,7 @@ export interface ConfiguratorManifest {
     /** ADR-0322 ④/B: the micro-survey answer endpoint (/p/<token>/feedback). */
     readonly feedbackUrl?: string;
   };
-  /** ADR-XXXX (Próba riport): the trial continuation's own beacon (/p/<token>/trial-event) —
+  /** ADR-0407 (Próba riport): the trial continuation's own beacon (/p/<token>/trial-event) —
    *  the order's opening and the checkout steps; `from` = where „Megrendelem" was pressed. */
   readonly trialTrack?: { readonly url: string; readonly from: "admin" | "level" | null };
   /** Domain step (ADR-0020): platform subdomain default + custom-domain upsell. */
@@ -339,7 +339,7 @@ export interface ConfiguratorOpts {
     /** ADR-0322 ④/B: the micro-survey answer endpoint (/p/<token>/feedback). */
     readonly feedbackUrl?: string;
   };
-  /** ADR-XXXX (Próba riport): the trial continuation's own beacon (/p/<token>/trial-event) —
+  /** ADR-0407 (Próba riport): the trial continuation's own beacon (/p/<token>/trial-event) —
    *  the order's opening and the checkout steps; `from` = where „Megrendelem" was pressed. */
   readonly trialTrack?: { readonly url: string; readonly from: "admin" | "level" | null };
   /** ADR-0036: buyer language for the configurator UI; absent/hu → empty i18n map. */

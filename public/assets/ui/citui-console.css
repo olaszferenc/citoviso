@@ -3269,7 +3269,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rpm-legend { font-size: 11.5px; color: var(--citui-muted); margin-top: 8px; }
 .rpm-legend .rpm-dots i { vertical-align: -1px; }
 
-/* ── Riport · Próba tab (ADR-XXXX, frozen plan: assets/design-refs/console/proba-riport/, A + B hybrid) ──
+/* ── Riport · Próba tab (ADR-0407, frozen plan: assets/design-refs/console/proba-riport/, A + B hybrid) ──
    The ladder on top (rows are links: tap = only the trials that stopped there), the trial rows
    below as <details> (the strip in the summary, the timeline inside). Markers: shape + colour, never
    colour alone — circle = visit, square = save, ring = own site, diamond = order, dash = letter. */

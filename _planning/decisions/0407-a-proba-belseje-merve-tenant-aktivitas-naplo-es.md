@@ -1,4 +1,4 @@
-## ADR-XXXX — A próba belseje mérve: tenant-aktivitás napló és a Riport „Próba” füle
+## ADR-0407 — A próba belseje mérve: tenant-aktivitás napló és a Riport „Próba” füle
 
 **Dátum:** 2026-10-26 · **Kiváltó:** tulajdonosi kérdés: „Van arra kimutatás, hogy mennyien indították az ingyenes
 próbát? … érdemes lenne azt is mérni, hogy a próba során hol bukik el vagy nem egy rendelés, hányszor lépnek be

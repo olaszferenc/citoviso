@@ -85,7 +85,7 @@ export function buildTrialNoticeEmail(input: {
   lang?: string;
 }): EmailMessage {
   const { to, daysLeft, siteName, trialUntilIso, coupon, lang } = input;
-  // ADR-XXXX (Próba riport): the report names where „Megrendelem" was pressed — the letter.
+  // ADR-0407 (Próba riport): the report names where „Megrendelem" was pressed — the letter.
   const continueUrl = withOrderFrom(input.continueUrl, "level");
   const siteHost = input.siteHost ?? null;
   const greeting = mailGreeting(lang, input.contactName, true);
@@ -201,7 +201,7 @@ export function buildPurgeWarningEmail(input: {
   lang?: string;
 }): EmailMessage {
   const { to, siteName, trialUntilIso, purgeIso, coupon, lang } = input;
-  // ADR-XXXX (Próba riport): the report names where „Megrendelem" was pressed — the letter.
+  // ADR-0407 (Próba riport): the report names where „Megrendelem" was pressed — the letter.
   const continueUrl = withOrderFrom(input.continueUrl, "level");
   const greeting = mailGreeting(lang, input.contactName, true);
   const n = String(input.daysToPurge);

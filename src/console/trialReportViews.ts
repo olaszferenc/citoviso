@@ -1,4 +1,4 @@
-// Riport · Próba fül — the page (ADR-XXXX). Frozen plan: assets/design-refs/console/proba-riport/
+// Riport · Próba fül — the page (ADR-0407). Frozen plan: assets/design-refs/console/proba-riport/
 // (A+B hybrid). Top to bottom: KPIs → the ladder (B) with timings → the trial rows (A), narrowed
 // to the stage tapped on the ladder → on which trial day people work → the mock side's device
 // split → what is measured. Links and <details> only — the page works without JS.

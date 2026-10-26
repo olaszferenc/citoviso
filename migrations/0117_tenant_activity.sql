@@ -1,4 +1,4 @@
--- 0117 TENANT-AKTIVITÁS — mit csinál a tulaj a saját adminjában (ADR-XXXX, Próba riport).
+-- 0117 TENANT-AKTIVITÁS — mit csinál a tulaj a saját adminjában (ADR-0407, Próba riport).
 --
 -- A tulaj kérdése (2026-10-26): „hol bukik el vagy nem egy rendelés a próba alatt, hányszor
 -- lépnek be". Ma a próbáról csak az eleje (free_trial.started_at) és a vége (converted_at /

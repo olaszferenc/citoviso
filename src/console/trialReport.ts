@@ -1,4 +1,4 @@
-// Riport · Próba fül — what happens INSIDE a free trial (ADR-XXXX).
+// Riport · Próba fül — what happens INSIDE a free trial (ADR-0407).
 //
 // Frozen plan: assets/design-refs/console/proba-riport/ (A+B hybrid, owner „mehet” 2026-10-26).
 // The page answers „hol bukik el vagy nem egy rendelés a próba alatt": a ladder (how far the

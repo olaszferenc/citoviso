@@ -1,4 +1,4 @@
-// Where „Megrendelem" was pressed (ADR-XXXX, Próba riport) — a pure helper the letters and
+// Where „Megrendelem" was pressed (ADR-0407, Próba riport) — a pure helper the letters and
 // the admin share with the /folytatas route; no DB, no server imports.
 
 /** The /folytatas link tagged with its source (the SMS stays bare: its length is counted). */

@@ -1,4 +1,4 @@
-// Tenant-aktivitás — what the owner does in their own admin (ADR-XXXX, Próba riport).
+// Tenant-aktivitás — what the owner does in their own admin (ADR-0407, Próba riport).
 //
 // WHY THIS EXISTS: the trial's inside was invisible. The report knew when a trial started
 // and how it ended; how often the owner came back, what they saved, whether they looked at

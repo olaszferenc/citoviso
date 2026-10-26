@@ -2558,7 +2558,7 @@ async function handle(
     const m = await getMockReport(days, ch, labels);
     return send(res, 200, reportMockPage(m, { tpl: url.searchParams.get("tpl") || null, q: (url.searchParams.get("q") ?? "").trim().slice(0, 80), sort, n }));
   }
-  // GET /report/trial — the Próba tab (ADR-XXXX, frozen plan: design-refs/console/proba-riport/).
+  // GET /report/trial — the Próba tab (ADR-0407, frozen plan: design-refs/console/proba-riport/).
   // Query: days ∈ {7,30,90,0} (default 30), st ∈ TRIAL_STATUS_FILTERS, stage = a ladder step.
   if (method === "GET" && path === "/report/trial") {
     const daysRaw = Number(url.searchParams.get("days") ?? "30");
@@ -3565,7 +3565,7 @@ async function handle(
     }
     return send(res, 204, "");
   }
-  // POST /p/:token/trial-event — ADR-XXXX (Próba riport): the trial continuation's beacon.
+  // POST /p/:token/trial-event — ADR-0407 (Próba riport): the trial continuation's beacon.
   // JSON {type, from}: „order_open" (the owner opened the order — first human sign) or a
   // checkout step. Only for a continuable trial; anything else is silently dropped (204).
   const pTrialEvMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/trial-event$/.exec(pPath);
@@ -3705,7 +3705,7 @@ async function handle(
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(p.artifactPath, p.artifactInputs)));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pContMatch[1]}/request`,
-        // ADR-XXXX (Próba riport): the order's opening + checkout steps, recorded by the page.
+        // ADR-0407 (Próba riport): the order's opening + checkout steps, recorded by the page.
         trialTrack: { url: `/p/${pContMatch[1]}/trial-event`, from: orderOpenFrom(url.searchParams.get("from")) },
         // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
         subLabel: await plannedSiteSlug(pf.leadId),

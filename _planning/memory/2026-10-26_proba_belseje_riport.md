@@ -1,4 +1,4 @@
-# 2026-10-26 — A próba belseje mérve + Riport „Próba” fül (ADR-XXXX)
+# 2026-10-26 — A próba belseje mérve + Riport „Próba” fül (ADR-0407)
 
 **Kérés (tulaj):** „Van arra kimutatás, hogy mennyien indították az ingyenes próbát? … hol bukik el vagy nem egy
 rendelés, hányszor lépnek be a próba alatt … kvázi egy újabb réteget mérni.”

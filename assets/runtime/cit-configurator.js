@@ -37,7 +37,7 @@
   // Fire-and-forget beacons; measurement must never break the page. No cookies:
   // the identity is the outreach token, the session is the server-issued viewId.
   var TRACK = CFG.track || null;
-  // ADR-XXXX (Próba riport): the trial continuation (/p/<t>/folytatas) carries no mock
+  // ADR-0407 (Próba riport): the trial continuation (/p/<t>/folytatas) carries no mock
   // tracking — the visitor is a customer. It reports only that the owner opened the order
   // (on the first human sign, like ADR-0291: mail scanners fetch the link too) and the
   // checkout's steps, so the report can say where an order stopped.

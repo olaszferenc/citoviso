@@ -2571,7 +2571,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // sem tud véletlenül Pixelt kapni. Innen a saját webshopunk lapjai jönnek, KIVÉVE
   // azt a néhány útvonalat, amely ugyaninnen szolgálja ki a tenant VENDÉGÉT.
   markAudience(res, GUEST_PAGE_ROUTES.some((re) => re.test(pathname)) ? "guest" : "own");
-  // ADR-XXXX (Próba riport): the owner's admin opens and saves, recorded after the answer.
+  // ADR-0407 (Próba riport): the owner's admin opens and saves, recorded after the answer.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) watchAdminRequest(req, res, pathname);
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   // A RESOLVED one that got here is a mail-link/asset pass-through (above) — it is
@@ -2640,7 +2640,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       );
     }
     setSession(res, uid);
-    // ADR-XXXX: every login is a row (last_login_at keeps only the latest).
+    // ADR-0407: every login is a row (last_login_at keeps only the latest).
     recordTenantUserActivity(uid, "login", { via: "password" });
     // Back to where the link pointed (only ever inside /admin — safeAdminNext).
     return redirect(res, next ?? "/admin");
@@ -2692,7 +2692,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return send(res, 200, passwordSetDonePage(lang, r.firstSet, v.username));
     }
   }
-  // POST /admin/activity — ADR-XXXX: the admin's „Oldal" / address link was clicked (a
+  // POST /admin/activity — ADR-0407: the admin's „Oldal" / address link was clicked (a
   // sendBeacon from SHELL_SCRIPT). The owner looking at their own site is a trial signal;
   // the site host cannot see it (the session lives on this host only).
   if (req.method === "POST" && pathname === "/admin/activity") {

@@ -1,4 +1,4 @@
-// TRIAL-REPORT GUARD — the Riport „Próba" tab and the measurement under it (ADR-XXXX; approved
+// TRIAL-REPORT GUARD — the Riport „Próba" tab and the measurement under it (ADR-0407; approved
 // plan assets/design-refs/console/proba-riport/, A+B hybrid, owner „mehet" 2026-10-26).
 //
 // Why: the owner asked „hol bukik el vagy nem egy rendelés a próba alatt, hányszor lépnek be".

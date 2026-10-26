@@ -160,7 +160,7 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
     a("/report", funnelQs, T(lang, "Tölcsér")) +
     a("/report/behaviour", funnelQs, T(lang, "Viselkedés")) +
     a("/report/mock", mockQs, T(lang, "Mock")) +
-    // ADR-XXXX: the trial's inside (frozen plan: design-refs/console/proba-riport/).
+    // ADR-0407: the trial's inside (frozen plan: design-refs/console/proba-riport/).
     a("/report/trial", mockQs.startsWith("?days=") ? mockQs.replace(/&.*$/, "") : "", T(lang, "Próba")) +
     `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "2. kör — készül"))}">${esc(T(lang, "Pénzügy"))}</a>` +
     `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "3. kör — készül"))}">${esc(T(lang, "Tenantok"))}</a>` +

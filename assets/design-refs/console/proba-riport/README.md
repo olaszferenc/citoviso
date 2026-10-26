@@ -1,4 +1,4 @@
-# Riport · Próba fül — mit csinálnak a próba alatt (ADR-XXXX)
+# Riport · Próba fül — mit csinálnak a próba alatt (ADR-0407)
 
 Tulajdonosi jóváhagyás: 2026-10-26 — „A+B hibrid”, majd „mehet”. A vázlat `plan.html` (A · B · C és
 a hibrid egy fájlban; az A+B hibrid változat KÖT, az A, B és C csak összevetésre maradt).

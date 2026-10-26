@@ -1490,7 +1490,7 @@ export interface LeadActivityTable {
   at: Generated<Timestamp>;
 }
 
-/** 0117 — what the owner does in their own admin (ADR-XXXX, Próba riport). One log for every
+/** 0117 — what the owner does in their own admin (ADR-0407, Próba riport). One log for every
  *  tenant; the trial report reads it through free_trial.tenant_id + the trial's window. */
 export interface TenantActivityTable {
   id: Generated<string>;

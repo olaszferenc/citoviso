@@ -33,7 +33,7 @@ const EDITOR_TS = path.join(ROOT, "src/tenant/editor.ts");
  */
 const NO_RENDER_NEEDED: Record<string, string> = {
   "/admin/password": "belépési jelszó — nem oldal-tartalom",
-  // ADR-XXXX (Próba riport): the „Oldal” link's beacon — one tenant_activity row, no site content.
+  // ADR-0407 (Próba riport): the „Oldal” link's beacon — one tenant_activity row, no site content.
   "/admin/activity": "mérési jel (megnyitotta a saját oldalát) — nem oldal-tartalom",
   // ADR-0380: the booking setup page's trial booking and Segítő only READ (the trial runs the
   // guest rules without creating a request; the helper writes nothing but its cost row).
