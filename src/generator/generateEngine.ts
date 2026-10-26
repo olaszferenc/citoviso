@@ -8,7 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
-import { deniedSampleTypes, roomCountContradicted, unitNamesFromProse, wholeLetOnly } from "../engine/sampleFromSource.js";
+import { deniedSampleTypes, roomCountContradicted, unitKindOf, unitNamesFromProse, wholeLetOnly } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
@@ -134,7 +134,7 @@ export function sampleHintsOf(
   },
 ): {
   units: { rooms: Room[]; count: number | null };
-  hints: Pick<SiteData, "sampleRoomCount" | "sampleRoomNames" | "sampleAmenities" | "sampleAmenityDeny">;
+  hints: Pick<SiteData, "sampleRoomCount" | "sampleRoomNames" | "sampleAmenities" | "sampleAmenityDeny" | "sampleUnitKind">;
 } {
   const raw = portalRooms(lead, { lang });
   const units =
@@ -146,6 +146,8 @@ export function sampleHintsOf(
   // the copy (units), only the sample cards drop it.
   const wholeOnly = wholeLetOnly(sources.descriptions);
   const sampleRoomNames = wholeOnly ? [] : unitNamesFromProse(sources.descriptions, lead.name);
+  // Several units, but no count and no names → the one card names their kind (Barackvirág).
+  const sampleUnitKind = wholeOnly ? null : unitKindOf(sources.descriptions, lead.name);
   const sampleAmenityDeny = deniedSampleTypes(sources.listedAmenities, sources.descriptions);
   // „Amit kínálunk” asks what the HOUSE offers: a prose fact about the town or the area
   // („a város strandjain”, „közel a homokos strand”) is true, but not this house's offer.
@@ -163,6 +165,7 @@ export function sampleHintsOf(
       // Unit names from the owner's prose (Hungarian only — the type word is Hungarian)
       // beat a bare count.
       ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),
+      ...(!units.rooms.length && sampleUnitKind ? { sampleUnitKind } : {}),
       // The services sample: the listing's own offers (Hungarian source labels → Hungarian
       // pages only); the types the source contradicts drop out on every page.
       ...(lang === DEFAULT_LANG && sampleAmenities.length ? { sampleAmenities } : {}),

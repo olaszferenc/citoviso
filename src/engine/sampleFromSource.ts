@@ -187,3 +187,27 @@ export function wholeLetOnly(descriptions: readonly string[]): boolean {
   const NOT_ONLY = /(?<![a-z])nem\s+(?:csak|kizarolag)\s+(?:egyben|egeszben)(?![a-z])/g;
   return descriptions.some((d) => WHOLE_ONLY.test(fold(d).replace(NOT_ONLY, " ")));
 }
+
+/**
+ * Which kinds of units does the source say it lets, when it gives no count and no names?
+ * Measured 2026-10-26, Barackvirág Panzió 00660191: „Apartmanok és kétágyas szobák
+ * igényelhetők … klímás szobáihoz” — the mock's one sample card read „Az egész szállás”,
+ * a claim that the place is let as a whole. Several units only on evidence that SAYS so:
+ * a room-letting lodging type (panzió, hotel, szálloda, fogadó, motel) in the name or the
+ * prose; rooms let BY TYPE or offered („kétágyas szobák”, „szobák igényelhetők / kiadók”);
+ * plural apartments („apartmanok”, „apartmanjaink”). „A szobák klimatizáltak” alone is the
+ * description of one house's rooms and changes nothing. Null = the whole-place default stays.
+ */
+export function unitKindOf(
+  descriptions: readonly string[],
+  leadName: string,
+): "rooms" | "apartments" | "both" | null {
+  const hay = descriptions.map(fold).join(" ");
+  const ROOM_TYPES = /(?<![a-z])(?:panzio|hotel|szalloda|fogado|motel)(?![a-z])/;
+  const ROOMS_LET =
+    /(?<![a-z])(?:egy|ket|harom|negy|tobb)agyas\s+(?:vendeg)?szob(?:ak|akat|akban)(?![a-z])|(?<![a-z])(?:vendeg)?szob(?:ak|akat)\s+(?:[a-z]+\s+)?(?:igenyelhet|kiado|foglalhat|berelhet)/;
+  const APTS = /(?<![a-z])apartman(?:ok|okat|okban|okkal|okhoz|jaink|jainkat|jainkban)(?![a-z])/;
+  const rooms = ROOM_TYPES.test(fold(leadName)) || ROOM_TYPES.test(hay) || ROOMS_LET.test(hay);
+  const apts = APTS.test(hay);
+  return rooms && apts ? "both" : rooms ? "rooms" : apts ? "apartments" : null;
+}

@@ -276,6 +276,13 @@ export interface SiteData {
    */
   readonly sampleRoomNames?: readonly string[];
   /**
+   * The source lets SEVERAL units but states neither their number nor their names
+   * (Barackvirág Panzió 2026-10-26: „Apartmanok és kétágyas szobák igényelhetők”): the one
+   * sample card then says what kind of units there are, never „Az egész szállás” (a claim
+   * that the place is let as a whole) and never an invented count. Mock-only hint.
+   */
+  readonly sampleUnitKind?: "rooms" | "apartments" | "both";
+  /**
    * The mock's services SAMPLE, filled from the source (ADR-0338): the listing's own
    * offers, strongest first. Mock-only hint — the live page renders `amenities`.
    */

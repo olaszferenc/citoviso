@@ -19,6 +19,8 @@
 //   · Parallax / Fullbleed / Dopamine / Dark luxury: the contact picture was a FIXED slot (the
 //     last photo or photos[3]), captioned „<név> környezete” — on 8 leads a bathroom or a WC
 //     (Germering, Balaton Panzió, Dinasztia, Bodza, Admirál, Kék Madár, Szerencsemák, Hold utca).
+//   · Barackvirág (00660191, 2026-10-26): „Apartmanok és kétágyas szobák igényelhetők” — no
+//     count, no names — and the one sample card said „Az egész szállás” (let as a whole).
 // Deterministic: no AI, no DB, no browser. Asserts the pure rules, the render, and the wiring
 // (the generator actually hands the hints to the renderer).
 //
@@ -31,11 +33,13 @@ import {
   roomCountContradicted,
   sampleAmenityItems,
   unitNamesFromProse,
+  unitKindOf,
   wholeLetOnly,
 } from "../src/engine/sampleFromSource.js";
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, sampleRooms } from "../src/engine/templateKit.js";
+import { sampleHintsOf } from "../src/generator/generateEngine.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
@@ -147,6 +151,20 @@ const SZOMORCE = [
 check("Szömörce: „Csak egyben adjuk ki” → egész-házas kiadás", wholeLetOnly(SZOMORCE));
 check("⛔ „Egyben is kiadó” nem csak-egész (szobánként is)", !wholeLetOnly(["A ház szobánként és egyben is kiadó."]));
 check("⛔ „nem csak egyben” nem csak-egész", !wholeLetOnly(["Nem csak egyben adjuk ki, a szobák külön is foglalhatók."]));
+// Barackvirág (00660191), the hovamenjek text (excerpt): several units, neither count nor names.
+const BARACK = ["Barackvirág Panzió Tihany csendes, nyugodt környezetben várja vendégeit. Apartmanok és kétágyas szobák igényelhetők. A panzió klímás szobáihoz saját fürdőszoba tartozik."];
+check("Barackvirág: apartmanok + kétágyas szobák → „both”", unitKindOf(BARACK, "Barackvirág Vendégház") === "both", unitKindOf(BARACK, "Barackvirág Vendégház"));
+check("hotel a névben → „rooms”", unitKindOf([], "Hotel Honti") === "rooms");
+check("Noémi: „apartmanok 1-6 fő részére kiadók” → „apartments”", unitKindOf(["Igényesen berendezett, klimatizált apartmanok 1-6 fő részére kiadók."], "Noémi Apartman") === "apartments");
+check("⛔ egy ház szobái nem több egység („A szobák klimatizáltak.”)", unitKindOf(["A ház három hálószobás, a szobák klimatizáltak, a szobái tágasak."], "Szömörce Vendégház") === null);
+const barackHints = sampleHintsOf({ name: "Barackvirág Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: BARACK });
+check("sampleHintsOf: Barackvirág → sampleUnitKind=both, szobaszám nélkül", barackHints.hints.sampleUnitKind === "both" && !barackHints.hints.sampleRoomCount, barackHints.hints);
+const szomHints = sampleHintsOf({ name: "Szömörce Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: SZOMORCE });
+check("⛔ csak egyben kiadott ház: nincs egységtípus (marad „Az egész szállás”)", !szomHints.hints.sampleUnitKind, szomHints.hints);
+const card = (k?: "rooms" | "apartments" | "both") => sampleRooms({ ...base, ...(k ? { sampleUnitKind: k } : {}) })[0]?.name;
+check("kártya: both → „Szobák és apartmanok”, rooms → „Szobák”, apartments → „Apartmanok”, semmi → „Az egész szállás”",
+  card("both") === "Szobák és apartmanok" && card("rooms") === "Szobák" && card("apartments") === "Apartmanok" && card() === "Az egész szállás",
+  [card("both"), card("rooms"), card("apartments"), card()]);
 check("Szömörce: „a reggeli kávé” → nem „Reggeli”", !descriptionFactIsOwn("Reggeli", SZOMORCE) && !descriptionSellingPoints(SZOMORCE).includes("Reggeli"));
 check("Szömörce: „Balatonfüred központja, a strandok” → a mintán nem „Strand”", !descriptionFactIsOwn("Strand", SZOMORCE));
 check("⛔ „a reggeli az árban van” Reggeli marad", descriptionFactIsOwn("Reggeli", ["A reggeli az árban van."]));
@@ -225,6 +243,7 @@ for (const key of ["sampleRoomNames", "sampleAmenities", "sampleAmenityDeny"])
 check("generateEngine hívja: unitNamesFromProse · deniedSampleTypes · sampleFacilityItems · roomCountContradicted",
   /unitNamesFromProse\(/.test(gen) && /deniedSampleTypes\(/.test(gen) && /sampleFacilityItems\(/.test(gen) && /roomCountContradicted\(/.test(gen));
 const rr = readFileSync(path.join(import.meta.dirname, "rerender-mock.mts"), "utf8");
+check("rerender-mock --resample az egységtípust is cseréli", /sampleUnitKind: _k/.test(readFileSync(path.join(import.meta.dirname, "rerender-mock.mts"), "utf8")));
 check("generateEngine: csak-egész háznál nincs számozott minta-szoba (wholeLetOnly)",
   /wholeLetOnly\(/.test(gen) && /&& !wholeOnly \?/.test(gen));
 check("rerender-mock --resample ugyanazt a sampleHintsOf()-ot futtatja", /--resample/.test(rr) && /sampleHintsOf\(/.test(rr));

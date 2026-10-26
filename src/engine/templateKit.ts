@@ -171,7 +171,13 @@ export function sampleRooms(d: SiteData): readonly Room[] {
       ? names[i]!
       : d.sampleRoomCount
         ? T(d, "{n}. szoba", { n: i + 1 })
-        : T(d, "Az egész szállás");
+        : d.sampleUnitKind === "both"
+          ? T(d, "Szobák és apartmanok")
+          : d.sampleUnitKind === "rooms"
+            ? T(d, "Szobák")
+            : d.sampleUnitKind === "apartments"
+              ? T(d, "Apartmanok")
+              : T(d, "Az egész szállás");
     // On a card that names a REAL unit („Gold apartman") or the whole place, a generic chip
     // is no longer an illustration but a claim about that unit („Gold apartman: Erkély") —
     // those cards carry no sample chips (fact-check 2026-10-07, §B.17 (5)). On a numbered

@@ -96,10 +96,10 @@ for (const row of rows) {
       descriptions: sources.descriptions,
       descriptionFacts: sources.descriptionFacts,
     });
-    const { sampleRoomCount: _c, sampleRoomNames: _n, sampleAmenities: _a, sampleAmenityDeny: _d, ...rest } = siteData;
+    const { sampleRoomCount: _c, sampleRoomNames: _n, sampleAmenities: _a, sampleAmenityDeny: _d, sampleUnitKind: _k, ...rest } = siteData;
     const next: SiteData = { ...rest, ...hints };
     const show = (d: SiteData) =>
-      `szolgáltatás=[${(d.sampleAmenities ?? []).join(", ")}] tiltott=[${(d.sampleAmenityDeny ?? []).join(", ")}] szobaszám=${d.sampleRoomCount ?? "—"} nevek=[${(d.sampleRoomNames ?? []).join(", ")}]`;
+      `szolgáltatás=[${(d.sampleAmenities ?? []).join(", ")}] tiltott=[${(d.sampleAmenityDeny ?? []).join(", ")}] szobaszám=${d.sampleRoomCount ?? "—"} nevek=[${(d.sampleRoomNames ?? []).join(", ")}] egység=${d.sampleUnitKind ?? "—"}`;
     console.log(`  · ${row.name} (${String(row.id).slice(0, 8)}) minta-jelzések\n      előtte: ${show(siteData)}\n      utána:  ${show(next)}`);
     await db
       .updateTable("mock_artifact")
