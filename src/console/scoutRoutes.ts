@@ -155,6 +155,12 @@ export async function handleScoutRoute(
     }
     if (action === "close") {
       const r = await closeScoutTile(tile, lang);
+      if ("error" in r && r.error === "closed") {
+        // Another request closed it a moment ago (double click, second tab): its job owns
+        // the rows — answer with the current state and start nothing.
+        json(res, 200, { ...(await regionState(region, tile.id, lang)) });
+        return true;
+      }
       if ("error" in r) {
         json(res, 200, { error: "gate", soft: true, message: r.error, ...(await regionState(region, tile.id, lang)) });
         return true;
@@ -167,7 +173,8 @@ export async function handleScoutRoute(
           }
         });
         if (busy) {
-          await reopenScoutTile(tile.id);
+          // Undo only THIS request's close (its own rows) — never a close another request made.
+          await reopenScoutTile(tile.id, r.procIds);
           json(res, 200, {
             error: "busy",
             soft: true,

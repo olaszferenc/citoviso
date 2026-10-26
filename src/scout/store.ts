@@ -589,37 +589,67 @@ export async function savePlaceField(placeId: string, field: string, value: stri
   return { tileId: row.tile_id };
 }
 
-/** Close gate passed → the tile is done and its new rows wait for processing. */
-export async function closeScoutTile(tile: TileRow, lang = "hu"): Promise<MutationError | { procRows: number }> {
-  const rows = await db
-    .selectFrom("scout_place")
-    .select(["status", "name", "lat", "lon"])
-    .where("tile_id", "=", tile.id)
-    .execute();
-  const input = { state: tileStateOf(tile.state, tile.kw, rows.length), kw: tile.kw, rows };
-  if (!canClose(input)) return { error: closeHint(input, lang) };
-  const now = new Date();
-  await db.transaction().execute(async (trx) => {
-    await trx.updateTable("scout_tile").set({ state: "done", closed_at: now, updated_at: now }).where("id", "=", tile.id).execute();
-    await trx
+/** Close gate passed → the tile is done and its new rows wait for processing.
+ *
+ * ONE closer per tile (Magellan, 2026-10-26, tile F2 of megye-so): two concurrent close
+ * requests both read the open tile, both „closed” it, and the second one's busy branch
+ * reopened the first one's rows (proc → new) before its job read them — the run got 0 rows.
+ * The tile row is now locked (FOR UPDATE), the gate is judged on what the lock sees, the
+ * tile update is conditional (state <> 'done'), and procRows/procIds come from the UPDATE
+ * itself. A request that finds the tile already closed gets `{ error: "closed" }`. */
+export async function closeScoutTile(
+  tile: TileRow,
+  lang = "hu",
+): Promise<MutationError | { procRows: number; procIds: string[] }> {
+  return db.transaction().execute(async (trx) => {
+    const locked = await trx
+      .selectFrom("scout_tile")
+      .select(["state", "kw"])
+      .where("id", "=", tile.id)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!locked) return { error: "nf" };
+    if (locked.state === "done") return { error: "closed" };
+    const kw = (locked.kw ?? {}) as Record<string, number | null>;
+    const rows = await trx
+      .selectFrom("scout_place")
+      .select(["status", "name", "lat", "lon"])
+      .where("tile_id", "=", tile.id)
+      .execute();
+    const input = { state: tileStateOf(locked.state as TileState, kw, rows.length), kw, rows };
+    if (!canClose(input)) return { error: closeHint(input, lang) };
+    const now = new Date();
+    const closed = await trx
+      .updateTable("scout_tile")
+      .set({ state: "done", closed_at: now, updated_at: now })
+      .where("id", "=", tile.id)
+      .where("state", "<>", "done")
+      .executeTakeFirst();
+    if (Number(closed.numUpdatedRows) === 0) return { error: "closed" };
+    const proc = await trx
       .updateTable("scout_place")
       .set({ status: "proc", updated_at: now })
       .where("tile_id", "=", tile.id)
       .where("status", "=", "new")
+      .returning("id")
       .execute();
+    return { procRows: proc.length, procIds: proc.map((r) => r.id) };
   });
-  return { procRows: rows.filter((r) => r.status === "new").length };
 }
 
 /** The processing did not finish (child failed / was killed): the tile opens again, its
  *  rows go back to `new` — nothing is lost, the operator closes it once more. */
-export async function reopenScoutTile(tileId: string): Promise<void> {
+export async function reopenScoutTile(tileId: string, onlyPlaceIds?: readonly string[]): Promise<void> {
+  // `onlyPlaceIds`: undo exactly what ONE close request put into processing, never rows
+  // another request (or job) owns.
+  if (onlyPlaceIds && !onlyPlaceIds.length) return;
   await db.transaction().execute(async (trx) => {
     await trx
       .updateTable("scout_place")
       .set({ status: "new", updated_at: new Date() })
       .where("tile_id", "=", tileId)
       .where("status", "=", "proc")
+      .$if(Boolean(onlyPlaceIds), (q) => q.where("id", "in", [...onlyPlaceIds!]))
       .execute();
     await trx
       .updateTable("scout_tile")

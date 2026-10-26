@@ -242,9 +242,21 @@ async function main(): Promise<void> {
     });
   }
 
-  const { raw, warnings: sourceWarnings } = await runSourcePhase(runId, resume, sources, query, mark);
+  const { raw, warnings: sourceWarnings, failedSources } = await runSourcePhase(runId, resume, sources, query, mark);
 
   try {
+    if (scout) {
+      // The worksheet is the ONLY source: a failed read must fail the job (exit ≠ 0 → the
+      // console reopens the tile, nothing is lost), never close it as a „completed” 0-row run.
+      if (failedSources.length) {
+        throw new Error(`--scout: a munkalap forrása hibával állt le (${failedSources.join(", ")}) — a csempe újra nyílik.`);
+      }
+      if (!raw.length) {
+        const w = `a felderítés 0 munkalap-sort kapott (csempe ${scout}) — a csempe sorai nem „proc” állapotúak?`;
+        console.warn(`  ⚠️ ${w}`);
+        sourceWarnings.push(w);
+      }
+    }
     let base = dedupeAndQualify(raw, INDUSTRY, region.id);
     // Circular area (0019): the sources fetched the enclosing rectangle, so drop
     // whatever falls outside the radius — the searched area is a circle, not a box.

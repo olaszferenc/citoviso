@@ -2817,6 +2817,15 @@ if [ -f scripts/sample-from-source-check.mts ] && \
   echo "[pre-commit] sample-from-source-check (a minta nem mond ellent a forrásnak)…"
   npx tsx scripts/sample-from-source-check.mts >"$GATE_LOG" || gate_failed
 fi
+# scout-close-race-check (Magellan 2026-10-26, megye-so F2): két egyidejű csempe-lezárásból a
+# második „busy”-ága visszanyitotta az elsőt, a futás 0 sort kapott és „completed” lett. Méri:
+# egy csempe egyszer zárul (FOR UPDATE + feltételes update), a célzott újranyitás csak a saját
+# sorokat viszi vissza, a forrás hibája nem nyelődik el. Saját eldobható régió a dev DB-ben, ~5 s.
+if [ -f scripts/scout-close-race-check.mts ] && \
+   changed_files | grep -qE '^src/scout/|^src/console/(scoutRoutes|scoutViews|scrapeJob)\.ts$|^src/scraper/(batchedRun|run)\.ts$|^scripts/scout-close-race-check'; then
+  echo "[pre-commit] scout-close-race-check (a felderítő csempe egyszer zárul)…"
+  npx tsx scripts/scout-close-race-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/room-card-overflow-check.mts ] && \
    changed_files | grep -qE '^src/engine/render\.ts$|^src/engine/templates/|^assets/runtime/cit-modules\.css$|^scripts/room-card-overflow-check'; then
   echo "[pre-commit] room-card-overflow-check (a szoba-kártya képe nem takarja a szöveget)…"

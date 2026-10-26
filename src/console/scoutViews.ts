@@ -297,6 +297,9 @@ function renderMap(){var m=$("scMap"),g=layoutTiles(),sig=g.cells.map(function(x
     b.title=t.label;b.setAttribute("data-tile",t.id);
     b.style.gridRow=(x.r+1)+" / span "+x.n;b.style.gridColumn=(x.c+1)+" / span "+x.n;m.appendChild(b)})}
 // ── keyword panel + split / close ──
+// One close request at a time: a re-render while it runs (poll, a field save) must not
+// re-enable the button — two concurrent closes raced (Magellan 2026-10-26).
+var closing=false;
 function kwChip(el,st){el.className="sc-st"+(st==="ok"?" ok":st==="sat"?" sat":"");el.textContent=st==="ok"?L.stOk:st==="sat"?L.stSat:L.stTodo}
 function c5(n){return Number(n).toFixed(5)}
 function geoHtml(t){var g=t.geo,b=t.box;
@@ -318,7 +321,7 @@ function renderKw(){var t=selTile(),box=$("scKw");$("scTileName").textContent=t?
       '<a href="'+esc(t.maps[k])+'" target="_blank" rel="noopener" data-map="'+esc(k)+'" title="'+esc(fmt(L.mapLinkTitle,{kw:k}))+'">'+esc(L.mapLink)+'</a>'});
   h+='</div><p class="sc-err" id="scKwErr"></p><div class="sc-actions">'+
     '<button class="sc-btn" type="button" id="scSplit"'+(t.state==="sat"?"":" disabled")+'>'+esc(L.split)+'</button>'+
-    '<button class="sc-btn pri" type="button" id="scClose"'+(t.canClose?"":" disabled")+'>'+esc(L.close)+'</button></div>'+
+    '<button class="sc-btn pri" type="button" id="scClose"'+(t.canClose&&!closing?"":" disabled")+'>'+esc(L.close)+'</button></div>'+
     '<p class="sc-hint" id="scCloseHint">'+esc(t.hint)+'</p>';
   box.innerHTML=h;
   box.querySelectorAll("[data-kwst]").forEach(function(c){kwChip(c,t.kwStates[c.getAttribute("data-kwst")])});
@@ -328,8 +331,8 @@ function renderKw(){var t=selTile(),box=$("scKw");$("scTileName").textContent=t?
     api("POST","/scout/tile/"+id+"/kw",{kw:inp.getAttribute("data-kw"),value:v}).then(function(j){
       if(j.error){e.textContent=j.message||L.kwInt;return}absorb(j);renderMap();renderKw();renderStats()})}});
   $("scSplit").onclick=function(){api("POST","/scout/tile/"+id+"/split",{}).then(function(j){if(j.error){$("scKwErr").textContent=j.message||"";return}absorb(j);syncUrl();render()})};
-  $("scClose").onclick=function(){$("scClose").disabled=true;api("POST","/scout/tile/"+id+"/close",{}).then(function(j){
-    if(j.error){$("scKwErr").textContent=j.message||"";absorb(j);render();return}absorb(j);render();poll()})}}
+  $("scClose").onclick=function(){if(closing)return;closing=true;$("scClose").disabled=true;api("POST","/scout/tile/"+id+"/close",{}).then(function(j){closing=false;
+    if(j.error){$("scKwErr").textContent=j.message||"";absorb(j);render();return}absorb(j);render();poll()},function(){closing=false;render()})}}
 // ── rows ──
 function chipFor(r){if(r.status==="known")return'<span class="sc-chip known">'+esc(L.chipKnown)+'</span>';
   if(r.status==="proc")return'<span class="sc-chip warn">'+esc(L.chipProc)+'</span>';

@@ -62,16 +62,18 @@ export async function runSourcePhase(
   sources: LeadSource[],
   query: ScrapeQuery,
   mark: (line: string) => void,
-): Promise<{ raw: RawLead[]; warnings: string[] }> {
+): Promise<{ raw: RawLead[]; warnings: string[]; failedSources: string[] }> {
   if (resume) {
     mark(
       `  Mentett forrás-eredményből folytatom, a forrás-lépés Google-hívás nélkül: ` +
         `${resume.raw.length} találat (${resume.checkpointAt.toISOString().slice(0, 16).replace("T", " ")} UTC), ` +
         `${resume.savedLeads} lead már mentve az előző próbálkozásból.`,
     );
-    return { raw: resume.raw, warnings: resume.warnings };
+    return { raw: resume.raw, warnings: resume.warnings, failedSources: [] };
   }
   const raw: RawLead[] = [];
+  const failedSources: string[] = [];
+  const failureWarnings: string[] = [];
   for (const src of sources) {
     try {
       mark(`  [${src.name}] forrás lekérdezése…`);
@@ -79,10 +81,14 @@ export async function runSourcePhase(
       console.log(`  [${src.name}] ${found.length} players`);
       raw.push(...found);
     } catch (err) {
+      // Kept with the run, not only in the live log: a swallowed source failure made a
+      // 0-row run look „completed” (Magellan, 2026-10-26).
       console.error(`  [${src.name}] failed:`, (err as Error).message);
+      failedSources.push(src.name);
+      failureWarnings.push(`[${src.name}] a forrás hibával állt le: ${(err as Error).message}`);
     }
   }
-  const warnings = sources.flatMap((s) => s.warnings?.() ?? []);
+  const warnings = [...failureWarnings, ...sources.flatMap((s) => s.warnings?.() ?? [])];
   // The paid walk is over: keep its result with the run before the long enrichment.
   try {
     await saveScrapeCheckpoint(runId, raw, warnings);
@@ -93,7 +99,7 @@ export async function runSourcePhase(
         `de ha elhal, a forrás-lépést újra kell fizetni.`,
     );
   }
-  return { raw, warnings };
+  return { raw, warnings, failedSources };
 }
 
 /** This attempt's enrichment measurement, summed over its batches. */
