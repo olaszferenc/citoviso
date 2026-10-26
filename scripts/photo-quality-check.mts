@@ -22,8 +22,10 @@ import {
   judgePhoto,
 } from "../src/scraper/sources/portals/photoQuality.js";
 import { readFileSync } from "node:fs";
-import { parseSrcset } from "../src/scraper/srcset.js";
-import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
+import { isCutSrcsetUrl, parseSrcset } from "../src/scraper/srcset.js";
+import { ownSiteImages, photoCountMessage, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
+import { distinctPortalPhotos } from "../src/scraper/portalPhotos.js";
+import { ENGINE_HOME_REDIRECT } from "../src/scraper/sources/portalListing.js";
 import { domImages } from "../src/scraper/sources/portals/extract.js";
 
 let failed = 0;
@@ -383,6 +385,46 @@ check(
   /isSiteBuilderMedia\(imgHost\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
     !/const SITE_BUILDER_CDN/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")),
   "egy igazság, két kapu",
+);
+
+// Deploy-check 2026-10-26: dead comma-cut pieces stayed on OLD profiles (a homepage re-pull adds
+// a new profile, the /galeria one keeps its rows) — Gyógynövények, Manduláskert, Fordan, LUX.
+const DEAD = [
+  "https://www.gyogynovenyekvolgye.hu/quality_auto/2f56fe_b16511f420b2406c9ff39155719cb79e~mv2.png",
+  "https://www.fordanhotel.hu/quality_auto/hotel%20log%C3%B3%20fekete.png",
+  "https://olajimre.wixsite.com/mysite/quality_auto/74d327d3628e4f14800301f1c61013b0.png",
+  "https://www.mandulaskert.com/quality_auto/web_EGYBE-94.png",
+];
+const LIVE = "https://static.wixstatic.com/media/53a235_8689724f970242168c367f97311a0da3~mv2.png/v1/fit/w_1440,h_839,q_90,enc_avif,quality_auto/53a235_8689724f970242168c367f97311a0da3~mv2.png";
+check("vágott srcset-darab felismerve (host-, wixsite-alak, .png)", DEAD.every(isCutSrcsetUrl) && !isCutSrcsetUrl(LIVE), DEAD.filter((u) => !isCutSrcsetUrl(u)));
+check(
+  "ELDOB · a régi sorok halott URL-je a képszűrőn (generátor) nem megy át, az élő Wix-URL igen",
+  DEAD.every((url) => !judgePhoto({ url, width: 1600, height: 1067, vouched: true, portalHost: new URL(url).hostname, provenance: "website" }).usable) &&
+    judgePhoto({ url: LIVE, width: 1440, height: 839, vouched: true, portalHost: "baladise.hu", provenance: "website" }).usable,
+  "",
+);
+const stale = distinctPortalPhotos([{ photos: [...DEAD.map((url) => ({ url })), { url: LIVE }] }]);
+check("a számláló sem látja őket (distinctPortalPhotos: 5 → 1)", stale.length === 1 && stale[0]!.url === LIVE, stale.length);
+
+// Neo 2026-10-26: the line said „a fotószám nem változott” while the count dropped.
+check(
+  "üzenet: csökkenés kimondva, növekedés és változatlan a régi",
+  /csökkent: 33 → 21/.test(photoCountMessage(33, 21)) && /behúzva.*0 → 12/.test(photoCountMessage(0, 12)) && /nem változott \(7 fotó/.test(photoCountMessage(7, 7)),
+  photoCountMessage(33, 21),
+);
+// Kakas-Dombi 2895a3ef: the szallas.hu listing is alive (33 photos), only its booked.hu twin is missing.
+const twinWhy = twinSkipReason("szallas.hu", "https://szallas.hu/kokas-dombi-vendeghaz-nemeshetes", "https://kokas-dombi-vendeghaz-nemeshetes.booked.hu/", ENGINE_HOME_REDIRECT);
+check(
+  "szallas.hu iker nélkül: nem „az adatlap nem létezik”, hanem „nincs nyílt booked.hu-ikre”",
+  /nyílt booked\.hu-ikre sincs/.test(twinWhy) && !/nem létezik/.test(twinWhy) &&
+    twinSkipReason("booked.hu", "https://x.booked.hu/", "https://x.booked.hu/", ENGINE_HOME_REDIRECT) === ENGINE_HOME_REDIRECT,
+  twinWhy,
+);
+check(
+  "bekötés: a link-behúzó a twinSkipReason-t és a photoCountMessage-et használja",
+  /twinSkipReason\(adapter\.label, url, readUrl, r\.skipped\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
+    /photoCountMessage\(beforeCount, afterCount\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")),
+  "",
 );
 
 if (failed) {

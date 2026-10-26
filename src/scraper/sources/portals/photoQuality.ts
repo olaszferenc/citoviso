@@ -19,6 +19,8 @@
 // genuine property galleries while sitting on the generic adapter (ADR-0037 curator
 // promotion is a separate, slower track).
 
+import { isCutSrcsetUrl } from "../../srcset.js";
+
 /** Long-edge floor in pixels — below this an image cannot carry a hero (owner ruling). */
 export const MIN_LONG_EDGE = 800;
 
@@ -174,6 +176,9 @@ export function judgePhoto(p: PhotoLike): PhotoVerdict {
   }
   if (isSceneryHost(p.url)) {
     return { usable: false, why: "túraútvonal-katalógus tájfotója, nem a szállás képe" };
+  }
+  if (isCutSrcsetUrl(p.url)) {
+    return { usable: false, why: "vesszőnél vágott srcset-darab — halott URL (a régi kinyerés maradéka)" };
   }
   // CROSS-SITE image inside a listing gallery = injected ad/cross-promo, never the
   // property's own photo. Measured 2026-09-05: a szalas.hu listing carried a

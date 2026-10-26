@@ -195,6 +195,9 @@ function ownSiteHost(lead: Pick<QualifiedLead, "website" | "websiteStatus">): st
   return hostOf(lead.website);
 }
 
+/** Skip reason when a property subdomain redirects to the engine's own root/search page. */
+export const ENGINE_HOME_REDIRECT = "a portál a főoldalára irányított át — ez az adatlap ott nem létezik";
+
 /**
  * Read ONE portal listing and decide whether it belongs to this lead.
  * Returns a profile only when the entity match survives the band gate.
@@ -256,7 +259,7 @@ export async function readPortalListing(
   if (finalHost && finalHost !== host) {
     const bare = host.split(".").slice(1).join(".");
     if (finalHost === bare || finalHost === `www.${bare}`) {
-      return { url, skipped: "a portál a főoldalára irányított át — ez az adatlap ott nem létezik" };
+      return { url, skipped: ENGINE_HOME_REDIRECT };
     }
   }
 

@@ -40,3 +40,21 @@ export function largestFromSrcset(srcset: string): string | undefined {
   for (const c of parseSrcset(srcset)) if (!best || c.w > best.w) best = c;
   return best?.url;
 }
+
+/**
+ * A dead piece of a comma-cut Wix srcset, resolved against the page („<host>/quality_auto/<file>”,
+ * „<x>.wixsite.com/mysite/quality_auto/<file>”). parseSrcset no longer makes them, but rows read
+ * before 2026-10-26 keep them: a re-pull of the homepage adds a NEW profile and leaves the old
+ * /galeria, /szobaink profiles in place (Gyógynövények Völgye, Manduláskert, Fordan, LUX —
+ * 13 dead URLs after the deploy). A live Wix transform URL always carries „/v1/” before it.
+ */
+export function isCutSrcsetUrl(url: string): boolean {
+  const path = (() => {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  })();
+  return /\/quality_auto\//i.test(path) && !/\/v1\//i.test(path);
+}

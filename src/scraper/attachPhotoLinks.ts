@@ -26,7 +26,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
-import { brandTokens, captionBelongsToOther, readPortalListing } from "./sources/portalListing.js";
+import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, readPortalListing } from "./sources/portalListing.js";
 import { deaccent } from "./enrichPresence.js";
 import { mergeListings, mergeProfiles } from "./enrichPortal.js";
 import { buildMaterial } from "./enrichMaterial.js";
@@ -74,6 +74,21 @@ export interface LinkOutcome {
   readonly photos: number;
   /** Operator-facing Hungarian reason when nothing was attached. */
   readonly skipped?: string;
+}
+
+/**
+ * The operator-facing reason for a portal link that gave no profile. A szallas.hu link is
+ * read on its derived booked.hu twin, but not every szallas.hu property has one: the twin
+ * then redirects to the booked.hu root, and the reader's "this listing does not exist"
+ * blamed the szallas.hu listing, which is alive (Kakas-Dombi 2895a3ef, 33 photos, 2026-10-26;
+ * 25/25 sampled live szallas.hu leads without a booked profile had no twin under their slug).
+ */
+export function twinSkipReason(portalLabel: string, url: string, readUrl: string, skipped: string | undefined): string {
+  if (readUrl !== url && skipped === ENGINE_HOME_REDIRECT) {
+    return `${portalLabel}: az adatlapot gépileg nem olvassuk (anti-bot kihívás), és nyílt booked.hu-ikre sincs ` +
+      `(${readUrl} a booked.hu főoldalára irányít) — az adatlap ettől még élhet; a fotókat a saját honlapról vagy másik portálról lehet behúzni`;
+  }
+  return skipped ?? "az adatlap nem olvasható";
 }
 
 export interface AttachPhotoLinksResult {
@@ -421,7 +436,7 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
             ? r.profile.needsReview
               ? { skipped: "közepes egyezés — az adatlapot rögzítettük, de a fotóit kurátori jóváhagyásig nem tulajdonítjuk a leadnek" }
               : {}
-            : { skipped: r.skipped ?? "az adatlap nem olvasható" }),
+            : { skipped: twinSkipReason(adapter.label, url, readUrl, r.skipped) }),
         });
       } else {
         const r = await readOwnSitePhotos(url, before, region);
@@ -445,23 +460,10 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
 
   const failed = outcomes.filter((o) => o.skipped && o.photos === 0);
   const failText = failed.map((o) => `${o.url}: ${o.skipped}`).join(" · ");
-  if (afterCount > beforeCount) {
+  if (afterCount !== beforeCount || found.some((p) => p.photos.length)) {
     return {
       ok: true,
-      message:
-        `Fotók behúzva a megadott linkről — fotó: ${beforeCount} → ${afterCount}.` +
-        (failed.length ? ` Nem sikerült: ${failText}` : ""),
-      before: beforeCount,
-      after: afterCount,
-      links: outcomes,
-    };
-  }
-  if (found.some((p) => p.photos.length)) {
-    return {
-      ok: true,
-      message:
-        `A linkek beolvasva, a fotószám nem változott (${afterCount} fotó; a beolvasott adatlapok frissültek).` +
-        (failed.length ? ` Nem sikerült: ${failText}` : ""),
+      message: photoCountMessage(beforeCount, afterCount) + (failed.length ? ` Nem sikerült: ${failText}` : ""),
       before: beforeCount,
       after: afterCount,
       links: outcomes,
@@ -474,6 +476,20 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
     after: afterCount,
     links: outcomes,
   };
+}
+
+/**
+ * The flash line for a link pull that read something. The count can DROP: a re-read listing
+ * replaces its stored profile, and photos that are gone or now fail the filters leave with
+ * the old one — the line used to say „a fotószám nem változott” then (Neo, 2026-10-26).
+ */
+export function photoCountMessage(before: number, after: number): string {
+  if (after > before) return `Fotók behúzva a megadott linkről — fotó: ${before} → ${after}.`;
+  if (after < before) {
+    return `A linkek beolvasva, a fotószám csökkent: ${before} → ${after} (a frissen olvasott adatlap a régi, ` +
+      `már nem elérhető vagy a szűrőn fennakadó képeit lecserélte).`;
+  }
+  return `A linkek beolvasva, a fotószám nem változott (${after} fotó; a beolvasott adatlapok frissültek).`;
 }
 
 /** Merge freshly read profiles into the lead and store it (photo count, qualification). */

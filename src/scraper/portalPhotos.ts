@@ -7,6 +7,7 @@
 // zimmerinfo.hu answers with and without "www.". A full-URL key counted them twice: 9 leads,
 // 145 duplicate pairs, "129 kép" on a lead whose distinct portal set is 59. Every same-path
 // pair across hosts in that measurement was the same picture.
+import { isCutSrcsetUrl } from "./srcset.js";
 import type { QualifiedLead } from "./types.js";
 
 /** Shortest path we trust as a file identity on its own (shorter → keep the host). */
@@ -26,7 +27,8 @@ export function portalPhotoIdentity(url: string): string {
   }
 }
 
-/** Distinct photos of the accepted portal profiles, first occurrence kept (profile order). */
+/** Distinct photos of the accepted portal profiles, first occurrence kept (profile order);
+ *  dead comma-cut srcset pieces (srcset.isCutSrcsetUrl) are left out. */
 export function distinctPortalPhotos<T extends { url: string }>(
   profiles: readonly { readonly photos: readonly T[]; readonly needsReview?: boolean }[],
 ): T[] {
@@ -35,7 +37,8 @@ export function distinctPortalPhotos<T extends { url: string }>(
   for (const profile of profiles) {
     if (profile.needsReview) continue;
     for (const p of profile.photos) {
-      if (!p.url) continue;
+      // Dead comma-cut srcset pieces stored before the srcset fix never count or render.
+      if (!p.url || isCutSrcsetUrl(p.url)) continue;
       const key = portalPhotoIdentity(p.url);
       if (seen.has(key)) continue;
       seen.add(key);

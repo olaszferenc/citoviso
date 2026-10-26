@@ -195,7 +195,8 @@ export function wholeLetOnly(descriptions: readonly string[]): boolean {
  * a claim that the place is let as a whole. Several units only on evidence that SAYS so:
  * a room-letting lodging type (panzió, hotel, szálloda, fogadó, motel) in the name or the
  * prose; rooms let BY TYPE or offered („kétágyas szobák”, „szobák igényelhetők / kiadók”);
- * plural apartments („apartmanok”, „apartmanjaink”). „A szobák klimatizáltak” alone is the
+ * plural apartments („apartmanok”, „apartmanjaink”, „3 apartmanban”, an „Apartmanház” /
+ * „Apartmanok” name). „A szobák klimatizáltak” alone is the
  * description of one house's rooms and changes nothing. Null = the whole-place default stays.
  */
 export function unitKindOf(
@@ -207,7 +208,15 @@ export function unitKindOf(
   const ROOMS_LET =
     /(?<![a-z])(?:egy|ket|harom|negy|tobb)agyas\s+(?:vendeg)?szob(?:ak|akat|akban)(?![a-z])|(?<![a-z])(?:vendeg)?szob(?:ak|akat)\s+(?:[a-z]+\s+)?(?:igenyelhet|kiado|foglalhat|berelhet)/;
   const APTS = /(?<![a-z])apartman(?:ok|okat|okban|okkal|okhoz|jaink|jainkat|jainkban)(?![a-z])/;
+  // A number of apartments („3 apartmanban kínál 13 személynek” — Kalandor ad440016,
+  // 2026-10-26). Only a neutral word may stand between: „2 hálószobás apartman”, „4 fős
+  // apartman” describe ONE apartment.
+  const APTS_COUNTED =
+    /(?<![a-z\d.,])(?:[2-9]|[1-9]\d|ket|harom|negy|ot|hat|het|nyolc|kilenc|tiz)\s+(?:(?:db\.?|darab|kulon|kulonallo|onallo|kulonbejaratu|modern|felujitott|tagas|igenyes|kenyelmes|komfortos)\s+)?(?:studio)?apartman(?!os)[a-z]*/;
+  // A name that is itself plural or a house OF apartments („EmZi Apartmanok”, „ALRO Stúdió
+  // Apartmanház”, „Belvárosi Apartmanház”) — the owner's own word for several units.
+  const APTS_NAME = /(?<![a-z])apartman(?:ok|haz)(?![a-z])/;
   const rooms = ROOM_TYPES.test(fold(leadName)) || ROOM_TYPES.test(hay) || ROOMS_LET.test(hay);
-  const apts = APTS.test(hay);
+  const apts = APTS.test(hay) || APTS_COUNTED.test(hay) || APTS_NAME.test(fold(leadName));
   return rooms && apts ? "both" : rooms ? "rooms" : apts ? "apartments" : null;
 }

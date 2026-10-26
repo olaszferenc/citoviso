@@ -159,6 +159,19 @@ check("Barackvirág: apartmanok + kétágyas szobák → „both”", unitKindOf
 check("hotel a névben → „rooms”", unitKindOf([], "Hotel Honti") === "rooms");
 check("Noémi: „apartmanok 1-6 fő részére kiadók” → „apartments”", unitKindOf(["Igényesen berendezett, klimatizált apartmanok 1-6 fő részére kiadók."], "Noémi Apartman") === "apartments");
 check("⛔ egy ház szobái nem több egység („A szobák klimatizáltak.”)", unitKindOf(["A ház három hálószobás, a szobák klimatizáltak, a szobái tágasak."], "Szömörce Vendégház") === null);
+// TARTVA list after the c8df89d8 deploy (2026-10-26): „3 apartmanban kínál” and an
+// „Apartmanház” / „Apartmanok” name are several units too.
+const KALANDOR = ["A Kalandor Magánszállás Kozármislenyben, csendes, családias környezetben található. 3 apartmanban kínál 13 személynek kényelmes szállást, ingyenes..."];
+check("Kalandor: „3 apartmanban kínál” → „apartments”", unitKindOf(KALANDOR, "Kalandor szállás") === "apartments", unitKindOf(KALANDOR, "Kalandor szállás"));
+check("„két különálló apartman” → „apartments”", unitKindOf(["Két különálló apartman várja vendégeinket."], "Andika Vendégház") === "apartments");
+check("Apartmanház / Apartmanok a névben → „apartments”", unitKindOf([], "ALRO Stúdió Apartmanház") === "apartments" && unitKindOf([], "Mediterran - Apartmanok - Harkány") === "apartments");
+check("⛔ EGY apartman leírása nem több egység („2 hálószobás apartman”, „4 fős apartman”, „1 apartman”)",
+  unitKindOf(["A 2 hálószobás apartman a kertre néz."], "Liliom Apartman") === null &&
+    unitKindOf(["A 4 fős apartman klimatizált."], "Liliom Apartman") === null &&
+    unitKindOf(["1 apartman, 2 hálószoba."], "Liliom Apartman") === null,
+  [unitKindOf(["A 2 hálószobás apartman a kertre néz."], "Liliom Apartman"), unitKindOf(["A 4 fős apartman klimatizált."], "Liliom Apartman")]);
+check("⛔ „3 db 2 ágyas szoba közös fürdővel” egy ház (Szabó, határeset) — nincs egységtípus",
+  unitKindOf(["Az épületben 3 db 2 ágyas szoba közös fürdőszobával, WC-vel és teakonyhával áll a vendégek rendelkezésére."], "Szabó Vendégház") === null);
 const barackHints = sampleHintsOf({ name: "Barackvirág Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: BARACK });
 check("sampleHintsOf: Barackvirág → sampleUnitKind=both, szobaszám nélkül", barackHints.hints.sampleUnitKind === "both" && !barackHints.hints.sampleRoomCount, barackHints.hints);
 const szomHints = sampleHintsOf({ name: "Szömörce Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: SZOMORCE });
