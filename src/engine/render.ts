@@ -13,6 +13,7 @@ import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
 import { addressWithoutOwnCountry } from "./displayAddress.js";
+import { withoutFilenameAlts } from "./photoCaption.js";
 import { setHighlightSources } from "./copyFields.js";
 
 /** Templates escape their text, so compare against the escaped form. */
@@ -714,6 +715,11 @@ export function renderSite(
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
+  // A file name is no alt („kep_128.jpg”, Dobos 2026-10-26): the neutral „<név> — N. kép”.
+  if (data.photos.length) {
+    const photos = withoutFilenameAlts(data.photos, data.name);
+    if (photos !== data.photos) data = { ...data, photos: [...photos] };
+  }
   // ADR-0338: the guest-facing address drops the property's own country („… 8646 Hungary”).
   if (data.contact.address && data.place?.country) {
     const address = addressWithoutOwnCountry(data.contact.address, data.place.country, data.lang);

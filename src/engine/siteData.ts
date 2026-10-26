@@ -10,6 +10,7 @@
 
 import { guestVisibleContact } from "../scraper/contactLedger.js";
 import type { Industry, QualifiedLead } from "../scraper/types.js";
+import { isFilenameCaption, neutralAlt } from "./photoCaption.js";
 import type { Photo, SiteData } from "./recipe.js";
 
 /** ADR-0041: Schema.org business @type per industry. The industry is a PARAMETER (not baked-in
@@ -66,7 +67,8 @@ export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string
   return photos.map((p, i) => ({
     url: p.url,
     // The caption the SOURCE published beats a generated placeholder (§B.17: real text).
-    alt: p.caption?.trim() || `${leadName} — ${i + 1}. kép`,
+    // A file name („kep_128.jpg”) is not a caption — the neutral alt then (Dobos, 2026-10-26).
+    alt: p.caption?.trim() && !isFilenameCaption(p.caption) ? p.caption.trim() : neutralAlt(leadName, i),
     ...(p.provenance ? { provenance: p.provenance } : {}),
     // §A.2: the live gate's ONLY unconditional exclusion. Dropping it here would make
     // `photoPolicy.isLiveSafePhoto` unreachable again — the exact dead-code state this

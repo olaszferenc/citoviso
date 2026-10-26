@@ -161,7 +161,9 @@ export function sampleHintsOf(
     hints: {
       // No list, but a stated room count → the sample cards follow that number, so the
       // SHAPE of the property is true even where the names are not known.
-      ...(!units.rooms.length && units.count && !wholeOnly ? { sampleRoomCount: units.count } : {}),
+      // ONE unit is the whole place, not „1. szoba” with its own Foglalás (Francia ház
+      // e0d06c0f, 2026-10-26: booked.hu JSON-LD numberOfRooms 1 = the apartment's bedroom).
+      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly ? { sampleRoomCount: units.count } : {}),
       // Unit names from the owner's prose (Hungarian only — the type word is Hungarian)
       // beat a bare count.
       ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),

@@ -40,6 +40,7 @@ import { fetchPortalPage } from "./sources/portals/politeness.js";
 import { hostOf, resolvePortal } from "./sources/portals/registry.js";
 import type { PortalPhoto, PortalProfile, QualifiedLead, Region } from "./types.js";
 import { largestFromSrcset } from "./srcset.js";
+import { isFilenameCaption } from "../engine/photoCaption.js";
 
 /** One request may carry this many links — Neo batches leads, not 50 links per lead. */
 export const MAX_LINKS = 10;
@@ -146,7 +147,9 @@ export function ownSiteImages(html: string, pageUrl: string): { url: string; cap
     const key = abs.split("?")[0]!.toLowerCase().replace(/(wixstatic\.com\/media\/[^/]+)\/v1\/.*$/, "$1");
     if (seen.has(key)) return;
     seen.add(key);
-    out.push({ url: abs, ...(caption?.trim() ? { caption: caption.trim().slice(0, 200) } : {}) });
+    // A file name in the alt („kep_128.jpg”, hupont) is no caption — keep none rather than it.
+    const cap = caption?.trim() && !isFilenameCaption(caption) ? caption.trim().slice(0, 200) : "";
+    out.push({ url: abs, ...(cap ? { caption: cap } : {}) });
   };
   for (const m of body.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0]!;

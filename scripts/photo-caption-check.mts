@@ -21,7 +21,9 @@ import { config } from "../src/config.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { PRIMITIVES } from "../src/engine/primitives.js";
-import { isEchoCaption, photoCaption } from "../src/engine/photoCaption.js";
+import { isEchoCaption, isFilenameCaption, photoCaption } from "../src/engine/photoCaption.js";
+import { toSitePhotos } from "../src/engine/siteData.js";
+import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
 import type { SiteData } from "../src/engine/recipe.js";
 
 let failures = 0;
@@ -137,6 +139,25 @@ const OVERLAP = `(() => {
   }
   return out;
 })()`;
+// ── A fájlnév nem alt (Dobos Apartman 97e61003, hupont, 2026-10-26: „kep_128.jpg”) ──
+console.log("fájlnév-alt");
+check("isFilenameCaption: kep_128.jpg · hirdeteshez_008.jpg · IMG_1182 · 4-2-1000007130.jpg · DSC_0012",
+  ["kep_128.jpg", "hirdeteshez_008.jpg", "IMG_1182", "4-2-1000007130.jpg", "DSC_0012", "P1010045.JPG"].every(isFilenameCaption));
+check("⛔ valódi felirat nem fájlnév („Kerti terasz a diófa alatt”, „Szoba 2.”, „Nappali — 3. kép”)",
+  ![MEANINGFUL, "Szoba 2.", "Nappali — 3. kép", "Panoráma 2024"].some(isFilenameCaption));
+const sp = toSitePhotos([{ url: "https://x.hupont.hu/kep_128.jpg", caption: "kep_128.jpg" }, { url: "https://x.hupont.hu/b.jpg", caption: "Terasz" }] as never, "Dobos Apartman");
+check("toSitePhotos: fájlnév-caption → „<név> — N. kép”, a valódi marad", sp[0]?.alt === "Dobos Apartman — 1. kép" && sp[1]?.alt === "Terasz", JSON.stringify(sp.map((p) => p.alt)));
+const own = ownSiteImages(`<img src="https://balatonszarszo-nyaralas.hupont.hu/felhasznalok_uj/kepfeltoltes/kep_128.jpg" alt="kep_128.jpg">`, "https://balatonszarszo-nyaralas.hupont.hu/");
+check("ownSiteImages: a fájlnév-altot nem veszi fel captionnek", own.length === 1 && own[0]!.caption === undefined, JSON.stringify(own));
+const dobos = { ...D, name: "Dobos Apartman", photos: D.photos.map((p, i) => ({ ...p, alt: i === 2 ? MEANINGFUL : `hirdeteshez_00${i}.jpg` })) } as unknown as SiteData;
+for (const id of Object.keys(TEMPLATES)) {
+  const tpl = TEMPLATES[id as keyof typeof TEMPLATES]!;
+  const html = renderSite({ template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] }, dobos, { phase: "mock" });
+  const bad = [...html.matchAll(/\balt="([^"]*)"/g)].map((m) => m[1]!).filter((a) => /hirdeteshez_\d+\.jpg/.test(a));
+  if (bad.length) check(`${id}: render — nincs fájlnév az altban`, false, bad.slice(0, 3).join(" · "));
+}
+check("render: egyik sablon altjában sincs fájlnév (a meglévő mock rerenderrel javul)", true);
+
 try {
   const page = await browser.newPage();
   // red twin: the old editorial cover — caption absolutely positioned over the photo

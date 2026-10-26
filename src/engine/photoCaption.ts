@@ -46,6 +46,30 @@ export function isEchoCaption(d: SiteData, alt: string): boolean {
   return words(alt).every((w) => known.has(w) || /^\d$/.test(w));
 }
 
+/**
+ * A FILE NAME is not a caption (Dobos Apartman 97e61003, 2026-10-26: the hupont site sets
+ * alt="kep_128.jpg", and the mock printed „kep_128.jpg”, „hirdeteshez_008.jpg” as alts).
+ * An image extension, or a bare camera/upload name („IMG_2041”, „DSC_0012”, „kep_128”).
+ */
+export function isFilenameCaption(s: string): boolean {
+  const t = s.trim();
+  if (!t) return false;
+  if (/^[^\s/\\]+\.(?:jpe?g|png|webp|gif|avif|bmp|tiff?|heic)$/i.test(t)) return true;
+  return /^(?:img|dsc|dscn|dscf|dcim|pic|photo|image|kep|foto|p)[_\- ]?\d{2,}(?:[_\- ]\w+)?$/i.test(t);
+}
+
+/** The neutral alt a photo wears when the source gave none (or only a file name). */
+export function neutralAlt(name: string, index: number): string {
+  return `${name} — ${index + 1}. kép`;
+}
+
+/** Photos whose alt is a file name get the neutral alt — render-time, so a rerender fixes
+ *  an already generated mock. Same array back when nothing changes. */
+export function withoutFilenameAlts<T extends { readonly alt: string }>(photos: readonly T[], name: string): readonly T[] {
+  if (!photos.some((p) => isFilenameCaption(p.alt))) return photos;
+  return photos.map((p, i) => (isFilenameCaption(p.alt) ? { ...p, alt: neutralAlt(name, i) } : p));
+}
+
 /** The caption to PRINT under a photo, or "" when it would say nothing (alt stays on the img). */
 export function photoCaption(d: SiteData, p: Photo): string {
   const alt = p.alt.trim();

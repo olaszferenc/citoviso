@@ -249,8 +249,9 @@ const TEMPORAL_AFTER = /^\p{L}*\s+(?:utan|elott|kozben|utani|elotti|idejen)(?![\
 /** „reggeli kávé a teraszon” is a morning moment, not a breakfast served (Szömörce 2026-10-21). */
 const MORNING_ADJ =
   /^reggeli\s+(?:kave|kavez|tea|napsut|napfeny|feny|seta|uszas|furdoz|csend|madar|ebred|harmat|joga|torna|futas|kocog)/u;
-/** A view ONTO the yard / street / car park is no panorama. */
-const NEAR_VIEW = /^\p{L}*\s+(?:a|az)\s+(?:kert|udvar|belso|utca|parkolo|medence|haz)/u;
+/** A view ONTO the yard / street / car park is no panorama — also with a verb between
+ *  („kilátást nyújt a kertre”, Francia ház e0d06c0f 2026-10-26). */
+const NEAR_VIEW = /^\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:a|az)\s+(?:kert|udvar|belso|utca|parkolo|medence|haz)/u;
 const FAR_KM = /(\d+(?:[.,]\d+)?)\s*km(?![\p{L}])/gu;
 const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
 

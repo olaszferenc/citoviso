@@ -21,6 +21,8 @@
 //     (Germering, Balaton Panzió, Dinasztia, Bodza, Admirál, Kék Madár, Szerencsemák, Hold utca).
 //   · Barackvirág (00660191, 2026-10-26): „Apartmanok és kétágyas szobák igényelhetők” — no
 //     count, no names — and the one sample card said „Az egész szállás” (let as a whole).
+//   · Francia ház (e0d06c0f): „Panoráma” from „kilátást nyújt a kertre”; „1. szoba” + Foglalás
+//     on one whole apartment (numberOfRooms 1).
 // Deterministic: no AI, no DB, no browser. Asserts the pure rules, the render, and the wiring
 // (the generator actually hands the hints to the renderer).
 //
@@ -161,6 +163,15 @@ const barackHints = sampleHintsOf({ name: "Barackvirág Vendégház" } as never,
 check("sampleHintsOf: Barackvirág → sampleUnitKind=both, szobaszám nélkül", barackHints.hints.sampleUnitKind === "both" && !barackHints.hints.sampleRoomCount, barackHints.hints);
 const szomHints = sampleHintsOf({ name: "Szömörce Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: SZOMORCE });
 check("⛔ csak egyben kiadott ház: nincs egységtípus (marad „Az egész szállás”)", !szomHints.hints.sampleUnitKind, szomHints.hints);
+// Francia ház (e0d06c0f, booked.hu, 2026-10-26): „kilátást nyújt a kertre” is no panorama, and
+// the JSON-LD numberOfRooms 1 (the apartment's one bedroom) is no „1. szoba” with its own Foglalás.
+const FRANCIA = ["Az 1 hálószobás apartman nagyjából 4 km-re helyezkedik el a Tihanyrévtől. Az apartman kilátást nyújt a kertre, továbbá tornácot, erkélyt és ülősarkot foglal magában."];
+check("Francia ház: „kilátást nyújt a kertre” → nem „Panoráma”", !descriptionFactIsOwn("Panoráma", FRANCIA) && !descriptionSellingPoints(FRANCIA).includes("Panoráma"), descriptionSellingPoints(FRANCIA));
+check("⛔ „kilátás nyílik a Balatonra” Panoráma marad", descriptionFactIsOwn("Panoráma", ["A teraszról kilátás nyílik a Balatonra."]));
+const francia = sampleHintsOf({ name: "Francia ház", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 1, evidence: "numberOfRooms: 1" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: FRANCIA });
+check("Francia ház: 1-es szobaszám → nincs „1. szoba” (egy egység = az egész szállás)", !francia.hints.sampleRoomCount, francia.hints);
+const two = sampleHintsOf({ name: "Két szoba", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 2, evidence: "numberOfRooms: 2" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: [] });
+check("⛔ 2-es szobaszám számozott kártya marad", two.hints.sampleRoomCount === 2, two.hints);
 const card = (k?: "rooms" | "apartments" | "both") => sampleRooms({ ...base, ...(k ? { sampleUnitKind: k } : {}) })[0]?.name;
 check("kártya: both → „Szobák és apartmanok”, rooms → „Szobák”, apartments → „Apartmanok”, semmi → „Az egész szállás”",
   card("both") === "Szobák és apartmanok" && card("rooms") === "Szobák" && card("apartments") === "Apartmanok" && card() === "Az egész szállás",
