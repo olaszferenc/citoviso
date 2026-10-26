@@ -1,4 +1,4 @@
-## ADR-XXXX — Több terv egy követett linken: a lead a saját linkjén vált 2–3 jóváhagyott terv között
+## ADR-0406 — Több terv egy követett linken: a lead a saját linkjén vált 2–3 jóváhagyott terv között
 
 **Dátum:** 2026-09-23 · **Kiváltó:** tulajdonosi kérdés: „mekkora meló, hogy ha több generált mockot hagy jóvá
 a kurátor, akkor a tenant a linkjét megnyitva tudjon tabon váltva a mockokat változtatni? … Az összeállítás
