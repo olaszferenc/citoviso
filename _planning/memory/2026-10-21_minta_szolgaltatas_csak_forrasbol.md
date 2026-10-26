@@ -1,4 +1,4 @@
-# 2026-10-21 — A minta-szolgáltatáslista csak a forrásból (ADR-XXXX)
+# 2026-10-21 — A minta-szolgáltatáslista csak a forrásból (ADR-0404)
 
 **Szál:** CIT SUB `cita3d7c954`, koordinátor `cita291565c` (brief: `~/rc-briefs/minta-szolgaltatas-hamis-tetel-20261021.md`), Vera J-leletei éles mockokon.
 

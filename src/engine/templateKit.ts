@@ -176,7 +176,7 @@ export function sampleRooms(d: SiteData): readonly Room[] {
     // is no longer an illustration but a claim about that unit („Gold apartman: Erkély") —
     // those cards carry no sample chips (fact-check 2026-10-07, §B.17 (5)). On a numbered
     // card a chip of a service type („Reggeli kérhető", „Klíma") stays only when the source
-    // itself offers that type (ADR-XXXX: Hotel Garni „Ellátást nem tudnak biztosítani").
+    // itself offers that type (ADR-0404: Hotel Garni „Ellátást nem tudnak biztosítani").
     const amenities = names || !d.sampleRoomCount
       ? []
       : proto.amenities?.filter((a) => {

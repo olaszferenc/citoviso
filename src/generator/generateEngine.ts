@@ -115,7 +115,7 @@ export function portalRooms(
 }
 
 /**
- * The mock's SAMPLE hints (ADR-0338, ADR-XXXX), from the source alone — no AI, no network.
+ * The mock's SAMPLE hints (ADR-0338, ADR-0404), from the source alone — no AI, no network.
  * One function for the generator AND for `rerender-mock.mts --resample`, so a sample-rule
  * fix can reach an already generated mock without re-running the planner or the writer.
  * A portal room count the prose contradicts is dropped (Hotel Garni: field 3, text „9

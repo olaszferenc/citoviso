@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-minta-szolgaltatas-csak-forrasbol.md) — A minta-szolgáltatáslista csak a forrás saját kínálatából; közeli idegen és tagadott tétel ki
+- [ADR-0404](decisions/0404-a-minta-szolgaltataslista-csak-a-forras-sajat.md) — A minta-szolgáltatáslista csak a forrás saját kínálatából; közeli idegen és tagadott tétel ki
 - [ADR-0403](decisions/0403-a-sajat-domain-megujitasa-a-regisztrator.md) — A saját domain megújítása: a regisztrátor kapcsolója a szabály szerint, naponta
 - [ADR-0402](decisions/0402-belepes-egy-hely-egy-mondat-a-sajat-cimen-is.md) — Belépés: egy hely, egy mondat, a saját címen is
 - [ADR-0401](decisions/0401-a-hu-nyilvantarto-megerositeset-neo-kollega.md) — A .hu Nyilvántartó megerősítését Neo kolléga végzi, nem a tulaj és nem egy vak szkript (2026-10-22)

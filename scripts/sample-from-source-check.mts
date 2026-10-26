@@ -5,7 +5,7 @@
 //   · Főnix: the rooms sample said „1.–3. szoba”; the owner's prose names two apartments
 //     („Family”, „Gold”) — the count 3 was invented.
 //   · Kisvasút / Vitorlás / AQUA: the Hungarian page printed „… 8646 Hungary”.
-// Second round (Vera's J-findings on live mocks, 2026-10-21, ADR-XXXX):
+// Second round (Vera's J-findings on live mocks, 2026-10-21, ADR-0404):
 //   · Dunapart Villa: „Reggeli” on a self-catering villa — generic padding, not the source.
 //   · Hosszúhegyi Vendégház: „Reggeli” with an EMPTY amenity list — the same padding.
 //   · Hargita panzió: „Étterem” from „A közelben található étterem” — another business.
@@ -60,7 +60,7 @@ const noPets = sampleAmenityItems(["Kisállat-barát", "Wifi"], ["pets"]);
 check("tiltott típus nem kerül a mintára", noPets.join("|") === "Wifi", noPets);
 check("a forrás tagadó tétele sosem jelenik meg", !sampleAmenityItems(["Háziállat nem engedélyezett"], []).some((i) => /nem/.test(i)));
 
-console.log("② a szolgáltatás-minta CSAK a forrásból töltődik (ADR-XXXX)");
+console.log("② a szolgáltatás-minta CSAK a forrásból töltődik (ADR-0404)");
 const filled = sampleAmenityItems(["Privát strand", "Saját parkoló", "Játszótér"], []);
 check("a forrás tételei, ebben a sorrendben, semmi más", filled.join("|") === "Privát strand|Saját parkoló|Játszótér", filled);
 check("⛔ nincs generikus feltöltés (Hosszúhegyi: üres forrás → üres minta)", sampleAmenityItems([], []).length === 0);

@@ -1,4 +1,4 @@
-## ADR-XXXX — A minta-szolgáltatáslista csak a forrás saját kínálatából; közeli idegen és tagadott tétel ki
+## ADR-0404 — A minta-szolgáltatáslista csak a forrás saját kínálatából; közeli idegen és tagadott tétel ki
 
 **Dátum:** 2026-10-21 · **Döntött:** koordinátor (cita291565c) briefje Vera J-leletei alapján; megvalósítás: CIT SUB
 

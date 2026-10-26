@@ -18,7 +18,7 @@
 //                                                          #   denied types) from the lead's
 //                                                          #   source, persist them, render
 //
-// --resample (ADR-XXXX) exists because the sample hints are PERSISTED in siteData: a rule fix
+// --resample (ADR-0404) exists because the sample hints are PERSISTED in siteData: a rule fix
 // in the generator (Hargita „a közelben található étterem” → no „Étterem”; Hotel Garni's
 // contradicted room count) does not reach a mock by a plain re-render. It recomputes only
 // those four fields — no AI, no network: the same sampleHintsOf() the generator runs, over

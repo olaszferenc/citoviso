@@ -120,7 +120,7 @@ export function unitNamesFromProse(descriptions: readonly string[], leadName: st
 /**
  * The services sample's items: ONLY the source's own offers (strongest first), refusals
  * and denied types out, six at most — the block's approved size. No generic top-up
- * (2026-10-21, ADR-XXXX): „Reggeli” stood under „Amit kínálunk” on a self-catering villa
+ * (2026-10-21, ADR-0404): „Reggeli” stood under „Amit kínálunk” on a self-catering villa
  * (Dunapart) and on a lead with no amenities at all (Hosszúhegyi), because the block was
  * padded with generic types the source never stated. The „Minta” pill does not unsay a
  * service the guest reads as this house's. Nothing sourced → no item (the block shows its

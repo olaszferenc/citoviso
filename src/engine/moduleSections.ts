@@ -588,7 +588,7 @@ function pricingSampleBlock(d: SiteData): string {
 
 /**
  * ADR-0061 sample checklist: the facilities module in its real dress, filled ONLY with the
- * source's own offers (ADR-0338, ADR-XXXX) — the section carries the "Minta" pill and says
+ * source's own offers (ADR-0338, ADR-0404) — the section carries the "Minta" pill and says
  * the owner ticks the real ones. Never generic padding; nothing sourced → the empty frame.
  */
 function amenitiesSampleBlock(d: SiteData): string {
