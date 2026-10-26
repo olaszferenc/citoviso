@@ -466,6 +466,17 @@ const kk = withoutNeighbourFolders(krisztina);
 check("döntetlen (Krisztina 5b577422: négy 1-képes mappa) → a lead slugját viselő fájl mappája marad", kk.length === 1 && /krisztina-panzio/.test(kk[0]!.url), kk.map((p) => p.url));
 const blind = krisztina.slice(1);
 check("⛔ döntetlen név nélkül → semmi nem dől el, minden marad", withoutNeighbourFolders(blind).length === 3, "");
+// MG21-B, Hévíz: the Szent Kristóf szálloda thumb (11540) under Attila, Laguna, Hegyi Villa and
+// five more live profiles — same „Közeli szállások” strip. Kőnig Apartman cb569974 as stored
+// on prod: 6 own (21112) + Szent Kristóf + Hévíz Apartmanház (25455), two neighbours at once.
+const konigSrc = "https://hovamenjek.hu/heviz/konig-apartman";
+const konig = [
+  ...["heviz-konig-apartman2", "heviz-4", "heviz-6", "heviz-2", "heviz-3", "heviz-7"].map((f) => `${HM}/21112_2e969d52/fullHd/${f}.jpg`),
+  `${HM}/11540_eed43ed9/fullHd/heviz-szent-kristof-szalloda4.jpg`,
+  `${HM}/25455_9d1ec18d/fullHd/heviz-heviz-apartmanhaz1.jpg`,
+].map((url) => ({ url, sourceUrl: konigSrc }));
+const konigKept = withoutNeighbourFolders(konig);
+check("Hévíz (Kőnig): Szent Kristóf + egy második szomszéd egyszerre kiesik, a 6 saját marad", konigKept.length === 6 && konigKept.every((p) => p.url.includes("/21112_")), konigKept.map((p) => p.url));
 const mixed = [{ url: "https://x.booked.hu/photo1.jpg" }, { url: elzaOwn(1) }, { url: "https://www.elza.hu/kep.jpg" }];
 check("⛔ egy mappa / nem-hovamenjek kép érintetlen", withoutNeighbourFolders(mixed).length === 3, "");
 check(
