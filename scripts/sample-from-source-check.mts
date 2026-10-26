@@ -198,6 +198,20 @@ check("⛔ egységtípus előbb jön: „Apartmanház” + „egyben is kiadó�
 const FRANCIA = ["Az 1 hálószobás apartman nagyjából 4 km-re helyezkedik el a Tihanyrévtől. Az apartman kilátást nyújt a kertre, továbbá tornácot, erkélyt és ülősarkot foglal magában."];
 check("Francia ház: „kilátást nyújt a kertre” → nem „Panoráma”", !descriptionFactIsOwn("Panoráma", FRANCIA) && !descriptionSellingPoints(FRANCIA).includes("Panoráma"), descriptionSellingPoints(FRANCIA));
 check("⛔ „kilátás nyílik a Balatonra” Panoráma marad", descriptionFactIsOwn("Panoráma", ["A teraszról kilátás nyílik a Balatonra."]));
+// EszterHáz 74f7e92d (mock 375d4c76) / MARaBU 8dbffb31 (32a82510), booked.hu: the stock phrase
+// „kertre néző kilátás” names the view BEFORE the word — still the yard, still no panorama.
+const ESZTER = ["A Szent Kereszt felmagasztalasa templom közelségében fekszik.\n\nNéhány szobának kertre néző kilátása van. A vendégek élvezni fogják a zuhanyfülkével és fürdőkáddal felszerelt fürdőszobákat."];
+const MARABU = ["Az 1 fürdőszobás villa kertre néző kilátást élvez. A Balatonberény városi ingatlan külön WC-vel és zuhanyzóval ellátott fürdőszobát biztosít."];
+check("EszterHáz: „kertre néző kilátása van” → nem „Panoráma”", !descriptionFactIsOwn("Panoráma", ESZTER) && !descriptionSellingPoints(ESZTER).includes("Panoráma"), descriptionSellingPoints(ESZTER));
+check("MARaBU: „kertre néző kilátást élvez” → nem „Panoráma”", !descriptionFactIsOwn("Panoráma", MARABU) && !descriptionSellingPoints(MARABU).includes("Panoráma"), descriptionSellingPoints(MARABU));
+const NEAR_VIEWS = ["A szálláshely udvarra néző kilátást kínál.", "Saját erkéllyel rendelkezik medencére néző kilátással.", "Déli erkély a zöld parkra néző kilátással.", "Az apartman utcára néző kilátást nyújt.", "A kertre és kertre néző kilátással várja vendégeit.", "A ház tájra néző kilátást kínál."];
+const nearHit = NEAR_VIEWS.filter((t) => descriptionFactIsOwn("Panoráma", [t]));
+check("udvar / medence / park / utca / táj felé néző kilátás → nem „Panoráma”", nearHit.length === 0, nearHit);
+const FAR_VIEWS = ["Az apartman tóra néző kilátást kínál.", "A hegyre néző kilátást kínáló apartman.", "A szálláshely városra néző kilátással várja vendégeit.", "Minden szobából Balatonra néző kilátás nyílik."];
+const farMiss = FAR_VIEWS.filter((t) => !descriptionFactIsOwn("Panoráma", [t]));
+check("⛔ tóra / hegyre / városra / Balatonra néző kilátás Panoráma marad", farMiss.length === 0, farMiss);
+const eszter = sampleHintsOf({ name: "EszterHáz" } as never, "hu", { listedAmenities: ["Parkoló", "Kert", "Terasz"], amenities: [], descriptions: ESZTER });
+check("EszterHáz: a mintában nincs „Panoráma”", !(eszter.hints.sampleAmenities ?? []).includes("Panoráma"), eszter.hints.sampleAmenities);
 const francia = sampleHintsOf({ name: "Francia ház", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 1, evidence: "numberOfRooms: 1" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: FRANCIA });
 check("Francia ház: 1-es szobaszám → nincs „1. szoba” (egy egység = az egész szállás)", !francia.hints.sampleRoomCount, francia.hints);
 const two = sampleHintsOf({ name: "Két szoba", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 2, evidence: "numberOfRooms: 2" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: [] });

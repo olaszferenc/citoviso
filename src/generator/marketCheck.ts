@@ -252,6 +252,11 @@ const MORNING_ADJ =
 /** A view ONTO the yard / street / car park is no panorama — also with a verb between
  *  („kilátást nyújt a kertre”, Francia ház e0d06c0f 2026-10-26). */
 const NEAR_VIEW = /^\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:a|az)\s+(?:kert|udvar|belso|utca|parkolo|medence|haz)/u;
+/** The same view named BEFORE the word — the booked.hu stock phrase „kertre néző kilátás(t
+ *  kínál)” (EszterHáz 74f7e92d, MARaBU 8dbffb31, 2026-10-26: one sentence each, read as
+ *  Panoráma). Lake, mountain or town views („tóra néző kilátás”) stay a panorama. */
+const NEAR_VIEW_BEFORE =
+  /(?:^|[^\p{L}])(?:(?:kert|udvar|utca|parkolo|medence|park|taj)\p{L}*\s+(?:fele\s+)?nezo|kerti|udvari|utcai)\s+$/u;
 const FAR_KM = /(\d+(?:[.,]\d+)?)\s*km(?![\p{L}])/gu;
 const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
 
@@ -406,7 +411,7 @@ function affirmsIn(needle: string, clause: string, rawClause: string | null, own
     if (NEGATION_AFTER.test(after) || NEGATION_BEFORE.test(beforeText)) continue;
     if (TEMPORAL_AFTER.test(after)) continue;
     if (needle === "reggeli" && MORNING_ADJ.test(after)) continue;
-    if ((needle === "kilatas" || needle === "panorama") && NEAR_VIEW.test(after)) continue;
+    if ((needle === "kilatas" || needle === "panorama") && (NEAR_VIEW.test(after) || NEAR_VIEW_BEFORE.test(beforeText))) continue;
     if (isFar(clause)) continue;
     if ((own || !PLACE_NEEDLE.has(needle)) && NEARBY.test(clause)) continue;
     if (own && TOWN_OWNED.test(beforeText)) continue;
