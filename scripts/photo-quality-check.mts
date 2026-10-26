@@ -24,9 +24,9 @@ import {
 import { readFileSync } from "node:fs";
 import { isCutSrcsetUrl, parseSrcset } from "../src/scraper/srcset.js";
 import { ownSiteImages, photoCountMessage, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
-import { distinctPortalPhotos } from "../src/scraper/portalPhotos.js";
+import { distinctPortalPhotos, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
 import { ENGINE_HOME_REDIRECT } from "../src/scraper/sources/portalListing.js";
-import { domImages } from "../src/scraper/sources/portals/extract.js";
+import { domImages, extractListing } from "../src/scraper/sources/portals/extract.js";
 
 let failed = 0;
 function check(label: string, ok: boolean, detail: string): void {
@@ -424,6 +424,53 @@ check(
   "bekötés: a link-behúzó a twinSkipReason-t és a photoCountMessage-et használja",
   /twinSkipReason\(adapter\.label, url, readUrl, r\.skipped\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
     /photoCountMessage\(beforeCount, afterCount\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")),
+  "",
+);
+
+// -bb, MG21 Keszthely 2026-10-26: Dóra Holiday House (9926) and Miss Mici (11997) under almost
+// every Keszthely lead — the „Közeli szállások” strip (div.places_nearby) of the hovamenjek
+// listing, neighbours' thumbs from THEIR folders. Shape of the real Elza Apartman page.
+const HM = "https://hovamenjek.hu/upload/places";
+const elzaOwn = (n: number) => `${HM}/12963_0a1b2c3d/galleryMiddle/keszthely-elza-apartman${n}.jpg`;
+const elzaPage =
+  `<html><head><title>Elza Apartman</title></head><body>${"<p>Keszthely, a Balaton partján.</p>".repeat(20)}` +
+  `<div id="place_picture">${[1, 2, 3, 4, 5, 6].map((n) => `<a href="${elzaOwn(n).replace("galleryMiddle", "fullHd")}"><img src="${elzaOwn(n)}" alt="Elza Apartman"></a>`).join("")}</div>` +
+  `<h3 class="callback-text">Közeli helyek</h3><ul class="services-ul"><li>Városi Strand, távolság: 1 000 m</li></ul>` +
+  `<div class="places_nearby"><h3>Közeli szállások – <a href="https://hovamenjek.hu/keszthely/szallas">Keszthely</a></h3>` +
+  `<a class="nearby" href="https://hovamenjek.hu/keszthely/miss-mici"><figure><img srcset="${HM}/11997_e33d974a/187x187/keszthely-miss-mici9.jpg 187w,${HM}/11997_e33d974a/250x250/keszthely-miss-mici9.jpg 250w" src="${HM}/11997_e33d974a/187x187/keszthely-miss-mici9.jpg" width="187" height="187" alt="Miss Mici – Keszthely"></figure><h4>Miss Mici</h4></a>` +
+  `<a class="nearby" href="https://hovamenjek.hu/keszthely/dora-holiday-house"><figure><img src="${HM}/9926_cb757ef4/187x187/keszthely-2.jpg" width="187" height="187" alt="Dóra Holiday House – Keszthely"></figure><h4>Dóra Holiday House</h4></a>` +
+  `</div></body></html>`;
+const elzaImgs = extractListing(elzaPage, "https://hovamenjek.hu/keszthely/elza-apartman").images.map((i) => i.url);
+check(
+  "hovamenjek „Közeli szállások”: a szomszédok bélyegképe nem kerül a lead képei közé",
+  elzaImgs.length > 0 && elzaImgs.every((u) => u.includes("/12963_")) && !elzaImgs.some((u) => /miss-mici|keszthely-2\.jpg/.test(u)),
+  elzaImgs.join(" "),
+);
+const src = "https://hovamenjek.hu/keszthely/elza-apartman";
+const stored = [
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => ({ url: elzaOwn(n).replace("galleryMiddle", "fullHd"), sourceUrl: src })),
+  { url: `${HM}/11997_e33d974a/fullHd/keszthely-miss-mici9.jpg`, sourceUrl: src },
+  { url: `${HM}/9926_cb757ef4/fullHd/keszthely-2.jpg`, sourceUrl: src },
+];
+const kept = withoutNeighbourFolders(stored);
+check("már TÁROLT profil (Elza: 10 saját + 2 szomszéd) → a szomszédok kiesnek újragyűjtés nélkül", kept.length === 10 && kept.every((p) => p.url.includes("/12963_")), kept.length);
+check("a számláló is a tisztát látja (distinctPortalPhotos 12 → 10)", distinctPortalPhotos([{ photos: stored }]).length === 10, distinctPortalPhotos([{ photos: stored }]).length);
+const ks = "https://hovamenjek.hu/balatonalmadi/krisztina-panzio-puszta-etterem";
+const krisztina = [
+  `${HM}/3671_54ebdfbb/main/balatonalmadi-krisztina-panzio-puszta-etterem2.jpg`,
+  `${HM}/3681_9426c311/fullHd/balatonalmadi-porcio-vendeglo1.jpg`,
+  `${HM}/3685_55a0df4b/fullHd/balatonalmadi-virag-etterem1.jpg`,
+  `${HM}/698_99bcfcd7/fullHd/balatonalmadi-hatar-etterem2.jpg`,
+].map((url) => ({ url, sourceUrl: ks }));
+const kk = withoutNeighbourFolders(krisztina);
+check("döntetlen (Krisztina 5b577422: négy 1-képes mappa) → a lead slugját viselő fájl mappája marad", kk.length === 1 && /krisztina-panzio/.test(kk[0]!.url), kk.map((p) => p.url));
+const blind = krisztina.slice(1);
+check("⛔ döntetlen név nélkül → semmi nem dől el, minden marad", withoutNeighbourFolders(blind).length === 3, "");
+const mixed = [{ url: "https://x.booked.hu/photo1.jpg" }, { url: elzaOwn(1) }, { url: "https://www.elza.hu/kep.jpg" }];
+check("⛔ egy mappa / nem-hovamenjek kép érintetlen", withoutNeighbourFolders(mixed).length === 3, "");
+check(
+  "bekötés: a generátor galériája is a szűrt listát olvassa",
+  /for \(const p of withoutNeighbourFolders\(profile\.photos\)\)/.test(readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8")),
   "",
 );
 

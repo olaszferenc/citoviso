@@ -466,10 +466,12 @@ export const IMAGE_EXT = /\.(jpe?g|png|webp|avif)(\?|#|$)/i;
  * after the first one belongs to OTHER businesses — during the first live run
  * this block put BuBis Apartman's and Majestic Apartmanház's thumbnails into
  * Korbély Apartman's gallery, i.e. a §F.17b misattribution of the worst kind
- * (another guesthouse's photos on this lead's mock).
+ * (another guesthouse's photos on this lead's mock). hovamenjek.hu calls the block
+ * „Közeli szállások” (div.places_nearby) — its neighbours' thumbs sat under most Keszthely
+ * leads (MG21, 2026-10-26). The „Közeli helyek” list above it (sights, no photos) is not it.
  */
 const RELATED_BLOCK =
-  /(hasonló\s+szállás|hasonlo\s+szallas|similar-listing|similar_listing|similar-hotel|related-listing|related-item|ajánlott\s+szállás|ezt\s+is\s+megnézhet|önnek\s+ajánljuk|más\s+szálláshely|nearby-?hotels|other-?properties|wide-listings-list)/i;
+  /(hasonló\s+szállás|hasonlo\s+szallas|similar-listing|similar_listing|similar-hotel|related-listing|related-item|ajánlott\s+szállás|ezt\s+is\s+megnézhet|önnek\s+ajánljuk|más\s+szálláshely|nearby-?hotels|other-?properties|wide-listings-list|places_nearby|közeli\s+szállások)/i;
 
 /** The part of the page that is about THIS property — everything before the
  *  "similar listings" block. Returns the whole page when there is no such block. */

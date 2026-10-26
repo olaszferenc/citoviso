@@ -18,7 +18,7 @@ import {
   PlacesUnavailableError,
   type PlacesFailure,
 } from "../scraper/sources/googleMaps.js";
-import { portalPhotoIdentity } from "../scraper/portalPhotos.js";
+import { portalPhotoIdentity, withoutNeighbourFolders } from "../scraper/portalPhotos.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import type { PhotoProvenance } from "../engine/recipe.js";
 import { isUsablePropertyPhoto } from "../scraper/sources/portals/photoQuality.js";
@@ -311,7 +311,9 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
   const seen = new Set<string>();
   for (const profile of lead.portalProfiles ?? []) {
     if (profile.needsReview) continue;
-    for (const p of profile.photos) {
+    // A neighbour listing's thumbnail stored as the lead's own (hovamenjek „Közeli szállások”)
+    // stays off the page without a re-scrape.
+    for (const p of withoutNeighbourFolders(profile.photos)) {
       // Host-independent: a portal network serves the same file from several hosts
       // (scraper/portalPhotos.ts) — a full-URL key put the same picture twice in the gallery.
       const key = portalPhotoIdentity(p.url);

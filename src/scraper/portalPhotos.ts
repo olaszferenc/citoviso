@@ -27,8 +27,40 @@ export function portalPhotoIdentity(url: string): string {
   }
 }
 
+/**
+ * hovamenjek.hu keeps every listing's photos in ONE folder: /upload/places/<placeId>_<hash>/.
+ * The „Közeli szállások” strip at the bottom of a listing shows the NEIGHBOURS' thumbnails
+ * from THEIR folders, and before ownContentOnly knew that block those thumbs were stored as
+ * the lead's own (-bb, MG21 Keszthely, 2026-10-26: Dóra Holiday House 9926 and Miss Mici 11997
+ * under Abigél, Anikó, Elza, Barbara Wellness …). Within one profile the listing's own folder
+ * is the one most photos come from; a photo from any other place folder is a neighbour's.
+ * A tie is broken by the listing's slug in a file name (prod, 2026-10-26: Krisztina Panzió
+ * 5b577422 holds four single-photo folders, its own „…krisztina-panzio-puszta-etterem2.jpg”
+ * among three restaurants); still no single leader → nothing is decided, all photos stay.
+ */
+const PLACE_FOLDER = /\/upload\/places\/(\d+)_[0-9a-f]+\//i;
+export function withoutNeighbourFolders<T extends { url: string; sourceUrl?: string }>(photos: readonly T[]): T[] {
+  const counts = new Map<string, number>();
+  for (const p of photos) {
+    const folder = PLACE_FOLDER.exec(p.url ?? "")?.[1];
+    if (!folder) continue;
+    const slug = (p.sourceUrl ?? "").replace(/[?#].*$/, "").replace(/\/+$/, "").split("/").pop() ?? "";
+    const named = slug.length >= 4 && (p.url.split("/").pop() ?? "").toLowerCase().includes(slug.toLowerCase());
+    counts.set(folder, (counts.get(folder) ?? 0) + 1 + (named ? 0.5 : 0));
+  }
+  if (counts.size < 2) return [...photos];
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (ranked[0]![1] === ranked[1]![1]) return [...photos];
+  const own = ranked[0]![0];
+  return photos.filter((p) => {
+    const folder = PLACE_FOLDER.exec(p.url ?? "")?.[1];
+    return !folder || folder === own;
+  });
+}
+
 /** Distinct photos of the accepted portal profiles, first occurrence kept (profile order);
- *  dead comma-cut srcset pieces (srcset.isCutSrcsetUrl) are left out. */
+ *  dead comma-cut srcset pieces (srcset.isCutSrcsetUrl) and neighbours' thumbnails
+ *  (withoutNeighbourFolders) are left out. */
 export function distinctPortalPhotos<T extends { url: string }>(
   profiles: readonly { readonly photos: readonly T[]; readonly needsReview?: boolean }[],
 ): T[] {
@@ -36,7 +68,7 @@ export function distinctPortalPhotos<T extends { url: string }>(
   const seen = new Set<string>();
   for (const profile of profiles) {
     if (profile.needsReview) continue;
-    for (const p of profile.photos) {
+    for (const p of withoutNeighbourFolders(profile.photos)) {
       // Dead comma-cut srcset pieces stored before the srcset fix never count or render.
       if (!p.url || isCutSrcsetUrl(p.url)) continue;
       const key = portalPhotoIdentity(p.url);
