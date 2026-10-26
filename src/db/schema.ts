@@ -1490,6 +1490,19 @@ export interface LeadActivityTable {
   at: Generated<Timestamp>;
 }
 
+/** 0117 — what the owner does in their own admin (ADR-XXXX, Próba riport). One log for every
+ *  tenant; the trial report reads it through free_trial.tenant_id + the trial's window. */
+export interface TenantActivityTable {
+  id: Generated<string>;
+  tenant_id: string;
+  kind: TenantActivityKind;
+  /** login: {via} · save: {area} · order_open: {from} · checkout: {step}. */
+  detail: JSONColumnType<Record<string, unknown>>;
+  occurred_at: Generated<Timestamp>;
+}
+
+export type TenantActivityKind = "login" | "admin_open" | "save" | "site_view" | "order_open" | "checkout";
+
 export type LeadActivityTab =
   | "ls-data"
   | "ls-mocks"
@@ -2018,6 +2031,7 @@ export interface Database {
   local_event: LocalEventTable;
   lead_hero_override: LeadHeroOverrideTable;
   lead_activity: LeadActivityTable;
+  tenant_activity: TenantActivityTable;
   lead_places_cache: LeadPlacesCacheTable;
   places_detail_cache: PlacesDetailCacheTable;
   scrape_checkpoint: ScrapeCheckpointTable;

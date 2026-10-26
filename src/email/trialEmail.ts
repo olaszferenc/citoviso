@@ -25,6 +25,7 @@ import { huArticle, huArticleLower } from "../hu.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { esc, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
+import { withOrderFrom } from "../analytics/orderFrom.js";
 
 /** The trial's discount, as the letters show it (trialDiscount, src/trial/offer.ts). */
 export interface TrialCouponView {
@@ -83,7 +84,9 @@ export function buildTrialNoticeEmail(input: {
   siteHost?: string | null;
   lang?: string;
 }): EmailMessage {
-  const { to, daysLeft, siteName, trialUntilIso, coupon, continueUrl, lang } = input;
+  const { to, daysLeft, siteName, trialUntilIso, coupon, lang } = input;
+  // ADR-XXXX (Próba riport): the report names where „Megrendelem" was pressed — the letter.
+  const continueUrl = withOrderFrom(input.continueUrl, "level");
   const siteHost = input.siteHost ?? null;
   const greeting = mailGreeting(lang, input.contactName, true);
   const n = String(daysLeft);
@@ -197,7 +200,9 @@ export function buildPurgeWarningEmail(input: {
   continueUrl: string;
   lang?: string;
 }): EmailMessage {
-  const { to, siteName, trialUntilIso, purgeIso, coupon, continueUrl, lang } = input;
+  const { to, siteName, trialUntilIso, purgeIso, coupon, lang } = input;
+  // ADR-XXXX (Próba riport): the report names where „Megrendelem" was pressed — the letter.
+  const continueUrl = withOrderFrom(input.continueUrl, "level");
   const greeting = mailGreeting(lang, input.contactName, true);
   const n = String(input.daysToPurge);
   const subject = T(lang, "{n} nap múlva töröljük a próba-honlap adatait – {site}", { n, site: siteName });

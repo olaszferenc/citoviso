@@ -1,0 +1,537 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Riport · Próba — terv (A/B/C)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-ink-brand:var(--citui-navy-900);
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d; --citui-info:var(--citui-cyan-500);
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+    /* Chart roles — every value is a brand token or a color-mix of tokens (ADR-0021).
+       Emphasis form by default: ONE hue + de-emphasis gray. Categorical only where the
+       series ARE the subject (device: 3 classes, direct-labelled). */
+    --viz-1:var(--citui-link-ink); --viz-2:var(--citui-cyan-500); --viz-3:var(--citui-navy-700);
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel));
+    --viz-grid:color-mix(in srgb, var(--citui-muted) 18%, transparent);
+    --ramp-1:var(--citui-cyan-400); --ramp-2:color-mix(in srgb, var(--citui-cyan-500) 55%, var(--citui-link-ink));
+    --ramp-3:var(--citui-link-ink); --ramp-4:color-mix(in srgb, var(--citui-link-ink) 55%, var(--citui-navy-900)); --ramp-5:var(--citui-navy-900);
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px} .bar .sp{flex:1}
+  .bar button{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .bar .grp{display:flex;gap:4px;align-items:center} .bar .grp span{font-size:11px;opacity:.7;margin-right:4px}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1100px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+
+  /* console shell bits (citui-console.css vocabulary) */
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink);font-weight:600}
+  h1{font:600 20px/1.2 var(--citui-font-text);letter-spacing:-.01em;margin:0 2px 10px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);margin:0 0 12px;overflow-x:auto}
+  .tabs button{appearance:none;border:0;background:none;padding:9px 14px;font:600 13px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs button.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+  .panel h2{margin:0 0 10px;font:600 15px/1.3 var(--citui-font-text);letter-spacing:-.01em;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .panel h2 .q{font-weight:500;color:var(--citui-muted);font-size:12.5px}
+  .mut{color:var(--citui-muted)} .small{font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--citui-radius-pill);font-size:11px;font-weight:600;border:1px solid var(--citui-line);background:var(--citui-surface-2);color:var(--citui-ink)}
+  .pill.ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft);border-color:color-mix(in srgb,var(--citui-ok) 30%,transparent)}
+  .pill.warn{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-warn) 40%,transparent)}
+  .pill.bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-bad) 35%,transparent)}
+  .pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+  /* filter row — one row above every chart (dataviz: filters in one row) */
+  .filt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel)}
+  .chips button{appearance:none;border:0;background:none;padding:7px 12px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:32px}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .filt select{min-height:32px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:0 12px;font:600 12px var(--citui-font-text);background:var(--citui-panel);color:var(--citui-ink)}
+  .filt .n{font-size:12px;color:var(--citui-muted);margin-left:auto}
+
+  /* KPI strip */
+  .kstrip{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}
+  .kbox{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;background:var(--citui-panel);min-width:0}
+  .kbox__t{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .kbox__v{font-family:var(--citui-font-display);font-weight:700;font-size:1.35rem;color:var(--citui-ink-brand);line-height:1.1;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kbox__s{font-size:11.5px;color:var(--citui-muted);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .delta{font-weight:700} .delta.up{color:var(--citui-ok-ink)} .delta.dn{color:var(--citui-bad-ink)} .delta.flat{color:var(--citui-muted)}
+  .spark{display:block;width:100%;height:26px;margin-top:6px}
+
+  .grid2{display:grid;grid-template-columns:1fr;gap:12px} .grid3{display:grid;grid-template-columns:1fr;gap:12px}
+  @container (min-width: 720px){
+    .kstrip{grid-template-columns:repeat(4,1fr)} .kstrip.k6{grid-template-columns:repeat(6,1fr)}
+    .grid2{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr 1fr}
+    .grid2 > .panel, .grid3 > .panel{margin:0}
+    .funnel-wrap{display:grid;grid-template-columns:3fr 2fr;gap:18px;align-items:start}
+    .hyp{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .exitmap{grid-template-columns:150px 1fr 150px}
+    .buyers{grid-template-columns:1fr 1fr}
+  }
+  @container (min-width: 980px){ .hyp{grid-template-columns:repeat(3,1fr)} }
+
+  /* horizontal funnel bars */
+  .fun{display:grid;gap:7px;margin:4px 0}
+  .fun .row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;cursor:default}
+  .fun .lab{font-size:12.5px;font-weight:600;line-height:1.2} .fun .lab small{display:block;font-weight:500;color:var(--citui-muted);font-size:11px}
+  .fun .trk{position:relative;height:28px;background:var(--viz-ghost);border-radius:4px;overflow:hidden}
+  .fun .trk i{position:absolute;inset:0 auto 0 0;border-radius:4px 0 0 4px;transition:width var(--citui-transition)}
+  .fun .trk b{position:absolute;left:8px;top:0;line-height:28px;font-size:12px;color:var(--citui-ink-inverse);font-variant-numeric:tabular-nums}
+  .fun .trk b.out{color:var(--citui-ink);left:auto;right:8px}
+  .fun .rate{position:absolute;right:6px;top:5px;line-height:18px;padding:0 6px;border-radius:9px;background:color-mix(in srgb,var(--citui-panel) 88%,transparent);font-size:11px;color:var(--citui-ink);font-variant-numeric:tabular-nums}
+  .fun .row:hover .trk{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .times{width:100%;border-collapse:collapse;font-size:12.5px} .times th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:4px 6px;border-bottom:1px solid var(--citui-line)}
+  .times td{padding:7px 6px;border-bottom:1px solid var(--citui-line);font-variant-numeric:tabular-nums} .times td.num{text-align:right;font-weight:600}
+  .times tr:last-child td{border-bottom:0}
+
+  /* tables */
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px} .tbl th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:6px;border-bottom:1px solid var(--citui-line);white-space:nowrap}
+  .tbl td{padding:7px 6px;border-bottom:1px solid var(--citui-line);font-variant-numeric:tabular-nums;vertical-align:middle} .tbl td.num{text-align:right} .tbl tr:last-child td{border-bottom:0}
+  .tbl tr.tot td{font-weight:700;background:var(--citui-surface)}
+  .tbl a{color:var(--citui-link-ink);text-decoration:none;font-weight:600} .tbl a:hover{text-decoration:underline}
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .mini{display:inline-block;height:9px;border-radius:3px;background:var(--viz-2);vertical-align:middle;margin-right:6px;min-width:2px}
+  .heat{display:inline-block;min-width:54px;padding:3px 7px;border-radius:5px;text-align:right;font-weight:600}
+
+  /* line chart */
+  .chart{position:relative} .chart svg{display:block;width:100%;height:auto}
+  .tip{position:absolute;pointer-events:none;background:var(--citui-navy-900);color:var(--citui-ink-inverse);font-size:11.5px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-110%);opacity:0;transition:opacity .12s;z-index:5;box-shadow:var(--citui-shadow-sm)}
+  .tip.on{opacity:1} .tip b{color:var(--citui-cyan-300)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--citui-muted);margin:6px 0 0}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+  .legend i.ln{height:2px;width:14px;border-radius:1px;vertical-align:3px}
+  .notes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .notes input{flex:1;min-width:160px;min-height:34px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:0 12px;font:13px var(--citui-font-text)}
+  .btn{appearance:none;min-height:34px;border-radius:var(--citui-radius-pill);padding:0 14px;font:600 12.5px var(--citui-font-text);cursor:pointer;border:1px solid var(--citui-navy-900);background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .btn.ghost{background:var(--citui-panel);color:var(--citui-ink-brand);border-color:var(--citui-line-strong)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ok-msg{font-size:12px;color:var(--citui-ok-ink);font-weight:600}
+
+  /* hypothesis cards (variant B) */
+  .hyp{display:grid;gap:10px;margin:0 0 12px}
+  .hcard{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;background:var(--citui-panel);display:grid;gap:6px}
+  .hcard .hq{font-weight:600;font-size:13.5px;line-height:1.3} .hcard .hmeas{font-size:11.5px;color:var(--citui-muted)}
+  .hcard .hv{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap} .hcard .hv b{font-family:var(--citui-font-display);font-size:1.5rem;color:var(--citui-ink-brand);font-variant-numeric:tabular-nums}
+  .meter{position:relative;height:8px;background:var(--viz-ghost);border-radius:4px;overflow:visible;margin:2px 0}
+  .meter i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--viz-1)} .meter em{position:absolute;top:-4px;width:2px;height:16px;background:var(--citui-ink);opacity:.55}
+  .meter em::after{content:attr(data-l);position:absolute;top:16px;left:-14px;font-size:10px;font-style:normal;color:var(--citui-muted);white-space:nowrap}
+
+  /* exit map */
+  .exitmap{display:grid;grid-template-columns:1fr;gap:6px;align-items:center}
+  .ex{display:grid;grid-template-columns:120px 1fr 56px;gap:8px;align-items:center;font-size:12.5px;padding:3px 0;cursor:default}
+  .ex .sec{font-weight:600;line-height:1.2} .ex .sec small{display:block;font-weight:500;color:var(--citui-muted);font-size:10.5px}
+  .ex .trk{position:relative;height:18px;background:var(--viz-ghost);border-radius:4px}
+  .ex .trk .reach{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--viz-1) 22%,var(--citui-panel));border-radius:4px}
+  .ex .trk .exit{position:absolute;left:0;top:4px;bottom:4px;background:var(--viz-1);border-radius:3px}
+  .ex .pc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums} .ex .pc small{display:block;font-weight:500;color:var(--citui-muted);font-size:10.5px}
+  .ex:hover .trk{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .ex.hot .pc{color:var(--citui-bad-ink)}
+
+  /* reasons */
+  .rs{display:grid;gap:6px} .rr{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;font-size:12.5px}
+  .rr .l{display:flex;gap:8px;align-items:center;min-width:0} .rr .l b{white-space:nowrap}
+  .rr .trk{flex:1;height:14px;background:var(--viz-ghost);border-radius:4px;position:relative;min-width:40px}
+  .rr .trk i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--viz-1)}
+  .rr .trk i.said{background:var(--viz-2)}
+  .rr .v{font-weight:700;font-variant-numeric:tabular-nums;min-width:64px;text-align:right} .rr .v small{color:var(--citui-muted);font-weight:500}
+  .conf{font-size:10.5px;color:var(--citui-muted)}
+  .calib td.hit{background:color-mix(in srgb,var(--citui-ok) 16%,var(--citui-panel));font-weight:700;color:var(--citui-ok-ink)}
+  .calib td.miss{color:var(--citui-muted)}
+
+  /* buyers */
+  .buyers{display:grid;grid-template-columns:1fr;gap:10px}
+  .bprof{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;background:var(--citui-surface)}
+  .bprof h3{margin:0 0 6px;font:600 13.5px var(--citui-font-text)} .bprof dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:12.5px}
+  .bprof dt{color:var(--citui-muted)} .bprof dd{margin:0;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* heatmap */
+  .hm{display:grid;grid-template-columns:34px repeat(17,1fr);gap:2px;font-size:10px;color:var(--citui-muted)}
+  .hm .c{aspect-ratio:1;border-radius:3px;background:var(--viz-ghost)} .hm .h{text-align:center} .hm .d{line-height:1;display:flex;align-items:center}
+
+  /* device bars */
+  .dev{display:grid;gap:8px} .dr{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;font-size:12.5px}
+  .dr .trk{position:relative;height:26px;background:var(--viz-ghost);border-radius:4px}
+  .dr .trk i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+  .dr .trk b{position:absolute;left:8px;line-height:26px;font-size:12px;color:var(--citui-ink-inverse)}
+  .dr .trk span{position:absolute;right:8px;line-height:26px;font-size:11.5px;color:var(--citui-muted)}
+
+  /* micro survey preview */
+  .survey{border:1px solid var(--citui-line);border-radius:14px;padding:14px 16px;background:var(--citui-surface);max-width:420px}
+  .survey p{margin:0 0 10px;font-size:13.5px;font-weight:600} .survey .opts{display:grid;gap:6px}
+  .survey .opts button{appearance:none;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);min-height:38px;padding:0 14px;font:500 13px var(--citui-font-text);color:var(--citui-ink);cursor:pointer;text-align:left}
+  .survey .opts button:hover{border-color:var(--citui-cyan-500)} .survey .opts button[aria-pressed="true"]{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:var(--citui-navy-900)}
+  .survey textarea{width:100%;min-height:56px;border:1px solid var(--citui-line);border-radius:10px;padding:8px 10px;font:13px var(--citui-font-text);margin-top:6px;display:none}
+  .survey textarea.on{display:block}
+  .survey .foot{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap} .survey .thanks{display:none;font-size:13px;color:var(--citui-ok-ink);font-weight:600}
+  .survey.done .opts,.survey.done .foot,.survey.done textarea{display:none} .survey.done .thanks{display:block}
+  .hide{display:none!important}
+  .vb{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-link-ink);margin:14px 2px 6px}
+
+  /* ── Próba tab additions ── */
+  .kstrip.k5{grid-template-columns:repeat(2,1fr)}
+  @container (min-width: 720px){ .kstrip.k5{grid-template-columns:repeat(5,1fr)} .ladder-wrap{display:grid;grid-template-columns:3fr 2fr;gap:18px;align-items:start} .tcards{grid-template-columns:1fr 1fr} }
+  @container (min-width: 980px){ .tcards{grid-template-columns:1fr 1fr 1fr} }
+  .lgd{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--citui-muted);margin:0 0 10px}
+  .lgd span{display:inline-flex;align-items:center;gap:5px}
+  .mk{display:inline-block;width:10px;height:10px;flex:none}
+  .mk.login{border-radius:50%;background:var(--viz-2)}
+  .mk.edit{border-radius:2px;background:var(--viz-1)}
+  .mk.site{border-radius:50%;background:var(--citui-panel);border:2px solid var(--viz-3);width:10px;height:10px}
+  .mk.order{background:var(--citui-ok-ink);transform:rotate(45deg) scale(.85);border-radius:1px}
+  .mk.stall{background:var(--citui-bad-ink);transform:rotate(45deg) scale(.85);border-radius:1px}
+  .mk.notice{width:12px;height:2px;background:var(--citui-muted);border-radius:1px}
+
+  /* trial rows (variant A) */
+  .trows{display:grid;gap:0}
+  .trow{display:grid;grid-template-columns:1fr;gap:6px 12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--citui-line);cursor:pointer}
+  .trow:last-child{border-bottom:0}
+  .trow:hover{background:var(--citui-surface)}
+  .trow .who{min-width:0} .trow .who b{display:block;font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .trow .who small{color:var(--citui-muted);font-size:11.5px}
+  .trow .strip-w{grid-column:1 / -1}
+  .trow .where{font-size:12px;line-height:1.3;text-align:left;display:flex;gap:8px;align-items:center;flex-wrap:wrap} .trow .where small{color:var(--citui-muted);font-size:11px}
+  .strip{display:grid;grid-template-columns:repeat(14,1fr);gap:2px}
+  .strip .c{position:relative;height:26px;background:var(--viz-ghost);border-radius:3px;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:2px;padding:2px}
+  .strip .c.fut{background:repeating-linear-gradient(135deg,transparent 0 4px,var(--viz-grid) 4px 5px);}
+  .strip .c.today{outline:2px solid var(--citui-cyan-500);outline-offset:-1px}
+  .strip .c.after{background:transparent;border:1px dashed var(--citui-line)}
+  .strip .c .mk{width:7px;height:7px}
+  .strip .c .mk.site{width:7px;height:7px;border-width:1.5px}
+  .strip .c .mk.notice{width:9px;height:2px}
+  .dayax{display:grid;grid-template-columns:repeat(14,1fr);gap:2px;font-size:9.5px;color:var(--citui-muted);text-align:center;margin-top:2px}
+  .detail{grid-column:1 / -1;background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px;margin:4px 0 2px;cursor:default}
+  .tl{list-style:none;margin:0;padding:0;display:grid;gap:0}
+  .tl li{display:grid;grid-template-columns:94px 14px 1fr;gap:8px;align-items:start;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--citui-line)}
+  .tl li:last-child{border-bottom:0}
+  .tl li time{color:var(--citui-muted);font-variant-numeric:tabular-nums;font-size:11.5px}
+  .tl li .mk{margin-top:4px}
+  .tl li.gap{color:var(--citui-muted);font-style:italic}
+  .detail .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .detail .summ{font-size:12.5px;margin:0 0 8px}
+
+  /* ladder (variant B) */
+  .lad{display:grid;gap:7px}
+  .lad .row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;cursor:pointer;border-radius:6px;padding:2px}
+  .lad .row.sel{background:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-panel))}
+  .lad .lab{font-size:12.5px;font-weight:600;line-height:1.2} .lad .lab small{display:block;font-weight:500;color:var(--citui-muted);font-size:11px}
+  .lad .trk{position:relative;height:28px;background:var(--viz-ghost);border-radius:4px;overflow:hidden}
+  .lad .trk i{position:absolute;inset:0 auto 0 0;background:var(--viz-1);border-radius:4px 0 0 4px;transition:width var(--citui-transition)}
+  .lad .trk b{position:absolute;left:8px;top:0;line-height:28px;font-size:12px;color:var(--citui-ink-inverse);font-variant-numeric:tabular-nums}
+  .lad .trk b.out{color:var(--citui-ink)}
+  .lad .trk .st{position:absolute;right:6px;top:5px;line-height:18px;padding:0 6px;border-radius:9px;background:color-mix(in srgb,var(--citui-panel) 88%,transparent);font-size:11px;font-variant-numeric:tabular-nums}
+  .lad .trk .st.hot{color:var(--citui-bad-ink);font-weight:700}
+  .lad .row:hover .trk{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .cols{display:grid;grid-template-columns:repeat(14,1fr);gap:3px;align-items:end;height:110px;margin-top:22px}
+  .cols .cb{position:relative;background:var(--viz-1);border-radius:3px 3px 0 0;min-height:2px}
+  .cols .cb span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:10px;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+  .stuck{display:grid;gap:6px;margin-top:6px}
+  .stuck .s{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--citui-line);border-radius:10px;padding:8px 10px;font-size:12.5px;cursor:pointer;background:var(--citui-panel)}
+  .stuck .s:hover{border-color:var(--citui-cyan-500)}
+  .stuck .s small{display:block;color:var(--citui-muted);font-size:11.5px}
+
+  /* action cards (variant C) */
+  .grp-h{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);margin:14px 2px 8px;display:flex;gap:8px;align-items:center}
+  .tcards{display:grid;grid-template-columns:1fr;gap:10px}
+  .tcard{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;background:var(--citui-panel);display:grid;gap:8px;min-width:0}
+  .tcard.call{border-left:4px solid var(--citui-bad-ink)}
+  .tcard.stuckc{border-left:4px solid var(--citui-warn)}
+  .tcard.okc{border-left:4px solid var(--citui-ok)}
+  .tcard .hd{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .tcard .hd b{font-size:13.5px;line-height:1.25} .tcard .hd small{display:block;color:var(--citui-muted);font-size:11.5px}
+  .tcard .why{font-size:12.5px;line-height:1.4}
+  .tcard dl{margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+  .tcard dl div{background:var(--citui-surface);border-radius:8px;padding:6px 8px}
+  .tcard dt{font-size:10.5px;color:var(--citui-muted)} .tcard dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
+  .tcard .acts{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* mock-side visitor panel */
+  .vis{display:grid;gap:7px}
+  .vis .r{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;font-size:12.5px}
+  .vis .r .lab{font-weight:600;line-height:1.2} .vis .r .lab small{display:block;font-weight:500;color:var(--citui-muted);font-size:11px}
+  .vis .trk{position:relative;height:24px;background:var(--viz-ghost);border-radius:4px;overflow:hidden}
+  .vis .trk i{position:absolute;inset:0 auto 0 0;background:var(--viz-1)} .vis .trk i.b{background:var(--viz-2)}
+  .vis .trk b{position:absolute;left:8px;line-height:24px;font-size:12px;color:var(--citui-ink-inverse)}
+  .vis .trk em{position:absolute;right:8px;line-height:24px;font-size:11.5px;font-style:normal;color:var(--citui-ink)}
+  a.btn{text-decoration:none;display:inline-flex;align-items:center}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:9px 14px;border-radius:10px;font-size:12.5px;opacity:0;transition:opacity .2s;z-index:80;pointer-events:none;max-width:90vw}
+  .toast.on{opacity:1}
+  @container (min-width: 720px){ .trow{grid-template-columns:190px 1fr 210px;gap:6px 14px} .trow .who{grid-column:1;grid-row:1} .trow .strip-w{grid-column:2;grid-row:1} .trow .where{grid-column:3;grid-row:1;display:block;text-align:right} .trow .where small{display:block} }
+  .empty{padding:14px;text-align:center;color:var(--citui-muted);font-size:12.5px}
+</style></head><body>
+<div class="bar"><b>Riport · Próba — terv</b>
+  <div class="grp"><span>Méret</span><button id="szM">Mobil 390px</button><button id="szD" class="on">Asztali</button></div>
+  <div class="grp"><span>Változat</span><button data-v="H" class="on">A+B — hibrid</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
+  <div class="sp"></div></div>
+<p class="note" id="vnote"></p>
+
+<div class="stage" id="stage">
+  <div class="crumb">Riport › <b>Próba</b></div>
+  <h1>Megkeresés-riport</h1>
+  <div class="tabs"><button>Tölcsér</button><button>Viselkedés</button><button>Mock</button><button class="on">Próba</button></div>
+
+  <div class="filt">
+    <div class="chips" id="range"><button data-d="7">7 nap</button><button data-d="30" class="on">30 nap</button><button data-d="90">90 nap</button><button data-d="0">Összes</button></div>
+    <div class="chips" id="stat"><button data-s="all" class="on">Mind</button><button data-s="active">Fut</button><button data-s="converted">Megrendelte</button><button data-s="lapsed">Lejárt</button></div>
+    <span class="n" id="fnote"></span>
+  </div>
+
+  <div class="kstrip k5" id="kpis"></div>
+
+  <!-- B: in-trial ladder + where they stop -->
+  <section id="vB" class="hide">
+    <div class="panel" id="ladPanel"><h2>Meddig jut el a próbázó? <span class="q">— a szám: LEGALÁBB eddig eljutott; koppints egy lépcsőre, és alatta látod, ki állt meg ott</span></h2>
+      <div class="ladder-wrap">
+        <div><div class="lad" id="ladder"></div><div id="stuckBox"></div></div>
+        <div><table class="times"><thead><tr><th>Mennyi idő alatt</th><th style="text-align:right">Medián</th><th style="text-align:right">Leglassabb</th></tr></thead><tbody id="ltimes"></tbody></table>
+          <p class="mut small" style="margin:8px 0 0">A próba indulásától számolva. Mediánt nézünk: egy kivétel az átlagot elvinné.</p></div>
+      </div>
+    </div>
+  <!-- A: one row per trial, 14-day strip -->
+  <section id="vA">
+    <div class="panel"><h2>Próbák napról napra <span id="rowFilt"></span><span class="q">— mit csinált a próba 14 napja alatt; koppints egy sorra az idővonalért</span></h2>
+      <div class="lgd" id="lgdA"></div>
+      <div class="trows" id="trows"></div>
+    </div>
+  </section>
+
+    <div class="panel" id="dayPanel"><h2>A próba melyik napján dolgoznak? <span class="q">— hány próbázó adott életjelet (belépés vagy mentés) az adott napon</span></h2>
+      <div class="cols" id="dayCols"></div>
+      <div class="dayax" id="dayAx"></div>
+      <p class="mut small" style="margin:10px 0 0" id="dayNote"></p>
+    </div>
+  </section>
+
+  <!-- C: grouped by what the operator should do -->
+  <section id="vC" class="hide">
+    <div id="tcards"></div>
+  </section>
+
+  <!-- shared: mock-side visitor split (point 3) -->
+  <div class="panel"><h2>Mock: ugyanaz tér vissza, vagy továbbküldték? <span class="q">— új mérés: névtelen látogató-jel, csak ezen a linken (Tölcsér lap, Visszatérés panel kiegészítése)</span></h2>
+    <div class="vis" id="vis"></div>
+    <p class="mut small" style="margin:10px 0 0">A jel egy véletlen azonosító a böngészőben, csak a mock-linkhez. Nevet, IP-t nem tárol, más oldalon nem látszik. Amit ma „visszatérésnek” számolunk, abban benne van a továbbküldött link is: ez a panel szétválasztja.</p>
+  </div>
+
+  <div class="panel"><h2>Mit mér a próba alatt <span class="q">— új események, a lap ezekből számol</span></h2>
+    <table class="tbl"><thead><tr><th>Jel</th><th>Mikor rögzül</th></tr></thead><tbody>
+      <tr><td><span class="mk login"></span> Belépés</td><td>minden belépéskor (link vagy jelszó), nem csak az utolsó</td></tr>
+      <tr><td><span class="mk edit"></span> Mentés</td><td>Szövegek · Fotók · Elérhetőség · Modulok · Foglalások mentése (melyik fül)</td></tr>
+      <tr><td><span class="mk site"></span> Saját oldal</td><td>a próbázó megnyitja az élő oldalát (a saját megnyitása, nem vendég)</td></tr>
+      <tr><td><span class="mk order"></span> Megrendelem</td><td>a gomb megnyomása (admin-sáv vagy levél), a rendelés lépései, elküldés, fizetés</td></tr>
+      <tr><td><span class="mk stall"></span> Elakadt</td><td>a rendelést elkezdte, de 1 órán belül nem küldte el: az utolsó lépés neve</td></tr>
+      <tr><td><span class="mk notice"></span> Levél</td><td>a lejárat előtti értesítők (3 nap, 1 nap) kimentek</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────── sample data (MINTA, not real leads) ───────── */
+const DAY = 86400000, NOW = new Date("2026-10-26T15:00:00").getTime(), LEN = 14;
+const at = (startDay, d, hh, mm) => { const t = new Date(NOW - startDay * DAY); t.setHours(0, 0, 0, 0); return t.getTime() + d * DAY + (hh * 60 + (mm || 0)) * 60000; };
+// e: [dayOfTrial, hh, mm, type, text]  type: start|login|edit|site|order|stall|paid|notice|lapse
+const RAW = [
+  { name: "Szőlőhegy Vendégház", town: "Badacsony", ago: 13, status: "converted", e: [[0,9,40,"start","Próba indult a mockról"],[0,9,52,"login","Belépés (levélbeli link)"],[0,10,5,"edit","Fotók: 6 kép sorrendje"],[0,10,18,"edit","Szövegek: bemutatkozás"],[0,10,21,"site","Megnézte a saját oldalát"],[2,20,11,"login","Belépés (jelszó)"],[2,20,25,"edit","Elérhetőség: telefon"],[5,8,30,"login","Belépés"],[5,8,44,"edit","Modulok: foglalás bekapcsolva"],[9,7,0,"notice","Levél: 5 nap van hátra"],[10,19,2,"login","Belépés"],[10,19,6,"order","Megrendelem (admin-sáv)"],[10,19,9,"order","Rendelés: 2. lépés (számlázás)"],[10,19,13,"order","Rendelés elküldve"],[10,19,20,"paid","Fizetve"]] },
+  { name: "Fenyves Apartman", town: "Hévíz", ago: 12, status: "active", e: [[0,14,3,"start","Próba indult a mockról"],[0,14,20,"login","Belépés (levélbeli link)"],[0,14,31,"edit","Fotók: 2 kép törölve"],[11,7,0,"notice","Levél: 3 nap van hátra"]] },
+  { name: "Napsugár Panzió", town: "Keszthely", ago: 12, status: "active", e: [[0,11,15,"start","Próba indult a mockról"],[11,7,0,"notice","Levél: 3 nap van hátra"]] },
+  { name: "Tölgyfa Ház", town: "Zalakaros", ago: 12, status: "active", e: [[0,16,40,"start","Próba indult a mockról"],[0,16,58,"login","Belépés"],[0,17,10,"edit","Szövegek: szobaleírás"],[1,9,5,"login","Belépés"],[1,9,30,"edit","Fotók: 4 új kép"],[1,9,41,"site","Megnézte a saját oldalát"],[4,21,0,"login","Belépés"],[4,21,12,"edit","Modulok: árak"],[8,18,22,"login","Belépés"],[11,7,0,"notice","Levél: 3 nap van hátra"],[11,12,4,"order","Megrendelem (levélből)"],[11,12,7,"order","Rendelés: 2. lépés (számlázás)"],[11,13,7,"stall","Elakadt a 2. lépésnél (számlázási adatok)"]] },
+  { name: "Liliom Vendégház", town: "Gyenesdiás", ago: 11, status: "active", e: [[0,10,0,"start","Próba indult a mockról"],[0,10,9,"login","Belépés (levélbeli link)"],[0,10,12,"site","Megnézte a saját oldalát"],[6,19,40,"login","Belépés"],[6,19,43,"site","Megnézte a saját oldalát"]] },
+  { name: "Kis Rét Apartman", town: "Balatonmáriafürdő", ago: 9, status: "active", e: [[0,8,20,"start","Próba indult a mockról"],[0,8,31,"login","Belépés"],[0,8,50,"edit","Szövegek: bemutatkozás"],[2,13,0,"login","Belépés"],[2,13,14,"edit","Fotók: borítókép"],[3,20,5,"login","Belépés"],[3,20,30,"edit","Foglalások: elérhetőség"],[5,9,1,"login","Belépés"],[5,9,10,"site","Megnézte a saját oldalát"],[7,22,0,"login","Belépés"],[7,22,18,"edit","Modulok: étkezés"],[8,21,30,"login","Belépés"],[8,21,33,"order","Megrendelem (admin-sáv)"]] },
+  { name: "Hársfa Szállás", town: "Tihany", ago: 5, status: "converted", e: [[0,12,0,"start","Próba indult a mockról"],[0,12,6,"login","Belépés"],[0,12,25,"edit","Fotók: 3 kép"],[0,12,40,"site","Megnézte a saját oldalát"],[1,8,10,"login","Belépés"],[1,8,14,"order","Megrendelem (admin-sáv)"],[1,8,19,"order","Rendelés elküldve"],[1,8,26,"paid","Fizetve"]] },
+  { name: "Rózsakert Vendégház", town: "Siófok", ago: 3, status: "active", e: [[0,15,30,"start","Próba indult a mockról"],[0,15,41,"login","Belépés"],[0,15,55,"edit","Elérhetőség: e-mail"],[2,10,2,"login","Belépés"],[2,10,15,"edit","Szövegek: környék"]] },
+  { name: "Platán Apartmanok", town: "Fonyód", ago: 20, status: "lapsed", e: [[0,9,0,"start","Próba indult a mockról"],[0,9,20,"login","Belépés"],[0,9,40,"edit","Fotók: 5 kép"],[3,18,0,"login","Belépés"],[3,18,9,"edit","Szövegek: bemutatkozás"],[11,7,0,"notice","Levél: 3 nap van hátra"],[13,7,0,"notice","Levél: holnap lejár"],[14,0,5,"lapse","A próba lejárt"]] },
+];
+const T = RAW.map((r, i) => {
+  const start = at(r.ago, 0, 0); const ev = r.e.map(([d, h, m, t, x]) => ({ d, ts: at(r.ago, d, h, m), t, x }));
+  return { id: i, ...r, start: ev[0].ts, ev, day: Math.min(LEN, Math.floor((NOW - at(r.ago, 0, 0)) / DAY) + 1) };
+});
+const fmt = (ts) => { const d = new Date(ts); return `${d.getMonth() + 1}. ${d.getDate()}. ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const md = (ts) => { const d = new Date(ts); return `${d.getMonth() + 1}. ${d.getDate()}.`; };
+const has = (tr, t, re) => tr.ev.some((e) => e.t === t && (!re || re.test(e.x)));
+const STAGES = [
+  { k: "start", l: "Próba indult", s: "az űrlap elküldve", f: (t) => true },
+  { k: "login", l: "Belépett", s: "legalább egyszer", f: (t) => has(t, "login") },
+  { k: "edit", l: "Szerkesztett", s: "legalább egy mentés", f: (t) => has(t, "edit") },
+  { k: "site", l: "Megnézte az oldalát", s: "a saját élő oldalát", f: (t) => has(t, "site") },
+  { k: "click", l: "Megrendelem", s: "megnyomta a gombot", f: (t) => has(t, "order") },
+  { k: "sent", l: "Rendelés elküldve", s: "a rendelő végén", f: (t) => has(t, "order", /elküldve/) },
+  { k: "paid", l: "Fizetett", s: "Barion: sikeres", f: (t) => has(t, "paid") },
+];
+const reached = (t) => { let n = 0; for (const s of STAGES) { if (s.f(t)) n++; else break; } return n; };
+const lastSig = (t) => [...t.ev].reverse().find((e) => e.t === "login" || e.t === "edit" || e.t === "site" || e.t === "order");
+const quietDays = (t) => { const l = lastSig(t); return Math.floor((NOW - (l ? l.ts : t.start)) / DAY); };
+// one sentence: where it stands (same rule in every variant)
+function verdict(t) {
+  if (t.status === "converted") return { k: "ok", s: "Megrendelte", sub: `a próba ${t.ev.find((e) => e.t === "paid").d + 1}. napján` };
+  if (t.status === "lapsed") return { k: "lapsed", s: "Lejárt, nem rendelt", sub: `utolsó életjel a ${lastSig(t).d + 1}. napon` };
+  const st = t.ev.find((e) => e.t === "stall"); if (st) return { k: "stuck", s: "Rendelésben elakadt", sub: st.x.replace(/^Elakadt /, "") };
+  if (has(t, "order")) return { k: "stuck", s: "Megrendelem után megállt", sub: quietDays(t) === 0 ? "ma" : `${quietDays(t)} napja` };
+  if (!has(t, "login")) return { k: "call", s: "Nem lépett be", sub: `${t.day}. nap, a belépő levél kiment` };
+  const q = quietDays(t);
+  if (q >= 3) return { k: "call", s: has(t, "edit") ? "Dolgozott rajta, aztán csend" : "Belépett, nem szerkesztett", sub: `${q} napja nincs életjel` };
+  return { k: "active", s: "Dolgozik rajta", sub: `utolsó életjel ${q === 0 ? "ma" : q + " napja"}` };
+}
+const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const dur = (ms) => ms == null ? "–" : ms < 3600000 ? `${Math.round(ms / 60000)} perc` : ms < 2 * DAY ? `${(ms / 3600000).toFixed(1).replace(".", ",")} óra` : `${(ms / DAY).toFixed(1).replace(".", ",")} nap`;
+
+/* ───────── state ───────── */
+let V = "H", RANGE = 30, STAT = "all", OPEN = null, SEL = null;
+const $ = (id) => document.getElementById(id);
+function rows() { return T.filter((t) => (RANGE === 0 || NOW - t.start <= RANGE * DAY) && (STAT === "all" || t.status === STAT)); }
+function toast(s) { const el = $("toast"); el.textContent = s; el.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove("on"), 2400); }
+
+const NOTES = {
+  H: "<b>A+B — hibrid (a tulaj választása, 2026-10-26).</b> Felül a B lépcsője: meddig jutnak el a próbán belül, és hol állnak meg a legtöbben. Koppints egy lépcsőre: alatta az A idővonal-listája csak azokat mutatja, akik ott álltak meg; egy sorra koppintva kinyílik a próba teljes idővonala. Legalul: a próba melyik napján dolgoznak.",
+  A: "<b>A — idővonal-első.</b> Minden próba egy sor: a 14 nap egy sávon, rajta a belépések, mentések és a Megrendelem. Jobbra egy mondat: hol tart, hol állt meg. Kevés próbánál (ma 7) ez a legolvashatóbb — a százalék még semmit nem mond. Koppints egy sorra.",
+  B: "<b>B — lépcső-első.</b> A Tölcsér lap mintájára: meddig jutnak el a próbán belül (belépés → mentés → saját oldal → Megrendelem → elküldve → fizetett), és melyik lépcsőn állnak meg a legtöbben. Koppints egy lépcsőre: alatta, kik álltak meg ott. Sok próbánál erősebb, ma kevés hozzá az adat.",
+  C: "<b>C — teendő-első.</b> Nem riport, hanem munkalista: a próbák aszerint csoportosítva, mit kell tenni velük (hívd fel · elakadt a rendelésben · dolgozik rajta · lezárult). Ugyanaz az adat, de a kérdés „kit hívjak ma?”.",
+};
+
+function renderKpis(rs) {
+  const n = rs.length, c = (f) => rs.filter(f).length;
+  const firstLogin = rs.map((t) => { const l = t.ev.find((e) => e.t === "login"); return l ? l.ts - t.start : null; }).filter((x) => x != null);
+  const K = [
+    ["Próba indult", n, "a kiválasztott időszakban"],
+    ["Belépett", `${c((t) => has(t, "login"))} / ${n}`, "legalább egyszer"],
+    ["Átlag belépés", n ? (rs.reduce((a, t) => a + t.ev.filter((e) => e.t === "login").length, 0) / n).toFixed(1).replace(".", ",") : "–", "próbánként"],
+    ["Megrendelemig jutott", `${c((t) => has(t, "order"))} / ${n}`, "megnyomta a gombot"],
+    ["Megrendelte", `${c((t) => t.status === "converted")} / ${n}`, `1. belépés medián: ${dur(median(firstLogin))}`],
+  ];
+  $("kpis").innerHTML = K.map(([a, b, s]) => `<div class="kbox"><div class="kbox__t">${a}</div><div class="kbox__v">${b}</div><div class="kbox__s">${s}</div></div>`).join("");
+  $("fnote").textContent = `${n} próba · csak KIKÜLDÖTT linkről indult próba (teszt nem számít) · MINTA`;
+}
+
+const LG = [["login", "belépés"], ["edit", "mentés"], ["site", "saját oldal"], ["order", "Megrendelem / rendelés"], ["stall", "elakadt"], ["notice", "levél"]];
+function legend() { return LG.map(([k, l]) => `<span><i class="mk ${k}"></i>${l}</span>`).join(""); }
+function strip(t) {
+  let h = "";
+  for (let d = 0; d < LEN; d++) {
+    const evs = t.ev.filter((e) => e.d === d && e.t !== "start" && e.t !== "lapse");
+    const kinds = [...new Set(evs.map((e) => e.t === "paid" ? "order" : e.t))];
+    const fut = t.status === "active" && d >= t.day; const today = t.status === "active" && d === t.day - 1;
+    const after = t.status === "converted" && d > t.ev.find((e) => e.t === "paid").d;
+    h += `<div class="c${fut ? " fut" : ""}${today ? " today" : ""}${after ? " after" : ""}" title="${d + 1}. nap${evs.length ? ": " + evs.map((e) => e.x).join(" · ") : ""}">${kinds.map((k) => `<i class="mk ${k}"></i>`).join("")}</div>`;
+  }
+  return `<div class="strip">${h}</div>`;
+}
+function axis() { let h = ""; for (let d = 1; d <= LEN; d++) h += `<span>${d === 1 || d === 7 || d === 14 ? d + "." : ""}</span>`; return `<div class="dayax">${h}</div>`; }
+function detail(t, inCard) {
+  const v = verdict(t); let prev = null, li = "";
+  for (const e of t.ev) {
+    if (prev && e.ts - prev > 2 * DAY) li += `<li class="gap"><time></time><span></span><span>${Math.floor((e.ts - prev) / DAY)} nap csend</span></li>`;
+    const mk = e.t === "paid" ? "order" : e.t === "start" || e.t === "lapse" ? "notice" : e.t;
+    li += `<li><time>${fmt(e.ts)}</time><i class="mk ${mk}"></i><span>${e.d + 1}. nap · ${e.x}</span></li>`; prev = e.ts;
+  }
+  if (t.status === "active" && NOW - prev > 2 * DAY) li += `<li class="gap"><time></time><span></span><span>${Math.floor((NOW - prev) / DAY)} napja csend (ma: ${t.day}. nap)</span></li>`;
+  return `<div class="detail" data-stop><p class="summ"><b>${v.s}</b> — ${v.sub}. ${t.ev.filter((e) => e.t === "login").length} belépés, ${t.ev.filter((e) => e.t === "edit").length} mentés.</p><ul class="tl">${li}</ul>
+    <div class="acts"><a class="btn ghost" href="#" data-lead="${t.id}">Lead-lap</a>${!inCard && (v.k === "call" || v.k === "stuck") ? `<a class="btn" href="#" data-call="${t.id}">Felhívom</a>` : ""}</div></div>`;
+}
+
+function renderA(rs) {
+  $("lgdA").innerHTML = legend();
+  if (V !== "H") $("rowFilt").innerHTML = "";
+  if (!rs.length) { $("trows").innerHTML = `<div class="empty">${SEL != null && V === "H" ? "Ezen a lépcsőn senki nem állt meg." : "Ebben az időszakban nem indult próba."}</div>`; return; }
+  const ord = [...rs].sort((a, b) => b.start - a.start);
+  $("trows").innerHTML = ord.map((t) => {
+    const v = verdict(t); const pill = { ok: "ok", lapsed: "", stuck: "warn", call: "bad", active: "" }[v.k];
+    return `<div class="trow" data-t="${t.id}"><div class="who"><b>${t.name}</b><small>${t.town} · indult ${md(t.start)} · ${t.status === "active" ? t.day + ". nap" : t.status === "converted" ? "megrendelte" : "lejárt"}</small></div>
+      <div class="where"><span class="pill ${pill}"><span class="d"></span>${v.s}</span><small>${v.sub}</small></div>
+      <div class="strip-w">${strip(t)}${axis()}</div>${OPEN === t.id ? detail(t) : ""}</div>`;
+  }).join("");
+}
+
+function renderB(rs) {
+  const n = rs.length || 1; const counts = STAGES.map((s, i) => rs.filter((t) => reached(t) > i).length);
+  const stopAt = STAGES.map((s, i) => rs.filter((t) => reached(t) === i + 1 && t.status !== "converted").length);
+  const hot = stopAt.indexOf(Math.max(...stopAt.slice(0, 6)));
+  $("ladder").innerHTML = STAGES.map((s, i) => {
+    const w = counts[i] / n * 100;
+    return `<div class="row${SEL === i ? " sel" : ""}" data-st="${i}"><div class="lab">${s.l}<small>${s.s}</small></div>
+      <div class="trk"><i style="width:${w}%"></i><b class="${w < 18 ? "out" : ""}" style="${w < 18 ? `left:calc(${w}% + 8px)` : ""}">${counts[i]}</b>${i < 6 && stopAt[i] ? `<span class="st${i === hot ? " hot" : ""}">${stopAt[i]} itt állt meg</span>` : ""}</div></div>`;
+  }).join("");
+  if (V === "H") {
+    $("stuckBox").innerHTML = `<p class="mut small" style="margin:10px 2px 0">${SEL == null ? "Koppints egy lépcsőre: az alábbi lista csak azokat mutatja, akik ott álltak meg." : "A lista szűrve. Koppints újra a lépcsőre a teljes listához."}</p>`;
+    $("rowFilt").innerHTML = SEL == null ? "" : `<button class="pill warn" data-clear style="cursor:pointer">Itt álltak meg: ${STAGES[SEL].l} ×</button>`;
+  } else if (SEL != null) {
+    const who = rs.filter((t) => reached(t) === SEL + 1 && t.status !== "converted");
+    $("stuckBox").innerHTML = `<div class="grp-h">Itt álltak meg: ${STAGES[SEL].l} (${who.length})</div><div class="stuck">${who.length ? who.map((t) => { const v = verdict(t); return `<div class="s" data-jump="${t.id}"><span><b>${t.name}</b><small>${t.town} · ${v.sub}</small></span><span class="pill ${v.k === "call" ? "bad" : v.k === "stuck" ? "warn" : ""}">${v.s}</span></div>`; }).join("") : `<div class="empty">Ezen a lépcsőn senki nem állt meg.</div>`}</div>`;
+  } else $("stuckBox").innerHTML = `<p class="mut small" style="margin:10px 2px 0">Koppints egy lépcsőre: alatta megjelenik, ki állt meg ott.</p>`;
+  const span = (f, g) => rs.map((t) => { const a = f(t), b = g(t); return a != null && b != null ? b - a : null; }).filter((x) => x != null);
+  const first = (t, k, re) => { const e = t.ev.find((x) => x.t === k && (!re || re.test(x.x))); return e ? e.ts : null; };
+  const L = [["Indulás → 1. belépés", span((t) => t.start, (t) => first(t, "login"))], ["Indulás → 1. mentés", span((t) => t.start, (t) => first(t, "edit"))], ["Indulás → Megrendelem", span((t) => t.start, (t) => first(t, "order"))], ["Megrendelem → fizetés", span((t) => first(t, "order"), (t) => first(t, "paid"))]];
+  $("ltimes").innerHTML = L.map(([l, a]) => `<tr><td>${l}<br><small class="mut">${a.length} próbából</small></td><td class="num">${dur(median(a))}</td><td class="num">${a.length ? dur(Math.max(...a)) : "–"}</td></tr>`).join("");
+  const per = Array.from({ length: LEN }, (_, d) => rs.filter((t) => t.ev.some((e) => e.d === d && (e.t === "login" || e.t === "edit"))).length);
+  const mx = Math.max(1, ...per);
+  $("dayCols").innerHTML = per.map((v, d) => `<div class="cb" style="height:${v / mx * 100}%" title="${d + 1}. nap: ${v} próbázó"><span>${v}</span></div>`).join("");
+  $("dayAx").innerHTML = Array.from({ length: LEN }, (_, d) => `<span>${d + 1}.</span>`).join("");
+  const mid = per.slice(3, 10).reduce((a, b) => a + b, 0), early = per[0] + per[1] + per[2];
+  $("dayNote").textContent = rs.length ? `Az első 3 napon ${early} életjel, a 4–10. napon összesen ${mid}: a próba közepe csendes. Ide érdemes egy segítő levelet vagy hívást tenni.` : "";
+}
+
+function renderC(rs) {
+  const G = [["call", "Hívd fel", "call", "nincs életjel 3+ napja, vagy be sem lépett"], ["stuck", "Elakadt a rendelésben", "stuckc", "elkezdte, nem fejezte be"], ["active", "Dolgozik rajta", "", "nincs teendő"], ["ok", "Megrendelte", "okc", ""], ["lapsed", "Lejárt", "", ""]];
+  let h = "";
+  for (const [k, title, cls, sub] of G) {
+    const g = rs.filter((t) => verdict(t).k === k); if (!g.length) continue;
+    h += `<div class="grp-h">${title} · ${g.length}${sub ? ` <span style="text-transform:none;letter-spacing:0;font-weight:500">— ${sub}</span>` : ""}</div><div class="tcards">` + g.map((t) => {
+      const v = verdict(t); const lg = t.ev.filter((e) => e.t === "login").length, ed = t.ev.filter((e) => e.t === "edit").length;
+      return `<div class="tcard ${cls}"><div class="hd"><span><b>${t.name}</b><small>${t.town} · indult ${md(t.start)}</small></span><span class="pill">${t.status === "active" ? `${t.day}/14. nap` : t.status === "converted" ? "megrendelte" : "lejárt"}</span></div>
+        <div class="why"><b>${v.s}</b> — ${v.sub}.</div>
+        <dl><div><dt>Belépés</dt><dd>${lg}</dd></div><div><dt>Mentés</dt><dd>${ed}</dd></div><div><dt>Megrendelem</dt><dd>${has(t, "order") ? "igen" : "–"}</dd></div></dl>
+        ${strip(t)}
+        ${OPEN === t.id ? detail(t, true) : ""}
+        <div class="acts"><button class="btn ghost" data-open="${t.id}">${OPEN === t.id ? "Idővonal bezárása" : "Idővonal"}</button>${k === "call" || k === "stuck" ? `<a class="btn" href="#" data-call="${t.id}">Felhívom</a>` : ""}</div></div>`;
+    }).join("") + `</div>`;
+  }
+  $("tcards").innerHTML = h || `<div class="panel empty">Ebben az időszakban nem indult próba.</div>`;
+}
+
+function renderVis() {
+  const R = [["1 látogatás", "egyszer nyitotta meg", 41, 0], ["Visszatért, ugyanaz", "ugyanaz a böngésző 2+ alkalommal", 24, 0], ["Továbbküldve", "2+ különböző böngésző a linken", 0, 13]];
+  const mx = 41;
+  $("vis").innerHTML = R.map(([l, s, a, b]) => `<div class="r"><div class="lab">${l}<small>${s}</small></div><div class="trk"><i class="${b ? "b" : ""}" style="width:${(a || b) / mx * 100}%"></i><b>${a || b}</b><em>${["próba: 2%", "próba: 12%", "próba: 15%"][R.findIndex((x) => x[0] === l)]}</em></div></div>`).join("") +
+    `<p class="small" style="margin:6px 0 0">Ma a „Visszatér-e?” kártya <b>37</b> visszatérőt mutat — ebből <b>13</b> valójában továbbküldött link (családtag, társtulaj). MINTA.</p>`;
+}
+
+function render() {
+  const rs = rows();
+  renderKpis(rs);
+  $("vB").classList.toggle("hide", V !== "B" && V !== "H"); $("vC").classList.toggle("hide", V !== "C");
+  $("vA").classList.toggle("hide", V !== "A" && V !== "H"); $("ladPanel").classList.toggle("hide", V === "A"); $("dayPanel").classList.toggle("hide", V === "A");
+  if (V === "A") $("vB").classList.remove("hide");
+  $("vnote").innerHTML = NOTES[V] + " Minden szám MINTA (9 kitalált szállás), a szűrők működnek.";
+  if (V === "A") renderA(rs); else if (V === "B") { $("vA").classList.add("hide"); renderB(rs); } else if (V === "H") { renderB(rs); renderA(SEL == null ? rs : rs.filter((t) => reached(t) === SEL + 1 && t.status !== "converted")); } else renderC(rs);
+  renderVis();
+}
+
+/* ───────── wiring ───────── */
+document.querySelectorAll("[data-v]").forEach((b) => b.onclick = () => { V = b.dataset.v; OPEN = null; SEL = null; document.querySelectorAll("[data-v]").forEach((x) => x.classList.toggle("on", x === b)); render(); });
+$("range").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; RANGE = +b.dataset.d; [...$("range").children].forEach((x) => x.classList.toggle("on", x === b)); render(); };
+$("stat").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; STAT = b.dataset.s; SEL = null; [...$("stat").children].forEach((x) => x.classList.toggle("on", x === b)); render(); };
+const stage = $("stage");
+function size(m) { stage.classList.toggle("m", m); $("szM").classList.toggle("on", m); $("szD").classList.toggle("on", !m); }
+$("szM").onclick = () => size(true); $("szD").onclick = () => size(false);
+document.addEventListener("click", (e) => {
+  const lead = e.target.closest("[data-lead]"), call = e.target.closest("[data-call]");
+  if (lead) { e.preventDefault(); toast("A valódi lapon: a lead-lapra visz (ügyfél-kártya, ADR-0386)."); return; }
+  if (call) { e.preventDefault(); const t = T[+call.dataset.call]; toast(`Hívás rögzítve: ${t.name}. A lead-lapon jegyzetként jelenik meg, a kártya „Hívva ma” lesz.`); return; }
+  if (e.target.closest("[data-stop]")) return;
+  const op = e.target.closest("[data-open]"); if (op) { const id = +op.dataset.open; OPEN = OPEN === id ? null : id; render(); return; }
+  const row = e.target.closest(".trow"); if (row) { const id = +row.dataset.t; OPEN = OPEN === id ? null : id; render(); return; }
+  if (e.target.closest("[data-clear]")) { SEL = null; render(); return; }
+  const st = e.target.closest("[data-st]"); if (st) { const i = +st.dataset.st; SEL = SEL === i ? null : i; render(); return; }
+  const j = e.target.closest("[data-jump]"); if (j) { V = "A"; OPEN = +j.dataset.jump; document.querySelectorAll("[data-v]").forEach((x) => x.classList.toggle("on", x.dataset.v === "A")); render(); document.querySelector(`.trow[data-t="${OPEN}"]`)?.scrollIntoView({ block: "center" }); }
+});
+if (window.matchMedia("(max-width: 600px)").matches) size(true);
+render();
+</script>
+</body></html>

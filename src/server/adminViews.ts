@@ -530,7 +530,9 @@ const SHELL_SCRIPT = (lang: string): string =>
   `function paint(){var t=theme();$$('[data-theme-toggle]').forEach(function(b){b.hidden=false;var i=b.querySelector('[data-ic]');if(i)i.innerHTML=t==='dark'?ICO.sun:ICO.moon;` +
   `$$('[data-when]',b).forEach(function(s){s.hidden=s.getAttribute('data-when')!==t})});` +
   `var r=document.querySelector('[data-rail]');if(r)r.innerHTML=d.classList.contains('is-rail')?ICO.exp:ICO.col}` +
-  `document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
+  // ADR-XXXX (Próba riport): the owner opening their own site is a signal — one beacon, the
+  // link itself is untouched (no preventDefault, no redirect hop).
+  `document.addEventListener('click',function(e){if(e.target.closest('[data-site-link]')){try{navigator.sendBeacon('/admin/activity')}catch(x){}}var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
   `var rb=e.target.closest('[data-rail]');if(rb){e.preventDefault();d.classList.toggle('is-rail');try{localStorage.setItem('citui-admin-rail',d.classList.contains('is-rail')?'1':'0')}catch(x){}paint();return}` +
   `var tg=e.target.closest('[data-subtg]');if(tg){e.preventDefault();var o=!tg.parentNode.classList.contains('is-open');subnav(o);return}` +
   `var ml=e.target.closest('[data-subnav]>a');if(ml)subnav(true);` +
@@ -4817,7 +4819,7 @@ function overviewSection(
   const activeCount = counted.live;
   const billedActiveCount = counted.billed;
   const addr = siteUrl
-    ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
+    ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener" data-site-link>${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
     : previewUrl
       ? `<a href="${esc(previewUrl)}" target="_blank" rel="noopener">${T(lang, "privát előnézet")}</a>`
       : `<span class="citui-hint">–</span>`;
@@ -6699,7 +6701,7 @@ export function adminDashboard(
   // README ③: „Oldal" (view) in the top bar — under a freeze it says PREVIEW, because
   // the guest gets a 503 while the owner gets the working page (frozen-guest-view-check).
   const viewBtn = previewUrl
-    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 14)} ${
+    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener" data-site-link>${ic("external", 14)} ${
         subFrozen ? T(lang, "Előnézet — csak Ön látja") : T(lang, "Oldal")
       }</a>`
     : "";

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-proba-belseje-merve-riport-proba-ful.md) — A próba belseje mérve: tenant-aktivitás napló és a Riport „Próba” füle
 - [ADR-0406](decisions/0406-tobb-terv-egy-kovetett-linken-a-lead-a-sajat.md) — Több terv egy követett linken: a lead a saját linkjén vált 2–3 jóváhagyott terv között
 - [ADR-0405](decisions/0405-automata-megkereses-kikuldo-a-go-lista-az.md) — Automata megkeresés-kiküldő: a go-lista az adatbázisban, éles időzítő üríti
 - [ADR-0404](decisions/0404-a-minta-szolgaltataslista-csak-a-forras-sajat.md) — A minta-szolgáltatáslista csak a forrás saját kínálatából; közeli idegen és tagadott tétel ki

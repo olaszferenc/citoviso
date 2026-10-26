@@ -71,6 +71,8 @@ import { findScenario } from "../src/elek/fkParse.js";
 import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
 import { reportBehaviourPage, reportFunnelPage, reportMockPage } from "../src/console/reportViews.js";
 import { DEFAULT_TARGETS, foldMockReport, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
+import { foldTrialReport, type RawTrial } from "../src/console/trialReport.js";
+import { reportTrialPage } from "../src/console/trialReportViews.js";
 import { TEMPLATES as RP_TEMPLATES } from "../src/engine/templates.js";
 import { inferExitReason, signalsFromEvents } from "../src/analytics/exitReason.js";
 import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
@@ -2174,6 +2176,35 @@ const rpMock = reportMockPage(
 );
 await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", "assets", "hu", "mock.png"));
 await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", "assets", "hu", "mock-list.png"), undefined, "#rpm-list");
+// The Próba tab (assets/design-refs/console/proba-riport/, A+B hybrid) has its own entry: the
+// top (KPIs + the ladder) and the trial rows. Sample trials, folded without a DB — the same
+// stories the frozen plan shows (worked on it · stopped after „Megrendelem” · never logged in…).
+{
+  const D = 86_400_000;
+  const at = (daysAgo: number, h: number, m = 0): Date => {
+    const d = new Date(rpNow.getTime() - daysAgo * D);
+    d.setUTCHours(h - 2, m, 0, 0);
+    return d;
+  };
+  type A = { at: Date; kind: string; detail: Record<string, unknown> };
+  const a = (kind: string, when: Date, detail: Record<string, unknown> = {}): A => ({ at: when, kind, detail });
+  const raw = (i: number, name: string, town: string, ago: number, status: "active" | "converted" | "lapsed", activity: A[], extra: Partial<RawTrial> = {}): RawTrial => ({
+    trialId: `t${i}`, leadId: `00000000-0000-0000-0000-00000000000${i}`, name, address: `86${i}0 ${town}, Fő u. ${i}.`,
+    startedAt: at(ago, 10), status, convertedAt: null, lapsedAt: null, activity, orderSentAt: [], notices: [], ...extra,
+  });
+  const trials: RawTrial[] = [
+    raw(1, "Rózsakert Vendégház", "Siófok", 3, "active", [a("admin_open", at(3, 10, 11)), a("save", at(3, 10, 25), { area: "elerhetoseg" }), a("admin_open", at(1, 9, 2)), a("save", at(1, 9, 15), { area: "szovegek" })]),
+    raw(2, "Hársfa Szállás", "Tihany", 5, "converted", [a("admin_open", at(5, 10, 6)), a("save", at(5, 10, 25), { area: "fotok" }), a("site_view", at(5, 10, 40)), a("admin_open", at(4, 8, 10)), a("order_open", at(4, 8, 14), { from: "admin" })], { convertedAt: at(4, 8, 26), orderSentAt: [at(4, 8, 19)] }),
+    raw(3, "Kis Rét Apartman", "Balatonmáriafürdő", 9, "active", [a("admin_open", at(9, 10, 11)), a("save", at(9, 10, 30), { area: "szovegek" }), a("admin_open", at(7, 13)), a("save", at(7, 13, 14), { area: "fotok" }), a("admin_open", at(4, 9, 1)), a("site_view", at(4, 9, 10)), a("admin_open", at(1, 21, 30)), a("order_open", at(1, 21, 33), { from: "admin" })]),
+    raw(4, "Liliom Vendégház", "Gyenesdiás", 11, "active", [a("login", at(11, 10, 8), { via: "link" }), a("admin_open", at(11, 10, 9)), a("site_view", at(11, 10, 12)), a("admin_open", at(5, 19, 40))]),
+    raw(5, "Tölgyfa Ház", "Zalakaros", 12, "active", [a("admin_open", at(12, 10, 58)), a("save", at(12, 11, 10), { area: "szovegek" }), a("admin_open", at(11, 9, 5)), a("save", at(11, 9, 30), { area: "fotok" }), a("site_view", at(11, 9, 41)), a("admin_open", at(8, 21)), a("save", at(8, 21, 12), { area: "modulok" }), a("order_open", at(1, 12, 4), { from: "level" }), a("checkout", at(1, 12, 7), { step: "billing" })], { notices: [{ at: at(1, 7), step: "t3" }] }),
+    raw(6, "Fenyves Apartman", "Hévíz", 12, "active", [a("admin_open", at(12, 10, 20)), a("save", at(12, 10, 31), { area: "fotok" })], { notices: [{ at: at(1, 7), step: "t3" }] }),
+    raw(7, "Napsugár Panzió", "Keszthely", 12, "active", [], { notices: [{ at: at(1, 7), step: "t3" }] }),
+  ];
+  const sample = foldTrialReport(trials, at(30, 0), 30, "all", null, rpNow, [], new Set());
+  await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial.png"));
+  await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial-list.png"), undefined, "#rp-trials");
+}
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.
 await shootConsole(

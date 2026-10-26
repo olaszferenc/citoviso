@@ -125,7 +125,8 @@ export async function trialAdminState(tenantId: string, now = new Date()): Promi
     totalDays: Math.max(1, trialDaysLeft(started, until)),
     untilIso: budapestIsoDay(until),
     discount: await trialDiscount(row.id, now),
-    continueUrl: base && row.token ? `${base}/p/${row.token}/folytatas` : null,
+    // ADR-XXXX (Próba riport): `?from=admin` — the report names where „Megrendelem" was pressed.
+    continueUrl: base && row.token ? `${base}/p/${row.token}/folytatas?from=admin` : null,
     purgeIso: warned ? effectivePurgeDay(until, budapestIsoDay(new Date(warn!.at as unknown as string))) : purgeDay(until),
     purgeWarned: warned,
     modules: row.status === "lapsed" ? await trialGrantedModules(tenantId) : [],

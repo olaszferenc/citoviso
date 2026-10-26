@@ -204,6 +204,9 @@ export interface ConfiguratorManifest {
     /** ADR-0322 ④/B: the micro-survey answer endpoint (/p/<token>/feedback). */
     readonly feedbackUrl?: string;
   };
+  /** ADR-XXXX (Próba riport): the trial continuation's own beacon (/p/<token>/trial-event) —
+   *  the order's opening and the checkout steps; `from` = where „Megrendelem" was pressed. */
+  readonly trialTrack?: { readonly url: string; readonly from: "admin" | "level" | null };
   /** Domain step (ADR-0020): platform subdomain default + custom-domain upsell. */
   readonly domain: {
     /** The default host under the platform domain (e.g. "sissi.citoviso.com"). */
@@ -336,6 +339,9 @@ export interface ConfiguratorOpts {
     /** ADR-0322 ④/B: the micro-survey answer endpoint (/p/<token>/feedback). */
     readonly feedbackUrl?: string;
   };
+  /** ADR-XXXX (Próba riport): the trial continuation's own beacon (/p/<token>/trial-event) —
+   *  the order's opening and the checkout steps; `from` = where „Megrendelem" was pressed. */
+  readonly trialTrack?: { readonly url: string; readonly from: "admin" | "level" | null };
   /** ADR-0036: buyer language for the configurator UI; absent/hu → empty i18n map. */
   readonly lang?: string;
   /**
@@ -433,6 +439,7 @@ export async function buildManifest(
     renewal,
     requestUrl: opts.requestUrl ?? `/configure/${artifactId}/request`,
     ...(opts.track ? { track: opts.track } : {}),
+    ...(opts.trialTrack ? { trialTrack: opts.trialTrack } : {}),
     groups: GROUP_LABELS,
     i18n: await packForClientAsync(opts.lang),
     pricing: {

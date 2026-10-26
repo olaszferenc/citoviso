@@ -195,6 +195,8 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   // ADR-0380: the booking-setup helper's cost rows (no question text) go with the site.
   { table: "tenant_ai_call", where: `site_id IN ${SITES}` },
   { table: "module_entitlement", where: "tenant_id = $1" },
+  // ADR-XXXX: the owner's own admin activity (Próba riport) goes with the tenant.
+  { table: "tenant_activity", where: "tenant_id = $1" },
   { table: "tenant_user", where: "tenant_id = $1" },
   { table: "login_token", where: "tenant_user_id IN (SELECT id FROM tenant_user WHERE tenant_id = $1)" },
   { table: "tenant_message", where: "tenant_id = $1" },

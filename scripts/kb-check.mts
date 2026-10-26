@@ -80,6 +80,8 @@ const VIEW_GROUPS = {
     // Riport-modul (ADR-0322): a Tölcsér és a Viselkedés lap feliratai — saját nézet-fájl,
     // saját korpusz-hely (feedback_guard_scope_is_the_doctrine).
     "src/console/reportViews.ts",
+    // ADR-XXXX: the Riport „Próba” tab is its own view file — its labels are quoted by the KB.
+    "src/console/trialReportViews.ts",
     // ADR-0360: the redesigned Árazás page — its new panels (Csomagok, Modulok, Saját domain,
     // the overview, the save bar) are rendered HERE; views.ts only assembles them.
     "src/console/pricingPage.ts",
@@ -117,6 +119,7 @@ const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
     "console.duplicates",
     "console.report",
     "console.report_mock",
+    "console.report_trial",
     "console.pricing",
     "console.settings",
     "console.outreach_draft",

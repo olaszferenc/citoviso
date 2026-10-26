@@ -886,6 +886,14 @@ if [ -f scripts/client-visibility-check.mts ] && \
   echo "[pre-commit] client-visibility-check (próba + foglalás a konzolon, értesítés egyszer)…"
   npx tsx scripts/client-visibility-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A PRÓBA BELSEJE (scripts/trial-report-check.mts — ADR-XXXX, terv assets/design-refs/console/proba-riport/):
+# minden admin-mentés útvonala fülhöz tartozik, a valódi admin HTTP-n naplóz (megnyitás egyszer, mentés füllel,
+# saját oldal), a próba-történetek (csend, elakadás, fizetett, nem mért) és a Riport „Próba” fül egy szabályból.
+if [ -f scripts/trial-report-check.mts ] && \
+   changed_files | grep -qE '^src/analytics/(tenantActivity|orderFrom)\.ts$|^src/console/trialReport(Views)?\.ts$|^src/server/(public|adminViews)\.ts$|^src/email/trialEmail\.ts$|^src/trial/(admin|retention)\.ts$|^assets/runtime/cit-configurator\.js$|^scripts/trial-report-check\.mts$'; then
+  echo "[pre-commit] trial-report-check (a próba belseje mérve, a Próba fül ugyanabból számol)…"
+  npx tsx scripts/trial-report-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A bukott számla riaszt és újrakiadható — sosem kétszer. Mérve élesen 2026-09-30: a fizetett
 # 97 Ft-os rendelés számlája „Számlázz error 378”-cal elbukott, és csak egy failed sor maradt.
 # Mock számlázó (a Számlázz szamlaKulsoAzon-viselkedésével), saját fixtúra, a tick a saját id-kra szűkítve.

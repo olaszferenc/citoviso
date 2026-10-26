@@ -37,6 +37,51 @@
   // Fire-and-forget beacons; measurement must never break the page. No cookies:
   // the identity is the outreach token, the session is the server-issued viewId.
   var TRACK = CFG.track || null;
+  // ADR-XXXX (Próba riport): the trial continuation (/p/<t>/folytatas) carries no mock
+  // tracking — the visitor is a customer. It reports only that the owner opened the order
+  // (on the first human sign, like ADR-0291: mail scanners fetch the link too) and the
+  // checkout's steps, so the report can say where an order stopped.
+  var TRIAL_TRACK = CFG.trialTrack || null;
+  var TRIAL_STEPS = { billing_step_open: 1, billing_invalid: 1, order_intent_submitted: 1, order_send_failed: 1 };
+  function trialBeacon(type) {
+    if (!TRIAL_TRACK) return;
+    try {
+      var body = JSON.stringify({ type: type, from: TRIAL_TRACK.from || null });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(TRIAL_TRACK.url, new Blob([body], { type: "application/json" }));
+      } else {
+        fetch(TRIAL_TRACK.url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: body,
+          keepalive: true,
+        }).catch(function () {});
+      }
+    } catch (e) {
+      /* measurement must never break the page */
+    }
+  }
+  if (TRIAL_TRACK) {
+    var trialOpened = false;
+    var trialOpen = function () {
+      if (trialOpened) return;
+      trialOpened = true;
+      trialBeacon("order_open");
+    };
+    ["scroll", "wheel", "touchstart", "pointerdown", "keydown"].forEach(function (ev) {
+      window.addEventListener(ev, trialOpen, { passive: true, once: true });
+    });
+    var trialVisible = 0;
+    var trialTimer = setInterval(function () {
+      if (trialOpened) return clearInterval(trialTimer);
+      if (document.visibilityState !== "visible") return;
+      trialVisible += 1;
+      if (trialVisible >= 5) {
+        clearInterval(trialTimer);
+        trialOpen();
+      }
+    }, 1000);
+  }
   // ADR-0291 (owner's ruling B, 2026-10-01): the server-side GET records NOTHING — mail-link
   // scanners and link previews fetch the page without a person. The visit is recorded HERE,
   // on the first human sign (scroll, wheel, touch, pointer, key) or after 5 s of a visible
@@ -44,6 +89,7 @@
   var VIEW_ID = null;
   var pending = [];
   function track(type, payload) {
+    if (TRIAL_TRACK && TRIAL_STEPS[type]) trialBeacon(type);
     if (!TRACK) return;
     if (!VIEW_ID) {
       if (pending.length < 50) pending.push([type, payload]);

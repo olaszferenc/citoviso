@@ -246,6 +246,7 @@ import {
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import { asksChildren, chosenPlan, clampChildren, countedChildAge, MEAL_PLAN_IDS, mealLines, mealPlanLabel, minorsTaxNote, offeredPlans, parseMealsForm, readMeals, taxPayers } from "../tenant/meals.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
+import { recordSiteView, recordTenantUserActivity, watchAdminRequest } from "../analytics/tenantActivity.js";
 import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { distanceKm } from "../events/gates.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
@@ -2570,6 +2571,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // sem tud véletlenül Pixelt kapni. Innen a saját webshopunk lapjai jönnek, KIVÉVE
   // azt a néhány útvonalat, amely ugyaninnen szolgálja ki a tenant VENDÉGÉT.
   markAudience(res, GUEST_PAGE_ROUTES.some((re) => re.test(pathname)) ? "guest" : "own");
+  // ADR-XXXX (Próba riport): the owner's admin opens and saves, recorded after the answer.
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) watchAdminRequest(req, res, pathname);
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   // A RESOLVED one that got here is a mail-link/asset pass-through (above) — it is
   // claimed, and the platform handler below is exactly what the mail pointed at.
@@ -2637,6 +2640,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       );
     }
     setSession(res, uid);
+    // ADR-XXXX: every login is a row (last_login_at keeps only the latest).
+    recordTenantUserActivity(uid, "login", { via: "password" });
     // Back to where the link pointed (only ever inside /admin — safeAdminNext).
     return redirect(res, next ?? "/admin");
   }
@@ -2682,9 +2687,19 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         return send(res, 400, setPasswordPage({ token, username: v.username, siteName: v.siteName }, lang, r.error));
       }
       setSession(res, r.tenantUserId);
+      recordTenantUserActivity(r.tenantUserId, "login", { via: "link" });
       console.log(`[auth] jelszó beállítva egyszeri linkkel · ${v.username}`);
       return send(res, 200, passwordSetDonePage(lang, r.firstSet, v.username));
     }
+  }
+  // POST /admin/activity — ADR-XXXX: the admin's „Oldal" / address link was clicked (a
+  // sendBeacon from SHELL_SCRIPT). The owner looking at their own site is a trial signal;
+  // the site host cannot see it (the session lives on this host only).
+  if (req.method === "POST" && pathname === "/admin/activity") {
+    const session = await currentTenant(req);
+    if (session) recordSiteView(session.tenantId);
+    res.writeHead(204);
+    return void res.end();
   }
   // POST /admin/password — tenant password change (Fiók card).
   if (req.method === "POST" && pathname === "/admin/password") {

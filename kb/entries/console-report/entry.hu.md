@@ -4,18 +4,20 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-10-08
+updated: 2026-10-26
 ---
 
-A Riport három lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
+A Riport négy lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
 megkeresés a kiküldéstől a fizetésig, és javul-e hétről hétre; a **„Viselkedés”** azt, hogy
 milyen eszközről nézik, hol lépnek ki, és — ahol meg tudjuk mondani — miért; a **„Mock”** azt,
-hogy melyik mock-sablon mennyire vonzó.
+hogy melyik mock-sablon mennyire vonzó; a **„Próba”** azt, hogy mit csinálnak az ingyenes próba
+alatt, és hol áll meg a rendelés.
 
 ## Hol találod
 
-A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselkedés”** vagy **„Mock”**. A lapok
-tetején ugyanaz a fülsor: **„Tölcsér”** · **„Viselkedés”** · **„Mock”**. A szürke **„Pénzügy”** és
+A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselkedés”**, **„Mock”** vagy
+**„Próba”**. A lapok tetején ugyanaz a fülsor: **„Tölcsér”** · **„Viselkedés”** · **„Mock”** ·
+**„Próba”**. A szürke **„Pénzügy”** és
 **„Tenantok”** fül még nem nyílik — a 2. és a 3. kör ide érkezik, addig csak a helyét mutatja.
 
 ![Képernyőkép: a Tölcsér lap telefonon — szűrősor és az első kérdés-kártyák](assets/hu/screen.png)
@@ -153,6 +155,11 @@ leiratkozottnál és a már vásárlónál.
 
 A Mock fülnek saját súgója van: a lapon a cím melletti **?** ikon azt nyitja meg
 („Riport — Mock: melyik mock mennyire vonzó”).
+
+## Próba — mit csinálnak a próba alatt
+
+A Próba fülnek saját súgója van: a lapon a cím melletti **?** ikon azt nyitja meg
+(„Riport — Próba: mit csinálnak a próba alatt”).
 
 ## Honnan jönnek a számok?
 

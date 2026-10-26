@@ -445,7 +445,7 @@ try {
   check("próba-Modulok: nincs „megvett”, nincs sor-díj / kosár, egy „Megrendelem — csomag és modulok” → /folytatas",
     !modHtml.includes("modult megvett") && modHtml.includes("A próbában minden modul be van kapcsolva") &&
       !modHtml.includes("A sorok melletti díj") && !modHtml.includes("adm-modform") && !modHtml.includes("Kosárba teszem") &&
-      modHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Megrendelem — csomag és modulok</a>`));
+      modHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas?from=admin">Megrendelem — csomag és modulok</a>`));
   // Elek3 K4 (proba-c README 3): during the trial the Modulok tab sells nothing one by one —
   // not even the one-off multilang generation; the purchase path refuses it as well.
   {
@@ -484,7 +484,7 @@ try {
   check("A1: a sáv dátuma egy kifejezés, zárójel a zárójelben nélkül",
     /\(\d{4}\. [^()]+ \d{1,2}\., [a-zőöüóéáúűí]+ig\)/.test(stripHead) && !/\)-ig\)/.test(stripHead), stripHead.slice(0, 120));
   check(`${TRIAL_WARN_DAYS} napnál több van hátra → nem warn`, calmHtml.includes("data-trial-strip") && !calmHtml.includes("adm-trial--warn"));
-  check("a „Megrendelem” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas">Megrendelem</a>`));
+  check("a „Megrendelem” a /p/<t>/folytatas-ra mutat", calmHtml.includes(`href="https://citoviso.test/p/${a.token}/folytatas?from=admin">Megrendelem</a>`));
   // ADR-0354 "C" (mock proba-c (a)): the strip names the ONE discount and its ONE deadline;
   // the pre-C coupon sentence („…kedvezményt kap…") is not said for a C trial.
   check("C: a sáv „Ha a próba végéig megrendeli: Próba-kedvezmény (−{p}%) az első díjból.” (A2)",

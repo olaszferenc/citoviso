@@ -3269,6 +3269,69 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rpm-legend { font-size: 11.5px; color: var(--citui-muted); margin-top: 8px; }
 .rpm-legend .rpm-dots i { vertical-align: -1px; }
 
+/* ── Riport · Próba tab (ADR-XXXX, frozen plan: assets/design-refs/console/proba-riport/, A + B hybrid) ──
+   The ladder on top (rows are links: tap = only the trials that stopped there), the trial rows
+   below as <details> (the strip in the summary, the timeline inside). Markers: shape + colour, never
+   colour alone — circle = visit, square = save, ring = own site, diamond = order, dash = letter. */
+.rp-kstrip--5 { grid-template-columns: repeat(2, 1fr); }
+.rp-lad { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.con a.rp-lad__row { color: var(--citui-ink); text-decoration: none; border-radius: 6px; padding: 2px; }
+.con a.rp-lad__row:hover { text-decoration: none; }
+.rp-lad__row { padding: 2px; }
+.rp-lad__row--on { background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-panel)); }
+.rp-frow.rp-lad__row, .rp-frow.rp-vis__row { grid-template-columns: 150px 1fr; }
+.rp-tr__hot { color: var(--citui-bad-ink); font-weight: 700; }
+.rp-tr__lgd { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--citui-muted); margin: 0 0 8px; }
+.rp-tr__lgd span { display: inline-flex; align-items: center; gap: 5px; }
+.rp-mk { display: inline-block; width: 10px; height: 10px; flex: none; vertical-align: -1px; }
+.rp-mk--login { border-radius: 50%; background: var(--citui-cyan-500); }
+.rp-mk--save { border-radius: 2px; background: var(--citui-link-ink); }
+.rp-mk--site { border-radius: 50%; background: var(--citui-panel); border: 2px solid var(--citui-navy-700); }
+.rp-mk--order { background: var(--citui-ok-ink); transform: rotate(45deg) scale(.85); border-radius: 1px; }
+.rp-mk--stall { background: var(--citui-bad-ink); transform: rotate(45deg) scale(.85); border-radius: 1px; }
+.rp-mk--notice { width: 12px; height: 2px; background: var(--citui-muted); border-radius: 1px; vertical-align: 3px; }
+.rp-trs { display: grid; }
+.rp-tr { border-bottom: 1px solid var(--citui-line); }
+.rp-tr:last-child { border-bottom: 0; }
+.rp-tr > summary { list-style: none; display: grid; grid-template-columns: 1fr; gap: 6px 14px; align-items: center; padding: 10px 4px; cursor: pointer; }
+.rp-tr > summary::-webkit-details-marker { display: none; }
+.rp-tr > summary:hover { background: var(--citui-surface); }
+.rp-tr__who { min-width: 0; }
+.rp-tr__who b { display: block; font-size: 13px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-tr__who small, .rp-tr__where small { color: var(--citui-muted); font-size: 11.5px; }
+.rp-tr__where { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.rp-tr__empty { padding: 12px 4px; }
+.rp-strip { display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; }
+.rp-strip__c { height: 26px; border-radius: 3px; background: color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel)); display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 2px; padding: 2px; }
+.rp-strip__c .rp-mk { width: 7px; height: 7px; }
+.rp-strip__c .rp-mk--site { border-width: 1.5px; }
+.rp-strip__c .rp-mk--notice { width: 9px; height: 2px; }
+.rp-strip__c--fut { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--citui-muted) 18%, transparent) 4px 5px); }
+.rp-strip__c--after { background: transparent; border: 1px dashed var(--citui-line); }
+.rp-strip__c--today { outline: 2px solid var(--citui-cyan-500); outline-offset: -1px; }
+.rp-strip__ax { display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; font-size: 9.5px; color: var(--citui-muted); text-align: center; margin-top: 2px; }
+.rp-tl { background: var(--citui-surface); border: 1px solid var(--citui-line); border-radius: 10px; padding: 10px 12px; margin: 0 0 10px; }
+.rp-tl__sum { font-size: 12.5px; margin: 0 0 8px; }
+.rp-tl ul { list-style: none; margin: 0; padding: 0; }
+.rp-tl li { display: grid; grid-template-columns: 94px 14px 1fr; gap: 8px; align-items: start; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed var(--citui-line); }
+.rp-tl li:last-child { border-bottom: 0; }
+.rp-tl li time { color: var(--citui-muted); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.rp-tl li .rp-mk { margin-top: 4px; }
+.rp-tl__gap { color: var(--citui-muted); font-style: italic; }
+.rp-tl__acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rp-cols { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; align-items: end; height: 128px; }
+.rp-cols__c { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; height: 100%; }
+.rp-cols__c b { font-size: 10px; font-weight: 500; color: var(--citui-muted); text-align: center; font-variant-numeric: tabular-nums; }
+.rp-cols__c i { display: block; background: var(--citui-link-ink); border-radius: 3px 3px 0 0; min-height: 2px; max-height: calc(100% - 16px); }
+.rp-cols__ax { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; font-size: 10px; color: var(--citui-muted); text-align: center; margin-top: 2px; }
+@container (min-width: 720px) {
+  .rp-kstrip--5 { grid-template-columns: repeat(5, 1fr); }
+  .rp-lad { grid-template-columns: 3fr 2fr; gap: 18px; align-items: start; }
+  .rp-tr > summary { grid-template-columns: 190px 1fr 210px; }
+  .rp-tr__where { display: block; text-align: right; }
+  .rp-tr__where small { display: block; margin-top: 2px; }
+}
+
 /* ── Árazás és értékesítés — redesign (ADR-0360 ⑦; frozen plan
    assets/design-refs/console/pricing-redesign/, A). Konzol-keret + riport-panelek;
    the existing .pr-field/.pr-input/.pr-esc/.con-sell pieces are reused inside. ── */

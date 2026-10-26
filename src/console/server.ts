@@ -384,6 +384,9 @@ import {
   proxiedPhotoUrl,
   verifyPhotoSignature,
 } from "./photoProxy.js";
+import { CHECKOUT_STEPS, orderOpenFrom, recordTenantActivity } from "../analytics/tenantActivity.js";
+import { getTrialReport, TRIAL_STATUS_FILTERS, type TrialStatusFilter } from "./trialReport.js";
+import { reportTrialPage } from "./trialReportViews.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
@@ -2555,6 +2558,17 @@ async function handle(
     const m = await getMockReport(days, ch, labels);
     return send(res, 200, reportMockPage(m, { tpl: url.searchParams.get("tpl") || null, q: (url.searchParams.get("q") ?? "").trim().slice(0, 80), sort, n }));
   }
+  // GET /report/trial — the Próba tab (ADR-XXXX, frozen plan: design-refs/console/proba-riport/).
+  // Query: days ∈ {7,30,90,0} (default 30), st ∈ TRIAL_STATUS_FILTERS, stage = a ladder step.
+  if (method === "GET" && path === "/report/trial") {
+    const daysRaw = Number(url.searchParams.get("days") ?? "30");
+    const days = ([7, 30, 90, 0] as const).includes(daysRaw as ReportDays) ? (daysRaw as ReportDays) : 30;
+    const stRaw = url.searchParams.get("st") ?? "all";
+    const st: TrialStatusFilter = (TRIAL_STATUS_FILTERS as readonly string[]).includes(stRaw) ? (stRaw as TrialStatusFilter) : "all";
+    const stageRaw = url.searchParams.get("stage");
+    const stage = stageRaw !== null && /^[0-5]$/.test(stageRaw) ? Number(stageRaw) : null;
+    return send(res, 200, reportTrialPage(await getTrialReport(days, st, stage)));
+  }
   // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.
   if (method === "POST" && path === "/report/note") {
     const body = await readBody(req);
@@ -3551,6 +3565,27 @@ async function handle(
     }
     return send(res, 204, "");
   }
+  // POST /p/:token/trial-event — ADR-XXXX (Próba riport): the trial continuation's beacon.
+  // JSON {type, from}: „order_open" (the owner opened the order — first human sign) or a
+  // checkout step. Only for a continuable trial; anything else is silently dropped (204).
+  const pTrialEvMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/trial-event$/.exec(pPath);
+  if (method === "POST" && pTrialEvMatch) {
+    const b = (await readJson(req)) as { type?: unknown; from?: unknown };
+    const type = typeof b.type === "string" ? b.type : "";
+    const step = CHECKOUT_STEPS[type];
+    if (type !== "order_open" && !step) return send(res, 204, "");
+    const pr = await db
+      .selectFrom("prospect")
+      .select("lead_id")
+      .where("token", "=", pTrialEvMatch[1])
+      .executeTakeFirst();
+    const trial = pr ? await continuableTrialForLead(pr.lead_id) : null;
+    if (trial) {
+      if (step) recordTenantActivity(trial.tenantId, "checkout", { step });
+      else recordTenantActivity(trial.tenantId, "order_open", { from: orderOpenFrom(typeof b.from === "string" ? b.from : null) });
+    }
+    return send(res, 204, "");
+  }
   // POST /p/:token/trial — ADR-0342: the card-less free trial (no payment, no invoice).
   // JSON {name, email, phone, aszfAccepted, photoRightsAccepted, viewId?} → {ok, …} or
   // {ok:false, error:<TrialError>}; the page maps the code to its own wording.
@@ -3670,6 +3705,8 @@ async function handle(
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(p.artifactPath, p.artifactInputs)));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pContMatch[1]}/request`,
+        // ADR-XXXX (Próba riport): the order's opening + checkout steps, recorded by the page.
+        trialTrack: { url: `/p/${pContMatch[1]}/trial-event`, from: orderOpenFrom(url.searchParams.get("from")) },
         // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
         subLabel: await plannedSiteSlug(pf.leadId),
         renewalLeadId: pf.leadId,
