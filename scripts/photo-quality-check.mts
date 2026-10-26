@@ -477,6 +477,18 @@ const konig = [
 ].map((url) => ({ url, sourceUrl: konigSrc }));
 const konigKept = withoutNeighbourFolders(konig);
 check("Hévíz (Kőnig): Szent Kristóf + egy második szomszéd egyszerre kiesik, a 6 saját marad", konigKept.length === 6 && konigKept.every((p) => p.url.includes("/21112_")), konigKept.map((p) => p.url));
+// MG22-B, Balatongyörök: a pool ad with bathers (11323, „balatongyorok-3.jpg”) under Vadrózsa,
+// Tea Apartman and a third lead — the same strip. Villa Gracia c9d1fcbd as stored on prod:
+// 18 own (20864) + four neighbours, the pool ad among them.
+const gracia = [
+  ...Array.from({ length: 18 }, (_, i) => `${HM}/20864_1e81d9dd/fullHd/balatongyorok-villa-gracia${i + 1}.jpg`),
+  `${HM}/2295_16026d60/fullHd/balatongyorok-orgona-apartman-es-nyaralohaz4.jpg`,
+  `${HM}/22698_89dfb67c/fullHd/balatongyorok-harmonia-apartman1.jpg`,
+  `${HM}/24331_0f0e0d0c/fullHd/balatongyorok-5.jpg`,
+  `${HM}/11323_26864bfb/fullHd/balatongyorok-3.jpg`,
+].map((url) => ({ url, sourceUrl: "https://hovamenjek.hu/balatongyorok/villa-gracia" }));
+const graciaKept = withoutNeighbourFolders(gracia);
+check("Balatongyörök (Villa Gracia): a medencés reklámkép (11323) és a többi szomszéd kiesik, a 18 saját marad", graciaKept.length === 18 && !graciaKept.some((p) => p.url.includes("/11323_")), graciaKept.length);
 const mixed = [{ url: "https://x.booked.hu/photo1.jpg" }, { url: elzaOwn(1) }, { url: "https://www.elza.hu/kep.jpg" }];
 check("⛔ egy mappa / nem-hovamenjek kép érintetlen", withoutNeighbourFolders(mixed).length === 3, "");
 check(

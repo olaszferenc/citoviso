@@ -40,7 +40,7 @@ import {
   wholeLetStated,
 } from "../src/engine/sampleFromSource.js";
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
-import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems } from "../src/generator/marketCheck.js";
+import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, sampleRooms } from "../src/engine/templateKit.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
 import { renderSite } from "../src/engine/render.js";
@@ -290,6 +290,43 @@ check("generateEngine: csak-egész háznál nincs számozott minta-szoba (wholeL
 check("rerender-mock --resample ugyanazt a sampleHintsOf()-ot futtatja", /--resample/.test(rr) && /sampleHintsOf\(/.test(rr));
 check("a minta a leírás-tényt csak saját tulajdonításnál veszi át (generateEngine + --resample)",
   /descriptionFactIsOwn\(/.test(gen) && /descriptionFacts: sources\.descriptionFacts/.test(gen) && /descriptionFacts: sources\.descriptionFacts/.test(rr));
+
+console.log("⑨ a környék létesítménye nem a házé (TARTVA, 2026-10-26)");
+// Real source text of the leads the coordinator held back (prod, read 2026-10-26).
+const LAGUNA = ["Hévízen, kényelmes távolságra a gyógyfürdőtől várja vendégeit az igényes apartmanház.\n\nA tó parkjában kilenc elemből álló kondipark, szabadtéri sakk, játszótér és pihenési lehetőség áll, a vendégek rendelkezésére."];
+check("Laguna 326b0f25: „A tó parkjában … játszótér” → nem Játszótér", !descriptionFactIsOwn("Játszótér", LAGUNA));
+const ANDREA = ["Saját wellness részleg, különleges masszázsok és finom ételek gondoskodnak az ittlét gondtalan perceiről. A környék adottságai kiváló túrázási és kirándulási lehetőségeket rejtenek magukban.\nLehetőség van:\n - vitorlázni\n - fürdőzni\n - játszótér a kicsiknek\n - lovagolni\n\nAz egész panzió területén korlátlan WIFI csatlakozási lehetőség biztosított."];
+check("Andrea 84c900f2: a „környék … Lehetőség van:” lista „játszótér”-e → nem Játszótér", !descriptionFactIsOwn("Játszótér", ANDREA));
+check("…a saját wellness marad (a lista előtti mondat)", descriptionFactIsOwn("Wellness", ANDREA));
+const ORCHIDEA = ["Minden apartman saját, jól felszerelt konyha, fürdőszoba, WC, TV, erkély kertibútorokkal és ingyenes wifi biztosítja a vendégek kellemes pihenését.\n\nA közelben néhány lépésre étterem, hivatalok, vásárlási lehetőség, a közeli hotelben uszoda biztosít fürdési lehetőséget."];
+check("Orchidea 20f95ea1: „a közeli hotelben uszoda” → nem Medence (saját medence nincs)", !descriptionFactIsOwn("Medence", ORCHIDEA));
+check("…és az étterem sem", !descriptionFactIsOwn("Étterem", ORCHIDEA));
+const CYRANO = ["A panzióban 2 db kétágyas szoba van (pótágyazható), apartmanok és úszómedence is.\r\nA homokos strandon, mely a környék legszebbje, lehetőség van szörfözni., vízibiciklizni, csúszdázni.\r\nProgramlehetőségek a közelben:\r\n - tenisz\r\n - strandröplabda\r\n - strandfoci"];
+check("Cyrano 9c81f133: „a homokos strandon, mely a környék legszebbje” + strandröplabda → nem Strand", !descriptionFactIsOwn("Strand", CYRANO));
+check("…a saját úszómedence marad Medence", descriptionFactIsOwn("Medence", CYRANO));
+const LEITNER = ["Bababarát szálláshely, ahol a kisgyermekes családok számára kiságyat és játszóteret biztosít.\n\nSzínházi előadások és egyéb programok várják az itt nyaralókat Balatongyörökön és a szomszédos településeken.\n\n- tenisz, biliárd, golfpálya, csónakbérlés, strandröplabda, strandfoci, vitorlázás"];
+check("Leitner 8977c622: a szomszédos települések programlistája („strandröplabda”) → nem Strand", !descriptionFactIsOwn("Strand", LEITNER));
+check("…a saját játszótér („játszóteret biztosít”) marad", descriptionFactIsOwn("Játszótér", LEITNER));
+check("⛔ „strandröplabda” lista nélkül sem Strand", !descriptionFactIsOwn("Strand", ["A kertben strandröplabda-pálya van."]));
+const BREEZE = ["The 30 m² Balaton Breeze Apartman Fonyod enjoys a beachfront location only a 5-minute walk from the Strand Street Beach. The apartment can hold up to 2 guests."];
+check("Balaton Breeze 2eab1936: „5-minute walk from the Strand Street Beach” → nem Strand", !descriptionFactIsOwn("Strand", BREEZE));
+const FARKAS = ["Az ingatlan Siófok belvárosában, zöldövezetben található.\n\n100 m-es körzeten belül található szupermarket, több étterem, gyorsbüfé."];
+check("Farkas 7e3ff3c5: „100 m-es körzeten belül … több étterem” → nem Étterem", !descriptionFactIsOwn("Étterem", FARKAS));
+check("⛔ saját tény a környék-szó MÁSIK mondatában marad („Saját medencénk van. A közelben strand.”)",
+  descriptionFactIsOwn("Medence", ["Saját medencénk van a kertben. A közelben strand is található."]));
+check("⛔ „a ház saját medencés, a közelben strand”: a Medence marad (a mondat nem a környékkel indul)",
+  descriptionFactIsOwn("Medence", ["A ház saját medencés, a közelben strand is van."]));
+check("⛔ „parkosított kert” a ház kertje", descriptionFactIsOwn("Kert", ["A ház parkosított kertjében grillezhetnek."]));
+check("withoutAreaLists: a környék-bevezetés utáni pontok kiesnek, a többi lista marad",
+  !/játszótér/.test(withoutAreaLists("A környék gyönyörű.\nLehetőség van:\n- játszótér\n- tenisz")) &&
+    /kiságy/.test(withoutAreaLists("A szobákban:\n- kiságy\n- tv")),
+  withoutAreaLists("A környék gyönyörű.\nLehetőség van:\n- játszótér"));
+console.log("⑩ angol tételek magyarul a mintán (Balaton Breeze)");
+const breezeItems = sampleFacilityItems(["Wi-Fi", "Private beach", "Air conditioning", "No pets allowed", "Patio", "Terrace", "Dining table", "Free toiletries", "Flat-screen TV", "Parquet floor"]);
+check("„Flat-screen TV” → „Síkképernyős TV”, „Air conditioning” → „Légkondicionálás”, „Patio” → „Terasz”",
+  breezeItems.includes("Síkképernyős TV") && breezeItems.includes("Légkondicionálás") && breezeItems.includes("Terasz") && !breezeItems.some((i) => ["Flat-screen TV", "Air conditioning", "Patio", "Terrace"].includes(i)), breezeItems);
+check("⛔ „Private beach” nem fordítódik Strandra (a Balaton-parti hirdetésen ez a közeli strand)", !breezeItems.some((i) => /strand|beach/i.test(i)), breezeItems);
+check("⛔ a magyar tételek érintetlenek", sampleFacilityItems(["Saját parkoló", "Klíma", "Síkképernyős TV"]).join("|") === "Saját parkoló|Klíma|Síkképernyős TV");
 
 if (failures) {
   console.error(`\n❌ sample-from-source-check: ${failures} bukás`);

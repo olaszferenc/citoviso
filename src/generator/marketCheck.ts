@@ -264,10 +264,13 @@ const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
  * keep their short-distance reading — „a homokos strandtól 700 m-re” is a fair selling point,
  * and isFar() still drops them beyond a kilometre. A distance needs its suffix („200 m-re”):
  * a bare size („10 m-es medence”) is the house's own pool.
+ * 2026-10-26 (TARTVA, amenity sample): „a közeli hotelben uszoda” (Orchidea 20f95ea1 →
+ * Medence), „100 m-es körzeten belül … több étterem” (Farkas 7e3ff3c5 → Étterem), and the
+ * English „5-minute walk from the Strand Street Beach” (Balaton Breeze 2eab1936 → Strand).
  */
 const PLACE_NEEDLE = new Set(["vizpart", "topart", "strand", "steg", "molo", "panorama", "kilatas"]);
 const NEARBY =
-  /(?<![\p{L}])(?:kozel(?:eben|ben)?|kornyek(?:en|eben|beli)|szomszed\p{L}*|setatavolsag\p{L}*|meterre|percre)(?![\p{L}])|\d+\s*(?:m|km|perc)\s*-?\s*(?:re|ra|nyire|nyira)(?![\p{L}])|\d+\s*perc(?:es)?\s+(?:setara|setanyira|autoval|gyalog)/u;
+  /(?<![\p{L}])(?:kozel(?:eben|ben|i)?|kornyek\p{L}*|korzet\p{L}*|szomszed\p{L}*|setatavolsag\p{L}*|meterre|percre|walk|walking|nearby|close\s+to|from\s+the|minutes?)(?![\p{L}])|\d+\s*(?:m|km|perc)\s*-?\s*(?:re|ra|nyire|nyira)(?![\p{L}])|\d+\s*perc(?:es)?\s+(?:setara|setanyira|autoval|gyalog)/u;
 
 function isFar(clauseNorm: string): boolean {
   for (const m of clauseNorm.matchAll(FAR_KM)) if (parseFloat(m[1]!.replace(",", ".")) >= 1) return true;
@@ -280,15 +283,53 @@ function isFar(clauseNorm: string): boolean {
  * Exported for the guard and for isSourcedMiss — one rule for "the prose says so".
  */
 export function proseAffirms(needle: string, descriptions: readonly string[], own = false): boolean {
-  for (const raw of descriptions.map(withoutPlaceNames)) {
+  for (const raw of descriptions.map(withoutAreaLists).map(withoutPlaceNames)) {
     for (const sentence of raw.split(SENTENCE_SPLIT)) {
       // A sentence about ANOTHER venue („A Gyulai Várfürdőben … hullám medence, szaunapark”)
       // lists that venue's offer, not the property's — whatever its clauses say.
       if ((own || !PLACE_NEEDLE.has(needle)) && isForeignVenueSentence(sentence)) continue;
+      // „A homokos strandon, mely a környék legszebbje …” (Cyrano 9c81f133): the area's beach,
+      // named in another clause of the same sentence. A house's own beach is not „the area's”.
+      if (own && PLACE_NEEDLE.has(needle) && AREA_SENTENCE.test(deaccent(sentence.toLowerCase()))) continue;
+      // „100 m-es körzeten belül található szupermarket, több étterem, gyorsbüfé” (Farkas
+      // 7e3ff3c5): a sentence that OPENS on the area lists the area's offer in its later clauses.
+      if (own && AREA_LEAD.test(deaccent((sentence.split(DEAC_CLAUSE_SPLIT)[0] ?? "").toLowerCase()))) continue;
       if (sentenceAffirms(needle, sentence, own)) return true;
     }
   }
   return false;
+}
+
+const AREA_LEAD = /(?<![\p{L}])(?:kornyek\p{L}*|korzet\p{L}*|kozel(?:eben|ben|i)|szomszed\p{L}*)(?![\p{L}])/u;
+const AREA_SENTENCE = /(?<![\p{L}])(?:kornyek\p{L}*|kozel(?:eben|ben|i)|szomszed\p{L}*|telepules\p{L}*)(?![\p{L}])/u;
+
+/**
+ * A bullet list the prose introduces as the AREA's offer is not the house's (2026-10-26):
+ *   „A környék adottságai … Lehetőség van: – vitorlázni – … – játszótér a kicsiknek” (Andrea 84c900f2)
+ *   „Programlehetőségek a közelben: – tenisz – … – strandröplabda” (Cyrano 9c81f133)
+ *   „… Balatongyörökön és a szomszédos településeken. – tenisz, …, strandröplabda” (Leitner 8977c622)
+ * Bullets right after a line that speaks of the area (blank lines and a short „Lehetőség
+ * van:” in between keep the context) are dropped; any other line ends the list.
+ */
+const AREA_INTRO =
+  /(?<![\p{L}])(?:kornyek\p{L}*|kozel(?:eben|ben|i)|szomszed\p{L}*|telepules\p{L}*|program\p{L}*|latnivalo\p{L}*|kirandul\p{L}*|varos(?:ban|unkban)|nearby|surroundings|area)(?![\p{L}])/u;
+const BULLET = /^\s*(?:[-–—•*·]|\d+[.)])\s*/u;
+export function withoutAreaLists(text: string): string {
+  let area = false;
+  const out: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t) { out.push(line); continue; }
+    if (BULLET.test(t)) {
+      if (!area) out.push(line);
+      continue;
+    }
+    const n = deaccent(t.toLowerCase());
+    if (AREA_INTRO.test(n)) area = true;
+    else if (!(area && t.length <= 40 && t.endsWith(":"))) area = false;
+    out.push(line);
+  }
+  return out.join("\n");
 }
 
 function sentenceAffirms(needle: string, raw: string, own: boolean): boolean {
@@ -324,10 +365,12 @@ function isForeignVenueSentence(sentence: string): boolean {
  * Gyula): „A fürdő … gyógymedencékkel, … szaunavilággal”, „A Gyulai Várfürdőben … hullám
  * medence, … szaunapark”, „a toronyban csodás kilátás” → Medence, Szauna, Panoráma on the
  * mock. „fürdőszoba / -köpeny / -kád / -ruha” are the flat's own and stay out of the pattern.
+ * „A tó parkjában … kondipark, szabadtéri sakk, játszótér” (Laguna 326b0f25, 2026-10-26) is
+ * the lake park's; „parkosított kert” and „parkoló” are the house's and do not match.
  */
 const SENTENCE_SPLIT = /[.!?;\n]+/u;
 const FOREIGN_VENUE =
-  /(?<![\p{L}])(?:(?:var|gyogy|termal|strand|elmeny)?furdo(?!szob|kopeny|kad|ruha|nadrag|lepedo|torolkoz)\p{L}*|aquapark\p{L}*|muzeum\p{L}*|torony\p{L}*|tornya\p{L}*|kastely\p{L}*|szinhaz\p{L}*|varszinhaz\p{L}*|templom\p{L}*|bazilika\p{L}*|apatsag\p{L}*)/u;
+  /(?<![\p{L}])(?:(?:var|gyogy|termal|strand|elmeny)?furdo(?!szob|kopeny|kad|ruha|nadrag|lepedo|torolkoz)\p{L}*|aquapark\p{L}*|muzeum\p{L}*|torony\p{L}*|tornya\p{L}*|kastely\p{L}*|szinhaz\p{L}*|varszinhaz\p{L}*|templom\p{L}*|bazilika\p{L}*|apatsag\p{L}*|park(?:ja|jaban|jaba|jat|ban|ba|ok|okban|jaiban)(?![\p{L}]))/u;
 
 const TOWN_OWNED = /(?<![\p{L}])(?:varos|telepules|kozseg|falu|kornyekbeli|helyi|kozeli)\s+$/u;
 
@@ -370,6 +413,8 @@ function affirmsIn(needle: string, clause: string, rawClause: string | null, own
     // „Balatonfüred központja, a strandok …”: the beaches (plural) are the town's; a house's
     // own beach is one („saját strand”). Szömörce 2026-10-21.
     if (own && needle === "strand" && /^strand(?:ok|jai)/u.test(word)) continue;
+    // „strandröplabda”, „strandfoci” are activities of the area, not a beach of the house.
+    if (own && word !== needle && AREA_ACTIVITY.test(word.slice(needle.length))) continue;
     return true;
   }
 }
@@ -416,8 +461,9 @@ const AREA_ACTIVITY = /roplabda|foci|labda|tenisz|kolcsonz|berles|lovag|hajoz|ho
 export function sampleFacilityItems(ranked: readonly string[], max = 6): string[] {
   const out: string[] = [];
   const kinds = new Set<string>();
-  for (const item of ranked) {
+  for (const raw of ranked) {
     if (out.length >= max) break;
+    const item = hungarianAmenity(raw);
     const n = norm(item);
     if (NEGATED_LABEL.test(n) || AREA_ACTIVITY.test(n)) continue;
     const kind = AMENITY_BUCKET.find(([, keys]) => keys.some((k) => n.includes(k)))?.[0];
@@ -426,6 +472,49 @@ export function sampleFacilityItems(ranked: readonly string[], max = 6): string[
     out.push(item.trim());
   }
   return out;
+}
+
+/**
+ * The sample stands on Hungarian pages only, but white-label booking engines (lake-balaton.com,
+ * booked.hu) publish their amenity list in English: „Flat-screen TV” stood untranslated on
+ * Balaton Breeze 2eab1936 (2026-10-26). The common in-house items are translated; an English
+ * item not listed here is no recognised facility and stays out, as before. „Private beach” is
+ * deliberately absent: on a Balaton listing it names the beach down the road far more often
+ * than a beach of the house (the same Balaton Breeze is 150 m from the shore).
+ */
+const EN_AMENITY: readonly (readonly [RegExp, string])[] = [
+  [/^flat[- ]?screen tv$|^lcd tv$/i, "Síkképernyős TV"],
+  [/^(?:satellite |cable )?tv$|^television$/i, "TV"],
+  [/^air[- ]?conditioning$/i, "Légkondicionálás"],
+  [/^heating$/i, "Fűtés"],
+  [/^(?:free )?wi-?fi(?: in all areas)?$/i, "Wi-Fi"],
+  [/^terrace$|^patio$|^sun terrace$/i, "Terasz"],
+  [/^balcony$/i, "Erkély"],
+  [/^garden$/i, "Kert"],
+  [/^garden furniture$|^outdoor furniture$/i, "Kerti bútor"],
+  [/^(?:bbq|barbecue)(?: facilities| grill)?$/i, "Grillezési lehetőség"],
+  [/^(?:free |private )?parking(?: on site)?$/i, "Parkoló"],
+  [/^(?:fully equipped )?kitchen$|^kitchenette$/i, "Konyha"],
+  [/^refrigerator$|^fridge$/i, "Hűtőszekrény"],
+  [/^microwave$/i, "Mikrohullámú sütő"],
+  [/^coffee machine$|^tea\/coffee maker$|^electric kettle$/i, "Tea-/kávéfőző"],
+  [/^dishwasher$/i, "Mosogatógép"],
+  [/^washing machine$/i, "Mosógép"],
+  [/^(?:outdoor |indoor )?swimming pool$|^(?:outdoor |indoor )?pool$/i, "Medence"],
+  [/^sauna$/i, "Szauna"],
+  [/^hot tub(?:\/jacuzzi)?$|^jacuzzi$/i, "Jacuzzi"],
+  [/^spa(?: and wellness cent(?:re|er))?$|^wellness$/i, "Wellness"],
+  [/^(?:children'?s )?playground$/i, "Játszótér"],
+  [/^cots?$|^baby cots?$|^crib$/i, "Kiságy"],
+  [/^high chair$/i, "Etetőszék"],
+  [/^breakfast$/i, "Reggeli"],
+  [/^restaurant$/i, "Étterem"],
+  [/^pets allowed$/i, "Háziállat bevihető"],
+  [/^bicycle (?:rental|storage)$|^bike storage$/i, "Kerékpártároló"],
+];
+export function hungarianAmenity(item: string): string {
+  const t = item.trim();
+  return EN_AMENITY.find(([re]) => re.test(t))?.[1] ?? t;
 }
 
 /** „Háziállat nem engedélyezett” is a listing item, and the opposite of a selling point. */
