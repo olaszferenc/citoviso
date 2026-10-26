@@ -10,6 +10,9 @@ képei `level-mobile.png` · `level-desktop.png`; az SMS: `sms.html`, `sms-mobil
 kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tartja vissza?” oldal) · futtató:
 `scripts/trial-campaign.mts` · őr: `scripts/trial-campaign-check.mts` · ADR-0348.
 
+> ⭐ **A LEVÉL SZÖVEGÉT 2026-10-26 ÓTA az újrakereső A2 köti:** `../ujrakereses-level/README.md` (tárgy, „Mi változott”, egy gomb,
+> „Mi történik a 14 nap végén?”, lábléc „kérés nélkül”). Innen az SMS (8.), az egy-lövés (7.) és a küldés (9.) él.
+
 **Hatókör:** `src/email/trialCampaignEmail.ts` · `src/console/prospectFeedback.ts` · `src/outreach/trialCampaign.ts`
 
 > **Kiegészítve / felülírva:** `../proba-c/3-levelek-sms.html` (ADR-0354 „C” + ADR-0356, jóváhagyva 2026-10-10):
@@ -23,23 +26,23 @@ kapuk, egy-lövés, küldés) · `src/console/prospectFeedback.ts` (a „mi tart
    (a dátum a hideg megkeresés napja, Budapest, „Szeptember 24-én” alakban), majd
    **„Most nem kell rögtön döntenie: {days} napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.”**
 3. **A terv képe + gombpár:** elsődleges **„Kipróbálom {days} napig ingyen”** → a mock linkje `forras=proba&proba=nyit`
-   paraméterrel (a tervlap a próba-űrlapot nyitva mutatja), másodlagos (keretes) **„Megnézem a tervemet”** → a mock linkje
+   paraméterrel (a tervlap a próba-űrlapot nyitva mutatja), másodlagos (keretes) „Megnézem a tervemet” (⏹ A2 óta kivezetve) → a mock linkje
    `forras=proba`-val (a lead saját aldomainje, ADR-0330; a link meglévő paraméterei megmaradnak). A szöveges rész mindkét
    linket viszi; a gomb alatt a puszta URL.
-4. **A kérdés a terv UTÁN (nem a végén):** **„Ha nem érdekli: mi tartja vissza?”** / **„Egy koppintás, és megtudjuk. Ez nem leiratkozás.”**
+4. **A kérdés a terv UTÁN (nem a végén):** **„Ha nem érdekli: mi tartja vissza?”** / „Egy koppintás, és megtudjuk. Ez nem leiratkozás.” (⏹ A2 óta: „Koppintson a válaszára…”)
    és három gomb: **„Drágának találom”** · **„Most nem időszerű”** · **„Nem értem, vagy nem bízom benne”**.
    A gomb CSAK MEGNYIT egy oldalt (`/p/<token>/why?forras=proba&ok=<ok>`), ahol a koppintott válasz előre kijelölt,
    mind az öt ok választható, és a leiratkozás egy koppintásra van. A GET semmit nem ír (ADR-0291); a válasz a POST-tal,
    `prospect_feedback.source = 'trial_mail'` forrással rögzül. Csak a három levél-ok jelölhető ki előre.
    Az oldal: **„Mi tartja vissza?”** / **„A válasz nem kötelező, és nem iratkoztatja le. Egyetlen kérdés, nevet nem kérünk.”**
 5. **„Ha kipróbálja” — csak ami VAN (§B.17):** a saját aldomain (a próba VALÓDI slugja, ADR-0347 ④), a szerkesztő,
-   minden funkció az online foglalással, és **„A Google számára olvasható felépítés (szállás-adatok, oldaltérkép).”**
+   minden funkció az online foglalással, és „A Google számára olvasható felépítés (szállás-adatok, oldaltérkép).” (⏹ A2 óta a levélben nincs)
    ⛔ „Helyezést nem ígérünk.” — SEHOL (az őr méri).
 6. **A vég:** szünetel, nem terhelünk, az adatok a próba végétől `TRIAL_RETENTION_DAYS` (90) napig megmaradnak; ha a leadnek
    van ma élő ajánlata: **„A korábbi levelünkben ajánlott {p}% kedvezmény a próba alatt is megmarad: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.”**
    A {p} ugyanaz a szabály, ahogy a próba indulásakor rögzül (`pinTrialOffer` → `trialCampaignOfferPercent`: a lead
    legnagyobb élő bevezető ajánlata, ennek híján az operátori bevezető %); 0%-nál a mondat elmarad.
-7. **Lábléc, változatlanul a mockból:** **„Erről a próbáról több levelet nem küldünk.”** (Elek3 A6, 2026-10-11: a mondat második fele — „ha nem kér tőlünk több megkeresést, leiratkozhat” — közvetlenül a leiratkozás-sor fölött ugyanazt mondta kétszer; a leiratkozás a link sorában marad),
+7. **Lábléc, változatlanul a mockból:** „Erről a próbáról több levelet nem küldünk.” (⏹ A2 óta: „…kérés nélkül több levelet…”) (Elek3 A6, 2026-10-11: a mondat második fele — „ha nem kér tőlünk több megkeresést, leiratkozhat” — közvetlenül a leiratkozás-sor fölött ugyanazt mondta kétszer; a leiratkozás a link sorában marad),
    a leiratkozó link, a jogalap-sor, a cégazonosítás (`advertiserIdentity`). Az egy-lövés sor KÓDKÉNYSZER: `trial_campaign` tábla
    (leadenként és címenként egy), és az eszkalációs follow-up utána nem megy. Az ígéret a SZEMÉLYNEK szól (ADR-0353): egy ember
    (közös cím VAGY közös mobil) egy üzenetet kap — levelet, ha van levél-célpontja, különben SMS-t.

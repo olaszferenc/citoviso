@@ -1,13 +1,14 @@
 // ADR-0348 — the RETROACTIVE trial letter + SMS (src/email/trialCampaignEmail.ts,
 // src/outreach/trialCampaign.ts). What this proves, each leg a way the campaign could break
 // a promise or the owner's ruling:
-//   ① the letter: the removed sentence ("Helyezést nem ígérünk.") is in neither part, the
-//      Google bullet is the approved one, the one-shot footer line is there, the subject is
-//      "{name}: {days} napig ingyen, élesben", the numbers come from their sources (trial
-//      days, TRIAL_RETENTION_DAYS, the lead's live offer — 0% leaves the offer sentence out),
-//      the ADR-0354 "C" wording (proba-c/3-levelek-sms.html: the offer STAYS during the trial,
-//      one-sentence opening, the button PAIR with forras=proba[&proba=nyit]), the three answer
-//      links carry forras=proba&ok=<reason>, and the §C gate passes it;
+//   ① the letter — the re-contact "A2" (assets/design-refs/console/ujrakereses-level/README.md):
+//      the removed sentence ("Helyezést nem ígérünk.") is in neither part, the subject is
+//      "{name}: azóta élesben is kipróbálhatja", the three "Mi változott" points stand above
+//      the plan image, ONE button (forras=proba&proba=nyit), the "mi tartja vissza?" block,
+//      "Mi történik a {days} nap végén?" as points whose numbers come from their sources
+//      (trial days, TRIAL_RETENTION_DAYS, the lead's live offer — "korábban ígért" only for a
+//      promised percent, 0% leaves the point out), the one-shot footer line "kérés nélkül",
+//      the three answer links carry forras=proba&ok=<reason>, and the §C gate passes it;
 //   ② the SMS: GSM-7, ≤ 2 segments, the link whole — for a normal AND a very long name, with
 //      and without the offer — and the §C SMS gate passes on the text that goes out;
 //   ②b trialCampaignOfferPercent: the largest LIVE initial offer of the lead (pinTrialOffer's
@@ -30,7 +31,10 @@
 //      target's mobile holds the SMS key, an operator exclusion and a sent campaign hold the
 //      twin's address (D-1g/D-1h/D-1x); the letter never goes to an address added after the
 //      cold letter (D-1f); a dry run mints no preview label (D-8k); a 36-hyphen id is refused,
-//      not thrown (D-4k).
+//      not thrown (D-4k);
+//   ⑧ the mail branch's artifact gates (the cold letter's, sendBatch.ts): an un-approved mock
+//      and an unacknowledged guard finding skip the lead; a finding the curator acknowledged
+//      passes.
 //
 // The dev DB is SHARED: every row is this run's own (stamped names, example.invalid
 // addresses, random mobile numbers) and deleted in `finally`; nothing is sent — the senders
@@ -92,8 +96,18 @@ const check = (label: string, pass: boolean, detail = ""): void => {
 };
 
 const REMOVED = "Helyezést nem ígérünk";
-const ONE_SHOT = "Erről a próbáról több levelet nem küldünk";
-const GOOGLE = "A Google számára olvasható felépítés (szállás-adatok, oldaltérkép).";
+const ONE_SHOT = "Erről a próbáról kérés nélkül több levelet nem küldünk.";
+const SUBJECT = "Rozé Fogadó: azóta élesben is kipróbálhatja";
+// The three points of "Mi változott" — each live on the running commit (§B.17, 2026-10-22).
+const CHANGES = [
+  "14 napig ingyen, élesben kipróbálhatja a tervét: bankkártya nélkül, és a végén semmit nem terhelünk.",
+  "Bármelyik csomagunk díja egy .hu webcímet is tartalmaz, külön havidíj nélkül (pl. a szálláshelye nevével). A próba citoviso.com-os címen fut, a .hu cím a megrendeléssel jár.",
+  "A foglalási naptár iCal-linkkel, szobánként összeköthető a Booking.com, a Szállás.hu és az Airbnb naptárával. Az árak nem szinkronizálódnak: a portálon és a honlapon külön állítja őket.",
+];
+const END_TITLE = "Mi történik a 14 nap végén?";
+const END_STOP = "Ha nem rendeli meg: a próba-honlap leáll, semmit nem fizet, és semmit nem kell lemondania.";
+const offerPoint = (p: number, promised: boolean): string =>
+  `Ha a 14 napon belül megrendeli: megkapja a ${promised ? "korábban ígért " : ""}${p}% kedvezményt (éves fizetésnél az első évre, havi fizetésnél az első hónapra; utána a listaár érvényes).`;
 
 const lang = await prepareMailLang("hu");
 const sampleInput = (over: Partial<TrialCampaignLetterInput> = {}): TrialCampaignLetterInput => ({
@@ -103,7 +117,7 @@ const sampleInput = (over: Partial<TrialCampaignLetterInput> = {}): TrialCampaig
   days: 14,
   host: "roze-fogado.citoviso.com",
   retentionDays: TRIAL_RETENTION_DAYS,
-  coupon: { percent: 25 },
+  coupon: { percent: 25, promised: true },
   sender: senderParts(),
   identity: advertiserIdentity(lang),
   links: {
@@ -118,12 +132,12 @@ const sampleInput = (over: Partial<TrialCampaignLetterInput> = {}): TrialCampaig
 function letterLegs(subject: string, text: string, html: string, tag: string): void {
   check(`① ${tag}: „${REMOVED}” sincs a szövegben`, !text.includes(REMOVED));
   check(`① ${tag}: „${REMOVED}” sincs a HTML-ben`, !html.includes(REMOVED));
-  check(`① ${tag}: a Google-pont a jóváhagyott mondat`, text.includes(`- ${GOOGLE}`) && html.includes(GOOGLE));
+  check(`① ${tag}: a „Mi változott” három pontja (szöveg + HTML)`, CHANGES.every((c) => text.includes(`- ${c}`) && html.includes(c)));
   check(`① ${tag}: az egy-lövés sor a láblécben (szöveg + HTML)`, text.includes(ONE_SHOT) && html.includes(ONE_SHOT));
   // Elek3 A6: the opt-out is said ONCE in the foot — the one-shot line does not repeat it.
   const oneShotLine = text.split("\n").find((l) => l.includes(ONE_SHOT)) ?? "";
   check(`A6 ${tag}: az egy-lövés sor nem ismétli a leiratkozást`, !!oneShotLine && !/leiratkoz/i.test(oneShotLine), oneShotLine);
-  check(`① ${tag}: tárgy = „{name}: {days} napig ingyen, élesben”`, subject === "Rozé Fogadó: 14 napig ingyen, élesben", subject);
+  check(`① ${tag}: tárgy = „{name}: azóta élesben is kipróbálhatja”`, subject === SUBJECT, subject);
 }
 
 /** ② — the SMS legs on a given text. */
@@ -142,37 +156,44 @@ const html = msg.html as string;
 if (SELF_TEST) {
   letterLegs(
     letter.subject,
-    letter.body.replace(GOOGLE, `${GOOGLE} ${REMOVED}.`),
-    html.replace(GOOGLE, `${GOOGLE} ${REMOVED}.`),
+    letter.body.replace(CHANGES[0]!, `${CHANGES[0]} ${REMOVED}.`),
+    html.replace(CHANGES[0]!, `${CHANGES[0]} ${REMOVED}.`),
     "SZABOTÁZS: visszatett mondat",
   );
   letterLegs(letter.subject, letter.body.replace(ONE_SHOT, "Kérdés esetén írjon"), html.replace(ONE_SHOT, "x"), "SZABOTÁZS: hiányzó egy-lövés");
 } else {
   letterLegs(letter.subject, letter.body, html, "minta");
-  check("① a megőrzés napjai = TRIAL_RETENTION_DAYS", letter.body.includes(`a próba végétől ${TRIAL_RETENTION_DAYS} napig megmaradnak`));
-  const C_OFFER = "A korábbi levelünkben ajánlott 25% kedvezmény a próba alatt is megmarad: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.";
-  check("① C: az ajánlat a próba alatt is megmarad (szöveg + HTML)", letter.body.includes(C_OFFER) && html.includes(C_OFFER));
-  check("① a régi „a próba végétől … napig érvényes” / „helyett választható” szöveg nincs", !letter.body.includes("napig érvényes)") && !letter.body.includes("helyett választható"));
-  const noCoupon = renderTrialCampaignLetter(sampleInput({ coupon: { percent: 0 } }));
-  check("① 0%-os ajánlat → az ajánlat-mondat elmarad", !noCoupon.body.includes("kedvezmény") && !noCoupon.body.includes("korábbi levelünkben"));
-  check("① nincs ajánlat (null) → az ajánlat-mondat elmarad", !renderTrialCampaignLetter(sampleInput({ coupon: null })).body.includes("korábbi levelünkben"));
-  check("① nyitány (#22): „Szeptember 24-én küldtünk Önnek egy honlap-tervet.” — „Azóta egy dolog változott.” nélkül",
-    letter.body.includes("Szeptember 24-én küldtünk Önnek egy honlap-tervet.\n") && !letter.body.includes("Azóta egy dolog változott") && !html.includes("Azóta egy dolog változott"));
-  check("① második bekezdés: „Most nem kell rögtön döntenie: 14 napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.”",
-    letter.body.includes("Most nem kell rögtön döntenie: 14 napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.") && !letter.body.includes("Most annyi változott"));
-  // #10: the button PAIR — primary opens the trial form, secondary the plan; both in the text too.
+  check("① a megőrzés napjai = TRIAL_RETENTION_DAYS",
+    letter.body.includes(`- A próbában feltöltött képeit és szövegeit a próba vége után még ${TRIAL_RETENTION_DAYS} napig megőrizzük, ha később mégis folytatná.`));
+  check("① „Mi történik a 14 nap végén?” pontokban: leállás, ajánlat, megőrzés (szöveg + HTML)",
+    letter.body.includes(`${END_TITLE}\n- ${END_STOP}\n- ${offerPoint(25, true)}\n- A próbában`) &&
+      html.includes(END_TITLE) && html.includes(END_STOP) && html.includes(offerPoint(25, true)));
+  check("① a régi vég-bekezdés („szünetel”, „korábbi levelünkben”, „Ha kipróbálja”) nincs",
+    !/szünetel|korábbi levelünkben|Ha kipróbálja|Megnézem a tervemet/.test(letter.body + html));
+  check("① ki nem adott ajánlat → „korábban ígért” nélkül",
+    renderTrialCampaignLetter(sampleInput({ coupon: { percent: 25 } })).body.includes(`- ${offerPoint(25, false)}`));
+  const noCoupon = renderTrialCampaignLetter(sampleInput({ coupon: { percent: 0, promised: true } }));
+  check("① 0%-os ajánlat → az ajánlat-pont elmarad", !noCoupon.body.includes("kedvezmény"));
+  check("① nincs ajánlat (null) → az ajánlat-pont elmarad", !renderTrialCampaignLetter(sampleInput({ coupon: null })).body.includes("kedvezmény"));
+  check("① nyitány: „Szeptember 24-én küldtünk Önnek egy honlap-tervet.”, majd „Azóta három dolog változott…”",
+    letter.body.includes("Szeptember 24-én küldtünk Önnek egy honlap-tervet.\n\nAzóta három dolog változott, ami Önnek is számíthat.\n"));
+  // A2: ONE button (the trial form), the change list ABOVE the plan image.
   const tryHref = "https://roze-fogado.citoviso.com?forras=proba&proba=nyit";
   const planHref = "https://roze-fogado.citoviso.com?forras=proba";
-  check("① gombpár a szövegben: „Kipróbálom 14 napig ingyen: …&proba=nyit” + „Megnézem a tervemet: …?forras=proba”",
-    letter.body.includes(`Kipróbálom 14 napig ingyen: ${tryHref}\n`) && letter.body.includes(`Megnézem a tervemet: ${planHref}\n`));
-  check("① gombpár a HTML-ben: elsődleges a próbára, másodlagos a tervre",
-    html.includes(`href="${tryHref.replace(/&/g, "&amp;")}" data-cta="try"`) && html.includes(">Kipróbálom 14 napig ingyen</a>") &&
-      html.includes(`href="${planHref}" data-cta="plan"`) && html.includes(">Megnézem a tervemet</a>") &&
-      html.indexOf('data-cta="try"') < html.indexOf('data-cta="plan"'));
+  check("① egy gomb a szövegben: „Kipróbálom 14 napig ingyen: …&proba=nyit”, a pontok UTÁN",
+    letter.body.includes(`Kipróbálom 14 napig ingyen: ${tryHref}\n`) && letter.body.indexOf(CHANGES[2]!) < letter.body.indexOf("Kipróbálom 14 napig"));
+  const withHero = buildTrialCampaignEmail(letter, "minta@example.invalid", { lang, heroShotPath: "assets/design-refs/console/ujrakereses-level/hero.png" }).html as string;
+  check("① HTML: egy gomb a próbára, a pontok a terv képe FÖLÖTT, a kép a tervre nyit",
+    html.includes(`href="${tryHref.replace(/&/g, "&amp;")}" data-cta="try"`) && !html.includes('data-cta="plan"') &&
+      withHero.indexOf(CHANGES[2]!) < withHero.indexOf("cid:hero-terv") && withHero.includes(`<a href="${planHref}" style="text-decoration:none"><img src="cid:hero-terv"`));
+  check("① a „mi tartja vissza?” blokk: a GET csak megnyit, a gomb küld",
+    letter.body.includes("Ha nem érdekli: mi tartja vissza?\nKoppintson a válaszára, és a megnyíló oldalon egy gombbal elküldheti. Ez nem leiratkozás.\n"));
+  check("① a „más változat” mondat még NINCS (a kattintás-célja nem kész)", !/másik változat|Más stílusú/.test(letter.body + html));
   check("① a link meglévő query-je megmarad (követő paraméter)",
     withQuery("https://x.citoviso.com/?utm=a#top", { forras: "proba", proba: "nyit" }) === "https://x.citoviso.com/?utm=a&forras=proba&proba=nyit#top" &&
       withQuery("https://x.citoviso.com", { forras: "proba" }) === "https://x.citoviso.com?forras=proba");
-  check("① 7 napos próba → a szöveg 7-et mond", renderTrialCampaignLetter(sampleInput({ days: 7 })).body.includes("7 napig ingyen, élesben kipróbálhatja"));
+  const seven = renderTrialCampaignLetter(sampleInput({ days: 7 })).body;
+  check("① 7 napos próba → a szöveg 7-et mond", seven.includes("- 7 napig ingyen, élesben kipróbálhatja") && seven.includes("Mi történik a 7 nap végén?") && seven.includes("Ha a 7 napon belül"));
   check(
     "① a három válasz-link: …/why?forras=proba&ok=<ok>",
     ["expensive", "not_now", "distrust"].every((r) => letter.body.includes(`/p/roze-fogado/Xk3mintatokenmintatoken0/why?forras=proba&ok=${r}`)),
@@ -247,8 +268,9 @@ async function fixture(
     archived?: boolean;
     unsubscribed?: boolean;
     status?: "sent" | "order_intent" | "converted";
-    /** The /p/<token> routes need a mock artifact with a path (getProspectByToken). */
-    artifact?: boolean;
+    /** The mock artifact (the /p/<token> routes need its path; the mail branch its curator
+     *  sign-off). Default: an approved one; false = none. */
+    artifact?: false | { status?: string; inputs?: Record<string, unknown> };
   } = {},
 ): Promise<{ leadId: string; prospectId: string; token: string }> {
   const lead = await db
@@ -263,10 +285,15 @@ async function fixture(
     .executeTakeFirstOrThrow();
   leads.push(lead.id);
   const token = `tcc${stamp}${tag}xxxxxxxxxxxxxxxx`.replace(/[^A-Za-z0-9_-]/g, "");
-  const art = o.artifact
+  const art = o.artifact !== false
     ? await db
         .insertInto("mock_artifact")
-        .values({ lead_id: lead.id, path: `sites/_trialcampaigncheck_${stamp}.html`, inputs: JSON.stringify({}) })
+        .values({
+          lead_id: lead.id,
+          path: `sites/_trialcampaigncheck_${stamp}.html`,
+          status: o.artifact?.status ?? "approved",
+          inputs: JSON.stringify(o.artifact?.inputs ?? {}),
+        })
         .returning("id")
         .executeTakeFirstOrThrow()
     : null;
@@ -306,7 +333,7 @@ if (!SELF_TEST) {
 
     // ③ the answer page
     console.log("③ a „mi tartja vissza?” oldal");
-    const page = await fixture("page", { artifact: true });
+    const page = await fixture("page");
     const { server } = await import("../src/console/server.js");
     closeConsole = () => {
       server.closeAllConnections();
@@ -416,7 +443,7 @@ if (!SELF_TEST) {
     const m0 = sent[0];
     check(
       "⑤ a kiment levél: tárgy, egy-lövés sor, a mondat nélkül",
-      !!m0 && /: \d+ napig ingyen, élesben$/.test(m0.subject) && (m0.text ?? "").includes(ONE_SHOT) && !(m0.html as string).includes(REMOVED),
+      !!m0 && /: azóta élesben is kipróbálhatja$/.test(m0.subject) && (m0.text ?? "").includes(ONE_SHOT) && !(m0.html as string).includes(REMOVED),
       m0?.subject,
     );
     const second = await sendTrialCampaignMail(target, { mailer, now: WEEKDAY, offline: true, onlyLeads: leads });
@@ -577,6 +604,25 @@ if (!SELF_TEST) {
     const dryRun = dryV ? await sendTrialCampaignMail(dryV, { dryRun: true, offline: true, onlyLeads: leads }) : null;
     const label = await db.selectFrom("lead").select("preview_label").where("id", "=", dry.leadId).executeTakeFirst();
     check("⑦ D-8k: a száraz futás (--kapuk) nem foglal előnézeti aldomaint", dryRun?.kind === "dry-run" && label?.preview_label === null, JSON.stringify([dryRun, label?.preview_label]));
+
+    // ⑧ the mail branch's artifact gates
+    console.log("⑧ a levél-ág mock-kapui (kurátori jóváhagyás, őr-lelet)");
+    const flagInputs = { designVerdict: "flag", designReason: "őr-teszt lelet" };
+    const gen = await fixture("gen", { artifact: { status: "generated" } });
+    const flg = await fixture("flg", { artifact: { inputs: flagInputs } });
+    const ack = await fixture("ack", {
+      artifact: { inputs: { ...flagInputs, verdictAck: { at: new Date().toISOString(), by: "őr", reason: "teszt", verdicts: { designVerdict: "flag" } } } },
+    });
+    const gate8 = async (l: string) => {
+      const v = await verdictOf(l);
+      return v ? sendTrialCampaignMail(v, { dryRun: true, offline: true, onlyLeads: leads }) : null;
+    };
+    const rGen = await gate8(gen.leadId);
+    check("⑧ jóváhagyatlan (generated) mock → kimarad", rGen?.kind === "skipped" && rGen.reason.includes("kurátori jóváhagyásra vár"), JSON.stringify(rGen));
+    const rFlg = await gate8(flg.leadId);
+    check("⑧ vállalatlan őr-lelet → kimarad, a leletet megnevezi", rFlg?.kind === "skipped" && rFlg.reason.includes("őr-teszt lelet"), JSON.stringify(rFlg));
+    const rAck = await gate8(ack.leadId);
+    check("⑧ a kurátor által vállalt lelet → átmegy", rAck?.kind === "dry-run", JSON.stringify(rAck));
 
     // D-4k: 36 hyphens is not an id.
     let threw = false;

@@ -1,5 +1,6 @@
-// ADR-0348 — the RETROACTIVE trial campaign runner: "{name}: 14 napig ingyen, élesben" once to
-// every lead the cold outreach reached (mail; SMS for the mobile-only ones).
+// ADR-0348 — the RETROACTIVE trial campaign runner: the re-contact letter (A2, "{name}: azóta
+// élesben is kipróbálhatja") once to every lead the cold outreach reached (mail; SMS for the
+// mobile-only ones).
 //
 // ⛔ DRY BY DEFAULT. Without `--go` nothing is claimed and nothing is sent: the run prints the
 // target counts (total / mail / SMS / excluded by reason) and a sample. The campaign starts
@@ -10,13 +11,17 @@
 //                                                           gates (§C on the real text), no send
 //   npx tsx scripts/trial-campaign.mts --go [--limit N]     REAL send, weekday 9–16 Budapest,
 //        [--sms-koz 95] [--level-koz 20] [--naplo <path>]   one at a time (SMS ≥ 90 s apart)
+//   … --csak-level | --csak-sms                             with any of the above: only that
+//                                                           channel's targets (counts, gates,
+//                                                           send, --limit) — the letters and the
+//                                                           SMS go as separate waves
 //   npx tsx scripts/trial-campaign.mts --kizar <prospectId|leadId> --ok "<reason>"
 //                                                           persistent operator exclusion
 //   npx tsx scripts/trial-campaign.mts --felold <sorId|leadId> --ok "<reason>"
 //                                                           release a STUCK claim (a run died
 //                                                           mid-send) — check the outbox first
 //   npx tsx scripts/trial-campaign.mts --render             sample letter + SMS rendered into
-//                                                           assets/design-refs/_drafts/proba-E2/
+//                                                           assets/design-refs/_drafts/ujrakereses/
 //
 // The send path, the gates and the one-shot claim live in src/outreach/trialCampaign.ts.
 
@@ -74,7 +79,7 @@ const day = (d: Date | null): string => (d ? d.toISOString().slice(0, 10) : "—
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 async function render(): Promise<void> {
-  const out = path.resolve("assets/design-refs/_drafts/proba-E2");
+  const out = path.resolve("assets/design-refs/_drafts/ujrakereses");
   await mkdir(out, { recursive: true });
   const lang = await prepareMailLang("hu");
   const n = await trialCampaignNumbers();
@@ -90,12 +95,14 @@ async function render(): Promise<void> {
     days: n.days,
     host,
     retentionDays: n.retentionDays,
-    coupon: n.coupon,
+    // The sample shows the fuller wording — a lead whose percent was offered to them.
+    coupon: n.coupon ? { ...n.coupon, promised: true } : null,
     sender: senderParts(),
     identity: advertiserIdentity(lang),
     links: { cta, unsub: `${base}/p/roze-fogado/${token}/unsubscribe`, privacy: `${base}/privacy` },
   });
-  const hero = path.resolve("assets/design-refs/_drafts/proba-E/hero.png");
+  // The frozen contract's sample image (a real outreach shot) stands in for the lead's.
+  const hero = path.resolve("assets/design-refs/console/ujrakereses-level/hero.png");
   const hasHero = existsSync(hero);
   if (hasHero) await copyFile(hero, path.join(out, "hero.png"));
   const msg = buildTrialCampaignEmail(letter, "minta@example.invalid", { heroShotPath: hasHero ? hero : null, lang });
@@ -155,8 +162,17 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (flag("--csak-level") && flag("--csak-sms")) {
+    console.error("⛔ --csak-level és --csak-sms együtt: a kettő kizárja egymást");
+    process.exitCode = 2;
+    return;
+  }
+  const only: TrialCampaignCandidate["channel"] = flag("--csak-level") ? "email" : flag("--csak-sms") ? "sms" : null;
+  // The channel is chosen per PERSON by the list (mail first) — the switch only filters it,
+  // so a lead never moves to the other channel because one wave runs alone.
   const all = await listTrialCampaignCandidates();
-  const targets = all.filter((c) => !c.excluded);
+  const targets = all.filter((c) => !c.excluded && (!only || c.channel === only));
+  if (only) console.log(`Csak ${only === "email" ? "levél" : "SMS"} (--csak-${only === "email" ? "level" : "sms"})`);
   const byReason = new Map<TrialCampaignExclusion, number>();
   for (const c of all) if (c.excluded) byReason.set(c.excluded, (byReason.get(c.excluded) ?? 0) + 1);
   const mail = targets.filter((c) => c.channel === "email").length;

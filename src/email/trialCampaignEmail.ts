@@ -22,9 +22,16 @@
 //
 // ADR-0354 "C" (owner-approved 2026-10-10, assets/design-refs/console/proba-c/3-levelek-sms.html):
 // the lead's earlier offer STAYS during the trial (to its end, on the first fee — never "instead
-// of" the trial); the opening is one sentence (Elek #22); TWO buttons (Elek #10): the primary
-// opens the plan with the trial form open (`forras=proba&proba=nyit`), the secondary the plan
-// itself (`forras=proba`).
+// of" the trial).
+//
+// ⭐ RE-CONTACT LETTER "A2" (owner-approved 2026-10-26, §2b; frozen contract:
+// assets/design-refs/console/ujrakereses-level/ — README = what BINDS) REPLACES the mail's copy:
+// subject "{name}: azóta élesben is kipróbálhatja", a "Mi változott" list of three points ABOVE
+// the plan image (trial · .hu address in every package · iCal calendar link), ONE button (the
+// plan with the trial form open, `forras=proba&proba=nyit`; the image opens the plan itself),
+// the "mi tartja vissza?" block, and "Mi történik a {days} nap végén?" as points. The SMS twin
+// is unchanged (ADR-0348). The approved "más stílusú változat" sentence is NOT here yet: it
+// needs its click target (GET confirm page + POST into the reply inbox) — see the README.
 
 import path from "node:path";
 import { T } from "../i18n/mail.js";
@@ -33,7 +40,6 @@ import { config } from "../config.js";
 import { formatDayShortOn, formatMonthDayOn } from "../text/day.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { bandBrand, esc } from "./platformLayout.js";
-import { boldVars } from "./trialEmail.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
 /** CID of the embedded hero screenshot — the same image the cold letter carried. */
@@ -68,9 +74,10 @@ export interface TrialCampaignLetterInput {
   readonly host: string;
   /** TRIAL_RETENTION_DAYS (ADR-0345). */
   readonly retentionDays: number;
-  /** The lead's best live initial offer today (trialCampaignOfferPercent) — null (or 0%) =
-   *  the offer sentence is left out. */
-  readonly coupon: { readonly percent: number } | null;
+  /** The lead's best live initial offer today (trialCampaignOffer) — null (or 0%) = the
+   *  offer point is left out. `promised`: the percent comes from an offer the lead was
+   *  actually given — only then may the letter call it "korábban ígért". */
+  readonly coupon: { readonly percent: number; readonly promised?: boolean } | null;
   /** senderParts() — the cold letter's signature. */
   readonly sender: { readonly sigName: string; readonly sigCo: string; readonly sigMail: string };
   /** advertiserIdentity(lang) — §C.2 registry identification. */
@@ -90,20 +97,17 @@ export interface TrialCampaignParts {
   readonly greet: string;
   readonly p1: string;
   readonly p2: string;
-  /** The primary button: try it (the plan with the trial form open). */
+  /** The one button: try it (the plan with the trial form open). */
   readonly ctaTry: string;
-  /** The secondary button: the plan itself. */
-  readonly cta: string;
   readonly heroAlt: string;
   readonly whyQ: string;
   readonly whySub: string;
   readonly whyLabels: readonly { readonly reason: TrialMailReason; readonly label: string; readonly href: string }[];
   readonly getsTitle: string;
   readonly gets: readonly string[];
-  /** The first bullet with the host in bold — HTML only; its plain twin is gets[0]. */
-  readonly getsHostHtml: string;
-  readonly end: string;
-  readonly coupon: string | null;
+  /** "Mi történik a {days} nap végén?" and its points (the offer point only with an offer). */
+  readonly endTitle: string;
+  readonly ends: readonly string[];
   readonly regards: string;
   readonly sigName: string;
   readonly sigCo: string;
@@ -127,8 +131,9 @@ export function withQuery(url: string, params: Readonly<Record<string, string>>)
   return `${base}${sep}${add}${hash}`;
 }
 
-/** The two button links (the main session's plan page reads them): the primary opens the
- *  trial form (`proba=nyit`), both say the visit came from this letter (`forras=proba`). */
+/** The two links (the main session's plan page reads them): the button opens the trial form
+ *  (`proba=nyit`), the image the plan itself; both say the visit came from this letter
+ *  (`forras=proba`). */
 export function trialCampaignLinks(planLink: string): { readonly tryLink: string; readonly planLink: string } {
   return {
     tryLink: withQuery(planLink, { forras: "proba", proba: "nyit" }),
@@ -145,58 +150,60 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
   const { lang, leadName: name } = i;
   const when = formatMonthDayOn(i.sentIso, lang);
   const days = String(i.days);
-  const hostSentence = (v: { host: string }): string =>
-    T(lang, "A honlap élesben elérhető egy saját aldomainen: {host} (saját domain a megrendeléssel jár)", v);
   const labels: Record<TrialMailReason, string> = {
     expensive: T(lang, "Drágának találom"),
     not_now: T(lang, "Most nem időszerű"),
     distrust: T(lang, "Nem értem, vagy nem bízom benne"),
   };
-  const coupon =
-    i.coupon && i.coupon.percent > 0
-      ? T(
-          lang,
-          "A korábbi levelünkben ajánlott {p}% kedvezmény a próba alatt is megmarad: ha a próba végéig megrendeli, megkapja — éves fizetésnél az első évre, havinál az első hónapra. Utána a listaár érvényes.",
-          { p: String(i.coupon.percent) },
-        )
-      : null;
+  // The platform domain the trial runs on — the host minus the lead's own label.
+  const domain = i.host.slice(i.host.indexOf(".") + 1);
+  const pct = i.coupon && i.coupon.percent > 0 ? { p: String(i.coupon.percent), days } : null;
+  const offer = pct
+    ? i.coupon!.promised
+      ? T(lang, "Ha a {days} napon belül megrendeli: megkapja a korábban ígért {p}% kedvezményt (éves fizetésnél az első évre, havi fizetésnél az első hónapra; utána a listaár érvényes).", pct)
+      : T(lang, "Ha a {days} napon belül megrendeli: megkapja a {p}% kedvezményt (éves fizetésnél az első évre, havi fizetésnél az első hónapra; utána a listaár érvényes).", pct)
+    : null;
   return {
-    subject: T(lang, "{name}: {days} napig ingyen, élesben", { name, days }),
-    headerTag: T(lang, "Ingyenes próba"),
+    subject: T(lang, "{name}: azóta élesben is kipróbálhatja", { name }),
+    headerTag: T(lang, "Újdonság"),
     greet: T(lang, "Tisztelt {name}!", { name }),
     p1: T(lang, "{when} küldtünk Önnek egy honlap-tervet.", { when: upperFirst(when) }),
-    p2: T(lang, "Most nem kell rögtön döntenie: {days} napig ingyen, élesben kipróbálhatja — kártya és előfizetés nélkül.", { days }),
+    p2: T(lang, "Azóta három dolog változott, ami Önnek is számíthat."),
     ctaTry: T(lang, "Kipróbálom {days} napig ingyen", { days }),
-    cta: T(lang, "Megnézem a tervemet"),
     heroAlt: T(lang, "A honlap-terv nyitóképe"),
     whyQ: T(lang, "Ha nem érdekli: mi tartja vissza?"),
-    whySub: T(lang, "Egy koppintás, és megtudjuk. Ez nem leiratkozás."),
+    // The link only OPENS the page; the answer is recorded by its button (ADR-0291).
+    whySub: T(lang, "Koppintson a válaszára, és a megnyíló oldalon egy gombbal elküldheti. Ez nem leiratkozás."),
     whyLabels: TRIAL_MAIL_REASONS.map((reason) => ({
       reason,
       label: labels[reason],
       href: trialWhyLink(i.links.unsub, reason),
     })),
-    getsTitle: T(lang, "Ha kipróbálja"),
+    getsTitle: T(lang, "Mi változott"),
+    // §B.17: each point is live today (measured 2026-10-22 on the running commit): the trial
+    // (getFreeTrialConfig, no card), the .hu address in every package (pricing_config
+    // domain_free_in_package), the per-room iCal link (ADR-0361) — prices do NOT sync.
     gets: [
-      hostSentence({ host: i.host }),
-      T(lang, "Saját szerkesztő felület: a fotókat, szövegeket, árakat Ön cseréli"),
-      T(lang, "Minden funkció be van kapcsolva, az online foglalással együtt"),
-      // ⛔ Owner, 2026-10-09: "Helyezést nem ígérünk." is OUT — here and everywhere in the letter.
-      T(lang, "A Google számára olvasható felépítés (szállás-adatok, oldaltérkép)."),
+      T(lang, "{days} napig ingyen, élesben kipróbálhatja a tervét: bankkártya nélkül, és a végén semmit nem terhelünk.", { days }),
+      T(lang, "Bármelyik csomagunk díja egy .hu webcímet is tartalmaz, külön havidíj nélkül (pl. a szálláshelye nevével). A próba {domain}-os címen fut, a .hu cím a megrendeléssel jár.", { domain }),
+      T(lang, "A foglalási naptár iCal-linkkel, szobánként összeköthető a Booking.com, a Szállás.hu és az Airbnb naptárával. Az árak nem szinkronizálódnak: a portálon és a honlapon külön állítja őket."),
     ],
-    getsHostHtml: boldVars(hostSentence, { host: i.host }, ["host"]),
-    end: T(
-      lang,
-      "Ha nem folytatja, a honlap szünetel, és semmit nem terhelünk. A próba-honlap adatai a próba végétől {days} napig megmaradnak, utána töröljük őket.",
-      { days: String(i.retentionDays) },
-    ),
-    coupon,
+    endTitle: T(lang, "Mi történik a {days} nap végén?", { days }),
+    // Each point is the code's: the trial site is suspended at the end (trial/expiry.ts), no
+    // card = nothing to cancel; the offer is pinned at the trial's start (pinTrialOffer);
+    // TRIAL_RETENTION_DAYS keeps the uploads after the end (ADR-0345).
+    ends: [
+      T(lang, "Ha nem rendeli meg: a próba-honlap leáll, semmit nem fizet, és semmit nem kell lemondania."),
+      ...(offer ? [offer] : []),
+      T(lang, "A próbában feltöltött képeit és szövegeit a próba vége után még {n} napig megőrizzük, ha később mégis folytatná.", { n: String(i.retentionDays) }),
+    ],
     regards: T(lang, "Üdvözlettel,"),
     sigName: i.sender.sigName,
     sigCo: i.sender.sigCo,
     sigMail: i.sender.sigMail,
     // Elek3 A6: the opt-out sentence lives once — in unsubTxt, right below, with its link.
-    oneShot: T(lang, "Erről a próbáról több levelet nem küldünk."),
+    // "kérés nélkül": an answer the lead ASKS for (the why page) is not a new approach.
+    oneShot: T(lang, "Erről a próbáról kérés nélkül több levelet nem küldünk."),
     unsubTxt: T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
     legal: T(
       lang,
@@ -217,17 +224,17 @@ export function composeTrialCampaignText(t: TrialCampaignParts, l: TrialCampaign
     "",
     t.p2,
     "",
+    `${t.getsTitle}:`,
+    ...t.gets.map((g) => `- ${g}`),
+    "",
     `${t.ctaTry}: ${b.tryLink}`,
-    `${t.cta}: ${b.planLink}`,
     "",
     t.whyQ,
     t.whySub,
     ...t.whyLabels.map((w) => `${w.label}: ${w.href}`),
     "",
-    `${t.getsTitle}:`,
-    ...t.gets.map((g) => `- ${g}`),
-    "",
-    t.coupon ? `${t.end} ${t.coupon}` : t.end,
+    t.endTitle,
+    ...t.ends.map((e) => `- ${e}`),
     "",
     t.regards,
     t.sigName,
@@ -317,9 +324,7 @@ function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampa
       `</td></tr>`
     : "";
 
-  // bgcolor ON THE TD — Outlook can drop the CSS background of the link. The pair is stacked
-  // (primary, then the outlined secondary — the house ghost button, bookingLayout.ts): two
-  // tables cannot wrap side by side in Outlook, and stacked they read the same on a phone.
+  // bgcolor ON THE TD — Outlook can drop the CSS background of the link. ONE button (A2).
   const cta =
     `<tr><td style="padding:14px ${PAD}px 6px">` +
     tbl(
@@ -328,16 +333,10 @@ function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampa
         `<a href="${esc(b.tryLink)}" data-cta="try" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(t.ctaTry)}</a>` +
         `</td></tr>`,
     ) +
-    tbl(
-      `cellpadding="0" style="margin:10px 0 0"`,
-      `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE_STRONG};border-radius:8px">` +
-        `<a href="${esc(b.planLink)}" data-cta="plan" style="display:block;padding:12px 24px;font-family:${FONT};font-size:15px;font-weight:600;color:${NAVY};text-decoration:none">${esc(t.cta)}</a>` +
-        `</td></tr>`,
-    ) +
     `</td></tr>`;
   const rawUrl = `<tr><td style="padding:0 ${PAD}px 16px;font-family:${FONT};font-size:12px;line-height:1.5;color:${FOOT};word-break:break-all">${esc(l.cta)}</td></tr>`;
 
-  // The question comes RIGHT AFTER the plan (variant C). The pills are inline-block links:
+  // The question comes RIGHT AFTER the button (variant C, kept in A2). The pills are inline-block links:
   // they wrap on a 390px phone, and Outlook (no inline padding) still shows bordered links.
   const pills = t.whyLabels
     .map(
@@ -353,22 +352,29 @@ function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampa
     pills +
     `</div></td></tr>`;
 
-  const gets =
-    `<tr><td style="padding:10px ${PAD}px 0">` +
-    `<p style="margin:0 0 6px;font-family:${FONT};font-size:12px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};font-weight:700">${esc(t.getsTitle)}</p>` +
+  const bullets = (items: readonly string[]): string =>
     tbl(
       `width="100%" style="margin:0 0 14px"`,
-      [t.getsHostHtml, ...t.gets.slice(1).map(esc)]
+      items
         .map(
           (g) =>
             `<tr><td valign="top" width="18" style="width:18px;padding:0 0 6px;font-family:${FONT};font-size:15px;line-height:1.55;color:${CYAN}">&#9679;</td>` +
-            `<td valign="top" style="padding:0 0 6px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">${g}</td></tr>`,
+            `<td valign="top" style="padding:0 0 6px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">${esc(g)}</td></tr>`,
         )
         .join(""),
-    ) +
+    );
+  // A2: the change list stands ABOVE the plan image — it is the letter's news.
+  const gets =
+    `<tr><td style="padding:0 ${PAD}px">` +
+    `<p style="margin:0 0 6px;font-family:${FONT};font-size:12px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};font-weight:700">${esc(t.getsTitle)}</p>` +
+    bullets(t.gets) +
     `</td></tr>`;
 
-  const endPara = `<tr><td style="padding:0 ${PAD}px">${para(esc(t.coupon ? `${t.end} ${t.coupon}` : t.end))}</td></tr>`;
+  const endBlock =
+    `<tr><td style="padding:10px ${PAD}px 0">` +
+    `<p style="margin:0 0 8px;font-family:${FONT};font-size:15px;font-weight:700;color:${INK}">${esc(t.endTitle)}</p>` +
+    bullets(t.ends) +
+    `</td></tr>`;
 
   const signature =
     `<tr><td style="padding:4px ${PAD}px 0">` +
@@ -389,7 +395,7 @@ function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampa
 
   const inner = tbl(
     `width="100%" style="width:100%;max-width:${W}px;background:#ffffff" bgcolor="#ffffff"`,
-    header + intro + hero + cta + rawUrl + why + gets + endPara + signature + footer,
+    header + intro + gets + hero + cta + rawUrl + why + endBlock + signature + footer,
   );
   return tbl(
     `width="100%" bgcolor="${PAGE_BG}" style="background:${PAGE_BG}"`,
@@ -416,8 +422,8 @@ export function buildTrialCampaignEmail(
   // check keeps a later hand-edit from breaking it silently.
   const t = letter.parts;
   const shown = [
-    t.greet, t.p1, t.p2, t.ctaTry, t.cta, t.whyQ, t.whySub, ...t.whyLabels.map((w) => w.label), t.getsTitle,
-    ...t.gets, t.end, ...(t.coupon ? [t.coupon] : []), t.oneShot, t.unsubTxt, t.legal, t.identity,
+    t.greet, t.p1, t.p2, t.ctaTry, t.whyQ, t.whySub, ...t.whyLabels.map((w) => w.label), t.getsTitle,
+    ...t.gets, t.endTitle, ...t.ends, t.oneShot, t.unsubTxt, t.legal, t.identity,
   ];
   for (const s of shown) {
     if (!letter.body.includes(s)) {

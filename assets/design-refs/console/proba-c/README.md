@@ -44,7 +44,7 @@ Bővíti: `../proba-admin-sav/`, `../proba-levelek/`, `../proba-torles-level/`, 
 5. **Levelek, SMS (4):** a `3-levelek-sms.html` javaslatai szó szerint (belépő-levél, T−3/T−1, SMS-ek,
    90 napos levél: a kedvezmény-mondat helyén „Ha folytatná, a Megrendelem gombbal most is megteheti; a honlap
    a fizetés után azonnal visszakapcsol.”); a kampány-levél gombpárja **„Kipróbálom {days} napig ingyen”** +
-   **„Megnézem a tervemet”**; a kampány-SMS a %-os változat (ha a lead-nek van élő ajánlata; 2 szegmensen
+   „Megnézem a tervemet” (⏹ 2026-10-26 óta kivezetve, `../ujrakereses-level/`); a kampány-SMS a %-os változat (ha a lead-nek van élő ajánlata; 2 szegmensen
    túl a %-mentes, jóváhagyott szövegre esik vissza). A T−1 levélben: „Tetszik a cím? Most {host} —
    megrendeléskor ingyen megváltoztathatja.” (a T−3-ba és az SMS-be nem kerül).
 6. **Névváltás (4/5):** a folytatás 1. lépésében a mai cím **„Ingyen megváltoztatható”** jelzéssel;

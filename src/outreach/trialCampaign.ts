@@ -1,13 +1,16 @@
-// ADR-0348 — the RETROACTIVE trial campaign: one "{name}: 14 napig ingyen, élesben" letter (or,
-// for the mobile-only leads, its accent-free SMS) to every lead that ALREADY received the cold
-// outreach, sent once, after the big deploy, on the owner's separate "mehet".
+// ADR-0348 — the RETROACTIVE trial campaign: one letter (since 2026-10-26 the re-contact letter
+// "A2": "{name}: azóta élesben is kipróbálhatja") or, for the mobile-only leads, its accent-free
+// SMS to every lead that ALREADY received the cold outreach, sent once, after the big deploy, on
+// the owner's separate "mehet".
 //
 // Who gets it (owner, 2026-10-09):
 //   · a lead whose cold outreach actually went out (some prospect has email_sent_at or
 //     sms_sent_at), addressed through its LIVE prospect (the newest non-archived one);
 //   · the channel is the one the cold outreach used: mail if a cold MAIL went out (and an
 //     address is known), else SMS if a cold SMS went out to a Hungarian mobile;
-//   · a rejecting reply is NOT an unsubscribe — those leads get the letter.
+//   · a rejecting reply is NOT an unsubscribe — those leads get the letter. (Re-confirmed for
+//     the A2 re-contact, 2026-10-26: the brief's "no second letter after a rejection" lost to
+//     this rule; a conversation the operator wants spared goes out through `--kizar`.)
 // Who does not (each counted under its own reason in the dry run):
 //   archived (no live prospect) · test lead · disqualified / terminated lead · unsubscribed
 //   (any prospect row, or the address / number suppressed at person level) · bought
@@ -51,6 +54,7 @@ import { TRIAL_RETENTION_DAYS } from "../trial/retention.js";
 import { advertiserIdentity, buildDraftForProspect, senderParts } from "./draft.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
+import { ackCoversVerdicts, blockingVerdicts, verdictAckOf, verdictReasonLine } from "./mockVerdictGate.js";
 import { checkOutreachDraft, checkOutreachSms } from "./outreachCheck.js";
 import { isTestLeadName } from "./ownerTestPhone.js";
 import { isEmailSuppressed } from "./sendBatch.js";
@@ -438,6 +442,16 @@ export async function trialCampaignNumbers(): Promise<{
  * intro percent it mints as a `campaign` row. null = nothing to promise (0 %).
  */
 export async function trialCampaignOfferPercent(leadId: string, now = new Date()): Promise<number | null> {
+  return (await trialCampaignOffer(leadId, now))?.percent ?? null;
+}
+
+/** trialCampaignOfferPercent, plus whether the percent was PROMISED to the lead (a live offer
+ *  of theirs, or a legacy send's intro) — the A2 letter says "korábban ígért" only then; the
+ *  operator-intro fallback was never offered to them. */
+export async function trialCampaignOffer(
+  leadId: string,
+  now = new Date(),
+): Promise<{ readonly percent: number; readonly promised: boolean } | null> {
   const prospects = await db.selectFrom("prospect").select(["id", "sent_at"]).where("lead_id", "=", leadId).execute();
   if (!prospects.length) return null;
   const offers = await db
@@ -457,7 +471,7 @@ export async function trialCampaignOfferPercent(leadId: string, now = new Date()
     if (p.sent_at && !offers.some((o) => o.prospect_id === p.id && o.kind === "outreach")) percents.push(legacyOutreachPercent());
   }
   const best = percents.length ? Math.max(...percents) : (await getEscalationConfig()).outreachPercent;
-  return best > 0 ? best : null;
+  return best > 0 ? { percent: best, promised: percents.length > 0 } : null;
 }
 
 /** The trial site's promised host (ADR-0347 ④: the same rule the provisioning runs). */
@@ -513,7 +527,7 @@ export async function buildTrialCampaignLetterFor(
   const host = await trialCampaignHost(c.leadId);
   if (!host) return { error: "a próba-aldomain nem határozható meg" }; // i18n-exempt: operátori CLI-kimenet
   const n = await trialCampaignNumbers();
-  const percent = await trialCampaignOfferPercent(c.leadId);
+  const offer = await trialCampaignOffer(c.leadId);
   const letter = renderTrialCampaignLetter({
     lang: d.lang,
     leadName: d.input.leadName,
@@ -521,12 +535,27 @@ export async function buildTrialCampaignLetterFor(
     days: n.days,
     host,
     retentionDays: n.retentionDays,
-    coupon: percent ? { percent } : null,
+    coupon: offer,
     sender: senderParts(),
     identity: advertiserIdentity(d.lang),
     links: { cta: d.draft.link, unsub: d.draft.unsubscribeLink, privacy: d.draft.privacyLink },
   });
   return { letter, lang: d.lang, market: d.market };
+}
+
+/** The curator sign-off and the stored guard verdicts of the mock the letter links to; null =
+ *  sendable. The SMS branch gets both from mobileOutreachGates. */
+async function artifactBlocks(artifactId: string | null): Promise<string | null> {
+  if (!artifactId) return "nincs mock-artifact — nincs mit kurátornak jóváhagynia"; // i18n-exempt: operátori CLI-kimenet
+  const art = await db.selectFrom("mock_artifact").select(["status", "inputs"]).where("id", "=", artifactId).executeTakeFirst();
+  if (art?.status !== "approved") {
+    return `a mock kurátori jóváhagyásra vár (artifact: '${art?.status ?? "ismeretlen"}') — küldés csak 'approved' után`; // i18n-exempt: operátori CLI-kimenet
+  }
+  const blocking = blockingVerdicts(art.inputs);
+  if (blocking.length && !ackCoversVerdicts(verdictAckOf(art.inputs), blocking)) {
+    return `${blocking.map(verdictReasonLine).join(" · ")} — a kampány leletet nem vállal át: Vera-ítélet vagy új mock után mehet`; // i18n-exempt: operátori CLI-kimenet
+  }
+  return null;
 }
 
 /** Send (or dry-run) the campaign MAIL to one candidate, through every gate. */
@@ -537,6 +566,11 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   if (await isEmailSuppressed(c.address)) return { kind: "skipped", reason: EXCLUSION_LABEL.unsubscribed };
   const shared = await sharedContactBlocks(c.leadId, "email", c.address);
   if (shared) return { kind: "skipped", reason: shared };
+  // The cold letter's curator sign-off and §A artifact-verdict gates (sendBatch.ts): the letter
+  // opens the same mock again, so an un-approved or FLAGged one must not be re-sent. Here there
+  // is no confirm click — an unacknowledged finding skips the lead.
+  const verdict = await artifactBlocks(c.artifactId);
+  if (verdict) return { kind: "skipped", reason: verdict };
 
   const built = await buildTrialCampaignLetterFor(c, { dryRun: deps.dryRun });
   if ("error" in built) return { kind: "skipped", reason: built.error };
