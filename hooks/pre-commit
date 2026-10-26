@@ -886,7 +886,7 @@ if [ -f scripts/client-visibility-check.mts ] && \
   echo "[pre-commit] client-visibility-check (próba + foglalás a konzolon, értesítés egyszer)…"
   npx tsx scripts/client-visibility-check.mts >"$GATE_LOG" || gate_failed
 fi
-# A PRÓBA BELSEJE (scripts/trial-report-check.mts — ADR-XXXX, terv assets/design-refs/console/proba-riport/):
+# A PRÓBA BELSEJE (scripts/trial-report-check.mts — terv assets/design-refs/console/proba-riport/):
 # minden admin-mentés útvonala fülhöz tartozik, a valódi admin HTTP-n naplóz (megnyitás egyszer, mentés füllel,
 # saját oldal), a próba-történetek (csend, elakadás, fizetett, nem mért) és a Riport „Próba” fül egy szabályból.
 if [ -f scripts/trial-report-check.mts ] && \
