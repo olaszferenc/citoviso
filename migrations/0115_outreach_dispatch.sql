@@ -1,4 +1,4 @@
--- 0115 AUTOMATIC OUTREACH DISPATCH (ADR-XXXX, owner 2026-10-26: "SOS … hogy mielőbb
+-- 0115 AUTOMATIC OUTREACH DISPATCH (ADR-0405, owner 2026-10-26: "SOS … hogy mielőbb
 -- elindulhasson az automata kiküldés").
 --
 -- Until now the dispatcher's go list (MEHET) lived in text files on the dev machine

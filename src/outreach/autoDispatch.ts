@@ -1,4 +1,4 @@
-// ADR-XXXX — AUTOMATIC OUTREACH DISPATCH (owner, 2026-10-26: "SOS … hogy mielőbb elindulhasson
+// ADR-0405 — AUTOMATIC OUTREACH DISPATCH (owner, 2026-10-26: "SOS … hogy mielőbb elindulhasson
 // az automata kiküldés … ezerszer kértem … ez a cél").
 //
 // The go list (MEHET) used to be text files on the dev machine and a Claude session clicked

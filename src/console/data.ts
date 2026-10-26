@@ -168,7 +168,7 @@ export interface LeadDetail {
   readonly heroScores: Record<string, { subject: string; score: number; reason: string }>;
   /** Az operátor saját nyitókép-választása erre a leadre (0061), ha van. */
   readonly heroPin: { url: string; actor: string } | null;
-  /** ADR-XXXX: the lead's row on the automatic outreach go list, if any. */
+  /** ADR-0405: the lead's row on the automatic outreach go list, if any. */
   readonly dispatch?: { artifactId: string; status: string; note: string | null; queuedBy: string } | null;
   /** True when any prospect of this lead was already contacted (no first contact again). */
   readonly contacted?: boolean;

@@ -5182,7 +5182,7 @@ function mockReviewBlock(
 }
 
 /**
- * ADR-XXXX — the automatic outreach go list on the approved mock's card. The dispatcher puts
+ * ADR-0405 — the automatic outreach go list on the approved mock's card. The dispatcher puts
  * the lead in the queue with ONE click after Poe's pick and Vera's PASS; the prod timer sends
  * it through the send-all gates (weekday 9–16, daily cap). A row the timer held shows why.
  */

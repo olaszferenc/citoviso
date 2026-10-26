@@ -552,7 +552,7 @@ export interface TrialCampaignTable {
   sent_at: Timestamp | null;
 }
 
-/** 0115 (ADR-XXXX): the automatic outreach go list — one row per lead, sent by the prod
+/** 0115 (ADR-0405): the automatic outreach go list — one row per lead, sent by the prod
  *  timer through the send-all gates (src/outreach/autoDispatch.ts). */
 export interface OutreachDispatchTable {
   id: Generated<string>;

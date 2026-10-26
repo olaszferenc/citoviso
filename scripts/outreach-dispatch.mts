@@ -1,4 +1,4 @@
-// ADR-XXXX — the automatic outreach go list (outreach_dispatch) and its timer.
+// ADR-0405 — the automatic outreach go list (outreach_dispatch) and its timer.
 //
 //   tsx scripts/outreach-dispatch.mts tick [--now=ISO] [--force]   # one lead (the timer runs this)
 //   tsx scripts/outreach-dispatch.mts status                        # switch, cap, queue counts

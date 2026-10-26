@@ -1,9 +1,9 @@
 [Unit]
-# ADR-XXXX: az automata megkeresés-kiküldő (tulaj, 2026-10-26). Egy futás = legfeljebb EGY lead
+# ADR-0405: az automata megkeresés-kiküldő (tulaj, 2026-10-26). Egy futás = legfeljebb EGY lead
 # az outreach_dispatch sorból, a konzol send-all útján (minden kapu újrafut). A főkapcsoló
 # (app_setting outreach_auto) alapból KI; az ablakot (hétköznap 9–16 Budapest) és a napi
 # plafont a KÓD tartja.
-Description=Citoviso automata megkeresés-kiküldő tick (ADR-XXXX)
+Description=Citoviso automata megkeresés-kiküldő tick (ADR-0405)
 After=network-online.target
 Wants=network-online.target
 # ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).

@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso automata megkeresés-kiküldő, 4 percenként (ADR-XXXX)
+Description=Citoviso automata megkeresés-kiküldő, 4 percenként (ADR-0405)
 
 [Timer]
 # 4 percenként, egész nap: az ablakot (hétköznap 9:00–16:00 Europe/Budapest) a KÓD tartja,

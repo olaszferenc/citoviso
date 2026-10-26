@@ -1,4 +1,4 @@
-## ADR-XXXX — Automata megkeresés-kiküldő: a go-lista az adatbázisban, éles időzítő üríti
+## ADR-0405 — Automata megkeresés-kiküldő: a go-lista az adatbázisban, éles időzítő üríti
 
 **Dátum:** 2026-10-26 · **Állapot:** elfogadva (tulaj) · **Érinti:** ADR-0134, ADR-0329, ADR-0334, ADR-0112
 

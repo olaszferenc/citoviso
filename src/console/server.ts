@@ -2989,7 +2989,7 @@ async function handle(
       `/lead/${row.lead_id}?flash=${encodeURIComponent(flash)}${bad ? "&flashKind=bad" : ""}#a-${id}`,
     );
   }
-  // POST /artifact/:id/dispatch — ADR-XXXX: the automatic outreach go list. op=add puts the
+  // POST /artifact/:id/dispatch — ADR-0405: the automatic outreach go list. op=add puts the
   // lead with THIS approved mock in the queue (the prod timer sends it through the send-all
   // gates), op=cancel takes a queued row out, op=requeue puts a held/cancelled row back.
   const dispatchMatch = /^\/artifact\/([0-9a-f-]{36})\/dispatch$/i.exec(path);
