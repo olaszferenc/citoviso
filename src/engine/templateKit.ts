@@ -116,14 +116,29 @@ const SURROUNDINGS_SUBJECTS = new Set(["exterior", "view", "pool_garden"]);
 /** Never the contact / surroundings picture, whatever slot it falls into. */
 const NEVER_SURROUNDINGS = new Set(["bathroom", "toilet"]);
 
+/** The outdoor contact picture's alt, by its vision subject (a literal per subject for the extractor). */
+function sceneAlt(d: SiteData, subject: string | undefined): string {
+  switch (subject) {
+    case "view":
+      return T(d, "{name} – kilátás", { name: d.name });
+    case "pool_garden":
+      return T(d, "{name} – kert és udvar", { name: d.name });
+    default:
+      return T(d, "{name} kívülről", { name: d.name });
+  }
+}
+
 /**
  * The contact block's picture („<név> környezete”). Measured 2026-10-21 (Vera, 8 leads:
  * Germering, Balaton Panzió, Dinasztia, …): the templates took a FIXED slot (the last photo,
  * or photos[3]), and the gated set often ends in a bathroom — a shower captioned „the
  * surroundings”. Now: the last outdoor photo (exterior · view · pool_garden) other than the
- * hero wins, captioned as the surroundings; otherwise the fixed slot stays (a bathroom or
- * toilet stepping aside) with the plain name as alt — the caption claims nothing it cannot
- * know. Photos without a vision verdict count as unknown, never as outdoor. Deterministic.
+ * hero wins; otherwise the fixed slot stays (a bathroom or toilet stepping aside) with the
+ * plain name as alt — the caption claims nothing it cannot know. Photos without a vision
+ * verdict count as unknown, never as outdoor. Deterministic.
+ * The alt names what the picture shows (Tomi d36898cc, 2026-10-26: a windowsill shot with
+ * the city beyond, verdict "view", read „<név> környezete”): view → kilátás, exterior →
+ * kívülről, pool_garden → kert és udvar.
  */
 export function contactPhotoOf(
   d: SiteData,
@@ -133,7 +148,7 @@ export function contactPhotoOf(
   if (!photos.length) return null;
   const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
   const scene = outdoor.filter((p) => p.url !== photos[0]!.url).at(-1) ?? outdoor.at(-1);
-  if (scene) return { url: scene.url, alt: T(d, "{name} környezete", { name: d.name }) };
+  if (scene) return { url: scene.url, alt: sceneAlt(d, scene.subject) };
   const ok = (p: Photo | undefined): p is Photo => Boolean(p && !(p.subject && NEVER_SURROUNDINGS.has(p.subject)));
   const pick = ok(slot) ? slot : [...photos].reverse().find(ok);
   return pick ? { url: pick.url, alt: d.name } : null;

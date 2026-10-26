@@ -252,12 +252,19 @@ for (const [id, tpl] of Object.entries(TEMPLATES)) {
     /szándékosan nincs kitalált szolgáltatás/.test(amen) && !/cit-modsec__item/.test(amen), amen.slice(0, 160));
 }
 
-console.log("⑥ kapcsolat-kép: környezet csak kültéri képen, fürdő/WC soha");
+console.log("⑥ kapcsolat-kép: kültéri kép, fürdő/WC soha; az alt a kép tárgyát mondja");
 const shot = (n: string, subject?: string) => ({ url: `https://x.test/${n}.jpg`, alt: n, ...(subject ? { subject } : {}) });
 // Germering a5cfe07f (shape): the gated set ends in a WC; a garden photo is in the middle.
 const GERMERING = [shot("h", "exterior"), shot("n", "interior"), shot("k", "pool_garden"), shot("s", "interior"), shot("f", "bathroom"), shot("w", "toilet")];
 const ger = contactPhotoOf({ ...base, name: "Germering Apartman", photos: GERMERING }, GERMERING.at(-1));
-check("Germering: a WC helyett a kerti kép, „környezete” alttal", ger?.url.endsWith("/k.jpg") === true && ger.alt === "Germering Apartman környezete", ger);
+check("Germering: a WC helyett a kerti kép, „kert és udvar” alttal", ger?.url.endsWith("/k.jpg") === true && ger.alt === "Germering Apartman – kert és udvar", ger);
+// Tomi Apartman d36898cc (mock 34abde3f): the only outdoor verdicts are two windowsill shots with
+// Pécs beyond ("view") — the alt says view, not „környezete”.
+const TOMI_SHOTS = [shot("pecs-10", "view"), shot("pecs-14", "view"), shot("pecs-3", "interior"), shot("pecs-7", "bathroom"), shot("pecs-9", "bathroom")];
+const tomi = contactPhotoOf({ ...base, name: "Tomi Apartman", photos: TOMI_SHOTS }, TOMI_SHOTS.at(-1));
+check("Tomi: az ablakos kilátás-kép altja „kilátás”, nem „környezete”", tomi?.url.endsWith("/pecs-14.jpg") === true && tomi.alt === "Tomi Apartman – kilátás", tomi);
+const HOUSE = [shot("h", "view"), shot("e", "exterior"), shot("i", "interior")];
+check("házról készült kép: „kívülről”", contactPhotoOf({ ...base, name: "Teszt Ház", photos: HOUSE }, HOUSE.at(-1))?.alt === "Teszt Ház kívülről");
 // Kék Madár ab708be5 (shape): no outdoor photo at all → the slot steps past the bathroom, plain alt.
 const KEK = [shot("a", "interior"), shot("b", "interior"), shot("c", "bathroom")];
 const kek = contactPhotoOf({ ...base, name: "Kék Madár Vendégház", photos: KEK }, KEK.at(-1));
@@ -273,8 +280,9 @@ for (const id of ["parallax", "fullbleed", "dopamine", "dark-luxury"]) {
   const recipe: Recipe = { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] };
   const html = renderSite(recipe, { ...lead, name: "Germering Apartman", photos: GERMERING.map((p) => ({ ...p, url: `${PIX}#${p.alt}` })) }, { phase: "mock" });
   const alts = [...html.matchAll(/<img[^>]*#(w|f)"[^>]*alt="([^"]*)"/g)].map((m) => m[2]);
-  check(`${id}: render — fürdő/WC kép nem kap „környezete” altot`, !alts.some((a) => /környezete/.test(a ?? "")), alts);
-  check(`${id}: render — a „környezete” kép a kerti`, /#k"[^>]*alt="Germering Apartman környezete"/.test(html));
+  check(`${id}: render — fürdő/WC kép nem kap kültéri altot`, !alts.some((a) => /kert és udvar|kilátás|kívülről|környezete/.test(a ?? "")), alts);
+  check(`${id}: render — a kerti kép altja „kert és udvar”`, /#k"[^>]*alt="Germering Apartman – kert és udvar"/.test(html));
+  check(`${id}: render — „környezete” alt sehol`, !/alt="[^"]*környezete"/.test(html));
 }
 
 console.log("⑦ bekötés: a generátor átadja a jelzéseket");
