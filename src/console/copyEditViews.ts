@@ -660,7 +660,9 @@ const EDITOR_JS = `(function(){
       '<b>'+esc(fmt(t.changedN,{n:ch.length}))+'</b> · '+esc(dirty.length?fmt(t.unsaved,{n:dirty.length}):t.saved);
     var names=[]; ch.forEach(function(it){var n=it.f.label+(it.i!=null?' '+(it.i+1):''); if(names.indexOf(n)<0) names.push(n);});
     $('cit-ced-list').textContent=ch.length?t.listHead+' '+names.join(', '):t.keys;
-    $('cit-ced-save').disabled=!dirty.length||!!active;
+    // Not disabled while a field is open: Save closes it first (finish) and posts it too —
+    // a disabled button swallowed the click silently (Poe, Olympos 0a0c283c, 2026-10-26).
+    $('cit-ced-save').disabled=!dirty.length;
     $('cit-ced-discard').disabled=!dirty.length;
     $('cit-ced-revert-all').disabled=!Object.keys(cfg.fields).some(function(k){return cfg.fields[k].manual;})&&!items.some(isChanged);
     placeTags();
@@ -713,7 +715,6 @@ const EDITOR_JS = `(function(){
     if(it.el.contentEditable!=='plaintext-only'&&it.key!=='hero.lead') it.el.setAttribute('contenteditable','true');
     it.el.focus();
     showPop(it,it.part==='first-sentence'?t.firstSentence:(it.key==='tagline'?t.tagline:''),it.part?'warn':'');
-    $('cit-ced-save').disabled=true;
   }
   function finish(force){
     var it=active; if(!it) return true;
@@ -740,7 +741,8 @@ const EDITOR_JS = `(function(){
     });
     it.el.addEventListener('input',function(){it.el.classList.remove('cit-ced-err');
       if(pop){var c=pop.querySelector('.cit-ced-cnt'),n=read(it).length;c.textContent=n+' / '+it.f.max;c.classList.toggle('over',n>it.f.max);}
-      placeTags();});
+      // The bar must say „not saved” the moment the words change, not after „Kész”.
+      summary();});
     it.el.addEventListener('paste',function(e){e.preventDefault();var s=(e.clipboardData||window.clipboardData).getData('text/plain').replace(/\\s+/g,' ');document.execCommand('insertText',false,s);});
   });
   document.addEventListener('click',function(e){if(!active) return; if(e.target.closest('.cit-ced-pop')||e.target.closest('[data-cit-copy]')) return; finish(false);},true);

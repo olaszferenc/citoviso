@@ -2825,6 +2825,14 @@ if [ -f scripts/booked-source-check.mts ] && \
   echo "[pre-commit] booked-source-check (booked.hu forrás magyarul, ajánló nélkül)…"
   npx tsx scripts/booked-source-check.mts >"$GATE_LOG" || gate_failed
 fi
+# copy-edit-save-check (Poe 2026-10-26, Olympos 0a0c283c): az /artifact/:id/edit szerkesztőben a
+# „Mentés” nyitott mezőnél le volt tiltva, a kattintás néma maradt, a sáv „mentve”-t mutatott, az
+# átírás elveszett. Valódi böngésző, a POST elfogva; DB/hálózat nincs, ~5 s.
+if [ -f scripts/copy-edit-save-check.mts ] && \
+   changed_files | grep -qE '^src/console/copyEditViews\.ts$|^scripts/copy-edit-save-check'; then
+  echo "[pre-commit] copy-edit-save-check (a szerkesztő Mentése nyitott mezővel is ment)…"
+  npx tsx scripts/copy-edit-save-check.mts >"$GATE_LOG" || gate_failed
+fi
 # portal-approve-check (Neo 2026-10-26, Vivien 1108db5a): a közepes egyezésű portál-adatlapnak
 # nem volt jóváhagyó lépése, a lead örökre TARTVA maradt. Méri: a jóváhagyás újraolvas és cserél,
 # rossz/várakozó olvasás elutasít (a lead érintetlen), gyenge sáv soha; végpont + gomb. Dev DB, ~5 s.
