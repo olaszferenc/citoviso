@@ -26,8 +26,15 @@
 // /p/:token/request), so it also counts as ordered/paid. `ordered`/`paid` keep their
 // definitions — starting a trial is not an order.
 // Only SENT links count (ADR-0139): own opens / tests on an unsent link are not interest.
+// Our own TEST leads never count (owner, 2026-10-26: "most is torzítva van az éles tesztek
+// alatt megvásárolt / látogatások miatt"): a [TESZT]-named lead or the Elek park lead is a
+// live test sent to our own mailbox — measured that day, those 4 sent links carried EVERY
+// trial, order and payment of the funnel (real: 0). Dropped here, before any join, so their
+// visits, trials, orders and replies leave every panel at once.
 
 import { db } from "../db/client.js";
+import { isTestLeadName } from "../outreach/ownerTestPhone.js";
+import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { partsIn, APP_TZ } from "../text/zoneTime.js";
 import {
   EXIT_REASONS,
@@ -485,7 +492,8 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       "mock_artifact.inputs as inputs",
     ])
     .where("prospect.sent_at", "is not", null)
-    .execute();
+    .execute()
+    .then((all) => all.filter((r) => !isTestLeadName(r.lead_name) && r.lead_name !== ELEK_LEAD_NAME));
   if (!rows.length) return [];
   const ids = rows.map((r) => r.id);
 
