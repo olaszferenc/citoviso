@@ -767,6 +767,37 @@ a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet
 küldtél, a **„Megjelölöm kiküldöttként”** gombbal jelzed. ⚠️ A mérés NEM ekkor indul: az a link létrehozása óta fut — a megjelölés azt rögzíti, hogy innentől a forgalom a címzetté
 és az aktivitást (Tevékenység-gomb).
 
+## Kiküldési sor (automata)
+
+A jóváhagyott mock kártyáján, Vera ítélete alatt áll a **„Kiküldési sorba (automata)”** gomb. Csak
+akkor látszik, ha a mock **jóvá van hagyva**, Vera **PASS**-t adott a mostani szövegére, és a lead
+még **nem kapott megkeresést**. Egy kattintás: a lead bekerül a kiküldési sorba — a többit a rendszer
+végzi.
+
+**Mit csinál az automata.** Hétköznap 9 és 16 óra között (budapesti idő) négypercenként egy leadet
+küld ki a sorból, a legrégebben sorba tettel kezdve, a napi keretig. Ugyanazok az ellenőrzések futnak
+le, mint a kézi küldésnél (kép-kapu, jogszerűségi kapu, leiratkozás, egyszeri küldés, Vera-ítélet), és
+ugyanaz megy ki: a levél és — mobilszámnál — a kép+SMS pár. Hétvégén, este, kikapcsolt automatánál
+vagy elért napi keretnél a sor vár.
+
+**Az állapotsor** a gomb helyén mutatja, hol tart a lead, és ki tette sorba:
+
+- **„Kiküldési sorban”** — vár a következő küldési ablakra. Mellette **„Kivétel a sorból”**: ha
+  mégsem mehet ki (iker, visszavont kép, új információ), ezzel kiveszed.
+- **„Kiküldés folyamatban”** — az automata éppen ezt küldi.
+- **„Az automata kiküldte”** — kiment; innentől a „Megkeresés” panel és a riport mutatja.
+- **„Az automata visszatartotta — ember dönt”** — egy ellenőrzés megállította, és az automata
+  SOHA nem dönt helyetted. Az ok a sor végén áll (pl. „kép-kapu: broken”, „őr-lelet megerősítésre
+  vár”, „Vera-ellenőrzés hiányzik vagy elavult”). Teendő: olvasd el az okot, javítsd vagy vállald a
+  lead lapján (kép-kapu, Vera új ítélete), majd **„Újra sorba”** — vagy küldd ki kézzel a
+  Megkeresés-piszkozat képernyőn, ha ott meg kell erősíteni egy leletet.
+- **„Az automata kihagyta”** — nincs mit küldeni (pl. a lead közben már megkeresést kapott). Ha
+  szerinted tévedés, **„Újra sorba”**.
+- **„Visszavonva a kiküldési sorból”** — valaki kivette; **„Újra sorba”** visszateszi.
+
+⚠️ Ugyanazt a leadet ne küldd ki kézzel ÉS ne tedd sorba is: a rendszer a második küldést úgyis
+megtagadja, de a sorban lévő lead kézi küldése után az automata „kihagyta” állapotba teszi.
+
 ## Ha a soron „leiratkozott” áll
 
 A leiratkozott prospect sorában piros címke jelzi a leiratkozást a dátumával, és a küldés-gomb

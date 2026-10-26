@@ -199,6 +199,11 @@ Ugyanez a címke-változatra is áll: a `nev+valami@domain` és a `nev@domain` c
 EGY címzettnek veszi, ezért ha az egyikre már ment hideg megkeresés, a másikra sem megy ki.
 A tárolt cím nem változik, csak az összevetés hagyja figyelmen kívül a `+` utáni részt.
 
+
+> ℹ️ A kézi küldés mellett van **automata út** is: a lead lapján, a jóváhagyott mock kártyáján a
+> „Kiküldési sorba (automata)” gomb sorba teszi a leadet, és hétköznap 9–16 között a rendszer küldi
+> ki, ugyanezekkel az ellenőrzésekkel (Súgó: lead adatlap → „Kiküldési sor (automata)”).
+
 ## Mit lát a lead, amikor megnyitja a linket
 
 A lap **legtetején** mindig áll egy diszkrét sáv — de **három különböző**, attól függően, ki
