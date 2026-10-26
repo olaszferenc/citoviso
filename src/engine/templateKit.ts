@@ -159,8 +159,10 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   // lead with three rooms must not meet a mock built for a different property.
   // ADR-0338: names the owner's prose gives → that many cards, by those names (Főnix:
   // „Family apartman”, „Gold apartman”, not „1.–3. szoba”); a stated count → numbered
-  // cards; NOTHING stated → one card for the whole place — the owner's own default
-  // (2026-09-08: „az egész szállás a jó alapértelmezés"), never an invented count.
+  // cards; NOTHING stated → one card, never an invented count. That card says „Az egész
+  // szállás" ONLY when the source says the place is let as a whole (sampleUnitKind
+  // "whole"); otherwise it carries no letting-mode claim at all (TARTVA ×30, 2026-10-26:
+  // the whole-place default stood on panziók, hotels and apartment houses — §B.17).
   const names = d.sampleRoomNames?.length ? d.sampleRoomNames.slice(0, 8) : null;
   const n = names ? names.length : d.sampleRoomCount ? Math.max(1, Math.min(8, d.sampleRoomCount)) : 1;
   const deny = d.sampleAmenityDeny ?? [];
@@ -177,7 +179,9 @@ export function sampleRooms(d: SiteData): readonly Room[] {
             ? T(d, "Szobák")
             : d.sampleUnitKind === "apartments"
               ? T(d, "Apartmanok")
-              : T(d, "Az egész szállás");
+              : d.sampleUnitKind === "whole"
+                ? T(d, "Az egész szállás")
+                : T(d, "Szálláslehetőség");
     // On a card that names a REAL unit („Gold apartman") or the whole place, a generic chip
     // is no longer an illustration but a claim about that unit („Gold apartman: Erkély") —
     // those cards carry no sample chips (fact-check 2026-10-07, §B.17 (5)). On a numbered

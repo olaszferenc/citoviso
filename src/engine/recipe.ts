@@ -279,9 +279,13 @@ export interface SiteData {
    * The source lets SEVERAL units but states neither their number nor their names
    * (Barackvirág Panzió 2026-10-26: „Apartmanok és kétágyas szobák igényelhetők”): the one
    * sample card then says what kind of units there are, never „Az egész szállás” (a claim
-   * that the place is let as a whole) and never an invented count. Mock-only hint.
+   * that the place is let as a whole) and never an invented count. "whole" = the source
+   * SAYS the place is let as a whole („csak egyben adjuk ki”, „egyben is kiadó”, „a teljes
+   * ház kibérelhető”) — the only case the card may read „Az egész szállás”. No hint at all
+   * → a neutral „Szálláslehetőség” card (TARTVA ×30, 2026-10-26: the whole-place name was
+   * the default, a letting-mode claim with no source). Mock-only hint.
    */
-  readonly sampleUnitKind?: "rooms" | "apartments" | "both";
+  readonly sampleUnitKind?: "rooms" | "apartments" | "both" | "whole";
   /**
    * The mock's services SAMPLE, filled from the source (ADR-0338): the listing's own
    * offers, strongest first. Mock-only hint — the live page renders `amenities`.

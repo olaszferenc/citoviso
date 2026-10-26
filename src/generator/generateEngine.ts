@@ -9,7 +9,7 @@
 // confidence rule can never drift between the two paths.
 
 import { hungarianBedNote, hungarianRoomName } from "../engine/roomNames.js";
-import { deniedSampleTypes, roomCountContradicted, unitKindOf, unitNamesFromProse, wholeLetOnly } from "../engine/sampleFromSource.js";
+import { deniedSampleTypes, roomCountContradicted, unitKindOf, unitNamesFromProse, wholeLetOnly, wholeLetStated } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
@@ -152,7 +152,10 @@ export function sampleHintsOf(
   const wholeOnly = wholeLetOnly(sources.descriptions);
   const sampleRoomNames = wholeOnly ? [] : unitNamesFromProse(sources.descriptions, lead.name);
   // Several units, but no count and no names → the one card names their kind (Barackvirág).
-  const sampleUnitKind = wholeOnly ? null : unitKindOf(sources.descriptions, lead.name);
+  // The whole place only where the source says so; nothing stated → no hint, a neutral card.
+  const sampleUnitKind = wholeOnly
+    ? "whole"
+    : (unitKindOf(sources.descriptions, lead.name) ?? (wholeLetStated(sources.descriptions) ? "whole" : null));
   const sampleAmenityDeny = deniedSampleTypes(sources.listedAmenities, sources.descriptions);
   // „Amit kínálunk” asks what the HOUSE offers: a prose fact about the town or the area
   // („a város strandjain”, „közel a homokos strand”) is true, but not this house's offer.

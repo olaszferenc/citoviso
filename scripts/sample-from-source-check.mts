@@ -37,6 +37,7 @@ import {
   unitNamesFromProse,
   unitKindOf,
   wholeLetOnly,
+  wholeLetStated,
 } from "../src/engine/sampleFromSource.js";
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems } from "../src/generator/marketCheck.js";
@@ -91,7 +92,7 @@ check("⛔ a ház saját neve nem egység („A Vitorlás apartmanunk”)", unit
 check("⛔ névelő/névmás nem név („Az apartmanunk”, „Minden szobánk”)", unitNamesFromProse(["Az apartmanunk tágas. Minden szobánk klímás."], "X").length === 0);
 const base: SiteData = { name: "Teszt", tagline: "", intro: "", highlights: [], photos: [], contact: {} };
 const unknown = sampleRooms(base);
-check("forrás nem ad számot → EGY kártya, „Az egész szállás”", unknown.length === 1 && unknown[0]!.name === "Az egész szállás", unknown.map((r) => r.name));
+check("forrás nem ad semmit → EGY kártya, semleges „Szálláslehetőség” (nem „Az egész szállás”)", unknown.length === 1 && unknown[0]!.name === "Szálláslehetőség", unknown.map((r) => r.name));
 const counted = sampleRooms({ ...base, sampleRoomCount: 2 });
 check("kimondott szám → annyi számozott kártya", counted.map((r) => r.name).join("|") === "1. szoba|2. szoba", counted.map((r) => r.name));
 const named = sampleRooms({ ...base, sampleRoomNames: names });
@@ -100,7 +101,8 @@ const noBreakfast = sampleRooms({ ...base, sampleRoomCount: 1, sampleAmenityDeny
 check("a tiltott típus a minta-szoba felszereltségéből is kiesik", !noBreakfast[0]!.amenities?.some((a) => /reggeli/i.test(a.label)), noBreakfast[0]!.amenities);
 check("számozott minta-kártya megtartja az illusztratív chipeket", (counted[0]!.amenities?.length ?? 0) > 0, counted[0]!.amenities);
 check("⛔ VALÓS nevű kártyán nincs generikus chip („Gold apartman: Erkély”)", named.every((r) => !r.amenities?.length), named.map((r) => r.amenities));
-check("⛔ „Az egész szállás” kártyán nincs generikus chip", !unknown[0]!.amenities?.length, unknown[0]!.amenities);
+check("⛔ az egyetlen semleges kártyán nincs generikus chip", !unknown[0]!.amenities?.length, unknown[0]!.amenities);
+check("⛔ „Az egész szállás” kártyán sincs generikus chip", !sampleRooms({ ...base, sampleUnitKind: "whole" })[0]!.amenities?.length);
 
 console.log("④ cím: a ház saját országa nem kerül a lapra");
 check("„…, 8646 Hungary” → „…, 8646”", addressWithoutOwnCountry("Balatonfenyves, Fenyvesi u. 3a, 8646 Hungary", "HU") === "Balatonfenyves, Fenyvesi u. 3a, 8646");
@@ -175,7 +177,22 @@ check("⛔ „3 db 2 ágyas szoba közös fürdővel” egy ház (Szabó, határ
 const barackHints = sampleHintsOf({ name: "Barackvirág Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: BARACK });
 check("sampleHintsOf: Barackvirág → sampleUnitKind=both, szobaszám nélkül", barackHints.hints.sampleUnitKind === "both" && !barackHints.hints.sampleRoomCount, barackHints.hints);
 const szomHints = sampleHintsOf({ name: "Szömörce Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: SZOMORCE });
-check("⛔ csak egyben kiadott ház: nincs egységtípus (marad „Az egész szállás”)", !szomHints.hints.sampleUnitKind, szomHints.hints);
+check("csak egyben kiadott ház → sampleUnitKind=whole („Az egész szállás”)", szomHints.hints.sampleUnitKind === "whole", szomHints.hints);
+// TARTVA ×30 (2026-10-26): with nothing stated the card said „Az egész szállás” — on panziók,
+// hotels, apartment houses. The whole place only on the source's own word.
+check("„egyben is kiadó” / „a teljes ház kibérelhető” / „kizárólagos használat” → egészben kiadható",
+  wholeLetStated(["A ház szobánként és egyben is kiadó."]) && wholeLetStated(["A teljes ház kibérelhető, max. 8 főre."]) &&
+    wholeLetStated(["Az egész nyaraló a vendégeké, kizárólagos használattal."]) && wholeLetStated(SZOMORCE));
+check("⛔ nincs kiadási mód a szövegben → nem egészben kiadott (Zöld, Birgés, Larum típus)",
+  !wholeLetStated(["A ház három hálószobás, a szobák klimatizáltak."]) && !wholeLetStated(["A Balaton 300 méterre, a ház kertjében grillező."]) &&
+    !wholeLetStated([]) && !wholeLetStated(["Nem adjuk ki egyben, a szobák külön foglalhatók."]) && !wholeLetStated(["Az egész ház klímás, a teljes ingatlan felújított."]));
+const silent = sampleHintsOf({ name: "Zöld Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: ["Csendes környezetben, a Balatontól 600 méterre várjuk vendégeinket."] });
+check("sampleHintsOf: forrás hallgat → nincs egységtípus, a kártya „Szálláslehetőség”",
+  !silent.hints.sampleUnitKind && sampleRooms({ ...base, ...silent.hints })[0]?.name === "Szálláslehetőség", silent.hints);
+const alsoWhole = sampleHintsOf({ name: "Huszár Vendégház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: ["A ház szobánként és egyben is kiadó."] });
+check("sampleHintsOf: „egyben is kiadó” → whole", alsoWhole.hints.sampleUnitKind === "whole", alsoWhole.hints);
+check("⛔ egységtípus előbb jön: „Apartmanház” + „egyben is kiadó” → apartments",
+  sampleHintsOf({ name: "Sirály Apartmanház" } as never, "hu", { listedAmenities: [], amenities: [], descriptions: ["Egyben is kiadó."] }).hints.sampleUnitKind === "apartments");
 // Francia ház (e0d06c0f, booked.hu, 2026-10-26): „kilátást nyújt a kertre” is no panorama, and
 // the JSON-LD numberOfRooms 1 (the apartment's one bedroom) is no „1. szoba” with its own Foglalás.
 const FRANCIA = ["Az 1 hálószobás apartman nagyjából 4 km-re helyezkedik el a Tihanyrévtől. Az apartman kilátást nyújt a kertre, továbbá tornácot, erkélyt és ülősarkot foglal magában."];
@@ -185,10 +202,10 @@ const francia = sampleHintsOf({ name: "Francia ház", portalProfiles: [{ matchBa
 check("Francia ház: 1-es szobaszám → nincs „1. szoba” (egy egység = az egész szállás)", !francia.hints.sampleRoomCount, francia.hints);
 const two = sampleHintsOf({ name: "Két szoba", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 2, evidence: "numberOfRooms: 2" } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions: [] });
 check("⛔ 2-es szobaszám számozott kártya marad", two.hints.sampleRoomCount === 2, two.hints);
-const card = (k?: "rooms" | "apartments" | "both") => sampleRooms({ ...base, ...(k ? { sampleUnitKind: k } : {}) })[0]?.name;
-check("kártya: both → „Szobák és apartmanok”, rooms → „Szobák”, apartments → „Apartmanok”, semmi → „Az egész szállás”",
-  card("both") === "Szobák és apartmanok" && card("rooms") === "Szobák" && card("apartments") === "Apartmanok" && card() === "Az egész szállás",
-  [card("both"), card("rooms"), card("apartments"), card()]);
+const card = (k?: "rooms" | "apartments" | "both" | "whole") => sampleRooms({ ...base, ...(k ? { sampleUnitKind: k } : {}) })[0]?.name;
+check("kártya: both → „Szobák és apartmanok”, rooms → „Szobák”, apartments → „Apartmanok”, whole → „Az egész szállás”, semmi → „Szálláslehetőség”",
+  card("both") === "Szobák és apartmanok" && card("rooms") === "Szobák" && card("apartments") === "Apartmanok" && card("whole") === "Az egész szállás" && card() === "Szálláslehetőség",
+  [card("both"), card("rooms"), card("apartments"), card("whole"), card()]);
 check("Szömörce: „a reggeli kávé” → nem „Reggeli”", !descriptionFactIsOwn("Reggeli", SZOMORCE) && !descriptionSellingPoints(SZOMORCE).includes("Reggeli"));
 check("Szömörce: „Balatonfüred központja, a strandok” → a mintán nem „Strand”", !descriptionFactIsOwn("Strand", SZOMORCE));
 check("⛔ „a reggeli az árban van” Reggeli marad", descriptionFactIsOwn("Reggeli", ["A reggeli az árban van."]));

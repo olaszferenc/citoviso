@@ -189,6 +189,22 @@ export function wholeLetOnly(descriptions: readonly string[]): boolean {
 }
 
 /**
+ * Does the source SAY the place can be let as a whole — only or also? The one sample card
+ * may read „Az egész szállás” on this evidence alone (TARTVA ×30, 2026-10-26: it was the
+ * default, and stood on panziók, hotels and apartment houses). „Csak egyben adjuk ki”,
+ * „egyben is kiadó”, „a teljes ház kibérelhető”, „az egész nyaraló a vendégeké”,
+ * „kizárólagos használat”. A house's description („a ház három hálószobás”) is no such
+ * statement; „nem adjuk ki egyben” is the opposite.
+ */
+export function wholeLetStated(descriptions: readonly string[]): boolean {
+  if (wholeLetOnly(descriptions)) return true;
+  const WHOLE =
+    /(?<![a-z])(?:egyben|egeszben)\s+is\s+(?:kiado|berelheto|kiberelheto|foglalhato|kiadjuk|kiadom)(?![a-z])|(?<![a-z])(?:a\s+)?(?:teljes|egesz)\s+(?:haz|hazat|villa|villat|nyaralo|nyaralot|ingatlan|ingatlant|vendeghaz|vendeghazat|szallas|szallast|lakas|lakast|epulet|epuletet)\s+(?:[a-z]+\s+){0,3}?(?:kiado|berelheto|kiberelheto|foglalhato|a\s+vendegeke|az\s+onoke|a\s+tietek|a\s+tied|csak\s+az\s+onoke|kizarolag)|(?<![a-z])kizarolagos\s+hasznal/;
+  const NEGATED = /(?<![a-z])nem\s+(?:adjuk|adom|adjak|kiado|berelheto|foglalhato)\s+(?:ki\s+)?(?:egyben|egeszben)(?![a-z])/g;
+  return descriptions.some((d) => WHOLE.test(fold(d).replace(NEGATED, " ")));
+}
+
+/**
  * Which kinds of units does the source say it lets, when it gives no count and no names?
  * Measured 2026-10-26, Barackvirág Panzió 00660191: „Apartmanok és kétágyas szobák
  * igényelhetők … klímás szobáihoz” — the mock's one sample card read „Az egész szállás”,
@@ -197,7 +213,8 @@ export function wholeLetOnly(descriptions: readonly string[]): boolean {
  * prose; rooms let BY TYPE or offered („kétágyas szobák”, „szobák igényelhetők / kiadók”);
  * plural apartments („apartmanok”, „apartmanjaink”, „3 apartmanban”, an „Apartmanház” /
  * „Apartmanok” name). „A szobák klimatizáltak” alone is the
- * description of one house's rooms and changes nothing. Null = the whole-place default stays.
+ * description of one house's rooms and changes nothing. Null = no kind stated (the caller then
+ * asks wholeLetStated before the card may say „Az egész szállás”).
  */
 export function unitKindOf(
   descriptions: readonly string[],
