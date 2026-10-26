@@ -49,3 +49,11 @@ export function distinctPortalPhotos<T extends { url: string }>(
 export function portalPhotoCount(lead: Pick<QualifiedLead, "portalProfiles">): number {
   return distinctPortalPhotos(lead.portalProfiles ?? []).length;
 }
+
+/** The listings of a lead waiting for a curator: medium band / unresolved type conflict
+ *  (console „Jóváhagyom az egyezést” → attachPhotoLinks.approvePortalMatch). */
+export function profilesAwaitingApproval(
+  lead: Pick<QualifiedLead, "portalProfiles">,
+): NonNullable<QualifiedLead["portalProfiles"]>[number][] {
+  return (lead.portalProfiles ?? []).filter((p) => p.needsReview);
+}

@@ -30,7 +30,7 @@ import { brandTokens, captionBelongsToOther, readPortalListing } from "./sources
 import { deaccent } from "./enrichPresence.js";
 import { mergeListings, mergeProfiles } from "./enrichPortal.js";
 import { buildMaterial } from "./enrichMaterial.js";
-import { portalPhotoCount } from "./portalPhotos.js";
+import { portalPhotoCount, profilesAwaitingApproval } from "./portalPhotos.js";
 import { qualificationOf } from "./persist.js";
 import { classifyWebsite } from "./qualify.js";
 import { getRegion, loadRegions } from "./regions.js";
@@ -437,27 +437,7 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
 
   const beforeCount = portalPhotoCount(before);
   const found = [...portalProfiles, ...siteProfiles];
-  let after: QualifiedLead = before;
-  if (found.length) {
-    after = {
-      ...before,
-      portalProfiles: mergeProfiles(before.portalProfiles, found),
-      // A read portal listing is a verified footprint entry; the own site is not a listing.
-      ...(portalProfiles.length ? { listings: mergeListings(before.listings, portalProfiles) } : {}),
-    };
-    // Recount from the stored Street View verdict — enrichMaterial would call the API.
-    after = { ...after, material: buildMaterial(after, before.material?.streetView ?? false) };
-    const merged = { ...(before as unknown as Record<string, unknown>), ...(after as unknown as Record<string, unknown>) };
-    await db
-      .updateTable("lead")
-      .set({
-        raw: sql`${JSON.stringify(merged)}::jsonb`,
-        qualification: qualificationOf(after),
-        match_confidence: after.matchConfidence ?? null,
-      })
-      .where("id", "=", leadId)
-      .execute();
-  }
+  const after = found.length ? await saveProfiles(leadId, before, found, portalProfiles) : before;
   const afterCount = portalPhotoCount(after);
 
   const failed = outcomes.filter((o) => o.skipped && o.photos === 0);
@@ -490,5 +470,74 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
     before: beforeCount,
     after: afterCount,
     links: outcomes,
+  };
+}
+
+/** Merge freshly read profiles into the lead and store it (photo count, qualification). */
+async function saveProfiles(
+  leadId: string,
+  before: QualifiedLead,
+  found: readonly PortalProfile[],
+  listingProfiles: readonly PortalProfile[],
+): Promise<QualifiedLead> {
+  let after: QualifiedLead = {
+    ...before,
+    portalProfiles: mergeProfiles(before.portalProfiles, found),
+    // A read portal listing is a verified footprint entry; the own site is not a listing.
+    ...(listingProfiles.length ? { listings: mergeListings(before.listings, listingProfiles) } : {}),
+  };
+  // Recount from the stored Street View verdict — enrichMaterial would call the API.
+  after = { ...after, material: buildMaterial(after, before.material?.streetView ?? false) };
+  const merged = { ...(before as unknown as Record<string, unknown>), ...(after as unknown as Record<string, unknown>) };
+  await db
+    .updateTable("lead")
+    .set({
+      raw: sql`${JSON.stringify(merged)}::jsonb`,
+      qualification: qualificationOf(after),
+      match_confidence: after.matchConfidence ?? null,
+    })
+    .where("id", "=", leadId)
+    .execute();
+  return after;
+}
+
+/**
+ * „Jóváhagyom az egyezést” (Vivien 1108db5a, 2026-10-26): a medium-band listing's photos
+ * are never stored, so approving it means reading the listing AGAIN with the curator's
+ * word — the same reader, the same photo filters, nothing else read, $0. A listing that
+ * now scores low (the page changed) is refused, never forced through.
+ */
+export async function approvePortalMatch(
+  leadId: string,
+  profileUrl: string,
+  read: typeof readPortalListing = readPortalListing,
+): Promise<AttachPhotoLinksResult> {
+  const fail = (message: string): AttachPhotoLinksResult => ({ ok: false, message, before: 0, after: 0, links: [] });
+  const row = await db.selectFrom("lead").select(["id", "raw"]).where("id", "=", leadId).executeTakeFirst();
+  if (!row) return fail("Nincs ilyen lead.");
+  const before = (typeof row.raw === "string" ? JSON.parse(row.raw) : row.raw) as QualifiedLead;
+  const held = profilesAwaitingApproval(before).find((p) => p.url === profileUrl);
+  if (!held) return fail("Ez az adatlap nem vár jóváhagyásra (már jóváhagyták, vagy nincs a leadnél).");
+  await loadRegions(true);
+  let region: Region;
+  try {
+    region = getRegion(before.region);
+  } catch {
+    return fail(`Ismeretlen régió: „${before.region}" — a régiónak léteznie kell a region táblában.`);
+  }
+  const r = await read(held.url, before, region, { curatorApproved: true });
+  if (!r.profile) return fail(`Az adatlap újraolvasása nem sikerült: ${r.skipped ?? "ismeretlen ok"} — a jóváhagyás nem történt meg.`);
+  if (r.profile.needsReview) return fail("Az adatlap továbbra is jóváhagyásra vár — a jóváhagyás nem történt meg.");
+  const beforeCount = portalPhotoCount(before);
+  // The re-read may land on another final URL: replace the held profile, never keep both.
+  const rest = { ...before, portalProfiles: (before.portalProfiles ?? []).filter((p) => p.url !== held.url) };
+  const after = await saveProfiles(leadId, rest as QualifiedLead, [r.profile], [r.profile]);
+  const afterCount = portalPhotoCount(after);
+  return {
+    ok: true,
+    message: `Egyezés jóváhagyva (${held.portalHost}) — fotó: ${beforeCount} → ${afterCount}.`,
+    before: beforeCount,
+    after: afterCount,
+    links: [{ url: held.url, kind: "portal", photos: r.profile.photos.length }],
   };
 }

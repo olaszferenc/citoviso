@@ -203,6 +203,13 @@ export async function readPortalListing(
   url: string,
   lead: LeadFacts,
   region: Region,
+  /**
+   * `curatorApproved`: an operator looked at a medium-band (or type-word-conflict) listing
+   * and confirmed it IS this lead (console „Jóváhagyom az egyezést”). It lifts the curator
+   * hold — photos and reviews are attributed — but never a low band: what the score threw
+   * away is not offered for approval. Vivien 1108db5a (2026-10-26) waited forever on it.
+   */
+  opts: { readonly curatorApproved?: boolean } = {},
 ): Promise<PortalReadResult> {
   const host = hostOf(url);
   if (!host) return { url, skipped: "értelmezhetetlen URL" };
@@ -344,7 +351,9 @@ export async function readPortalListing(
   // built for is one owner with two properties, who publishes ONE number on both. A
   // shared phone is evidence of a shared owner, not of a shared building; the address is.
   const conflictResolved = conflict && streetMatch === true;
-  const needsReview = confidence.band === "medium" || (conflict && !conflictResolved);
+  const held = confidence.band === "medium" || (conflict && !conflictResolved);
+  const approved = held && opts.curatorApproved === true;
+  const needsReview = held && !approved;
   const reasons = [...confidence.reasons];
   if (conflict) {
     reasons.push(
@@ -356,6 +365,9 @@ export async function readPortalListing(
   if (needsReview) {
     reasons.push("közepes sáv — kurátori jóváhagyás kell, fotók NEM tulajdonítva");
   }
+  if (approved) {
+    reasons.push(`kurátor jóváhagyta az egyezést (${new Date().toISOString().slice(0, 10)}) — fotók tulajdonítva`);
+  }
 
   // A listing page carries much more than the property's gallery — flags, ad banners,
   // article thumbnails, map graphics. Those must not be attributed to the lead (§B.17),
@@ -365,7 +377,7 @@ export async function readPortalListing(
   // hovamenjek/apartman), which the 800px floor would drop wholesale. Vouch the photos
   // whose FILENAME names this property so the relaxed floor lets the real gallery
   // through — a partner listing on the same page names a different slug and stays out.
-  const vouchable = confidence.band === "high";
+  const vouchable = confidence.band === "high" || approved;
   // Upgrade each image to the portal's LARGEST derivative, but VERIFY it resolves: some
   // portals expose the big size for SOME images only (hovamenjek's /main/ existed for
   // its NAMED files only — ADR-0298 moved it to fullHd). A blind rewrite would store a broken URL,
@@ -451,7 +463,7 @@ export async function readPortalListing(
     matchConfidence: confidence.score,
     // The band the DATA is used under, not the raw score's band: a type-word
     // conflict demotes an otherwise high match to curator review.
-    matchBand: needsReview ? "medium" : confidence.band,
+    matchBand: needsReview ? "medium" : approved ? "high" : confidence.band,
     matchReasons: reasons,
     needsReview,
     extractor:

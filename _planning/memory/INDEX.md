@@ -8,6 +8,7 @@
 
 - [2026-10-26_wix_kepek_srcset_es_cdn.md](2026-10-26_wix_kepek_srcset_es_cdn.md) — 2026-10-26 — Wix-honlapok képei: srcset-vágás és CDN-szűrő
 - [2026-10-26_scout_csempe_lezaras_verseny.md](2026-10-26_scout_csempe_lezaras_verseny.md) — 2026-10-26 — Felderítő csempe lezárása: versenyhelyzet
+- [2026-10-26_portal_kozepes_egyezes_jovahagyas.md](2026-10-26_portal_kozepes_egyezes_jovahagyas.md) — 2026-10-26 — Közepes portál-egyezés: „Jóváhagyom az egyezést”
 - [2026-10-26_minta_kartya_egysegfajta.md](2026-10-26_minta_kartya_egysegfajta.md) — 2026-10-26 — Minta-kártya: „Az egész szállás” több egységes szállásnál
 - [2026-10-22_webcim_allapot_b_overseer_folytatas.md](2026-10-22_webcim_allapot_b_overseer_folytatas.md) — 2026-10-22 — Webcím állapot-képernyő „B” (ADR-0399) · overseer.hu folytatás · a domain-folyamat hiányai
 - [2026-10-22_domain_regisztracio_szal.md](2026-10-22_domain_regisztracio_szal.md) — 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-0400) — overseer.hu oka és a gépi folyamat

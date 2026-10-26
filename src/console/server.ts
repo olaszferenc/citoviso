@@ -113,7 +113,7 @@ import {
   type LeadQuery,
 } from "./data.js";
 import { reenrichOne } from "../scraper/reenrichOne.js";
-import { attachPhotoLinks } from "../scraper/attachPhotoLinks.js";
+import { approvePortalMatch, attachPhotoLinks } from "../scraper/attachPhotoLinks.js";
 import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
@@ -2829,6 +2829,25 @@ async function handle(
     const result = await attachPhotoLinks(leadId, form.get("links") ?? "");
     if (result.after > result.before)
       await logLeadActivity({ leadId, tab: "ls-photos", action: "photos.links", actor: operatorActor(await currentOperator(req)) });
+    if ((req.headers.accept ?? "").includes("application/json")) {
+      return send(res, result.ok ? 200 : 422, JSON.stringify(result), "application/json");
+    }
+    return redirect(
+      res,
+      `/lead/${leadId}?flash=${encodeURIComponent(result.message)}` +
+        `&flashKind=${result.ok ? "ok" : "bad"}#ls-photos`,
+    );
+  }
+  // POST /lead/:id/portal-approve — „Jóváhagyom az egyezést” for a medium-band listing the
+  // photo reader held for a curator (Vivien 1108db5a, 2026-10-26). Re-reads that one listing
+  // with the operator's approval ($0, nothing else read), same flash + #ls-photos as above.
+  const approveMatch = /^\/lead\/([0-9a-f-]{36})\/portal-approve$/i.exec(path);
+  if (method === "POST" && approveMatch) {
+    const leadId = approveMatch[1]!;
+    const form = await readBody(req);
+    const result = await approvePortalMatch(leadId, form.get("url") ?? "");
+    if (result.ok)
+      await logLeadActivity({ leadId, tab: "ls-photos", action: "photos.approve", actor: operatorActor(await currentOperator(req)) });
     if ((req.headers.accept ?? "").includes("application/json")) {
       return send(res, result.ok ? 200 : 422, JSON.stringify(result), "application/json");
     }

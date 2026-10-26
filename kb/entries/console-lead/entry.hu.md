@@ -330,6 +330,22 @@ Fotók fülön a **„Portál-fotók újragyűjtése”** a következő lépés,
 scrape-API-k ki vannak kapcsolva, ez a gomb szürke; ilyenkor a **„Fotók behúzása linkről”**
 mezőbe másold be a portál-adatlap vagy a saját honlap linkjét (díjmentes).
 
+### Közepes egyezés: „Jóváhagyom az egyezést”
+
+Ha a beolvasott portál-adatlap csak **közepes egyezést** ad (pl. a név alig egyezik, de a
+település és a cím igen), az adatlapot rögzítjük, a fotóit viszont nem adjuk a leadhez, amíg
+valaki meg nem nézi. Ilyenkor a Fotók fülön, a link-mező alatt ez áll: *Közepes egyezés —
+kurátori jóváhagyásra vár:* és az adatlap linkje, mellette az egyezés pontszáma és az okai.
+
+1. Nyisd meg a linket, és nézd meg: tényleg ennek a szállásnak az adatlapja? (név, cím, képek)
+2. Ha igen, kattints a **„Jóváhagyom az egyezést”** gombra. A rendszer újraolvassa az adatlapot
+   (díjmentes, csak ezt az oldalt), és a fotói a leadhez kerülnek; a fenti üzenet megmondja a
+   fotószámot előtte és utána.
+3. Ha nem ennek a szállásnak az adatlapja, ne hagyd jóvá — a fotói így sosem kerülnek a mockra.
+
+⚠️ Ha az adatlap közben megváltozott, és már gyenge egyezést ad, a jóváhagyás nem megy át, és az
+üzenet megmondja, miért.
+
 ### ⛔ Törött képpel a rendszer NEM ENGEDI ki a mockot
 
 Ez nem figyelmeztetés, hanem kapu. Amíg a mocknak törött képe van, **négy művelet meg van

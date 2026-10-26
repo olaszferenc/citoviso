@@ -44,7 +44,7 @@ import {
   summariseMocks,
   unknownRegionLabel,
 } from "./leadFilters.js";
-import { portalPhotoCount } from "../scraper/portalPhotos.js";
+import { portalPhotoCount, profilesAwaitingApproval } from "../scraper/portalPhotos.js";
 import type { ContactCandidate, PortalListing, QualifiedLead } from "../scraper/types.js";
 import { formatMoney } from "../text/money.js";
 import {
@@ -4515,6 +4515,8 @@ function leadPhotosPanel(
   latestArtifactId?: string,
   currentHeroUrl?: string,
   mockPhotoCount: number | null = null,
+  /** Medium-band listings the photo reader holds for a curator (profilesAwaitingApproval). */
+  held: readonly { readonly url: string; readonly host: string; readonly score: number; readonly reasons: readonly string[] }[] = [],
 ): string {
   const lang = consoleLang();
   // ⚠️ A rács az ÉLŐ fotólistát kéri le, a mock viszont egy PILLANATKÉP: a kettő sorrendje
@@ -4623,6 +4625,18 @@ function leadPhotosPanel(
         <button type="submit" class="ghost">${ic("link", 15)} ${T(lang, "Fotók behúzása linkről")}</button>
         <p class="mut small" style="margin:6px 0 0">${T(lang, "Portál-adatlap vagy a szállás saját honlapja — csak a megadott oldalakat olvassuk, keresés és díj nélkül. A képek a leadhez kötődnek, a fotószám frissül.")}</p>
       </form>
+      ${held
+        .map(
+          (h) => `<form method="post" action="/lead/${esc(leadId)}/portal-approve" class="con-reenrich" data-portal-approve
+        style="margin-top:12px"
+        onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Jóváhagyás folyamatban…"))}'`)}">
+        <input type="hidden" name="url" value="${esc(h.url)}">
+        <p style="margin:0 0 6px;flex:1 1 100%">${T(lang, "Közepes egyezés — kurátori jóváhagyásra vár:")} <a href="${esc(h.url)}" target="_blank" rel="noopener">${esc(h.host)}</a> (${esc(h.score.toFixed(2).replace(".", ","))})</p>
+        <button type="submit" class="ghost">${ic("check", 15)} ${T(lang, "Jóváhagyom az egyezést")}</button>
+        <p class="mut small" style="margin:6px 0 0">${esc(h.reasons.join(" · "))} — ${T(lang, "Ha az adatlap ennek a szállásnak a sajátja, a jóváhagyás után újraolvassuk, és a fotói a leadhez kerülnek.")}</p>
+      </form>`,
+        )
+        .join("")}
       <script>
       (function () {
         var LEAD = '${esc(leadId)}';
@@ -7392,7 +7406,18 @@ function cpScript(prefix: string): string {
       // nélkül mutatja. A terv ③ szerint a mondat azt mondja, ami a FÜLÖN van, ezért a
       // rács kirajzolása írja át (leadPhotosPanel → tabSay); addig a betöltést mondja.
       say: T(lang, "Képek betöltése…"),
-      body: leadPhotosPanel(d.id, latestMock?.id, latestMockHeroUrl, mockPhotoCount),
+      body: leadPhotosPanel(
+        d.id,
+        latestMock?.id,
+        latestMockHeroUrl,
+        mockPhotoCount,
+        profilesAwaitingApproval((d.raw ?? {}) as Pick<QualifiedLead, "portalProfiles">).map((p) => ({
+          url: p.url,
+          host: p.portalHost,
+          score: p.matchConfidence,
+          reasons: p.matchReasons.filter((r) => !/kurátori jóváhagyás kell/.test(r)),
+        })),
+      ),
     },
     {
       id: "ls-contacts",
