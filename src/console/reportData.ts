@@ -31,6 +31,11 @@
 // live test sent to our own mailbox — measured that day, those 4 sent links carried EVERY
 // trial, order and payment of the funnel (real: 0). Dropped here, before any join, so their
 // visits, trials, orders and replies leave every panel at once.
+// The funnel is the FIRST cold touch. A lead that later got the retroactive trial letter
+// (trial_campaign, ADR-0348 — the second touch, same /p/ link) would otherwise credit its later
+// visits, trial, order, reply and unsubscribe to the first letter (owner, 2026-10-26: „hogy
+// lehetne … hogy ne torzítson?”). The second letter's sent_at is a per-lead CUT: nothing at
+// or after it counts here.
 
 import { db } from "../db/client.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
@@ -496,6 +501,10 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .then((all) => all.filter((r) => !isTestLeadName(r.lead_name) && r.lead_name !== ELEK_LEAD_NAME));
   if (!rows.length) return [];
   const ids = rows.map((r) => r.id);
+  const cutByLead = await loadSecondTouch([...new Set(rows.map((r) => r.lead_id))]);
+  const cutOf = (leadId: string): number => cutByLead.get(leadId)?.getTime() ?? Infinity;
+  const before = (leadId: string, at: Date | null): Date | null => (at && at.getTime() < cutOf(leadId) ? at : null);
+  const leadOfProspect = new Map(rows.map((r) => [r.id, r.lead_id]));
 
   const views = await db
     .selectFrom("mock_view")
@@ -520,8 +529,11 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .where("order_intent.kind", "=", "initial")
     .execute();
   const trialed = await loadTrialStarts(rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })));
-  const feedback = await loadFeedback(ids);
-  const replied = await loadReplied(rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })));
+  const feedback = await loadFeedback(ids, (prospectId, at) => at.getTime() < cutOf(leadOfProspect.get(prospectId) ?? ""));
+  const replied = await loadReplied(
+    rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })),
+    (leadId, at) => at.getTime() < cutOf(leadId),
+  );
 
   const eventsByView = new Map<string, RawEvent[]>();
   for (const e of events) {
@@ -535,6 +547,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     // kept in the table but never counted — ADR-0108's rule, applied to the mock side too.
     const device = deviceOf(v);
     if (device === "bot") continue;
+    if (!before(leadOfProspect.get(v.prospect_id) ?? "", toDate(v.started_at))) continue;
     const evs = eventsByView.get(v.id) ?? [];
     const visit = foldVisit(v.id, toDate(v.started_at)!, device, evs);
     const list = viewsByProspect.get(v.prospect_id) ?? [];
@@ -544,9 +557,10 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
   const firstOrder = new Map<string, Date>();
   const firstPaid = new Map<string, Date>();
   for (const o of orders) {
-    const s = toDate(o.submitted_at);
+    const lead = leadOfProspect.get(o.prospect_id) ?? "";
+    const s = before(lead, toDate(o.submitted_at));
     if (s && (!firstOrder.has(o.prospect_id) || s < firstOrder.get(o.prospect_id)!)) firstOrder.set(o.prospect_id, s);
-    const p = o.pay_status === "paid" ? toDate(o.paid_at) : null;
+    const p = o.pay_status === "paid" ? before(lead, toDate(o.paid_at)) : null;
     if (p && (!firstPaid.has(o.prospect_id) || p < firstPaid.get(o.prospect_id)!)) firstPaid.set(o.prospect_id, p);
   }
 
@@ -582,10 +596,10 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       visits,
       openedAt,
       deepAt,
-      trialedAt: trialed.get(r.id) ?? null,
+      trialedAt: before(r.lead_id, trialed.get(r.id) ?? null),
       orderedAt: firstOrder.get(r.id) ?? null,
       paidAt,
-      unsubscribedAt: toDate(r.unsubscribed_at),
+      unsubscribedAt: before(r.lead_id, toDate(r.unsubscribed_at)),
       escalationShown: escShown,
       escalationCta: escCta,
       escalationDismiss: escDismiss,
@@ -644,16 +658,39 @@ async function loadTrialStarts(ps: readonly { id: string; leadId: string; sentAt
   return out;
 }
 
+/**
+ * When the second touch (the retroactive trial letter) went out, per lead — the first-touch
+ * funnel's cut. Only a SENT campaign row cuts; a claim or an operator exclusion did not reach
+ * the person.
+ */
+async function loadSecondTouch(leadIds: readonly string[]): Promise<Map<string, Date>> {
+  const out = new Map<string, Date>();
+  if (!leadIds.length) return out;
+  const rows = await db
+    .selectFrom("trial_campaign")
+    .select(["lead_id", "sent_at"])
+    .where("lead_id", "in", leadIds)
+    .where("status", "=", "sent")
+    .where("sent_at", "is not", null)
+    .execute();
+  for (const r of rows) out.set(r.lead_id, toDate(r.sent_at)!);
+  return out;
+}
+
 /** Stated reasons (prospect_feedback): the FIRST answer per prospect counts. */
-async function loadFeedback(ids: readonly string[]): Promise<Map<string, StatedReason>> {
+async function loadFeedback(
+  ids: readonly string[],
+  counts: (prospectId: string, at: Date) => boolean,
+): Promise<Map<string, StatedReason>> {
   const out = new Map<string, StatedReason>();
   const rows = await db
     .selectFrom("prospect_feedback")
-    .select(["prospect_id", "reason"])
+    .select(["prospect_id", "reason", "created_at"])
     .where("prospect_id", "in", ids)
     .orderBy("created_at", "asc")
     .execute();
   for (const r of rows) {
+    if (!counts(r.prospect_id, toDate(r.created_at)!)) continue;
     if (!out.has(r.prospect_id) && (STATED_REASONS as readonly string[]).includes(r.reason)) out.set(r.prospect_id, r.reason as StatedReason);
   }
   return out;
@@ -663,7 +700,10 @@ async function loadFeedback(ids: readonly string[]): Promise<Map<string, StatedR
  * Which sends got an answer (outreach_reply, ADR-0339): the reply names the prospect, or —
  * when the collector could only match the lead — it arrived after this send.
  */
-async function loadReplied(ps: readonly { id: string; leadId: string; sentAt: Date }[]): Promise<Set<string>> {
+async function loadReplied(
+  ps: readonly { id: string; leadId: string; sentAt: Date }[],
+  counts: (leadId: string, at: Date) => boolean,
+): Promise<Set<string>> {
   const out = new Set<string>();
   const rows = await db
     .selectFrom("outreach_reply")
@@ -671,11 +711,12 @@ async function loadReplied(ps: readonly { id: string; leadId: string; sentAt: Da
     .where("lead_id", "in", [...new Set(ps.map((p) => p.leadId))])
     .execute();
   for (const r of rows) {
+    const at = toDate(r.received_at)!;
+    if (!counts(r.lead_id, at)) continue;
     if (r.prospect_id) {
       out.add(r.prospect_id);
       continue;
     }
-    const at = toDate(r.received_at)!;
     for (const p of ps) if (p.leadId === r.lead_id && p.sentAt.getTime() <= at.getTime()) out.add(p.id);
   }
   return out;
