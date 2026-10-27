@@ -17,8 +17,11 @@ leadenként kattintotta a konzol `send-all` gombját. Ha nem ült ott session, s
 1. **A go-lista az adatbázisba kerül:** `outreach_dispatch` tábla (0115), leadenként egy sor
    (`queued → sending → sent | held | skipped | cancelled`). Sorba tenni csak kurátor által
    jóváhagyott (`approved`), a leadhez tartozó mockot lehet, és csak még meg nem keresett leadet.
-2. **Éles időzítő** (`citoviso-outreach-dispatch.timer`, 4 percenként): futásonként legfeljebb
-   EGY lead, csak hétköznap 9–16 (Budapest), napi plafon alatt, és csak bekapcsolt főkapcsolóval
+2. **Éles időzítő** (`citoviso-outreach-dispatch.timer`, 4 percenként): futásonként a sorban
+   álló leadeket egymás után küldi, amíg a sor ki nem ürül vagy a plafont el nem éri, legfeljebb
+   8 percig (a oneshot unit 600 mp-es korlátja alatt; a következő futás folytatja). Tulaj,
+   2026-10-27: a jóváhagyott lead azonnal menjen, az SMS/MMS-felét a modem-sor ütemezi
+   (eredetileg futásonként EGY lead volt, ez napi ~105-ös plafont adott). Csak hétköznap 9–16 (Budapest), napi plafon alatt, és csak bekapcsolt főkapcsolóval
    (`app_setting outreach_auto` = `{"enabled":…,"dailyCap":…}`, alapból KI, plafon alapból 40).
 3. **Egyenértékű a kézi úttal, nem rövidítés.** A futás a konzol `send-all` lépéseit hívja
    ugyanazokkal a függvényekkel: kép-kapu → `createProspect` → őr-lelet/Vera-ellenőrzés →

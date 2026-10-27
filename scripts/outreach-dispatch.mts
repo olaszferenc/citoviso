@@ -1,6 +1,6 @@
 // ADR-0405 — the automatic outreach go list (outreach_dispatch) and its timer.
 //
-//   tsx scripts/outreach-dispatch.mts tick [--now=ISO] [--force]   # one lead (the timer runs this)
+//   tsx scripts/outreach-dispatch.mts tick [--now=ISO] [--force]   # queued leads back-to-back up to the cap (the timer runs this; --now = one lead)
 //   tsx scripts/outreach-dispatch.mts status                        # switch, cap, queue counts
 //   tsx scripts/outreach-dispatch.mts add <leadId> <mockId> --by=<name>
 //   tsx scripts/outreach-dispatch.mts import <file> --by=<name> [--dry-run]
@@ -38,6 +38,7 @@ function opt(name: string): string | undefined {
 }
 const flag = (name: string) => args.includes(`--${name}`);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DRAIN_BUDGET_MS = 8 * 60_000;
 
 function needBy(): string {
   const by = opt("by")?.trim();
@@ -51,9 +52,17 @@ async function main(): Promise<void> {
       const nowArg = opt("now");
       const now = nowArg ? new Date(nowArg) : new Date();
       if (Number.isNaN(now.getTime())) throw new Error("hibás --now");
-      const r = await runDispatchTick(now, { force: flag("force") });
-      console.log(`outreach-dispatch @ ${now.toISOString()}: ${JSON.stringify(r)}`);
-      return;
+      // Owner 2026-10-27: an approved lead goes out as soon as it is queued, not one per timer
+      // tick — the modem queue paces the SMS/MMS half by itself. The tick drains back-to-back
+      // until cap/empty/window/off, but stops within DRAIN_BUDGET_MS so the oneshot unit stays
+      // under its TimeoutStartSec=600; the next timer firing carries on.
+      const started = Date.now();
+      for (;;) {
+        const at = nowArg ? now : new Date();
+        const r = await runDispatchTick(at, { force: flag("force") });
+        console.log(`outreach-dispatch @ ${at.toISOString()}: ${JSON.stringify(r)}`);
+        if (r.kind !== "done" || nowArg || Date.now() - started > DRAIN_BUDGET_MS) return;
+      }
     }
     case "status": {
       console.log(JSON.stringify(await dispatchStatus(), null, 2));
