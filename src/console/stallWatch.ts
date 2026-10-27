@@ -281,7 +281,7 @@ async function sweepRegistrarReadiness(now: Date, deps: StallWatchDeps): Promise
 // has not looked at for RENEWAL_SYNC_STALE_HOURS means the sync itself is not running.
 
 async function sweepRenewal(now: Date): Promise<Case[]> {
-  const { HELD_STATUSES } = await import("../domains/domainRenewal.js");
+  const { HELD_STATUSES, isHouseDomain } = await import("../domains/domainRenewal.js");
   const rows = await db
     .selectFrom("domain_provisioning as dp")
     .innerJoin("site", "site.id", "dp.site_id")
@@ -299,7 +299,7 @@ async function sweepRenewal(now: Date): Promise<Case[]> {
   const out: Case[] = [];
   const seen = new Set<string>();
   for (const r of rows) {
-    if (seen.has(r.siteId)) continue;
+    if (seen.has(r.siteId) || isHouseDomain(r.domain)) continue; // our own names: the sync skips them
     seen.add(r.siteId);
     const exp = r.expiresAt ? ` · lejár ${iso(r.expiresAt).slice(0, 10)}` : "";
     if (r.problem) {

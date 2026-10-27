@@ -22,6 +22,7 @@
 // Operator text — outside the §B.18 customer-facing i18n scope.
 
 import { db } from "../db/client.js";
+import { PLATFORM_DOMAIN } from "../domains.js";
 import type { DomainService, RegistrarAdapter } from "./registrar/registrar.js";
 
 /** Owner 2026-10-25: at least this many days to expiry at cancellation → no more renewal. */
@@ -30,6 +31,18 @@ export const RENEW_ONCE_DAYS = 90;
 export const RENEW_WARN_DAYS = 30;
 /** Stage of the purchase from which the name is ours at the registrar. */
 export const HELD_STATUSES = ["registered", "dns_pending", "tls_pending", "setup_retry", "live"] as const;
+
+/**
+ * Our own names. Owner 2026-10-27: the sync never touches them — citoviso.hu sits on the
+ * `tls-proba` test tenant's provisioning row, and a cancelled subscription there would
+ * switch OUR domain's renewal off. Their renewal is set by hand in the registrar account.
+ */
+export const HOUSE_DOMAINS: readonly string[] = ["citoviso.hu", PLATFORM_DOMAIN];
+
+export function isHouseDomain(domain: string): boolean {
+  const d = domain.toLowerCase().replace(/^www\./, "");
+  return HOUSE_DOMAINS.some((h) => d === h || d.endsWith(`.${h}`));
+}
 
 const DAY = 86_400_000;
 
@@ -155,7 +168,7 @@ export async function loadRenewalRows(): Promise<RenewalRow[]> {
   const out: RenewalRow[] = [];
   for (const r of rows) {
     const k = `${r.siteId}|${r.domain.toLowerCase()}`;
-    if (seen.has(k)) continue;
+    if (seen.has(k) || isHouseDomain(r.domain)) continue;
     seen.add(k);
     out.push({
       siteId: r.siteId,

@@ -131,6 +131,15 @@ try {
 }
 ok(refused, "a visszaadott állás a régi maradt → elutasítás");
 
+// ── 3c. our own names are never touched (owner 2026-10-27) ──────────────────
+const { isHouseDomain } = await import("../src/domains/domainRenewal.js");
+ok(isHouseDomain("citoviso.hu") && isHouseDomain("www.citoviso.hu"), "a citoviso.hu a saját nevünk: a szinkron nem nyúl hozzá");
+ok(isHouseDomain("citoviso.com"), "a platform-domain a saját nevünk");
+ok(!isHouseDomain("overseer.hu") && !isHouseDomain("nemcitoviso.hu"), "tenant neve nem saját név");
+const renewalSrc = readFileSync("src/domains/domainRenewal.ts", "utf8");
+ok(/isHouseDomain\(r\.domain\)/.test(renewalSrc), "a betöltés a saját neveket kihagyja");
+ok(/isHouseDomain\(r\.domain\)/.test(readFileSync("src/console/stallWatch.ts", "utf8")), "az őr sem riaszt a saját nevekre (a szinkron nem nézi őket)");
+
 // ── 4. wiring ────────────────────────────────────────────────────────────────
 const targets = JSON.parse(readFileSync("deploy/systemd/targets.json", "utf8")) as { timers: Record<string, { target: string }> };
 ok(targets.timers["citoviso-domain-renewal.timer"]?.target === "prod", "a napi megújítás-időzítő élesre települ (targets.json prod)");
