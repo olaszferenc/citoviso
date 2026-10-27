@@ -185,7 +185,10 @@ console.log("\n── Ingyenes próba a levélben és a pár-SMS-ben ───�
   const { smsEncoding } = await import("../src/sms/encoding.js");
   const { PAIR_SMS_MAX_SEGMENTS } = await import("../src/outreach/draft.js");
   const LETTER = (n: number): string => `Mielőtt döntene, ${n} napig ingyen kipróbálhatja, kötelezettség nélkül.`;
-  const SMS = (n: number): string => fold(`! ${n} napig ingyen kipróbálható.`);
+  const SMS = (n: number): string => fold(`most megnézheti, és ${n} napig ingyen kipróbálhatja, kötelezettségmentesen! A Citoviso csapata`);
+  const SMS_SHORT = (n: number): string => fold(`amit most megnézhet, és ${n} napig ingyen kipróbálhat, kötelezettségmentesen! A Citoviso csapata`);
+  const SMS_OFF = fold("most megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata");
+  const SMS_OFF_SHORT = fold("amit most megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata");
   for (const plans of [1, 2, 3] as const) {
     for (const days of [14, 7]) {
       const d: DraftInput = { ...INPUT, planCount: plans, trialDays: days };
@@ -204,23 +207,32 @@ console.log("\n── Ingyenes próba a levélben és a pár-SMS-ben ───�
         html = `THROW ${(e as Error).message}`;
       }
       say(html.includes(LETTER(days)), `${plans} terv, ${days} nap — a HTML-levélben is benne (a §C.4 egyezés-őr elfogadja)`, html.slice(0, 200));
-      const pair = renderPairSmsDraft(d);
-      const r = checkOutreachSms(pair, LEAD, "hu");
-      say(r.verdict === "PASS", `${plans} terv, ${days} nap — pár-SMS: §C-kapu PASS`, r.reasons.join(" | "));
-      say(fold(pair.text).includes(SMS(days)), `${plans} terv, ${days} nap — a pár-SMS-ben benne a próba-mondat`, pair.text);
-      // A long name: the NAME is shortened, the trial sentence stays and the SMS fits.
-      const long = renderPairSmsDraft({ ...d, leadName: "Balatonfűzfői Szállás Bodorka Apartman és Vendégház Kemence" });
-      say(
-        fold(long.text).includes(SMS(days)) && smsEncoding(long.text).segments <= PAIR_SMS_MAX_SEGMENTS,
-        `${plans} terv, ${days} nap — hosszú névvel is ≤ ${PAIR_SMS_MAX_SEGMENTS} szegmens, a mondat megmarad`,
-        `${smsEncoding(long.text).segments} szegmens: ${long.text}`,
-      );
+      // Owner 2026-10-27 („Mehet”): ONE sentence, no „élőben” — pair and solo SMS alike.
+      for (const [label, render, must] of [
+        ["pár-SMS", renderPairSmsDraft, SMS(days)],
+        ["önálló SMS", renderSmsDraft, plans === 1 ? SMS_SHORT(days) : SMS(days)],
+      ] as const) {
+        const sms = render(d);
+        const r = checkOutreachSms(sms, LEAD, "hu");
+        say(r.verdict === "PASS", `${plans} terv, ${days} nap — ${label}: §C-kapu PASS`, r.reasons.join(" | "));
+        say(fold(sms.text).includes(must) && !fold(sms.text).includes("eloben"), `${plans} terv, ${days} nap — ${label}: „${must}”, „élőben” nélkül`, sms.text);
+        // A long name: the NAME is shortened, the invitation stays and the SMS fits.
+        const long = render({ ...d, leadName: "Balatonfűzfői Szállás Bodorka Apartman és Vendégház Kemence" });
+        say(
+          fold(long.text).includes(must) && smsEncoding(long.text).segments <= PAIR_SMS_MAX_SEGMENTS,
+          `${plans} terv, ${days} nap — ${label}: hosszú névvel is ≤ ${PAIR_SMS_MAX_SEGMENTS} szegmens, a mondat megmarad`,
+          `${smsEncoding(long.text).segments} szegmens: ${long.text}`,
+        );
+      }
     }
     for (const off of [null, undefined, 0]) {
       const d: DraftInput = { ...INPUT, planCount: plans, trialDays: off };
       const m = renderDraft(d);
       say(!/napig ingyen/.test(m.body) && m.parts.trial === undefined, `${plans} terv, próba nélkül (${off}) — a levélben nincs próba-mondat`);
-      say(!/napig ingyen/.test(fold(renderPairSmsDraft(d).text)), `${plans} terv, próba nélkül (${off}) — a pár-SMS-ben sincs`);
+      const pairOff = fold(renderPairSmsDraft(d).text);
+      const soloOff = fold(renderSmsDraft(d).text);
+      say(!/napig ingyen/.test(pairOff) && pairOff.includes(SMS_OFF), `${plans} terv, próba nélkül (${off}) — a pár-SMS: „most megnézheti és kipróbálhatja”, próba nélkül`, pairOff);
+      say(!/napig ingyen/.test(soloOff) && soloOff.includes(plans === 1 ? SMS_OFF_SHORT : SMS_OFF), `${plans} terv, próba nélkül (${off}) — az önálló SMS ugyanígy`, soloOff);
       say(m.body === renderDraft({ ...INPUT, planCount: plans }).body, `${plans} terv, próba nélkül — a mai levél, betűre`);
     }
   }

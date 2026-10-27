@@ -1,9 +1,17 @@
 {
-  "fingerprint": "a1967310340d5060",
+  "fingerprint": "a6130a7a46e9511a",
   "verdict": "PASS",
   "model": "claude-opus-4-8",
-  "at": "2026-10-27T11:40:19.575Z",
+  "at": "2026-10-27T11:54:22.859Z",
   "branches": 9,
-  "plan": "Végignéztem mind a hat levél-ágat, a két SMS-t és az emlékeztető-levelet. Az ág-címkék valóságát ütköztettem a mondatokkal (honlap van/nincs, betölt/nem, mobil-nézet, értékelés megléte). A megszólítást, a jogi láblécet, a linkeket, az árakat, a tulaj-jóváhagyott fordulatokat (kötelezettségmentesen, élőben megnézheti, az emlékeztető köszönő mondata) kihagytam. A törzsmondatok nagyrészt tiszták és emberiek; a 'rögtön látja az árát' és néhány fordulat szagát mérlegeltem, de nem éri el a kifogás-szintet. Egy ellentmondást és néhány stílushibát találtam.",
-  "objections": []
+  "plan": "Végignéztem mind a nyolc ágat. A levéltörzsek jórészt tiszták, de a 4. és 5. ág első bekezdésében a mobil/összevetés-állítások rendben vannak. A kiemelt figyelem: ellentmondás az ág-valósággal, szakzsargon, reklámfordulat, csonka mondatok az SMS-ekben és az emlékeztető-sablon gépies/reklámízű fordulatai. Az ár-számok, jogi lábléc, link, megszólítás és a jóváhagyott mondatok nem kifogásolhatók. Az SMS ékezet nélküli, de ez technikai, nem nyelvi hiba, így a központozást nézem. Az emlékeztető-sablonban a kettős kedvezmény-megfogalmazás gépies ismétlés.",
+  "objections": [
+    {
+      "branch": "EMLÉKEZTETŐ-LEVÉL (aki többször megnézte a tervét) — a sablon mondatai",
+      "quote": "Döntés-segítő ajánlatként {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
+      "kind": "gepies",
+      "fix": "hagyd ki — ugyanazt a kedvezményt már az előző mondat elmondta, ez fölösleges körlevél-ízű ismétlés",
+      "severity": "javitando"
+    }
+  ]
 }

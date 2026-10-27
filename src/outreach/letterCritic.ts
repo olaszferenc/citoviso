@@ -66,22 +66,21 @@ const KINDS = [
  *     the brand; no personal name is ever fixed in a template (the letter's signature comes
  *     from config.outreachSender).
  *   ② „kötelezettségmentesen” stays (the owner's own SMS wording, ADR-0112).
- *   ③④ (coordinator, 2026-10-27, adding the trial sentence): the SMS „élőben megnézheti /
- *     megnézhet” and the reminder's „Köszönjük, hogy többször is megnézte a honlap-tervét.”
- *     are owner-approved lines — three critic runs flagged them in turn, unchanged, while
- *     the new sentence passed. Enforced like ① by the filter below (OWNER_APPROVED_PHRASES).
+ *   ③ (coordinator, 2026-10-27, adding the trial sentence): the reminder's „Köszönjük, hogy
+ *     többször is megnézte a honlap-tervét.” is an owner-approved line — critic runs flagged it
+ *     in turn, unchanged. Enforced like ① by the filter below (OWNER_APPROVED_PHRASES). (The
+ *     SMS „élőben” the runs also flagged is gone: owner's new SMS wording, 2026-10-27.)
  */
 export const OWNER_RULINGS: readonly string[] = [
   "Az aláírás a márka („Citoviso”, SMS-ben „A Citoviso csapata”). SOHA ne javasolj személynevet aláírásnak vagy a szövegbe — tulaj-döntés: személynév nem kerülhet fixen a sablonba.",
   "A „kötelezettségmentesen” szó a tulaj saját SMS-szövege — NEM kifogásolható.",
-  "Az SMS „élőben megnézheti / megnézhet” fordulata (ékezet nélkül „eloben”) tulaj-jóváhagyott szöveg — NEM kifogásolható.",
   "Az emlékeztető-levél „Köszönjük, hogy többször is megnézte a honlap-tervét.” mondata tulaj-jóváhagyott — NEM kifogásolható.",
 ];
 
-/** Owner-approved wording (OWNER_RULINGS ③④), folded: an objection quoting it is dropped. */
-const OWNER_APPROVED_PHRASES: readonly string[] = ["eloben megnez", "tobbszor is megnezte a honlap-tervet"];
+/** Owner-approved wording (OWNER_RULINGS ③), folded: an objection quoting it is dropped. */
+const OWNER_APPROVED_PHRASES: readonly string[] = ["tobbszor is megnezte a honlap-tervet"];
 
-/** Does this objection quote owner-approved wording (OWNER_RULINGS ③④)? Accent- and case-blind. */
+/** Does this objection quote owner-approved wording (OWNER_RULINGS ③)? Accent- and case-blind. */
 export function quotesOwnerApproved(o: Pick<LetterObjection, "quote">): boolean {
   const q = o.quote.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ");
   return OWNER_APPROVED_PHRASES.some((p) => q.includes(p));
@@ -186,7 +185,7 @@ export async function critiqueLetter(branches: readonly LetterBranch[]): Promise
   const { config } = await import("../config.js");
   const objections = parsed.objections.filter((o) => {
     if (proposesPersonalName(o, config.outreachSender.name ?? "")) return false; // OWNER_RULINGS ①
-    if (quotesOwnerApproved(o)) return false; // OWNER_RULINGS ③④
+    if (quotesOwnerApproved(o)) return false; // OWNER_RULINGS ③
     const b = branches.find((x) => x.label === o.branch);
     const hay = squeeze(b ? b.text : branches.map((x) => x.text).join("\n"));
     return hay.includes(squeeze(o.quote));

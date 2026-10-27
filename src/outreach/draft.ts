@@ -617,18 +617,38 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
   // ADR-0373 (Elek 10-12 A-új-2): GSM-7 and at most 2 segments, folded the same way as the
   // companion SMS (ADR-0366). Measured before: 225 characters, UCS-2, 4 segments.
   // Multi-plan: the count from the link's plans (plan-tabs contract).
+  // Owner 2026-10-27 („Mehet”): no „élőben”, and the free trial (DraftInput.trialDays) joins
+  // the invitation as ONE sentence — see smsInvite.
   const plans = planCountOf(d);
+  const tail = smsInvite(d, plans === 1 ? "short" : "formal");
   return foldedSms(
     d,
     (name, mark) =>
       plans === 3
-        ? T(d.lang, "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
+        ? T(d.lang, "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket {invite} A Citoviso csapata\n{link}", { name, link: mark, invite: tail })
         : plans === 2
-          ? T(d.lang, "{name} – két honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
-          : T(d.lang, "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark }),
+          ? T(d.lang, "{name} – két honlap-látványtervet is készítettünk Önnek, amelyeket {invite} A Citoviso csapata\n{link}", { name, link: mark, invite: tail })
+          : T(d.lang, "{name} – készítettünk Önnek egy honlap-látványtervet, amit {invite} A Citoviso csapata\n{link}", { name, link: mark, invite: tail }),
     link,
     unsubscribeLink,
   );
+}
+
+/**
+ * The SMS invitation's closing clause (owner 2026-10-27, „Mehet”): „most megnézheti, és
+ * {N} napig ingyen kipróbálhatja, kötelezettségmentesen!” while the linked page offers the
+ * trial (trialDaysOnOffer), else „most megnézheti és kipróbálhatja kötelezettségmentesen!”.
+ * „short” is the solo single-plan SMS's „amit … megnézhet” form.
+ */
+function smsInvite(d: DraftInput, form: "formal" | "short"): string {
+  if (d.trialDays) {
+    return form === "short"
+      ? T(d.lang, "most megnézhet, és {days} napig ingyen kipróbálhat, kötelezettségmentesen!", { days: d.trialDays })
+      : T(d.lang, "most megnézheti, és {days} napig ingyen kipróbálhatja, kötelezettségmentesen!", { days: d.trialDays });
+  }
+  return form === "short"
+    ? T(d.lang, "most megnézhet és kipróbálhat kötelezettségmentesen!")
+    : T(d.lang, "most megnézheti és kipróbálhatja kötelezettségmentesen!");
 }
 
 /**
@@ -649,17 +669,17 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   // Multi-plan: the SHORT form on purpose (measured 2026-09-23: the long „…mellé” form made
   // 50 of 598 real names a 5-part SMS).
   const plans = planCountOf(d);
-  // Owner 2026-10-27: the free trial, when the linked page offers one (DraftInput.trialDays).
-  // It never pushes the SMS into a 3rd segment: foldedSms shortens the NAME, never this.
-  const trial = d.trialDays ? ` ${T(d.lang, "{days} napig ingyen kipróbálható.", { days: d.trialDays })}` : "";
+  // Owner 2026-10-27 („Mehet”): no „élőben”; the trial joins the invitation (smsInvite). It
+  // never pushes the SMS into a 3rd segment: foldedSms shortens the NAME, never the invitation.
+  const tail = smsInvite(d, "formal");
   return foldedSms(
     d,
     (name, mark) =>
       plans === 3
-        ? T(d.lang, "{name} – az imént küldött terv mellé még kettőt készítettünk: mindhármat élőben megnézheti és kipróbálhatja kötelezettségmentesen!{trial} A Citoviso csapata\n{link}", { name, link: mark, trial })
+        ? T(d.lang, "{name} – az imént küldött terv mellé még kettőt készítettünk: mindhármat {invite} A Citoviso csapata\n{link}", { name, link: mark, invite: tail })
         : plans === 2
-          ? T(d.lang, "{name} – az imént küldött terv mellé még egyet készítettünk: mindkettőt élőben megnézheti és kipróbálhatja kötelezettségmentesen!{trial} A Citoviso csapata\n{link}", { name, link: mark, trial })
-          : T(d.lang, "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen!{trial} A Citoviso csapata\n{link}", { name, link: mark, trial }),
+          ? T(d.lang, "{name} – az imént küldött terv mellé még egyet készítettünk: mindkettőt {invite} A Citoviso csapata\n{link}", { name, link: mark, invite: tail })
+          : T(d.lang, "{name} – az imént MMS-ben küldött honlap-látványtervet {invite} A Citoviso csapata\n{link}", { name, link: mark, invite: tail }),
     link,
     unsubscribeLink,
   );

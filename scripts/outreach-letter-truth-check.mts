@@ -152,10 +152,10 @@ const NAME_FIX = [{ fix: "Kiss Anna, Citoviso" }, { fix: "Citoviso — Nagy Pét
 const BRAND_FIX = [{ fix: "A Citoviso csapata" }, { fix: "hagyd ki" }, { fix: "Citoviso" }];
 check("⑥ a személynév-szűrő elkapja a névvel aláíró javaslatot, a márkát átengedi",
   NAME_FIX.every((o) => proposesPersonalName(o, sender)) && BRAND_FIX.every((o) => !proposesPersonalName(o, sender)));
-// OWNER_RULINGS ③④ (2026-10-27): the owner-approved lines are filtered, the new trial sentence is NOT.
-check("⑥ a tulaj-jóváhagyott sorok kifogása kiszűrve, a próba-mondaté nem",
-  [{ quote: "amit most eloben megnezhet es kiprobalhat" }, { quote: "most élőben megnézheti" }, { quote: "Köszönjük, hogy többször is megnézte a honlap-tervét." }].every(quotesOwnerApproved) &&
-    ![{ quote: "Mielőtt döntene, 14 napig ingyen kipróbálhatja, kötelezettség nélkül." }, { quote: "14 napig ingyen kiprobalhato" }, { quote: "kotelezettsegmentesen" }].some(quotesOwnerApproved));
+// OWNER_RULINGS ③ (2026-10-27): the owner-approved line is filtered, the new trial wording is NOT.
+check("⑥ a tulaj-jóváhagyott sor kifogása kiszűrve, a próba-mondaté nem",
+  [{ quote: "Köszönjük, hogy többször is megnézte a honlap-tervét." }, { quote: "tobbszor is megnezte a honlap-tervet" }].every(quotesOwnerApproved) &&
+    ![{ quote: "Mielőtt döntene, 14 napig ingyen kipróbálhatja, kötelezettség nélkül." }, { quote: "most megnezheti, es 14 napig ingyen kiprobalhatja" }, { quote: "kotelezettsegmentesen" }].some(quotesOwnerApproved));
 check("⑥ a márka mint küldő-név NEM személynév, a mellette álló személynév igen",
   ["Citoviso", "citoviso.com", "A Citoviso csapata", " Citoviso "].every((n) => personalSenderName(n) === "") &&
     personalSenderName("Olasz Ferenc") === "Olasz Ferenc" && personalSenderName("Olasz Ferenc, Citoviso") === "Olasz Ferenc" &&
