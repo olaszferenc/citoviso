@@ -22,7 +22,8 @@
 // in the generator (Hargita „a közelben található étterem” → no „Étterem”; Hotel Garni's
 // contradicted room count) does not reach a mock by a plain re-render. It recomputes only
 // those four fields — no AI, no network: the same sampleHintsOf() the generator runs, over
-// the listing + prose + the first generation's quote-verified facts. It never adds a claim the
+// the listing + prose + the first generation's quote-verified facts — and the photos' bedroom
+// flag (Photo.bedroom, the room cards' photo rule) from the CACHED vision verdicts. It never adds a claim the
 // source does not make, so it also runs on a link already sent (§I: the offer was the design
 // and the copy, both untouched; a false sample item is a correction, not a switch).
 //
@@ -43,6 +44,7 @@ import { injectRuntime } from "../src/generator/runtime.js";
 import { getHeroPin, rerenderArtifactWithHero } from "../src/generator/heroOverride.js";
 import { secureMockPhotos } from "../src/generator/photoTransport.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
+import { isBedroomVerdict, photoUrlKey, readCachedScores } from "../src/generator/heroPick.js";
 import { loadLead } from "../src/generator/persist.js";
 import { collectWriterSources, type WriterSourceLead } from "../src/generator/writerSources.js";
 import { quotedFactsOf } from "../src/generator/copySources.js";
@@ -97,9 +99,15 @@ for (const row of rows) {
       descriptionFacts: sources.descriptionFacts,
     });
     const { sampleRoomCount: _c, sampleRoomNames: _n, sampleAmenities: _a, sampleAmenityDeny: _d, sampleUnitKind: _k, ...rest } = siteData;
-    const next: SiteData = { ...rest, ...hints };
+    // The room cards' bedroom flag (Photo.bedroom), from the CACHED verdicts — no AI call.
+    const scores = await readCachedScores((rest.photos ?? []).map((p) => p.url));
+    const photos = (rest.photos ?? []).map((p) => {
+      const v = scores.get(photoUrlKey(p.url));
+      return v ? { ...p, bedroom: isBedroomVerdict(v) } : p;
+    });
+    const next: SiteData = { ...rest, photos, ...hints };
     const show = (d: SiteData) =>
-      `szolgáltatás=[${(d.sampleAmenities ?? []).join(", ")}] tiltott=[${(d.sampleAmenityDeny ?? []).join(", ")}] szobaszám=${d.sampleRoomCount ?? "—"} nevek=[${(d.sampleRoomNames ?? []).join(", ")}] egység=${d.sampleUnitKind ?? "—"}`;
+      `szolgáltatás=[${(d.sampleAmenities ?? []).join(", ")}] tiltott=[${(d.sampleAmenityDeny ?? []).join(", ")}] szobaszám=${d.sampleRoomCount ?? "—"} nevek=[${(d.sampleRoomNames ?? []).join(", ")}] egység=${d.sampleUnitKind ?? "—"} hálószobakép=${(d.photos ?? []).some((p) => p.bedroom !== undefined) ? (d.photos ?? []).filter((p) => p.bedroom).length : "—"}`;
     console.log(`  · ${row.name} (${String(row.id).slice(0, 8)}) minta-jelzések\n      előtte: ${show(siteData)}\n      utána:  ${show(next)}`);
     await db
       .updateTable("mock_artifact")

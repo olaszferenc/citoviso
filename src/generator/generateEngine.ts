@@ -115,7 +115,11 @@ export function portalRooms(
     // `source`: the listing the rooms were read from — the source pack names it (§B.17 trace).
     if (rooms.length) return { rooms: rooms.slice(0, 8), count: rooms.length, source: p.url };
   }
-  const counted = high.find((p) => p.roomCount?.value && p.roomCount.value > 0);
+  // A BEDROOM count is no unit count (Tea aa69b4d0, 2026-10-27: „Itt található 3 hálószoba”
+  // → „1.–3. szoba” on two apartments): the cards count bookable units.
+  const counted = high.find(
+    (p) => p.roomCount?.value && p.roomCount.value > 0 && !/hálószob/iu.test(p.roomCount.evidence ?? ""),
+  );
   return { rooms: [], count: counted?.roomCount?.value ?? null };
 }
 
@@ -176,8 +180,9 @@ export function sampleHintsOf(
       // Rooms AND apartments: the count is one kind's only („Négy … apartman, valamint további
       // 3 szoba” — Gála ceb9eae4), numbered „N. szoba” cards would hide the rest → one
       // „Szobák és apartmanok” card.
-      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly && sampleUnitKind !== "both" &&
-        !roomCountInsideApartments(units.count, sources.descriptions, sampleUnitKind === "whole" ? null : sampleUnitKind)
+      // Let as a whole (stated, not only „csak egyben”) → no numbered cards either (Délibáb 330d3c5a).
+      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly && sampleUnitKind !== "both" && sampleUnitKind !== "whole" &&
+        !roomCountInsideApartments(units.count, sources.descriptions, sampleUnitKind)
         ? { sampleRoomCount: units.count }
         : {}),
       // Unit names from the owner's prose (Hungarian only — the type word is Hungarian)

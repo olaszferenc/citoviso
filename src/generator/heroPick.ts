@@ -193,9 +193,20 @@ export function dropNeverShown<T extends OrderablePhoto>(
     // Ugyanaz az érv, mint a bélyegnél: a négy renderelő út mind ezt hívja, így a tárgy
     // mindegyiken ott van, verdikt nélkül pedig nincs — a sablon akkor nem találgat.
     const marked = v?.watermarked ? ({ ...p, watermarked: true } as T) : p;
-    kept.push(v ? ({ ...marked, subject: v.subject } as T) : marked);
+    // A hálószoba-jel (`bedroom`) ugyanitt: a szobakártya csak hálószobaképet visel (templateKit).
+    kept.push(v ? ({ ...marked, subject: v.subject, bedroom: isBedroomVerdict(v) } as T) : marked);
   }
   return { kept, dropped };
+}
+
+/**
+ * Does the cached verdict show a BEDROOM? The subject enum has no such class („interior” is a
+ * kitchen, a corridor or a bedroom alike), but the verdict's one-sentence reason names it:
+ * „Hálószoba …”, „Szoba két ággyal”, „Tetőtéri szoba … ágy” — and „Konyha …”, „Folyosó …”,
+ * „Nappali/étkezőszoba …” do not. Accented match on purpose: „ágy” is not inside „nagy”.
+ */
+export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">): boolean {
+  return v.subject === "interior" && /hálószob|ágy|ággyal|paplan/iu.test(v.reason ?? "");
 }
 
 export interface HeroScore {

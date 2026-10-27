@@ -44,6 +44,7 @@ import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
+import { dropNeverShown, isBedroomVerdict, photoUrlKey } from "../src/generator/heroPick.js";
 import { collectWriterSources, withoutOwnName } from "../src/generator/writerSources.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -420,6 +421,63 @@ const noVerdict = sampleRooms({ ...base, photos: [1, 2, 3, 4, 5].map((i) => ({ u
 check("⛔ tárgy-ítélet nélkül a régi sor (az első két kép kimarad)", noVerdict.map((r) => r.photo?.url).join("|") === "https://x.hu/3.jpg|https://x.hu/4.jpg", noVerdict.map((r) => r.photo?.url));
 const allOut = sampleRooms({ ...base, photos: [sub("exterior", 1), sub("view", 2)], sampleRoomCount: 2 });
 check("⛔ belső kép nélkül is kap képet a kártya (ADR-0059 ③: ikonos kártya nincs)", allOut.every((r) => r.photo), allOut.map((r) => r.photo?.url));
+
+console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép egyszer; egészben kiadott = egy kártya (2026-10-27)");
+{
+  // The REAL cached verdict reasons (photo_hero_score, live 2026-10-27).
+  const R: [string, boolean][] = [
+    ["Hálószoba teljes nézete plafonlámpa és lábzsámli részletével, világos és szellős, de kisebb szögből fotózva.", true],
+    ["Szoba két ággyal, világos, jól bevilágított, de apró szoba, semleges berendezésű.", true],
+    ["Tetőtéri szoba átfogó nézete fa mennyezettel, munkahelyű és ágy, érdekes, de vegyes.", true],
+    ["Konyha felújított türkiz berendezéssel, zöld csempefalak, virág dekoráció – tiszta, modern és invitáló.", false],
+    ["Szép, világos folyosó faszerkezettel, dekoratív padlóval és ajtókkal – vonzó belső tér, de folyosó, nem közlekedési fő tér.", false],
+    ["Nappali/étkezőszoba, sárga fal, ajtók és világos, de semleges, üresnek tűnik.", false],
+    ["Kis szoba természetes fénnyel, drapp burkolat és nappali bútor, barátságos de szűkösebb.", false],
+    ["Nagy nappali kanapéval.", false],
+    ["Szobainteriőr virágos paplannal és fürdőszobaajtóval, semleges, szűk felvétel.", true],
+  ];
+  const wrongR = R.filter(([reason, want]) => isBedroomVerdict({ subject: "interior", reason }) !== want).map(([r]) => r);
+  check("isBedroomVerdict: hálószoba / ágy igen; konyha, folyosó, nappali, „nagy” nem", wrongR.length === 0, wrongR);
+  check("⛔ nem „interior” tárgy sosem hálószoba (a kerti nyugágy sem)", !isBedroomVerdict({ subject: "pool_garden", reason: "Kert napozóággyal" }));
+  const scores = new Map([
+    [photoUrlKey("https://x.hu/b1.jpg"), { subject: "interior", score: 60, reason: R[0]![0], watermarked: false }],
+    [photoUrlKey("https://x.hu/k1.jpg"), { subject: "interior", score: 60, reason: R[3]![0], watermarked: false }],
+  ]) as never;
+  const marked = dropNeverShown([{ url: "https://x.hu/b1.jpg" }, { url: "https://x.hu/k1.jpg" }, { url: "https://x.hu/n.jpg" }], scores).kept as { bedroom?: boolean }[];
+  check("dropNeverShown: minden elítélt képen ott a hálószoba-jel (igaz/hamis), ítélet nélkül nincs",
+    marked[0]!.bedroom === true && marked[1]!.bedroom === false && marked[2]!.bedroom === undefined, marked);
+
+  const ph = (n: string, subject: string, bedroom?: boolean) => ({ url: `https://x.hu/${n}.jpg`, alt: "", subject, ...(bedroom === undefined ? {} : { bedroom }) });
+  const uniq = (rooms: readonly { photo?: { url: string } }[]) => new Set(rooms.map((r) => r.photo?.url)).size === rooms.length;
+  // Délibáb 330d3c5a: let as a whole, a count of 3 rode along, kitchens among the interiors.
+  const delibab = [ph("ext", "exterior", false), ph("b1", "interior", true), ph("k1", "interior", false), ph("b2", "interior", true), ph("k2", "interior", false), ph("b3", "interior", true)];
+  const dCards = sampleRooms({ ...base, photos: delibab, sampleRoomCount: 3, sampleUnitKind: "whole" });
+  check("Délibáb: egészben kiadott → EGY „Az egész szállás” kártya, nem „1.–3. szoba”",
+    dCards.length === 1 && dCards[0]!.name === "Az egész szállás", dCards.map((r) => r.name));
+  check("Délibáb: a kártyán hálószobakép, nem konyha", /\/b\d\.jpg$/.test(dCards[0]!.photo?.url ?? ""), dCards[0]!.photo?.url);
+  // Tea aa69b4d0: „3 hálószoba” is no unit count; two apartments → one „Apartmanok” card.
+  const teaDesc = "Kettő illetve három szobás klimatizált apartmanokkal várják a vendégeket. Mindkét apartman egyik szobájában franciaágy, míg a másikban csak szimpla ágyak vannak elhelyezve.";
+  const teaH = sampleHintsOf({ name: "Tea Apartman", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 3, evidence: "Itt található 3 hálószoba, fürdőszoba fürdőkáddal, konyha étkezővel és nappali is" } }] } as never, "hu",
+    { listedAmenities: [], amenities: [], descriptions: [teaDesc] }).hints;
+  check("Tea: a hálószoba-szám nem egységszám → nincs sampleRoomCount", !teaH.sampleRoomCount, teaH);
+  const teaOld = sampleRooms({ ...base, photos: [ph("e1", "exterior", false), ph("e2", "exterior", false), ph("i1", "interior"), ph("i2", "interior")], sampleRoomCount: 3, sampleUnitKind: "apartments" });
+  check("Tea (a régi, tárolt 3-as számmal, sima rerender): 2 kép 3 kártyára nem elég → egy „Apartmanok” kártya, nincs ismétlődő kép",
+    teaOld.length === 1 && teaOld[0]!.name === "Apartmanok", teaOld.map((r) => `${r.name}:${r.photo?.url}`));
+  // Kákonyi 6841869e: 6 rooms stated, the interiors hold a corridor (#1) and a door (#4).
+  const kakonyi = [ph("c1", "interior", false), ph("r1", "interior", true), ph("r2", "interior", true), ph("d1", "interior", false), ph("r3", "interior", true), ph("r4", "interior", true), ph("r5", "interior", true), ph("r6", "interior", true), ph("x", "exterior", false)];
+  const kCards = sampleRooms({ ...base, photos: kakonyi, sampleRoomCount: 6 });
+  check("Kákonyi: 6 számozott kártya, mindegyiken MÁS hálószobakép (folyosó, ajtó nem)",
+    kCards.length === 6 && kCards.every((r) => /\/r\d\.jpg$/.test(r.photo?.url ?? "")) && uniq(kCards), kCards.map((r) => r.photo?.url));
+  const kShort = sampleRooms({ ...base, photos: kakonyi.filter((p) => !/r[56]/.test(p.url)), sampleRoomCount: 6 });
+  check("⛔ 4 hálószobakép 6 kártyára → nem ismétel: egy kártya (a szám a tényekben marad)", kShort.length === 1 && kShort[0]!.name === "Szálláslehetőség", kShort.map((r) => `${r.name}:${r.photo?.url}`));
+  // Aranyhíd: a sourced count with distinct bedroom photos → the numbered cards stand.
+  const aranyhidCards = sampleRooms({ ...base, photos: [ph("h", "exterior", false), ...[1, 2, 3, 4].map((i) => ph(`r${i}`, "interior", true))], sampleRoomCount: 4 });
+  check("Aranyhíd: forrásolt szám + különböző hálószobaképek → „1.–4. szoba” marad",
+    aranyhidCards.map((r) => r.name).join("|") === "1. szoba|2. szoba|3. szoba|4. szoba" && uniq(aranyhidCards), aranyhidCards.map((r) => `${r.name}:${r.photo?.url}`));
+  // Real rooms without a photo borrow a bedroom, each once; the rest keep their panel.
+  const real = roomsForMock({ ...base, photos: [ph("c1", "interior", false), ph("r1", "interior", true)], rooms: [{ name: "Tölgy" }, { name: "Bükk" }] as never });
+  check("valós szobák: hálószobakép egyszer, a második nem ismétli", real[0]!.photo?.url === "https://x.hu/r1.jpg" && !real[1]!.photo, real.map((r) => r.photo?.url));
+}
 
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");
 const panProfile = (title: string, description: string) => ({ name: title, portalProfiles: [{ matchBand: "high", title, url: "https://hovamenjek.hu/x", portal: "hovamenjek", amenities: ["Saját parkoló"], rooms: [], photos: [], reviews: [], prices: [], description }] });

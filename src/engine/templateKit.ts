@@ -172,13 +172,21 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   // szállás" ONLY when the source says the place is let as a whole (sampleUnitKind
   // "whole"); otherwise it carries no letting-mode claim at all (TARTVA ×30, 2026-10-26:
   // the whole-place default stood on panziók, hotels and apartment houses — §B.17).
-  const names = d.sampleRoomNames?.length ? d.sampleRoomNames.slice(0, 8) : null;
-  const n = names ? names.length : d.sampleRoomCount ? Math.max(1, Math.min(8, d.sampleRoomCount)) : 1;
+  // A place let as a WHOLE has no room cards (Délibáb 330d3c5a, 2026-10-27: „egészben kiadott
+  // ikerház-fél”, yet „1.–3. szoba”): one „Az egész szállás” card, whatever count rode along.
+  const whole = d.sampleUnitKind === "whole";
+  const names = !whole && d.sampleRoomNames?.length ? d.sampleRoomNames.slice(0, 8) : null;
+  const photos = roomCardPhotos(d);
+  let n = names ? names.length : !whole && d.sampleRoomCount ? Math.max(1, Math.min(8, d.sampleRoomCount)) : 1;
+  // Numbered cards stand only with a DIFFERENT bedroom photo each (Aranyhíd); fewer such photos
+  // than cards → one card naming the kind (Tea aa69b4d0: cards 1 and 3 wore the same photo).
+  const numbered = !names && n > 1;
+  if (numbered && d.photos.length && photos.cards.length < n) n = 1;
   const base: Room[] = Array.from({ length: n }, (_, i) => {
     const proto = SAMPLE_ROOMS[Math.min(i, SAMPLE_ROOMS.length - 1)]!;
     const name = names
       ? names[i]!
-      : d.sampleRoomCount
+      : n > 1
         ? T(d, "{n}. szoba", { n: i + 1 })
         : d.sampleUnitKind === "both"
           ? T(d, "Szobák és apartmanok")
@@ -186,7 +194,7 @@ export function sampleRooms(d: SiteData): readonly Room[] {
             ? T(d, "Szobák")
             : d.sampleUnitKind === "apartments"
               ? T(d, "Apartmanok")
-              : d.sampleUnitKind === "whole"
+              : whole
                 ? T(d, "Az egész szállás")
                 : T(d, "Szálláslehetőség");
     // No sample card carries amenity chips: a chip on a card is a claim about THAT unit
@@ -197,21 +205,30 @@ export function sampleRooms(d: SiteData): readonly Room[] {
     return { ...card, name, amenities: [] };
   });
   if (!d.photos.length) return base;
-  const pick = roomCardPhotos(d, base.length);
-  return base.map((r, i) => ({ ...r, photo: { ...pick(i), alt: T(d, "Minta — {name}", { name: r.name }) } }));
+  // One card stands for the whole place or a kind — any inside photo fits it.
+  const pick = (i: number): Photo | undefined => (n === 1 ? photos.cards[0] ?? photos.single : photos.cards[i]);
+  return base.map((r, i) => {
+    const photo = pick(i);
+    return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
+  });
 }
 
 /**
- * The gallery photo for the i-th room card. A room card shows an INSIDE photo: where the
- * vision verdict marked interiors, the cards cycle through those only (Centrum 3d5e8bb1,
- * 2026-10-27: „1.–5. szoba” wore the house's facade shots). No verdict, or no interior at
- * all → the whole gallery, skipping the first two (hero) photos when there are enough.
+ * The photos room cards may wear (Délibáb 330d3c5a, Tea aa69b4d0, Kákonyi 6841869e,
+ * 2026-10-27): with a vision verdict, BEDROOMS only (Photo.bedroom — not the kitchen, the
+ * corridor or the door „interior” also covers), each photo ONCE. No verdict at all → the
+ * gallery, skipping the two hero photos when there are enough, each once. `single`: the photo
+ * of a lone whole-place / kind card when no bedroom is pictured — an inside shot, else the
+ * first non-hero gallery photo.
  */
-function roomCardPhotos(d: SiteData, cards: number): (i: number) => Photo {
+function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo | undefined } {
+  const judged = d.photos.some((p) => p.subject !== undefined);
+  const offset = d.photos.length > 3 ? 2 : 0;
+  if (!judged) return { cards: d.photos.slice(offset), single: d.photos[offset] };
   const inside = d.photos.filter((p) => p.subject === "interior");
-  if (inside.length) return (i) => inside[i % inside.length]!;
-  const offset = d.photos.length > cards + 1 ? 2 : 0;
-  return (i) => d.photos[(offset + i) % d.photos.length]!;
+  // A snapshot from before the bedroom flag: inside photos, still each once.
+  const flagged = d.photos.some((p) => p.bedroom !== undefined);
+  return { cards: flagged ? d.photos.filter((p) => p.bedroom) : inside, single: inside[0] ?? d.photos[offset] };
 }
 
 /**
@@ -227,10 +244,14 @@ function roomCardPhotos(d: SiteData, cards: number): (i: number) => Photo {
 export function roomsForMock(d: SiteData): readonly Room[] {
   if (!d.rooms?.length) return sampleRooms(d);
   if (!d.photos.length) return d.rooms;
-  const pick = roomCardPhotos(d, d.rooms.length);
-  return d.rooms.map((r, i) =>
-    r.photo ? r : { ...r, photo: { ...pick(i), alt: T(d, "Minta — {name}", { name: r.name }) } },
-  );
+  // A borrowed photo is a bedroom (with a verdict) and is borrowed ONCE; a room left without
+  // one keeps its own panel rather than repeat a photo another card already wears.
+  const pool = [...roomCardPhotos(d).cards];
+  return d.rooms.map((r) => {
+    if (r.photo) return r;
+    const photo = pool.shift();
+    return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
+  });
 }
 
 /**

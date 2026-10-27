@@ -102,6 +102,14 @@ export interface Photo {
    */
   readonly subject?: string;
   /**
+   * The vision verdict's reason names a BEDROOM („Hálószoba …”, „Szoba két ággyal”) — the only
+   * photos a room card may wear (Délibáb 330d3c5a, Kákonyi 6841869e, 2026-10-27: kitchens,
+   * a corridor and a door on „N. szoba” cards). From the cached verdict, set beside `subject`
+   * (dropNeverShown) on every judged photo; absent = no verdict, or a snapshot from before
+   * the flag (then the cards fall back to inside photos — `rerender-mock --resample` sets it).
+   */
+  readonly bedroom?: boolean;
+  /**
    * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
    * for the hero and the outdoor photos only. Answers "is this the SAME picture under
    * another URL?" (portals republish each other's photos) via engine/samePicture.ts.
