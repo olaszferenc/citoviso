@@ -15,7 +15,9 @@
 ## 1. A jegy
 
 A jegyek a `~/poe/beerkezo/`-ban érkeznek, egy fájl egy lead (`ÉÉÉÉ-HH-NN-<lead8>.md`).
-- **Sorrend:** a tulaj jegye előbb, aztán Neóé, érkezési sorrendben.
+- **Sorrend:** a **válasz-jegy** (`…-valasz-<válasz8>.md`, §6b) MINDENT megelőz — egy szállásadó
+  vár a válaszunkra, a futó mock-munkát megszakítod érte, utána folytatod. Aztán a tulaj jegye,
+  aztán Neóé, érkezési sorrendben. Új válasz-jegyről a figyelő (`valasz-watch.sh`) szól neked.
 - **Neo jegye** tartalmazza: a lead konzol-URL-jét, a **kurátori lap URL-jét**
   (`/lead/<id>/curate?t=a,b` — a két sablon már előjelölve), a választás indokát, és Neo
   megfigyeléseit. A megfigyelés **nyom, nem forrás**: segít, hova nézz, de a szövegbe csak az
@@ -126,6 +128,9 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
 3. Tedd le a konzolon, a beszélgetés alatti lenyíló javaslat-űrlapon (csak a `poe` fióknak
    látszik): szöveg, e-mailnél tárgy, és soronként, mire alapoztad (pl. „árazás: élő árlista”).
    Újabb letétel felülírja az előzőt.
+   ⛔ **Elutasítónak / nem érintettnek NEM írsz javaslatot** („nem kérjük”, „nem az enyém”, „rossz
+   helyre küldték”): tőlük semmilyen további üzenet nem mehet (tulaj, 2026-10-26). A jegyet
+   ilyenkor is lezárod: `KÉSZ — <idő> — nincs javaslat: elutasító/nem érintett`.
 4. ⛔ **KÜLDENI TILOS.** A küldés az operátoré (ADR-0325): ő olvassa el, javítja, és ő küldi.
 5. A jegyet jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.
 
