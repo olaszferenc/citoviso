@@ -2841,6 +2841,14 @@ if [ -f scripts/sample-from-source-check.mts ] && \
   echo "[pre-commit] sample-from-source-check (a minta nem mond ellent a forrásnak)…"
   npx tsx scripts/sample-from-source-check.mts >"$GATE_LOG" || gate_failed
 fi
+# dispatch-rooms-guard-check (koordinátor 2026-10-27, Relax Balaton / PENNY): szobamodul nélküli
+# terv nem megy ki az automatán — főtervnél held a link készítése előtt, 2. tervnél kimarad.
+# Fixture-fájlok + forrás-bekötés, DB/böngésző nélkül, ~2 s.
+if [ -f scripts/dispatch-rooms-guard-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/autoDispatch\.ts$|^scripts/dispatch-rooms-guard-check'; then
+  echo "[pre-commit] dispatch-rooms-guard-check (szobamodul nélküli terv nem megy ki)…"
+  npx tsx scripts/dispatch-rooms-guard-check.mts >"$GATE_LOG" || gate_failed
+fi
 # booked-source-check (Vera 2026-10-26: Lunczer d86a6f11, Oázis d7cb475c): booked.hu angol
 # szobanevei a magyar mockon, szomszéd-ajánló a leírásban, a férőhely forrása hiányzott a packból.
 # Determinisztikus, hálózat/DB nélkül, ~5 s.

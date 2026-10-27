@@ -16,6 +16,8 @@
 // Pacing: ONE lead per tick (the timer fires every few minutes), a daily cap from the
 // `outreach_auto` setting, and the master switch in the same setting (off by default).
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { getSetting, setSetting } from "../console/appSettings.js";
@@ -232,11 +234,14 @@ async function dispatchOne(
 
   const art = await db
     .selectFrom("mock_artifact")
-    .select(["status", "inputs"])
+    .select(["status", "inputs", "path"])
     .where("id", "=", artifactId)
     .executeTakeFirst();
   if (!art) return { status: "skipped", note: "a mock időközben törlődött" };
   if (art.status !== "approved") return { status: "held", note: `a mock nincs jóváhagyva (állapot: ${art.status})` };
+  if (!(await planHasRooms(art.path))) {
+    return { status: "held", note: "a mockból hiányzik a szobamodul — szobamodul nélküli terv nem megy ki" };
+  }
 
   // Photo gate — the same check POST /lead/:id/prospect runs before createProspect.
   const health = await assessMockPhotos(artifactId);
@@ -344,17 +349,19 @@ export async function attachSecondPlan(
   if (has) return { ok: true, attached: null };
   const mocks = await db
     .selectFrom("mock_artifact")
-    .select(["id", "inputs", "status"])
+    .select(["id", "inputs", "status", "path"])
     .where("lead_id", "=", p.lead_id)
     .where("id", "!=", p.mock_artifact_id ?? "")
     .where("status", "!=", "rejected")
     .where("path", "is not", null)
     .orderBy("generated_at", "desc")
     .execute();
-  const passed = mocks.filter((m) => {
+  const reviewed = mocks.filter((m) => {
     const r = reviewOf(m.inputs);
     return r?.verdict === "pass" && r.copyHash === copyHashOf(m.inputs);
   });
+  const passed: typeof reviewed = [];
+  for (const m of reviewed) if (await planHasRooms(m.path)) passed.push(m);
   const refusals: string[] = [];
   for (const m of passed) {
     const r = await setProspectVariants(prospectId, [m.id], opts);
@@ -365,6 +372,23 @@ export async function attachSecondPlan(
     ok: false,
     note: passed.length
       ? `a második terv nem csatolható (${refusals.join(", ")}) — más sablon és azonos fotókészlet kell`
-      : "nincs második, Vera által ellenőrzött terv — a lead lapján kell rögzíteni Vera ítéletét a másik mockra",
+      : reviewed.length
+        ? "a Vera által ellenőrzött második tervből hiányzik a szobamodul — más sablonú, szobamodulos terv kell"
+        : "nincs második, Vera által ellenőrzött terv — a lead lapján kell rögzíteni Vera ítéletét a másik mockra",
   };
+}
+
+/**
+ * Coordinator rule 2026-10-27 (Relax Balaton, PENNY): a plan whose rendered page has no rooms
+ * module never goes out — as the main plan the row is held, as a second plan it is skipped.
+ * A missing or unreadable file counts as no rooms module.
+ */
+export async function planHasRooms(mockPath: string | null | undefined): Promise<boolean> {
+  if (!mockPath) return false;
+  try {
+    const html = await readFile(path.resolve(process.cwd(), mockPath), "utf8");
+    return html.includes('data-cit-module="rooms"');
+  } catch {
+    return false;
+  }
 }
