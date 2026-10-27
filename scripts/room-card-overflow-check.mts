@@ -170,6 +170,9 @@ function siteData(photoUrl: string, withRooms: boolean): SiteData {
     url: photoUrl,
     alt: `ELEK-TESZT Vendégház — ${i + 1}. kép`,
     provenance: "owner" as const,
+    // Since 2026-10-27 a room card wears ONLY a bedroom photo — the card's photo is what is measured.
+    subject: "interior",
+    bedroom: true,
   }));
   return {
     name: "ELEK-TESZT Vendégház",

@@ -192,6 +192,15 @@ console.log("\n②e sok kép egy vision-hívásban (Sárgarózsa 3419993e, 2026-
   check(fitted[1] === many[1], "a határon belüli kép érintetlen (ugyanaz a blokk)");
   const few = [block(big), block(small)];
   check((await fitManyImageRequest(few))[0] === few[0], "PIROS IKER: ≤ 20 kép → nincs kicsinyítés (a teljes felbontás marad)");
+  // Ametiszt ce2f06ec: an AVIF block refuses the whole vision call → re-encoded as JPEG.
+  const { asJpeg, API_IMAGE_TYPES } = await import("../src/generator/images.js");
+  const avif = await sharp({ create: { width: 64, height: 48, channels: 3, background: "#a7c" } }).avif().toBuffer();
+  const asJ = await asJpeg(avif, "image/avif");
+  const jm = await sharp(asJ.raw).metadata();
+  check(asJ.mediaType === "image/jpeg" && jm.format === "jpeg" && jm.width === 64 && !API_IMAGE_TYPES.has("image/avif") && API_IMAGE_TYPES.has("image/webp"),
+    "AVIF → JPEG a vision-blokkhoz (az API csak JPEG/PNG/GIF/WebP-t olvas)");
+  const imgSrc = readFileSync("src/generator/images.ts", "utf8");
+  check(/API_IMAGE_TYPES\.has\(mediaTypeIn\)[\s\S]{0,120}await asJpeg\(fetched, mediaTypeIn\)/.test(imgSrc), "toImageBlock minden nem-API típust átalakít, mielőtt a kérésbe tenné");
   const heroSrc = readFileSync("src/generator/heroPick.ts", "utf8");
   check(/const blocks = await fitManyImageRequest\(fetched\.map\(\(f\) => f\.block\)\)/.test(heroSrc), "a nyitókép-pontozó a kérés előtt átfuttatja (scoreHeroCandidates)");
 }

@@ -161,6 +161,20 @@ export async function fitManyImageRequest(blocks: readonly ImageBlock[]): Promis
   );
 }
 
+/** The image types the API accepts in a block (anything else fails the whole request). */
+export const API_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+/** Re-encode an image the API does not read (AVIF, HEIC, TIFF …) as JPEG; the input on failure. */
+export async function asJpeg(buf: Buffer, mediaType: string): Promise<{ raw: Buffer; mediaType: string }> {
+  try {
+    const { default: sharp } = await import("sharp");
+    const out = await sharp(buf, { failOn: "none" }).rotate().jpeg({ quality: VISION_JPEG_QUALITY, mozjpeg: true }).toBuffer();
+    return { raw: out, mediaType: "image/jpeg" };
+  } catch {
+    return { raw: buf, mediaType };
+  }
+}
+
 /** Image content block as the Anthropic SDK expects it (remote url, or inlined bytes). */
 export type ImageBlock =
   | { type: "image"; source: { type: "url"; url: string } }
@@ -214,11 +228,18 @@ export async function toImageBlock(url: string): Promise<ImageBlock | null> {
       },
     });
     if (!res.ok) return null;
-    const mediaType =
-      (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
-    if (!mediaType.startsWith("image/")) return null;
-    const raw = Buffer.from(await res.arrayBuffer());
-    if (!raw.length) return null;
+    const mediaTypeIn =
+      (res.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+    if (!mediaTypeIn.startsWith("image/")) return null;
+    const fetched = Buffer.from(await res.arrayBuffer());
+    if (!fetched.length) return null;
+    // The API reads JPEG, PNG, GIF and WebP only: an AVIF (or any other) block refuses the
+    // WHOLE call, every photo's verdict with it (Ametiszt ce2f06ec, 2026-10-27: an all-.avif
+    // own site, no verdict at all, the room card on a garden shot) → re-encode as JPEG.
+    const { raw, mediaType } = API_IMAGE_TYPES.has(mediaTypeIn)
+      ? { raw: fetched, mediaType: mediaTypeIn }
+      : await asJpeg(fetched, mediaTypeIn);
+    if (!API_IMAGE_TYPES.has(mediaType)) return null;
     // Full resolution by default — the model reads real features off these photos, and
     // shrinking them measurably costs facts (see VISION_MAX_EDGE). Shrink ONLY when the
     // image would otherwise be dropped for size, where the alternative is no grounding.

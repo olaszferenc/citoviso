@@ -210,7 +210,7 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   });
   if (!d.photos.length) return base;
   // One card stands for the whole place or a kind — any inside photo fits it.
-  const pick = (i: number): Photo | undefined => (n === 1 ? photos.cards[0] ?? photos.single : photos.cards[i]);
+  const pick = (i: number): Photo | undefined => (n === 1 ? photos.single : photos.cards[i]);
   return base.map((r, i) => {
     const photo = pick(i);
     return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
@@ -228,29 +228,20 @@ const NAMED_NOT_ROOM = /(?:^|[^a-z])(?:furdo[a-z]*|bath[a-z]*|bad|wc|toalett|toi
 
 /**
  * The photos room cards may wear (Délibáb 330d3c5a, Tea aa69b4d0, Kákonyi 6841869e,
- * 2026-10-27): with a vision verdict, BEDROOMS only (Photo.bedroom — not the kitchen, the
- * corridor or the door „interior” also covers), each photo ONCE. No verdict at all → the
- * gallery, skipping the two hero photos when there are enough, each once. `single`: the photo
- * of a lone whole-place / kind card when no bedroom is pictured — an inside shot, else the
- * first non-hero gallery photo.
+ * 2026-10-27): BEDROOMS only, each photo ONCE — and none at all when no bedroom is known
+ * (coordinator, 2026-10-27: Villa Eve, Szóládi, Kager, Kalandor, Ametiszt wore a living room, a
+ * reception, a dining table and a garden; „ha nincs hálókép-ítéletű kép, ne legyen
+ * kártyakép”). With a vision verdict: Photo.bedroom (a snapshot from before the flag knows
+ * none — `rerender-mock --resample` sets it). No verdict at all: a bedroom the file name or
+ * the caption names („Szoba2-scaled.jpg”), never a named bathroom, kitchen or living room.
+ * `single`: the photo of a lone whole-place / kind card — the first such bedroom, or none.
  */
 function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo | undefined } {
   const judged = d.photos.some((p) => p.subject !== undefined);
-  const offset = d.photos.length > 3 ? 2 : 0;
-  if (!judged) {
-    // No verdict: the file name or the caption may still say what the photo shows
-    // („Szoba2-scaled.jpg”, „Furdo-scaled.jpg”, -bb 2026-10-27) — a named bathroom, kitchen or
-    // living room never wears a room card, a named bedroom is preferred.
-    const named = d.photos.filter((p) => NAMED_BEDROOM.test(photoWords(p)) && !NAMED_NOT_ROOM.test(photoWords(p)));
-    const usable = d.photos.filter((p) => !NAMED_NOT_ROOM.test(photoWords(p)));
-    return named.length
-      ? { cards: named, single: named[0] }
-      : { cards: usable.slice(offset), single: usable[offset] ?? usable[0] };
-  }
-  const inside = d.photos.filter((p) => p.subject === "interior");
-  // A snapshot from before the bedroom flag: inside photos, still each once.
-  const flagged = d.photos.some((p) => p.bedroom !== undefined);
-  return { cards: flagged ? d.photos.filter((p) => p.bedroom) : inside, single: inside[0] ?? d.photos[offset] };
+  const cards = judged
+    ? d.photos.filter((p) => p.bedroom)
+    : d.photos.filter((p) => NAMED_BEDROOM.test(photoWords(p)) && !NAMED_NOT_ROOM.test(photoWords(p)));
+  return { cards, single: cards[0] };
 }
 
 /**

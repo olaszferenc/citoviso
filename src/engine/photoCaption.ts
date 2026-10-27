@@ -160,9 +160,33 @@ export function captionContradictsSubject(alt: string, subject: string | undefin
   return claims.length > 0 && claims.every(([, ok]) => !ok.includes(subject));
 }
 
+/**
+ * A SEO SENTENCE in the alt (own sites; -bb / Vera J1, 2026-10-27): „Kényelmes Rózsa szoba
+ * Balaton közeli szálláson”, „Kereki Levendula Apartman Levendula szoba szállás Kerekiben”,
+ * „Kiadó falusi vendégház a Balaton közelében - Életvirága vendégház Bálványos”. A booking word
+ * (szállás, kiadó, szálláshely) heaped with the lake, a „közel…” or the lodging's own name is
+ * written for the search engine, and it carries unsourced claims into the mock. A plain caption
+ * that only says „szállás” („A szállás bejárata”) stays.
+ */
+export function isSeoSentenceAlt(alt: string, name: string): boolean {
+  if (GENERATED_ALT.test(alt.trim())) return false;
+  // A portal's own photo label („Megacentrum Szállás – Szekszárd fotó 7”, hovamenjek) echoes
+  // the listing title — no SEO sentence, and its caption is empty anyway (isEchoCaption).
+  if (/\s[-–]\s.+\sfotó\s+\d+\s*$/u.test(alt.trim())) return false;
+  // The lodging's own name may hold the booking word („Kalandor Szállás”, „… szálláshely”).
+  const nameWords = new Set(words(name));
+  const rest = words(alt).filter((w) => !nameWords.has(w)).join(" ");
+  if (!/(?:^|[^a-z])(?:szallas[a-z]*|kiado|szallashely[a-z]*)(?:$|[^a-z])/.test(rest)) return false;
+  const own = [...nameWords].filter((w) => w.length >= 4 && !TYPE_WORDS.includes(w));
+  return /(?:^|[^a-z])(?:balaton[a-z]*|kozel[a-z]*)(?:$|[^a-z])/.test(rest) || own.some((w) => fold(alt).includes(w));
+}
+
 export function withoutFilenameAlts<T extends { readonly alt: string; readonly url?: string; readonly subject?: string }>(photos: readonly T[], name: string): readonly T[] {
   const bad = (p: T): boolean =>
-    isNonCaption(p.alt, p.url) || isQuoteCutName(p.alt, name) || captionContradictsSubject(p.alt, p.subject, name);
+    isNonCaption(p.alt, p.url) ||
+    isQuoteCutName(p.alt, name) ||
+    captionContradictsSubject(p.alt, p.subject, name) ||
+    isSeoSentenceAlt(p.alt, name);
   if (!photos.some(bad)) return photos;
   return photos.map((p, i) => (bad(p) ? { ...p, alt: neutralAlt(name, i) } : p));
 }

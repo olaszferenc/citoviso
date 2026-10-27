@@ -43,6 +43,7 @@ import {
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
+import { toSitePhotos } from "../src/engine/siteData.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
 import { dropNeverShown, isBedroomVerdict, photoUrlKey } from "../src/generator/heroPick.js";
 import { collectWriterSources, withoutOwnName } from "../src/generator/writerSources.js";
@@ -414,14 +415,15 @@ check("Gála ceb9eae4: „Négy … apartman, valamint további 3 szoba” → n
 const sub = (subject: string, i: number) => ({ url: `https://x.hu/${subject}-${i}.jpg`, alt: "", subject });
 const centrumPhotos = [sub("exterior", 1), sub("exterior", 2), sub("exterior", 3), sub("pool_garden", 4), sub("interior", 5), sub("bathroom", 6), sub("interior", 7)];
 const fiveCards = sampleRooms({ ...base, photos: centrumPhotos, sampleRoomCount: 3 });
-check("szobakártyán csak „interior” tárgyú kép (homlokzat, kert, fürdő nem)",
-  fiveCards.every((r) => /interior/.test(r.photo?.url ?? "")), fiveCards.map((r) => r.photo?.url));
+// Coordinator 2026-10-27: no bedroom flag → NO card photo (was: any interior).
+check("hálószoba-jel nélkül (régi pillanatkép) nincs kártyakép — homlokzat, kert, fürdő, beltér sem",
+  fiveCards.every((r) => !r.photo), fiveCards.map((r) => r.photo?.url));
 const realRooms = roomsForMock({ ...base, photos: centrumPhotos, rooms: [{ name: "Tölgy" }, { name: "Bükk" }] as never });
-check("valós (kép nélküli) szobán is belső kép", realRooms.every((r) => /interior/.test(r.photo?.url ?? "")), realRooms.map((r) => r.photo?.url));
+check("valós (kép nélküli) szoba hálószoba-jel nélkül nem kölcsönöz képet", realRooms.every((r) => !r.photo), realRooms.map((r) => r.photo?.url));
 const noVerdict = sampleRooms({ ...base, photos: [1, 2, 3, 4, 5].map((i) => ({ url: `https://x.hu/${i}.jpg`, alt: "" })), sampleRoomCount: 2 });
-check("⛔ tárgy-ítélet nélkül a régi sor (az első két kép kimarad)", noVerdict.map((r) => r.photo?.url).join("|") === "https://x.hu/3.jpg|https://x.hu/4.jpg", noVerdict.map((r) => r.photo?.url));
+check("⛔ ítélet és név-jel nélkül: egy kártya, kép nélkül (nem a galéria N. képe)", noVerdict.length === 1 && !noVerdict[0]!.photo, noVerdict.map((r) => r.photo?.url));
 const allOut = sampleRooms({ ...base, photos: [sub("exterior", 1), sub("view", 2)], sampleRoomCount: 2 });
-check("⛔ belső kép nélkül is kap képet a kártya (ADR-0059 ③: ikonos kártya nincs)", allOut.every((r) => r.photo), allOut.map((r) => r.photo?.url));
+check("⛔ hálószobakép nélkül a kártya kép nélkül marad (a koordinátor 2026-10-27-i szabálya felülírja az ADR-0059 ③ „ikonos kártya nincs”-et)", allOut.every((r) => !r.photo), allOut.map((r) => r.photo?.url));
 
 console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép egyszer; egészben kiadott = egy kártya (2026-10-27)");
 {
@@ -484,8 +486,20 @@ console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép 
   const eveCard = sampleRooms({ ...base, name: "Villa Eve", photos: eve, sampleUnitKind: "whole" });
   check("ítélet nélkül: a fájlnévben nevezett hálószoba („Szoba2”) a kártyakép", eveCard[0]!.photo?.url.endsWith("/Szoba2-scaled.jpg") === true, eveCard[0]!.photo?.url);
   const noSignal = sampleRooms({ ...base, photos: ["haz.jpg", "kert.jpg", "Furdo.jpg", "Konyha.jpg", "terasz.jpg", "Badacsony-kilatas.jpg"].map((f) => ({ url: `https://x.hu/${f}`, alt: "" })) });
-  check("ítélet nélkül: fürdő / konyha nevű kép nem kártyakép; a „Badacsony” nem „bad”",
-    !/Furdo|Konyha/.test(noSignal[0]!.photo?.url ?? "") && noSignal[0]!.photo !== undefined, noSignal[0]!.photo?.url);
+  check("ítélet nélkül: fürdő / konyha nevű vagy jel nélküli kép nem kártyakép → kép nélküli kártya", !noSignal[0]!.photo, noSignal[0]!.photo?.url);
+  // The generation seam (Abi-Lo 9a5834c9, 2026-10-27): toSitePhotos dropped `bedroom`, so every
+  // mock generated after 1ef70a4c fell back to „any inside photo”.
+  const sp = toSitePhotos([{ url: "https://x.hu/b.jpg", subject: "interior", bedroom: true }, { url: "https://x.hu/k.jpg", subject: "interior", bedroom: false }, { url: "https://x.hu/n.jpg" }], "Abi-Lo Vendégház");
+  check("toSitePhotos: a hálószoba-jel átjut a generált SiteData-ba (igaz/hamis), ítélet nélkül nincs",
+    sp[0]!.bedroom === true && sp[1]!.bedroom === false && sp[2]!.bedroom === undefined, sp);
+  // Ametiszt ce2f06ec: an all-.avif own site, no verdict → the file names decide.
+  const ametiszt = ["ametiszt-hotel-harkany-2048x1365.avif", "DSC_1307-1.avif", "ametiszt-hotel-recepcio.avif", "franciaagyas-szoba-ametiszt-hotel-harkany.avif", "ametiszt-hotel-furdoszoba.avif", "harkany-csaladi-szoba-scaled.avif"]
+    .map((f) => ({ url: `https://www.ametiszthotel.hu/wp-content/uploads/${f}`, alt: "Ametiszt Hotel Harkány" }));
+  const amCards = sampleRooms({ ...base, name: "Ametiszt Hotel Harkány", photos: ametiszt, sampleUnitKind: "rooms" });
+  check("Ametiszt: ítélet nélkül a „…-szoba” nevű kép a kártyakép (nem az őszi kert, nem a recepció, nem a fürdőszoba)",
+    /franciaagyas-szoba|csaladi-szoba/.test(amCards[0]!.photo?.url ?? ""), amCards[0]!.photo?.url);
+  const badacsony = sampleRooms({ ...base, photos: [{ url: "https://x.hu/Badacsony-szoba-1.jpg", alt: "" }] });
+  check("⛔ a „Badacsony” nem „bad” (fürdő-jel): a „szoba” nevű kép kártyakép", badacsony[0]!.photo?.url === "https://x.hu/Badacsony-szoba-1.jpg", badacsony[0]!.photo?.url);
 }
 
 console.log("⑭ a KÖRNYÉK panorámája nem a házé (Bogyólak 6bd6058a, 2026-10-27)");

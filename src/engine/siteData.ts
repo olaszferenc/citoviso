@@ -54,6 +54,8 @@ export interface CollectedPhoto {
   readonly subject?: string;
   /** Perceptual fingerprint, see Photo.dhash. */
   readonly dhash?: string;
+  /** The verdict names a bedroom (heroPick.isBedroomVerdict), see Photo.bedroom. */
+  readonly bedroom?: boolean;
 }
 
 /**
@@ -77,6 +79,9 @@ export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string
     ...(p.watermarked ? { watermarked: true } : {}),
     // The vision subject rides along for the walk-through template's photo walk (ADR-0304).
     ...(p.subject ? { subject: p.subject } : {}),
+    // The room cards' bedroom flag rides with the subject (Abi-Lo 9a5834c9, 2026-10-27: dropped
+    // HERE, every mock generated after 1ef70a4c fell back to „any inside photo” — a dining room).
+    ...(p.bedroom !== undefined ? { bedroom: p.bedroom } : {}),
     // The fingerprint lets a template tell a republished copy from another photo (gate-opening).
     ...(p.dhash ? { dhash: p.dhash } : {}),
   }));

@@ -21,7 +21,7 @@ import { config } from "../src/config.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { PRIMITIVES } from "../src/engine/primitives.js";
-import { captionContradictsSubject, isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, isQuoteCutName, photoCaption, withoutFilenameAlts } from "../src/engine/photoCaption.js";
+import { captionContradictsSubject, isEchoCaption, isSeoSentenceAlt, isFilenameCaption, isKeywordListCaption, isNonCaption, isQuoteCutName, photoCaption, withoutFilenameAlts } from "../src/engine/photoCaption.js";
 import { domImages, extractListing, tagAttr } from "../src/scraper/sources/portals/extract.js";
 import { withoutStarRating } from "../src/text/starRating.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
@@ -344,6 +344,29 @@ console.log("\ncaption ↔ képelemzés: ütközésnél a képelemzés nyer (Dun
     if (html.includes("Fürdőszoba modern kialakítása")) bad.push(id);
   }
   check(`minden sablon: a kültéri képen nincs „Fürdőszoba” felirat / alt (${Object.keys(TEMPLATES).length} sablon)`, bad.length === 0, bad);
+}
+
+console.log("\nSEO-mondat az altban (-bb / Vera J1, 2026-10-27): semleges alt");
+{
+  const SEO: [string, string][] = [
+    ["Kényelmes Rózsa szoba Balaton közeli szálláson", "Kereki Levendula Apartman"],
+    ["Kereki Levendula Apartman Levendula szoba szállás Kerekiben", "Kereki Levendula Apartman"],
+    ["Kiadó falusi vendégház a Balaton közelében - Életvirága vendégház Bálványos", "Életvirága Vendégház"],
+    ["Szállás Paks közelében, munkavállalók részére is!", "Família Vendégház"],
+  ];
+  check("isSeoSentenceAlt: foglalási szó + Balaton / közel / saját név → SEO-mondat", SEO.every(([a, n]) => isSeoSentenceAlt(a, n)), SEO.filter(([a, n]) => !isSeoSentenceAlt(a, n)));
+  const KEEP: [string, string][] = [
+    ["A szállás bejárata", "Bea Panzió"],
+    ["Erkély kilátással a Balatonra", "Bea Panzió"],
+    ["Kalandor Szállás – Kozármisleny fotó 10", "Kalandor Szállás"],
+    ["Megacentrum Szállás – Szekszárd fotó 7", "Megacentrum Apartman"],
+    ["Silent Forest szálláshely — 24. kép", "Silent Forest szálláshely"],
+    ["Hangulatos szoba franciaággyal", "Kereki Levendula Apartman"],
+  ];
+  check("PIROS IKER: egyszerű caption, a név saját „szállás” szava, portál-fotócímke, generált alt marad", KEEP.every(([a, n]) => !isSeoSentenceAlt(a, n)), KEEP.filter(([a, n]) => isSeoSentenceAlt(a, n)));
+  const out = withoutFilenameAlts([{ alt: SEO[1]![0], url: "https://x.hu/1.jpg" }, { alt: "Hangulatos szoba franciaággyal", url: "https://x.hu/2.jpg" }], "Kereki Levendula Apartman");
+  check("withoutFilenameAlts: a SEO-mondat semleges altra cserél, a valódi caption marad",
+    out[0]!.alt === "Kereki Levendula Apartman — 1. kép" && out[1]!.alt === "Hangulatos szoba franciaággyal", out.map((p) => p.alt));
 }
 
 console.log("\ncsillag a névben: portál-cím → caption → mock név / alt (fd50391f, 2026-10-27)");

@@ -364,6 +364,15 @@ check(
     !ph.some((o) => /wp\.com/.test(o.url)),
   JSON.stringify(ph),
 );
+// Lightbox gallery (Diviák Apartman a377f54f, 2026-10-27): the full image sits in the anchor's
+// data-src, the <img> is a 320 × 200 thumbnail — the full one is taken, the thumbnail skipped.
+const LB = (h: string) => `<a href="" data-src="/thumbs/3/2/1/${h}_1200x1200.webp" class="lg-gallery"><img src="/thumbs/3/2/1/${h}_320x200.webp" alt="Diviák Apartman"></a>`;
+const lb = ownSiteImages(`<div>${LB("3214f55f")}${LB("b521e536")}<img src="/images/terasz.jpg"></div>`, "https://zalaihorgaszat.hu/hu/a-lakohaz/");
+check(
+  "ownSiteImages: lightbox <a data-src> → a teljes kép, a bélyegkép nem; a sima <img> marad",
+  lb.length === 3 && lb.filter((o) => /_1200x1200\.webp$/.test(o.url)).length === 2 && !lb.some((o) => /320x200/.test(o.url)) && lb.some((o) => o.url.endsWith("/images/terasz.jpg")),
+  JSON.stringify(lb.map((o) => o.url)),
+);
 const dom = domImages(`<img src="${WIX480}" alt="kert"><img srcset="${WIX960} 2x, ${WIX480} 1x">`, "https://www.mandulaskert.com/");
 check(
   "domImages: a vesszős Wix-src egyben marad, a csak-srcset kép is ép URL",

@@ -342,6 +342,10 @@ function stampSampleRoomPhotos(html: string, data: SiteData, phase: RenderPhase)
   // Covers both branches: numbered samples AND real rooms wearing a borrowed photo. The VALUE
   // tells them apart — the fact gate cuts a sample room's card, never a real room's (OP3-1).
   const kind = data.rooms?.length ? "borrowed" : "sample";
+  // A sample card may now stand WITHOUT a photo (no bedroom photo known, 2026-10-27), and five
+  // templates marked their sample rooms only through that photo's stamp — the fact gate then
+  // read „Minta-leírás …” as page text. The rooms module itself carries the sample mark.
+  if (kind === "sample") out = out.replaceAll('data-cit-module="rooms"', 'data-cit-module="rooms" data-cit-sample-photo="sample"');
   for (const r of roomsForMock(data)) {
     const alt = r.photo?.alt;
     if (!alt) continue;

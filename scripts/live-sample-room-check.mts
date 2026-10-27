@@ -27,7 +27,9 @@ import { honestStarCount } from "../src/engine/templateKit.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 
-const PHOTO = (i: number) => ({ url: `https://sample-room-check.test/p${i}.png`, alt: `fotó ${i}`, provenance: "owner" as const });
+// Bedroom photos: since 2026-10-27 a room card borrows ONLY a bedroom (Photo.bedroom), so the
+// borrowed-photo mark this gate checks needs one to borrow.
+const PHOTO = (i: number) => ({ url: `https://sample-room-check.test/p${i}.png`, alt: `fotó ${i}`, provenance: "owner" as const, subject: "interior", bedroom: true });
 const ROOMS: Room[] = [
   { name: "Nádas apartman", capacity: "2 fő", price: "21 000 Ft / éj" },
   { name: "Kerti stúdió", capacity: "3 fő", price: "25 000 Ft / éj" },

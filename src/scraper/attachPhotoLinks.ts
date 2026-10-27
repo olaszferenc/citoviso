@@ -163,13 +163,30 @@ export function withoutPhotonCdn(url: string | null): string | null {
   return m ? `https://${m[1]}` : url;
 }
 
+/** Where a lightbox anchor keeps its full-size image. */
+const LIGHTBOX_ATTRS = ["data-src", "data-href", "data-full", "data-large", "data-original", "data-image"];
+
 export function ownSiteImages(html: string, pageUrl: string): { url: string; caption?: string }[] {
   const body = ownContentOnly(html);
   const out: { url: string; caption?: string }[] = [];
   const seen = new Set<string>();
+  // A thumbnail inside a lightbox anchor whose data attribute holds the full image is the
+  // same picture twice (Diviák: 320 × 200 inside <a data-src="…_1200x1200.webp">) — skip it.
+  const thumbs = new Set<string>();
+  for (const m of body.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const a = `<a ${m[1]}>`;
+    const full = LIGHTBOX_ATTRS.map((n) => tagAttr(a, n)).find((v) => v && IMAGE_EXT.test(v));
+    if (!full) continue;
+    for (const im of m[2]!.matchAll(/<img\b[^>]*>/gi)) {
+      const src = tagAttr(im[0], "src");
+      const abs = src ? absoluteUrl(src, pageUrl) : null;
+      if (abs) thumbs.add(abs.split("?")[0]!.toLowerCase());
+    }
+  }
   const add = (raw: string | undefined, caption?: string): void => {
     if (!raw || raw.startsWith("data:")) return;
     const abs = withoutPhotonCdn(absoluteUrl(raw, pageUrl));
+    if (abs && thumbs.has(abs.split("?")[0]!.toLowerCase())) return;
     if (!abs || !IMAGE_EXT.test(abs) || NON_CONTENT_IMAGE.test(abs)) return;
     // Wix serves one media file under many transform paths („…~mv2.jpg/v1/fill/w_960,…/x.jpg”):
     // the media id is the picture, so the srcset's largest and the src's thumbnail are one.
@@ -188,7 +205,13 @@ export function ownSiteImages(html: string, pageUrl: string): { url: string; cap
     add(srcset ? largestFromSrcset(srcset) : undefined, alt);
     add(attr("data-lazy-src") ?? attr("data-src") ?? attr("data-original") ?? attr("src"), alt);
   }
-  for (const m of body.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)) add(m[1]);
+  // A lightbox anchor carries the FULL image in a data attribute, not in href (Diviák Apartman
+  // a377f54f, 2026-10-27: <a href="" data-src="…_1200x1200.webp"> around a 320 × 200 thumbnail —
+  // 19 gallery photos missed, the header slider kept).
+  for (const m of body.matchAll(/<a\b[^>]*>/gi)) {
+    const tag = m[0]!;
+    for (const name of ["href", ...LIGHTBOX_ATTRS]) add(tagAttr(tag, name));
+  }
   for (const m of body.matchAll(/background(?:-image)?\s*:\s*url\(\s*['"]?([^'")]+)['"]?\s*\)/gi)) add(m[1]);
   const og = /<meta[^>]+property=["']og:image["'][^>]*content=["']([^"']+)["']/i.exec(html)?.[1];
   add(og);
