@@ -17,6 +17,7 @@
 - **Mag / unique core** — a szállásra jellemző EGYEDI, valós adat egy dedikált szekcióban (nem generikus töltelék). Kód: `Property.unique`.
 - **Outreach** — a mockup-link kiküldése a tulajnak (GDPR/Grt.-tudatos, leiratkozható).
 - **Convert** — megrendelés: a tulaj saját (jogtiszta) képei + admin-hozzáférés.
+- **Bábel (fordító munkatárs)** — MINDEN nem-magyar szöveg az ő terminológiáján megy át (ADR-XXXX): perszóna (`babel/charter/`) + a keze, a fordító-motor (`src/i18n/babel.ts`: ontológia + glosszárium + a string FELÜLETE). Tudása verzió: `src/i18n/babel/{ontology.md,glossary.json}`; saját fordítása a mag (`src/i18n/babel/packs/<nyelv>.json`), a deploy viszi ki. Nyelvenként egyszerre EGY fordítás fut, napi/futásonkénti plafon alatt.
 
 <!-- distill:begin 5fe0f7bc7063c0c6 20261019T060329Z -->
 ### ⏳ Desztillált javaslat — ELHELYEZÉSRE VÁR (20261019T060329Z)

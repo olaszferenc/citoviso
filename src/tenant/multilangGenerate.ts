@@ -8,11 +8,9 @@
 // prompt states it, and a digit-integrity guard drops any translation whose digit
 // sequences differ from the source (source survives loudly instead).
 
-import { recordAiUsage } from "../ai/usage.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { config } from "../config.js";
 import { db } from "../db/client.js";
 import type { SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
@@ -21,7 +19,9 @@ import { loadTenantLegal } from "./legalIdentity.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
-import { DEFAULT_LANG, langName, siteLangs } from "../i18n/lang.js";
+import { babelCall, babelSystem } from "../i18n/babel.js";
+import { newTranslationRun } from "../i18n/budget.js";
+import { DEFAULT_LANG, siteLangs } from "../i18n/lang.js";
 import {
   effectiveSiteForMultilang,
   photosByUnit,
@@ -52,41 +52,26 @@ async function translateStrings(
   lang: string,
   strings: readonly string[],
 ): Promise<Record<string, string>> {
-  if (!config.anthropicApiKey) {
-    throw new Error("multilang: nincs ANTHROPIC_API_KEY a fordítás-generáláshoz");
-  }
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  const client = new Anthropic();
+  // Bábel (ADR-XXXX): the site copy goes through the same ontology + glossary as the UI
+  // pack, under the translation ceilings and onto the translation_spend ledger. A spent
+  // budget throws (TranslationBudgetError) — the generation fails loudly, not half-done.
+  const run = newTranslationRun(lang);
+  const system = babelSystem(lang, "site");
   const out: Record<string, string> = {};
   // Site copy runs longer than UI strings (intro paragraphs) → smaller batches.
   for (let i = 0; i < strings.length; i += 20) {
     const batch = strings.slice(i, i + 20);
-    const res = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 8000,
-      system:
-        `Professzionális honosító-fordító vagy: egy szálláshely honlapjának vendég-oldali ` +
-        `szövegeit fordítod magyarról ${langName(lang)} nyelvre. SZIGORÚ szabályok: ` +
-        `(1) ÁTÜLTETSZ, nem alkotsz — tényt, számot, árat, mértéket, dátumot, tulajdonnevet ` +
-        `nem adhatsz hozzá, nem hagyhatsz el és nem változtathatsz meg; ` +
-        `(2) a hangnem természetes, vendégcsalogató, de tartalmilag PONTOSAN a forrás; ` +
-        `(3) tulajdonneveket (a szállás neve, településnevek, Citoviso, Google) nem fordítasz — ` +
-        `település ismert exonimája használható (Wien/Vienna); ` +
-        `(4) semmi magyarázat — CSAK a kért JSON.`,
-      messages: [
-        {
-          role: "user",
-          content:
-            `Add vissza JSON objektumként: {"<magyar forrás>": "<fordítás>", ...} ` +
-            `pontosan ezekre a szövegekre:\n` +
-            JSON.stringify(batch, null, 1),
-        },
-      ],
-    });
-    recordAiUsage("translateSiteBatch", "claude-opus-4-8", res.usage);
-    const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") continue;
-    const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);
+    const res = await babelCall(
+      run,
+      "translateSiteBatch",
+      system,
+      `Add vissza JSON objektumként: {"<magyar forrás>": "<fordítás>", ...} ` +
+        `pontosan ezekre a szövegekre:\n` +
+        JSON.stringify(batch, null, 1),
+      8000,
+    );
+    if (!res.text) continue;
+    const jsonText = res.text.slice(res.text.indexOf("{"), res.text.lastIndexOf("}") + 1);
     const parsed = JSON.parse(jsonText) as Record<string, string>;
     for (const src of batch) {
       const tr = parsed[src];

@@ -373,7 +373,7 @@ import { runStaggered } from "./staggeredBatch.js";
 import { HUB_PREFIX } from "./nav.js";
 import { uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
-import { prepareMailLang, T } from "../i18n/mail.js";
+import { prepareRenderLang, T } from "../i18n/mail.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { faviconSvg } from "../ui/brand.js";
 import { readServableMock } from "../generator/modelHtml.js";
@@ -1594,9 +1594,11 @@ async function handle(
       .where("id", "=", op.operatorUserId)
       .execute();
     setConsoleLang(wanted);
-    // Provision the pack NOW rather than on the next render: the switch is the
-    // moment the operator expects to see the change, not a page later.
-    await prepareMailLang(wanted);
+    // Start the pack NOW (the switch is when the operator expects the change) — but in the
+    // BACKGROUND (ADR-XXXX). Measured 2026-10-27: awaiting a full translation here held
+    // the request for minutes, the browser gave up, and every reload started another run.
+    // Until the pack lands the console shows a „készül” notice and Hungarian text.
+    await prepareRenderLang(wanted);
     return redirect(res, req.headers.referer ?? "/");
   }
 

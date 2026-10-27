@@ -14,7 +14,7 @@
 
 import { db } from "../db/client.js";
 import { DEFAULT_LANG, langForCountry } from "./lang.js";
-import { ensureLanguagePack, interpolate, tSync } from "./packs.js";
+import { ensureLanguagePack, interpolate, loadPack, requestLanguagePack, tSync } from "./packs.js";
 
 /**
  * Translate one mail string to `lang` (the Hungarian source IS the key), with
@@ -220,7 +220,27 @@ function readLang(inputs: unknown): string {
 }
 
 /**
+ * The RENDER-path counterpart of prepareMailLang (ADR-XXXX): warm the pack from the DB so
+ * the sync T() lookups resolve, and if it is incomplete start provisioning in the
+ * BACKGROUND — never wait for it. A page request must not hold the browser while a pack is
+ * translated: on 2026-10-27 that wait timed out (499/504), and every reload started a new
+ * full translation. Missing strings render in Hungarian (tSync) until the pack lands.
+ */
+export async function prepareRenderLang(lang: string): Promise<string> {
+  if (lang === DEFAULT_LANG) return lang;
+  try {
+    await loadPack(lang);
+    requestLanguagePack(lang);
+  } catch (err) {
+    console.error(`[i18n] nyelvi csomag betöltése HIBA (${lang}): ${(err as Error).message}`);
+  }
+  return lang;
+}
+
+/**
  * Load/provision the pack so the SYNC T() lookups in a mail builder resolve.
+ * Waits for the language's ONE running translation (ensureLanguagePack single-flight) —
+ * a letter is better late than half Hungarian. Page renders use prepareRenderLang.
  * Never throws: a pack outage must not swallow a credentials or invoice mail —
  * tSync then falls back to Hungarian per string, loudly.
  */

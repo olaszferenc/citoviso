@@ -8,16 +8,15 @@
 // image paths and the heading skeleton must survive translation unchanged — a
 // violating translation is dropped so the next ensure re-flags it.
 
-import { recordAiUsage } from "../ai/usage.js";
 import { createHash } from "node:crypto";
 
 import { sql } from "kysely";
 
-import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { loadKbEntries, makeSnippet, type KbEntry } from "../kb/kb.js";
-import { DEFAULT_LANG, langName } from "./lang.js";
-import { recordTranslationSpend } from "./spend.js";
+import { babelCall, babelSystem } from "./babel.js";
+import { newTranslationRun, TranslationBudgetError, type TranslationRun } from "./budget.js";
+import { DEFAULT_LANG } from "./lang.js";
 
 /** Version fingerprint of the Hungarian source an entry translation derives from. */
 export function kbSourceHash(entry: Pick<KbEntry, "title" | "body">): string {
@@ -84,34 +83,18 @@ const MAX_TOKENS = 16_000;
 async function translateEntry(
   lang: string,
   entry: KbEntry,
+  run: TranslationRun,
 ): Promise<{ title: string; body: string } | null> {
-  if (!config.anthropicApiKey) throw new Error("i18n: nincs ANTHROPIC_API_KEY a KB-fordításhoz");
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  const client = new Anthropic();
-  const res = await client.messages.create({
-    model: "claude-opus-4-8",
-    max_tokens: MAX_TOKENS, // lásd a függvény fölötti mérést
-    system:
-      `Professzionális honosító vagy: a Citoviso szállásadói kezelőfelület SÚGÓ-cikkeit fordítod ` +
-      `${langName(lang)} nyelvre, IT-kezdő szállásadóknak. Szabályok: (1) természetes, közérthető, ` +
-      `udvarias (önöző) nyelv a szállás/vendéglátás regiszterében; (2) a markdown-szerkezet PONTOSAN ` +
-      `marad — ugyanannyi "## " alcím, ugyanolyan lista- és **félkövér**-szerkezet; (3) a ` +
-      `**„félkövér-idézőjeles”** szövegek a KÉPERNYŐN LÁTHATÓ gombfeliratok — ezek MAGYARUL maradnak, ` +
-      `SZÓ SZERINT (a felület ma magyar feliratú), a körülöttük lévő mondat a célnyelven magyarázza ` +
-      `őket; (4) kép-sor (![alt](útvonal)): az útvonal VÁLTOZATLAN, az alt-szöveg fordítható; ` +
-      `(5) tulajdonneveket (Citoviso, Google, Booking.com) ne fordíts; (6) semmi magyarázat — CSAK ` +
-      `a kért JSON.`,
-    messages: [
-      {
-        role: "user",
-        content:
-          `Add vissza JSON objektumként: {"title": "<fordítás>", "body": "<fordítás>"} erre:\n` +
-          JSON.stringify({ title: entry.title, body: entry.body }),
-      },
-    ],
-  });
-  recordAiUsage("translateKbEntry", "claude-opus-4-8", res.usage);
-  await recordTranslationSpend("translateKbEntry", lang, "claude-opus-4-8", res.usage);
+  // Bábel (ADR-XXXX): the same ontology + glossary as the UI pack, so the guide names a
+  // screen's concepts the way the translated screen does; budget-checked and metered.
+  const res = await babelCall(
+    run,
+    "translateKbEntry",
+    babelSystem(lang, "kb"),
+    `Add vissza JSON objektumként: {"title": "<fordítás>", "body": "<fordítás>"} erre:\n` +
+      JSON.stringify({ title: entry.title, body: entry.body }),
+    MAX_TOKENS, // lásd a függvény fölötti mérést
+  );
   // ⛔ A BUKÁS OKA NEVEZŐDJÖN MEG. Eddig minden út ugyanabba a `null`-ba futott, és a
   // hívó mindet „integritás-sértés"-nek naplózta — az elvágott választ is. Így a
   // valódi ok (túl kicsi korlát) hónapokig láthatatlan maradt, miközben minden
@@ -120,15 +103,14 @@ async function translateEntry(
     console.error(`[i18n] KB-fordítás eldobva (${lang}/${entry.id}): ${reason}`);
     return null;
   };
-  if (res.stop_reason === "max_tokens") {
+  if (res.stopReason === "max_tokens") {
     return fail(
-      `a válasz ELVÁGÓDOTT a token-korlátnál (${res.usage.output_tokens} kimenő token) — ` +
+      `a válasz ELVÁGÓDOTT a token-korlátnál (${res.usage?.output_tokens ?? "?"} kimenő token) — ` +
         `a cikk hosszabb, mint amennyi belefér; emeld a max_tokens-t`,
     );
   }
-  const block = res.content.find((b) => b.type === "text");
-  if (!block || block.type !== "text") return fail("a válasz nem tartalmaz szöveget");
-  const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);
+  if (!res.text) return fail("a válasz nem tartalmaz szöveget");
+  const jsonText = res.text.slice(res.text.indexOf("{"), res.text.lastIndexOf("}") + 1);
   let parsed: { title?: unknown; body?: unknown };
   try {
     parsed = JSON.parse(jsonText) as { title?: unknown; body?: unknown };
@@ -163,7 +145,10 @@ const translatableKbEntries = (): KbEntry[] =>
  * Called from ensureLanguagePack, so every existing trigger — scrape into a region,
  * mock generation, boot self-heal, CLI — covers the KB with no new call sites.
  */
-export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> {
+export async function ensureKbTranslations(
+  lang: string,
+  run: TranslationRun = newTranslationRun(lang),
+): Promise<KbPackStatus> {
   const entries = translatableKbEntries();
   if (lang === DEFAULT_LANG || !entries.length) {
     return { lang, total: entries.length, missing: 0, ok: true };
@@ -180,7 +165,7 @@ export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> 
     console.log(`[i18n] KB-fordítás provisioning: ${lang} — ${stale.length} entry`);
   for (const entry of stale) {
     try {
-      const tr = await translateEntry(lang, entry);
+      const tr = await translateEntry(lang, entry, run);
       if (!tr) {
         // Az OKOT a translateEntry naplózta, pontosan — itt csak a darabszám nő.
         missing++;
@@ -205,6 +190,11 @@ export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> 
         )
         .execute();
     } catch (err) {
+      if (err instanceof TranslationBudgetError) {
+        // The ceiling stops the run: count what is left as missing, ask nothing more.
+        missing += stale.length - stale.indexOf(entry);
+        break;
+      }
       missing++;
       console.error(`[i18n] KB-fordítás HIBA (${lang}/${entry.id}): ${(err as Error).message}`);
     }

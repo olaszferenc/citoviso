@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-27_valasz_javaslat_figyelo.md](2026-10-27_valasz_javaslat_figyelo.md) — 2026-10-27 — Válasz-javaslat: Poe soha nem kapta meg a jegyeket → válasz-figyelő (ADR-0340 A út)
+- [2026-10-27_babel_fordito.md](2026-10-27_babel_fordito.md) — 2026-10-27 — Bábel, a fordító munkatárs + a nyelvi csomag egy-futás/plafon javítása
 - [2026-10-27_arak_es_rendeles_gomb.md](2026-10-27_arak_es_rendeles_gomb.md) — 2026-10-27 — A rendelő gomb: „Árak és rendelés” + „havi X Ft-tól” (ADR-0408)
 - [2026-10-27_api_hivas_leltar.md](2026-10-27_api_hivas_leltar.md) — API-hívás leltár — mi hív külső API-t, miért, mennyiért (2026-10-27)
 - [2026-10-26_wix_kepek_srcset_es_cdn.md](2026-10-26_wix_kepek_srcset_es_cdn.md) — 2026-10-26 — Wix-honlapok képei: srcset-vágás és CDN-szűrő

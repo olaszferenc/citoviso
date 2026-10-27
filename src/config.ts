@@ -191,6 +191,15 @@ export const config = {
    */
   aiDailyCapUsdRaw: env("AI_DAILY_CAP_USD", "20"),
   /**
+   * Bábel (ADR-XXXX): HARD ceilings on AI TRANSLATION spend, USD — measured on the
+   * `translation_spend` ledger (all hosts writing this DB). Daily = today's Europe/Budapest
+   * day; per-run = one language-pack provisioning (UI strings + KB). Measured 2026-10-27:
+   * one stuck console language switch spent $130 in an hour with no ceiling at all; one
+   * clean full pack is ~$4–8. Raw strings for the same NaN reason as above (budget.ts).
+   */
+  translationDailyCapUsdRaw: env("TRANSLATION_DAILY_CAP_USD", "25"),
+  translationRunCapUsdRaw: env("TRANSLATION_RUN_CAP_USD", "12"),
+  /**
    * Boot-time language-pack top-up (ADR-0036/b self-heal) — the servers' only AI call at
    * startup. "0" = boot only MEASURES coverage (read-only) and never calls the API.
    * Dev sets it to 0 in .env (measured 2026-10-07: every land restarts both dev servers,

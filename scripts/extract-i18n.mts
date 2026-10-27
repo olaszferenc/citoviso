@@ -48,6 +48,36 @@ async function tsFilesUnder(dir: string): Promise<string[]> {
   return out;
 }
 
+/**
+ * Bábel (ADR-XXXX): WHERE a string is shown decides how it is translated — the same
+ * "Foglalás" is a button for an operator, a menu item for a guest, a subject line in a
+ * mail. The catalogue stays a flat list (the coverage contract); this sidecar maps each
+ * string to the SURFACES its sources belong to, so the translator gets the context the
+ * old 40-string blind batches never had. Coarse by design: a surface is an audience +
+ * register, not a file path (paths would churn the sidecar on every refactor).
+ */
+export function surfaceOf(rel: string): string {
+  const base = path.basename(rel);
+  if (rel.startsWith("src/console/") || rel === "src/auth/operatorAuth.ts") return "konzol";
+  if (/sms/i.test(base) || rel.startsWith("src/sms/")) return "sms";
+  if (rel.startsWith("src/outreach/")) return "megkereses";
+  if (rel.startsWith("src/email/") || /(?:Mail|Email|mail)\.ts$/.test(base) || rel === "src/i18n/mail.ts") return "level";
+  if (
+    rel.startsWith("src/engine/") ||
+    rel.startsWith("src/generator/") ||
+    rel.startsWith("src/booking/") ||
+    /^src\/server\/(?:bookingViews|offerViews|suspendedPage|consent|legalViews|contactViews|edgeRoutes|public)\.ts$/.test(rel) ||
+    /^assets\/runtime\/cit-(?:runtime|configurator)\.js$/.test(rel)
+  )
+    return "honlap";
+  if (
+    /^src\/(?:server|tenant|kb|billing|payment|trial|reviews|domains|invoicing|auth)\//.test(rel) ||
+    rel.startsWith("assets/runtime/")
+  )
+    return "admin";
+  return "egyeb";
+}
+
 async function main(): Promise<void> {
   // SOURCES still carries the non-src entries (client runtime JS); everything
   // under src/ is harvested wholesale, list or no list.
@@ -56,6 +86,13 @@ async function main(): Promise<void> {
     ...(await tsFilesUnder(path.join(ROOT, "src"))),
   ];
   const found = new Set<string>();
+  const surfaces = new Map<string, Set<string>>();
+  const note = (hu: string, surface: string): void => {
+    found.add(hu);
+    let set = surfaces.get(hu);
+    if (!set) surfaces.set(hu, (set = new Set()));
+    set.add(surface);
+  };
   // T(x, "…") / T(x(), "…") in TS templates; tr("…") in client JS. Double-quoted
   // only (the contract).
   // ⚠️ The lang argument may be a CALL, not just an identifier: `T(consoleLang(),
@@ -66,8 +103,9 @@ async function main(): Promise<void> {
     /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,|tr\()\s*"((?:[^"\\]|\\.)+)"/g;
   for (const file of files) {
     const src = await readFile(file, "utf8").catch(() => "");
+    const surface = surfaceOf(path.relative(ROOT, file));
     for (const m of src.matchAll(RE)) {
-      found.add(JSON.parse(`"${m[1]}"`)); // unescape via JSON
+      note(JSON.parse(`"${m[1]}"`), surface); // unescape via JSON
     }
   }
 
@@ -92,28 +130,39 @@ async function main(): Promise<void> {
   ];
   for (const rel of DATA_FILES) {
     const src = await readFile(path.join(ROOT, rel), "utf8").catch(() => "");
-    for (const m of src.matchAll(DATA_FIELDS)) found.add(JSON.parse(`"${m[1]}"`));
+    // Registry labels show on the owner's admin AND (publicLabel/publicDesc) on the site.
+    const surface = rel === "src/kb/kbCategories.ts" ? "admin" : "admin+honlap";
+    const add = (hu: string): void => {
+      for (const s of surface.split("+")) note(hu, s);
+    };
+    for (const m of src.matchAll(DATA_FIELDS)) add(JSON.parse(`"${m[1]}"`));
     // The plain string maps (e.g. GROUP_LABELS: offer: "Amit bemutat").
     for (const m of src.matchAll(/^\s*[a-z][\w]*:\s*"([^"\\]{3,})",\s*$/gm)) {
-      found.add(JSON.parse(`"${m[1]}"`));
+      add(JSON.parse(`"${m[1]}"`));
     }
   }
   const catalog = [...found].sort((a, b) => a.localeCompare(b, "hu"));
   const out = path.join(ROOT, "src/i18n/catalog.json");
   const next = JSON.stringify(catalog, null, 2) + "\n";
+  const ctxOut = path.join(ROOT, "src/i18n/catalog-context.json");
+  const ctx: Record<string, string> = {};
+  for (const hu of catalog) ctx[hu] = [...(surfaces.get(hu) ?? [])].sort().join("+");
+  const nextCtx = JSON.stringify(ctx, null, 0).replace(/","/g, '",\n"') + "\n";
   // --check: verify the committed catalog matches the sources (pre-commit freshness gate) —
   // a stale catalog would let new strings ship untranslated (silent Hungarian on foreign pages).
   if (process.argv.includes("--check")) {
     const current = await readFile(out, "utf8").catch(() => "");
-    if (current !== next) {
-      console.error("⛔ i18n-katalógus ELAVULT — futtasd: npx tsx scripts/extract-i18n.mts, és addold a src/i18n/catalog.json-t.");
+    const currentCtx = await readFile(ctxOut, "utf8").catch(() => "");
+    if (current !== next || currentCtx !== nextCtx) {
+      console.error("⛔ i18n-katalógus ELAVULT — futtasd: npx tsx scripts/extract-i18n.mts, és addold a src/i18n/catalog.json-t és a catalog-context.json-t.");
       process.exit(1);
     }
     console.log(`✅ i18n-katalógus friss (${catalog.length} string).`);
     return;
   }
   await writeFile(out, next, "utf8");
+  await writeFile(ctxOut, nextCtx, "utf8");
   console.log(`catalog: ${catalog.length} string → ${out}`);
 }
 
-await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) await main();

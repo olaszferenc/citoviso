@@ -60,19 +60,21 @@ export function getScrapeJob(): ScrapeJobState {
  * or null on successful start. Fire-and-forget: the page polls getScrapeJob().
  */
 export function startScrapeJob(regionId: string, cap?: number): string | null {
-  // ADR-0036: a scrape entering a new language area pre-provisions the UI-string pack in the
-  // background (fire-and-forget; generateEngineMock re-ensures it anyway before rendering).
-  void (async () => {
-    const { db } = await import("../db/client.js");
-    const { langForCountry, DEFAULT_LANG } = await import("../i18n/lang.js");
-    const { ensureLanguagePack } = await import("../i18n/packs.js");
-    const row = await db.selectFrom("region").select("country").where("id", "=", regionId).executeTakeFirst().catch(() => null);
-    const lang = langForCountry(row?.country);
-    if (lang !== DEFAULT_LANG) await ensureLanguagePack(lang);
-  })().catch((e) => console.error(`[i18n] scrape-időzített provisioning hiba: ${(e as Error).message}`));
   if (state.running) {
     return `Már fut egy scrape (${state.regionId}) — egyszerre egy futás engedett.`;
   }
+  // ADR-0036: a scrape entering a new language area pre-provisions the UI-string pack in the
+  // background (generateEngineMock re-ensures it anyway before rendering). ⛔ ADR-XXXX: only
+  // AFTER the one-job gate — a refused start must not start a translation either — and
+  // through requestLanguagePack (one run per language, never awaited here).
+  void (async () => {
+    const { db } = await import("../db/client.js");
+    const { langForCountry, DEFAULT_LANG } = await import("../i18n/lang.js");
+    const { requestLanguagePack } = await import("../i18n/packs.js");
+    const row = await db.selectFrom("region").select("country").where("id", "=", regionId).executeTakeFirst().catch(() => null);
+    const lang = langForCountry(row?.country);
+    if (lang !== DEFAULT_LANG) requestLanguagePack(lang);
+  })().catch((e) => console.error(`[i18n] scrape-időzített provisioning hiba: ${(e as Error).message}`));
   const args = ["tsx", path.join("src", "scraper", "run.ts"), regionId];
   if (cap && Number.isFinite(cap) && cap > 0) args.push("--cap", String(cap));
   spawnJob(args, regionId, cap ?? null, process.env, null, null);
