@@ -2,6 +2,7 @@
 // no randomness. The SAME (recipe) with demo vs. real data yields structurally
 // identical HTML — the mock=live guarantee. The skin is named by the recipe.
 
+import { withoutStarRating } from "../text/starRating.js";
 import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
@@ -719,6 +720,16 @@ export function renderSite(
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
+  // A star classification in the name or an alt („Panoráma Faház****”, fd50391f, 2026-10-27)
+  // is no sourced fact (§B.17) — off the MOCK, render-time, so a plain rerender fixes it. The
+  // live site prints the owner's own name as they set it.
+  if (phase === "mock") {
+    const name = withoutStarRating(data.name);
+    if (name !== data.name) data = { ...data, name };
+    if (data.photos.some((p) => withoutStarRating(p.alt) !== p.alt)) {
+      data = { ...data, photos: data.photos.map((p) => ({ ...p, alt: withoutStarRating(p.alt) })) };
+    }
+  }
   // A file name is no alt („kep_128.jpg”, Dobos 2026-10-26): the neutral „<név> — N. kép”.
   if (data.photos.length) {
     const photos = withoutFilenameAlts(data.photos, data.name);

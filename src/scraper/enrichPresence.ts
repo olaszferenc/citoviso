@@ -90,11 +90,37 @@ export function isBrandShaped(w: string): boolean {
   return w.length >= 4 || isLetterDigitWord(w);
 }
 
+/**
+ * An ACRONYM written in capitals in the name („BBB Apartman”, „NOA Panzió”, „KJB Vendégház”)
+ * is the business's brand even though it is under the 4-letter floor (BBB c9d21708,
+ * 2026-10-27: the hovamenjek re-pull stopped with 422 „csupa általános szó”). 2–3 capitals,
+ * not a roman numeral („II”, „XIV”) and not a generic capitalised word (ACRONYM_GENERIC).
+ * Lower-cased and deaccented like nameWords; matched only as a whole word (hasNameWord).
+ * Measured on the live names 2026-10-27: 234 names had no brand word, 31 of them carry one.
+ */
+export function acronymWords(name: string): string[] {
+  const out: string[] = [];
+  for (const t of name.split(/[^\p{L}\p{N}]+/u)) {
+    if (!/^\p{Lu}{2,3}$/u.test(t) || /^[IVXLCDM]+$/.test(t)) continue;
+    const w = deaccent(t.toLowerCase());
+    if (!ACRONYM_GENERIC.has(w) && !out.includes(w)) out.push(w);
+  }
+  return out;
+}
+
+/** Capitalised words that are no brand: grading, legal form, institutions on every page. */
+const ACRONYM_GENERIC = new Set([
+  "vip", "lux", "art", "one", "the", "spa", "fit", "top", "eco", "new", "bar", "sup",
+  "kft", "bt", "zrt", "nyrt", "kkt", "ev", "llc", "ltd", "gmbh", "mav", "mta", "ovi", "uni",
+  "bb",
+]);
+
 /** Does deaccented, lowercased `text` carry name word `w`? A compound ("abi-lo") also
  *  matches written with a space, a dash or as one word ("Abi Lo", "AbiLo"); a letter+digit
  *  token ("a16") only as a whole word — inside "ka160" it is not this name. */
 export function hasNameWord(text: string, w: string): boolean {
-  if (isLetterDigitWord(w)) return new RegExp(`(?:^|[^a-z0-9])${w}(?:$|[^a-z0-9])`).test(text);
+  // A short word (an acronym, acronymWords) only as a whole word: „bbb” is not inside „abbbx”.
+  if (isLetterDigitWord(w) || (w.length < 4 && !w.includes("-"))) return new RegExp(`(?:^|[^a-z0-9])${w}(?:$|[^a-z0-9])`).test(text);
   if (!w.includes("-")) return text.includes(w);
   return new RegExp(`(?:^|[^a-z0-9])${w.split("-").join("[\\s\\-–]?")}(?:$|[^a-z0-9])`).test(text);
 }
@@ -236,7 +262,8 @@ export function verify(name: string, terms: string[], html: string): boolean {
   const text = deaccent(html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
   const core = nameWords(name).filter((w) => !TYPE_WORDS.has(w));
-  const brandHit = core.some((w) => isBrandShaped(w) && hasNameWord(text, w));
+  const acr = acronymWords(name);
+  const brandHit = [...core.filter(isBrandShaped), ...acr].some((w) => hasNameWord(text, w));
   const geoHit = terms.some((term) => text.includes(term));
   return brandHit && geoHit; // §F.14 — brand-only is a collision, not a hit
 }

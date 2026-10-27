@@ -16,6 +16,7 @@
 // normalised into a nicer unit, or inferred from context. A fact we cannot quote
 // is a fact we do not emit — "bizonytalanság → kevesebb, sosem hamis".
 
+import { withoutStarRating } from "../../../text/starRating.js";
 import { mailtoAddress } from "../../../email/leadEmails.js";
 import { deaccent } from "../../enrichPresence.js";
 import { parseSrcset } from "../../srcset.js";
@@ -876,6 +877,11 @@ export function extractListing(html: string, pageUrl: string, nameHint?: string)
   mergeInto(base, fromOpenGraph(html, pageUrl));
   mergeInto(base, fromDom(html, pageUrl, nameHint));
   if (base.description) base.description = withoutRatingCards(base.description);
+  // A star classification in the listing's own title is no sourced fact (§B.17), and it would
+  // ride into every caption („Panoráma Faház**** – Mohács fotó 32”, fd50391f, 2026-10-27).
+  if (base.title) base.title = withoutStarRating(base.title);
+  if (base.description) base.description = withoutStarRating(base.description);
+  base.images = base.images.map((img) => (img.caption && withoutStarRating(img.caption) !== img.caption ? { ...img, caption: withoutStarRating(img.caption) } : img));
   return base;
 }
 

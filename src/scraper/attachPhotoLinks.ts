@@ -149,13 +149,27 @@ function absoluteUrl(raw: string, base: string): string | null {
  * the first entry is usually the thumbnail), linked image files (lightboxes),
  * inline background images (old slider markup) and og:image.
  */
+/**
+ * Jetpack's Photon CDN (i0–i3.wp.com) serves a WordPress site's uploads as
+ * `https://i0.wp.com/<site host>/<path>?resize=…` — the picture is the site's OWN upload, but
+ * the cross-site rule saw the host wp.com and dropped the whole gallery (Apartman Meiszter
+ * 21e0e5a7, 2026-10-27: 26 own photos, 0 kept). The CDN serves ANY site's images, so wp.com is
+ * NOT allowed as such: the URL is read back to its ORIGINAL (`https://<site host>/<path>`), and
+ * the same-site rule then judges the original host — another site's image stays foreign.
+ */
+export function withoutPhotonCdn(url: string | null): string | null {
+  if (!url) return url;
+  const m = /^https?:\/\/i[0-3]\.wp\.com\/([a-z0-9.-]+\.[a-z]{2,}\/[^?#]+)/i.exec(url);
+  return m ? `https://${m[1]}` : url;
+}
+
 export function ownSiteImages(html: string, pageUrl: string): { url: string; caption?: string }[] {
   const body = ownContentOnly(html);
   const out: { url: string; caption?: string }[] = [];
   const seen = new Set<string>();
   const add = (raw: string | undefined, caption?: string): void => {
     if (!raw || raw.startsWith("data:")) return;
-    const abs = absoluteUrl(raw, pageUrl);
+    const abs = withoutPhotonCdn(absoluteUrl(raw, pageUrl));
     if (!abs || !IMAGE_EXT.test(abs) || NON_CONTENT_IMAGE.test(abs)) return;
     // Wix serves one media file under many transform paths („…~mv2.jpg/v1/fill/w_960,…/x.jpg”):
     // the media id is the picture, so the srcset's largest and the src's thumbnail are one.

@@ -348,6 +348,22 @@ check(
   own.length === 1 && own[0]!.url === WIX960 && !own.some((o) => /mandulaskert\.com\/quality_auto/.test(o.url)),
   JSON.stringify(own),
 );
+// Jetpack Photon (Apartman Meiszter 21e0e5a7, 2026-10-27): the site's own uploads served via
+// i0.wp.com are read back to the ORIGINAL URL — so the same-site rule keeps them, and an image
+// the CDN serves for ANOTHER site stays foreign (wp.com itself is never allowed).
+const PH = "https://i0.wp.com/balatonlelleiszallasok.hu/wp-content/uploads/2017/08/DSC_0128_v2.jpg?resize=1024%2C768&ssl=1";
+const ph = ownSiteImages(
+  `<img src="${PH}" srcset="${PH} 1024w, https://i1.wp.com/balatonlelleiszallasok.hu/wp-content/uploads/2017/08/DSC_0128_v2.jpg?w=2048&ssl=1 2048w"><img src="https://i2.wp.com/masik-szallas.hu/wp-content/uploads/x.jpg?ssl=1">`,
+  "https://balatonlelleiszallasok.hu/balatonlelle-apartman-meiszter/",
+);
+check(
+  "ownSiteImages: i0–i3.wp.com → az eredeti, saját-domain URL (egyszer); a CDN más oldal képét nem teszi sajáttá",
+  ph.length === 2 &&
+    ph[0]!.url === "https://balatonlelleiszallasok.hu/wp-content/uploads/2017/08/DSC_0128_v2.jpg" &&
+    ph[1]!.url === "https://masik-szallas.hu/wp-content/uploads/x.jpg" &&
+    !ph.some((o) => /wp\.com/.test(o.url)),
+  JSON.stringify(ph),
+);
 const dom = domImages(`<img src="${WIX480}" alt="kert"><img srcset="${WIX960} 2x, ${WIX480} 1x">`, "https://www.mandulaskert.com/");
 check(
   "domImages: a vesszős Wix-src egyben marad, a csak-srcset kép is ép URL",

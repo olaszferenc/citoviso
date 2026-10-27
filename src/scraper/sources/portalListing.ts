@@ -26,7 +26,7 @@
 // by the extractor at the point of ingest — see extract.ts/toPortalPhotos.
 
 import { scorePortalMatch, type MatchConfidence } from "../confidence.js";
-import { deaccent, geoTerms, hasNameWord, isBrandShaped, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
+import { acronymWords, deaccent, geoTerms, hasNameWord, isBrandShaped, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
@@ -51,7 +51,9 @@ const TYPE_WORD = new Set([
 
 /** The lead's identifying words — what a listing must actually be about. */
 export function brandTokens(name: string): string[] {
-  return nameWords(name).filter((t) => isBrandShaped(t) && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
+  const words = nameWords(name).filter((t) => isBrandShaped(t) && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
+  // A capitalised acronym („BBB Apartman”) is a brand word too (acronymWords).
+  return [...words, ...acronymWords(name).filter((t) => !words.includes(t) && !GENERIC_NAME_WORD.has(t))];
 }
 
 /** Type words present in a name, deaccented. */

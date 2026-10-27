@@ -187,6 +187,10 @@ const COMPOUND_CASES: { name: string; text: string; geo: string[]; expect: boole
   // Letter+digit token (2026-10-27): A16 Panzió d29e5e74 (Harkány) — "a16" is 3 characters.
   { name: "A16 Panzió", text: "<h1>A16 Panzió</h1><p>7815 Harkány, Bajcsy-Zs. u. 16.</p>", geo: ["harkany"], expect: true, why: "betű+szám token, egész szóként" },
   { name: "A16 Panzió", text: "<h1>KA160 Panzió</h1><p>Harkány</p>", geo: ["harkany"], expect: false, why: "„ka160” belsejében nem a név" },
+  // Capitalised acronym (2026-10-27): BBB Apartman c9d21708 (Balatonboglár) — "bbb" is 3 letters.
+  { name: "BBB Apartman", text: "<h1>BBB Apartman I. és II.</h1><p>8630 Balatonboglár, Balaton u. 2.</p>", geo: ["balatonboglar"], expect: true, why: "nagybetűs rövidítés, egész szóként" },
+  { name: "BBB Apartman", text: "<h1>Abbba Apartman</h1><p>Balatonboglár</p>", geo: ["balatonboglar"], expect: false, why: "„abbba” belsejében nem a név" },
+  { name: "KJB Vendégház ***", text: "<title>KJB Vendégház - Hajdúszoboszló</title>", geo: ["hajduszoboszlo"], expect: true, why: "rövidítés + csillag" },
 ];
 for (const c of COMPOUND_CASES) {
   const brand = brandTokens(c.name);
@@ -200,8 +204,8 @@ for (const c of COMPOUND_CASES) {
 }
 // Not brands: an ordinal ("11-es"), roman unit numbers, a feature word (Wi-Fi).
 // …and a number with a unit or a motorway is no letter+digit brand.
-for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi", "Vendégház Balatontól 6km-re 4fő", "M0 Motel"]) {
-  const expectEmpty = n === "Apartman Vendégház" || n === "B-B Apartman";
+for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi", "Vendégház Balatontól 6km-re 4fő", "M0 Motel", "VIP Apartman", "LUX Apartman", "MÁV szállás", "Apartman II", "BB Panzió"]) {
+  const expectEmpty = ["Apartman Vendégház", "B-B Apartman", "VIP Apartman", "LUX Apartman", "MÁV szállás", "Apartman II", "BB Panzió"].includes(n);
   const brand = brandTokens(n);
   const ok = expectEmpty ? brand.length === 0 : !brand.some((t) => t.includes("-") || t === "wifi" || /\d/.test(t));
   if (!ok) failed++;
@@ -215,5 +219,5 @@ if (failed) {
   process.exit(1);
 }
 console.log(
-  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 7} kötőjeles/betű+szám márka eset rendben.`,
+  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 12} kötőjeles/betű+szám/rövidítés márka eset rendben.`,
 );

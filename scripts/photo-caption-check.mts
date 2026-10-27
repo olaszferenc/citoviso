@@ -22,7 +22,8 @@ import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { PRIMITIVES } from "../src/engine/primitives.js";
 import { isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, isQuoteCutName, photoCaption, withoutFilenameAlts } from "../src/engine/photoCaption.js";
-import { domImages, tagAttr } from "../src/scraper/sources/portals/extract.js";
+import { domImages, extractListing, tagAttr } from "../src/scraper/sources/portals/extract.js";
+import { withoutStarRating } from "../src/text/starRating.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
 import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
 import type { SiteData } from "../src/engine/recipe.js";
@@ -297,6 +298,45 @@ console.log("\nidézőjel a névben: forrás-alt → tárolt caption → alt / t
     }
   }
   check(`minden sablon: alt / title / aria-label / content / JSON-LD épen viszi a nevet (${seen} attribútum mérve)`, bad.length === 0 && seen > 100, bad.slice(0, 5));
+}
+
+console.log("\ncsillag a névben: portál-cím → caption → mock név / alt (fd50391f, 2026-10-27)");
+{
+  const CASES: [string, string][] = [
+    ["Panoráma Faház****", "Panoráma Faház"],
+    ["Panoráma Faház**** – Mohács fotó 32", "Panoráma Faház – Mohács fotó 32"],
+    ["Villa Izabella Vendégház Badacsonytördemic ★★★", "Villa Izabella Vendégház Badacsonytördemic"],
+    ["HUNGUEST Hotel Helios***superior", "HUNGUEST Hotel Helios"],
+    ["Hotel Forrás*** Zalakaros", "Hotel Forrás Zalakaros"],
+    ["Csatári Ház **** - Szekszárd", "Csatári Ház - Szekszárd"],
+    ["* Thelena Apartman Hikádi és Társa Bt", "Thelena Apartman Hikádi és Társa Bt"],
+    ["Suzy 3*", "Suzy"],
+    ["Panzió****Balaton", "Panzió Balaton"],
+  ];
+  const wrong = CASES.filter(([a, b]) => withoutStarRating(a) !== b).map(([a, b]) => `${a} → ${withoutStarRating(a)} (várt: ${b})`);
+  check("withoutStarRating: a csillag-sorozat, a ★ és a „superior” ki, a név marad", wrong.length === 0, wrong);
+  // Red twins: no star, no change — a number, a dash, an apostrophe and other punctuation stay.
+  const keep = ["Andy's House", "Apartman 12 - 3 fős", "Dalma Panzió Balatonvilágos : 2026 Árak", "Villa Rosa – 4 fő, 2 szoba", "A16 Panzió"];
+  check("PIROS IKER: csillag nélkül betűre ugyanaz", keep.every((s) => withoutStarRating(s) === s), keep.filter((s) => withoutStarRating(s) !== s));
+  // Scrape: the portal's og:title and an <img alt> carry the stars → the listing does not.
+  const page = `<html><head><meta property="og:title" content="Panoráma Faház**** Mohács"><meta property="og:description" content="Panoráma Faház**** – Szállás Mohács. Csendes faház a Duna mellett, saját kerttel."></head><body><img alt="Panoráma Faház**** – Mohács fotó 32" src="/upload/places/1/fullHd/mohacs-panorama-fahaz32.jpg"></body></html>`;
+  const l = extractListing(page, "https://hovamenjek.hu/mohacs/panorama-fahaz");
+  check("behúzó (extractListing): a cím, a leírás és a caption csillag nélkül",
+    l.title === "Panoráma Faház Mohács" && !/[*★]/.test(l.description ?? "") && l.images.every((i) => !/[*★]/.test(i.caption ?? "")) && l.images.some((i) => i.caption === "Panoráma Faház – Mohács fotó 32"),
+    { title: l.title, description: l.description, captions: l.images.map((i) => i.caption) });
+  // Render: an ALREADY stored name / caption is cleaned on a plain rerender (mock only).
+  const name = "Panoráma Faház****";
+  const d = { ...D, name, photos: [0, 1, 2, 3, 4, 5].map((i) => ({ url: IMG(i), alt: `${name} – Mohács fotó ${i + 1}`, provenance: "portal" as const })) } as SiteData;
+  const bad: string[] = [];
+  for (const [id, tpl] of Object.entries(TEMPLATES)) {
+    const sections = ["hero", "features", "gallery", "rooms", "reviews", "location", "enquiry"].map((kind) => ({ kind }));
+    const html = renderSite({ template: id, skin: tpl.skins[0], archetype: "stacked", sections } as never, d, { phase: "mock" });
+    if (/Faház\s*\*|★/.test(html)) bad.push(`${id}: csillag a mockban`);
+    if (!html.includes("Panoráma Faház")) bad.push(`${id}: a név eltűnt`);
+  }
+  check(`minden sablon (mock): a név és az alt csillag nélkül (${Object.keys(TEMPLATES).length} sablon)`, bad.length === 0, bad.slice(0, 5));
+  const live = renderSite({ template: Object.keys(TEMPLATES)[0], skin: Object.values(TEMPLATES)[0]!.skins[0], archetype: "stacked", sections: [{ kind: "hero" }] } as never, d, { phase: "live" } as never);
+  check("élő oldal: a tulaj saját nevét nem írjuk át", live.includes(name));
 }
 
 if (failures) {
