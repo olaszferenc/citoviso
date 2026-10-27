@@ -1,4 +1,4 @@
-// ADR-XXXX — robots.txt answers read per RFC 9309 §2.3.1 (owner's yes, 2026-10-27).
+// ADR-0410 — robots.txt answers read per RFC 9309 §2.3.1 (owner's yes, 2026-10-27).
 //
 // What this proves, through the REAL mayFetch (fetch stubbed per origin, no network):
 //   ① a 4xx robots.txt (401, 403, 404, 410) = no restrictions — the Fecske Kabin case

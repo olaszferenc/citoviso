@@ -1,4 +1,4 @@
-## ADR-XXXX — A robots.txt válaszát az RFC 9309 szerint olvassuk
+## ADR-0410 — A robots.txt válaszát az RFC 9309 szerint olvassuk
 
 **Dátum:** 2026-10-27 · **Státusz:** elfogadva (lokál, nem élesítve) · Módosítja: a portál-olvasás udvariassági rétegét (`src/scraper/sources/portals/politeness.ts`)
 

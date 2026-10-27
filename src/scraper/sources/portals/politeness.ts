@@ -129,7 +129,7 @@ export function robotsAllows(policy: Pick<RobotsPolicy, "rules">, pathname: stri
 }
 
 /**
- * ADR-XXXX — what a robots.txt answer means, per RFC 9309 §2.3.1 (owner's yes, 2026-10-27; the
+ * ADR-0410 — what a robots.txt answer means, per RFC 9309 §2.3.1 (owner's yes, 2026-10-27; the
  * Fecske Kabin case: fecskekabin.hu answered robots.txt with 403 while its pages served our bot,
  * and the old rule read every 401/403 as „keep out”):
  *   · 2xx — read the file (parse);
