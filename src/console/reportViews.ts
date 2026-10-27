@@ -400,7 +400,7 @@ const PANEL_VIA_SHORT = (lang: string): Readonly<Record<"pill" | "esc" | "tab" |
   trial: T(lang, "a próba-űrlapról"),
 });
 const PANEL_STEPS = (lang: string): readonly { t: string; s: string }[] => [
-  { t: T(lang, "Megnyitotta"), s: T(lang, "„Itt rendelheti meg” / ajánlat / fül") },
+  { t: T(lang, "Megnyitotta"), s: T(lang, "rendelő gomb / ajánlat / fül") },
   { t: T(lang, "Tovább"), s: T(lang, "1. lépés után, a domainhez") },
   { t: T(lang, "Számlázás"), s: T(lang, "számlázási adatok lépés") },
   { t: T(lang, "Elküldte"), s: T(lang, "megrendelés beküldve") },
@@ -486,7 +486,7 @@ function orderPanelPanel(d: ReportData, lang: string, via: PanelFilter, mode: Re
     kbox(T(lang, "Rendelés nélkül zárta"), String(sum.leftWithout), T(lang, "{p} · ebből hibába futott: {e}", { p: pct(sum.leftWithout, sum.n), e: sum.leftWithError })) +
     `</div>`;
   const head =
-    `<h2>${esc(T(lang, "Rendelés-panel"))} <span class="rp-q">${esc(T(lang, "— megnyomta-e az „Itt rendelheti meg” gombot, és mi történt benne"))}</span></h2>` +
+    `<h2>${esc(T(lang, "Rendelés-panel"))} <span class="rp-q">${esc(T(lang, "— megnyomta-e a rendelő gombot („Árak és rendelés”), és mi történt benne"))}</span></h2>` +
     `<div class="rp-chips rp-chips--mb" role="group" aria-label="${esc(T(lang, "Hogyan nyitotta meg"))}">${chips}</div>` +
     kpis;
   if (!sum.n) {

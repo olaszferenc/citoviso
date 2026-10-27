@@ -8740,7 +8740,7 @@ export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
   dwell_end: T(lang, "Elhagyta az oldalt"),
   section_seen: T(lang, "Látta az oldal egy szakaszát"),
   client_error: T(lang, "Hiba a böngészőjében"),
-  panel_open: T(lang, "Megnyomta: „Itt rendelheti meg”"),
+  panel_open: T(lang, "Megnyomta a rendelő gombot („Árak és rendelés”)"),
   panel_collapse: T(lang, "Összecsukta a panelt"),
   panel_close: T(lang, "Bezárta a panelt (X)"),
   module_add: T(lang, "Bekapcsolt egy modult"),

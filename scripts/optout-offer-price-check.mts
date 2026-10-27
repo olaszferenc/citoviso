@@ -111,7 +111,7 @@ async function run(browser: Browser, html: string, tag: string, size: { width: n
     });
     check(!m.veil, `${label}: nincs fátyol a terv előtt`);
     check(m.top <= 20 && m.h <= m.vh * 0.15, `${label}: felső sáv, a képernyő legfeljebb 15%-a (teteje ${Math.round(m.top)}, ${Math.round(m.h)} / ${m.vh} px)`);
-    check(!m.overlap, `${label}: a sáv nem takarja az „Itt rendelheti meg” gombot`);
+    check(!m.overlap, `${label}: a sáv nem takarja a rendelő gombot („Árak és rendelés”)`);
     check(m.x >= 40, `${label}: jól látható bezáró ×, legalább 40 px (mért: ${Math.round(m.x)})`);
     if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/eszkalacio-sav-${tag}.png` });
   }

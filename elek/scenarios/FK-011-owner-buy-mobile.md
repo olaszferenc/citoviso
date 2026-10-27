@@ -11,7 +11,7 @@ kontraktus: assets/design-refs/prospect-page/order-pill/README.md
   user: anon
   út: ${ELEK_NIGHT_PROSPECT_PATH}
   várd: látható "${ELEK_NIGHT_NAME}"
-  várd: látható "Itt rendelheti meg"
+  várd: látható "Árak és rendelés"
   # A süti-sáv z-indexe (2147483600) a panel és a pirula FÖLÖTT van: ha nem tűnik el,
   # minden alatta lévő koppintás a sávra megy. Best-effort, mert a második futásban
   # már nincs ott.

@@ -2026,10 +2026,23 @@
   }
 
   var scrim = el('<div class="cit-cfg-scrim"></div>');
+  /* ADR-XXXX (frozen plan: assets/design-refs/prospect-page/arak-gomb/, variant B): the
+   * pill answers "mennyibe kerül?" itself — the cheapest package's MONTHLY LIST price, the
+   * same figure its card shows on the monthly cycle. Never the one-off offer price (that is
+   * the first payment, not what it costs), never a typed-in number. No package or no price
+   * → no second line, the label stands alone. */
+  var launchFrom = PRESETS.reduce(function (min, p) {
+    var m = presetMonthly(p);
+    return m > 0 && (min === null || m < min) ? m : min;
+  }, null);
+  var launchFromText = launchFrom === null ? "" : tr("havi {price}-tól").replace("{price}", fmt(launchFrom));
   var launch = el(
-    '<button class="cit-cfg-launch" type="button" aria-label="' + tr("Itt rendelheti meg a saját weboldalát") + '">' +
+    '<button class="cit-cfg-launch' + (launchFromText ? " cit-cfg-launch--from" : "") + '" type="button" aria-label="' +
+      esc(tr("Árak és rendelés") + (launchFromText ? " — " + launchFromText : "")) + '">' +
       I.spark +
-      "<span>" + tr("Itt rendelheti meg") + "</span>" +
+      '<span class="cit-cfg-launch__lbl">' + esc(tr("Árak és rendelés")) +
+      (launchFromText ? '<small class="cit-cfg-launch__from">' + esc(launchFromText) + "</small>" : "") +
+      "</span>" +
       // package-domain-badge B: the pill names the free own address when ANY package carries it.
       (PRESETS.some(presetCarriesDomain) ? '<em class="cit-cfg-launch__tag">' + esc(domainBadgeText()) + "</em>" : "") +
       "</button>"

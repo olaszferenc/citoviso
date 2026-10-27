@@ -158,7 +158,7 @@ irányít.
   végződésnek nincs havidíja. Ez a kapcsoló csak akkor nyomható, ha fent az „Ingyen domain
   csomagban” be van kapcsolva.
 
-  A vevő ezt a tervén látja: a domaint tartalmazó csomag kártyáján és az „Itt rendelheti meg”
+  A vevő ezt a tervén látja: a domaint tartalmazó csomag kártyáján és az „Árak és rendelés”
   gombon zöld „+ saját .hu cím” jelvény jelenik meg (a végződés a te jelölésedből jön). Ha ilyen
   csomagot választ, a „Címe az interneten” lépés a saját címmel kezd. Ha a domain-pirula egy
   csomagban van, de egyetlen végződésen sincs bejelölve a „Csomagban ingyen”, a vevő nem kap ingyen

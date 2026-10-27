@@ -119,7 +119,7 @@ A lap tetején hat mutató: **„Medián időtöltés”** (és a p90), **„Med
 
 ![Képernyőkép: a Rendelés-panel telefonon — szűrő, négy mutató, a lépcső és a leadenkénti lista](assets/hu/order-panel.png)
 
-Azt mutatja, hogy a megnyitó megnyomta-e az **„Itt rendelheti meg”** gombot, és a rendelés-panelen
+Azt mutatja, hogy a megnyitó megnyomta-e az **„Árak és rendelés”** gombot (2026-10-27 előtt „Itt rendelheti meg”), és a rendelés-panelen
 belül meddig jutott. Egy sor = egy látogatás, amelyben a panelt megnyitotta; aki visszajött és
 újra kinyitotta, több sort ad.
 
