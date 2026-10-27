@@ -157,6 +157,39 @@ for (const id of Object.keys(TEMPLATES)) {
   if (bad.length) check(`${id}: render — nincs fájlnév az altban`, false, bad.slice(0, 3).join(" · "));
 }
 check("render: egyik sablon altjában sincs fájlnév (a meglévő mock rerenderrel javul)", true);
+// ── A kép saját fájltöve sem alt (Erzsike Apartman 0dbda045, 2026-10-27: WordPress alt="erzsike-25"
+//    a …/uploads/2018/02/erzsike-25.jpg-n; mock b1675651, 18664b64) ──
+console.log("fájltő-alt (az URL fájlneve kiterjesztés nélkül)");
+const WP = "https://varvolgyszallas.hu/wp-content/uploads/2018/02/";
+const STEMS: Array<[string, string]> = [
+  ["erzsike-25", `${WP}erzsike-25.jpg`],
+  ["erzsike-5", `${WP}erzsike-5.jpg`],
+  ["erzsike-apartman-szoba-6", "https://varvolgyszallas.hu/wp-content/uploads/2022/02/erzsike-apartman-szoba-6.jpg"],
+  ["Varvolgyszallas_Galeria_Udvar_Telen-1", `${WP}Varvolgyszallas_Galeria_Udvar_Telen-1.jpg`],
+  ["erzsike-25", `${WP}erzsike-25-1024x683.jpg`],
+  ["erzsike-25-1024x683", `${WP}erzsike-25-1024x683.jpg?ver=2`],
+  ["terasz-2-scaled", `${WP}terasz-2-scaled.jpeg`],
+  ["kertkapu_01", "https://x.hu/k%C3%A9pek/kertkapu_01.webp"],
+  ["fürdő-1", "https://x.hu/furdo-1.jpg"],
+];
+for (const [alt, url] of STEMS) check(`fájltő: „${alt}” ← ${url.split("/").pop()}`, isFilenameCaption(alt, url));
+check("⛔ valódi felirat a fájltő mellett is marad („Terasz” a terasz.jpg-n, „Szoba 2” a szoba-2.jpg-n, más fájl)",
+  !isFilenameCaption("Terasz", `${WP}terasz.jpg`) && !isFilenameCaption("Szoba 2", `${WP}szoba-2.jpg`) &&
+  !isFilenameCaption("erzsike-25", `${WP}erzsike-26.jpg`) && !isFilenameCaption("Erzsike Apartman – Várvölgy fotó 5", "https://hovamenjek.hu/upload/x/varvolgy-erzsike-apartman11.jpg"));
+const wsp = toSitePhotos([{ url: `${WP}erzsike-25.jpg`, caption: "erzsike-25" }] as never, "Erzsike Apartman");
+check("toSitePhotos: fájltő-caption → „<név> — N. kép”", wsp[0]?.alt === "Erzsike Apartman — 1. kép", JSON.stringify(wsp.map((p) => p.alt)));
+const wown = ownSiteImages(`<img src="${WP}erzsike-5.jpg" alt="erzsike-5">`, "https://varvolgyszallas.hu/");
+check("ownSiteImages: a fájltő-altot nem veszi fel captionnek", wown.length === 1 && wown[0]!.caption === undefined, JSON.stringify(wown));
+const erzsike = { ...D, name: "Erzsike Apartman", photos: D.photos.map((p, i) => (i === 2 ? { ...p, alt: MEANINGFUL } : { ...p, url: `${WP}erzsike-${20 + i}.jpg`, alt: `erzsike-${20 + i}` })) } as unknown as SiteData;
+for (const id of Object.keys(TEMPLATES)) {
+  const tpl = TEMPLATES[id as keyof typeof TEMPLATES]!;
+  const html = renderSite({ template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] }, erzsike, { phase: "mock" });
+  const bad = [...html.matchAll(/\balt="([^"]*)"/g)].map((m) => m[1]!).filter((a) => /^erzsike-\d+$/.test(a));
+  const shown = [...html.matchAll(/>\s*(erzsike-\d+)\s*</g)].map((m) => m[1]!);
+  if (bad.length || shown.length) check(`${id}: render — nincs fájltő az altban/feliratban`, false, [...bad, ...shown].slice(0, 3).join(" · "));
+}
+check("render: egyik sablonban sincs fájltő-alt (a meglévő mock sima rerenderrel javul)", true);
+
 
 try {
   const page = await browser.newPage();

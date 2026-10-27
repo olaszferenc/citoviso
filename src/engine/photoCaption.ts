@@ -51,11 +51,36 @@ export function isEchoCaption(d: SiteData, alt: string): boolean {
  * alt="kep_128.jpg", and the mock printed „kep_128.jpg”, „hirdeteshez_008.jpg” as alts).
  * An image extension, or a bare camera/upload name („IMG_2041”, „DSC_0012”, „kep_128”).
  */
-export function isFilenameCaption(s: string): boolean {
+export function isFilenameCaption(s: string, url?: string): boolean {
   const t = s.trim();
   if (!t) return false;
   if (/^[^\s/\\]+\.(?:jpe?g|png|webp|gif|avif|bmp|tiff?|heic)$/i.test(t)) return true;
-  return /^(?:img|dsc|dscn|dscf|dcim|pic|photo|image|kep|foto|p)[_\- ]?\d{2,}(?:[_\- ]\w+)?$/i.test(t);
+  if (/^(?:img|dsc|dscn|dscf|dcim|pic|photo|image|kep|foto|p)[_\- ]?\d{2,}(?:[_\- ]\w+)?$/i.test(t)) return true;
+  return url !== undefined && isUrlStemAlt(t, url);
+}
+
+/** A file name's stem in slug form: extension, WordPress size/scaled/edit suffixes dropped,
+ *  accents folded, every separator one "-". */
+function stemSlug(s: string): string {
+  return fold(s)
+    .replace(/\.(?:jpe?g|png|webp|gif|avif|bmp|tiff?|heic)$/i, "")
+    .replace(/(?:-(?:\d{2,5}x\d{2,5}|scaled|rotated|e\d{10,}))+$/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * The alt is the photo URL's own file stem (Erzsike Apartman 0dbda045, 2026-10-27: the
+ * WordPress site set alt="erzsike-25" on …/uploads/2018/02/erzsike-25.jpg). Only a slug-form
+ * alt counts — no space, and a separator or a digit in it — so a one-word real caption
+ * („Terasz” on terasz.jpg) stays.
+ */
+function isUrlStemAlt(alt: string, url: string): boolean {
+  if (/\s/.test(alt) || !/[-_.\d]/.test(alt)) return false;
+  let file = url.split(/[?#]/)[0]!.split("/").pop() ?? "";
+  try { file = decodeURIComponent(file); } catch { /* keep the raw name */ }
+  const stem = stemSlug(file);
+  return stem !== "" && stem === stemSlug(alt);
 }
 
 /** The neutral alt a photo wears when the source gave none (or only a file name). */
@@ -65,9 +90,9 @@ export function neutralAlt(name: string, index: number): string {
 
 /** Photos whose alt is a file name get the neutral alt — render-time, so a rerender fixes
  *  an already generated mock. Same array back when nothing changes. */
-export function withoutFilenameAlts<T extends { readonly alt: string }>(photos: readonly T[], name: string): readonly T[] {
-  if (!photos.some((p) => isFilenameCaption(p.alt))) return photos;
-  return photos.map((p, i) => (isFilenameCaption(p.alt) ? { ...p, alt: neutralAlt(name, i) } : p));
+export function withoutFilenameAlts<T extends { readonly alt: string; readonly url?: string }>(photos: readonly T[], name: string): readonly T[] {
+  if (!photos.some((p) => isFilenameCaption(p.alt, p.url))) return photos;
+  return photos.map((p, i) => (isFilenameCaption(p.alt, p.url) ? { ...p, alt: neutralAlt(name, i) } : p));
 }
 
 /** The caption to PRINT under a photo, or "" when it would say nothing (alt stays on the img). */

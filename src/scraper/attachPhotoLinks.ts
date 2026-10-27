@@ -163,7 +163,7 @@ export function ownSiteImages(html: string, pageUrl: string): { url: string; cap
     if (seen.has(key)) return;
     seen.add(key);
     // A file name in the alt („kep_128.jpg”, hupont) is no caption — keep none rather than it.
-    const cap = caption?.trim() && !isFilenameCaption(caption) ? caption.trim().slice(0, 200) : "";
+    const cap = caption?.trim() && !isFilenameCaption(caption, abs) ? caption.trim().slice(0, 200) : "";
     out.push({ url: abs, ...(cap ? { caption: cap } : {}) });
   };
   for (const m of body.matchAll(/<img\b[^>]*>/gi)) {
