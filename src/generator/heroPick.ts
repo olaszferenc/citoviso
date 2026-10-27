@@ -194,7 +194,7 @@ export function dropNeverShown<T extends OrderablePhoto>(
     // mindegyiken ott van, verdikt nélkül pedig nincs — a sablon akkor nem találgat.
     const marked = v?.watermarked ? ({ ...p, watermarked: true } as T) : p;
     // A hálószoba-jel (`bedroom`) ugyanitt: a szobakártya csak hálószobaképet visel (templateKit).
-    kept.push(v ? ({ ...marked, subject: v.subject, bedroom: isBedroomVerdict(v) } as T) : marked);
+    kept.push(v ? ({ ...marked, subject: v.subject, bedroom: isBedroomVerdict(v, p.url) } as T) : marked);
   }
   return { kept, dropped };
 }
@@ -205,8 +205,34 @@ export function dropNeverShown<T extends OrderablePhoto>(
  * „Hálószoba …”, „Szoba két ággyal”, „Tetőtéri szoba … ágy” — and „Konyha …”, „Folyosó …”,
  * „Nappali/étkezőszoba …” do not. Accented match on purpose: „ágy” is not inside „nagy”.
  */
-export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">): boolean {
-  return v.subject === "interior" && /hálószob|ágy|ággyal|paplan/iu.test(v.reason ?? "");
+export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?: string): boolean {
+  // A bedroom close-up is judged „detail” (Hillside 854c58c9 „Hálószoba részlete”, Szép Zalában
+  // 9050baa8 „Hálószoba-sarok: ágy, párnák”, 2026-10-28) — still the only bedroom photo there.
+  if (v.subject !== "interior" && v.subject !== "detail") return false;
+  const reason = v.reason ?? "";
+  // A living or dining room that shows a bed is no bedroom (2026-10-28, Vera2): „Nappali
+  // ágy-kanapé konbinációval” (BBBB 0824acb1), „Közös terület ágy-szobával” (Orgona 80d3d128),
+  // „Több szobás apartman nézete, hálószobák, nappali” and „hálócellájának nappali része”
+  // (Rubin d275c55a).
+  // A living room anywhere in the sentence is on the photo; a dining or common area only when it
+  // is the photo's subject (the first clause) — „hálószoba TV-vel és étkezési zónával” is a bedroom.
+  if (/nappali/iu.test(reason) || /étkez|közös/iu.test(reason.split(/[,;–—:]/u)[0]!)) return false;
+  // Any bed („Kétágyas”, „többágyas”, „ággyal”, even the typo „ágygyal”), but not the garden's,
+  // the sofa's or the spa's („függőágy”, „virágágy”, „nyugágy”, „kanapéágy”, „masszázságy”) —
+  // and „virággal” is no bed: only „ággy” is the doubled form.
+  if (/hálószob|hálórész|hálósar|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|heverő|masszázs)(?:ágy|ággy)/iu.test(reason)) return true;
+  // The verdict says only „szobabelsőség” — the file name says which room (Ametiszt ce2f06ec
+  // „franciaagyas-szoba-…avif”, „haromagyas-szoba-…”, 2026-10-28).
+  return v.subject === "interior" && url !== undefined && namesBedroomFile(url);
+}
+
+const BEDROOM_FILE = /(?:^|[^a-z])(?:haloszoba[a-z]*|szoba(?!s)[a-z]*|bedroom|franciaagy[a-z]*|ketagyas|haromagyas|agyas)(?:$|[^a-z])/;
+const NOT_BEDROOM_FILE = /(?:^|[^a-z])(?:furdo[a-z]*|bath[a-z]*|wc|konyha[a-z]*|kitchen|nappali|living|etkezo|dining|recepcio|folyoso)(?:$|[^a-z])/;
+function namesBedroomFile(url: string): boolean {
+  let file = url.split(/[?#]/)[0]!.split("/").pop() ?? "";
+  try { file = decodeURIComponent(file); } catch { /* keep the raw name */ }
+  const f = file.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return BEDROOM_FILE.test(f) && !NOT_BEDROOM_FILE.test(f);
 }
 
 export interface HeroScore {

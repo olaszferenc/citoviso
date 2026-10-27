@@ -103,7 +103,7 @@ for (const row of rows) {
     const scores = await readCachedScores((rest.photos ?? []).map((p) => p.url));
     const photos = (rest.photos ?? []).map((p) => {
       const v = scores.get(photoUrlKey(p.url));
-      return v ? { ...p, bedroom: isBedroomVerdict(v) } : p;
+      return v ? { ...p, bedroom: isBedroomVerdict(v, p.url) } : p;
     });
     const next: SiteData = { ...rest, photos, ...hints };
     const show = (d: SiteData) =>

@@ -562,6 +562,41 @@ console.log("⑯ a hotel wellnesse nem az apartman szolgáltatása (Belima 4231b
   check("⛔ PIROS IKER: a név maga az aparthotel (Platán) → a szaunája marad", aparthotel.some((a) => /szaun/i.test(a)), aparthotel);
 }
 
+console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép igen, resample után is ítélet (Vera2 2026-10-28: BBBB, Hillside, Szép Zalában, Orgona, Rubin; Ametiszt)");
+{
+  // The REAL cached verdicts of the five leads (photo_hero_score, live 2026-10-28).
+  const V: [string, string, string, boolean][] = [
+    ["interior", "zalakaros-25.jpg", "Nappali ágy-kanapé konbinációval, szűk. Világított de statikus, semleges szín, kevés vonzerő az első pillantás", false],
+    ["interior", "zalakaros-35.jpg", "Hálószoba teljes nézete világosabb, de semleges szín és minimál dekoráció. Tiszta de kevéssé inspiráló vagy vo", true],
+    ["detail", "zalakaros-11.jpg", "Hálószoba részlete képekkel és takaróval dekorálva – semleges, de túl zárt kép.", true],
+    ["detail", "felsorajk-szep-zalaban-vendeghazak13.jpg", "Hálószoba-sarok: ágy, párnák és szövet-részletei, meleg és tiszta, de túl közelre lőtt és nem mutatja az egész", true],
+    ["detail", "felsorajk-szep-zalaban-vendeghazak7.jpg", "Fürdőszoba-polc közeli felvétele: szervezet, növények és fürdőfelszerelés, de csak egy szűk szoba-részlet", false],
+    ["interior", "murakeresztur-orgona-vendeghaz7.jpg", "Közös terület ágy-szobával, világos de kevésbé vonzó, a funkcionális berendezés dominál.", false],
+    ["interior", "murakeresztur-orgona-vendeghaz9.jpg", "Hálószoba világos ágyneművel és dekoratív képpel, semleges és tiszta de kevésbé vonzó.", true],
+    ["interior", "murakeresztur-orgona-vendeghaz12.jpg", "Kétágyas szoba világos megvilágítással, jó állapotú de kevésbé karakteres.", true],
+    ["interior", "zalakaros-17.jpg", "Tágas hálószoba tetőablakkal, dupla ágy, fehér bútorok, világos szoba - vonzó, kényelmes megjelenés.", true],
+    ["interior", "zalakaros-22.jpg", "Több szobás apartman nézete, hálószobák, nappali, virágos díszítés - átfogó belső kép, átlagos vonzerő.", false],
+    ["interior", "zalakaros-16.jpg", "Szálláshely hálócellájának nappali része, ágy, tévé, erkély - vonzó belső tér, de szűkebb kép.", false],
+    ["interior", "zalakaros-23.jpg", "Hálószoba TV-vel, tárolóval, erkéllyel, klasszikus belső - kényelmes de kevésbé dinamikus kép.", true],
+    ["interior", "x.jpg", "Szoba két ággyal, világos, de szoros.", true],
+    ["interior", "x.jpg", "Világos, tágas hálószoba TV-vel és étkezési zónával, kényelmes elrendezés.", true],
+    ["interior", "x.jpg", "Recepció/folyosó elemi enteriőr szálas zöld virággal, semleges.", false],
+    ["detail", "x.jpg", "Közeli virágágy, szép pink virágok.", false],
+    ["interior", "franciaagyas-szoba-ametiszt-hotel-harkany-2048x1365.avif", "Világos, tiszta szobabelsőség természetes fénnyel.", true],
+    ["interior", "balatonfenyves-szobas-nyaralo_1.webp", "Narancs szoba tévével, szűkös tér.", false],
+    ["interior", "ametiszthtel-harkany-recepcio.1472x975.avif", "Közlekedési terület, sok bútor.", false],
+  ];
+  const wrongV = V.filter(([subject, file, reason, want]) => isBedroomVerdict({ subject, reason }, `https://x.hu/${file}`) !== want).map(([, f, r]) => `${f}: ${r.slice(0, 40)}`);
+  check("isBedroomVerdict: nappali/étkező/közös tér soha; háló-részletkép és „két ággyal” igen; virágágy, „virággal” nem; „szoba” fájlnév ítélet mellett is", wrongV.length === 0, wrongV);
+  // Rubin: 3 apartments stated, 2 bedroom photos → one card with the first bedroom (not 22, 16).
+  const P = (file: string, bedroom: boolean) => ({ url: `https://x.hu/${file}`, alt: "", bedroom });
+  const rubin = sampleRooms({ ...base, sampleRoomCount: 3, sampleUnitKind: "apartments", photos: [P("zalakaros-20.jpg", false), P("zalakaros-17.jpg", true), P("zalakaros-22.jpg", false), P("zalakaros-16.jpg", false), P("zalakaros-23.jpg", true)] } as never);
+  check("Rubin: 3 kimondott egység, 2 hálókép → egy kártya a 17-essel, nappali/étkező sehol", rubin.length === 1 && rubin[0]!.photo?.url.endsWith("zalakaros-17.jpg") === true, rubin.map((r) => r.photo?.url));
+  // After `--resample` the photos carry the bedroom flag WITHOUT a subject — still a verdict.
+  const resampled = sampleRooms({ ...base, photos: [P("ametiszt-hotel-utcafront.avif", false), P("franciaagyas-szoba.avif", false), P("szallas-harkany.avif", true)] } as never);
+  check("resample-alak (csak hálójel, tárgy nélkül): az ítélet dönt, nem a fájlnév", resampled[0]?.photo?.url.endsWith("szallas-harkany.avif") === true, resampled.map((r) => r.photo?.url));
+}
+
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");
 const panProfile = (title: string, description: string) => ({ name: title, portalProfiles: [{ matchBand: "high", title, url: "https://hovamenjek.hu/x", portal: "hovamenjek", amenities: ["Saját parkoló"], rooms: [], photos: [], reviews: [], prices: [], description }] });
 const panSrc = collectWriterSources(panProfile("Panoráma Vendégház", "Panoráma Vendégház – Szállás Dombóvár, Nyerges dűlő 2.. Nyitvatartás, elérhetőség, értékelések és fotók a Hovamenjek.hu-n. Foglaljon szállást Dombóváron egyszerűen és gyorsan.") as never, []);

@@ -239,7 +239,9 @@ const NAMED_NOT_ROOM = /(?:^|[^a-z])(?:furdo[a-z]*|bath[a-z]*|bad|wc|toalett|toi
  * `single`: the photo of a lone whole-place / kind card — the first such bedroom, or none.
  */
 function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo | undefined } {
-  const judged = d.photos.some((p) => p.subject !== undefined);
+  // `rerender-mock --resample` sets the bedroom flag without the subject (Ametiszt ce2f06ec,
+  // 2026-10-28): a flag alone is a verdict too, or the cards fall back to file names.
+  const judged = d.photos.some((p) => p.subject !== undefined || p.bedroom !== undefined);
   const cards = judged
     ? d.photos.filter((p) => p.bedroom)
     : d.photos.filter((p) => NAMED_BEDROOM.test(photoWords(p)) && !NAMED_NOT_ROOM.test(photoWords(p)));
