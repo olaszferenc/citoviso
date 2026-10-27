@@ -1,4 +1,4 @@
-## ADR-XXXX — A kiküldési sor sorrendje: a honlap nélküliek mennek elsőként
+## ADR-0409 — A kiküldési sor sorrendje: a honlap nélküliek mennek elsőként
 
 **Dátum:** 2026-10-27 · **Státusz:** elfogadva (lokál, nem élesítve) · Kiegészíti: ADR-0405 (automata kiküldés)
 

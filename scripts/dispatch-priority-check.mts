@@ -1,4 +1,4 @@
-// ADR-XXXX — the automatic outreach queue's ORDER (owner, 2026-10-27: „a honlap nélküliek
+// ADR-0409 — the automatic outreach queue's ORDER (owner, 2026-10-27: „a honlap nélküliek
 // mennek elsőként, és ha elfogytak, jöhetnek a többiek”).
 //
 // What this proves, on the real claim query (DISPATCH_PRIORITY):
@@ -34,7 +34,7 @@ const CASES = [
 ] as const;
 const EXPECTED = ["honlap nélküli, újabb", "csak portál (minősítetlen)", "elavult", "modern, legrégebbi", "minősítetlen, legrégebbi"];
 
-console.log("dispatch-sorrend: honlap nélküli elöl (ADR-XXXX)");
+console.log("dispatch-sorrend: honlap nélküli elöl (ADR-0409)");
 try {
   await db.transaction().execute(async (trx) => {
     const free = await trx

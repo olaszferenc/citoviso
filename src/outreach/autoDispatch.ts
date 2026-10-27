@@ -31,7 +31,7 @@ import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 
 /**
- * ADR-XXXX — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
+ * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
  * elfogytak, jöhetnek a többiek”). A claim takes the best-placed lead first:
  *   0 — no own site (lead.qualification no_site, or raw.websiteStatus none / portal_only),
  *   1 — an outdated own site, 2 — a modern own site, 3 — not classified;
@@ -202,7 +202,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   const sent = await sentToday();
   if (sent >= settings.dailyCap) return { kind: "cap", sent, cap: settings.dailyCap };
 
-  // Claim the best-placed queued row (DISPATCH_PRIORITY: no own site first, ADR-XXXX), the oldest
+  // Claim the best-placed queued row (DISPATCH_PRIORITY: no own site first, ADR-0409), the oldest
   // within its rank; an overlapping tick finds nothing (SKIP LOCKED + status flip).
   const claimed = await db.transaction().execute(async (trx) => {
     const row = await trx
