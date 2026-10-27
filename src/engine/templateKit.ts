@@ -223,7 +223,9 @@ function photoWords(p: Photo): string {
   try { file = decodeURIComponent(file); } catch { /* keep the raw name */ }
   return `${file} ${p.alt}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
-const NAMED_BEDROOM = /(?:^|[^a-z])(?:szoba[a-z]*|haloszoba[a-z]*|halo|bedroom|schlafzimmer|zimmer|room)(?:$|[^a-z])/;
+// „ágy” folded is „agy”: a word START is required, so „nagy” never reads as a bed (coordinator 2026-10-27:
+// szoba, hálószoba, haloszoba, bedroom, ágy, franciaágy).
+const NAMED_BEDROOM = /(?:^|[^a-z])(?:szoba[a-z]*|haloszoba[a-z]*|halo|bedroom|schlafzimmer|zimmer|room|agy(?:as|ak|akkal|gyal|ban)?|franciaagy[a-z]*|ketagyas|haromagyas)(?:$|[^a-z])/;
 const NAMED_NOT_ROOM = /(?:^|[^a-z])(?:furdo[a-z]*|bath[a-z]*|bad|wc|toalett|toilet|konyha[a-z]*|kitchen|kuche|nappali|living|wohnzimmer|etkezo|dining|bejarat)(?:$|[^a-z])/;
 
 /**

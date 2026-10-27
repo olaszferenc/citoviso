@@ -498,6 +498,11 @@ console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép 
   const amCards = sampleRooms({ ...base, name: "Ametiszt Hotel Harkány", photos: ametiszt, sampleUnitKind: "rooms" });
   check("Ametiszt: ítélet nélkül a „…-szoba” nevű kép a kártyakép (nem az őszi kert, nem a recepció, nem a fürdőszoba)",
     /franciaagyas-szoba|csaladi-szoba/.test(amCards[0]!.photo?.url ?? ""), amCards[0]!.photo?.url);
+  // Coordinator 2026-10-27: „ágy”, „franciaágy” name a bedroom too; „nagy” is not a bed.
+  const bed = (f: string, alt = "") => sampleRooms({ ...base, photos: [{ url: `https://x.hu/${f}`, alt }] })[0]!.photo?.url;
+  check("ítélet nélkül: „franciaagy.jpg”, „Kétágyas szoba” alt, „agy-2.jpg” → kártyakép; „nagy-terasz.jpg” nem",
+    !!bed("franciaagy-1.jpg") && !!bed("x1.jpg", "Kétágyas szoba") && !!bed("agy-2.jpg") && !bed("nagy-terasz.jpg") && !bed("IMG_0042.jpg", "Nagy kert"),
+    [bed("franciaagy-1.jpg"), bed("x1.jpg", "Kétágyas szoba"), bed("agy-2.jpg"), bed("nagy-terasz.jpg"), bed("IMG_0042.jpg", "Nagy kert")]);
   const badacsony = sampleRooms({ ...base, photos: [{ url: "https://x.hu/Badacsony-szoba-1.jpg", alt: "" }] });
   check("⛔ a „Badacsony” nem „bad” (fürdő-jel): a „szoba” nevű kép kártyakép", badacsony[0]!.photo?.url === "https://x.hu/Badacsony-szoba-1.jpg", badacsony[0]!.photo?.url);
 }
