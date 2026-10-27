@@ -1,8 +1,8 @@
 # Bábel — fordítói ontológia (a Citoviso világa, ahogy a fordítónak tudnia kell)
 
-> Ezt a fájlt Bábel gondozza (`babel/charter/`). A fordító-motor MINDEN fordítás rendszerpromptjába
-> betölti (prompt-cache-elve), a glosszáriummal (`glossary.json`) együtt. Rövid marad: amit ide írsz,
-> az minden hívás bemenete.
+> Ezt a fájlt Bábel gondozza (`babel/charter/`), a glosszáriummal (`glossary.json`) együtt. Bábel minden
+> fordítás előtt ezt olvassa a saját sessionjében — gépi fordító-motor nincs (ADR-0412: fordítás
+> API-hívással TILOS). Rövid marad: a lényeg, nem a részletek.
 
 ## Mi a Citoviso
 

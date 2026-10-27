@@ -16,6 +16,10 @@ npx tsx scripts/i18n-pack-status.mts            # nyelvenként: hiányzó felira
 npx tsx scripts/babel-pack.mts audit <nyelv>    # glosszárium-eltérések a meglévő csomagban ($0)
 ```
 
+⚠️ Ezek a DEV DB-t olvassák (amire az env mutat), és az elavult lehet (2026-10-27: dev `en` 1376 hiány,
+élesen 0). Élő nyelvnél (`en`, `sl`) az ÉLES csomag számít: olvasd ki (csak olvasás, `psql … select
+strings from language_pack where lang='…'`), és a mostani `src/i18n/catalog.json`-hoz mérd.
+
 ## 2. Egy nyelv teljes csomagja (vagy egy felület)
 
 1. **Export** — mit kell fordítani, felülettel:

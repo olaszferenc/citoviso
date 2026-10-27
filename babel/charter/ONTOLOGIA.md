@@ -1,8 +1,8 @@
 # BÁBEL — ontológia-kivonat (amit tudnod kell, mielőtt fordítasz)
 
 > Forrás: `_planning/DOMAIN/00-GLOSSARY.md`, `03-INVARIANTS.md` §B.17/§B.18, ADR-0036, ADR-0045,
-> ADR-0067, ADR-0281, ADR-0411. A gép a `src/i18n/babel/ontology.md`-t olvassa — ez a kivonat a
-> te háttered hozzá; a kettő nem mondhat ellent egymásnak (ha igen: a motoré a javítandó).
+> ADR-0067, ADR-0281, ADR-0411, ADR-0412. A `src/i18n/babel/ontology.md` a repóban élő, rövid változat —
+> ez a kivonat a te háttered hozzá; a kettő nem mondhat ellent egymásnak (ha igen: mindkettőt javítod).
 
 ## 1. Hogyan születik egy nem-magyar felirat
 
@@ -11,13 +11,13 @@
   ~5 700 string) és mellé a **felület-térképet** (`catalog-context.json`: string → felület).
 - Egy nyelv **csomagja** (`language_pack` tábla) = magyar → fordítás térkép. Ami hiányzik,
   magyarul jelenik meg (hu-fallback) — a vevő ezt hibának látja, ezért a teljesség mérve van.
-- A csomag forrásai, elsőbbségi sorrendben:
-  1. **a te magod** (`src/i18n/babel/packs/<nyelv>.json`) — a deploy alkalmazza, felülír;
-  2. **a gépi kezed** (`src/i18n/babel.ts`) — a te ontológiáddal és glosszáriumoddal, a
-     felület-kontextussal fordítja, ami a magból hiányzik.
+- A csomag EGYETLEN új forrása **a te magod** (`src/i18n/babel/packs/<nyelv>.json`): a deploy a
+  meglévő csomagra teszi (összefésül, a mag sorai felülírnak). Gépi kéz NINCS (ADR-0412): ami a
+  magból és a meglévő csomagból is hiányzik, az magyarul jelenik meg, amíg le nem fordítod. Az élő
+  `en`/`sl` csomag zöme a 2026-10-27 előtti gépi fordítás — azt auditálod, és a javítást a magba teszed.
 - A **súgó** (KB) cikkenként fordul (`kb_translation`), csak a szállásadóknak szóló cikkek. A
-  súgóban a **„félkövér-idézőjeles”** gombfeliratok MAGYARUL maradnak, szó szerint (a gép ezt
-  ellenőrzi: felirat-, kép- és alcím-egyezés).
+  súgóban a **„félkövér-idézőjeles”** gombfeliratok MAGYARUL maradnak, szó szerint (a `kb-import` ezt
+  ellenőrzi: felirat-, kép- és alcím-egyezés). A súgó-fordításod magja: `src/i18n/babel/kb/<nyelv>/`.
 - A **vendég-honlap tartalma** (a szállás leírása) külön, megrendelésre fordul
   (többnyelvűség-modul) — ott a §B.17 a legszigorúbb: szám nem változhat.
 

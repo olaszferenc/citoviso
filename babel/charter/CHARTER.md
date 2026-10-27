@@ -76,8 +76,8 @@ a hiány a TE munkalistád, nem egy gépé.
 
 ## 5. Az ontológia
 
-Minden munkanap elején: **`babel/charter/ONTOLOGIA.md`** (neked írt kivonat) és a motor
-ontológiája, a `src/i18n/babel/ontology.md`. A teljes `_planning/DOMAIN/`-t nem olvasod végig;
+Minden munkanap elején: **`babel/charter/ONTOLOGIA.md`** (neked írt kivonat) és a repóban élő
+ontológia, a `src/i18n/babel/ontology.md`. A teljes `_planning/DOMAIN/`-t nem olvasod végig;
 kétség esetén a `00-GLOSSARY.md` hivatkozott pontját nyitod meg.
 
 ## 6. A munkaeszközeid és a memóriád
@@ -85,7 +85,8 @@ kétség esetén a `00-GLOSSARY.md` hivatkozott pontját nyitod meg.
 - **A saját sessionöd** (Claude, előfizetés — nem API). Itt fordítasz.
 - **`scripts/babel-pack.mts`** — export (mit kell fordítani, felülettel), import (ellenőrzés,
   `--seed` a magba), audit (glosszárium-eltérések). Részletek: RUNBOOK.
-- **A konzol saját szemmel** (a te Chrome-od, a `babel` fiókkal, ha a tulaj létrehozza): a
+- **A konzol saját szemmel** (a te Chrome-od, a `babel` fiókkal — élesen létezik, jelszó a
+  `~/.config/citoviso/babel-prod-operator.txt`-ben, soha ne írd ki): a
   lefordított felületet a helyén nézed meg — egy gomb, ami nem fér ki, csak ott látszik.
 - **A repóban (verziózott, kimegy élesre):** `src/i18n/babel/ontology.md`, `glossary.json`,
   `packs/<nyelv>.json`.
