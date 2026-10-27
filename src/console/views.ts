@@ -146,7 +146,8 @@ import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
 import { config } from "../config.js";
-import { uiLangs } from "../i18n/lang.js";
+import { langName, uiLangs } from "../i18n/lang.js";
+import { packGapSync } from "../i18n/packs.js";
 import { consoleAi, consoleLang, consoleNav } from "./i18nCtx.js";
 import {
   capReachedMessage,
@@ -582,7 +583,25 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
     // Prospect/tenant-facing page inside the console server: brand only, no operator menu.
     return `${head}<body class="con con--plain"><header class="con-top con-top--plain">${BRAND}</header><main class="con-main"><div class="con-main__in">${body}</div></main></body></html>`;
   }
-  return `${head}<body class="con">${frame(title, body, opts.active, lang)}</body></html>`;
+  return `${head}<body class="con">${frame(title, packNotice(lang) + body, opts.active, lang)}</body></html>`;
+}
+
+/**
+ * ADR-0411/0412: the operator's language has strings Bábel has not translated yet — they
+ * render in Hungarian (nothing translates them by API). Says so, so the mixed screen reads
+ * as "not translated yet", not as a broken language switch.
+ */
+function packNotice(lang: string): string {
+  const gap = packGapSync(lang);
+  if (!gap || gap.missing <= 0) return "";
+  return aiMsg(
+    "warn",
+    T(lang, "Nyelvi csomag — {nyelv}: {n} felirat még nincs lefordítva, ezek addig magyarul jelennek meg.", {
+      nyelv: langName(lang),
+      n: gap.missing,
+    }),
+    ' style="margin:0 0 12px"',
+  );
 }
 
 /**

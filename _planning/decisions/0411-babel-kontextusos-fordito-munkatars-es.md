@@ -56,8 +56,8 @@ rendszerprompttal: nem tudta, hol jelenik meg a szöveg, és mit jelent egy szó
 2. **A kérés nem vár fordításra.** A konzol-nyelvváltás és a konzol-oldalrender (operátor-betöltés)
    `prepareRenderLang`-ot hív: betölti a csomagot, és ha hiányos, a HÁTTÉRBEN egyszer elindítja
    (`requestLanguagePack`); addig a hiányzó feliratok magyarul jelennek meg.
-   **Függőben (külön commit):** (a) a konzol „készül” sávja (`packGapSync` kész) — felület-változás, a
-   §2b-kapu a tulaj kivételét kéri; (b) ugyanez a szállásadói admin / login / felfüggesztett-oldal
+   **Pótolva (2026-10-27, tulaj-kivétel):** (a) konzol-sáv „N felirat még nincs lefordítva” (ADR-0412 után
+   nincs „háttérben készül”); **függőben:** (b) ugyanez a szállásadói admin / login / felfüggesztett-oldal
    renderre a `public.ts`-ben — a `booking-outcome-truth-check` kapu ma (hónapvég) a tiszta mainen is
    piros, ezért csak utána mehet. Addig ezek a single-flight védelme alatt várnak, de nem indítanak újat. A levelek (`prepareMailLang`) várnak — egy levél
    inkább késsen, mint félig magyarul menjen —, de a single-flight miatt soha nem indítanak újat.

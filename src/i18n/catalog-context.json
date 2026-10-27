@@ -4694,6 +4694,7 @@
 "number":"admin+honlap",
 "Ny":"konzol",
 "Nyelv":"konzol",
+"Nyelvi csomag — {nyelv}: {n} felirat még nincs lefordítva, ezek addig magyarul jelennek meg.":"konzol",
 "Nyelvi változatok:":"admin",
 "nyilvános":"honlap",
 "nyilvánosan elérhető":"konzol",
