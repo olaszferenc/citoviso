@@ -18,7 +18,8 @@ Session: cit75f909e8 (diszpécser / deploy / éles üzem). Koordinátor: cita291
 - gépen: `~/rc-briefs/watch/sorba.sh` (nice 19), `~/rc-briefs/watch/cap-vissza-150.sh` (lefutott); élesen: `/root/rs-safe.sh`, `/tmp/rec-review.mts`, `/tmp/set-photo-alt.mts`, `/swapfile`
 
 ## Nyitott / következő lépés
-- Következő deploy-jelölt: origin/main bbf211c4 (+784e8d65; szobakártya bedroom-jel a friss generálásnál, AVIF→JPEG, szigorú kártyakép, Diviák, SEO-alt szűrő, dispatch-prioritás ADR-0409) + a robots-commit, amint landol. Tulaj-engedély kell.
+- Következő deploy-jelölt: origin/main 22473201 (robots ADR-0410 + bbf211c4 + 784e8d65; szobakártya bedroom-jel a friss generálásnál, AVIF→JPEG, szigorú kártyakép, Diviák, SEO-alt szűrő, dispatch-prioritás ADR-0409) + a robots-commit, amint landol. Tulaj-engedély kell.
 - Utána: `--resample` a 14:00 UTC után generált mockokra (a `/root/rs-safe.sh` listáján már rajta vannak, de a javított kóddal újra kell), sima rerender a SEO-altos 24 mockra, `--rehero` az Ametisztre és a 36 > 20 képes „error” mockra (~$0,5, csak ki nem küldött linken), Diviák + Apartman Éva link-behúzás.
+- Kártyakép (koordinátor (b) út, fizetős képelemzés NINCS): deploy után resample a TARTVA-listára — Ametiszt ce2f06ec, Abi-Lo 9a5834c9, Szép Zalában 9050baa8, Teresa 954e80e9 (+ Vera bővítése a -bb-től); a --rehero sor ezzel tárgytalan.
 - Held: Oázis 7189665e, Belvárosi 5c01e332, Party 27f36367 (kártyakép) → resample után Vera2, ha PASS: requeue. Ametiszt, Abi-Lo, Sárgarózsa TARTVA a következő deployig.
 - A `/root/rs-safe.sh` éjjel tovább fut (500/1691 volt zárásnál), folytatható.
