@@ -197,11 +197,21 @@ export function sampleRooms(d: SiteData): readonly Room[] {
     return { ...card, name, amenities: [] };
   });
   if (!d.photos.length) return base;
-  const offset = d.photos.length > base.length + 1 ? 2 : 0;
-  return base.map((r, i) => {
-    const p = d.photos[(offset + i) % d.photos.length]!;
-    return { ...r, photo: { ...p, alt: T(d, "Minta — {name}", { name: r.name }) } };
-  });
+  const pick = roomCardPhotos(d, base.length);
+  return base.map((r, i) => ({ ...r, photo: { ...pick(i), alt: T(d, "Minta — {name}", { name: r.name }) } }));
+}
+
+/**
+ * The gallery photo for the i-th room card. A room card shows an INSIDE photo: where the
+ * vision verdict marked interiors, the cards cycle through those only (Centrum 3d5e8bb1,
+ * 2026-10-27: „1.–5. szoba” wore the house's facade shots). No verdict, or no interior at
+ * all → the whole gallery, skipping the first two (hero) photos when there are enough.
+ */
+function roomCardPhotos(d: SiteData, cards: number): (i: number) => Photo {
+  const inside = d.photos.filter((p) => p.subject === "interior");
+  if (inside.length) return (i) => inside[i % inside.length]!;
+  const offset = d.photos.length > cards + 1 ? 2 : 0;
+  return (i) => d.photos[(offset + i) % d.photos.length]!;
 }
 
 /**
@@ -217,17 +227,9 @@ export function sampleRooms(d: SiteData): readonly Room[] {
 export function roomsForMock(d: SiteData): readonly Room[] {
   if (!d.rooms?.length) return sampleRooms(d);
   if (!d.photos.length) return d.rooms;
-  const offset = d.photos.length > d.rooms.length + 1 ? 2 : 0;
+  const pick = roomCardPhotos(d, d.rooms.length);
   return d.rooms.map((r, i) =>
-    r.photo
-      ? r
-      : {
-          ...r,
-          photo: {
-            ...d.photos[(offset + i) % d.photos.length]!,
-            alt: T(d, "Minta — {name}", { name: r.name }),
-          },
-        },
+    r.photo ? r : { ...r, photo: { ...pick(i), alt: T(d, "Minta — {name}", { name: r.name }) } },
   );
 }
 

@@ -175,6 +175,29 @@ export function roomCountContradicted(count: number, descriptions: readonly stri
 }
 
 /**
+ * Is the stated count the ROOMS INSIDE apartments, not bookable units? Centrum 3d5e8bb1
+ * (2026-10-27): „ez az 5 szobás … vendégház. A … apartmanok összesen 15 fő …”; Zöldike
+ * f5230165: „2 db … apartmanunkban összesen 5 szoba található” — both mocks showed
+ * „1.–5. szoba” cards. True when the count stands before a ROOM word in the prose and the
+ * units are apartments (the prose's unit kind, or — kind unknown — „apartman” in that same
+ * sentence). Rooms let as rooms (kind "rooms"/"both") keep their count.
+ * A number before „apartman” is an apartment count and is never caught here.
+ */
+export function roomCountInsideApartments(
+  count: number,
+  descriptions: readonly string[],
+  unitKind: "rooms" | "apartments" | "both" | null,
+): boolean {
+  const ROOMS_N = new RegExp(`(?<![\\d.,])${count}\\s*(?:db\\.?\\s+|darab\\s+)?(?:[a-z]+\\s+){0,2}?szob`);
+  for (const d of descriptions) {
+    for (const sentence of fold(d).split(/[.!?;\n]+/)) {
+      if (ROOMS_N.test(sentence) && (unitKind === "apartments" || (unitKind === null && /apartman/.test(sentence)))) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Is the property let ONLY as a whole? Measured 2026-10-21, Szömörce fe105370: „Csak egyben
  * adjuk ki, így a ház és a kert … csak a tiétek” — yet the mock showed four separately
  * bookable „1.–4. szoba” cards from the four bedrooms. A whole-only house has ONE bookable

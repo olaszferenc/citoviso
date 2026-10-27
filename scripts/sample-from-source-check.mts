@@ -33,6 +33,7 @@ import path from "node:path";
 import {
   deniedSampleTypes,
   roomCountContradicted,
+  roomCountInsideApartments,
   sampleAmenityItems,
   unitNamesFromProse,
   unitKindOf,
@@ -41,7 +42,7 @@ import {
 } from "../src/engine/sampleFromSource.js";
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
-import { contactPhotoOf, sampleRooms } from "../src/engine/templateKit.js";
+import { contactPhotoOf, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -342,7 +343,7 @@ check("generateEngine hívja: unitNamesFromProse · deniedSampleTypes · sampleF
 const rr = readFileSync(path.join(import.meta.dirname, "rerender-mock.mts"), "utf8");
 check("rerender-mock --resample az egységtípust is cseréli", /sampleUnitKind: _k/.test(readFileSync(path.join(import.meta.dirname, "rerender-mock.mts"), "utf8")));
 check("generateEngine: csak-egész háznál nincs számozott minta-szoba (wholeLetOnly)",
-  /wholeLetOnly\(/.test(gen) && /&& !wholeOnly \?/.test(gen));
+  /wholeLetOnly\(/.test(gen) && /&& !wholeOnly(?: \?| &&)/.test(gen));
 check("rerender-mock --resample ugyanazt a sampleHintsOf()-ot futtatja", /--resample/.test(rr) && /sampleHintsOf\(/.test(rr));
 check("a minta a leírás-tényt csak saját tulajdonításnál veszi át (generateEngine + --resample)",
   /descriptionFactIsOwn\(/.test(gen) && /descriptionFacts: sources\.descriptionFacts/.test(gen) && /descriptionFacts: sources\.descriptionFacts/.test(rr));
@@ -383,6 +384,37 @@ check("„Flat-screen TV” → „Síkképernyős TV”, „Air conditioning”
   breezeItems.includes("Síkképernyős TV") && breezeItems.includes("Légkondicionálás") && breezeItems.includes("Terasz") && !breezeItems.some((i) => ["Flat-screen TV", "Air conditioning", "Patio", "Terrace"].includes(i)), breezeItems);
 check("⛔ „Private beach” nem fordítódik Strandra (a Balaton-parti hirdetésen ez a közeli strand)", !breezeItems.some((i) => /strand|beach/i.test(i)), breezeItems);
 check("⛔ a magyar tételek érintetlenek", sampleFacilityItems(["Saját parkoló", "Klíma", "Síkképernyős TV"]).join("|") === "Saját parkoló|Klíma|Síkképernyős TV");
+
+console.log("⑪ apartmanon belüli szobaszám nem egységszám; a szobakártyán belső kép (Centrum 3d5e8bb1, Zöldike f5230165)");
+const CENTRUM = ["Gyönyörű virágos udvarral, Tihany ófalujában várja vendégeit ez az 5 szobás, minden igényt kielégítő vendégház. A modern, igényesen berendezett, fürdőszobával, konyhával rendelkező apartmanok összesen 15 fő kényelmes elhelyezésére alkalmasak."];
+const ZOLDIKE = ["A hegyvidéken elhelyezkedő település tökéletes célpont. 2 db külön bejáratú, egyenként közel 100 nm-es, saját nappalival, jól felszerelt konyhával, étkezővel és fürdővel rendelkező apartmanunkban összesen 5 szoba található."];
+const counted5 = (name: string, ev: string, descriptions: string[]) =>
+  sampleHintsOf({ name, portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 5, evidence: ev } }] } as never, "hu", { listedAmenities: [], amenities: [], descriptions }).hints;
+const centrumH = counted5("Centrum Vendégház", "ez az 5 szobás", CENTRUM);
+check("Centrum: „5 szobás vendégház … apartmanok” → nincs „1.–5. szoba”, egy „Apartmanok” kártya",
+  !centrumH.sampleRoomCount && sampleRooms({ ...base, ...centrumH }).map((r) => r.name).join("|") === "Apartmanok", centrumH);
+const zoldikeH = counted5("Zöldike Vendégház", "összesen 5 szoba", ZOLDIKE);
+check("Zöldike: „2 db … apartmanunkban összesen 5 szoba” → nincs „1.–5. szoba”, egy kártya",
+  !zoldikeH.sampleRoomCount && sampleRooms({ ...base, ...zoldikeH }).length === 1, zoldikeH);
+check("Elza / János: „Az apartmanban 2 szoba”, „A 8 szobás apartman” → apartmanon belüli",
+  roomCountInsideApartments(2, ["Az apartmanban 2 szoba található, melyben 4+1 fő fér el."], null) &&
+    roomCountInsideApartments(8, ["A 8 szobás apartman kényelmes elhelyezkedéssel büszkélkedhet."], null));
+const panzio5 = counted5("Rózsa Panzió", "5 szobás", ["Panziónk 5 szobás, a szobák külön foglalhatók."]);
+check("⛔ kiadott szobák száma marad („Panziónk 5 szobás”) → 5 számozott kártya", panzio5.sampleRoomCount === 5, panzio5);
+check("⛔ apartman-darabszám nem szobaszám („3 apartmanban 13 fő”), és a „both” szobaszáma marad",
+  !roomCountInsideApartments(3, ["3 apartmanban kínál szállást 13 személynek."], "apartments") &&
+    !roomCountInsideApartments(6, ["6 szobánk és 2 apartmanunk várja a vendégeket. Kétágyas szobák foglalhatók."], "both"));
+const sub = (subject: string, i: number) => ({ url: `https://x.hu/${subject}-${i}.jpg`, alt: "", subject });
+const centrumPhotos = [sub("exterior", 1), sub("exterior", 2), sub("exterior", 3), sub("pool_garden", 4), sub("interior", 5), sub("bathroom", 6), sub("interior", 7)];
+const fiveCards = sampleRooms({ ...base, photos: centrumPhotos, sampleRoomCount: 3 });
+check("szobakártyán csak „interior” tárgyú kép (homlokzat, kert, fürdő nem)",
+  fiveCards.every((r) => /interior/.test(r.photo?.url ?? "")), fiveCards.map((r) => r.photo?.url));
+const realRooms = roomsForMock({ ...base, photos: centrumPhotos, rooms: [{ name: "Tölgy" }, { name: "Bükk" }] as never });
+check("valós (kép nélküli) szobán is belső kép", realRooms.every((r) => /interior/.test(r.photo?.url ?? "")), realRooms.map((r) => r.photo?.url));
+const noVerdict = sampleRooms({ ...base, photos: [1, 2, 3, 4, 5].map((i) => ({ url: `https://x.hu/${i}.jpg`, alt: "" })), sampleRoomCount: 2 });
+check("⛔ tárgy-ítélet nélkül a régi sor (az első két kép kimarad)", noVerdict.map((r) => r.photo?.url).join("|") === "https://x.hu/3.jpg|https://x.hu/4.jpg", noVerdict.map((r) => r.photo?.url));
+const allOut = sampleRooms({ ...base, photos: [sub("exterior", 1), sub("view", 2)], sampleRoomCount: 2 });
+check("⛔ belső kép nélkül is kap képet a kártya (ADR-0059 ③: ikonos kártya nincs)", allOut.every((r) => r.photo), allOut.map((r) => r.photo?.url));
 
 if (failures) {
   console.error(`\n❌ sample-from-source-check: ${failures} bukás`);

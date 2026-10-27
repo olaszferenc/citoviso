@@ -9,7 +9,7 @@
 // confidence rule can never drift between the two paths.
 
 import { hungarianBedNote, hungarianRoomName } from "../engine/roomNames.js";
-import { deniedSampleTypes, roomCountContradicted, unitKindOf, unitNamesFromProse, wholeLetOnly, wholeLetStated } from "../engine/sampleFromSource.js";
+import { deniedSampleTypes, roomCountContradicted, roomCountInsideApartments, unitKindOf, unitNamesFromProse, wholeLetOnly, wholeLetStated } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
@@ -171,7 +171,12 @@ export function sampleHintsOf(
       // SHAPE of the property is true even where the names are not known.
       // ONE unit is the whole place, not „1. szoba” with its own Foglalás (Francia ház
       // e0d06c0f, 2026-10-26: booked.hu JSON-LD numberOfRooms 1 = the apartment's bedroom).
-      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly ? { sampleRoomCount: units.count } : {}),
+      // Rooms counted INSIDE apartments („2 db apartmanunkban összesen 5 szoba”) are no
+      // bookable units either (Zöldike f5230165, Centrum 3d5e8bb1, 2026-10-27).
+      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly &&
+        !roomCountInsideApartments(units.count, sources.descriptions, sampleUnitKind === "whole" ? null : sampleUnitKind)
+        ? { sampleRoomCount: units.count }
+        : {}),
       // Unit names from the owner's prose (Hungarian only — the type word is Hungarian)
       // beat a bare count.
       ...(!units.rooms.length && lang === DEFAULT_LANG && sampleRoomNames.length ? { sampleRoomNames } : {}),
