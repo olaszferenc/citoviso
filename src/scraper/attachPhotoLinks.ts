@@ -27,7 +27,7 @@
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, readPortalListing } from "./sources/portalListing.js";
-import { deaccent } from "./enrichPresence.js";
+import { deaccent, hasNameWord } from "./enrichPresence.js";
 import { mergeListings, mergeProfiles } from "./enrichPortal.js";
 import { buildMaterial } from "./enrichMaterial.js";
 import { portalPhotoCount, profilesAwaitingApproval } from "./portalPhotos.js";
@@ -237,7 +237,7 @@ export async function readOwnSitePhotos(
     if (nameInDomain && townTokens.some((t) => hay.includes(t))) return true;
     const digits = (lead.phone ?? "").replace(/\D/g, "");
     const phoneOnPage = digits.length >= 9 && textOf(html).replace(/\D/g, "").includes(digits.slice(-9));
-    return phoneOnPage && brandTokens(lead.name).some((t) => hay.includes(t));
+    return phoneOnPage && brandTokens(lead.name).some((t) => hasNameWord(hay, t));
   };
 
   let candidates = ownSiteImages(page.html, page.finalUrl);

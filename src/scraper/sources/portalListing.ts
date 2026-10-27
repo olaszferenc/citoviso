@@ -26,7 +26,7 @@
 // by the extractor at the point of ingest — see extract.ts/toPortalPhotos.
 
 import { scorePortalMatch, type MatchConfidence } from "../confidence.js";
-import { deaccent, geoTerms, searchPlace, tokens, verify } from "../enrichPresence.js";
+import { deaccent, geoTerms, hasNameWord, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
@@ -51,7 +51,7 @@ const TYPE_WORD = new Set([
 
 /** The lead's identifying words — what a listing must actually be about. */
 export function brandTokens(name: string): string[] {
-  return tokens(name).filter((t) => t.length >= 4 && !GENERIC_NAME_WORD.has(t));
+  return nameWords(name).filter((t) => t.length >= 4 && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
 }
 
 /** Type words present in a name, deaccented. */
@@ -112,7 +112,7 @@ export function nameCoverage(leadName: string, listingText: string): number {
   const brand = brandTokens(leadName);
   if (!brand.length) return 0;
   const hay = deaccent(listingText.toLowerCase());
-  const hit = brand.filter((t) => hay.includes(t)).length;
+  const hit = brand.filter((t) => hasNameWord(hay, t)).length;
   return hit / brand.length;
 }
 
@@ -270,7 +270,7 @@ export async function readPortalListing(
   // identifies ONE business worldwide, so this is the hardest identity evidence
   // a listing can carry.
   const phoneOnPage = leadPhone ? pageText.replace(/\D/g, "").includes(leadPhone) : false;
-  const brandOnPage = brandTokens(lead.name).some((t) => haystack.includes(t));
+  const brandOnPage = brandTokens(lead.name).some((t) => hasNameWord(haystack, t));
 
   // Same brand+town proof the presence layer uses (§F.14 / ADR-0043): the town
   // anchor is the lead's OWN city, never the region label.

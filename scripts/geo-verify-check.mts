@@ -16,6 +16,7 @@
 
 import { geoTerms, searchPlace, verify } from "../src/scraper/enrichPresence.js";
 import { domainCarriesBrand } from "../src/scraper/enrichSiteSearch.js";
+import { brandTokens, nameCoverage } from "../src/scraper/sources/portalListing.js";
 import type { Region } from "../src/scraper/types.js";
 
 /** The radius region every case below belongs to — one label, many towns. */
@@ -166,6 +167,38 @@ for (const c of BRAND_CASES) {
   );
 }
 
+// ── Hyphenated short-part brand names (2026-10-27) ───────────────────────────────
+// The portal link-attach answered 422 "a lead neve csupa általános szó" for
+// "Abi-Lo Vendégház" (9a5834c9, Nagypeterd) and "Li-di Apartman" (77207ad0, Kalocsa):
+// tokens() split at the dash and every part fell under the 4-letter brand floor.
+// The compound is ONE brand word, found on the page with a dash, a space or as one
+// word — but not across a word boundary inside other text.
+const COMPOUND_CASES: { name: string; text: string; geo: string[]; expect: boolean; why: string }[] = [
+  { name: "Abi-Lo Vendégház", text: "<h1>Abi-Lo Vendégház</h1><p>7980 Nagypeterd, Szőlőhegy 343</p>", geo: ["nagypeterd"], expect: true, why: "kötőjellel, ahogy a lead" },
+  { name: "Abi-Lo Vendégház", text: "<h1>AbiLo vendégház</h1><p>Nagypeterd</p>", geo: ["nagypeterd"], expect: true, why: "egybeírva" },
+  { name: "Li-di Apartman", text: "<h1>Li Di Apartman</h1><p>6300 Kalocsa, Kossuth Lajos u. 12</p>", geo: ["kalocsa"], expect: true, why: "szóközzel" },
+  { name: "Li-di Apartman", text: "<h1>Kalocsai apartman</h1><p>Kalocsa, falidísz a szobában</p>", geo: ["kalocsa"], expect: false, why: "„falidísz” nem a „Li-di”" },
+  { name: "Abi-Lo Vendégház", text: "<h1>Vendégház</h1><p>Nagypeterd</p>", geo: ["nagypeterd"], expect: false, why: "márka nélkül csak a köznév" },
+];
+for (const c of COMPOUND_CASES) {
+  const brand = brandTokens(c.name);
+  const got = brand.length > 0 && verify(c.name, c.geo, c.text) && nameCoverage(c.name, c.text) === 1;
+  const ok = brand.length > 0 && got === c.expect;
+  if (!ok) failed++;
+  console.log(
+    `${ok ? "✓" : "✗ FAIL"}  [kötőjeles márka] ${c.name} · márkaszó: ${JSON.stringify(brand)}\n` +
+      `     várt: ${c.expect ? "EGYEZIK" : "NEM EGYEZIK"} · kapott: ${got ? "EGYEZIK" : "NEM EGYEZIK"} — ${c.why}\n`,
+  );
+}
+// Not brands: an ordinal ("11-es"), roman unit numbers, a feature word (Wi-Fi).
+for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi"]) {
+  const expectEmpty = n === "Apartman Vendégház" || n === "B-B Apartman";
+  const brand = brandTokens(n);
+  const ok = expectEmpty ? brand.length === 0 : !brand.some((t) => t.includes("-") || t === "wifi");
+  if (!ok) failed++;
+  console.log(`${ok ? "✓" : "✗ FAIL"}  [kötőjeles márka] ${n} → nem márkaszó a kötőjeles/jellemző szó (${JSON.stringify(brand)})\n`);
+}
+
 if (failed) {
   console.error(
     `⛔ ${failed} eset megbukott — a geo-horgony vagy a márka-korroboráció visszaesett.`,
@@ -173,5 +206,5 @@ if (failed) {
   process.exit(1);
 }
 console.log(
-  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset rendben.`,
+  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 5} kötőjeles-márka eset rendben.`,
 );

@@ -44,6 +44,39 @@ export function tokens(s: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Name words for brand matching: tokens(), except that a hyphenated compound made of
+ * SHORT parts only ("Abi-Lo", "Li-di") stays one word, "abi-lo". Split, every part fell
+ * under the 4-letter brand floor and the lead read as "csupa általános szó" (portal
+ * link-attach 422, 2026-10-27: Abi-Lo Vendégház 9a5834c9, Li-di Apartman 77207ad0).
+ * A compound with a long part ("Kis-Balaton") or a numeric part ("11-es") keeps
+ * splitting as before.
+ */
+export function nameWords(s: string): string[] {
+  const out: string[] = [];
+  for (const chunk of deaccent(s.toLowerCase()).split(/[^a-z0-9\-–]+/)) {
+    const parts = chunk.split(/[-–]+/).filter(Boolean);
+    // Every part starts with a letter: "11-es" is an ordinal, "3-4" a capacity; and
+    // "I-II-III" (unit numbers in roman) is no brand either.
+    if (
+      parts.length > 1 &&
+      parts.every((p) => p.length < 4 && /^[a-z]/.test(p)) &&
+      !parts.every((p) => /^[ivx]+$/.test(p)) &&
+      parts.join("").length >= 4
+    ) {
+      out.push(parts.join("-"));
+    } else out.push(...parts);
+  }
+  return out;
+}
+
+/** Does deaccented, lowercased `text` carry name word `w`? A compound ("abi-lo") also
+ *  matches written with a space, a dash or as one word ("Abi Lo", "AbiLo"). */
+export function hasNameWord(text: string, w: string): boolean {
+  if (!w.includes("-")) return text.includes(w);
+  return new RegExp(`(?:^|[^a-z0-9])${w.split("-").join("[\\s\\-–]?")}(?:$|[^a-z0-9])`).test(text);
+}
+
 // Region terms a page must contain to confirm geo-match: the region id/label
 // tokens (>=4 chars). "badacsony" matches "Badacsonytomaj", "Badacsonyörs" too.
 export function regionTerms(region: Region): string[] {
@@ -180,8 +213,8 @@ export async function fetchHtml(
 export function verify(name: string, terms: string[], html: string): boolean {
   const text = deaccent(html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
-  const core = tokens(name).filter((w) => !TYPE_WORDS.has(w));
-  const brandHit = core.some((w) => w.length >= 4 && text.includes(w));
+  const core = nameWords(name).filter((w) => !TYPE_WORDS.has(w));
+  const brandHit = core.some((w) => w.length >= 4 && hasNameWord(text, w));
   const geoHit = terms.some((term) => text.includes(term));
   return brandHit && geoHit; // §F.14 — brand-only is a collision, not a hit
 }

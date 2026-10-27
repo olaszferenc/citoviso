@@ -13,6 +13,9 @@ export const GENERIC_NAME_WORD = new Set([
   "hotel", "tabor", "hely", "ifjusagi", "turistahaz", "motel", "resort", "villa",
   "vendeglo", "etterem", "szoba", "szobak", "parton", "vadkempingezo",
   "diakszallas", "kozossegi", "faluhaz", "porta", "birtok", "kiado", "balaton",
+  // A feature, not a brand: "Holiday home with Wi-Fi" (one word since the hyphen
+  // compound rule, 2026-10-27).
+  "wifi",
 ]);
 
 /**

@@ -2638,7 +2638,7 @@ fi
 # RÉGIÓ-CÍMKÉRE horgonyzott, amit egy sugaras régió sok településsel oszt meg.
 # Offline, DB és hálózat nélkül (~5 s).
 if [ -f scripts/geo-verify-check.mts ] && \
-   changed_files | grep -qE '^src/scraper/(enrichPresence|enrichSiteSearch)\.ts$|^scripts/geo-verify-check'; then
+   changed_files | grep -qE '^src/scraper/(enrichPresence|enrichSiteSearch|attachPhotoLinks)\.ts$|^src/scraper/sources/portalListing\.ts$|^scripts/geo-verify-check'; then
   echo "[pre-commit] geo-verify-check (a weboldal-igazolás földrajzi horgonya)…"
   npx tsx scripts/geo-verify-check.mts >"$GATE_LOG" || gate_failed
 fi
