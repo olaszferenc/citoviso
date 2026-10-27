@@ -1523,15 +1523,16 @@ export async function createProspect(input: {
     .where("mock_artifact_id", "=", input.artifactId)
     .executeTakeFirst();
   if (existing) {
-    // Idempotent re-run: refresh the operator-editable fields only.
-    await db
-      .updateTable("prospect")
-      .set({
-        ...(input.segment ? { segment: input.segment } : {}),
-        ...(input.contactEmail ? { contact_email: input.contactEmail } : {}),
-      })
-      .where("id", "=", existing.id)
-      .execute();
+    // Idempotent re-run: refresh the operator-editable fields only. A phone-only lead's
+    // re-run has neither, and an empty SET is a SQL syntax error (prod 2026-10-27: every
+    // requeued phone-only dispatch held with „syntax error at or near "where"”).
+    const refresh = {
+      ...(input.segment ? { segment: input.segment } : {}),
+      ...(input.contactEmail ? { contact_email: input.contactEmail } : {}),
+    };
+    if (Object.keys(refresh).length) {
+      await db.updateTable("prospect").set(refresh).where("id", "=", existing.id).execute();
+    }
   } else {
     await db
       .insertInto("prospect")
