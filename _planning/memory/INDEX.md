@@ -15,6 +15,7 @@
 - [2026-10-26_hovamenjek_szomszed_kepek.md](2026-10-26_hovamenjek_szomszed_kepek.md) — 2026-10-26 — hovamenjek: a „Közeli szállások” képei nem a lead képei
 - [2026-10-26_fajlnev_alt_es_egy_egyseg.md](2026-10-26_fajlnev_alt_es_egy_egyseg.md) — 2026-10-26 — Fájlnév-alt (Dobos) és egy egység / kerti kilátás (Francia ház)
 - [2026-10-26_booked_forras_magyarul.md](2026-10-26_booked_forras_magyarul.md) — 2026-10-26 — booked.hu forrás: angol szobanevek, szomszéd-ajánló, férőhely a packban
+- [2026-10-25_dev_lemez_mentes_fak_pair_repair.md](2026-10-25_dev_lemez_mentes_fak_pair_repair.md) — 2026-10-22…25 — Dev lemez: mentés hardlinkkel, landolatlan fák lezárása, pair-repair
 - [2026-10-22_webcim_allapot_b_overseer_folytatas.md](2026-10-22_webcim_allapot_b_overseer_folytatas.md) — 2026-10-22 — Webcím állapot-képernyő „B” (ADR-0399) · overseer.hu folytatás · a domain-folyamat hiányai
 - [2026-10-22_domain_regisztracio_szal.md](2026-10-22_domain_regisztracio_szal.md) — 2026-10-22 — Domain-regisztráció: a szál végig a miénk (ADR-0400) — overseer.hu oka és a gépi folyamat
 - [2026-10-21_tenant_admin_szakasz_hierarchia.md](2026-10-21_tenant_admin_szakasz_hierarchia.md) — 2026-10-21 — Tenant-admin szakasz-hierarchia („E”) + portál-menüút a tenant nyelvén
