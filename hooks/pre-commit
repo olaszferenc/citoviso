@@ -515,7 +515,7 @@ if [ -f scripts/kb-translation-coverage-check.mts ] && \
   echo "[pre-commit] kb-translation-coverage --self-test (az őr változott; a fordítás a deploy kapuja)…"
   npx tsx scripts/kb-translation-coverage-check.mts --self-test >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (Bábel, mérve 2026-10-27 élesen): egy konzol-nyelvváltás 16 teljes csomag-fordítást
+# Bábel-ADR (_planning/decisions/*-babel-kontextusos-fordito-munkatars.md; mérve 2026-10-27 élesen): egy konzol-nyelvváltás 16 teljes csomag-fordítást
 # indított egy óra alatt ($130) — a kérés várt a fordításra, minden újratöltés újat indított,
 # és a költségmérőt semmi nem olvasta vissza. Az őr VALÓDI párhuzamos hívással (egy folyamatban
 # ÉS három folyamatban) bizonyítja, hogy nyelvenként egy fordítás fut, a kérés nem vár, és a

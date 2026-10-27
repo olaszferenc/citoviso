@@ -387,7 +387,6 @@
 "{name} az árban":"honlap",
 "{name} foglalt. Ez szabad:":"honlap",
 "{name} kéri — döntésre vár, még nem foglalt":"honlap",
-"{name} kívülről":"honlap",
 "{name} marad az egész ház, a most felvett pedig az első szobája. A vendég egy szobát vagy az egész házat foglalhatja.":"admin",
 "{name} SAJÁT adata a kijelölt kinézeten — a szöveg a legutóbbi mockból való, nem újragenerált.":"konzol",
 "{name} szoba lesz — a naptára, képei és ára megmarad. Az egész házat külön felvesszük, ár nélkül: az árát utána a ház kártyáján adja meg.":"admin",
