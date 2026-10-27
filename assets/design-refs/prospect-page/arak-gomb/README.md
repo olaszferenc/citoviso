@@ -4,7 +4,7 @@ A tulaj felvetése (2026-10-27): több lead-visszajelzés is azt kérdezi, mi me
 honlap, de nem mernek a „Megrendelés”-jellegű gombra kattintani. Javaslata: „Árak és megrendelés”.
 §2b terv-kör a valódi Laguna Panzió dev-mockon (a feliratot a lap betöltésekor cseréltük, a tördelést a
 valódi CSS és a valódi szélesség-elosztó adta): A „Árak és rendelés” · B ugyanez + alatta „havi X Ft-tól” ·
-C „Mennyibe kerül?”. **A tulaj a B-t választotta.** Döntés: ADR-XXXX.
+C „Mennyibe kerül?”. **A tulaj a B-t választotta.** Döntés: ADR-0408.
 
 Kattintható terv: `plan.html` (felirat- és méretváltó; a gombra a valódi rendelő-panel képe nyílik; a
 szélesség-mérés élőben mutatja, mi vágódik le). Képek: `valtozatok-mobil.jpg` (balról Ma · A · B · C ·

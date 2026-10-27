@@ -40,7 +40,7 @@
   box-sizing: border-box;
 }
 
-/* ── launcher: the order pill ("Árak és rendelés", ADR-XXXX) ─────────────────────────────
+/* ── launcher: the order pill ("Árak és rendelés", ADR-0408) ─────────────────────────────
  * Always on stage except while the panel is open (owner, 2026-09-26; plan:
  * assets/design-refs/prospect-page/order-pill/). Desktop: bottom-centre; phone:
  * bottom-right. The runtime rests it just above a template's fixed booking bar and
@@ -124,7 +124,7 @@
 .cit-cfg-launch[hidden] {
   display: none;
 }
-/* ADR-XXXX (assets/design-refs/prospect-page/arak-gomb/, B): "Árak és rendelés" with the
+/* ADR-0408 (assets/design-refs/prospect-page/arak-gomb/, B): "Árak és rendelés" with the
  * cheapest monthly price under it, smaller. Two lines inside the SAME 48 px pill as the
  * trial pill beside it — the vertical padding gives the room the second line takes. */
 .cit-cfg-launch--from {

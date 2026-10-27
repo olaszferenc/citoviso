@@ -1,4 +1,4 @@
-## ADR-XXXX — „Árak és rendelés” + „havi X Ft-tól”: a lead-lap rendelő gombja az árat is megmondja
+## ADR-0408 — „Árak és rendelés” + „havi X Ft-tól”: a lead-lap rendelő gombja az árat is megmondja
 
 **Dátum:** 2026-10-27 · **Státusz:** elfogadva (lokál, nem élesítve) · Felülírja: ADR-0242 1. pont (felirat)
 

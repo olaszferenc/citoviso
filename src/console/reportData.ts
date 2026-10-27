@@ -325,7 +325,7 @@ export interface ReportData {
     /** The Rendelés-panel (README rendeles-panel ④–⑨): sessions newest first + the pill KPI. */
     readonly panel: {
       readonly sessions: readonly PanelSession[];
-      /** Openers with at least one `panel_open` via the order pill („Árak és rendelés”, until ADR-XXXX „Itt rendelheti meg”) — never chip-filtered. */
+      /** Openers with at least one `panel_open` via the order pill („Árak és rendelés”, until ADR-0408 „Itt rendelheti meg”) — never chip-filtered. */
       readonly pressedPill: number;
     };
   };

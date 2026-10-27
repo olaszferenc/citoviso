@@ -1,4 +1,4 @@
-# 2026-10-27 — A rendelő gomb: „Árak és rendelés” + „havi X Ft-tól” (ADR-XXXX)
+# 2026-10-27 — A rendelő gomb: „Árak és rendelés” + „havi X Ft-tól” (ADR-0408)
 
 **Kérés (tulaj):** a leadek az árat kérdezik, a „Megrendelés”-jellegű gombra nem kattintanak; javaslat: „Árak és megrendelés”.
 

@@ -2026,7 +2026,7 @@
   }
 
   var scrim = el('<div class="cit-cfg-scrim"></div>');
-  /* ADR-XXXX (frozen plan: assets/design-refs/prospect-page/arak-gomb/, variant B): the
+  /* ADR-0408 (frozen plan: assets/design-refs/prospect-page/arak-gomb/, variant B): the
    * pill answers "mennyibe kerül?" itself — the cheapest package's MONTHLY LIST price, the
    * same figure its card shows on the monthly cycle. Never the one-off offer price (that is
    * the first payment, not what it costs), never a typed-in number. No package or no price
