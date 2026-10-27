@@ -14,4 +14,4 @@
 
 **Ellenőrzés:** valódi lapon 360 · 390 · 844×390 · 1280 px — semmi nem vágódik le, magasság 48/44 px, panel nyílik, JS-hiba 0; domain-jelvénnyel is rendben. Zöld: lead-mobile-check --gate, lead-page-surface-check, configurator-float/placement/price-check, i18n-lint, design-token-lint, kb-check.
 
-**Nyitott:** élesítés külön döntés. Hatásmérés: Riport „Rendelés-panel”, `panel_open {via:"pill"}` az élesítés előtt/után.
+**Élesítés:** 2026-10-27 12:57, `34ab1322` (`prod/20261027-1257`); élesen mérve a Muschel teszt-leaden: „havi 2 780 Ft-tól”, nincs vágás, JS-hiba 0. Hatásmérés: Riport „Rendelés-panel”, `panel_open {via:"pill"}` az élesítés előtt/után.
