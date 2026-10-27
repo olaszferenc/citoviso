@@ -83,16 +83,40 @@ function isUrlStemAlt(alt: string, url: string): boolean {
   return stem !== "" && stem === stemSlug(alt);
 }
 
+/** Booking words a photo caption never carries — a page's SEO line or button text. Folded. */
+const SEO_WORD = /(?:^|[^a-z])(?:booking|szallasfoglalas|szobafoglalas|online foglalas|foglaljon|szallaskereso)(?:$|[^a-z])/;
+
+/**
+ * A SEO KEYWORD LINE is not a caption (Apartman Bella bbdc9da9, 2026-10-27: alt="Szállás,
+ * Siófok, Apartman Bella, szállásfoglalás, booking, szobafoglalás"; Fészek Villa, Matild):
+ * a booking word, or ≥ 4 comma-separated items most of which are short (≤ 3 words).
+ * The generated „<név> — N. kép” is exempt — a lead name may itself hold commas.
+ */
+export function isKeywordListCaption(s: string): boolean {
+  const t = s.trim();
+  if (!t || GENERATED_ALT.test(t)) return false;
+  if (SEO_WORD.test(fold(t))) return true;
+  const items = t.split(",").map((x) => x.trim()).filter(Boolean);
+  if (items.length < 4) return false;
+  const short = items.filter((x) => x.split(/\s+/).length <= 3).length;
+  return short * 4 >= items.length * 3;
+}
+
+/** An alt that is no caption: a file name (or the photo's own file stem) or a SEO keyword line. */
+export function isNonCaption(s: string, url?: string): boolean {
+  return isFilenameCaption(s, url) || isKeywordListCaption(s);
+}
+
 /** The neutral alt a photo wears when the source gave none (or only a file name). */
 export function neutralAlt(name: string, index: number): string {
   return `${name} — ${index + 1}. kép`;
 }
 
-/** Photos whose alt is a file name get the neutral alt — render-time, so a rerender fixes
+/** Photos whose alt is a file name or a SEO keyword line get the neutral alt — render-time, so a rerender fixes
  *  an already generated mock. Same array back when nothing changes. */
 export function withoutFilenameAlts<T extends { readonly alt: string; readonly url?: string }>(photos: readonly T[], name: string): readonly T[] {
-  if (!photos.some((p) => isFilenameCaption(p.alt, p.url))) return photos;
-  return photos.map((p, i) => (isFilenameCaption(p.alt, p.url) ? { ...p, alt: neutralAlt(name, i) } : p));
+  if (!photos.some((p) => isNonCaption(p.alt, p.url))) return photos;
+  return photos.map((p, i) => (isNonCaption(p.alt, p.url) ? { ...p, alt: neutralAlt(name, i) } : p));
 }
 
 /** The caption to PRINT under a photo, or "" when it would say nothing (alt stays on the img). */

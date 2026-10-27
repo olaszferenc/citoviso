@@ -21,7 +21,7 @@ import { config } from "../src/config.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { PRIMITIVES } from "../src/engine/primitives.js";
-import { isEchoCaption, isFilenameCaption, photoCaption } from "../src/engine/photoCaption.js";
+import { isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, photoCaption } from "../src/engine/photoCaption.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
 import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
 import type { SiteData } from "../src/engine/recipe.js";
@@ -189,6 +189,33 @@ for (const id of Object.keys(TEMPLATES)) {
   if (bad.length || shown.length) check(`${id}: render — nincs fájltő az altban/feliratban`, false, [...bad, ...shown].slice(0, 3).join(" · "));
 }
 check("render: egyik sablonban sincs fájltő-alt (a meglévő mock sima rerenderrel javul)", true);
+// ── SEO-kulcsszósor sem alt (Apartman Bella bbdc9da9, 2026-10-27, mock 60a06fa5, 2244d7d0) ──
+console.log("SEO-kulcsszósor-alt");
+const BELLA_SEO = "Szállás, Siófok, Apartman Bella, szállásfoglalás, booking, szobafoglalás";
+const SEO_LINES = [
+  BELLA_SEO,
+  "Matildhotel, szállás, balaton, kertes apartman",
+  "Fészek Villa romantikus wellness szállás elvonulásra kikapcsolódásra, enteriőr, hálószoba, franciaágy, erdei szállás, wellness szállás, romantikus szállás",
+  "Online Foglalás",
+  "Siófok apartman booking",
+];
+for (const a of SEO_LINES) check(`kulcsszósor: „${a.slice(0, 50)}”`, isKeywordListCaption(a) && isNonCaption(a));
+const REAL = [MEANINGFUL, "Hálószoba — ágy, csipke függöny, kilátás a kertre", "Vica Apartman Kertibútor, pavilon, grill",
+  "Sümegi Varázskuckó Apartman – hangulatos vidéki ház, a sümegi vár tövében, virágos kerttel és terasszal",
+  "Hotel Fortuna, szállás, étterem, hotel, családbarát szálloda, wellness — 3. kép"];
+check("⛔ valódi (vesszős) felirat és a generált „— N. kép” marad", !REAL.some(isKeywordListCaption), REAL.filter(isKeywordListCaption).join(" · "));
+const bsp = toSitePhotos([{ url: "https://bella.hu/a.jpg", caption: BELLA_SEO }] as never, "Apartman Bella Panzió");
+check("toSitePhotos: kulcsszósor → „<név> — N. kép”", bsp[0]?.alt === "Apartman Bella Panzió — 1. kép", JSON.stringify(bsp.map((p) => p.alt)));
+const bown = ownSiteImages(`<img src="https://bella.hu/a.jpg" alt="${BELLA_SEO}">`, "https://bella.hu/");
+check("ownSiteImages: a kulcsszósort nem veszi fel captionnek", bown.length === 1 && bown[0]!.caption === undefined, JSON.stringify(bown));
+const bella = { ...D, name: "Apartman Bella Panzió", photos: D.photos.map((p, i) => (i === 2 ? { ...p, alt: MEANINGFUL } : { ...p, alt: BELLA_SEO })) } as unknown as SiteData;
+for (const id of Object.keys(TEMPLATES)) {
+  const tpl = TEMPLATES[id as keyof typeof TEMPLATES]!;
+  const html = renderSite({ template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] }, bella, { phase: "mock" });
+  if (/szobafoglalás/.test(html)) check(`${id}: render — nincs kulcsszósor az altban/feliratban`, false);
+}
+check("render: egyik sablonban sincs kulcsszósor-alt (a meglévő mock sima rerenderrel javul)", true);
+
 
 
 try {

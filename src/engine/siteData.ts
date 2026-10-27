@@ -10,7 +10,7 @@
 
 import { guestVisibleContact } from "../scraper/contactLedger.js";
 import type { Industry, QualifiedLead } from "../scraper/types.js";
-import { isFilenameCaption, neutralAlt } from "./photoCaption.js";
+import { isNonCaption, neutralAlt } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
 import type { Photo, SiteData } from "./recipe.js";
 
@@ -69,7 +69,7 @@ export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string
     url: p.url,
     // The caption the SOURCE published beats a generated placeholder (§B.17: real text).
     // A file name („kep_128.jpg”) is not a caption — the neutral alt then (Dobos, 2026-10-26).
-    alt: p.caption?.trim() && !isFilenameCaption(p.caption, p.url) ? p.caption.trim() : neutralAlt(leadName, i),
+    alt: p.caption?.trim() && !isNonCaption(p.caption, p.url) ? p.caption.trim() : neutralAlt(leadName, i),
     ...(p.provenance ? { provenance: p.provenance } : {}),
     // §A.2: the live gate's ONLY unconditional exclusion. Dropping it here would make
     // `photoPolicy.isLiveSafePhoto` unreachable again — the exact dead-code state this
