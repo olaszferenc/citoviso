@@ -52,7 +52,7 @@ async function translateStrings(
   lang: string,
   strings: readonly string[],
 ): Promise<Record<string, string>> {
-  // Bábel (ADR-XXXX): the site copy goes through the same ontology + glossary as the UI
+  // Bábel (ADR-0411): the site copy goes through the same ontology + glossary as the UI
   // pack, under the translation ceilings and onto the translation_spend ledger. A spent
   // budget throws (TranslationBudgetError) — the generation fails loudly, not half-done.
   const run = newTranslationRun(lang);

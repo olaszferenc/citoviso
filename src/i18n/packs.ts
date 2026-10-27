@@ -157,7 +157,7 @@ const BATCH = 60;
  * small batch whose prompt lists, per string, the placeholders that must appear verbatim.
  * What still fails is reported LOUDLY and returned in `rejected`.
  *
- * Bábel (ADR-XXXX): every item carries its SURFACE (`surfaceOf`), batches are ordered by
+ * Bábel (ADR-0411): every item carries its SURFACE (`surfaceOf`), batches are ordered by
  * surface so one batch reads like one screen, and the answer is keyed by the item index
  * (a Hungarian-keyed answer is still accepted). The system prompt comes from the caller
  * (`babelSystem`) — this function only shapes the batches and checks the answers.
@@ -296,7 +296,7 @@ export async function missingPackStrings(lang: string): Promise<string[]> {
  * key, API failure, spend ceiling) — callers log loudly, generation still proceeds with
  * hu-fallback.
  *
- * ⛔ ONE RUN PER LANGUAGE (ADR-XXXX). Measured 2026-10-27 in production: a console language
+ * ⛔ ONE RUN PER LANGUAGE (ADR-0411). Measured 2026-10-27 in production: a console language
  * switch to `sl` started this inside the request; the browser gave up (499/504), every
  * reload and every further console page started ANOTHER full run (16 runs, 5 within 20
  * seconds), because nothing knew a run was already going — $130 in an hour. Now:

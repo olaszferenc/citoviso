@@ -188,7 +188,7 @@ export async function currentOperator(
   // ADR-0067 ③: the ONE place the operator is loaded is the one place that can
   // reliably arm the request's language — and warm the pack, because the views'
   // T() lookups are synchronous. Doing it here means no route can forget to.
-  // ⛔ ADR-XXXX: warm only — an incomplete pack is provisioned in the background, the page
+  // ⛔ ADR-0411: warm only — an incomplete pack is provisioned in the background, the page
   // renders with the hu-fallback (2026-10-27: awaiting it here cost $130 in an hour).
   setConsoleLang(row.lang);
   await prepareRenderLang(row.lang);

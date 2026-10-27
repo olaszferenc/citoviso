@@ -1,4 +1,4 @@
-// i18n-single-flight-check — ONE translation per language, never a second one (ADR-XXXX, Bábel).
+// i18n-single-flight-check — ONE translation per language, never a second one (ADR-0411, Bábel).
 //
 // ⛔ MEASURED 2026-10-27, production: the owner switched the console to `sl`. The switch
 // awaited a full 5651-string pack inside the request; the browser gave up (499/504), and

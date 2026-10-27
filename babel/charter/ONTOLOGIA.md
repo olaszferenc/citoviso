@@ -1,7 +1,7 @@
 # BÁBEL — ontológia-kivonat (amit tudnod kell, mielőtt fordítasz)
 
 > Forrás: `_planning/DOMAIN/00-GLOSSARY.md`, `03-INVARIANTS.md` §B.17/§B.18, ADR-0036, ADR-0045,
-> ADR-0067, ADR-0281, ADR-XXXX. A gép a `src/i18n/babel/ontology.md`-t olvassa — ez a kivonat a
+> ADR-0067, ADR-0281, ADR-0411. A gép a `src/i18n/babel/ontology.md`-t olvassa — ez a kivonat a
 > te háttered hozzá; a kettő nem mondhat ellent egymásnak (ha igen: a motoré a javítandó).
 
 ## 1. Hogyan születik egy nem-magyar felirat

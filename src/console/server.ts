@@ -1595,7 +1595,7 @@ async function handle(
       .execute();
     setConsoleLang(wanted);
     // Start the pack NOW (the switch is when the operator expects the change) — but in the
-    // BACKGROUND (ADR-XXXX). Measured 2026-10-27: awaiting a full translation here held
+    // BACKGROUND (ADR-0411). Measured 2026-10-27: awaiting a full translation here held
     // the request for minutes, the browser gave up, and every reload started another run.
     // Until the pack lands the console shows a „készül” notice and Hungarian text.
     await prepareRenderLang(wanted);

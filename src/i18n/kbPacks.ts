@@ -85,7 +85,7 @@ async function translateEntry(
   entry: KbEntry,
   run: TranslationRun,
 ): Promise<{ title: string; body: string } | null> {
-  // Bábel (ADR-XXXX): the same ontology + glossary as the UI pack, so the guide names a
+  // Bábel (ADR-0411): the same ontology + glossary as the UI pack, so the guide names a
   // screen's concepts the way the translated screen does; budget-checked and metered.
   const res = await babelCall(
     run,

@@ -1,4 +1,4 @@
-// babel-pack — Bábel's own workbench for a language pack (ADR-XXXX, babel/charter/RUNBOOK.md).
+// babel-pack — Bábel's own workbench for a language pack (ADR-0411, babel/charter/RUNBOOK.md).
 //
 // Bábel the persona translates in his own session (subscription, not the API): he reads the
 // ontology and the glossary once, and translates a WHOLE pack as one consistent piece of

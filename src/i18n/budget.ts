@@ -1,5 +1,5 @@
 /**
- * Translation spend ceilings (ADR-XXXX, Bábel) — the brake the 2026-10-27 incident lacked.
+ * Translation spend ceilings (ADR-0411, Bábel) — the brake the 2026-10-27 incident lacked.
  *
  * WHY: `translation_spend` (spend.ts) MEASURED every translation call, but nothing read the
  * meter back. Measured 2026-10-27 in production: one console language switch to `sl`

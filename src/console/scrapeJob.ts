@@ -64,7 +64,7 @@ export function startScrapeJob(regionId: string, cap?: number): string | null {
     return `Már fut egy scrape (${state.regionId}) — egyszerre egy futás engedett.`;
   }
   // ADR-0036: a scrape entering a new language area pre-provisions the UI-string pack in the
-  // background (generateEngineMock re-ensures it anyway before rendering). ⛔ ADR-XXXX: only
+  // background (generateEngineMock re-ensures it anyway before rendering). ⛔ ADR-0411: only
   // AFTER the one-job gate — a refused start must not start a translation either — and
   // through requestLanguagePack (one run per language, never awaited here).
   void (async () => {

@@ -191,7 +191,7 @@ export const config = {
    */
   aiDailyCapUsdRaw: env("AI_DAILY_CAP_USD", "20"),
   /**
-   * Bábel (ADR-XXXX): HARD ceilings on AI TRANSLATION spend, USD — measured on the
+   * Bábel (ADR-0411): HARD ceilings on AI TRANSLATION spend, USD — measured on the
    * `translation_spend` ledger (all hosts writing this DB). Daily = today's Europe/Budapest
    * day; per-run = one language-pack provisioning (UI strings + KB). Measured 2026-10-27:
    * one stuck console language switch spent $130 in an hour with no ceiling at all; one

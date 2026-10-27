@@ -1,6 +1,6 @@
 # 2026-10-27 — Bábel, a fordító munkatárs + a nyelvi csomag egy-futás/plafon javítása
 
-**Forrás:** OF-brief `~/rc-briefs/babel-fordito-20261027.md` (Ferenc kérése az OF sessionön át). ADR-XXXX.
+**Forrás:** OF-brief `~/rc-briefs/babel-fordito-20261027.md` (Ferenc kérése az OF sessionön át). ADR-0411.
 
 ## Elvégzett munka
 - **Hibajavítás (az éles `sl`-eset, $130/óra):** `ensureLanguagePack` nyelvenként egy futás (közös ígéret

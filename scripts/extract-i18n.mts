@@ -49,7 +49,7 @@ async function tsFilesUnder(dir: string): Promise<string[]> {
 }
 
 /**
- * Bábel (ADR-XXXX): WHERE a string is shown decides how it is translated — the same
+ * Bábel (ADR-0411): WHERE a string is shown decides how it is translated — the same
  * "Foglalás" is a button for an operator, a menu item for a guest, a subject line in a
  * mail. The catalogue stays a flat list (the coverage contract); this sidecar maps each
  * string to the SURFACES its sources belong to, so the translator gets the context the

@@ -1,5 +1,5 @@
 /**
- * Bábel — the translating colleague's engine (ADR-XXXX).
+ * Bábel — the translating colleague's engine (ADR-0411).
  *
  * WHY: until 2026-10-27 every translation was a blind call — 40 Hungarian strings, a
  * one-paragraph system prompt, no idea where a string is shown or what the Citoviso words

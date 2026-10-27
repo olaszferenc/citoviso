@@ -1,5 +1,5 @@
 {
-  "_doc": "Bábel glosszáriuma (ADR-XXXX). Fogalom → kötelező fordítás nyelvenként. A motor a cél-nyelv oszlopát minden fordítás rendszerpromptjába teszi. Több jelentés: 'senses', a felület ('ahol') dönt. Gondozója: Bábel (babel/charter/RUNBOOK.md). Mag: 2026-10-27, a meglévő csomagok helyes formáiból + a kontextus-vak hibák javításával (en 'Elérhetőség' → Contact, nem Availability).",
+  "_doc": "Bábel glosszáriuma (ADR-0411). Fogalom → kötelező fordítás nyelvenként. A motor a cél-nyelv oszlopát minden fordítás rendszerpromptjába teszi. Több jelentés: 'senses', a felület ('ahol') dönt. Gondozója: Bábel (babel/charter/RUNBOOK.md). Mag: 2026-10-27, a meglévő csomagok helyes formáiból + a kontextus-vak hibák javításával (en 'Elérhetőség' → Contact, nem Availability).",
   "terms": [
     { "hu": "szállás", "note": "a vendégház/apartman/panzió gyűjtőneve",
       "tr": { "en": "accommodation", "de": "Unterkunft", "sk": "ubytovanie", "hr": "smještaj", "sl": "nastanitev", "pl": "obiekt noclegowy", "it": "struttura", "cs": "ubytování", "ro": "cazare" } },

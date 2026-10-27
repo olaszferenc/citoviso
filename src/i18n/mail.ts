@@ -220,7 +220,7 @@ function readLang(inputs: unknown): string {
 }
 
 /**
- * The RENDER-path counterpart of prepareMailLang (ADR-XXXX): warm the pack from the DB so
+ * The RENDER-path counterpart of prepareMailLang (ADR-0411): warm the pack from the DB so
  * the sync T() lookups resolve, and if it is incomplete start provisioning in the
  * BACKGROUND — never wait for it. A page request must not hold the browser while a pack is
  * translated: on 2026-10-27 that wait timed out (499/504), and every reload started a new

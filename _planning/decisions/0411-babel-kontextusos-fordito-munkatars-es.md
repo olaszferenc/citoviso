@@ -1,4 +1,4 @@
-## ADR-XXXX — Bábel: kontextusos fordító munkatárs, és nyelvenként egyetlen, plafonos fordítás
+## ADR-0411 — Bábel: kontextusos fordító munkatárs, és nyelvenként egyetlen, plafonos fordítás
 
 **Dátum:** 2026-10-27 · **Státusz:** elfogadva (lokál, nem élesítve) · Kiegészíti: ADR-0036, ADR-0045, ADR-0067 ③, ADR-0281
 
