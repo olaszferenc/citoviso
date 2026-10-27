@@ -80,6 +80,18 @@ export function decodeEntities(s: string): string {
     .replace(/&([a-z]+);/gi, (m, name: string) => ENTITIES[name.toLowerCase()] ?? m);
 }
 
+/**
+ * One attribute of ONE tag, entity-decoded. The value runs to its OWN closing quote:
+ * `["']([^"']*)["']` stopped at the first quote of either kind, so hovamenjek's
+ * alt="Andy's House – Geresdlak fotó 11" came out as "Andy" on every gallery photo
+ * (Andy's House ccbea845, 2026-10-27). Unquoted values are read too. `data-alt` is not `alt`.
+ */
+export function tagAttr(tag: string, name: string): string | undefined {
+  const m = new RegExp(`(?:^|[\\s"'/])${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\`]+))`, "i").exec(tag);
+  const v = m ? (m[1] ?? m[2] ?? m[3]) : undefined;
+  return v === undefined ? undefined : decodeEntities(v);
+}
+
 /** Strip tags/scripts/styles and collapse whitespace — the page as plain text. */
 export function textOf(html: string): string {
   return decodeEntities(
@@ -500,12 +512,10 @@ export function domImages(html: string, pageUrl: string): ExtractedListing["imag
 
   for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0]!;
-    const alt = /alt\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1];
-    const src =
-      /\bdata-src\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1] ??
-      /\bsrc\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    const alt = tagAttr(tag, "alt");
+    const src = tagAttr(tag, "data-src") || tagAttr(tag, "src");
     if (src) add(src, alt);
-    else add(/\bsrcset\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1], alt, true);
+    else add(tagAttr(tag, "srcset"), alt, true);
   }
   for (const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)) {
     add(m[1]);

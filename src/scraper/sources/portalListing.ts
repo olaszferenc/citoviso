@@ -26,7 +26,7 @@
 // by the extractor at the point of ingest — see extract.ts/toPortalPhotos.
 
 import { scorePortalMatch, type MatchConfidence } from "../confidence.js";
-import { deaccent, geoTerms, hasNameWord, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
+import { deaccent, geoTerms, hasNameWord, isBrandShaped, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
@@ -51,7 +51,7 @@ const TYPE_WORD = new Set([
 
 /** The lead's identifying words — what a listing must actually be about. */
 export function brandTokens(name: string): string[] {
-  return nameWords(name).filter((t) => t.length >= 4 && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
+  return nameWords(name).filter((t) => isBrandShaped(t) && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
 }
 
 /** Type words present in a name, deaccented. */

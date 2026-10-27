@@ -70,9 +70,31 @@ export function nameWords(s: string): string[] {
   return out;
 }
 
+/** Letters AND digits in one token ("A16 Panzió", 2026-10-27): short, but it names one
+ *  place — the 4-letter floor that keeps "ház"/"kis" out must not drop it. */
+function isLetterDigitWord(w: string): boolean {
+  if (w.length < 2 || !/[a-z]/.test(w) || !/\d/.test(w) || w.includes("-")) return false;
+  // A number with a unit is a fact, not a name: "6km", "2fő", "5BR", "100m2".
+  if (/^\d+(?:km|m|m2|fo|fos|br|ft|eur|nm|perc|ora|ej|ejszaka)$/.test(w)) return false;
+  // A motorway is on every page near it ("az M0-s felől"): "M0 Motel" is no brand word.
+  return !MOTORWAY.has(w);
+}
+
+const MOTORWAY = new Set([
+  "m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m15", "m19", "m25", "m30",
+  "m31", "m35", "m43", "m44", "m51", "m60", "m70", "m85", "m86",
+]);
+
+/** Long enough to identify a business on its own: 4+ letters, or a letter+digit token. */
+export function isBrandShaped(w: string): boolean {
+  return w.length >= 4 || isLetterDigitWord(w);
+}
+
 /** Does deaccented, lowercased `text` carry name word `w`? A compound ("abi-lo") also
- *  matches written with a space, a dash or as one word ("Abi Lo", "AbiLo"). */
+ *  matches written with a space, a dash or as one word ("Abi Lo", "AbiLo"); a letter+digit
+ *  token ("a16") only as a whole word — inside "ka160" it is not this name. */
 export function hasNameWord(text: string, w: string): boolean {
+  if (isLetterDigitWord(w)) return new RegExp(`(?:^|[^a-z0-9])${w}(?:$|[^a-z0-9])`).test(text);
   if (!w.includes("-")) return text.includes(w);
   return new RegExp(`(?:^|[^a-z0-9])${w.split("-").join("[\\s\\-–]?")}(?:$|[^a-z0-9])`).test(text);
 }
@@ -214,7 +236,7 @@ export function verify(name: string, terms: string[], html: string): boolean {
   const text = deaccent(html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
   const core = nameWords(name).filter((w) => !TYPE_WORDS.has(w));
-  const brandHit = core.some((w) => w.length >= 4 && hasNameWord(text, w));
+  const brandHit = core.some((w) => isBrandShaped(w) && hasNameWord(text, w));
   const geoHit = terms.some((term) => text.includes(term));
   return brandHit && geoHit; // §F.14 — brand-only is a collision, not a hit
 }

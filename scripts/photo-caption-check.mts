@@ -21,7 +21,8 @@ import { config } from "../src/config.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { PRIMITIVES } from "../src/engine/primitives.js";
-import { isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, photoCaption } from "../src/engine/photoCaption.js";
+import { isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, isQuoteCutName, photoCaption, withoutFilenameAlts } from "../src/engine/photoCaption.js";
+import { domImages, tagAttr } from "../src/scraper/sources/portals/extract.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
 import { ownSiteImages } from "../src/scraper/attachPhotoLinks.js";
 import type { SiteData } from "../src/engine/recipe.js";
@@ -242,6 +243,60 @@ try {
   check("⭐⭐ egyetlen sablonban sem ül felirat a fotón", over.length === 0, over.slice(0, 5).join(" · "));
 } finally {
   await browser.close();
+}
+
+// ── Quotes in the name survive every attribute (Andy's House ccbea845, 2026-10-27) ──────
+// hovamenjek's alt="Andy's House – Geresdlak fotó 11" was read with `["']([^"']*)["']`, which
+// stops at the first quote of either kind: all 6 gallery alts of both mocks were "Andy".
+console.log("\nidézőjel a névben: forrás-alt → tárolt caption → alt / title / JSON-LD");
+{
+  const ANDY = "Andy's House";
+  const QUOTED = `Kovács "Öreg" & <b>Fiai</b> Vendégház`;
+  check("tagAttr: aposztróf dupla idézőjelben", tagAttr(`<img alt="${ANDY} – Geresdlak fotó 11" src="a.jpg">`, "alt") === `${ANDY} – Geresdlak fotó 11`);
+  check("tagAttr: idézőjel szimpla idézőjelben", tagAttr(`<img alt='Az "új" terasz' src=a.jpg>`, "alt") === `Az "új" terasz`);
+  check("tagAttr: entitások dekódolva (&#39; &quot; &amp; &lt;)", tagAttr(`<img alt="Andy&#39;s &quot;Ház&quot; &amp; &lt;kert&gt;">`, "alt") === `Andy's "Ház" & <kert>`);
+  check("tagAttr: idézőjel nélküli érték, és a data-alt nem alt", tagAttr(`<img data-alt="x" src=kep.jpg>`, "src") === "kep.jpg" && tagAttr(`<img data-alt="x">`, "alt") === undefined);
+  const page = `<div><img alt="${ANDY} – Geresdlak fotó 11" src="/upload/places/1/fullHd/geresdlak-andys-house12.jpg"><img alt='Az "új" terasz &amp; a kert' data-src="/upload/b.jpg"></div>`;
+  const dom = domImages(page, "https://hovamenjek.hu/geresdlak/andys-house");
+  check("portál-kinyerő (domImages): a teljes alt a caption", dom[0]?.caption === `${ANDY} – Geresdlak fotó 11` && dom[1]?.caption === `Az "új" terasz & a kert`, dom.map((x) => x.caption));
+  const own = ownSiteImages(page, "https://andyshouse.hu/");
+  check("saját-oldal kinyerő (ownSiteImages): a teljes alt a caption", own.some((x) => x.caption === `${ANDY} – Geresdlak fotó 11`) && own.some((x) => x.caption === `Az "új" terasz & a kert`), own.map((x) => x.caption));
+  // Captions stored before the fix stay "Andy" until a re-scrape: the render replaces them.
+  check("tárolt csonk („Andy”) → semleges alt rerendernél", isQuoteCutName("Andy", ANDY) && withoutFilenameAlts([{ alt: "Andy", url: "u" }], ANDY)[0]!.alt === `${ANDY} — 1. kép`);
+  check("PIROS IKER: a teljes név és egy valódi caption marad", !isQuoteCutName(ANDY, ANDY) && !isQuoteCutName("Andy kertje", ANDY) && !isQuoteCutName("Kovács", "Kovács Vendégház"));
+  check("idézőjeles névnél is felismeri a csonkot", isQuoteCutName("Kovács", QUOTED));
+  const bad: string[] = [];
+  let seen = 0;
+  for (const name of [ANDY, QUOTED]) {
+    const caps = [`${name} – Geresdlak fotó 11`, `Az „új" terasz & a kert`];
+    const d = {
+      ...D,
+      name,
+      photos: [0, 1, 2, 3, 4, 5].map((i) => ({ url: IMG(i), alt: caps[i % 2]!, provenance: "portal" as const })),
+    } as SiteData;
+    const first = name.split(/[\s'"]/)[0]!;
+    for (const [id, tpl] of Object.entries(TEMPLATES)) {
+      const sections = ["hero", "features", "gallery", "rooms", "reviews", "location", "enquiry"].map((kind) => ({ kind }));
+      const html = renderSite({ template: id, skin: tpl.skins[0], archetype: "stacked", sections } as never, d, { phase: "mock" });
+      for (const m of html.matchAll(/<[a-z][a-z0-9-]*\b[^>]*>/gi)) {
+        for (const a of ["alt", "title", "aria-label", "content"]) {
+          const v = tagAttr(m[0], a);
+          if (!v) continue;
+          if (v.includes(name) || caps.some((c) => v.includes(c))) seen++;
+          else if (v.startsWith(first)) bad.push(`${id}: ${a}=${JSON.stringify(v)}`);
+        }
+      }
+      if (html.replace(/<script[\s\S]*?<\/script>/gi, "").includes("<b>Fiai")) bad.push(`${id}: nyers <b> a markupban`);
+      for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+        try {
+          if (!JSON.stringify(JSON.parse(m[1]!)).includes(JSON.stringify(name).slice(1, -1))) bad.push(`${id}: JSON-LD név hiányzik`);
+        } catch (e) {
+          bad.push(`${id}: JSON-LD nem JSON (${String(e).slice(0, 60)})`);
+        }
+      }
+    }
+  }
+  check(`minden sablon: alt / title / aria-label / content / JSON-LD épen viszi a nevet (${seen} attribútum mérve)`, bad.length === 0 && seen > 100, bad.slice(0, 5));
 }
 
 if (failures) {

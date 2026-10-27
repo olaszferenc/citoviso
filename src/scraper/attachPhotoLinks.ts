@@ -34,7 +34,7 @@ import { portalPhotoCount, profilesAwaitingApproval } from "./portalPhotos.js";
 import { qualificationOf } from "./persist.js";
 import { classifyWebsite } from "./qualify.js";
 import { getRegion, loadRegions } from "./regions.js";
-import { IMAGE_EXT, NON_CONTENT_IMAGE, extractListing, ownContentOnly, textOf } from "./sources/portals/extract.js";
+import { IMAGE_EXT, NON_CONTENT_IMAGE, extractListing, ownContentOnly, tagAttr, textOf } from "./sources/portals/extract.js";
 import { isSiteBuilderMedia, keepUsablePhotos } from "./sources/portals/photoQuality.js";
 import { fetchPortalPage } from "./sources/portals/politeness.js";
 import { hostOf, resolvePortal } from "./sources/portals/registry.js";
@@ -168,8 +168,7 @@ export function ownSiteImages(html: string, pageUrl: string): { url: string; cap
   };
   for (const m of body.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0]!;
-    const attr = (name: string): string | undefined =>
-      new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(tag)?.[1];
+    const attr = (name: string): string | undefined => tagAttr(tag, name) || undefined;
     const alt = attr("alt");
     const srcset = attr("data-srcset") ?? attr("srcset");
     add(srcset ? largestFromSrcset(srcset) : undefined, alt);

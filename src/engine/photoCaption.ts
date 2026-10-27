@@ -114,9 +114,25 @@ export function neutralAlt(name: string, index: number): string {
 
 /** Photos whose alt is a file name or a SEO keyword line get the neutral alt — render-time, so a rerender fixes
  *  an already generated mock. Same array back when nothing changes. */
+/**
+ * The lodging's name CUT at a quote: the scraper's old attribute regex stopped at the first
+ * quote of either kind, so alt="Andy's House – Geresdlak fotó 11" was stored as "Andy" on
+ * every gallery photo (Andy's House ccbea845, 2026-10-27). Stored captions only change on a
+ * re-scrape — this keeps the existing mocks right on a plain rerender.
+ */
+export function isQuoteCutName(alt: string, name: string): boolean {
+  const a = alt.trim();
+  if (!a) return false;
+  for (const m of name.matchAll(/['’"„”`]/g)) {
+    if (name.slice(0, m.index).trim() === a) return true;
+  }
+  return false;
+}
+
 export function withoutFilenameAlts<T extends { readonly alt: string; readonly url?: string }>(photos: readonly T[], name: string): readonly T[] {
-  if (!photos.some((p) => isNonCaption(p.alt, p.url))) return photos;
-  return photos.map((p, i) => (isNonCaption(p.alt, p.url) ? { ...p, alt: neutralAlt(name, i) } : p));
+  const bad = (p: T): boolean => isNonCaption(p.alt, p.url) || isQuoteCutName(p.alt, name);
+  if (!photos.some(bad)) return photos;
+  return photos.map((p, i) => (bad(p) ? { ...p, alt: neutralAlt(name, i) } : p));
 }
 
 /** The caption to PRINT under a photo, or "" when it would say nothing (alt stays on the img). */

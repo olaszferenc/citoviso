@@ -184,6 +184,9 @@ const COMPOUND_CASES: { name: string; text: string; geo: string[]; expect: boole
   { name: "KI-AD-LAK", text: "<h1>Kiadó lakás</h1><p>Bóly, ki ad lakást?</p>", geo: ["boly"], expect: false, why: "„kiadó lakás” nem a „KI-AD-LAK”" },
   { name: "Ide-odu Apartman", text: "<h1>Ide-Odú Apartman</h1><p>6500 Baja</p>", geo: ["baja"], expect: true, why: "ékezettel a lapon" },
   { name: "Ide-odu Apartman", text: "<h1>IdeOdu apartman</h1><p>Baja</p>", geo: ["baja"], expect: true, why: "egybeírva" },
+  // Letter+digit token (2026-10-27): A16 Panzió d29e5e74 (Harkány) — "a16" is 3 characters.
+  { name: "A16 Panzió", text: "<h1>A16 Panzió</h1><p>7815 Harkány, Bajcsy-Zs. u. 16.</p>", geo: ["harkany"], expect: true, why: "betű+szám token, egész szóként" },
+  { name: "A16 Panzió", text: "<h1>KA160 Panzió</h1><p>Harkány</p>", geo: ["harkany"], expect: false, why: "„ka160” belsejében nem a név" },
 ];
 for (const c of COMPOUND_CASES) {
   const brand = brandTokens(c.name);
@@ -196,10 +199,11 @@ for (const c of COMPOUND_CASES) {
   );
 }
 // Not brands: an ordinal ("11-es"), roman unit numbers, a feature word (Wi-Fi).
-for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi"]) {
+// …and a number with a unit or a motorway is no letter+digit brand.
+for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi", "Vendégház Balatontól 6km-re 4fő", "M0 Motel"]) {
   const expectEmpty = n === "Apartman Vendégház" || n === "B-B Apartman";
   const brand = brandTokens(n);
-  const ok = expectEmpty ? brand.length === 0 : !brand.some((t) => t.includes("-") || t === "wifi");
+  const ok = expectEmpty ? brand.length === 0 : !brand.some((t) => t.includes("-") || t === "wifi" || /\d/.test(t));
   if (!ok) failed++;
   console.log(`${ok ? "✓" : "✗ FAIL"}  [kötőjeles márka] ${n} → nem márkaszó a kötőjeles/jellemző szó (${JSON.stringify(brand)})\n`);
 }
@@ -211,5 +215,5 @@ if (failed) {
   process.exit(1);
 }
 console.log(
-  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 5} kötőjeles-márka eset rendben.`,
+  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 7} kötőjeles/betű+szám márka eset rendben.`,
 );
