@@ -384,10 +384,12 @@ function withModuleSections(
   const samples = demoModuleSamples(data, phase, opts.sampleAllow, opts.sampleDeny);
   const firstRoom =
     data.rooms?.[0]?.name ?? (samples.has("rooms") ? sampleRooms(data)[0]?.name : undefined);
-  // The booking widget's data-cit-units attribute carries the SAME room names as
-  // JSON — an attribute is not a rooms section, so it must not satisfy the probe.
-  const probeHtml = html.replace(/ data-cit-units="[^"]*"/g, "");
-  const roomsAlreadyShown = firstRoom ? probeHtml.includes(escapeForCompare(firstRoom)) : true;
+  // The probe is the room CARD (roomShell's data-cit-room-name), not the bare name: a
+  // sample name is generic ("Apartmanok", "Szobák") and sits inside the lodging's own
+  // name, so the text probe found "PENNY Apartmanok" in the header and dropped the only
+  // rooms section of the parallax mock (measured 2026-10-27, 728499d5). The booking
+  // widget's data-cit-units JSON is a different attribute and cannot satisfy it either.
+  const roomsAlreadyShown = firstRoom ? html.includes(`data-cit-room-name="${esc(firstRoom)}"`) : true;
   // ADR-0059 §1: the usp/amenities items were woven into `highlights` before render;
   // whatever the template's native section did not fit (its own slice caps) goes into
   // ONE shared leftover block. Measured on the output — the module promise ("what you

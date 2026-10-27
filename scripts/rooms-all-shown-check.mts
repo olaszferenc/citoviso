@@ -87,6 +87,43 @@ for (const id of ids) {
   say(missing.length === 0, `${id}: mind az öt szoba (név + ár) a szoba-szekcióban`, `hiányzik: ${missing.join(", ")}`);
 }
 
+// ── A rooms section is never lost to the lodging's own name (2026-10-27) ─────────
+// PENNY Apartmanok 5e63301e, parallax mock 728499d5: no named rooms → one sample card
+// "Apartmanok"; the "already shown?" probe searched the template HTML for that NAME,
+// found it inside "PENNY Apartmanok", and the parallax page (no native rooms section)
+// got no rooms section at all. The same held for a real room named like the lodging.
+// Every template, both phases: EXACTLY one rooms section — none is the bug, two would
+// be the shared block printing next to a native one.
+const OWN_NAME_CASES: { what: string; phase: "mock" | "live"; d: SiteData }[] = [
+  {
+    what: "mock, nincs megnevezett szoba, a név „… Apartmanok”",
+    phase: "mock",
+    d: { ...data, name: "PENNY Apartmanok", rooms: undefined, sampleUnitKind: "apartments" } as SiteData,
+  },
+  {
+    what: "mock, nincs megnevezett szoba, a név „… Szobák”",
+    phase: "mock",
+    d: { ...data, name: "Kemence Szobák", rooms: undefined, sampleUnitKind: "rooms" } as SiteData,
+  },
+  {
+    what: "élő, a valós szoba neve a szállásnév része",
+    phase: "live",
+    d: { ...data, name: "Bella Apartman", rooms: [{ name: "Apartman", capacity: "4 fő", price: "24 000 Ft / éj" }] } as SiteData,
+  },
+];
+for (const c of OWN_NAME_CASES) {
+  for (const id of ids) {
+    const tpl = TEMPLATES[id]!;
+    const html = renderSite(
+      { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections } as Recipe,
+      c.d,
+      { phase: c.phase },
+    );
+    const n = (html.match(/<[a-z]+[^>]*data-cit-module="rooms"/g) ?? []).length;
+    say(SELF_TEST ? n !== 1 : n === 1, `${id}: ${c.what} → pontosan egy szoba-szekció`, `talált: ${n}`);
+  }
+}
+
 if (measured === 0) {
   console.error("⛔ Egyetlen sablonnak sem volt szoba-szekciója — a mérés ÜRES.");
   process.exit(1);
@@ -95,4 +132,7 @@ if (failed) {
   console.error(`\n⛔ rooms-all-shown-check: ${failed} bukás (${measured} sablon mérve)`);
   process.exit(1);
 }
-console.log(`✅ rooms-all-shown-check: ${measured} sablon mindegyike mind az öt szobát kiírja, árral.`);
+console.log(
+  `✅ rooms-all-shown-check: ${measured} sablon mindegyike mind az öt szobát kiírja, árral; ` +
+    `${ids.length} sablon × ${OWN_NAME_CASES.length} eset: a szállásnév nem viszi el a szoba-szekciót.`,
+);
