@@ -179,6 +179,11 @@ const COMPOUND_CASES: { name: string; text: string; geo: string[]; expect: boole
   { name: "Li-di Apartman", text: "<h1>Li Di Apartman</h1><p>6300 Kalocsa, Kossuth Lajos u. 12</p>", geo: ["kalocsa"], expect: true, why: "szóközzel" },
   { name: "Li-di Apartman", text: "<h1>Kalocsai apartman</h1><p>Kalocsa, falidísz a szobában</p>", geo: ["kalocsa"], expect: false, why: "„falidísz” nem a „Li-di”" },
   { name: "Abi-Lo Vendégház", text: "<h1>Vendégház</h1><p>Nagypeterd</p>", geo: ["nagypeterd"], expect: false, why: "márka nélkül csak a köznév" },
+  // Same 422, two more leads (2026-10-27): KI-AD-LAK 71a7b957 (Bóly), Ide-odu Apartman d573b0af (Baja).
+  { name: "KI-AD-LAK", text: "<h1>Ki-Ad-Lak vendégház</h1><p>7754 Bóly</p>", geo: ["boly"], expect: true, why: "három rövid tag, kötőjellel" },
+  { name: "KI-AD-LAK", text: "<h1>Kiadó lakás</h1><p>Bóly, ki ad lakást?</p>", geo: ["boly"], expect: false, why: "„kiadó lakás” nem a „KI-AD-LAK”" },
+  { name: "Ide-odu Apartman", text: "<h1>Ide-Odú Apartman</h1><p>6500 Baja</p>", geo: ["baja"], expect: true, why: "ékezettel a lapon" },
+  { name: "Ide-odu Apartman", text: "<h1>IdeOdu apartman</h1><p>Baja</p>", geo: ["baja"], expect: true, why: "egybeírva" },
 ];
 for (const c of COMPOUND_CASES) {
   const brand = brandTokens(c.name);

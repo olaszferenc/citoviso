@@ -3279,7 +3279,8 @@ async function handle(
   if (method === "GET" && mockMatch) {
     return serveMock(res, mockMatch[1]);
   }
-  // GET /configure/:artifactId/photo/:hash — the mock's http-only or hotlink-blocked photo,
+  // GET /configure/:artifactId/photo/:hash — the mock's http-only, hotlink-blocked or oversized
+  // photo (the latter shrunk to SERVE_MAX_EDGE by fetchPhoto),
   // served over our https origin (ADR-0341, photoTransport.ts path (b)). ⛔ Not an open
   // proxy: the hash must name one of THIS artifact's stored photo sources, and a paid host
   // (Places media, isPaidPhotoHost) is never fetched here.

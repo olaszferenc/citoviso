@@ -31,6 +31,12 @@
 // nincs. Az ilyen fotó a (b) úton jön, a route elforgatva szolgálja ki, így a lap a
 // forgatott bájtot és méretarányt kapja — CSS transform nincs (az elrontaná a layoutot).
 //
+// TÚLMÉRETES FORRÁS (2026-10-27, DunaTaxi Apartman b680c405): a saját honlap 5196 px-es,
+// 12–17 MB-os JPEG-eket ad, a mock közvetlenül töltötte őket (~85 MB mobilon). A közvetlenül
+// kiadott fotók méretét EGY HEAD-del mérjük; ami a `SERVE_MAX_BYTES`-nál nehezebb, a (b) úton
+// jön, és a route a `fetchPhoto` kicsinyített bájtját adja (max. `SERVE_MAX_EDGE` széles).
+// Content-Length nélküli válasz: közvetlen marad (nincs mit mérni, nem töltjük le előre).
+//
 // A siteData a FORRÁS-URL-t tartja meg (jogállás, hero-pontszám kulcsa, élesítés) — a
 // csere a RENDERELT HTML-en történik, minden íráskor (generálás, hero-csere, szöveg-
 // átírás), egyetlen függvénnyel.
@@ -40,7 +46,7 @@ import { createHash } from "node:crypto";
 import sharp from "sharp";
 
 import { config } from "../config.js";
-import { fetchPhoto } from "../console/photoProxy.js";
+import { SERVE_MAX_BYTES, fetchPhoto } from "../console/photoProxy.js";
 import { db } from "../db/client.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 
@@ -105,6 +111,33 @@ export const probeWithMockReferer: HotlinkProbe = async (url) => {
   if (probeCache.size > 500) probeCache.clear();
   probeCache.set(url, { ok, at: Date.now() });
   return ok;
+};
+
+/** How many bytes the photo is (Content-Length), or null when the host does not say. */
+export type SizeProbe = (url: string) => Promise<number | null>;
+
+const sizeCache = new Map<string, { readonly bytes: number | null; readonly at: number }>();
+
+/** The default size probe: one HEAD, the scraper's own user agent ($0, no body downloaded). */
+export const headContentLength: SizeProbe = async (url) => {
+  const hit = sizeCache.get(url);
+  if (hit && Date.now() - hit.at < PROBE_TTL_MS) return hit.bytes;
+  let bytes: number | null = null;
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: AbortSignal.timeout(5_000),
+      headers: { "user-agent": PORTAL_USER_AGENT },
+    });
+    const n = Number(res.headers.get("content-length"));
+    bytes = res.ok && Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    bytes = null;
+  }
+  if (sizeCache.size > 2000) sizeCache.clear();
+  sizeCache.set(url, { bytes, at: Date.now() });
+  return bytes;
 };
 
 /** A proxy-URL azonosítója: a forrás-URL lenyomata (nem titok — a jogosultság a tárolt lista). */
@@ -201,9 +234,10 @@ export type PhotoFetcher = (url: string) => Promise<{ readonly ok: boolean; read
 const sha = (b: Buffer): string => createHash("sha256").update(b).digest("hex");
 
 /**
- * Eldönti a http-s fotók útját, és a hotlink-tiltó https-hosztokét (fent). Költség:
- * http-fotónként egy https-kérés a szállás SAJÁT hosztjára, https-hosztonként egy
- * Referer-próba (+ egy Referer nélküli, ha a próba bukik) — $0, Places nincs.
+ * Eldönti a http-s fotók útját, a hotlink-tiltó https-hosztokét és a túlméretes fotókét
+ * (fent). Költség: http-fotónként egy https-kérés a szállás SAJÁT hosztjára,
+ * https-hosztonként egy Referer-próba (+ egy Referer nélküli, ha a próba bukik), és
+ * közvetlen fotónként egy HEAD — $0, Places nincs.
  */
 export async function planPhotoTransport(
   urls: readonly string[],
@@ -211,6 +245,7 @@ export async function planPhotoTransport(
   fetcher: PhotoFetcher = fetchPhoto,
   probe: HotlinkProbe = probeWithMockReferer,
   rotations: ReadonlyMap<string, PhotoRotation> = new Map(),
+  sizeProbe: SizeProbe = headContentLength,
 ): Promise<PhotoTransportRow[]> {
   const rows: PhotoTransportRow[] = [];
   // A rotated photo always rides the proxy (the route turns it); a paid host never does.
@@ -266,6 +301,33 @@ export async function planPhotoTransport(
       // Blocked for our page — but is it alive at all? A dead photo is the gate's to report.
       if (!(await fetcher(first)).ok) return;
       for (const source of list) rows.push({ source, served: proxiedMockPhotoUrl(artifactId, source), via: "proxy" });
+    }),
+  );
+  // OVERSIZED (DunaTaxi b680c405, 2026-10-27): a photo the page would load directly but
+  // heavier than SERVE_MAX_BYTES rides the proxy, which serves it shrunk to SERVE_MAX_EDGE
+  // (photoProxy.downsizedPhoto). One HEAD per photo, one host's requests serially.
+  const viaProxy = new Set(rows.filter((r) => r.via === "proxy").map((r) => r.source));
+  const direct = new Map<string, string>();
+  for (const u of new Set(urls)) {
+    if (viaProxy.has(u) || isPaidPhotoHost(u)) continue;
+    const served = rows.find((r) => r.source === u)?.served ?? u;
+    if (/^https:\/\//i.test(served)) direct.set(u, served);
+  }
+  const directByHost = new Map<string, string[]>();
+  for (const [source, served] of direct) {
+    const host = new URL(served).host;
+    directByHost.set(host, [...(directByHost.get(host) ?? []), source]);
+  }
+  await Promise.all(
+    [...directByHost.values()].map(async (list) => {
+      for (const source of list) {
+        const bytes = await sizeProbe(direct.get(source)!);
+        if (bytes === null || bytes <= SERVE_MAX_BYTES) continue;
+        const i = rows.findIndex((r) => r.source === source);
+        const row: PhotoTransportRow = { source, served: proxiedMockPhotoUrl(artifactId, source), via: "proxy" };
+        if (i >= 0) rows[i] = row;
+        else rows.push(row);
+      }
     }),
   );
   rows.sort((x, y) => x.source.localeCompare(y.source));

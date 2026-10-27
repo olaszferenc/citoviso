@@ -26,6 +26,8 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import sharp from "sharp";
+
 import { config } from "../config.js";
 import { T } from "../i18n/mail.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
@@ -37,8 +39,40 @@ const OK_TTL_MS = 30 * 60_000;
 const FAIL_TTL_MS = 5 * 60_000;
 /** A lekérés nem áshatja be a konzolt: a lassú forrás ugyanúgy „nem tölthető be". */
 const FETCH_TIMEOUT_MS = 8_000;
-/** Ennél nagyobb képet nem szolgálunk ki bélyegnek (védelem a véletlen óriás ellen). */
-const MAX_BYTES = 12 * 1024 * 1024;
+/** Ennél nagyobb NYERS forrást le sem töltünk végig (védelem a véletlen óriás ellen). */
+const MAX_BYTES = 40 * 1024 * 1024;
+
+/**
+ * TÚLMÉRETES FORRÁS (2026-10-27, DunaTaxi Apartman b680c405): a szállás saját honlapja
+ * 5196 px-es, 12–17 MB-os JPEG-eket ad — a mock 6 képpel ~85 MB-ot töltött mobilon, a
+ * konzol pedig a régi 12 MiB-os korlát miatt „nem érhető el"-t írt egy élő képre. Ami
+ * ennél szélesebb vagy nehezebb, azt a lekéréskor EGYSZER kicsinyítjük, és a cache, a
+ * konzol-bélyeg, a mock-kapu és a mock-proxy (`/configure/…/photo/…`) mind ezt kapja.
+ */
+export const SERVE_MAX_EDGE = 2400;
+export const SERVE_MAX_BYTES = 1_500_000;
+
+/** A túlméretes kép kicsinyítve (JPEG marad JPEG, más WebP — az átlátszóság megmarad).
+ *  Animált GIF-hez és értelmezhetetlen bájthoz nem nyúl: az eredeti megy tovább. */
+export async function downsizedPhoto(
+  body: Buffer,
+  contentType: string,
+): Promise<{ readonly body: Buffer; readonly contentType: string }> {
+  if (/gif|svg/i.test(contentType)) return { body, contentType };
+  try {
+    const img = sharp(body, { failOn: "none" });
+    const meta = await img.metadata();
+    const width = meta.autoOrient?.width ?? meta.width ?? 0;
+    if (width <= SERVE_MAX_EDGE && body.byteLength <= SERVE_MAX_BYTES) return { body, contentType };
+    // rotate() with no angle = apply the EXIF orientation: the re-encoded file drops EXIF.
+    const resized = img.rotate().resize({ width: SERVE_MAX_EDGE, withoutEnlargement: true });
+    return meta.format === "jpeg"
+      ? { body: await resized.jpeg({ quality: 82, mozjpeg: true }).toBuffer(), contentType: "image/jpeg" }
+      : { body: await resized.webp({ quality: 82 }).toBuffer(), contentType: "image/webp" };
+  } catch {
+    return { body, contentType };
+  }
+}
 
 // `insecure` (ADR-0341): the RENDERED mock links the photo over plain http — the https page
 // will not show it, whatever the source answers. Only the mock gate sets it, never fetchPhoto.
@@ -153,7 +187,8 @@ async function fetchPhotoNow(url: string, key: string): Promise<CacheRow> {
     if (body.byteLength > MAX_BYTES) {
       return put({ ok: false, status: res.status, failure: "toolarge", contentType: type });
     }
-    return put({ ok: true, status: res.status, contentType: type, body });
+    const served = await downsizedPhoto(body, type);
+    return put({ ok: true, status: res.status, contentType: served.contentType, body: served.body });
   } catch {
     return put({ ok: false, status: null, failure: "network" });
   }

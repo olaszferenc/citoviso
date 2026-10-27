@@ -33,7 +33,9 @@ import {
   rotatedPhoto,
   type HotlinkProbe,
   type PhotoFetcher,
+  type SizeProbe,
 } from "../src/generator/photoTransport.js";
+import { SERVE_MAX_BYTES, SERVE_MAX_EDGE, downsizedPhoto } from "../src/console/photoProxy.js";
 import {
   classifyServedRefs,
   extractImageRefs,
@@ -57,6 +59,8 @@ const SAME = "http://www.lehelvendeghaz.hu/img/a.jpg";
 const BADCERT = "http://kerekhegyvendeghaz.hu/img/rooms/konyha-1.jpg";
 const DIFFBYTES = "http://example.hu/x.jpg";
 const SECURE = "https://places.googleapis.com/v1/x/media";
+/** No size known (the host sent no Content-Length) — the tests below stay off the network. */
+const noSize: SizeProbe = async () => null;
 
 console.log("http-fotó a https-es mockon — út-döntés + kapu\n");
 
@@ -93,7 +97,7 @@ const fake: PhotoFetcher = async (u) => {
   if (u === DIFFBYTES.replace("http:", "https:")) return { ok: true, body: img("parked-domain") };
   return { ok: false };
 };
-const plan = await planPhotoTransport([SAME, BADCERT, DIFFBYTES, SECURE], AID, fake);
+const plan = await planPhotoTransport([SAME, BADCERT, DIFFBYTES, SECURE], AID, fake, undefined, undefined, noSize);
 const via = (u: string): string | undefined => plan.find((r) => r.source === u)?.via;
 check(via(SAME) === "https" && plan.find((r) => r.source === SAME)?.served === SAME.replace("http:", "https:"), "azonos bájt → (a) https");
 check(via(BADCERT) === "proxy", "rossz tanúsítvány → (b) proxy");
@@ -104,7 +108,7 @@ check(
   "a proxy-URL az artefaktum + a forrás lenyomata",
 );
 const optimist: PhotoFetcher = async (u) => ({ ok: true, body: img(u.startsWith("https") ? "Z" : "Y") });
-const planRed = await planPhotoTransport([DIFFBYTES], AID, optimist);
+const planRed = await planPhotoTransport([DIFFBYTES], AID, optimist, undefined, undefined, noSize);
 check(planRed[0]?.via === "proxy", "PIROS IKER: két 200-as, de eltérő válasz nem elég a https-hez");
 
 console.log("\n②b hotlink-tiltó https-hoszt (Huszár 62a12b3e, 2026-10-27) → saját proxy");
@@ -115,14 +119,14 @@ const PORTAL = "https://hovamenjek.hu/upload/places/1_ab/fullHd/a.jpg";
 const probed: string[] = [];
 const blocks: HotlinkProbe = async (u) => { probed.push(u); return !u.includes("huszar.info"); };
 const alive: PhotoFetcher = async (u) => ({ ok: true, body: img(u) });
-const hot = await planPhotoTransport([...HUSZAR, PORTAL, SECURE], AID, alive, blocks);
+const hot = await planPhotoTransport([...HUSZAR, PORTAL, SECURE], AID, alive, blocks, undefined, noSize);
 check(hot.filter((r) => r.via === "proxy").map((r) => r.source).sort().join("|") === [...HUSZAR].sort().join("|"), "a tiltó hoszt MINDEN fotója a proxyra megy, a többi érintetlen");
 check(hot.every((r) => r.served === proxiedMockPhotoUrl(AID, r.source)), "a proxy-URL a szokásos (b) út");
 check(probed.filter((u) => u.includes("huszar.info")).length === 1, "hosztonként EGY próba");
 check(!probed.some((u) => isPaidPhotoHost(u)), "fizetős hoszt (Places) soha nem próba");
 const dead: PhotoFetcher = async () => ({ ok: false });
-check((await planPhotoTransport(HUSZAR, AID, dead, async () => false)).length === 0, "halott kép (Referer nélkül sem él) nem kerül proxyra — az a kapu dolga");
-check((await planPhotoTransport(HUSZAR, AID, alive, async () => true)).length === 0, "PIROS IKER: Refererrel is betöltődő https-kép érintetlen");
+check((await planPhotoTransport(HUSZAR, AID, dead, async () => false, undefined, noSize)).length === 0, "halott kép (Referer nélkül sem él) nem kerül proxyra — az a kapu dolga");
+check((await planPhotoTransport(HUSZAR, AID, alive, async () => true, undefined, noSize)).length === 0, "PIROS IKER: Refererrel is betöltődő https-kép érintetlen");
 check(isPaidPhotoHost("https://places.googleapis.com/v1/x/media") && isPaidPhotoHost("https://lh3.googleusercontent.com/p/x") && !isPaidPhotoHost(HUSZAR[0]!), "isPaidPhotoHost: Places/Google igen, a szállás hosztja nem");
 const hz = { siteData: { photos: HUSZAR.map((url) => ({ url })) } };
 check(resolveProxiedSource(hz, photoSourceHash(HUSZAR[0]!)) === HUSZAR[0], "a tárolt https-forrás feloldódik (rerender után a route kiszolgálja)");
@@ -137,7 +141,7 @@ const rots = photoRotations(rawLk);
 check(rots.get(LK) === 90 && rots.get("https://x.hu/b.jpg") === 270 && rots.get("https://own.hu/c.jpg") === 180, "a mező: photos[].rotate = 90 | 180 | 270 (szám, vagy számjegy-szöveg), portál- és saját fotón");
 check(!rots.has(LK2) && !rots.has("https://x.hu/a.jpg"), "PIROS IKER: mező nélkül / 45°-kal nincs forgatás");
 const noProbe: HotlinkProbe = async () => true;
-const turned = await planPhotoTransport([LK, LK2, SECURE], AID, alive, noProbe, rots);
+const turned = await planPhotoTransport([LK, LK2, SECURE], AID, alive, noProbe, rots, noSize);
 check(turned.length === 1 && turned[0]!.source === LK && turned[0]!.served === `${proxiedMockPhotoUrl(AID, LK)}?r=90`, "a forgatott kép a proxyra megy (?r=90 a cache miatt), a többi érintetlen");
 check(!turned.some((r) => r.source === SECURE), "fizetős hoszt (Places) forgatva sem megy proxyra");
 check(resolveProxiedSource({ siteData: { photos: [{ url: LK }] } }, photoSourceHash(LK)) === LK, "a route a ?r nélküli lenyomatból oldja fel");
@@ -145,6 +149,31 @@ const sharp = (await import("sharp")).default;
 const wide = await sharp({ create: { width: 40, height: 30, channels: 3, background: "#888" } }).jpeg().toBuffer();
 const meta = await sharp(await rotatedPhoto(wide, 90)).metadata();
 check(meta.width === 30 && meta.height === 40 && meta.format === "jpeg", "rotatedPhoto(90): 40×30 → 30×40, a formátum marad");
+
+console.log("\n②d túlméretes forrás (DunaTaxi b680c405, 2026-10-27) → proxy, a route kicsinyít");
+// Measured: apartmanszallaskalocsa.hu serves 5196 px JPEGs of 12–17 MB straight into both
+// mocks (~85 MB on a phone), and the console's 12 MiB cap called the live photos unreachable.
+const DT = ["https://apartmanszallaskalocsa.hu/images/image8.jpg", "https://apartmanszallaskalocsa.hu/images/image9.jpg"];
+const sizes: SizeProbe = async (u) => (u.endsWith("image8.jpg") ? 16_796_329 : u.endsWith("image9.jpg") ? 264_559 : null);
+const big = await planPhotoTransport([...DT, SECURE], AID, alive, noProbe, undefined, sizes);
+check(big.length === 1 && big[0]!.source === DT[0] && big[0]!.served === proxiedMockPhotoUrl(AID, DT[0]!), "a 16,8 MB-os kép a proxyra megy, a 265 kB-os közvetlen marad");
+check(!big.some((r) => r.source === SECURE), "fizetős hoszt (Places) mérete nem számít, soha nem proxy");
+const sameHttp = await planPhotoTransport([SAME], AID, fake, noProbe, undefined, async () => 9_000_000);
+check(sameHttp.length === 1 && sameHttp[0]!.via === "proxy", "a http→https (a) úton közvetlen, de túlméretes kép is a proxyra megy");
+check((await planPhotoTransport(DT, AID, alive, noProbe, undefined, async () => SERVE_MAX_BYTES)).length === 0, "PIROS IKER: a küszöbön (nem fölötte) nincs proxy");
+const huge = await sharp({ create: { width: 5196, height: 3464, channels: 3, background: "#7a9" } }).jpeg({ quality: 100 }).toBuffer();
+const shrunk = await downsizedPhoto(huge, "image/jpeg");
+const sm = await sharp(shrunk.body).metadata();
+check(sm.width === SERVE_MAX_EDGE && sm.height === 1600 && sm.format === "jpeg" && shrunk.contentType === "image/jpeg", "downsizedPhoto: 5196×3464 JPEG → 2400×1600 JPEG");
+const png = await sharp({ create: { width: 3000, height: 1000, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+const pngOut = await downsizedPhoto(png, "image/png");
+const pm = await sharp(pngOut.body).metadata();
+check(pm.width === SERVE_MAX_EDGE && pm.format === "webp" && pm.hasAlpha === true && pngOut.contentType === "image/webp", "átlátszó PNG → WebP, az alfa megmarad");
+check((await downsizedPhoto(wide, "image/jpeg")).body === wide, "PIROS IKER: a kicsi kép bájtra érintetlen");
+const garbage = Buffer.alloc(2_000_000, 1);
+check((await downsizedPhoto(garbage, "image/jpeg")).body === garbage, "értelmezhetetlen bájt: az eredeti megy tovább (nem dob)");
+const proxySrc = readFileSync("src/console/photoProxy.ts", "utf8");
+check(/const served = await downsizedPhoto\(body, type\)/.test(proxySrc) && /body: served\.body/.test(proxySrc), "fetchPhoto a kicsinyített bájtot tárolja (konzol, kapu és mock-proxy egy forrásból)");
 
 console.log("\n③ nem nyílt proxy: csak a tárolt forrás oldódik fel");
 const inputs = { siteData: { photos: [{ url: BADCERT }, { url: SAME }] } };
