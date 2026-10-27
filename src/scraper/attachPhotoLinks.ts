@@ -127,6 +127,33 @@ export function parseLinks(raw: string): { urls: string[]; invalid: string[] } {
   return { urls, invalid };
 }
 
+/**
+ * The site a URL belongs to, for „is this the lead's stored website”: the host, and on Google
+ * Sites (one host for every site) the /view/<name> path too — any other Sites page is someone else.
+ */
+function siteKey(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.toLowerCase().replace(/^www\./, "");
+    if (host !== "sites.google.com") return host;
+    const [kind, name] = u.pathname.split("/").filter(Boolean);
+    return name ? `${host}/${kind}/${decodeURIComponent(name).toLowerCase()}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Is `url` on the same site as the lead's stored website (siteKey)? */
+export function sameStoredSite(stored: string, url: string): boolean {
+  const a = siteKey(stored);
+  return a !== null && a === siteKey(url);
+}
+
+/** A Google Sites image: served without a file extension („…/sitesv-images-rt/…=w1280”). */
+const GOOGLE_SITES_IMAGE = /^https:\/\/(?:sites\.google\.com\/sitesv-images-rt\/|lh\d\.googleusercontent\.com\/)/i;
+/** A CMS theme's own stock picture (Drupal „themes/danland/images/slideshows/sea.jpg”), not the lodging's. */
+const THEME_IMAGE = /\/themes\/[^/]+\/images\//i;
+
 /** Last two labels — fine for the .hu/.com sites this reads. */
 function site2(host: string): string {
   const h = host.toLowerCase();
@@ -187,10 +214,10 @@ export function ownSiteImages(html: string, pageUrl: string): { url: string; cap
     if (!raw || raw.startsWith("data:")) return;
     const abs = withoutPhotonCdn(absoluteUrl(raw, pageUrl));
     if (abs && thumbs.has(abs.split("?")[0]!.toLowerCase())) return;
-    if (!abs || !IMAGE_EXT.test(abs) || NON_CONTENT_IMAGE.test(abs)) return;
+    if (!abs || !(IMAGE_EXT.test(abs) || GOOGLE_SITES_IMAGE.test(abs)) || NON_CONTENT_IMAGE.test(abs) || THEME_IMAGE.test(abs)) return;
     // Wix serves one media file under many transform paths („…~mv2.jpg/v1/fill/w_960,…/x.jpg”):
     // the media id is the picture, so the srcset's largest and the src's thumbnail are one.
-    const key = abs.split("?")[0]!.toLowerCase().replace(/(wixstatic\.com\/media\/[^/]+)\/v1\/.*$/, "$1");
+    const key = abs.split("?")[0]!.toLowerCase().replace(/(wixstatic\.com\/media\/[^/]+)\/v1\/.*$/, "$1").replace(/=[swh]\d+[^/]*$/, "");
     if (seen.has(key)) return;
     seen.add(key);
     // A file name in the alt („kep_128.jpg”, hupont) is no caption — keep none rather than it.
@@ -258,8 +285,11 @@ export async function readOwnSitePhotos(
   // brand word on the page is NOT enough; the site must be the lead's stored own site,
   // or be NAMED after the business (brand word / full name in the domain) with the lead's
   // own town on the page, or print the lead's phone number next to its brand.
-  const storedHost = lead.websiteStatus === "has_own" && lead.website ? hostOf(lead.website) : null;
-  const knownOwn = storedHost !== null && (storedHost === host || storedHost === hostOf(page.finalUrl));
+  // The lead's STORED website, when it is an own site and not a portal — whatever the (possibly
+  // stale) websiteStatus says (Strand Közeli Faház c5f603cc, Cuki apartman eb7b6ab6, 2026-10-27:
+  // the stored website WAS this link, the status said „none”, the link was refused).
+  const stored = lead.website && classifyWebsite(lead.website) === "has_own" ? lead.website : null;
+  const knownOwn = stored !== null && (sameStoredSite(stored, url) || sameStoredSite(stored, page.finalUrl));
   const hostCompact = host.replace(/[^a-z0-9]/g, "");
   const compactName = deaccent(lead.name.toLowerCase()).replace(/[^a-z0-9]/g, "");
   const nameInDomain =
@@ -308,7 +338,9 @@ export async function readOwnSitePhotos(
   const own = candidates.filter((img) => {
     const imgHost = hostOf(img.url) ?? "";
     const sameSite = site2(imgHost) === pageSite;
-    const builderCdn = isSiteBuilderMedia(imgHost);
+    // Google Sites keeps the site's uploads on googleusercontent.com — allowed ONLY on a Sites page
+    // (elsewhere that host also serves Google Maps photos, see the note above).
+    const builderCdn = isSiteBuilderMedia(imgHost) || (/(?:^|\.)sites\.google\.com$/.test(hostOf(page!.finalUrl) ?? host) && /\.googleusercontent\.com$/.test(imgHost));
     if (!sameSite && !builderCdn) {
       dropped.push(`idegen domain képe (${imgHost})`);
       return false;

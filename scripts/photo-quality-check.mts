@@ -23,7 +23,7 @@ import {
 } from "../src/scraper/sources/portals/photoQuality.js";
 import { readFileSync } from "node:fs";
 import { isCutSrcsetUrl, parseSrcset } from "../src/scraper/srcset.js";
-import { ownSiteImages, photoCountMessage, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
+import { ownSiteImages, photoCountMessage, sameStoredSite, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
 import { distinctPortalPhotos, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
 import { ENGINE_HOME_REDIRECT } from "../src/scraper/sources/portalListing.js";
 import { domImages, extractListing } from "../src/scraper/sources/portals/extract.js";
@@ -373,6 +373,37 @@ check(
   lb.length === 3 && lb.filter((o) => /_1200x1200\.webp$/.test(o.url)).length === 2 && !lb.some((o) => /320x200/.test(o.url)) && lb.some((o) => o.url.endsWith("/images/terasz.jpg")),
   JSON.stringify(lb.map((o) => o.url)),
 );
+// Google Sites (Cuki apartman eb7b6ab6, 2026-10-27): the uploads have no file extension
+// („…/sitesv-images-rt/…=w1280”) — taken; a CMS theme's stock slideshow (balatonhausfrei.hu,
+// „themes/danland/images/slideshows/sea.jpg”) is not the lodging's photo — dropped.
+const gs = ownSiteImages(
+  `<img src="https://sites.google.com/sitesv-images-rt/AMxu72us-aaa=w1280"><img src="https://sites.google.com/sitesv-images-rt/AMxu72us-aaa=w16383"><img src="https://lh3.googleusercontent.com/abc123=w800">`,
+  "https://sites.google.com/view/cukiapartman/f%C5%91oldal",
+);
+check(
+  "ownSiteImages: Google Sites kiterjesztés nélküli képe bekerül, a =w méretváltozat egyszer",
+  gs.length === 2 && gs.some((o) => /sitesv-images-rt/.test(o.url)) && gs.some((o) => /googleusercontent/.test(o.url)),
+  JSON.stringify(gs.map((o) => o.url)),
+);
+const th = ownSiteImages(
+  `<img src="/sites/all/themes/danland/images/slideshows/sea.jpg"><img src="http://balatonhausfrei.hu/images/nyito_1.jpg">`,
+  "https://balatonhausfrei.hu/",
+);
+check("ownSiteImages: a CMS-téma sablonképe (themes/<név>/images/) kimarad, a saját kép marad",
+  th.length === 1 && th[0]!.url.endsWith("/images/nyito_1.jpg"), JSON.stringify(th.map((o) => o.url)));
+// Strand Közeli Faház c5f603cc: the lead's STORED website is its own site whatever the (stale)
+// websiteStatus; on Google Sites the /view/<name> path is part of the site.
+check("sameStoredSite: ugyanaz a host (www nélkül is) igen; Google Sites-on csak ugyanaz a /view/<név>",
+  sameStoredSite("https://balatonhausfrei.hu/", "https://www.balatonhausfrei.hu/hu/kepek") &&
+    sameStoredSite("https://sites.google.com/view/cukiapartman/f%C5%91oldal", "https://sites.google.com/view/cukiapartman/galeria") &&
+    !sameStoredSite("https://sites.google.com/view/cukiapartman/f%C5%91oldal", "https://sites.google.com/view/masvalaki/fooldal") &&
+    !sameStoredSite("https://balatonhausfrei.hu/", "https://masik.hu/"),
+  "");
+const ap = readFileSync("src/scraper/attachPhotoLinks.ts", "utf8");
+check("readOwnSitePhotos: a tárolt honlap a státusztól függetlenül ismert saját oldal, ha nem portál (classifyWebsite has_own)",
+  /const stored = lead\.website && classifyWebsite\(lead\.website\) === "has_own" \? lead\.website : null;/.test(ap) && /const knownOwn = stored !== null && \(sameStoredSite\(stored, url\)/.test(ap), "");
+check("googleusercontent csak Google Sites oldalon engedett",
+  /sites\\\.google\\\.com\$\/\.test\(hostOf\(page!\.finalUrl\) \?\? host\) && \/\\\.googleusercontent\\\.com\$\/\.test\(imgHost\)/.test(ap), "");
 const dom = domImages(`<img src="${WIX480}" alt="kert"><img srcset="${WIX960} 2x, ${WIX480} 1x">`, "https://www.mandulaskert.com/");
 check(
   "domImages: a vesszős Wix-src egyben marad, a csak-srcset kép is ép URL",
