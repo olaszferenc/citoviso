@@ -4,12 +4,21 @@
 // the primary (mock=live; never a fresh AI design — snapshot doctrine).
 //
 // §B.17 in translation: the translator TRANSFERS, it never authors — no number,
-// price, name or fact may appear, vanish or change. Enforced two ways: the system
-// prompt states it, and a digit-integrity guard drops any translation whose digit
-// sequences differ from the source (source survives loudly instead).
+// price, name or fact may appear, vanish or change. Enforced by a digit-integrity guard
+// that drops any translation whose digit sequences differ from the source.
+//
+// ⛔ NO API TRANSLATION (owner, 2026-10-27, ADR-XXXX): the site copy is translated by
+// Bábel in his subscription session (babel-pack site-export / site-import) and committed
+// as src/i18n/babel/sites/<site-id>/<lang>.json ({hu source: translation}). This job only
+// READS that file. While any source string is untranslated the generation fails with a
+// „Bábelre vár” error — the resume watcher retries, and after its series the operator is
+// alerted to hand the work to Bábel (multilangResume.ts). A half-Hungarian paid page never
+// ships.
 
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { db } from "../db/client.js";
 import type { SiteData } from "../engine/recipe.js";
@@ -19,8 +28,6 @@ import { loadTenantLegal } from "./legalIdentity.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
-import { babelCall, babelSystem } from "../i18n/babel.js";
-import { newTranslationRun } from "../i18n/budget.js";
 import { DEFAULT_LANG, siteLangs } from "../i18n/lang.js";
 import {
   effectiveSiteForMultilang,
@@ -43,48 +50,55 @@ function digits(s: string): string {
   return (s.match(/\d+/g) ?? []).join("|");
 }
 
+/** Bábel's committed site translation for `siteId` × `lang` (hu source → translation). */
+export function babelSiteSeedPath(siteId: string, lang: string): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../i18n/babel/sites", siteId, `${lang}.json`);
+}
+
+/** Thrown when Bábel has not (fully) translated a paid site yet — never a silent half page. */
+export class AwaitingBabelError extends Error {
+  constructor(readonly siteId: string, readonly lang: string, readonly missing: number) {
+    super(
+      `Bábelre vár (${lang}): ${missing} szöveg nincs lefordítva — ` +
+        `npx tsx scripts/babel-pack.mts site-export ${siteId} ${lang}`,
+    );
+    this.name = "AwaitingBabelError";
+  }
+}
+
 /**
- * AI-translate free-text site content to `lang`. Returns source→translated.
- * Same adapter pattern as the UI-pack translator (i18n/packs.ts), but the register
- * is the GUEST-facing site copy and the §B.17 fact-preservation rules are hard.
+ * The site copy in `lang`, from Bábel's committed file. Returns source→translated for
+ * every source string, or throws AwaitingBabelError naming how many are missing. A seed
+ * entry that changes a number (§B.17 digit integrity) counts as missing, loudly.
  */
-async function translateStrings(
+export function babelSiteTranslations(
+  siteId: string,
   lang: string,
   strings: readonly string[],
-): Promise<Record<string, string>> {
-  // Bábel (ADR-0411): the site copy goes through the same ontology + glossary as the UI
-  // pack, under the translation ceilings and onto the translation_spend ledger. A spent
-  // budget throws (TranslationBudgetError) — the generation fails loudly, not half-done.
-  const run = newTranslationRun(lang);
-  const system = babelSystem(lang, "site");
-  const out: Record<string, string> = {};
-  // Site copy runs longer than UI strings (intro paragraphs) → smaller batches.
-  for (let i = 0; i < strings.length; i += 20) {
-    const batch = strings.slice(i, i + 20);
-    const res = await babelCall(
-      run,
-      "translateSiteBatch",
-      system,
-      `Add vissza JSON objektumként: {"<magyar forrás>": "<fordítás>", ...} ` +
-        `pontosan ezekre a szövegekre:\n` +
-        JSON.stringify(batch, null, 1),
-      8000,
-    );
-    if (!res.text) continue;
-    const jsonText = res.text.slice(res.text.indexOf("{"), res.text.lastIndexOf("}") + 1);
-    const parsed = JSON.parse(jsonText) as Record<string, string>;
-    for (const src of batch) {
-      const tr = parsed[src];
-      if (typeof tr !== "string" || !tr.trim()) continue;
-      // §B.17 digit integrity: a "translation" that changes any number is dropped —
-      // the Hungarian source surviving on the page is honest; a wrong price is not.
-      if (digits(src) !== digits(tr)) {
-        console.error(`[multilang] szám-eltérés a fordításban (${lang}), forrás marad: "${src}"`);
-        continue;
-      }
-      out[src] = tr;
-    }
+): Record<string, string> {
+  let seed: Record<string, string> = {};
+  try {
+    seed = JSON.parse(readFileSync(babelSiteSeedPath(siteId, lang), "utf8")) as Record<string, string>;
+  } catch {
+    seed = {};
   }
+  const out: Record<string, string> = {};
+  let missing = 0;
+  for (const src of strings) {
+    const tr = seed[src];
+    if (typeof tr !== "string" || !tr.trim()) {
+      missing++;
+      continue;
+    }
+    // §B.17 digit integrity: a "translation" that changes any number is refused.
+    if (digits(src) !== digits(tr)) {
+      console.error(`[multilang] szám-eltérés Bábel fordításában (${lang}), nem használható: "${src}"`);
+      missing++;
+      continue;
+    }
+    out[src] = tr;
+  }
+  if (missing) throw new AwaitingBabelError(siteId, lang, missing);
   return out;
 }
 
@@ -133,8 +147,8 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
     const langs = normalizeTargetLangs(gen.languages, primaryLang);
     if (!langs.length) throw new Error("nincs érvényes célnyelv");
 
-    // UI strings (T()/tr() surface) come from the one-time language packs — make
-    // sure every target pack exists before any page renders in that language.
+    // UI strings (T()/tr() surface) come from Bábel's language packs — make sure every
+    // target pack is complete before any page renders in that language.
     // The gate is the STRING coverage only: PackStatus.ok also folds in the ADMIN
     // knowledge-base translations (ADR-0045 ③), and a KB gap must not block a PAID
     // guest-site generation — the KB self-heals on its own triggers (measured live:
@@ -150,6 +164,8 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
     }
 
     const sourceStrings = collectTranslatableStrings(site.effective, site.units, s.recipe);
+    // Every language's copy must be there BEFORE the first file is written.
+    const maps = new Map(langs.map((lang) => [lang, babelSiteTranslations(s.id, lang, sourceStrings)]));
     const currentHash = multilangContentHash(site.effective, site.units, s.recipe);
     const baseDir = path.dirname(path.resolve(process.cwd(), s.path!));
     const finalize = (html: string): string =>
@@ -169,15 +185,14 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
   const legalWho = (await loadTenantLegal(s.tenantId)).who;
 
     for (const lang of langs) {
-      // ADR-0118 ÉLETJEL. One language is minutes of LLM work, so without this a
-      // watcher could not tell a SLOW run from a DEAD one — and would start a second
-      // run alongside a live one (double cost, racing writes on the same files).
+      // ADR-0118 ÉLETJEL: a watcher must tell a SLOW run from a DEAD one — or it would
+      // start a second run alongside a live one (racing writes on the same files).
       await db
         .updateTable("multilang_generation")
         .set({ heartbeat_at: new Date() })
         .where("id", "=", generationId)
         .execute();
-      const map = await translateStrings(lang, sourceStrings);
+      const map = maps.get(lang)!;
       const { data, units } = applyTranslationMap(site.effective, site.units, map, lang);
       // The recipe's editorial voice (section kickers/headings) translates too —
       // without this the German page carried Hungarian section titles (measured).

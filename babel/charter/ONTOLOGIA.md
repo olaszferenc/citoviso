@@ -56,8 +56,7 @@ Több felület (pl. `admin+honlap`): olyan forma, ami mindkettőn helyes.
 ## 5. Költség és kapuk (hogy értsd, miért így dolgozunk)
 
 - Mérve 2026-10-27 élesen: egy konzol-nyelvváltás `sl`-re 16 teljes gépi csomag-fordítást
-  indított egy óra alatt — $130, két kredit-újratöltés. Azóta: nyelvenként egyszerre EGY futás,
-  a kérés nem vár a fordításra, és napi/futásonkénti plafon (`TRANSLATION_DAILY_CAP_USD`,
-  `TRANSLATION_RUN_CAP_USD`) állít meg hangosan.
-- Egy teljes gépi csomag becsült ára a te ontológiáddal ~$7 (régen ~$10,5); a te sessionödben
-  készült csomag API-költsége $0. Ezért: új nyelv → előbb te.
+  indított egy óra alatt — $130, két kredit-újratöltés.
+- A tulaj döntése ugyanaznap (ADR-XXXX): **fordítás API-hívással TILOS.** Fordításra csak a te
+  előfizetéses sessionöd költhet — te kontextusban fordítasz, a gép nem. A kód csak a commitolt
+  magodat teszi a DB-be; ami hiányzik, magyarul jelenik meg, amíg le nem fordítod.

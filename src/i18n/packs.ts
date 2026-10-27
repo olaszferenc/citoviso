@@ -1,5 +1,7 @@
-// ADR-0036: language packs — one-time AI-provisioned UI-string translations, persisted in
-// the language_pack table, deterministic afterwards (mock=live safe). The catalog's KEY is
+// ADR-0036: language packs — UI-string translations persisted in the language_pack table,
+// deterministic afterwards (mock=live safe). ⛔ Since 2026-10-27 (ADR-XXXX) the ONLY source of
+// a translation is Bábel's committed pack (src/i18n/babel/packs/<lang>.json, made in his
+// subscription session): no code path translates through the API. The catalog's KEY is
 // the Hungarian source string itself (no invented key names): templates call T(d, "Galéria")
 // and the pack maps that exact string to its translation. {placeholders} are preserved and
 // guarded. Hungarian needs no pack (the source IS the string).
@@ -12,10 +14,8 @@ import { fileURLToPath } from "node:url";
 import { sql } from "kysely";
 
 import { db, pool } from "../db/client.js";
-import { babelCall, babelSystem, surfaceOf } from "./babel.js";
-import { newTranslationRun, TranslationBudgetError, type TranslationRun } from "./budget.js";
-import { ensureKbTranslations, kbCoverage, type KbPackStatus } from "./kbPacks.js";
-import { DEFAULT_LANG, langName } from "./lang.js";
+import { ensureKbTranslations, kbCoverage, kbSeedPending, type KbPackStatus } from "./kbPacks.js";
+import { DEFAULT_LANG } from "./lang.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CATALOG_PATH = path.resolve(HERE, "catalog.json");
@@ -38,8 +38,7 @@ export async function loadCatalog(): Promise<string[]> {
 }
 
 /** Synchronous translation lookup for render time. Hungarian returns the source. A missing
- *  pack/string falls back to Hungarian LOUDLY (once per key) — ensureLanguagePack before
- *  generation is the real guard; this is the belt-and-braces path. */
+ *  pack/string falls back to Hungarian LOUDLY (once per key) — until Bábel translates it. */
 const warned = new Set<string>();
 export function tSync(lang: string | undefined, hu: string): string {
   const l = lang || DEFAULT_LANG;
@@ -49,7 +48,7 @@ export function tSync(lang: string | undefined, hu: string): string {
   const wk = `${l}:${hu}`;
   if (!warned.has(wk)) {
     warned.add(wk);
-    console.error(`[i18n] hiányzó fordítás (${l}): "${hu}" — hu-fallback (pack-guard futott?)`);
+    console.error(`[i18n] hiányzó fordítás (${l}): "${hu}" — hu-fallback (Bábelre vár: babel-pack export ${l})`);
   }
   return hu;
 }
@@ -139,131 +138,6 @@ export async function loadPack(lang: string): Promise<Record<string, string> | n
   return strings;
 }
 
-/** One model round-trip: system + user prompt → the raw text answer (null = no text). */
-export type AskModel = (system: string, user: string) => Promise<string | null>;
-
-/** Retry rounds after the first pass — each only for the strings the previous one dropped. */
-const MAX_RETRY_ROUNDS = 2;
-
-/** First-pass batch size. Bábel answers by index (no Hungarian echo), so a batch of 60
- *  costs about what 40 did when the answer repeated every source string as its key. */
-const BATCH = 60;
-
-/**
- * Translate `strings` to `lang` through `ask`, with placeholder-integrity checking and
- * RETRY. Measured 2026-09-30 in production: 7 strings failed the check, were dropped, and
- * nothing asked again — the boot self-heal failed the same 7 twice, so the pack could
- * never become complete. Now a dropped string is re-asked (up to MAX_RETRY_ROUNDS) in a
- * small batch whose prompt lists, per string, the placeholders that must appear verbatim.
- * What still fails is reported LOUDLY and returned in `rejected`.
- *
- * Bábel (ADR-0411): every item carries its SURFACE (`surfaceOf`), batches are ordered by
- * surface so one batch reads like one screen, and the answer is keyed by the item index
- * (a Hungarian-keyed answer is still accepted). The system prompt comes from the caller
- * (`babelSystem`) — this function only shapes the batches and checks the answers.
- */
-export async function translateStrings(
-  lang: string,
-  strings: string[],
-  ask: AskModel,
-  opts: { maxRetryRounds?: number; system?: string; surfaceOf?: (hu: string) => string } = {},
-): Promise<{ out: Record<string, string>; rejected: Record<string, string>; stopped?: TranslationBudgetError }> {
-  const maxRetry = opts.maxRetryRounds ?? MAX_RETRY_ROUNDS;
-  const surface = opts.surfaceOf ?? (() => "egyeb");
-  const system = opts.system ?? babelSystem(lang, "ui");
-  const out: Record<string, string> = {};
-  let rejected: Record<string, string> = {};
-
-  const runBatch = async (batch: string[], user: string): Promise<void> => {
-    let parsed: Record<string, string>;
-    try {
-      const text = await ask(system, user);
-      if (!text) throw new Error("üres válasz");
-      parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as Record<string, string>;
-    } catch (err) {
-      // A spent budget is not a bad answer: it stops the whole run, loudly, upstream.
-      if (err instanceof TranslationBudgetError) throw err;
-      for (const hu of batch) rejected[hu] = `a válasz nem értelmezhető: ${(err as Error).message}`;
-      return;
-    }
-    batch.forEach((hu, i) => {
-      const tr = parsed[String(i)] ?? parsed[hu];
-      if (typeof tr !== "string" || !tr.trim()) {
-        rejected[hu] = "hiányzik a válaszból";
-        return;
-      }
-      // Placeholder integrity: a broken translation is worse than a re-run.
-      const problem = placeholderProblem(hu, tr);
-      if (problem) {
-        rejected[hu] = problem;
-        return;
-      }
-      out[hu] = tr;
-    });
-  };
-
-  try {
-    // One batch ≈ one surface: the order groups the strings of a screen together.
-    const ordered = [...strings].sort((a, b) => surface(a).localeCompare(surface(b)));
-    for (let i = 0; i < ordered.length; i += BATCH) {
-      const batch = ordered.slice(i, i + BATCH);
-      const items = batch.map((hu, n) => ({ i: n, hu, felulet: surface(hu) }));
-      await runBatch(
-        batch,
-        `Fordítsd ${langName(lang)} nyelvre. Add vissza JSON objektumként: {"<i>": "<fordítás>", ...}:\n` +
-          JSON.stringify(items, null, 0),
-      );
-    }
-
-    for (let round = 1; round <= maxRetry && Object.keys(rejected).length; round++) {
-      const again = Object.keys(rejected);
-      console.error(`[i18n] újrapróba ${round}/${maxRetry} (${lang}): ${again.length} string`);
-      rejected = {};
-      for (let i = 0; i < again.length; i += 10) {
-        const batch = again.slice(i, i + 10);
-        const spec = batch.map((hu, n) => {
-          const req = placeholders(hu).filter((t) => !isArticleToken(t));
-          return { i: n, magyar: hu, felulet: surface(hu), kotelezo_placeholderek: req };
-        });
-        await runBatch(
-          batch,
-          `Az előző fordításod ezeknél megsértette a placeholder-szabályt. Fordítsd újra őket; a ` +
-            `"kotelezo_placeholderek" MINDEGYIKE betűre, kapcsos zárójellel szerepeljen a fordításban, ` +
-            `más {kapcsos} token ne (az {art}/{Art}/{art2} maradjon ki). ` +
-            `Add vissza JSON objektumként: {"<i>": "<fordítás>", ...}:\n` +
-            JSON.stringify(spec, null, 1),
-        );
-      }
-    }
-  } catch (err) {
-    // A ceiling stops the run; what was translated so far is KEPT (the caller persists it).
-    if (err instanceof TranslationBudgetError) return { out, rejected, stopped: err };
-    throw err;
-  }
-
-  for (const [hu, why] of Object.entries(rejected))
-    console.error(`[i18n] ⛔ fordítás ELDOBVA újrapróba után is (${lang}): "${hu}" — ${why}`);
-  return { out, rejected };
-}
-
-/** AI-translate the given Hungarian strings to `lang` through Bábel. Returns hu→translated;
- *  strings that keep breaking the placeholder contract are left out so the coverage guard
- *  re-flags them. Throws TranslationBudgetError when a ceiling stops the run. */
-async function translateBatch(
-  lang: string,
-  strings: string[],
-  run: TranslationRun,
-): Promise<{ out: Record<string, string>; stopped?: TranslationBudgetError }> {
-  const system = babelSystem(lang, "ui");
-  const ask: AskModel = async (sys, user) => {
-    const ans = await babelCall(run, "translateUiBatch", sys, user, 8000);
-    if (ans.stopReason === "max_tokens") throw new Error("a válasz elvágódott a token-korlátnál");
-    return ans.text;
-  };
-  const r = await translateStrings(lang, strings, ask, { system, surfaceOf });
-  return { out: r.out, stopped: r.stopped };
-}
-
 export interface PackStatus {
   readonly lang: string;
   readonly total: number;
@@ -276,10 +150,9 @@ export interface PackStatus {
 /**
  * READ-ONLY coverage: which catalog strings `lang` is missing RIGHT NOW.
  *
- * Never translates, never writes, costs nothing. It exists because a SCREEN may have
- * to ask "would this send succeed?" without paying for it: `ensureLanguagePack` below
- * PROVISIONS (AI call + DB upsert), so rendering a page through it would spend money
- * and mutate state on a GET. The send path and the screen therefore share this one
+ * Never writes, costs nothing. It exists because a SCREEN may have to ask "would this
+ * send succeed?" without mutating state on a GET: `ensureLanguagePack` below WRITES
+ * (applies Bábel's seed to the DB). The send path and the screen therefore share this one
  * measurement, and only differ in whether they may act on the gap.
  */
 export async function missingPackStrings(lang: string): Promise<string[]> {
@@ -290,11 +163,12 @@ export async function missingPackStrings(lang: string): Promise<string[]> {
 }
 
 /**
- * Ensure the language pack for `lang` exists and fully covers the extracted catalog —
- * the ADR-0036 automation hook. Missing entries are translated by Bábel and upserted; the
- * cache refreshes. Returns coverage; `ok=false` means generation could not complete (missing
- * key, API failure, spend ceiling) — callers log loudly, generation still proceeds with
- * hu-fallback.
+ * Bring the language pack for `lang` up to what Bábel has COMMITTED — the ADR-0036
+ * automation hook. Bábel's seed (UI strings + help entries) is applied to the DB and the
+ * cache refreshes. Nothing is translated here: ⛔ no API call (owner, 2026-10-27,
+ * ADR-XXXX). Returns coverage; `ok=false` means Bábel has not translated everything yet —
+ * callers log loudly, rendering proceeds with the hu-fallback, and `babel-pack export`
+ * lists the gap for Bábel's session.
  *
  * ⛔ ONE RUN PER LANGUAGE (ADR-0411). Measured 2026-10-27 in production: a console language
  * switch to `sl` started this inside the request; the browser gave up (499/504), every
@@ -310,10 +184,10 @@ export async function ensureLanguagePack(lang: string, opts: { wait?: boolean } 
   if (lang === DEFAULT_LANG) return coverageNow(lang);
   const running = inflight.get(lang);
   if (running) return running;
-  // Fast path — the common case (every letter calls this): complete pack, complete KB, no
-  // pending Bábel seed → nothing to do, no lock, no connection held.
-  const now = await coverageNow(lang);
-  if (now.ok && applyBabelSeed(lang, (await loadPack(lang)) ?? {}, await loadCatalog()).changed === 0) return now;
+  // Fast path — the common case (every letter calls this): nothing of Bábel's seed is
+  // waiting to be applied → nothing to do, no lock, no connection held. A gap Bábel has not
+  // translated yet is NOT work for this function (it can only be filled by his session).
+  if (!(await seedPending(lang))) return coverageNow(lang);
   const again = inflight.get(lang); // another caller may have started while we measured
   if (again) return again;
   const p = exclusiveRun(lang, opts.wait ?? true).finally(() => inflight.delete(lang));
@@ -323,7 +197,7 @@ export async function ensureLanguagePack(lang: string, opts: { wait?: boolean } 
 
 const inflight = new Map<string, Promise<PackStatus>>();
 
-/** True while THIS process is provisioning `lang` (the console's „készül” notice). */
+/** True while THIS process is applying Bábel's seed for `lang`. */
 export function packBuilding(lang: string): boolean {
   return inflight.has(lang);
 }
@@ -331,7 +205,7 @@ export function packBuilding(lang: string): boolean {
 /**
  * Synchronous pack state for a page frame (render time cannot await): null when the
  * language is Hungarian or its pack covers the catalog; otherwise whether THIS process is
- * translating it and how many strings still fall back to Hungarian.
+ * applying Bábel's seed and how many strings still fall back to Hungarian.
  */
 export function packGapSync(lang: string): { building: boolean; missing: number } | null {
   if (lang === DEFAULT_LANG) return null;
@@ -342,14 +216,14 @@ export function packGapSync(lang: string): { building: boolean; missing: number 
 }
 
 /**
- * Start provisioning `lang` in the BACKGROUND if its pack is incomplete, and return at once.
- * For request paths (console language switch, page renders, scrape start): they render with
- * the hu-fallback meanwhile and never wait for — or re-start — a translation.
+ * Apply Bábel's pending seed for `lang` in the BACKGROUND, and return at once. For request
+ * paths (console language switch, page renders, scrape start): they render with the
+ * hu-fallback meanwhile and never wait.
  */
 export function requestLanguagePack(lang: string): void {
   if (lang === DEFAULT_LANG || inflight.has(lang)) return;
   void (async () => {
-    if ((await missingPackStrings(lang)).length === 0 && (await kbCoverage(lang)).ok) return;
+    if (!(await seedPending(lang))) return;
     await ensureLanguagePack(lang, { wait: false });
   })().catch((e) => console.error(`[i18n] háttér-provisioning HIBA (${lang}): ${(e as Error).message}`));
 }
@@ -357,8 +231,9 @@ export function requestLanguagePack(lang: string): void {
 /** Advisory-lock key: one per language, namespaced so it collides with nothing else. */
 const lockKey = (lang: string): string => `citoviso:i18n-pack:${lang}`;
 
-/** How long a waiting caller queues behind another process's run before giving up. */
-const LOCK_WAIT = "20min";
+/** How long a waiting caller queues behind another process's run before giving up (a run
+ *  only copies committed files into the DB — seconds, not minutes). */
+const LOCK_WAIT = "2min";
 
 async function exclusiveRun(lang: string, wait: boolean): Promise<PackStatus> {
   // A session-level advisory lock lives on ONE connection: hold a dedicated pool client
@@ -370,16 +245,16 @@ async function exclusiveRun(lang: string, wait: boolean): Promise<PackStatus> {
     locked = got.rows[0]?.ok === true;
     if (!locked) {
       if (!wait) {
-        console.log(`[i18n] ${lang}: egy másik folyamat már fordítja — nem indítok újat`);
+        console.log(`[i18n] ${lang}: egy másik folyamat már alkalmazza a Bábel-magot — nem indítok újat`);
         return await coverageNow(lang, { fresh: true });
       }
-      console.log(`[i18n] ${lang}: egy másik folyamat már fordítja — megvárom, nem indítok újat`);
+      console.log(`[i18n] ${lang}: egy másik folyamat már alkalmazza a Bábel-magot — megvárom`);
       await conn.query(`set lock_timeout = '${LOCK_WAIT}'`);
       try {
         await conn.query("select pg_advisory_lock(hashtext($1))", [lockKey(lang)]);
         locked = true;
       } catch (err) {
-        console.error(`[i18n] ${lang}: a másik fordítás nem ért véget ${LOCK_WAIT} alatt — hu-fallback (${(err as Error).message})`);
+        console.error(`[i18n] ${lang}: a másik futás nem ért véget ${LOCK_WAIT} alatt — hu-fallback (${(err as Error).message})`);
         return await coverageNow(lang, { fresh: true });
       } finally {
         await conn.query("reset lock_timeout").catch(() => undefined);
@@ -394,7 +269,7 @@ async function exclusiveRun(lang: string, wait: boolean): Promise<PackStatus> {
   }
 }
 
-/** Coverage without translating. `fresh` re-reads the pack from the DB (another process wrote it). */
+/** Coverage without writing. `fresh` re-reads the pack from the DB (another process wrote it). */
 async function coverageNow(lang: string, opts: { fresh?: boolean } = {}): Promise<PackStatus> {
   const catalog = await loadCatalog();
   if (lang === DEFAULT_LANG || !catalog.length) return { lang, total: catalog.length, missing: 0, ok: true };
@@ -458,61 +333,40 @@ export function applyBabelSeed(
   return { merged, changed };
 }
 
-/** The run itself — only ever entered under the language's lock. */
+/** Bábel's committed work for `lang` that the DB does not have yet (UI strings + help
+ *  entries). 0 → ensureLanguagePack has nothing to do. */
+async function seedPending(lang: string): Promise<number> {
+  const ui = applyBabelSeed(lang, (await loadPack(lang)) ?? {}, await loadCatalog()).changed;
+  return ui + (await kbSeedPending(lang));
+}
+
+/** The run itself — only ever entered under the language's lock. Copies Bábel's committed
+ *  seed into the DB; ⛔ translates nothing (no API call, ADR-XXXX). */
 async function provision(lang: string): Promise<PackStatus> {
   const catalog = await loadCatalog();
   if (!catalog.length) return { lang, total: 0, missing: 0, ok: true };
-  const run = newTranslationRun(lang);
-  let existing = (await loadPack(lang)) ?? {};
-  // Bábel's own, reviewed translations (made in his session, committed, shipped by deploy)
-  // come FIRST and win over machine output; the API only fills what they leave open.
+  const existing = (await loadPack(lang)) ?? {};
   const seeded = applyBabelSeed(lang, existing, catalog);
   if (seeded.changed) {
-    existing = seeded.merged;
-    await upsertPack(lang, existing);
+    await upsertPack(lang, seeded.merged);
     console.log(`[i18n] ${lang}: Bábel-mag alkalmazva — ${seeded.changed} string a babel/packs/${lang}.json-ból`);
   }
-  let missing = await missingPackStrings(lang);
-  let stopped: TranslationBudgetError | undefined;
-  if (missing.length) {
-    console.log(`[i18n] nyelvi csomag provisioning (Bábel): ${lang} — ${missing.length} hiányzó string`);
-    try {
-      const r = await translateBatch(lang, missing, run);
-      stopped = r.stopped;
-      const merged = { ...existing, ...r.out };
-      await upsertPack(lang, merged);
-      missing = catalog.filter((s) => !merged[s]);
-    } catch (err) {
-      console.error(`[i18n] csomag-generálás HIBA (${lang}): ${(err as Error).message}`);
-    }
-  }
-  // ADR-0045 ③ (§J.25): a language is only "ready" WITH its knowledge base — same
-  // entry point as the UI strings, so every existing trigger (scrape into a region,
-  // mock generation, boot self-heal, CLI) covers the KB with no new call sites.
-  // A KB failure must not break the string pack; it reports loudly instead. A spent
-  // budget skips the KB: the ceiling stops the RUN, not just the step.
+  const missing = catalog.filter((s) => !seeded.merged[s]).length;
+  // ADR-0045 ③ (§J.25): a language is only "ready" WITH its knowledge base — same entry
+  // point as the UI strings. A KB failure must not break the string pack; it reports loudly.
   let kb: KbPackStatus | null = null;
-  if (stopped) {
-    kb = await kbCoverage(lang);
-  } else {
-    try {
-      kb = await ensureKbTranslations(lang, run);
-    } catch (err) {
-      console.error(`[i18n] KB-fordítás HIBA (${lang}): ${(err as Error).message}`);
-    }
+  try {
+    kb = await ensureKbTranslations(lang);
+  } catch (err) {
+    console.error(`[i18n] KB-mag HIBA (${lang}): ${(err as Error).message}`);
   }
-  const status = {
-    lang,
-    total: catalog.length,
-    missing: missing.length,
-    ok: missing.length === 0 && (kb?.ok ?? false),
-    kb,
-  };
-  console.log(`[i18n] ${lang}: futás vége — ${run.calls} hívás, $${run.spentUsd.toFixed(2)}`);
-  if (missing.length)
-    console.error(`[i18n] ⛔ hiányos csomag (${lang}): ${missing.length}/${catalog.length}`);
-  if (kb && !kb.ok) console.error(`[i18n] ⛔ hiányos KB (${lang}): ${kb.missing}/${kb.total}`);
-  return status;
+  if (missing)
+    console.error(
+      `[i18n] ⛔ hiányos csomag (${lang}): ${missing}/${catalog.length} — hu-fallback; Bábelre vár ` +
+        `(npx tsx scripts/babel-pack.mts export ${lang})`,
+    );
+  if (kb && !kb.ok) console.error(`[i18n] ⛔ hiányos KB (${lang}): ${kb.missing}/${kb.total} — Bábelre vár (babel-pack kb-export ${lang})`);
+  return { lang, total: catalog.length, missing, ok: missing === 0 && (kb?.ok ?? false), kb };
 }
 
 /** The full pack map for client-side injection (booking widget / configurator). Hungarian →
@@ -550,11 +404,11 @@ export async function knownLanguages(): Promise<string[]> {
 }
 
 /**
- * Deploy-time / boot-time self-heal (ADR-0036 kiegészítés): during development the catalog
- * keeps growing, so existing packs silently go stale until the next generation event for that
- * language. This ensures EVERY known language's pack covers the current catalog — missing
- * entries are AI-translated and persisted. Wired into server startup, so a deploy+restart
- * tops the packs up automatically; also runnable as a CLI (scripts/i18n-pack-status.mts).
+ * Deploy-time / boot-time sync (ADR-0036 kiegészítés): applies Bábel's committed seed to
+ * EVERY known language and reports what is still missing. Wired into server startup, so a
+ * deploy+restart brings the packs up to the deployed version; also runnable as a CLI
+ * (scripts/i18n-pack-status.mts --ensure). ⛔ It never translates (ADR-XXXX): a gap stays a
+ * gap until Bábel fills it in his session.
  */
 export async function ensureAllLanguagePacks(): Promise<PackStatus[]> {
   const langs = await knownLanguages();

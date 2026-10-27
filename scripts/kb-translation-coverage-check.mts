@@ -178,7 +178,8 @@ if (coverageBlocking(rows)) {
     `\n❌ kb-translation-coverage: a súgó NEM jutott el minden élő nyelvre.\n` +
       `   A magyar forrás megváltozott, a fordítás viszont a RÉGI szöveget szolgálja ki —\n` +
       `   magyar fallback NINCS, tehát az érintett tulaj a régi (esetleg hibás) súgót olvassa.\n\n` +
-      `   Javítás:  npx tsx scripts/kb-translate.mts\n` +
+      `   Javítás:  Bábel fordítja (npx tsx scripts/babel-pack.mts kb-export <nyelv>), commit + land,\n` +
+      `             utána npx tsx scripts/kb-translate.mts teszi a DB-be. ⛔ API-fordítás nincs (ADR-XXXX).\n` +
       `   ⚠️ A fordítás-kört a KB-SZERKESZTÉS UTÁN futtasd, ne előtte — a sorrend maga a hiba volt.`,
   );
   process.exit(1);

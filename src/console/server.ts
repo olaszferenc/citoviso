@@ -5195,18 +5195,17 @@ server.listen(PORT, () => {
   console.log(`Citoviso operátor-konzol → http://localhost:${PORT}`);
 });
 
-// ADR-0036 boot-time self-heal: a deploy+restart automatically tops up every known language
-// pack to the current catalog (the catalog grows during development; a stale pack would leak
-// Hungarian strings onto foreign pages). Fire-and-forget — boot must not block on the AI.
-// Skipped under CIT_SHOT=1: a screenshot run must never trigger AI top-ups or DB writes.
+// ADR-0036 boot-time sync: a deploy+restart applies Bábel's committed packs (the deployed
+// version) to every known language and reports what still falls back to Hungarian. It never
+// translates (no API translation, ADR-XXXX). Fire-and-forget — boot must not block on it.
+// Skipped under CIT_SHOT=1: a screenshot run must never write the DB.
 if (process.env.CIT_SHOT !== "1") {
   void (async () => {
     const { ensureAllLanguagePacks, packCoverage } = await import("../i18n/packs.js");
-    const { withTranslationTrigger } = await import("../i18n/spend.js");
-    // I18N_BOOT_TOPUP=0 (dev): measure coverage only — no API call at boot (2026-10-07).
+    // I18N_BOOT_TOPUP=0 (dev): measure coverage only — no DB write at boot.
     if (!config.i18nBootTopup) console.log("[i18n] boot-fordítás KIKAPCSOLVA (I18N_BOOT_TOPUP=0) — csak mérés");
     const rows = config.i18nBootTopup
-      ? await withTranslationTrigger("boot", () => ensureAllLanguagePacks())
+      ? await ensureAllLanguagePacks()
       : await packCoverage();
     for (const r of rows) {
       console.log(`[i18n] csomag ${r.lang}: ${r.total - r.missing}/${r.total}${r.ok ? "" : " ⛔ HIÁNYOS"}`);

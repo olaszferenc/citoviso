@@ -1,7 +1,13 @@
 // ADR-0045 ③ (§J.25): document-level knowledge-base translation on the ADR-0036 spine.
 // The unit is a WHOLE markdown entry (title + body), not a UI string — language_pack
 // stays what it is. source_hash pins the Hungarian source version a translation was
-// made from; a mismatch marks it stale and the ensure layer regenerates it.
+// made from; a mismatch marks it stale until Bábel translates the new version.
+//
+// ⛔ NO API TRANSLATION (owner, 2026-10-27, ADR-XXXX): the only source of a KB translation
+// is Bábel's committed seed, src/i18n/babel/kb/<lang>/<entry-id>.json
+// ({source_hash, title, body}), made in his subscription session (babel-pack kb-export /
+// kb-import). The ensure layer copies a seed into kb_translation when its source_hash
+// matches the CURRENT Hungarian source and it passes the integrity check below.
 //
 // Integrity mirrors the placeholder guard of packs.ts: the **„…”** labels (the admin
 // screen shows these in Hungarian today, so the guide must quote them VERBATIM), the
@@ -9,14 +15,17 @@
 // violating translation is dropped so the next ensure re-flags it.
 
 import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { loadKbEntries, makeSnippet, type KbEntry } from "../kb/kb.js";
-import { babelCall, babelSystem } from "./babel.js";
-import { newTranslationRun, TranslationBudgetError, type TranslationRun } from "./budget.js";
 import { DEFAULT_LANG } from "./lang.js";
+
+const KB_SEED_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "babel", "kb");
 
 /** Version fingerprint of the Hungarian source an entry translation derives from. */
 export function kbSourceHash(entry: Pick<KbEntry, "title" | "body">): string {
@@ -63,66 +72,45 @@ export function kbTranslationValid(sourceBody: string, candidateBody: string): b
   );
 }
 
-/**
- * A fordítandó cikkek legnagyobbikához MÉRT kimeneti korlát.
- *
- * ⛔ MÉRT HIBA (2026-09-15): 6000 volt, és a két legnagyobb fordítandó cikk pont fölé
- * nőtt — `admin-modules` (10 871 kar ≈ 5 930 kimenő token) és `admin-messages`
- * (10 302 ≈ 5 619), a JSON-escape ráadásával átlépve. A válasz `stop_reason:
- * "max_tokens"`-szel elvágódott, a JSON nem záródott be, és a hívó ezt
- * „integritás-sértés"-ként naplózta — vagyis más kérdésre válaszolt, mint ami történt,
- * így a valódi ok láthatatlan maradt. A `max_tokens` felső HATÁR, nem költség: a rövid
- * cikkek ugyanannyiba kerülnek. ⚠️ Új, hosszabb súgó-cikknél a
- * `kb-translation-integrity-check` ③ szakasza szól, mielőtt ez némán újra elvágna egyet.
- */
-const MAX_TOKENS = 16_000;
+/** One help entry as Bábel committed it (src/i18n/babel/kb/<lang>/<entry-id>.json). */
+export interface KbSeed {
+  readonly source_hash: string;
+  readonly title: string;
+  readonly body: string;
+}
 
-/** AI-translate one entry. Returns null when the response is unusable — the caller
- *  counts it as missing and the next ensure retries; a `fail()` sor mindig MEGNEVEZI az
- *  okot (elvágás / JSON / hiányzó mező / integritás), mert egy közös `null` elrejtette. */
-async function translateEntry(
-  lang: string,
-  entry: KbEntry,
-  run: TranslationRun,
-): Promise<{ title: string; body: string } | null> {
-  // Bábel (ADR-0411): the same ontology + glossary as the UI pack, so the guide names a
-  // screen's concepts the way the translated screen does; budget-checked and metered.
-  const res = await babelCall(
-    run,
-    "translateKbEntry",
-    babelSystem(lang, "kb"),
-    `Add vissza JSON objektumként: {"title": "<fordítás>", "body": "<fordítás>"} erre:\n` +
-      JSON.stringify({ title: entry.title, body: entry.body }),
-    MAX_TOKENS, // lásd a függvény fölötti mérést
-  );
-  // ⛔ A BUKÁS OKA NEVEZŐDJÖN MEG. Eddig minden út ugyanabba a `null`-ba futott, és a
-  // hívó mindet „integritás-sértés"-nek naplózta — az elvágott választ is. Így a
-  // valódi ok (túl kicsi korlát) hónapokig láthatatlan maradt, miközben minden
-  // újrafuttatás ugyanoda futott.
-  const fail = (reason: string): null => {
-    console.error(`[i18n] KB-fordítás eldobva (${lang}/${entry.id}): ${reason}`);
-    return null;
-  };
-  if (res.stopReason === "max_tokens") {
-    return fail(
-      `a válasz ELVÁGÓDOTT a token-korlátnál (${res.usage?.output_tokens ?? "?"} kimenő token) — ` +
-        `a cikk hosszabb, mint amennyi belefér; emeld a max_tokens-t`,
-    );
+/** Bábel's committed help entries for `lang`, by entry id ({} when none). The files only
+ *  change with a deploy (= a restart), so they are read once per process. */
+export function kbSeeds(lang: string): Record<string, KbSeed> {
+  let seeds = kbSeedCache.get(lang);
+  if (!seeds) {
+    seeds = {};
+    let files: string[] = [];
+    try {
+      files = readdirSync(path.join(KB_SEED_DIR, lang)).filter((f) => f.endsWith(".json"));
+    } catch {
+      files = [];
+    }
+    for (const f of files) {
+      try {
+        seeds[f.slice(0, -5)] = JSON.parse(readFileSync(path.join(KB_SEED_DIR, lang, f), "utf8")) as KbSeed;
+      } catch (err) {
+        console.error(`[i18n] Bábel KB-mag olvashatatlan (${lang}/${f}): ${(err as Error).message}`);
+      }
+    }
+    kbSeedCache.set(lang, seeds);
   }
-  if (!res.text) return fail("a válasz nem tartalmaz szöveget");
-  const jsonText = res.text.slice(res.text.indexOf("{"), res.text.lastIndexOf("}") + 1);
-  let parsed: { title?: unknown; body?: unknown };
-  try {
-    parsed = JSON.parse(jsonText) as { title?: unknown; body?: unknown };
-  } catch (err) {
-    return fail(`a válasz nem értelmezhető JSON (${(err as Error).message.slice(0, 80)})`);
-  }
-  if (typeof parsed.title !== "string" || typeof parsed.body !== "string")
-    return fail("a JSON-ból hiányzik a title vagy a body");
-  if (!parsed.title.trim()) return fail("üres cím");
-  if (!kbTranslationValid(entry.body, parsed.body))
-    return fail("integritás-sértés (felirat / kép-útvonal / alcím-szám eltérés)");
-  return { title: parsed.title.trim(), body: parsed.body };
+  return seeds;
+}
+const kbSeedCache = new Map<string, Record<string, KbSeed>>();
+
+/** Why a seed cannot serve `entry` right now (stale source, broken structure), or null. */
+export function kbSeedProblem(entry: KbEntry, seed: KbSeed): string | null {
+  if (seed.source_hash !== kbSourceHash(entry)) return "elavult: a magyar forrás azóta változott";
+  if (typeof seed.title !== "string" || !seed.title.trim()) return "üres cím";
+  if (typeof seed.body !== "string" || !kbTranslationValid(entry.body, seed.body))
+    return "integritás-sértés (felirat / kép-útvonal / alcím-szám eltérés)";
+  return null;
 }
 
 export interface KbPackStatus {
@@ -134,75 +122,64 @@ export interface KbPackStatus {
 
 /** ADR-0045/e: only tenant-facing entries translate. The operator console renders
  *  Hungarian today and tenants never reach the operator guides — translating them
- *  would be AI cost without a reader, and §J.25 wants the guide to quote what the
+ *  would be work without a reader, and §J.25 wants the guide to quote what the
  *  screen actually shows. If the console ever gets language packs, widen here. */
-const translatableKbEntries = (): KbEntry[] =>
+export const translatableKbEntries = (): KbEntry[] =>
   loadKbEntries().filter((e) => e.audience === "tenant");
 
-/**
- * Ensure every KB entry has a FRESH translation for `lang` (§J.25): missing rows and
- * rows whose source_hash no longer matches the Hungarian source are (re)generated.
- * Called from ensureLanguagePack, so every existing trigger — scrape into a region,
- * mock generation, boot self-heal, CLI — covers the KB with no new call sites.
- */
-export async function ensureKbTranslations(
-  lang: string,
-  run: TranslationRun = newTranslationRun(lang),
-): Promise<KbPackStatus> {
-  const entries = translatableKbEntries();
-  if (lang === DEFAULT_LANG || !entries.length) {
-    return { lang, total: entries.length, missing: 0, ok: true };
-  }
+/** Valid Bábel seeds for `lang` that kb_translation does not hold yet (entry id → seed). */
+async function pendingKbSeeds(lang: string): Promise<Map<KbEntry, KbSeed>> {
+  const out = new Map<KbEntry, KbSeed>();
+  const seeds = kbSeeds(lang);
+  if (lang === DEFAULT_LANG || !Object.keys(seeds).length) return out;
   const rows = await db
     .selectFrom("kb_translation")
-    .select(["entry_id", "source_hash"])
+    .select(["entry_id", "source_hash", "title", "body_md"])
     .where("lang", "=", lang)
     .execute();
-  const have = new Map(rows.map((r) => [r.entry_id, r.source_hash]));
-  const stale = entries.filter((e) => have.get(e.id) !== kbSourceHash(e));
-  let missing = 0;
-  if (stale.length)
-    console.log(`[i18n] KB-fordítás provisioning: ${lang} — ${stale.length} entry`);
-  for (const entry of stale) {
-    try {
-      const tr = await translateEntry(lang, entry, run);
-      if (!tr) {
-        // Az OKOT a translateEntry naplózta, pontosan — itt csak a darabszám nő.
-        missing++;
-        continue;
-      }
-      await db
-        .insertInto("kb_translation")
-        .values({
-          entry_id: entry.id,
-          lang,
-          source_hash: kbSourceHash(entry),
-          title: tr.title,
-          body_md: tr.body,
-        })
-        .onConflict((oc) =>
-          oc.columns(["entry_id", "lang"]).doUpdateSet({
-            source_hash: kbSourceHash(entry),
-            title: tr.title,
-            body_md: tr.body,
-            updated_at: sql`now()`,
-          }),
-        )
-        .execute();
-    } catch (err) {
-      if (err instanceof TranslationBudgetError) {
-        // The ceiling stops the run: count what is left as missing, ask nothing more.
-        missing += stale.length - stale.indexOf(entry);
-        break;
-      }
-      missing++;
-      console.error(`[i18n] KB-fordítás HIBA (${lang}/${entry.id}): ${(err as Error).message}`);
-    }
+  const have = new Map(rows.map((r) => [r.entry_id, r]));
+  for (const entry of translatableKbEntries()) {
+    const seed = seeds[entry.id];
+    if (!seed || kbSeedProblem(entry, seed)) continue;
+    const row = have.get(entry.id);
+    if (row && row.source_hash === seed.source_hash && row.title === seed.title.trim() && row.body_md === seed.body) continue;
+    out.set(entry, seed);
   }
-  return { lang, total: entries.length, missing, ok: missing === 0 };
+  return out;
 }
 
-/** Coverage WITHOUT generating (tracking view): fresh-translation count vs entries. */
+/** How many of Bábel's committed help entries wait to be copied into the DB. */
+export async function kbSeedPending(lang: string): Promise<number> {
+  return (await pendingKbSeeds(lang)).size;
+}
+
+/**
+ * Copy Bábel's committed, current help translations for `lang` into kb_translation and
+ * report coverage (§J.25). Called from ensureLanguagePack, so every existing trigger —
+ * boot, deploy, CLI, mock generation — applies a deployed seed with no new call sites.
+ * ⛔ Translates nothing: a missing or stale entry stays missing until Bábel delivers it.
+ */
+export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> {
+  const pending = await pendingKbSeeds(lang);
+  for (const [entry, seed] of pending) {
+    await db
+      .insertInto("kb_translation")
+      .values({ entry_id: entry.id, lang, source_hash: seed.source_hash, title: seed.title.trim(), body_md: seed.body })
+      .onConflict((oc) =>
+        oc.columns(["entry_id", "lang"]).doUpdateSet({
+          source_hash: seed.source_hash,
+          title: seed.title.trim(),
+          body_md: seed.body,
+          updated_at: sql`now()`,
+        }),
+      )
+      .execute();
+  }
+  if (pending.size) console.log(`[i18n] ${lang}: Bábel KB-mag alkalmazva — ${pending.size} cikk`);
+  return kbCoverage(lang);
+}
+
+/** Coverage WITHOUT writing (tracking view): fresh-translation count vs entries. */
 export async function kbCoverage(lang: string): Promise<KbPackStatus> {
   const entries = translatableKbEntries();
   if (lang === DEFAULT_LANG) return { lang, total: entries.length, missing: 0, ok: true };
@@ -218,8 +195,8 @@ export async function kbCoverage(lang: string): Promise<KbPackStatus> {
 
 /**
  * The entry list with the language overlay applied. A stale translation still serves
- * (a readable guide beats a Hungarian fallback for a Polish owner) — the ensure layer
- * refreshes it on the next trigger. Hungarian returns the source untouched.
+ * (a readable guide beats a Hungarian fallback for a Polish owner) until Bábel delivers
+ * the new version. Hungarian returns the source untouched.
  */
 export async function localizedKbEntries(lang: string | undefined): Promise<KbEntry[]> {
   const entries = loadKbEntries();

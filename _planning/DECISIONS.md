@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-forditas-api-hivassal-tilos-csak-babel.md) — Fordítás API-hívással TILOS: fordításra csak Bábel előfizetéses sessionje költhet
 - [ADR-0411](decisions/0411-babel-kontextusos-fordito-munkatars-es.md) — Bábel: kontextusos fordító munkatárs, és nyelvenként egyetlen, plafonos fordítás
 - [ADR-0410](decisions/0410-a-robots-txt-valaszat-az-rfc-9309-szerint.md) — A robots.txt válaszát az RFC 9309 szerint olvassuk
 - [ADR-0409](decisions/0409-a-kikuldesi-sor-sorrendje-a-honlap-nelkuliek.md) — A kiküldési sor sorrendje: a honlap nélküliek mennek elsőként

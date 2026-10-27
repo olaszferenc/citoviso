@@ -8,18 +8,13 @@
 // azt már nem fordíttattam újra — a lengyel és a szlovák tulaj a frissen javított hibákat
 // olvasta tovább, mert magyar fallback NINCS.
 //
-// ⛔ KORLÁTOS ÚJRAPRÓBÁLÁS, MEGSZÁMOLVA. A fordítás integritás-ellenőrzésen megy át (felirat-
-// halmaz, kép-útvonalak, alcím-szám), és a modell **nemdeterminisztikus**: ugyanazon a cikken
-// mérve 5 kísérletből 3 elbukott, majd ugyanaz a bemenet átment. Ezért a kör nyelvenként
-// többször próbál — de a kísérletek számát KIÍRJA, és ha a végén marad hiány, HANGOSAN bukik.
-// Egy „majd a következő trigger megjavítja" hozzáállás pont a mért hibát termelte újra.
+// ⛔ NINCS API-FORDÍTÁS (tulaj, 2026-10-27, ADR-XXXX): ez a kör Bábel COMMITOLT súgó-fordításait
+// (src/i18n/babel/kb/<nyelv>/<cikk>.json) teszi a DB-be. Ami hiányzik vagy elavult, az Bábel
+// sessionjére vár (`babel-pack.mts kb-export <nyelv>`) — újrapróbálni nincs mit, a kör HANGOSAN bukik.
 
 import { db } from "../src/db/client.js";
 import { ensureLanguagePack } from "../src/i18n/packs.js";
 import { kbCoverage } from "../src/i18n/kbPacks.js";
-
-/** Nyelvenként ennyi kísérlet. Mért alap: a bukó cikk a 2. kísérletre átment. */
-const MAX_ATTEMPTS = 4;
 
 const wanted = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const live = (await db.selectFrom("language_pack").select("lang").execute()).map((r) => r.lang);
@@ -42,25 +37,22 @@ for (const lang of langs) {
     console.log(`  ${lang}: már friss (${before.total}/${before.total}) — nincs teendő.`);
     continue;
   }
-  let n = 0;
-  let ok = false;
-  while (n < MAX_ATTEMPTS && !ok) {
-    n++;
-    await ensureLanguagePack(lang);
-    ok = (await kbCoverage(lang)).ok;
-  }
-  if (ok) {
-    console.log(`  ${lang}: ✅ teljes (${n} kísérlet, indulás: ${before.total - before.missing}/${before.total})`);
+  await ensureLanguagePack(lang);
+  const after = await kbCoverage(lang);
+  if (after.ok) {
+    console.log(`  ${lang}: ✅ teljes (Bábel-mag, indulás: ${before.total - before.missing}/${before.total})`);
   } else {
     failed++;
-    console.error(`  ${lang}: ⛔ ${MAX_ATTEMPTS} kísérlet után SEM teljes — nézd meg a fenti okot.`);
+    console.error(
+      `  ${lang}: ⛔ ${after.missing}/${after.total} cikk Bábelre vár — npx tsx scripts/babel-pack.mts kb-export ${lang}`,
+    );
   }
 }
 
 // ── VISSZAMÉRÉS: a saját kimenetemből, nem a saját listámból ─────────────────
 // `feedback_registration_count_must_be_read_back`: amit elvégeztünk, azt a REGISZTERBŐL
 // olvassuk vissza, nem abból, amit hinni szeretnénk róla.
-console.log("\n=== visszamérés (generálás nélkül):");
+console.log("\n=== visszamérés (írás nélkül):");
 let allOk = true;
 for (const lang of live) {
   const c = await kbCoverage(lang);

@@ -2,6 +2,10 @@
 
 **Dátum:** 2026-10-27 · **Státusz:** elfogadva (lokál, nem élesítve) · Kiegészíti: ADR-0036, ADR-0045, ADR-0067 ③, ADR-0281
 
+> ⛔ **RÉSZBEN FELÜLÍRVA — ADR-XXXX (2026-10-27, tulaj):** a fordítás API-hívással TILOS. Az A4 („a keze —
+> a fordító-motor”) és a B3 (költségplafon) kivezetve; a single-flight (B1), a nem-váró kérés (B2), a
+> scrape-kapu (B4) és Bábel perszónája, tudása, magja (A1–A3) marad.
+
 ### Kontextus
 
 **Az eset (élesen mérve, 2026-10-27).** 09:55Z-kor a tulaj a konzolt szlovénre (`sl`) állította. A

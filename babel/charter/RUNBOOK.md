@@ -40,7 +40,8 @@ npx tsx scripts/babel-pack.mts audit <nyelv>    # glosszárium-eltérések a meg
 6. **Audit** újra (`babel-pack audit`): az eltéréseket átnézed; az indokolatlanokat javítod.
 7. **Landolás:** csak a saját fájljaid (`src/i18n/babel/**`, `babel/**`), tételes `git add`,
    `bash scripts/land.sh` → „IGAZOLTAN FENT”. Élesre a deploy viszi, a tulaj engedélyével — a
-   deploy `--ensure` lépése a magot a csomagra teszi, a gép csak a maradékot fordítja.
+   deploy `--ensure` lépése a magot a csomagra teszi. Ami a magból hiányzik, magyarul marad:
+   fordítást a kód SEMMIT nem végez (API-fordítás tilos, ADR-XXXX).
 
 ## 3. Egy rossz fordítás javítása (bejelentés alapján)
 
@@ -49,12 +50,31 @@ npx tsx scripts/babel-pack.mts audit <nyelv>    # glosszárium-eltérések a meg
    fogalom ÖSSZES előfordulását (audit) — nem csak a bejelentett sort.
 3. A javított sorokat `import --seed`, land. Írd a `~/babel/tanulsagok.md`-be, mi volt a hiba oka.
 
-## 4. Ha a gép hangosan leállt (plafon)
+## 4. Súgó-cikkek (KB) és a fizetett többnyelvű honlap
 
-A `⛔⛔ fordítási … plafon elérve` riasztás azt jelenti: a gépi kezed megállt, a nyelv hiányos,
-a felület magyarul pótol. **Te nem indítasz újra fizetős futást.** Megnézed, mi hiányzik
-(export), és a sessionödben lefordítod (§2) — ez a helyes út. A plafont a tulaj állítja (env),
-nem te.
+**Súgó** (a szállásadó admin súgója, `kb/entries/`, csak a tenant-cikkek):
+```
+npx tsx scripts/babel-pack.mts kb-export <nyelv> --out ~/babel/munka/kb-<nyelv>/   # hiányzó/elavult cikkek
+# … minden <cikk>.json-ban a title + body mezőt fordítod (source_hash, id marad) …
+npx tsx scripts/babel-pack.mts kb-import <nyelv> ~/babel/munka/kb-<nyelv>/ --seed  # → src/i18n/babel/kb/<nyelv>/
+```
+Szabály: a **„…”** gombfeliratok MAGYARUL, betűre maradnak (a képernyő magyar), a kép-útvonal
+változatlan, ugyanannyi `## ` alcím. Udvarias, magázó/önöző hang, IT-kezdő olvasó.
+
+**Fizetett többnyelvű honlap** (ADR-0063; a generálás „Bábelre vár” hibával áll, amíg nincs kész):
+```
+# éles site-nál az ÉLES gépen, csak olvasás:
+npx tsx scripts/babel-pack.mts site-export <site-id> <nyelv> --out ~/babel/munka/site-<nyelv>.json
+npx tsx scripts/babel-pack.mts site-import <site-id> <nyelv> ~/babel/munka/site-<nyelv>-kesz.json --seed
+```
+Felület: honlap, a vendég olvassa. Átülteted, nem alkotsz: szám, ár, név, tény betűre (a gép a
+számokat ellenőrzi). Land → deploy (tulaj-engedély) → a generálás következő próbája kész.
+
+## 4b. A deploy fordítás-kapuja (GATE 5) bukott
+
+Az élő nyelvek egyikén hiány maradt a magod alkalmazása után. Megnézed (`i18n-pack-status`,
+`export`/`kb-export`), lefordítod (§2/§4), landolsz — és a deploy azzal a committal megy újra.
+**API-fordítás nincs** — sem kézzel, sem „csak most az egyszer”.
 
 ## 5. Nap vége
 

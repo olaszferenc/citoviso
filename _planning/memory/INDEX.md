@@ -8,6 +8,7 @@
 
 - [2026-10-27_valasz_javaslat_figyelo.md](2026-10-27_valasz_javaslat_figyelo.md) — 2026-10-27 — Válasz-javaslat: Poe soha nem kapta meg a jegyeket → válasz-figyelő (ADR-0340 A út)
 - [2026-10-27_kikuldo_szal_150_folyamatos_kuldes.md](2026-10-27_kikuldo_szal_150_folyamatos_kuldes.md) — 2026-10-27 — Kiküldő szál: 150-es keret, folyamatos küldés, 14 nap ingyen, három élesítés
+- [2026-10-27_forditas_api_tilos_csak_babel.md](2026-10-27_forditas_api_tilos_csak_babel.md) — 2026-10-27 — Fordítás API-hívással TILOS: csak Bábel (doktrína + kód)
 - [2026-10-27_babel_fordito.md](2026-10-27_babel_fordito.md) — 2026-10-27 — Bábel, a fordító munkatárs + a nyelvi csomag egy-futás/plafon javítása
 - [2026-10-27_arak_es_rendeles_gomb.md](2026-10-27_arak_es_rendeles_gomb.md) — 2026-10-27 — A rendelő gomb: „Árak és rendelés” + „havi X Ft-tól” (ADR-0408)
 - [2026-10-27_api_hivas_leltar.md](2026-10-27_api_hivas_leltar.md) — API-hívás leltár — mi hív külső API-t, miért, mennyiért (2026-10-27)
