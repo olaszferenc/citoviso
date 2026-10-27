@@ -44,6 +44,7 @@ import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
+import { collectWriterSources, withoutOwnName } from "../src/generator/writerSources.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
@@ -404,6 +405,10 @@ check("⛔ kiadott szobák száma marad („Panziónk 5 szobás”) → 5 számo
 check("⛔ apartman-darabszám nem szobaszám („3 apartmanban 13 fő”), és a „both” szobaszáma marad",
   !roomCountInsideApartments(3, ["3 apartmanban kínál szállást 13 személynek."], "apartments") &&
     !roomCountInsideApartments(6, ["6 szobánk és 2 apartmanunk várja a vendégeket. Kétágyas szobák foglalhatók."], "both"));
+const galaH = sampleHintsOf({ name: "Gála Panzió", portalProfiles: [{ matchBand: "high", rooms: [], roomCount: { value: 3, evidence: "további 3 szoba" } }] } as never, "hu",
+  { listedAmenities: [], amenities: [], descriptions: ["A Gála Panzió Simontornya településén található, kellemes és családias hangulatú apartmanok várják a vendégeket. Négy teljesen felszerelt apartman várja a vendégeket, valamint további 3 szoba is a vendégek rendelkezésére áll."] }).hints;
+check("Gála ceb9eae4: „Négy … apartman, valamint további 3 szoba” → nincs „1.–3. szoba”, egy „Szobák és apartmanok” kártya",
+  !galaH.sampleRoomCount && sampleRooms({ ...base, ...galaH }).map((r) => r.name).join("|") === "Szobák és apartmanok", galaH);
 const sub = (subject: string, i: number) => ({ url: `https://x.hu/${subject}-${i}.jpg`, alt: "", subject });
 const centrumPhotos = [sub("exterior", 1), sub("exterior", 2), sub("exterior", 3), sub("pool_garden", 4), sub("interior", 5), sub("bathroom", 6), sub("interior", 7)];
 const fiveCards = sampleRooms({ ...base, photos: centrumPhotos, sampleRoomCount: 3 });
@@ -415,6 +420,18 @@ const noVerdict = sampleRooms({ ...base, photos: [1, 2, 3, 4, 5].map((i) => ({ u
 check("⛔ tárgy-ítélet nélkül a régi sor (az első két kép kimarad)", noVerdict.map((r) => r.photo?.url).join("|") === "https://x.hu/3.jpg|https://x.hu/4.jpg", noVerdict.map((r) => r.photo?.url));
 const allOut = sampleRooms({ ...base, photos: [sub("exterior", 1), sub("view", 2)], sampleRoomCount: 2 });
 check("⛔ belső kép nélkül is kap képet a kártya (ADR-0059 ③: ikonos kártya nincs)", allOut.every((r) => r.photo), allOut.map((r) => r.photo?.url));
+
+console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");
+const panProfile = (title: string, description: string) => ({ name: title, portalProfiles: [{ matchBand: "high", title, url: "https://hovamenjek.hu/x", portal: "hovamenjek", amenities: ["Saját parkoló"], rooms: [], photos: [], reviews: [], prices: [], description }] });
+const panSrc = collectWriterSources(panProfile("Panoráma Vendégház", "Panoráma Vendégház – Szállás Dombóvár, Nyerges dűlő 2.. Nyitvatartás, elérhetőség, értékelések és fotók a Hovamenjek.hu-n. Foglaljon szállást Dombóváron egyszerűen és gyorsan.") as never, []);
+check("Panoráma: a portál-sablon névsorából nincs „Panoráma” amenity", panSrc.descriptions.length === 1 && !panSrc.amenities.includes("Panoráma") && !panSrc.descriptionFacts.includes("Panoráma"), panSrc);
+check("withoutOwnName: ékezet- és kisbetű-független, ragozott alak is („PANORAMA vendégházban”)",
+  !/anor/i.test(withoutOwnName("Várjuk a PANORAMA vendégházban.", ["Panoráma Vendégház"])) && /Várjuk/.test(withoutOwnName("Várjuk a PANORAMA vendégházban.", ["Panoráma Vendégház"])));
+check("⛔ szó eleje kell („Kiskert Vendégház” neve nem vágja ki a „kert vendégház”-at középről)", withoutOwnName("Kiskert vendégház", ["Kert Vendégház"]) === "Kiskert vendégház");
+const ownView = collectWriterSources(panProfile("Panoráma Vendégház", "Panoráma Vendégház Dombóváron, csendes környezetben várja a pihenni vágyó vendégeket egész évben. A teraszról csodálatos panoráma nyílik a völgyre.") as never, []);
+check("⛔ a név mellett a leírás SAJÁT panoráma-mondata megmarad", ownView.descriptionFacts.includes("Panoráma"), ownView.descriptionFacts);
+const kertSrc = collectWriterSources(panProfile("Medence Kert Apartman", "Medence Kert Apartman – Szállás Siófok, Petőfi sétány 3.. Nyitvatartás, elérhetőség, értékelések és fotók a portálon. Foglaljon szállást Siófokon egyszerűen.") as never, []);
+check("Medence Kert Apartman: a névből nincs Medence/Kert", kertSrc.descriptions.length === 1 && !kertSrc.descriptionFacts.some((f) => /Medence|Kert/.test(f)), kertSrc.descriptionFacts);
 
 if (failures) {
   console.error(`\n❌ sample-from-source-check: ${failures} bukás`);

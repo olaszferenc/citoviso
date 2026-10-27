@@ -173,7 +173,10 @@ export function sampleHintsOf(
       // e0d06c0f, 2026-10-26: booked.hu JSON-LD numberOfRooms 1 = the apartment's bedroom).
       // Rooms counted INSIDE apartments („2 db apartmanunkban összesen 5 szoba”) are no
       // bookable units either (Zöldike f5230165, Centrum 3d5e8bb1, 2026-10-27).
-      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly &&
+      // Rooms AND apartments: the count is one kind's only („Négy … apartman, valamint további
+      // 3 szoba” — Gála ceb9eae4), numbered „N. szoba” cards would hide the rest → one
+      // „Szobák és apartmanok” card.
+      ...(!units.rooms.length && units.count && units.count > 1 && !wholeOnly && sampleUnitKind !== "both" &&
         !roomCountInsideApartments(units.count, sources.descriptions, sampleUnitKind === "whole" ? null : sampleUnitKind)
         ? { sampleRoomCount: units.count }
         : {}),

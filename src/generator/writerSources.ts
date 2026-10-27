@@ -81,6 +81,33 @@ export function portalVoiceOf(profiles: readonly PortalProfile[]): VoiceInput[] 
  * or re-fetched; the view: the stored set). Google first, then the portals — the order the
  * guest-voice cap keeps.
  */
+/** Accent- and case-folded, one char for one char, so an index in the fold is one in the text. */
+function foldChars(s: string): string {
+  return Array.from(s, (c) => (c.normalize("NFD")[0] ?? c).toLowerCase()).join("");
+}
+
+/**
+ * The text with every occurrence of the property's name cut out (accent- and case-blind,
+ * from a word start; an inflected end goes too: „Panoráma Vendégházban”).
+ */
+export function withoutOwnName(text: string, names: readonly string[]): string {
+  let out = text;
+  for (const name of names) {
+    const n = foldChars(name.trim());
+    if (n.length < 3) continue;
+    for (;;) {
+      const hay = foldChars(out);
+      let i = hay.indexOf(n);
+      while (i > 0 && /\p{L}/u.test(hay[i - 1]!)) i = hay.indexOf(n, i + 1);
+      if (i < 0) break;
+      let end = i + n.length;
+      while (end < hay.length && /\p{L}/u.test(hay[end]!)) end++;
+      out = `${out.slice(0, i)} ${out.slice(end)}`;
+    }
+  }
+  return out;
+}
+
 export function collectWriterSources(lead: WriterSourceLead, googleVoice: readonly VoiceInput[]): WriterSources {
   const profiles = lead.portalProfiles ?? [];
   // What the property's OWN verified listing says it offers. Until 2026-08-31 this was read
@@ -137,7 +164,11 @@ export function collectWriterSources(lead: WriterSourceLead, googleVoice: readon
   // amenities, and the mock sold the car park — because every consumer only ever counted
   // the amenity LIST). Merged before the writer, the guard and the fact gate, so "vízparti"
   // is a fact the headline can be REQUIRED to carry.
-  const descriptionFacts = descriptionSellingPoints(descriptions).filter(
+  // The property's own NAME is no fact about it: „Panoráma Vendégház – Szállás Dombóvár …”
+  // (Panoráma ca4ecf89, 2026-10-27, a portal's boilerplate line) sold „Panoráma”. The prose
+  // facts are read with the name taken out; the writer still sees the prose whole.
+  const ownNames = [lead.name, ...profiles.map((p) => p.title ?? "")];
+  const descriptionFacts = descriptionSellingPoints(descriptions.map((d) => withoutOwnName(d, ownNames))).filter(
     (f) => !listedAmenities.some((a) => a.toLowerCase() === f.toLowerCase()),
   );
   const amenities = [...listedAmenities];
