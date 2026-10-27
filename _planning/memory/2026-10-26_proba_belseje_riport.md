@@ -27,4 +27,4 @@ Terv befagyasztva: `assets/design-refs/console/proba-riport/` (README köt).
 - A mérés kezdete = a 0117 migráció `applied_at`-je (nem az első sor) — különben a csendes napok hamis „nem mért”-et adnának.
 - A mock-oldali bontás nem tesz azonosítót a böngészőbe (ADR-0108 + hozzájárulás): eszköz-típus + rendszer + böngésző.
 
-**Nyitott:** élesítés (külön tulaj-engedéllyel). Élesítés után a lap csak az onnantól induló próbák belsejét mutatja.
+**Élesítve:** 2026-10-27 09:29 (3473d7da, prod/20261027-0929; a futó Magellan-felderítés egy köre `--ignore-scrape`-pel megszakadt — Magellan 1–3 percenként indít, szünet nincs). Élesen a lap csak a 10-27 09:27 után induló próbák belsejét mutatja.
