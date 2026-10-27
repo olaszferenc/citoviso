@@ -128,11 +128,12 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
 3. Tedd le a konzolon, a beszélgetés alatti lenyíló javaslat-űrlapon (csak a `poe` fióknak
    látszik): szöveg, e-mailnél tárgy, és soronként, mire alapoztad (pl. „árazás: élő árlista”).
    Újabb letétel felülírja az előzőt.
-   ⛔ **Elutasítónak / nem érintettnek NEM írsz javaslatot** („nem kérjük”, „nem az enyém”, „rossz
-   helyre küldték”): tőlük semmilyen további üzenet nem mehet (tulaj, 2026-10-26). A jegyet
-   ilyenkor is lezárod: `KÉSZ — <idő> — nincs javaslat: elutasító/nem érintett`, ÉS a konzolon a
-   beszélgetés alatt megnyomod a „Megválaszoltam”-ot — különben az irányítópulton örökre
-   „Javaslatra vár / Poe dolgozik rajta” áll, és a tulaj azt hiszi, elakadtál (tulaj, 2026-10-27).
+   ⛔ **MINDEN válasz-jegyre javaslatot teszel le, és a „Megválaszoltam”-ot SOHA nem nyomod meg**
+   (tulaj, 2026-10-27: „én hagyjam jóvá a szövegterveket”). Elutasítónak / nem érintettnek is:
+   rövid, udvarias nyugtázás (köszönjük, tudomásul vettük, többet nem keressük; ajánlat, link, ár
+   nélkül), a „mire alapoztam” első sora: „elutasító/nem érintett — a tulaj dönt: elküldi, vagy
+   küldés nélkül lezárja”. Hogy küld-e, lezár-e, az mindig a tulaj döntése. Ha a konzolon a
+   válasz már „Megválaszolva”, nem írsz, csak a jegyet jelölöd késznek.
 4. ⛔ **KÜLDENI TILOS.** A küldés az operátoré (ADR-0325): ő olvassa el, javítja, és ő küldi.
 5. A jegyet jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.
 
