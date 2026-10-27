@@ -8,6 +8,7 @@
 
 - [2026-10-27_valasz_javaslat_figyelo.md](2026-10-27_valasz_javaslat_figyelo.md) — 2026-10-27 — Válasz-javaslat: Poe soha nem kapta meg a jegyeket → válasz-figyelő (ADR-0340 A út)
 - [2026-10-27_arak_es_rendeles_gomb.md](2026-10-27_arak_es_rendeles_gomb.md) — 2026-10-27 — A rendelő gomb: „Árak és rendelés” + „havi X Ft-tól” (ADR-0408)
+- [2026-10-27_api_hivas_leltar.md](2026-10-27_api_hivas_leltar.md) — API-hívás leltár — mi hív külső API-t, miért, mennyiért (2026-10-27)
 - [2026-10-26_wix_kepek_srcset_es_cdn.md](2026-10-26_wix_kepek_srcset_es_cdn.md) — 2026-10-26 — Wix-honlapok képei: srcset-vágás és CDN-szűrő
 - [2026-10-26_szallas_iker_fotoszam_wix_egysegtipus.md](2026-10-26_szallas_iker_fotoszam_wix_egysegtipus.md) — 2026-10-26 — szallas.hu iker nélkül, fotószám-csökkenés, halott Wix-sorok, egységtípus
 - [2026-10-26_scout_csempe_lezaras_verseny.md](2026-10-26_scout_csempe_lezaras_verseny.md) — 2026-10-26 — Felderítő csempe lezárása: versenyhelyzet
