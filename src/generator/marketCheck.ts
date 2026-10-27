@@ -300,10 +300,29 @@ export function proseAffirms(needle: string, descriptions: readonly string[], ow
       // 7e3ff3c5): a sentence that OPENS on the area lists the area's offer in its later clauses.
       if (own && AREA_LEAD.test(deaccent((sentence.split(DEAC_CLAUSE_SPLIT)[0] ?? "").toLowerCase()))) continue;
       if (own && needle === "strand" && placeBeachSentence(sentence)) continue;
+      if (own && (needle === "panorama" || needle === "kilatas") && areaViewSentence(sentence)) continue;
       if (sentenceAffirms(needle, sentence, own)) return true;
     }
   }
   return false;
+}
+
+/**
+ * A VIEW the sentence gives to the area, not to the house (Bogyólak 6bd6058a, 2026-10-27): „a
+ * környék egyik legszebb faluja, amely a … Borút csodálatos panorámájával rendelkezik”, „a
+ * páratlan panorámával rendelkező Weingarten szőlőhegy” → Panoráma on the services sample.
+ * The sentence names a place of the area (village, hill, wine route, valley …) and no part of
+ * the house a view is had from (terrace, balcony, window, room, the flat itself) — „A teraszról
+ * csodálatos panoráma nyílik a völgyre” names both and stays the house's; a place in the
+ * „-ra/-re” case is where the view GOES („panoráma a hegyre”), not whose it is.
+ */
+const AREA_VIEW_PLACE =
+  /(?<![\p{L}])(?:falu|telepules|kornyek|varos|kozseg|szoloheg|hegy|domb|borut|volgy|kilato)\p{L}*(?<!ra|re)(?![\p{L}])/u;
+const OWN_VIEW_PART =
+  /(?<![\p{L}])(?:terasz\p{L}*|erkely\p{L}*|ablak\p{L}*|szob\p{L}*|nappali\p{L}*|tetoter\p{L}*|apartman\p{L}*|szallas\p{L}*|vendeghaz\p{L}*|panzio\p{L}*|haz(?:unk\p{L}*|bol|rol|ban|nak|at|a|ak)?|kert\p{L}*|udvar\p{L}*)(?![\p{L}])/u;
+function areaViewSentence(sentence: string): boolean {
+  const t = deaccent(sentence.toLowerCase());
+  return AREA_VIEW_PLACE.test(t) && !OWN_VIEW_PART.test(t);
 }
 
 // „Közelünkben található a Zsindelyes étterem” (Elisabeth d912916b, 2026-10-27): the

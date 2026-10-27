@@ -479,6 +479,17 @@ console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép 
   check("valós szobák: hálószobakép egyszer, a második nem ismétli", real[0]!.photo?.url === "https://x.hu/r1.jpg" && !real[1]!.photo, real.map((r) => r.photo?.url));
 }
 
+console.log("⑭ a KÖRNYÉK panorámája nem a házé (Bogyólak 6bd6058a, 2026-10-27)");
+{
+  const bog = [
+    "A környék egyik legszebb faluja, amely a Villány-Siklósi Borút csodálatos panorámájával rendelkezik.",
+    "A falu körül három csodás halastó is megtalálható, illetve a páratlan panorámával rendelkező Weingarten szőlőhegy is kiváló kirándulási lehetőség.",
+  ];
+  check("Bogyólak: a falu / a borút / a szőlőhegy panorámája → nincs „Panoráma” a mintában", !descriptionFactIsOwn("Panoráma", bog));
+  const own = ["A teraszról csodálatos panoráma nyílik a völgyre.", "Csodálatos panoráma a hegyre.", "Panorámás kilátás a tóra a szobákból.", "A házból páratlan kilátás nyílik a falura."];
+  check("⛔ PIROS IKER: a ház (terasz, szoba, ház) kilátása, vagy a kilátás iránya („a hegyre”) marad", own.every((t) => descriptionFactIsOwn("Panoráma", [t])), own.filter((t) => !descriptionFactIsOwn("Panoráma", [t])));
+}
+
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");
 const panProfile = (title: string, description: string) => ({ name: title, portalProfiles: [{ matchBand: "high", title, url: "https://hovamenjek.hu/x", portal: "hovamenjek", amenities: ["Saját parkoló"], rooms: [], photos: [], reviews: [], prices: [], description }] });
 const panSrc = collectWriterSources(panProfile("Panoráma Vendégház", "Panoráma Vendégház – Szállás Dombóvár, Nyerges dűlő 2.. Nyitvatartás, elérhetőség, értékelések és fotók a Hovamenjek.hu-n. Foglaljon szállást Dombóváron egyszerűen és gyorsan.") as never, []);
