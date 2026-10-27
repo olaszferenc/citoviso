@@ -41,7 +41,7 @@ import {
   wholeLetStated,
 } from "../src/engine/sampleFromSource.js";
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
-import { descriptionFactIsOwn, descriptionSellingPoints, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
+import { descriptionFactIsOwn, descriptionSellingPoints, hostVenueOf, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
@@ -531,6 +531,35 @@ console.log("⑮ a fürdő medencéi nem a szállás medencéje (Bencze 086685fe
     !descriptionFactIsOwn("Medence", ["A hévízi gyógyfürdő a közelben van. Medencéje egész évben 30 fokos."]));
   const own = ["A vendégház udvarán saját medence várja a vendégeket.", "Kerti medence és napozóágyak.", "A ház medencéje nyáron fűtött.", "Medence a kertben.", "Saját élménymedencénk is van az udvaron."];
   check("⛔ PIROS IKER: a saját / kerti / udvari / a ház medencéje marad", own.every((t) => descriptionFactIsOwn("Medence", [t])), own.filter((t) => !descriptionFactIsOwn("Medence", [t])));
+}
+
+console.log("⑯ a hotel wellnesse nem az apartman szolgáltatása (Belima 4231bd12, Karos Gold 9c24d9b0, Zalakaros, 2026-10-27)");
+{
+  const hostHints = (name: string, listed: string[], descriptions: string[], facts: string[] = []) =>
+    sampleHintsOf({ name } as never, "hu", { listedAmenities: listed, amenities: [...listed, ...facts], descriptions, descriptionFacts: facts }).hints.sampleAmenities ?? [];
+  // Belima: the hm list is Hotel Karos Spa's (ice cave, steam room, thermal pool …), the prose is silent.
+  const belimaList = ["Kiságy", "Gyerekmedence", "Élménymedence", "Gőzkamra", "Jégszauna", "Úszómedence", "Medence", "Jégbarlang", "Finn szauna", "Termálmedence", "Infraszauna", "Bioszauna", "Parkolás az utcán", "Erkély/terasz", "Légkondícionálás"];
+  const belima = hostHints("Belima Apartman", belimaList, ["Magyarország egyik leghíresebb fürdővárosában, Zalakaroson vár a Belima Apartman. 2 külön bejáratú apartmanunk akár 2 családnak is ideális"]);
+  check("Belima: a fürdőkomplexum-lista medencéje/szaunája nem kerül a mintába", belima.length > 0 && !belima.some((a) => /medenc|szaun|wellness|jégbarlang|gőz/i.test(a)), belima);
+  // Karos Gold: the prose places it in the Aparthotel AND grants the hotel's wellness → named, not own.
+  const karos = [
+    "Nagyon jó választás lehet a Zalakaroson található Karos Gold 813 Wellness Apartman, amely közvetlen összeköttetésben van a Hotel Karos Spa wellness részlegével, így nem csupán egy apartmanház használatot kapnak, hanem igénybe vehetik a hotel teljes wellness részlegét is.",
+    "Az apartman az Aparthotel második emeletén helyezkedik el, ahova kényelmesen lift segítségével juthatunk fel.",
+  ];
+  const karosItems = hostHints("Karos Gold 813 Wellness Apartman", ["Fitness", "Játszótér", "Saját parkoló"], karos, ["Wellness"]);
+  check("Karos Gold: kimondott engedély → „A Hotel Karos Spa wellnessrészlege”, saját Wellness/Medence nincs",
+    karosItems.includes("A Hotel Karos Spa wellnessrészlege") && !karosItems.some((a) => a !== "A Hotel Karos Spa wellnessrészlege" && /medenc|szaun|wellness|fitnes/i.test(a)), karosItems);
+  const noGrant = hostHints("Napfény Apartman", ["Medence", "Szauna", "Parkoló"], ["Az apartman a Hotel Napfény épületében, a harmadik emeleten található."]);
+  check("engedély nélkül a hotel épületében lévő egység mintájában nincs medence/szauna", noGrant.length > 0 && !noGrant.some((a) => /medenc|szaun/i.test(a)), noGrant);
+  check("hostVenueOf: a hotel neve a mondatból, névelő nélkül; az engedély kimondva",
+    JSON.stringify(hostVenueOf("Lila Apartman", [], ["A Hotel Lila Akác wellness részlegét vendégeink ingyen használhatják."])) === JSON.stringify({ name: "Hotel Lila Akác", access: true }));
+  // ⛔ PIROS IKER: an own pool, a hotel's own list, a complex's own name keep their wellness.
+  const ownPool = hostHints("Kerti Vendégház", ["Medence", "Szauna", "Parkoló"], ["Udvarunkon saját medence és finn szauna várja a vendégeket."]);
+  check("⛔ PIROS IKER: saját medence (nincs hotel a forrásban) → Medence marad", ownPool.some((a) => /medenc/i.test(a)), ownPool);
+  const hotel = hostHints("Hotel Karos Spa", belimaList, ["A Hotel Karos Spa élményfürdője egész évben nyitva."]);
+  check("⛔ PIROS IKER: a hotel SAJÁT leadjén a wellness az övé → marad", hotel.some((a) => /medenc|szaun/i.test(a)), hotel);
+  const aparthotel = hostHints("Platán Apartmanház", ["Szauna", "Parkoló"], ["A Platán Apartmanház Aparthotel Balatongyörök úszómedencét kínál."]);
+  check("⛔ PIROS IKER: a név maga az aparthotel (Platán) → a szaunája marad", aparthotel.some((a) => /szaun/i.test(a)), aparthotel);
 }
 
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");

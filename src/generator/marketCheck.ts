@@ -568,6 +568,92 @@ export function sampleFacilityItems(ranked: readonly string[], max = 6): string[
 }
 
 /**
+ * A unit inside a hotel's or a spa's building (2026-10-27, Belima 4231bd12, Karos Gold
+ * 9c24d9b0 — Zalakaros, Hotel Karos Spa): the portal lists the HOTEL's wellness (pools,
+ * saunas, ice cave) among the apartment's amenities. That is no offer of the apartment.
+ * The source places the unit in the building in one of two ways:
+ *   · its prose says so („az Aparthotel második emeletén”, „közvetlen összeköttetésben van
+ *     a Hotel Karos Spa wellness részlegével”, „a szálloda épületében”);
+ *   · its amenity list IS a spa complex — three or more facilities no private apartment
+ *     has (ice cave, steam room, ice/bio sauna, thermal/adventure pool) under a name that is
+ *     no hotel's or spa's own.
+ * The wellness then reaches the sample ONLY where the prose grants the guests its use in so
+ * many words („igénybe vehetik a hotel teljes wellness részlegét”, „vendégeink ingyen
+ * használhatják”), and even then as „A <hotel> wellnessrészlege”, never as an own pool.
+ */
+export interface HostVenue {
+  /** „Hotel Karos Spa” — the host's name as the prose gives it; null when not named. */
+  readonly name: string | null;
+  /** The prose explicitly lets the guests use the host's wellness. */
+  readonly access: boolean;
+}
+const HOST_IN_PROSE =
+  /aparthotel\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:emelet|epulet|szint|foldszint)\p{L}*|(?:hotel|szalloda|furdo)\s+(?:\p{L}+\s+){0,3}?(?:epulet\p{L}*|wellness\s*reszleg\p{L}*|wellnessreszleg\p{L}*|spa\s*reszleg\p{L}*)|osszekottetes\p{L}*\s+(?:van\s+)?(?:a|az)\s+(?:\p{L}+\s+){0,4}?(?:hotel|szalloda|furdo)/u;
+const HOST_ACCESS =
+  /(?:igenybe\s+vehet\p{L}*|hasznalhat\p{L}*|hasznalata\s+(?:ingyenes|biztositott|benne\s+van)|belepo\p{L}*\s+(?:ingyenes|biztositott))/u;
+const HOST_WELLNESS = /wellness|spa|medenc|szaun|furdo/u;
+/** Facilities of a spa complex — no private apartment lists three of them. */
+const SPA_COMPLEX =
+  /jegbarlang|gozkamra|gozfurdo|jegszauna|bioszauna|sokkolo|aromakabin|termalmedence|elmenymedence|sokemedence|kneipp/u;
+/** A name that is itself a hotel's, a spa's or a holiday complex's: its wellness is its own
+ *  (Platán Apartmanház „Aparthotel”, Kentaur Üdülőfalu – Motel, Szidónia Kastélyszálloda,
+ *  Portré panzió — measured on prod 2026-10-27). */
+const HOST_OWN_NAME = /hotel|szallo|motel|panzio|udulo|kemping|camping|resort|kastely|furdo|(?<![\p{L}])spa(?![\p{L}])/u;
+const HOTEL_FIRST = /(?<![\p{L}])(?:Hotel|Aparthotel)(?:\s+\p{Lu}[\p{L}\d&'-]*){1,3}/u;
+const HOTEL_LAST = /(?:\p{Lu}[\p{L}\d&'-]*\s+){1,3}(?:Hotel|Szálló|Szálloda|Fürdő)(?![\p{L}])/u;
+/** „Hotel Karos Spa” / „Karos Spa Hotel” — a sentence-initial article is no part of it. */
+function hostNameIn(sentence: string): string | null {
+  const first = sentence.match(HOTEL_FIRST)?.[0];
+  if (first) return first.trim();
+  const last = sentence.match(HOTEL_LAST)?.[0].replace(/^(?:A|Az|Egy)\s+/u, "").trim();
+  return last && /\s/u.test(last) ? last : null;
+}
+
+export function hostVenueOf(
+  leadName: string,
+  amenities: readonly string[],
+  descriptions: readonly string[],
+): HostVenue | null {
+  if (HOST_OWN_NAME.test(norm(leadName))) return null;
+  const sentences = descriptions.flatMap((d) => d.split(SENTENCE_SPLIT)).map((s) => s.trim()).filter(Boolean);
+  const placed = sentences.filter((s) => HOST_IN_PROSE.test(norm(s)));
+  const complex = new Set(amenities.map((a) => norm(a).match(SPA_COMPLEX)?.[0]).filter(Boolean));
+  if (!placed.length && complex.size < 3) return null;
+  const name = placed.map(hostNameIn).find(Boolean) ?? null;
+  const access = sentences.some((s) => {
+    const n = norm(s);
+    return HOST_ACCESS.test(n) && HOST_WELLNESS.test(n) && /hotel|szalloda|furdo|wellness\s*reszleg/u.test(n);
+  });
+  return { name, access };
+}
+
+/**
+ * The sample's input with a host venue's wellness taken out: every pool/sauna/wellness
+ * item goes, and, where the prose grants its use, ONE „A <hotel> wellnessrészlege” takes
+ * the place of the first one (so the strongest-first order holds).
+ */
+export function withHostWellness(ranked: readonly string[], host: HostVenue | null): string[] {
+  if (!host) return [...ranked];
+  const wellness = AMENITY_BUCKET.find(([label]) => label === "Medence és wellness")![1];
+  const isWellness = (a: string) => {
+    const n = norm(a);
+    return wellness.some((k) => n.includes(k)) || SPA_COMPLEX.test(n) || /fitnes|konditer/u.test(n);
+  };
+  const named = host.access && host.name ? `A ${host.name} wellnessrészlege` : null;
+  const out: string[] = [];
+  let placed = false;
+  for (const a of ranked) {
+    if (!isWellness(a)) {
+      out.push(a);
+    } else if (named && !placed) {
+      out.push(named);
+      placed = true;
+    }
+  }
+  return out;
+}
+
+/**
  * The sample stands on Hungarian pages only, but white-label booking engines (lake-balaton.com,
  * booked.hu) publish their amenity list in English: „Flat-screen TV” stood untranslated on
  * Balaton Breeze 2eab1936 (2026-10-26). The common in-house items are translated; an English

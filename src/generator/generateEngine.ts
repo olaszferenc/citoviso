@@ -41,7 +41,7 @@ import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { MIN_GUEST_STARS } from "./guestVoice.js";
 import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
-import { descriptionFactIsOwn, groupAmenities, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, withHostWellness, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { fingerprintCandidates } from "./photoHash.js";
@@ -163,9 +163,14 @@ export function sampleHintsOf(
   const sampleAmenityDeny = deniedSampleTypes(sources.listedAmenities, sources.descriptions);
   // „Amit kínálunk” asks what the HOUSE offers: a prose fact about the town or the area
   // („a város strandjain”, „közel a homokos strand”) is true, but not this house's offer.
+  // A unit inside a hotel or a spa: the host's wellness is no offer of the unit (hostVenueOf).
+  const host = hostVenueOf(lead.name, sources.listedAmenities, sources.descriptions);
   const sampleAmenities = sampleFacilityItems(
-    sources.amenities.filter(
-      (a) => !sources.descriptionFacts?.includes(a) || descriptionFactIsOwn(a, sources.descriptions),
+    withHostWellness(
+      sources.amenities.filter(
+        (a) => !sources.descriptionFacts?.includes(a) || descriptionFactIsOwn(a, sources.descriptions),
+      ),
+      host,
     ),
   );
   return {
