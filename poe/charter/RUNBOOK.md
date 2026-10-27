@@ -130,7 +130,9 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
    Újabb letétel felülírja az előzőt.
    ⛔ **Elutasítónak / nem érintettnek NEM írsz javaslatot** („nem kérjük”, „nem az enyém”, „rossz
    helyre küldték”): tőlük semmilyen további üzenet nem mehet (tulaj, 2026-10-26). A jegyet
-   ilyenkor is lezárod: `KÉSZ — <idő> — nincs javaslat: elutasító/nem érintett`.
+   ilyenkor is lezárod: `KÉSZ — <idő> — nincs javaslat: elutasító/nem érintett`, ÉS a konzolon a
+   beszélgetés alatt megnyomod a „Megválaszoltam”-ot — különben az irányítópulton örökre
+   „Javaslatra vár / Poe dolgozik rajta” áll, és a tulaj azt hiszi, elakadtál (tulaj, 2026-10-27).
 4. ⛔ **KÜLDENI TILOS.** A küldés az operátoré (ADR-0325): ő olvassa el, javítja, és ő küldi.
 5. A jegyet jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.
 
