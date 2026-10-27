@@ -19,6 +19,7 @@
 //   · unrelated  → two different businesses on ONE contact: at least one of them is
 //                  wrong, so the block STAYS — the fix is correcting the contact.
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { normalizeEmail } from "../email/address.js";
 import { ELEK_EMAIL } from "../elek/park.js";
@@ -149,4 +150,54 @@ export async function sharedContactBlocks(
     `lehet, hogy a szomszédé, és akkor a mock a konkurenshez menne. Ha azonos a tulaj, jelöld így a Duplikátumok lapon; ` +
     `ha nem, javítsd a lead elérhetőségét.`
   );
+}
+
+/**
+ * ONE OWNER, ONE OUTREACH (-bb + coordinator, 2026-10-27): a lead whose e-mail or phone (the same
+ * keys as above) also belongs to ANOTHER lead that already got an outreach — a prospect with
+ * sent_at or any *_sent_at — is held, whatever the Duplikátumok ruling says (same_owner releases the
+ * shared contact for a FIRST outreach, never for a second one). Measured live 2026-10-27: Lakeside
+ * 79202242, Balaton Wellness, Gála, Zöldike were queued on a phone/e-mail pair whose other lead
+ * had been mailed in an older campaign, outside the dispatch table.
+ * Returns the operator-facing reason, or null.
+ */
+export async function twinAlreadyContacted(
+  leadId: string,
+  raw: QualifiedLead,
+  /** The query executor — a guard passes its rolled-back transaction. */
+  q: Pick<typeof db, "selectFrom"> = db,
+): Promise<string | null> {
+  const mine = new Set([...[...contactKeysOf(raw, "email")].map((k) => `e:${k}`), ...[...contactKeysOf(raw, "phone")].map((k) => `p:${k}`)]);
+  if (!mine.size) return null;
+  const sent = await q
+    .selectFrom("prospect")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    // Only the contact fields of raw: the whole raw (portal profiles, photos) of every contacted
+    // lead would be tens of MB per claim (prod ran out of memory on 2026-10-27).
+    .select([
+      "lead.id as id",
+      "lead.name as name",
+      sql<QualifiedLead>`jsonb_build_object('email', lead.raw->'email', 'otherEmails', lead.raw->'otherEmails', 'phone', lead.raw->'phone', 'contacts', lead.raw->'contacts')`.as("raw"),
+      "prospect.contact_email as email",
+    ])
+    .where("lead.id", "!=", leadId)
+    .where((eb) =>
+      eb.or([
+        eb("prospect.sent_at", "is not", null),
+        eb("prospect.email_sent_at", "is not", null),
+        eb("prospect.mms_sent_at", "is not", null),
+        eb("prospect.sms_sent_at", "is not", null),
+      ]),
+    )
+    .execute();
+  for (const s of sent) {
+    const other = (typeof s.raw === "string" ? JSON.parse(s.raw) : s.raw) as QualifiedLead;
+    const theirs = [
+      ...[...contactKeysOf(other, "email")].map((k) => `e:${k}`),
+      ...[...contactKeysOf(other, "phone")].map((k) => `p:${k}`),
+      ...(s.email && keyOf("email", s.email) ? [`e:${keyOf("email", s.email)}`] : []),
+    ];
+    if (theirs.some((k) => mine.has(k))) return `TARTVA iker: a közös kontaktra már ment megkeresés (${s.name})`;
+  }
+  return null;
 }

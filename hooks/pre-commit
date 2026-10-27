@@ -2869,6 +2869,14 @@ if [ -f scripts/dispatch-rooms-guard-check.mts ] && \
   echo "[pre-commit] dispatch-rooms-guard-check (szobamodul nélküli terv nem megy ki)…"
   npx tsx scripts/dispatch-rooms-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
+# dispatch-twin-check (-bb + koordinátor 2026-10-27, Lakeside ↔ Napsugár): egy gazda, egy megkeresés —
+# ha a lead e-mailje / telefonja egy másik leadé is, amelyre már ment megkeresés, a sor TARTVA (a
+# same_owner sem engedi). Egyetlen, visszagörgetett tranzakció a közös dev DB-n, ~3 s.
+if [ -f scripts/dispatch-twin-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(autoDispatch|sharedContactGate)\.ts$|^scripts/dispatch-twin-check'; then
+  echo "[pre-commit] dispatch-twin-check (közös kontaktra második megkeresés nem megy)…"
+  npx tsx scripts/dispatch-twin-check.mts >"$GATE_LOG" || gate_failed
+fi
 # robots-policy-check (tulaj 2026-10-27, RFC 9309 — Fecske Kabin: robots.txt 403, a lapok 200): a 4xx
 # robots.txt (a 429 kivételével) = nincs korlátozás; 429, 5xx, hálózati hiba, időtúllépés = tiltás;
 # a 2xx fájlt betartjuk; hostonként egy robots-kérés. A valódi mayFetch, fetch-csonkkal, hálózat nélkül, ~1 s.

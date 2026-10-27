@@ -29,6 +29,8 @@ import { sendOutreachMail } from "./sendBatch.js";
 import { startOutreachPair } from "./sendOutreachPair.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
+import { twinAlreadyContacted } from "./sharedContactGate.js";
+import type { QualifiedLead } from "../scraper/types.js";
 
 /**
  * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
@@ -109,7 +111,7 @@ export async function enqueueDispatch(input: {
     return { ok: false, reason: "nincs rögzített Vera-PASS ezen a mockon" };
   }
   const contacted = await alreadyContacted(input.leadId);
-  if (contacted) return { ok: false, reason: contacted };
+  if (contacted) return { ok: false, reason: contacted.reason };
   const row = await db
     .insertInto("outreach_dispatch")
     .values({ lead_id: input.leadId, artifact_id: input.artifactId, queued_by: input.by })
@@ -141,8 +143,11 @@ export async function cancelDispatch(leadId: string, by: string, reason: string)
   return Number(r.numUpdatedRows) > 0;
 }
 
-/** Why this lead must not get a FIRST contact anymore, or null. */
-async function alreadyContacted(leadId: string): Promise<string | null> {
+/**
+ * Why this lead must not get a FIRST contact anymore, or null. `twin`: the lead itself was not
+ * contacted, but a lead sharing its e-mail or phone was (one owner, one outreach) → held.
+ */
+async function alreadyContacted(leadId: string): Promise<{ reason: string; twin: boolean } | null> {
   const p = await db
     .selectFrom("prospect")
     .select(["id"])
@@ -156,7 +161,11 @@ async function alreadyContacted(leadId: string): Promise<string | null> {
       ]),
     )
     .executeTakeFirst();
-  return p ? "ez a lead már kapott megkeresést" : null;
+  if (p) return { reason: "ez a lead már kapott megkeresést", twin: false };
+  const lead = await db.selectFrom("lead").select(["raw"]).where("id", "=", leadId).executeTakeFirst();
+  const raw = (typeof lead?.raw === "string" ? JSON.parse(lead.raw) : lead?.raw) as QualifiedLead | undefined;
+  const twin = raw ? await twinAlreadyContacted(leadId, raw) : null;
+  return twin ? { reason: twin, twin: true } : null;
 }
 
 /** Leads the timer contacted today (Budapest day). */
@@ -250,7 +259,8 @@ async function dispatchOne(
   artifactId: string,
 ): Promise<{ status: "sent" | "held" | "skipped"; note: string; prospectId?: string }> {
   const contacted = await alreadyContacted(leadId);
-  if (contacted) return { status: "skipped", note: contacted };
+  // A twin (another lead on the same contact got the outreach) is held: a person decides.
+  if (contacted) return { status: contacted.twin ? "held" : "skipped", note: contacted.reason };
 
   const art = await db
     .selectFrom("mock_artifact")
