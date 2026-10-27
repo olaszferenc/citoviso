@@ -314,7 +314,8 @@ check("Tomi: az ablakos kép altja semleges „– fotó” (nem „környezete�
 const coarse = (subject: string) => contactPhotoOf({ ...base, name: "Teszt", photos: [shot("h", "exterior"), shot("x", subject)] }, undefined)?.alt;
 check("view / pool_garden → semleges alt, sosem „kilátás” / „kert és udvar”", coarse("view") === "Teszt – fotó" && coarse("pool_garden") === "Teszt – fotó", [coarse("view"), coarse("pool_garden")]);
 const HOUSE = [shot("h", "view"), shot("e", "exterior"), shot("i", "interior")];
-check("házról készült kép: „kívülről”", contactPhotoOf({ ...base, name: "Teszt Ház", photos: HOUSE }, HOUSE.at(-1))?.alt === "Teszt Ház kívülről");
+// Kákonyi 6841869e (2026-10-27): "exterior" also covers a gateway seen from inside → no „kívülről”.
+check("„exterior” ítélet → semleges „– fotó”, nem „kívülről” (Kákonyi kapualj)", contactPhotoOf({ ...base, name: "Teszt Ház", photos: HOUSE }, HOUSE.at(-1))?.alt === "Teszt Ház – fotó");
 // Kék Madár ab708be5 (shape): no outdoor photo at all → the slot steps past the bathroom, plain alt.
 const KEK = [shot("a", "interior"), shot("b", "interior"), shot("c", "bathroom")];
 const kek = contactPhotoOf({ ...base, name: "Kék Madár Vendégház", photos: KEK }, KEK.at(-1));
@@ -477,6 +478,14 @@ console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép 
   // Real rooms without a photo borrow a bedroom, each once; the rest keep their panel.
   const real = roomsForMock({ ...base, photos: [ph("c1", "interior", false), ph("r1", "interior", true)], rooms: [{ name: "Tölgy" }, { name: "Bükk" }] as never });
   check("valós szobák: hálószobakép egyszer, a második nem ismétli", real[0]!.photo?.url === "https://x.hu/r1.jpg" && !real[1]!.photo, real.map((r) => r.photo?.url));
+  // No verdict at all: the file name / caption decides (Villa Eve 085b6714 shape, villaeve.hu names).
+  const eve = ["jatszoter.jpg", "277516212_713758682976743_n.jpg", "Szoba2-scaled.jpg", "Haz.png", "Etkezo-scaled.jpg", "Konyha1-scaled.jpg", "Furdo-scaled.jpg"]
+    .map((f) => ({ url: `https://villaeve.hu/wp-content/uploads/2022/02/${f}`, alt: "Villa Eve" }));
+  const eveCard = sampleRooms({ ...base, name: "Villa Eve", photos: eve, sampleUnitKind: "whole" });
+  check("ítélet nélkül: a fájlnévben nevezett hálószoba („Szoba2”) a kártyakép", eveCard[0]!.photo?.url.endsWith("/Szoba2-scaled.jpg") === true, eveCard[0]!.photo?.url);
+  const noSignal = sampleRooms({ ...base, photos: ["haz.jpg", "kert.jpg", "Furdo.jpg", "Konyha.jpg", "terasz.jpg", "Badacsony-kilatas.jpg"].map((f) => ({ url: `https://x.hu/${f}`, alt: "" })) });
+  check("ítélet nélkül: fürdő / konyha nevű kép nem kártyakép; a „Badacsony” nem „bad”",
+    !/Furdo|Konyha/.test(noSignal[0]!.photo?.url ?? "") && noSignal[0]!.photo !== undefined, noSignal[0]!.photo?.url);
 }
 
 console.log("⑭ a KÖRNYÉK panorámája nem a házé (Bogyólak 6bd6058a, 2026-10-27)");

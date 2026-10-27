@@ -115,9 +115,13 @@ const SURROUNDINGS_SUBJECTS = new Set(["exterior", "view", "pool_garden"]);
 /** Never the contact / surroundings picture, whatever slot it falls into. */
 const NEVER_SURROUNDINGS = new Set(["bathroom", "toilet"]);
 
-/** The outdoor contact picture's alt: „kívülről” only on an exterior verdict, else neutral. */
-function sceneAlt(d: SiteData, subject: string | undefined): string {
-  return subject === "exterior" ? T(d, "{name} kívülről", { name: d.name }) : T(d, "{name} – fotó", { name: d.name });
+/**
+ * The outdoor contact picture's alt: neutral. „kívülről” claimed more than the verdict knows:
+ * "exterior" also covers an entrance or a covered gateway seen from inside (Kákonyi 6841869e,
+ * 2026-10-27: „Épület bejárata, keskeny folyosó” → „Kákonyi Vendégház kívülről”).
+ */
+function sceneAlt(d: SiteData): string {
+  return T(d, "{name} – fotó", { name: d.name });
 }
 
 /**
@@ -142,7 +146,7 @@ export function contactPhotoOf(
   if (!photos.length) return null;
   const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
   const scene = outdoor.filter((p) => p.url !== photos[0]!.url).at(-1) ?? outdoor.at(-1);
-  if (scene) return { url: scene.url, alt: sceneAlt(d, scene.subject) };
+  if (scene) return { url: scene.url, alt: sceneAlt(d) };
   const ok = (p: Photo | undefined): p is Photo => Boolean(p && !(p.subject && NEVER_SURROUNDINGS.has(p.subject)));
   const pick = ok(slot) ? slot : [...photos].reverse().find(ok);
   return pick ? { url: pick.url, alt: d.name } : null;
@@ -213,6 +217,15 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   });
 }
 
+/** A photo's file name + caption, folded, for the no-verdict signal words. */
+function photoWords(p: Photo): string {
+  let file = p.url.split(/[?#]/)[0]!.split("/").pop() ?? "";
+  try { file = decodeURIComponent(file); } catch { /* keep the raw name */ }
+  return `${file} ${p.alt}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+const NAMED_BEDROOM = /(?:^|[^a-z])(?:szoba[a-z]*|haloszoba[a-z]*|halo|bedroom|schlafzimmer|zimmer|room)(?:$|[^a-z])/;
+const NAMED_NOT_ROOM = /(?:^|[^a-z])(?:furdo[a-z]*|bath[a-z]*|bad|wc|toalett|toilet|konyha[a-z]*|kitchen|kuche|nappali|living|wohnzimmer|etkezo|dining|bejarat)(?:$|[^a-z])/;
+
 /**
  * The photos room cards may wear (Délibáb 330d3c5a, Tea aa69b4d0, Kákonyi 6841869e,
  * 2026-10-27): with a vision verdict, BEDROOMS only (Photo.bedroom — not the kitchen, the
@@ -224,7 +237,16 @@ export function sampleRooms(d: SiteData): readonly Room[] {
 function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo | undefined } {
   const judged = d.photos.some((p) => p.subject !== undefined);
   const offset = d.photos.length > 3 ? 2 : 0;
-  if (!judged) return { cards: d.photos.slice(offset), single: d.photos[offset] };
+  if (!judged) {
+    // No verdict: the file name or the caption may still say what the photo shows
+    // („Szoba2-scaled.jpg”, „Furdo-scaled.jpg”, -bb 2026-10-27) — a named bathroom, kitchen or
+    // living room never wears a room card, a named bedroom is preferred.
+    const named = d.photos.filter((p) => NAMED_BEDROOM.test(photoWords(p)) && !NAMED_NOT_ROOM.test(photoWords(p)));
+    const usable = d.photos.filter((p) => !NAMED_NOT_ROOM.test(photoWords(p)));
+    return named.length
+      ? { cards: named, single: named[0] }
+      : { cards: usable.slice(offset), single: usable[offset] ?? usable[0] };
+  }
   const inside = d.photos.filter((p) => p.subject === "interior");
   // A snapshot from before the bedroom flag: inside photos, still each once.
   const flagged = d.photos.some((p) => p.bedroom !== undefined);

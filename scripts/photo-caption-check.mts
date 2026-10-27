@@ -21,7 +21,7 @@ import { config } from "../src/config.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { PRIMITIVES } from "../src/engine/primitives.js";
-import { isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, isQuoteCutName, photoCaption, withoutFilenameAlts } from "../src/engine/photoCaption.js";
+import { captionContradictsSubject, isEchoCaption, isFilenameCaption, isKeywordListCaption, isNonCaption, isQuoteCutName, photoCaption, withoutFilenameAlts } from "../src/engine/photoCaption.js";
 import { domImages, extractListing, tagAttr } from "../src/scraper/sources/portals/extract.js";
 import { withoutStarRating } from "../src/text/starRating.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
@@ -298,6 +298,52 @@ console.log("\nidézőjel a névben: forrás-alt → tárolt caption → alt / t
     }
   }
   check(`minden sablon: alt / title / aria-label / content / JSON-LD épen viszi a nevet (${seen} attribútum mérve)`, bad.length === 0 && seen > 100, bad.slice(0, 5));
+}
+
+console.log("\ncaption ↔ képelemzés: ütközésnél a képelemzés nyer (DunaTaxi b680c405, 2026-10-27)");
+{
+  // The live DunaTaxi 02da4aa3 rows: [caption, vision subject, contradicts?].
+  const ROWS: [string, string | undefined, boolean][] = [
+    ["Fürdőszoba modern kialakítása", "exterior", true],
+    ["Saját parkosított udvar", "interior", true],
+    ["Hálószoba kényelme", "bathroom", true],
+    ["Parkosított kert", "pool_garden", false],
+    ["Amerikai stílusú nappali", "dining", false],
+    ["Konyha felszerelése", "dining", false],
+    ["HD LED TV és kényelmes kanapé", "interior", false],
+    ["Fürdőszoba modern kialakítása", undefined, false],
+    ["Fürdőszoba modern kialakítása", "other", false],
+    ["Esti hangulat", "exterior", false],
+    ["Zuhanyzós fürdőszoba", "bathroom", false],
+    ["Emeleti szoba (2 ágyas) fürdő", "bathroom", false],
+    ["Kert & Szauna", "dining", false],
+    ["Kilátás a teraszajtón át a székekre és a medencére", "view", false],
+    ["Kerti kiülő", "detail", false],
+    ["Koliko Apartman hálószoba - kétszemélyes ágy és természetes fényű szoba", "exterior", true],
+  ];
+  const wrong = ROWS.filter(([a, s, want]) => captionContradictsSubject(a, s) !== want).map(([a, s]) => `${a} / ${s}`);
+  // The lead's own name is no claim (live 2026-10-27: „Lovas Udvarház – Szedres fotó 3”, „Malom Udvar Vendégház – Óbánya fotó 1” on interiors).
+  if (captionContradictsSubject("Lovas Udvarház – Szedres fotó 3", "dining", "Lovas Udvarház") || captionContradictsSubject("Malom Udvar Vendégház – Óbánya fotó 1", "interior", "Malom Udvar Vendégház")) wrong.push("a név szava ütközésnek számított");
+  check("captionContradictsSubject: a tárgyat kizáró szavú caption ütközik; ítélet nélkül, „other”-rel vagy semleges szóval nem", wrong.length === 0, wrong);
+  const out = withoutFilenameAlts(
+    [
+      { alt: "Fürdőszoba modern kialakítása", url: "https://x.hu/image7.jpg", subject: "exterior" },
+      { alt: "Parkosított kert", url: "https://x.hu/image8.jpg", subject: "pool_garden" },
+      { alt: "Saját parkosított udvar", url: "https://x.hu/image3.jpg", subject: "interior" },
+    ],
+    "DunaTaxi Apartman",
+  );
+  check("withoutFilenameAlts: az ütköző caption a semleges altra cserél, az egyező marad",
+    out[0]!.alt === "DunaTaxi Apartman — 1. kép" && out[1]!.alt === "Parkosított kert" && out[2]!.alt === "DunaTaxi Apartman — 3. kép", out.map((p) => p.alt));
+  // Rendered: the slid caption is gone from every template (render-time, so a plain rerender fixes it).
+  const d = { ...D, name: "DunaTaxi Apartman", photos: [0, 1, 2, 3, 4, 5].map((i) => ({ url: IMG(i), alt: i % 2 ? "Parkosított kert" : "Fürdőszoba modern kialakítása", subject: i % 2 ? "pool_garden" : "exterior", provenance: "portal" as const })) } as SiteData;
+  const bad: string[] = [];
+  for (const [id, tpl] of Object.entries(TEMPLATES)) {
+    const sections = ["hero", "features", "gallery", "rooms", "reviews", "location", "enquiry"].map((kind) => ({ kind }));
+    const html = renderSite({ template: id, skin: tpl.skins[0], archetype: "stacked", sections } as never, d, { phase: "mock" });
+    if (html.includes("Fürdőszoba modern kialakítása")) bad.push(id);
+  }
+  check(`minden sablon: a kültéri képen nincs „Fürdőszoba” felirat / alt (${Object.keys(TEMPLATES).length} sablon)`, bad.length === 0, bad);
 }
 
 console.log("\ncsillag a névben: portál-cím → caption → mock név / alt (fd50391f, 2026-10-27)");

@@ -27,7 +27,7 @@ import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { toImageBlock } from "./images.js";
+import { fitManyImageRequest, toImageBlock } from "./images.js";
 import { HEALTH_MARK, applyHealth, measurePhotoHealth, measurePhotoHealthFromBuffer } from "./photoHealth.js";
 
 /**
@@ -419,9 +419,11 @@ export async function scoreHeroCandidates(
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic();
   const content: AnthropicNS.ContentBlockParam[] = [];
-  fetched.forEach((f, i) => {
+  // Over 20 images the API refuses any above 2000 px — and with it every verdict (Sárgarózsa).
+  const blocks = await fitManyImageRequest(fetched.map((f) => f.block));
+  blocks.forEach((block, i) => {
     content.push({ type: "text", text: `[${i + 1}]` });
-    content.push(f.block as AnthropicNS.ContentBlockParam);
+    content.push(block as AnthropicNS.ContentBlockParam);
   });
   content.push({
     type: "text",

@@ -191,6 +191,10 @@ const COMPOUND_CASES: { name: string; text: string; geo: string[]; expect: boole
   { name: "BBB Apartman", text: "<h1>BBB Apartman I. és II.</h1><p>8630 Balatonboglár, Balaton u. 2.</p>", geo: ["balatonboglar"], expect: true, why: "nagybetűs rövidítés, egész szóként" },
   { name: "BBB Apartman", text: "<h1>Abbba Apartman</h1><p>Balatonboglár</p>", geo: ["balatonboglar"], expect: false, why: "„abbba” belsejében nem a név" },
   { name: "KJB Vendégház ***", text: "<title>KJB Vendégház - Hajdúszoboszló</title>", geo: ["hajduszoboszlo"], expect: true, why: "rövidítés + csillag" },
+  // 3-letter capitalised name (2026-10-27): Apartman Éva (MG53), Sam Ash (MG54, Balatonszemes).
+  { name: "Apartman Éva", text: "<h1>Éva Apartman</h1><p>8636 Balatonszemes</p>", geo: ["balatonszemes"], expect: true, why: "3 betűs, nagy kezdőbetűs név, egész szóként" },
+  { name: "Apartman Éva", text: "<h1>Évaház Apartman</h1><p>Balatonszemes</p>", geo: ["balatonszemes"], expect: false, why: "„évaház” belsejében nem a név" },
+  { name: "Sam Ash", text: "<title>Sam Ash apartman – Balatonszemes</title>", geo: ["balatonszemes"], expect: true, why: "két 3 betűs név" },
 ];
 for (const c of COMPOUND_CASES) {
   const brand = brandTokens(c.name);
@@ -204,8 +208,8 @@ for (const c of COMPOUND_CASES) {
 }
 // Not brands: an ordinal ("11-es"), roman unit numbers, a feature word (Wi-Fi).
 // …and a number with a unit or a motorway is no letter+digit brand.
-for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi", "Vendégház Balatontól 6km-re 4fő", "M0 Motel", "VIP Apartman", "LUX Apartman", "MÁV szállás", "Apartman II", "BB Panzió"]) {
-  const expectEmpty = ["Apartman Vendégház", "B-B Apartman", "VIP Apartman", "LUX Apartman", "MÁV szállás", "Apartman II", "BB Panzió"].includes(n);
+for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es számú kisház", "TópART Apartman I-II-III.", "Holiday home with Wi-Fi", "Vendégház Balatontól 6km-re 4fő", "M0 Motel", "VIP Apartman", "LUX Apartman", "MÁV szállás", "Apartman II", "BB Panzió", "Kék Vendégház", "Rév Kemping", "Apartman 4 you", "Tea Ház"]) {
+  const expectEmpty = ["Apartman Vendégház", "B-B Apartman", "VIP Apartman", "LUX Apartman", "MÁV szállás", "Apartman II", "BB Panzió", "Kék Vendégház", "Rév Kemping", "Apartman 4 you", "Tea Ház"].includes(n);
   const brand = brandTokens(n);
   const ok = expectEmpty ? brand.length === 0 : !brand.some((t) => t.includes("-") || t === "wifi" || /\d/.test(t));
   if (!ok) failed++;
@@ -219,5 +223,5 @@ if (failed) {
   process.exit(1);
 }
 console.log(
-  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 12} kötőjeles/betű+szám/rövidítés márka eset rendben.`,
+  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset + ${COMPOUND_CASES.length + 16} kötőjeles/betű+szám/rövidítés márka eset rendben.`,
 );

@@ -175,6 +175,27 @@ check((await downsizedPhoto(garbage, "image/jpeg")).body === garbage, "értelmez
 const proxySrc = readFileSync("src/console/photoProxy.ts", "utf8");
 check(/const served = await downsizedPhoto\(body, type\)/.test(proxySrc) && /body: served\.body/.test(proxySrc), "fetchPhoto a kicsinyített bájtot tárolja (konzol, kapu és mock-proxy egy forrásból)");
 
+console.log("\n②e sok kép egy vision-hívásban (Sárgarózsa 3419993e, 2026-10-27): > 20 kép → mind ≤ 2000 px");
+{
+  const { fitManyImageRequest, MANY_IMAGES, MANY_IMAGES_MAX_EDGE } = await import("../src/generator/images.js");
+  const block = (buf: Buffer) => ({ type: "image" as const, source: { type: "base64" as const, media_type: "image/jpeg", data: buf.toString("base64") } });
+  const big = await sharp({ create: { width: 2048, height: 1536, channels: 3, background: "#7a9" } }).jpeg().toBuffer();
+  const small = await sharp({ create: { width: 600, height: 800, channels: 3, background: "#97a" } }).jpeg().toBuffer();
+  const many = [block(big), ...Array.from({ length: MANY_IMAGES }, () => block(small))];
+  const fitted = await fitManyImageRequest(many);
+  const edges = await Promise.all(fitted.map(async (b) => {
+    const m = await sharp(Buffer.from((b.source as { data: string }).data, "base64")).metadata();
+    return Math.max(m.width ?? 0, m.height ?? 0);
+  }));
+  check(fitted.length === many.length && edges.every((e) => e <= MANY_IMAGES_MAX_EDGE) && edges[0] === MANY_IMAGES_MAX_EDGE,
+    `21 kép: a 2048 px-es ${MANY_IMAGES_MAX_EDGE} px-re, a sorrend és a darabszám marad (${edges.slice(0, 3).join(", ")}…)`);
+  check(fitted[1] === many[1], "a határon belüli kép érintetlen (ugyanaz a blokk)");
+  const few = [block(big), block(small)];
+  check((await fitManyImageRequest(few))[0] === few[0], "PIROS IKER: ≤ 20 kép → nincs kicsinyítés (a teljes felbontás marad)");
+  const heroSrc = readFileSync("src/generator/heroPick.ts", "utf8");
+  check(/const blocks = await fitManyImageRequest\(fetched\.map\(\(f\) => f\.block\)\)/.test(heroSrc), "a nyitókép-pontozó a kérés előtt átfuttatja (scoreHeroCandidates)");
+}
+
 console.log("\n③ nem nyílt proxy: csak a tárolt forrás oldódik fel");
 const inputs = { siteData: { photos: [{ url: BADCERT }, { url: SAME }] } };
 check(resolveProxiedSource(inputs, photoSourceHash(BADCERT)) === BADCERT, "tárolt forrás → feloldva");

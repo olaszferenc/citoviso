@@ -97,11 +97,20 @@ export function isBrandShaped(w: string): boolean {
  * not a roman numeral („II”, „XIV”) and not a generic capitalised word (ACRONYM_GENERIC).
  * Lower-cased and deaccented like nameWords; matched only as a whole word (hasNameWord).
  * Measured on the live names 2026-10-27: 234 names had no brand word, 31 of them carry one.
+ *
+ * A 3-letter word written with a CAPITAL initial is a name too („Apartman Éva” MG53, „Sam Ash”
+ * MG54, „Ida Panzió”, „Noé Apartman” — 2026-10-27, the same 422): 114 of the 214 live names
+ * still without a brand word gain one. A lower-case word („Apartman 4 you”) and a common word
+ * („Kék”, „Rév”, „Tea”, „Pék”) are not.
  */
 export function acronymWords(name: string): string[] {
   const out: string[] = [];
-  for (const t of name.split(/[^\p{L}\p{N}]+/u)) {
-    if (!/^\p{Lu}{2,3}$/u.test(t) || /^[IVXLCDM]+$/.test(t)) continue;
+  // A hyphen compound („Abi-Lo”, „KI-AD-LAK”) is one word for nameWords — its parts are not.
+  for (const t of name.split(/[^\p{L}\p{N}\-–]+/u)) {
+    if (/[-–]/.test(t)) continue;
+    const acronym = /^\p{Lu}{2,3}$/u.test(t);
+    const shortName = /^\p{Lu}\p{Ll}{2}$/u.test(t);
+    if ((!acronym && !shortName) || /^[IVXLCDM]+$/.test(t)) continue;
     const w = deaccent(t.toLowerCase());
     if (!ACRONYM_GENERIC.has(w) && !out.includes(w)) out.push(w);
   }
@@ -113,6 +122,10 @@ const ACRONYM_GENERIC = new Set([
   "vip", "lux", "art", "one", "the", "spa", "fit", "top", "eco", "new", "bar", "sup",
   "kft", "bt", "zrt", "nyrt", "kkt", "ev", "llc", "ltd", "gmbh", "mav", "mta", "ovi", "uni",
   "bb",
+  // Common 3-letter words written capitalised in a name („Kék Vendégház”, „Rév Kemping”).
+  "kis", "kek", "you", "inn", "lak", "see", "sun", "six", "var", "rev", "sio", "tea", "box", "via",
+  "bal", "pek", "dam", "uno", "rum", "tar", "ozd", "era", "dom", "bon", "hat", "het", "ket", "fel",
+  "uj", "ujj", "nap", "hol", "kut", "kod", "lap", "fal", "fa", "ret", "por", "sas", "tok", "zug",
 ]);
 
 /** Does deaccented, lowercased `text` carry name word `w`? A compound ("abi-lo") also

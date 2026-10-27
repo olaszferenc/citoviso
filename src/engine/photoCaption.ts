@@ -129,8 +129,40 @@ export function isQuoteCutName(alt: string, name: string): boolean {
   return false;
 }
 
-export function withoutFilenameAlts<T extends { readonly alt: string; readonly url?: string }>(photos: readonly T[], name: string): readonly T[] {
-  const bad = (p: T): boolean => isNonCaption(p.alt, p.url) || isQuoteCutName(p.alt, name);
+/**
+ * What a caption SAYS the photo shows, by its words (folded): the room or place it names.
+ * Only the clear words — a caption naming none of them claims nothing checkable.
+ */
+const CAPTION_PLACE: readonly [RegExp, readonly string[]][] = [
+  [/(?:^|[^a-z])(?:furdo(?:szob|kad)?[a-z]*|zuhany|mosdo|wc|toalett)(?:$|[^a-z])/, ["bathroom", "toilet"]],
+  [/(?:^|[^a-z])(?:szauna|jakuzzi|medence)/, ["interior", "pool_garden", "bathroom", "exterior", "view"]],
+  [/(?:^|[^a-z])(?:haloszob|hal[oó]\s|agy(?:ak|as|nemu)?(?:$|[^a-z])|konyha|nappali|kanape|etkezo|tv(?:$|[^a-z]))/, ["interior", "dining", "detail"]],
+  [/(?:^|[^a-z])(?:kert|udvar|parkositott|pazsit|gyep)/, ["pool_garden", "exterior", "view", "parking", "dining"]],
+  [/(?:^|[^a-z])(?:kivulrol|homlokzat|epulet)/, ["exterior", "view", "pool_garden", "parking"]],
+];
+
+/** Verdict classes that name a PLACE; "detail", "people_doc", "sign_map", "other" … say too little. */
+const PLACE_SUBJECTS = new Set(["exterior", "view", "pool_garden", "interior", "dining", "bathroom", "toilet", "parking"]);
+
+/**
+ * The source caption and the vision verdict disagree about what the photo SHOWS (DunaTaxi
+ * b680c405, 2026-10-27: the site's captions slid one place — „Fürdőszoba modern kialakítása”
+ * under the house from outside, „Saját parkosított udvar” under the living room). The bought
+ * verdict wins (coordinator): the caption is dropped for the neutral alt. No verdict, or a
+ * verdict class the caption's words do not rule out → the caption stays.
+ */
+export function captionContradictsSubject(alt: string, subject: string | undefined, name = ""): boolean {
+  if (!subject || !PLACE_SUBJECTS.has(subject)) return false;
+  // The lead's own name is no claim about the photo („Lovas Udvarház – … fotó 3”, „Malom Udvar”).
+  const own = new Set(words(name));
+  const t = words(alt).filter((w) => !own.has(w)).join(" ");
+  const claims = CAPTION_PLACE.filter(([re]) => re.test(t));
+  return claims.length > 0 && claims.every(([, ok]) => !ok.includes(subject));
+}
+
+export function withoutFilenameAlts<T extends { readonly alt: string; readonly url?: string; readonly subject?: string }>(photos: readonly T[], name: string): readonly T[] {
+  const bad = (p: T): boolean =>
+    isNonCaption(p.alt, p.url) || isQuoteCutName(p.alt, name) || captionContradictsSubject(p.alt, p.subject, name);
   if (!photos.some(bad)) return photos;
   return photos.map((p, i) => (bad(p) ? { ...p, alt: neutralAlt(name, i) } : p));
 }

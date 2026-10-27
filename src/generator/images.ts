@@ -130,6 +130,37 @@ async function shrinkForVision(
   }
 }
 
+/**
+ * The API's many-image rule: a request with MORE than 20 images accepts none over 2000 px on
+ * its long edge — the whole call is refused (Sárgarózsa 3419993e, 2026-10-27: 22 photos, one of
+ * 2048 × 1536 → no hero verdict at all, „Nyitókép: error”, the room card on the bathroom).
+ */
+export const MANY_IMAGES = 20;
+export const MANY_IMAGES_MAX_EDGE = 2000;
+
+/** Inlined blocks of a > MANY_IMAGES request, each brought within MANY_IMAGES_MAX_EDGE. */
+export async function fitManyImageRequest(blocks: readonly ImageBlock[]): Promise<ImageBlock[]> {
+  if (blocks.length <= MANY_IMAGES) return [...blocks];
+  const { default: sharp } = await import("sharp");
+  return Promise.all(
+    blocks.map(async (b) => {
+      if (b.source.type !== "base64") return b;
+      try {
+        const buf = Buffer.from(b.source.data, "base64");
+        const meta = await sharp(buf, { failOn: "none" }).metadata();
+        if (Math.max(meta.width ?? 0, meta.height ?? 0) <= MANY_IMAGES_MAX_EDGE) return b;
+        const out = await sharp(buf, { failOn: "none" })
+          .resize({ width: MANY_IMAGES_MAX_EDGE, height: MANY_IMAGES_MAX_EDGE, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: VISION_JPEG_QUALITY, mozjpeg: true })
+          .toBuffer();
+        return { type: "image", source: { type: "base64", media_type: "image/jpeg", data: out.toString("base64") } } as ImageBlock;
+      } catch {
+        return b;
+      }
+    }),
+  );
+}
+
 /** Image content block as the Anthropic SDK expects it (remote url, or inlined bytes). */
 export type ImageBlock =
   | { type: "image"; source: { type: "url"; url: string } }
