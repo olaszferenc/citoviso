@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-kikuldesi-sor-honlap-nelkuliek-elol.md) — A kiküldési sor sorrendje: a honlap nélküliek mennek elsőként
 - [ADR-0408](decisions/0408-arak-es-rendeles-havi-x-ft-tol-a-lead-lap.md) — „Árak és rendelés” + „havi X Ft-tól”: a lead-lap rendelő gombja az árat is megmondja
 - [ADR-0407](decisions/0407-a-proba-belseje-merve-tenant-aktivitas-naplo-es.md) — A próba belseje mérve: tenant-aktivitás napló és a Riport „Próba” füle
 - [ADR-0406](decisions/0406-tobb-terv-egy-kovetett-linken-a-lead-a-sajat.md) — Több terv egy követett linken: a lead a saját linkjén vált 2–3 jóváhagyott terv között

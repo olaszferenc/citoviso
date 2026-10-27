@@ -30,6 +30,24 @@ import { startOutreachPair } from "./sendOutreachPair.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 
+/**
+ * ADR-XXXX — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
+ * elfogytak, jöhetnek a többiek”). A claim takes the best-placed lead first:
+ *   0 — no own site (lead.qualification no_site, or raw.websiteStatus none / portal_only),
+ *   1 — an outdated own site, 2 — a modern own site, 3 — not classified;
+ * within a rank the oldest queued row. A subquery, not a join: the FOR UPDATE SKIP LOCKED
+ * claim keeps locking the dispatch row alone.
+ */
+export const DISPATCH_PRIORITY = sql<number>`(
+  select case
+    when l.qualification = 'no_site' or l.raw->>'websiteStatus' in ('none', 'portal_only') then 0
+    when l.qualification = 'outdated' then 1
+    when l.qualification = 'modern' then 2
+    else 3
+  end
+  from lead l where l.id = outreach_dispatch.lead_id
+)`;
+
 export const AUTO_SETTING_KEY = "outreach_auto";
 export const DEFAULT_DAILY_CAP = 40;
 
@@ -184,12 +202,14 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   const sent = await sentToday();
   if (sent >= settings.dailyCap) return { kind: "cap", sent, cap: settings.dailyCap };
 
-  // Claim the oldest queued row; an overlapping tick finds nothing (SKIP LOCKED + status flip).
+  // Claim the best-placed queued row (DISPATCH_PRIORITY: no own site first, ADR-XXXX), the oldest
+  // within its rank; an overlapping tick finds nothing (SKIP LOCKED + status flip).
   const claimed = await db.transaction().execute(async (trx) => {
     const row = await trx
       .selectFrom("outreach_dispatch")
       .select(["id", "lead_id", "artifact_id"])
       .where("status", "=", "queued")
+      .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(1)
       .forUpdate()

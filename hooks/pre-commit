@@ -2849,6 +2849,14 @@ if [ -f scripts/dispatch-rooms-guard-check.mts ] && \
   echo "[pre-commit] dispatch-rooms-guard-check (szobamodul nélküli terv nem megy ki)…"
   npx tsx scripts/dispatch-rooms-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
+# dispatch-priority-check (ADR-XXXX, tulaj 2026-10-27: „a honlap nélküliek mennek elsőként”):
+# a kiküldési sor claimje honlap nélküli → elavult → modern → minősítetlen, azon belül queued_at.
+# Egyetlen, visszagörgetett tranzakció a közös dev DB-n, ~3 s.
+if [ -f scripts/dispatch-priority-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/autoDispatch\.ts$|^scripts/dispatch-priority-check'; then
+  echo "[pre-commit] dispatch-priority-check (honlap nélküliek elöl a kiküldési sorban)…"
+  npx tsx scripts/dispatch-priority-check.mts >"$GATE_LOG" || gate_failed
+fi
 # booked-source-check (Vera 2026-10-26: Lunczer d86a6f11, Oázis d7cb475c): booked.hu angol
 # szobanevei a magyar mockon, szomszéd-ajánló a leírásban, a férőhely forrása hiányzott a packból.
 # Determinisztikus, hálózat/DB nélkül, ~5 s.
