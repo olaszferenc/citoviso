@@ -289,7 +289,14 @@ function isFar(clauseNorm: string): boolean {
  */
 export function proseAffirms(needle: string, descriptions: readonly string[], own = false): boolean {
   for (const raw of descriptions.map(withoutAreaLists).map(withoutPlaceNames)) {
-    for (const sentence of raw.split(SENTENCE_SPLIT)) {
+    for (const paragraph of raw.split(/\n\s*\n/)) {
+    // A paragraph about ANOTHER venue keeps talking about it after its first sentence (Bencze
+    // 086685fe, 2026-10-27: „A zalakarosi Gyógy- Wellness- Élményfürdő …” then „Nyáron … termálvizes
+    // ülőmedencék, sport-, hullám-, csúszdás- …” → Medence on the services sample). In `own` mode a
+    // sentence of such a paragraph speaks for the house only when it says so (OWN_FACILITY_MARK).
+    const venueParagraph = own && paragraph.split(SENTENCE_SPLIT).some((s) => isForeignVenueSentence(s));
+    for (const sentence of paragraph.split(SENTENCE_SPLIT)) {
+      if (venueParagraph && !OWN_FACILITY_MARK.test(deaccent(sentence.toLowerCase()))) continue;
       // A sentence about ANOTHER venue („A Gyulai Várfürdőben … hullám medence, szaunapark”)
       // lists that venue's offer, not the property's — whatever its clauses say.
       if ((own || !PLACE_NEEDLE.has(needle)) && isForeignVenueSentence(sentence)) continue;
@@ -303,9 +310,18 @@ export function proseAffirms(needle: string, descriptions: readonly string[], ow
       if (own && (needle === "panorama" || needle === "kilatas") && areaViewSentence(sentence)) continue;
       if (sentenceAffirms(needle, sentence, own)) return true;
     }
+    }
   }
   return false;
 }
+
+/** A bath's pool by its word: a spa-type compound, or several pools (a lodging rarely has several). */
+const SPA_POOL_WORD =
+  /^(?:\p{L}*(?:ulo|termal|elmeny|gyogy|hullam|sport|tan|csuszdas)medenc\p{L}*|\p{L}*medenc(?:ek|ei|eik|ekkel|ekben|eket|eiben|eivel)\p{L}*)$/u;
+
+/** The house's own facility, said in so many words: „saját medence”, „kerti / udvari medence”, „a ház medencéje”. */
+const OWN_FACILITY_MARK =
+  /(?<![\p{L}])(?:sajat|privat|kerti|udvari|udvaron|kertben|kertunkben|hazunk\p{L}*|szallasunk\p{L}*|a\s+(?:haz|szallas|vendeghaz|panzio|apartman)\p{L}*\s+(?:medence|szauna|jakuzzi)\p{L}*)(?![\p{L}])/u;
 
 /**
  * A VIEW the sentence gives to the area, not to the house (Bogyólak 6bd6058a, 2026-10-27): „a
@@ -456,6 +472,10 @@ function affirmsIn(needle: string, clause: string, rawClause: string | null, own
     if (isFar(clause)) continue;
     if ((own || !PLACE_NEEDLE.has(needle)) && NEARBY.test(clause)) continue;
     if (own && TOWN_OWNED.test(beforeText)) continue;
+    // A spa's pools („termálvizes ülőmedencék, sport-, hullám-, csúszdás-” — Bencze 086685fe,
+    // 2026-10-27, the Zalakaros bath) are no pool of the house: a bath-type compound or the plural,
+    // unless the clause names the house's own (OWN_FACILITY_MARK).
+    if (own && needle === "medence" && SPA_POOL_WORD.test(word) && !OWN_FACILITY_MARK.test(clause)) continue;
     // „Balatonfüred központja, a strandok …”: the beaches (plural) are the town's; a house's
     // own beach is one („saját strand”). Szömörce 2026-10-21.
     if (own && needle === "strand" && /^strand(?:ok|jai)/u.test(word)) continue;

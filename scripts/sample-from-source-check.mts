@@ -518,6 +518,21 @@ console.log("⑭ a KÖRNYÉK panorámája nem a házé (Bogyólak 6bd6058a, 2026
   check("⛔ PIROS IKER: a ház (terasz, szoba, ház) kilátása, vagy a kilátás iránya („a hegyre”) marad", own.every((t) => descriptionFactIsOwn("Panoráma", [t])), own.filter((t) => !descriptionFactIsOwn("Panoráma", [t])));
 }
 
+console.log("⑮ a fürdő medencéi nem a szállás medencéje (Bencze 086685fe, Zalakaros, 2026-10-27)");
+{
+  const bencze = [
+    "Nappalija-étkezője tágas, konyhája jól felszerelt. A teraszra kilépve csodálatos panoráma tárul a vendégek elé. Udvara árnyas, lehetőség van itt grillezni.\n\n" +
+      "A zalakarosi Gyógy- Wellness- Élményfürdő kellemes pihenési és kikapcsolódási lehetőséget biztosít kicsiknek és nagyoknak egyaránt.\n\n" +
+      "Nyáron a parkosított környezetben megépített termálvizes ülőmedencék, sport-, hullám-, csúszdás-, valamint a gyermekek részére kialakított „VIZIPÓK GYERMEKVILÁG” nyújt felejthetetlen élményeket.",
+  ];
+  check("Bencze: a fürdő termálvizes ülőmedencéi → nincs „Medence” a mintában", !descriptionFactIsOwn("Medence", bencze));
+  check("Bencze: a TERASZRÓL nyíló panoráma a házé → „Panoráma” marad", descriptionFactIsOwn("Panoráma", bencze));
+  check("bekezdés: a fürdőről szóló bekezdés további mondata sem ad medencét",
+    !descriptionFactIsOwn("Medence", ["A hévízi gyógyfürdő a közelben van. Medencéje egész évben 30 fokos."]));
+  const own = ["A vendégház udvarán saját medence várja a vendégeket.", "Kerti medence és napozóágyak.", "A ház medencéje nyáron fűtött.", "Medence a kertben.", "Saját élménymedencénk is van az udvaron."];
+  check("⛔ PIROS IKER: a saját / kerti / udvari / a ház medencéje marad", own.every((t) => descriptionFactIsOwn("Medence", [t])), own.filter((t) => !descriptionFactIsOwn("Medence", [t])));
+}
+
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");
 const panProfile = (title: string, description: string) => ({ name: title, portalProfiles: [{ matchBand: "high", title, url: "https://hovamenjek.hu/x", portal: "hovamenjek", amenities: ["Saját parkoló"], rooms: [], photos: [], reviews: [], prices: [], description }] });
 const panSrc = collectWriterSources(panProfile("Panoráma Vendégház", "Panoráma Vendégház – Szállás Dombóvár, Nyerges dűlő 2.. Nyitvatartás, elérhetőség, értékelések és fotók a Hovamenjek.hu-n. Foglaljon szállást Dombóváron egyszerűen és gyorsan.") as never, []);
