@@ -5,8 +5,7 @@
 ## Elvégzett munka
 - **Hibajavítás (az éles `sl`-eset, $130/óra):** `ensureLanguagePack` nyelvenként egy futás (közös ígéret
   + Postgres advisory lock, a várakozó a lock mögé áll és a DB-ből olvas); `requestLanguagePack` háttér-indítás;
-  `prepareRenderLang` a konzol-operátor betöltésében, a `/operator/lang`-ban és a tenant admin / login /
-  felfüggesztett-oldal renderben; konzol „készül” sáv (`packNotice`); scrape-indítás: fordítás a „már fut”
+  `prepareRenderLang` a konzol-operátor betöltésében és a `/operator/lang`-ban; scrape-indítás: fordítás a „már fut”
   kapu mögött; napi/futásonkénti plafon (`src/i18n/budget.ts`, env `TRANSLATION_DAILY_CAP_USD`=25,
   `TRANSLATION_RUN_CAP_USD`=12) minden hívás előtt, ⛔⛔ + alertHouse (SMS) naponta egyszer.
 - **Bábel motor** (`src/i18n/babel.ts`): ontológia + glosszárium + feladat-szerződés egy cache-jelölt
@@ -28,13 +27,17 @@
 ## Módosított / új fájlok
 src/i18n/{babel.ts,budget.ts,packs.ts,kbPacks.ts,mail.ts,catalog.json,catalog-context.json},
 src/i18n/babel/{ontology.md,glossary.json}, src/config.ts, src/auth/operatorAuth.ts,
-src/console/{server.ts,scrapeJob.ts,views.ts}, src/server/public.ts, src/tenant/multilangGenerate.ts,
+src/console/{server.ts,scrapeJob.ts}, src/tenant/multilangGenerate.ts,
 scripts/{extract-i18n.mts,babel-pack.mts,i18n-single-flight-check.mts}, hooks/pre-commit,
 babel/charter/{CHARTER.md,ONTOLOGIA.md,RUNBOOK.md}, _planning/decisions/XXXX-babel-….md,
 _planning/DOMAIN/00-GLOSSARY.md, MEMORY.md.
 
 ## Nyitott
-- Élesítés: tulaj-engedéllyel (deploy). Utána a deploy `--ensure` a 2 új konzol-feliratot nyelvenként
-  lefordítja (centek).
+- **Függő patch-ek** (a session scratchpadjében, landolás után újra előállíthatók): konzol „készül” sáv
+  (`src/console/views.ts` `packNotice`, `packGapSync`-ra épül) — §2b-kivétel kell a tulajtól;
+  `src/server/public.ts` render-utak `prepareRenderLang`-ra — a `booking-outcome-truth-check` (hónapvég,
+  a mainen is piros) után.
+- Élesítés: tulaj-engedéllyel (deploy). Új felirat ebben nincs (katalógus 5656); a deploy `--ensure` csak a meglévő réseket
+  tölti, már Bábel-motorral, plafon alatt.
 - Bábel saját RC-sessionje és (ha kell) `babel` konzol-fiókja: a tulaj döntése.
 - Bábel első munkája: glosszárium-audit a meglévő csomagokon (en, de, sk, hr, it, pl, sl), a hibás sorok a magba.

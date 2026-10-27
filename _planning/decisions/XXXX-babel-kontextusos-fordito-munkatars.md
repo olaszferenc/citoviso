@@ -49,10 +49,13 @@ rendszerprompttal: nem tudta, hol jelenik meg a szöveg, és mit jelent egy szó
    (konzol, public, CLI, deploy) Postgres advisory lock nyelvenként. Aki vár (levél, mock-generálás,
    kiküldés), a lock mögé áll, és utána a DB-ből olvas (ott már kész); aki nem várhat, azonnal a mostani
    lefedettséggel tér vissza. Gyors út: teljes csomagnál lock sincs.
-2. **A kérés nem vár fordításra.** A nyelvváltás, a konzol-oldalrender (operátor-betöltés) és a
-   szállásadói admin / login / felfüggesztett-oldal render `prepareRenderLang`-ot hív: betölti a csomagot,
-   és ha hiányos, a HÁTTÉRBEN egyszer elindítja (`requestLanguagePack`). A konzol addig „készül” sávot
-   mutat, a hiányzó feliratok magyarul jelennek meg. A levelek (`prepareMailLang`) várnak — egy levél
+2. **A kérés nem vár fordításra.** A konzol-nyelvváltás és a konzol-oldalrender (operátor-betöltés)
+   `prepareRenderLang`-ot hív: betölti a csomagot, és ha hiányos, a HÁTTÉRBEN egyszer elindítja
+   (`requestLanguagePack`); addig a hiányzó feliratok magyarul jelennek meg.
+   **Függőben (külön commit):** (a) a konzol „készül” sávja (`packGapSync` kész) — felület-változás, a
+   §2b-kapu a tulaj kivételét kéri; (b) ugyanez a szállásadói admin / login / felfüggesztett-oldal
+   renderre a `public.ts`-ben — a `booking-outcome-truth-check` kapu ma (hónapvég) a tiszta mainen is
+   piros, ezért csak utána mehet. Addig ezek a single-flight védelme alatt várnak, de nem indítanak újat. A levelek (`prepareMailLang`) várnak — egy levél
    inkább késsen, mint félig magyarul menjen —, de a single-flight miatt soha nem indítanak újat.
 3. **Költségplafon** a `translation_spend` főkönyvre, MINDEN hívás ELŐTT: napi (`TRANSLATION_DAILY_CAP_USD`,
    alap $25, budapesti nap) és futásonkénti (`TRANSLATION_RUN_CAP_USD`, alap $12). Elérésekor a futás
