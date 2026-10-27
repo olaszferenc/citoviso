@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-robots-txt-rfc-9309-szerint.md) — A robots.txt válaszát az RFC 9309 szerint olvassuk
 - [ADR-0409](decisions/0409-a-kikuldesi-sor-sorrendje-a-honlap-nelkuliek.md) — A kiküldési sor sorrendje: a honlap nélküliek mennek elsőként
 - [ADR-0408](decisions/0408-arak-es-rendeles-havi-x-ft-tol-a-lead-lap.md) — „Árak és rendelés” + „havi X Ft-tól”: a lead-lap rendelő gombja az árat is megmondja
 - [ADR-0407](decisions/0407-a-proba-belseje-merve-tenant-aktivitas-naplo-es.md) — A próba belseje mérve: tenant-aktivitás napló és a Riport „Próba” füle

@@ -128,6 +128,28 @@ export function robotsAllows(policy: Pick<RobotsPolicy, "rules">, pathname: stri
   return best ? best.allow : true;
 }
 
+/**
+ * ADR-XXXX — what a robots.txt answer means, per RFC 9309 §2.3.1 (owner's yes, 2026-10-27; the
+ * Fecske Kabin case: fecskekabin.hu answered robots.txt with 403 while its pages served our bot,
+ * and the old rule read every 401/403 as „keep out”):
+ *   · 2xx — read the file (parse);
+ *   · 4xx except 429 — „unavailable”: no restrictions (allow_all), as with no file at all;
+ *   · 429, 5xx and anything else unread — „unreachable”: assume a complete disallow (block).
+ * A network error or timeout is unreachable too (loadRobots' catch). One robots request per host,
+ * cached for ROBOTS_TTL_MS.
+ */
+export function robotsPolicyForStatus(status: number): "parse" | "allow_all" | "block" {
+  if (status >= 200 && status < 300) return "parse";
+  if (status === 429) return "block";
+  if (status >= 400 && status < 500) return "allow_all";
+  return "block";
+}
+
+/** Test hook: forget every cached robots.txt (a guard swaps `fetch` between origins). */
+export function clearRobotsCache(): void {
+  robotsCache.clear();
+}
+
 async function loadRobots(origin: string): Promise<RobotsPolicy> {
   const cached = robotsCache.get(origin);
   if (cached && Date.now() - cached.fetchedAt < ROBOTS_TTL_MS) return cached;
@@ -139,18 +161,17 @@ async function loadRobots(origin: string): Promise<RobotsPolicy> {
       headers: { "User-Agent": PORTAL_USER_AGENT, Accept: "text/plain,*/*" },
       signal: AbortSignal.timeout(ROBOTS_TIMEOUT_MS),
     });
-    if (res.status === 404 || res.status === 410) {
-      // No robots.txt at all = no restrictions (the standard's reading).
+    const verdict = robotsPolicyForStatus(res.status);
+    if (verdict === "allow_all") {
       policy = { rules: [], blockedByFailure: false, fetchedAt: Date.now() };
-    } else if (!res.ok) {
-      // 401/403/5xx: the host is telling us something we must not read past.
+    } else if (verdict === "block") {
       policy = { rules: [], blockedByFailure: true, fetchedAt: Date.now() };
     } else {
       const text = (await res.text()).slice(0, 200_000);
       policy = { ...parseRobots(text), blockedByFailure: false, fetchedAt: Date.now() };
     }
   } catch {
-    // Network/timeout: we cannot prove we are allowed, so we do not fetch.
+    // Network/timeout = unreachable (RFC 9309): we cannot prove we are allowed, so we do not fetch.
     policy = { rules: [], blockedByFailure: true, fetchedAt: Date.now() };
   }
   robotsCache.set(origin, policy);
