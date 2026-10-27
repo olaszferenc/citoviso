@@ -1,4 +1,4 @@
-// babel-pack — Bábel's own workbench (ADR-0411, ADR-XXXX, babel/charter/RUNBOOK.md).
+// babel-pack — Bábel's own workbench (ADR-0411, ADR-0412, babel/charter/RUNBOOK.md).
 //
 // ⛔ Translation is spent ONLY from Bábel's subscription session — never from the API credit
 // (owner, 2026-10-27). He reads the ontology and the glossary once, and translates a WHOLE

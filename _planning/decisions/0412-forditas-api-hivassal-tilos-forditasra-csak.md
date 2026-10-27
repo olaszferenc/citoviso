@@ -1,4 +1,4 @@
-## ADR-XXXX — Fordítás API-hívással TILOS: fordításra csak Bábel előfizetéses sessionje költhet
+## ADR-0412 — Fordítás API-hívással TILOS: fordításra csak Bábel előfizetéses sessionje költhet
 
 **Dátum:** 2026-10-27 · **Státusz:** elfogadva (lokál, nem élesítve) · Felülírja: ADR-0411 A4 + B3; ADR-0036 „AI-provisioned” része · Kiegészíti: ADR-0045 ③, ADR-0063, ADR-0207
 

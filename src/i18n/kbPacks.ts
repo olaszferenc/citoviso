@@ -3,7 +3,7 @@
 // stays what it is. source_hash pins the Hungarian source version a translation was
 // made from; a mismatch marks it stale until Bábel translates the new version.
 //
-// ⛔ NO API TRANSLATION (owner, 2026-10-27, ADR-XXXX): the only source of a KB translation
+// ⛔ NO API TRANSLATION (owner, 2026-10-27, ADR-0412): the only source of a KB translation
 // is Bábel's committed seed, src/i18n/babel/kb/<lang>/<entry-id>.json
 // ({source_hash, title, body}), made in his subscription session (babel-pack kb-export /
 // kb-import). The ensure layer copies a seed into kb_translation when its source_hash

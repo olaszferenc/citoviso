@@ -193,7 +193,7 @@ export const config = {
   /**
    * Boot-time language-pack sync (ADR-0036/b): applies Bábel's committed seed to the DB.
    * "0" = boot only MEASURES coverage (read-only). ⛔ Neither mode translates: there is no
-   * API translation at all since 2026-10-27 (ADR-XXXX).
+   * API translation at all since 2026-10-27 (ADR-0412).
    */
   i18nBootTopup: env("I18N_BOOT_TOPUP", "1") !== "0",
   googleCostProject: env("GOOGLE_COST_PROJECT", "mineralcrm"),

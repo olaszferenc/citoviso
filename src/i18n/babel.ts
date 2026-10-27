@@ -1,5 +1,5 @@
 /**
- * Bábel — the translating colleague's knowledge (ADR-0411, ADR-XXXX).
+ * Bábel — the translating colleague's knowledge (ADR-0411, ADR-0412).
  *
  * WHY: until 2026-10-27 every translation was a blind API call — 40 Hungarian strings, a
  * one-paragraph system prompt, no idea where a string is shown or what the Citoviso words
@@ -13,7 +13,7 @@
  *  - the SURFACE of every string (`catalog-context.json`, written by extract-i18n): konzol /
  *    admin / honlap / level / megkereses / sms — audience and register.
  *
- * ⛔ NO TRANSLATION BY API CALL (owner, 2026-10-27, ADR-XXXX): translations are spent ONLY
+ * ⛔ NO TRANSLATION BY API CALL (owner, 2026-10-27, ADR-0412): translations are spent ONLY
  * from Bábel's subscription session, never from the API credit. The code has no model
  * transport for translation any more: it reads what Bábel committed (packs.ts / kbPacks.ts /
  * multilangGenerate.ts seeds) and leaves the rest to the Hungarian fallback until Bábel

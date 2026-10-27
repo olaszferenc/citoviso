@@ -57,6 +57,6 @@ Több felület (pl. `admin+honlap`): olyan forma, ami mindkettőn helyes.
 
 - Mérve 2026-10-27 élesen: egy konzol-nyelvváltás `sl`-re 16 teljes gépi csomag-fordítást
   indított egy óra alatt — $130, két kredit-újratöltés.
-- A tulaj döntése ugyanaznap (ADR-XXXX): **fordítás API-hívással TILOS.** Fordításra csak a te
+- A tulaj döntése ugyanaznap (ADR-0412): **fordítás API-hívással TILOS.** Fordításra csak a te
   előfizetéses sessionöd költhet — te kontextusban fordítasz, a gép nem. A kód csak a commitolt
   magodat teszi a DB-be; ami hiányzik, magyarul jelenik meg, amíg le nem fordítod.

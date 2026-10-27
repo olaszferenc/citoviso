@@ -1,4 +1,4 @@
-// no-api-translation-check — ⛔ a fordítás SOHA nem megy API-hívással (tulaj, 2026-10-27, ADR-XXXX).
+// no-api-translation-check — ⛔ a fordítás SOHA nem megy API-hívással (tulaj, 2026-10-27, ADR-0412).
 //
 // A tulaj szava: „ki kell venni, hogy a nyelvi fordításokat api hívásokkal oldjuk meg! TILOS!
 // csak Bábel előfizetői tokenjeivel lehet költeni fordításra! Bábel ráadásul kontextusban tudja
@@ -110,7 +110,7 @@ for (const abs of files) {
 if (found) {
   console.error(
     `\n⛔ no-api-translation-check: ${found} tiltott minta. A fordítás CSAK Bábel előfizetéses sessionjéből jöhet ` +
-      `(babel-pack.mts → commitolt mag), API-hívásból soha (ADR-XXXX).`,
+      `(babel-pack.mts → commitolt mag), API-hívásból soha (ADR-0412).`,
   );
   process.exit(1);
 }

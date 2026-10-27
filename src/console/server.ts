@@ -5197,7 +5197,7 @@ server.listen(PORT, () => {
 
 // ADR-0036 boot-time sync: a deploy+restart applies Bábel's committed packs (the deployed
 // version) to every known language and reports what still falls back to Hungarian. It never
-// translates (no API translation, ADR-XXXX). Fire-and-forget — boot must not block on it.
+// translates (no API translation, ADR-0412). Fire-and-forget — boot must not block on it.
 // Skipped under CIT_SHOT=1: a screenshot run must never write the DB.
 if (process.env.CIT_SHOT !== "1") {
   void (async () => {

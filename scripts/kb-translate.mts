@@ -8,7 +8,7 @@
 // azt már nem fordíttattam újra — a lengyel és a szlovák tulaj a frissen javított hibákat
 // olvasta tovább, mert magyar fallback NINCS.
 //
-// ⛔ NINCS API-FORDÍTÁS (tulaj, 2026-10-27, ADR-XXXX): ez a kör Bábel COMMITOLT súgó-fordításait
+// ⛔ NINCS API-FORDÍTÁS (tulaj, 2026-10-27, ADR-0412): ez a kör Bábel COMMITOLT súgó-fordításait
 // (src/i18n/babel/kb/<nyelv>/<cikk>.json) teszi a DB-be. Ami hiányzik vagy elavult, az Bábel
 // sessionjére vár (`babel-pack.mts kb-export <nyelv>`) — újrapróbálni nincs mit, a kör HANGOSAN bukik.
 

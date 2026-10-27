@@ -41,7 +41,7 @@ npx tsx scripts/babel-pack.mts audit <nyelv>    # glosszárium-eltérések a meg
 7. **Landolás:** csak a saját fájljaid (`src/i18n/babel/**`, `babel/**`), tételes `git add`,
    `bash scripts/land.sh` → „IGAZOLTAN FENT”. Élesre a deploy viszi, a tulaj engedélyével — a
    deploy `--ensure` lépése a magot a csomagra teszi. Ami a magból hiányzik, magyarul marad:
-   fordítást a kód SEMMIT nem végez (API-fordítás tilos, ADR-XXXX).
+   fordítást a kód SEMMIT nem végez (API-fordítás tilos, ADR-0412).
 
 ## 3. Egy rossz fordítás javítása (bejelentés alapján)
 

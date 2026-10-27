@@ -1,5 +1,5 @@
 // i18n-single-flight-check — ONE pack run per language, the request never waits, and nothing
-// is ever translated by the code (ADR-0411, ADR-XXXX, Bábel).
+// is ever translated by the code (ADR-0411, ADR-0412, Bábel).
 //
 // ⛔ MEASURED 2026-10-27, production: the owner switched the console to `sl`. The switch
 // awaited a full 5651-string API translation inside the request; the browser gave up

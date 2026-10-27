@@ -1,7 +1,7 @@
 // ADR-0036 pack tracking CLI: which languages have a complete pack, which wait for Bábel.
 //   npx tsx scripts/i18n-pack-status.mts            → coverage report only (tracking view)
 //   npx tsx scripts/i18n-pack-status.mts --ensure   → also APPLY Bábel's committed seed to the DB
-// ⛔ Neither mode translates (owner, 2026-10-27, ADR-XXXX): a gap is Bábel's work —
+// ⛔ Neither mode translates (owner, 2026-10-27, ADR-0412): a gap is Bábel's work —
 // `npx tsx scripts/babel-pack.mts export <lang>` / `kb-export <lang>` lists it for his session.
 import { ensureAllLanguagePacks, packCoverage } from "../src/i18n/packs.js";
 import { db } from "../src/db/client.js";

@@ -2,7 +2,7 @@
 
 **Forrás:** tulaj-brief `~/rc-briefs/b-bel-20261027-174040.md`: „Ha bábel a nyelvész felállt: doktrína szinten,
 sőt kódszinten is ki kell venni, hogy a nyelvi fordításokat api hívásokkal oldjuk meg! TILOS! csak Bábel
-előfizetői tokenjeivel lehet költeni fordításra!” ADR-XXXX (`_planning/decisions/XXXX-forditas-api-hivassal-tilos-csak-babel.md`).
+előfizetői tokenjeivel lehet költeni fordításra!” ADR-0412 (`_planning/decisions/XXXX-forditas-api-hivassal-tilos-csak-babel.md`).
 Alapja az aznap landolt ADR-0411 (Bábel + single-flight), annak A4 („a keze”) és B3 (plafon) pontját írja felül.
 
 ## Elvégzett munka

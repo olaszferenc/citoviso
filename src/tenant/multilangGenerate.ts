@@ -7,7 +7,7 @@
 // price, name or fact may appear, vanish or change. Enforced by a digit-integrity guard
 // that drops any translation whose digit sequences differ from the source.
 //
-// ⛔ NO API TRANSLATION (owner, 2026-10-27, ADR-XXXX): the site copy is translated by
+// ⛔ NO API TRANSLATION (owner, 2026-10-27, ADR-0412): the site copy is translated by
 // Bábel in his subscription session (babel-pack site-export / site-import) and committed
 // as src/i18n/babel/sites/<site-id>/<lang>.json ({hu source: translation}). This job only
 // READS that file. While any source string is untranslated the generation fails with a

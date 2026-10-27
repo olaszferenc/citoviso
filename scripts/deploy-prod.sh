@@ -482,7 +482,7 @@ $SSH "set -o pipefail; cd $APP && sudo -u citoviso npm run db:migrate 2>&1 | tai
 #
 # ⭐ TARTOMÁNY-SZŰKÍTETT: ha a deployolt tartomány egyetlen fordítás-releváns fájlt
 # sem érint, a kapu HANGOSAN kihagyja magát (ugyanaz az elv, mint a GATE 1c-nél).
-# ⛔ A kapu NEM fordít (ADR-XXXX, tulaj 2026-10-27): Bábel commitolt magját (src/i18n/babel/)
+# ⛔ A kapu NEM fordít (ADR-0412, tulaj 2026-10-27): Bábel commitolt magját (src/i18n/babel/)
 # teszi az éles DB-re, és bukik, ha utána is hiány marad — a hiányt Bábel fordítja, nem az API.
 if [ -n "$PROD_SHA" ] && git diff --name-only "$PROD_SHA" "$SHA" 2>/dev/null \
      | grep -qE '^kb/entries/|^src/i18n/catalog\.json$|^src/i18n/babel/'; then
@@ -502,7 +502,7 @@ if [ "$NEEDS_I18N" = "0" ]; then
 else
   echo "── GATE 5 — fordítás-frissítés az éles adatbázison (blokkoló)…"
   $SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null \
-    || fail "a nyelvi csomag HIÁNYOS a Bábel-mag alkalmazása után is — a servicek NEM lettek újraindítva. API-fordítás nincs (ADR-XXXX): Bábel fordítsa le a hiányt (babel-pack.mts export/kb-export <nyelv>), landoljon, és azzal a commit-tal deployolj"
+    || fail "a nyelvi csomag HIÁNYOS a Bábel-mag alkalmazása után is — a servicek NEM lettek újraindítva. API-fordítás nincs (ADR-0412): Bábel fordítsa le a hiányt (babel-pack.mts export/kb-export <nyelv>), landoljon, és azzal a commit-tal deployolj"
   # ⛔ A frissítő SAJÁT szavát nem fogadjuk el: független méréssel igazoljuk. Egy
   # „lefutottam" ág, ami nem bizonyít, pontosan az a hamis zöld, amitől ez a kapu véd.
   echo "── GATE 5b — visszaellenőrzés (független mérés)…"

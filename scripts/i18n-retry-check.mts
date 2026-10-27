@@ -3,7 +3,7 @@
 // ⛔ MEASURED 2026-09-30, production deploy GATE 5: `en: 3694/3701 — 7 UI-string hiányzik`.
 // All seven carried the Hungarian article placeholder {Art}; the translator omitted it
 // (English has no such article) and the integrity check dropped the string. The retrying
-// API translator this check also covered is GONE (owner, 2026-10-27, ADR-XXXX: translation
+// API translator this check also covered is GONE (owner, 2026-10-27, ADR-0412: translation
 // only from Bábel's subscription session) — what remains is the contract every seed entry
 // passes (placeholderProblem, babel-pack import + applyBabelSeed) and its rendering:
 //   ③ omitting an article placeholder ({Art}) is NOT a violation, inventing one is;

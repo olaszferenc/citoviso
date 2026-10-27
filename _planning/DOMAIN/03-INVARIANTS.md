@@ -86,7 +86,7 @@
    (CIT_I18N / manifest-i18n). A kulcs maga a magyar forrás-string; a katalógust az extractor
    (`scripts/extract-i18n.mts`) gyűjti, a csomagot az `ensureLanguagePack` tölti (`language_pack` tábla,
    placeholder-őrzéssel) — ⛔ KIZÁRÓLAG Bábel commitolt magjából (`src/i18n/babel/packs/`), mert
-   **fordítás API-hívással TILOS** (tulaj, 2026-10-27, ADR-XXXX): fordításra csak Bábel előfizetéses
+   **fordítás API-hívással TILOS** (tulaj, 2026-10-27, ADR-0412): fordításra csak Bábel előfizetéses
    sessionje költhet, kontextusban. Ami a magból hiányzik, az magyar fallback, amíg Bábel le nem fordítja.
    - **ÚJ felület/felirat CSAK burkolva születhet** — beégetett vevő-felirat = doktrína-sértés,
      mert némán magyar marad egy lengyel oldalon.

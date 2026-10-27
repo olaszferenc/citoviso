@@ -1,5 +1,5 @@
 // ADR-0036: language packs — UI-string translations persisted in the language_pack table,
-// deterministic afterwards (mock=live safe). ⛔ Since 2026-10-27 (ADR-XXXX) the ONLY source of
+// deterministic afterwards (mock=live safe). ⛔ Since 2026-10-27 (ADR-0412) the ONLY source of
 // a translation is Bábel's committed pack (src/i18n/babel/packs/<lang>.json, made in his
 // subscription session): no code path translates through the API. The catalog's KEY is
 // the Hungarian source string itself (no invented key names): templates call T(d, "Galéria")
@@ -166,7 +166,7 @@ export async function missingPackStrings(lang: string): Promise<string[]> {
  * Bring the language pack for `lang` up to what Bábel has COMMITTED — the ADR-0036
  * automation hook. Bábel's seed (UI strings + help entries) is applied to the DB and the
  * cache refreshes. Nothing is translated here: ⛔ no API call (owner, 2026-10-27,
- * ADR-XXXX). Returns coverage; `ok=false` means Bábel has not translated everything yet —
+ * ADR-0412). Returns coverage; `ok=false` means Bábel has not translated everything yet —
  * callers log loudly, rendering proceeds with the hu-fallback, and `babel-pack export`
  * lists the gap for Bábel's session.
  *
@@ -341,7 +341,7 @@ async function seedPending(lang: string): Promise<number> {
 }
 
 /** The run itself — only ever entered under the language's lock. Copies Bábel's committed
- *  seed into the DB; ⛔ translates nothing (no API call, ADR-XXXX). */
+ *  seed into the DB; ⛔ translates nothing (no API call, ADR-0412). */
 async function provision(lang: string): Promise<PackStatus> {
   const catalog = await loadCatalog();
   if (!catalog.length) return { lang, total: 0, missing: 0, ok: true };
@@ -407,7 +407,7 @@ export async function knownLanguages(): Promise<string[]> {
  * Deploy-time / boot-time sync (ADR-0036 kiegészítés): applies Bábel's committed seed to
  * EVERY known language and reports what is still missing. Wired into server startup, so a
  * deploy+restart brings the packs up to the deployed version; also runnable as a CLI
- * (scripts/i18n-pack-status.mts --ensure). ⛔ It never translates (ADR-XXXX): a gap stays a
+ * (scripts/i18n-pack-status.mts --ensure). ⛔ It never translates (ADR-0412): a gap stays a
  * gap until Bábel fills it in his session.
  */
 export async function ensureAllLanguagePacks(): Promise<PackStatus[]> {

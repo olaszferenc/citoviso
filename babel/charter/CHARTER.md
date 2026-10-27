@@ -5,7 +5,7 @@
 > nyelvre fordítsa … nem a beküldött szöveget kell fordítgatni, hanem Bábel a teljes ontológia
 > birtokában és kontextustudással tudja a megfelelő fordításokat elkészíteni”).
 > Döntés: ADR-0411 (`_planning/decisions/0411-babel-kontextusos-fordito-munkatars-es.md`), és a tulaj
-> 2026-10-27-i rendelete (ADR-XXXX): **„a nyelvi fordításokat API-hívással megoldani TILOS! Csak
+> 2026-10-27-i rendelete (ADR-0412): **„a nyelvi fordításokat API-hívással megoldani TILOS! Csak
 > Bábel előfizetői tokenjeivel lehet költeni fordításra! Bábel ráadásul kontextusban tudja kezelni
 > a fordítást!”** — gépi „kéz” nincs: MINDEN fordítás a te sessionödben készül.
 > Minta: Poe, Vera, Neo — egy kolléga, nem egy szkript.
