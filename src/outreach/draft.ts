@@ -24,6 +24,8 @@ import { langForCountry } from "../i18n/lang.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { loadPricing } from "../pricing.js";
 import { cheapestOfferedMonthly, cheapestOfferedMonthlyFrom } from "../packageOffer.js";
+import { trialDaysOnOffer } from "../trial/config.js";
+import { isEngineArtifact } from "../conversion/provision.js";
 import { applyOffer, OUTREACH_OFFER_PERCENT, outreachPercentForProspect } from "../payment/offers.js";
 
 /**
@@ -75,6 +77,12 @@ export interface OutreachParts {
    * price the other one hides.
    */
   readonly p3: string;
+  /**
+   * The free-trial sentence (owner 2026-10-27: „írd bele, hátha úgy még vonzóbb”) — present
+   * only while the linked page offers the trial (trialDaysOnOffer), with ITS day count, so the
+   * letter never promises a trial the page withholds (§I).
+   */
+  readonly trial?: string;
   /** Go-live + no commission. */
   readonly p4: string;
   readonly priceList: string;
@@ -216,6 +224,11 @@ export interface DraftInput {
    * it. Absent (offline sample renders only) → computed from the loaded snapshot.
    */
   readonly fromMonthly?: number | null;
+  /**
+   * The trial length the linked page offers (trialDaysOnOffer) — the letter and the companion
+   * SMS name it; null / absent = the page offers no trial and neither says a word of one.
+   */
+  readonly trialDays?: number | null;
   /**
    * How many plans the tracked link carries (1–3; plan-tabs contract). The copy is
    * DERIVED from it — subject, offer, try-it-out, go-live, the image line and both
@@ -472,6 +485,9 @@ export function renderDraft(d: DraftInput): OutreachDraft {
       "Bemutatkozó ajánlatként minden csomagra {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
       { percent, price: priceList, offerPrice: priceOffer },
     ),
+    ...(d.trialDays
+      ? { trial: T(d.lang, "Mielőtt döntene, {days} napig ingyen kipróbálhatja, kötelezettség nélkül.", { days: d.trialDays }) }
+      : {}),
     p4:
       plans === 1
         ? T(
@@ -538,6 +554,7 @@ export function composeBody(
     "",
     t.p3,
     "",
+    ...(t.trial ? [t.trial, ""] : []),
     t.p4,
     "",
     T(lang, "Üdvözlettel,"),
@@ -632,14 +649,17 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   // Multi-plan: the SHORT form on purpose (measured 2026-09-23: the long „…mellé” form made
   // 50 of 598 real names a 5-part SMS).
   const plans = planCountOf(d);
+  // Owner 2026-10-27: the free trial, when the linked page offers one (DraftInput.trialDays).
+  // It never pushes the SMS into a 3rd segment: foldedSms shortens the NAME, never this.
+  const trial = d.trialDays ? ` ${T(d.lang, "{days} napig ingyen kipróbálható.", { days: d.trialDays })}` : "";
   return foldedSms(
     d,
     (name, mark) =>
       plans === 3
-        ? T(d.lang, "{name} – az imént küldött terv mellé még kettőt készítettünk: mindhármat élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
+        ? T(d.lang, "{name} – az imént küldött terv mellé még kettőt készítettünk: mindhármat élőben megnézheti és kipróbálhatja kötelezettségmentesen!{trial} A Citoviso csapata\n{link}", { name, link: mark, trial })
         : plans === 2
-          ? T(d.lang, "{name} – az imént küldött terv mellé még egyet készítettünk: mindkettőt élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark })
-          : T(d.lang, "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}", { name, link: mark }),
+          ? T(d.lang, "{name} – az imént küldött terv mellé még egyet készítettünk: mindkettőt élőben megnézheti és kipróbálhatja kötelezettségmentesen!{trial} A Citoviso csapata\n{link}", { name, link: mark, trial })
+          : T(d.lang, "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen!{trial} A Citoviso csapata\n{link}", { name, link: mark, trial }),
     link,
     unsubscribeLink,
   );
@@ -754,6 +774,8 @@ export async function buildDraftForProspect(
     previewLabel: opts.reserveLabel === false ? await peekPreviewLabel(r.leadId) : await ensurePreviewLabel(r.leadId),
     // Owner 2026-10-12: the from-price follows /pricing — read at send time, every time.
     fromMonthly: await cheapestOfferedMonthly(),
+    // Owner 2026-10-27: the trial sentence — the SAME rule as the /p page's trial entry.
+    trialDays: await trialDaysOnOffer(r.leadId, isEngineArtifact(r.artifactInputs)),
   };
   // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
   // send path gets the same verdict. The gate itself stays synchronous (it is a pure

@@ -30,7 +30,8 @@ if (!process.argv.includes("--run")) {
 
 await loadPricing();
 const lang = await prepareMailLang("hu");
-const base = { leadName: "Rozé Fogadó", region: "", qualification: null, token: "T".repeat(24), lang } as const;
+// trialDays: the trial sentence is part of the wording the critic judges (owner 2026-10-27).
+const base = { leadName: "Rozé Fogadó", region: "", qualification: null, token: "T".repeat(24), lang, trialDays: 14 } as const;
 const SITUATIONS: { label: string; d: Partial<DraftInput> }[] = [
   { label: "nincs saját honlapja; Google 4,7 ★ / 91 értékelés", d: { segment: "nincs_honlap", rating: { value: 4.7, count: 91 } } },
   { label: "nincs saját honlapja; nincs Google-értékelése (vagy 4,0 alatti)", d: { segment: "nincs_honlap", rating: null } },

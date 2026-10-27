@@ -173,6 +173,59 @@ console.log("\n── Több terv egy linken ────────────
   say(oneHtml.includes("Megnézem a tervet") && !oneHtml.includes("Megnézem a terveket"), "1 terv — a gomb a mai");
 }
 
+// ── FREE TRIAL (owner 2026-10-27: „írd bele, hátha úgy még vonzóbb”). ─────────
+//
+// While the linked page offers the trial (DraftInput.trialDays, from trialDaysOnOffer — the
+// page's own rule, free-trial-config-check ⑧), the letter's text AND HTML and the companion
+// SMS say it with THAT day count; without it, not a word. The SMS stays ≤ 2 segments and the
+// sentence is never the part that gets cut.
+console.log("\n── Ingyenes próba a levélben és a pár-SMS-ben ────────────────────");
+{
+  const { buildOutreachEmail } = await import("../src/email/outreachEmail.js");
+  const { smsEncoding } = await import("../src/sms/encoding.js");
+  const { PAIR_SMS_MAX_SEGMENTS } = await import("../src/outreach/draft.js");
+  const LETTER = (n: number): string => `Mielőtt döntene, ${n} napig ingyen kipróbálhatja, kötelezettség nélkül.`;
+  const SMS = (n: number): string => fold(`! ${n} napig ingyen kipróbálható.`);
+  for (const plans of [1, 2, 3] as const) {
+    for (const days of [14, 7]) {
+      const d: DraftInput = { ...INPUT, planCount: plans, trialDays: days };
+      const m = renderDraft(d);
+      say(m.body.includes(LETTER(days)), `${plans} terv, ${days} nap — a levél szövegében benne a próba-mondat`, m.body);
+      say(m.body.indexOf(LETTER(days)) < m.body.indexOf(m.parts.p4), `${plans} terv, ${days} nap — az indulás-mondat előtt áll`);
+      say(
+        notPricing(checkOutreachDraft(m, LEAD, "hu").reasons).length === 0,
+        `${plans} terv, ${days} nap — levél: §C-kapu tiszta`,
+        notPricing(checkOutreachDraft(m, LEAD, "hu").reasons).join(" | "),
+      );
+      let html = "";
+      try {
+        html = String((buildOutreachEmail(m, "a@b.hu", { lang: "hu", heroShotPath: "/nonexistent/hero.png" }) as { html?: unknown }).html ?? "");
+      } catch (e) {
+        html = `THROW ${(e as Error).message}`;
+      }
+      say(html.includes(LETTER(days)), `${plans} terv, ${days} nap — a HTML-levélben is benne (a §C.4 egyezés-őr elfogadja)`, html.slice(0, 200));
+      const pair = renderPairSmsDraft(d);
+      const r = checkOutreachSms(pair, LEAD, "hu");
+      say(r.verdict === "PASS", `${plans} terv, ${days} nap — pár-SMS: §C-kapu PASS`, r.reasons.join(" | "));
+      say(fold(pair.text).includes(SMS(days)), `${plans} terv, ${days} nap — a pár-SMS-ben benne a próba-mondat`, pair.text);
+      // A long name: the NAME is shortened, the trial sentence stays and the SMS fits.
+      const long = renderPairSmsDraft({ ...d, leadName: "Balatonfűzfői Szállás Bodorka Apartman és Vendégház Kemence" });
+      say(
+        fold(long.text).includes(SMS(days)) && smsEncoding(long.text).segments <= PAIR_SMS_MAX_SEGMENTS,
+        `${plans} terv, ${days} nap — hosszú névvel is ≤ ${PAIR_SMS_MAX_SEGMENTS} szegmens, a mondat megmarad`,
+        `${smsEncoding(long.text).segments} szegmens: ${long.text}`,
+      );
+    }
+    for (const off of [null, undefined, 0]) {
+      const d: DraftInput = { ...INPUT, planCount: plans, trialDays: off };
+      const m = renderDraft(d);
+      say(!/napig ingyen/.test(m.body) && m.parts.trial === undefined, `${plans} terv, próba nélkül (${off}) — a levélben nincs próba-mondat`);
+      say(!/napig ingyen/.test(fold(renderPairSmsDraft(d).text)), `${plans} terv, próba nélkül (${off}) — a pár-SMS-ben sincs`);
+      say(m.body === renderDraft({ ...INPUT, planCount: plans }).body, `${plans} terv, próba nélkül — a mai levél, betűre`);
+    }
+  }
+}
+
 // ── STRUCTURAL: the random token may never change the verdict. ───────────────
 //
 // This is the property the prose rule guarantees, stated without naming any single

@@ -12,7 +12,10 @@
 //   ⑤ switched off → startTrial refuses a NEW trial ('disabled') — before any row is written;
 //   ⑥ the running-trial count reads the DB without error;
 //   ⑦ ONE coupon rule: both minting paths (first payment, trial start) read getCouponConfig and
-//      nothing else (no fixed constant), and the ADR-0342 trial percent migrates (structural + pure).
+//      nothing else (no fixed constant), and the ADR-0342 trial percent migrates (structural + pure);
+//   ⑧ ONE trial-offer rule (owner 2026-10-27, the cold letter's „14 napig ingyen” sentence):
+//      trialDaysOnOffer gives the configured days only while the trial is on, the mock is an
+//      engine mock and the lead had no trial — and both the /p page and the letter read it.
 //
 // The dev DB is SHARED by parallel worktrees: the config is set with the PROCESS-LOCAL override,
 // never by writing the app_setting row. This guard writes NO row at all (leg ⑤ is refused
@@ -40,6 +43,7 @@ import {
   freeTrialFromForm,
   overrideFreeTrialConfigInProcess,
   runningFreeTrials,
+  trialDaysOnOffer,
   type FreeTrialConfig,
 } from "../src/trial/config.js";
 import { startTrial } from "../src/trial/start.js";
@@ -188,6 +192,28 @@ try {
   check("⑦ migráció: a régi próba-% átjön", legacyTrialCouponPercent('{"enabled":true,"days":14,"couponPercent":20}'), 20);
   check("⑦ migráció: nincs régi sor / mező / hibás érték → null (alapérték)", [legacyTrialCouponPercent(null), legacyTrialCouponPercent('{"days":14}'), legacyTrialCouponPercent('{"couponPercent":95}')], [null, null, null]);
   check("⑦ a kupon-sor parsere: üres → alap, hibás → null", [parseCouponSetting("{}"), parseCouponSetting('{"percent":91}')], [{ percent: 25, days: 90 }, null]);
+
+  // ⑧ the trial the page offers = the trial the letter promises (one rule, trialDaysOnOffer).
+  const freshLead = crypto.randomUUID(); // no free_trial row can carry it
+  overrideFreeTrialConfigInProcess({ ...FREE_TRIAL_CONFIG_DEFAULT, enabled: true, days: 9 });
+  check("⑧ bekapcsolt próba, motoros mock, nem volt próba → a beállított nap", await trialDaysOnOffer(freshLead, true), 9);
+  check("⑧ régi HTML-másolat mock → nincs ajánlat", await trialDaysOnOffer(freshLead, false), null);
+  check("⑧ nincs lead → nincs ajánlat", await trialDaysOnOffer(null, true), null);
+  const had = await db
+    .selectFrom("free_trial")
+    .select("lead_id")
+    .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "not in", ["active", "lapsed"])]))
+    .limit(1)
+    .executeTakeFirst();
+  if (had) check("⑧ volt már próbája → nincs ajánlat", await trialDaysOnOffer(had.lead_id, true), null);
+  overrideFreeTrialConfigInProcess({ ...FREE_TRIAL_CONFIG_DEFAULT, enabled: false });
+  check("⑧ kikapcsolt próba → nincs ajánlat", await trialDaysOnOffer(freshLead, true), null);
+  const pageSrc = src("../src/console/server.ts");
+  const draftSrc = src("../src/outreach/draft.ts");
+  check("⑧ a /p lap próba-belépője a trialDaysOnOffer-ből (days: trialDays)",
+    /await trialDaysOnOffer\(pf\?\.leadId, p\.engine\)/.test(pageSrc) && /days: trialDays,/.test(pageSrc), true);
+  check("⑧ a levél / pár-SMS próba-napja ugyanebből (buildDraftForProspect)",
+    /trialDays: await trialDaysOnOffer\(r\.leadId, isEngineArtifact\(r\.artifactInputs\)\)/.test(draftSrc), true);
 } finally {
   overrideFreeTrialConfigInProcess(null);
   await db.destroy();

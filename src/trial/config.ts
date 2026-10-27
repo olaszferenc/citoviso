@@ -78,6 +78,25 @@ export async function getFreeTrialConfig(): Promise<FreeTrialConfig> {
   return FREE_TRIAL_CONFIG_DEFAULT;
 }
 
+/**
+ * The trial length the lead's /p page OFFERS, or null when it offers none — the ONE rule the
+ * page and the cold letter / companion SMS share (the letter may not promise a trial the
+ * page withholds, §I). Offered = the trial is switched on, the mock is an engine mock (a
+ * legacy HTML copy can never become a live trial site, ADR-0364 B2), and the lead never had
+ * a trial (an active claim without a tenant is not one — startTrial resumes it).
+ */
+export async function trialDaysOnOffer(leadId: string | null | undefined, engine: boolean): Promise<number | null> {
+  const cfg = await getFreeTrialConfig();
+  if (!cfg.enabled || !leadId || !engine) return null;
+  const had = await db
+    .selectFrom("free_trial")
+    .select("id")
+    .where("lead_id", "=", leadId)
+    .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "not in", ["active", "lapsed"])]))
+    .executeTakeFirst();
+  return had ? null : cfg.days;
+}
+
 /** Persist; throws on an invalid value (never stores one). For the /pricing editor. */
 export async function setFreeTrialConfig(c: FreeTrialConfig): Promise<void> {
   const errs = freeTrialConfigErrors(c);

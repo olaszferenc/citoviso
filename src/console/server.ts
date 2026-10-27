@@ -10,6 +10,7 @@ import {
   getFreeTrialConfig,
   runningFreeTrials,
   setFreeTrialConfig,
+  trialDaysOnOffer,
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
 import { configuredTrialPackage, tenantTrialPackage, trialModuleLabel } from "../trial/package.js";
@@ -3832,20 +3833,12 @@ async function handle(
       // active, lapsed, converted or still-provisioning trial all mean no second offer of
       // one (the endpoint would answer them with the same trial or `trial_used`). An owned
       // lead never reaches this branch.
-      const trialCfg = await getFreeTrialConfig();
       // ADR-0364 (B2): a claim that never got a tenant is not a trial the lead had (startTrial
       // resumes it), and a legacy HTML-copy mock can never become a live trial site — no entry.
-      const hadTrial =
-        trialCfg.enabled && pf?.leadId && p.engine
-          ? !!(await db
-              .selectFrom("free_trial")
-              .select("id")
-              .where("lead_id", "=", pf.leadId)
-              .where((eb) => eb.or([eb("tenant_id", "is not", null), eb("status", "not in", ["active", "lapsed"])]))
-              .executeTakeFirst())
-          : true;
+      // One rule with the cold letter's trial sentence (trialDaysOnOffer).
+      const trialDays = await trialDaysOnOffer(pf?.leadId, p.engine);
       // ADR-0364 (B1): the form names what the trial GIVES — the same list startTrial grants.
-      const trialPkg = trialCfg.enabled && !hadTrial ? await configuredTrialPackage() : null;
+      const trialPkg = trialDays !== null ? await configuredTrialPackage() : null;
       const page = await injectConfigurator(html, plan.artifactId, p.leadName, {
         // §F.19: the order binds to the plan on screen.
         requestUrl: plan.n === 1 ? `/p/${pMatch[1]}/request` : `/p/${pMatch[1]}/v/${plan.n}/request`,
@@ -3876,11 +3869,11 @@ async function handle(
               ...(tracked ? {} : { offerQuiet: true }),
             }
           : {}),
-        ...(trialCfg.enabled && !hadTrial
+        ...(trialDays !== null
           ? {
               trial: {
                 enabled: true as const,
-                days: trialCfg.days,
+                days: trialDays,
                 url: `/p/${pMatch[1]}/trial`,
                 privacyUrl: "/privacy",
                 ...(trialPkg && !trialPkg.everything

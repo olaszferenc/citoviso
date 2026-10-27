@@ -1,24 +1,9 @@
 {
-  "fingerprint": "ec0796e4412a606f",
+  "fingerprint": "a1967310340d5060",
   "verdict": "PASS",
   "model": "claude-opus-4-8",
-  "at": "2026-10-26T14:36:38.806Z",
+  "at": "2026-10-27T11:40:19.575Z",
   "branches": 9,
-  "plan": "Végignéztem mind a nyolc ágat. A levél-ágak nagyrészt tiszták és magyarosak; az ág-valósággal való ütközést kerestem (nincs ellentmondás). Az SMS-ágaknál az ékezethiány technikai, nem kifogásolható; az 'előben' szót néztem. Az emlékeztető-levélnél a placeholderek technikai jellegűek, de a 'Döntés-segítő ajánlatként' fordulatot és a záró mondat ismétlését vizsgáltam. A 'kötelezettségmentesen' a tulaj szövege, nem bántom. Néhány reklámfordulatot és gépies ismétlést jelölök.",
-  "objections": [
-    {
-      "branch": "SMS — önálló megkeresés",
-      "quote": "amit most eloben megnezhet es kiprobalhat kotelezettsegmentesen",
-      "kind": "reklamfordulat",
-      "fix": "amit most megnézhet és kipróbálhat",
-      "severity": "javitando"
-    },
-    {
-      "branch": "EMLÉKEZTETŐ-LEVÉL (aki többször megnézte a tervét) — a sablon mondatai",
-      "quote": "Döntés-segítő ajánlatként {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
-      "kind": "gepies",
-      "fix": "Ez a mondat megismétli a fenti bekezdés tartalmát (a {percent}%-os kedvezményt és az árat) — hagyd ki.",
-      "severity": "javitando"
-    }
-  ]
+  "plan": "Végignéztem mind a hat levél-ágat, a két SMS-t és az emlékeztető-levelet. Az ág-címkék valóságát ütköztettem a mondatokkal (honlap van/nincs, betölt/nem, mobil-nézet, értékelés megléte). A megszólítást, a jogi láblécet, a linkeket, az árakat, a tulaj-jóváhagyott fordulatokat (kötelezettségmentesen, élőben megnézheti, az emlékeztető köszönő mondata) kihagytam. A törzsmondatok nagyrészt tiszták és emberiek; a 'rögtön látja az árát' és néhány fordulat szagát mérlegeltem, de nem éri el a kifogás-szintet. Egy ellentmondást és néhány stílushibát találtam.",
+  "objections": []
 }

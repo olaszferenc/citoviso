@@ -175,6 +175,7 @@ function buildMail(
     rawUrl +
     `<tr><td style="padding:0 ${PAD}px">${p(t.p2)}</td></tr>` +
     priceBox +
+    (t.trial ? `<tr><td style="padding:0 ${PAD}px">${p(t.trial)}</td></tr>` : "") +
     `<tr><td style="padding:0 ${PAD}px">${p(t.p4)}</td></tr>` +
     signature +
     footer;
