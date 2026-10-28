@@ -16,7 +16,8 @@
 
 import { geoTerms, searchPlace, verify } from "../src/scraper/enrichPresence.js";
 import { domainCarriesBrand } from "../src/scraper/enrichSiteSearch.js";
-import { brandTokens, nameCoverage } from "../src/scraper/sources/portalListing.js";
+import { brandTokens, captionBelongsToOther, nameCoverage, typoBrandTokens, withinOneEdit } from "../src/scraper/sources/portalListing.js";
+import { readFileSync } from "node:fs";
 import type { Region } from "../src/scraper/types.js";
 
 /** The radius region every case below belongs to — one label, many towns. */
@@ -214,6 +215,33 @@ for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es szám�
   const ok = expectEmpty ? brand.length === 0 : !brand.some((t) => t.includes("-") || t === "wifi" || /\d/.test(t));
   if (!ok) failed++;
   console.log(`${ok ? "✓" : "✗ FAIL"}  [kötőjeles márka] ${n} → nem márkaszó a kötőjeles/jellemző szó (${JSON.stringify(brand)})\n`);
+}
+
+// ELÍRT NÉV A PORTÁLON (Fenyves Vendégház 5d745854, 2026-10-28: hovamenjek „Fenvves Vendégház”):
+// egy betű eltérés egy ≥6 betűs márkaszónál CSAK a település + kemény azonosító (telefon, házszám,
+// 150 m-en belüli tű) mellett igazol; magában soha.
+{
+  const fen = "fenvves vendeghaz – szallas, kehidakustany petofi s. u. 15";
+  const cases: [string, boolean][] = [
+    ["typoBrandTokens: „Fenvves” ≈ Fenyves (1 betű, 7 hosszú)", JSON.stringify(typoBrandTokens("Fenyves Vendégház", fen)) === JSON.stringify(["fenyves"])],
+    ["withinOneEdit: csere / beszúrás / törlés igen, két eltérés nem", withinOneEdit("fenyves", "fenvves") && withinOneEdit("fenyves", "fenyvess") && withinOneEdit("fenyves", "fenyes") && !withinOneEdit("fenyves", "fenvvez")],
+    ["⛔ rövid (<6) márkaszó nem tűri az elírást („Hold” ≠ „Hód”-szerű)", typoBrandTokens("Rózsa Vendégház", "rozsi vendeghaz").length === 0],
+    ["⛔ ha az oldal helyesen is kiírja, nincs elírás-találat", typoBrandTokens("Fenyves Vendégház", "fenyves vendeghaz fenvves").length === 0],
+    ["⛔ elírás nélkül a pontos egyezés változatlan (nameCoverage 0 a „Fenvves”-re)", nameCoverage("Fenyves Vendégház", fen) === 0 && nameCoverage("Fenyves Vendégház", fen, ["fenyves"]) === 1],
+    ["képaláírás „Fenvves Vendégház – … fotó 3” a leadé, ha a lap az elírással elfogadott", !captionBelongsToOther("Fenvves Vendégház – Kehidakustány fotó 3", "Fenyves Vendégház", ["fenyves"])],
+    ["⛔ elfogadás nélkül (üres typoHits) a „Fenvves” aláírás idegen marad", captionBelongsToOther("Fenvves Vendégház – Kehidakustány fotó 3", "Fenyves Vendégház")],
+  ];
+  const src = readFileSync(new URL("../src/scraper/sources/portalListing.ts", import.meta.url), "utf8");
+  cases.push([
+    "bekötés: az elírás csak település + (telefon | listázott telefon | házszám | ≤150 m) mellett nyit kaput",
+    /typoHits\.length > 0 &&\s*townOnPage &&\s*\(phoneOnPage \|\| \(leadPhone !== undefined && leadPhone === listingPhone\) \|\| streetMatch === true \|\| \(distance !== undefined && distance <= 150\)\)/.test(src) &&
+      /!verify\(lead\.name, terms, page\.html\) && !\(brandOnPage && phoneOnPage\) && !typoIdentity/.test(src),
+  ]);
+  for (const [label, ok] of cases) {
+    if (!ok) failed++;
+    console.log(`${ok ? "✓" : "✗ FAIL"}  [elírt név] ${label}`);
+  }
+  console.log("");
 }
 
 if (failed) {

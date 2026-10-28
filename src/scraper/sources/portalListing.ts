@@ -70,10 +70,13 @@ function typeWords(name: string): string[] {
  * Only captions that look like a business name are judged: a plain "Kert" or
  * "Terasz" carries no brand and must not cost us a genuine photo.
  */
-export function captionBelongsToOther(caption: string | undefined, leadName: string): boolean {
+export function captionBelongsToOther(caption: string | undefined, leadName: string, typoHits: readonly string[] = []): boolean {
   if (!caption) return false;
   if (!typeWords(caption).length) return false; // not a business name — no verdict
-  return nameCoverage(leadName, caption) === 0;
+  // The portal's own misspelling of THIS lead („Fenvves Vendégház – Kehidakustány fotó 3”) names
+  // the lead — once the listing itself was accepted on that typo (typoBrandTokens).
+  const typoNamed = typoHits.length > 0 && typoBrandTokens(leadName, deaccent(caption.toLowerCase())).some((t) => typoHits.includes(t));
+  return nameCoverage(leadName, caption) === 0 && !typoNamed;
 }
 
 /**
@@ -110,12 +113,35 @@ export function typeWordConflict(leadName: string, listingTitle: string | undefi
  * ("Rózsakő Ház Villa - Badacsonytomaj"), and Jaccard would punish that even
  * though the brand matched completely.
  */
-export function nameCoverage(leadName: string, listingText: string): number {
+export function nameCoverage(leadName: string, listingText: string, typoHits: readonly string[] = []): number {
   const brand = brandTokens(leadName);
   if (!brand.length) return 0;
   const hay = deaccent(listingText.toLowerCase());
-  const hit = brand.filter((t) => hasNameWord(hay, t)).length;
+  const hit = brand.filter((t) => hasNameWord(hay, t) || typoHits.includes(t)).length;
   return hit / brand.length;
+}
+
+/** At most ONE insertion, deletion or substitution between two words. */
+export function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+
+/**
+ * The lead's brand words the page prints with ONE typo (Fenyves Vendégház 5d745854, 2026-10-28:
+ * hovamenjek „Fenvves Vendégház”). Six letters at least — a shorter word one letter off is
+ * another word („Hold” / „Hód”) — and never a word the page also prints right. A typo alone
+ * proves nothing: the caller accepts it only with the town AND a hard identifier on the page.
+ */
+export function typoBrandTokens(leadName: string, haystack: string): string[] {
+  const words = new Set(haystack.split(/[^a-z0-9]+/).filter((w) => w.length >= 5));
+  return brandTokens(leadName).filter(
+    (t) => !t.includes("-") && t.length >= 6 && !hasNameWord(haystack, t) && [...words].some((w) => withinOneEdit(w, t)),
+  );
 }
 
 /** Comparable form of a phone number: the last 9 digits (drops +36/06 variance). */
@@ -284,22 +310,31 @@ export async function readPortalListing(
   // lead whose city facet is "Badacsonytomaj", so the town token misses while
   // the page prints the lead's exact number. This exception ADDS hard evidence;
   // it never relaxes the rule for a page that has none.
-  if (!verify(lead.name, geoTerms(lead, region), page.html) && !(brandOnPage && phoneOnPage)) {
-    return { url, skipped: "az oldal nem igazolja a márkát ÉS a települést" };
-  }
-
   const extracted = extractListing(page.html, page.finalUrl, lead.name);
-  const listingText = [extracted.title, extracted.description].filter(Boolean).join(" ");
-  // Score the name against the listing's own headline/prose when it has one;
-  // the pre-structured-data stock (table layouts, no h1, no meta) has neither,
-  // and falling back to the raw HTML head used to score a real match at 0.00.
-  const coverage = nameCoverage(lead.name, listingText || pageText.slice(0, 8_000));
-
   const listingPhone = phoneKey(extracted.phone);
   const distance =
     lead.lat != null && lead.lon != null && extracted.lat != null && extracted.lon != null
       ? metersBetween(lead.lat, lead.lon, extracted.lat, extracted.lon)
       : undefined;
+  const streetMatch = streetMatches(lead.address, extracted.street);
+  // A brand word the portal MISSPELT (typoBrandTokens) counts only with the lead's own town on
+  // the page AND a hard identifier: its phone, its house number, or the pin within 150 m.
+  const terms = geoTerms(lead, region);
+  const townOnPage = terms.some((t) => deaccent(page.html.toLowerCase()).includes(t));
+  const typoHits = brandOnPage ? [] : typoBrandTokens(lead.name, haystack);
+  const typoIdentity =
+    typoHits.length > 0 &&
+    townOnPage &&
+    (phoneOnPage || (leadPhone !== undefined && leadPhone === listingPhone) || streetMatch === true || (distance !== undefined && distance <= 150));
+  if (!verify(lead.name, terms, page.html) && !(brandOnPage && phoneOnPage) && !typoIdentity) {
+    return { url, skipped: "az oldal nem igazolja a márkát ÉS a települést" };
+  }
+
+  const listingText = [extracted.title, extracted.description].filter(Boolean).join(" ");
+  // Score the name against the listing's own headline/prose when it has one;
+  // the pre-structured-data stock (table layouts, no h1, no meta) has neither,
+  // and falling back to the raw HTML head used to score a real match at 0.00.
+  const coverage = nameCoverage(lead.name, listingText || pageText.slice(0, 8_000), typoIdentity ? typoHits : []);
 
   // Phone signal: compare the two numbers when the listing published one;
   // otherwise fall back to "the page prints our number anywhere", which is the
@@ -310,7 +345,6 @@ export async function readPortalListing(
       : phoneOnPage
         ? true
         : undefined;
-  const streetMatch = streetMatches(lead.address, extracted.street);
   const confidence = scorePortalMatch({
     nameCoverage: coverage,
     cityMatch: cityMatches(lead.city, [extracted.city, extracted.address, extracted.title]),
@@ -360,6 +394,7 @@ export async function readPortalListing(
   const approved = held && opts.curatorApproved === true;
   const needsReview = held && !approved;
   const reasons = [...confidence.reasons];
+  if (typoIdentity) reasons.push(`elírt név a portálon (${typoHits.join(", ")} ≈ 1 betű) — település + kemény azonosító igazolja`);
   if (conflict) {
     reasons.push(
       conflictResolved
@@ -390,7 +425,7 @@ export async function readPortalListing(
   // probe's size rides along, so keepUsablePhotos need not measure it a second time.
   const upgrade = adapter.largestPhotoUrl;
   const filtered = extracted.images.filter(
-    (img) => !captionBelongsToOther(img.caption, lead.name),
+    (img) => !captionBelongsToOther(img.caption, lead.name, typoIdentity ? typoHits : []),
   );
   const resolved = await Promise.all(
     filtered.map(async (img) => {
