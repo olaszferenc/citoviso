@@ -55,6 +55,9 @@ import {
 export type ReportDays = 0 | 7 | 30 | 90;
 export type ReportDim = "segment" | "channel" | "device" | "style" | "hour";
 export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device", "style", "hour"];
+/** Lead-type filter (prospect.segment; NULL folds to "ismeretlen"): scopes EVERY metric on the page. */
+export const REPORT_SEGS = ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult", "ismeretlen"] as const;
+export type ReportSeg = (typeof REPORT_SEGS)[number] | "all";
 export const REPORT_RANGES: readonly ReportDays[] = [7, 30, 90, 0];
 
 export type Device = "mobile" | "tablet" | "desktop" | "bot" | "unknown";
@@ -281,6 +284,7 @@ export interface PanelSummary {
 export interface ReportData {
   readonly days: ReportDays;
   readonly dim: ReportDim;
+  readonly seg: ReportSeg;
   readonly now: Date;
   readonly prospects: readonly ProspectFacts[];
   readonly counts: StageCounts;
@@ -948,21 +952,25 @@ export function summarizePanel(all: readonly PanelSession[], via: PanelFilter): 
   };
 }
 
-/** Everything both pages render from, for one range + one breakdown dimension. */
-export async function getReportData(days: ReportDays, dim: ReportDim, now = new Date()): Promise<ReportData> {
+/** Everything both pages render from, for one range + one breakdown dimension + one lead type. */
+export async function getReportData(days: ReportDays, dim: ReportDim, seg: ReportSeg = "all", now = new Date()): Promise<ReportData> {
   const [all, targets, notes] = await Promise.all([loadProspectFacts(), loadTargets(), loadNotes()]);
-  return foldReport(all, targets, notes, days, dim, now);
+  return foldReport(all, targets, notes, days, dim, now, seg);
 }
 
 /** The pure fold — the pages' fixtures (kb-shot) feed it synthetic facts. */
 export function foldReport(
-  all: readonly ProspectFacts[],
+  everyone: readonly ProspectFacts[],
   targets: Readonly<Record<Hypothesis["key"], number>>,
   notes: readonly ReportNote[],
   days: ReportDays,
   dim: ReportDim,
   now: Date,
+  seg: ReportSeg = "all",
 ): ReportData {
+  // The lead-type filter scopes the WHOLE fold (cards, previous window, sparklines, cohorts,
+  // timeline, behaviour) — a segment's metrics compared with that segment's own past.
+  const all = seg === "all" ? everyone : everyone.filter((p) => p.segment === seg);
   const from = days ? now.getTime() - days * DAY : -Infinity;
   const prevFrom = days ? now.getTime() - 2 * days * DAY : -Infinity;
   const inRange = all.filter((p) => p.sentAt.getTime() >= from);
@@ -1121,6 +1129,7 @@ export function foldReport(
   return {
     days,
     dim,
+    seg,
     now,
     prospects: inRange,
     counts,

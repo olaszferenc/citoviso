@@ -2983,6 +2983,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-chips a.on { background: var(--citui-navy-900); color: var(--citui-ink-inverse); }
 .rp-chips--mb { margin-bottom: 10px; }
 .rp-filt select { min-height: 32px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-pill); padding: 0 12px; font: 600 12px var(--citui-font-text); background: var(--citui-panel); color: var(--citui-ink); margin: 0; width: auto; }
+.rp-filt select.on { border-color: var(--citui-navy-900); box-shadow: inset 0 0 0 1px var(--citui-navy-900); }
 .rp-filt__n { font-size: 12px; color: var(--citui-muted); margin-left: auto; }
 .rp-q { font-weight: 500; color: var(--citui-muted); font-size: 12.5px; }
 .rp-note { margin: 8px 0 0; }
@@ -3010,7 +3011,13 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 
 /* hypothesis cards */
 .rp-hcard { border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px; background: var(--citui-panel); display: grid; gap: 6px; align-content: start; }
-.rp-hcard__q { font-weight: 600; font-size: 13.5px; line-height: 1.3; }
+/* Header A (owner-approved 2026-10-28, design-refs/console/riport-kartya-fejlec/): the question
+   is the card's title, and the top edge carries the verdict hue — the eye lands on red first. */
+.rp-hcard { border-top: 4px solid var(--citui-line-strong); }
+.rp-hcard--ok { border-top-color: var(--citui-ok); }
+.rp-hcard--warn { border-top-color: var(--citui-warn); }
+.rp-hcard--bad { border-top-color: var(--citui-bad); }
+.rp-hcard__q { font-family: var(--citui-font-display); font-weight: 700; font-size: 17px; line-height: 1.3; color: var(--citui-ink-brand); }
 .rp-hcard__m { font-size: 11.5px; color: var(--citui-muted); }
 .rp-hcard__sub { margin-top: 14px; }
 .rp-hcard__v { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }

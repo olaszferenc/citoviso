@@ -32,6 +32,7 @@ import {
   EXIT_SECTIONS,
   REPORT_DIMS,
   REPORT_RANGES,
+  REPORT_SEGS,
   type Channel,
   type Device,
   type ExitSection,
@@ -44,6 +45,7 @@ import {
   type ReportData,
   type ReportDim,
   type ReportDays,
+  type ReportSeg,
   type StageCounts,
 } from "./reportData.js";
 
@@ -146,7 +148,7 @@ function dimValueLabel(dim: ReportDim, key: string, lang: string): string {
 // ── shell: tabs + filter row ──────────────────────────────────────────────────
 const RANGE_LABEL = (d: ReportDays, lang: string): string => (d ? T(lang, "{n} nap", { n: d }) : T(lang, "Összes"));
 const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
-  const p = new URLSearchParams({ days: String(d.days), dim: d.dim, ...extra });
+  const p = new URLSearchParams({ days: String(d.days), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...extra });
   return `?${p.toString()}`;
 };
 
@@ -177,10 +179,15 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
   const dims = REPORT_DIMS.map(
     (k) => `<option value="${k}"${k === d.dim ? " selected" : ""}>${esc(T(lang, "Bontás: {dim}", { dim: DIM_LABEL(lang)[k].toLowerCase() }))}</option>`,
   ).join("");
+  const segOpt = (k: ReportSeg, label: string): string => `<option value="${k}"${k === d.seg ? " selected" : ""}>${esc(label)}</option>`;
+  const segs =
+    segOpt("all", T(lang, "Lead típus: mind")) +
+    REPORT_SEGS.map((k) => segOpt(k, T(lang, "Lead típus: {s}", { s: SEG_LABEL(lang)[k]!.toLowerCase() }))).join("");
   const filter =
     `<form class="rp-filt" method="get" action="${base}">` +
     `<input type="hidden" name="days" value="${d.days}">` +
     `<div class="rp-chips" role="group" aria-label="${esc(T(lang, "Időszak"))}">${ranges}</div>` +
+    `<select name="seg" aria-label="${esc(T(lang, "Lead típus"))}" onchange="this.form.submit()"${d.seg === "all" ? "" : ' class="on"'}>${segs}</select>` +
     `<select name="dim" aria-label="${esc(T(lang, "Bontás"))}" onchange="this.form.submit()">${dims}</select>` +
     `<noscript><button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Alkalmaz"))}</button></noscript>` +
     `<span class="rp-filt__n">${esc(T(lang, "{n} követett link az időszakban · csak KIKÜLDÖTT linkek (saját megnyitás, teszt nem számít)", { n: d.counts.sent }))}</span>` +
@@ -246,7 +253,7 @@ function hypothesisCards(d: ReportData, lang: string): string {
       const change = delta(h.value, h.prevValue, lang, lower);
       const changeNote = d.days ? T(lang, "{d} az előző {n} naphoz", { d: change, n: d.days }) : change;
       return (
-        `<div class="rp-hcard"><div class="rp-hcard__q">${esc(tx[h.key].q)}</div><div class="rp-hcard__m">${esc(tx[h.key].m)}</div>` +
+        `<div class="rp-hcard rp-hcard--${v.cls || "none"}"><div class="rp-hcard__q">${esc(tx[h.key].q)}</div><div class="rp-hcard__m">${esc(tx[h.key].m)}</div>` +
         `<div class="rp-hcard__v"><b>${esc(value)}</b><span class="rp-pill rp-pill--${v.cls}"><i></i>${esc(v.label)}</span></div>` +
         `<div class="rp-meter" title="${esc(T(lang, "cél: {t}", { t: lower ? fmtH(h.target, lang) : `${h.target}%` }))}">${bar(fill)}<em style="left:${mark.toFixed(1)}%" data-l="${esc(T(lang, "cél {t}", { t: lower ? fmtH(h.target, lang) : `${h.target}%` }))}"></em></div>` +
         `<div class="rp-hcard__m rp-hcard__sub">${esc(sub)} · ${changeNote}</div>${sparkline(h.weekly)}</div>`
@@ -345,7 +352,7 @@ function timelinePanel(d: ReportData, lang: string, today: string): string {
     `<div class="panel"><h2>${esc(T(lang, "Pilot-napló"))} <span class="rp-q">${esc(T(lang, "— mi történt, és mi változott utána"))}</span></h2>` +
     `<div class="rp-chart rp-chart--wide">${timelineSvg(d, lang, 720)}</div><div class="rp-chart rp-chart--narrow">${timelineSvg(d, lang, 360)}</div>` +
     `<div class="rp-legend"><span><i style="background:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel))"></i>${esc(T(lang, "kiküldés / nap"))}</span><span><i class="rp-legend__ln" style="background:var(--citui-link-ink)"></i>${esc(T(lang, "megnyitás / nap"))}</span><span><i class="rp-legend__ln" style="background:var(--citui-warn)"></i>${esc(T(lang, "jegyzet (a te megjegyzésed)"))}</span></div>` +
-    `<form class="rp-notes" method="post" action="/report/note"><input type="hidden" name="days" value="${d.days}"><input type="hidden" name="dim" value="${esc(d.dim)}">` +
+    `<form class="rp-notes" method="post" action="/report/note"><input type="hidden" name="days" value="${d.days}"><input type="hidden" name="dim" value="${esc(d.dim)}"><input type="hidden" name="seg" value="${esc(d.seg)}">` +
     `<input type="date" name="day" value="${esc(today)}" aria-label="${esc(T(lang, "Nap"))}" required>` +
     `<input type="text" name="text" maxlength="80" required placeholder="${esc(T(lang, "Jegyzet, pl. „Tárgymező csere: személyes megszólítás”"))}" aria-label="${esc(T(lang, "Jegyzet"))}">` +
     `<button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Jegyzet hozzáadása"))}</button></form></div>`

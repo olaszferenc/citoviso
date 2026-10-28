@@ -79,7 +79,7 @@ import {
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
 import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
-import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim } from "./reportData.js";
+import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
@@ -2530,13 +2530,16 @@ async function handle(
   // Every /scout route lives in scoutRoutes.ts; this is its one mount point.
   if (await handleScoutRoute(req, res, method, path, url)) return;
   // Riport module (frozen plan: assets/design-refs/console/riport/) — Tölcsér + Viselkedés.
-  // The filters are query params (links, no JS): days ∈ {7,30,90,0}, dim ∈ REPORT_DIMS.
+  // The filters are query params (links, no JS): days ∈ {7,30,90,0}, dim ∈ REPORT_DIMS,
+  // seg ∈ REPORT_SEGS (lead type — scopes every metric; absent = all).
   if (method === "GET" && (path === "/report" || path === "/report/behaviour")) {
     const daysRaw = Number(url.searchParams.get("days") ?? "30");
     const days = ([7, 30, 90, 0] as const).includes(daysRaw as ReportDays) ? (daysRaw as ReportDays) : 30;
     const dimRaw = url.searchParams.get("dim") ?? "segment";
     const dim = (REPORT_DIMS as readonly string[]).includes(dimRaw) ? (dimRaw as ReportDim) : "segment";
-    const d = await getReportData(days, dim);
+    const segRaw = url.searchParams.get("seg") ?? "all";
+    const seg = (REPORT_SEGS as readonly string[]).includes(segRaw) ? (segRaw as ReportSeg) : "all";
+    const d = await getReportData(days, dim, seg);
     if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
     const rsRaw = url.searchParams.get("rs") ?? "inf";
     const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";
@@ -2580,6 +2583,8 @@ async function handle(
     const op = await currentOperator(req);
     if (/^\d{4}-\d{2}-\d{2}$/.test(day) && text) await addNote(day, text, op?.displayName || op?.username || "operátor");
     const back = new URLSearchParams({ days: body.get("days") ?? "30", dim: body.get("dim") ?? "segment" });
+    const seg = body.get("seg");
+    if (seg && seg !== "all") back.set("seg", seg);
     return redirect(res, `/report?${back.toString()}`);
   }
   // GET /lead/:id
