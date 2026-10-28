@@ -217,10 +217,11 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   // A living room anywhere in the sentence is on the photo; a dining or common area only when it
   // is the photo's subject (the first clause) — „hálószoba TV-vel és étkezési zónával” is a bedroom.
   if (/nappali/iu.test(reason) || /étkez|közös/iu.test(reason.split(/[,;–—:]/u)[0]!)) return false;
-  // Any bed („Kétágyas”, „többágyas”, „ággyal”, even the typo „ágygyal”), but not the garden's,
-  // the sofa's or the spa's („függőágy”, „virágágy”, „nyugágy”, „kanapéágy”, „masszázságy”) —
-  // and „virággal” is no bed: only „ággy” is the doubled form.
-  if (/hálószob|hálórész|hálósar|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|heverő|masszázs)(?:ágy|ággy)/iu.test(reason)) return true;
+  // Any bed („Kétágyas”, „többágyas”, „ággyal”, even the typo „ágygyal”, a daybed „heverőágy”
+  // to sleep on — Budai Vám 5e77481d pecs-65, 2026-10-28), but not the garden's, the sofa's or
+  // the spa's („függőágy”, „virágágy”, „nyugágy”, „kanapéágy”, „masszázságy”) — and
+  // „virággal” is no bed: only „ággy” is the doubled form.
+  if (/hálószob|hálórész|hálósar|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu.test(reason)) return true;
   // The verdict says only „szobabelsőség” — the file name says which room (Ametiszt ce2f06ec
   // „franciaagyas-szoba-…avif”, „haromagyas-szoba-…”, 2026-10-28).
   return v.subject === "interior" && url !== undefined && namesBedroomFile(url);

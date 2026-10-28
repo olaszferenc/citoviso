@@ -582,6 +582,8 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
     ["interior", "x.jpg", "Világos, tágas hálószoba TV-vel és étkezési zónával, kényelmes elrendezés.", true],
     ["interior", "x.jpg", "Recepció/folyosó elemi enteriőr szálas zöld virággal, semleges.", false],
     ["detail", "x.jpg", "Közeli virágágy, szép pink virágok.", false],
+    ["interior", "pecs-65.jpg", "Szoba két heverőággyal, világos, egyszerű berendezés.", true],
+    ["interior", "x.jpg", "Kanapéágy a sarokban, kis asztallal.", false],
     ["interior", "franciaagyas-szoba-ametiszt-hotel-harkany-2048x1365.avif", "Világos, tiszta szobabelsőség természetes fénnyel.", true],
     ["interior", "balatonfenyves-szobas-nyaralo_1.webp", "Narancs szoba tévével, szűkös tér.", false],
     ["interior", "ametiszthtel-harkany-recepcio.1472x975.avif", "Közlekedési terület, sok bútor.", false],
