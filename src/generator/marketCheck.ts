@@ -295,8 +295,18 @@ export function proseAffirms(needle: string, descriptions: readonly string[], ow
     // ülőmedencék, sport-, hullám-, csúszdás- …” → Medence on the services sample). In `own` mode a
     // sentence of such a paragraph speaks for the house only when it says so (OWN_FACILITY_MARK).
     const venueParagraph = own && paragraph.split(SENTENCE_SPLIT).some((s) => isForeignVenueSentence(s));
+    // A paragraph that OPENS on the area („Nagykanizsa városában rengeteg programlehetőség van.
+    // Uszoda, mozi, …” — Hegyi Panzió c2376334, 2026-10-28) goes on about the area: its later
+    // sentences speak for the house only when they name it (landscapeSentence's own marks).
+    const areaParagraph = own && landscapeSentence(paragraph.split(SENTENCE_SPLIT)[0] ?? "");
     for (const sentence of paragraph.split(SENTENCE_SPLIT)) {
       if (venueParagraph && !OWN_FACILITY_MARK.test(deaccent(sentence.toLowerCase()))) continue;
+      if (areaParagraph && !speaksForHouse(sentence)) continue;
+      // „uszoda” is a public building — the town's, not the house's pool (Hegyi Panzió c2376334,
+      // Mediterrán dc3a80b8, 2026-10-28: „Uszoda, mozi, koncertek…”, „– tenisz, …, uszoda”), unless
+      // the sentence speaks for the house („A vendégek részére … fedett uszoda” — Fortunatus Hotel)
+      // and names no walk or distance to it („A vendégháztól pár perces sétára fedett uszodát”).
+      if (own && needle === "uszoda" && (!(OWN_FACILITY_MARK.test(deaccent(sentence.toLowerCase())) || speaksForHouse(sentence)) || WALK_OR_DISTANCE.test(deaccent(sentence.toLowerCase())))) continue;
       // A sentence about ANOTHER venue („A Gyulai Várfürdőben … hullám medence, szaunapark”)
       // lists that venue's offer, not the property's — whatever its clauses say.
       if ((own || !PLACE_NEEDLE.has(needle)) && isForeignVenueSentence(sentence)) continue;
@@ -360,7 +370,11 @@ function viewFromHouse(sentence: string): boolean {
  * or its own voice („nálunk”, „vendégeink”, „biztosítunk”, „a szálláshely”).
  */
 const LANDSCAPE_WORD =
-  /(?<![\p{L}])(?:itt\s+talalhato|falu\p{L}*|falucska\p{L}*|telepules\p{L}*|varos\p{L}*|kornyek\p{L}*|taj(?:on|ban|at|a|at|eg\p{L}*|kep\p{L}*)?|latnivalo\p{L}*|nevezetesseg\p{L}*|magaspart\p{L}*|folyo\p{L}*|patak\p{L}*|hegyseg\p{L}*|volgy\p{L}*|szakasz\p{L}*|videk\p{L}*|nemzeti\s+park\p{L}*|termeszetvedelmi\p{L}*|kirandul\p{L}*)(?![\p{L}])/u;
+  /(?<![\p{L}])(?:itt\s+talalhato|falu\p{L}*|falucska\p{L}*|telepules\p{L}*|varos\p{L}*|kornyek\p{L}*|taj(?:on|ban|at|a|at|eg\p{L}*|kep\p{L}*)?|latnivalo\p{L}*|nevezetesseg\p{L}*|magaspart\p{L}*|folyo\p{L}*|patak\p{L}*|hegyseg\p{L}*|volgy\p{L}*|szakasz\p{L}*|videk\p{L}*|nemzeti\s+park\p{L}*|termeszetvedelmi\p{L}*|kirandul\p{L}*|kozel(?:eben|ben)|programlehetoseg\p{L}*)(?![\p{L}])/u;
+/** A walk or a distance in the sentence — the facility is somewhere else. */
+const WALK_OR_DISTANCE = /setar|perc(?:re|nyire|es)|(?<![\p{L}\d])\d+(?:[.,]\d+)?\s*(?:km|m)\s*-?\s*(?:re|ra|nyire|en)(?![\p{L}])|kozel(?:eben|ben)/u;
+/** A distance opens an area sentence too: „16 km-re Zalakaroson fürdőzésre is van mód”. */
+const DISTANCE_LEAD = /(?<![\p{L}\d])\d+(?:[.,]\d+)?\s*(?:km|kilometer\p{L}*|m|meter\p{L}*)\s*-?\s*(?:re|ra|nyire|en|rol)(?![\p{L}])/u;
 const HOUSE_VOICE =
   /(?<![\p{L}])(?:nalunk|itt(?!\s+talalhato)|vendegeink\p{L}*|vendegek\p{L}*|biztosit\p{L}*|sajat|kiado|szallashely\p{L}*|epulet\p{L}*|ingatlan\p{L}*|hotel\p{L}*|szallod\p{L}*|villa(?:ja|nk|nkban|ban|ba|bol|ban|nak|t|val)?|motel\p{L}*|nyaralo\p{L}*|fahaz\p{L}*|\p{L}+(?:unk|unkban|unkon|unkhoz|unkbol|unkat|unknal))(?![\p{L}])|\p{L}+(?:ra|re)\s+nezo(?![\p{L}])/u;
 /** The sentence's SUBJECT is the landscape: its first clause („Itt található a Dráva legszebb
@@ -368,7 +382,12 @@ const HOUSE_VOICE =
 function landscapeSentence(sentence: string): boolean {
   const t = deaccent(sentence.toLowerCase());
   const lead = t.split(DEAC_CLAUSE_SPLIT)[0] ?? "";
-  return LANDSCAPE_WORD.test(lead) && !OWN_VIEW_PART.test(t) && !HOUSE_VOICE.test(t);
+  return (LANDSCAPE_WORD.test(lead) || DISTANCE_LEAD.test(lead)) && !speaksForHouse(sentence);
+}
+/** The sentence names a part of the house or speaks in its voice (OWN_VIEW_PART / HOUSE_VOICE). */
+function speaksForHouse(sentence: string): boolean {
+  const t = deaccent(sentence.toLowerCase());
+  return OWN_VIEW_PART.test(t) || HOUSE_VOICE.test(t);
 }
 
 // „Közelünkben található a Zsindelyes étterem” (Elisabeth d912916b, 2026-10-27): the
@@ -616,12 +635,16 @@ export interface HostVenue {
   readonly name: string | null;
   /** The prose explicitly lets the guests use the host's wellness. */
   readonly access: boolean;
+  /** The prose's access sentences, normalised — a shared facility stays only if one names it. */
+  readonly grants?: string;
 }
 const HOST_IN_PROSE =
   /aparthotel\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:emelet|epulet|szint|foldszint)\p{L}*|(?:hotel|szalloda|furdo)\s+(?:\p{L}+\s+){0,3}?(?:epulet\p{L}*|wellness\s*reszleg\p{L}*|wellnessreszleg\p{L}*|spa\s*reszleg\p{L}*)|osszekottetes\p{L}*\s+(?:van\s+)?(?:a|az)\s+(?:\p{L}+\s+){0,4}?(?:hotel|szalloda|furdo)/u;
 const HOST_ACCESS =
   /(?:igenybe\s+vehet\p{L}*|hasznalhat\p{L}*|hasznalata\s+(?:ingyenes|biztositott|benne\s+van)|belepo\p{L}*\s+(?:ingyenes|biztositott))/u;
 const HOST_WELLNESS = /wellness|spa|medenc|szaun|furdo/u;
+/** A hotel's shared facilities besides the wellness: children's, programme and sport rooms. */
+const HOST_SHARED = /jatszo|gyermekfelugyel|baba\s*felugyel|animaci|xbox|fitnes|konditer|bowling|biliard|squash|teniszpaly/u;
 /** Facilities of a spa complex — no private apartment lists three of them. */
 const SPA_COMPLEX =
   /jegbarlang|gozkamra|gozfurdo|jegszauna|bioszauna|sokkolo|aromakabin|termalmedence|elmenymedence|sokemedence|kneipp/u;
@@ -650,11 +673,9 @@ export function hostVenueOf(
   const complex = new Set(amenities.map((a) => norm(a).match(SPA_COMPLEX)?.[0]).filter(Boolean));
   if (!placed.length && complex.size < 3) return null;
   const name = placed.map(hostNameIn).find(Boolean) ?? null;
-  const access = sentences.some((s) => {
-    const n = norm(s);
-    return HOST_ACCESS.test(n) && HOST_WELLNESS.test(n) && /hotel|szalloda|furdo|wellness\s*reszleg/u.test(n);
-  });
-  return { name, access };
+  const granting = sentences.map(norm).filter((n) => HOST_ACCESS.test(n) && /hotel|szalloda|furdo|reszleg/u.test(n));
+  const access = granting.some((n) => HOST_WELLNESS.test(n));
+  return { name, access, grants: granting.join(" | ") };
 }
 
 /**
@@ -670,9 +691,17 @@ export function withHostWellness(ranked: readonly string[], host: HostVenue | nu
     return wellness.some((k) => n.includes(k)) || SPA_COMPLEX.test(n) || /fitnes|konditer/u.test(n);
   };
   const named = host.access && host.name ? `A ${host.name} wellnessrészlege` : null;
+  // The host's OTHER shared facilities ride on the same list (Karos Gold 9c24d9b0, 2026-10-28:
+  // „Játszótér”, „Játszóház”, „Gyermekfelügyelet”, „Animációs programok”, „Fitness” are Hotel Karos
+  // Spa's) — they stay only where an access sentence names them.
+  const isShared = (a: string) => {
+    const m = norm(a).match(HOST_SHARED);
+    return m !== null && !(host.grants ?? "").includes(m[0]);
+  };
   const out: string[] = [];
   let placed = false;
   for (const a of ranked) {
+    if (isShared(a)) continue;
     if (!isWellness(a)) {
       out.push(a);
     } else if (named && !placed) {

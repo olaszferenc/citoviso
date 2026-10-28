@@ -549,10 +549,15 @@ console.log("⑯ a hotel wellnesse nem az apartman szolgáltatása (Belima 4231b
   const karosItems = hostHints("Karos Gold 813 Wellness Apartman", ["Fitness", "Játszótér", "Saját parkoló"], karos, ["Wellness"]);
   check("Karos Gold: kimondott engedély → „A Hotel Karos Spa wellnessrészlege”, saját Wellness/Medence nincs",
     karosItems.includes("A Hotel Karos Spa wellnessrészlege") && !karosItems.some((a) => a !== "A Hotel Karos Spa wellnessrészlege" && /medenc|szaun|wellness|fitnes/i.test(a)), karosItems);
+  const karosKids = hostHints("Karos Gold 813 Wellness Apartman", ["Játszótér", "Játszóház", "Gyermekfelügyelet", "Animációs programok", "Fitness", "Saját parkoló", "Kiságy"], karos, ["Wellness"]);
+  check("Karos Gold: a hotel játszótere / játszóháza / gyermekfelügyelete / animációja nem az apartmané (az engedély csak a wellnessre szól)",
+    karosKids.includes("A Hotel Karos Spa wellnessrészlege") && !karosKids.some((a) => /Játszó|Gyermekfelügyelet|Animáci|Fitness/.test(a)) && karosKids.includes("Saját parkoló"), karosKids);
+  const kidsGranted = hostHints("Lila Apartman", ["Játszóház", "Medence", "Parkoló"], ["Az apartman a Hotel Lila Akác épületében, a második emeleten található.", "A Hotel Lila Akác játszóházát és wellness részlegét vendégeink ingyen használhatják."], []);
+  check("⛔ PIROS IKER: ha az engedély-mondat megnevezi (játszóház), a tétel marad", kidsGranted.some((a) => /Játszóház/.test(a)), kidsGranted);
   const noGrant = hostHints("Napfény Apartman", ["Medence", "Szauna", "Parkoló"], ["Az apartman a Hotel Napfény épületében, a harmadik emeleten található."]);
   check("engedély nélkül a hotel épületében lévő egység mintájában nincs medence/szauna", noGrant.length > 0 && !noGrant.some((a) => /medenc|szaun/i.test(a)), noGrant);
   check("hostVenueOf: a hotel neve a mondatból, névelő nélkül; az engedély kimondva",
-    JSON.stringify(hostVenueOf("Lila Apartman", [], ["A Hotel Lila Akác wellness részlegét vendégeink ingyen használhatják."])) === JSON.stringify({ name: "Hotel Lila Akác", access: true }));
+    ((h) => h?.name === "Hotel Lila Akác" && h.access === true)(hostVenueOf("Lila Apartman", [], ["A Hotel Lila Akác wellness részlegét vendégeink ingyen használhatják."])));
   // ⛔ PIROS IKER: an own pool, a hotel's own list, a complex's own name keep their wellness.
   const ownPool = hostHints("Kerti Vendégház", ["Medence", "Szauna", "Parkoló"], ["Udvarunkon saját medence és finn szauna várja a vendégeket."]);
   check("⛔ PIROS IKER: saját medence (nincs hotel a forrásban) → Medence marad", ownPool.some((a) => /medenc/i.test(a)), ownPool);
@@ -626,6 +631,15 @@ console.log("⑱ (d) amenity csak a szállásról szóló mondatból; panoráma 
     ["Medence", "A 25 percnyi sétára található Köcsi-tó mellett a 3 hálószobás Neb Garden Villa úszómedencét is kínál."],
     ["Panoráma", "Saját vízpart, stég és csodás balatoni panoráma."],
   ];
+  // Hegyi Panzió c2376334 / Mediterrán dc3a80b8 (2026-10-28): a paragraph opening on the town, a
+  // distance, and the town's „uszoda” are no pool of the house.
+  const hegyi = ["Nagykanizsa városában rengeteg programlehetőség van. Uszoda, mozi, koncertek, kaszinó, nevezetességek, bevásárlóközpont.\n\n16 km-re Zalakaroson fürdőzésre is van mód, mely nem csak a vízi élmények kedvelőinek, de a gyógyulni vágyóknak is remek lehetőség."];
+  check("Hegyi Panzió: a városnévvel nyitó bekezdés „Uszoda, mozi…” mondata és a „16 km-re” mondat → nincs Medence", !descriptionFactIsOwn("Medence", hegyi));
+  const med = ["Kertje tágas és szépen gondozott, egy szalonnasütésre, bográcsozásra és grillezésre alkalmas hely is ki lett alakítva.\n\n- tenisz, biliárd, teke, golfpálya, bowling, uszoda, hajózás, búvárkodás, íjászat"];
+  check("Mediterrán: az „uszoda” egy felsorolásban → nincs Medence; a kert és a grill marad", !descriptionFactIsOwn("Medence", med) && descriptionFactIsOwn("Kert", med) && descriptionFactIsOwn("Grill", med));
+  check("az uszoda sétára / perccel a háztól a városé („A vendégháztól pár perces sétára fedett uszodát…”)", !descriptionFactIsOwn("Medence", ["A vendégháztól pár perces sétára fedett uszodát, szaunázási lehetőséget találhatnak."]));
+  house.push(["Medence", "A vendégek részére napozó udvar, fedett uszoda, finn és infraszauna, gőzkabin és jakuzzi biztosítja a felfrissülést."]);
+  house.push(["Medence", "Saját fedett uszodánk egész évben nyitva."]);
   const lostOwn = house.filter(([f, t]) => !descriptionFactIsOwn(f, [t])).map(([f, t]) => `${f}: ${t.slice(0, 50)}`);
   check("⛔ PIROS IKER: a szállásról szóló mondat (terasz, napozóterasz, ingatlan, villa, saját, „tóra néző”, a ház kínálata a környékkel együtt) forrás marad", lostOwn.length === 0, lostOwn);
 }
