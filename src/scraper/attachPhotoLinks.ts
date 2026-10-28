@@ -324,6 +324,15 @@ export async function readOwnSitePhotos(
     };
   }
 
+  // An Appartman.hu builder site lists its gallery in a public JSON (appartmanImages) — read
+  // it instead of rendering the page: no browser, $0 (Fecske Kabin, 2026-10-28).
+  {
+    const seen = new Set(candidates.map((c) => c.url.split("?")[0]!.toLowerCase()));
+    for (const img of await appartmanImages(page.html, page.finalUrl)) {
+      if (!seen.has(img.url.split("?")[0]!.toLowerCase())) candidates.push(img);
+    }
+  }
+
   for (const gallery of galleryLinks(page.html, page.finalUrl)) {
     const g = await fetchPortalPage(gallery);
     if (!g.page) continue;
@@ -427,6 +436,53 @@ function linkKind(url: string, lead: LeadFacts): "portal" | "website" {
  * never pays. Every link gets its own verdict, so a flash can say which one failed
  * and why instead of failing silently.
  */
+/**
+ * Appartman.hu builder sites (Next.js, „appartman.b-cdn.net”) ship an empty shell: the gallery
+ * comes from a public JSON — `/x/hotels/<slug>/images` and, per unit, `/x/rooms/<id>/images`
+ * (Fecske Kabin 30a461c4, 2026-10-28: static HTML 1 image, the JSON 21 + 12). The slug is the
+ * page's own `__NEXT_DATA__` query. Same politeness as every page read (robots, one request per
+ * host with a gap). Pure parse in `appartmanSlug`, the reads here.
+ */
+export function appartmanSlug(html: string): string | null {
+  if (!html.includes("appartman.b-cdn.net")) return null;
+  const m = /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/.exec(html);
+  if (!m) return null;
+  try {
+    const slug = (JSON.parse(m[1]!) as { query?: { slug?: unknown } }).query?.slug;
+    return typeof slug === "string" && /^[a-z0-9-]{1,80}$/i.test(slug) ? slug : null;
+  } catch {
+    return null;
+  }
+}
+
+const APPARTMAN_MAX_ROOMS = 8;
+async function appartmanImages(html: string, pageUrl: string): Promise<{ url: string; caption?: string }[]> {
+  const slug = appartmanSlug(html);
+  if (!slug) return [];
+  const origin = new URL(pageUrl).origin;
+  const readJson = async (path: string): Promise<unknown> => {
+    const r = await fetchPortalPage(`${origin}${path}`);
+    if (!r.page) return null;
+    try { return JSON.parse(r.page.html); } catch { return null; }
+  };
+  const urlsOf = (j: unknown): string[] =>
+    Array.isArray(j)
+      ? (j as { url?: unknown; order?: unknown }[])
+          .filter((x) => typeof x?.url === "string" && /^https:\/\/appartman\.b-cdn\.net\//.test(x.url as string))
+          .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
+          .map((x) => x.url as string)
+      : [];
+  const out = urlsOf(await readJson(`/x/hotels/${slug}/images`)).map((url) => ({ url }));
+  const rooms = await readJson(`/x/hotels/${slug}/rooms`);
+  if (Array.isArray(rooms)) {
+    for (const room of rooms.slice(0, APPARTMAN_MAX_ROOMS) as { id?: unknown }[]) {
+      if (typeof room?.id !== "number") continue;
+      for (const url of urlsOf(await readJson(`/x/rooms/${room.id}/images`))) out.push({ url });
+    }
+  }
+  return out;
+}
+
 export async function attachPhotoLinks(leadId: string, rawLinks: string): Promise<AttachPhotoLinksResult> {
   const { urls, invalid } = parseLinks(rawLinks);
   const invalidOutcomes: LinkOutcome[] = invalid.map((u) => ({

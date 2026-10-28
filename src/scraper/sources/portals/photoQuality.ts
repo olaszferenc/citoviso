@@ -146,7 +146,9 @@ export interface PhotoLike {
  * (Árvalányhaj 54bbfabd: 80bef5b163.clvaw-cdnwnd.com), hence a pattern, not a host.
  * ONE list for both gates: the own-site reader (attachPhotoLinks) and judgePhoto.
  */
-const SITE_BUILDER_MEDIA = ["wixstatic.com", "squarespace-cdn.com"];
+// „appartman.b-cdn.net” is the Appartman.hu builder's own zone on the shared Bunny CDN (Fecske
+// Kabin, 2026-10-28) — that zone only, never the shared b-cdn.net itself.
+const SITE_BUILDER_MEDIA = ["wixstatic.com", "squarespace-cdn.com", "appartman.b-cdn.net"];
 const WEBNODE_CDN = /(?:^|\.)[a-z0-9]+-cdnwnd\.com$/;
 
 /** Does this image host serve only a site builder customer's own uploads? */

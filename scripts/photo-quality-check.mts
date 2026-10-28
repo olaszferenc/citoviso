@@ -23,7 +23,7 @@ import {
 } from "../src/scraper/sources/portals/photoQuality.js";
 import { readFileSync } from "node:fs";
 import { isCutSrcsetUrl, parseSrcset } from "../src/scraper/srcset.js";
-import { ownSiteImages, photoCountMessage, sameStoredSite, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
+import { appartmanSlug, ownSiteImages, photoCountMessage, sameStoredSite, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
 import { distinctPortalPhotos, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
 import { ENGINE_HOME_REDIRECT } from "../src/scraper/sources/portalListing.js";
 import { domImages, extractListing } from "../src/scraper/sources/portals/extract.js";
@@ -430,6 +430,26 @@ check(
     isSiteBuilderMedia("80bef5b163.clvaw-cdnwnd.com") && isSiteBuilderMedia("0f5d6ecb02.cbaul-cdnwnd.com") &&
     !isSiteBuilderMedia("cdnwnd.com.example.hu") && !isSiteBuilderMedia("notwixstatic.com") && !isSiteBuilderMedia("i0.wp.com"),
   "egy lista a két kapunak",
+);
+// Appartman.hu builder (Fecske Kabin 30a461c4, 2026-10-28): the rendered page held 9 images, all
+// dropped as „idegen domain” — the builder's zone was not on the list; the gallery is a public JSON.
+const APP_HTML = `<script src="https://appartman.b-cdn.net/x.js"></script><script id="__NEXT_DATA__" type="application/json">{"page":"/[slug]","query":{"slug":"fecskekabin"}}</script>`;
+check(
+  "Appartman.hu: az appartman.b-cdn.net zóna a lap saját feltöltése; a közös b-cdn.net és más zóna nem",
+  isSiteBuilderMedia("appartman.b-cdn.net") && !isSiteBuilderMedia("b-cdn.net") && !isSiteBuilderMedia("masik.b-cdn.net"),
+  "a Fecske Kabin 9 képe mind „idegen domain” volt",
+);
+check(
+  "Appartman.hu: a slug a lap __NEXT_DATA__ query-jéből; más oldalon / hibás JSON-nál nincs",
+  appartmanSlug(APP_HTML) === "fecskekabin" && appartmanSlug(APP_HTML.replace("appartman.b-cdn.net", "example.com")) === null &&
+    appartmanSlug(`appartman.b-cdn.net <script id="__NEXT_DATA__">{rossz</script>`) === null &&
+    appartmanSlug(APP_HTML.replace("fecskekabin", "../etc")) === null,
+  "a JSON-útvonal csak ellenőrzött slugból épül",
+);
+check(
+  "bekötés: a saját-honlap olvasó a JSON-galériát a fetchPortalPage-dzsel (robots + host-szünet) olvassa, a képek a jelölt-listába mennek",
+  /await appartmanImages\(page\.html, page\.finalUrl\)/.test(ap) && /fetchPortalPage\(`\$\{origin\}\$\{path\}`\)/.test(ap) && /\/x\/hotels\/\$\{slug\}\/images/.test(ap),
+  "",
 );
 check(
   "MEGTART · Squarespace saját honlapon a képszűrőn is (eddig csak a behúzó engedte)",
