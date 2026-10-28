@@ -109,6 +109,24 @@ const SCOUT_CSS = `<style>
 }
 </style>`;
 
+/**
+ * Compass initials from the full direction names. A bare letter key collided ("K" is Tuesday
+ * in the calendars and East here — one key, one translation), so the full words are translated
+ * and the initial is taken from them. Hungarian digraphs (Ny) count as one letter; if two
+ * initials collide in a language, the full words are shown instead.
+ */
+function compassLetters(lang: string): { geoN: string; geoS: string; geoW: string; geoE: string } {
+  const full = { geoN: T(lang, "Észak"), geoS: T(lang, "Dél"), geoW: T(lang, "Nyugat"), geoE: T(lang, "Kelet") };
+  const initial = (w: string) => {
+    const m = /^(?:Cs|Dzs|Dz|Gy|Ly|Ny|Sz|Ty|Zs)/.exec(w);
+    return m ? m[0] : w.charAt(0).toUpperCase();
+  };
+  const short = {
+    geoN: initial(full.geoN), geoS: initial(full.geoS), geoW: initial(full.geoW), geoE: initial(full.geoE),
+  };
+  return new Set(Object.values(short)).size === 4 ? short : full;
+}
+
 /** Every sentence the page script shows — translated here, never in the script. */
 function scoutStrings(lang: string): Record<string, string> {
   return {
@@ -118,10 +136,7 @@ function scoutStrings(lang: string): Record<string, string> {
     geoCenter: T(lang, "Közép"),
     geoZoom: T(lang, "nagyítás"),
     geoEdges: T(lang, "Határ"),
-    geoN: T(lang, "É"),
-    geoS: T(lang, "D"),
-    geoW: T(lang, "Ny"),
-    geoE: T(lang, "K"),
+    ...compassLetters(lang),
     geoStep: T(lang, "A Térkép-link a csempe nézetére nyit, de a találati lista NEM szorul rá. Kicsinyíts egyet, nagyíts vissza, és kattints a „Keresés ezen a területen” gombra — a lista csak ezután a csempéé."),
     mapLink: T(lang, "Térkép"),
     mapLinkTitle: T(lang, "„{kw}” keresés a Térképen, a csempe nézetén"),
