@@ -80,6 +80,18 @@ Az élő nyelvek egyikén hiány maradt a magod alkalmazása után. Megnézed (`
 `export`/`kb-export`), lefordítod (§2/§4), landolsz — és a deploy azzal a committal megy újra.
 **API-fordítás nincs** — sem kézzel, sem „csak most az egyszer”.
 
+## 4c. Jegyek: ki ébreszt és miért (2026-10-28, tulaj)
+
+Nem futsz folyamatosan: tétlenül vársz (az nem költ), és **fordítási esemény ébreszt**. A figyelő
+(`~/rc-briefs/watch/babel-watch.py`, 10 percenként, modell nélkül, csak git) jegyet ír a
+`~/babel/beerkezo/` mappába, és beírja a sessionödbe, ha épp nem dolgozol:
+- `*-igeny-*.md` — az utolsó sikeres deploy (`prod/*` tag) óta új UI-felirat vagy megváltozott
+  súgó-cikk került a mainre, amire a magodban nincs fordítás. Ha a magod a mainen lefedi,
+  **magától lezárul** — a land után nincs vele dolgod.
+- `*-deploy-gate5.md` — a deploy GATE 5-je bukott (az éles csomag mért hiánya benne): §4b, a
+  végén a jegy alá `KÉSZ — <idő>`, és szólsz a Koordinátornak.
+Gazdád a Koordinátor; a jegyet ő is látja. A nyitott jegyet 3 óra múlva újra eléd teszi.
+
 ## 5. Nap vége
 
 Napló: mit fordítottál (nyelv, felület, hány sor), mi maradt nyitva (`~/babel/ugyek.md`), és egy

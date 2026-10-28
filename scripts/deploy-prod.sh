@@ -501,8 +501,17 @@ if [ "$NEEDS_I18N" = "0" ]; then
   echo "── GATE 5 — fordítás: nincs fordítás-releváns változás a tartományban ✓ (kihagyva)"
 else
   echo "── GATE 5 — fordítás-frissítés az éles adatbázison (blokkoló)…"
-  $SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null \
-    || fail "a nyelvi csomag HIÁNYOS a Bábel-mag alkalmazása után is — a servicek NEM lettek újraindítva. API-fordítás nincs (ADR-0412): Bábel fordítsa le a hiányt (babel-pack.mts export/kb-export <nyelv>), landoljon, és azzal a commit-tal deployolj"
+  # On failure the measured gap becomes a ticket in Bábel's inbox; ~/rc-briefs/watch/babel-watch.py
+  # hands it to his session (owner 2026-10-28: translation events trigger Bábel).
+  GATE5_OUT="$($SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null)"
+  GATE5_RC=$?
+  echo "$GATE5_OUT"
+  [ "$GATE5_RC" = "0" ] || {
+    mkdir -p "$HOME/babel/beerkezo" \
+      && printf '# Deploy elbukott a GATE 5-ön — %s (%s)\n\nAz éles csomag a magod alkalmazása után is hiányos:\n\n```\n%s\n```\n\nFordítsd le a hiányt (babel-pack.mts export/kb-export <nyelv>, az élesen hiányzó sorokat a munka/prod-*-hiany.json mintájára méred), land, és szólj a Koordinátornak, hogy a deploy mehet.\n' \
+        "$SHA" "$(date '+%F %T')" "$GATE5_OUT" > "$HOME/babel/beerkezo/$(date +%F-%H%M)-deploy-gate5.md"
+    fail "a nyelvi csomag HIÁNYOS a Bábel-mag alkalmazása után is — a servicek NEM lettek újraindítva. API-fordítás nincs (ADR-0412): Bábel fordítsa le a hiányt (babel-pack.mts export/kb-export <nyelv>), landoljon, és azzal a commit-tal deployolj (jegy: ~/babel/beerkezo/)"
+  }
   # ⛔ A frissítő SAJÁT szavát nem fogadjuk el: független méréssel igazoljuk. Egy
   # „lefutottam" ág, ami nem bizonyít, pontosan az a hamis zöld, amitől ez a kapu véd.
   echo "── GATE 5b — visszaellenőrzés (független mérés)…"
