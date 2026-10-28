@@ -92,7 +92,7 @@ function foldChars(s: string): string {
  */
 export function withoutOwnName(text: string, names: readonly string[]): string {
   let out = text;
-  for (const name of names) {
+  for (const name of names.flatMap(wordOrders)) {
     const n = foldChars(name.trim());
     if (n.length < 3) continue;
     for (;;) {
@@ -106,6 +106,45 @@ export function withoutOwnName(text: string, names: readonly string[]): string {
     }
   }
   return out;
+}
+
+/**
+ * A name of 2–4 words in every word order: the portal's line writes „Wellness Panoráma
+ * Vendégház” for the lead „Panoráma Wellness Vendégház” (5304085b, 2026-10-28).
+ */
+function wordOrders(name: string): string[] {
+  const words = name.trim().split(/\s+/u).filter(Boolean);
+  if (words.length < 2 || words.length > 4) return [name];
+  const out: string[] = [];
+  const permute = (rest: string[], acc: string[]): void => {
+    if (!rest.length) { out.push(acc.join(" ")); return; }
+    rest.forEach((w, i) => permute([...rest.slice(0, i), ...rest.slice(i + 1)], [...acc, w]));
+  };
+  permute(words, []);
+  return out;
+}
+
+/**
+ * A portal's template line about the listing is no fact about the house (Panoráma Wellness
+ * 5304085b, 2026-10-28): „Wellness Panoráma Vendégház – Szállás Cserszegtomaj, Panoráma utca 15.
+ * Nyitvatartás, elérhetőség, értékelések és fotók a Hovamenjek.hu-n.” and „Foglaljon szállást
+ * Dombóváron egyszerűen és gyorsan.”
+ */
+export function withoutPortalBoilerplate(text: string): string {
+  return text
+    .replace(/[^\n]*?[–-]\s*Szállás\s[^\n]*?Nyitvatartás, elérhetőség, értékelések és fotók a\s+\S+?-[nmo]n\.?/gu, " ")
+    .replace(/Foglaljon szállást [^.\n]*?egyszerűen és gyorsan\.?/gu, " ");
+}
+
+/**
+ * A street's name is no fact either: „Panoráma utca 15.”, „Kilátó út”, „Strand sétány 2/a”.
+ * The capitalised words before a street type go with the type and the number.
+ */
+export function withoutStreetNames(text: string): string {
+  return text.replace(
+    /(?:\p{Lu}[\p{L}.-]*\s+){1,3}(?:utca|u\.|út|útja|tér|tere|köz|sor|sétány|dűlő|körút|krt\.|lejtő|liget|fasor)(?![\p{L}])(?:\s*\d+[\p{L}\d/.-]*)?/gu,
+    " ",
+  );
 }
 
 export function collectWriterSources(lead: WriterSourceLead, googleVoice: readonly VoiceInput[]): WriterSources {
@@ -164,11 +203,14 @@ export function collectWriterSources(lead: WriterSourceLead, googleVoice: readon
   // amenities, and the mock sold the car park — because every consumer only ever counted
   // the amenity LIST). Merged before the writer, the guard and the fact gate, so "vízparti"
   // is a fact the headline can be REQUIRED to carry.
-  // The property's own NAME is no fact about it: „Panoráma Vendégház – Szállás Dombóvár …”
+  // The property's own NAME is no fact about it (in any word order): „Panoráma Vendégház – Szállás Dombóvár …”
   // (Panoráma ca4ecf89, 2026-10-27, a portal's boilerplate line) sold „Panoráma”. The prose
   // facts are read with the name taken out; the writer still sees the prose whole.
   const ownNames = [lead.name, ...profiles.map((p) => p.title ?? "")];
-  const descriptionFacts = descriptionSellingPoints(descriptions.map((d) => withoutOwnName(d, ownNames))).filter(
+  // Neither is the portal's template line nor a street name („Panoráma utca 15.”).
+  const descriptionFacts = descriptionSellingPoints(
+    descriptions.map((d) => withoutStreetNames(withoutOwnName(withoutPortalBoilerplate(d), ownNames))),
+  ).filter(
     (f) => !listedAmenities.some((a) => a.toLowerCase() === f.toLowerCase()),
   );
   const amenities = [...listedAmenities];

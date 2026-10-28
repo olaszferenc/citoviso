@@ -657,6 +657,14 @@ check("withoutOwnName: ékezet- és kisbetű-független, ragozott alak is („PA
 check("⛔ szó eleje kell („Kiskert Vendégház” neve nem vágja ki a „kert vendégház”-at középről)", withoutOwnName("Kiskert vendégház", ["Kert Vendégház"]) === "Kiskert vendégház");
 const ownView = collectWriterSources(panProfile("Panoráma Vendégház", "Panoráma Vendégház Dombóváron, csendes környezetben várja a pihenni vágyó vendégeket egész évben. A teraszról csodálatos panoráma nyílik a völgyre.") as never, []);
 check("⛔ a név mellett a leírás SAJÁT panoráma-mondata megmarad", ownView.descriptionFacts.includes("Panoráma"), ownView.descriptionFacts);
+// Panoráma Wellness 5304085b (2026-10-28): the portal's line swaps the name's words and names the
+// street „Panoráma utca” — neither is a fact (word order, street name, template line).
+const pwSrc = collectWriterSources(panProfile("Panoráma Wellness Vendégház", "Wellness Panoráma Vendégház – Szállás Cserszegtomaj, Panoráma utca 15. Nyitvatartás, elérhetőség, értékelések és fotók a Hovamenjek.hu-n.") as never, []);
+check("Panoráma Wellness: fordított szórendű név, „Panoráma utca 15.” és a portál-sablonmondat → nincs „Panoráma”", !pwSrc.descriptionFacts.includes("Panoráma"), pwSrc.descriptionFacts);
+const kertUtca = collectWriterSources(panProfile("Lelle-kert Apartman", "Csendes apartman Balatonlellén, a Kert utca 14. alatt, közel a strandhoz, a ház a központtól tíz perc sétára fekszik.") as never, []);
+check("utcanév („Kert utca 14.”) nem ad „Kert”-et", !kertUtca.descriptionFacts.includes("Kert"), kertUtca.descriptionFacts);
+const realView = collectWriterSources(panProfile("Panoráma Wellness Vendégház", "Wellness Panoráma Vendégház Cserszegtomajon, a Panoráma utca 15. alatt. A teraszról csodálatos panoráma nyílik a Balatonra, a kertben jakuzzi vár.") as never, []);
+check("⛔ PIROS IKER: a név és az utcanév mellett a terasz SAJÁT panorámája és a kert megmarad", realView.descriptionFacts.includes("Panoráma") && realView.descriptionFacts.includes("Kert"), realView.descriptionFacts);
 const kertSrc = collectWriterSources(panProfile("Medence Kert Apartman", "Medence Kert Apartman – Szállás Siófok, Petőfi sétány 3.. Nyitvatartás, elérhetőség, értékelések és fotók a portálon. Foglaljon szállást Siófokon egyszerűen.") as never, []);
 check("Medence Kert Apartman: a névből nincs Medence/Kert", kertSrc.descriptions.length === 1 && !kertSrc.descriptionFacts.some((f) => /Medence|Kert/.test(f)), kertSrc.descriptionFacts);
 
