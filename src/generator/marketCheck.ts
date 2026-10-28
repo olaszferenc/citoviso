@@ -394,6 +394,8 @@ function speaksForHouse(sentence: string): boolean {
 // possessive „közelünkben / közelében” is the area too.
 const AREA_LEAD = /(?<![\p{L}])(?:kornyek\p{L}*|korzet\p{L}*|kozel(?:eben|ben|i|unkben|etekben)|szomszed\p{L}*)(?![\p{L}])/u;
 const AREA_SENTENCE = /(?<![\p{L}])(?:kornyek\p{L}*|kozel(?:eben|ben|i|unkben|etekben)|szomszed\p{L}*|telepules\p{L}*)(?![\p{L}])/u;
+/** Where the beach is from the house: a walk, a distance, the street's end, the corner. */
+const BEACH_ACCESS = /setar|perc(?:re|nyire|es)|(?<![\p{L}\d])\d+(?:[.,]\d+)?\s*(?:km|m|meter\p{L}*)\s*-?\s*(?:re|ra|nyire|en)?(?![\p{L}])|utca\s+vegen|utcavegen|a\s+sarkon|szomszedsag\p{L}*|kozel(?:eben|ben|i)?(?![\p{L}])/u;
 /** The house's own beach, said in so many words. */
 const OWN_BEACH_MARK = /(?<![\p{L}])(?:sajat|privat|strandunk\p{L}*|strandjaval|egyeni)(?![\p{L}])/u;
 /** A public beach by its kind — „szabadstrand”, „Nagystrand”, „városi strand”, „ingyenes strand”. */
@@ -479,7 +481,10 @@ function isForeignVenueSentence(sentence: string): boolean {
  * the lake park's; „parkosított kert” and „parkoló” are the house's and do not match.
  */
 // „Strand (ingyenes!) a … torkolatánál” — a mark inside parentheses ends no sentence.
-const SENTENCE_SPLIT = /[.!?;\n]+(?!\s*\))/u;
+// A sentence ends at [!?;\n], or at a full stop NOT followed by a lowercase letter or a digit —
+// „a strandtól és a belvárostól kb. 10 percnyi sétára” (Léda a3c802ca, 2026-10-28) is one
+// sentence: cut at „kb.” it lost the walk and gave the house a beach. Same rule as the hero line.
+const SENTENCE_SPLIT = /(?:[!?;\n]+|\.+(?!\s*[\p{Ll}\d(]))(?!\s*\))/u;
 const FOREIGN_VENUE =
   /(?<![\p{L}])(?:(?:var|gyogy|termal|strand|elmeny)?furdo(?!szob|kopeny|kad|ruha|nadrag|lepedo|torolkoz)\p{L}*|aquapark\p{L}*|muzeum\p{L}*|torony\p{L}*|tornya\p{L}*|kastely\p{L}*|szinhaz\p{L}*|varszinhaz\p{L}*|templom\p{L}*|bazilika\p{L}*|apatsag\p{L}*|park(?:ja|jaban|jaba|jat|ban|ba|ok|okban|jaiban)(?![\p{L}]))/u;
 
@@ -532,6 +537,10 @@ function affirmsIn(needle: string, clause: string, rawClause: string | null, own
     if (own && word !== needle && AREA_ACTIVITY.test(word.slice(needle.length))) continue;
     if (own && needle === "strand" && !STRAND_PLACE.test(word)) continue;
     if (own && needle === "strand" && CAR_RIDE.test(clause)) continue;
+    // Access, not a beach of the house (2026-10-28, Léda a3c802ca, Suzy 8cd52fe8): „a strandtól …
+    // 10 percnyi sétára”, „Az utca végén strand” — unless it says the house's own („saját strand”).
+    if (own && needle === "strand" && !OWN_BEACH_MARK.test(clause) &&
+      (/^strand(?:tol|ig|hoz)$/u.test(word) || BEACH_ACCESS.test(clause))) continue;
     if (own && needle === "strand" && rawClause && placesBeach(rawClause.slice(0, ws))) continue;
     return true;
   }

@@ -642,6 +642,13 @@ console.log("⑱ (d) amenity csak a szállásról szóló mondatból; panoráma 
   const med = ["Kertje tágas és szépen gondozott, egy szalonnasütésre, bográcsozásra és grillezésre alkalmas hely is ki lett alakítva.\n\n- tenisz, biliárd, teke, golfpálya, bowling, uszoda, hajózás, búvárkodás, íjászat"];
   check("Mediterrán: az „uszoda” egy felsorolásban → nincs Medence; a kert és a grill marad", !descriptionFactIsOwn("Medence", med) && descriptionFactIsOwn("Kert", med) && descriptionFactIsOwn("Grill", med));
   check("az uszoda sétára / perccel a háztól a városé („A vendégháztól pár perces sétára fedett uszodát…”)", !descriptionFactIsOwn("Medence", ["A vendégháztól pár perces sétára fedett uszodát, szaunázási lehetőséget találhatnak."]));
+  // Léda a3c802ca / Suzy 8cd52fe8 (2026-10-28): the way to the beach is access, not the house's beach.
+  check("Léda: „a strandtól és a belvárostól kb. 10 percnyi sétára” (a „kb.” nem mondatvég) → nincs Strand",
+    !descriptionFactIsOwn("Strand", ["A Léda Apartman Keszthely városában található, a strandtól és a belvárostól kb. 10 percnyi sétára."]));
+  check("Suzy: „Az utca végén strand, yacht kikötő található” → nincs Strand", !descriptionFactIsOwn("Strand", ["Az utca végén strand, yacht kikötő található, valamint lehetőség van horgászni is."]));
+  check("„Strandtól való távolság: 600 m”, „A strand pár percnyire …” → nincs Strand",
+    !descriptionFactIsOwn("Strand", ["Strandtól való távolság: 600 m"]) && !descriptionFactIsOwn("Strand", ["A strand pár percnyire található a szálláshelytől."]));
+  house.push(["Strand", "Saját strandunk a ház előtt, stéggel."]);
   house.push(["Medence", "A vendégek részére napozó udvar, fedett uszoda, finn és infraszauna, gőzkabin és jakuzzi biztosítja a felfrissülést."]);
   house.push(["Medence", "Saját fedett uszodánk egész évben nyitva."]);
   const lostOwn = house.filter(([f, t]) => !descriptionFactIsOwn(f, [t])).map(([f, t]) => `${f}: ${t.slice(0, 50)}`);
