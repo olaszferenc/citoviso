@@ -45,7 +45,7 @@ import { descriptionFactIsOwn, descriptionSellingPoints, hostVenueOf, sampleFaci
 import { contactPhotoOf, firstSentence, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
-import { dropNeverShown, isBedroomVerdict, photoUrlKey } from "../src/generator/heroPick.js";
+import { dropNeverShown, isBedroomVerdict, packPortalPhotos, photoUrlKey } from "../src/generator/heroPick.js";
 import { collectWriterSources, withoutOwnName } from "../src/generator/writerSources.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -646,6 +646,28 @@ console.log("⑲ a hero alsó sora nem vág házszámnál, dátumnál, rövidít
   ];
   const wrongFS = FS.filter(([t, want]) => firstSentence(t) !== want).map(([t]) => `${t.slice(0, 40)} → ${firstSentence(t)}`);
   check("firstSentence: szám/rövidítés/monogram pontja után kisbetű vagy szám → a mondat folytatódik; nagybetű, vagy egész szó után szám → vége", wrongFS.length === 0, wrongFS);
+}
+
+console.log("⑳ source-pack: a szoba-, háló- és fürdőkép mindig bekerül, a 24-es keret a többire vonatkozik (Nádas 1c221611, 2026-10-28)");
+{
+  const gal = Array.from({ length: 30 }, (_, i) => ({ url: `https://hm.hu/x/balatonederics-${i + 1}.jpg`, caption: `Nádas Nyaralóház – Balatonederics fotó ${i + 1}` }));
+  const verdict = (n: number, subject: string, reason: string) => [photoUrlKey(gal[n - 1]!.url), { subject, score: 50, reason, watermarked: false }] as const;
+  const scores = new Map([
+    verdict(28, "interior", "Emeleti hálószoba két ággyal, világos."),
+    verdict(29, "interior", "Tetőtéri szoba franciaággyal."),
+    verdict(30, "bathroom", "Fürdőszoba zuhanyzóval."),
+    verdict(27, "interior", "Nappali kanapéval és tévével."),
+  ]) as never;
+  const pack = packPortalPhotos(gal, scores, 24);
+  const has = (n: number) => pack.some((p) => p.url === gal[n - 1]!.url);
+  check("a 24-en túli háló (28, 29) és fürdő (30) a csomagban; a nappali (27) nem kényszer", pack.length === 24 && has(28) && has(29) && has(30) && !has(27), pack.map((p) => p.url.split("-").pop()));
+  check("a csomag a galéria sorrendjét tartja (az 1. kép, a tulaj borítója elöl)", pack[0]!.url === gal[0]!.url && pack.every((p, i) => i === 0 || gal.indexOf(p) > gal.indexOf(pack[i - 1]!)));
+  const named = Array.from({ length: 30 }, (_, i) => ({ url: `https://x.hu/Villa-${i < 28 ? `Pool-${i}` : "Room"}-${i}.JPEG` }));
+  check("ítélet nélkül a fájlnév („…-Room-28.JPEG”) is szobakép", packPortalPhotos(named, new Map() as never, 24).some((p) => p.url.includes("Room-28")));
+  check("⛔ PIROS IKER: 24 vagy kevesebb képnél a csomag változatlan", packPortalPhotos(gal.slice(0, 24), scores, 24).length === 24);
+  const gen = readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8");
+  check("bekötés: a generálás a packPortalPhotos-szal, a cache-elt ítéletekkel csomagol (nem slice(0, 24))",
+    /packPortalPhotos\(collected, await readCachedScores\(collected\.map\(\(p\) => p\.url\)\), PORTAL_PHOTO_CAP\)/.test(gen) && !/collectPortalPhotos\(lead\)\.slice\(0, PORTAL_PHOTO_CAP\)/.test(gen));
 }
 
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");

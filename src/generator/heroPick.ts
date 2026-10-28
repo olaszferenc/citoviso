@@ -227,12 +227,54 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   return v.subject === "interior" && url !== undefined && namesBedroomFile(url);
 }
 
+/**
+ * A ROOM photo — a bedroom, a room, a bathroom — by its cached verdict or by its own words
+ * (file name, caption). The source pack must never lose one to the size cap (coordinator,
+ * 2026-10-28: Nádas 1c221611's bedrooms -28/-29 sat past the first 24 of the gallery, Budai Vám
+ * pecs-65 past the first 60): the room cards and the walk-through need exactly these.
+ */
+export function isRoomPhoto(p: { readonly url: string; readonly caption?: string }, v?: Pick<HeroScore, "subject" | "reason">): boolean {
+  if (v) {
+    if (v.subject === "bathroom" || isBedroomVerdict(v, p.url)) return true;
+    const reason = v.reason ?? "";
+    return (v.subject === "interior" || v.subject === "detail") && /szob|fürdő/iu.test(reason) && !/nappali|étkez|közös|konyh|folyos|fürdőszoba-?polc/iu.test(reason);
+  }
+  return namesBedroomFile(p.url) || namesRoomWords(p.caption ?? "") || namesRoomWords(foldFile(p.url).replace(/\.[a-z0-9]+$/, "")) || /(?:^|[^a-z])zuhany(?:$|[^a-z])/.test(foldFile(p.url));
+}
+
+/**
+ * The source pack: at most `cap` photos, the ROOM photos (isRoomPhoto) always in it — up to
+ * `maxRooms` of them — and the rest of the places filled in gallery order. The pack keeps the
+ * gallery order, since the hero starts from it (the owner's cover first).
+ */
+export function packPortalPhotos<T extends { readonly url: string; readonly caption?: string }>(
+  photos: readonly T[],
+  scores: HeroScores,
+  cap: number,
+  maxRooms = 12,
+): T[] {
+  if (photos.length <= cap) return [...photos];
+  const rooms = new Set(photos.filter((p) => isRoomPhoto(p, scores.get(photoUrlKey(p.url)))).slice(0, Math.min(maxRooms, cap)));
+  let others = cap - rooms.size;
+  return photos.filter((p) => rooms.has(p) || (others-- > 0));
+}
+
+function foldFile(url: string): string {
+  let file = url.split(/[?#]/)[0]!.split("/").pop() ?? "";
+  try { file = decodeURIComponent(file); } catch { /* keep the raw name */ }
+  return file.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+/** A caption that names a room („Hálószoba”, „Kétágyas szoba”, „Fürdőszoba”) — not „fotó 3”. */
+function namesRoomWords(caption: string): boolean {
+  const c = caption.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /(?:^|[^a-z])(?:haloszoba|szoba(?!s)[a-z]*|bedroom|room|beds?|furdoszoba|furdo|bathroom|agy(?:as|ak|akkal|gyal)?|franciaagy[a-z]*)(?:$|[^a-z])/.test(c) &&
+    !/(?:^|[^a-z])(?:nappali|living|etkezo|dining|konyha|kitchen)(?:$|[^a-z])/.test(c);
+}
+
 const BEDROOM_FILE = /(?:^|[^a-z])(?:haloszoba[a-z]*|szoba(?!s)[a-z]*|bedroom|franciaagy[a-z]*|ketagyas|haromagyas|agyas)(?:$|[^a-z])/;
 const NOT_BEDROOM_FILE = /(?:^|[^a-z])(?:furdo[a-z]*|bath[a-z]*|wc|konyha[a-z]*|kitchen|nappali|living|etkezo|dining|recepcio|folyoso)(?:$|[^a-z])/;
 function namesBedroomFile(url: string): boolean {
-  let file = url.split(/[?#]/)[0]!.split("/").pop() ?? "";
-  try { file = decodeURIComponent(file); } catch { /* keep the raw name */ }
-  const f = file.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const f = foldFile(url);
   return BEDROOM_FILE.test(f) && !NOT_BEDROOM_FILE.test(f);
 }
 

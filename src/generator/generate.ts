@@ -42,6 +42,8 @@ import {
   judgeHero,
   healthAdjustCachedScores,
   orderPhotosForHero,
+  packPortalPhotos,
+  readCachedScores,
   scoreHeroCandidates,
   type HeroScores,
   type HeroVerdict,
@@ -437,7 +439,10 @@ export async function resolveGatedPhotos(
   // while a full-size portal photo (≥1200) still leads. Portal photos are the
   // property's OWN marketing set, so they win ties. Reversible: the tenant re-picks
   // the cover in the admin.
-  const portal = collectPortalPhotos(lead).slice(0, PORTAL_PHOTO_CAP);
+  // The pack keeps every ROOM photo (bedroom, room, bathroom — cached verdict or its own words)
+  // and fills the rest in gallery order (packPortalPhotos; Nádas 1c221611, 2026-10-28).
+  const collected = collectPortalPhotos(lead);
+  const portal = packPortalPhotos(collected, await readCachedScores(collected.map((p) => p.url)), PORTAL_PHOTO_CAP);
   let photos: GatedPhoto[] = [...portal];
   let matchBand: string | undefined;
   let rating: number | undefined;
