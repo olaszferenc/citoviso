@@ -40,7 +40,7 @@ import {
   wholeLetOnly,
   wholeLetStated,
 } from "../src/engine/sampleFromSource.js";
-import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
+import { addressWithCity, addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, hostVenueOf, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
 import { contactPhotoOf, firstSentence, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
@@ -668,6 +668,24 @@ console.log("⑳ source-pack: a szoba-, háló- és fürdőkép mindig bekerül,
   const gen = readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8");
   check("bekötés: a generálás a packPortalPhotos-szal, a cache-elt ítéletekkel csomagol (nem slice(0, 24))",
     /packPortalPhotos\(collected, await readCachedScores\(collected\.map\(\(p\) => p\.url\)\), PORTAL_PHOTO_CAP\)/.test(gen) && !/collectPortalPhotos\(lead\)\.slice\(0, PORTAL_PHOTO_CAP\)/.test(gen));
+}
+
+console.log("㉑ a vendégnek mutatott cím nevezi a települést; a JSON-LD streetAddress változatlan (koordinátor 2026-10-28, hrsz-es cím)");
+{
+  const PIXc = "data:image/svg+xml;base64," + Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#8fa98c"/></svg>`).toString("base64");
+  const hrsz: SiteData = { ...base, name: "Újudvari Vendégház", photos: [1, 2, 3].map((i) => ({ url: PIXc, alt: `kép ${i}` })), contact: { address: "külterület (hrsz. 1269)", phone: "06 70 000 0000" }, place: { city: "Újudvar", country: "HU" } };
+  const bad: string[] = [];
+  for (const [id, tpl] of Object.entries(TEMPLATES)) {
+    const html = renderSite({ template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] }, hrsz, { phase: "mock" });
+    const visible = html.replace(/<script[\s\S]*?<\/script>/g, "");
+    const ld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => m[1]!).join("");
+    if (!visible.includes("Újudvar, külterület (hrsz. 1269)")) bad.push(`${id}: a látható címben nincs a település`);
+    if (!ld.includes('"streetAddress":"külterület (hrsz. 1269)"')) bad.push(`${id}: a JSON-LD streetAddress megváltozott`);
+  }
+  check("minden sablon: „Újudvar, külterület (hrsz. 1269)” látszik, a JSON-LD streetAddress az eredeti", bad.length === 0, bad);
+  check("⛔ PIROS IKER: ha a cím már nevezi a települést (ragozva is), nincs duplázás",
+    addressWithCity("Balatonfenyves, Fenyvesi u. 3a", "Balatonfenyves") === "Balatonfenyves, Fenyvesi u. 3a" && addressWithCity("8646 BALATONFENYVES Fenyvesi u. 3a", "Balatonfenyves") === "8646 BALATONFENYVES Fenyvesi u. 3a");
+  check("település nélkül a cím változatlan", addressWithCity("Fő u. 1", undefined) === "Fő u. 1");
 }
 
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");

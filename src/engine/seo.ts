@@ -52,7 +52,8 @@ function jsonLd(d: SiteData, canonicalUrl?: string): string {
   if (d.contact.address || d.place?.city || d.place?.country) {
     node.address = {
       "@type": "PostalAddress",
-      ...(d.contact.address ? { streetAddress: d.contact.address } : {}),
+      // The stored street address, not the guest-facing one with the town in front (render.ts).
+      ...((d.contact.streetAddress ?? d.contact.address) ? { streetAddress: d.contact.streetAddress ?? d.contact.address } : {}),
       ...(d.place?.city ? { addressLocality: d.place.city } : {}),
       ...(d.place?.country ? { addressCountry: d.place.country } : {}),
     };

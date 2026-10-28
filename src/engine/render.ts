@@ -13,7 +13,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
-import { addressWithoutOwnCountry } from "./displayAddress.js";
+import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
 import { hungarianBedNote, hungarianRoomName } from "./roomNames.js";
@@ -749,6 +749,12 @@ export function renderSite(
   if (data.contact.address && data.place?.country) {
     const address = addressWithoutOwnCountry(data.contact.address, data.place.country, data.lang);
     if (address !== data.contact.address) data = { ...data, contact: { ...data.contact, address } };
+  }
+  // …and names its town (addressWithCity: „Újudvar, külterület (hrsz. 1269)”). The JSON-LD keeps
+  // the stored street address (contact.streetAddress) — its locality has a field of its own.
+  if (data.contact.address) {
+    const address = addressWithCity(data.contact.address, data.place?.city);
+    if (address !== data.contact.address) data = { ...data, contact: { ...data.contact, address, streetAddress: data.contact.address } };
   }
   // An English portal unit name on a Hungarian MOCK („Private Bathroom Twin Room”, booked.hu)
   // → its Hungarian name; render-time, so a rerender fixes an existing mock. The live page

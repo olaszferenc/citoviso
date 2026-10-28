@@ -46,3 +46,16 @@ export function addressWithoutOwnCountry(
     .trim();
   return out || address;
 }
+
+/**
+ * The address a guest reads names its town (2026-10-28, coordinator): „külterület (hrsz. 1269)”
+ * says nothing on its own → „Újudvar, külterület (hrsz. 1269)”. Prepended only when the address
+ * does not already name the town (accent- and case-blind, any inflection: „Újudvaron”). Pure.
+ */
+export function addressWithCity(address: string, city: string | undefined): string {
+  const c = city?.trim();
+  if (!c || !address.trim()) return address;
+  const fold = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  if (fold(address).includes(fold(c))) return address;
+  return `${c}, ${address.trim()}`;
+}

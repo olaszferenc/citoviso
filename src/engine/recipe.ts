@@ -259,6 +259,9 @@ export interface SiteData {
     readonly email?: string;
     readonly phone?: string;
     readonly address?: string;
+    /** The stored address as it was, for the JSON-LD streetAddress — set by render.ts only,
+     *  when the guest-facing `address` gained the town in front (addressWithCity). */
+    readonly streetAddress?: string;
   };
   readonly rooms?: readonly Room[];
   /**
