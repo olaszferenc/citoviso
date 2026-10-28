@@ -307,7 +307,8 @@ export function proseAffirms(needle: string, descriptions: readonly string[], ow
       // 7e3ff3c5): a sentence that OPENS on the area lists the area's offer in its later clauses.
       if (own && AREA_LEAD.test(deaccent((sentence.split(DEAC_CLAUSE_SPLIT)[0] ?? "").toLowerCase()))) continue;
       if (own && needle === "strand" && placeBeachSentence(sentence)) continue;
-      if (own && (needle === "panorama" || needle === "kilatas") && areaViewSentence(sentence)) continue;
+      if (own && (needle === "panorama" || needle === "kilatas") && !viewFromHouse(sentence)) continue;
+      if (own && landscapeSentence(sentence)) continue;
       if (sentenceAffirms(needle, sentence, own)) return true;
     }
     }
@@ -335,10 +336,39 @@ const OWN_FACILITY_MARK =
 const AREA_VIEW_PLACE =
   /(?<![\p{L}])(?:falu|telepules|kornyek|varos|kozseg|szoloheg|hegy|domb|borut|volgy|kilato)\p{L}*(?<!ra|re)(?![\p{L}])/u;
 const OWN_VIEW_PART =
-  /(?<![\p{L}])(?:terasz\p{L}*|erkely\p{L}*|ablak\p{L}*|szob\p{L}*|nappali\p{L}*|tetoter\p{L}*|apartman\p{L}*|szallas\p{L}*|vendeghaz\p{L}*|panzio\p{L}*|haz(?:unk\p{L}*|bol|rol|ban|nak|at|a|ak)?|kert\p{L}*|udvar\p{L}*)(?![\p{L}])/u;
+  /(?<![\p{L}])(?:\p{L}*terasz\p{L}*|erkely\p{L}*|ablak\p{L}*|szob\p{L}*|nappali\p{L}*|tetoter\p{L}*|apartman\p{L}*|szallas\p{L}*|vendeghaz\p{L}*|panzio\p{L}*|haz(?:unk\p{L}*|bol|rol|ban|nak|at|a|ak)?|kert\p{L}*|udvar\p{L}*)(?![\p{L}])/u;
 function areaViewSentence(sentence: string): boolean {
   const t = deaccent(sentence.toLowerCase());
   return AREA_VIEW_PLACE.test(t) && !OWN_VIEW_PART.test(t);
+}
+
+/**
+ * A view counts for the house only when the sentence says it opens FROM the house — a terrace,
+ * a window, a room, the house itself (coordinator, 2026-10-28, Dráva Menti cfc0d17e: „Itt
+ * található a Dráva legszebb szakasza, a magaspart, … melynek panorámája minden erre látogatót
+ * elkápráztat” → Panoráma on the services sample). Bogyólak's village view and Dráva's river
+ * bank both fail here; Bencze's „A teraszra kilépve csodálatos panoráma tárul” passes.
+ */
+function viewFromHouse(sentence: string): boolean {
+  return !areaViewSentence(sentence) && (OWN_VIEW_PART.test(deaccent(sentence.toLowerCase())) || HOUSE_VOICE.test(deaccent(sentence.toLowerCase())));
+}
+
+/**
+ * A sentence that describes the landscape, the village or a sight — and no part of the house —
+ * is no source of a house amenity (coordinator, 2026-10-28: „a környéket, a falut, a tájat, a
+ * látnivalót leíró mondat nem lehet forrás”). The house speaks through its parts (OWN_VIEW_PART)
+ * or its own voice („nálunk”, „vendégeink”, „biztosítunk”, „a szálláshely”).
+ */
+const LANDSCAPE_WORD =
+  /(?<![\p{L}])(?:itt\s+talalhato|falu\p{L}*|falucska\p{L}*|telepules\p{L}*|varos\p{L}*|kornyek\p{L}*|taj(?:on|ban|at|a|at|eg\p{L}*|kep\p{L}*)?|latnivalo\p{L}*|nevezetesseg\p{L}*|magaspart\p{L}*|folyo\p{L}*|patak\p{L}*|hegyseg\p{L}*|volgy\p{L}*|szakasz\p{L}*|videk\p{L}*|nemzeti\s+park\p{L}*|termeszetvedelmi\p{L}*|kirandul\p{L}*)(?![\p{L}])/u;
+const HOUSE_VOICE =
+  /(?<![\p{L}])(?:nalunk|itt(?!\s+talalhato)|vendegeink\p{L}*|vendegek\p{L}*|biztosit\p{L}*|sajat|kiado|szallashely\p{L}*|epulet\p{L}*|ingatlan\p{L}*|hotel\p{L}*|szallod\p{L}*|villa(?:ja|nk|nkban|ban|ba|bol|ban|nak|t|val)?|motel\p{L}*|nyaralo\p{L}*|fahaz\p{L}*|\p{L}+(?:unk|unkban|unkon|unkhoz|unkbol|unkat|unknal))(?![\p{L}])|\p{L}+(?:ra|re)\s+nezo(?![\p{L}])/u;
+/** The sentence's SUBJECT is the landscape: its first clause („Itt található a Dráva legszebb
+ *  szakasza, …”) — „Lehetőség van grillezni, … felfedezheti a környék szépségeit” is the house's. */
+function landscapeSentence(sentence: string): boolean {
+  const t = deaccent(sentence.toLowerCase());
+  const lead = t.split(DEAC_CLAUSE_SPLIT)[0] ?? "";
+  return LANDSCAPE_WORD.test(lead) && !OWN_VIEW_PART.test(t) && !HOUSE_VOICE.test(t);
 }
 
 // „Közelünkben található a Zsindelyes étterem” (Elisabeth d912916b, 2026-10-27): the

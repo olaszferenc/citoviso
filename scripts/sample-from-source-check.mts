@@ -514,8 +514,8 @@ console.log("⑭ a KÖRNYÉK panorámája nem a házé (Bogyólak 6bd6058a, 2026
     "A falu körül három csodás halastó is megtalálható, illetve a páratlan panorámával rendelkező Weingarten szőlőhegy is kiváló kirándulási lehetőség.",
   ];
   check("Bogyólak: a falu / a borút / a szőlőhegy panorámája → nincs „Panoráma” a mintában", !descriptionFactIsOwn("Panoráma", bog));
-  const own = ["A teraszról csodálatos panoráma nyílik a völgyre.", "Csodálatos panoráma a hegyre.", "Panorámás kilátás a tóra a szobákból.", "A házból páratlan kilátás nyílik a falura."];
-  check("⛔ PIROS IKER: a ház (terasz, szoba, ház) kilátása, vagy a kilátás iránya („a hegyre”) marad", own.every((t) => descriptionFactIsOwn("Panoráma", [t])), own.filter((t) => !descriptionFactIsOwn("Panoráma", [t])));
+  const own = ["A teraszról csodálatos panoráma nyílik a völgyre.", "A szálláshelyről csodálatos panoráma nyílik a hegyre.", "Panorámás kilátás a tóra a szobákból.", "A házból páratlan kilátás nyílik a falura."];
+  check("⛔ PIROS IKER: a ház (terasz, szoba, ház, szálláshely) kilátása marad, a kilátás iránya („a hegyre”, „a falura”) nem baj", own.every((t) => descriptionFactIsOwn("Panoráma", [t])), own.filter((t) => !descriptionFactIsOwn("Panoráma", [t])));
 }
 
 console.log("⑮ a fürdő medencéi nem a szállás medencéje (Bencze 086685fe, Zalakaros, 2026-10-27)");
@@ -595,6 +595,37 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
   // After `--resample` the photos carry the bedroom flag WITHOUT a subject — still a verdict.
   const resampled = sampleRooms({ ...base, photos: [P("ametiszt-hotel-utcafront.avif", false), P("franciaagyas-szoba.avif", false), P("szallas-harkany.avif", true)] } as never);
   check("resample-alak (csak hálójel, tárgy nélkül): az ítélet dönt, nem a fájlnév", resampled[0]?.photo?.url.endsWith("szallas-harkany.avif") === true, resampled.map((r) => r.photo?.url));
+}
+
+console.log("⑱ (d) amenity csak a szállásról szóló mondatból; panoráma csak a szállásról nyíló kilátásból (koordinátor 2026-10-28: Dráva Menti cfc0d17e, Mismás 84b9c200; Bencze, Bogyólak)");
+{
+  const drava = [
+    "Itt található a Dráva legszebb szaasza, a \"a magaspart\", mely a fecskék és gyurgyalagok fészkelőhelye, melynek panorámája minden erre látogatót elkápráztat.\n\n3 db kényelmesen és otthonosan berendezett szoba várja a vendégeket, így összesen 7 személy számára tudnak kényelmes elszállásolást biztosítani.",
+  ];
+  check("Dráva Menti: a Dráva-magaspart panorámája (tájleíró mondat) → nincs „Panoráma”", !descriptionFactIsOwn("Panoráma", drava));
+  const mismas = [
+    "A Mismás Panzió Zalakaros városában található, 800 méterre a fürdőtől. A panzióból lenyűgöző kilátás nyílik az épület mellett található erdőre.\n\nA szabadban lehetőség van grillezni, bográcsban főzni, tárcsán sütni és szalonnát sütni, melyhez a szálláshely ingyenesen biztosít tűzifát.",
+  ];
+  check("Mismás: a grill a szálláshely kínálata → „Grill” marad", descriptionFactIsOwn("Grill", mismas));
+  const landscape: [string, string][] = [
+    ["Játszótér", "Remek kikapcsolódást nyújt a faluszéli őstölgyesben kialakított pihenőpark, a felszerelt játszótér és a Római kori villagazdaság."],
+    ["Klíma", "Köszöntjük Önt a Villányi-hegység lábánál található mediterrán klímájú városkában, Harkányban."],
+    ["Panoráma", "Nagymarosról lenyűgöző panoráma nyílik a Duna-partra."],
+    ["Panoráma", "Csodálatos panoráma a hegyre."],
+  ];
+  const leaked = landscape.filter(([f, t]) => descriptionFactIsOwn(f, [t])).map(([f, t]) => `${f}: ${t.slice(0, 50)}`);
+  check("a falut, a várost, a tájat leíró mondat, és a honnan-nyílik nélküli panoráma nem forrás", leaked.length === 0, leaked);
+  const house: [string, string][] = [
+    ["Panoráma", "A teraszra kilépve csodálatos panoráma tárul a vendégek elé."],
+    ["Panoráma", "A legfelső szinten pedig napozóterasz található, amely csodálatos panorámás kilátást nyújt a tóra."],
+    ["Panoráma", "Rózsakő Ház Villa vendégeinek tóra néző kilátást kínál."],
+    ["Grill", "Lehetőség van ping-pongozni, grillezni, vagy kerékpárra ülhet és felfedezheti a környék szépségeit."],
+    ["Reggeli", "A Keszthely városi ingatlan mindennap büfé reggelit szolgál fel az étteremben."],
+    ["Medence", "A 25 percnyi sétára található Köcsi-tó mellett a 3 hálószobás Neb Garden Villa úszómedencét is kínál."],
+    ["Panoráma", "Saját vízpart, stég és csodás balatoni panoráma."],
+  ];
+  const lostOwn = house.filter(([f, t]) => !descriptionFactIsOwn(f, [t])).map(([f, t]) => `${f}: ${t.slice(0, 50)}`);
+  check("⛔ PIROS IKER: a szállásról szóló mondat (terasz, napozóterasz, ingatlan, villa, saját, „tóra néző”, a ház kínálata a környékkel együtt) forrás marad", lostOwn.length === 0, lostOwn);
 }
 
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");
