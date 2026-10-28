@@ -14,20 +14,79 @@ Jelölés: **K** = kicsi (egy-két nap), **Kö** = közepes (napok, több fájl)
 
 ---
 
+## 0. Mért állapot — élő végigfuttatás (2026-10-28)
+
+**Az első változat (2026-10-27) kódolvasás volt, nem ellenőrzés.** Ezt a fejezetet futtatás adja: a teljes lánc lefutott egy-egy valós horvát (Makarska) és bolgár (Nesebar) szálláson, eldobható scratch DB-ben, mock-szolgáltatókkal.
+- Költség: 0 AI-, 0 Places- és 0 fordítás-hívás.
+- A közös dev DB-hez és az éleshez a futás nem nyúlt.
+
+**Újrafuttatható elfogadási tesztek** (ma mindkettő hibával lép ki; a javítás akkor kész, ha zöld):
+- `npx tsx scripts/foreign-market-e2e-ingest.mts [--fix-country]` — felderítéstől a leadig.
+- `npx tsx scripts/foreign-market-e2e.mts [--no-shots]` — mocktól a tenant-adminig, képernyőképekkel.
+
+**Eredmény: a lánc hiba (throw) nélkül végigfut, de a vevő felé mindkét országban elbukik.**
+
+| Lépés | HR | BG |
+|---|---|---|
+| Régió → lead | **FAIL**: a régió és a lead is „HU” lesz | **FAIL**: ugyanez |
+| Kulcsszavak, portál-felismerés | **FAIL**: magyar kulcsszavak; a helyi portál „saját honlap” | **FAIL**: ugyanez |
+| Helyi formátumú telefon (`098…`, `088…`) | **FAIL**: szó nélkül elvész | **FAIL**: ugyanez |
+| Mock nyelve | PARTIAL: horvát, 11 magyar maradvány, magyar mintaszolgáltatás | **FAIL**: magyarul generálódik; kényszerítve 91 magyar maradvány, és a cirill szavak latin betűkkel keverednek |
+| Lead-lap (`/p/…`) | PARTIAL: 45 magyar szöveg, „havi 4.880 HUF-tól”, magyar jogi keret, magyar leiratkozó lap | **FAIL**: 190 magyar maradvány, HUF |
+| Hideg levél | PARTIAL: horvát tárgy, de „4 880 forinti” ár és 1 magyar mondat; a jogszerűségi kapu a hibátlan horvát levelet is tiltja | **FAIL**: a törzs magyar; a nyelv a scraper-definíció fix „HU”-jából jön |
+| Rendelés | PARTIAL: HUF-ár, magyar hibaüzenetek, irányítószám-ellenőrzés nincs | PARTIAL: ugyanez |
+| Fizetés, számla | **FAIL**: Barion HUF + hu-HU, számla hu/HUF, a fizetés utáni lap magyar | **FAIL**: ugyanez |
+| Tenant-admin | PASS (áttekintő fül) | **FAIL**: 61 magyar maradvány, a bolgár nem felületi nyelv |
+| Fordítási csomag | 1391 / 5656 hiányzik, a súgóból 16 / 24 | **nincs csomag** |
+| Fontok | rendben | 31 betűcsaládból 19 cirill nélküli, 21 sablonból 15 érintett |
+
+A képek: `assets/design-refs/_drafts/foreign-e2e/` (pl. `hr-order-panel-mobile.png`: a csomagválasztó félig magyar, 9 500 HUF/mj.; `crops/bg-mock-mobile-0.png`: a bolgár oldalon magyar gombok, „Szabad időpontot kérek”, „Foglalás”).
+
+### Mért hibák (a 2. fejezet tételeit pontosítja és kiegészíti)
+
+| # | Hiba | Hol | Méret |
+|---|---|---|---|
+| M1 | A konzolon a régiónak nem adható ország → minden régió HU | `src/console/data.ts:2482`, `console/server.ts:2505-2518`, `migrations/0018_region.sql:15` | K |
+| M2 | A felderítő forrás a régió országát írja a leadre, ezért a koordináta-alapú ország nem írja felül | `src/scraper/sources/magellan.ts:87`, `src/scraper/enrichGeo.ts:64,82` | K |
+| M3 | A scraper-definíció országa beégetett „HU” → a levél nyelve és a piac-kapu is ebből dolgozik | `src/scraper/persist.ts:25,54,74`, `src/i18n/mail.ts:190-210`, `src/outreach/draft.ts:748,774,803-804` | K |
+| M4 | BG nincs a nyelvtáblában | `src/i18n/lang.ts:14-28` | K |
+| M5 | A helyi formátumú külföldi telefonszám elvész, a lezárás nem áll meg | `src/text/phone.ts:58-70`, `src/scout/rules.ts`, `src/scraper/sources/magellan.ts:91` | Kö |
+| M6 | Magyar felderítő-kulcsszavak | `src/scout/rules.ts:15` | K |
+| M7 | A portál-lista csak HU/DE oldalakat ismer | `src/scraper/qualify.ts:6` | K |
+| M8 | A rejtett honlap keresése csak `.hu`/`.com` végződést próbál | `src/scraper/enrichPresence.ts:15` | K |
+| M9 | A cirill→latin „homoglif-javítás” szétszedi a bolgár szavakat | `src/generator/copyCurator.ts:37-44`, `generateEngine.ts:625-631`, `recopy.ts:254-255` | K |
+| M10 | Az oldalba a TELJES nyelvi csomag kerül, konzol-szövegekkel együtt: 757 KB-os mock, 1,66 MB-os `/p` lap, belső szövegek a lead böngészőjében; az emojik miatt a dizájn-őr minden hr mockot kurátorhoz küld | `src/generator/runtime.ts:187-189`, `src/generator/configurator.ts:443` | Kö |
+| M11 | Pénznem a vásárlási úton: a régió nem jut el a konfigurátorig és a havi díjig, a fizetés fix HUF; a `global` modulárak a forint-térképből jönnek (galéria „490 €/hó”) | `configurator.ts:451`, `console/server.ts:1210`, `payment/service.ts:216,230`, `barion.ts:133,196`, `pricing.ts:74,114` | N |
+| M12 | A számla nyelve és pénzneme fix hu/HUF | `src/invoicing/szamlazz.ts:152` | Kö |
+| M13 | Vevő-űrlap: magyar literálok, csak HU irányítószám, HU alapérték, magyar országnevek | `src/billing/buyer.ts:153-180`, `cit-configurator.js:2791` | K |
+| M14 | A prospect-keret és a leiratkozó lap i18n-en kívül van | `src/console/prospectNotice.ts:42-60,201,516-525`, `console/server.ts:3414` | Kö |
+| M15 | A kiküldés-ellenőrző csak magyar mintákat ismer: a jó horvát levelet tiltja, a „forinti” árat nem veszi észre | `src/outreach/outreachCheck.ts:60,72,783` | Kö |
+| M16 | SMS: magyar szöveg, a GSM-7 átírás kitörli a cirill nevet, a kapu a konzol-szövegek hiánya miatt is tilt | `outreach/sendOutreachSms.ts:233-240`, `draft.ts:622-650` | Kö |
+| M17 | Cirill névből üres slug: az aldomain „oldalam”, a felhasználónév „vendeg” lesz | `src/domains.ts:56-63` | K–Kö |
+| M18 | A fizetés utáni lap és a mock pénztár a konzol nyelvén jelenik meg, nem a vevőén | `src/console/views.ts:3288` | K |
+| M19 | A belépő- és a számla-levél magyar tárgyú, az összeg „Ft” | levélsablonok + csomag | Kö |
+| M20 | A süti-sáv magyar literál, az i18n-őr nem látja | `public/assets/runtime/cit-consent.js:201-204` | K |
+| M21 | 19 betűcsalád cirill nélküli; a sablonválasztás nem nézi a nyelvet | `src/engine/skins.ts:497-505` | Kö |
+| M22 | Az élő oldal `/impresszum` és `/adatvedelem` magyar jogi szöveg, magyar útvonallal | `src/legal.ts` | N (jog most nem tárgy; a szerkezet K–Kö) |
+| M23 | A mintaszolgáltatás magyar szövegű, és a listing valódi szolgáltatásait is kiszorítja | `src/generator/generateEngine.ts:195,199` | K–Kö |
+| M24 | A csomagnevek (Teljes / Ajánlott / Alap) operátori DB-címkék, nincs fordításuk | konfigurátor | K |
+| M25 | A fordítás: hr 1391 hiány, bg csomag nincs, a súgó 16/24 hiányos | **Bábel** (`scripts/babel-pack.mts`) | N (Bábel munkája) |
+
+Ami mérten működik:
+- csempék, felvétel, lezárás, feldolgozás, duplikátumszűrés;
+- a booking.com-os hely `portal_only` besorolása és a saját oldal ellenőrzése;
+- `+385`/`+359` normalizálás;
+- a tenant időzónája (`Europe/Zagreb`, `Europe/Sofia`);
+- horvát céges vevőnél a VIES → fordított adózás;
+- a horvát ékezetek renderelése;
+- egy cirill-képes sablon renderelése;
+- 0 JS-hiba.
+
 ## 1. Röviden
 
-- **A lánc eleje majdnem kész.**
-  - A régiónak van `country` mezője.
-  - A vendég-nyelvek között ott a `bg` és a `hr`.
-  - A konzol fordított.
-  - Nem magyar országnál a lead-lap már ma is az EUR-ás `global` árrégióból olvas.
-- **A lánc közepe és vége magyarra van drótozva:**
-  - Magellan kulcsszavai magyarok;
-  - egy bolgár régió ma magyar mockot kapna;
-  - a fizetési út HUF-ot ír;
-  - a sablon-fontok nem cirillek;
-  - a válaszokat Poe magyar normával kezeli;
-  - SMS/MMS csak magyar számra megy.
+- **A lánc ma egy horvát vagy bolgár szállást magyarként visz végig** (0. fejezet). Nem dobja el, de rossz országkóddal, magyar levéllel, félig magyar oldallal, forintos árral és forintos fizetéssel.
+- **Kevés pont viszi a terhet.** M1–M4 és M9 apró javítás, de nélkülük a lánc többi része nem is tesztelhető helyesen. A legnagyobb tételek: a pénznem végigvitele (M11), a nyelvi csomag szétválasztása (M10), és Bábel fordítása (M25).
+- A régi 2. fejezet tételei a kódolvasásból jöttek; a 0. fejezet mért listája ezeket pontosítja.
 - **Javaslat:** **Horvátország legyen az első mérés, Bulgária közvetlenül utána.** A horvát már szerepel az ország→nyelv térképben, latin betűs, és a piac nagyobb (kb. 125 ezer magánszállás-objektum, 2025-07), így ott jön előbb értékelhető minta. A bolgárhoz előbb cirill fontok kellenek (lásd 2.3). Magellan mindkét országban dolgozhat párhuzamosan, a kiküldés országonként indul, amikor az adott ország lánca zöld.
 - **Időzítés:** a szállásadók tél végén és tavasszal készülnek a szezonra. Ha az első külföldi kiküldés **2027 január–februárban** kimegy, a tavaszi döntési időszakban mérünk. Magellan már novemberben elkezdheti gyűjteni a leadkészletet.
 
@@ -93,13 +152,21 @@ Jelölés: **K** = kicsi (egy-két nap), **Kö** = közepes (napok, több fájl)
 
 Minden fázis végén van egy **kapu**. A fázisok egymásra épülnek, de Magellan az 1. fázis után végig gyűjthet, a többi addig készül.
 
+A mért hibák (M-szám) elosztása a fázisok között:
+- 1. fázis: M1–M8;
+- 2. fázis: M9, M10, M17, M21, M23, M25;
+- 3. fázis: M11–M13, M18, M19, M24;
+- 4. fázis: M14–M16, M20.
+
+Minden fázis kapuja a két `foreign-market-e2e*` szkript adott szakaszának zöldje.
+
 ### 0. fázis — Tulaj-döntések (most)
 
 Lásd az 5. fejezetet: sorrend, mintaméret, ár, domain a csomagban, régiók.
 
 ### 1. fázis — Magellan külföldön (2026-11 első fele)
 
-- **Tartalom:** 1, 2, 3, 4, 6, 8, 11. pont.
+- **Tartalom:** 1, 2, 3, 4, 6, 8, 11. pont, valamint a mért M1–M8.
 - **Javasolt induló régiók:**
   - **HR:** Isztria vagy Kvarner (Krk, Opatija), illetve Dalmácia egy része (Split-Dalmácia a legsűrűbb, 33 ezer objektum).
   - **BG:** Nesebar/Sunny Beach vagy Sozopol, plusz Bansko a téli kontrollnak.

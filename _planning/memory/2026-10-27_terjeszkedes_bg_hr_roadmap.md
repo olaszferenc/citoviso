@@ -31,3 +31,19 @@
 - Domain nélküli külföldi alapcsomag.
 - Mintaméret (javaslat: 300 mock/ország).
 - Induló régiók.
+
+## 2026-10-28 — élő végigfuttatás (a tulaj kérdésére: „le van ellenőrizve?”)
+- Az első roadmap csak kódolvasás volt. Ezt a tulaj jogosan kérdezte meg.
+- Két újrafuttatható elfogadási teszt készült, ma mindkettő hibával lép ki:
+  - `scripts/foreign-market-e2e-ingest.mts`
+  - `scripts/foreign-market-e2e.mts`
+- Futtatás: eldobható scratch DB, mock-szolgáltatók; 0 AI-, 0 Places- és 0 fordítás-hívás.
+- Eredmény: hiba nélkül végigfut, de a horvát és a bolgár leadet magyarként viszi végig.
+  - A régió, a lead és a scraper-definíció országa „HU”.
+  - A BG nincs a nyelvtáblában.
+  - A helyi formátumú telefonszám elvész.
+  - A cirill szövegből a homoglif-javítás latin betűs keveréket csinál.
+  - A teljes nyelvi csomag (konzol-szövegekkel) belekerül a vevő oldalába.
+  - Pénznem: HUF végig, a számla is hu.
+  - Nyelvi csomag: hr-ből 1391 szöveg hiányzik, bg csomag nincs (Bábel munkája).
+- A mért hibalista M1–M25, a roadmap 0. fejezetében.
