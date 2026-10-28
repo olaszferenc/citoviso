@@ -19,6 +19,7 @@
  "Kijelentkezés": "Check-out",
  "Köszönjük! Az érdeklődését elküldtük a szállásadónak": "Thank you! Your inquiry has been sent to the host",
  "Minden csomag alja — a gerinccel (érdeklődés-CTA) együtt.": "The base of every plan — together with the core (inquiry CTA).",
+ "Nyelvi csomag — {nyelv}: {n} felirat még nincs lefordítva, ezek addig magyarul jelennek meg.": "Language package — {nyelv}: {n} strings not translated yet; until then they appear in Hungarian.",
  "Terhelés és élesítés — {sum}": "Charge and go live — {sum}",
  "V": "Sun"
 }
