@@ -42,7 +42,7 @@ import {
 } from "../src/engine/sampleFromSource.js";
 import { addressWithoutOwnCountry } from "../src/engine/displayAddress.js";
 import { descriptionFactIsOwn, descriptionSellingPoints, hostVenueOf, sampleFacilityItems, withoutAreaLists } from "../src/generator/marketCheck.js";
-import { contactPhotoOf, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
+import { contactPhotoOf, firstSentence, roomsForMock, sampleRooms } from "../src/engine/templateKit.js";
 import { toSitePhotos } from "../src/engine/siteData.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
 import { dropNeverShown, isBedroomVerdict, photoUrlKey } from "../src/generator/heroPick.js";
@@ -628,6 +628,24 @@ console.log("⑱ (d) amenity csak a szállásról szóló mondatból; panoráma 
   ];
   const lostOwn = house.filter(([f, t]) => !descriptionFactIsOwn(f, [t])).map(([f, t]) => `${f}: ${t.slice(0, 50)}`);
   check("⛔ PIROS IKER: a szállásról szóló mondat (terasz, napozóterasz, ingatlan, villa, saját, „tóra néző”, a ház kínálata a környékkel együtt) forrás marad", lostOwn.length === 0, lostOwn);
+}
+
+console.log("⑲ a hero alsó sora nem vág házszámnál, dátumnál, rövidítésnél (Chill and Relax a9b809ca, Agroping 84180509, 2026-10-28)");
+{
+  const FS: [string, string][] = [
+    ["A Chill and Relax Apartman Kehidakustányban, a Vágóhíd utca 5. alatt várja vendégeit, külön bejárattal. Az apartmanban kandalló van.", "A Chill and Relax Apartman Kehidakustányban, a Vágóhíd utca 5. alatt várja vendégeit, külön bejárattal."],
+    ["Az Agroping Glamping Nemesbükön, az Április utca 21. alatt várja vendégeit. A glamping-sátorban franciaágy van.", "Az Agroping Glamping Nemesbükön, az Április utca 21. alatt várja vendégeit."],
+    ["Csendes szállás Balatonfüreden, a strandtól kb. 400 méterre. Parkoló van.", "Csendes szállás Balatonfüreden, a strandtól kb. 400 méterre."],
+    ["A ház a 2. emeleten van. Lift is van.", "A ház a 2. emeleten van."],
+    ["Nyitás 2026. október 28. Várjuk!", "Nyitás 2026. október 28."],
+    ["Címünk: Petőfi S. u. 15. Várjuk szeretettel!", "Címünk: Petőfi S. u. 15."],
+    // ⛔ PIROS IKER: a real end stays an end — before a capital, and before a digit after a whole word.
+    ["Hévízen, a Sümegi úton várjuk vendégeinket. 23 szobánkban 70 vendégnek tudunk szállást adni.", "Hévízen, a Sümegi úton várjuk vendégeinket."],
+    ["Várjuk Önöket! „Gyertek” — mondja a tulaj.", "Várjuk Önöket!"],
+    ["Szép ház. Nagy kert.", "Szép ház."],
+  ];
+  const wrongFS = FS.filter(([t, want]) => firstSentence(t) !== want).map(([t]) => `${t.slice(0, 40)} → ${firstSentence(t)}`);
+  check("firstSentence: szám/rövidítés/monogram pontja után kisbetű vagy szám → a mondat folytatódik; nagybetű, vagy egész szó után szám → vége", wrongFS.length === 0, wrongFS);
 }
 
 console.log("⑫ a szállás NEVE nem amenity (Panoráma Vendégház ca4ecf89, 2026-10-27)");

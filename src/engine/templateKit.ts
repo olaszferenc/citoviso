@@ -59,8 +59,28 @@ export function accented(text: string, accent?: string): string {
 
 /** First sentence of a longer text (hero subtitle slot), capped for the hero measure. */
 export function firstSentence(s: string, max = 180): string {
-  const m = /^[^.!?]*[.!?]/.exec(s.trim());
-  const first = (m ? m[0] : s).trim();
+  const t = s.trim();
+  // A sentence ends at [.!?] followed by the end of the text or by a space and a capital (or an
+  // opening quote / bracket) — or by a space and a digit after a whole word („várjuk
+  // vendégeinket. 23 szobánkban …”). Everything else is inside the sentence (2026-10-28):
+  //   · a number's stop (house number, date, ordinal) before lowercase: „a Vágóhíd utca 5. alatt
+  //     várja” (Chill and Relax a9b809ca), „az Április utca 21. alatt” (Agroping 84180509),
+  //     „a 2. emeleten”, „2026. október 28.”;
+  //   · a short abbreviation: „kb. 20 perc”, „Petőfi S. u. 15”;
+  //   · an initial — a lone capital before the stop („S. Petőfi”).
+  let cut = t.length;
+  for (const end of t.matchAll(/[.!?]+(?=$|\s+["„»(]?(\p{Lu}|\d))/gu)) {
+    const before = t.slice(0, end.index);
+    if (end[0] === ".") {
+      if (/(?:^|[^\p{L}])\p{Lu}$/u.test(before)) continue;
+      // Before a digit only a whole word (5+ letters) closes a sentence; „kb.”, „u.”, „sz.”,
+      // a number („21.”) do not.
+      if (end[1] !== undefined && /\d/.test(end[1]) && !/\p{L}{5,}$/u.test(before)) continue;
+    }
+    cut = end.index + end[0].length;
+    break;
+  }
+  const first = t.slice(0, cut).trim();
   return first.length <= max ? first : "";
 }
 

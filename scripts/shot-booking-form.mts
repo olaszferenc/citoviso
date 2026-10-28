@@ -204,7 +204,9 @@ check("a foglalt nap nem kattintható", await busyBtn.isDisabled());
 const freeDays = page.locator(".cit-book__day:not(:disabled):visible");
 // Month-end trap (red on main 2026-09-28): late in a month the visible month has fewer
 // than 4 free days left, so nth(3) waited 30s for a day that is not there. Page on first.
-if ((await freeDays.count()) < 4) await page.click(".cit-book__calnav--next");
+// The locator is live: the first tap (check-in) disables the days up to it, so nth(3) after it
+// is the SIXTH free day of the month — 4 left (2026-10-28: 28–31) still timed out. Six, then.
+if ((await freeDays.count()) < 6) await page.click(".cit-book__calnav--next");
 await freeDays.nth(1).click();
 await freeDays.nth(3).click();
 const picked = {
