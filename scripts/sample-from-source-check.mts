@@ -588,11 +588,15 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
     ["interior", "x.jpg", "Recepció/folyosó elemi enteriőr szálas zöld virággal, semleges.", false],
     ["detail", "x.jpg", "Közeli virágágy, szép pink virágok.", false],
     ["interior", "pecs-65.jpg", "Szoba két heverőággyal, világos, egyszerű berendezés.", true],
+    ["interior", "harkany-piroska-apartman7.jpg", "Stúdió: ágy az előtérben, mögötte konyhasarok és étkezőasztal, világos.", true],
+    ["interior", "harkany-piroska-apartman7.jpg", "Átjátszó nappali-konyha kombinált terület, világos, de szűk kameraszög.", false],
+    ["interior", "x.jpg", "Egyterű nappali kanapéággyal és konyhával.", false],
     ["interior", "x.jpg", "Kanapéágy a sarokban, kis asztallal.", false],
     ["interior", "franciaagyas-szoba-ametiszt-hotel-harkany-2048x1365.avif", "Világos, tiszta szobabelsőség természetes fénnyel.", true],
     ["interior", "balatonfenyves-szobas-nyaralo_1.webp", "Narancs szoba tévével, szűkös tér.", false],
     ["interior", "ametiszthtel-harkany-recepcio.1472x975.avif", "Közlekedési terület, sok bútor.", false],
   ];
+  check("a képelemző promptja kéri a látható ágy megnevezését és a „stúdió” szót", /nevezze meg a látható ÁGYAT/.test(readFileSync(new URL("../src/generator/heroPick.ts", import.meta.url), "utf8")));
   const wrongV = V.filter(([subject, file, reason, want]) => isBedroomVerdict({ subject, reason }, `https://x.hu/${file}`) !== want).map(([, f, r]) => `${f}: ${r.slice(0, 40)}`);
   check("isBedroomVerdict: nappali/étkező/közös tér soha; háló-részletkép és „két ággyal” igen; virágágy, „virággal” nem; „szoba” fájlnév ítélet mellett is", wrongV.length === 0, wrongV);
   // Rubin: 3 apartments stated, 2 bedroom photos → one card with the first bedroom (not 22, 16).

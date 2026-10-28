@@ -216,6 +216,10 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   // (Rubin d275c55a).
   // A living room anywhere in the sentence is on the photo; a dining or common area only when it
   // is the photo's subject (the first clause) — „hálószoba TV-vel és étkezési zónával” is a bedroom.
+  // A STUDIO is the guest's bedroom even with its kitchenette and table in the frame (Piroska
+  // bd23e91e harkany-piroska-apartman7, 2026-10-28: a made bed in the foreground) — when the
+  // verdict names the studio AND a bed. The sofa bed („kanapéágy”) stays out below.
+  if (/stúdió|egyterű|garzon/iu.test(reason) && /(?<!kanapé|kanapé-|heverő-|függő)(?:ágy|ággy)/iu.test(reason)) return true;
   if (/nappali/iu.test(reason) || /étkez|közös/iu.test(reason.split(/[,;–—:]/u)[0]!)) return false;
   // Any bed („Kétágyas”, „többágyas”, „ággyal”, even the typo „ágygyal”, a daybed „heverőágy”
   // to sleep on — Budai Vám 5e77481d pecs-65, 2026-10-28), but not the garden's, the sofa's or
@@ -382,6 +386,8 @@ Pontozás (a vendég szemével: melyik kép miatt kattint tovább):
 - 0 pont és "ad_banner" akkor is, ha a képen egy LEFÉNYKÉPEZETT reklámtábla, molinó, plakát vagy szórólap a fő elem, és rajta foglalási portál neve (pl. szallas.hu, booking), webcím, telefonszám vagy e-mail-cím olvasható — akkor is, ha mögötte az épület is látszik. Ez egy portál reklámja és egy MÁSIK elérhetőség, ami ellentmond a honlap saját kapcsolati adatainak. A szállás puszta névtáblája vagy cégére (csak a név, elérhetőség és portál nélkül) NEM ez: az "sign_map" vagy "exterior".
 
 A "subject" a fő tárgyat nevezze meg; ha a kép fele kert, fele épület, az erősebb élményt add meg.
+
+Az indoklás ("reason") nevezze meg a látható ÁGYAT, ha van a képen — akkor is, ha csak az előtérben vagy egy sarokban áll (pl. "Stúdió: ágy az előtérben, mögötte konyhasarok"). Egyterű lakrésznél (ágy, konyhasarok, étkező egy térben) írd: "stúdió". A kanapét ne nevezd ágynak.
 
 VÍZJEL ("watermarked") — ez KÜLÖN kérdés a tárgytól és a pontszámtól:
 - true, ha a képen IDEGEN tulajdonjogi jel van: fotóügynökség vagy foglalási portál félig
