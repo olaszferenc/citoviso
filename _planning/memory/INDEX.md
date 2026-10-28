@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-27_valasz_javaslat_figyelo.md](2026-10-27_valasz_javaslat_figyelo.md) — 2026-10-27 — Válasz-javaslat: Poe soha nem kapta meg a jegyeket → válasz-figyelő (ADR-0340 A út)
+- [2026-10-27_terjeszkedes_bg_hr_roadmap.md](2026-10-27_terjeszkedes_bg_hr_roadmap.md) — 2026-10-27 — Terjeszkedés Bulgária + Horvátország: rendszer-szintű feltételek és roadmap
 - [2026-10-27_kikuldo_szal_150_folyamatos_kuldes.md](2026-10-27_kikuldo_szal_150_folyamatos_kuldes.md) — 2026-10-27 — Kiküldő szál: 150-es keret, folyamatos küldés, 14 nap ingyen, három élesítés
 - [2026-10-27_forditas_api_tilos_csak_babel.md](2026-10-27_forditas_api_tilos_csak_babel.md) — 2026-10-27 — Fordítás API-hívással TILOS: csak Bábel (doktrína + kód)
 - [2026-10-27_babel_fordito.md](2026-10-27_babel_fordito.md) — 2026-10-27 — Bábel, a fordító munkatárs + a nyelvi csomag egy-futás/plafon javítása
