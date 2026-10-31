@@ -1554,6 +1554,20 @@ export interface TranslationSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
+/** 0118: one row per metered Anthropic call outside (and inside) a mock run (ADR-XXXX).
+ *  The hero-scoring daily cap sums these. Writer/reader: src/ai/spend.ts. */
+export interface AiSpendTable {
+  id: Generated<string>;
+  at: ColumnType<Date, Date | string | undefined, Date | string>;
+  host: string;
+  process: string;
+  step: string;
+  model: string;
+  input_tokens: ColumnType<number, number | undefined, number>;
+  output_tokens: ColumnType<number, number | undefined, number>;
+  cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
+}
+
 /** 0109: one row per AI call a TENANT made (ADR-0380 — the booking-setup helper). The
  *  per-site daily limit counts these BEFORE a call; the cost is USD (ADR-0085).
  *  Writer/reader: src/ai/bookingHelper.ts. The question text is NOT stored. */
@@ -2036,6 +2050,7 @@ export interface Database {
   places_detail_cache: PlacesDetailCacheTable;
   scrape_checkpoint: ScrapeCheckpointTable;
   translation_spend: TranslationSpendTable;
+  ai_spend: AiSpendTable;
   tenant_ai_call: TenantAiCallTable;
   scout_tile: ScoutTileTable;
   scout_place: ScoutPlaceTable;

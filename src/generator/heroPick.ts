@@ -23,6 +23,7 @@
 // A pontszám fotó-URL-re cache-elődik (photo_hero_score, 0060): egy lead mockja sokszor
 // újragenerálódik, a kép attól nem lesz más — a második kör ingyen van.
 
+import { isStepCapReached, parseCapUsd, recordAiSpend } from "../ai/spend.js";
 import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
@@ -81,6 +82,10 @@ export function acceptsCachedVerdict(model: string, subject: string): boolean {
  * másodszor ingyen) — egy idegen cég reklámja a fizető ügyfél lapján ennél többe kerül.
  */
 export const HERO_SCORE_CAP = 24;
+/** The `ai_spend.step` of a scoring call — the daily ceiling sums this step only. */
+export const HERO_SPEND_STEP = "scoreHeroCandidates";
+/** HERO_SCORE_DAILY_CAP_USD when unset or invalid (owner ruling 2026-10-31). */
+export const HERO_SCORE_DAILY_CAP_DEFAULT_USD = 5;
 
 /**
  * Nyitókép-alkalmassági küszöb. Ez alatt a mock kurátor-sorba megy: nem azt jelenti, hogy
@@ -480,6 +485,13 @@ export async function scoreHeroCandidates(
 
   const missing = candidates.filter((p) => !scores.has(photoUrlKey(p.url)));
   if (!missing.length || !config.anthropicApiKey) return scores;
+  // Daily ceiling (owner ruling 2026-10-31, ADR-XXXX): at or above it no new call — the
+  // caller keeps what is cached and falls back to the default order for the rest.
+  const capUsd = parseCapUsd(config.heroScoreDailyCapUsdRaw, "HERO_SCORE_DAILY_CAP_USD", HERO_SCORE_DAILY_CAP_DEFAULT_USD);
+  if (await isStepCapReached(HERO_SPEND_STEP, capUsd)) {
+    console.warn(`  ⛔ nyitókép-pontozás kihagyva: elérte a napi $${capUsd} plafont (HERO_SCORE_DAILY_CAP_USD)`); // i18n-exempt: operator log
+    return scores;
+  }
 
   // A blokkot fotónként készítjük, hogy a letöltésben elbukó képek NE csúsztassák el a
   // sorszámokat (toImageBlocks a hibásat némán kidobja) — különben a budi verdiktje a
@@ -509,12 +521,17 @@ export async function scoreHeroCandidates(
 
   const res = await client.messages.create({
     model: HERO_MODEL,
-    max_tokens: 2048,
+    // 24 verdicts with a Hungarian reason each overran 2048 (ADR-XXXX): a cut-off answer is
+    // unparseable, nothing gets cached, and the next request pays for the whole batch again.
+    max_tokens: 4096,
     system: SYSTEM,
     messages: [{ role: "user", content }],
     output_config: { format: { type: "json_schema", schema: SCHEMA } },
   });
-  recordAiUsage("scoreHeroCandidates", HERO_MODEL, res.usage);
+  recordAiUsage(HERO_SPEND_STEP, HERO_MODEL, res.usage);
+  await recordAiSpend(HERO_SPEND_STEP, HERO_MODEL, res.usage);
+  if (res.stop_reason === "max_tokens")
+    console.warn(`  ⚠️ nyitókép-pontozás: a válasz elvágódott (max_tokens, ${fetched.length} kép)`); // i18n-exempt: operator log
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return scores;
 

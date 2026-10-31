@@ -2376,6 +2376,14 @@ if [ -f scripts/places-cache-check.mts ] && \
   echo "[pre-commit] places-cache-check (a lead-lap nem fizet, egy lead egyszer fizet)…"
   npx tsx scripts/places-cache-check.mts
 fi
+# ⛔ Hero-photo scoring (_planning/decisions/*-hos-foto-pontozas-*.md, owner 2026-10-31): measured 2026-10-27 at 6–9k photos/day
+# with no record anywhere. Every scoring call writes ai_spend, a daily ceiling stops it, and
+# only the generation scores live. Fetch-stubbed, no network; one ledger row, deleted.
+if [ -f scripts/hero-score-cap-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(generate|heroPick)\.ts$|^src/ai/spend\.ts$|^src/config\.ts$|^scripts/hero-score-cap-check'; then
+  echo "[pre-commit] hero-score-cap-check (a pontozás mérve, napi plafon alatt, csak a generálás fizet)…"
+  npx tsx scripts/hero-score-cap-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Portal first, for everyone (owner ruling 2026-10-01, ~/rc-briefs/places-portal-mindenkinek.md): every contactable lead's
 # KNOWN listings are read — the old 60-per-run ceiling must not come back — while the PAID
 # web-search discovery stays inside its budget. Hermetic (fetch stub), ~8 s, never pays.

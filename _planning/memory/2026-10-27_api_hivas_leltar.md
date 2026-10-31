@@ -114,6 +114,12 @@ Valós számla: „missing” minden nap → a billing export (`mineralcrm.billi
 11. **Szkriptből futó AI (A12/A13, `rescore-photo-verdicts.mts`):** mérő nélkül.
 12. **SMS/MMS, Websupport-kredit:** nincs költés-mérő (a modem-díj és a domain-vétel a fiókokban látszik).
 
+## Döntés (2026-10-31, tulaj)
+① Fordítás csak Bábel (ADR-0412, már élesen). ② Pontozás marad API, csak a generálás pontoz élőben, `ai_spend` mérő + napi $5
+plafon. ③ A generálás nem hív fizetős Google-t (Places, reviews, Street View Static). Megvalósítás: ADR-XXXX (hős-fotó pontozás /
+generálás nem fizet), őr `scripts/hero-score-cap-check.mts`. Nyitott: a nyilvános `/api/mock-request` fékje, a böngésző-kulcs
+szétválasztása, a Google billing export, a dev/éles Anthropic-kulcs szétválasztása.
+
 ## Források
 - Éles SELECT-ek 2026-10-27 ~16:30: `translation_spend`, `photo_hero_score`, `tenant_ai_call`, `event_gather_run`, `lead_places_cache`, `mock_artifact.inputs.aiUsage(.byStep)`.
 - Éles journal: `citoviso-console` (10-27: „AI-költség: 0 hívás” ×364, kurátori szöveg ×267, 400-as képméret-hiba ×16), `citoviso-public` indulások.

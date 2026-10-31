@@ -10,11 +10,12 @@
 //   ① a lead-lap útvonala `places: "cached"` politikával hív, és minden termék-hívó
 //      KIMONDJA a politikáját (alapérték-csúszás ne nyisson fizetős utat);
 //   ② "cached" politikával üres tárolónál 0 fizetős hívás;
-//   ③ a generálás ("auto") portál-fotó NÉLKÜL egyszer fizet és eltárol; a második hívás
-//      ugyanarra a leadre 0 fizetős hívás, a lead-lap pedig a tárolt képeket mutatja;
+//   ③ a generálás ("auto") SOHA nem fizet, portál-fotó nélkül sem (ADR-XXXX, tulaj
+//      2026-10-31: „ne hívjon fizetős cuccot”); a kurátor egyszer fizet és eltárol, utána
+//      a generálás és a lead-lap a tárolt képeket használja, 0 fizetős hívással;
 //   ④ "auto" portál-fotóval nem fizet;
 //   ⑤ tárolt place id → Place Details, nem Text Search;
-//   ⑥ megváltozott név → újrakérdez (a régi válasz másé);
+//   ⑥ megváltozott név → a régi válasz másé; a generálás nem kérdez újra, a kurátor igen;
 //   ⑦ elérhetetlen Places (napi kvóta) NEM tárolódik (nem tény a leadről);
 //   ⑧ "curator" portál-fotó mellett is fizet — egyszer.
 //
@@ -151,12 +152,17 @@ try {
   check("lead-lap, üres tároló: 0 fizetős hívás", paid().length === 0 && view0.places.state === "not_asked",
     `hívások: ${paid().length} · állapot: ${view0.places.state}`);
 
-  // ③ generation without portal photos pays ONCE and stores
+  // ③ generation without portal photos pays NOTHING (ADR-XXXX); the curator pays ONCE and stores
   reset();
-  const gen1 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
-  check("generálás portál-fotó nélkül: egyszer fizet (1 Text Search + fotók) és eltárol",
+  const gen0 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
+  check("generálás portál-fotó nélkül: 0 fizetős hívás (ADR-XXXX)",
+    paid().length === 0 && gen0.places.state === "not_asked" && gen0.photos.length === 0,
+    `hívások: ${paid().map((h) => h.kind).join(",")} · állapot: ${gen0.places.state} · kép: ${gen0.photos.length}`);
+  reset();
+  const gen1 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "curator" });
+  check("kurátor portál-fotó nélkül: egyszer fizet (1 Text Search + fotók) és eltárol",
     hits.filter((h) => h.kind === "search").length === 1 && gen1.places.state === "fetched" &&
-      gen1.photos.filter((p) => p.provenance === "places").length === 2 && gen1.places.askedBy === "auto",
+      gen1.photos.filter((p) => p.provenance === "places").length === 2 && gen1.places.askedBy === "curator",
     `hívások: ${paid().map((h) => h.kind).join(",")} · állapot: ${gen1.places.state} · places-kép: ${gen1.photos.length}`);
   reset();
   const gen2 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
@@ -168,15 +174,20 @@ try {
     paid().length === 0 && view1.photos.length === 2 && view1.rating === 4.6 && view1.matchBand === "high",
     `hívások: ${paid().length} · kép: ${view1.photos.length} · értékelés: ${view1.rating} · sáv: ${view1.matchBand}`);
 
-  // ⑥ a changed name makes the stored answer someone else's → re-ask (auto, no portal)
+  // ⑥ a changed name makes the stored answer someone else's → the generation does NOT re-ask, the curator does
   reset();
   const renamed = await resolveGatedPhotos(lead({ name: "Places Kapu Panzió" }), id, { ...HERMETIC, places: "cached" });
   check("megváltozott név: a lead-lap nem használja a régi választ (stale), és nem fizet",
     paid().length === 0 && renamed.places.state === "stale" && renamed.places.staleReason === "identity" && renamed.photos.length === 0,
     `hívások: ${paid().length} · állapot: ${renamed.places.state}/${renamed.places.staleReason}`);
   reset();
-  const reasked = await resolveGatedPhotos(lead({ name: "Places Kapu Panzió" }), id, { ...HERMETIC, places: "auto" });
-  check("megváltozott név + generálás: újrakérdez", reasked.places.state === "fetched" && paid().length > 0,
+  const genRenamed = await resolveGatedPhotos(lead({ name: "Places Kapu Panzió" }), id, { ...HERMETIC, places: "auto" });
+  check("megváltozott név + generálás: NEM kérdez újra, nem fizet (ADR-XXXX)",
+    paid().length === 0 && genRenamed.places.state === "stale" && genRenamed.photos.length === 0,
+    `hívások: ${paid().length} · állapot: ${genRenamed.places.state}`);
+  reset();
+  const reasked = await resolveGatedPhotos(lead({ name: "Places Kapu Panzió" }), id, { ...HERMETIC, places: "curator" });
+  check("megváltozott név + kurátor: újrakérdez", reasked.places.state === "fetched" && paid().length > 0,
     `hívások: ${paid().length} · állapot: ${reasked.places.state}`);
   await db.deleteFrom("lead_places_cache").where("lead_id", "=", id).execute();
 
@@ -189,7 +200,7 @@ try {
   // ⑦ an unreachable Places is not stored
   reset();
   mode = "quota";
-  const down = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
+  const down = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "curator" });
   mode = "ok";
   const storedAfterOutage = await db.selectFrom("lead_places_cache").select("lead_id").where("lead_id", "=", id).executeTakeFirst();
   check("elérhetetlen Places (napi kvóta): nem tárolódik, és a hívó megtudja",
@@ -198,7 +209,7 @@ try {
 
   // ⑤ a stored place id is used: Place Details, no Text Search
   reset();
-  const byId = await resolveGatedPhotos(lead({ sourceRefs: { google_places: "ChIJ-stored" } }), id, { ...HERMETIC, places: "auto" });
+  const byId = await resolveGatedPhotos(lead({ sourceRefs: { google_places: "ChIJ-stored" } }), id, { ...HERMETIC, places: "curator" });
   check("tárolt place id → Place Details, NEM Text Search",
     hits.some((h) => h.kind === "details" && h.url.includes("ChIJ-stored")) && !hits.some((h) => h.kind === "search") && byId.placeId === "ChIJ-stored",
     `hívások: ${paid().map((h) => h.kind).join(",")} · placeId: ${byId.placeId}`);

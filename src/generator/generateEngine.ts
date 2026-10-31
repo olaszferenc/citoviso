@@ -28,7 +28,6 @@ import { T } from "../engine/templateKit.js";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
-import { fetchPlaceReviews } from "../scraper/sources/googleMaps.js";
 import { loadRegions } from "../scraper/regions.js";
 import type { GuestReview, PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
@@ -43,7 +42,6 @@ import { MIN_GUEST_STARS } from "./guestVoice.js";
 import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
 import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, withHostWellness, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
-import { streetViewUrl } from "./images.js";
 import { fingerprintCandidates } from "./photoHash.js";
 import { GATE_OPENING, GATE_SUBJECTS } from "../engine/templates/gateOpening.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
@@ -330,8 +328,8 @@ async function generateEngineMockInner(
   const dLang = { lang }; // identifier form so the i18n extractor picks up T(dLang, "…") calls
 
   // Same trust-gated media as the AI path (A4): portal-listing images first, then the
-  // confidence-gated Places set. Fall back to a Street View baseline for grounding the
-  // copy when the lead has no photos at all.
+  // confidence-gated Places set. No Street View fallback: the Static API is paid, and the
+  // generation calls nothing paid at Google (owner ruling 2026-10-31, ADR-XXXX).
   opts.onStage?.("photos");
   const gated = await resolveGatedPhotos(lead, leadId, { places: "auto" });
   const { rating, userRatingCount, heroVerdict } = gated;
@@ -342,10 +340,7 @@ async function generateEngineMockInner(
     opts.template === GATE_OPENING.id
       ? await fingerprintCandidates(gated.photos, GATE_SUBJECTS)
       : gated.photos;
-  const hero =
-    photos[0]?.url ??
-    (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
-  const groundImages = photos.length ? photos.map((p) => p.url) : hero ? [hero] : [];
+  const groundImages = photos.map((p) => p.url);
 
   // Real Google rating as a fact-safe stat (rides the same A4 gate; never fabricated). No "★"
   // glyph — the design doctrine mandates SVG stars, not the character (designCheck emoji gate).
@@ -365,27 +360,20 @@ async function generateEngineMockInner(
   // photo's ("fehér csempés fürdőszoba"). Two channels, both attribution-gated:
   // portal reviews ride their profile's high-band entity match; Google reviews
   // ride the A4-gated place id, under the 30-day freshness rule (stale stored
-  // content is re-fetched, and on a failed re-fetch DROPPED, never used stale —
-  // the Places policy forbids long-term caching).
+  // content is DROPPED, never used stale — the Places policy forbids long-term
+  // caching). No re-fetch here: the generation calls nothing paid at Google
+  // (owner ruling 2026-10-31, ADR-XXXX).
   const storedGoogle = lead as unknown as {
     guestReviews?: readonly GuestReview[];
     guestReviewsFetchedAt?: string;
   };
-  let googleVoice: { text: string; rating?: number; source: string }[] = [];
-  if (guestReviewsFresh(storedGoogle)) {
-    googleVoice = (storedGoogle.guestReviews ?? []).map((r) => ({
-      text: r.text,
-      rating: r.rating,
-      source: "google_places",
-    }));
-  } else if (placeIdOf(lead) && config.googleMapsGeneratorKey) {
-    try {
-      const fresh = await fetchPlaceReviews(placeIdOf(lead)!, config.googleMapsGeneratorKey);
-      googleVoice = fresh.map((r) => ({ text: r.text, rating: r.rating, source: "google_places" }));
-    } catch (err) {
-      console.warn(`  [engine] vendég-vélemény lekérés kihagyva: ${(err as Error).message}`);
-    }
-  }
+  const googleVoice: { text: string; rating?: number; source: string }[] = guestReviewsFresh(storedGoogle)
+    ? (storedGoogle.guestReviews ?? []).map((r) => ({
+        text: r.text,
+        rating: r.rating,
+        source: "google_places",
+      }))
+    : [];
   // The writer's source pack — the ONE assembly the console's "Forrás-csomag" view also
   // shows (src/generator/writerSources.ts): listed amenities + prose facts (strongest
   // first), self-anchored prose with the owner intro first, the ≥4★ guest voice.

@@ -191,6 +191,13 @@ export const config = {
    */
   aiDailyCapUsdRaw: env("AI_DAILY_CAP_USD", "20"),
   /**
+   * HARD daily ceiling on hero-photo scoring (scoreHeroCandidates), USD (owner ruling
+   * 2026-10-31, ADR-XXXX). Sums today's `ai_spend` rows of that step (Europe/Budapest day);
+   * at or above it no new scoring call is made — the caller keeps the cached verdicts and the
+   * default photo order. Raw string for the same reason as AI_DAILY_CAP_USD.
+   */
+  heroScoreDailyCapUsdRaw: env("HERO_SCORE_DAILY_CAP_USD", "5"),
+  /**
    * Boot-time language-pack sync (ADR-0036/b): applies Bábel's committed seed to the DB.
    * "0" = boot only MEASURES coverage (read-only). ⛔ Neither mode translates: there is no
    * API translation at all since 2026-10-27 (ADR-0412).
