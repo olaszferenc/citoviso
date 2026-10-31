@@ -265,7 +265,7 @@ export interface GatedMedia {
  * policy only decides whether a MISSING (or stale) answer may be bought.
  *   · "cached"  — never pays. The console lead page: it is opened and reloaded at will
  *                 (every 6–8 s while a generation runs), so it may only READ.
- *   · "auto"    — the generation: NEVER pays Google (owner ruling 2026-10-31, ADR-XXXX —
+ *   · "auto"    — the generation: NEVER pays Google (owner ruling 2026-10-31, ADR-0413 —
  *                 "ne hívjon fizetős cuccot"); it uses a stored answer if there is one, and
  *                 is the ONLY policy that may make a new (metered, capped) hero-scoring call:
  *                 a lead gets scored when a mock is made from it, not when a page shows it.
@@ -478,7 +478,7 @@ export async function resolveGatedPhotos(
       places = staleReason ? { state: "stale", staleReason } : { state: "not_asked" };
       // ② May THIS caller pay? (ADR-0293) The generation only when the lead has no
       //   live portal photo at all; the curator on request; the lead page never.
-      //   Since ADR-XXXX the generation never pays: only the curator's explicit button does.
+      //   Since ADR-0413 the generation never pays: only the curator's explicit button does.
       const mayPay = policy === "curator";
       if (mayPay && config.googleMapsGeneratorKey) {
         try {
@@ -575,7 +575,7 @@ export async function resolveGatedPhotos(
   }
   // A régi (képminőség előtti) cache-sorok utólagos levonása — ingyen, AI nélkül.
   await healthAdjustCachedScores(photos.map((p) => p.url)).catch(() => undefined);
-  // Live (paid) scoring only for the generation (ADR-XXXX); every other caller — lead page,
+  // Live (paid) scoring only for the generation (ADR-0413); every other caller — lead page,
   // source pack, Places button — reads the verdicts already bought.
   const heroScores = await (policy === "auto"
     ? scoreHeroCandidates(photos, lead.name)

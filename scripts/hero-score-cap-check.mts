@@ -1,4 +1,4 @@
-// ⛔ HŐS-FOTÓ PONTOZÁS: MÉRŐ + NAPI PLAFON + CSAK A GENERÁLÁS FIZET (ADR-XXXX, tulaj 2026-10-31).
+// ⛔ HŐS-FOTÓ PONTOZÁS: MÉRŐ + NAPI PLAFON + CSAK A GENERÁLÁS FIZET (ADR-0413, tulaj 2026-10-31).
 //
 // A MÉRT LELET (2026-10-27, _planning/memory/2026-10-27_api_hivas_leltar.md): a pontozás
 // (scoreHeroCandidates, Haiku) a kurátori úton (buildSourcePack) és a lead-lapon a mérőn kívül
@@ -92,7 +92,7 @@ try {
 }
 
 if (failed) {
-  console.error(`⛔ ${failed} eset megbukott — a hős-fotó pontozás mérője/plafonja (ADR-XXXX) sérült.`);
+  console.error(`⛔ ${failed} eset megbukott — a hős-fotó pontozás mérője/plafonja (ADR-0413) sérült.`);
   process.exit(1);
 }
-console.log("✅ Hős-fotó pontozás: mérve, napi plafon alatt, és csak a generálás fizet (ADR-XXXX).");
+console.log("✅ Hős-fotó pontozás: mérve, napi plafon alatt, és csak a generálás fizet (ADR-0413).");

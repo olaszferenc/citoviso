@@ -1,5 +1,5 @@
 /**
- * Persistent AI call ledger (`ai_spend`, migration 0118, ADR-XXXX).
+ * Persistent AI call ledger (`ai_spend`, migration 0118, ADR-0413).
  *
  * WHY: `recordAiUsage` (usage.ts) only collects inside a mock run; outside one it is a silent
  * no-op. Measured 2026-10-27: hero-photo scoring ran thousands of times a day on the curator

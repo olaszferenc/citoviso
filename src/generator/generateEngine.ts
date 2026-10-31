@@ -329,7 +329,7 @@ async function generateEngineMockInner(
 
   // Same trust-gated media as the AI path (A4): portal-listing images first, then the
   // confidence-gated Places set. No Street View fallback: the Static API is paid, and the
-  // generation calls nothing paid at Google (owner ruling 2026-10-31, ADR-XXXX).
+  // generation calls nothing paid at Google (owner ruling 2026-10-31, ADR-0413).
   opts.onStage?.("photos");
   const gated = await resolveGatedPhotos(lead, leadId, { places: "auto" });
   const { rating, userRatingCount, heroVerdict } = gated;
@@ -362,7 +362,7 @@ async function generateEngineMockInner(
   // ride the A4-gated place id, under the 30-day freshness rule (stale stored
   // content is DROPPED, never used stale — the Places policy forbids long-term
   // caching). No re-fetch here: the generation calls nothing paid at Google
-  // (owner ruling 2026-10-31, ADR-XXXX).
+  // (owner ruling 2026-10-31, ADR-0413).
   const storedGoogle = lead as unknown as {
     guestReviews?: readonly GuestReview[];
     guestReviewsFetchedAt?: string;

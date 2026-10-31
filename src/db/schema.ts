@@ -1554,7 +1554,7 @@ export interface TranslationSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
-/** 0118: one row per metered Anthropic call outside (and inside) a mock run (ADR-XXXX).
+/** 0118: one row per metered Anthropic call outside (and inside) a mock run (ADR-0413).
  *  The hero-scoring daily cap sums these. Writer/reader: src/ai/spend.ts. */
 export interface AiSpendTable {
   id: Generated<string>;

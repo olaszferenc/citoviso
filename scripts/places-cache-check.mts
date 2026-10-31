@@ -10,7 +10,7 @@
 //   ① a lead-lap útvonala `places: "cached"` politikával hív, és minden termék-hívó
 //      KIMONDJA a politikáját (alapérték-csúszás ne nyisson fizetős utat);
 //   ② "cached" politikával üres tárolónál 0 fizetős hívás;
-//   ③ a generálás ("auto") SOHA nem fizet, portál-fotó nélkül sem (ADR-XXXX, tulaj
+//   ③ a generálás ("auto") SOHA nem fizet, portál-fotó nélkül sem (ADR-0413, tulaj
 //      2026-10-31: „ne hívjon fizetős cuccot”); a kurátor egyszer fizet és eltárol, utána
 //      a generálás és a lead-lap a tárolt képeket használja, 0 fizetős hívással;
 //   ④ "auto" portál-fotóval nem fizet;
@@ -152,10 +152,10 @@ try {
   check("lead-lap, üres tároló: 0 fizetős hívás", paid().length === 0 && view0.places.state === "not_asked",
     `hívások: ${paid().length} · állapot: ${view0.places.state}`);
 
-  // ③ generation without portal photos pays NOTHING (ADR-XXXX); the curator pays ONCE and stores
+  // ③ generation without portal photos pays NOTHING (ADR-0413); the curator pays ONCE and stores
   reset();
   const gen0 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
-  check("generálás portál-fotó nélkül: 0 fizetős hívás (ADR-XXXX)",
+  check("generálás portál-fotó nélkül: 0 fizetős hívás (ADR-0413)",
     paid().length === 0 && gen0.places.state === "not_asked" && gen0.photos.length === 0,
     `hívások: ${paid().map((h) => h.kind).join(",")} · állapot: ${gen0.places.state} · kép: ${gen0.photos.length}`);
   reset();
@@ -182,7 +182,7 @@ try {
     `hívások: ${paid().length} · állapot: ${renamed.places.state}/${renamed.places.staleReason}`);
   reset();
   const genRenamed = await resolveGatedPhotos(lead({ name: "Places Kapu Panzió" }), id, { ...HERMETIC, places: "auto" });
-  check("megváltozott név + generálás: NEM kérdez újra, nem fizet (ADR-XXXX)",
+  check("megváltozott név + generálás: NEM kérdez újra, nem fizet (ADR-0413)",
     paid().length === 0 && genRenamed.places.state === "stale" && genRenamed.photos.length === 0,
     `hívások: ${paid().length} · állapot: ${genRenamed.places.state}`);
   reset();

@@ -1,4 +1,4 @@
-## ADR-XXXX — Hős-fotó pontozás: mérő + napi plafon, csak a generálás pontoz; a generálás nem fizet a Google-nek
+## ADR-0413 — Hős-fotó pontozás: mérő + napi plafon, csak a generálás pontoz; a generálás nem fizet a Google-nek
 
 **Dátum:** 2026-10-31 · **Státusz:** elfogadva (lokál, nem élesítve) · Kiegészíti: ADR-0293 (Places-politika), ADR-0412 (fordítás API-val tilos) · Felülírja: ADR-0293 „auto” politikájának fizetős ágát, ADR-0106 Google-értékelés újralekérését a generálásban
 

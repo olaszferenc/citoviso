@@ -485,7 +485,7 @@ export async function scoreHeroCandidates(
 
   const missing = candidates.filter((p) => !scores.has(photoUrlKey(p.url)));
   if (!missing.length || !config.anthropicApiKey) return scores;
-  // Daily ceiling (owner ruling 2026-10-31, ADR-XXXX): at or above it no new call — the
+  // Daily ceiling (owner ruling 2026-10-31, ADR-0413): at or above it no new call — the
   // caller keeps what is cached and falls back to the default order for the rest.
   const capUsd = parseCapUsd(config.heroScoreDailyCapUsdRaw, "HERO_SCORE_DAILY_CAP_USD", HERO_SCORE_DAILY_CAP_DEFAULT_USD);
   if (await isStepCapReached(HERO_SPEND_STEP, capUsd)) {
@@ -521,7 +521,7 @@ export async function scoreHeroCandidates(
 
   const res = await client.messages.create({
     model: HERO_MODEL,
-    // 24 verdicts with a Hungarian reason each overran 2048 (ADR-XXXX): a cut-off answer is
+    // 24 verdicts with a Hungarian reason each overran 2048 (ADR-0413): a cut-off answer is
     // unparseable, nothing gets cached, and the next request pays for the whole batch again.
     max_tokens: 4096,
     system: SYSTEM,

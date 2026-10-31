@@ -116,7 +116,7 @@ Valós számla: „missing” minden nap → a billing export (`mineralcrm.billi
 
 ## Döntés (2026-10-31, tulaj)
 ① Fordítás csak Bábel (ADR-0412, már élesen). ② Pontozás marad API, csak a generálás pontoz élőben, `ai_spend` mérő + napi $5
-plafon. ③ A generálás nem hív fizetős Google-t (Places, reviews, Street View Static). Megvalósítás: ADR-XXXX (hős-fotó pontozás /
+plafon. ③ A generálás nem hív fizetős Google-t (Places, reviews, Street View Static). Megvalósítás: ADR-0413 (hős-fotó pontozás /
 generálás nem fizet), őr `scripts/hero-score-cap-check.mts`. Nyitott: a nyilvános `/api/mock-request` fékje, a böngésző-kulcs
 szétválasztása, a Google billing export, a dev/éles Anthropic-kulcs szétválasztása.
 

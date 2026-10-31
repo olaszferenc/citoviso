@@ -1,4 +1,4 @@
--- 0118 AI-HÍVÁS FŐKÖNYV — a mock-futáson KÍVÜLI Anthropic-hívások mérője (ADR-XXXX).
+-- 0118 AI-HÍVÁS FŐKÖNYV — a mock-futáson KÍVÜLI Anthropic-hívások mérője (ADR-0413).
 --
 -- MIÉRT KELL. A `recordAiUsage` csak egy futó mock-generálásba gyűjt (mock_artifact.inputs.aiUsage),
 -- azon kívül no-op. Mérve 2026-10-27 (_planning/memory/2026-10-27_api_hivas_leltar.md): a hős-fotó
