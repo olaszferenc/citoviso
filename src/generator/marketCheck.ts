@@ -257,7 +257,8 @@ const NEAR_VIEW = /^\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:a|az)\s+(?:kert|udvar|belso|u
  *  Panoráma), and „kertre nyíló kilátás” (Villa Suzy 02dbb6c2, 2026-10-27). Lake, mountain or town views („tóra néző kilátás”) stay a panorama. */
 const NEAR_VIEW_BEFORE =
   /(?:^|[^\p{L}])(?:(?:kert|udvar|utca|parkolo|medence|park|taj)\p{L}*\s+(?:fele\s+)?(?:nezo|nyilo)|kerti|udvari|utcai)\s+$/u;
-const FAR_KM = /(\d+(?:[.,]\d+)?)\s*km(?![\p{L}])/gu;
+// „4 kilométernyi távolságra” (Mura Völgye 919e838c, 2026-11-01) is as far as „4 km”.
+const FAR_KM = /(\d+(?:[.,]\d+)?)\s*(?:km|kilometer\p{L}*)(?![\p{L}])/gu;
 const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
 
 /**
@@ -272,10 +273,13 @@ const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
  * 2026-10-26 (TARTVA, amenity sample): „a közeli hotelben uszoda” (Orchidea 20f95ea1 →
  * Medence), „100 m-es körzeten belül … több étterem” (Farkas 7e3ff3c5 → Étterem), and the
  * English „5-minute walk from the Strand Street Beach” (Balaton Breeze 2eab1936 → Strand).
+ * 2026-11-01: „A legközelebbi étterem 4 kilométernyi távolságra” (Mura Völgye 919e838c →
+ * Étterem): „legközelebbi”, „500 méternyi távolságra” and the spelled-out „kilométer” are distance too.
+ * A bare „mérsékelt távolságra” is not (KiDo f7c9c97a: the house's own terrace in that clause).
  */
 const PLACE_NEEDLE = new Set(["vizpart", "topart", "strand", "steg", "molo", "panorama", "kilatas"]);
 const NEARBY =
-  /(?<![\p{L}])(?:kozel(?:eben|ben|i)?|kornyek\p{L}*|korzet\p{L}*|szomszed\p{L}*|setatavolsag\p{L}*|meterre|percre|walk|walking|nearby|close\s+to|from\s+the|minutes?)(?![\p{L}])|\d+\s*(?:m|km|perc)\s*-?\s*(?:re|ra|nyire|nyira)(?![\p{L}])|\d+\s*perc(?:es)?\s+(?:setara|setanyira|autoval|gyalog)/u;
+  /(?<![\p{L}])(?:kozel(?:eben|ben|i)?|(?:leg)?kozelebb\p{L}*|kornyek\p{L}*|korzet\p{L}*|szomszed\p{L}*|setatavolsag\p{L}*|meterre|percre|walk|walking|nearby|close\s+to|from\s+the|minutes?)(?![\p{L}])|\d+\s*(?:m|km|perc|(?:kilo)?meter)\s*-?\s*(?:re|ra|nyire|nyira)(?![\p{L}])|\d+\s*(?:m|km|(?:kilo)?meter)\p{L}*\s+tavolsag\p{L}*|\d+\s*perc(?:es)?\s+(?:setara|setanyira|autoval|gyalog)/u;
 
 function isFar(clauseNorm: string): boolean {
   for (const m of clauseNorm.matchAll(FAR_KM)) if (parseFloat(m[1]!.replace(",", ".")) >= 1) return true;

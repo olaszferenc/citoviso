@@ -373,6 +373,12 @@ const BREEZE = ["The 30 m² Balaton Breeze Apartman Fonyod enjoys a beachfront l
 check("Balaton Breeze 2eab1936: „5-minute walk from the Strand Street Beach” → nem Strand", !descriptionFactIsOwn("Strand", BREEZE));
 const FARKAS = ["Az ingatlan Siófok belvárosában, zöldövezetben található.\n\n100 m-es körzeten belül található szupermarket, több étterem, gyorsbüfé."];
 check("Farkas 7e3ff3c5: „100 m-es körzeten belül … több étterem” → nem Étterem", !descriptionFactIsOwn("Étterem", FARKAS));
+const MURA = ["A legközelebbi étterem 4 kilométernyi távolságra, az élelmiszer üzlet 1 kilométerre található."];
+check("Mura Völgye 919e838c: „legközelebbi étterem 4 kilométernyi távolságra” → nem Étterem", !descriptionFactIsOwn("Étterem", MURA));
+check("„Az étterem 500 méternyi távolságra van.” → nem Étterem", !descriptionFactIsOwn("Étterem", ["Az étterem 500 méternyi távolságra van."]));
+check("⛔ „Házunkban étterem is működik.” Étterem marad", descriptionFactIsOwn("Étterem", ["Házunkban étterem is működik."]));
+check("Lovász 38f74f7a: „legközelebbi étterem 300 m.” → nem Étterem", !descriptionFactIsOwn("Étterem", ["Ellátás nincsen, legközelebbi étterem 300 m."]));
+check("⛔ KiDo f7c9c97a: „strandtól mérsékelt távolságra … a teraszon pihenhetnek” Terasz marad", descriptionSellingPoints(["A Balatonberény községi strándtól mérsékelt távolságra fekvő 1 hálószobás apartman vendégei a teraszon pihenhetnek."]).includes("Terasz"));
 check("⛔ saját tény a környék-szó MÁSIK mondatában marad („Saját medencénk van. A közelben strand.”)",
   descriptionFactIsOwn("Medence", ["Saját medencénk van a kertben. A közelben strand is található."]));
 check("⛔ „a ház saját medencés, a közelben strand”: a Medence marad (a mondat nem a környékkel indul)",
