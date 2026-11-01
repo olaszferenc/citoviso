@@ -15,8 +15,8 @@
       "tr": { "en": "inquiry", "de": "Anfrage", "sk": "dopyt", "hr": "upit", "sl": "povpraševanje", "pl": "zapytanie", "it": "richiesta di informazioni", "cs": "poptávka", "ro": "solicitare" } },
     { "hu": "megkeresés",
       "senses": [
-        { "ahol": "konzol, megkereses — a Citoviso HIDEG ajánlata a szállásadónak (nem az érdeklődés!)", "tr": { "en": "outreach", "de": "Ansprache", "sk": "oslovenie", "hr": "kontaktiranje", "it": "proposta" } },
-        { "ahol": "admin, honlap — a VENDÉG kapcsolatfelvétele a szállással", "tr": { "en": "contact request", "de": "Kontaktaufnahme", "sk": "kontaktovanie", "hr": "upit za kontakt", "it": "richiesta di contatto" } }
+        { "ahol": "konzol, megkereses — a Citoviso HIDEG ajánlata a szállásadónak (nem az érdeklődés!)", "tr": { "en": "outreach", "de": "Ansprache", "sk": "oslovenie", "hr": "kontaktiranje", "it": "proposta", "pl": "propozycja" } },
+        { "ahol": "admin, honlap — a VENDÉG kapcsolatfelvétele a szállással", "tr": { "en": "contact request", "de": "Kontaktaufnahme", "sk": "kontaktovanie", "hr": "upit za kontakt", "it": "richiesta di contatto", "pl": "prośba o kontakt" } }
       ] },
     { "hu": "lemondás",
       "senses": [
