@@ -2869,6 +2869,14 @@ if [ -f scripts/sample-from-source-check.mts ] && \
   echo "[pre-commit] sample-from-source-check (a minta nem mond ellent a forrásnak)…"
   npx tsx scripts/sample-from-source-check.mts >"$GATE_LOG" || gate_failed
 fi
+# empty-set-check (koordinátor 2026-11-01, Panoráma Sümeg 0ff9c3d7): üres SET-es UPDATE nem futhat —
+# a Kysely `.set({})` „syntax error at or near "where"”-t ad (élesen 10-26/27 a csak telefonos
+# kiküldés held-re ment). Statikus, DB nélkül, ~1 s; minden src/ vagy scripts/ változásnál.
+if [ -f scripts/empty-set-check.mts ] && \
+   changed_files | grep -qE '^src/.*\.ts$|^scripts/empty-set-check'; then
+  echo "[pre-commit] empty-set-check (üres SET-es UPDATE nem futhat)…"
+  npx tsx scripts/empty-set-check.mts >"$GATE_LOG" || gate_failed
+fi
 # dispatch-rooms-guard-check (koordinátor 2026-10-27, Relax Balaton / PENNY): szobamodul nélküli
 # terv nem megy ki az automatán — főtervnél held a link készítése előtt, 2. tervnél kimarad.
 # Fixture-fájlok + forrás-bekötés, DB/böngésző nélkül, ~2 s.
