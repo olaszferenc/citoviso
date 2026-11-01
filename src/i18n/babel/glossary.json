@@ -74,7 +74,7 @@
     { "hu": "előfizetés",
       "tr": { "en": "subscription", "de": "Abonnement", "sk": "predplatné", "hr": "pretplata", "sl": "naročnina", "pl": "subskrypcja", "it": "abbonamento", "cs": "předplatné", "ro": "abonament" } },
     { "hu": "ingyenes próba", "note": "14 napos kipróbálás; nem 'teszt'",
-      "tr": { "en": "free trial", "de": "kostenlose Testphase", "sk": "bezplatná skúšobná verzia", "hr": "besplatna probna verzija", "sl": "brezplačni preizkus", "pl": "bezpłatny okres próbny", "it": "prova gratuita", "cs": "zkušební verze zdarma", "ro": "perioadă de probă gratuită" } },
+      "tr": { "en": "free trial", "de": "kostenlose Testphase", "sk": "bezplatné skúšobné obdobie", "hr": "besplatna probna verzija", "sl": "brezplačni preizkus", "pl": "bezpłatny okres próbny", "it": "prova gratuita", "cs": "zkušební verze zdarma", "ro": "perioadă de probă gratuită" } },
 { "hu": "számla",
       "senses": [
         { "ahol": "admin, level, konzol — kiállított számla (díjért)", "tr": { "en": "invoice", "de": "Rechnung", "sk": "faktúra", "hr": "račun", "sl": "račun", "pl": "faktura", "it": "fattura", "cs": "faktura", "ro": "factură" } },
