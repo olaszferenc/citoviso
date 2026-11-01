@@ -595,6 +595,13 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
     ["interior", "franciaagyas-szoba-ametiszt-hotel-harkany-2048x1365.avif", "Világos, tiszta szobabelsőség természetes fénnyel.", true],
     ["interior", "balatonfenyves-szobas-nyaralo_1.webp", "Narancs szoba tévével, szűkös tér.", false],
     ["interior", "ametiszthtel-harkany-recepcio.1472x975.avif", "Közlekedési terület, sok bútor.", false],
+    // 2026-11-01 (live verdicts): „nappali fény” is daylight (Stokedli 5e8d5ac4); the bed before
+    // the dining area in the subject clause is a room (Gulya e2f3dbfa); a living room stays one.
+    ["interior", "bajansenye-stokedli-vendeghaz2.jpg", "Tiszta, világos hálószoba striped ágyneművel, jó nappali fény; vonzó, de szűk helyiség.", true],
+    ["interior", "zalalovo-11.jpg", "Szoba ágy és étkezőrész egy helyen, fa bútorok, szőnyeg, virágos dísz. Felújított, barátságos belsőtér, de szűk", true],
+    ["interior", "pecs-7.jpg", "Teljes szoba széles nézőpontból, ágy, konyha, nappali világos térrel – jó szerkezetű, vonzó belső.", false],
+    ["interior", "zalalovo-14.jpg", "Közös étkezőterület, fa asztal, zöld függöny, TV, ablak fénnyel.", false],
+    ["interior", "x.jpg", "Étkezőrész és mögötte ágy, világos.", false],
   ];
   check("a képelemző promptja kéri a látható ágy megnevezését és a „stúdió” szót", /nevezze meg a látható ÁGYAT/.test(readFileSync(new URL("../src/generator/heroPick.ts", import.meta.url), "utf8")));
   const wrongV = V.filter(([subject, file, reason, want]) => isBedroomVerdict({ subject, reason }, `https://x.hu/${file}`) !== want).map(([, f, r]) => `${f}: ${r.slice(0, 40)}`);

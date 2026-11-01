@@ -225,7 +225,16 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   // bd23e91e harkany-piroska-apartman7, 2026-10-28: a made bed in the foreground) — when the
   // verdict names the studio AND a bed. The sofa bed („kanapéágy”) stays out below.
   if (/stúdió|egyterű|garzon/iu.test(reason) && /(?<!kanapé|kanapé-|heverő-|függő)(?:ágy|ággy)/iu.test(reason)) return true;
-  if (/nappali/iu.test(reason) || /étkez|közös/iu.test(reason.split(/[,;–—:]/u)[0]!)) return false;
+  // „nappali fény(ben)”, „nappali megvilágítás” is DAYLIGHT, not a living room (Stokedli 5e8d5ac4
+  // vendeghaz2, 2026-11-01: „Tiszta, világos hálószoba … jó nappali fény” lost its card photo).
+  const living = /nappali(?!\s+(?:fény|napfény|megvilágít))/iu.test(reason);
+  // The dining/common area is the photo's subject only when it comes BEFORE the bed in the first
+  // clause: „Közös terület ágy-szobával” is a common area, „Szoba ágy és étkezőrész egy helyen”
+  // (Gulya e2f3dbfa zalalovo-11, 2026-11-01) is a room with its bed first.
+  const subject = reason.split(/[,;–—:]/u)[0]!;
+  const bedAt = subject.search(/hálószob|hálórész|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu);
+  const diningAt = subject.search(/étkez|közös/iu);
+  if (living || (diningAt !== -1 && (bedAt === -1 || diningAt < bedAt))) return false;
   // Any bed („Kétágyas”, „többágyas”, „ággyal”, even the typo „ágygyal”, a daybed „heverőágy”
   // to sleep on — Budai Vám 5e77481d pecs-65, 2026-10-28), but not the garden's, the sofa's or
   // the spa's („függőágy”, „virágágy”, „nyugágy”, „kanapéágy”, „masszázságy”) — and
