@@ -55,7 +55,7 @@
     { "hu": "főszezon",
       "tr": { "en": "high season", "de": "Hauptsaison", "sk": "hlavná sezóna", "hr": "glavna sezona", "sl": "glavna sezona", "pl": "sezon wysoki", "it": "alta stagione", "cs": "hlavní sezóna", "ro": "sezon de vârf" } },
     { "hu": "honlap", "note": "a szállás saját weboldala",
-      "tr": { "en": "website", "de": "Website", "sk": "web", "hr": "web-stranica", "sl": "spletna stran", "pl": "strona internetowa", "it": "sito web", "cs": "web", "ro": "site web" } },
+      "tr": { "en": "website", "de": "Website", "sk": "webová stránka", "hr": "web-stranica", "sl": "spletna stran", "pl": "strona internetowa", "it": "sito web", "cs": "web", "ro": "site web" } },
     { "hu": "minta-honlap", "note": "mock: a Citoviso által előre elkészített bemutató honlap; nem makett, nem sablon",
       "tr": { "en": "sample website", "de": "Beispiel-Website", "sk": "ukážková webová stránka", "hr": "ogledna web-stranica", "sl": "vzorčna spletna stran", "pl": "przykładowa strona", "it": "sito di esempio", "cs": "ukázkový web", "ro": "site de prezentare" } },
     { "hu": "látványterv", "note": "honlap-terv / honlap-látványterv: a szállásadónak küldött minta-honlap a megkeresésben; nem 'mockup', nem 'maketa'",
