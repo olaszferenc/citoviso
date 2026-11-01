@@ -232,14 +232,16 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   // clause: „Közös terület ágy-szobával” is a common area, „Szoba ágy és étkezőrész egy helyen”
   // (Gulya e2f3dbfa zalalovo-11, 2026-11-01) is a room with its bed first.
   const subject = reason.split(/[,;–—:]/u)[0]!;
-  const bedAt = subject.search(/hálószob|hálórész|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu);
+  const bedAt = subject.search(/hálós?zob|hálórész|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu);
   const diningAt = subject.search(/étkez|közös/iu);
   if (living || (diningAt !== -1 && (bedAt === -1 || diningAt < bedAt))) return false;
   // Any bed („Kétágyas”, „többágyas”, „ággyal”, even the typo „ágygyal”, a daybed „heverőágy”
   // to sleep on — Budai Vám 5e77481d pecs-65, 2026-10-28), but not the garden's, the sofa's or
   // the spa's („függőágy”, „virágágy”, „nyugágy”, „kanapéágy”, „masszázságy”) — and
   // „virággal” is no bed: only „ággy” is the doubled form.
-  if (/hálószob|hálórész|hálósar|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu.test(reason)) return true;
+  // „hálózoba” is the vision model's own typo for „hálószoba” (Zamárdi Parti e24080dc, 2026-11-01:
+  // „Nagy hálózoba teraszrálátással” …061, „Tetőtéri hálózoba” …067 — no card photo).
+  if (/hálós?zob|hálórész|hálósar|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu.test(reason)) return true;
   // The verdict says only „szobabelsőség” — the file name says which room (Ametiszt ce2f06ec
   // „franciaagyas-szoba-…avif”, „haromagyas-szoba-…”, 2026-10-28).
   return v.subject === "interior" && url !== undefined && namesBedroomFile(url);

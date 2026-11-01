@@ -480,6 +480,12 @@ console.log("⑬ szobakártya: annyi, ahány egység; hálószobakép; egy kép 
   // Real rooms without a photo borrow a bedroom, each once; the rest keep their panel.
   const real = roomsForMock({ ...base, photos: [ph("c1", "interior", false), ph("r1", "interior", true)], rooms: [{ name: "Tölgy" }, { name: "Bükk" }] as never });
   check("valós szobák: hálószobakép egyszer, a második nem ismétli", real[0]!.photo?.url === "https://x.hu/r1.jpg" && !real[1]!.photo, real.map((r) => r.photo?.url));
+  // Zamárdi Parti e24080dc (2026-11-01): 4 sourced „Apartman” units — the same NAME four times
+  // and the same FILE NAME on different photos; each card a different bedroom, none repeated.
+  const zam = [ph("ext", "exterior", false), ...["061", "068", "023", "040", "064", "067"].map((n) => ({ ...ph(`1769937${n}/Zamardi-Parti-Apartman-Room`, "interior", n !== "068") }))];
+  const zCards = roomsForMock({ ...base, photos: zam, rooms: [1, 2, 3, 4].map(() => ({ name: "Apartman" })) as never });
+  check("Zamárdi: 4 azonos nevű forrás-szoba, 5 hálókép → 4 különböző kép, egy sem ismétlődik",
+    zCards.length === 4 && zCards.every((r) => !!r.photo) && new Set(zCards.map((r) => r.photo!.url)).size === 4, zCards.map((r) => r.photo?.url));
   // No verdict at all: the file name / caption decides (Villa Eve 085b6714 shape, villaeve.hu names).
   const eve = ["jatszoter.jpg", "277516212_713758682976743_n.jpg", "Szoba2-scaled.jpg", "Haz.png", "Etkezo-scaled.jpg", "Konyha1-scaled.jpg", "Furdo-scaled.jpg"]
     .map((f) => ({ url: `https://villaeve.hu/wp-content/uploads/2022/02/${f}`, alt: "Villa Eve" }));
@@ -602,6 +608,11 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
     ["interior", "pecs-7.jpg", "Teljes szoba széles nézőpontból, ágy, konyha, nappali világos térrel – jó szerkezetű, vonzó belső.", false],
     ["interior", "zalalovo-14.jpg", "Közös étkezőterület, fa asztal, zöld függöny, TV, ablak fénnyel.", false],
     ["interior", "x.jpg", "Étkezőrész és mögötte ágy, világos.", false],
+    // The vision model's typo „hálózoba” (Zamárdi Parti e24080dc, 2026-11-01 — the 4th card stood
+    // photoless while …061 and …067 were bedrooms); „nappali-hálózóma” stays a living room.
+    ["interior", "1769937061/Zamardi-Parti-Apartman-Room.JPEG", "Nagy hálózoba teraszrálátással, világos, függönyzet, TV és komfortos berendezés.", true],
+    ["interior", "1769937067/Zamardi-Parti-Apartman-Macro-Details.JPEG", "Tetőtéri hálózoba, mélypontos, polcok, fényes, azonban szűk és speciális design.", true],
+    ["interior", "1769937024/Zamardi-Parti-Apartman-Room.JPEG", "Nyílt nappali-hálózóma konyhasarokkal, lépcsővel, modern és világos.", false],
   ];
   check("a képelemző promptja kéri a látható ágy megnevezését és a „stúdió” szót", /nevezze meg a látható ÁGYAT/.test(readFileSync(new URL("../src/generator/heroPick.ts", import.meta.url), "utf8")));
   const wrongV = V.filter(([subject, file, reason, want]) => isBedroomVerdict({ subject, reason }, `https://x.hu/${file}`) !== want).map(([, f, r]) => `${f}: ${r.slice(0, 40)}`);
