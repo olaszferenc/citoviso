@@ -3,7 +3,7 @@
   "terms": [
     { "hu": "szállás", "note": "a vendégház/apartman/panzió gyűjtőneve",
       "tr": { "en": "property", "de": "Unterkunft", "sk": "ubytovanie", "hr": "smještaj", "sl": "nastanitev", "pl": "obiekt noclegowy", "it": "struttura", "cs": "ubytování", "ro": "cazare" } },
-    { "hu": "szállásadó", "note": "a szállás üzemeltetője, a Citoviso ügyfele (tulaj)",
+    { "hu": "szállásadó", "note": "a szállás üzemeltetője, a Citoviso ügyfele; a „tulaj” szó is ide fordul (de: Gastgeber, nem Eigentümer)",
       "tr": { "en": "host", "de": "Gastgeber", "sk": "ubytovateľ", "hr": "iznajmljivač", "sl": "gostitelj", "pl": "gospodarz", "it": "host", "cs": "ubytovatel", "ro": "gazdă" } },
     { "hu": "vendég",
       "tr": { "en": "guest", "de": "Gast", "sk": "hosť", "hr": "gost", "sl": "gost", "pl": "gość", "it": "ospite", "cs": "host", "ro": "oaspete" } },
@@ -13,6 +13,11 @@
       "tr": { "en": "booking request", "de": "Buchungsanfrage", "sk": "žiadosť o rezerváciu", "hr": "zahtjev za rezervaciju", "sl": "zahteva za rezervacijo", "pl": "prośba o rezerwację", "it": "richiesta di prenotazione", "cs": "žádost o rezervaci", "ro": "cerere de rezervare" } },
     { "hu": "érdeklődés", "note": "nem kötelező kérdés/ajánlatkérés a honlapon",
       "tr": { "en": "inquiry", "de": "Anfrage", "sk": "dopyt", "hr": "upit", "sl": "povpraševanje", "pl": "zapytanie", "it": "richiesta di informazioni", "cs": "poptávka", "ro": "solicitare" } },
+    { "hu": "megkeresés",
+      "senses": [
+        { "ahol": "konzol, megkereses — a Citoviso HIDEG ajánlata a szállásadónak (nem az érdeklődés!)", "tr": { "en": "outreach", "de": "Ansprache", "sk": "oslovenie", "hr": "kontaktiranje" } },
+        { "ahol": "admin, honlap — a VENDÉG kapcsolatfelvétele a szállással", "tr": { "en": "contact request", "de": "Kontaktaufnahme", "sk": "kontaktovanie", "hr": "upit za kontakt" } }
+      ] },
     { "hu": "lemondás",
       "senses": [
         { "ahol": "honlap, admin, level — a VENDÉG foglalása", "tr": { "en": "cancellation", "de": "Stornierung", "sk": "zrušenie", "hr": "otkazivanje", "sl": "preklic", "pl": "anulowanie", "it": "cancellazione", "cs": "zrušení", "ro": "anulare" } },

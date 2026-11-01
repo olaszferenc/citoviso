@@ -34,8 +34,11 @@ helyes fordítás kell.
   nem „sablon”. A tulajnak szóló szövegben: „minta-honlap” (en: sample website, de: Beispiel-Website).
 - **élesítés / élesít** — a honlap nyilvánossá tétele (go-live), nem „aktiválás”.
 - **modul** — megvásárolható funkció-csomag a honlaphoz (foglalás, többnyelvűség, vélemények…).
-- **csomag** — díjcsomag (Alap / Plusz / …) VAGY nyelvi csomag — a kontextusból látszik; a díjcsomag
-  nevét (Alap, Plusz, Pro…) NEM fordítod, tulajdonnév.
+- **csomag** — díjcsomag (Alap / Ajánlott / Teljes) VAGY nyelvi csomag — a kontextusból látszik. A
+  díjcsomag nevét a kód `T()`-vel fordíttatja, és az élő en is fordítja (Basic / Recommended) →
+  FORDÍTOD (de: Basis / Empfohlen / Vollständig), egy nyelven belül mindig ugyanarra.
+- **megkeresés** — a konzolban és a megkeresés-felületen a Citoviso hideg ajánlata (en: outreach, de:
+  Ansprache); az adminban/honlapon a vendég kapcsolatfelvétele. Nem azonos az **érdeklődés**sel.
 - **tulaj / szállásadó** — a szállás üzemeltetője, a Citoviso ügyfele. **vendég** — a szállás vendége.
 - **érdeklődés** — a vendég kérdése/ajánlatkérése a honlapon (nem kötelező foglalás).
 - **foglalás** — kötelező erejű szobafoglalás (booking), **foglalási kérés** = még jóváhagyásra vár.
@@ -55,8 +58,7 @@ helyes fordítás kell.
    nem változtatsz meg.
 2. **{kapcsos} placeholderek** betűre megmaradnak; kivétel `{art}`, `{Art}`, `{art2}`: ezek a magyar
    határozott névelőt jelölik — nem-magyar nyelven HAGYD KI őket.
-3. **Tulajdonnév** nem fordul: Citoviso, Google, Booking.com, Szallas.hu, a szállás neve, a díjcsomag
-   neve. Településnévnek a célnyelvben bevett exonimája használható (Wien/Vienna).
+3. **Tulajdonnév** nem fordul: Citoviso, Google, Booking.com, Szallas.hu, a szállás neve. Településnévnek a célnyelvben bevett exonimája használható (Wien/Vienna).
 4. **Hossz:** a felület-felirat (gomb, menüpont, oszlopfej) legyen olyan rövid, mint a forrás; ahol a
    célnyelv hosszabb, a rövidebb, bevett UI-formát válaszd.
 5. **Konzisztencia:** ugyanaz a magyar fogalom ugyanazon a felületen MINDIG ugyanarra fordul — a
