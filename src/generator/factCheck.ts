@@ -11,6 +11,7 @@
 // a FLAG routes the mock to the curation queue (never auto-outreach) — §G.20.
 
 import { recordAiUsage } from "../ai/usage.js";
+import { promptAmenityLabel } from "./amenityGloss.js";
 import { cachedSystem } from "../ai/promptCache.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
@@ -427,7 +428,7 @@ export async function verifyFactuality(input: {
           ]
         : []),
       ...(input.lead.amenities?.length
-        ? [`amenities (hitelesített adatlapról): ${input.lead.amenities.join(", ")}`]
+        ? [`amenities (hitelesített adatlapról): ${input.lead.amenities.map(promptAmenityLabel).join(", ")}`]
         : []),
       // A prose source is still a SOURCE: a fact stated here is traceable. But it is
       // the listing's own marketing text, so it grounds only what it plainly STATES —

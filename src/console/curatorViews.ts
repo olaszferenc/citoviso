@@ -185,7 +185,7 @@ export function sourcePackPane(leadId: string, lang: string): string {
         h += blk(S.statsTitle, '', esc(S.statsWhy), rs ? '<dl class="cur-kv"><dt>' + esc(S.rating) + '</dt><dd><b>' + esc(rs.rating) + '</b>' + (rs.count != null ? ' · ' + esc(f(S.ratingCount, { n: rs.count })) : '') + '</dd></dl>' +
           (rs.rating < 3.5 ? '<div class="cur-flag" style="margin-top:10px">' + WARN + '<span>' + esc(f(S.lowRating, { r: rs.rating })) + '</span></div>' : '') : '<p class="mut small">' + esc(S.noStats) + '</p>');
         h += blk(S.amTitle, pill(f(S.items, { n: p.amenities.length })), esc(S.amWhy), '<ol class="cur-am">' + p.amenities.map(function (a) {
-          return '<li>' + esc(a.label) + ' <span class="src">· ' + esc(a.origin === 'description' ? S.fromDesc : S.fromList) + '</span></li>'; }).join('') + '</ol>', 'span2');
+          return '<li>' + esc(a.label) + ' <span class="src">· ' + esc(a.origin === 'description' ? S.fromDesc : S.fromList) + (a.note ? ' — ' + esc(a.note) : '') + '</span></li>'; }).join('') + '</ol>', 'span2');
         var hasOwner = p.descriptions.some(function (d) { return d.source === 'owner_intro'; });
         h += blk(S.descTitle, pill(f(S.pcs, { n: p.descriptions.length })), esc(f(S.descWhy, { n: p.limits.descriptionChars })),
           (hasOwner ? '' : '<div class="cur-flag">' + WARN + '<span>' + esc(S.noOwnerIntro) + '</span></div>') +

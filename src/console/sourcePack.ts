@@ -11,6 +11,7 @@
 // never show another set than the writer received (except the stale Google reviews, flagged).
 
 import { db } from "../db/client.js";
+import { amenityGloss } from "../generator/amenityGloss.js";
 import { copyFieldSpec, copyKeysFor, visibleCopyKeys, type CopyKey } from "../engine/copyFields.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
@@ -43,7 +44,8 @@ export interface SourcePack {
   };
   /** The real Google rating the writer may cite (only when attributable, §B.17). */
   readonly realStats: { readonly rating: number; readonly count: number | null } | null;
-  readonly amenities: readonly { readonly label: string; readonly origin: "listing" | "description" }[];
+  // `note`: what a misleading label really is („Fürdetőkád” = a baby's bath tub, not the bathroom's).
+  readonly amenities: readonly { readonly label: string; readonly origin: "listing" | "description"; readonly note?: string }[];
   readonly descriptions: readonly { readonly text: string; readonly source: string }[];
   readonly voice: {
     readonly used: readonly VoiceInput[];
@@ -119,6 +121,7 @@ export async function buildSourcePack(loaded: LoadedLead): Promise<SourcePack> {
     amenities: src.amenities.map((label) => ({
       label,
       origin: src.descriptionFacts.includes(label) ? "description" : "listing",
+      ...(amenityGloss(label) ? { note: amenityGloss(label)! } : {}),
     })),
     descriptions: src.descriptions.map((text) => ({
       text,

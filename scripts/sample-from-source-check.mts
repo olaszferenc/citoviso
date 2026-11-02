@@ -373,6 +373,20 @@ const BREEZE = ["The 30 m² Balaton Breeze Apartman Fonyod enjoys a beachfront l
 check("Balaton Breeze 2eab1936: „5-minute walk from the Strand Street Beach” → nem Strand", !descriptionFactIsOwn("Strand", BREEZE));
 const FARKAS = ["Az ingatlan Siófok belvárosában, zöldövezetben található.\n\n100 m-es körzeten belül található szupermarket, több étterem, gyorsbüfé."];
 check("Farkas 7e3ff3c5: „100 m-es körzeten belül … több étterem” → nem Étterem", !descriptionFactIsOwn("Étterem", FARKAS));
+// A baby's bath tub („Fürdetőkád”) is no bathroom tub (Bagoly 40612ae4, 2026-11-02: written up as
+// „Fürdőkád” / „A fürdőszobában kád”): every prompt that shows the listing to a model glosses it.
+{
+  const { promptAmenityLabel } = await import("../src/generator/amenityGloss.js");
+  check("„Fürdetőkád” a promptban babakádként, fürdőkádat nem igazol", /gyerek-kellék.*NEM a fürdőszoba kádja/u.test(promptAmenityLabel("Fürdetőkád")) && /NEM a fürdőszoba/u.test(promptAmenityLabel("Babakád")));
+  check("⛔ a valódi „Fürdőkád” címke változatlan", promptAmenityLabel("Fürdőkád") === "Fürdőkád" && promptAmenityLabel("Kád") === "Kád");
+  const wired = ["brief.ts", "factCheck.ts", "marketCheck.ts", "guestCritic.ts"].filter(
+    (f) => !/promptAmenityLabel\(|\.map\(promptAmenityLabel\)/.test(readFileSync(new URL(`../src/generator/${f}`, import.meta.url), "utf8")),
+  );
+  check("a felszereltség-címkét az író, a tényellenőrző, a piaci bíráló és a vendég-kritikus is magyarázva kapja", wired.length === 0, wired);
+  const pack = readFileSync(new URL("../src/console/sourcePack.ts", import.meta.url), "utf8");
+  const view = readFileSync(new URL("../src/console/curatorViews.ts", import.meta.url), "utf8");
+  check("a kurátor forrás-csomagja is jelzi (note), és a nézet kiírja", /note:\s*amenityGloss\(/.test(pack) && /a\.note/.test(view));
+}
 const MURA = ["A legközelebbi étterem 4 kilométernyi távolságra, az élelmiszer üzlet 1 kilométerre található."];
 check("Mura Völgye 919e838c: „legközelebbi étterem 4 kilométernyi távolságra” → nem Étterem", !descriptionFactIsOwn("Étterem", MURA));
 check("„Az étterem 500 méternyi távolságra van.” → nem Étterem", !descriptionFactIsOwn("Étterem", ["Az étterem 500 méternyi távolságra van."]));

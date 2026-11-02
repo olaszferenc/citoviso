@@ -24,6 +24,7 @@
 // only thing standing between a "főtt reggeli" and the lead.
 
 import type AnthropicNS from "@anthropic-ai/sdk";
+import { promptAmenityLabel } from "./amenityGloss.js";
 import { recordAiUsage } from "../ai/usage.js";
 import { cachedSystem, EPHEMERAL } from "../ai/promptCache.js";
 import { config } from "../config.js";
@@ -619,7 +620,7 @@ function describeSource(s: CriticSource): string {
     s.address ? `Cím: ${s.address}` : "",
     s.rating ? `Google-értékelés: ${s.rating.value} (${s.rating.count ?? "?"} vélemény)` : "Google-értékelés: nincs",
     `\nA SZÁLLÁS SAJÁT HIRDETÉSÉBŐL (szolgáltatásként állítható):`,
-    listing.length ? listing.map((f) => `- ${f.label}${f.quote ? ` — „${f.quote}”` : ""}`).join("\n") : "- nincs",
+    listing.length ? listing.map((f) => `- ${promptAmenityLabel(f.label)}${f.quote ? ` — „${f.quote}”` : ""}`).join("\n") : "- nincs",
     `\nVENDÉG-VÉLEMÉNYEKBŐL KINYERT ÁLLÍTÁSOK (a címke a gép fordítása — az IDÉZET az igazság):`,
     review.length ? review.map((f) => `- ${f.label} — „${f.quote ?? ""}”`).join("\n") : "- nincs",
     s.descriptions?.length ? `\nA SZÁLLÁS SAJÁT BEMUTATKOZÁSA:\n${s.descriptions.map((d) => `"""${d.slice(0, 1200)}"""`).join("\n")}` : "",

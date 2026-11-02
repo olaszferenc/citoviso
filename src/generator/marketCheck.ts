@@ -30,6 +30,7 @@
 // at the curator instead of landing in a stranger's mailbox.
 
 import { recordAiUsage } from "../ai/usage.js";
+import { promptAmenityLabel } from "./amenityGloss.js";
 import { cachedSystem, EPHEMERAL } from "../ai/promptCache.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
@@ -1253,7 +1254,7 @@ export async function verifyMarketRelevance(input: {
           : "") +
         `\nAMIT A SZÁLLÁSRÓL BIZONYÍTOTTAN TUDUNK (a saját, hitelesített hirdetéséről) —\n` +
         `ezt KELLETT VOLNA eladnia a szövegnek:\n` +
-        (amenities.length ? amenities.map((a) => `- ${a}`).join("\n") : "- (nincs adat)") +
+        (amenities.length ? amenities.map((a) => `- ${promptAmenityLabel(a)}`).join("\n") : "- (nincs adat)") +
         `\n\n════ A GENERÁLT ELADÓ SZÖVEG ════\n` +
         `HERO FŐCÍM: ${input.sales.heroLead ?? "(nincs)"}\n` +
         `HERO KICKER: ${input.sales.heroEyebrow ?? "(nincs)"}\n` +

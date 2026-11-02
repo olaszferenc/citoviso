@@ -5,6 +5,7 @@
 // applies it within safe rails. Falls back to null (→ seeded theme) without a key.
 
 import { recordAiUsage } from "../ai/usage.js";
+import { promptAmenityLabel } from "./amenityGloss.js";
 import { cachedSystem } from "../ai/promptCache.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
@@ -374,7 +375,7 @@ export async function generateBriefAndCopy(input: {
             `panoráma szerepel, a nyitórész lírai képe és az első kiemelés EZT vigye — a kert, a parkoló, a\n` +
             `terasz ezek MÖGÉ sorolódik. (Megtörtént kár: egy közvetlen vízparti, saját strandos,\n` +
             `stéges villát "tágas kert, teraszos étkező és saját parkoló" főcímmel adtunk el.)\n` +
-            input.sourcedFacts.amenities.map((a) => `- ${a}`).join("\n") +
+            input.sourcedFacts.amenities.map((a) => `- ${promptAmenityLabel(a)}`).join("\n") +
             `\n`
           : "") +
         (input.sourcedFacts?.descriptions?.length

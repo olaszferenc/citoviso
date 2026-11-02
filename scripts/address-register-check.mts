@@ -111,6 +111,10 @@ const CONSOLE_FAMILIAR = new Set([
   // Több e-mail-cím egy leadhez (ADR-0321): „… a megkeresés címzettjének ezt írd” ·
   // „Több címet egyszerre is beilleszthetsz …” — the Adatok tab addresses the operator.
   "írd", "beilleszthetsz",
+  // 2026-11-02 reviewed (all operator console copy): pricingPage „Előbb kérdezd le az árat.”,
+  // scoutViews „… amit a Térképen egy nézetben átnézel … beírod … nézed”, views „Jelölj ki
+  // sablont”, „Ha nem vársz rá, írd meg te.” (Poe's curator lock).
+  "kérdezd", "átnézel", "beírod", "nézed", "jelölj", "vársz",
 ]);
 
 /** The seven measured eyebrows, as the critic's lint sees them (features.eyebrow). */
