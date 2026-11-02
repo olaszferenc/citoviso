@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-02_marilyn_artalmas_oldal_sajat_megnyitas.md](2026-11-02_marilyn_artalmas_oldal_sajat_megnyitas.md) — 2026-11-02 — Marilyn Vendégház: „ártalmas oldal”, e-mail, saját megnyitás a tervváltón
 - [2026-10-31_riport_lead_tipus_szuro.md](2026-10-31_riport_lead_tipus_szuro.md) — 2026-10-31 — Riport: lead típus szűrő + ítélet-színű kártya-fejléc
 - [2026-10-28_babel_esemenyre_ebred_deploy.md](2026-10-28_babel_esemenyre_ebred_deploy.md) — 2026-10-28 — Bábel eseményre ébred, a Koordinátor alatt; deploy b6384a2f
 - [2026-10-27_valasz_javaslat_figyelo.md](2026-10-27_valasz_javaslat_figyelo.md) — 2026-10-27 — Válasz-javaslat: Poe soha nem kapta meg a jegyeket → válasz-figyelő (ADR-0340 A út)
