@@ -619,6 +619,15 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
     ["interior", "1769937061/Zamardi-Parti-Apartman-Room.JPEG", "Nagy hálózoba teraszrálátással, világos, függönyzet, TV és komfortos berendezés.", true],
     ["interior", "1769937067/Zamardi-Parti-Apartman-Macro-Details.JPEG", "Tetőtéri hálózoba, mélypontos, polcok, fényes, azonban szűk és speciális design.", true],
     ["interior", "1769937024/Zamardi-Parti-Apartman-Room.JPEG", "Nyílt nappali-hálózóma konyhasarokkal, lépcsővel, modern és világos.", false],
+    // 2026-11-02 (Poe, rooms module without an img): a living room named only in the verdict's
+    // „, de …” comparison; a collage judged by its first panel; „hálóterek”; a one-room
+    // „nappali-hálós szoba” with its beds named. A hall „a … hálószoba felé” stays out.
+    ["interior", "solt-szazholdas-pagony-vendeghaz2.jpg", "Stilisztikus hálószoba zöld fal mellett, ágy középpontban, világos, elegáns belsőépítészet – vonzó szoba, de a nappali vagy közösségi tér erősebb.", true],
+    ["interior", "akaszto-mustang-vendeghaz5.jpg", "6 panelből: hálószobák ágyakkal, nappali-étkezőrész. Világos, vonzó belső tér több szoba bemutatása.", true],
+    ["interior", "akaszto-mustang-vendeghaz13.jpg", "Többpaneles: étkezőrész, konyha, nappali. Világos, meleg világítás, jó belső tér összbenyomása.", false],
+    ["interior", "fehervarcsurgo-zold-kullo-vendeghaz7.jpg", "Felsõemelet hálóterek tetõrészlet-szerkezettel, átmeneti/közlekedési jellegû tér, nem szívesen megosztás.", true],
+    ["interior", "magyarpolany-3.jpg", "Szálláshely nappali-hálós szoba: két ágy, étkező asztal, konyha – világos, vonzó berendezés, jó áttekintés.", true],
+    ["interior", "revfulop-roze-fogado2.jpg", "Világos, tágas belső tér, nyitott ajtók, fa gerendázat, de csak folyosó/átjáró a nappali vagy hálószoba felé, semleges perspektíva.", false],
   ];
   check("a képelemző promptja kéri a látható ágy megnevezését és a „stúdió” szót", /nevezze meg a látható ÁGYAT/.test(readFileSync(new URL("../src/generator/heroPick.ts", import.meta.url), "utf8")));
   const wrongV = V.filter(([subject, file, reason, want]) => isBedroomVerdict({ subject, reason }, `https://x.hu/${file}`) !== want).map(([, f, r]) => `${f}: ${r.slice(0, 40)}`);

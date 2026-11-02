@@ -210,6 +210,9 @@ export function dropNeverShown<T extends OrderablePhoto>(
  * „Hálószoba …”, „Szoba két ággyal”, „Tetőtéri szoba … ágy” — and „Konyha …”, „Folyosó …”,
  * „Nappali/étkezőszoba …” do not. Accented match on purpose: „ágy” is not inside „nagy”.
  */
+const LIVING = /nappali(?!\s+(?:fény|napfény|megvilágít))/iu;
+const BED_WORD = /hálós?zob|hálórész|hálósar|hálóter|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu;
+
 export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?: string): boolean {
   // A bedroom close-up is judged „detail” (Hillside 854c58c9 „Hálószoba részlete”, Szép Zalában
   // 9050baa8 „Hálószoba-sarok: ágy, párnák”, 2026-10-28) — still the only bedroom photo there.
@@ -224,10 +227,22 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   // A STUDIO is the guest's bedroom even with its kitchenette and table in the frame (Piroska
   // bd23e91e harkany-piroska-apartman7, 2026-10-28: a made bed in the foreground) — when the
   // verdict names the studio AND a bed. The sofa bed („kanapéágy”) stays out below.
-  if (/stúdió|egyterű|garzon/iu.test(reason) && /(?<!kanapé|kanapé-|heverő-|függő)(?:ágy|ággy)/iu.test(reason)) return true;
+  // A combined „nappali-hálós szoba: két ágy” is that same one-room unit (Pajta 0e73a6af
+  // magyarpolany-3, 2026-11-02) — with a bed named; „Nyílt nappali-hálózóma konyhasarokkal”
+  // (Zamárdi …024) names none and stays a living room.
+  if (/stúdió|egyterű|garzon|nappali-hál/iu.test(reason) && /(?<!kanapé|kanapé-|heverő-|függő)(?:ágy|ággy)/iu.test(reason)) return true;
+  // A COLLAGE is judged by its first panel: „6 panelből: hálószobák ágyakkal, nappali-étkezőrész”
+  // (Mustang a5c4f147 akaszto-mustang-vendeghaz5, 2026-11-02: four of six panels are bedrooms —
+  // the house's only bedroom photo). „Többpaneles: étkezőrész, konyha, nappali” is not.
+  const collage = /^\s*(?:\d+\s*panel\p{L}*|többpaneles)\s*:\s*([^,;]+)/iu.exec(reason);
+  if (collage) return BED_WORD.test(collage[1]!);
   // „nappali fény(ben)”, „nappali megvilágítás” is DAYLIGHT, not a living room (Stokedli 5e8d5ac4
   // vendeghaz2, 2026-11-01: „Tiszta, világos hálószoba … jó nappali fény” lost its card photo).
-  const living = /nappali(?!\s+(?:fény|napfény|megvilágít))/iu.test(reason);
+  // The verdict's own judgement after „, de …” compares, it does not describe: „Stilisztikus
+  // hálószoba …, ágy középpontban – vonzó szoba, de a nappali vagy közösségi tér erősebb”
+  // (Százholdas ed33f676 vendeghaz2, 2026-11-02) shows no living room.
+  const described = reason.split(/,\s*de\s/u)[0]!;
+  const living = LIVING.test(described);
   // The dining/common area is the photo's subject only when it comes BEFORE the bed in the first
   // clause: „Közös terület ágy-szobával” is a common area, „Szoba ágy és étkezőrész egy helyen”
   // (Gulya e2f3dbfa zalalovo-11, 2026-11-01) is a room with its bed first.
@@ -241,7 +256,12 @@ export function isBedroomVerdict(v: Pick<HeroScore, "subject" | "reason">, url?:
   // „virággal” is no bed: only „ággy” is the doubled form.
   // „hálózoba” is the vision model's own typo for „hálószoba” (Zamárdi Parti e24080dc, 2026-11-01:
   // „Nagy hálózoba teraszrálátással” …061, „Tetőtéri hálózoba” …067 — no card photo).
-  if (/hálós?zob|hálórész|hálósar|paplan|(?<!függő|napozó|nyug|virág|kanapé|kanapé-|masszázs)(?:ágy|ággy)/iu.test(reason)) return true;
+  // „hálótér”, „hálóterek”, „hálóterület”, „hálóterem” too (Zöld küllő af72a19d vendeghaz7,
+  // 2026-11-02: „Felsőemelet hálóterek” — the loft with three beds). A bed named only after
+  // „, de” counts as before — unless a living room is named there too: „… nyitott ajtók, de csak
+  // folyosó/átjáró a nappali vagy hálószoba felé” (Rozé Fogadó) is a hall.
+  if (BED_WORD.test(described)) return true;
+  if (BED_WORD.test(reason) && !LIVING.test(reason)) return true;
   // The verdict says only „szobabelsőség” — the file name says which room (Ametiszt ce2f06ec
   // „franciaagyas-szoba-…avif”, „haromagyas-szoba-…”, 2026-10-28).
   return v.subject === "interior" && url !== undefined && namesBedroomFile(url);
