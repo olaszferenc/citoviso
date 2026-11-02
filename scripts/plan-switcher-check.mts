@@ -27,7 +27,7 @@ import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 import { disableIntroAnimation, injectTrackingNotice } from "../src/console/prospectNotice.js";
-import { injectPlanEndBlock, injectPlanSwitcherBar, type SwitcherInput } from "../src/console/planSwitcher.js";
+import { injectPlanEndBlock, injectPlanSwitcherBar, planHref, type SwitcherInput } from "../src/console/planSwitcher.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
 const SELFTEST = process.argv.includes("--selftest");
@@ -224,6 +224,32 @@ async function run(browser: Browser, mutate?: (html: string) => string): Promise
     check(`${tpl} JS=KI: a kinyitott rész viszi mindkét jogi linket`, open.privacy && open.unsub, open);
     await ctx.close();
   }
+}
+
+// OWN VIEW (?sajat=1) survives a plan switch (measured 2026-11-02: the owner opened
+// Marilyn Vendégház's link from the console, clicked a plan chip, and the marker fell
+// off — two of the lead's three recorded "visits" were his).
+if (!SELFTEST) {
+  console.log("\n— saját megnyitás (?sajat=1) a tervváltón —");
+  const own = { ...input(2, 1), viewId: null, ownView: true };
+  const ownHtml = injectPlanEndBlock(injectPlanSwitcherBar("<html><body></body></html>", own), own);
+  // Plan links only: /p/<slug>/<token> or …/v/<n> — not /unsubscribe or /feedback.
+  const ownHrefs = [...ownHtml.matchAll(/<a href="([^"]*\/p\/[^"]*)"/g)]
+    .map((m) => m[1]!)
+    .filter((h) => /\/p\/[a-z0-9-]+\/[A-Za-z0-9_-]{16,}(?:\/v\/\d)?(?:\?|$)/.test(h));
+  check(
+    "saját megnyitásnál minden tervváltó link viszi a ?sajat=1-et",
+    ownHrefs.length >= 3 && ownHrefs.every((h) => /[?&]sajat=1(?:&|$)/.test(h)),
+    ownHrefs,
+  );
+  const lead = { ...input(2, 1), viewId: null };
+  const leadHtml = injectPlanEndBlock(injectPlanSwitcherBar("<html><body></body></html>", lead), lead);
+  check("a lead lapján a tervváltó link NEM kap sajat jelet", !/sajat=1/.test(leadHtml));
+  check(
+    "látogatás-azonosító és sajat jel együtt: egy ?, egy &",
+    planHref(DATA.name, TOKEN, 2, "abc", true).endsWith("/v/2?s=abc&sajat=1"),
+    planHref(DATA.name, TOKEN, 2, "abc", true),
+  );
 }
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });

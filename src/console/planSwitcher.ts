@@ -21,6 +21,7 @@ import { jsonForScript } from "../text/jsonForScript.js";
 import { slugify } from "../domains.js";
 import { T } from "../i18n/mail.js";
 import { appendToBody, prependToBody, trackedBarParts } from "./prospectNotice.js";
+import { OWN_VIEW_PARAM } from "./prospectPath.js";
 
 /** What the page knows about one plan when it renders the switcher. */
 export interface SwitcherPlan {
@@ -41,6 +42,10 @@ export interface SwitcherInput {
   /** The view this page load belongs to. The switch links carry it, so a switch
    *  continues the visit instead of opening a new one (data.ts continueView). */
   readonly viewId?: string | null;
+  /** An OWN VIEW (owner/operator, `?sajat=1` — prospectPath.ts): the switch links keep
+   *  the marker, or the first click turns the owner's look into a measured lead visit
+   *  (measured 2026-11-02: two of Marilyn Vendégház's three "visits" were the owner's). */
+  readonly ownView?: boolean;
 }
 
 function esc(s: string): string {
@@ -52,11 +57,21 @@ function esc(s: string): string {
  * who switches must keep seeing their own business name in the address bar — the
  * trust signal draft.ts puts there on purpose. Plan 1 is the letter's own address.
  */
-export function planHref(leadName: string, token: string, n: number, viewId?: string | null): string {
+export function planHref(
+  leadName: string,
+  token: string,
+  n: number,
+  viewId?: string | null,
+  ownView?: boolean,
+): string {
   const slug = slugify(leadName).slice(0, 40).replace(/-+$/, "");
   const base = slug ? `/p/${slug}/${token}` : `/p/${token}`;
   const path = n === 1 ? base : `${base}/v/${n}`;
-  return viewId ? `${path}?s=${encodeURIComponent(viewId)}` : path;
+  const query = [
+    ...(viewId ? [`s=${encodeURIComponent(viewId)}`] : []),
+    ...(ownView ? [`${OWN_VIEW_PARAM}=1`] : []),
+  ];
+  return query.length ? `${path}?${query.join("&")}` : path;
 }
 
 /** The chip picture — served from the cached hero shot, never rendered on request. */
@@ -162,7 +177,7 @@ export function injectPlanSwitcherBar(html: string, i: SwitcherInput): string {
       const style = p.hasThumb ? ` style="background-image:url(${planThumbUrl(i.token, p.n)})"` : "";
       const cur = p.n === i.current ? ` aria-current="page"` : "";
       return (
-        `<a href="${esc(planHref(i.leadName, i.token, p.n, i.viewId))}" aria-label="${esc(T(i.lang, "{n}. terv", { n: p.n }))}"` +
+        `<a href="${esc(planHref(i.leadName, i.token, p.n, i.viewId, i.ownView))}" aria-label="${esc(T(i.lang, "{n}. terv", { n: p.n }))}"` +
         `${cur}${style}><span>${p.n}</span></a>`
       );
     })
@@ -205,7 +220,7 @@ export function injectPlanEndBlock(html: string, i: SwitcherInput): string {
     .map((p) => {
       const pv = p.hasThumb ? ` style="background-image:url(${planThumbUrl(i.token, p.n)})"` : "";
       return (
-        `<a href="${esc(planHref(i.leadName, i.token, p.n, i.viewId))}" data-cit-plan-end="${p.n}">` +
+        `<a href="${esc(planHref(i.leadName, i.token, p.n, i.viewId, i.ownView))}" data-cit-plan-end="${p.n}">` +
         `<span class="citp-pv"${pv}></span>` +
         `<span class="citp-cap"><span>${esc(T(i.lang, "{n}. terv", { n: p.n }))}</span>` +
         `<span class="citp-cta">${esc(T(i.lang, "Megnézem"))} ${ARROW}</span></span></a>`

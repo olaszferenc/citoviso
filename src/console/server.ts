@@ -969,6 +969,7 @@ async function multiPlanLayers(
     plans: readonly ProspectPlan[];
     current: number;
     viewId: string | null;
+    ownView: boolean;
   },
 ): Promise<string> {
   const plans = await Promise.all(
@@ -3763,7 +3764,7 @@ async function handle(
     const plan = plans.find((x) => x.n === planN);
     // A plan number this link does not have (a single-plan link, or a plan that has
     // since dropped out) is not an error page: the lead lands on the link's own plan.
-    if (!plan) return redirect(res, planHref(p.leadName, pMatch[1], 1));
+    if (!plan) return redirect(res, planHref(p.leadName, pMatch[1], 1, null, tracked && !measured));
     const multi = plans.length >= 2;
     // THE THIRD FRAMING STATE (2026-09-20): this lead ALREADY BOUGHT. Measured in
     // dev — the link kept serving the configurator and the checkout to a paying
@@ -3927,6 +3928,7 @@ async function handle(
                       plans,
                       current: plan.n,
                       viewId: null,
+                      ownView: !measured,
                     })
                   : injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
                 pMatch[1],

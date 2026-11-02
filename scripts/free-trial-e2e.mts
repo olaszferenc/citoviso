@@ -216,7 +216,10 @@ try {
   const until = new Date(trialA.trial_until as unknown as string);
   const UNTIL_DAY = budapestIsoDay(until);
   check(`free_trial active, started_at = T0, trial_until = T0 + ${TRIAL_DAYS} nap`,
-    trialA.status === "active" && new Date(trialA.started_at as unknown as string).getTime() === T0.getTime() && until.getTime() === T0.getTime() + TRIAL_DAYS * 86_400_000,
+    // Same Budapest wall clock TRIAL_DAYS CALENDAR days later (trialUntilFrom, IT 5. kör A3) —
+    // not T0 + n × 24 h: that turned red whenever the window crossed a DST switch (2026-11-02:
+    // T0 = 10-15, the 10-25 switch in between, product right, gate red on every tree).
+    trialA.status === "active" && new Date(trialA.started_at as unknown as string).getTime() === T0.getTime() && until.getTime() === bpAt(addIsoDays(T0_DAY, TRIAL_DAYS), 10).getTime(),
     `${budapestIsoDay(T0)} → ${UNTIL_DAY}`);
   const siteA = await db.selectFrom("site").select(["status", "slug"]).where("tenant_id", "=", tenantA).executeTakeFirstOrThrow();
   check("a site LIVE az aldomainen", siteA.status === "live" && !!siteA.slug, `${siteA.status} ${siteA.slug}`);
