@@ -91,8 +91,8 @@ export function buildCredentialsEmail(input: {
     ? pkg && pkgLabel
       ? T(
           lang,
-          "Elindult {art} {site} ingyenes próbája: a honlap él, és {pkgArt} {pkg} csomag moduljai be vannak kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
-          { ...introVars, pkgArt: huArticleLower(pkgLabel), pkg: pkgLabel },
+          "Elindult {art} {site} ingyenes próbája: a honlap él, és {art2} {pkg} csomag moduljai be vannak kapcsolva. Az első belépéshez állítson be egy saját jelszót.",
+          { ...introVars, art2: huArticleLower(pkgLabel), pkg: pkgLabel },
         )
       : pkg
         ? T(
