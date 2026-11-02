@@ -4,7 +4,7 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-10-26
+updated: 2026-11-02
 ---
 
 A Riport négy lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
@@ -24,8 +24,12 @@ A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselk
 
 ## A szűrősor — minden szám erre számolódik
 
-Egy sorban: az **időszak** chipjei (7 · 30 · 90 nap vagy **„Összes”**) és a **bontás**
-legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra). Minden panel a kiválasztott
+Egy sorban: az **időszak** chipjei (7 · 30 · 90 nap vagy **„Összes”**), a **„Lead típus”**
+legördülő (**„mind”** · nincs honlap · 0 lábnyom · van lábnyom · elavult honlap · ismeretlen) és a
+**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra). A „Lead típus”
+csak az adott típusú leadeket hagyja meg: így egyetlen csoport tölcsérét látod önmagában, míg a
+szegmens szerinti bontás egymás mellé teszi a típusokat. Ha nem „mind” van kiválasztva, a doboz
+kiemelt, és a választás a Viselkedés lapon is érvényes marad. Minden panel a kiválasztott
 időszakban KIKÜLDÖTT linkeket nézi — a saját megnyitásod és a teszt nem számít bele, a sor jobb
 széle ezt ki is írja. A változás-számok („+3,7 pont”) az előző, ugyanakkora időszakhoz mérnek;
 az **„Összes”** mellett ilyen összevetés nincs, ott egy kötőjel áll.
@@ -51,7 +55,8 @@ mérővel:
   Itt a KISEBB a jobb.
 
 Az ítélet-pill három szava: **„cél felett”** (zöld), **„közelít”** (borostyán), **„cél alatt”**
-(piros); adat nélkül **„nincs adat”**. A „közelít” az arányoknál azt jelenti, hogy a cél 70%-át
+(piros); adat nélkül **„nincs adat”**. A kártya felső csíkja ugyanezt a színt viseli, így a
+lapot görgetve is látod, melyik kérdés áll rosszul. A „közelít” az arányoknál azt jelenti, hogy a cél 70%-át
 már hozza; az idő-kártyánál fordítva: legfeljebb 30%-kal lassabb a célnál. A kártya alján a tört
 (hány darabból), a változás az előző időszakhoz, és egy hat heti vonal: felfelé megy-e.
 
