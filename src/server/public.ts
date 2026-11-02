@@ -114,7 +114,7 @@ import { retryRenewalCharge } from "../payment/retryCharge.js";
 import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
-import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { T, langForTenant, prepareMailLang, prepareRenderLang } from "../i18n/mail.js";
 import { peekPasswordToken, setPasswordWithToken } from "../auth/passwordLink.js";
 import { sendPasswordResetLinks } from "../tenant/credentials.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
@@ -1049,7 +1049,7 @@ async function serveTenantHost(
    */
   let langMemo: Promise<string> | null = null;
   const tenantLang = (): Promise<string> =>
-    (langMemo ??= langForTenant(site.tenantId).then(prepareMailLang));
+    (langMemo ??= langForTenant(site.tenantId).then(prepareRenderLang));
 
   // B1 (Elek 2026-10-11): the export feed the owner pasted into a portal lives on THIS
   // host. Before the freeze branch on purpose: a portal reading it keeps the nights we
@@ -1079,7 +1079,7 @@ async function serveTenantHost(
     // for it — not always the primary one (the freeze branch used to run before
     // the /<lang>/ router, so it never saw the prefix).
     const paidLangs = site.path ? await multilangLangsFor(site.path) : [];
-    const lang = await prepareMailLang(
+    const lang = await prepareRenderLang(
       suspendedLang(pathname, paidLangs, await langForTenant(site.tenantId)),
     );
     res.statusCode = 503;
@@ -4417,7 +4417,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // ADR-0067: /login lives on the platform host with NO tenant context, so the
     // language arrives as a hint on the link the owner clicked on their own site
     // (ownerLogin.ts). Unknown/unsupported → Hungarian.
-    const loginLang = await prepareMailLang(
+    const loginLang = await prepareRenderLang(
       uiLangs().includes(url.searchParams.get("lang") ?? "")
         ? (url.searchParams.get("lang") as string)
         : DEFAULT_LANG,
@@ -4463,7 +4463,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (pathname === "/admin/modules/preview") {
       const session = await currentTenant(req);
       if (!session) return redirect(res, "/login");
-      const lang = await prepareMailLang(await langForTenant(session.tenantId));
+      const lang = await prepareRenderLang(await langForTenant(session.tenantId));
       const shown = parsePreviewSet(url.searchParams.get("on"));
       const mv = await getTenantModules(session.tenantId);
       const owned = new Set(
@@ -4634,18 +4634,17 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`Citoviso publikus szerver → http://0.0.0.0:${PORT} (public/ + /api/mock-request)`);
 });
 
-// ADR-0036 boot-time self-heal: a deploy+restart automatically tops up every known language
-// pack to the current catalog (the catalog grows during development; a stale pack would leak
-// Hungarian strings onto foreign pages). Fire-and-forget — boot must not block on the AI.
-// Skipped under CIT_SHOT=1: a screenshot run must never trigger AI top-ups or DB writes.
+// ADR-0036 boot-time self-heal: a deploy+restart applies Bábel's committed seed to every known
+// language pack (ADR-0412: nothing is translated by API; a gap stays Hungarian until his
+// session fills it). Fire-and-forget — boot must not block on it.
+// Skipped under CIT_SHOT=1: a screenshot run must never trigger DB writes.
 if (process.env.CIT_SHOT !== "1") {
   void (async () => {
     const { ensureAllLanguagePacks, packCoverage } = await import("../i18n/packs.js");
-    const { withTranslationTrigger } = await import("../i18n/spend.js");
     // I18N_BOOT_TOPUP=0 (dev): measure coverage only — no API call at boot (2026-10-07).
     if (!config.i18nBootTopup) console.log("[i18n] boot-fordítás KIKAPCSOLVA (I18N_BOOT_TOPUP=0) — csak mérés");
     const rows = config.i18nBootTopup
-      ? await withTranslationTrigger("boot", () => ensureAllLanguagePacks())
+      ? await ensureAllLanguagePacks()
       : await packCoverage();
     for (const r of rows) {
       const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";

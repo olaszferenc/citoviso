@@ -1539,7 +1539,8 @@ export interface ScrapeCheckpointTable {
 }
 
 /** 0092: one row per AI translation call (UI-string pack / KB entry) — the translation
- *  meter outside a mock run (src/i18n/spend.ts). cost_usd NULL = unpriced model. */
+ *  meter outside a mock run. Historical since ADR-0412 (no API translation, writer removed).
+ *  cost_usd NULL = unpriced model. */
 export interface TranslationSpendTable {
   id: Generated<string>;
   at: ColumnType<Date, Date | string | undefined, Date | string>;
