@@ -14,8 +14,17 @@
 - **Volumen-modell:** árbevétel ≈ `tenant_szám × éves_díj`. Cél-nagyságrend: pl. 2000 × 100 €/év = 200k €/év.
 
 ## Ügyfél-oldali megtérülés (a horog)
-- **Jelenlegi költség:** booking-jutalék = `éves_foglalási_forgalom × 0,15–0,18`. Példa: 3–4M Ft forgalom → 450–700e Ft/év.
-- **Megtakarítás:** `átcsábított_direkt_foglalás_arány (20–30%) × jutalék`. A saját oldal havidíja ehhez képest töredék → hónapos megtérülés.
+- **Jelenlegi költség:** portál-jutalék = `portálos_foglalási_forgalom × a_szállásadó_SAJÁT_jutalékkulcsa`.
+  ⛔ A kulcsot NEM mi mondjuk meg: szállásonként és szerződésenként más (a szállásadó a szerződéséből tudja).
+  Igazolt sáv (2026-11-02): OGY Infojegyzet 2024/1 — az online szállásközvetítők jutaléka a nettó szállásdíj
+  **10–30%-a**; Szallas.hu: 13% egy 2019-es esetben (adozona.hu); Booking: hivatalos átlag nincs, a ~15% csak
+  harmadik-fél becslés. (A korábbi „0,15–0,18” és „3–4M Ft forgalom” forrás nélküli volt — §B.17 — törölve.)
+- **Megtakarítás:** `közvetlenül_foglaló_vendégek_szállásdíja × jutalékkulcs`. Az átcsábítható arányra NINCS
+  forrásunk (a korábbi „20–30%” kitalált volt) — kifelé csak a szállásadó saját számaival számolunk:
+  `megtérülés = havidíj / (átlagos_foglalás × jutalékkulcs)` = ennyi közvetlen foglalás/hó hozza ki a díjat.
+- **Ár-paritás (2026-11-02):** a Booking.com 2024-11-14 óta DMA-kapuőr, az EGT-ben sem szűk, sem tág
+  paritás-záradékot nem alkalmazhat → a szállásadó a SAJÁT oldalán olcsóbb lehet, mint a Bookingon
+  (Európai Bizottság DMA-tájékoztató). A Szallas.hu szerződését nem ellenőriztük.
 
 ## Árazási sávok (piaci referencia, 2026-07-04 — történeti horgony)
 - Klasszikus kézi/ügynökség: €1000–3000 (EU) / $2000–5000 (US) egyszeri.
