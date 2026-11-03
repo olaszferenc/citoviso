@@ -196,6 +196,21 @@ export class WebsupportDns implements DnsAdapter {
   }
 
   /**
+   * ADR-XXXX: the Google Search Console verification TXT on the apex. ADDS a record and
+   * never updates one — the apex usually already carries the owner's SPF TXT, and an
+   * update would silently break their mail. Reading back first keeps it idempotent.
+   */
+  async ensureApexTxt(domain: string, content: string): Promise<void> {
+    const records = await this.#records(domain);
+    const unquote = (v: string): string => v.replace(/^"+|"+$/g, "");
+    const exists = records.some(
+      (r) => r.type === "TXT" && (r.name === "@" || r.name === "") && unquote(r.content) === content,
+    );
+    if (exists) return;
+    await this.#request("POST", this.#recordPath(domain), { type: "TXT", name: "@", content, ttl: 600 });
+  }
+
+  /**
    * Does the host actually serve a VALID certificate for this name?
    *
    * Deliberately provider-agnostic: it opens a real TLS connection and lets Node verify

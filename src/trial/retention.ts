@@ -194,6 +194,9 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   { table: "multilang_generation", where: `tenant_id = $1 OR site_id IN ${SITES}` },
   // ADR-0380: the booking-setup helper's cost rows (no question text) go with the site.
   { table: "tenant_ai_call", where: `site_id IN ${SITES}` },
+  // ADR-XXXX: the Search Console submission state goes with the site (the append-only
+  // search_console_event log keeps its rows, target_id → NULL).
+  { table: "search_console_target", where: `site_id IN ${SITES}` },
   { table: "module_entitlement", where: "tenant_id = $1" },
   // ADR-0407: the owner's own admin activity (Próba riport) goes with the tenant.
   { table: "tenant_activity", where: "tenant_id = $1" },

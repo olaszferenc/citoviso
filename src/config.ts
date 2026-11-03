@@ -227,6 +227,22 @@ export const config = {
   googleCostDailyThresholdEur: Number(env("GOOGLE_COST_DAILY_THRESHOLD_EUR", "18")),
   gcloudBin: env("GCLOUD_BIN", `${env("HOME", "/home/citoviso")}/google-cloud-sdk/bin/gcloud`),
   /**
+   * ADR-XXXX — automatic Search Console submission of every live lodging site.
+   * The service-account JSON key (citoviso-search-console@mineralcrm). Empty or missing
+   * file = the tick logs "beállításra vár" and sends nothing. ⛔ The REAL Google client
+   * runs only on the live host (isLiveHost); dev always uses the recording mock.
+   */
+  searchConsoleKeyFile: env(
+    "SEARCH_CONSOLE_KEY_FILE",
+    `${env("HOME", "/home/citoviso")}/.config/citoviso/search-console-sa.json`,
+  ),
+  /** The ONE Domain property every <slug>.citoviso.com sitemap goes under. */
+  searchConsolePlatformProperty: env("SEARCH_CONSOLE_PLATFORM_PROPERTY", "sc-domain:citoviso.com"),
+  /** Comma list of Google accounts recorded as co-owners of every property the service
+   *  account verifies itself (Site Verification `owners`), so the owner sees them in the
+   *  Search Console UI. Empty = the service account alone. */
+  searchConsoleOwnerEmails: env("SEARCH_CONSOLE_OWNER_EMAILS"),
+  /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
    * machine actually sends while the pilot runs (owner request, 2026-08-26).
    * Empty = off, which is the post-pilot state.

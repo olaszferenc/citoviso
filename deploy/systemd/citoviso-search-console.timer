@@ -1,0 +1,12 @@
+[Unit]
+Description=Citoviso Search Console sitemap-beküldés negyedóránként
+
+[Timer]
+# 15 perc: egy új élő oldal negyedórán belül bent van; a már beküldött sitemapet csak
+# 6 óránként nézi újra (RECHECK_MS), így a gyakori futás nem jár sok hívással.
+OnBootSec=300
+OnUnitActiveSec=900
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

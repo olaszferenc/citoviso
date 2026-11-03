@@ -26,4 +26,14 @@ export class MockDns implements DnsAdapter {
   async certificateStatus(domain: string): Promise<"pending" | "active"> {
     return /dnsfail/i.test(domain) ? "pending" : "active";
   }
+
+  /** TXT records "written" locally (the Search Console tick's dev path reads them back). */
+  readonly txt = new Map<string, Set<string>>();
+
+  async ensureApexTxt(domain: string, content: string): Promise<void> {
+    if (/dnsfail/i.test(domain)) throw new Error(`mock DNS: a(z) ${domain} zónája nem írható`);
+    const set = this.txt.get(domain) ?? new Set<string>();
+    set.add(content);
+    this.txt.set(domain, set);
+  }
 }

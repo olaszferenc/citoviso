@@ -1,0 +1,23 @@
+[Unit]
+# ADR-XXXX: minden élő szállásoldal sitemapje automatikusan a Google Search Console-ba —
+# a citoviso.com-os cím az oldal élesedésekor, a saját domain annak élesedésekor, és újra,
+# ha a sitemap változik. Egyeztető futás: az élesítés NEM hívja, így a Google hibája sosem
+# buktathat el próbát, vásárlást vagy domain-élesítést. Idempotens; a hibás célt visszalépéssel
+# újrapróbálja, és az 5. egymás utáni hiba után EGY levelet küld. Csak az élő hoszt hívja a
+# Google-t (isLiveHost), máshol a mock fut.
+Description=Citoviso Search Console sitemap-beküldés (ADR-XXXX)
+After=network-online.target
+Wants=network-online.target
+# ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).
+OnFailure=citoviso-alert@%n.service
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052 integrációs pont).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/search-console-tick.mts
+# Google-hívások + sitemap-letöltések, mindegyiknek saját időkorlátja van; ez a végső fék.
+TimeoutStartSec=300
+StandardOutput=append:/home/citoviso/.claude/citoviso-search-console.log
+StandardError=inherit

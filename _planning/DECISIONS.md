@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-search-console-automatikus-bekuldes.md) — Search Console: minden élő szállásoldal automatikus beküldése a Google-nek
 - [ADR-0414](decisions/0414-rendszer-szamlak-a-bizonylatokban-tukor.md) — Rendszer-számlák a Bizonylatokban (tükör) + riasztás minden sikeres fizetésről
 - [ADR-0413](decisions/0413-hos-foto-pontozas-mero-napi-plafon-csak-a.md) — Hős-fotó pontozás: mérő + napi plafon, csak a generálás pontoz; a generálás nem fizet a Google-nek
 - [ADR-0412](decisions/0412-forditas-api-hivassal-tilos-forditasra-csak.md) — Fordítás API-hívással TILOS: fordításra csak Bábel előfizetéses sessionje költhet

@@ -2438,6 +2438,16 @@ if [ -f scripts/google-cost-report-check.mts ] && \
   echo "[pre-commit] google-cost-report-check (napi Google-költség riport számolása)…"
   npx tsx scripts/google-cost-report-check.mts
 fi
+# Automatic Search Console submission (_planning/decisions/*-search-console-automatikus-bekuldes.md): live slug site → submitted under sc-domain:citoviso.com,
+# own domain → TXT + verify + sites.add + submit under sc-domain:<domain>, the slug row retired, re-submit only
+# on a changed <loc> set, backoff + ONE alert, 301/foreign/non-sitemap never submitted, the real Google client
+# only on the live host. Own scratch DB, mock client/DNS, global fetch throws. ~10 s.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/search-console-check.mts ] && \
+   changed_files | grep -qE '^src/visibility/(searchConsoleTick|googleSearchConsole)\.ts$|^src/domains/dns/|^scripts/search-console-(tick|setup)\.mts$|^migrations/0119_search_console\.sql$|^scripts/search-console-check\.mts$'; then
+  echo "[pre-commit] search-console-check (élő oldal → Google-beküldés, saját domain ellenőrzése, újraküldés, visszalépés, élő-kapu)…"
+  npx tsx scripts/search-console-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A lead carrying portal data must be PERSISTABLE (2026-08-21). A bare URL in the JSONB
 # matched_entity column rolled back a whole 554-lead run; the type said `string | null`,
 # so tsc saw nothing. Needs the local DB, so it runs only when persist code is staged.

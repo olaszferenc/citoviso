@@ -38,4 +38,8 @@ export class CloudflareDns implements DnsAdapter {
   async certificateStatus(_domain: string): Promise<"pending" | "active"> {
     throw new Error("CloudflareDns.certificateStatus: nincs implementálva — Cloudflare REST integráció az első éles domain-rendeléskor (ADR-0024).");
   }
+
+  async ensureApexTxt(_domain: string, _content: string): Promise<void> {
+    throw new Error("CloudflareDns.ensureApexTxt: nincs implementálva — a tenant-domainek zónája a Websupporton él (ADR-0103 terv-B).");
+  }
 }

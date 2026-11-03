@@ -1580,6 +1580,52 @@ export interface AiSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
+/** 0119 (ADR-XXXX): a Search Console property the service account verified/added.
+ *  Writer: src/visibility/searchConsoleTick.ts (custom) + scripts/search-console-setup.mts (platform). */
+export interface SearchConsolePropertyTable {
+  property: string;
+  kind: "platform" | "custom";
+  verify_token: string | null;
+  txt_written_at: Timestamp | null;
+  verified_at: Timestamp | null;
+  added_at: Timestamp | null;
+  last_error: string | null;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+/** 0119 (ADR-XXXX): one row per (live site, address) to keep submitted to Google. */
+export interface SearchConsoleTargetTable {
+  id: Generated<string>;
+  site_id: string;
+  kind: "platform" | "custom";
+  host: string;
+  property: string;
+  sitemap_url: string;
+  status: Generated<"pending" | "submitted" | "retired">;
+  submitted_hash: string | null;
+  submitted_at: Timestamp | null;
+  attempts: Generated<number>;
+  next_attempt_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  checked_at: Timestamp | null;
+  last_error: string | null;
+  alerted_at: Timestamp | null;
+  created_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+/** 0119 (ADR-XXXX): append-only log of every external call of the submission. */
+export interface SearchConsoleEventTable {
+  id: Generated<string>;
+  at: ColumnType<Date, Date | string | undefined, Date | string>;
+  target_id: string | null;
+  property: string | null;
+  action: string;
+  ok: boolean;
+  http_status: number | null;
+  detail: string | null;
+  live: boolean;
+}
+
 /** 0109: one row per AI call a TENANT made (ADR-0380 — the booking-setup helper). The
  *  per-site daily limit counts these BEFORE a call; the cost is USD (ADR-0085).
  *  Writer/reader: src/ai/bookingHelper.ts. The question text is NOT stored. */
@@ -2066,6 +2112,9 @@ export interface Database {
   scrape_checkpoint: ScrapeCheckpointTable;
   translation_spend: TranslationSpendTable;
   ai_spend: AiSpendTable;
+  search_console_property: SearchConsolePropertyTable;
+  search_console_target: SearchConsoleTargetTable;
+  search_console_event: SearchConsoleEventTable;
   tenant_ai_call: TenantAiCallTable;
   scout_tile: ScoutTileTable;
   scout_place: ScoutPlaceTable;
