@@ -20,7 +20,7 @@ Nem látom a saját domainnevüket, ha megrendelték, annak lejáratát, semmit.
   Domain · Számlák/Bizonylatok · Aktivitás · Előzmények). A régi „Kontaktok” fül az Adatok fülbe
   olvadt (`?tab=contacts` oda visz).
 - Szerkesztés: `POST /partner/:id/edit` (`updatePartner`, tranzakció, audit = operátor-id),
-  kliens-tükör ugyanazokkal a szabályokkal. Forrás-szabály: ADR-XXXX.
+  kliens-tükör ugyanazokkal a szabályokkal. Forrás-szabály: ADR-0418.
 - Következő terhelés = `getSubscriptionAdmin().nextChargeTotal` (a vevő saját számával egyezik).
 - Domain: átmeneti `partnerDomains()` a SUB-E `getDomainsForTenant`-jéig.
 - Aktivitás-slot a SUB-D-nek: `src/console/partnerActivity.ts`.

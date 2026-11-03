@@ -1,4 +1,4 @@
-## ADR-XXXX — A partner-adatlap szerkeszthető; a partner-sor a számlázás forrása, a nyilatkozat és a kiállított számla érinthetetlen
+## ADR-0418 — A partner-adatlap szerkeszthető; a partner-sor a számlázás forrása, a nyilatkozat és a kiállított számla érinthetetlen
 
 **Dátum:** 2026-11-03 · **Státusz:** elfogadva (tulaj: A — Fülek terv, lokál, nem élesítve) · Kiegészíti: ADR-0055 (vevő-nyilatkozat), ADR-0414 (rendszer-számlák), ADR-0403 (domain-megújítás), ADR-0109 (domain-díj)
 
