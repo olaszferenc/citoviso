@@ -78,6 +78,8 @@ export interface DomainRecord {
   readonly error: string | null;
   readonly orderIntentId: string | null;
   readonly orderKind: string | null;
+  /** When the beszerzés row was created (the purchase attempt started). */
+  readonly startedAt: Date;
   readonly steps: readonly DomainStep[];
   /** Since when the setup waits (NS delegation / certificate); null when not waiting. */
   readonly waitingSince: Date | null;
@@ -379,6 +381,7 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
       error: r.error,
       orderIntentId: r.order_intent_id,
       orderKind: r.order_kind,
+      startedAt: r.created_at,
       steps,
       waitingSince: waiting ? r.waiting_since : null,
       stuckStage: r.stuck_stage,

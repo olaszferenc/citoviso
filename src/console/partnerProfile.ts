@@ -10,8 +10,8 @@
 //     customer can never show two different amounts (the first-payment coupon does not
 //     renew: Duna Vibe House paid 4 957 Ft, the 12-03 renewal charges 6 610 Ft);
 //   · the payments of the partner's tenant;
-//   · the custom DOMAINS — a thin read until the SUB-E domain registry lands its
-//     getDomainsForTenant(); swap partnerDomains() for it then (one source per fact);
+//   · the custom DOMAINS — from the SUB-E domain registry's getDomainsForTenant()
+//     (one source per fact with the /domains list);
 //   · the „Figyelendő” attention list derived from the above;
 //   · EDITING: validation (the same rules as /partners/new and the checkout) + the
 //     transactional update of the partner row and its contacts.
@@ -29,6 +29,7 @@ import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing
 import { normalizePhone } from "../text/phone.js";
 import { getSubscriptionAdmin } from "../tenant/subscriptionAdmin.js";
 import { getTenantModules } from "../tenant/modules.js";
+import { getDomainsForTenant, type DomainRecord, type DomainStepKey } from "./domainRegistry.js";
 
 const iso = (v: unknown): string | null => (v ? new Date(v as string).toISOString() : null);
 
@@ -277,45 +278,25 @@ async function paymentsOf(tenantId: string, leadId: string): Promise<PartnerPaym
   }));
 }
 
-/** The tenant's custom domains. ⚠️ Interim: the SUB-E domain registry owns this data
- *  (getDomainsForTenant); replace this body with that call when it lands. */
+/** The tenant's custom domains — read from the SUB-E domain registry (one source per fact:
+ *  the /domains list and this block show the same record). The newest attempt per name. */
 export async function partnerDomains(tenantId: string): Promise<PartnerDomain[]> {
-  const site = await db
-    .selectFrom("site")
-    .select(["domain_expires_at", "domain_auto_renew", "domain_renew_checked_at", "domain_renew_problem"])
-    .where("tenant_id", "=", tenantId)
-    .executeTakeFirst();
-  const rows = await db
-    .selectFrom("domain_provisioning")
-    .select([
-      "domain",
-      "status",
-      "registrar_ref",
-      "created_at",
-      "finished_at",
-      "waiting_since",
-      "ns_active_at",
-      "registrar_note",
-      "bought_notice_at",
-    ])
-    .where("tenant_id", "=", tenantId)
-    .orderBy("created_at", "desc")
-    .execute();
-  return rows.map((r, i) => ({
+  const records = await getDomainsForTenant(tenantId);
+  const stepAt = (r: DomainRecord, k: DomainStepKey): Date | null => r.steps.find((st) => st.key === k)?.at ?? null;
+  return records.map((r) => ({
     domain: r.domain,
     status: r.status,
-    registrarRef: r.registrar_ref,
-    orderedAt: iso(r.created_at)!,
-    finishedAt: iso(r.finished_at),
-    waitingSince: iso(r.waiting_since),
-    nsActiveAt: iso(r.ns_active_at),
-    registrarNote: r.registrar_note,
-    boughtNoticeAt: iso(r.bought_notice_at),
-    // site.* holds the CURRENT name's renewal facts — only the newest row owns them.
-    expiresAt: i === 0 ? iso(site?.domain_expires_at) : null,
-    expiresConfirmed: i === 0 && Boolean(site?.domain_renew_checked_at),
-    autoRenew: i === 0 ? (site?.domain_auto_renew ?? null) : null,
-    renewProblem: i === 0 ? (site?.domain_renew_problem ?? null) : null,
+    registrarRef: r.registrarRef,
+    orderedAt: iso(stepAt(r, "ordered") ?? r.startedAt)!,
+    finishedAt: iso(stepAt(r, "live")),
+    waitingSince: iso(r.waitingSince),
+    nsActiveAt: iso(stepAt(r, "ns")),
+    registrarNote: r.registrarNote,
+    boughtNoticeAt: iso(stepAt(r, "bought")),
+    expiresAt: iso(r.expiresAt),
+    expiresConfirmed: Boolean(r.expiresAt) && !r.expiryEstimated,
+    autoRenew: r.autoRenew,
+    renewProblem: r.renewProblem,
   }));
 }
 
