@@ -1969,6 +1969,10 @@ export interface DomainProvisioningTable {
   registrar_note_at: Timestamp | null;
   /** 0113: the tenant's "we bought your name" letter went out (once per row). */
   bought_notice_at: Timestamp | null;
+  /** 0122: the .hu registry's confirmation-link mail for this name (first seen) — the prod mailbox watcher. */
+  confirm_link_at: Timestamp | null;
+  /** 0122: the registry's „adatok rögzítése” notice — the confirmation went through. */
+  registry_recorded_at: Timestamp | null;
 }
 
 /** 0094 (ADR-0339): a reply to our outreach, collected read-only from the dev box's

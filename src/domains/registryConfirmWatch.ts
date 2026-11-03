@@ -475,6 +475,64 @@ export function confirmLinkSeenSince(since: Date): boolean {
   return false;
 }
 
+/** One trail mark for a beszerzés row (0122): which column, when. */
+export interface ConfirmTrailMark {
+  readonly provisioningId: string;
+  readonly field: "confirm_link_at" | "registry_recorded_at";
+  readonly at: Date;
+}
+
+/** The registry's „Domain adatok rögzítése” notice — the confirmation went through. */
+const REGISTRY_RECORDED = /r(?:ö|o)gz(?:í|i)t|registered|recorded/i;
+
+/**
+ * 0122 (domain registry): WHERE each in-flight name stands with the .hu registry — pure, so
+ * the guard measures it without a mailbox. A confirmation link that names an in-flight
+ * domain marks `confirm_link_at`; a registry notice whose subject says the data is recorded
+ * marks `registry_recorded_at`. The earliest time wins (the writer keeps the first one).
+ */
+export function confirmTrailMarks(
+  links: readonly Finding[],
+  mails: readonly RegistrarMail[],
+  inflight: readonly InflightDomain[],
+): ConfirmTrailMark[] {
+  const byName = new Map(inflight.map((d) => [d.domain.toLowerCase(), d.id] as const));
+  const best = new Map<string, ConfirmTrailMark>();
+  const put = (m: ConfirmTrailMark): void => {
+    const k = `${m.provisioningId}:${m.field}`;
+    const cur = best.get(k);
+    if (!cur || m.at < cur.at) best.set(k, m);
+  };
+  for (const f of links) {
+    const id = f.domain ? byName.get(f.domain.toLowerCase()) : undefined;
+    const at = parseImapDate(f.mailAt);
+    if (id && at) put({ provisioningId: id, field: "confirm_link_at", at });
+  }
+  for (const m of mails) {
+    const match = matchRegistrarMail(m, [...byName.keys()]);
+    if (match?.kind !== "registry" || !REGISTRY_RECORDED.test(m.subject)) continue;
+    const id = byName.get(match.domain.toLowerCase());
+    const at = parseImapDate(m.mailAt);
+    if (id && at) put({ provisioningId: id, field: "registry_recorded_at", at });
+  }
+  return [...best.values()];
+}
+
+/** Writes the marks; a column already set keeps its (earlier) value. */
+async function writeConfirmTrail(marks: readonly ConfirmTrailMark[]): Promise<number> {
+  let n = 0;
+  for (const m of marks) {
+    const r = await db
+      .updateTable("domain_provisioning")
+      .set({ [m.field]: m.at })
+      .where("id", "=", m.provisioningId)
+      .where(m.field, "is", null)
+      .executeTakeFirst();
+    n += Number(r.numUpdatedRows ?? 0);
+  }
+  return n;
+}
+
 async function inflightDomains(): Promise<InflightDomain[]> {
   return db
     .selectFrom("domain_provisioning")
@@ -490,13 +548,22 @@ export async function watchRegistryConfirmations(): Promise<string> {
   const now = new Date();
   const a = await processFindings(links, state, now.toISOString());
   let b: string;
+  let inflight: InflightDomain[] = [];
   try {
-    b = await processRegistrarMails(mails, state, now, await inflightDomains());
+    inflight = await inflightDomains();
+    b = await processRegistrarMails(mails, state, now, inflight);
   } catch (e) {
     b = `[registrar-mail] a regisztrátor-levelek feldolgozása hibázott: ${(e as Error).message}`;
   }
   saveState(state);
-  return `${a}\n${b}`;
+  let c = "";
+  try {
+    const n = await writeConfirmTrail(confirmTrailMarks(links, mails, inflight));
+    if (n) c = `\n[confirm-trail] ${n} megerősítési időpont rögzítve a domain-nyilvántartásnak.`;
+  } catch (e) {
+    c = `\n[confirm-trail] a megerősítési nyom írása hibázott: ${(e as Error).message}`;
+  }
+  return `${a}\n${b}${c}`;
 }
 
 /** Test seam: the link detector, so the guard measures the SHIPPED regex. */

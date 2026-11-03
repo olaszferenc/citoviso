@@ -2050,6 +2050,14 @@ if [ -f scripts/domain-renewal-check.mts ] && \
   echo "[pre-commit] domain-renewal-check (ADR-0100: a domain-év díja a megújuláson)…"
   npx tsx scripts/domain-renewal-check.mts
 fi
+# Domain registry (SUB-E, src/console/domainRegistry.ts): the life path with measured times only
+# (§B.17), the attention rule (stuck / registrar mail / expiry 60-30-7 / ended subscription), the
+# summary, and the watcher's .hu confirmation trail. Pure functions — no DB, no network.
+if [ -f scripts/domain-registry-check.mts ] && \
+   changed_files | grep -qE '^src/console/domainRegistry\.ts|^src/domains/(registryConfirmWatch|domainRenewal)\.ts|^src/payment/billing\.ts|^src/pricing\.ts|^scripts/domain-registry-check'; then
+  echo "[pre-commit] domain-registry-check (domain-nyilvántartás: életút, figyelem, statisztika)…"
+  npx tsx scripts/domain-registry-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Own-domain renewal (src/domains/domainRenewal.ts): the NAME's renewal at the registrar — the auto-renew switch per the owner's rule
 # (paying: on · ended ≥90 days before expiry: off · ended <90: one more renewal, then off),
 # the daily prod timer, the stall-watch sweep, the landing redirect. No DB, no network.
