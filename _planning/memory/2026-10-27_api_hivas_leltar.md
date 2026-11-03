@@ -125,3 +125,8 @@ szétválasztása, a Google billing export, a dev/éles Anthropic-kulcs szétvá
 - Éles journal: `citoviso-console` (10-27: „AI-költség: 0 hívás” ×364, kurátori szöveg ×267, 400-as képméret-hiba ×16), `citoviso-public` indulások.
 - `systemctl list-timers` (éles), `.env` változónevek (érték nélkül), kulcs-ujjlenyomatok (sha256 első 10 jegy).
 - Dev: `~/.claude/citoviso-google-cost-report.log`, `crontab -l`, `~/rc-briefs/watch/*`; dev DB 10-14 óta elhanyagolható.
+
+## Zárás (2026-11-03)
+- Elvégezve: leltár (10-27), tulaj-döntés (10-31) implementálva és landolva — ADR-0413, `src/ai/spend.ts`, `migrations/0118_ai_spend.sql`, `scripts/hero-score-cap-check.mts`, `generate.ts`/`generateEngine.ts`/`heroPick.ts` módosítva; `origin/main` = `6a3e6dc4`. Élesen nincs.
+- Legnagyobb valós tokenfogyasztó: hős-fotó pontozás (≈ $0,002/kép, csúcsnapon ≈ $13–18); egynapos csúcs a fordítás volt (10-27: $125,72), 10-28 óta megszűnt.
+- Nyitott (tulaj döntése, a MEMORY.md „Nyitott kérdések” alatt): élesítés, `/api/mock-request` fék, Google- és Anthropic-kulcsok szétválasztása, Google billing export.
