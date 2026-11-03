@@ -1,4 +1,4 @@
-## ADR-XXXX — Portál-jutalék kiváltása és megtalálhatóság: Search Console, „közvetlen foglalás előnye” modul, közösségimédia-modul, Google Térkép-útmutató
+## ADR-0416 — Portál-jutalék kiváltása és megtalálhatóság: Search Console, „közvetlen foglalás előnye” modul, közösségimédia-modul, Google Térkép-útmutató
 
 **Dátum:** 2026-11-02 · **Státusz:** IRÁNY ELFOGADVA (tulaj, 2026-11-02, tulaj-szál `cit0dae95bf`); a felület-munkák a §2b terv-kapun mennek át ·
 **Kapcsolódik:** `_planning/VISIBILITY.md` (felfedezhetőség-motor), ADR-0361 (portál-naptárszinkron), `_planning/DOMAIN/01-CALC-MODELS.md` (ügyfél-oldali megtérülés)
