@@ -4,7 +4,7 @@ title: Partner-lap — egy vevő vagy szállító pénzügyi arca
 audience: operator
 category: finance
 anchors: console.partner
-updated: 2026-08-23
+updated: 2026-11-03
 ---
 
 A partner nevére kattintva (a **„Partnerek”** listából) nyílik a partner-lap: egy vevő vagy
@@ -60,9 +60,14 @@ ezeket a címeket a vevő a megrendeléskor adja meg, és fizetéskor automatiku
 
 A partner minden számlája/bizonylata egy listában, a sztornó negatív összeggel ugyanabban a
 sorban. Szűrés a **„Típus: mind”** lenyílóval (pl. „Vevői számla”, „Szállítói számla”) és a
-**„Fizetve: mind”** lenyílóval — kombinálhatók. A **„Korosítás (nyitott)”** tábla a
+**„Fizetve: mind”** lenyílóval, valamint a forrás szerint (**„minden forrás”** /
+**„rendszer-számla”** / **„kézi / importált”**) — kombinálhatók. A fizetésből automatikusan
+kiállított számlák is itt vannak, a bizonylatszám alatt jelvénnyel: **„rendszer”** (rendben),
+**„sztornózva”** vagy **„számla nem készült”** — az utóbbi kettő halványan listázódik, de nem pénz,
+nem számít bele az összegekbe (részletek a Bizonylatok súgójában). A **„Korosítás (nyitott)”** tábla a
 kiegyenlítetlen tételeket bontja lejárat szerint: Nem lejárt · 1–30 · 31–60 · 61–90 · 90+ nap.
-A sor végi **„Számlakép ▸”** link a tárolt bizonylat-képet nyitja meg (ha van); az
+A sor végi **„Számlakép ▸”** link a tárolt bizonylat-képet nyitja meg (ha van; rendszer-számlánál
+a számlázótól kapott PDF-et); az
 **„Excel-export (CSV) ▾”** a szűrt listát tölti le Excelben megnyitható fájlként.
 
 ## Az **„Áttekintés”** fül
