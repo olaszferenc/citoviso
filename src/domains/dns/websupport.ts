@@ -196,7 +196,7 @@ export class WebsupportDns implements DnsAdapter {
   }
 
   /**
-   * ADR-XXXX: the Google Search Console verification TXT on the apex. ADDS a record and
+   * ADR-0415: the Google Search Console verification TXT on the apex. ADDS a record and
    * never updates one — the apex usually already carries the owner's SPF TXT, and an
    * update would silently break their mail. Reading back first keeps it idempotent.
    */

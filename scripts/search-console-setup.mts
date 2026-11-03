@@ -1,4 +1,4 @@
-// One-time setup of the platform Search Console property sc-domain:citoviso.com (ADR-XXXX).
+// One-time setup of the platform Search Console property sc-domain:citoviso.com (ADR-0415).
 // The tick (scripts/search-console-tick.mts) never verifies citoviso.com itself — it waits
 // for this script's DB row. Run it ON THE HOST whose DB the tick uses (the live VPS for prod).
 //
@@ -99,7 +99,7 @@ if (cmd === "status") {
   } else {
     const r = await cloudflare(`/zones/${zone.id}/dns_records`, {
       method: "POST",
-      body: JSON.stringify({ type: "TXT", name: domain, content, ttl: 300, comment: "Google Search Console (Citoviso ADR-XXXX)" }),
+      body: JSON.stringify({ type: "TXT", name: domain, content, ttl: 300, comment: "Google Search Console (Citoviso ADR-0415)" }),
     });
     if (!r.success) {
       console.error(`⛔ Cloudflare TXT: ${JSON.stringify(r.errors)}`);

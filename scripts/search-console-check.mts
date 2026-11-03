@@ -1,4 +1,4 @@
-// ŐR — automatikus Search Console-beküldés (ADR-XXXX). Saját scratch-DB, mock Google-kliens,
+// ŐR — automatikus Search Console-beküldés (ADR-0415). Saját scratch-DB, mock Google-kliens,
 // mock DNS, csonk sitemap-letöltés; a globális fetch dob (egy hálózati hívás = piros).
 //
 // Amit mér:

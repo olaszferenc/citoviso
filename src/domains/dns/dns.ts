@@ -24,7 +24,7 @@ export interface DnsAdapter {
   certificateStatus(domain: string): Promise<"pending" | "active">;
   /**
    * Make sure the apex carries a TXT record with exactly this content (Google Search
-   * Console domain verification, ADR-XXXX). Idempotent: an existing identical record is
+   * Console domain verification, ADR-0415). Idempotent: an existing identical record is
    * left alone, and NO other TXT record (SPF, DMARC, the owner's own) is touched.
    */
   ensureApexTxt(domain: string, content: string): Promise<void>;

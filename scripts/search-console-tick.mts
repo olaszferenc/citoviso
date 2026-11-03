@@ -1,4 +1,4 @@
-// Search Console submission tick (ADR-XXXX) — run by citoviso-search-console.timer.
+// Search Console submission tick (ADR-0415) — run by citoviso-search-console.timer.
 //
 //   npx tsx scripts/search-console-tick.mts            # one reconciliation pass
 //

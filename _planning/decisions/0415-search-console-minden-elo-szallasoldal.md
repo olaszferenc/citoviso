@@ -1,4 +1,4 @@
-## ADR-XXXX — Search Console: minden élő szállásoldal automatikus beküldése a Google-nek
+## ADR-0415 — Search Console: minden élő szállásoldal automatikus beküldése a Google-nek
 
 **Dátum:** 2026-11-03 · **Státusz:** MEGVALÓSÍTVA (kód + őr landol), ⛔ ÉLESEN NINCS — élesítés: egyszeri beállítás + deploy, külön engedéllyel ·
 **Kapcsolódik:** a „Portál-jutalék kiváltása és megtalálhatóság” ADR 1. pontja (tulaj 2026-11-02, „2-t is be kell küldeni”; 2026-11-03 „ok ez így jó mehet. ezt indítsuk is el.”), `_planning/VISIBILITY.md` §1/A, ADR-0041 (slug → saját domain 301), ADR-0071/0103 (domain-állapotgép, terv-B Websupport-zóna), ADR-0276 (OnFailure-riasztás)

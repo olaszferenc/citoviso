@@ -227,7 +227,7 @@ export const config = {
   googleCostDailyThresholdEur: Number(env("GOOGLE_COST_DAILY_THRESHOLD_EUR", "18")),
   gcloudBin: env("GCLOUD_BIN", `${env("HOME", "/home/citoviso")}/google-cloud-sdk/bin/gcloud`),
   /**
-   * ADR-XXXX — automatic Search Console submission of every live lodging site.
+   * ADR-0415 — automatic Search Console submission of every live lodging site.
    * The service-account JSON key (citoviso-search-console@mineralcrm). Empty or missing
    * file = the tick logs "beállításra vár" and sends nothing. ⛔ The REAL Google client
    * runs only on the live host (isLiveHost); dev always uses the recording mock.

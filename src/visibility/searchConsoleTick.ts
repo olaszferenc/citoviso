@@ -1,4 +1,4 @@
-// Automatic Search Console submission of every live lodging site (ADR-XXXX).
+// Automatic Search Console submission of every live lodging site (ADR-0415).
 //
 // RECONCILIATION, not a call inside the go-live code paths. The trial start, the purchase
 // and the custom-domain flip only change `site` — this tick (citoviso-search-console.timer)
@@ -287,7 +287,7 @@ async function processTarget(deps: TickDeps, t: TargetRow, now: Date): Promise<O
     if (attempts >= MAX_SILENT_FAILURES && !t.alerted_at && deps.alert) {
       const sent = await deps.alert(
         `Citoviso: a(z) ${t.host} oldalt ${attempts}. próbára sem sikerült beküldeni a Google-nek`,
-        `A Search Console-beküldés (ADR-XXXX) ${attempts} egymás utáni próbán át hibázott.\n\n` +
+        `A Search Console-beküldés (ADR-0415) ${attempts} egymás utáni próbán át hibázott.\n\n` +
           `Cím: ${t.sitemap_url}\nTulajdon: ${t.property}\nUtolsó hiba: ${error}\n\n` +
           `Az oldal működik, a vendégek elérik — csak a Google-nek nem jeleztük, hogy létezik. ` +
           `Az időzítő tovább próbálkozik (legfeljebb naponta), ez a levél egyszer jön.\n` +

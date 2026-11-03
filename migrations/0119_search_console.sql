@@ -1,4 +1,4 @@
--- 0119 SEARCH CONSOLE BEKÜLDÉS — minden élő szállásoldal sitemapje automatikusan a Google-höz (ADR-XXXX).
+-- 0119 SEARCH CONSOLE BEKÜLDÉS — minden élő szállásoldal sitemapje automatikusan a Google-höz (ADR-0415).
 --
 -- MIÉRT KELL. Mérve 2026-11-02 (élő sama-vendeghaz.citoviso.com, overseer.hu): az oldalak indexelhetők
 -- (index,follow · canonical · LodgingBusiness JSON-LD · robots.txt + sitemap.xml), de a Google-nek semmi

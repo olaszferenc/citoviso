@@ -1,4 +1,4 @@
-// Google Search Console + Site Verification client (ADR-XXXX) — service-account auth,
+// Google Search Console + Site Verification client (ADR-0415) — service-account auth,
 // no third-party library (the JWT is signed with node:crypto).
 //
 // SOURCES (fetched 2026-11-03, official Google docs):

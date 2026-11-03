@@ -1580,7 +1580,7 @@ export interface AiSpendTable {
   cost_usd: ColumnType<string | null, number | null | undefined, number | null>;
 }
 
-/** 0119 (ADR-XXXX): a Search Console property the service account verified/added.
+/** 0119 (ADR-0415): a Search Console property the service account verified/added.
  *  Writer: src/visibility/searchConsoleTick.ts (custom) + scripts/search-console-setup.mts (platform). */
 export interface SearchConsolePropertyTable {
   property: string;
@@ -1593,7 +1593,7 @@ export interface SearchConsolePropertyTable {
   updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
-/** 0119 (ADR-XXXX): one row per (live site, address) to keep submitted to Google. */
+/** 0119 (ADR-0415): one row per (live site, address) to keep submitted to Google. */
 export interface SearchConsoleTargetTable {
   id: Generated<string>;
   site_id: string;
@@ -1613,7 +1613,7 @@ export interface SearchConsoleTargetTable {
   updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
-/** 0119 (ADR-XXXX): append-only log of every external call of the submission. */
+/** 0119 (ADR-0415): append-only log of every external call of the submission. */
 export interface SearchConsoleEventTable {
   id: Generated<string>;
   at: ColumnType<Date, Date | string | undefined, Date | string>;

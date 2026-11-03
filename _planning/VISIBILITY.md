@@ -17,7 +17,7 @@ Dátum: 2026-07-07 · Státusz: terv-vázlat (a 2026-07-07 session gondolkodás�
   **Schema.org LocalBusiness/Hotel/Restaurant JSON-LD** (a strukturált lead-adatból egyenesen) +
   lokál kulcsszavak. ⭐ A generátor **alapból** ezt gyártsa (generátor-követelmény).
 - **Indexelés** — a site a **mi domainünkön / Search Console-unkon** → a verifikáció MIénk. Auto.
-  ✅ **Megvalósítva (ADR-XXXX, 2026-11-03):** minden élő oldal sitemapje automatikusan beküldve — a
+  ✅ **Megvalósítva (ADR-0415, 2026-11-03):** minden élő oldal sitemapje automatikusan beküldve — a
   citoviso.com-os cím az `sc-domain:citoviso.com` alá az oldal élesedésekor, a saját domain a saját
   `sc-domain:<domain>` alá (DNS TXT-vel, géppel ellenőrizve) a domain élesedésekor, és újra, ha a sitemap
   változik. Időzítő: `citoviso-search-console.timer`; napló: `search_console_event`. A beküldés „csak jelzés”

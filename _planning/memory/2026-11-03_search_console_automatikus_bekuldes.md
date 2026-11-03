@@ -1,6 +1,6 @@
 # 2026-11-03 — Search Console: automatikus beküldés (SUB a „portál-jutalék + megtalálhatóság” szál alatt)
 
-Brief: `~/rc-briefs/search-console-bekuldes-20261103.md` · Döntés: ADR-XXXX (`_planning/decisions/XXXX-search-console-automatikus-bekuldes.md`) · ⛔ ÉLESEN NINCS.
+Brief: `~/rc-briefs/search-console-bekuldes-20261103.md` · Döntés: ADR-0415 (`_planning/decisions/XXXX-search-console-automatikus-bekuldes.md`) · ⛔ ÉLESEN NINCS.
 
 ## Mi készült
 - `src/visibility/googleSearchConsole.ts` — Google-kliens service accounttal (JWT node:crypto-val, külső könyvtár nélkül): getToken, webResource.insert, sites.add, sites.get, sitemaps.submit; + felvevő mock.
