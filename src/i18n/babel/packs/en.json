@@ -1,4 +1,5 @@
 {
+ "{Art} {site} honlapja már él, de még nem lépett be a szerkesztőbe. A próbából még {n} nap van, {until}-ig.": "The {site} website is already live, but you haven't logged in to the editor yet. {n} days of the trial are left, until {until}.",
  "{guest} foglalni szeretne {art} {host} szállásán.": "{guest} would like to book at {host}.",
  "{name} – az imént MMS-ben küldött honlap-látványtervet {invite} A Citoviso csapata\n{link}": "{name} – the website design we just sent via MMS {invite} The Citoviso team\n{link}",
  "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket {invite} A Citoviso csapata\n{link}": "{name} – we've created three website designs for you, which {invite} The Citoviso team\n{link}",
@@ -7,6 +8,8 @@
  "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, {art2} {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso": "{name}: the website plan sent on {date} is now free for {days} days, you can try it live, no card needed. Order before the trial ends and keep the {p}% discount. {link} Unsubscribe at the bottom of the page. Citoviso",
  "a szállása": "your property",
  "Bejelentkezés": "Check-in",
+ "Citoviso: elindult {art} {site} ingyenes próbája. Jelszó beállítása és belépés: {url} Felhasználónév: {user}": "Citoviso: the free trial of {site} has started. Set your password and log in: {url} Username: {user}",
+ "Citoviso: még nem lépett be {art} {site} honlapjába, a próbából még {n} nap van. Jelszó beállítása egy kattintással: {url}": "Citoviso: you haven't logged in to the {site} website yet, and {n} days of the trial are left. Set your password in one click: {url}",
  "Cs": "Thu",
  "Dél": "South",
  "Elérhetőség": "Contact",
@@ -20,6 +23,7 @@
  "Ez még csak látványterv, nem kész oldal, és semmire nem kötelezi.": "This is only a design, not a finished site, and it commits you to nothing.",
  "Ezeknek a szobáknak nincs (teljes) ára a honlapján:": "These rooms have no (complete) price on your site:",
  "gerinc": "core",
+ "Ha elakadt, hívjon minket: {phone}.": "If you get stuck, call us: {phone}.",
  "Kelet": "East",
  "kézi / importált": "manual / imported",
  "Kijelentkezés": "Check-out",
@@ -27,6 +31,8 @@
  "Lead típus": "Lead type",
  "Lead típus: {s}": "Lead type: {s}",
  "Lead típus: mind": "Lead type: all",
+ "Még nem lépett be": "You haven't logged in yet",
+ "Még nem lépett be – {site}": "You haven't logged in yet – {site}",
  "Minden csomag alja — a gerinccel (érdeklődés-CTA) együtt.": "The base of every plan — together with the core (inquiry CTA).",
  "minden forrás": "all sources",
  "Nyelvi csomag — {nyelv}: {n} felirat még nincs lefordítva, ezek addig magyarul jelennek meg.": "Language package — {nyelv}: {n} strings not translated yet; until then they appear in Hungarian.",
@@ -35,5 +41,6 @@
  "számla nem készült": "no invoice issued",
  "sztornózva": "cancelled",
  "Terhelés és élesítés — {sum}": "Charge and go live — {sum}",
+ "Új link, 7 napig érvényes, és egyszer használható.": "A new link, valid for 7 days and usable once.",
  "V": "Sun"
 }
