@@ -527,7 +527,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
       <option value="">mind</option>
       ${DOC_TYPE_OPTIONS.map((o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
     </select></div>`;
-  // ADR-XXXX: origin filter — the system invoices (payment path) vs. the hand-registered ones.
+  // ADR-0414: origin filter — the system invoices (payment path) vs. the hand-registered ones.
   const srcF = `<div class="ctbl-f${q.src ? " on" : ""}" style="margin-top:4px"><select form="docf" name="src" onchange="this.form.submit()" aria-label="${T(lang, "Forrás")}">
       <option value="">${T(lang, "minden forrás")}</option>
       <option value="system"${q.src === "system" ? " selected" : ""}>${T(lang, "rendszer-számla")}</option>
@@ -573,7 +573,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
               : `<span class="du du--${dr.urgency}">${
                   dr.urgency === "late" ? ic("alert", 13) : dr.urgency === "soon" ? ic("clock", 13) : ""
                 }${esc(dr.text)}</span>`;
-          // ADR-XXXX: a mirrored system invoice says so; a storno-ed / failed one says WHY
+          // ADR-0414: a mirrored system invoice says so; a storno-ed / failed one says WHY
           // its amount is not in the totals (it is listed, it is no money).
           const srcBadge =
             r.source !== "system"

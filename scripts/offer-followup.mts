@@ -93,7 +93,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: the day's paid renewals → ONE mail + ONE SMS to the owner (after 18:00 Budapest).
+  // ADR-0414: the day's paid renewals → ONE mail + ONE SMS to the owner (after 18:00 Budapest).
   const rd = await flushRenewalPaymentDigest(now);
   console.log(`renewal-payment-digest @ ${now.toISOString()}:`, JSON.stringify(rd));
 } catch (e) {

@@ -97,7 +97,7 @@ export async function listPartners(q: PartnerListQuery = {}): Promise<PartnerLis
       byPartner.set(pid, agg);
     }
     agg.docCount += Number(a.n);
-    // ADR-XXXX: a 'draft' (a storno-ed or failed system invoice) is listed, never money.
+    // ADR-0414: a 'draft' (a storno-ed or failed system invoice) is listed, never money.
     const gross = a.status === "active" ? Number(a.gross ?? 0) : 0;
     if (a.direction === "outgoing") {
       add(agg.revenue, a.currency, gross);
@@ -223,7 +223,7 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
   let docCount = 0;
   const yearAgo = Date.now() - 365 * 86_400_000;
   for (const a of aggs) {
-    // ADR-XXXX: a 'draft' (storno-ed / failed system invoice) is counted, never money.
+    // ADR-0414: a 'draft' (storno-ed / failed system invoice) is counted, never money.
     const gross = a.status === "active" ? Number(a.gross ?? 0) : 0;
     docCount += Number(a.n);
     if (a.direction === "outgoing") {
@@ -380,7 +380,7 @@ export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number 
     .select(({ fn }) => fn.countAll().as("n"))
     .where("direction", "=", "outgoing")
     .where("status", "=", "active")
-    // ADR-XXXX: the invoice mirror is counted from `invoice` (sys) — never twice.
+    // ADR-0414: the invoice mirror is counted from `invoice` (sys) — never twice.
     .where("source", "!=", "system")
     .where("currency", "!=", "HUF")
     .where("issue_date", ">=", yearStart)
@@ -1184,7 +1184,7 @@ export interface PartnerDocQuery {
   dueFrom?: string;
   dueTo?: string;
   currency?: string;
-  /** ADR-XXXX: origin filter — "system" (issued by the payment path) or "manual"
+  /** ADR-0414: origin filter — "system" (issued by the payment path) or "manual"
    *  (registered by hand / imported); undefined = mind. */
   src?: "system" | "manual";
 }
@@ -1208,16 +1208,16 @@ export interface PartnerDocRow {
   /** Counterparty (null on a legacy document with no partner link yet). */
   readonly partnerId: string | null;
   readonly partnerName: string | null;
-  /** ADR-XXXX: where the row came from — 'system' = mirrored system invoice. */
+  /** ADR-0414: where the row came from — 'system' = mirrored system invoice. */
   readonly source: "system" | "imported" | "manual";
-  /** ADR-XXXX: the mirrored invoice's own state ('issued' | 'storno' | 'failed' …);
+  /** ADR-0414: the mirrored invoice's own state ('issued' | 'storno' | 'failed' …);
    *  null for a manual document. A storno-ed / failed one is listed but is no money. */
   readonly systemState: "issued" | "failed" | "storno" | "cancelled" | null;
   /** The document's note (a failed system invoice carries the provider's reason). */
   readonly note: string | null;
 }
 
-/** ADR-XXXX: the documents the money aggregates leave out — a mirrored system invoice
+/** ADR-0414: the documents the money aggregates leave out — a mirrored system invoice
  *  that was storno-ed, or a payment whose invoice failed (status 'draft'). */
 export function isInertDocument(status: string): boolean {
   return status === "draft";
@@ -1436,7 +1436,7 @@ export async function getDocuments(
 
   for (const a of aggs) {
     const n = Number(a.n);
-    // ADR-XXXX: an inert row (storno-ed / failed system invoice) is LISTED — the pager
+    // ADR-0414: an inert row (storno-ed / failed system invoice) is LISTED — the pager
     // counts it — but carries no money into the totals, the aging or the KPIs.
     const gross = isInertDocument(a.status) ? 0 : Number(a.gross ?? 0);
     if (!a.paid) {
@@ -1571,7 +1571,7 @@ export async function getPartnerDocuments(
   return getDocuments(q, partnerId, opts);
 }
 
-/** ADR-XXXX: the origin readout of a document (list badge + CSV „Forrás” column). */
+/** ADR-0414: the origin readout of a document (list badge + CSV „Forrás” column). */
 export function documentSourceLabel(
   source: PartnerDocRow["source"],
   systemState: PartnerDocRow["systemState"],
@@ -1658,7 +1658,7 @@ export async function getDocumentFile(
     .where("accounting_document.id", "=", documentId)
     .executeTakeFirst();
   if (d?.document_file) return { file: d.document_file, mime: d.document_mime };
-  // ADR-XXXX: a mirrored system invoice serves the PDF the provider returned (0030).
+  // ADR-0414: a mirrored system invoice serves the PDF the provider returned (0030).
   if (d?.pdf) return { bytes: Buffer.from(d.pdf, "base64"), mime: "application/pdf" };
   return null;
 }

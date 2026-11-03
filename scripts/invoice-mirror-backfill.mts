@@ -1,7 +1,7 @@
-// Rendszer-számlák visszamenőleges tükrözése a Bizonylatok közé (ADR-XXXX).
+// Rendszer-számlák visszamenőleges tükrözése a Bizonylatok közé (ADR-0414).
 //
 // MIÉRT: a fizetés-út a régi `invoice` táblába ír, a konzol bizonylat-felületei az
-// `accounting_document`-et olvassák. Az élő út az ADR-XXXX óta minden számla után tükröz;
+// `accounting_document`-et olvassák. Az élő út az ADR-0414 óta minden számla után tükröz;
 // ez a szkript a MÁR meglévő számlákat hozza át (élesen 2026-11-03-án: CITO-2026-5/6/7).
 //
 //   npx tsx scripts/invoice-mirror-backfill.mts          # mit tenne (szárazon, írás nélkül)

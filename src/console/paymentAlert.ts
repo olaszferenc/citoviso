@@ -1,4 +1,4 @@
-// PAYMENT-ARRIVED ALERT — the owner hears about EVERY successful payment (ADR-XXXX).
+// PAYMENT-ARRIVED ALERT — the owner hears about EVERY successful payment (ADR-0414).
 //
 // Why this exists: measured on prod 2026-11-03, the first real paying customer (Duna Vibe
 // House) went through the whole path — payment, activation, invoice CITO-2026-7, domain
@@ -15,7 +15,7 @@
 // gateway callback repeats and /pay/done re-drives the same path; the second run stops
 // at the INSERT, not on the owner's phone.
 //
-// RENEWALS GO IN A DAILY DIGEST (decision, ADR-XXXX): every subscriber renews monthly, so
+// RENEWALS GO IN A DAILY DIGEST (decision, ADR-0414): every subscriber renews monthly, so
 // with N customers the per-payment alert would be N texts a month landing in bursts on
 // the anchor days — routine money the owner cannot act on. The FIRST purchase, an
 // upsell, a domain or a one-time purchase is news and goes at once; renewals are listed

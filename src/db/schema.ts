@@ -691,7 +691,7 @@ export interface MmsOutboxTable {
  *  tier%, channel) triple however often the daily billing tick fires; a new
  *  year resets naturally. Per-channel (dunning_event style): a failed email
  *  retries without re-sending the SMS. */
-/** ADR-XXXX: one row per paid payment — whoever inserts it sends the owner's
+/** ADR-0414: one row per paid payment — whoever inserts it sends the owner's
  *  "payment arrived" alert (the gateway callback repeats). Renewals wait for the
  *  daily digest (digest_at). */
 export interface PaymentAlertTable {
@@ -1823,7 +1823,7 @@ export interface AccountingDocumentTable extends AuditColumns {
   /** Sztornó/helyesbítő lánc: melyik bizonylatot érvényteleníti vagy módosítja. */
   corrects_document_id: string | null;
   status: Generated<"draft" | "active" | "void">;
-  /** ADR-XXXX: the system invoice this row mirrors (source='system'); unique when set. */
+  /** ADR-0414: the system invoice this row mirrors (source='system'); unique when set. */
   invoice_id: Generated<string | null>;
   note: string | null;
 }

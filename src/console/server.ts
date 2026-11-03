@@ -2434,7 +2434,7 @@ async function handle(
   if (method === "GET" && docFileMatch) {
     const f = await getDocumentFile(docFileMatch[1]!);
     if (!f) return send(res, 404, layout("404", "<p>Ehhez a bizonylathoz nincs tárolt számlakép.</p>"));
-    // ADR-XXXX: a mirrored system invoice streams the provider's PDF from the DB.
+    // ADR-0414: a mirrored system invoice streams the provider's PDF from the DB.
     if (f.bytes) {
       res.writeHead(200, { "content-type": f.mime, "content-disposition": "inline" });
       res.end(f.bytes);

@@ -1,4 +1,4 @@
-// SYSTEM INVOICE → ACCOUNTING DOCUMENT MIRROR (ADR-XXXX).
+// SYSTEM INVOICE → ACCOUNTING DOCUMENT MIRROR (ADR-0414).
 //
 // Why this exists: measured on prod 2026-11-03, the first real paying customer's invoice
 // (CITO-2026-7) was issued fine — and the console showed NOTHING. Every document surface

@@ -1,4 +1,4 @@
-# 2026-11-03 — Rendszer-számlák a Bizonylatokban + riasztás minden sikeres fizetésről (SUB-A, ADR-XXXX)
+# 2026-11-03 — Rendszer-számlák a Bizonylatokban + riasztás minden sikeres fizetésről (SUB-A, ADR-0414)
 
 **Kiváltó ok:** az első valódi fizető vevő (Duna Vibe House, CITO-2026-7) számlája kiment, de a konzolon semmi nem látszott, és a tulaj nem kapott értesítést.
 

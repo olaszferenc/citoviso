@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-rendszer-szamlak-a-bizonylatokban-fizetes-riasztas.md) — Rendszer-számlák a Bizonylatokban (tükör) + riasztás minden sikeres fizetésről
+- [ADR-0414](decisions/0414-rendszer-szamlak-a-bizonylatokban-tukor.md) — Rendszer-számlák a Bizonylatokban (tükör) + riasztás minden sikeres fizetésről
 - [ADR-0413](decisions/0413-hos-foto-pontozas-mero-napi-plafon-csak-a.md) — Hős-fotó pontozás: mérő + napi plafon, csak a generálás pontoz; a generálás nem fizet a Google-nek
 - [ADR-0412](decisions/0412-forditas-api-hivassal-tilos-forditasra-csak.md) — Fordítás API-hívással TILOS: fordításra csak Bábel előfizetéses sessionje költhet
 - [ADR-0411](decisions/0411-babel-kontextusos-fordito-munkatars-es.md) — Bábel: kontextusos fordító munkatárs, és nyelvenként egyetlen, plafonos fordítás

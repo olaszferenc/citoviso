@@ -1545,7 +1545,7 @@ export async function issueInvoiceFor(
     try {
       const trigger = opts.trigger ?? "payment";
       const outcome = await issueInvoiceLocked(paymentId, trigger);
-      // ADR-XXXX ①: the console's document surfaces read accounting_document — mirror the
+      // ADR-0414 ①: the console's document surfaces read accounting_document — mirror the
       // invoice row(s) there, on EVERY attempt (a retry that finally issues voids the
       // "failed" mirror). Inside the lock: two racers cannot mirror the same row twice.
       // A mirror failure never fails the payment; it is loud, and the backfill heals it.
@@ -1560,7 +1560,7 @@ export async function issueInvoiceFor(
           );
         }
       }
-      // ADR-XXXX ②: every paid path (webhook, capture, token charge) reaches here with the
+      // ADR-0414 ②: every paid path (webhook, capture, token charge) reaches here with the
       // default trigger — tell the owner the money arrived, once per payment. The retries
       // ("auto-retry"/"console") are not a new payment and stay silent.
       if (trigger === "payment" && outcome.status !== "no-payment") {

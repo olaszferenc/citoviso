@@ -1,4 +1,4 @@
--- 0120 RENDSZER-SZÁMLÁK A BIZONYLATOKBAN + RIASZTÁS MINDEN SIKERES FIZETÉSRŐL (ADR-XXXX).
+-- 0120 RENDSZER-SZÁMLÁK A BIZONYLATOKBAN + RIASZTÁS MINDEN SIKERES FIZETÉSRŐL (ADR-0414).
 --
 -- MIÉRT KELL. Mérve élesen 2026-11-03: megjött az első valódi fizető vevő (Duna Vibe House,
 -- CITO-2026-7), a számla rendben kiment a Számlázz.hu-ból — a konzolon mégsem látszott SEMMI.

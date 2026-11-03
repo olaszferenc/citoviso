@@ -1,4 +1,4 @@
-## ADR-XXXX — Rendszer-számlák a Bizonylatokban (tükör) + riasztás minden sikeres fizetésről
+## ADR-0414 — Rendszer-számlák a Bizonylatokban (tükör) + riasztás minden sikeres fizetésről
 
 **Dátum:** 2026-11-03 · **Státusz:** elfogadva (lokál, nem élesítve) · Kiegészíti: ADR-0031 (bizonylat-mag), ADR-0098 (ÁAM-plafon), ADR-0276/0374/0376 (ház-riasztás, SMS, csendes óra), ADR-0283 (számla egyszer)
 

@@ -1,4 +1,4 @@
-// GUARD (ADR-XXXX): the system invoices show in the Bizonylatok, and the owner hears about
+// GUARD (ADR-0414): the system invoices show in the Bizonylatok, and the owner hears about
 // EVERY successful payment — once.
 //
 //   npx tsx scripts/payment-alert-check.mts
