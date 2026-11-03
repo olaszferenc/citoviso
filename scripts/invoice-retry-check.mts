@@ -59,6 +59,10 @@ setHouseAlertDeps({
   publicBaseUrl: () => "https://citoviso.com",
   recipientEmail: async () => "haz@example.test",
   send: async (m) => {
+    // ADR-XXXX: every paid payment also sends the owner a "payment arrived" mail on this
+    // channel — that one is payment-alert-check's to measure; this guard counts the
+    // invoice-FAILURE alerts only.
+    if (/fizetés beérkezett|ÚJ VEVŐ/.test(m.subject)) return { id: "mock", provider: "mock" };
     outbox.push({ subject: m.subject, text: m.text });
     return { id: "mock", provider: "mock" };
   },

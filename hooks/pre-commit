@@ -889,6 +889,16 @@ if [ -f scripts/house-alert-check.mts ] && \
   echo "[pre-commit] house-alert-check (időzítő / foglalási levél / webhook → a ház riasztást kap)…"
   npx tsx scripts/house-alert-check.mts >"$GATE_LOG" || gate_failed
 fi
+# RENDSZER-SZÁMLA + FIZETÉS-RIASZTÁS (2026-11-03, ADR: rendszer-szamlak-a-bizonylatokban — az első valódi vevő számlája nem
+# látszott a konzolon, és a tulaj semmit nem kapott róla). Saját scratch-DB: a kiállított számla
+# source='system' tükre a Bizonylatokban (lista, CSV, szűrő, partner, PDF), az ÁAM nem dupláz,
+# sikertelen/sztornó listázva de nem pénz; minden sikeres fizetésről EGY levél + EGY SMS (ÚJ VEVŐ
+# az első rendelésnél), ismételt callbackre semmi, megújítás a napi 18:00-s összesítőben.
+if [ -f scripts/payment-alert-check.mts ] && \
+   changed_files | grep -qE '^src/console/(paymentAlert|partnerData|houseAlert)\.ts$|^src/billing/invoiceMirror\.ts$|^src/payment/service\.ts$|^migrations/.*invoice_mirror_payment_alert\.sql$|^scripts/(payment-alert-check|invoice-mirror-backfill|offer-followup)\.mts$'; then
+  echo "[pre-commit] payment-alert-check (rendszer-számla a Bizonylatokban + fizetés-riasztás egyszer)…"
+  npx tsx scripts/payment-alert-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ÉLESI ŐRKÖDÉS (2026-10-13, scripts/stall-alert-check.mts — tulaj: „ha valamely külső folyamat megakad, arról jöjjön
 # értesítés + SMS”). Saját scratch-DB: a súlyos ház-riasztás levél + szűrt SMS (ismétlés-tiltás,
 # óránkénti sapka, nem éles hoston SMS nincs); az óránkénti söprés a megakadt fizetést, domaint,

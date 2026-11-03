@@ -73,12 +73,13 @@ export async function listPartners(q: PartnerListQuery = {}): Promise<PartnerLis
       "direction",
       "currency",
       "paid",
+      "status",
       fn.countAll().as("n"),
       fn.sum("gross").as("gross"),
     ])
     .where("partner_id", "is not", null)
     .where("status", "!=", "void")
-    .groupBy(["partner_id", "direction", "currency", "paid"])
+    .groupBy(["partner_id", "direction", "currency", "paid", "status"])
     .execute();
 
   const byPartner = new Map<
@@ -95,8 +96,9 @@ export async function listPartners(q: PartnerListQuery = {}): Promise<PartnerLis
       agg = { docCount: 0, revenue: {}, receivable: {}, spend: {}, payable: {} };
       byPartner.set(pid, agg);
     }
-    const gross = Number(a.gross ?? 0);
     agg.docCount += Number(a.n);
+    // ADR-XXXX: a 'draft' (a storno-ed or failed system invoice) is listed, never money.
+    const gross = a.status === "active" ? Number(a.gross ?? 0) : 0;
     if (a.direction === "outgoing") {
       add(agg.revenue, a.currency, gross);
       if (!a.paid) add(agg.receivable, a.currency, gross);
@@ -207,12 +209,13 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
       "currency",
       "paid",
       "issue_date",
+      "status",
       fn.countAll().as("n"),
       fn.sum("gross").as("gross"),
     ])
     .where("partner_id", "=", id)
     .where("status", "!=", "void")
-    .groupBy(["direction", "currency", "paid", "issue_date"])
+    .groupBy(["direction", "currency", "paid", "issue_date", "status"])
     .execute();
   const receivable: MoneyByCurrency = {};
   const payable: MoneyByCurrency = {};
@@ -220,7 +223,8 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
   let docCount = 0;
   const yearAgo = Date.now() - 365 * 86_400_000;
   for (const a of aggs) {
-    const gross = Number(a.gross ?? 0);
+    // ADR-XXXX: a 'draft' (storno-ed / failed system invoice) is counted, never money.
+    const gross = a.status === "active" ? Number(a.gross ?? 0) : 0;
     docCount += Number(a.n);
     if (a.direction === "outgoing") {
       if (!a.paid) receivable[a.currency] = (receivable[a.currency] ?? 0) + gross;
@@ -376,6 +380,8 @@ export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number 
     .select(({ fn }) => fn.countAll().as("n"))
     .where("direction", "=", "outgoing")
     .where("status", "=", "active")
+    // ADR-XXXX: the invoice mirror is counted from `invoice` (sys) — never twice.
+    .where("source", "!=", "system")
     .where("currency", "!=", "HUF")
     .where("issue_date", ">=", yearStart)
     .executeTakeFirst();
@@ -1178,6 +1184,9 @@ export interface PartnerDocQuery {
   dueFrom?: string;
   dueTo?: string;
   currency?: string;
+  /** ADR-XXXX: origin filter — "system" (issued by the payment path) or "manual"
+   *  (registered by hand / imported); undefined = mind. */
+  src?: "system" | "manual";
 }
 
 export interface PartnerDocRow {
@@ -1199,6 +1208,19 @@ export interface PartnerDocRow {
   /** Counterparty (null on a legacy document with no partner link yet). */
   readonly partnerId: string | null;
   readonly partnerName: string | null;
+  /** ADR-XXXX: where the row came from — 'system' = mirrored system invoice. */
+  readonly source: "system" | "imported" | "manual";
+  /** ADR-XXXX: the mirrored invoice's own state ('issued' | 'storno' | 'failed' …);
+   *  null for a manual document. A storno-ed / failed one is listed but is no money. */
+  readonly systemState: "issued" | "failed" | "storno" | "cancelled" | null;
+  /** The document's note (a failed system invoice carries the provider's reason). */
+  readonly note: string | null;
+}
+
+/** ADR-XXXX: the documents the money aggregates leave out — a mirrored system invoice
+ *  that was storno-ed, or a payment whose invoice failed (status 'draft'). */
+export function isInertDocument(status: string): boolean {
+  return status === "draft";
 }
 
 /** Aging buckets over the UNPAID items (computed from due_date — never stored). */
@@ -1344,6 +1366,7 @@ export async function getDocuments(
       .selectFrom("accounting_document")
       .leftJoin("legal_entity", "legal_entity.id", "accounting_document.legal_entity_id")
       .leftJoin("partner", "partner.id", "accounting_document.partner_id")
+      .leftJoin("invoice", "invoice.id", "accounting_document.invoice_id")
       .where("accounting_document.status", "!=", "void");
     if (partnerId) qb = qb.where("accounting_document.partner_id", "=", partnerId);
     if (typeOpt) {
@@ -1359,9 +1382,11 @@ export async function getDocuments(
     if (q.partner) qb = qb.where("partner.name", "ilike", `%${q.partner}%`);
     if (q.from) qb = qb.where("issue_date", ">=", new Date(`${q.from}T00:00:00Z`));
     if (q.to) qb = qb.where("issue_date", "<=", new Date(`${q.to}T23:59:59Z`));
-    if (q.dueFrom) qb = qb.where("due_date", ">=", new Date(`${q.dueFrom}T00:00:00Z`));
-    if (q.dueTo) qb = qb.where("due_date", "<=", new Date(`${q.dueTo}T23:59:59Z`));
+    if (q.dueFrom) qb = qb.where("accounting_document.due_date", ">=", new Date(`${q.dueFrom}T00:00:00Z`));
+    if (q.dueTo) qb = qb.where("accounting_document.due_date", "<=", new Date(`${q.dueTo}T23:59:59Z`));
     if (q.currency) qb = qb.where("accounting_document.currency", "=", q.currency);
+    if (q.src === "system") qb = qb.where("accounting_document.source", "=", "system");
+    if (q.src === "manual") qb = qb.where("accounting_document.source", "!=", "system");
     return qb;
   };
 
@@ -1377,11 +1402,18 @@ export async function getDocuments(
       "direction",
       "accounting_document.currency as currency",
       "paid",
-      "due_date",
+      "accounting_document.due_date as due_date",
+      "accounting_document.status as status",
       fn.countAll().as("n"),
-      fn.sum("gross").as("gross"),
+      fn.sum("accounting_document.gross").as("gross"),
     ])
-    .groupBy(["direction", "accounting_document.currency", "paid", "due_date"])
+    .groupBy([
+      "direction",
+      "accounting_document.currency",
+      "paid",
+      "accounting_document.due_date",
+      "accounting_document.status",
+    ])
     .execute();
 
   const totalGross: MoneyByCurrency = {};
@@ -1403,8 +1435,10 @@ export async function getDocuments(
   let total = 0;
 
   for (const a of aggs) {
-    const gross = Number(a.gross ?? 0);
     const n = Number(a.n);
+    // ADR-XXXX: an inert row (storno-ed / failed system invoice) is LISTED — the pager
+    // counts it — but carries no money into the totals, the aging or the KPIs.
+    const gross = isInertDocument(a.status) ? 0 : Number(a.gross ?? 0);
     if (!a.paid) {
       const dueMs = a.due_date ? new Date(a.due_date as unknown as string).getTime() : null;
       const bucket = agingBucketFor(dueMs, now);
@@ -1432,11 +1466,16 @@ export async function getDocuments(
   // ── 3. Payment habit: settled items, grouped by their date pair so the
   //    offset math stays in the guard-tested settleOffsetDays. ──
   const habitRows = await scoped()
-    .select(({ fn }) => ["due_date", "paid_at", fn.countAll().as("n")])
+    .select(({ fn }) => [
+      "accounting_document.due_date as due_date",
+      "paid_at",
+      fn.countAll().as("n"),
+    ])
     .where("paid", "=", true)
     .where("paid_at", "is not", null)
-    .where("due_date", "is not", null)
-    .groupBy(["due_date", "paid_at"])
+    .where("accounting_document.due_date", "is not", null)
+    .where("accounting_document.status", "=", "active")
+    .groupBy(["accounting_document.due_date", "paid_at"])
     .execute();
   let settleSum = 0;
   let onTime = 0;
@@ -1463,7 +1502,7 @@ export async function getDocuments(
       "doc_type",
       "document_number",
       "issue_date",
-      "due_date",
+      "accounting_document.due_date as due_date",
       "accounting_document.net as net",
       "accounting_document.gross as gross",
       "accounting_document.currency as currency",
@@ -1473,6 +1512,11 @@ export async function getDocuments(
       "legal_entity.name as entity_name",
       "partner.id as p_id",
       "partner.name as p_name",
+      "accounting_document.source as source",
+      "accounting_document.note as note",
+      "invoice.status as inv_status",
+      // The PDF itself stays in the DB — only whether there is one.
+      sql<boolean>`invoice.pdf_base64 is not null`.as("inv_has_pdf"),
     ])
     // Tie-break on id: without it two documents sharing an issue_date can swap
     // places between pages, so one is shown twice and another never.
@@ -1500,9 +1544,12 @@ export async function getDocuments(
       paid: d.paid,
       paidAt: d.paid_at ? iso(d.paid_at) : null,
       entityName: d.entity_name ?? "?",
-      hasFile: Boolean(d.document_file),
+      hasFile: Boolean(d.document_file) || Boolean(d.inv_has_pdf),
       partnerId: d.p_id,
       partnerName: d.p_name,
+      source: d.source,
+      systemState: d.inv_status ?? null,
+      note: d.note,
     })),
     totalGross,
     paidGross,
@@ -1524,6 +1571,18 @@ export async function getPartnerDocuments(
   return getDocuments(q, partnerId, opts);
 }
 
+/** ADR-XXXX: the origin readout of a document (list badge + CSV „Forrás” column). */
+export function documentSourceLabel(
+  source: PartnerDocRow["source"],
+  systemState: PartnerDocRow["systemState"],
+): string {
+  if (source !== "system") return source === "imported" ? "importált" : "kézi";
+  if (systemState === "storno") return "rendszer — sztornózva";
+  if (systemState === "failed") return "rendszer — számlázás sikertelen";
+  if (systemState === "cancelled") return "rendszer — visszavonva";
+  return "rendszer";
+}
+
 /**
  * The filtered document list as CSV for Excel (spec: Excel-export). UTF-8 BOM +
  * semicolon separator + comma decimals — the trio Hungarian Excel expects; a
@@ -1532,7 +1591,7 @@ export async function getPartnerDocuments(
 export function buildDocumentsCsv(docs: PartnerDocuments): string {
   const field = (v: string): string => (/[";\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
   const lines = [
-    ["Számla szám", "Partner", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég"],
+    ["Számla szám", "Partner", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég", "Forrás"],
     ...docs.rows.map((r) => [
       r.documentNumber ?? "",
       r.partnerName ?? "",
@@ -1545,6 +1604,7 @@ export function buildDocumentsCsv(docs: PartnerDocuments): string {
       r.paid ? "igen" : "nem",
       r.paidAt?.slice(0, 10) ?? "",
       r.entityName,
+      documentSourceLabel(r.source, r.systemState),
     ]),
   ];
   return "\uFEFF" + lines.map((l) => l.map(field).join(";")).join("\r\n");
@@ -1586,12 +1646,19 @@ export async function getPartnerContacts(partnerId: string): Promise<PartnerCont
 /** The stored document image (Számlakép) of one document, for streaming. */
 export async function getDocumentFile(
   documentId: string,
-): Promise<{ file: string; mime: string | null } | null> {
+): Promise<
+  | { file: string; mime: string | null; bytes?: undefined }
+  | { bytes: Buffer; mime: string; file?: undefined }
+  | null
+> {
   const d = await db
     .selectFrom("accounting_document")
-    .select(["document_file", "document_mime"])
-    .where("id", "=", documentId)
+    .leftJoin("invoice", "invoice.id", "accounting_document.invoice_id")
+    .select(["document_file", "document_mime", "invoice.pdf_base64 as pdf"])
+    .where("accounting_document.id", "=", documentId)
     .executeTakeFirst();
-  if (!d?.document_file) return null;
-  return { file: d.document_file, mime: d.document_mime };
+  if (d?.document_file) return { file: d.document_file, mime: d.document_mime };
+  // ADR-XXXX: a mirrored system invoice serves the PDF the provider returned (0030).
+  if (d?.pdf) return { bytes: Buffer.from(d.pdf, "base64"), mime: "application/pdf" };
+  return null;
 }

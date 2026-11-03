@@ -527,6 +527,12 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
       <option value="">mind</option>
       ${DOC_TYPE_OPTIONS.map((o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
     </select></div>`;
+  // ADR-XXXX: origin filter — the system invoices (payment path) vs. the hand-registered ones.
+  const srcF = `<div class="ctbl-f${q.src ? " on" : ""}" style="margin-top:4px"><select form="docf" name="src" onchange="this.form.submit()" aria-label="${T(lang, "Forrás")}">
+      <option value="">${T(lang, "minden forrás")}</option>
+      <option value="system"${q.src === "system" ? " selected" : ""}>${T(lang, "rendszer-számla")}</option>
+      <option value="manual"${q.src === "manual" ? " selected" : ""}>${T(lang, "kézi / importált")}</option>
+    </select></div>`;
   const currencies = ["HUF", "EUR", "USD"];
   const currencyF = `<div class="ctbl-f${q.currency ? " on" : ""}"><select form="docf" name="currency" onchange="this.form.submit()" aria-label="${T(lang, "Pénznem")}">
       <option value="">mind</option>
@@ -544,7 +550,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
   const head = `<tr>
     ${th("Bizonylat", textF("no", T(lang, "Szám…"), q.no), ' style="min-width:132px"')}
     ${opts.global ? th("Partner", textF("partner", "Partner…", q.partner), ' style="min-width:180px"') : ""}
-    ${th(T(lang, "Típus"), typeF, ' style="min-width:140px"')}
+    ${th(T(lang, "Típus"), typeF + srcF, ' style="min-width:140px"')}
     ${th("Kelte", dateF("from", "to", q.from, q.to), ' style="min-width:150px"')}
     ${th(T(lang, "Fiz. határidő"), dateF("dueFrom", "dueTo", q.dueFrom, q.dueTo), ' style="min-width:150px"')}
     ${th(T(lang, "Esedékesség"), "", ' style="min-width:120px"')}
@@ -567,8 +573,19 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
               : `<span class="du du--${dr.urgency}">${
                   dr.urgency === "late" ? ic("alert", 13) : dr.urgency === "soon" ? ic("clock", 13) : ""
                 }${esc(dr.text)}</span>`;
-          return `<tr${r.docType === "storno" ? ` class="storno"` : ""}>
-      <td><code>${r.documentNumber ? esc(r.documentNumber) : "–"}</code></td>
+          // ADR-XXXX: a mirrored system invoice says so; a storno-ed / failed one says WHY
+          // its amount is not in the totals (it is listed, it is no money).
+          const srcBadge =
+            r.source !== "system"
+              ? ""
+              : r.systemState === "storno"
+                ? `<span class="pill warn">${T(lang, "sztornózva")}</span>`
+                : r.systemState === "failed"
+                  ? `<span class="pill rejected" title="${esc(r.note ?? "")}">${T(lang, "számla nem készült")}</span>`
+                  : `<span class="pill sent">${T(lang, "rendszer")}</span>`;
+          const inert = r.source === "system" && (r.systemState === "storno" || r.systemState === "failed");
+          return `<tr${r.docType === "storno" || inert ? ` class="storno"` : ""}>
+      <td><code>${r.documentNumber ? esc(r.documentNumber) : "–"}</code>${srcBadge ? `<div style="margin-top:3px">${srcBadge}</div>` : ""}</td>
       ${
         opts.global
           ? `<td>${
@@ -613,6 +630,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
     ...(q.dueFrom ? ([["dueFrom", q.dueFrom]] as [string, string][]) : []),
     ...(q.dueTo ? ([["dueTo", q.dueTo]] as [string, string][]) : []),
     ...(q.currency ? ([["currency", q.currency]] as [string, string][]) : []),
+    ...(q.src ? ([["src", q.src]] as [string, string][]) : []),
     ...(q.paid !== undefined ? ([["paid", q.paid ? "1" : "0"]] as [string, string][]) : []),
     ...(q.q ? ([["q", q.q]] as [string, string][]) : []),
   ];
@@ -626,9 +644,10 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
   const chipLabel: Record<string, string> = {
     no: T(lang, "Szám"), partner: "Partner", type: T(lang, "Típus"), from: T(lang, "Kelte-tól"), to: "Kelte-ig",
     dueFrom: T(lang, "Határidő-tól"), dueTo: T(lang, "Határidő-ig"), currency: T(lang, "Pénznem"), paid: T(lang, "Állapot"), q: T(lang, "Keresés"),
+    src: T(lang, "Forrás"),
   };
   const chipValue = (k: string, v: string) =>
-    k === "type" ? DOC_TYPE_OPTIONS.find((o) => o.id === v)?.label ?? v : k === "paid" ? (v === "1" ? "fizetve" : "nyitott") : v;
+    k === "type" ? DOC_TYPE_OPTIONS.find((o) => o.id === v)?.label ?? v : k === "paid" ? (v === "1" ? "fizetve" : "nyitott") : k === "src" ? (v === "system" ? T(lang, "rendszer-számla") : T(lang, "kézi / importált")) : v;
   const chips = active
     .map(
       ([k, v]) =>

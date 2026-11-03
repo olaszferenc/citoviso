@@ -34,6 +34,7 @@ import { runTrialWatch } from "../src/trial/watch.js";
 import { runStallWatch } from "../src/console/stallWatch.js";
 import { runClientNotices } from "../src/console/clientNotify.js";
 import { flushNightSmsDigest } from "../src/console/houseAlert.js";
+import { flushRenewalPaymentDigest } from "../src/console/paymentAlert.js";
 import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -89,6 +90,14 @@ try {
   console.log(`night-sms-digest @ ${now.toISOString()}:`, JSON.stringify(nd));
 } catch (e) {
   console.error("night-sms-digest HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  // ADR-XXXX: the day's paid renewals → ONE mail + ONE SMS to the owner (after 18:00 Budapest).
+  const rd = await flushRenewalPaymentDigest(now);
+  console.log(`renewal-payment-digest @ ${now.toISOString()}:`, JSON.stringify(rd));
+} catch (e) {
+  console.error("renewal-payment-digest HIBA:", e);
   process.exitCode = 1;
 }
 try {

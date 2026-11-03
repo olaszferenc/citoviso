@@ -2230,6 +2230,7 @@ async function handle(
       dueFrom: date("dueFrom"),
       dueTo: date("dueTo"),
       currency: /^[A-Z]{3}$/.test(cur) ? cur : undefined,
+      src: ((v) => (v === "system" || v === "manual" ? v : undefined))(u.searchParams.get("src")),
     };
   };
   // GET /documents — the global document list: ONE searchable table over all
@@ -2433,6 +2434,12 @@ async function handle(
   if (method === "GET" && docFileMatch) {
     const f = await getDocumentFile(docFileMatch[1]!);
     if (!f) return send(res, 404, layout("404", "<p>Ehhez a bizonylathoz nincs tárolt számlakép.</p>"));
+    // ADR-XXXX: a mirrored system invoice streams the provider's PDF from the DB.
+    if (f.bytes) {
+      res.writeHead(200, { "content-type": f.mime, "content-disposition": "inline" });
+      res.end(f.bytes);
+      return;
+    }
     try {
       const abs = path_mod.resolve(process.cwd(), f.file);
       const buf = await readFile(abs);

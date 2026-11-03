@@ -32,6 +32,8 @@ import {
 } from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail, deliverPaymentReceiptEmail } from "../billing/invoiceDelivery.js";
 import { alertHouse, alertInvoiceFailure, INVOICE_AUTO_RETRY_LIMIT } from "../console/houseAlert.js";
+import { alertPaymentSucceeded } from "../console/paymentAlert.js";
+import { mirrorInvoicesForPayment } from "../billing/invoiceMirror.js";
 import { publicPaymentRef } from "./publicRef.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
@@ -1541,7 +1543,35 @@ export async function issueInvoiceFor(
   try {
     await lock.query("SELECT pg_advisory_lock(hashtext($1))", [`citoviso-invoice:${paymentId}`]);
     try {
-      return await issueInvoiceLocked(paymentId, opts.trigger ?? "payment");
+      const trigger = opts.trigger ?? "payment";
+      const outcome = await issueInvoiceLocked(paymentId, trigger);
+      // ADR-XXXX ①: the console's document surfaces read accounting_document — mirror the
+      // invoice row(s) there, on EVERY attempt (a retry that finally issues voids the
+      // "failed" mirror). Inside the lock: two racers cannot mirror the same row twice.
+      // A mirror failure never fails the payment; it is loud, and the backfill heals it.
+      if (outcome.status !== "no-payment") {
+        try {
+          await mirrorInvoicesForPayment(paymentId);
+        } catch (e) {
+          console.error(
+            `[invoice-mirror] ⛔ a számla NEM került a Bizonylatok közé (${paymentId}) — ` +
+              `pótlás: npx tsx scripts/invoice-mirror-backfill.mts --go`,
+            e,
+          );
+        }
+      }
+      // ADR-XXXX ②: every paid path (webhook, capture, token charge) reaches here with the
+      // default trigger — tell the owner the money arrived, once per payment. The retries
+      // ("auto-retry"/"console") are not a new payment and stay silent.
+      if (trigger === "payment" && outcome.status !== "no-payment") {
+        await alertPaymentSucceeded(
+          paymentId,
+          outcome.status === "failed"
+            ? { status: "failed", error: outcome.error }
+            : { status: outcome.status, invoiceNumber: outcome.invoiceNumber },
+        );
+      }
+      return outcome;
     } finally {
       await lock.query("SELECT pg_advisory_unlock(hashtext($1))", [`citoviso-invoice:${paymentId}`]);
     }

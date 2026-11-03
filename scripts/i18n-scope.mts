@@ -121,6 +121,8 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // ugyanaz a fajta belső üzemi levél, a címzett az app_setting.alert_email (a TULAJ),
   // vevőhöz vagy vendéghez ez a szöveg soha nem jut el.
   "src/console/houseAlert.ts": "belső tulaj-riasztás (időzítő / foglalási levél / webhook hiba) — a címzett az operátor, nem vevő",
+  "src/console/paymentAlert.ts": "belső tulaj-riasztás (sikeres fizetés, ADR-XXXX) — a címzett az operátor, nem vevő",
+  "src/billing/invoiceMirror.ts": "belső bizonylat-tükör (invoice → accounting_document, ADR-XXXX) — megjegyzés-szövege a konzol könyvelési sora, nem vevő-szöveg",
   "src/invoicing/keyGuard.ts": "a houseAlert az isLiveHost-ért importálja (ADR-0279); magyar szövege a dev-számlázást letiltó operátor-hibaüzenet — levélbe nem kerül",
   // ADR-0112: a törött mobil-pár feladás-riasztása ugyanaz a fajta belső üzemi
   // levél+SMS, mint az AAM-riasztás — a címzett a TULAJ, nem a lead. A leadnek
