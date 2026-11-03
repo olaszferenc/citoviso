@@ -238,7 +238,7 @@ export function buildPasswordResetEmail(input: {
   });
 }
 
-// ── ADR-XXXX — the trial LOGIN REMINDER (owner-approved 2026-11-03) ─────────────────────
+// ── ADR-0417 — the trial LOGIN REMINDER (owner-approved 2026-11-03) ─────────────────────
 //
 // Measured 2026-11-03: both live trialists (Sáma 10-28, Marilyn 11-02) got the credentials
 // letter and NEITHER clicked it — they were reached by MMS/SMS and do not watch their inbox.

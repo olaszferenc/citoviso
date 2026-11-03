@@ -1,4 +1,4 @@
-// ADR-XXXX — the trial LOGIN REMINDER (src/trial/loginReminders.ts, owner-approved 2026-11-03).
+// ADR-0417 — the trial LOGIN REMINDER (src/trial/loginReminders.ts, owner-approved 2026-11-03).
 // Measured on prod 2026-11-03: two trialists got the credentials letter and never clicked it.
 // What this proves:
 //   ① loginReminderDay, pure: trial day 2/4/6/8 (day 1 = the start day); a step reaching the

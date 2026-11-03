@@ -261,7 +261,7 @@ try {
   check("szerda 17:00 → ablak zárva, 0 küldés", late.windowClosed && sent.length === 0);
   const dry = await runTrialNotices(bp("2026-10-14", "10:00"), null, { ...only, dryRun: true });
   if (SELF_TEST) await db.insertInto("free_trial_notice").values({ free_trial_id: trial.id, step: "t3", channel: "email", status: "claimed", detail: "sabotage" }).execute();
-  // Only the expiry steps: the start SMS (l0, ADR-XXXX) owns its own ledger row.
+  // Only the expiry steps: the start SMS (l0, ADR-0417) owns its own ledger row.
   const dryRows = await db.selectFrom("free_trial_notice").select("id").where("free_trial_id", "=", trial.id).where("step", "in", ["t3", "t1"]).execute();
   check("száraz futás (óránkénti tick a jóváhagyásig): 1 esedékes, 0 küldés, 0 foglalt sor", dry.due === 1 && dry.sent === 0 && sent.length === 0 && dryRows.length === 0, `${dry.due}/${dryRows.length}`);
   if (SELF_TEST) await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).execute();

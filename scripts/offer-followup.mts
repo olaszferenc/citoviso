@@ -61,7 +61,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: a trialist who has not set a password yet — e-mail + SMS on trial day 2/4/6/8.
+  // ADR-0417: a trialist who has not set a password yet — e-mail + SMS on trial day 2/4/6/8.
   const l = await runLoginReminders(now, loginReminderDeps());
   console.log(`trial-login-reminders (e-mail + SMS éles) @ ${now.toISOString()}:`, JSON.stringify(l));
 } catch (e) {

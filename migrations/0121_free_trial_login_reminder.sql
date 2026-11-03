@@ -1,4 +1,4 @@
--- 0121 INGYENES PRÓBA — belépés-emlékeztető (ADR-XXXX, tulaj-jóváhagyás 2026-11-03).
+-- 0121 INGYENES PRÓBA — belépés-emlékeztető (ADR-0417, tulaj-jóváhagyás 2026-11-03).
 --
 -- Mérve 2026-11-03: a két éles próbázó megkapta a belépő levelet, de egyikük sem kattintott.
 -- Amíg nem állít be jelszót: l0 = SMS a próba indulásakor; l2/l4/l6/l8 = e-mail + SMS a

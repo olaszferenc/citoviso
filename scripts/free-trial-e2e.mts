@@ -237,7 +237,7 @@ try {
 
   // ② login letter ───────────────────────────────────────────────────────────
   console.log("② próbás belépő-levél");
-  // The start SMS (ADR-XXXX, step l0) is logged as kind 'credentials' too, on channel 'sms'.
+  // The start SMS (ADR-0417, step l0) is logged as kind 'credentials' too, on channel 'sms'.
   const credAll = await db.selectFrom("tenant_message").select(["body_text", "recipient", "subject", "channel"]).where("tenant_id", "=", tenantA).where("kind", "=", "credentials").execute();
   const cred = credAll.filter((m) => m.channel === "email");
   check("tenant_message kind 'credentials' e-mail: pontosan 1, a próbázónak", cred.length === 1 && cred[0]!.recipient === EMAIL_A, `${cred.length} · ${cred[0]?.recipient}`);

@@ -312,7 +312,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           },
         );
         loginSentTo = login.contactEmail;
-        // ADR-XXXX (owner, 2026-11-03): the same login by SMS too — phone-first leads do not
+        // ADR-0417 (owner, 2026-11-03): the same login by SMS too — phone-first leads do not
         // watch their inbox (measured: two live trialists never opened the letter's link).
         void import("./loginReminders.js").then((m) => m.sendLoginStartSms(trialId)).catch(() => undefined);
       } catch (e) {

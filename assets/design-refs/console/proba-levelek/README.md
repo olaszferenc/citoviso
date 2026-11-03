@@ -52,7 +52,7 @@ Forrás: `trialDiscount` (`src/trial/offer.ts`) — `kind: "trial"` = C; `kind: 
 13. **Belépő-levél:** adat-panel **„Próba-kedvezmény”** = **„−{p}%, ha {date}-ig megrendeli (évesen az első évre)”**, és a próba-bekezdés végén
     **„Ha a próba végéig megrendeli, a díjból {p}% kedvezményt kap — évesen az első évre, havinál az első hónapra.”**
 
-## Belépés-emlékeztető (ADR-XXXX, jóváhagyva 2026-11-03, tulaj: „mehet”)
+## Belépés-emlékeztető (ADR-0417, jóváhagyva 2026-11-03, tulaj: „mehet”)
 
 Amíg a próbázó nem állít jelszót. **Induló SMS** (a belépő levél mellé): „Citoviso: elindult a {site} ingyenes
 probaja. Jelszo beallitasa es belepes: {link} Felhasznalonev: {user}”. **A 2., 4., 6., 8. napon** e-mail + SMS:

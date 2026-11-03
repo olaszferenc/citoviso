@@ -1,4 +1,4 @@
-// ADR-XXXX — the trial LOGIN REMINDER (owner-approved 2026-11-03).
+// ADR-0417 — the trial LOGIN REMINDER (owner-approved 2026-11-03).
 //
 // Measured 2026-11-03 on prod: both live trialists got the credentials letter, neither clicked
 // it (login_token.used_at empty, no /login/jelszo hit) — they were reached by MMS/SMS and do not

@@ -1,4 +1,4 @@
-## ADR-XXXX — Próbázó belépés-emlékeztető: induló SMS + 2./4./6./8. napi e-mail és SMS
+## ADR-0417 — Próbázó belépés-emlékeztető: induló SMS + 2./4./6./8. napi e-mail és SMS
 
 **Dátum:** 2026-11-03 · **Döntött:** a tulaj („mehet”, a szöveggel és az ütemezéssel együtt) · **Kapcsolódik:** ADR-0344 (próba-levelek), ADR-0303 (jelszó-link, nincs jelszó a levélben), ADR-0334 (hétköznap 9–16 ablak)
 
