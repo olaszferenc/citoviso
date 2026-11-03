@@ -237,8 +237,12 @@ try {
 
   // ② login letter ───────────────────────────────────────────────────────────
   console.log("② próbás belépő-levél");
-  const cred = await db.selectFrom("tenant_message").select(["body_text", "recipient", "subject"]).where("tenant_id", "=", tenantA).where("kind", "=", "credentials").execute();
-  check("tenant_message kind 'credentials': pontosan 1, a próbázónak", cred.length === 1 && cred[0]!.recipient === EMAIL_A, `${cred.length} · ${cred[0]?.recipient}`);
+  // The start SMS (ADR-XXXX, step l0) is logged as kind 'credentials' too, on channel 'sms'.
+  const credAll = await db.selectFrom("tenant_message").select(["body_text", "recipient", "subject", "channel"]).where("tenant_id", "=", tenantA).where("kind", "=", "credentials").execute();
+  const cred = credAll.filter((m) => m.channel === "email");
+  check("tenant_message kind 'credentials' e-mail: pontosan 1, a próbázónak", cred.length === 1 && cred[0]!.recipient === EMAIL_A, `${cred.length} · ${cred[0]?.recipient}`);
+  const credSms = credAll.filter((m) => m.channel === "sms");
+  check("…és pontosan 1 induló belépő-SMS (l0), kitakart linkkel", credSms.length === 1 && credSms[0]!.body_text.includes("/login/jelszo/[kitakarva]"), `${credSms.length} · ${credSms[0]?.body_text.slice(0, 80)}`);
   const credText = cred[0]?.body_text ?? "";
   check("…próbás szöveg (ingyenes próba, T−3/T−1 ígéret, a próba vége)",
     credText.includes("ingyenes próbája") && credText.includes("3 nappal és 1 nappal a vége előtt szólunk."), credText.slice(0, 160).replace(/\s+/g, " "));
@@ -295,8 +299,10 @@ try {
   const lastDay = await notice(bpAt(UNTIL_DAY, 9, 5));
   check(`T−1 14:00 és a lejárat napja 09:05 → 0 (nem kétszer)`, t1again.sent === 0 && lastDay.sent === 0 && mails.length === 2 && smss.length === 2);
   const ledger = await db.selectFrom("free_trial_notice").select(["step", "channel", "status"]).where("free_trial_id", "=", trialA.id).execute();
-  check("ledger: t3/t1 × email/sms, mind 'sent', 4 sor",
-    ledger.length === 4 && ledger.every((r) => r.status === "sent"), ledger.map((r) => `${r.step}:${r.channel}:${r.status}`).sort().join(","));
+  const expiryLedger = ledger.filter((r) => r.step === "t3" || r.step === "t1");
+  check("ledger: t3/t1 × email/sms, mind 'sent', 4 sor (+ az induló l0:sms)",
+    expiryLedger.length === 4 && expiryLedger.every((r) => r.status === "sent") && ledger.length === 5 && ledger.some((r) => r.step === "l0" && r.channel === "sms" && r.status === "sent"),
+    ledger.map((r) => `${r.step}:${r.channel}:${r.status}`).sort().join(","));
   const logged = await db.selectFrom("tenant_message").select(["related_kind", "channel"]).where("tenant_id", "=", tenantA).where("related_kind", "in", ["free_trial_t3", "free_trial_t1"]).execute();
   check("tenant postafiók: 4 bejegyzés (t3/t1 × email/sms)", logged.length === 4, logged.map((r) => `${r.related_kind}:${r.channel}`).sort().join(","));
   const noticeEml = (await ourEml()).filter((e) => e.body.includes(`To: ${EMAIL_A}\n`) && /\/p\/[^/]+\/folytatas/.test(e.body) && !e.file.includes(credEml[0]?.file ?? "\u0000"));

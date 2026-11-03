@@ -29,6 +29,7 @@
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { runTrialNotices } from "../src/trial/expiry.js";
 import { purgeWarningDeps, trialNoticeDeps } from "../src/trial/notices.js";
+import { loginReminderDeps, runLoginReminders } from "../src/trial/loginReminders.js";
 import { runPurgeWarnings } from "../src/trial/retention.js";
 import { runTrialWatch } from "../src/trial/watch.js";
 import { runStallWatch } from "../src/console/stallWatch.js";
@@ -57,6 +58,14 @@ try {
   console.log(`trial-notices (e-mail + SMS éles) @ ${now.toISOString()}:`, JSON.stringify(n));
 } catch (e) {
   console.error("trial-notices HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  // ADR-XXXX: a trialist who has not set a password yet — e-mail + SMS on trial day 2/4/6/8.
+  const l = await runLoginReminders(now, loginReminderDeps());
+  console.log(`trial-login-reminders (e-mail + SMS éles) @ ${now.toISOString()}:`, JSON.stringify(l));
+} catch (e) {
+  console.error("trial-login-reminders HIBA:", e);
   process.exitCode = 1;
 }
 try {

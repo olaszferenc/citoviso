@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-proba-belepes-emlekezteto-sms-es-email.md) — Próbázó belépés-emlékeztető: induló SMS + 2./4./6./8. napi e-mail és SMS
 - [ADR-0416](decisions/0416-portal-jutalek-kivaltasa-es-megtalalhatosag.md) — Portál-jutalék kiváltása és megtalálhatóság: Search Console, „közvetlen foglalás előnye” modul, közösségimédia-modul, Google Térkép-útmutató
 - [ADR-0415](decisions/0415-search-console-minden-elo-szallasoldal.md) — Search Console: minden élő szállásoldal automatikus beküldése a Google-nek
 - [ADR-0414](decisions/0414-rendszer-szamlak-a-bizonylatokban-tukor.md) — Rendszer-számlák a Bizonylatokban (tükör) + riasztás minden sikeres fizetésről

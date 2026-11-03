@@ -87,7 +87,9 @@ ok(hasLoginLine(plain), "1. platformMail: a záró belépés-sor alapból ott va
 const en = layout.platformMail({ to: "x@example.invalid", subject: "s", text: "t", heading: "h", blocks: [], lang: "en" });
 ok((en.html ?? "").includes(`${LOGIN}?lang=en`), "1. nem magyar olvasó: a link ?lang=-et visz (a /login-nak nincs tenant-kontextusa)");
 
-const ALLOW_OFF: Record<string, number> = { "src/email/activationEmail.ts": 1, "src/email/loginEmail.ts": 2, "src/email/orderEmail.ts": 2 };
+// loginEmail.ts: credentials, password reset, and (ADR-XXXX) the trial login reminder — all three
+// name the login address in their details box, so the closing login line would repeat it.
+const ALLOW_OFF: Record<string, number> = { "src/email/activationEmail.ts": 1, "src/email/loginEmail.ts": 3, "src/email/orderEmail.ts": 2 };
 const offFound: Record<string, number> = {};
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>

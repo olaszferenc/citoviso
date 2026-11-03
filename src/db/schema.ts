@@ -590,7 +590,8 @@ export interface FreeTrialNoticeTable {
   id: Generated<string>;
   free_trial_id: string;
   /** t3 / t1 = before the trial ends (0098); p7 = 7 days before the retention purge (0099). */
-  step: "t3" | "t1" | "p7";
+  /** l0 = start SMS, l2/l4/l6/l8 = login reminders on trial day 2/4/6/8 (0121). */
+  step: "t3" | "t1" | "p7" | "l0" | "l2" | "l4" | "l6" | "l8";
   channel: "email" | "sms";
   status: Generated<"claimed" | "sent" | "failed" | "skipped">;
   detail: string | null;

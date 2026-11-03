@@ -30,7 +30,8 @@
 // box, right under the username, and early in the plain-text part (loginDetailRow / loginTextLine).
 
 import { T } from "../i18n/mail.js";
-import { huArticleLower } from "../hu.js";
+import { huArticle, huArticleLower } from "../hu.js";
+import { toGsm7 } from "../sms/encoding.js";
 import { loginAddressLabel, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
 import type { FooterReason, MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
@@ -235,4 +236,105 @@ export function buildPasswordResetEmail(input: {
     // The address already stands in the details box, under the username.
     ownerLogin: false,
   });
+}
+
+// ── ADR-XXXX — the trial LOGIN REMINDER (owner-approved 2026-11-03) ─────────────────────
+//
+// Measured 2026-11-03: both live trialists (Sáma 10-28, Marilyn 11-02) got the credentials
+// letter and NEITHER clicked it — they were reached by MMS/SMS and do not watch their inbox.
+// So a trialist who has not set a password yet gets, until they do: an SMS at the start
+// (next to the credentials letter), then an e-mail + SMS on trial day 2, 4, 6 and 8. Every
+// reminder carries a FRESH one-time link, so an expired first link can never strand them.
+
+/** The reminder letter: "Még nem lépett be" — one button, the username, our phone. */
+export function buildLoginReminderEmail(input: {
+  to: string;
+  username: string;
+  setPasswordUrl: string;
+  loginUrl: string;
+  siteName: string;
+  contactName: string | null;
+  /** Whole Budapest days left (trialDaysLeft). */
+  daysLeft: number;
+  trialUntilIso: string;
+  /** Our phone for "Ha elakadt, hívjon minket" — omitted when not configured. */
+  helpPhone: string | null;
+  lang?: string;
+}): EmailMessage {
+  const { to, username, setPasswordUrl, loginUrl, siteName, lang } = input;
+  const greeting = mailGreeting(lang, input.contactName, true);
+  const subject = T(lang, "Még nem lépett be – {site}", { site: siteName });
+  const intro = T(
+    lang,
+    "{Art} {site} honlapja már él, de még nem lépett be a szerkesztőbe. A próbából még {n} nap van, {until}-ig.",
+    {
+      Art: huArticle(siteName),
+      site: siteName,
+      n: String(input.daysLeft),
+      until: formatDayLongStem(input.trialUntilIso, lang),
+    },
+  );
+  const button = T(lang, "Jelszó beállítása");
+  const fresh = T(lang, "Új link, 7 napig érvényes, és egyszer használható.");
+  const help = input.helpPhone ? T(lang, "Ha elakadt, hívjon minket: {phone}.", { phone: input.helpPhone }) : null;
+  const text =
+    `${greeting}\n\n${intro}\n\n` +
+    `${button}: ${setPasswordUrl}\n${fresh}\n\n` +
+    `${T(lang, "Felhasználónév:")} ${username}\n` +
+    `${loginTextLine(lang, loginUrl)}\n` +
+    (help ? `\n${help}\n` : "");
+  return platformMail({
+    to,
+    subject,
+    text,
+    lang,
+    heading: T(lang, "Még nem lépett be"),
+    greeting,
+    siteName,
+    footerReason: "trial",
+    ownerLogin: false,
+    blocks: [
+      mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
+      mailButton(setPasswordUrl, button),
+      mailNote(esc(fresh)),
+      mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }, loginDetailRow(lang, loginUrl)]),
+      ...(help ? [mailPara(esc(help))] : []),
+    ],
+  });
+}
+
+/** The START SMS (sent with the credentials letter): accent-free, ≤ 2 segments. */
+export function buildLoginStartSmsText(input: {
+  siteName: string;
+  username: string;
+  setPasswordUrl: string;
+  lang?: string;
+}): string {
+  const url = input.setPasswordUrl.replace(/^https?:\/\//, "");
+  return toGsm7(
+    T(input.lang, "Citoviso: elindult {art} {site} ingyenes próbája. Jelszó beállítása és belépés: {url} Felhasználónév: {user}", {
+      art: huArticleLower(input.siteName),
+      site: input.siteName,
+      url,
+      user: input.username,
+    }),
+  );
+}
+
+/** The REMINDER SMS (day 2/4/6/8 while no password is set): accent-free, ≤ 2 segments. */
+export function buildLoginReminderSmsText(input: {
+  siteName: string;
+  daysLeft: number;
+  setPasswordUrl: string;
+  lang?: string;
+}): string {
+  const url = input.setPasswordUrl.replace(/^https?:\/\//, "");
+  return toGsm7(
+    T(input.lang, "Citoviso: még nem lépett be {art} {site} honlapjába, a próbából még {n} nap van. Jelszó beállítása egy kattintással: {url}", {
+      art: huArticleLower(input.siteName),
+      site: input.siteName,
+      n: String(input.daysLeft),
+      url,
+    }),
+  );
 }

@@ -261,7 +261,8 @@ try {
   check("szerda 17:00 → ablak zárva, 0 küldés", late.windowClosed && sent.length === 0);
   const dry = await runTrialNotices(bp("2026-10-14", "10:00"), null, { ...only, dryRun: true });
   if (SELF_TEST) await db.insertInto("free_trial_notice").values({ free_trial_id: trial.id, step: "t3", channel: "email", status: "claimed", detail: "sabotage" }).execute();
-  const dryRows = await db.selectFrom("free_trial_notice").select("id").where("free_trial_id", "=", trial.id).execute();
+  // Only the expiry steps: the start SMS (l0, ADR-XXXX) owns its own ledger row.
+  const dryRows = await db.selectFrom("free_trial_notice").select("id").where("free_trial_id", "=", trial.id).where("step", "in", ["t3", "t1"]).execute();
   check("száraz futás (óránkénti tick a jóváhagyásig): 1 esedékes, 0 küldés, 0 foglalt sor", dry.due === 1 && dry.sent === 0 && sent.length === 0 && dryRows.length === 0, `${dry.due}/${dryRows.length}`);
   if (SELF_TEST) await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", trial.id).execute();
   const early = await runTrialNotices(bp("2026-10-13", "10:00"), deps, only);
@@ -390,7 +391,7 @@ try {
     (trialMailC.html ?? "").includes("Próba-kedvezmény") && (trialMailC.html ?? "").includes("−50%, ha 2026. okt. 23-ig megrendeli (évesen az első évre)") &&
       (trialMailC.html ?? "").includes("Ha a próba végéig megrendeli, a díjból 50% kedvezményt kap — évesen az első évre, havinál az első hónapra.") &&
       trialMailC.text.includes("Ha a próba végéig megrendeli, a díjból 50% kedvezményt kap") && !(trialMailC.html ?? "").includes("Kedvezmény, ha folytatja"));
-  const cred = await db.selectFrom("tenant_message").select("body_text").where("tenant_id", "=", tenantId).where("kind", "=", "credentials").executeTakeFirst();
+  const cred = await db.selectFrom("tenant_message").select("body_text").where("tenant_id", "=", tenantId).where("kind", "=", "credentials").where("channel", "=", "email").executeTakeFirst();
   check("a valódi próba-indítás a próbás belépő-levelet küldte", !!cred && cred.body_text.includes("ingyenes próbája") && cred.body_text.includes("3 nappal és 1 nappal a vége előtt szólunk."));
   check("…a C próba-kedvezménnyel (trialDiscount, nem a régi kupon)", !!cred && cred.body_text.includes("Ha a próba végéig megrendeli, a díjból") && cred.body_text.includes("% kedvezményt kap — évesen az első évre"), cred?.body_text);
   // C2c ②: the OTHER platform letters of a running trial (password reset, the owner's booking

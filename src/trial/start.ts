@@ -312,6 +312,9 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
           },
         );
         loginSentTo = login.contactEmail;
+        // ADR-XXXX (owner, 2026-11-03): the same login by SMS too — phone-first leads do not
+        // watch their inbox (measured: two live trialists never opened the letter's link).
+        void import("./loginReminders.js").then((m) => m.sendLoginStartSms(trialId)).catch(() => undefined);
       } catch (e) {
         console.error(`[trial] ${trialId}: belépés-kiadás SIKERTELEN (a site él, kézzel pótolandó): ${(e as Error).message}`); // i18n-exempt: operátori napló
       }

@@ -3419,10 +3419,10 @@ if [ -f scripts/free-trial-check.mts ] && \
    changed_files | grep -qE '^src/trial/.*\.ts$|^src/tenant/paidEntitlements\.ts$|^src/payment/subscription\.ts$|^src/conversion/provision\.ts$|^migrations/0097_free_trial\.sql$|^scripts/free-trial-check\.mts$'; then
   if changed_files | grep -qE '^scripts/free-trial-check\.mts$'; then
     echo "[pre-commit] free-trial-check --self-test (a próba-őr pirosra tud-e menni)…"
-    EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts --self-test >"$GATE_LOG" || gate_failed
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/free-trial-check.mts --self-test >"$GATE_LOG" || gate_failed
   fi
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
-  EMAIL_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
 # trial-promise-check (Elek 10-11 próba-kör, a próba-ígéret ADR-je): a próba azt ÍGÉRI, amit AD — a beállított
 #     próba-csomagnál (Ajánlott) a próba-űrlap (valódi Chromium, 390 + 1280 px), a belépő-levél és az admin
@@ -3433,7 +3433,7 @@ fi
 if [ -f scripts/trial-promise-check.mts ] && \
    changed_files | grep -qE '^src/trial/.*\.ts$|^src/conversion/(owned|provision)\.ts$|^src/email/loginEmail\.ts$|^src/tenant/credentials\.ts$|^src/generator/configurator\.ts$|^assets/runtime/cit-configurator\.js$|^scripts/trial-promise-check\.mts$'; then
   echo "[pre-commit] trial-promise-check (a próba ígérete = amit ad; bukott indítás nem zár ki)…"
-  EMAIL_PROVIDER=mock npx tsx scripts/trial-promise-check.mts >"$GATE_LOG" || gate_failed
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-promise-check.mts >"$GATE_LOG" || gate_failed
 fi
 # proba-c-checkout-check (design-refs/console/proba-c, jóváhagyva 2026-10-10; ADR-0354 „C”, ADR-0356): a
 #     próbázó /folytatas oldala és a próba-levél terv-lapja VALÓDI böngészőben, 390 px és asztali
@@ -3448,7 +3448,7 @@ fi
 if [ -f scripts/proba-c-checkout-check.mts ] && \
    changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/trial/offer\.ts$|^scripts/proba-c-checkout-check\.mts$'; then
   echo "[pre-commit] proba-c-checkout-check (a próba-folytatás és a próba-levél terv-lapja a terv szerint)…"
-  EMAIL_PROVIDER=mock npx tsx scripts/proba-c-checkout-check.mts >"$GATE_LOG" || gate_failed
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/proba-c-checkout-check.mts >"$GATE_LOG" || gate_failed
 fi
 # free-trial-e2e (ADR-0097/0354/0356, Elek3 B1): a próba teljes útja SAJÁT scratch-DB-n — indítás,
 #     admin, lejárat, folytatás a VALÓDI /p/<t>/request + mock-fizetés úton; a fizetés UTÁN a site
@@ -3472,10 +3472,10 @@ if [ -f scripts/slug-rename-check.mts ] && \
    changed_files | grep -qE '^src/conversion/provision\.ts$|^src/outreach/previewLabel\.ts$|^src/server/(public|mailLinkRoutes)\.ts$|^src/payment/service\.ts$|^migrations/0104_site_slug_alias\.sql$|^scripts/slug-rename-check\.mts$'; then
   if changed_files | grep -qE '^scripts/slug-rename-check\.mts$'; then
     echo "[pre-commit] slug-rename-check --self-test (a névváltás-őr pirosra tud-e menni)…"
-    EMAIL_PROVIDER=mock npx tsx scripts/slug-rename-check.mts --self-test >"$GATE_LOG" || gate_failed
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/slug-rename-check.mts --self-test >"$GATE_LOG" || gate_failed
   fi
   echo "[pre-commit] slug-rename-check (névváltás: választott cím érvényesül, régi cím 301, örökre foglalt)…"
-  EMAIL_PROVIDER=mock npx tsx scripts/slug-rename-check.mts >"$GATE_LOG" || gate_failed
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/slug-rename-check.mts >"$GATE_LOG" || gate_failed
 fi
 # trial-campaign-check (a visszamenőleges próba-levél ADR-je, visszamenőleges „14 nap ingyen” levél + SMS): a kivett mondat
 #     („Helyezést nem ígérünk.”) sehol, az egy-lövés lábléc-sor ott van, az SMS GSM-7 és ≤ 2 szelet
@@ -3501,7 +3501,7 @@ fi
 if [ -f scripts/free-trial-config-check.mts ] && \
    changed_files | grep -qE '^src/trial/config\.ts$|^src/console/(views|server)\.ts$|^scripts/free-trial-config-check\.mts$'; then
   echo "[pre-commit] free-trial-config-check (a /pricing próba-hossza és kupon-%-a tényleg a beállítás)…"
-  npx tsx scripts/free-trial-config-check.mts >"$GATE_LOG" || gate_failed
+  SMS_PROVIDER=mock npx tsx scripts/free-trial-config-check.mts >"$GATE_LOG" || gate_failed
 fi
 # pricing-packages-check (/pricing redesign — csomag-összetétel + domain-végződések, design-refs/console/pricing-redesign): a csomag-összetétel szabályai (függőség, gerinc,
 #     egymásra épülés), a domain mint csomag-tartalom (0 Ft), végződésenkénti díj és plafon, a 0 = nincs
@@ -3535,6 +3535,19 @@ if [ -f scripts/free-trial-expiry-check.mts ] && \
   fi
   echo "[pre-commit] free-trial-expiry-check (próba vége: figyelmeztetés, szünetel, folytatás-fizetés)…"
   npx tsx scripts/free-trial-expiry-check.mts >"$GATE_LOG" || gate_failed
+fi
+# _planning/decisions/*-proba-belepes-emlekezteto-sms-es-email.md (tulaj 2026-11-03): a próbázó belépés-emlékeztetője — induló SMS a friss jelszó-linkkel, majd
+#     a 2./4./6./8. napon e-mail + SMS, amíg nem állít jelszót; ablakon kívül semmi, kétszer semmi, a kimaradt
+#     lépcső kihagyva, minden üzenet saját tokennel, jelszó után csend. Saját scratch-DB, ~15 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/trial-login-reminder-check.mts ] && \
+   changed_files | grep -qE '^src/trial/(loginReminders|start|expiry|notices)\.ts$|^src/email/(loginEmail|platformLayout)\.ts$|^src/auth/passwordLink\.ts$|^src/sms/(sender|encoding|sendWindow)\.ts$|^scripts/offer-followup\.mts$|^migrations/0119_free_trial_login_reminder\.sql$|^scripts/trial-login-reminder-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/trial-login-reminder-check\.mts$'; then
+    echo "[pre-commit] trial-login-reminder-check --self-test (a belépés-emlékeztető őr pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-login-reminder-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] trial-login-reminder-check (próbázó belépés-emlékeztető: SMS + e-mail)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-login-reminder-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek2 #24: a terv-link (/p/<token>) a TULAJDONOS lead (próba / fizetett) MOSTANI oldalát mutatja — a
 #     szerkesztett tartalmat (új szlogen, minta-blokkok nélkül), demó-űrlapokkal, a feltöltött képek a publikus

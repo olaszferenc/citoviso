@@ -51,3 +51,14 @@ Forrás: `trialDiscount` (`src/trial/offer.ts`) — `kind: "trial"` = C; `kind: 
     Kedvezmény nélkül változatlanul „Folytatás: {url}”.
 13. **Belépő-levél:** adat-panel **„Próba-kedvezmény”** = **„−{p}%, ha {date}-ig megrendeli (évesen az első évre)”**, és a próba-bekezdés végén
     **„Ha a próba végéig megrendeli, a díjból {p}% kedvezményt kap — évesen az első évre, havinál az első hónapra.”**
+
+## Belépés-emlékeztető (ADR-XXXX, jóváhagyva 2026-11-03, tulaj: „mehet”)
+
+Amíg a próbázó nem állít jelszót. **Induló SMS** (a belépő levél mellé): „Citoviso: elindult a {site} ingyenes
+probaja. Jelszo beallitasa es belepes: {link} Felhasznalonev: {user}”. **A 2., 4., 6., 8. napon** e-mail + SMS:
+SMS „Citoviso: meg nem lepett be a {site} honlapjaba, a probabol meg {n} nap van. Jelszo beallitasa egy
+kattintassal: {link}”; e-mail tárgya **„Még nem lépett be – {site}”**, címsor „Még nem lépett be”, szöveg
+„{Art} {site} honlapja már él, de még nem lépett be a szerkesztőbe. A próbából még {n} nap van, {dátum}-ig.”,
+egy gomb **„Jelszó beállítása”** (friss link) + „Új link, 7 napig érvényes, és egyszer használható.”, adat-panel
+(Felhasználónév, Belépés), „Ha elakadt, hívjon minket: {telefon}.” Keret: a platform-levél, mint a belépő levélé.
+⛔ Minden üzenet FRISS linket visz; az SMS GSM-7, ≤ 2 szelet. Megvalósítás: `src/trial/loginReminders.ts`.

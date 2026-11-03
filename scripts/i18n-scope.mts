@@ -52,6 +52,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // and ledger details only; the letter's wording lives in src/email/trialEmail.ts.
   "src/trial/expiry.ts": "operátori napló + ledger-részlet; a levél szövege trialEmail.ts",
   "src/trial/notices.ts": "operátori hibaüzenet a ledgerbe; a levél szövege trialEmail.ts",
+  "src/trial/loginReminders.ts": "operátori hibaüzenet a ledgerbe; a levél és az SMS szövege loginEmail.ts",
   "src/trial/retention.ts": "operátori napló + ledger-részlet (törlés-jelentés, megtagadás oka); a törlés-levél szövege trialEmail.ts",
   // The free-trial watch (0100): its e-mail + SMS go to the OPERATOR (getAlertRecipients),
   // like payLinkAlert / multilangResume — never to the trialist.
