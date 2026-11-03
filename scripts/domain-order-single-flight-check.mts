@@ -360,7 +360,10 @@ await block("B2", async () => {
   const a = await newPaidLink(tenantId, "ribizli-dns.hu");
   await pay.applyWebhookResult({ gatewayRef: a.ref, status: "paid" });
   await waitSettled([a.orderId]);
-  for (let i = 0; i < 40 && alerts.length === 0; i++) await new Promise((r) => setTimeout(r, 100));
+  // Wait for THE domain-setup alert, not any alert: since ADR-0414 every paid order first fires a
+  // "fizetés beérkezett" house alert (its subject has no domain), which ended this wait before the
+  // setup step had flipped the site — the check read `site=registered` (main red, 2026-11-03).
+  for (let i = 0; i < 40 && !alerts.some((x) => /ribizli-dns\.hu/.test(x.subject)); i++) await new Promise((r) => setTimeout(r, 100));
   const site = await db.selectFrom("site").select(["custom_domain_status"]).where("id", "=", siteId).executeTakeFirstOrThrow();
   const dp = await db.selectFrom("domain_provisioning").select(["status", "registrar_ref"]).where("tenant_id", "=", tenantId).executeTakeFirstOrThrow();
   ok(dp.status === "setup_retry" && site.custom_domain_status === "setup_retry",
