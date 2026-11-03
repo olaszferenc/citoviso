@@ -329,9 +329,10 @@ async function runBrowserChecks(
     ] as const) {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       await page.goto(`${url}/partner/${customer.id}`);
-      check(`[${vp}] Áttekintés törzsadat látszik`, await page.locator("dl.kv").first().isVisible());
+      check(`[${vp}] Áttekintés törzsadat látszik`, await page.locator("dl.pa-kv").first().isVisible());
       // CLICK the tab — behaviour, not markup.
-      await page.locator('nav.con-tabs a', { hasText: "Bizonylatok" }).last().click();
+      // 2026-11-03 (A — Fülek): a pure customer's ledger tab reads „Számlák”, a supplier's „Bizonylatok”.
+      await page.locator("nav.pa-tabs a", { hasText: /Számlák|Bizonylatok/ }).last().click();
       await page.waitForLoadState();
       const docsVisible = await page
         .locator("table.ctbl th .lbl", { hasText: "Bizonylat" })
@@ -340,7 +341,7 @@ async function runBrowserChecks(
         .catch(() => false);
       check(`[${vp}] Bizonylatok fülre KATTINTVA a bizonylat-tábla jön be`, docsVisible);
       // Range-measured tap size on the tab links (not a bare lower bound).
-      const box = await page.locator("nav.con-tabs a").last().boundingBox();
+      const box = await page.locator("nav.pa-tabs a").last().boundingBox();
       const tapOk = box !== null && box.height >= 30 && box.height <= 70;
       check(
         `[${vp}] fül tap-magasság 30–70px tartományban`,
@@ -353,7 +354,7 @@ async function runBrowserChecks(
     const suppPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const { url: suppUrl, close: closeSupp } = await serve((tab) => partnerPage(supplier, tab));
     await suppPage.goto(`${suppUrl}/partner/${supplier.id}`);
-    const tabTexts = await suppPage.locator("nav.con-tabs a").allTextContents();
+    const tabTexts = await suppPage.locator("nav.pa-tabs a").allTextContents();
     check(
       "⑤ tiszta szállítónál NINCS Előfizetés fül (tulaj-rendelet)",
       !tabTexts.some((t) => t.includes("Előfizetés")),
@@ -361,7 +362,7 @@ async function runBrowserChecks(
     );
     const custPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await custPage.goto(`${url}/partner/${customer.id}`);
-    const custTabs = await custPage.locator("nav.con-tabs a").allTextContents();
+    const custTabs = await custPage.locator("nav.pa-tabs a").allTextContents();
     check("⑤ vevőnél VAN Előfizetés fül", custTabs.some((t) => t.includes("Előfizetés")));
     await suppPage.close();
     await custPage.close();

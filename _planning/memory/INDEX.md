@@ -8,6 +8,7 @@
 
 - [2026-11-03_search_console_automatikus_bekuldes.md](2026-11-03_search_console_automatikus_bekuldes.md) — 2026-11-03 — Search Console: automatikus beküldés (SUB a „portál-jutalék + megtalálhatóság” szál alatt)
 - [2026-11-03_rendszer_szamla_bizonylatok_fizetes_riasztas.md](2026-11-03_rendszer_szamla_bizonylatok_fizetes_riasztas.md) — 2026-11-03 — Rendszer-számlák a Bizonylatokban + riasztás minden sikeres fizetésről (SUB-A, ADR-0414)
+- [2026-11-03_partner_adatlap_a_fulek.md](2026-11-03_partner_adatlap_a_fulek.md) — Partner-adatlap A — Fülek: szerkeszthető partner, előfizetés, domain, Figyelendő (SUB-C, 2026-11-03)
 - [2026-11-02_marilyn_artalmas_oldal_sajat_megnyitas.md](2026-11-02_marilyn_artalmas_oldal_sajat_megnyitas.md) — 2026-11-02 — Marilyn Vendégház: „ártalmas oldal”, e-mail, saját megnyitás a tervváltón
 - [2026-10-31_riport_lead_tipus_szuro.md](2026-10-31_riport_lead_tipus_szuro.md) — 2026-10-31 — Riport: lead típus szűrő + ítélet-színű kártya-fejléc
 - [2026-10-28_babel_esemenyre_ebred_deploy.md](2026-10-28_babel_esemenyre_ebred_deploy.md) — 2026-10-28 — Bábel eseményre ébred, a Koordinátor alatt; deploy b6384a2f

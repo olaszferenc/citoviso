@@ -53,7 +53,6 @@ import {
   buildDocumentsCsv,
   getDocumentFile,
   getDocuments,
-  getPartnerContacts,
   getPartnerDetail,
   getPartnerDocuments,
   getPartnerTimeline,
@@ -78,6 +77,9 @@ import {
   resolveDocType,
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
+import { getEditableContacts, getPartnerProfile, updatePartner, type PartnerContactInput } from "./partnerProfile.js";
+import { fmtTime as partnerFmtTime, type PartnerEditState } from "./partnerProfileViews.js";
+import { partnerActivityHtml } from "./partnerActivity.js";
 import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
 import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
@@ -2386,24 +2388,34 @@ async function handle(
       return redirect(res, `/partner/${result.id}`);
     }
   }
-  // GET /partner/:id — partner page: header + role-dependent KPIs + tabs.
+  // GET /partner/:id — the partner sheet (approved plan: assets/design-refs/console/partner-adatlap/,
+  // A — Fülek). POST /partner/:id/edit — save the billing identity + contacts.
   const partnerMatch = /^\/partner\/([0-9a-f-]{36})$/i.exec(path);
-  if (method === "GET" && partnerMatch) {
-    const d = await getPartnerDetail(partnerMatch[1]!);
+  const partnerEditMatch = /^\/partner\/([0-9a-f-]{36})\/edit$/i.exec(path);
+  const renderPartner = async (
+    id: string,
+    want: string | null,
+    edit: PartnerEditState,
+    status = 200,
+  ): Promise<void> => {
+    const d = await getPartnerDetail(id);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
-    const t = url.searchParams.get("tab");
+    const prof = await getPartnerProfile({ tenantId: d.tenant?.tenantId ?? null, phone: d.phone }, partnerFmtTime);
+    const hasTenant = Boolean(prof.relations.tenant);
+    // „contacts” was the old Kontaktok tab — its content lives on the data tab now.
+    const t = want === "contacts" ? "data" : want;
     const tab: PartnerTab =
-      t === "activity" || t === "documents" || t === "contacts"
+      t === "data" || t === "documents" || t === "activity"
         ? t
         : t === "subscription" && d.isCustomer
           ? "subscription"
-          : "overview";
+          : (t === "domain" || t === "usage") && hasTenant
+            ? t
+            : "overview";
     const timeline = tab === "activity" ? await getPartnerTimeline(d.id) : [];
     const docQuery = partnerDocQueryFrom(url);
-    // Overview needs the documents too: the KPI strip + havi bontás chart
-    // (MineREAL) are computed from them.
     // Overview derives its KPI strip + monthly chart FROM the rows, so it needs
-    // every document; only the Bizonylatok tab itself is paginated.
+    // every document; only the Számlák/Bizonylatok tab itself is paginated.
     const docs =
       tab === "documents" || tab === "overview"
         ? tab === "overview"
@@ -2412,8 +2424,67 @@ async function handle(
               page: Number.parseInt(url.searchParams.get("page") ?? "1", 10),
             })
         : null;
-    const contacts = tab === "contacts" ? await getPartnerContacts(d.id) : [];
-    return send(res, 200, partnerPage(d, tab, timeline, docs, docQuery, contacts));
+    const contacts = tab === "data" ? await getEditableContacts(d.id) : [];
+    const usage = tab === "usage" ? await partnerActivityHtml({ partnerId: d.id, tenantId: prof.relations.tenant?.id ?? null }) : null;
+    return send(res, status, partnerPage(d, tab, timeline, docs, docQuery, contacts, { profile: prof, edit, usageHtml: usage }));
+  };
+  if (method === "GET" && partnerMatch) {
+    const editOpen = url.searchParams.get("edit") === "1";
+    // „Átveszem a partnerre” (Figyelendő): the lead's phone arrives prefilled, nothing is
+    // written until the operator presses Mentés.
+    const phone = url.searchParams.get("phone");
+    const saved = url.searchParams.get("saved");
+    return renderPartner(partnerMatch[1]!, url.searchParams.get("tab"), {
+      open: editOpen,
+      values: editOpen && phone ? { phone } : undefined,
+      savedAt: saved && /^\d{2}:\d{2}$/.test(saved) ? saved : null,
+    });
+  }
+  if (method === "POST" && partnerEditMatch) {
+    const id = partnerEditMatch[1]!;
+    const op = await currentOperator(req);
+    const form = await readBody(req);
+    const get = (k: string) => String(form.get(k) ?? "");
+    // Contact rows arrive indexed (c0_kind, c1_email, …); a removed row leaves a gap.
+    const idx = new Set<number>();
+    for (const [k] of form) {
+      const m = /^c(\d+)_kind$/.exec(k);
+      if (m) idx.add(Number(m[1]));
+    }
+    const kinds = new Set(["billing", "general", "technical", "legal"]);
+    const contacts: PartnerContactInput[] = [...idx]
+      .sort((a, b) => a - b)
+      .map((i) => ({
+        id: /^[0-9a-f-]{36}$/i.test(get(`c${i}_id`)) ? get(`c${i}_id`) : null,
+        kind: (kinds.has(get(`c${i}_kind`)) ? get(`c${i}_kind`) : "general") as PartnerContactInput["kind"],
+        name: get(`c${i}_name`),
+        email: get(`c${i}_email`),
+        phone: get(`c${i}_phone`),
+        primary: get(`c${i}_primary`) === "1",
+      }));
+    const input = {
+      name: get("name"),
+      country: get("country"),
+      zip: get("zip"),
+      city: get("city"),
+      address: get("address"),
+      taxNumber: get("tax_number"),
+      euVatNumber: get("eu_vat_number"),
+      email: get("email"),
+      phone: get("phone"),
+      note: get("note"),
+      contacts,
+      syncBilling: get("sync_billing") === "1",
+    };
+    const r = await updatePartner(id, input, op?.operatorUserId ?? null);
+    if (!r.ok) {
+      const values: Record<string, string> = {};
+      for (const k of ["name", "country", "zip", "city", "address", "tax_number", "eu_vat_number", "email", "phone", "note"]) values[k] = get(k);
+      // Re-index the rows 0..n so the field names and the problem keys line up.
+      return renderPartner(id, "data", { open: true, values, contacts, problems: r.problems }, 422);
+    }
+    const hhmm = partnerFmtTime(new Date().toISOString()).slice(11);
+    return redirect(res, `/partner/${id}?tab=data&saved=${encodeURIComponent(hhmm)}`);
   }
   // GET /partner/:id/documents.csv — the filtered document list for Excel
   // (UTF-8 BOM + semicolon separator: opens correctly in Hungarian Excel).

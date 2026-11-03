@@ -172,6 +172,8 @@ export interface PartnerDetail {
   readonly address: string | null;
   readonly email: string | null;
   readonly phone: string | null;
+  /** Internal operator note (partner.note). */
+  readonly note: string | null;
   readonly createdAt: string;
   readonly bankAccounts: PartnerBankAccountView[];
   readonly tenant: PartnerTenantView | null;
@@ -306,6 +308,7 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
     address: p.address,
     email: p.email,
     phone: p.phone,
+    note: p.note,
     createdAt: new Date(p.created_at as unknown as string).toISOString(),
     bankAccounts: banks.map((b) => ({
       accountNo: b.account_no,

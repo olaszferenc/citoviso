@@ -2293,9 +2293,19 @@ fi
 # fixtures + a real browser (~15s), so scoped to the partner console files.
 # Red self-test: `npx tsx scripts/partner-ui-check.mts --self-test`.
 if [ -f scripts/partner-ui-check.mts ] && \
-   changed_files | grep -qE '^src/console/partner(Data|Views)\.ts$|^src/console/server\.ts$|^scripts/partner-ui-check'; then
+   changed_files | grep -qE '^src/console/partner(Data|Views|Profile|ProfileViews)\.ts$|^src/console/server\.ts$|^scripts/partner-ui-check'; then
   echo "[pre-commit] partner-ui-check (partner-felület viselkedés-kapu)…"
   npx tsx scripts/partner-ui-check.mts
+fi
+# Partner sheet editor (A — Fülek, 2026-11-03: „partnert nem is tudom szerkeszteni”): the real
+# console in-process + a real browser at 1280/390 — bad tax/phone refused by the client AND the
+# server (JS off → 422, nothing written), a valid edit lands normalised, contacts add/edit/delete,
+# the billing recipient follows the company e-mail, the Figyelendő phone prefill. Uses a
+# throw-away partner in the dev DB and deletes it. ~40s, so scoped to the partner sheet files.
+if [ -f scripts/partner-edit-check.mts ] && \
+   changed_files | grep -qE '^src/console/partner(Data|Views|Profile|ProfileViews)\.ts$|^src/console/server\.ts$|^public/assets/ui/citui-console\.css$|^scripts/partner-edit-check'; then
+  echo "[pre-commit] partner-edit-check (partner-adatlap szerkesztés, végponttól végpontig)…"
+  npx tsx scripts/partner-edit-check.mts
 fi
 # A lapozás sorokat vág, PÉNZT NEM: a KPI-sáv / korosítás / végösszeg a teljes
 # szűrt halmazt írja le, nem a látott oldalt. Némán hibás pénzügyi szám ellen —

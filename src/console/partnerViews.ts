@@ -7,17 +7,26 @@
 
 import { esc, helpLink, layout } from "./views.js";
 import { ic } from "../ui/icons.js";
-import { formatPrice } from "../pricing.js";
 import { formatMoney, formatNumber } from "../text/money.js";
-import { MODULE_CATALOG } from "../modules.js";
 import { DOC_TYPE_OPTIONS, docTypeLabelOf, dueReadout } from "./partnerData.js";
 // ADR-0067 ③: operator surface, prepared for a non-Hungarian colleague.
 import { T } from "../i18n/mail.js";
 import { budapestYear } from "../text/budapestTime.js";
 import { consoleLang } from "./i18nCtx.js";
+import {
+  attentionBlock,
+  dataTab,
+  domainBlock,
+  overviewCards,
+  partnerHeader,
+  partnerTabNav,
+  subscriptionBlock,
+  usageBlock,
+} from "./partnerProfileViews.js";
+import type { PartnerEditState, PartnerTabId } from "./partnerProfileViews.js";
+import type { PartnerContactInput, PartnerProfile } from "./partnerProfile.js";
 import type {
   MoneyByCurrency,
-  PartnerContactRow,
   PartnerDetail,
   PartnerDocQuery,
   PartnerDocuments,
@@ -25,6 +34,7 @@ import type {
   PartnerListRow,
   TimelineEvent,
 } from "./partnerData.js";
+
 
 /** One amount per currency ("1 234 567 Ft", "40 EUR"); "–" when empty. */
 export function fmtMoney(m: MoneyByCurrency): string {
@@ -34,21 +44,6 @@ export function fmtMoney(m: MoneyByCurrency): string {
     // it lands in HTML either way.
     .map(([cur, v]) => esc(formatMoney(v, cur)));
   return parts.length ? parts.join(" + ") : `<span class="mut">–</span>`;
-}
-/** KPI-tile money: HUF leads big, other currencies stack UNDER it in a smaller
- *  line (MineREAL header proportions) — never a "+"-chained mush in one line. */
-function fmtMoneyTile(m: MoneyByCurrency): string {
-  const entries = Object.entries(m).filter(([, v]) => v !== 0);
-  if (!entries.length) return `<span class="mut">–</span>`;
-  entries.sort(([a], [b]) => (a === "HUF" ? -1 : b === "HUF" ? 1 : a.localeCompare(b)));
-  const fmt = ([cur, v]: [string, number]) => esc(formatMoney(v, cur));
-  const [first, ...rest] = entries;
-  return (
-    fmt(first!) +
-    (rest.length
-      ? `<span class="mut" style="display:block;font-size:0.58em;line-height:1.5;-webkit-text-fill-color:var(--citui-muted)">${rest.map(fmt).join(" · ")}</span>`
-      : "")
-  );
 }
 
 /** Role badges: a partner can be customer AND supplier at once (MineREAL model). */
@@ -213,129 +208,67 @@ export function partnerNewPage(
 
 /** Tab ids grow slice by slice (spec: Áttekintés → Előzmények → Előfizetés →
  *  Bizonylatok → Kontaktok); only implemented tabs are offered. */
-export type PartnerTab = "overview" | "activity" | "subscription" | "documents" | "contacts";
+export type PartnerTab = PartnerTabId;
 
-/** The Előfizetés tab only exists on the customer face (spec: „csak vevőnél”). */
-function partnerTabs(partnerId: string, active: PartnerTab, isCustomer: boolean): string {
-  const lang = consoleLang();
-  const tabs: ReadonlyArray<{ id: PartnerTab; label: string }> = [
-    { id: "overview", label: T(lang, "Áttekintés") },
-    { id: "activity", label: T(lang, "Előzmények / Aktivitás") },
-    ...(isCustomer ? [{ id: "subscription", label: T(lang, "Előfizetés") } as const] : []),
-    { id: "documents", label: "Bizonylatok" },
-    { id: "contacts", label: "Kontaktok" },
-  ];
-  return `<nav class="con-tabs">${tabs
-    .map(
-      (t) =>
-        `<a href="/partner/${esc(partnerId)}?tab=${t.id}"${t.id === active ? ' class="active"' : ""}>${esc(t.label)}</a>`,
-    )
-    .join("")}</nav>`;
-}
+/** A partner with no tenant behind it (supplier, fixtures): nothing to relate. */
+const EMPTY_PROFILE: PartnerProfile = {
+  relations: { tenant: null, lead: null, site: null, users: [] },
+  subscription: null,
+  payments: [],
+  domains: [],
+  attention: [],
+};
 
-/** Site state → operator wording (mirrors the lead page's conversion block). */
-function siteStatusLabel(s: string | null): string {
-  const lang = consoleLang();
-  switch (s) {
-    case "live":
-      return T(lang, "élő (publikus)");
-    case "provisioned":
-      return T(lang, "előnézet (privát)");
-    case "suspended":
-      return T(lang, "felfüggesztve");
-    case "deactivated":
-      return T(lang, "leállítva");
-    case "draft":
-      return "piszkozat";
-    default:
-      return "nincs oldal";
-  }
-}
-
-/** Partner page: header + role-dependent KPI tiles + tabbed body (spec §3). */
+/** Partner page — the approved A — Fülek sheet (assets/design-refs/console/partner-adatlap/):
+ *  header + KPI, „Figyelendő”, tabs. The money ledger (Számlák/Bizonylatok) and the
+ *  timeline (Előzmények) render here; the rest comes from partnerProfileViews.ts. */
 export function partnerPage(
   d: PartnerDetail,
   tab: PartnerTab = "overview",
   timeline: TimelineEvent[] = [],
   docs: PartnerDocuments | null = null,
   docQuery: PartnerDocQuery = {},
-  contacts: PartnerContactRow[] = [],
+  contacts: readonly PartnerContactInput[] = [],
+  extra: { readonly profile?: PartnerProfile; readonly edit?: PartnerEditState; readonly usageHtml?: string | null } = {},
 ): string {
   const lang = consoleLang();
-  const addressLine = [d.zip, d.city, d.address].filter(Boolean).join(" ");
-  const badges = [
-    d.isCustomer ? `<span class="pill approved">${T(lang, "vevő")}</span>` : "",
-    d.isSupplier ? `<span class="pill sent">${T(lang, "szállító")}</span>` : "",
-    d.active ? "" : `<span class="pill rejected">${T(lang, "inaktív")}</span>`,
-    d.taxNumber ? `<span class="pill" title="${T(lang, "Adószám")}"><code>${esc(d.taxNumber)}</code></span>` : "",
-    d.euVatNumber
-      ? `<span class="pill" title="${T(lang, "Közösségi adószám")}"><code>${esc(d.euVatNumber)}</code></span>`
-      : "",
-    d.registrationNo
-      ? `<span class="pill" title="${T(lang, "Cégjegyzékszám / nyilvántartási szám")}"><code>${esc(d.registrationNo)}</code></span>`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  // The two surfaces reference each other (owner decree #1): the marketing face
-  // of a CUSTOMER partner lives on the lead page.
-  const leadLink = d.tenant
-    ? `<a href="/lead/${esc(d.tenant.leadId)}">Lead-lap (marketing) ▸</a>`
-    : "";
-
-  // Band KPI boxes (MineREAL header): compact value boxes on the RIGHT of the
-  // identity band; the set differs by role. A dual-role partner gets both.
-  const pkpi = (v: string, l: string) =>
-    `<div class="con-pkpi"><div class="con-pkpi__v">${v}</div><div class="con-pkpi__l">${esc(l)}</div></div>`;
-  const kpis: string[] = [];
-  if (d.isCustomer) {
-    const t = d.tenant;
-    kpis.push(
-      pkpi(t ? esc(formatPrice(t.monthlyFee, t.feeCurrency)) : "–", T(lang, "havi díj")),
-      pkpi(t ? esc(formatPrice(t.annualFee, t.feeCurrency)) : "–", T(lang, "éves érték")),
-      pkpi(fmtMoneyTile(d.receivable), T(lang, "kintlévőség")),
-      pkpi(t ? String(t.modules.length) : "–", T(lang, "aktív modul")),
-    );
+  const prof: PartnerProfile = extra.profile ?? EMPTY_PROFILE;
+  const edit: PartnerEditState = extra.edit ?? { open: false };
+  const usageHtml = extra.usageHtml ?? null;
+  const card = (h: string, inner: string) => `<section class="pa-card"><h2 class="pa-h">${esc(h)}</h2>${inner}</section>`;
+  let body: string;
+  switch (tab) {
+    case "overview":
+      body = `${attentionBlock(d, prof.attention)}${overviewCards(d, prof)}${
+        docs && docs.rows.length ? `<section class="pa-card">${kpiStrip(docs)}${monthlyChart(docs)}</section>` : ""
+      }`;
+      break;
+    case "data":
+      body = dataTab(d, contacts, edit);
+      break;
+    case "subscription":
+      body = card(T(lang, "Előfizetés"), subscriptionBlock(d, prof));
+      break;
+    case "domain":
+      body = card(T(lang, "Domain"), domainBlock(prof));
+      break;
+    case "documents":
+      body = `<section class="pa-card">${docs ? documentsTab(d.id, docs, docQuery) : `<p class="mut">Nincs bizonylat.</p>`}</section>`;
+      break;
+    case "usage":
+      body = card(T(lang, "Aktivitás és látogatottság"), usageBlock(usageHtml));
+      break;
+    case "activity":
+      body = card(T(lang, "Előzmények"), activityTab(timeline));
+      break;
   }
-  if (d.isSupplier) {
-    kpis.push(
-      pkpi(fmtMoneyTile(d.yearSpend), T(lang, "éves költség")),
-      pkpi(fmtMoneyTile(d.payable), T(lang, "tartozásunk")),
-    );
-  }
-
-  const bodyByTab: Record<PartnerTab, string> = {
-    overview: overviewTab(d, docs),
-    activity: activityTab(timeline),
-    subscription: subscriptionTab(d),
-    documents: docs
-      ? documentsTab(d.id, docs, docQuery)
-      : `<p class="mut" style="padding:12px 0">Nincs bizonylat.</p>`,
-    contacts: contactsTab(contacts),
-  };
-
-  // MineREAL partner header: identity band (left) + KPI boxes (right), the tab
-  // row riding directly under the band, content in the same card.
-  const body = `<div class="con-phead">
-    <div class="con-phead__band">
-      <div class="con-phead__id">
-        <h1>${esc(d.name)} ${helpLink("console.partner")}</h1>
-        ${addressLine ? `<div class="con-phead__sub">${esc(addressLine)}${d.country !== "HU" ? ` · ${esc(d.country)}` : ""}</div>` : ""}
-        <div class="con-phead__badges">${badges}</div>
-      </div>
-      <div class="con-phead__kpis">${kpis.join("")}</div>
-    </div>
-    ${partnerTabs(d.id, tab, d.isCustomer)}
-    <div class="con-phead__body">
-      <div class="row" style="justify-content:flex-end;gap:12px;margin:0 0 4px">
-        ${leadLink}
-        <a class="small" href="/partners">◂ partner-lista</a>
-      </div>
-      ${bodyByTab[tab]}
-    </div>
+  const page = `<div class="pa-page">
+    ${partnerHeader(d, prof)}
+    <div class="pa-help">${helpLink("console.partner")}</div>
+    ${partnerTabNav(d, prof, tab)}
+    ${body}
   </div>`;
-  return layout(d.name, body, { active: `/partner/${d.id}` });
+  return layout(d.name, page, { active: `/partner/${d.id}` });
 }
 
 /** Monthly breakdown chart (MineREAL "Havi bontás"): pure-SVG bars from the
@@ -995,122 +928,5 @@ export function documentNewPage(
 
 /** Előfizetés tab (customer face only): what they subscribe to and where the
  *  live site is — with the crossover to the marketing side (lead page). */
-function subscriptionTab(d: PartnerDetail): string {
-  const lang = consoleLang();
-  const t = d.tenant;
-  if (!t)
-    return `<p class="mut" style="padding:12px 0">Ehhez a partnerhez nem tartozik platform-előfizetés
-      (nincs tenant-kapcsolat).</p>`;
-  const modLabel = (id: string): string => MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
-  const mods = t.modules.length
-    ? t.modules.map((m) => `<span class="pill approved">${esc(modLabel(m))}</span>`).join(" ")
-    : `<span class="mut">${T(lang, "nincs aktív modul")}</span>`;
-  const liveHost = t.customDomain ?? (t.slug ? `${t.slug}.citoviso.com` : null);
-  const siteLink =
-    t.siteStatus === "live" && liveHost
-      ? `<a href="https://${esc(liveHost)}" target="_blank">${esc(liveHost)} ▸</a>`
-      : t.previewToken
-        ? `<a href="/site/${esc(t.previewToken)}" target="_blank">${T(lang, "privát előnézet ▸")}</a> <span class="mut small">(${esc(siteStatusLabel(t.siteStatus))})</span>`
-        : `<span class="mut">${esc(siteStatusLabel(t.siteStatus))}</span>`;
-  return `<div style="max-width:640px">
-    <dl class="kv">
-      <dt>${T(lang, "Havi díj")}</dt><dd>${esc(formatPrice(t.monthlyFee, t.feeCurrency))} <span class="mut small">${T(lang, "az aktív modulokból számítva")}</span></dd>
-      <dt>${T(lang, "Éves érték")}</dt><dd>${esc(formatPrice(t.annualFee, t.feeCurrency))}</dd>
-      <dt>${T(lang, "Fizetési ciklus")}</dt><dd>${
-        t.billingPeriod ? (t.billingPeriod === "annual" ? T(lang, "éves") : "havi") : `<span class="mut">${T(lang, "még nincs fizetés")}</span>`
-      }</dd>
-      <dt>Domain</dt><dd>${liveHost ? `<code>${esc(liveHost)}</code>` : `<span class="mut">–</span>`}</dd>
-      <dt>${T(lang, "Élő oldal")}</dt><dd>${siteLink}</dd>
-      ${t.liveAt ? `<dt>${T(lang, "Élesítve")}</dt><dd>${esc(t.liveAt.slice(0, 10))}</dd>` : ""}
-    </dl>
-    <div style="margin-top:12px">
-      <div class="mut small" style="margin-bottom:6px">${T(lang, "Aktív modulok ({n}):", { n: t.modules.length })}</div>
-      <div class="row" style="flex-wrap:wrap;gap:6px">${mods}</div>
-    </div>
-    <p style="margin-top:14px"><a href="/lead/${esc(t.leadId)}">A marketing-oldal (mock, megkeresés,
-      konverzió) a lead-lapon ▸</a></p>
-  </div>`;
-}
 
-/** Kontaktok tab: partner_contact grouped by role, primary first (spec §3). */
-function contactsTab(contacts: PartnerContactRow[]): string {
-  const lang = consoleLang();
-  if (!contacts.length)
-    return `<p class="mut" style="padding:12px 0">Ehhez a partnerhez még nincs rögzített kapcsolattartó.
-      A vevő a megrendeléskor megadott számlázási címekkel érkezik ide automatikusan.</p>`;
-  const KIND_LABEL: Readonly<Record<PartnerContactRow["kind"], string>> = {
-    billing: T(lang, "Számlázás"),
-    technical: T(lang, "Műszaki"),
-    general: T(lang, "Általános"),
-    legal: "Jogi",
-  };
-  const groups = new Map<string, PartnerContactRow[]>();
-  for (const c of contacts) {
-    const list = groups.get(c.kind) ?? [];
-    list.push(c);
-    groups.set(c.kind, list);
-  }
-  const blocks = [...groups.entries()]
-    .map(([kind, list]) => {
-      const rows = list
-        .map(
-          (c) => `<tr${c.active ? "" : ` style="color:var(--citui-muted)"`}>
-        <td>${c.name ? esc(c.name) : `<span class="mut">–</span>`}</td>
-        <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : `<span class="mut">–</span>`}</td>
-        <td class="small">${c.phone ? esc(c.phone) : `<span class="mut">–</span>`}</td>
-        <td>${c.isPrimary ? `<span class="pill approved">${T(lang, "elsődleges")}</span>` : ""}${c.active ? "" : ` <span class="pill rejected">${T(lang, "inaktív")}</span>`}</td>
-        <td class="small mut">${c.note ? esc(c.note) : ""}</td>
-      </tr>`,
-        )
-        .join("");
-      return `<h3 style="margin:16px 0 6px">${esc(KIND_LABEL[kind as PartnerContactRow["kind"]] ?? kind)}</h3>
-      <div class="tblwrap"><table>
-        <thead><tr><th>${T(lang, "Név")}</th><th>E-mail</th><th>Telefon</th><th></th><th>${T(lang, "Megjegyzés")}</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>`;
-    })
-    .join("");
-  return `<div>${blocks}
-    <p class="mut small" style="margin-top:12px">A „Számlázás” csoport elsődleges címére megy a számla;
-      a többi billing-cím másolatot kap. A címeket a vevő a megrendeléskor adja meg.</p>
-  </div>`;
-}
 
-/** Áttekintés tab (MineREAL): KPI strip + havi bontás chart + master data. */
-function overviewTab(d: PartnerDetail, docs: PartnerDocuments | null): string {
-  const lang = consoleLang();
-  const banks = d.bankAccounts.length
-    ? d.bankAccounts
-        .map(
-          (b) =>
-            `<code>${esc(b.accountNo)}</code>${b.bankName ? ` <span class="mut small">(${esc(b.bankName)}${b.currency ? `, ${esc(b.currency)}` : ""})</span>` : ""}${b.isDefault && d.bankAccounts.length > 1 ? ` <span class="pill approved">${T(lang, "alapértelmezett")}</span>` : ""}`,
-        )
-        .join("<br>")
-    : `<span class="mut">–</span>`;
-  const dash = `<span class="mut">–</span>`;
-  const site = d.tenant
-    ? `${siteStatusLabel(d.tenant.siteStatus)}${
-        d.tenant.slug ? ` · <code>${esc(d.tenant.slug)}.citoviso.com</code>` : ""
-      }${d.tenant.customDomain ? ` · <code>${esc(d.tenant.customDomain)}</code>` : ""}`
-    : "";
-  return `<div>
-    ${docs ? kpiStrip(docs) : ""}
-    ${docs ? monthlyChart(docs) : ""}
-    <div class="con-kbox__t" style="margin:0 0 8px">Partner adatai</div>
-    <dl class="kv" style="max-width:640px">
-      <dt>${T(lang, "Cégnév")}</dt><dd>${esc(d.name)}</dd>
-      <dt>${T(lang, "Ország")}</dt><dd>${esc(d.country)}</dd>
-      <dt>Irsz.</dt><dd>${d.zip ? esc(d.zip) : dash}</dd>
-      <dt>${T(lang, "Város")}</dt><dd>${d.city ? esc(d.city) : dash}</dd>
-      <dt>${T(lang, "Cím")}</dt><dd>${d.address ? esc(d.address) : dash}</dd>
-      <dt>${T(lang, "Adószám")}</dt><dd>${d.taxNumber ? `<code>${esc(d.taxNumber)}</code>` : dash}</dd>
-      ${d.euVatNumber ? `<dt>${T(lang, "EU adószám")}</dt><dd><code>${esc(d.euVatNumber)}</code></dd>` : ""}
-      <dt>${T(lang, "Cégjegyzékszám")}</dt><dd>${d.registrationNo ? `<code>${esc(d.registrationNo)}</code>` : dash}</dd>
-      <dt>E-mail</dt><dd>${d.email ? esc(d.email) : dash}</dd>
-      <dt>Telefon</dt><dd>${d.phone ? esc(d.phone) : dash}</dd>
-      <dt>${T(lang, "Bankszámla")}</dt><dd>${banks}</dd>
-      ${d.tenant ? `<dt>${T(lang, "Élő oldal")}</dt><dd>${site}</dd>` : ""}
-      <dt>${T(lang, "Partner azóta")}</dt><dd>${esc(d.createdAt.slice(0, 10))}</dd>
-    </dl>
-  </div>`;
-}

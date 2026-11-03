@@ -71,6 +71,8 @@ const VIEW_GROUPS = {
     // the lead page only mounts it — the handbook quotes them.
     "src/console/curatorViews.ts",
     "src/console/partnerViews.ts",
+    // Partner sheet A — Fülek (2026-11-03): header, Figyelendő, editor, Előfizetés, Domain.
+    "src/console/partnerProfileViews.ts",
     // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
     // views render live HERE (single source shared with the register route).
     "src/console/partnerData.ts",

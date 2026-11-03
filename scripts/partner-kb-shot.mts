@@ -146,8 +146,10 @@ try {
       const run = await c.query("INSERT INTO scrape_run (scraper_definition_id, status) VALUES ($1, 'completed') RETURNING id", [def.rows[0].id]);
       const lead = await c.query("INSERT INTO lead (scrape_run_id, name) VALUES ($1, 'Vendégház Panoráma (TESZT)') RETURNING id", [run.rows[0].id]);
       const tenant = await c.query(
-        "INSERT INTO tenant (lead_id, display_name) VALUES ($1, 'Vendégház Panoráma (TESZT)') RETURNING id",
-        [lead.rows[0].id],
+        // id + created_at pinned: the partner sheet prints the tenant id and „… óta” — a random
+        // uuid / DB now() here would change the image every run (ADR-0220 determinism).
+        "INSERT INTO tenant (id, lead_id, display_name, created_at) VALUES ('0000c0de-0000-4000-8000-00000000cafe', $1, 'Vendégház Panoráma (TESZT)', $2) RETURNING id",
+        [lead.rows[0].id, PARTNER_SHOT_NOW],
       );
       const tid = tenant.rows[0].id;
       await c.query(
@@ -177,7 +179,9 @@ try {
   if (config.pg.database !== SCRATCH || config.databaseUrl) {
     throw new Error(`a konfiguráció NEM a scratch-DB-re mutat (${config.pg.database}) — a közös dev DB-t fotóznánk`);
   }
-  const { getDocuments, getPartnerDetail, listPartners } = await import("../src/console/partnerData.js");
+  const { getDocuments, getPartnerDetail, getPartnerDocuments, listPartners } = await import("../src/console/partnerData.js");
+  const { getPartnerProfile } = await import("../src/console/partnerProfile.js");
+  const { fmtTime } = await import("../src/console/partnerProfileViews.js");
   const { documentsPage, partnerPage, partnersPage } = await import("../src/console/partnerViews.js");
   const { pool } = await import("../src/db/client.js");
   const { chromium } = await import("playwright-core");
@@ -194,7 +198,14 @@ try {
   const detail = (await getPartnerDetail(cust.id))!;
   const pages = new Map<string, string>([
     ["list", partnersPage(all, {})],
-    ["page", partnerPage(detail, "overview")],
+    // The sheet as the console serves it: the profile (Figyelendő, cards) + the overview
+    // ledger strip — the same calls the /partner/:id route makes.
+    [
+      "page",
+      partnerPage(detail, "overview", [], await getPartnerDocuments(detail.id, {}, { all: true }), {}, [], {
+        profile: await getPartnerProfile({ tenantId: detail.tenant?.tenantId ?? null, phone: detail.phone }, fmtTime),
+      }),
+    ],
     ["documents", documentsPage(docs, {})],
   ]);
   await pool.end();
