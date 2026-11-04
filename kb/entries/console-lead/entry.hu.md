@@ -206,9 +206,12 @@ a rendszer soha nem dönt helyetted.
 ⚠️ **A Kapunyitás egy második képet kér.** Ennél a kinézetnél a nyitó-animációban egy kép kétfelé
 nyílik, és mögötte a nyitókép marad — a kettő sosem lehet ugyanaz. A szétnyíló kép a szállás
 fotóinak **második** képe, és különböznie kell a nyitóképtől (egy portálon újraközölt másolata sem
-jó). Ha nincs ilyen, a generálás elutasító üzenettel leáll; az üzenet így kezdődik: „Kapunyitás:
-nincs a nyitóképtől különböző második kép”. Ilyenkor két út van: **gyűjts további képet** a leadhez, vagy
-**válassz másik kinézetet** (Parallax vagy Névből növő).
+jó). Ha nincs ilyen, ez a mock nem készül el. A generálás eredménysorában (piros sáv) a hiba oka
+áll, a sáv elején „A generálás elbukott:”, több kinézetnél „… mock készült el; a többi elbukott:”
+után: „Kapunyitás: nincs a nyitóképtől különböző második kép…” vagy „Kapunyitás: a második kép a
+nyitóképpel azonos…”. Ilyenkor két út van: **gyűjts további képet** a leadhez, vagy **válassz
+másik kinézetet** (Parallax vagy Névből növő). Ha a második kép a nyitókép másolata, a több kép
+önmagában nem biztos, hogy segít — ilyenkor a másik kinézet a biztos út.
 
 ### Napi AI-költségplafon
 
