@@ -143,3 +143,34 @@ terv-kör (szalon-mock desktop+mobil, működő időpont-választóval) — kód
   csak SZÁMLÁL (szakmánként hány hely, ebből hány honlap-nélküli / elavult / modern, hány Booksy/Salonic-os),
   nem rögzít leadet, DB-t nem ír. Brief: `~/rc-briefs/szolgaltato-godollo-proba-20261104.md`.
   Ez adja a pilot- és földrajz-döntéshez az adatot (sűrűség × honlap-hiány szakmánként).
+
+## Gödöllő-próba eredménye (SUB `cit3f8b24cf`, 2026-11-04 18:10–19:36, 0 API)
+
+Jelentés: `~/rc-briefs/szolgaltato-godollo/eredmeny.md` (nyers: `nyers-helyek.json`). Térkép, belépés nélkül,
+szakmánként 1 keresés, első lista (≤25). **188 egyedi hely, 110 (59%) honlap-gyenge**: 61 nincs honlap a
+Térképen (32%), 30 csak portál/FB/IG (16%), 19 saját elavult/hibás (10%, ebből 6 halott domain / 500 / rossz
+tanúsítvány), 78 saját modern (41%). Gazdátlan GBP-profil 48 (26%), könyvelőnél 12/19.
+
+| szakma | hely | honlap-gyenge |
+|---|---|---|
+| műköröm | 18 | 17 |
+| szempilla | 7 | 7 |
+| szolárium | 5 | 5 |
+| tetováló | 5 | 4 |
+| könyvelő | 19 | 14 |
+| fodrász/borbély | 24 | 15 |
+| ügyvéd | 18 | 11 |
+| masszázs | 22 | 9 |
+| edző/jóga | 23 | 9 |
+| kozmetika | 15 | 7 |
+| fogorvos | 25 | 9 |
+| állatorvos | 7 | 3 |
+
+Tanulságok: (1) **Booksy 0** — Gödöllőn a foglalás szétszórt (Salonic 3, Minup 2, Notino 2, Motibro 2, Alteg 1,
+3 saját foglaló), a „honlap nélküli + Booksy” célcsoport itt nem létezik, helyette „honlap nélküli + bármilyen
+platform” = 5 hely; (2) a piac kettészakad: a szépségipari kisvállalkozó (műköröm, szempilla, szolárium, tetováló)
+FB/IG-n él honlap nélkül, a fogorvos/edző/masszőr többsége már modern; (3) a halott „saját” honlap (6/19) tényszerű
+megkeresési horog; (4) a gazdátlan profil a láthatóság-modul célpontja. **Mérési korlát:** belépés nélkül a Térkép
+„korlátozott nézet”: nincs értékelés-szám, a foglalás-gomb többnyire rejtett (platform-arány alsó becslés); a
+Google-keresés CAPTCHA-t dobott, ezért a „nincs honlap” csak Térkép-szintű (felső becslés, §F.13 nélkül). Éles
+felderítéshez belépett Chrome-profil kell.
