@@ -49,16 +49,13 @@ Három fogalom, ami MINDEN szolgáltatónál ugyanaz, és a mai modellre ráille
 | **Foglalás** | dátum-tartomány, vendégszám | időpont: `starts_at`/`ends_at`, szolgáltatás, egység, (fő) | `booking_request` + 3 oszlop; a kérés-alapú folyamat (tulaj dönt, ADR-0044/b) marad |
 | **Referencia** | fotók + vélemények | portfólió (előtte/utána), esettanulmány, csapat-kártya, Google-vélemény | `gallery` + `reviews` + **új** `references` / `team` modul |
 
-Erőforrás-fajták, amik a modellt próbára teszik (ezek döntik el a sémát, nem a szakma):
-1. **Személy-erőforrás**: a fodrász, manikűrös, ügyvéd, edző — saját nyitvatartás, saját
-   szolgáltatás-készlet; egyben a honlap „csapat” kártyája is.
-2. **Eszköz/helyiség-erőforrás**: szolárium-ágy, gőzkabin, teniszpálya, stúdió — nincs személy,
-   csak időablak; gyakran több egyforma (3 ágy → kapacitás).
-3. **Vegyes** (személy + eszköz egyszerre, pl. fogorvos+szék, autósiskola oktató+autó) — 2. kör,
-   a pilotban nem.
-4. **Csoportos** (jóga 12 fő egy slotban) — a meglévő `capacity` fedi.
-5. **Kiszállásos** (villanyszerelő, takarítás): nem pontos slot, hanem „délelőtt / délután” ablak
-   + cím — más ígéret, 2. kör.
+**Tulaj-döntés (2026-11-04, 1. kör visszajelzés):** a személy/eszköz-bontás ELVETVE — „nem látom
+értelmét”. A modell **legfeljebb két lépcső, azon belül erőforrások**: a vállalkozás → (opcionális
+csoport, pl. masszázsközpont: thai masszázs / jógamasszázs) → **erőforrás** = ami foglalható
+(Jolika és Gizike a fodrászatban; az erős és a gyengébb szolárium-beállás ugyanaz a fogalom).
+Az erőforrásnak nincs „fajtája”; a csoportos (kapacitás>1) a meglévő `capacity`, a vegyes és a
+kiszállásos eset NEM a pilot. Mérce: **standardizálhatóság**, nem a szakma. Ez a mai `site_unit`
+(+ opcionális szülő-csoport) — a modellhez nem kell új entitás-fajta.
 
 Szolgáltatás-attribútumok: időtartam, **puffer** (takarítás/átállás), ár-mód (fix / -tól / óradíj /
 ajánlatra), **minimum** (ügyvéd 60'), ki végezheti (egység-lista), helyszín-mód (helyben /
@@ -76,7 +73,8 @@ dupla-foglalás-védelem, csak órás felbontásban.
 - **Iroda/szakmai:** ügyvéd, könyvelő, adótanácsadó, biztosítási alkusz, ingatlanközvetítő, fordító,
   pénzügyi tanácsadó. (**Közjegyző: gyenge cél** — törvény szerint nem reklámozhat, illetékessége
   területi, nincs versenynyomása; csak tájékoztató oldal.)
-- **Autó/gép:** autószerelő, gumis, autókozmetika, műszaki vizsga, kerékpárszerviz.
+- **Autó/gép — tulaj: NEM foglalkozunk vele** (11-04): a gumis árut is ad el (nem tiszta szolgáltatás),
+  kevés van belőle egy városban, a honlap-érdeke gyenge. „Szolgáltatás” = amit igénybe veszünk.
 - **Oktatás/edzés:** személyi edző, jóga/pilates (csoportos), nyelvtanár, zeneoktató, autósiskola,
   úszásoktató.
 - **Órás bérlés:** teniszpálya, squash, szabadulószoba, próbaterem/stúdió, rendezvényterem,
@@ -100,7 +98,7 @@ kiváltás” analógia (szállásnál Booking.com; itt **Booksy/Salonic** díj 
   oldal (referencia, szakterület, csapat), konzultáció-foglalás min. 60' + online opció; fizetőképes.
   Jogi őrszem: az ügyvédi etikai szabályzat korlátozza a reklámot (nincs „legjobb”, nincs
   eredmény-ígéret) — a generált szövegre külön őr kell.
-- Autó/egészség: 3. kör (vegyes erőforrás, egészségügyi szöveg-szabályok).
+- Egészség: 3. kör (egészségügyi szöveg-szabályok). Autó kiesett (tulaj).
 
 ## Felderítés / feed szolgáltatóknál
 
@@ -136,3 +134,12 @@ azonnali megerősítés 2. kör; a `közjegyző` kiesik.
 ADR: „2. vertikum = szolgáltató” (iparág-definíció registry + erőforrás/szolgáltatás/slot-modell),
 DOMAIN-frissítés (02-ENTITY-MAP Vertical realizálása, 05-MODULES szolgáltató-készlet), utána §2b
 terv-kör (szalon-mock desktop+mobil, működő időpont-választóval) — kód csak a jóváhagyott terv után.
+
+## 1. kör visszajelzés + Gödöllő-próba (2026-11-04 este)
+
+- Tulaj: a tipizálás (személy/eszköz) nem kell, ld. fent; gumis/autó kiesik; a mérce a standardizálhatóság.
+- Tulaj: **próba API-fogyasztás nélkül**, Magellán-módon (Chrome + Google Térkép, előfizetéses session):
+  mit talál Gödöllőn a felsorolt szakmákból. Döntés: külön SUB (nem a futó Magellan, az szállást táplál),
+  csak SZÁMLÁL (szakmánként hány hely, ebből hány honlap-nélküli / elavult / modern, hány Booksy/Salonic-os),
+  nem rögzít leadet, DB-t nem ír. Brief: `~/rc-briefs/szolgaltato-godollo-proba-20261104.md`.
+  Ez adja a pilot- és földrajz-döntéshez az adatot (sűrűség × honlap-hiány szakmánként).
