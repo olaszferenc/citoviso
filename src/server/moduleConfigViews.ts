@@ -40,6 +40,7 @@ import { readFileSync } from "node:fs";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
+import { PGUIDE_CSS, portalGuide } from "./portalGuide.js";
 import { honestStars } from "../engine/rating.js";
 import { OWN_AHEAD_DAYS, OWN_PLACE_MAX, OWN_TITLE_MAX, type OwnProgram } from "../events/ownPrograms.js";
 import { MAX_SPAN_DAYS, WINDOW_DAYS } from "../events/gates.js";
@@ -63,7 +64,7 @@ function esc(s: unknown): string {
 }
 
 /** Styles for the settings screens; loaded only on this tab. */
-export const MODCFG_STYLE = `<style>
+export const MODCFG_STYLE = `<style>${PGUIDE_CSS}
 /* ── Automata heti programajánló (poi) — approved contract B,
    assets/design-refs/console/programajanlo/. Two panes need 720px of CONTAINER
    width (@container, not @media: the admin column is narrower than the window). */
@@ -2979,6 +2980,8 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
     `<div class="adm-card" id="portal-naptar">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
     `<p class="adm-lead">${esc(T(lang, "Ha {what} a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") }))}</p>` +
+    // The tutorial (video + steps with screenshots) — the most asked phone question (owner, 2026-11-03).
+    portalGuide(lang) +
     `<div class="psync">${cards}</div>` +
     others +
     `<ul class="psync__limits">` +

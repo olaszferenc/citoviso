@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-10-21
+updated: 2026-11-04
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -124,7 +124,13 @@ A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintv
 
 Kösse össze a naptárakat, így nem kell két helyen lezárnia ugyanazt a napot: ami a portálon
 foglalt, az itt is lezár, és ami itt foglalt, az a portálon is. A naptár alatti
-**„Hirdeti máshol is?”** kártyán mindhárom portálnak saját doboza van, két lépéssel:
+**„Hirdeti máshol is?”** kártya tetején az **„Így köti össze — videó és leírás”** rész végigmutatja
+az egészet. Fent kiválasztja a portált (Booking.com, Szállás.hu vagy Airbnb), alatta pedig két nézet közül választ:
+a **„Videó”** 2,5–3 perces, magyar hanggal és felirattal mutatja meg, mire kattintson a portálon és itt
+(minden menüpontra ráközelít, és megáll rajta); a **„Leírás képekkel”** ugyanezeket a lépéseket számozott
+képekkel adja, a képen keret jelöli, hová kell kattintani. Egy képre koppintva nagyobban látja.
+
+Alatta mindhárom portálnak saját doboza van, két lépéssel:
 
 1. **A portál naptár-linkjét hozza ide.** A portálon a naptár-szinkron menüben kap egy linket
    (Booking.com: Árak és elérhetőség › Naptár › naptár-szinkronizálás; Szállás.hu: Árak és kapacitás › Naptár

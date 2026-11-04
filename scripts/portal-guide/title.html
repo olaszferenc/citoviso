@@ -1,0 +1,28 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>title</title>
+<style>
+:root{--navy:#0e2a47;--ink:#eaf3f8;--cyan:#1fb6d6}
+html,body{margin:0;height:100%;background:var(--navy);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+.w{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;gap:18px;opacity:0;transform:translateY(12px);transition:opacity .6s,transform .6s}
+.w.on{opacity:1;transform:none}
+.k{font:700 14px/1.2 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}
+h1{margin:0;font:800 clamp(26px,5.4vw,46px)/1.2 Inter,system-ui,sans-serif;max-width:900px}
+.path{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:960px}
+.path span{background:var(--ink);color:#10243a;border-radius:10px;padding:8px 14px;font:700 clamp(16px,3.2vw,24px)/1.25 Inter,system-ui,sans-serif}
+.path i{font-style:normal;align-self:center;font-size:clamp(18px,3.4vw,26px);opacity:.7}
+p{margin:0;font:500 clamp(16px,3vw,22px)/1.45 Inter,system-ui,sans-serif;max-width:760px;opacity:.9}
+</style></head><body>
+<div class="w" id="w"><div class="k" id="k"></div><h1 id="h"></h1><div class="path" id="p"></div><p id="s"></p></div>
+<script>
+// Full-screen chapter card: kicker, title, optional menu path (› separated), sub line.
+const q = new URLSearchParams(location.search);
+document.getElementById("k").textContent = q.get("k") || "";
+document.getElementById("h").textContent = q.get("h") || "";
+document.getElementById("s").textContent = q.get("s") || "";
+const p = document.getElementById("p");
+(q.get("path") || "").split("›").map((x) => x.trim()).filter(Boolean).forEach((x, i) => {
+  if (i) { const a = document.createElement("i"); a.textContent = "›"; p.appendChild(a); }
+  const s = document.createElement("span"); s.textContent = x; p.appendChild(s);
+});
+window.__dur = +(q.get("ms") || 4500);
+requestAnimationFrame(() => setTimeout(() => document.getElementById("w").classList.add("on"), 60));
+</script></body></html>

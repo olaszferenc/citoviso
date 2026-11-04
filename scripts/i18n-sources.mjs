@@ -124,6 +124,8 @@ export const I18N_SOURCES = [
   // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+  // The portal-calendar tutorial inside the booking module card (video + steps).
+  "src/server/portalGuide.ts",
   // ADR-0380 — the guided booking setup page: its words (server) and its client script
   // (every visible word arrives in `L`, so the script itself carries none).
   "src/server/bookingSetupViews.ts",

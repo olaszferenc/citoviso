@@ -1,0 +1,69 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>still</title>
+<style>
+:root{--navy:#0e2a47;--ink:#eaf3f8;--cyan:#1fb6d6}
+html,body{margin:0;height:100%;background:var(--navy);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+.top{position:fixed;left:0;right:0;top:0;height:44px;display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--ink);font:600 15px/1.3 Inter,system-ui,sans-serif;z-index:3;background:var(--navy)}
+.tag{background:var(--ink);color:#10243a;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.src{margin-left:auto;font-weight:400;font-size:11px;opacity:.6;white-space:nowrap}
+.stage{position:fixed;left:0;right:0;top:44px;bottom:var(--capH,120px);overflow:hidden}
+.wrap{position:absolute;left:0;top:0;transform-origin:0 0;transition:transform 1.3s cubic-bezier(.4,0,.2,1)}
+.wrap img{display:block;border-radius:6px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.ring{position:absolute;border:4px solid var(--cyan);border-radius:10px;box-shadow:0 0 0 9999px rgba(10,31,54,.45);opacity:0;transition:opacity .5s}
+.ring.on{opacity:1;animation:p 1.3s ease-in-out infinite}
+@keyframes p{50%{border-color:#fff}}
+.cap{position:fixed;left:12px;right:12px;bottom:12px;z-index:3;background:rgba(255,255,255,.97);color:#10243a;font:600 18px/1.4 Inter,system-ui,sans-serif;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);min-height:52px}
+.cap small{display:block;font:500 13px/1.3 Inter,system-ui,sans-serif;color:#5a6d82;margin-bottom:3px}
+@media (max-width:500px){.cap{font-size:16px}}
+</style></head><body>
+<div class="top"><span class="tag" id="tag"></span><span id="t"></span><span class="src" id="src"></span></div>
+<div class="stage" id="stage"><div class="wrap" id="wrap"><img id="im" alt=""><div class="ring" id="ring"></div></div></div>
+<div class="cap" id="cap"><small id="capk"></small><span id="capt"></span></div>
+<script>
+// Plays one real portal screenshot: whole screen first, then zooms to each focus
+// region (native px) with a ring + its own caption, then zooms back out.
+const q = new URLSearchParams(location.search);
+const foci = JSON.parse(q.get("foci") || "[]");
+const INTRO = +(q.get("intro") || 3500), HOLD = +(q.get("hold") || 5500), MOVE = 1300, OUTRO = 2200;
+const holds = JSON.parse(q.get("holds") || "[]"); // per-focus hold (ms), long enough for the narration
+const hold = (i) => holds[i] ?? HOLD;
+document.getElementById("tag").textContent = q.get("portal") + " oldalán";
+document.getElementById("t").textContent = q.get("step") || "";
+document.getElementById("src").textContent = q.get("src") ? "kép: " + q.get("src") : "";
+const im = document.getElementById("im"), wrap = document.getElementById("wrap"), ring = document.getElementById("ring"), stage = document.getElementById("stage");
+const setCap = (k, t) => { document.getElementById("capk").textContent = k || ""; document.getElementById("capt").textContent = t; requestAnimationFrame(() => document.documentElement.style.setProperty("--capH", (document.getElementById("cap").offsetHeight + 24) + "px")); };
+window.__dur = INTRO + foci.reduce((a, _, i) => a + MOVE + hold(i), 0) + OUTRO;
+setCap("", q.get("cap") || "");
+im.onload = () => {
+  const W = im.naturalWidth, H = im.naturalHeight;
+  im.style.width = W + "px"; im.style.height = H + "px";
+  const view = () => stage.getBoundingClientRect();
+  const fit = () => { const v = view(); const s = Math.min((v.width - 24) / W, (v.height - 16) / H); return { s, x: (v.width - W * s) / 2, y: (v.height - H * s) / 2 }; };
+  const go = (t) => { wrap.style.transform = `translate(${t.x}px,${t.y}px) scale(${t.s})`; };
+  const zoomTo = (r) => {
+    const v = view(), f = fit();
+    // big enough to read, never past 2.4x native (blur) and never smaller than the fit
+    let s = Math.min((v.width * 0.86) / r[2], (v.height * 0.62) / r[3], 2.4);
+    // a wide but short target (a link field on a phone) must still be readable: at least ~54px tall
+    s = Math.max(s, f.s, Math.min(Math.max(54 / r[3], v.width < 600 ? 0.8 : 0), 2.4));
+    const cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+    let x = v.width / 2 - cx * s, y = v.height / 2 - cy * s;
+    // keep the image edges inside the stage where possible
+    x = Math.min(Math.max(x, v.width - W * s - 8), 8); y = Math.min(Math.max(y, v.height - H * s - 8), 8);
+    if (W * s < v.width) x = (v.width - W * s) / 2; if (H * s < v.height) y = (v.height - H * s) / 2;
+    // wider than the screen: show where it STARTS (the label, the start of the link)
+    if (r[2] * s > v.width - 24) x = 14 - (r[0] - 8) * s;
+    go({ s, x, y });
+    const pad = 8;
+    Object.assign(ring.style, { left: r[0] - pad + "px", top: r[1] - pad + "px", width: r[2] + pad * 2 + "px", height: r[3] + pad * 2 + "px", borderWidth: Math.max(3, 4 / s) + "px" });
+  };
+  wrap.style.transition = "none"; go(fit()); void wrap.offsetWidth; wrap.style.transition = "";
+  window.__t0 = performance.timeOrigin + performance.now(); // epoch ms when the timeline starts
+  let t = INTRO;
+  foci.forEach((f, i) => {
+    setTimeout(() => { ring.classList.remove("on"); zoomTo(f.r); setCap(`${i + 1} / ${foci.length}`, f.t); setTimeout(() => ring.classList.add("on"), MOVE - 200); }, t);
+    t += MOVE + hold(i);
+  });
+  setTimeout(() => { ring.classList.remove("on"); go(fit()); }, t);
+};
+im.src = q.get("img");
+</script></body></html>

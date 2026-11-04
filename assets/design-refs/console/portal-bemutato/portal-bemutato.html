@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portál-naptár bemutató v2 — videó + leírás, valós képekkel</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#ffffff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#5a6d82;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;
+  --citui-accent-ink:#06131b;--citui-field:#f6f7f8;--citui-panel:#ffffff;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--citui-font-text);background:color-mix(in srgb,var(--citui-navy-900) 8%,var(--citui-white));color:var(--citui-ink);font-size:15px;line-height:1.45}
+button{font:inherit;cursor:pointer}
+.mock-bar{background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:14px 16px}
+.mock-bar h1{font:600 16px/1.3 var(--citui-font-display);margin:0 0 6px}
+.mock-bar p{margin:8px 0 0;font-size:13px;opacity:.85;max-width:980px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--citui-cyan-400);background:transparent;color:var(--citui-ink-inverse);border-radius:var(--citui-radius-pill);padding:5px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-accent-ink);border-color:var(--citui-cyan-500);font-weight:600}
+.lbl{font-size:12px;opacity:.8;align-self:center}
+.stage{padding:20px 16px 40px;display:flex;justify-content:center}
+.frame{width:100%;max-width:1180px;container-type:inline-size}
+.frame.is-mobile{max-width:390px}
+
+.card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:16px}
+.card h2{font:600 18px/1.3 var(--citui-font-display);margin:0 0 4px}
+.lead{color:var(--citui-muted);margin:0 0 12px;font-size:14px}
+
+/* the new block */
+.guide{border:1px solid color-mix(in srgb,var(--citui-cyan-500) 45%,transparent);background:var(--citui-accent-soft);border-radius:var(--citui-radius-sm);padding:14px}
+.guide h3{margin:0 0 4px;font:600 16px var(--citui-font-display)}
+.guide>p{margin:0 0 10px;font-size:14px}
+.ptabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.ptab{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:6px 14px;font-size:14px;font-weight:600}
+.ptab[aria-pressed="true"]{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:var(--citui-navy-900)}
+.modes{display:flex;gap:0;border:1px solid var(--citui-line-strong);border-radius:12px;overflow:hidden;width:max-content;max-width:100%;margin:0 0 12px;background:var(--citui-panel)}
+.mode{border:0;background:transparent;padding:8px 16px;font-weight:600;font-size:14px;color:var(--citui-ink)}
+.mode[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.vid{background:var(--citui-navy-950);border-radius:12px;overflow:hidden}
+.vid video{display:block;width:100%;height:auto;max-height:72vh;background:var(--citui-navy-950)}
+.vnote{font-size:12.5px;color:var(--citui-muted);margin:8px 0 0}
+
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.st{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;padding:12px;display:grid;gap:10px}
+@container (min-width:760px){.st{grid-template-columns:300px 1fr;align-items:start}}
+.st__h{display:flex;gap:10px;align-items:flex-start}
+.st__n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--citui-navy-900);color:var(--citui-ink-inverse);display:grid;place-items:center;font-size:13px;font-weight:700}
+.st__where{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:var(--citui-radius-pill);padding:2px 9px;margin:0 0 4px}
+.st__where.p{background:var(--citui-surface-2);color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
+.st__where.c{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+.st__t{margin:0;font-size:14.5px}
+.st__img{margin:0}
+.st__img img{display:block;width:100%;height:auto;border:1px solid var(--citui-line);border-radius:10px;background:var(--citui-white);cursor:zoom-in}
+.st__img figcaption{font-size:11.5px;color:var(--citui-muted);margin-top:4px}
+.fw{position:relative;display:block}
+.fb{position:absolute;border:3px solid var(--citui-cyan-500);border-radius:6px;box-shadow:0 0 0 2px var(--citui-white);pointer-events:none}
+.fb b{position:absolute;left:-12px;top:-12px;width:22px;height:22px;border-radius:50%;background:var(--citui-cyan-500);color:var(--citui-accent-ink);font-size:12px;display:grid;place-items:center;box-shadow:0 0 0 2px var(--citui-white)}
+.fl{margin:8px 0 0;padding-left:0;list-style:none;counter-reset:f;display:grid;gap:6px;font-size:14px}
+.fl li{counter-increment:f;display:flex;gap:8px;align-items:flex-start}
+.fl li::before{content:counter(f);flex:none;width:22px;height:22px;border-radius:50%;background:var(--citui-cyan-500);color:var(--citui-accent-ink);font-size:12px;font-weight:700;display:grid;place-items:center}
+@container (min-width:760px){.st{grid-template-columns:420px 1fr}}
+.zoom{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 88%,transparent);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.zoom.on{display:flex}
+.zoom img{max-width:100%;max-height:100%;border-radius:10px;background:var(--citui-white)}
+.limits{margin:14px 0 0;padding:12px 0 0 18px;border-top:1px solid var(--citui-line);font-size:13px;color:var(--citui-muted)}
+.existing{margin-top:14px;padding:12px;border:1px dashed var(--citui-line-strong);border-radius:12px;color:var(--citui-muted);font-size:13px}
+.why{max-width:1180px;margin:0 auto;padding:0 16px 60px;font-size:13px;color:var(--citui-muted)}
+.why h3{color:var(--citui-ink);font:600 15px var(--citui-font-display);margin:18px 0 6px}
+.warn{background:color-mix(in srgb,var(--citui-warn) 14%,transparent);color:var(--citui-warn-ink);border-radius:10px;padding:10px 12px}
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <h1>TERV v2 · Portál-naptár összekötés: VIDEÓ + LEÍRÁS, valós képekkel — Modulok › Online foglalás › „Hirdeti máshol is?”</h1>
+  <div class="chips"><span class="lbl">Méret:</span>
+    <button class="chip" data-sz="m" aria-pressed="false">Mobil 390px</button>
+    <button class="chip" data-sz="d" aria-pressed="true">Asztali</button>
+  </div>
+  <p>A Citoviso-részek a valódi admin felvételei (helyi tesztszállás, „Kisházi szoba”). A portál-képek valós képernyőképek a portálok/szoftvercégek nyilvános súgóiból — lásd lent.</p>
+</div>
+
+<div class="stage"><div class="frame" id="frame">
+  <div class="card">
+    <h2>Hirdeti máshol is?</h2>
+    <p class="lead">Ha a szállása a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.</p>
+
+    <section class="guide" aria-labelledby="gt">
+      <h3 id="gt">Így köti össze — videó és leírás</h3>
+      <p>Két linket kell kicserélni: a portálét ide, az Önét a portálra. Válassza ki a portált.</p>
+      <div class="ptabs" id="ptabs"></div>
+      <div class="modes" role="group" aria-label="Nézet">
+        <button class="mode" type="button" data-m="video" aria-pressed="true">Videó</button>
+        <button class="mode" type="button" data-m="text" aria-pressed="false">Leírás képekkel</button>
+      </div>
+      <div id="out"></div>
+    </section>
+
+    <div class="existing">(alatta változatlanul a három portál-kártya: 1. lépés mező + „Összekötés”, 2. lépés „Másolás”, állapot)</div>
+    <ul class="limits">
+      <li>Minden szobát külön kell összekötni — a portálokon is szobánként van naptár.</li>
+      <li>A foglalt napok mennek át, az ár és a vendég adatai nem.</li>
+      <li>Nem azonnali: mi óránként nézzük meg a portált, a Booking.com kétóránként a mi naptárunkat (ott „Import now” gombbal azonnal is frissíthető).</li>
+      <li>Booking.com: a naptár-összekötés csak akkor érhető el, ha ott egy szobatípus egy szobát jelent, és nem használ channel managert.</li>
+    </ul>
+  </div>
+</div></div>
+<div class="zoom" id="zoom" role="dialog" aria-label="Nagyítás"><img id="zimg" alt=""></div>
+
+<div class="why">
+  <h3>Mi ez</h3>
+  <ul>
+    <li>A kártya tetején portálonként (Booking.com / Szállás.hu / Airbnb) két nézet: <b>Videó</b> (2,5–3 perc, magyar hang-narrációval és felirattal; a szakaszok közt menüút-kártya, minden menünél és gombnál ráközelít, bekeretezi és megáll) és <b>Leírás képekkel</b> (számozott lépések, mindegyiknél a valódi képernyő). A lépések sorrendje mindkettőben ugyanaz.</li>
+    <li>Mobilon a videó a mobil-felvételt játssza (a Citoviso-admin mobil nézetével), asztalin az asztalit.</li>
+  </ul>
+  <h3>A portál-képek forrása</h3>
+  <p class="warn">A portál-oldali képek (Booking-extranet, Szállás.hu admin, Airbnb) harmadik fél súgóiból valók (Appartman, Plum Guide, Rental Ninja, szallaskeres.hu), szabad licenc nélkül — ebben a tervben csak referenciának. Élesre ugyanezeket a képernyőket SAJÁT felvételből kell adni: egy portálfiókba belépve a felvevő-szkript ugyanígy végigmegy és lefotózza. A Booking-képek angol felületűek (magyar extranetről állókép nincs nyilvánosan).</p>
+</div>
+
+<script>
+"use strict";
+const B = "../../../../public/assets/help/portal-naptar/";
+const C = (k, sz, n) => `${B}${k}-${sz}-${n}.webp`;
+const PLAN = {
+ "booking": {
+  "name": "Booking.com",
+  "steps": [
+   {
+    "s": "c",
+    "t": "A Citoviso-adminban: Modulok › Online foglalás › „Hirdeti máshol is?” — itt a Booking.com kártyája. Minden szobát külön kell összekötni.",
+    "img": "01-kartya"
+   },
+   {
+    "s": "c",
+    "t": "Először másolja ki a SAJÁT naptár-linkjét: a 2. lépésnél nyomja meg a „Másolás” gombot.",
+    "img": "02-masolas"
+   },
+   {
+    "s": "p",
+    "t": "Most lépjen be a Booking.com extranetre (admin.booking.com).",
+    "img": "booking-01-menu-rates-availability-sync-calendars-appartman.webp",
+    "src": "appartman.hu súgó",
+    "foci": [
+     {
+      "t": "Felül a menüsorban: „Árak és elérhetőség” (angolul: Rates & Availability). Kattintson rá.",
+      "b": [
+       0.1959,
+       0.1051,
+       0.2758,
+       0.1351
+      ]
+     },
+     {
+      "t": "A lenyíló listában: „naptár-szinkronizálás” (Sync calendars).",
+      "b": [
+       0.2938,
+       0.4859,
+       0.3376,
+       0.0582
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "Megnyílik a naptár-szinkronizálás oldala. Itt minden szobának külön sora van.",
+    "img": "booking-07-attekintes-add-calendar-connection-plum.webp",
+    "src": "Plum Guide súgó",
+    "foci": [
+     {
+      "t": "A szoba neve alatt: „Add calendar connection” (új naptárkapcsolat). Kattintson rá.",
+      "b": [
+       0.1702,
+       0.4745,
+       0.1605,
+       0.0459
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "1. lépés a Bookingon: Import calendar — ide jön a Citovisóból másolt link.",
+    "img": "booking-10-import-kitoltve-appartman.webp",
+    "src": "appartman.hu súgó",
+    "foci": [
+     {
+      "t": "Ebbe a mezőbe illessze be a Citovisóból másolt linket (jobb klikk › Beillesztés, vagy Ctrl+V).",
+      "b": [
+       0.1097,
+       0.472,
+       0.811,
+       0.0619
+      ]
+     },
+     {
+      "t": "Calendar name: adjon neki nevet, például „honlap”.",
+      "b": [
+       0.1097,
+       0.6093,
+       0.811,
+       0.0648
+      ]
+     },
+     {
+      "t": "Majd „Next step” (következő lépés).",
+      "b": [
+       0.1097,
+       0.7137,
+       0.1198,
+       0.0638
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "2. lépés a Bookingon: Export calendar — a Booking megmutatja a SAJÁT naptár-linkjét.",
+    "img": "booking-16-export-link-copy-link-plum.webp",
+    "src": "Plum Guide súgó",
+    "foci": [
+     {
+      "t": "Nyomja meg a „Copy link” gombot — ezt a linket viszi át a Citovisóba.",
+      "b": [
+       0.196,
+       0.6097,
+       0.5177,
+       0.111
+      ]
+     },
+     {
+      "t": "Végül „Done” (kész).",
+      "b": [
+       0.196,
+       0.8163,
+       0.0556,
+       0.0472
+      ]
+     }
+    ]
+   },
+   {
+    "s": "c",
+    "t": "Vissza a Citovisóba: illessze be a Booking linkjét az 1. lépés mezőjébe, és nyomja meg az „Összekötés” gombot.",
+    "img": "03-beillesztve"
+   },
+   {
+    "s": "c",
+    "t": "Kész: „Összekötve”. Látszik, mikor frissült, és hány foglalt napot hoztunk át. A Booking kétóránként néz ránk; az „Import now” gombbal azonnal is frissítheti.",
+    "img": "04-osszekotve"
+   }
+  ]
+ },
+ "szallas": {
+  "name": "Szállás.hu",
+  "steps": [
+   {
+    "s": "p",
+    "t": "Lépjen be a Szállás.hu adminba.",
+    "img": "szallas-01-naptar-szinkron-oldal-naptar-exportalasa-gomb-szallaskeres.webp",
+    "src": "szallaskeres.hu blog (Appartman-felvétel)",
+    "foci": [
+     {
+      "t": "Bal oldali menü: „Árak és kapacitás”.",
+      "b": [
+       0,
+       0.3087,
+       0.2625,
+       0.0639
+      ]
+     },
+     {
+      "t": "Alatta, a lista alján: „Naptár szinkron (iCal)”.",
+      "b": [
+       0,
+       0.9261,
+       0.2625,
+       0.0606
+      ]
+     },
+     {
+      "t": "Felül a szoba neve. Ha több szobája van, itt válassza ki, melyiket köti össze — minden szobának saját linkje van.",
+      "b": [
+       0.2867,
+       0.1985,
+       0.4067,
+       0.0662
+      ]
+     },
+     {
+      "t": "Kattintson a „Naptár exportálása” gombra.",
+      "b": [
+       0.7133,
+       0.301,
+       0.2217,
+       0.0794
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "Felugrik a Szállás.hu naptár-linkje.",
+    "img": "szallas-02-naptar-exportalasa-popup-link-appartman.webp",
+    "src": "appartman.hu súgó",
+    "foci": [
+     {
+      "t": "Jelölje ki az egész linket, és másolja ki (jobb klikk › Másolás, vagy Ctrl+C).",
+      "b": [
+       0.096,
+       0.2872,
+       0.8043,
+       0.0692
+      ]
+     }
+    ]
+   },
+   {
+    "s": "c",
+    "t": "A Citoviso-adminban, a Szállás.hu kártyáján: illessze be az 1. lépés mezőjébe, és nyomja meg az „Összekötés” gombot.",
+    "img": "03-beillesztve"
+   },
+   {
+    "s": "c",
+    "t": "Ugyanott, a 2. lépésnél: „Másolás” — ezt a linket kapja meg a Szállás.hu.",
+    "img": "02-masolas"
+   },
+   {
+    "s": "p",
+    "t": "Vissza a Szállás.hu-ra, ugyanarra az oldalra (Naptár szinkron).",
+    "img": "szallas-03-naptar-szinkron-oldal-naptar-importalasa-gomb-appartman.webp",
+    "src": "appartman.hu súgó",
+    "foci": [
+     {
+      "t": "Most a „Naptár importálása” gombra kattintson.",
+      "b": [
+       0.5014,
+       0.3126,
+       0.2044,
+       0.0548
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "Felugrik az „Új naptár importálása” ablak.",
+    "img": "szallas-04-uj-naptar-importalasa-popup-siker-appartman.webp",
+    "src": "appartman.hu súgó",
+    "foci": [
+     {
+      "t": "„Naptár linkje”: ide illessze be a Citovisóból másolt linket.",
+      "b": [
+       0.1286,
+       0.5035,
+       0.7496,
+       0.0618
+      ]
+     },
+     {
+      "t": "„Nevezd el a naptárat”: például „honlap”.",
+      "b": [
+       0.1286,
+       0.655,
+       0.7496,
+       0.0606
+      ]
+     },
+     {
+      "t": "Végül „Importálás”. A zöld sáv jelzi, hogy sikerült.",
+      "b": [
+       0.1286,
+       0.7576,
+       0.1269,
+       0.0594
+      ]
+     }
+    ]
+   },
+   {
+    "s": "c",
+    "t": "Kész: a Citoviso-kártyán „Összekötve”, és látszik, hány foglalt napot hoztunk át. Ha másik szobája is van, azt is ugyanígy, külön kösse össze.",
+    "img": "04-osszekotve"
+   }
+  ]
+ },
+ "airbnb": {
+  "name": "Airbnb",
+  "steps": [
+   {
+    "s": "c",
+    "t": "A Citoviso-adminban: Modulok › Online foglalás › „Hirdeti máshol is?” — itt az Airbnb kártyája.",
+    "img": "01-kartya"
+   },
+   {
+    "s": "c",
+    "t": "Először másolja ki a SAJÁT naptár-linkjét: a 2. lépésnél nyomja meg a „Másolás” gombot.",
+    "img": "02-masolas"
+   },
+   {
+    "s": "p",
+    "t": "Lépjen be az Airbnb-re, vendéglátó (host) módban.",
+    "img": "airbnb-01-naptar-foglalhatosag-panel-rentalninja.webp",
+    "src": "Rental Ninja súgó",
+    "foci": [
+     {
+      "t": "Felül: „Naptár” (Calendar). Ha több hirdetése van, válassza ki a megfelelőt.",
+      "b": [
+       0.4377,
+       0.0078,
+       0.0435,
+       0.057
+      ]
+     },
+     {
+      "t": "Jobb oldalt: „Foglalhatóság” (Availability) fül.",
+      "b": [
+       0.8658,
+       0.1036,
+       0.0484,
+       0.0466
+      ]
+     },
+     {
+      "t": "A panel aljára görgetve: „Naptárak bekötése” (Connect calendars).",
+      "b": [
+       0.8343,
+       0.9637,
+       0.1657,
+       0.0363
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "Naptárak bekötése:",
+    "img": "airbnb-02-connect-calendars-rentalninja.webp",
+    "src": "Rental Ninja súgó",
+    "foci": [
+     {
+      "t": "Válassza: „Csatlakozás egy másik webhelyhez” (Connect to another website).",
+      "b": [
+       0.0259,
+       0.4251,
+       0.932,
+       0.2021
+      ]
+     }
+    ]
+   },
+   {
+    "s": "p",
+    "t": "Két lépés jelenik meg: az Airbnb linkje ki, a Citovisóé be.",
+    "img": "airbnb-03-connect-to-another-website-step1-link-rentalninja.webp",
+    "src": "Rental Ninja súgó",
+    "foci": [
+     {
+      "t": "1. lépés: „Másolás” (Copy) — ez az Airbnb naptár-linkje, ezt viszi át a Citovisóba.",
+      "b": [
+       0.0566,
+       0.4199,
+       0.9057,
+       0.0962
+      ]
+     },
+     {
+      "t": "2. lépés: ide illessze be a Citovisóból másolt linket, és adjon nevet (pl. „honlap”).",
+      "b": [
+       0.0566,
+       0.7051,
+       0.9057,
+       0.1603
+      ]
+     },
+     {
+      "t": "Végül „Naptár hozzáadása” (Add calendar).",
+      "b": [
+       0.0566,
+       0.9006,
+       0.9057,
+       0.0689
+      ]
+     }
+    ]
+   },
+   {
+    "s": "c",
+    "t": "Vissza a Citovisóba: illessze be az Airbnb linkjét az 1. lépés mezőjébe, és nyomja meg az „Összekötés” gombot.",
+    "img": "03-beillesztve"
+   },
+   {
+    "s": "c",
+    "t": "Kész: „Összekötve”. Látszik, mikor frissült, és hány foglalt napot hoztunk át.",
+    "img": "04-osszekotve"
+   }
+  ]
+ }
+};
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let cur = "booking", mode = "video";
+const isMobile = () => document.getElementById("frame").classList.contains("is-mobile");
+function draw(){
+  document.getElementById("ptabs").innerHTML = Object.entries(PLAN).map(([k, p]) => `<button class="ptab" type="button" data-k="${k}" aria-pressed="${k===cur}">${esc(p.name)}</button>`).join("");
+  document.querySelectorAll(".mode").forEach((b) => b.setAttribute("aria-pressed", b.dataset.m === mode));
+  const p = PLAN[cur], sz = isMobile() ? "m" : "d";
+  const out = document.getElementById("out");
+  if (mode === "video") {
+    out.innerHTML = `<div class="vid"><video controls playsinline preload="metadata" src="${B}${cur}-${sz}.webm"></video></div>
+      <p class="vnote">${esc(p.name)} összekötése, felirattal. Bármikor megállíthatja, és közben a lenti kártyán maga is csinálhatja.</p>`;
+    return;
+  }
+  out.innerHTML = `<ol class="steps">${p.steps.map((st, i) => {
+    const img = st.s === "c" ? C(cur, sz, st.img) : B + st.img;
+    const foci = st.foci || [];
+    const boxes = foci.map((f, j) => `<span class="fb" style="left:${f.b[0]*100}%;top:${f.b[1]*100}%;width:${f.b[2]*100}%;height:${f.b[3]*100}%"><b>${j+1}</b></span>`).join("");
+    const list = foci.length ? `<ol class="fl">${foci.map((f) => `<li>${esc(f.t)}</li>`).join("")}</ol>` : "";
+    return `<li class="st"><figure class="st__img"><span class="fw"><img src="${esc(img)}" alt="${i+1}. lépés képe" loading="lazy">${boxes}</span>${st.src ? `<figcaption>kép: ${esc(st.src)}</figcaption>` : ""}</figure>
+      <div class="st__h"><span class="st__n">${i+1}</span><div><span class="st__where ${st.s}">${st.s === "c" ? "Citoviso-admin" : esc(p.name) + " oldalán"}</span><p class="st__t">${esc(st.t)}</p>${list}</div></div></li>`;
+  }).join("")}</ol>`;
+}
+document.getElementById("ptabs").onclick = (e) => { const b = e.target.closest(".ptab"); if (b) { cur = b.dataset.k; draw(); } };
+document.querySelectorAll(".mode").forEach((b) => b.onclick = () => { mode = b.dataset.m; draw(); });
+document.getElementById("out").addEventListener("click", (e) => { const im = e.target.closest(".st__img img"); if (!im) return; document.getElementById("zimg").src = im.src; document.getElementById("zoom").classList.add("on"); });
+document.getElementById("zoom").onclick = () => document.getElementById("zoom").classList.remove("on");
+document.querySelectorAll("[data-sz]").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("[data-sz]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  document.getElementById("frame").classList.toggle("is-mobile", b.dataset.sz === "m"); draw();
+});
+const qs = new URLSearchParams(location.search);
+if (qs.get("m")) mode = qs.get("m");
+if (qs.get("p")) cur = qs.get("p");
+if (qs.get("sz") === "m" || (!qs.get("sz") && window.innerWidth < 700)) { document.getElementById("frame").classList.add("is-mobile"); document.querySelectorAll("[data-sz]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.sz === "m")); }
+draw();
+</script>
+</body>
+</html>

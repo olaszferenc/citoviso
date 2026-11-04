@@ -10,6 +10,7 @@
 - [2026-11-04_tenant_aktivitas_latogatottsag.md](2026-11-04_tenant_aktivitas_latogatottsag.md) — 2026-11-04 · Tenant-aktivitás és látogatottság a konzolon (SUB-D, Fizetés-szál)
 - [2026-11-04_riport_elofizetok.md](2026-11-04_riport_elofizetok.md) — 2026-11-04 — Riport › Előfizetők fül (bevétel, előrejelzés, előfizetők)
 - [2026-11-04_proba-belepes-emlekezteto.md](2026-11-04_proba-belepes-emlekezteto.md) — 2026-11-04 — Próbázó belépés-emlékeztető (induló SMS + 2./4./6./8. napi e-mail és SMS)
+- [2026-11-04_portal_naptar_bemutato.md](2026-11-04_portal_naptar_bemutato.md) — 2026-11-04 · Portál-naptár bemutató (videó + leírás képekkel) a foglalás-modulban
 - [2026-11-04_partner_uzenetvaltasok_m1.md](2026-11-04_partner_uzenetvaltasok_m1.md) — Partner-adatlap Üzenetváltások (M1) + elutasító-jel (SUB-C 2. rész, 2026-11-04)
 - [2026-11-04_keret_elemzes_munkatars_lanc.md](2026-11-04_keret_elemzes_munkatars_lanc.md) — Keret-elemzés: hová megy a token, és a munkatárs-lánc egyszerűsítése (2026-11-03/04)
 - [2026-11-04_fizetes_csomag_zaras.md](2026-11-04_fizetes_csomag_zaras.md) — 2026-11-04 — Fizetés-csomag zárása (számla-tükör, riasztás, riport, partner-adatlap, aktivitás, domain-nyilvántartás)

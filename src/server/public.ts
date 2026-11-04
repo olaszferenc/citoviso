@@ -10,8 +10,8 @@
 import http from "node:http";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
-import { readdir, readFile } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { createReadStream, readFileSync } from "node:fs";
 import path from "node:path";
 import { sql } from "kysely";
 
@@ -309,6 +309,7 @@ const MIME: Record<string, string> = {
   ".ico": "image/x-icon",
   ".json": "application/json; charset=utf-8",
   ".woff2": "font/woff2",
+  ".webm": "video/webm",
 };
 
 /**
@@ -448,18 +449,54 @@ async function redirectRerendered(
 }
 
 /** Serve a file from public/, blocking path traversal. */
-async function serveStatic(res: http.ServerResponse, urlPath: string): Promise<void> {
+async function serveStatic(res: http.ServerResponse, urlPath: string, range?: string): Promise<void> {
   const rel = decodeURIComponent(urlPath.split("?")[0]);
   const clean = path.normalize(rel).replace(/^(\.\.[/\\])+/, "");
   const target = clean === "/" || clean === "" ? "index.html" : clean.replace(/^\/+/, "");
   const abs = path.join(PUBLIC_DIR, target);
   if (!abs.startsWith(PUBLIC_DIR)) return send(res, 403, "Forbidden", "text/plain");
+  // Video (the portal-calendar tutorial): byte ranges, or the player cannot seek and
+  // Safari does not play it at all.
+  if (path.extname(abs) === ".webm") return serveVideo(res, abs, range);
   try {
     const buf = await readFile(abs);
     send(res, 200, buf, MIME[path.extname(abs)] ?? "application/octet-stream");
   } catch {
     send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
   }
+}
+
+/** A video file with HTTP byte-range support (206), streamed, never read whole. */
+async function serveVideo(res: http.ServerResponse, abs: string, range?: string): Promise<void> {
+  let size: number;
+  try {
+    const st = await stat(abs);
+    if (!st.isFile()) throw new Error("not a file");
+    size = st.size;
+  } catch {
+    return send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
+  }
+  const head = { "Content-Type": "video/webm", "Accept-Ranges": "bytes", "Cache-Control": "public, max-age=86400" };
+  const m = range ? /^bytes=(\d*)-(\d*)$/.exec(range.trim()) : null;
+  if (range && !m) {
+    res.writeHead(416, { ...head, "Content-Range": `bytes */${size}` });
+    return void res.end();
+  }
+  if (!m) {
+    res.writeHead(200, { ...head, "Content-Length": String(size) });
+    createReadStream(abs).pipe(res);
+    return;
+  }
+  // "bytes=a-b", "bytes=a-" or the suffix form "bytes=-n" (the last n bytes)
+  let start = m[1] === "" ? Math.max(0, size - Number(m[2] || 0)) : Number(m[1]);
+  let end = m[1] === "" || m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
+  if (m[1] === "" && m[2] === "") { start = 0; end = size - 1; }
+  if (start > end || start >= size) {
+    res.writeHead(416, { ...head, "Content-Range": `bytes */${size}` });
+    return void res.end();
+  }
+  res.writeHead(206, { ...head, "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1) });
+  createReadStream(abs, { start, end }).pipe(res);
 }
 
 /**
@@ -4617,7 +4654,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (pathname === "/" || pathname === "/index.html") {
       return serveHomepage(req, res, url);
     }
-    return serveStatic(res, pathname);
+    return serveStatic(res, pathname, typeof req.headers.range === "string" ? req.headers.range : undefined);
   }
 
   send(res, 405, "Method Not Allowed", "text/plain");

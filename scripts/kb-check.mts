@@ -25,6 +25,8 @@ const VIEW_GROUPS = {
   tenant: [
     "src/server/adminViews.ts",
     "src/server/moduleConfigViews.ts",
+    // The portal-calendar tutorial in the booking card (approved plan 2026-11-04).
+    "src/server/portalGuide.ts",
     // Approved plan 2026-09-06: the Foglalások tab is its own view file — a new
     // surface file MUST enter this list (feedback_guard_scope_is_the_doctrine).
     "src/server/bookingViews.ts",
