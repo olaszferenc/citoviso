@@ -8,6 +8,7 @@
 
 - [2026-11-04_zoja_szamlazas_eszkalacio_vizsgalat.md](2026-11-04_zoja_szamlazas_eszkalacio_vizsgalat.md) — 2026-11-04 — Zója Apartmanház: számlázási kilépés és eszkaláció vizsgálata
 - [2026-11-04_tenant_aktivitas_latogatottsag.md](2026-11-04_tenant_aktivitas_latogatottsag.md) — 2026-11-04 · Tenant-aktivitás és látogatottság a konzolon (SUB-D, Fizetés-szál)
+- [2026-11-04_szolgaltatas_uzletag_otletek.md](2026-11-04_szolgaltatas_uzletag_otletek.md) — Szolgáltatási üzletág (2. vertikum) — ötletelés, 0. kör
 - [2026-11-04_riport_elofizetok.md](2026-11-04_riport_elofizetok.md) — 2026-11-04 — Riport › Előfizetők fül (bevétel, előrejelzés, előfizetők)
 - [2026-11-04_proba-belepes-emlekezteto.md](2026-11-04_proba-belepes-emlekezteto.md) — 2026-11-04 — Próbázó belépés-emlékeztető (induló SMS + 2./4./6./8. napi e-mail és SMS)
 - [2026-11-04_portal_naptar_bemutato.md](2026-11-04_portal_naptar_bemutato.md) — 2026-11-04 · Portál-naptár bemutató (videó + leírás képekkel) a foglalás-modulban
