@@ -13,7 +13,7 @@
 // i18n note: operator-facing (internal console) — outside the §B.18 customer scope; the
 // labels still go through T() so a non-Hungarian operator gets them translated (ADR-0067 ③).
 
-import { esc, layout } from "./views.js";
+import { esc, helpLink, layout } from "./views.js";
 import { formatMoney } from "../text/money.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
@@ -551,7 +551,7 @@ export function domainsPage(all: readonly DomainRecord[], stats: DomainStats, q:
     )}</p>
   </div></div>`;
   const body = `<div class="dm-page">
-  <div class="dm-hrow"><h1 class="dm-h1">${esc(T(lang, "Domainek"))}</h1><button type="button" class="dm-q" data-help aria-label="${esc(T(lang, "Súgó"))}">?</button><span class="dm-grow"></span>
+  <div class="dm-hrow"><h1 class="dm-h1">${esc(T(lang, "Domainek"))} ${helpLink("console.domains")}</h1><button type="button" class="dm-q" data-help aria-label="${esc(T(lang, "Súgó"))}">?</button><span class="dm-grow"></span>
     <form method="get" action="/domains" class="dm-searchf" role="search">${q.f !== "all" ? `<input type="hidden" name="f" value="${q.f}">` : ""}${
       q.sort !== "att" ? `<input type="hidden" name="sort" value="${q.sort}">` : ""
     }<input class="dm-search" type="search" name="q" id="dm-q" value="${esc(q.q)}" placeholder="${esc(T(lang, "Domain, tenant, partner…"))}" aria-label="${esc(

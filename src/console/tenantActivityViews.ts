@@ -7,7 +7,7 @@
 // row's detail line (the same text is reachable through the partner link, and mobile uses
 // <details> cards).
 
-import { esc, layout } from "./views.js";
+import { esc, helpLink, layout } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { APP_TZ, partsIn } from "../text/zoneTime.js";
@@ -406,7 +406,7 @@ export function reportTenantsPage(all: readonly TenantActivity[], q: TenantRepor
     `r.addEventListener("click",function(e){if(e.target.closest("a"))return;t();});r.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();t();}});});</script>`;
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))}</h1></div>${tabs}${filter}${kpis}${panel}${js}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_tenants")}</h1></div>${tabs}${filter}${kpis}${panel}${js}`,
     { active: "/report/tenants" },
   );
 }

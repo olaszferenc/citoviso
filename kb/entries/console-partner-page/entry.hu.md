@@ -50,6 +50,8 @@ neve mellett a szám: hány üzenete jött a partnernek a mi utolsó üzenetünk
 
 Felül a szűrők: **„Mind”**, **„E-mail”**, **„SMS / MMS”**, **„Kézi”**, **„Rendszerlevél”**.
 
+![Képernyőkép: az Üzenetváltások fül telefonon — szűrők, a szál buborékai és alatta az írás-doboz](assets/hu/messages.png)
+
 **Írás** (a szál alatt):
 
 - **„E-mail”** / **„SMS”** váltó, **„Címzett”** — csak a partner és a kapcsolattartói címei
@@ -67,6 +69,8 @@ Felül a szűrők: **„Mind”**, **„E-mail”**, **„SMS / MMS”**, **„K
 **Ha a partner elutasító vagy leiratkozott**, az írás-doboz fölött piros sáv áll: **„Ennek a
 partnernek nem küldhető üzenet.”**, az okkal együtt, és a doboz le van tiltva. Az elutasító-jelet
 az Irányítópult „Válaszok a megkeresésekre” blokkjában lehet feltenni.
+
+![Képernyőkép: elutasító partner — a piros „Ennek a partnernek nem küldhető üzenet.” sáv és a letiltott írás-doboz](assets/hu/messages-blocked.png)
 
 ## Az **„Adatok és kapcsolattartók”** fül — itt szerkeszt
 
@@ -118,7 +122,25 @@ megnyitható fájlként.
 
 ## Az **„Aktivitás”** fül
 
-A tulaj tevékenysége az adminjában és az oldal látogatottsága — fejlesztés alatt.
+Csak annál a partnernél látszik, akinek van oldala (tenantja). Arra felel, dolgozik-e a tulaj az
+oldalán, és nézi-e valaki.
+
+- Felül az oldal helyzete (pl. **„Próba · {n}. nap / 14”**) és a jelzés: **„Aktív”**, **„Új”**,
+  **„Még nem lépett be”** (friss, 3 napnál fiatalabb), **„Alvó”** (fizetőnél 14 napja, próbánál
+  5 napja nincs belépés vagy mentés, vagy 3 nap után sem lépett be), **„Lezárult”** vagy
+  **„Teszt”**. Alatta egy rövid összefoglaló.
+- Négy szám: **„Belépés 7 / 30 nap”** (alatta az utolsó belépés), **„Utolsó mentés”** (alatta, mit
+  mentett: szövegek, fotók, elérhetőség…), **„Látogató 7 / 30 nap”** (botok és saját megnyitás
+  nélkül), **„Érdeklődés 30 nap”** (érdeklődés + foglalási kérés).
+- **„A tulaj — utolsó események”**: belépés (jelszóval vagy egyszeri linkkel), admin-megnyitás,
+  mentés, a saját oldal megnyitása, a „Megrendelem” út, próba és előfizetés indulása.
+- **„Vendégek naponta (30 nap)”** oszlopdiagram, **„Honnan jönnek (a küldő oldal szerint)”**
+  bontás (Google, közösségi, szállásportál, közvetlen…), és hogy a megnyitások hány százaléka jött
+  telefonról.
+
+Látogató = egy böngésző egy napon egyszer számít; a tulaj és az operátor saját megnyitása nem
+számít bele. Csak a főoldal megnyitását mérjük. Minden tenant egy táblában: **„Riport”** →
+**„Tenantok”**.
 
 ## Az **„Előzmények”** fül
 

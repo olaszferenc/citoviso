@@ -75,6 +75,10 @@ import { foldTrialReport, type RawTrial } from "../src/console/trialReport.js";
 import { reportTrialPage } from "../src/console/trialReportViews.js";
 import { foldRevenueReport, type RevenueSub } from "../src/console/revenueReport.js";
 import { reportRevenuePage } from "../src/console/revenueReportViews.js";
+import { attentionOf, domainStats, lifeSteps, type DomainRecord } from "../src/console/domainRegistry.js";
+import { domainsPage, parseDomainsQuery } from "../src/console/domainRegistryViews.js";
+import type { TenantActivity } from "../src/console/tenantActivityData.js";
+import { reportTenantsPage } from "../src/console/tenantActivityViews.js";
 import { TEMPLATES as RP_TEMPLATES } from "../src/engine/templates.js";
 import { inferExitReason, signalsFromEvents } from "../src/analytics/exitReason.js";
 import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
@@ -2240,6 +2244,85 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
   const sample = foldRevenueReport(subs, facts, [{ name: "Napsugár Panzió", until: day(9) }], 6, false, null, rpNow);
   await shootConsole(reportRevenuePage(sample), path.join(ROOT, "kb/entries", "console-report-revenue", "assets", "hu", "revenue.png"));
   await shootConsole(reportRevenuePage(sample), path.join(ROOT, "kb/entries", "console-report-revenue", "assets", "hu", "revenue-list.png"), undefined, "#rv-subs");
+}
+// The Domainek page (assets/design-refs/console/domain-nyilvantartas/, approved hybrid): tiles,
+// filter chips and the phone cards with the life-path bar. Invented names only — the measured
+// records (real customers' domains) must not end up in the guide. One of each state the entry
+// explains: running .hu (confirmation step), live, stuck (72 h), lapsing with a renewal problem.
+{
+  const D = 86_400_000;
+  const dNow = new Date("2026-11-04T10:00:00Z");
+  const at = (n: number, h = 10): Date => new Date(dNow.getTime() + n * D + (h - 10) * 3_600_000);
+  let k = 0;
+  const rec = (o: {
+    domain: string; status: string; tenant: string; partner: string; stuckStage?: number;
+    orderedAt?: Date; paidAt?: Date; boughtAt?: Date; confirmLinkAt?: Date; nsActiveAt?: Date; liveAt?: Date;
+    expiresAt: Date; renewProblem?: string; registrarNote?: string;
+  }): DomainRecord => {
+    k++;
+    const id = `00000000-0000-4000-8000-0000000d${String(k).padStart(4, "0")}`;
+    const tld = o.domain.slice(o.domain.lastIndexOf("."));
+    const daysLeft = Math.floor((o.expiresAt.getTime() - dNow.getTime()) / D);
+    const steps = lifeSteps({
+      status: o.status, tld, house: false, stuckStage: o.stuckStage ?? 0, orderedAt: o.orderedAt ?? null, paidAt: o.paidAt ?? null,
+      boughtAt: o.boughtAt ?? null, confirmLinkAt: o.confirmLinkAt ?? null, registryRecordedAt: null, nsActiveAt: o.nsActiveAt ?? null,
+      liveAt: o.liveAt ?? null, bought: !!o.boughtAt,
+    });
+    const base = { status: o.status, stuckStage: o.stuckStage ?? 0, registrarNote: o.registrarNote ?? null, renewProblem: o.renewProblem ?? null, renewEnd: null, house: false };
+    return {
+      provisioningId: id, siteId: id, tenantId: id, tenantName: o.tenant, tenantStatus: "active", slug: o.domain.split(".")[0]!.replace(/-/g, ""),
+      partnerId: id, partnerName: o.partner, domain: o.domain, tld, house: false, registrar: "websupport",
+      registrarRef: o.boughtAt ? String(22900100 + k) : null, serviceRef: null, status: o.status, error: null, orderIntentId: id,
+      orderKind: "initial", startedAt: o.orderedAt ?? dNow, steps,
+      waitingSince: o.status !== "live" && o.status !== "failed" ? (o.boughtAt ?? null) : null, stuckStage: o.stuckStage ?? 0,
+      delayNoticeAt: null, registrarNote: o.registrarNote ?? null, registrarNoteAt: o.registrarNote ? at(-1) : null,
+      confirmLinkAt: o.confirmLinkAt ?? null, expiresAt: o.expiresAt, expiryEstimated: false, autoRenew: o.status === "live" ? true : null,
+      renewEnd: null, renewCheckedAt: o.status === "live" ? at(0, 5) : null, renewProblem: o.renewProblem ?? null, cover: "package",
+      monthlyFee: 0, feeCurrency: "HUF", costNet: 1990, costCurrency: "HUF", attention: attentionOf(base, daysLeft), daysLeft,
+    } as DomainRecord;
+  };
+  const recs: DomainRecord[] = [
+    rec({ domain: "rozsakertvendeghaz.hu", status: "dns_pending", tenant: "Rózsakert Vendégház", partner: "Rózsakert Kft.", orderedAt: at(0, 8), paidAt: at(0, 8), boughtAt: at(0, 8), confirmLinkAt: at(0, 9), expiresAt: at(365) }),
+    rec({ domain: "harsfaszallas.hu", status: "live", tenant: "Hársfa Szállás", partner: "Hársfa Szállás Bt.", orderedAt: at(-14), paidAt: at(-14), boughtAt: at(-14), nsActiveAt: at(-13), liveAt: at(-13, 11), expiresAt: at(351) }),
+    rec({ domain: "sasfeszek-lak.hu", status: "dns_pending", stuckStage: 2, tenant: "Sasfészek Lak", partner: "Kovács Anna", orderedAt: at(-4), paidAt: at(-4), boughtAt: at(-4), registrarNote: "a Nyilvántartó dokumentumot kér", expiresAt: at(361) }),
+    rec({ domain: "borostyan-panzio.hu", status: "live", tenant: "Borostyán Panzió", partner: "Borostyán Panzió Kft.", orderedAt: at(-360), boughtAt: at(-360), liveAt: at(-360, 12), expiresAt: at(5), renewProblem: "a regisztrátori egyenleg nem fedezi" }),
+  ];
+  await shootConsole(domainsPage(recs, domainStats(recs, dNow), parseDomainsQuery(new URL("http://x/domains")), dNow), conOut("console-domains"));
+}
+// The Tenantok tab (frozen plan 2A): one tenant per verdict the entry explains, invented names.
+{
+  const D = 86_400_000;
+  const tNow = new Date("2026-11-04T10:00:00Z");
+  const at = (n: number): Date => new Date(tNow.getTime() - n * D);
+  const daily = (pattern: readonly number[]) =>
+    Array.from({ length: 30 }, (_, i) => ({ day: at(29 - i).toISOString().slice(0, 10), n: pattern[i % pattern.length]! }));
+  const ta = (i: number, name: string, kind: TenantActivity["kind"], verdict: TenantActivity["verdict"], o: {
+    age: number; l7: number; l30: number; lastLogin: number | null; save: number | null; v7: number; v30: number; enq: number;
+    src: TenantActivity["visitors"]["mainSource"]; pat: readonly number[];
+  }): TenantActivity => ({
+    tenantId: `00000000-0000-4000-8000-0000000e${String(i).padStart(4, "0")}`, partnerId: null, name, isTest: false, kind,
+    createdAt: at(o.age), trialStartedAt: kind === "trial" ? at(o.age) : null, trialUntil: kind === "trial" ? at(o.age - 14) : null,
+    ageDays: o.age, hosts: [],
+    owner: {
+      logins7: o.l7, logins30: o.l30, lastLoginAt: o.lastLogin === null ? null : at(o.lastLogin),
+      lastSave: o.save === null ? null : { at: at(o.save), area: "szovegek" }, siteViews30: 0,
+      lastLifeAt: o.lastLogin === null ? null : at(Math.min(o.lastLogin, o.save ?? o.lastLogin)),
+      events: o.lastLogin === null ? [] : [{ at: at(o.lastLogin), kind: "login", detail: "password" }],
+    },
+    visitors: {
+      v7: o.v7, v30: o.v30, views30: o.v30 + 4, ownViews30: 3, daily: daily(o.pat),
+      sources: o.src ? [{ group: o.src, views: o.v30 }] : [], mainSource: o.src, mobilePct: o.v30 ? 68 : null,
+    },
+    enquiries30: o.enq, verdict,
+  });
+  const rows: TenantActivity[] = [
+    ta(1, "Rózsakert Vendégház", "paying", "active", { age: 40, l7: 3, l30: 9, lastLogin: 1, save: 1, v7: 21, v30: 84, enq: 3, src: "google", pat: [2, 3, 1, 4, 2, 5, 3] }),
+    ta(2, "Hársfa Szállás", "paying", "sleeping", { age: 60, l7: 0, l30: 0, lastLogin: 25, save: 26, v7: 6, v30: 31, enq: 1, src: "portal", pat: [1, 0, 2, 1, 1, 0, 1] }),
+    ta(3, "Kis Rét Apartman", "trial", "active", { age: 6, l7: 4, l30: 4, lastLogin: 0, save: 0, v7: 5, v30: 5, enq: 0, src: "social", pat: [0, 0, 0, 0, 0, 0, 1] }),
+    ta(4, "Liliom Vendégház", "trial", "not_logged_in", { age: 1, l7: 0, l30: 0, lastLogin: null, save: null, v7: 0, v30: 0, enq: 0, src: null, pat: [0] }),
+    ta(5, "Fenyves Apartman", "trial", "sleeping", { age: 9, l7: 0, l30: 1, lastLogin: 8, save: null, v7: 1, v30: 2, enq: 0, src: "direct", pat: [0, 0, 1, 0, 0, 0, 0] }),
+  ];
+  await shootConsole(reportTenantsPage(rows, { f: "active", test: false, sort: "flag", desc: false }, tNow), conOut("console-report-tenants"));
 }
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.

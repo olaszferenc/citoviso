@@ -87,6 +87,10 @@ const VIEW_GROUPS = {
     "src/console/trialReportViews.ts",
     // Riport „Előfizetők” tab (frozen plan: design-refs/console/elofizetok-riport/) — own view file.
     "src/console/revenueReportViews.ts",
+    // Domainek page (approved hybrid, design-refs/console/domain-nyilvantartas/) — own view file.
+    "src/console/domainRegistryViews.ts",
+    // Riport „Tenantok” tab + the partner sheet's Aktivitás block (frozen plans 1A/2A).
+    "src/console/tenantActivityViews.ts",
     // ADR-0360: the redesigned Árazás page — its new panels (Csomagok, Modulok, Saját domain,
     // the overview, the save bar) are rendered HERE; views.ts only assembles them.
     "src/console/pricingPage.ts",

@@ -4,7 +4,7 @@
 // REAL data layer (partnerData — the KPI/aging/habit numbers are SQL, a hand-written
 // fixture would be a second copy of those rules).
 //
-//   npx tsx scripts/partner-kb-shot.mts             # writes the three entry images
+//   npx tsx scripts/partner-kb-shot.mts             # writes the entry images (TARGETS)
 //   npx tsx scripts/partner-kb-shot.mts --out <dir> # writes under <dir> (kb-shot --determinism /
 //                                                   # --check-committed call it this way)
 //
@@ -52,6 +52,11 @@ const TARGETS: ReadonlyArray<[string, string]> = [
   ["list", "kb/entries/console-partners/assets/hu/screen.png"],
   ["page", "kb/entries/console-partner-page/assets/hu/screen.png"],
   ["documents", "kb/entries/console-documents/assets/hu/screen.png"],
+  // The „Üzenetváltások” tab (ADR-0421): the thread + composer, and the same partner marked as a
+  // rejecter (red bar, composer disabled). The thread is a fixture — the seed has no messages,
+  // and real outreach history must not end up in the guide.
+  ["messages", "kb/entries/console-partner-page/assets/hu/messages.png"],
+  ["messages-blocked", "kb/entries/console-partner-page/assets/hu/messages-blocked.png"],
 ];
 
 // The frozen clock must be in force in THIS process too (the views read "now") — the
@@ -183,6 +188,9 @@ try {
   const { getPartnerProfile } = await import("../src/console/partnerProfile.js");
   const { fmtTime } = await import("../src/console/partnerProfileViews.js");
   const { documentsPage, partnerPage, partnersPage } = await import("../src/console/partnerViews.js");
+  const { messagesTab } = await import("../src/console/partnerMessageViews.js");
+  type Thread = import("../src/console/partnerMessages.js").PartnerThread;
+  type Msg = import("../src/console/partnerMessages.js").ThreadMessage;
   const { pool } = await import("../src/db/client.js");
   const { chromium } = await import("playwright-core");
   const { pinNetwork, settle } = await import("./lib/kb-settle.mts");
@@ -208,6 +216,37 @@ try {
     ],
     ["documents", documentsPage(docs, {})],
   ]);
+  // Fixture thread at the frozen clock: cold SMS → their reply → our manual mail → a system mail.
+  {
+    const t0 = Date.parse(PARTNER_SHOT_NOW);
+    const ago = (h: number): string => new Date(t0 - h * 3_600_000).toISOString();
+    const PHONE = "+36301234567";
+    const MAIL = "info@panorama-teszt.hu";
+    const m = (k: string, o: Partial<Msg> & Pick<Msg, "at" | "dir" | "channel" | "source" | "address" | "body">): Msg => ({
+      key: k, kind: null, subject: null, attachment: null, status: o.dir === "out" ? "sent" : null, scheduledFor: null, error: null,
+      by: null, answeredAt: null, retryId: null, placeholder: false, ...o,
+    });
+    const messages: Msg[] = [
+      m("sms_outbox:1", { at: ago(72), dir: "out", channel: "sms", source: "outreach", address: PHONE, body: "Jó napot! Elkészítettük a Vendégház Panoráma új honlapjának látványtervét: citoviso.com/p/… A Citoviso csapata" }),
+      m("reply:1", { at: ago(70), dir: "in", channel: "sms", source: "reply", address: PHONE, body: "Köszönöm, nagyon tetszik! Mennyibe kerül havonta?" }),
+      m("pm:1", { at: ago(69), dir: "out", channel: "email", source: "manual", address: MAIL, subject: "A Vendégház Panoráma honlapja", by: "operátor", body: "Kedves Panoráma! Az ajánlott csomag havi díja a látványterv alján látható, az első 14 nap ingyenes. Üdvözlettel: A Citoviso csapata" }),
+      m("tenant_message:1", { at: ago(48), dir: "out", channel: "email", source: "system", kind: "belépés", address: MAIL, subject: "Belépés az oldala szerkesztéséhez", body: "Belépési link az adminhoz." }),
+    ];
+    const recipients = [
+      { channel: "email" as const, address: MAIL, label: "Vendégház Panoráma Kft. (TESZT)", blocked: null },
+      { channel: "sms" as const, address: PHONE, label: "Vendégház Panoráma Kft. (TESZT)", blocked: null },
+    ];
+    const thread: Thread = { messages, recipients, block: null, waiting: 0, partnerName: detail.name };
+    const blocked: Thread = { ...thread, block: { at: ago(24), why: "nem kér további megkeresést" } };
+    const sheet = async (t: Thread): Promise<string> =>
+      partnerPage(detail, "messages", [], null, {}, [], {
+        profile: await getPartnerProfile({ tenantId: detail.tenant?.tenantId ?? null, phone: detail.phone }, fmtTime),
+        messagesHtml: messagesTab(detail.id, t, "all", {}),
+        waiting: 0,
+      });
+    pages.set("messages", await sheet(thread));
+    pages.set("messages-blocked", await sheet(blocked));
+  }
   await pool.end();
 
   const server = http.createServer((req, res) => {
