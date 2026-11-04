@@ -3069,6 +3069,52 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-tbl td { padding: 7px 6px; border-bottom: 1px solid var(--citui-line); font-variant-numeric: tabular-nums; vertical-align: middle; }
 .rp-tbl td.num, .rp-tbl th.num { text-align: right; }
 .rp-tbl tr:last-child td { border-bottom: 0; }
+
+/* ── Riport · Előfizetők (frozen plan: design-refs/console/elofizetok-riport/, variant A) ──
+   One hue: sure income = link-ink, estimated = the same hue tinted + hatched, outflow/empty =
+   muted. Bars are <a> to the month detail; .rp-chart--wide/--narrow switch the SVG and the
+   tenant table/cards at the 720 px container width. */
+.rv-svg { display: block; width: 100%; height: auto; }
+.rv-svg a { cursor: pointer; }
+.rv-svg .rv-hit { fill: transparent; }
+.rv-svg a:hover .rv-hit { fill: color-mix(in srgb, var(--citui-cyan-500) 8%, transparent); }
+.rv-svg .rv-sure { fill: var(--citui-link-ink); }
+.rv-svg .rv-est { fill: color-mix(in srgb, var(--citui-link-ink) 35%, var(--citui-panel)); }
+.rv-svg .rv-hatch { stroke: var(--citui-panel); stroke-width: 2; }
+.rv-svg .rv-est-edge { stroke: var(--citui-link-ink); stroke-width: .8; }
+.rv-svg .rv-ghost { stroke: color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel)); stroke-width: 2; }
+.rv-svg .rv-grid { stroke: color-mix(in srgb, var(--citui-muted) 18%, transparent); }
+.rv-svg .rv-selbox { fill: none; stroke: var(--citui-cyan-500); stroke-width: 1.5; }
+.rv-svg .rv-ax { font: 400 11px var(--citui-font-text); fill: var(--citui-muted); }
+.rv-svg .rv-ax--on { fill: var(--citui-ink); font-weight: 700; }
+.rv-svg .rv-ax--y { font-size: 10px; }
+.rv-svg .rv-ax--v { fill: var(--citui-ink); }
+.rv-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--citui-muted); margin: 6px 0 8px; }
+.rv-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+.rv-sw--sure { background: var(--citui-link-ink); }
+.rv-sw--est { background: color-mix(in srgb, var(--citui-link-ink) 35%, var(--citui-panel)); outline: 1px solid var(--citui-link-ink); }
+.rp-tbl tr.rv-sel td { background: var(--citui-surface-2); }
+.rp-tbl tr.rv-tot td { font-weight: 700; border-bottom: 0; }
+.rv-detail { margin-top: 10px; border-top: 1px dashed var(--citui-line-strong); padding-top: 10px; }
+.rv-detail h3 { margin: 0 0 6px; font-size: 13px; }
+.rv-detail .rv-d { white-space: nowrap; color: var(--citui-muted); font-size: 12px; }
+.rv-none { font-size: .95rem; color: var(--citui-muted); }
+.rv-fl { font-size: 12px; font-weight: 600; color: var(--citui-muted); }
+.rv-p { font-size: 13px; margin: 0 0 10px; }
+.rv-test { border-style: dashed; color: var(--citui-muted); }
+.rv-card { border: 1px solid var(--citui-line); border-radius: 10px; padding: 10px 12px; margin: 0 0 8px; background: var(--citui-panel); }
+.rv-card__t { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.rv-card__row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 3px 0; border-bottom: 1px dotted var(--citui-line); }
+.rv-card__row span:first-child { color: var(--citui-muted); }
+.rv-card__row:last-child { border-bottom: 0; }
+.rv-show-n { display: none; }
+.rv .rp-tbl td.num { white-space: nowrap; }
+@container (max-width: 719.9px) {
+  .rv-hide-n { display: none; }
+  .rv-show-n { display: block; }
+  .rv .rp-tbl th { white-space: normal; letter-spacing: .02em; }
+  .rv .rp-tbl th, .rv .rp-tbl td { padding-left: 4px; padding-right: 4px; }
+}
 .rp-tbl tr.rp-tot td { font-weight: 700; background: var(--citui-surface); }
 .rp-mini { display: inline-block; height: 9px; border-radius: 3px; background: var(--citui-cyan-500); vertical-align: middle; margin-right: 6px; min-width: 2px; }
 .rp-heat { display: inline-block; min-width: 54px; padding: 3px 7px; border-radius: 5px; text-align: right; font-weight: 700; color: var(--citui-ink); }

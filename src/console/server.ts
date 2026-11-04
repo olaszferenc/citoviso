@@ -392,6 +392,8 @@ import {
 import { CHECKOUT_STEPS, orderOpenFrom, recordTenantActivity } from "../analytics/tenantActivity.js";
 import { getTrialReport, TRIAL_STATUS_FILTERS, type TrialStatusFilter } from "./trialReport.js";
 import { reportTrialPage } from "./trialReportViews.js";
+import { reportRevenuePage, REVENUE_LIST_FILTERS, REVENUE_SORTS, type RevenueListFilter, type RevenueSort } from "./revenueReportViews.js";
+import { getRevenueReport, REVENUE_HORIZONS, type RevenueHorizon } from "./revenueReport.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
@@ -2662,6 +2664,20 @@ async function handle(
     const stageRaw = url.searchParams.get("stage");
     const stage = stageRaw !== null && /^[0-5]$/.test(stageRaw) ? Number(stageRaw) : null;
     return send(res, 200, reportTrialPage(await getTrialReport(days, st, stage)));
+  }
+  // GET /report/revenue — the Előfizetők tab (frozen plan: design-refs/console/elofizetok-riport/).
+  // Query: h ∈ {3,6,12} forecast months (default 6), t=1 counts the tests, m=YYYY-MM the month shown in
+  // detail, st ∈ {all,attn,ok} + sort ∈ {next,fee,name} for the subscriber table.
+  if (method === "GET" && path === "/report/revenue") {
+    const hRaw = Number(url.searchParams.get("h") ?? "6");
+    const h: RevenueHorizon = (REVENUE_HORIZONS as readonly number[]).includes(hRaw) ? (hRaw as RevenueHorizon) : 6;
+    const mRaw = url.searchParams.get("m");
+    const m = mRaw && /^\d{4}-\d{2}$/.test(mRaw) ? mRaw : null;
+    const stRaw = url.searchParams.get("st") ?? "all";
+    const st: RevenueListFilter = (REVENUE_LIST_FILTERS as readonly string[]).includes(stRaw) ? (stRaw as RevenueListFilter) : "all";
+    const sortRaw = url.searchParams.get("sort") ?? "next";
+    const sort: RevenueSort = (REVENUE_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as RevenueSort) : "next";
+    return send(res, 200, reportRevenuePage(await getRevenueReport(h, url.searchParams.get("t") === "1", m), { st, sort }));
   }
   // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.
   if (method === "POST" && path === "/report/note") {

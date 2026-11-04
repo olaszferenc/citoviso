@@ -73,6 +73,8 @@ import { reportBehaviourPage, reportFunnelPage, reportMockPage } from "../src/co
 import { DEFAULT_TARGETS, foldMockReport, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
 import { foldTrialReport, type RawTrial } from "../src/console/trialReport.js";
 import { reportTrialPage } from "../src/console/trialReportViews.js";
+import { foldRevenueReport, type RevenueSub } from "../src/console/revenueReport.js";
+import { reportRevenuePage } from "../src/console/revenueReportViews.js";
 import { TEMPLATES as RP_TEMPLATES } from "../src/engine/templates.js";
 import { inferExitReason, signalsFromEvents } from "../src/analytics/exitReason.js";
 import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
@@ -2204,6 +2206,40 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
   const sample = foldTrialReport(trials, at(30, 0), 30, "all", null, rpNow, [], new Set());
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial.png"));
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial-list.png"), undefined, "#rp-trials");
+}
+// The Előfizetők tab (assets/design-refs/console/elofizetok-riport/, variant A): the top (five
+// numbers + the expected income) and the subscriber table. Sample subscribers folded without a
+// DB — one of each state the page explains (sure card, invoice, expiring card, failed charge,
+// cancelled at period end, annual).
+{
+  const D = 86_400_000;
+  const day = (n: number): Date => new Date(rpNow.getTime() + n * D);
+  const sub = (i: number, name: string, city: string, extra: Partial<RevenueSub>): RevenueSub => ({
+    tenantId: `t${i}`, leadId: `00000000-0000-0000-0000-0000000000${10 + i}`, name, city, test: false, preset: "ajanlott",
+    moduleIds: ["gallery", "rooms", "amenities", "location", "reviews", "booking"], period: "monthly", cycleAmount: 5250, monthly: 5250,
+    domainFee: 0, firstDiscount: null, lastPaid: { amount: 5250, at: day(-20) }, method: "token",
+    card: { brand: "MasterCard", last4: "4821", expMonth: 9, expYear: 2028 }, next: day(10), status: "active", cancelAtEnd: false,
+    startedAt: day(-80), cancelledAt: null, frozenAt: null, failedCharges: 0, owed: 0, domain: null, ...extra,
+  });
+  const subs: RevenueSub[] = [
+    sub(1, "Rózsakert Vendégház", "Siófok", { firstDiscount: { list: 5250, paid: 3938, percent: 25, kind: "outreach" }, startedAt: day(-20), domain: { name: "rozsakertvendeghaz.hu", expiresAt: day(150), renews: true, cost: 1990 } }),
+    sub(2, "Hársfa Szállás", "Tihany", { method: "invoice", card: null, next: day(16), preset: "alap", moduleIds: ["gallery", "location"], cycleAmount: 2780, monthly: 2780 }),
+    sub(3, "Kis Rét Apartman", "Balatonmáriafürdő", { card: { brand: "Visa", last4: "1187", expMonth: 12, expYear: 2026 }, next: day(22), preset: "teljes", cycleAmount: 7000, monthly: 7000 }),
+    sub(4, "Liliom Vendégház", "Gyenesdiás", { status: "past_due", next: day(-3), failedCharges: 1, owed: 5250 }),
+    sub(5, "Tölgyfa Ház", "Zalakaros", { cancelAtEnd: true, cancelledAt: day(-6), next: day(5) }),
+    sub(6, "Fenyves Apartman", "Hévíz", { period: "annual", cycleAmount: 52500, monthly: 4375, next: day(200), startedAt: day(-165) }),
+  ];
+  const facts = {
+    paid: [
+      { amount: 21000, at: day(-50), test: false }, { amount: 52500, at: day(-40), test: false },
+      { amount: 18950, at: day(-20), test: false }, { amount: 3938, at: day(-20), test: false },
+    ],
+    invoices: [{ status: "issued", at: day(-50), test: false }, { status: "issued", at: day(-20), test: false }],
+    failedCharges: [{ at: day(-3), test: false }],
+  };
+  const sample = foldRevenueReport(subs, facts, [{ name: "Napsugár Panzió", until: day(9) }], 6, false, null, rpNow);
+  await shootConsole(reportRevenuePage(sample), path.join(ROOT, "kb/entries", "console-report-revenue", "assets", "hu", "revenue.png"));
+  await shootConsole(reportRevenuePage(sample), path.join(ROOT, "kb/entries", "console-report-revenue", "assets", "hu", "revenue-list.png"), undefined, "#rv-subs");
 }
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.

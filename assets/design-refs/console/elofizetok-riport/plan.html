@@ -1,0 +1,539 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Riport · Előfizetők — terv (A/B/C)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82;
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-pill:999px;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    /* Chart roles: ONE hue (emphasis form). Sure = solid link-ink, estimated = same hue tinted + hatch,
+       outflow = muted gray. Every value is a token or a color-mix of tokens (ADR-0021). */
+    --viz-sure:var(--citui-link-ink);
+    --viz-est:color-mix(in srgb, var(--citui-link-ink) 35%, var(--citui-panel));
+    --viz-out:color-mix(in srgb, var(--citui-muted) 55%, var(--citui-panel));
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel));
+    --viz-grid:color-mix(in srgb, var(--citui-muted) 18%, transparent);
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px} .bar .sp{flex:1}
+  .bar button{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .bar .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap} .bar .grp span{font-size:11px;opacity:.75;margin-right:4px}
+  .note{max-width:1180px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1180px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink);font-weight:600}
+  h1{font:600 20px/1.2 var(--citui-font-text);letter-spacing:-.01em;margin:0 2px 10px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);margin:0 0 12px;overflow-x:auto}
+  .tabs span{padding:9px 14px;font:600 13px/1 var(--citui-font-text);color:var(--citui-muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs span.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px;min-width:0}
+  .panel h2{margin:0 0 10px;font:600 15px/1.3 var(--citui-font-text);letter-spacing:-.01em;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .panel h2 .q{font-weight:500;color:var(--citui-muted);font-size:12.5px}
+  .mut{color:var(--citui-muted)} .small{font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--citui-radius-pill);font-size:11px;font-weight:600;border:1px solid var(--citui-line);background:var(--citui-surface-2);color:var(--citui-ink);white-space:nowrap}
+  .pill.ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft);border-color:color-mix(in srgb,var(--citui-ok) 30%,transparent)}
+  .pill.warn{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-warn) 40%,transparent)}
+  .pill.bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-bad) 35%,transparent)}
+  .pill.test{color:var(--citui-muted);border-style:dashed}
+  .pill svg{width:12px;height:12px}
+
+  .filt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+  .filt label{font-size:12px;color:var(--citui-muted);font-weight:600}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel)}
+  .chips button{appearance:none;border:0;background:none;padding:7px 12px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:34px}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .filt .n{font-size:12px;color:var(--citui-muted);margin-left:auto}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 12px}
+  .kpi{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:12px 14px;min-width:0}
+  .kpi .l{font-size:12px;color:var(--citui-muted);font-weight:600}
+  .kpi .v{font:600 24px/1.15 var(--citui-font-text);letter-spacing:-.02em;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+  .kpi .s{font-size:12px;color:var(--citui-muted)}
+  .kpi .v.none{font-size:15px;color:var(--citui-muted);font-weight:600}
+  .strip{display:flex;flex-wrap:wrap;gap:6px 18px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:10px 14px;margin:0 0 12px}
+  .strip div{font-size:12px;color:var(--citui-muted)} .strip b{display:block;font-size:16px;color:var(--citui-ink);font-variant-numeric:tabular-nums}
+
+  .g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+  .g2 > .panel{margin:0} .g2{margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--citui-line);text-align:left;vertical-align:top}
+  th{font-size:11.5px;color:var(--citui-muted);font-weight:600;white-space:nowrap}
+  td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.tot td{font-weight:700;border-bottom:0}
+  tr.click{cursor:pointer} tr.click:hover td{background:var(--citui-surface)}
+  tr.sel td{background:var(--citui-surface-2)}
+  th.sort{cursor:pointer} th.sort.on::after{content:" ▾"}
+  a{color:var(--citui-link-ink);font-weight:600;text-decoration:none} a:hover{text-decoration:underline}
+  .tw{overflow-x:auto}
+
+  .chart{position:relative}
+  .chart svg{display:block;width:100%;height:auto}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--citui-muted);margin:6px 0 0}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+  .tip{position:absolute;pointer-events:none;background:var(--citui-navy-900);color:var(--citui-ink-inverse);font-size:12px;padding:8px 10px;border-radius:8px;min-width:170px;z-index:5;display:none;box-shadow:0 8px 24px rgba(14,42,71,.25)}
+  .tip b{display:block;font-size:12.5px;margin-bottom:2px}
+  .detail{margin-top:10px;border-top:1px dashed var(--citui-line-strong);padding-top:10px}
+  .detail h3{margin:0 0 6px;font-size:13px}
+  .warnline{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;margin:0 0 6px;background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));font-size:13px}
+  .warnline.bad{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-panel))}
+  .warnline.ok{background:var(--citui-ok-soft)}
+  .warnline svg{flex:0 0 16px;width:16px;height:16px;margin-top:2px}
+  .nodata{color:var(--citui-muted);font-style:italic}
+  details > summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+  .bigdate{font-size:12px;color:var(--citui-muted)}
+
+  /* tenant cards (mobile form of the table) */
+  .cards{display:none}
+  .card{border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px;margin:0 0 8px;background:var(--citui-panel)}
+  .card .t{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .card .t b{font-size:14px}
+  .card .row{display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;border-bottom:1px dotted var(--citui-line)}
+  .card .row span:first-child{color:var(--citui-muted)}
+  .card .row:last-child{border-bottom:0}
+
+  @container (max-width:640px){
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .kpis .kpi:first-child{grid-column:1 / -1}
+    .g2{grid-template-columns:minmax(0,1fr)}
+    .tbl-tenants{display:none} .cards{display:block}
+    .filt .n{margin-left:0;width:100%}
+    .hide-m{display:none}
+    .kpi .v{font-size:21px}
+    table{font-size:12px} th{white-space:normal} th,td{padding:6px 5px}
+    .card .t{flex-wrap:wrap}
+    .panel{padding:12px 10px}
+  }
+</style></head><body>
+<div class="bar">
+  <b>Előfizetők-riport · terv</b>
+  <div class="grp"><span>Változat</span><button data-v="A" class="on">A · Pénz felül</button><button data-v="B">B · Előrejelzés felül</button><button data-v="C">C · Ügyfélkönyv</button></div>
+  <div class="grp"><span>Adat</span><button data-d="live" class="on">Éles (11-03)</button><button data-d="sim">Szimulált 26</button></div>
+  <div class="grp"><span>Méret</span><button data-s="m">Mobil 390</button><button data-s="d" class="on">Asztali</button></div>
+</div>
+<div class="note" id="note"></div>
+<div class="stage" id="stage"></div>
+
+<script>
+"use strict";
+/* ───────── data ───────── */
+const TODAY = "2026-11-03";
+// LIVE — read from the production DB on 2026-11-03 (subscription, order_intent, payment, invoice,
+// module_entitlement, domain_provisioning, free_trial, offer). Renewal = list price of the billed
+// modules (billing.ts findOrCreateRenewalOrder: base 1 800 + modules; the welcome discount only
+// touches the FIRST payment).
+const LIVE = {
+  subs: [
+    { id:"0188d272", name:"Duna Vibe House", city:"Budapest", test:false, preset:"egyedi", modules:11,
+      period:"monthly", cycle:6610, lastPaid:4957, lastPaidAt:"2026-11-03", discount:{pct:25, kind:"megkeresési ajánlat", amount:1653},
+      method:"token", card:"MasterCard ·2696", cardExp:"2028-09", next:"2026-12-03", status:"active", cancelAtEnd:false,
+      started:"2026-11-03", cancelledAt:null, frozenAt:null, endedAt:null, failed:0, owed:0,
+      domain:{name:"dunavibehouse.hu", state:"dns_pending", renew:"2027-11-03", cost:1990}, partner:"d60a8974", lead:"Duna Vibe House" },
+    { id:"b4c07a37", name:"[TESZT] Rebeka Panzió", city:"Gödöllő", test:true, preset:"alap", modules:3,
+      period:"monthly", cycle:2780, lastPaid:55, lastPaidAt:"2026-10-21", discount:{pct:98, kind:"próba-kampány", amount:2725},
+      method:"token", card:"MasterCard ·7275", cardExp:"2028-01", next:"2026-12-05", status:"active", cancelAtEnd:false,
+      started:"2026-10-21", cancelledAt:null, frozenAt:null, endedAt:null, failed:0, owed:0,
+      domain:{name:"overseer.hu", state:"live", renew:"2027-10-21", cost:1990}, partner:"c3f231c6", lead:"[TESZT] Rebeka Panzió" },
+    { id:"e04bd3ea", name:"[TESZT] Nussbaum Panzió", city:"Keszthely", test:true, preset:"alap", modules:3,
+      period:"monthly", cycle:2780, lastPaid:103, lastPaidAt:"2026-10-14", discount:{pct:98, kind:"próba-kampány", amount:5077},
+      method:"invoice", card:null, cardExp:null, next:"2026-11-29", status:"active", cancelAtEnd:true,
+      started:"2026-10-14", cancelledAt:"2026-10-14", frozenAt:null, endedAt:null, failed:0, owed:0,
+      domain:null, partner:"4caf3c42", lead:"[TESZT] Nussbaum Panzió" },
+  ],
+  // one row per month: paid payments (gross), invoices issued, failed invoice attempts, failed charges
+  facts: [
+    { m:"2026-10", rows:[ {test:true, paid:103, inv:1, invFail:2, chargeFail:0}, {test:true, paid:55, inv:1, invFail:0, chargeFail:0} ] },
+    { m:"2026-11", rows:[ {test:false, paid:4957, inv:1, invFail:0, chargeFail:0} ] },
+  ],
+  trials: [
+    { name:"Sáma Vendégház", until:"2026-11-11", offer:25, est:null },
+    { name:"Marilyn Vendégház", until:"2026-11-16", offer:25, est:null },
+  ],
+  domainCost:1990,
+};
+
+// SIMULATED — deterministic invented sample (26 tenants over 12 months). NOT data.
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function buildSim(){
+  const r = mulberry(7);
+  const names = ["Napfény Vendégház","Tölgyfa Apartman","Kék Duna Panzió","Somló Lak","Hajnal Vendégház","Kőris Apartmanház","Pipacs Lak","Balaton Apartman","Hegyalja Panzió","Nádas Vendégház","Szőlőskert Lak","Villa Fenyő","Csillag Apartman","Mandula Vendégház","Gesztenye Panzió","Patak Lak","Rózsa Apartmanház","Juhar Vendégház","Liget Panzió","Holló Lak","Ezüst Hárs","Bodza Vendégház","Kikötő Apartman","Levendula Lak","Szirom Panzió","Malom Vendégház"];
+  const cities = ["Keszthely","Balatonfüred","Eger","Tokaj","Szentendre","Siófok","Hévíz","Pécs","Sopron","Tihany","Gyula","Visegrád"];
+  const presets = [["alap",2780,3],["ajanlott",4740,7],["teljes",7000,12],["egyedi",5650,9]];
+  const subs = [];
+  names.forEach((nm,i)=>{
+    const p = presets[Math.floor(r()*presets.length)];
+    const annual = r()<0.3;
+    const startOff = Math.floor(r()*360);               // days before TODAY
+    const started = addDays(TODAY,-startOff);
+    const period = annual ? "annual" : "monthly";
+    const monthly = p[1];
+    const cycle = annual ? monthly*10 : monthly;        // 2 free months
+    // next charge: next anniversary after today
+    let next = started; const step = annual?12:1;
+    while (next <= TODAY) next = addMonths(next, step);
+    const disc = r()<0.55 ? 25 : 0;
+    const method = r()<0.82 ? "token" : "invoice";
+    const exp = method==="token" ? ym(addMonths(TODAY, Math.floor(r()*30)-1)) : null;
+    let status="active", cancelAtEnd=false, cancelledAt=null, frozenAt=null, endedAt=null, failed=0, owed=0;
+    const x = r();
+    if (x<0.08){ status="cancelled"; endedAt=addDays(TODAY,-Math.floor(r()*Math.min(startOff,200))); cancelledAt=addDays(endedAt,-20); }
+    else if (x<0.13){ cancelAtEnd=true; cancelledAt=addDays(TODAY,-Math.floor(r()*20)); }
+    else if (x<0.17){ status="frozen"; frozenAt=addDays(TODAY,-Math.floor(r()*25)); failed=2; owed=cycle; }
+    else if (x<0.22){ status="past_due"; failed=1; owed=cycle; }
+    // pin the edge cases so the sample always shows every state once or twice
+    if (i===3){ status="past_due"; failed=1; owed=cycle; cancelAtEnd=false; }
+    if (i===8){ status="frozen"; frozenAt=addDays(TODAY,-9); failed=3; owed=cycle; cancelAtEnd=false; }
+    if (i===12 && method==="token"){ /* card dies before the next charge */ }
+    const hasDomain = r()<0.45;
+    const expFix = (i===12||i===19) ? ym(addMonths(next,-1)) : exp;
+    const methodFix = (i===12||i===19) ? "token" : method;
+    subs.push({ id:"sim"+i, name:nm, city:cities[i%cities.length], test:false, preset:p[0], modules:p[2],
+      period, cycle, lastPaid: disc && startOff<31 ? Math.round(cycle*(1-disc/100)) : cycle, lastPaidAt: addMonths(next,-step),
+      discount: disc ? {pct:disc, kind:"megkeresési ajánlat", amount: Math.round(cycle*disc/100)} : null,
+      method:methodFix, card: methodFix==="token" ? (r()<0.6?"MasterCard":"Visa")+" ·"+String(1000+Math.floor(r()*8999)) : null, cardExp:expFix,
+      next, status, cancelAtEnd, started, cancelledAt, frozenAt, endedAt, failed, owed,
+      domain: hasDomain ? {name: slug(nm)+".hu", state:"live", renew: anniversaryAfter(started), cost:1990} : null,
+      partner:"sim", lead:nm });
+  });
+  subs.push({ id:"simT", name:"[TESZT] Próba Panzió", city:"Gödöllő", test:true, preset:"alap", modules:3, period:"monthly", cycle:2780, lastPaid:55, lastPaidAt:"2026-10-21",
+    discount:{pct:98,kind:"próba-kampány",amount:2725}, method:"token", card:"Visa ·4242", cardExp:"2027-04", next:"2026-11-21", status:"active", cancelAtEnd:false,
+    started:"2026-10-21", cancelledAt:null, frozenAt:null, endedAt:null, failed:0, owed:0, domain:null, partner:"sim", lead:"[TESZT] Próba Panzió" });
+  // facts: every past cycle of every subscription = one payment (frozen/past_due: last cycle unpaid)
+  const fm = new Map();
+  for (const s of subs){
+    const step = s.period==="annual"?12:1; let d = s.started; let first=true;
+    while (d <= TODAY && (!s.endedAt || d < s.endedAt)){
+      const unpaid = (s.status==="frozen"||s.status==="past_due") && addMonths(d,step) > TODAY;
+      const k = ym(d); if(!fm.has(k)) fm.set(k,[]);
+      fm.get(k).push({ test:s.test, paid: unpaid?0:(first && s.discount ? Math.round(s.cycle*(1-s.discount.pct/100)) : s.cycle), inv: unpaid?0:1, invFail: 0, chargeFail: unpaid ? s.failed : 0 });
+      first=false; d = addMonths(d, step);
+    }
+  }
+  const facts = [...fm.entries()].sort().map(([m,rows])=>({m,rows}));
+  return { subs, facts, trials:[
+    { name:"Fecske Vendégház", until:"2026-11-08", offer:25 }, { name:"Vadrózsa Lak", until:"2026-11-12", offer:25 },
+    { name:"Akác Apartman", until:"2026-11-15", offer:0 }, { name:"Remete Panzió", until:"2026-11-17", offer:25 } ], domainCost:1990 };
+}
+
+/* ───────── date & format helpers ───────── */
+function parse(d){const [y,m,dd]=d.split("-").map(Number);return {y,m,d:dd}}
+function iso(y,m,d){return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+function addMonths(d,n){const p=parse(d);let y=p.y,m=p.m+n;while(m>12){m-=12;y++}while(m<1){m+=12;y--}const last=new Date(Date.UTC(y,m,0)).getUTCDate();return iso(y,m,Math.min(p.d,last))}
+function addDays(d,n){const t=new Date(d+"T12:00:00Z");t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)}
+function ym(d){return d.slice(0,7)}
+function anniversaryAfter(d){let x=d;while(x<=TODAY)x=addMonths(x,12);return x}
+function slug(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"")}
+const MONTHS=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
+function mLabel(k){const [y,m]=k.split("-").map(Number);return `${y===2026?"":y+". "}${MONTHS[m-1]}`}
+function dLabel(d){if(!d)return "—";const p=parse(d);return `${p.y}. ${String(p.m).padStart(2,"0")}. ${String(p.d).padStart(2,"0")}.`}
+const nf=new Intl.NumberFormat("hu-HU",{useGrouping:"always"});
+function ft(n){return nf.format(Math.round(n))+" Ft"}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+const IC = {
+  warn:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2 15 14H1z"/><path d="M8 6.5v3.5M8 12v.01"/></svg>',
+  card:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/><path d="M1.5 6.5h13"/></svg>',
+  ok:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 8.5 3 3 7-7"/></svg>',
+  stop:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5.5 5.5l5 5"/></svg>',
+};
+
+/* ───────── model (same functions for live and simulated) ───────── */
+const S = { v:"A", d:"live", size:"d", tests:"out", horizon:6, sel:null, sort:"next", state:"all" };
+
+function view(){
+  const src = S.d==="live" ? LIVE : SIM;
+  const subs = src.subs.filter(s => S.tests==="in" || !s.test);
+  const facts = src.facts.map(f => ({ m:f.m, rows:f.rows.filter(r => S.tests==="in" || !r.test) }));
+  return { src, subs, facts, trials:src.trials };
+}
+const monthly = s => s.period==="annual" ? s.cycle/12 : s.cycle;
+const live = s => s.status==="active" || s.status==="past_due";
+function cardOkOn(s, d){ return s.cardExp && s.cardExp >= ym(d); }
+
+function forecast(subs, horizon, domainCost){
+  const start = ym(TODAY); const months=[];
+  for (let i=0;i<horizon;i++) months.push(ym(addMonths(TODAY.slice(0,8)+"01", i)));
+  const end = months[months.length-1];
+  const by = new Map(months.map(m=>[m,{m, sure:0, est:0, out:0, items:[]}]));
+  for (const s of subs){
+    if (!live(s)) continue;
+    const step = s.period==="annual"?12:1;
+    let d = s.next;
+    while (ym(d) <= end){
+      if (s.cancelAtEnd) { by.has(ym(d)) && by.get(ym(d)).items.push({s, d, amount:0, kind:"end", why:"lemondta — a periódus végén megszűnik, nem terhelünk"}); break; }
+      let kind="sure", why="tárolt kártya, nem lemondott";
+      if (s.status==="past_due") { kind="est"; why="tartozása van — sikertelen terhelés"; }
+      else if (s.method==="invoice") { kind="est"; why="díjbekérő — a vevő maga fizeti"; }
+      else if (!cardOkOn(s,d)) { kind="est"; why=`a kártya ${s.cardExp.replace("-","/")} hónapban lejár — terhelés előtt`; }
+      const b = by.get(ym(d)); if (b){ b[kind]+=s.cycle; b.items.push({s,d,amount:s.cycle,kind,why}); }
+      d = addMonths(d, step);
+    }
+    if (s.domain){ let r = s.domain.renew; while (ym(r)<=end){ const b=by.get(ym(r)); if(b){ b.out += s.domain.cost; b.items.push({s,d:r,amount:-s.domain.cost,kind:"out",why:`${s.domain.name} megújítása a regisztrátornál (nettó kiadás)`}); } r=addMonths(r,12);} }
+  }
+  return months.map(m=>by.get(m));
+}
+
+function kpis(subs, facts){
+  const act = subs.filter(live);
+  const going = act.filter(s=>!s.cancelAtEnd);
+  const mrr = going.reduce((a,s)=>a+monthly(s),0);
+  const leaving = act.filter(s=>s.cancelAtEnd);
+  const from = addMonths(TODAY,-3);
+  const atStart = subs.filter(s => s.started <= from && (!s.endedAt || s.endedAt > from)).length;
+  const ended = subs.filter(s => s.endedAt && s.endedAt > from && s.endedAt <= TODAY).length;
+  const churn = atStart ? ended/atStart : null;
+  const paid30 = facts.flatMap(f=>f.rows).reduce((a,r)=>a+r.paid,0);
+  return { act, going, mrr, arr:mrr*12, avg: going.length? mrr/going.length : null, leaving,
+    nMonthly: act.filter(s=>s.period==="monthly").length, nAnnual: act.filter(s=>s.period==="annual").length,
+    frozen: subs.filter(s=>s.status==="frozen").length, churn, atStart, ended, paid30,
+    owed: subs.reduce((a,s)=>a+s.owed,0), failed: subs.reduce((a,s)=>a+s.failed,0) };
+}
+
+function movement(subs){
+  const keys = new Set(); subs.forEach(s=>{keys.add(ym(s.started)); s.cancelledAt&&keys.add(ym(s.cancelledAt)); s.frozenAt&&keys.add(ym(s.frozenAt)); s.endedAt&&keys.add(ym(s.endedAt));});
+  const months = [...keys].filter(k=>k<=ym(TODAY)).sort().slice(-6);
+  return months.map(m=>{
+    const nw = subs.filter(s=>ym(s.started)===m).length;
+    const cx = subs.filter(s=>s.cancelledAt && ym(s.cancelledAt)===m).length;
+    const fz = subs.filter(s=>s.frozenAt && ym(s.frozenAt)===m).length;
+    const en = subs.filter(s=>s.endedAt && ym(s.endedAt)===m).length;
+    const endOf = addMonths(m+"-01",1);
+    const active = subs.filter(s=>s.started < endOf && (!s.endedAt || s.endedAt >= endOf)).length;
+    return {m,nw,cx,fz,en,active};
+  });
+}
+
+function nextWarn(s){
+  if (s.status==="frozen") return {cls:"bad", ic:IC.stop, txt:"Befagyott — nem fizetett"};
+  if (s.status==="past_due") return {cls:"bad", ic:IC.warn, txt:`Sikertelen terhelés (${s.failed}×)`};
+  if (s.status==="cancelled") return {cls:"", ic:"", txt:"Megszűnt"};
+  if (s.cancelAtEnd) return {cls:"warn", ic:IC.stop, txt:"Lemondta — "+dLabel(s.next)+" megszűnik"};
+  if (s.method==="token" && !cardOkOn(s,s.next)) return {cls:"warn", ic:IC.card, txt:"Kártya lejár a terhelés előtt"};
+  return {cls:"ok", ic:IC.ok, txt:"Rendben"};
+}
+
+/* ───────── render pieces ───────── */
+function kpiTiles(k){
+  const none = (t)=>`<div class="v none">${t}</div>`;
+  return `<div class="kpis">
+    <div class="kpi"><div class="l">Aktív előfizető</div><div class="v">${k.act.length}</div><div class="s">havi ${k.nMonthly} · éves ${k.nAnnual}${k.frozen?` · befagyott ${k.frozen}`:""}${k.leaving.length?` · lemondta ${k.leaving.length}`:""}</div></div>
+    <div class="kpi"><div class="l">MRR — havi ismétlődő</div>${k.going.length?`<div class="v">${ft(k.mrr)}</div>`:none("nincs előfizető")}<div class="s">listaáron, az éves díj 1/12-e</div></div>
+    <div class="kpi"><div class="l">ARR — éves</div>${k.going.length?`<div class="v">${ft(k.arr)}</div>`:none("—")}<div class="s">MRR × 12</div></div>
+    <div class="kpi"><div class="l">Átlagos díj / hó</div>${k.avg!=null?`<div class="v">${ft(k.avg)}</div>`:none("—")}<div class="s">${k.going.length} megújuló előfizetés</div></div>
+    <div class="kpi"><div class="l">Lemorzsolódás · 3 hó</div>${k.churn!=null?`<div class="v">${(k.churn*100).toFixed(1).replace(".",",")} %</div><div class="s">${k.ended} megszűnt / ${k.atStart} induló</div>`:`${none("nincs adat")}<div class="s">3 hónapja még nem volt előfizető</div>`}</div>
+  </div>`;
+}
+function kpiStrip(k){
+  return `<div class="strip">
+    <div>Aktív<b>${k.act.length}</b></div><div>Havi / éves<b>${k.nMonthly} / ${k.nAnnual}</b></div>
+    <div>MRR<b>${k.going.length?ft(k.mrr):"—"}</b></div><div>ARR<b>${k.going.length?ft(k.arr):"—"}</b></div>
+    <div>Átlagdíj/hó<b>${k.avg!=null?ft(k.avg):"—"}</b></div>
+    <div>Lemorzsolódás 3 hó<b>${k.churn!=null?(k.churn*100).toFixed(1).replace(".",",")+" %":"nincs adat"}</b></div>
+    <div>Kintlévőség<b>${ft(k.owed)}</b></div></div>`;
+}
+function horizonChips(){
+  return `<div class="chips" role="group" aria-label="Előrejelzés hossza">${[3,6,12].map(h=>`<button data-h="${h}" class="${S.horizon===h?"on":""}">${h} hó</button>`).join("")}</div>`;
+}
+function filterRow(n){
+  return `<div class="filt">
+    <label>Előrejelzés</label>${horizonChips()}
+    <label>Tesztek</label><div class="chips"><button data-t="out" class="${S.tests==="out"?"on":""}">Kizárva</button><button data-t="in" class="${S.tests==="in"?"on":""}">Beszámítva</button></div>
+    <span class="n">${n}</span></div>`;
+}
+
+function fcChart(fc, h=220){
+  const W=S.size==="m"?360:640; if(S.size==="m") h=230;
+  const _u=0, pad={l:52,r:8,t:16,b:34};
+  const max = Math.max(1, ...fc.map(b=>b.sure+b.est));
+  const nice = niceMax(max); const iw=W-pad.l-pad.r, ih=h-pad.t-pad.b;
+  const bw = Math.min(46, iw/fc.length*0.62);
+  let g=`<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--viz-est)"/><path d="M0 0v6" stroke="var(--citui-panel)" stroke-width="2"/></pattern></defs>`;
+  for (let i=0;i<=4;i++){const y=pad.t+ih-ih*i/4; g+=`<line x1="${pad.l}" x2="${W-pad.r}" y1="${y}" y2="${y}" stroke="var(--viz-grid)"/><text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="10.5" fill="var(--citui-muted)">${short(nice*i/4)}</text>`;}
+  fc.forEach((b,i)=>{
+    const cx = pad.l + iw*(i+0.5)/fc.length, x=cx-bw/2;
+    const hs = ih*b.sure/nice, he = ih*b.est/nice; const y0=pad.t+ih;
+    const sel = S.sel===b.m;
+    if (hs>0) g+=`<path d="${barPath(x,y0-hs,bw,hs, he<=0)}" fill="var(--viz-sure)"/>`;
+    if (he>0) g+=`<path d="${barPath(x,y0-hs-he-(hs>0?2:0),bw,he,true)}" fill="url(#hatch)" stroke="var(--viz-sure)" stroke-width=".8"/>`;
+    if (hs+he===0) g+=`<line x1="${x}" x2="${x+bw}" y1="${y0-1}" y2="${y0-1}" stroke="var(--viz-ghost)" stroke-width="2"/>`;
+    const mo=+b.m.slice(5), yr=b.m.slice(0,4);
+    g+=`<text x="${cx}" y="${y0+15}" text-anchor="middle" font-size="11" fill="${sel?"var(--citui-ink)":"var(--citui-muted)"}" font-weight="${sel?700:400}">${MONTHS[mo-1]}</text>`;
+    if (i===0||mo===1) g+=`<text x="${cx}" y="${y0+28}" text-anchor="middle" font-size="10" fill="var(--citui-muted)">${yr}</text>`;
+    if (sel) g+=`<rect x="${x-4}" y="${pad.t-4}" width="${bw+8}" height="${ih+8}" fill="none" stroke="var(--citui-cyan-500)" stroke-width="1.5" rx="6"/>`;
+    g+=`<rect class="hit" data-m="${b.m}" x="${cx-iw/fc.length/2}" y="${pad.t}" width="${iw/fc.length}" height="${ih+pad.b}" fill="transparent" style="cursor:pointer"/>`;
+  });
+  return `<div class="chart" data-chart="fc"><svg viewBox="0 0 ${W} ${h}" role="img" aria-label="Várható bevétel havonta">${g}</svg><div class="tip"></div></div>
+   <div class="legend"><span><i style="background:var(--viz-sure)"></i>Biztos — tárolt kártya, nem lemondott</span><span><i style="background:var(--viz-est);outline:1px solid var(--viz-sure)"></i>Becsült — díjbekérő, lejáró kártya, tartozás</span></div>`;
+}
+function factChart(facts){
+  const rows = facts.slice(-6); const W=S.size==="m"?360:640,h=190,pad={l:56,r:10,t:16,b:30};
+  const max = Math.max(1,...rows.map(f=>f.rows.reduce((a,r)=>a+r.paid,0))); const nice=niceMax(max);
+  const iw=W-pad.l-pad.r, ih=h-pad.t-pad.b; const bw=Math.min(46, iw/Math.max(rows.length,1)*0.62);
+  let g="";
+  for (let i=0;i<=4;i++){const y=pad.t+ih-ih*i/4; g+=`<line x1="${pad.l}" x2="${W-pad.r}" y1="${y}" y2="${y}" stroke="var(--viz-grid)"/><text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="10.5" fill="var(--citui-muted)">${short(nice*i/4)}</text>`;}
+  rows.forEach((f,i)=>{const v=f.rows.reduce((a,r)=>a+r.paid,0);const cx=pad.l+iw*(i+0.5)/rows.length;const hh=ih*v/nice;const y0=pad.t+ih;
+    g+= hh>0?`<path d="${barPath(cx-bw/2,y0-hh,bw,hh,true)}" fill="var(--viz-sure)"/>`:`<line x1="${cx-bw/2}" x2="${cx+bw/2}" y1="${y0-1}" y2="${y0-1}" stroke="var(--viz-ghost)" stroke-width="2"/>`;
+    g+=`<text x="${cx}" y="${y0-hh-5}" text-anchor="middle" font-size="10.5" fill="var(--citui-ink)">${v?short(v):""}</text><text x="${cx}" y="${y0+16}" text-anchor="middle" font-size="11" fill="var(--citui-muted)">${mLabel(f.m)}</text>`;});
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${h}" role="img" aria-label="Beérkezett fizetések havonta">${g}</svg></div>`;
+}
+function barPath(x,y,w,h,roundTop){const r=Math.min(4,h,w/2);if(!roundTop||h<=0)return `M${x} ${y}h${w}v${h}h${-w}z`;return `M${x} ${y+h}V${y+r}Q${x} ${y} ${x+r} ${y}H${x+w-r}Q${x+w} ${y} ${x+w} ${y+r}V${y+h}z`}
+function niceMax(v){const raw=v/4;const p=Math.pow(10,Math.floor(Math.log10(raw)));for(const m of [1,1.5,2,2.5,3,4,5,6,7.5,8,10]){if(m*p>=raw)return 4*m*p}return 40*p}
+function short(v){if(v>=1e6)return (v/1e6).toFixed(v%1e6?1:0).replace(".",",")+" M";if(v>=1e3)return Math.round(v/1e3)+" e";return String(Math.round(v))}
+
+function fcTable(fc, k){
+  const tot = fc.reduce((a,b)=>({sure:a.sure+b.sure, est:a.est+b.est, out:a.out+b.out}),{sure:0,est:0,out:0});
+  return `<div class="tw"><table><thead><tr><th>Hónap</th><th class="r">Biztos</th><th class="r">Becsült</th><th class="r hide-m">Domain-kiadás</th><th class="r">Összesen</th></tr></thead><tbody>
+  ${fc.map(b=>`<tr class="click ${S.sel===b.m?"sel":""}" data-m="${b.m}"><td>${mLabel(b.m)}</td><td class="r">${b.sure?ft(b.sure):"—"}</td><td class="r">${b.est?ft(b.est):"—"}</td><td class="r hide-m">${b.out?"−"+ft(b.out):"—"}</td><td class="r"><b>${ft(b.sure+b.est-b.out)}</b></td></tr>`).join("")}
+  <tr class="tot"><td>${S.horizon} hónap</td><td class="r">${ft(tot.sure)}</td><td class="r">${ft(tot.est)}</td><td class="r hide-m">${tot.out?"−"+ft(tot.out):"—"}</td><td class="r">${ft(tot.sure+tot.est-tot.out)}</td></tr></tbody></table></div>`;
+}
+function monthDetail(fc){
+  const b = fc.find(x=>x.m===S.sel) || fc.find(x=>x.items.length) || fc[0];
+  if (!b) return "";
+  const items = b.items.slice().sort((a,c)=>a.d.localeCompare(c.d));
+  return `<div class="detail"><h3>${mLabel(b.m)} — ki mennyit, mikor <span class="mut small">(koppints egy hónapra a grafikonon vagy a táblában)</span></h3>
+   ${items.length?`<div class="tw"><table><tbody>${items.slice(0, S.all?999:8).map(it=>`<tr><td class="bigdate">${dLabel(it.d)}</td><td>${esc(it.s.name)}${it.s.test?' <span class="pill test">teszt</span>':""}</td><td class="mut small hide-m">${esc(it.why)}</td><td class="r">${it.kind==="end"?'<span class="pill warn">megszűnik</span>':it.kind==="out"?"−"+ft(-it.amount):ft(it.amount)}${it.kind==="est"?' <span class="pill warn">becsült</span>':""}</td></tr>`).join("")}</tbody></table></div>${items.length>8&&!S.all?`<p style="margin:6px 0 0"><a href="#" data-all="1">+ még ${items.length-8} tétel</a></p>`:""}`:`<p class="nodata">Ebben a hónapban nincs terhelés.</p>`}</div>`;
+}
+function trialsBlock(trials){
+  if (!trials.length) return "";
+  return `<p class="small mut" style="margin:8px 0 0">Nincs benne: ${trials.length} futó próba (${trials.map(t=>`${esc(t.name)} — ${dLabel(t.until)}-ig`).join(", ")}). Hogy hányan rendelnek meg egy próbát, arra még <b>nincs adat</b> (kevés lezárt próba), ezért nem becsüljük.</p>`;
+}
+
+function factTable(facts, k){
+  const rows = facts.slice(-6);
+  if (!rows.length) return `<p class="nodata">Még nem érkezett fizetés.</p>`;
+  return `<div class="tw"><table><thead><tr><th>Hónap</th><th class="r">Beérkezett</th><th class="r">Számla</th><th class="r">Sikertelen terhelés</th><th class="r hide-m">Számla-hiba</th></tr></thead><tbody>
+  ${rows.map(f=>{const s=f.rows.reduce((a,r)=>({p:a.p+r.paid,i:a.i+r.inv,f:a.f+r.invFail,c:a.c+r.chargeFail}),{p:0,i:0,f:0,c:0});
+   return `<tr><td>${mLabel(f.m)}</td><td class="r">${ft(s.p)}</td><td class="r">${s.i} db</td><td class="r">${s.c?`<span class="pill bad">${s.c}×</span>`:"0"}</td><td class="r hide-m">${s.f?`${s.f}× <span class="mut small">(újra kiállítva)</span>`:"0"}</td></tr>`}).join("")}
+  </tbody></table></div><p class="small mut" style="margin:8px 0 0">Kintlévőség ma: <b>${ft(k.owed)}</b>${k.failed?` · ${k.failed} sikertelen terhelés vár újrapróbára`:""}.</p>`;
+}
+function moveTable(subs){
+  const mv = movement(subs);
+  if (!mv.length) return `<p class="nodata">Nincs előfizető.</p>`;
+  return `<div class="tw"><table><thead><tr><th>Hónap</th><th class="r">Új</th><th class="r">Lemondta</th><th class="r hide-m">Befagyott</th><th class="r">Megszűnt</th><th class="r">Aktív a hó végén</th></tr></thead><tbody>
+  ${mv.map(r=>`<tr><td>${mLabel(r.m)}</td><td class="r">${r.nw}</td><td class="r">${r.cx}</td><td class="r hide-m">${r.fz}</td><td class="r">${r.en}</td><td class="r"><b>${r.active}</b></td></tr>`).join("")}</tbody></table></div>`;
+}
+function discountBlock(subs){
+  const withD = subs.filter(s=>s.discount);
+  const given = withD.reduce((a,s)=>a+s.discount.amount,0);
+  const going = subs.filter(s=>live(s)&&!s.cancelAtEnd);
+  const listSum = going.reduce((a,s)=>a+monthly(s),0);
+  const lastSum = going.reduce((a,s)=>a+(s.period==="annual"?s.lastPaid/12:s.lastPaid),0);
+  const byPreset = {}; going.forEach(s=>{(byPreset[s.preset]??={n:0,mrr:0}); byPreset[s.preset].n++; byPreset[s.preset].mrr+=monthly(s);});
+  const presetName={alap:"Alap",ajanlott:"Ajánlott",teljes:"Teljes",egyedi:"Egyedi összeállítás"};
+  return `<p class="small" style="margin:0 0 8px">Kedvezmény az első fizetésekben: <b>${given?"−"+ft(given):"nincs"}</b>${withD.length?` (${withD.length} vevő; ${[...new Set(withD.map(s=>s.discount.pct+"% "+s.discount.kind))].join(", ")})`:""}. Megújuláskor mindenki <b>listaáron</b> fizet: a legutóbbi díjak havi összege ${ft(lastSum)}, a következő ciklusé ${ft(listSum)}.</p>
+   <div class="tw"><table><thead><tr><th>Csomag</th><th class="r">Előfizető</th><th class="r">MRR</th><th class="r">Arány</th></tr></thead><tbody>
+   ${Object.entries(byPreset).sort((a,b)=>b[1].mrr-a[1].mrr).map(([p,v])=>`<tr><td>${presetName[p]||p}</td><td class="r">${v.n}</td><td class="r">${ft(v.mrr)}</td><td class="r">${listSum?Math.round(v.mrr/listSum*100):0} %</td></tr>`).join("")||`<tr><td colspan="4" class="nodata">nincs</td></tr>`}
+   </tbody></table></div><p class="small mut" style="margin:6px 0 0">Modulonkénti bontás a megvalósításban: alapdíj + modulok listaára, a ténylegesen számlázott modulokból (próba-ajándék nélkül).</p>`;
+}
+
+function sortedSubs(subs){
+  let list = subs.slice();
+  if (S.state!=="all") list = list.filter(s => S.state==="attn" ? nextWarn(s).cls!=="ok" : S.state==="ok" ? nextWarn(s).cls==="ok" : true);
+  const key = { next:s=>(live(s)?s.next:"9999"), name:s=>s.name, fee:s=>-monthly(s) }[S.sort];
+  return list.sort((a,b)=>{const x=key(a),y=key(b);return x<y?-1:x>y?1:0});
+}
+function tenantTable(subs, title){
+  const list = sortedSubs(subs);
+  const cnt = (f)=>subs.filter(f).length;
+  const chips = `<div class="chips"><button data-st="all" class="${S.state==="all"?"on":""}">Mind ${subs.length}</button><button data-st="attn" class="${S.state==="attn"?"on":""}">Figyelmet kér ${cnt(s=>nextWarn(s).cls!=="ok")}</button><button data-st="ok" class="${S.state==="ok"?"on":""}">Rendben ${cnt(s=>nextWarn(s).cls==="ok")}</button></div>`;
+  const th = (k,l,c="")=>`<th class="sort ${c} ${S.sort===k?"on":""}" data-sort="${k}">${l}</th>`;
+  const rows = list.map(s=>{const w=nextWarn(s);
+    return `<tr><td><a href="#partner-${s.partner}">${esc(s.name)}</a>${s.test?' <span class="pill test">teszt</span>':""}<div class="small mut">${esc(s.city)}${s.domain?` · ${esc(s.domain.name)}`:""}</div></td>
+     <td>${({alap:"Alap",ajanlott:"Ajánlott",teljes:"Teljes",egyedi:"Egyedi"})[s.preset]}<div class="small mut">${s.modules} modul</div></td>
+     <td class="r">${ft(monthly(s))}${s.discount&&s.lastPaid<s.cycle?`<div class="small mut">első: ${ft(s.lastPaid)} (−${s.discount.pct}%)</div>`:""}</td>
+     <td>${s.period==="annual"?"éves":"havi"}<div class="small mut">${s.method==="token"?"kártya":"díjbekérő"}</div></td>
+     <td class="r">${live(s)&&!s.cancelAtEnd?dLabel(s.next)+`<div class="small mut">${ft(s.cycle)}</div>`:"—"}</td>
+     <td>${s.card?`${esc(s.card)}<div class="small ${s.method==="token"&&!cardOkOn(s,s.next)?"":"mut"}">lejár ${s.cardExp.replace("-","/")}</div>`:'<span class="mut">—</span>'}</td>
+     <td><span class="pill ${w.cls}">${w.ic}${w.txt}</span></td></tr>`;}).join("");
+  const cards = list.map(s=>{const w=nextWarn(s);return `<div class="card"><div class="t"><b><a href="#partner-${s.partner}">${esc(s.name)}</a></b><span class="pill ${w.cls}">${w.ic}${w.txt}</span></div>
+     <div class="small mut" style="margin:0 0 4px">${esc(s.city)} · ${({alap:"Alap",ajanlott:"Ajánlott",teljes:"Teljes",egyedi:"Egyedi"})[s.preset]} · ${s.period==="annual"?"éves":"havi"}${s.test?" · teszt":""}</div>
+     <div class="row"><span>Díj / hó</span><span>${ft(monthly(s))}${s.discount&&s.lastPaid<s.cycle?` · első ${ft(s.lastPaid)}`:""}</span></div>
+     <div class="row"><span>Következő terhelés</span><span>${live(s)&&!s.cancelAtEnd?dLabel(s.next)+" · "+ft(s.cycle):"—"}</span></div>
+     <div class="row"><span>Fizetés</span><span>${s.card?esc(s.card)+" · lejár "+s.cardExp.replace("-","/"):"díjbekérő"}</span></div></div>`}).join("");
+  return `<div class="panel"><h2>${title} <span class="q">koppints a névre: partner-adatlap</span></h2>
+   <div class="filt">${chips}<span class="n">rendezés: <a href="#" data-sort="next">következő terhelés</a> · <a href="#" data-sort="fee">díj</a> · <a href="#" data-sort="name">név</a></span></div>
+   <div class="tw tbl-tenants"><table><thead><tr>${th("name","Szállás")}<th>Csomag</th>${th("fee","Díj / hó","r")}<th>Időszak</th>${th("next","Következő terhelés","r")}<th>Kártya</th><th>Állapot</th></tr></thead><tbody>${rows||`<tr><td colspan="7" class="nodata">Nincs ilyen előfizető.</td></tr>`}</tbody></table></div>
+   <div class="cards">${cards||`<p class="nodata">Nincs ilyen előfizető.</p>`}</div></div>`;
+}
+function alerts(subs){
+  const a = subs.map(s=>({s,w:nextWarn(s)})).filter(x=>x.w.cls==="bad"||x.w.cls==="warn");
+  if (!a.length) return `<div class="warnline ok">${IC.ok}<div>Nincs teendő: minden előfizetés rendben, a következő terhelések kártyára mennek.</div></div>`;
+  return a.map(({s,w})=>`<div class="warnline ${w.cls}">${w.ic}<div><b>${esc(s.name)}</b>${s.test?' <span class="pill test">teszt</span>':""} — ${w.txt}${s.owed?` · tartozás ${ft(s.owed)}`:""}${live(s)&&!s.cancelAtEnd?` · terhelés ${dLabel(s.next)}`:""}</div></div>`).join("");
+}
+
+function head(){
+  return `<div class="crumb">Konzol › <b>Riport</b></div><h1>Riport</h1>
+   <div class="tabs"><span>Tölcsér</span><span>Viselkedés</span><span>Mock</span><span>Próba</span><span class="on">Előfizetők</span></div>`;
+}
+
+function render(){
+  const {subs, facts, trials, src} = view();
+  const k = kpis(subs, facts);
+  const fc = forecast(subs, S.horizon, src.domainCost);
+  if (S.sel && !fc.some(b=>b.m===S.sel)) S.sel=null;
+  const n = `${subs.length} előfizetés${S.tests==="out"?" · tesztek nélkül":""}`;
+  const fcPanel = (big)=>`<div class="panel"><h2>Várható bevétel <span class="q">a tényleges fordulónapokból, listaáron</span></h2>${fcChart(fc, big?250:210)}${fcTable(fc,k)}${monthDetail(fc)}${trialsBlock(trials)}</div>`;
+  let body="";
+  if (S.v==="A"){
+    body = kpiTiles(k) + fcPanel(false) +
+      `<div class="g2"><div class="panel"><h2>Tény-bevétel <span class="q">beérkezett fizetés havonta</span></h2>${factChart(facts)}${factTable(facts,k)}</div>
+       <div class="panel"><h2>Előfizetők mozgása</h2>${moveTable(subs)}</div></div>
+       <div class="panel"><h2>Kedvezmény és csomagok</h2>${discountBlock(subs)}</div>` + tenantTable(subs, "Előfizetők");
+  } else if (S.v==="B"){
+    body = fcPanel(true) + kpiStrip(k) + tenantTable(subs, "Előfizetők") +
+      `<div class="panel"><details><summary>Tény-bevétel, mozgás, kedvezmény</summary>
+        <h2 style="margin-top:12px">Tény-bevétel</h2>${factTable(facts,k)}<h2 style="margin-top:14px">Mozgás</h2>${moveTable(subs)}<h2 style="margin-top:14px">Kedvezmény és csomagok</h2>${discountBlock(subs)}</details></div>`;
+  } else {
+    body = kpiStrip(k) + `<div class="panel"><h2>Figyelmet kér</h2>${alerts(subs)}</div>` + tenantTable(subs, "Ügyfélkönyv") +
+      `<div class="g2"><div class="panel"><h2>Várható bevétel <span class="q">biztos és becsült</span></h2>${fcTable(fc,k)}${monthDetail(fc)}${trialsBlock(trials)}</div>
+       <div class="panel"><h2>Tény-bevétel</h2>${factTable(facts,k)}<h2 style="margin-top:14px">Mozgás</h2>${moveTable(subs)}</div></div>
+       <div class="panel"><h2>Kedvezmény és csomagok</h2>${discountBlock(subs)}</div>`;
+  }
+  const stage = document.getElementById("stage");
+  stage.className = "stage" + (S.size==="m"?" m":"");
+  stage.innerHTML = head() + filterRow(n) + body;
+  document.getElementById("note").innerHTML = S.d==="live"
+    ? `<b>Éles adat, 2026-11-03.</b> 1 valódi vevő (Duna Vibe House) + 2 teszt-előfizetés. A tesztszűrő a „[TESZT]” névre szűr (ugyanaz, mint a Próba fül). A számok a megvalósításban a DB-ből és a díjszámító függvényből jönnek.`
+    : `<b>SZIMULÁLT — kitalált minta</b> (26 szállás, 12 hónap), csak hogy látszódjon, hogyan skálázódik. Nem valós szám.`;
+  wire();
+}
+
+function wire(){
+  const st = document.getElementById("stage");
+  st.querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>{S.horizon=+b.dataset.h;render()});
+  st.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.tests=b.dataset.t;render()});
+  st.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{S.state=b.dataset.st;render()});
+  st.querySelectorAll("[data-sort]").forEach(b=>b.onclick=(e)=>{e.preventDefault();S.sort=b.dataset.sort;render()});
+  st.querySelectorAll("tr[data-m], rect.hit").forEach(el=>el.addEventListener("click",()=>{S.sel=el.dataset.m;S.all=false;render()}));
+  st.querySelectorAll("[data-all]").forEach(a=>a.onclick=(e)=>{e.preventDefault();S.all=true;render()});
+  st.querySelectorAll('[data-chart="fc"]').forEach(ch=>{
+    const tip = ch.querySelector(".tip"); const {subs,src}=view(); const fc=forecast(subs,S.horizon,src.domainCost);
+    ch.querySelectorAll("rect.hit").forEach(r=>{
+      r.addEventListener("mousemove",(e)=>{const b=fc.find(x=>x.m===r.dataset.m);const box=ch.getBoundingClientRect();
+        tip.innerHTML=`<b>${mLabel(b.m)}</b>Biztos: ${ft(b.sure)}<br>Becsült: ${ft(b.est)}${b.out?`<br>Domain-kiadás: −${ft(b.out)}`:""}<br>${b.items.filter(i=>i.kind!=="out"&&i.kind!=="end").length} terhelés`;
+        tip.style.display="block";let x=e.clientX-box.left+12;if(x>box.width-180)x=e.clientX-box.left-190;tip.style.left=x+"px";tip.style.top=(e.clientY-box.top-10)+"px";});
+      r.addEventListener("mouseleave",()=>tip.style.display="none");
+    });
+  });
+}
+document.querySelectorAll(".bar [data-v]").forEach(b=>b.onclick=()=>{S.v=b.dataset.v;mark("v",b);render()});
+document.querySelectorAll(".bar [data-d]").forEach(b=>b.onclick=()=>{S.d=b.dataset.d;S.sel=null;mark("d",b);render()});
+document.querySelectorAll(".bar [data-s]").forEach(b=>b.onclick=()=>{S.size=b.dataset.s;mark("s",b);render()});
+function mark(k,b){document.querySelectorAll(`.bar [data-${k}]`).forEach(x=>x.classList.toggle("on",x===b))}
+const SIM = buildSim();
+const qp = new URLSearchParams(location.search);
+if (qp.get("v")) S.v=qp.get("v"); if (qp.get("d")) S.d=qp.get("d");
+if (qp.get("s")) S.size=qp.get("s"); else if (window.innerWidth<700) S.size="m";
+if (qp.get("h")) S.horizon=+qp.get("h");
+["v","d","s"].forEach(k=>{const val={v:S.v,d:S.d,s:S.size}[k];const b=document.querySelector(`.bar [data-${k}="${val}"]`);b&&mark(k,b)});
+render();
+</script>
+</body></html>

@@ -84,6 +84,8 @@ const VIEW_GROUPS = {
     "src/console/reportViews.ts",
     // ADR-0407: the Riport „Próba” tab is its own view file — its labels are quoted by the KB.
     "src/console/trialReportViews.ts",
+    // Riport „Előfizetők” tab (frozen plan: design-refs/console/elofizetok-riport/) — own view file.
+    "src/console/revenueReportViews.ts",
     // ADR-0360: the redesigned Árazás page — its new panels (Csomagok, Modulok, Saját domain,
     // the overview, the save bar) are rendered HERE; views.ts only assembles them.
     "src/console/pricingPage.ts",

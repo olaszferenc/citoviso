@@ -152,7 +152,7 @@ const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
   return `?${p.toString()}`;
 };
 
-type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial";
+type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue";
 
 /** The Riport tab row — Tölcsér · Viselkedés · Mock (mock-tab README ①) · the coming rounds. */
 export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string): string {
@@ -164,7 +164,8 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
     a("/report/mock", mockQs, T(lang, "Mock")) +
     // ADR-0407: the trial's inside (frozen plan: design-refs/console/proba-riport/).
     a("/report/trial", mockQs.startsWith("?days=") ? mockQs.replace(/&.*$/, "") : "", T(lang, "Próba")) +
-    `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "2. kör — készül"))}">${esc(T(lang, "Pénzügy"))}</a>` +
+    // Subscribers / income / cash-flow forecast (frozen plan: design-refs/console/elofizetok-riport/).
+    a("/report/revenue", "", T(lang, "Előfizetők")) +
     `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "3. kör — készül"))}">${esc(T(lang, "Tenantok"))}</a>` +
     `</nav>`
   );
