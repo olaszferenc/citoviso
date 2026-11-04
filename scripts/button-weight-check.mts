@@ -172,7 +172,11 @@ async function measureRoute(
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
   await ctx.addCookies([{ name: "cit_op_session", value: cookie, url: origin }]);
   const page = await ctx.newPage();
-  const res = await page.goto(`${origin}${route}`, { waitUntil: "networkidle" }).catch(() => null);
+  // "load", then a bounded wait for quiet: a lead page whose photo/proxy requests never settle on the
+  // shared dev DB kept `networkidle` from firing, and the 30 s goto timeout read as "no response"
+  // (2026-11-04, red on clean main too). The buttons are server-rendered — they exist at "load".
+  const res = await page.goto(`${origin}${route}`, { waitUntil: "load", timeout: 60_000 }).catch(() => null);
+  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
   const label = `${vp.tag} · ${route}${poison ? " · MÉRGEZETT" : ""}`;
   if (!res || res.status() >= 400) {
     say(false, `${label}: a lap betölt`, `HTTP ${res?.status() ?? "nincs válasz"}`);

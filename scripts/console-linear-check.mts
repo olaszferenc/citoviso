@@ -177,11 +177,12 @@ for (const size of SIZES) {
   ok(`CSAK a CRM nyitva, a ${crmN} funkciója látszik`, (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 1 && (await page.locator(`${navSel} .con-nav__grp.is-open`).getAttribute("data-grp")) === "crm" && (await page.locator(`${navSel} .con-nav__kids:not([hidden]) .con-nav__sub`).count()) === crmN);
   ok(`a CRM widgetje + a CRM 3 figyelmeztetése + a ${crmN} funkció listája`, (await page.locator("[data-widget=crm]").count()) === 1 && (await page.locator("[data-widget]").count()) === 1 && (await page.locator("[data-attention] .con-att__row").count()) === 3 && (await page.locator("[data-functions] a").count()) === crmN);
   ok("a funkció-lista számlálója = a sáv számlálója (600 · 11 · 13/14 eladó)", (await page.locator("[data-functions]").innerText()).includes("600") && (await page.locator("[data-functions]").innerText()).includes("13/14 eladó"));
-  // The chevron folds WITHOUT navigating.
+  // The chevron folds WITHOUT navigating. The finance leaf count comes from the nav registry too
+  // (a new leaf — e.g. „Domainek”, SUB-E 2026-11-04 — must not redden this).
   const before = page.url();
   if (mobile) await page.click(".con-top__menu");
   await page.click(`${navSel} .con-nav__grp[data-grp=finance] [data-fold]`);
-  ok("a nyíl csak hajtogat: Pénzügy kinyílt, a lap maradt", page.url() === before && (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 2 && (await page.locator(`${navSel} .con-nav__grp[data-grp=finance] + .con-nav__kids:not([hidden]) .con-nav__sub`).count()) === 5);
+  ok("a nyíl csak hajtogat: Pénzügy kinyílt, a lap maradt", page.url() === before && (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 2 && (await page.locator(`${navSel} .con-nav__grp[data-grp=finance] + .con-nav__kids:not([hidden]) .con-nav__sub`).count()) === findGroup("finance")!.children.length);
   await page.click(`${navSel} .con-nav__grp[data-grp=finance] [data-fold]`);
   ok("…és vissza is csukja", (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 1);
 

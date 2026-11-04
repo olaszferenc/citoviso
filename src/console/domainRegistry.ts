@@ -17,7 +17,7 @@
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
-import { domainFeeForCycle, loadPricing, offeredTldOf } from "../pricing.js";
+import { domainFeeForCycle, getCurrency, loadPricing, offeredTldOf } from "../pricing.js";
 import { renewableModuleIds } from "../payment/billing.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { isHouseDomain } from "../domains/domainRenewal.js";
@@ -88,6 +88,8 @@ export interface DomainRecord {
   readonly delayNoticeAt: Date | null;
   readonly registrarNote: string | null;
   readonly registrarNoteAt: Date | null;
+  /** .hu: when the registry's confirmation link reached our mailbox (0122); null = not seen. */
+  readonly confirmLinkAt: Date | null;
   /** Measured at the registrar by the daily sync; until its first run, purchase + 1 year. */
   readonly expiresAt: Date | null;
   /** True while the daily renewal sync has not read this name yet (the expiry is the estimate). */
@@ -100,6 +102,8 @@ export interface DomainRecord {
   readonly cover: DomainCover;
   /** Monthly fee the tenant pays for the name (0 = package content / house). Market currency. */
   readonly monthlyFee: number;
+  /** Currency of `monthlyFee` (the market's). */
+  readonly feeCurrency: string;
   /** NET yearly purchase / renewal cost at the registrar; null = never measured. */
   readonly costNet: number | null;
   readonly costCurrency: string | null;
@@ -388,6 +392,7 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
       delayNoticeAt: r.delay_notice_at,
       registrarNote: r.registrar_note,
       registrarNoteAt: r.registrar_note_at,
+      confirmLinkAt: r.confirm_link_at,
       expiresAt: r.domain_expires_at,
       expiryEstimated: !!r.domain_expires_at && !r.domain_renew_checked_at,
       autoRenew: r.domain_auto_renew,
@@ -396,6 +401,7 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
       renewProblem: r.domain_renew_problem,
       cover,
       monthlyFee,
+      feeCurrency: getCurrency(),
       costNet: tldRow?.costNet ?? null,
       costCurrency: tldRow?.costCurrency ?? null,
       attention: attentionOf(

@@ -78,6 +78,8 @@ import {
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
 import { getEditableContacts, getPartnerProfile, updatePartner, type PartnerContactInput } from "./partnerProfile.js";
+import { domainStats, listDomains } from "./domainRegistry.js";
+import { domainsPage, parseDomainsQuery } from "./domainRegistryViews.js";
 import { fmtTime as partnerFmtTime, type PartnerEditState } from "./partnerProfileViews.js";
 import { partnerActivityHtml } from "./partnerActivity.js";
 import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
@@ -2212,6 +2214,13 @@ async function handle(
       type: t === "customer" || t === "supplier" ? t : undefined,
     };
     return send(res, 200, partnersPage(await listPartners(q), q));
+  }
+  // GET /domains — the domain registry (SUB-E, approved hybrid 2026-11-04): every name we
+  // bought and hold, its life path, expiry and cover. Read-only; `?open=<id>` deep-links the drawer.
+  if (method === "GET" && path === "/domains") {
+    const now = new Date();
+    const all = await listDomains(now);
+    return send(res, 200, domainsPage(all, domainStats(all, now), parseDomainsQuery(url), now));
   }
   // Shared query-string reader for the Bizonylatok filters (page + CSV export).
   const partnerDocQueryFrom = (u: URL): PartnerDocQuery => {

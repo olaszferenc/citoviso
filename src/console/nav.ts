@@ -137,6 +137,8 @@ export function navTree(lang = "hu"): readonly NavNode[] {
         { kind: "leaf", id: "open-items", label: T(lang, "Nyitott tételek"), href: "/documents?paid=0" },
         { kind: "leaf", id: "partners", label: T(lang, "Partnerek"), href: "/partners", match: ["/partner/"] },
         { kind: "leaf", id: "partner-new", label: T(lang, "Új partner rögzítése"), href: "/partners/new" },
+        // SUB-E (2026-11-04, approved hybrid): every name we bought and hold — cost, renewal, partner.
+        { kind: "leaf", id: "domains", label: T(lang, "Domainek"), href: "/domains" },
       ],
     },
     {

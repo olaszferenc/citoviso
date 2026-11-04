@@ -2058,6 +2058,14 @@ if [ -f scripts/domain-registry-check.mts ] && \
   echo "[pre-commit] domain-registry-check (domain-nyilvántartás: életút, figyelem, statisztika)…"
   npx tsx scripts/domain-registry-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Domain registry PAGE (/domains, approved hybrid assets/design-refs/console/domain-nyilvantartas/):
+# table on desktop / cards on phone, the drawer (row, ESC, deep link), timeline truth, the
+# „Figyelmet kér” filter, live search, help. Fixture records, real CSS, real browser; no DB.
+if [ -f scripts/domain-registry-ui-check.mts ] && \
+   changed_files | grep -qE '^src/console/domainRegistry(Views)?\.ts|^public/assets/ui/citui-console\.css|^scripts/domain-registry-ui-check'; then
+  echo "[pre-commit] domain-registry-ui-check (a /domains lap a jóváhagyott terv szerint)…"
+  npx tsx scripts/domain-registry-ui-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Own-domain renewal (src/domains/domainRenewal.ts): the NAME's renewal at the registrar — the auto-renew switch per the owner's rule
 # (paying: on · ended ≥90 days before expiry: off · ended <90: one more renewal, then off),
 # the daily prod timer, the stall-watch sweep, the landing redirect. No DB, no network.
