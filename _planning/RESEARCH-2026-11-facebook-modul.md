@@ -43,9 +43,10 @@ Sorrend a várható hatás szerint (a szállásadónak a foglalás számít, nem
 2. **Rövid videó (Reels), 15–30 mp** — a szállás saját fotóiból diavetítés (lassú zoom/úsztatás, felirat,
    zene). Az oldal-posztok közül jellemzően a Reels jut el a legtöbb emberhez organikusan (iparági
    tapasztalat, nem garancia). Hetente 1.
-3. **Program-javaslat a környékről** — helyi rendezvény, szüret, adventi vásár, túraútvonal, fürdő.
-   Forrás: a település/rendezvény nyilvános oldala, amit a kolléga Chrome-ban megnéz. ⛔ Csak forrásolt tény
-   (dátum, hely) — §B.17 tényhűség; a kitalált rendezvény rosszabb a semminél.
+3. **Program-javaslat a környékről** — NEM új kutatás: a meglévő **„Automata heti programajánló”**
+   modul (`poi`, 490 Ft/hó, `src/modules.ts`; gyűjtés és válogatás `src/events/` — `gather.ts`, `pool.ts`,
+   `picks.ts`) adja. A Facebook-poszt a tenant által kiválasztott programokból készül, így forrásolt és
+   jóváhagyott. Akinek nincs `poi` modulja, annál ez az elem kimarad (vagy a modul ráajánlható).
 4. **Hely és hangulat** — a szállás egy-egy képe, évszakhoz kötött mondattal (őszi terasz, kandalló).
 5. **Évszak / ünnep** — Márton-nap, Valentin, hosszú hétvégék — mindig egy szabad időponttal vagy
    ajánlattal összekötve, különben üres.
@@ -68,14 +69,15 @@ havi egysoros jelentés a tenant-adminban.
 
 | Lépés | Eszköz | Költség |
 |---|---|---|
-| Szöveg + képválasztás + program-kutatás | digitális kolléga (saját RC-session, Chrome) | előfizetés-keret |
+| Szöveg + képválasztás | digitális kolléga (saját RC-session) | előfizetés-keret |
+| Program-javaslat | meglévő `poi` modul (`src/events/`) | már fut |
 | Reels-videó a fotókból | `ffmpeg` szkript (kód), Debianon CPU-n is megy | $0 |
 | Zene a videóhoz | jogtiszta, kereskedelmi licencű könyvtár (licenc a repóban) | egyszeri / $0 |
 | Szabad időpont felismerése | kód a foglalási naptárból | $0 |
 | Közzététel, időzítés | kód: Graph API + systemd timer | $0 |
 
 **Keret-becslés (NEM mért — a pilotban mérni kell `pipemeter.py`-jal):** ha a kolléga egy tenant heti 3
-posztját egy ülésben írja, a meglévő adatból (képek, naptár) + 1–2 Chrome-oldal a programhoz, akkor
+posztját egy ülésben írja a meglévő adatból (képek, naptár, `poi`-programok), akkor
 tenantonként hetente ~$1–3 API-egyenérték várható (≈ 2–6 cent valós pénzben, 1 API-$ ≈ 2 cent).
 100 tenantnál ez heti ~$100–300, a heti keret (~$2 275) ~4–13%-a. Ez a pipeline-munkatársak mellett
 (heti ~$1 586) **már szűkös**, ezért a pilot fő mérése a tenantonkénti keret-fogyás.
@@ -83,7 +85,7 @@ Opus marad (kisebb modell rossz minőséget adott — tulaj, 11-03).
 
 ## 5. Döntési pontok (tulaj)
 
-1. Indulhat-e a pilot a Citoviso SAJÁT oldalán (teszt: rendszerfelhasználó, posztolás, Reels)?
-2. Ki az a valós személy, akinek a fiókjával a portfólió és az új oldalak létrejönnek?
+1. ✅ (tulaj, 11-04) A pilot a Citoviso SAJÁT Facebook-oldalán fut, a tulaj személyes fiókjával tesztelünk.
+2. Élesben kinek a fiókjával jönnek létre az új oldalak? (A pilot a tulajéval megy.)
 3. A posztok a szállásadó jóváhagyása nélkül mennek-e ki (a tenant-adminban látja és leállíthatja)?
 4. A modul ára — a pilot keret-mérése után.
