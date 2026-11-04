@@ -33,6 +33,9 @@ dolgozik tovább Neo, Poe és Vera.
 4. **Új hely:** megnyitod, és felírod a tényadatait (§4).
 5. **Honlap-ellenőrzés:** honlap nélküli vagy csak portál-linkes helynél **egy** Google-keresés,
    a találatok megnyitása, ítélet (nincs · van · bizonytalan) — Neo szabályai szerint (ONTOLOGIA §2).
+   ⚠️ 2026-11-04 óta (ADR-XXXX) **Neo ezt az ítéletet nem ellenőrzi újra**, csak a „bizonytalan”-t.
+   Ezért ha nem vagy biztos, írd ki egyértelműen, hogy **bizonytalan** (és miért) — ne „nincs”-et
+   tippelj: a tévesen „nincs”-nek ítélt saját honlapú szállás mock nélkül is megkeresést kapna.
 6. **Csempe lezárása**, ha minden kulcsszó és minden új hely kész. A feldolgozás a rendszeré.
 7. **Jelentés** a tulajnak (RUNBOOK §6).
 

@@ -60,6 +60,17 @@ Minden állításhoz egy sor a jelentés táblájába:
 - Ha egy leadnek több mockja van, a második mocknál a már ítélt, SZÓ SZERINT azonos
   állításokat hivatkozással jelölheted („= mock A #3”), de az eltérőket újra ítéled.
 
+## 4b. A lánc-ellenőrzés (CHARTER §3b, 2026-11-04)
+
+Mockonként, a tényítélet után, egy-egy sor a jelentésbe:
+- **kontakt** ✓/✗ — HU mobil vagy saját e-mail a lead-lapon; különben TARTVA.
+- **iker** ✓/✗ — `~/rc-briefs/bb-tools/tw.sh <l8>`; ha „→ OK”, rendben, különben TARTVA iker.
+- **sorrend** — no_site vagy outdated (8:2); modern → nem megy.
+- **képek** ✓/✗ — a mock kiválasztott képei nagyban: személy, rendszám, vízjel/logó,
+  szöveg-/térképkép → levételi kérés pontos URL-lel; ≥6 egyedi saját kép + hálókép, különben TARTVA.
+- Átfedéses hét (11-04–11-11): egy sor a `~/rc-briefs/atfedes/vera-ÉÉÉÉHHNN.txt`-be
+  (`l8|PASS/J/TARTVA|kontakt ✓✗ iker ✓✗ képek ✓✗|ok`).
+
 ## 5. Jelentés
 
 - Fájl: `~/vera/jelentesek/ÉÉÉÉ-HH-NN-<jegy>.md` — leadenként fejléc, forrás-kivonat,

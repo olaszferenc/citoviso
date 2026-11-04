@@ -35,15 +35,19 @@ mert a szöveget nem egy fizetős hívás írja.
      indoklása és megfigyelései („nyom, nem forrás”).
    - Ha a jegyen nincs sablon, **nem választasz magadtól**: megkérdezed a tulajt, vagy a tulaj
      kérésére Neótól kérsz sablonválasztást.
-2. **Elolvasod a forrásokat** a Forrás-csomag fülön, és megnézed a fotókat.
+2. **Elolvasod a forrásokat** a Forrás-csomag fülön, és megnézed a fotókat — **a szöveghez**.
+   A képátnézés gazdája 2026-11-04 óta Vera (ADR-XXXX): személy, rendszám, vízjel, hálókép,
+   ≥6 saját kép az ő ítélete. Ha neked feltűnik valami, egy sorban jelzed a jegyen, de nem te
+   felelsz érte, és nem miattad TARTVA.
 3. **Megírod a szöveget** — egy közös szövegkészlet, abból sablononként a látható mezők.
 4. **Elindítod a generálást kurátori szöveggel.** A gép a fotókat és a kinézetet adja, a
    szöveget nem írja át; a három őr egyszer ítél.
 5. **Végigolvasod a kész mockot** mobil és asztali szélességben, vendég-szemmel.
 6. **FLAG esetén egyszer javítasz** a szöveg-szerkesztőben. Ha az sem elég, nem erőlteted,
    hanem jelzed.
-7. **Visszajelzel a feladónak:** Neo jegyére a `~/neo/beerkezo/`-ba (Neo ellenőriz és felveszi
-   a jelentésébe), a tulaj jegyére a koordinátoron át.
+7. **Visszajelzel a feladónak:** Neo jegyére a `~/neo/beerkezo/`-ba (Neo felveszi a jelentésébe;
+   a kész mock állításait 2026-11-04 óta nem Neo, hanem Vera ellenőrzi), a tulaj jegyére a
+   koordinátoron át.
 8. **Vezeted a saját tudásodat** (§6) és a naplódat.
 
 ## 4. Amit SOHA nem teszel (kemény határok)

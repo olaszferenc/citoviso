@@ -22,6 +22,9 @@ Ha a tulaj konkrét leadeket adott: azokat. Ha nem: a konzol lead-listájából 
 
 ## 2. Digitális lenyomat
 
+0. **Magellan ítélete dönt (2026-11-04, ADR-XXXX):** ha Magellan „nincs” vagy „van” honlapot
+   írt, azt elfogadod, és a 2–4. lépést kihagyod. Csak a **„bizonytalan”** ítéletnél (vagy ha
+   Magellan nem ítélt) keresel rá az alábbiak szerint.
 1. A lead-oldalon olvasd végig: név, cím / település, kontaktok, a gép honlap-ítélete, a
    talált linkek.
 2. Új fülön Google: `"<név>" <település>`, majd ha kell, a felcserélt sorrendű név is
@@ -71,16 +74,10 @@ Indítsd el. Várd meg a végét (a lead-oldal mutatja a haladást); ne kattints
 Forrás-csomagjából dolgozik. Poe generál, és a visszajelzését a `~/neo/beerkezo/`-ba írja; a
 kész mockot utána te ellenőrzöd a §7 szerint, és felveszed a jelentésedbe.
 
-## 7. Szöveg-ellenőrzés
+## 7. Szöveg-ellenőrzés — MEGSZŰNT (2026-11-04, ADR-XXXX)
 
-Nyisd meg a kész mockot **mobil és asztali** szélességben is. Olvasd végig az egészet.
-- Minden tény-állításnál: van-e forrása a leadben (portál-szöveg, Maps, fotó)? Távolság,
-  szobaszám, ár, ★, „Balaton-parti”, „csendes”, „családbarát” — honnan?
-- Nyelv: természetes magyar, magázás, nincs tolakodó túlzás, nincs elírás.
-- A gépi őrök jelzései (tényhűség, nyitórész stb.) a mock kártyáján — olvasd el, értsd meg.
-- Kép: a nyitókép tényleg az, amit választottál? Nincs törött kép?
-Ha javítani kell: a szöveg-újraíróval (utasítás: mi a hiba, mit kérsz) vagy a
-szöveg-szerkesztővel. Legfeljebb egy újragenerálás. **Jóvá nem hagysz.**
+A kész mock állításait Vera ellenőrzi (ő a kapu, ADR-0329); a képátnézés is az övé. Te csak
+annyit nézel meg, hogy a mock elkészült, nincs törött kép, és a nyitókép az, amit választottál.
 
 ## 8. Jelentés (`~/neo/jelentesek/ÉÉÉÉ-HH-NN.md` + a sessionben válaszként)
 
