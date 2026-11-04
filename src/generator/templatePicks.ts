@@ -11,7 +11,7 @@ import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 
 /**
  * Templates the OWNER banned from new mocks — refused by id here and in the engine, whatever
- * the registry's `retired` flag says (ADR-XXXX, 2026-11-04: „soha többet nem lehet a
+ * the registry's `retired` flag says (ADR-0422, 2026-11-04: „soha többet nem lehet a
  * fejezetest mock típust használni”). The old mocks still render; no new one is ever made.
  */
 export const OWNER_BANNED_TEMPLATES: ReadonlyMap<string, string> = new Map([
@@ -23,7 +23,7 @@ export function isNewMockTemplate(id: string): boolean {
   return isPickableTemplate(id) && !OWNER_BANNED_TEMPLATES.has(id);
 }
 
-/** The second design's default when a pair is wanted and the curator named one (ADR-XXXX). */
+/** The second design's default when a pair is wanted and the curator named one (ADR-0422). */
 export const SECOND_TEMPLATE_DEFAULT = "fullbleed";
 
 export type TemplatePicks =

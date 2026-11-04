@@ -17,7 +17,7 @@ function check(label: string, ok: boolean, detail = ""): void {
 
 check("a két élő sablon létezik (parallax, horizontal = Fejezetes)", Boolean(TEMPLATES.parallax && TEMPLATES.horizontal) && /^Fejezetes/.test(TEMPLATES.horizontal!.label));
 
-// ⛔ TULAJ-DOKTRÍNA (2026-11-04, ADR-XXXX): „soha többet nem lehet a fejezetest mock típust használni”.
+// ⛔ TULAJ-DOKTRÍNA (2026-11-04, ADR-0422): „soha többet nem lehet a fejezetest mock típust használni”.
 const banPair = resolveTemplatePicks(["parallax", "horizontal"], 2);
 check("„Parallax + Fejezetes” → hangos elutasítás (Fejezetes kivezetve), nem csendes helyettesítés",
   !banPair.ok && /Fejezetes/.test(banPair.message) && /soha többet/.test(banPair.message) && /Fullbleed/.test(banPair.message), JSON.stringify(banPair));

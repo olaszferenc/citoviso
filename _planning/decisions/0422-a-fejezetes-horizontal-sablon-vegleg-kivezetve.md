@@ -1,4 +1,4 @@
-## ADR-XXXX — A Fejezetes (horizontal) sablon végleg kivezetve: új mock nem készülhet vele, a második terv alapértelmezése Fullbleed
+## ADR-0422 — A Fejezetes (horizontal) sablon végleg kivezetve: új mock nem készülhet vele, a második terv alapértelmezése Fullbleed
 
 **Dátum:** 2026-11-04 · **Státusz:** elfogadva (tulaj-doktrína, a koordinátoron át) · Épít: ADR-0027 (sablon-első generálás), ADR-0028 (a sablonválasztás a kurátoré) · Mintája: az editorial kivezetése (2026-10-04, `retired: true`)
 
