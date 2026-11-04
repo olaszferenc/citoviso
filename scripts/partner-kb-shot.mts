@@ -276,6 +276,10 @@ try {
       await settle(page, page);
       const out = path.join(OUT_DIR ?? ROOT, rel);
       fs.mkdirSync(path.dirname(out), { recursive: true });
+      // A full-page capture paints the sticky mobile bottom nav (.con-bnav, position:sticky;
+      // bottom:0) in the MIDDLE of the long image, covering the thread the guide describes
+      // (tudasbazis-or FLAG, 2026-11-04). Hide it for the capture only.
+      await page.addStyleTag({ content: ".con-bnav{display:none !important}" });
       await page.screenshot({ path: out, fullPage: true });
       if (misses.length) throw new Error(`külső kérés a pillanatképen kívül: ${[...new Set(misses)].join(", ")}`);
       await page.close();
