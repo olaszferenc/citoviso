@@ -174,3 +174,32 @@ megkeresési horog; (4) a gazdátlan profil a láthatóság-modul célpontja. **
 „korlátozott nézet”: nincs értékelés-szám, a foglalás-gomb többnyire rejtett (platform-arány alsó becslés); a
 Google-keresés CAPTCHA-t dobott, ezért a „nincs honlap” csak Térkép-szintű (felső becslés, §F.13 nélkül). Éles
 felderítéshez belépett Chrome-profil kell.
+
+## Gödöllő 2. kör: képek (SUB `citf3b9dda4`, 2026-11-04 ~19:30–20:21, 0 API, letöltés 0)
+
+Jelentés: `~/rc-briefs/szolgaltato-godollo/kepek-eredmeny.md` (nyers: `kepek-nyers.json`). A 110 honlap-gyenge helyből
+**18 jó a demóhoz (16%, alsó becslés)**, 48 gyenge, 44 nincs. `jó` = ≥6 éles kép a hely saját munkájáról/helyiségéről/emberéről.
+
+| szakma | hely | demóra jó |
+|---|---|---|
+| szempilla | 7 | 4 |
+| tetováló | 4 | 3 |
+| műköröm | 17 | 4 |
+| fodrász/borbély | 15 | 3 |
+| edző/jóga | 9 | 2 |
+| kozmetika | 7 | 1 |
+| állatorvos | 3 | 1 |
+| szolárium | 5 | 0 |
+| masszázs | 9 | 0 |
+| ügyvéd | 11 | 0 |
+| könyvelő | 14 | 0 |
+| fogorvos | 9 | 0 |
+
+Tanulságok: (1) **a Térkép fotógalériája belépés nélkül ZÁRVA** (110/110), csak 1 borítókép látszik (52 helynél, 30-nál
+tulaj-feltöltés; forrás-címke `bizbuilder:*` = tulaj, `photos:*` = vendég); (2) **a Facebook-cégoldal és az Instagram-profil
+belépés nélkül NYITVA** (FB: 9-es rács + posztok, IG: 12 poszt; 40 külső oldalból 3 fal) → a szolgáltatói demó-kép forrása
+FB/IG, nem a Térkép; (3) a szépségipari kisvállalkozó éles munka-portfóliót visz FB/IG-n, az irodai szakma (ügyvéd,
+könyvelő, fogorvos) 0 saját használható kép → ott stock/generált kép, szöveg-vezérelt mock; (4) 70 helynél nem volt ismert
+FB/IG-link, keresés nélkül (Google CAPTCHA, FB-keresés belépést kér) → a `jó` szám nőhet; (5) két „honlap nélküli” helynél
+saját domain-nyom (Fonat: `fonatszalon.hu` IG-bióban, MilaDerma: `miladerma.hu` FB-n) → a Térkép-szintű „nincs honlap”
+§F.13 ellenőrzés nélkül téves lehet. Jog: FB/IG-kép csak demóra (§A), élesre a tulaj saját képe.
