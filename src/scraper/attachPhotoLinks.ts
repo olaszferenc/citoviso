@@ -26,11 +26,18 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
-import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, readPortalListing } from "./sources/portalListing.js";
+import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, readPortalListing, twinBrands } from "./sources/portalListing.js";
 import { deaccent, hasNameWord } from "./enrichPresence.js";
 import { mergeListings, mergeProfiles } from "./enrichPortal.js";
 import { buildMaterial } from "./enrichMaterial.js";
-import { portalPhotoCount, profilesAwaitingApproval } from "./portalPhotos.js";
+import {
+  heldForSharedPhotos,
+  portalPhotoCount,
+  portalPhotoIdentity,
+  profilesAwaitingApproval,
+  sameBrand,
+  sharedPhotoCount,
+} from "./portalPhotos.js";
 import { qualificationOf } from "./persist.js";
 import { classifyWebsite } from "./qualify.js";
 import { getRegion, loadRegions } from "./regions.js";
@@ -577,6 +584,19 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
     }
   }
 
+  // The batch's shared-photo-set guard (enrichPortal) sees one batch; a link pasted in the
+  // console is checked against every OTHER stored lead instead (portalPhotos.SHARED_SET_MIN).
+  for (let i = 0; i < portalProfiles.length; i++) {
+    const p = portalProfiles[i]!;
+    if (p.needsReview || !p.photos.length) continue;
+    const { ids, leads } = await photosOnOtherLeads(leadId, p.photos.map((ph) => ph.url), twinBrands(before.name, before.city), before);
+    const shared = sharedPhotoCount(p, ids);
+    if (!shared) continue;
+    portalProfiles[i] = heldForSharedPhotos(p, shared, leads);
+    const o = outcomes.find((x) => x.url === p.url || x.readUrl === p.url);
+    if (o) Object.assign(o, { photos: 0, skipped: `ugyanez a fotókészlet ${leads} másik leadnél is szerepel — gyűjtőoldal gyanú, kurátori jóváhagyásig a fotók nem kerülnek a leadhez` });
+  }
+
   const beforeCount = portalPhotoCount(before);
   const found = [...portalProfiles, ...siteProfiles];
   const after = found.length ? await saveProfiles(leadId, before, found, portalProfiles) : before;
@@ -614,6 +634,45 @@ export function photoCountMessage(before: number, after: number): string {
       `már nem elérhető vagy a szűrőn fennakadó képeit lecserélte).`;
   }
   return `A linkek beolvasva, a fotószám nem változott (${after} fotó; a beolvasott adatlapok frissültek).`;
+}
+
+const NEIGHBOUR_BOX_DEG = 0.1;
+
+/**
+ * Which of these photos (by portalPhotoIdentity) sit on an accepted portal profile of ANOTHER
+ * stored lead, and on how many leads. Path identities only (the short-path fallback keeps the
+ * host and is too rare to be worth a second SQL shape).
+ */
+export async function photosOnOtherLeads(
+  leadId: string,
+  urls: readonly string[],
+  /** This lead's brand words: a lead sharing one is its twin, not a list (portalPhotos.sameBrand). */
+  brands: readonly string[],
+  /** Where the lead is: only NEIGHBOURS are compared (a list page covers one town). */
+  at: { readonly lat?: number; readonly lon?: number },
+): Promise<{ ids: Set<string>; leads: number }> {
+  const wanted = [...new Set(urls.filter(Boolean).map(portalPhotoIdentity))].filter((id) => id.startsWith("/"));
+  if (!wanted.length || at.lat == null || at.lon == null) return { ids: new Set(), leads: 0 };
+  // ⛔ PROD LOAD (2026-11-04): expanding every lead's profiles × photos held the 2-core VPS at
+  // load 8 for 6.5 min (Neo's /photos 504s). The plain lat/lng columns narrow the set first —
+  // the batch guard's own ~11 km cell (batchedRun.BATCH_CELL_DEG) — and the result is capped.
+  const box = NEIGHBOUR_BOX_DEG;
+  const found = await sql<{ id: string; name: string | null; city: string | null; ident: string }>`
+    select distinct l.id, coalesce(nullif(trim(l.name), ''), l.raw->>'name') as name, l.raw->>'city' as city, lower(regexp_replace(split_part(ph->>'url', '?', 1), '^[a-z]+://[^/]+', '', 'i')) as ident
+    from lead l
+    cross join lateral jsonb_array_elements(
+      case when jsonb_typeof(l.raw->'portalProfiles') = 'array' then l.raw->'portalProfiles' else '[]'::jsonb end) p
+    cross join lateral jsonb_array_elements(
+      case when jsonb_typeof(p->'photos') = 'array' then p->'photos' else '[]'::jsonb end) ph
+    where l.id <> ${leadId}
+      and l.lat between ${at.lat - box} and ${at.lat + box}
+      and l.lng between ${at.lon - box} and ${at.lon + box}
+      and coalesce(p->>'needsReview', 'false') <> 'true'
+      and lower(regexp_replace(split_part(ph->>'url', '?', 1), '^[a-z]+://[^/]+', '', 'i')) = any(${wanted})
+    limit 2000
+  `.execute(db);
+  const rows = found.rows.filter((r) => !sameBrand(brands, twinBrands(r.name ?? "", r.city ?? undefined)));
+  return { ids: new Set(rows.map((r) => r.ident)), leads: new Set(rows.map((r) => r.id)).size };
 }
 
 /** Merge freshly read profiles into the lead and store it (photo count, qualification). */

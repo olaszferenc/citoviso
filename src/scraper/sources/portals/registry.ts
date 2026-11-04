@@ -193,6 +193,18 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
     note: "Város/kistérségi portál — sok leadnek ez az EGYETLEN online adatlapja.",
   },
   {
+    id: "kiadoapartman_hu",
+    label: "kiadoapartman.hu",
+    hosts: ["kiadoapartman.hu"],
+    access: "open",
+    // A listing is /szallas/<town>/apt<id>/<n>/. /szallas/<town>/ is the TOWN list —
+    // measured prod 2026-11-04: four Balatonfenyves leads (Karneol, Elizabeth, Fenyves,
+    // Balaton apartman) each held /szallas/balatonfenyves/ as their own high-band profile,
+    // 46–50 photos of other houses apiece.
+    listingPath: /^\/szallas\/[^/]+\/apt\d+\//i,
+    note: "Apartman-hirdető portál; a település-lista (/szallas/<település>/) NEM adatlap.",
+  },
+  {
     id: "badacsony_hu",
     label: "badacsony.hu (települési portál)",
     hosts: ["badacsony.hu", "badacsony.com"],
@@ -250,11 +262,30 @@ export function resolvePortal(url: string): PortalAdapter {
  * else the entity-match gate downstream does the filtering.
  */
 export function looksLikeListingUrl(url: string): boolean {
-  const adapter = resolvePortal(url);
-  if (!adapter.listingPath) return true;
+  let pathname: string;
   try {
-    return adapter.listingPath.test(new URL(url).pathname);
+    pathname = new URL(url).pathname;
   } catch {
     return false;
   }
+  if (isCategoryPath(pathname)) return false;
+  const adapter = resolvePortal(url);
+  if (!adapter.listingPath) return true;
+  return adapter.listingPath.test(pathname);
+}
+
+/**
+ * Category / search page shapes of the booked.net engine family, on ANY host (lake-balaton.com,
+ * hungaryhotel.net, hotels-in-hungary.net …). That engine serves a property on its own
+ * subdomain (<slug>.lake-balaton.com/hu/); the bare domain's /<lang>/<town>-hotels-<id>/…
+ * pages (/type/apartments-3/, /theme/…, /all-accommodations/) list a whole town. Measured
+ * prod 2026-11-04: 40+ leads held such a page as their own profile, the town's photos with it.
+ */
+const ENGINE_TOWN_SEGMENT = /(?:^|\/)[a-z0-9-]+-hotels-\d+(?:\/|$)/i;
+/** Airbnb's search pages: /<place>/stays[/<theme>] (a listing is /rooms/<id>). Prod 2026-11-04:
+ *  Családbarát Apartman f476d8fd held /balatonkeresztur-hungary/stays/family-friendly as a
+ *  high-band profile, its prose about other houses in the source pack. */
+const SEARCH_STAYS = /^\/[a-z0-9-]+\/stays(?:\/|$)/i;
+export function isCategoryPath(pathname: string): boolean {
+  return ENGINE_TOWN_SEGMENT.test(pathname) || SEARCH_STAYS.test(pathname);
 }

@@ -24,8 +24,10 @@ import {
 import { readFileSync } from "node:fs";
 import { isCutSrcsetUrl, parseSrcset } from "../src/scraper/srcset.js";
 import { appartmanSlug, ownSiteImages, photoCountMessage, sameStoredSite, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
-import { distinctPortalPhotos, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
-import { ENGINE_HOME_REDIRECT } from "../src/scraper/sources/portalListing.js";
+import { distinctPortalPhotos, holdSharedPhotoSets, sameBrand, usableProfiles, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
+import { looksLikeListingUrl } from "../src/scraper/sources/portals/registry.js";
+import type { PortalProfile } from "../src/scraper/types.js";
+import { ENGINE_HOME_REDIRECT, twinBrands } from "../src/scraper/sources/portalListing.js";
 import { domImages, extractListing } from "../src/scraper/sources/portals/extract.js";
 
 let failed = 0;
@@ -570,6 +572,111 @@ check("⛔ egy mappa / nem-hovamenjek kép érintetlen", withoutNeighbourFolders
 check(
   "bekötés: a generátor galériája is a szűrt listát olvassa",
   /for \(const p of withoutNeighbourFolders\(profile\.photos\)\)/.test(readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8")),
+  "",
+);
+
+// ── Lista-/keresőoldal mint „adatlap” (prod 2026-11-04) ───────────────────────────
+// kiadoapartman.hu/szallas/balatonfenyves/ négy lead (Karneol 83e9d857, Elizabeth c9618fb8,
+// Fenyves 96b05fd6, Balaton apartman ec6912a1) high-sávú profilja volt, 46–50 idegen fotóval;
+// a lake-balaton/hungaryhotel <település>-hotels-<id> oldalai 40+ leadnél.
+const CATEGORY_URLS = [
+  "https://kiadoapartman.hu/szallas/balatonfenyves/",
+  "https://kiadoapartman.hu/szallas/fonyod/",
+  "https://www.lake-balaton.com/hu/balatonkeresztur-hotels-237163/type/apartments-3/",
+  "https://www.lake-balaton.com/en/balatonszentgyorgy-hotels-238378/",
+  "https://www.lake-balaton.com/hu/balatonbereny-hotels-237772/all-accommodations/",
+  "https://www.lake-balaton.com/en/balatonbereny-hotels-237772/theme/vacation-rentals-42/3/",
+  "https://www.hungaryhotel.net/hu/balatonfenyves-hotels-237238/all-accommodations/",
+  "https://www.hungaryhotel.net/en/balatonbereny-hotels-237772/",
+  // Családbarát Apartman f476d8fd (prod 2026-11-04): idegen leírás a forráscsomagban
+  // (Bleicher Borbirtok, Facsiga Birtok, Villa Kamilla) e kettőről.
+  "https://www.lake-balaton.com/en/balatonkeresztur-hotels-237163/theme/family-hotels-11/",
+  "https://www.airbnb.hu/balatonkeresztur-hungary/stays/family-friendly",
+  "https://www.airbnb.co.za/lake-balaton-hungary/stays/vacation-homes",
+];
+const LISTING_URLS = [
+  "https://kiadoapartman.hu/szallas/balatonfenyves/apt932884/2391/",
+  "https://zalan-apartmann.lake-balaton.com/hu/",
+  "https://the-boys-apartman.hotels-in-hungary.net/hu/",
+  "https://haj-apartman.hungaryhotel.net/hu/",
+  "https://hovamenjek.hu/balatongyorok/villa-gracia",
+  "https://csaladbarat-apartman-balatonkeresztur.booked.hu/",
+  "https://www.airbnb.hu/rooms/12345678",
+];
+const wrongCat = CATEGORY_URLS.filter((u) => looksLikeListingUrl(u));
+check("lista-/típus-/település-oldal NEM adatlap (kiadoapartman /szallas/<település>/, *-hotels-<id>/, /type/, /theme/, airbnb /stays/)", wrongCat.length === 0, wrongCat.join(" · ") || `${CATEGORY_URLS.length} elutasítva`);
+const wrongList = LISTING_URLS.filter((u) => !looksLikeListingUrl(u));
+check("⛔ a valódi adatlap marad (kiadoapartman /apt<id>/, white-label aldomain, hovamenjek)", wrongList.length === 0, wrongList.join(" · ") || `${LISTING_URLS.length} elfogadva`);
+
+const fenyvesPhotos = Array.from({ length: 50 }, (_, i) => ({ url: `https://kiadoapartman.hu/kepek/apt${900000 + i}/foto-${i}.jpg`, provenance: "portal" as const }));
+const prof = (url: string, photos: { url: string; provenance: "portal" }[], extra: Partial<PortalProfile> = {}): PortalProfile => ({
+  portal: "kiadoapartman_hu", portalHost: "kiadoapartman.hu", url, rooms: [], amenities: [], prices: [],
+  photos: photos as unknown as PortalProfile["photos"], reviews: [{ text: "Szuper" }], phone: "+36301234567",
+  matchConfidence: 1, matchBand: "high", matchReasons: ["név-lefedettség 1.00"], needsReview: false,
+  extractor: "dom", fetchedAt: "2026-10-02T11:10:06.367Z", ...extra,
+});
+const storedTown = prof("https://kiadoapartman.hu/szallas/balatonfenyves/", fenyvesPhotos);
+const ownListing = prof("https://kiadoapartman.hu/szallas/balatonfenyves/apt932884/2391/", fenyvesPhotos.slice(0, 6).map((p) => ({ ...p, url: p.url.replace("/kepek/", "/sajat/") })));
+check("tárolt település-oldal profilja kiesik betöltéskor (usableProfiles), a saját adatlap marad", usableProfiles([storedTown, ownListing]).length === 1 && usableProfiles([storedTown, ownListing])[0] === ownListing, "");
+check("a fotó-számláló a tárolt település-oldal 50 képét nem számolja (distinctPortalPhotos)", distinctPortalPhotos([storedTown, ownListing]).length === 6, String(distinctPortalPhotos([storedTown, ownListing]).length));
+
+// Közös fotókészlet ≥2 leaden = gyanú (a négy Balatonfenyves-lead UGYANAZT az ~50 képet kapta).
+const G = (name: string, profiles: PortalProfile[], city = "Balatonfenyves") => ({ brands: twinBrands(name, city), profiles });
+const FENYVES = ["Karneol Apartman Balatonfenyves", "Elizabeth Apartman Balatonfenyves", "Fenyves apartmanház", "Balaton apartman Balatonfenyves"];
+const fourLeads = FENYVES.map((n, i) => G(n, [prof(`https://gyujto.example/lista-${i}`, fenyvesPhotos.slice(i, 46 + i))]));
+const heldFour = holdSharedPhotoSets([...fourLeads, G("Napsugár Vendégház", [ownListing])]);
+check(
+  "ugyanaz a fotókészlet 4 leaden → mind a 4 kurátorra tartva (fotó, vélemény 0, medium)",
+  heldFour.slice(0, 4).every((g) => g[0]!.needsReview && g[0]!.photos.length === 0 && (g[0]!.reviews ?? []).length === 0 && g[0]!.matchBand === "medium"),
+  heldFour.slice(0, 4).map((g) => g[0]!.matchReasons.at(-1)).join(" | ").slice(0, 160),
+);
+check("⛔ a saját, nem közös fotókészletű adatlap érintetlen", heldFour[4]![0] === ownListing, "");
+const twoShared = holdSharedPhotoSets([
+  G("Karneol Apartman", [prof("https://a.example/1", fenyvesPhotos.slice(0, 10))]),
+  G("Elizabeth Apartman", [prof("https://b.example/2", [...fenyvesPhotos.slice(8, 10), ...fenyvesPhotos.slice(20, 30)])]),
+]);
+check("⛔ 2 közös kép (falukép, logó) nem készlet → mindkét adatlap marad", twoShared.every((g) => !g[0]!.needsReview), "");
+const halfShared = holdSharedPhotoSets([
+  G("Karneol Apartman", [prof("https://a.example/1", fenyvesPhotos.slice(0, 20))]),
+  G("Elizabeth Apartman", [prof("https://b.example/2", fenyvesPhotos.slice(0, 4))]),
+]);
+// Iker-lead (prod 2026-11-04: Aranyhal 341420fe / fd4c4641, Valéria 4e98e7e2 / 1ca50a6a — a
+// közös készletek 119/123-a ilyen): ugyanaz a ház kétszer tárolva, a közös galéria NEM lista.
+const twins = holdSharedPhotoSets([
+  G("Aranyhal Apartmanház", [prof("https://aranyhal-apartman-balatonlelle.booked.hu/", fenyvesPhotos.slice(0, 12))]),
+  G("Aranyhal Apartman", [prof("https://aranyhal-apartman-balatonlelle.booked.hu/", fenyvesPhotos.slice(0, 12))]),
+]);
+check("⛔ iker-lead (közös márkaszó a névben) közös galériája marad — nem gyűjtőoldal", twins.every((g) => !g[0]!.needsReview), "");
+const apartTwins = holdSharedPhotoSets([
+  G("Két Sirály Apartman", [prof("https://ketsiraly.hu/", fenyvesPhotos.slice(0, 6))], "Balatonkeresztúr"),
+  G("Kétsirály Apartman", [prof("https://ketsiraly.hu/galeria", fenyvesPhotos.slice(0, 5))], "Balatonkeresztúr"),
+]);
+check("⛔ külön-/egybeírt iker (Két Sirály ↔ Kétsirály, 258faade/2c560da3) marad", apartTwins.every((g) => !g[0]!.needsReview), "");
+check("a közös TELEPÜLÉSNÉV nem tesz ikerré (Karneol/Elizabeth … Balatonfenyves)", !sameBrand(twinBrands("Karneol Apartman Balatonfenyves", "Balatonfenyves"), twinBrands("Elizabeth Apartman Balatonfenyves", "Balatonfenyves")), "");
+check("a kis profil, amelynek 4/4 képe máshol is van → tartva; a nagy (4/20) marad", halfShared[1]![0]!.needsReview && !halfShared[0]![0]!.needsReview, "");
+
+// ⛔ Éles terhelés (2026-11-04: egy lead × profil × fotó kibontás 6,5 percig 8-as loadon tartotta
+// a 2 magos VPS-t, Neo /photos 504): a konzolos lekérdezés előbb a lat/lng oszlopokra szűkít, és limites.
+{
+  const a = readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8");
+  const q = a.slice(a.indexOf("export async function photosOnOtherLeads"), a.indexOf("/** Merge freshly read profiles"));
+  check(
+    "photosOnOtherLeads: lat/lng-doboz előszűrés + limit, koordináta nélkül nem fut",
+    /l\.lat between/.test(q) && /l\.lng between/.test(q) && /\blimit \d+/.test(q) && /at\.lat == null \|\| at\.lon == null/.test(q),
+    "",
+  );
+}
+const enrichSrc = readFileSync(new URL("../src/scraper/enrichPortal.ts", import.meta.url), "utf8");
+check(
+  "bekötés: a batch-ingest a közös-fotó őrt a kontakt-átvétel ELŐTT futtatja (tartott oldal telefont sem ad)",
+  /holdSharedPhotoSets\(/.test(enrichSrc) && enrichSrc.indexOf("holdSharedPhotoSets(") < enrichSrc.indexOf("const phoneUses"),
+  "",
+);
+check(
+  "bekötés: a konzolos link-behúzás a többi tárolt leadhez méri (photosOnOtherLeads), a generátor betöltése és galériája usableProfiles-on át olvas",
+  /photosOnOtherLeads\(leadId, [^;]*twinBrands\(before\.name, before\.city\), before\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
+    /usableProfiles\(stored\.portalProfiles\)/.test(readFileSync(new URL("../src/generator/persist.ts", import.meta.url), "utf8")) &&
+    /for \(const profile of usableProfiles\(lead\.portalProfiles\)\)/.test(readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8")),
   "",
 );
 

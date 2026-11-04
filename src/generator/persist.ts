@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
+import { usableProfiles } from "../scraper/portalPhotos.js";
 import type { QualifiedLead } from "../scraper/types.js";
 
 export interface LoadedLead {
@@ -46,7 +47,10 @@ export async function loadLead(idOrName?: string): Promise<LoadedLead> {
   // The `name` COLUMN is the curator's word: the console rename wrote only the column until
   // 2026-10-26, so a regenerated Hotel Fortuna mock still carried the scraped SEO name from
   // raw.name. The column wins; raw.name is only the fallback.
-  const raw = row.raw as unknown as QualifiedLead;
+  const stored = row.raw as unknown as QualifiedLead;
+  // A town / category list stored as a profile (before the URL rule knew its shape) is
+  // another house's material — every generator reader goes through here (usableProfiles).
+  const raw = stored.portalProfiles ? { ...stored, portalProfiles: usableProfiles(stored.portalProfiles) } : stored;
   return { id: row.id, lead: row.name?.trim() ? { ...raw, name: row.name.trim() } : raw };
 }
 

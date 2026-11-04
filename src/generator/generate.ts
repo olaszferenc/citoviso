@@ -18,7 +18,7 @@ import {
   PlacesUnavailableError,
   type PlacesFailure,
 } from "../scraper/sources/googleMaps.js";
-import { portalPhotoIdentity, withoutNeighbourFolders } from "../scraper/portalPhotos.js";
+import { portalPhotoIdentity, usableProfiles, withoutNeighbourFolders } from "../scraper/portalPhotos.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import type { PhotoProvenance } from "../engine/recipe.js";
 import { isUsablePropertyPhoto } from "../scraper/sources/portals/photoQuality.js";
@@ -313,7 +313,7 @@ function photoKey(url: string): string {
 function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
   const out: GatedPhoto[] = [];
   const seen = new Set<string>();
-  for (const profile of lead.portalProfiles ?? []) {
+  for (const profile of usableProfiles(lead.portalProfiles)) {
     if (profile.needsReview) continue;
     // A neighbour listing's thumbnail stored as the lead's own (hovamenjek „Közeli szállások”)
     // stays off the page without a re-scrape.

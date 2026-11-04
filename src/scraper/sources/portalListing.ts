@@ -26,7 +26,7 @@
 // by the extractor at the point of ingest — see extract.ts/toPortalPhotos.
 
 import { scorePortalMatch, type MatchConfidence } from "../confidence.js";
-import { acronymWords, deaccent, geoTerms, hasNameWord, isBrandShaped, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
+import { acronymWords, cityTerms, deaccent, geoTerms, hasNameWord, isBrandShaped, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
@@ -54,6 +54,17 @@ export function brandTokens(name: string): string[] {
   const words = nameWords(name).filter((t) => isBrandShaped(t) && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
   // A capitalised acronym („BBB Apartman”) is a brand word too (acronymWords).
   return [...words, ...acronymWords(name).filter((t) => !words.includes(t) && !GENERIC_NAME_WORD.has(t))];
+}
+
+/**
+ * The words that tell two leads are the SAME house stored twice (portalPhotos.sameBrand): the
+ * brand words without the lead's own town. „Karneol Apartman Balatonfenyves” and „Elizabeth
+ * Apartman Balatonfenyves” share only their town — prod 2026-11-04, the town list that gave
+ * both the same gallery; the town word must not make them twins.
+ */
+export function twinBrands(name: string, city: string | undefined): string[] {
+  const town = new Set(cityTerms({ city }));
+  return brandTokens(name).filter((t) => !town.has(t));
 }
 
 /** Type words present in a name, deaccented. */

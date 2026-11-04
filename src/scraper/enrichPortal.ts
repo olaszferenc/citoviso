@@ -18,8 +18,8 @@
 // gap, so more leads means a longer run, never a faster hammer.
 
 import { isBusinessEmail, isCorroboratedEmail } from "./enrichWebSearch.js";
-import { findPortalCandidates, portalLookup } from "./sources/portalListing.js";
-import { distinctPortalPhotos } from "./portalPhotos.js";
+import { findPortalCandidates, portalLookup, twinBrands } from "./sources/portalListing.js";
+import { distinctPortalPhotos, holdSharedPhotoSets } from "./portalPhotos.js";
 import { webSearchAvailable } from "./sources/webSearch.js";
 import type { PortalListing, PortalProfile, QualifiedLead, Region } from "./types.js";
 
@@ -167,6 +167,20 @@ export async function enrichPortal(
       `${accepted} adatlap · ${photos} portál-fotó (jogállás: portal) · ` +
       `${plan.filter((p) => p.search).length} fizetős webes keresés`,
   );
+
+  // SHARED-PHOTO-SET GUARD (portalPhotos.holdSharedPhotoSets): the same gallery on two
+  // leads means a list or multi-house page — held for the curator BEFORE the contacts are
+  // taken, so a held page gives neither photos nor a phone.
+  {
+    const keys = [...found.keys()];
+    const held = holdSharedPhotoSets(keys.map((k) => ({ brands: twinBrands(k.name, k.city), profiles: found.get(k)! })));
+    let demoted = 0;
+    keys.forEach((k, i) => {
+      demoted += held[i]!.filter((p, j) => p.needsReview && !found.get(k)![j]!.needsReview).length;
+      found.set(k, held[i]!);
+    });
+    if (demoted) console.log(`  ⚠ ${demoted} adatlap fotókészlete több leaden is szerepel — kurátori jóváhagyásra tartva`);
+  }
 
   // SHARED-CONTACT GUARD (the tourinform lesson, enrichWebSearch): one phone
   // number belongs to one business. A number that turns up on several leads'
