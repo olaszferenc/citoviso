@@ -197,10 +197,11 @@ készüljön a mock, majd a gombbal indítod. Az elkészült mock az „előnéz
 ez a mock-kártyán, **a pillanatkép jobb alsó sarkában**, egy sötét pirulán ül (a képen, nem
 mellette). Ha még nincs kép, ugyanott találod, a magyarázó doboz sarkában.
 
-⚠️ **A választó TÖBBSZÖRÖS, és alapból egy sincs bejelölve.** Amennyi kártyát bejelölsz, annyi
-külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt
-érdemes tudni, mert könnyű azt hinni, hogy „nem az készült, amit kértem”, holott választás
-nélkül a rendszer maga döntött.
+⚠️ **Legalább egy kinézetet ki kell választanod.** A választó többszörös, és alapból egy sincs
+bejelölve; amennyi kártyát bejelölsz, annyi külön mock készül. Új mockhoz csak a **Parallax**, a
+**Kapunyitás** és a **Névből növő** választható. Ha egyet sem jelölsz be, a generálás nem indul el:
+a panel elutasító üzenetben kéri, hogy válassz. Alapértelmezett kinézet szándékosan nincs —
+a rendszer soha nem dönt helyetted.
 
 ### Napi AI-költségplafon
 
