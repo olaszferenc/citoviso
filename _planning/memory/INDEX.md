@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-11-04_proba-belepes-emlekezteto.md](2026-11-04_proba-belepes-emlekezteto.md) — 2026-11-04 — Próbázó belépés-emlékeztető (induló SMS + 2./4./6./8. napi e-mail és SMS)
+- [2026-11-04_keret_elemzes_munkatars_lanc.md](2026-11-04_keret_elemzes_munkatars_lanc.md) — Keret-elemzés: hová megy a token, és a munkatárs-lánc egyszerűsítése (2026-11-03/04)
 - [2026-11-03_search_console_automatikus_bekuldes.md](2026-11-03_search_console_automatikus_bekuldes.md) — 2026-11-03 — Search Console: automatikus beküldés (SUB a „portál-jutalék + megtalálhatóság” szál alatt)
 - [2026-11-03_rendszer_szamla_bizonylatok_fizetes_riasztas.md](2026-11-03_rendszer_szamla_bizonylatok_fizetes_riasztas.md) — 2026-11-03 — Rendszer-számlák a Bizonylatokban + riasztás minden sikeres fizetésről (SUB-A, ADR-0414)
 - [2026-11-03_portal_jutalek_kivaltas_es_megtalalhatosag.md](2026-11-03_portal_jutalek_kivaltas_es_megtalalhatosag.md) — 2026-11-03 — Portál-jutalék kiváltása + megtalálhatóság (tulaj-szál, koordinátor)
