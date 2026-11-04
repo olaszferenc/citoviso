@@ -2330,6 +2330,15 @@ if [ -f scripts/partner-edit-check.mts ] && \
   echo "[pre-commit] partner-edit-check (partner-adatlap szerkesztés, végponttól végpontig)…"
   npx tsx scripts/partner-edit-check.mts
 fi
+# Partner-lap „Üzenetváltások” (M1, partner-adatlap 2. rész): a szál összeáll (megkeresés, válasz, rendszerlevél,
+# kézi), az írás-doboz e-mailt és SMS-t küld a meglévő utakon (mock levélküldő + az SMS-sor, amit
+# a dev gépen senki nem ürít — semmi nem megy ki), a számláló GSM-7/UCS-2, JS nélkül is megy, a
+# partner címéről jött levél a szálba kerül, és az elutasító-jel minden küldést tilt (a szerver is).
+if [ -f scripts/partner-messages-check.mts ] && \
+   changed_files | grep -qE '^src/console/partner(Messages|MessageViews|Views|ProfileViews)\.ts$|^src/console/server\.ts$|^src/replies/(store|answer)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/partner-messages-check'; then
+  echo "[pre-commit] partner-messages-check (Üzenetváltások: szál, írás, elutasító-őr)…"
+  npx tsx scripts/partner-messages-check.mts
+fi
 # A lapozás sorokat vág, PÉNZT NEM: a KPI-sáv / korosítás / végösszeg a teljes
 # szűrt halmazt írja le, nem a látott oldalt. Némán hibás pénzügyi szám ellen —
 # a kimutatást a naiv (mindent beolvasó) újraszámolással hasonlítja össze, és

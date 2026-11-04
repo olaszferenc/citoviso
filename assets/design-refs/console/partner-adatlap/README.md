@@ -45,3 +45,42 @@ Az „Üzenetváltások” fül KÜLÖN tervkörben megy (2. mock-kör), ez a te
 
 - `scripts/partner-edit-check.mts` — a szerkesztő végponttól végpontig (kliens + szerver, 390/1280).
 - `scripts/partner-ui-check.mts` — fül-kattintás, tap-méret, szerep-fülek.
+
+---
+
+# Üzenetváltások — JÓVÁHAGYOTT terv: M1 csevegő-szál (2026-11-04)
+
+**Döntés:** a tulaj 2026-11-04 (a koordinátoron át): Üzenetváltások fül = **M1**, nem az M2 (postafiók).
+
+- `JOVAHAGYOTT-M1-uzenetvaltasok.html` — a kattintható terv (méret-váltó, működő írás-doboz,
+  bemutató-kapcsolók), valós éles szállal (Duna Vibe House, 2026-11-03).
+- `kepek/M1-{asztali,mobil}.png`, `kepek/M1-{asztali,mobil}-sms-iras.png` — amit a tulaj látott.
+
+## Amit a terv KÖT
+
+1. Fül az Áttekintés után; a neve mellett szám (a mi utolsó üzenetünk óta jött partner-üzenetek).
+2. Egy szál, időrendben, napi elválasztóval: a miénk jobbra, a partneré balra, a rendszerlevél
+   lenyitható kártya (tárgy → szöveg), melléklet-név. Buborék fölött: csatorna-ikon, forrás,
+   címzett/feladó, idő, állapot-címke (elküldve / sorban / ütemezve / nem ment ki + „újra”).
+3. Szűrők: Mind · E-mail · SMS / MMS · Kézi · Rendszerlevél.
+4. Írás-doboz a szál alatt: E-mail / SMS váltó, címzett-lista (csak a partner és a kapcsolattartói
+   címei), tárgy csak e-mailnél, SMS-számláló GSM-7 / UCS-2 + „Ékezet nélkül küldöm”, 5-rész-limit,
+   aláírás-pipa, a mikor-megy sor (csendes óra 22–07), „Küldés…” → állapot, és az üzenet AZONNAL
+   megjelenik a szálban.
+5. Elutasító / leiratkozott partner: piros sáv az okkal, az írás-doboz letiltva.
+
+## Ahol a kód TUDATOSAN eltér a képtől
+
+- A mock „Bejövő: … ma senki nem gyűjti” sávja helyett a valós állapot áll: a partner és a
+  kapcsolattartói címeiről jött levél / SMS is a szálba kerül (koordinátor-döntés 2026-11-03).
+- A szűrők linkek (szerver oldali), nem JS-gombok — JS nélkül is működnek.
+- A küldés-gomb a konzol elsődleges gombja (navy), mint a partner-szerkesztő „Mentés”-e; a mock a
+  közös dizájn-mag cián változatát mutatta.
+- A bejövő buborék fölött a partner (számlázási) neve áll; nem megkeresési bejövőnél elöl
+  „Bejövő levél” / „Bejövő SMS”.
+- A bemutató-kapcsolók (éjszaka / hiba / őr) a mock részei; a kódban ezek valós állapotok.
+
+## Őr
+
+- `scripts/partner-messages-check.mts` — a szál, az írás (kliens + szerver, JS nélkül is), a sor
+  követése, a bejövő besorolás és az elutasító-őr, 390/1280 px.

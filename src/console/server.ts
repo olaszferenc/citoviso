@@ -84,6 +84,17 @@ import { fmtTime as partnerFmtTime, type PartnerEditState } from "./partnerProfi
 import { partnerActivityHtml } from "./partnerActivity.js";
 import { getTenantActivities } from "./tenantActivityData.js";
 import { reportTenantsPage, TENANT_FILTERS, TENANT_SORTS, type TenantFilter, type TenantSort } from "./tenantActivityViews.js";
+import {
+  blockLeadContact,
+  getPartnerThread,
+  outcomeText,
+  replyLeadId,
+  retryPartnerMessage,
+  sendPartnerMessage,
+  settlePartnerMessages,
+  unblockLeadContact,
+} from "./partnerMessages.js";
+import { MESSAGE_FILTERS, messageBubble, messagesTab, type ComposeState, type MessageFilter } from "./partnerMessageViews.js";
 import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
 import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
@@ -1655,6 +1666,29 @@ async function handle(
       return redirect(res, `/?reply=${m[1]}${all}#replies`);
     }
   }
+  // POST /replies/<id>/block | /unblock — „Elutasító / nem érintett — ne keressük” (ADR-XXXX):
+  // the lead's block mark with a reason; from then on nothing goes to it (partner sheet, answers).
+  {
+    const m = method === "POST" ? path.match(/^\/replies\/([0-9a-f-]{36})\/(block|unblock)$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const id = m[1]!;
+      const leadId = await replyLeadId(id);
+      if (!leadId) return send(res, 404, layout("404", `<p>${T(consoleLang(), "Nincs ilyen válasz.")}</p>`));
+      if (m[2] === "block") {
+        const r = await blockLeadContact(leadId, String(form.get("reason") ?? ""), op.displayName);
+        replyNotices.set(id, r.ok ? { kind: "blocked", detail: null, at: null } : { kind: "failed", detail: r.problem ?? null, at: null });
+      } else {
+        await unblockLeadContact(leadId);
+        replyNotices.set(id, { kind: "unblocked", detail: null, at: null });
+      }
+      resetNavCountsCache();
+      const all = form.get("f") === "all" ? "&replies=all" : "";
+      return redirect(res, `/?reply=${id}${all}#replies`);
+    }
+  }
   // POST /replies/<id>/send — „Elküldöm" (ADR-0340, plan valaszok-valasz ③④⑦⑦b⑧): the
   // operator's answer on the reply's own channel; inside the weekday window it goes now,
   // outside it is queued for the next opening. POST /replies/<id>/suggest — Poe's
@@ -2410,6 +2444,7 @@ async function handle(
     want: string | null,
     edit: PartnerEditState,
     status = 200,
+    compose: ComposeState = {},
   ): Promise<void> => {
     const d = await getPartnerDetail(id);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
@@ -2418,7 +2453,7 @@ async function handle(
     // „contacts” was the old Kontaktok tab — its content lives on the data tab now.
     const t = want === "contacts" ? "data" : want;
     const tab: PartnerTab =
-      t === "data" || t === "documents" || t === "activity"
+      t === "data" || t === "documents" || t === "activity" || t === "messages"
         ? t
         : t === "subscription" && d.isCustomer
           ? "subscription"
@@ -2439,7 +2474,23 @@ async function handle(
         : null;
     const contacts = tab === "data" ? await getEditableContacts(d.id) : [];
     const usage = tab === "usage" ? await partnerActivityHtml({ partnerId: d.id, tenantId: prof.relations.tenant?.id ?? null }) : null;
-    return send(res, status, partnerPage(d, tab, timeline, docs, docQuery, contacts, { profile: prof, edit, usageHtml: usage }));
+    if (tab === "messages") await settlePartnerMessages();
+    const thread = await getPartnerThread(d.id);
+    const mf = url.searchParams.get("f") as MessageFilter | null;
+    const sentId = url.searchParams.get("sent");
+    const sentMsg = sentId ? thread?.messages.find((x) => x.key === `pm:${sentId}`) : undefined;
+    const messagesHtml =
+      tab === "messages" && thread
+        ? messagesTab(d.id, thread, mf && MESSAGE_FILTERS.includes(mf) ? mf : "all", {
+            ...compose,
+            flash: compose.flash ?? (sentMsg?.status ? { ok: sentMsg.status !== "failed", text: outcomeText(sentMsg.status) } : null),
+          })
+        : undefined;
+    return send(
+      res,
+      status,
+      partnerPage(d, tab, timeline, docs, docQuery, contacts, { profile: prof, edit, usageHtml: usage, messagesHtml, waiting: thread?.waiting ?? 0 }),
+    );
   };
   if (method === "GET" && partnerMatch) {
     const editOpen = url.searchParams.get("edit") === "1";
@@ -2498,6 +2549,52 @@ async function handle(
     }
     const hhmm = partnerFmtTime(new Date().toISOString()).slice(11);
     return redirect(res, `/partner/${id}?tab=data&saved=${encodeURIComponent(hhmm)}`);
+  }
+  // „Üzenetváltások” (M1, ADR-XXXX). POST /partner/:id/message — a manual e-mail / SMS;
+  // GET /partner/:id/message/:mid — one bubble's state (the JS follows a queued SMS);
+  // POST /partner/:id/message/:mid/retry — „újra” on a failed one. JSON for the JS client,
+  // a redirect back to the tab without JS.
+  const pmSend = /^\/partner\/([0-9a-f-]{36})\/message$/i.exec(path);
+  const pmOne = /^\/partner\/([0-9a-f-]{36})\/message\/([0-9a-f-]{36})$/i.exec(path);
+  const pmRetry = /^\/partner\/([0-9a-f-]{36})\/message\/([0-9a-f-]{36})\/retry$/i.exec(path);
+  if ((method === "POST" && (pmSend || pmRetry)) || (method === "GET" && pmOne)) {
+    const wantsJson = String(req.headers.accept ?? "").includes("application/json");
+    const json = (code: number, body: unknown) => {
+      res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify(body));
+    };
+    const pid = (pmSend ?? pmOne ?? pmRetry)![1]!;
+    const bubble = async (mid: string) => {
+      const t = await getPartnerThread(pid);
+      const msg = t?.messages.find((x) => x.key === `pm:${mid}`);
+      return msg && t ? { key: msg.key, status: msg.status, html: messageBubble(msg, pid, t.partnerName, true) } : null;
+    };
+    if (pmOne) {
+      await settlePartnerMessages();
+      const b = await bubble(pmOne[2]!);
+      return b ? json(200, b) : json(404, { error: "not found" });
+    }
+    const op = await currentOperator(req);
+    if (!op) return wantsJson ? json(401, { ok: false, problems: { form: "Jelentkezzen be újra." } }) : redirect(res, "/login");
+    const form = await readBody(req);
+    const get = (k: string) => String(form.get(k) ?? "");
+    const input = { channel: get("channel"), to: get("to"), subject: get("subject"), body: get("body"), sign: get("sign") === "1" };
+    const r = pmRetry ? await retryPartnerMessage(pid, pmRetry[2]!) : await sendPartnerMessage(pid, input, op.displayName);
+    if (wantsJson) {
+      if (!r.ok) return json(422, r);
+      const b = await bubble(r.id);
+      return json(200, { ...r, ...b, status: r.status });
+    }
+    if (!r.ok && !pmRetry) {
+      const t = await getPartnerThread(pid);
+      if (!t) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
+      return renderPartner(pid, "messages", { open: false }, 422, {
+        values: { ...input, sign: input.sign ? "1" : "0" },
+        problems: r.problems,
+      });
+    }
+    const flash = r.ok ? `&sent=${encodeURIComponent(r.id)}` : "";
+    return redirect(res, `/partner/${pid}?tab=messages${flash}${r.ok ? `#m-pm-${r.id}` : ""}`);
   }
   // GET /partner/:id/documents.csv — the filtered document list for Excel
   // (UTF-8 BOM + semicolon separator: opens correctly in Hungarian Excel).

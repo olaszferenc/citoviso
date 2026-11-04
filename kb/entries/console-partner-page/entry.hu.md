@@ -4,7 +4,7 @@ title: Partner-lap — egy vevő vagy szállító adatlapja
 audience: operator
 category: finance
 anchors: console.partner
-updated: 2026-11-03
+updated: 2026-11-04
 ---
 
 A partner nevére kattintva (a **„Partnerek”** listából) nyílik a partner-lap: egy vevő vagy
@@ -37,6 +37,36 @@ az **„Átveszem a partnerre”** link megnyitja a szerkesztőt a számmal kit�
 Alatta kártyák: **Előfizetés**, **Domain**, **Kapcsolatok** (tenant, lead, oldal, a tulaj
 belépési neve és utolsó jelszavas belépése) és **Számlázási adatok**. A **„Részletek”** link a
 megfelelő fülre visz. Legalul a bizonylat-összesítő és a havi bontás.
+
+## Az **„Üzenetváltások”** fül — minden levél és SMS egy szálban, és innen írhat is
+
+Egy szál, időrendben, mint egy csevegés: jobbra a mi üzeneteink (a megkeresés MMS-e, SMS-e és
+levele, a válaszainkra adott válasz, a kézi üzenetek, és a rendszerlevelek — számla, belépés,
+domain —, ez utóbbiak lenyitható kártyaként), balra a partneré (a megkeresésre adott válasza, és
+minden levél vagy SMS, ami a partner vagy egy kapcsolattartója címéről jön). A buborék fölött a
+csatorna, a címzett, az időpont és az állapot: **„elküldve”**, **„sorban — a modem-sáv viszi
+ki”**, **„ütemezve”** vagy **„nem ment ki”** (ilyenkor mellette az **„újra”** gomb). A fül
+neve mellett a szám: hány üzenete jött a partnernek a mi utolsó üzenetünk óta.
+
+Felül a szűrők: **„Mind”**, **„E-mail”**, **„SMS / MMS”**, **„Kézi”**, **„Rendszerlevél”**.
+
+**Írás** (a szál alatt):
+
+- **„E-mail”** / **„SMS”** váltó, **„Címzett”** — csak a partner és a kapcsolattartói címei
+  közül (SMS-nél a lead telefonja is, ahová a megkeresés ment). Leiratkozott címre nem küldhet.
+- **„Tárgy”** csak levélnél kell. SMS-nél a számláló mutatja a karaktereket és a részeket:
+  ékezet nélkül 160 karakter egy SMS, egy ékezet (ő, ű, „) miatt az egész 70-es részekre vált —
+  az **„Ékezet nélkül küldöm (kevesebb SMS-rész)”** link leveszi az ékezeteket. 5 résznél
+  hosszabb szöveg nem küldhető. Az aláírás („A Citoviso csapata”) alapból a végére kerül.
+- **„Levél küldése”** / **„SMS küldése”**: a levél azonnal megy, a citoviso.com feladóval — a
+  válasz a postafiókba érkezik, és ebben a szálban is megjelenik. Az SMS a modem-sávon megy ki,
+  általában 1 percen belül; este 10 és reggel 7 között reggel 7-kor. A kiküldött üzenet azonnal
+  megjelenik a szálban, és az SMS állapota magától frissül.
+- A vevő a saját adminjában, az üzenetei között is látja, amit innen írt neki.
+
+**Ha a partner elutasító vagy leiratkozott**, az írás-doboz fölött piros sáv áll: **„Ennek a
+partnernek nem küldhető üzenet.”**, az okkal együtt, és a doboz le van tiltva. Az elutasító-jelet
+az Irányítópult „Válaszok a megkeresésekre” blokkjában lehet feltenni.
 
 ## Az **„Adatok és kapcsolattartók”** fül — itt szerkeszt
 

@@ -229,7 +229,14 @@ export function partnerPage(
   docs: PartnerDocuments | null = null,
   docQuery: PartnerDocQuery = {},
   contacts: readonly PartnerContactInput[] = [],
-  extra: { readonly profile?: PartnerProfile; readonly edit?: PartnerEditState; readonly usageHtml?: string | null } = {},
+  extra: {
+    readonly profile?: PartnerProfile;
+    readonly edit?: PartnerEditState;
+    readonly usageHtml?: string | null;
+    /** The „Üzenetváltások” tab body (partnerMessageViews.messagesTab) and its badge. */
+    readonly messagesHtml?: string;
+    readonly waiting?: number;
+  } = {},
 ): string {
   const lang = consoleLang();
   const prof: PartnerProfile = extra.profile ?? EMPTY_PROFILE;
@@ -242,6 +249,9 @@ export function partnerPage(
       body = `${attentionBlock(d, prof.attention)}${overviewCards(d, prof)}${
         docs && docs.rows.length ? `<section class="pa-card">${kpiStrip(docs)}${monthlyChart(docs)}</section>` : ""
       }`;
+      break;
+    case "messages":
+      body = extra.messagesHtml ?? "";
       break;
     case "data":
       body = dataTab(d, contacts, edit);
@@ -265,7 +275,7 @@ export function partnerPage(
   const page = `<div class="pa-page">
     ${partnerHeader(d, prof)}
     <div class="pa-help">${helpLink("console.partner")}</div>
-    ${partnerTabNav(d, prof, tab)}
+    ${partnerTabNav(d, prof, tab, extra.waiting ?? 0)}
     ${body}
   </div>`;
   return layout(d.name, page, { active: `/partner/${d.id}` });

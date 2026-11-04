@@ -13,7 +13,7 @@
 // costs two septets and its escape handling differs between handsets; a text with
 // one of those stays UCS-2, which is safe (a few more segments, never mangled).
 
-const GSM7_BASIC =
+export const GSM7_BASIC =
   "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
 const BASIC = new Set([...GSM7_BASIC]);
 

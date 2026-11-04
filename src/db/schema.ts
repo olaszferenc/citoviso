@@ -85,6 +85,14 @@ export interface LeadTable {
    * once (it is in a sent message), released (NULL) when the buyer chooses another address.
    */
   preview_label: string | null;
+  /**
+   * 0123 (ADR-XXXX): „Elutasító / nem érintett — ne keressük”, set from the Válaszok panel with
+   * a reason. While set, nothing goes to this lead's tenant/partner from the console (manual
+   * messages and reply-answers alike). Deliberately NOT „has replied” — paying customers reply too.
+   */
+  contact_block_at: Timestamp | null;
+  contact_block_reason: string | null;
+  contact_block_by: string | null;
 }
 
 export interface LeadProvenanceTable {
@@ -2030,6 +2038,34 @@ export interface OutreachReplySendTable {
   updated_at: Generated<Timestamp>;
 }
 
+/**
+ * 0123 (ADR-XXXX): the partner sheet's own messages — a manual send from the „Üzenetváltások” tab
+ * (out), or a mail/SMS from the partner's or a contact's address that was not an outreach reply (in).
+ */
+export interface PartnerMessageTable {
+  id: Generated<string>;
+  partner_id: string;
+  direction: "in" | "out";
+  channel: "email" | "sms";
+  /** Recipient (out) or sender (in): lower-cased e-mail or E.164. */
+  address: string;
+  subject: string | null;
+  body: string;
+  status: "scheduled" | "queued" | "sent" | "failed" | "received";
+  scheduled_for: Timestamp | null;
+  sms_outbox_id: string | null;
+  /** The mirror row in the tenant's own inbox — the thread skips it. */
+  tenant_message_id: string | null;
+  message_id: string | null;
+  source_key: string | null;
+  error: string | null;
+  sent_by: string | null;
+  created_at: Generated<Timestamp>;
+  /** out: when it left; in: when it arrived. */
+  sent_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+}
+
 /** 0094: when the collector last looked at each source (the freshness line). */
 export interface OutreachReplyPollTable {
   channel: "sms" | "email";
@@ -2041,6 +2077,7 @@ export interface Database {
   outreach_reply: OutreachReplyTable;
   outreach_reply_poll: OutreachReplyPollTable;
   outreach_reply_send: OutreachReplySendTable;
+  partner_message: PartnerMessageTable;
   scraper_definition: ScraperDefinitionTable;
   scrape_run: ScrapeRunTable;
   lead: LeadTable;

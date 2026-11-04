@@ -25,7 +25,7 @@ import type {
   PartnerSubscription,
 } from "./partnerProfile.js";
 
-export type PartnerTabId = "overview" | "data" | "subscription" | "domain" | "documents" | "usage" | "activity";
+export type PartnerTabId = "overview" | "messages" | "data" | "subscription" | "domain" | "documents" | "usage" | "activity";
 
 const huf = (n: number, cur = "HUF") => esc(formatMoney(n, cur));
 const dash = `<span class="mut">–</span>`;
@@ -137,11 +137,14 @@ function moneyTile(m: Readonly<Record<string, number>>): string {
   return e.length ? e.map(([c, v]) => huf(v, c)).join("<br>") : huf(0);
 }
 
-export function partnerTabNav(d: PartnerDetail, prof: PartnerProfile, active: PartnerTabId): string {
+export function partnerTabNav(d: PartnerDetail, prof: PartnerProfile, active: PartnerTabId, waiting = 0): string {
   const lang = consoleLang();
   const hasTenant = Boolean(prof.relations.tenant);
   const tabs: [PartnerTabId, string, number?][] = [
     ["overview", T(lang, "Áttekintés"), prof.attention.length || undefined],
+    // M1 (owner decision 2026-11-04): right after Áttekintés; the badge = partner messages
+    // newer than our last outbound one.
+    ["messages", T(lang, "Üzenetváltások"), waiting || undefined],
     ["data", T(lang, "Adatok és kapcsolattartók")],
     ...(d.isCustomer ? ([["subscription", T(lang, "Előfizetés")]] as [PartnerTabId, string][]) : []),
     ...(hasTenant ? ([["domain", T(lang, "Domain")]] as [PartnerTabId, string][]) : []),

@@ -73,6 +73,7 @@ const VIEW_GROUPS = {
     "src/console/partnerViews.ts",
     // Partner sheet A — Fülek (2026-11-03): header, Figyelendő, editor, Előfizetés, Domain.
     "src/console/partnerProfileViews.ts",
+    "src/console/partnerMessageViews.ts",
     // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
     // views render live HERE (single source shared with the register route).
     "src/console/partnerData.ts",

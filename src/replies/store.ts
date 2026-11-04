@@ -140,6 +140,13 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
     }
     const c = matchReply(r, contacts);
     if (!c) {
+      // Not an outreach reply — but a partner's or a contact's own address joins that
+      // partner's „Üzenetváltások” thread (ADR-XXXX). Lazy import: partnerMessages uses this module.
+      const { ingestPartnerInbound } = await import("../console/partnerMessages.js");
+      if (await ingestPartnerInbound({ key, channel: r.channel, from: r.from, subject: clip(r.subject, 500), text, receivedAt })) {
+        accepted.push(key);
+        continue;
+      }
       dropped++;
       continue;
     }
@@ -237,6 +244,8 @@ export interface ReplyView {
   readonly sentSms: boolean;
   readonly answeredAt: Date | null;
   readonly answeredBy: string | null;
+  /** „Elutasító / nem érintett — ne keressük” on the lead (ADR-XXXX), or null. */
+  readonly block: { readonly at: Date; readonly reason: string; readonly by: string } | null;
   /** Poe's „Javasolt válasz” (ADR-0340), or null while it is still being written. */
   readonly suggestion: ReplySuggestion | null;
   /** The operator's sends on this reply, newest first (a failure, then its „Újraküldés”). */
@@ -320,6 +329,9 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         "r.suggestion_by",
         "r.suggestion_at",
         "r.suggestion_basis",
+        "l.contact_block_at",
+        "l.contact_block_reason",
+        "l.contact_block_by",
       ])
       .orderBy("r.received_at", "desc")
       .limit(limit)
@@ -357,6 +369,9 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     sentSms: !!r.sms_sent_at,
     answeredAt: r.answered_at ? new Date(r.answered_at) : null,
     answeredBy: r.answered_by,
+    block: r.contact_block_at
+      ? { at: new Date(r.contact_block_at), reason: r.contact_block_reason ?? "", by: r.contact_block_by ?? "—" }
+      : null,
     suggestion:
       r.suggestion_text && r.suggestion_at
         ? { text: r.suggestion_text, subject: r.suggestion_subject, by: r.suggestion_by ?? "Poe", at: new Date(r.suggestion_at), basis: r.suggestion_basis ?? [] }

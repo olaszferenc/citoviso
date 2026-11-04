@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-10-08
+updated: 2026-11-04
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -105,6 +105,24 @@ A **„Visszavonás”** csak a megválaszolt-jelölést veszi vissza — a kime
 Poe javaslata már nem áll ott újra (az egyszer kiment); ha folytatnád a beszélgetést, a
 **„Megírom magam”** gombbal írod meg a következő üzenetet.
 Poe soha nem küld: a küldés mindig a te gombnyomásod.
+
+### Elutasító / nem érintett — ne keressük
+
+Ha a lead elutasította az ajánlatot, vagy kiderül, hogy nem érintett (nem ő a tulajdonos,
+nem kiadó a ház), a beszélgetés alján nyisd le az **„Elutasító / nem érintett — ne keressük”**
+sort, írd be, miért (**„Miért? (pl. „nem kéri”, „nem ő a tulajdonos”)”**), és nyomd meg a
+**„Megjelölöm — ne keressük”** gombot. Ettől kezdve:
+
+- semmilyen üzenet nem megy neki: megkeresés, a válaszára adott válasz, és a partner-lap
+  **„Üzenetváltások”** füléről írt kézi levél vagy SMS sem;
+- a megkeresésekről is leiratkoztatjuk, a tétel megválaszolt lesz, és ami a sorban várt neki,
+  az nem megy ki;
+- a beszélgetésben piros sáv mutatja: **„Elutasító / nem érintett — nem keressük”**, mikor,
+  ki jelölte és az indok. Ha tévedésből jelölted: **„Jelölés levétele”** (a leiratkozás
+  ilyenkor megmarad — azt a lead lapján, indokkal lehet visszavenni).
+
+⚠️ Nem az számít elutasítónak, aki bármit válaszolt — a fizető vevő is válaszolt. A jelölés
+mindig a te döntésed.
 
 A megválaszolatlanok száma a menüben is ott áll, az **„Irányítópult”** sor mellett piros
 jelvényként; 0-nál eltűnik.

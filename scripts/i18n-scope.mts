@@ -61,6 +61,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // text (typed or Poe's suggestion, in the lead's language) — nothing is composed here;
   // the Hungarian literals are operator-facing outcomes / validation messages.
   "src/replies/answer.ts": "operátor írta levél-szöveg; a magyar literálok operátori hiba-/állapot-üzenetek",
+  // ADR-XXXX: the partner sheet's manual e-mail/SMS — the operator types the letter; the Hungarian
+  // literals are console-only states, validation and guard reasons. store.ts reaches the sender
+  // only through the lazy inbound hand-off to partnerMessages (no outgoing text of its own).
+  "src/console/partnerMessages.ts": "operátor írta levél-szöveg; a magyar literálok operátori állapot-/hiba-üzenetek",
+  "src/replies/store.ts": "csak a bejövő átadás miatt ér el a küldőig (partnerMessages); saját kimenő szöveg nincs",
   "src/replies/answerRules.ts": "operátori validációs üzenetek; a levélbe nem kerül komponált szöveg",
   // ADR-0287: az eszkalációs emlékeztető (escalationFollowup.ts) innen veszi a küldési
   // ablak ÓRÁIT és a budapesti falióra-számítást. A fájl magyar literáljai operátori/relé

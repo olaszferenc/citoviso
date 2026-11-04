@@ -157,10 +157,14 @@ export async function sendAnswer(
 ): Promise<SendOutcome> {
   const r = await db
     .selectFrom("outreach_reply")
-    .select(["id", "channel", "sender", "subject", "ours_subject"])
+    .select(["id", "channel", "sender", "subject", "ours_subject", "lead_id"])
     .where("id", "=", replyId)
     .executeTakeFirst();
   if (!r) return { ok: false, status: "failed", message: "Nincs ilyen válasz." };
+  // ⛔ A rejecter / „not concerned” replier gets nothing more — not even an answer (ADR-XXXX).
+  const { leadContactBlock } = await import("../console/partnerMessages.js");
+  const blocked = await leadContactBlock(r.lead_id);
+  if (blocked) return { ok: false, status: "failed", message: blocked };
   const busy = await db
     .selectFrom("outreach_reply_send")
     .select("id")

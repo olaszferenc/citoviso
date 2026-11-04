@@ -3923,3 +3923,88 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   .ta-tblwrap { display: none; }
   .ta-cards { display: block; }
 }
+/* ── Partner-adatlap: Üzenetváltások (M1 csevegő-szál, ADR-XXXX;
+      assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html) ── */
+.con .mx-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 10px; }
+.con .mx-filters a { border: 1px solid var(--citui-line-strong); background: var(--citui-panel); border-radius: var(--citui-radius-pill); padding: 6px 12px; min-height: 32px; box-sizing: border-box; display: inline-flex; align-items: center; font: 600 12.5px var(--citui-font-text); color: var(--citui-ink); text-decoration: none; }
+.con .mx-filters a[aria-current="true"] { background: var(--citui-navy-900); border-color: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+.con .mx-gap { font-size: 12.5px; color: var(--citui-muted); background: var(--citui-surface-2); border-radius: 10px; padding: 8px 10px; margin: 0 0 12px; }
+.con .mx-thread { list-style: none; margin: 0 0 12px; padding: 12px; display: grid; gap: 10px; background: var(--citui-surface); border-radius: var(--citui-radius-sm); }
+.con .mx-day { text-align: center; font-size: 11.5px; color: var(--citui-muted); font-weight: 600; }
+.con .mx-empty { text-align: center; font-size: 13px; color: var(--citui-muted); padding: 10px; }
+.con .mx-msg { display: grid; max-width: min(560px, 88%); gap: 3px; min-width: 0; }
+.con .mx-msg--out { justify-self: end; }
+.con .mx-msg--in { justify-self: start; }
+.con .mx-meta { font-size: 11.5px; color: var(--citui-muted); line-height: 1.7; overflow-wrap: anywhere; }
+.con .mx-meta svg { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+.con .mx-meta .mx-chip { margin-left: 6px; white-space: nowrap; }
+.con .mx-msg--out .mx-meta { text-align: right; }
+.con .mx-bub { border-radius: 16px; padding: 9px 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--citui-ink); }
+.con .mx-msg--in .mx-bub { background: var(--citui-panel); border: 1px solid var(--citui-line-strong); border-bottom-left-radius: 4px; }
+.con .mx-msg--out .mx-bub { background: color-mix(in srgb, var(--citui-cyan-500) 14%, var(--citui-panel)); border: 1px solid color-mix(in srgb, var(--citui-cyan-500) 35%, transparent); border-bottom-right-radius: 4px; }
+.con .mx-msg--sys .mx-bub { background: var(--citui-surface-2); border: 1px solid var(--citui-line); }
+.con .mx-subj { display: block; margin-bottom: 3px; white-space: normal; }
+.con .mx-ph { color: var(--citui-muted); font-style: italic; }
+.con .mx-bub details summary { cursor: pointer; font-weight: 600; list-style: none; white-space: normal; }
+.con .mx-bub details summary::-webkit-details-marker { display: none; }
+.con .mx-bub details[open] summary { margin-bottom: 6px; }
+.con .mx-att { display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; margin-top: 6px; color: var(--citui-link-ink); font-weight: 600; }
+.con .mx-chip { font-size: 11px; font-weight: 700; border-radius: var(--citui-radius-pill); padding: 1px 7px; border: 1px solid var(--citui-line); }
+.con .mx-chip--sent { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
+.con .mx-chip--queued, .con .mx-chip--scheduled { background: color-mix(in srgb, var(--citui-warn) 14%, var(--citui-panel)); color: var(--citui-warn-ink); }
+.con .mx-chip--failed { background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink); }
+.con .mx-retryf { display: inline; margin: 0; }
+.con .mx-retry { border: 0; background: none; color: var(--citui-bad-ink); font: 700 11.5px var(--citui-font-text); cursor: pointer; text-decoration: underline; padding: 4px 2px; width: auto; margin: 0; min-height: 0; }
+.con .mx-note { font-size: 11.5px; color: var(--citui-muted); font-style: italic; }
+.con .mx-note.is-bad { color: var(--citui-bad-ink); font-style: normal; }
+.con .mx-msg--out .mx-note { text-align: right; }
+.con .mx-new { animation: mxin .4s ease; }
+@keyframes mxin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* composer */
+/* (0,2,1) beats `.con form { display: inline }` — an inline box cannot be a size container */
+.con form.mx-comp { display: block; }
+.con .mx-comp { background: var(--citui-panel); border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm); padding: 12px; container-type: inline-size; }
+.con .mx-fs { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; min-width: 0; }
+.con .mx-comp.is-guarded .mx-fs { opacity: .45; }
+.con .mx-comp__row { display: grid; gap: 10px; }
+@container (min-width: 560px) { .con .mx-comp__row { grid-template-columns: auto 1fr; align-items: start; } }
+.con .mx-seg { display: inline-flex; border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-pill); padding: 3px; gap: 3px; justify-self: start; align-self: end; }
+.con .mx-seg__o { position: relative; border-radius: var(--citui-radius-pill); padding: 7px 12px; font: 600 13px var(--citui-font-text); color: var(--citui-muted); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; min-height: 34px; box-sizing: border-box; }
+.con .mx-seg__o input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.con .mx-seg__o:has(input:checked) { background: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+.con .mx-seg__o:has(input:focus-visible) { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; }
+.con .mx-to, .con .mx-f { display: grid; gap: 4px; font-size: 12.5px; color: var(--citui-muted); min-width: 0; }
+.con .mx-to > span, .con .mx-f > span { font-weight: 600; }
+.con .mx-f small { font-weight: 500; }
+.con .mx-comp select, .con .mx-comp input[name="subject"], .con .mx-comp textarea { font: 14px var(--citui-font-text); color: var(--citui-ink); background: var(--citui-field); border: 1px solid var(--citui-line-strong); border-radius: 10px; padding: 9px 11px; width: 100%; box-sizing: border-box; min-width: 0; margin: 0; }
+.con .mx-comp textarea { resize: vertical; min-height: 90px; }
+.con .mx-comp .is-bad { border-color: var(--citui-bad); }
+.con .mx-err { color: var(--citui-bad-ink); font-style: normal; font-size: 12px; }
+.con .mx-err:empty { display: none; }
+.con .mx-smsinfo { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--citui-ink); }
+.con .mx-smsinfo [data-mx-count] { font-variant-numeric: tabular-nums; font-weight: 600; }
+.con .mx-smsinfo [data-mx-count].is-bad { color: var(--citui-bad-ink); }
+.con .mx-link { border: 0; background: none; padding: 4px 0; color: var(--citui-link-ink); font: 600 12.5px var(--citui-font-text); cursor: pointer; width: auto; margin: 0; min-height: 0; }
+.con .mx-chk { display: inline-flex; gap: 5px; align-items: center; color: var(--citui-muted); }
+.con .mx-chk input { width: auto; margin: 0; }
+.con .mx-when { font-size: 12.5px; color: var(--citui-muted); }
+.con .mx-when:empty { display: none; }
+.con .mx-when.is-night { color: var(--citui-warn-ink); font-weight: 600; }
+.con .mx-acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.con .mx-btn { padding: 10px 16px; font-size: 14px; display: inline-flex; gap: 6px; align-items: center; width: auto; margin: 0; }
+.con .mx-state { font-size: 13px; color: var(--citui-muted); }
+.con .mx-state.is-ok { color: var(--citui-ok-ink); }
+.con .mx-state.is-bad { color: var(--citui-bad-ink); }
+.con .mx-guard { display: flex; gap: 10px; align-items: flex-start; background: color-mix(in srgb, var(--citui-bad) 9%, var(--citui-panel)); border: 1px solid color-mix(in srgb, var(--citui-bad) 35%, transparent); color: var(--citui-bad-ink); border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
+.con .mx-guard svg { flex: none; margin-top: 1px; }
+.con .mx-guard span { display: block; color: var(--citui-ink); margin-top: 2px; }
+.con .mx [hidden], .con .mx-comp [hidden] { display: none !important; }
+/* Válaszok panel: „Elutasító / nem érintett — ne keressük” */
+.con-rep__block { max-width: 620px; margin-top: 12px; font-size: 13px; }
+.con-rep__block summary { cursor: pointer; color: var(--citui-bad-ink); display: inline-flex; gap: 5px; align-items: center; font-weight: 600; }
+.con-rep__block label { display: block; margin-top: 8px; color: var(--citui-muted); }
+.con-rep__block form p { margin: 8px 0 0; }
+.con .con-rep__blockbtn { margin-top: 8px; color: var(--citui-bad-ink); border-color: color-mix(in srgb, var(--citui-bad) 45%, transparent); }
+.con-rep__block.is-on { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; background: color-mix(in srgb, var(--citui-bad) 9%, var(--citui-panel)); border: 1px solid color-mix(in srgb, var(--citui-bad) 35%, transparent); border-radius: 10px; padding: 8px 12px; color: var(--citui-ink); }
+.con-rep__block.is-on svg { color: var(--citui-bad-ink); }
+.con-rep__block.is-on form { display: inline; margin: 0; }

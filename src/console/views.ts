@@ -9325,7 +9325,7 @@ export interface RepliesQuery {
 
 /** What the redirect after a send / suggestion tells the operator (ADR-0340). */
 export interface ReplyNotice {
-  readonly kind: "scheduled" | "queued" | "sent" | "failed" | "suggested";
+  readonly kind: "scheduled" | "queued" | "sent" | "failed" | "suggested" | "blocked" | "unblocked";
   readonly detail: string | null;
   readonly at: Date | null;
 }
@@ -9526,6 +9526,10 @@ function replyToast(r: ReplyView | null, n: ReplyNotice | null | undefined, lang
           ? T(lang, "Sorba állítva — {when} megy ki · {lead}", { when: n.at ? whenAhead(n.at, lang) : "—", lead: r.leadName })
           : n.kind === "suggested"
             ? T(lang, "Javaslat letéve — {lead}", { lead: r.leadName })
+            : n.kind === "blocked"
+              ? T(lang, "Elutasítónak jelölve — {lead} többé semmilyen üzenetet nem kap", { lead: r.leadName })
+              : n.kind === "unblocked"
+                ? T(lang, "Az elutasító-jel levéve — {lead}", { lead: r.leadName })
             : `${T(lang, "Nem ment ki — a tétel megválaszolatlan maradt")}${n.detail ? ` · ${n.detail}` : ""}`;
   return `<div class="con-rep__toast${n.kind === "failed" ? " is-err" : ""}" role="status" data-rep-toast>${esc(text)}</div>`;
 }
@@ -9547,9 +9551,31 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
     `<span class="con-rep__who">${esc([r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
     `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
     `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>` +
-    replyAnswer(r, q, hidden, lang) +
+    (r.block ? "" : replyAnswer(r, q, hidden, lang)) +
     `<div class="con-rep__acts">${acts}<a class="con-btn" href="/lead/${esc(r.leadId)}">${esc(T(lang, "Lead lapja"))}${icf("fwd", 13)}</a></div>` +
+    replyBlock(r, hidden, lang) +
     `</div>`
+  );
+}
+
+/**
+ * „Elutasító / nem érintett — ne keressük” (ADR-XXXX, coordinator decision 2026-11-03): a
+ * reasoned block mark on the lead. NOT „has replied” — paying customers reply too. Once set,
+ * the answer editor is gone and nothing can be sent to the lead from anywhere in the console.
+ */
+function replyBlock(r: ReplyView, hidden: string, lang: string): string {
+  if (r.block)
+    return (
+      `<div class="con-rep__block is-on">${icf("lock", 14)}<span><b>${esc(T(lang, "Elutasító / nem érintett — nem keressük"))}</b> · ` +
+      `${esc(whenShort(r.block.at.toISOString(), lang))} · ${esc(r.block.by)}${r.block.reason ? ` · „${esc(r.block.reason)}”` : ""}</span>` +
+      `<form method="post" action="/replies/${esc(r.id)}/unblock">${hidden}<button type="submit" class="ghost con-rep__undo">${esc(T(lang, "Jelölés levétele"))}</button></form></div>`
+    );
+  return (
+    `<details class="con-rep__block"><summary>${icf("lock", 13)}${esc(T(lang, "Elutasító / nem érintett — ne keressük"))}</summary>` +
+    `<form method="post" action="/replies/${esc(r.id)}/block">${hidden}` +
+    `<p class="con-rep__meta">${esc(T(lang, "Ezután semmilyen üzenet nem megy neki: megkeresés, válasz és kézi levél vagy SMS sem. A megkeresésekről le is iratkoztatjuk."))}</p>` +
+    `<label>${esc(T(lang, "Miért? (pl. „nem kéri”, „nem ő a tulajdonos”)"))}<input name="reason" maxlength="300" required></label>` +
+    `<button type="submit" class="con-btn con-rep__blockbtn">${esc(T(lang, "Megjelölöm — ne keressük"))}</button></form></details>`
   );
 }
 

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-partner-uzenetvaltasok-m1-elutasito-jel.md) — Partner-lap „Üzenetváltások” (M1 csevegő-szál), kézi e-mail/SMS, elutasító-jel a leaden
 - [ADR-0420](decisions/0420-tenant-aktivitas-es-latogatottsag-a-konzolon.md) — Tenant-aktivitás és látogatottság a konzolon, csak a már mért adatból; a tulaj saját megnyitása nem vendég
 - [ADR-0419](decisions/0419-munkatars-lanc-egyszerusitese-bb-szabalyai.md) — Munkatárs-lánc egyszerűsítése: -bb szabályai Verához, dupla ellenőrzések le
 - [ADR-0418](decisions/0418-a-partner-adatlap-szerkesztheto-a-partner-sor-a.md) — A partner-adatlap szerkeszthető; a partner-sor a számlázás forrása, a nyilatkozat és a kiállított számla érinthetetlen
