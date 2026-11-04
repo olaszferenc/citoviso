@@ -183,7 +183,12 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (2026-11-03 — portál-jutalék kiváltása + megtalálhatóság) — ZÁRVA, Search Console ÉLESEN
+## Aktív feladat (2026-11-04 — Fizetés-csomag: számla-tükör, riasztás, riport, partner-adatlap, aktivitás, domain-nyilvántartás) — ZÁRVA, ÉLESEN
+- **Élesen most:** `d7e7c90d` (prod/20261104-1656): ADR-0414 számla-tükör + fizetés-riasztás (backfill lefutott, CITO-2026-5/6/7 a Bizonylatokban), partner-adatlap fülekkel (ADR-0418) + Üzenetváltások fül (M1, e-mail/SMS, elutasító-jel; ADR-0421, 0123), `/domains` domain-nyilvántartás (hibrid, 0122), Riport › Előfizetők és Tenantok, súgó-cikkek; cfm-relé keret-ÁLLJ kivétel.
+- **Nyitott (tulaj):** CITO-2026-5/6 teszt-számlák sztornója; Websupport „tulajdonosi információ nem egyezik” figyelmeztetés (dunavibehouse.hu).
+- **Ismert:** `kb/entries/admin-modules-amenities/assets/hu/screen.png` két render között billeg, a deploy kép-kapuja ezért időnként bukik — a kapu friss renderjét kell commitolni. Jegyzet: `_planning/memory/2026-11-04_fizetes_csomag_zaras.md`.
+
+## Előző aktív feladat (2026-11-03 — portál-jutalék kiváltása + megtalálhatóság) — ZÁRVA, Search Console ÉLESEN
 - **Élesen most:** `7c803b52` (prod/20261103-1657): Search Console-beküldés (ADR-0415, 6 sitemap beküldve, hiba 0) + belépés-emlékeztető (ADR-0417) + rendszer-számlák (ADR-0414).
 - **Döntésre vár (tulaj):** Közvetlen foglalás előnye modul (mock A/B/C + beállítás 1/2, 490 Ft/hó?, Teljes csomagba?) · Térkép-útmutató helye (1/2/3) · célzott hirdetés (ki fizet, kinek a fiókja, retargeting) · ajánlói csatorna. Mockok: `~/rc-briefs/_mocks/portal-20261103/`. Jegyzet: `_planning/memory/2026-11-03_portal_jutalek_kivaltas_es_megtalalhatosag.md`, ADR-0416.
 
