@@ -1,4 +1,4 @@
-## ADR-XXXX — Tenant-aktivitás és látogatottság a konzolon, csak a már mért adatból; a tulaj saját megnyitása nem vendég
+## ADR-0420 — Tenant-aktivitás és látogatottság a konzolon, csak a már mért adatból; a tulaj saját megnyitása nem vendég
 
 **Dátum:** 2026-11-04 · **Státusz:** elfogadva (tulaj: 1A + 2A; a 3. és 4. pont nem kapott igent — lokál, nem élesítve) · Épít: ADR-0108 (first-party látogatás-mérés), ADR-0407 (tenant-aktivitás napló), ADR-0418 (partner-adatlap, az „Aktivitás” fül helye)
 
