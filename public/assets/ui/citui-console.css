@@ -2985,6 +2985,13 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-filt select { min-height: 32px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-pill); padding: 0 12px; font: 600 12px var(--citui-font-text); background: var(--citui-panel); color: var(--citui-ink); margin: 0; width: auto; }
 .rp-filt select.on { border-color: var(--citui-navy-900); box-shadow: inset 0 0 0 1px var(--citui-navy-900); }
 .rp-filt__n { font-size: 12px; color: var(--citui-muted); margin-left: auto; }
+/* Custom send-date window (owner, 2026-11-04): from – to + Szűrés, own GET form. */
+.rp-filt--dates { margin-top: -4px; }
+.rp-dates { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-pill); background: var(--citui-panel); }
+.rp-dates.on { border-color: var(--citui-navy-900); box-shadow: inset 0 0 0 1px var(--citui-navy-900); }
+.rp-dates input[type="date"] { min-height: 30px; width: auto; margin: 0; padding: 0 6px; border: 0; background: transparent; font: 600 12px var(--citui-font-text); color: var(--citui-ink); }
+.rp-dates span { color: var(--citui-muted); }
+.rp-dates .citui-btn { min-height: 28px; padding: 0 12px; font-size: 12px; border-radius: var(--citui-radius-pill); }
 .rp-q { font-weight: 500; color: var(--citui-muted); font-size: 12.5px; }
 .rp-note { margin: 8px 0 0; }
 
@@ -3049,6 +3056,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-bar__fill.rp-ramp-2 { background: var(--citui-cyan-500); }
 .rp-bar__fill.rp-ramp-3 { background: var(--citui-link-ink); }
 .rp-bar__fill.rp-ramp-4 { background: color-mix(in srgb, var(--citui-link-ink) 55%, var(--citui-navy-900)); }
+.rp-bar__fill.rp-ramp-5 { background: var(--citui-navy-900); }
 .rp-bar__fill.rp-cat-1 { background: var(--citui-link-ink); }
 .rp-bar__fill.rp-cat-2 { background: var(--citui-cyan-500); }
 .rp-bar__fill.rp-cat-3 { background: var(--citui-navy-700); }
@@ -3060,6 +3068,19 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-frow__l { font-size: 12.5px; font-weight: 600; line-height: 1.2; }
 .rp-frow__l small { display: block; font-weight: 500; color: var(--citui-muted); font-size: 11px; }
 .rp-frow:hover .rp-bar { outline: 2px solid var(--citui-cyan-500); outline-offset: 1px; }
+/* Visszatérés drill-down: a bucket opens into its leads (no JS). */
+.rp-ret > summary { list-style: none; cursor: pointer; }
+.rp-ret > summary::-webkit-details-marker { display: none; }
+.rp-ret > summary:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+.rp-ret > summary .rp-frow__l::before { content: "▸"; margin-right: 5px; color: var(--citui-muted); font-weight: 400; }
+.rp-ret[open] > summary .rp-frow__l::before { content: "▾"; }
+.rp-ret[open] > summary .rp-bar { outline: 2px solid var(--citui-cyan-500); outline-offset: 1px; }
+.rp-ret__list { list-style: none; margin: 6px 0 4px 120px; padding: 4px 0; max-height: 320px; overflow-y: auto; border-left: 2px solid var(--citui-line); }
+.rp-ret__list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 5px 10px; font-size: 12.5px; border-bottom: 1px solid var(--citui-line); }
+.rp-ret__list li:last-child { border-bottom: 0; }
+.rp-ret__list li > a { font-weight: 600; }
+.rp-ret__m { color: var(--citui-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .rp-ret__list { margin-left: 0; } }
 .rp-dev { display: grid; gap: 8px; }
 .rp-drow { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; font-size: 12.5px; }
 

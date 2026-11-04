@@ -40,7 +40,7 @@
 import { db } from "../db/client.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
-import { partsIn, APP_TZ } from "../text/zoneTime.js";
+import { partsIn, APP_TZ, addIsoDays, isoDayDiff, midnightIn, todayIn } from "../text/zoneTime.js";
 import {
   EXIT_REASONS,
   EXPECTED_STATED,
@@ -59,6 +59,54 @@ export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device"
 export const REPORT_SEGS = ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult", "ismeretlen"] as const;
 export type ReportSeg = (typeof REPORT_SEGS)[number] | "all";
 export const REPORT_RANGES: readonly ReportDays[] = [7, 30, 90, 0];
+
+/** The funnel's period chips (Tölcsér + Viselkedés): „Ma” first and the default (owner, 2026-11-04). */
+export type ReportPresetKey = "today" | "7" | "30" | "90" | "0";
+export const REPORT_PRESETS: readonly ReportPresetKey[] = ["today", "7", "30", "90", "0"];
+
+/**
+ * The send-date window the funnel folds over. Presets keep their old rolling meaning (7/30/90
+ * days back from now, 0 = all); „today” = Budapest midnight → now; „custom” = whole Budapest
+ * calendar days from..to, both inclusive. The previous window (for the cards' delta) is the
+ * same length right before `fromMs`.
+ */
+export interface ReportPeriod {
+  readonly key: ReportPresetKey | "custom";
+  /** "YYYY-MM-DD" (Budapest) — set for today and custom, null for the rolling presets. */
+  readonly from: string | null;
+  readonly to: string | null;
+  readonly fromMs: number;
+  /** Exclusive end; `now` for everything but a custom range that ends before today. */
+  readonly toMs: number;
+  /** Calendar days the window spans (0 = all time) — the label and the timeline read it. */
+  readonly spanDays: number;
+}
+
+const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Builds the period from the query (`days` preset, or `from`+`to`); invalid input → `fallback`. */
+export function reportPeriod(
+  days: string | number | null,
+  from: string | null = null,
+  to: string | null = null,
+  now = new Date(),
+  fallback: ReportPresetKey = "today",
+): ReportPeriod {
+  const today = todayIn(APP_TZ, now);
+  if (from && to && ISO_DAY_RE.test(from) && ISO_DAY_RE.test(to) && !Number.isNaN(Date.parse(from)) && !Number.isNaN(Date.parse(to))) {
+    let [a, b] = from <= to ? [from, to] : [to, from];
+    if (b > today) b = today;
+    if (a > b) a = b;
+    const fromMs = midnightIn(a, APP_TZ).getTime();
+    const toMs = Math.min(now.getTime(), midnightIn(addIsoDays(b, 1), APP_TZ).getTime());
+    return { key: "custom", from: a, to: b, fromMs, toMs, spanDays: isoDayDiff(a, b) + 1 };
+  }
+  const k = String(days ?? fallback) as ReportPresetKey;
+  const key: ReportPresetKey = (REPORT_PRESETS as readonly string[]).includes(k) ? k : fallback;
+  if (key === "today") return { key, from: today, to: today, fromMs: midnightIn(today, APP_TZ).getTime(), toMs: now.getTime(), spanDays: 1 };
+  const n = Number(key);
+  return { key, from: null, to: null, fromMs: n ? now.getTime() - n * DAY : -Infinity, toMs: now.getTime(), spanDays: n };
+}
 
 export type Device = "mobile" | "tablet" | "desktop" | "bot" | "unknown";
 export type Channel = "email" | "sms" | "mms" | "email_sms" | "manual";
@@ -189,10 +237,22 @@ export interface ReportNote {
   readonly text: string;
 }
 
+/** One lead behind a Visszatérés bucket — the drill-down list (owner, 2026-11-04). */
+export interface ReturnLead {
+  readonly prospectId: string;
+  readonly leadId: string;
+  readonly leadName: string;
+  readonly visits: number;
+  readonly lastVisitAt: Date | null;
+  readonly ordered: boolean;
+}
+
 export interface ReturnRow {
-  readonly visits: "1" | "2" | "3+";
+  readonly visits: "1" | "2" | "3" | "4+";
   readonly prospects: number;
   readonly ordered: number;
+  /** The leads in this bucket, most recent visit first. */
+  readonly leads: readonly ReturnLead[];
 }
 
 export interface ExitRow {
@@ -282,7 +342,9 @@ export interface PanelSummary {
 }
 
 export interface ReportData {
-  readonly days: ReportDays;
+  /** The window's span in days (0 = all time); see `period` for the exact window. */
+  readonly days: number;
+  readonly period: ReportPeriod;
   readonly dim: ReportDim;
   readonly seg: ReportSeg;
   readonly now: Date;
@@ -953,7 +1015,7 @@ export function summarizePanel(all: readonly PanelSession[], via: PanelFilter): 
 }
 
 /** Everything both pages render from, for one range + one breakdown dimension + one lead type. */
-export async function getReportData(days: ReportDays, dim: ReportDim, seg: ReportSeg = "all", now = new Date()): Promise<ReportData> {
+export async function getReportData(days: ReportDays | ReportPeriod, dim: ReportDim, seg: ReportSeg = "all", now = new Date()): Promise<ReportData> {
   const [all, targets, notes] = await Promise.all([loadProspectFacts(), loadTargets(), loadNotes()]);
   return foldReport(all, targets, notes, days, dim, now, seg);
 }
@@ -963,17 +1025,19 @@ export function foldReport(
   everyone: readonly ProspectFacts[],
   targets: Readonly<Record<Hypothesis["key"], number>>,
   notes: readonly ReportNote[],
-  days: ReportDays,
+  range: ReportDays | ReportPeriod,
   dim: ReportDim,
   now: Date,
   seg: ReportSeg = "all",
 ): ReportData {
+  const period = typeof range === "number" ? reportPeriod(range, null, null, now) : range;
+  const days = period.spanDays;
   // The lead-type filter scopes the WHOLE fold (cards, previous window, sparklines, cohorts,
   // timeline, behaviour) — a segment's metrics compared with that segment's own past.
   const all = seg === "all" ? everyone : everyone.filter((p) => p.segment === seg);
-  const from = days ? now.getTime() - days * DAY : -Infinity;
-  const prevFrom = days ? now.getTime() - 2 * days * DAY : -Infinity;
-  const inRange = all.filter((p) => p.sentAt.getTime() >= from);
+  const from = period.fromMs;
+  const prevFrom = days ? from - (period.toMs - from) : -Infinity;
+  const inRange = all.filter((p) => p.sentAt.getTime() >= from && p.sentAt.getTime() < period.toMs);
   const prev = days ? all.filter((p) => p.sentAt.getTime() >= prevFrom && p.sentAt.getTime() < from) : [];
 
   const counts = stageCounts(inRange);
@@ -1025,9 +1089,13 @@ export function foldReport(
   ];
 
   const openers = inRange.filter((p) => p.openedAt);
-  const returns: ReturnRow[] = (["1", "2", "3+"] as const).map((k) => {
-    const g = openers.filter((p) => (k === "1" ? p.visits.length === 1 : k === "2" ? p.visits.length === 2 : p.visits.length >= 3));
-    return { visits: k, prospects: g.length, ordered: g.filter((p) => p.orderedAt).length };
+  const lastVisitAt = (p: ProspectFacts): Date | null => p.visits[p.visits.length - 1]?.startedAt ?? null;
+  const returns: ReturnRow[] = (["1", "2", "3", "4+"] as const).map((k) => {
+    const g = openers.filter((p) => (k === "4+" ? p.visits.length >= 4 : p.visits.length === Number(k)));
+    const leads: ReturnLead[] = g
+      .map((p) => ({ prospectId: p.id, leadId: p.leadId, leadName: p.leadName, visits: p.visits.length, lastVisitAt: lastVisitAt(p), ordered: p.orderedAt !== null }))
+      .sort((a, b) => (b.lastVisitAt?.getTime() ?? 0) - (a.lastVisitAt?.getTime() ?? 0));
+    return { visits: k, prospects: g.length, ordered: g.filter((p) => p.orderedAt).length, leads };
   });
   const shown = inRange.filter((p) => p.escalationShown);
   const escalation = {
@@ -1066,10 +1134,12 @@ export function foldReport(
     });
   }
 
-  // Timeline: sends and opens per Budapest day over the range (49 days for "all").
-  const span = days || 49;
+  // Timeline: sends and opens per Budapest day over the range (49 days for "all"); a short
+  // window (today, a few custom days) still shows a week, ending on the window's last day.
+  const span = Math.min(370, Math.max(7, days || 49));
+  const lastDay = period.to ?? isoDay(now);
   const byDay = new Map<string, { sent: number; opened: number }>();
-  for (let i = span - 1; i >= 0; i--) byDay.set(isoDay(new Date(now.getTime() - i * DAY)), { sent: 0, opened: 0 });
+  for (let i = span - 1; i >= 0; i--) byDay.set(addIsoDays(lastDay, -i), { sent: 0, opened: 0 });
   for (const p of all) {
     const ds = isoDay(p.sentAt);
     const s = byDay.get(ds);
@@ -1128,6 +1198,7 @@ export function foldReport(
 
   return {
     days,
+    period,
     dim,
     seg,
     now,

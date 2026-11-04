@@ -7741,6 +7741,7 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
 - 2026-10-13 · Webcím 1. lépés díjsora csomag-tartalom névnél: „A név a csomag része, külön díja nincs. Ha kisebb csomagra vált, a név díja ({ár}/hó) elindul.” — {ár} = a kijelölt végződés /pricing-díja, kijelölés nélkül a díjsáv; „0 Ft” sosem; a fizetős sor változatlan (tulaj „ok”, §2b-kivétel; őr: domain-package-claim-check)
 
 ## Előzmények
+- 2026-11-04: Megkeresés-riport › Tölcsér › Visszatérés: 1/2/3/4+ sáv (a 3+ kettévált), kattintásra a sáv leadjeinek névsora → `/prospect/<id>/activity` (lead riport) + lead-lap link. Fájlok: `src/console/reportData.ts` (`ReturnLead`), `src/console/reportViews.ts` (`returnsPanel`), `public/assets/ui/citui-console.css` (`.rp-ret`). Időszak-szűrő (Tölcsér + Viselkedés): „Ma” chip az ALAPÉRTELMEZETT, plusz egyedi `from`–`to` dátum (Budapest-napok, mindkettő benne; a kiküldés napjára szűr, mint eddig) — `reportPeriod()` a `reportData.ts`-ben; a Mock/Próba fül a saját 7/30/90/Összes szűrőjén maradt. Új feliratok Bábelre várnak. (CIT `cite96675d8`)
 
 ### 2026-09-12 — ADR-0125 (a lista sora mondja meg, miről szól)
 **📄 ADR-0125 — A LISTA SORA MONDJA MEG, MIRŐL SZÓL, ÉS MI MÁR NEM IGAZ.** Elek FK-001.

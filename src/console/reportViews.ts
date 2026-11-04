@@ -9,7 +9,7 @@
 // number next to it, so colour never carries meaning alone (dataviz rule + README ⑥).
 
 import { esc, eventDetail, eventLabel, EVENT_BAD, EVENT_STRONG, helpLink, layout } from "./views.js";
-import { APP_TZ, partsIn } from "../text/zoneTime.js";
+import { APP_TZ, partsIn, todayIn } from "../text/zoneTime.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { SKINS } from "../engine/skins.js";
@@ -46,6 +46,10 @@ import {
   type ReportDim,
   type ReportDays,
   type ReportSeg,
+  type ReturnRow,
+  REPORT_PRESETS,
+  type ReportPeriod,
+  type ReportPresetKey,
   type StageCounts,
 } from "./reportData.js";
 
@@ -147,10 +151,20 @@ function dimValueLabel(dim: ReportDim, key: string, lang: string): string {
 
 // ── shell: tabs + filter row ──────────────────────────────────────────────────
 const RANGE_LABEL = (d: ReportDays, lang: string): string => (d ? T(lang, "{n} nap", { n: d }) : T(lang, "Összes"));
+const PRESET_LABEL = (k: ReportPresetKey, lang: string): string => (k === "today" ? T(lang, "Ma") : RANGE_LABEL(Number(k) as ReportDays, lang));
+/** The period as query params: a preset → `days`, a custom window → `from` + `to`. */
+const periodParams = (p: ReportPeriod): Record<string, string> =>
+  p.key === "custom" ? { from: p.from!, to: p.to! } : { days: p.key };
 const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
-  const p = new URLSearchParams({ days: String(d.days), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...extra });
+  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }) };
+  // A preset chip in `extra` replaces a custom window (and vice versa).
+  if ("days" in extra) { delete base.from; delete base.to; }
+  const p = new URLSearchParams({ ...base, ...extra });
   return `?${p.toString()}`;
 };
+/** Hidden inputs that carry the period through a GET/POST form. */
+const periodHidden = (p: ReportPeriod): string =>
+  Object.entries(periodParams(p)).map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`).join("");
 
 type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants";
 
@@ -173,11 +187,23 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
 }
 
 function shell(d: ReportData, active: "/report" | "/report/behaviour", body: string, lang: string): string {
-  const tabs = reportTabs(active, qs(d), `?days=${d.days}`, lang);
+  // The Mock/Próba tabs know only the rolling presets: hand them over when one is on.
+  const mockQs = ["7", "30", "90", "0"].includes(d.period.key) ? `?days=${d.period.key}` : "";
+  const tabs = reportTabs(active, qs(d), mockQs, lang);
   const base = active;
-  const ranges = REPORT_RANGES.map(
-    (r) => `<a href="${base}${qs(d, { days: String(r) })}"${r === d.days ? ' class="on"' : ""}>${esc(RANGE_LABEL(r, lang))}</a>`,
+  const ranges = REPORT_PRESETS.map(
+    (r) => `<a href="${base}${qs(d, { days: r })}"${r === d.period.key ? ' class="on"' : ""}>${esc(PRESET_LABEL(r, lang))}</a>`,
   ).join("");
+  // Custom window: two date fields, own GET form (no JS needed); the other filters ride along.
+  const today = todayIn(APP_TZ, d.now);
+  const custom = d.period.key === "custom";
+  const dates =
+    `<form class="rp-dates${custom ? " on" : ""}" method="get" action="${base}" aria-label="${esc(T(lang, "Egyedi időszak"))}">` +
+    `<input type="hidden" name="dim" value="${esc(d.dim)}">${d.seg === "all" ? "" : `<input type="hidden" name="seg" value="${esc(d.seg)}">`}` +
+    `<input type="date" name="from" value="${esc(d.period.from ?? "")}" max="${today}" required aria-label="${esc(T(lang, "Kezdőnap"))}">` +
+    `<span aria-hidden="true">–</span>` +
+    `<input type="date" name="to" value="${esc(d.period.to ?? "")}" max="${today}" required aria-label="${esc(T(lang, "Utolsó nap"))}">` +
+    `<button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Szűrés"))}</button></form>`;
   const dims = REPORT_DIMS.map(
     (k) => `<option value="${k}"${k === d.dim ? " selected" : ""}>${esc(T(lang, "Bontás: {dim}", { dim: DIM_LABEL(lang)[k].toLowerCase() }))}</option>`,
   ).join("");
@@ -187,16 +213,21 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
     REPORT_SEGS.map((k) => segOpt(k, T(lang, "Lead típus: {s}", { s: SEG_LABEL(lang)[k]!.toLowerCase() }))).join("");
   const filter =
     `<form class="rp-filt" method="get" action="${base}">` +
-    `<input type="hidden" name="days" value="${d.days}">` +
+    periodHidden(d.period) +
     `<div class="rp-chips" role="group" aria-label="${esc(T(lang, "Időszak"))}">${ranges}</div>` +
     `<select name="seg" aria-label="${esc(T(lang, "Lead típus"))}" onchange="this.form.submit()"${d.seg === "all" ? "" : ' class="on"'}>${segs}</select>` +
     `<select name="dim" aria-label="${esc(T(lang, "Bontás"))}" onchange="this.form.submit()">${dims}</select>` +
     `<noscript><button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Alkalmaz"))}</button></noscript>` +
     `<span class="rp-filt__n">${esc(T(lang, "{n} követett link az időszakban · csak KIKÜLDÖTT linkek (saját megnyitás, teszt nem számít)", { n: d.counts.sent }))}</span>` +
     `</form>`;
+  const periodNote = custom
+    ? T(lang, "Kiküldve {a} – {b} között", { a: dayLabel(d.period.from!), b: dayLabel(d.period.to!) })
+    : d.period.key === "today"
+      ? T(lang, "Ma kiküldött megkeresések ({a})", { a: dayLabel(today) })
+      : "";
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${filter}${body}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${filter}<div class="rp-filt rp-filt--dates">${dates}${periodNote ? `<span class="rp-filt__n">${esc(periodNote)}</span>` : ""}</div>${body}`,
     { active },
   );
 }
@@ -253,7 +284,11 @@ function hypothesisCards(d: ReportData, lang: string): string {
         ? T(lang, "{n} megnyitás · a kisebb a jobb", { n: h.num })
         : `${h.num} / ${h.den}`;
       const change = delta(h.value, h.prevValue, lang, lower);
-      const changeNote = d.days ? T(lang, "{d} az előző {n} naphoz", { d: change, n: d.days }) : change;
+      const changeNote = !d.days
+        ? change
+        : d.period.key === "today"
+          ? T(lang, "{d} a tegnapihoz", { d: change })
+          : T(lang, "{d} az előző {n} naphoz", { d: change, n: d.days });
       return (
         `<div class="rp-hcard rp-hcard--${v.cls || "none"}"><div class="rp-hcard__q">${esc(tx[h.key].q)}</div><div class="rp-hcard__m">${esc(tx[h.key].m)}</div>` +
         `<div class="rp-hcard__v"><b>${esc(value)}</b><span class="rp-pill rp-pill--${v.cls}"><i></i>${esc(v.label)}</span></div>` +
@@ -266,22 +301,35 @@ function hypothesisCards(d: ReportData, lang: string): string {
 
 function returnsPanel(d: ReportData, lang: string): string {
   const total = d.counts.opened;
+  const label = (k: ReturnRow["visits"]): string =>
+    k === "1" ? T(lang, "1 látogatás") : k === "2" ? T(lang, "2 látogatás") : k === "3" ? T(lang, "3 látogatás") : T(lang, "4+ látogatás");
+  // Each bucket opens (no JS, <details>) into the leads behind it; a name leads to that
+  // lead's activity report (owner, 2026-11-04).
   const rows = d.returns
     .map((r, i) => {
       const w = total ? Math.max(1.5, (r.prospects / total) * 100) : 0;
-      const label = r.visits === "1" ? T(lang, "1 látogatás") : r.visits === "2" ? T(lang, "2 látogatás") : T(lang, "3+ látogatás");
-      return (
-        `<div class="rp-frow" title="${esc(T(lang, "{label}: {n} lead, ebből rendelt {o}", { label, n: r.prospects, o: r.ordered }))}">` +
-        `<div class="rp-frow__l">${esc(label)}<small>${esc(T(lang, "{n} rendelés", { n: r.ordered }))}</small></div>` +
-        `<div class="rp-bar rp-bar--tall">${bar(w, `rp-ramp-${i + 2}`)}<b class="rp-bar__n${w > 18 ? "" : " rp-bar__n--out"}"${w > 18 ? "" : ` style="left:calc(${w.toFixed(1)}% + 8px)"`}>${r.prospects}</b><span class="rp-bar__r">${esc(T(lang, "rendel: {p}", { p: pct(r.ordered, r.prospects) }))}</span></div></div>`
-      );
+      const lb = label(r.visits);
+      const row =
+        `<div class="rp-frow__l">${esc(lb)}<small>${esc(T(lang, "{n} rendelés", { n: r.ordered }))}</small></div>` +
+        `<div class="rp-bar rp-bar--tall">${bar(w, `rp-ramp-${i + 2}`)}<b class="rp-bar__n${w > 18 ? "" : " rp-bar__n--out"}"${w > 18 ? "" : ` style="left:calc(${w.toFixed(1)}% + 8px)"`}>${r.prospects}</b><span class="rp-bar__r">${esc(T(lang, "rendel: {p}", { p: pct(r.ordered, r.prospects) }))}</span></div>`;
+      const title = esc(T(lang, "{label}: {n} lead, ebből rendelt {o}", { label: lb, n: r.prospects, o: r.ordered }));
+      if (!r.leads.length) return `<div class="rp-frow" title="${title}">${row}</div>`;
+      const items = r.leads
+        .map(
+          (l) =>
+            `<li><a href="/prospect/${esc(l.prospectId)}/activity">${esc(l.leadName)}</a>` +
+            `${l.ordered ? ` <span class="rp-pill rp-pill--ok rp-pill--xs">${esc(T(lang, "rendelt"))}</span>` : ""}` +
+            `<span class="rp-ret__m">${esc(T(lang, "{n} látogatás", { n: l.visits }))}${l.lastVisitAt ? ` · ${esc(T(lang, "utoljára {t}", { t: whenLabel(l.lastVisitAt) }))}` : ""} · <a href="/lead/${esc(l.leadId)}">${esc(T(lang, "lead-lap"))}</a></span></li>`,
+        )
+        .join("");
+      return `<details class="rp-ret"><summary class="rp-frow" title="${title}">${row}</summary><ul class="rp-ret__list">${items}</ul></details>`;
     })
     .join("");
   const e = d.escalation;
   const note = e.shown
     ? T(lang, "Eszkalációs ajánlat (N. látogatás, kedvezménnyel): {s} leadnek jelent meg, {c} kattintott rá ({p}), {o} rendelt belőlük. Elvetette: {x}.", { s: e.shown, c: e.cta, p: pct(e.cta, e.shown), o: e.ordered, x: e.dismissed })
     : T(lang, "Eszkalációs ajánlat ebben az időszakban még nem jelent meg senkinek.");
-  return `<div class="panel"><h2>${esc(T(lang, "Visszatérés"))} <span class="rp-q">${esc(T(lang, "— hányadik látogatásnál születik a rendelés"))}</span></h2><div class="rp-fun">${rows}</div><p class="mut small rp-note">${esc(note)}</p></div>`;
+  return `<div class="panel"><h2>${esc(T(lang, "Visszatérés"))} <span class="rp-q">${esc(T(lang, "— hányadik látogatásnál születik a rendelés"))}</span></h2><div class="rp-fun">${rows}</div><p class="mut small rp-note">${esc(T(lang, "Egy sávra kattintva: a leadek névsora; a névre kattintva a lead riportja."))}</p><p class="mut small rp-note">${esc(note)}</p></div>`;
 }
 
 function dimPanel(d: ReportData, lang: string): string {
@@ -354,7 +402,7 @@ function timelinePanel(d: ReportData, lang: string, today: string): string {
     `<div class="panel"><h2>${esc(T(lang, "Pilot-napló"))} <span class="rp-q">${esc(T(lang, "— mi történt, és mi változott utána"))}</span></h2>` +
     `<div class="rp-chart rp-chart--wide">${timelineSvg(d, lang, 720)}</div><div class="rp-chart rp-chart--narrow">${timelineSvg(d, lang, 360)}</div>` +
     `<div class="rp-legend"><span><i style="background:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel))"></i>${esc(T(lang, "kiküldés / nap"))}</span><span><i class="rp-legend__ln" style="background:var(--citui-link-ink)"></i>${esc(T(lang, "megnyitás / nap"))}</span><span><i class="rp-legend__ln" style="background:var(--citui-warn)"></i>${esc(T(lang, "jegyzet (a te megjegyzésed)"))}</span></div>` +
-    `<form class="rp-notes" method="post" action="/report/note"><input type="hidden" name="days" value="${d.days}"><input type="hidden" name="dim" value="${esc(d.dim)}"><input type="hidden" name="seg" value="${esc(d.seg)}">` +
+    `<form class="rp-notes" method="post" action="/report/note">${periodHidden(d.period)}<input type="hidden" name="dim" value="${esc(d.dim)}"><input type="hidden" name="seg" value="${esc(d.seg)}">` +
     `<input type="date" name="day" value="${esc(today)}" aria-label="${esc(T(lang, "Nap"))}" required>` +
     `<input type="text" name="text" maxlength="80" required placeholder="${esc(T(lang, "Jegyzet, pl. „Tárgymező csere: személyes megszólítás”"))}" aria-label="${esc(T(lang, "Jegyzet"))}">` +
     `<button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Jegyzet hozzáadása"))}</button></form></div>`
