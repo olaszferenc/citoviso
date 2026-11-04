@@ -1,4 +1,4 @@
-## ADR-XXXX — Új mockhoz csak három sablon (Parallax · Kapunyitás · Névből növő); a Kapunyitás szétnyíló képe sosem a nyitókép, hanem az admin második képe, külön mezőben
+## ADR-0423 — Új mockhoz csak három sablon (Parallax · Kapunyitás · Névből növő); a Kapunyitás szétnyíló képe sosem a nyitókép, hanem az admin második képe, külön mezőben
 
 **Dátum:** 2026-11-04 · **Státusz:** elfogadva (tulaj, szó szerint a koordinátoron át) · Épít: ADR-0422 (a Fejezetes kivezetése), ADR-0311 (a Kapunyitás sablon) · Felülírja: a Kapunyitás 2026-10-03-i „B”/„A” kapu-szabályát
 

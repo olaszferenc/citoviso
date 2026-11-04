@@ -56,7 +56,7 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
 };
 
 /**
- * The ONLY templates a new mock may use — the owner's list (2026-11-04, ADR-XXXX): „ami még
+ * The ONLY templates a new mock may use — the owner's list (2026-11-04, ADR-0423): „ami még
  * választható: parralax · kapunyitás · névből növő”. Every other template still RENDERS (the
  * mocks and sites already built on it), but is never offered and never accepted for a new one.
  */

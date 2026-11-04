@@ -19,7 +19,7 @@
 // opening onto the house). No vision subject says „gate” or „entrance” (heroPick.ts knows
 // exterior · pool_garden · view · dining · interior · …), so no photo can be TOLD to be a
 // gate, and the page may not suggest the place has one. The leaves are ANOTHER photo of the
-// place opening onto the hero — since 2026-11-04 (owner, ADR-XXXX) exactly the gallery's SECOND
+// place opening onto the hero — since 2026-11-04 (owner, ADR-0423) exactly the gallery's SECOND
 // photo, held in its own field (SiteData.gatePhoto) for the tenant admin to configure, and
 // NEVER the hero itself (the old „A” fallback, the hero split and dimmed, is gone: no distinct
 // second photo → no gate, and generation refuses the plan). The leaves claim nothing (gatePhotoOf).
@@ -91,7 +91,7 @@ export type EyebrowCase = "caps" | "normal";
 export const EYEBROW_CASE: EyebrowCase = "caps";
 
 /**
- * THE GATE PHOTO — owner, 2026-11-04 (ADR-XXXX): „DE KURVÁRA NEM LEHET A SZÉTNYÍLÓ KÉP UGYANAZ
+ * THE GATE PHOTO — owner, 2026-11-04 (ADR-0423): „DE KURVÁRA NEM LEHET A SZÉTNYÍLÓ KÉP UGYANAZ
  * AMI AZ ANIMÁCIÓ UTÁN OTTMARAD!!!! Az admin második képe legyen, hogy tudja majd tenant ezt is
  * konfigurálni”. The leaves show `SiteData.gatePhoto` — its own field, set at generation to the
  * gallery's SECOND photo (the admin's second image), so the tenant admin can later choose it —

@@ -5019,7 +5019,7 @@ function templateCards(selected = "", walk: WalkReadiness | null = null): string
   // made the picker look broken ("kiválasztom X-et, ugyanazt gyártja le").
   const lang = consoleLang();
   return Object.values(TEMPLATES)
-    // The owner's list only (isPickableTemplate, ADR-XXXX) — retired AND not-listed stay out.
+    // The owner's list only (isPickableTemplate, ADR-0423) — retired AND not-listed stay out.
     .filter((t) => isPickableTemplate(t.id))
     .map((t) => {
       // Short name = the label's first segment before an em-dash/colon (the registry label is

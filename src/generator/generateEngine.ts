@@ -341,7 +341,7 @@ async function generateEngineMockInner(
     opts.template === GATE_OPENING.id
       ? await fingerprintCandidates(gated.photos, GATE_SUBJECTS, [1])
       : gated.photos;
-  // The Kapunyitás needs a gate photo that is NOT the hero (owner 2026-11-04, ADR-XXXX): the
+  // The Kapunyitás needs a gate photo that is NOT the hero (owner 2026-11-04, ADR-0423): the
   // gallery's second photo, distinct by URL and fingerprint. None → the plan is refused out
   // loud HERE, before any AI spend — never a gate that opens onto itself.
   if (opts.template === GATE_OPENING.id && !gatePhotoOf(photos as never)) {
@@ -660,7 +660,7 @@ async function generateEngineMockInner(
     // ADR-0338: the mock's SAMPLE blocks read against the source (sampleHintsOf).
     ...sampleHints,
   };
-  // The gate photo in its own field (the tenant admin's later choice; ADR-XXXX).
+  // The gate photo in its own field (the tenant admin's later choice; ADR-0423).
   const gatePick = opts.template === GATE_OPENING.id ? gatePhotoOf(baseSiteData.photos) : null;
   if (opts.template === GATE_OPENING.id && !gatePick) {
     throw new Error("Kapunyitás: a második kép a nyitóképpel azonos — a tervet elutasítottam, nem generáltam."); // i18n-exempt: operator-facing generation error (console)
@@ -671,7 +671,7 @@ async function generateEngineMockInner(
   // COMPLETE reference-fidelity art template. The composition path remains for the no-photo
   // case and the explicit curator archetype-override. Skin: deterministic spread over the
   // template's curated list (name-hash) — kills the planner's warm-cream monoculture.
-  // The owner's list only (ADR-XXXX). The console never reaches here without an explicit pick
+  // The owner's list only (ADR-0423). The console never reaches here without an explicit pick
   // (owner: „random … amelyik jobb” — no fixed default there); this default serves only the
   // non-console callers (the public mock request, the CLI).
   const DEFAULT_TEMPLATE = FIRST_TEMPLATE_DEFAULT;

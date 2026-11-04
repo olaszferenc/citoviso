@@ -27,7 +27,7 @@ check("új mockhoz a Fejezetes nem választható (isNewMockTemplate), a Parallax
   !isNewMockTemplate("horizontal") && isNewMockTemplate("parallax") && OWNER_BANNED_TEMPLATES.has("horizontal"));
 check("a regiszter is kivezeti (retired → a választóból és a Forrás-csomag sablonlistájából eltűnik; „Fejezetes = kuka”)",
   TEMPLATES.horizontal!.retired === true && !isPickableTemplate("horizontal") && isPickableTemplate("parallax"));
-// ⛔ TULAJ (2026-11-04, ADR-XXXX): „ami még választható: parralax · kapunyitás · névből növő”.
+// ⛔ TULAJ (2026-11-04, ADR-0423): „ami még választható: parralax · kapunyitás · névből növő”.
 const pickable = Object.keys(TEMPLATES).filter(isPickableTemplate).sort();
 check("csak a tulaj három sablonja választható (parallax, gate-opening, wordmark-grow)",
   pickable.join(",") === "gate-opening,parallax,wordmark-grow" && OWNER_ALLOWED_TEMPLATES.size === 3, pickable.join(","));

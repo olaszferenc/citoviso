@@ -257,7 +257,7 @@ export interface SiteData {
   readonly photos: readonly Photo[];
   /**
    * The Kapunyitás (gate-opening) leaves' photo — its OWN field so the tenant admin can later
-   * configure it (owner, 2026-11-04, ADR-XXXX). Generation sets it to the gallery's SECOND photo;
+   * configure it (owner, 2026-11-04, ADR-0423). Generation sets it to the gallery's SECOND photo;
    * it is never the hero (gateOpening.gatePhotoOf). Absent on other templates / older mocks.
    */
   readonly gatePhoto?: Photo;
