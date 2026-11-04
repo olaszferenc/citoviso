@@ -180,7 +180,11 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (2026-10-22 — overseer.hu éles eset · Webcím állapot „B” · a domain-folyamat hiányai) — LANDOLVA, ÉLESEN NINCS
+## Aktív feladat (2026-11-03 — portál-jutalék kiváltása + megtalálhatóság) — ZÁRVA, Search Console ÉLESEN
+- **Élesen most:** `7c803b52` (prod/20261103-1657): Search Console-beküldés (ADR-0415, 6 sitemap beküldve, hiba 0) + belépés-emlékeztető (ADR-0417) + rendszer-számlák (ADR-0414).
+- **Döntésre vár (tulaj):** Közvetlen foglalás előnye modul (mock A/B/C + beállítás 1/2, 490 Ft/hó?, Teljes csomagba?) · Térkép-útmutató helye (1/2/3) · célzott hirdetés (ki fizet, kinek a fiókja, retargeting) · ajánlói csatorna. Mockok: `~/rc-briefs/_mocks/portal-20261103/`. Jegyzet: `_planning/memory/2026-11-03_portal_jutalek_kivaltas_es_megtalalhatosag.md`, ADR-0416.
+
+## Előző aktív feladat (2026-10-22 — overseer.hu éles eset · Webcím állapot „B” · a domain-folyamat hiányai) — LANDOLVA, ÉLESEN NINCS
 - **Élesen most:** `1b038d76` (prod/20261021-1441). A `d5a71eec` (E-nyelv admin fülek + rendelő ár-oszlop + domain-verseny javítás f2edeb15 + Webcím állapot „B” ADR-0399 + 0112 migráció) dry-runja a GATE 1c/kép kapun bukott (`kb/entries/admin-modules-amenities/assets/hu/screen.png`, 198 px, szemre azonos — valószínű futás-ingadozás, NEM bizonyított); a 2. dry-runt a gép memóriahiány miatt leölte (32 GB-ból ~1,5 GB szabad; ~9 GB egy MR-session `elekdrive.js` Chrome-ja, nem a miénk). Élesítés CSAK a tulaj „mehet élesre” szavára.
 - **overseer.hu (tenant b4c07a37, sor 51cc09db, `dns_pending`):** a regisztrátornál a szolgáltatás `active` (16572522, autoExtend FALSE), a .hu Nyilvántartóban 10-22 08:15-kor sincs (whois „Nincs talalat”, NS üres). **Regisztrátori ügyfélszolgálat (Liptai Nikolett) 10-22 06:04, olasz.ferenc@citoviso.com, tárgy „hiányzó adat - overseer.hu”:** a regisztráció „hiányos adatrögzítés miatt hibára futott”, a domain-profilhoz kell EGY azonosító (születési dátum / anyja neve / szig. szám / útlevél / jogosítvány), válasz-e-mailben, utána újraindítják. **Nincs megválaszolva** — a tulaj személyes adata, ő dönt (vagy ő válaszol). A 24 órás riasztás 10-22 15:54-kor megy ki.
 - **A figyelő vaksága:** `registryConfirmWatch.ts` CSAK a `cfm.drr.hu` linket keresi az INBOX-ban — a saját domainünkről szóló support-levél mellett elment. Javítás nincs megírva, nincs kérve.
