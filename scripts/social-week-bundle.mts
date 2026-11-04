@@ -17,7 +17,8 @@ import { readFileSync } from "node:fs";
 import { haversineKm } from "../src/events/gates.js";
 import { ownSettlement, RADIUS_KM, type Settlement } from "../src/events/settlements.js";
 import { hostOf } from "../src/events/pool.js";
-import { freeGaps } from "../src/social/freeGaps.js";
+import { freeGaps, type FreeGap } from "../src/social/freeGaps.js";
+import { driveLeg, isNear, NEAR_DRIVE_MIN } from "../src/social/proximity.js";
 
 interface Snapshot {
   site: { lat: number; lng: number; address: string | null; name: string };
@@ -51,7 +52,7 @@ const own = ownSettlement(around, lat, lon, snap.site.address);
 const byId = new Map(around.map((s) => [s.osmId, s]));
 
 const windowEnd = addDays(today, POST_WINDOW_DAYS);
-const live = (snap.events ?? [])
+const liveRaw = (snap.events ?? [])
   .filter((e) => byId.has(e.settlementOsmId) && (e.end ?? e.start) >= today && e.start <= windowEnd)
   .map((e) => {
     const s = byId.get(e.settlementOsmId)!;
@@ -65,15 +66,42 @@ const live = (snap.events ?? [])
       // No distance on purpose (tenyhuseg-or, 2026-11-04): the module's km is centre of the
       // OWN settlement → centre of the event's settlement, as the crow flies — in a post it
       // reads as "from the lodging", and across the lake (Tihany) it hides a ferry.
+      own: own?.osmId === s.osmId,
+      at: { lat: s.lat, lon: s.lon },
       sourceUrl: e.sourceUrl,
       sourceHost: hostOf(e.sourceUrl),
     };
   })
   .sort((a, b) => a.start.localeCompare(b.start) || a.settlement.localeCompare(b.settlement));
 
+// Real nearness (coordinator 2026-11-04): a program goes into a post only from the lodging's
+// own settlement or within a short drive WITHOUT a ferry — one route per settlement.
+const legs = new Map<string, Awaited<ReturnType<typeof driveLeg>>>();
+for (const e of liveRaw) {
+  if (e.own || legs.has(e.settlement)) continue;
+  legs.set(e.settlement, await driveLeg(lat, lon, e.at.lat, e.at.lon));
+}
+const live = liveRaw.map(({ at: _at, ...e }) => {
+  const leg = e.own ? null : legs.get(e.settlement) ?? null;
+  return { ...e, drive: leg, near: e.own || isNear(leg) };
+});
+
 const pickIds = new Map((snap.picks ?? []).map((p) => [p.id, p.title]));
 const livePicks = live.filter((e) => pickIds.has(e.id)).map((e) => ({ ...e, name: pickIds.get(e.id) ?? e.name, fromPool: false }));
-const programs = livePicks.length ? livePicks : live.map((e) => ({ ...e, fromPool: true }));
+const programs = (livePicks.length ? livePicks : live.map((e) => ({ ...e, fromPool: true }))).filter((e) => e.near);
+const leftOut = (livePicks.length ? livePicks : live).filter((e) => !e.near).map((e) => ({ name: e.name, settlement: e.settlement, drive: e.drive }));
+
+/** Friday + Saturday nights inside a free gap that is fully inside the looked-at window. */
+function freeWeekends(gs: readonly FreeGap[]): { arrive: string; leave: string }[] {
+  const out: { arrive: string; leave: string }[] = [];
+  for (const g of gs) {
+    for (let d = g.from; d < g.to; d = addDays(d, 1)) {
+      const sun = addDays(d, 2);
+      if (new Date(`${d}T00:00:00Z`).getUTCDay() === 5 && sun <= g.to) out.push({ arrive: d, leave: sun });
+    }
+  }
+  return out;
+}
 
 // The unit a free-night post advertises: the whole place if there is one, else each unit.
 const whole = snap.units.find((u) => u.whole);
@@ -86,7 +114,7 @@ const gaps = targets.map((u) => {
     seasonalOnly: u.seasonalOnly,
     gaps: u.seasonalOnly ? [] : freeGaps(busy.map((b) => b.day), today, 21, 2),
   };
-});
+}).map((u) => ({ ...u, freeWeekends: freeWeekends(u.gaps) }));
 
 console.log(
   JSON.stringify(
@@ -101,12 +129,16 @@ console.log(
         moduleSettlementMatchesAddress: !!own && (snap.site.address ?? "").includes(own.name),
       },
       bookingRules: "UNKNOWN — minimum nights / arrival days are not in this bundle: promise no arrival day or stay length",
+      // A gap with openEnded: true ends where we stopped LOOKING — never write "until <to>".
+      // freeWeekends are the safe, concrete claim: Fri+Sat nights fully free in the window.
       freeNights: { horizonDays: 21, minNights: 2, units: gaps },
       programs: {
         windowDays: POST_WINDOW_DAYS,
         tenantPicksTotal: snap.picks?.length ?? 0,
         livePicks: livePicks.length,
+        nearRule: `own settlement, or ≤ ${NEAR_DRIVE_MIN} min drive without a ferry (OSRM)`,
         items: programs,
+        leftOutAsNotNear: leftOut,
       },
     },
     null,
