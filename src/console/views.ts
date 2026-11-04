@@ -74,7 +74,7 @@ function fmtHuf(n: number): string {
 // ../modules.js so the operator convert form and the prospect configurator
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
-import { TEMPLATES } from "../engine/templates.js";
+import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { walkSubjectLabel, WALK_MIN_STEPS, WALK_SUBJECTS, type WalkReadiness } from "../engine/templates/walkThrough.js";
 import { copyNames, groupAmenities, normForCopyMatch } from "../generator/marketCheck.js";
 import { patternSummary, type PatternInputs } from "../generator/patternBadge.js";
@@ -5019,7 +5019,8 @@ function templateCards(selected = "", walk: WalkReadiness | null = null): string
   // made the picker look broken ("kiválasztom X-et, ugyanazt gyártja le").
   const lang = consoleLang();
   return Object.values(TEMPLATES)
-    .filter((t) => !t.retired)
+    // The owner's list only (isPickableTemplate, ADR-XXXX) — retired AND not-listed stay out.
+    .filter((t) => isPickableTemplate(t.id))
     .map((t) => {
       // Short name = the label's first segment before an em-dash/colon (the registry label is
       // "Név — hosszú leírás (referencia N)"); fall back to the id.

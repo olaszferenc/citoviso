@@ -2405,6 +2405,11 @@ if [ -f scripts/photo-quality-check.mts ]; then
 fi
 # The curator's template pair EXACTLY or a loud refusal (Poe2 2026-11-04: „Parallax + Fejezetes”
 # → two Parallax / Parallax + Fullbleed; ids were filtered and deduped without a word). Hermetic.
+# Kapunyitás: the splitting photo is never the one that stays (owner 2026-11-04). Hermetic.
+if [ -f scripts/gate-photo-check.mts ]; then
+  echo "[pre-commit] gate-photo-check (a szétnyíló kép sosem a nyitókép)…"
+  npx tsx scripts/gate-photo-check.mts
+fi
 if [ -f scripts/template-pick-check.mts ]; then
   echo "[pre-commit] template-pick-check (a kért sablonpár pontosan, vagy hangos bukás)…"
   npx tsx scripts/template-pick-check.mts

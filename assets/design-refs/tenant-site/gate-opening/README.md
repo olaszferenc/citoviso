@@ -45,10 +45,13 @@ abból is egy sablont.” A koordináló session briefje hozta (`~/rc-briefs/kap
   sáv csak félúton. A mock ragadós ajánlatkérő bevezetője elmarad: a foglalási blokk mellett nincs ragadó foglalás-gomb.
 - **Szöveg:** a SiteData-ból és a copywriter-rétegből; minden vevő-oldali felirat `T()`-vel.
 - **A kapu adatból, és nem állít semmit:** egyetlen vision-tárgy sem mondja, hogy „kapu” vagy „bejárat”, ezért
-  egy fotó sem nevezhető kapunak, és a lap nem sugallhatja, hogy a szálláson kapu van. A tulaj döntése (2026-10-03, „B”):
-  a kapu két fele a szállás egy MÁSIK kültéri fotója (a hős utáni legjobb `exterior` / `pool_garden` / `view`), és a hős
-  fotóra nyílik; ha nincs második kültéri fotó, a hős fotó maga, tompítva („A”). Mindkét esetben dekoratív (`alt=""`,
-  `aria-hidden`), és a galéria sorrendjében nem számít „már látott” képnek.
+  egy fotó sem nevezhető kapunak, és a lap nem sugallhatja, hogy a szálláson kapu van. ⛔ A tulaj döntése (2026-11-04,
+  ADR-XXXX, felülírja a 2026-10-03-i „B”/„A” szabályt): „NEM LEHET A SZÉTNYÍLÓ KÉP UGYANAZ AMI AZ ANIMÁCIÓ UTÁN OTTMARAD …
+  Az admin második képe legyen, hogy tudja majd tenant ezt is konfigurálni”. A kapu képe a `SiteData.gatePhoto` saját
+  mező; generáláskor a galéria MÁSODIK képe, és SOHA nem a hős (sem ugyanaz az URL, sem a portál újraközölt másolata —
+  ujjlenyomat). A hős fotó tompított kettévágása („A”) MEGSZŰNT: ha nincs a hőstől különböző második kép, a generálás a
+  tervet hangosan elutasítja, a régi mock pedig kapu nélkül renderel. A kapu dekoratív (`alt=""`, `aria-hidden`), és a
+  galéria sorrendjében nem számít „már látott” képnek.
 - **A kiküldött mockon is fut** (tulaj, 2026-10-03): ~1,2 mp, a hősön belül, semmit nem takar ki — a 2026-09-14-i
   tiltás (teljes képernyős, több másodperces nyitó-animáció a kiküldött mockon) nem vonatkozik rá.
 - **A hős fölötti felirat nagybetűs marad** (tulaj, 2026-10-03). **A kiemelőszín a fotókból vett**, mint minden sablonnál.

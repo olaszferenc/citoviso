@@ -2,7 +2,7 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
-import { resolveTemplatePicks } from "../generator/templatePicks.js";
+import { requireExplicitPick, resolveTemplatePicks } from "../generator/templatePicks.js";
 import { couponConfigErrors, couponFromForm, getCouponConfig, liveTenantCoupons, setCouponConfig } from "../payment/couponConfig.js";
 import { crossOriginRefusal } from "../server/originGuard.js";
 import {
@@ -2932,12 +2932,13 @@ async function handle(
       // selection → a single default-template mock.
       const form = await readBody(req);
       // Exactly the picked templates, or a loud refusal (templatePicks.ts) — no silent drop to the default.
-      const picked = resolveTemplatePicks(form.getAll("template"), Object.keys(TEMPLATES).length);
+      // …and an explicit one: no default template (owner: „random … amelyik jobb”).
+      const picked = requireExplicitPick(resolveTemplatePicks(form.getAll("template"), Object.keys(TEMPLATES).length));
       if (!picked.ok) {
         generateOutcome.set(id, { ok: false, message: picked.message, at: Date.now(), durationMs: 0, artifactId: null });
       } else {
         const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
-        const picks: (string | undefined)[] = picked.templates.length ? [...picked.templates] : [undefined];
+        const picks: (string | undefined)[] = [...picked.templates];
         startGenerateRun(id, picks, curatorPrompt ? { curatorPrompt } : {}, operatorActor(await currentOperator(req)));
       }
     }
@@ -2977,7 +2978,7 @@ async function handle(
     };
     const check = validateCuratorCopy(pack, storedQuoteCorpus(loaded));
     // The requested pair EXACTLY (templatePicks.ts): an unknown / retired / repeated id is refused, never dropped.
-    const picked = resolveTemplatePicks(Array.isArray(body.templates) ? body.templates : [], 2);
+    const picked = requireExplicitPick(resolveTemplatePicks(Array.isArray(body.templates) ? body.templates : [], 2));
     const templates = picked.ok ? [...picked.templates] : [];
     const verdict = check.ok
       ? { ok: true, errors: {}, warnings: check.copy.warnings, fields: check.copy.fields }

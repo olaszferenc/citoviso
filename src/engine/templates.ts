@@ -55,8 +55,15 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [GATE_OPENING.id]: GATE_OPENING,
 };
 
+/**
+ * The ONLY templates a new mock may use — the owner's list (2026-11-04, ADR-XXXX): „ami még
+ * választható: parralax · kapunyitás · névből növő”. Every other template still RENDERS (the
+ * mocks and sites already built on it), but is never offered and never accepted for a new one.
+ */
+export const OWNER_ALLOWED_TEMPLATES: ReadonlySet<string> = new Set(["parallax", "gate-opening", "wordmark-grow"]);
+
 /** Templates the curator may pick for a NEW mock (retired ones still render, see ArtTemplate). */
 export function isPickableTemplate(id: string): boolean {
   const t = TEMPLATES[id];
-  return Boolean(t && !t.retired);
+  return Boolean(t && !t.retired && OWNER_ALLOWED_TEMPLATES.has(id));
 }

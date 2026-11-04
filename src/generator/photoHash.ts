@@ -65,8 +65,11 @@ const FINGERPRINT_CAP = 6;
 export async function fingerprintCandidates<T extends { url: string; subject?: string }>(
   photos: readonly T[],
   subjects: ReadonlySet<string>,
+  /** Indexes fingerprinted whatever their subject (gate-opening: the second photo, ADR-XXXX). */
+  always: readonly number[] = [],
 ): Promise<(T & { dhash?: string })[]> {
   const picked = new Set<number>(photos.length ? [0] : []);
+  for (const i of always) if (i < photos.length) picked.add(i);
   for (let i = 1; i < photos.length && picked.size <= FINGERPRINT_CAP; i++) {
     const s = photos[i]!.subject;
     if (s && subjects.has(s)) picked.add(i);

@@ -18,11 +18,11 @@
 // THE GATE IS DATA-DRIVEN, AND HONEST. The mock's gate was hand-picked (a stone gate photo
 // opening onto the house). No vision subject says „gate” or „entrance” (heroPick.ts knows
 // exterior · pool_garden · view · dining · interior · …), so no photo can be TOLD to be a
-// gate, and the page may not suggest the place has one. Owner's ruling (2026-10-03, „B”): the
-// leaves are ANOTHER outdoor photo of the place (the best-ranked exterior / garden / view
-// after the hero) opening onto the hero — the mock's "one picture of the place opens onto
-// another". Without a second outdoor photo the hero itself is split and dimmed like a closed
-// door at dusk ("A"). Either way the leaves are decorative and claim nothing (see gateSource).
+// gate, and the page may not suggest the place has one. The leaves are ANOTHER photo of the
+// place opening onto the hero — since 2026-11-04 (owner, ADR-XXXX) exactly the gallery's SECOND
+// photo, held in its own field (SiteData.gatePhoto) for the tenant admin to configure, and
+// NEVER the hero itself (the old „A” fallback, the hero split and dimmed, is gone: no distinct
+// second photo → no gate, and generation refuses the plan). The leaves claim nothing (gatePhotoOf).
 // The gate also plays on the mock we SEND (owner, 2026-10-03): ~1,7 s inside the hero, it
 // hides nothing — the 2026-09-14 ban on full-screen opening intros does not cover it, so it
 // does not listen to data-cit-no-intro.
@@ -82,46 +82,32 @@ function ico(name: string, size = 22): string {
 
 // ── the gate ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Where the gate's two leaves come from.
- *   "photo" — the best-ranked OTHER outdoor photo (vision subject exterior / pool_garden /
- *             view); falls back to "self" when there is none. Owner's pick („B”, 2026-10-03).
- *   "self"  — the hero photo itself, dimmed (claims nothing; the fallback, „A”).
- */
-export type GateMode = "self" | "photo";
-export const GATE_MODE: GateMode = "photo";
+/** Vision subjects of the outdoor candidates generation fingerprints (kept for tooling). */
+export const GATE_SUBJECTS: ReadonlySet<string> = new Set(["exterior", "pool_garden", "view"]);
 
 /** The eyebrow over the name: the approved mock's small caps. Owner's ruling (2026-10-03):
  *  it stays in capitals. */
 export type EyebrowCase = "caps" | "normal";
 export const EYEBROW_CASE: EyebrowCase = "caps";
 
-/** Vision subjects a gate leaf may show. Exported: generation fingerprints exactly these. */
-export const GATE_SUBJECTS: ReadonlySet<string> = new Set(["exterior", "pool_garden", "view"]);
-
-/** The photo the gate's leaves show, and whether it is the hero itself. Exported for tooling. */
-export function gateSource(
-  photos: readonly Photo[],
-  mode: GateMode = GATE_MODE,
-): { photo: Photo; self: boolean } | null {
+/**
+ * THE GATE PHOTO — owner, 2026-11-04 (ADR-XXXX): „DE KURVÁRA NEM LEHET A SZÉTNYÍLÓ KÉP UGYANAZ
+ * AMI AZ ANIMÁCIÓ UTÁN OTTMARAD!!!! Az admin második képe legyen, hogy tudja majd tenant ezt is
+ * konfigurálni”. The leaves show `SiteData.gatePhoto` — its own field, set at generation to the
+ * gallery's SECOND photo (the admin's second image), so the tenant admin can later choose it —
+ * and NEVER the photo that stays after the animation (the hero, photos[0]): not the same URL,
+ * not a republished copy of it (Photo.dhash; portals serve one file under several URLs, the
+ * Lovász apartman's gate opened onto itself, 2026-10-03). The old fallback that split the hero
+ * itself („A”, a dimmed closed door) is GONE: no distinct photo → no gate at all, and
+ * generation refuses the plan (generateEngine). For a mock stored before the field existed,
+ * the second photo stands in, under the same rule.
+ */
+export function gatePhotoOf(photos: readonly Photo[], explicit?: Photo): Photo | null {
   const hero = photos[0];
   if (!hero) return null;
-  if (mode === "photo") {
-    // ⛔ A different URL is not a different picture: portals republish each other's photos,
-    // and the Lovász apartman's gate opened the hero onto ITSELF (owner, 2026-10-03). The
-    // fingerprint (Photo.dhash) skips the copy; without one we cannot tell, and keep the URL test.
-    const other = photos
-      .slice(1)
-      .find(
-        (p) =>
-          p.url !== hero.url &&
-          p.subject &&
-          GATE_SUBJECTS.has(p.subject) &&
-          !isSamePicture(p.dhash, hero.dhash),
-      );
-    if (other) return { photo: other, self: false };
-  }
-  return { photo: hero, self: true };
+  const distinct = (p: Photo | undefined): p is Photo =>
+    Boolean(p && p.url && p.url !== hero.url && !isSamePicture(p.dhash, hero.dhash));
+  return [explicit, photos[1]].find(distinct) ?? null;
 }
 
 /**
@@ -255,7 +241,6 @@ p{margin:0 0 1em}
 .ko-leaf.l img{left:0}
 .ko-leaf.r img{right:0}
 /* the hero photo as its own gate: dimmed like a closed door at dusk, so the opening reads */
-.ko-gate.self .ko-leaf::before{content:"";position:absolute;inset:0;z-index:1;background:color-mix(in srgb,var(--cit-bg) 58%,transparent)}
 .ko-leaf::after{content:"";position:absolute;top:0;bottom:0;z-index:2;width:3px;background:var(--cit-accent)}
 .ko-leaf.l::after{right:0}
 .ko-leaf.r::after{left:0}
@@ -540,14 +525,14 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   </header>`;
 
   // ── hero: the photo, the gate over it, the copy at the bottom ──
-  const gate = gateSource(photos);
+  const gate = gatePhotoOf(photos, data.gatePhoto);
   const lines = nameLines(data.name);
   const longest = Math.max(...data.name.split(/\s+/).map((w) => w.length), 1);
   const firstAfterHero = feat.length || aboutText ? "#ko-about" : rooms ? "#cit-rooms" : photos.length ? "#ko-gallery" : "#cit-enquiry";
   const gateHtml = gate
-    ? `<div class="ko-gate${gate.self ? " self" : ""}" aria-hidden="true">
-      <div class="ko-leaf l"><img src="${esc(gate.photo.url)}" alt="" loading="eager"></div>
-      <div class="ko-leaf r"><img src="${esc(gate.photo.url)}" alt="" loading="eager"></div>
+    ? `<div class="ko-gate" aria-hidden="true">
+      <div class="ko-leaf l"><img src="${esc(gate.url)}" alt="" loading="eager"></div>
+      <div class="ko-leaf r"><img src="${esc(gate.url)}" alt="" loading="eager"></div>
     </div>`
     : "";
   const heroBlock = `<section class="ko-hero" id="top">
