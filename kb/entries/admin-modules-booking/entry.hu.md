@@ -129,6 +129,8 @@ az egészet. Fent kiválasztja a portált (Booking.com, Szállás.hu vagy Airbnb
 a **„Videó”** 2,5–3 perces, magyar hanggal és felirattal mutatja meg, mire kattintson a portálon és itt
 (minden menüpontra ráközelít, és megáll rajta); a **„Leírás képekkel”** ugyanezeket a lépéseket számozott
 képekkel adja, a képen keret jelöli, hová kell kattintani. Egy képre koppintva nagyobban látja.
+A videó magyar nyelvű, ezért csak magyar felületen jelenik meg; más nyelven a **„Videó”** gomb
+nem látszik, ott rögtön a képes leírás nyílik.
 
 Alatta mindhárom portálnak saját doboza van, két lépéssel:
 
