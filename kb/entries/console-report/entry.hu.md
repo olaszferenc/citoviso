@@ -24,7 +24,8 @@ A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselk
 
 ## A szűrősor — minden szám erre számolódik
 
-Egy sorban: az **időszak** chipjei (7 · 30 · 90 nap vagy **„Összes”**), a **„Lead típus”**
+Egy sorban: az **időszak** chipjei (**„Ma”** · 7 · 30 · 90 nap vagy **„Összes”**; a lap a
+**„Ma”**-val nyílik), a **„Lead típus”**
 legördülő (**„mind”** · nincs honlap · 0 lábnyom · van lábnyom · elavult honlap · ismeretlen) és a
 **bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra). A „Lead típus”
 csak az adott típusú leadeket hagyja meg: így egyetlen csoport tölcsérét látod önmagában, míg a
@@ -32,7 +33,13 @@ szegmens szerinti bontás egymás mellé teszi a típusokat. Ha nem „mind” v
 kiemelt, és a választás a Viselkedés lapon is érvényes marad. Minden panel a kiválasztott
 időszakban KIKÜLDÖTT linkeket nézi — a saját megnyitásod és a teszt nem számít bele, a sor jobb
 széle ezt ki is írja. A változás-számok („+3,7 pont”) az előző, ugyanakkora időszakhoz mérnek;
-az **„Összes”** mellett ilyen összevetés nincs, ott egy kötőjel áll.
+az **„Összes”** mellett ilyen összevetés nincs, ott egy kötőjel áll; a **„Ma”** a tegnapihoz mér.
+
+**Egyedi időszak:** a chipek alatti két dátummezőben add meg a kezdő és az utolsó napot, majd
+nyomd meg a **„Szűrés”** gombot. Mindkét nap beleszámít, a mai napnál későbbi nem választható.
+Ilyenkor a dátum-doboz kiemelt, mellette ez áll: „Kiküldve 9. 20. – 9. 27. között”. A választás
+a lead-típus és a bontás váltásakor, és a Viselkedés lapon is megmarad; egy chipre kattintva
+visszatérsz a gyors időszakokhoz. Itt is a link KIKÜLDÉSI napja számít.
 
 ## Tölcsér — hét kérdés, hét kártya
 
@@ -65,8 +72,11 @@ leadet mutatja.
 
 ## Visszatérés, bontás, kohorsz, napló
 
-- **„Visszatérés”**: hányan jöttek 1 / 2 / 3+ alkalommal, és közülük hányan rendeltek
-  („rendel: 29%”). Alatta egy mondat az eszkalációs ajánlatról: hánynak jelent meg, hány
+- **„Visszatérés”**: hányan jöttek 1 / 2 / 3 / 4+ alkalommal, és közülük hányan rendeltek
+  („rendel: 29%”). Egy sávra kattintva lenyílik a leadek névsora (a legutóbb visszatérő elöl,
+  a látogatások számával és az utolsó látogatás idejével, a rendelőknél **„rendelt”** jellel);
+  a névre kattintva a lead riportja nyílik (mit csinált a mockon), a **„lead-lap”** link a lead
+  adatlapjára visz. Alatta egy mondat az eszkalációs ajánlatról: hánynak jelent meg, hány
   kattintott, hány rendelt, hány vetette el.
 - **„Bontás”**: a kiválasztott dimenzió szerint (pl. szegmensenként) a tölcsér hat oszlopa:
   **„Kiküldve”** · **„Megnyitva”** · **„Elmélyült”** · **„Próba”** · **„Rendelés”** · **„Fizetve”**; az
