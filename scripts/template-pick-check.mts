@@ -1,138 +1,71 @@
-// Gate: the curator's template pick must be exactly what gets generated.
-//
-// ⛔ WHY THIS EXISTS. The picker is multi-select (one mock per ticked template),
-// but the form arrived with "fullbleed" PRE-CHECKED. Ticking "arch-frames" then
-// produced TWO mocks — one of them always fullbleed — so the owner reported
-// "kiválasztom a Boltíves kereteket … ugyanazt a típust gyártja le". The picker
-// was not broken; it silently added a second pick nobody asked for.
-//
-// What is measured (no DB, no network — pure render + parse):
-//   ① nothing is pre-checked in the generator form;
-//   ② every registered template has a picker card AND a preview image on disk;
-//   ③ a chosen template id really reaches the rendered page (per template);
-//   ④ the artifact card names the template that produced it.
-//
-//   npx tsx scripts/template-pick-check.mts
-
-import { existsSync } from "node:fs";
-import path from "node:path";
-
-import type { Recipe, SiteData } from "../src/engine/recipe.js";
-import { renderSite } from "../src/engine/render.js";
+// The curator's template pair is honoured EXACTLY or refused out loud (src/generator/templatePicks.ts).
+// Live cases (Poe2, 2026-11-04): „Parallax + Fejezetes” on Martina 9f5723d0 and Balatinus 00ec9215
+// came back as two Parallax / Parallax + Fullbleed. Prod 2026-11-04: the stored pairs of those runs
+// were parallax + horizontal (17:24, 17:31 UTC) and, earlier, fullbleed + parallax (Balatinus
+// 2026-10-06) — the console filtered and deduped the requested ids WITHOUT a word, so any id that
+// was not a pickable template id vanished and the run went on with the rest (or the default).
+// Hermetic: no DB, no network.
+import { readFileSync } from "node:fs";
 import { TEMPLATES } from "../src/engine/templates.js";
-import { leadPage } from "../src/console/views.js";
+import { assertTemplateHonoured, resolveTemplatePicks } from "../src/generator/templatePicks.js";
 
-const fails: string[] = [];
-const ok = (c: boolean, label: string, detail = "") => {
-  console.log(`  ${c ? "✓" : "✗"} ${label}${detail ? ` — ${detail}` : ""}`);
-  if (!c) fails.push(label);
-};
-
-// ── ① + ② the picker form ───────────────────────────────────────────────────
-const lead = (artifacts: unknown[]) =>
-  ({
-    id: "00000000-0000-0000-0000-000000000000",
-    name: "Teszt Lead",
-    qualification: "unknown",
-    lifecycle: "active",
-    matchConfidence: 0.9,
-    address: "Fő utca 1.",
-    region: "Balaton",
-    raw: {},
-    provenance: [],
-    artifacts,
-  }) as unknown as Parameters<typeof leadPage>[0];
-
-const html = leadPage(lead([]));
-
-const checked = [...html.matchAll(/<input[^>]*name="template"[^>]*>/g)].filter((m) =>
-  / checked/.test(m[0]),
-);
-ok(
-  checked.length === 0,
-  "a generáló űrlapon EGYETLEN sablon sincs előre bejelölve",
-  checked.length ? `${checked.length} előre bejelölve` : "0 előre bejelölve",
-);
-
-const missingCards = Object.keys(TEMPLATES).filter(
-  (id) => !TEMPLATES[id]!.retired && !html.includes(`name="template" value="${id}"`),
-);
-ok(missingCards.length === 0, "minden aktív sablonnak van kártyája a választóban", missingCards.join(", "));
-
-const retiredCards = Object.keys(TEMPLATES).filter(
-  (id) => TEMPLATES[id]!.retired && html.includes(`name="template" value="${id}"`),
-);
-ok(retiredCards.length === 0, "passzivált sablon nem kerül a választóba", retiredCards.join(", "));
-
-const root = path.resolve(import.meta.dirname, "..");
-const missingShots = Object.keys(TEMPLATES).filter(
-  (id) => !existsSync(path.join(root, "public/assets/ui", `tpl-${id}.jpg`)),
-);
-ok(missingShots.length === 0, "minden sablonnak van előnézeti kártyaképe", missingShots.join(", "));
-
-// ── ③ the pick reaches the rendered page ────────────────────────────────────
-const DATA: SiteData = {
-  name: "Teszt Panzió",
-  tagline: "Csend és kilátás",
-  intro: "Kétszáz méterre a parttól, saját kerttel.",
-  highlights: ["Parkoló", "Kert"],
-  photos: [
-    { url: "https://example.invalid/1.jpg", alt: "Ház" },
-    { url: "https://example.invalid/2.jpg", alt: "Szoba" },
-    { url: "https://example.invalid/3.jpg", alt: "Kert" },
-  ],
-  contact: { email: "a@b.hu", phone: "+36 30 123 4567", address: "Fő utca 1." },
-} as SiteData;
-
-const wrong: string[] = [];
-for (const id of Object.keys(TEMPLATES)) {
-  const recipe: Recipe = { template: id, skin: "", archetype: "", sections: [] };
-  const out = renderSite(recipe, DATA, { phase: "mock" });
-  // every template stamps its own id on <body class="cit-tpl-…"> or is identifiable
-  // by its own CSS namespace; the body class is the contract the guards key off
-  if (!out.includes(`cit-tpl-`)) wrong.push(`${id}: nincs cit-tpl-* body-osztály`);
+let failed = 0;
+function check(label: string, ok: boolean, detail = ""): void {
+  console.log(`${ok ? "✓" : "✗"}  ${label}${detail ? `\n     ${detail}` : ""}`);
+  if (!ok) failed++;
 }
-ok(wrong.length === 0, "minden sablon a saját body-osztályát adja", wrong.join(" | "));
 
-// the three new ones must be distinguishable from each other (not one shared render)
-const sigs = new Map<string, string>();
-for (const id of ["tilted-gallery", "arch-frames", "wordmark-grow"]) {
-  if (!TEMPLATES[id]) continue;
-  const out = renderSite({ template: id, skin: "", archetype: "", sections: [] }, DATA, {
-    phase: "mock",
-  });
-  const m = /<body class="([^"]+)"/.exec(out);
-  sigs.set(id, m?.[1] ?? "");
+check("a két élő sablon létezik és választható (parallax, horizontal = Fejezetes)", Boolean(TEMPLATES.parallax && TEMPLATES.horizontal) && /^Fejezetes/.test(TEMPLATES.horizontal!.label));
+
+// The pair Poe2 asked for, by id: exactly that pair, in that order.
+const pair = resolveTemplatePicks(["parallax", "horizontal"], 2);
+check("„Parallax + Fejezetes” (Martina, Balatinus) → pontosan parallax + horizontal", pair.ok && pair.templates.join(",") === "parallax,horizontal", JSON.stringify(pair));
+
+// The silent paths of before, each now loud.
+const byLabel = resolveTemplatePicks(["parallax", "Fejezetes"], 2);
+check("címke azonosító helyett („Fejezetes”) → hangos elutasítás, nem csendes egy-Parallax", !byLabel.ok && /Fejezetes/.test(byLabel.message), JSON.stringify(byLabel));
+const twice = resolveTemplatePicks(["parallax", "parallax"], 2);
+check("kétszer ugyanaz (két Parallax) → hangos elutasítás, nem csendes összevonás", !twice.ok && /kétszer/.test(twice.message), JSON.stringify(twice));
+const retired = Object.values(TEMPLATES).find((t) => t.retired);
+if (retired) {
+  const r = resolveTemplatePicks(["parallax", retired.id], 2);
+  check(`kivezetett sablon (${retired.id}) → hangos elutasítás`, !r.ok, JSON.stringify(r));
 }
-ok(
-  new Set(sigs.values()).size === sigs.size,
-  "a három új sablon KÜLÖNBÖZŐ oldalt ad (nem ugyanazt)",
-  [...sigs.entries()].map(([k, v]) => `${k}→${v}`).join(", "),
+const unknownOnly = resolveTemplatePicks(["fejezetes"], 2);
+check("csak ismeretlen id → elutasítás (a /generate nem esik csendben a fullbleed alapértelmezésre)", !unknownOnly.ok, JSON.stringify(unknownOnly));
+const three = resolveTemplatePicks(["parallax", "horizontal", "fullbleed"], 2);
+check("kurátori futás: 3 sablon → elutasítás", !three.ok, JSON.stringify(three));
+const empty = resolveTemplatePicks([], 2);
+check("üres kérés → üres lista (a hívó dönt: /generate = alapértelmezett, curate = hiba)", empty.ok && empty.templates.length === 0);
+
+// The engine's proof: a requested template rendered as anything else is a failure.
+let threw = "";
+try { assertTemplateHonoured("horizontal", undefined); } catch (e) { threw = (e as Error).message; }
+check("motor: kért Fejezetes, fotó nélkül kompozíció lenne → hiba, nincs mock", /Fejezetes/.test(threw), threw);
+threw = "";
+try { assertTemplateHonoured("horizontal", "parallax"); } catch (e) { threw = (e as Error).message; }
+check("motor: kért Fejezetes helyett Parallax → hiba", /Fejezetes/.test(threw) && /Parallax/.test(threw), threw);
+let ok = true;
+try { assertTemplateHonoured("horizontal", "horizontal"); assertTemplateHonoured(undefined, "fullbleed"); } catch { ok = false; }
+check("motor: a teljesült kérés és a kérés nélküli futás átmegy", ok);
+
+// Wiring: both console routes use the resolver (no isPickableTemplate filter left on the
+// generate paths), and the engine asserts before it renders.
+const server = readFileSync(new URL("../src/console/server.ts", import.meta.url), "utf8");
+const gen = server.slice(server.indexOf("const genMatch ="), server.indexOf("const packMatch ="));
+check(
+  "bekötés: /generate és /generate-curated a resolveTemplatePicks-en át, csendes szűrő nélkül",
+  (gen.match(/resolveTemplatePicks\(/g) ?? []).length === 2 && !/isPickableTemplate\(t\)/.test(gen) && !/new Set\(/.test(gen),
+);
+const engine = readFileSync(new URL("../src/generator/generateEngine.ts", import.meta.url), "utf8");
+check(
+  "bekötés: a motor a render ELŐTT ellenőrzi a kért sablont",
+  /assertTemplateHonoured\(opts\.template, finalRecipe\.template\)/.test(engine) &&
+    engine.indexOf("assertTemplateHonoured(opts.template") < engine.indexOf("renderSite(finalRecipe"),
 );
 
-// ── ④ the artifact card names its template ──────────────────────────────────
-const withArtifact = leadPage(
-  lead([
-    {
-      id: "11111111-1111-1111-1111-111111111111",
-      path: "mock-teszt-arch-frames.html",
-      status: "generated",
-      generatedAt: "2026-09-08T10:00:00.000Z",
-      inputs: { template: "arch-frames", photos: 3 },
-      decisions: [],
-    },
-  ]),
-);
-const shortName = (TEMPLATES["arch-frames"]?.label.split(/[—:(]/)[0] ?? "").trim();
-ok(
-  !!shortName && withArtifact.includes(shortName),
-  "az artifact-kártya kiírja, melyik sablon készítette",
-  shortName,
-);
-
-console.log(
-  fails.length
-    ? `\n⛔ template-pick-check: ${fails.length} bukott ellenőrzés.`
-    : "\n✅ template-pick-check: amit a kurátor kiválaszt, pontosan az készül el.",
-);
-process.exit(fails.length ? 1 : 0);
+if (failed) {
+  console.error(`⛔ ${failed} eset megbukott — a kért sablonpár csendben helyettesíthető.`);
+  process.exit(1);
+}
+console.log("✅ template-pick-check: a kért sablonpár pontosan teljesül, vagy hangosan bukik.");

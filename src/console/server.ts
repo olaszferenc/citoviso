@@ -2,6 +2,7 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
+import { resolveTemplatePicks } from "../generator/templatePicks.js";
 import { couponConfigErrors, couponFromForm, getCouponConfig, liveTenantCoupons, setCouponConfig } from "../payment/couponConfig.js";
 import { crossOriginRefusal } from "../server/originGuard.js";
 import {
@@ -2924,12 +2925,15 @@ async function handle(
       // each chosen template yields its OWN mock (distinct file + artifact row). Unknown/empty
       // selection → a single default-template mock.
       const form = await readBody(req);
-      const templates = [...new Set(form.getAll("template").map((t) => t.trim()))].filter(
-        (t) => t && isPickableTemplate(t),
-      );
-      const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
-      const picks: (string | undefined)[] = templates.length ? templates : [undefined];
-      startGenerateRun(id, picks, curatorPrompt ? { curatorPrompt } : {}, operatorActor(await currentOperator(req)));
+      // Exactly the picked templates, or a loud refusal (templatePicks.ts) — no silent drop to the default.
+      const picked = resolveTemplatePicks(form.getAll("template"), Object.keys(TEMPLATES).length);
+      if (!picked.ok) {
+        generateOutcome.set(id, { ok: false, message: picked.message, at: Date.now(), durationMs: 0, artifactId: null });
+      } else {
+        const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
+        const picks: (string | undefined)[] = picked.templates.length ? [...picked.templates] : [undefined];
+        startGenerateRun(id, picks, curatorPrompt ? { curatorPrompt } : {}, operatorActor(await currentOperator(req)));
+      }
     }
     // ⛔ ANCHORED, like every other post-action redirect on this page (the recopy route
     // below lands on `#ls-mocks`). Without the fragment `fromHash()` finds nothing and
@@ -2966,13 +2970,15 @@ async function handle(
       by: op?.displayName || op?.username || POE_BY,
     };
     const check = validateCuratorCopy(pack, storedQuoteCorpus(loaded));
-    const templates = [
-      ...new Set((Array.isArray(body.templates) ? body.templates : []).map((t) => String(t).trim())),
-    ].filter((t) => t && isPickableTemplate(t));
+    // The requested pair EXACTLY (templatePicks.ts): an unknown / retired / repeated id is refused, never dropped.
+    const picked = resolveTemplatePicks(Array.isArray(body.templates) ? body.templates : [], 2);
+    const templates = picked.ok ? [...picked.templates] : [];
     const verdict = check.ok
       ? { ok: true, errors: {}, warnings: check.copy.warnings, fields: check.copy.fields }
       : { ok: false, errors: check.errors, warnings: [] as readonly string[] };
     if (!launch) return send(res, 200, JSON.stringify(verdict), "application/json");
+    if (!picked.ok)
+      return send(res, 422, JSON.stringify({ ...verdict, ok: false, message: picked.message }), "application/json");
     // 1–2 templates (Neo's ticket); each gets the SAME words.
     if (!templates.length || templates.length > 2)
       return send(res, 422, JSON.stringify({ ...verdict, ok: false, message: T(lang, "Válasszon 1 vagy 2 sablont.") }), "application/json");

@@ -8,6 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
+import { assertTemplateHonoured } from "./templatePicks.js";
 import { hungarianBedNote, hungarianRoomName } from "../engine/roomNames.js";
 import { deniedSampleTypes, roomCountContradicted, roomCountInsideApartments, unitKindOf, unitNamesFromProse, wholeLetOnly, wholeLetStated } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
@@ -687,6 +688,8 @@ async function generateEngineMockInner(
   }
   // Editorial copy comes from the SAME call as the brief (one photo send) — see above.
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
+  // A requested template is rendered or the run fails — never another design in its place.
+  if (!opts.archetype) assertTemplateHonoured(opts.template, finalRecipe.template);
   // Module-sales switch (owner decree 2026-09-06): a not-sellable module gets no
   // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
   opts.onStage?.("render");
