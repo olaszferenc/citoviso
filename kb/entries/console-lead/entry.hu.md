@@ -203,6 +203,13 @@ bejelölve; amennyi kártyát bejelölsz, annyi külön mock készül. Új mockh
 a panel elutasító üzenetben kéri, hogy válassz. Alapértelmezett kinézet szándékosan nincs —
 a rendszer soha nem dönt helyetted.
 
+⚠️ **A Kapunyitás egy második képet kér.** Ennél a kinézetnél a nyitó-animációban egy kép kétfelé
+nyílik, és mögötte a nyitókép marad — a kettő sosem lehet ugyanaz. A szétnyíló kép a szállás
+fotóinak **második** képe, és különböznie kell a nyitóképtől (egy portálon újraközölt másolata sem
+jó). Ha nincs ilyen, a generálás elutasító üzenettel leáll; az üzenet így kezdődik: „Kapunyitás:
+nincs a nyitóképtől különböző második kép”. Ilyenkor két út van: **gyűjts további képet** a leadhez, vagy
+**válassz másik kinézetet** (Parallax vagy Névből növő).
+
 ### Napi AI-költségplafon
 
 A generáló gomb alatt a **„Mai AI-költség”** sáv mutatja, mennyit költött ma a
