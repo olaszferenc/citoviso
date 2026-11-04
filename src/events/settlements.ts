@@ -113,7 +113,38 @@ export async function fetchSettlementsAround(
       )
       .execute();
   }
+  // 0124: remember the circle itself — an empty answer is a valid "nothing here" too.
+  await db.insertInto("settlement_cover").values({ lat, lon, radius_km: radiusKm }).execute();
   return out;
+}
+
+export interface CoverCircle {
+  readonly lat: number;
+  readonly lon: number;
+  readonly radiusKm: number;
+}
+
+/**
+ * Pure: does one fetched circle contain the whole circle (lat, lon, radiusKm)? A fetch
+ * covers it when the centre distance plus the needed radius fits inside the fetched
+ * radius. Several partial fetches are NOT combined — their union can still have holes
+ * (that is exactly how Siófok fell between circles).
+ */
+export function circleCovered(covers: readonly CoverCircle[], lat: number, lon: number, radiusKm: number): boolean {
+  return covers.some((c) => haversineKm(c.lat, c.lon, lat, lon) + radiusKm <= c.radiusKm + 0.01);
+}
+
+/** The fresh fetched circles that could cover a circle around (lat, lon). */
+async function freshCoversNear(lat: number, lon: number, radiusKm: number): Promise<CoverCircle[]> {
+  const reach = (radiusKm * 3) / 111;
+  const rows = await db
+    .selectFrom("settlement_cover")
+    .select(["lat", "lon", "radius_km"])
+    .where(sql<boolean>`fetched_at > now() - make_interval(days => ${REFRESH_DAYS})`)
+    .where("lat", ">=", lat - reach)
+    .where("lat", "<=", lat + reach)
+    .execute();
+  return rows.map((r) => ({ lat: r.lat, lon: r.lon, radiusKm: r.radius_km }));
 }
 
 /** Cached settlements within the radius; null when the cache around here is cold/stale. */
@@ -146,8 +177,17 @@ export async function cachedSettlementsAround(
   }));
 }
 
+/**
+ * The gathering's view: the cache only if one fresh fetch covered this WHOLE circle,
+ * else a fetch now. The page render keeps reading `cachedSettlementsAround` (it never
+ * fetches); once the gathering has refetched a circle, the render sees the full set.
+ */
 export async function settlementsAround(lat: number, lon: number, radiusKm = RADIUS_KM): Promise<Settlement[]> {
-  return (await cachedSettlementsAround(lat, lon, radiusKm)) ?? (await fetchSettlementsAround(lat, lon, radiusKm));
+  if (circleCovered(await freshCoversNear(lat, lon, radiusKm), lat, lon, radiusKm)) {
+    const cached = await cachedSettlementsAround(lat, lon, radiusKm);
+    if (cached) return cached;
+  }
+  return fetchSettlementsAround(lat, lon, radiusKm);
 }
 
 /**

@@ -14,7 +14,7 @@ import {
   sameProgram,
   windowGate,
 } from "../src/events/gates.js";
-import { ownSettlement, querySettlements, type Settlement } from "../src/events/settlements.js";
+import { circleCovered, ownSettlement, querySettlements, type Settlement } from "../src/events/settlements.js";
 import { resolveSettlement } from "../src/events/gather.js";
 
 let fails = 0;
@@ -164,6 +164,20 @@ ok(q.some((s) => s.osmId === "3"), "a 15 000-people town is queried");
 ok(resolveSettlement("Tapolca, Tavasbarlang", all, revfulop)?.osmId === "3", "'Tapolca, Tavasbarlang' → Tapolca");
 ok(resolveSettlement("Budapest", all, revfulop) === null, "a place outside every circle is refused");
 ok(resolveSettlement("", all, revfulop) === null, "no city → refused");
+
+console.log("circleCovered (0124 — Siófok fell between circles, measured 2026-11-04)");
+// The production cache was filled by one fetch around a circle further west (rows avg lon
+// 17.57); a Siófok lodging at 46.9036/18.0326 had Zamárdi in its circle and called that warm.
+const matroz = { lat: 46.9036423, lon: 18.0326117 };
+const westFetch = { lat: 46.86, lon: 17.62, radiusKm: 30 };
+ok(!circleCovered([westFetch], matroz.lat, matroz.lon, 30), "someone else's overlapping circle does NOT cover mine");
+ok(circleCovered([{ ...matroz, radiusKm: 30 }], matroz.lat, matroz.lon, 30), "my own fetched circle covers me");
+ok(circleCovered([{ lat: 46.9, lon: 18.03, radiusKm: 40 }], matroz.lat, matroz.lon, 30), "a bigger nearby circle covers me");
+ok(!circleCovered([], matroz.lat, matroz.lon, 30), "no fetch → not covered (cold)");
+ok(
+  !circleCovered([westFetch, { lat: 46.95, lon: 18.4, radiusKm: 30 }], matroz.lat, matroz.lon, 30),
+  "two partial circles are not combined (their union can have holes)",
+);
 
 console.log(fails ? `\n⛔ ${fails} FAIL` : "\n✅ minden kapu-állítás ZÖLD");
 process.exit(fails ? 1 : 0);

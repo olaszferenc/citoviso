@@ -1448,6 +1448,16 @@ export interface SettlementTable {
   refreshed_at: Generated<Timestamp>;
 }
 
+/** 0124: a circle the OSM settlement cache was fetched for. The weekly gathering trusts the
+ *  cache only when one fresh fetch covers its whole circle (Siófok was missing, 2026-11-04). */
+export interface SettlementCoverTable {
+  id: Generated<string>;
+  lat: number;
+  lon: number;
+  radius_km: number;
+  fetched_at: Generated<Timestamp>;
+}
+
 /** 0071: one weekly gathering run for one settlement — cost and yield, measured. */
 export interface EventGatherRunTable {
   id: Generated<string>;
@@ -2144,6 +2154,7 @@ export interface Database {
   site_place_rating: SitePlaceRatingTable;
   photo_hero_score: PhotoHeroScoreTable;
   settlement: SettlementTable;
+  settlement_cover: SettlementCoverTable;
   event_gather_run: EventGatherRunTable;
   local_event: LocalEventTable;
   lead_hero_override: LeadHeroOverrideTable;
