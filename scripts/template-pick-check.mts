@@ -6,7 +6,7 @@
 // was not a pickable template id vanished and the run went on with the rest (or the default).
 // Hermetic: no DB, no network.
 import { readFileSync } from "node:fs";
-import { TEMPLATES } from "../src/engine/templates.js";
+import { isPickableTemplate, TEMPLATES } from "../src/engine/templates.js";
 import { assertTemplateHonoured, isNewMockTemplate, OWNER_BANNED_TEMPLATES, resolveTemplatePicks, SECOND_TEMPLATE_DEFAULT } from "../src/generator/templatePicks.js";
 
 let failed = 0;
@@ -24,6 +24,8 @@ check("„Parallax + Fejezetes” → hangos elutasítás (Fejezetes kivezetve),
 check("Fejezetes egyedül is elutasítva (/generate)", !resolveTemplatePicks(["horizontal"], 21).ok);
 check("új mockhoz a Fejezetes nem választható (isNewMockTemplate), a Parallax igen",
   !isNewMockTemplate("horizontal") && isNewMockTemplate("parallax") && OWNER_BANNED_TEMPLATES.has("horizontal"));
+check("a regiszter is kivezeti (retired → a választóból és a Forrás-csomag sablonlistájából eltűnik; „Fejezetes = kuka”)",
+  TEMPLATES.horizontal!.retired === true && !isPickableTemplate("horizontal") && isPickableTemplate("parallax"));
 check("a második terv alapértelmezése Fullbleed, választható és nem tiltott", SECOND_TEMPLATE_DEFAULT === "fullbleed" && isNewMockTemplate(SECOND_TEMPLATE_DEFAULT));
 // The pair Poe2 is now steered to: exactly that pair, in that order.
 const pair = resolveTemplatePicks(["parallax", "fullbleed"], 2);

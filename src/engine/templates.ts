@@ -37,7 +37,9 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [PARALLAX.id]: PARALLAX,
   [BRUTALISM.id]: BRUTALISM,
   [DOPAMINE.id]: DOPAMINE,
-  [HORIZONTAL.id]: HORIZONTAL,
+  // RETIRED by the owner 2026-11-04 (ADR-0422): „Fejezetes = kuka”. Still renders (existing
+  // mocks), never offered in the picker or accepted for a new mock.
+  [HORIZONTAL.id]: { ...HORIZONTAL, retired: true },
   [CINEMATIC.id]: CINEMATIC,
   [TRANSIT.id]: TRANSIT,
   [ORGANIC.id]: ORGANIC,
