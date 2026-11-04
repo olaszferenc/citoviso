@@ -31,6 +31,7 @@ import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
 import { keepUsablePhotos, probeImageSize } from "./portals/photoQuality.js";
+import { multiPropertyPage } from "../portalPhotos.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
@@ -322,6 +323,10 @@ export async function readPortalListing(
   // the page prints the lead's exact number. This exception ADDS hard evidence;
   // it never relaxes the rule for a page that has none.
   const extracted = extractListing(page.html, page.finalUrl, lead.name);
+  // A town / search list behind a listing-shaped URL (szallaskeres.hu's flat slugs): its
+  // prose, amenities and photos are several houses' — never a source (portalPhotos.multiPropertyPage).
+  const manyHouses = multiPropertyPage(extracted);
+  if (manyHouses) return { url, skipped: `több szállás listaoldala, nem adatlap: ${manyHouses}` };
   const listingPhone = phoneKey(extracted.phone);
   const distance =
     lead.lat != null && lead.lon != null && extracted.lat != null && extracted.lon != null

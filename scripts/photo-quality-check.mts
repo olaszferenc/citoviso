@@ -24,7 +24,8 @@ import {
 import { readFileSync } from "node:fs";
 import { isCutSrcsetUrl, parseSrcset } from "../src/scraper/srcset.js";
 import { appartmanSlug, ownSiteImages, photoCountMessage, sameStoredSite, twinSkipReason } from "../src/scraper/attachPhotoLinks.js";
-import { distinctPortalPhotos, holdSharedPhotoSets, sameBrand, usableProfiles, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
+import { distinctPortalPhotos, holdSharedPhotoSets, multiPropertyPage, sameBrand, usableProfiles, withoutNeighbourFolders } from "../src/scraper/portalPhotos.js";
+import { collectWriterSources } from "../src/generator/writerSources.js";
 import { looksLikeListingUrl } from "../src/scraper/sources/portals/registry.js";
 import type { PortalProfile } from "../src/scraper/types.js";
 import { ENGINE_HOME_REDIRECT, twinBrands } from "../src/scraper/sources/portalListing.js";
@@ -679,6 +680,66 @@ check(
     /for \(const profile of usableProfiles\(lead\.portalProfiles\)\)/.test(readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8")),
   "",
 );
+
+// ── szallaskeres.hu: listaoldal adatlap-alakú URL mögött (prod 2026-11-04) ─────────────────────
+// Ugyanaz a lapos slug a háznak (/gyongy-haz) és a település-listának (/balatonfenyves-vízparti-szállás);
+// a listaoldal leírása 4–6 idegen ház blurbje egymás után, ami a forráscsomag D2-jébe és a Mintába került.
+{
+  const facets = ["Légkondicionálás (12)", "Saját fürdőszoba (16)", "Televízió (15)", "Wi-Fi (13)", "Felszerelt konyha (14)",
+    "Hűtőszekrény (16)", "Babaágy (5)", "Etetőszék (5)", "Kandalló", "Fürdőkád (5)", "Terasz/erkély (10)", "Hajszárító (8)",
+    "Vízforraló (11)", "Tea/kávéfőző (12)", "Fűthető (11)"];
+  const mixedProse =
+    "Közvetlen vízparti, panorámás apartmanok Balatonfenyvesen, privát partszakasszal és saját stéggel. SUP, csónak, vízibicikli, kültéri jakuzzi, nagy kert grillezővel és bográcsozóval.\n\n" +
+    "Közvetlen Balaton-parti, gyermekbarát apartman Balatonfenyvesen – saját, zárt partszakasszal és stéggel. Zárt udvar, játszótér, tűzrakóhely és saját stég teszi teljessé a pihenést; a házban étterem működik.\n\n" +
+    "Közvetlen vízparti, saját mólós, 5 hálószobás, 8+2 fős, klímás nyaraló Balatonfenyvesen. Tágas, kb. 2500 m²‑es kert játszótérrel és sportpályákkal, csónakkal és horgászhellyel.\n\n" +
+    "Balatonparti Gerle Ház – vízparthoz közeli, családbarát nyaraló Balatonfenyvesen, 2 hálószobával, 2 zuhanyzós fürdővel, terasszal és kerttel, balatoni kilátással.";
+  const vizparti = {
+    url: "https://szallaskeres.hu/balatonfenyves-v%C3%ADzparti-sz%C3%A1ll%C3%A1s",
+    portalHost: "szallaskeres.hu", matchBand: "high", matchConfidence: 0.7,
+    title: "BALATONFENYVES vízparti szállás: 16 db [Közvetlen Foglalás]",
+    description: mixedProse, amenities: facets, photos: [{ url: "https://szallaskeres.hu/img/a1.jpg" }],
+  } as unknown as PortalProfile;
+  const szentantalfa = {
+    ...vizparti, url: "https://szallaskeres.hu/szentantalfa-vend%C3%A9gh%C3%A1z", matchConfidence: 1,
+    title: "SZENTANTALFA környéki vendégházak [Közvetlen Foglalás]",
+    amenities: ["Légkondicionálás (18)", "Saját fürdőszoba (30)", "Televízió (26)", "Wi-Fi (28)"],
+  } as unknown as PortalProfile;
+  // Real szallaskeres house pages (prod): the same flat slug, a house's headline, a plain amenity list.
+  const kortefa = {
+    ...vizparti, url: "https://szallaskeres.hu/kortefavendeghaz",
+    title: "Körtefa Vendégház Keszthely - családias, belvárosi szállás", amenities: [],
+    description: "Tágas, 175 m²-es vendégház Keszthely belvárosában, 12 főnek, 6 hálószobával, 5 fürdővel, 2 konyhával és zárt kerttel. A Körtefa Vendégház csendes, mégis központi utcában várja a családokat.",
+  } as unknown as PortalProfile;
+  const vazul = { ...kortefa, url: "https://szallaskeres.hu/vazul-var", title: "Vazul Vendégház Vászoly - erdei, családias szállás" } as unknown as PortalProfile;
+  const gyongy = { ...kortefa, url: "https://szallaskeres.hu/gyongy-haz", title: "Gyöngy-ház Balatonboglár-Szőlősgyörök [Közvetlen Foglalás]", amenities: ["Wi-Fi", "Fürdőszobák (2)", "Terasz"] } as unknown as PortalProfile;
+
+  const listTitles = [
+    "BALATONFENYVES szállás: 145 db [Közvetlen Foglalás]",
+    "MARCALI nyaraló: 19 szállásajánlat [Közvetlen Foglalás]",
+    "FONYÓD szállás: 257 ajánlat [Közvetlen Foglalás]",
+    "BALATONUDVARI környéki szállások [Közvetlen Foglalás]",
+  ];
+  check("szallaskeres listaoldal: Vízparti 0ec434cb (16 db, facet-lista) felismerve", multiPropertyPage(vizparti) !== null, String(multiPropertyPage(vizparti)));
+  check("szallaskeres listaoldal: Szentantalfa 6d06fee4 („környéki vendégházak”) felismerve", multiPropertyPage(szentantalfa) !== null, String(multiPropertyPage(szentantalfa)));
+  check("szallaskeres listacím facet nélkül is listaoldal (db / szállásajánlat / ajánlat / környéki)",
+    listTitles.every((title) => multiPropertyPage({ title, amenities: [] }) !== null), "");
+  check("darabszámos facet-lista cím nélkül is listaoldal", multiPropertyPage({ title: "Valami", amenities: facets }) !== null, "");
+  check("valódi szallaskeres-adatlapok maradnak (Körtefa, Vazul, Gyöngy-ház egy „(2)” tétellel)",
+    [kortefa, vazul, gyongy].every((p) => multiPropertyPage(p) === null), "");
+  const kept = usableProfiles([vizparti, szentantalfa, kortefa]);
+  check("usableProfiles: a két listaoldal kiesik, az adatlap marad", kept.length === 1 && kept[0] === kortefa, kept.map((p) => p.url).join(", "));
+  check("distinctPortalPhotos: listaoldal képe nem számít", distinctPortalPhotos([vizparti, szentantalfa]).length === 0, "");
+  // The source pack / Minta read the stored profiles through loadLead → usableProfiles.
+  const src = collectWriterSources({ name: "Vízparti Pihenő", portalProfiles: usableProfiles([vizparti]) } as never, []);
+  check("forráscsomag: az idegen házak leírása (Gerle Ház, jakuzzi, móló) nem kerül a forrásba",
+    !src.descriptions.some((d) => /Gerle|jakuzzi|mólós/.test(d)) && !src.amenities.some((a) => /\(\d+\)/.test(a)), src.descriptions.join(" | ").slice(0, 120));
+  const before = collectWriterSources({ name: "Vízparti Pihenő", portalProfiles: [vizparti] } as never, []);
+  check("kontroll: szűrő nélkül a keverék TÉNYLEG forrás lenne (a teszt nem üres)", before.descriptions.some((d) => /Gerle/.test(d)), "");
+  const ingestSrc = readFileSync(new URL("../src/scraper/sources/portalListing.ts", import.meta.url), "utf8");
+  check("bekötés: az ingest a kivonat után, az egyezés-pontozás előtt elutasítja a listaoldalt",
+    /const manyHouses = multiPropertyPage\(extracted\)/.test(ingestSrc) &&
+      ingestSrc.indexOf("multiPropertyPage(extracted)") < ingestSrc.indexOf("const confidence = scorePortalMatch("), "");
+}
 
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — a fotó-tulajdonítás visszaesett.`);

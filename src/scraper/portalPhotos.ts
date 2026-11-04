@@ -63,7 +63,13 @@ export function withoutNeighbourFolders<T extends { url: string; sourceUrl?: str
  *  dead comma-cut srcset pieces (srcset.isCutSrcsetUrl) and neighbours' thumbnails
  *  (withoutNeighbourFolders) are left out. */
 export function distinctPortalPhotos<T extends { url: string }>(
-  profiles: readonly { readonly photos: readonly T[]; readonly needsReview?: boolean; readonly url?: string }[],
+  profiles: readonly {
+    readonly photos: readonly T[];
+    readonly needsReview?: boolean;
+    readonly url?: string;
+    readonly title?: string;
+    readonly amenities?: readonly string[];
+  }[],
 ): T[] {
   const out: T[] = [];
   const seen = new Set<string>();
@@ -71,6 +77,8 @@ export function distinctPortalPhotos<T extends { url: string }>(
     if (profile.needsReview) continue;
     // A town/category list stored as a profile before the URL rule knew it (usableProfiles).
     if (profile.url && !looksLikeListingUrl(profile.url)) continue;
+    // …or a list page whose URL looks like a listing's (multiPropertyPage).
+    if (multiPropertyPage(profile)) continue;
     for (const p of withoutNeighbourFolders(profile.photos)) {
       // Dead comma-cut srcset pieces stored before the srcset fix never count or render.
       if (!p.url || isCutSrcsetUrl(p.url)) continue;
@@ -103,8 +111,42 @@ export function profilesAwaitingApproval(
  * (prod 2026-11-04: kiadoapartman.hu/szallas/balatonfenyves/ on four leads, 46–50 foreign
  * photos each; lake-balaton.com/…-hotels-<id>/type/… on 40+) — dropped on read, no DB write.
  */
-export function usableProfiles<P extends { readonly url: string }>(profiles: readonly P[] | undefined): P[] {
-  return (profiles ?? []).filter((p) => looksLikeListingUrl(p.url));
+export function usableProfiles<
+  P extends { readonly url: string; readonly title?: string; readonly amenities?: readonly string[] },
+>(profiles: readonly P[] | undefined): P[] {
+  return (profiles ?? []).filter((p) => looksLikeListingUrl(p.url) && !multiPropertyPage(p));
+}
+
+/**
+ * MANY HOUSES ON ONE PAGE — a list page whose URL cannot be told from a listing's.
+ * szallaskeres.hu serves both on one flat slug (/gyongy-haz is a house,
+ * /balatonfenyves-vízparti-szállás a town list), so the URL rule cannot see it; the page
+ * itself can. Its headline counts the houses („BALATONFENYVES vízparti szállás: 16 db”,
+ * „SZENTANTALFA környéki vendégházak”) and its amenity list is the SEARCH FILTER with a
+ * count per facet („Wi-Fi (13)”, „Babaágy (5)”), while its prose is the houses' blurbs one
+ * after another. Prod 2026-11-04: Vízparti Pihenő 0ec434cb held such a page as a high-band
+ * profile — a jacuzzi, a pier, a restaurant and a playground of four other Balatonfenyves
+ * houses in its source pack; Szentantalfa 6d06fee4 got five houses of four other villages.
+ * Measured on all 3 197 stored profiles with prose: both signs fire on the same 15
+ * (all szallaskeres.hu town pages) and on nothing else; the 36 szallaskeres house pages
+ * carry neither. Returns the reason (for the skip note), or null for a single house.
+ */
+const FACET_COUNT = /\(\d+\)\s*$/u;
+/** Three counted facets: one stray „(2)” in a real amenity name is not a filter. */
+const MIN_FACETS = 3;
+const LIST_HEADLINE = [
+  /:\s*\d+\s*(?:db|(?:szállás)?ajánlat|szállás(?:hely)?)(?![\p{L}\d])/iu,
+  /(?<![\p{L}])környéki\s+(?:szállás|vendégház|apartman|nyaraló|panzió)/iu,
+];
+export function multiPropertyPage(profile: {
+  readonly title?: string;
+  readonly amenities?: readonly string[];
+}): string | null {
+  const facets = (profile.amenities ?? []).filter((a) => FACET_COUNT.test(a)).length;
+  if (facets >= MIN_FACETS) return `darabszámos szűrő-lista a felszereltségben (${facets} tétel)`;
+  const title = profile.title ?? "";
+  if (LIST_HEADLINE.some((re) => re.test(title))) return `listaoldal-cím („${title}”)`;
+  return null;
 }
 
 /**
