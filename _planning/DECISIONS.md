@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-fejezetes-sablon-vegleg-kivezetve.md) — A Fejezetes (horizontal) sablon végleg kivezetve: új mock nem készülhet vele, a második terv alapértelmezése Fullbleed
 - [ADR-0421](decisions/0421-partner-lap-uzenetvaltasok-m1-csevego-szal-kezi.md) — Partner-lap „Üzenetváltások” (M1 csevegő-szál), kézi e-mail/SMS, elutasító-jel a leaden
 - [ADR-0420](decisions/0420-tenant-aktivitas-es-latogatottsag-a-konzolon.md) — Tenant-aktivitás és látogatottság a konzolon, csak a már mért adatból; a tulaj saját megnyitása nem vendég
 - [ADR-0419](decisions/0419-munkatars-lanc-egyszerusitese-bb-szabalyai.md) — Munkatárs-lánc egyszerűsítése: -bb szabályai Verához, dupla ellenőrzések le

@@ -9,6 +9,23 @@
 // template, each at most once, or the request is refused with the offending value named.
 import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 
+/**
+ * Templates the OWNER banned from new mocks — refused by id here and in the engine, whatever
+ * the registry's `retired` flag says (ADR-XXXX, 2026-11-04: „soha többet nem lehet a
+ * fejezetest mock típust használni”). The old mocks still render; no new one is ever made.
+ */
+export const OWNER_BANNED_TEMPLATES: ReadonlyMap<string, string> = new Map([
+  ["horizontal", "a tulaj 2026-11-04-én végleg kivezette („soha többet nem lehet a fejezetest mock típust használni”)"],
+]);
+
+/** May a NEW mock be made with this template id? (registry pickable AND not owner-banned) */
+export function isNewMockTemplate(id: string): boolean {
+  return isPickableTemplate(id) && !OWNER_BANNED_TEMPLATES.has(id);
+}
+
+/** The second design's default when a pair is wanted and the curator named one (ADR-XXXX). */
+export const SECOND_TEMPLATE_DEFAULT = "fullbleed";
+
 export type TemplatePicks =
   | { readonly ok: true; readonly templates: readonly string[] }
   | { readonly ok: false; readonly message: string };
@@ -25,6 +42,13 @@ export function templateShortName(id: string): string {
  */
 export function resolveTemplatePicks(requested: readonly unknown[], max: number): TemplatePicks {
   const ids = requested.map((t) => String(t ?? "").trim()).filter((t) => t.length > 0);
+  const banned = ids.filter((t) => OWNER_BANNED_TEMPLATES.has(t));
+  if (banned.length) {
+    return {
+      ok: false,
+      message: `${banned.map(templateShortName).join(", ")}: ${OWNER_BANNED_TEMPLATES.get(banned[0]!)}. Válasszon másik sablont (második tervnek: ${templateShortName(SECOND_TEMPLATE_DEFAULT)}).`,
+    };
+  }
   const unknown = ids.filter((t) => !isPickableTemplate(t));
   if (unknown.length) {
     return {
@@ -49,6 +73,9 @@ export function resolveTemplatePicks(requested: readonly unknown[], max: number)
  * which must be a failure of THAT pick, not a mock wearing another design.
  */
 export function assertTemplateHonoured(requested: string | undefined, rendered: string | undefined): void {
+  // A banned template is never rendered for a NEW mock — not on request, not by any default.
+  const banned = rendered && OWNER_BANNED_TEMPLATES.get(rendered);
+  if (banned) throw new Error(`${templateShortName(rendered!)}: ${banned}. Nem mentettem mockot.`);
   if (requested && rendered !== requested) {
     throw new Error(
       rendered

@@ -7,7 +7,7 @@
 // Hermetic: no DB, no network.
 import { readFileSync } from "node:fs";
 import { TEMPLATES } from "../src/engine/templates.js";
-import { assertTemplateHonoured, resolveTemplatePicks } from "../src/generator/templatePicks.js";
+import { assertTemplateHonoured, isNewMockTemplate, OWNER_BANNED_TEMPLATES, resolveTemplatePicks, SECOND_TEMPLATE_DEFAULT } from "../src/generator/templatePicks.js";
 
 let failed = 0;
 function check(label: string, ok: boolean, detail = ""): void {
@@ -15,11 +15,19 @@ function check(label: string, ok: boolean, detail = ""): void {
   if (!ok) failed++;
 }
 
-check("a két élő sablon létezik és választható (parallax, horizontal = Fejezetes)", Boolean(TEMPLATES.parallax && TEMPLATES.horizontal) && /^Fejezetes/.test(TEMPLATES.horizontal!.label));
+check("a két élő sablon létezik (parallax, horizontal = Fejezetes)", Boolean(TEMPLATES.parallax && TEMPLATES.horizontal) && /^Fejezetes/.test(TEMPLATES.horizontal!.label));
 
-// The pair Poe2 asked for, by id: exactly that pair, in that order.
-const pair = resolveTemplatePicks(["parallax", "horizontal"], 2);
-check("„Parallax + Fejezetes” (Martina, Balatinus) → pontosan parallax + horizontal", pair.ok && pair.templates.join(",") === "parallax,horizontal", JSON.stringify(pair));
+// ⛔ TULAJ-DOKTRÍNA (2026-11-04, ADR-XXXX): „soha többet nem lehet a fejezetest mock típust használni”.
+const banPair = resolveTemplatePicks(["parallax", "horizontal"], 2);
+check("„Parallax + Fejezetes” → hangos elutasítás (Fejezetes kivezetve), nem csendes helyettesítés",
+  !banPair.ok && /Fejezetes/.test(banPair.message) && /soha többet/.test(banPair.message) && /Fullbleed/.test(banPair.message), JSON.stringify(banPair));
+check("Fejezetes egyedül is elutasítva (/generate)", !resolveTemplatePicks(["horizontal"], 21).ok);
+check("új mockhoz a Fejezetes nem választható (isNewMockTemplate), a Parallax igen",
+  !isNewMockTemplate("horizontal") && isNewMockTemplate("parallax") && OWNER_BANNED_TEMPLATES.has("horizontal"));
+check("a második terv alapértelmezése Fullbleed, választható és nem tiltott", SECOND_TEMPLATE_DEFAULT === "fullbleed" && isNewMockTemplate(SECOND_TEMPLATE_DEFAULT));
+// The pair Poe2 is now steered to: exactly that pair, in that order.
+const pair = resolveTemplatePicks(["parallax", "fullbleed"], 2);
+check("„Parallax + Fullbleed” → pontosan parallax + fullbleed", pair.ok && pair.templates.join(",") === "parallax,fullbleed", JSON.stringify(pair));
 
 // The silent paths of before, each now loud.
 const byLabel = resolveTemplatePicks(["parallax", "Fejezetes"], 2);
@@ -33,20 +41,23 @@ if (retired) {
 }
 const unknownOnly = resolveTemplatePicks(["fejezetes"], 2);
 check("csak ismeretlen id → elutasítás (a /generate nem esik csendben a fullbleed alapértelmezésre)", !unknownOnly.ok, JSON.stringify(unknownOnly));
-const three = resolveTemplatePicks(["parallax", "horizontal", "fullbleed"], 2);
+const three = resolveTemplatePicks(["parallax", "gate-opening", "fullbleed"], 2);
 check("kurátori futás: 3 sablon → elutasítás", !three.ok, JSON.stringify(three));
 const empty = resolveTemplatePicks([], 2);
 check("üres kérés → üres lista (a hívó dönt: /generate = alapértelmezett, curate = hiba)", empty.ok && empty.templates.length === 0);
 
 // The engine's proof: a requested template rendered as anything else is a failure.
 let threw = "";
-try { assertTemplateHonoured("horizontal", undefined); } catch (e) { threw = (e as Error).message; }
-check("motor: kért Fejezetes, fotó nélkül kompozíció lenne → hiba, nincs mock", /Fejezetes/.test(threw), threw);
+try { assertTemplateHonoured("parallax", undefined); } catch (e) { threw = (e as Error).message; }
+check("motor: kért Parallax, fotó nélkül kompozíció lenne → hiba, nincs mock", /Parallax/.test(threw), threw);
 threw = "";
-try { assertTemplateHonoured("horizontal", "parallax"); } catch (e) { threw = (e as Error).message; }
-check("motor: kért Fejezetes helyett Parallax → hiba", /Fejezetes/.test(threw) && /Parallax/.test(threw), threw);
+try { assertTemplateHonoured("fullbleed", "parallax"); } catch (e) { threw = (e as Error).message; }
+check("motor: kért Fullbleed helyett Parallax → hiba", /Fullbleed/.test(threw) && /Parallax/.test(threw), threw);
+threw = "";
+try { assertTemplateHonoured("horizontal", "horizontal"); } catch (e) { threw = (e as Error).message; }
+check("motor: Fejezetes új mockként akkor sem renderel, ha valaki a végpontot megkerüli", /Fejezetes/.test(threw) && /Nem mentettem/.test(threw), threw);
 let ok = true;
-try { assertTemplateHonoured("horizontal", "horizontal"); assertTemplateHonoured(undefined, "fullbleed"); } catch { ok = false; }
+try { assertTemplateHonoured("parallax", "parallax"); assertTemplateHonoured(undefined, "fullbleed"); } catch { ok = false; }
 check("motor: a teljesült kérés és a kérés nélküli futás átmegy", ok);
 
 // Wiring: both console routes use the resolver (no isPickableTemplate filter left on the
@@ -68,4 +79,4 @@ if (failed) {
   console.error(`⛔ ${failed} eset megbukott — a kért sablonpár csendben helyettesíthető.`);
   process.exit(1);
 }
-console.log("✅ template-pick-check: a kért sablonpár pontosan teljesül, vagy hangosan bukik.");
+console.log("✅ template-pick-check: a kért sablonpár pontosan teljesül, vagy hangosan bukik; a Fejezetes új mockhoz kivezetve.");
