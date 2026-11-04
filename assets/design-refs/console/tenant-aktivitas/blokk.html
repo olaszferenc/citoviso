@@ -1,0 +1,239 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Partner-adatlap · Aktivitás és látogatottság — terv (A/B/C)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-ink-brand:var(--citui-navy-900);
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --viz-1:var(--citui-link-ink); --viz-2:var(--citui-cyan-500);
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel));
+    --viz-sample:repeating-linear-gradient(45deg, color-mix(in srgb,var(--citui-warn) 18%,var(--citui-panel)) 0 6px, var(--citui-panel) 6px 12px);
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px}
+  .bar button,.bar select{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar select option{color:var(--citui-ink)}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .bar .grp{display:flex;gap:4px;align-items:center} .bar .grp span{font-size:11px;opacity:.7;margin-right:4px}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1100px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink)}
+  h1{font:600 20px/1.2 var(--citui-font-text);margin:0 2px 4px}
+  .sub{margin:0 2px 12px;font-size:12.5px;color:var(--citui-muted)}
+  .ghostcard{border:1px dashed var(--citui-line-strong);border-radius:10px;padding:12px 14px;margin:0 0 12px;color:var(--citui-muted);font-size:12.5px;background:var(--citui-surface)}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+  .panel h2{margin:0 0 4px;font:600 15px/1.3 var(--citui-font-text);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .panel h3{margin:14px 0 6px;font:700 11px/1.2 var(--citui-font-text);letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .mut{color:var(--citui-muted)} .small{font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--citui-radius-pill);font-size:11px;font-weight:600;border:1px solid var(--citui-line);background:var(--citui-surface-2);color:var(--citui-ink)}
+  .pill.ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft)}
+  .pill.warn{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel))}
+  .pill.bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel))}
+  .pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel)}
+  .chips button{appearance:none;border:0;background:none;padding:6px 11px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:30px}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:8px}
+  .verdict{font-size:13.5px;margin:6px 0 10px} .verdict b{font-family:var(--citui-font-display)}
+  .kstrip{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}
+  .kbox{border:1px solid var(--citui-line);border-radius:10px;padding:9px 11px;background:var(--citui-panel);min-width:0}
+  .kbox.sample{background:var(--viz-sample)}
+  .kbox__t{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .kbox__v{font-family:var(--citui-font-display);font-weight:700;font-size:1.3rem;color:var(--citui-ink-brand);line-height:1.15;font-variant-numeric:tabular-nums}
+  .kbox__s{font-size:11.5px;color:var(--citui-muted)}
+  .cols{display:grid;grid-template-columns:1fr;gap:14px}
+  .ev{list-style:none;margin:0;padding:0} .ev li{display:grid;grid-template-columns:92px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid var(--citui-line);font-size:12.5px}
+  .ev li:last-child{border-bottom:0} .ev time{color:var(--citui-muted);font-variant-numeric:tabular-nums}
+  .hb{display:grid;grid-template-columns:120px 1fr 40px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
+  .hb .tr{display:block;height:12px;border-radius:6px;background:var(--viz-ghost);overflow:hidden} .hb .fi{display:block;height:100%;background:var(--viz-1);border-radius:6px}
+  .hb .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .empty{border:1px dashed var(--citui-line-strong);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--citui-muted);background:var(--citui-surface)}
+  .samplebadge{display:inline-block;font:700 10px/1 var(--citui-font-text);letter-spacing:.06em;padding:3px 6px;border-radius:4px;background:color-mix(in srgb,var(--citui-warn) 22%,var(--citui-panel));color:var(--citui-warn-ink);vertical-align:middle}
+  .spark{display:block;width:100%;height:56px}
+  .lanes{display:grid;grid-template-columns:70px 1fr;gap:4px 8px;align-items:center;font-size:11.5px}
+  .lane{display:grid;gap:2px;height:22px;align-items:end}
+  .lane .c{background:var(--viz-ghost);border-radius:2px;height:100%;position:relative}
+  .lane .c.v{background:transparent} .lane .c.v i{position:absolute;bottom:0;left:0;right:0;background:var(--viz-1);border-radius:2px}
+  .lane .c .dot{position:absolute;inset:0;margin:auto;width:8px;height:8px;border-radius:50%}
+  .dot.login{background:var(--viz-2)} .dot.save{background:var(--citui-navy-900);border-radius:1px} .dot.own{border:2px solid var(--citui-navy-900);background:var(--citui-panel)}
+  .lane .c.today{outline:2px solid var(--citui-cyan-500)}
+  .axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--citui-muted);grid-column:2}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--citui-muted);margin:6px 0} .legend span{display:inline-flex;gap:5px;align-items:center}
+  .legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;position:static}
+  .compact{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;align-items:baseline}
+  .compact b{font-family:var(--citui-font-display);font-size:1.05rem}
+  details.more{margin-top:10px} details.more summary{cursor:pointer;color:var(--citui-link-ink);font-weight:600;font-size:12.5px}
+  .rule{font-size:11.5px;color:var(--citui-muted);margin-top:10px;border-top:1px solid var(--citui-line);padding-top:8px}
+  @container (min-width: 720px){
+    .kstrip{grid-template-columns:repeat(4,1fr)}
+    .cols{grid-template-columns:1fr 1.4fr}
+    .lanes{grid-template-columns:90px 1fr}
+  }
+</style></head><body>
+<div class="bar">
+  <b>Partner-adatlap · Aktivitás és látogatottság — terv</b>
+  <div class="grp"><span>Méret</span><button data-size="m">Mobil 390px</button><button data-size="d" class="on">Asztali</button></div>
+  <div class="grp"><span>Változat</span><button data-v="A" class="on">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
+  <div class="grp"><span>Tenant</span><select id="tsel"></select></div>
+  <div class="grp"><span>Nézet</span><button data-mode="ma" class="on">Ma (valós)</button><button data-mode="minta">30 nap mérés után (MINTA)</button></div>
+</div>
+<p class="note" id="vnote"></p>
+<div class="stage" id="stage">
+  <div class="crumb">Partnerek › <b id="crumbname"></b></div>
+  <h1 id="tname"></h1>
+  <p class="sub" id="tsub"></p>
+  <div class="ghostcard">A partner-adatlap többi része (előfizetés, számlák, domain, rendelés) — a SUB-C terve, itt csak a helyét jelzi.</div>
+  <div id="block"></div>
+</div>
+<script>
+// REAL production figures, read 2026-11-03 ~11:00 (Budapest). Visit rows come from the
+// EXISTING counter (site_visit, ADR-0108): it counts only "/" and does NOT exclude the
+// owner's own views — that is why the "ma" view states it explicitly.
+const TENANTS = {
+  duna:{name:"Duna Vibe House", sub:"Fizető · indult 2026-11-03 · dunavibehouse.citoviso.com (saját domain: dunavibehouse.hu, DNS folyamatban)",
+    state:{cls:"ok",t:"Új — ma lépett be"},
+    owner:{login7:1,login30:1,lastLogin:"11-03 10:17",lastSave:null,own7:1,
+      events:[["11-03 10:39","Megnyitotta a saját oldalát az adminból"],["11-03 10:17","Belépett (egyszeri link), megnyitotta az admint"],["11-03","Fizetett — CITO-2026-7"]]},
+    vis:{v7:1,v30:1,views30:2,ownGuess:"Mind a 2 megnyitás ma 10:31 és 10:39 között, asztali gépről; a 10:39-es az adminból jött (a tulaj). Vendég-látogatás valószínűleg még nincs.",
+      days:dayArr({"11-03":1}),own:dayArr({"11-03":1}),logins:dayArr({"11-03":1}),saves:dayArr({}),
+      devMob:0,refs:[["admin.citoviso.com (saját)",1],["közvetlen / ismeretlen",1]],enq30:0}},
+  sama:{name:"Sáma Vendégház", sub:"Próba · indult 2026-10-28 (14 nap, 11-11-ig) · sama-vendeghaz.citoviso.com",
+    state:{cls:"bad",t:"Alvó — még nem lépett be"},
+    owner:{login7:0,login30:0,lastLogin:null,lastSave:null,own7:0,
+      events:[["10-28 10:11","Kiment a belépő levél — a linkre nem kattintott (11-04 10:11-ig él)"],["10-28","Próba indult"]]},
+    vis:{v7:5,v30:5,views30:5,ownGuess:"5 megnyitás két napon: 10-28 (4, az indítás órájában, ebből 1 az adminból) és 11-02 (1). Valószínűleg a mi ellenőrzésünk és a tulaj; vendég nem azonosítható.",
+      days:dayArr({"10-28":4,"11-02":1}),own:dayArr({}),logins:dayArr({}),saves:dayArr({}),
+      devMob:4,refs:[["közvetlen / ismeretlen",3],["admin.citoviso.com (saját)",1],["saját oldalon belül",1]],enq30:0}},
+  marilyn:{name:"Marilyn Vendégház", sub:"Próba · indult 2026-11-02 (11-16-ig) · marilyn-vendeghaz.citoviso.com",
+    state:{cls:"warn",t:"Még nem lépett be — 1 napja indult"},
+    owner:{login7:0,login30:0,lastLogin:null,lastSave:null,own7:0,
+      events:[["11-02","Kiment a belépő levél — a linkre nem kattintott"],["11-02","Próba indult"]]},
+    vis:{v7:0,v30:0,views30:0,ownGuess:"Az élő oldalt még senki nem nyitotta meg (botok nélkül).",
+      days:dayArr({}),own:dayArr({}),logins:dayArr({}),saves:dayArr({}),devMob:0,refs:[],enq30:0}},
+  rebeka:{name:"[TESZT] Rebeka Panzió", sub:"Teszt-tenant · fizető (teszt) · saját domain: overseer.hu",
+    state:{cls:"",t:"Teszt — a riport alapból kihagyja"},
+    owner:{login7:0,login30:0,lastLogin:null,lastSave:null,own7:0,events:[["10-21","Próba indult, ugyanazon a napon megrendelte (teszt)"]]},
+    vis:{v7:83,v30:283,views30:449,ownGuess:"A forgalom nagy része a tesztelés és az overseer.hu domainre érkező szkenner/ismeretlen kliens — ezért kell a szigorúbb botszűrés és a tulaj/operátor kiszűrése.",
+      days:dayArr({"10-21":1,"10-23":85,"10-24":41,"10-25":42,"10-26":22,"10-27":21,"10-28":11,"10-29":16,"10-30":3,"10-31":17,"11-01":9,"11-02":7,"11-03":8}),
+      own:dayArr({}),logins:dayArr({}),saves:dayArr({}),devMob:58,refs:[["közvetlen / ismeretlen",380],["overseer.hu (önhivatkozás)",56],["egyéb weboldal",10],["Bing",1],["Gmail-app",1]],enq30:1}},
+};
+// SAMPLE data — shown ONLY in "MINTA" mode, hatched + labelled; never mixed with real.
+const SAMPLE = {
+  owner:{login7:3,login30:9,lastLogin:"11-02 19:40",lastSave:"11-02 19:52 · Fotók",own7:2,
+    events:[["11-02 19:52","Mentett — Fotók"],["11-02 19:40","Belépett (jelszó)"],["10-30 08:12","Mentett — Elérhetőség"],["10-30 08:05","Belépett"],["10-27 21:10","Megnyitotta a saját oldalát"]]},
+  vis:{v7:41,v30:163,views30:298,pages:[["Főoldal",163],["Apartman: Duna-panoráma",71],["Apartman: Kert",38],["Angol változat (/en)",26]],
+    src:[["Google keresés",58],["Google Maps",44],["közvetlen (beírt cím, könyvjelző)",29],["Facebook / Instagram",17],["Szallas.hu / Booking",9],["Saját kampány (UTM)",4],["egyéb weboldal",2]],
+    country:[["Magyarország",131],["Ausztria",14],["Németország",11],["egyéb",7]],devMob:68,
+    conv:[["Érdeklődés / foglalási kérés",4],["Telefonszámra koppintott",11],["E-mail címre kattintott",3]],
+    days:null}
+};
+function dayArr(map){ // 30 days ending 11-03
+  const out=[]; const end=new Date(Date.UTC(2026,10,3));
+  for(let i=29;i>=0;i--){const d=new Date(end-i*864e5);const k=String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");out.push({k,n:map[k]||0});}
+  return out;
+}
+SAMPLE.vis.days = dayArr(Object.fromEntries(dayArr({}).map((d,i)=>[d.k,Math.round(3+4*Math.sin(i/3)+i/4+(i%7==5?5:0))])));
+SAMPLE.owner.logins = dayArr({"10-27":1,"10-30":1,"11-02":1,"10-20":1,"10-21":1,"10-14":1});
+SAMPLE.owner.saves = dayArr({"10-30":1,"11-02":1,"10-21":1});
+SAMPLE.owner.ownd = dayArr({"10-27":1,"11-02":1});
+
+let st={size:"d",v:"A",t:"duna",mode:"ma"};
+const $=s=>document.querySelector(s);
+const tsel=$("#tsel");
+for(const [k,t] of Object.entries(TENANTS)){const o=document.createElement("option");o.value=k;o.textContent=t.name;tsel.appendChild(o);}
+tsel.onchange=()=>{st.t=tsel.value;render();};
+document.querySelectorAll(".bar button").forEach(b=>b.onclick=()=>{
+  if(b.dataset.size){st.size=b.dataset.size;} if(b.dataset.v){st.v=b.dataset.v;} if(b.dataset.mode){st.mode=b.dataset.mode;}
+  render();});
+
+const NOTES={
+  A:"<b>A — Két oszlop: „A tulaj” és „A vendégek”.</b> Bal oldalt mit csinál a tulaj (belépés, mentés, saját oldal, utolsó 5 esemény), jobb oldalt a látogatók: napi görbe, honnan jönnek, milyen eszközön, mi lett belőle. Fölül egy ítélet-sor (aktív / alvó). A legtöbbet mutató, de a leghosszabb.",
+  B:"<b>B — Egy közös 30 napos idősáv.</b> Két sáv ugyanazon a napi rácson: fölül a tulaj jelei (belépés, mentés, saját megnyitás), alul a vendégek napi száma — egy pillantással látszik, hogy a tulaj munkája után jön-e forgalom. Alatta tömör forrás- és konverzió-lista.",
+  C:"<b>C — Kompakt: egy ítélet-mondat + 4 szám, a részletek lenyitva.</b> A partner-adatlapon a legkevesebb helyet viszi; a görbe, a források és az eseménylista a „Részletek” mögött van. Akkor jó, ha az adatlapon sok más blokk is van.",
+};
+function hbars(rows,max){ if(!rows.length) return `<div class="empty">Nincs adat.</div>`; max=max||Math.max(...rows.map(r=>r[1]));
+  return rows.map(([l,n])=>`<div class="hb"><span>${l}</span><span class="tr"><span class="fi" style="width:${max?Math.max(2,n/max*100):0}%"></span></span><span class="n">${n}</span></div>`).join("");}
+function spark(days){const W=600,H=56,max=Math.max(1,...days.map(d=>d.n));const bw=W/days.length;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Napi látogatók, 30 nap">${days.map((d,i)=>{const h=d.n/max*(H-6);return `<rect x="${i*bw+1}" y="${H-h}" width="${bw-2}" height="${h}" fill="var(--viz-1)" rx="1"><title>${d.k}: ${d.n}</title></rect><rect x="${i*bw+1}" y="${H-1}" width="${bw-2}" height="1" fill="var(--viz-ghost)"/>`}).join("")}</svg>
+  <div class="axis" style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--citui-muted)"><span>${days[0].k}</span><span>${days[14].k}</span><span>ma</span></div>`;}
+function pend(what){return `<div class="empty">${what} — <b>a bekapcsolás napjától</b> mérjük; visszamenőleg nincs adat.</div>`;}
+
+function data(){
+  const t=TENANTS[st.t]; const S=st.mode==="minta";
+  const o=S?SAMPLE.owner:t.owner; const v=S?SAMPLE.vis:t.vis;
+  return {t,S,o,v,
+    logins:S?SAMPLE.owner.logins:t.vis.logins, saves:S?SAMPLE.owner.saves:t.vis.saves, ownd:S?SAMPLE.owner.ownd:t.vis.own,
+    state:S?{cls:"ok",t:"Aktív — 2 napja mentett"}:t.state};
+}
+function verdict(d){
+  const {o,v,S}=d;
+  if(S) return `A tulaj az elmúlt 7 napban <b>${o.login7}×</b> lépett be, utoljára ${o.lastSave} mentett. Az oldalt 30 nap alatt <b>${v.v30}</b> vendég nézte meg, főleg <b>Google-keresésből</b>; <b>4</b> érdeklődés és <b>11</b> telefon-koppintás lett belőle.`;
+  const l = o.login30? `A tulaj <b>${o.login30}×</b> lépett be (utoljára ${o.lastLogin}), mentése még nincs.` : `A tulaj <b>még nem lépett be</b>.`;
+  return `${l} Az élő oldalt 30 nap alatt <b>${v.views30}</b>× nyitották meg (${v.v30} különböző napi lenyomat) — <span class="mut">${v.ownGuess}</span>`;
+}
+function kpis(d){
+  const {o,v,S}=d; const sc=S?" sample":"";
+  return `<div class="kstrip">
+  <div class="kbox${sc}"><div class="kbox__t">Belépés 7 / 30 nap</div><div class="kbox__v">${o.login7} / ${o.login30}</div><div class="kbox__s">utolsó: ${o.lastLogin||"soha"}</div></div>
+  <div class="kbox${sc}"><div class="kbox__t">Utolsó mentés</div><div class="kbox__v">${o.lastSave?o.lastSave.split(" · ")[0]:"nincs"}</div><div class="kbox__s">${o.lastSave?o.lastSave.split(" · ")[1]:"a napló 10-27 óta él"}</div></div>
+  <div class="kbox${sc}"><div class="kbox__t">Látogató 7 / 30 nap</div><div class="kbox__v">${v.v7} / ${v.v30}</div><div class="kbox__s">${S?"botok és a tulaj nélkül":"régi számláló: a tulaj is benne"}</div></div>
+  <div class="kbox${sc}"><div class="kbox__t">Érdeklődés 30 nap</div><div class="kbox__v">${S?4:v.enq30}</div><div class="kbox__s">${S?"+ 11 telefon-, 3 e-mail-kattintás":"foglalási kérés (mért)"}</div></div></div>`;
+}
+function sources(d){
+  const {v,S}=d;
+  if(S) return `<h3>Honnan jönnek</h3>${hbars(v.src)}<h3>Melyik oldalt nézik</h3>${hbars(v.pages)}<h3>Ország · eszköz</h3>${hbars(v.country)}<div class="small mut">Telefonról: ${v.devMob}%</div>`;
+  return `<h3>Honnan jönnek (ma: csak a küldő oldal neve)</h3>${hbars(v.refs)}
+    <h3>Ma még nem mérjük</h3>${pend("Forrás-csoport (Google keresés / Maps / Facebook / portál / UTM), ország, melyik oldalt nézik, telefon- és e-mail-kattintás")}
+    <div class="small mut" style="margin-top:6px">Eszköz: ${v.views30? Math.round(v.devMob/v.views30*100)+"% telefon":"—"}</div>`;
+}
+function events(d){return `<ul class="ev">${d.o.events.map(([t,e])=>`<li><time>${t}</time><span>${e}</span></li>`).join("")}</ul>`;}
+function lanes(d){
+  const days=d.S?d.v.days:d.t.vis.days; const max=Math.max(1,...days.map(x=>x.n));
+  const ownerCells=days.map((x,i)=>{const l=d.logins[i].n,s=d.saves[i].n,w=d.ownd[i].n;const dot=s?"save":l?"login":w?"own":"";return `<span class="c${i==29?" today":""}" title="${x.k}${l?" · belépés":""}${s?" · mentés":""}${w?" · saját oldal":""}">${dot?`<span class="dot ${dot}"></span>`:""}</span>`}).join("");
+  const visCells=days.map((x,i)=>`<span class="c v${i==29?" today":""}" title="${x.k}: ${x.n} látogató"><i style="height:${x.n/max*100}%"></i></span>`).join("");
+  const cols=`grid-template-columns:repeat(30,1fr)`;
+  return `<div class="legend"><span><i class="dot login"></i>belépés</span><span><i class="dot save" style="border-radius:1px"></i>mentés</span><span><i class="dot own"></i>saját oldal</span><span><i class="dot" style="background:var(--viz-1);border-radius:2px"></i>vendégek / nap</span></div>
+  <div class="lanes"><span class="mut">A tulaj</span><div class="lane" style="${cols}">${ownerCells}</div>
+  <span class="mut">Vendégek</span><div class="lane" style="${cols};height:44px">${visCells}</div>
+  <span></span><div class="axis"><span>${days[0].k}</span><span>${days[15].k}</span><span>ma (${days[29].k})</span></div></div>`;
+}
+function head(d){return `<div class="head"><h2>Aktivitás és látogatottság ${d.S?'<span class="samplebadge">MINTA</span>':""}</h2>
+  <span class="pill ${d.state.cls}"><span class="d"></span>${d.state.t}</span></div>`;}
+const RULE=`<div class="rule">Látogató = napi lenyomat (IP + böngésző, napi sóval, IP nélkül tárolva), botok és a tulaj/operátor saját megnyitása nélkül. Alvó = 14 napja nem lépett be és nem mentett (próbánál: 3 nap után sem lépett be).</div>`;
+
+function render(){
+  document.querySelectorAll(".bar button").forEach(b=>b.classList.toggle("on", b.dataset.size===st.size||b.dataset.v===st.v||b.dataset.mode===st.mode));
+  $("#stage").classList.toggle("m",st.size==="m"); $("#vnote").innerHTML=NOTES[st.v];
+  const d=data(); $("#crumbname").textContent=$("#tname").textContent=d.t.name; $("#tsub").textContent=d.t.sub;
+  let h="";
+  if(st.v==="A"){
+    h=`<section class="panel">${head(d)}<p class="verdict">${verdict(d)}</p>${kpis(d)}
+    <div class="cols"><div><h3>A tulaj — utolsó események</h3>${events(d)}</div>
+    <div><h3>Vendégek naponta (30 nap)</h3>${spark(d.S?d.v.days:d.t.vis.days)}${sources(d)}
+    ${d.S?`<h3>Mi lett belőle</h3>${hbars(d.v.conv)}`:""}</div></div>${RULE}</section>`;
+  } else if(st.v==="B"){
+    h=`<section class="panel">${head(d)}<p class="verdict">${verdict(d)}</p>${lanes(d)}
+    <div class="cols" style="margin-top:6px"><div>${d.S?`<h3>Mi lett belőle</h3>${hbars(d.v.conv)}`:`<h3>Mi lett belőle</h3><div class="hb"><span>Érdeklődés</span><span class="tr"><span class="fi" style="width:0"></span></span><span class="n">${d.v.enq30}</span></div>${pend("Telefon- és e-mail-kattintás")}`}</div><div>${sources(d)}</div></div>${RULE}</section>`;
+  } else {
+    const {o,v,S}=d;
+    h=`<section class="panel">${head(d)}
+    <div class="compact"><span>Belépés 7/30: <b>${o.login7}/${o.login30}</b></span><span>Utolsó mentés: <b>${o.lastSave?o.lastSave.split(" · ")[0]:"nincs"}</b></span><span>Látogató 7/30: <b>${v.v7}/${v.v30}</b></span><span>Érdeklődés: <b>${S?4:v.enq30}</b></span>${S?'<span>Fő forrás: <b>Google keresés</b></span>':""}</div>
+    <p class="verdict">${verdict(d)}</p>
+    <details class="more"><summary>Részletek — görbe, források, események</summary><div class="cols" style="margin-top:8px"><div><h3>A tulaj</h3>${events(d)}</div><div><h3>Vendégek naponta</h3>${spark(S?v.days:d.t.vis.days)}${sources(d)}${S?`<h3>Mi lett belőle</h3>${hbars(v.conv)}`:""}</div></div></details>${RULE}</section>`;
+  }
+  $("#block").innerHTML=h;
+  document.querySelectorAll("#block .chips button").forEach(b=>b.onclick=()=>{b.parentNode.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
+}
+if(matchMedia("(max-width:600px)").matches) st.size="m";
+render();
+</script></body></html>

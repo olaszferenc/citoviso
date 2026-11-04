@@ -154,6 +154,7 @@ export function navTree(lang = "hu"): readonly NavNode[] {
         { kind: "leaf", id: "mock", label: T(lang, "Mock — melyik mennyire vonzó"), short: T(lang, "Mock"), href: "/report/mock" },
         { kind: "leaf", id: "trial", label: T(lang, "Próba — mit csinálnak a próba alatt"), short: T(lang, "Próba"), href: "/report/trial" },
         { kind: "leaf", id: "revenue", label: T(lang, "Előfizetők — bevétel és előrejelzés"), short: T(lang, "Előfizetők"), href: "/report/revenue" },
+        { kind: "leaf", id: "tenants", label: T(lang, "Tenantok — ki dolgozik, kit néznek"), short: T(lang, "Tenantok"), href: "/report/tenants" },
       ],
     },
     {

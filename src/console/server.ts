@@ -82,6 +82,8 @@ import { domainStats, listDomains } from "./domainRegistry.js";
 import { domainsPage, parseDomainsQuery } from "./domainRegistryViews.js";
 import { fmtTime as partnerFmtTime, type PartnerEditState } from "./partnerProfileViews.js";
 import { partnerActivityHtml } from "./partnerActivity.js";
+import { getTenantActivities } from "./tenantActivityData.js";
+import { reportTenantsPage, TENANT_FILTERS, TENANT_SORTS, type TenantFilter, type TenantSort } from "./tenantActivityViews.js";
 import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
 import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
@@ -2678,6 +2680,17 @@ async function handle(
     const sortRaw = url.searchParams.get("sort") ?? "next";
     const sort: RevenueSort = (REVENUE_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as RevenueSort) : "next";
     return send(res, 200, reportRevenuePage(await getRevenueReport(h, url.searchParams.get("t") === "1", m), { st, sort }));
+  }
+  // GET /report/tenants — the Tenantok tab: every tenant's owner activity + site visits in one
+  // row (frozen plan: design-refs/console/tenant-aktivitas/, 2A). Query: f ∈ TENANT_FILTERS
+  // (default „Aktív”), test=1 shows the [TESZT] tenants, sort ∈ TENANT_SORTS, dir=desc.
+  if (method === "GET" && path === "/report/tenants") {
+    const fRaw = url.searchParams.get("f") ?? "active";
+    const f: TenantFilter = (TENANT_FILTERS as readonly string[]).includes(fRaw) ? (fRaw as TenantFilter) : "active";
+    const sortRaw = url.searchParams.get("sort") ?? "flag";
+    const sort: TenantSort = (TENANT_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as TenantSort) : "flag";
+    const q = { f, test: url.searchParams.get("test") === "1", sort, desc: url.searchParams.get("dir") === "desc" };
+    return send(res, 200, reportTenantsPage(await getTenantActivities(), q));
   }
   // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.
   if (method === "POST" && path === "/report/note") {

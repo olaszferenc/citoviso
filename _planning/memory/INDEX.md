@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-04_tenant_aktivitas_latogatottsag.md](2026-11-04_tenant_aktivitas_latogatottsag.md) — 2026-11-04 · Tenant-aktivitás és látogatottság a konzolon (SUB-D, Fizetés-szál)
 - [2026-11-04_riport_elofizetok.md](2026-11-04_riport_elofizetok.md) — 2026-11-04 — Riport › Előfizetők fül (bevétel, előrejelzés, előfizetők)
 - [2026-11-04_proba-belepes-emlekezteto.md](2026-11-04_proba-belepes-emlekezteto.md) — 2026-11-04 — Próbázó belépés-emlékeztető (induló SMS + 2./4./6./8. napi e-mail és SMS)
 - [2026-11-04_keret_elemzes_munkatars_lanc.md](2026-11-04_keret_elemzes_munkatars_lanc.md) — Keret-elemzés: hová megy a token, és a munkatárs-lánc egyszerűsítése (2026-11-03/04)

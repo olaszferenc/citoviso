@@ -924,6 +924,13 @@ if [ -f scripts/trial-report-check.mts ] && \
   echo "[pre-commit] trial-report-check (a próba belseje mérve, a Próba fül ugyanabból számol)…"
   npx tsx scripts/trial-report-check.mts >"$GATE_LOG" || gate_failed
 fi
+# TENANT-AKTIVITÁS ÉS LÁTOGATOTTSÁG (scripts/tenant-activity-check.mts — terv assets/design-refs/console/tenant-aktivitas/):
+# a tulaj/operátor saját megnyitása nem vendég (aznapi lenyomat), az „Alvó” szabály egy helyen, a Tenantok fül szűrése.
+if [ -f scripts/tenant-activity-check.mts ] && \
+   changed_files | grep -qE '^src/console/(tenantActivity(Data|Views)|partnerActivity)\.ts$|^src/analytics/referrerGroup\.ts$|^scripts/tenant-activity-check\.mts$'; then
+  echo "[pre-commit] tenant-activity-check (saját megnyitás kiszűrve, alvó-szabály, Tenantok fül)…"
+  npx tsx scripts/tenant-activity-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A bukott számla riaszt és újrakiadható — sosem kétszer. Mérve élesen 2026-09-30: a fizetett
 # 97 Ft-os rendelés számlája „Számlázz error 378”-cal elbukott, és csak egy failed sor maradt.
 # Mock számlázó (a Számlázz szamlaKulsoAzon-viselkedésével), saját fixtúra, a tick a saját id-kra szűkítve.

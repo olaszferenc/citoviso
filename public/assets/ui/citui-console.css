@@ -3869,3 +3869,57 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .dm-modal__box { background: var(--citui-panel); color: var(--citui-ink); border-radius: 14px; max-width: 520px; width: 100%; padding: 18px; box-shadow: var(--citui-shadow-md); font-size: 13px; }
 .con .dm-modal__box h3 { margin: 0 0 8px; }
 .con .dm-x { float: right; cursor: pointer; border: none; background: none; color: var(--citui-ink); font-size: 22px; line-height: 1; min-width: 32px; min-height: 32px; }
+
+/* ── Tenant activity + site visits (frozen plan: design-refs/console/tenant-aktivitas/) ──
+   1A: the partner sheet's block · 2A: Riport › Tenantok. Tokens only (ADR-0021). */
+.ta-block { display: block; }
+.ta-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: space-between; margin: 0 0 6px; }
+.ta-kind { font-size: 12.5px; color: var(--citui-muted); font-weight: 600; }
+.ta-sum { font-size: 13.5px; margin: 4px 0 10px; line-height: 1.5; }
+.ta-kstrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ta-cols { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.ta-h3 { margin: 12px 0 6px; font: 700 11px/1.2 var(--citui-font-text); letter-spacing: .05em; text-transform: uppercase; color: var(--citui-muted); }
+.ta-ev { list-style: none; margin: 0; padding: 0; }
+.ta-ev li { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--citui-line); font-size: 12.5px; }
+.ta-ev li:last-child { border-bottom: 0; }
+.ta-ev time { color: var(--citui-muted); font-variant-numeric: tabular-nums; }
+.ta-chart { display: block; width: 100%; height: 56px; }
+.ta-chart__bar { fill: var(--citui-link-ink); }
+.ta-chart__base { fill: color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel)); }
+.ta-axis { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--citui-muted); margin-top: 2px; }
+.ta-hb { display: grid; grid-template-columns: minmax(110px, 40%) 1fr 40px; gap: 8px; align-items: center; font-size: 12.5px; margin: 4px 0; }
+.ta-hb__tr { display: block; height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel)); overflow: hidden; }
+.ta-hb__fi { display: block; height: 100%; border-radius: 6px; background: var(--citui-link-ink); }
+.ta-hb__n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.ta-empty { border: 1px dashed var(--citui-line-strong); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--citui-muted); background: var(--citui-surface); margin: 0; }
+.ta-note { font-size: 12px; color: var(--citui-muted); margin: 6px 0 0; }
+.ta-foot { font-size: 11.5px; color: var(--citui-muted); margin: 12px 0 0; border-top: 1px solid var(--citui-line); padding-top: 8px; }
+.ta-testtoggle { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--citui-ink); text-decoration: none; }
+.ta-box { width: 14px; height: 14px; border: 1.5px solid var(--citui-line-strong); border-radius: 3px; background: var(--citui-panel); display: inline-block; }
+.ta-box.on { background: var(--citui-navy-900); border-color: var(--citui-navy-900); box-shadow: inset 0 0 0 2px var(--citui-panel); }
+.ta-tbl th a { color: inherit; text-decoration: none; }
+.ta-tbl td { vertical-align: middle; padding: 9px 8px; }
+.ta-tbl th.num, .ta-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ta-row { cursor: pointer; }
+.ta-row:hover td, .ta-row:focus-visible td { background: var(--citui-surface); }
+.ta-det td { background: var(--citui-surface); font-size: 12px; color: var(--citui-muted); }
+.ta-nm { font-weight: 600; color: var(--citui-ink); display: block; }
+.ta-st { font-size: 11.5px; color: var(--citui-muted); display: block; }
+.ta-spk { display: inline-block; vertical-align: middle; margin-left: 6px; }
+.ta-cards { display: none; }
+.ta-card { border: 1px solid var(--citui-line); border-radius: 10px; padding: 10px 12px; background: var(--citui-panel); margin: 0 0 8px; }
+.ta-card summary { list-style: none; cursor: pointer; display: block; }
+.ta-card summary::-webkit-details-marker { display: none; }
+.ta-card__top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.ta-card__why { display: block; font-size: 12px; margin: 4px 0 6px; }
+.ta-card__nums { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 12px; color: var(--citui-muted); }
+.ta-card__nums b { color: var(--citui-ink); font-variant-numeric: tabular-nums; }
+.ta-card__more { font-size: 12px; color: var(--citui-muted); border-top: 1px solid var(--citui-line); margin: 8px 0 0; padding-top: 6px; }
+@media (min-width: 761px) {
+  .ta-kstrip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ta-cols { grid-template-columns: 1fr 1.4fr; }
+}
+@media (max-width: 760px) {
+  .ta-tblwrap { display: none; }
+  .ta-cards { display: block; }
+}

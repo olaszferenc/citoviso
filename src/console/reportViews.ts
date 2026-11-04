@@ -152,7 +152,7 @@ const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
   return `?${p.toString()}`;
 };
 
-type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue";
+type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants";
 
 /** The Riport tab row — Tölcsér · Viselkedés · Mock (mock-tab README ①) · the coming rounds. */
 export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string): string {
@@ -166,7 +166,8 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
     a("/report/trial", mockQs.startsWith("?days=") ? mockQs.replace(/&.*$/, "") : "", T(lang, "Próba")) +
     // Subscribers / income / cash-flow forecast (frozen plan: design-refs/console/elofizetok-riport/).
     a("/report/revenue", "", T(lang, "Előfizetők")) +
-    `<a class="rp-tab--soon" aria-disabled="true" title="${esc(T(lang, "3. kör — készül"))}">${esc(T(lang, "Tenantok"))}</a>` +
+    // Tenant activity + site visits (frozen plan: design-refs/console/tenant-aktivitas/, 2A).
+    a("/report/tenants", "", T(lang, "Tenantok")) +
     `</nav>`
   );
 }
