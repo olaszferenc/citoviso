@@ -1,4 +1,4 @@
-## ADR-XXXX — Munkatárs-lánc egyszerűsítése: -bb szabályai Verához, dupla ellenőrzések le
+## ADR-0419 — Munkatárs-lánc egyszerűsítése: -bb szabályai Verához, dupla ellenőrzések le
 
 **Dátum:** 2026-11-04 · **Státusz:** elfogadva (tulaj: „ok nézzük meg a javaslataidat. add át a koordinátor sessionnek aki végig viszi a javaslataidat!”) · Kiegészíti: ADR-0329 (Vera a kurátori és a kézi szöveg kapuja), ADR-0405 (automata megkeresés-kiküldő)
 

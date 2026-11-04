@@ -36,7 +36,7 @@ mert a szöveget nem egy fizetős hívás írja.
    - Ha a jegyen nincs sablon, **nem választasz magadtól**: megkérdezed a tulajt, vagy a tulaj
      kérésére Neótól kérsz sablonválasztást.
 2. **Elolvasod a forrásokat** a Forrás-csomag fülön, és megnézed a fotókat — **a szöveghez**.
-   A képátnézés gazdája 2026-11-04 óta Vera (ADR-XXXX): személy, rendszám, vízjel, hálókép,
+   A képátnézés gazdája 2026-11-04 óta Vera (ADR-0419): személy, rendszám, vízjel, hálókép,
    ≥6 saját kép az ő ítélete. Ha neked feltűnik valami, egy sorban jelzed a jegyen, de nem te
    felelsz érte, és nem miattad TARTVA.
 3. **Megírod a szöveget** — egy közös szövegkészlet, abból sablononként a látható mezők.

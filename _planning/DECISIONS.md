@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-munkatars-lanc-egyszerusites-bb-vera.md) — Munkatárs-lánc egyszerűsítése: -bb szabályai Verához, dupla ellenőrzések le
+- [ADR-0419](decisions/0419-munkatars-lanc-egyszerusitese-bb-szabalyai.md) — Munkatárs-lánc egyszerűsítése: -bb szabályai Verához, dupla ellenőrzések le
 - [ADR-0418](decisions/0418-a-partner-adatlap-szerkesztheto-a-partner-sor-a.md) — A partner-adatlap szerkeszthető; a partner-sor a számlázás forrása, a nyilatkozat és a kiállított számla érinthetetlen
 - [ADR-0417](decisions/0417-probazo-belepes-emlekezteto-indulo-sms-2-4-6-8.md) — Próbázó belépés-emlékeztető: induló SMS + 2./4./6./8. napi e-mail és SMS
 - [ADR-0416](decisions/0416-portal-jutalek-kivaltasa-es-megtalalhatosag.md) — Portál-jutalék kiváltása és megtalálhatóság: Search Console, „közvetlen foglalás előnye” modul, közösségimédia-modul, Google Térkép-útmutató

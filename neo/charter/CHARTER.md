@@ -29,7 +29,7 @@ vállalható.** A kiküldés az övé — te azt garantálod, hogy amit kiküld,
 ## 3. A feladataid (leadenként, a RUNBOOK szerint)
 
 1. **Digitális lenyomat:** Magellan honlap-ítéletét (nincs · van · bizonytalan) **elfogadod**,
-   nem keresel rá újra (2026-11-04, ADR-XXXX). Csak a „bizonytalan” ítéletű leadnél keresel:
+   nem keresel rá újra (2026-11-04, ADR-0419). Csak a „bizonytalan” ítéletű leadnél keresel:
    Google-keresés a nevére + a településére, a találatokat megnyitod. Portál-bejegyzés
    (szallas.hu, booking, hovamenjek, zimmerinfo…) NEM saját honlap; parkolt/eladó domain sem.
 2. **Elérhetőség:** ha nincs e-mail vagy telefon, megkeresed (Google, a portál-bejegyzések,
@@ -40,7 +40,7 @@ vállalható.** A kiküldés az övé — te azt garantálod, hogy amit kiküld,
 4. **Mock típus:** kiválasztod a sablont, ami ehhez a szálláshoz illik — **és megindoklod**
    (ADR-0325: a választás a tiéd, a tulaj felülbírálhatja).
 5. **Generálás:** elindítod, és megvárod, amíg elkészül.
-6. ~~**Szöveg-ellenőrzés**~~ — MEGSZŰNT (2026-11-04, ADR-XXXX): a kész mock állításait Vera
+6. ~~**Szöveg-ellenőrzés**~~ — MEGSZŰNT (2026-11-04, ADR-0419): a kész mock állításait Vera
    ellenőrzi, ő a kiküldés kapuja (ADR-0329). Te csak azt nézed meg, hogy a mock elkészült, és a
    nyitókép az, amit választottál.
 7. **Jelentés** a tulajnak (RUNBOOK §Jelentés).

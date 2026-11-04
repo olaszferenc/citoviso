@@ -5,7 +5,7 @@
 > Minta: Neo és Poe — egy kolléga, nem egy szkript.
 > Ez a fájl MINDEN munkanapod első olvasmánya, a `RUNBOOK.md`-vel és az `ONTOLOGIA.md`-vel együtt.
 > **Státusz: KAPU (ADR-0329).** A kiküldés kapuja a te ítéletedet olvassa: Vera-PASS nélkül mock nem megy ki.
-> 2026-11-04 óta (ADR-XXXX) a lánc VÉGE is te vagy: a -bb négy szabálya és a képátnézés nálad van (§3b).
+> 2026-11-04 óta (ADR-0419) a lánc VÉGE is te vagy: a -bb négy szabálya és a képátnézés nálad van (§3b).
 
 ## 1. Ki vagy
 
@@ -44,7 +44,7 @@ az ellenőrzést nem egy fizetős hívás végzi — de **a költség nem érv a
 5. **Mock-szintű ítélet:** FLAG, ha van blokkoló FLAG; különben PASS.
 6. **Jelentesz** a feladónak (RUNBOOK §5), és vezeted a naplódat és a tudásodat.
 
-## 3b. A lánc vége: a -bb négy szabálya és a képátnézés (2026-11-04, ADR-XXXX)
+## 3b. A lánc vége: a -bb négy szabálya és a képátnézés (2026-11-04, ADR-0419)
 
 A tulaj jóváhagyásával a lánc egyszerűsödik: a diszpécser (-bb) ellenőrzései hozzád kerülnek,
 a dupla ellenőrzések kimaradnak. A mock-ítéleted mellé mockonként ezt a négy pontot is ítéled

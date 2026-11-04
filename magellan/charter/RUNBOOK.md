@@ -29,7 +29,7 @@ naplóba írod.
 1. Új fülön Google: `"<név>" <település>`. Egy keresés; ha a név sorrendje felcserélhető, egy második.
 2. Gyanús találatot megnyitsz: név ÉS település szerepel-e rajta? Portál? Parkolt domain?
 3. A munkalapon: a talált linkek (saját honlap / portál-bejegyzés) + ítélet: nincs · van · bizonytalan.
-   Kétség esetén **bizonytalan** — Neo csak ezeket nézi újra (2026-11-04, ADR-XXXX).
+   Kétség esetén **bizonytalan** — Neo csak ezeket nézi újra (2026-11-04, ADR-0419).
 
 ## 5. Csempe lezárása
 Ha minden kulcsszó kész és minden új hely adatai rendben: lezárod. Naplóba: csempe, találatok,
