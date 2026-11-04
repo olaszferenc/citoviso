@@ -161,7 +161,7 @@ export async function sendAnswer(
     .where("id", "=", replyId)
     .executeTakeFirst();
   if (!r) return { ok: false, status: "failed", message: "Nincs ilyen válasz." };
-  // ⛔ A rejecter / „not concerned” replier gets nothing more — not even an answer (ADR-XXXX).
+  // ⛔ A rejecter / „not concerned” replier gets nothing more — not even an answer (ADR-0421).
   const { leadContactBlock } = await import("../console/partnerMessages.js");
   const blocked = await leadContactBlock(r.lead_id);
   if (blocked) return { ok: false, status: "failed", message: blocked };

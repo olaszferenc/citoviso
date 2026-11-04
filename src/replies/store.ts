@@ -141,7 +141,7 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
     const c = matchReply(r, contacts);
     if (!c) {
       // Not an outreach reply — but a partner's or a contact's own address joins that
-      // partner's „Üzenetváltások” thread (ADR-XXXX). Lazy import: partnerMessages uses this module.
+      // partner's „Üzenetváltások” thread (ADR-0421). Lazy import: partnerMessages uses this module.
       const { ingestPartnerInbound } = await import("../console/partnerMessages.js");
       if (await ingestPartnerInbound({ key, channel: r.channel, from: r.from, subject: clip(r.subject, 500), text, receivedAt })) {
         accepted.push(key);
@@ -244,7 +244,7 @@ export interface ReplyView {
   readonly sentSms: boolean;
   readonly answeredAt: Date | null;
   readonly answeredBy: string | null;
-  /** „Elutasító / nem érintett — ne keressük” on the lead (ADR-XXXX), or null. */
+  /** „Elutasító / nem érintett — ne keressük” on the lead (ADR-0421), or null. */
   readonly block: { readonly at: Date; readonly reason: string; readonly by: string } | null;
   /** Poe's „Javasolt válasz” (ADR-0340), or null while it is still being written. */
   readonly suggestion: ReplySuggestion | null;

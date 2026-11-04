@@ -3923,7 +3923,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   .ta-tblwrap { display: none; }
   .ta-cards { display: block; }
 }
-/* ── Partner-adatlap: Üzenetváltások (M1 csevegő-szál, ADR-XXXX;
+/* ── Partner-adatlap: Üzenetváltások (M1 csevegő-szál, ADR-0421;
       assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html) ── */
 .con .mx-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 10px; }
 .con .mx-filters a { border: 1px solid var(--citui-line-strong); background: var(--citui-panel); border-radius: var(--citui-radius-pill); padding: 6px 12px; min-height: 32px; box-sizing: border-box; display: inline-flex; align-items: center; font: 600 12.5px var(--citui-font-text); color: var(--citui-ink); text-decoration: none; }

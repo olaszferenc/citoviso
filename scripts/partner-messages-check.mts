@@ -1,5 +1,5 @@
 // PARTNER MESSAGES — end-to-end check of the partner sheet's „Üzenetváltások” tab (approved
-// plan assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html, ADR-XXXX).
+// plan assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html, ADR-0421).
 //
 // Boots THIS tree's console in-process on an ephemeral port with the MOCK e-mail sender and the
 // SMS QUEUE (the dev queue is never drained — the relay pulls from production), builds a

@@ -1,5 +1,5 @@
 // The partner sheet's „Üzenetváltások” tab — the approved M1 chat thread
-// (assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html, ADR-XXXX).
+// (assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html, ADR-0421).
 // Ours on the right, the partner's on the left, the system mails as collapsible cards; the
 // composer under the thread. Works without JS (plain POST + redirect); with JS the send is a
 // fetch, the new bubble appears at once and a queued SMS follows its state.

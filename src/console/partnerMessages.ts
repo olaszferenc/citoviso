@@ -1,5 +1,5 @@
 // The partner sheet's „Üzenetváltások” tab (approved plan:
-// assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html, ADR-XXXX).
+// assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html, ADR-0421).
 //
 // ONE thread per partner, read from the tables that already hold every message:
 //   tenant_message          — system mails/SMS to the tenant (invoice, login, domain, …)

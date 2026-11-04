@@ -1,4 +1,4 @@
--- 0123 PARTNER-ADATLAP „ÜZENETVÁLTÁSOK” + ELUTASÍTÓ-JEL (2026-11-04, ADR-XXXX;
+-- 0123 PARTNER-ADATLAP „ÜZENETVÁLTÁSOK” + ELUTASÍTÓ-JEL (2026-11-04, ADR-0421;
 -- terv: assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html).
 --
 -- MIÉRT KELL. A tulaj: „üzenetváltások tab is kell, ahol lehet írni is (sms + email)”.
@@ -46,11 +46,11 @@ CREATE TABLE IF NOT EXISTS partner_message (
 CREATE INDEX IF NOT EXISTS partner_message_partner_idx ON partner_message (partner_id, created_at);
 CREATE INDEX IF NOT EXISTS partner_message_pending_idx ON partner_message (scheduled_for) WHERE status IN ('scheduled', 'queued');
 
-COMMENT ON TABLE partner_message IS 'Partner-lap Üzenetváltások (ADR-XXXX): kézi kimenő e-mail/SMS és a partner címeiről jött, nem-megkeresési bejövő üzenet.';
+COMMENT ON TABLE partner_message IS 'Partner-lap Üzenetváltások (ADR-0421): kézi kimenő e-mail/SMS és a partner címeiről jött, nem-megkeresési bejövő üzenet.';
 
 ALTER TABLE lead
   ADD COLUMN IF NOT EXISTS contact_block_at     timestamptz,
   ADD COLUMN IF NOT EXISTS contact_block_reason text,
   ADD COLUMN IF NOT EXISTS contact_block_by     text;
 
-COMMENT ON COLUMN lead.contact_block_at IS 'Elutasító / nem érintett — ne keressük (ADR-XXXX): semmilyen további üzenet, kézi sem.';
+COMMENT ON COLUMN lead.contact_block_at IS 'Elutasító / nem érintett — ne keressük (ADR-0421): semmilyen további üzenet, kézi sem.';

@@ -86,7 +86,7 @@ export interface LeadTable {
    */
   preview_label: string | null;
   /**
-   * 0123 (ADR-XXXX): „Elutasító / nem érintett — ne keressük”, set from the Válaszok panel with
+   * 0123 (ADR-0421): „Elutasító / nem érintett — ne keressük”, set from the Válaszok panel with
    * a reason. While set, nothing goes to this lead's tenant/partner from the console (manual
    * messages and reply-answers alike). Deliberately NOT „has replied” — paying customers reply too.
    */
@@ -2039,7 +2039,7 @@ export interface OutreachReplySendTable {
 }
 
 /**
- * 0123 (ADR-XXXX): the partner sheet's own messages — a manual send from the „Üzenetváltások” tab
+ * 0123 (ADR-0421): the partner sheet's own messages — a manual send from the „Üzenetváltások” tab
  * (out), or a mail/SMS from the partner's or a contact's address that was not an outreach reply (in).
  */
 export interface PartnerMessageTable {

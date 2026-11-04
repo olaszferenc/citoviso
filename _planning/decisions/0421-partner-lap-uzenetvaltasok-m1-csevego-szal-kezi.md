@@ -1,4 +1,4 @@
-## ADR-XXXX — Partner-lap „Üzenetváltások” (M1 csevegő-szál), kézi e-mail/SMS, elutasító-jel a leaden
+## ADR-0421 — Partner-lap „Üzenetváltások” (M1 csevegő-szál), kézi e-mail/SMS, elutasító-jel a leaden
 
 **Dátum:** 2026-11-04 · **Állapot:** elfogadva · **Kapcsolódik:** ADR-0418 (partner-adatlap A — Fülek), ADR-0340 (válasz az irányítópultról), ADR-0376/0379 (SMS csendes óra)
 **Terv:** `assets/design-refs/console/partner-adatlap/JOVAHAGYOTT-M1-uzenetvaltasok.html` (tulaj-döntés 2026-11-04: M1, nem az M2 postafiók)

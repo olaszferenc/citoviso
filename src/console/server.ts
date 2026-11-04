@@ -1666,7 +1666,7 @@ async function handle(
       return redirect(res, `/?reply=${m[1]}${all}#replies`);
     }
   }
-  // POST /replies/<id>/block | /unblock — „Elutasító / nem érintett — ne keressük” (ADR-XXXX):
+  // POST /replies/<id>/block | /unblock — „Elutasító / nem érintett — ne keressük” (ADR-0421):
   // the lead's block mark with a reason; from then on nothing goes to it (partner sheet, answers).
   {
     const m = method === "POST" ? path.match(/^\/replies\/([0-9a-f-]{36})\/(block|unblock)$/) : null;
@@ -2550,7 +2550,7 @@ async function handle(
     const hhmm = partnerFmtTime(new Date().toISOString()).slice(11);
     return redirect(res, `/partner/${id}?tab=data&saved=${encodeURIComponent(hhmm)}`);
   }
-  // „Üzenetváltások” (M1, ADR-XXXX). POST /partner/:id/message — a manual e-mail / SMS;
+  // „Üzenetváltások” (M1, ADR-0421). POST /partner/:id/message — a manual e-mail / SMS;
   // GET /partner/:id/message/:mid — one bubble's state (the JS follows a queued SMS);
   // POST /partner/:id/message/:mid/retry — „újra” on a failed one. JSON for the JS client,
   // a redirect back to the tab without JS.

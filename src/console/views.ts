@@ -9559,7 +9559,7 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
 }
 
 /**
- * „Elutasító / nem érintett — ne keressük” (ADR-XXXX, coordinator decision 2026-11-03): a
+ * „Elutasító / nem érintett — ne keressük” (ADR-0421, coordinator decision 2026-11-03): a
  * reasoned block mark on the lead. NOT „has replied” — paying customers reply too. Once set,
  * the answer editor is gone and nothing can be sent to the lead from anywhere in the console.
  */

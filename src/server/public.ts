@@ -4289,7 +4289,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // carries back the replies Poe still owes a suggestion for (his tickets).
     const { settleReplySends, replyConsoleUrl } = await import("../replies/answer.js");
     await settleReplySends();
-    // ADR-XXXX: the same clock moves the partner sheet's manual sends (morning SMS, queued → sent).
+    // ADR-0421: the same clock moves the partner sheet's manual sends (morning SMS, queued → sent).
     const { settlePartnerMessages } = await import("../console/partnerMessages.js");
     await settlePartnerMessages();
     // The ticket's link: this host knows its console only when CONSOLE_URL is set — else

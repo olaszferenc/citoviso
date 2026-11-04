@@ -61,7 +61,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // text (typed or Poe's suggestion, in the lead's language) — nothing is composed here;
   // the Hungarian literals are operator-facing outcomes / validation messages.
   "src/replies/answer.ts": "operátor írta levél-szöveg; a magyar literálok operátori hiba-/állapot-üzenetek",
-  // ADR-XXXX: the partner sheet's manual e-mail/SMS — the operator types the letter; the Hungarian
+  // ADR-0421: the partner sheet's manual e-mail/SMS — the operator types the letter; the Hungarian
   // literals are console-only states, validation and guard reasons. store.ts reaches the sender
   // only through the lazy inbound hand-off to partnerMessages (no outgoing text of its own).
   "src/console/partnerMessages.ts": "operátor írta levél-szöveg; a magyar literálok operátori állapot-/hiba-üzenetek",
