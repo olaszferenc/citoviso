@@ -182,10 +182,14 @@ section{padding:clamp(70px,10vh,124px) 0}
 
 /* room cards */
 .w-rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:min(30px,3.5vw);margin-top:48px}
+/* One or two rooms must not leave empty columns beside them (Poe3, Panna c552c2d0, 2026-11-04):
+   one card is centred at ≤640 px, two share the row. The phone rule below still wins. */
+.w-rooms.w-rooms--one{grid-template-columns:minmax(0,640px);justify-content:center}
+.w-rooms.w-rooms--two{grid-template-columns:repeat(2,1fr)}
 .w-rooms figure{margin:0}
 .w-rooms figcaption{padding-top:14px;font-size:14px}
 .w-rooms .w-note{display:block;font-size:12.5px;color:var(--cit-muted)}
-@media(max-width:860px){.w-rooms{grid-template-columns:1fr}}
+@media(max-width:860px){.w-rooms,.w-rooms.w-rooms--one,.w-rooms.w-rooms--two{grid-template-columns:1fr}}
 
 /* amenity chips */
 .w-chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
@@ -320,7 +324,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <h2 style="font-size:clamp(26px,4vw,46px)"${hookPick(["rooms.title", roomsCopy.title])} ${mo("up")}>${esc(
         roomsCopy.title ?? T(data, "Szobák"),
       )}</h2>
-      <div class="w-rooms">
+      <div class="w-rooms${rooms.length === 1 ? " w-rooms--one" : rooms.length === 2 ? " w-rooms--two" : ""}">
         ${rooms
           // EVERY room, never the first three: the 3-column grid wraps. Measured 2026-09-28
           // (price-where-check, kemences-vendeghaz): `.slice(0, 3)` dropped the 4th room from
@@ -350,14 +354,23 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // does not show elsewhere first (`galleryOrder`, called below once the other sections
   // exist). The section ALWAYS renders — with no photo a designed fill card — or the module
   // hook would vanish on a data-poor lead (measured by configurator-placement-check).
+  // The line under the gallery heading: the copy's eyebrow, else the tagline.
+  const galHeadSub = galCopy.eyebrow ?? data.tagline ?? "";
   const galleryOf = (ordered: readonly { url: string; alt: string }[]): string => `<section data-cit-module="gallery" style="padding-top:0">
       <div class="w-wrap">
         <div class="w-gal-head">
           <span class="w-spark">${SPARK}</span>
-          <h2 ${mo("up")}>${T(data, "Képek")}</h2>
           ${
-            (galCopy.eyebrow ?? data.tagline)
-              ? `<p${hookPick(["gallery.eyebrow", galCopy.eyebrow], ["tagline", data.tagline])} ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`
+            // The gallery's OWN title heads the gallery (Poe3, Renáta b07890e4 / Panna c552c2d0,
+            // 2026-11-04: it stood alone in a band under the booking strip, the carousel headed
+            // by a bare „Képek”). „Képek” only when the copy gave no title.
+            galCopy.title
+              ? `<h2${copyHook("gallery.title")} ${mo("up")}>${esc(galCopy.title)}</h2>`
+              : `<h2 ${mo("up")}>${T(data, "Képek")}</h2>`
+          }
+          ${
+            galHeadSub
+              ? `<p${hookPick(["gallery.eyebrow", galCopy.eyebrow], ["tagline", data.tagline])} ${mo("up", 90)}>${esc(galHeadSub)}</p>`
               : ""
           }
         </div>
@@ -377,10 +390,12 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // ⛔ Az EGÉSZ sáv elmarad, ha nincs mit mondania. Ez a szekció EGYETLEN tartalma egy
   // nagy, kiemelt mondat; szöveg nélkül egy üres `<section>` maradna a lapon (saját
   // belső térközzel), vagyis pont az a néma hézag, amit a §2b üres-sáv tilalom tilt.
-  const sayText = galCopy.title ?? data.tagline;
+  // The gallery title now heads the gallery; the big line only carries the tagline, and only
+  // when the gallery heading did not already show it — never the same words twice.
+  const sayText = data.tagline && data.tagline !== galHeadSub ? data.tagline : "";
   const say = sayText
     ? `<section class="w-say"><div class="w-wrap">
-    <p class="cit-words"${hookPick(["gallery.title", galCopy.title], ["tagline", data.tagline])} ${mo("in")}>${words(esc(sayText))}</p>
+    <p class="cit-words"${copyHook("tagline")} ${mo("in")}>${words(esc(sayText))}</p>
   </div></section>`
     : "";
 

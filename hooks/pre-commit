@@ -2405,6 +2405,11 @@ if [ -f scripts/photo-quality-check.mts ]; then
 fi
 # The curator's template pair EXACTLY or a loud refusal (Poe2 2026-11-04: „Parallax + Fejezetes”
 # → two Parallax / Parallax + Fullbleed; ids were filtered and deduped without a word). Hermetic.
+# Névből növő desktop: the gallery title heads the gallery; 1 room centred, 2 rooms two columns (owner „Igen”, 2026-11-04).
+if [ -f scripts/wordmark-desktop-check.mts ]; then
+  echo "[pre-commit] wordmark-desktop-check (Névből növő asztali elrendezés)…"
+  npx tsx scripts/wordmark-desktop-check.mts
+fi
 # Kapunyitás: the splitting photo is never the one that stays (owner 2026-11-04). Hermetic.
 if [ -f scripts/gate-photo-check.mts ]; then
   echo "[pre-commit] gate-photo-check (a szétnyíló kép sosem a nyitókép)…"
