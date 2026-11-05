@@ -1,4 +1,4 @@
-## ADR-XXXX — Vélemény-szekció saját vélemények nélkül: egy kártya (Google-szám + „Én is írok”)
+## ADR-0424 — Vélemény-szekció saját vélemények nélkül: egy kártya (Google-szám + „Én is írok”)
 
 **Dátum:** 2026-11-05 · **Döntött:** tulaj („B”) · **Terv:** `assets/design-refs/tenant-site/reviews-card/`
 
