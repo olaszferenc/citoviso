@@ -1,4 +1,4 @@
-## ADR-XXXX — Galéria: a rács a terv szerinti képszámot mutatja, a megnyitott galéria az összes képet a tenant sorrendjében
+## ADR-0427 — Galéria: a rács a terv szerinti képszámot mutatja, a megnyitott galéria az összes képet a tenant sorrendjében
 
 **Dátum:** 2026-11-05 · **Döntött:** tulaj („mindenhol úgy kellene”) · **Kiváltó eset:** Duna Vibe House, „csak ötöt látok”
 
@@ -19,4 +19,4 @@ A galéria-modul `maxPhotos` korlátja (a tenant beállítása) érvényes marad
 **Visszafordíthatóság:** 🔄 olcsó (egy függvény + egy runtime-ág). **Elvetett:** a rácsot
 `maxPhotos`-ig nyújtani minden sablonban (szétesik a terv); sablononként külön „Összes fotó”
 felület (16 sablon × N). **Hatás az élőre:** a runtime beágyazva él az oldalakon → a meglévő élő
-oldalak a következő deploy + `rerender-tenant` után kapják meg. **Státusz:** elfogadva, landolva.
+oldalak a következő deploy + `rerender-tenant` után kapják meg. **Státusz:** elfogadva, ÉLESEN 2026-11-05 (`prod/20261105-1108`).

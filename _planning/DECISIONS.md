@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-galeria-racs-a-terv-szerint-nagyito-minden-kep.md) — Galéria: a rács a terv szerinti képszámot mutatja, a megnyitott galéria az összes képet a tenant sorrendjében
+- [ADR-0427](decisions/0427-galeria-racs-a-terv-szerint-nagyito-minden-kep.md) — Galéria: a rács a terv szerinti képszámot mutatja, a megnyitott galéria az összes képet a tenant sorrendjében
 - [ADR-0426](decisions/0426-modul-lathatosag-kapcsolo.md) — Modul láthatósága: „Látható / Nem látható” kapcsoló, külön a lemondástól
 - [ADR-0425](decisions/0425-probazo-eszkalacio-4-nap-piros-jelzes-5-nap-elo.md) — Próbázó eszkaláció: 4. nap piros jelzés, 5. nap élő-oldal MMS, 7. nap személyes levél helyi névvel, 10. nap „elakadt”
 - [ADR-0424](decisions/0424-velemeny-szekcio-sajat-velemenyek-nelkul-egy.md) — Vélemény-szekció saját vélemények nélkül: egy kártya (Google-szám + „Én is írok”)

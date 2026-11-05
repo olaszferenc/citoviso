@@ -31,7 +31,7 @@
    „Rejtve a vendég elől — az előfizetése és a beállításai megmaradnak.” (eltérés a mocktól, szándékos).
 9. **A változás azonnal élesedik** a tenant oldalán (újrarenderelés), ahogy a többi modul-beállítás.
 
-## Megvalósítás (ADR-XXXX)
+## Megvalósítás (ADR-0426)
 
 `module_entitlement.hidden_at` + `hidden_by` (migráció 0126; trigger: aktív-váltáskor a rejtés törlődik). A vendég-oldali kérdés („látja-e a vendég?”) egyetlen függvény
 (`shownModuleIds` / `tenantShowsModule` / `siteShowsModule`, `src/tenant/modules.ts`); az admin-oldali („birtokolja-e?”) marad `isRenderedModule`.
