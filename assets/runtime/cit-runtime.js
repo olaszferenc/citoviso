@@ -1832,12 +1832,43 @@
     return lb;
   }
 
+  var photoList; // undefined = not read yet, null = the page carries none
+  function sitePhotoList() {
+    if (photoList !== undefined) return photoList;
+    photoList = null;
+    var el = document.querySelector("script[data-cit-photos]");
+    if (!el) return photoList;
+    try {
+      var arr = JSON.parse(el.textContent || "[]");
+      if (Array.isArray(arr) && arr.length) {
+        photoList = arr
+          .filter(function (p) { return p && typeof p.src === "string" && p.src; })
+          .map(function (p) { return { src: p.src, alt: typeof p.alt === "string" ? p.alt : "" }; });
+      }
+    } catch (e) { photoList = null; }
+    return photoList;
+  }
+  function indexOfSrc(list, src) {
+    if (!src) return -1;
+    for (var k = 0; k < list.length; k++) if (list[k].src === src) return k;
+    return -1;
+  }
+
   register("gallery", function mountGallery(slot) {
     var imgs = [].slice.call(slot.querySelectorAll("img"));
     if (!imgs.length) return; // nothing to enhance — leave the in-skin markup as is
-    var items = imgs.map(function (im) {
+    var own = imgs.map(function (im) {
       return { src: im.getAttribute("data-cit-full") || im.currentSrc || im.src, alt: im.getAttribute("alt") || "" };
     });
+    // The page's FULL photo list (render.ts withGalleryPhotoList): the grid shows what the
+    // design holds, the lightbox pages through every photo in the tenant's order. A photo
+    // not on that list (or an older page without it) falls back to the slot's own photos.
+    var all = sitePhotoList();
+    function openAt(im, idx) {
+      var at = all ? indexOfSrc(all, im.getAttribute("src")) : -1;
+      if (at >= 0) ensureLightbox().open(all, at, im);
+      else ensureLightbox().open(own, idx, im);
+    }
     imgs.forEach(function (im, idx) {
       im.setAttribute("tabindex", "0");
       im.setAttribute("role", "button");
@@ -1847,9 +1878,9 @@
       // captions over the picture (fullbleed's ::after), and a tap that lands on those never
       // reached the <img> listener — the lightbox was dead on a phone (FK-010, 2026-09-26).
       var tap = im.parentElement && im.parentElement.tagName === "FIGURE" ? im.parentElement : im;
-      tap.addEventListener("click", function () { ensureLightbox().open(items, idx, im); });
+      tap.addEventListener("click", function () { openAt(im, idx); });
       im.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ensureLightbox().open(items, idx, im); }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openAt(im, idx); }
       });
     });
     mountGalleryStrip(slot);

@@ -16,6 +16,7 @@ import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { hungarianBedNote, hungarianRoomName } from "./roomNames.js";
 import { setHighlightSources } from "./copyFields.js";
 
@@ -171,6 +172,21 @@ export function responsiveGooglePhotos(html: string): string {
   });
   if (bgSeen) out = /<\/head>/i.test(out) ? out.replace(/<\/head>/i, `${BGSET_STYLE}</head>`) : BGSET_STYLE + out;
   return out;
+}
+
+/** The lightbox's photo list (owner, 2026-11-05, Duna Vibe House „csak ötöt látok”): the
+ *  template's gallery grid shows as many photos as its DESIGN holds (6 in parallax, 5 in the
+ *  card-sidebar mosaic …) so the page keeps its look, but opening the gallery pages through
+ *  EVERY photo of the site in the tenant's own order (Fotók tab; the gallery module's
+ *  maxPhotos cap already applied upstream). One JSON island for every template — the
+ *  runtime's mountGallery reads it; without it (old pages) it pages the slot's own <img>s. */
+export function withGalleryPhotoList(html: string, data: SiteData): string {
+  if (!data.photos.length || !html.includes('data-cit-module="gallery"') || !html.includes("</body>")) return html;
+  const list = data.photos.map((p) => ({ src: p.url, alt: p.alt ?? "" }));
+  return html.replace(
+    "</body>",
+    `<script type="application/json" data-cit-photos>${jsonForScript(list)}</script>\n</body>`,
+  );
 }
 
 function injectImgFallback(html: string): string {
@@ -715,7 +731,9 @@ export function renderSite(
   const modOpts = { sampleAllow: opts.sampleAllow, sampleDeny: opts.sampleDeny, demoForms: opts.demoForms };
   const finish = (page: string): string => {
     const bought = (opts.hideAnchors ?? []).reduce(stripModuleAnchor, stampCutScope(page));
-    const out = responsiveGooglePhotos(opts.hideGallery ? withoutGallery(bought, recipe, data, opts) : bought);
+    const out = responsiveGooglePhotos(
+      opts.hideGallery ? withoutGallery(bought, recipe, data, opts) : withGalleryPhotoList(bought, data),
+    );
     // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
     // tenant site and meaningless on a mock (no legal data about the lead, no such
     // page on the preview host). Cut here, once, for both render paths.
