@@ -1304,6 +1304,29 @@ await shoot(
   subscriptionAnnualFixture,
   modulesOwned,
 );
+// ADR-0426: the „Látható / Nem látható" switch — the owned list with ONE module hidden
+// (the gallery), so the picture shows both switch states and the hidden row's own sentence.
+// Element capture on the list only (`.adm-mine`): the whole card is past 2000 px (see above).
+// ⚠️ The supersession is re-derived HERE (tudásbázis-őr FLAG, 2026-11-05): modulesOwned owns
+// booking but leaves enquiry un-superseded, so the shot showed a „Mindig látszik" enquiry next
+// to a live booking — a state getTenantModules never returns. Real: enquiry is replaced.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries/admin-modules/assets", LANG, "lathatosag.png"),
+  undefined,
+  undefined,
+  ".adm-mine",
+  undefined,
+  subscriptionAnnualFixture,
+  modulesOwned
+    ? {
+        ...modulesOwned,
+        modules: modulesOwned.modules.map((m) =>
+          m.id === "gallery" ? { ...m, hidden: true } : m.id === "enquiry" ? { ...m, supersededBy: "booking" } : m,
+        ),
+      }
+    : null,
+);
 // ADR-0128 / tudásbázis-őr lelete (2026-09-13): a Többnyelvű kártya három sávra épült át
 // (sáv-dobozok, régió-fejlécek zászlós csempékkel, sapka-sor, tapadó mobil ár-sáv), az
 // entry viszont NULLA képet viselt — pont annál a vásárlásnál, ami 30 000 Ft-ig mér. A

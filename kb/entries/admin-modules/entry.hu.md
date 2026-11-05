@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-10-21
+updated: 2026-11-05
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -106,6 +106,49 @@ szokásos módon működik.
    egy megerősítő kártya nyílik (lásd lentebb). Ha a kosárban csak díjmentes változás van
    (például lemondás), a gomb felirata **„Alkalmazom a módosításokat”**, és a változás azonnal
    érvényes. A **„Kiürítem a kosarat”** gomb mindent visszaállít.
+
+## Elrejtés a vendég elől — a „Látható / Nem látható” kapcsoló
+
+Ha egy modult csak egy időre nem szeretne mutatni a vendégeknek — például télen nem akarja, hogy
+az árak látszódjanak, vagy épp új képeket készít —, **nem kell lemondania**. Az **„Az én moduljaim”**
+részben azoknak a moduloknak a sorában, amelyeknek saját helye van az oldalon, egy kapcsoló áll:
+
+- **„Látható”** (zöld) — a modul ott van az oldalán.
+- **„Nem látható”** (szürke) — a modul szakasza és a menüpontja eltűnik az oldaláról.
+
+Egy koppintás a kapcsolóra, és a változás **azonnal érvényes** az oldalán — nem kerül a kosárba,
+nincs fizetés, nincs megerősítés. A kattintott sorban egy rövid mondat visszaigazolja, mi történt.
+Visszakapcsolni ugyanígy, egy koppintással lehet.
+
+![A modul-lista: a Képek rejtve, a Szobák és az Online foglalás látható](assets/hu/lathatosag.png)
+
+**Miben más, mint a lemondás?** A rejtés csak arról szól, mit lát a vendég:
+
+- a modul **díja marad** — ugyanúgy szerepel a számláján, mint eddig;
+- a **beállításai megmaradnak**, és a **„Beállítás”** gombbal rejtve is szerkesztheti őket;
+- visszakapcsolva minden pontosan úgy jelenik meg, ahogy volt.
+
+Ha a modulra hosszabb távon nincs szüksége, azt a **„Kikapcsolom”** felirattal mondhatja le (lásd
+fent) — az szünteti meg a díjat. A rejtett modul sora alatt ez áll: **„Rejtve a vendég elől — az
+előfizetése és a beállításai megmaradnak.”**
+
+**Amit érdemes tudni:**
+
+- Az **Időpontkérés, kapcsolat** modul nem rejthető, a sorában **„Mindig látszik”** áll: ezen
+  keresztül keresik meg a vendégek, oldal nélküle nem lehet. Ha az **Online foglalás** is az Öné,
+  az időpontkérés sorában nincs kapcsoló — azt a foglalási naptár váltja ki (lásd a képen).
+- Nincs kapcsoló azoknál a moduloknál sem, amelyek nem az oldalon jelennek meg (például a saját
+  e-mail cím), és az egyszeri szolgáltatásoknál (például a többnyelvű honlap).
+- Ha az **Árak, szezonok** modult rejti el, de az **Online foglalás** látszik, a foglalási naptár **árat nem
+  mutat** — a vendég ajánlatot kér, Ön pedig válaszol rá. A foglalás sorában ezt ez a mondat jelzi:
+  **„Árat nem mutat, mert az Árak rejtve van.”**
+- Ha az **Online foglalást** rejti el, a helyén az **időpontkérő űrlap** jelenik meg, így a
+  vendég továbbra is írhat Önnek.
+- Ha a **Képek a szállásról** modult rejti el, a galéria eltűnik, de a nyitókép az oldal tetején megmarad.
+- Ha egy rejtett modult később lemond, majd újra megvesz, az újra **látható** lesz.
+- Amíg a honlapja fel van függesztve, a kapcsolók nem jelennek meg.
+- **Az ingyenes próba alatt** is ugyanígy rejthet a **„Modulok a próbában”** listában: ott díj
+  nincs és **„Kikapcsolom”** sincs, a rejtett modul neve alatt röviden **„Rejtve a vendég elől”** áll.
 
 ## Ha egy modul másik modullal jár együtt
 
