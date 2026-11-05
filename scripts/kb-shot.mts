@@ -2229,10 +2229,14 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
     raw(5, "Tölgyfa Ház", "Zalakaros", 12, "active", [a("admin_open", at(12, 10, 58)), a("save", at(12, 11, 10), { area: "szovegek" }), a("admin_open", at(11, 9, 5)), a("save", at(11, 9, 30), { area: "fotok" }), a("site_view", at(11, 9, 41)), a("admin_open", at(8, 21)), a("save", at(8, 21, 12), { area: "modulok" }), a("order_open", at(1, 12, 4), { from: "level" }), a("checkout", at(1, 12, 7), { step: "billing" })], { notices: [{ at: at(1, 7), step: "t3" }] }),
     raw(6, "Fenyves Apartman", "Hévíz", 12, "active", [a("admin_open", at(12, 10, 20)), a("save", at(12, 10, 31), { area: "fotok" })], { notices: [{ at: at(1, 7), step: "t3" }] }),
     raw(7, "Napsugár Panzió", "Keszthely", 12, "active", [], { notices: [{ at: at(1, 7), step: "t3" }] }),
+    // ADR-0425: a trialist who has not logged in yet (day 5) next to Napsugár (day 13 → „Elakadt: nem lépett be”).
+    raw(8, "Fecske Vendégház", "Balatonboglár", 4, "active", []),
   ];
   const sample = foldTrialReport(trials, at(30, 0), 30, "all", null, rpNow, [], new Set());
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial.png"));
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial-list.png"), undefined, "#rp-trials");
+  // ADR-0425: the „Hol szakad meg a próba?” panel.
+  await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "breaks.png"), undefined, "[data-cit-breaks]");
 }
 // The Előfizetők tab (assets/design-refs/console/elofizetok-riport/, variant A): the top (five
 // numbers + the expected income) and the subscriber table. Sample subscribers folded without a

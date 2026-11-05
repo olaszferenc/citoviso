@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-10-14
+updated: 2026-11-05
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -56,6 +56,22 @@ Egy saját oldal előfizetés és foglalás nélkül nem kap kártyát.
   - vagy „A próba lejárt N napja”.
 
   Próbánál egy csík mutatja, hányadik napnál tart.
+
+  **Ha a próbázó a 4. naptól sem lépett be**, a kártya feje piros: **„Nem lépett be — {n}. nap”**, alatta
+  „Próbázik, még N nap · <dátum>-ig · jelszót nem állított be”. Ilyenkor a kártyán „A próba 14 napja — mit küldtünk, mi jön”
+  rész (a próba hosszával) is van:
+  - egy napcsík: minden nap egy cella, a mai keretes, a hátralévők csíkosak; a pontok színe a lépés
+    fajtája (levél / SMS, riasztás, MMS, személyes levél, elakadt, lejárat előtti levél — a jelmagyarázat
+    alatta);
+  - alatta lépésenként: hányadik nap, mi (belépő levél, emlékeztető e-mail + SMS, piros jelzés, MMS az
+    élő oldal képével + kísérő SMS, személyes levél a segítő nevével, „Elakadt”, lejárat előtti levelek),
+    mikor, és az állapota: **„kiment”**, **„most”** (sárga sor, épp megy vagy sorban áll), **„jön”**
+    (dátummal), **„kimaradt”** (okkal), **„hiba”** (okkal), a jelzéseknél **„jelezve”**. A hétvége miatt
+    kimaradt emlékeztető nem külön sor: a kiment emlékeztető mellett áll („a 2., 4., 6. napi kimaradt”).
+
+  **Mit tegyél:** semmit — a lépések maguktól mennek. Ha egy sor „hiba”, az oka mellette áll (pl. az
+  élő oldal képe nem készült el); ha ugyanaz tartósan ismétlődik, szólj a fejlesztőnek. Részletek: az
+  Ingyenes próba súgójának „Ha a próbázó nem lép be” része.
 - Az **„Élő oldal”** gomb új lapon nyitja a szállás élő oldalát (lejárt próbánál nincs, mert az
   oldal szünetel).
 - Próbánál a kártya ezeket írja ki:

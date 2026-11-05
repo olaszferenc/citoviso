@@ -398,7 +398,7 @@
 "{n}. lépés képe":"admin",
 "{n}. lépésig jutott":"konzol",
 "{n}. nap":"konzol",
-"{n}. nap, 10 nap belépés nélkül":"konzol",
+"{n}. nap, belépés nélkül":"konzol",
 "{n}. szoba":"honlap",
 "{n}. szoba neve":"admin",
 "{n}. terv":"konzol",

@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-11-04
+updated: 2026-11-05
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -154,6 +154,12 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
   adómentesség 18 M Ft-os keretéhez mérve; amíg 80% alatt van, a sor nem jelenik meg — ha
   felbukkan, a rendszer SMS-t/e-mailt is küldött róla (címzettek: Beállítások →
   „Riasztások — keret-kihasználtság”);
+- **„próbázó nem lépett be”** (piros) — hány futó próbázó nem lépett be (jelszót sem állított be) a
+  próba 4. napjától, a nevükkel és a próba napjával; ha közülük valaki már 10 napja nem lépett be,
+  mellette „ebből N elakadt (10 nap belépés nélkül)”. Egy próbázónál a sorra koppintva a lead-lapja
+  nyílik, többnél a lead-lista **„Próbázik”** szűrője. **Teendőd nincs:** a rendszer magától küldi az
+  emlékeztetőket, az MMS-t és a személyes levelet — a lead-lapon látod, mi ment ki (részletek az
+  Ingyenes próba súgójának „Ha a próbázó nem lép be” részében). A sor eltűnik, amint a próbázó belép.
 - **„megválaszolatlan válasz a megkeresésekre”** (piros) — hány lead válaszára nem reagáltunk
   még; a fenti blokkra ugrik;
 - **„lejárt számla”** (piros) és **„nyitott bizonylat”** (borostyán) — a nyitott tételekre visz;

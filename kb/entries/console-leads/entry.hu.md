@@ -4,7 +4,7 @@ title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
 category: lead-path
 anchors: console.leads
-updated: 2026-10-14
+updated: 2026-11-05
 ---
 
 A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
@@ -182,7 +182,9 @@ is csak „jóváhagyva” állt).
 
 - **A név alatt jelvény** áll:
   - próbánál „próbázik · még N nap”, az utolsó két napon „próbázik · holnap lejár” / „próbázik · ma lejár”.
-    Ha legfeljebb 3 nap van hátra, a jelvény sárga;
+    Ha legfeljebb 3 nap van hátra, a jelvény sárga. Ha a próbázó a 4. naptól még nem lépett be, előtte
+    piros jelvény áll: **„nem lépett be · {n}. nap”** (eltűnik, amint belép — a lead-lapon látod, mit
+    küldtünk neki);
   - **„előfizető”**: fizető ügyfél, akkor is, ha a díjjal késésben van;
   - **„próba lejárt”**: a próba folytatás nélkül véget ért.
 - Ha az élő oldalra foglalás érkezett, mellette „N foglalás” áll (az összes kérés száma). Ha a tulaj egy

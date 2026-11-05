@@ -160,7 +160,7 @@ function verdictOf(v: TrialVerdict, lang: string, measured = true): { pill: stri
     case "no_login":
       return { pill: T(lang, "Nem lépett be"), cls: "rp-pill--bad", sub: T(lang, "{n}. nap", { n: v.day }) };
     case "stalled":
-      return { pill: T(lang, "Elakadt: nem lépett be"), cls: "rp-pill--bad", sub: T(lang, "{n}. nap, 10 nap belépés nélkül", { n: v.day }) };
+      return { pill: T(lang, "Elakadt: nem lépett be"), cls: "rp-pill--bad", sub: T(lang, "{n}. nap, belépés nélkül", { n: v.day }) };
     case "quiet":
       return {
         pill: v.saved ? T(lang, "Dolgozott rajta, aztán csend") : T(lang, "Belépett, nem szerkesztett"),

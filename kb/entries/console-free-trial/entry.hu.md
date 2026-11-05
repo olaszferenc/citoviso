@@ -4,7 +4,7 @@ title: Ingyenes próba — a teljes út az indulástól a folytatásig, a törl�
 audience: operator
 category: lead-path
 anchors: console.free_trial
-updated: 2026-10-21
+updated: 2026-11-05
 ---
 
 Az ingyenes próba a **rendelés alternatívája**: a kiküldött tervet megnyitó lead kártya és fizetés
@@ -33,7 +33,8 @@ A hosszt (alapból 14 nap) és a kupon százalékát (alapból 25%) a **„Áraz
 
 ## Hol látod a próbát a konzolon
 
-- **Lead-lista**: a próbázó lead neve alatt „próbázik · még N nap” jelvény áll, és a cím alatti
+- **Lead-lista**: a próbázó lead neve alatt „próbázik · még N nap” jelvény áll (a 4. naptól, ha még
+  nem lépett be, mellette piros „nem lépett be · {n}. nap”), és a cím alatti
   szűrő-sor **„Próbázik”** gombja csak a próbázókat mutatja (részletek a Lead-lista súgójában).
 - **A lead lapja**: a munkamenet-sáv alatt az ügyfél-kártya mutatja a hátralévő napokat, az élő
   oldalt, a próba-űrlap kapcsolattartóját és az élő oldalra érkezett foglalásokat (részletek a
@@ -50,6 +51,30 @@ A hosszt (alapból 14 nap) és a kupon százalékát (alapból 25%) a **„Áraz
   **„Elküldte a próba-űrlapot”**, **„Bezárta a próba-űrlapot”**, piros sorként
   **„A próba indítása nem sikerült”**, és kiemelve **„ELINDÍTOTTA AZ INGYENES PRÓBÁT”**. Ez az utolsó
   sor csak akkor jelenik meg, ha a próba ténylegesen elindult.
+
+## Ha a próbázó nem lép be — emlékeztetők és eszkaláció
+
+Amíg a próbázó nem állít be jelszót (nem lép be), a rendszer magától próbálkozik — neked nincs teendőd,
+a lead-lapon látod, mi ment ki:
+
+- **Indulás:** a belépő levél mellé SMS a jelszó-linkkel.
+- **2., 4., 6., 8. nap:** e-mail és SMS „Még nem lépett be” — minden üzenetben új, egyszer használható
+  link. Hétvége után csak a legkésőbbi esedékes megy, a kimaradt nem.
+- **4. nap — piros jelzés:** a lead-listán piros „nem lépett be · {n}. nap” jelvény, a lead-lapon a
+  próba-kártya piros („Nem lépett be — {n}. nap”), az Irányítópulton piros sor („N próbázó nem lépett
+  be”). Ez csak jelzés, üzenet nem megy vele.
+- **5. nap — MMS az élő oldal képével:** az oldaluk nyitóképe telefon-méretben, alul „EZ MÁR AZ ÖN
+  HONLAPJA” és a webcím; utána SMS a jelszó-linkkel (csak miután az MMS kiment).
+- **7. nap — személyes levél:** „Segíthetek a belépésben? – <szállás>” tárgyú levél egy helyi nevű
+  ügyfélsegítő nevében (magyarul „Kiss Eszter · Citoviso”), friss linkkel és a felhasználónévvel.
+  Telefonos segítséget nem ajánl: arra kéri, írja meg válaszként, hol akadt el.
+- **10. nap — „Elakadt”:** a Riport Próba fülén „Elakadt: nem lépett be” — külön kategória a
+  „Hol szakad meg a próba?” panelen.
+
+Az üzenetek hétköznap 9 és 16 óra között mennek; ami hétvégére esik, hétfőn. Mindegyik egyszer. Ha a
+leadet a Válaszok panelen **„Elutasító / nem érintett — ne keressük”** jellel jelölted, az 5. napi MMS és a
+7. napi személyes levél nem megy ki (a piros jelzés megjelenik); a 2–8. napi emlékeztetők és a lejárat
+előtti levelek viszont igen.
 
 ## A próba vége előtt: T−3 és T−1 értesítés
 
@@ -112,6 +137,9 @@ domain, fizetés a rendelésein), a rendszer nem töröl, a napi futás hibával
 Ilyenkor kézzel kell megnézni, mi történt — valószínűleg a próbázó közben fizetett.
 
 ## Riasztások — ha egy próba elakad
+
+A be nem lépő próbázó NEM ide tartozik: az ő esetét a piros jelzés és az eszkaláció kezeli (lásd fent,
+„Ha a próbázó nem lép be”), levél vagy SMS neked róla nem megy — az Irányítópult piros sora mutatja.
 
 Óránként egy őr átnézi a próbákat, és ha valami elakadt, **riasztást küld** a **„Fiók”** lap üzemi
 riasztás-címzettjeinek (e-mail és SMS; lásd a Fiók súgóját). Esetenként **egyszer** szól; ha egyszerre
