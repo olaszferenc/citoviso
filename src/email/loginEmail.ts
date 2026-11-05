@@ -338,3 +338,94 @@ export function buildLoginReminderSmsText(input: {
     }),
   );
 }
+
+/**
+ * ADR-XXXX — the trial-day-7 HELPER letter (owner-approved frame, 2026-11-05, plan
+ * assets/design-refs/console/proba-eszkalacio/ „P2”): personal tone, signed with a LOCAL
+ * name (helperPersona), a fresh one-time password link, the username, and one sentence about
+ * the trialist's OWN live page (its first heading, read from the page — never invented).
+ * No phone call is offered (owner 2026-11-05: zero human in sales/setup) — the reader is
+ * asked to reply in writing.
+ */
+export function buildTrialHelperEmail(input: {
+  to: string;
+  username: string;
+  setPasswordUrl: string;
+  loginUrl: string;
+  siteName: string;
+  contactName: string | null;
+  /** Whole days the site has been live (≥ 6 on trial day 7). */
+  daysLive: number;
+  /** Whole Budapest days left (trialDaysLeft). */
+  daysLeft: number;
+  trialUntilIso: string;
+  /** The live page's first heading, or null (then the sentence is left out). */
+  heroHeading: string | null;
+  /** The helper's local name, or null (→ team signature). */
+  helperName: string | null;
+  fromName: string;
+  lang?: string;
+}): EmailMessage {
+  const { to, username, setPasswordUrl, loginUrl, siteName, lang } = input;
+  const greeting = mailGreeting(lang, input.contactName, true);
+  const subject = T(lang, "Segíthetek a belépésben? – {site}", { site: siteName });
+  const me = input.helperName
+    ? T(lang, "{name} vagyok, a Citoviso ügyfélsegítője.", { name: input.helperName })
+    : T(lang, "A Citoviso ügyfélsegítőjeként írok.");
+  const intro = T(
+    lang,
+    "Láttam, hogy {art} {site} honlapja már {n} napja él, de a szerkesztőbe még nem lépett be — gondoltam, írok Önnek, hátha valahol elakadt.",
+    { art: huArticleLower(siteName), site: siteName, n: String(input.daysLive) },
+  );
+  const hero = input.heroHeading
+    ? T(lang, "Az oldala nyitóképén most ez áll: „{h}” — a szerkesztőben ezt is egy kattintással átírhatja.", { h: input.heroHeading })
+    : null;
+  const lead = T(lang, "A belépéshez elég egy kattintás, ezzel beállítja a saját jelszavát:");
+  const button = T(lang, "Jelszó beállítása");
+  const fresh = T(lang, "Új link, 7 napig érvényes, és egyszer használható.");
+  const help = T(lang, "Ha valahol elakad, írja meg válaszként, hol — és megmutatom, merre tovább.");
+  const left = T(lang, "A próbából még {n} nap van, {until}-ig.", {
+    n: String(input.daysLeft),
+    until: formatDayLongStem(input.trialUntilIso, lang),
+  });
+  const bye = T(lang, "Üdvözlettel:");
+  const sig = input.helperName
+    ? `${input.helperName}\n${T(lang, "Citoviso ügyfélsegítő")}`
+    : T(lang, "A Citoviso csapata");
+  const text =
+    `${greeting}\n\n${me} ${intro}\n\n` +
+    (hero ? `${hero}\n\n` : "") +
+    `${lead}\n${button}: ${setPasswordUrl}\n${fresh}\n\n` +
+    `${T(lang, "Felhasználónév:")} ${username}\n` +
+    `${loginTextLine(lang, loginUrl)}\n\n` +
+    `${help}\n\n${left}\n\n${bye}\n${sig}\n`;
+  const mail = platformMail({
+    to,
+    subject,
+    text,
+    lang,
+    heading: T(lang, "Segíthetek a belépésben?"),
+    greeting,
+    siteName,
+    footerReason: "trial",
+    ownerLogin: false,
+    blocks: [
+      mailPara(`${esc(me)} ${esc(intro)}`),
+      ...(hero ? [mailPara(esc(hero))] : []),
+      mailPara(esc(lead)),
+      mailButton(setPasswordUrl, button),
+      mailNote(esc(fresh)),
+      mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }, loginDetailRow(lang, loginUrl)]),
+      mailPara(esc(help)),
+      mailPara(esc(left)),
+      mailPara(`${esc(bye)}<br>${esc(sig).replace(/\n/g, "<br>")}`),
+    ],
+  });
+  return { ...mail, fromName: input.fromName };
+}
+
+/** ADR-XXXX — the companion SMS of the day-5 live-site MMS: accent-free, 1 segment with a real link. */
+export function buildTrialMmsSmsText(input: { setPasswordUrl: string; lang?: string }): string {
+  const url = input.setPasswordUrl.replace(/^https?:\/\//, "");
+  return toGsm7(T(input.lang, "Citoviso: a képen már az Ön élő honlapja. Szerkesztés egy kattintással: {url}", { url }));
+}

@@ -51,13 +51,18 @@ import {
   BOOKING_SILENT_HOURS,
   CLIENT_FILTERS,
   retentionDay,
+  trialNoLogin,
   type BookingStatus,
   type ClientFilter,
   type ClientKind,
   type LeadClientView,
 } from "./leadClient.js";
+import { escalationDay, type EscalationStep } from "../trial/escalation.js";
+import { loginReminderDay, type LoginReminderStep } from "../trial/loginReminders.js";
+import { noticeSendDay } from "../trial/expiry.js";
+import { helperName } from "../trial/helperPersona.js";
 import { isMealPlanId, mealPlanLabel } from "../tenant/meals.js";
-import { budapestHhmm, budapestIsoDay } from "../text/budapestTime.js";
+import { addIsoDays, budapestHhmm, budapestIsoDay } from "../text/budapestTime.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -5513,13 +5518,20 @@ function huDayText(iso: string): string {
 }
 
 /** The client-state pill: próbázik (days left) · előfizető · próba lejárt. */
-export function clientPill(c: { kind: ClientKind | null; daysLeft: number | null } | null | undefined, lang: string): string {
+export function clientPill(
+  c: { kind: ClientKind | null; daysLeft: number | null; noLoginDay?: number | null } | null | undefined,
+  lang: string,
+): string {
   if (!c?.kind) return "";
   if (c.kind === "trial") {
     const d = c.daysLeft ?? 0;
+    // ADR-XXXX (approved plan proba-eszkalacio): from day 4 without a login the badge goes red.
+    const noLogin = c.noLoginDay
+      ? `<span class="con-cpill bad" data-cit-client-nologin="${c.noLoginDay}"><i aria-hidden="true"></i>${T(lang, "nem lépett be · {n}. nap", { n: c.noLoginDay })}</span>`
+      : "";
     const text =
       d <= 0 ? T(lang, "próbázik · ma lejár") : d === 1 ? T(lang, "próbázik · holnap lejár") : T(lang, "próbázik · még {n} nap", { n: d });
-    return `<span class="con-cpill ${d <= 3 ? "soon" : "trial"}" data-cit-client="trial"><i aria-hidden="true"></i>${text}</span>`;
+    return `${noLogin}<span class="con-cpill ${d <= 3 ? "soon" : "trial"}" data-cit-client="trial"><i aria-hidden="true"></i>${text}</span>`;
   }
   if (c.kind === "paid") return `<span class="con-cpill paid" data-cit-client="paid"><i aria-hidden="true"></i>${T(lang, "előfizető")}</span>`;
   return `<span class="con-cpill lapsed" data-cit-client="lapsed"><i aria-hidden="true"></i>${T(lang, "próba lejárt")}</span>`;
@@ -5554,6 +5566,7 @@ const BOOKING_PILL_CLASS: Record<BookingStatus, string> = {
 };
 
 function clientTitle(c: LeadClientView, lang: string): string {
+  if (c.kind === "trial" && c.trial && trialNoLogin(c.trial)) return T(lang, "Nem lépett be — {n}. nap", { n: c.trial.day });
   if (c.kind === "trial" && c.trial) {
     const d = c.trial.daysLeft;
     if (d <= 0) return T(lang, "Próbázik — ma lejár");
@@ -5615,15 +5628,196 @@ function silentBookingHint(c: LeadClientView, lang: string): string {
   );
 }
 
+// ── PRÓBÁZÓ ESZKALÁCIÓ (ADR-XXXX, approved plan proba-eszkalacio „A”) ─────────────────
+// From trial day 4 without a login the card turns red and shows the trial's days on one strip
+// plus every step in a list: what went out, what is happening now, what comes. The list reads
+// the ledger (free_trial_notice) for the past and the same schedule functions the tick uses
+// (loginReminderDay / escalationDay / noticeSendDay) for the future — one rule, two readers.
+
+type LadderKind = "msg" | "alert" | "mms" | "helper" | "stuck" | "exp";
+interface LadderStep {
+  readonly day: number;
+  readonly kind: LadderKind;
+  readonly text: string;
+  readonly state: "done" | "now" | "plan" | "skip" | "fail";
+  readonly when: string;
+}
+
+function ladderText(step: string, lang: string): { kind: LadderKind; text: string } {
+  switch (step) {
+    case "start":
+      return { kind: "msg", text: T(lang, "Belépő levél (felhasználónév + jelszó-link)") };
+    case "l0":
+      return { kind: "msg", text: T(lang, "Induló SMS a jelszó-linkkel") };
+    case "l2":
+    case "l4":
+    case "l6":
+    case "l8":
+      return { kind: "msg", text: T(lang, "Emlékeztető e-mail + SMS, friss link") };
+    case "e4":
+      return { kind: "alert", text: T(lang, "Piros jelzés: nem lépett be") };
+    case "m5":
+      return { kind: "mms", text: T(lang, "MMS az élő oldal képével + kísérő SMS") };
+    case "h7": {
+      const n = helperName(lang);
+      return { kind: "helper", text: n ? T(lang, "Személyes levél ({name} aláírással)", { name: n }) : T(lang, "Személyes levél") };
+    }
+    case "s10":
+      return { kind: "stuck", text: T(lang, "„Elakadt” — külön kategória a riportban") };
+    case "t3":
+      return { kind: "exp", text: T(lang, "Lejárat előtti levél (3 nap van hátra)") };
+    default:
+      return { kind: "exp", text: T(lang, "Lejárat előtti levél (holnap lejár)") };
+  }
+}
+
+/** The steps of a trial for the ladder, oldest first. Exported for the guard. */
+export function trialLadderSteps(
+  t: { startedAt: string; untilDay: string; day: number; notices: readonly { step: string; channel: string; status: string; detail: string | null; at: string }[] },
+  lang: string,
+): LadderStep[] {
+  const started = new Date(t.startedAt);
+  const startDay = budapestIsoDay(started);
+  const until = new Date(`${t.untilDay}T12:00:00Z`);
+  const today = addIsoDays(startDay, t.day - 1);
+  const dayOf = (iso: string): number => Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${startDay}T00:00:00Z`)) / 86_400_000) + 1;
+  const md = (iso: string): string => `${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
+  const out: LadderStep[] = [];
+  const { kind: k0, text: x0 } = ladderText("start", lang);
+  out.push({ day: 1, kind: k0, text: x0, state: "done", when: T(lang, "{d} kiment", { d: md(startDay) }) });
+
+  const byStep = new Map<string, { status: string; detail: string | null; at: string }[]>();
+  for (const n of t.notices) {
+    if (n.step === "p7") continue;
+    const l = byStep.get(n.step) ?? [];
+    l.push(n);
+    byStep.set(n.step, l);
+  }
+  const STEPS = ["l0", "l2", "l4", "l6", "l8", "e4", "m5", "h7", "s10", "t3", "t1"] as const;
+  // A reminder skipped because a later one was already due (weekend / the trial predates
+  // ADR-0417) is not a row of its own: the reminder that went says which days it replaced.
+  const skippedReminders: number[] = [];
+  for (const step of STEPS) {
+    const { kind } = ladderText(step, lang);
+    let { text } = ladderText(step, lang);
+    const rows = byStep.get(step);
+    if (rows?.length && /^l[2468]$/.test(step) && rows.every((r) => r.status === "skipped")) {
+      skippedReminders.push(Number(step.slice(1)));
+      continue;
+    }
+    if (rows?.length && /^l[2468]$/.test(step) && skippedReminders.length) {
+      text = `${text} ${T(lang, "(a {days}. napi kimaradt)", { days: skippedReminders.join("., ") })}`;
+      skippedReminders.length = 0;
+    }
+    if (rows?.length) {
+      const at = budapestIsoDay(new Date(rows[0]!.at));
+      const sts = rows.map((r) => r.status);
+      const state: LadderStep["state"] = sts.includes("failed")
+        ? "fail"
+        : sts.includes("claimed")
+          ? "now"
+          : sts.every((x) => x === "skipped")
+            ? "skip"
+            : "done";
+      const why = rows.find((r) => r.detail && r.status !== "sent")?.detail ?? null;
+      const when =
+        state === "done"
+          ? T(lang, "{d} kiment", { d: md(at) })
+          : state === "now"
+            ? T(lang, "{d} — sorban, a modem küldi", { d: md(at) })
+            : state === "fail"
+              ? T(lang, "{d} — nem ment ki: {why}", { d: md(at), why: why ?? "?" })
+              : T(lang, "kimaradt: {why}", { why: why ?? "–" });
+      if ((step === "e4" || step === "s10") && state === "done") {
+        out.push({ day: dayOf(at), kind, text, state, when: T(lang, "{d} óta", { d: md(at) }) });
+      } else out.push({ day: dayOf(at), kind, text, state, when });
+      continue;
+    }
+    // Not in the ledger yet: when is it due (the same schedule the tick reads)?
+    let due: string | null = null;
+    if (step === "l0") continue; // only at the start — absent = the trial predates it
+    if (step.startsWith("l")) due = loginReminderDay(step as LoginReminderStep, started, until);
+    else if (step === "t3" || step === "t1") due = noticeSendDay(step, started, until);
+    else due = escalationDay(step as EscalationStep, started);
+    if (!due) continue;
+    if (due < today) {
+      // A past reminder with no ledger row: the trial predates the reminder (ADR-0417 shipped 11-04).
+      if (step.startsWith("l")) continue;
+    }
+    const d = due < today ? today : due;
+    out.push({
+      day: dayOf(d),
+      kind,
+      text,
+      state: d === today ? "now" : "plan",
+      when: d === today ? T(lang, "ma, a következő óránkénti körben") : md(d),
+    });
+  }
+  return out.sort((a, b) => a.day - b.day);
+}
+
+function trialEscalationLadder(
+  t: NonNullable<LeadClientView["trial"]>,
+  lang: string,
+): string {
+  const steps = trialLadderSteps(t, lang);
+  const cells: string[] = [];
+  for (let d = 1; d <= t.lengthDays; d++) {
+    const dots = steps.filter((s) => s.day === d).map((s) => `<i class="con-lad__dot ${s.kind}"></i>`).join("");
+    const cls = d < t.day ? "past" : d === t.day ? "today" : "fut";
+    cells.push(`<span class="con-lad__c ${cls}" title="${esc(T(lang, "{n}. nap", { n: d }))}">${dots || d}</span>`);
+  }
+  const PILL: Record<LadderStep["state"], [string, string]> = {
+    done: ["paid", T(lang, "kiment")],
+    now: ["wait", T(lang, "most")],
+    plan: ["bk", T(lang, "jön")],
+    skip: ["lapsed", T(lang, "kimaradt")],
+    fail: ["bad", T(lang, "hiba")],
+  };
+  const lgd = (
+    [
+      ["msg", T(lang, "levél / SMS")],
+      ["alert", T(lang, "riasztás")],
+      ["mms", T(lang, "MMS")],
+      ["helper", T(lang, "személyes levél")],
+      ["stuck", T(lang, "elakadt")],
+      ["exp", T(lang, "lejárat előtti levél")],
+    ] as const
+  )
+    .map(([k, l]) => `<span><i class="con-lad__dot ${k}"></i>${l}</span>`)
+    .join("");
+  const items = steps
+    .map(
+      (s) =>
+        `<li class="${s.state === "now" ? "now" : ""}" data-cit-step-state="${s.state}">` +
+        `<span class="con-lad__d">${T(lang, "{n}. nap", { n: s.day })}</span>` +
+        `<span><i class="con-lad__dot ${s.kind}"></i> ${esc(s.text)}<br><span class="mut small">${esc(s.when)}</span></span>` +
+        `<span class="con-lad__s"><span class="con-cpill ${PILL[s.state][0]}">${s.state === "done" && (s.kind === "alert" || s.kind === "stuck") ? T(lang, "jelezve") : PILL[s.state][1]}</span></span></li>`,
+    )
+    .join("");
+  return (
+    `<div class="con-lad" data-cit-escalation>` +
+    `<h4>${T(lang, "A próba {n} napja — mit küldtünk, mi jön", { n: t.lengthDays })}</h4>` +
+    `<div class="con-lad__strip" style="grid-template-columns:repeat(${t.lengthDays},minmax(0,1fr))">${cells.join("")}</div>` +
+    `<div class="con-lad__lgd">${lgd}</div><ul class="con-lad__steps">${items}</ul></div>`
+  );
+}
+
 /**
  * The client card under the strip (approved plan, variant B): days left, the live site,
  * the trial contact and the bookings. Rendered only when the lead has a trial or a tenant.
  */
 export function clientCard(c: LeadClientView, lang: string): string {
   const t = c.trial;
-  const soon = c.kind === "trial" && !!t && t.daysLeft <= 3;
+  const noLogin = c.kind === "trial" && trialNoLogin(t);
+  const soon = c.kind === "trial" && !!t && t.daysLeft <= 3 && !noLogin;
   const meter =
-    c.kind === "trial" && t
+    noLogin && t
+      ? `<div class="mut small">${T(lang, "Próbázik, még {n} nap · {until}-ig · jelszót nem állított be", {
+          n: Math.max(0, t.daysLeft),
+          until: huDayText(t.untilDay).replace(/\.$/, ""),
+        })}</div>`
+      : c.kind === "trial" && t
       ? (() => {
           const day = Math.min(t.lengthDays, Math.max(1, t.lengthDays - t.daysLeft));
           const pct = t.lengthDays > 0 ? Math.round((day / t.lengthDays) * 100) : 100;
@@ -5669,9 +5863,10 @@ export function clientCard(c: LeadClientView, lang: string): string {
   }
   const kvHtml = kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
   return (
-    `<section class="con-client${soon ? " soon" : ""}${c.kind === "lapsed" ? " lapsed" : ""}" data-cit-client-card="${c.kind ?? "none"}">` +
+    `<section class="con-client${soon ? " soon" : ""}${noLogin ? " bad" : ""}${c.kind === "lapsed" ? " lapsed" : ""}" data-cit-client-card="${c.kind ?? "none"}"${noLogin ? ` data-cit-nologin="${t!.day}"` : ""}>` +
     `<div class="con-client__h"><div class="con-client__t"><h3>${clientTitle(c, lang)}</h3>${meter}</div>${live}</div>` +
     `<div class="con-client__b"><dl class="con-client__kv">${kvHtml}</dl>` +
+    (noLogin && t ? trialEscalationLadder(t, lang) : "") +
     `<h4>${T(lang, "Foglalások")}${c.bookingTotal ? ` (${c.bookingTotal})` : ""}</h4>${bookingTable(c, lang)}${silentBookingHint(c, lang)}` +
     (c.kind === "trial"
       ? `<p class="con-client__hint">${T(lang, "Próbázó ügyfél: hideg megkeresés neki már nem megy.")}</p>`
@@ -9125,6 +9320,8 @@ export interface HubData {
   /** Replies to our outreach (ADR-0339) — the block on the home, the attention row, the widget row. */
   readonly replies: RepliesBlock;
   readonly repliesQuery: RepliesQuery;
+  /** ADR-XXXX: running trials without a login from day 4 on (the red attention row). */
+  readonly noLoginTrials?: readonly { leadId: string; name: string; day: number }[];
 }
 
 interface AttentionRow {
@@ -9167,6 +9364,21 @@ function attentionRows(d: HubData, lang: string): readonly AttentionRow[] {
       html: `${b(String(d.replies.open))} ${esc(T(lang, "megválaszolatlan válasz a megkeresésekre"))}`,
       href: "/#replies",
       where: T(lang, "Válaszok"),
+    });
+  }
+  // ADR-XXXX (approved plan proba-eszkalacio): a trialist who has not logged in from day 4 on.
+  const nl = d.noLoginTrials ?? [];
+  if (nl.length) {
+    const names = nl.map((x) => `${esc(x.name)} (${esc(T(lang, "{n}. nap", { n: x.day }))})`).join(", ");
+    const stalled = nl.filter((x) => x.day >= 10).length;
+    rows.push({
+      group: "crm",
+      tone: "bad",
+      html:
+        `${b(String(nl.length))} ${esc(T(lang, "próbázó nem lépett be"))}: ${names}` +
+        (stalled ? ` — ${esc(T(lang, "ebből {n} elakadt (10 nap belépés nélkül)", { n: stalled }))}` : ""),
+      href: nl.length === 1 ? `/lead/${encodeURIComponent(nl[0]!.leadId)}` : "/leads?client=trial",
+      where: nl.length === 1 ? T(lang, "Lead-lap") : T(lang, "Próbázók"),
     });
   }
   // AAM cap meter (owner, 2026-09-06): silent below 80% — from there a warn row,

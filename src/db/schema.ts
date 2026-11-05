@@ -599,8 +599,10 @@ export interface FreeTrialNoticeTable {
   free_trial_id: string;
   /** t3 / t1 = before the trial ends (0098); p7 = 7 days before the retention purge (0099). */
   /** l0 = start SMS, l2/l4/l6/l8 = login reminders on trial day 2/4/6/8 (0121). */
-  step: "t3" | "t1" | "p7" | "l0" | "l2" | "l4" | "l6" | "l8";
-  channel: "email" | "sms";
+  /** e4 = red console flag, m5 = live-site MMS, h7 = helper letter, s10 = stalled (0125, ADR-XXXX). */
+  step: "t3" | "t1" | "p7" | "l0" | "l2" | "l4" | "l6" | "l8" | "e4" | "m5" | "h7" | "s10";
+  /** 'mark' = a console signal, nothing was sent (0125). */
+  channel: "email" | "sms" | "mms" | "mark";
   status: Generated<"claimed" | "sent" | "failed" | "skipped">;
   detail: string | null;
   created_at: Generated<Timestamp>;
@@ -683,6 +685,8 @@ export interface SmsOutboxTable {
 export interface MmsOutboxTable {
   id: Generated<string>;
   prospect_id: string | null;
+  /** 0125 (ADR-XXXX): the trial's day-5 live-site MMS — the ack starts its companion SMS. */
+  free_trial_id: Generated<string | null>;
   to_phone: string;
   subject: string;
   image: Buffer;

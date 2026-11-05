@@ -30,6 +30,7 @@ import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { runTrialNotices } from "../src/trial/expiry.js";
 import { purgeWarningDeps, trialNoticeDeps } from "../src/trial/notices.js";
 import { loginReminderDeps, runLoginReminders } from "../src/trial/loginReminders.js";
+import { escalationDeps, runTrialEscalation } from "../src/trial/escalation.js";
 import { runPurgeWarnings } from "../src/trial/retention.js";
 import { runTrialWatch } from "../src/trial/watch.js";
 import { runStallWatch } from "../src/console/stallWatch.js";
@@ -66,6 +67,14 @@ try {
   console.log(`trial-login-reminders (e-mail + SMS éles) @ ${now.toISOString()}:`, JSON.stringify(l));
 } catch (e) {
   console.error("trial-login-reminders HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  // ADR-XXXX: still no login — day 4 red flag, day 5 live-site MMS, day 7 helper letter, day 10 stalled.
+  const x = await runTrialEscalation(now, escalationDeps());
+  console.log(`trial-escalation (MMS + e-mail éles) @ ${now.toISOString()}:`, JSON.stringify(x));
+} catch (e) {
+  console.error("trial-escalation HIBA:", e);
   process.exitCode = 1;
 }
 try {

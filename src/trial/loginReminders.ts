@@ -55,7 +55,7 @@ export function loginReminderDay(step: LoginReminderStep, startedAt: Date, trial
 }
 
 /** Has the trial's owner ever set a password or logged in? (Then no reminder is due.) */
-async function ownerHasLoggedIn(tenantId: string): Promise<boolean> {
+export async function ownerHasLoggedIn(tenantId: string): Promise<boolean> {
   const r = await db
     .selectFrom("tenant_user")
     .select("id")
@@ -65,7 +65,7 @@ async function ownerHasLoggedIn(tenantId: string): Promise<boolean> {
   return Boolean(r);
 }
 
-interface LoginContext {
+export interface LoginContext {
   readonly tenantUserId: string;
   readonly username: string;
   readonly siteName: string;
@@ -73,7 +73,7 @@ interface LoginContext {
   readonly lang: string;
 }
 
-async function loginContext(trialId: string): Promise<LoginContext> {
+export async function loginContext(trialId: string): Promise<LoginContext> {
   const row = await db
     .selectFrom("free_trial")
     .innerJoin("tenant", "tenant.id", "free_trial.tenant_id")
@@ -94,7 +94,7 @@ async function loginContext(trialId: string): Promise<LoginContext> {
 }
 
 /** Send one SMS; throws when it was blocked (sendSms never throws), then log it. */
-async function sendLoggedSms(
+export async function sendLoggedSms(
   send: LoginSmsSender,
   tenantId: string,
   trialId: string,

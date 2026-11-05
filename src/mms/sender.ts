@@ -48,6 +48,8 @@ export interface MmsMessage {
   readonly subject: string;
   /** The pair's prospect (queue provider: the ack stamps its mms_sent_at). */
   readonly prospectId?: string;
+  /** ADR-XXXX: the trial's day-5 live-site MMS (queue provider: the ack sends its companion SMS). */
+  readonly freeTrialId?: string;
 }
 
 export interface MmsSendResult {
@@ -166,14 +168,18 @@ async function sendQueue(msg: MmsMessage, to: string): Promise<MmsSendResult> {
   try {
     const row = await db
       .insertInto("mms_outbox")
-      .values({ prospect_id: msg.prospectId ?? null, to_phone: to, subject: msg.subject, image })
+      .values({ prospect_id: msg.prospectId ?? null, free_trial_id: msg.freeTrialId ?? null, to_phone: to, subject: msg.subject, image })
       .returning("id")
       .executeTakeFirstOrThrow();
     console.log(`[mms:queue] sorba téve → ${to} · ${row.id}`);
     return { ok: true, messageId: row.id, provider: "queue", queued: true };
   } catch (err) {
     if ((err as { code?: string }).code === "23505") {
-      return { ok: false, error: "ennél a prospectnél már sorban áll egy MMS", provider: "queue" };
+      return {
+        ok: false,
+        error: msg.freeTrialId ? "ennél a próbánál már volt MMS" : "ennél a prospectnél már sorban áll egy MMS",
+        provider: "queue",
+      };
     }
     throw err;
   }

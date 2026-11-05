@@ -924,6 +924,14 @@ if [ -f scripts/trial-report-check.mts ] && \
   echo "[pre-commit] trial-report-check (a próba belseje mérve, a Próba fül ugyanabból számol)…"
   npx tsx scripts/trial-report-check.mts >"$GATE_LOG" || gate_failed
 fi
+# PRÓBÁZÓ ESZKALÁCIÓ (scripts/trial-escalation-check.mts — terv assets/design-refs/console/proba-eszkalacio/):
+# belépés nélkül 4. nap piros jelzés, 5. nap élő-oldal MMS + kísérő SMS (a nyugta után), 7. nap személyes levél helyi
+# névvel (Poe sehol, telefonos ajánlat nincs), 10. nap „elakadt”; egyszer megy, „ne keressük” és belépés után csend.
+if [ -f scripts/trial-escalation-check.mts ] && \
+   changed_files | grep -qE '^src/trial/(escalation|liveShot|helperPersona|loginReminders)\.ts$|^src/email/loginEmail\.ts$|^src/mms/(sender|relayQueue)\.ts$|^src/console/leadClient\.ts$|^scripts/(offer-followup|trial-escalation-check)\.mts$|^migrations/0125_'; then
+  echo "[pre-commit] trial-escalation-check (próbázó eszkaláció: piros jelzés, MMS, személyes levél, elakadt)…"
+  npx tsx scripts/trial-escalation-check.mts >"$GATE_LOG" || gate_failed
+fi
 # TENANT-AKTIVITÁS ÉS LÁTOGATOTTSÁG (scripts/tenant-activity-check.mts — terv assets/design-refs/console/tenant-aktivitas/):
 # a tulaj/operátor saját megnyitása nem vendég (aznapi lenyomat), az „Alvó” szabály egy helyen, a Tenantok fül szűrése.
 if [ -f scripts/tenant-activity-check.mts ] && \

@@ -68,6 +68,8 @@ export type TrialVerdict =
   | { readonly k: "stuck"; readonly step: string }
   | { readonly k: "ordered" }
   | { readonly k: "no_login"; readonly day: number }
+  /** ADR-XXXX: still running, day ≥ 10, never logged in — „elakadt”. */
+  | { readonly k: "stalled"; readonly day: number }
   | { readonly k: "quiet"; readonly saved: boolean; readonly days: number }
   | { readonly k: "active"; readonly days: number }
   | { readonly k: "unmeasured" };
@@ -111,6 +113,8 @@ export interface TrialReport {
   readonly stage: number | null;
   /** Every trial in the range + status filter (the KPIs and the ladder count these). */
   readonly trials: readonly TrialRow[];
+  /** ADR-XXXX: the selected „hol szakad meg?” bucket (only those trials are listed), or null. */
+  readonly bucket: VerdictBucket | null;
   /** The list under the ladder: `trials`, narrowed to `stage` when one is selected. */
   readonly listed: readonly TrialRow[];
   /** When tenant_activity started recording (the 0117 migration's applied_at). */
@@ -224,7 +228,7 @@ export function deriveTrial(r: RawTrial, measuredFrom: Date | null, now: Date): 
   else if (!measured) verdict = { k: "unmeasured" };
   else if (stall) verdict = { k: "stuck", step: stall.detail ?? "package" };
   else if (sig.order) verdict = { k: "ordered" };
-  else if (!sig.login) verdict = { k: "no_login", day: dayNow };
+  else if (!sig.login) verdict = dayNow >= STALLED_LOGIN_DAY ? { k: "stalled", day: dayNow } : { k: "no_login", day: dayNow };
   else if (quietDays >= QUIET_DAYS) verdict = { k: "quiet", saved: sig.save, days: quietDays };
   else verdict = { k: "active", days: quietDays };
 
@@ -243,6 +247,20 @@ export function deriveTrial(r: RawTrial, measuredFrom: Date | null, now: Date): 
     logins: ev.filter((e) => e.kind === "login").length,
     saves: ev.filter((e) => e.kind === "save").length,
   };
+}
+
+/** ADR-XXXX: „elakadt” from this trial day on without a login (the same day as the lead page's s10). */
+export const STALLED_LOGIN_DAY = 10;
+
+/** ADR-XXXX „hol szakad meg?”: one bucket per trial, in the page's order. */
+export const VERDICT_BUCKETS = ["no_login", "stalled", "quiet_nosave", "quiet_saved", "stuck", "ordered", "active", "paid", "lapsed", "unmeasured"] as const;
+export type VerdictBucket = (typeof VERDICT_BUCKETS)[number];
+export function verdictBucket(v: TrialVerdict): VerdictBucket {
+  if (v.k === "quiet") return v.saved ? "quiet_saved" : "quiet_nosave";
+  return v.k;
+}
+export function isVerdictBucket(x: unknown): x is VerdictBucket {
+  return typeof x === "string" && (VERDICT_BUCKETS as readonly string[]).includes(x);
 }
 
 /** The ladder over the MEASURED trials: reached ≥ stage / stopped exactly there (not converted). */
@@ -324,6 +342,7 @@ export async function getTrialReport(
   st: TrialStatusFilter,
   stage: number | null,
   now = new Date(),
+  bucket: VerdictBucket | null = null,
 ): Promise<TrialReport> {
   const since = days ? new Date(now.getTime() - days * DAY) : null;
   // The inside is measured from the moment the 0117 table existed (its migration's applied_at) —
@@ -427,7 +446,7 @@ export async function getTrialReport(
         .execute()
     ).map((r) => r.prospect_id as string),
   );
-  return foldTrialReport(raws, measuredFrom, days, st, stage, now, views, trialed);
+  return foldTrialReport(raws, measuredFrom, days, st, stage, now, views, trialed, bucket);
 }
 
 /** The page's numbers from already-loaded rows — no DB (the KB screenshots fold sample rows). */
@@ -440,16 +459,19 @@ export function foldTrialReport(
   now: Date,
   views: readonly { readonly prospectId: string; readonly device: string | null; readonly os: string | null; readonly browser: string | null }[],
   trialedProspects: ReadonlySet<string>,
+  bucket: VerdictBucket | null = null,
 ): TrialReport {
   const all = raws.map((r) => deriveTrial(r, measuredFrom, now));
   const trials = st === "all" ? all : all.filter((t) => t.status === st);
   const sel = stage !== null && stage >= 0 && stage < TRIAL_STAGES.length - 1 ? stage : null;
-  const listed = sel === null ? trials : trials.filter((t) => t.measured && t.reached === sel && t.status !== "converted");
+  const byStage = sel === null ? trials : trials.filter((t) => t.measured && t.reached === sel && t.status !== "converted");
+  const listed = bucket === null ? byStage : byStage.filter((t) => verdictBucket(t.verdict) === bucket);
   const { splits, returned } = visitorSplitOf(views, trialedProspects);
   return {
     days,
     st,
     stage: sel,
+    bucket,
     trials,
     listed,
     measuredFrom,

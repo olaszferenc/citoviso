@@ -1,0 +1,414 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Próbázó eszkaláció (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16324f; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-accent-soft:#e3f6fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-ink:#1d7a4b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-ink:#8a5a00; --citui-warn-soft:#fff7e6;
+    --citui-bad:#e5484d; --citui-bad-ink:#b3261e; --citui-bad-soft:#fdecec;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  a{color:#0b7894}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button,.sub button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:1100px;margin:12px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .sub button{border-color:var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink)}
+  .sub button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:13.5px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:10px auto 30px;container-type:inline-size;width:100%;max-width:1100px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0}
+  .con{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:18px;overflow:hidden;min-height:520px}
+  .head{padding:14px 16px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white)}
+  .head h2{margin:0;font:700 1.25rem/1.2 var(--citui-font-display)} .head p{margin:2px 0 0;color:#c9d6e3;font-size:.85rem}
+  .body{padding:14px} @container (min-width:640px){ .body{padding:20px 24px} }
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;box-shadow:var(--citui-shadow-sm);padding:16px 18px;margin-bottom:14px}
+  .card h3{margin:0 0 8px;font:700 1.05rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .muted{color:var(--citui-muted);font-size:.86rem}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:9px 14px;font:700 .88rem/1 var(--citui-font-text);cursor:pointer;background:var(--citui-navy-900);color:var(--citui-white)}
+  .btn.ghost{background:var(--citui-white);color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
+  .btn.cy{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .pill{display:inline-block;padding:3px 9px;border-radius:var(--citui-radius-pill);font:700 .75rem/1.4 var(--citui-font-text);background:var(--citui-surface-2);color:var(--citui-ink);white-space:nowrap}
+  .pill.bad{background:var(--citui-bad-soft);color:var(--citui-bad-ink)} .pill.warn{background:var(--citui-warn-soft);color:var(--citui-warn-ink)} .pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+  .tcard{border:1px solid var(--citui-line);border-radius:16px;overflow:hidden;background:var(--citui-white);margin-bottom:14px}
+  .tcard__top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:14px 16px;background:var(--citui-accent-soft)}
+  .tcard__top.bad{background:var(--citui-bad-soft)}
+  .tcard__top h3{margin:0;font:700 1.15rem/1.25 var(--citui-font-display)} .tcard__top.bad h3{color:var(--citui-bad-ink)}
+  .tcard__in{padding:14px 16px}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:12px}
+  @container (min-width:640px){ .meta{grid-template-columns:repeat(4,1fr)} }
+  .meta small{display:block;font:700 .68rem/1.2 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+  .meta span{font-weight:600;font-size:.9rem}
+  /* Variant A — 14-day ladder */
+  .lad{display:grid;grid-template-columns:repeat(14,1fr);gap:3px;margin:6px 0 4px}
+  .lad__c{position:relative;height:34px;border-radius:6px;background:var(--citui-surface-2);display:flex;align-items:center;justify-content:center;gap:2px;font-size:.62rem;color:var(--citui-muted)}
+  .lad__c.past{background:#e4edf2} .lad__c.today{outline:2px solid var(--citui-navy-900);outline-offset:1px}
+  .lad__c.fut{background:repeating-linear-gradient(45deg,var(--citui-surface-2),var(--citui-surface-2) 4px,#fff 4px,#fff 8px)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .d-msg{background:var(--citui-cyan-500)} .d-alert{background:var(--citui-bad)} .d-mms{background:#7a5af5} .d-poe{background:var(--citui-warn)} .d-stuck{background:var(--citui-navy-900)} .d-exp{background:var(--citui-muted)}
+  .lgd{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.75rem;color:var(--citui-muted);margin-bottom:12px} .lgd span{display:inline-flex;align-items:center;gap:5px}
+  .steps{list-style:none;margin:0;padding:0;border-top:1px solid var(--citui-line)}
+  .steps li{display:grid;grid-template-columns:62px 1fr;gap:4px 10px;padding:9px 0;border-bottom:1px solid var(--citui-line);font-size:.88rem}
+  @container (min-width:640px){ .steps li{grid-template-columns:90px 1fr auto} }
+  .steps li .d{font-weight:700;color:var(--citui-muted);font-size:.8rem}
+  .steps li .s{grid-column:2} @container (min-width:640px){ .steps li .s{grid-column:auto;text-align:right} }
+  .steps li.now{background:var(--citui-warn-soft);margin:0 -16px;padding:9px 16px}
+  /* Variant B — next action banner */
+  .next{display:flex;flex-direction:column;gap:10px;border:2px solid var(--citui-bad);border-radius:14px;padding:12px 14px;margin-bottom:12px;background:var(--citui-white)}
+  @container (min-width:640px){ .next{flex-direction:row;align-items:center;justify-content:space-between} }
+  .next b{color:var(--citui-bad-ink)}
+  details.hist summary{cursor:pointer;font-weight:700;font-size:.88rem;color:#0b7894;margin:6px 0}
+  /* Poe letter */
+  .poe textarea{width:100%;min-height:210px;border:1px solid var(--citui-line-strong);border-radius:10px;padding:10px 12px;font:14px/1.5 var(--citui-font-text);color:var(--citui-ink);resize:vertical}
+  .poe input{width:100%;border:1px solid var(--citui-line-strong);border-radius:10px;padding:9px 12px;font:600 14px/1.3 var(--citui-font-text);margin-bottom:8px}
+  .poe .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .err{color:var(--citui-bad-ink);font-size:.84rem;font-weight:600}
+  .okmsg{background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-radius:10px;padding:10px 12px;font-weight:600;font-size:.9rem}
+  .infomsg{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;font-size:.9rem}
+  /* list + dashboard */
+  table{width:100%;border-collapse:collapse;font-size:.88rem} th{text-align:left;font:700 .7rem/1.2 var(--citui-font-text);letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:8px 6px;border-bottom:1px solid var(--citui-line)}
+  td{padding:9px 6px;border-bottom:1px solid var(--citui-line);vertical-align:top}
+  .hide-m{display:none} @container (min-width:640px){ .hide-m{display:table-cell} }
+  .tiles{display:grid;grid-template-columns:1fr;gap:10px} @container (min-width:640px){ .tiles{grid-template-columns:repeat(3,1fr)} }
+  .tile{border:1px solid var(--citui-line);border-radius:14px;padding:12px 14px;background:var(--citui-white)}
+  .tile.bad{border-color:var(--citui-bad);background:var(--citui-bad-soft)}
+  .tile .n{font:700 1.7rem/1 var(--citui-font-display)} .tile.bad .n{color:var(--citui-bad-ink)}
+  /* MMS */
+  .mmswrap{display:grid;grid-template-columns:1fr;gap:18px;justify-items:center} @container (min-width:640px){ .mmswrap{grid-template-columns:330px 1fr;justify-items:start;align-items:start} }
+  .phone{width:300px;border-radius:34px;background:#111;padding:12px;box-shadow:0 20px 40px rgba(0,0,0,.25)}
+  .screen{background:#f2f2f7;border-radius:24px;padding:14px 10px;min-height:520px}
+  .from{text-align:center;font-size:.72rem;color:#6b6b70;margin-bottom:10px}
+  .bub{max-width:88%;background:#e5e5ea;border-radius:18px;padding:8px 11px;font-size:.84rem;line-height:1.35;color:#111;margin-bottom:8px;word-break:break-word}
+  .mmsimg{position:relative;width:88%;border-radius:16px;overflow:hidden;margin-bottom:8px;aspect-ratio:390/560;background:#333}
+  .mmsimg img{width:100%;height:100%;object-fit:cover;display:block}
+  .rib{position:absolute;left:0;right:0;bottom:0;background:var(--citui-navy-950);color:var(--citui-white);padding:9px 10px 10px;font:700 .78rem/1.25 var(--citui-font-display);letter-spacing:.02em}
+  .rib small{display:block;font:500 .66rem/1.3 var(--citui-font-text);color:var(--citui-cyan-300);margin-top:2px}
+  .rib.top{bottom:auto;top:0}
+  .spec dt{font-weight:700;font-size:.82rem;margin-top:10px} .spec dd{margin:2px 0 0;font-size:.88rem}
+  code{background:var(--citui-surface-2);padding:1px 5px;border-radius:5px;font-size:.84em}
+  /* report */
+  .bars{display:grid;gap:8px}
+  .barrow{display:grid;grid-template-columns:1fr;gap:4px;cursor:pointer;border-radius:10px;padding:6px 8px}
+  @container (min-width:640px){ .barrow{grid-template-columns:230px 1fr 60px;align-items:center} }
+  .barrow:hover,.barrow.on{background:var(--citui-surface-2)}
+  .bartrack{height:14px;border-radius:7px;background:var(--citui-surface-2);overflow:hidden} .barfill{height:100%;border-radius:7px}
+  .hidden{display:none!important}
+</style></head><body>
+<div class="bar">
+  <b>Próbázó eszkaláció</b>
+  <button data-tab="lap" class="on">Lead-lap</button>
+  <button data-tab="lista">Lista + Irányítópult</button>
+  <button data-tab="mms">5. nap: MMS</button>
+  <button data-tab="poe">7. nap: Poe levele</button>
+  <button data-tab="riport">Riport</button>
+  <span class="sp"></span>
+  <button data-size="m" id="szm">Mobil 390px</button><button data-size="d" id="szd">Asztali</button>
+</div>
+
+<div class="sub" id="leadsel"><span>Próbázó:</span><button data-lead="sama" class="on">Sáma Vendégház (9. nap)</button><button data-lead="marilyn">Marilyn Vendégház (4. nap)</button></div>
+<div class="sub" id="varsel"><span>Lead-lap változat:</span><button data-var="A" class="on">A — 14 napos lépcső</button><button data-var="B">B — „Mi a következő lépés” sáv</button></div>
+<div class="sub hidden" id="poesel"><span>Poe-levél jóváhagyása:</span><button data-pv="P1">P1 — levelenként te hagyod jóvá</button><button data-pv="P2" class="on">P2 — egyszer a mintát (javasolt)</button></div>
+<div class="note" id="note"></div>
+
+<div class="stage" id="stage"><div class="con">
+  <div class="head"><h2 id="h-name">Sáma Vendégház</h2><p id="h-sub">Fonyód · próbázik · konzol</p></div>
+  <div class="body">
+
+  <!-- LEAD PAGE -->
+  <section data-pane="lap">
+    <div class="tcard">
+      <div class="tcard__top bad"><div><h3 id="t-title">Nem lépett be — 9. nap</h3><div class="muted" id="t-sub">Próbázik, még 6 nap · 2026. 11. 11-ig · jelszót nem állított be</div></div>
+        <a class="btn cy" href="#" onclick="return false">Élő oldal</a></div>
+      <div class="tcard__in">
+        <div class="meta">
+          <div><small>Indult</small><span id="m-start">2026. 10. 28.</span></div>
+          <div><small>Lejár</small><span id="m-end">2026. 11. 11.</span></div>
+          <div><small>Kapcsolattartó</small><span id="m-contact">Marton Zoltán</span></div>
+          <div><small>Utolsó üzenetünk</small><span id="m-last">11. 04. e-mail + SMS</span></div>
+        </div>
+
+        <div id="varA">
+          <div class="muted" style="margin-bottom:2px">A próba 14 napja — mit küldtünk, mi jön</div>
+          <div class="lad" id="ladder"></div>
+          <div class="lgd"><span><i class="dot d-msg"></i>levél / SMS</span><span><i class="dot d-alert"></i>riasztás</span><span><i class="dot d-mms"></i>MMS</span><span><i class="dot d-poe"></i>Poe levele</span><span><i class="dot d-stuck"></i>elakadt</span><span><i class="dot d-exp"></i>lejárat előtti levél</span></div>
+          <ul class="steps" id="stepsA"></ul>
+        </div>
+
+        <div id="varB" class="hidden">
+          <div class="next" id="nextB"></div>
+          <details class="hist"><summary id="histsum">Minden lépés (7)</summary><ul class="steps" id="stepsB"></ul></details>
+        </div>
+      </div>
+    </div>
+    <p class="muted">A kártya alatt a lead-lap többi része (foglalások, fülek) változatlan.</p>
+  </section>
+
+  <!-- LIST + DASHBOARD -->
+  <section data-pane="lista" class="hidden">
+    <div class="card"><h3>Irányítópult</h3>
+      <div class="tiles">
+        <div class="tile bad"><div class="n">2</div><b>próbázó nem lépett be</b><div class="muted">Sáma (9. nap), Marilyn (4. nap). <a href="#" onclick="return false">Szűrt lista →</a></div></div>
+        <div class="tile"><div class="n">1</div><b>Poe levele vár rád</b><div class="muted">Sáma — <a href="#" data-goto="poe">jóváhagyás →</a></div></div>
+        <div class="tile"><div class="n">0</div><b>elakadt próba</b><div class="muted">10 nap belépés nélkül</div></div>
+      </div>
+    </div>
+    <div class="card"><h3>Lead-sor — Próbázik (2)</h3>
+      <table><thead><tr><th>Név</th><th class="hide-m">Település</th><th>Állapot</th></tr></thead><tbody>
+        <tr><td><b>Sáma Vendégház</b><br><span class="pill bad">nem lépett be · 9. nap</span> <span class="pill">még 6 nap</span></td><td class="hide-m">Fonyód</td><td><span class="pill warn">Poe levele vár rád</span></td></tr>
+        <tr><td><b>Marilyn Vendégház</b><br><span class="pill bad">nem lépett be · 4. nap</span> <span class="pill">még 11 nap</span></td><td class="hide-m">–</td><td><span class="muted">holnap MMS</span></td></tr>
+      </tbody></table>
+      <p class="muted">A piros jelvény a 4. naptól jelenik meg (addig a megszokott „próbázik · még N nap”), és eltűnik, amint belép.</p>
+    </div>
+  </section>
+
+  <!-- MMS -->
+  <section data-pane="mms" class="hidden">
+    <div class="mmswrap">
+      <div class="phone"><div class="screen">
+        <div class="from">+36 30 120 0971 · MMS</div>
+        <div class="mmsimg"><img src="sama-elo.jpg" alt=""><div class="rib" id="rib">EZ MÁR AZ ÖN HONLAPJA<small id="rib-url">sama-vendeghaz.citoviso.com</small></div></div>
+        <div class="bub" id="mms-sms"></div>
+      </div></div>
+      <div class="card" style="width:100%">
+        <h3>5. nap: MMS az élő oldal képével</h3>
+        <p class="muted">Ők MMS-re reagáltak először (a mock képére). A belépést eddig szöveg vitte — ez a lépés ugyanazt a csatornát használja, ami egyszer már bevált.</p>
+        <dl class="spec">
+          <dt>Kép</dt><dd>Az ÉLŐ oldaluk nyitóképe, telefon-méretben, alul a sáv: <b>„EZ MÁR AZ ÖN HONLAPJA”</b> + a webcím. (Nem „előzetes látványterv” — ez már az övék.)</dd>
+          <dt>Kísérő SMS (ékezet nélkül, 1 szelet)</dt><dd><code id="sms-code"></code><br><span class="muted" id="sms-len"></span></dd>
+          <dt>Mikor</dt><dd>A próba 5. napján, hétköznap 9–16 között. Hétvégére esve hétfőn megy.</dd>
+          <dt>Csak akkor</dt><dd>ha jelszót még nem állított be és nem lépett be. Próbánként egyszer.</dd>
+        </dl>
+        <p style="margin:12px 0 4px"><b>Sáv helye:</b></p>
+        <button class="btn ghost" id="ribpos">Sáv felülre</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- POE LETTER -->
+  <section data-pane="poe" class="hidden">
+    <div class="card poe hidden" id="poeP2">
+      <h3>Poe levelének mintája — egyszer hagyod jóvá</h3>
+      <p class="muted">Poe minden próbázónak SAJÁT levelet ír a 7. napon, de ebben a keretben: ugyanaz a felépítés, csak a próbázó adatai és egy-két mondat változik. A gép minden levélen ellenőrzi, hogy benne van-e a belépő-link helye, és hogy nincs-e benne olyan állítás, amit a próbázó adataiból nem tudunk. Ha átmegy, <b>magától kimegy</b> (hétköznap 9–16); ha nem, nem megy ki, és a lépcsőn „kimaradt” áll az okával. Neked levelenként semmi teendőd.</p>
+      <div class="infomsg" style="white-space:pre-wrap;font-size:.88rem" id="p2tpl"></div>
+      <div class="row" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="p2ok">A mintát jóváhagyom</button></div>
+      <div id="p2done" class="hidden" style="margin-top:10px"></div>
+      <h3 style="margin-top:16px">Így ment volna ki most</h3>
+      <div class="muted" id="p2list"></div>
+    </div>
+    <div class="card poe" id="poeP1">
+      <h3>Poe levele jóváhagyásra vár — <span id="poe-name">Sáma Vendégház</span></h3>
+      <p class="muted">A próba 7. napján Poe személyes hangú levelet ír annak, aki még nem lépett be. A levél CSAK a te jóváhagyásod után megy ki. A belépő-link a küldéskor kerül bele (friss, egyszer használható) — a szövegben a <code>[Jelszó beállítása]</code> jelöli a helyét.</p>
+      <div id="poe-form">
+        <label class="muted">Tárgy</label>
+        <input id="poe-subj" value="Segíthetek a belépésben? – Sáma Vendégház">
+        <label class="muted">Szöveg</label>
+        <textarea id="poe-text"></textarea>
+        <div class="muted" id="poe-count"></div>
+        <div class="err" id="poe-err"></div>
+        <div class="row">
+          <button class="btn" id="poe-ok">Jóváhagyom, mehet</button>
+          <button class="btn ghost" id="poe-no">Nem küldjük</button>
+        </div>
+      </div>
+      <div id="poe-done" class="hidden"></div>
+      <p class="muted">Ugyanez a kártya a lead-lapon, a próba-kártya alatt is megjelenik; az Irányítópult „Poe levele vár rád” csempéje ide visz.</p>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section data-pane="riport" class="hidden">
+    <div class="card"><h3>Riport › Próba — hol szakad meg?</h3>
+      <p class="muted">Minden próba egy helyen áll. Kattints egy sorra: alatta a próbák listája.</p>
+      <div class="bars" id="bars"></div>
+      <table style="margin-top:12px"><thead><tr><th>Próba</th><th>Ítélet</th><th class="hide-m">Megkapta</th></tr></thead><tbody id="rtab"></tbody></table>
+    </div>
+  </section>
+
+  </div></div></div>
+
+<script>
+const LEADS = {
+  sama: { name:"Sáma Vendégház", town:"Fonyód", day:9, left:6, start:"2026. 10. 28.", end:"2026. 11. 11.", endShort:"11. 11.", contact:"Marton Zoltán", last:"11. 04. e-mail + SMS", slug:"sama-vendeghaz",
+    // d = trial day (1-based); st: done | now | plan | skip
+    steps:[
+      {d:1, k:"msg", t:"Belépő levél (felhasználónév + jelszó-link)", st:"done", w:"10. 28. kiment"},
+      {d:8, k:"msg", t:"Emlékeztető e-mail + SMS, friss link (a 2./4./6. nap kimaradt: a funkció 11. 04-én indult)", st:"done", w:"11. 04. kiment"},
+      {d:9, k:"alert", t:"Riasztás: piros jelvény + koordinátor-jegy (kézbesíthető-e a szám és a cím)", st:"now", w:"ma, a funkció élesítésekor"},
+      {d:9, k:"mms", t:"MMS az élő oldal képével + kísérő SMS", st:"now", w:"ma 9–16 között"},
+      {d:9, k:"poe", t:"Poe személyes levele — a jóváhagyásodra vár", st:"now", w:"jóváhagyás után"},
+      {d:10,k:"stuck", t:"„Elakadt” jelzés, külön kategória a riportban", st:"plan", w:"holnap, 11. 06."},
+      {d:12,k:"exp", t:"Lejárat előtti levél (3 nap van hátra)", st:"plan", w:"11. 09."},
+      {d:14,k:"exp", t:"Lejárat előtti levél (holnap lejár)", st:"plan", w:"11. 10."},
+    ]},
+  marilyn: { name:"Marilyn Vendégház", town:"–", day:4, left:11, start:"2026. 11. 02.", end:"2026. 11. 16.", endShort:"11. 16.", contact:"Monik", last:"11. 04. e-mail + SMS", slug:"marilyn-vendeghaz",
+    steps:[
+      {d:1, k:"msg", t:"Belépő levél (felhasználónév + jelszó-link)", st:"done", w:"11. 02. kiment"},
+      {d:3, k:"msg", t:"Emlékeztető e-mail + SMS, friss link", st:"done", w:"11. 04. kiment"},
+      {d:4, k:"alert", t:"Riasztás: piros jelvény + koordinátor-jegy (kézbesíthető-e a szám és a cím)", st:"now", w:"ma"},
+      {d:4, k:"msg", t:"Emlékeztető e-mail + SMS, friss link", st:"now", w:"ma 9–16 között"},
+      {d:5, k:"mms", t:"MMS az élő oldal képével + kísérő SMS", st:"plan", w:"holnap, 11. 06."},
+      {d:6, k:"msg", t:"Emlékeztető e-mail + SMS — hétvégére esik", st:"skip", w:"kimarad: hétfőn már a 8. napi megy"},
+      {d:7, k:"poe", t:"Poe személyes levele — a jóváhagyásod után megy", st:"plan", w:"11. 09., hétfő"},
+      {d:8, k:"msg", t:"Emlékeztető e-mail + SMS, friss link", st:"plan", w:"11. 09., hétfő"},
+      {d:10,k:"stuck", t:"„Elakadt” jelzés, külön kategória a riportban", st:"plan", w:"11. 11."},
+      {d:12,k:"exp", t:"Lejárat előtti levél (3 nap van hátra)", st:"plan", w:"11. 13."},
+      {d:14,k:"exp", t:"Lejárat előtti levél (holnap lejár)", st:"plan", w:"11. 15."},
+    ]},
+};
+const ST = { done:["pill ok","kiment"], now:["pill warn","most"], plan:["pill","jön"], skip:["pill","kimarad"] };
+let cur="sama", variant="A";
+const $=s=>document.querySelector(s);
+
+function render(){
+  const L=LEADS[cur];
+  $("#h-name").textContent=L.name; $("#h-sub").textContent=`${L.town} · próbázik · konzol`;
+  $("#t-title").textContent=`Nem lépett be — ${L.day}. nap`;
+  $("#t-sub").textContent=`Próbázik, még ${L.left} nap · ${L.end}-ig · jelszót nem állított be`;
+  $("#m-start").textContent=L.start; $("#m-end").textContent=L.end; $("#m-contact").textContent=L.contact; $("#m-last").textContent=L.last;
+  // ladder
+  let h="";
+  for(let d=1; d<=14; d++){
+    const ev=L.steps.filter(s=>s.d===d).map(s=>`<i class="dot d-${s.k}"></i>`).join("");
+    const cls=d<L.day?"past":d===L.day?"today":"fut";
+    h+=`<div class="lad__c ${cls}" title="${d}. nap">${ev||d}</div>`;
+  }
+  $("#ladder").innerHTML=h;
+  const li=s=>`<li class="${s.st==="now"?"now":""}"><span class="d">${s.d}. nap</span><span><i class="dot d-${s.k}"></i> ${s.t}<br><span class="muted">${s.w}</span></span><span class="s"><span class="${ST[s.st][0]}">${ST[s.st][1]}</span></span></li>`;
+  $("#stepsA").innerHTML=L.steps.map(li).join("");
+  $("#stepsB").innerHTML=L.steps.map(li).join("");
+  $("#histsum").textContent=`Minden lépés (${L.steps.length})`;
+  const nows=L.steps.filter(s=>s.st==="now"), nexts=L.steps.filter(s=>s.st==="plan");
+  $("#nextB").innerHTML=`<div><b>${L.day}. nap, még nem lépett be.</b><br>Most: ${nows.map(s=>s.t.split(" — ")[0].split(":")[0].toLowerCase()).join(", ")}.<br><span class="muted">Következő: ${nexts[0].t.split(" — ")[0].split(",")[0]} — ${nexts[0].w}</span></div>`+
+    (L.steps.some(s=>s.k==="poe"&&s.st==="now")?`<a class="btn" href="#" data-goto="poe">Poe levele vár rád →</a>`:`<span class="pill">${nexts.length} lépés van még hátra</span>`);
+  // MMS
+  const sms=`Citoviso: a kepen mar az On elo honlapja. Szerkesztes egy kattintassal: https://citoviso.com/login/jelszo/kV3x9QmT2pLw8RzN4yHc7JbD1fGs6UeA0oXiY5nKqWt`;
+  $("#mms-sms").textContent=sms; $("#sms-code").textContent=sms;
+  $("#sms-len").textContent=`${sms.length}/160 karakter · a link a valódi, egyszer használható jelszó-link (a webcím a képen van, így 1 szeletbe fér)`;
+  $("#rib-url").textContent=`${L.slug}.citoviso.com`;
+  // Poe
+  $("#poe-name").textContent=L.name;
+  if(!poeTouched){
+    $("#poe-subj").value=`Segíthetek a belépésben? – ${L.name}`;
+    $("#poe-text").value=`Kedves ${L.contact.split(" ").slice(-1)[0]}!\n\nPoe vagyok a Citovisótól. Láttam, hogy a ${L.name} honlapja már egy hete él, de a szerkesztőbe még nem lépett be — gondoltam, írok személyesen, hátha valahol elakadt.\n\nA belépéshez elég egy kattintás, ezzel beállítja a saját jelszavát:\n[Jelszó beállítása]\n\nA felhasználóneve: ${L.slug}\n\nHa valahol elakad, írja meg válaszként, hol — és megmutatom, merre tovább.\n\nA próbából még ${L.left} nap van, ${L.endShort}-ig.\n\nÜdvözlettel:\nPoe, Citoviso`;
+  }
+  checkPoe();
+  renderP2();
+  renderReport();
+  $("#note").innerHTML=notes[tab]||"";
+  document.querySelectorAll("[data-goto]").forEach(a=>a.onclick=e=>{e.preventDefault();setTab(a.dataset.goto)});
+}
+let poeTouched=false, pv="P2";
+const TPL=`Tárgy: Segíthetek a belépésben? – {szállás neve}
+
+Kedves {megszólítás}!
+
+Poe vagyok a Citovisótól. Láttam, hogy a {szállás neve} honlapja már egy hete él, de a szerkesztőbe még nem lépett be — gondoltam, írok személyesen, hátha valahol elakadt.
+
+{egy mondat a saját oldalukról — csak abból, ami az oldalon van}
+
+A belépéshez elég egy kattintás, ezzel beállítja a saját jelszavát:
+[Jelszó beállítása]
+
+A felhasználóneve: {felhasználónév}
+
+Ha valahol elakad, írja meg válaszként, hol — és megmutatom, merre tovább.
+
+A próbából még {N} nap van, {dátum}-ig.
+
+Üdvözlettel:
+Poe, Citoviso`;
+function renderP2(){
+  $("#p2tpl").textContent=TPL;
+  $("#p2list").innerHTML=Object.values(LEADS).map(L=>`<p style="margin:6px 0"><b>${L.name}</b> — ${L.day>=7?"ma kimenne (a 7. nap elmúlt)":"a 7. napon megy (11. 09., hétfő)"}; saját mondata pl.: „Az oldal nyitóképén a ${L.name==="Sáma Vendégház"?"fonyódi ház":"ház"} fogadja a vendégeket — a szerkesztőben a képet is cserélheti.”</p>`).join("");
+}
+function setPv(v){pv=v;document.querySelectorAll("[data-pv]").forEach(x=>x.classList.toggle("on",x.dataset.pv===v));$("#poeP1").classList.toggle("hidden",v!=="P1");$("#poeP2").classList.toggle("hidden",v!=="P2");}
+document.querySelectorAll("[data-pv]").forEach(b=>b.onclick=()=>{setPv(b.dataset.pv);setTab("poe")});
+document.getElementById("p2ok").onclick=()=>{const d=document.getElementById("p2done");d.classList.remove("hidden");d.innerHTML='<div class="okmsg">Minta jóváhagyva. Innentől Poe levelei e keretben, magától mennek ki; a lead-lap lépcsőjén látszik, mi ment ki.</div>';document.getElementById("p2ok").disabled=true;};
+function checkPoe(){
+  const t=$("#poe-text").value, s=$("#poe-subj").value.trim();
+  let err="";
+  if(!s) err="A tárgy nem lehet üres.";
+  else if(!t.includes("[Jelszó beállítása]")) err="A szövegből hiányzik a [Jelszó beállítása] helye — enélkül a levélben nem lenne belépő-link.";
+  else if(t.trim().length<80) err="Túl rövid a levél.";
+  $("#poe-err").textContent=err; $("#poe-ok").disabled=!!err;
+  $("#poe-count").textContent=`${t.length} karakter`;
+}
+$("#poe-text").addEventListener("input",()=>{poeTouched=true;checkPoe()});
+$("#poe-subj").addEventListener("input",()=>{poeTouched=true;checkPoe()});
+function windowOpen(now){ // weekday 9–16, Budapest — same rule as mockOutreachWindowOpen
+  const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Budapest",weekday:"short",hour:"numeric",hour12:false}).formatToParts(now);
+  const wd=p.find(x=>x.type==="weekday").value, hr=+p.find(x=>x.type==="hour").value;
+  return !["Sat","Sun"].includes(wd) && hr>=9 && hr<16;
+}
+$("#poe-ok").onclick=()=>{
+  const open=windowOpen(new Date());
+  $("#poe-form").classList.add("hidden");
+  const d=$("#poe-done"); d.classList.remove("hidden");
+  d.innerHTML=(open?`<div class="okmsg">Elküldve ${new Date().toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"})}-kor, friss belépő-linkkel.</div>`
+    :`<div class="infomsg"><b>Jóváhagyva.</b> A küldési ablakon kívül vagyunk (hétköznap 9–16), a következő ablak elején megy ki, friss belépő-linkkel.</div>`)+
+    `<p class="muted">A lead-lap lépcsőjén „kiment” lesz; a levél a tenant postafiókjában is megjelenik, link nélkül.</p><button class="btn ghost" id="poe-undo">Vissza (csak a mockban)</button>`;
+  $("#poe-undo").onclick=()=>{d.classList.add("hidden");$("#poe-form").classList.remove("hidden")};
+};
+$("#poe-no").onclick=()=>{
+  $("#poe-form").classList.add("hidden");
+  const d=$("#poe-done"); d.classList.remove("hidden");
+  d.innerHTML=`<div class="infomsg"><b>Nem megy személyes levél.</b> A többi lépés (emlékeztetők, a 10. napi „elakadt” jelzés) marad.</div><button class="btn ghost" id="poe-undo" style="margin-top:10px">Vissza (csak a mockban)</button>`;
+  $("#poe-undo").onclick=()=>{d.classList.add("hidden");$("#poe-form").classList.remove("hidden")};
+};
+// ribbon position toggle
+$("#ribpos").onclick=()=>{const r=$("#rib");r.classList.toggle("top");$("#ribpos").textContent=r.classList.contains("top")?"Sáv alulra":"Sáv felülre"};
+
+// REPORT
+const CATS=[
+  {k:"no_login",l:"Nem lépett be (még fut)",c:"var(--citui-bad)",rows:[["Marilyn Vendégház","4. nap","e-mail+SMS ×2"]]},
+  {k:"stuck",l:"Elakadt: 10 nap belépés nélkül",c:"var(--citui-navy-900)",rows:[["Sáma Vendégház","holnaptól (10. nap)","e-mail+SMS, MMS, Poe"]]},
+  {k:"quiet",l:"Belépett, nem szerkesztett",c:"var(--citui-warn)",rows:[]},
+  {k:"worked",l:"Dolgozott rajta, aztán csend",c:"var(--citui-warn)",rows:[]},
+  {k:"order",l:"Rendelésben elakadt",c:"#7a5af5",rows:[]},
+  {k:"paid",l:"Megrendelte",c:"var(--citui-ok)",rows:[]},
+];
+let rsel="no_login";
+function renderReport(){
+  const max=2;
+  $("#bars").innerHTML=CATS.map(c=>`<div class="barrow ${c.k===rsel?"on":""}" data-k="${c.k}"><span>${c.l}</span><div class="bartrack"><div class="barfill" style="width:${c.rows.length/max*100}%;background:${c.c}"></div></div><b>${c.rows.length}</b></div>`).join("");
+  document.querySelectorAll(".barrow").forEach(b=>b.onclick=()=>{rsel=b.dataset.k;renderReport()});
+  const c=CATS.find(x=>x.k===rsel);
+  $("#rtab").innerHTML=c.rows.length?c.rows.map(r=>`<tr><td><b>${r[0]}</b></td><td><span class="pill ${rsel==="stuck"?"":"bad"}">${c.l.split(" (")[0].split(":")[0]}</span> <span class="muted">${r[1]}</span></td><td class="hide-m">${r[2]}</td></tr>`).join(""):`<tr><td colspan="3" class="muted">Ebben a kategóriában most nincs próba.</td></tr>`;
+}
+
+const notes={
+  lap:"<b>Lead-lap.</b> A próba-kártya piros fejet kap a 4. naptól, ha nem lépett be. <b>A</b>: a 14 nap egy csíkon + minden lépés listában (mi ment ki, mi jön). <b>B</b>: csak a teendő és a következő lépés látszik, a lista lenyitható.",
+  lista:"<b>Lista + Irányítópult.</b> Mindkét lead-lap változathoz ugyanez: piros jelvény a lead-sorban, csempe az Irányítópulton.",
+  mms:"<b>5. nap: MMS.</b> Az élő oldaluk képe telefonon, ahogy megérkezik. A kép ma élesben készült a Sáma oldaláról.",
+  poe:"<b>7. nap: Poe levele.</b> <b>P1</b> = ahogy javasoltam: minden levelet te hagysz jóvá (szerkeszthető, link-hely nélkül nem küldhető). <b>P2</b> = a 11-05-i „nulla humán” szabályod szerint: egyszer a mintát hagyod jóvá, utána magától megy.",
+  riport:"<b>Riport › Próba.</b> Új bontás: hol szakad meg a próba. Az „Elakadt” a 10. naptól külön kategória.",
+};
+let tab="lap";
+function setTab(t){
+  tab=t;
+  document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  document.querySelectorAll("[data-pane]").forEach(p=>p.classList.toggle("hidden",p.dataset.pane!==t));
+  $("#varsel").classList.toggle("hidden",t!=="lap");
+  $("#leadsel").classList.toggle("hidden",t==="lista"||t==="riport"||(t==="poe"&&pv==="P2"));
+  $("#poesel").classList.toggle("hidden",t!=="poe");
+  $("#note").innerHTML=notes[t];
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.querySelectorAll("[data-lead]").forEach(b=>b.onclick=()=>{cur=b.dataset.lead;poeTouched=false;document.querySelectorAll("[data-lead]").forEach(x=>x.classList.toggle("on",x===b));render()});
+document.querySelectorAll("[data-var]").forEach(b=>b.onclick=()=>{variant=b.dataset.var;document.querySelectorAll("[data-var]").forEach(x=>x.classList.toggle("on",x===b));$("#varA").classList.toggle("hidden",variant!=="A");$("#varB").classList.toggle("hidden",variant!=="B")});
+function setSize(s){$("#stage").classList.toggle("m",s==="m");$("#szm").classList.toggle("on",s==="m");$("#szd").classList.toggle("on",s==="d")}
+$("#szm").onclick=()=>setSize("m"); $("#szd").onclick=()=>setSize("d");
+const q=new URLSearchParams(location.search);
+setSize(q.get("size")||(innerWidth<700?"m":"d"));
+if(q.get("lead")) cur=q.get("lead");
+if(q.get("var")){variant=q.get("var");document.querySelectorAll("[data-var]").forEach(x=>x.classList.toggle("on",x.dataset.var===variant));$("#varA").classList.toggle("hidden",variant!=="A");$("#varB").classList.toggle("hidden",variant!=="B")}
+setPv(q.get("pv")||"P2"); render(); setTab(q.get("tab")||"lap");
+document.querySelectorAll("[data-lead]").forEach(x=>x.classList.toggle("on",x.dataset.lead===cur));
+</script>
+</body></html>

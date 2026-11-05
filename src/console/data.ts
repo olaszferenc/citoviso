@@ -40,7 +40,7 @@ import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
 import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
-import { CLIENT_FILTERS, isClientFilter, loadLeadClients, passesClientFilter, type ClientFilter, type ClientKind } from "./leadClient.js";
+import { CLIENT_FILTERS, isClientFilter, loadLeadClients, passesClientFilter, trialNoLogin, type ClientFilter, type ClientKind } from "./leadClient.js";
 import { isEngineArtifact } from "../conversion/provision.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
@@ -122,6 +122,8 @@ export interface LeadListRow {
 export interface LeadClientSummary {
   readonly kind: ClientKind | null;
   readonly daysLeft: number | null;
+  /** ADR-XXXX: the trial day when the owner has not logged in from day 4 on (red badge), else null. */
+  readonly noLoginDay?: number | null;
   readonly bookingTotal: number;
   readonly bookingPending: number;
 }
@@ -407,7 +409,13 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       client: (() => {
         const c = clients.get(l.id);
         return c
-          ? { kind: c.kind, daysLeft: c.trial?.daysLeft ?? null, bookingTotal: c.bookingTotal, bookingPending: c.bookingPending }
+          ? {
+              kind: c.kind,
+              daysLeft: c.trial?.daysLeft ?? null,
+              noLoginDay: trialNoLogin(c.trial) ? c.trial!.day : null,
+              bookingTotal: c.bookingTotal,
+              bookingPending: c.bookingPending,
+            }
           : null;
       })(),
     };

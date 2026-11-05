@@ -13,6 +13,9 @@ import {
   TRIAL_DAYS,
   TRIAL_STAGES,
   TRIAL_STATUS_FILTERS,
+  VERDICT_BUCKETS,
+  verdictBucket,
+  type VerdictBucket,
   type TrialEvent,
   type TrialReport,
   type TrialRow,
@@ -50,13 +53,18 @@ const STATUS_LABEL = (lang: string): Record<TrialStatusFilter, string> => ({
   lapsed: T(lang, "Lejárt"),
 });
 
-function href(r: TrialReport, over: { days?: ReportDays; st?: TrialStatusFilter; stage?: number | null } = {}): string {
+function href(
+  r: TrialReport,
+  over: { days?: ReportDays; st?: TrialStatusFilter; stage?: number | null; v?: VerdictBucket | null } = {},
+): string {
   const days = over.days ?? r.days;
   const st = over.st ?? r.st;
   const stage = over.stage === undefined ? r.stage : over.stage;
+  const v = over.v === undefined ? r.bucket : over.v;
   const p = new URLSearchParams({ days: String(days) });
   if (st !== "all") p.set("st", st);
   if (stage !== null) p.set("stage", String(stage));
+  if (v) p.set("v", v);
   return `/report/trial?${p.toString()}`;
 }
 
@@ -151,6 +159,8 @@ function verdictOf(v: TrialVerdict, lang: string, measured = true): { pill: stri
       return { pill: T(lang, "Rendelés folyamatban"), cls: "", sub: T(lang, "most nyitotta meg a rendelést") };
     case "no_login":
       return { pill: T(lang, "Nem lépett be"), cls: "rp-pill--bad", sub: T(lang, "{n}. nap", { n: v.day }) };
+    case "stalled":
+      return { pill: T(lang, "Elakadt: nem lépett be"), cls: "rp-pill--bad", sub: T(lang, "{n}. nap, 10 nap belépés nélkül", { n: v.day }) };
     case "quiet":
       return {
         pill: v.saved ? T(lang, "Dolgozott rajta, aztán csend") : T(lang, "Belépett, nem szerkesztett"),
@@ -279,6 +289,47 @@ function ladder(r: TrialReport, lang: string): string {
   return `<div class="rp-fun">${rows}</div>${note}`;
 }
 
+// ADR-XXXX (approved plan proba-eszkalacio, „Riport”): where does the trial break? One bar per
+// bucket of the same verdict the list shows; a tap narrows the list below to that bucket.
+const BUCKET_LABEL = (lang: string): Record<VerdictBucket, string> => ({
+  no_login: T(lang, "Nem lépett be (még fut)"),
+  stalled: T(lang, "Elakadt: 10 nap belépés nélkül"),
+  quiet_nosave: T(lang, "Belépett, nem szerkesztett"),
+  quiet_saved: T(lang, "Dolgozott rajta, aztán csend"),
+  stuck: T(lang, "Rendelésben elakadt"),
+  ordered: T(lang, "Rendelés folyamatban"),
+  active: T(lang, "Dolgozik rajta"),
+  paid: T(lang, "Megrendelte"),
+  lapsed: T(lang, "Lejárt, nem rendelt"),
+  unmeasured: T(lang, "A belseje nem mért"),
+});
+const BUCKET_TONE: Record<VerdictBucket, string> = {
+  no_login: "bad", stalled: "stuck", quiet_nosave: "warn", quiet_saved: "warn", stuck: "warn",
+  ordered: "", active: "", paid: "ok", lapsed: "muted", unmeasured: "muted",
+};
+
+function breaks(r: TrialReport, lang: string): string {
+  const counts = new Map<VerdictBucket, number>();
+  for (const t of r.trials) counts.set(verdictBucket(t.verdict), (counts.get(verdictBucket(t.verdict)) ?? 0) + 1);
+  const max = Math.max(1, ...counts.values());
+  const rows = VERDICT_BUCKETS.filter((b) => (counts.get(b) ?? 0) > 0 || b === "no_login" || b === "stalled")
+    .map((b) => {
+      const n = counts.get(b) ?? 0;
+      const on = r.bucket === b;
+      return (
+        `<a class="rp-brk__row${on ? " on" : ""}" data-cit-bucket="${b}" href="${esc(href(r, { v: on ? null : b, stage: null }))}#rp-trials">` +
+        `<span class="rp-brk__l">${esc(BUCKET_LABEL(lang)[b])}</span>` +
+        `<span class="rp-brk__t"><i class="rp-brk__f ${BUCKET_TONE[b]}" style="width:${((n / max) * 100).toFixed(1)}%"></i></span>` +
+        `<b class="rp-brk__n">${n}</b></a>`
+      );
+    })
+    .join("");
+  return (
+    `<div class="rp-brk">${rows}</div>` +
+    `<p class="rp-q rp-note">${esc(r.bucket ? T(lang, "A lista szűrve. Koppints újra a sorra a teljes listához.") : T(lang, "Minden próba egy helyen áll. Koppints egy sorra: alatta a próbák listája."))}</p>`
+  );
+}
+
 const TIMING_LABEL = (lang: string): Record<TrialTiming["key"], string> => ({
   first_login: T(lang, "Indulás → 1. belépés"),
   first_save: T(lang, "Indulás → 1. mentés"),
@@ -397,17 +448,22 @@ export function reportTrialPage(r: TrialReport): string {
     `</div>`;
 
   const stageName = r.stage !== null ? STAGE_LABEL(lang)[r.stage]![0] : null;
-  const chip = stageName
-    ? ` <a class="rp-pill rp-pill--warn rp-pill--xs" href="${esc(href(r, { stage: null }))}#rp-trials">${esc(T(lang, "Itt álltak meg: {s}", { s: stageName }))} ×</a>`
-    : "";
+  const chip =
+    (stageName
+      ? ` <a class="rp-pill rp-pill--warn rp-pill--xs" href="${esc(href(r, { stage: null }))}#rp-trials">${esc(T(lang, "Itt álltak meg: {s}", { s: stageName }))} ×</a>`
+      : "") +
+    (r.bucket
+      ? ` <a class="rp-pill rp-pill--warn rp-pill--xs" href="${esc(href(r, { v: null }))}#rp-trials">${esc(BUCKET_LABEL(lang)[r.bucket])} ×</a>`
+      : "");
   const list = r.listed.length
     ? r.listed.map((t) => trialRow(t, lang)).join("")
-    : `<p class="rp-q rp-tr__empty">${esc(r.stage !== null ? T(lang, "Ezen a lépcsőn senki nem állt meg.") : T(lang, "Ebben az időszakban nem indult próba."))}</p>`;
+    : `<p class="rp-q rp-tr__empty">${esc(r.bucket !== null ? T(lang, "Ebben a kategóriában most nincs próba.") : r.stage !== null ? T(lang, "Ezen a lépcsőn senki nem állt meg.") : T(lang, "Ebben az időszakban nem indult próba."))}</p>`;
 
   const body =
     kpis +
     `<div class="panel"><h2>${esc(T(lang, "Meddig jut el a próbázó?"))} <span class="rp-q">— ${esc(T(lang, "a szám: legalább eddig eljutott; koppints egy lépcsőre, és alatta látod, ki állt meg ott"))}</span></h2>` +
     `<div class="rp-lad">${`<div>${ladder(r, lang)}</div>`}<div>${timings(r, lang)}</div></div></div>` +
+    `<div class="panel" data-cit-breaks><h2>${esc(T(lang, "Hol szakad meg a próba?"))} <span class="rp-q">— ${esc(T(lang, "minden próba ott áll, ahol most tart; a 10. naptól belépés nélkül „elakadt”"))}</span></h2>${breaks(r, lang)}</div>` +
     `<div class="panel" id="rp-trials"><h2>${esc(T(lang, "Próbák napról napra"))}${chip} <span class="rp-q">— ${esc(T(lang, "mit csinált a próba 14 napja alatt; koppints egy sorra az idővonalért"))}</span></h2>` +
     LEGEND(lang) +
     `<div class="rp-trs">${list}</div></div>` +

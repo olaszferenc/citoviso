@@ -103,6 +103,7 @@ setMmsRelayDeps({
     afterSent.push(id);
     await onAfterSent(id);
   },
+  afterTrialMms: async () => {},
   alert: async (subject) => {
     alerts.push(subject);
   },

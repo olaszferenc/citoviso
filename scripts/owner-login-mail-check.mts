@@ -89,7 +89,8 @@ ok((en.html ?? "").includes(`${LOGIN}?lang=en`), "1. nem magyar olvasó: a link 
 
 // loginEmail.ts: credentials, password reset, and (ADR-0417) the trial login reminder — all three
 // name the login address in their details box, so the closing login line would repeat it.
-const ALLOW_OFF: Record<string, number> = { "src/email/activationEmail.ts": 1, "src/email/loginEmail.ts": 3, "src/email/orderEmail.ts": 2 };
+// ADR-XXXX: loginEmail.ts +1 — the trial helper letter (buildTrialHelperEmail) is a login letter: username + login address in its own block.
+const ALLOW_OFF: Record<string, number> = { "src/email/activationEmail.ts": 1, "src/email/loginEmail.ts": 4, "src/email/orderEmail.ts": 2 };
 const offFound: Record<string, number> = {};
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>

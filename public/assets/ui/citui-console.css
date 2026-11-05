@@ -3053,6 +3053,27 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-bar--thin { height: 8px; }
 .rp-bar__fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--citui-link-ink); transition: width var(--citui-transition); }
 .rp-bar__fill.rp-said { background: var(--citui-cyan-500); }
+/* ADR-XXXX „Hol szakad meg a próba?” (approved plan proba-eszkalacio). */
+.rp-brk { display: grid; gap: 4px; }
+.rp-brk__row {
+  display: grid; grid-template-columns: minmax(150px, 240px) minmax(0, 1fr) 40px; gap: 10px; align-items: center;
+  padding: 7px 8px; border-radius: 10px; color: inherit; text-decoration: none;
+}
+.rp-brk__row:hover, .rp-brk__row.on { background: var(--citui-surface-2); }
+.rp-brk__l { font-size: 13.5px; font-weight: 600; }
+.rp-brk__t { height: 14px; border-radius: 7px; background: var(--citui-surface-2); overflow: hidden; }
+.rp-brk__row:hover .rp-brk__t, .rp-brk__row.on .rp-brk__t { background: var(--citui-panel); }
+.rp-brk__f { display: block; height: 100%; border-radius: 7px; background: var(--citui-link-ink); }
+.rp-brk__f.bad { background: var(--citui-bad); }
+.rp-brk__f.stuck { background: var(--citui-navy-900); }
+.rp-brk__f.warn { background: var(--citui-warn); }
+.rp-brk__f.ok { background: var(--citui-ok); }
+.rp-brk__f.muted { background: var(--citui-muted); }
+.rp-brk__n { text-align: right; font-family: var(--citui-font-display); }
+@media (max-width: 640px) {
+  .rp-brk__row { grid-template-columns: minmax(0, 1fr) 40px; }
+  .rp-brk__t { grid-column: 1 / -1; grid-row: 2; }
+}
 .rp-bar__fill.rp-ramp-2 { background: var(--citui-cyan-500); }
 .rp-bar__fill.rp-ramp-3 { background: var(--citui-link-ink); }
 .rp-bar__fill.rp-ramp-4 { background: color-mix(in srgb, var(--citui-link-ink) 55%, var(--citui-navy-900)); }
@@ -3567,6 +3588,11 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-cpill.paid { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
 .con .con-cpill.lapsed { background: var(--citui-surface-2); color: var(--citui-muted); border-color: var(--citui-line-strong); }
 .con .con-cpill.bk { background: var(--citui-panel); color: var(--citui-ink-brand); border-color: var(--citui-line-strong); }
+/* ADR-XXXX (approved plan proba-eszkalacio): the red „nem lépett be” badge. */
+.con .con-cpill.bad {
+  background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink, var(--citui-bad));
+  border-color: color-mix(in srgb, var(--citui-bad) 40%, transparent);
+}
 .con .con-cbadges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 
 .con .con-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
@@ -3598,6 +3624,43 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con .con-client.soon .con-client__h { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel)); }
 .con .con-client.lapsed .con-client__h { background: var(--citui-surface-2); }
+/* ADR-XXXX: no login from trial day 4 — red head + the 14-day ladder („A”). */
+.con .con-client.bad { border-color: color-mix(in srgb, var(--citui-bad) 45%, transparent); }
+.con .con-client.bad .con-client__h { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-panel)); }
+.con .con-client.bad .con-client__t h3 { color: var(--citui-bad-ink, var(--citui-bad)); }
+.con .con-lad { margin-top: 14px; }
+.con .con-lad__strip { display: grid; gap: 3px; margin: 6px 0 4px; }
+.con .con-lad__c {
+  height: 32px; border-radius: 6px; background: var(--citui-surface-2); display: flex; align-items: center; justify-content: center;
+  gap: 2px; font-size: 10px; color: var(--citui-muted); min-width: 0;
+}
+.con .con-lad__c.past { background: color-mix(in srgb, var(--citui-line-strong) 45%, var(--citui-panel)); }
+.con .con-lad__c.today { outline: 2px solid var(--citui-ink-brand); outline-offset: 1px; }
+.con .con-lad__c.fut {
+  background: repeating-linear-gradient(45deg, var(--citui-surface-2), var(--citui-surface-2) 4px, var(--citui-panel) 4px, var(--citui-panel) 8px);
+}
+.con .con-lad__dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--citui-muted); }
+.con .con-lad__dot.msg { background: var(--citui-cyan-500); }
+.con .con-lad__dot.alert { background: var(--citui-bad); }
+.con .con-lad__dot.mms { background: var(--citui-ink-brand); box-shadow: inset 0 0 0 2px var(--citui-cyan-300); }
+.con .con-lad__dot.helper { background: var(--citui-warn); }
+.con .con-lad__dot.stuck { background: var(--citui-navy-900); }
+.con .con-lad__dot.exp { background: var(--citui-muted); }
+.con .con-lad__lgd { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--citui-muted); margin-bottom: 10px; }
+.con .con-lad__lgd span { display: inline-flex; align-items: center; gap: 5px; }
+.con .con-lad__steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--citui-line); }
+.con .con-lad__steps li {
+  display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 4px 10px; padding: 9px 0;
+  border-bottom: 1px solid var(--citui-line); font-size: 13.5px;
+}
+.con .con-lad__steps li.now { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel)); margin: 0 -18px; padding: 9px 18px; }
+.con .con-lad__d { font-weight: 700; color: var(--citui-muted); font-size: 12px; }
+@container (max-width: 620px) {
+  .con .con-lad__c { height: 26px; font-size: 9px; }
+  .con .con-lad__c .con-lad__dot { width: 6px; height: 6px; }
+  .con .con-lad__steps li { grid-template-columns: 52px minmax(0, 1fr); }
+  .con .con-lad__s { grid-column: 2; }
+}
 .con .con-client__t { flex: 1 1 260px; min-width: 0; }
 .con .con-client__t h3 { margin: 0 0 4px; font-family: var(--citui-font-display); font-size: 1.1rem; color: var(--citui-ink-brand); }
 .con .con-client__meter { height: 6px; max-width: 280px; border-radius: 9px; background: var(--citui-line); overflow: hidden; margin: 4px 0 3px; }

@@ -149,7 +149,7 @@ import { siteShotPath } from "../payment/siteShot.js";
 import { renderTenantSiteForPlanLink, rerenderTenantSnapshot, tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import { alertWebhookFailure } from "./houseAlert.js";
-import { isClientFilter, loadLeadClients } from "./leadClient.js";
+import { isClientFilter, loadLeadClients, loadNoLoginTrials } from "./leadClient.js";
 import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
 import { resolvePayEntry } from "../payment/payEntry.js";
 import {
@@ -404,7 +404,7 @@ import {
   verifyPhotoSignature,
 } from "./photoProxy.js";
 import { CHECKOUT_STEPS, orderOpenFrom, recordTenantActivity } from "../analytics/tenantActivity.js";
-import { getTrialReport, TRIAL_STATUS_FILTERS, type TrialStatusFilter } from "./trialReport.js";
+import { getTrialReport, isVerdictBucket, TRIAL_STATUS_FILTERS, type TrialStatusFilter } from "./trialReport.js";
 import { reportTrialPage } from "./trialReportViews.js";
 import { reportRevenuePage, REVENUE_LIST_FILTERS, REVENUE_SORTS, type RevenueListFilter, type RevenueSort } from "./revenueReportViews.js";
 import { getRevenueReport, REVENUE_HORIZONS, type RevenueHorizon } from "./revenueReport.js";
@@ -1757,6 +1757,7 @@ async function handle(
       // Is this console even running today's code? (2026-09-08 silent-staleness fix)
       stale: await getTreeFreshness(),
       replies: await getRepliesBlock(),
+      noLoginTrials: await loadNoLoginTrials(),
       repliesQuery: {
         filter: url.searchParams.get("replies") === "all" ? "all" : "open",
         reply: url.searchParams.get("reply"),
@@ -2763,7 +2764,8 @@ async function handle(
     const st: TrialStatusFilter = (TRIAL_STATUS_FILTERS as readonly string[]).includes(stRaw) ? (stRaw as TrialStatusFilter) : "all";
     const stageRaw = url.searchParams.get("stage");
     const stage = stageRaw !== null && /^[0-5]$/.test(stageRaw) ? Number(stageRaw) : null;
-    return send(res, 200, reportTrialPage(await getTrialReport(days, st, stage)));
+    const vRaw = url.searchParams.get("v");
+    return send(res, 200, reportTrialPage(await getTrialReport(days, st, stage, new Date(), isVerdictBucket(vRaw) ? vRaw : null)));
   }
   // GET /report/revenue — the Előfizetők tab (frozen plan: design-refs/console/elofizetok-riport/).
   // Query: h ∈ {3,6,12} forecast months (default 6), t=1 counts the tests, m=YYYY-MM the month shown in

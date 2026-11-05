@@ -45,6 +45,8 @@ export interface MmsAck {
 export interface MmsRelayDeps {
   /** After the ack stamped mms_sent_at: send the pair's companion SMS half. */
   afterSent(prospectId: string, pairStartedAt: Date): Promise<unknown>;
+  /** ADR-XXXX: after a trial's live-site MMS was accepted (ok) or parked failed: its companion SMS / ledger. */
+  afterTrialMms(freeTrialId: string, ok: boolean, error: string | null): Promise<unknown>;
   alert(subject: string, text: string): Promise<unknown>;
 }
 
@@ -56,6 +58,10 @@ const realDeps: MmsRelayDeps = {
     const r = await sendPairSmsHalf(prospectId, pairStartedAt);
     if (!r.ok) console.error(`[mms-relay] a pár SMS-fele nem ment ki (${prospectId}): ${r.message}`);
     return r;
+  },
+  afterTrialMms: async (freeTrialId, ok, error) => {
+    const { settleTrialMms } = await import("../trial/escalation.js");
+    return settleTrialMms(freeTrialId, ok, error);
   },
   alert: (subject, text) => alertHouse({ tag: "mms-relay", subject, text }),
 };
@@ -164,10 +170,11 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
         .set({ status: "sent", sent_at: new Date(), last_error: null, message_id: r.messageId ?? null })
         .where("id", "=", r.id)
         .where("status", "in", ["sending", "unknown", "queued"])
-        .returning(["prospect_id", "created_at"])
+        .returning(["prospect_id", "free_trial_id", "created_at"])
         .executeTakeFirst();
       if (!row) continue; // already sent (duplicate ack) or unknown id → idempotent no-op
       settled.push(r.id);
+      if (row.free_trial_id) await deps.afterTrialMms(row.free_trial_id, true, null);
       if (row.prospect_id) {
         // ADR-0083 claim: the lead SAW the image now.
         const stamped = await db
@@ -185,7 +192,7 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
     const error = String(r.error ?? "").slice(0, 500) || "ismeretlen relay-hiba";
     const row = await db
       .selectFrom("mms_outbox")
-      .select(["attempts", "status"])
+      .select(["attempts", "status", "free_trial_id"])
       .where("id", "=", r.id)
       .executeTakeFirst();
     if (!row || row.status !== "sending") continue;
@@ -204,6 +211,7 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
       .set({ status: final ? "failed" : "queued", last_error: error })
       .where("id", "=", r.id)
       .execute();
+    if (final && row.free_trial_id) await deps.afterTrialMms(row.free_trial_id, false, error);
     if (final) {
       await alertRow(
         r.id,

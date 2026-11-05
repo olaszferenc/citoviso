@@ -68,6 +68,28 @@ export interface LeadClientTrial {
   readonly discountPercent: number | null;
   /** First outreach to the lead before the trial (ISO), null = the trial came without one. */
   readonly outreachAt: string | null;
+  /** ADR-XXXX: the trial day today (1 = the start's Budapest day). */
+  readonly day: number;
+  /** ADR-XXXX: has the owner ever set a password or logged in? */
+  readonly loggedIn: boolean;
+  /** ADR-XXXX: every message / mark of the trial (free_trial_notice), oldest first — page only. */
+  readonly notices: readonly TrialNoticeRow[];
+}
+
+export interface TrialNoticeRow {
+  readonly step: string;
+  readonly channel: string;
+  readonly status: string;
+  readonly detail: string | null;
+  readonly at: string;
+}
+
+/** ADR-XXXX: the red „nem lépett be” state — a running trial, day ≥ 4, no password yet. */
+export const NO_LOGIN_FLAG_DAY = 4;
+/** ADR-XXXX: „elakadt” — day ≥ 10 without a login. */
+export const STALLED_DAY = 10;
+export function trialNoLogin(t: Pick<LeadClientTrial, "status" | "day" | "loggedIn"> | null | undefined): boolean {
+  return !!t && t.status === "active" && !t.loggedIn && t.day >= NO_LOGIN_FLAG_DAY;
 }
 
 export interface LeadClientView {
@@ -147,6 +169,35 @@ export async function loadLeadClients(
     ]);
   if (ids) tenantsQ = tenantsQ.where("tenant.lead_id", "in", ids);
   const [trials, tenants] = await Promise.all([trialsQ.execute(), tenantsQ.execute()]);
+
+  // ADR-XXXX: who has logged in (or set a password) — the red flag is the absence of it.
+  const tenantIdsAll = tenants.map((t) => t.tenantId);
+  const loggedTenants = new Set(
+    tenantIdsAll.length
+      ? (
+          await db
+            .selectFrom("tenant_user")
+            .select("tenant_id")
+            .where("tenant_id", "in", tenantIdsAll)
+            .where((eb) => eb.or([eb("password_set_at", "is not", null), eb("last_login_at", "is not", null)]))
+            .execute()
+        ).map((r) => r.tenant_id)
+      : [],
+  );
+  const noticesByTrial = new Map<string, TrialNoticeRow[]>();
+  if (opts.withBookingList && trials.length) {
+    const rows = await db
+      .selectFrom("free_trial_notice")
+      .select(["free_trial_id", "step", "channel", "status", "detail", "created_at"])
+      .where("free_trial_id", "in", trials.map((t) => t.id))
+      .orderBy("created_at", "asc")
+      .execute();
+    for (const r of rows) {
+      const list = noticesByTrial.get(r.free_trial_id) ?? [];
+      list.push({ step: r.step, channel: r.channel, status: r.status, detail: r.detail, at: new Date(r.created_at as unknown as string).toISOString() });
+      noticesByTrial.set(r.free_trial_id, list);
+    }
+  }
 
   const siteIds = tenants.map((t) => t.siteId).filter((s): s is string => !!s);
   const counts = siteIds.length
@@ -253,6 +304,9 @@ export async function loadLeadClients(
             contactPhone: t.contact_phone,
             discountPercent: (t.offer_id && liveOffer.get(t.offer_id)) || (t.coupon_offer_id && liveOffer.get(t.coupon_offer_id)) || null,
             outreachAt: sentByLead.get(leadId) ?? null,
+            day: dayDiff(startDay!, isoDay(now)) + 1,
+            loggedIn: !!ten && loggedTenants.has(ten.tenantId),
+            notices: noticesByTrial.get(t.id) ?? [],
           }
         : null,
       siteUrl: ten?.slug || ten?.customDomain ? tenantSiteUrl(config.publicSiteUrl, ten.slug ?? null, ten.customDomain ?? null) : null,
@@ -273,4 +327,22 @@ export function retentionDay(untilDay: string): string {
   const d = new Date(`${untilDay}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + TRIAL_RETENTION_DAYS);
   return d.toISOString().slice(0, 10);
+}
+
+/** ADR-XXXX: the running trials whose owner has not logged in from day 4 on (dashboard row), oldest first. */
+export async function loadNoLoginTrials(now: Date = new Date()): Promise<{ leadId: string; name: string; day: number }[]> {
+  const rows = await db
+    .selectFrom("free_trial")
+    .innerJoin("lead", "lead.id", "free_trial.lead_id")
+    .select(["free_trial.lead_id as leadId", "lead.name as name"])
+    .where("free_trial.status", "=", "active")
+    .execute();
+  if (!rows.length) return [];
+  const clients = await loadLeadClients({ leadIds: rows.map((r) => r.leadId), now });
+  return rows
+    .flatMap((r) => {
+      const t = clients.get(r.leadId)?.trial;
+      return t && trialNoLogin(t) ? [{ leadId: r.leadId, name: r.name, day: t.day }] : [];
+    })
+    .sort((a, b) => b.day - a.day);
 }
