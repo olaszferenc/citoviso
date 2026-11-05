@@ -72,9 +72,11 @@ a lead-lapon látod, mi ment ki:
   „Hol szakad meg a próba?” panelen.
 
 Az üzenetek hétköznap 9 és 16 óra között mennek; ami hétvégére esik, hétfőn. Mindegyik egyszer. Ha a
-leadet a Válaszok panelen **„Elutasító / nem érintett — ne keressük”** jellel jelölted, az 5. napi MMS és a
-7. napi személyes levél nem megy ki (a piros jelzés megjelenik); a 2–8. napi emlékeztetők és a lejárat
-előtti levelek viszont igen.
+leadet a Válaszok panelen **„Elutasító / nem érintett — ne keressük”** jellel jelölted, semmilyen üzenetet
+nem kap tőlünk: se emlékeztetőt, se MMS-t, se személyes levelet, se lejárat előtti levelet (a lead-lapon
+„kimaradt: ne keressük (contact_block)” áll mellettük); a piros jelzés ettől még megjelenik. Kivétel csak kettő: a próba indulásakor a
+belépő adatai (azt ő maga kérte az űrlappal), és az adattörlés előtti értesítés (a 90 napos törlés
+törvényi feltétele).
 
 ## A próba vége előtt: T−3 és T−1 értesítés
 

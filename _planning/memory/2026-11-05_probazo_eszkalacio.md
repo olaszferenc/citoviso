@@ -12,7 +12,7 @@
 - Az első hétköznapi tick-ben Sáma: e4 + s10 jel, MMS + kísérő SMS, személyes levél; Marilyn: e4 jel, 5. napján MMS, 7. napja vasárnap → hétfőn levél.
 
 ## Nyitott
-- „Ne keressük” jelű próbázó: az eszkaláció (MMS, levél) kimarad, de az ADR-0417 emlékeztetői (l2–l8) és a T−3/T−1 levél NEM nézik a `contact_block_at`-et — a „semmilyen üzenet” doktrínával ütközik; javítandó (súgó-őr lelete 11-05).
+- ✅ JAVÍTVA 11-05 (koordinátor kérésére, tulaj 10-26-i doktrínája): „ne keressük” jelű próbázó semmilyen üzenetet nem kap — l2–l8, T−3/T−1, m5, h7 egy predikátumból (`src/trial/contactBlock.ts`). Szándékos kivétel: p7 törlés előtti levél (a 90 napos törlés feltétele), és az l0 induló SMS (a saját űrlap-beküldésére válasz).
 - Súgó pótolva 11-05 (tudasbazis-or PASS): console-report-trial (+breaks.png), console-lead, console-leads, console-free-trial, console-dashboard.
 - Koordinátor-jegy a 4. napi jelzéshez (VPS → dev gép híd) — külön lépés.
 - SMS-kézbesítés nem mérhető (ADR-0417 nyitott pontja).

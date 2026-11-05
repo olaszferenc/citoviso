@@ -13,7 +13,9 @@
 //      nothing; Monday (day 8) the helper letter; day 10 the „elakadt” mark;
 //   ④ the queue path: a queued MMS waits (claimed), the ack (settleTrialMms) sends the SMS;
 //      a final failure marks the MMS failed and sends no SMS;
-//   ⑤ „ne keressük” (lead.contact_block_at): the red mark yes, MMS and letter skipped;
+//   ⑤ „ne keressük” (lead.contact_block_at): the red mark yes, but NO message of any kind — the
+//      MMS and the letter (escalation), the l2–l8 reminders (ADR-0417) and the T−3 / T−1 warning
+//      are all recorded as skipped with the same reason (one shared predicate, contactBlock.ts);
 //   ⑥ once the owner set a password nothing more goes;
 //   ⑦ the console reads the same facts: trialNoLogin, the red list badge, the red card with
 //      the ladder, and the ladder lists what went out.
@@ -88,6 +90,9 @@ const { config } = await import("../src/config.js");
 const { overrideFreeTrialConfigInProcess } = await import("../src/trial/config.js");
 const { startTrial } = await import("../src/trial/start.js");
 const E = await import("../src/trial/escalation.js");
+const { runLoginReminders } = await import("../src/trial/loginReminders.js");
+const { runTrialNotices, noticeSendDay } = await import("../src/trial/expiry.js");
+const { CONTACT_BLOCK_DETAIL } = await import("../src/trial/contactBlock.js");
 const { buildTrialHelperEmail, buildTrialMmsSmsText } = await import("../src/email/loginEmail.js");
 const { helperFromName, helperName } = await import("../src/trial/helperPersona.js");
 const { isGsm7, smsEncoding } = await import("../src/sms/encoding.js");
@@ -275,6 +280,28 @@ try {
   await E.runTrialEscalation(bp("2026-10-12", "10:00"), deps, { onlyTrialIds: [D.trialId] });
   const rd = await rowsOf(D.trialId);
   check("piros jelzés igen, MMS és levél kihagyva", st(rd, "e4", "mark") === "sent" && st(rd, "m5", "mms") === "skipped" && st(rd, "h7", "email") === "skipped" && mmss.length === mmsD0 && mails.length === mailD0);
+  if (SELF_TEST) await db.updateTable("lead").set({ contact_block_at: null } as never).where("id", "=", D.leadId).execute();
+  const remD = await runLoginReminders(bp("2026-10-12", "10:00"), { email: deps.email, sms: deps.sms }, { onlyTrialIds: [D.trialId] });
+  const rd2 = await rowsOf(D.trialId);
+  const l8 = rd2.filter((r) => r.step === "l8");
+  check("belépés-emlékeztető (l8): nem megy, mindkét csatorna „ne keressük” okkal kihagyva",
+    remD.sent === 0 && mails.length === mailD0 && l8.length === 2 && l8.every((r) => r.status === "skipped" && r.detail === CONTACT_BLOCK_DETAIL), JSON.stringify(remD));
+  const t3day = noticeSendDay("t3", bp("2026-10-05", "10:00"), bp("2026-10-19", "10:00"))!;
+  const noticeSent: string[] = [];
+  const notD = await runTrialNotices(bp(t3day, "10:00"), {
+    sendEmail: async (t) => void noticeSent.push(`email:${t.step}`),
+    sendSms: async (t) => void noticeSent.push(`sms:${t.step}`),
+  }, { onlyTrialIds: [D.trialId] });
+  const rd3 = await rowsOf(D.trialId);
+  const t3 = rd3.filter((r) => r.step === "t3");
+  check("lejárat előtti levél (T−3): nem megy, „ne keressük” okkal kihagyva",
+    notD.sent === 0 && noticeSent.length === 0 && t3.length === 2 && t3.every((r) => r.status === "skipped" && r.detail === CONTACT_BLOCK_DETAIL), `${t3day} ${JSON.stringify(notD)}`);
+  // control: the same runners DO send to an unblocked trial (A) — the skip is the block, not a broken runner
+  const notA = await runTrialNotices(bp(t3day, "10:00"), {
+    sendEmail: async (t) => void noticeSent.push(`email:${t.step}`),
+    sendSms: async (t) => void noticeSent.push(`sms:${t.step}`),
+  }, { onlyTrialIds: [A.trialId] });
+  check("kontroll: jel nélküli próbának a T−3 kimegy", notA.sent >= 1 && noticeSent.length >= 1, JSON.stringify(notA));
 
   // ⑥ logged in → silence
   console.log("⑥ belépett → csend");

@@ -35,6 +35,7 @@ import { sendSms as sendSmsDefault } from "../sms/sender.js";
 import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { addIsoDays, budapestIsoDay } from "../text/budapestTime.js";
+import { CONTACT_BLOCK_DETAIL, trialContactBlocked } from "./contactBlock.js";
 import { helperFromName, helperName } from "./helperPersona.js";
 import { liveHeading, renderLiveShot, type LiveShotResult } from "./liveShot.js";
 import { loginContext, ownerHasLoggedIn, sendLoggedSms, type LoginSmsSender } from "./loginReminders.js";
@@ -85,17 +86,6 @@ async function mark(trialId: string, step: EscalationStep, channel: Channel, sta
     .where("step", "=", step)
     .where("channel", "=", channel)
     .execute();
-}
-
-/** Is the lead behind this trial marked „ne keressük” (ADR-0421)? */
-async function contactBlocked(trialId: string): Promise<boolean> {
-  const r = await db
-    .selectFrom("free_trial")
-    .innerJoin("lead", "lead.id", "free_trial.lead_id")
-    .select("lead.contact_block_at as at")
-    .where("free_trial.id", "=", trialId)
-    .executeTakeFirst();
-  return Boolean(r?.at);
 }
 
 async function siteUrlOf(tenantId: string): Promise<string | null> {
@@ -163,9 +153,9 @@ export async function runTrialEscalation(
     if (day >= ESCALATION_DAYS.s10 && (await claim(t.id, "s10", "mark", "sent", null))) out.stalled++;
     if (out.windowClosed || !deps) continue;
     if (day < ESCALATION_DAYS.m5) continue;
-    if (await contactBlocked(t.id)) {
+    if (await trialContactBlocked(t.id)) {
       for (const [s, ch] of [["m5", "mms"], ["h7", "email"]] as const) {
-        if (day >= ESCALATION_DAYS[s] && (await claim(t.id, s, ch, "skipped", "ne keressük (contact_block)"))) out.skipped++;
+        if (day >= ESCALATION_DAYS[s] && (await claim(t.id, s, ch, "skipped", CONTACT_BLOCK_DETAIL))) out.skipped++;
       }
       continue;
     }

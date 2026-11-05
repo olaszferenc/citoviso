@@ -18,6 +18,7 @@ import { db } from "../db/client.js";
 import { addIsoDays, budapestIsoDay, budapestWeekday } from "../text/budapestTime.js";
 import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
+import { CONTACT_BLOCK_DETAIL, trialContactBlocked } from "./contactBlock.js";
 
 export interface LapseResult {
   readonly lapsed: number;
@@ -233,6 +234,12 @@ export async function runTrialNotices(
         const r = await claim(t.id, s, channel, "skipped", "egy későbbi lépcső már esedékes");
         if (r) out.skipped++;
       }
+    }
+    // Owner doctrine 2026-10-26 (ADR-0421): a „ne keressük” lead gets no further message —
+    // the warning is recorded as skipped, so the ledger (and the lead page) says why.
+    if (await trialContactBlocked(t.id)) {
+      for (const channel of ["email", "sms"] as const) if (await claim(t.id, step!, channel, "skipped", CONTACT_BLOCK_DETAIL)) out.skipped++;
+      continue;
     }
     const target: TrialNoticeTarget = {
       trialId: t.id,

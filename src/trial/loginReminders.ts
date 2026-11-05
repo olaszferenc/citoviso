@@ -31,6 +31,7 @@ import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { sendSms as sendSmsDefault, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { noticeSendDay } from "./expiry.js";
 import { trialDaysLeft } from "./notices.js";
+import { CONTACT_BLOCK_DETAIL, trialContactBlocked } from "./contactBlock.js";
 
 export type LoginReminderStep = "l2" | "l4" | "l6" | "l8";
 /** The trial day each step goes on — day 1 is the start day (as the /report trial timeline counts). */
@@ -202,6 +203,11 @@ export async function runLoginReminders(
     if (done) continue;
     const channels = ["email", "sms"] as const;
     for (const s of older) for (const ch of channels) if (await claim(t.id, s, ch, "skipped", "egy későbbi emlékeztető már esedékes")) out.skipped++;
+    // Owner doctrine 2026-10-26 (ADR-0421): a „ne keressük” lead gets no further message.
+    if (await trialContactBlocked(t.id)) {
+      for (const ch of channels) if (await claim(t.id, step!, ch, "skipped", CONTACT_BLOCK_DETAIL)) out.skipped++;
+      continue;
+    }
     out.due++;
     if (!deps) {
       console.log(`[trial] belépés-emlékeztető ESEDÉKES (száraz) · ${step} · próba ${t.id}`); // i18n-exempt: operátori napló
