@@ -203,3 +203,8 @@ könyvelő, fogorvos) 0 saját használható kép → ott stock/generált kép, 
 FB/IG-link, keresés nélkül (Google CAPTCHA, FB-keresés belépést kér) → a `jó` szám nőhet; (5) két „honlap nélküli” helynél
 saját domain-nyom (Fonat: `fonatszalon.hu` IG-bióban, MilaDerma: `miladerma.hu` FB-n) → a Térkép-szintű „nincs honlap”
 §F.13 ellenőrzés nélkül téves lehet. Jog: FB/IG-kép csak demóra (§A), élesre a tulaj saját képe.
+
+## Zárás (2026-11-05)
+
+Tulaj: „egyelőre ez egy felderítő folyamat volt” — a szál így zárul. Nyitott a pilot-szakma, a földrajz és az ár
+(MEMORY.md „Nyitott kérdések”). Mindkét SUB retire + felhő-archiválva.
