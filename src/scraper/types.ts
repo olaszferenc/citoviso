@@ -174,6 +174,9 @@ export interface QualifiedLead {
     readonly value: number;
     readonly count: number;
     readonly source: "magellan";
+    /** The place's own Google Maps card the number was read from (scout_place.link) —
+     *  the badge links here when there is no Places id to build a reviews URL from. */
+    readonly url?: string;
   };
   /** Assessment of the own site (only set for has_own leads after enrichment). */
   readonly assessment?: WebsiteAssessment;

@@ -30,7 +30,7 @@ import { bookableUnits, ensureUnits, guestUnits, isBookableUnit, isWholeOnlySite
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
 import { formatSpan, getSitePrices, isPriceActive, priceSpan, publicSeasons, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
-import { getPlaceRating } from "../reviews/placeRating.js";
+import { getPlaceRating, scoutMapsUrlForSite } from "../reviews/placeRating.js";
 import {
   decorateWithLanguages,
   multilangContentHash,
@@ -738,7 +738,14 @@ async function assembleEffective(
     photoChecked.photos as PhotoEdit[],
     overrideActive,
   );
-  const merged2: SiteData = { ...photoChecked, ...moduleContent.data };
+  const merged3: SiteData = { ...photoChecked, ...moduleContent.data };
+  // A snapshot rating without a link is the Magellan scout's Maps reading (no Places
+  // id to build a reviews URL from). Link it to the place card it was read from, so
+  // the badge is verifiable instead of a dead box (Duna Vibe House, 2026-11-05).
+  const scoutUrl =
+    merged3.rating && !merged3.rating.url && !merged3.googleRating ? await scoutMapsUrlForSite(s.id) : null;
+  const merged2: SiteData =
+    scoutUrl && merged3.rating ? { ...merged3, rating: { ...merged3.rating, url: scoutUrl } } : merged3;
   // The photo cap runs LAST: only here is the final list known (base photos, the
   // tenant's uploads, then the live rights filter).
   const effective: SiteData =

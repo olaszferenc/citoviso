@@ -12,6 +12,7 @@
 import { db } from "../../db/client.js";
 import { foundLinks, phoneE164, rowComplete, webClass, webUrl } from "../../scout/rules.js";
 import { classifyWebsite } from "../qualify.js";
+import { googleMapsPlaceUrl } from "../../reviews/placeRating.js";
 import type { LeadSource } from "./LeadSource.js";
 import type { PortalListing, QualifiedLead, RawLead, ScrapeQuery } from "../types.js";
 
@@ -26,6 +27,8 @@ export interface ScoutExtra {
   /** „van saját honlap" → the first found link (already checked to be an own site). */
   readonly ownSite: string | null;
   readonly rating: { readonly value: number; readonly count: number } | null;
+  /** The place's Google Maps card (validated) — where the rating can be verified. */
+  readonly mapsUrl: string | null;
 }
 
 export class MagellanSource implements LeadSource {
@@ -47,6 +50,7 @@ export class MagellanSource implements LeadSource {
         "lat",
         "lon",
         "ftid",
+        "link",
         "status",
         "address",
         "city",
@@ -76,6 +80,7 @@ export class MagellanSource implements LeadSource {
         portalLinks: links.filter((u) => classifyWebsite(u) === "portal_only"),
         ownSite: r.verdict === "own" ? (links[0] ?? null) : null,
         rating: r.rating != null && r.rating_count != null ? { value: r.rating, count: r.rating_count } : null,
+        mapsUrl: googleMapsPlaceUrl(r.link),
       });
       out.push({
         source: MAGELLAN_SOURCE,
@@ -120,7 +125,15 @@ export function applyScoutExtras(leads: QualifiedLead[], extras: ReadonlyMap<str
       next = { ...next, listings: [...(next.listings ?? []), ...add] };
     }
     if (ex.rating) {
-      next = { ...next, mapsRating: { value: ex.rating.value, count: ex.rating.count, source: MAGELLAN_SOURCE } };
+      next = {
+        ...next,
+        mapsRating: {
+          value: ex.rating.value,
+          count: ex.rating.count,
+          source: MAGELLAN_SOURCE,
+          ...(ex.mapsUrl ? { url: ex.mapsUrl } : {}),
+        },
+      };
     }
     return next;
   });

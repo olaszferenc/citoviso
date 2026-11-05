@@ -45,7 +45,7 @@ import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems,
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { fingerprintCandidates } from "./photoHash.js";
 import { GATE_OPENING, GATE_SUBJECTS, gatePhotoOf } from "../engine/templates/gateOpening.js";
-import { reviewsUrlFor } from "../reviews/placeRating.js";
+import { googleMapsPlaceUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
   loadLead,
   mockArtifactPath,
@@ -76,6 +76,17 @@ function placeIdOf(lead: LoadedLead["lead"]): string | null {
   const refs = (lead as unknown as { sourceRefs?: Record<string, string> }).sourceRefs;
   const id = refs?.google_places;
   return typeof id === "string" && id.trim() ? id : null;
+}
+
+/**
+ * The Google Maps card the Magellan scout read the rating from — the link for a
+ * scouted badge when there is no Places id (ADR-0336). Only when the printed number
+ * IS the scouted one, so the link never points at a source of a different number.
+ */
+function scoutedMapsUrl(lead: LoadedLead["lead"], rating: number): string | null {
+  const r = (lead as unknown as { mapsRating?: { value?: number; source?: string; url?: string } }).mapsRating;
+  if (!r || r.source !== "magellan" || r.value !== rating) return null;
+  return googleMapsPlaceUrl(r.url);
 }
 
 /**
@@ -645,7 +656,11 @@ async function generateEngineMockInner(
           rating: {
             value: rating,
             count: userRatingCount,
-            ...(placeIdOf(lead) ? { url: reviewsUrlFor(placeIdOf(lead)!) } : {}),
+            ...(placeIdOf(lead)
+              ? { url: reviewsUrlFor(placeIdOf(lead)!) }
+              : scoutedMapsUrl(lead, rating)
+                ? { url: scoutedMapsUrl(lead, rating)! }
+                : {}),
           },
         }
       : {}),

@@ -100,6 +100,43 @@ export async function placeIdForSite(
   return { placeId, confidence: row.confidence };
 }
 
+/**
+ * A scout's Maps link is accepted only when it is Google Maps' own place page —
+ * the worksheet column is free text, and the badge must never send a visitor to
+ * an arbitrary host under the "Megnézem a Google-on" label.
+ */
+export function googleMapsPlaceUrl(link: string | null | undefined): string | null {
+  if (!link) return null;
+  try {
+    const u = new URL(link.trim());
+    const hostOk = /^(www\.)?google\.[a-z.]{2,6}$/i.test(u.hostname);
+    if (u.protocol !== "https:" || !hostOk || !u.pathname.startsWith("/maps/place/")) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The Google Maps place page the Magellan scout recorded for this site's lead
+ * (ADR-0336) — the same card the scouted rating was READ from, so it is exactly
+ * where a visitor can verify that number. Used when there is no attributable
+ * Places row (getPlaceRating null): without it the scouted badge rendered as a
+ * dead, unclickable box on a live page (Duna Vibe House, 2026-11-05).
+ */
+export async function scoutMapsUrlForSite(siteId: string): Promise<string | null> {
+  const row = await db
+    .selectFrom("site")
+    .innerJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
+    .innerJoin("scout_place", "scout_place.lead_id", "mock_artifact.lead_id")
+    .select(["scout_place.link as link"])
+    .where("site.id", "=", siteId)
+    .where("scout_place.link", "is not", null)
+    .orderBy("scout_place.updated_at", "desc")
+    .executeTakeFirst();
+  return googleMapsPlaceUrl(row?.link);
+}
+
 /** Store what a resolve already learned. Called on provisioning and on refresh. */
 export async function savePlaceRating(input: {
   siteId: string;
