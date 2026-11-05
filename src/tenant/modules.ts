@@ -6,7 +6,7 @@
 
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { db } from "../db/client.js";
-import { MODULE_CATALOG, supersederOf, type ModuleGroup } from "../modules.js";
+import { MODULE_CATALOG, renderableModules, supersederOf, type ModuleGroup } from "../modules.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 
@@ -35,6 +35,13 @@ export interface TenantModule {
    * Modulok tab quoted 98 900 Ft/év for a 95 000 Ft purchase). Optional for hand-made fixtures.
    */
   readonly trialGrant?: boolean;
+  /**
+   * 0126 (owner, 2026-11-05, approved plan modul-lathatosag "A"): owned, but the owner
+   * switched it OFF THE GUEST PAGE. Billing, settings and admin screens are untouched —
+   * only the guest-facing question (isShownModule / siteShowsModule) changes.
+   * Optional for hand-made fixtures; absent = shown.
+   */
+  readonly hidden?: boolean;
 }
 
 export interface TenantModuleView {
@@ -106,7 +113,8 @@ export interface ModuleCounts {
 export function moduleCounts(mv: Pick<TenantModuleView, "modules">): ModuleCounts {
   return {
     listed: mv.modules.filter((m) => m.active).length,
-    live: mv.modules.filter(isRenderedModule).length,
+    // „Live" = what the GUEST sees — a module the owner hid is owned, not live.
+    live: shownModuleIds(mv).size,
     billed: mv.modules.filter(isBilledModule).length,
   };
 }
@@ -222,7 +230,7 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   const disabledSales = await getDisabledModules();
   const rows = await db
     .selectFrom("module_entitlement")
-    .select(["module", "active", "cancel_at_period_end", "awaiting_first_charge", "trial_grant"])
+    .select(["module", "active", "cancel_at_period_end", "awaiting_first_charge", "trial_grant", "hidden_at"])
     .where("tenant_id", "=", tenantId)
     .execute();
   const trialGrantIds = new Set(rows.filter((r) => r.active && r.trial_grant).map((r) => r.module));
@@ -232,6 +240,9 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   );
   const awaitingIds = new Set(
     rows.filter((r) => r.active && r.awaiting_first_charge).map((r) => r.module),
+  );
+  const hiddenIds = new Set(
+    rows.filter((r) => r.active && r.hidden_at && isHideableModule(r.module)).map((r) => r.module),
   );
 
   // Everything currently switched on, spine included — the input for supersession.
@@ -265,6 +276,7 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
     cancelAtPeriodEnd: cancelIds.has(m.id),
     awaitingFirstCharge: awaitingIds.has(m.id),
     trialGrant: trialGrantIds.has(m.id),
+    hidden: hiddenIds.has(m.id),
   }));
   const baseMonthly = getBaseMonthly();
   // A replaced module is never billed: the page cannot show it, so charging for it
@@ -311,6 +323,67 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
  */
 export function isRenderedModule(m: TenantModule): boolean {
   return m.active && !m.supersededBy;
+}
+
+/**
+ * Can the owner switch this module off the guest page (0126)? Only a module with its own
+ * place on the page: not the spine (the enquiry form is the page's way in), not a one-off
+ * product, not a module without a page anchor (the e-mail address).
+ */
+export function isHideableModule(id: string): boolean {
+  const m = MODULE_CATALOG.find((x) => x.id === id);
+  return Boolean(m && !m.spine && m.billing !== "once" && m.domType);
+}
+
+/**
+ * The modules the GUEST sees (0126). ⛔ ONE definition for every guest-facing reader — the
+ * renderer, the availability/price JSON, the booking quote — while the ADMIN keeps asking
+ * isRenderedModule ("does the owner have it?"), so a hidden module's settings stay open.
+ *
+ * Supersession is re-derived over the shown set on purpose: a HIDDEN booking module gives
+ * its slot back to the enquiry form, exactly as an unbought one does — otherwise the page
+ * would lose both and the guest could not reach the owner at all.
+ */
+export function shownModuleIds(mv: Pick<TenantModuleView, "modules">): Set<string> {
+  return new Set(
+    renderableModules(mv.modules.filter((m) => m.active && !m.hidden).map((m) => m.id)),
+  );
+}
+
+/** shownModuleIds() asked by tenant + module id. */
+export async function tenantShowsModule(tenantId: string, moduleId: string): Promise<boolean> {
+  return shownModuleIds(await getTenantModules(tenantId)).has(moduleId);
+}
+
+/**
+ * shownModuleIds() asked by site — for the guest-facing readers that only know the site
+ * (the availability/price JSON, the booking quote, the price-gap reminder).
+ */
+export async function siteShowsModule(siteId: string, moduleId: string): Promise<boolean> {
+  const row = await db.selectFrom("site").select("tenant_id").where("id", "=", siteId).executeTakeFirst();
+  return row ? tenantShowsModule(row.tenant_id, moduleId) : false;
+}
+
+/**
+ * Show or hide an OWNED module on the guest page (0126). Returns false — and writes
+ * nothing — for a module the tenant does not hold or that cannot be hidden. Billing
+ * columns are never touched here.
+ */
+export async function setModuleHidden(
+  tenantId: string,
+  moduleId: string,
+  hidden: boolean,
+  by: string,
+): Promise<boolean> {
+  if (!isHideableModule(moduleId)) return false;
+  const r = await db
+    .updateTable("module_entitlement")
+    .set(hidden ? { hidden_at: new Date().toISOString(), hidden_by: by } : { hidden_at: null, hidden_by: null })
+    .where("tenant_id", "=", tenantId)
+    .where("module", "=", moduleId)
+    .where("active", "=", true)
+    .executeTakeFirst();
+  return Number(r.numUpdatedRows ?? 0) > 0;
 }
 
 /** isRenderedModule() asked by tenant + module id. */

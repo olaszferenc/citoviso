@@ -24,7 +24,7 @@ import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
-import { getTenantModules, isRenderedModule } from "./modules.js";
+import { getTenantModules, shownModuleIds } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { bookableUnits, ensureUnits, guestUnits, isBookableUnit, isWholeOnlySite, peekUnits } from "./units.js";
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
@@ -288,12 +288,10 @@ export async function moduleContentFor(
 ): Promise<ModuleContent> {
   const unitPhotos = photosByUnit(photos);
   const overrideRenderable = overrideActive ? new Set(renderableModules(overrideActive)) : null;
-  const mv = overrideRenderable ? null : await getTenantModules(tenantId);
-  const on = (id: string) => {
-    if (overrideRenderable) return overrideRenderable.has(id);
-    const m = mv!.modules.find((x) => x.id === id);
-    return Boolean(m && isRenderedModule(m));
-  };
+  // What the GUEST sees (0126): owned AND not hidden by the owner — a hidden module is
+  // cut exactly like an unbought one (and a hidden booking gives its slot back to enquiry).
+  const shown = overrideRenderable ?? shownModuleIds(await getTenantModules(tenantId));
+  const on = (id: string) => shown.has(id);
   const configs = await getAllSiteModuleConfigs(siteId);
   const cfg = (id: string) => configs[id]?.config ?? {};
   const lines = (id: string): string[] => {

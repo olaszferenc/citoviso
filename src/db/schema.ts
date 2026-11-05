@@ -526,6 +526,10 @@ export interface ModuleEntitlementTable {
   /** 0097 (ADR-0342): granted by the free trial, not bought. Cleared by the paid
    *  reconciliation on what the buyer paid for; the rest is switched off there. */
   trial_grant: Generated<boolean>;
+  /** 0126: hidden from the GUEST page by the owner (still owned and billed). NULL = shown. */
+  hidden_at: Timestamp | null;
+  /** 0126: who hid it (tenant user id / operator), for the audit trail. */
+  hidden_by: string | null;
 }
 
 /** 0097 (ADR-0342): the card-less free trial — one per lead. A trialling tenant has

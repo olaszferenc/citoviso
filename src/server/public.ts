@@ -101,7 +101,9 @@ import {
   filledContentFields,
   getTenantModules,
   paidButEmptyModules,
-  siteRendersModule,
+  siteShowsModule,
+  setModuleHidden,
+  isHideableModule,
   tenantRendersModule,
 } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
@@ -109,7 +111,7 @@ import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, getSubscriptionSummary, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { trialAdminState } from "../trial/admin.js";
 import { createCardUpdateOrder, getWalletAdmin } from "../tenant/wallet.js";
-import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
+import { isSubscriptionFrozen, revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { retryRenewalCharge } from "../payment/retryCharge.js";
 import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG } from "../modules.js";
@@ -1149,7 +1151,8 @@ async function serveTenantHost(
     // widget — the guest read a stay total on a site that quotes no prices. Same
     // predicate as the renderer (isRenderedModule), asked through one function, so
     // the page and the widget cannot disagree about whether this site has prices.
-    const pricingLive = await siteRendersModule(siteId, "pricing");
+    // 0126: the GUEST-facing question — a pricing module the owner hid quotes no price either.
+    const pricingLive = await siteShowsModule(siteId, "pricing");
     const priceRows = pricingLive ? await getUnitPrices(unitId) : [];
     const pricingRow = await db
       .selectFrom("site_module_config")
@@ -2123,6 +2126,11 @@ async function serveAdmin(
         payFailedUrl: await openUpsellPayUrl(session.tenantId),
       };
     }
+    // 0126: what the show/hide switch just did — the id is whitelisted by ids().
+    const visId = ids("vis")[0];
+    if (visId) {
+      moduleApplied = { added: [], cancelled: [], other: [], visibility: { id: visId, shown: q.get("vison") === "1" } };
+    }
   }
 
   // ADR-0084: a „Dokumentumok" és „Üzenetek" fül adata. A számla-lekérdezés a
@@ -2841,6 +2849,30 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // only when its prorated first fee is paid. Token mandate → instant MIT charge
   // here; no mandate (or a failed charge) → pay-link redirect, the webhook
   // activates. Fail-closed: an unpaid add changes nothing.
+  // 0126 (owner, 2026-11-05 — approved plan design-refs/console/modul-lathatosag, "A"):
+  // show/hide an OWNED module on the guest page. ⛔ NOT a cancellation: billing, the
+  // settings and the admin screens stay as they are; only the guest page changes, and
+  // at once (the snapshot is re-rendered like after any module change).
+  if (req.method === "POST" && pathname === "/admin/module-visibility") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const [id = "", want = ""] = String(form.get("vis") ?? "").split(":");
+    // Under a suspension the list is read-only (ADR-0155) — and a crafted POST must
+    // not get through either (feedback_additive_write_is_not_a_gate).
+    if (!isHideableModule(id) || (want !== "0" && want !== "1") || (await isSubscriptionFrozen(session.tenantId))) {
+      return redirect(res, "/admin?tab=modulok");
+    }
+    const shown = want === "1";
+    const changed = await setModuleHidden(session.tenantId, id, !shown, session.tenantUserId);
+    if (!changed) return redirect(res, "/admin?tab=modulok");
+    return redirectRerendered(
+      res,
+      session.tenantId,
+      `/admin?tab=modulok&vis=${encodeURIComponent(id)}&vison=${shown ? "1" : "0"}#modrow-${encodeURIComponent(id)}`,
+    );
+  }
+
   if (req.method === "POST" && pathname === "/admin/modules") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");

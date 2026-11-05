@@ -48,7 +48,7 @@ import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { footerReasonForTenant } from "../trial/footer.js";
-import { siteRendersModule } from "../tenant/modules.js";
+import { siteShowsModule } from "../tenant/modules.js";
 import { blockingUnitIds } from "../tenant/unitScope.js";
 import { seasonalOnlyInForce } from "../tenant/seasonalOnly.js";
 import {
@@ -692,7 +692,8 @@ export async function stayQuote(
   guests: number,
   lang: string,
 ): Promise<{ pricingLive: boolean; pricing: Record<string, unknown>; quote: ReturnType<typeof quoteStayFrom> }> {
-  const pricingLive = await siteRendersModule(siteId, "pricing");
+  // 0126: guest-facing — a hidden pricing module puts no price in the guest's quote or mail.
+  const pricingLive = await siteShowsModule(siteId, "pricing");
   const pricingRow = pricingLive
     ? await db
         .selectFrom("site_module_config")

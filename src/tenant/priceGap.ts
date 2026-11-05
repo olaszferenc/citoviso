@@ -11,7 +11,7 @@ import { todayIn } from "../text/zoneTime.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
-import { siteRendersModule } from "./modules.js";
+import { siteShowsModule } from "./modules.js";
 import { getSitePrices, unitPriceStatus, type UnitPrice } from "./prices.js";
 import { bookableUnits } from "./unitVisibility.js";
 
@@ -35,7 +35,8 @@ export async function sitePriceGaps(
   todayArg?: string,
 ): Promise<PriceGap[]> {
   const today = todayArg ?? (await todayForSite(siteId));
-  if (!(await siteRendersModule(siteId, "pricing"))) return [];
+  // 0126: a pricing module the owner HID shows no price on purpose — nothing to remind about.
+  if (!(await siteShowsModule(siteId, "pricing"))) return [];
   // ⛔ Read directly, not through units.ts: this module sends MAIL, and pulling units.ts
   // onto the mail path brings its Hungarian admin strings into the i18n scope (the
   // i18n-scope gate). Only the fields the rule needs; same order as getUnits.

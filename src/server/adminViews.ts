@@ -17,7 +17,13 @@ import { zonePickerHtml, type ZonePickerData } from "../tenant/zonePicker.js";
 import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
-import { moduleCounts, type TenantModule, type TenantModuleView } from "../tenant/modules.js";
+import {
+  isHideableModule,
+  moduleCounts,
+  shownModuleIds,
+  type TenantModule,
+  type TenantModuleView,
+} from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen, tocNav, tocScript, type TocItem } from "./moduleConfigViews.js";
 import { bookingsSection, hoursLeft } from "./bookingViews.js";
 import type { InboxItem } from "../booking/requests.js";
@@ -1042,6 +1048,8 @@ export interface ModuleAppliedFlash {
   /** ADR-0119 ⑥: a NEW module could not be added because the site is suspended
    *  for non-payment. Cancellations in the same submit DID go through. */
   readonly frozenBlocked?: boolean;
+  /** 0126: the show/hide switch just applied — which module, and is it now shown. */
+  readonly visibility?: { readonly id: string; readonly shown: boolean };
   /**
    * The stored card was DECLINED: nothing was charged and these modules did NOT
    * switch on. Empty/absent on every other path — its presence IS the signal.
@@ -1278,7 +1286,57 @@ function trialNoBookingCard(t: TrialAdminState, lang: string): string {
  * the strip's „Megrendelem" opens — and the list below only states what is on. A module with
  * a settings screen keeps its „Beállítás" link: the trial is for setting the site up.
  */
-function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string): string {
+/**
+ * 0126 · approved plan design-refs/console/modul-lathatosag ("A"): the „Látható / Nem látható"
+ * switch of one owned module row. A submit BUTTON bound to the separate `adm-visform`
+ * (works without JS, acts at once). The spine shows a locked „Mindig látszik"; a superseded
+ * row or a frozen account gets nothing (the list is read-only there).
+ */
+function visibilitySwitch(m: TenantModule, readOnly: boolean, lang: string): string {
+  if (readOnly || !m.active) return "";
+  if (m.spine) {
+    return (
+      `<span class="adm-vis is-on is-locked" aria-disabled="true">` +
+      `<span class="adm-vis__t" aria-hidden="true"></span><span>${T(lang, "Mindig látszik")}</span></span>`
+    );
+  }
+  if (!isHideableModule(m.id)) return "";
+  const shown = !m.hidden;
+  return (
+    `<button type="submit" form="adm-visform" name="vis" value="${esc(m.id)}:${shown ? "0" : "1"}"` +
+    ` class="adm-vis${shown ? " is-on" : ""}" role="switch" aria-checked="${shown ? "true" : "false"}"` +
+    ` aria-label="${esc(T(lang, m.label))}: ${T(lang, "látható az oldalon")}">` +
+    `<span class="adm-vis__t" aria-hidden="true"></span>` +
+    `<span>${shown ? T(lang, "Látható") : T(lang, "Nem látható")}</span></button>`
+  );
+}
+
+/** 0126 KÖT ⑦: the notice after a show/hide click — rendered inside the clicked row. */
+function visibilityNotice(
+  v: { readonly id: string; readonly shown: boolean },
+  mv: TenantModuleView,
+  lang: string,
+  labelOf: (id: string) => string,
+): string {
+  const name = esc(T(lang, labelOf(v.id)));
+  // Hiding the prices while the booking calendar stays on: the guest gets no price (KÖT ⑤).
+  const warn = !v.shown && v.id === "pricing" && shownModuleIds(mv).has("booking");
+  return (
+    `<span class="adm-vis-flash${warn ? " adm-vis-flash--warn" : ""}" role="status">` +
+    (v.shown
+      ? T(lang, "„{name}” újra látszik az oldalán.", { name })
+      : T(lang, "„{name}” most nem látszik az oldalán. Az előfizetése és a beállításai megmaradnak.", { name })) +
+    (warn ? " " + T(lang, "A Foglalás továbbra is látszik, de árat nem mutat: a vendég ajánlatot kér.") : "") +
+    `</span>`
+  );
+}
+
+function trialModulesTab(
+  mv: TenantModuleView,
+  t: TrialAdminState,
+  lang: string,
+  applied: ModuleAppliedFlash | null = null,
+): string {
   const d = t.discount;
   // ADR-0364 (B1, Elek 10-11): „minden modul” only when the trial really got every module
   // (trial/package.ts); otherwise the package it ran on, and that the rest can be added.
@@ -1306,15 +1364,23 @@ function trialModulesTab(mv: TenantModuleView, t: TrialAdminState, lang: string)
     .filter((m) => m.active)
     .map(
       (m) =>
-        `<li data-modrow="${esc(m.id)}"><span class="adm-trial-mods__n">${esc(T(lang, m.label))}</span>` +
+        `<li id="modrow-${esc(m.id)}" data-modrow="${esc(m.id)}"${m.hidden ? ` class="is-hidden"` : ""}><span class="adm-trial-mods__n">${esc(T(lang, m.label))}` +
+        // 0126: the hidden state is said in words too, not only by the switch's colour.
+        (m.hidden ? `<small>${T(lang, "Rejtve a vendég elől")}</small>` : "") +
+        (applied?.visibility?.id === m.id
+          ? visibilityNotice(applied.visibility, mv, lang, (id) => mv.modules.find((x) => x.id === id)?.label ?? id)
+          : "") +
+        `</span>` +
         (hasSettingsScreen(m.id)
           ? `<a class="adm-trial-keep__cfg" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
             `${ic("settings", 14)}<span>${T(lang, "Beállítás")}</span></a>`
           : "") +
-        `<span class="adm-trial-keep__on">${T(lang, "be")}</span></li>`,
+        (visibilitySwitch(m, Boolean(m.supersededBy), lang) || `<span class="adm-trial-keep__on">${T(lang, "be")}</span>`) +
+        `</li>`,
     )
     .join("");
   return (
+    `<form id="adm-visform" method="POST" action="/admin/module-visibility"></form>` +
     `<section class="adm-card adm-trial-keep" data-trial-keep>` +
     `<div class="adm-trial-keep__t"><h2>${T(lang, "Modulok a próbában")}</h2><p>${text}</p></div>` +
     (t.continueUrl
@@ -1700,7 +1766,7 @@ export function modulesSection(
    */
   trial: TrialAdminState | null = null,
 ): string {
-  if (trial?.status === "active") return trialModulesTab(mv, trial, lang);
+  if (trial?.status === "active") return trialModulesTab(mv, trial, lang, applied);
   const huf = hufAmount;
   // The anniversary the owner reads a dozen times on this page. It arrives in
   // STORAGE form (`2027-09-10`) and used to be printed raw into every one of
@@ -2296,7 +2362,11 @@ export function modulesSection(
               // notice. The entitlement survives; only its visibility is paused.
               frozen
               ? T(lang, "Szünetel — a felfüggesztés alatt a vendégek nem látják.")
-              : // Elek P-3 (2026-10-14): after buying only the base package, the trial's modules
+              : // 0126: hidden by the owner — NOT a plain row: the block above counts
+                // the modules live on the page, and a hidden one is not.
+                m.hidden
+                ? T(lang, "Rejtve a vendég elől — az előfizetése és a beállításai megmaradnak.")
+                : // Elek P-3 (2026-10-14): after buying only the base package, the trial's modules
                 // stood here as „aktív” with their prices, and nothing said they switch off.
                 m.trialGrant
                 ? mv.trialUntil
@@ -2349,8 +2419,20 @@ export function modulesSection(
       // the real shell (248px rail + 900px cap) the old `flex-wrap` lifted the
       // CANCEL onto its own line at the row's LEFT edge, and not only on the
       // phone: at 1280px too (x=377, below „Megnézem" at x=821).
+      // 0126 · approved plan modul-lathatosag "A": the show/hide switch — its own form
+      // (adm-visform, outside the cart form), so it acts at once and never reaches the
+      // cart's submit handler or applyModuleChange (a missing checkbox = a cancellation).
+      const visSw = visibilitySwitch(m, Boolean(frozen || replacedBy), lang);
+      // A booking module still on the page while pricing is hidden quotes no price (KÖT ⑤).
+      const visNote =
+        (m.id === "booking" && !m.hidden && !replacedBy && mv.modules.some((x) => x.id === "pricing" && x.active && x.hidden)
+          ? `<span>${T(lang, "Árat nem mutat, mert az Árak rejtve van.")}</span>`
+          : "") +
+        // KÖT ⑦: the notice of the click lands IN the row the redirect scrolls to — at the
+        // top of the tab it would sit a screen away from the switch the owner just pressed.
+        (applied?.visibility?.id === m.id ? visibilityNotice(applied.visibility, mv, lang, labelOf) : "");
       return (
-        `<div class="adm-mine__row${frozen ? " adm-mine__row--ro" : ""}" data-modrow="${esc(m.id)}">${keep}` +
+        `<div class="adm-mine__row${frozen ? " adm-mine__row--ro" : ""}${m.hidden ? " is-hidden" : ""}" id="modrow-${esc(m.id)}" data-modrow="${esc(m.id)}">${keep}` +
         `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}` +
         // ⭐ APPROVED CONTRACT (module-dependency §2, C változat): the ROW says WHAT.
         // ⛔ `.adm-mine__t .dep-tag` — the plain `.dep-tag` (0,1,0) loses to
@@ -2359,7 +2441,9 @@ export function modulesSection(
         `</strong>` +
         // An empty <span> would still draw its 2px top margin on every plain row.
         (state ? `<span>${state}</span>` : "") +
+        visNote +
         `</span>` +
+        `<span class="adm-mine__v">${visSw}</span>` +
         // ⛔ No price under a freeze (ADR-0155). Measured on the old page: 11 rows
         // of ALREADY-OWNED, paused modules wore a "+490 Ft/hó" sales tag — an
         // upsell label on something the owner is being dunned for. What the modules
@@ -3257,6 +3341,7 @@ export function modulesSection(
   }
   // The cancel/resume forms live OUTSIDE the module form (nested forms are invalid).
   const dangerForms =
+    `<form id="adm-visform" method="POST" action="/admin/module-visibility"></form>` +
     `<form id="adm-sub-cancel" method="POST" action="/admin/subscription/cancel"></form>` +
     `<form id="adm-sub-resume" method="POST" action="/admin/subscription/resume"></form>` +
     (sub?.autoCharge

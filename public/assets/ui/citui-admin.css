@@ -1210,7 +1210,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
    Mobil:  „név | ár" az első sorban, a műveletek a másodikban, JOBBRA zárva.
    Asztali: „név | ár | műveletek" egy sorban. */
 .adm-mine__row{display:grid;gap:4px 12px;padding:13px 4px;
-  grid-template-columns:1fr auto;grid-template-areas:"n p" "d d" "a a";
+  grid-template-columns:1fr auto;grid-template-areas:"n p" "d d" "v v" "a a";
   border-bottom:1px solid var(--citui-line)}
 /* ── ADR-0192 · jóváhagyott kontraktus: design-refs/console/module-dependency ──
    A SOR mondja meg MIT: cián pirula a név mellett + a katalógus indoklása a sor
@@ -1264,8 +1264,8 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   flex-wrap:nowrap;min-width:0}
 .adm-mine__a .citui-btn{padding:7px 12px;font-size:11px;white-space:nowrap}
 @media(min-width:700px){
-  .adm-mine__row{grid-template-columns:1fr auto auto;
-    grid-template-areas:"n p a" "d d d";
+  .adm-mine__row{grid-template-columns:1fr auto auto auto;
+    grid-template-areas:"n v p a" "d d d d";
     align-items:center}
   .dep-rail{margin-left:0}
 }
@@ -1727,3 +1727,30 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-pg .adm-todobox{border-radius:10px}
 .adm-pg .adm-todo__h{border:0;padding:16px 14px 6px;font-size:19px;font-weight:700;letter-spacing:-.015em}
 .adm-pg .adm-todo__h .cnt{font-size:12px;letter-spacing:0}
+
+/* ── 0126 · jóváhagyott kontraktus: design-refs/console/modul-lathatosag („A") ──
+   „Látható / Nem látható" kapcsoló a modul sorában — KÜLÖN a lemondástól. Gomb (a saját
+   űrlapjával), nem jelölőnégyzet: JS nélkül is azonnal hat, és a kosár-űrlapot nem érinti.
+   Mobilon saját sorban a név alatt, asztalon a név és az ár között. */
+.adm-mine__v{grid-area:v;display:flex;align-items:center;min-width:0}
+.adm-vis{display:inline-flex;align-items:center;gap:8px;padding:4px 2px;border:0;background:none;
+  cursor:pointer;font:600 11px/1.2 var(--citui-font-text);color:var(--citui-muted);white-space:nowrap}
+.adm-vis.is-on{color:var(--citui-ink)}
+.adm-vis__t{position:relative;flex:0 0 auto;width:36px;height:20px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-line-strong);transition:background var(--citui-transition)}
+.adm-vis__t::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+  background:var(--citui-white);box-shadow:var(--citui-shadow-sm);transition:transform var(--citui-transition)}
+.adm-vis.is-on .adm-vis__t{background:var(--citui-ok)}
+.adm-vis.is-on .adm-vis__t::after{transform:translateX(16px)}
+.adm-vis:focus-visible{outline:2px solid var(--citui-cyan-500);outline-offset:2px;border-radius:6px}
+.adm-vis.is-locked{cursor:default}
+.adm-vis.is-locked .adm-vis__t{opacity:.5}
+.adm-mine__row.is-hidden .adm-mine__t strong{color:var(--citui-muted)}
+.adm-trial-mods__list li.is-hidden .adm-trial-mods__n{color:var(--citui-muted)}
+.adm-trial-mods__n small{display:block;font-size:10px;color:var(--citui-muted)}
+.adm-trial-mods__list .adm-vis{margin-left:auto}
+.adm-mine__t .adm-vis-flash,.adm-trial-mods__n .adm-vis-flash{display:block;margin-top:6px;padding:8px 10px;
+  border-radius:var(--citui-radius-sm);background:var(--citui-ok-soft);color:var(--citui-ok-ink);
+  font-size:11px;font-weight:500;line-height:1.45}
+.adm-mine__t .adm-vis-flash--warn,.adm-trial-mods__n .adm-vis-flash--warn{
+  background:color-mix(in srgb,var(--citui-warn) 14%,transparent);color:var(--citui-warn-ink)}
