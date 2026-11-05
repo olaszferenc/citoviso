@@ -2426,6 +2426,31 @@
     });
   }
 
+  // ── "Én is írok" (decision B, design-refs/tenant-site/reviews-card) ──────────
+  // The review form sits under the Google card, closed; the button opens it in place.
+  // Server-side the button is `hidden` and the form open, so without JS the guest
+  // still has a working form — the runtime only folds it once it can unfold it again.
+  function initReviewWrite() {
+    document.querySelectorAll("[data-cit-rev-open]").forEach(function (btn) {
+      var box = document.getElementById(btn.getAttribute("data-cit-rev-open"));
+      if (!box) return;
+      box.hidden = true;
+      btn.hidden = false;
+      btn.setAttribute("aria-expanded", "false");
+      btn.setAttribute("aria-controls", box.id);
+      btn.addEventListener("click", function () {
+        var open = box.hidden;
+        box.hidden = !open;
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {
+          var f = box.querySelector("input,select,textarea");
+          if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
+          box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      });
+    });
+  }
+
   // ── SAMPLE-photo watermark (owner decree 2026-08-23) ────────────────────────
   // A room card whose photo stands for a room we do not know about must SAY SO on
   // the picture. Without it the lead reads the invented room as a claim ("nálam
@@ -2761,7 +2786,7 @@
     window.addEventListener("resize", measure);
   }
 
-  function boot() { initStickClearance(); hydrate(); initPhoneChrome(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
+  function boot() { initStickClearance(); hydrate(); initPhoneChrome(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); initReviewWrite(); shiftSampleDates(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

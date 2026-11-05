@@ -704,6 +704,8 @@ export function centredModsecCss(tpl: string): string {
      would otherwise sit hard left under a centred heading (measured at 390px). */
   ${s} .cit-modsec__in > form.cit-news{max-width:560px;margin-left:auto;margin-right:auto;justify-content:center}
   ${s} .cit-modsec__in .cit-rev-f{max-width:780px;margin-left:auto;margin-right:auto}
+  ${s} .cit-modsec__in .cit-rvc,${s} .cit-modsec__in .cit-rvc__wr{max-width:780px;margin-left:auto;margin-right:auto}
+  ${s} .cit-modsec__in .cit-rvc__intro{text-align:center}
   ${s} .cit-modsec__in .cit-price__tabs{justify-content:center}
   ${s} .cit-modsec__in .cit-price__unit table{max-width:900px;margin-left:auto;margin-right:auto}
   /* On a phone a fixed-width tile would leave a dead margin on both sides — below the

@@ -23,6 +23,7 @@ import { amenityIconSvg } from "./amenityIcon.js";
 import { sampleAmenityItems } from "./sampleFromSource.js";
 import { mapEmbed } from "./primitives.js";
 import { formatMoney } from "../text/money.js";
+import { honestStars } from "./rating.js";
 
 /** Scoped styles for the shared blocks; emitted once, only when something renders. */
 const CSS = `<style data-cit-modsec>
@@ -126,6 +127,28 @@ const CSS = `<style data-cit-modsec>
 .cit-grat__num{font-size:1.7rem;font-weight:700;line-height:1}
 .cit-grat__meta{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--cit-muted)}
 .cit-grat__meta em{font-style:normal;color:var(--cit-accent);font-weight:600}
+/* Tenant decision B (design-refs/tenant-site/reviews-card, 2026-11-05): with no own
+   reviews yet, the section is ONE card — the real Google number with honest stars,
+   a way to read the reviews at the source, and a way to write one. The form opens
+   under the card in the same section (no second heading, no empty band between). */
+.cit-rvc{display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;
+  padding:24px;border:1px solid var(--cit-line);border-radius:var(--cit-radius);
+  background:var(--cit-bg);color:var(--cit-ink)}
+.cit-rvc__score{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cit-rvc__num{font-size:2.6rem;font-weight:700;line-height:1}
+.cit-rvc__stars{display:inline-flex;gap:3px}
+.cit-rvc__stars svg{width:22px;height:22px;stroke:var(--cit-accent);stroke-width:1.6;fill:none}
+.cit-rvc__stars svg.on{fill:var(--cit-accent)}
+.cit-rvc__count{flex-basis:100%;margin:0;color:var(--cit-muted);font-size:.95rem}
+.cit-rvc__acts{display:flex;flex-wrap:wrap;gap:10px}
+.cit-modsec .cit-rvc__acts .cit-btn{text-align:center}
+.cit-modsec .cit-rvc__acts .cit-rvc__write{background:transparent;color:var(--cit-ink);
+  border:1px solid currentColor}
+/* .cit-btn sets display, which outranks the UA's [hidden] rule. */
+.cit-modsec .cit-rvc__acts .cit-rvc__write[hidden],.cit-modsec .cit-rvc__wr[hidden]{display:none}
+.cit-rvc__intro{margin:0 0 12px;font-weight:600;color:var(--cit-ink)}
+.cit-rvc + .cit-rvc__wr{margin-top:24px}
+@media (max-width:560px){.cit-rvc__acts,.cit-rvc__acts .cit-btn{width:100%}}
 /* ADR-0061 — the honest sample marker on a NATIVE-styled demo section (§B.17): the
    module is the real one, only its data is representative. Same pill language as the
    booking demo ribbon, token-themed. */
@@ -1001,7 +1024,7 @@ function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
  * reviews already exist, so a tenant switching the module on would have nowhere to
  * receive the FIRST one — the form would appear only once it was no longer needed.
  */
-function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean } = {}): string {
+function reviewFormMarkup(d: SiteData, opts: { demo?: boolean; sample?: boolean } = {}): string {
   const f = d.reviewForm ?? (opts.sample ? {} : null);
   if (!f) return "";
   const units = f.units ?? [];
@@ -1038,10 +1061,7 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
   const afterSubmit = opts.demo
     ? T(d, "Ez egy előnézet: a beküldés most nem rögzít és nem küld el semmit.")
     : T(d, "A véleménye azután jelenik meg, hogy a szállásadó jóváhagyta.");
-  const html =
-    `<section class="cit-modsec" data-cit-module="review-form">` +
-    `<div class="cit-modsec__in">` +
-    `<h2>${T(d, "Járt már nálunk? Írja meg, milyen volt")}</h2>` +
+  return (
     `<form class="cit-rev-f" method="POST" action="/api/velemeny"${demoAttr}>` +
     `<label class="cit-rev-f__lbl">${T(d, "Az Ön neve")}` +
     `<input type="text" name="name" required maxlength="160"></label>` +
@@ -1065,18 +1085,34 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
     `<div class="cit-rev-f__wide">` +
     `<button class="cit-btn" type="submit">${T(d, "Vélemény elküldése")}</button>` +
     `<p class="cit-modsec__note">${afterSubmit}</p>` +
-    `</div></form></div></section>`;
+    `</div></form>`
+  );
+}
+
+/** The sample note the mock's review form carries (ADR-0061, §B.17). */
+function reviewFormSampleNote(d: SiteData): string {
+  return T(d, "Minta — az éles oldalon a vendégei ezen az űrlapon írnak véleményt, és Ön hagyja jóvá őket.");
+}
+
+/**
+ * The standalone "write a review" section — used when the page already shows real
+ * reviews (the template's own review section carries them). With no reviews yet the
+ * form lives inside the reviews card instead (reviewsPendingBlock, decision B).
+ */
+function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean } = {}): string {
+  const form = reviewFormMarkup(d, opts);
+  if (!form) return "";
+  const html =
+    `<section class="cit-modsec" data-cit-module="review-form">` +
+    `<div class="cit-modsec__in">` +
+    `<h2>${T(d, "Járt már nálunk? Írja meg, milyen volt")}</h2>` +
+    form +
+    `</div></section>`;
   // The newsletter and the price table next to it BOTH carry the "Minta" pill; this
   // form — the one that asks for a name, an e-mail and a consent tick — carried
   // nothing. The lead read an unmarked, live-looking guest form on a page where
   // everything else was labelled. Same helper, same dress as the other samples.
-  return opts.sample
-    ? asSample(
-        html,
-        d,
-        T(d, "Minta — az éles oldalon a vendégei ezen az űrlapon írnak véleményt, és Ön hagyja jóvá őket."),
-      )
-    : html;
+  return opts.sample ? asSample(html, d, reviewFormSampleNote(d)) : html;
 }
 
 /**
@@ -1144,64 +1180,91 @@ export function slotMarker(slot: ModuleSlot): string {
  * (§B.17). What replaces it is stronger anyway: the owner's ACTUAL Google rating,
  * plus a plain sentence about what the section will hold.
  */
-function reviewsPendingBlock(d: SiteData, ratingAlreadyLinked = false): string {
+function reviewsPendingBlock(
+  d: SiteData,
+  opts: { ratingAlreadyLinked?: boolean; demo?: boolean; sampleForm?: boolean } = {},
+): string {
   if (d.reviews?.length) return ""; // real words — nothing to stand in for
   // Either source is the SAME real Google number: `googleRating` on a live tenant
   // page (gated on match confidence + freshness), `rating` on a mock built from the
-  // lead. Both are facts about this business; neither is invented.
+  // lead or read by the Magellan scout. Both are facts about this business.
   const g = d.googleRating ?? (d.rating?.count ? { value: d.rating.value, count: d.rating.count } : null);
-  const value = g
-    ? g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-    : "";
-  // Show the real average as a DESIGNED badge (a star row + number), not a muted
-  // sentence that reads as a restatement of the hero stat — that "the rating twice"
-  // look is the exact complaint (2026-08-23). Skipped when the google-rating module
-  // already renders its own badge right above, so the number is never stated twice.
-  // The number is VERIFIABLE: with a reviews URL the badge is a link straight to
-  // Google's own reviews for this place (owner request 2026-08-23 — "lehessen rá
-  // kattintani"). The runtime opens it in a small window on desktop; without a URL
-  // (or without JS) it degrades to the static badge / a plain new-tab link.
   const url = d.googleRating?.url ?? d.rating?.url ?? "";
-  const inner =
-    `<span class="cit-grat__icon">${ICON_STAR}</span>` +
-    `<span class="cit-grat__num">${esc(value)}</span>` +
-    `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g?.count ?? 0 })}` +
-    (url ? `<em>${T(d, "Megnézem a Google-on")}</em>` : "") +
-    `</span>`;
-  // …and skipped when the TEMPLATE's own review section, right above the trust slot,
-  // already states the number with the link to Google (walk-through, gate-opening).
-  const badge = !g || d.googleRating || ratingAlreadyLinked
-    ? ""
-    : url
-      ? `<a class="cit-grat" href="${esc(url)}" target="_blank" rel="noopener nofollow" ` +
-        `data-cit-popup="reviews">${inner}</a>`
-      : `<div class="cit-grat cit-grat--static">${inner}</div>`;
+  // The template's own review section, right above the trust slot, already states the
+  // number with the link (walk-through, gate-opening): never say it twice (ADR-0057 ②).
+  const showScore = Boolean(g) && !opts.ratingAlreadyLinked;
+  const form = reviewFormMarkup(d, { demo: opts.demo, sample: opts.sampleForm });
+
+  // ⛔ DECISION B (owner, 2026-11-05 — design-refs/tenant-site/reviews-card): the
+  // section used to be a small static badge, then a sentence ABOUT the section ("Itt a
+  // vendégek véleményei jelennek meg…"), then a second section with its own heading
+  // and an always-open form. On the live Duna Vibe House page that read as a
+  // placeholder nobody finished, the badge could not be clicked, and two tall empty
+  // bands framed it. Now: ONE card — the real number with honest stars, "read them on
+  // Google", "write one" — and the form opens beneath it in the same section.
+  if (!showScore && !form) {
+    // Nothing real to show (no Google number, collection switched off). Keep the anchor
+    // a template's "Vélemények" nav link targets, with the plain sentence it always had.
+    return (
+      `<section class="cit-modsec" id="t-reviews" data-cit-module="reviews-pending">` +
+      `<div class="cit-modsec__in">` +
+      `<h2>${T(d, "Vendégek véleménye")}</h2>` +
+      `<p class="cit-modsec__note" style="margin-top:0">` +
+      `${T(d, "Itt a vendégek véleményei jelennek meg. Minden vélemény valódi vendégtől származik, és közzététel előtt a szállásadó hagyja jóvá.")}</p>` +
+      `</div></section>`
+    );
+  }
+
+  let card = "";
+  if (showScore && g) {
+    const value = g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    // §B.17 — the same honest star count every star row on the page uses (4,4 → 4).
+    const on = honestStars({ rating: { value: g.value } });
+    const stars = [0, 1, 2, 3, 4]
+      .map((i) => ICON_STAR.replace("<svg ", `<svg class="${i < on ? "on" : "off"}" `))
+      .join("");
+    const acts =
+      (url
+        ? `<a class="cit-btn" href="${esc(url)}" target="_blank" rel="noopener nofollow" data-cit-popup="reviews">` +
+          // A non-breaking hyphen: at 390 px the label broke as "GOOGLE- / ON".
+          `${T(d, "Vélemények a Google-on").replace(/-/g, "\u2011")}</a>`
+        : "") +
+      // Hidden until the runtime wires it: without JS the form simply stands open below.
+      (form
+        ? `<button type="button" class="cit-btn cit-rvc__write" data-cit-rev-open="cit-rev-write" hidden>` +
+          `${T(d, "Én is írok")}</button>`
+        : "");
+    card =
+      `<div class="cit-rvc">` +
+      `<div class="cit-rvc__score">` +
+      `<span class="cit-rvc__num">${esc(value)}</span>` +
+      `<span class="cit-rvc__stars" role="img" aria-label="${esc(T(d, "{value} / 5 csillag", { value }))}">${stars}</span>` +
+      `<p class="cit-rvc__count">${T(d, "{count} vendég értékelte a Google-on", { count: g.count })}</p>` +
+      `</div>` +
+      (acts ? `<div class="cit-rvc__acts">${acts}</div>` : "") +
+      `</div>`;
+  }
+
+  // The form keeps its own module anchor (review-form) on a wrapper, so the
+  // unbought-module cut and the paid-anchor checks find it exactly as before.
+  const write = form
+    ? `<div class="cit-rvc__wr" id="cit-rev-write" data-cit-module="review-form">` +
+      `<p class="cit-rvc__intro">${T(d, "Járt már nálunk? Írja meg, milyen volt")}` +
+      (opts.sampleForm ? `<span class="cit-modsec__minta">${T(d, "Minta")}</span>` : "") +
+      `</p>` +
+      form +
+      (opts.sampleForm ? `<p class="cit-modsec__note">${esc(reviewFormSampleNote(d))}</p>` : "") +
+      `</div>`
+    : "";
+
   // Stable anchor so a template's "Vélemények" nav link always has a target here (the
   // real-reviews section carries the same id; the two are mutually exclusive).
   return (
     `<section class="cit-modsec" id="t-reviews" data-cit-module="reviews-pending">` +
     `<div class="cit-modsec__in">` +
     `<h2>${T(d, "Vendégek véleménye")}</h2>` +
-    (badge ? `<div class="cit-modsec__badge">${badge}</div>` : "") +
-    // ⛔ TWO fixes on this one line (Elek FK-004b, 2026-09-13):
-    //
-    //  · WHO IS BEING SPOKEN TO. The sentence used to say "Ön hagyja jóvá" — the
-    //    OWNER — and it sits directly above "Járt már nálunk?", which asks a GUEST
-    //    to write. One paragraph apart, the page addressed two different people as
-    //    "Ön". This section is guest-facing body copy on a LIVE tenant site too, so
-    //    it speaks to the guest; the fact that the host moderates stays (it is what
-    //    makes the section trustworthy), just stated ABOUT the host, not TO them.
-    //    What the LEAD needs to know — "these will be yours to approve" — is said
-    //    where it belongs: in the review form's own sample note.
-    //
-    //  · WHY IT SAT LEFT. `margin:0` is a SHORTHAND: it also set margin-left/right
-    //    to 0, overriding `centredModsecCss`'s `margin-left:auto;margin-right:auto`
-    //    (templateKit.ts) with an inline declaration nothing in a stylesheet can
-    //    beat. On a centred template the 640 px note therefore hugged the left edge
-    //    — measured centre x≈400 against the section's x≈640. Only the TOP margin
-    //    was ever wanted (the note follows the badge), so only the top is set.
-    `<p class="cit-modsec__note" style="margin-top:0">` +
-    `${T(d, "Itt a vendégek véleményei jelennek meg. Minden vélemény valódi vendégtől származik, és közzététel előtt a szállásadó hagyja jóvá.")}</p>` +
+    card +
+    write +
     `</div></section>`
   );
 }
@@ -1329,9 +1392,20 @@ export function moduleSectionGroups(
     ],
     // Why they should believe it — next to the template's own review section.
     trust: [
-      googleRatingBlock(d, opts.ratingAlreadyLinked),
-      reviewsPendingBlock(d, opts.ratingAlreadyLinked),
-      reviewFormBlock(d, { demo: opts.demo, sample: s.has("review-form") }),
+      // With real reviews: the template shows them, the Google badge and the form
+      // follow as before. Without: ONE card section carries the number and the form.
+      ...(d.reviews?.length
+        ? [
+            googleRatingBlock(d, opts.ratingAlreadyLinked),
+            reviewFormBlock(d, { demo: opts.demo, sample: s.has("review-form") }),
+          ]
+        : [
+            reviewsPendingBlock(d, {
+              ratingAlreadyLinked: opts.ratingAlreadyLinked,
+              demo: opts.demo,
+              sampleForm: s.has("review-form"),
+            }),
+          ]),
     ],
     // Practicalities they check before deciding.
     practical: [

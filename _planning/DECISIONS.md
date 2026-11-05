@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-velemeny-szekcio-egy-kartya.md) — Vélemény-szekció saját vélemények nélkül: egy kártya (Google-szám + „Én is írok”)
 - [ADR-0423](decisions/0423-uj-mockhoz-csak-harom-sablon-parallax.md) — Új mockhoz csak három sablon (Parallax · Kapunyitás · Névből növő); a Kapunyitás szétnyíló képe sosem a nyitókép, hanem az admin második képe, külön mezőben
 - [ADR-0422](decisions/0422-a-fejezetes-horizontal-sablon-vegleg-kivezetve.md) — A Fejezetes (horizontal) sablon végleg kivezetve: új mock nem készülhet vele, a második terv alapértelmezése Fullbleed
 - [ADR-0421](decisions/0421-partner-lap-uzenetvaltasok-m1-csevego-szal-kezi.md) — Partner-lap „Üzenetváltások” (M1 csevegő-szál), kézi e-mail/SMS, elutasító-jel a leaden
