@@ -2075,7 +2075,19 @@
   var trialPill = null;
   if (TRIAL) {
     trialPill = el('<button class="cit-cfg-trialpill" type="button">' + I.gift + "<span></span></button>");
-    trialPill.querySelector("span").textContent = trialN(tr("{n} nap ingyen"));
+    // Owner 2026-11-05: „{n} nap ingyen” (and „{n} napig ingyen”) reads as the usual SaaS trial —
+    // card first, pay when the days run out. Ours asks for nothing and charges nothing, and THAT
+    // is what the pill says; the day count lives on the trial sheet it opens.
+    // Two lines, like the order pill beside it („Árak és rendelés” + „havi … Ft-tól”, the shared
+    // .cit-cfg-launch__from style), at EVERY width: the one-line „Próbálja ki ingyen, bankkártya
+    // nélkül” (346–414 px) covered the title in the landscape-phone corner stack and the
+    // card-sidebar card on the desktop (mock-trial-overlay-check ⑪, measured 2026-11-05).
+    var trialLbl = trialPill.querySelector("span");
+    trialLbl.className = "cit-cfg-launch__lbl";
+    trialLbl.innerHTML =
+      esc(tr("Ingyenes próba")) + '<small class="cit-cfg-launch__from">' + esc(tr("bankkártya nélkül")) + "</small>";
+    trialPill.setAttribute("aria-label", tr("Próbálja ki ingyen, bankkártya nélkül"));
+    trialPill.classList.add("cit-cfg-trialpill--two");
     trialPill.hidden = true; // follows the order pill — shown at mount
     launch.classList.add("cit-cfg-launch--pair");
   }

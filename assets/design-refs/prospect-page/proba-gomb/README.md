@@ -1,5 +1,11 @@
 # „14 nap ingyen” — az ingyenes próba belépője a lead-lapon (JÓVÁHAGYOTT TERV, 2026-10-09)
 
+> ⛔ **FELIRAT FELÜLÍRVA 2026-11-05 (tulaj):** a „{n} nap ingyen” (és a „{n} napig ingyen”) a szokásos
+> előfizetéses próbát idézi — előbb kártya, a végén fizetni kell. Nálunk nincs se kártya, se fizetés, ezt
+> mondja a pirula: **MINDEN méreten két sorban
+> „Ingyenes próba” + „bankkártya nélkül”** (akadálymentes név: „Próbálja ki ingyen, bankkártya nélkül”; az egysoros változat fekvő telefonon és card-sidebar asztalon takart) (a rendelés-pirula kétsoros mintájával, `.cit-cfg-launch__from`).
+> A napszám a megnyíló próba-lapon áll. Az alábbi „{n} nap ingyen” említések TÖRTÉNETIEK.
+
 A tulaj döntése a §2b terv-körben (2026-10-09, a koordinátoron át, szó szerint): B a legjobb, ahol a két
 pirula egyben van. Az A (keretező sáv a lap tetején) és a C (kártya az Árak előtt) elvetve.
 Háttér: ADR-0342 (kártya nélküli próba, `src/trial/start.ts` `startTrial`, `src/trial/config.ts`
