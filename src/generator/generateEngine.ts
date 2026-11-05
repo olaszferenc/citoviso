@@ -45,7 +45,7 @@ import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems,
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { fingerprintCandidates } from "./photoHash.js";
 import { GATE_OPENING, GATE_SUBJECTS, gatePhotoOf } from "../engine/templates/gateOpening.js";
-import { googleMapsPlaceUrl, reviewsUrlFor } from "../reviews/placeRating.js";
+import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
   loadLead,
   mockArtifactPath,
@@ -86,7 +86,7 @@ function placeIdOf(lead: LoadedLead["lead"]): string | null {
 function scoutedMapsUrl(lead: LoadedLead["lead"], rating: number): string | null {
   const r = (lead as unknown as { mapsRating?: { value?: number; source?: string; url?: string } }).mapsRating;
   if (!r || r.source !== "magellan" || r.value !== rating) return null;
-  return googleMapsPlaceUrl(r.url);
+  return isGoogleRatingUrl(r.url) ? r.url! : null;
 }
 
 /**

@@ -101,40 +101,89 @@ export async function placeIdForSite(
 }
 
 /**
- * A scout's Maps link is accepted only when it is Google Maps' own place page —
- * the worksheet column is free text, and the badge must never send a visitor to
- * an arbitrary host under the "Megnézem a Google-on" label.
+ * Google's place_id from a Maps feature id ("0x<hex>:0x<hex>", the `!1s…` part of a
+ * Maps place link, or scout_place.ftid). The place_id IS that pair, protobuf-wrapped
+ * and base64url-encoded (field 1 = { fixed64 1, fixed64 2 }) — measured 2026-11-05:
+ * 0x47421d033d27c0e3:0x8574a049392bced4 → ChIJ48AnPQMdQkcR1M4rOUmgdIU, the id Google
+ * itself serves for Duna Vibe House. Pure arithmetic: no Places call, no cost.
  */
-export function googleMapsPlaceUrl(link: string | null | undefined): string | null {
-  if (!link) return null;
+export function placeIdFromFtid(ftid: string | null | undefined): string | null {
+  const m = /^\s*0x([0-9a-f]{1,16}):0x([0-9a-f]{1,16})\s*$/i.exec(ftid ?? "");
+  if (!m) return null;
+  const buf = Buffer.alloc(20);
+  buf.set([0x0a, 0x12, 0x09], 0);
+  buf.writeBigUInt64LE(BigInt("0x" + m[1]), 3);
+  buf[11] = 0x11;
+  buf.writeBigUInt64LE(BigInt("0x" + m[2]), 12);
+  return buf.toString("base64url");
+}
+
+/** The feature id inside a Maps place link (`…/data=…!1s0x…:0x…!…`), if it carries one. */
+export function ftidFromMapsLink(link: string | null | undefined): string | null {
+  const m = /!1s(0x[0-9a-f]{1,16}:0x[0-9a-f]{1,16})/i.exec(link ?? "");
+  return m ? m[1]! : null;
+}
+
+/**
+ * Where the rating badge of a SCOUTED place (Magellan, no Places row) should land.
+ *
+ * ⛔ Owner, 2026-11-05: "telefonon térképet nyit meg és nem a véleményeket". The first
+ * fix linked the scout's Maps link — but that link usually carries only the name and
+ * coordinates (19 257 of 19 322 rows had no feature id), and on a phone the Maps app
+ * opened a bare map. So:
+ *   1. feature id known (scout_place.ftid or `!1s` in the link) → Google's own REVIEWS
+ *      page for that place_id (on a phone: the "Vélemények" tab — measured);
+ *   2. otherwise → a Maps search for name + address, which opens the place CARD
+ *      (rating and reviews on it) instead of an anonymous point on the map.
+ */
+export function scoutReviewsUrl(p: {
+  ftid?: string | null;
+  link?: string | null;
+  name?: string | null;
+  address?: string | null;
+  city?: string | null;
+}): string | null {
+  const pid = placeIdFromFtid(p.ftid) ?? placeIdFromFtid(ftidFromMapsLink(p.link));
+  if (pid) return reviewsUrlFor(pid);
+  const q = [p.name, p.address, p.city].map((x) => (x ?? "").trim()).filter(Boolean).join(", ");
+  if (!p.name?.trim() || !q) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+/** Only links we build ourselves pass: Google reviews by place_id, or a Maps place/search page. */
+export function isGoogleRatingUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
   try {
-    const u = new URL(link.trim());
-    const hostOk = /^(www\.)?google\.[a-z.]{2,6}$/i.test(u.hostname);
-    if (u.protocol !== "https:" || !hostOk || !u.pathname.startsWith("/maps/place/")) return null;
-    return u.toString();
+    const u = new URL(url);
+    if (u.protocol !== "https:") return false;
+    if (u.hostname === "search.google.com") return u.pathname === "/local/reviews" && u.searchParams.has("placeid");
+    return /^(www\.)?google\.[a-z.]{2,6}$/i.test(u.hostname) && /^\/maps\/(place|search)\//.test(u.pathname);
   } catch {
-    return null;
+    return false;
   }
 }
 
 /**
- * The Google Maps place page the Magellan scout recorded for this site's lead
- * (ADR-0336) — the same card the scouted rating was READ from, so it is exactly
- * where a visitor can verify that number. Used when there is no attributable
- * Places row (getPlaceRating null): without it the scouted badge rendered as a
- * dead, unclickable box on a live page (Duna Vibe House, 2026-11-05).
+ * The reviews link for this site's Magellan-scouted lead (scoutReviewsUrl), used when
+ * there is no attributable Places row (getPlaceRating null): without it the scouted
+ * badge rendered as a dead, unclickable box on a live page (Duna Vibe House).
  */
-export async function scoutMapsUrlForSite(siteId: string): Promise<string | null> {
+export async function scoutReviewsUrlForSite(siteId: string): Promise<string | null> {
   const row = await db
     .selectFrom("site")
     .innerJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
     .innerJoin("scout_place", "scout_place.lead_id", "mock_artifact.lead_id")
-    .select(["scout_place.link as link"])
+    .select([
+      "scout_place.ftid as ftid",
+      "scout_place.link as link",
+      "scout_place.name as name",
+      "scout_place.address as address",
+      "scout_place.city as city",
+    ])
     .where("site.id", "=", siteId)
-    .where("scout_place.link", "is not", null)
     .orderBy("scout_place.updated_at", "desc")
     .executeTakeFirst();
-  return googleMapsPlaceUrl(row?.link);
+  return row ? scoutReviewsUrl(row) : null;
 }
 
 /** Store what a resolve already learned. Called on provisioning and on refresh. */

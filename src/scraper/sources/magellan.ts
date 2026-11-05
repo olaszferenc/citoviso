@@ -12,7 +12,7 @@
 import { db } from "../../db/client.js";
 import { foundLinks, phoneE164, rowComplete, webClass, webUrl } from "../../scout/rules.js";
 import { classifyWebsite } from "../qualify.js";
-import { googleMapsPlaceUrl } from "../../reviews/placeRating.js";
+import { scoutReviewsUrl } from "../../reviews/placeRating.js";
 import type { LeadSource } from "./LeadSource.js";
 import type { PortalListing, QualifiedLead, RawLead, ScrapeQuery } from "../types.js";
 
@@ -27,7 +27,7 @@ export interface ScoutExtra {
   /** „van saját honlap" → the first found link (already checked to be an own site). */
   readonly ownSite: string | null;
   readonly rating: { readonly value: number; readonly count: number } | null;
-  /** The place's Google Maps card (validated) — where the rating can be verified. */
+  /** Where the rating can be verified: Google reviews by place_id, else the Maps place card (scoutReviewsUrl). */
   readonly mapsUrl: string | null;
 }
 
@@ -80,7 +80,7 @@ export class MagellanSource implements LeadSource {
         portalLinks: links.filter((u) => classifyWebsite(u) === "portal_only"),
         ownSite: r.verdict === "own" ? (links[0] ?? null) : null,
         rating: r.rating != null && r.rating_count != null ? { value: r.rating, count: r.rating_count } : null,
-        mapsUrl: googleMapsPlaceUrl(r.link),
+        mapsUrl: scoutReviewsUrl({ ftid: r.ftid, link: r.link, name: r.name, address: r.address, city: r.city }),
       });
       out.push({
         source: MAGELLAN_SOURCE,

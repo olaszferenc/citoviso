@@ -30,7 +30,7 @@ import { bookableUnits, ensureUnits, guestUnits, isBookableUnit, isWholeOnlySite
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
 import { formatSpan, getSitePrices, isPriceActive, priceSpan, publicSeasons, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
-import { getPlaceRating, scoutMapsUrlForSite } from "../reviews/placeRating.js";
+import { getPlaceRating, scoutReviewsUrlForSite } from "../reviews/placeRating.js";
 import {
   decorateWithLanguages,
   multilangContentHash,
@@ -743,7 +743,7 @@ async function assembleEffective(
   // id to build a reviews URL from). Link it to the place card it was read from, so
   // the badge is verifiable instead of a dead box (Duna Vibe House, 2026-11-05).
   const scoutUrl =
-    merged3.rating && !merged3.rating.url && !merged3.googleRating ? await scoutMapsUrlForSite(s.id) : null;
+    merged3.rating && !merged3.rating.url && !merged3.googleRating ? await scoutReviewsUrlForSite(s.id) : null;
   const merged2: SiteData =
     scoutUrl && merged3.rating ? { ...merged3, rating: { ...merged3.rating, url: scoutUrl } } : merged3;
   // The photo cap runs LAST: only here is the final list known (base photos, the
