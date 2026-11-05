@@ -13,7 +13,11 @@
 //     (A converted trial is never 'lapsed'; this is the second lock, not the first.)
 //   · ⛔ never without the warning: the purge needs the 'p7' e-mail SENT on a day at least 7
 //     days before. A late warning (outage) moves the deletion, never shortens the notice.
+//     The ONE exception (owner doctrine 2026-10-26, ADR-0421): a lead marked „ne keressük”
+//     (lead.contact_block_at) gets no message at all — not the p7 either (recorded as skipped),
+//     and its data is deleted on the scheduled purge day without it („p7 sent OR contact_block”).
 //   · dry run: reports what WOULD go, deletes nothing, claims nothing.
+import { CONTACT_BLOCK_DETAIL, trialContactBlocked } from "./contactBlock.js";
 import { readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { db, pool } from "../db/client.js";
@@ -107,6 +111,16 @@ export async function runPurgeWarnings(
   for (const t of await q.execute()) {
     const until = new Date(t.trial_until as unknown as string);
     if (purgeWarningDay(until) > today) continue;
+    // Owner doctrine 2026-10-26 (ADR-0421): a „ne keressük” lead gets no message — the warning is
+    // recorded as skipped (the purge then runs on its scheduled day without it, see below).
+    if (!dry && (await trialContactBlocked(t.id))) {
+      await db
+        .insertInto("free_trial_notice")
+        .values({ free_trial_id: t.id, step: "p7", channel: "email", status: "skipped", detail: CONTACT_BLOCK_DETAIL, created_at: now as never })
+        .onConflict((oc) => oc.columns(["free_trial_id", "step", "channel"]).doUpdateSet({ status: "skipped", detail: CONTACT_BLOCK_DETAIL }))
+        .execute();
+      continue;
+    }
     out.due++;
     const target: PurgeWarningTarget = {
       trialId: t.id,
@@ -295,7 +309,9 @@ export async function purgeExpiredTrials(
         break;
       }
     }
-    if (!blockedBy) {
+    // „p7 sent OR contact_block”: a „ne keressük” lead was never warned (it gets no message), so its
+    // data goes on the scheduled purge day (already reached above) — never kept past the 90 days.
+    if (!blockedBy && !(await trialContactBlocked(t.id))) {
       if (t.warn_status !== "sent" || !t.warned_at) {
         blockedBy = t.warn_status ? `a figyelmeztetés állapota: ${t.warn_status}` : "a figyelmeztetés még nem ment ki";
       } else {

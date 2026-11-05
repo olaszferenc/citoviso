@@ -1,10 +1,11 @@
 // ADR-0421 + owner doctrine 2026-10-26: a lead marked „Elutasító / nem érintett — ne keressük”
 // (lead.contact_block_at) gets NO further message. ONE predicate for every trial runner that
-// writes to the trialist — the ADR-0417 login reminders (l2–l8), the T−3 / T−1 warnings and the
-// ADR-0425 escalation (m5 MMS, h7 letter) — so the rule cannot drift between copies.
+// writes to the trialist — the ADR-0417 login reminders (l2–l8), the T−3 / T−1 warnings, the
+// ADR-0425 escalation (m5 MMS, h7 letter) and the p7 purge warning — so the rule cannot drift
+// between copies. The purge reads it too: „p7 sent OR contact_block” (retention.ts), so a blocked
+// trial's data is still deleted on its scheduled day, never kept past the 90 days.
 //
-// Deliberately NOT here: the p7 purge warning (retention.ts). The purge only runs after a SENT
-// p7, so blocking it would keep the data past the ÁSZF's 90 days — a legal duty, not outreach.
+// Deliberately NOT here: the l0 start SMS — it answers the trialist's own form submit.
 
 import { db } from "../db/client.js";
 

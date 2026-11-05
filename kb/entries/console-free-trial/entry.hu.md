@@ -74,9 +74,9 @@ a lead-lapon látod, mi ment ki:
 Az üzenetek hétköznap 9 és 16 óra között mennek; ami hétvégére esik, hétfőn. Mindegyik egyszer. Ha a
 leadet a Válaszok panelen **„Elutasító / nem érintett — ne keressük”** jellel jelölted, semmilyen üzenetet
 nem kap tőlünk: se emlékeztetőt, se MMS-t, se személyes levelet, se lejárat előtti levelet (a lead-lapon
-„kimaradt: ne keressük (contact_block)” áll mellettük); a piros jelzés ettől még megjelenik. Kivétel csak kettő: a próba indulásakor a
-belépő adatai (azt ő maga kérte az űrlappal), és az adattörlés előtti értesítés (a 90 napos törlés
-törvényi feltétele).
+„kimaradt: ne keressük (contact_block)” áll mellettük); a piros jelzés ettől még megjelenik. Egyetlen kivétel: a próba indulásakor a
+belépő adatai (azt ő maga kérte az űrlappal). A törlés előtti levelet sem kapja meg; az adatai ettől
+még a 90 nap leteltével törlődnek.
 
 ## A próba vége előtt: T−3 és T−1 értesítés
 
@@ -116,11 +116,12 @@ sima lapjára visz vissza.
 A lejárt, nem folytatott próba adatai a **próba utolsó napjától számított 90 napig** maradnak meg
 (ÁSZF 1.4) — ugyanaddig, ameddig a próba kuponja érvényes. A törlés előtt 7 nappal a próbázó
 figyelmeztető levelet kap (hétvégére eső levél előző pénteken; ha a levél késve megy, a törlés is
-későbbre tolódik, sosem rövidül).
+későbbre tolódik, sosem rövidül). Kivétel a **„ne keressük”** jelű lead: ő ezt a levelet sem kapja meg
+(a lead-lapon „kimaradt: ne keressük (contact_block)”), az adatai a 90 nap leteltével levél nélkül törlődnek.
 
 ⚠️ **Ma még semmi nem törlődik magától.** A figyelmeztető levél szövege jóváhagyásra vár, addig a
 levél és a törlés is csak **szárazon** fut (naplóz, nem küld, nem töröl) — és elküldött figyelmeztetés
-nélkül a törlés amúgy sem indul.
+nélkül a törlés amúgy sem indul (a „ne keressük” jelű leadnél kivételesen igen).
 
 **Kézi futtatás** (a szerveren, a projekt mappájában):
 

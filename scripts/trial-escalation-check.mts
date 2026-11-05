@@ -16,8 +16,11 @@
 //   ⑤ „ne keressük” (lead.contact_block_at): the red mark yes, but NO message of any kind — the
 //      MMS and the letter (escalation), the l2–l8 reminders (ADR-0417) and the T−3 / T−1 warning
 //      are all recorded as skipped with the same reason (one shared predicate, contactBlock.ts);
-//   ⑥ once the owner set a password nothing more goes;
-//   ⑦ the console reads the same facts: trialNoLogin, the red list badge, the red card with
+//   ⑥ „ne keressük” at the end of retention: the blocked lapsed trial gets NO p7 purge warning
+//      (recorded skipped), yet its data is deleted on the scheduled day („p7 sent OR
+//      contact_block”); control — an unblocked lapsed trial without a sent p7 is NOT deleted;
+//   ⑦ once the owner set a password nothing more goes;
+//   ⑧ the console reads the same facts: trialNoLogin, the red list badge, the red card with
 //      the ladder, and the ladder lists what went out.
 //
 // ISOLATION: own scratch database; every sender is injected and recorded.
@@ -93,6 +96,7 @@ const E = await import("../src/trial/escalation.js");
 const { runLoginReminders } = await import("../src/trial/loginReminders.js");
 const { runTrialNotices, noticeSendDay } = await import("../src/trial/expiry.js");
 const { CONTACT_BLOCK_DETAIL } = await import("../src/trial/contactBlock.js");
+const { runPurgeWarnings, purgeExpiredTrials, purgeDay, purgeWarningDay } = await import("../src/trial/retention.js");
 const { buildTrialHelperEmail, buildTrialMmsSmsText } = await import("../src/email/loginEmail.js");
 const { helperFromName, helperName } = await import("../src/trial/helperPersona.js");
 const { isGsm7, smsEncoding } = await import("../src/sms/encoding.js");
@@ -237,8 +241,8 @@ try {
   rows = await rowsOf(A.trialId);
   check("10. nap (ablakon kívül is): „elakadt” mark", d10.stalled === 1 && st(rows, "s10", "mark") === "sent", JSON.stringify(d10));
 
-  // ⑦ the console (before the password: A is red)
-  console.log("⑦ konzol");
+  // ⑧ the console (before the password: A is red)
+  console.log("⑧ konzol");
   const cA = (await loadLeadClients({ leadIds: [A.leadId], withBookingList: true, now: bp("2026-10-14", "10:00") })).get(A.leadId)!;
   check("trialNoLogin: 10. nap, jelszó nélkül → igaz", trialNoLogin(cA.trial) && cA.trial!.day === 10, `${cA.trial?.day}`);
   const pill = V.clientPill({ kind: "trial", daysLeft: 5, noLoginDay: 10 }, "hu");
@@ -303,8 +307,37 @@ try {
   }, { onlyTrialIds: [A.trialId] });
   check("kontroll: jel nélküli próbának a T−3 kimegy", notA.sent >= 1 && noticeSent.length >= 1, JSON.stringify(notA));
 
-  // ⑥ logged in → silence
-  console.log("⑥ belépett → csend");
+  // ⑥ „ne keressük” at the end of retention
+  console.log("⑥ ne keressük: törlés előtti levél nincs, a törlés mégis lefut");
+  const Ex = await trial("e");
+  const Gx = await trial("g");
+  const lapsedUntil = bp("2026-06-01", "10:00");
+  for (const x of [Ex, Gx]) await db.updateTable("free_trial").set({ status: "lapsed", started_at: bp("2026-05-18", "10:00"), trial_until: lapsedUntil } as never).where("id", "=", x.trialId).execute();
+  await db.updateTable("lead").set({ contact_block_at: new Date(), contact_block_reason: "teszt", contact_block_by: "check" } as never).where("id", "=", Ex.leadId).execute();
+  if (SELF_TEST) await db.updateTable("lead").set({ contact_block_at: null } as never).where("id", "=", Ex.leadId).execute();
+  const warned: string[] = [];
+  const wDay = purgeWarningDay(lapsedUntil);
+  const pw = await runPurgeWarnings(bp(wDay, "10:00"), { sendEmail: async (t) => void warned.push(t.trialId) }, { onlyTrialIds: [Ex.trialId] });
+  const p7 = (await rowsOf(Ex.trialId)).filter((r) => r.step === "p7");
+  check("jeles próba: nincs törlés előtti levél, a p7 „ne keressük” okkal kihagyva",
+    warned.length === 0 && p7.length === 1 && p7[0]!.status === "skipped" && p7[0]!.detail === CONTACT_BLOCK_DETAIL, `${wDay} ${JSON.stringify(pw)}`);
+  const pDay = purgeDay(lapsedUntil);
+  const dryP = await purgeExpiredTrials(bp(pDay, "08:00"), { dryRun: true, onlyTrialIds: [Ex.trialId, Gx.trialId] });
+  const cE = dryP.candidates.find((c) => c.trialId === Ex.trialId);
+  const cG = dryP.candidates.find((c) => c.trialId === Gx.trialId);
+  check("kontroll: jel nélküli, figyelmeztetés nélküli próba NEM törölhető", !!cG?.blockedBy, cG?.blockedBy ?? "nincs akadály");
+  const dataRoot = path.resolve(process.cwd(), `sites/_trialesc_${stamp}_root`);
+  await mkdir(path.join(dataRoot, "sites", Ex.tenantId), { recursive: true });
+  const realP = await purgeExpiredTrials(bp(pDay, "08:00"), { onlyTrialIds: [Ex.trialId], dataRoot });
+  const eRow = await db.selectFrom("free_trial").select(["status", "tenant_id"]).where("id", "=", Ex.trialId).executeTakeFirstOrThrow();
+  check("jeles próba: a törlés a határidőn (90 nap után) p7 nélkül is lefut",
+    !cE?.blockedBy && realP.purged === 1 && eRow.status === "purged" && eRow.tenant_id === null, `${pDay} ${cE?.blockedBy ?? ""} ${JSON.stringify({ purged: realP.purged, refused: realP.refused })}`);
+  await rm(dataRoot, { recursive: true, force: true });
+  const tIdx = tenants.indexOf(Ex.tenantId);
+  if (tIdx >= 0) tenants.splice(tIdx, 1);
+
+  // ⑦ logged in → silence
+  console.log("⑦ belépett → csend");
   await db.deleteFrom("free_trial_notice").where("free_trial_id", "=", A.trialId).where("step", "in", ["m5", "h7", "s10", "e4"]).execute();
   if (!SELF_TEST) await db.updateTable("tenant_user").set({ password_set_at: new Date() }).where("tenant_id", "=", A.tenantId).execute();
   const mm0 = mmss.length + mails.length;
@@ -317,7 +350,7 @@ try {
   console.error("❌ kivétel:", e);
 } finally {
   for (const t of tenants) await rm(path.resolve(process.cwd(), "sites", t), { recursive: true, force: true });
-  for (const tag of ["a", "b", "c", "d"]) await rm(path.resolve(process.cwd(), `sites/_trialesc_${stamp}${tag}.html`), { force: true });
+  for (const tag of ["a", "b", "c", "d", "e", "g"]) await rm(path.resolve(process.cwd(), `sites/_trialesc_${stamp}${tag}.html`), { force: true });
   await rm(SHOT, { force: true });
   await db.destroy();
 }
