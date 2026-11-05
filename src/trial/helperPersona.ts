@@ -1,4 +1,4 @@
-// ADR-XXXX — the LOCAL name the trial helper letter is signed with (owner, 2026-11-05:
+// ADR-0425 — the LOCAL name the trial helper letter is signed with (owner, 2026-11-05:
 // "ne Poe legyen a kimenő név… Mindig valami helyi név, most pl. magyar").
 //
 // The letter goes to a trialist who has not logged in for a week; a foreign or invented-

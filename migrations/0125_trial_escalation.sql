@@ -1,4 +1,4 @@
--- 0125 INGYENES PRÓBA — eszkaláció, ha a próbázó nem lép be (ADR-XXXX, tulaj-jóváhagyás 2026-11-05;
+-- 0125 INGYENES PRÓBA — eszkaláció, ha a próbázó nem lép be (ADR-0425, tulaj-jóváhagyás 2026-11-05;
 -- terv: assets/design-refs/console/proba-eszkalacio/).
 --
 -- Az ADR-0417 emlékeztetői (l0…l8) mellé, amíg a próbázó nem állít be jelszót:
@@ -21,4 +21,4 @@ ALTER TABLE mms_outbox ADD COLUMN IF NOT EXISTS free_trial_id uuid REFERENCES fr
 CREATE UNIQUE INDEX IF NOT EXISTS mms_outbox_one_per_trial
   ON mms_outbox(free_trial_id) WHERE free_trial_id IS NOT NULL;
 COMMENT ON COLUMN mms_outbox.free_trial_id IS
-  'ADR-XXXX: a próbázó 5. napi MMS-e (élő oldal képe) — próbánként egy; a nyugta a kísérő SMS-t indítja.';
+  'ADR-0425: a próbázó 5. napi MMS-e (élő oldal képe) — próbánként egy; a nyugta a kísérő SMS-t indítja.';

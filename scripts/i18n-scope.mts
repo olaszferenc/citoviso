@@ -53,7 +53,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/trial/expiry.ts": "operátori napló + ledger-részlet; a levél szövege trialEmail.ts",
   "src/trial/notices.ts": "operátori hibaüzenet a ledgerbe; a levél szövege trialEmail.ts",
   "src/trial/loginReminders.ts": "operátori hibaüzenet a ledgerbe; a levél és az SMS szövege loginEmail.ts",
-  // ADR-XXXX: the escalation runner — ledger details + operator log; the letter / SMS wording lives
+  // ADR-0425: the escalation runner — ledger details + operator log; the letter / SMS wording lives
   // in loginEmail.ts, the MMS band in liveShot.ts (T()); the ASCII MMS subject is HU-only by channel.
   "src/trial/escalation.ts": "operátori hibaüzenet a ledgerbe + ASCII MMS-tárgy; a levél és az SMS szövege loginEmail.ts",
   // The MMS adapter: its error strings are operator-facing results (ledger / console), never sent.

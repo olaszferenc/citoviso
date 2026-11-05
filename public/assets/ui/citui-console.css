@@ -3053,7 +3053,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-bar--thin { height: 8px; }
 .rp-bar__fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--citui-link-ink); transition: width var(--citui-transition); }
 .rp-bar__fill.rp-said { background: var(--citui-cyan-500); }
-/* ADR-XXXX „Hol szakad meg a próba?” (approved plan proba-eszkalacio). */
+/* ADR-0425 „Hol szakad meg a próba?” (approved plan proba-eszkalacio). */
 .rp-brk { display: grid; gap: 4px; }
 .rp-brk__row {
   display: grid; grid-template-columns: minmax(150px, 240px) minmax(0, 1fr) 40px; gap: 10px; align-items: center;
@@ -3588,7 +3588,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-cpill.paid { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
 .con .con-cpill.lapsed { background: var(--citui-surface-2); color: var(--citui-muted); border-color: var(--citui-line-strong); }
 .con .con-cpill.bk { background: var(--citui-panel); color: var(--citui-ink-brand); border-color: var(--citui-line-strong); }
-/* ADR-XXXX (approved plan proba-eszkalacio): the red „nem lépett be” badge. */
+/* ADR-0425 (approved plan proba-eszkalacio): the red „nem lépett be” badge. */
 .con .con-cpill.bad {
   background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink, var(--citui-bad));
   border-color: color-mix(in srgb, var(--citui-bad) 40%, transparent);
@@ -3624,7 +3624,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con .con-client.soon .con-client__h { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel)); }
 .con .con-client.lapsed .con-client__h { background: var(--citui-surface-2); }
-/* ADR-XXXX: no login from trial day 4 — red head + the 14-day ladder („A”). */
+/* ADR-0425: no login from trial day 4 — red head + the 14-day ladder („A”). */
 .con .con-client.bad { border-color: color-mix(in srgb, var(--citui-bad) 45%, transparent); }
 .con .con-client.bad .con-client__h { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-panel)); }
 .con .con-client.bad .con-client__t h3 { color: var(--citui-bad-ink, var(--citui-bad)); }

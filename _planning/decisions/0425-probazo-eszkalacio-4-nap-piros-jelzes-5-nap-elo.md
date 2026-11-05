@@ -1,4 +1,4 @@
-## ADR-XXXX — Próbázó eszkaláció: 4. nap piros jelzés, 5. nap élő-oldal MMS, 7. nap személyes levél helyi névvel, 10. nap „elakadt”
+## ADR-0425 — Próbázó eszkaláció: 4. nap piros jelzés, 5. nap élő-oldal MMS, 7. nap személyes levél helyi névvel, 10. nap „elakadt”
 
 **Dátum:** 2026-11-05 · **Döntött:** a tulaj („Elfogadom a javaslatokat!”, plan `assets/design-refs/console/proba-eszkalacio/`: lead-lap **A**, levél **P2**; „ne Poe legyen a kimenő név… mindig valami helyi név”) · **Kapcsolódik:** ADR-0417 (belépés-emlékeztető), ADR-0386 (az operátor látja a próbát), ADR-0407 (Próba riport), ADR-0083/0282 (MMS-pár, MMS-sor), ADR-0421 (ne keressük)
 

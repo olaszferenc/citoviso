@@ -1,4 +1,4 @@
-// ADR-XXXX — ESCALATION for a trialist who does not log in (owner-approved 2026-11-05, plan
+// ADR-0425 — ESCALATION for a trialist who does not log in (owner-approved 2026-11-05, plan
 // assets/design-refs/console/proba-eszkalacio/: lead page „A”, helper letter „P2”).
 //
 // Measured 2026-11-05 on prod: both live trialists (Sáma day 9, Marilyn day 4) got the

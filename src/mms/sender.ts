@@ -48,7 +48,7 @@ export interface MmsMessage {
   readonly subject: string;
   /** The pair's prospect (queue provider: the ack stamps its mms_sent_at). */
   readonly prospectId?: string;
-  /** ADR-XXXX: the trial's day-5 live-site MMS (queue provider: the ack sends its companion SMS). */
+  /** ADR-0425: the trial's day-5 live-site MMS (queue provider: the ack sends its companion SMS). */
   readonly freeTrialId?: string;
 }
 

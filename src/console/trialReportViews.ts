@@ -289,7 +289,7 @@ function ladder(r: TrialReport, lang: string): string {
   return `<div class="rp-fun">${rows}</div>${note}`;
 }
 
-// ADR-XXXX (approved plan proba-eszkalacio, „Riport”): where does the trial break? One bar per
+// ADR-0425 (approved plan proba-eszkalacio, „Riport”): where does the trial break? One bar per
 // bucket of the same verdict the list shows; a tap narrows the list below to that bucket.
 const BUCKET_LABEL = (lang: string): Record<VerdictBucket, string> => ({
   no_login: T(lang, "Nem lépett be (még fut)"),

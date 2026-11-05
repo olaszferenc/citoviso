@@ -1,7 +1,7 @@
 # 2026-11-05 — Próbázó eszkaláció (nem lép be): piros jelzés, élő-oldal MMS, személyes levél helyi névvel, „elakadt”
 
 **Session:** `cit2dea6649` · brief `~/rc-briefs/pr-ba-eszkal-ci-s-folyamat-20261105-085445.md` (a „CIT ➕ Hiba” session javaslata, tulaj: „ok, elfogadom”)
-**ADR:** ADR-XXXX · **Terv:** `assets/design-refs/console/proba-eszkalacio/` (A + P2 + helyi név)
+**ADR:** ADR-0425 · **Terv:** `assets/design-refs/console/proba-eszkalacio/` (A + P2 + helyi név)
 
 ## Mi történt
 - Élesen mérve: Sáma (9. nap) és Marilyn (4. nap) egyetlen ADR-0417 emlékeztetőt kapott (11-04), jelszót egyikük sem állított.

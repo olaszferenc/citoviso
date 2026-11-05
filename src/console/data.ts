@@ -122,7 +122,7 @@ export interface LeadListRow {
 export interface LeadClientSummary {
   readonly kind: ClientKind | null;
   readonly daysLeft: number | null;
-  /** ADR-XXXX: the trial day when the owner has not logged in from day 4 on (red badge), else null. */
+  /** ADR-0425: the trial day when the owner has not logged in from day 4 on (red badge), else null. */
   readonly noLoginDay?: number | null;
   readonly bookingTotal: number;
   readonly bookingPending: number;

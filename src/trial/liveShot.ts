@@ -1,4 +1,4 @@
-// ADR-XXXX — the picture of the trialist's LIVE site for the day-5 MMS (approved plan
+// ADR-0425 — the picture of the trialist's LIVE site for the day-5 MMS (approved plan
 // assets/design-refs/console/proba-eszkalacio/ „5. nap: MMS”).
 //
 // The trialists first answered an MMS (the mock's hero image). This shot reuses that channel

@@ -10,7 +10,7 @@ képen, és ezt választotta:
 | Személyes levél | **P2**: a mintát egyszer hagyja jóvá (ezzel a jóváhagyással megtörtént), utána magától megy |
 | Aláíró | **NEM „Poe”** — mindig a címzett nyelvének HELYI neve (tulaj: „Mindig valami helyi név, most pl. magyar”) |
 
-Ez a terv a megvalósítás **KONTRAKTUSA**: elvárt viselkedés, nem stílus-javaslat. ADR: `ADR-XXXX`
+Ez a terv a megvalósítás **KONTRAKTUSA**: elvárt viselkedés, nem stílus-javaslat. ADR: `ADR-0425`
 (`_planning/decisions/XXXX-probazo-eszkalacio-*.md`).
 
 Referencia: `plan.html` (kattintható, Mobil 390px / Asztali váltóval) és képei (`terv-*`), a

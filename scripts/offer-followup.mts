@@ -70,7 +70,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: still no login — day 4 red flag, day 5 live-site MMS, day 7 helper letter, day 10 stalled.
+  // ADR-0425: still no login — day 4 red flag, day 5 live-site MMS, day 7 helper letter, day 10 stalled.
   const x = await runTrialEscalation(now, escalationDeps());
   console.log(`trial-escalation (MMS + e-mail éles) @ ${now.toISOString()}:`, JSON.stringify(x));
 } catch (e) {

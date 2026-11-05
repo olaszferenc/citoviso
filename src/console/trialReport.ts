@@ -68,7 +68,7 @@ export type TrialVerdict =
   | { readonly k: "stuck"; readonly step: string }
   | { readonly k: "ordered" }
   | { readonly k: "no_login"; readonly day: number }
-  /** ADR-XXXX: still running, day ≥ 10, never logged in — „elakadt”. */
+  /** ADR-0425: still running, day ≥ 10, never logged in — „elakadt”. */
   | { readonly k: "stalled"; readonly day: number }
   | { readonly k: "quiet"; readonly saved: boolean; readonly days: number }
   | { readonly k: "active"; readonly days: number }
@@ -113,7 +113,7 @@ export interface TrialReport {
   readonly stage: number | null;
   /** Every trial in the range + status filter (the KPIs and the ladder count these). */
   readonly trials: readonly TrialRow[];
-  /** ADR-XXXX: the selected „hol szakad meg?” bucket (only those trials are listed), or null. */
+  /** ADR-0425: the selected „hol szakad meg?” bucket (only those trials are listed), or null. */
   readonly bucket: VerdictBucket | null;
   /** The list under the ladder: `trials`, narrowed to `stage` when one is selected. */
   readonly listed: readonly TrialRow[];
@@ -249,10 +249,10 @@ export function deriveTrial(r: RawTrial, measuredFrom: Date | null, now: Date): 
   };
 }
 
-/** ADR-XXXX: „elakadt” from this trial day on without a login (the same day as the lead page's s10). */
+/** ADR-0425: „elakadt” from this trial day on without a login (the same day as the lead page's s10). */
 export const STALLED_LOGIN_DAY = 10;
 
-/** ADR-XXXX „hol szakad meg?”: one bucket per trial, in the page's order. */
+/** ADR-0425 „hol szakad meg?”: one bucket per trial, in the page's order. */
 export const VERDICT_BUCKETS = ["no_login", "stalled", "quiet_nosave", "quiet_saved", "stuck", "ordered", "active", "paid", "lapsed", "unmeasured"] as const;
 export type VerdictBucket = (typeof VERDICT_BUCKETS)[number];
 export function verdictBucket(v: TrialVerdict): VerdictBucket {

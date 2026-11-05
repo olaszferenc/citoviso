@@ -340,7 +340,7 @@ export function buildLoginReminderSmsText(input: {
 }
 
 /**
- * ADR-XXXX — the trial-day-7 HELPER letter (owner-approved frame, 2026-11-05, plan
+ * ADR-0425 — the trial-day-7 HELPER letter (owner-approved frame, 2026-11-05, plan
  * assets/design-refs/console/proba-eszkalacio/ „P2”): personal tone, signed with a LOCAL
  * name (helperPersona), a fresh one-time password link, the username, and one sentence about
  * the trialist's OWN live page (its first heading, read from the page — never invented).
@@ -424,7 +424,7 @@ export function buildTrialHelperEmail(input: {
   return { ...mail, fromName: input.fromName };
 }
 
-/** ADR-XXXX — the companion SMS of the day-5 live-site MMS: accent-free, 1 segment with a real link. */
+/** ADR-0425 — the companion SMS of the day-5 live-site MMS: accent-free, 1 segment with a real link. */
 export function buildTrialMmsSmsText(input: { setPasswordUrl: string; lang?: string }): string {
   const url = input.setPasswordUrl.replace(/^https?:\/\//, "");
   return toGsm7(T(input.lang, "Citoviso: a képen már az Ön élő honlapja. Szerkesztés egy kattintással: {url}", { url }));

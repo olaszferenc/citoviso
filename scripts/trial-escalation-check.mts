@@ -1,4 +1,4 @@
-// ADR-XXXX — trialist ESCALATION (src/trial/escalation.ts, owner-approved 2026-11-05, plan
+// ADR-0425 — trialist ESCALATION (src/trial/escalation.ts, owner-approved 2026-11-05, plan
 // assets/design-refs/console/proba-eszkalacio/ — lead page „A”, helper letter „P2”, local name).
 // What this proves:
 //   ① the schedule, pure: trial day = Budapest calendar day from the start (day 1 = start day);

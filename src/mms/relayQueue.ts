@@ -45,7 +45,7 @@ export interface MmsAck {
 export interface MmsRelayDeps {
   /** After the ack stamped mms_sent_at: send the pair's companion SMS half. */
   afterSent(prospectId: string, pairStartedAt: Date): Promise<unknown>;
-  /** ADR-XXXX: after a trial's live-site MMS was accepted (ok) or parked failed: its companion SMS / ledger. */
+  /** ADR-0425: after a trial's live-site MMS was accepted (ok) or parked failed: its companion SMS / ledger. */
   afterTrialMms(freeTrialId: string, ok: boolean, error: string | null): Promise<unknown>;
   alert(subject: string, text: string): Promise<unknown>;
 }

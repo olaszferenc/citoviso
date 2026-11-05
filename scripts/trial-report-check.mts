@@ -212,7 +212,7 @@ const rep = await R.getTrialReport(0, "all", null, NOW);
 const by = (id: string) => rep.trials.find((t) => t.trialId === id);
 check("csak kiküldött, nem teszt próbák (7)", rep.trials.length === 7 && !rep.trials.some((t) => t.name.includes("TESZT") || t.name.includes("Nem kiküldött")), rep.trials.map((t) => t.name).join(", "));
 check("a mérés előtti próba „nem mért”", by(old.trialId)?.measured === false && by(old.trialId)?.verdict.k === "lapsed");
-check("be sem lépett, 13. nap → stalled (elakadt, ADR-XXXX)", by(nologin.trialId)?.verdict.k === "stalled");
+check("be sem lépett, 13. nap → stalled (elakadt, ADR-0425)", by(nologin.trialId)?.verdict.k === "stalled");
 const q = by(quiet.trialId)!;
 check("mentett, aztán csend → quiet + saved", q.verdict.k === "quiet" && q.verdict.saved === true, JSON.stringify(q.verdict));
 check("a belépés módja a látogatáshoz kötve (egy belépés, „link”)", q.logins === 1 && q.events.find((e) => e.kind === "login")?.detail === "link", JSON.stringify(q.events));

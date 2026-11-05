@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-probazo-eszkalacio-piros-jelzes-mms-szemelyes-level-elakadt.md) — Próbázó eszkaláció: 4. nap piros jelzés, 5. nap élő-oldal MMS, 7. nap személyes levél helyi névvel, 10. nap „elakadt”
+- [ADR-0425](decisions/0425-probazo-eszkalacio-4-nap-piros-jelzes-5-nap-elo.md) — Próbázó eszkaláció: 4. nap piros jelzés, 5. nap élő-oldal MMS, 7. nap személyes levél helyi névvel, 10. nap „elakadt”
 - [ADR-0424](decisions/0424-velemeny-szekcio-sajat-velemenyek-nelkul-egy.md) — Vélemény-szekció saját vélemények nélkül: egy kártya (Google-szám + „Én is írok”)
 - [ADR-0423](decisions/0423-uj-mockhoz-csak-harom-sablon-parallax.md) — Új mockhoz csak három sablon (Parallax · Kapunyitás · Névből növő); a Kapunyitás szétnyíló képe sosem a nyitókép, hanem az admin második képe, külön mezőben
 - [ADR-0422](decisions/0422-a-fejezetes-horizontal-sablon-vegleg-kivezetve.md) — A Fejezetes (horizontal) sablon végleg kivezetve: új mock nem készülhet vele, a második terv alapértelmezése Fullbleed

@@ -5525,7 +5525,7 @@ export function clientPill(
   if (!c?.kind) return "";
   if (c.kind === "trial") {
     const d = c.daysLeft ?? 0;
-    // ADR-XXXX (approved plan proba-eszkalacio): from day 4 without a login the badge goes red.
+    // ADR-0425 (approved plan proba-eszkalacio): from day 4 without a login the badge goes red.
     const noLogin = c.noLoginDay
       ? `<span class="con-cpill bad" data-cit-client-nologin="${c.noLoginDay}"><i aria-hidden="true"></i>${T(lang, "nem lépett be · {n}. nap", { n: c.noLoginDay })}</span>`
       : "";
@@ -5628,7 +5628,7 @@ function silentBookingHint(c: LeadClientView, lang: string): string {
   );
 }
 
-// ── PRÓBÁZÓ ESZKALÁCIÓ (ADR-XXXX, approved plan proba-eszkalacio „A”) ─────────────────
+// ── PRÓBÁZÓ ESZKALÁCIÓ (ADR-0425, approved plan proba-eszkalacio „A”) ─────────────────
 // From trial day 4 without a login the card turns red and shows the trial's days on one strip
 // plus every step in a list: what went out, what is happening now, what comes. The list reads
 // the ledger (free_trial_notice) for the past and the same schedule functions the tick uses
@@ -9320,7 +9320,7 @@ export interface HubData {
   /** Replies to our outreach (ADR-0339) — the block on the home, the attention row, the widget row. */
   readonly replies: RepliesBlock;
   readonly repliesQuery: RepliesQuery;
-  /** ADR-XXXX: running trials without a login from day 4 on (the red attention row). */
+  /** ADR-0425: running trials without a login from day 4 on (the red attention row). */
   readonly noLoginTrials?: readonly { leadId: string; name: string; day: number }[];
 }
 
@@ -9366,7 +9366,7 @@ function attentionRows(d: HubData, lang: string): readonly AttentionRow[] {
       where: T(lang, "Válaszok"),
     });
   }
-  // ADR-XXXX (approved plan proba-eszkalacio): a trialist who has not logged in from day 4 on.
+  // ADR-0425 (approved plan proba-eszkalacio): a trialist who has not logged in from day 4 on.
   const nl = d.noLoginTrials ?? [];
   if (nl.length) {
     const names = nl.map((x) => `${esc(x.name)} (${esc(T(lang, "{n}. nap", { n: x.day }))})`).join(", ");

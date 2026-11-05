@@ -68,11 +68,11 @@ export interface LeadClientTrial {
   readonly discountPercent: number | null;
   /** First outreach to the lead before the trial (ISO), null = the trial came without one. */
   readonly outreachAt: string | null;
-  /** ADR-XXXX: the trial day today (1 = the start's Budapest day). */
+  /** ADR-0425: the trial day today (1 = the start's Budapest day). */
   readonly day: number;
-  /** ADR-XXXX: has the owner ever set a password or logged in? */
+  /** ADR-0425: has the owner ever set a password or logged in? */
   readonly loggedIn: boolean;
-  /** ADR-XXXX: every message / mark of the trial (free_trial_notice), oldest first — page only. */
+  /** ADR-0425: every message / mark of the trial (free_trial_notice), oldest first — page only. */
   readonly notices: readonly TrialNoticeRow[];
 }
 
@@ -84,9 +84,9 @@ export interface TrialNoticeRow {
   readonly at: string;
 }
 
-/** ADR-XXXX: the red „nem lépett be” state — a running trial, day ≥ 4, no password yet. */
+/** ADR-0425: the red „nem lépett be” state — a running trial, day ≥ 4, no password yet. */
 export const NO_LOGIN_FLAG_DAY = 4;
-/** ADR-XXXX: „elakadt” — day ≥ 10 without a login. */
+/** ADR-0425: „elakadt” — day ≥ 10 without a login. */
 export const STALLED_DAY = 10;
 export function trialNoLogin(t: Pick<LeadClientTrial, "status" | "day" | "loggedIn"> | null | undefined): boolean {
   return !!t && t.status === "active" && !t.loggedIn && t.day >= NO_LOGIN_FLAG_DAY;
@@ -170,7 +170,7 @@ export async function loadLeadClients(
   if (ids) tenantsQ = tenantsQ.where("tenant.lead_id", "in", ids);
   const [trials, tenants] = await Promise.all([trialsQ.execute(), tenantsQ.execute()]);
 
-  // ADR-XXXX: who has logged in (or set a password) — the red flag is the absence of it.
+  // ADR-0425: who has logged in (or set a password) — the red flag is the absence of it.
   const tenantIdsAll = tenants.map((t) => t.tenantId);
   const loggedTenants = new Set(
     tenantIdsAll.length
@@ -329,7 +329,7 @@ export function retentionDay(untilDay: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** ADR-XXXX: the running trials whose owner has not logged in from day 4 on (dashboard row), oldest first. */
+/** ADR-0425: the running trials whose owner has not logged in from day 4 on (dashboard row), oldest first. */
 export async function loadNoLoginTrials(now: Date = new Date()): Promise<{ leadId: string; name: string; day: number }[]> {
   const rows = await db
     .selectFrom("free_trial")
