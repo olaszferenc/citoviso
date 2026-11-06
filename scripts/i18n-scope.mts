@@ -151,6 +151,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // („a páros küldése elindult", kapu-indoklások) — a leadnek menő szöveg a
   // renderPairSmsDraft-ból származik, T()-vel.
   "src/outreach/sendOutreachPair.ts": "operátori művelet-visszajelzés + kapu-indoklás — a lead SMS-e a draft.ts-ből jön",
+  // The owner's own wording (approval page): its Hungarian literals are the save-refusal
+  // reasons shown to the operator; the lead's text is composeBody/renderPairSmsDraft (T())
+  // or the owner's own typed text, never a literal of this file.
+  "src/outreach/copyOverride.ts": "operátori mentés-elutasítási indok — a lead szövege a draft.ts-ből (T()) vagy a tulaj saját szövege",
   // A riasztás húzta be a levél-gráfba; a magyarja konzol-felirat/riport, levél-törzsbe
   // nem folyik (az aamAlert.ts a saját szövegét építi).
   "src/console/partnerData.ts": "konzol-adatréteg — magyarja operátor-felirat, levél-törzsbe nem folyik",
