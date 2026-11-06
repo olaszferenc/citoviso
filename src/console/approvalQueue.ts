@@ -168,28 +168,24 @@ const CSS = `<style>
 .aq-tabs button{font:inherit;font-size:.82rem;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:5px 12px;cursor:pointer}
 .aq-tabs button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
 .aq-tabs .sep{width:10px}
-.aq-view{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:auto;max-height:calc(100vh - 290px)}
-.aq-shot{display:block;width:100%;height:auto;margin:0 auto;background:var(--citui-white)}
-.aq-shot.m{max-width:390px}
-.aq-wait{margin:0;padding:10px 14px;font-size:.8rem;color:var(--citui-muted)}
+.aq-view{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden}
+.aq-frame{display:block;width:100%;height:calc(100vh - 300px);min-height:520px;border:0;margin:0 auto;background:var(--citui-white)}
+.aq-frame.m{width:390px;max-width:100%}
 .aq-empty{padding:40px;text-align:center;color:var(--citui-muted)}
 @media (max-width:900px){.aq{grid-template-columns:1fr}.aq-list{max-height:220px}}
 </style>`;
 
 const SCRIPT = `<script>
 (function(){
-  var img=document.querySelector('.aq-shot'); if(!img) return;
-  var wait=document.querySelector('.aq-wait'), plan=img.getAttribute('data-main'), w=1280;
-  function load(){ wait.style.display='block'; img.classList.toggle('m', w<600); img.src='/jovahagyas/kep/'+plan+'?w='+w; }
-  img.addEventListener('load',function(){ wait.style.display='none'; });
-  img.addEventListener('error',function(){ wait.textContent='A kép nem készült el — frissítsd az oldalt.'; });
+  var fr=document.querySelector('.aq-frame'); if(!fr) return;
+  var plan=fr.getAttribute('data-main');
   document.querySelectorAll('.aq-tabs button').forEach(function(b){
     b.addEventListener('click',function(){
       var g=b.getAttribute('data-g');
       document.querySelectorAll('.aq-tabs button[data-g="'+g+'"]').forEach(function(x){x.classList.remove('on');});
       b.classList.add('on');
-      if(g==='plan') plan=b.getAttribute('data-id'); else w=Number(b.getAttribute('data-w'));
-      load();
+      if(g==='plan'){ plan=b.getAttribute('data-id'); fr.src='/mock/'+plan; }
+      else { fr.classList.toggle('m', b.getAttribute('data-w')==='390'); }
     });
   });
 })();
@@ -225,7 +221,7 @@ export function approvalPage(items: readonly PendingApproval[], selected: string
     (cur.reason ? `<div class="aq-why">${esc(T(lang, "Átnéző"))}: ${esc(cur.reason)}</div>` : "") +
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;
   const right =
-    `<div class="aq-main">${head}${tabs}<div class="aq-view"><p class="aq-wait">${esc(T(lang, "A teljes oldal képe készül…"))}</p><img class="aq-shot" alt="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/jovahagyas/kep/${esc(cur.mainId)}?w=1280"></div></div>`;
+    `<div class="aq-main">${head}${tabs}<div class="aq-view"><iframe class="aq-frame" title="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/mock/${esc(cur.mainId)}"></iframe></div></div>`;
   return layout(
     T(lang, "Jóváhagyás"),
     `${CSS}${flash ? `<p class="aq-meta">${esc(flash)}</p>` : ""}<div class="aq">${left}${right}</div>${SCRIPT}`,

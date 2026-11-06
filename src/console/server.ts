@@ -1838,7 +1838,6 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const items = await listPendingApprovals();
-    warmApprovalShots(items);
     return send(res, 200, approvalPage(items, url.searchParams.get("lead"), url.searchParams.get("ok") ?? ""));
   }
   {
