@@ -1,0 +1,1929 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Modul-státusz — 4. kör</title>
+<style>:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A kiküldött terv (/p/<token>) alján ülő RÖGZÍTETT réteg MÉRT magassága: a
+     süti-sáv + a sablon saját Foglalás-sávja + a fölé mászó hívó pirula, együtt.
+     A konfigurátor-futó (`assets/runtime/cit-configurator.js`, placeLaunch) írja
+     a gyökérre, mert egyedül ő tudja, meddig kellett felmásznia. A jogi lábléc
+     (`prospectNotice.ts`) ebből tart magának alsó térközt — mérve 2026-09-26,
+     390 px-en 19 sablonból 19-en e nélkül a leiratkozó link a réteg ALATT volt.
+     Alapból 0: pirula nélkül (már megvett oldal, JS nélkül) a süti-sáv magassága
+     a tartalék. */
+  --citui-cfg-clear: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
+}
+/* Mock-only layout. Colours/fonts/radii come from the --citui-* tokens inlined above. */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--citui-surface-2);color:var(--citui-ink);font:13px/1.45 var(--citui-font-text);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--citui-link-ink)}
+/* ── mock toolbar (outside the device) ── */
+.mk{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 12px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);font-size:12px}
+.mk b{font-weight:600}
+.mk .grp{display:flex;gap:4px;align-items:center}
+.mk .grp>span{opacity:.7;margin-right:2px}
+.mk button{background:transparent;border:1px solid color-mix(in srgb,var(--citui-white) 28%,transparent);color:var(--citui-ink-inverse);border-radius:6px;padding:4px 9px;cursor:pointer}
+.mk button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.mk .note{opacity:.75;flex-basis:100%}
+.stage{display:flex;justify-content:center;padding:16px 8px 60px}
+.dev{width:1180px;max-width:100%;container-type:inline-size;background:var(--citui-bg);border:1px solid var(--citui-line);border-radius:10px;overflow:hidden;position:relative;min-height:760px}
+body[data-size=mobile] .dev{width:390px;min-height:800px}
+/* ── admin shell ── */
+.shell{display:grid;grid-template-columns:1fr;min-height:inherit}
+.side{display:none}
+.top{display:flex;align-items:center;gap:8px;height:52px;padding:0 12px;border-bottom:1px solid var(--citui-line);background:var(--citui-panel)}
+.top .crumb{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .crumb small{font-weight:400;color:var(--citui-muted)}
+.main{padding:16px 16px 84px;min-width:0}
+.bnav{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);height:60px;border-top:1px solid var(--citui-line);background:var(--citui-panel)}
+.bnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--citui-muted);text-decoration:none;cursor:pointer}
+.bnav a.on{color:var(--citui-ink)}
+.bnav a.on svg{color:var(--citui-cyan-500)}
+@container (min-width:900px){
+  .shell{grid-template-columns:232px 1fr}
+  .side{display:flex;flex-direction:column;background:var(--citui-side);border-right:1px solid var(--citui-line);padding:12px 8px}
+  .side .brand{display:flex;gap:8px;align-items:center;padding:4px 8px 12px}
+  .side .brand b{display:block;font-size:14px}
+  .side .brand small{display:block;color:var(--citui-muted);font-weight:400;font-size:11px}
+  .side .g{font-size:11px;color:var(--citui-muted);font-weight:600;padding:12px 8px 4px}
+  .side a{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;color:var(--citui-ink);text-decoration:none;cursor:pointer}
+  .side a:hover{background:var(--citui-hover)}
+  .side a.on{background:var(--citui-accent-soft);font-weight:600}
+  .side a .n{margin-left:auto;font-size:11px;color:var(--citui-muted)}
+  .side a .pip{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--citui-warn)}
+  .bnav{display:none}
+  .top{padding:0 24px}
+  .main{padding:28px 32px 40px}
+  .mob-only{display:none!important}
+}
+@container (max-width:899px){.desk-only{display:none!important}}
+/* ── primitives ── */
+.ph h1{font:600 22px/1.2 var(--citui-font-display);margin:0 0 4px}
+.ph p{margin:0 0 16px;color:var(--citui-muted)}
+@container (min-width:900px){.ph h1{font-size:28px}}
+.card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap;text-decoration:none;color:var(--citui-ink)}
+.btn:hover{background:var(--citui-hover)}
+.btn--p{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.btn--p:hover{background:var(--citui-cyan-400)}
+.btn--lg{padding:12px 18px;font-size:15px}
+.btn--ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;border:0;background:transparent;cursor:pointer;color:var(--citui-ink)}
+.ib:hover{background:var(--citui-hover)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-done{color:var(--citui-ok-ink);background:var(--citui-ok-soft)}
+.st-part,.st-miss{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 16%,transparent)}
+.st-miss{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 12%,transparent)}
+.st-opt,.st-decl{color:var(--citui-muted);background:var(--citui-hover)}
+.muted{color:var(--citui-muted)}
+.help{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--citui-link-ink);text-decoration:none;cursor:pointer}
+.help:hover{text-decoration:underline}
+.bar{height:6px;border-radius:999px;background:var(--citui-hover);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--citui-ok);border-radius:999px;transition:width .4s}
+/* status icon (ring) */
+.sic{flex:none;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.sic.done{background:var(--citui-ok);color:var(--citui-white)}
+.sic.part{border:2px solid var(--citui-warn);background:linear-gradient(90deg,var(--citui-warn) 50%,transparent 50%)}
+.sic.miss{border:2px dashed var(--citui-bad)}
+.sic.opt,.sic.decl{border:2px solid var(--citui-line-strong)}
+/* ── wizard (shared engine, mounted by each variant) ── */
+.wz-back{position:absolute;inset:0;z-index:30;background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.wz{background:var(--citui-panel);width:100%;max-height:96%;border-radius:14px 14px 0 0;display:flex;flex-direction:column;overflow:hidden}
+@container (min-width:900px){.wz-back{align-items:center}.wz{width:760px;border-radius:12px;max-height:88%;display:grid;grid-template-columns:220px 1fr}}
+.wz__steps{display:none}
+@container (min-width:900px){
+  .wz__steps{display:block;background:var(--citui-side);border-right:1px solid var(--citui-line);padding:18px 14px}
+  .wz__steps h3{margin:0 0 2px;font-size:14px}
+  .wz__steps ol{list-style:none;margin:14px 0 0;padding:0}
+  .wz__steps li{display:flex;gap:8px;align-items:center;padding:6px 4px;color:var(--citui-muted)}
+  .wz__steps li.on{color:var(--citui-ink);font-weight:600}
+  .wz__steps li.ok{color:var(--citui-ok-ink)}
+  .wz__steps li b{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none}
+  .wz__steps li.ok b{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+}
+.wz__body{display:flex;flex-direction:column;min-height:0}
+.wz__h{display:flex;align-items:center;gap:8px;padding:14px 16px 0}
+.wz__h .t{flex:1;font-weight:600}
+.wz__prog{padding:8px 16px 0}
+.wz__c{padding:12px 16px 16px;overflow:auto;flex:1}
+.wz__c h2{font:600 19px/1.25 var(--citui-font-display);margin:4px 0 6px}
+.wz__c p.lead{margin:0 0 14px;color:var(--citui-muted);font-size:14px}
+.wz__f{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--citui-line);background:var(--citui-panel)}
+.wz__f .sp{flex:1}
+.field{display:block;margin:10px 0}
+.field>span{display:block;font-weight:600;margin-bottom:4px}
+.field input[type=text],.field input[type=email],.field input[type=url],.field select{width:100%;padding:11px 12px;border:1px solid var(--citui-line-strong);border-radius:6px;background:var(--citui-field);font-size:15px}
+.field input.bad{border-color:var(--citui-bad)}
+.err{color:var(--citui-bad-ink);font-size:12px;margin-top:4px}
+.okmsg{color:var(--citui-ok-ink);font-size:12px;margin-top:4px}
+.hint{color:var(--citui-muted);font-size:12px;margin-top:4px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--citui-line-strong);border-radius:8px;margin:8px 0;cursor:pointer;background:var(--citui-panel)}
+.opt:hover{background:var(--citui-hover)}
+.opt.on{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.opt input{margin-top:3px}
+.opt b{display:block}
+.opt small{color:var(--citui-muted)}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--citui-line-strong);border-radius:8px;overflow:hidden}
+.stepper button{width:46px;height:46px;border:0;background:var(--citui-field);font-size:20px;cursor:pointer}
+.stepper output{min-width:64px;text-align:center;font-size:18px;font-weight:600}
+.howto{counter-reset:h;list-style:none;padding:0;margin:8px 0}
+.howto li{counter-increment:h;position:relative;padding:6px 0 6px 30px}
+.howto li:before{content:counter(h);position:absolute;left:0;top:5px;width:22px;height:22px;border-radius:50%;background:var(--citui-accent-soft);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px}
+.box{border:1px solid var(--citui-line);border-radius:8px;padding:12px;background:var(--citui-surface)}
+.box--ok{border-color:color-mix(in srgb,var(--citui-ok) 45%,transparent);background:var(--citui-ok-soft)}
+.box--warn{border-color:color-mix(in srgb,var(--citui-warn) 45%,transparent);background:color-mix(in srgb,var(--citui-warn) 10%,transparent)}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--citui-line-strong);border-top-color:var(--citui-cyan-500);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:9px 14px;border-radius:8px;z-index:40;font-size:13px;box-shadow:var(--citui-shadow-md);max-width:90%}
+/* reminder preview (shared) */
+.rem{margin-top:18px}
+.rem h3{margin:0 0 6px;font-size:14px}
+.sms{max-width:300px;background:var(--citui-hover);border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:13px;margin:6px 0}
+.mail{border:1px solid var(--citui-line);border-radius:8px;padding:10px 12px;font-size:13px;margin:6px 0;background:var(--citui-panel)}
+.mail .subj{font-weight:600;margin-bottom:4px}
+.tag-mock{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--citui-muted)}
+
+@media (max-width:700px){.wz-back{position:fixed}.toast{position:fixed}.stage{padding:0}.dev{border:0;border-radius:0}}
+.btn--sm{padding:4px 9px;font-size:12px}
+body[data-size=desktop] .wz-back{position:fixed}
+.wz-back{z-index:60}
+@media (max-width:700px){.mk{position:static}}
+
+.bstrip{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
+.bstrip__t{flex:1 1 260px}
+.bstrip__chips{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
+.bstrip>.btn{flex:1 1 100%;justify-content:center}
+@container (min-width:900px){.bstrip>.btn{flex:0 0 auto}.bstrip__chips{order:3}}
+.bchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:999px;padding:4px 10px 4px 5px;cursor:pointer}
+.bchip .sic{width:16px;height:16px}
+.w3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.w3 span{display:block;font-size:11px}
+.w3 b{font-size:16px}
+.bg{font-size:12px;font-weight:600;color:var(--citui-muted);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.btiles{display:grid;gap:8px}
+@container (min-width:900px){.btiles{grid-template-columns:repeat(3,1fr);gap:12px}}
+.bt{display:flex;gap:12px;text-align:left;padding:14px;border:1px solid var(--citui-line);border-radius:8px;background:var(--citui-panel);cursor:pointer;position:relative}
+.bt:hover{background:var(--citui-hover)}
+.bt--miss{border-left:4px solid var(--citui-bad)}
+.bt--part{border-left:4px solid var(--citui-warn)}
+.bt--done,.bt--decl{border-left:4px solid var(--citui-ok)}
+.bt__ic{width:36px;height:36px;border-radius:8px;background:var(--citui-hover);display:flex;align-items:center;justify-content:center;flex:none}
+.bt__b{display:flex;flex-direction:column;gap:4px;min-width:0;align-items:flex-start}
+.bt__t{font-weight:600;font-size:14px}
+.bt__l{color:var(--citui-muted);font-size:12px}
+.bt__cta{color:var(--citui-link-ink);font-weight:600;font-size:13px;margin-top:2px}
+.bhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-8px 0 14px}
+.bmod{display:grid;gap:14px}
+@container (min-width:900px){.bmod{grid-template-columns:420px 1fr;align-items:start}.bmod__side{position:sticky;top:12px}}
+.bpanel{border-color:var(--citui-cyan-500);box-shadow:0 0 0 3px var(--citui-accent-soft)}
+.bpanel__h{display:flex;align-items:center;padding:10px 14px 0}
+.bpanel__h .sp,.bpanel__f .sp,.bresume .sp{flex:1}
+.bdots{display:flex;gap:4px;padding:8px 14px 0}
+.bdots i{flex:1;height:4px;border-radius:2px;background:var(--citui-hover)}
+.bdots i.on{background:var(--citui-cyan-500)}
+.bdots i.ok{background:var(--citui-ok)}
+.bpanel__c{padding:4px 14px 10px}
+.bpanel__c h2{font:600 18px/1.25 var(--citui-font-display);margin:6px 0}
+.bpanel__c p.lead{margin:0 0 10px;color:var(--citui-muted)}
+.bpanel__f{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--citui-line)}
+.bresume{display:flex;gap:10px;align-items:center;width:100%;padding:12px 14px;text-align:left;cursor:pointer}
+.afake{padding:14px}
+.ff{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--citui-line)}
+
+.cf{display:flex;flex-direction:column;min-height:inherit;background:var(--citui-bg)}
+.cf__top{display:flex;align-items:center;gap:8px;height:52px;padding:0 16px;border-bottom:1px solid var(--citui-line)}
+.cf__top .sp,.cf__f .sp{flex:1}
+.cf__prog{padding:10px 16px 0}
+.cf__grid{display:grid;gap:16px;padding:12px 16px 24px;flex:1}
+@container (min-width:900px){.cf__grid{grid-template-columns:220px minmax(0,1fr) 300px;padding:28px 32px;gap:28px}}
+.cf__rail ol{list-style:none;margin:0;padding:0}
+.cf__rail li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;color:var(--citui-muted)}
+.cf__rail li b{width:24px;height:24px;border-radius:50%;border:1.5px solid currentColor;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.cf__rail li.on{color:var(--citui-ink);font-weight:600}
+.cf__rail li.on b{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.cf__rail li.ok{color:var(--citui-ok-ink)}
+.cf__rail li.ok b{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+.cf__rail li small{display:block;font-weight:400;color:var(--citui-muted)}
+.cf__q h2{font:600 22px/1.25 var(--citui-font-display);margin:6px 0 6px}
+.cf__q p.lead{font-size:15px;color:var(--citui-muted);margin:0 0 14px}
+.cf__f{display:flex;gap:8px;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--citui-line)}
+@container (max-width:899px){.cf__f{position:sticky;bottom:0;background:var(--citui-bg);padding-bottom:10px}.cf__f .btn--lg{flex:1;justify-content:center}}
+.cf__done{padding:20px 16px;max-width:520px;margin:0 auto}
+.cp__card{border:1px solid var(--citui-line);border-radius:10px;padding:14px;margin-top:6px;background:var(--citui-panel)}
+.cp__cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:10px 0 4px}
+.cp__cal i{font-style:normal;font-size:11px;text-align:center;padding:4px 0;border-radius:4px;background:var(--citui-hover)}
+.cp__cal i.b{background:color-mix(in srgb,var(--citui-bad) 18%,transparent);text-decoration:line-through}
+.cp__price{margin:10px 0 4px}
+.cp__p{font-size:20px;font-weight:700}
+.cp__p small{font-size:12px;font-weight:400;color:var(--citui-muted)}
+.cp__q{font-weight:700}
+.cp__miss{color:var(--citui-bad-ink)}
+.cband{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 16px;margin-bottom:16px;border-color:var(--citui-cyan-500);background:var(--citui-accent-soft);cursor:pointer}
+.cband__t{flex:1}
+@container (max-width:899px){.cband{flex-wrap:wrap}.cband .btn{width:100%;justify-content:center}}
+.ctodo{list-style:none;margin:0;padding:0}
+.ctodo li{display:flex;gap:10px;align-items:flex-start;padding:9px 16px;border-top:1px solid var(--citui-line)}
+
+.panel{max-width:1180px;margin:16px auto 60px;padding:0 12px}
+.pn{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:18px}
+.pn h2{font:600 18px/1.3 var(--citui-font-display);margin:22px 0 6px}
+.pn h2:first-child{margin-top:0}
+.pn h3{font-size:14px;margin:16px 0 6px}
+.pt{width:100%;border-collapse:collapse;font-size:12.5px}
+.pt th,.pt td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--citui-line)}
+.pt th{color:var(--citui-muted);font-weight:600}
+.pt code{font-size:12px}
+.pt tr.new td{background:var(--citui-accent-soft)}
+.ptw{overflow-x:auto}
+.pt--reg{min-width:760px}
+.pl{padding-left:18px}
+.pl li{margin:4px 0}
+.pex{display:grid;gap:8px;margin:12px 0}
+@media (min-width:800px){.pex{grid-template-columns:repeat(3,1fr)}}
+.pex button{text-align:left;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:8px;padding:10px;cursor:pointer}
+.pex button b{display:block;margin-bottom:3px}
+.pex button span{font-size:12px;color:var(--citui-muted)}
+.pex button.on{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.gate{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;padding:12px;border-radius:8px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);border-left:4px solid var(--citui-ok)}
+.gate.red{border-left-color:var(--citui-bad)}
+.bt--new{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.cf__pv{min-width:0}
+.stage[hidden],.panel[hidden]{display:none!important}
+
+.cf__rail li.lk{color:var(--citui-muted);opacity:.85}
+.cf__rail li.lk b{border-style:dashed}
+.bt--lock{border-left:4px dashed var(--citui-line-strong);background:var(--citui-surface)}
+.cp__units{margin:8px 0 4px;display:grid;gap:4px}
+.cp__u{display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:12px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--citui-line)}
+.pl--plain{list-style:none;padding-left:0}
+
+.cf__rail li>button{all:unset;display:flex;gap:10px;align-items:flex-start;cursor:pointer;width:100%;border-radius:6px}
+.cf__rail li>button:hover span{text-decoration:underline}
+.cf__rail li.op{color:var(--citui-muted)}
+.cf__rail li.op b{border-style:dashed}
+.cf__rail li.ok>button{color:var(--citui-ok-ink)}
+.cf__rail li.ok>button b{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+.cf__topics{all:unset;display:flex;justify-content:space-between;gap:8px;width:100%;font-size:12px;color:var(--citui-muted);cursor:pointer;padding:2px 0}
+.cf__topics span{color:var(--citui-link-ink);font-weight:600;white-space:nowrap}
+.cf__rail--m{display:block;margin-top:8px;border:1px solid var(--citui-line);border-radius:8px;padding:6px 10px;background:var(--citui-panel)}
+.cband--quiet{border-color:var(--citui-line);background:var(--citui-panel)}
+.cf__f{flex-wrap:wrap}
+</style></head>
+<body data-size="desktop"><div class="stage"><div class="dev"></div></div><div class="panel" hidden></div>
+<script>const ICONS={"overview":"<path d=\"M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\"/>","texts":"<path d=\"M4 6h16M4 12h10M4 18h14\"/>","photos":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10\" r=\"1.6\"/><path d=\"m21 16-5-4.5L8 19\"/>","modules":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/>","account":"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c1-4 4-6 8-6s7 2 8 6\"/>","external":"<path d=\"M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5\"/>","domain":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18\"/>","leads":"<circle cx=\"12\" cy=\"12\" r=\"7.5\"/><circle cx=\"12\" cy=\"12\" r=\"2.2\"/><path d=\"M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4\"/>","scrape":"<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"m12 12 5.6-5.6\"/><path d=\"M12 12a4.2 4.2 0 0 1 4.2 4.2\"/><circle cx=\"7.6\" cy=\"14.6\" r=\"1.9\" fill=\"var(--citui-cyan-500)\" stroke=\"none\"/>","report":"<path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/>","pricing":"<path d=\"M12.6 3.5H6A2.5 2.5 0 0 0 3.5 6v6.6a2.5 2.5 0 0 0 .73 1.77l6.4 6.4a2.5 2.5 0 0 0 3.54 0l6.1-6.1a2.5 2.5 0 0 0 0-3.54l-6.4-6.4a2.5 2.5 0 0 0-1.77-.73Z\"/><circle cx=\"8.4\" cy=\"8.4\" r=\"1.4\"/>","settings":"<path d=\"M4 7h3M12.5 7H20M4 12h8.5M17.5 12H20M4 17h1.5M10.5 17H20\"/><circle cx=\"9.75\" cy=\"7\" r=\"2.1\"/><circle cx=\"15\" cy=\"12\" r=\"2.1\"/><circle cx=\"8\" cy=\"17\" r=\"2.1\"/>","help":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7v.5\"/><circle cx=\"12\" cy=\"17\" r=\".6\" fill=\"currentColor\"/>","mail":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2.5\"/><path d=\"m3 8 9 6 9-6\"/>","sms":"<path d=\"M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.6-3.7A6.6 6.6 0 0 1 3.5 12.4c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z\"/>","partners":"<circle cx=\"8.6\" cy=\"8.2\" r=\"3.3\"/><path d=\"M2.8 19.5c.8-3.2 3-4.9 5.8-4.9s5 1.7 5.8 4.9\"/><path d=\"M15.2 5.4a3.3 3.3 0 0 1 0 5.6M17.5 14.9c2 .6 3.3 2.1 3.9 4.6\"/>","gift":"<rect x=\"4\" y=\"10.5\" width=\"16\" height=\"10\" rx=\"2.2\"/><rect x=\"3\" y=\"7\" width=\"18\" height=\"3.5\" rx=\"1.4\"/><path d=\"M12 7v13.5\"/><path d=\"M12 7C10.6 4.2 7.4 3.6 7.1 5.6 6.9 7 9.4 7 12 7zM12 7c1.4-2.8 4.6-3.4 4.9-1.4.2 1.4-2.3 1.4-4.9 1.4z\"/><circle cx=\"12\" cy=\"7\" r=\"1.7\" fill=\"var(--citui-cyan-500)\" stroke=\"none\"/>","docs":"<path d=\"M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\"/><path d=\"M14 3v5h5M9 13h6M9 17h6\"/>","link":"<path d=\"M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7\"/><path d=\"M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7\"/>","check":"<path d=\"m5 12 4.5 4.5L19 7\"/>","clock":"<circle cx=\"12\" cy=\"12\" r=\"8.4\"/><path d=\"M12 7.4v5l3.3 2\"/>","zoom":"<circle cx=\"10.6\" cy=\"10.6\" r=\"6.6\"/><path d=\"M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4\"/>","alert":"<path d=\"M12 3 2.5 20h19z\"/><path d=\"M12 10v4\"/><circle cx=\"12\" cy=\"17\" r=\".7\" fill=\"currentColor\"/>","preview":"<path d=\"M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>","card":"<rect x=\"3\" y=\"6\" width=\"18\" height=\"12\" rx=\"2.5\"/><path d=\"M3 10h18\"/>","plus":"<path d=\"M12 5v14M5 12h14\"/>","star":"<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z\"/>","close":"<path d=\"M6 6l12 12M18 6 6 18\"/>","filter":"<path d=\"M4 6h16l-6 7v5l-4 2v-7z\"/>","chevron-down":"<path d=\"m6 9 6 6 6-6\"/>","bookings":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2.5\"/><path d=\"M3 10h18M8 3v4M16 3v4\"/>","contact":"<path d=\"M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2\"/>","pin":"<path d=\"M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z\"/><circle cx=\"12\" cy=\"9.5\" r=\"2.5\"/>","home":"<path d=\"M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\"/>","starf":"<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z\" fill=\"currentColor\"/>","checkc":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8.5 12.5 2.5 2.5 5-5.5\"/>","back":"<path d=\"M15 5l-7 7 7 7\"/>","fwd":"<path d=\"m9 5 7 7-7 7\"/>","trash":"<path d=\"M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3\"/>","upload":"<path d=\"M12 16V4M6 10l6-6 6 6M4 20h16\"/>","camera":"<path d=\"M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z\"/><circle cx=\"12\" cy=\"13\" r=\"3.5\"/>","menu":"<path d=\"M4 7h16M4 12h16M4 17h16\"/>","moreh":"<circle cx=\"5\" cy=\"12\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.2\" fill=\"currentColor\"/>","grip":"<circle cx=\"9\" cy=\"6\" r=\"1.1\" fill=\"currentColor\"/><circle cx=\"15\" cy=\"6\" r=\"1.1\" fill=\"currentColor\"/><circle cx=\"9\" cy=\"12\" r=\"1.1\" fill=\"currentColor\"/><circle cx=\"15\" cy=\"12\" r=\"1.1\" fill=\"currentColor\"/><circle cx=\"9\" cy=\"18\" r=\"1.1\" fill=\"currentColor\"/><circle cx=\"15\" cy=\"18\" r=\"1.1\" fill=\"currentColor\"/>","select":"<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"3\"/><path d=\"m8.5 12.5 2.5 2.5 5-5.5\"/>","search":"<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-4-4\"/>","logout":"<path d=\"M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M9 12h10\"/>","collapse":"<path d=\"M15 6l-6 6 6 6M4 4v16\"/>","expand":"<path d=\"m9 6 6 6-6 6M20 4v16\"/>","grid":"<rect x=\"3\" y=\"3\" width=\"8\" height=\"8\" rx=\"1.5\"/><rect x=\"13\" y=\"3\" width=\"8\" height=\"8\" rx=\"1.5\"/><rect x=\"3\" y=\"13\" width=\"8\" height=\"8\" rx=\"1.5\"/><rect x=\"13\" y=\"13\" width=\"8\" height=\"8\" rx=\"1.5\"/>","list":"<path d=\"M8 6h13M8 12h13M8 18h13\"/><circle cx=\"4\" cy=\"6\" r=\"1\" fill=\"currentColor\"/><circle cx=\"4\" cy=\"12\" r=\"1\" fill=\"currentColor\"/><circle cx=\"4\" cy=\"18\" r=\"1\" fill=\"currentColor\"/>","sun":"<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/>","moon":"<path d=\"M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z\"/>","dot":"<circle cx=\"12\" cy=\"12\" r=\"4\" fill=\"currentColor\" stroke=\"none\"/>","shield":"<path d=\"M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z\"/><path d=\"M8.5 12l2.5 2.5 4.5-5\"/>","lock":"<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>","send":"<path d=\"M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z\"/>","pen":"<path d=\"M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z\"/>"};
+/* Shared mock engine: real-data samples → module status (the same predicates the
+   server already runs) → per-module step-by-step guide. Variants only differ in WHERE
+   the status shows and HOW the guide opens. */
+"use strict";
+
+// ── real samples (prod, read-only, 2026-11-05) ─────────────────────────────────
+const SAMPLES = {
+  duna: {
+    key: "duna",
+    label: "Duna Vibe House (éles, fizető)",
+    name: "Duna Vibe House",
+    initials: "DV",
+    host: "dunavibehouse.hu",
+    trial: null,
+    photos: { n: 24, own: true },
+    intro: true,
+    units: [{ id: "u1", name: "A szállás egésze", cap: 8, whole: true, por: true, base: null, high: null }],
+    minNights: 2,
+    rulesAnswered: true,
+    notify: "", // empty = the account address (the owner's own mailbox)
+    cal: { asked: true, portals: ["szallas"], links: { szallas: { ok: true, days: 31, from: "nov. 27.", last: "ma 10:00" } }, exportCopied: false },
+    hours: { inFrom: "14:00", inTo: "17:00", outUntil: "11:00" },
+    amenities: 11,
+    usp: true,
+    reviews: { collect: true, n: 0 },
+    poi: 4,
+    email: null, // module not held
+    domain: "live",
+  },
+  marilyn: {
+    key: "marilyn",
+    label: "Marilyn Vendégház (próba, 0 belépés)",
+    name: "Marilyn Vendégház",
+    initials: "MV",
+    host: "marilyn-vendeghaz.citoviso.com",
+    trial: { until: "nov. 16.", left: 11, day: 4 },
+    photos: { n: 8, own: false },
+    intro: true,
+    units: [{ id: "u1", name: "A szállás egésze", cap: null, whole: true, por: false, base: null, high: null }],
+    minNights: 1,
+    rulesAnswered: false,
+    notify: "",
+    cal: { asked: false, portals: [], links: {}, exportCopied: false },
+    hours: null,
+    amenities: 0,
+    usp: false,
+    reviews: { collect: false, n: 0 },
+    poi: 10,
+    email: { localPart: "info", forwardTo: "" },
+    domain: "sub",
+  },
+};
+
+const PORTALS = {
+  szallas: {
+    name: "Szállás.hu",
+    host: /(^|\.)szallas\.hu$/i,
+    where: "Admin › Árak és kapacitás › Naptár szinkron (iCal)",
+    steps: [
+      "Lépjen be a Szállás.hu adminba, és nyissa meg: Árak és kapacitás › Naptár szinkron (iCal). Több szobánál előbb válassza ki a szobatípust.",
+      "Kattintson a „Naptár exportálása” gombra, és másolja ki a kapott linket.",
+      "Illessze be ide, az alábbi mezőbe.",
+    ],
+    sample: "https://szallas.hu/ical-sync/export/get-calendar?token=3af72ed1…",
+  },
+  booking: {
+    name: "Booking.com",
+    host: /(^|\.)booking\.com$/i,
+    where: "Extranet › Árak és elérhetőség › Naptár › naptár-szinkronizálás",
+    steps: [
+      "Lépjen be a Booking.com extranetbe: Árak és elérhetőség › Naptár › naptár-szinkronizálás (Rates & Availability › Sync calendars).",
+      "Új naptárkapcsolat („Add calendar connection”): a Booking megmutatja a saját naptár-linkjét („export”). Másolja ki.",
+      "Illessze be ide, az alábbi mezőbe.",
+    ],
+    note: "A Booking naptár-szinkronja csak akkor érhető el, ha ott egy szobatípus = egy szoba, és nem használ channel managert.",
+    sample: "https://admin.booking.com/hotel/hoteladmin/ical.html?t=…",
+  },
+  airbnb: {
+    name: "Airbnb",
+    host: /(^|\.)airbnb\.[a-z.]+$/i,
+    where: "Naptár › a hirdetés › Foglalhatóság › Naptárak bekötése",
+    steps: [
+      "Airbnb: Naptár › a hirdetés › Foglalhatóság › Naptárak bekötése (Calendar › Availability › Connect calendars).",
+      "Másolja ki az Airbnb-naptár hivatkozását (Export calendar).",
+      "Illessze be ide, az alábbi mezőbe.",
+    ],
+    sample: "https://www.airbnb.hu/calendar/ical/123456.ics?s=…",
+  },
+};
+
+let S = null; // the live (mutable) sample
+let SIZE = "desktop";
+let VARIANT = "A";
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: mock still works */ } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
+};
+const skey = (k) => "modstat-" + VARIANT + "-" + S.key + "-" + k;
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const ft = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
+function ic(name, size) {
+  size = size || 18;
+  return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+}
+
+// ── status: one predicate per module, from the data the server already holds ───
+// st: done (kész) · part (félkész) · miss (hiányzik) · decl (Ön döntött így) · opt (nem kötelező)
+/* MODS comes from the registry (registry.js) — one list, no hand-made copy. */
+
+function status(id) {
+  const s = S;
+  switch (id) {
+    case "rooms": {
+      const noCap = s.units.filter((u) => !u.cap);
+      if (!noCap.length) return { st: "done", line: s.units.length === 1 ? (s.units[0].whole ? "Egészben adja ki" : "1 szoba") + " · " + s.units[0].cap + " fő" : s.units.length + " szoba" };
+      return { st: "part", line: noCap.map((u) => u.name).join(", ") + ": nincs megadva, hány fő fér el", miss: ["férőhely"] };
+    }
+    case "pricing": {
+      // unitPriceStatus: complete | on_request | partial | none
+      const st = s.units.map((u) => (u.por ? "on_request" : u.base ? "complete" : "none"));
+      if (st.every((x) => x === "complete")) return { st: "done", line: s.units.map((u) => ft(u.base) + " / éj").join(", ") + " · min. " + s.minNights + " éj" };
+      if (st.every((x) => x === "on_request")) return { st: "decl", line: "Ár kérésre — a vendég végösszeg helyett árajánlatot kér", miss: [] };
+      if (st.every((x) => x === "none")) return { st: "miss", line: "Nincs ár — a vendég nem lát végösszeget, csak ajánlatot kérhet", miss: ["ár/éj"] };
+      return { st: "part", line: s.units.filter((u, i) => st[i] === "none").length + " szobának nincs ára", miss: ["ár/éj"] };
+    }
+    case "calendar": {
+      const c = s.cal;
+      const bad = Object.keys(c.links).filter((k) => !c.links[k].ok);
+      if (bad.length) return { st: "part", line: PORTALS[bad[0]].name + ": a link nem működik", miss: ["link"] };
+      if (!c.asked) return { st: "miss", line: "Még nem mondta meg, hol hirdet még — dupla foglalás jöhet", miss: ["portálok"] };
+      if (!c.portals.length) return { st: "done", line: "Csak itt hirdet — nincs mit összekötni" };
+      const missing = c.portals.filter((p) => !c.links[p]);
+      if (missing.length) return { st: "part", line: missing.map((p) => PORTALS[p].name).join(", ") + ": még nincs összekötve", miss: missing };
+      const days = c.portals.reduce((a, p) => a + (c.links[p].days || 0), 0);
+      return { st: "done", line: c.portals.map((p) => PORTALS[p].name).join(", ") + " összekötve · " + days + " foglalt nap beolvasva" };
+    }
+    case "booking": {
+      if (!s.rulesAnswered) return { st: "part", line: "Még nem nézte át: legkevesebb éj, kinek szóljunk a kérésről", miss: ["szabályok"] };
+      return { st: "done", line: "Legalább " + s.minNights + " éj · értesítés: " + (s.notify || "a fiókja e-mail címére") };
+    }
+    case "hours":
+      return s.hours ? { st: "done", line: "Érkezés " + s.hours.inFrom + "–" + s.hours.inTo + " · távozás " + s.hours.outUntil + "-ig" } : { st: "miss", line: "Nincs megadva — az oldalon ez a rész most nem jelenik meg", miss: ["időpontok"] };
+    case "amenities":
+      return s.amenities ? { st: "done", line: s.amenities + " tétel látszik az oldalon" } : { st: "miss", line: "Üres — az oldalon ez a rész most nem jelenik meg", miss: ["tételek"] };
+    case "email":
+      if (!s.email) return null; // module not held → no row
+      if (s.domain !== "live") return { st: "opt", line: "A saját webcímével együtt indul (" + s.email.localPart + "@…)" };
+      return s.email.forwardTo ? { st: "done", line: s.email.localPart + "@" + s.host + " → " + s.email.forwardTo } : { st: "part", line: "Hová továbbítsuk a leveleket? — nincs megadva", miss: ["cím"] };
+    case "photos":
+      return s.photos.own ? { st: "done", line: s.photos.n + " saját fotó" } : { st: "opt", line: s.photos.n + " bemutató kép · ha szeretné, feltölthet sajátot" };
+    case "reviews":
+      return s.reviews.collect ? { st: "done", line: "Gyűjtés bekapcsolva · " + (s.reviews.n ? s.reviews.n + " vélemény" : "még nincs vélemény") } : { st: "opt", line: "A vendég írhat véleményt — Ön hagyja jóvá" };
+    case "texts":
+      return s.intro ? { st: "done", line: "A bemutatkozó szöveg kész" } : { st: "miss", line: "Írja meg a bemutatkozó szöveget", miss: ["szöveg"] };
+  }
+  return null;
+}
+const ST_LABEL = { done: "Kész", part: "Félkész", miss: "Hiányzik", decl: "Ön döntött így", opt: "Nem kötelező" };
+const chip = (st) => '<span class="chip st-' + st + '"><i></i>' + ST_LABEL[st] + "</span>";
+const sic = (st) => '<span class="sic ' + st + '">' + (st === "done" ? ic("check", 13) : "") + "</span>";
+function rows() {
+  return MODS.map((m) => ({ m: m, s: status(m.id) })).filter((r) => r.s);
+}
+function openRows() {
+  return rows().filter((r) => r.s.st === "miss" || r.s.st === "part");
+}
+function counts() {
+  const r = rows();
+  const counted = r.filter((x) => x.s.st !== "opt");
+  const done = counted.filter((x) => x.s.st === "done" || x.s.st === "decl").length;
+  return { done: done, all: counted.length, open: openRows().length };
+}
+// "Can a guest book?" — the one sentence the owner cares about (ADR-0208 wording).
+function guestSentence() {
+  const p = status("pricing").st;
+  const r = status("rooms").st;
+  if (r !== "done") return "A vendég még nem látja, hány fő fér el a szálláson.";
+  if (p === "miss" || p === "part") return "A vendég most nem lát végösszeget — foglalás helyett árajánlatot kér.";
+  const cal = S.modules && S.modules.includes("booking") ? status("calendar").st : "done";
+  const calWarn = cal === "miss" || cal === "part" ? " A portálos foglalások itt még nem látszanak — dupla foglalás jöhet." : "";
+  if (p === "decl") return "A vendég árajánlatot kér — így döntött (ár kérésre)." + calWarn;
+  return "A vendég végösszeget lát és foglalni tud." + calWarn;
+}
+
+// ── guide steps (deterministic text; every input runs the real rule) ──────────
+function draftOf(id) {
+  const d = store.get(skey("draft-" + id));
+  return d || {};
+}
+function saveDraft(id, d) { store.set(skey("draft-" + id), d); }
+
+const GUIDES = {
+  rooms: {
+    title: "Szobák és férőhely",
+    why: "A vendég ebből látja, elfér-e a társasága — e nélkül sokan be sem írják a dátumot.",
+    steps: [
+      {
+        t: "Hogyan adja ki a szállást?",
+        lead: "Ha a vendég mindig az egész házat kapja, válassza az elsőt.",
+        render: (d) => opt("mode", "whole", d.mode || (S.units[0].whole ? "whole" : "rooms"), "Egészben", "Egy foglalás = az egész szállás") + opt("mode", "rooms", d.mode || (S.units[0].whole ? "whole" : "rooms"), "Szobánként", "Több szoba, mindegyik külön foglalható"),
+        read: (root, d) => { d.mode = (root.querySelector("input[name=mode]:checked") || {}).value || "whole"; return null; },
+      },
+      {
+        t: "Hány vendég fér el egyszerre?",
+        lead: "Az ágyak alapján — pótággyal együtt, ha van.",
+        render: (d) => stepper("cap", d.cap || S.units[0].cap || 4, 1, 30) + '<div class="hint">' + esc(S.units[0].name) + "</div>",
+        read: (root, d) => { d.cap = Number(root.querySelector("output[data-k=cap]").textContent); return d.cap >= 1 && d.cap <= 30 ? null : "1 és 30 fő között adja meg."; },
+      },
+    ],
+    apply: (d) => { S.units[0].cap = d.cap; S.units[0].whole = d.mode !== "rooms"; },
+    done: (d) => "Mentve: " + (d.mode === "rooms" ? "szobánként" : "egészben") + ", " + d.cap + " fő.",
+  },
+  pricing: {
+    title: "Árak",
+    why: "A vendég végösszeget akar látni. Ár nélkül a foglalás helyett árajánlatot kér, és sokan ott megállnak.",
+    steps: [
+      {
+        t: "Mennyi egy éjszaka?",
+        lead: "Az egész szállás ára egy éjre. Később szezononként is módosíthatja.",
+        render: (d) =>
+          '<label class="field"><span>' + esc(S.units[0].name) + " — ár / éj</span>" +
+          '<input type="text" inputmode="numeric" data-k="base" placeholder="pl. 35 000" value="' + esc(d.baseRaw || (S.units[0].base || "")) + '"' + (d.por ? " disabled" : "") + ">" +
+          '<div class="hint" data-norm></div><div class="err" data-err></div></label>' +
+          '<label class="opt' + (d.por ? " on" : "") + '"><input type="checkbox" data-k="por"' + (d.por ? " checked" : "") + '><span><b>Nem adok meg árat</b><small>A vendég árajánlatot kér, Ön válaszol neki. Az oldal ezt így is írja ki.</small></span></label>',
+        bind: (root) => {
+          const inp = root.querySelector("[data-k=base]");
+          const por = root.querySelector("[data-k=por]");
+          const show = () => {
+            const n = normPrice(inp.value);
+            root.querySelector("[data-norm]").textContent = n.val ? "Így jelenik meg: " + ft(n.val) + " / éj" : "";
+            root.querySelector("[data-err]").textContent = inp.value && n.err ? n.err : "";
+            inp.classList.toggle("bad", !!(inp.value && n.err));
+          };
+          inp.addEventListener("input", show);
+          por.addEventListener("change", () => { inp.disabled = por.checked; por.closest(".opt").classList.toggle("on", por.checked); show(); });
+          show();
+        },
+        read: (root, d) => {
+          d.por = root.querySelector("[data-k=por]").checked;
+          d.baseRaw = root.querySelector("[data-k=base]").value;
+          if (d.por) { d.base = null; return null; }
+          const n = normPrice(d.baseRaw);
+          if (!d.baseRaw.trim()) return "Írjon be egy összeget, vagy jelölje be: „Nem adok meg árat”.";
+          if (n.err) return n.err;
+          d.base = n.val;
+          return null;
+        },
+      },
+      {
+        t: "Legalább hány éjre lehet foglalni?",
+        lead: "Hétvégi kiadásnál sokan 2 éjt kérnek. Ezt is bármikor átírhatja.",
+        render: (d) => stepper("min", d.min || S.minNights || 1, 1, 14),
+        read: (root, d) => { d.min = Number(root.querySelector("output[data-k=min]").textContent); return null; },
+      },
+      {
+        t: "Így látja a vendég",
+        lead: "Egy kitalált foglalás, ugyanazzal a számolással, amit a vendég kap.",
+        render: (d) => {
+          const nights = Math.max(d.min || 1, 2);
+          if (d.por) return '<div class="box"><b>Árajánlatot kér</b><div class="muted" style="margin-top:4px">Ehhez a szálláshoz a tulajdonos egyedi árat ad. Küldje el a kérését — ez még nem foglalás, és nem kötelezi semmire.</div></div><p class="hint">Ezt a szöveget látja a vendég a dátum kiválasztása után (ADR-0208).</p>';
+          return '<div class="box box--ok"><div class="muted">dec. 4–' + (4 + nights) + ". · " + nights + " éj · 2 fő</div><div style=\"font-size:20px;font-weight:700;margin-top:4px\">" + ft(d.base * nights) + '</div><div class="muted">' + nights + " × " + ft(d.base) + "</div></div>" + (d.min > 1 ? '<p class="hint">Rövidebb foglalást (' + (d.min - 1) + " éj) a naptár nem enged.</p>" : "");
+        },
+        read: () => null,
+      },
+    ],
+    apply: (d) => { S.units[0].por = !!d.por; S.units[0].base = d.por ? null : d.base; S.minNights = d.min || S.minNights; },
+    done: (d) => (d.por ? "Mentve: ár kérésre." : "Mentve: " + ft(d.base) + " / éj, legalább " + d.min + " éj."),
+  },
+  calendar: {
+    title: "Naptár-összekötés",
+    why: "Ha máshol is hirdet, a két naptárnak tudnia kell egymásról — különben ugyanarra a napra két vendég foglalhat.",
+    steps: [
+      {
+        t: "Hol hirdeti még a szállást?",
+        lead: "Jelölje be mindet. Ha sehol máshol, azt is jelölje — akkor nincs mit összekötni.",
+        render: (d) => {
+          const sel = d.portals || S.cal.portals;
+          return Object.keys(PORTALS).map((k) => '<label class="opt' + (sel.includes(k) ? " on" : "") + '"><input type="checkbox" name="pt" value="' + k + '"' + (sel.includes(k) ? " checked" : "") + "><span><b>" + PORTALS[k].name + "</b></span></label>").join("") +
+            '<label class="opt' + (d.none ? " on" : "") + '"><input type="checkbox" name="none"' + (d.none ? " checked" : "") + "><span><b>Sehol máshol</b><small>Csak ezen a honlapon foglalnak</small></span></label>";
+        },
+        bind: (root) => {
+          root.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => {
+            if (i.name === "none" && i.checked) root.querySelectorAll("input[name=pt]").forEach((x) => (x.checked = false));
+            if (i.name === "pt" && i.checked) root.querySelector("input[name=none]").checked = false;
+            root.querySelectorAll(".opt").forEach((o) => o.classList.toggle("on", o.querySelector("input").checked));
+          }));
+        },
+        read: (root, d) => {
+          d.portals = [...root.querySelectorAll("input[name=pt]:checked")].map((i) => i.value);
+          d.none = root.querySelector("input[name=none]").checked;
+          return d.portals.length || d.none ? null : "Jelöljön be legalább egyet.";
+        },
+      },
+      {
+        t: "Másolja ide a portál naptár-linkjét",
+        lead: "Egyszer kell megcsinálni. Utána a rendszer óránként magától frissít.",
+        skipIf: (d) => d.none,
+        render: (d) => (d.portals || []).map((k) => {
+          const p = PORTALS[k];
+          const have = (d.urls && d.urls[k]) || (S.cal.links[k] ? p.sample : "");
+          return '<div class="box" style="margin:10px 0"><b>' + p.name + '</b><div class="hint">Hol találja: ' + esc(p.where) + "</div>" +
+            '<ol class="howto">' + p.steps.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ol>" + (p.note ? '<div class="hint">' + esc(p.note) + "</div>" : "") +
+            '<label class="field"><span>' + p.name + " naptár-link</span><input type=\"url\" data-portal=\"" + k + '" placeholder="https://…" value="' + esc(have) + '"><div class="err" data-err="' + k + '"></div></label>' +
+            '<a class="help" data-kb="admin-modules-booking">' + ic("help", 14) + "Képekkel a súgóban</a></div>";
+        }).join(""),
+        read: (root, d) => {
+          d.urls = d.urls || {};
+          let firstErr = null;
+          root.querySelectorAll("input[data-portal]").forEach((i) => {
+            const k = i.dataset.portal;
+            const e = checkFeed(k, i.value);
+            root.querySelector("[data-err=" + k + "]").textContent = e || "";
+            i.classList.toggle("bad", !!e);
+            if (e && !firstErr) firstErr = e;
+            d.urls[k] = i.value.trim().replace(/^webcal:\/\//i, "https://");
+          });
+          return firstErr ? "Javítsa a pirossal jelölt linket." : null;
+        },
+      },
+      {
+        t: "Ellenőrizzük",
+        lead: "Beolvassuk a naptárat, és megmutatjuk, mit találtunk.",
+        skipIf: (d) => d.none,
+        render: (d) => '<div data-check class="box"><button type="button" class="btn btn--p" data-run>' + ic("check", 16) + "Ellenőrzöm</button></div>",
+        bind: (root, d) => {
+          const box = root.querySelector("[data-check]");
+          box.querySelector("[data-run]").addEventListener("click", () => {
+            box.innerHTML = '<span class="spin"></span> Olvassuk a naptárakat…';
+            setTimeout(() => {
+              d.checked = true;
+              const ge = root.querySelector("[data-gerr]");
+              if (ge) ge.textContent = "";
+              box.className = "box box--ok";
+              box.innerHTML = (d.portals || []).map((k) => {
+                const real = S.cal.links[k];
+                return "<div><b>" + PORTALS[k].name + ":</b> " + (real ? real.days + " foglalt nap (" + real.from + "-től) — ezek a honlapon is foglaltak." : "a naptár él, 0 foglalt nap — ha a portálon van foglalása, nézze meg, a jó szobáé-e a link.") + "</div>";
+              }).join("") + '<div class="hint" style="margin-top:6px">A minta a valós szabályt mutatja; a mockban az ellenőrzés nem hív portált.</div>';
+            }, 900);
+          });
+        },
+        read: (root, d) => (d.checked ? null : "Nyomja meg az „Ellenőrzöm” gombot."),
+      },
+      {
+        t: "Fordítva is: a mi naptárunk a portálba",
+        lead: "Így a honlapon jött foglalás a portálon is lezárja a napot.",
+        skipIf: (d) => d.none,
+        render: (d) => '<div class="box"><div class="mono" data-exp>https://' + esc(S.host) + '/naptar/7f3c2a9e.ics</div><button type="button" class="btn" style="margin-top:8px" data-copy>' + ic("link", 16) + "Link másolása</button><span class=\"okmsg\" data-copied></span></div>" +
+          '<p class="hint">' + (d.portals || []).map((k) => PORTALS[k].name + ": " + (k === "szallas" ? "„Naptár importálása” → illessze be, nevezze el „honlap”." : k === "booking" ? "„Add calendar connection” → illessze be." : "„Csatlakozás egy másik webhelyhez” → illessze be, majd „Naptár hozzáadása”.")).join("<br>") + "</p>",
+        bind: (root, d) => root.querySelector("[data-copy]").addEventListener("click", () => {
+          try { navigator.clipboard && navigator.clipboard.writeText(root.querySelector("[data-exp]").textContent); } catch (e) { /* mock */ }
+          d.exportCopied = true;
+          root.querySelector("[data-copied]").textContent = "  Kimásolva — most illessze be a portálon.";
+        }),
+        read: () => null,
+      },
+    ],
+    apply: (d) => {
+      S.cal.asked = true;
+      S.cal.portals = d.none ? [] : d.portals;
+      (d.portals || []).forEach((k) => { if (!S.cal.links[k]) S.cal.links[k] = { ok: true, days: 0, from: "", last: "most" }; });
+    },
+    done: (d) => (d.none ? "Mentve: csak ezen a honlapon foglalnak." : "Összekötve: " + d.portals.map((k) => PORTALS[k].name).join(", ") + "."),
+  },
+  booking: {
+    title: "Foglalás szabályai",
+    why: "Ki kapja meg a foglalási kérést, és mennyi időre lehet foglalni. Két kérdés.",
+    steps: [
+      {
+        t: "Kinek szóljunk, ha foglalási kérés jön?",
+        lead: "E-mailt és értesítést küldünk erre a címre. Üresen hagyva a fiókja e-mail címére megy.",
+        render: (d) => '<label class="field"><span>Értesítési e-mail cím</span><input type="email" data-k="notify" placeholder="a fiókja e-mail címe" value="' + esc(d.notify || S.notify) + '"><div class="err" data-err></div></label>',
+        read: (root, d) => {
+          d.notify = root.querySelector("[data-k=notify]").value.trim();
+          const bad = d.notify && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.notify);
+          root.querySelector("[data-err]").textContent = bad ? "Ez nem e-mail cím — nézze meg a @ utáni részt." : "";
+          return bad ? "Ez nem e-mail cím." : null;
+        },
+      },
+      {
+        t: "Legalább hány éjre lehet foglalni?",
+        lead: "Ugyanaz a szám, mint az Áraknál — itt is átírhatja.",
+        render: (d) => stepper("min", d.min || S.minNights || 1, 1, 14),
+        read: (root, d) => { d.min = Number(root.querySelector("output[data-k=min]").textContent); return null; },
+      },
+    ],
+    apply: (d) => { S.notify = d.notify; S.minNights = d.min; S.rulesAnswered = true; },
+    done: () => "Mentve. A részletes beállítás a „Foglalás beállítása” lapon marad.",
+  },
+  hours: {
+    title: "Érkezés, távozás",
+    why: "A vendég tudja, mikor érkezhet — kevesebb telefonos kérdés.",
+    steps: [
+      {
+        t: "Mikor érkezhet és mikor kell távoznia a vendégnek?",
+        lead: "A szokásos: érkezés 14 órától, távozás 10 óráig.",
+        render: (d) => sel("inFrom", "Érkezés ettől", d.inFrom || "14:00") + sel("inTo", "Érkezés eddig", d.inTo || "20:00") + sel("outUntil", "Távozás eddig", d.outUntil || "10:00"),
+        read: (root, d) => {
+          ["inFrom", "inTo", "outUntil"].forEach((k) => (d[k] = root.querySelector("[data-k=" + k + "]").value));
+          return d.inTo <= d.inFrom ? "Az „érkezés eddig” legyen később, mint az „érkezés ettől”." : null;
+        },
+      },
+    ],
+    apply: (d) => { S.hours = { inFrom: d.inFrom, inTo: d.inTo, outUntil: d.outUntil }; },
+    done: (d) => "Mentve: érkezés " + d.inFrom + "–" + d.inTo + ", távozás " + d.outUntil + "-ig.",
+  },
+  amenities: {
+    title: "Felszereltség",
+    why: "A vendég ebből dönt: van-e Wi-Fi, parkoló, konyha. Pipálja be, ami van.",
+    steps: [
+      {
+        t: "Mi van a szálláson?",
+        lead: "Csak pipálja be. A listát később bővítheti.",
+        render: (d) => ["Ingyenes Wi‑Fi", "Ingyenes parkolás", "Teljesen felszerelt konyha", "Hűtőszekrény", "Kávéfőző", "Síkképernyős TV", "Grillezési lehetőség", "Társasjátékok"].map((x) => '<label class="opt' + ((d.items || []).includes(x) ? " on" : "") + '"><input type="checkbox" name="am" value="' + esc(x) + '"' + ((d.items || []).includes(x) ? " checked" : "") + "><span><b>" + esc(x) + "</b></span></label>").join(""),
+        bind: (root) => root.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => i.closest(".opt").classList.toggle("on", i.checked))),
+        read: (root, d) => { d.items = [...root.querySelectorAll("input:checked")].map((i) => i.value); return d.items.length ? null : "Pipáljon be legalább egyet."; },
+      },
+    ],
+    apply: (d) => { S.amenities = d.items.length; },
+    done: (d) => "Mentve: " + d.items.length + " tétel.",
+  },
+  email: {
+    title: "Saját e-mail cím",
+    why: "Az info@… címre érkező leveleket a meglévő postafiókjába küldjük tovább.",
+    steps: [
+      {
+        t: "Hová továbbítsuk a leveleket?",
+        lead: "A meglévő, mindennap olvasott e-mail címe.",
+        render: (d) => '<label class="field"><span>Továbbítás ide</span><input type="email" data-k="fw" value="' + esc(d.fw || "") + '"><div class="err" data-err></div></label>',
+        read: (root, d) => { d.fw = root.querySelector("[data-k=fw]").value.trim(); const bad = !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.fw); root.querySelector("[data-err]").textContent = bad ? "Ez nem e-mail cím." : ""; return bad ? "Ez nem e-mail cím." : null; },
+      },
+    ],
+    apply: (d) => { S.email.forwardTo = d.fw; },
+    done: (d) => "Mentve: továbbítás ide: " + d.fw + ".",
+  },
+};
+
+function normPrice(raw) {
+  // Same tolerance the price field gives: spaces, dots, "Ft" are fine; decimals are not.
+  const s = String(raw || "").replace(/ft|huf/gi, "").replace(/[\s. ]/g, "");
+  if (!s) return { val: null, err: null };
+  if (!/^\d+$/.test(s)) return { val: null, err: "Csak számot írjon (pl. 35 000)." };
+  const v = Number(s);
+  if (v < 1000) return { val: v, err: "Ez nagyon kevés egy éjszakára — biztos, hogy forintban írta?" };
+  if (v > 2000000) return { val: v, err: "Ez szokatlanul sok egy éjszakára — nézze meg a nullákat." };
+  return { val: v, err: null };
+}
+function checkFeed(k, raw) {
+  // sync.ts: webcal:// → https://, then it must be a web address; the portal check is the plan's addition.
+  const v = String(raw || "").trim().replace(/^webcal:\/\//i, "https://");
+  if (!v) return "Hiányzik a link.";
+  let u;
+  try { u = new URL(v); } catch (e) { return "A link nem érvényes webcím."; }
+  if (!/^https?:$/.test(u.protocol)) return "A link nem érvényes webcím.";
+  if (!PORTALS[k].host.test(u.hostname)) return "Ez nem " + PORTALS[k].name + "-link. A " + PORTALS[k].name + " naptár-exportját másolja ide.";
+  if (k === "airbnb" && !/\.ics$/i.test(u.pathname)) return "Az Airbnb naptár-linkje .ics-re végződik — a „Export calendar” linket másolja.";
+  return null;
+}
+function opt(name, value, cur, title, small) {
+  return '<label class="opt' + (cur === value ? " on" : "") + '"><input type="radio" name="' + name + '" value="' + value + '"' + (cur === value ? " checked" : "") + "><span><b>" + title + "</b><small>" + small + "</small></span></label>";
+}
+function stepper(k, v, min, max) {
+  return '<div class="stepper" data-min="' + min + '" data-max="' + max + '"><button type="button" data-d="-1" aria-label="Kevesebb">−</button><output data-k="' + k + '">' + v + '</output><button type="button" data-d="1" aria-label="Több">+</button></div>';
+}
+function sel(k, label, v) {
+  const hrs = [];
+  for (let h = 6; h <= 23; h++) hrs.push((h < 10 ? "0" : "") + h + ":00");
+  return '<label class="field"><span>' + label + '</span><select data-k="' + k + '">' + hrs.map((x) => "<option" + (x === v ? " selected" : "") + ">" + x + "</option>").join("") + "</select></label>";
+}
+function bindCommon(root) {
+  root.addEventListener("change", () => { const g = root.querySelector("[data-gerr]"); if (g) g.textContent = ""; });
+  root.querySelectorAll(".stepper").forEach((st) => st.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    const o = st.querySelector("output");
+    const n = Math.min(Number(st.dataset.max), Math.max(Number(st.dataset.min), Number(o.textContent) + Number(b.dataset.d)));
+    o.textContent = n;
+  })));
+  root.querySelectorAll(".opt input[type=radio]").forEach((r) => r.addEventListener("change", () => root.querySelectorAll('.opt input[name="' + r.name + '"]').forEach((x) => x.closest(".opt").classList.toggle("on", x.checked))));
+  root.querySelectorAll("[data-kb]").forEach((a) => a.addEventListener("click", () => toast("Súgó: „" + a.dataset.kb + "” (a mockban nem nyílik meg)")));
+}
+
+// Guide runner — the container (modal / inline panel / full screen) is the variant's choice.
+// Progress (draft + step) survives closing: „bezárható, később folytatható”.
+function guideState(id) {
+  return store.get(skey("guide-" + id)) || { step: 0 };
+}
+function visibleSteps(id, d) {
+  return GUIDES[id].steps.filter((s) => !(s.skipIf && s.skipIf(d)));
+}
+function renderGuideBody(id, host, opts) {
+  const g = GUIDES[id];
+  const d = draftOf(id);
+  const gs = guideState(id);
+  const steps = visibleSteps(id, d);
+  const i = Math.min(gs.step, steps.length - 1);
+  const s = steps[i];
+  host.innerHTML =
+    '<div class="tag-mock">' + (opts.kicker || g.title) + " · " + (i + 1) + ". lépés / " + steps.length + "</div>" +
+    "<h2>" + esc(s.t) + "</h2>" + '<p class="lead">' + esc(s.lead) + "</p>" +
+    '<div data-step>' + s.render(d) + "</div>" +
+    '<div class="err" data-gerr></div>' +
+    '<p class="hint" style="margin-top:14px">' + esc(g.why) + ' <a class="help" data-kb="' + (MODS.find((m) => m.id === id) || {}).kb + '">' + ic("help", 14) + "Részletesen a súgóban</a></p>";
+  bindCommon(host);
+  if (s.bind) s.bind(host, d);
+  return {
+    steps: steps, i: i,
+    next() {
+      const err = s.read(host, d);
+      saveDraft(id, d);
+      host.querySelector("[data-gerr]").textContent = err || "";
+      if (err) return "err";
+      if (g.applyEach) { g.apply(d); persistSample(); } // per-unit topics save every answer at once
+      const st2 = visibleSteps(id, d);
+      if (i + 1 >= st2.length) {
+        g.apply(d);
+        store.set(skey("guide-" + id), { step: 0, done: true });
+        persistSample();
+        return { done: g.done(d) };
+      }
+      store.set(skey("guide-" + id), { step: i + 1 });
+      return "next";
+    },
+    back() {
+      s.read(host, d); saveDraft(id, d);
+      store.set(skey("guide-" + id), { step: Math.max(0, i - 1) });
+    },
+  };
+}
+function stepTitles(id) {
+  return visibleSteps(id, draftOf(id)).map((s) => s.t);
+}
+
+// ── shell ─────────────────────────────────────────────────────────────────────
+const NAV = [
+  ["Áttekintés", "overview", "attekintes"],
+  ["G:Az oldalam"], ["Szövegek", "texts"], ["Fotók", "photos"], ["Elérhetőség", "contact"], ["Modulok", "settings", "modulok"],
+  ["G:Vendégek"], ["Foglalások", "bookings"], ["Üzenetek", "mail"],
+  ["G:Üzlet"], ["Webcím", "domain"], ["Forgalom", "report"], ["Dokumentumok", "docs"], ["Pénztárca", "card"],
+  ["G:Fiók"], ["Fiók", "account"], ["Súgó", "help"],
+];
+let VIEW = "attekintes";
+function shell(inner, crumb, navExtra) {
+  const side =
+    '<aside class="side"><div class="brand"><svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="var(--citui-cyan-500)" stroke-width="6" stroke-linecap="round"/><circle cx="22.5" cy="24" r="4.5" fill="var(--citui-ink)"/><path d="M34 18.5 42 24l-8 5.5z" fill="var(--citui-cyan-500)"/></svg><span><b>' + esc(S.name) + "</b><small>" + esc(S.host) + " · Élő</small></span></div>" +
+    NAV.map((n) => (n[0].startsWith("G:") ? '<div class="g">' + n[0].slice(2) + "</div>" : '<a data-go="' + (n[2] || "") + '" class="' + (n[2] && n[2] === VIEW ? "on" : "") + '">' + ic(n[1]) + n[0] + ((navExtra && navExtra[n[2]]) || "") + "</a>")).join("") + "</aside>";
+  const top = '<div class="top"><button class="ib mob-only" aria-label="Menü">' + ic("menu") + '</button><span class="crumb">' + crumb + '</span><a class="btn btn--sm">' + ic("external", 16) + '<span class="desk-only">Oldal</span></a></div>';
+  const bnav = '<nav class="bnav">' + [["Áttekintés", "overview", "attekintes"], ["Fotók", "photos"], ["Foglalások", "bookings"], ["Üzenetek", "mail"], ["Menü", "menu", "modulok"]].map((n) => '<a data-go="' + (n[2] || "") + '" class="' + (n[2] === VIEW ? "on" : "") + '">' + ic(n[1], 20) + n[0] + "</a>").join("") + "</nav>";
+  return '<div class="shell">' + side + '<div style="min-width:0;display:flex;flex-direction:column">' + top + '<main class="main">' + inner + "</main></div>" + bnav + "</div>";
+}
+function bindNav(root, go) {
+  root.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", () => { if (a.dataset.go) go(a.dataset.go); else toast("A mock ezt a lapot nem tartalmazza."); }));
+}
+function toast(msg) {
+  const dev = document.querySelector(".dev");
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  dev.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+// ── reminder preview (question 3: should the reminder name the missing module?) ─
+function ascii(s) { return s.normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+function missingNames() {
+  return openRows().filter((r) => r.m.forBooking || r.s.st === "miss").map((r) => r.m.title.toLowerCase());
+}
+function reminderHtml() {
+  const miss = missingNames();
+  const list = miss.slice(0, 2).join(" és ") + (miss.length > 2 ? " és még " + (miss.length - 2) : "");
+  if (S.trial) {
+    const sms = "Citoviso: meg nem lepett be a " + S.name + " honlapjaba, a probabol meg " + S.trial.left + " nap van." + (miss.length ? " Meg hianyzik: " + list + " - belepes utan lepesrol lepesre vegigvezetjuk." : "") + " Jelszo beallitasa egy kattintassal: https://…";
+    return '<div class="rem card" style="padding:14px"><h3>Belépés-emlékeztető (ADR-0417, 4. nap) — javasolt kiegészítés</h3><div class="muted">Ma a belépés előtt megy; a javaslat egy mondattal megnevezi, mi hiányzik — a lista ugyanebből az állapotból jön.</div>' +
+      '<div class="sms">' + esc(ascii(sms)).replace("Meg hianyzik:", "<b>Meg hianyzik:</b>") + '</div><div class="hint">' + sms.length + " karakter · GSM-7 (ékezet nélkül) · " + Math.ceil(ascii(sms).length / 153) + " SMS-szelet</div>" +
+      '<div class="mail"><div class="subj">Még nem lépett be – ' + esc(S.name) + "</div>A " + esc(S.name) + " honlapja már él, de még nem lépett be a szerkesztőbe. A próbából még " + S.trial.left + " nap van, " + esc(S.trial.until) + "-ig." + (miss.length ? "<br><b>Ahhoz, hogy a vendég foglalni tudjon, még ez hiányzik:</b><ul style=\"margin:4px 0\">" + openRows().map((r) => "<li>" + esc(r.m.title) + " — " + esc(r.s.line) + "</li>").join("") + "</ul>Belépés után lépésről lépésre végigvezetjük, kb. " + Math.max(2, openRows().length * 1) + " perc." : "") + '<div style="margin-top:6px"><span class="btn btn--p btn--sm">Jelszó beállítása</span></div></div></div>';
+  }
+  return '<div class="rem card" style="padding:14px"><h3>Belépés utáni emlékeztető — javaslat</h3><div class="muted">Ma belépés után csak az ár-hiány heti levele szól (priceGap). A javaslat: ugyanaz a levél a teljes hiánylistát nevezi meg, és a modul lépéseire visz.</div>' +
+    (miss.length
+      ? '<div class="mail"><div class="subj">Még ' + miss.length + " dolog hiányzik a foglaláshoz – " + esc(S.name) + "</div>" + openRows().map((r) => "• " + esc(r.m.title) + " — " + esc(r.s.line)).join("<br>") + '<div style="margin-top:6px"><span class="btn btn--p btn--sm">Folytatom a beállítást</span></div></div>'
+      : '<div class="box box--ok">Nincs hiány — emlékeztető nem megy ki.</div>') + "</div>";
+}
+
+// ── mock toolbar + boot ─────────────────────────────────────────────────────────
+function persistSample() { store.set(skey("sample"), S); }
+function loadSample(k) {
+  const saved = store.get("modstat-" + VARIANT + "-" + k + "-sample");
+  S = saved || JSON.parse(JSON.stringify(SAMPLES[k]));
+}
+function resetAll() {
+  try { Object.keys(localStorage).filter((k) => k.startsWith("modstat-" + VARIANT + "-")).forEach((k) => localStorage.removeItem(k)); } catch (e) { /* ignore */ }
+}
+function boot(variant, title, note, render) {
+  VARIANT = variant;
+  const isPhone = (window.matchMedia && window.matchMedia("(max-width: 700px)").matches);
+  const qs = new URLSearchParams(location.search);
+  SIZE = qs.get("size") || (isPhone ? "mobile" : "desktop");
+  let sample = qs.get("sample") || "marilyn";
+  if (qs.get("reset") === "1") resetAll();
+  VIEW = qs.get("view") || "attekintes";
+  loadSample(sample);
+  document.body.dataset.size = SIZE;
+  const bar = document.createElement("div");
+  bar.className = "mk";
+  const draw = () => {
+    bar.innerHTML = "<b>" + esc(title) + "</b>" +
+      '<span class="grp"><span>Méret</span><button data-size="mobile" class="' + (SIZE === "mobile" ? "on" : "") + '">Mobil 390px</button><button data-size="desktop" class="' + (SIZE === "desktop" ? "on" : "") + '">Asztali</button></span>' +
+      '<span class="grp"><span>Minta</span>' + Object.keys(SAMPLES).map((k) => '<button data-sample="' + k + '" class="' + (sample === k ? "on" : "") + '">' + esc(SAMPLES[k].label) + "</button>").join("") + "</span>" +
+      '<span class="grp"><button data-reset>Első belépés újra</button></span><span class="grp"><button data-panel class="' + (K_PANEL ? "on" : "") + '">Terv: nyilvántartás + kapu</button></span><span class="note">' + note + "</span>";
+    bar.querySelectorAll("[data-size]").forEach((b) => b.addEventListener("click", () => { SIZE = b.dataset.size; document.body.dataset.size = SIZE; draw(); render(); }));
+    bar.querySelectorAll("[data-sample]").forEach((b) => b.addEventListener("click", () => { sample = b.dataset.sample; loadSample(sample); VIEW = "attekintes"; K_MOD = null; K_WIZ = false; K_PANEL = false; draw(); render(true); }));
+    bar.querySelector("[data-panel]").addEventListener("click", () => { K_PANEL = !K_PANEL; draw(); render(); });
+    bar.querySelector("[data-reset]").addEventListener("click", () => { resetAll(); loadSample(sample); VIEW = "attekintes"; K_MOD = null; K_WIZ = false; K_PANEL = false; draw(); render(true); });
+  };
+  document.body.prepend(bar);
+  draw();
+  render(true);
+}
+
+/* Round 3 — the unit model: "how do you let it" first, then everything per unit.
+   Facts from the code (2026-11-06):
+   · provisioning creates ONE unit, "A szállás egésze" (ensureUnits: represents_whole + is_whole_property);
+   · createUnit (name, capacity) is not module-gated; ≥2 units → settleHouse keeps/creates the
+     whole-house unit beside the rooms (ADR-0392); beside rooms the house takes no request
+     of its own (ADR-0393) → the rooms are the bookable units;
+   · the room editor (description, photos) needs `rooms`; per-room amenities need `rooms` AND
+     `amenities` (ADR-0074 §5); amenities itself is site-level;
+   · pricing requires rooms when multiUnit (2+ units), booking requires pricing (ADR-0192). */
+"use strict";
+
+const PRICE = { rooms: 490, pricing: 490, booking: 790, amenities: 490 }; // live module_price, 2026-11-06
+const MOD_NAME = { rooms: "Szobák", pricing: "Árak", booking: "Online foglalás", amenities: "Felszereltség" };
+// ADR-0192 "why" sentences, verbatim from the catalog.
+const MOD_WHY = {
+  pricing: "Több szoba vagy apartman esetén az ár mindig ahhoz tartozik, amit a vendég kivesz — a Szobák modul mondja meg, mire vonatkozik az összeg.",
+  booking: "Az online foglalás összeget mond a vendégnek a naptárban, és ugyanaz az összeg megy ki a visszaigazoló levélben is — az árakat az Árak modul adja.",
+};
+
+// Samples: unit lists as the DB holds them.
+SAMPLES.duna.letting = "whole";
+SAMPLES.duna.units = [{ id: "u1", name: "A szállás egésze", cap: 8, house: true, por: true, base: null, am: [] }];
+SAMPLES.marilyn.letting = null; // default unit only — nobody asked yet
+SAMPLES.marilyn.units = [{ id: "u1", name: "A szállás egésze", cap: null, house: true, por: false, base: null, am: [] }];
+SAMPLES.bereny = {
+  key: "bereny",
+  label: "Berény Panzió (3 szoba, „Alap” csomag)",
+  name: "Berény Panzió",
+  initials: "BP",
+  host: "bereny-panzio.citoviso.com",
+  trial: { until: "nov. 20.", left: 14, day: 1 },
+  photos: { n: 9, own: false },
+  intro: true,
+  letting: null,
+  units: [{ id: "u1", name: "A szállás egésze", cap: null, house: true, por: false, base: null, am: [] }],
+  // Room names the lead's mock shows (data-cit-units, from the portal data) — offered as a starting point.
+  suggest: ["Deluxe Queen szoba", "Háromszemélyes szoba", "Családi szoba"],
+  minNights: 1,
+  rulesAnswered: false,
+  notify: "",
+  cal: { asked: false, portals: [], links: {}, exportCopied: false },
+  hours: null,
+  amenities: 0,
+  usp: false,
+  reviews: { collect: false, n: 0 },
+  poi: 0,
+  email: null,
+  domain: "sub",
+  geo: true,
+  modules: ["gallery", "enquiry", "location"], // the "Alap" preset (src/modules.ts MINIMAL)
+};
+
+// ── unit helpers (the same split the server makes) ─────────────────────────────────
+const house = () => S.units.find((u) => u.house) || S.units[0];
+const roomsOf = () => S.units.filter((u) => !u.house);
+const multi = () => S.units.length > 1; // tenantMultiUnitState counts ALL units
+// ADR-0257 whole_only: the house is the ONLY bookable unit, the rooms are presentation.
+const bookable = () => (S.letting === "wholeOnly" || !roomsOf().length ? [house()] : roomsOf());
+const holds = (m) => S.modules.includes(m);
+const word = () => (bookable().length > 1 ? "szobának" : "egységnek");
+
+// ── statuses, per unit ───────────────────────────────────────────────────────────────
+function stLetting() {
+  if (!S.letting) return { st: "miss", line: "Még nem mondta meg: egészben vagy szobánként adja ki", miss: ["kiadás módja"] };
+  if (S.letting === "whole") return { st: "done", line: "Egészben adja ki" };
+  if (!holds("rooms")) return { st: "part", line: roomsOf().length + " szoba — a Szobák modul nélkül nem látszanak az oldalon", miss: ["Szobák modul"] };
+  if (S.letting === "wholeOnly") return { st: "done", line: "Csak egyben adja ki · " + roomsOf().length + " szoba bemutatásként" };
+  return { st: "done", line: roomsOf().length + " szoba + az egész ház (egyben is kivehető)" };
+}
+function stCap() {
+  const b = bookable();
+  const ok = b.filter((u) => u.cap).length;
+  if (ok === b.length) return { st: "done", line: b.length === 1 ? b[0].cap + " fő" : b.map((u) => u.name + ": " + u.cap + " fő").join(" · ") };
+  return { st: ok ? "part" : "miss", line: (b.length === 1 ? "Nincs megadva, hány fő fér el" : ok + "/" + b.length + " " + word() + " van férőhelye"), miss: ["férőhely"] };
+}
+function stPrice() {
+  const b = bookable();
+  const st = b.map((u) => (u.por ? "on_request" : u.base ? "complete" : "none"));
+  const ok = st.filter((x) => x !== "none").length;
+  if (st.every((x) => x === "on_request")) return { st: "decl", line: "Ár kérésre — a vendég árajánlatot kér" };
+  if (ok === b.length) return { st: "done", line: b.map((u) => (b.length > 1 ? u.name + ": " : "") + (u.por ? "ár kérésre" : ft(u.base))).join(" · ") };
+  return { st: ok ? "part" : "miss", line: b.length === 1 ? "Nincs ár — a vendég nem lát végösszeget" : ok + "/" + b.length + " " + word() + " van ára", miss: ["ár"] };
+}
+function stAmen() {
+  const site = S.amenities ? S.amenities + " tétel az egész szálláson" : "";
+  const per = holds("rooms") && multi() ? roomsOf().filter((u) => u.am && u.am.length).length : null;
+  if (!S.amenities) return { st: "miss", line: "Üres — az oldalon ez a rész most nem jelenik meg", miss: ["tételek"] };
+  if (per !== null && per < roomsOf().length) return { st: "part", line: site + " · " + per + "/" + roomsOf().length + " szobánál saját felszereltség", miss: ["szobák"] };
+  return { st: "done", line: site + (per !== null ? " · minden szobánál saját is" : "") };
+}
+function guestSentence() {
+  const l = stLetting();
+  if (l.st === "miss") return "A vendég még nem tudja, a házat vagy egy szobát foglal.";
+  if (l.st === "part") return "A szobái a honlapon még nem látszanak.";
+  if (holds("rooms") || holds("booking")) { const c = stCap(); if (c.st !== "done") return "A vendég még nem látja, hány fő fér el."; }
+  if (!holds("pricing")) return "A vendég időpontot kér Öntől (árat a csomagja nem mutat).";
+  const p = stPrice().st;
+  const calWarn = holds("booking") && (status("calendar").st === "miss" || status("calendar").st === "part") ? " A portálos foglalások itt még nem látszanak — dupla foglalás jöhet." : "";
+  if (p === "miss" || p === "part") return "A vendég nem lát végösszeget — foglalás helyett árajánlatot kér." + calWarn;
+  if (p === "decl") return "A vendég árajánlatot kér — így döntött (ár kérésre)." + calWarn;
+  return "A vendég végösszeget lát és foglalni tud." + calWarn;
+}
+
+// ── guides that repeat per unit (steps are built from the CURRENT units) ──────────────
+function moduleOffer(need, d) {
+  // need: modules required by the answer; optional: worth offering with it
+  const opt = holds("pricing") ? [] : ["pricing"];
+  return '<div class="box box--warn"><b>Ehhez a ' + need.map((m) => MOD_NAME[m]).join(" és a ") + " modul kell</b><div class=\"muted\" style=\"margin-top:4px\">A csomagjában most nincs benne. Nélküle a szobák a honlapon nem jelennek meg külön — a vendég az egész szállásra kér időpontot.</div></div>" +
+    need.map((m) => '<label class="opt on"><input type="checkbox" checked disabled><span><b>' + MOD_NAME[m] + " · " + PRICE[m] + " Ft/hó</b><small>Szobánként: név, férőhely, leírás, fotó.</small></span></label>").join("") +
+    opt.map((m) => '<label class="opt' + (d.alsoPricing ? " on" : "") + '"><input type="checkbox" data-k="alsoPricing"' + (d.alsoPricing ? " checked" : "") + "><span><b>Árak · " + PRICE[m] + " Ft/hó — nem kötelező</b><small>Ha szobánként árat is mutatna. " + esc(MOD_WHY.pricing) + "</small></span></label>").join("") +
+    opt2("buy", "Megrendelem, és folytatjuk", "A Modulok › Még nem vette meg kosarába tesszük; a fizetés után itt folytatja.", d.choice) +
+    opt2("whole", "Most egészben adom ki", "Egy egység marad. Később bármikor átállhat szobánkéntire.", d.choice);
+}
+function opt2(v, t, s, cur) {
+  return '<label class="opt' + (cur === v ? " on" : "") + '"><input type="radio" name="choice" value="' + v + '"' + (cur === v ? " checked" : "") + "><span><b>" + t + "</b><small>" + s + "</small></span></label>";
+}
+GUIDES.letting = {
+  title: "Hogyan adja ki?",
+  why: "Ettől függ minden további kérdés: a férőhely, az ár és a naptár egységenként él.",
+  get steps() {
+    const d = draftOf("letting");
+    const s = [{
+      t: "Hogyan adja ki a szállást?",
+      lead: "Ha a vendég mindig az egész házat kapja, válassza az elsőt.",
+      render: (d) => { const c = d.mode || S.letting || ""; return opt("mode", "whole", c, "Egészben", "Egy foglalás = az egész szállás") + opt("mode", "rooms", c, "Szobánként", "A vendég egy-egy szobát foglal (az egész ház is kivehető marad)") + opt("mode", "wholeOnly", c, "Egyben adom ki, de a szobákat bemutatnám", "Egy foglalható egység (a ház); a szobák képpel, leírással látszanak, árat nem kérnek"); },
+      read: (root, d) => { const c = root.querySelector("input[name=mode]:checked"); if (!c) return "Válasszon egyet."; d.mode = c.value; return null; },
+    }];
+    const withRooms = d.mode === "rooms" || d.mode === "wholeOnly";
+    // The module step STAYS after the purchase (it then confirms it), so the step numbers do not shift.
+    if (withRooms && (!holds("rooms") || d.choice)) s.push({
+      t: "Ehhez kell egy modul",
+      lead: "Mondjuk meg előre, mibe kerül — utána Ön dönt.",
+      render: (d) => (holds("rooms") && d.choice === "buy" ? '<div class="box box--ok"><b>Megrendelve és kifizetve: ' + ["rooms"].concat(d.alsoPricing ? ["pricing"] : []).map((m) => MOD_NAME[m]).join(", ") + '.</b><div class="muted">Folytatjuk ott, ahol abbahagyta.</div></div>' : moduleOffer(["rooms"], d)),
+      bind: (root) => root.querySelectorAll(".opt input").forEach((i) => i.addEventListener("change", () => root.querySelectorAll(".opt").forEach((o) => o.classList.toggle("on", o.querySelector("input").checked)))),
+      read: (root, d) => {
+        if (holds("rooms") && d.choice === "buy") return null;
+        const c = root.querySelector("input[name=choice]:checked");
+        const ap = root.querySelector("[data-k=alsoPricing]");
+        d.alsoPricing = !!(ap && ap.checked);
+        if (!c) return "Válasszon: megrendeli, vagy most egészben adja ki.";
+        d.choice = c.value;
+        if (d.choice === "whole") { d.mode = "whole"; return null; }
+        // KOSÁR (tulaj, 11-06): into the existing module cart; after payment the walk continues HERE.
+        openCart(["rooms"].concat(d.alsoPricing ? ["pricing"] : []));
+        return "A kosárban vár — fizetés után innen folytatjuk.";
+      },
+    });
+    if (withRooms && holds("rooms")) {
+      s.push({
+        t: "Hány szobát ad ki?",
+        lead: S.suggest ? "A portálon " + S.suggest.length + " szobát láttunk — javítsa, ha nem így van." : "Csak a külön kiadott szobákat számolja.",
+        render: (d) => stepper("n", d.n || (S.suggest ? S.suggest.length : Math.max(2, roomsOf().length)), 2, 30),
+        read: (root, d) => { d.n = Number(root.querySelector("output[data-k=n]").textContent); return null; },
+      });
+      s.push({
+        t: "Mi a szobák neve?",
+        lead: d.mode === "wholeOnly" ? "Bemutatásként látszanak — foglalni az egész házat lehet." : "Így látja a vendég a honlapon és a foglaláskor.",
+        render: (d) => Array.from({ length: d.n || 2 }, (_, i) => '<label class="field"><span>' + (i + 1) + '. szoba</span><input type="text" data-room="' + i + '" value="' + esc((d.names || [])[i] || (roomsOf()[i] || {}).name || (S.suggest || [])[i] || "") + '" placeholder="pl. Kétágyas szoba"></label>').join("") + '<div class="hint">Mellé az egész ház is megmarad, egyben kivehetőnek („A szállás egésze”).</div>',
+        read: (root, d) => { d.names = [...root.querySelectorAll("[data-room]")].map((i) => i.value.trim()); return d.names.every(Boolean) ? null : "Minden szobának adjon nevet."; },
+      });
+    }
+    return s;
+  },
+  apply: (d) => {
+    S.letting = d.mode;
+    if (d.mode === "whole") { S.units = [Object.assign({}, house(), { house: true })]; return; }
+    const keep = roomsOf();
+    const rooms = d.names.map((n, i) => Object.assign({ id: "r" + (i + 1), cap: null, por: false, base: null, am: [] }, keep[i] || {}, { name: n, house: false }));
+    // settleHouse: the house stays beside the rooms (unpriced when rooms are let); whole_only → only the house is bookable.
+    S.units = [Object.assign({}, house(), { house: true }, d.mode === "rooms" ? { base: null } : {})].concat(rooms);
+  },
+  done: (d) => (d.mode === "whole" ? "Mentve: egészben adja ki." : d.mode === "wholeOnly" ? "Mentve: egyben adja ki, " + d.names.length + " szoba bemutatásként." : "Mentve: " + d.names.length + " szoba."),
+};
+GUIDES.rooms = {
+  applyEach: true,
+  title: "Férőhely",
+  why: "A vendég ebből látja, elfér-e a társasága.",
+  get steps() {
+    return bookable().map((u) => ({
+      t: "Hány fő fér el: " + u.name + "?",
+      lead: "Az ágyak alapján — pótággyal együtt, ha van.",
+      render: (d) => stepper("cap", (d.cap && d.cap[u.id]) || u.cap || 2, 1, 30),
+      read: (root, d) => { d.cap = d.cap || {}; d.cap[u.id] = Number(root.querySelector("output[data-k=cap]").textContent); return null; },
+    }));
+  },
+  apply: (d) => S.units.forEach((u) => { if (d.cap && d.cap[u.id]) u.cap = d.cap[u.id]; }),
+  done: () => "Mentve: " + bookable().map((u) => u.name + " " + u.cap + " fő").join(", ") + ".",
+};
+GUIDES.pricing = {
+  applyEach: true,
+  title: "Árak",
+  why: "A vendég végösszeget akar látni. Ár nélkül árajánlatot kér, és sokan ott megállnak.",
+  get steps() {
+    const per = bookable().map((u) => ({
+      t: "Mennyi egy éjszaka: " + u.name + "?",
+      lead: bookable().length > 1 ? "Szobánként külön ár — a vendég annak az árát látja, amit kivesz." : "Az egész szállás ára egy éjre.",
+      render: (d) => {
+        const v = (d.raw && d.raw[u.id]) || (u.base || "");
+        const por = d.por ? d.por[u.id] : u.por;
+        return '<label class="field"><span>' + esc(u.name) + ' — ár / éj</span><input type="text" inputmode="numeric" data-k="base" placeholder="pl. 25 000" value="' + esc(v) + '"' + (por ? " disabled" : "") + '><div class="hint" data-norm></div><div class="err" data-err></div></label>' +
+          '<label class="opt' + (por ? " on" : "") + '"><input type="checkbox" data-k="por"' + (por ? " checked" : "") + "><span><b>Ennél nem adok meg árat</b><small>A vendég árajánlatot kér, Ön válaszol neki.</small></span></label>";
+      },
+      bind: (root) => {
+        const inp = root.querySelector("[data-k=base]");
+        const por = root.querySelector("[data-k=por]");
+        const show = () => { const n = normPrice(inp.value); root.querySelector("[data-norm]").textContent = n.val && !n.err ? "Így jelenik meg: " + ft(n.val) + " / éj" : ""; root.querySelector("[data-err]").textContent = inp.value && n.err ? n.err : ""; inp.classList.toggle("bad", !!(inp.value && n.err)); };
+        inp.addEventListener("input", show);
+        por.addEventListener("change", () => { inp.disabled = por.checked; por.closest(".opt").classList.toggle("on", por.checked); show(); });
+        show();
+      },
+      read: (root, d) => {
+        d.raw = d.raw || {}; d.por = d.por || {}; d.base = d.base || {};
+        d.por[u.id] = root.querySelector("[data-k=por]").checked;
+        d.raw[u.id] = root.querySelector("[data-k=base]").value;
+        if (d.por[u.id]) { d.base[u.id] = null; return null; }
+        const n = normPrice(d.raw[u.id]);
+        if (!d.raw[u.id].trim()) return "Írjon be egy összeget, vagy jelölje be: „Ennél nem adok meg árat”.";
+        if (n.err) return n.err;
+        d.base[u.id] = n.val;
+        return null;
+      },
+    }));
+    return per.concat([{
+      t: "Legalább hány éjre lehet foglalni?",
+      lead: "Minden szobára ugyanez — később szezononként finomíthatja.",
+      render: (d) => stepper("min", d.min || S.minNights || 1, 1, 14),
+      read: (root, d) => { d.min = Number(root.querySelector("output[data-k=min]").textContent); return null; },
+    }]);
+  },
+  apply: (d) => { S.units.forEach((u) => { if (d.por && u.id in d.por) { u.por = d.por[u.id]; u.base = d.base[u.id]; } }); S.minNights = d.min || S.minNights; },
+  done: () => "Mentve: " + bookable().map((u) => u.name + " " + (u.por ? "ár kérésre" : ft(u.base))).join(", ") + ".",
+};
+const AMEN = ["Ingyenes Wi‑Fi", "Ingyenes parkolás", "Teljesen felszerelt konyha", "Hűtőszekrény", "Kávéfőző", "Síkképernyős TV", "Szauna", "Légkondicionálás"];
+const UNIT_AMEN = ["Saját fürdőszoba", "Erkély, terasz", "Légkondicionálás", "Hűtőszekrény", "Pótágy"];
+GUIDES.amenities = {
+  applyEach: true,
+  title: "Felszereltség",
+  why: "A vendég ebből dönt: van-e Wi-Fi, parkoló, konyha.",
+  get steps() {
+    const s = [{
+      t: "Mi van az egész szálláson?",
+      lead: "Ami minden vendégnek jár. Csak pipálja be.",
+      render: (d) => AMEN.map((x) => '<label class="opt' + ((d.items || []).includes(x) ? " on" : "") + '"><input type="checkbox" name="am" value="' + esc(x) + '"' + ((d.items || []).includes(x) ? " checked" : "") + "><span><b>" + esc(x) + "</b></span></label>").join(""),
+      bind: (root) => root.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => i.closest(".opt").classList.toggle("on", i.checked))),
+      read: (root, d) => { d.items = [...root.querySelectorAll("input:checked")].map((i) => i.value); return d.items.length ? null : "Pipáljon be legalább egyet."; },
+    }];
+    // Per-room amenities: rooms AND amenities (ADR-0074 §5, the save route checks both).
+    if (multi() && holds("rooms")) roomsOf().forEach((u) => s.push({
+      t: "Mi van a(z) " + u.name + " szobában?",
+      lead: "Ami csak ebben a szobában van. Ha nincs ilyen, hagyja üresen.",
+      render: (d) => UNIT_AMEN.map((x) => { const on = ((d.unit && d.unit[u.id]) || u.am || []).includes(x); return '<label class="opt' + (on ? " on" : "") + '"><input type="checkbox" name="uam" value="' + esc(x) + '"' + (on ? " checked" : "") + "><span><b>" + esc(x) + "</b></span></label>"; }).join(""),
+      bind: (root) => root.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => i.closest(".opt").classList.toggle("on", i.checked))),
+      read: (root, d) => { d.unit = d.unit || {}; d.unit[u.id] = [...root.querySelectorAll("input:checked")].map((i) => i.value); return null; },
+    }));
+    return s;
+  },
+  apply: (d) => { S.amenities = (d.items || []).length; S.units.forEach((u) => { if (d.unit && d.unit[u.id]) u.am = d.unit[u.id]; }); },
+  done: (d) => "Mentve: " + d.items.length + " tétel" + (d.unit ? ", szobánként is" : "") + ".",
+};
+
+/* Round 4 — every purchased module is a wizard topic. Embedded steps where the admin's own
+   form is small (photos, address, advantages, reviews, intro); "open the page and come back"
+   where only the existing page can do it (programme picker, translations). */
+"use strict";
+SAMPLES.duna.address = "Napos part 108";
+SAMPLES.marilyn.address = "Hold u. 20";
+SAMPLES.bereny.address = "Béke utca 55";
+
+GUIDES.gallery = {
+  title: "Fotók",
+  why: "A saját fotók hitelesebbek. Nem kötelező: a bemutató képek addig is látszanak.",
+  steps: [{
+    t: "Feltölti a saját fotóit?",
+    lead: "JPEG, PNG vagy WEBP, legfeljebb 6 MB, egyszerre 12 kép. Az első feltöltés lecseréli a bemutató képeket.",
+    render: (d) => '<div class="box"><button type="button" class="btn btn--p" data-pick>' + ic("upload", 16) + 'Fotók választása</button> <button type="button" class="btn" data-pick>' + ic("camera", 16) + 'Fényképezés</button><div class="hint" data-picked>' + (d.n ? d.n + " kép kiválasztva" : S.photos.own ? S.photos.n + " saját fotó van fent" : "Most " + S.photos.n + " bemutató kép látszik.") + "</div></div>",
+    bind: (root, d) => root.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => { d.n = 6; root.querySelector("[data-picked]").textContent = "6 kép kiválasztva (a mockban nem tölt fel)"; })),
+    read: (root, d) => (d.n || S.photos.own ? null : "Válasszon képeket, vagy nyomja meg: „Most kihagyom”."),
+  }],
+  apply: (d) => { if (d.n) S.photos = { n: d.n, own: true }; },
+  done: (d) => (d.n ? "Feltöltve: " + d.n + " saját fotó." : "Rendben."),
+};
+GUIDES.location = {
+  title: "Térkép, megközelítés",
+  why: "A térkép a pontos címet mutatja, a vendég egyszerűen odatalál.",
+  steps: [{
+    t: "Jó ez a cím?",
+    lead: "Ezt a címet mutatja a térkép. Ha kell, javítsa, és írja mellé, hol lehet parkolni.",
+    render: (d) => '<label class="field"><span>Cím</span><input type="text" data-k="addr" value="' + esc(d.addr != null ? d.addr : S.address || "") + '"><div class="err" data-err></div></label><label class="field"><span>Parkolás (nem kötelező)</span><input type="text" data-k="park" value="' + esc(d.park || "") + '" placeholder="pl. ingyenes parkolás az udvarban"></label>',
+    read: (root, d) => { d.addr = root.querySelector("[data-k=addr]").value.trim(); d.park = root.querySelector("[data-k=park]").value.trim(); return d.addr.length >= 4 ? null : "Adja meg a címet (utca, házszám)."; },
+  }],
+  apply: (d) => { S.address = d.addr; S.geo = true; },
+  done: (d) => "Mentve: " + d.addr + ".",
+};
+GUIDES.usp = {
+  title: "„Miért Önt válasszák”",
+  why: "Ami megkülönbözteti a környék többi szállásától. Nem kötelező: addig a bemutatkozó szöveg kiemelései látszanak.",
+  steps: [{
+    t: "Mi a három legerősebb érve?",
+    lead: "Egy-egy rövid mondat. Amit a vendégei a legtöbbet dicsérnek.",
+    render: (d) => [0, 1, 2].map((i) => '<label class="field"><span>' + (i + 1) + '. előny</span><input type="text" data-u="' + i + '" value="' + esc((d.u || [])[i] || "") + '"></label>').join(""),
+    read: (root, d) => { d.u = [...root.querySelectorAll("[data-u]")].map((i) => i.value.trim()).filter(Boolean); return d.u.length ? null : "Írjon legalább egyet, vagy nyomja meg: „Most kihagyom”."; },
+  }],
+  apply: (d) => { S.usp = d.u.length > 0; },
+  done: (d) => "Mentve: " + d.u.length + " előny.",
+};
+GUIDES.reviews = {
+  title: "Vélemények",
+  why: "A valódi vendégvélemény a legerősebb érv egy új vendégnek. Minden véleményt Ön hagy jóvá.",
+  steps: [{
+    t: "Írhatnak-e a vendégek véleményt az oldalon?",
+    lead: "Csak az jelenik meg, amit Ön jóváhagy.",
+    render: (d) => { const c = d.collect != null ? (d.collect ? "yes" : "no") : S.reviews.answered ? (S.reviews.collect ? "yes" : "no") : ""; return opt("rv", "yes", c, "Igen, gyűjtsünk véleményt", "Értesítjük, ha új vélemény jön") + opt("rv", "no", c, "Most nem", "A rész a véleménygyűjtés nélkül jelenik meg"); },
+    read: (root, d) => { const c = root.querySelector("input[name=rv]:checked"); if (!c) return "Válasszon egyet."; d.collect = c.value === "yes"; return null; },
+  }],
+  apply: (d) => { S.reviews.collect = d.collect; S.reviews.answered = true; },
+  done: (d) => (d.collect ? "Mentve: a vendégek írhatnak véleményt." : "Mentve: most nem gyűjt véleményt."),
+};
+GUIDES.texts = {
+  title: "Bemutatkozó szöveg",
+  why: "Pár mondat a szállásról — ezt olvassa el először a vendég.",
+  steps: [{
+    t: "Így mutatkozik be az oldalon",
+    lead: "Javítsa vagy egészítse ki. Legalább 40 karakter.",
+    render: (d) => '<label class="field"><span>Bemutatkozás</span><textarea data-k="intro" rows="5" style="width:100%;padding:10px;border:1px solid var(--citui-line-strong);border-radius:6px;background:var(--citui-field);font:inherit">' + esc(d.intro != null ? d.intro : S.introText || "") + '</textarea><div class="hint">' + (S.introText ? "" : "A mockban a honlap mostani szövege nincs betöltve — élesben itt áll előtöltve.") + "</div></label>",
+    read: (root, d) => { d.intro = root.querySelector("[data-k=intro]").value.trim(); return d.intro.length > 40 ? null : "Legalább 40 karakter kell (most " + d.intro.length + ")."; },
+  }],
+  apply: (d) => { S.intro = true; S.introText = d.intro; },
+  done: () => "Mentve: a bemutatkozó szöveg.",
+};
+
+// ── the module cart (tulaj, 11-06: KOSÁR, not an in-place payment) ──────────────────
+function openCart(mods) {
+  const dev = document.querySelector(".dev");
+  const back = document.createElement("div");
+  back.className = "wz-back";
+  const sum = mods.reduce((a, m) => a + PRICE[m], 0);
+  back.innerHTML = '<div class="wz wz--one" role="dialog" aria-modal="true"><div class="wz__body" style="grid-column:1/-1"><div class="wz__h"><span class="t">Kosár</span><button class="ib" data-x aria-label="Bezárás">' + ic("close") + '</button></div><div class="wz__c"><div class="tag-mock">A meglévő modul-kosár (Modulok › Még nem vette meg)</div>' +
+    mods.map((m) => '<div class="ff"><span>' + MOD_NAME[m] + "</span><span>" + PRICE[m] + " Ft/hó</span></div>").join("") +
+    '<div class="ff"><b>Összesen</b><b>+' + sum + ' Ft/hó</b></div><p class="hint">A havi díjához adódik. Fizetés után a varázsló ott folytatja, ahol abbahagyta.</p></div>' +
+    '<div class="wz__f"><button class="btn btn--ghost" data-x>Mégse</button><span class="sp"></span><button class="btn btn--p btn--lg" data-pay>Fizetés</button></div></div></div>';
+  dev.appendChild(back);
+  back.querySelectorAll("[data-x]").forEach((b) => b.addEventListener("click", () => back.remove()));
+  back.querySelector("[data-pay]").addEventListener("click", () => {
+    S.modules = S.modules.concat(mods.filter((m) => !S.modules.includes(m)));
+    persistSample();
+    back.remove();
+    toast("Kifizetve (mock) — folytatjuk.");
+    kRender();
+  });
+}
+// ── "open the existing page, then come back" (programme picker, translations) ──────────
+function openPageAndReturn(entry, onBack) {
+  const dev = document.querySelector(".dev");
+  const back = document.createElement("div");
+  back.className = "wz-back";
+  back.innerHTML = '<div class="wz wz--one"><div class="wz__body" style="grid-column:1/-1"><div class="wz__h"><span class="t">' + esc(entry.setup.label) + '</span></div><div class="wz__c"><div class="tag-mock">A mai „' + esc(entry.setup.label) + '” lap nyílik meg (/admin?tab=' + esc(entry.setup.tab) + '&vissza=varazslo)</div><p>Itt a meglévő képernyőn állítja be. A lap tetején egy sáv mutatja: <b>„Kész — vissza a beállításhoz”</b>.</p></div>' +
+    '<div class="wz__f"><span class="sp"></span><button class="btn btn--p btn--lg" data-back>Kész — vissza a beállításhoz</button></div></div></div>';
+  dev.appendChild(back);
+  back.querySelector("[data-back]").addEventListener("click", () => { back.remove(); onBack(); });
+}
+
+/* THE MODULE SETUP REGISTRY (mock of the planned src/tenant/moduleSetup.ts).
+   One entry per setup item. The wizard, the tiles, the overview strip, the reminder text
+   and the land gate ALL read this list — nothing else lists modules by hand. */
+"use strict";
+
+// Real catalog (src/modules.ts MODULE_CATALOG, 2026-11-06): id, label, retired.
+const CATALOG = [
+  { id: "gallery", label: "Galéria (valós fotók)" },
+  { id: "rooms", label: "Szobák / apartmanok" },
+  { id: "amenities", label: "Felszereltség" },
+  { id: "pricing", label: "Árak / szezonok", requires: [{ id: "rooms", when: "multiUnit" }] },
+  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", spine: true },
+  { id: "location", label: "Térkép / megközelítés" },
+  { id: "hours", label: "Nyitvatartás / be-kijelentkezés" },
+  { id: "usp", label: "„Miért mi” — előnyök" },
+  { id: "reviews", label: "Vélemények (valós)" },
+  { id: "poi", label: "Automata heti programajánló" },
+  { id: "booking", label: "Foglalás (upsell)", requires: [{ id: "pricing", when: "always" }] },
+  { id: "newsletter", label: "Hírlevél-CTA (upsell)", retired: true },
+  { id: "email", label: "Egyedi e-mail cím (upsell)" },
+  { id: "multilang", label: "Többnyelvű honlap (egyszeri)" },
+];
+// Real KB entry ids (kb/entries/*, 2026-11-06).
+const KB_IDS = ["admin-account", "admin-bookings", "admin-booking-setup", "admin-contact", "admin-documents", "admin-domain", "admin-legal", "admin-messages", "admin-modules", "admin-modules-amenities", "admin-modules-booking", "admin-modules-pricing", "admin-modules-programs", "admin-modules-reviews", "admin-modules-rooms", "admin-modules-settings", "admin-multilang", "admin-overview", "admin-photos", "admin-settlement", "admin-subscription", "admin-texts", "admin-traffic", "admin-wallet"];
+// Catalog modules that deliberately have NO setup item — each with its reason (the gate keeps this list alive).
+const EXEMPT = { enquiry: "Gerinc: minden oldalon él, nincs mit beállítani (az értesítési címet a „Foglalás szabályai” kérdezi)." };
+
+// returns: the page opens with ?vissza=varazslo and its top bar leads back to the next topic.
+const page = (tab, label, returns) => ({ kind: "page", tab: tab, label: label, returns: !!returns });
+const guide = (id) => ({ kind: "guide", guide: id });
+
+// Data preconditions a topic may wait for (registered, so the gate can check names).
+const DATA_PREREQS = {
+  bookableUnit: { test: () => bookable().every((u) => u.name), why: "Előbb hozza létre a szobákat." },
+};
+const req = (topic, why) => ({ topic: topic, why: why });
+const REGISTRY_BASE = [
+  { id: "letting", modules: [], group: "booking", title: "Hogyan adja ki?", icon: "home", kb: "admin-modules-rooms", requires: [],
+    rule: "site_unit: 1 egység (represents_whole) = egészben · szobák + ház = szobánként; a válasz tárolva", setup: guide("letting"), status: stLetting },
+  { id: "rooms", modules: ["rooms", "booking"], group: "booking", title: "Férőhely", icon: "account", kb: "admin-modules-rooms",
+    requires: [req("letting", "Előbb mondja meg, egészben vagy szobánként adja ki."), { data: "bookableUnit" }], repeat: "unit",
+    rule: "site_unit.capacity minden foglalható egységen (bookableUnits) — „2/3 szobának van férőhelye”", setup: guide("rooms"), status: stCap },
+  { id: "pricing", modules: ["pricing"], group: "booking", title: "Árak", icon: "pricing", kb: "admin-modules-pricing",
+    requires: [req("letting", "Előbb mondja meg, egészben vagy szobánként adja ki — az ár ahhoz tartozik, amit a vendég kivesz."), { data: "bookableUnit" }], repeat: "unit",
+    rule: "unitPriceStatus egységenként: complete · on_request = Ön döntött így · none/partial — „1/3 szobának van ára”", setup: guide("pricing"), status: stPrice },
+  { id: "calendar", modules: ["booking"], group: "booking", title: "Naptár-összekötés", icon: "bookings", kb: "admin-modules-booking",
+    requires: [req("pricing", "Előbb az árak — a foglalás összeget mond (ADR-0192)."), { data: "bookableUnit" }],
+    rule: "calendar_link egységenként (import, last_ok_at, last_error) + a „hol hirdet még” válasz", setup: guide("calendar"), status: () => status("calendar") },
+  { id: "booking", modules: ["booking"], group: "booking", title: "Foglalás szabályai", icon: "settings", kb: "admin-booking-setup",
+    requires: [req("pricing", "Előbb az árak — a foglalás összeget mond (ADR-0192).")],
+    rule: "loadBookingSetup(): answered{stay,notify} + blockers[]", setup: guide("booking"), status: () => status("booking") },
+  { id: "hours", modules: ["hours"], group: "page", title: "Érkezés, távozás", icon: "clock", kb: "admin-modules-settings", requires: [],
+    rule: "paidButEmptyModules: hours", setup: guide("hours"), status: () => status("hours") },
+  { id: "amenities", modules: ["amenities"], group: "page", title: "Felszereltség", icon: "check", kb: "admin-modules-amenities",
+    requires: [req("letting", "Előbb mondja meg, egészben vagy szobánként adja ki — szobánként a szobák saját felszereltségét is kérdezzük.")], repeat: "unit (ha Szobák + Felszereltség)",
+    rule: "config.items (az egész szálláson) + site_unit.amenities szobánként, ha rooms ÉS amenities (ADR-0074 §5)", setup: guide("amenities"), status: stAmen },
+  { id: "email", modules: ["email"], group: "page", title: "Saját e-mail cím", icon: "mail", kb: "admin-modules-settings", requires: [],
+    rule: "config.forwardTo + site.custom_domain_status", setup: guide("email"), status: () => status("email") },
+  { id: "gallery", modules: ["gallery"], group: "page", title: "Fotók", icon: "photos", kb: "admin-photos", requires: [],
+    rule: "usingOwnPhotos (bemutató = Nem kötelező)", setup: guide("gallery"), status: () => status("photos") },
+  { id: "location", modules: ["location"], group: "page", title: "Térkép, megközelítés", icon: "pin", kb: "admin-contact", requires: [],
+    rule: "contact.address + geo", setup: guide("location"),
+    status: () => (S.geo && S.address ? { st: "done", line: "A térkép ezt mutatja: " + S.address } : { st: "miss", line: "Nincs cím — a térkép nem jelenik meg" }) },
+  { id: "usp", modules: ["usp"], group: "page", title: "„Miért Önt válasszák”", icon: "starf", kb: "admin-texts", requires: [],
+    rule: "config.items", setup: guide("usp"),
+    status: () => (S.usp ? { st: "done", line: "Saját előnyök az oldalon" } : { st: "opt", line: "A bemutatkozó szöveg kiemelései látszanak — sajátot is megadhat" }) },
+  { id: "reviews", modules: ["reviews"], group: "page", title: "Vélemények", icon: "star", kb: "admin-modules-reviews", requires: [],
+    rule: "config.collectEnabled (+ a válasz tárolva) + site_review", setup: guide("reviews"),
+    status: () => (S.reviews.collect ? { st: "done", line: "Gyűjtés bekapcsolva · " + (S.reviews.n ? S.reviews.n + " vélemény" : "még nincs vélemény") } : S.reviews.answered ? { st: "decl", line: "Most nem gyűjt véleményt — így döntött" } : { st: "opt", line: "A vendég írhat véleményt — Ön hagyja jóvá" }) },
+  { id: "poi", modules: ["poi"], group: "page", title: "Heti programajánló", icon: "report", kb: "admin-modules-programs", requires: [],
+    rule: "config.picks", setup: page("modulok&m=poi", "Programajánló", true),
+    status: () => ({ st: "done", line: S.poi + " program látszik" + (S.poiAuto ? " (automatikus válogatás)" : "") }) },
+  { id: "multilang", modules: ["multilang"], group: "page", title: "Többnyelvű honlap", icon: "domain", kb: "admin-multilang", requires: [],
+    rule: "site_multilang.status", setup: page("tobbnyelvu", "Többnyelvű", true), status: () => ({ st: "done", line: "Lefordítva" }) },
+  { id: "texts", modules: [], group: "page", title: "Bemutatkozó szöveg", icon: "texts", kb: "admin-texts", requires: [],
+    rule: "content.intro.length > 40", setup: guide("texts"), status: () => status("texts") },
+];
+
+// ── the "new module" example (gate demo): 0 = not in catalog, 1 = catalog only, 2 = entry without help, 3 = complete
+let EXAMPLE = 0;
+const FAQ_ENTRY = { id: "faq", modules: ["faq"], group: "page", title: "Gyakori kérdések", icon: "help", kb: "admin-modules-faq", requires: [],
+  rule: "config.items (kérdés–válasz párok)", setup: guide("faq"),
+  status: () => (S.faq && S.faq.length ? { st: "done", line: S.faq.length + " kérdés látszik az oldalon" } : { st: "miss", line: "Üres — az oldalon ez a rész most nem jelenik meg" }) };
+GUIDES.faq = {
+  title: "Gyakori kérdések",
+  why: "A vendég itt kap választ, mielőtt felhívná Önt: parkolás, kisállat, érkezés.",
+  steps: [
+    {
+      t: "Melyik kérdésekre válaszol az oldalon?",
+      lead: "Pipálja be — a választ a következő lépésben írja meg.",
+      render: (d) => ["Lehet-e kisállatot hozni?", "Van-e parkolás?", "Mikor lehet érkezni?", "Van-e reggeli?"].map((x) => '<label class="opt' + ((d.q || []).includes(x) ? " on" : "") + '"><input type="checkbox" name="fq" value="' + esc(x) + '"' + ((d.q || []).includes(x) ? " checked" : "") + "><span><b>" + esc(x) + "</b></span></label>").join(""),
+      bind: (root) => root.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => i.closest(".opt").classList.toggle("on", i.checked))),
+      read: (root, d) => { d.q = [...root.querySelectorAll("input:checked")].map((i) => i.value); return d.q.length ? null : "Pipáljon be legalább egyet."; },
+    },
+    {
+      t: "Írja meg a válaszokat",
+      lead: "Egy-két mondat elég.",
+      render: (d) => (d.q || []).map((x, i) => '<label class="field"><span>' + esc(x) + '</span><input type="text" data-a="' + i + '" value="' + esc((d.a || [])[i] || "") + '"></label>').join(""),
+      read: (root, d) => { d.a = [...root.querySelectorAll("[data-a]")].map((i) => i.value.trim()); return d.a.every(Boolean) ? null : "Minden kérdéshez írjon választ."; },
+    },
+  ],
+  apply: (d) => { S.faq = d.q; },
+  done: (d) => "Mentve: " + d.q.length + " kérdés.",
+};
+
+function catalogNow() {
+  return EXAMPLE >= 1 && EXAMPLE <= 3 ? CATALOG.concat([{ id: "faq", label: "Gyakori kérdések (új)" }]) : CATALOG;
+}
+function registryNow() {
+  if (EXAMPLE === 4) return REGISTRY_BASE.map((e) => (e.id === "letting" ? Object.assign({}, e, { requires: [req("pricing", "")] }) : e));
+  if (EXAMPLE === 6) return REGISTRY_BASE.map((e) => (e.id === "poi" ? Object.assign({}, e, { setup: page("modulok&m=poi", "Programajánló", false) }) : e));
+  if (EXAMPLE === 5) return REGISTRY_BASE.map((e) => (e.id === "calendar" ? Object.assign({}, e, { requires: [{ data: "bookableUnit" }] }) : e));
+  if (EXAMPLE < 2) return REGISTRY_BASE;
+  if (EXAMPLE > 3) return REGISTRY_BASE;
+  const e = Object.assign({}, FAQ_ENTRY, EXAMPLE === 2 ? { kb: "admin-modules-faq" } : {});
+  return REGISTRY_BASE.concat([e]);
+}
+function kbNow() { return EXAMPLE === 3 ? KB_IDS.concat(["admin-modules-faq"]) : KB_IDS; }
+// The live (gate-passing) registry is what the product runs on: a red gate never lands.
+let LANDED = REGISTRY_BASE;
+
+// ── derived lists (replace the hand-made MODS of round 1) ─────────────────────────
+var MODS = [];
+function held(e) { return !e.modules.length || e.modules.some((m) => S.modules.includes(m)); }
+function refreshMods() {
+  MODS = topoOrder(LANDED).filter(held).map((e) => ({ id: e.id, title: e.title, icon: e.icon, kb: e.kb, forBooking: e.group === "booking", entry: e }));
+}
+function rows() {
+  refreshMods();
+  return MODS.map((m) => ({ m: m, s: m.entry.status() })).filter((r) => r.s);
+}
+const hasGuide = (id) => { const e = LANDED.find((x) => x.id === id); return !!(e && e.setup.kind === "guide"); };
+const inWalk = (id) => { const e = LANDED.find((x) => x.id === id); return !!(e && (e.setup.kind === "guide" || e.setup.returns)); };
+
+// ── THE LAND GATE (mock of scripts/module-setup-registry-check.mts) ─────────────────
+// Every check is computed here from catalogNow()/registryNow()/kbNow() — the output below is not canned.
+function gateRun(cat, reg, kb) {
+  const errs = [];
+  const live = cat.filter((c) => !c.retired);
+  // ① coverage: every sellable catalog module is set up by ≥1 entry or exempt with a reason
+  for (const c of live) {
+    if (!reg.some((e) => e.modules.includes(c.id)) && !EXEMPT[c.id]) errs.push(["①", c.id + " („" + c.label + "”): a katalógusban eladható, de a nyilvántartásban (src/tenant/moduleSetup.ts) nincs bejegyzése.", "Vegyél fel egy bejegyzést (status + setup + kb), vagy tedd a KIVÉTEL-listára indokkal."]);
+  }
+  for (const e of reg) {
+    // ② the entry points at real catalog modules
+    for (const m of e.modules) if (!cat.some((c) => c.id === m && !c.retired)) errs.push(["②", e.id + ": a(z) „" + m + "” modul nincs a katalógusban, vagy kivezetett.", "Javítsd a modules mezőt."]);
+    // ③ status rule exists and judges the empty fixture as NOT done
+    if (typeof e.status !== "function") errs.push(["③", e.id + ": nincs státusz-szabálya.", "Adj meg status(ctx)-et."]);
+    // ④ a setup path: guide steps or an existing admin page
+    if (!e.setup || (e.setup.kind === "guide" && !(GUIDES[e.setup.guide] && GUIDES[e.setup.guide].steps.length)) || (e.setup.kind === "page" && !e.setup.tab)) errs.push(["④", e.id + ": nincs beállítási útja (lépések vagy admin-lap).", "Adj meg setup: { kind: \"guide\", steps } vagy { kind: \"page\", tab }."]);
+    // ⑪ every topic is part of the walk: steps, or the page opened FROM the walk and leading back to it
+    if (e.setup && e.setup.kind === "page" && !e.setup.returns) errs.push(["⑪", e.id + ": csak csempe-téma — a lap nem tér vissza a varázslóba (returns hiányzik), így a varázsló nem vinné végig.", "Adj beágyazott lépéseket (kind: \"guide\"), vagy page + returns: true (a lap ?vissza=varazslo sávval visz tovább)."]);
+    // ⑤ help link opens a real KB entry
+    if (!kb.includes(e.kb)) errs.push(["⑤", e.id + ": a súgó-link („" + e.kb + "”) nem létező KB-entry.", "Írd meg a kb/entries/" + e.kb + "/entry.hu.md-t, vagy mutass létezőre."]);
+  }
+  // ⑧ every requires points at an existing topic or a registered data precondition
+  for (const e of reg) for (const r of e.requires || []) {
+    if (r.topic && !reg.some((x) => x.id === r.topic)) errs.push(["⑧", e.id + ": a requires nem létező témára mutat („" + r.topic + "”).", "Javítsd az id-t, vagy vedd ki."]);
+    if (r.data && !DATA_PREREQS[r.data]) errs.push(["⑧", e.id + ": ismeretlen adat-előfeltétel („" + r.data + "”).", "Regisztráld a DATA_PREREQS-ben (teszt + mondat)."]);
+    if (r.topic && !r.why) errs.push(["⑧", e.id + " → " + r.topic + ": nincs zároló mondat (why) — a tulaj nem tudná, mire vár.", "Írj egy „Előbb …” mondatot."]);
+  }
+  // ⑨ no cycle
+  const cyc = findCycle(reg);
+  if (cyc) errs.push(["⑨", "körkörös függés: " + cyc.join(" → ") + " — a varázsló sosem tudna elindulni.", "Bontsd a kört: valamelyik requires fölösleges."]);
+  // ⑩ consistent with the catalog (ADR-0192): an "always" requirement A→B means every A-topic waits for a B-topic;
+  //    and no B-topic may wait for an A-topic (that would be the inverted, deadlocking edge).
+  for (const c of cat) for (const r of c.requires || []) {
+    const aT = reg.filter((e) => e.modules[0] === c.id), bT = reg.filter((e) => e.modules[0] === r.id);
+    if (r.when === "always" && bT.length) for (const a of aT) if (!bT.some((b) => reaches(reg, a.id, b.id))) errs.push(["⑩", a.id + " (" + c.id + "): a katalógusban " + c.id + " → " + r.id + " (ADR-0192), de a téma nem vár egyetlen " + r.id + "-témára sem (" + bT.map((b) => b.id).join(", ") + ").", "Add a requires-hez: { topic: \"" + bT[0].id + "\", why }."]);
+    for (const b of bT) for (const a of aT) if (reaches(reg, b.id, a.id)) errs.push(["⑩", b.id + " (" + r.id + ") egy " + c.id + "-témára vár, pedig a katalógusban " + c.id + " függ " + r.id + "-tól — fordított él.", "Fordítsd meg a függést."]);
+  }
+  // ⑥ the exemption list is alive
+  for (const id of Object.keys(EXEMPT)) {
+    if (!live.some((c) => c.id === id)) errs.push(["⑥", "KIVÉTEL „" + id + "”: nincs ilyen eladható modul.", "Töröld a kivételt."]);
+    if (reg.some((e) => e.modules.includes(id))) errs.push(["⑥", "KIVÉTEL „" + id + "”: közben van bejegyzése.", "Töröld a kivételt."]);
+  }
+  return errs;
+}
+function reaches(reg, from, to) {
+  const seen = new Set();
+  const go = (id) => { const e = reg.find((x) => x.id === id); return !!e && (e.requires || []).some((r) => r.topic && (r.topic === to || (!seen.has(r.topic) && (seen.add(r.topic), go(r.topic))))); };
+  return go(from);
+}
+function findCycle(reg) {
+  const state = {}, stack = [];
+  let found = null;
+  const dfs = (id) => {
+    if (found) return;
+    state[id] = 1; stack.push(id);
+    const e = reg.find((x) => x.id === id);
+    for (const r of (e && e.requires) || []) {
+      if (!r.topic || found) continue;
+      if (state[r.topic] === 1) { found = stack.slice(stack.indexOf(r.topic)).concat(r.topic); return; }
+      if (!state[r.topic]) dfs(r.topic);
+    }
+    stack.pop(); state[id] = 2;
+  };
+  reg.forEach((e) => { if (!state[e.id]) dfs(e.id); });
+  return found;
+}
+// Topological order (Kahn), ties by registry order → the wizard/tiles order comes from the graph.
+function topoOrder(reg) {
+  const out = [], left = reg.slice();
+  while (left.length) {
+    const i = left.findIndex((e) => (e.requires || []).every((r) => !r.topic || out.some((o) => o.id === r.topic) || !left.some((l) => l.id === r.topic)));
+    out.push(left.splice(i < 0 ? 0 : i, 1)[0]);
+  }
+  return out;
+}
+// Runtime module lock: the catalog's own requirement (ADR-0192), evaluated for THIS site — not copied into the registry.
+function moduleLock(e) {
+  const c = CATALOG.find((x) => x.id === e.modules[0]);
+  const need = ((c && c.requires) || []).filter((r) => (r.when === "always" || multi()) && !holds(r.id)).map((r) => r.id);
+  return need.length ? { need: need, why: MOD_WHY[c.id] || "" } : null;
+}
+// Topic lock: an unmet requires (topic not done, or data precondition false).
+function topicLock(e) {
+  for (const r of e.requires || []) {
+    if (r.data && !DATA_PREREQS[r.data].test()) return { why: DATA_PREREQS[r.data].why, topic: "letting" };
+    if (r.topic) {
+      const t = LANDED.find((x) => x.id === r.topic);
+      if (!t || !held(t)) continue;
+      const st = t.status().st;
+      if (st === "miss" || st === "part") return { why: r.why, topic: r.topic };
+    }
+  }
+  return null;
+}
+function gateText(errs, nCat, nReg) {
+  const head = "[pre-commit] module-setup-registry-check (ADR-XXXX: minden eladható modulnak van státusz-szabálya és beállítási útja)…\n";
+  if (!errs.length) return head + "✓ module-setup-registry-check: " + nCat + " eladható modul · " + nReg + " bejegyzés · " + Object.keys(EXEMPT).length + " kivétel (indokkal) · 0 hiba\n  önteszt: 10/10 szintetikus sértés pirosat adott (①②③④⑤⑥⑧⑨⑩⑪)";
+  return head + "✗ module-setup-registry-check: " + errs.length + " hiba — a land MEGÁLL\n" + errs.map((e, i) => "  " + e[0] + " " + e[1] + "\n     Javítás: " + e[2]).join("\n") + "\n[land] ✗ kapu bukott: module-setup-registry-check — nincs push.";
+}
+
+/* Round 2 — one design: first login → C wizard (all open guided items, live guest preview);
+   "Később folytatom" / done → B tiles + overview strip; module page = steps embedded.
+   Everything is driven by the registry (registry.js). */
+"use strict";
+// Sample facts the registry rules need beyond round 1 (prod, read-only, 2026-11-05).
+SAMPLES.duna.modules = ["amenities", "booking", "enquiry", "gallery", "hours", "location", "poi", "pricing", "reviews", "rooms", "usp"];
+SAMPLES.duna.geo = true;
+SAMPLES.marilyn.modules = ["amenities", "booking", "email", "enquiry", "gallery", "hours", "location", "poi", "pricing", "reviews", "rooms", "usp"];
+SAMPLES.marilyn.geo = true;
+SAMPLES.marilyn.poiAuto = true;
+
+let K_MOD = null;
+let K_PREV = false;
+let K_WIZ = false;
+let K_PANEL = false;
+let K_TOPICS = false;
+
+const isOpen = (st) => st === "miss" || st === "part";
+function guidedOpen() { return rows().filter((r) => isOpen(r.s.st) && hasGuide(r.m.id)); }
+const titleOf = (id) => (GUIDES[id] ? GUIDES[id].title : (LANDED.find((e) => e.id === id) || {}).title || id);
+// ── the walk: EVERY purchased topic (tulaj, 11-06), in the graph's order ──────────────
+function kQueue() { return MODS.filter((m) => inWalk(m.id)).map((m) => m.id); }
+function stOf(id) { const r = rows().find((x) => x.m.id === id); return r ? r.s.st : "done"; }
+function skippedList() { return store.get(skey("skipped")) || []; }
+// passed = done / own decision, or an optional topic the owner chose to skip
+function kPassed(id) { const st = stOf(id); return st === "done" || st === "decl" || (st === "opt" && skippedList().includes(id)); }
+function kDone(id) { const st = stOf(id); return st === "done" || st === "decl"; }
+function lockOf(id) { const e = LANDED.find((x) => x.id === id); return e ? topicLock(e) || moduleLock(e) : null; }
+function kCur() {
+  const f = store.get(skey("focus"));
+  if (f && kQueue().includes(f) && !lockOf(f)) return f;
+  const q = kQueue(), sk = skippedList();
+  return q.find((id) => !kPassed(id) && !lockOf(id) && !sk.includes(id)) || q.find((id) => !kPassed(id) && !lockOf(id)) || null;
+}
+function kFocus(id, step) { store.set(skey("focus"), id); store.set(skey("guide-" + id), { step: step || 0 }); }
+function kPrevOf(id) { const q = kQueue(); for (let i = q.indexOf(id) - 1; i >= 0; i--) if (!lockOf(q[i])) return q[i]; return null; }
+function lockLine(l) {
+  if (l.need) return "Ehhez kell: " + l.need.map((m) => MOD_NAME[m] + " modul (" + PRICE[m] + " Ft/hó)").join(", ");
+  return l.why;
+}
+function kWalkLeft() { return kQueue().some((id) => !kPassed(id)); }
+
+function kPreview() {
+  const b = bookable();
+  const p = holds("pricing") ? stPrice().st : null;
+  const busy = S.cal.links.szallas && S.cal.links.szallas.days;
+  const unitRow = (u) => '<div class="cp__u"><b>' + esc(u.name) + '</b><span>' + (u.cap ? "max. " + u.cap + " fő" : (holds("rooms") || holds("booking") ? '<span class="cp__miss">férőhely: —</span>' : "")) + "</span><span>" + (!holds("pricing") ? "" : u.por ? "árajánlat" : u.base ? ft(u.base) + " / éj" : '<span class="cp__miss">nincs ár</span>') + "</span></div>";
+  const units = S.letting === "rooms" && !holds("rooms") ? '<div class="cp__miss" style="font-size:12px">A szobák a Szobák modul nélkül nem látszanak — a vendég az egész szállásra kér időpontot.</div>' : b.map(unitRow).join("") + (roomsOf().length ? '<div class="muted" style="font-size:11px">+ az egész ház egyben (árajánlat)</div>' : "");
+  return '<div class="cp"><div class="tag-mock">Így látja a vendég · ' + esc(S.host) + '</div><div class="cp__card"><b>' + esc(S.name) + "</b>" +
+    '<div class="cp__units">' + (S.letting ? units : '<div class="cp__miss" style="font-size:12px">Még nem tudni: a házat vagy egy szobát foglal?</div>') + "</div>" +
+    (holds("booking") ? '<div class="cp__cal">' + Array.from({ length: 14 }, (_, i) => '<i class="' + (busy && i % 5 === 3 ? "b" : "") + '">' + (i + 1) + "</i>").join("") + "</div>" : "") +
+    '<div class="muted" style="font-size:12px">' + (holds("hours") ? (S.hours ? "Érkezés " + S.hours.inFrom + "–" + S.hours.inTo + " · távozás " + S.hours.outUntil + "-ig" : '<span class="cp__miss">Érkezés / távozás: —</span>') : "") + "</div>" +
+    '<span class="btn btn--p" style="margin-top:8px;width:100%;justify-content:center">' + (!holds("booking") ? "Időpontot kérek" : p === "done" ? "Foglalási kérés elküldése" : "Árajánlatot kérek") + "</span></div></div>";
+}
+
+// ── C: the full-screen first-login walk ────────────────────────────────────────────
+function kRail(id) {
+  return "<ol>" + kQueue().map((x, i) => {
+    const lk = !kDone(x) && lockOf(x);
+    const st = stOf(x);
+    const cls = x === id ? "on" : kDone(x) ? "ok" : lk ? "lk" : st === "opt" ? "op" : "";
+    const sub = x === id ? "" : lk ? esc(lockLine(lk)) : kDone(x) ? "Kész — szerkeszthető" : st === "opt" ? (skippedList().includes(x) ? "Kihagyva — nem kötelező" : "Nem kötelező") : "";
+    const inner = "<b>" + (kDone(x) && x !== id ? "✓" : lk ? ic("lock", 12) : i + 1) + "</b><span>" + esc(titleOf(x)) + (sub ? "<small>" + sub + "</small>" : "") + "</span>";
+    return '<li class="' + cls + '">' + (lk || x === id ? inner : '<button type="button" data-jump="' + x + '">' + inner + "</button>") + "</li>";
+  }).join("") + "</ol>";
+}
+function kWizard() {
+  const q = kQueue();
+  const id = kCur();
+  const passedN = q.filter(kPassed).length;
+  const top = '<div class="cf__top"><b>Állítsuk be együtt</b><span class="muted desk-only">&nbsp;· ' + q.length + ' téma — az összes megvett modul</span><span class="sp"></span><button class="btn btn--ghost btn--sm" data-later>Később folytatom</button></div>';
+  const waiting = q.filter((x) => !kPassed(x) && lockOf(x));
+  if (!id) return '<div class="cf">' + top + '<div class="cf__grid"><nav class="cf__rail desk-only">' + kRail(null) + '</nav><div class="cf__q">' + (waiting.length ? '<div class="box box--warn"><h2 style="margin:0 0 6px">Ezek még várnak</h2>' + waiting.map((x) => "<div><b>" + esc(titleOf(x)) + "</b> — " + esc(lockLine(lockOf(x))) + "</div>").join("") + "</div>" : '<div class="box box--ok"><h2 style="margin:0 0 6px">Kész — minden témán végigment.</h2>' + esc(guestSentence()) + "</div>") + '<p class="hint">Bármelyik témára kattintva újra szerkesztheti.</p><div class="mob-only">' + kRail(null) + '</div><button class="btn btn--p btn--lg" data-exit style="margin-top:14px">Tovább a honlapom adminjába</button></div><aside class="cf__pv desk-only">' + kPreview() + "</aside></div></div>";
+  const e = LANDED.find((x) => x.id === id);
+  const page = e.setup.kind === "page";
+  const gs = guideState(id);
+  const titles = page ? [e.setup.label] : stepTitles(id);
+  const st = stOf(id);
+  const prev = gs.step > 0 || kPrevOf(id);
+  return '<div class="cf">' + top +
+    '<div class="cf__prog mob-only"><button type="button" class="cf__topics" data-topics>' + (q.indexOf(id) + 1) + ". téma / " + q.length + " · " + esc(titleOf(id)) + " · " + (gs.step + 1) + "/" + titles.length + ' <span>Témák ▾</span></button><div class="bar"><i style="width:' + Math.round(((passedN + (gs.step + 1) / titles.length) / q.length) * 100) + '%"></i></div>' + (K_TOPICS ? '<div class="cf__rail cf__rail--m">' + kRail(id) + "</div>" : "") + "</div>" +
+    '<div class="cf__grid"><nav class="cf__rail desk-only">' + kRail(id) + "</nav>" +
+    '<div class="cf__q">' + (st === "opt" ? '<span class="chip st-opt"><i></i>Nem kötelező</span>' : "") + "<div data-c></div>" +
+    '<div class="cf__f">' + (prev ? '<button class="btn btn--ghost" data-b>' + ic("back", 16) + (gs.step > 0 ? "Vissza" : "Vissza: " + esc(titleOf(kPrevOf(id)))) + "</button>" : "") +
+    '<button class="btn btn--ghost" data-skip>' + (st === "opt" ? "Most kihagyom" : "Kihagyom") + '</button><span class="sp"></span><button class="btn btn--p btn--lg" data-n>' + (page ? "Tovább" : gs.step + 1 >= titles.length ? "Mentés, tovább" : "Tovább") + "</button></div>" +
+    '<button class="btn btn--ghost mob-only" data-prev style="margin-top:10px;width:100%;justify-content:center">' + ic("preview", 16) + (K_PREV ? "Előnézet elrejtése" : "Így látja a vendég") + "</button>" + (K_PREV ? '<div class="mob-only" style="margin-top:8px">' + kPreview() + "</div>" : "") + "</div>" +
+    '<aside class="cf__pv desk-only">' + kPreview() + "</aside></div></div>";
+}
+
+// ── B: overview strip + tiles + module page ─────────────────────────────────────────
+function kOverview() {
+  const o = rows().filter((r) => isOpen(r.s.st));
+  const c = counts();
+  const q = kQueue();
+  const walkLeft = kWalkLeft();
+  const nx = kCur();
+  const band = walkLeft
+    ? '<button class="card cband" data-resume><div class="cband__t"><b>Beállítás: ' + q.filter(kPassed).length + " / " + q.length + ' téma kész</b><div class="muted">' + (nx ? "Következő: " + esc(titleOf(nx)) + " — " : "") + esc(guestSentence()) + '</div></div><span class="btn btn--p">Folytatom</span></button>'
+    : '<button class="card cband cband--quiet" data-resume><div class="cband__t"><b>Beállítás: mind a ' + q.length + ' téma kész</b><div class="muted">Bármelyiket lépésenként átnézheti vagy módosíthatja.</div></div><span class="btn">Beállítás átnézése</span></button>';
+  const strip = o.length
+    ? '<section class="card bstrip"><div class="bstrip__t"><b>' + o.length + " modul vár beállításra</b><div class=\"muted\">" + esc(guestSentence()) + '</div></div><div class="bstrip__chips">' + o.map((r) => '<button class="bchip" data-open="' + r.m.id + '">' + sic(r.s.st) + esc(r.m.title) + "</button>").join("") + '</div><button class="btn' + (walkLeft ? "" : " btn--p") + '" data-go="modulok">Modulok (' + c.done + "/" + c.all + " kész) ›</button></section>"
+    : '<section class="card bstrip"><div class="box box--ok" style="flex:1">Minden modul kész. ' + esc(guestSentence()) + "</div></section>";
+  const todo = '<section class="card" style="margin-top:14px"><div style="padding:10px 16px;font-weight:600">Teendők <span class="muted" style="font-weight:400">' + (S.trial ? 1 : 0) + ' nyitott</span></div><ul class="ctodo">' +
+    (S.trial ? "<li>" + sic("part") + "<span><b>Próba: még " + S.trial.left + " nap</b> <span class=\"muted\">— " + esc(S.trial.until) + "-ig fut, kártyát nem kértünk.</span></span></li>" : "") +
+    "<li>" + sic("done") + '<span><b>Az oldala élő és nyilvános</b> <span class="muted">— ' + esc(S.host) + "</span></span></li></ul>" +
+    '<div class="hint" style="padding:0 16px 12px">A modulok beállítása fent és a Modulok lapon él; itt a többi teendő marad (foglalási kérés, díj, élesítés).</div></section>';
+  return band + '<div class="ph"><h1>Áttekintés</h1><p>Az oldala állapota egy képernyőn — ami teendő, az itt sorban áll.</p></div>' + strip + todo;
+}
+function kTiles() {
+  const r = rows();
+  const c = counts();
+  const tile = (x) => {
+    const g = hasGuide(x.m.id);
+    const e = x.m.entry;
+    const lk = isOpen(x.s.st) && lockOf(x.m.id);
+    if (lk) return '<button class="bt bt--lock" data-open="' + (lk.need ? x.m.id : lk.topic) + '"><span class="bt__ic">' + ic("lock", 20) + '</span><span class="bt__b"><span class="bt__t">' + esc(x.m.title) + '</span><span class="chip st-opt"><i></i>Vár</span><span class="bt__l">' + esc(x.s.line) + '</span><span class="bt__cta">' + esc(lockLine(lk)) + " ›</span></span></button>";
+    const cta = isOpen(x.s.st) ? (g ? (guideState(x.m.id).step ? "Folytatom (" + (guideState(x.m.id).step + 1) + "/" + stepTitles(x.m.id).length + ")" : "Beállítom lépésenként") : "Megnyitom: " + e.setup.label) : g ? "" : "";
+    return '<button class="bt bt--' + x.s.st + (x.m.id === "faq" ? " bt--new" : "") + '" data-open="' + x.m.id + '"><span class="bt__ic">' + ic(x.m.icon, 20) + "</span>" +
+      '<span class="bt__b"><span class="bt__t">' + esc(x.m.title) + "</span>" + chip(x.s.st) + '<span class="bt__l">' + esc(x.s.line) + "</span>" + (cta ? '<span class="bt__cta">' + cta + " ›</span>" : "") + "</span></button>";
+  };
+  const groups = [["Ami a foglaláshoz kell", r.filter((x) => x.m.forBooking)], ["Az oldal többi része", r.filter((x) => !x.m.forBooking)]];
+  return '<div class="ph"><h1>Modulok</h1><p>' + c.done + " / " + c.all + " kész. " + esc(guestSentence()) + "</p></div>" +
+    groups.map((g) => '<h2 class="bg">' + g[0] + '</h2><div class="btiles">' + g[1].map(tile).join("") + "</div>").join("");
+}
+function kFake(id) {
+  const u = S.units[0];
+  if (id === "pricing") return '<div class="ff"><span>' + esc(u.name) + "</span><span>" + (u.por ? "Ár kérésre" : u.base ? ft(u.base) + " / éj" : "— nincs ár —") + '</span></div><div class="ff"><span>Legkevesebb éj</span><span>' + S.minNights + "</span></div>";
+  if (id === "rooms") return '<div class="ff"><span>' + esc(u.name) + "</span><span>" + (u.cap ? u.cap + " fő" : "— férőhely nincs —") + "</span></div>";
+  if (id === "calendar") return S.cal.portals.length ? S.cal.portals.map((k) => '<div class="ff"><span>' + PORTALS[k].name + "</span><span>" + (S.cal.links[k] ? "összekötve · " + S.cal.links[k].last : "nincs link") + "</span></div>").join("") : '<div class="ff"><span>Hirdeti máshol is?</span><span>—</span></div>';
+  if (id === "hours") return '<div class="ff"><span>Érkezés</span><span>' + (S.hours ? S.hours.inFrom + "–" + S.hours.inTo : "—") + '</span></div><div class="ff"><span>Távozás</span><span>' + (S.hours ? S.hours.outUntil : "—") + "</span></div>";
+  if (id === "faq") return (S.faq || []).map((x) => '<div class="ff"><span>' + esc(x) + "</span><span>✓</span></div>").join("") || '<div class="ff"><span>Kérdések</span><span>—</span></div>';
+  return '<div class="ff"><span>Beállítások</span><span>…</span></div>';
+}
+function kModule() {
+  const x = rows().find((y) => y.m.id === K_MOD);
+  const open = isOpen(x.s.st);
+  const hidden = store.get(skey("hide-" + x.m.id));
+  const gs = guideState(x.m.id);
+  const lk = open && lockOf(x.m.id);
+  // A walk in progress stays on screen to its last question, even if the status turned "Kész" meanwhile.
+  const panel = lk
+    ? '<section class="card box--warn" style="padding:14px"><b>' + esc(lockLine(lk)) + "</b>" + (lk.need ? '<div class="muted" style="margin-top:4px">' + esc(lk.why) + '</div><button class="btn btn--p" style="margin-top:10px" data-buy="' + lk.need.join(",") + '">Megrendelem</button>' : '<div style="margin-top:10px"><button class="btn btn--p" data-open="' + lk.topic + '">' + esc(GUIDES[lk.topic].title) + " ›</button></div>") + "</section>"
+    : (open || (gs.step > 0 && !gs.done)) && !hidden
+    ? '<section class="card bpanel"><div class="bpanel__h"><span class="tag-mock">Lépésenként</span><span class="sp"></span><button class="btn btn--ghost btn--sm" data-hide>Elrejtem</button></div><div class="bdots">' + stepTitles(x.m.id).map((t, i) => '<i class="' + (i < gs.step ? "ok" : i === gs.step ? "on" : "") + '" title="' + esc(t) + '"></i>').join("") + '</div><div data-c class="bpanel__c"></div><div class="bpanel__f">' + (gs.step ? '<button class="btn btn--ghost" data-b>' + ic("back", 16) + "Vissza</button>" : "") + '<span class="sp"></span><button class="btn btn--p btn--lg" data-n>' + (gs.step + 1 >= stepTitles(x.m.id).length ? "Mentés" : "Tovább") + "</button></div></section>"
+    : open
+      ? '<button class="card bresume" data-unhide>' + sic(x.s.st) + "<span><b>Lépésenkénti beállítás</b> — " + (gs.step ? gs.step + 1 + ". lépésnél tart" : "még nem kezdte el") + '</span><span class="sp"></span><span class="btn btn--sm">Folytatom</span></button>'
+      : '<button class="card bresume" data-unhide>' + sic("done") + '<span><b>' + ST_LABEL[x.s.st] + ".</b> Lépésenként is átnézheti.</span><span class=\"sp\"></span><span class=\"btn btn--sm btn--ghost\">Átnézem</span></button>";
+  return '<div class="ph"><h1>' + esc(x.m.title) + '</h1></div><div class="bhead">' + chip(x.s.st) + "<span>" + esc(x.s.line) + '</span><a class="help" data-kb="' + x.m.kb + '">' + ic("help", 14) + "Súgó</a></div>" +
+    '<div class="bmod"><div class="bmod__side">' + panel + '</div><div class="card afake"><div class="tag-mock">A mai „' + esc(x.m.title) + '” képernyő változatlanul itt marad</div>' + kFake(x.m.id) + "</div></div>";
+}
+function kOpen(id) {
+  if (!hasGuide(id)) { const e = LANDED.find((y) => y.id === id); toast("A(z) „" + e.setup.label + "” lapra visz (a mockban nincs)."); return; }
+  K_MOD = id; VIEW = "modulok"; kRender();
+}
+
+// ── plan panel: registry shape, live gate, the new-module example, reminder, resume state ──
+function kPanel() {
+  const cat = catalogNow(), reg = registryNow(), kb = kbNow();
+  const errs = gateRun(cat, reg, kb);
+  const ex = [
+    ["0", "Mai állapot", "13 eladható modul, mind lefedve (az „enquiry” kivétel indokkal)."],
+    ["1", "Új modul a katalógusban", "Valaki felveszi a „Gyakori kérdések” modult a src/modules.ts-be — nyilvántartás-bejegyzés nélkül."],
+    ["2", "Bejegyzés, de súgó nélkül", "Bejegyzés kész (státusz + 2 lépés), a súgó-entry még nincs megírva."],
+    ["3", "Teljes", "Súgó is megírva → a kapu zöld, a modul landol, és MAGÁTÓL megjelenik a varázslóban és a csempék között."],
+    ["4", "Körkörös függés", "Valaki a „Hogyan adja ki?” témát az Árakra várakoztatja — az Árak viszont erre vár."],
+    ["5", "Ellentmond az ADR-0192-nek", "A Naptár-témából kikerül az Árakra várás — pedig a katalógusban booking → pricing."],
+    ["6", "Csak csempe-téma", "A Programajánló lapja nem tér vissza a varázslóba (returns nincs) — a varázsló nem vinné végig."],
+  ];
+  const rowsHtml = reg.map((e) => "<tr" + (e.id === "faq" ? ' class="new"' : "") + "><td><b>" + esc(e.id) + "</b></td><td>" + e.modules.map(esc).join(", ") + "</td><td>" + (e.group === "booking" ? "foglalás" : "oldal") + "</td><td>" + esc(e.rule) + "</td><td>" + (e.setup.kind === "guide" ? (e.repeat ? "egységenként ismétlődik" : GUIDES[e.setup.guide].steps.length + " lépés (varázsló)") + (e.requires && e.requires.length ? "<br><small>vár: " + e.requires.map((r) => r.topic || r.data).join(", ") + "</small>" : "") : "lap: " + esc(e.setup.label) + (e.setup.returns ? " → vissza a varázslóba" : ' <span class="chip st-miss">nem tér vissza</span>')) + "</td><td>" + esc(e.kb) + (kb.includes(e.kb) ? "" : ' <span class="chip st-miss">nincs</span>') + "</td></tr>").join("");
+  return '<div class="pn">' +
+    "<h2>1. A nyilvántartás (src/tenant/moduleSetup.ts — terv)</h2>" +
+    '<p class="muted">Egy bejegyzés = egy beállítási téma. A varázsló, a csempék, az Áttekintés sávja, az emlékeztető és a kapu CSAK ezt a listát olvassa.</p>' +
+    '<table class="pt"><tr><th>mező</th><th>mit tud</th></tr>' +
+    [["id", "A téma azonosítója (pl. pricing, calendar). Egy modulhoz több téma is tartozhat (booking → calendar + booking)."],
+     ["modules[]", "Melyik katalógus-modul(ok) birtoklása hozza elő. Üres = mindig (pl. bemutatkozó szöveg)."],
+     ["group", "booking (a foglaláshoz kell — elöl, a varázsló sorrendje) · page (az oldal többi része)."],
+     ["order", "Csak döntetlennél számít: a sorrendet a requires-gráf adja (topologikus rendezés)."],
+     ["status(ctx)", "A szabály: a MEGLÉVŐ predikátumokat hívja (unitPriceStatus, paidButEmptyModules, loadBookingSetup, calendar_link) → { st: done|part|miss|decl|opt, line, missing[] }. Írás nélkül (ADR-0192 ②)."],
+     ["setup", "{ kind: \"guide\", steps[] } — lépések: kérdés, magyarázat, mező (a moduleConfig-mező vagy a nevesített írás-függvény: setBasePrice, updateUnit, setSiteModuleConfig, calendar-link), ellenőrzés; VAGY { kind: \"page\", tab, returns: true } — a varázsló megnyitja a meglévő lapot (?vissza=varazslo), és a lap sávja visz tovább a következő témára. Minden téma a varázsló része (tulaj, 11-06: „az összes megvett modulon végigvisz”)."],
+     ["kb", "Súgó-entry azonosítója (kb/entries/<id>) — minden lépés alján „Részletesen a súgóban”."],
+     ["preview", "Mit tesz hozzá az „Így látja a vendég” előnézethez (férőhely, ár, foglalt napok, érkezés)."],
+     ["requires[]", "Előfeltételek: { topic, why } — másik téma legyen kész (Kész vagy Ön döntött így); { data } — regisztrált adat-előfeltétel (pl. bookableUnit: „legalább 1 foglalható egység”). Amíg hiányzik, a téma ZÁROLT, és a why mondatot mutatja („Előbb …”). A sorrend ebből jön (topologikus), nem kézi számból."],
+     ["repeat", "\"unit\": a lépések a foglalható egységeken ismétlődnek (bookableUnits: szobák, vagy egészben az egy egység); a státusz is egységenként számol („2/3 szobának van ára”)."],
+     ["(modul-zár)", "NEM mező: a katalógus requires-éből (ADR-0192) futásidőben jön — ha a téma modulja a mostani helyzetben (pl. 2+ egység) egy meg nem vett modult kíván, a téma zárolt, és a katalógus „why” mondatát + az árat + a vásárlás útját mutatja. Egy szabály, egy példány."],
+     ["remind", "Igen/nem: megnevezheti-e az emlékeztető, ha hiányzik (alap: group = booking vagy st = miss)."]].map((r) => "<tr><td><code>" + r[0] + "</code></td><td>" + r[1] + "</td></tr>").join("") + "</table>" +
+    '<h3>A nyilvántartás most (' + reg.length + " bejegyzés · kivétel: " + Object.keys(EXEMPT).map((k) => k + " — " + EXEMPT[k]).join("; ") + ')</h3><div class="ptw"><table class="pt pt--reg"><tr><th>id</th><th>modul</th><th>csoport</th><th>státusz-szabály</th><th>beállítás</th><th>súgó</th></tr>' + rowsHtml + "</table></div>" +
+    "<h2>2. A land-kapu: module-setup-registry-check</h2>" +
+    '<p class="muted">A pre-commit és a land.sh futtatja (a module-dependency-check mellett; a guard-wiring-check kikényszeríti a bekötést). Ellenőrzések:</p><ul class="pl pl--plain">' +
+    "<li><b>① Lefedettség</b> — minden nem kivezetett katalógus-modult legalább egy bejegyzés hoz elő, vagy KIVÉTEL indokkal.</li>" +
+    "<li><b>② Élő hivatkozás</b> — a bejegyzés modules[] mezője létező, nem kivezetett modulra mutat.</li>" +
+    "<li><b>③ Státusz-szabály</b> — van status(); a két fixtúrán (üres oldal / kitöltött oldal) az üres NEM „Kész”, a kitöltött „Kész” — és a szabály nem ír a DB-be.</li>" +
+    "<li><b>④ Beállítási út</b> — guide legalább egy lépéssel (minden lépés mezője létező moduleConfig-mező vagy nevesített írás-függvény), vagy page létező admin-fülre.</li>" +
+    "<li><b>⑤ Súgó</b> — a kb azonosító létező kb/entries/ mappa.</li>" +
+    "<li><b>⑥ Élő kivétel-lista</b> — a kivétel létező modulra szól, és nincs közben bejegyzése.</li>" +
+    "<li><b>⑧ Élő előfeltétel</b> — minden requires létező témára vagy regisztrált adat-előfeltételre mutat, és van zároló mondata.</li>" +
+    "<li><b>⑨ Nincs kör</b> — a requires-gráf körmentes (különben a varázsló sosem indulna).</li>" +
+    "<li><b>⑩ Összhang az ADR-0192-vel</b> — ha a katalógusban A → B „always” (booking → pricing), minden A-téma (átmenetileg) vár egy B-témára; és egy B-téma sosem várhat A-témára (fordított él). A „multiUnit” függés (pricing → rooms) futásidejű modul-zár, a katalógusból olvasva.</li>" +
+    "<li><b>⑪ Minden téma a varázslóban</b> — guide-lépés, vagy page + returns; „csak csempe” téma nincs. Az ① lefedettséggel együtt: minden megvett modulon végigvisz.</li>" +
+    "<li><b>⑦ Piros önteszt</b> (--self-test) — mind a tíz sértést előállítja egy szintetikus katalóguson, és pirosat vár.</li></ul>" +
+    '<div class="pex">' + ex.map((e) => '<button data-ex="' + e[0] + '" class="' + (String(EXAMPLE) === e[0] ? "on" : "") + '"><b>' + e[0] + ". " + e[1] + "</b><span>" + e[2] + "</span></button>").join("") + "</div>" +
+    '<pre class="gate ' + (errs.length ? "red" : "green") + '" data-gate>' + esc(gateText(errs, cat.filter((c) => !c.retired).length, reg.length)) + "</pre>" +
+    (EXAMPLE === 3 ? '<div class="box box--ok">A kapu zöld → landolt. Ugyanaz a bejegyzés hozza a csempét, a varázsló-témát, a súgó-linket és az emlékeztető-sort — senki nem írt hozzá felületet. <button class="btn btn--p" data-try>Megnézem: Marilyn megvette, első belépés</button></div>' : EXAMPLE ? '<div class="box box--warn">A kapu piros → nincs land, a modul NEM jelenik meg a tulajoknak (a felület a landolt nyilvántartásból fut).</div>' : "") +
+    "<h2>Szobák — tények a kódból (2026-11-06)</h2><ul class=\"pl\">" +
+    "<li>Élesítéskor EGY egység jön létre: „A szállás egésze” (ensureUnits, represents_whole). A mock szobái nem kerülnek át — ezért kérdez a „Hogyan adja ki?” elsőként, a portálról ismert nevekkel előtöltve.</li>" +
+    "<li>Szoba létrehozása (név, férőhely): createUnit — az útvonal nem kér modult; 2+ egységnél a settleHouse megtartja/létrehozza az egész házat a szobák mellett, ár nélkül (ADR-0392); a szobák mellett a ház nem kap külön kérést (ADR-0393) → a szobák a foglalható egységek.</li>" +
+    "<li>A szobák a honlapon a Szobák modullal látszanak; a szoba-szerkesztő (leírás, fotó) a rooms modulhoz kötött; a szobánkénti felszereltség rooms ÉS amenities (ADR-0074 §5); az amenities maga oldalszintű.</li>" +
+    "<li>Ár egységenként (unit_price.unit_id); pricing → rooms, ha 2+ egység; booking → pricing (ADR-0192). Az „Alap” csomag (gallery, enquiry, location) egyiket sem tartalmazza.</li></ul>" +
+    "<h2>3. Emlékeztető — a jelenlegi minta (" + esc(S.name) + ")</h2>" + reminderHtml() +
+    "<h2>4. Folytatási állapot (szerver-oldalon)</h2>" +
+    '<p>Új tábla: <code>site_setup_progress</code> — <code>site_id</code>, <code>item</code> (a bejegyzés id-je, vagy <code>_welcome</code> az első-belépéses menethez), <code>step</code>, <code>draft jsonb</code> (a még nem mentett válaszok), <code>queue jsonb</code> (csak a <code>_welcome</code> soron: a menet befagyasztott témasora), <code>hidden_at</code> (a modul-lapon „Elrejtem”), <code>completed_at</code>, <code>updated_at</code>. Az oldalhoz kötött, nem a böngészőhöz: másik eszközön is ott folytatja. A státusz NEM itt él — mindig a valós adatból számolódik; ez a tábla csak azt tárolja, hol tart a tulaj a kérdésekben.</p></div>';
+}
+
+// ── render ───────────────────────────────────────────────────────────────────────
+function kGo(v) { VIEW = v; K_MOD = null; kRender(); }
+function kRender(first) {
+  const dev = document.querySelector(".dev");
+  const pn = document.querySelector(".panel");
+  pn.hidden = !K_PANEL;
+  document.querySelector(".stage").hidden = K_PANEL;
+  if (K_PANEL) {
+    pn.innerHTML = kPanel();
+    pn.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => { EXAMPLE = Number(b.dataset.ex); LANDED = gateRun(catalogNow(), registryNow(), kbNow()).length ? REGISTRY_BASE : registryNow(); kRender(); }));
+    const t = pn.querySelector("[data-try]");
+    if (t) t.addEventListener("click", () => kTryNew());
+    return;
+  }
+  refreshMods();
+  if (first && !store.get(skey("seen")) && kWalkLeft()) K_WIZ = true;
+  if (K_WIZ) return kRenderWizard(dev);
+  const inner = K_MOD ? kModule() : VIEW === "modulok" ? kTiles() : kOverview();
+  const crumb = esc(S.name) + (VIEW === "modulok" ? " <small>› Modulok" + (K_MOD ? " › " + esc(MODS.find((m) => m.id === K_MOD).title) : "") + "</small>" : "");
+  const n = rows().filter((r) => isOpen(r.s.st)).length;
+  dev.innerHTML = shell(inner, crumb, { modulok: n ? '<span class="n">' + n + " vár</span>" : "" });
+  bindNav(dev, kGo);
+  dev.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => kOpen(b.dataset.open)));
+  dev.querySelectorAll("[data-kb]").forEach((a) => a.addEventListener("click", () => toast("Súgó: „" + a.dataset.kb + "”")));
+  dev.querySelectorAll("[data-buy]").forEach((b) => b.addEventListener("click", () => { S.modules = S.modules.concat(b.dataset.buy.split(",")); persistSample(); toast("Kosárba téve — a mockban megvettnek vesszük."); kRender(); }));
+  const res = dev.querySelector("[data-resume]");
+  if (res) res.addEventListener("click", () => { if (!kWalkLeft()) kFocus(kQueue()[0], 0); K_WIZ = true; kRender(); });
+  const hide = dev.querySelector("[data-hide]");
+  if (hide) hide.addEventListener("click", () => { store.set(skey("hide-" + K_MOD), true); kRender(); toast("Elrejtve — a lap tetején folytathatja."); });
+  const un = dev.querySelector("[data-unhide]");
+  if (un) un.addEventListener("click", () => { store.del(skey("hide-" + K_MOD)); if (guideState(K_MOD).done) store.set(skey("guide-" + K_MOD), { step: 0 }); kRender(); });
+  const host = dev.querySelector(".bpanel [data-c]");
+  if (host) {
+    const id = K_MOD;
+    const run = renderGuideBody(id, host, { kicker: GUIDES[id].title });
+    const b = dev.querySelector(".bpanel [data-b]");
+    if (b) b.addEventListener("click", () => { run.back(); kRender(); });
+    dev.querySelector(".bpanel [data-n]").addEventListener("click", () => {
+      const r = run.next();
+      if (r === "err") return;
+      if (r === "next") return kRender();
+      store.set(skey("hide-" + id), true);
+      kRender();
+      const nxt = guidedOpen()[0];
+      const side = document.querySelector(".bmod__side");
+      side.insertAdjacentHTML("afterbegin", '<section class="card box--ok" style="padding:14px;margin-bottom:10px"><b>' + esc(r.done) + "</b>" + (nxt ? '<div style="margin-top:8px">Következő: <button class="btn btn--sm btn--p" data-open="' + nxt.m.id + '">' + esc(nxt.m.title) + " ›</button></div>" : '<div class="muted">Minden kész, ami beállítható.</div>') + "</section>");
+      side.querySelectorAll("[data-open]").forEach((x) => x.addEventListener("click", () => kOpen(x.dataset.open)));
+    });
+  }
+}
+function kRenderWizard(dev) {
+  dev.innerHTML = kWizard();
+  const leave = (msg) => { K_WIZ = false; K_TOPICS = false; store.set(skey("seen"), true); store.del(skey("focus")); VIEW = "attekintes"; K_MOD = null; kRender(); if (msg) toast(msg); };
+  dev.querySelectorAll("[data-exit]").forEach((b) => b.addEventListener("click", () => leave()));
+  const later = dev.querySelector("[data-later]");
+  if (later) later.addEventListener("click", () => leave("Elmentettük. Az Áttekintés tetején és a Modulok lapon folytathatja."));
+  // jump to any reachable topic (done ones re-open with their saved values)
+  dev.querySelectorAll("[data-jump]").forEach((b) => b.addEventListener("click", () => { kFocus(b.dataset.jump, 0); K_TOPICS = false; kRender(); }));
+  const tp = dev.querySelector("[data-topics]");
+  if (tp) tp.addEventListener("click", () => { K_TOPICS = !K_TOPICS; kRender(); });
+  const pv = dev.querySelector("[data-prev]");
+  if (pv) pv.addEventListener("click", () => { K_PREV = !K_PREV; kRender(); });
+  const id = kCur();
+  if (!id) return;
+  const e = LANDED.find((x) => x.id === id);
+  const finish = (msg) => {
+    store.del(skey("focus"));
+    const sk = skippedList().filter((x) => x !== id);
+    store.set(skey("skipped"), sk);
+    kRender();
+    if (msg) toast(msg);
+  };
+  const goPrev = () => { const p = kPrevOf(id); if (!p) return; const pe = LANDED.find((x) => x.id === p); kFocus(p, pe.setup.kind === "guide" ? stepTitles(p).length - 1 : 0); kRender(); };
+  const skip = () => {
+    store.set(skey("skipped"), skippedList().filter((x) => x !== id).concat(id));
+    store.del(skey("focus"));
+    const dep = kQueue().filter((x) => x !== id && (LANDED.find((y) => y.id === x).requires || []).some((r) => r.topic === id)).map(titleOf);
+    toast((stOf(id) === "opt" ? "Kihagyva (nem kötelező): " : "A végére tettük: ") + titleOf(id) + (dep.length ? " — erre vár: " + dep.join(", ") : ""));
+    kRender();
+  };
+  dev.querySelector("[data-skip]").addEventListener("click", skip);
+  if (e.setup.kind === "page") {
+    const host = dev.querySelector("[data-c]");
+    host.innerHTML = '<div class="tag-mock">' + esc(e.title) + '</div><h2>' + esc(e.title) + '</h2><p class="lead">Ezt a meglévő „' + esc(e.setup.label) + '” lapon állítja be — megnyitjuk, és onnan ide tér vissza a következő témához.</p><div class="box">' + esc(stOf(id) === "done" || stOf(id) === "decl" ? rows().find((r) => r.m.id === id).s.line : "Még nincs beállítva.") + '</div><button type="button" class="btn btn--p" style="margin-top:12px" data-openpage>Megnyitom: ' + esc(e.setup.label) + "</button>";
+    host.querySelector("[data-openpage]").addEventListener("click", () => openPageAndReturn(e, () => finish("Vissza a beállításhoz.")));
+    const b = dev.querySelector("[data-b]");
+    if (b) b.addEventListener("click", goPrev);
+    dev.querySelector("[data-n]").addEventListener("click", () => finish());
+    return;
+  }
+  const run = renderGuideBody(id, dev.querySelector("[data-c]"), { kicker: titleOf(id) });
+  const b = dev.querySelector("[data-b]");
+  if (b) b.addEventListener("click", () => { if (guideState(id).step > 0) { run.back(); kRender(); } else goPrev(); });
+  dev.querySelector("[data-n]").addEventListener("click", () => {
+    const r = run.next();
+    if (r === "err") return;
+    if (r === "next") return kRender();
+    finish(r.done);
+  });
+}
+function kTryNew() {
+  // Example: Marilyn bought the new module; fresh first login.
+  resetAll();
+  loadSample("marilyn");
+  S.modules = S.modules.concat(["faq"]);
+  persistSample();
+  K_PANEL = false; K_WIZ = false; VIEW = "attekintes"; K_MOD = null;
+  document.querySelectorAll(".mk [data-panel]").forEach((x) => x.classList.remove("on"));
+  kRender(true);
+}
+
+boot("K2", "4. kör — első belépés: varázsló (C) → utána modul-csempék (B), nyilvántartásból", "A varázsló az ÖSSZES megvett modulon végigvisz, a függőségi gráf sorrendjében; mindenhol vissza lehet lépni, a témasorból bármelyik kész téma újra szerkeszthető; hiányzó modul → kosár. „Terv”: nyilvántartás, kapu (⑧–⑪), példák.", kRender);
+</script></body></html>
