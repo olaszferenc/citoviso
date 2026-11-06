@@ -62,7 +62,13 @@ export function minutesUntilWindowCloses(now: Date): number {
 }
 
 /** When a mock outreach (mail, MMS+SMS pair, cold SMS) may START: Mon–Fri, Budapest wall clock (ADR-0334). */
-export const MOCK_OUTREACH_WINDOW = { fromHour: 9, toHour: 16, timeZone: SEND_WINDOW_TZ } as const;
+// The closing hour may be moved later by the owner (2026-11-06: „ma 5-ig”) with
+// MOCK_OUTREACH_TO_HOUR (17–20); anything else keeps 16. The opening hour is fixed.
+const mockToHour = ((): number => {
+  const n = Number(process.env.MOCK_OUTREACH_TO_HOUR ?? "");
+  return Number.isInteger(n) && n >= 16 && n <= 20 ? n : 16;
+})();
+export const MOCK_OUTREACH_WINDOW = { fromHour: 9, toHour: mockToHour, timeZone: SEND_WINDOW_TZ } as const;
 
 const WEEKDAY_HU = ["vasárnap", "hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat"] as const;
 

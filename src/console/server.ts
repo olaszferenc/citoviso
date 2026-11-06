@@ -366,6 +366,7 @@ import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
+import { approvalPage, decideApproval, listPendingApprovals } from "./approvalQueue.js";
 import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
 import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -1828,6 +1829,30 @@ async function handle(
       return;
     } catch {
       return send(res, 404, "Nincs ilyen kép.", "text/plain; charset=utf-8");
+    }
+  }
+  // ── Owner approval of the single-pass chain's MEHET leads (owner 2026-11-06) ──
+  // GET /jovahagyas[?lead=] — left the waiting list, right the whole site of one lead.
+  // POST /jovahagyas/:lead (d=mehet|nem) — back on the queue or cancelled, then the next lead.
+  if (method === "GET" && path === "/jovahagyas") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const items = await listPendingApprovals();
+    return send(res, 200, approvalPage(items, url.searchParams.get("lead"), url.searchParams.get("ok") ?? ""));
+  }
+  {
+    const m = method === "POST" ? /^\/jovahagyas\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const approve = form.get("d") === "mehet";
+      const before = await listPendingApprovals();
+      const idx = before.findIndex((i) => i.leadId === m[1]);
+      const done = await decideApproval(m[1]!, approve, op.displayName || op.username);
+      const next = before.filter((i) => i.leadId !== m[1])[Math.max(0, idx)] ?? null;
+      const flash = done ? `${before[idx]?.name ?? ""}: ${approve ? T(consoleLang(), "mehet") : T(consoleLang(), "nem megy ki")}` : "";
+      return redirect(res, `/jovahagyas?${next ? `lead=${next.leadId}&` : ""}ok=${encodeURIComponent(flash)}`);
     }
   }
   // ── Test-log (Elek-rend, approved contract: design-refs/console/elek-test-log) ──
