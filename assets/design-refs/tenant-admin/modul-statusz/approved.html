@@ -1597,7 +1597,7 @@ function topicLock(e) {
   return null;
 }
 function gateText(errs, nCat, nReg) {
-  const head = "[pre-commit] module-setup-registry-check (ADR-XXXX: minden eladható modulnak van státusz-szabálya és beállítási útja)…\n";
+  const head = "[pre-commit] module-setup-registry-check (ADR-0429: minden eladható modulnak van státusz-szabálya és beállítási útja)…\n";
   if (!errs.length) return head + "✓ module-setup-registry-check: " + nCat + " eladható modul · " + nReg + " bejegyzés · " + Object.keys(EXEMPT).length + " kivétel (indokkal) · 0 hiba\n  önteszt: 10/10 szintetikus sértés pirosat adott (①②③④⑤⑥⑧⑨⑩⑪)";
   return head + "✗ module-setup-registry-check: " + errs.length + " hiba — a land MEGÁLL\n" + errs.map((e, i) => "  " + e[0] + " " + e[1] + "\n     Javítás: " + e[2]).join("\n") + "\n[land] ✗ kapu bukott: module-setup-registry-check — nincs push.";
 }

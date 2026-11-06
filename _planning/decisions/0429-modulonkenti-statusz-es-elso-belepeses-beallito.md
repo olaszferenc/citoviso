@@ -1,4 +1,4 @@
-## ADR-XXXX — Modulonkénti státusz és első belépéses beállító varázsló, egy nyilvántartásból, land-kapuval
+## ADR-0429 — Modulonkénti státusz és első belépéses beállító varázsló, egy nyilvántartásból, land-kapuval
 
 **Dátum:** 2026-11-06 · **Döntött:** tulaj (négy tervkör, a 4. körre „ok”) · **Terv:** `assets/design-refs/tenant-admin/modul-statusz/` (README = ami köt) · **Kapcsolódik:** ADR-0192, ADR-0074 §5, ADR-0257, ADR-0392, ADR-0393, ADR-0208, ADR-0380, ADR-0417, ADR-0045
 

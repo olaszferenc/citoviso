@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-modul-statusz-es-beallito-varazslo-nyilvantartasbol.md) — Modulonkénti státusz és első belépéses beállító varázsló, egy nyilvántartásból, land-kapuval
+- [ADR-0429](decisions/0429-modulonkenti-statusz-es-elso-belepeses-beallito.md) — Modulonkénti státusz és első belépéses beállító varázsló, egy nyilvántartásból, land-kapuval
 - [ADR-0428](decisions/0428-uj-lanc-egy-ai-lepes-leadenkent-tulaj-jovahagyo.md) — Új lánc: egy AI-lépés leadenként + tulaj-jóváhagyó lap a kiküldés előtt
 - [ADR-0427](decisions/0427-galeria-racs-a-terv-szerint-nagyito-minden-kep.md) — Galéria: a rács a terv szerinti képszámot mutatja, a megnyitott galéria az összes képet a tenant sorrendjében
 - [ADR-0426](decisions/0426-modul-lathatosag-kapcsolo.md) — Modul láthatósága: „Látható / Nem látható” kapcsoló, külön a lemondástól

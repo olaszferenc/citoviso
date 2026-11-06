@@ -1,7 +1,7 @@
 # Modul-státusz + első belépéses beállító varázsló — JÓVÁHAGYOTT TERV
 
 **Jóváhagyva:** 2026-11-06, tulajdonosi döntés a koordinátoron át („ok” a 4. körre). A tervkörök: 1. kör A/B/C → B (csempék) + C (varázsló), 2. kör nyilvántartás + land-kapu, 3. kör szobák/függőségek/hiányzó modul, 4. kör visszalépés mindenhol, kosár, whole_only, minden megvett modul a varázslóban.
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0192 (modul-függőség), ADR-0074 §5 (szobánkénti felszereltség), ADR-0114/0256/0257/0392/0393 (egész ház, szobák, csak egyben), ADR-0208/0222 (ár nélkül árajánlatkérés), ADR-0380 (Foglalás beállítása — megmarad haladó nézetnek), ADR-0417 (belépés-emlékeztető), ADR-0045 (súgó), ADR-0224 (Linear admin-nyelv), ADR-0036 / Bábel (i18n).
+**Kapcsolódó:** ADR-0429 (ez a döntés), ADR-0192 (modul-függőség), ADR-0074 §5 (szobánkénti felszereltség), ADR-0114/0256/0257/0392/0393 (egész ház, szobák, csak egyben), ADR-0208/0222 (ár nélkül árajánlatkérés), ADR-0380 (Foglalás beállítása — megmarad haladó nézetnek), ADR-0417 (belépés-emlékeztető), ADR-0045 (súgó), ADR-0224 (Linear admin-nyelv), ADR-0036 / Bábel (i18n).
 
 `approved.html` a megvalósítás **KONTRAKTUSA, nem stílus-javaslat** (önhordó, működő vázlat: méret-váltó, minták — Duna Vibe House egészben, Marilyn Vendégház egészben/üres, Berény Panzió 3 szoba „Alap” csomaggal —, „Első belépés újra”, és a „Terv: nyilvántartás + kapu” panel, ahol a kapu kimenete élőben számol). Képek: mobil + asztali párok (`01-…`–`12-…`), valamint `csempek-zarolt-mobile.png`, `csempek-egysegenkent-desktop.png`.
 
