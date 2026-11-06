@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-06_facebook_modul_koordinator.md](2026-11-06_facebook_modul_koordinator.md) — Facebook-modul — koordinátor-szál (2026-11-04 → 11-06, cit208299e0)
 - [2026-11-05_probazo_eszkalacio.md](2026-11-05_probazo_eszkalacio.md) — 2026-11-05 — Próbázó eszkaláció (nem lép be): piros jelzés, élő-oldal MMS, személyes levél helyi névvel, „elakadt”
 - [2026-11-04_zoja_szamlazas_eszkalacio_vizsgalat.md](2026-11-04_zoja_szamlazas_eszkalacio_vizsgalat.md) — 2026-11-04 — Zója Apartmanház: számlázási kilépés és eszkaláció vizsgálata
 - [2026-11-04_tenant_aktivitas_latogatottsag.md](2026-11-04_tenant_aktivitas_latogatottsag.md) — 2026-11-04 · Tenant-aktivitás és látogatottság a konzolon (SUB-D, Fizetés-szál)
