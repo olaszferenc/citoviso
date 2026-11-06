@@ -17,3 +17,11 @@ Az eredmény a broadcast `data` mezőjében jön vissza (`OK … -> true` / `NOT
 logcat `CITA11Y` tagjén is. A képernyő tartalma: `uiautomator dump` (olvasás működik).
 
 **Újraépítés / telepítés:** `bash scripts/s10-a11y/build.sh` (JDK 21 + `~/Android` build-tools 34).
+
+## Messenger-jelenlét mérése (küldés nélkül)
+
+`python3 scripts/s10-a11y/msg_check.py <bemenet.txt> <kimenet.csv> [korábbi.csv]` — a bemenet soronként
+`lead_id|név|minősítés|város|36XXXXXXXXX`. Számonként megnyitja a `wa.me/<szám>` és a
+`viber://chat?number=%2B<szám>` csevegést, kiolvassa, van-e fiók (Vibernél a profilnevet és az
+utolsó aktivitást is), majd a kezdőképernyőre lép. Üzenetet NEM küld. 20–35 mp szünet számonként
+(tiltás-kockázat). A futás alatt a telefonhoz ne nyúljon senki (a képernyőt használja).
