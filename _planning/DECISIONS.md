@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-uj-lanc-tulaj-jovahagyo-lap.md) — Új lánc: egy AI-lépés leadenként + tulaj-jóváhagyó lap a kiküldés előtt
+- [ADR-0428](decisions/0428-uj-lanc-egy-ai-lepes-leadenkent-tulaj-jovahagyo.md) — Új lánc: egy AI-lépés leadenként + tulaj-jóváhagyó lap a kiküldés előtt
 - [ADR-0427](decisions/0427-galeria-racs-a-terv-szerint-nagyito-minden-kep.md) — Galéria: a rács a terv szerinti képszámot mutatja, a megnyitott galéria az összes képet a tenant sorrendjében
 - [ADR-0426](decisions/0426-modul-lathatosag-kapcsolo.md) — Modul láthatósága: „Látható / Nem látható” kapcsoló, külön a lemondástól
 - [ADR-0425](decisions/0425-probazo-eszkalacio-4-nap-piros-jelzes-5-nap-elo.md) — Próbázó eszkaláció: 4. nap piros jelzés, 5. nap élő-oldal MMS, 7. nap személyes levél helyi névvel, 10. nap „elakadt”

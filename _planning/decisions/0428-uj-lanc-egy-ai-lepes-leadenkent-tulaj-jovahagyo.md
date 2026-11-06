@@ -1,4 +1,4 @@
-## ADR-XXXX — Új lánc: egy AI-lépés leadenként + tulaj-jóváhagyó lap a kiküldés előtt
+## ADR-0428 — Új lánc: egy AI-lépés leadenként + tulaj-jóváhagyó lap a kiküldés előtt
 
 **Dátum:** 2026-11-06 · **Döntött:** tulaj
 
