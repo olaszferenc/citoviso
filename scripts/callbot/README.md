@@ -32,9 +32,11 @@ Hívásonként a `~/speech/calls/<időbélyeg>-<in|out>-<szám>/` mappa keletkez
 ## Állapot (2026-11-06)
 
 - Mindkét irányt kipróbáltuk a tulaj tesztmobiljával, mindkét leirat szó szerint pontos lett.
-- A bemondó szöveg még **tervezet**. Élesben csak a tulaj által jóváhagyott szöveg mehet.
+- A bemondást a tulaj **jóváhagyta** (2026-11-06), a szövege a `MEMORY.md`-ben van. Más szöveg
+  csak az ő jóváhagyásával mehet élesbe.
+- Hívás utáni SMS-visszaigazolás **nem kell** (tulaj, 2026-11-06).
 - Még nincs kész: folyamatos figyelés (systemd), a lead hozzárendelése és a Válaszok panel,
-  SMS-visszaigazolás, valamint az SMS és az MMS átköltöztetése az S10-re.
+  valamint az SMS és az MMS átköltöztetése az S10-re.
 
 ## Ismert apróságok
 
