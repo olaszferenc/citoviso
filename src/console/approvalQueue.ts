@@ -96,9 +96,9 @@ const CSS = `<style>
 .aq-why{font-size:.82rem;margin-top:6px;line-height:1.45}
 .aq-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .aq-act form{margin:0}
-.aq-btn{font:inherit;font-weight:700;font-size:.95rem;border:0;border-radius:var(--citui-radius-sm);padding:10px 22px;cursor:pointer}
-.aq-yes{background:var(--citui-ok-ink);color:var(--citui-white)}
-.aq-no{background:var(--citui-surface-2);color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
+.aq .aq-btn{font:inherit;font-weight:700;font-size:.95rem;border:0;border-radius:var(--citui-radius-sm);padding:10px 22px;cursor:pointer}
+.aq .aq-btn.aq-yes{background:var(--citui-ok-ink);color:var(--citui-white);border:1px solid var(--citui-ok-ink)}
+.aq .aq-btn.aq-no{background:var(--citui-surface-2);color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
 .aq-tabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}
 .aq-tabs button{font:inherit;font-size:.82rem;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:5px 12px;cursor:pointer}
 .aq-tabs button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
