@@ -49,7 +49,8 @@ const body = (name: string): string => {
 };
 const one = body("dispatchOne");
 const guardAt = one.indexOf("planHasRooms(art.path)");
-const prospectAt = one.indexOf("createProspect(");
+// The link is made by prepareDispatchProspect (shared with the approval page, which runs the same rooms check first).
+const prospectAt = Math.max(one.indexOf("createProspect("), one.indexOf("prepareDispatchProspect("));
 check(guardAt > 0 && prospectAt > guardAt, "főterv: a szobamodul-őr a link készítése ELŐTT fut, held-del",
   `planHasRooms @${guardAt} · createProspect @${prospectAt}`);
 check(/planHasRooms\(art\.path\)\)\)\s*\{\s*return \{ status: "held"/.test(one), "főterv: hiányzó szobamodul → held (nem skipped)");

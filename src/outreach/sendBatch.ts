@@ -9,6 +9,7 @@
 // the operator raises them consciously per run, not by default.
 
 import { buildDraftForProspect, draftOfferPercent } from "./draft.js";
+import { loadCopyOverride, withMailOverride } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
@@ -392,8 +393,11 @@ export async function sendOutreachMail(
     };
   }
 
-  const d = await buildDraftForProspect(prospectId);
-  if (!d) return { ...base, outcome: { kind: "skipped", reason: "a piszkozat nem állítható elő" } };
+  const d0 = await buildDraftForProspect(prospectId);
+  if (!d0) return { ...base, outcome: { kind: "skipped", reason: "a piszkozat nem állítható elő" } };
+  // The owner's own wording for this lead, if he edited it on the approval page (copyOverride.ts);
+  // every gate below judges the letter that actually goes out.
+  const d = { ...d0, draft: withMailOverride(d0.draft, await loadCopyOverride(prospectId), d0.lang) };
 
   // ADR-0070 §3 — LANGUAGE gate: for a non-Hungarian lead the draft must have a
   // COMPLETE pack behind it. A missing translation falls back to Hungarian per

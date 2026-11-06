@@ -220,7 +220,7 @@ import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
 import { startOutreachPair, sendPairSmsHalf, pairJobState } from "../outreach/sendOutreachPair.js";
 import { cancelDispatch, enqueueDispatch, requeueDispatch } from "../outreach/autoDispatch.js";
-import { renderPairSmsDraft } from "../outreach/draft.js";
+import { effectivePairSms, loadCopyOverride, withMailOverride } from "../outreach/copyOverride.js";
 import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
@@ -366,7 +366,8 @@ import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
-import { approvalPage, approvalShot, decideApproval, listPendingApprovals, warmApprovalShots } from "./approvalQueue.js";
+import { approvalPage, approvalShot, decideApproval, listPendingApprovals, selectedApproval, warmApprovalShots } from "./approvalQueue.js";
+import { approvalCopyPanel, copyEditFromForm, saveApprovalCopy } from "./approvalCopy.js";
 import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
 import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -1838,7 +1839,27 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const items = await listPendingApprovals();
-    return send(res, 200, approvalPage(items, url.searchParams.get("lead"), url.searchParams.get("ok") ?? ""));
+    const cur = selectedApproval(items, url.searchParams.get("lead"));
+    const panel = cur ? await approvalCopyPanel(cur) : "";
+    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel));
+  }
+  // POST /jovahagyas/:lead/szoveg (a=save|reset) — the owner's own wording of this lead's first
+  // outreach (copyOverride.ts). Refused → the page again, his text in the boxes, the reasons above.
+  {
+    const m = method === "POST" ? /^\/jovahagyas\/([0-9a-f-]{36})\/szoveg$/i.exec(path) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const items = await listPendingApprovals();
+      const item = items.find((i) => i.leadId === m[1]);
+      if (!item) return redirect(res, `/jovahagyas?ok=${encodeURIComponent(T(consoleLang(), "Ez a lead már nem vár jóváhagyásra."))}`);
+      const input = form.get("a") === "reset" ? null : copyEditFromForm(form);
+      const r = await saveApprovalCopy(item, input, op.displayName || op.username);
+      if (r.ok) return redirect(res, `/jovahagyas?lead=${item.leadId}&ok=${encodeURIComponent(`${item.name}: ${r.message}`)}`);
+      const panel = await approvalCopyPanel(item, input ? { input, reasons: r.reasons } : null);
+      return send(res, 200, approvalPage(items, item.leadId, "", panel));
+    }
   }
   {
     const k = method === "GET" ? /^\/jovahagyas\/kep\/([0-9a-f-]{36})$/i.exec(path) : null;
@@ -4608,8 +4629,10 @@ async function handle(
   // send button (PASS + contact e-mail) with the A2 manual copy as fallback.
   const draftMatch = /^\/prospect\/([0-9a-f-]{36})\/draft$/i.exec(path);
   if (method === "GET" && draftMatch) {
-    const d = await buildDraftForProspect(draftMatch[1]);
-    if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    const d0 = await buildDraftForProspect(draftMatch[1]);
+    if (!d0) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    // The owner's edit from the approval page, if any — the page shows what the send sends.
+    const d = { ...d0, draft: withMailOverride(d0.draft, await loadCopyOverride(draftMatch[1]), d0.lang) };
     const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
     const p = await db
       .selectFrom("prospect")
@@ -4661,7 +4684,7 @@ async function handle(
         {
           // ADR-0083: the mobile channel is the MMS+SMS pair — the box shows the
           // pair's companion wording, the exact text that goes out.
-          sms: renderPairSmsDraft(d.input),
+          sms: await effectivePairSms(draftMatch[1], d.input),
           phone: d.phone,
           emailSentAt: chState?.emailSentAt ?? null,
           // ⛔ SAY IT BEFORE THE CLICK. The one-shot is ADDRESS-level (ADR-0122), but
@@ -4812,8 +4835,9 @@ async function handle(
   // send (operator preview; renders in FLAG state too — viewing is not sending).
   const mailPrevMatch = /^\/prospect\/([0-9a-f-]{36})\/email-preview$/i.exec(path);
   if (method === "GET" && mailPrevMatch) {
-    const d = await buildDraftForProspect(mailPrevMatch[1]);
-    if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    const d0 = await buildDraftForProspect(mailPrevMatch[1]);
+    if (!d0) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    const d = { ...d0, draft: withMailOverride(d0.draft, await loadCopyOverride(mailPrevMatch[1]), d0.lang) };
     const p = await db
       .selectFrom("prospect")
       .select(["contact_email", "mock_artifact_id"])

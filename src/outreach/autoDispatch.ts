@@ -290,31 +290,13 @@ async function dispatchOne(
     };
   }
 
-  // The recipient the console's „Követett link készítése” field starts with: the lead's ONLY
-  // address. With several, the operator chooses there (owner decision 2026-10-04) — the timer
-  // never picks whom a cold mail reaches. (Measured 2026-10-26: without this the first
-  // automatic send went out as a pair only, the lead's single address left out.)
-  const lead = await db.selectFrom("lead").select("raw").where("id", "=", leadId).executeTakeFirst();
-  const raw = (lead?.raw ?? null) as Parameters<typeof leadEmails>[0];
-  const chosen = await db
-    .selectFrom("prospect")
-    .select("contact_email")
-    .where("lead_id", "=", leadId)
-    .where("mock_artifact_id", "=", artifactId)
-    .where("contact_email", "is not", null)
-    .executeTakeFirst();
-  if (!chosen && leadEmails(raw).length > 1) {
+  const rcpt = await dispatchRecipient(leadId, artifactId);
+  if (rcpt.ambiguous) {
     return { status: "held", note: "több e-mail-cím — a lead lapján válaszd ki, kinek menjen, majd küldd kézzel vagy tedd újra sorba" };
   }
-  const contactEmail = chosen?.contact_email ?? (outreachPrefill(raw) || undefined);
-  const prospect = await createProspect({ leadId, artifactId, contactEmail });
-  if (!prospect) return { status: "skipped", note: "a lead nem található" };
-  const prospectId = prospect.id;
-
-  // Owner, 2026-10-26: „minimum kettő mockot kiküldünk” — the link carries a second plan
-  // (plan-tabs, ADR „több terv egy követett linken”), or nothing goes out.
-  const second = await attachSecondPlan(prospectId);
-  if (!second.ok) return { status: "held", note: second.note, prospectId };
+  const prepared = await prepareDispatchProspect(leadId, artifactId, rcpt.contactEmail);
+  if (!prepared.ok) return { status: prepared.status, note: prepared.note, ...(prepared.prospectId ? { prospectId: prepared.prospectId } : {}) };
+  const prospectId = prepared.prospectId;
 
   const mail = await sendOutreachMail(prospectId);
   const mailNote =
@@ -334,6 +316,53 @@ async function dispatchOne(
     return { status: "sent", note, prospectId };
   }
   return { status: "held", note, prospectId };
+}
+
+/**
+ * The recipient the console's „Követett link készítése” field starts with: the lead's ONLY
+ * address, or the one an operator already chose on the lead page. With several and no choice,
+ * `ambiguous` — the operator chooses there (owner decision 2026-10-04), the timer never picks
+ * whom a cold mail reaches. (Measured 2026-10-26: without this the first automatic send went
+ * out as a pair only, the lead's single address left out.) Shared with the approval page, so
+ * its preview names the same recipient the send will use.
+ */
+export async function dispatchRecipient(
+  leadId: string,
+  artifactId: string,
+): Promise<{ readonly contactEmail: string | undefined; readonly ambiguous: boolean }> {
+  const lead = await db.selectFrom("lead").select("raw").where("id", "=", leadId).executeTakeFirst();
+  const raw = (lead?.raw ?? null) as Parameters<typeof leadEmails>[0];
+  const chosen = await db
+    .selectFrom("prospect")
+    .select("contact_email")
+    .where("lead_id", "=", leadId)
+    .where("mock_artifact_id", "=", artifactId)
+    .where("contact_email", "is not", null)
+    .executeTakeFirst();
+  if (!chosen && leadEmails(raw).length > 1) return { contactEmail: undefined, ambiguous: true };
+  return { contactEmail: chosen?.contact_email ?? (outreachPrefill(raw) || undefined), ambiguous: false };
+}
+
+/**
+ * The tracked link the send goes out on: createProspect (idempotent per lead + mock) and the
+ * second plan (owner, 2026-10-26: „minimum kettő mockot kiküldünk” — the link carries a second
+ * plan, plan-tabs, or nothing goes out). Shared with the approval page: its preview is rendered
+ * from the very prospect the send will use, so the link and the plan count in the text are the
+ * ones that go out.
+ */
+export async function prepareDispatchProspect(
+  leadId: string,
+  artifactId: string,
+  contactEmail: string | undefined,
+): Promise<
+  | { readonly ok: true; readonly prospectId: string }
+  | { readonly ok: false; readonly status: "held" | "skipped"; readonly note: string; readonly prospectId?: string }
+> {
+  const prospect = await createProspect({ leadId, artifactId, contactEmail });
+  if (!prospect) return { ok: false, status: "skipped", note: "a lead nem található" };
+  const second = await attachSecondPlan(prospect.id);
+  if (!second.ok) return { ok: false, status: "held", note: second.note, prospectId: prospect.id };
+  return { ok: true, prospectId: prospect.id };
 }
 
 export interface DispatchStatus {

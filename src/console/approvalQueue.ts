@@ -191,9 +191,15 @@ const SCRIPT = `<script>
 })();
 </script>`;
 
-export function approvalPage(items: readonly PendingApproval[], selected: string | null, flash: string): string {
+/** The lead the page opens: the asked one, else the first waiting. */
+export function selectedApproval(items: readonly PendingApproval[], selected: string | null): PendingApproval | null {
+  return items.find((i) => i.leadId === selected) ?? items[0] ?? null;
+}
+
+/** `copyPanel`: the outreach text panel of the selected lead (approvalCopy.ts), above the site. */
+export function approvalPage(items: readonly PendingApproval[], selected: string | null, flash: string, copyPanel = ""): string {
   const lang = consoleLang();
-  const cur = items.find((i) => i.leadId === selected) ?? items[0] ?? null;
+  const cur = selectedApproval(items, selected);
   const list = items
     .map(
       (i) =>
@@ -205,6 +211,7 @@ export function approvalPage(items: readonly PendingApproval[], selected: string
     return layout(
       T(lang, "Jóváhagyás"),
       `${CSS}${flash ? `<p class="aq-meta">${esc(flash)}</p>` : ""}<div class="aq">${left}<div class="aq-main"><div class="aq-empty">${esc(T(lang, "Nincs jóváhagyásra váró megkeresés."))}</div></div></div>`,
+      { active: "/jovahagyas" },
     );
   }
   const contact = [cur.phone, cur.email].filter(Boolean).map(esc).join(" · ") || esc(T(lang, "nincs kontakt"));
@@ -221,9 +228,10 @@ export function approvalPage(items: readonly PendingApproval[], selected: string
     (cur.reason ? `<div class="aq-why">${esc(T(lang, "Átnéző"))}: ${esc(cur.reason)}</div>` : "") +
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;
   const right =
-    `<div class="aq-main">${head}${tabs}<div class="aq-view"><iframe class="aq-frame" title="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/mock/${esc(cur.mainId)}"></iframe></div></div>`;
+    `<div class="aq-main">${head}${copyPanel}${tabs}<div class="aq-view"><iframe class="aq-frame" title="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/mock/${esc(cur.mainId)}"></iframe></div></div>`;
   return layout(
     T(lang, "Jóváhagyás"),
     `${CSS}${flash ? `<p class="aq-meta">${esc(flash)}</p>` : ""}<div class="aq">${left}${right}</div>${SCRIPT}`,
+    { active: "/jovahagyas" },
   );
 }

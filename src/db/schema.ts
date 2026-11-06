@@ -592,6 +592,8 @@ export interface OutreachDispatchTable {
   last_attempt_at: Timestamp | null;
   note: string | null;
   sent_at: Timestamp | null;
+  /** 0127: the owner's own wording for this lead's first outreach (src/outreach/copyOverride.ts); null = machine text. */
+  copy_override: JSONColumnType<Record<string, unknown> | null, string | null, string | null>;
 }
 
 // --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---

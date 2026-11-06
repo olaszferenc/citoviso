@@ -68,6 +68,8 @@ export interface NavNumbers {
   readonly catalog: number;
   /** Replies to our outreach nobody has answered yet — the dashboard's „Válaszok" block (ADR-0339). */
   readonly openReplies: number;
+  /** Leads the single-pass checker let through, waiting for the owner's yes/no on /jovahagyas. */
+  readonly pendingApprovals: number;
 }
 
 /** Numbers → marks beside the nodes. Pure, so a guard can feed fixtures; null → no marks. */
@@ -88,6 +90,14 @@ export function navCountsOf(n: NavNumbers | null, lang = "hu"): NavCounts {
       title: T(lang, "{n} felmért szereplő összesen, a diszkvalifikáltakkal együtt — a link a szűretlen AKTÍV listát nyitja, a diszkvalifikáltak külön nézetben vannak", { n: n.players }),
     },
     approved: { n: n.approvedMocks },
+    ...(n.pendingApprovals > 0
+      ? {
+          approval: {
+            badge: { text: String(n.pendingApprovals), tone: "warn" as const },
+            title: T(lang, "{n} megkeresés vár a jóváhagyásodra", { n: n.pendingApprovals }),
+          },
+        }
+      : {}),
     documents: { n: n.documents },
     partners: { n: n.partners },
     pricing: {
@@ -115,6 +125,8 @@ export function navTree(lang = "hu"): readonly NavNode[] {
       children: [
         { kind: "leaf", id: "leads", label: T(lang, "Lead-sor"), href: "/leads", match: ["/lead/"] },
         { kind: "leaf", id: "approved", label: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved" },
+        // Owner 2026-11-06: the single-pass chain's MEHET leads wait here for his yes/no.
+        { kind: "leaf", id: "approval", label: T(lang, "Jóváhagyás"), href: "/jovahagyas" },
         { kind: "leaf", id: "duplicates", label: T(lang, "Duplikátumok"), href: "/duplicates" },
         { kind: "leaf", id: "scrape", label: T(lang, "Adatgyűjtés indítása"), href: "/scrape" },
         // ADR-0336: Magellan's worksheet — the $0 way leads enter the store (plan: scout-worksheet).

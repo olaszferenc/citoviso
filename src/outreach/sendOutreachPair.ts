@@ -30,7 +30,8 @@
 // happens in the PUBLIC process, where this registry does not reach.
 
 import { db } from "../db/client.js";
-import { draftOfferPercent, renderPairSmsDraft } from "./draft.js";
+import { draftOfferPercent } from "./draft.js";
+import { effectivePairSms } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachSms } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
@@ -163,7 +164,7 @@ export async function startOutreachPair(
   }
 
   // §C on the PAIR's companion text (the message that actually goes out).
-  const pairSms = renderPairSmsDraft(d.input);
+  const pairSms = await effectivePairSms(prospectId, d.input);
   const check = checkOutreachSms(pairSms, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
     return { ok: false, message: `Jogszerűségi kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}` };
@@ -261,7 +262,7 @@ export async function sendPairSmsHalf(
   // Gates re-run on retry too (opt-out may have arrived since the MMS went out!).
   const gate = await mobileOutreachGates(prospectId);
   if (!gate.ok) return fail(`SMS-fele blokkolva: ${gate.message}`);
-  const pairSms = renderPairSmsDraft(gate.d.input);
+  const pairSms = await effectivePairSms(prospectId, gate.d.input);
   const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang, gate.d.market);
   if (check.verdict === "FLAG") return fail(`Jogszerűségi kapu FLAG az SMS-felén: ${check.reasons.join(" · ")}`);
 
