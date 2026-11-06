@@ -366,7 +366,7 @@ import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
-import { approvalPage, decideApproval, listPendingApprovals } from "./approvalQueue.js";
+import { approvalPage, approvalShot, decideApproval, listPendingApprovals, warmApprovalShots } from "./approvalQueue.js";
 import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
 import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -1838,7 +1838,20 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const items = await listPendingApprovals();
+    warmApprovalShots(items);
     return send(res, 200, approvalPage(items, url.searchParams.get("lead"), url.searchParams.get("ok") ?? ""));
+  }
+  {
+    const k = method === "GET" ? /^\/jovahagyas\/kep\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (k) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const w = url.searchParams.get("w") === "390" ? 390 : 1280;
+      const file = await approvalShot(k[1]!, w);
+      if (!file) return send(res, 404, "Nincs kép.", "text/plain; charset=utf-8");
+      res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "private, max-age=600" });
+      return void res.end(await readFile(file));
+    }
   }
   {
     const m = method === "POST" ? /^\/jovahagyas\/([0-9a-f-]{36})$/i.exec(path) : null;

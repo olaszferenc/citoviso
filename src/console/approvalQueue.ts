@@ -5,7 +5,12 @@
 // row back on the dispatch queue, "Nem" cancels it; either way the next lead opens.
 
 import { sql } from "kysely";
+import { access, mkdir, stat } from "node:fs/promises";
+import path from "node:path";
+import { chromium } from "playwright-core";
+import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { esc, layout } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
@@ -68,6 +73,66 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
   }));
 }
 
+// Full-page picture of a mock (the right pane): rendered on this server with the same
+// Chromium the hero shots use, one at a time, cached per mock file version and width.
+const SHOT_DIR = path.resolve(process.cwd(), "sites/_approval-shots");
+let shotChain: Promise<unknown> = Promise.resolve();
+const shotInFlight = new Map<string, Promise<string | null>>();
+
+async function renderFullShot(artifactId: string, width: number): Promise<string | null> {
+  const a = await db.selectFrom("mock_artifact").select("path").where("id", "=", artifactId).executeTakeFirst();
+  if (!a?.path) return null;
+  const mockAbs = path.resolve(process.cwd(), a.path);
+  const mtime = Math.floor((await stat(mockAbs)).mtimeMs / 1000);
+  const dest = path.join(SHOT_DIR, `${artifactId}-${width}-${mtime}.jpg`);
+  try {
+    await access(dest);
+    return dest;
+  } catch {
+    // not cached yet
+  }
+  await mkdir(SHOT_DIR, { recursive: true });
+  const browser = await chromium.launch({ executablePath: config.chromiumPath });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: width < 600 ? 844 : 900 }, userAgent: PORTAL_USER_AGENT });
+    await page.goto(`file://${mockAbs}`, { waitUntil: "networkidle", timeout: 45000 }).catch(() => undefined);
+    // Scroll through once so lazy images and reveal-on-scroll sections render.
+    await page.evaluate(async () => {
+      const step = Math.max(300, Math.floor(window.innerHeight * 0.8));
+      for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      window.scrollTo(0, 0);
+    });
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: dest, fullPage: true, type: "jpeg", quality: 70 });
+    return dest;
+  } finally {
+    await browser.close().catch(() => undefined);
+  }
+}
+
+/** The cached (or freshly rendered) full-page JPEG of a mock; serialised, never two Chromiums. */
+export function approvalShot(artifactId: string, width: number): Promise<string | null> {
+  const key = `${artifactId}-${width}`;
+  const running = shotInFlight.get(key);
+  if (running) return running;
+  const p = shotChain.then(() => renderFullShot(artifactId, width)).catch(() => null);
+  shotChain = p;
+  shotInFlight.set(key, p);
+  void p.finally(() => shotInFlight.delete(key));
+  return p;
+}
+
+/** Warm the pictures of the waiting list in order (desktop width, both plans). */
+export function warmApprovalShots(items: readonly PendingApproval[]): void {
+  for (const i of items.slice(0, 12)) {
+    void approvalShot(i.mainId, 1280);
+    if (i.altId) void approvalShot(i.altId, 1280);
+  }
+}
+
 /** Records the owner's yes/no. Only a row still waiting is touched; returns whether it was. */
 export async function decideApproval(leadId: string, approve: boolean, by: string): Promise<boolean> {
   const r = await db
@@ -104,33 +169,27 @@ const CSS = `<style>
 .aq-tabs button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
 .aq-tabs .sep{width:10px}
 .aq-view{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:auto;max-height:calc(100vh - 290px)}
-.aq-box{position:relative;overflow:hidden;margin:0 auto}
-.aq-box iframe{border:0;transform-origin:0 0;background:var(--citui-white);display:block}
+.aq-shot{display:block;width:100%;height:auto;margin:0 auto;background:var(--citui-white)}
+.aq-shot.m{max-width:390px}
+.aq-wait{margin:0;padding:10px 14px;font-size:.8rem;color:var(--citui-muted)}
 .aq-empty{padding:40px;text-align:center;color:var(--citui-muted)}
 @media (max-width:900px){.aq{grid-template-columns:1fr}.aq-list{max-height:220px}}
 </style>`;
 
 const SCRIPT = `<script>
 (function(){
-  var view=document.querySelector('.aq-view'); if(!view) return;
-  var box=view.querySelector('.aq-box'), fr=box.querySelector('iframe');
-  var w=1280, plan=fr.getAttribute('data-main');
-  function fit(){
-    var s=Math.min(1,(view.clientWidth-2)/w);
-    var h=1200;
-    try{ h=Math.max(fr.contentDocument.documentElement.scrollHeight, fr.contentDocument.body.scrollHeight); }catch(e){}
-    fr.style.width=w+'px'; fr.style.height=h+'px'; fr.style.transform='scale('+s+')';
-    box.style.width=(w*s)+'px'; box.style.height=(h*s)+'px';
-  }
-  fr.addEventListener('load',function(){ fit(); setTimeout(fit,1500); setTimeout(fit,4000); });
-  window.addEventListener('resize',fit);
+  var img=document.querySelector('.aq-shot'); if(!img) return;
+  var wait=document.querySelector('.aq-wait'), plan=img.getAttribute('data-main'), w=1280;
+  function load(){ wait.style.display='block'; img.classList.toggle('m', w<600); img.src='/jovahagyas/kep/'+plan+'?w='+w; }
+  img.addEventListener('load',function(){ wait.style.display='none'; });
+  img.addEventListener('error',function(){ wait.textContent='A kép nem készült el — frissítsd az oldalt.'; });
   document.querySelectorAll('.aq-tabs button').forEach(function(b){
     b.addEventListener('click',function(){
       var g=b.getAttribute('data-g');
       document.querySelectorAll('.aq-tabs button[data-g="'+g+'"]').forEach(function(x){x.classList.remove('on');});
       b.classList.add('on');
-      if(g==='plan'){ plan=b.getAttribute('data-id'); fr.src='/mock/'+plan; }
-      else { w=Number(b.getAttribute('data-w')); fr.style.width=w+'px'; fit(); fr.src='/mock/'+plan; }
+      if(g==='plan') plan=b.getAttribute('data-id'); else w=Number(b.getAttribute('data-w'));
+      load();
     });
   });
 })();
@@ -166,7 +225,7 @@ export function approvalPage(items: readonly PendingApproval[], selected: string
     (cur.reason ? `<div class="aq-why">${esc(T(lang, "Átnéző"))}: ${esc(cur.reason)}</div>` : "") +
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;
   const right =
-    `<div class="aq-main">${head}${tabs}<div class="aq-view"><div class="aq-box"><iframe src="/mock/${esc(cur.mainId)}" data-main="${esc(cur.mainId)}" title="${esc(cur.name)}"></iframe></div></div></div>`;
+    `<div class="aq-main">${head}${tabs}<div class="aq-view"><p class="aq-wait">${esc(T(lang, "A teljes oldal képe készül…"))}</p><img class="aq-shot" alt="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/jovahagyas/kep/${esc(cur.mainId)}?w=1280"></div></div>`;
   return layout(
     T(lang, "Jóváhagyás"),
     `${CSS}${flash ? `<p class="aq-meta">${esc(flash)}</p>` : ""}<div class="aq">${left}${right}</div>${SCRIPT}`,
