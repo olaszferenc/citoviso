@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-11-05
+updated: 2026-11-06
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -13,6 +13,22 @@ alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). A
 előnézetben, mielőtt dönt.
 
 ![Képernyőkép: a Modulok fül telefonon](assets/hu/screen.png)
+
+## Fent: mi kész, mi hiányzik — a beállítás kártyái
+
+A Modulok fül tetején minden beállítási téma egy kártya, két csoportban: **„Ami a foglaláshoz
+kell”** (hogyan adja ki, férőhely, árak, naptár, foglalási szabályok) és **„Az oldal többi része”**.
+A kártya bal szélének színe mondja meg, hol tart: zöld — kész; sárga — félkész; piros — hiányzik;
+szürke — nem kötelező. A kártyán egy mondat áll arról, mi van meg és mi hiányzik — szobánként is,
+például „1/3 szobának van ára”.
+
+- A **„Beállítom lépésenként”** gomb a téma kérdéseihez visz, ugyanoda, ahová az első belépéskor
+  megnyíló beállítás.
+- Ha egy téma egy másikra vár, a kártyán lakat és a **„Vár”** címke áll, alatta, hogy mire vár
+  (például: előbb az árak kellenek). A kártyára koppintva oda jut, amit előbb kell elvégezni.
+- A **„Végigmegyek lépésenként”** link a teljes beállítást nyitja meg, az elejétől.
+
+A kártyák alatt a modulok listája és a bővítés áll, mint eddig.
 
 ## A bal oldali menüben is látja, mi hiányzik még
 

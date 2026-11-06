@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-10-21
+updated: 2026-11-06
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -29,9 +29,21 @@ oldala, és mi a következő teendője.
 - **Világos vagy sötét mód:** gépen a fejléc és a menü alján lévő nap/hold gomb, telefonon a
   Menüben a **„Sötét mód”** / **„Világos mód”** sor váltja; a választását a készüléke megjegyzi.
 
+## A beállítás sávja — mi hiányzik még?
+
+Az Áttekintés legtetején egy kék sáv mutatja, hány téma kész a honlapja beállításából (például
+„Beállítás: 5 / 12 téma kész”), és mi a következő. A **„Folytatom”** gomb oda visz, ahol a
+beállítást abbahagyta. Ha minden kész, a sáv halványabb, és a **„Beállítás átnézése”** gombbal
+bármelyik témát újra végigveheti.
+
+Alatta egy doboz sorolja fel, melyik modul vár még beállításra — minden név egy gomb, ami a
+kérdéseihez visz —, és megmondja egy mondatban, mit lát ma a vendég (például hogy árajánlatot kér,
+mert nincs ára). A **„Modulok”** gomb a Modulok fülre visz, ahol minden témát egy kártya mutat. Hogy
+a beállítás hogyan halad, azt a súgó „A honlap beállítása lépésről lépésre” cikke írja le.
+
 ## Mit mutatnak a csempék?
 
-Az Áttekintés tetején három csempe áll:
+A beállítás sávja alatt három csempe áll:
 
 - **„Állapot”** — az oldala jelenlegi állapota, alatta az oldal címe. Az „Előnézet (még nem
   publikus)” azt jelenti, hogy az oldal elkészült, de még csak Ön látja egy privát címen; az
@@ -73,54 +85,27 @@ moduljaim”** lista alján lévő összegzőben látja; a tételes bontást ped
 
 A lista magától frissül: a zöld pötty és az áthúzott szöveg azt jelzi, hogy egy lépés kész, a
 szaggatott kör azt, hogy még hátravan. Minden sor jobb szélén annak a lapnak a neve áll, ahol a
-teendőt elintézheti — rákoppintva oda jut. Amíg az oldal nincs élesítve, a nyitott sorokon az
-**„Élesítés előtt”** címke áll. A legfontosabb teendő az induláskor:
+teendőt elintézheti — rákoppintva oda jut. A Teendők között azok a tételek állnak, amelyek nem egy
+modul beállításáról szólnak: a válaszra váró foglalási kérések, a díj rendezése, az oldal
+élesítése, a próba. Ami egy modul beállításáról szól — a bemutatkozó szöveg, az üres modul, a
+hiányzó ár —, az a beállítás sávjába és a Modulok fül kártyáira került.
 
-- **„Írja meg a bemutatkozó szöveget”** — ez a szöveg fogadja a vendégeit az oldal elején.
-  Ha megvan, a sor így szól: **„A bemutatkozó szövege kész”**.
-
-Ha ez kész, és a csomagja rendezett, a Citoviso élesíti az oldalt — Önnek ehhez nincs
-külön teendője. Saját fotó nem feltétele az élesítésnek: ha szeretné, a Fotók lapon bármikor
+Ha a bemutatkozó szöveg kész, és a csomagja rendezett, a Citoviso élesíti az oldalt — Önnek ehhez
+nincs külön teendője. Saját fotó nem feltétele az élesítésnek: ha szeretné, a Fotók lapon bármikor
 feltölthet saját képeket.
 
-## „Kifizette, de üres” — ha egy modul nem látszik az oldalán
+## Ha egy modul üres, vagy egy szobának nincs ára
 
-Van olyan modul, amelyik csak akkor jelenik meg a vendégek előtt, ha Ön feltölti tartalommal.
-Amíg üres, a szakasz **egyáltalán nem kerül ki az oldalra** — a díja viszont már fut. Ezért az
-ilyen modulok külön sort kapnak a Teendők között.
+Van olyan modul, amelyik csak akkor jelenik meg a vendégek előtt, ha Ön feltölti tartalommal:
+amíg üres, a szakasz **egyáltalán nem kerül ki az oldalra**. Ilyenkor a kártyája piros, és ez áll
+rajta: „Üres — az oldalon ez a rész most nem jelenik meg”. Öt modulnál fordulhat elő: **Árak,
+szezonok**; **Heti programajánló**; **Nyitvatartás, érkezés**; **Amit kínál (felszereltség)**;
+**Szobák, apartmanok**.
 
-A sor a „Töltse ki:” felszólítással kezdődik, utána annak a modulnak a neve áll, amelyikről szó
-van (például a Szobák, apartmanok), majd a modul ára, végül a lényeg:
-**„— kifizette, de üres, ezért a vendég ma nem látja”**. Ha a modult a próbaidőben ingyen
-kapta, ár nem áll mellette, és a sor vége: **„— a próbában be van kapcsolva, de üres, ezért a
-vendég ma nem látja”**. Alatta egy mondat megmondja, pontosan mi hiányzik belőle: „Amíg nincs benne szoba, a szakasz nem jelenik meg az oldalán.”
-Éves számlázásnál az éves összeg a vezető szám, a havi díj halkabban mellette.
-
-Két gomb tartozik hozzá:
-
-- **„Kitöltöm”** — egyenesen a modul beállító lapjára visz, ahol beírhatja a tartalmat.
-- **„Megnézem”** — új lapon megmutatja a szakaszt. ⚠️ Amit ott lát, az **minta**: mi töltjük ki
-  példa-tartalommal, hogy lássa a formáját. A vendég ebből ma semmit nem lát — a sajátját a
-  „Kitöltöm” alatt írhatja be.
-
-Amint mentette a tartalmat, a sor magától eltűnik a listáról, és a szakasz megjelenik az oldalán.
-
-Öt modulnál fordulhat elő: **Árak, szezonok**; **Heti programajánló**; **Nyitvatartás, érkezés**;
-**Amit kínál (felszereltség)**; **Szobák, apartmanok**. A többi modul üresen is mutat valamit a
-vendégnek, ezért azoknál ilyen sor nem jelenik meg.
-
-## „… szobájának nincs ára”
-
-Ha az Árak modul be van kapcsolva, és egy szobának nincs ára, vagy csak az év egy részére van, a
-Teendők között sor jelenik meg, ami megmondja, hány szobájának nincs ára (például „2 szobájának
-nincs ára”). Alatta felsoroljuk, melyik
-szobáról van szó, és mi hiányzik belőle. A vendég ezekre az éjszakákra nem lát árat, és foglalás
-helyett árajánlatot kér.
-
-A **„Megadom az árakat”** gomb az Árazás lapra visz. Ha egy szobára szándékosan nem ad meg árat,
-mert mindig egyedi ajánlatot küld, ott pipálja be — akkor a szoba lekerül a sorról, és
-emlékeztetőt sem küldünk róla. Ha az Árak modulban egyáltalán nincs tartalom, ez a sor nem
-jelenik meg, mert akkor a „Töltse ki:” sor szól róla.
+Az Árak kártyája szobánként számol: például „1/3 szobának van ára”. A vendég az ár nélküli
+szobákra nem lát végösszeget, és foglalás helyett árajánlatot kér. Ha egy szobára szándékosan nem
+ad meg árat, mert mindig egyedi ajánlatot küld, a kérdésnél jelölje be: „Ennél nem adok meg árat”.
+Ez nem hiány: a kártyán az áll, hogy **„Ön döntött így”**, és emlékeztetőt sem küldünk róla.
 
 ## Ingyenes próba — a sáv a lap tetején
 

@@ -1069,6 +1069,15 @@ export async function saveTenantContact(
   return (await renderAndPersist(s, overrides)) ? { ok: true, changed: true } : { ok: false, errors: [] };
 }
 
+/**
+ * ADR-0429 — the room names the generated page carries (the lead's portal data), offered
+ * as a starting point by the setup wizard's "Hogyan adja ki?" question. Read-only.
+ */
+export async function generatedRoomNames(tenantId: string): Promise<string[]> {
+  const s = await loadSiteForEdit(tenantId);
+  return (s?.baseSiteData.rooms ?? []).map((r) => r.name.trim()).filter(Boolean).slice(0, 30);
+}
+
 /** A2: add owner photos. The FIRST upload switches the site off the demo photos
  *  onto the owner's own set (§A) — appended thereafter. */
 export async function addTenantPhotos(

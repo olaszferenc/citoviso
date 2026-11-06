@@ -45,6 +45,7 @@ import { config } from "../src/config.js";
 import { CARD_VERIFY_AMOUNT_HUF } from "../src/payment/service.js";
 import {
   adminDashboard,
+  adminFullscreenPage,
   domainSettlementSection,
   type MultilangAdminData,
 } from "../src/server/adminViews.js";
@@ -54,6 +55,7 @@ import type { WalletAdminData } from "../src/tenant/wallet.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import { ownerOfferPage } from "../src/server/offerViews.js";
 import { bookingSetupPage } from "../src/server/bookingSetupViews.js";
+import { overviewSetupStrip, setupTilesSection, setupWizardPage, type WalkItem } from "../src/server/setupWizardViews.js";
 import type { SetupState } from "../src/tenant/bookingSetup.js";
 import {
   dashboardPage,
@@ -1108,6 +1110,21 @@ const page = await browser.newPage({
 // Google Fonts from the committed snapshot, every other external request refused (ADR-0220).
 const netMisses = await pinNetwork(page);
 
+// ADR-0429: one setup fixture for every picture that shows it (the walk, the overview strip,
+// the Modulok tiles) — a 3-room panzió in the middle of its setup.
+const setupIt = (id: string, title: string, st: WalkItem["st"], line: string, extra: Partial<WalkItem> = {}): WalkItem => ({
+  id, title, icon: "settings", group: "booking", st, line, lock: null, passed: st === "done" || st === "decl", skipped: false, href: "/admin/beallitas", steps: true, ...extra,
+});
+const SETUP_ITEMS: WalkItem[] = [
+  setupIt("letting", "Hogyan adja ki?", "done", "3 szoba + az egész ház (egyben is kivehető)", { icon: "overview" }),
+  setupIt("capacity", "Férőhely", "miss", "0/3 szobának van férőhelye", { icon: "account" }),
+  setupIt("pricing", "Árak", "part", "1/3 szobának van ára", { icon: "pricing" }),
+  setupIt("calendar", "Naptár-összekötés", "miss", "Még nem mondta meg, hol hirdet még", { icon: "bookings", lock: { why: "Előbb az árak — a foglalás összeget mond.", first: "pricing" } }),
+  setupIt("gallery", "Fotók", "opt", "9 bemutató kép · ha szeretné, feltölthet sajátot", { group: "page", icon: "photos" }),
+  setupIt("location", "Térkép, megközelítés", "done", "A térkép ezt mutatja: Béke utca 55", { group: "page", icon: "pin" }),
+];
+const SETUP_GUEST = "A vendég még nem látja, hány fő fér el.";
+
 async function shoot(
   tab: string,
   outPath: string,
@@ -1136,6 +1153,9 @@ async function shoot(
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     ...(multilang ? { multilang } : {}),
+    // ADR-0429: the overview strip and the Modulok tiles are on these pictures, as on the real admin.
+    ...(tab === "attekintes" ? { setupStrip: overviewSetupStrip({ lang: LANG, items: SETUP_ITEMS, next: SETUP_ITEMS[1]!, guestLine: SETUP_GUEST }) } : {}),
+    ...(tab === "modulok" && !moduleSettingsHtml ? { setupTiles: setupTilesSection({ lang: LANG, items: SETUP_ITEMS, guestLine: SETUP_GUEST }) } : {}),
     tab,
     modules: mods,
     siteUrl: "https://nyugalom-vendeghaz.citoviso.com",
@@ -1449,6 +1469,31 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
             ? ".adm-card:has([data-strip])"
             : undefined,
   );
+}
+// ADR-0429: the first-login setup walk (full screen) — a 3-room panzió in the middle of it:
+// "Hogyan adja ki?" done, the capacity asked per room, the dependants locked with their reason.
+{
+  const items = SETUP_ITEMS;
+
+  const html = adminFullscreenPage(
+    "Beállítás",
+    setupWizardPage({
+      lang: LANG,
+      items,
+      step: {
+        topicId: "capacity", topicTitle: "Férőhely", index: 0, count: 3, question: "Hány fő fér el: Deluxe Queen szoba?",
+        lead: "Az ágyak alapján — pótággyal együtt, ha van.",
+        fieldsHtml: '<label class="sw-field"><span>Férőhely (fő)</span><input type="number" name="cap" value="2"></label>',
+        kb: "admin-modules-rooms", st: "miss", backLabel: "Vissza: Hogyan adja ki?", pageHref: null, pageLabel: null, last: false, upload: false,
+      },
+      error: null,
+      notice: null,
+      preview: "",
+      guestLine: "",
+    }),
+    LANG,
+  );
+  await shootConsole(html, path.join(ROOT, "kb/entries", "admin-setup-wizard", "assets", LANG, "screen.png"));
 }
 // ADR-0380: the guided booking setup page — the checklist (done sections with their
 // answers, the open one with its questions) and the Segítő opened from the bottom bar.

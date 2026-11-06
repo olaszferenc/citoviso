@@ -24,6 +24,7 @@ import { expireStaleOffers, expireStaleRequests } from "../src/booking/requests.
 import { maintainDatedPrices } from "../src/tenant/priceExpiry.js";
 import { maintainSeasonNudges } from "../src/tenant/seasonNudge.js";
 import { maintainPriceGaps } from "../src/tenant/priceGap.js";
+import { maintainSetupReminders } from "../src/tenant/setupReminder.js";
 import { syncAllCalendarLinks } from "../src/booking/sync.js";
 
 const started = Date.now();
@@ -72,6 +73,13 @@ try {
   const pg = await maintainPriceGaps();
   if (pg.started || pg.ended || pg.reminded) {
     console.log(`[booking] ár-hiány: ${pg.started} új · ${pg.ended} lezárult · ${pg.reminded} emlékeztető`);
+  }
+
+  // ADR-0429: after the first login, the open setup topics get a weekly mail after 7 days
+  // (skipped where the price-gap mail of the week already carries the same list).
+  const sr = await maintainSetupReminders();
+  if (sr.started || sr.ended || sr.reminded) {
+    console.log(`[booking] beállítás-emlékeztető: ${sr.started} új · ${sr.ended} lezárult · ${sr.reminded} levél`);
   }
 
   console.log(`[booking] kész ${Math.round((Date.now() - started) / 1000)}s alatt`);

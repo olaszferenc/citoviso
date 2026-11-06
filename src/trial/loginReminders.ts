@@ -17,6 +17,7 @@
 // first link can never strand a trialist. The (trial, step, channel) row in free_trial_notice
 // is claimed BEFORE the send — a re-run or an overlapping run never sends twice.
 
+import { loadSetupCtx, remindTopics } from "../tenant/moduleSetup.js";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { issuePasswordToken, passwordLinkUrl } from "../auth/passwordLink.js";
@@ -215,6 +216,8 @@ export async function runLoginReminders(
     }
     const daysLeft = trialDaysLeft(now, until);
     const untilIso = budapestIsoDay(until);
+    // ADR-0429: the reminder names the open setup topics (the same registry the walk reads).
+    const missing = await missingSetupTopics(t.tenant_id!, (await loginContext(t.id)).lang);
 
     if (await claim(t.id, step!, "email", "claimed", null)) {
       try {
@@ -230,6 +233,7 @@ export async function runLoginReminders(
           daysLeft,
           trialUntilIso: untilIso,
           helpPhone: config.legalEntity.phone || null,
+          missing,
           lang: c.lang,
         });
         await deps.email.send(msg);
@@ -257,7 +261,7 @@ export async function runLoginReminders(
       try {
         const c = await loginContext(t.id);
         const url = passwordLinkUrl(await issuePasswordToken(c.tenantUserId), c.lang);
-        const text = buildLoginReminderSmsText({ siteName: c.siteName, daysLeft, setPasswordUrl: url, lang: c.lang });
+        const text = buildLoginReminderSmsText({ siteName: c.siteName, daysLeft, setPasswordUrl: url, missing, lang: c.lang });
         await sendLoggedSms(deps.sms, t.tenant_id!, t.id, step!, t.contact_phone, text);
         await mark(t.id, step!, "sms", "sent", null);
         out.sent++;
@@ -308,4 +312,20 @@ async function mark(
     .where("step", "=", step)
     .where("channel", "=", channel)
     .execute();
+}
+
+/**
+ * ADR-0429 — the open setup topics a reminder may name (registry `remind`). A failure here
+ * must never stop the reminder itself: it then goes out without the list.
+ */
+async function missingSetupTopics(tenantId: string, lang: string): Promise<string[]> {
+  try {
+    const site = await db.selectFrom("site").select("id").where("tenant_id", "=", tenantId).executeTakeFirst();
+    if (!site) return [];
+    const ctx = await loadSetupCtx(tenantId, site.id);
+    return remindTopics(ctx, lang).map((v) => v.topic.title(lang));
+  } catch (e) {
+    console.error(`[trial] beállítás-hiánylista nem olvasható · ${tenantId}: ${(e as Error).message}`); // i18n-exempt: operátori napló
+    return [];
+  }
 }

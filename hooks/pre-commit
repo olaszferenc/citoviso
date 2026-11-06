@@ -725,6 +725,13 @@ if [ -f scripts/module-dependency-check.mts ]; then
   echo "[pre-commit] module-dependency-check (ADR-0192: függőség végponttól végpontig)…"
   npx tsx scripts/module-dependency-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-0429: minden eladható modulnak van beállítási témája (státusz-szabály, varázsló-út,
+# súgó), a függőségi gráf körmentes és egyezik az ADR-0192-vel. Mindig fut (tiszta, gyors):
+# egy új katalógus-modul témája nélkül nem landolhat. A piros önteszt is minden körben.
+if [ -f scripts/module-setup-registry-check.mts ]; then
+  echo "[pre-commit] module-setup-registry-check (ADR-0429: minden modul a varázslóban)…"
+  { npx tsx scripts/module-setup-registry-check.mts && npx tsx scripts/module-setup-registry-check.mts --self-test; } >"$GATE_LOG" || gate_failed
+fi
 # ADR-0192 ④.1: a LEAD-oldali kosár (bepipálás, indoklás, zárolás, visszavétel,
 # „Fizetendő most" == szerver-ár) ÉS a rendelés-beküldés kapuja. ⭐ Itt mozdul
 # ELŐSZÖR a pénz: a lead eddig megvehette az Online foglalást Árak nélkül, és a
@@ -3737,6 +3744,17 @@ fi
 #     ír és az őr SOSEM költ AI-t (kulcs nélkül fut); böngésző 390 + asztali, 0 JS-hiba.
 #     Eldobható fixtúra a közös dev-DB-n, ~40 mp.
 #     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+# ADR-0429 — a beállító varázsló végponttól végpontig (jóváhagyott terv: design-refs/tenant-admin/
+#     modul-statusz): első belépés, szobák létrehozása, egységenkénti férőhely/ár, vissza témák között,
+#     ugrás kész témára + módváltás, kihagyás, csempék „1/3”, sáv, modul-panel, visszatérő sáv, kosár a
+#     meglévő modulokkal + folytatás fizetés után, emlékeztetők; böngésző 390 + asztali, 0 JS-hiba.
+#     Eldobható fixtúra a közös dev-DB-n.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/setup-wizard-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(moduleSetup|setupReminder|units|prices|siteModuleConfig|unitVisibility|editor|modules)\.ts$|^src/server/(setupSteps|setupWizard|setupWizardViews|adminViews|public)\.ts$|^src/email/loginEmail\.ts$|^src/trial/loginReminders\.ts$|^src/modules\.ts$|^assets/design-refs/tenant-admin/modul-statusz/|^migrations/0128_site_setup_progress\.sql$|^scripts/setup-wizard-check\.mts$'; then
+  echo "[pre-commit] setup-wizard-check (ADR-0429: a beállító varázsló a terv szerint)…"
+  npx tsx scripts/setup-wizard-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/booking-setup-check.mts ] && \
    changed_files | grep -qE '^src/tenant/(bookingSetup|units|prices|siteModuleConfig|unitVisibility)\.ts$|^src/ai/bookingHelper\.ts$|^src/booking/requests\.ts$|^src/server/(bookingSetupViews|moduleConfigViews|public)\.ts$|^src/moduleConfig\.ts$|^assets/runtime/cit-booking-setup\.js$|^assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/|^migrations/0109_tenant_ai_call\.sql$|^scripts/booking-setup-check\.mts$'; then
   echo "[pre-commit] booking-setup-check (vezetett foglalás-beállítás, akadályok, próba-foglalás, Segítő)…"

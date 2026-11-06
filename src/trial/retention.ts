@@ -198,6 +198,8 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   { table: "booking_request", where: `site_id IN ${SITES}` },
   { table: "site_module_config", where: `site_id IN ${SITES}` },
   { table: "site_module_config_history", where: `site_id IN ${SITES}` },
+  // ADR-0429: where the owner stood in the setup questions (0128).
+  { table: "site_setup_progress", where: `site_id IN ${SITES}` },
   { table: "site_multilang", where: `site_id IN ${SITES}` },
   { table: "site_place_rating", where: `site_id IN ${SITES}` },
   { table: "site_review", where: `site_id IN ${SITES}` },

@@ -186,13 +186,16 @@ try {
   check("a Nagy lakosztály pipája ÉLŐ", card(pr, big.id).includes("Nem adok meg alapárat — ahol nincs ár, egyedi ajánlatot küldök") && !/name="on" value="1"[^>]* disabled/.test(card(pr, big.id)));
   check("a figyelmeztetés kimondja a heti emlékeztetőt", card(pr, big.id).includes("hetente emlékeztetjük"));
 
-  // ── ④ the overview row — the SAME predicate ───────────────────────────────
-  console.log("\n④ Áttekintés — teendő-sor");
+  // ── ④ the overview — ADR-0429: the setup strip OWNS the module to-dos (approved plan
+  // design-refs/tenant-admin/modul-statusz README ①4); the Árak tile counts per room with the
+  // SAME predicate (unitPriceStatus) the card, the strip and the weekly mail read.
+  console.log("\n④ Áttekintés — a beállítás-sáv, az Árak csempe egységenként");
+  const tileOf = (h: string): string => (h.match(/data-setup-tile="pricing"[\s\S]*?<\/a>/) ?? [""])[0];
   let ov = await get("/admin?tab=attekintes");
-  check("van ár-hiány sor", ov.includes('data-todo="price-gap"'));
-  check("„2 szobájának nincs ára”", ov.includes("2 szobájának nincs ára"));
-  check("…mindkét szobát megnevezi, a teljeset NEM", ov.includes("Nagy lakosztály — egyik éjszakára sincs ár") && ov.includes("Tetőtéri szoba — az év egy részére nincs ár") && !/<li>Kis faház —/.test(ov));
-  check("nincs mellette „Töltse ki: Árak” sor (az árazás nem üres)", !ov.includes("Töltse ki: Árak"));
+  check("a sáv nevezi az Árakat (a régi teendő-sor helyett)", /data-setup-strip[\s\S]*Árak/.test(ov) && !ov.includes('data-todo="price-gap"'));
+  let tiles = await get("/admin?tab=modulok");
+  check("az Árak csempe: „1/3 szobának van ára” (a teljes árú szoba számít, a két hiányos nem)", tileOf(tiles).includes("1/3 szobának van ára"), tileOf(tiles));
+  check("nincs „Töltse ki: Árak” sor (az árazás nem üres)", !ov.includes("Töltse ki: Árak"));
 
   // ── ⑤ guest page before the decision ──────────────────────────────────────
   console.log("\n⑤ Vendég-lap — döntés ELŐTT");
@@ -207,14 +210,14 @@ try {
   pr = await get("/admin?tab=modulok&m=pricing");
   check("a kártya: „Kimondva: nem ad meg alapárat.”", /data-price-state="on_request"/.test(card(pr, big.id)) && card(pr, big.id).includes("Kimondva: nem ad meg alapárat."));
   check("…és a pipa bejelölve", /name="on" value="1" checked/.test(card(pr, big.id)));
-  ov = await get("/admin?tab=attekintes");
-  check("a teendő-sor: már csak „1 szobájának nincs ára”", ov.includes("1 szobájának nincs ára") && !ov.includes("Nagy lakosztály — egyik"));
+  tiles = await get("/admin?tab=modulok");
+  check("az Árak csempe: „2/3 szobának van ára” (a kimondott ár kérésre döntés)", tileOf(tiles).includes("2/3 szobának van ára"), tileOf(tiles));
   html = await page();
   check("⑤ a vendég-lap újrarenderelve: „Egyedi ajánlat alapján”", html.includes("Egyedi ajánlat alapján"));
   check("⑤ …egész évre (szezon nélkül „Egész évben”)", /data-cit-onrequest><td>Egész évben/.test(html));
   await post("/admin/prices/request", { unit: attic.id, on: "1" });
-  ov = await get("/admin?tab=attekintes");
-  check("mindkettő kimondva → a teendő-sor ELTŰNIK", !ov.includes('data-todo="price-gap"'));
+  tiles = await get("/admin?tab=modulok");
+  check("mindkettő kimondva → az Árak KÉSZ, és ki is mondja: 1 árral, 2 ár kérésre", tileOf(tiles).includes("sw-chip--done") && tileOf(tiles).includes("1 árral, 2 ár kérésre"), tileOf(tiles));
   check("…és a sitePriceGaps is üres (a levél ugyanezt olvassa)", (await sitePriceGaps(site.id)).length === 0);
   html = await page();
   check("⑤ a szezonos szobánál „Egyéb időszakban” + egyedi ajánlat", /data-cit-onrequest><td>Egyéb időszakban/.test(html));

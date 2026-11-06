@@ -24,6 +24,7 @@ import {
 } from "../outreach/copyOverride.js";
 import { checkOutreachDraft, checkOutreachSms } from "../outreach/outreachCheck.js";
 import { GSM7_BASIC, smsEncoding } from "../sms/encoding.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { isHuMobileE164, normalizePhone } from "../text/phone.js";
 import { T } from "../i18n/mail.js";
 import { esc } from "./views.js";
@@ -167,7 +168,7 @@ const SCRIPT = (gsm: string, max: number) => `<script>
 (function(){
   var ta=document.querySelector('.aq-copy textarea[name="sms"]'); if(!ta) return;
   var out=document.querySelector('.aq-cnt-sms'), link=ta.getAttribute('data-link');
-  var B=new Set(Array.from(${JSON.stringify(gsm)}));
+  var B=new Set(Array.from(${jsonForScript(gsm)}));
   var P={'\\u201e':'"','\\u201c':'"','\\u201d':'"','\\u00ab':'"','\\u00bb':'"','\\u2018':"'",'\\u2019':"'",'\\u201a':"'",'\\u2013':'-','\\u2014':'-','\\u2011':'-','\\u2026':'...','\\u00a0':' ','\\u2009':' ','\\u202f':' '};
   function fold(t){ return Array.from(t.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')).map(function(c){return P[c]||c;}).join('').split('').filter(function(c){return B.has(c);}).join('').replace(/ {2,}/g,' '); }
   function upd(){

@@ -106,7 +106,7 @@ const tenant = await db.insertInto("tenant").values({ lead_id: lead.id, display_
 const { issueTenantLogin } = await import("../src/tenant/credentials.js");
 const { issuePasswordToken, peekPasswordToken, setPasswordWithToken, findUserForReset, payDonePasswordUrl } =
   await import("../src/auth/passwordLink.js");
-const { authenticate, setSession, currentTenant, mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
+const { authenticate, setSession, currentTenant, legacyTenantCookieValue } = await import("../src/auth/tenantAuth.js");
 
 const login = await issueTenantLogin(tenant.id, "Napfény Panzió", "tulaj@napfeny.hu");
 
@@ -128,7 +128,7 @@ const oldCookie = (() => {
   setSession({ setHeader: (_n: string, v: string | string[]) => h.push(...([] as string[]).concat(v)), req: { headers: {} } } as never, login.tenantUserId);
   return h[0]!.split(";")[0]!.split("=").slice(1).join("=");
 })();
-const legacyCookie = mintTenantCookieValue(login.tenantUserId);
+const legacyCookie = legacyTenantCookieValue(login.tenantUserId);
 const reqWith = (cookie: string) => ({ headers: { cookie: `cit_session=${cookie}` } }) as never;
 ok(Boolean(await currentTenant(reqWith(legacyCookie))), "régi (T-3 előtti) süti él, amíg a tulaj nem állított jelszót");
 await new Promise((r) => setTimeout(r, 5));

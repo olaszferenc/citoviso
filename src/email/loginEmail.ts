@@ -31,7 +31,7 @@
 
 import { T } from "../i18n/mail.js";
 import { huArticle, huArticleLower } from "../hu.js";
-import { toGsm7 } from "../sms/encoding.js";
+import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { loginAddressLabel, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
 import type { FooterReason, MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
@@ -259,9 +259,14 @@ export function buildLoginReminderEmail(input: {
   trialUntilIso: string;
   /** Our phone for "Ha elakadt, hívjon minket" — omitted when not configured. */
   helpPhone: string | null;
+  /** ADR-0429 — the open setup topics, named by the registry (src/tenant/moduleSetup.ts remindTopics). */
+  missing?: readonly string[];
   lang?: string;
 }): EmailMessage {
   const { to, username, setPasswordUrl, loginUrl, siteName, lang } = input;
+  const missing = input.missing ?? [];
+  const missHead = T(lang, "Ahhoz, hogy a vendég foglalni tudjon, még ez hiányzik:");
+  const missTail = T(lang, "Belépés után lépésről lépésre végigvezetjük.");
   const greeting = mailGreeting(lang, input.contactName, true);
   const subject = T(lang, "Még nem lépett be – {site}", { site: siteName });
   const intro = T(
@@ -279,6 +284,7 @@ export function buildLoginReminderEmail(input: {
   const help = input.helpPhone ? T(lang, "Ha elakadt, hívjon minket: {phone}.", { phone: input.helpPhone }) : null;
   const text =
     `${greeting}\n\n${intro}\n\n` +
+    (missing.length ? `${missHead}\n${missing.map((m) => `• ${m}`).join("\n")}\n${missTail}\n\n` : "") +
     `${button}: ${setPasswordUrl}\n${fresh}\n\n` +
     `${T(lang, "Felhasználónév:")} ${username}\n` +
     `${loginTextLine(lang, loginUrl)}\n` +
@@ -295,6 +301,7 @@ export function buildLoginReminderEmail(input: {
     ownerLogin: false,
     blocks: [
       mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
+      ...(missing.length ? [mailPara(`<b>${esc(missHead)}</b><br>${missing.map((m) => `• ${esc(m)}`).join("<br>")}<br>${esc(missTail)}`)] : []),
       mailButton(setPasswordUrl, button),
       mailNote(esc(fresh)),
       mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }, loginDetailRow(lang, loginUrl)]),
@@ -326,9 +333,22 @@ export function buildLoginReminderSmsText(input: {
   siteName: string;
   daysLeft: number;
   setPasswordUrl: string;
+  /** ADR-0429 — the open setup topics; named only while the SMS still fits 2 segments. */
+  missing?: readonly string[];
   lang?: string;
 }): string {
   const url = input.setPasswordUrl.replace(/^https?:\/\//, "");
+  const base = buildReminderSmsBase(input, url);
+  const missing = input.missing ?? [];
+  if (!missing.length) return base;
+  const names = missing.slice(0, 2).join(", ") + (missing.length > 2 ? ` +${missing.length - 2}` : "");
+  const withMissing = toGsm7(
+    `${base} ${T(input.lang, "Még hiányzik: {list} — belépés után végigvezetjük.", { list: names })}`,
+  );
+  return smsEncoding(withMissing).segments <= 2 ? withMissing : base;
+}
+
+function buildReminderSmsBase(input: { siteName: string; daysLeft: number; lang?: string }, url: string): string {
   return toGsm7(
     T(input.lang, "Citoviso: még nem lépett be {art} {site} honlapjába, a próbából még {n} nap van. Jelszó beállítása egy kattintással: {url}", {
       art: huArticleLower(input.siteName),

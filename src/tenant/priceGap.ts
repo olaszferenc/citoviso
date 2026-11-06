@@ -4,6 +4,7 @@
 // `unitPriceStatus` (prices.ts), which the Árazás card's state line also runs —
 // three surfaces, one predicate (feedback_one_rule_two_copies).
 
+import { setupReminderLines } from "./setupReminder.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { tenantTimeZone, todayForSite } from "./timeZone.js";
@@ -174,7 +175,7 @@ export async function maintainPriceGaps(
       .executeTakeFirst();
     if (!Number(claim.numUpdatedRows)) continue;
     try {
-      await remindPriceGap(s.tenant_id, gaps, Math.floor((now.getTime() - since.getTime()) / DAY_MS));
+      await remindPriceGap(s.tenant_id, gaps, Math.floor((now.getTime() - since.getTime()) / DAY_MS), s.id);
       reminded++;
     } catch (err) {
       console.error(`[price-gap] az emlékeztető NEM ment ki (${s.id}):`, err);
@@ -183,7 +184,7 @@ export async function maintainPriceGaps(
   return { started, ended, reminded };
 }
 
-async function remindPriceGap(tenantId: string, gaps: readonly PriceGap[], days: number): Promise<void> {
+async function remindPriceGap(tenantId: string, gaps: readonly PriceGap[], days: number, siteId: string): Promise<void> {
   const user = await db
     .selectFrom("tenant_user")
     .select(["contact_email"])
@@ -195,6 +196,10 @@ async function remindPriceGap(tenantId: string, gaps: readonly PriceGap[], days:
   }
   const lang = await prepareMailLang(await langForTenant(tenantId));
   const adminUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/admin?tab=modulok&m=pricing`;
+  const setup = await setupReminderLines(tenantId, siteId, lang).catch(() => ({ lines: [] as string[], url: "" }));
+  const pricingTitle = T(lang, "Árak");
+  const others = setup.lines.filter((l) => !l.startsWith(`• ${pricingTitle} —`));
+  const setupUrl = setup.url;
   const n = gaps.length;
   const subject =
     n === 1
@@ -223,6 +228,10 @@ async function remindPriceGap(tenantId: string, gaps: readonly PriceGap[], days:
     "\n\n" +
     T(lang, "Az árakat itt adhatja meg:") +
     `\n${adminUrl}\n\n` +
+    // ADR-0429: the same letter names the other open setup topics (one letter, not two).
+    (others.length
+      ? T(lang, "A beállításból még ez is hiányzik:") + `\n${others.join("\n")}\n` + T(lang, "Folytatom a beállítást:") + `\n${setupUrl}\n\n`
+      : "") +
     T(lang, "Ha ezekre a szobákra szándékosan nem ad meg árat, mert mindig egyedi ajánlatot küld, pipálja be az Árazás lapon: „Nem adok meg alapárat”. Akkor több emlékeztetőt nem küldünk róluk.") +
     "\n\n" +
     T(lang, "Hetente emlékeztetjük, amíg minden szobának ára van, vagy be nem jelöli, hogy nem ad meg árat.") +

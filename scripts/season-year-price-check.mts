@@ -389,7 +389,8 @@ try {
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ username: `syp_${stamp}`, password: "szezon-teszt-42", next: evil }).toString(),
       });
-      check(`nyitott átirányítás nincs: next=${JSON.stringify(evil)} → /admin`, r.status === 302 && r.headers.get("location") === "/admin", { status: r.status, loc: r.headers.get("location") });
+      // ADR-0429: a plain login lands on `/admin?elso=1` (the first time it opens the setup walk) — still our own admin.
+      check(`nyitott átirányítás nincs: next=${JSON.stringify(evil)} → /admin`, r.status === 302 && /^\/admin(\?elso=1)?$/.test(r.headers.get("location") ?? ""), { status: r.status, loc: r.headers.get("location") });
     }
     // positive control for the same probe: a real /admin target IS honoured
     const ok = await fetch(`${BASE}/login`, {

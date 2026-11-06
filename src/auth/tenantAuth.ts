@@ -119,6 +119,17 @@ export function clearSession(res: http.ServerResponse): void {
  * Route SOSEM hívja; ha valaha kérésből hívnád, az hitelesítés-megkerülés lenne.
  */
 export function mintTenantCookieValue(tenantUserId: string): string {
+  // The CURRENT format, as setSession writes it: a legacy `<id>.<hmac(id)>` value reads as
+  // issued at 0, so every dev user who ever set a password (password_set_at) locked every
+  // minting check out of the admin (measured 2026-11-06: price-where-check red on main,
+  // myrna-haus → 302 /login).
+  const v = `${tenantUserId}.${Date.now()}`;
+  return `${v}.${signValue(v)}`;
+}
+
+/** A LEGACY (pre-T-3) cookie value, `<id>.<hmac(id)>` — only for the guard that proves such a
+ *  cookie still works until a password is set, and ends after (scripts/password-link-check.mts). */
+export function legacyTenantCookieValue(tenantUserId: string): string {
   return `${tenantUserId}.${signValue(tenantUserId)}`;
 }
 

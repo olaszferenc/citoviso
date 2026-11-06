@@ -77,6 +77,7 @@ import { normalizeUpload } from "../tenant/photoUpload.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import {
   adminDashboard,
+  adminFullscreenPage,
   chargeRetryAnchor,
   DECLINED_NOTE_ANCHOR,
   domainSettlementSection,
@@ -117,6 +118,9 @@ import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../paym
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang, prepareRenderLang } from "../i18n/mail.js";
+import { cartReturnUrl, currentTopic, markWalkSeen, moduleTopicStep, walkItems, walkPost, walkScreen, walkWanted } from "./setupWizard.js";
+import { moduleStepPanel, overviewSetupStrip, returnToWalkBar, setupTilesSection, setupWizardPage } from "./setupWizardViews.js";
+import { guestSentence, loadSetupCtx } from "../tenant/moduleSetup.js";
 import { peekPasswordToken, setPasswordWithToken } from "../auth/passwordLink.js";
 import { sendPasswordResetLinks } from "../tenant/credentials.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
@@ -1585,6 +1589,22 @@ async function serveAdmin(
       ? tenantSiteUrl(config.publicSiteUrl, site.slug, site.custom_domain)
       : null;
   const modules = await getTenantModules(session.tenantId);
+  // ADR-0429: a module purchase started from the setup walk — once paid, the walk goes on
+  // at the very step it left (the cart and the Barion return both land here).
+  if (site?.id) {
+    const back = await cartReturnUrl(session.tenantId, site.id);
+    if (back) return redirect(res, back);
+  }
+  // ADR-0429: the setup surfaces read ONE registry (src/tenant/moduleSetup.ts).
+  const setupLang = content?.lang ?? "hu";
+  // The first login (`elso=1`, set by the login and the password-link pages) opens the setup
+  // walk once — if it was never seen and something is left to set up.
+  if (site?.id && new URL(req.url ?? "/", "http://x").searchParams.get("elso") === "1" && (await walkWanted(session.tenantId, site.id, setupLang))) {
+    return redirect(res, "/admin/beallitas");
+  }
+  const setupCtx =
+    site?.id && (!tab || tab === "attekintes" || tab === "modulok") ? await loadSetupCtx(session.tenantId, site.id) : null;
+  const setupItems = setupCtx ? walkItems(setupCtx, setupLang) : [];
   // ADR-0044/d: the Fotók tab assigns photos to units, so it needs the unit list.
   const adminUnits = site?.id
     ? (await ensureUnits(site.id)).map((u) => ({ id: u.id, name: u.name }))
@@ -1613,7 +1633,8 @@ async function serveAdmin(
   let paidEmpty: AdminOpts["paidEmpty"] = [];
   let priceGaps: AdminOpts["priceGaps"] = [];
   const overviewTab = !tab || tab === "attekintes";
-  if (overviewTab && site?.id) {
+  // ADR-0429: with the setup strip on the Áttekintés, the module to-dos live THERE.
+  if (overviewTab && site?.id && !setupItems.length) {
     const moduleContent = await moduleContentFor(session.tenantId, site.id);
     // ⛔ `.data` — a modul-mezők ott ülnek, a ModuleContent felső szintje csak burkoló
     // (`{ data, photoCap, units }`). A burkolót átadva a halmaz `data/photoCap/units`
@@ -2375,7 +2396,39 @@ async function serveAdmin(
       siteUrl,
       guestViewUrl,
       chargeRetry: new URL(req.url ?? "/", "http://x").searchParams.get("ujra"),
-      moduleSettingsHtml,
+      moduleSettingsHtml: await (async () => {
+        // ADR-0429: the module page embeds its topic's next question; a page the walk opened
+        // (`vissza=varazslo`) carries the way back to the next topic.
+        if (tab !== "modulok" || !moduleId || !moduleSettingsHtml || !site?.id) return moduleSettingsHtml;
+        const q = new URL(req.url ?? "/", "http://x").searchParams;
+        const ret = q.get("vissza") === "varazslo" ? returnToWalkBar(setupLang, q.get("vt") ?? moduleId) : "";
+        const ss = q.get("ss");
+        const own = await moduleTopicStep({
+          session: { tenantId: session.tenantId, tenantUserId: session.tenantUserId },
+          siteId: site.id,
+          lang: setupLang,
+          moduleId,
+          stepIndex: ss !== null && /^\d+$/.test(ss) ? Number(ss) : null,
+          siteUrl,
+        });
+        const panel = own
+          ? moduleStepPanel({ lang: setupLang, item: own.item, step: own.step, hidden: own.hidden, moduleId, error: q.get("e"), notice: q.get("swok") })
+          : "";
+        return ret + panel + moduleSettingsHtml;
+      })(),
+      setupStrip:
+        setupCtx && overviewTab && setupItems.length
+          ? overviewSetupStrip({
+              lang: setupLang,
+              items: setupItems,
+              next: setupItems.find((x) => x.id === currentTopic(setupItems, null)) ?? null,
+              guestLine: guestSentence(setupCtx, setupLang),
+            })
+          : null,
+      setupTiles:
+        setupCtx && tab === "modulok" && !moduleSettingsHtml && setupItems.length
+          ? setupTilesSection({ lang: setupLang, items: setupItems, guestLine: guestSentence(setupCtx, setupLang) })
+          : null,
       openModule: moduleSettingsHtml ? (moduleId ?? null) : null,
       units: adminUnits,
       help,
@@ -2687,8 +2740,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     setSession(res, uid);
     // ADR-0407: every login is a row (last_login_at keeps only the latest).
     recordTenantUserActivity(uid, "login", { via: "password" });
-    // Back to where the link pointed (only ever inside /admin — safeAdminNext).
-    return redirect(res, next ?? "/admin");
+    // Back to where the link pointed (only ever inside /admin — safeAdminNext). A plain login
+    // carries `elso=1`: the first time, the setup walk opens (ADR-0429).
+    return redirect(res, next ?? "/admin?elso=1");
   }
   // Elek T-3: "Elfelejtett jelszó?" — mail a fresh link. The SAME answer whether or
   // not the account exists; every request counts against the per-IP limit.
@@ -3432,6 +3486,19 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       );
     }
     return redirect(res, `/admin?tab=modulok&m=booking&e=${encodeURIComponent(unit)}&ho=${month}&saved=1`);
+  }
+  // POST /admin/beallitas — one answer of the setup walk (ADR-0429), written through the
+  // existing write functions (src/server/setupSteps.ts); the guest page re-renders after a save.
+  if (req.method === "POST" && pathname === "/admin/beallitas") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (!siteId) return redirect(res, "/admin");
+    const lang = (await getTenantContent(session.tenantId))?.lang ?? "hu";
+    const r = await walkPost({ session: { tenantId: session.tenantId, tenantUserId: session.tenantUserId }, siteId, lang, form });
+    if (r.html) return send(res, 200, adminFullscreenPage(T(lang, "Kosár"), r.html, lang));
+    return r.rerender ? redirectRerendered(res, session.tenantId, r.redirect ?? "/admin/beallitas") : redirect(res, r.redirect ?? "/admin/beallitas");
   }
   // POST /admin/calendar-link — connect a portal calendar (owner never sees "iCal").
   if (req.method === "POST" && pathname === "/admin/calendar-link") {
@@ -4595,6 +4662,42 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           unreadMessages: await countUnreadMessages(ctx.session.tenantId),
           subSummary: await getSubscriptionSummary(ctx.session.tenantId),
         }),
+      );
+      return;
+    }
+    // ADR-0429 — the setup walk (full screen). Approved plan: design-refs/tenant-admin/modul-statusz.
+    if (pathname === "/admin/beallitas") {
+      const session = await currentTenant(req);
+      if (!session) return redirect(res, `/login?next=${encodeURIComponent("/admin/beallitas")}`);
+      const siteId = await tenantSiteId(session.tenantId);
+      if (!siteId) return redirect(res, "/admin");
+      const content = await getTenantContent(session.tenantId);
+      const lang = content?.lang ?? "hu";
+      const site = await db.selectFrom("site").select(["slug", "custom_domain"]).where("id", "=", siteId).executeTakeFirst();
+      const siteUrl = site ? tenantSiteUrl(config.publicSiteUrl, site.slug, site.custom_domain) : null;
+      const sParam = url.searchParams.get("s");
+      const scr = await walkScreen({
+        session: { tenantId: session.tenantId, tenantUserId: session.tenantUserId },
+        siteId,
+        lang,
+        requested: url.searchParams.get("t"),
+        stepIndex: sParam !== null && /^\d+$/.test(sParam) ? Number(sParam) : null,
+        siteName: content?.name ?? session.displayName,
+        host: siteUrl ? new URL(siteUrl).host : "",
+        siteUrl,
+      });
+      await markWalkSeen(siteId);
+      const ok = url.searchParams.get("ok");
+      const notice =
+        ok === "paid" ? T(lang, "Megrendelve és kifizetve — folytatjuk ott, ahol abbahagyta.") : ok && /^\d+$/.test(ok) ? T(lang, "{n} fotó feltöltve.", { n: Number(ok) }) : ok;
+      send(
+        res,
+        200,
+        adminFullscreenPage(
+          T(lang, "Beállítás"),
+          setupWizardPage({ lang, items: scr.items, step: scr.step, error: url.searchParams.get("e"), notice, preview: scr.preview, guestLine: scr.guestLine }),
+          lang,
+        ),
       );
       return;
     }

@@ -33,6 +33,11 @@ const VIEW_GROUPS = {
     // ADR-0380: the guided booking setup page — its own view file (its words, incl. the
     // client script's `L` strings, are T() calls here).
     "src/server/bookingSetupViews.ts",
+    // ADR-0429: the setup walk, the module tiles and the overview strip — own view files
+    // (the questions live in setupSteps.ts, the topic titles/status lines in moduleSetup.ts).
+    "src/server/setupWizardViews.ts",
+    "src/server/setupSteps.ts",
+    "src/tenant/moduleSetup.ts",
     // Booking-offer (2026-09-23): the owner's offer page is its own view file, reached
     // from the Foglalások tab and the owner's mail — its labels are quoted by the KB.
     "src/server/offerViews.ts",

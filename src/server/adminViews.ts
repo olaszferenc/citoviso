@@ -308,6 +308,14 @@ const THEME_BOOT =
   `if(t==='dark'||t==='light')d.setAttribute('data-citui-theme',t);` +
   `if(localStorage.getItem('citui-admin-rail')==='1')d.classList.add('is-rail');}catch(e){}})();</script>`;
 
+/**
+ * ADR-0429 — a full-screen admin page (the first-login setup wizard): the admin's own
+ * stylesheet and theme, without the frame (sidebar, top bar, bottom nav).
+ */
+export function adminFullscreenPage(title: string, body: string, lang: string): string {
+  return shell(title, ADM_STYLE + body, lang, { head: THEME_BOOT, bodyClass: "adm-body" });
+}
+
 /** Short status word for the frame (the widgets keep the full, KB-quoted labels). */
 function statusShort(status: string, lang: string): string {
   return status === "live"
@@ -928,7 +936,7 @@ export function passwordSetDonePage(lang = "hu", firstSet = false, username?: st
       (firstSet ? "" : `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>`) +
       loginAddressBox(lang, username) +
       `<p class="citui-hint" data-pw-autogo>${T(lang, "Pár másodperc múlva magától továbblépünk a szerkesztőbe.")}</p>` +
-      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
+      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin?elso=1">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
       `</div></div>` +
       // Elek3 A7 / Elek 10-11 A5: „beléptetjük” must be what happens — the session is already
       // live, so the page goes on by itself after a moment to read, and SAYS so (a reader who
@@ -4882,6 +4890,13 @@ function overviewSection(
   lapsedTrial: TrialAdminState | null = null,
   /** A RUNNING free trial: nothing is paid, nothing is billed (Elek 2026-10-09, lelet 1). */
   trialActive = false,
+  /**
+   * ADR-0429 — the setup strip (src/server/setupWizardViews.ts). When present it OWNS the
+   * module items (empty modules, price gaps, the intro text): the Teendők list keeps only the
+   * non-module ones (booking requests, the fee, publication, the trial) — approved plan
+   * design-refs/tenant-admin/modul-statusz README ①4.
+   */
+  setupStrip: string | null = null,
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -5066,20 +5081,22 @@ function overviewSection(
       }</span></span></a>`
     : "";
   const introDone = Boolean(content.intro && content.intro.length > 40);
+  // ADR-0429: with the setup strip, the module to-dos (empty modules, price gaps, intro) are the strip's.
   const todo =
     pendingRows +
-    paidEmptyRows +
-    priceGapRow +
+    (setupStrip ? "" : paidEmptyRows + priceGapRow) +
     // No photo row (owner's ruling 2026-10-02): an „Élesítés előtt” to-do that only an
     // own upload could close made the declared photos look insufficient.
-    todoItem(
-      introDone,
-      introDone
-        ? T(lang, "A bemutatkozó szövege kész")
-        : `<strong>${T(lang, "Írja meg a bemutatkozó szöveget")}</strong>`,
-      "szovegek",
-      true,
-    ) +
+    (setupStrip
+      ? ""
+      : todoItem(
+          introDone,
+          introDone
+            ? T(lang, "A bemutatkozó szövege kész")
+            : `<strong>${T(lang, "Írja meg a bemutatkozó szöveget")}</strong>`,
+          "szovegek",
+          true,
+        )) +
     (suspended && lapsedTrial
       ? // ADR-0344 C2c: a LAPSED TRIAL is paused, not in debt — „Rendezze a díjat" would
         // be false (a trial owes nothing). The row reuses the approved paused-block
@@ -5109,7 +5126,7 @@ function overviewSection(
         ));
   const openCount =
     pendingItems.length +
-    paidEmpty.length + (priceGaps.length ? 1 : 0) + (introDone ? 0 : 1) + (live ? 0 : 1);
+    (setupStrip ? 0 : paidEmpty.length + (priceGaps.length ? 1 : 0)) + (introDone || setupStrip ? 0 : 1) + (live ? 0 : 1);
   // ── the three widgets (README ⑤) ────────────────────────────────────────────
   const statusTag =
     content.status === "live"
@@ -5171,6 +5188,7 @@ function overviewSection(
     `<div class="adm-ph"><h1>${T(lang, "Áttekintés")}${helpLink("admin.overview", lang)}</h1>` +
     `<p>${T(lang, "Az oldala állapota egy képernyőn — ami teendő, az itt sorban áll.")}</p></div>` +
     pendingStrip +
+    (setupStrip ?? "") +
     // E language (ADR-0397 ②): the widgets and the cover are one zone; the to-do list under it is a section.
     `<section class="adm-zone"><h2 class="adm-zone__h">${T(lang, "Egy pillantásra")}</h2>` +
     `<div class="adm-w">${wStatus}${wVisits}${wMsgs}</div>` +
@@ -6434,6 +6452,10 @@ export interface AdminOpts {
   readonly chargeRetry?: string | null;
   /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
   readonly moduleSettingsHtml?: string | null;
+  /** ADR-0429 — the setup strip on the Áttekintés (owns the module to-dos). */
+  readonly setupStrip?: string | null;
+  /** ADR-0429 — the setup tiles at the top of the Modulok tab. */
+  readonly setupTiles?: string | null;
   /** module-subnav ②: the id of the module whose settings screen is open (`?m=`). */
   readonly openModule?: string | null;
   /** ADR-0044/d: bookable units, so photos can be assigned to them on the Fotók tab. */
@@ -6831,7 +6853,8 @@ export function adminDashboard(
             // the tab is the on/off list. One screen = one decision.
             (opts.moduleSettingsHtml ??
               (mv
-                ? modulesSection(
+                ? (opts.setupTiles ?? "") +
+                  modulesSection(
                     mv,
                     opts.subscription ?? null,
                     opts.moduleApplied ?? null,
@@ -6925,6 +6948,7 @@ export function adminDashboard(
                 opts.now ?? new Date(),
                 opts.trial?.status === "lapsed" ? opts.trial : null,
                 opts.trial?.status === "active",
+                opts.setupStrip ?? null,
               );
 
   // The Áttekintés and the Fotók render their own page head (title + sentence);

@@ -1212,6 +1212,20 @@ export interface SiteModuleConfigTable {
   updated_by: string | null;
 }
 
+/** ADR-0429 (0128): where the owner stands in the setup questions — never the module status itself. */
+export interface SiteSetupProgressTable {
+  site_id: string;
+  /** Registry topic id, or "_welcome" for the first-login walk. */
+  item: string;
+  step: Generated<number>;
+  /** Insert/update as JSON text (the JSONColumnType convention); omitted on insert = {}. */
+  draft: ColumnType<Record<string, unknown>, string | undefined, string>;
+  skipped_at: Timestamp | null;
+  hidden_at: Timestamp | null;
+  completed_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+}
+
 /** Append-only trail so an owner can ask for the previous settings back (0023). */
 export interface SiteModuleConfigHistoryTable {
   id: Generated<number>;
@@ -2153,6 +2167,7 @@ export interface Database {
   kb_translation: KbTranslationTable;
   lead_link: LeadLinkTable;
   site_module_config: SiteModuleConfigTable;
+  site_setup_progress: SiteSetupProgressTable;
   site_module_config_history: SiteModuleConfigHistoryTable;
   site_unit: SiteUnitTable;
   unit_price: UnitPriceTable;

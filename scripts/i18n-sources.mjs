@@ -131,6 +131,12 @@ export const I18N_SOURCES = [
   "src/server/bookingSetupViews.ts",
   "src/tenant/bookingSetup.ts",
   "assets/runtime/cit-booking-setup.js",
+  // ADR-0429 — the module setup registry (status lines, topic titles), its embedded
+  // questions, and the wizard / tiles surface.
+  "src/tenant/moduleSetup.ts",
+  "src/tenant/setupReminder.ts",
+  "src/server/setupSteps.ts",
+  "src/server/setupWizardViews.ts",
   // ADR-0157 — a FELFÜGGESZTETT honlap VENDÉG-lapja. Mérve 2026-09-14: a szövegei
   // rendesen `T(lang, …)`-gal születtek, de a fájljuk (`public.ts`) SOHA nem volt
   // ezen a listán, tehát egyetlen string sem került a katalógusba — egy német
