@@ -4,6 +4,7 @@ with call audio through the Bluetooth hands-free link (BlueALSA hfp-hf).
 
   callbot.py answer --text "..." [--rings-wait 4]   wait for an incoming call, answer, speak, beep, record
   callbot.py dial <number> --text "..."             call out, speak when answered, beep, record
+  callbot.py listen                                 answer every incoming call with greeting.txt (systemd)
 
 Each call leaves in ~/speech/calls/<ts>-<dir>-<number>/:
   greeting.wav (what we said), caller.wav (the other party), conversation.wav (both mixed),
@@ -103,9 +104,21 @@ def run_call(direction, number, text, ended):
     return d
 
 
+def ensure_bt():
+    """Reconnect the hands-free link if the phone dropped it (reboot, BT toggle)."""
+    info = subprocess.run(["bluetoothctl", "info", BT_MAC], capture_output=True, text=True).stdout
+    if "Connected: yes" not in info:
+        log("bluetooth link down, reconnecting")
+        subprocess.run(["bluetoothctl", "connect", BT_MAC], capture_output=True, text=True, timeout=30)
+
+
 def cmd_answer(a):
     log("waiting for an incoming call")
+    last_bt = 0.0
     while True:
+        if time.time() - last_bt > 60:
+            ensure_bt()
+            last_bt = time.time()
         cs, ring, fg, num = call_state()
         if cs == 1:
             break
@@ -143,13 +156,36 @@ def cmd_dial(a):
     run_call("out", a.number, a.text, lambda: call_state()[0] == 0)
 
 
+GREETING_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "greeting.txt")
+
+
+def cmd_listen(a):
+    """Answer every incoming call with the owner-approved greeting, forever."""
+    text = open(GREETING_FILE, encoding="utf-8").read().strip()
+    while True:
+        try:
+            a.text = text
+            cmd_answer(a)
+        except Exception as e:  # keep listening; a single bad call must not stop the bot
+            log(f"error: {e!r}")
+        # wait until the line is idle again before arming for the next call
+        while True:
+            try:
+                if call_state()[0] == 0:
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
+
+
 def main():
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
     pa = sp.add_parser("answer"); pa.add_argument("--text", required=True); pa.add_argument("--rings-wait", type=float, default=4)
+    pl = sp.add_parser("listen"); pl.add_argument("--rings-wait", type=float, default=4)
     pd = sp.add_parser("dial"); pd.add_argument("number"); pd.add_argument("--text", required=True)
     a = p.parse_args()
-    {"answer": cmd_answer, "dial": cmd_dial}[a.cmd](a)
+    {"answer": cmd_answer, "dial": cmd_dial, "listen": cmd_listen}[a.cmd](a)
 
 
 if __name__ == "__main__":

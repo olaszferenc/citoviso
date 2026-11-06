@@ -23,7 +23,16 @@ Minden helyben fut, API-hívás nincs.
 bash scripts/callbot/setup.sh                       # egyszer, a gép beállítása (idempotens)
 sg audio -c "python3 scripts/callbot/callbot.py answer --text '<bemondás>'"
 sg audio -c "python3 scripts/callbot/callbot.py dial +3630... --text '<szöveg>'"
+
+# folyamatos hívásfogadás a jóváhagyott greeting.txt-vel (a fő fából fut):
+sudo cp scripts/callbot/citoviso-callbot.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now citoviso-callbot
+journalctl -u citoviso-callbot -f
 ```
+
+⚠️ A `greeting.txt` a tulaj által jóváhagyott szöveg; csak az ő jóváhagyásával változhat.
+A szolgáltatás a fő fából fut (`/home/citoviso/citoviso`), tehát egy landolt változás az
+újraindítás után azonnal élesben hat.
 
 Hívásonként a `~/speech/calls/<időbélyeg>-<in|out>-<szám>/` mappa keletkezik:
 `greeting.wav` (amit mondtunk), `caller.wav` (a másik fél), `conversation.wav` (a kettő keverve),
@@ -35,7 +44,8 @@ Hívásonként a `~/speech/calls/<időbélyeg>-<in|out>-<szám>/` mappa keletkez
 - A bemondást a tulaj **jóváhagyta** (2026-11-06), a szövege a `MEMORY.md`-ben van. Más szöveg
   csak az ő jóváhagyásával mehet élesbe.
 - Hívás utáni SMS-visszaigazolás **nem kell** (tulaj, 2026-11-06).
-- Még nincs kész: folyamatos figyelés (systemd), a lead hozzárendelése és a Válaszok panel,
+- Folyamatos figyelés: `citoviso-callbot` systemd-szolgáltatás (2026-11-06 óta fut).
+- Még nincs kész: a lead hozzárendelése és a Válaszok panel,
   valamint az SMS és az MMS átköltöztetése az S10-re.
 
 ## Ismert apróságok

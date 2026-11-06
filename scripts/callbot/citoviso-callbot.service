@@ -1,0 +1,17 @@
+# Answers every incoming call on the S10 (modem SIM) with the owner-approved greeting,
+# records the caller and transcribes locally. Install: see scripts/callbot/README.md
+[Unit]
+Description=Citoviso call bot (S10 + Bluetooth hands-free)
+After=bluealsa.service network-online.target
+Wants=bluealsa.service
+
+[Service]
+User=citoviso
+SupplementaryGroups=audio plugdev
+WorkingDirectory=/home/citoviso
+ExecStart=/usr/bin/python3 -u /home/citoviso/citoviso/scripts/callbot/callbot.py listen
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
