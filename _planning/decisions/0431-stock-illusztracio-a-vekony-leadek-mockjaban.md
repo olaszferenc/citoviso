@@ -1,4 +1,4 @@
-## ADR-XXXX — Stock-illusztráció a vékony leadek mockjában (csak galéria + szobakártya, soha élesre)
+## ADR-0431 — Stock-illusztráció a vékony leadek mockjában (csak galéria + szobakártya, soha élesre)
 
 **Dátum:** 2026-11-07 · **Döntött:** tulaj („ha már hero kép van, stock fotókkal töltsük fel a hiányzókat”; kiegészítés: erős, beégetett vízjel, soha élesre, nulla képnél betűs hero; a tervre „Mehet”) · **Terv (kontraktus):** `assets/design-refs/tenant-site/stock-fill/README.md` · **Kapcsolódik:** ADR-0419 (Vera képátnézése), §A (fotó-jogállás), §B.17 (tényhűség)
 

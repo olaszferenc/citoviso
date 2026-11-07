@@ -1,6 +1,6 @@
 # 2026-11-07 — Stock-illusztráció a vékony leadek mockjában
 
-SUB-session (koordinátor brief). Döntés: ADR-XXXX. Terv: `assets/design-refs/tenant-site/stock-fill/` (tulaj: „Mehet”).
+SUB-session (koordinátor brief). Döntés: ADR-0431. Terv: `assets/design-refs/tenant-site/stock-fill/` (tulaj: „Mehet”).
 
 ## Elvégzett munka
 - Könyvtár: `public/assets/stock/` — 79 Pexels-kép, 11 kategória (háló rusztikus/modern, fürdő, konyha, nappali, terasz, reggeli, 4 táj), 1600×1067, ~200 KB, vízjel a pixelekben; `manifest.json` (szerző, forrás, licenc, md5, dHash). Generálás: `scripts/stock-build.mts`.

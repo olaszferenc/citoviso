@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-stock-illusztracio-vekony-leadek-mockjaban.md) — Stock-illusztráció a vékony leadek mockjában (csak galéria + szobakártya, soha élesre)
+- [ADR-0431](decisions/0431-stock-illusztracio-a-vekony-leadek-mockjaban.md) — Stock-illusztráció a vékony leadek mockjában (csak galéria + szobakártya, soha élesre)
 - [ADR-0430](decisions/0430-messenger-elso-megkereses-viber-whatsapp-mms-az.md) — Messenger-első megkeresés: Viber → WhatsApp → MMS, az S10-ről, olvasás-méréssel
 - [ADR-0429](decisions/0429-modulonkenti-statusz-es-elso-belepeses-beallito.md) — Modulonkénti státusz és első belépéses beállító varázsló, egy nyilvántartásból, land-kapuval
 - [ADR-0428](decisions/0428-uj-lanc-egy-ai-lepes-leadenkent-tulaj-jovahagyo.md) — Új lánc: egy AI-lépés leadenként + tulaj-jóváhagyó lap a kiküldés előtt
