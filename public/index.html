@@ -3,465 +3,236 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Citoviso – modern weboldal a vállalkozásodnak, ami vevőket hoz és megtalálható a Google-keresésben. Kérj egy ingyenes, személyre szabott mintát." />
-  <title>Citoviso – Weboldal, ami vevőket hoz</title>
+  <meta name="description" content="Citoviso – modern honlap szálláshelyeknek. Előbb elkészítjük és megmutatjuk a szállásod honlapját, utána 14 napig ingyen kipróbálod, bankkártya nélkül." />
+  <title>Citoviso – Honlap szálláshelyeknek: előbb megmutatjuk, aztán döntesz</title>
 
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Citoviso – Weboldal, ami vevőket hoz" />
-  <meta property="og:description" content="Modern, mobilbarát weboldal, ami megtalálható a Google-keresésben. Kérj egy ingyenes, személyre szabott mintát." />
+  <meta property="og:title" content="Citoviso – Előbb megmutatjuk. Aztán döntesz." />
+  <meta property="og:description" content="Modern, mobilra kész honlap a szállásodnak a nyilvános adataiból. 14 nap ingyen, bankkártya nélkül." />
   <meta property="og:locale" content="hu_HU" />
 
   <link rel="icon" href="/favicon.ico" type="image/svg+xml" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="/assets/ui/citui.css">
   <link rel="stylesheet" href="/assets/home/home.css">
 
-  <!-- No-FOUC: enable the reveal hidden-state before first paint (see citui.css §5). -->
-  <script>document.documentElement.classList.add("citui-js");</script>
+  <!-- Motion is opt-in: without JS (or with reduced motion) the page is a plain static
+       layout. The class is set before first paint so there is no flash. -->
+  <script>
+    document.documentElement.classList.add("js");
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("anim");
+  </script>
 </head>
 <body>
 
-  <header class="site-header" data-citui-header>
-    <div class="citui-container citui-nav">
-      <!--CIT_BRAND--><a class="citui-brand" href="#top">Citoviso</a><!--/CIT_BRAND-->
-
-      <nav class="citui-nav-links" data-citui-nav aria-label="Fő navigáció">
-        <a href="#pelda">Így nézne ki</a>
-        <a href="#elonyok">Mit kapsz</a>
-        <a href="#ar">Ár</a>
-        <a href="#gyik">GYIK</a>
-        <a href="/login">Bejelentkezés</a>
+  <header class="nav" id="nav">
+    <div class="nav-in">
+      <span class="brand-slot" id="brand-slot" data-citui-theme="dark"><!--CIT_BRAND--><a class="citui-brand" href="#top">Citoviso</a><!--/CIT_BRAND--></span>
+      <nav class="links" aria-label="Fő navigáció">
+        <a href="#pelda">Példa</a><a href="#hogyan">Hogyan működik</a><a href="#jutalek">Jutalék</a><a href="#arak">Árak</a><a href="#gyik">GYIK</a><a href="/login">Belépés</a>
       </nav>
-
-      <div class="citui-nav-actions">
-        <a class="citui-nav-cta" href="#minta">Ingyenes minta</a>
-        <button class="citui-menu-toggle" data-citui-menu-toggle aria-label="Menü megnyitása" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <path d="M4 7h16M4 12h16M4 17h16"/>
-          </svg>
-        </button>
+      <a class="btn" href="#minta">Kérem a mintát</a>
+      <button class="burger" id="burger" type="button" aria-label="Menü" aria-expanded="false" aria-controls="menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="menu" id="menu">
+        <a href="#pelda">Példa</a><a href="#hogyan">Hogyan működik</a><a href="#jutalek">Jutalék</a><a href="#arak">Árak</a><a href="#gyik">GYIK</a><a href="#minta">Kérem a mintát</a><a href="/login">Belépés</a>
       </div>
     </div>
   </header>
 
-  <main id="top">
-    <!-- HERO — outcome + free-mock hook -->
-    <section class="hero">
-      <div class="citui-container hero-inner">
-        <div class="hero-copy citui-reveal">
-          <span class="citui-eyebrow">Weboldal, ami dolgozik érted</span>
-          <h1>Több vendég. <span>Kevesebb macera.</span></h1>
-          <p class="hero-lead">
-            Modern, mobilbarát weboldal a vállalkozásodnak, amit megtalálnak a Google-keresésben —
-            és amiről a vendég egyből foglal vagy megkeres. Mutatunk egy ingyenes mintát, hogy lásd, hogyan nézne ki.
-          </p>
+  <!-- INTRO: the hero, then the C opens into an eye, winks, and its iris swells into the
+       next section. The pin holds the stage still while the scroll drives the timeline. -->
+  <div class="intro" id="intro">
+    <div class="pin" id="pin">
+      <canvas class="sky" id="sky" aria-hidden="true"></canvas>
+      <div class="glow" aria-hidden="true"></div>
+      <div class="iris" id="iris" aria-hidden="true"></div>
 
-          <div class="hero-actions">
-            <a class="citui-btn citui-btn--primary" href="#minta">
-              Kérem az ingyenes mintát
-              <svg class="citui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </a>
-            <a class="citui-btn citui-btn--secondary" href="#pelda">Így nézne ki</a>
+      <div class="hero" id="top">
+        <div class="hero-copy" id="hero-copy">
+          <span class="eyebrow">Honlap szálláshelyeknek</span>
+          <h1>Előbb megmutatjuk.<br><em>Aztán döntesz.</em></h1>
+          <p class="lede">Elkészítjük a szállásod modern, mobilra kész honlapját a nyilvános adataiból — mielőtt egy forintot fizetnél. Utána 14 napig élesben, ingyen kipróbálod, bankkártya nélkül.</p>
+          <div class="ctas">
+            <a class="btn" href="#minta">Kérem a mintát <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="btn ghost" href="#arak">Árak</a>
           </div>
-
-          <div class="hero-note">
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Ingyenes minta</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Csak akkor fizetsz, ha tetszik</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Nem kell hozzá értened a technikához</span>
-          </div>
-        </div>
-
-        <div class="hero-visual citui-reveal">
-          <div class="orbital"></div>
-          <div class="visual-core" aria-hidden="true">
-            <!--CIT_HERO_MARK--><!--/CIT_HERO_MARK-->
-          </div>
-
-          <article class="float-card float-one">
-            <div class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></div>
-            <strong>Mobilon is tökéletes</strong>
-            <span>A vendégek többsége telefonról nézi.</span>
-          </article>
-          <article class="float-card float-two">
-            <div class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
-            <strong>Megtalálnak a Google-ön</strong>
-            <span>Kereshető oldal, saját néven.</span>
-          </article>
-          <article class="float-card float-three">
-            <div class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 8 9 5 9-5"/></svg></div>
-            <strong>Közvetlen foglalás</strong>
-            <span>Egyből téged keresnek meg, jutalék nélkül.</span>
-          </article>
-          <article class="float-card float-four">
-            <div class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
-            <strong>Te szerkeszted</strong>
-            <span>Kép, szöveg, ár — bármikor, egyszerűen.</span>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- HOOK — show the personalized preview -->
-    <section class="citui-section" id="pelda">
-      <div class="citui-container">
-        <div class="citui-section-heading citui-reveal">
-          <span class="citui-eyebrow">Nem ígéret — megmutatjuk</span>
-          <h2>Így nézne ki a te oldalad.</h2>
-          <p>Nem egy üres sablont mutatunk. A vállalkozásod nevéből és nyilvános adataiból elkészítünk egy konkrét, személyre szabott előnézetet — díjmentesen. Ránézel, és eldöntöd, tetszik-e.</p>
-        </div>
-
-        <div class="showcase-shell citui-reveal">
-          <div class="showcase-toolbar">
-            <div class="browser-dots"><span></span><span></span><span></span></div>
-            <div class="browser-url">a-te-vallalkozasod.citoviso.com</div>
-          </div>
-
-          <div class="showcase-grid">
-            <aside class="showcase-sidebar">
-              <div class="sidebar-brand"><span></span><span>A te oldalad</span></div>
-              <div class="sidebar-line"></div>
-              <div class="sidebar-line short"></div>
-              <div class="sidebar-line"></div>
-              <div class="sidebar-line short"></div>
-              <div class="sidebar-action">Foglalás</div>
-            </aside>
-
-            <div class="showcase-preview">
-              <div class="preview-nav">
-                <span>A vállalkozásod</span>
-                <div class="preview-nav-links"><span>Rólunk</span><span>Galéria</span><span>Árak</span><span>Kapcsolat</span></div>
-              </div>
-              <div class="preview-content">
-                <small>Személyre szabott előnézet</small>
-                <h3>Egy oldal, amit szívesen mutatsz meg.</h3>
-                <p>Profi megjelenés, valódi fotók, világos foglalási vagy ajánlatkérési út — pontosan a te vállalkozásodra szabva.</p>
-                <a class="citui-btn citui-btn--dark" href="#minta">Kérem a sajátomat</a>
-              </div>
-              <div class="preview-badge">
-                <strong>A te adataidból</strong>
-                <span>A tartalom és a stílus a vállalkozásod ismert adataiból épül fel.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- BENEFITS — what YOU get -->
-    <section class="citui-section citui-section--alt" id="elonyok">
-      <div class="citui-container">
-        <div class="citui-section-heading citui-reveal">
-          <span class="citui-eyebrow">Mit kapsz</span>
-          <h2>Egy weboldal, ami tényleg hoz valamit a konyhára.</h2>
-          <p>Nem csak „legyen honlapod". Olyan oldal, ami vendéget hoz, megtalálható, és nem igényel tőled technikai tudást.</p>
-        </div>
-
-        <div class="benefit-grid">
-          <article class="process-card benefit-card citui-reveal">
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
-            <h3>Profi megjelenés</h3>
-            <p>Bizalmat kelt az első pillanattól — a vendég szívesebben foglal ott, ami rendezettnek látszik.</p>
-          </article>
-          <article class="process-card benefit-card citui-reveal">
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></div>
-            <h3>Mobilon is tökéletes</h3>
-            <p>A látogatók többsége telefonról néz — nálad minden gyorsan és jól működik kicsiben is.</p>
-          </article>
-          <article class="process-card benefit-card citui-reveal">
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
-            <h3>Megtalálnak a neten</h3>
-            <p>Ott vagy a Google-keresésben, amikor a vendég épp keres.</p>
-          </article>
-          <article class="process-card benefit-card citui-reveal">
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 8 9 5 9-5"/></svg></div>
-            <h3>Közvetlen foglalás</h3>
-            <p>A vendég egyből téged keres meg — a foglalási jutalék a te zsebedben marad.</p>
-          </article>
-          <article class="process-card benefit-card citui-reveal">
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
-            <h3>Te szerkeszted</h3>
-            <p>Képet, szöveget, árat bármikor módosíthatsz — egyszerűen, fejlesztő nélkül.</p>
-          </article>
-          <article class="process-card benefit-card citui-reveal">
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
-            <h3>Gyors indulás</h3>
-            <p>Nincs hetekig tartó projekt. Megnézed a mintát, és ha tetszik, hamar élesbe megy.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- FOR WHOM — reassurance (customer, not architecture) -->
-    <section class="citui-section">
-      <div class="citui-container industry-layout">
-        <div class="industry-copy citui-reveal">
-          <span class="citui-eyebrow">Kinek készül</span>
-          <h2>Neked is — bármilyen helyi vállalkozásod van.</h2>
-          <p>Ha van vendéged, vevőd vagy ügyfeled, akit online is elérhetnél, a Citoviso neked szól. A szálláshelyekkel és vendéglátással kezdünk, de a rendszer bármilyen helyi vállalkozásra hangolható.</p>
-          <div class="industry-pills">
-            <span class="citui-chip">Szálláshelyek</span>
-            <span class="citui-chip">Éttermek, kávézók</span>
-            <span class="citui-chip">Szolgáltatók</span>
-            <span class="citui-chip">Kézművesek, boltok</span>
-            <span class="citui-chip">Wellness, szépség</span>
-            <span class="citui-chip">Helyi vállalkozások</span>
-          </div>
-        </div>
-
-        <div class="industry-visual citui-reveal" aria-label="Példák">
-          <article class="industry-card">
-            <span class="tag">Szállás</span>
-            <h4>Több közvetlen foglalás</h4>
-            <p>Szobák, árak, elérhetőség — egyetlen világos oldalon.</p>
-          </article>
-          <article class="industry-card">
-            <span class="tag">Étterem</span>
-            <h4>Étlap és asztalfoglalás</h4>
-            <p>Kínálat, nyitvatartás és egyből elérhető kapcsolat.</p>
-          </article>
-          <article class="industry-card">
-            <span class="tag">Szolgáltató</span>
-            <h4>Több ajánlatkérés</h4>
-            <p>Referenciák és egyszerű megkeresés a látogatóknak.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- HOW (from the customer's side) -->
-    <section class="citui-section citui-section--alt">
-      <div class="citui-container">
-        <div class="citui-section-heading citui-reveal" style="margin-inline:auto;text-align:center;">
-          <span class="citui-eyebrow">Egyszerű, mint 1-2-3</span>
-          <h2>Három lépés, és kész.</h2>
-        </div>
-        <div class="steps-grid">
-          <article class="process-card citui-reveal">
-            <span class="step-number">01</span>
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5l-1 4z"/><path d="M8 9h8M8 12h5"/></svg></div>
-            <h3>Kérsz egy ingyenes mintát</h3>
-            <p>Megadod a vállalkozásod nevét és pár adatot. Percek műve.</p>
-          </article>
-          <article class="process-card citui-reveal">
-            <span class="step-number">02</span>
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></div>
-            <h3>Megnézed, és finomítjuk</h3>
-            <p>Elkészítjük az előnézetet. Ha tetszik, közösen véglegesítjük.</p>
-          </article>
-          <article class="process-card citui-reveal">
-            <span class="step-number">03</span>
-            <div class="process-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
-            <h3>Élesítjük — és jönnek a vendégek</h3>
-            <p>Élesbe megy az oldal, megtalálható lesz, és bővíthető, ahogy nő az igényed.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- TRUST (customer language) -->
-    <section class="citui-section">
-      <div class="citui-container">
-        <div class="citui-section-heading citui-reveal">
-          <span class="citui-eyebrow">Nyugodt lehetsz</span>
-          <h2>A te vállalkozásod, a te jóváhagyásoddal.</h2>
-          <p>Semmi sem megy ki a fejed fölött. Amit látsz a mintán, azt kapod — a saját adataidból, a te döntésed szerint.</p>
-        </div>
-
-        <div class="trust-grid">
-          <article class="trust-card citui-reveal">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 7v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V7z"/><path d="m9 12 2 2 4-4"/></svg></div>
-            <h3>Te hagyod jóvá</h3>
-            <p>Semmi nem kerül nyilvánosságra, amíg rá nem bólintasz.</p>
-          </article>
-          <article class="trust-card citui-reveal">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="m8 12 3 3 5-6"/></svg></div>
-            <h3>Amit látsz, azt kapod</h3>
-            <p>A minta és az éles oldal ugyanaz — nincs meglepetés, nincs átverés.</p>
-          </article>
-          <article class="trust-card citui-reveal">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
-            <h3>Nyilvános adatokból</h3>
-            <p>Az oldal a vállalkozásod nyilvános adataiból készül. Ha szeretnéd, saját képeket is feltölthetsz.</p>
-          </article>
-          <article class="trust-card citui-reveal">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
-            <h3>Bármikor módosíthatod</h3>
-            <p>Nem vagy fejlesztőhöz kötve — te tartod kézben az oldalad.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- PRICE (value framing) -->
-    <section class="citui-section citui-section--alt" id="ar">
-      <div class="citui-container pricing-wrap">
-        <div class="pricing-copy citui-reveal">
-          <span class="citui-eyebrow">Árazás</span>
-          <h2>Előbb a minta. Csak akkor fizetsz, ha tetszik.</h2>
-          <p>Nincs drága ügynökségi projekt és rejtett költség. Az ingyenes minta után te döntöd el, élesítjük-e — a végső ár a csomagtól és a választott extráktól függ.</p>
-        </div>
-
-        <div class="pricing-card citui-reveal">
-          <span class="price-label">Induló csomag</span>
-          <!-- Price bound server-side to the live pricing (region-aware, §C-gated);
-               see serveHomepage() in src/server/public.ts, which replaces everything
-               between the CIT_PRICE_BLOCK markers. The static block below is only the
-               no-render fallback (what a raw file-serve would show). -->
-          <!--CIT_PRICE_BLOCK--><div class="price">100 €<span style="font-size:1.1rem;font-weight:600;color:var(--citui-muted);letter-spacing:0;"> / évtől</span></div>
-          <div class="price-note">vagy kényelmes havi konstrukcióban</div><!--/CIT_PRICE_BLOCK-->
-
-          <ul class="price-list">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Kész, személyre szabott weboldal</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Mobilbarát megjelenés, saját domain</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Megtalálhatóság a Google-keresésben</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Bővíthető foglalással, ajánlatkéréssel</li>
+          <ul class="ticks">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>14 nap ingyen</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>Bankkártya nélkül</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>Saját .hu domain a csomagban</li>
           </ul>
+        </div>
+        <div class="mark-slot" id="mark-slot" aria-hidden="true"></div>
+      </div>
 
-          <a class="citui-btn citui-btn--dark" href="#minta">Kérem az ingyenes mintát</a>
+      <!-- The E4 mark, drawn as two curves so it can open into an eye (home.js). The
+           static paths are the plain C, for the no-JS / reduced-motion layout. -->
+      <div class="mark" id="mark" aria-hidden="true">
+        <svg viewBox="0 0 120 120">
+          <defs><radialGradient id="eyeg" cx="38%" cy="34%" r="78%"><stop offset="0" style="stop-color:var(--citui-cyan-300)"/><stop offset="1" style="stop-color:var(--citui-cyan-500)"/></radialGradient></defs>
+          <g id="mark-tilt">
+            <clipPath id="eyeclip"><path id="eye-clip" d="M84.6 29.3 A42 42 0 1 0 84.6 90.7 Z"/></clipPath>
+            <g clip-path="url(#eyeclip)"><circle id="eye-iris" cx="48" cy="60" r="12.5" fill="url(#eyeg)"/><circle id="eye-hl" cx="42.5" cy="54" r="3.5" fill="var(--citui-white)"/></g>
+            <path id="lid-up" d="M84.6 29.3 A42 42 0 0 0 18 60" fill="none" stroke="var(--citui-cyan-500)" stroke-width="12" stroke-linecap="round"/>
+            <path id="lid-lo" d="M18 60 A42 42 0 0 0 84.6 90.7" fill="none" stroke="var(--citui-cyan-500)" stroke-width="12" stroke-linecap="round"/>
+            <g id="lashes" opacity="0" stroke="var(--citui-cyan-500)" stroke-width="6" stroke-linecap="round"><path d="M38 84 L32 96"/><path d="M60 87 L60 100"/><path d="M82 84 L88 96"/></g>
+            <path id="mark-tri" d="M82 49 L82 71 L102 60 Z" fill="var(--citui-white)"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="cue" id="scroll-cue" aria-hidden="true">GÖRGESS<i></i></div>
+
+      <!-- the first frame of the next section: the iris pales into it -->
+      <div class="reveal" id="reveal">
+        <div class="sec-head wrap">
+          <span class="eyebrow">Nem ígéret — kész oldal</span>
+          <h2 id="pelda">Így néz ki egy szállás, amit mi építettünk.</h2>
+          <p class="sub">A dömsödi Duna Vibe House ezen az oldalon fogad vendéget: <b>dunavibehouse.hu</b>. A te mintád ugyanígy a saját szállásod adataiból készül.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="light">
+    <section class="s s-show">
+      <div class="wrap show">
+        <div class="devices rv">
+          <div class="browser"><div class="bar"><i></i><i></i><i></i><span>dunavibehouse.hu</span></div><img src="/assets/home/dvh-asztali.jpg" alt="A Duna Vibe House honlapja asztali gépen" width="1280" height="800" loading="lazy"></div>
+          <div class="phone"><img src="/assets/home/dvh-mobil.jpg" alt="Ugyanaz az oldal telefonon" width="780" height="1560" loading="lazy"></div>
+        </div>
+        <div class="rv">
+          <ul class="list">
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></span><div><b>Telefonon is első osztályú</b><span>A vendég telefonról is végignézi a szobákat, és egy gombbal megkeres.</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><div><b>Saját .hu domain</b><span>A csomag része. A rendelés után magától a tiéd lesz, nem kell vele foglalkoznod.</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><div><b>Bent van a Google-nél</b><span>Az oldalt beküldjük a Google-nek, a szerkezete keresőbarát. Helyezést senki nem ígérhet — mi sem.</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><div><b>Foglalási naptár, dupla foglalás nélkül</b><span>Kétirányú szinkron a Booking.com, a Szállás.hu és az Airbnb naptárával (Teljes csomag).</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><div><b>Te szerkeszted</b><span>Képek, szövegek, szobák, árak, szezonok, zárt napok — egy egyszerű felületen, amikor akarod.</span></div></li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <!-- FAQ (customer questions) -->
-    <section class="citui-section" id="gyik">
-      <div class="citui-container">
-        <div class="citui-section-heading citui-reveal" style="margin-inline:auto;text-align:center;">
-          <span class="citui-eyebrow">Gyakori kérdések</span>
-          <h2>Amit kérdezni szoktak.</h2>
+    <section class="s s-white" id="hogyan">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <span class="eyebrow">Hogyan működik</span>
+          <h2>Nincs projekt. Nincs megbeszélés.</h2>
+          <p class="sub">Nem kell briefet írnod, képeket gyűjtened vagy egyeztetned. Megnézed a kész oldalt, és eldöntöd.</p>
         </div>
-
-        <div class="faq-list">
-          <article class="faq-item citui-reveal">
-            <button class="faq-question">Tényleg ingyenes a minta?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
-            <div class="faq-answer"><div><p>Igen. Elkészítjük az előnézetet a vállalkozásodhoz, kötelezettség nélkül megnézed, és csak akkor fizetsz bármit, ha úgy döntesz, hogy éles oldalt szeretnél belőle.</p></div></div>
-          </article>
-          <article class="faq-item citui-reveal">
-            <button class="faq-question">Mi kell tőlem hozzá?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
-            <div class="faq-answer"><div><p>A mintához elég a vállalkozásod neve és a helye. Ha szeretnéd, később saját fotókat és pár mondatot is feltölthetsz — ebben is segítünk.</p></div></div>
-          </article>
-          <article class="faq-item citui-reveal">
-            <button class="faq-question">Kell hozzá technikai tudás?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
-            <div class="faq-answer"><div><p>Nem. Mi elkészítjük és beállítjuk, te pedig egy egyszerű felületen módosíthatod a képeket, szövegeket és árakat, amikor csak szeretnéd.</p></div></div>
-          </article>
-          <article class="faq-item citui-reveal">
-            <button class="faq-question">Meddig tart, mire kész?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
-            <div class="faq-answer"><div><p>Az előnézetet gyorsan megmutatjuk. Ha tetszik, az éles oldal a saját anyagaid megérkezése után hamar elkészül — nincs hetekig húzódó projekt.</p></div></div>
-          </article>
-          <article class="faq-item citui-reveal">
-            <button class="faq-question">Mi van, ha nem tetszik?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
-            <div class="faq-answer"><div><p>Akkor semmi teendőd — a minta ingyenes volt, és nem kötelez semmire. Ha viszont csak finomítani szeretnél rajta, azt is szívesen megtesszük.</p></div></div>
-          </article>
+        <div class="steps">
+          <div class="step rv"><h3>Megkapod a mintát</h3><p>A szállásod nyilvános adataiból és képeiből elkészítjük a személyre szabott honlapot. Ha még nem kaptál tőlünk, kérd lent.</p></div>
+          <div class="step rv"><h3>14 napig élesben próbálod</h3><p>Egy kattintás, és az oldal élőben fut. Bankkártya nem kell, semmire nem kötelez.</p></div>
+          <div class="step rv"><h3>Maradsz, ha megéri</h3><p>Választasz csomagot, és az oldal a saját .hu domainedre költözik. Havonta vagy évente fizetsz.</p></div>
         </div>
       </div>
     </section>
 
-    <!-- REQUEST A MOCK — the spine -->
-    <section class="citui-section" id="minta">
-      <div class="citui-container pricing-wrap">
-        <div class="pricing-copy citui-reveal">
-          <span class="citui-eyebrow">Ingyenes minta</span>
-          <h2>Nézzük meg, hogyan nézne ki a te oldalad.</h2>
-          <p>Add meg pár adatod, és elkészítjük a személyre szabott előnézetet — díjmentesen, kötelezettség nélkül. Ha tetszik, onnan lépünk tovább.</p>
+    <section class="s band" id="jutalek">
+      <div class="wrap calc">
+        <div class="rv">
+          <span class="eyebrow">Jutalék</span>
+          <h2>Minden közvetlen foglalás a tiéd marad.</h2>
+          <p class="sub">A szállásportálok a szobaár 10–30%-át viszik el jutalékként<sup>1</sup>. Ami a saját oldaladon érkezik, azért nem fizetsz senkinek.</p>
         </div>
-
-        <div class="pricing-card citui-reveal">
-          <form id="mock-form" novalidate>
-            <div class="citui-field">
-              <label class="citui-label" for="f-business">Vállalkozás neve *</label>
-              <input class="citui-input" id="f-business" name="business" required placeholder="pl. Napfény Panzió">
-            </div>
-
-            <div class="citui-field">
-              <label class="citui-label" for="f-search">Hol található? Keresd meg, majd tedd le a tűt a pontos helyre *</label>
-              <input class="citui-input" id="f-search" placeholder="Írd be a címet vagy a település nevét, majd Enter">
-              <div id="mock-map" class="mock-map" aria-label="Térkép a helyszín kiválasztásához"></div>
-              <p class="citui-hint" id="map-readout">Kattints a térképre a pontos helyszínhez — így biztosan a te vállalkozásodról készül a minta.</p>
-              <input type="hidden" id="f-lat" name="lat">
-              <input type="hidden" id="f-lon" name="lon">
-              <input type="hidden" id="f-town" name="town">
-            </div>
-
-            <div class="citui-field">
-              <label class="citui-label" for="f-type">Vállalkozás típusa</label>
-              <select class="citui-select" id="f-type" name="type">
-                <option>Szálláshely</option>
-                <option>Étterem / kávézó</option>
-                <option>Szolgáltató</option>
-                <option>Bolt / kézműves</option>
-                <option>Wellness / szépség</option>
-                <option>Egyéb</option>
-              </select>
-            </div>
-            <div class="citui-field">
-              <label class="citui-label" for="f-contact">E-mail vagy telefon *</label>
-              <input class="citui-input" id="f-contact" name="contact" required placeholder="ide küldjük a mintát">
-            </div>
-            <button class="citui-btn citui-btn--primary" type="submit" style="width:100%;">
-              Kérem az ingyenes mintát
-              <svg class="citui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </button>
-            <p class="citui-hint" id="mock-form-note" style="text-align:center;">Nem kötelez semmire. Az adataidat kizárólag a minta elkészítéséhez használjuk. <a href="/privacy">Adatkezelési tájékoztató</a></p>
-          </form>
+        <div class="calc-card rv">
+          <label for="rev">Éves szállásbevételed a portálokon</label>
+          <input id="rev" type="range" min="1000000" max="30000000" step="500000" value="6000000">
+          <div class="calc-row"><span id="rev-out">6 000 000 Ft</span></div>
+          <label for="pct">A portál jutaléka</label>
+          <input id="pct" type="range" min="10" max="30" step="1" value="15">
+          <div class="calc-row"><span id="pct-out">15%</span></div>
+          <div class="calc-out">
+            <small>Ennyit fizetsz most évente jutalékban:</small>
+            <strong id="fee-out">900 000 Ft</strong>
+            <small id="quarter-out">Ha minden negyedik foglalás közvetlenül jönne, évente 225 000 Ft maradna nálad.</small>
+          </div>
         </div>
+      </div>
+      <div class="wrap"><p class="fine fine-dark"><sup>1</sup> Országgyűlés Hivatala, Infojegyzet 2024/1. A számoló példa, nem ígéret: hogy hány vendég foglal közvetlenül, az nem rajtunk múlik.</p></div>
+    </section>
+
+    <section class="s" id="arak">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <span class="eyebrow">Árak</span>
+          <h2>Havonta kevesebb, mint egy vendégéjszaka.</h2>
+          <p class="sub">Minden csomaghoz jár a saját .hu domain és a 14 napos ingyenes próba.</p>
+          <div class="toggle" role="group" aria-label="Fizetés gyakorisága"><button type="button" data-bill="m" aria-pressed="true">Havonta</button><button type="button" data-bill="y" aria-pressed="false">Évente — 2 hónap ingyen</button></div>
+        </div>
+        <!-- The packages and their prices are filled server-side from the live pricing
+             (serveHomepage); this static block is only the raw-file fallback. -->
+        <!--CIT_PRICE_BLOCK--><div class="plans plans-none rv"><div class="plan"><h3>Egyedi ajánlat</h3><p class="fine">Kérd az ingyenes mintát — a pontos árat vele együtt mutatjuk meg.</p></div></div><!--/CIT_PRICE_BLOCK-->
+        <p class="fine rv">Több nyelv egyszeri díjjal kérhető<!--CIT_ML_PRICE--><!--/CIT_ML_PRICE-->. A domain a rendelés után kerül a nevedre, a próba alatt az oldal a citoviso.com alatt fut.</p>
+      </div>
+    </section>
+
+    <section class="s s-white" id="gyik">
+      <div class="wrap">
+        <div class="sec-head rv"><span class="eyebrow">GYIK</span><h2>Amit kérdezni szoktak.</h2></div>
+        <div class="faq rv">
+          <details><summary>Mibe kerül a minta?</summary><p>Semmibe. A minta és a 14 napos próba is ingyenes, bankkártyát nem kérünk.</p></details>
+          <details><summary>Honnan vannak a képek és a szövegek?</summary><p>A szállásod nyilvános adataiból: a Google-ön és a szállásportálokon közzétett leírásból és fotókból. Bármikor lecserélheted őket a sajátjaidra.</p></details>
+          <details><summary>Kell hozzá technikai tudás?</summary><p>Nem. A képeket, szövegeket, szobákat, árakat és a naptárat egy egyszerű felületen állítod be.</p></details>
+          <details><summary>Fent vagyok a Bookingon és a Szállás.hu-n. Maradhatok?</summary><p>Igen. A Teljes csomag foglalási naptára szinkronban van a portálok naptárával, így nem lesz dupla foglalás.</p></details>
+          <details><summary>Mi történik a próba végén?</summary><p>Ha nem rendelsz, nem fizetsz semmit — kártyát sem adtál meg, nincs mit terhelni. Ha rendelsz, a választott csomag díját fizeted.</p></details>
+          <details><summary>Csak szálláshelyeknek szól?</summary><p>Ma igen. A rendszer a szálláshelyek igényeire készült: szobák, szezonális árak, foglalási naptár.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="s" id="minta">
+      <div class="wrap ask">
+        <div class="rv">
+          <span class="eyebrow">Ingyenes minta</span>
+          <h2>Nézd meg a saját szállásodat.</h2>
+          <p class="sub">Add meg a szállás nevét, tedd le a tűt a térképen, és e-mailben elküldjük a kész minta linkjét.</p>
+        </div>
+        <form class="formcard rv" id="mock-form" novalidate>
+          <div class="f field" id="f-name"><label for="name">Szálláshely neve *</label><input id="name" name="business" autocomplete="organization" placeholder="pl. Napsugár Vendégház"><div class="err">Írd be a szállás nevét.</div></div>
+          <div class="f field" id="f-pin">
+            <label for="f-search">Hol van? Keress rá, vagy kattints a pontos helyre *</label>
+            <input id="f-search" placeholder="Település vagy cím, majd Enter" autocomplete="off">
+            <div id="map" class="map" aria-label="Térkép a szállás helyének kiválasztásához"></div>
+            <div class="hint" id="pin-out">Még nincs kiválasztva hely.</div>
+            <div class="err">Tedd le a tűt a szállásodra.</div>
+          </div>
+          <div class="f field" id="f-contact"><label for="contact">E-mail-cím *</label><input id="contact" name="contact" type="email" inputmode="email" autocomplete="email" placeholder="nev@pelda.hu"><div class="err">Ez nem tűnik e-mail-címnek.</div></div>
+          <button class="f btn" type="submit">Kérem a mintát</button>
+          <p class="f fine fine-tight" id="form-note">Az adataidat csak a minta elkészítéséhez és elküldéséhez használjuk. <a href="/adatvedelem">Adatkezelési tájékoztató</a></p>
+          <div class="sent" id="sent" role="status"></div>
+        </form>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="citui-container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <!--CIT_BRAND--><a class="citui-brand" href="#top">Citoviso</a><!--/CIT_BRAND-->
-          <p>Modern weboldal helyi vállalkozásoknak, ami vevőket hoz és megtalálható a Google-keresésben.</p>
-          <!-- Barion Smart Payment Banner. A FŐOLDALON való megjelenítés a Barion
-               elfogadóhely-jóváhagyás előfeltétele. SÖTÉT változat, mert a lábléc
-               sötét hátterű (a hivatalos útmutató: sötét sáv sötét háttérre). A kép
-               nem nyújtható és nem vágható — ezért csak a szélesség korlátozott. -->
-          <img class="footer-paylogos"
-               src="/assets/vendor/barion/barion-smart-banner-dark.svg"
-               alt="Elfogadott fizetési módok: Barion, Mastercard, VISA, Apple Pay, Google Pay"
-               loading="lazy" width="880" height="120">
-        </div>
-
-        <div class="footer-col">
-          <h4>Oldal</h4>
-          <a href="#pelda">Így nézne ki</a>
-          <a href="#elonyok">Mit kapsz</a>
-          <a href="#ar">Ár</a>
-        </div>
-
-        <div class="footer-col">
-          <h4>Kapcsolat</h4>
-          <a href="#minta">Ingyenes minta</a>
-          <a href="mailto:hello@citoviso.com">hello@citoviso.com</a>
-          <a href="/login">Bejelentkezés</a>
-        </div>
-
-        <div class="footer-col">
-          <h4>Jogi</h4>
-          <a href="/impresszum">Impresszum</a>
-          <a href="/aszf">ÁSZF</a>
-          <a href="/adatvedelem">Adatkezelési tájékoztató</a>
-          <a href="/elallas">Elállási tájékoztató</a>
-        </div>
+  <footer class="foot">
+    <div class="wrap">
+      <div>
+        <!--CIT_BRAND--><a class="citui-brand" href="#top">Citoviso</a><!--/CIT_BRAND-->
+        <p class="foot-claim">Modern honlap szálláshelyeknek — előbb megmutatjuk, aztán döntesz.</p>
+        <!-- Barion Smart Payment Banner. Showing it on the homepage is a precondition of
+             the Barion merchant approval. The DARK variant on the dark footer; the image
+             must not be stretched or cropped, so only its width is capped. -->
+        <img class="foot-pay" src="/assets/vendor/barion/barion-smart-banner-dark.svg"
+             alt="Elfogadott fizetési módok: Barion, Mastercard, VISA, Apple Pay, Google Pay"
+             loading="lazy" width="880" height="120">
       </div>
-
-      <div class="footer-bottom">
-        <span>© <span id="year">2026</span> Citoviso. Minden jog fenntartva.</span>
-        <span>Kérj egy ingyenes mintát — meglátod, megéri.</span>
-      </div>
+      <div><h4>Oldal</h4><a href="#pelda">Példa</a><a href="#arak">Árak</a><a href="#gyik">GYIK</a><a href="#minta">Ingyenes minta</a></div>
+      <div><h4>Kapcsolat</h4><a href="mailto:hello@citoviso.com">hello@citoviso.com</a><a href="/login">Belépés</a></div>
+      <div><h4>Jogi</h4><a href="/impresszum">Impresszum</a><a href="/aszf">ÁSZF</a><a href="/adatvedelem">Adatkezelési tájékoztató</a><a href="/elallas">Elállási tájékoztató</a></div>
     </div>
+    <div class="wrap foot-bottom">© <span id="year">2026</span> Citoviso. Minden jog fenntartva.</div>
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="/assets/ui/citui.js" defer></script>
   <script src="/assets/home/home.js" defer></script>
 </body>
 </html>

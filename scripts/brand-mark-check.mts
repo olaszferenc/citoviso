@@ -38,7 +38,11 @@ const read = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 const C_ARC = /A\s*\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+0\s+1\s+0\s/;
 const RETIRED = /\b(?:mark-gradient|lockup-gradient|mark-mono|lockup-mono)\.svg\b/;
 /** Named exceptions — each with the reason it is not a logo instance. */
-const ARC_ALLOW: Record<string, string> = {};
+const ARC_ALLOW: Record<string, string> = {
+  "public/index.html":
+    "a főoldal ANIMÁLT hero-jele (jóváhagyva 2026-11-07, „C · Szem”): a C két íve szemhéjjá nyílik, ehhez " +
+    "a home.js görbéi kellenek, a statikus markup csak a JS nélküli kezdőállapot; az E4-geometriát a ④ őrzi",
+};
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(path.join(ROOT, dir))) {
     const rel = path.join(dir, e);
@@ -109,13 +113,19 @@ const WIRED: Array<[string, RegExp, string]> = [
   ["src/console/views.ts", /PAY_MARK_SRC = markDataUri\("dark"\)/, "/pay/* fejléc (sötét)"],
   ["src/server/adminViews.ts", /const LOGO = lockup\(/, "ügyfél-belépő lapok"],
   ["src/server/adminViews.ts", /const LOGO_MARK = markThemed\(/, "tulaj-admin keret (ikon)"],
-  ["src/server/public.ts", /lockup\(\{ on: "dark"/, "főoldal fejléc + lábléc (sötét)"],
-  ["src/server/public.ts", /CIT_HERO_MARK[\s\S]{0,80}heroMarkSvg\(\)/, "főoldal hero-illusztráció (a cián gömbön)"],
+  ["src/server/homepage.ts", /lockup\(\{ on: "dark"/, "főoldal lábléc (sötét)"],
+  ["src/server/homepage.ts", /lockup\(\{ on: "themed"/, "főoldal fejléc (a sötét bevezető fölött sötét, utána világos)"],
 ];
 for (const [f, re, what] of WIRED) if (!re.test(read(f))) fail(`④ ${f}: ${what} — nem a közös forrásból`);
 const home = read("public/index.html");
 if ((home.match(/<!--CIT_BRAND-->/g) ?? []).length !== 2) fail("④ public/index.html: a fejléc+lábléc CIT_BRAND jelölője nem 2 db");
-if ((home.match(/<!--CIT_HERO_MARK-->/g) ?? []).length !== 1) fail("④ public/index.html: a hero CIT_HERO_MARK jelölője nem 1 db");
+// The hero mark is the animated E4 (the C opens into an eye, approved 2026-11-07): its
+// static geometry must stay the E4's — the play triangle in the markup, and the arc's
+// open ends (84.6/29.3 – 84.6/90.7 on r 42 around 60/60) in the morph code.
+if (!home.includes('id="mark-tri" d="M82 49 L82 71 L102 60 Z"')) fail("④ public/index.html: a hero-jel háromszöge nem az E4-é");
+if (!home.includes('d="M84.6 29.3 A42 42 0 0 0 18 60"') || !home.includes('d="M18 60 A42 42 0 0 0 84.6 90.7"'))
+  fail("④ public/index.html: a hero-jel C-íve nem az E4-é");
+if (!read("public/assets/home/home.js").includes("Math.atan2(-30.7, 24.6)")) fail("④ home.js: a szem-morph C-íve nem az E4 nyitott végeiből indul");
 
 // ── ⑤ seen in a browser ─────────────────────────────────────────────────────
 const CSS = read("public/assets/ui/citui.css") + read("public/assets/ui/citui-console.css");

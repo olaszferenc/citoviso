@@ -44,6 +44,8 @@ const FILES = [
   "src/console/scoutViews.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",
+  // The homepage renderer (package cards) split out of public.ts, 2026-11-07.
+  "src/server/homepage.ts",
   "src/ui/icons.ts",
 ];
 

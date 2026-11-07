@@ -261,15 +261,12 @@ import { clientIp } from "./clientIp.js";
 import { brakeKey, RequestBrake } from "./requestBrake.js";
 import { crossOriginRefusal } from "./originGuard.js";
 import { sendAccountActionMail, storedCardLabel } from "../payment/accountMail.js";
-import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
+import { faviconSvg } from "../ui/brand.js";
+import { renderHomepage } from "./homepage.js";
 import {
-  computeAnnual,
-  formatPrice,
   getCurrency,
   getOneTimePrice,
   loadPricing,
-  pricingSnapshot,
-  resolvePricingRegion,
 } from "../pricing.js";
 
 /**
@@ -545,14 +542,7 @@ async function withAssetVersions(html: string): Promise<string> {
   return out;
 }
 
-/**
- * Serve the marketing homepage with its price bound to the LIVE pricing source
- * (region-aware, §C-gated). The price block in public/index.html is a
- * <!--CIT_PRICE_BLOCK--> marker we fill server-side: the confirmed annual price for
- * the visitor's region, or — if that region's price is NOT owner-confirmed — a
- * "custom offer, ask for the free sample" fallback (Fttv./§C: never advertise an
- * unconfirmed price). Region: ?region= override → CF-IPCountry → Accept-Language.
- */
+/** Serve the marketing homepage, rendered with its live prices (src/server/homepage.ts). */
 async function serveHomepage(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -564,39 +554,7 @@ async function serveHomepage(
   } catch {
     return send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
   }
-  await loadPricing();
-  const region = resolvePricingRegion(req.headers, url.searchParams.get("region"));
-  const snap = pricingSnapshot(region);
-  const unitStyle =
-    "font-size:1.1rem;font-weight:600;color:var(--citui-muted);letter-spacing:0;";
-  let block: string;
-  if (snap.pricingConfirmed) {
-    const annual = computeAnnual([], region);
-    block =
-      `<div class="price">${formatPrice(annual, snap.currency)}` +
-      `<span style="${unitStyle}"> / évtől</span></div>` +
-      `<div class="price-note">vagy kényelmes havi konstrukcióban</div>`;
-  } else {
-    // §C gate closed: no concrete number until the owner confirms the price.
-    block =
-      `<div class="price">Egyedi ajánlat</div>` +
-      `<div class="price-note">Kérd az ingyenes mintát — a pontos árat személyre szabva mutatjuk meg.</div>`;
-  }
-  // Replace everything between the markers (inclusive) — the static block in the
-  // file is only the no-render fallback for a raw file-serve.
-  let rendered = html.replace(
-    /<!--CIT_PRICE_BLOCK-->[\s\S]*?<!--\/CIT_PRICE_BLOCK-->/,
-    `<!--CIT_PRICE_BLOCK-->${block}<!--/CIT_PRICE_BLOCK-->`,
-  );
-  // The header and the footer are dark: the "B" lockup (dark E4 + white word) from the
-  // one brand source (ADR-0236). The file only carries a plain-text fallback.
-  rendered = rendered.replace(
-    /<!--CIT_BRAND-->[\s\S]*?<!--\/CIT_BRAND-->/g,
-    () => lockup({ on: "dark", href: "#top", cls: "citui-lockup--lg" }),
-  );
-  // The hero illustration: the same E4 mark, recoloured for the cyan sphere it sits on.
-  rendered = rendered.replace(/<!--CIT_HERO_MARK-->[\s\S]*?<!--\/CIT_HERO_MARK-->/, () => heroMarkSvg());
-  rendered = await withAssetVersions(rendered);
+  const rendered = await withAssetVersions(await renderHomepage(html, req.headers, url.searchParams.get("region")));
   send(res, 200, rendered);
 }
 

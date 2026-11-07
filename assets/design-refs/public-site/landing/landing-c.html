@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Citoviso — landing terv C · Szem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>/* Citoviso landing mock — layout + theme. Tokens mirror public/assets/ui/citui.css (--citui-*). */
+:root {
+  --citui-navy-950: #0a1f36; --citui-navy-900: #0e2a47; --citui-navy-800: #16283f; --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; --citui-cyan-400: #35c4e0; --citui-cyan-300: #6fd8eb; --citui-glow-blue: #5081ff;
+  --citui-white: #ffffff; --citui-ink: #10243a; --citui-ink-inverse: #eaf3f8; --citui-muted: #5a6d82;
+  --citui-surface: #f6fbfd; --citui-surface-2: #eef7fa; --citui-line: rgba(14, 42, 71, 0.12); --citui-line-strong: rgba(14, 42, 71, 0.22);
+  --citui-ok: #2fa96b; --citui-bad-ink: #b3262b; --citui-accent-ink: #06131b;
+  --citui-radius-sm: 14px; --citui-radius: 22px; --citui-radius-lg: 32px; --citui-radius-pill: 999px;
+  --citui-font-display: "Space Grotesk", system-ui, sans-serif; --citui-font-text: "Inter", system-ui, sans-serif;
+  --space: #040b16;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--space); color: var(--citui-ink); font-family: var(--citui-font-text); }
+body { overflow: hidden; }
+
+/* ── mock toolbar (not part of the design) ── */
+.tb { position: fixed; z-index: 100; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center;
+  padding: 6px; border-radius: var(--citui-radius-pill); background: color-mix(in srgb, var(--citui-white) 92%, transparent);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35); font: 600 12px/1 var(--citui-font-text); color: var(--citui-ink); white-space: nowrap; }
+.tb a, .tb button { border: 0; background: transparent; color: inherit; font: inherit; padding: 8px 10px; border-radius: var(--citui-radius-pill); cursor: pointer; text-decoration: none; }
+.tb [aria-pressed="true"], .tb a[aria-current] { background: var(--citui-navy-900); color: var(--citui-white); }
+.tb .sep { width: 1px; height: 18px; background: var(--citui-line-strong); }
+
+/* ── frame + stage (scroll container) ── */
+.frame { height: 100%; display: flex; justify-content: center; background: #1b2230; }
+.frame[data-size="mobile"] { padding: 14px 0 70px; }
+.stage { position: relative; height: 100%; width: 100%; overflow-y: auto; overflow-x: hidden; background: var(--space);
+  container-type: inline-size; scrollbar-width: thin; overscroll-behavior: contain; }
+.frame[data-size="mobile"] .stage { width: 390px; max-width: 100%; border-radius: 28px; box-shadow: 0 0 0 10px #0b0f16, 0 30px 80px rgba(0,0,0,.5); }
+
+/* ── nav ── */
+.nav { position: sticky; top: 0; z-index: 30; height: 0; }
+.nav-in { display: flex; align-items: center; gap: 24px; height: 68px; padding: 0 clamp(16px, 4cqi, 48px); color: var(--citui-ink-inverse); transition: background .3s, color .3s, box-shadow .3s; }
+.stage.nav-light .nav-in { background: color-mix(in srgb, var(--citui-white) 88%, transparent); backdrop-filter: blur(12px); color: var(--citui-ink); box-shadow: 0 1px 0 var(--citui-line); }
+.brand { display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font: 600 22px/1 var(--citui-font-display); letter-spacing: -.02em; }
+.brand svg { width: 30px; height: 30px; }
+.links { display: flex; gap: 22px; margin-left: auto; font-size: 14px; }
+.links a { color: inherit; opacity: .82; text-decoration: none; }
+.links a:hover { opacity: 1; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: var(--citui-radius-pill); border: 0; cursor: pointer;
+  font: 600 15px/1 var(--citui-font-text); text-decoration: none; background: var(--citui-cyan-500); color: var(--citui-accent-ink); transition: transform .2s, box-shadow .2s; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 10px 30px color-mix(in srgb, var(--citui-cyan-500) 40%, transparent); }
+.btn.ghost { background: transparent; color: inherit; box-shadow: inset 0 0 0 1px currentColor; }
+.btn svg { width: 18px; height: 18px; }
+.nav .btn { height: 40px; padding: 0 16px; font-size: 14px; }
+.burger { display: none; margin-left: auto; width: 42px; height: 42px; border-radius: 12px; border: 0; background: color-mix(in srgb, currentColor 12%, transparent); color: inherit; }
+.menu { display: none; }
+@container (max-width: 760px) {
+  .links, .nav .btn { display: none; }
+  .burger { display: inline-grid; place-items: center; }
+  .menu[data-open] { display: grid; gap: 4px; position: absolute; top: 68px; left: 12px; right: 12px; padding: 10px; border-radius: var(--citui-radius);
+    background: var(--citui-white); color: var(--citui-ink); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .menu a { padding: 14px; border-radius: 12px; color: inherit; text-decoration: none; font-weight: 600; }
+  .menu a:hover { background: var(--citui-surface-2); }
+}
+
+/* ── intro (hero + C-mark launch), pinned ── */
+.intro { position: relative; height: calc(var(--vh, 100dvh) * 5.6); }
+.pin { position: sticky; top: 0; height: var(--vh, 100dvh); overflow: hidden; }
+.sky { position: absolute; inset: 0; display: block; }
+.glow { position: absolute; inset: -20% -10% auto; height: 80%; pointer-events: none;
+  background: radial-gradient(60% 55% at 70% 30%, color-mix(in srgb, var(--citui-glow-blue) 22%, transparent), transparent 70%),
+              radial-gradient(40% 40% at 20% 80%, color-mix(in srgb, var(--citui-cyan-500) 14%, transparent), transparent 70%);
+  opacity: calc(1 - var(--p, 0) * 1.6); }
+.hero { position: absolute; inset: 0; display: grid; grid-template-columns: 1.15fr .85fr; align-items: center; gap: 32px;
+  padding: 90px clamp(16px, 5cqi, 64px) 60px; color: var(--citui-ink-inverse); }
+.hero-copy { max-width: 640px; will-change: transform, opacity; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 600 12px/1 var(--citui-font-text); letter-spacing: .16em; text-transform: uppercase; color: var(--citui-cyan-300); }
+.eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--citui-cyan-400); box-shadow: 0 0 12px var(--citui-cyan-400); }
+h1 { font: 700 clamp(42px, 7.2cqi, 92px)/.98 var(--citui-font-display); letter-spacing: -.035em; margin: 18px 0 20px; }
+h1 em { font-style: normal; background: linear-gradient(90deg, var(--citui-cyan-300), var(--citui-cyan-500)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lede { font-size: clamp(16px, 1.5cqi, 19px); line-height: 1.6; color: color-mix(in srgb, var(--citui-ink-inverse) 82%, transparent); max-width: 540px; margin: 0 0 28px; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.ticks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; color: color-mix(in srgb, var(--citui-ink-inverse) 78%, transparent); }
+.ticks li { display: flex; align-items: center; gap: 7px; }
+.ticks svg { width: 16px; height: 16px; color: var(--citui-cyan-400); }
+.mark-slot { justify-self: center; width: clamp(150px, 22cqi, 260px); aspect-ratio: 1; }
+.mark { position: absolute; left: 0; top: 0; transform-origin: 50% 50%; will-change: transform, opacity; pointer-events: none; z-index: 5;
+  filter: drop-shadow(0 0 24px color-mix(in srgb, var(--citui-cyan-500) 55%, transparent)); }
+.mark svg { width: 100%; height: 100%; overflow: visible; }
+#mark-eye { transform-origin: 60px 60px; }
+#mark-tilt { transform-origin: 60px 60px; }
+.cue { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: grid; justify-items: center; gap: 8px;
+  font: 600 11px/1 var(--citui-font-text); letter-spacing: .2em; color: color-mix(in srgb, var(--citui-ink-inverse) 60%, transparent); }
+.cue i { width: 1px; height: 34px; background: linear-gradient(var(--citui-cyan-400), transparent); animation: cue 1.8s ease-in-out infinite; }
+@keyframes cue { 0%,100% { transform: scaleY(.4); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } }
+@container (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; align-content: start; padding-top: 96px; gap: 8px; }
+  .mark-slot { order: -1; justify-self: start; width: 84px; }
+  h1 { margin-top: 12px; }
+}
+.horizon { position: absolute; left: -30%; right: -30%; top: 0; height: 120%; opacity: 0; pointer-events: none; z-index: 4;
+  border-radius: 50% 50% 0 0 / 22% 22% 0 0; border-top: 2px solid var(--citui-cyan-300);
+  background: linear-gradient(color-mix(in srgb, var(--citui-glow-blue) 55%, transparent), var(--citui-navy-900) 30%);
+  box-shadow: 0 -30px 80px color-mix(in srgb, var(--citui-cyan-500) 50%, transparent); }
+.iris { position: absolute; inset: 0; z-index: 4; clip-path: circle(0 at 50% 50%);
+  background: radial-gradient(circle at 40% 35%, var(--citui-surface) 0 18%, var(--citui-cyan-300) 45%, var(--citui-cyan-500)); }
+[data-variant="c"] .iris { background: radial-gradient(circle at 50% 46%, var(--citui-surface) 0 30%, var(--citui-cyan-300) 70%, var(--citui-cyan-500)); }
+
+/* the next section's opening frame — lives in the pin, revealed by the morph */
+.reveal { position: absolute; inset: 0; z-index: 6; opacity: 0; clip-path: circle(0 at 50% 50%); background: var(--citui-surface);
+  display: grid; align-content: center; padding: 84px clamp(16px, 5cqi, 64px) 24px; }
+.sec-head { max-width: 760px; }
+.sec-head .eyebrow { color: var(--citui-link-ink, #10697a); }
+.sec-head .eyebrow::before { background: var(--citui-cyan-500); box-shadow: none; }
+h2 { font: 700 clamp(32px, 5cqi, 60px)/1.02 var(--citui-font-display); letter-spacing: -.03em; margin: 14px 0 16px; color: var(--citui-ink); }
+.sub { font-size: clamp(16px, 1.4cqi, 18px); line-height: 1.6; color: var(--citui-muted); margin: 0; max-width: 640px; }
+
+/* ── light content ── */
+.light { background: var(--citui-surface); position: relative; z-index: 2; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 clamp(16px, 5cqi, 64px); }
+section.s { padding: clamp(56px, 9cqi, 120px) 0; }
+.rv { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+.rv.in { opacity: 1; transform: none; }
+html:not(.js) .rv, .reduced .rv { opacity: 1; transform: none; }
+
+.show { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding-top: 8px; }
+.phone { justify-self: center; width: min(300px, 78cqi); aspect-ratio: 390/780; border-radius: 40px; padding: 10px; background: var(--citui-navy-950);
+  box-shadow: 0 40px 90px rgba(14,42,71,.28), inset 0 0 0 2px #2a3a52; position: relative; }
+.phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 31px; display: block; }
+.browser { border-radius: 14px; overflow: hidden; background: var(--citui-white); box-shadow: 0 30px 70px rgba(14,42,71,.18); }
+.browser .bar { display: flex; gap: 6px; align-items: center; padding: 10px 12px; background: var(--citui-surface-2); font-size: 12px; color: var(--citui-muted); }
+.browser .bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--citui-line-strong); }
+.browser .bar span { margin-left: 10px; padding: 4px 12px; border-radius: 99px; background: var(--citui-white); }
+.browser img { display: block; width: 100%; }
+.devices { position: relative; }
+.devices .phone { position: absolute; right: -6%; bottom: -12%; width: 34%; border-radius: 26px; padding: 6px; }
+.devices .phone img { border-radius: 21px; }
+.caption { margin-top: 18px; font-size: 13px; color: var(--citui-muted); }
+.list { display: grid; gap: 18px; margin: 28px 0 0; padding: 0; list-style: none; }
+.list li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; }
+.list b { display: block; font: 600 17px/1.3 var(--citui-font-display); color: var(--citui-ink); margin-bottom: 3px; }
+.list span { color: var(--citui-muted); line-height: 1.55; font-size: 15px; }
+.ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); color: var(--citui-navy-900); position: relative; }
+.ico svg { width: 20px; height: 20px; }
+.ico::after { content: ""; position: absolute; right: 7px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--citui-cyan-500); }
+@container (max-width: 760px) {
+  .show { grid-template-columns: 1fr; gap: 28px; }
+  .devices .phone { right: 2%; bottom: -16%; width: 38%; }
+}
+
+/* steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 44px; counter-reset: st; }
+.step { padding: 28px; border-radius: var(--citui-radius); background: var(--citui-white); box-shadow: 0 0 0 1px var(--citui-line); }
+.step::before { counter-increment: st; content: "0" counter(st); font: 700 14px/1 var(--citui-font-display); color: var(--citui-cyan-500); letter-spacing: .1em; }
+.step h3 { font: 600 21px/1.25 var(--citui-font-display); margin: 14px 0 8px; color: var(--citui-ink); letter-spacing: -.01em; }
+.step p { margin: 0; color: var(--citui-muted); line-height: 1.6; font-size: 15px; }
+@container (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+
+/* commission band (dark) */
+.band { background: radial-gradient(70% 120% at 85% 0%, color-mix(in srgb, var(--citui-glow-blue) 22%, transparent), transparent 60%), var(--citui-navy-950); color: var(--citui-ink-inverse); }
+.band h2 { color: var(--citui-white); }
+.band .sub { color: color-mix(in srgb, var(--citui-ink-inverse) 75%, transparent); }
+.calc { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: center; }
+.calc-card { padding: 26px; border-radius: var(--citui-radius); background: color-mix(in srgb, var(--citui-white) 6%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--citui-white) 14%, transparent); }
+.calc-card label { display: block; font-size: 13px; color: color-mix(in srgb, var(--citui-ink-inverse) 70%, transparent); margin-bottom: 8px; }
+.calc-card input[type=range] { width: 100%; accent-color: var(--citui-cyan-400); }
+.calc-row { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 18px; font: 600 15px/1 var(--citui-font-text); }
+.calc-out { margin-top: 8px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, var(--citui-white) 14%, transparent); }
+.calc-out strong { display: block; font: 700 clamp(30px, 4cqi, 44px)/1 var(--citui-font-display); color: var(--citui-cyan-300); margin: 6px 0; }
+.calc-out small { color: color-mix(in srgb, var(--citui-ink-inverse) 62%, transparent); line-height: 1.5; display: block; }
+@container (max-width: 760px) { .calc { grid-template-columns: 1fr; } }
+
+/* pricing */
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+.plan { padding: 28px; border-radius: var(--citui-radius); background: var(--citui-white); box-shadow: 0 0 0 1px var(--citui-line); display: flex; flex-direction: column; }
+.plan.hot { box-shadow: 0 0 0 2px var(--citui-cyan-500), 0 24px 60px rgba(14,42,71,.12); }
+.plan h3 { font: 600 20px/1 var(--citui-font-display); margin: 0; color: var(--citui-ink); }
+.plan .tag { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; background: color-mix(in srgb, var(--citui-cyan-500) 14%, transparent); color: var(--citui-navy-900); margin-bottom: 12px; }
+.price { font: 700 40px/1 var(--citui-font-display); letter-spacing: -.02em; margin: 18px 0 4px; color: var(--citui-ink); }
+.price small { font: 500 15px/1 var(--citui-font-text); color: var(--citui-muted); }
+.yr { font-size: 13px; color: var(--citui-muted); min-height: 18px; }
+.plan ul { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; font-size: 15px; color: var(--citui-ink); }
+.plan li { display: flex; gap: 9px; line-height: 1.4; }
+.plan li svg { flex: none; width: 18px; height: 18px; color: var(--citui-cyan-500); margin-top: 1px; }
+.toggle { display: inline-flex; padding: 4px; border-radius: 99px; background: var(--citui-white); box-shadow: 0 0 0 1px var(--citui-line); margin-top: 24px; }
+.toggle button { border: 0; background: transparent; padding: 9px 16px; border-radius: 99px; font: 600 14px/1 var(--citui-font-text); color: var(--citui-muted); cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--citui-navy-900); color: var(--citui-white); }
+.fine { font-size: 13px; color: var(--citui-muted); margin-top: 18px; line-height: 1.5; }
+@container (max-width: 760px) { .plans { grid-template-columns: 1fr; } }
+
+/* faq */
+.faq { margin-top: 32px; display: grid; gap: 10px; max-width: 820px; }
+.faq details { background: var(--citui-white); border-radius: var(--citui-radius-sm); box-shadow: 0 0 0 1px var(--citui-line); padding: 0 20px; }
+.faq summary { cursor: pointer; list-style: none; padding: 18px 0; font: 600 16px/1.35 var(--citui-font-display); color: var(--citui-ink); display: flex; justify-content: space-between; gap: 12px; }
+.faq summary::after { content: "+"; color: var(--citui-cyan-500); font-size: 22px; line-height: 1; }
+.faq details[open] summary::after { content: "–"; }
+.faq p { margin: 0 0 18px; color: var(--citui-muted); line-height: 1.6; }
+
+/* request form */
+.ask { display: grid; grid-template-columns: .9fr 1.1fr; gap: 40px; align-items: start; }
+.formcard { padding: 28px; border-radius: var(--citui-radius-lg); background: var(--citui-white); box-shadow: 0 30px 70px rgba(14,42,71,.12); display: grid; gap: 16px; }
+.field label { display: block; font: 600 14px/1.3 var(--citui-font-text); margin-bottom: 7px; color: var(--citui-ink); }
+.field input { width: 100%; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--citui-line-strong); background: var(--citui-surface); font: 16px var(--citui-font-text); color: var(--citui-ink); }
+.field input:focus { outline: 2px solid var(--citui-cyan-500); outline-offset: 1px; }
+.field .hint { font-size: 13px; color: var(--citui-muted); margin-top: 6px; }
+.field .err { font-size: 13px; color: var(--citui-bad-ink); margin-top: 6px; display: none; }
+.field.bad input { border-color: var(--citui-bad-ink); }
+.field.bad .err { display: block; }
+#map { height: 220px; border-radius: 12px; border: 1px solid var(--citui-line-strong); }
+.sent { display: none; padding: 22px; border-radius: var(--citui-radius); background: color-mix(in srgb, var(--citui-ok) 12%, transparent); color: var(--citui-ink); line-height: 1.55; }
+.formcard.done .sent { display: block; }
+.formcard.done .f { display: none; }
+@container (max-width: 760px) { .ask { grid-template-columns: 1fr; } }
+
+/* footer */
+footer { background: var(--citui-navy-950); color: color-mix(in srgb, var(--citui-ink-inverse) 75%, transparent); padding: 56px 0 90px; font-size: 14px; }
+footer .wrap { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 28px; }
+footer h4 { color: var(--citui-white); font: 600 14px/1 var(--citui-font-display); margin: 0 0 14px; }
+footer a { display: block; color: inherit; text-decoration: none; margin-bottom: 9px; }
+footer .brand { color: var(--citui-white); margin-bottom: 14px; }
+@container (max-width: 760px) { footer .wrap { grid-template-columns: 1fr 1fr; } footer .wrap > :first-child { grid-column: 1 / -1; } }
+
+.reduced .intro { height: auto; }
+.reduced .pin { position: relative; }
+.reduced .pin { height: auto; overflow: visible; }
+.reduced .hero { position: relative; min-height: var(--vh, 100dvh); }
+.reduced .reveal { position: relative; opacity: 1 !important; clip-path: none !important; inset: auto; }
+.reduced .sky, .reduced .horizon, .reduced .iris, .reduced .cue { display: none; }
+.reduced .pin { background: radial-gradient(80% 60% at 70% 20%, color-mix(in srgb, var(--citui-glow-blue) 25%, transparent), transparent), var(--space); }
+
+@media (max-width: 700px) { .frame[data-size="mobile"] { padding: 0; } .frame[data-size="mobile"] .stage { border-radius: 0; box-shadow: none; } }
+</style>
+</head>
+<body data-variant="c">
+
+<nav class="tb" aria-label="Terv-váltó (nem része a lapnak)">
+  <a href="landing-a.html" >A · Kapu</a>
+  <a href="landing-b.html" >B · Horizont</a>
+  <a href="landing-c.html" aria-current="page">C · Szem</a>
+  <span class="sep"></span>
+  <button type="button" data-size-btn="mobile">Mobil 390</button>
+  <button type="button" data-size-btn="desktop">Asztali</button>
+</nav>
+
+<div class="frame" id="frame" data-size="desktop">
+<div class="stage" id="stage">
+
+  <header class="nav">
+    <div class="nav-in">
+      <a class="brand" href="#top" aria-label="Citoviso">
+        <svg viewBox="0 0 120 120" aria-hidden="true"><path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="var(--citui-cyan-500)" stroke-width="12" stroke-linecap="round"/><circle cx="48" cy="60" r="12.5" fill="var(--citui-cyan-400)"/><circle cx="42.5" cy="54" r="3.5" fill="var(--citui-white)"/><path d="M82 49 L82 71 L102 60 Z" fill="currentColor"/></svg>
+        <span>itoviso</span>
+      </a>
+      <div class="links">
+        <a href="#pelda">Példa</a><a href="#hogyan">Hogyan működik</a><a href="#jutalek">Jutalék</a><a href="#arak">Árak</a><a href="#gyik">GYIK</a><a href="#belepes">Belépés</a>
+      </div>
+      <a class="btn" href="#minta">Kérem a mintát</a>
+      <button class="burger" id="burger" type="button" aria-label="Menü"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="menu" id="menu">
+        <a href="#pelda">Példa</a><a href="#hogyan">Hogyan működik</a><a href="#jutalek">Jutalék</a><a href="#arak">Árak</a><a href="#gyik">GYIK</a><a href="#minta">Kérem a mintát</a><a href="#belepes">Belépés</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- INTRO: hero + the C-mark launch (pinned while it plays) -->
+  <div class="intro" id="intro">
+    <div class="pin" id="pin">
+      <canvas class="sky" id="sky" aria-hidden="true"></canvas>
+      <div class="glow" aria-hidden="true"></div>
+      <div class="horizon" id="horizon" aria-hidden="true"></div>
+      <div class="iris" id="iris" aria-hidden="true"></div>
+
+      <div class="hero" id="top">
+        <div class="hero-copy" id="hero-copy">
+          <span class="eyebrow">Honlap szálláshelyeknek</span>
+          <h1>Előbb megmutatjuk.<br><em>Aztán döntesz.</em></h1>
+          <p class="lede">Elkészítjük a szállásod modern, mobilra kész honlapját a nyilvános adataiból — mielőtt egy forintot fizetnél. Utána 14 napig élesben, ingyen kipróbálod, bankkártya nélkül.</p>
+          <div class="ctas">
+            <a class="btn" href="#minta">Kérem a mintát <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="btn ghost" href="#arak">Árak</a>
+          </div>
+          <ul class="ticks">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>14 nap ingyen</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>Bankkártya nélkül</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 4 4L19 6"/></svg>Saját .hu domain a csomagban</li>
+          </ul>
+        </div>
+        <div class="mark-slot" id="mark-slot" aria-hidden="true"></div>
+      </div>
+
+      <div class="mark" id="mark" aria-hidden="true">
+        <svg viewBox="0 0 120 120">
+          <defs><radialGradient id="eyeg" cx="38%" cy="34%" r="78%"><stop offset="0" stop-color="#8ee6f6"/><stop offset="1" stop-color="#1fb6d6"/></radialGradient></defs>
+          <g id="mark-tilt">
+            <clipPath id="eyeclip"><path id="eye-clip"/></clipPath>
+            <g clip-path="url(#eyeclip)"><circle id="eye-iris" cx="48" cy="60" r="12.5" fill="url(#eyeg)"/><circle id="eye-hl" cx="42.5" cy="54" r="3.5" fill="var(--citui-white)"/></g>
+            <path id="lid-up" fill="none" stroke="var(--citui-cyan-500)" stroke-width="12" stroke-linecap="round"/>
+            <path id="lid-lo" fill="none" stroke="var(--citui-cyan-500)" stroke-width="12" stroke-linecap="round"/>
+            <g id="lashes" opacity="0" stroke="var(--citui-cyan-500)" stroke-width="6" stroke-linecap="round"><path d="M38 84 L32 96"/><path d="M60 87 L60 100"/><path d="M82 84 L88 96"/></g>
+            <path id="mark-tri" d="M82 49 L82 71 L102 60 Z" fill="var(--citui-white)"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="cue" id="scroll-cue" aria-hidden="true">GÖRGESS<i></i></div>
+
+      <!-- the first frame of the next section: the morph lands here -->
+      <div class="reveal" id="reveal">
+        <div class="sec-head wrap" style="margin:0">
+          <span class="eyebrow">Nem ígéret — kész oldal</span>
+          <h2 id="pelda">Így néz ki egy szállás, amit mi építettünk.</h2>
+          <p class="sub">A dömsödi Duna Vibe House ezen az oldalon fogad vendéget: <b>dunavibehouse.hu</b>. A te mintád ugyanígy a saját szállásod adataiból készül.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="light">
+    <section class="s" style="padding-top:8px">
+      <div class="wrap show">
+        <div class="devices rv">
+          <div class="browser"><div class="bar"><i></i><i></i><i></i><span>dunavibehouse.hu</span></div><img src="ref/live-dvh-d.jpg" alt="A Duna Vibe House honlapja asztali gépen"></div>
+          <div class="phone"><img src="ref/live-dvh-m.jpg" alt="Ugyanaz az oldal telefonon"></div>
+        </div>
+        <div class="rv">
+          <ul class="list">
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg></span><div><b>Telefonon is első osztályú</b><span>A vendég telefonról is végignézi a szobákat, és egy gombbal megkeres.</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><div><b>Saját .hu domain</b><span>A csomag része. A rendelés után magától a tiéd lesz, nem kell vele foglalkoznod.</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><div><b>Bent van a Google-nél</b><span>Az oldalt beküldjük a Google-nek, a szerkezete keresőbarát. Helyezést senki nem ígérhet — mi sem.</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><div><b>Foglalási naptár, dupla foglalás nélkül</b><span>Kétirányú szinkron a Booking.com, a Szállás.hu és az Airbnb naptárával (Teljes csomag).</span></div></li>
+            <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><div><b>Te szerkeszted</b><span>Képek, szövegek, szobák, árak, szezonok, zárt napok — egy egyszerű felületen, amikor akarod.</span></div></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="s" id="hogyan" style="background:var(--citui-white)">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <span class="eyebrow">Hogyan működik</span>
+          <h2>Nincs projekt. Nincs megbeszélés.</h2>
+          <p class="sub">Nem kell briefet írnod, képeket gyűjtened vagy egyeztetned. Megnézed a kész oldalt, és eldöntöd.</p>
+        </div>
+        <div class="steps">
+          <div class="step rv"><h3>Megkapod a mintát</h3><p>A szállásod nyilvános adataiból és képeiből elkészítjük a személyre szabott honlapot. Ha még nem kaptál tőlünk, kérd lent.</p></div>
+          <div class="step rv"><h3>14 napig élesben próbálod</h3><p>Egy kattintás, és az oldal élőben fut. Bankkártya nem kell, semmire nem kötelez.</p></div>
+          <div class="step rv"><h3>Maradsz, ha megéri</h3><p>Választasz csomagot, és az oldal a saját .hu domainedre költözik. Havonta vagy évente fizetsz.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="s band" id="jutalek">
+      <div class="wrap calc">
+        <div class="rv">
+          <span class="eyebrow">Jutalék</span>
+          <h2>Minden közvetlen foglalás a tiéd marad.</h2>
+          <p class="sub">A szállásportálok a szobaár 10–30%-át viszik el jutalékként<sup>1</sup>. Ami a saját oldaladon érkezik, azért nem fizetsz senkinek.</p>
+        </div>
+        <div class="calc-card rv">
+          <label for="rev">Éves szállásbevételed a portálokon</label>
+          <input id="rev" type="range" min="1000000" max="30000000" step="500000" value="6000000">
+          <div class="calc-row"><span id="rev-out">6 000 000 Ft</span></div>
+          <label for="pct">A portál jutaléka</label>
+          <input id="pct" type="range" min="10" max="30" step="1" value="15">
+          <div class="calc-row"><span id="pct-out">15%</span></div>
+          <div class="calc-out">
+            <small>Ennyit fizetsz most évente jutalékban:</small>
+            <strong id="fee-out">900 000 Ft</strong>
+            <small id="quarter-out">Ha minden negyedik foglalás közvetlenül jönne, évente 225 000 Ft maradna nálad. A Teljes csomag egy évre 70 000 Ft.</small>
+          </div>
+        </div>
+      </div>
+      <div class="wrap"><p class="fine" style="color:color-mix(in srgb,var(--citui-ink-inverse) 55%,transparent)"><sup>1</sup> Országgyűlés Hivatala, Infojegyzet 2024/1. A számoló példa, nem ígéret: hogy hány vendég foglal közvetlenül, az nem rajtunk múlik.</p></div>
+    </section>
+
+    <section class="s" id="arak">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <span class="eyebrow">Árak</span>
+          <h2>Havonta kevesebb, mint egy vendégéjszaka.</h2>
+          <p class="sub">Minden csomaghoz jár a saját .hu domain és a 14 napos ingyenes próba.</p>
+          <div class="toggle" role="group" aria-label="Fizetés gyakorisága"><button type="button" data-bill="m" aria-pressed="true">Havonta</button><button type="button" data-bill="y" aria-pressed="false">Évente — 2 hónap ingyen</button></div>
+        </div>
+        <div class="plans">
+          <div class="plan rv"><h3>Alap</h3><div class="price" data-m="2 780" data-y="27 800">2 780 <small>Ft / hó</small></div><div class="yr"></div>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Személyre szabott honlap, mobilra kész</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Galéria, térkép, ajánlatkérő űrlap</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Saját .hu domain</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Beküldés a Google-nek</li></ul></div>
+          <div class="plan hot rv"><span class="tag">Ezt ajánljuk</span><h3>Ajánlott</h3><div class="price" data-m="4 740" data-y="47 400">4 740 <small>Ft / hó</small></div><div class="yr"></div>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Minden, ami az Alapban</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Szobák és felszereltség</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Vendégvélemények</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>„Miért nálunk” szakasz</li></ul></div>
+          <div class="plan rv"><h3>Teljes</h3><div class="price" data-m="7 000" data-y="70 000">7 000 <small>Ft / hó</small></div><div class="yr"></div>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Minden, ami az Ajánlottban</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Online foglalás, portál-naptár szinkronnal</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Szezonális árak, nyitvatartás</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Heti programajánló a környékről</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>Saját e-mail-cím</li></ul></div>
+        </div>
+        <p class="fine rv">Több nyelv egyszeri díjjal kérhető (3 nyelv 14 900 Ft-tól). A domain a rendelés után kerül a nevedre, a próba alatt az oldal a citoviso.com alatt fut.</p>
+      </div>
+    </section>
+
+    <section class="s" id="gyik" style="background:var(--citui-white)">
+      <div class="wrap">
+        <div class="sec-head rv"><span class="eyebrow">GYIK</span><h2>Amit kérdezni szoktak.</h2></div>
+        <div class="faq rv">
+          <details><summary>Mibe kerül a minta?</summary><p>Semmibe. A minta és a 14 napos próba is ingyenes, bankkártyát nem kérünk.</p></details>
+          <details><summary>Honnan vannak a képek és a szövegek?</summary><p>A szállásod nyilvános adataiból: a Google-ön és a szállásportálokon közzétett leírásból és fotókból. Bármikor lecserélheted őket a sajátjaidra.</p></details>
+          <details><summary>Kell hozzá technikai tudás?</summary><p>Nem. A képeket, szövegeket, szobákat, árakat és a naptárat egy egyszerű felületen állítod be.</p></details>
+          <details><summary>Fent vagyok a Bookingon és a Szállás.hu-n. Maradhatok?</summary><p>Igen. A Teljes csomag foglalási naptára szinkronban van a portálok naptárával, így nem lesz dupla foglalás.</p></details>
+          <details><summary>Mi történik a próba végén?</summary><p>Ha nem rendelsz, nem fizetsz semmit — kártyát sem adtál meg, nincs mit terhelni. Ha rendelsz, a választott csomag díját fizeted.</p></details>
+          <details><summary>Csak szálláshelyeknek szól?</summary><p>Ma igen. A rendszer a szálláshelyek igényeire készült: szobák, szezonális árak, foglalási naptár.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="s" id="minta">
+      <div class="wrap ask">
+        <div class="rv">
+          <span class="eyebrow">Ingyenes minta</span>
+          <h2>Nézd meg a saját szállásodat.</h2>
+          <p class="sub">Add meg a szállás nevét, tedd le a tűt a térképen, és e-mailben elküldjük a kész minta linkjét.</p>
+        </div>
+        <form class="formcard rv" id="form" novalidate>
+          <div class="f field" id="f-name"><label for="name">Szálláshely neve *</label><input id="name" autocomplete="organization" placeholder="pl. Napsugár Vendégház"><div class="err">Írd be a szállás nevét.</div></div>
+          <div class="f field" id="f-pin"><label>Hol van? Kattints a pontos helyre *</label><div id="map"></div><div class="hint" id="pin-out">Még nincs kiválasztva hely.</div><div class="err">Tedd le a tűt a szállásodra.</div></div>
+          <div class="f field" id="f-contact"><label for="contact">E-mail-cím *</label><input id="contact" type="email" inputmode="email" autocomplete="email" placeholder="nev@pelda.hu"><div class="err" id="contact-err">Ez nem tűnik e-mail-címnek.</div></div>
+          <button class="f btn" type="submit" style="justify-self:start">Kérem a mintát</button>
+          <p class="f fine" style="margin:0">Az adataidat csak a minta elkészítéséhez és elküldéséhez használjuk. <a href="#">Adatkezelési tájékoztató</a></p>
+          <div class="sent" id="sent"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer id="belepes">
+    <div class="wrap">
+      <div><a class="brand" href="#top"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="var(--citui-cyan-500)" stroke-width="12" stroke-linecap="round"/><circle cx="48" cy="60" r="12.5" fill="var(--citui-cyan-400)"/><circle cx="42.5" cy="54" r="3.5" fill="var(--citui-white)"/><path d="M82 49 L82 71 L102 60 Z" fill="currentColor"/></svg><span>itoviso</span></a>
+        <p style="margin:0 0 18px;max-width:320px;line-height:1.6">Modern honlap szálláshelyeknek — előbb megmutatjuk, aztán döntesz.</p>
+        <img src="../../../../public/assets/vendor/barion/barion-smart-banner-dark.svg" alt="Elfogadott fizetési módok: Barion, Mastercard, VISA, Apple Pay, Google Pay" style="max-width:340px;width:100%"></div>
+      <div><h4>Oldal</h4><a href="#pelda">Példa</a><a href="#arak">Árak</a><a href="#gyik">GYIK</a><a href="#">Bejelentkezés</a><a href="#">hello@citoviso.com</a></div>
+      <div><h4>Jogi</h4><a href="#">Impresszum</a><a href="#">ÁSZF</a><a href="#">Adatkezelési tájékoztató</a><a href="#">Elállási tájékoztató</a></div>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>window.CIT_VARIANT = "c";</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>/*
+ * Citoviso landing mock — scroll engine (hyperspace starfield + C-mark intro).
+ * The page scrolls inside .stage (not the window) so the same code runs in the
+ * 390px phone frame and at full desktop width. VARIANT is injected by build.mjs.
+ */
+(function () {
+  "use strict";
+  var VARIANT = window.CIT_VARIANT || "a";
+  var stage = document.getElementById("stage");
+  var frame = document.getElementById("frame");
+  var canvas = document.getElementById("sky");
+  var ctx = canvas.getContext("2d");
+  var intro = document.getElementById("intro");
+  var pin = document.getElementById("pin");
+  var heroCopy = document.getElementById("hero-copy");
+  var mark = document.getElementById("mark");
+  var markSlot = document.getElementById("mark-slot");
+  var tilt = document.getElementById("mark-tilt");
+  var lidUp = document.getElementById("lid-up"), lidLo = document.getElementById("lid-lo");
+  var eyeClip = document.getElementById("eye-clip"), iris = document.getElementById("eye-iris");
+  var hl = document.getElementById("eye-hl"), lashes = document.getElementById("lashes");
+  var tri = document.getElementById("mark-tri");
+  var reveal = document.getElementById("reveal");
+  var horizon = document.getElementById("horizon");
+  var irisLayer = document.getElementById("iris");
+  var cue = document.getElementById("scroll-cue");
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.documentElement.classList.add("js");
+  if (reduced) document.documentElement.classList.add("reduced");
+
+  // ── size toggle (Mobil 390 / Asztali) ─────────────────────────────────────
+  var sizeBtns = document.querySelectorAll("[data-size-btn]");
+  function setSize(s) {
+    frame.setAttribute("data-size", s);
+    sizeBtns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-size-btn") === s)); });
+    stage.scrollTop = 0;
+    resize();
+  }
+  sizeBtns.forEach(function (b) { b.addEventListener("click", function () { setSize(b.getAttribute("data-size-btn")); }); });
+  setSize(window.innerWidth < 700 ? "mobile" : "desktop");
+
+  // ── starfield ─────────────────────────────────────────────────────────────
+  var W = 0, H = 0, DPR = 1, stars = [], N = 0;
+  function makeStar(far) {
+    return { x: (Math.random() * 2 - 1), y: (Math.random() * 2 - 1), z: far ? 0.2 + Math.random() * 0.8 : Math.random(), c: Math.random() < 0.18 ? 1 : 0, pz: 0 };
+  }
+  function resize() {
+    W = stage.clientWidth; H = stage.clientHeight;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    stage.style.setProperty("--vh", H + "px");
+    var want = W < 600 ? 260 : 520;
+    if (want !== N) { N = want; stars = []; for (var i = 0; i < N; i++) stars.push(makeStar(false)); }
+    onScroll();
+  }
+  window.addEventListener("resize", resize);
+
+  var lastY = 0, lastT = performance.now(), vel = 0, warp = 0, introP = 0, alive = true;
+  function frameDraw(now) {
+    var dt = Math.min(48, now - lastT); lastT = now;
+    var y = stage.scrollTop; var dy = Math.abs(y - lastY); lastY = y;
+    vel = vel * 0.92 + (dy / Math.max(dt, 1)) * 0.08;           // px per ms, smoothed
+    var introBoost = Math.sin(Math.min(1, introP / 0.62) * Math.PI) * 2.2;  // the "jump" peaks mid-growth
+    var target = reduced ? 0 : Math.min(4, vel * 1.6 + introBoost);    // calm cap: streaks, never a blur
+    warp += (target - warp) * 0.035;                              // slow ease in and out
+    var speed = 0.00007 + warp * 0.00016;
+    var skyFade = 1 - smooth(0.62, 0.95, introP);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (skyFade > 0.01) {
+      var cx = W / 2, cy = H * 0.46, f = Math.max(W, H) * 0.55;
+      ctx.lineCap = "round";
+      for (var i = 0; i < N; i++) {
+        var s = stars[i];
+        var pz = s.z;
+        s.z -= speed * dt;
+        if (s.z <= 0.02) { stars[i] = makeStar(true); stars[i].z = 1; continue; }
+        var sx = cx + (s.x / s.z) * f, sy = cy + (s.y / s.z) * f;
+        if (sx < -50 || sx > W + 50 || sy < -50 || sy > H + 50) { stars[i] = makeStar(true); stars[i].z = 1; continue; }
+        var tz = Math.min(1, pz + 0.0005 + warp * 0.006);
+        var tx = cx + (s.x / tz) * f, ty = cy + (s.y / tz) * f;
+        var a = Math.min(1, (1 - s.z) * 1.4) * skyFade;
+        ctx.strokeStyle = s.c ? "rgba(111,216,235," + a + ")" : "rgba(234,243,248," + a + ")";
+        ctx.lineWidth = Math.max(0.6, (1 - s.z) * 2.2);
+        ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(sx + 0.01, sy); ctx.stroke();
+      }
+    }
+    if (alive) requestAnimationFrame(frameDraw);
+  }
+  requestAnimationFrame(frameDraw);
+
+  // ── intro timeline ────────────────────────────────────────────────────────
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function smooth(a, b, v) { var t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // ── the C ⇄ eye morph ────────────────────────────────────────────────────
+  // The C is drawn as two cubic halves (upper / lower arc). For the eye, the same two
+  // curves become an almond: an upper and a lower lid. The dot slides to the centre
+  // and grows into an iris, clipped by the lids, so the upper lid really covers it.
+  function arc(a0, a1) {                       // cubic approximation of a circle arc (r 42, c 60/60)
+    var r = 42, k = 4 / 3 * Math.tan((a1 - a0) / 4);
+    var p0 = [60 + r * Math.cos(a0), 60 + r * Math.sin(a0)], p3 = [60 + r * Math.cos(a1), 60 + r * Math.sin(a1)];
+    return [p0, [p0[0] - k * r * Math.sin(a0), p0[1] + k * r * Math.cos(a0)], [p3[0] + k * r * Math.sin(a1), p3[1] - k * r * Math.cos(a1)], p3];
+  }
+  var D = Math.PI / 180, A0 = Math.atan2(-30.7, 24.6);
+  var C_UP = arc(A0, -Math.PI), C_LO = arc(Math.PI, -A0);
+  var E_UP = [[108, 60], [84, 22], [36, 22], [12, 60]], E_LO = [[12, 60], [36, 98], [84, 98], [108, 60]];
+  var S_UP = [[108, 60], [84, 88], [36, 88], [12, 60]], S_LO = [[12, 60], [36, 92], [84, 92], [108, 60]];   // shut
+  function mix(A, B, t) { return A.map(function (p, i) { return [lerp(p[0], B[i][0], t), lerp(p[1], B[i][1], t)]; }); }
+  function d(P, move) { return (move ? "M" + P[0][0].toFixed(2) + " " + P[0][1].toFixed(2) : "L" + P[0][0].toFixed(2) + " " + P[0][1].toFixed(2)) + " C" + [P[1], P[2], P[3]].map(function (q) { return q[0].toFixed(2) + " " + q[1].toFixed(2); }).join(" "); }
+  var scrollE = 0, idleE = 0, lidT = 0;
+  function drawMark() {
+    if (!C_UP) return;                         // called by the first resize, before the shapes exist
+    var e = Math.max(scrollE, idleE), l = lidT * e;
+    var up = mix(C_UP, mix(E_UP, S_UP, l), e), lo = mix(C_LO, mix(E_LO, S_LO, l), e);
+    lidUp.setAttribute("d", d(up, true)); lidLo.setAttribute("d", d(lo, true));
+    eyeClip.setAttribute("d", d(up, true) + " " + d(lo, false) + " Z");
+    var sw = lerp(12, 8.5, e).toFixed(2);
+    lidUp.setAttribute("stroke-width", sw); lidLo.setAttribute("stroke-width", sw);
+    var icx = lerp(48, 60, e), icy = lerp(60, 62, e), ir = lerp(12.5, 19, e);
+    iris.setAttribute("cx", icx.toFixed(2)); iris.setAttribute("cy", icy.toFixed(2)); iris.setAttribute("r", ir.toFixed(2));
+    hl.setAttribute("cx", (icx - lerp(5.5, 7, e)).toFixed(2)); hl.setAttribute("cy", (icy - lerp(6, 7.5, e)).toFixed(2)); hl.setAttribute("r", lerp(3.5, 5, e).toFixed(2));
+    tri.setAttribute("opacity", String(1 - smooth(0, 0.5, e)));
+    lashes.setAttribute("opacity", String(smooth(0.75, 1, l)));
+    tilt.setAttribute("transform", "rotate(" + (-7 * l).toFixed(2) + " 60 60)");
+  }
+  // time-based tweens (fixed tempo, independent of scroll speed)
+  function tween(ms, step, done) {
+    var t0 = performance.now();
+    (function f(now) { var t = Math.min(1, (now - t0) / ms); step(t); drawMark(); if (t < 1) requestAnimationFrame(f); else if (done) done(); })(t0);
+  }
+  var winking = false, winked = false;
+  function wink(done) {                        // close · hold · open, ~1.4 s
+    if (reduced || winking) return;
+    winking = true;
+    tween(1400, function (t) { lidT = smooth(0.05, 0.3, t) - smooth(0.6, 0.85, t); }, function () { winking = false; lidT = 0; if (done) done(); });
+  }
+  function idleWink() {                        // hero: the C opens into an eye, winks, becomes a C again
+    if (reduced || winking || introP > 0.02) return;
+    tween(650, function (t) { idleE = smooth(0, 1, t); }, function () {
+      wink(function () { setTimeout(function () { tween(650, function (t) { idleE = 1 - smooth(0, 1, t); }); }, 350); });
+    });
+  }
+  window.__wink = wink; window.__idle = idleWink;
+  drawMark();
+
+  function onScroll() {
+    if (!intro) return;
+    var total = intro.offsetHeight - H;
+    var p = total > 0 ? clamp(stage.scrollTop / total, 0, 1) : 1;
+    introP = p;
+    if (reduced) {
+      stage.style.setProperty("--p", "0");
+      var sl = markSlot.getBoundingClientRect(), sr = pin.getBoundingClientRect();
+      mark.style.width = mark.style.height = sl.width + "px";
+      mark.style.transform = "translate(" + (sl.left - sr.left) + "px," + (sl.top - sr.top) + "px)";
+      stage.classList.toggle("nav-light", stage.scrollTop > H * 0.8);
+      return;
+    }
+    stage.style.setProperty("--p", p.toFixed(4));
+
+    // hero copy fades and lifts
+    var hc = smooth(0.0, 0.16, p);
+    heroCopy.style.opacity = String(1 - hc);
+    heroCopy.style.transform = "translateY(" + (-40 * hc) + "px)";
+    heroCopy.style.pointerEvents = hc > 0.5 ? "none" : "";
+    if (cue) cue.style.opacity = String(1 - smooth(0, 0.05, p));
+
+    // mark: from its hero slot to centre, growing
+    var slot = markSlot.getBoundingClientRect(), st = stage.getBoundingClientRect();
+    var sx0 = slot.left - st.left + slot.width / 2, sy0 = slot.top - st.top + slot.height / 2 + stage.scrollTop * 0; // slot is inside the pin → fixed on screen
+    var size0 = slot.width;
+    var big = Math.min(W * 0.78, H * 0.62);
+    var g = smooth(0.06, 0.34, p);
+    var cx = lerp(sx0, W / 2, g), cy = lerp(sy0, H * 0.46, g);
+    var scale = lerp(1, big / size0, g);
+    var rot = 0;
+
+    // wink: time-based (fixed tempo whatever the scroll speed), fired once when the
+    // grown mark settles in the centre; scrolling back above re-arms it
+    scrollE = smooth(0.34, 0.45, p) - (VARIANT === "c" ? 0 : smooth(0.54, 0.6, p));
+    if (p > 0.46 && !winked) { winked = true; idleE = 0; wink(); }
+    if (p < 0.3) winked = false;
+    drawMark();
+
+    var markOpacity = 1, extra = "", r = 0;
+    var t = smooth(0.58, 0.96, p);                 // the morph into the next section
+    if (VARIANT === "a") {
+      // Portal: the light section opens THROUGH the C, the ring flies past the camera
+      scale *= lerp(1, 7, t * t);
+      markOpacity = 1 - smooth(0.7, 0.92, p);
+      r = lerp(0, Math.hypot(W, H), t);
+      reveal.style.clipPath = "circle(" + r.toFixed(1) + "px at " + cx.toFixed(1) + "px " + cy.toFixed(1) + "px)";
+      reveal.style.opacity = "1";
+    } else if (VARIANT === "b") {
+      // Horizon: the C turns its mouth down (a dome), sinks, and hands over to the planet's rim
+      rot += 90 * smooth(0.58, 0.7, p);
+      cy = lerp(cy, H * 0.6, smooth(0.6, 0.74, p));
+      markOpacity = 1 - smooth(0.7, 0.8, p);
+      var domeTop = (H * 0.6) - (big / 2) * 0.7;          // where the C's top edge sits
+      horizon.style.opacity = String(smooth(0.68, 0.76, p));
+      horizon.style.transform = "translateY(" + lerp(domeTop, -H * 0.1, smooth(0.76, 0.93, p)).toFixed(1) + "px)";
+      reveal.style.clipPath = "none";
+      reveal.style.opacity = String(smooth(0.88, 0.98, p));
+    } else {
+      // Eye: the iris swells into the screen and pales into the next section
+      var ir = lerp(0, Math.hypot(W, H) * 1.05, smooth(0.58, 0.82, p));
+      var eyeCx = cx, eyeCy = cy + 2 / 120 * size0 * scale;   // the iris sits at the eye's centre
+      irisLayer.style.clipPath = "circle(" + ir.toFixed(1) + "px at " + eyeCx.toFixed(1) + "px " + eyeCy.toFixed(1) + "px)";
+      irisLayer.style.opacity = String(1 - smooth(0.84, 0.97, p) * 0.0);
+      markOpacity = 1 - smooth(0.6, 0.7, p);
+      reveal.style.clipPath = "none";
+      reveal.style.opacity = String(smooth(0.8, 0.96, p));
+    }
+    reveal.style.pointerEvents = p > 0.95 ? "auto" : "none";
+    mark.style.opacity = String(markOpacity);
+    mark.style.width = mark.style.height = size0 + "px";
+    mark.style.transform = "translate(" + (cx - size0 / 2).toFixed(1) + "px," + (cy - size0 / 2).toFixed(1) + "px) rotate(" + rot.toFixed(2) + "deg) scale(" + scale.toFixed(3) + ")" + extra;
+    // the nav turns light once the light section owns the screen
+    // (A: as soon as the opening light circle covers the whole top bar)
+    var navLight = VARIANT === "a" ? r > Math.max(Math.hypot(cx, cy), Math.hypot(W - cx, cy)) : p > ({ b: 0.9, c: 0.7 })[VARIANT];
+    stage.classList.toggle("nav-light", navLight);
+  }
+  stage.addEventListener("scroll", onScroll, { passive: true });
+
+  // ── idle wink on the hero mark (so it is alive before any scroll) ─────────
+  if (!reduced) {
+    setInterval(idleWink, 7000);
+    setTimeout(idleWink, 1500);
+  }
+
+  // ── reveal-on-scroll for the content sections ─────────────────────────────
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { root: stage, threshold: 0.12 });
+  document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
+
+  function topOf(el) { return el.getBoundingClientRect().top - stage.getBoundingClientRect().top + stage.scrollTop; }
+  // ── nav anchors scroll the stage ──────────────────────────────────────────
+  document.querySelectorAll("a[href^='#']").forEach(function (a) {
+    a.addEventListener("click", function (ev) {
+      var id = a.getAttribute("href").slice(1); var t = document.getElementById(id);
+      if (!t) return; ev.preventDefault();
+      stage.scrollTo({ top: topOf(t) - 64, behavior: reduced ? "auto" : "smooth" });
+      var m = document.getElementById("menu"); if (m) m.removeAttribute("data-open");
+    });
+  });
+  var burger = document.getElementById("burger");
+  if (burger) burger.addEventListener("click", function () {
+    var m = document.getElementById("menu");
+    if (m.hasAttribute("data-open")) m.removeAttribute("data-open"); else m.setAttribute("data-open", "");
+  });
+
+  window.__cit = { onScroll: onScroll, stage: stage, topOf: topOf };
+  resize();
+})();
+</script>
+<script>/* Citoviso landing mock — page behaviours: billing toggle, commission calc, sample-request form. */
+(function () {
+  "use strict";
+  var fmt = function (n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; };
+
+  // billing toggle: monthly ↔ yearly (yearly = 10 × monthly, i.e. 2 months free — pricing.ts)
+  document.querySelectorAll("[data-bill]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var y = b.getAttribute("data-bill") === "y";
+      document.querySelectorAll("[data-bill]").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      document.querySelectorAll(".plan").forEach(function (pl) {
+        var pr = pl.querySelector(".price");
+        pr.innerHTML = (y ? pr.getAttribute("data-y") : pr.getAttribute("data-m")) + " <small>Ft / " + (y ? "év" : "hó") + "</small>";
+        var m = Number(pr.getAttribute("data-m").replace(/\s/g, ""));
+        pl.querySelector(".yr").textContent = y ? "havonta " + fmt(m) + " helyett " + fmt(m * 10 / 12) : "";
+      });
+    });
+  });
+
+  // commission calculator
+  var rev = document.getElementById("rev"), pct = document.getElementById("pct");
+  function calc() {
+    var r = Number(rev.value), p = Number(pct.value), fee = r * p / 100;
+    document.getElementById("rev-out").textContent = fmt(r);
+    document.getElementById("pct-out").textContent = p + "%";
+    document.getElementById("fee-out").textContent = fmt(fee);
+    document.getElementById("quarter-out").textContent = "Ha minden negyedik foglalás közvetlenül jönne, évente " + fmt(fee / 4) + " maradna nálad. A Teljes csomag egy évre 70 000 Ft.";
+  }
+  rev.addEventListener("input", calc); pct.addEventListener("input", calc); calc();
+
+  // sample request: name + map pin + e-mail (the real intake mails the preview link → e-mail only)
+  var lat = null, lon = null, marker = null;
+  var mapEl = document.getElementById("map");
+  if (window.L && mapEl) {
+    var map = L.map(mapEl, { scrollWheelZoom: false }).setView([47.16, 19.5], 7);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
+    map.on("click", function (e) {
+      lat = e.latlng.lat; lon = e.latlng.lng;
+      if (marker) marker.setLatLng(e.latlng); else marker = L.marker(e.latlng).addTo(map);
+      document.getElementById("pin-out").textContent = "Hely rögzítve (" + lat.toFixed(4) + ", " + lon.toFixed(4) + "). Ha nem pontos, kattints máshova.";
+      document.getElementById("f-pin").classList.remove("bad");
+    });
+    new IntersectionObserver(function (es) { if (es[0].isIntersecting) map.invalidateSize(); }, { root: document.getElementById("stage") }).observe(mapEl);
+  }
+  var nameEl = document.getElementById("name"), mailEl = document.getElementById("contact");
+  mailEl.addEventListener("blur", function () { mailEl.value = mailEl.value.trim().toLowerCase(); });
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
+  document.getElementById("form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var okName = nameEl.value.trim().length >= 2, okPin = lat !== null, mail = mailEl.value.trim().toLowerCase(), okMail = EMAIL.test(mail);
+    document.getElementById("f-name").classList.toggle("bad", !okName);
+    document.getElementById("f-pin").classList.toggle("bad", !okPin);
+    document.getElementById("f-contact").classList.toggle("bad", !okMail);
+    if (!(okName && okPin && okMail)) { (okName ? (okPin ? mailEl : mapEl) : nameEl).scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+    var f = document.getElementById("form");
+    document.getElementById("sent").innerHTML = "<b>Megkaptuk.</b><br>A(z) „" + nameEl.value.trim().replace(/[<>&]/g, "") + "” mintáját elkészítjük, és a linkjét elküldjük ide: <b>" + mail.replace(/[<>&]/g, "") + "</b>.";
+    f.classList.add("done");
+  });
+})();
+</script>
+</body>
+</html>
