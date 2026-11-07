@@ -7,6 +7,8 @@
 //                      unset → the relay exits quietly (feature not armed).
 //   SMS_RELAY_SECRET — the bearer secret (the SAME one the SMS relay uses).
 //   MMS_RELAY_JOURNAL — optional; default outbox-mms/relay-journal.json (gitignored).
+//   MMS_SENDER       — "s10" → the MMS goes out from the Galaxy S10 (the modem SIM lives
+//                      there since 2026-11-06, ADR-XXXX); unset → the SIM800C mms-send CLI.
 //   GAMMU_DB_USER / GAMMU_DB_PASSWORD (+ GAMMU_DB_HOST, GAMMU_DB_NAME) — gammu-smsd's
 //                      SQL store: the pair's companion SMS is verified from its
 //                      sentitems (ADR-0332). Unset → NO MMS goes out (a pair whose
@@ -20,6 +22,7 @@
 import path from "node:path";
 import { config } from "../src/config.js";
 import { cliErrorDetail, sendMmsViaCli } from "../src/mms/sender.js";
+import { sendMmsViaS10 } from "../src/mms/s10Sender.js";
 import { runMmsRelayOnce } from "../src/mms/relayClient.js";
 import { injectViaGammu } from "../src/sms/sender.js";
 import { mysqlGammuStore } from "../src/sms/modemLane.js";
@@ -52,7 +55,7 @@ async function api(pathname: string, body: unknown): Promise<Record<string, unkn
 try {
   await runMmsRelayOnce({
     api,
-    send: sendMmsViaCli,
+    send: process.env.MMS_SENDER === "s10" ? sendMmsViaS10 : sendMmsViaCli,
     errorDetail: cliErrorDetail,
     journalPath: process.env.MMS_RELAY_JOURNAL ?? path.resolve(process.cwd(), "outbox-mms", "relay-journal.json"),
     lane: {

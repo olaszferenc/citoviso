@@ -25,3 +25,15 @@ logcat `CITA11Y` tagjén is. A képernyő tartalma: `uiautomator dump` (olvasás
 `viber://chat?number=%2B<szám>` csevegést, kiolvassa, van-e fiók (Vibernél a profilnevet és az
 utolsó aktivitást is), majd a kezdőképernyőre lép. Üzenetet NEM küld. 20–35 mp szünet számonként
 (tiltás-kockázat). A futás alatt a telefonhoz ne nyúljon senki (a képernyőt használja).
+
+## Küldés az S10-ről (ADR-XXXX: Viber → WhatsApp → MMS)
+
+`python3 scripts/s10-a11y/s10_send.py send --to <szám> --image <jpg> --text "<szöveg>" [--channel auto|viber|whatsapp|mms] [--dry-run]`
+— `auto`: Viber, ha ≤30 napja aktív; különben WhatsApp; különben Viber (régi); különben MMS.
+Egy JSON-sor a kimenet (`ok`, `channel`, `error`). `presence` = jelenlét küldés nélkül,
+`status` = a csevegés állapota (WhatsApp: utolsó üzenet „Kézbesítve/Megnézve”, utoljára aktív).
+A képernyő kizárólagos (`~/.cache/s10-ui.lock`), hívás közben nem nyúl semmihez.
+
+**MMS-relay az S10-ről:** `MMS_SENDER=s10` a fő fa `.env`-jében → a `scripts/mms-relay.mts` a
+`sendMmsViaS10`-et hívja (a Samsung Üzenetek appal küld, siker = `content://mms` `resp_st=128`).
+A kísérő SMS változatlanul a gammu-sávon (→ `s10_smsd.py`) megy.
