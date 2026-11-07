@@ -391,6 +391,15 @@ if [ -f scripts/photo-caption-check.mts ] && \
   echo "[pre-commit] photo-caption-check (a fotó-felirat mond valamit, és nem a képen ül)…"
   npx tsx scripts/photo-caption-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Stock-illusztráció (tulaj 2026-11-07, terv: design-refs/tenant-site/stock-fill): a vékony lead mockja
+# vízjeles stock képet kap — CSAK a galériába és a szobakártyára, soha herónak, soha élesre; a tenant-
+# feltöltő md5/dHash alapján elutasítja; nulla saját képnél betűs hero. 21 sablon + élő út + feltöltő.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/stock-fill-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(render|stock|templateKit|photoPolicy|recipe|samePicture)\.ts$|^src/tenant/(assetStore|editor)\.ts$|^public/assets/stock/|^scripts/stock-(fill-check|build)\.mts$'; then
+  echo "[pre-commit] stock-fill-check (illusztráció csak galéria + szobakártya, soha hero, soha élesre)…"
+  npx tsx scripts/stock-fill-check.mts >"$GATE_LOG" || gate_failed
+fi
 # M3 · H-2 (Elek 2026-10-01; terv: design-refs/console/mock-cards-fact-list): a „Tényhűség: megjelölve” jelvény nem mondta meg, MIT jelölt meg.
 # A jelvény a leletek számát viseli, és a kártyán nyitja a tárolt listát (valódi stíluslap, Chromium).
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).

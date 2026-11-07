@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, T, galleryOrder, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, T, galleryOrder, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS, galleryPhotos } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -479,7 +479,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
     </div>
   </div></div></footer>`;
 
-  const gallery = galleryOf(galleryOrder(photos, [mast, hero, rooms, wellness, reviews, faq, contact, footer, mobcta].join("")));
+  const gallery = galleryOf(galleryOrder(galleryPhotos(data), [mast, hero, rooms, wellness, reviews, faq, contact, footer, mobcta].join("")));
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

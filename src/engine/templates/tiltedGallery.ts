@@ -21,7 +21,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, copyHook, galleryPhotos, highlightHook, hookPick, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 const TILTED_CSS = `
 /* shared module sections (.cit-modsec) dressed to this template's rhythm (ADR-0057):
@@ -255,9 +255,11 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   // Mood cluster: the tail of the photo set, so it never repeats the hero/rooms.
   // Wrap around rather than slice past the end: a photo-poor lead must still get
   // the (smaller) mood cluster — it carries this template's gallery module hook.
-  const moodStart = Math.min((rooms?.length ?? 0) + 2, Math.max(0, photos.length - 1));
-  const mood = photos.length
-    ? Array.from({ length: Math.min(4, photos.length) }, (_, i) => photos[(moodStart + i) % photos.length]!)
+  // The mood cluster IS this template's gallery: a photo-poor MOCK adds the stock illustrations.
+  const moodSrc = galleryPhotos(data);
+  const moodStart = Math.min((rooms?.length ?? 0) + 2, Math.max(0, moodSrc.length - 1));
+  const mood = moodSrc.length
+    ? Array.from({ length: Math.min(4, moodSrc.length) }, (_, i) => moodSrc[(moodStart + i) % moodSrc.length]!)
     : [];
 
   const shot = (p: { url: string; alt: string } | undefined, alt: string) =>

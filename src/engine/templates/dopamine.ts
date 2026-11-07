@@ -33,6 +33,7 @@ import {
   T,
   type ArtTemplate,
   type MastheadLink,
+  galleryPhotos,
 } from "../templateKit.js";
 
 const DOPAMINE_CSS = `
@@ -305,7 +306,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     <div class="t-wrap">
       ${sectionHead("view", galCopy.eyebrow || T(data, "Galéria"), galCopy.title || T(data, "Nézzen be hozzánk"), galCopy.accent, hookPick(["gallery.eyebrow", galCopy.eyebrow]), hookPick(["gallery.title", galCopy.title]))}
       <div class="t-coll" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 8)
           .map(
             (p, i) =>

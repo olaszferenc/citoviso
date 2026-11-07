@@ -58,6 +58,7 @@ import {
 } from "../console/photoProxy.js";
 import { isInsecurePhotoUrl, parseProxiedMockPhoto, resolveProxiedSource } from "../generator/photoTransport.js";
 import { parseSrcset } from "../scraper/srcset.js";
+import { stockUrl } from "../engine/stock.js";
 
 /** Egy kép-hivatkozás a renderelt lapon. */
 export interface ImageRef {
@@ -201,6 +202,10 @@ export function extractImageRefs(html: string): ImageRef[] {
   const add = (raw: string | undefined, where: ImageRef["where"]): void => {
     const url = (raw ?? "").trim().replace(/&amp;/g, "&");
     if (!url) return;
+    // A stock ILLUSTRATION (engine/stock.ts, our own file in public/assets/stock) is no photo of
+    // the lodging: it neither makes a photo-less mock "photographed" (the nophoto gate, ADR-0150,
+    // stays in force for a lead with no own photo) nor is it a source URL to health-check.
+    if (stockUrl(url)) return;
     const prev = found.get(url);
     // Az ERŐSEBB hivatkozás-típus nyer: ami `<img>`-ként is szerepel, az kép a lapon,
     // akkor is, ha előbb egy meta-tagben találtuk meg.

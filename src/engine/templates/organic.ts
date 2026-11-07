@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyHook, copyOf, highlightHook, hookPick, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, highlightHook, hookPick, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS, galleryPhotos } from "../templateKit.js";
 
 const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -481,7 +481,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   </div>`
     : "";
 
-  const gallery = galleryOf(galleryOrder(photos, [mast, hero, rooms, rhythm, chips, reviews, faq, contact, footer, mobcta].join("")));
+  const gallery = galleryOf(galleryOrder(galleryPhotos(data), [mast, hero, rooms, rhythm, chips, reviews, faq, contact, footer, mobcta].join("")));
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

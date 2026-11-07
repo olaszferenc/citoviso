@@ -68,6 +68,7 @@ import {
   roomShell,
   T,
   type ArtTemplate,
+  galleryPhotos,
 } from "../templateKit.js";
 
 const ARROW = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`;
@@ -759,7 +760,7 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   // The gate's photo is seen for ~1 s while it opens: it does not count as "already on the page"
   // (otherwise the B gate photo would be pushed to the back of the gallery).
   const gallery = galleryOf(
-    galleryOrder(photos, [heroBlock.replace(gateHtml, ""), aboutBlock, roomsBlock, footer].join("")),
+    galleryOrder(galleryPhotos(data), [heroBlock.replace(gateHtml, ""), aboutBlock, roomsBlock, footer].join("")),
   );
 
   return `<!doctype html>

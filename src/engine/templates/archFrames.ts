@@ -25,7 +25,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -472,7 +472,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     </div>
   </footer>`;
 
-  const gallery = galleryOf(galleryOrder(photos, [heroBlock, about, roomsBlock, feature, band, review, footer].join("")));
+  const gallery = galleryOf(galleryOrder(galleryPhotos(data), [heroBlock, about, roomsBlock, feature, band, review, footer].join("")));
 
   // contract booking-card: with a booking surface the slim band is a card right after the
   // photos — at the end it sat directly above the full calendar, repeating its „Foglalás”

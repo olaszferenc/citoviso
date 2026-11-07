@@ -22,6 +22,7 @@
 // defensive only, since activate() already refuses to flip a site live without one.
 
 import type { Photo, SiteData } from "./recipe.js";
+import { isStockPhoto } from "./stock.js";
 
 /** Legacy tenant uploads stored before provenance stamping — recognizably owner assets. */
 const OWNER_UPLOAD_PREFIX = "/uploads/";
@@ -31,6 +32,9 @@ const OWNER_UPLOAD_PREFIX = "/uploads/";
  * @param rightsDeclared the tenant's §A self-declaration is on file for this site.
  */
 export function isLiveSafePhoto(p: Photo, rightsDeclared: boolean): boolean {
+  // ⛔ A STOCK illustration (engine/stock.ts) is a mock-only stand-in, watermarked in the pixels —
+  // never the tenant's asset, so no declaration covers it (owner 2026-11-07: „SOHA NEM MEHET ÉLESRE”).
+  if (isStockPhoto(p)) return false;
   // §A.2 — a visible third-party watermark is disqualifying on its own, declaration
   // or not: it is affirmative evidence of someone else's asset.
   if (p.watermarked) return false;

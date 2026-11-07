@@ -67,6 +67,7 @@ import {
   roomShell,
   T,
   type ArtTemplate,
+  galleryPhotos,
 } from "../templateKit.js";
 
 /** The brand mark: a drawn arch (the approved mock's gate). Inline SVG, never an emoji. */
@@ -750,7 +751,7 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   </div>`;
 
   // The gallery leads with the photos the page does not show elsewhere (contract gallery-cap).
-  const gallery = galleryOf(galleryOrder(photos, [heroBlock, walkBlock, roomsBlock, footer].join("")));
+  const gallery = galleryOf(galleryOrder(galleryPhotos(data), [heroBlock, walkBlock, roomsBlock, footer].join("")));
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

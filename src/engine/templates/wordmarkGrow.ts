@@ -31,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -140,6 +140,23 @@ section{padding:clamp(70px,10vh,124px) 0}
   .w-hero-copy h1{font-size:clamp(26px,9vh,40px)}
   .w-hero-copy .w-hero-line{font-size:clamp(14px,4.2vh,18px)}
 }
+
+/* NO OWN PHOTO (owner 2026-11-07, plan design-refs/tenant-site/stock-fill/): a TYPOGRAPHIC hero —
+   the name and the town large, in the skin's colours, over a faded, watermarked regional landscape
+   (stock, mock only). The veil is the page ground, so the type reads on every skin. */
+.w-hero--type{height:auto;min-height:62vh;display:flex;align-items:center;background:var(--cit-surface)}
+.w-hero--type::after{content:none}
+.w-hero--type .w-hero-back{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.32;filter:saturate(.55)}
+.w-hero--type::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,
+  color-mix(in srgb,var(--cit-bg) 55%,transparent),color-mix(in srgb,var(--cit-bg) 88%,transparent))}
+.w-type{position:relative;z-index:2;width:min(1140px,88vw);margin:0 auto;padding:72px 0}
+.w-type .w-kick{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--cit-accent);margin-bottom:14px}
+.w-type h1{font-family:var(--cit-font-display);font-size:clamp(44px,10vw,132px);line-height:.95;margin:0;
+  color:var(--cit-ink);max-width:12ch;letter-spacing:-.01em}
+.w-type .w-hero-line{font-family:var(--cit-font-display);max-width:46ch;margin:22px 0 0;font-size:clamp(16px,2vw,22px);
+  line-height:1.4;color:color-mix(in srgb,var(--cit-ink) 78%,transparent)}
+/* no own photo: the about row has no picture — one centred column, never an empty frame */
+.w-row--solo{grid-template-columns:1fr;max-width:760px}
 
 /* alternating rows: rounded portrait card + copy */
 .w-row{display:grid;grid-template-columns:1fr 1fr;gap:min(72px,7vw);align-items:center}
@@ -269,7 +286,20 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // The hero copy is revealed word by word — the intro hands over to it when the
   // growing frame has filled the screen (data-cit-hero-copy is that handshake).
-  const heroBlock = `${nav}
+  // No own photo → the typographic hero over the faded regional landscape (data.stock.backdrop,
+  // mock only). ⛔ Never a stock INTERIOR as the cover: the backdrop is a landscape, behind the type.
+  const backdrop = hero ? undefined : data.stock?.backdrop;
+  const heroBlock = backdrop
+    ? `${nav}
+  <header class="w-hero w-hero--type">
+    <img class="w-hero-back" src="${esc(backdrop.url)}" alt="${esc(backdrop.alt)}" aria-hidden="true">
+    <div class="w-type cit-words" data-cit-hero-copy ${mo("in", 100)}>
+      ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
+      <h1>${esc(data.name)}</h1>
+      ${heroCopy.lead ? `<p class="w-hero-line"${copyHook("hero.lead")}>${accented(heroCopy.lead, heroCopy.accent)}</p>` : ""}
+    </div>
+  </header>`
+    : `${nav}
   <header class="w-hero">
     ${hero ? `<img ${parallax(0.7)} data-cit-hero-img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
     <div class="w-hero-copy cit-words" data-cit-hero-copy ${mo("in", 100)}>
@@ -281,8 +311,8 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   const about = `<section id="cit-about">
     <div class="w-wrap">
-      <div class="w-row">
-        <div class="w-fig">${card(photos[1] ?? hero, data.name)}</div>
+      <div class="w-row${photos.length ? "" : " w-row--solo"}">
+        ${photos.length ? `<div class="w-fig">${card(photos[1] ?? hero, data.name)}</div>` : ""}
         <div>
           <span class="w-spark">${SPARK}</span>
           ${
@@ -457,7 +487,11 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   </footer>`;
 
   // The one-shot intro flash is NOT "shown on the page" — it is gone after two seconds.
-  const gallery = galleryOf(galleryOrder(photos, [heroBlock, about, roomsBlock, review, footer].join("")));
+  // No photo at all (the typographic-hero lead): no gallery section — never one empty frame.
+  const galList = galleryPhotos(data);
+  const gallery = galList.length
+    ? galleryOf(galleryOrder(galList, [heroBlock, about, roomsBlock, review, footer].join("")))
+    : "";
 
   // Contract wordmark-grow-b: with a booking surface the slim band sits right after the
   // photos (the full calendar closes the page); the enquiry bar keeps its old place.

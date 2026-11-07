@@ -13,7 +13,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, contactPhotoOf, copyHook, highlightHook, hookPick, bookingSlot, hasBookingSurface, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, contactPhotoOf, copyHook, copyOf, ctaLabel, esc, firstSentence, galleryPhotos, hasBookingSurface, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -410,7 +410,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       ${galCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
       <h2${hookPick(["gallery.title", galCopy.title && galCopy.title !== bandAText ? galCopy.title : ""])}>${galCopy.title && galCopy.title !== bandAText ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="t-gal" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 6)
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
           .join("\n        ")}

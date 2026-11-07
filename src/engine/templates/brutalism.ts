@@ -15,7 +15,7 @@ import { ratingScale } from "../rating.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, galleryPhotos, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 // Monospace stack for the "industrial" voice (labels, tags, marquee). System fonts only —
 // the skin decides the display/body families; the mono accent is template character.
@@ -361,7 +361,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       ${secTag(galCopy.eyebrow ?? T(data, "Képek"), hookPick(["gallery.eyebrow", galCopy.eyebrow]))}
       <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a helyszínről")}</h2>
       <div class="b-gal" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 6)
           .map(
             (p) => {

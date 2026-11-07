@@ -116,6 +116,12 @@ export interface Photo {
    * Absent = not measured — never read as "different" or "same".
    */
   readonly dhash?: string;
+  /**
+   * A watermarked STOCK illustration from public/assets/stock (engine/stock.ts) — mock only,
+   * gallery and room cards only, never the hero, never live. Every live gate keys on this flag
+   * OR the /assets/stock/ URL (isStockPhoto), never on the provenance alone.
+   */
+  readonly stock?: boolean;
 }
 
 /** One amenity ON a unit: the owner's stored label plus the catalogue's icon markup. */
@@ -346,6 +352,20 @@ export interface SiteData {
   /** ADR-0041 locality facets off the lead (ADR-0038/0040): NAP fields for the JSON-LD
    *  PostalAddress + the localized <title> pattern. Only real values — never fabricated. */
   readonly place?: { readonly city?: string; readonly country?: string };
+  /** The lead id — the seed of the mock's deterministic stock-illustration pick (engine/stock.ts).
+   *  Absent (older artifacts) → name + town. */
+  readonly stockSeed?: string;
+  /**
+   * RENDER-TIME ONLY, mock phase (render.ts withStockFill) — never stored, never live.
+   * `gallery`: watermarked illustrations the gallery shows AFTER the own photos (templates read
+   * them through galleryPhotos()); `backdrop`: the faded regional landscape behind the
+   * typographic hero of a lead with no own photo; `cards`: room cards may wear illustrations.
+   */
+  readonly stock?: {
+    readonly gallery: readonly Photo[];
+    readonly backdrop?: Photo;
+    readonly cards: boolean;
+  };
   /** ADR-0041 Schema.org business @type derived from the lead's INDUSTRY (the industry is a
    *  parameter, not baked-in code). Absent (legacy artifacts) → LodgingBusiness fallback. */
   readonly businessType?: string;

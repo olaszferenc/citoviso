@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, galleryPhotos, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, photoFill, roomDetails, roomHint, roomsFor, roomsHeading, roomShell, roomsLabel, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -380,7 +380,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       ${galCopy.eyebrow ? `<span class="au-k"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Galéria")}</span>`}
       <h2 class="au-h2"${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="au-gal" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 8)
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
           .join("\n        ")}

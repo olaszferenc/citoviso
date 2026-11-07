@@ -12,7 +12,8 @@ import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
-import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
+import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, sampleRooms, T } from "./templateKit.js";
+import { isStockPhoto, stockGallery, stockHeroBackdrop } from "./stock.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
@@ -181,8 +182,9 @@ export function responsiveGooglePhotos(html: string): string {
  *  maxPhotos cap already applied upstream). One JSON island for every template — the
  *  runtime's mountGallery reads it; without it (old pages) it pages the slot's own <img>s. */
 export function withGalleryPhotoList(html: string, data: SiteData): string {
-  if (!data.photos.length || !html.includes('data-cit-module="gallery"') || !html.includes("</body>")) return html;
-  const list = data.photos.map((p) => ({ src: p.url, alt: p.alt ?? "" }));
+  const photos = galleryPhotos(data);
+  if (!photos.length || !html.includes('data-cit-module="gallery"') || !html.includes("</body>")) return html;
+  const list = photos.map((p) => ({ src: p.url, alt: p.alt ?? "" }));
   return html.replace(
     "</body>",
     `<script type="application/json" data-cit-photos>${jsonForScript(list)}</script>\n</body>`,
@@ -708,6 +710,19 @@ function injectWholeBand(html: string, data: SiteData, phase: RenderPhase): stri
     : html.slice(0, end) + band + html.slice(end);
 }
 
+/**
+ * The mock's stock fill (engine/stock.ts): the gallery's illustrations after the own photos
+ * (up to six in all, a bedroom only when the lodging shows none), room cards may wear one, and a
+ * lead with NO own photo gets the faded regional landscape behind its typographic hero. Rides in
+ * `data.stock`, never in `data.photos` — so no hero/about/band/contact slot can pick one up.
+ */
+function withStockFill(data: SiteData): SiteData {
+  const alt = T(data, "Illusztráció");
+  const gallery = stockGallery(data, !hasOwnBedroomPhoto(data), alt);
+  const backdrop = data.photos.length === 0 ? stockHeroBackdrop(data, alt) : undefined;
+  return { ...data, stock: { gallery, cards: true, ...(backdrop ? { backdrop } : {}) } };
+}
+
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
@@ -785,6 +800,12 @@ export function renderSite(
     });
     if (rooms.some((r, i) => r !== data.rooms![i])) data = { ...data, rooms };
   }
+  // A stock illustration is never a stored photo of the lodging: whatever the phase, it leaves
+  // `photos` here (a stale snapshot or a hand edit must not carry one to the hero or live).
+  if (data.photos.some((p) => isStockPhoto(p))) data = { ...data, photos: data.photos.filter((p) => !isStockPhoto(p)) };
+  // Owner 2026-11-07 (plan assets/design-refs/tenant-site/stock-fill/): on the MOCK the missing
+  // image slots are filled with watermarked stock illustrations — gallery + room cards only.
+  if (phase === "mock") data = withStockFill(data);
   // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
   // so no card is left as a bare icon panel next to a page full of real imagery.
   if (phase === "mock" && data.rooms?.length) data = { ...data, rooms: roomsForMock(data) };

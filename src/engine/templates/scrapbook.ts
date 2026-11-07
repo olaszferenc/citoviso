@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, esc, firstSentence, galleryPhotos, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, photoFill, roomDetails, roomHint, roomsFor, roomShell, roomsLabel, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const SCRAPBOOK_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -333,7 +333,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       ${galCopy.eyebrow ? `<span class="sb-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Képek")}</span>`}
       <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Fotóalbum")}</h2>
       <div class="sb-album" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 8)
           .map((p, i) => `<div class="sb-ap${i % 3 === 2 ? " sb-pin" : i % 3 === 0 ? " sb-tape" : ""}" style="--r:${tilt(i)}"><figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure></div>`)
           .join("\n        ")}

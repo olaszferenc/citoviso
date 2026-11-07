@@ -45,6 +45,7 @@ import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems,
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { fingerprintCandidates } from "./photoHash.js";
 import { GATE_OPENING, GATE_SUBJECTS, gatePhotoOf } from "../engine/templates/gateOpening.js";
+import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
   loadLead,
@@ -674,10 +675,14 @@ async function generateEngineMockInner(
     ...(units.rooms.length ? { rooms: units.rooms } : {}),
     // ADR-0338: the mock's SAMPLE blocks read against the source (sampleHintsOf).
     ...sampleHints,
+    // The seed of the mock's deterministic stock-illustration pick (engine/stock.ts).
+    stockSeed: leadId,
   };
   // The gate photo in its own field (the tenant admin's later choice; ADR-0423).
-  const gatePick = opts.template === GATE_OPENING.id ? gatePhotoOf(baseSiteData.photos) : null;
-  if (opts.template === GATE_OPENING.id && !gatePick) {
+  // A lead with no own photo renders through wordmark-grow (noPhotoHero below), not the gate.
+  const gateWanted = opts.template === GATE_OPENING.id && photos.length > 0;
+  const gatePick = gateWanted ? gatePhotoOf(baseSiteData.photos) : null;
+  if (gateWanted && !gatePick) {
     throw new Error("Kapunyitás: a második kép a nyitóképpel azonos — a tervet elutasítottam, nem generáltam."); // i18n-exempt: operator-facing generation error (console)
   }
   const siteData: SiteData = gatePick ? { ...baseSiteData, gatePhoto: gatePick } : baseSiteData;
@@ -691,8 +696,12 @@ async function generateEngineMockInner(
   // non-console callers (the public mock request, the CLI).
   const DEFAULT_TEMPLATE = FIRST_TEMPLATE_DEFAULT;
   if (opts.template && !TEMPLATES[opts.template]) throw new Error(`unknown template: ${opts.template}`);
-  const templateId = opts.template ?? DEFAULT_TEMPLATE;
-  const useTemplate = !opts.archetype && photos.length > 0 && Boolean(TEMPLATES[templateId]);
+  // NO OWN PHOTO (owner 2026-11-07, plan assets/design-refs/tenant-site/stock-fill/): such a lead
+  // gets a mock too — through wordmark-grow, whose typographic hero (name + town over a faded,
+  // watermarked regional landscape) needs no photo. Every other template's hero IS a photo.
+  const noPhotoHero = !opts.archetype && photos.length === 0;
+  const templateId = noPhotoHero ? WORDMARK_GROW.id : (opts.template ?? DEFAULT_TEMPLATE);
+  const useTemplate = !opts.archetype && (photos.length > 0 || noPhotoHero) && Boolean(TEMPLATES[templateId]);
   let recipe: Recipe;
   let source: "template" | "ai" | "fallback";
   if (useTemplate) {
@@ -721,7 +730,7 @@ async function generateEngineMockInner(
   // Editorial copy comes from the SAME call as the brief (one photo send) — see above.
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
   // A requested template is rendered or the run fails — never another design in its place.
-  if (!opts.archetype) assertTemplateHonoured(opts.template, finalRecipe.template);
+  if (!opts.archetype && !noPhotoHero) assertTemplateHonoured(opts.template, finalRecipe.template);
   // Module-sales switch (owner decree 2026-09-06): a not-sellable module gets no
   // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
   opts.onStage?.("render");

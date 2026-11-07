@@ -75,6 +75,8 @@ import { priceSiteView } from "../tenant/priceSiteView.js";
 import { CONTACT_ERRORS, type ContactErrorKey } from "../tenant/contact.js";
 import { normalizeUpload } from "../tenant/photoUpload.js";
 import { getAssetStore } from "../tenant/assetStore.js";
+import { isStockBytes, isStockDhash } from "../engine/stock.js";
+import { dHashFromBuffer } from "../generator/photoHash.js";
 import {
   adminDashboard,
   adminFullscreenPage,
@@ -4276,6 +4278,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           continue;
         }
         const buf = Buffer.from(m[2], "base64");
+        // ⛔ The mock's stock illustrations (watermarked, public/assets/stock) are never a tenant
+        // photo — not the downloaded file (md5), not a re-encoded copy or the clean original (dHash).
+        if (isStockBytes(buf) || isStockDhash(await dHashFromBuffer(buf).catch(() => null))) {
+          errors.push({ file: nameOf(it, i), reason: "ez a kép a bemutató illusztrációink egyike, nem az Ön fotója — kérjük, saját fotót töltsön fel" });
+          continue;
+        }
         if (buf.length > 6_000_000) {
           errors.push({
             file: nameOf(it, i),

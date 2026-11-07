@@ -15,7 +15,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, hasBookingSurface, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyHook, copyOf, esc, firstSentence, galleryPhotos, hasBookingSurface, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, photoFill, roomDetails, roomHint, roomsFor, roomsHeading, roomShell, roomsLabel, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -387,7 +387,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${decoRule}
       </div>
       <div class="ad-gal" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 8)
           .map(
             (p) => {

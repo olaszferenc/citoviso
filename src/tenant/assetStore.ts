@@ -6,6 +6,14 @@ import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
+import { isStockBytes } from "../engine/stock.js";
+
+/** The upload IS one of the mock's stock illustrations (md5 of a library file) — refused. */
+export class StockAssetRefused extends Error {
+  constructor() {
+    super("stock illustration refused as a tenant asset");
+  }
+}
 
 export interface StoredAsset {
   /** Public URL the rendered site references. */
@@ -21,6 +29,8 @@ const UPLOAD_ROOT = "sites"; // sites/<tenantId>/uploads/<file>
 
 class LocalAssetStore implements AssetStore {
   async save(tenantId: string, ext: string, data: Buffer): Promise<StoredAsset> {
+    // ⛔ The last line of defence (owner 2026-11-07): a stock file never lands in a tenant's store.
+    if (isStockBytes(data)) throw new StockAssetRefused();
     const dir = path.join(UPLOAD_ROOT, tenantId, "uploads");
     await mkdir(path.resolve(process.cwd(), dir), { recursive: true });
     const name = `${randomBytes(8).toString("hex")}.${ext}`;

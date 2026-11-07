@@ -11,6 +11,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/client.js";
 import { applyLivePhotoPolicy } from "../engine/photoPolicy.js";
+import { isStockPhoto } from "../engine/stock.js";
 import type { PhotoProvenance, Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import {
@@ -717,7 +718,15 @@ async function assembleEffective(
     mergedRaw.photos ?? [],
     await readCachedScores((mergedRaw.photos ?? []).map((p) => p.url)),
   );
-  const merged: SiteData = { ...mergedRaw, photos: bannerFree.kept };
+  // ⛔ A stock illustration (mock only, engine/stock.ts) is never a tenant photo — not on the
+  // preview, not live, not as a room's cover (owner 2026-11-07).
+  const merged: SiteData = {
+    ...mergedRaw,
+    photos: bannerFree.kept.filter((p) => !isStockPhoto(p)),
+    ...(mergedRaw.rooms
+      ? { rooms: mergedRaw.rooms.map((r) => (r.photo && isStockPhoto(r.photo) ? { ...r, photo: undefined } : r)) }
+      : {}),
+  };
   // §A.1/b: with the tenant's photo-rights declaration on file the demo photos STAY on
   // the public snapshot (owner ruling 2026-08-20) — only watermarked imagery is stripped.
   // The provisioned private preview is demo-phase (ADR-0014) and keeps everything.
@@ -1089,7 +1098,9 @@ export async function addTenantPhotos(
   const current = s.overrides.photos ?? [];
   // §A.3: uploads through the tenant admin are the owner's own assets — stamp them so
   // the live photo policy can tell them apart from demo (places/streetview) imagery.
-  const stamped = photos.map((p) => ({ ...p, provenance: "owner" as const }));
+  // ⛔ A stock illustration's URL never becomes a tenant photo, whatever the caller sent.
+  const stamped = photos.filter((p) => !isStockPhoto(p)).map((p) => ({ ...p, provenance: "owner" as const }));
+  if (!stamped.length) return { ok: false };
   const overrides: Overrides = { ...s.overrides, photos: [...current, ...stamped].slice(0, 24) };
   return { ok: await renderAndPersist(s, overrides) };
 }

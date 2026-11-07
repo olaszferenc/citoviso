@@ -8,6 +8,7 @@ import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
+import { isStockPhoto, stockRoomPhotos } from "./stock.js";
 // Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
 export { copyHook, highlightHook, hookPick } from "./copyFields.js";
@@ -228,13 +229,47 @@ export function sampleRooms(d: SiteData): readonly Room[] {
     const { amenities: _chips, ...card } = proto;
     return { ...card, name, amenities: [] };
   });
-  if (!d.photos.length) return base;
   // One card stands for the whole place or a kind — any inside photo fits it.
   const pick = (i: number): Photo | undefined => (n === 1 ? photos.single : photos.cards[i]);
-  return base.map((r, i) => {
-    const photo = pick(i);
+  const own = base.map((r, i) => {
+    const photo = d.photos.length ? pick(i) : undefined;
     return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
   });
+  return withStockCards(d, own);
+}
+
+/**
+ * Owner 2026-11-07 (plan assets/design-refs/tenant-site/stock-fill/): a MOCK room card the
+ * lodging has no bedroom photo for wears a watermarked bedroom ILLUSTRATION (engine/stock.ts),
+ * each card a different one. Only when the render opened the stock fill (`d.stock.cards`, mock
+ * phase) — the live page never sees one. Also replaces a card photo whose verdict says it is
+ * NOT a bedroom while the lodging shows no bedroom of its own (a kitchen on „1. szoba”).
+ */
+function withStockCards(d: SiteData, rooms: Room[]): Room[] {
+  if (!d.stock?.cards) return rooms;
+  const noOwnBedroom = roomCardPhotos(d).cards.length === 0;
+  const needs = rooms.map((r) => !r.photo || (noOwnBedroom && r.photo.bedroom === false && !isStockPhoto(r.photo)));
+  const wanted = needs.filter(Boolean).length;
+  if (!wanted) return rooms;
+  const names = rooms.filter((_, i) => needs[i]).map((r) => r.name);
+  const pool = stockRoomPhotos(d, wanted, (i) => T(d, "Illusztráció — {name}", { name: names[i] ?? "" }));
+  let k = 0;
+  return rooms.map((r, i) => {
+    if (!needs[i]) return r;
+    const photo = pool[k++];
+    return photo ? { ...r, photo } : r;
+  });
+}
+
+/**
+ * The gallery's photos: the lodging's own, then (MOCK only, when the lead has fewer than six)
+ * the watermarked stock illustrations of `d.stock.gallery`. ⛔ Read this ONLY for the gallery
+ * section and its lightbox — every other slot (hero, about, band, contact) reads `d.photos`,
+ * which never holds a stock picture (owner 2026-11-07: stock only in the gallery and on cards).
+ */
+export function galleryPhotos(d: SiteData): readonly Photo[] {
+  const extra = d.stock?.gallery ?? [];
+  return extra.length ? [...d.photos, ...extra] : d.photos;
 }
 
 /** A photo's file name + caption, folded, for the no-verdict signal words. */
@@ -268,6 +303,11 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   return { cards, single: cards[0] };
 }
 
+/** Does the lodging show a bedroom photo of its own (the room cards' photo rule)? */
+export function hasOwnBedroomPhoto(d: SiteData): boolean {
+  return roomCardPhotos(d).cards.length > 0;
+}
+
 /**
  * The rooms the MOCK should render: the property's REAL rooms when a verified
  * listing named them, otherwise numbered samples — and in BOTH cases every card
@@ -280,15 +320,16 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
  */
 export function roomsForMock(d: SiteData): readonly Room[] {
   if (!d.rooms?.length) return sampleRooms(d);
-  if (!d.photos.length) return d.rooms;
   // A borrowed photo is a bedroom (with a verdict) and is borrowed ONCE; a room left without
-  // one keeps its own panel rather than repeat a photo another card already wears.
-  const pool = [...roomCardPhotos(d).cards];
-  return d.rooms.map((r) => {
+  // one keeps its own panel rather than repeat a photo another card already wears — or, on the
+  // mock with the stock fill open, a watermarked bedroom illustration (withStockCards).
+  const pool = d.photos.length ? [...roomCardPhotos(d).cards] : [];
+  const borrowed = d.rooms.map((r) => {
     if (r.photo) return r;
     const photo = pool.shift();
     return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
   });
+  return withStockCards(d, borrowed);
 }
 
 /**
@@ -435,7 +476,11 @@ export function galleryOrder(photos: readonly Photo[], elsewhere: string): Photo
     const u = esc(p.url);
     return elsewhere.includes(`${u}"`) || elsewhere.includes(`${u}'`) || elsewhere.includes(`${u})`);
   };
-  return [...photos.filter((p) => !shown(p)), ...photos.filter(shown)];
+  // A stock illustration (mock only) never leads: the lodging's own unseen photos first, then
+  // the illustrations, then the own photos the page already shows.
+  const own = photos.filter((p) => !isStockPhoto(p));
+  const stock = photos.filter((p) => isStockPhoto(p));
+  return [...own.filter((p) => !shown(p)), ...stock, ...own.filter(shown)];
 }
 
 const GPAGER_PREV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;

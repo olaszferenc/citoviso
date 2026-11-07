@@ -14,7 +14,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, contactPhotoOf, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, contactPhotoOf, galleryPhotos, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const DARK_LUXURY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -232,7 +232,8 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   // Photo card spread: with >4 photos the strip skips the hero shot; the offset gallery takes
   // the tail; the contact overlay card takes the last one. Degrades gracefully down to 0.
   const stripPhotos = photos.length > 4 ? photos.slice(1, 5) : photos.slice(0, 4);
-  const galPhotos = photos.slice(-4);
+  // A photo-poor MOCK fills its gallery with the stock illustrations (galleryPhotos) — own first.
+  const galPhotos = photos.length >= 4 ? photos.slice(-4) : galleryPhotos(data).slice(0, 4);
   const conPhoto = contactPhotoOf(data, photos[photos.length - 1]);
   const contactPhoto = conPhoto?.url ?? "";
   const contactAlt = conPhoto?.alt ?? "";

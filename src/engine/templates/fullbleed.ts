@@ -10,7 +10,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, contactPhotoOf, copyHook, copyOf, highlightHook, hookPick, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, contactPhotoOf, copyHook, copyOf, ctaLabel, esc, firstSentence, galleryPhotos, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -326,7 +326,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
       </div>
       <div class="t-mosaic" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 6)
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
           .join("\n        ")}

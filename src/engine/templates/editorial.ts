@@ -32,6 +32,7 @@ import {
   honestStarCount,
   T,
   type ArtTemplate,
+  galleryPhotos,
 } from "../templateKit.js";
 
 const EDITORIAL_CSS = `
@@ -328,7 +329,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section id="e-gallery">
     ${sectionHead(galCopy.title || T(data, "Képek a házról"), galCopy.accent, hookPick(["gallery.title", galCopy.title]))}
     <div class="e-sheet" data-cit-module="gallery">
-      ${photos
+      ${galleryPhotos(data)
         .slice(0, 6)
         .map(
           (p, i) => {

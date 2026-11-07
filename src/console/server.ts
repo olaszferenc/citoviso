@@ -1531,7 +1531,9 @@ async function handle(
   // nem bízzuk egy proxy-sorra: a lapot kiszolgáló processz szolgálja ki azt is,
   // ami nélkül a lap hazudik. Ez a szakasz az AUTH-KAPU ELŐTT van, tehát a két
   // fájl bejelentkezés nélkül is elérhető — ahogy a sávnak kell.
-  if (method === "GET" && /^\/assets\/(?:ui|runtime)\/[a-z0-9._-]+$/i.test(path)) {
+  // `stock/<category>/<file>`: the mock's watermarked illustrations (engine/stock.ts) — the mock
+  // served from /mock/ and /configure/ must show them in dev, where nginx does not route /assets/.
+  if (method === "GET" && /^\/assets\/(?:(?:ui|runtime)\/|stock\/[a-z-]+\/)[a-z0-9._-]+$/i.test(path)) {
     const file = path_mod.resolve(process.cwd(), "public", path.slice(1));
     try {
       const type = path.endsWith(".css")

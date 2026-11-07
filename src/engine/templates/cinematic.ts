@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, roomsFor, T, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, galleryPhotos, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, photoFill, roomDetails, roomHint, roomsFor, roomsHeading, roomShell, roomsLabel, roomsLead, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -397,7 +397,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="cn-mosaic" data-cit-module="gallery">
-        ${photos
+        ${galleryPhotos(data)
           .slice(0, 6)
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
           .join("\n        ")}
