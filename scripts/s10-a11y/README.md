@@ -26,7 +26,7 @@ logcat `CITA11Y` tagjén is. A képernyő tartalma: `uiautomator dump` (olvasás
 utolsó aktivitást is), majd a kezdőképernyőre lép. Üzenetet NEM küld. 20–35 mp szünet számonként
 (tiltás-kockázat). A futás alatt a telefonhoz ne nyúljon senki (a képernyőt használja).
 
-## Küldés az S10-ről (ADR-XXXX: Viber → WhatsApp → MMS)
+## Küldés az S10-ről (ADR-0430: Viber → WhatsApp → MMS)
 
 `python3 scripts/s10-a11y/s10_send.py send --to <szám> --image <jpg> --text "<szöveg>" [--channel auto|viber|whatsapp|mms] [--dry-run]`
 — `auto`: Viber, ha ≤30 napja aktív; különben WhatsApp; különben Viber (régi); különben MMS.

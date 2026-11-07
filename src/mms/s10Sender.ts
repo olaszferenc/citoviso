@@ -1,4 +1,4 @@
-// S10 MMS adapter (ADR-XXXX) — DEBIAN-BOX ONLY (scripts/mms-relay.mts). The modem SIM lives
+// S10 MMS adapter (ADR-0430) — DEBIAN-BOX ONLY (scripts/mms-relay.mts). The modem SIM lives
 // in the Galaxy S10 since 2026-11-06, so the MMS goes out from the phone's own messaging app,
 // driven by scripts/s10-a11y/s10_send.py. Kept out of src/mms/sender.ts on purpose: that
 // module ships to production, where there is no Python (mms-preview-gate ⑨).

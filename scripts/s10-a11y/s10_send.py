@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""S10 messenger-first sender (ADR-XXXX): Viber -> WhatsApp -> MMS, one image + one text.
+"""S10 messenger-first sender (ADR-0430): Viber -> WhatsApp -> MMS, one image + one text.
 
   s10_send.py presence --to 36301234567
   s10_send.py send --to 36301234567 --image kep.jpg --text "..." [--channel auto|viber|whatsapp|mms] [--dry-run]

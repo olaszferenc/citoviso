@@ -1,4 +1,4 @@
-## ADR-XXXX — Messenger-első megkeresés: Viber → WhatsApp → MMS, az S10-ről, olvasás-méréssel
+## ADR-0430 — Messenger-első megkeresés: Viber → WhatsApp → MMS, az S10-ről, olvasás-méréssel
 
 **Dátum:** 2026-11-07 · **Döntött:** tulaj („Cél írd fel: megkeresésnél sms mms előtt ellenőrizni, hogy a lead használ-e Vibert vagy WhatsAppot; ha igen, ott kiküldeni … és max küldjük sms mmsben”; a tervre „mehet”) · **Kapcsolódik:** ADR-0282 (MMS-relay), ADR-0332 (pár = egy egység), ADR-0334 (küldési ablak), ADR-0080 (SMS-relay), ADR-0339 (válasz-gyűjtő)
 

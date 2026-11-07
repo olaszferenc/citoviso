@@ -8,7 +8,7 @@
 //   SMS_RELAY_SECRET — the bearer secret (the SAME one the SMS relay uses).
 //   MMS_RELAY_JOURNAL — optional; default outbox-mms/relay-journal.json (gitignored).
 //   MMS_SENDER       — "s10" → the MMS goes out from the Galaxy S10 (the modem SIM lives
-//                      there since 2026-11-06, ADR-XXXX); unset → the SIM800C mms-send CLI.
+//                      there since 2026-11-06, ADR-0430); unset → the SIM800C mms-send CLI.
 //   GAMMU_DB_USER / GAMMU_DB_PASSWORD (+ GAMMU_DB_HOST, GAMMU_DB_NAME) — gammu-smsd's
 //                      SQL store: the pair's companion SMS is verified from its
 //                      sentitems (ADR-0332). Unset → NO MMS goes out (a pair whose
