@@ -674,7 +674,8 @@ async function audit(v: Variant): Promise<string[]> {
   // never run it, so deferring it would drop it for good.
   const commitOnly = [...v.hook.matchAll(/^if \[ -z "\$\{LAND_RANGE:-\}" \][^\n]*\n([\s\S]*?)^fi$/gm)];
   say(
-    commitOnly.length === (v.hook.match(/\[ -z "\$\{LAND_RANGE/g) ?? []).length,
+    // every CODE line testing for an empty LAND_RANGE (comments mention the form too)
+    commitOnly.length === v.hook.split("\n").filter((l) => !l.trimStart().startsWith("#") && l.includes('[ -z "${LAND_RANGE')).length,
     "K · a hook egy commit-módú (LAND_RANGE-üres) feltételét az őr nem tudta blokként kiolvasni — a böngészős-kapu tilalom nem mérhető rajta",
   );
   for (const blk of commitOnly) {
