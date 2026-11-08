@@ -55,6 +55,8 @@ export interface MmsMessage {
    * WhatsApp instead of MMS. Absent = MMS only.
    */
   readonly messengerText?: string;
+  /** ADR-0430: 'whatsapp' = send on WhatsApp only (the automatic follow-up); no ladder, no MMS. */
+  readonly forceChannel?: "whatsapp";
 }
 
 export interface MmsSendResult {

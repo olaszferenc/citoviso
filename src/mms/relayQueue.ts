@@ -38,6 +38,8 @@ export interface PulledMms {
    * for this row (switch on, no brake, FIRST attempt; no daily cap). Absent = MMS.
    */
   readonly messenger_text?: string;
+  /** ADR-0430: 'whatsapp' = the automatic follow-up — WhatsApp only, never an MMS. */
+  readonly channel?: "whatsapp";
 }
 
 export interface MmsAck {
@@ -157,6 +159,8 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
     );
   }
   if (mmsPullBlocks(windowAt)) return [];
+  // A WhatsApp follow-up may only go on WhatsApp: with the messenger branch off or braked it stays queued.
+  const followupBlocked = (await messengerBlocked()) !== null;
   // Claim-then-read in ONE statement: two overlapping pulls cannot get the same row.
   const claimed = await db
     .updateTable("mms_outbox")
@@ -168,13 +172,14 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
         .selectFrom("mms_outbox")
         .select("id")
         .where("status", "=", "queued")
+        .$if(followupBlocked, (qb) => qb.where("force_channel", "is", null))
         .orderBy("created_at", "asc")
         .limit(1)
         .forUpdate()
         .skipLocked(),
     )
     .where("status", "=", "queued")
-    .returning(["id", "to_phone", "subject", "image", "messenger_text", "attempts", "prospect_id"])
+    .returning(["id", "to_phone", "subject", "image", "messenger_text", "attempts", "prospect_id", "force_channel"])
     .execute();
   // ADR-0430: the messenger option only on a prospect row's first attempt, and only when allowed.
   const blocked = claimed.some((r) => r.messenger_text && r.prospect_id && r.attempts === 1) ? await messengerBlocked() : "—";
@@ -183,7 +188,11 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
     to_phone: r.to_phone,
     subject: r.subject,
     image_b64: Buffer.from(r.image).toString("base64"),
-    ...(r.messenger_text && r.prospect_id && r.attempts === 1 && !blocked ? { messenger_text: r.messenger_text } : {}),
+    ...(r.force_channel === "whatsapp" && r.messenger_text
+      ? { messenger_text: r.messenger_text, channel: "whatsapp" as const }
+      : r.messenger_text && r.prospect_id && r.attempts === 1 && !blocked
+        ? { messenger_text: r.messenger_text }
+        : {}),
   }));
 }
 
@@ -210,12 +219,14 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
         })
         .where("id", "=", r.id)
         .where("status", "in", ["sending", "unknown", "queued"])
-        .returning(["prospect_id", "free_trial_id", "created_at", "fallback_of"])
+        .returning(["prospect_id", "free_trial_id", "created_at", "fallback_of", "force_channel"])
         .executeTakeFirst();
       if (!row) continue; // already sent (duplicate ack) or unknown id → idempotent no-op
       settled.push(r.id);
       // ADR-0430: the owner's MMS+SMS fallback — the pair was already stamped by the messenger
       // send; the image went out now, so its companion SMS follows (never an SMS alone).
+      // The automatic WhatsApp follow-up: the pair is long complete — nothing else to do.
+      if (row.force_channel) continue;
       if (row.fallback_of && row.prospect_id) {
         await deps.afterFallback(row.prospect_id);
         continue;
@@ -240,10 +251,15 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
     const error = String(r.error ?? "").slice(0, 500) || "ismeretlen relay-hiba";
     const row = await db
       .selectFrom("mms_outbox")
-      .select(["attempts", "status", "free_trial_id"])
+      .select(["attempts", "status", "free_trial_id", "force_channel"])
       .where("id", "=", r.id)
       .executeTakeFirst();
     if (!row || row.status !== "sending") continue;
+    if (row.force_channel) {
+      // A follow-up is never retried (a retry would have no WhatsApp guarantee) and is no alarm.
+      await db.updateTable("mms_outbox").set({ status: "failed", last_error: error }).where("id", "=", r.id).execute();
+      continue;
+    }
     if (isModemBusy(error)) {
       // Not a verdict: back to the queue, the attempt refunded.
       await db

@@ -29,7 +29,9 @@ interface S10Line {
  */
 export async function sendMmsViaS10(msg: MmsMessage, to: string): Promise<MmsSendResult> {
   const script = path.resolve(process.cwd(), "scripts", "s10-a11y", "s10_send.py");
-  const args = msg.messengerText
+  const args = msg.forceChannel && msg.messengerText
+    ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--channel", msg.forceChannel]
+    : msg.messengerText
     ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--mms-text", msg.subject, "--channel", "auto"]
     : [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.subject, "--channel", "mms"];
   let stdout: string;

@@ -198,6 +198,8 @@ export interface WatchList {
 
 /** The chats due for a re-read (oldest check first) and the queued messenger answers. */
 export async function messengerWatchList(now: Date = new Date()): Promise<WatchList> {
+  // The watcher's 90 s call is also the clock of the automatic WhatsApp follow-up.
+  await scheduleWhatsappFollowups(now);
   const young = new Date(now.getTime() - 24 * 3_600_000);
   const rows = await db
     .selectFrom("mms_outbox")
@@ -454,6 +456,55 @@ export async function applyPresence(reports: readonly PresenceReport[], now: Dat
       .onConflict((oc) => oc.column("phone").doUpdateSet(row))
       .execute();
     n++;
+  }
+  return n;
+}
+
+// ── The automatic WhatsApp follow-up (owner 2026-11-08: „igen, így mehet”) ──
+
+/**
+ * A Viber outreach unseen for NOT_SEEN_AFTER_DAYS goes out once more on WhatsApp — the same image
+ * and caption, automatically — when the lead has WhatsApp (or it is not known yet; the phone refuses
+ * if there is none, and the follow-up is then simply failed, never an MMS). Skipped: a lead who
+ * replied, is blocked, unsubscribed, already decided on, or has a follow-up already. The relay's own
+ * window (weekday 9–16) still decides when it leaves. Returns how many were queued.
+ */
+export async function scheduleWhatsappFollowups(now: Date = new Date()): Promise<number> {
+  const cfg = await getMessengerConfig();
+  if (!cfg.enabled || cfg.brake) return 0;
+  const rows = await sql<{ id: string; prospect_id: string; to_phone: string }>`
+    select o.id, o.prospect_id, o.to_phone
+      from mms_outbox o
+      join prospect p on p.id = o.prospect_id
+      join lead l on l.id = p.lead_id
+      left join messenger_presence mp on mp.phone = o.to_phone
+     where o.channel = 'viber' and o.status = 'sent' and o.read_at is null
+       and o.fallback_decision is null
+       and o.sent_at <= ${new Date(now.getTime() - NOT_SEEN_AFTER_DAYS * 86_400_000)}
+       and coalesce(mp.whatsapp, 'unknown') <> 'no'
+       and l.contact_block_at is null and p.unsubscribed_at is null
+       and not exists (select 1 from outreach_reply r where r.lead_id = p.lead_id)
+       and not exists (select 1 from mms_outbox f where f.fallback_of = o.id)
+       and not exists (select 1 from mms_outbox q where q.prospect_id = o.prospect_id and q.status in ('queued', 'sending'))
+     order by o.sent_at asc
+     limit 20`.execute(db);
+  if (!rows.rows.length) return 0;
+  const { mobileOutreachGates } = await import("../outreach/sendOutreachSms.js");
+  let n = 0;
+  for (const r of rows.rows) {
+    const gate = await mobileOutreachGates(r.prospect_id);
+    if (!gate.ok) continue;
+    const src = await db.selectFrom("mms_outbox").select(["image", "subject", "messenger_text"]).where("id", "=", r.id).executeTakeFirstOrThrow();
+    if (!src.messenger_text) continue;
+    try {
+      await db
+        .insertInto("mms_outbox")
+        .values({ prospect_id: r.prospect_id, to_phone: r.to_phone, subject: src.subject, image: src.image, messenger_text: src.messenger_text, fallback_of: r.id, force_channel: "whatsapp" })
+        .execute();
+      n++;
+    } catch (err) {
+      if ((err as { code?: string }).code !== "23505") throw err; // a pending row already exists → next run
+    }
   }
   return n;
 }

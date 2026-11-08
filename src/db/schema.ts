@@ -723,6 +723,8 @@ export interface MmsOutboxTable {
   fallback_decision: "send" | "skip" | null;
   fallback_decided_at: Timestamp | null;
   fallback_decided_by: string | null;
+  /** 0131: 'whatsapp' = the automatic WhatsApp follow-up of an unseen Viber outreach (never an MMS). */
+  force_channel: "whatsapp" | null;
 }
 
 /** 0130 (ADR-0430): Viber / WhatsApp presence of a number, read on the S10 without sending. */

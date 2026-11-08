@@ -45,3 +45,12 @@
   - A „Mehet MMS + SMS-ben is” gomb ugyanazt a képet MMS-ként sorba teszi (`fallback_of`). Az MMS visszaigazolása után a kísérő SMS megy, mindig együtt, soha nem csak SMS. A kapuk újra lefutnak.
   - A „Nem kell” gomb csak rögzíti a döntést.
 - **A jóváhagyó lap teljes szélességű** (tulaj: „jobban látszódjon a jóváhagyandó oldal … túl sok a kihasználatlan oldalsó rész”).
+
+**Automatikus WhatsApp-követés (2026-11-08, tulaj: „igen, így mehet”; migráció 0131).**
+- A sorrend:
+  - a Viber-üzenet megy;
+  - ha 3 nap alatt nem nézi meg, és van WhatsAppja (vagy még nem tudjuk), ugyanaz a kép és szöveg magától kimegy WhatsAppon (`force_channel = 'whatsapp'`, `fallback_of` = a Viber-sor);
+  - ha azt sem nézi meg újabb 3 nap alatt, a „Messengeren nem nézte meg” fülre kerül, és onnan MMS + SMS csak a tulaj gombjára megy.
+- A követő üzenet csak WhatsAppon mehet: kikapcsolt vagy fékezett messenger-útnál a sorban vár; ha a küldés bukik, végleges `failed`, MMS-újrapróba és riasztás nélkül.
+- A kapuk újra lefutnak. Aki válaszolt, elutasított, leiratkozott, vagy akiről a tulaj már döntött, nem kap követő üzenetet.
+- Az ütemező a figyelő 90 mp-es hívásán fut (`scheduleWhatsappFollowups`).

@@ -49,7 +49,10 @@ Telefonon a lista felül áll, alatta a kiválasztott lead.
 ## „Messengeren nem nézte meg”
 
 Ide az kerül, akinek legalább 3 napja kiment a megkeresés Viberen vagy WhatsAppon, és nem
-nézte meg. Aki válaszolt, elutasított vagy leiratkozott, ide soha nem kerül. WhatsAppon az is
+nézte meg. Ha Viberen nem nézte meg, és van WhatsAppja, a gép előbb magától elküldi ugyanazt a
+képet és szöveget WhatsAppon is (a küldési ablakban, gomb nélkül), és csak ha azt sem nézi meg
+újabb 3 nap alatt, akkor kerül ide. Aki válaszolt, elutasított vagy leiratkozott, ide soha nem
+kerül, és második üzenetet sem kap. WhatsAppon az is
 „nem nézte meg”-nek látszik, aki kikapcsolta az olvasási visszaigazolást.
 
 - **Szűrés:** csatorna, állapot (kézbesítve / csak elküldve), Viberen aktív az elmúlt 7
