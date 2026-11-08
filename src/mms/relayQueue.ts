@@ -35,7 +35,7 @@ export interface PulledMms {
   readonly image_b64: string;
   /**
    * ADR-0430: the caption for Viber / WhatsApp — present only when the S10 may try a messenger
-   * for this row (switch on, no brake, today's cap not reached, FIRST attempt). Absent = MMS.
+   * for this row (switch on, no brake, FIRST attempt; no daily cap). Absent = MMS.
    */
   readonly messenger_text?: string;
 }
@@ -169,7 +169,7 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
     .returning(["id", "to_phone", "subject", "image", "messenger_text", "attempts", "prospect_id"])
     .execute();
   // ADR-0430: the messenger option only on a prospect row's first attempt, and only when allowed.
-  const blocked = claimed.some((r) => r.messenger_text && r.prospect_id && r.attempts === 1) ? await messengerBlocked(now) : "—";
+  const blocked = claimed.some((r) => r.messenger_text && r.prospect_id && r.attempts === 1) ? await messengerBlocked() : "—";
   return claimed.map((r) => ({
     id: r.id,
     to_phone: r.to_phone,

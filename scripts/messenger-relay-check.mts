@@ -10,7 +10,7 @@
 //      stores channel / last-seen / receipt 'sent', stamps mms_sent_at, runs the messenger
 //      bookkeeping ONCE and the SMS half NEVER
 //   ③ a failed messenger attempt → the retry carries NO caption (never a second messenger message)
-//   ④ the daily cap: today's messenger sends ≥ cap → no caption
+//   ④ NO daily cap (owner 2026-11-08): several messenger sends today, the next row still gets the caption
 //   ⑤ a "restricted" ack trips the brake ONCE (one alert); braked → no caption
 //   ⑥ the watch list holds the fresh messenger row; a report moves the receipt forward only,
 //      stamps delivered/read once, an incoming text becomes ONE outreach_reply (channel viber,
@@ -125,12 +125,12 @@ const outboxRow = (id: string) =>
     .where("id", "=", id)
     .executeTakeFirstOrThrow();
 
-console.log("Messenger-ág (ADR-0430): kapcsoló, keret, fék, csatorna az ackban, olvasás és válasz (mock S10, valódi DB):\n");
+console.log("Messenger-ág (ADR-0430): kapcsoló, fék (keret nincs), csatorna az ackban, olvasás és válasz (mock S10, valódi DB):\n");
 
 try {
   const foreign = await db.selectFrom("mms_outbox").select("id").where("status", "in", ["queued", "sending"]).execute();
   if (foreign.length) throw new Error(`a közös DB mms_outbox-ában ${foreign.length} függő sor áll — az őr nem futhat mellette`);
-  if ((await m.messengerSentToday()) > 0) throw new Error("ma már ment messenger-üzenet a közös DB-ben — a keret-próba nem futhat");
+  if ((await m.messengerSentToday()) > 0) throw new Error("ma már ment messenger-üzenet a közös DB-ben — a számláló-próba nem futhat");
 
   const def = await db
     .insertInto("scraper_definition")
@@ -173,7 +173,7 @@ try {
   }
 
   // ── ② switch on → viber ─────────────────────────────────────────────────
-  await m.setMessengerConfig({ enabled: true, dailyCap: 2, brake: null });
+  await m.setMessengerConfig({ enabled: true, brake: null });
   const p2 = await mkProspect("b");
   const r2 = await enqueue(p2);
   {
@@ -200,20 +200,19 @@ try {
     say(ok.got[0]?.text === undefined && (await outboxRow(r3)).channel === "mms", "③ az újrapróba szöveg NÉLKÜL megy (MMS) — második messenger-üzenet soha", JSON.stringify(ok.got));
   }
 
-  // ── ④ daily cap ─────────────────────────────────────────────────────────
+  // ── ④ no daily cap ──────────────────────────────────────────────────────
   {
-    await m.setMessengerConfig({ enabled: true, dailyCap: 1, brake: null });
-    say((await m.messengerBlocked()) !== null, "④ 1 mai messenger-küldés mellett az 1-es keret elfogyott", String(await m.messengerBlocked()));
     const p4 = await mkProspect("d");
-    await enqueue(p4);
-    const ph = phone(() => ({ ok: true, messageId: "MMSC-4", provider: "cli", channel: "mms" }));
+    const r4 = await enqueue(p4);
+    const ph = phone((msg) => ({ ok: true, messageId: "s10-wa-4", provider: "cli", channel: msg.messengerText ? "whatsapp" : "mms" }));
     await tick(ph);
-    say(ph.got[0]?.text === undefined, "④ elfogyott keretnél a pull NEM ad szöveget", JSON.stringify(ph.got));
+    say(ph.got[0]?.text === CAPTION && (await outboxRow(r4)).channel === "whatsapp", "④ nincs napi keret: a mai messenger-küldések után is megy a szöveg", JSON.stringify(ph.got));
+    say((await m.messengerSentToday()) === 2, "④ a mai messenger-szám csak számláló (2)", String(await m.messengerSentToday()));
   }
 
   // ── ⑤ restricted → brake ───────────────────────────────────────────────
   {
-    await m.setMessengerConfig({ enabled: true, dailyCap: 10, brake: null });
+    await m.setMessengerConfig({ enabled: true, brake: null });
     const p5 = await mkProspect("e");
     const r5 = await enqueue(p5);
     const ph = phone(() => ({ ok: false, error: "whatsapp: chat did not open", provider: "cli", restricted: true }));
@@ -227,7 +226,7 @@ try {
   }
 
   // ── ⑥ watch: receipts + incoming reply ─────────────────────────────────
-  await m.setMessengerConfig({ enabled: true, dailyCap: 10, brake: null });
+  await m.setMessengerConfig({ enabled: true, brake: null });
   {
     const w = await m.messengerWatchList();
     say(w.chats.some((c) => c.id === r2 && c.channel === "viber" && c.to_phone === PHONE), "⑥ a friss Viber-sor a figyelőlistán", JSON.stringify(w));
@@ -288,5 +287,5 @@ if (failed) {
   console.error(`\n⛔ messenger-relay-check: ${failed} ellenőrzés bukott.`);
   process.exit(1);
 }
-console.log("\n✅ messenger-relay-check: a messenger-ág csak bekapcsolva, kereten belül, fék nélkül és első kísérletre megy; az ack lezárja a párt kísérő SMS nélkül; az olvasás és a válasz visszajön.");
+console.log("\n✅ messenger-relay-check: a messenger-ág csak bekapcsolva, fék nélkül és első kísérletre megy (napi keret nincs); az ack lezárja a párt kísérő SMS nélkül; az olvasás és a válasz visszajön.");
 process.exit(0);

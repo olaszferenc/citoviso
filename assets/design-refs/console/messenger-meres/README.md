@@ -17,7 +17,7 @@ KONTRAKTUSA — elvárt viselkedés, nem stílus-javaslat. Képek: `A-alap-*`, `
    - ha van válasz: a szövege, és ugrás a Válaszok blokkra.
 4. **Lead-állapotok:** sorban áll; kiment Viberen, még nem olvasta; WhatsAppon elolvasva + válasz; MMS-tartalékra esett; hiba. A hibánál „Újra a sorba” gomb.
 5. **Irányítópult, „Messenger-út” blokk:**
-   - **Csempe 1:** „Ma kiküldve messengeren X / keret”, folyamatjelzővel. Alatta a napi keret mezője (0–100 közötti egész szám) és a Mentés gomb. Hibás értékre hibaüzenet, kisebb keretre figyelmeztetés („ma több nem megy”).
+   - **Csempe 1:** „Ma kiküldve messengeren: N”, csak számláló. ⛔ NAPI KERET NINCS (tulaj, 2026-11-08: „ne legyen semmilyen keret, korlátlanul, ami jóvá van hagyva, az menjen ki”): a mock keret-mezője és „/ 10” jelölése ÉRVÉNYTELEN.
    - **Csempe 2:** a fék állapota (aktív, vagy leállt és az oka), feloldás gombbal, valamint a messenger-út be/ki kapcsolója. Kikapcsolva vagy leállt fékkel minden MMS+SMS-ben megy.
    - **Csempe 3:** csatorna-megoszlás az elmúlt 7 napban, oszlopsávon.
    - **Csatornánként egy csempe** (Viber, WhatsApp, MMS+kísérő SMS): kézbesítve, megtekintve/olvasott és válasz arány. Ahol nem mérhető: „n/a”.

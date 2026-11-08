@@ -1970,11 +1970,11 @@ if [ -f scripts/mms-relay-check.mts ] && \
   echo "[pre-commit] mms-relay-check (MMS-relay: az MMS sorból a modemre, az ack zárja a párt, a kísérő SMS igazoltan kimegy a következő MMS előtt — modem-sáv)…"
   npx tsx scripts/mms-relay-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-0430 (messenger-első megkeresés): a pár Viberen/WhatsAppon megy az S10-ről — kapcsoló, napi keret, fék,
-# csatorna az ackban kísérő SMS nélkül, olvasás- és válasz-visszaolvasás. Eldobható fixture, MOCK telefon.
+# ADR-0430 (messenger-első megkeresés): a pár Viberen/WhatsAppon megy az S10-ről — kapcsoló, fék,
+# csatorna az ackban kísérő SMS nélkül, olvasás- és válasz-visszaolvasás; napi keret NINCS (tulaj 11-08). MOCK telefon.
 if [ -f scripts/messenger-relay-check.mts ] && \
    changed_files | grep -qE '^src/mms/|^src/replies/(store|answer|answerRules)\.ts$|^src/outreach/(sendOutreachPair|copyOverride|messengerCaption)\.ts$|^scripts/messenger-|^migrations/0129_'; then
-  echo "[pre-commit] messenger-relay-check (ADR-0430: Viber/WhatsApp-ág — kapcsoló, keret, fék, ack, olvasás, válasz)…"
+  echo "[pre-commit] messenger-relay-check (ADR-0430: Viber/WhatsApp-ág — kapcsoló, fék, ack, olvasás, válasz; napi keret nincs)…"
   npx tsx scripts/messenger-relay-check.mts >"$GATE_LOG" || gate_failed
 fi
 # The kimeno-ablakok-budapest-ido-szerint ADR: every outbound window/deadline on the BUDAPEST clock, whatever the server's zone

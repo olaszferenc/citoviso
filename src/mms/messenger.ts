@@ -5,9 +5,10 @@
 // Viber → MMS + companion SMS (scripts/s10-a11y/s10_send.py picks). This module decides
 // WHETHER the messenger option is handed out at all, and keeps what the S10 reads back.
 //
-//  · Switch + daily cap + brake: one app_setting row (`messenger_outreach`, JSON), the same
-//    pattern as the trial / escalation settings — no migration. Off, braked, or the cap reached
-//    → the pull hands out no caption, and the row goes the old MMS+SMS way.
+//  · Switch + brake: one app_setting row (`messenger_outreach`, JSON), the same pattern as the
+//    trial / escalation settings — no migration. Off or braked → the pull hands out no caption,
+//    and the row goes the old MMS+SMS way. NO daily cap (owner 2026-11-08: „ne legyen semmilyen
+//    keret, korlátlanul, ami jóvá van hagyva, az menjen ki”) — the approval queue is the limit.
 //  · A row's FIRST attempt only: a messenger send that failed may have reached the chat
 //    (the "sent" check is a screen read), so the retry is always the MMS — never a second
 //    messenger message.
@@ -37,22 +38,12 @@ export interface MessengerBrake {
 export interface MessengerConfig {
   /** Off = every pair goes the MMS+SMS way. */
   readonly enabled: boolean;
-  /** Messenger sends per Budapest day (ADR-0430 ⑦: starts at 10). */
-  readonly dailyCap: number;
   /** Set by the automatic brake; cleared only by the operator. */
   readonly brake?: MessengerBrake | null;
 }
 
 /** Off until the operator switches it on (the rollout, ADR-0430 F3, is a decision, not a deploy side effect). */
-export const MESSENGER_CONFIG_DEFAULT: MessengerConfig = { enabled: false, dailyCap: 10, brake: null };
-export const MESSENGER_CAP_MIN = 0;
-export const MESSENGER_CAP_MAX = 100;
-
-export function messengerCapError(n: unknown): string | null {
-  return Number.isInteger(n) && (n as number) >= MESSENGER_CAP_MIN && (n as number) <= MESSENGER_CAP_MAX
-    ? null
-    : `a napi keret ${MESSENGER_CAP_MIN} és ${MESSENGER_CAP_MAX} közötti egész szám`;
-}
+export const MESSENGER_CONFIG_DEFAULT: MessengerConfig = { enabled: false, brake: null };
 
 export async function getMessengerConfig(): Promise<MessengerConfig> {
   const raw = await getSetting(MESSENGER_SETTING_KEY);
@@ -61,7 +52,6 @@ export async function getMessengerConfig(): Promise<MessengerConfig> {
     const j = JSON.parse(raw) as Partial<MessengerConfig>;
     return {
       enabled: j.enabled === true,
-      dailyCap: messengerCapError(j.dailyCap) ? MESSENGER_CONFIG_DEFAULT.dailyCap : (j.dailyCap as number),
       brake: j.brake && typeof j.brake.reason === "string" ? { at: String(j.brake.at ?? ""), reason: j.brake.reason } : null,
     };
   } catch {
@@ -71,12 +61,10 @@ export async function getMessengerConfig(): Promise<MessengerConfig> {
 }
 
 export async function setMessengerConfig(c: MessengerConfig): Promise<void> {
-  const err = messengerCapError(c.dailyCap);
-  if (err) throw new Error(err);
-  await setSetting(MESSENGER_SETTING_KEY, JSON.stringify({ enabled: c.enabled, dailyCap: c.dailyCap, brake: c.brake ?? null }));
+  await setSetting(MESSENGER_SETTING_KEY, JSON.stringify({ enabled: c.enabled, brake: c.brake ?? null }));
 }
 
-/** Messenger sends since Budapest midnight. */
+/** Messenger sends since Budapest midnight (the dashboard's count — not a limit). */
 export async function messengerSentToday(now: Date = new Date()): Promise<number> {
   const r = await db
     .selectFrom("mms_outbox")
@@ -88,12 +76,10 @@ export async function messengerSentToday(now: Date = new Date()): Promise<number
 }
 
 /** Why the messenger option is NOT handed out right now, or null when it is. */
-export async function messengerBlocked(now: Date = new Date()): Promise<string | null> {
+export async function messengerBlocked(): Promise<string | null> {
   const c = await getMessengerConfig();
   if (!c.enabled) return "a messenger-út ki van kapcsolva";
   if (c.brake) return `a fék leállította: ${c.brake.reason}`;
-  const n = await messengerSentToday(now);
-  if (n >= c.dailyCap) return `a mai messenger-keret (${c.dailyCap}) elfogyott`;
   return null;
 }
 

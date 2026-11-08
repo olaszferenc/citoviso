@@ -228,18 +228,30 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 - 2026-11-07 · S10-SMS-HÍD ÉLES (00:02): a `gammu-smsd` egység drop-innal (`/etc/systemd/system/gammu-smsd.service.d/s10.conf`) a `scripts/callbot/s10_smsd.py`-t futtatja: a `minereal_sms` séma változatlan (outbox → S10 „SMS Gateway for Android” v1.77.5 helyi REST-en, adb forward 18080 → sentitems részenként azonos UDH-val, SendingOK/DeliveryOK; inbox ← `content://sms/inbox`; phones.TimeOut 20 mp-enként) → a Citoviso SMS-sáv és a MineREAL éles SMS-e kód-módosítás nélkül ÚJRA MEGY. Mérve 11-06 23:53: 3 részes ékezetes SMS inject → DeliveryOK 2 mp. Folyamatos hívásfogadás: `citoviso-callbot` systemd (11-06 23:35). ⚠️ MMS még NEM megy (az `mms-send` a SIM nélküli SIM800C-t hajtja) — hétfő 9 előtt kell. Visszaállás: drop-in törlés + SIM vissza. MineREAL értesítve (`mrc3106614`). A modem-számra 11-06 23:39-kor WhatsApp-regisztrációs kód jött.
 - 2026-11-06 · MODUL-STÁTUSZ + BEÁLLÍTÓ VARÁZSLÓ JÓVÁHAGYVA (tulaj „ok”, 4. kör): befagyasztás `assets/design-refs/tenant-admin/modul-statusz/`, utána kód a SUB `cite708a236`-ban (ADR, `site_setup_progress`, `module-setup-registry-check` kapu); élesre külön engedéllyel. Kész-jelentés: `~/rc-briefs/konverzio-terv/modul-statusz-kesz.md`.
 - 2026-11-06 · VARÁZSLÓ-KÖVETELMÉNY (tulaj-aggály): a beállító varázslónak kezelnie kell a FÜGGŐSÉGEKET és a SORRENDET — pl. szobánkénti kiadásnál előbb szobát kell létrehozni, a létszám/felszereltség/ár szobához rendelődik, és ehhez a megfelelő modul kell. 3. körös terv (SUB `cite708a236`): `requires`-gráf, egységenként ismétlődő lépések, hiányzó modul → vásárlási út, land-kapu ⑧ élő előfeltétel ⑨ nincs kör ⑩ összhang ADR-0192-vel. Kódból: élesítéskor 1 egység jön létre („A szállás egésze”); szobánkénti felszereltséghez Szobák ÉS Felszereltség modul kell (ADR-0074 §5); az Alap csomagban nincs Szobák/Árak/Foglalás; élesen nincs több szobás tenant. TULAJ-DÖNTÉS (11-06, 3. kör): jóváhagyva; visszalépés MINDENHOL kell (témán belül, témák között, kész téma újraszerkesztése); hiányzó modul → KOSÁR (nem helyben fizetés); „Hogyan adja ki?” 3. válasza: „egyben adom ki, de a szobákat bemutatnám”; a varázsló az ÖSSZES MEGVETT modulon végigvisz (a lap-hivatkozásos témák is benne vannak).
+- 2026-11-08 · MESSENGER: NINCS NAPI KERET (tulaj: „Ne legyen semmilyen keret, korlátlanul, ami jóvá van hagyva. Az menjen majd ki.”). Ami jóváhagyott, az kimegy messengeren; a korlát a jóváhagyás, a biztosíték a fék (fiók-korlátozás, vagy a felére eső olvasási/válasz-arány) és a kapcsoló. Az ADR-0430 „napi 10-zel indul” pontja felülírva. A kódból kivéve.
+- 2026-11-08 · AZ EGÉSZ MESSENGER-FELÜLET EGY SESSION (a Telefon, cit5980e14c) DOLGA (tulaj: „a telefon ezzel egészítse ki az övét”): a jóváhagyó lap és az irányítópult-válaszok Viber/WhatsApp-bővítése is. A cit32290a10 kód nélkül zárult (átadás: `~/rc-briefs/viber-jovahagyas-atadas-telefonnak-20261108.md`).
+- 2026-11-07 · JÓVÁHAGYÁS + MESSENGER (tulaj-brief `viber-whatsapp-20261107-232939.md`):
+  - A jóváhagyó lapon látszódjon a csatorna: Viber / WhatsApp / MMS+SMS / e-mail.
+  - Külön fül azoknak, akik messengeren 3 napig nem nézték meg; onnan tulaj-jóváhagyással MMS+SMS-ben (a pár) mehet.
+- 2026-11-08 · TULAJ-DÖNTÉS A JÓVÁHAGYÓ LAPRÓL:
+  - HIBRID: az 1. fül csatornánként csoportosítva, a 4 lépcsővel; a 2. fül leadenként idővonallal és az üzenet képével.
+  - SMS és MMS CSAK EGYÜTT mehet, soha nem csak SMS.
+  - Mindkét fülön lehet szűrni.
+  - A Viber/WhatsApp-válaszok és a csevegés úgy jelenik meg az irányítópulton, mint az SMS és az e-mail, csatorna-szűrővel; a válasz ugyanazon a csatornán megy vissza.
+  - A 2. fülre soha nem kerül, aki válaszolt vagy elutasított.
 - 2026-11-07 · MESSENGER-ÁG F2 KÉSZ, LOKÁLISAN (tulaj: „mehet F2”; ÉLESEN MÉG NINCS, ADR-0430 „F2 megvalósítás”):
+  - **Commit:** 3ba34f91.
   - **Szerver:** migráció 0129.
     - Az `mms_outbox` új mezői: `messenger_text`, `channel`, `receipt`, `read_at` stb.
-    - A pull csak akkor ad messenger-szöveget, ha a kapcsoló be van kapcsolva, a napi keretben van még hely, nincs fék, és ez a sor első kísérlete.
+    - A pull csak akkor ad messenger-szöveget, ha a kapcsoló be van kapcsolva, nincs fék, és ez a sor első kísérlete.
     - Az ack messenger-csatornánál lezárja a párt kísérő SMS nélkül (`settleMessengerPair`).
-    - Kapcsoló, keret és fék: `app_setting` `messenger_outreach`, alapból KIKAPCSOLVA, keret 10.
+    - Kapcsoló és fék: `app_setting` `messenger_outreach`, alapból KIKAPCSOLVA. NAPI KERET NINCS (lásd lent, tulaj 11-08).
   - **Szöveg:** „a képen látható honlap-látványtervet…”, ékezetesen.
   - **Debian:** `scripts/messenger-watch.mts` (+ `deploy/systemd/citoviso-messenger-watch.*`). Visszaolvassa a kézbesítve/elolvasva állapotot, az aktivitást és a bejövő szöveget. A bejövő szöveg a válaszok közé kerül, a válasz-válasz ugyanazon a messengeren megy.
   - **Mérve 11-07:** a WhatsApp „Megnézve” szövegként olvasható. A Viber olvasást csak a pipa színe mutatja (a ciánkék dupla pipa jelenti, hogy megnézte), ezt képernyőképből olvassuk.
   - **Tesztek:** `scripts/messenger-relay-check.mts`, 30/30 zöld.
   - **Nyitott:**
-    - A konzol-nézet a §2b terv-kapunál vár: A/B mock elküldve, mentés `~/rc-briefs/messenger-meres-mock/`.
+    - Konzol-nézet: a tulaj 11-08-án az A változatot hagyta jóvá (`assets/design-refs/console/messenger-meres/`).
     - Az élesítéshez külön engedély kell.
     - Élesítés után telepíteni kell a figyelő timerét, és a kapcsolót bekapcsolni (F3).
 - 2026-11-07 · MMS AZ S10-RŐL ÉLESÍTVE A DEBIANON (01:55, ADR-0430): a fő fa `.env`-jében `MMS_SENDER=s10` (mentés `.env.bak-20261107-mms-sender`) → a `citoviso-mms-relay` a `src/mms/s10Sender.ts`-en át a `scripts/s10-a11y/s10_send.py --channel mms`-t hívja (Samsung Üzenetek, siker = `content://mms` `resp_st=128`); a kísérő SMS változatlanul gammu → `s10_smsd.py`. Próba a tulaj tesztmobiljára a relay-adapteren át: OK. Visszaállás: a sor törlése a `.env`-ből (+ SIM vissza a modembe). A messenger-ág (Viber/WhatsApp) a relay-ben MÉG NINCS bekötve — szerver-oldal kell (F2: csatorna az ackban, kísérő SMS kihagyása, mérés). Küldő: `s10_send.py send --channel auto` (Viber ≤30 nap → WhatsApp → Viber → MMS), képernyő-zár `~/.cache/s10-ui.lock`, hívás közben nem nyúl a képernyőhöz.
