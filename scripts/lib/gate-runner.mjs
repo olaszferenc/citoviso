@@ -83,6 +83,20 @@
 // verdict from the output: a gate that did not return gave none (the 2026-09-27 hang was mid-run,
 // not at close).
 //
+// BROWSER GATES WAIT FOR THE LAND (ADR-XXXX). A commit used to run the full gate list and
+// `scripts/land.sh` ran the same list again on the rebased diff minutes later (measured
+// 2026-11-08: commit ~10 min + land ~10 min for one surface change). The pass cache above does
+// not help once main moved, which with ~10 parallel threads is almost always. So in COMMIT mode
+// (no LAND_RANGE) a gate whose source drives a browser (`playwright` / `chromium` anywhere in
+// it — Chromium start-up + rendering is where the time goes: ~78% of the measured gate
+// wall-clock) is NOT run; it is listed loudly as deferred. The land is unchanged: it calls the
+// hook with LAND_RANGE and EVERY gate — browser ones included — runs on the rebased range, which
+// contains every commit of the branch, so nothing reaches origin/main ungated. A false positive
+// (the word in a comment) only moves a gate to the land; a false negative only keeps it at the
+// commit. ⚠️ A gate the hook runs ONLY in commit mode (`[ -z "$LAND_RANGE" ]` blocks — today the
+// surface gate, which is no browser gate) must never be deferred: scripts/gate-runner-check.mts
+// keeps that true. CIT_FULL_COMMIT=1 restores the full commit-time run.
+//
 // Usage (from hooks/pre-commit only):  node scripts/lib/gate-runner.mjs <jobs-dir> <root>
 
 import { spawn, spawnSync } from "node:child_process";
@@ -571,11 +585,27 @@ function show(job, r) {
   process.stdout.write(`${parts.filter(Boolean).join("\n")}\n`);
 }
 
+// ── COMMIT MODE: browser gates wait for the land (see the header, ADR-XXXX) ───────────
+const COMMIT_MODE = !process.env.LAND_RANGE && process.env.CIT_FULL_COMMIT !== "1";
+const BROWSER_GATE = /playwright|chromium/i;
+function browserGate(job) {
+  try {
+    return BROWSER_GATE.test(readFileSync(path.join(job.cwd, job.script), "utf8"));
+  } catch {
+    return false;
+  }
+}
+
 const t0 = Date.now();
 const serial = [];
 const queue = [];
+const toLand = [];
 let reused = 0;
 for (const j of jobs) {
+  if (COMMIT_MODE && browserGate(j)) {
+    toLand.push(j);
+    continue;
+  }
   j.sig = signature(j);
   const age = cachedPass(j);
   if (age !== null) {
@@ -584,6 +614,13 @@ for (const j of jobs) {
     continue;
   }
   (knownWriters.has(j.script) ? serial : queue).push(j);
+}
+if (toLand.length) {
+  const names = [...new Set(toLand.map((j) => path.basename(j.script).replace(/\.(mts|mjs|ts|js)$/, "")))];
+  process.stdout.write(
+    `[pre-commit] ⏭ ${toLand.length} böngészős kapu a LAND-en fut, nem most (commit-mód, ADR-XXXX): ${names.join(", ")}\n` +
+      `   A land.sh mindet lefuttatja a teljes landolt diffre. Teljes kör most: CIT_FULL_COMMIT=1 git commit …\n`,
+  );
 }
 const phase1 = queue.length;
 const known = queue.filter((j) => pastSecs(j) !== Infinity).length;
@@ -678,6 +715,7 @@ const slotNote = slotsOff ? `gépi slot nélkül` : `${SLOT_COUNT} gépi slot, v
 console.log(
   `[pre-commit] kapu-futtató: ${jobs.length} kapu · ${phase1 - deferred} párhuzamosan (${PARALLEL} szál, csak-olvasó DB) · ` +
     `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ` +
+    (toLand.length ? `${toLand.length} böngészős a land-re halasztva · ` : "") +
     `leghosszabb-először (${known}/${phase1} kapunak volt előzménye) · ${secs} s ` +
     `(① ${phase1Secs} s · ${slotNote})`,
 );

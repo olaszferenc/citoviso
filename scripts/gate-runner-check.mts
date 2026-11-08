@@ -31,6 +31,9 @@
 //     a LASSÚ, de folyamatosan író kapu — és a kimenetét a végéig PUFFERELŐ, de egységenként
 //     szívverő poolos kapu (CIT_GATE_HEARTBEAT) — a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),
 //     és csak a teljes-idő plafon (CIT_GATE_JOB_MAX) állítja meg,
+//   · (ADR-XXXX) commit-módban a böngészős kapu (forrásában `playwright`/`chromium`) HANGOSAN a
+//     land-re halasztva, a LAND-mód (LAND_RANGE) és a CIT_FULL_COMMIT=1 viszont lefuttatja, és a
+//     hook CSAK commit-módú blokkjaiban nincs böngészős kapu (azt a land sosem futtatná),
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
 //     előzmény nélküli kaput a legelején; az előzményt minden futás tartósan frissíti, és egy
 //     sérült előzmény-fájl nem bukás.
@@ -41,7 +44,7 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (huszonöt visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (huszonhét visszarontás — a böngészős kapu land-módban is halasztva · a commit-módú halasztás ki · csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
 //    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
 //    kihagyva · a self-overlap jelölés hatástalan · indok nélküli jelölés is elég · a sáv-jelölés vak · minden író a sávba · gépi slot
@@ -123,6 +126,13 @@ echo "[pre-commit] mode-aware…"
 node scripts/modeaware.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] flaky…"
 node scripts/flaky.mjs >"$GATE_LOG" || gate_failed
+`;
+// ── K: browser gates wait for the land (ADR-XXXX). One browser gate, one plain gate.
+const BROWSER_GATES = String.raw`
+echo "[pre-commit] browser…"
+node scripts/browser.mjs >"$GATE_LOG" || gate_failed
+echo "[pre-commit] counted…"
+node scripts/count.mjs >"$GATE_LOG" || gate_failed
 `;
 // ── F: writer lanes. Three KNOWN writers (pre-registered, so they go straight to phase ②):
 // two carry the lane marker and must overlap; the unmarked one must start only after both ended.
@@ -222,6 +232,8 @@ const COUNTER = (name: string, extra = ""): string =>
 
 const FIXTURES: Record<string, string> = {
   "count.mjs": COUNTER("count"),
+  // K: a browser gate by the runner's rule (the word in its source) — deferred to the land at commit time.
+  "browser.mjs": COUNTER("browser", " /* drives Chromium via playwright-core (fixture) */"),
   // Mentions the mode variable, so its verdict is not a function of the tree alone.
   "modeaware.mjs": COUNTER("modeaware", " const mode = process.env.LAND_RANGE;"),
   "flaky.mjs": COUNTER("flaky", ` if (existsSync(process.env.FIX_OUT + "/fail-flag")) process.exit(4);`),
@@ -647,6 +659,34 @@ async function audit(v: Variant): Promise<string[]> {
   say(units === want, `J · a poolos kapu kimenete megváltozott (egységek: „${units}”, „${want}” várt) — a szívverés nem nyúlhat a kimenethez`);
   dispose(px);
 
+  // ── K: commit mode defers browser gates; the land and CIT_FULL_COMMIT=1 run them ─────────
+  const k = prepare(v, BROWSER_GATES, "4");
+  const kc = k.run();
+  say(kc.rc === 0 && kc.read("browser") === "" && kc.read("count") === "x", `K · commit-módban a böngészős kapu lefutott, vagy a sima nem (rc=${kc.rc}, browser=${kc.read("browser").length}, count=${kc.read("count").length})\n${kc.out.slice(-800)}`);
+  say(kc.out.includes("⏭ 1 böngészős kapu a LAND-en fut") && kc.out.includes("browser"), "K · a halasztás nem hangos: nincs „⏭ … a LAND-en fut” sor a kapu nevével");
+  const kl = k.run({ LAND_RANGE: "HEAD~1...HEAD" });
+  say(kl.rc === 0 && kc.read("browser") === "x", `K · LAND-módban (LAND_RANGE) a böngészős kapu NEM futott le — a land nem kapuz mindent (rc=${kl.rc})\n${kl.out.slice(-800)}`);
+  say(!kl.out.includes("⏭"), "K · LAND-módban is halasztást jelentett");
+  const kf = k.run({ CIT_FULL_COMMIT: "1" });
+  say(kf.rc === 0 && kc.read("browser") === "xx", `K · CIT_FULL_COMMIT=1 mellett a böngészős kapu nem futott le commitnál (rc=${kf.rc})`);
+  dispose(k);
+  // …and no gate the REAL hook runs only in commit mode may be a browser gate: the land would
+  // never run it, so deferring it would drop it for good.
+  const commitOnly = [...v.hook.matchAll(/^if \[ -z "\$\{LAND_RANGE:-\}" \][^\n]*\n([\s\S]*?)^fi$/gm)];
+  say(
+    commitOnly.length === (v.hook.match(/\[ -z "\$\{LAND_RANGE/g) ?? []).length,
+    "K · a hook egy commit-módú (LAND_RANGE-üres) feltételét az őr nem tudta blokként kiolvasni — a böngészős-kapu tilalom nem mérhető rajta",
+  );
+  for (const blk of commitOnly) {
+    for (const m of blk[0].matchAll(/scripts\/[\w./-]+\.(?:mts|mjs|ts|js)/g)) {
+      let src = "";
+      try {
+        src = readFileSync(path.join(ROOT, m[0]), "utf8");
+      } catch {}
+      say(!/playwright|chromium/i.test(src), `K · a(z) ${m[0]} CSAK commit-módban fut (LAND_RANGE-üres blokk), mégis böngészős kapu — commitnál halasztódna, a land pedig sosem futtatja`);
+    }
+  }
+
   // ── G: machine-wide slots — across runners, deadlock-free, released on death ──────
   // Two runners, ONE shared slot: their four 1.2 s gates must never overlap, both must finish.
   const f1 = prepare(v, SLOT_GATES, "4");
@@ -730,6 +770,8 @@ if (SELF_TEST) {
     ["a szívverés ki", { ...shipped, runner: mutate("heartbeat", runnerText, "    env.CIT_GATE_HEARTBEAT = beat;\n", "") }],
     ["a teljes-idő plafon ki", { ...shipped, runner: mutate("max", runnerText, "else if (now - t0 >= JOB_MAX_S * 1000)", "else if (false)") }],
     ["csak a közvetlen gyerek ölve", { ...shipped, runner: mutate("tree", runnerText, "const seen = new Set(processTree(root));", "const seen = new Set([root]);") }],
+    ["a böngészős kapu LAND-módban is halasztva", { ...shipped, runner: mutate("defer-land", runnerText, "const COMMIT_MODE = !process.env.LAND_RANGE && ", "const COMMIT_MODE = ") }],
+    ["a commit-módú halasztás ki", { ...shipped, runner: mutate("defer-off", runnerText, "if (COMMIT_MODE && browserGate(j)) {", "if (false) {") }],
     ["a beragadás a kapuidő-előzménybe kerül", { ...shipped, runner: mutate("timeout-history", runnerText, "times.filter(([, , , hung]) => !hung)", "times") }],
   ];
   let ok = true;
@@ -742,7 +784,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a huszonöt visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a huszonhét visszarontás pirosat adott.");
   process.exit(0);
 }
 
@@ -752,4 +794,4 @@ if (bad.length) {
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ gate-runner-check: a párhuzamos futtató mind a tíz forgatókönyvben (A–J) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");
+console.log("✅ gate-runner-check: a párhuzamos futtató mind a tizenegy forgatókönyvben (A–K) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");

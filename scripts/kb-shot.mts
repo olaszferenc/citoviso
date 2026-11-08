@@ -13,6 +13,12 @@
 //   npx tsx scripts/kb-shot.mts --determinism # KÉT futás ideiglenes könyvtárba → pixel-összevetés
 //   npx tsx scripts/kb-shot.mts --check-committed  # újragyárt ideiglenesen, és a COMMITOLT
 //                                                  # képekkel veti össze (deploy GATE 1c, ADR-0220)
+//   npx tsx scripts/kb-shot.mts --check-committed --full  # ugyanez gyorsítótár NÉLKÜL: minden képet újragyárt
+//
+// ⏱️ VÁLTOZATLAN BEMENET = NINCS ÚJRAGYÁRTÁS (ADR-XXXX). A --check-committed csak azt a képet
+// gyártja újra és veti össze, amelynek valamelyik bemenete (HTML, betöltött fájl, gyártó-kód,
+// böngésző, betűk, a commitolt PNG) eltér egy korábbi ZÖLD összevetésétől — a többi bizonyítottan
+// ugyanazt adná (determinizmus, ADR-0220). Részletek: scripts/lib/kb-shot-pass.mts.
 //
 // ⛔ DETERMINIZMUS (2026-09-23, ADR-0220). A súgó-kép frissessége deploy-KAPU, és egy kapu
 // csak akkor mondhat igazat, ha ugyanaz a commit MINDIG ugyanazt a képet adja. Mérve nem
@@ -95,7 +101,9 @@ import { isUnread } from "../src/tenant/messages.js";
 import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
 import type { MonthView } from "../src/tenant/availability.js";
 import { describeDiff, identical, pixelDiff } from "./lib/png-pixel-diff.mts";
-import { pinNetwork, settle } from "./lib/kb-settle.mts";
+import { fontFileFor, pinNetwork, settle } from "./lib/kb-settle.mts";
+import { existsSync } from "node:fs";
+import { globalFingerprint, lookup, passDir, prune, resources, shotKey, store, type Res } from "./lib/kb-shot-pass.mts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Language of the shot UI. Today the admin renders Hungarian; when the admin surface
@@ -118,6 +126,9 @@ const OUT_DIR = (() => {
   return path.resolve(v);
 })();
 const MANIFEST = "kb-shot-manifest.json";
+/** --out runs only: per captured image its pass-cache key + resources; and the images skipped as unchanged. */
+const FP_FILE = "kb-shot-fingerprints.json";
+const SKIPPED_FILE = "kb-shot-skipped.json";
 
 /** Only the guide images are committed; the CWD verification shots are not. */
 const isEntryAsset = (rel: string): boolean => rel.startsWith("kb/entries/");
@@ -125,6 +136,9 @@ const isEntryAsset = (rel: string): boolean => rel.startsWith("kb/entries/");
 interface ShotRun {
   readonly dir: string;
   readonly rels: readonly string[];
+  /** Images the child did NOT capture: their inputs equal a past green comparison (pass cache). */
+  readonly skipped: readonly string[];
+  readonly fps: Readonly<Record<string, { key: string; res: Res[] | null }>>;
 }
 
 /**
@@ -133,11 +147,11 @@ interface ShotRun {
  * diagnosztizálhatatlan (`feedback_silenced_failure_costs_hours`), a zöld futás zaja viszont
  * elfedné a lényeget.
  */
-async function runInto(label: string): Promise<ShotRun> {
+async function runInto(label: string, extra: readonly string[] = []): Promise<ShotRun> {
   const dir = await mkdtemp(path.join(tmpdir(), `kbshot-${label}-`));
   const log = path.join(dir, "run.log");
   const self = new URL(import.meta.url).pathname;
-  const r = spawnSync("npx", ["tsx", self, "--out", dir], {
+  const r = spawnSync("npx", ["tsx", self, "--out", dir, ...extra], {
     cwd: process.cwd(),
     env: process.env,
     encoding: "utf8",
@@ -150,12 +164,16 @@ async function runInto(label: string): Promise<ShotRun> {
     process.exit(1);
   }
   const rels = JSON.parse(await readFile(path.join(dir, MANIFEST), "utf8")) as string[];
+  const opt = async <T,>(f: string, dflt: T): Promise<T> =>
+    existsSync(path.join(dir, f)) ? (JSON.parse(await readFile(path.join(dir, f), "utf8")) as T) : dflt;
+  const skipped = await opt<string[]>(SKIPPED_FILE, []);
+  const fps = await opt<Record<string, { key: string; res: Res[] | null }>>(FP_FILE, {});
   // ⛔ UTÓ-FELTÉTEL: egy nulla képes gyártás mellett minden összevetés üresen zöld lenne.
-  if (!rels.filter(isEntryAsset).length) {
+  if (![...rels, ...skipped].filter(isEntryAsset).length) {
     console.error(`⛔ kb-shot (${label}): a gyártás NULLA súgó-képet adott — a mérés maga romlott el.`);
     process.exit(1);
   }
-  return { dir, rels };
+  return { dir, rels, skipped, fps };
 }
 
 interface Mismatch {
@@ -213,15 +231,33 @@ if (process.argv.includes("--check-committed")) {
   // ── --check-committed: friss gyártás vs. a fában (= a commitban) álló képek ────────
   // A deploy GATE 1c ezt futtatja a CÉL-commit worktree-jében: eltérés = a súgó olyan
   // képet mutat, ami NEM az, amit a kiadott kód renderel — a deploy megáll (ADR-0220).
-  const run = await runInto("check");
+  const full = process.argv.includes("--full");
+  const run = await runInto("check", full ? [] : ["--pass-cache"]);
   const rels = run.rels.filter(isEntryAsset).sort();
+  const skipped = run.skipped.filter(isEntryAsset).sort();
   const bad = await compareSets(
     rels,
     (rel) => path.join(run.dir, rel),
     (rel) => path.join(ROOT, rel),
     "a gyártó előállítja, de NINCS commitolva",
   );
-  console.log(`kb-shot frissesség: ${rels.length} súgó-kép összevetve a commitolt változattal`);
+  // Store every GREEN comparison — also when another image is red, so the re-run after a fix
+  // re-captures only what is still in question.
+  const cacheDir = full ? null : passDir(process.cwd());
+  if (cacheDir) {
+    const red = new Set(bad.map((m) => m.rel));
+    for (const rel of rels) {
+      const fp = run.fps[rel];
+      if (!red.has(rel) && fp?.res) store(cacheDir, fp.key, fp.res, ROOT, rel);
+    }
+    prune(cacheDir);
+  }
+  console.log(
+    `kb-shot frissesség: ${rels.length} súgó-kép újragyártva és összevetve a commitolt változattal` +
+      (full
+        ? " (--full: gyorsítótár nélkül)"
+        : ` · ${skipped.length} változatlan bemenetű kép a korábbi zöld összevetés alapján (teljes kör: --full)`),
+  );
   if (bad.length) {
     console.error(`\n⛔ ${bad.length} súgó-kép ELAVULT (a commitolt kép ≠ amit a kód ma renderel):`);
     for (const m of bad) console.error(`   ${m.rel}: ${m.what}`);
@@ -232,7 +268,7 @@ if (process.argv.includes("--check-committed")) {
     process.exit(1);
   }
   await rm(run.dir, { recursive: true, force: true });
-  console.log(`✅ mind a ${rels.length} commitolt súgó-kép friss.`);
+  console.log(`✅ mind a ${rels.length + skipped.length} commitolt súgó-kép friss.`);
   process.exit(0);
 }
 
@@ -1005,6 +1041,10 @@ async function snap(target: Page | Locator, treePath: string): Promise<void> {
   await target.screenshot({ path: outPath });
   const next = await pngSize(outPath);
   captures.push({ rel, prev, next });
+  if (shotNow) {
+    fps[rel] = { key: shotNow.key, res: resources(ROOT, shotNow.html, shotReqs, fontSnap, tmp) };
+    shotNow = null;
+  }
 }
 
 
@@ -1092,6 +1132,71 @@ if (process.argv.includes("--self-test")) {
     process.exit(1);
   }
 
+  // ── A „VÁLTOZATLAN BEMENET" GYORSÍTÓTÁR ÖNKONTROLLJA (ADR-XXXX) ─────────────────
+  // Egy kép CSAK akkor maradhat ki, ha minden bemenete azonos egy zöld összevetésével. Hermetikus
+  // próba egy eldobható fában: az azonos bemenet találat (különben a gyorsítás csak költség), és
+  // MINDEN egyes bemenet változása újragyártást ad (különben a kapu zölden hazudna).
+  {
+    const fx = await mkdtemp(path.join(tmpdir(), "kbshot-pass-selftest-"));
+    const cache = path.join(fx, "cache");
+    const own = path.join(fx, "own");
+    const rel = "kb/entries/x/assets/hu/screen.png";
+    await mkdir(path.join(fx, "kb/entries/x/assets/hu"), { recursive: true });
+    await mkdir(path.join(fx, "public/assets/ui"), { recursive: true });
+    await writeFile(path.join(fx, rel), "PNG-v1");
+    await writeFile(path.join(fx, "public/assets/ui/a.css"), "body{color:red}");
+    const css = `${pathToFileURL(path.join(fx, "public/assets/ui/a.css")).href}?v=1794164351776`;
+    const html = `<link rel="stylesheet" href="${css}"><img src="${pathToFileURL(path.join(fx, "public/assets/ui/b.png")).href}">`;
+    const reqs = [css, "file:///admin/modules/preview"];
+    const noFont = (): string | null => null;
+    const res0 = resources(fx, html, reqs, noFont, own)!;
+    const key0 = shotKey("G1", fx, rel, html, { fn: "shoot" });
+    store(cache, key0, res0, fx, rel);
+    const hit = (k: string): boolean => lookup(cache, k, fx, rel);
+    const passCases: Array<[string, () => Promise<boolean>, boolean]> = [
+      ["azonos bemenet → kimarad (találat)", async () => hit(key0), true],
+      ["csak a ?v= gyorsítótár-törő más → kimarad", async () => hit(shotKey("G1", fx, rel, html.replace("1794164351776", "1794164359999"), { fn: "shoot" })), true],
+      ["más checkout-útvonal (deploy temp-fa) → kimarad", async () => {
+        const fx2 = `${fx}-masik`;
+        return shotKey("G1", fx2, rel, html.split(fx).join(fx2), { fn: "shoot" }) === key0;
+      }, true],
+      ["más HTML → újragyárt", async () => hit(shotKey("G1", fx, rel, html + "<p>x</p>", { fn: "shoot" })), false],
+      ["más gyártó/böngésző (globális ujjlenyomat) → újragyárt", async () => hit(shotKey("G2", fx, rel, html, { fn: "shoot" })), false],
+      ["más interakció (görgetés) → újragyárt", async () => hit(shotKey("G1", fx, rel, html, { fn: "shoot", scrollTo: "#x" })), false],
+      ["a betöltött CSS bájtja változott → újragyárt", async () => {
+        await writeFile(path.join(fx, "public/assets/ui/a.css"), "body{color:blue}");
+        const r = hit(key0);
+        await writeFile(path.join(fx, "public/assets/ui/a.css"), "body{color:red}");
+        return r;
+      }, false],
+      ["a hiányzó (ABSENT) kép megjelent → újragyárt", async () => {
+        await writeFile(path.join(fx, "public/assets/ui/b.png"), "IMG");
+        const r = hit(key0);
+        await rm(path.join(fx, "public/assets/ui/b.png"));
+        return r;
+      }, false],
+      ["a commitolt PNG lecserélve → újragyárt", async () => {
+        await writeFile(path.join(fx, rel), "PNG-v2");
+        const r = hit(key0);
+        await writeFile(path.join(fx, rel), "PNG-v1");
+        return r;
+      }, false],
+      ["nem helyi (hálózati) kérés → nem tárolható", async () => resources(fx, html, [...reqs, "https://example.com/x.js"], noFont, own) !== null, false],
+      ["visszaállított bemenet → újra találat", async () => hit(key0), true],
+    ];
+    let passBad = 0;
+    for (const [why, run, want] of passCases) {
+      const got = await run();
+      if (got !== want) passBad++;
+      console.log(`  ${got === want ? "✅" : "⛔"} gyorsítótár: ${why}`);
+    }
+    await rm(fx, { recursive: true, force: true });
+    if (passBad) {
+      console.error(`\n❌ gyorsítótár-önteszt: ${passBad} eset nem a várt eredményt adta — a deploy-kapu kihagyhat egy megváltozott képet.`);
+      process.exit(1);
+    }
+  }
+
   console.log(
     `\n✅ kb-shot ép-őr önteszt: ${cases.length} eset, ebből ${firedCount} PIROSRA ment — ` +
       `a szabály képes megszólalni, a jogos rövidülést átengedi, és a felvételi út nem kerülhető meg.`,
@@ -1109,6 +1214,42 @@ const page = await browser.newPage({
 });
 // Google Fonts from the committed snapshot, every other external request refused (ADR-0220).
 const netMisses = await pinNetwork(page);
+
+// ── PASS CACHE (ADR-XXXX, scripts/lib/kb-shot-pass.mts) ──────────────────────────────
+// Every shot starts from the SAME page state whether or not earlier shots were skipped: pointer
+// parked, storage and cookies empty, the browser cache off (each shot's every load is observed).
+const PASS_DIR = OUT_DIR && process.argv.includes("--pass-cache") ? passDir(process.cwd()) : null;
+const GLOBAL_FP = OUT_DIR ? globalFingerprint(ROOT, browser.version(), LANG) : null;
+await (await page.context().newCDPSession(page)).send("Network.setCacheDisabled", { cacheDisabled: true });
+let shotReqs: string[] = [];
+page.on("request", (r) => shotReqs.push(r.url()));
+const fps: Record<string, { key: string; res: Res[] | null }> = {};
+const skippedShots: string[] = [];
+let shotNow: { key: string; html: string } | null = null;
+const fontSnap = (u: string): string | null => {
+  try {
+    const f = fontFileFor(u);
+    return existsSync(f) ? f : null;
+  } catch {
+    return null;
+  }
+};
+/** Reset the page state; true = this image's inputs equal a past green comparison → do not capture. */
+async function beginShot(html: string, outPath: string, extra: unknown): Promise<boolean> {
+  await page.mouse.move(0, 0);
+  await page.evaluate("try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}").catch(() => {});
+  await page.context().clearCookies();
+  shotReqs = [];
+  const rel = path.relative(ROOT, outPath);
+  shotNow = GLOBAL_FP ? { key: shotKey(GLOBAL_FP, ROOT, rel, html, extra), html } : null;
+  if (PASS_DIR && shotNow && isEntryAsset(rel) && lookup(PASS_DIR, shotNow.key, ROOT, rel)) {
+    skippedShots.push(rel);
+    shotNow = null;
+    console.log(`  ↺ ${rel} (változatlan bemenet — korábbi zöld összevetés)`);
+    return true;
+  }
+  return false;
+}
 
 // ADR-0429: one setup fixture for every picture that shows it (the walk, the overview strip,
 // the Modulok tiles) — a 3-room panzió in the middle of its setup.
@@ -1217,6 +1358,7 @@ async function shoot(
     // Design core + fixture photos straight off disk instead of through the server.
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
+  if (await beginShot(html, outPath, { fn: "shoot", tab, topic, scrollTo, viewportAt, hash, clickFirst })) return;
   const file = path.join(tmp, `${tab}-${topic ?? "x"}-${path.basename(outPath, ".png")}.html`);
   await writeFile(file, html, "utf8");
   await page.goto(pathToFileURL(file).href + (hash ?? ""));
@@ -1966,6 +2108,7 @@ async function shootConsole(
   const patched = html
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
+  if (await beginShot(patched, outPath, { fn: "shootConsole", hash, scrollTo, clickToOpen })) return;
   const file = path.join(tmp, `con-${path.basename(outPath, ".png")}.html`);
   await writeFile(file, patched, "utf8");
   // Optional #hash: the lead page's tab switcher activates the addressed tab,
@@ -2574,7 +2717,7 @@ await browser.close();
   }
   // ⛔ UTÓ-FELTÉTEL: ha a `snap()` mellett valaki új felvételi utat nyitna, a mérleg
   // NÉMÁN kevesebbet mérne, és ez a zöld sor hazudna.
-  if (!captures.length) {
+  if (!captures.length && !skippedShots.length) {
     console.error("⛔ ép-őr: NULLA felvételt mértünk — a mérés maga romlott el.");
     process.exit(1);
   }
@@ -2604,5 +2747,7 @@ if (OUT_DIR) {
     JSON.stringify([...captures.map((c) => c.rel), ...partnerRels]),
     "utf8",
   );
+  await writeFile(path.join(OUT_DIR, FP_FILE), JSON.stringify(fps), "utf8");
+  await writeFile(path.join(OUT_DIR, SKIPPED_FILE), JSON.stringify(skippedShots), "utf8");
 }
 console.log(`kb-shot: kész (${LANG})`);

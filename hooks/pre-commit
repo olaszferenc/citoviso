@@ -74,6 +74,11 @@ gate_failed() {
 # Egyetlen kapu sem marad ki és egyik sem változik: a futtató azt dönti el, MIKOR fut, nem azt,
 # hogy fut-e. ⚠️ A bukó kaput ugyanaz a `gate_failed` írja ki, mint soros módban.
 # Soros mód (a régi viselkedés, hibakereséshez): CIT_GATE_JOBS=1. Őr: `scripts/gate-runner-check.mts`.
+# ⏭ COMMIT-MÓDBAN a BÖNGÉSZŐS kapuk (forrásukban `playwright`/`chromium`) NEM futnak, hanem a land-re
+# halasztódnak, hangosan kiírva (ADR-XXXX): a land.sh UGYANEZT a hookot LAND_RANGE-dzsel futtatja, és
+# ott mind lefut a teljes landolt diffre — eddig minden böngészős kapu kétszer futott. Teljes kör a
+# commitnál: CIT_FULL_COMMIT=1. ⛔ CSAK commit-módú blokkba (`[ -z "${LAND_RANGE:-}" ]`) böngészős kapu
+# nem kerülhet — azt a land sosem futtatná (a gate-runner-check K forgatókönyve méri).
 # ⚠️ Soros módban NINCS tiszta-main próba (a bukott kapu feljegyzése a futtatóé) — ott kézzel.
 CIT_ROOT="$PWD"
 if [ "${CIT_GATE_JOBS:-}" = "1" ]; then
@@ -578,8 +583,10 @@ fi
 # meg egy új felvételi úttal (szerkezeti próba). Böngészőt NEM indít, nem fényképez.
 # A súgó-kép deploy-kapu óta a pixel-összevetőt (determinizmus-próba + deploy-kép-kapu alapja) is kalibrálja —
 # vak-e (5×5-ös folt), zajra érzékeny-e (+10 csatornánként) —, ezért annak változására is fut.
+# ADR-XXXX óta a deploy-kép-kapu „változatlan bemenet” gyorsítótárát (scripts/lib/kb-shot-pass.mts) is:
+# minden bemenet változása újragyártást ad-e — ezért annak változására is fut.
 if [ -f scripts/kb-shot.mts ] && \
-   changed_files | grep -qE '^scripts/(kb-shot\.mts|lib/png-pixel-diff\.mts)'; then
+   changed_files | grep -qE '^scripts/(kb-shot\.mts|lib/png-pixel-diff\.mts|lib/kb-shot-pass\.mts)'; then
   echo "[pre-commit] kb-shot ép-őr + pixel-összevető önteszt…"
   npx tsx scripts/kb-shot.mts --self-test >"$GATE_LOG" || gate_failed
 fi

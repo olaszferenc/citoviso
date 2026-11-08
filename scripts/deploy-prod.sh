@@ -2,6 +2,7 @@
 # deploy-prod — ADR-0053: production runs a NAMED COMMIT, never a file collage.
 #
 #   bash scripts/deploy-prod.sh <commit-ish>        # dry-run: gates + diff plan only
+#   … --full-kb-shots                                # GATE 1c/kép: every guide image re-captured (no pass cache)
 #   bash scripts/deploy-prod.sh <commit-ish> --go   # deploy (owner's scoped permission!)
 #   … --go --ignore-scrape                          # deploy THOUGH a scrape is running
 #                                                     (it will be killed — see GATE 4)
@@ -155,7 +156,10 @@ timers_install_and_verify() {
 # képet és a bbox-ot. Előfeltétele a determinisztikus gyártó (kb-shot settle(), próbája:
 # `npx tsx scripts/kb-shot.mts --determinism`) — nélküle a kapu zajra bukna.
 # Nem csak KB-releváns diffnél fut: egy CSS- vagy fixture-változás ugyanúgy elavítja a képet.
-# Csak LOKÁLIS: a prodot nem érinti (külön is futtatható: --kb-shot-gate <commit>).
+# Csak LOKÁLIS: a prodot nem érinti (külön is futtatható: --kb-shot-gate <commit> [--full-kb-shots]).
+# ⏱️ (ADR-XXXX) Alapból csak azt a képet gyártja újra, amelynek a bemenete (HTML, betöltött fájl,
+# gyártó-kód, böngésző, betűk, commitolt PNG) eltér egy korábbi ZÖLD összevetésétől — a többi
+# bizonyítottan ugyanazt adná. Kétség = újragyártás. --full-kb-shots: mind a ~70, gyorsítótár nélkül.
 kb_shot_gate() { # $1 = commit sha
   local wt log rc
   wt="$(mktemp -d /tmp/kbshot-gate-XXXX)"
@@ -172,7 +176,9 @@ kb_shot_gate() { # $1 = commit sha
     fail "kb-kép-kapu: a cél-commit kb-shot-ja nem tud összevetni (ADR-0220 előtti) — a súgó-képek frissessége nem igazolható"
   fi
   # A kimenet fájlba, és CSAK bukáskor ki — a zöld futás 40 sora elfedné a kapu többi sorát.
-  npx tsx "$wt/scripts/kb-shot.mts" --check-committed >"$log" 2>&1
+  local full=()
+  [ "${FULL_KB_SHOTS:-0}" = "1" ] && full=(--full)
+  npx tsx "$wt/scripts/kb-shot.mts" --check-committed "${full[@]}" >"$log" 2>&1
   rc=$?
   git worktree remove -f "$wt" >/dev/null 2>&1 || true
   if [ "$rc" -ne 0 ]; then
@@ -189,6 +195,7 @@ kb_shot_gate() { # $1 = commit sha
     fail "kb-kép-kapu: a gyártó 0-val lépett ki, de a „friss\" sort nem írta ki — a mérés nem történt meg"
   fi
   echo "     ✓ $ok"
+  grep -o 'súgó-kép újragyártva.*' "$log" | sed 's/^/       /' || true
   rm -f "$log"
 }
 
@@ -253,6 +260,11 @@ if [ "$1" = "--kb-shot-gate" ]; then
   [ $# -ge 2 ] || fail "használat: deploy-prod.sh --kb-shot-gate <commit-ish>"
   cd "$(git rev-parse --show-toplevel)" || fail "nem git-fa"
   KSHA="$(git rev-parse --verify "$2^{commit}" 2>/dev/null)" || fail "ismeretlen commit: $2"
+  case "${3:-}" in
+    "") ;;
+    --full-kb-shots) FULL_KB_SHOTS=1 ;;
+    *) fail "ismeretlen kapcsoló: $3" ;;
+  esac
   echo "── GATE 1c/kép — súgó-képek frissessége ($KSHA, csak lokál)…"
   kb_shot_gate "$KSHA"
   exit 0
@@ -265,6 +277,7 @@ for arg in "$@"; do
   case "$arg" in
     --go) GO="--go" ;;
     --ignore-scrape) IGNORE_SCRAPE=1 ;;
+    --full-kb-shots) FULL_KB_SHOTS=1 ;;
     *) fail "ismeretlen kapcsoló: $arg" ;;
   esac
 done
