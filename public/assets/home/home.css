@@ -48,29 +48,31 @@ body { margin: 0; background: color-mix(in srgb, var(--citui-navy-950) 40%, #000
   background: radial-gradient(60% 55% at 70% 30%, color-mix(in srgb, var(--citui-glow-blue) 22%, transparent), transparent 70%),
               radial-gradient(40% 40% at 20% 80%, color-mix(in srgb, var(--citui-cyan-500) 14%, transparent), transparent 70%);
   opacity: calc(1 - var(--p, 0) * 1.6); } /* token-exempt: runtime layout variable set by home.js (viewport height / scroll progress), not a design token */
-.hero { position: absolute; inset: 0; display: grid; grid-template-columns: 1.15fr .85fr; align-items: center; gap: 32px;
+/* Hero "B · Háttér-szem" (approved 2026-11-08): the copy is centred, the C waits large and dim behind it,
+   and lights up as the launch begins (home.js drives the svg opacity). */
+.hero { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr; justify-items: center; align-content: center; text-align: center;
   padding: 90px clamp(16px, 5vw, 64px) 60px; color: var(--citui-ink-inverse); }
-.hero-copy { max-width: 640px; will-change: transform, opacity; }
+.hero-copy { position: relative; z-index: 6; max-width: 900px; display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 600 12px/1 var(--citui-font-text); letter-spacing: .16em; text-transform: uppercase; color: var(--citui-cyan-300); }
 .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--citui-cyan-400); box-shadow: 0 0 12px var(--citui-cyan-400); }
-.hero h1 { font: 700 clamp(42px, 7.2vw, 92px)/.98 var(--citui-font-display); letter-spacing: -.035em; margin: 18px 0 20px; color: var(--citui-ink-inverse); }
+.hero h1 { font: 700 clamp(40px, 6.4vw, 86px)/.98 var(--citui-font-display); letter-spacing: -.035em; margin: 18px 0 20px; color: var(--citui-ink-inverse); }
 .hero h1 em { font-style: normal; background: linear-gradient(90deg, var(--citui-cyan-300), var(--citui-cyan-500)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.lede { font-size: clamp(16px, 1.5vw, 19px); line-height: 1.6; color: color-mix(in srgb, var(--citui-ink-inverse) 82%, transparent); max-width: 540px; margin: 0 0 28px; }
-.ctas { display: flex; flex-wrap: wrap; gap: 12px; }
-.ticks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; color: color-mix(in srgb, var(--citui-ink-inverse) 78%, transparent); }
+.lede { font-size: clamp(16px, 1.5vw, 19px); line-height: 1.6; color: color-mix(in srgb, var(--citui-ink-inverse) 82%, transparent); max-width: 600px; margin: 0 auto 28px; }
+.ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.ticks { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; color: color-mix(in srgb, var(--citui-ink-inverse) 78%, transparent); }
 .ticks li { display: flex; align-items: center; gap: 7px; }
 .ticks svg { width: 16px; height: 16px; color: var(--citui-cyan-400); }
-.mark-slot { justify-self: center; width: clamp(150px, 22vw, 260px); aspect-ratio: 1; }
+.mark-slot { position: absolute; left: 50%; top: 52%; width: min(64vh, 72vw); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
 .mark { position: absolute; left: 0; top: 0; transform-origin: 50% 50%; will-change: transform, opacity; pointer-events: none; z-index: 5;
   filter: drop-shadow(0 0 24px color-mix(in srgb, var(--citui-cyan-500) 55%, transparent)); }
-.mark svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.mark svg { width: 100%; height: 100%; overflow: visible; display: block; opacity: .2; }
 .cue { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: grid; justify-items: center; gap: 8px;
   font: 600 11px/1 var(--citui-font-text); letter-spacing: .2em; color: color-mix(in srgb, var(--citui-ink-inverse) 60%, transparent); }
 .cue i { width: 1px; height: 34px; background: linear-gradient(var(--citui-cyan-400), transparent); animation: cue 1.8s ease-in-out infinite; }
 @keyframes cue { 0%, 100% { transform: scaleY(.4); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } }
 @media (max-width: 760px) {
-  .hero { grid-template-columns: 1fr; align-content: start; padding-top: 96px; gap: 8px; }
-  .mark-slot { order: -1; justify-self: start; width: 84px; }
+  .hero { padding-top: 80px; }
+  .mark-slot { width: 88vw; top: 46%; }
   .hero h1 { margin-top: 12px; }
 }
 .iris { position: absolute; inset: 0; z-index: 4; clip-path: circle(0 at 50% 50%);

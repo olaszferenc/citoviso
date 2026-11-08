@@ -23,6 +23,7 @@
   var canvas = $("sky"), ctx = canvas ? canvas.getContext("2d") : null;
   var intro = $("intro"), pin = $("pin"), heroCopy = $("hero-copy");
   var mark = $("mark"), markSlot = $("mark-slot");
+  var markSvg = mark ? mark.querySelector("svg") : null;
   var irisLayer = $("iris"), reveal = $("reveal"), cue = $("scroll-cue");
   var brandSlot = $("brand-slot");
   var tilt = $("mark-tilt"), lidUp = $("lid-up"), lidLo = $("lid-lo");
@@ -191,6 +192,8 @@
     reveal.style.pointerEvents = p > 0.95 ? "auto" : "none";
 
     mark.style.opacity = String(1 - smooth(0.6, 0.7, p));
+    // the C waits dim behind the hero copy and lights up as the launch begins
+    if (markSvg) markSvg.style.opacity = String(0.2 + 0.8 * smooth(0.02, 0.2, p));
     mark.style.width = mark.style.height = size0 + "px";
     mark.style.transform = "translate(" + (cx - size0 / 2).toFixed(1) + "px," + (cy - size0 / 2).toFixed(1) + "px) scale(" + scale.toFixed(3) + ")";
     setNavLight(p > 0.7);

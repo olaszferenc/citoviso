@@ -2,7 +2,7 @@
 
 Jóváhagyva: 2026-11-07, tulaj („C mehet is élesre”), 3 tervkör után.
 Megvalósítás: `public/index.html`, `public/assets/home/home.css`, `public/assets/home/home.js`,
-ár-blokk: `serveHomepage()` a `src/server/public.ts`-ben.
+ár-blokk: `renderHomepage()` a `src/server/homepage.ts`-ben.
 
 A `landing-c.html` a kattintható terv (méret-váltóval). A képek: `c-mobil-kockak.png`,
 `c-asztali-kockak.png` (a bevezető görgetési kockái), `szem-sor.png` (C → szem → kacsintás).
@@ -24,8 +24,13 @@ A `landing-c.html` a kattintható terv (méret-váltóval). A képek: `c-mobil-k
    halványul, amelyen a „Nem ígéret — kész oldal” cím áll. A menüsor ekkor vált világosra.
 6. **Mozgás-csökkentés / JS nélkül:** statikus elrendezés, nincs rögzített (pinned) bevezető,
    minden tartalom látszik.
-7. **Mobil és asztali** külön elrendezés (a logó mobilon a cím fölött, kicsiben; a tartalmi
-   szekciók egy oszlopban).
+7. **Hero: „B · Háttér-szem”** (2026-11-08, tulaj: „B”; az előző jobb oldali logó „szétszórta a
+   lapot”): a hero szövege középre zárt, a C nagyban (asztalon ~64vh, mobilon ~88vw) és
+   HALVÁNYAN (20%) a szöveg mögött ül; görgetésre a szöveg elhalványul, a C teljes fényre
+   erősödik, majd ugyanúgy szemmé nyílik és kacsint. Terv: `hero-b.html`, képek:
+   `hero-b-asztali.png`, `hero-b-mobil.png` (balra nyugalomban, jobbra görgetés közben).
+   Ez a pont felülírja a `landing-c.html` hero-elrendezését (két oszlop, logó jobbra).
+8. **Mobil és asztali** külön elrendezés (a tartalmi szekciók mobilon egy oszlopban).
 
 ## Tartalom-szabályok (a terv része)
 
