@@ -252,6 +252,9 @@ body:has(.aq-page) .con-main__in{max-width:none}
 .aq-empty{padding:40px;text-align:center;color:var(--citui-muted)}
 /* The filters hide rows with the hidden attribute; .aq-list a{display:block} would override it. */
 .aq-page [hidden]{display:none!important}
+.aq-sub{font-size:.8rem;font-weight:500;color:var(--citui-muted);margin-left:6px}
+.aq-badges--data{margin:6px 0 2px;gap:6px}
+.aq-data{font-size:.82rem;font-weight:600;padding:4px 10px;user-select:all}
 .aq-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .aq-pill{display:inline-flex;gap:4px;align-items:center;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);white-space:nowrap}
 .aq-pill.viber{color:var(--citui-glow-blue);border-color:color-mix(in srgb,var(--citui-glow-blue) 40%,var(--citui-white));background:color-mix(in srgb,var(--citui-glow-blue) 8%,var(--citui-white))}
@@ -427,6 +430,21 @@ function ladder(i: PendingApproval, lang: string): string {
 }
 
 /** `copyPanel`: the outreach text panel of the selected lead (approvalCopy.ts), above the site. */
+/** The selected lead's contacts as badges carrying the data itself (owner 2026-11-08). */
+function contactDataBadges(i: PendingApproval, lang: string): string {
+  const b: string[] = [];
+  if (i.email) b.push(`<span class="aq-pill aq-data">${ic("mail", 12)}${esc(i.email)}</span>`);
+  if (i.phone) b.push(`<span class="aq-pill aq-data">${ic("contact", 12)}${esc(i.phone)}</span>`);
+  const p = i.presence;
+  if (i.mobile) {
+    if (p?.viber === "yes") b.push(`<span class="aq-pill aq-data viber">${ic("sms", 12)}Viber${p.viberSeen ? ` · ${esc(p.viberSeen)}` : ""}</span>`);
+    if (p?.whatsapp === "yes") b.push(`<span class="aq-pill aq-data whatsapp">${ic("sms", 12)}WhatsApp</span>`);
+    if (!p || p.whatsapp === "unknown" || p.viber === "unknown") b.push(`<span class="aq-pill aq-data">${ic("clock", 12)}${esc(T(lang, "Ellenőrzés vár"))}</span>`);
+    else if (p.viber !== "yes" && p.whatsapp !== "yes") b.push(`<span class="aq-pill aq-data">${ic("photos", 12)}${esc(T(lang, "MMS + SMS"))}</span>`);
+  }
+  return b.length ? `<div class="aq-badges aq-badges--data">${b.join("")}</div>` : "";
+}
+
 /** What the lead has, as badges (owner 2026-11-08: „badgeként látszódjon, mije van”). */
 function contactBadges(i: PendingApproval, lang: string): string {
   const b: string[] = [];
@@ -479,7 +497,6 @@ export function approvalPage(
       { active: "/jovahagyas" },
     );
   }
-  const contact = [cur.phone, cur.email].filter(Boolean).map(esc).join(" · ") || esc(T(lang, "nincs kontakt"));
   const tabs =
     `<div class="aq-tabs"><button type="button" class="on" data-g="plan" data-id="${esc(cur.mainId)}">${esc(T(lang, "1. terv"))}</button>` +
     (cur.altId ? `<button type="button" data-g="plan" data-id="${esc(cur.altId)}">${esc(T(lang, "2. terv"))}</button>` : "") +
@@ -487,10 +504,11 @@ export function approvalPage(
     `<button type="button" data-g="w" data-w="390">${esc(T(lang, "Mobil"))}</button></div>`;
   const form = (approve: boolean) =>
     `<form method="post" action="/jovahagyas/${esc(cur.leadId)}"><input type="hidden" name="d" value="${approve ? "mehet" : "nem"}"><button class="aq-btn ${approve ? "aq-yes" : "aq-no"}">${esc(approve ? T(lang, "Mehet") : T(lang, "Nem mehet ki"))}</button></form>`;
+  // Owner 2026-11-08: no recipient line, no reviewer note — the contacts as badges WITH the data,
+  // so they can be checked at a glance (e.g. the e-mail badge reads info@szallas.hu).
   const head =
-    `<div class="aq-head"><h2>${esc(cur.name)}</h2>` +
-    `<div class="aq-meta">${esc(cur.city)} · ${esc(T(lang, "Címzett"))}: ${contact} · <a href="/lead/${esc(cur.leadId)}" target="_blank" rel="noopener">${esc(T(lang, "lead lapja"))}</a></div>` +
-    (cur.reason ? `<div class="aq-why">${esc(T(lang, "Átnéző"))}: ${esc(cur.reason)}</div>` : "") +
+    `<div class="aq-head"><h2>${esc(cur.name)} <small class="aq-sub">${esc(cur.city)} · <a href="/lead/${esc(cur.leadId)}" target="_blank" rel="noopener">${esc(T(lang, "lead lapja"))}</a></small></h2>` +
+    contactDataBadges(cur, lang) +
     ladder(cur, lang) +
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;
   const right =

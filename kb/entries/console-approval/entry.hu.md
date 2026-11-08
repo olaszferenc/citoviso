@@ -29,7 +29,7 @@ Telefonon a lista felül áll, alatta a kiválasztott lead.
 - **Szűrés:** a keresőmezőbe név vagy település írható, alatta csatorna és honlap szerint
   szűrhetsz. Minden gombon ott a darabszám; a 0 darabos gomb nem nyomható. A
   **„Szűrők törlése”** mindent visszaállít.
-- **A kiválasztott lead fejlécében** a négy lépcső áll: 1. Viber (ha 30 napon belül aktív),
+- **A kiválasztott lead fejlécében** a neve alatt jelvények mutatják az elérhetőségeit, benne az adattal: az e-mail-cím, a telefonszám, a Viber (az utolsó aktivitással) és a WhatsApp, így egy pillantással ellenőrizheted. Alattuk a négy lépcső áll: 1. Viber (ha 30 napon belül aktív),
   2. WhatsApp, 3. Viber régi aktivitással, 4. MMS + SMS együtt. A kiemelt lépcső alatt
   **„EZ MEGY”** áll, alatta egy mondat, hogy miért. Messengeren a terv képe és a szöveg a
   linkkel EGY üzenetben megy, SMS nélkül. Ha a messenger-út ki van kapcsolva vagy a fék
