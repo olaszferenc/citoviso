@@ -253,6 +253,9 @@ body:has(.aq-page) .con-main__in{max-width:none}
 /* The filters hide rows with the hidden attribute; .aq-list a{display:block} would override it. */
 .aq-page [hidden]{display:none!important}
 .aq-sub{font-size:.8rem;font-weight:500;color:var(--citui-muted);margin-left:6px}
+.aq-city{font-weight:600;color:var(--citui-ink)}
+.aq-search{display:inline-flex;gap:4px;align-items:center;font-size:.8rem;font-weight:700;padding:3px 10px;margin-left:8px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);color:var(--citui-ink);text-decoration:none;vertical-align:middle}
+.aq-search:hover{background:var(--citui-surface-2)}
 .aq-badges--data{margin:6px 0 2px;gap:6px}
 .aq-data{font-size:.82rem;font-weight:600;padding:4px 10px;user-select:all}
 .aq-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
@@ -507,7 +510,10 @@ export function approvalPage(
   // Owner 2026-11-08: no recipient line, no reviewer note — the contacts as badges WITH the data,
   // so they can be checked at a glance (e.g. the e-mail badge reads info@szallas.hu).
   const head =
-    `<div class="aq-head"><h2>${esc(cur.name)} <small class="aq-sub">${esc(cur.city)} · <a href="/lead/${esc(cur.leadId)}" target="_blank" rel="noopener">${esc(T(lang, "lead lapja"))}</a></small></h2>` +
+    `<div class="aq-head"><h2>${esc(cur.name)}${cur.city ? ` <span class="aq-city">· ${esc(cur.city)}</span>` : ""}` +
+    // Owner 2026-11-08: one click to check the lead on the web — name + town + e-mail, in a new window.
+    ` <a class="aq-search" href="https://www.google.com/search?q=${encodeURIComponent([cur.name, cur.city, cur.email].filter(Boolean).join(" "))}" target="_blank" rel="noopener">${ic("search", 13)}${esc(T(lang, "Keresés"))}</a>` +
+    ` <small class="aq-sub"><a href="/lead/${esc(cur.leadId)}" target="_blank" rel="noopener">${esc(T(lang, "lead lapja"))}</a></small></h2>` +
     contactDataBadges(cur, lang) +
     ladder(cur, lang) +
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;

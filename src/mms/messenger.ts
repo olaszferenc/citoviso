@@ -562,7 +562,8 @@ export async function notSeenList(now: Date = new Date()): Promise<NotSeenItem[]
        and o.sent_at <= ${new Date(now.getTime() - NOT_SEEN_AFTER_DAYS * 86_400_000)}
        and l.contact_block_at is null and p.unsubscribed_at is null
        and not exists (select 1 from outreach_reply r where r.lead_id = p.lead_id)
-       and not exists (select 1 from mms_outbox f where f.fallback_of = o.id)
+       -- A follow-up that FAILED (e.g. no WhatsApp after all) leaves the row on the tab.
+       and not exists (select 1 from mms_outbox f where f.fallback_of = o.id and f.status <> 'failed')
      order by o.sent_at asc`.execute(db);
   return rows.rows.map((r) => ({
     outboxId: r.id,

@@ -347,6 +347,7 @@ try {
     await tick(bad);
     const f1row = await db.selectFrom("mms_outbox").select(["status"]).where("id", "=", f1.id).executeTakeFirstOrThrow();
     say(bad.got[0]?.text === CAPTION && f1row.status === "failed" && alerts.length === alertsBefore, "⑫ a bukott követő üzenet végleg 'failed' (nincs MMS-újrapróba, nincs riasztás)", JSON.stringify(f1row));
+    say((await m.notSeenList()).some((i) => i.outboxId === r12), "⑫ bukott követés után a Viber-sor azonnal a „nem nézte meg” fülön (nem vész el)");
     await db.deleteFrom("mms_outbox").where("id", "=", f1.id).execute();
     const f2 = await ins();
     const before = { m: afterMessenger.length, f: afterFallback.length };
