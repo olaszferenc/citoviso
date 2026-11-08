@@ -16,6 +16,10 @@
 // (ADR-0332) — so the answer stays 'queued' until that row settles. With 'gammu' / 'mock'
 // (dev) the inject IS the send. settleReplySends() runs on every replies read and on every
 // collector ingest (once a minute), so the scheduled ones leave without a new timer.
+//
+// ADR-0430: a Viber / WhatsApp reply is answered on that messenger. Its send is only marked
+// 'queued' here; the Debian box's messenger watcher (scripts/messenger-watch.mts) pulls it,
+// types it into the chat on the S10 and acks it (src/mms/messenger.ts → settleMessengerAnswer).
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
@@ -103,6 +107,14 @@ async function transmit(sendId: string): Promise<SendOutcome> {
       .execute();
     return { ok: false, status: "failed", message: `Nem ment ki: ${error}` };
   };
+  if (s.channel === "viber" || s.channel === "whatsapp") {
+    await db
+      .updateTable("outreach_reply_send")
+      .set({ status: "queued", updated_at: sql`now()` })
+      .where("id", "=", s.id)
+      .execute();
+    return { ok: true, status: "queued", message: "Sorban — az S10 küldi ki a csevegésbe." };
+  }
   if (s.channel === "sms") {
     const r = await sendSms({ to: s.to_addr, text: s.body });
     if (r.provider === "blocked") return fail("a modem nem fogadta");
@@ -204,6 +216,30 @@ let settling: Promise<void> | null = null;
  * follow their sms_outbox row ('sent' → answered; 'failed' → failed). Single-flight —
  * a page load and an ingest arriving together never send one row twice.
  */
+/** The messenger watcher's ack of one queued Viber/WhatsApp answer (ADR-0430). */
+export async function settleMessengerAnswer(sendId: string, ok: boolean, error?: string): Promise<void> {
+  const s = await db
+    .selectFrom("outreach_reply_send")
+    .select(["id", "reply_id", "sent_by", "status", "channel"])
+    .where("id", "=", sendId)
+    .executeTakeFirst();
+  if (!s || s.status !== "queued" || (s.channel !== "viber" && s.channel !== "whatsapp")) return;
+  if (ok) {
+    await db
+      .updateTable("outreach_reply_send")
+      .set({ status: "sent", sent_at: sql`now()`, updated_at: sql`now()` })
+      .where("id", "=", s.id)
+      .execute();
+    await markAnsweredBySend(s.reply_id, s.sent_by);
+    return;
+  }
+  await db
+    .updateTable("outreach_reply_send")
+    .set({ status: "failed", error: (error ?? "az S10 nem küldte ki").slice(0, 500), updated_at: sql`now()` })
+    .where("id", "=", s.id)
+    .execute();
+}
+
 export function settleReplySends(now: Date = new Date()): Promise<void> {
   if (settling) return settling;
   settling = (async () => {

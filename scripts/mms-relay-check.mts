@@ -103,6 +103,10 @@ setMmsRelayDeps({
     afterSent.push(id);
     await onAfterSent(id);
   },
+  // ADR-0430: messenger acks are scripts/messenger-relay-check.mts's business; none here.
+  afterMessenger: async () => {
+    throw new Error("messenger-ág az MMS-őrben — nem várt");
+  },
   afterTrialMms: async () => {},
   alert: async (subject) => {
     alerts.push(subject);

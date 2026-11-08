@@ -16,12 +16,18 @@ import { normalizePhone } from "../text/phone.js";
 import { leadEmails } from "../email/leadEmails.js";
 import { settleReplySends } from "./answer.js";
 
-export type ReplyChannel = "sms" | "email";
+export type ReplyChannel = "sms" | "email" | "viber" | "whatsapp";
+export const REPLY_CHANNELS: readonly ReplyChannel[] = ["sms", "email", "viber", "whatsapp"];
+
+/** Channels whose sender is a phone number (ADR-0430: a Viber/WhatsApp chat is keyed by the number). */
+export function isPhoneChannel(ch: ReplyChannel): boolean {
+  return ch !== "email";
+}
 
 /** What the collector sends per reply. Times are ISO strings (UTC). */
 export interface IncomingReply {
   readonly channel: ReplyChannel;
-  /** 'sms:<lowest gammu ID>' | 'email:<Message-ID>' */
+  /** 'sms:<lowest gammu ID>' | 'email:<Message-ID>' | 'viber:<mms_outbox id>:<text hash>' (same for whatsapp) */
   readonly key: string;
   /** Raw sender: a phone number (any format) or an e-mail address. */
   readonly from: string;
@@ -62,7 +68,7 @@ export function matchReply(r: Pick<IncomingReply, "channel" | "from" | "received
   const at = new Date(r.receivedAt).getTime();
   if (!Number.isFinite(at)) return null;
   let hit: SentContact | null = null;
-  if (r.channel === "sms") {
+  if (isPhoneChannel(r.channel)) {
     const phone = normalizePhone(r.from);
     if (!phone) return null;
     for (const c of contacts) {
@@ -134,23 +140,28 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
     const key = String(r.key ?? "").slice(0, 500);
     const text = clip(r.text, MAX_BODY);
     const receivedAt = isoOrNull(r.receivedAt);
-    if (!key || !text || !receivedAt || typeof r.from !== "string" || (r.channel !== "sms" && r.channel !== "email")) {
+    if (!key || !text || !receivedAt || typeof r.from !== "string" || !REPLY_CHANNELS.includes(r.channel)) {
       dropped++;
       continue;
     }
     const c = matchReply(r, contacts);
+    if (!c && (r.channel === "viber" || r.channel === "whatsapp")) {
+      // A messenger chat is only ever read for a number we sent to — no partner thread here.
+      dropped++;
+      continue;
+    }
     if (!c) {
       // Not an outreach reply — but a partner's or a contact's own address joins that
       // partner's „Üzenetváltások” thread (ADR-0421). Lazy import: partnerMessages uses this module.
       const { ingestPartnerInbound } = await import("../console/partnerMessages.js");
-      if (await ingestPartnerInbound({ key, channel: r.channel, from: r.from, subject: clip(r.subject, 500), text, receivedAt })) {
+      if (await ingestPartnerInbound({ key, channel: r.channel as "sms" | "email", from: r.from, subject: clip(r.subject, 500), text, receivedAt })) {
         accepted.push(key);
         continue;
       }
       dropped++;
       continue;
     }
-    const sender = r.channel === "sms" ? normalizePhone(r.from)! : emailKey(r.from);
+    const sender = isPhoneChannel(r.channel) ? normalizePhone(r.from)! : emailKey(r.from);
     const row = {
       channel: r.channel,
       lead_id: c.leadId,
@@ -172,7 +183,7 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
     accepted.push(key);
   }
   for (const ch of checked ?? []) {
-    if (ch !== "sms" && ch !== "email") continue;
+    if (!REPLY_CHANNELS.includes(ch)) continue;
     await db
       .insertInto("outreach_reply_poll")
       .values({ channel: ch, checked_at: new Date() })

@@ -50,6 +50,11 @@ export interface MmsMessage {
   readonly prospectId?: string;
   /** ADR-0425: the trial's day-5 live-site MMS (queue provider: the ack sends its companion SMS). */
   readonly freeTrialId?: string;
+  /**
+   * ADR-0430 (queue provider): the image's caption should the S10 relay send it on Viber /
+   * WhatsApp instead of MMS. Absent = MMS only.
+   */
+  readonly messengerText?: string;
 }
 
 export interface MmsSendResult {
@@ -57,6 +62,11 @@ export interface MmsSendResult {
   readonly messageId?: string;
   readonly error?: string;
   readonly provider: "mock" | "cli" | "queue";
+  /** ADR-0430 (S10 sender): where it actually went, and the lead's Viber last-seen line read before. */
+  readonly channel?: "mms" | "viber" | "whatsapp";
+  readonly peerSeenBefore?: string;
+  /** ADR-0430: the S10 saw a banned / limited messenger account. */
+  readonly restricted?: boolean;
   /** true = only enqueued (queue provider); the MMSC verdict arrives with the relay's ack. */
   readonly queued?: boolean;
 }
@@ -168,7 +178,14 @@ async function sendQueue(msg: MmsMessage, to: string): Promise<MmsSendResult> {
   try {
     const row = await db
       .insertInto("mms_outbox")
-      .values({ prospect_id: msg.prospectId ?? null, free_trial_id: msg.freeTrialId ?? null, to_phone: to, subject: msg.subject, image })
+      .values({
+        prospect_id: msg.prospectId ?? null,
+        free_trial_id: msg.freeTrialId ?? null,
+        to_phone: to,
+        subject: msg.subject,
+        image,
+        messenger_text: msg.messengerText ?? null,
+      })
       .returning("id")
       .executeTakeFirstOrThrow();
     console.log(`[mms:queue] sorba téve → ${to} · ${row.id}`);

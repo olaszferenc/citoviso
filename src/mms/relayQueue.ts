@@ -20,6 +20,7 @@
 import { db } from "../db/client.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { mmsPullBlocks } from "../sms/sendWindow.js";
+import { messengerBlocked, tripBrake, type OutboxChannel } from "./messenger.js";
 
 /** A 'sending' row older than this is a relay that died mid-send (a send is ≤200 s, MMS_CLI_TIMEOUT_MS). */
 export const MMS_STALE_MS = 10 * 60_000;
@@ -32,6 +33,11 @@ export interface PulledMms {
   readonly subject: string;
   /** The JPEG, base64 (≤300 KB raw — the column's CHECK). */
   readonly image_b64: string;
+  /**
+   * ADR-0430: the caption for Viber / WhatsApp — present only when the S10 may try a messenger
+   * for this row (switch on, no brake, today's cap not reached, FIRST attempt). Absent = MMS.
+   */
+  readonly messenger_text?: string;
 }
 
 export interface MmsAck {
@@ -39,12 +45,20 @@ export interface MmsAck {
   readonly ok: boolean;
   readonly messageId?: string;
   readonly error?: string;
+  /** ADR-0430: where it went (absent = MMS, the pre-S10 relay). */
+  readonly channel?: OutboxChannel;
+  /** ADR-0430: the lead's Viber last-seen line read before the send. */
+  readonly peerSeenBefore?: string;
+  /** ADR-0430: the S10 saw a banned / limited account screen — trips the brake. */
+  readonly restricted?: boolean;
 }
 
 /** Injectable effects — the guard (scripts/mms-relay-check.mts) swaps them; prod uses the real ones. */
 export interface MmsRelayDeps {
   /** After the ack stamped mms_sent_at: send the pair's companion SMS half. */
   afterSent(prospectId: string, pairStartedAt: Date): Promise<unknown>;
+  /** ADR-0430: the pair went out on Viber / WhatsApp (image + link in one) — the bookkeeping, NO SMS. */
+  afterMessenger(prospectId: string): Promise<unknown>;
   /** ADR-0425: after a trial's live-site MMS was accepted (ok) or parked failed: its companion SMS / ledger. */
   afterTrialMms(freeTrialId: string, ok: boolean, error: string | null): Promise<unknown>;
   alert(subject: string, text: string): Promise<unknown>;
@@ -58,6 +72,10 @@ const realDeps: MmsRelayDeps = {
     const r = await sendPairSmsHalf(prospectId, pairStartedAt);
     if (!r.ok) console.error(`[mms-relay] a pár SMS-fele nem ment ki (${prospectId}): ${r.message}`);
     return r;
+  },
+  afterMessenger: async (prospectId) => {
+    const { settleMessengerPair } = await import("../outreach/sendOutreachPair.js");
+    return settleMessengerPair(prospectId);
   },
   afterTrialMms: async (freeTrialId, ok, error) => {
     const { settleTrialMms } = await import("../trial/escalation.js");
@@ -148,13 +166,16 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
         .skipLocked(),
     )
     .where("status", "=", "queued")
-    .returning(["id", "to_phone", "subject", "image"])
+    .returning(["id", "to_phone", "subject", "image", "messenger_text", "attempts", "prospect_id"])
     .execute();
+  // ADR-0430: the messenger option only on a prospect row's first attempt, and only when allowed.
+  const blocked = claimed.some((r) => r.messenger_text && r.prospect_id && r.attempts === 1) ? await messengerBlocked(now) : "—";
   return claimed.map((r) => ({
     id: r.id,
     to_phone: r.to_phone,
     subject: r.subject,
     image_b64: Buffer.from(r.image).toString("base64"),
+    ...(r.messenger_text && r.prospect_id && r.attempts === 1 && !blocked ? { messenger_text: r.messenger_text } : {}),
   }));
 }
 
@@ -163,11 +184,22 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
   const settled: string[] = [];
   for (const r of results) {
     if (!r.id) continue;
+    if (r.restricted) await tripBrake("a Viber- vagy WhatsApp-fiók korlátozást kapott (küldés közben)");
     if (r.ok) {
+      const channel: OutboxChannel = r.channel === "viber" || r.channel === "whatsapp" ? r.channel : "mms";
+      const messenger = channel !== "mms";
       // 'sending' (normal) or 'unknown' (a late re-ack from the relay's journal).
       const row = await db
         .updateTable("mms_outbox")
-        .set({ status: "sent", sent_at: new Date(), last_error: null, message_id: r.messageId ?? null })
+        .set({
+          status: "sent",
+          sent_at: new Date(),
+          last_error: null,
+          message_id: r.messageId ?? null,
+          channel,
+          peer_seen_before: r.peerSeenBefore ? String(r.peerSeenBefore).slice(0, 200) : null,
+          ...(messenger ? { receipt: "sent" as const } : {}),
+        })
         .where("id", "=", r.id)
         .where("status", "in", ["sending", "unknown", "queued"])
         .returning(["prospect_id", "free_trial_id", "created_at"])
@@ -184,7 +216,9 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
           .where("mms_sent_at", "is", null)
           .executeTakeFirst();
         if (stamped.numUpdatedRows) {
-          await deps.afterSent(row.prospect_id, new Date(row.created_at as unknown as string));
+          // ADR-0430: on a messenger the link rode with the image — no companion SMS.
+          if (messenger) await deps.afterMessenger(row.prospect_id);
+          else await deps.afterSent(row.prospect_id, new Date(row.created_at as unknown as string));
         }
       }
       continue;

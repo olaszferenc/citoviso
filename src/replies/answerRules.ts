@@ -17,7 +17,7 @@ export function smsParts(text: string): number {
 }
 
 /** Why `text` cannot go out on `channel`, or null. Operator-facing. */
-export function answerTextError(channel: "sms" | "email", text: string): string | null {
+export function answerTextError(channel: "sms" | "email" | "viber" | "whatsapp", text: string): string | null {
   if (!text.trim()) return "Üres szöveg nem küldhető.";
   if ([...text].length > MAX_TEXT) return `Túl hosszú szöveg (legfeljebb ${MAX_TEXT} karakter).`;
   if (channel === "sms" && smsParts(text) > SMS_MAX_PARTS) return `${SMS_MAX_PARTS} SMS-résznél hosszabb szöveg nem küldhető — rövidíts.`;

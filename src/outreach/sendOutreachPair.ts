@@ -31,7 +31,7 @@
 
 import { db } from "../db/client.js";
 import { draftOfferPercent } from "./draft.js";
-import { effectivePairSms } from "./copyOverride.js";
+import { effectiveMessengerCaption, effectivePairSms } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachSms } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
@@ -178,7 +178,18 @@ export async function startOutreachPair(
 
   if (queueMode) {
     // Enqueue only; the relay's ack claims (mms_sent_at) and starts the SMS half.
-    const mms = await sendMms({ to, imagePath: jpeg, subject: asciiSubject(d.input.leadName), prospectId });
+    // ADR-0430: the same image may go out on Viber / WhatsApp from the S10 — with this caption
+    // (the link inside), and then no companion SMS follows. §C runs on it like on the SMS; a
+    // FLAG only drops the messenger option, the MMS+SMS pair stays.
+    const caption = await effectiveMessengerCaption(prospectId, d.input);
+    const captionOk = checkOutreachSms(caption, d.input.leadName, d.lang, d.market).verdict !== "FLAG";
+    const mms = await sendMms({
+      to,
+      imagePath: jpeg,
+      subject: asciiSubject(d.input.leadName),
+      prospectId,
+      ...(captionOk ? { messengerText: caption.text } : {}),
+    });
     if (!mms.ok) return { ok: false, message: `MMS-hiba: ${mms.error ?? "ismeretlen"} — semmi nem ment ki` };
     // Pilot copy: queued right BEHIND the lead's row (the relay drains by created_at).
     await copyOutreachMms(d.input.leadName, to, jpeg, asciiSubject(d.input.leadName));
@@ -273,9 +284,36 @@ export async function sendPairSmsHalf(
   }
   await copyOutreachSms(gate.d.input.leadName, gate.to, pairSms.text);
 
+  await stampPairComplete(prospectId, draftOfferPercent(gate.d.input));
+
+  jobs.set(prospectId, {
+    phase: "done",
+    startedAt: startedIso,
+    mmsMessageId: jobs.get(prospectId)?.mmsMessageId,
+  });
+  return { ok: true, message: "a pár teljes — MMS + SMS kint" };
+}
+
+/**
+ * ADR-0430 — the pair went out on Viber / WhatsApp from the S10: ONE message carrying the
+ * image AND the link, so the pair is complete without an SMS. The stamps mean what they
+ * always meant — mms_sent_at "the lead saw the image", sms_sent_at "the lead got the link"
+ * — so every gate (pair one-shot, broken-pair detection, funnel) holds unchanged; WHICH
+ * channel carried them is on the mms_outbox row. Called by the relay ack (public process).
+ */
+export async function settleMessengerPair(prospectId: string): Promise<{ ok: boolean; message: string }> {
+  // The offer percent binds from the first message on (ADR-0286); the draft is needed for it.
+  // A gate refusing NOW (an opt-out after the send) does not undo what the lead already got.
+  const gate = await mobileOutreachGates(prospectId);
+  await stampPairComplete(prospectId, gate.ok ? draftOfferPercent(gate.d.input) : null);
+  return { ok: true, message: "a pár teljes — messengeren kint (kép + link)" };
+}
+
+/** The bookkeeping of a completed pair: offer, sms_sent_at, first touch, status. */
+async function stampPairComplete(prospectId: string, offerPercent: ReturnType<typeof draftOfferPercent> | null): Promise<void> {
   const now = new Date();
   // ADR-0286: the intro percent binds from the first message on.
-  await stampOutreachOffer(prospectId, draftOfferPercent(gate.d.input));
+  if (offerPercent !== null) await stampOutreachOffer(prospectId, offerPercent);
   await db
     .updateTable("prospect")
     .set({ sms_sent_at: now })
@@ -295,11 +333,4 @@ export async function sendPairSmsHalf(
     .where("id", "=", prospectId)
     .where("status", "=", "created")
     .execute();
-
-  jobs.set(prospectId, {
-    phase: "done",
-    startedAt: startedIso,
-    mmsMessageId: jobs.get(prospectId)?.mmsMessageId,
-  });
-  return { ok: true, message: "a pár teljes — MMS + SMS kint" };
 }

@@ -37,3 +37,8 @@ A képernyő kizárólagos (`~/.cache/s10-ui.lock`), hívás közben nem nyúl s
 **MMS-relay az S10-ről:** `MMS_SENDER=s10` a fő fa `.env`-jében → a `scripts/mms-relay.mts` a
 `sendMmsViaS10`-et hívja (a Samsung Üzenetek appal küld, siker = `content://mms` `resp_st=128`).
 A kísérő SMS változatlanul a gammu-sávon (→ `s10_smsd.py`) megy.
+
+**Messenger-ág (ADR-0430 F2):** ha a sor messenger-szöveget ad (`messenger_text`: a kapcsoló be van kapcsolva, a napi keretben van még hely, nincs fék, és ez az első kísérlet), a relay `--channel auto --text <messenger-szöveg> --mms-text <MMS-tárgy>` hívással küld. Az ack visszaviszi a csatornát.
+- `status --channel viber|whatsapp`: gépelés nélkül olvas, a kimenet `receipt` (`sent`/`delivered`/`read`), `last_seen` és `incoming` (a bejövő buborékok szövege). A Viber pipájának állapotát a képernyőkép színéből olvassa: a ciánkék dupla pipa jelenti, hogy megnézte.
+- `send --channel viber|whatsapp --text "…"` (kép nélkül): szöveg a csevegésbe, ezzel megy az operátor válasza.
+- A visszaolvasást és a válaszok kiküldését a `scripts/messenger-watch.mts` végzi (`deploy/systemd/citoviso-messenger-watch.*`, 10 percenként).

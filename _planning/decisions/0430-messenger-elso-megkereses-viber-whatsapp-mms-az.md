@@ -20,3 +20,17 @@
 **Visszafordíthatóság.** 🔄 A messenger-ág egy kapcsolóval kikapcsolható, ekkor minden a mai MMS-páron megy. A platform-fiók letiltása a számot nem érinti.
 
 **Kockázat.** Mindkét platform szabálya tiltja a kéretlen üzleti első üzenetet; a tét a fiók (nem a szám). Ezért kis adag, személyre szabott szöveg, automatikus fék.
+
+**F2 megvalósítás (2026-11-07, tulaj: „mehet F2”).**
+- **Adat:** migráció 0129 — `mms_outbox.messenger_text` (a kép messenger-szövege, a sorba tételkor rögzítve), `channel` (mms/viber/whatsapp, az ack írja), `peer_seen_before` (Viber-aktivitás a küldés előtt), `receipt` + `delivered_at` + `read_at`, `peer_seen_last` + `checked_at`; az `outreach_reply` / `_poll` / `_send` csatornái + viber, whatsapp.
+- **Szöveg:** `renderMessengerCaption` — ugyanaz a meghívás és link, de „a képen látható honlap-látványtervet” (nem „az imént MMS-ben küldött”), ékezetesen és rövidítés nélkül (messengeren nincs szegmens-díj). Ha a tulaj a jóváhagyó oldalon átírta a kísérő SMS-t, az ő szövege megy. A §C-kapu ezen is fut; FLAG esetén csak a messenger-opció esik ki, az MMS+SMS pár marad.
+- **Kapcsoló, keret, fék:** egy `app_setting` sor (`messenger_outreach`): alapból **KIKAPCSOLVA**, napi keret 10. A messenger-opciót a pull csak akkor adja ki, ha a kapcsoló be van kapcsolva, nincs fék, a mai keret nem fogyott el, és ez a sor ELSŐ kísérlete. A bukott messenger-kísérlet újrapróbája mindig MMS: a „kiment-e” csak képernyő-olvasás, második messenger-üzenet soha. A fék leáll, ha az S10 korlátozott fiókot lát, vagy ha 40 rendezett (48 óránál régebbi) messenger-küldés után az utolsó 20 olvasási aránya (5 válasz fölött a válasz-arány is) az összesnek a fele alá esik. Ilyenkor egy riasztás megy a házi csatornán, és a féket csak az operátor oldja fel.
+- **Visszaigazolás:** messenger-csatornánál az ack ugyanúgy bélyegzi az `mms_sent_at`-ot („a lead látta a képet”) és a pár-könyvelést (`sms_sent_at` = „megkapta a linket”, első érintés, státusz, ajánlat), de kísérő SMS NEM megy (`settleMessengerPair`). Melyik csatorna vitte, az az `mms_outbox` soron áll.
+- **Figyelő:** `scripts/messenger-watch.mts` (Debian, `citoviso-messenger-watch.timer`, 10 percenként): `POST /api/messenger/watch` → a telefonon gépelés nélkül visszaolvas legfeljebb 6 csevegést. A friss küldést óránként nézi, az egy napnál régebbit 6 óránként, összesen 7 napig. Kiolvassa:
+  - a WhatsApp „Kézbesítve/Megnézve” állapotát;
+  - a Viber pipáját a színéből: a ciánkék dupla pipa jelenti, hogy megnézte (mérve 11-07);
+  - az utolsó aktivitást;
+  - a bejövő szövegeket.
+  Az eredmény a `POST /api/messenger/report` végponton megy vissza: a bejövő szöveg az ADR-0339 válasz-folyamatba kerül, a receipt csak előre léphet.
+- **Válasz a messenger-válaszra:** ugyanazon a messengeren megy, az S10 gépeli be. A sorban `queued` állapotban várakozik, a figyelő küldi ki és nyugtázza; SMS nem megy.
+- **Konzol-nézet:** §2b terv-kapu, a tulaj A/B mockja `~/rc-briefs/messenger-meres-mock/`. Kód csak a jóváhagyás után.

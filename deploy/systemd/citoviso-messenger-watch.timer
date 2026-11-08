@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso messenger-figyelő 10 percenként (ADR-0430)
+
+[Timer]
+# 10 perc: a friss küldést óránként, az egy napnál régebbit 6 óránként nézi újra (a szerver
+# dönti el, mi esedékes); üres lista = egy könnyű HTTP-kérés. Egy még futó oneshotot a timer
+# nem indít újra.
+OnBootSec=300
+OnUnitActiveSec=600
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -157,15 +157,22 @@ async function runLocked(deps: MmsRelayClientDeps, deadline: Date, log: (l: stri
       if (!isJpeg(jpeg) || jpeg.length > MMS_MAX_BYTES) jpeg = await toMmsJpeg(jpeg);
       const imagePath = path.join(dir, "mms.jpg");
       await writeFile(imagePath, jpeg);
-      const r = await deps.send({ to, imagePath, subject: m.subject }, to);
+      // ADR-0430: a caption = the S10 may send it on Viber / WhatsApp (the CLI sender ignores it).
+      const r = await deps.send({ to, imagePath, subject: m.subject, ...(m.messenger_text ? { messengerText: m.messenger_text } : {}) }, to);
       if (r.ok) {
-        const ack: MmsAck = { id: m.id, ok: true, messageId: r.messageId };
+        const ack: MmsAck = {
+          id: m.id,
+          ok: true,
+          messageId: r.messageId,
+          ...(r.channel ? { channel: r.channel } : {}),
+          ...(r.peerSeenBefore ? { peerSeenBefore: r.peerSeenBefore } : {}),
+        };
         // BEFORE the ack: a lost ack must not turn a delivered MMS into 'unknown'.
         await writeJournal(deps.journalPath, [...(await readJournal(deps.journalPath)), ack]);
         results.push(ack);
-        log(`[mms-relay] elküldve · ${to} · queue ${m.id} → MMSC ${r.messageId ?? "?"}`);
+        log(`[mms-relay] elküldve · ${to} · queue ${m.id} → ${r.channel && r.channel !== "mms" ? r.channel : `MMSC ${r.messageId ?? "?"}`}`);
       } else {
-        results.push({ id: m.id, ok: false, error: r.error ?? "ismeretlen MMSC-hiba" });
+        results.push({ id: m.id, ok: false, error: r.error ?? "ismeretlen MMSC-hiba", ...(r.restricted ? { restricted: true } : {}) });
         console.error(`[mms-relay] HIBA · ${to} · ${m.id}: ${r.error}`);
       }
     } catch (err) {

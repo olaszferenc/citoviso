@@ -1,0 +1,409 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Messenger-megkeresés — A változat (lépcső + csempék)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-glow-blue:#5081ff; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-muted:#5a6d82;
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    /* channel identity (validated categorical trio, see dataviz validator) */
+    --ch-viber:var(--citui-glow-blue); --ch-wa:var(--citui-cyan-400); --ch-mms:var(--citui-warn);
+    --warn-soft:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));
+    --bad-soft:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));
+    --acc-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-panel));
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  /* mock control bar (not part of the design) */
+  .mockbar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:10px 16px;background:var(--citui-navy-950);color:var(--citui-white);font-size:13px}
+  .mockbar b{margin:0 2px 0 8px} .mockbar b:first-child{margin-left:0}
+  .mockbar button{font:inherit;border:1px solid color-mix(in srgb,var(--citui-white) 30%,transparent);background:transparent;color:inherit;border-radius:var(--citui-radius-pill);padding:3px 11px;cursor:pointer}
+  .mockbar button[aria-pressed=true]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:600}
+  .mockbar .grp{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .note{max-width:1280px;margin:12px auto 0;padding:10px 14px;background:var(--citui-surface-2);border:1px dashed var(--citui-line-strong);border-radius:10px;font-size:13px;color:var(--citui-navy-700)}
+  .frame{margin:14px auto 40px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;overflow:hidden;container-type:inline-size}
+  .frame[data-size=desk]{max-width:1280px} .frame[data-size=mob]{max-width:390px}
+  .shell{display:grid;grid-template-columns:220px 1fr}
+  .side{border-right:1px solid var(--citui-line);background:var(--citui-surface);padding:14px 8px}
+  .logo{font:700 18px var(--citui-font-display);padding:2px 8px 16px}
+  .logo small{display:block;font:400 12px var(--citui-font-text);color:var(--citui-muted)}
+  .nav a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;color:var(--citui-ink);text-decoration:none;font-weight:600}
+  .nav a.on{background:var(--acc-soft)}
+  .main{padding:20px;min-width:0}
+  .scr{font:600 11px var(--citui-font-text);letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px}
+  .scr + h1{margin-top:0}
+  h1{font:600 21px var(--citui-font-text);margin:0 0 2px}
+  h2{font:600 16px var(--citui-font-text);margin:0}
+  .lede{color:var(--citui-muted);margin:0 0 14px}
+  .sep{border:0;border-top:2px dashed var(--citui-line-strong);margin:28px 0 22px}
+  .pill{display:inline-flex;gap:5px;align-items:center;padding:2px 10px;border-radius:var(--citui-radius-pill);font-size:12px;font-weight:600;border:1px solid var(--citui-line-strong);color:var(--citui-muted);white-space:nowrap}
+  .pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-color:transparent}
+  .pill.bad{background:var(--bad-soft);color:var(--citui-bad-ink);border-color:transparent}
+  .pill.warn{background:var(--warn-soft);color:var(--citui-warn-ink);border-color:transparent}
+  .pill.run{background:var(--acc-soft);color:var(--citui-link-ink);border-color:transparent}
+  .mut{color:var(--citui-muted)} .small{font-size:12.5px}
+  .btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+  .btn.primary{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .btn.link{border-color:transparent;color:var(--citui-link-ink);padding-left:2px;padding-right:2px}
+  .chdot{width:10px;height:10px;border-radius:3px;flex:none;display:inline-block}
+  .chdot.viber{background:var(--ch-viber)} .chdot.wa{background:var(--ch-wa)} .chdot.mms{background:var(--ch-mms)}
+
+  /* ── LEAD: A ── */
+  .lgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;margin-top:12px}
+  .card{border:1px solid var(--citui-line);border-radius:12px;padding:14px 16px;min-width:0}
+  .card__h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .chbig{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--citui-surface);border:1px solid var(--citui-line)}
+  .chbig .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--citui-white);flex:none}
+  .chbig .ic.viber{background:var(--ch-viber)} .chbig .ic.wa{background:var(--ch-wa)} .chbig .ic.mms{background:var(--ch-mms)} .chbig .ic.none{background:var(--citui-muted)}
+  .chbig b{display:block;font-size:15px}
+  .ladder{list-style:none;margin:12px 0 0;padding:0;font-size:13px}
+  .ladder li{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:6px 0;border-top:1px solid var(--citui-line)}
+  .ladder .n{width:20px;height:20px;border-radius:50%;border:1px solid var(--citui-line-strong);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--citui-muted)}
+  .ladder li.pick .n{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .ladder li.pick{font-weight:600}
+  .ladder li.skip{color:var(--citui-muted)}
+  .ladder .why{font-size:12px;color:var(--citui-muted);font-weight:400;text-align:right}
+  .presence{margin-top:10px;font-size:12.5px;color:var(--citui-muted);display:flex;gap:6px;align-items:flex-start}
+  .msg .shot{display:block;width:100%;max-width:260px;border-radius:10px;border:1px solid var(--citui-line);background:var(--citui-surface)}
+  .msgtext{margin-top:8px;font-size:13px;background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:10px;padding:8px 10px;word-break:break-word}
+  .msgtext a{color:var(--citui-link-ink)}
+  .msg .cap{font-size:12px;color:var(--citui-muted);margin:6px 0 0}
+  /* step staircase */
+  .stairs{grid-column:1/-1;border:1px solid var(--citui-line);border-radius:12px;padding:14px 16px}
+  .steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin-top:12px;position:relative}
+  .st{position:relative;padding:0 8px 0 0}
+  .st .bar{height:6px;border-radius:99px;background:var(--citui-line);margin:0 0 10px}
+  .st.done .bar{background:var(--citui-ok)} .st.run .bar{background:repeating-linear-gradient(90deg,var(--citui-cyan-500) 0 8px,var(--acc-soft) 8px 14px)}
+  .st.fail .bar{background:var(--citui-bad)} .st.na .bar{background:repeating-linear-gradient(135deg,var(--citui-line) 0 4px,transparent 4px 8px)}
+  .st h4{margin:0;font-size:13px;display:flex;gap:6px;align-items:center}
+  .st .t{font-size:13px;font-weight:600;margin-top:2px}
+  .st p{margin:2px 0 0;font-size:12px;color:var(--citui-muted)}
+  .st.todo h4,.st.todo .t{color:var(--citui-muted)}
+  .st .ico{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none;border:1px solid var(--citui-line-strong);color:var(--citui-muted)}
+  .st.done .ico{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+  .st.fail .ico{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+  .st.run .ico{border-color:var(--citui-cyan-500);color:var(--citui-cyan-500)}
+  .reply{margin-top:14px;border:1px solid var(--citui-line-strong);border-left:4px solid var(--citui-ok);border-radius:10px;padding:10px 12px;background:var(--citui-ok-soft)}
+  .reply q{display:block;font-size:14px;margin:4px 0 6px;quotes:"„" "”"}
+  .errbox{margin-top:14px;border-radius:10px;padding:10px 12px;background:var(--bad-soft);color:var(--citui-bad-ink);font-size:13px}
+  .errbox .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .info{margin-top:14px;border-radius:10px;padding:10px 12px;background:var(--citui-surface-2);font-size:13px;color:var(--citui-navy-700)}
+
+  /* ── DASHBOARD: A tiles ── */
+  .dgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+  .tile{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;min-width:0}
+  .tile h3{margin:0;font-size:12.5px;font-weight:600;color:var(--citui-muted);display:flex;gap:6px;align-items:center}
+  .big{font:700 30px var(--citui-font-display);margin:4px 0 2px;letter-spacing:-.01em}
+  .big small{font:500 15px var(--citui-font-text);color:var(--citui-muted)}
+  .meter{height:8px;background:var(--citui-line);border-radius:99px;overflow:hidden;display:flex;gap:2px}
+  .meter i{display:block;height:100%}
+  .tile.off{opacity:.55}
+  .stack{display:flex;height:22px;gap:2px;margin:10px 0 8px;border-radius:4px;overflow:hidden}
+  .stack i{display:block;height:100%;position:relative;cursor:default}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px}
+  .legend span{display:inline-flex;gap:6px;align-items:center}
+  .legend b{font-weight:600}
+  .chtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+  .chtile{border:1px solid var(--citui-line);border-top:4px solid var(--c);border-radius:12px;padding:12px 14px}
+  .chtile h3{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:center}
+  .rates{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .rates div{background:var(--citui-surface);border-radius:8px;padding:6px 8px}
+  .rates b{display:block;font:700 19px var(--citui-font-display)}
+  .rates span{font-size:11.5px;color:var(--citui-muted)}
+  .rates .na b{color:var(--citui-muted)}
+  .brake{display:flex;gap:10px;align-items:flex-start}
+  .brake .sig{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none;background:var(--citui-ok);box-shadow:0 0 0 4px var(--citui-ok-soft)}
+  .brake.stop .sig{background:var(--citui-bad);box-shadow:0 0 0 4px var(--bad-soft)}
+  .brake.off .sig{background:var(--citui-muted);box-shadow:0 0 0 4px var(--citui-surface-2)}
+  .brake b{display:block}
+  .switch{display:flex;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--citui-line);cursor:pointer;user-select:none}
+  .switch input{position:absolute;opacity:0;pointer-events:none}
+  .switch .tr{width:40px;height:22px;border-radius:99px;background:var(--citui-line-strong);position:relative;flex:none;transition:background .15s}
+  .switch .tr::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--citui-white);transition:left .15s}
+  .switch input:checked + .tr{background:var(--citui-ok)}
+  .switch input:checked + .tr::after{left:21px}
+  .switch input:focus-visible + .tr{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+  .lim{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .lim input{width:76px;font:inherit;padding:5px 8px;border:1px solid var(--citui-line-strong);border-radius:8px}
+  .lim input[aria-invalid=true]{border-color:var(--citui-bad);outline-color:var(--citui-bad)}
+  .fb{font-size:12px;margin-top:5px;min-height:18px}
+  .fb.bad{color:var(--citui-bad-ink)} .fb.ok{color:var(--citui-ok-ink)} .fb.warn{color:var(--citui-warn-ink)}
+  .stub{flex-wrap:wrap;margin-top:16px;border:1px solid var(--citui-line);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;transition:box-shadow .3s}
+  .stub.flash{box-shadow:0 0 0 3px var(--citui-cyan-500)}
+  .tip{position:fixed;z-index:99;pointer-events:none;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px;padding:6px 9px;border-radius:8px;display:none;max-width:240px}
+
+  @container (max-width:720px){
+    .shell{grid-template-columns:1fr} .side{display:none}
+    .main{padding:14px 12px}
+    .lgrid,.dgrid,.chtiles{grid-template-columns:1fr}
+    .steps{grid-template-columns:1fr;gap:0}
+    .st{display:grid;grid-template-columns:6px 1fr;gap:0 12px;padding:0 0 12px}
+    .st .bar{width:6px;height:auto;min-height:44px;margin:0;grid-row:1/4}
+    .msg .shot{max-width:100%}
+    .ladder .why{text-align:left;grid-column:2/-1}
+    .ladder li{grid-template-columns:22px 1fr}
+  }
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mock-vezérlő (nem része a tervnek)">
+  <b>Nézet</b><span class="grp"><button data-s="mob">Mobil 390px</button><button data-s="desk" aria-pressed="true">Asztali</button></span>
+  <b>Lead-állapot</b><span class="grp" id="stbtns"></span>
+  <b>Fék</b><span class="grp" id="brbtns"></span>
+</div>
+<div class="note">A változat — <b>lépcső a kártyában + kompakt csempék.</b> Lead-oldal: nagy csatorna-jelvény, alatta a 4-fokú csatorna-szabály (ADR-0430, 1–4. fok) kipipálva, mellette a kimenő kép+szöveg, alul vízszintes állapot-lépcső (mobilon függőleges). Irányítópult: 3 csempe (keret · fék+kapcsoló · megoszlás) + csatornánként egy csempe a 3 aránnyal. A felső sávval válthatsz állapotot és fék-helyzetet; a kapcsoló és a napi keret a terven belül működik.</div>
+
+<div class="frame" id="frame" data-size="desk"><div class="shell">
+  <aside class="side">
+    <div class="logo">Citoviso<small>operátor-konzol</small></div>
+    <nav class="nav"><a href="#dash">Irányítópult</a><a class="on" href="#lead">Leadek</a><a href="#">Kiküldési sor</a><a href="#">Válaszok</a></nav>
+  </aside>
+  <main class="main">
+    <section id="lead">
+      <p class="scr">1 · Lead-oldal</p>
+      <h1 id="lname">Napfény Vendégház</h1>
+      <p class="lede" id="lsub">Balatonfenyves · no_site · +36 30 ••• 41 27</p>
+      <div class="lgrid">
+        <div class="card" id="chcard"></div>
+        <div class="card msg" id="msgcard"></div>
+        <div class="stairs" id="stairs"></div>
+      </div>
+    </section>
+
+    <hr class="sep">
+
+    <section id="dash">
+      <p class="scr">2 · Irányítópult — Messenger-út blokk</p>
+      <h1>Messenger-út</h1>
+      <p class="lede">Viber → WhatsApp → MMS+SMS, az S10-ről. Csak hétköznap 9–16 küld (ADR-0334).</p>
+      <div class="dgrid">
+        <div class="tile" id="tToday"></div>
+        <div class="tile" id="tBrake"></div>
+        <div class="tile" id="tSplit"></div>
+      </div>
+      <div class="chtiles" id="chtiles"></div>
+      <div class="stub" id="valaszok"><span class="pill ok">2 új</span><b>Válaszok</b><span class="mut small">— a meglévő, jóváhagyott válasz-blokk (itt csak jelölve). A messenger-válaszok ugyanide futnak (ADR-0339).</span></div>
+    </section>
+  </main>
+</div></div>
+<div class="tip" id="tip"></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const I = {
+  viber:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c5 0 8 2.6 8 7.5S17 18 12 18l-4 3v-3.6C5.4 16.5 4 14 4 10.5 4 5.6 7 3 12 3z"/><path d="M9.5 8.5c.3 2.6 2.4 4.7 5 5"/></svg>',
+  wa:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8.4 19z"/><path d="M9 9c0 3 3 6 6 6"/></svg>',
+  mms:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
+  clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  ok:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>',
+  x:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  dot:'<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor"/></svg>',
+  eye:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  go:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  alert:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>',
+};
+const CH = { viber:"Viber", wa:"WhatsApp", mms:"MMS + kísérő SMS" };
+/* the outgoing picture: inline SVG thumbnail of the generated mock page */
+const SHOT = (name) => `<svg class="shot" viewBox="0 0 260 170" role="img" aria-label="A kimenő kép: a ${esc(name)} látványtervének képe">
+  <rect width="260" height="170" fill="var(--citui-surface-2)"/>
+  <rect x="0" y="0" width="260" height="22" fill="var(--citui-navy-900)"/>
+  <rect x="10" y="8" width="48" height="6" rx="3" fill="var(--citui-white)"/>
+  <rect x="190" y="7" width="60" height="9" rx="4.5" fill="var(--citui-cyan-500)"/>
+  <rect x="0" y="22" width="260" height="88" fill="var(--citui-navy-700)"/>
+  <path d="M0 110 L70 62 L120 92 L170 52 L260 104 L260 110 Z" fill="var(--citui-navy-900)" opacity=".7"/>
+  <circle cx="214" cy="44" r="12" fill="var(--citui-warn)" opacity=".85"/>
+  <text x="14" y="76" font-family="Space Grotesk,sans-serif" font-size="17" font-weight="700" fill="var(--citui-white)">${esc(name)}</text>
+  <rect x="14" y="86" width="72" height="12" rx="6" fill="var(--citui-cyan-500)"/>
+  <rect x="14" y="122" width="74" height="38" rx="5" fill="var(--citui-white)"/>
+  <rect x="94" y="122" width="74" height="38" rx="5" fill="var(--citui-white)"/>
+  <rect x="174" y="122" width="74" height="38" rx="5" fill="var(--citui-white)"/>
+</svg>`;
+const TEXT = (name, code) => `Jó napot! Készítettünk egy látványtervet a(z) ${name} számára, itt megnézheti: https://citoviso.com/m/${code} – Citoviso`;
+const linkify = (s) => esc(s).replace(/(https:\/\/\S+)/, '<a href="#" onclick="return false">$1</a>');
+
+/* lead states — each a real-looking lead, channel decided at send time (ADR-0430, 1–4. fok) */
+const LEADS = {
+  queued: { label:"Sorban áll", name:"Napfény Vendégház", sub:"Balatonfenyves · no_site · +36 30 ••• 41 27", code:"ab12cd",
+    viber:{ has:true, last:"tegnap 18:40" }, wa:{ has:true }, ch:"viber", pick:1,
+    presence:"Viber: utoljára aktív tegnap 18:40 (előzetes, nov. 6. 15:52 — a kiküldés pillanatában újra ellenőrizzük)",
+    steps:[ ["Sorban","3. a sorban","várható indulás: hétfő (nov. 9.) 9:00 — hétvégén nem küldünk","run"], ["Elküldve","—","","todo"], ["Kézbesítve","—","","todo"], ["Megtekintve","—","Viberen így hívják az olvasást","todo"], ["Válasz","—","","todo"] ],
+    pill:["run","sorban áll"] },
+  viber: { label:"Viber, még nem olvasta", name:"Napfény Vendégház", sub:"Balatonfenyves · no_site · +36 30 ••• 41 27", code:"ab12cd",
+    viber:{ has:true, last:"tegnap 18:40" }, wa:{ has:true }, ch:"viber", pick:1,
+    presence:"Viber-aktivitás a küldés előtt: utoljára aktív tegnap 18:40 (ellenőrizve nov. 6. 10:11)",
+    steps:[ ["Sorban","nov. 6. 09:58","","done"], ["Elküldve","nov. 6. 10:12","S10 · Viber","done"], ["Kézbesítve","nov. 6. 10:12","egy pipa → két pipa","done"], ["Megtekintve","még nem","óránként nézzük; utolsó: 14:00","run"], ["Válasz","—","","todo"] ],
+    pill:["ok","kiment Viberen"] },
+  wa: { label:"WhatsAppon elolvasva + válasz", name:"Pitypang Apartman", sub:"Gyenesdiás · no_site · +36 30 ••• 88 05", code:"q7rt2m",
+    viber:{ has:false }, wa:{ has:true }, ch:"wa", pick:2,
+    presence:"Viber-fiók nincs ezen a számon (ellenőrizve nov. 5. 11:20) — a WhatsApp idegennek nem mutat aktivitást",
+    steps:[ ["Sorban","nov. 5. 11:04","","done"], ["Elküldve","nov. 5. 11:21","S10 · WhatsApp","done"], ["Kézbesítve","nov. 5. 11:21","két szürke pipa","done"], ["Olvasott","nov. 5. 13:47","két kék pipa · 2 ó 26 p múlva","done"], ["Válasz","nov. 5. 13:52","WhatsApp","done"] ],
+    reply:"Köszönöm, megnéztem, nagyon tetszik! Mennyibe kerülne, ha ez lenne a honlapunk?",
+    pill:["ok","elolvasta · válaszolt"] },
+  mms: { label:"MMS-tartalékra esett", name:"Hársfa Vendégház", sub:"Szilvásvárad · no_site · +36 30 ••• 19 63", code:"k3pz9w",
+    viber:{ has:false }, wa:{ has:false }, ch:"mms", pick:4,
+    presence:"Sem Viber-, sem WhatsApp-fiók nincs ezen a számon (ellenőrizve nov. 6. 09:30)",
+    steps:[ ["Sorban","nov. 6. 09:12","","done"], ["Elküldve","nov. 6. 09:31","MMS 09:31 + kísérő SMS 09:33","done"], ["Kézbesítve","nov. 6. 09:33","SMS kézbesítési jelentés","done"], ["Olvasás","nem mérhető","MMS/SMS-en nincs olvasási jel","na"], ["Válasz","—","","todo"] ],
+    pill:["warn","MMS+SMS páron ment"] },
+  err: { label:"Hiba", name:"Szőlőskert Panzió", sub:"Tokaj · no_site · +36 30 ••• 52 10", code:"m4xc8e",
+    viber:{ has:true, last:"3 napja" }, wa:{ has:true }, ch:"viber", pick:1,
+    presence:"Viber-aktivitás a küldés előtt: utoljára aktív 3 napja (ellenőrizve nov. 6. 10:40)",
+    steps:[ ["Sorban","nov. 6. 10:31","","done"], ["Elküldve","sikertelen","nov. 6. 10:41 · Viber","fail"], ["Kézbesítve","—","","todo"], ["Megtekintve","—","","todo"], ["Válasz","—","","todo"] ],
+    error:"A Viber-küldés nem ment ki: az S10 akadálymentességi hídja nem találta a „Küldés” gombot (10:41). A lead NEM kapott üzenetet, a megkeresés nincs elhasználva.",
+    pill:["bad","hiba — nem ment ki"] },
+};
+const BRAKES = {
+  ok:{ label:"aktív" },
+  limited:{ label:"fiók-korlátozás" },
+  halved:{ label:"olvasás a felére" },
+};
+const S = { st:"viber", brake:"ok", on:true, limit:10, sent:7 };
+
+function effectiveRouteOn(){ return S.on && S.brake === "ok"; }
+
+function renderLead(){
+  const L = LEADS[S.st];
+  $("#lname").textContent = L.name; $("#lsub").textContent = L.sub;
+  // queued + path off/stopped → predicted channel falls to MMS
+  let ch = L.ch, pick = L.pick, routeNote = "";
+  if (S.st === "queued" && !effectiveRouteOn()) { ch = "mms"; pick = 4; routeNote = S.on ? "A messenger-út most LEÁLLT (fék) — ez a lead is MMS+SMS-en megy." : "A messenger-út ki van kapcsolva — ez a lead MMS+SMS-en megy."; }
+  const vb = L.viber, wa = L.wa;
+  const rules = [
+    ["Viber, ha van fiók és ≤ 30 napja aktív", vb.has ? (/tegnap|ma|napja/.test(vb.last) && !/3[1-9] napja/.test(vb.last) ? `fiók van · aktív ${vb.last}` : `fiók van · régen aktív`) : "nincs Viber-fiók"],
+    ["WhatsApp, ha van fiók", wa.has ? "fiók van" : "nincs WhatsApp-fiók"],
+    ["Viber akkor is, ha régi az aktivitás", vb.has ? "—" : "nincs Viber-fiók"],
+    ["MMS + kísérő SMS (a régi pár)", "tartalék — mindig elérhető"],
+  ];
+  const head = S.st === "queued" ? "Várható csatorna" : (S.st === "err" ? "Próbált csatorna" : "Kiment ezen");
+  const why = { 1:`Viber — utoljára aktív ${vb.last || ""}`, 2:"WhatsApp-fiók van, Viber nincs", 4: (vb.has||wa.has) ? "A messenger-út nem él → MMS+SMS" : "Egyik messenger sincs → MMS+SMS" }[pick];
+  $("#chcard").innerHTML = `
+    <div class="card__h"><h2>Mobil-megkeresés</h2><span class="pill ${L.pill[0]}">${esc(L.pill[1])}</span></div>
+    <div class="chbig"><span class="ic ${ch}">${I[ch]}</span><div><span class="mut small">${head}</span><b>${CH[ch]}</b><span class="small">${esc(why)}</span></div></div>
+    <ol class="ladder" aria-label="Csatorna-szabály, ADR-0430">
+      ${rules.map((r, i) => {
+        const n = i + 1, cls = n === pick ? "pick" : (n < pick ? "skip" : "");
+        const mark = n === pick ? "ezt választottuk" : (n < pick ? (routeNote ? "messenger-út nem él" : r[1]) : "nem kellett");
+        return `<li class="${cls}"><span class="n">${n === pick ? I.ok : n}</span><span>${esc(r[0])}</span><span class="why">${esc(mark)}</span></li>`;
+      }).join("")}
+    </ol>
+    <div class="presence">${I.eye}<span>${esc(L.presence)}</span></div>
+    ${routeNote ? `<div class="info">${esc(routeNote)}</div>` : ""}`;
+  const text = TEXT(L.name, L.code);
+  const capt = ch === "mms" ? "MMS-ben a kép, külön kísérő SMS-ben a szöveg (ADR-0332)." : `${CH[ch]}-en egy kép + egy szöveg; kísérő SMS és tulaj-másolat nem megy.`;
+  $("#msgcard").innerHTML = `<div class="card__h"><h2>Kimenő üzenet</h2><span class="pill">${S.st === "queued" ? "így fog kimenni" : S.st === "err" ? "nem ment ki — ez ment volna" : "így ment ki"}</span></div>
+    ${SHOT(L.name)}<div class="msgtext">${linkify(text)}</div><p class="cap">${esc(capt)}</p>`;
+  const steps = L.steps.map((s) => `<div class="st ${s[3]}"><div class="bar"></div>
+      <h4><span class="ico">${s[3]==="done"?I.ok:s[3]==="fail"?I.x:I.dot}</span>${esc(s[0])}</h4>
+      <div class="t">${esc(s[1])}</div>${s[2] ? `<p>${esc(s[2])}</p>` : ""}</div>`).join("");
+  let extra = "";
+  if (L.reply) extra = `<div class="reply"><span class="small mut">Válasz · ${CH.wa} · nov. 5. 13:52</span><q>${esc(L.reply)}</q>
+      <a class="btn link" href="#valaszok" data-jump>Ugrás a Válaszok blokkra ${I.go}</a> <span class="small mut">— a válasz-szöveget a tulaj hagyja jóvá</span></div>`;
+  if (L.error) extra = `<div class="errbox"><b>${I.alert} Nem ment ki</b><div>${esc(L.error)}</div>
+      <div class="row"><button class="btn primary" id="retry">Újra a sorba (Viber)</button><button class="btn" id="tomms">Küldés MMS+SMS páron</button></div></div>`;
+  $("#stairs").innerHTML = `<div class="card__h"><h2>Mérés</h2><span class="mut small">Elküldve → Kézbesítve → ${ch==="viber"?"Megtekintve":ch==="wa"?"Olvasott":"Olvasás"}, időpontokkal</span></div>
+    <div class="steps">${steps}</div>${extra}`;
+  const r = $("#retry"); if (r) r.onclick = () => { r.closest(".errbox").innerHTML = `<b>Újra sorba téve</b> — 4. a sorban; a csatornát a kiküldéskor újra eldöntjük.`; };
+  const m = $("#tomms"); if (m) m.onclick = () => { if (confirm("VALÓDI MMS + kísérő SMS megy ki a Szőlőskert Panziónak. Mehet?")) m.closest(".errbox").innerHTML = `<b>MMS+SMS páron sorba téve</b> — a Viber kimarad ennél a leadnél.`; };
+}
+
+/* ── dashboard ── */
+const WEEK = { viber:{ sent:29, del:28, read:21, rep:3 }, wa:{ sent:14, del:14, read:11, rep:2 }, mms:{ sent:38, del:36, read:null, rep:2 } };
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+function renderDash(){
+  const routeOn = effectiveRouteOn();
+  const cap = S.limit;
+  const over = S.sent > cap;
+  $("#tToday").className = "tile" + (routeOn ? "" : " off");
+  $("#tToday").innerHTML = `<h3>Ma kiküldve messengeren</h3>
+    <div class="big">${S.sent}<small> / ${cap} napi keret</small></div>
+    <div class="meter" aria-label="${S.sent} a ${cap}-ból">${cap ? `<i style="width:${Math.min(100, pct(S.sent, cap))}%;background:var(--citui-navy-900)"></i>` : ""}</div>
+    <p class="small mut" style="margin:6px 0 0">${routeOn ? (over || S.sent >= cap ? "A mai keret betelt — a többi MMS+SMS-en megy." : `Még ${cap - S.sent} mehet ma messengeren.`) : "A messenger-út most nem küld — minden MMS+SMS-en megy."}</p>
+    <form class="lim" id="limf" novalidate><label for="limit" class="small">Napi keret</label>
+      <input id="limit" inputmode="numeric" value="${S.limit}" aria-describedby="limfb"><button class="btn" type="submit">Mentés</button></form>
+    <div class="fb" id="limfb" role="status"></div>`;
+  wireLimit();
+  const stop = S.brake !== "ok";
+  const bText = !S.on ? ["off","Kikapcsolva","Minden megkeresés a régi MMS+SMS páron megy. A fék nem figyel."]
+    : S.brake === "limited" ? ["stop","LEÁLLT: a fiók korlátozást kapott","A Viber nov. 6. 11:40-kor „ideiglenesen korlátozott fiók” jelzést adott. Azóta minden MMS+SMS-en megy."]
+    : S.brake === "halved" ? ["stop","LEÁLLT: az olvasási arány a felére esett","7 napos olvasási arány 34% (indulás 76%, a fék 38%-nál old). Azóta minden MMS+SMS-en megy."]
+    : ["ok","Aktív","Olvasás 7 nap: 74% (indulás 76%) · válasz 11% (indulás 12%). A fék 38% / 6% alatt old."];
+  $("#tBrake").innerHTML = `<h3>Fék</h3>
+    <div class="brake ${bText[0]}" style="margin-top:6px"><span class="sig"></span><div><b>${esc(bText[1])}</b><span class="small mut">${esc(bText[2])}</span></div></div>
+    ${S.on && stop ? `<button class="btn" id="unbrake" style="margin-top:8px">Fék feloldása — újraindítás</button>` : ""}
+    <label class="switch"><input type="checkbox" id="onoff" ${S.on ? "checked" : ""}><span class="tr"></span>
+      <span><b>Messenger-út</b> <span class="small mut" id="onofft">${S.on ? "bekapcsolva" : "kikapcsolva — régi MMS+SMS pár"}</span></span></label>`;
+  $("#onoff").onchange = (e) => { S.on = e.target.checked; renderAll(); };
+  const ub = $("#unbrake"); if (ub) ub.onclick = () => { if (confirm("A messenger-út újraindul a mai kerettel. A fék oka megszűnt?")) { S.brake = "ok"; renderAll(); } };
+  const tot = WEEK.viber.sent + WEEK.wa.sent + WEEK.mms.sent;
+  $("#tSplit").innerHTML = `<h3>Csatorna-megoszlás · elmúlt 7 nap</h3>
+    <div class="big">${tot}<small> megkeresés</small></div>
+    <div class="stack" role="img" aria-label="Viber ${WEEK.viber.sent}, WhatsApp ${WEEK.wa.sent}, MMS+SMS ${WEEK.mms.sent}">
+      ${["viber","wa","mms"].map((k) => `<i style="flex:${WEEK[k].sent};background:var(--ch-${k})" data-tip="${CH[k]}: ${WEEK[k].sent} db (${pct(WEEK[k].sent, tot)}%)"></i>`).join("")}</div>
+    <div class="legend">${["viber","wa","mms"].map((k) => `<span><i class="chdot ${k}"></i>${k==="mms"?"MMS+SMS":CH[k]} <b>${WEEK[k].sent}</b> <span class="mut">${pct(WEEK[k].sent, tot)}%</span></span>`).join("")}</div>`;
+  $("#chtiles").innerHTML = ["viber","wa","mms"].map((k) => {
+    const w = WEEK[k];
+    const readL = k === "viber" ? "megtekintve" : k === "wa" ? "olvasott" : "olvasás";
+    return `<div class="chtile" style="--c:var(--ch-${k})"><h3><span class="chdot ${k}"></span>${CH[k]} <span class="mut small" style="font-weight:400">${w.sent} db · 7 nap</span></h3>
+      <div class="rates">
+        <div data-tip="${w.del} / ${w.sent} kézbesítve"><b>${pct(w.del, w.sent)}%</b><span>kézbesítve</span></div>
+        <div class="${w.read==null?"na":""}" data-tip="${w.read==null?"MMS/SMS-en nincs olvasási jel":`${w.read} / ${w.sent} ${readL}`}"><b>${w.read==null?"n/a":pct(w.read, w.sent)+"%"}</b><span>${readL}</span></div>
+        <div data-tip="${w.rep} / ${w.sent} válaszolt"><b>${pct(w.rep, w.sent)}%</b><span>válasz</span></div>
+      </div></div>`; }).join("");
+}
+
+function validateLimit(raw){
+  const v = raw.trim();
+  if (v === "") return { err:"Adj meg egy számot 0 és 100 között." };
+  if (!/^\d+$/.test(v)) return { err:"Csak egész szám lehet (0–100), betű, tizedes vagy előjel nélkül." };
+  const n = Number(v);
+  if (n > 100) return { err:"Legfeljebb 100 lehet — a fiók védelmében (ADR-0430: 10-zel indul, hetente emelhető)." };
+  return { n };
+}
+function wireLimit(){
+  const f = $("#limf"), inp = $("#limit"), fb = $("#limfb");
+  inp.oninput = () => { const r = validateLimit(inp.value); inp.setAttribute("aria-invalid", r.err ? "true" : "false"); fb.className = "fb" + (r.err ? " bad" : ""); fb.textContent = r.err || ""; };
+  f.onsubmit = (e) => {
+    e.preventDefault();
+    const r = validateLimit(inp.value);
+    if (r.err) { inp.setAttribute("aria-invalid", "true"); fb.className = "fb bad"; fb.textContent = r.err; inp.focus(); return; }
+    const old = S.limit; S.limit = r.n; renderDash();
+    const fb2 = $("#limfb");
+    if (r.n === 0) { fb2.className = "fb warn"; fb2.textContent = "Mentve: 0 — ma egy sem megy messengeren (a kapcsoló bekapcsolva marad)."; }
+    else if (r.n < S.sent) { fb2.className = "fb warn"; fb2.textContent = `Mentve: ${r.n}. Ma már ${S.sent} kiment, ma több nem megy messengeren; holnaptól ${r.n}/nap.`; }
+    else if (r.n > old * 2) { fb2.className = "fb warn"; fb2.textContent = `Mentve: ${r.n}/nap — ez több mint a duplája az eddiginek (${old}). A fék figyel.`; }
+    else { fb2.className = "fb ok"; fb2.textContent = `Mentve: napi ${r.n}, azonnal érvényes.`; }
+  };
+}
+
+function renderAll(){ renderLead(); renderDash(); syncBar(); }
+function syncBar(){
+  $("#stbtns").innerHTML = Object.entries(LEADS).map(([k, v]) => `<button data-st="${k}" aria-pressed="${k===S.st}">${esc(v.label)}</button>`).join("");
+  $("#brbtns").innerHTML = Object.entries(BRAKES).map(([k, v]) => `<button data-br="${k}" aria-pressed="${k===S.brake}">${esc(v.label)}</button>`).join("");
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button,a");
+  if (!b) return;
+  if (b.dataset.s) { $("#frame").dataset.size = b.dataset.s; document.querySelectorAll("[data-s]").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
+  if (b.dataset.st) { S.st = b.dataset.st; renderAll(); }
+  if (b.dataset.br) { S.brake = b.dataset.br; renderAll(); }
+  if (b.hasAttribute("data-jump")) { e.preventDefault(); const t = $("#valaszok"); t.scrollIntoView({ behavior:"smooth", block:"center" }); t.classList.add("flash"); setTimeout(() => t.classList.remove("flash"), 1600); }
+});
+const tip = $("#tip");
+document.addEventListener("mousemove", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (!t) { tip.style.display = "none"; return; }
+  tip.textContent = t.dataset.tip; tip.style.display = "block";
+  tip.style.left = Math.min(e.clientX + 12, innerWidth - 250) + "px"; tip.style.top = (e.clientY + 14) + "px";
+});
+if (matchMedia("(max-width: 700px)").matches) { $("#frame").dataset.size = "mob"; document.querySelectorAll("[data-s]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.s === "mob")); }
+renderAll();
+</script>
+</body></html>

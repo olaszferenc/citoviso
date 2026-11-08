@@ -141,7 +141,7 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
-import type { RepliesBlock, ReplySendView, ReplyView } from "../replies/store.js";
+import type { RepliesBlock, ReplyChannel, ReplySendView, ReplyView } from "../replies/store.js";
 import { SMS_MAX_PARTS, smsParts } from "../replies/answerRules.js";
 import { displayPhone } from "../tenant/contact.js";
 import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
@@ -9572,7 +9572,7 @@ function replyExcerpt(text: string, max: number): string {
 const OURS_MAX = 260;
 
 function replySender(r: ReplyView): string {
-  const addr = r.channel === "sms" ? displayPhone(r.sender) : r.sender;
+  const addr = r.channel !== "email" ? displayPhone(r.sender) : r.sender;
   return r.senderName ? `${r.senderName} · ${addr}` : addr;
 }
 
@@ -9610,15 +9610,20 @@ function whenAhead(d: Date, lang: string, now: Date = new Date()): string {
   return `${names[wd] ?? wd} ${time}`;
 }
 
-/** „SMS” / „E-mail” chip of the answer box. */
-function repChan(ch: "sms" | "email", lang: string): string {
-  return `<span class="con-rep__ch">${ic(ch === "sms" ? "sms" : "mail", 13)}${esc(ch === "sms" ? "SMS" : T(lang, "E-mail"))}</span>`;
+/** The channel's display name (ADR-0430: + Viber / WhatsApp — product names, not translated). */
+function repChName(ch: ReplyChannel, lang: string): string {
+  return ch === "sms" ? "SMS" : ch === "viber" ? "Viber" : ch === "whatsapp" ? "WhatsApp" : T(lang, "E-mail");
+}
+
+/** „SMS” / „E-mail” / „Viber” / „WhatsApp” chip of the answer box. */
+function repChan(ch: ReplyChannel, lang: string): string {
+  return `<span class="con-rep__ch">${ic(ch === "email" ? "mail" : "sms", 13)}${esc(repChName(ch, lang))}</span>`;
 }
 
 /** The address line under the box head: number + parts (SMS) or address + „subject” (e-mail). */
 function repAddr(r: ReplyView, text: string, subject: string | null, lang: string): string {
-  const to = r.channel === "sms" ? displayPhone(r.sender) : r.sender;
-  const tail = r.channel === "sms" ? T(lang, "{n} SMS-rész", { n: smsParts(text) }) : `„${subject ?? ""}”`;
+  const to = r.channel !== "email" ? displayPhone(r.sender) : r.sender;
+  const tail = r.channel === "sms" ? T(lang, "{n} SMS-rész", { n: smsParts(text) }) : r.channel === "email" ? `„${subject ?? ""}”` : repChName(r.channel, lang);
   return `<div class="con-rep__row">${repChan(r.channel, lang)}<span class="con-rep__hint">${esc(to)} · ${esc(tail)}</span></div>`;
 }
 
@@ -9656,7 +9661,12 @@ function replyAnswer(r: ReplyView, q: RepliesQuery, hidden: string, lang: string
   const sent = r.sends.filter((x) => x.status === "sent").reverse();
   const bubbles = sent
     .map((x) => {
-      const via = x.channel === "sms" ? `SMS · ${T(lang, "{n} rész", { n: x.parts ?? smsParts(x.body) })}` : `${T(lang, "E-mail")} · „${x.subject ?? ""}”`;
+      const via =
+        x.channel === "sms"
+          ? `SMS · ${T(lang, "{n} rész", { n: x.parts ?? smsParts(x.body) })}`
+          : x.channel === "email"
+            ? `${T(lang, "E-mail")} · „${x.subject ?? ""}”`
+            : repChName(x.channel, lang);
       return `<div class="con-rep__bub is-sent"><span class="con-rep__lbl">${esc(T(lang, "Elküldött válasz"))} · ${esc(via)} · ${esc(whenShort((x.sentAt ?? x.createdAt).toISOString(), lang))} · ${esc(x.by)}</span>${esc(x.body)}</div>`;
     })
     .join("");
@@ -9691,7 +9701,7 @@ function replyAnswer(r: ReplyView, q: RepliesQuery, hidden: string, lang: string
     : `<div class="con-rep__sug is-wait" data-rep-view="${esc(r.id)}"><div class="con-rep__sh"><b>${esc(T(lang, "Javasolt válasz"))}</b><span class="con-rep__tag is-wait">${esc(T(lang, "készül"))}</span></div>` +
       `<p class="con-rep__hint con-rep__p1">${esc(T(lang, "Poe dolgozik rajta ({t} óta). Ha nem vársz rá, írd meg te.", { t: whenShort(r.receivedAt.toISOString(), lang) }))}</p>` +
       `<div class="con-rep__row"><button type="button" class="con-btn" data-rep-own="${esc(r.id)}">${icf("pen", 13)}${esc(T(lang, "Megírom magam"))}</button></div></div>`;
-  const to = r.channel === "sms" ? displayPhone(r.sender) : r.sender;
+  const to = r.channel !== "email" ? displayPhone(r.sender) : r.sender;
   const editor =
     `<form class="con-rep__sug is-solid" method="post" action="/replies/${esc(r.id)}/send" data-rep-ed="${esc(r.id)}" data-ch="${r.channel}"` +
     ` data-sug="${esc(sug?.text ?? "")}" data-sugsub="${esc(sug?.subject ?? "")}" hidden>${hidden}` +
@@ -9763,7 +9773,7 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
     `<span class="con-rep__pn">${esc(r.leadName)}</span>` +
     `<span class="con-rep__who">${esc([r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
     `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
-    `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>` +
+    `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>` +
     (r.block ? "" : replyAnswer(r, q, hidden, lang)) +
     `<div class="con-rep__acts">${acts}<a class="con-btn" href="/lead/${esc(r.leadId)}">${esc(T(lang, "Lead lapja"))}${icf("fwd", 13)}</a></div>` +
     replyBlock(r, hidden, lang) +
@@ -9822,7 +9832,7 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
         `<a class="con-rep__it${r.answeredAt ? " is-done" : ""}" href="${esc(repliesHref({ filter: q.filter, reply: r.id }))}" data-rep-id="${esc(r.id)}" data-done="${r.answeredAt ? 1 : 0}"` +
         `${sel?.id === r.id ? ' aria-current="true"' : ""}${visible(r) ? "" : " hidden"}>` +
         `<span class="con-rep__d"></span><span class="con-rep__nm">${esc(r.leadName)}</span>` +
-        `<span class="con-rep__when"><span class="con-rep__ch">${ic(r.channel === "sms" ? "sms" : "mail", 13)}${esc(r.channel === "sms" ? "SMS" : T(lang, "E-mail"))}</span>${esc(whenShort(r.receivedAt.toISOString(), lang, now))}</span>` +
+        `<span class="con-rep__when"><span class="con-rep__ch">${ic(r.channel === "email" ? "mail" : "sms", 13)}${esc(repChName(r.channel, lang))}</span>${esc(whenShort(r.receivedAt.toISOString(), lang, now))}</span>` +
         `<span class="con-rep__ex">${esc(first)}</span>${replyListTag(r, lang)}</a>`
       );
     })

@@ -2,7 +2,8 @@
 """S10 messenger-first sender (ADR-0430): Viber -> WhatsApp -> MMS, one image + one text.
 
   s10_send.py presence --to 36301234567
-  s10_send.py send --to 36301234567 --image kep.jpg --text "..." [--channel auto|viber|whatsapp|mms] [--dry-run]
+  s10_send.py send --to 36301234567 --image kep.jpg --text "..." [--mms-text "..."] [--channel auto|viber|whatsapp|mms] [--dry-run]
+  s10_send.py send --to 36301234567 --channel viber|whatsapp --text "..."   (no image: a text into the chat)
   s10_send.py status --to 36301234567 --channel whatsapp|viber
 
 Prints ONE JSON line. Exit 0 = the message is visible as sent in the chosen app; exit 1 = not sent.
@@ -219,6 +220,35 @@ def send_viber(ph, uri, text):
     home()
 
 
+def send_text(ph, channel, text):
+    """A plain text into an existing chat (ADR-0430: the operator's answer to a messenger reply)."""
+    if channel == "whatsapp":
+        sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"https://wa.me/{ph}", "-p", "com.whatsapp")
+        x, ok = wait_for(lambda x: "com.whatsapp:id/entry" in x or RESTRICTED_RX.search(x))
+        if not ok or RESTRICTED_RX.search(x):
+            raise Fail("whatsapp: chat did not open")
+        if not a11y("settext", "com.whatsapp:id/entry", text):
+            raise Fail("whatsapp: text could not be set")
+        time.sleep(1)
+        if not a11y("click", "com.whatsapp:id/send"):
+            raise Fail("whatsapp: send click failed")
+    else:
+        sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
+        x, ok = wait_for(lambda x: "com.viber.voip:id/send_text" in x or RESTRICTED_RX.search(x))
+        if not ok or RESTRICTED_RX.search(x):
+            raise Fail("viber: chat did not open")
+        if not a11y("settext", "com.viber.voip:id/send_text", text):
+            raise Fail("viber: text could not be set")
+        time.sleep(1)
+        if not a11y("click", "com.viber.voip:id/btn_send"):
+            raise Fail("viber: send click failed")
+    snippet = text[:25]
+    x, ok = wait_for(lambda x: snippet in x, tries=8)
+    if not ok:
+        raise Fail(f"{channel}: sent text not visible in chat")
+    home()
+
+
 def send_mms(ph, uri, text):
     sh("am", "start", "-a", "android.intent.action.SEND", "-t", "image/jpeg",
        "--eu", "android.intent.extra.STREAM", uri, "--es", "address", "0" + ph[2:],
@@ -244,20 +274,78 @@ def send_mms(ph, uri, text):
     raise Fail("mms: no successful send confirmation (resp_st=128) in 80 s")
 
 
+# A banned/limited account shows one of these instead of the chat (WhatsApp, Viber; HU + EN).
+RESTRICTED_RX = re.compile(r"nem használhatja a WhatsAppot|fiókod(at)? (le|ki)tiltott|korlátozt|"
+                           r"is banned|account (is )?(banned|restricted)|deaktivál", re.I)
+
+
+def nodes(x):
+    """(resource-id tail, text, content-desc, x1, y1, x2, y2) for every node of a dump."""
+    out = []
+    for m in re.finditer(r"<node [^>]*>", x):
+        n = m.group(0)
+        g = lambda k: (re.search(k + r'="([^"]*)"', n) or [None, ""])[1]
+        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+        if b:
+            out.append((g("resource-id").split("/")[-1], g(" text"), g("content-desc"), *map(int, b.groups())))
+    return out
+
+
+def screencap_png():
+    return subprocess.run(ADB + ["exec-out", "screencap", "-p"], capture_output=True, timeout=30).stdout
+
+
+def viber_tick_state(png, box):
+    """Viber draws the receipt as an icon with no accessibility text. Measured 2026-11-07 on the
+    S10: a seen message has a CYAN double tick (~(102,238,255)); delivered is a white/grey double
+    tick; sent is a single tick. Returns 'read' | 'delivered' | 'sent'."""
+    import io
+    from PIL import Image
+    im = Image.open(io.BytesIO(png)).convert("RGB").crop(box)
+    cyan = white = 0
+    for r, g, b in im.getdata():
+        if b > 230 and g > 200 and r < 150:
+            cyan += 1
+        elif r > 200 and g > 200 and b > 200:
+            white += 1
+    return "read" if cyan >= 40 else ("delivered" if white >= 80 else "sent")
+
+
+INCOMING_MAX_X1 = 160  # incoming bubbles start at the left edge; ours start right of it
+
+
 def status(ph, channel):
+    """Read the chat without typing anything: receipt of our last message, the peer's last-seen line,
+    and the texts of incoming bubbles visible on screen."""
     if channel == "whatsapp":
         sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"https://wa.me/{ph}", "-p", "com.whatsapp")
-        x, _ = wait_for(lambda x: "com.whatsapp:id/conversation_contact_name" in x)
-        sts = re.findall(r'resource-id="com.whatsapp:id/status"[^>]*content-desc="([^"]*)"', x)
+        x, _ = wait_for(lambda x: "com.whatsapp:id/conversation_contact_name" in x or RESTRICTED_RX.search(x))
+        if RESTRICTED_RX.search(x):
+            home()
+            return {"restricted": True}
+        ns = nodes(x)
+        sts = [d for (rid, t, d, *_b) in ns if rid == "status" and d]
+        last = sts[-1] if sts else ""
+        receipt = ("read" if re.search(r"Megnézve|Olvasott|Read", last) else
+                   "delivered" if re.search(r"Kézbesítve|Delivered", last) else "sent" if last else "")
+        incoming = [t for (rid, t, d, x1, y1, x2, y2) in ns
+                    if rid in ("message_text", "caption") and t and x1 < INCOMING_MAX_X1]
         seen = text_of(x, "com.whatsapp:id/conversation_contact_status")
-        replies = len(re.findall(r'resource-id="com.whatsapp:id/message_text"', x))
         home()
-        return {"last_status": sts[-1] if sts else "", "last_seen": seen, "bubbles": replies}
+        return {"receipt": receipt, "receipt_raw": last, "last_seen": seen, "incoming": incoming}
     sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
-    x, _ = wait_for(lambda x: "com.viber.voip:id/menu_viber_call" in x)
+    x, _ = wait_for(lambda x: "com.viber.voip:id/menu_viber_call" in x or RESTRICTED_RX.search(x))
+    if RESTRICTED_RX.search(x):
+        home()
+        return {"restricted": True}
+    ns = nodes(x)
+    ticks = [(x1, y1, x2, y2) for (rid, t, d, x1, y1, x2, y2) in ns if rid == "statusView"]
+    receipt = viber_tick_state(screencap_png(), ticks[-1]) if ticks else ""
+    incoming = [t for (rid, t, d, x1, y1, x2, y2) in ns
+                if rid == "textMessageView" and t and x1 < INCOMING_MAX_X1]
     seen = text_of(x, "com.viber.voip:id/subtitle")
     home()
-    return {"last_seen": seen}
+    return {"receipt": receipt, "last_seen": seen, "incoming": incoming}
 
 
 def main():
@@ -266,6 +354,7 @@ def main():
     ap.add_argument("--to", required=True)
     ap.add_argument("--image")
     ap.add_argument("--text", default="")
+    ap.add_argument("--mms-text", default=None, help="text of the MMS when auto falls back to MMS (default: --text)")
     ap.add_argument("--channel", default="auto")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -283,6 +372,16 @@ def main():
         elif a.cmd == "status":
             res.update(status(ph, a.channel)); res["ok"] = True
         else:
+            if not a.image and a.channel in ("viber", "whatsapp"):
+                if not a.text.strip():
+                    raise Fail("missing --text")
+                res["channel"] = a.channel
+                if not a.dry_run:
+                    send_text(ph, a.channel, a.text)
+                    res["sent_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                res["ok"] = True
+                print(json.dumps(res, ensure_ascii=False))
+                sys.exit(0)
             if not a.image or not os.path.exists(a.image):
                 raise Fail("missing --image")
             ch = a.channel
@@ -295,11 +394,17 @@ def main():
                 res["ok"] = True
             else:
                 uri, _ = push_image(a.image)
-                {"viber": send_viber, "whatsapp": send_whatsapp, "mms": send_mms}[ch](ph, uri, a.text)
+                text = a.mms_text if (ch == "mms" and a.mms_text is not None) else a.text
+                {"viber": send_viber, "whatsapp": send_whatsapp, "mms": send_mms}[ch](ph, uri, text)
                 res["ok"] = True
                 res["sent_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     except Fail as e:
         res["error"] = str(e)
+        try:
+            if RESTRICTED_RX.search(dump()):
+                res["restricted"] = True
+        except Exception:
+            pass
         try:
             home()
         except Exception:

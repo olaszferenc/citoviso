@@ -20,6 +20,7 @@
 
 import { db } from "../db/client.js";
 import { composeBody, PAIR_SMS_MAX_SEGMENTS, renderPairSmsDraft, type DraftInput, type OutreachDraft, type OutreachParts, type SmsDraft } from "./draft.js";
+import { renderMessengerCaption } from "./messengerCaption.js";
 import { checkOutreachDraft, checkOutreachSms } from "./outreachCheck.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 
@@ -116,6 +117,14 @@ export function withPairSmsOverride(sms: SmsDraft, o: CopyOverride | null): SmsD
 /** The companion SMS that goes out for this prospect — the pair's one source of its text. */
 export async function effectivePairSms(prospectId: string, input: DraftInput): Promise<SmsDraft> {
   return withPairSmsOverride(renderPairSmsDraft(input), await loadCopyOverride(prospectId));
+}
+
+/**
+ * ADR-0430 — the caption that goes with the image on Viber / WhatsApp. The owner's own
+ * companion-SMS text (approval page) wins: it is the wording he approved for this lead.
+ */
+export async function effectiveMessengerCaption(prospectId: string, input: DraftInput): Promise<SmsDraft> {
+  return withPairSmsOverride(renderMessengerCaption(input), await loadCopyOverride(prospectId));
 }
 
 /** What the save form sends: every field as typed (empty = machine text). */

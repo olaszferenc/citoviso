@@ -4412,16 +4412,52 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
     const b = await readJsonBody(req);
     const results = (Array.isArray(b.results) ? b.results : []).map((r) => {
-      const o = r as { id?: unknown; ok?: unknown; messageId?: unknown; error?: unknown };
+      const o = r as { id?: unknown; ok?: unknown; messageId?: unknown; error?: unknown; channel?: unknown; peerSeenBefore?: unknown; restricted?: unknown };
       return {
         id: String(o.id ?? ""),
         ok: o.ok === true,
         messageId: o.messageId ? String(o.messageId).slice(0, 200) : undefined,
         error: o.error ? String(o.error) : undefined,
+        // ADR-0430: where the S10 sent it, and what it read before.
+        channel: o.channel === "viber" || o.channel === "whatsapp" || o.channel === "mms" ? (o.channel as "mms" | "viber" | "whatsapp") : undefined,
+        peerSeenBefore: o.peerSeenBefore ? String(o.peerSeenBefore).slice(0, 200) : undefined,
+        restricted: o.restricted === true,
       };
     });
     const { ackMms } = await import("../mms/relayQueue.js");
     return sendJson(res, 200, { ok: true, sent: await ackMms(results) });
+  }
+
+  // ── ADR-0430 messenger watcher (Debian box, S10): which chats to re-read + the queued
+  // messenger answers (GET-like POST), and the report of what it read / sent. Same bearer.
+  if (req.method === "POST" && pathname === "/api/messenger/watch") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    const { messengerWatchList } = await import("../mms/messenger.js");
+    return sendJson(res, 200, await messengerWatchList());
+  }
+  if (req.method === "POST" && pathname === "/api/messenger/report") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    const b = await readJsonBody(req, 200_000);
+    const str = (v: unknown, n: number): string | undefined => (typeof v === "string" && v ? v.slice(0, n) : undefined);
+    const chats = (Array.isArray(b.chats) ? b.chats : []).slice(0, 50).map((c) => {
+      const o = c as Record<string, unknown>;
+      const receipt = o.receipt === "sent" || o.receipt === "delivered" || o.receipt === "read" ? o.receipt : "";
+      return {
+        id: String(o.id ?? ""),
+        ok: o.ok === true,
+        receipt,
+        lastSeen: str(o.lastSeen, 200),
+        incoming: (Array.isArray(o.incoming) ? o.incoming : []).slice(0, 30).map((t) => String(t).slice(0, 8000)),
+        restricted: o.restricted === true,
+        error: str(o.error, 500),
+      } as const;
+    });
+    const answers = (Array.isArray(b.answers) ? b.answers : []).slice(0, 50).map((a) => {
+      const o = a as Record<string, unknown>;
+      return { id: String(o.id ?? ""), ok: o.ok === true, restricted: o.restricted === true, error: str(o.error, 500) };
+    });
+    const { applyMessengerWatch } = await import("../mms/messenger.js");
+    return sendJson(res, 200, { ok: true, ...(await applyMessengerWatch(chats, answers)) });
   }
 
   if (req.method === "POST" && pathname === "/api/mock-request") {

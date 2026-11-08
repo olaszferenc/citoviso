@@ -20,6 +20,10 @@
       "target": "dev",
       "why": "a helyi GSM-modem (SIM800C) a dev gépen ül; a relay a távoli sort erre a modemre üríti (CLAUDE.md §8)"
     },
+    "citoviso-messenger-watch.timer": {
+      "target": "dev",
+      "why": "a Galaxy S10 (Viber/WhatsApp, a modem-SIM) USB-adb-n a dev gépen ül; a figyelő a messenger-megkeresések csevegéseit ezen a telefonon olvassa vissza (ADR-0430)"
+    },
     "citoviso-mms-relay.timer": {
       "target": "dev",
       "why": "a helyi GSM-modem (SIM800C) a dev gépen ül; a relay a távoli MMS-sort erre a modemre üríti (ADR-0282, CLAUDE.md §8)"

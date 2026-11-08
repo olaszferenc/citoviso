@@ -1,0 +1,20 @@
+[Unit]
+# ADR-0430 F2: a Viber/WhatsApp-megkeresés UTÓÉLETE az S10-en — a figyelő a szervertől
+# kéri az esedékes csevegéseket, a telefonon gépelés NÉLKÜL visszaolvassa őket (kézbesítve /
+# elolvasva / utolsó aktivitás / bejövő szöveg), kiküldi az operátor sorban álló messenger-
+# válaszait, és mindent visszajelent. A képernyő közös: minden S10-hívás a
+# ~/.cache/s10-ui.lock zárat veszi, és hívás közben a képernyőhöz nem nyúl.
+Description=Citoviso messenger-figyelő — Viber/WhatsApp olvasás és válasz az S10-en (ADR-0430)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut (ADR-0052); SMS_RELAY_URL/SECRET a fő fa .env-jéből jön (config.ts).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/messenger-watch.mts
+# Futásonként legfeljebb 6 csevegés + 6 válasz, egyenként ≤120 s (gyakorlatban ~10 s).
+TimeoutStartSec=900
+StandardOutput=append:/home/citoviso/.claude/citoviso-messenger-watch.log
+StandardError=inherit

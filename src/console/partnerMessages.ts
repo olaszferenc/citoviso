@@ -29,7 +29,7 @@ import { isEmailSuppressed } from "../outreach/sendBatch.js";
 import { isPhoneSuppressed } from "../outreach/sendOutreachSms.js";
 import { logTenantMessage } from "../tenant/messages.js";
 
-export type MsgChannel = "email" | "sms" | "mms";
+export type MsgChannel = "email" | "sms" | "mms" | "viber" | "whatsapp";
 export type MsgStatus = "scheduled" | "queued" | "sent" | "failed";
 /** What the bubble says about its origin — and what the filter pills select on. */
 export type MsgSource = "outreach" | "reply" | "answer" | "manual" | "system" | "inbound";

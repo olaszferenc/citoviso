@@ -242,7 +242,7 @@ export interface DraftInput {
 }
 
 /** 1, 2 or 3 — anything else (absent, 0, NaN) is a single-plan letter. */
-function planCountOf(d: DraftInput): 1 | 2 | 3 {
+export function planCountOf(d: DraftInput): 1 | 2 | 3 {
   const n = Number(d.planCount);
   return n >= 3 ? 3 : n === 2 ? 2 : 1;
 }
@@ -590,7 +590,7 @@ export interface SmsDraft {
 }
 
 /** Shared pieces of every SMS-shaped outreach message (link, opt-out). */
-function smsDraftParts(d: DraftInput): { link: string; unsubscribeLink: string } {
+export function smsDraftParts(d: DraftInput): { link: string; unsubscribeLink: string } {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
   // SAME readable slug as the mail (ADR-0082 / guard finding 2026-08-29): a bare
   // random token arriving from an unknown mobile number is the strongest phishing
@@ -640,7 +640,7 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
  * trial (trialDaysOnOffer), else „most megnézheti és kipróbálhatja kötelezettségmentesen!”.
  * „short” is the solo single-plan SMS's „amit … megnézhet” form.
  */
-function smsInvite(d: DraftInput, form: "formal" | "short"): string {
+export function smsInvite(d: DraftInput, form: "formal" | "short"): string {
   if (d.trialDays) {
     return form === "short"
       ? T(d.lang, "most megnézhet, és {days} napig ingyen kipróbálhat, kötelezettségmentesen!", { days: d.trialDays })

@@ -1,0 +1,98 @@
+// Messenger watcher (ADR-0430 F2) — DEBIAN BOX, the Galaxy S10. The twin of the MMS relay
+// for what happens AFTER a Viber / WhatsApp outreach:
+//   ① asks the queue's host which chats are due for a re-read (POST /api/messenger/watch);
+//   ② reads each chat on the phone WITHOUT typing (s10_send.py status): our message's receipt
+//      (WhatsApp "Kézbesítve"/"Megnézve", Viber grey/cyan double tick), the lead's last-seen line,
+//      the incoming bubbles' texts;
+//   ③ types the operator's queued answers into their chats (s10_send.py send --channel … --text);
+//   ④ reports everything back (POST /api/messenger/report): receipts land on mms_outbox, incoming
+//      texts join the reply flow (ADR-0339), a restricted account trips the brake.
+// The phone's screen is shared: every s10_send.py call takes ~/.cache/s10-ui.lock and refuses
+// to touch the screen during a call (citoviso-callbot owns calls).
+//
+// Runs from the MAIN tree via citoviso-messenger-watch.timer (every 10 minutes). Env: the MMS
+// relay's SMS_RELAY_URL / SMS_RELAY_SECRET; unset → exits quietly.
+//
+//   tsx scripts/messenger-watch.mts [--dry-run]
+
+import { execFile } from "node:child_process";
+import path from "node:path";
+import { promisify } from "node:util";
+import { config } from "../src/config.js";
+import type { AnswerReport, ChatReport, WatchList } from "../src/mms/messenger.js";
+
+const execFileP = promisify(execFile);
+const BASE = (process.env.SMS_RELAY_URL ?? "").replace(/\/$/, "");
+const SECRET = config.smsRelaySecret;
+const DRY = process.argv.includes("--dry-run");
+const SCRIPT = path.resolve(process.cwd(), "scripts", "s10-a11y", "s10_send.py");
+
+if (!BASE || !SECRET) {
+  console.log("[messenger-watch] SMS_RELAY_URL / SMS_RELAY_SECRET nincs beállítva — nincs teendő.");
+  process.exit(0);
+}
+
+async function api(pathname: string, body: unknown): Promise<Record<string, unknown>> {
+  const resp = await fetch(`${BASE}${pathname}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${SECRET}` },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) throw new Error(`${pathname} → HTTP ${resp.status}`);
+  return (await resp.json()) as Record<string, unknown>;
+}
+
+/** One s10_send.py run → its JSON line (exit 1 still prints one). */
+async function s10(args: string[]): Promise<Record<string, unknown>> {
+  try {
+    const { stdout } = await execFileP("python3", [SCRIPT, ...args], { timeout: 120_000 });
+    return JSON.parse(stdout.trim().split("\n").pop() ?? "{}") as Record<string, unknown>;
+  } catch (err) {
+    const out = (err as { stdout?: string }).stdout ?? "";
+    try {
+      return JSON.parse(out.trim().split("\n").pop() ?? "") as Record<string, unknown>;
+    } catch {
+      return { ok: false, error: (err as Error).message.slice(0, 300) };
+    }
+  }
+}
+
+try {
+  const list = (await api("/api/messenger/watch", {})) as unknown as WatchList;
+  const chats: ChatReport[] = [];
+  const answers: AnswerReport[] = [];
+  for (const c of list.chats ?? []) {
+    const r = await s10(["status", "--to", c.to_phone, "--channel", c.channel]);
+    const receipt = r.receipt === "sent" || r.receipt === "delivered" || r.receipt === "read" ? r.receipt : "";
+    chats.push({
+      id: c.id,
+      ok: r.ok === true,
+      receipt,
+      lastSeen: typeof r.last_seen === "string" ? r.last_seen : undefined,
+      incoming: Array.isArray(r.incoming) ? r.incoming.map(String) : [],
+      restricted: r.restricted === true,
+      error: typeof r.error === "string" ? r.error : undefined,
+    });
+    console.log(`[messenger-watch] ${c.channel} ${c.to_phone}: ${r.ok ? `${receipt || "?"} · ${(r.incoming as unknown[] | undefined)?.length ?? 0} bejövő` : `HIBA ${r.error}`}`);
+  }
+  for (const a of list.answers ?? []) {
+    if (DRY) {
+      console.log(`[messenger-watch] (dry-run) válasz → ${a.channel} ${a.to_phone}: ${a.text.slice(0, 60)}`);
+      continue;
+    }
+    const r = await s10(["send", "--to", a.to_phone, "--channel", a.channel, "--text", a.text]);
+    answers.push({ id: a.id, ok: r.ok === true, restricted: r.restricted === true, error: typeof r.error === "string" ? r.error : undefined });
+    console.log(`[messenger-watch] válasz → ${a.channel} ${a.to_phone}: ${r.ok ? "kiment" : `HIBA ${r.error}`}`);
+  }
+  if (DRY) {
+    console.log(`[messenger-watch] (dry-run) ${chats.length} csevegés olvasva, jelentés nem ment fel.`);
+  } else if (chats.length || answers.length) {
+    const rep = await api("/api/messenger/report", { chats, answers });
+    console.log(`[messenger-watch] jelentve: ${chats.length} csevegés, ${answers.length} válasz, ${rep.replies ?? 0} bejövő üzenet a válaszok közé.`);
+  } else {
+    console.log("[messenger-watch] nincs esedékes csevegés.");
+  }
+} catch (err) {
+  console.error(`[messenger-watch] hálózati hiba (a következő futás újrapróbálja): ${(err as Error).message}`);
+  process.exit(0);
+}

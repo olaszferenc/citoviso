@@ -704,6 +704,19 @@ export interface MmsOutboxTable {
   pulled_at: Timestamp | null;
   sent_at: Timestamp | null;
   alerted_at: Timestamp | null;
+  /** 0129 (ADR-0430): the image's caption on Viber/WhatsApp (the companion SMS text); NULL = MMS only. */
+  messenger_text: string | null;
+  /** 0129: where it actually went — set by the ack. */
+  channel: "mms" | "viber" | "whatsapp" | null;
+  /** 0129: the lead's Viber last-seen line read just before the send. */
+  peer_seen_before: string | null;
+  /** 0129: the messenger receipt read back from the chat. */
+  receipt: "sent" | "delivered" | "read" | null;
+  delivered_at: Timestamp | null;
+  read_at: Timestamp | null;
+  /** 0129: the last-seen line at the latest check, and that check's time. */
+  peer_seen_last: string | null;
+  checked_at: Timestamp | null;
 }
 
 /** 0051+0052 (ADR-0098): AAM-cap alert stamp — exactly ONE send per (year,
@@ -2023,7 +2036,8 @@ export interface OutreachReplyTable {
   id: Generated<string>;
   /** 'sms:<lowest gammu inbox ID>' | 'email:<Message-ID>' — the idempotency key. */
   source_key: string;
-  channel: "sms" | "email";
+  /** 0129 (ADR-0430): + 'viber' | 'whatsapp' — a messenger reply joins the same flow. */
+  channel: "sms" | "email" | "viber" | "whatsapp";
   lead_id: string;
   prospect_id: string | null;
   /** E.164 number or lower-cased e-mail address. */
@@ -2056,7 +2070,7 @@ export interface OutreachReplyTable {
 export interface OutreachReplySendTable {
   id: Generated<string>;
   reply_id: string;
-  channel: "sms" | "email";
+  channel: "sms" | "email" | "viber" | "whatsapp";
   to_addr: string;
   subject: string | null;
   body: string;
@@ -2102,7 +2116,7 @@ export interface PartnerMessageTable {
 
 /** 0094: when the collector last looked at each source (the freshness line). */
 export interface OutreachReplyPollTable {
-  channel: "sms" | "email";
+  channel: "sms" | "email" | "viber" | "whatsapp";
   checked_at: Timestamp;
 }
 
