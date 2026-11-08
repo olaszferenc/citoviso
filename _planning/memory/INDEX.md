@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-08_session_kezelo_diff_panel.md](2026-11-08_session_kezelo_diff_panel.md) — 2026-11-08 — Session-kezelő: nem lehetett reagálni (CLI diff-panel) — gyökér-ok kikapcsolva
 - [2026-11-08_kapu_gyorsitas.md](2026-11-08_kapu_gyorsitas.md) — 2026-11-08 — Kapu-gyorsítás: böngészős kapuk a landen, súgókép-kapu csak változott bemenetre
 - [2026-11-07_stock_illusztracio_vekony_leadek.md](2026-11-07_stock_illusztracio_vekony_leadek.md) — 2026-11-07 — Stock-illusztráció a vékony leadek mockjában
 - [2026-11-06_s10_hivasfogadas_sms_hid.md](2026-11-06_s10_hivasfogadas_sms_hid.md) — 2026-11-06 — SMS/MMS-költség, S10 hívásfogadás és SMS-híd
