@@ -59,5 +59,6 @@
 - A tömeges előzetes WhatsApp-ellenőrzés után (kb. 1 óra alatt kb. 40 szám) a fiókot letiltották, a felülvizsgálatot kértük.
 - Kapcsolók az `app_setting` sorban:
   - `whatsapp: false` — a WhatsApp mindenhonnan kimarad: a sorrendből, az ellenőrzésből és a követésből;
-  - `presenceBacklog` — alapból `false`: a háttér-söprés tilos, csak a tulaj által megnyitott vagy számmal frissített lead kerül ellenőrzésre.
+  - `presenceBacklog` — alapból `true` (tulaj 2026-11-08 ~22:00: „Menjen mindig éjjel nappal 1,5 percenként.”): a megnyitott / számmal frissített lead soron kívül, mellette futásonként (90 mp) legfeljebb 1 háttér-szám, éjjel-nappal; tömeges söprés továbbra sincs. (Előbb, „mindhárom igen”: alapból `false`.)
 - Tulaj: „mindhárom igen”.
+- **A WhatsApp-szünet alatt a csak-WhatsAppos lead vár** (tulaj: „ami whatsappos kiküldés lenne feloldásig nem menjen ki”): WhatsApp yes + nincs Viber → a `pullMms` nem adja ki, `queued` marad a feloldásig, MMS-tartalék nincs. A szünet alatti olvasás (`whatsapp: skipped`) a tárolt WhatsApp-adatot nem írja felül.

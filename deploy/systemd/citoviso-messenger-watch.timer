@@ -2,7 +2,7 @@
 Description=Citoviso messenger-figyelő 90 mp-enként (ADR-0430)
 
 [Timer]
-# 90 mp (2026-11-08: a megnyitott lead száma soron kívül, 1–2 percen belül; futásonként 4 szám): a friss küldést óránként, az egy napnál régebbit 6 óránként nézi újra (a szerver
+# 90 mp (2026-11-08: a megnyitott lead száma soron kívül, 1–2 percen belül; mellette éjjel-nappal futásonként 1 háttér-szám): a friss küldést óránként, az egy napnál régebbit 6 óránként nézi újra (a szerver
 # dönti el, mi esedékes); üres lista = egy könnyű HTTP-kérés. Egy még futó oneshotot a timer
 # nem indít újra.
 OnBootSec=300

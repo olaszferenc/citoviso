@@ -17,6 +17,7 @@
 // Routes (bearer SMS_RELAY_SECRET, same secret as the SMS relay) live in
 // src/server/public.ts and are thin wrappers around pullMms / ackMms.
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { mmsPullBlocks } from "../sms/sendWindow.js";
@@ -163,7 +164,13 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
   if (mmsPullBlocks(windowAt)) return [];
   // A WhatsApp follow-up may only go on WhatsApp: with the messenger branch off or braked it stays queued.
   const mcfg = await getMessengerConfig();
-  const followupBlocked = (await messengerBlocked()) !== null || mcfg.whatsapp === false;
+  const messengerOff = (await messengerBlocked()) !== null;
+  const followupBlocked = messengerOff || mcfg.whatsapp === false;
+  // WhatsApp paused: a first outreach whose stored presence says WhatsApp-only (WhatsApp yes, no
+  // Viber) is NOT handed out — it waits, still 'queued', until WhatsApp is back (owner 2026-11-08:
+  // „ami whatsappos kiküldés lenne feloldásig nem menjen ki”); never an MMS instead. Filtered in the
+  // claim itself, so the queue behind it moves on and nothing spins. Messenger off / braked: all MMS anyway.
+  const holdWhatsapp = mcfg.whatsapp === false && !messengerOff;
   // Claim-then-read in ONE statement: two overlapping pulls cannot get the same row.
   const claimed = await db
     .updateTable("mms_outbox")
@@ -176,6 +183,13 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
         .select("id")
         .where("status", "=", "queued")
         .$if(followupBlocked, (qb) => qb.where("force_channel", "is", null))
+        .$if(holdWhatsapp, (qb) =>
+          qb.where(
+            sql<boolean>`not (mms_outbox.force_channel is null and mms_outbox.messenger_text is not null and mms_outbox.prospect_id is not null
+              and mms_outbox.attempts = 0 and exists (select 1 from messenger_presence p
+                where p.phone = mms_outbox.to_phone and p.whatsapp = 'yes' and p.viber <> 'yes'))`,
+          ),
+        )
         .orderBy("created_at", "asc")
         .limit(1)
         .forUpdate()

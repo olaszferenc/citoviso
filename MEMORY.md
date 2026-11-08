@@ -242,11 +242,11 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
   - **Tulaj, „mindhárom igen”:**
     - a felülvizsgálatot 11-08-án kértem (az SMS-hitelesítés után „Ellenőrzés alatt álló fiók”);
     - a WhatsApp kikerült a sorrendből (`messenger_outreach.whatsapp = false`: a telefon WhatsAppot nem nyit, Viber → MMS + SMS, követő WhatsApp nincs);
-    - a jelenlét-ellenőrzés csak a megnyitott vagy számmal frissített leadre fut (`presenceBacklog = false`).
-  - **Nyitott, a tulajra vár:**
-    - felülvizsgálat kérése;
-    - a WhatsApp kivétele a sorrendből a feloldásig;
-    - a Viber-ellenőrzés csak a megnyitott vagy számmal frissített leadre.
+    - ~~a jelenlét-ellenőrzés csak a megnyitott leadre~~ → FELÜLÍRVA, lásd lent.
+- 2026-11-08 ~22:00 · WHATSAPP-SZÜNET, VÉGLEGES SZABÁLY (tulaj: „Menjen mindig éjjel nappal 1,5 percenként.” + „ami whatsappos kiküldés lenne feloldásig nem menjen ki”):
+  - **Háttér-ellenőrzés:** éjjel-nappal, a figyelő 90 mp-es futásonként a kért számok + legfeljebb 1 háttér-szám (`PRESENCE_BACKGROUND = 1`, `presenceBacklog` alapból `true`). Szünet alatt csak Vibert néz; a régi WhatsApp-olvasást nem írja felül.
+  - **Csak-WhatsAppos lead** (WhatsApp yes, Viber nem yes): a szünet alatt a `pullMms` ki sem adja, `queued`-ban vár a feloldásig, MMS-ként SEM megy; a jóváhagyó lapon a „WhatsAppon megy” csoportban, óra-jellel. WhatsApp yes + régi Viber → Viberen megy. Ismeretlen WhatsApp (a szünet előtt nem nézett szám) → Viber, különben MMS + SMS (a telefon WhatsAppot nem nyithat, tehát nem tudhatja).
+  - **Feloldáskor:** `messenger_outreach.whatsapp = true` → a várakozók maguktól kimennek.
   - **Arányok:** a csak WhatsAppos lead kb. 15% (66 mérésből 10); csak Viber 12, mindkettő 34, egyik sem 10.
 - 2026-11-08 · AUTOMATIKUS WHATSAPP-KÖVETÉS (tulaj: „igen, így mehet”):
   - **Sorrend:** a Viber-üzenet megy. Ha 3 nap alatt nem nézi meg, és van WhatsAppja, ugyanaz a kép és szöveg magától kimegy WhatsAppon. Ha azt sem nézi meg újabb 3 nap alatt, a „nem nézte meg” fülre kerül, és onnan MMS + SMS csak a tulaj gombjára megy.

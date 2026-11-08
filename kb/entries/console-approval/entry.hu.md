@@ -17,21 +17,23 @@ leállította. A lap a teljes képernyő-szélességet használja, hogy a terv m
 
 Bal oldalt a lista, csatornánként csoportosítva: **„Viberen megy”**, **„WhatsAppon megy”**,
 **„MMS + SMS megy”**, **„E-mailben megy”** és **„Még ellenőrizzük”**. A csatornát a telefon
-dönti el: kiküldéskor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja. Előre csak azt a leadet
-nézi meg, amelyiket itt megnyitod, vagy amelyiknek a lead lapján mobilszámot írsz be és elmentesz:
-ilyenkor 1–2 percen belül, és a lap magától frissül, amint megvan az eredmény. A többi lead a
-**„Még ellenőrizzük”** csoportban áll — nyugodtan jóváhagyhatod, kiküldéskor a telefon megnézi, és a
-jó csatornán küld. (A teljes sort a háttérben nem nézi végig: sok idegen szám gyors egymás utáni
-lekérdezését a WhatsApp tiltással büntette.)
-Ha a WhatsApp szünetel (például mert a fiók felülvizsgálat alatt áll), a WhatsApp mindenhonnan
-kimarad: Viberen megy, különben MMS + SMS-ben, és a követő WhatsApp-üzenet sem megy.
+dönti el: kiküldéskor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja. Előre is megnézi: azt a
+leadet, amelyiket itt megnyitod, vagy amelyiknek a lead lapján mobilszámot írsz be és elmentesz,
+soron kívül, 1–2 percen belül (a lap magától frissül, amint megvan az eredmény); a sor többi számát
+a háttérben, éjjel-nappal, másfél percenként egyet — lassan, mert sok idegen szám gyors egymás utáni
+lekérdezését a WhatsApp tiltással büntette. Amíg egy lead nincs megnézve, a **„Még ellenőrizzük”**
+csoportban áll — nyugodtan jóváhagyhatod, kiküldéskor a telefon megnézi, és a jó csatornán küld.
+Ha a WhatsApp szünetel (például mert a fiók felülvizsgálat alatt áll), a telefon a WhatsAppot nem
+nyitja meg: Viberen megy, különben MMS + SMS-ben, és a követő WhatsApp-üzenet sem megy. Akinek csak
+WhatsAppja van (Vibere nincs), az a **„WhatsAppon megy”** csoportban marad, óra-jellel a WhatsApp
+jelvényén: a WhatsApp feloldásáig vár, addig nem megy ki, MMS-ként sem.
 A lista minden sorában jelvények mutatják, mi van a leadnek: **„E-mail”**, **„Viber”**, **„WhatsApp”**,
 **„Mobil”** (a szám még nincs megnézve) vagy **„MMS + SMS”** (se Vibere, se WhatsAppja).
 Telefonon a lista felül áll, alatta a kiválasztott lead.
 
 - **Szűrés:** a keresőmezőbe név vagy település írható, alatta csatorna és honlap szerint
   szűrhetsz. A **„Messenger-ellenőrzés”** sorban az **„Ellenőrizve”** csak azokat mutatja, akiknél
-  a telefon már megnézte a Vibert és a WhatsAppot; az **„Ellenőrzésre vár”** csak a még meg nem
+  a telefon már megnézte a Vibert (és, ha nem szünetel, a WhatsAppot); az **„Ellenőrzésre vár”** csak a még meg nem
   nézetteket. A **„Második terv”** sorban a **„Nincs — egy tervvel megy”** azokat mutatja, akiknek
   nincs második, átnézett terve: ők egy tervvel kapják meg a megkeresést, a levél is egy tervről szól. Minden gombon ott
   a darabszám; a 0 darabos gomb nem nyomható. A **„Szűrők törlése”** mindent visszaállít.

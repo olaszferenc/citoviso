@@ -180,7 +180,8 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
 ### Messenger-út
 
 A Válaszok-blokk alatt a **„Messenger-út”** blokk mutatja, hogyan megy a megkeresés Viberen és
-WhatsAppon (a gép a telefonról küld: Viber → WhatsApp → MMS + SMS, csak hétköznap 9–16 között).
+WhatsAppon (a gép a telefonról küld: Viber → WhatsApp → MMS + SMS, csak hétköznap 9–16 között; ha a
+WhatsApp szünetel: Viber → MMS + SMS, a csak-WhatsAppos leadek a feloldásig várnak).
 
 - **„Ma kiküldve messengeren”** — a mai Viber- és WhatsApp-megkeresések száma. Napi keret nincs:
   ami jóvá van hagyva, kimegy.

@@ -46,15 +46,16 @@ export interface MessengerConfig {
    */
   readonly whatsapp?: boolean;
   /**
-   * true = the phone works through the whole approval queue in the background. false (default since
-   * 2026-11-08: the bulk WhatsApp lookups got the account banned) = only the numbers the owner opens or
-   * types in are checked.
+   * true (default, owner 2026-11-08: „Menjen mindig éjjel nappal 1,5 percenként”) = besides the numbers
+   * the owner opens or types in, the phone checks ONE more queued number per watcher run (90 s), day and
+   * night — never a bulk sweep (the bulk WhatsApp lookups got the account banned). false = only the
+   * requested numbers.
    */
   readonly presenceBacklog?: boolean;
 }
 
 /** Off until the operator switches it on (the rollout, ADR-0430 F3, is a decision, not a deploy side effect). */
-export const MESSENGER_CONFIG_DEFAULT: MessengerConfig = { enabled: false, brake: null, whatsapp: true, presenceBacklog: false };
+export const MESSENGER_CONFIG_DEFAULT: MessengerConfig = { enabled: false, brake: null, whatsapp: true, presenceBacklog: true };
 
 export async function getMessengerConfig(): Promise<MessengerConfig> {
   const raw = await getSetting(MESSENGER_SETTING_KEY);
@@ -64,7 +65,7 @@ export async function getMessengerConfig(): Promise<MessengerConfig> {
     return {
       enabled: j.enabled === true,
       whatsapp: j.whatsapp !== false,
-      presenceBacklog: j.presenceBacklog === true,
+      presenceBacklog: j.presenceBacklog !== false,
       brake: j.brake && typeof j.brake.reason === "string" ? { at: String(j.brake.at ?? ""), reason: j.brake.reason } : null,
     };
   } catch {
@@ -76,7 +77,7 @@ export async function getMessengerConfig(): Promise<MessengerConfig> {
 export async function setMessengerConfig(c: MessengerConfig): Promise<void> {
   await setSetting(
     MESSENGER_SETTING_KEY,
-    JSON.stringify({ enabled: c.enabled, brake: c.brake ?? null, whatsapp: c.whatsapp !== false, presenceBacklog: c.presenceBacklog === true }),
+    JSON.stringify({ enabled: c.enabled, brake: c.brake ?? null, whatsapp: c.whatsapp !== false, presenceBacklog: c.presenceBacklog !== false }),
   );
 }
 
@@ -341,6 +342,8 @@ export async function applyMessengerWatch(
 export const PRESENCE_MAX_AGE_DAYS = 14;
 /** Numbers per watcher run (~20 s each on the phone's screen). Small, so a requested number waits ≤ ~2 runs. */
 export const PRESENCE_BATCH = 4;
+/** Background (not requested) numbers checked per watcher run (owner 2026-11-08: 1 per 1.5 min). */
+export const PRESENCE_BACKGROUND = 1;
 /** app_setting key: numbers the owner is looking at right now — checked before the backlog. */
 export const PRESENCE_PRIORITY_KEY = "messenger_presence_priority";
 /** Viber activity this fresh wins over WhatsApp (s10_send.py VIBER_FRESH_DAYS). */
@@ -361,6 +364,8 @@ export interface ChannelPlan {
   readonly step: 0 | 1 | 2 | 3 | 4;
   /** One plain sentence: why this one. */
   readonly reason: string;
+  /** true = it would go on WhatsApp, but WhatsApp is paused: it waits until it is back (never an MMS). */
+  readonly held?: true;
 }
 
 /**
@@ -368,7 +373,17 @@ export interface ChannelPlan {
  * read and the switch / brake. The phone decides again at send time; this groups the list.
  */
 export function expectedChannel(p0: Presence | null, cfg: Pick<MessengerConfig, "enabled" | "brake" | "whatsapp">): ChannelPlan {
-  // WhatsApp paused (e.g. the account is under review): it counts as absent everywhere.
+  // WhatsApp paused (the account is under review): a WhatsApp-only lead WAITS until it is back
+  // (owner 2026-11-08: „ami whatsappos kiküldés lenne feloldásig nem menjen ki”) — never an MMS.
+  if (cfg.whatsapp === false && cfg.enabled && !cfg.brake && whatsappHeld(p0)) {
+    return {
+      channel: "whatsapp",
+      step: 2,
+      held: true,
+      reason: "WhatsApp-fiók van, Viber nincs — a WhatsApp most szünetel, ezért a feloldásig vár, addig nem megy ki (MMS-ként sem)",
+    };
+  }
+  // Otherwise WhatsApp counts as absent everywhere while paused.
   const p = p0 && cfg.whatsapp === false ? { ...p0, whatsapp: "no" as const } : p0;
   if (!cfg.enabled) return { channel: "mms", step: 4, reason: "a messenger-út ki van kapcsolva — MMS + SMS megy, együtt" };
   if (cfg.brake) return { channel: "mms", step: 4, reason: `a fék leállította a messenger-utat (${cfg.brake.reason}) — MMS + SMS megy, együtt` };
@@ -385,6 +400,15 @@ export function expectedChannel(p0: Presence | null, cfg: Pick<MessengerConfig, 
     return { channel: "check", step: 0, reason: "a telefon nem kapott egyértelmű választ — kiküldéskor újra megnézi" };
   }
   return { channel: "mms", step: 4, reason: "sem Vibere, sem WhatsAppja nincs — MMS + SMS megy, együtt" };
+}
+
+/**
+ * Pure: with WhatsApp on, this read would go on WhatsApp (pick_channel: no fresh Viber, WhatsApp yes)
+ * and there is no Viber at all to fall back on. While WhatsApp is paused such a lead waits.
+ * (WhatsApp yes + an OLD Viber goes on Viber meanwhile — still a messenger, not the MMS fallback.)
+ */
+export function whatsappHeld(p: Presence | null): boolean {
+  return !!p && p.whatsapp === "yes" && p.viber !== "yes";
 }
 
 /** Presence of these E.164 numbers (missing = not checked yet). */
@@ -448,9 +472,12 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
   // A requested number that is checked (or left the queue) drops off the priority list.
   const keep = prio.filter((p) => due.includes(p));
   if (keep.length !== prio.length) await setSetting(PRESENCE_PRIORITY_KEY, keep.length ? JSON.stringify(keep) : "");
-  // No background sweep unless switched on: only what the owner opened or typed in.
-  if (!cfg.presenceBacklog) return first.slice(0, limit);
-  return [...first, ...due.filter((p) => !first.includes(p))].slice(0, limit);
+  // The requested numbers first; then at most PRESENCE_BACKGROUND queued number per run (day and
+  // night, every 90 s — never a bulk sweep). Switched off: only the requested ones.
+  const head = first.slice(0, limit);
+  if (!cfg.presenceBacklog) return head;
+  const bg = due.filter((p) => !first.includes(p)).slice(0, Math.max(0, Math.min(PRESENCE_BACKGROUND, limit - head.length)));
+  return [...head, ...bg];
 }
 
 export interface PresenceReport {
@@ -475,10 +502,13 @@ export async function applyPresence(reports: readonly PresenceReport[], now: Dat
       viber_age_days: Number.isInteger(r.viberAgeDays) ? (r.viberAgeDays as number) : null,
       checked_at: now,
     };
+    // WhatsApp paused: the phone did not open it ('skipped') — keep the last WhatsApp read, so a
+    // WhatsApp-only lead stays recognisable (and waits) instead of turning "unknown".
+    const { whatsapp: _wa, ...noWa } = row;
     await db
       .insertInto("messenger_presence")
       .values({ phone: r.phone, ...row })
-      .onConflict((oc) => oc.column("phone").doUpdateSet(row))
+      .onConflict((oc) => oc.column("phone").doUpdateSet(r.whatsapp === "skipped" ? noWa : row))
       .execute();
     n++;
   }
