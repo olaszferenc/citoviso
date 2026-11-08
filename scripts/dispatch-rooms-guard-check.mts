@@ -54,6 +54,9 @@ const prospectAt = Math.max(one.indexOf("createProspect("), one.indexOf("prepare
 check(guardAt > 0 && prospectAt > guardAt, "főterv: a szobamodul-őr a link készítése ELŐTT fut, held-del",
   `planHasRooms @${guardAt} · createProspect @${prospectAt}`);
 check(/planHasRooms\(art\.path\)\)\)\s*\{\s*return \{ status: "held"/.test(one), "főterv: hiányzó szobamodul → held (nem skipped)");
+const prep = body("prepareDispatchProspect");
+check(/\n  await attachSecondPlan\(prospect\.id\);/.test(prep) && !/second\.ok/.test(prep),
+  "ADR-XXXX: a hiányzó második terv NEM tartja vissza a kiküldést (egy terv elég, tulaj 2026-11-08)");
 const second = body("attachSecondPlan");
 check(/planHasRooms\(m\.path\)/.test(second) && /for \(const m of passed\)/.test(second),
   "2. terv: csak szobamodulos, Vera-PASS-os mock csatolható");

@@ -344,9 +344,9 @@ export async function dispatchRecipient(
 }
 
 /**
- * The tracked link the send goes out on: createProspect (idempotent per lead + mock) and the
- * second plan (owner, 2026-10-26: „minimum kettő mockot kiküldünk” — the link carries a second
- * plan, plan-tabs, or nothing goes out). Shared with the approval page: its preview is rendered
+ * The tracked link the send goes out on: createProspect (idempotent per lead + mock) and, when
+ * the lead has one, the second plan (plan-tabs). The 2026-10-26 „minimum kettő mock” rule is
+ * lifted by ADR-XXXX (owner 2026-11-08): a missing second plan no longer holds the send. Shared with the approval page: its preview is rendered
  * from the very prospect the send will use, so the link and the plan count in the text are the
  * ones that go out.
  */
@@ -360,8 +360,9 @@ export async function prepareDispatchProspect(
 > {
   const prospect = await createProspect({ leadId, artifactId, contactEmail });
   if (!prospect) return { ok: false, status: "skipped", note: "a lead nem található" };
-  const second = await attachSecondPlan(prospect.id);
-  if (!second.ok) return { ok: false, status: "held", note: second.note, prospectId: prospect.id };
+  // ADR-XXXX (owner 2026-11-08, „A”): one plan is enough. A reviewed second plan is attached
+  // when the lead has one; its absence no longer holds the send (it held 1536 of 1885 approvals).
+  await attachSecondPlan(prospect.id);
   return { ok: true, prospectId: prospect.id };
 }
 

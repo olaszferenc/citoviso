@@ -29,8 +29,8 @@ Telefonon a lista felül áll, alatta a kiválasztott lead.
 - **Szűrés:** a keresőmezőbe név vagy település írható, alatta csatorna és honlap szerint
   szűrhetsz. A **„Messenger-ellenőrzés”** sorban az **„Ellenőrizve”** csak azokat mutatja, akiknél
   a telefon már megnézte a Vibert és a WhatsAppot; az **„Ellenőrzésre vár”** csak a még meg nem
-  nézetteket. A **„Második terv”** sorban a **„Nincs — most megállna”** azokat mutatja, akiknek
-  nincs második, átnézett terve: ezeknél a kiküldés jóváhagyás után is megállna. Minden gombon ott
+  nézetteket. A **„Második terv”** sorban a **„Nincs — egy tervvel megy”** azokat mutatja, akiknek
+  nincs második, átnézett terve: ők egy tervvel kapják meg a megkeresést, a levél is egy tervről szól. Minden gombon ott
   a darabszám; a 0 darabos gomb nem nyomható. A **„Szűrők törlése”** mindent visszaállít.
 - **A kiválasztott lead fejlécében** a neve és a települése mellett a **„Keresés”** gomb új ablakban
   megnyitja a Google-t a szállás nevével, a településsel és az e-mail-címmel. A név alatt jelvények
