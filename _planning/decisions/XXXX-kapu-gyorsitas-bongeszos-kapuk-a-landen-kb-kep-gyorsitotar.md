@@ -19,13 +19,16 @@
    Hogy a kihagyott kép ne változtassa a következő kép állapotát, minden felvétel ugyanabból az állapotból indul: az egérmutató a (0,0) ponton áll, a localStorage, a sessionStorage és a sütik üresek, a böngésző-gyorsítótár ki van kapcsolva. Mérve: ezzel is mind a 70 kép pixelre egyezik a commitolttal, vagyis egyik kép sem függött az előző felvételtől.
 3. **A brief eredeti ötlete helyett** („a deploy-tartomány view/CSS/seed-diffje alapján válogass”): a tartomány alapú szűrés a mért 14 deployból 13-nál a teljes kört adta volna, mert a kb-shot import-zárványa 289 `src/` fájl, és szinte minden tartomány érint egyet. A bemenet-ujjlenyomat pontosabb, és biztonságosabb is: nem kell megjósolni, mit érint egy fájl, mert a lap által ténylegesen betöltött bájtokat méri.
 
-**Mérés (2026-11-08, Debian, 8 mag; terhelés közben, ~10 párhuzamos szál mellett).** Lásd a lenti táblázatot.
+**Mérés (2026-11-08, Debian, 8 mag, load 5–7, más szálak is futottak; `CIT_GATE_CACHE=0`, hogy a zöld-gyorsítótár ne torzítson).**
 
 | | előtte | utána |
 |---|---|---|
-| kis felület-változás commit-kapui (1 sor a `src/console/views.ts`-ben) | MÉRÉS-A | MÉRÉS-B |
-| deploy GATE 1c/kép (`deploy-prod.sh --kb-shot-gate`) | 2:00 (load ~7, mind a 70 kép) | hideg (első futás): MÉRÉS-C · meleg (változatlan képek): MÉRÉS-D |
+| kis, nem-felületi változás commit-kapui (1 kommentsor a `src/console/approvalCopy.ts`-ben; 61 kapu) | **1:53** (`CIT_FULL_COMMIT=1`) | **0:50** (13 böngészős kapu a landre halasztva) |
+| ennek az ADR-nek a saját commitja (hook + futtató + kb-shot; 68 kapu) | — | 1:01 (12 halasztva) |
+| deploy GATE 1c/kép (`deploy-prod.sh --kb-shot-gate`) | **2:00** (mind a 70 kép újragyártva) | hideg (üres gyorsítótár): 1:22 · **meleg: 0:29** (64 kép kimarad, 6 újragyártva: a 3 partner-kép, amelyet külön gyártó készít, mindig, + 3 kép, amelynek a HTML-je futásonként más vagy nem tárolható) |
+
+Egy felület-fájlt érintő commit (pl. `src/console/views.ts`) sokkal több böngészős kaput indít (2026-09-24: 98 kapu, ~15 perc). Ott a nyereség arányosan nagyobb, de ezt nem mértem, mert a felület-kapu (§2b) jóváhagyási token nélkül megállítja a mérő commitot. A land ideje nem változik (szándékosan, ez a garancia). A teljes lánc így: commit a gyors kapukkal, land egyszer a teljes körrel, deploy csak az érintett képekkel.
 
 **Visszafordíthatóság:** 🔄 olcsó. A commitnál `CIT_FULL_COMMIT=1`, a deploynál `--full-kb-shots` adja vissza a régi viselkedést, a két szabály pedig egy-egy blokk a futtatóban és a kb-shotban.
 **Elvetett:** (a) a commit-kapuk teljes kihagyása, mert a gyors őrök (i18n, token) a szerkesztés közelében hasznosak, és olcsók; (b) a lassú kapuk kézi listája, mert elavul, a böngészős szabály viszont önmagát tartja karban; (c) a kapu-előzmény (futásidő) szerinti halasztás, mert nem determinisztikus: ugyanaz a kapu terhelés alatt egyszer halasztva lenne, máskor nem.
-**Státusz:** ✅ landolva. A meglévő `deploy-prod.sh` kapui egyébként változatlanok.
+**Státusz:** ✅ elfogadva, landolva. A `deploy-prod.sh` többi kapuja változatlan.
