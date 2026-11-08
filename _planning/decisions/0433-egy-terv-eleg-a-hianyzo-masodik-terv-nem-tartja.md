@@ -1,4 +1,4 @@
-## ADR-XXXX — Egy terv elég: a hiányzó második terv nem tartja vissza a kiküldést
+## ADR-0433 — Egy terv elég: a hiányzó második terv nem tartja vissza a kiküldést
 
 **Dátum:** 2026-11-08 · **Döntött:** tulaj („A)” — a jóváhagyó lapon: „akkor minek nézem? minek kell másodszorra is létre hozni?”) · **Felülírja:** ADR-0406 „minimum kettő mockot kiküldünk” kötelezőségét (2026-10-26) · **Kapcsolódik:** ADR-0430 (jóváhagyó lap, messenger-út)
 

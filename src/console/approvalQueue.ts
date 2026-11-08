@@ -487,7 +487,7 @@ export function approvalPage(
     `<h4>${esc(T(lang, "Csatorna"))}</h4>${chips("ch", APPROVAL_GROUPS.map((g) => [g, chipName(g, lang)] as const), lang)}` +
     `<h4>${esc(T(lang, "Honlap"))}</h4>${chips("site", [["none", T(lang, "Nincs honlap")], ["old", T(lang, "Elavult honlap")]], lang)}` +
     // Owner 2026-11-08: hide / show what the phone has not checked for Viber / WhatsApp yet,
-    // and whether the link carries a reviewed second plan (ADR-XXXX: one plan is enough).
+    // and whether the link carries a reviewed second plan (ADR-0433: one plan is enough).
     `<h4>${esc(T(lang, "Messenger-ellenőrzés"))}</h4>${chips("chk", [["done", T(lang, "Ellenőrizve")], ["wait", T(lang, "Ellenőrzésre vár")]], lang)}` +
     `<h4>${esc(T(lang, "Második terv"))}</h4>${chips("alt", [["yes", T(lang, "Van")], ["no", T(lang, "Nincs — egy tervvel megy")]], lang)}` +
     `<button type="button" class="aq-clear">${esc(T(lang, "Szűrők törlése"))}</button></div>`;
