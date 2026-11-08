@@ -37,14 +37,19 @@ function passes(m: ThreadMessage, f: MessageFilter): boolean {
   );
 }
 
+/** ADR-0430: a Viber / WhatsApp message names its app (product names, not translated). */
+function viaApp(m: ThreadMessage): string {
+  return m.channel === "viber" ? " · Viber" : m.channel === "whatsapp" ? " · WhatsApp" : "";
+}
+
 function sourceLabel(m: ThreadMessage, lang: string): string {
   switch (m.source) {
     case "outreach":
-      return T(lang, "Megkeresés");
+      return `${T(lang, "Megkeresés")}${viaApp(m)}`;
     case "reply":
-      return T(lang, "Válasz a megkeresésre");
+      return `${T(lang, "Válasz a megkeresésre")}${viaApp(m)}`;
     case "answer":
-      return T(lang, "Válasz a válaszra");
+      return `${T(lang, "Válasz a válaszra")}${viaApp(m)}`;
     case "manual":
       return T(lang, "Kézi üzenet");
     case "system":
@@ -60,7 +65,9 @@ function chip(m: ThreadMessage, lang: string): string {
     m.status === "sent"
       ? T(lang, "elküldve")
       : m.status === "queued"
-        ? T(lang, "sorban — a modem-sáv viszi ki")
+        ? m.channel === "viber" || m.channel === "whatsapp"
+          ? T(lang, "sorban — a telefon beírja a csevegésbe")
+          : T(lang, "sorban — a modem-sáv viszi ki")
         : m.status === "scheduled"
           ? `${T(lang, "ütemezve")}${m.scheduledFor ? ` ${fmtTime(m.scheduledFor).slice(5)}` : ""}`
           : T(lang, "nem ment ki");

@@ -324,7 +324,7 @@ export async function getPartnerThread(partnerId: string): Promise<PartnerThread
     if (pids.length) {
       const mms = await db
         .selectFrom("mms_outbox")
-        .select(["id", "to_phone", "subject", "status", "last_error", "created_at", "sent_at", sql<number>`octet_length(image)`.as("bytes")])
+        .select(["id", "to_phone", "subject", "status", "last_error", "created_at", "sent_at", "channel", sql<number>`octet_length(image)`.as("bytes")])
         .where("prospect_id", "in", pids)
         .execute();
       for (const m of mms) {
@@ -333,7 +333,8 @@ export async function getPartnerThread(partnerId: string): Promise<PartnerThread
           key: `mm:${m.id}`,
           at: iso(m.sent_at ?? m.created_at)!,
           dir: "out",
-          channel: "mms",
+          // ADR-0430: the S10 may have sent the pair's image on Viber / WhatsApp.
+          channel: m.channel === "viber" || m.channel === "whatsapp" ? m.channel : "mms",
           source: "outreach",
           address: m.to_phone,
           subject: m.subject,

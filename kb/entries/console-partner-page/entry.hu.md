@@ -45,7 +45,12 @@ levele, a válaszainkra adott válasz, a kézi üzenetek, és a rendszerlevelek 
 domain —, ez utóbbiak lenyitható kártyaként), balra a partneré (a megkeresésre adott válasza, és
 minden levél vagy SMS, ami a partner vagy egy kapcsolattartója címéről jön). A buborék fölött a
 csatorna, a címzett, az időpont és az állapot: **„elküldve”**, **„sorban — a modem-sáv viszi
-ki”**, **„ütemezve”** vagy **„nem ment ki”** (ilyenkor mellette az **„újra”** gomb). A fül
+ki”**, **„ütemezve”** vagy **„nem ment ki”** (ilyenkor mellette az **„újra”** gomb). Ha a
+megkeresés Viberen vagy WhatsAppon ment ki (kép és link egy üzenetben, SMS nélkül), a buborék
+fölött a feliratot az app neve követi (a Megkeresés felirat mögött: · Viber). A lead ottani
+válaszain és a mi arra adott válaszainkon is ott áll az app neve. A sorban álló ilyen válasznál
+**„sorban — a telefon beírja a csevegésbe”** látszik: ezt a választ a telefon írja be ugyanabba a
+csevegésbe. A fül
 neve mellett a szám: hány üzenete jött a partnernek a mi utolsó üzenetünk óta.
 
 Felül a szűrők: **„Mind”**, **„E-mail”**, **„SMS / MMS”**, **„Kézi”**, **„Rendszerlevél”**.

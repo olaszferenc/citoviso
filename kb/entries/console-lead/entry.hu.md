@@ -808,7 +808,9 @@ végzi.
 **Mit csinál az automata.** Hétköznap 9 és 16 óra között (budapesti idő) négypercenként egy leadet
 küld ki a sorból, a legrégebben sorba tettel kezdve, a napi keretig. Ugyanazok az ellenőrzések futnak
 le, mint a kézi küldésnél (kép-kapu, jogszerűségi kapu, leiratkozás, egyszeri küldés, Vera-ítélet), és
-ugyanaz megy ki: a levél és — mobilszámnál — a kép+SMS pár. Hétvégén, este, kikapcsolt automatánál
+ugyanaz megy ki: a levél és — mobilszámnál — a kép+SMS pár. Ha a messenger-út be van kapcsolva,
+a telefon kiküldéskor megnézi, van-e a leadnek Vibere vagy WhatsAppja. Ha van, a kép és a link egy
+üzenetben ott megy ki, kísérő SMS nélkül; ha nincs, marad a kép+SMS pár. Hétvégén, este, kikapcsolt automatánál
 vagy elért napi keretnél a sor vár.
 
 **Az állapotsor** a gomb helyén mutatja, hol tart a lead, és ki tette sorba:
