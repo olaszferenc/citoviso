@@ -1003,6 +1003,17 @@ export async function saveLeadEdits(
     })
     .where("id", "=", id)
     .execute();
+  // ADR-0430: a newly typed mobile number is checked for Viber / WhatsApp before the backlog, so the
+  // approval page shows its channel within 1–2 minutes (owner 2026-11-08: „ha beírom a mobilszámot,
+  // mi triggereli, hogy frissüljön?”). Read only on the phone — no message goes out.
+  if (edits.phone?.trim()) {
+    const { normalizePhone, isHuMobileE164 } = await import("../text/phone.js");
+    const m = normalizePhone(edits.phone.trim());
+    if (m && isHuMobileE164(m)) {
+      const { requestPresence } = await import("../mms/messenger.js");
+      await requestPresence(m);
+    }
+  }
   return { ok: true };
 }
 
