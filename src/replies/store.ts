@@ -261,6 +261,22 @@ export interface ReplyView {
   readonly suggestion: ReplySuggestion | null;
   /** The operator's sends on this reply, newest first (a failure, then its „Újraküldés”). */
   readonly sends: readonly ReplySendView[];
+  /**
+   * ADR-0430: the messenger outreach this reply answers (Viber / WhatsApp channel only) — the
+   * image + caption at the top of the conversation, with its receipt. null otherwise.
+   */
+  readonly outreach?: ReplyOutreach | null;
+}
+
+/** Our Viber / WhatsApp outreach message (mms_outbox row) as the conversation shows it. */
+export interface ReplyOutreach {
+  readonly outboxId: string;
+  readonly channel: "viber" | "whatsapp";
+  readonly sentAt: Date | null;
+  readonly text: string | null;
+  readonly receipt: "sent" | "delivered" | "read" | null;
+  readonly deliveredAt: Date | null;
+  readonly readAt: Date | null;
 }
 
 export interface ReplySuggestion {
@@ -323,6 +339,7 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         "l.address",
         "r.sender",
         "r.sender_name",
+        "r.prospect_id",
         "r.received_at",
         "r.subject",
         "r.body",
@@ -350,6 +367,18 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     db.selectFrom("outreach_reply_poll").selectAll().execute(),
     db.selectFrom("outreach_reply").select(db.fn.countAll().as("n")).executeTakeFirst(),
   ]);
+  // ADR-0430: the messenger outreach rows of the prospects behind messenger replies.
+  const msgProspects = [...new Set(rows.filter((r) => r.channel === "viber" || r.channel === "whatsapp").map((r) => r.prospect_id).filter((x): x is string => !!x))];
+  const outRows = msgProspects.length
+    ? await db
+        .selectFrom("mms_outbox")
+        .select(["id", "prospect_id", "channel", "sent_at", "messenger_text", "receipt", "delivered_at", "read_at"])
+        .where("prospect_id", "in", msgProspects)
+        .where("channel", "in", ["viber", "whatsapp"])
+        .where("status", "=", "sent")
+        .orderBy("sent_at", "desc")
+        .execute()
+    : [];
   const sendRows = rows.length
     ? await db
         .selectFrom("outreach_reply_send")
@@ -403,6 +432,21 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         createdAt: new Date(x.created_at as unknown as Date),
         sentAt: x.sent_at ? new Date(x.sent_at) : null,
       })),
+    outreach: (() => {
+      if (r.channel !== "viber" && r.channel !== "whatsapp") return null;
+      const o = outRows.find((x) => x.prospect_id === r.prospect_id && x.channel === r.channel);
+      return o
+        ? {
+            outboxId: o.id,
+            channel: o.channel as "viber" | "whatsapp",
+            sentAt: o.sent_at ? new Date(o.sent_at) : null,
+            text: o.messenger_text,
+            receipt: o.receipt,
+            deliveredAt: o.delivered_at ? new Date(o.delivered_at) : null,
+            readAt: o.read_at ? new Date(o.read_at) : null,
+          }
+        : null;
+    })(),
   }));
   const at = (ch: ReplyChannel) => {
     const p = polls.find((x) => x.channel === ch);

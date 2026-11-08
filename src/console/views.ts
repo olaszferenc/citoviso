@@ -20,6 +20,8 @@ import type {
   TenantAdminView,
 } from "./data.js";
 import { normalizeCountry } from "./data.js";
+import type { MessengerOutreachView } from "./data.js";
+import type { MessengerStats } from "../mms/messenger.js";
 import { EMPTY_ACTIVITY, type LeadActivityEntry, type LeadActivityView } from "./leadActivity.js";
 import type { LeadColumnKey, LeadFilterDef } from "./leadFilters.js";
 import { ownViewHref } from "./prospectPath.js";
@@ -141,7 +143,7 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
-import type { RepliesBlock, ReplyChannel, ReplySendView, ReplyView } from "../replies/store.js";
+import type { RepliesBlock, ReplyChannel, ReplyOutreach, ReplySendView, ReplyView } from "../replies/store.js";
 import { SMS_MAX_PARTS, smsParts } from "../replies/answerRules.js";
 import { displayPhone } from "../tenant/contact.js";
 import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
@@ -8308,6 +8310,8 @@ export function outreachDraftPage(
     /** State of the EXACT image the MMS would carry (Elek FK-004 H1): without it
      * there is no pair, so the button is dead and the reason is on the screen. */
     mmsPreview?: HeroShotState | null;
+    /** ADR-0430: the queued/sent pair's queue row with its channel and measurements (messenger card). */
+    messenger?: MessengerOutreachView | null;
   } | null = null,
   /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
   leadId: string | null = null,
@@ -8579,9 +8583,14 @@ export function outreachDraftPage(
           : "color:var(--citui-muted)";
   const badge = (label: string, s: string): string =>
     `<div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--citui-line-strong);font-size:13px;font-weight:600;${stepStyle(s)}">${label}</div>`;
+  // ADR-0430: once the pair is queued, the S10 decides the channel — the messenger card shows
+  // where it went and what came back; the MMS timeline below stays for the MMS+SMS path.
+  const messengerCard = channel?.messenger ? messengerCardHtml(channel.messenger, prospectId, smsText, lang) : "";
   const timelineBlock = !channel
     ? ""
-    : `<div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px;margin-top:14px">
+    : channel.messenger && channel.messenger.channel !== "mms" && channel.messenger.status !== "failed"
+      ? messengerCard
+      : `${messengerCard}<div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px;margin-top:14px">
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:6px 0;border-bottom:1px dashed var(--citui-line)">
         ${badge("1", step1)}
         <div><b class="small">${T(lang, "MMS — a látványterv képe")}</b>
@@ -9322,6 +9331,8 @@ export interface HubData {
   readonly repliesQuery: RepliesQuery;
   /** ADR-0425: running trials without a login from day 4 on (the red attention row). */
   readonly noLoginTrials?: readonly { leadId: string; name: string; day: number }[];
+  /** ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates). */
+  readonly messenger?: MessengerStats;
 }
 
 interface AttentionRow {
@@ -9530,6 +9541,8 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
 export interface RepliesQuery {
   readonly filter: "open" | "all";
   readonly reply: string | null;
+  /** ADR-0430: the channel filter (Minden / E-mail / SMS / Viber / WhatsApp); absent = all. */
+  readonly channel?: "all" | ReplyChannel;
   /** The one-shot outcome of the last „Elküldöm” / suggestion on `reply` (shown as a toast). */
   readonly notice?: ReplyNotice | null;
   /** Poe's suggestion form — only on the copy curator's own account (ADR-0340). */
@@ -9545,9 +9558,55 @@ export interface ReplyNotice {
 
 const REPLIES_STALE_MS = 10 * 60_000;
 
-function repliesHref(q: { readonly filter: "open" | "all"; readonly reply?: string | null }): string {
-  const p = [q.reply ? `reply=${encodeURIComponent(q.reply)}` : "", q.filter === "all" ? "replies=all" : ""].filter(Boolean);
+function repliesHref(q: { readonly filter: "open" | "all"; readonly reply?: string | null; readonly channel?: "all" | ReplyChannel }): string {
+  const p = [
+    q.reply ? `reply=${encodeURIComponent(q.reply)}` : "",
+    q.filter === "all" ? "replies=all" : "",
+    q.channel && q.channel !== "all" ? `ch=${q.channel}` : "",
+  ].filter(Boolean);
   return `/${p.length ? `?${p.join("&")}` : ""}#replies`;
+}
+
+/** The receipt line under our messenger message (ADR-0430): „Megnézve 12:14” / „Kézbesítve” / „Elküldve”. */
+function outreachReceipt(o: ReplyOutreach, lang: string): string {
+  if (o.receipt === "read") return o.readAt ? T(lang, "Megnézve {t}", { t: whenShort(o.readAt.toISOString(), lang) }) : T(lang, "Megnézve");
+  if (o.receipt === "delivered") return T(lang, "Kézbesítve");
+  return T(lang, "Elküldve");
+}
+
+/**
+ * ADR-0430 (plan messenger-felulet ③): on Viber / WhatsApp the whole chat in time order — our
+ * outreach (image + caption, receipt), every reply of the lead on that channel, our sent answers.
+ */
+function messengerThread(r: ReplyView, thread: readonly ReplyView[], lang: string): string {
+  const o = r.outreach;
+  const items: { at: number; html: string }[] = [];
+  if (o) {
+    items.push({
+      at: o.sentAt?.getTime() ?? 0,
+      html:
+        `<div class="con-rep__bub is-out con-rep__bub--msg"><span class="con-rep__lbl">${esc(T(lang, "Kiküldött megkeresés"))} · ${esc(repChName(o.channel, lang))}` +
+        `${o.sentAt ? ` · ${esc(whenShort(o.sentAt.toISOString(), lang))}` : ""}</span>` +
+        `<img class="con-rep__img" src="/messenger/kep/${esc(o.outboxId)}" alt="${esc(T(lang, "a kiküldött kép"))}" loading="lazy">` +
+        `${esc(o.text ?? "")}<span class="con-rep__rcpt${o.receipt === "read" ? " is-read" : ""}">${esc(outreachReceipt(o, lang))}</span></div>`,
+    });
+  }
+  for (const x of thread) {
+    items.push({
+      at: x.receivedAt.getTime(),
+      html: `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(x.channel, lang))} · ${esc(whenShort(x.receivedAt.toISOString(), lang))}</span>${esc(x.body)}</div>`,
+    });
+    for (const sd of x.sends.filter((y) => y.status === "sent")) {
+      items.push({
+        at: (sd.sentAt ?? sd.createdAt).getTime(),
+        html: `<div class="con-rep__bub is-sent"><span class="con-rep__lbl">${esc(T(lang, "Elküldött válasz"))} · ${esc(repChName(sd.channel, lang))} · ${esc(whenShort((sd.sentAt ?? sd.createdAt).toISOString(), lang))} · ${esc(sd.by)}</span>${esc(sd.body)}</div>`,
+      });
+    }
+  }
+  return items
+    .sort((a, b) => a.at - b.at)
+    .map((i) => i.html)
+    .join("");
 }
 
 /** „Kiküldött levél · ma 9:27 · „tárgy"" — what the bubble above the reply says about OUR message. */
@@ -9663,7 +9722,8 @@ function repSugHead(r: ReplyView, lang: string): string {
  */
 function replyAnswer(r: ReplyView, q: RepliesQuery, hidden: string, lang: string): string {
   const latest = r.sends[0] ?? null;
-  const sent = r.sends.filter((x) => x.status === "sent").reverse();
+  // ADR-0430: on a messenger chat the sent answers are already in the thread above.
+  const sent = r.outreach ? [] : r.sends.filter((x) => x.status === "sent").reverse();
   const bubbles = sent
     .map((x) => {
       const via =
@@ -9762,7 +9822,7 @@ function replyToast(r: ReplyView | null, n: ReplyNotice | null | undefined, lang
   return `<div class="con-rep__toast${n.kind === "failed" ? " is-err" : ""}" role="status" data-rep-toast>${esc(text)}</div>`;
 }
 
-function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: string): string {
+function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: string, thread: readonly ReplyView[] = [r]): string {
   const pill = r.answeredAt
     ? `<span class="con-rep__pill is-done">${icf("check", 12)}${esc(T(lang, "Megválaszolva"))}</span>`
     : `<span class="con-rep__pill is-open">${esc(T(lang, "Megválaszolatlan"))}</span>`;
@@ -9777,8 +9837,10 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
     `<div class="con-rep__dh"><a class="con-btn con-btn--sm con-rep__back" href="${esc(repliesHref({ filter: q.filter }))}" data-rep-back>${icf("back", 13)}${esc(T(lang, "Vissza"))}</a>` +
     `<span class="con-rep__pn">${esc(r.leadName)}</span>` +
     `<span class="con-rep__who">${esc([r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
-    `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
-    `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>` +
+    (r.outreach
+      ? messengerThread(r, thread, lang)
+      : `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
+        `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>`) +
     (r.block ? "" : replyAnswer(r, q, hidden, lang)) +
     `<div class="con-rep__acts">${acts}<a class="con-btn" href="/lead/${esc(r.leadId)}">${esc(T(lang, "Lead lapja"))}${icf("fwd", 13)}</a></div>` +
     replyBlock(r, hidden, lang) +
@@ -9823,18 +9885,30 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
   // Under „Megválaszolatlan" an answered reply stays visible while it is the one being
   // looked at — otherwise „Megválaszoltam" would make the conversation (and its
   // „Visszavonás") vanish under the operator's finger.
-  const visible = (r: ReplyView) => q.filter === "all" || !r.answeredAt || r.id === q.reply;
+  const ch = q.channel ?? "all";
+  const visible = (r: ReplyView) => (ch === "all" || r.channel === ch) && (q.filter === "all" || !r.answeredAt || r.id === q.reply);
   const sel = all.find((r) => r.id === q.reply && visible(r)) ?? all.find(visible) ?? null;
   const anyVisible = all.some(visible);
   const emptyText =
     T(lang, "Nincs megválaszolatlan válasz.") + (b.total > b.open ? ` ${T(lang, "A korábbiak a „Mind” szűrőn.")}` : "");
   const chip = (f: "open" | "all", label: string) =>
-    `<a class="con-rep__chip" href="${esc(repliesHref({ filter: f }))}" data-rep-f="${f}"${q.filter === f ? ' aria-current="true"' : ""}>${esc(label)}</a>`;
+    `<a class="con-rep__chip" href="${esc(repliesHref({ filter: f, channel: ch }))}" data-rep-f="${f}"${q.filter === f ? ' aria-current="true"' : ""}>${esc(label)}</a>`;
+  // ADR-0430: the channel filter — counts follow the open/all filter's base (every reply here).
+  const chChip = (c: "all" | ReplyChannel, label: string) => {
+    const n = c === "all" ? all.length : all.filter((r) => r.channel === c).length;
+    return `<a class="con-rep__chip${n === 0 && c !== "all" ? " is-off" : ""}" href="${esc(repliesHref({ filter: q.filter, channel: c }))}" data-rep-c="${c}"${ch === c ? ' aria-current="true"' : ""}>${esc(label)} ${n}</a>`;
+  };
+  const chChips =
+    chChip("all", T(lang, "Minden csatorna")) +
+    chChip("email", T(lang, "E-mail")) +
+    chChip("sms", "SMS") +
+    chChip("viber", "Viber") +
+    chChip("whatsapp", "WhatsApp");
   const items = all
     .map((r) => {
       const first = replyExcerpt(r.body, 160);
       return (
-        `<a class="con-rep__it${r.answeredAt ? " is-done" : ""}" href="${esc(repliesHref({ filter: q.filter, reply: r.id }))}" data-rep-id="${esc(r.id)}" data-done="${r.answeredAt ? 1 : 0}"` +
+        `<a class="con-rep__it${r.answeredAt ? " is-done" : ""}" href="${esc(repliesHref({ filter: q.filter, reply: r.id, channel: ch }))}" data-rep-id="${esc(r.id)}" data-done="${r.answeredAt ? 1 : 0}" data-ch="${r.channel}"` +
         `${sel?.id === r.id ? ' aria-current="true"' : ""}${visible(r) ? "" : " hidden"}>` +
         `<span class="con-rep__d"></span><span class="con-rep__nm">${esc(r.leadName)}</span>` +
         `<span class="con-rep__when"><span class="con-rep__ch">${ic(r.channel === "email" ? "mail" : "sms", 13)}${esc(repChName(r.channel, lang))}</span>${esc(whenShort(r.receivedAt.toISOString(), lang, now))}</span>` +
@@ -9846,20 +9920,269 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
     ? `<span class="con-rep__badge" data-rep-badge>${esc(T(lang, "{n} megválaszolatlan", { n: b.open }))}</span>`
     : `<span class="con-rep__badge is-zero" data-rep-badge>${esc(T(lang, "mind megválaszolva"))}</span>`;
   return (
-    `<section class="con-rep" id="replies" data-replies data-filter="${q.filter}" data-rep-l="${esc(JSON.stringify(replyEditorLabels(lang)))}">` +
+    REPLIES_MSG_CSS +
+    `<section class="con-rep" id="replies" data-replies data-filter="${q.filter}" data-ch="${ch}" data-rep-l="${esc(JSON.stringify(replyEditorLabels(lang)))}">` +
     `<div class="con-rep__h"><span class="con-rep__t">${ic("sms", 16)}${esc(T(lang, "Válaszok a megkeresésekre"))} ${badge}</span>` +
     `<span class="con-rep__chips">${chip("open", `${T(lang, "Megválaszolatlan")} ${b.open}`)}${chip("all", `${T(lang, "Mind")} ${b.total}`)}</span>` +
+    `<span class="con-rep__chips" data-rep-chs>${chChips}</span>` +
     repliesFreshness(b, lang, now) +
     `</div>` +
     `<div class="con-rep__b" data-open="${q.reply && sel ? "true" : "false"}">` +
     `<div class="con-rep__list">${items}<div class="con-rep__empty" data-rep-empty${anyVisible ? " hidden" : ""}>${esc(emptyText)}</div></div>` +
-    `<div class="con-rep__det">${all.map((r) => replyPanel(r, q, sel?.id === r.id, lang)).join("")}` +
+    `<div class="con-rep__det">${all
+      .map((r) =>
+        replyPanel(
+          r,
+          q,
+          sel?.id === r.id,
+          lang,
+          r.outreach ? all.filter((x) => x.leadId === r.leadId && x.channel === r.channel) : [r],
+        ),
+      )
+      .join("")}` +
     `<div class="con-rep__empty" data-rep-none${sel ? " hidden" : ""}>${esc(T(lang, "Nincs megválaszolatlan válasz."))}</div></div>` +
     `</div>${replyToast(sel, q.notice, lang)}</section>` +
     REPLIES_JS +
     REPLY_EDITOR_JS
   );
 }
+
+/** ADR-0430: the messenger bits of the replies block (image bubble, receipt, dimmed empty channel chip). */
+const REPLIES_MSG_CSS =
+  `<style>.con-rep__chip.is-off{opacity:.45}.con-rep__bub--msg .con-rep__img{display:block;width:100%;max-width:420px;border-radius:8px;margin:6px 0 8px;border:1px solid var(--citui-line)}` +
+  `.con-rep__rcpt{display:block;text-align:right;font-size:11.5px;font-weight:700;color:var(--citui-muted);margin-top:4px}.con-rep__rcpt.is-read{color:var(--citui-link-ink)}</style>`;
+
+// ── ADR-0430: the dashboard's „Messenger-út” block (plan messenger-felulet ④, A + no cap) ──
+
+const pct = (n: number, d: number): string => (d > 0 ? `${Math.round((n / d) * 100)}%` : "—");
+
+export function messengerBlockHtml(st: MessengerStats, lang: string): string {
+  const c = st.config;
+  const today = st.today.viber + st.today.whatsapp;
+  const w = st.week;
+  const total = w.viber.sent + w.whatsapp.sent + w.mms.sent;
+  const readAll = w.viber.read + w.whatsapp.read;
+  const sentMsg = w.viber.sent + w.whatsapp.sent;
+  const repAll = w.viber.replied + w.whatsapp.replied;
+  const share = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+  const brake = c.brake
+    ? `<div class="con-msg__st is-bad"><span class="con-msg__dot"></span><b>${esc(T(lang, "Leállt"))}</b></div>` +
+      `<p class="con-msg__mut">${esc(c.brake.reason)}${c.brake.at ? ` · ${esc(whenShort(c.brake.at, lang))}` : ""}. ${esc(T(lang, "Minden megkeresés MMS + SMS-ben megy, amíg fel nem oldod."))}</p>` +
+      `<form method="post" action="/messenger/fek"><button type="submit" class="con-btn">${esc(T(lang, "Fék feloldása"))}</button></form>`
+    : `<div class="con-msg__st is-ok"><span class="con-msg__dot"></span><b>${esc(T(lang, "Aktív"))}</b></div>` +
+      `<p class="con-msg__mut">${esc(T(lang, "Olvasás 7 nap: {r} · válasz {a}. A fék magától leáll, ha a fiók korlátozást kap, vagy az olvasási / válasz-arány a felére esik.", { r: pct(readAll, sentMsg), a: pct(repAll, sentMsg) }))}</p>`;
+  const sw =
+    `<form method="post" action="/messenger/kapcsolo" class="con-msg__sw"><input type="hidden" name="on" value="${c.enabled ? "0" : "1"}">` +
+    `<button type="submit" class="ghost con-msg__tg${c.enabled ? " is-on" : ""}" role="switch" aria-checked="${c.enabled ? "true" : "false"}" aria-label="${esc(T(lang, "Messenger-út"))}"><span></span></button>` +
+    `<span><b>${esc(T(lang, "Messenger-út"))}</b> ${esc(c.enabled ? T(lang, "bekapcsolva") : T(lang, "kikapcsolva — minden MMS + SMS-ben megy"))}</span></form>`;
+  const tile = (key: "viber" | "whatsapp" | "mms", name: string, readLabel: string) => {
+    const x = w[key];
+    return (
+      `<div class="con-msg__ch con-msg__ch--${key}"><div class="con-msg__chh"><span class="con-msg__sq"></span><b>${esc(name)}</b> <span class="con-msg__mut">${esc(T(lang, "{n} db · 7 nap", { n: x.sent }))}</span></div>` +
+      `<div class="con-msg__rates"><div><b>${esc(pct(x.delivered, x.sent))}</b><span>${esc(T(lang, "kézbesítve"))}</span></div>` +
+      `<div><b>${esc(key === "mms" ? "n/a" : pct(x.read, x.sent))}</b><span>${esc(readLabel)}</span></div>` +
+      `<div><b>${esc(pct(x.replied, x.sent))}</b><span>${esc(T(lang, "válasz"))}</span></div></div></div>`
+    );
+  };
+  return (
+    MESSENGER_BLOCK_CSS +
+    `<section class="con-msg" id="messenger"><div class="con-msg__h"><h2>${esc(T(lang, "Messenger-út"))}</h2>` +
+    `<p class="con-msg__mut">${esc(T(lang, "Viber → WhatsApp → MMS + SMS, az S10-ről. Csak hétköznap 9–16 küld."))}</p></div>` +
+    `<div class="con-msg__top">` +
+    `<div class="con-msg__t"><div class="con-msg__lbl">${esc(T(lang, "Ma kiküldve messengeren"))}</div><div class="con-msg__big">${today} <small>${esc(T(lang, "megkeresés"))}</small></div>` +
+    `<div class="con-msg__leg"><span class="con-msg__sq is-viber"></span>Viber <b>${st.today.viber}</b> <span class="con-msg__sq is-wa"></span>WhatsApp <b>${st.today.whatsapp}</b></div>` +
+    `<p class="con-msg__mut con-msg__nolim">${esc(T(lang, "Korlátlan: ami jóvá van hagyva, kimegy (hétköznap 9–16)."))}</p></div>` +
+    `<div class="con-msg__t"><div class="con-msg__lbl">${esc(T(lang, "Fék"))}</div>${brake}<div class="con-msg__sep"></div>${sw}</div>` +
+    `<div class="con-msg__t"><div class="con-msg__lbl">${esc(T(lang, "Csatorna-megoszlás · elmúlt 7 nap"))}</div><div class="con-msg__big">${total} <small>${esc(T(lang, "megkeresés"))}</small></div>` +
+    `<div class="con-msg__bar">${total ? `<span class="is-viber" style="flex:${w.viber.sent}"></span><span class="is-wa" style="flex:${w.whatsapp.sent}"></span><span class="is-mms" style="flex:${w.mms.sent}"></span>` : ""}</div>` +
+    `<div class="con-msg__leg"><span class="con-msg__sq is-viber"></span>Viber <b>${w.viber.sent}</b> ${share(w.viber.sent)}% <span class="con-msg__sq is-wa"></span>WhatsApp <b>${w.whatsapp.sent}</b> ${share(w.whatsapp.sent)}% <span class="con-msg__sq is-mms"></span>MMS + SMS <b>${w.mms.sent}</b> ${share(w.mms.sent)}%</div></div>` +
+    `</div><div class="con-msg__chs">` +
+    tile("viber", "Viber", T(lang, "megtekintve")) +
+    tile("whatsapp", "WhatsApp", T(lang, "olvasott")) +
+    tile("mms", T(lang, "MMS + kísérő SMS"), T(lang, "olvasás")) +
+    `</div></section>`
+  );
+}
+
+const MESSENGER_BLOCK_CSS =
+  `<style>.con-msg{margin:18px 0 22px}.con-msg__h h2{margin:0 0 2px;font-size:1.2rem}.con-msg__mut{color:var(--citui-muted);font-size:13px;line-height:1.5;margin:4px 0}` +
+  `.con-msg__top,.con-msg__chs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}` +
+  `.con-msg__t,.con-msg__ch{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px}` +
+  `.con-msg__lbl{font-size:13px;font-weight:600;color:var(--citui-muted);margin-bottom:6px}.con-msg__big{font-size:28px;font-weight:800;line-height:1.1}.con-msg__big small{font-size:14px;font-weight:500;color:var(--citui-muted)}` +
+  `.con-msg__leg{font-size:13px;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.con-msg__sq{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--citui-muted);margin-right:4px}` +
+  `.con-msg__sq.is-viber,.con-msg__bar .is-viber,.con-msg__ch--viber .con-msg__sq{background:var(--citui-glow-blue)}.con-msg__sq.is-wa,.con-msg__bar .is-wa,.con-msg__ch--whatsapp .con-msg__sq{background:var(--citui-cyan-400)}.con-msg__sq.is-mms,.con-msg__bar .is-mms,.con-msg__ch--mms .con-msg__sq{background:var(--citui-warn)}` +
+  `.con-msg__ch--viber{border-top:3px solid var(--citui-glow-blue)}.con-msg__ch--whatsapp{border-top:3px solid var(--citui-cyan-400)}.con-msg__ch--mms{border-top:3px solid var(--citui-warn)}` +
+  `.con-msg__bar{display:flex;gap:2px;height:20px;border-radius:4px;overflow:hidden;margin-top:10px;background:var(--citui-surface-2)}` +
+  `.con-msg__nolim{border-top:1px solid var(--citui-line);padding-top:8px;margin-top:10px}.con-msg__sep{border-top:1px solid var(--citui-line);margin:10px 0}` +
+  `.con-msg__st{display:flex;align-items:center;gap:8px}.con-msg__dot{width:12px;height:12px;border-radius:50%;background:var(--citui-ok)}.con-msg__st.is-bad .con-msg__dot{background:var(--citui-bad)}.con-msg__st.is-bad b{color:var(--citui-bad-ink)}` +
+  `.con-msg__sw{display:flex;align-items:center;gap:10px;margin:0;font-size:14px}` +
+  `.con .con-msg__sw button.con-msg__tg.ghost{width:44px;height:24px;min-height:0;border-radius:12px;border:0;background:var(--citui-line-strong);position:relative;padding:0;flex:none}` +
+  `.con .con-msg__sw button.con-msg__tg.ghost.is-on{background:var(--citui-ok)}` +
+  `.con-msg__tg span{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--citui-panel);box-shadow:0 1px 2px color-mix(in srgb,var(--citui-ink) 30%,transparent);transition:left .15s}.con-msg__tg.is-on span{left:23px}` +
+  `.con-msg__chh{font-size:14px;margin-bottom:8px}.con-msg__rates{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.con-msg__rates div{background:var(--citui-surface-2);border-radius:6px;padding:8px}` +
+  `.con-msg__rates b{display:block;font-size:20px}.con-msg__rates span{font-size:12px;color:var(--citui-muted)}` +
+  `@media (max-width:900px){.con-msg__top,.con-msg__chs{grid-template-columns:1fr}}</style>`;
+
+// ── ADR-0430: the lead page's messenger card (plan messenger-meres A, ①–④) ──
+
+type MsgState = "queued" | "sent" | "read" | "mms" | "failed";
+
+function msgState(m: MessengerOutreachView): MsgState {
+  if (m.status === "failed" || m.status === "unknown") return "failed";
+  if (m.status !== "sent") return "queued";
+  if (m.channel === "mms" || m.channel === null) return "mms";
+  return m.readAt || m.receipt === "read" ? "read" : "sent";
+}
+
+/**
+ * The messenger half of the „Mobil-megkeresés” card: which channel carried it and why, the 4-step
+ * rule with the chosen step ticked, the outgoing image + caption, and the measurement ladder
+ * Sorban → Elküldve → Kézbesítve → Megtekintve/Olvasott → Válasz (vertical on a phone).
+ */
+export function messengerCardHtml(m: MessengerOutreachView, prospectId: string, smsText: string, lang: string): string {
+  const st = msgState(m);
+  const name = m.channel === "viber" ? "Viber" : m.channel === "whatsapp" ? "WhatsApp" : m.channel === "mms" ? T(lang, "MMS + SMS") : "—";
+  const yesNo = (v: string) => (v === "yes" ? T(lang, "van") : v === "no" ? T(lang, "nincs") : T(lang, "nem tudni"));
+  const when = (d: Date | null) => (d ? whenShort(d.toISOString(), lang) : "");
+  const p = m.presence;
+  // Which step carried it (s10_send.py pick_channel): fresh Viber → WhatsApp → old Viber → MMS.
+  const freshViber = m.channel === "viber" && !!m.peerSeenBefore && !/régen/i.test(m.peerSeenBefore);
+  const chosen = m.channel === "viber" ? (freshViber ? 1 : 3) : m.channel === "whatsapp" ? 2 : m.channel === "mms" ? 4 : 0;
+  const why =
+    m.channel === "viber"
+      ? T(lang, "Viber — utoljára aktív {t}", { t: m.peerSeenBefore ?? "—" })
+      : m.channel === "whatsapp"
+        ? p?.viber === "yes"
+          ? T(lang, "WhatsApp-fiók van; a Viberen régen volt aktív")
+          : T(lang, "WhatsApp-fiók van, Viber nincs")
+        : m.channel === "mms"
+          ? T(lang, "egyik messengert sem találta, vagy a messenger-út ki volt kapcsolva — MMS + SMS ment, együtt")
+          : st === "failed"
+            ? T(lang, "nem ment ki: {why}", { why: m.lastError ?? "—" })
+            : T(lang, "kiküldéskor a telefon nézi meg: Viber → WhatsApp → MMS + SMS");
+  const stepNote = (n: number): string => {
+    if (chosen === n) return T(lang, "ezt választottuk");
+    if (chosen === 0) return "";
+    if (n < chosen) {
+      if (n === 1 && chosen !== 3) return p?.viber === "no" ? T(lang, "nincs Viber-fiók") : T(lang, "nem volt friss Viber-aktivitás");
+      if (n === 2) return T(lang, "nincs WhatsApp-fiók");
+      if (n === 3) return T(lang, "nincs Viber-fiók");
+      return T(lang, "nem volt friss Viber-aktivitás");
+    }
+    return T(lang, "nem kellett");
+  };
+  const steps = [
+    T(lang, "Viber, ha van fiók és ≤ 30 napja aktív"),
+    T(lang, "WhatsApp, ha van fiók"),
+    T(lang, "Viber akkor is, ha régi az aktivitás"),
+    T(lang, "MMS + kísérő SMS (a régi pár)"),
+  ]
+    .map(
+      (label, i) =>
+        `<li class="${chosen === i + 1 ? "is-on" : ""}"><span class="con-mc__n">${chosen === i + 1 ? icf("check", 12) : i + 1}</span><span>${esc(label)}</span><small>${esc(stepNote(i + 1))}</small></li>`,
+    )
+    .join("");
+  const pill =
+    st === "read"
+      ? T(lang, "elolvasva")
+      : st === "sent"
+        ? T(lang, "kiment ezen: {ch}", { ch: name })
+        : st === "mms"
+          ? T(lang, "MMS + SMS ment")
+          : st === "failed"
+            ? T(lang, "hiba")
+            : T(lang, "sorban áll");
+  const seen = m.peerSeenBefore
+    ? T(lang, "Viber-aktivitás a küldés előtt: {t}", { t: m.peerSeenBefore })
+    : p
+      ? T(lang, "Ellenőrizve {t}: WhatsApp {w}, Viber {v}", { t: when(p.checkedAt), w: yesNo(p.whatsapp), v: yesNo(p.viber) })
+      : "";
+  const text = m.channel === "mms" || (!m.text && st !== "queued") ? smsText : (m.text ?? smsText);
+  const ladder: { label: string; at: Date | null; done: boolean; note: string }[] = [
+    { label: T(lang, "Sorban"), at: m.createdAt, done: true, note: "" },
+    { label: T(lang, "Elküldve"), at: m.sentAt, done: !!m.sentAt, note: m.sentAt ? `S10 · ${name}` : "" },
+    {
+      label: T(lang, "Kézbesítve"),
+      at: m.deliveredAt,
+      done: !!m.deliveredAt || m.channel === "mms",
+      note: m.channel === "mms" ? T(lang, "az MMSC befogadta") : m.deliveredAt ? T(lang, "két pipa") : "",
+    },
+    {
+      label: m.channel === "viber" ? T(lang, "Megtekintve") : T(lang, "Olvasott"),
+      at: m.readAt,
+      done: !!m.readAt,
+      note:
+        m.channel === "mms"
+          ? T(lang, "MMS-nél nem mérhető")
+          : m.readAt
+            ? T(lang, "kék pipa")
+            : !m.sentAt
+              ? ""
+              : m.checkedAt
+              ? T(lang, "még nem · óránként nézzük, utoljára {t}", { t: when(m.checkedAt) })
+              : T(lang, "még nem"),
+    },
+    { label: T(lang, "Válasz"), at: m.reply?.at ?? null, done: !!m.reply, note: m.reply ? repChName(m.reply.channel as ReplyChannel, lang) : "" },
+  ];
+  const lad = ladder
+    .map(
+      (x) =>
+        `<li class="${x.done ? "is-done" : ""}"><span class="con-mc__bar"></span><b>${x.done ? icf("check", 12) : ""}${esc(x.label)}</b>` +
+        `<span>${esc(x.at ? when(x.at) : x.done ? "" : "—")}</span><small>${esc(x.note)}</small></li>`,
+    )
+    .join("");
+  const reply = m.reply
+    ? `<div class="con-mc__rep"><span class="con-msg__mut">${esc(T(lang, "Válasz"))} · ${esc(repChName(m.reply.channel as ReplyChannel, lang))} · ${esc(when(m.reply.at))}</span>` +
+      `<p>„${esc(replyExcerpt(m.reply.body, 400))}”</p><a class="con-btn con-btn--sm" href="/?reply=${esc(m.reply.id)}&replies=all#replies">${esc(T(lang, "Ugrás a Válaszok blokkra"))}${icf("fwd", 12)}</a></div>`
+    : "";
+  const fail =
+    st === "failed"
+      ? `<div class="con-mc__fail">${icf("alert", 14)}<span>${esc(T(lang, "Nem ment ki: {why}", { why: m.lastError ?? "—" }))}</span>` +
+        `<form method="post" action="/prospect/${esc(prospectId)}/send-pair"><button type="submit" class="con-btn">${esc(T(lang, "Újra a sorba"))}</button></form></div>`
+      : "";
+  const fb = m.fallback
+    ? `<p class="con-msg__mut">${esc(m.fallback.sentAt ? T(lang, "Tartalék MMS + SMS kiment: {t}", { t: when(m.fallback.sentAt) }) : T(lang, "Tartalék MMS + SMS a sorban"))}</p>`
+    : "";
+  return (
+    MESSENGER_CARD_CSS +
+    `<div class="con-mc"><div class="con-mc__grid">` +
+    `<div class="con-mc__card"><div class="con-mc__hd"><b>${esc(T(lang, "Mobil-megkeresés"))}</b><span class="con-mc__pill is-${st}">${esc(pill)}</span></div>` +
+    `<div class="con-mc__ch"><span class="con-mc__ic is-${m.channel ?? "none"}">${ic(m.channel === "mms" ? "photos" : "sms", 18)}</span><div><span class="con-msg__mut">${esc(st === "queued" ? T(lang, "Várható csatorna") : st === "failed" ? T(lang, "Nem ment ki") : T(lang, "Kiment ezen"))}</span><b>${esc(st === "queued" ? T(lang, "a telefon dönt kiküldéskor") : st === "failed" ? T(lang, "hiba a küldésnél") : name)}</b><span>${esc(why)}</span></div></div>` +
+    `<ol class="con-mc__steps">${steps}</ol>` +
+    (seen ? `<p class="con-msg__mut">${esc(seen)}</p>` : "") +
+    fb +
+    `</div>` +
+    `<div class="con-mc__card"><div class="con-mc__hd"><b>${esc(T(lang, "Kimenő üzenet"))}</b><span class="con-mc__tag">${esc(st === "queued" ? T(lang, "így megy ki") : T(lang, "így ment ki"))}</span></div>` +
+    (m.status === "sent" || m.status === "queued" || m.status === "sending"
+      ? `<img class="con-mc__img" src="/messenger/kep/${esc(m.outboxId)}" alt="${esc(T(lang, "a kimenő kép"))}" loading="lazy">`
+      : "") +
+    `<div class="con-mc__txt">${esc(text)}</div>` +
+    `<p class="con-msg__mut">${esc(m.channel === "viber" || m.channel === "whatsapp" ? T(lang, "Messengeren egy kép + egy szöveg; kísérő SMS és tulaj-másolat nem megy.") : T(lang, "MMS-ben a kép, utána a kísérő SMS a linkkel — mindig együtt."))}</p></div>` +
+    `</div>` +
+    `<div class="con-mc__card con-mc__meas"><div class="con-mc__hd"><b>${esc(T(lang, "Mérés"))}</b><span class="con-msg__mut">${esc(T(lang, "Elküldve → Kézbesítve → Olvasott, időpontokkal"))}</span></div>` +
+    `<ol class="con-mc__lad">${lad}</ol>${reply}${fail}</div></div>`
+  );
+}
+
+const MESSENGER_CARD_CSS =
+  `<style>.con-mc{margin:14px 0}.con-mc__grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}` +
+  `.con-mc__card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px;min-width:0}.con-mc__meas{margin-top:12px}` +
+  `.con-mc__hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.con-mc__pill{font-size:12px;font-weight:700;border-radius:var(--citui-radius-pill);padding:2px 9px;background:var(--citui-surface-2)}` +
+  `.con-mc__pill.is-read,.con-mc__pill.is-sent{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}.con-mc__pill.is-failed{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad-ink)}.con-mc__pill.is-mms{background:color-mix(in srgb,var(--citui-warn) 16%,transparent)}` +
+  `.con-mc__tag{font-size:12px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:1px 8px}` +
+  `.con-mc__ch{display:flex;gap:12px;align-items:center;background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:8px;padding:12px}.con-mc__ch div{display:flex;flex-direction:column;gap:2px}.con-mc__ch b{font-size:16px}.con-mc__ch span:last-child{font-size:13px}` +
+  `.con-mc__ic{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--citui-white);background:var(--citui-muted);flex:none}.con-mc__ic.is-viber{background:var(--citui-glow-blue)}.con-mc__ic.is-whatsapp{background:var(--citui-cyan-400)}.con-mc__ic.is-mms{background:var(--citui-warn)}` +
+  `.con-mc__steps{list-style:none;margin:10px 0 6px;padding:0}.con-mc__steps li{display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--citui-line);font-size:13.5px;color:var(--citui-muted)}` +
+  `.con-mc__steps li.is-on{color:var(--citui-ink);font-weight:600}.con-mc__steps small{font-size:12px;font-weight:400;color:var(--citui-muted)}` +
+  `.con-mc__n{width:20px;height:20px;border-radius:50%;border:1px solid var(--citui-line-strong);display:flex;align-items:center;justify-content:center;font-size:11px}.con-mc__steps li.is-on .con-mc__n{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}` +
+  `.con-mc__img{display:block;max-width:260px;width:100%;border-radius:8px;border:1px solid var(--citui-line);margin-bottom:8px}` +
+  `.con-mc__txt{border:1px solid var(--citui-line);border-radius:8px;padding:10px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--citui-surface-2)}` +
+  `.con-mc__lad{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}` +
+  `.con-mc__lad li{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--citui-muted)}.con-mc__lad li b{color:var(--citui-ink);display:flex;gap:4px;align-items:center}` +
+  `.con-mc__bar{height:4px;border-radius:2px;background:var(--citui-line);margin-bottom:6px}.con-mc__lad li.is-done .con-mc__bar{background:var(--citui-ok)}.con-mc__lad li.is-done b{color:var(--citui-ok-ink)}.con-mc__lad small{font-size:12px}` +
+  `.con-mc__rep{margin-top:12px;border-left:3px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:8px;padding:10px 12px}.con-mc__rep p{margin:4px 0 8px}` +
+  `.con-mc__fail{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:color-mix(in srgb,var(--citui-bad) 10%,transparent);color:var(--citui-bad-ink);border-radius:8px;padding:10px}.con-mc__fail form{margin:0 0 0 auto}` +
+  `@media (max-width:760px){.con-mc__grid{grid-template-columns:1fr}.con-mc__lad{grid-template-columns:1fr}.con-mc__lad li{display:grid;grid-template-columns:4px 1fr auto;gap:2px 10px}.con-mc__bar{grid-row:1/span 2;height:auto;width:4px;margin:0}.con-mc__lad small{grid-column:2/4}}</style>`;
 
 /** The editor script's words — from the server, so the i18n catalog owns them (§B.18). */
 function replyEditorLabels(lang: string): Record<string, string> {
@@ -9919,12 +10242,14 @@ const REPLIES_JS =
   `function sel(id,open){var any=false;its().forEach(function(a){var on=a.getAttribute('data-rep-id')===id;if(on)any=true;if(on)a.setAttribute('aria-current','true');else a.removeAttribute('aria-current')});` +
   `[].slice.call(R.querySelectorAll('[data-rep-p]')).forEach(function(p){p.hidden=p.getAttribute('data-rep-p')!==id});` +
   `R.querySelector('[data-rep-none]').hidden=any;B.setAttribute('data-open',open&&any?'true':'false')}` +
-  `function filt(f){R.setAttribute('data-filter',f);[].slice.call(R.querySelectorAll('[data-rep-f]')).forEach(function(c){if(c.getAttribute('data-rep-f')===f)c.setAttribute('aria-current','true');else c.removeAttribute('aria-current')});` +
+  `function filt(f,ch){if(f)R.setAttribute('data-filter',f);else f=R.getAttribute('data-filter');if(ch)R.setAttribute('data-ch',ch);else ch=R.getAttribute('data-ch')||'all';` +
+  `[].slice.call(R.querySelectorAll('[data-rep-f]')).forEach(function(c){if(c.getAttribute('data-rep-f')===f)c.setAttribute('aria-current','true');else c.removeAttribute('aria-current')});` +
+  `[].slice.call(R.querySelectorAll('[data-rep-c]')).forEach(function(c){if(c.getAttribute('data-rep-c')===ch)c.setAttribute('aria-current','true');else c.removeAttribute('aria-current')});` +
   `[].slice.call(R.querySelectorAll('[data-rep-fin]')).forEach(function(i){i.value=f});var first=null,cur=null;` +
-  `its().forEach(function(a){a.hidden=f==='open'&&a.getAttribute('data-done')==='1';if(!a.hidden&&!first)first=a;if(!a.hidden&&a.getAttribute('aria-current'))cur=a});` +
+  `its().forEach(function(a){a.hidden=(f==='open'&&a.getAttribute('data-done')==='1')||(ch!=='all'&&a.getAttribute('data-ch')!==ch);if(!a.hidden&&!first)first=a;if(!a.hidden&&a.getAttribute('aria-current'))cur=a});` +
   `R.querySelector('[data-rep-empty]').hidden=!!first;var c=cur||first;sel(c?c.getAttribute('data-rep-id'):'',false)}` +
-  `R.addEventListener('click',function(e){var t=e.target.closest('[data-rep-f],[data-rep-id],[data-rep-back]');if(!t||e.metaKey||e.ctrlKey)return;e.preventDefault();` +
-  `if(t.hasAttribute('data-rep-f'))filt(t.getAttribute('data-rep-f'));else if(t.hasAttribute('data-rep-id'))sel(t.getAttribute('data-rep-id'),true);else B.setAttribute('data-open','false');` +
+  `R.addEventListener('click',function(e){var t=e.target.closest('[data-rep-f],[data-rep-c],[data-rep-id],[data-rep-back]');if(!t||e.metaKey||e.ctrlKey)return;e.preventDefault();` +
+  `if(t.hasAttribute('data-rep-f'))filt(t.getAttribute('data-rep-f'),null);else if(t.hasAttribute('data-rep-c'))filt(null,t.getAttribute('data-rep-c'));else if(t.hasAttribute('data-rep-id'))sel(t.getAttribute('data-rep-id'),true);else B.setAttribute('data-open','false');` +
   `try{history.replaceState(null,'',t.getAttribute('href'))}catch(x){}})})();</script>`;
 
 /** The console home — Irányítópult: greeting, one widget per module, what needs attention. */
@@ -9938,6 +10263,7 @@ export function dashboardPage(d: HubData): string {
     `<div class="con-ph"><h1>${esc(T(lang, "Irányítópult"))} ${helpLink("console.dashboard")}</h1>` +
     `<p>${esc(T(lang, "Szia, {name}! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.", { name: d.operatorName }))}</p></div>` +
     repliesBlockHtml(d.replies, d.repliesQuery, lang) +
+    (d.messenger ? messengerBlockHtml(d.messenger, lang) : "") +
     `<div class="con-wgrid">${widgets}</div>` +
     attentionHtml(attentionRows(d, lang), lang);
   return layout(T(lang, "Irányítópult"), body, { active: "/" });

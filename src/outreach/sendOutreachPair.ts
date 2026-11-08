@@ -309,6 +309,23 @@ export async function settleMessengerPair(prospectId: string): Promise<{ ok: boo
   return { ok: true, message: "a pár teljes — messengeren kint (kép + link)" };
 }
 
+/**
+ * ADR-0430 — the owner's MMS+SMS fallback of a messenger outreach nobody looked at: the relay ack
+ * of the fallback MMS calls this, and the companion SMS (the pair's own text) follows the image.
+ * The pair's stamps are already set (the messenger send), so this only SENDS; the gates re-run
+ * (an opt-out since the decision blocks it).
+ */
+export async function sendFallbackSmsHalf(prospectId: string): Promise<{ ok: boolean; message: string }> {
+  const gate = await mobileOutreachGates(prospectId);
+  if (!gate.ok) return { ok: false, message: `tartalék SMS-fele blokkolva: ${gate.message}` };
+  const pairSms = await effectivePairSms(prospectId, gate.d.input);
+  const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang, gate.d.market);
+  if (check.verdict === "FLAG") return { ok: false, message: `Jogszerűségi kapu FLAG a tartalék SMS-felén: ${check.reasons.join(" · ")}` };
+  const result = await sendSms({ to: gate.to, text: pairSms.text });
+  if (result.provider === "blocked") return { ok: false, message: "a tartalék kísérő SMS elhasalt (modem/relay hiba)" };
+  return { ok: true, message: "a tartalék-pár teljes — MMS + SMS kint" };
+}
+
 /** The bookkeeping of a completed pair: offer, sms_sent_at, first touch, status. */
 async function stampPairComplete(prospectId: string, offerPercent: ReturnType<typeof draftOfferPercent> | null): Promise<void> {
   const now = new Date();

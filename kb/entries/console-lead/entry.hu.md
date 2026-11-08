@@ -794,7 +794,9 @@ megmarad, bármikor újra jóváhagyhatod.
 A **„Megkeresés — követett link”** panel prospect-linket készít a jóváhagyott mockhoz. Az
 **„E-mail / SMS megnyitása — küldés ▸”** gomb a Megkeresés-piszkozat KÉPERNYŐRE visz — ott fut le
 a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
-(részletes útmutató: a Súgóban a „Megkeresés-piszkozat" téma). Ha kézzel, a saját leveleződből
+(részletes útmutató: a Súgóban a „Megkeresés-piszkozat" téma). Ha a megkeresés Viberen vagy
+WhatsAppon ment ki, ugyanott a Mobil-megkeresés kártya mutatja a csatornát, a kiment képet és
+szöveget, és hogy kézbesült-e, megnézték-e, jött-e válasz. Ha kézzel, a saját leveleződből
 küldtél, a **„Megjelölöm kiküldöttként”** gombbal jelzed. ⚠️ A mérés NEM ekkor indul: az a link létrehozása óta fut — a megjelölés azt rögzíti, hogy innentől a forgalom a címzetté
 és az aktivitást (Tevékenység-gomb).
 

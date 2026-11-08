@@ -108,6 +108,10 @@ const VIEW_GROUPS = {
     // meg a forrásnál…”), amiket a kézikönyv idéz — tehát korpusz-tag. Egy új felület-
     // fájl, ami feliratot renderel, KÖTELEZŐEN belép a listába.
     "src/console/photoProxy.ts",
+    // ADR-0430: the owner's approval page (/jovahagyas, two tabs: „Jóváhagyásra vár”,
+    // „Messengeren nem nézte meg”) and its text panel render their labels HERE.
+    "src/console/approvalQueue.ts",
+    "src/console/approvalCopy.ts",
     // A KÖVETETT ELŐNÉZET keretezése és jogi lábazata („Ez egy honlap-terv az Ön
     // szállásáról.”, „Miért kaptam?”, „Leiratkozás”). Nem az operátor KÉPERNYŐJE, de az
     // operátor kézikönyve idézi — mert a kiküldés előtt tudnia kell, mit fog látni a

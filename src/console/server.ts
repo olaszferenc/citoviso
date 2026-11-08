@@ -366,7 +366,7 @@ import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
-import { approvalPage, approvalShot, decideApproval, listPendingApprovals, selectedApproval, warmApprovalShots } from "./approvalQueue.js";
+import { approvalPage, approvalShot, decideApproval, listPendingApprovals, notSeenPage, selectedApproval, warmApprovalShots } from "./approvalQueue.js";
 import { approvalCopyPanel, copyEditFromForm, saveApprovalCopy } from "./approvalCopy.js";
 import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
 import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
@@ -374,6 +374,7 @@ import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody 
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { handleScoutRoute } from "./scoutRoutes.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
+import { messengerOutreachOf, mmsOutboxImage } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
 import { anyLeadFilter, mockStatusLabel } from "./leadFilters.js";
 import { loadRegions, REGIONS } from "../scraper/regions.js";
@@ -1744,6 +1745,28 @@ async function handle(
       return;
     }
   }
+  // ADR-0430 — the dashboard's „Messenger-út” block: POST /messenger/kapcsolo (on=1|0) switches the
+  // messenger path, POST /messenger/fek releases the automatic brake. GET /messenger/kep/<id> serves
+  // the image a queue row carried (the replies conversation and the lead card show what went out).
+  if (method === "POST" && (path === "/messenger/kapcsolo" || path === "/messenger/fek")) {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const m = await import("../mms/messenger.js");
+    if (path === "/messenger/kapcsolo") await m.setMessengerEnabled(form.get("on") === "1");
+    else await m.releaseBrake();
+    return redirect(res, "/#messenger");
+  }
+  {
+    const k = method === "GET" ? /^\/messenger\/kep\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (k) {
+      const buf = await mmsOutboxImage(k[1]!);
+      if (!buf) return send(res, 404, "nincs ilyen kép", "text/plain; charset=utf-8");
+      res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": buf.length, "Cache-Control": "private, max-age=3600" });
+      res.end(buf);
+      return;
+    }
+  }
   // GET / — Irányítópult; GET /hub/<id> — a module's own dashboard (linear-shell README ④⑤).
   // Both render from ONE data object, so a number on the home and on the module page
   // can never disagree.
@@ -1762,8 +1785,11 @@ async function handle(
       stale: await getTreeFreshness(),
       replies: await getRepliesBlock(),
       noLoginTrials: await loadNoLoginTrials(),
+      // ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates).
+      messenger: await (await import("../mms/messenger.js")).messengerStats(),
       repliesQuery: {
         filter: url.searchParams.get("replies") === "all" ? "all" : "open",
+        channel: (["email", "sms", "viber", "whatsapp"] as const).find((c) => c === url.searchParams.get("ch")) ?? "all",
         reply: url.searchParams.get("reply"),
         notice: takeReplyNotice(url.searchParams.get("reply")),
         // Poe's suggestion form shows only to the copy curator's own account — the
@@ -1837,13 +1863,46 @@ async function handle(
   // ── Owner approval of the single-pass chain's MEHET leads (owner 2026-11-06) ──
   // GET /jovahagyas[?lead=] — left the waiting list, right the whole site of one lead.
   // POST /jovahagyas/:lead (d=mehet|nem) — back on the queue or cancelled, then the next lead.
+  // ?tab=nemnezte[&id=] — ADR-0430: messenger outreach unseen for 3 days (approved plan
+  // design-refs/console/messenger-felulet): „Mehet MMS + SMS-ben is” / „Nem kell”.
   if (method === "GET" && path === "/jovahagyas") {
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
-    const items = await listPendingApprovals();
+    const { getMessengerConfig, notSeenList } = await import("../mms/messenger.js");
+    const [items, notSeen, cfg] = await Promise.all([listPendingApprovals(), notSeenList(), getMessengerConfig()]);
+    if (url.searchParams.get("tab") === "nemnezte") {
+      return send(res, 200, notSeenPage(notSeen, url.searchParams.get("id"), url.searchParams.get("ok") ?? "", { cfg, waiting: items.length }));
+    }
     const cur = selectedApproval(items, url.searchParams.get("lead"));
     const panel = cur ? await approvalCopyPanel(cur) : "";
-    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel));
+    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel, { cfg, notSeen: notSeen.length }));
+  }
+  // GET /jovahagyas/mms-kep/:outbox — the image a messenger outreach carried (the "not seen" tab).
+  {
+    const k = method === "GET" ? /^\/jovahagyas\/mms-kep\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (k) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const row = await db.selectFrom("mms_outbox").select("image").where("id", "=", k[1]!).executeTakeFirst();
+      if (!row) return send(res, 404, "Nincs kép.", "text/plain; charset=utf-8");
+      res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "private, max-age=3600" });
+      return void res.end(Buffer.from(row.image));
+    }
+  }
+  // POST /jovahagyas/nemnezte/:outbox (d=mms|nem) — the owner's decision, then the next lead of the tab.
+  {
+    const m = method === "POST" ? /^\/jovahagyas\/nemnezte\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const { decideFallback, notSeenList } = await import("../mms/messenger.js");
+      const before = await notSeenList();
+      const idx = before.findIndex((i) => i.outboxId === m[1]);
+      const r = await decideFallback(m[1]!, form.get("d") === "mms" ? "send" : "skip", op.displayName || op.username);
+      const next = r.ok ? (before.filter((i) => i.outboxId !== m[1])[Math.max(0, idx)] ?? null) : (before[idx] ?? null);
+      return redirect(res, `/jovahagyas?tab=nemnezte&${next ? `id=${next.outboxId}&` : ""}ok=${encodeURIComponent(r.message)}`);
+    }
   }
   // POST /jovahagyas/:lead/szoveg (a=save|reset) — the owner's own wording of this lead's first
   // outreach (copyOverride.ts). Refused → the page again, his text in the boxes, the reasons above.
@@ -4701,6 +4760,8 @@ async function handle(
           smsSentAt: chState?.smsSentAt ?? null,
           mmsSentAt: chState?.mmsSentAt ?? null,
           pairJob: await pairJobState(draftMatch[1]),
+          // ADR-0430: the queue row (channel the S10 picked, receipts, reply) — the messenger card.
+          messenger: await messengerOutreachOf(draftMatch[1], d.phone ? normalizePhone(d.phone) : null),
           // The pair CANNOT start without this image (sendOutreachPair refuses) —
           // so the surface states it and kills the button, instead of letting the
           // operator learn it from a rejection banner after the confirm.

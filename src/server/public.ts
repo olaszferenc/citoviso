@@ -4456,8 +4456,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       const o = a as Record<string, unknown>;
       return { id: String(o.id ?? ""), ok: o.ok === true, restricted: o.restricted === true, error: str(o.error, 500) };
     });
-    const { applyMessengerWatch } = await import("../mms/messenger.js");
-    return sendJson(res, 200, { ok: true, ...(await applyMessengerWatch(chats, answers)) });
+    // The phone's presence reads (no message sent): the approval page groups by them.
+    const presence = (Array.isArray(b.presence) ? b.presence : []).slice(0, 50).map((x) => {
+      const o = x as Record<string, unknown>;
+      return {
+        phone: String(o.phone ?? ""),
+        ok: o.ok === true,
+        whatsapp: str(o.whatsapp, 10),
+        viber: str(o.viber, 10),
+        viberSeen: str(o.viberSeen, 200),
+        viberAgeDays: Number.isInteger(o.viberAgeDays) ? (o.viberAgeDays as number) : null,
+      };
+    });
+    const { applyMessengerWatch, applyPresence } = await import("../mms/messenger.js");
+    const stored = await applyPresence(presence);
+    return sendJson(res, 200, { ok: true, presence: stored, ...(await applyMessengerWatch(chats, answers)) });
   }
 
   if (req.method === "POST" && pathname === "/api/mock-request") {

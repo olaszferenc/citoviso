@@ -5,6 +5,7 @@
 //      (WhatsApp "Kézbesítve"/"Megnézve", Viber grey/cyan double tick), the lead's last-seen line,
 //      the incoming bubbles' texts;
 //   ③ types the operator's queued answers into their chats (s10_send.py send --channel … --text);
+//   ⑤ reads the Viber / WhatsApp presence of numbers waiting for approval (no message);
 //   ④ reports everything back (POST /api/messenger/report): receipts land on mms_outbox, incoming
 //      texts join the reply flow (ADR-0339), a restricted account trips the brake.
 // The phone's screen is shared: every s10_send.py call takes ~/.cache/s10-ui.lock and refuses
@@ -84,11 +85,27 @@ try {
     answers.push({ id: a.id, ok: r.ok === true, restricted: r.restricted === true, error: typeof r.error === "string" ? r.error : undefined });
     console.log(`[messenger-watch] válasz → ${a.channel} ${a.to_phone}: ${r.ok ? "kiment" : `HIBA ${r.error}`}`);
   }
+  // ⑤ Presence of the numbers waiting for approval — read only, no message (the approval page groups by it).
+  const presence: Record<string, unknown>[] = [];
+  for (const phone of list.presence ?? []) {
+    const r = await s10(["presence", "--to", phone]);
+    presence.push({
+      phone,
+      ok: r.ok === true,
+      whatsapp: r.whatsapp,
+      viber: r.viber,
+      viberSeen: typeof r.viber_last_seen === "string" ? r.viber_last_seen : undefined,
+      viberAgeDays: Number.isInteger(r.viber_age_days) ? r.viber_age_days : null,
+    });
+    console.log(`[messenger-watch] jelenlét ${phone}: ${r.ok ? `WhatsApp ${r.whatsapp} · Viber ${r.viber}${r.viber_last_seen ? ` (${r.viber_last_seen})` : ""}` : `HIBA ${r.error}`}`);
+    // Spread the lookups (WhatsApp / Viber watch the tempo of unknown-number lookups).
+    await new Promise((res) => setTimeout(res, 15_000 + Math.floor(Math.random() * 15_000)));
+  }
   if (DRY) {
-    console.log(`[messenger-watch] (dry-run) ${chats.length} csevegés olvasva, jelentés nem ment fel.`);
-  } else if (chats.length || answers.length) {
-    const rep = await api("/api/messenger/report", { chats, answers });
-    console.log(`[messenger-watch] jelentve: ${chats.length} csevegés, ${answers.length} válasz, ${rep.replies ?? 0} bejövő üzenet a válaszok közé.`);
+    console.log(`[messenger-watch] (dry-run) ${chats.length} csevegés, ${presence.length} jelenlét olvasva, jelentés nem ment fel.`);
+  } else if (chats.length || answers.length || presence.length) {
+    const rep = await api("/api/messenger/report", { chats, answers, presence });
+    console.log(`[messenger-watch] jelentve: ${chats.length} csevegés, ${answers.length} válasz, ${presence.length} jelenlét, ${rep.replies ?? 0} bejövő üzenet a válaszok közé.`);
   } else {
     console.log("[messenger-watch] nincs esedékes csevegés.");
   }

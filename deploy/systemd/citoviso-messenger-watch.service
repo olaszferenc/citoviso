@@ -14,7 +14,7 @@ User=citoviso
 # A FŐ FÁBÓL fut (ADR-0052); SMS_RELAY_URL/SECRET a fő fa .env-jéből jön (config.ts).
 WorkingDirectory=/home/citoviso/citoviso
 ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/messenger-watch.mts
-# Futásonként legfeljebb 6 csevegés + 6 válasz, egyenként ≤120 s (gyakorlatban ~10 s).
-TimeoutStartSec=900
+# Futásonként legfeljebb 6 csevegés + 6 válasz + 12 jelenlét-olvasás (ez utóbbi ~20 s + 15–30 s szünet/db).
+TimeoutStartSec=1500
 StandardOutput=append:/home/citoviso/.claude/citoviso-messenger-watch.log
 StandardError=inherit

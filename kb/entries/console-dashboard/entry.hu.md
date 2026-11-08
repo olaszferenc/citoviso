@@ -56,6 +56,12 @@ jelenik meg, akinek mi írtunk; más SMS vagy levél nem kerül ide.
 - A cím mellett a jelvény: **„{n} megválaszolatlan”** (piros), vagy ha nincs ilyen,
   **„mind megválaszolva”** (zöld). Alatta két szűrő: **„Megválaszolatlan”** (ez az alap) és
   **„Mind”**, mellettük a darabszám.
+- Mellettük a csatorna-szűrő: **„Minden csatorna”**, E-mail, SMS, Viber, WhatsApp, mindegyiken a
+  darabszám (a 0-s halványan áll). A két szűrő együtt dolgozik: például a megválaszolatlan Viber-válaszok.
+- **Viber- és WhatsApp-válasznál** a jobb oldalon a teljes csevegés áll, időrendben: legfelül a mi
+  kiküldött megkeresésünk (a kép és alatta a szöveg a linkkel), alatta az állapota (**„Megnézve”** az
+  időponttal, **„Kézbesítve”** vagy **„Elküldve”**), utána a lead válaszai és a mi elküldött
+  válaszaink.
 - **Asztali gépen** bal oldalt a lista, a legújabb felül: piros pötty = megválaszolatlan, zöld
   karika = megválaszolt, a lead neve, a csatorna (SMS, E-mail, Viber vagy WhatsApp), az időpont és a válasz eleje. Jobb oldalt
   a kiválasztott beszélgetés: felül a MI kiküldött üzenetünk (melyik csatornán, mikor, levélnél a
@@ -170,6 +176,23 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
 - hány modul eladó a katalógusból, ha nem mind — az Árazás és értékesítés lapra visz;
 - **„kvalifikált lead”** — pontosan annyi, amennyit a Lead-sor a linkre koppintva mutat;
 - **„adatgyűjtés”**: **„fut”** vagy **„áll”** — koppintva az Adatgyűjtés indítása képernyő.
+
+### Messenger-út
+
+A Válaszok-blokk alatt a **„Messenger-út”** blokk mutatja, hogyan megy a megkeresés Viberen és
+WhatsAppon (a gép a telefonról küld: Viber → WhatsApp → MMS + SMS, csak hétköznap 9–16 között).
+
+- **„Ma kiküldve messengeren”** — a mai Viber- és WhatsApp-megkeresések száma. Napi keret nincs:
+  ami jóvá van hagyva, kimegy.
+- **„Fék”** — **„Aktív”**, vagy **„Leállt”** az okkal. A fék magától leáll, ha a Viber- vagy
+  WhatsApp-fiók korlátozást kap, vagy az olvasási / válasz-arány a felére esik; ilyenkor minden
+  megkeresés MMS + SMS-ben megy. Újraindítás: **„Fék feloldása”**.
+- Alatta a kapcsoló: **„Messenger-út”** bekapcsolva vagy kikapcsolva. Kikapcsolva minden
+  megkeresés a régi MMS + SMS páron megy.
+- **„Csatorna-megoszlás · elmúlt 7 nap”** — hány megkeresés ment Viberen, WhatsAppon és MMS + SMS-ben.
+- Csatornánként egy csempe: hány százalék kézbesült, hányat néztek meg (Viber) vagy olvastak
+  (WhatsApp), és hányra jött válasz. MMS-nél az olvasás nem mérhető, ott „n/a” áll; a
+  „kézbesítve” ott azt jelenti, hogy a szolgáltató befogadta.
 
 ## A modul irányítópultja
 

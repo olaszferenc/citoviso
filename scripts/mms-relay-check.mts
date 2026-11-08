@@ -107,6 +107,9 @@ setMmsRelayDeps({
   afterMessenger: async () => {
     throw new Error("messenger-ág az MMS-őrben — nem várt");
   },
+  afterFallback: async () => {
+    throw new Error("tartalék-ág az MMS-őrben — nem várt");
+  },
   afterTrialMms: async () => {},
   alert: async (subject) => {
     alerts.push(subject);

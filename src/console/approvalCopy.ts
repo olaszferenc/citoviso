@@ -26,6 +26,7 @@ import { checkOutreachDraft, checkOutreachSms } from "../outreach/outreachCheck.
 import { GSM7_BASIC, smsEncoding } from "../sms/encoding.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { renderMessengerCaption } from "../outreach/messengerCaption.js";
 import { T } from "../i18n/mail.js";
 import { esc } from "./views.js";
 import { consoleLang } from "./i18nCtx.js";
@@ -38,6 +39,8 @@ interface CopyContext {
   readonly phone: string | null;
   readonly override: CopyOverride | null;
   readonly notes: readonly string[];
+  /** ADR-0430: the caption the image carries on Viber / WhatsApp (the machine text; the owner's SMS wins). */
+  readonly caption: SmsDraft | null;
 }
 
 type Loaded = { ok: true; ctx: CopyContext } | { ok: false; note: string };
@@ -71,6 +74,7 @@ async function loadContext(item: PendingApproval): Promise<Loaded> {
       phone: mobile,
       override: await loadCopyOverride(prospectId),
       notes,
+      caption: mobile ? renderMessengerCaption(d.input) : null,
     },
   };
 }
@@ -239,8 +243,19 @@ export async function approvalCopyPanel(
 
   const smsText = posted ? posted.input.pairSms : (sms?.text ?? "");
   const enc = smsEncoding(sms?.text ?? "");
+  // ADR-0430: on Viber / WhatsApp the image carries the caption, in ONE message (no SMS). The SMS box
+  // below stays: it is what goes out if the send falls back to the MMS + SMS pair.
+  const ch = item.channel.channel;
+  const app = ch === "viber" ? "Viber" : ch === "whatsapp" ? "WhatsApp" : null;
+  const caption = ctx.caption ? withPairSmsOverride(ctx.caption, o) : null;
+  const msgCol =
+    app && caption
+      ? `<div class="aq-ch"><h3>${esc(T(lang, "{app} — ami kimegy", { app }))}</h3><div class="aq-to">${esc(T(lang, "Címzett"))}: ${esc(ctx.phone ?? "")} · ${esc(T(lang, "a kép alatt ez a szöveg, egy üzenetben; SMS nem megy"))}</div>` +
+        `<label class="aq-f"><span>${esc(T(lang, "{app}-üzenet szövege (a kép alatt)", { app }))}</span><textarea rows="4" readonly>${esc(caption.text)}</textarea></label>` +
+        `<div class="aq-fix">${esc(o?.pairSms ? T(lang, "A saját SMS-szöveged megy ide is.") : T(lang, "Ékezetesen megy, rövidítés nélkül. Ha átírod a lenti SMS-t, a te szöveged megy ide is."))}</div></div>`
+      : "";
   const smsCol = sms
-    ? `<div class="aq-ch"><h3>${esc(T(lang, "MMS + SMS"))}</h3><div class="aq-to">${esc(T(lang, "Címzett"))}: ${esc(ctx.phone ?? "")} · ${esc(T(lang, "előbb MMS-ben a terv képe, utána ez az SMS"))}</div>` +
+    ? `${msgCol}<div class="aq-ch"><h3>${esc(app ? T(lang, "Ha MMS + SMS-re esik vissza") : T(lang, "MMS + SMS"))}</h3><div class="aq-to">${esc(T(lang, "Címzett"))}: ${esc(ctx.phone ?? "")} · ${esc(T(lang, "előbb MMS-ben a terv képe, utána ez az SMS"))}</div>` +
       `<label class="aq-f"><span>${esc(T(lang, "SMS szövege"))}</span><textarea name="sms" rows="6" data-link="${esc(sms.link)}">${esc(smsText)}</textarea></label>` +
       `<div class="aq-cnt-sms" data-f="${esc(T(lang, "{n} karakter · {s} szelet (legfeljebb {max})", { max: PAIR_SMS_MAX_SEGMENTS }))}" data-nolink="${esc(T(lang, "a mock linkje hiányzik!"))}">${esc(T(lang, "{n} karakter · {s} szelet (legfeljebb {max})", { n: enc.length, s: enc.segments, max: PAIR_SMS_MAX_SEGMENTS }))}</div>` +
       `<div class="aq-fix">${esc(T(lang, "Ékezetek nélkül megy ki (GSM-7), mint a gépi szöveg. A linket betűre hagyd benne: ez viszi a leiratkozást és a tájékoztatót."))}</div></div>`
@@ -257,7 +272,7 @@ export async function approvalCopyPanel(
     `<small>${esc(T(lang, "Üresen hagyott mező = a gépi szöveg megy."))}</small></div>`;
   return (
     `${CSS}<div class="aq-copy-wrap"><details class="aq-copy" open>${summary}${edited}<small>${esc(mail.subject)}</small></summary>` +
-    `<form method="post" action="/jovahagyas/${esc(item.leadId)}/szoveg">${err}${warn}<div class="aq-cols">${mailCol}${smsCol}</div>${buttons}</form></details></div>` +
+    `<form method="post" action="/jovahagyas/${esc(item.leadId)}/szoveg">${err}${warn}<div class="aq-cols">${mailCol}<div>${smsCol}</div></div>${buttons}</form></details></div>` +
     SCRIPT(GSM7_BASIC, PAIR_SMS_MAX_SEGMENTS)
   );
 }

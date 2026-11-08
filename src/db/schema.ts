@@ -717,6 +717,22 @@ export interface MmsOutboxTable {
   /** 0129: the last-seen line at the latest check, and that check's time. */
   peer_seen_last: string | null;
   checked_at: Timestamp | null;
+  /** 0130: this row is the MMS+SMS fallback of that messenger row (owner's „Mehet MMS + SMS-ben is”). */
+  fallback_of: string | null;
+  /** 0130, on the messenger row: the owner's decision on the "not seen" tab. */
+  fallback_decision: "send" | "skip" | null;
+  fallback_decided_at: Timestamp | null;
+  fallback_decided_by: string | null;
+}
+
+/** 0130 (ADR-0430): Viber / WhatsApp presence of a number, read on the S10 without sending. */
+export interface MessengerPresenceTable {
+  phone: string;
+  whatsapp: "yes" | "no" | "unknown";
+  viber: "yes" | "no" | "unknown";
+  viber_seen: string | null;
+  viber_age_days: number | null;
+  checked_at: Timestamp;
 }
 
 /** 0051+0052 (ADR-0098): AAM-cap alert stamp — exactly ONE send per (year,
@@ -2121,6 +2137,7 @@ export interface OutreachReplyPollTable {
 }
 
 export interface Database {
+  messenger_presence: MessengerPresenceTable;
   region: RegionTable;
   outreach_reply: OutreachReplyTable;
   outreach_reply_poll: OutreachReplyPollTable;

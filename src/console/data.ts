@@ -2632,3 +2632,96 @@ export async function markPlacesSource(
     .where("id", "=", leadId)
     .execute();
 }
+
+// ── ADR-0430: the lead page's messenger card (approved plan design-refs/console/messenger-meres) ──
+
+export interface MessengerOutreachView {
+  readonly outboxId: string;
+  /** Where it went; null while queued / failed. */
+  readonly channel: "mms" | "viber" | "whatsapp" | null;
+  readonly status: "queued" | "sending" | "sent" | "failed" | "unknown";
+  readonly lastError: string | null;
+  readonly createdAt: Date;
+  readonly sentAt: Date | null;
+  readonly receipt: "sent" | "delivered" | "read" | null;
+  readonly deliveredAt: Date | null;
+  readonly readAt: Date | null;
+  readonly peerSeenBefore: string | null;
+  readonly peerSeenLast: string | null;
+  readonly checkedAt: Date | null;
+  /** The caption that went (or goes) with the image on a messenger; null = MMS only. */
+  readonly text: string | null;
+  /** The owner's MMS+SMS fallback of an unseen messenger send, if queued / sent. */
+  readonly fallback: { readonly status: string; readonly sentAt: Date | null } | null;
+  /** The lead's first reply after the send, if any. */
+  readonly reply: { readonly id: string; readonly at: Date; readonly body: string; readonly channel: string } | null;
+  /** The phone's Viber / WhatsApp read of the number (approval-time presence), if any. */
+  readonly presence: { readonly whatsapp: string; readonly viber: string; readonly viberSeen: string | null; readonly checkedAt: Date } | null;
+}
+
+/** The prospect's mobile outreach row (the newest non-fallback queue row) with its measurements. */
+export async function messengerOutreachOf(prospectId: string, phoneE164: string | null): Promise<MessengerOutreachView | null> {
+  const row = await db
+    .selectFrom("mms_outbox")
+    .select([
+      "id",
+      "channel",
+      "status",
+      "last_error",
+      "created_at",
+      "sent_at",
+      "receipt",
+      "delivered_at",
+      "read_at",
+      "peer_seen_before",
+      "peer_seen_last",
+      "checked_at",
+      "messenger_text",
+    ])
+    .where("prospect_id", "=", prospectId)
+    .where("fallback_of", "is", null)
+    .orderBy("created_at", "desc")
+    .executeTakeFirst();
+  if (!row) return null;
+  const fb = await db
+    .selectFrom("mms_outbox")
+    .select(["status", "sent_at"])
+    .where("fallback_of", "=", row.id)
+    .orderBy("created_at", "desc")
+    .executeTakeFirst();
+  const rep = await db
+    .selectFrom("outreach_reply as r")
+    .innerJoin("prospect as p", "p.lead_id", "r.lead_id")
+    .select(["r.id", "r.received_at", "r.body", "r.channel"])
+    .where("p.id", "=", prospectId)
+    .orderBy("r.received_at", "asc")
+    .executeTakeFirst();
+  const pres = phoneE164
+    ? await db.selectFrom("messenger_presence").selectAll().where("phone", "=", phoneE164).executeTakeFirst()
+    : undefined;
+  const d = (v: unknown): Date | null => (v ? new Date(v as string) : null);
+  return {
+    outboxId: row.id,
+    channel: row.channel,
+    status: row.status,
+    lastError: row.last_error,
+    createdAt: new Date(row.created_at as unknown as string),
+    sentAt: d(row.sent_at),
+    receipt: row.receipt,
+    deliveredAt: d(row.delivered_at),
+    readAt: d(row.read_at),
+    peerSeenBefore: row.peer_seen_before,
+    peerSeenLast: row.peer_seen_last,
+    checkedAt: d(row.checked_at),
+    text: row.messenger_text,
+    fallback: fb ? { status: fb.status, sentAt: d(fb.sent_at) } : null,
+    reply: rep ? { id: rep.id, at: new Date(rep.received_at as unknown as string), body: rep.body, channel: rep.channel } : null,
+    presence: pres ? { whatsapp: pres.whatsapp, viber: pres.viber, viberSeen: pres.viber_seen, checkedAt: new Date(pres.checked_at as unknown as string) } : null,
+  };
+}
+
+/** The raw JPEG of a queue row — the conversation / lead card show the image that went out. */
+export async function mmsOutboxImage(outboxId: string): Promise<Buffer | null> {
+  const r = await db.selectFrom("mms_outbox").select("image").where("id", "=", outboxId).executeTakeFirst();
+  return r ? Buffer.from(r.image) : null;
+}

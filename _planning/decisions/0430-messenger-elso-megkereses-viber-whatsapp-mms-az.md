@@ -34,3 +34,14 @@
   Az eredmény a `POST /api/messenger/report` végponton megy vissza: a bejövő szöveg az ADR-0339 válasz-folyamatba kerül, a receipt csak előre léphet.
 - **Válasz a messenger-válaszra:** ugyanazon a messengeren megy, az S10 gépeli be. A sorban `queued` állapotban várakozik, a figyelő küldi ki és nyugtázza; SMS nem megy.
 - **Konzol-nézet:** §2b terv-kapu, a tulaj A/B mockja `~/rc-briefs/messenger-meres-mock/`. Kód csak a jóváhagyás után.
+
+**Egyesített felület (2026-11-08, tulaj: „mehet így élesre”; terv `assets/design-refs/console/messenger-felulet/`).**
+- **Jelenlét:**
+  - A telefon a jóváhagyásra váró leadek számán üzenet nélkül megnézi, van-e Vibere vagy WhatsAppja (migráció 0130, `messenger_presence`).
+  - Futásonként legfeljebb 12 számot néz meg, 15–30 mp szünettel; a 14 napnál régebbi olvasást újranézi.
+  - A jóváhagyó lap ebből csoportosít (`expectedChannel`); kiküldéskor a telefon újra dönt.
+- **„Messengeren nem nézte meg”:**
+  - Ide kerül a 3 napja olvasatlan messenger-küldés, ha a lead nem válaszolt, nincs letiltva és nem iratkozott le.
+  - A „Mehet MMS + SMS-ben is” gomb ugyanazt a képet MMS-ként sorba teszi (`fallback_of`). Az MMS visszaigazolása után a kísérő SMS megy, mindig együtt, soha nem csak SMS. A kapuk újra lefutnak.
+  - A „Nem kell” gomb csak rögzíti a döntést.
+- **A jóváhagyó lap teljes szélességű** (tulaj: „jobban látszódjon a jóváhagyandó oldal … túl sok a kihasználatlan oldalsó rész”).

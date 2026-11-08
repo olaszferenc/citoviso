@@ -59,6 +59,8 @@ export interface MmsRelayDeps {
   afterSent(prospectId: string, pairStartedAt: Date): Promise<unknown>;
   /** ADR-0430: the pair went out on Viber / WhatsApp (image + link in one) — the bookkeeping, NO SMS. */
   afterMessenger(prospectId: string): Promise<unknown>;
+  /** ADR-0430: the owner's MMS+SMS fallback of an unseen messenger outreach went out — its companion SMS. */
+  afterFallback(prospectId: string): Promise<unknown>;
   /** ADR-0425: after a trial's live-site MMS was accepted (ok) or parked failed: its companion SMS / ledger. */
   afterTrialMms(freeTrialId: string, ok: boolean, error: string | null): Promise<unknown>;
   alert(subject: string, text: string): Promise<unknown>;
@@ -76,6 +78,12 @@ const realDeps: MmsRelayDeps = {
   afterMessenger: async (prospectId) => {
     const { settleMessengerPair } = await import("../outreach/sendOutreachPair.js");
     return settleMessengerPair(prospectId);
+  },
+  afterFallback: async (prospectId) => {
+    const { sendFallbackSmsHalf } = await import("../outreach/sendOutreachPair.js");
+    const r = await sendFallbackSmsHalf(prospectId);
+    if (!r.ok) console.error(`[mms-relay] a tartalék-pár SMS-fele nem ment ki (${prospectId}): ${r.message}`);
+    return r;
   },
   afterTrialMms: async (freeTrialId, ok, error) => {
     const { settleTrialMms } = await import("../trial/escalation.js");
@@ -202,10 +210,16 @@ export async function ackMms(results: readonly MmsAck[]): Promise<string[]> {
         })
         .where("id", "=", r.id)
         .where("status", "in", ["sending", "unknown", "queued"])
-        .returning(["prospect_id", "free_trial_id", "created_at"])
+        .returning(["prospect_id", "free_trial_id", "created_at", "fallback_of"])
         .executeTakeFirst();
       if (!row) continue; // already sent (duplicate ack) or unknown id → idempotent no-op
       settled.push(r.id);
+      // ADR-0430: the owner's MMS+SMS fallback — the pair was already stamped by the messenger
+      // send; the image went out now, so its companion SMS follows (never an SMS alone).
+      if (row.fallback_of && row.prospect_id) {
+        await deps.afterFallback(row.prospect_id);
+        continue;
+      }
       if (row.free_trial_id) await deps.afterTrialMms(row.free_trial_id, true, null);
       if (row.prospect_id) {
         // ADR-0083 claim: the lead SAW the image now.

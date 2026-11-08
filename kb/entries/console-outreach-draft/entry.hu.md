@@ -167,6 +167,20 @@ a KÜLDÉS a lap alján, a levél alatt:”** blokk két kártyája már csak az
      előbb nézd meg a relay naplóját”: a dev gépen a relay naplója (`journalctl -u citoviso-mms-relay`)
      mondja meg, elment-e; utána a lead-lapon kézzel dől el a folytatás.
 
+   **Viberen vagy WhatsAppon (a messenger-út, 2026-11-08 óta):** a sorba került párt a gép a
+   telefonról küldi. Kiküldéskor a telefon megnézi, van-e a leadnek Vibere vagy WhatsAppja: a friss
+   Viber (30 napon belül aktív) az első, utána a WhatsApp, utána a régi Viber, és ha egyik sincs, az
+   MMS + SMS pár. Messengeren a kép és a link egy üzenetben megy, kísérő SMS nélkül. A kártya ekkor
+   ezt mutatja:
+   - **„Kiment ezen”** — a csatorna és az oka (például „Viber — utoljára aktív tegnap 18:40”), alatta
+     a négy lépcső, a választott kipipálva („ezt választottuk”);
+   - **„Kimenő üzenet”** — a kép és a szöveg úgy, ahogy kiment;
+   - **„Mérés”** — Sorban → Elküldve → Kézbesítve → Megtekintve (Viber) / Olvasott (WhatsApp) →
+     Válasz, időpontokkal. A telefon a csevegést óránként, egy nap után 6 óránként nézi meg újra, egy
+     hétig. Ha a lead válaszolt, ott a válasza és az **„Ugrás a Válaszok blokkra”** gomb.
+   - Ha a küldés nem sikerült: piros sor a hibával és az **„Újra a sorba”** gomb.
+   WhatsAppon az is „még nem”-nek látszik, aki kikapcsolta az olvasási visszaigazolást.
+
 ### Az alsó sáv — ez küld
 
 A sávban az szerepel, ami éppen indítható: a **„Küldés e-mailben —”** gomb (a címmel a

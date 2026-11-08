@@ -17,6 +17,11 @@
 //      matched to the lead by phone), re-reading the same bubble does not duplicate it
 //   ⑦ an answer to that reply is 'queued' (no SMS), shows up in the watch list, and the
 //      watcher's ok ack marks it sent + the reply answered
+//   ⑨ expectedChannel (pure): fresh Viber → WhatsApp → old Viber → MMS; off/brake → MMS; no read → check
+//   ⑩ the "not seen" tab: an unread messenger send older than 3 days is listed; "send" queues the SAME image
+//      as an MMS fallback (pointing at it), whose ack sends the companion SMS (afterFallback) — never the
+//      messenger bookkeeping again; the row leaves the tab; a replied lead is never listed
+//   ⑪ presence: applyPresence stores the phone's read, an ok:false read is skipped
 //   ⑧ brakeVerdict (pure): no verdict under 40; a halved read rate trips; a steady one does not;
 //      the reply rate is judged only from 5 replies on
 //
@@ -53,11 +58,12 @@ const say = (ok: boolean, what: string, detail = ""): void => {
 const PHONE = "+36301234568";
 const MIDDAY = new Date("2026-09-30T10:00:00Z"); // a Wednesday, 12:00 Budapest
 const CAPTION = "Teszt Vendégház – a képen látható honlap-látványtervet most megnézheti! A Citoviso csapata\nhttps://example.test/p/x";
-const ids: { defId?: string; runId?: string; leadId?: string; prospects: string[] } = { prospects: [] };
+const ids: { defId?: string; runId?: string; leadId?: string; lead2?: string; prospects: string[] } = { prospects: [] };
 const tmp = await mkdtemp(path.join(tmpdir(), "cit-messenger-check-"));
 const savedSetting = await getSetting(m.MESSENGER_SETTING_KEY);
 
 const afterMessenger: string[] = [];
+const afterFallback: string[] = [];
 const afterSent: string[] = [];
 const alerts: string[] = [];
 m.setMessengerAlert(async (subject) => {
@@ -69,6 +75,9 @@ setMmsRelayDeps({
   },
   afterMessenger: async (id) => {
     afterMessenger.push(id);
+  },
+  afterFallback: async (id) => {
+    afterFallback.push(id);
   },
   afterTrialMms: async () => {},
   alert: async (s) => {
@@ -256,6 +265,61 @@ try {
     say(s.status === "sent" && !!r.answered_at && r.answered_by === "_messenger_check", "⑦ a figyelő ok-ja: 'sent' + a válasz megválaszolt", JSON.stringify({ s, r }));
   }
 
+  // ── ⑨ expected channel (pure) ──────────────────────────────────────────
+  {
+    const on = { enabled: true, brake: null };
+    const P = (w: "yes" | "no" | "unknown", v: "yes" | "no" | "unknown", age: number | null) => ({ whatsapp: w, viber: v, viberSeen: age === null ? "régen" : "tegnap", viberAgeDays: age });
+    say(m.expectedChannel(P("yes", "yes", 1), on).step === 1, "⑨ friss Viber → 1. lépcső (Viber)");
+    say(m.expectedChannel(P("yes", "yes", null), on).channel === "whatsapp", "⑨ régi Viber + WhatsApp → WhatsApp");
+    say(m.expectedChannel(P("no", "yes", 90), on).step === 3, "⑨ csak régi Viber → 3. lépcső");
+    say(m.expectedChannel(P("no", "no", null), on).channel === "mms", "⑨ egyik sincs → MMS + SMS");
+    say(m.expectedChannel(null, on).channel === "check", "⑨ nincs még olvasás → még ellenőrizzük");
+    say(m.expectedChannel(P("yes", "yes", 1), { enabled: false, brake: null }).channel === "mms", "⑨ kikapcsolt messenger-út → MMS + SMS");
+    say(m.expectedChannel(P("yes", "yes", 1), { enabled: true, brake: { at: "", reason: "x" } }).channel === "mms", "⑨ fék → MMS + SMS");
+  }
+
+  // ── ⑩ the "not seen" tab + fallback ────────────────────────────────────
+  {
+    // A lead of its own: ⑥ gave the first lead a reply, and a replied lead is never listed.
+    const lead2 = await db
+      .insertInto("lead")
+      .values({ scrape_run_id: ids.runId!, name: "_messenger_check lead 2", raw: JSON.stringify({ phone: "+36301234571" }) })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    ids.lead2 = lead2.id;
+    const p10 = (await db.insertInto("prospect").values({ lead_id: lead2.id, token: `msc_f_${Date.now().toString(36)}` }).returning("id").executeTakeFirstOrThrow()).id;
+    const r10 = (await sendMms({ to: "+36301234571", imagePath: path.join(tmp, "hero.jpg"), subject: "Citoviso latvanyterv - Teszt", prospectId: p10, messengerText: CAPTION })).messageId!;
+    const ph = phone((msg) => ({ ok: true, messageId: "s10-wa-10", provider: "cli", channel: msg.messengerText ? "whatsapp" : "mms" }));
+    await tick(ph);
+    await db.updateTable("mms_outbox").set({ sent_at: new Date(Date.now() - 4 * 86_400_000) }).where("id", "=", r10).execute();
+    const list = await m.notSeenList();
+    say(list.some((i) => i.outboxId === r10) && !list.some((i) => i.outboxId === r2), "⑩ a 4 napja olvasatlan WhatsApp-küldés a listán; a válaszolt lead (⑥) nincs", JSON.stringify(list.map((i) => i.outboxId)));
+    // The fixture prospect has no approved mock: the gates refuse → nothing is queued.
+    const refused = await m.decideFallback(r10, "send", "_messenger_check");
+    say(!refused.ok && /Nem küldhető/.test(refused.message), "⑩ a kapuk a tartaléknál is futnak (jóváhagyott mock nélkül nem megy)", refused.message);
+    // Past the gates (as a real approved lead would be): the fallback row as decideFallback writes it.
+    const src = await db.selectFrom("mms_outbox").select(["image", "subject", "to_phone"]).where("id", "=", r10).executeTakeFirstOrThrow();
+    const fb = await db.insertInto("mms_outbox").values({ prospect_id: p10, to_phone: src.to_phone, subject: src.subject, image: src.image, fallback_of: r10 }).returning("id").executeTakeFirstOrThrow();
+    await db.updateTable("mms_outbox").set({ fallback_decision: "send", fallback_decided_at: new Date(), fallback_decided_by: "_messenger_check" }).where("id", "=", r10).execute();
+    const before = afterMessenger.length;
+    const mmsPhone = phone((msg) => ({ ok: true, messageId: "MMSC-10", provider: "cli", channel: msg.messengerText ? "viber" : "mms" }));
+    await tick(mmsPhone);
+    say(mmsPhone.got[0]?.text === undefined && (await outboxRow(fb.id)).channel === "mms", "⑩ a tartalék MMS-ként megy (szöveg nélkül)", JSON.stringify(mmsPhone.got));
+    say(afterFallback.length === 1 && afterFallback[0] === p10 && afterMessenger.length === before, "⑩ a tartalék ackja a kísérő SMS-t indítja (afterFallback), a messenger-könyvelést nem", JSON.stringify({ afterFallback }));
+    say(!(await m.notSeenList()).some((i) => i.outboxId === r10), "⑩ döntés után a sor lekerül a listáról");
+    const skip = await m.decideFallback(r10, "skip", "_messenger_check");
+    say(!skip.ok, "⑩ egy döntött sorra nincs második döntés");
+  }
+
+  // ── ⑪ presence store ───────────────────────────────────────────────────
+  {
+    const ph = "+36301234569";
+    const n = await m.applyPresence([{ phone: ph, ok: true, whatsapp: "yes", viber: "no", viberAgeDays: null }, { phone: "+36301234570", ok: false }]);
+    const got = await m.presenceOf([ph, "+36301234570"]);
+    say(n === 1 && got.get(ph)?.whatsapp === "yes" && !got.has("+36301234570"), "⑪ az olvasás tárolva, a sikertelen kimarad", JSON.stringify([...got]));
+    await db.deleteFrom("messenger_presence").where("phone", "=", ph).execute();
+  }
+
   // ── ⑧ brake verdict (pure) ─────────────────────────────────────────────
   {
     const mk = (n: number, read: (i: number) => boolean, replied: (i: number) => boolean = () => false) =>
@@ -277,6 +341,10 @@ try {
     await db.deleteFrom("outreach_reply").where("lead_id", "=", ids.leadId).execute(); // cascades the sends
     await db.deleteFrom("prospect").where("lead_id", "=", ids.leadId).execute(); // cascades mms_outbox
     await db.deleteFrom("lead").where("id", "=", ids.leadId).execute();
+  }
+  if (ids.lead2) {
+    await db.deleteFrom("prospect").where("lead_id", "=", ids.lead2).execute();
+    await db.deleteFrom("lead").where("id", "=", ids.lead2).execute();
   }
   if (ids.runId) await db.deleteFrom("scrape_run").where("id", "=", ids.runId).execute();
   if (ids.defId) await db.deleteFrom("scraper_definition").where("id", "=", ids.defId).execute();

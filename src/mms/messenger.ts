@@ -192,6 +192,8 @@ export interface QueuedAnswer {
 export interface WatchList {
   readonly chats: readonly WatchItem[];
   readonly answers: readonly QueuedAnswer[];
+  /** E.164 numbers whose Viber / WhatsApp presence the phone should read (no message). */
+  readonly presence: readonly string[];
 }
 
 /** The chats due for a re-read (oldest check first) and the queued messenger answers. */
@@ -224,6 +226,7 @@ export async function messengerWatchList(now: Date = new Date()): Promise<WatchL
   return {
     chats: rows.map((r) => ({ id: r.id, channel: r.channel as MessengerChannel, to_phone: r.to_phone })),
     answers: answers.map((a) => ({ id: a.id, channel: a.channel as MessengerChannel, to_phone: a.to_addr, text: a.body })),
+    presence: await presenceDue(now),
   };
 }
 
@@ -309,4 +312,275 @@ export async function applyMessengerWatch(
   if (restricted) await tripBrake("a Viber- vagy WhatsApp-fiók korlátozást kapott", now);
   else await evaluateRateBrake(now);
   return { replies };
+}
+
+// ── Presence before the approval (approved plan design-refs/console/messenger-felulet) ──
+
+/** The phone re-checks a number this old. */
+export const PRESENCE_MAX_AGE_DAYS = 14;
+/** Numbers per watcher run (~20 s each on the phone's screen). */
+export const PRESENCE_BATCH = 12;
+/** Viber activity this fresh wins over WhatsApp (s10_send.py VIBER_FRESH_DAYS). */
+export const VIBER_FRESH_DAYS = 30;
+
+export type Presence = {
+  readonly whatsapp: "yes" | "no" | "unknown";
+  readonly viber: "yes" | "no" | "unknown";
+  readonly viberSeen: string | null;
+  readonly viberAgeDays: number | null;
+};
+
+export type ExpectedChannel = "viber" | "whatsapp" | "mms" | "check";
+
+export interface ChannelPlan {
+  readonly channel: ExpectedChannel;
+  /** 1 = Viber (fresh), 2 = WhatsApp, 3 = Viber (old), 4 = MMS+SMS; 0 = not checked yet. */
+  readonly step: 0 | 1 | 2 | 3 | 4;
+  /** One plain sentence: why this one. */
+  readonly reason: string;
+}
+
+/**
+ * Pure: the channel the S10 will most likely pick (s10_send.py pick_channel), from the presence
+ * read and the switch / brake. The phone decides again at send time; this groups the list.
+ */
+export function expectedChannel(p: Presence | null, cfg: Pick<MessengerConfig, "enabled" | "brake">): ChannelPlan {
+  if (!cfg.enabled) return { channel: "mms", step: 4, reason: "a messenger-út ki van kapcsolva — MMS + SMS megy, együtt" };
+  if (cfg.brake) return { channel: "mms", step: 4, reason: `a fék leállította a messenger-utat (${cfg.brake.reason}) — MMS + SMS megy, együtt` };
+  if (!p) return { channel: "check", step: 0, reason: "a telefon még nem nézte meg, van-e Vibere vagy WhatsAppja (üzenet nélkül)" };
+  const age = p.viberAgeDays;
+  if (p.viber === "yes" && age !== null && age <= VIBER_FRESH_DAYS) {
+    return { channel: "viber", step: 1, reason: `Viber-fiók van, utoljára aktív: ${p.viberSeen ?? "nemrég"}` };
+  }
+  if (p.whatsapp === "yes") {
+    return { channel: "whatsapp", step: 2, reason: p.viber === "yes" ? `WhatsApp-fiók van; a Viberen régen volt aktív (${p.viberSeen ?? "régen"})` : "WhatsApp-fiók van, Viber nincs" };
+  }
+  if (p.viber === "yes") return { channel: "viber", step: 3, reason: `csak Viber-fiók van, régi aktivitással (${p.viberSeen ?? "régen"})` };
+  if (p.whatsapp === "unknown" || p.viber === "unknown") {
+    return { channel: "check", step: 0, reason: "a telefon nem kapott egyértelmű választ — kiküldéskor újra megnézi" };
+  }
+  return { channel: "mms", step: 4, reason: "sem Vibere, sem WhatsAppja nincs — MMS + SMS megy, együtt" };
+}
+
+/** Presence of these E.164 numbers (missing = not checked yet). */
+export async function presenceOf(phones: readonly string[]): Promise<Map<string, Presence>> {
+  const out = new Map<string, Presence>();
+  if (!phones.length) return out;
+  const rows = await db.selectFrom("messenger_presence").selectAll().where("phone", "in", [...new Set(phones)]).execute();
+  for (const r of rows) out.set(r.phone, { whatsapp: r.whatsapp, viber: r.viber, viberSeen: r.viber_seen, viberAgeDays: r.viber_age_days });
+  return out;
+}
+
+/** Numbers of leads waiting for the owner's approval with no fresh presence read. */
+export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH): Promise<string[]> {
+  const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
+  const { normalizePhone } = await import("../text/phone.js");
+  const rows = await sql<{ phone: string | null }>`
+    select l.raw->>'phone' as phone
+      from outreach_dispatch d join lead l on l.id = d.lead_id
+     where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
+     order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
+  const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
+  if (!phones.length) return [];
+  const fresh = new Set(
+    (
+      await db
+        .selectFrom("messenger_presence")
+        .select("phone")
+        .where("phone", "in", phones)
+        .where("checked_at", ">=", new Date(now.getTime() - PRESENCE_MAX_AGE_DAYS * 86_400_000))
+        .where((eb) => eb.and([eb("whatsapp", "<>", "unknown"), eb("viber", "<>", "unknown")]))
+        .execute()
+    ).map((r) => r.phone),
+  );
+  return phones.filter((p) => !fresh.has(p)).slice(0, limit);
+}
+
+export interface PresenceReport {
+  readonly phone: string;
+  readonly ok: boolean;
+  readonly whatsapp?: string;
+  readonly viber?: string;
+  readonly viberSeen?: string;
+  readonly viberAgeDays?: number | null;
+}
+
+/** Store the phone's presence reads (an `ok:false` read is skipped — it is retried next run). */
+export async function applyPresence(reports: readonly PresenceReport[], now: Date = new Date()): Promise<number> {
+  const tri = (v: unknown): "yes" | "no" | "unknown" => (v === "yes" || v === "no" ? v : "unknown");
+  let n = 0;
+  for (const r of reports) {
+    if (!r.ok || !/^\+\d{10,15}$/.test(r.phone)) continue;
+    const row = {
+      whatsapp: tri(r.whatsapp),
+      viber: tri(r.viber),
+      viber_seen: r.viberSeen ? String(r.viberSeen).slice(0, 200) : null,
+      viber_age_days: Number.isInteger(r.viberAgeDays) ? (r.viberAgeDays as number) : null,
+      checked_at: now,
+    };
+    await db
+      .insertInto("messenger_presence")
+      .values({ phone: r.phone, ...row })
+      .onConflict((oc) => oc.column("phone").doUpdateSet(row))
+      .execute();
+    n++;
+  }
+  return n;
+}
+
+// ── "Messengeren nem nézte meg" — the fallback tab ──
+
+/** A messenger outreach unseen this long is offered for the MMS+SMS fallback. */
+export const NOT_SEEN_AFTER_DAYS = 3;
+
+export interface NotSeenItem {
+  readonly outboxId: string;
+  readonly prospectId: string;
+  readonly leadId: string;
+  readonly name: string;
+  readonly city: string;
+  readonly phone: string;
+  readonly channel: MessengerChannel;
+  readonly sentAt: Date;
+  readonly receipt: "sent" | "delivered" | "read" | null;
+  readonly deliveredAt: Date | null;
+  readonly peerSeenBefore: string | null;
+  readonly peerSeenLast: string | null;
+  readonly checkedAt: Date | null;
+  readonly text: string | null;
+}
+
+/**
+ * Messenger outreach not seen in NOT_SEEN_AFTER_DAYS: no read receipt, no reply, no decision yet,
+ * the lead not blocked (a rejecter / "not concerned" never gets anything more), no fallback queued.
+ */
+export async function notSeenList(now: Date = new Date()): Promise<NotSeenItem[]> {
+  const rows = await sql<{
+    id: string;
+    prospect_id: string;
+    lead_id: string;
+    name: string;
+    city: string | null;
+    to_phone: string;
+    channel: MessengerChannel;
+    sent_at: Date;
+    receipt: "sent" | "delivered" | "read" | null;
+    delivered_at: Date | null;
+    peer_seen_before: string | null;
+    peer_seen_last: string | null;
+    checked_at: Date | null;
+    messenger_text: string | null;
+  }>`
+    select o.id, o.prospect_id, p.lead_id, l.name, l.raw->>'city' as city, o.to_phone, o.channel, o.sent_at,
+           o.receipt, o.delivered_at, o.peer_seen_before, o.peer_seen_last, o.checked_at, o.messenger_text
+      from mms_outbox o
+      join prospect p on p.id = o.prospect_id
+      join lead l on l.id = p.lead_id
+     where o.channel in ('viber', 'whatsapp') and o.status = 'sent'
+       and o.read_at is null and o.fallback_decision is null
+       and o.sent_at <= ${new Date(now.getTime() - NOT_SEEN_AFTER_DAYS * 86_400_000)}
+       and l.contact_block_at is null and p.unsubscribed_at is null
+       and not exists (select 1 from outreach_reply r where r.lead_id = p.lead_id)
+       and not exists (select 1 from mms_outbox f where f.fallback_of = o.id)
+     order by o.sent_at asc`.execute(db);
+  return rows.rows.map((r) => ({
+    outboxId: r.id,
+    prospectId: r.prospect_id,
+    leadId: r.lead_id,
+    name: r.name,
+    city: r.city ?? "",
+    phone: r.to_phone,
+    channel: r.channel,
+    sentAt: new Date(r.sent_at),
+    receipt: r.receipt,
+    deliveredAt: r.delivered_at ? new Date(r.delivered_at) : null,
+    peerSeenBefore: r.peer_seen_before,
+    peerSeenLast: r.peer_seen_last,
+    checkedAt: r.checked_at ? new Date(r.checked_at) : null,
+    text: r.messenger_text,
+  }));
+}
+
+/**
+ * The owner's decision on the "not seen" tab. "send" queues the SAME image as an MMS (the
+ * messenger row's fallback); its ack then sends the companion SMS — MMS and SMS only together,
+ * never an SMS alone. "skip" just records it. Both are one-shot per messenger row.
+ */
+export async function decideFallback(outboxId: string, decision: "send" | "skip", by: string): Promise<{ ok: boolean; message: string }> {
+  const items = await notSeenList();
+  const it = items.find((i) => i.outboxId === outboxId);
+  if (!it) return { ok: false, message: "Ez a megkeresés már nincs a listán (elolvasta, válaszolt, vagy már döntöttél róla)." };
+  if (decision === "send") {
+    const { mobileOutreachGates } = await import("../outreach/sendOutreachSms.js");
+    const gate = await mobileOutreachGates(it.prospectId);
+    if (!gate.ok) return { ok: false, message: `Nem küldhető: ${gate.message}` };
+    const src = await db.selectFrom("mms_outbox").select(["image", "subject", "to_phone"]).where("id", "=", outboxId).executeTakeFirstOrThrow();
+    try {
+      await db
+        .insertInto("mms_outbox")
+        .values({ prospect_id: it.prospectId, to_phone: src.to_phone, subject: src.subject, image: src.image, fallback_of: outboxId })
+        .execute();
+    } catch (err) {
+      if ((err as { code?: string }).code === "23505") return { ok: false, message: "Ennél a leadnél már sorban áll egy MMS." };
+      throw err;
+    }
+  }
+  await db
+    .updateTable("mms_outbox")
+    .set({ fallback_decision: decision, fallback_decided_at: new Date(), fallback_decided_by: by.slice(0, 200) })
+    .where("id", "=", outboxId)
+    .execute();
+  return {
+    ok: true,
+    message: decision === "send" ? `${it.name}: MMS + SMS sorba téve — a következő küldési ablakban megy ki.` : `${it.name}: nem küldünk többet.`,
+  };
+}
+
+// ── The dashboard's "Messenger-út" block ──
+
+export interface ChannelStats {
+  readonly sent: number;
+  readonly delivered: number;
+  readonly read: number;
+  readonly replied: number;
+}
+
+export interface MessengerStats {
+  readonly config: MessengerConfig;
+  readonly today: { readonly viber: number; readonly whatsapp: number };
+  /** Last 7 days, per channel. MMS: "delivered" = the MMSC accepted it; reading is not measurable. */
+  readonly week: { readonly viber: ChannelStats; readonly whatsapp: ChannelStats; readonly mms: ChannelStats };
+}
+
+export async function messengerStats(now: Date = new Date()): Promise<MessengerStats> {
+  const config = await getMessengerConfig();
+  const since = new Date(now.getTime() - 7 * 86_400_000);
+  const midnight = budapestMidnight(budapestIsoDay(now));
+  const rows = await sql<{ channel: string; sent: string; delivered: string; read: string; replied: string; today: string }>`
+    select coalesce(o.channel, 'mms') as channel,
+           count(*) as sent,
+           count(*) filter (where o.delivered_at is not null or coalesce(o.channel, 'mms') = 'mms') as delivered,
+           count(*) filter (where o.read_at is not null) as read,
+           count(*) filter (where exists (select 1 from outreach_reply r where r.prospect_id = o.prospect_id)) as replied,
+           count(*) filter (where o.sent_at >= ${midnight}) as today
+      from mms_outbox o
+     where o.status = 'sent' and o.sent_at >= ${since} and o.prospect_id is not null and o.fallback_of is null
+     group by 1`.execute(db);
+  const pick = (ch: string): ChannelStats => {
+    const r = rows.rows.find((x) => x.channel === ch);
+    return { sent: Number(r?.sent ?? 0), delivered: Number(r?.delivered ?? 0), read: Number(r?.read ?? 0), replied: Number(r?.replied ?? 0) };
+  };
+  const today = (ch: string) => Number(rows.rows.find((x) => x.channel === ch)?.today ?? 0);
+  return { config, today: { viber: today("viber"), whatsapp: today("whatsapp") }, week: { viber: pick("viber"), whatsapp: pick("whatsapp"), mms: pick("mms") } };
+}
+
+/** The operator's switch (on/off) and brake release, from the dashboard. */
+export async function setMessengerEnabled(enabled: boolean): Promise<void> {
+  const c = await getMessengerConfig();
+  await setMessengerConfig({ ...c, enabled });
+}
+
+export async function releaseBrake(): Promise<void> {
+  const c = await getMessengerConfig();
+  await setMessengerConfig({ ...c, brake: null });
 }

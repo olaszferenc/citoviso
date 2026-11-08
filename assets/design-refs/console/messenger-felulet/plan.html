@@ -1,0 +1,755 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Messenger-felület — 3. kör (összevont)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-glow-blue:#5081ff; --citui-white:#ffffff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82;
+  --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  /* channel identity (A plan, validated categorical trio) */
+  --ch-viber:var(--citui-glow-blue); --ch-wa:var(--citui-cyan-400); --ch-mms:var(--citui-warn);
+  --warn-soft:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));
+  --bad-soft:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));
+  --acc-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-panel));
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+
+/* ── mock control bar (not part of the design) ── */
+.mockbar{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:9px 16px;background:var(--citui-navy-950);color:var(--citui-white);font-size:13px}
+.mockbar .mgrp{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.mockbar b{margin-right:2px;font-weight:600;color:var(--citui-ink-inverse)}
+.mockbar button{font:inherit;border:1px solid color-mix(in srgb,var(--citui-white) 30%,transparent);background:transparent;color:inherit;border-radius:var(--citui-radius-pill);padding:3px 11px;cursor:pointer}
+.mockbar button[aria-pressed=true]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:600}
+.note{max-width:1280px;margin:12px auto 0;padding:10px 14px;background:var(--citui-surface-2);border:1px dashed var(--citui-line-strong);border-radius:10px;font-size:13px;color:var(--citui-navy-700);line-height:1.55}
+.note p{margin:0 0 4px} .note p:last-child{margin:0}
+@media (max-width:700px){.note{margin:10px 16px 0}}
+
+/* status markers: what is approved (A) and what is new */
+.mk{display:inline-flex;gap:5px;align-items:center;font:700 10.5px var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:6px;vertical-align:middle;white-space:nowrap}
+.mk svg{width:11px;height:11px}
+.mk.a{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.mk.chg{background:var(--citui-ok-soft);color:var(--citui-ok-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--citui-ok) 45%,transparent);white-space:normal}
+.mk.new{background:var(--warn-soft);color:var(--citui-warn-ink)}
+.blk{position:relative}
+.blk-h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 8px}
+.blk-h .scr{margin:0}
+
+/* ── frame + console shell ── */
+.frame{margin:14px auto 40px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;overflow:hidden;container-type:inline-size}
+.frame[data-size=desk]{max-width:1280px} .frame[data-size=mob]{max-width:390px}
+@media (max-width:700px){.frame{margin:10px 0 30px;border-radius:0;border-left:0;border-right:0}}
+.shell{display:grid;grid-template-columns:210px minmax(0,1fr)}
+.side{border-right:1px solid var(--citui-line);background:var(--citui-surface);padding:14px 8px}
+.logo{font:700 18px var(--citui-font-display);padding:2px 8px 16px}
+.logo small{display:block;font:400 12px var(--citui-font-text);color:var(--citui-muted)}
+.nav a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;color:var(--citui-ink);text-decoration:none;font-weight:600}
+.nav a.on{background:var(--acc-soft)}
+.nav a .cnt{margin-left:auto;font-size:11.5px;font-weight:700;background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:0 7px}
+.main{padding:20px;min-width:0}
+.scr{font:600 11px var(--citui-font-text);letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px}
+h1{font:600 21px var(--citui-font-text);margin:0 0 2px}
+h2{font:600 16px var(--citui-font-text);margin:0}
+.lede{color:var(--citui-muted);margin:0 0 14px}
+.sep{border:0;border-top:2px dashed var(--citui-line-strong);margin:28px 0 22px}
+.mut{color:var(--citui-muted)} .small{font-size:12.5px}
+@container (max-width:900px){
+  .shell{grid-template-columns:1fr} .side{display:none}
+  .main{padding:14px 12px}
+}
+
+/* ════════ A (APPROVED) — lead page + Messenger-út block, scoped .zA ════════ */
+.zA .pill{display:inline-flex;gap:5px;align-items:center;padding:2px 10px;border-radius:var(--citui-radius-pill);font-size:12px;font-weight:600;border:1px solid var(--citui-line-strong);color:var(--citui-muted);white-space:nowrap}
+.zA .pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-color:transparent}
+.zA .pill.bad{background:var(--bad-soft);color:var(--citui-bad-ink);border-color:transparent}
+.zA .pill.warn{background:var(--warn-soft);color:var(--citui-warn-ink);border-color:transparent}
+.zA .pill.run{background:var(--acc-soft);color:var(--citui-link-ink);border-color:transparent}
+.zA .btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.zA .btn.primary{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.zA .btn.link{border-color:transparent;color:var(--citui-link-ink);padding-left:2px;padding-right:2px}
+.chdot{width:10px;height:10px;border-radius:3px;flex:none;display:inline-block}
+.chdot.viber{background:var(--ch-viber)} .chdot.wa{background:var(--ch-wa)} .chdot.mms{background:var(--ch-mms)}
+.zA .lgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;margin-top:12px}
+.zA .card{border:1px solid var(--citui-line);border-radius:12px;padding:14px 16px;min-width:0}
+.zA .card__h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.zA .chbig{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--citui-surface);border:1px solid var(--citui-line)}
+.zA .chbig .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--citui-white);flex:none}
+.zA .chbig .ic.viber{background:var(--ch-viber)} .zA .chbig .ic.wa{background:var(--ch-wa)} .zA .chbig .ic.mms{background:var(--ch-mms)}
+.zA .chbig b{display:block;font-size:15px}
+.zA .ladder{list-style:none;margin:12px 0 0;padding:0;font-size:13px}
+.zA .ladder li{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:6px 0;border-top:1px solid var(--citui-line)}
+.zA .ladder .n{width:20px;height:20px;border-radius:50%;border:1px solid var(--citui-line-strong);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--citui-muted)}
+.zA .ladder li.pick .n{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.zA .ladder li.pick{font-weight:600}
+.zA .ladder li.skip{color:var(--citui-muted)}
+.zA .ladder .why{font-size:12px;color:var(--citui-muted);font-weight:400;text-align:right}
+.zA .presence{margin-top:10px;font-size:12.5px;color:var(--citui-muted);display:flex;gap:6px;align-items:flex-start}
+.zA .msg .shot{display:block;width:100%;max-width:260px;border-radius:10px;border:1px solid var(--citui-line);background:var(--citui-surface)}
+.zA .msgtext{margin-top:8px;font-size:13px;background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:10px;padding:8px 10px;word-break:break-word;white-space:pre-line}
+.zA .msgtext a{color:var(--citui-link-ink)}
+.zA .msg .cap{font-size:12px;color:var(--citui-muted);margin:6px 0 0}
+.zA .stairs{grid-column:1/-1;border:1px solid var(--citui-line);border-radius:12px;padding:14px 16px}
+.zA .steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:12px}
+.zA .st{position:relative;padding:0 8px 0 0}
+.zA .st .bar{height:6px;border-radius:99px;background:var(--citui-line);margin:0 0 10px}
+.zA .st.done .bar{background:var(--citui-ok)} .zA .st.run .bar{background:repeating-linear-gradient(90deg,var(--citui-cyan-500) 0 8px,var(--acc-soft) 8px 14px)}
+.zA .st.fail .bar{background:var(--citui-bad)} .zA .st.na .bar{background:repeating-linear-gradient(135deg,var(--citui-line) 0 4px,transparent 4px 8px)}
+.zA .st h4{margin:0;font-size:13px;display:flex;gap:6px;align-items:center}
+.zA .st .t{font-size:13px;font-weight:600;margin-top:2px}
+.zA .st p{margin:2px 0 0;font-size:12px;color:var(--citui-muted)}
+.zA .st.todo h4,.zA .st.todo .t{color:var(--citui-muted)}
+.zA .st .ico{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none;border:1px solid var(--citui-line-strong);color:var(--citui-muted)}
+.zA .st.done .ico{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+.zA .st.fail .ico{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+.zA .st.run .ico{border-color:var(--citui-cyan-500);color:var(--citui-cyan-500)}
+.zA .reply{margin-top:14px;border:1px solid var(--citui-line-strong);border-left:4px solid var(--citui-ok);border-radius:10px;padding:10px 12px;background:var(--citui-ok-soft)}
+.zA .reply q{display:block;font-size:14px;margin:4px 0 6px;quotes:"„" "”"}
+.zA .errbox{margin-top:14px;border-radius:10px;padding:10px 12px;background:var(--bad-soft);color:var(--citui-bad-ink);font-size:13px}
+.zA .errbox .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.zA .info{margin-top:14px;border-radius:10px;padding:10px 12px;background:var(--citui-surface-2);font-size:13px;color:var(--citui-navy-700)}
+/* dashboard tiles */
+.zA .dgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.zA .tile{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;min-width:0}
+.zA .tile h3{margin:0;font-size:12.5px;font-weight:600;color:var(--citui-muted);display:flex;gap:6px;align-items:center}
+.zA .big{font:700 30px var(--citui-font-display);margin:4px 0 2px;letter-spacing:-.01em}
+.zA .big small{font:500 15px var(--citui-font-text);color:var(--citui-muted)}
+.zA .tile.off{opacity:.55}
+.zA .splitline{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;margin-top:2px}
+.zA .splitline span{display:inline-flex;gap:6px;align-items:center}
+.zA .nolimit{margin-top:10px;padding-top:9px;border-top:1px solid var(--citui-line);font-size:12.5px;color:var(--citui-navy-700);display:flex;gap:7px;align-items:flex-start}
+.zA .nolimit svg{flex:none;margin-top:2px;color:var(--citui-ok)}
+.zA .stack{display:flex;height:22px;gap:2px;margin:10px 0 8px;border-radius:4px;overflow:hidden}
+.zA .stack i{display:block;height:100%}
+.zA .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px}
+.zA .legend span{display:inline-flex;gap:6px;align-items:center}
+.zA .legend b{font-weight:600}
+.zA .chtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.zA .chtile{border:1px solid var(--citui-line);border-top:4px solid var(--c);border-radius:12px;padding:12px 14px}
+.zA .chtile h3{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:center}
+.zA .rates{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.zA .rates div{background:var(--citui-surface);border-radius:8px;padding:6px 8px}
+.zA .rates b{display:block;font:700 19px var(--citui-font-display)}
+.zA .rates span{font-size:11.5px;color:var(--citui-muted)}
+.zA .rates .na b{color:var(--citui-muted)}
+.zA .brake{display:flex;gap:10px;align-items:flex-start}
+.zA .brake .sig{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none;background:var(--citui-ok);box-shadow:0 0 0 4px var(--citui-ok-soft)}
+.zA .brake.stop .sig{background:var(--citui-bad);box-shadow:0 0 0 4px var(--bad-soft)}
+.zA .brake.off .sig{background:var(--citui-muted);box-shadow:0 0 0 4px var(--citui-surface-2)}
+.zA .brake b{display:block}
+.zA .switch{display:flex;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--citui-line);cursor:pointer;user-select:none}
+.zA .switch input{position:absolute;opacity:0;pointer-events:none}
+.zA .switch .tr{width:40px;height:22px;border-radius:99px;background:var(--citui-line-strong);position:relative;flex:none;transition:background .15s}
+.zA .switch .tr::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--citui-white);transition:left .15s}
+.zA .switch input:checked + .tr{background:var(--citui-ok)}
+.zA .switch input:checked + .tr::after{left:21px}
+.zA .switch input:focus-visible + .tr{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.tip{position:fixed;z-index:99;pointer-events:none;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px;padding:6px 9px;border-radius:8px;display:none;max-width:240px}
+@container (max-width:720px){
+  .zA .lgrid,.zA .dgrid,.zA .chtiles{grid-template-columns:1fr}
+  .zA .steps{grid-template-columns:1fr}
+  .zA .st{display:grid;grid-template-columns:6px 1fr;gap:0 12px;padding:0 0 12px}
+  .zA .st .bar{width:6px;height:auto;min-height:44px;margin:0;grid-row:1/4}
+  .zA .msg .shot{max-width:100%}
+  .zA .ladder .why{text-align:left;grid-column:2/-1}
+  .zA .ladder li{grid-template-columns:22px 1fr}
+}
+
+/* ════════ NEW (2nd round) — approval page + replies block, scoped .zB ════════ */
+.zB .ptabs{display:flex;gap:4px;margin-top:10px;border-bottom:1px solid var(--citui-line);overflow-x:auto}
+.zB .ptabs button{font:inherit;font-size:.88rem;border:0;background:none;padding:9px 12px 10px;cursor:pointer;color:var(--citui-muted);border-bottom:3px solid transparent;white-space:nowrap}
+.zB .ptabs button.on{color:var(--citui-ink);font-weight:700;border-bottom-color:var(--citui-cyan-500)}
+.zB .ptabs .n{display:inline-block;min-width:22px;padding:1px 7px;margin-left:6px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);font-size:.76rem;font-weight:700;color:var(--citui-ink)}
+.zB .ptabs button.alert .n{background:color-mix(in srgb,var(--citui-warn) 22%,var(--citui-white));color:var(--citui-warn-ink)}
+.zB .tabsay{padding:9px 0;font-size:.84rem;color:var(--citui-muted);line-height:1.45}
+.zB .routebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.8rem;padding:6px 10px;border-radius:10px;background:var(--citui-surface);border:1px solid var(--citui-line);margin-bottom:12px}
+.zB .routebar .sig{width:9px;height:9px;border-radius:50%;background:var(--citui-ok);flex:none}
+.zB .routebar.stop{background:var(--bad-soft);border-color:transparent;color:var(--citui-bad-ink)}
+.zB .routebar.stop .sig{background:var(--citui-bad)}
+.zB .routebar span:nth-child(2){flex:1 1 220px}
+.zB .routebar a{color:var(--citui-link-ink);font-weight:600}
+.zB .aq{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
+.zB .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}
+.zB .list{max-height:660px;overflow:auto}
+.zB .cnt{font-size:.8rem;color:var(--citui-muted);padding:10px 14px;border-bottom:1px solid var(--citui-line)}
+.zB .chips{display:flex;gap:5px;flex-wrap:wrap}
+.zB .chips button{font:inherit;font-size:.76rem;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 9px;cursor:pointer;color:var(--citui-ink)}
+.zB .chips button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
+.zB .chips button:disabled{opacity:.45;cursor:default}
+.zB .row{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--citui-line);cursor:pointer}
+.zB .row:hover{background:var(--citui-surface-2)}
+.zB .row.on{background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+.zB .row .t{flex:1;min-width:0}
+.zB .row b{display:block;font-size:.9rem}
+.zB .row small{color:var(--citui-muted);font-size:.76rem}
+.zB .grp{padding:8px 14px 6px;font-size:.74rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--citui-muted);background:var(--citui-surface);border-bottom:1px solid var(--citui-line);display:flex;gap:6px;align-items:center}
+.zB .grp svg{width:13px;height:13px}
+.zB .grp .gsub{text-transform:none;letter-spacing:0;font-weight:400;margin-left:auto}
+.zB .gnote{padding:7px 14px;font-size:.76rem;line-height:1.45;color:var(--citui-navy-700);background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line)}
+.zB .ch{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-weight:700;border-radius:var(--citui-radius-pill);padding:3px 9px;white-space:nowrap;border:1px solid transparent}
+.zB .ch svg{width:13px;height:13px;flex:none}
+.zB .ch.viber{background:color-mix(in srgb,var(--ch-viber) 12%,var(--citui-white));color:var(--citui-navy-700);border-color:color-mix(in srgb,var(--ch-viber) 40%,transparent)}
+.zB .ch.wa{background:color-mix(in srgb,var(--ch-wa) 14%,var(--citui-white));color:var(--citui-link-ink);border-color:color-mix(in srgb,var(--ch-wa) 45%,transparent)}
+.zB .ch.mms{background:var(--warn-soft);color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 35%,transparent)}
+.zB .ch.mail{background:var(--citui-surface-2);color:var(--citui-navy-700);border-color:var(--citui-line-strong)}
+.zB .ch.wait{background:var(--citui-surface-2);color:var(--citui-muted);border-color:var(--citui-line-strong);font-weight:600}
+.zB .head{padding:14px 16px;margin-bottom:12px}
+.zB .head h2{margin:0 0 4px;font-size:1.12rem;font-family:var(--citui-font-display)}
+.zB .meta{font-size:.84rem;color:var(--citui-muted);line-height:1.5}
+.zB .meta a{color:var(--citui-link-ink)}
+.zB .how{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--citui-surface);border:1px solid var(--citui-line);font-size:.86rem;line-height:1.5}
+.zB .how .why{color:var(--citui-muted);font-size:.8rem;margin-top:4px}
+.zB .route{display:flex;margin-top:10px;flex-wrap:wrap}
+.zB .step{flex:1 1 0;min-width:120px;padding:8px 10px;border:1px solid var(--citui-line);background:var(--citui-white);font-size:.78rem;line-height:1.35;color:var(--citui-muted)}
+.zB .step:first-child{border-radius:10px 0 0 10px} .zB .step:last-child{border-radius:0 10px 10px 0}
+.zB .step+.step{border-left:0}
+.zB .step b{display:flex;gap:5px;align-items:center;font-size:.82rem;color:var(--citui-ink)}
+.zB .step b svg{width:14px;height:14px}
+.zB .step.pick{background:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-white));border-color:var(--citui-cyan-500);color:var(--citui-ink);box-shadow:inset 0 -3px 0 var(--citui-cyan-500)}
+.zB .step.no{opacity:.6}
+.zB .act{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.zB .btn{font:inherit;font-weight:700;font-size:.92rem;border-radius:var(--citui-radius-sm);padding:10px 20px;cursor:pointer;border:1px solid var(--citui-line-strong);background:var(--citui-surface-2);color:var(--citui-ink)}
+.zB .btn.yes{background:var(--citui-ok-ink);border-color:var(--citui-ok-ink);color:var(--citui-white)}
+.zB .copy{padding:12px 16px;margin-bottom:12px}
+.zB .copy h3{margin:0 0 6px;font-size:.92rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.zB .copy .to{font-size:.8rem;color:var(--citui-muted);margin-bottom:8px}
+.zB .copy label{font-size:.78rem;color:var(--citui-muted)}
+.zB .copy textarea{width:100%;font:inherit;font-size:.86rem;border:1px solid var(--citui-line-strong);border-radius:10px;padding:8px 10px;min-height:96px;resize:vertical}
+.zB .site{height:300px;background:linear-gradient(180deg,color-mix(in srgb,var(--citui-navy-700) 70%,var(--citui-white)),var(--citui-surface-2));display:flex;align-items:center;justify-content:center;color:var(--citui-white);font-family:var(--citui-font-display);font-size:1.3rem;border-radius:var(--citui-radius-sm);text-align:center;padding:20px}
+.zB .empty{padding:40px;text-align:center;color:var(--citui-muted)}
+.zB .flash{margin:0 0 12px;padding:9px 12px;border-radius:10px;background:var(--citui-ok-soft);color:var(--citui-ok-ink);font-size:.86rem}
+.zB .fbar{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-bottom:1px solid var(--citui-line)}
+.zB .fbar input[type=search]{font:inherit;font-size:.82rem;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:5px 12px;width:100%}
+.zB .fbar .lbl{font-size:.7rem;color:var(--citui-muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.zB .nores{padding:18px 14px;color:var(--citui-muted);font-size:.84rem}
+.zB .clr{font:inherit;font-size:.76rem;border:0;background:none;color:var(--citui-link-ink);text-decoration:underline;cursor:pointer;padding:0;align-self:flex-start}
+/* tab 2 */
+.zB .tl{display:flex;flex-direction:column;margin-top:10px;font-size:.84rem}
+.zB .tl div{display:flex;gap:10px;align-items:center;padding:5px 0}
+.zB .tl i{width:10px;height:10px;border-radius:50%;background:var(--citui-ok);flex:none}
+.zB .tl .x i{background:var(--citui-white);border:2px solid var(--citui-bad)}
+.zB .tl .x{color:var(--citui-bad-ink);font-weight:700}
+.zB .phone{max-width:300px;background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:18px;padding:12px}
+.zB .bub{background:var(--citui-white);border-radius:12px;padding:6px;box-shadow:var(--citui-shadow-sm);font-size:.8rem;line-height:1.4}
+.zB .bub p{margin:6px 4px 2px;white-space:pre-line;word-break:break-word}
+.zB .bub a{color:var(--citui-link-ink)}
+.zB .bub .tick{text-align:right;color:var(--citui-muted);font-size:.7rem;margin:0 4px}
+.zB .pimg{height:140px;border-radius:8px;background:linear-gradient(160deg,color-mix(in srgb,var(--citui-navy-700) 75%,var(--citui-white)),var(--citui-cyan-300));display:flex;align-items:flex-end;padding:8px;color:var(--citui-white);font-weight:700;font-size:.78rem}
+.zB .two{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}
+.zB .warnbox{margin-top:10px;font-size:.8rem;color:var(--citui-muted);line-height:1.45}
+/* dashboard replies */
+.zB .rep-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--citui-line)}
+.zB .rep-h h2{font-size:1rem;margin:0 8px 0 0;font-family:var(--citui-font-display)}
+.zB .badge{background:var(--citui-bad-ink);color:var(--citui-white);font-size:.74rem;font-weight:700;border-radius:var(--citui-radius-pill);padding:2px 9px}
+.zB .rep{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:480px}
+.zB .rep-l{border-right:1px solid var(--citui-line)}
+.zB .it{display:block;padding:10px 14px;border-bottom:1px solid var(--citui-line);cursor:pointer}
+.zB .it.on{background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+.zB .it .l1{display:flex;gap:6px;align-items:center}
+.zB .it .l1 b{flex:1;min-width:0;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zB .it .dot{width:8px;height:8px;border-radius:50%;background:var(--citui-bad);flex:none}
+.zB .it.done .dot{background:var(--citui-line-strong)}
+.zB .it .ex{font-size:.8rem;color:var(--citui-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zB .it .when{font-size:.74rem;color:var(--citui-muted)}
+.zB .tag{display:inline-block;margin-top:4px;font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:6px;background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-white));color:var(--citui-warn-ink)}
+.zB .rep-r{padding:14px 18px;min-width:0}
+.zB .rep-r .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+.zB .rep-r .who b{font-size:1.02rem;font-family:var(--citui-font-display)}
+.zB .chat{display:flex;flex-direction:column;gap:8px;max-width:640px}
+.zB .cm{max-width:80%;padding:8px 12px;border-radius:14px;font-size:.86rem;line-height:1.45;white-space:pre-line;word-break:break-word}
+.zB .cm a{color:var(--citui-link-ink)}
+.zB .cm .lb{display:block;font-size:.72rem;color:var(--citui-muted);margin-bottom:3px;font-weight:600;white-space:normal}
+.zB .cm.out{align-self:flex-end;background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));border-bottom-right-radius:4px}
+.zB .cm.in{align-self:flex-start;background:var(--citui-white);border:1px solid var(--citui-line-strong);border-bottom-left-radius:4px}
+.zB .cm .pimg{height:110px;margin-bottom:6px;font-size:.74rem;white-space:normal}
+.zB .cm .rc{display:block;text-align:right;font-size:.7rem;color:var(--citui-muted);margin-top:3px}
+.zB .cm .rc.read{color:var(--citui-link-ink);font-weight:700}
+.zB .day{align-self:center;font-size:.72rem;color:var(--citui-muted);padding:2px 10px;background:var(--citui-surface-2);border-radius:var(--citui-radius-pill)}
+.zB .ans{margin-top:14px;padding:12px;border:1px dashed var(--citui-line-strong);border-radius:12px;background:var(--citui-surface)}
+.zB .ans h4{margin:0 0 6px;font-size:.86rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.zB .ans textarea{width:100%;font:inherit;font-size:.86rem;border:1px solid var(--citui-line-strong);border-radius:10px;padding:8px 10px;min-height:80px}
+.zB .ans .hint{font-size:.76rem;color:var(--citui-muted);margin:6px 0}
+.zB .block{margin-top:12px;font-size:.84rem;color:var(--citui-bad-ink);font-weight:700}
+.flashblk{transition:box-shadow .3s;border-radius:var(--citui-radius-sm)}
+.flashblk.flash-on{box-shadow:0 0 0 3px var(--citui-cyan-500)}
+@container (max-width:900px){
+  .zB .aq,.zB .rep{grid-template-columns:1fr}
+  .zB .list{max-height:420px}
+  .zB .rep-l{border-right:0;border-bottom:1px solid var(--citui-line);max-height:300px;overflow:auto}
+}
+@container (max-width:700px){
+  .zB .two{grid-template-columns:1fr}
+  .zB .phone{max-width:100%}
+}
+@container (max-width:600px){
+  .zB .ptabs .lg{display:none}
+  .zB .ptabs button{padding:9px 8px 10px}
+  .zB .step{flex-basis:100%;border-radius:0!important;border-left:1px solid var(--citui-line)!important}
+  .zB .step+.step{border-top:0}
+  .zB .step:first-child{border-radius:10px 10px 0 0!important} .zB .step:last-child{border-radius:0 0 10px 10px!important}
+  .zB .rep-r{padding:12px}
+  .zB .cm{max-width:92%}
+  .zB .btn{padding:10px 14px}
+}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mock-vezérlő (nem része a tervnek)">
+  <span class="mgrp"><b>Nézet</b><button data-v="j" aria-pressed="true">Jóváhagyás</button><button data-v="d" aria-pressed="false">Irányítópult</button><button data-v="l" aria-pressed="false">Lead-oldal</button></span>
+  <span class="mgrp"><b>Méret</b><button data-s="mob" aria-pressed="false">Mobil 390px</button><button data-s="desk" aria-pressed="true">Asztali</button></span>
+  <span class="mgrp" id="stgrp"><b>Lead-állapot</b><span class="mgrp" id="stbtns"></span></span>
+  <span class="mgrp"><b>Fék</b><span class="mgrp" id="brbtns"></span></span>
+</div>
+<div class="note">
+  <p><span class="mk a">Jóváhagyva · A</span> a lead-oldal és a Messenger-út blokk (a tulaj 2026-11-08-án jóváhagyta), változatlanul, két módosítással: <b>a messenger-küldés korlátlan</b> (ami jóvá van hagyva, kimegy; a csempe csak a mai darabszámot mutatja), és a kimenő szöveg a <b>valódi gépi szöveg</b>.</p>
+  <p><span class="mk new">Új · döntésre vár</span> a jóváhagyó lap két füllel és az irányítópult Válaszok-blokkja csatorna-szűrővel és csevegéssel (2. kör). A fék és a be/ki kapcsoló közös: ha az irányítópulton kikapcsolod vagy a fék leáll, a jóváhagyó lap és a lead-oldal is MMS + SMS-t mutat. Minta-adatok, a gombok semmit nem küldenek.</p>
+</div>
+
+<div class="frame" id="frame" data-size="desk"><div class="shell">
+  <aside class="side">
+    <div class="logo">Citoviso<small>operátor-konzol</small></div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <main class="main" id="main"></main>
+</div></div>
+<div class="tip" id="tip"></div>
+
+<script>
+(function(){
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ── icons (inline SVG, no emoji) ── */
+const I = {
+  viber:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c5 0 8 2.6 8 7.5S17 18 12 18l-4 3v-3.6C5.4 16.5 4 14 4 10.5 4 5.6 7 3 12 3z"/><path d="M9.5 8.5c.3 2.6 2.4 4.7 5 5"/></svg>',
+  wa:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8.4 19z"/><path d="M9 9c0 3 3 6 6 6"/></svg>',
+  mms:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
+  ok:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>',
+  x:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  dot:'<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor"/></svg>',
+  eye:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  go:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  alert:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>',
+  inf:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 9a3 3 0 1 0 0 6c2.5 0 7.5-6 10-6a3 3 0 1 1 0 6c-2.5 0-7.5-6-10-6z"/></svg>',
+  dash:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+  check:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/></svg>',
+  user:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg>',
+};
+/* small 16px set for the new screens' pills */
+const IS = {
+  viber:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5h10a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5H8l-3 2.5v-2.5H3A1.5 1.5 0 0 1 1.5 10V4A1.5 1.5 0 0 1 3 2.5z"/><path d="M6 6.2c.4 1.2 1.3 2.1 2.6 2.6"/></svg>',
+  wa:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 13.8l.9-2.7A6 6 0 1 1 5 13z"/><path d="M6 5.6c.2 1.9 2.4 4.1 4.4 4.4"/></svg>',
+  mms:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="1.5" width="8" height="13" rx="1.6"/><path d="M6.2 11.5h3.6"/><circle cx="8" cy="6" r="1.6"/></svg>',
+  sms:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12v8H7l-3 2.5V11H2z"/></svg>',
+  mail:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="3.2" width="12.4" height="9.6" rx="1.4"/><path d="M2.4 4l5.6 4.4L13.6 4"/></svg>',
+  wait:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/></svg>'
+};
+const MK = {
+  a:'<span class="mk a">'+I.ok+'Jóváhagyva · A</span>',
+  chg:'<span class="mk chg">'+I.ok+'Jóváhagyva · A — módosítva: korlátlan küldés</span>',
+  nw:'<span class="mk new">Új · döntésre vár</span>',
+};
+
+/* ── the REAL machine texts (src/outreach/messengerCaption.ts + draft.ts renderPairSmsDraft) ── */
+const fold = (s) => s.replace(/–/g, "-").normalize("NFD").replace(/[̀-ͯ]/g, "");
+const slug = (n) => fold(n).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+const LINK = (n) => "https://citoviso.com/p/" + slug(n) + "/…";
+const CAPTION = (n) => n + " – a képen látható honlap-látványtervet most megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n" + LINK(n);
+const PAIRSMS = (n) => fold(n + " – az imént MMS-ben küldött honlap-látványtervet most megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata") + "\n" + LINK(n);
+const linkify = (s) => esc(s).replace(/(https:\/\/\S+)/, '<a href="#" data-nolink="1">$1</a>');
+
+/* ── shared state ── */
+const S = {
+  view:"j", size:"desk", st:"viber", brake:"ok", on:true, sentToday:7,
+  tab:1, sel:1, sel2:101, flash:"",
+  f1:{ch:"all",q:"all",s:""}, f2:{ch:"all",st:"all",act:"all",d:"all"},
+  rf:{open:"open",ch:"all"}, rsel:201, rflash:"",
+};
+const routeOn = () => S.on && S.brake === "ok";
+const routeWhy = () => !S.on ? "a messenger-út ki van kapcsolva" : S.brake === "limited" ? "a fék leállította (fiók-korlátozás)" : "a fék leállította (az olvasási arány a felére esett)";
+
+/* ════════ NEW: approval page ════════ */
+const LABEL = {viber:"Viber", wa:"WhatsApp", mms:"MMS + SMS", sms:"SMS", mail:"E-mail", wait:"Ellenőrzés vár"};
+const PCLS = {viber:"viber", wa:"wa", mms:"mms", sms:"mms", mail:"mail", wait:"wait"};
+const pill = (ch, extra) => '<span class="ch ' + PCLS[ch] + '">' + IS[ch] + LABEL[ch] + (extra ? " · " + extra : "") + "</span>";
+const chips = (name, opts, cur) => '<div class="chips">' + opts.map((o) =>
+  '<button data-fk="' + name + '" data-fv="' + o[0] + '" class="' + (cur === o[0] ? "on" : "") + '"' + (o[2] === 0 && cur !== o[0] ? " disabled" : "") + ">" + o[1] + (o[2] != null ? " " + o[2] : "") + "</button>").join("") + "</div>";
+
+const leads = [
+  {id:1,n:"Léna Apartmanház",c:"Balatonlelle",q:"no_site",p:"+36 20 921 7456",ch:"viber",seen:"tegnap",checked:"ma 14:10",hasV:true,hasW:true},
+  {id:2,n:"VIVAZA Villa Szigliget",c:"Szigliget",q:"no_site",p:"+36 70 242 5582",ch:"wa",checked:"ma 14:11",hasV:false,hasW:true},
+  {id:3,n:"Viola Harmony Apartman Siófok",c:"Siófok",q:"no_site",p:"+36 30 213 3700",ch:"mms",checked:"ma 14:12",hasV:false,hasW:false},
+  {id:4,n:"Anna Apartman",c:"Pápa",q:"no_site",p:"+36 20 238 2991",ch:"viber",seen:"október 2.",checked:"ma 14:13",hasV:true,hasW:false,old:true},
+  {id:5,n:"Jam Szálláshely",c:"Kecskemét",q:"no_site",p:"+36 30 482 0840",ch:"wa",checked:"ma 14:14",hasV:true,hasW:true,vOld:"régen"},
+  {id:6,n:"Veronika Vendégház",c:"Murarátka",q:"no_site",p:"+36 20 959 8192",ch:"wait",hasV:null,hasW:null},
+  {id:7,n:"Aranysas Vendégház",c:"Jenő",q:"no_site",p:"+36 20 970 3112",ch:"wait",hasV:null,hasW:null},
+  {id:8,n:"Dózsa Ház",c:"Baja",q:"outdated",p:"",e:"info@dozsahaz.hu",ch:"mail"},
+  {id:9,n:"Rózsakert Panzió",c:"Eger",q:"outdated",p:"+36 30 555 0192",ch:"viber",seen:"ma",checked:"ma 14:15",hasV:true,hasW:true},
+];
+const unread = [
+  {id:101,n:"Szőlőskert Vendégház",c:"Badacsonytomaj",ch:"viber",sent:"nov. 3. 10:12",del:"nov. 3. 10:12",seen:"tegnap",act7:true,days:4,state:"kézbesítve"},
+  {id:102,n:"Hajnal Apartman",c:"Zamárdi",ch:"wa",sent:"nov. 3. 10:31",del:"nov. 3. 11:02",days:4,state:"kézbesítve"},
+  {id:103,n:"Patak-parti Szállás",c:"Szilvásvárad",ch:"viber",sent:"nov. 4. 09:05",del:"nov. 4. 09:05",seen:"október 21.",days:3,state:"kézbesítve"},
+  {id:104,n:"Napraforgó Ház",c:"Hévíz",ch:"wa",sent:"nov. 4. 09:40",del:"",days:3,state:"csak elküldve"},
+  {id:105,n:"Kék Vitorla Apartman",c:"Balatonfüred",ch:"viber",sent:"nov. 4. 10:02",del:"nov. 4. 10:03",seen:"ma",act7:true,days:3,state:"kézbesítve"},
+  {id:106,n:"Fenyves Lak",c:"Mátraháza",ch:"viber",sent:"okt. 31. 11:20",del:"okt. 31. 11:20",seen:"november 1.",act7:true,days:8,state:"kézbesítve"},
+];
+/* effective channel: with the messenger path off / braked every messenger lead goes as the MMS + SMS pair */
+const eff = (l) => routeOn() ? l.ch : (l.ch === "mail" ? "mail" : "mms");
+
+function channelText(l){
+  const ch = eff(l);
+  if (ch === "mms" && l.ch !== "mms") return {t:"MMS + SMS megy, együtt: előbb MMS-ben a terv képe, utána SMS a linkkel.", why:"Most " + routeWhy() + ", ezért a messenger helyett a pár megy."};
+  if (ch === "viber") return {t:"Viberen megy: a terv képe + a szöveg a linkkel, egy üzenetben. SMS nem megy.",
+    why:(l.old ? "Viber-fiók van, de régen használta (utoljára: " + l.seen + "); WhatsApp nincs, ezért mégis Viber." : "Viber-fiók van, utoljára " + l.seen + " volt aktív.") + " Ellenőrizve " + l.checked + ", üzenet nélkül."};
+  if (ch === "wa") return {t:"WhatsAppon megy: a terv képe + a szöveg a linkkel, egy üzenetben. SMS nem megy.",
+    why:(l.hasV ? "Viber-fiók is van, de " + l.vOld + " volt aktív, ezért a WhatsApp az első." : "Viber-fiókja nincs, WhatsApp van.") + " Ellenőrizve " + l.checked + ", üzenet nélkül."};
+  if (ch === "mms") return {t:"MMS + SMS megy, együtt: előbb MMS-ben a terv képe, utána SMS a linkkel.", why:"Se Viber-, se WhatsApp-fiókja nincs. Ellenőrizve " + l.checked + ", üzenet nélkül."};
+  if (ch === "mail") return {t:"E-mailben megy (levél + a terv képe).", why:"Magyar mobilszám nincs, ezért messenger-ellenőrzés sem."};
+  return {t:"Még nem tudjuk: a telefon a sorba érkezéskor megnézi, van-e Vibere / WhatsAppja (üzenet nélkül, ~20 mp leadenként).", why:"Ha jóváhagyod, mielőtt kiderül, kiküldéskor dől el (Viber → WhatsApp → MMS + SMS)."};
+}
+const KEEP = "Ha a fék leállítja vagy kikapcsolod a messenger-utat, MMS + SMS megy helyette, együtt. Kiküldéskor a telefon újra megnézi a fiókot.";
+function route(l){
+  const st = [["viber","1. Viber","ha aktív ≤ 30 napja"],["wa","2. WhatsApp","ha van fiók"],["viber","3. Viber","régi aktivitással is"],["mms","4. MMS + SMS","együtt, tartalék"]];
+  const ch = eff(l);
+  const pick = ch === "viber" ? (l.old ? 2 : 0) : ch === "wa" ? 1 : ch === "mms" ? 3 : -1;
+  return '<div class="route">' + st.map((s, i) => {
+    let cls = i === pick ? "pick" : (pick >= 0 && i < pick ? "no" : ""), sub = s[2];
+    if (i === 0 && l.hasV === false) sub = "nincs Viber";
+    if (i === 0 && l.hasV && (l.old || l.vOld)) sub = "régen aktív";
+    if (i === 1 && l.hasW === false) sub = "nincs WhatsApp";
+    if (!routeOn() && i < 3 && l.ch !== "mms") sub = "messenger-út nem él";
+    if (i === pick) sub = "EZ MEGY";
+    return '<div class="step ' + cls + '"><b>' + IS[s[0]] + s[1] + "</b>" + sub + "</div>";
+  }).join("") + "</div>";
+}
+const sMatch = (l) => !S.f1.s || (l.n + " " + l.c).toLowerCase().indexOf(S.f1.s.toLowerCase()) >= 0;
+const match1 = (l) => { const f = S.f1; return (f.ch === "all" || eff(l) === f.ch) && (f.q === "all" || l.q === f.q) && sMatch(l); };
+function list1(){
+  const vis = leads.filter(match1);
+  const cnt = {all:0,viber:0,wa:0,mms:0,mail:0,wait:0};
+  leads.filter((l) => (S.f1.q === "all" || l.q === S.f1.q) && sMatch(l)).forEach((l) => { cnt.all++; cnt[eff(l)]++; });
+  const qc = (q) => leads.filter((l) => (S.f1.ch === "all" || eff(l) === S.f1.ch) && (q === "all" || l.q === q) && sMatch(l)).length;
+  const any = S.f1.ch !== "all" || S.f1.q !== "all" || S.f1.s;
+  const fb = '<div class="fbar"><input type="search" data-search="1" aria-label="Keresés név vagy település szerint" placeholder="Keresés név vagy település szerint" value="' + esc(S.f1.s) + '">' +
+    '<span class="lbl">Csatorna</span>' + chips("f1.ch", [["all","Mind",cnt.all],["viber","Viber",cnt.viber],["wa","WhatsApp",cnt.wa],["mms","MMS + SMS",cnt.mms],["mail","E-mail",cnt.mail],["wait","Ellenőrzés vár",cnt.wait]], S.f1.ch) +
+    '<span class="lbl">Honlap</span>' + chips("f1.q", [["all","Mind",qc("all")],["no_site","Nincs honlap",qc("no_site")],["outdated","Elavult honlap",qc("outdated")]], S.f1.q) +
+    (any ? '<button class="clr" data-clr="1">Szűrők törlése</button>' : "") + "</div>";
+  const order = [["viber","Viberen megy"],["wa","WhatsAppon megy"],["mms","MMS + SMS megy"],["mail","E-mailben megy"],["wait","Még ellenőrizzük"]];
+  let html = '<div class="card list"><div class="cnt">Jóváhagyásra vár: ' + (405 + leads.length) + (any ? " · szűrve: " + vis.length : "") + "</div>" + fb;
+  order.forEach((o) => {
+    const g = vis.filter((l) => eff(l) === o[0]); if (!g.length) return;
+    html += '<div class="grp">' + IS[o[0]] + o[1] + " · " + g.length + (o[0] === "viber" || o[0] === "wa" ? '<span class="gsub">SMS nélkül</span>' : o[0] === "mms" ? '<span class="gsub">csak együtt</span>' : "") + "</div>";
+    if (o[0] === "wait") html += '<div class="gnote">A telefon a sorba érkezéskor, üzenet nélkül megnézi, van-e Vibere vagy WhatsAppja; kiküldéskor újra megnézi.</div>';
+    html += g.map((l) => {
+      const sub = o[0] === "viber" ? l.c + " · aktív: " + l.seen : o[0] === "wait" ? l.c + " · a telefon most nézi" : l.c + " · " + (l.q === "no_site" ? "nincs honlap" : "elavult honlap");
+      return '<div class="row' + (l.id === S.sel ? " on" : "") + '" data-l="' + l.id + '"><div class="t"><b>' + esc(l.n) + "</b><small>" + esc(sub) + "</small></div></div>";
+    }).join("");
+  });
+  if (!vis.length) html += '<div class="nores">Erre a szűrésre nincs találat.</div>';
+  return html + "</div>";
+}
+function copyPanel(l){
+  const ch = eff(l);
+  if (ch === "mail") return '<div class="card copy"><h3>' + pill("mail") + ' Levél</h3><div class="to">Címzett: ' + esc(l.e) + '</div><textarea aria-label="Levél szövege">Tisztelt Dózsa Ház! Készítettünk Önöknek egy honlap-látványtervet…</textarea></div>';
+  if (ch === "mms") return '<div class="card copy"><h3>' + pill("mms") + ' Ami kimegy</h3><div class="to">Címzett: ' + esc(l.p) + ' · előbb MMS-ben a terv képe, utána ez az SMS — csak együtt</div><label for="cpt">SMS szövege (az MMS-kép után, ékezet nélkül)</label><textarea id="cpt">' + esc(PAIRSMS(l.n)) + "</textarea></div>";
+  const lab = ch === "wait" ? "Viber- / WhatsApp-üzenet szövege (a kép alatt)" : LABEL[ch] + "-üzenet szövege (a kép alatt)";
+  const to = ch === "wait" ? "Viberen / WhatsAppon ez megy a kép alatt; ha egyik sincs: MMS + a pár SMS-e, együtt" : "a kép alatt ez a szöveg, egy üzenetben; SMS nem megy";
+  return '<div class="card copy"><h3>' + pill(ch) + ' Ami kimegy</h3><div class="to">Címzett: ' + esc(l.p) + " · " + to + '</div><label for="cpt">' + lab + '</label><textarea id="cpt">' + esc(CAPTION(l.n)) + "</textarea></div>";
+}
+const flashHtml = () => S.flash ? '<div class="flash" role="status">' + esc(S.flash) + "</div>" : "";
+function tab1(){
+  const vis = leads.filter(match1);
+  const cur = vis.filter((l) => l.id === S.sel)[0] || vis[0];
+  const left = list1();
+  if (!cur) return '<div class="aq">' + left + "<div>" + flashHtml() + '<div class="card empty">Nincs megjeleníthető lead.</div></div></div>';
+  S.sel = cur.id; const ct = channelText(cur); const ch = eff(cur);
+  const how = '<div class="how"><div><b>Így megy ki:</b> ' + esc(ct.t) + "</div>" + (ch === "mail" ? "" : route(cur)) +
+    '<div class="why">' + esc(ct.why) + (ch === "viber" || ch === "wa" || ch === "wait" ? " " + KEEP : "") + "</div></div>";
+  const head = '<div class="card head"><h2>' + esc(cur.n) + '</h2><div class="meta">' + esc(cur.c) + " · Címzett: " + esc(cur.p || cur.e) + ' · <a href="#" data-v="l">lead lapja</a></div>' + how +
+    '<div class="act"><button class="btn yes" data-d="yes">Mehet</button><button class="btn" data-d="no">Nem mehet ki</button></div></div>';
+  return '<div class="aq">' + left + "<div>" + flashHtml() + head + copyPanel(cur) + '<div class="site">' + esc(cur.n) + "<br>— a terv teljes oldala (mint ma) —</div></div></div>";
+}
+function match2(u, f){ f = f || S.f2;
+  return !u.done && (f.ch === "all" || u.ch === f.ch) && (f.st === "all" || (f.st === "del" ? !!u.del : !u.del)) && (f.act === "all" || (f.act === "a7" ? !!u.act7 : !u.act7)) && (f.d === "all" || (f.d === "3" ? u.days === 3 : f.d === "46" ? u.days >= 4 && u.days <= 6 : u.days >= 7)); }
+function tl(u){
+  return '<div class="tl"><div><i></i>Elküldve ' + (u.ch === "viber" ? "Viberen" : "WhatsAppon") + ": " + u.sent + "</div>" +
+    (u.del ? "<div><i></i>Kézbesítve: " + u.del + "</div>" : '<div class="x"><i></i>Kézbesítve: még nem (a telefonja nem vette át)</div>') +
+    '<div class="x"><i></i>Megnézte: nem — ' + u.days + " napja</div>" +
+    (u.seen ? "<div><i></i>Viberen utoljára aktív: " + u.seen + (u.act7 ? " (használja, de ezt nem nyitotta meg)" : "") + "</div>" : "") + "</div>" +
+    (u.ch === "wa" ? '<div class="warnbox">WhatsAppon az is „nem nézte meg”-nek látszik, aki kikapcsolta az olvasási visszaigazolást.</div>' : "");
+}
+const bubble = (u) => '<div class="phone"><div class="bub"><div class="pimg">' + esc(u.n) + " — honlap-terv</div><p>" + linkify(CAPTION(u.n)) + '</p><div class="tick">' + u.sent + " · " + u.state + "</div></div></div>";
+const PAIR = "MMS + SMS megy ki, együtt (a mai pár): MMS-ben ugyanaz a kép, utána SMS ugyanazzal a linkkel. A messenger-üzenet marad, újat ott nem küldünk.";
+function tab2(){
+  const open = unread.filter((u) => !u.done), vis = open.filter((u) => match2(u));
+  const c = (k, v) => open.filter((u) => match2(u, Object.assign({}, S.f2, {[k]:v}))).length;
+  const any = S.f2.ch !== "all" || S.f2.st !== "all" || S.f2.act !== "all" || S.f2.d !== "all";
+  const fb = '<div class="fbar"><span class="lbl">Csatorna</span>' + chips("f2.ch", [["all","Mind",c("ch","all")],["viber","Viber",c("ch","viber")],["wa","WhatsApp",c("ch","wa")]], S.f2.ch) +
+    '<span class="lbl">Állapot</span>' + chips("f2.st", [["all","Mind",c("st","all")],["del","Kézbesítve",c("st","del")],["notdel","Csak elküldve",c("st","notdel")]], S.f2.st) +
+    '<span class="lbl">Viberen aktív</span>' + chips("f2.act", [["all","Mind",c("act","all")],["a7","Az elmúlt 7 napban",c("act","a7")],["old","Régebben / nem látszik",c("act","old")]], S.f2.act) +
+    '<span class="lbl">Mióta</span>' + chips("f2.d", [["all","Mind",c("d","all")],["3","3 napja",c("d","3")],["46","4–6 napja",c("d","46")],["7","7+ napja",c("d","7")]], S.f2.d) +
+    (any ? '<button class="clr" data-clr="2">Szűrők törlése</button>' : "") + "</div>";
+  const cur = vis.filter((u) => u.id === S.sel2)[0] || vis[0];
+  const left = '<div class="card list"><div class="cnt">3+ napja nem nézte meg: ' + open.length + (any ? " · szűrve: " + vis.length : "") + "</div>" + fb + vis.map((u) =>
+    '<div class="row' + (cur && u.id === cur.id ? " on" : "") + '" data-u="' + u.id + '"><div class="t"><b>' + esc(u.n) + "</b><small>" + esc(u.c) + " · " + u.days + " napja · " + u.state + "</small></div>" + pill(u.ch) + "</div>").join("") +
+    (vis.length ? "" : '<div class="nores">Erre a szűrésre nincs találat.</div>') + "</div>";
+  if (!cur) return '<div class="aq">' + left + "<div>" + flashHtml() + '<div class="card empty">Nincs megjeleníthető lead ezen a fülön.</div></div></div>';
+  S.sel2 = cur.id;
+  const head = '<div class="card head"><h2>' + esc(cur.n) + '</h2><div class="meta">' + esc(cur.c) + ' · <a href="#" data-v="l">lead lapja</a></div>' +
+    '<div class="two" style="margin-top:8px"><div>' + tl(cur) + '<div class="how" style="margin-top:12px"><b>Ha „Mehet”:</b> ' + PAIR + "</div>" +
+    '<div class="act"><button class="btn yes" data-u2="yes">Mehet MMS + SMS-ben is</button><button class="btn" data-u2="no">Nem kell</button></div></div>' + bubble(cur) + "</div></div>";
+  return '<div class="aq">' + left + "<div>" + flashHtml() + head + "</div></div>";
+}
+function routeBar(){
+  return routeOn()
+    ? '<div class="routebar"><span class="sig"></span><span><b>Messenger-út: bekapcsolva</b>, a fék nem lépett közbe. Korlátlan: ami jóvá van hagyva, kimegy (hétköznap 9–16).</span><a href="#" data-v="d">Irányítópult</a></div>'
+    : '<div class="routebar stop"><span class="sig"></span><span><b>Messenger-út: most nem küld</b> — ' + routeWhy() + '. Minden mobil-megkeresés MMS + SMS-ben megy, együtt.</span><a href="#" data-v="d">Irányítópult</a></div>';
+}
+function viewJ(){
+  const openN = unread.filter((u) => !u.done).length;
+  const say = S.tab === 1 ? "Itt döntöd el, mehet-e ki a megkeresés. A lista csatornánként csoportosítva mutatja, HOL megy ki: Viberen, WhatsAppon, MMS + SMS-ben vagy e-mailben."
+    : "Ide az kerül, akinek legalább 3 napja Viberen vagy WhatsAppon kiment a megkeresés, és nem nézte meg. Aki válaszolt vagy elutasított, ide soha nem kerül. WhatsAppon az is „nem nézte meg”-nek látszik, aki kikapcsolta az olvasási visszaigazolást.";
+  return '<div class="zB blk"><div class="blk-h"><p class="scr">Jóváhagyás · /jovahagyas</p>' + MK.nw + "</div><h1>Jóváhagyás</h1>" +
+    '<div class="ptabs" role="tablist"><button role="tab" data-t="1" class="' + (S.tab === 1 ? "on" : "") + '" aria-selected="' + (S.tab === 1) + '">Jóváhagyásra vár<span class="n">' + (405 + leads.length) + "</span></button>" +
+    '<button role="tab" data-t="2" class="alert ' + (S.tab === 2 ? "on" : "") + '" aria-selected="' + (S.tab === 2) + '"><span class="lg">Messengeren </span>nem nézte meg<span class="n">' + openN + "</span></button></div>" +
+    '<div class="tabsay">' + say + "</div>" + (S.tab === 1 ? routeBar() : "") + (S.tab === 1 ? tab1() : tab2()) + "</div>";
+}
+
+/* ════════ NEW: dashboard replies block ════════ */
+const replies = [
+  {id:201,n:"Mandula Vendégház",place:"Tihany",ch:"viber",from:"+36 30 412 7788",name:"Kovács Éva",when:"ma 10:41",open:true,ex:"Köszönöm, megnéztem! Mennyibe kerülne havonta?",tag:"Javaslatra vár",
+   chat:[["day","nov. 6."],["out","Kiküldött megkeresés · Viber · nov. 6. 09:58",CAPTION("Mandula Vendégház"),true,"Megnézve 12:14"],["day","ma"],["in","Viber · ma 10:41","Köszönöm, megnéztem! Mennyibe kerülne havonta?"]]},
+  {id:205,n:"Pitypang Apartman",place:"Gyenesdiás",ch:"wa",from:"+36 30 ••• 88 05",name:"",when:"nov. 5. 13:52",open:true,ex:"Köszönöm, megnéztem, nagyon tetszik! Mennyibe kerülne, ha ez lenne a honlapunk?",tag:"Javaslatra vár",
+   chat:[["day","nov. 5."],["out","Kiküldött megkeresés · WhatsApp · nov. 5. 11:21",CAPTION("Pitypang Apartman"),true,"Olvasott 13:47"],["in","WhatsApp · nov. 5. 13:52","Köszönöm, megnéztem, nagyon tetszik! Mennyibe kerülne, ha ez lenne a honlapunk?"]]},
+  {id:202,n:"Csillag Apartman",place:"Hajdúszoboszló",ch:"wa",from:"+36 20 377 1022",name:"",when:"ma 09:12",open:true,ex:"És a saját képeimet is fel tudom tenni?",tag:"Javaslatra vár",
+   chat:[["day","nov. 5."],["out","Kiküldött megkeresés · WhatsApp · nov. 5. 10:20",CAPTION("Csillag Apartman"),true,"Olvasott 10:31"],["in","WhatsApp · nov. 5. 10:35","Szép lett. Ez tényleg ingyenes?"],["out","Elküldött válasz · WhatsApp · nov. 5. 11:02","Igen, a terv megnézése ingyenes, és 14 napig az élő oldalt is kipróbálhatja kötelezettség nélkül.",false,"Olvasott 11:40"],["day","ma"],["in","WhatsApp · ma 09:12","És a saját képeimet is fel tudom tenni?"]]},
+  {id:203,n:"Krisztina Panzió",place:"Gyula",ch:"sms",from:"+36 30 811 2290",name:"",when:"tegnap 14:25",open:true,ex:"Rossz helyre küldték",tag:"Javaslatra vár",
+   chat:[["out","Kiküldött megkeresés · MMS + SMS · nov. 6. 10:02","(MMS-ben a terv képe, utána SMS:)\n" + PAIRSMS("Krisztina Panzió"),true,""],["in","SMS · tegnap 14:25","Rossz helyre küldték"]]},
+  {id:204,n:"Villa Eszter",place:"Balatonkeresztúr",ch:"mail",from:"balatonifecskek@…",name:"Eszter Varga",when:"nov. 6. 15:53",open:false,ex:"Köszönjük a megkeresést, de ez nem a mi apartmanházunk.",tag:"",
+   chat:[["out","Kiküldött levél · nov. 6. 09:27 · „Villa Eszter – honlap-terv”","Tisztelt Villa Eszter! Átnéztük a nyilvánosan elérhető adatait…",false,""],["in","E-mail · nov. 6. 15:53","Köszönjük a megkeresést, de ez nem a mi apartmanházunk."]]},
+];
+const matchR = (r) => (S.rf.open === "all" || r.open) && (S.rf.ch === "all" || r.ch === S.rf.ch);
+const via = (ch) => ch === "viber" ? "Viberen" : ch === "wa" ? "WhatsAppon" : ch === "sms" ? "SMS-ben" : "e-mailben";
+function repliesBlock(){
+  const vis = replies.filter(matchR), openN = replies.filter((r) => r.open).length;
+  const cc = (ch) => replies.filter((r) => (S.rf.open === "all" || r.open) && (ch === "all" || r.ch === ch)).length;
+  const oc = (o) => replies.filter((r) => (o === "all" || r.open) && (S.rf.ch === "all" || r.ch === S.rf.ch)).length;
+  const cur = vis.filter((r) => r.id === S.rsel)[0] || vis[0];
+  if (cur) S.rsel = cur.id;
+  const anyR = S.rf.ch !== "all" || S.rf.open !== "open";
+  const head = '<div class="rep-h"><h2>Válaszok a megkeresésekre</h2><span class="badge">' + openN + " megválaszolatlan</span>" +
+    chips("rf.open", [["open","Megválaszolatlan",oc("open")],["all","Mind",oc("all")]], S.rf.open) +
+    chips("rf.ch", [["all","Minden",cc("all")],["mail","E-mail",cc("mail")],["sms","SMS",cc("sms")],["viber","Viber",cc("viber")],["wa","WhatsApp",cc("wa")]], S.rf.ch) +
+    (anyR ? '<button class="clr" data-clr="r">Szűrők törlése</button>' : "") + "</div>";
+  const list = '<div class="rep-l">' + vis.map((r) =>
+    '<div class="it' + (r.open ? "" : " done") + (cur && r.id === cur.id ? " on" : "") + '" data-r="' + r.id + '"><div class="l1"><span class="dot"></span><b>' + esc(r.n) + "</b>" + pill(r.ch) + '<span class="when">' + r.when + '</span></div><div class="ex">' + esc(r.ex) + "</div>" + (r.tag && r.open ? '<span class="tag">' + r.tag + "</span>" : "") + "</div>").join("") +
+    (vis.length ? "" : '<div class="nores">Erre a szűrésre nincs válasz.</div>') + "</div>";
+  let right = '<div class="rep-r">';
+  if (cur) {
+    right += (S.rflash ? '<div class="flash" role="status">' + esc(S.rflash) + "</div>" : "") +
+      '<div class="who"><b>' + esc(cur.n) + '</b><span class="meta">' + esc(cur.place) + " · " + (cur.name ? esc(cur.name) + " · " : "") + esc(cur.from) + "</span>" + pill(cur.ch) + '</div><div class="chat">' + cur.chat.map((m) => {
+      if (m[0] === "day") return '<div class="day">' + m[1] + "</div>";
+      const img = m[0] === "out" && m[3] ? '<div class="pimg">' + esc(cur.n) + " — honlap-terv</div>" : "";
+      const rc = m[0] === "out" && m[4] ? '<span class="rc read">' + m[4] + "</span>" : "";
+      return '<div class="cm ' + m[0] + '"><span class="lb">' + esc(m[1]) + "</span>" + img + linkify(m[2]) + rc + "</div>";
+    }).join("") + "</div>";
+    if (cur.open) {
+      right += '<div class="ans"><h4>Válasz ' + via(cur.ch) + " " + pill(cur.ch) + '</h4><div class="hint">Poe javaslata ide érkezik; a válasz ugyanazon a csatornán megy vissza, ugyanabba a csevegésbe' + (cur.ch === "viber" || cur.ch === "wa" ? " — a telefon gépeli be, SMS nem megy" : "") + '.</div><textarea aria-label="Válasz szövege" placeholder="Írd meg a választ…"></textarea><div class="act"><button class="btn yes" data-send="1">Küldés ' + via(cur.ch) + '</button><button class="btn" data-done="1">Megválaszoltam</button></div></div>';
+    }
+    right += '<div class="block">Elutasító / nem érintett — ne keressük</div>';
+  }
+  right += "</div>";
+  return '<div class="zB blk" id="valaszok"><div class="blk-h"><p class="scr">Irányítópult · Válaszok-blokk</p>' + MK.nw + '</div><div class="card flashblk" id="repcard">' + head + '<div class="rep">' + list + right + "</div></div></div>";
+}
+
+/* ════════ A (APPROVED): Messenger-út block — no daily cap (owner 2026-11-08) ════════ */
+const CH = { viber:"Viber", wa:"WhatsApp", mms:"MMS + kísérő SMS" };
+const WEEK = { viber:{ sent:29, del:28, read:21, rep:3 }, wa:{ sent:14, del:14, read:11, rep:2 }, mms:{ sent:38, del:36, read:null, rep:2 } };
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+function messengerBlock(){
+  const on = routeOn();
+  const today = '<div class="tile' + (on ? "" : " off") + '"><h3>Ma kiküldve messengeren</h3>' +
+    '<div class="big">' + S.sentToday + "<small> megkeresés</small></div>" +
+    '<div class="splitline"><span><i class="chdot viber"></i>Viber <b>5</b></span><span><i class="chdot wa"></i>WhatsApp <b>2</b></span></div>' +
+    '<div class="nolimit">' + I.inf + "<span>" + (on ? "Korlátlan: ami jóvá van hagyva, kimegy (hétköznap 9–16)." : "A messenger-út most nem küld — minden MMS + SMS-ben megy.") + "</span></div></div>";
+  const stop = S.brake !== "ok";
+  const bText = !S.on ? ["off","Kikapcsolva","Minden megkeresés a régi MMS+SMS páron megy. A fék nem figyel."]
+    : S.brake === "limited" ? ["stop","LEÁLLT: a fiók korlátozást kapott","A Viber nov. 6. 11:40-kor „ideiglenesen korlátozott fiók” jelzést adott. Azóta minden MMS+SMS-en megy."]
+    : S.brake === "halved" ? ["stop","LEÁLLT: az olvasási arány a felére esett","7 napos olvasási arány 34% (indulás 76%, a fék 38%-nál old). Azóta minden MMS+SMS-en megy."]
+    : ["ok","Aktív","Olvasás 7 nap: 74% (indulás 76%) · válasz 11% (indulás 12%). A fék 38% / 6% alatt old."];
+  const brake = '<div class="tile"><h3>Fék</h3><div class="brake ' + bText[0] + '" style="margin-top:6px"><span class="sig"></span><div><b>' + esc(bText[1]) + '</b><span class="small mut">' + esc(bText[2]) + "</span></div></div>" +
+    (S.on && stop ? '<button class="btn" data-unbrake="1" style="margin-top:8px">Fék feloldása — újraindítás</button>' : "") +
+    '<label class="switch"><input type="checkbox" id="onoff"' + (S.on ? " checked" : "") + '><span class="tr"></span><span><b>Messenger-út</b> <span class="small mut">' + (S.on ? "bekapcsolva" : "kikapcsolva — régi MMS+SMS pár") + "</span></span></label></div>";
+  const tot = WEEK.viber.sent + WEEK.wa.sent + WEEK.mms.sent;
+  const split = '<div class="tile"><h3>Csatorna-megoszlás · elmúlt 7 nap</h3><div class="big">' + tot + "<small> megkeresés</small></div>" +
+    '<div class="stack" role="img" aria-label="Viber ' + WEEK.viber.sent + ", WhatsApp " + WEEK.wa.sent + ", MMS+SMS " + WEEK.mms.sent + '">' +
+    ["viber","wa","mms"].map((k) => '<i style="flex:' + WEEK[k].sent + ";background:var(--ch-" + k + ')" data-tip="' + CH[k] + ": " + WEEK[k].sent + " db (" + pct(WEEK[k].sent, tot) + '%)"></i>').join("") + "</div>" +
+    '<div class="legend">' + ["viber","wa","mms"].map((k) => '<span><i class="chdot ' + k + '"></i>' + (k === "mms" ? "MMS+SMS" : CH[k]) + " <b>" + WEEK[k].sent + '</b> <span class="mut">' + pct(WEEK[k].sent, tot) + "%</span></span>").join("") + "</div></div>";
+  const chtiles = ["viber","wa","mms"].map((k) => {
+    const w = WEEK[k]; const readL = k === "viber" ? "megtekintve" : k === "wa" ? "olvasott" : "olvasás";
+    return '<div class="chtile" style="--c:var(--ch-' + k + ')"><h3><span class="chdot ' + k + '"></span>' + CH[k] + ' <span class="mut small" style="font-weight:400">' + w.sent + ' db · 7 nap</span></h3><div class="rates">' +
+      '<div data-tip="' + w.del + " / " + w.sent + ' kézbesítve"><b>' + pct(w.del, w.sent) + "%</b><span>kézbesítve</span></div>" +
+      '<div class="' + (w.read == null ? "na" : "") + '" data-tip="' + (w.read == null ? "MMS/SMS-en nincs olvasási jel" : w.read + " / " + w.sent + " " + readL) + '"><b>' + (w.read == null ? "n/a" : pct(w.read, w.sent) + "%") + "</b><span>" + readL + "</span></div>" +
+      '<div data-tip="' + w.rep + " / " + w.sent + ' válaszolt"><b>' + pct(w.rep, w.sent) + "%</b><span>válasz</span></div></div></div>";
+  }).join("");
+  return '<div class="zA blk" id="mutblk"><div class="blk-h"><p class="scr">Irányítópult · Messenger-út blokk</p>' + MK.chg + "</div><h1>Messenger-út</h1>" +
+    '<p class="lede">Viber → WhatsApp → MMS+SMS, az S10-ről. Csak hétköznap 9–16 küld (ADR-0334).</p>' +
+    '<div class="dgrid">' + today + brake + split + '</div><div class="chtiles">' + chtiles + "</div></div>";
+}
+function viewD(){ return '<h1 style="margin-bottom:12px">Irányítópult</h1>' + repliesBlock() + '<hr class="sep">' + messengerBlock(); }
+
+/* ════════ A (APPROVED): lead page ════════ */
+const SHOT = (name) => '<svg class="shot" viewBox="0 0 260 170" role="img" aria-label="A kimenő kép: a ' + esc(name) + ' látványtervének képe">' +
+  '<rect width="260" height="170" fill="var(--citui-surface-2)"/><rect x="0" y="0" width="260" height="22" fill="var(--citui-navy-900)"/>' +
+  '<rect x="10" y="8" width="48" height="6" rx="3" fill="var(--citui-white)"/><rect x="190" y="7" width="60" height="9" rx="4.5" fill="var(--citui-cyan-500)"/>' +
+  '<rect x="0" y="22" width="260" height="88" fill="var(--citui-navy-700)"/><path d="M0 110 L70 62 L120 92 L170 52 L260 104 L260 110 Z" fill="var(--citui-navy-900)" opacity=".7"/>' +
+  '<circle cx="214" cy="44" r="12" fill="var(--citui-warn)" opacity=".85"/>' +
+  '<text x="14" y="76" font-family="Space Grotesk,sans-serif" font-size="17" font-weight="700" fill="var(--citui-white)">' + esc(name) + "</text>" +
+  '<rect x="14" y="86" width="72" height="12" rx="6" fill="var(--citui-cyan-500)"/><rect x="14" y="122" width="74" height="38" rx="5" fill="var(--citui-white)"/>' +
+  '<rect x="94" y="122" width="74" height="38" rx="5" fill="var(--citui-white)"/><rect x="174" y="122" width="74" height="38" rx="5" fill="var(--citui-white)"/></svg>';
+const LEADS = {
+  queued: { label:"Sorban áll", name:"Napfény Vendégház", sub:"Balatonfenyves · no_site · +36 30 ••• 41 27",
+    viber:{ has:true, last:"tegnap 18:40" }, wa:{ has:true }, ch:"viber", pick:1,
+    presence:"Viber: utoljára aktív tegnap 18:40 (előzetes, nov. 6. 15:52 — a kiküldés pillanatában újra ellenőrizzük)",
+    steps:[ ["Sorban","3. a sorban","várható indulás: hétfő (nov. 9.) 9:00 — hétvégén nem küldünk","run"], ["Elküldve","—","","todo"], ["Kézbesítve","—","","todo"], ["Megtekintve","—","Viberen így hívják az olvasást","todo"], ["Válasz","—","","todo"] ],
+    pill:["run","sorban áll"] },
+  viber: { label:"Viber, nem olvasta", name:"Napfény Vendégház", sub:"Balatonfenyves · no_site · +36 30 ••• 41 27",
+    viber:{ has:true, last:"tegnap 18:40" }, wa:{ has:true }, ch:"viber", pick:1,
+    presence:"Viber-aktivitás a küldés előtt: utoljára aktív tegnap 18:40 (ellenőrizve nov. 6. 10:11)",
+    steps:[ ["Sorban","nov. 6. 09:58","","done"], ["Elküldve","nov. 6. 10:12","S10 · Viber","done"], ["Kézbesítve","nov. 6. 10:12","egy pipa → két pipa","done"], ["Megtekintve","még nem","óránként nézzük; utolsó: 14:00","run"], ["Válasz","—","","todo"] ],
+    pill:["ok","kiment Viberen"] },
+  wa: { label:"WhatsApp olvasva + válasz", name:"Pitypang Apartman", sub:"Gyenesdiás · no_site · +36 30 ••• 88 05",
+    viber:{ has:false }, wa:{ has:true }, ch:"wa", pick:2,
+    presence:"Viber-fiók nincs ezen a számon (ellenőrizve nov. 5. 11:20) — a WhatsApp idegennek nem mutat aktivitást",
+    steps:[ ["Sorban","nov. 5. 11:04","","done"], ["Elküldve","nov. 5. 11:21","S10 · WhatsApp","done"], ["Kézbesítve","nov. 5. 11:21","két szürke pipa","done"], ["Olvasott","nov. 5. 13:47","két kék pipa · 2 ó 26 p múlva","done"], ["Válasz","nov. 5. 13:52","WhatsApp","done"] ],
+    reply:"Köszönöm, megnéztem, nagyon tetszik! Mennyibe kerülne, ha ez lenne a honlapunk?",
+    pill:["ok","elolvasta · válaszolt"] },
+  mms: { label:"MMS-tartalék", name:"Hársfa Vendégház", sub:"Szilvásvárad · no_site · +36 30 ••• 19 63",
+    viber:{ has:false }, wa:{ has:false }, ch:"mms", pick:4,
+    presence:"Sem Viber-, sem WhatsApp-fiók nincs ezen a számon (ellenőrizve nov. 6. 09:30)",
+    steps:[ ["Sorban","nov. 6. 09:12","","done"], ["Elküldve","nov. 6. 09:31","MMS 09:31 + kísérő SMS 09:33","done"], ["Kézbesítve","nov. 6. 09:33","SMS kézbesítési jelentés","done"], ["Olvasás","nem mérhető","MMS/SMS-en nincs olvasási jel","na"], ["Válasz","—","","todo"] ],
+    pill:["warn","MMS+SMS páron ment"] },
+  err: { label:"Hiba", name:"Szőlőskert Panzió", sub:"Tokaj · no_site · +36 30 ••• 52 10",
+    viber:{ has:true, last:"3 napja" }, wa:{ has:true }, ch:"viber", pick:1,
+    presence:"Viber-aktivitás a küldés előtt: utoljára aktív 3 napja (ellenőrizve nov. 6. 10:40)",
+    steps:[ ["Sorban","nov. 6. 10:31","","done"], ["Elküldve","sikertelen","nov. 6. 10:41 · Viber","fail"], ["Kézbesítve","—","","todo"], ["Megtekintve","—","","todo"], ["Válasz","—","","todo"] ],
+    error:"A Viber-küldés nem ment ki: az S10 akadálymentességi hídja nem találta a „Küldés” gombot (10:41). A lead NEM kapott üzenetet, a megkeresés nincs elhasználva.",
+    pill:["bad","hiba — nem ment ki"] },
+};
+let errMsg = "";
+function viewL(){
+  const L = LEADS[S.st];
+  let ch = L.ch, pick = L.pick, routeNote = "";
+  if (S.st === "queued" && !routeOn()) { ch = "mms"; pick = 4; routeNote = S.on ? "A messenger-út most LEÁLLT (fék) — ez a lead is MMS+SMS-en megy." : "A messenger-út ki van kapcsolva — ez a lead MMS+SMS-en megy."; }
+  const vb = L.viber, wa = L.wa;
+  const rules = [
+    ["Viber, ha van fiók és ≤ 30 napja aktív", vb.has ? "fiók van · aktív " + vb.last : "nincs Viber-fiók"],
+    ["WhatsApp, ha van fiók", wa.has ? "fiók van" : "nincs WhatsApp-fiók"],
+    ["Viber akkor is, ha régi az aktivitás", vb.has ? "—" : "nincs Viber-fiók"],
+    ["MMS + kísérő SMS (a régi pár)", "tartalék — mindig elérhető"],
+  ];
+  const head = S.st === "queued" ? "Várható csatorna" : (S.st === "err" ? "Próbált csatorna" : "Kiment ezen");
+  const why = { 1:"Viber — utoljára aktív " + (vb.last || ""), 2:"WhatsApp-fiók van, Viber nincs", 4:(vb.has || wa.has) ? "A messenger-út nem él → MMS+SMS" : "Egyik messenger sincs → MMS+SMS" }[pick];
+  const chcard = '<div class="card__h"><h2>Mobil-megkeresés</h2><span class="pill ' + L.pill[0] + '">' + esc(L.pill[1]) + "</span></div>" +
+    '<div class="chbig"><span class="ic ' + ch + '">' + I[ch] + '</span><div><span class="mut small">' + head + "</span><b>" + CH[ch] + '</b><span class="small">' + esc(why) + "</span></div></div>" +
+    '<ol class="ladder" aria-label="Csatorna-szabály, ADR-0430">' + rules.map((r, i) => {
+      const n = i + 1, cls = n === pick ? "pick" : (n < pick ? "skip" : "");
+      const mark = n === pick ? "ezt választottuk" : (n < pick ? (routeNote ? "messenger-út nem él" : r[1]) : "nem kellett");
+      return '<li class="' + cls + '"><span class="n">' + (n === pick ? I.ok : n) + "</span><span>" + esc(r[0]) + '</span><span class="why">' + esc(mark) + "</span></li>";
+    }).join("") + "</ol>" +
+    '<div class="presence">' + I.eye + "<span>" + esc(L.presence) + "</span></div>" + (routeNote ? '<div class="info">' + esc(routeNote) + "</div>" : "");
+  const text = ch === "mms" ? PAIRSMS(L.name) : CAPTION(L.name);
+  const capt = ch === "mms" ? "MMS-ben a kép, külön kísérő SMS-ben a szöveg (ADR-0332)." : CH[ch] + "-en egy kép + egy szöveg; kísérő SMS és tulaj-másolat nem megy.";
+  const msgcard = '<div class="card__h"><h2>Kimenő üzenet</h2><span class="pill">' + (S.st === "queued" ? "így fog kimenni" : S.st === "err" ? "nem ment ki — ez ment volna" : "így ment ki") + "</span></div>" +
+    SHOT(L.name) + '<div class="msgtext">' + linkify(text) + '</div><p class="cap">' + esc(capt) + "</p>";
+  const steps = L.steps.map((s) => '<div class="st ' + s[3] + '"><div class="bar"></div><h4><span class="ico">' + (s[3] === "done" ? I.ok : s[3] === "fail" ? I.x : I.dot) + "</span>" + esc(s[0]) + '</h4><div class="t">' + esc(s[1]) + "</div>" + (s[2] ? "<p>" + esc(s[2]) + "</p>" : "") + "</div>").join("");
+  let extra = "";
+  if (L.reply) extra = '<div class="reply"><span class="small mut">Válasz · ' + CH.wa + " · nov. 5. 13:52</span><q>" + esc(L.reply) + '</q><a class="btn link" href="#" data-jump="205">Ugrás a Válaszok blokkra ' + I.go + '</a> <span class="small mut">— a válasz-szöveget a tulaj hagyja jóvá</span></div>';
+  if (L.error) extra = '<div class="errbox">' + (errMsg ? errMsg : "<b>" + I.alert + " Nem ment ki</b><div>" + esc(L.error) + '</div><div class="row"><button class="btn primary" data-retry="1">Újra a sorba (Viber)</button><button class="btn" data-tomms="1">Küldés MMS+SMS páron</button></div>') + "</div>";
+  const stairs = '<div class="card__h"><h2>Mérés</h2><span class="mut small">Elküldve → Kézbesítve → ' + (ch === "viber" ? "Megtekintve" : ch === "wa" ? "Olvasott" : "Olvasás") + ', időpontokkal</span></div><div class="steps">' + steps + "</div>" + extra;
+  return '<div class="zA blk"><div class="blk-h"><p class="scr">Lead-oldal</p>' + MK.a + "</div><h1>" + esc(L.name) + '</h1><p class="lede">' + esc(L.sub) + "</p>" +
+    '<div class="lgrid"><div class="card">' + chcard + '</div><div class="card msg">' + msgcard + '</div><div class="stairs">' + stairs + "</div></div></div>";
+}
+
+/* ── render ── */
+const BRAKES = { ok:"aktív", limited:"fiók-korlátozás", halved:"olvasás a felére" };
+function render(){
+  $("#frame").dataset.size = S.size;
+  $("#main").innerHTML = S.view === "j" ? viewJ() : S.view === "d" ? viewD() : viewL();
+  $("#nav").innerHTML = [["d","Irányítópult",I.dash],["j","Jóváhagyás",I.check],["l","Leadek",I.user]].map((n) =>
+    '<a href="#" data-v="' + n[0] + '" class="' + (S.view === n[0] ? "on" : "") + '">' + n[2] + n[1] + (n[0] === "j" ? '<span class="cnt">' + (405 + leads.length) + "</span>" : "") + "</a>").join("");
+  document.querySelectorAll(".mockbar [data-v]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.v === S.view));
+  document.querySelectorAll(".mockbar [data-s]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.s === S.size));
+  $("#stgrp").style.display = S.view === "l" ? "" : "none";
+  $("#stbtns").innerHTML = Object.entries(LEADS).map(([k, v]) => '<button data-st="' + k + '" aria-pressed="' + (k === S.st) + '">' + esc(v.label) + "</button>").join("");
+  $("#brbtns").innerHTML = Object.entries(BRAKES).map(([k, v]) => '<button data-br="' + k + '" aria-pressed="' + (k === S.brake) + '">' + esc(v) + "</button>").join("");
+  const oo = $("#onoff"); if (oo) oo.onchange = (e) => { S.on = e.target.checked; render(); };
+}
+
+document.addEventListener("input", (e) => {
+  if (!e.target.dataset.search) return;
+  S.f1.s = e.target.value; const pos = e.target.selectionStart; render();
+  const i = $("[data-search]"); i.focus(); i.setSelectionRange(pos, pos);
+});
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button,a,.row,.it"); if (!b || b.closest(".switch")) return;
+  const d = b.dataset;
+  if (b.tagName === "A") e.preventDefault();
+  if (d.nolink) return;
+  if (d.v) { S.view = d.v; S.flash = ""; S.rflash = ""; errMsg = ""; render(); window.scrollTo(0, 0); return; }
+  if (d.s) { S.size = d.s; }
+  else if (d.st) { S.st = d.st; errMsg = ""; }
+  else if (d.br) { S.brake = d.br; }
+  else if (d.t) { S.tab = +d.t; S.flash = ""; }
+  else if (d.fk) { const k = d.fk.split("."); S[k[0]][k[1]] = d.fv; }
+  else if (d.clr) { if (d.clr === "1") S.f1 = {ch:"all",q:"all",s:""}; else if (d.clr === "2") S.f2 = {ch:"all",st:"all",act:"all",d:"all"}; else S.rf = {open:"open",ch:"all"}; }
+  else if (d.l) { S.sel = +d.l; S.flash = ""; }
+  else if (d.u) { S.sel2 = +d.u; S.flash = ""; }
+  else if (d.r) { S.rsel = +d.r; S.rflash = ""; }
+  else if (d.d) {
+    const vis = leads.filter(match1); const i = vis.findIndex((l) => l.id === S.sel); const l = vis[i]; const ch = eff(l);
+    const where = ch === "wait" ? "kiküldéskor dől el a csatorna" : ch === "viber" ? "Viberen megy" : ch === "wa" ? "WhatsAppon megy" : ch === "mms" ? "MMS + SMS megy, együtt" : "e-mailben megy";
+    S.flash = d.d === "yes" ? l.n + ": sorba téve (" + where + ")." : l.n + ": nem megy ki.";
+    leads.splice(leads.indexOf(l), 1); const nx = vis[i + 1] || vis[0]; S.sel = nx && nx !== l ? nx.id : 0;
+  }
+  else if (d.u2) {
+    const u = unread.filter((x) => x.id === S.sel2)[0]; u.done = d.u2;
+    S.flash = d.u2 === "yes" ? u.n + ": sorba téve, MMS + SMS együtt (a 9–16-os ablakban megy)." : u.n + ": nem kap MMS + SMS-t, lekerült a fülről.";
+    S.sel2 = 0;
+  }
+  else if (d.send || d.done) {
+    const r = replies.filter((x) => x.id === S.rsel)[0]; r.open = false;
+    S.rflash = r.n + (d.send ? ": a válasz sorban, " + via(r.ch) + " megy ki." : ": megválaszoltnak jelölve.");
+  }
+  else if (d.unbrake) { if (!confirm("A messenger-út újraindul. A fék oka megszűnt?")) return; S.brake = "ok"; }
+  else if (d.retry) { errMsg = "<b>Újra sorba téve</b> — 4. a sorban; a csatornát a kiküldéskor újra eldöntjük."; }
+  else if (d.tomms) { if (!confirm("VALÓDI MMS + kísérő SMS megy ki a Szőlőskert Panziónak. Mehet?")) return; errMsg = "<b>MMS+SMS páron sorba téve</b> — a Viber kimarad ennél a leadnél."; }
+  else if (d.jump) {
+    S.view = "d"; S.rf = {open:"all",ch:"all"}; S.rsel = +d.jump; render();
+    const t = $("#repcard"); t.scrollIntoView({ behavior:"smooth", block:"start" }); t.classList.add("flash-on"); setTimeout(() => t.classList.remove("flash-on"), 1600);
+    return;
+  }
+  else return;
+  render();
+});
+const tip = $("#tip");
+document.addEventListener("mousemove", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (!t) { tip.style.display = "none"; return; }
+  tip.textContent = t.dataset.tip; tip.style.display = "block";
+  tip.style.left = Math.min(e.clientX + 12, innerWidth - 250) + "px"; tip.style.top = (e.clientY + 14) + "px";
+});
+if (matchMedia("(max-width: 700px)").matches) S.size = "mob";
+render();
+})();
+</script>
+</body></html>
