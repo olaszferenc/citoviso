@@ -1874,8 +1874,24 @@ async function handle(
       return send(res, 200, notSeenPage(notSeen, url.searchParams.get("id"), url.searchParams.get("ok") ?? "", { cfg, waiting: items.length }));
     }
     const cur = selectedApproval(items, url.searchParams.get("lead"));
+    // The owner is looking at this lead and its number is not checked yet: the phone checks it
+    // before the backlog (owner 2026-11-08: „ha frissítem az adatokat … nem frissül a folyamat”).
+    if (cur?.mobile && cur.channel.channel === "check") {
+      const { requestPresence } = await import("../mms/messenger.js");
+      await requestPresence(cur.mobile);
+    }
     const panel = cur ? await approvalCopyPanel(cur) : "";
     return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel, { cfg, notSeen: notSeen.length }));
+  }
+  // GET /jovahagyas/csatorna/:lead — the selected lead's channel, polled while the phone checks it.
+  {
+    const m = method === "GET" ? /^\/jovahagyas\/csatorna\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return send(res, 401, "{}", "application/json");
+      const it = (await listPendingApprovals()).find((i) => i.leadId === m[1]);
+      return send(res, 200, JSON.stringify({ channel: it ? it.channel.channel : null }), "application/json");
+    }
   }
   // GET /jovahagyas/mms-kep/:outbox — the image a messenger outreach carried (the "not seen" tab).
   {

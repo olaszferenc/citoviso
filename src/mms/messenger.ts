@@ -318,8 +318,10 @@ export async function applyMessengerWatch(
 
 /** The phone re-checks a number this old. */
 export const PRESENCE_MAX_AGE_DAYS = 14;
-/** Numbers per watcher run (~20 s each on the phone's screen). */
-export const PRESENCE_BATCH = 12;
+/** Numbers per watcher run (~20 s each on the phone's screen). Small, so a requested number waits ≤ ~2 runs. */
+export const PRESENCE_BATCH = 4;
+/** app_setting key: numbers the owner is looking at right now — checked before the backlog. */
+export const PRESENCE_PRIORITY_KEY = "messenger_presence_priority";
 /** Viber activity this fresh wins over WhatsApp (s10_send.py VIBER_FRESH_DAYS). */
 export const VIBER_FRESH_DAYS = 30;
 
@@ -371,7 +373,24 @@ export async function presenceOf(phones: readonly string[]): Promise<Map<string,
   return out;
 }
 
-/** Numbers of leads waiting for the owner's approval with no fresh presence read. */
+/**
+ * The owner opened this lead on the approval page and its number is not checked yet (e.g. he just
+ * found and typed in the mobile number): the phone checks it before the backlog (owner 2026-11-08:
+ * „ha frissítem az adatokat … nem frissül a folyamat”).
+ */
+export async function requestPresence(phone: string): Promise<void> {
+  const raw = await getSetting(PRESENCE_PRIORITY_KEY);
+  let list: string[] = [];
+  try {
+    list = raw ? (JSON.parse(raw) as string[]).filter((x) => typeof x === "string") : [];
+  } catch {
+    list = [];
+  }
+  if (list.includes(phone)) return;
+  await setSetting(PRESENCE_PRIORITY_KEY, JSON.stringify([phone, ...list].slice(0, 20)));
+}
+
+/** Numbers of leads waiting for the owner's approval with no fresh presence read (requested ones first). */
 export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH): Promise<string[]> {
   const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
   const { normalizePhone } = await import("../text/phone.js");
@@ -393,7 +412,18 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
         .execute()
     ).map((r) => r.phone),
   );
-  return phones.filter((p) => !fresh.has(p)).slice(0, limit);
+  let prio: string[] = [];
+  try {
+    prio = JSON.parse((await getSetting(PRESENCE_PRIORITY_KEY)) ?? "[]") as string[];
+  } catch {
+    prio = [];
+  }
+  const due = phones.filter((p) => !fresh.has(p));
+  const first = prio.filter((p) => due.includes(p));
+  // A requested number that is checked (or left the queue) drops off the priority list.
+  const keep = prio.filter((p) => due.includes(p));
+  if (keep.length !== prio.length) await setSetting(PRESENCE_PRIORITY_KEY, keep.length ? JSON.stringify(keep) : "");
+  return [...first, ...due.filter((p) => !first.includes(p))].slice(0, limit);
 }
 
 export interface PresenceReport {

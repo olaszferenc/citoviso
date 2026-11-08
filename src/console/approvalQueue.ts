@@ -24,6 +24,7 @@ import {
   type ChannelPlan,
   type MessengerConfig,
   type NotSeenItem,
+  type Presence,
 } from "../mms/messenger.js";
 
 /** The dispatch note the single-pass chain writes on a lead waiting for the owner. */
@@ -48,6 +49,9 @@ export type PendingApproval = {
    * A lead with no Hungarian mobile number goes by e-mail only.
    */
   readonly channel: ChannelPlan | { readonly channel: "email"; readonly step: 0; readonly reason: string };
+  /** The Hungarian mobile number (E.164) and the phone's presence read of it (null = not checked yet). */
+  readonly mobile: string | null;
+  readonly presence: Presence | null;
 };
 
 /** The list's channel groups, in the plan's order. */
@@ -100,6 +104,8 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       altId: r.alt_id,
       reason: (r.reason ?? "").replace(/^MEHET \(egylépéses\):\s*/, ""),
       queuedAt: r.queued_at,
+      mobile: m,
+      presence: m ? (presence.get(m) ?? null) : null,
       channel: m
         ? expectedChannel(presence.get(m) ?? null, cfg)
         : { channel: "email" as const, step: 0 as const, reason: T(lang, "nincs magyar mobilszám — csak e-mail megy") },
@@ -244,6 +250,9 @@ body:has(.aq-page) .con-main__in{max-width:none}
 .aq-frame{display:block;width:100%;height:calc(100vh - 140px);min-height:640px;border:0;margin:0 auto;background:var(--citui-white)}
 .aq-frame.m{width:390px;max-width:100%}
 .aq-empty{padding:40px;text-align:center;color:var(--citui-muted)}
+/* The filters hide rows with the hidden attribute; .aq-list a{display:block} would override it. */
+.aq-page [hidden]{display:none!important}
+.aq-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .aq-pill{display:inline-flex;gap:4px;align-items:center;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);white-space:nowrap}
 .aq-pill.viber{color:var(--citui-glow-blue);border-color:color-mix(in srgb,var(--citui-glow-blue) 40%,var(--citui-white));background:color-mix(in srgb,var(--citui-glow-blue) 8%,var(--citui-white))}
 .aq-pill.whatsapp{color:var(--citui-ok-ink);border-color:color-mix(in srgb,var(--citui-ok-ink) 35%,var(--citui-white));background:color-mix(in srgb,var(--citui-ok-ink) 6%,var(--citui-white))}
@@ -265,6 +274,12 @@ body:has(.aq-page) .con-main__in{max-width:none}
 </style>`;
 
 /** Plan switch + width switch of the preview, and the list filters (client-side; the counts move with them). */
+/** The selected lead is still waiting for the phone's presence read: poll, reload once decided. */
+function presencePoll(cur: PendingApproval | null): string {
+  if (!cur || cur.channel.channel !== "check" || !cur.mobile) return "";
+  return `<script>(function(){var n=0;var t=setInterval(function(){if(++n>30){clearInterval(t);return;}fetch("/jovahagyas/csatorna/${cur.leadId}",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.channel&&j.channel!=="check"){clearInterval(t);location.reload();}}).catch(function(){});},20000);})();</script>`;
+}
+
 const SCRIPT = `<script>
 (function(){
   var fr=document.querySelector('.aq-frame');
@@ -412,6 +427,20 @@ function ladder(i: PendingApproval, lang: string): string {
 }
 
 /** `copyPanel`: the outreach text panel of the selected lead (approvalCopy.ts), above the site. */
+/** What the lead has, as badges (owner 2026-11-08: „badgeként látszódjon, mije van”). */
+function contactBadges(i: PendingApproval, lang: string): string {
+  const b: string[] = [];
+  if (i.email) b.push(`<span class="aq-pill">${ic("mail", 11)}${esc(T(lang, "E-mail"))}</span>`);
+  if (i.mobile) {
+    const p = i.presence;
+    if (p?.viber === "yes") b.push(`<span class="aq-pill viber">${ic("sms", 11)}Viber</span>`);
+    if (p?.whatsapp === "yes") b.push(`<span class="aq-pill whatsapp">${ic("sms", 11)}WhatsApp</span>`);
+    if (!p || p.whatsapp === "unknown" || p.viber === "unknown") b.push(`<span class="aq-pill">${ic("contact", 11)}${esc(T(lang, "Mobil"))}</span>`);
+    else if (p.viber !== "yes" && p.whatsapp !== "yes") b.push(`<span class="aq-pill">${ic("photos", 11)}${esc(T(lang, "MMS + SMS"))}</span>`);
+  }
+  return b.length ? `<span class="aq-badges">${b.join("")}</span>` : "";
+}
+
 export function approvalPage(
   items: readonly PendingApproval[],
   selected: string | null,
@@ -426,7 +455,7 @@ export function approvalPage(
     return i.channel.channel === "viber" && i.channel.step === 1 ? `${i.city} · ${i.channel.reason.replace(/^.*utoljára aktív: /, T(lang, "aktív") + ": ")}` : `${i.city} · ${site}`;
   };
   const row = (i: PendingApproval): string =>
-    `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small></a>`;
+    `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small>${contactBadges(i, lang)}</a>`;
   const groups = APPROVAL_GROUPS.map((g) => {
     const its = items.filter((i) => groupOf(i) === g);
     if (!its.length) return "";
@@ -466,7 +495,7 @@ export function approvalPage(
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;
   const right =
     `<div class="aq-main">${head}${copyPanel}${tabs}<div class="aq-view"><iframe class="aq-frame" title="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/mock/${esc(cur.mainId)}"></iframe></div></div>`;
-  return layout(T(lang, "Jóváhagyás"), `${CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}${right}</div></div>${SCRIPT}`, {
+  return layout(T(lang, "Jóváhagyás"), `${CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}${right}</div></div>${SCRIPT}${presencePoll(cur)}`, {
     active: "/jovahagyas",
   });
 }

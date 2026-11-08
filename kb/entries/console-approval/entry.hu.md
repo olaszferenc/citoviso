@@ -20,6 +20,10 @@ Bal oldalt a lista, csatornánként csoportosítva: **„Viberen megy”**, **�
 dönti el: a lead sorba érkezésekor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja, és
 kiküldéskor újra megnézi. Amíg ez nem történt meg, a lead a **„Még ellenőrizzük”** csoportban áll.
 Ilyen leadet nyugodtan jóváhagyhatsz: kiküldéskor a telefon úgyis megnézi, és a jó csatornán küld.
+Amelyik ilyen leadet megnyitod (például mert most írtad be a mobilszámát), azt a telefon soron kívül,
+1–2 percen belül megnézi, és a lap magától frissül, amint megvan az eredmény.
+A lista minden sorában jelvények mutatják, mi van a leadnek: **„E-mail”**, **„Viber”**, **„WhatsApp”**,
+**„Mobil”** (a szám még nincs megnézve) vagy **„MMS + SMS”** (se Vibere, se WhatsAppja).
 Telefonon a lista felül áll, alatta a kiválasztott lead.
 
 - **Szűrés:** a keresőmezőbe név vagy település írható, alatta csatorna és honlap szerint
@@ -30,7 +34,7 @@ Telefonon a lista felül áll, alatta a kiválasztott lead.
   **„EZ MEGY”** áll, alatta egy mondat, hogy miért. Messengeren a terv képe és a szöveg a
   linkkel EGY üzenetben megy, SMS nélkül. Ha a messenger-út ki van kapcsolva vagy a fék
   leállította, MMS + SMS megy, együtt — SMS soha nem megy egyedül.
-- **A megkeresés szövege** (lenyitható): a levél, és messenger-csatornánál a kép alatti
+- **A megkeresés szövege** (alapból összecsukva, a címére kattintva nyílik le): a levél, és messenger-csatornánál a kép alatti
   szöveg is. Ez nem szerkeszthető; a lenti SMS átírásával változik. Alatta a kísérő SMS, ami
   akkor megy, ha a küldés MMS + SMS-re esik vissza. Ha átírod, nyomd meg a **„Mentés”** gombot,
   mielőtt a **„Mehet”**-re koppintasz — a „Mehet” a szöveget nem menti el. Mentés után a te

@@ -271,7 +271,7 @@ export async function approvalCopyPanel(
     (o ? `<button name="a" value="reset">${esc(T(lang, "Vissza a gépi szövegre"))}</button>` : "") +
     `<small>${esc(T(lang, "Üresen hagyott mező = a gépi szöveg megy."))}</small></div>`;
   return (
-    `${CSS}<div class="aq-copy-wrap"><details class="aq-copy" open>${summary}${edited}<small>${esc(mail.subject)}</small></summary>` +
+    `${CSS}<div class="aq-copy-wrap"><details class="aq-copy">${summary}${edited}<small>${esc(mail.subject)}</small></summary>` +
     `<form method="post" action="/jovahagyas/${esc(item.leadId)}/szoveg">${err}${warn}<div class="aq-cols">${mailCol}<div>${smsCol}</div></div>${buttons}</form></details></div>` +
     SCRIPT(GSM7_BASIC, PAIR_SMS_MAX_SEGMENTS)
   );
