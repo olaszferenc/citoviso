@@ -96,8 +96,8 @@ buborék áll: ez még NEM ment ki.
   A sorban álló választ (**„Válasz a sorban”**) már nem lehet szerkeszteni vagy visszavonni, és
   amíg ott áll, újabb válasz sem küldhető ugyanerre — ezért este, hétvégén küldés előtt olvasd át.
 - **Állapot:** SMS-nél először **„Sorban — a modem-sáv viszi ki”**, amíg a modem ki nem küldi;
-  Viber- és WhatsApp-válasznál **„Sorban — a telefon beírja a csevegésbe”**, amíg a telefon be nem
-  írja (legfeljebb ~10 perc).
+  Viber- és WhatsApp-válasznál **„Válasz a sorban”**, mellette az app neve, amíg a telefon be nem
+  írja a csevegésbe (legfeljebb ~10 perc).
   Sikeres küldés után a buborék helyén az **„Elküldött válasz”** áll (csatorna — SMS-nél a részek
   száma, levélnél a tárgy —, idő, ki küldte), és a tétel MAGÁTÓL **„Megválaszolva”** lesz, a te neveddel — a **„Megválaszoltam”**-ot
   ilyenkor nem kell megnyomni. Ha nem ment ki: piros sor az okkal és **„Újraküldés”** gomb; a

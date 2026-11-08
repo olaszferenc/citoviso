@@ -49,7 +49,7 @@ ki”**, **„ütemezve”** vagy **„nem ment ki”** (ilyenkor mellette az **
 megkeresés Viberen vagy WhatsAppon ment ki (kép és link egy üzenetben, SMS nélkül), a buborék
 fölött a feliratot az app neve követi (a Megkeresés felirat mögött: · Viber). A lead ottani
 válaszain és a mi arra adott válaszainkon is ott áll az app neve. A sorban álló ilyen válasznál
-**„sorban — a telefon beírja a csevegésbe”** látszik: ezt a választ a telefon írja be ugyanabba a
+**„Válasz a sorban”** látszik, mellette az app neve: ezt a választ a telefon írja be ugyanabba a
 csevegésbe. A fül
 neve mellett a szám: hány üzenete jött a partnernek a mi utolsó üzenetünk óta.
 

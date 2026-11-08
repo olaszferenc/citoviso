@@ -66,7 +66,7 @@ function chip(m: ThreadMessage, lang: string): string {
       ? T(lang, "elküldve")
       : m.status === "queued"
         ? m.channel === "viber" || m.channel === "whatsapp"
-          ? T(lang, "sorban — a telefon beírja a csevegésbe")
+          ? `${T(lang, "Válasz a sorban")}${viaApp(m)}`
           : T(lang, "sorban — a modem-sáv viszi ki")
         : m.status === "scheduled"
           ? `${T(lang, "ütemezve")}${m.scheduledFor ? ` ${fmtTime(m.scheduledFor).slice(5)}` : ""}`
