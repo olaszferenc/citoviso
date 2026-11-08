@@ -52,6 +52,8 @@ export type PendingApproval = {
   /** The Hungarian mobile number (E.164) and the phone's presence read of it (null = not checked yet). */
   readonly mobile: string | null;
   readonly presence: Presence | null;
+  /** false = WhatsApp is paused (account under review): its badge and "not checked" state are not shown. */
+  readonly waOn: boolean;
 };
 
 /** The list's channel groups, in the plan's order. */
@@ -106,6 +108,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       queuedAt: r.queued_at,
       mobile: m,
       presence: m ? (presence.get(m) ?? null) : null,
+      waOn: cfg.whatsapp !== false,
       channel: m
         ? expectedChannel(presence.get(m) ?? null, cfg)
         : { channel: "email" as const, step: 0 as const, reason: T(lang, "nincs magyar mobilszám — csak e-mail megy") },
@@ -441,9 +444,9 @@ function contactDataBadges(i: PendingApproval, lang: string): string {
   const p = i.presence;
   if (i.mobile) {
     if (p?.viber === "yes") b.push(`<span class="aq-pill aq-data viber">${ic("sms", 12)}Viber${p.viberSeen ? ` · ${esc(p.viberSeen)}` : ""}</span>`);
-    if (p?.whatsapp === "yes") b.push(`<span class="aq-pill aq-data whatsapp">${ic("sms", 12)}WhatsApp</span>`);
-    if (!p || p.whatsapp === "unknown" || p.viber === "unknown") b.push(`<span class="aq-pill aq-data">${ic("clock", 12)}${esc(T(lang, "Ellenőrzés vár"))}</span>`);
-    else if (p.viber !== "yes" && p.whatsapp !== "yes") b.push(`<span class="aq-pill aq-data">${ic("photos", 12)}${esc(T(lang, "MMS + SMS"))}</span>`);
+    if (i.waOn && p?.whatsapp === "yes") b.push(`<span class="aq-pill aq-data whatsapp">${ic("sms", 12)}WhatsApp</span>`);
+    if (!p || p.viber === "unknown" || (i.waOn && p.whatsapp === "unknown")) b.push(`<span class="aq-pill aq-data">${ic("clock", 12)}${esc(T(lang, "Ellenőrzés vár"))}</span>`);
+    else if (p.viber !== "yes" && !(i.waOn && p.whatsapp === "yes")) b.push(`<span class="aq-pill aq-data">${ic("photos", 12)}${esc(T(lang, "MMS + SMS"))}</span>`);
   }
   return b.length ? `<div class="aq-badges aq-badges--data">${b.join("")}</div>` : "";
 }
@@ -455,9 +458,9 @@ function contactBadges(i: PendingApproval, lang: string): string {
   if (i.mobile) {
     const p = i.presence;
     if (p?.viber === "yes") b.push(`<span class="aq-pill viber">${ic("sms", 11)}Viber</span>`);
-    if (p?.whatsapp === "yes") b.push(`<span class="aq-pill whatsapp">${ic("sms", 11)}WhatsApp</span>`);
-    if (!p || p.whatsapp === "unknown" || p.viber === "unknown") b.push(`<span class="aq-pill">${ic("contact", 11)}${esc(T(lang, "Mobil"))}</span>`);
-    else if (p.viber !== "yes" && p.whatsapp !== "yes") b.push(`<span class="aq-pill">${ic("photos", 11)}${esc(T(lang, "MMS + SMS"))}</span>`);
+    if (i.waOn && p?.whatsapp === "yes") b.push(`<span class="aq-pill whatsapp">${ic("sms", 11)}WhatsApp</span>`);
+    if (!p || p.viber === "unknown" || (i.waOn && p.whatsapp === "unknown")) b.push(`<span class="aq-pill">${ic("contact", 11)}${esc(T(lang, "Mobil"))}</span>`);
+    else if (p.viber !== "yes" && !(i.waOn && p.whatsapp === "yes")) b.push(`<span class="aq-pill">${ic("photos", 11)}${esc(T(lang, "MMS + SMS"))}</span>`);
   }
   return b.length ? `<span class="aq-badges">${b.join("")}</span>` : "";
 }

@@ -362,6 +362,23 @@ try {
     say((await m.notSeenList()).some((i) => i.outboxId === f2.id && i.channel === "whatsapp"), "⑫ 3 nap után a WhatsApp-sor kerül a listára (onnan MMS + SMS a tulaj gombjára)");
   }
 
+  // ── ⑬ WhatsApp paused + presence only on demand ────────────────────────
+  {
+    const P = { whatsapp: "yes" as const, viber: "no" as const, viberSeen: null, viberAgeDays: null };
+    say(m.expectedChannel(P, { enabled: true, brake: null, whatsapp: false }).channel === "mms", "⑬ szünetelő WhatsAppnál a csak-WhatsAppos lead MMS + SMS");
+    say(m.expectedChannel({ ...P, viber: "yes", viberAgeDays: 90 }, { enabled: true, brake: null, whatsapp: false }).channel === "viber", "⑬ szünetelő WhatsAppnál a régi Viber is Viber");
+    await m.setMessengerConfig({ enabled: true, brake: null, whatsapp: false });
+    say((await m.scheduleWhatsappFollowups()) === 0, "⑬ szünetelő WhatsAppnál nincs követő üzenet");
+    const p13 = await mkProspect("h");
+    await enqueue(p13);
+    const pulled = await pullMms(new Date(), MIDDAY);
+    say(pulled.length === 1 && pulled[0]!.no_whatsapp === true, "⑬ a pull jelzi a telefonnak: WhatsAppot ne nyisson", JSON.stringify(pulled.map((x) => ({ nw: x.no_whatsapp }))));
+    await ackMms([{ id: pulled[0]!.id, ok: true, channel: "viber" }]);
+    say((await m.messengerWatchList()).noWhatsapp === true, "⑬ a figyelő is megkapja a WhatsApp-szünetet");
+    await m.setMessengerConfig({ enabled: true, brake: null });
+    say((await m.getMessengerConfig()).presenceBacklog === false, "⑬ alapból nincs háttér-söprés (csak a kért számok)");
+  }
+
   // ── ⑧ brake verdict (pure) ─────────────────────────────────────────────
   {
     const mk = (n: number, read: (i: number) => boolean, replied: (i: number) => boolean = () => false) =>

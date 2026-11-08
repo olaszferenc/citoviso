@@ -123,9 +123,11 @@ def presence_viber(ph):
     return r or "unknown", name, seen
 
 
-def presence(ph):
-    wa = presence_whatsapp(ph)
-    time.sleep(3)
+def presence(ph, no_whatsapp=False):
+    # WhatsApp paused (the account was banned on bulk lookups, 2026-11-08): never open it then.
+    wa = "skipped" if no_whatsapp else presence_whatsapp(ph)
+    if not no_whatsapp:
+        time.sleep(3)
     vb, name, seen = presence_viber(ph)
     return {"whatsapp": wa, "viber": vb, "viber_name": name, "viber_last_seen": seen,
             "viber_age_days": viber_age_days(seen)}
@@ -357,6 +359,7 @@ def main():
     ap.add_argument("--mms-text", default=None, help="text of the MMS when auto falls back to MMS (default: --text)")
     ap.add_argument("--channel", default="auto")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--no-whatsapp", action="store_true", help="WhatsApp paused: never open it (presence, auto ladder)")
     a = ap.parse_args()
     res = {"ok": False, "cmd": a.cmd}
     try:
@@ -375,7 +378,7 @@ def main():
             if "isKeyguardShowing=true" in sh("dumpsys", "window"):
                 raise Fail("screen locked — keyguard could not be dismissed")
         if a.cmd == "presence":
-            res.update(presence(ph)); res["ok"] = True
+            res.update(presence(ph, a.no_whatsapp)); res["ok"] = True
         elif a.cmd == "status":
             res.update(status(ph, a.channel)); res["ok"] = True
         else:
@@ -393,7 +396,7 @@ def main():
                 raise Fail("missing --image")
             ch = a.channel
             if ch == "auto":
-                p = presence(ph)
+                p = presence(ph, a.no_whatsapp)
                 res["presence"] = p
                 ch = pick_channel(p)
             res["channel"] = ch

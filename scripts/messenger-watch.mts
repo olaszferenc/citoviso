@@ -88,7 +88,7 @@ try {
   // ⑤ Presence of the numbers waiting for approval — read only, no message (the approval page groups by it).
   const presence: Record<string, unknown>[] = [];
   for (const phone of list.presence ?? []) {
-    const r = await s10(["presence", "--to", phone]);
+    const r = await s10(["presence", "--to", phone, ...(list.noWhatsapp ? ["--no-whatsapp"] : [])]);
     presence.push({
       phone,
       ok: r.ok === true,

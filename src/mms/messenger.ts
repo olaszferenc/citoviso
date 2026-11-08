@@ -40,10 +40,21 @@ export interface MessengerConfig {
   readonly enabled: boolean;
   /** Set by the automatic brake; cleared only by the operator. */
   readonly brake?: MessengerBrake | null;
+  /**
+   * false = WhatsApp is left out everywhere (ladder, presence, follow-up) — e.g. while the account
+   * is under review (owner 2026-11-08, after the ban). Absent = on.
+   */
+  readonly whatsapp?: boolean;
+  /**
+   * true = the phone works through the whole approval queue in the background. false (default since
+   * 2026-11-08: the bulk WhatsApp lookups got the account banned) = only the numbers the owner opens or
+   * types in are checked.
+   */
+  readonly presenceBacklog?: boolean;
 }
 
 /** Off until the operator switches it on (the rollout, ADR-0430 F3, is a decision, not a deploy side effect). */
-export const MESSENGER_CONFIG_DEFAULT: MessengerConfig = { enabled: false, brake: null };
+export const MESSENGER_CONFIG_DEFAULT: MessengerConfig = { enabled: false, brake: null, whatsapp: true, presenceBacklog: false };
 
 export async function getMessengerConfig(): Promise<MessengerConfig> {
   const raw = await getSetting(MESSENGER_SETTING_KEY);
@@ -52,6 +63,8 @@ export async function getMessengerConfig(): Promise<MessengerConfig> {
     const j = JSON.parse(raw) as Partial<MessengerConfig>;
     return {
       enabled: j.enabled === true,
+      whatsapp: j.whatsapp !== false,
+      presenceBacklog: j.presenceBacklog === true,
       brake: j.brake && typeof j.brake.reason === "string" ? { at: String(j.brake.at ?? ""), reason: j.brake.reason } : null,
     };
   } catch {
@@ -61,7 +74,10 @@ export async function getMessengerConfig(): Promise<MessengerConfig> {
 }
 
 export async function setMessengerConfig(c: MessengerConfig): Promise<void> {
-  await setSetting(MESSENGER_SETTING_KEY, JSON.stringify({ enabled: c.enabled, brake: c.brake ?? null }));
+  await setSetting(
+    MESSENGER_SETTING_KEY,
+    JSON.stringify({ enabled: c.enabled, brake: c.brake ?? null, whatsapp: c.whatsapp !== false, presenceBacklog: c.presenceBacklog === true }),
+  );
 }
 
 /** Messenger sends since Budapest midnight (the dashboard's count — not a limit). */
@@ -194,6 +210,8 @@ export interface WatchList {
   readonly answers: readonly QueuedAnswer[];
   /** E.164 numbers whose Viber / WhatsApp presence the phone should read (no message). */
   readonly presence: readonly string[];
+  /** true = WhatsApp is paused: the phone must not open WhatsApp at all (presence, sends). */
+  readonly noWhatsapp: boolean;
 }
 
 /** The chats due for a re-read (oldest check first) and the queued messenger answers. */
@@ -229,6 +247,7 @@ export async function messengerWatchList(now: Date = new Date()): Promise<WatchL
     chats: rows.map((r) => ({ id: r.id, channel: r.channel as MessengerChannel, to_phone: r.to_phone })),
     answers: answers.map((a) => ({ id: a.id, channel: a.channel as MessengerChannel, to_phone: a.to_addr, text: a.body })),
     presence: await presenceDue(now),
+    noWhatsapp: (await getMessengerConfig()).whatsapp === false,
   };
 }
 
@@ -348,7 +367,9 @@ export interface ChannelPlan {
  * Pure: the channel the S10 will most likely pick (s10_send.py pick_channel), from the presence
  * read and the switch / brake. The phone decides again at send time; this groups the list.
  */
-export function expectedChannel(p: Presence | null, cfg: Pick<MessengerConfig, "enabled" | "brake">): ChannelPlan {
+export function expectedChannel(p0: Presence | null, cfg: Pick<MessengerConfig, "enabled" | "brake" | "whatsapp">): ChannelPlan {
+  // WhatsApp paused (e.g. the account is under review): it counts as absent everywhere.
+  const p = p0 && cfg.whatsapp === false ? { ...p0, whatsapp: "no" as const } : p0;
   if (!cfg.enabled) return { channel: "mms", step: 4, reason: "a messenger-út ki van kapcsolva — MMS + SMS megy, együtt" };
   if (cfg.brake) return { channel: "mms", step: 4, reason: `a fék leállította a messenger-utat (${cfg.brake.reason}) — MMS + SMS megy, együtt` };
   if (!p) return { channel: "check", step: 0, reason: "a telefon még nem nézte meg, van-e Vibere vagy WhatsAppja (üzenet nélkül)" };
@@ -403,6 +424,8 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
      order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
+  const cfg = await getMessengerConfig();
+  const waOn = cfg.whatsapp !== false;
   const fresh = new Set(
     (
       await db
@@ -410,7 +433,7 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
         .select("phone")
         .where("phone", "in", phones)
         .where("checked_at", ">=", new Date(now.getTime() - PRESENCE_MAX_AGE_DAYS * 86_400_000))
-        .where((eb) => eb.and([eb("whatsapp", "<>", "unknown"), eb("viber", "<>", "unknown")]))
+        .where((eb) => (waOn ? eb.and([eb("whatsapp", "<>", "unknown"), eb("viber", "<>", "unknown")]) : eb("viber", "<>", "unknown")))
         .execute()
     ).map((r) => r.phone),
   );
@@ -425,6 +448,8 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
   // A requested number that is checked (or left the queue) drops off the priority list.
   const keep = prio.filter((p) => due.includes(p));
   if (keep.length !== prio.length) await setSetting(PRESENCE_PRIORITY_KEY, keep.length ? JSON.stringify(keep) : "");
+  // No background sweep unless switched on: only what the owner opened or typed in.
+  if (!cfg.presenceBacklog) return first.slice(0, limit);
   return [...first, ...due.filter((p) => !first.includes(p))].slice(0, limit);
 }
 
@@ -471,7 +496,7 @@ export async function applyPresence(reports: readonly PresenceReport[], now: Dat
  */
 export async function scheduleWhatsappFollowups(now: Date = new Date()): Promise<number> {
   const cfg = await getMessengerConfig();
-  if (!cfg.enabled || cfg.brake) return 0;
+  if (!cfg.enabled || cfg.brake || cfg.whatsapp === false) return 0;
   const rows = await sql<{ id: string; prospect_id: string; to_phone: string }>`
     select o.id, o.prospect_id, o.to_phone
       from mms_outbox o

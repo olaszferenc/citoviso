@@ -57,6 +57,8 @@ export interface MmsMessage {
   readonly messengerText?: string;
   /** ADR-0430: 'whatsapp' = send on WhatsApp only (the automatic follow-up); no ladder, no MMS. */
   readonly forceChannel?: "whatsapp";
+  /** ADR-0430: WhatsApp paused — the S10 ladder must not open WhatsApp. */
+  readonly noWhatsapp?: boolean;
 }
 
 export interface MmsSendResult {

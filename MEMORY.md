@@ -239,6 +239,10 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
   - **Ok:** a jelenlét-figyelő ma este kb. 1 óra alatt 41 számot (75 lekérdezést) nézett meg a `wa.me`-n át, és kb. 36 után jött a tiltás. Előtte 11-07-én 30 szám ment le gond nélkül, 20–35 mp szünettel.
   - **Tanulság:** WhatsAppon idegen számok TÖMEGES előzetes ellenőrzése TILOS.
   - **Állapot:** a figyelő leállítva (a timer és a service is), a Viber és a szám működik.
+  - **Tulaj, „mindhárom igen”:**
+    - a felülvizsgálatot 11-08-án kértem (az SMS-hitelesítés után „Ellenőrzés alatt álló fiók”);
+    - a WhatsApp kikerült a sorrendből (`messenger_outreach.whatsapp = false`: a telefon WhatsAppot nem nyit, Viber → MMS + SMS, követő WhatsApp nincs);
+    - a jelenlét-ellenőrzés csak a megnyitott vagy számmal frissített leadre fut (`presenceBacklog = false`).
   - **Nyitott, a tulajra vár:**
     - felülvizsgálat kérése;
     - a WhatsApp kivétele a sorrendből a feloldásig;

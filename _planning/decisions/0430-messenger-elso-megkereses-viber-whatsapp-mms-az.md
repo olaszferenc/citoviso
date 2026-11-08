@@ -54,3 +54,10 @@
 - A követő üzenet csak WhatsAppon mehet: kikapcsolt vagy fékezett messenger-útnál a sorban vár; ha a küldés bukik, végleges `failed`, MMS-újrapróba és riasztás nélkül.
 - A kapuk újra lefutnak. Aki válaszolt, elutasított, leiratkozott, vagy akiről a tulaj már döntött, nem kap követő üzenetet.
 - Az ütemező a figyelő 90 mp-es hívásán fut (`scheduleWhatsappFollowups`).
+
+**WhatsApp-tiltás után (2026-11-08 este).**
+- A tömeges előzetes WhatsApp-ellenőrzés után (kb. 1 óra alatt kb. 40 szám) a fiókot letiltották, a felülvizsgálatot kértük.
+- Kapcsolók az `app_setting` sorban:
+  - `whatsapp: false` — a WhatsApp mindenhonnan kimarad: a sorrendből, az ellenőrzésből és a követésből;
+  - `presenceBacklog` — alapból `false`: a háttér-söprés tilos, csak a tulaj által megnyitott vagy számmal frissített lead kerül ellenőrzésre.
+- Tulaj: „mindhárom igen”.

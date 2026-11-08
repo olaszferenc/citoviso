@@ -32,7 +32,7 @@ export async function sendMmsViaS10(msg: MmsMessage, to: string): Promise<MmsSen
   const args = msg.forceChannel && msg.messengerText
     ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--channel", msg.forceChannel]
     : msg.messengerText
-    ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--mms-text", msg.subject, "--channel", "auto"]
+    ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--mms-text", msg.subject, "--channel", "auto", ...(msg.noWhatsapp ? ["--no-whatsapp"] : [])]
     : [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.subject, "--channel", "mms"];
   let stdout: string;
   try {

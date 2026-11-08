@@ -17,11 +17,14 @@ leállította. A lap a teljes képernyő-szélességet használja, hogy a terv m
 
 Bal oldalt a lista, csatornánként csoportosítva: **„Viberen megy”**, **„WhatsAppon megy”**,
 **„MMS + SMS megy”**, **„E-mailben megy”** és **„Még ellenőrizzük”**. A csatornát a telefon
-dönti el: a lead sorba érkezésekor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja, és
-kiküldéskor újra megnézi. Amíg ez nem történt meg, a lead a **„Még ellenőrizzük”** csoportban áll.
-Ilyen leadet nyugodtan jóváhagyhatsz: kiküldéskor a telefon úgyis megnézi, és a jó csatornán küld.
-Ha a lead lapján beírsz és elmentesz egy mobilszámot, vagy egy ilyen leadet itt megnyitsz, a telefon
-soron kívül, 1–2 percen belül megnézi, és a lap magától frissül, amint megvan az eredmény.
+dönti el: kiküldéskor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja. Előre csak azt a leadet
+nézi meg, amelyiket itt megnyitod, vagy amelyiknek a lead lapján mobilszámot írsz be és elmentesz:
+ilyenkor 1–2 percen belül, és a lap magától frissül, amint megvan az eredmény. A többi lead a
+**„Még ellenőrizzük”** csoportban áll — nyugodtan jóváhagyhatod, kiküldéskor a telefon megnézi, és a
+jó csatornán küld. (A teljes sort a háttérben nem nézi végig: sok idegen szám gyors egymás utáni
+lekérdezését a WhatsApp tiltással büntette.)
+Ha a WhatsApp szünetel (például mert a fiók felülvizsgálat alatt áll), a WhatsApp mindenhonnan
+kimarad: Viberen megy, különben MMS + SMS-ben, és a követő WhatsApp-üzenet sem megy.
 A lista minden sorában jelvények mutatják, mi van a leadnek: **„E-mail”**, **„Viber”**, **„WhatsApp”**,
 **„Mobil”** (a szám még nincs megnézve) vagy **„MMS + SMS”** (se Vibere, se WhatsAppja).
 Telefonon a lista felül áll, alatta a kiválasztott lead.

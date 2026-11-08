@@ -158,7 +158,7 @@ async function runLocked(deps: MmsRelayClientDeps, deadline: Date, log: (l: stri
       const imagePath = path.join(dir, "mms.jpg");
       await writeFile(imagePath, jpeg);
       // ADR-0430: a caption = the S10 may send it on Viber / WhatsApp (the CLI sender ignores it).
-      const r = await deps.send({ to, imagePath, subject: m.subject, ...(m.messenger_text ? { messengerText: m.messenger_text } : {}), ...(m.channel ? { forceChannel: m.channel } : {}) }, to);
+      const r = await deps.send({ to, imagePath, subject: m.subject, ...(m.messenger_text ? { messengerText: m.messenger_text } : {}), ...(m.channel ? { forceChannel: m.channel } : {}), ...(m.no_whatsapp ? { noWhatsapp: true } : {}) }, to);
       if (r.ok) {
         const ack: MmsAck = {
           id: m.id,

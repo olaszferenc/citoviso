@@ -20,7 +20,7 @@
 import { db } from "../db/client.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { mmsPullBlocks } from "../sms/sendWindow.js";
-import { messengerBlocked, tripBrake, type OutboxChannel } from "./messenger.js";
+import { getMessengerConfig, messengerBlocked, tripBrake, type OutboxChannel } from "./messenger.js";
 
 /** A 'sending' row older than this is a relay that died mid-send (a send is ≤200 s, MMS_CLI_TIMEOUT_MS). */
 export const MMS_STALE_MS = 10 * 60_000;
@@ -40,6 +40,8 @@ export interface PulledMms {
   readonly messenger_text?: string;
   /** ADR-0430: 'whatsapp' = the automatic follow-up — WhatsApp only, never an MMS. */
   readonly channel?: "whatsapp";
+  /** ADR-0430: WhatsApp is paused — the phone's ladder skips it (Viber, else MMS). */
+  readonly no_whatsapp?: true;
 }
 
 export interface MmsAck {
@@ -160,7 +162,8 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
   }
   if (mmsPullBlocks(windowAt)) return [];
   // A WhatsApp follow-up may only go on WhatsApp: with the messenger branch off or braked it stays queued.
-  const followupBlocked = (await messengerBlocked()) !== null;
+  const mcfg = await getMessengerConfig();
+  const followupBlocked = (await messengerBlocked()) !== null || mcfg.whatsapp === false;
   // Claim-then-read in ONE statement: two overlapping pulls cannot get the same row.
   const claimed = await db
     .updateTable("mms_outbox")
@@ -193,6 +196,7 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
       : r.messenger_text && r.prospect_id && r.attempts === 1 && !blocked
         ? { messenger_text: r.messenger_text }
         : {}),
+    ...(mcfg.whatsapp === false ? { no_whatsapp: true as const } : {}),
   }));
 }
 
