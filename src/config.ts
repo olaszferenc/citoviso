@@ -393,6 +393,14 @@ export const config = {
   /** Brave Search API key — the PRIMARY web-search backend (ADR-0026; the Google
    *  CSE "entire web" mode is being sunset 2027-01-01). */
   braveApiKey: env("BRAVE_API_KEY"),
+  /** Every Brave key in failover order: BRAVE_API_KEY first, then BRAVE_API_KEY_2,
+   *  _3 … (owner 2026-11-08: a spare key "ha a másik kifogyna"). webSearch switches to
+   *  the next one when the current key is out of credit (402), rejected (401/403) or
+   *  over its quota (429 with an exhausted window), and retries the same query. */
+  braveApiKeys: [
+    env("BRAVE_API_KEY"),
+    ...Array.from({ length: 8 }, (_, i) => env(`BRAVE_API_KEY_${i + 2}`)),
+  ].filter((k, i, all) => k !== "" && all.indexOf(k) === i),
   /** Anthropic API key for AI copy generation (the SDK also reads this from env). */
   anthropicApiKey: env("ANTHROPIC_API_KEY"),
   /**

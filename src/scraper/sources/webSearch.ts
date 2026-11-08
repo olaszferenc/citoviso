@@ -63,12 +63,17 @@ export function braveText(s: string | undefined): string {
   );
 }
 
+/** One Brave call: the results, or the HTTP failure for the failover to judge. */
+type BraveOutcome =
+  | { ok: true; results: WebResult[] }
+  | { ok: false; status: number; body: string };
+
 /** Brave Search — the primary backend (ADR-0026). */
 async function braveSearch(
   query: string,
   apiKey: string,
   num: number,
-): Promise<WebResult[]> {
+): Promise<BraveOutcome> {
   // NOTE: Brave has no HU market — country=HU is rejected with HTTP 422 (the
   // enum only lists ~37 markets). country=ALL + search_lang=hu is the correct
   // combination for Hungarian queries (verified live 2026-08-18).
@@ -81,27 +86,88 @@ async function braveSearch(
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    if (res.status === 401 || res.status === 403) noteDeadKey("brave", `HTTP ${res.status}: ${body.slice(0, 200)}`);
-    warnOnce(
-      `brave-${res.status}`,
-      `⛔ BRAVE SEARCH HIBA (HTTP ${res.status})` +
-        (res.status === 401 || res.status === 403
-          ? " → érvénytelen vagy hiányzó BRAVE_API_KEY."
-          : res.status === 429
-            ? " → rate limit (az ingyenes csomag 1 lekérdezés/másodperc)."
-            : "") +
-        `\n   ${body.replace(/\s+/g, " ").slice(0, 200)}`,
-    );
-    return [];
+    return { ok: false, status: res.status, body };
   }
   const data = (await res.json()) as {
     web?: { results?: Array<{ title?: string; url?: string; description?: string }> };
   };
-  return (data.web?.results ?? []).map((r) => ({
-    title: braveText(r.title),
-    link: r.url ?? "",
-    snippet: braveText(r.description),
-  }));
+  return {
+    ok: true,
+    results: (data.web?.results ?? []).map((r) => ({
+      title: braveText(r.title),
+      link: r.url ?? "",
+      snippet: braveText(r.description),
+    })),
+  };
+}
+
+// ── Key failover (owner 2026-11-08: a spare key "ha a másik kifogyna") ─────────────────
+// config.braveApiKeys lists the keys in order. A key that is out of credit (402 —
+// measured 2026-11-08 on the first key: "HTTP 402" once its credit ran out), rejected
+// (401/403) or still rate-limited after one patient retry (429) is benched, and the
+// SAME query goes to the next key at once — a dropped query would silently lose a
+// lead's discovery (the credibility bug ADR-0026 exists to prevent). A benched key is
+// tried again after its bench time, so a key whose monthly credit renews comes back
+// by itself. The ops alert (noteDeadKey) fires only when NO key is left.
+const BENCH_MS: Record<number, number> = {
+  401: 6 * 3_600_000,
+  402: 3_600_000,
+  403: 6 * 3_600_000,
+  429: 10 * 60_000,
+};
+const benchedUntil = new Map<string, number>();
+
+function braveKeyLabel(keys: string[], key: string): string {
+  const i = keys.indexOf(key);
+  return i <= 0 ? "BRAVE_API_KEY" : `BRAVE_API_KEY_${i + 1}`;
+}
+
+/** Keys in failover order, the benched ones skipped. Exported for the check script. */
+export function braveUsableKeys(now = Date.now()): string[] {
+  return config.braveApiKeys.filter((k) => (benchedUntil.get(k) ?? 0) <= now);
+}
+
+async function braveWithFailover(query: string, num: number): Promise<WebResult[]> {
+  const keys = config.braveApiKeys;
+  let last: { status: number; body: string; label: string } | null = null;
+  for (const key of braveUsableKeys()) {
+    let out = await braveSearch(query, key, num);
+    if (!out.ok && out.status === 429) {
+      // A per-second burst limit clears in a second; only a 429 that persists means
+      // the key's quota is spent.
+      await new Promise((r) => setTimeout(r, BRAVE_MIN_GAP_MS));
+      out = await braveSearch(query, key, num);
+    }
+    if (out.ok) return out.results;
+    const label = braveKeyLabel(keys, key);
+    last = { status: out.status, body: out.body, label };
+    const bench = BENCH_MS[out.status];
+    if (bench === undefined) {
+      // 422, 5xx …: a problem with THIS query or Brave itself — another key won't help.
+      warnOnce(
+        `brave-${out.status}`,
+        `⛔ BRAVE SEARCH HIBA (HTTP ${out.status}, ${label})` +
+          `\n   ${out.body.replace(/\s+/g, " ").slice(0, 200)}`,
+      );
+      return [];
+    }
+    benchedUntil.set(key, Date.now() + bench);
+    console.error(
+      `⚠️ ${label}: HTTP ${out.status}` +
+        (out.status === 402 ? " (elfogyott a kerete)" : out.status === 429 ? " (kvóta/rate limit)" : " (érvénytelen kulcs)") +
+        ` → ${Math.round(bench / 60_000)} percre félreteszem, a következő kulccsal próbálom.`,
+    );
+  }
+  if (last && (last.status === 401 || last.status === 402 || last.status === 403)) {
+    noteDeadKey("brave", `minden Brave-kulcs használhatatlan; utolsó: ${last.label} HTTP ${last.status}: ${last.body.slice(0, 200)}`);
+  }
+  warnOnce(
+    `brave-all-${last?.status ?? "benched"}`,
+    `⛔ BRAVE SEARCH: NINCS HASZNÁLHATÓ KULCS (${keys.length} db beállítva` +
+      (last ? `, utolsó: ${last.label} HTTP ${last.status}` : ", mind félretéve") +
+      ") → a webes keresés kimarad. Új kulcs: BRAVE_API_KEY_" + (keys.length + 1) + " a .env-ben.",
+  );
+  return [];
 }
 
 /** Google Programmable Search — LEGACY fallback (entire-web sunset 2027-01-01). */
@@ -139,12 +205,12 @@ async function cseSearch(
 
 /** True when ANY web-search backend is configured (callers can skip the work). */
 export function webSearchAvailable(): boolean {
-  return Boolean(config.braveApiKey || (config.googleMapsApiKey && config.googleCseId));
+  return Boolean(config.braveApiKeys.length > 0 || (config.googleMapsApiKey && config.googleCseId));
 }
 
 /** Which backend a search would use right now (for operator-facing logs). */
 export function webSearchBackend(): "brave" | "google_cse" | "none" {
-  if (config.braveApiKey) return "brave";
+  if (config.braveApiKeys.length > 0) return "brave";
   if (config.googleMapsApiKey && config.googleCseId) return "google_cse";
   return "none";
 }
@@ -152,7 +218,7 @@ export function webSearchBackend(): "brave" | "google_cse" | "none" {
 /**
  * Search the open web. Brave first; Google CSE only as a legacy fallback. The
  * apiKey/cseId params are the CSE credentials (kept for call-site compatibility);
- * the Brave key comes from config.
+ * the Brave keys come from config (BRAVE_API_KEY, then BRAVE_API_KEY_2 … as failover).
  */
 export async function webSearch(
   query: string,
@@ -160,9 +226,8 @@ export async function webSearch(
   cseId?: string,
   num = 5,
 ): Promise<WebResult[]> {
-  if (config.braveApiKey) {
-    const key = config.braveApiKey;
-    return braveThrottled(() => braveSearch(query, key, num));
+  if (config.braveApiKeys.length > 0) {
+    return braveThrottled(() => braveWithFailover(query, num));
   }
   // Fall back to the configured CSE credentials so the behaviour always matches
   // webSearchBackend() (callers may pass them explicitly or not at all).
