@@ -38,7 +38,7 @@ Session: `citc3087339` (brief `~/rc-briefs/sms-mms-20261106-130626.md`)
   - `~/Android/s10ui.sh`.
 
 ## Nyitott kérdések / következő lépések
-1. **MMS az S10-ről, hétfő (11-09) 9:00 előtt.** Most az `mms-send` a SIM nélküli SIM800C-t hajtja, így hétfőn az MMS-ek hibára futnának.
+1. ✅ **MMS az S10-ről: megoldva** (11-07 01:55 óta, a `cit5980e14c` session, ADR-0430: Samsung Üzenetek + a11y-relay, `MMS_SENDER=s10`). A képernyőt a közös `~/.cache/s10-ui.lock` zár védi; a `~/Android/s10ui.sh` is ezt veszi fel.
 2. A hívásfelvétel és a leirat a leadhez kötve kerüljön a Válaszok panelre. Most a `~/speech/calls/` mappában gyűlik.
 3. A MineREAL saját SIM-et kap a 2-es SIM-helyre (tulaj, „lehet veszek”). Ezután a híd SIM-enként küld.
 4. WhatsApp/Viber-regisztráció a modem számára. 11-06 23:39-kor jött egy WhatsApp-kód: ellenőrizni kell, ki indította.

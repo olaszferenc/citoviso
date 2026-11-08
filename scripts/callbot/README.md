@@ -46,7 +46,7 @@ Hívásonként a `~/speech/calls/<időbélyeg>-<in|out>-<szám>/` mappa keletkez
 - Hívás utáni SMS-visszaigazolás **nem kell** (tulaj, 2026-11-06).
 - Folyamatos figyelés: `citoviso-callbot` systemd-szolgáltatás (2026-11-06 óta fut).
 - Még nincs kész: a lead hozzárendelése és a Válaszok panel,
-  valamint az SMS és az MMS átköltöztetése az S10-re.
+  (az SMS és az MMS 2026-11-07 óta az S10-ről megy).
 
 ## SMS: S10-híd a gammu helyén (`s10_smsd.py`)
 
@@ -70,8 +70,8 @@ Titkok: `~/.config/citoviso/s10-smsgw.json` és `~/.config/citoviso/minereal-sms
 Állapot: `~/.local/state/s10-smsd.json`. Mérve 2026-11-06 23:53: egy 3 részes ékezetes SMS
 injektálástól a kézbesítésig 2 mp alatt ment át.
 
-⚠️ Az MMS még NEM megy az S10-ről: az `mms-send` a SIM800C-t hajtja AT-parancsokkal, amiben most
-nincs SIM.
+MMS: 2026-11-07 óta az S10-ről megy (ADR-0430, `src/mms/s10Sender.ts` → Samsung Üzenetek,
+a11y-relay). Képernyő-vezérlés előtt mindenki a közös `~/.cache/s10-ui.lock` zárat veszi fel (`flock`).
 
 ## Ismert apróságok
 
