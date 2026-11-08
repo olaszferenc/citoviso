@@ -445,7 +445,8 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
     select l.raw->>'phone' as phone
       from outreach_dispatch d join lead l on l.id = d.lead_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
-     order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
+     order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
+  // Leads with an e-mail address first (owner 2026-11-08: the e-mail + Viber leads are what matters).
   const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
   const cfg = await getMessengerConfig();
