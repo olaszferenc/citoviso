@@ -251,6 +251,9 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
   - **Háttér-ellenőrzés:** éjjel-nappal, a figyelő 90 mp-es futásonként a kért számok + legfeljebb 1 háttér-szám (`PRESENCE_BACKGROUND = 1`, `presenceBacklog` alapból `true`). Szünet alatt csak Vibert néz; a régi WhatsApp-olvasást nem írja felül.
   - **Csak-WhatsAppos lead** (WhatsApp yes, Viber nem yes): a szünet alatt a `pullMms` ki sem adja, `queued`-ban vár a feloldásig, MMS-ként SEM megy; a jóváhagyó lapon a „WhatsAppon megy” csoportban, óra-jellel. WhatsApp yes + régi Viber → Viberen megy. Ismeretlen WhatsApp (a szünet előtt nem nézett szám) → Viber, különben MMS + SMS (a telefon WhatsAppot nem nyithat, tehát nem tudhatja).
   - **Feloldáskor:** `messenger_outreach.whatsapp = true` → a várakozók maguktól kimennek.
+- 2026-11-08 23:10 · E-MAIL + VIBER = A FONTOS KÖR (tulaj: „igen az a fontos” + „9 óra előtt mindent tömegesen hagyj jóvá ahol van email és viber is”):
+  - a háttér-jelenlétellenőrzés az e-mailes leadekkel kezd (c20db24b, élesen 23:13);
+  - tömeges jóváhagyás (`decideApproval` → `queued`, note: „tömeges jóváhagyás: e-mail + Viber (tulaj 2026-11-08)”): 11-08 23:09-kor 14 db; 11-09 06:00 és 08:50 újra (Debian, egyszeri `systemd-run` timerek `cit-approve-ev-0600/0850`, szkript élesen `/opt/citoviso/approve-email-viber.mts`, napló `~/.claude/approve-email-viber.log`).
   - **Arányok:** a csak WhatsAppos lead kb. 15% (66 mérésből 10); csak Viber 12, mindkettő 34, egyik sem 10.
 - 2026-11-08 · AUTOMATIKUS WHATSAPP-KÖVETÉS (tulaj: „igen, így mehet”):
   - **Sorrend:** a Viber-üzenet megy. Ha 3 nap alatt nem nézi meg, és van WhatsAppja, ugyanaz a kép és szöveg magától kimegy WhatsAppon. Ha azt sem nézi meg újabb 3 nap alatt, a „nem nézte meg” fülre kerül, és onnan MMS + SMS csak a tulaj gombjára megy.
