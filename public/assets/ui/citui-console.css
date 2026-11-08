@@ -834,7 +834,7 @@
 .con-rep__t svg { color: var(--citui-link-ink); flex: 0 0 auto; }
 .con-rep__badge { white-space: nowrap; background: var(--citui-bad-ink); color: var(--citui-panel); border-radius: var(--citui-radius-pill); font-size: 12px; font-weight: 700; padding: 1px 8px; }
 .con-rep__badge.is-zero { background: var(--citui-ok-ink); }
-.con-rep__chips { display: flex; gap: 6px; }
+.con-rep__chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .con .con-rep__chip { font-size: 13px; border: 1px solid var(--citui-line-strong); background: var(--citui-panel); border-radius: var(--citui-radius-pill); padding: 3px 11px; color: var(--citui-ink); white-space: nowrap; }
 .con .con-rep__chip:hover { text-decoration: none; border-color: var(--citui-cyan-500); }
 .con .con-rep__chip[aria-current="true"] { background: var(--citui-navy-900); border-color: var(--citui-navy-900); color: var(--citui-white); }
