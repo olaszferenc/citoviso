@@ -257,6 +257,7 @@ import {
   recordNoPhotoAck,
   type MockPhotoHealth,
 } from "../outreach/mockPhotoHealth.js";
+import { deliverInboundMock } from "../intake/mockRequest.js";
 import {
   ackCoversVerdicts,
   blockingVerdicts,
@@ -3423,6 +3424,19 @@ async function handle(
       await recordReview(id, { verdict: verdict as "pass" | "flag", by, ref, note });
       console.log(`[console] review ${id} (${by}): ${verdict} · ${ref.trim()}`); // i18n-exempt: operator log
       flash = verdict === "pass" ? "Ítélet rögzítve: PASS." : "Ítélet rögzítve: FLAG — küldéskor megerősítést kér.";
+      // A homepage request waiting for this lead's mock: Vera's PASS sends the requester the link.
+      if (verdict === "pass") {
+        try {
+          const out = await deliverInboundMock(id);
+          if (out === "sent") flash += " A főoldali mintakérő megkapta a linket e-mailben.";
+          else if (out === "provenance_flag" || out === "html_unreadable") {
+            flash += ` A főoldali mintakérőnek NEM ment ki a link (${out}) — a kérés vár.`;
+          }
+        } catch (err) {
+          console.error(`[console] inbound mock delivery ${id} hiba:`, err); // i18n-exempt: operator log
+          flash += " A főoldali mintakérőnek a link küldése elbukott — a kérés vár.";
+        }
+      }
     }
     return redirect(
       res,

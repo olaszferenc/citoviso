@@ -112,6 +112,14 @@ export async function enqueueDispatch(input: {
   }
   const contacted = await alreadyContacted(input.leadId);
   if (contacted) return { ok: false, reason: contacted.reason };
+  // A lead that came from the homepage form asked for its mock itself: it gets the
+  // "ready" mail on Vera's PASS (deliverInboundMock), never the cold outreach copy.
+  const inbound = await db
+    .selectFrom("mock_request")
+    .select("id")
+    .where("lead_id", "=", input.leadId)
+    .executeTakeFirst();
+  if (inbound) return { ok: false, reason: "a főoldalon kért mintát — a kész linket e-mailben kapja, nem megkeresést" };
   const row = await db
     .insertInto("outreach_dispatch")
     .values({ lead_id: input.leadId, artifact_id: input.artifactId, queued_by: input.by })
