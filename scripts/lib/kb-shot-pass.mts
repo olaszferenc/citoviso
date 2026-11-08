@@ -1,4 +1,4 @@
-// KB-SHOT PASS CACHE (ADR-XXXX) — deploy GATE 1c/kép re-captures ONLY the help images whose
+// KB-SHOT PASS CACHE (ADR-0432) — deploy GATE 1c/kép re-captures ONLY the help images whose
 // INPUTS changed since a green comparison.
 //
 // WHY. `kb-shot.mts --check-committed` re-rendered and pixel-compared all ~70 guide images on

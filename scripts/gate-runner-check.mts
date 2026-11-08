@@ -31,7 +31,7 @@
 //     a LASSÚ, de folyamatosan író kapu — és a kimenetét a végéig PUFFERELŐ, de egységenként
 //     szívverő poolos kapu (CIT_GATE_HEARTBEAT) — a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),
 //     és csak a teljes-idő plafon (CIT_GATE_JOB_MAX) állítja meg,
-//   · (ADR-XXXX) commit-módban a böngészős kapu (forrásában `playwright`/`chromium`) HANGOSAN a
+//   · (ADR-0432) commit-módban a böngészős kapu (forrásában `playwright`/`chromium`) HANGOSAN a
 //     land-re halasztva, a LAND-mód (LAND_RANGE) és a CIT_FULL_COMMIT=1 viszont lefuttatja, és a
 //     hook CSAK commit-módú blokkjaiban nincs böngészős kapu (azt a land sosem futtatná),
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
@@ -127,7 +127,7 @@ node scripts/modeaware.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] flaky…"
 node scripts/flaky.mjs >"$GATE_LOG" || gate_failed
 `;
-// ── K: browser gates wait for the land (ADR-XXXX). One browser gate, one plain gate.
+// ── K: browser gates wait for the land (ADR-0432). One browser gate, one plain gate.
 const BROWSER_GATES = String.raw`
 echo "[pre-commit] browser…"
 node scripts/browser.mjs >"$GATE_LOG" || gate_failed

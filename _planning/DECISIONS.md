@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-kapu-gyorsitas-bongeszos-kapuk-a-landen-kb-kep-gyorsitotar.md) — Gyorsabb commit és deploy: a böngészős kapuk a landen futnak, a súgóképeket csak bemenet-változáskor gyártjuk újra
+- [ADR-0432](decisions/0432-gyorsabb-commit-es-deploy-a-bongeszos-kapuk-a.md) — Gyorsabb commit és deploy: a böngészős kapuk a landen futnak, a súgóképeket csak bemenet-változáskor gyártjuk újra
 - [ADR-0431](decisions/0431-stock-illusztracio-a-vekony-leadek-mockjaban.md) — Stock-illusztráció a vékony leadek mockjában (csak galéria + szobakártya, soha élesre)
 - [ADR-0430](decisions/0430-messenger-elso-megkereses-viber-whatsapp-mms-az.md) — Messenger-első megkeresés: Viber → WhatsApp → MMS, az S10-ről, olvasás-méréssel
 - [ADR-0429](decisions/0429-modulonkenti-statusz-es-elso-belepeses-beallito.md) — Modulonkénti státusz és első belépéses beállító varázsló, egy nyilvántartásból, land-kapuval

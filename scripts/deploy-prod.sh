@@ -157,7 +157,7 @@ timers_install_and_verify() {
 # `npx tsx scripts/kb-shot.mts --determinism`) — nélküle a kapu zajra bukna.
 # Nem csak KB-releváns diffnél fut: egy CSS- vagy fixture-változás ugyanúgy elavítja a képet.
 # Csak LOKÁLIS: a prodot nem érinti (külön is futtatható: --kb-shot-gate <commit> [--full-kb-shots]).
-# ⏱️ (ADR-XXXX) Alapból csak azt a képet gyártja újra, amelynek a bemenete (HTML, betöltött fájl,
+# ⏱️ (ADR-0432) Alapból csak azt a képet gyártja újra, amelynek a bemenete (HTML, betöltött fájl,
 # gyártó-kód, böngésző, betűk, commitolt PNG) eltér egy korábbi ZÖLD összevetésétől — a többi
 # bizonyítottan ugyanazt adná. Kétség = újragyártás. --full-kb-shots: mind a ~70, gyorsítótár nélkül.
 kb_shot_gate() { # $1 = commit sha

@@ -1,4 +1,4 @@
-## ADR-XXXX — Gyorsabb commit és deploy: a böngészős kapuk a landen futnak, a súgóképeket csak bemenet-változáskor gyártjuk újra
+## ADR-0432 — Gyorsabb commit és deploy: a böngészős kapuk a landen futnak, a súgóképeket csak bemenet-változáskor gyártjuk újra
 
 **Dátum:** 2026-11-08 · **Döntött:** tulaj („kell minden bazdmeg??? … nincs ez kurvára túltolva?” → a cél jóváhagyva: a commitnál csak a gyors kapuk fussanak, a land változatlanul teljes, a deploy csak az érintett súgóképeket gyártsa újra; „ok egy subbal csináld meg”) · **Kapcsolódik:** ADR-0052 (land), ADR-0053 (deploy), ADR-0220 (súgókép-kapu), ADR-0227/0230/0265 (kapu-futtató), ADR-0260 (zöld-gyorsítótár)
 

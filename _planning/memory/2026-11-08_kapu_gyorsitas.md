@@ -1,6 +1,6 @@
 # 2026-11-08 — Kapu-gyorsítás: böngészős kapuk a landen, súgókép-kapu csak változott bemenetre
 
-**Session:** CIT `cit547b6566` (SUB, koordinátor: `cit5980e14c-92` „Telefon”) · **ADR:** ADR-XXXX
+**Session:** CIT `cit547b6566` (SUB, koordinátor: `cit5980e14c-92` „Telefon”) · **ADR:** ADR-0432
 
 ## Elvégezve
 - `scripts/lib/gate-runner.mjs`: commit-módban (nincs `LAND_RANGE`) a böngészős kapuk a landre halasztva, hangosan listázva; `CIT_FULL_COMMIT=1` = teljes kör. A land változatlan.

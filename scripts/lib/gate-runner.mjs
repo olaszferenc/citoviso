@@ -83,7 +83,7 @@
 // verdict from the output: a gate that did not return gave none (the 2026-09-27 hang was mid-run,
 // not at close).
 //
-// BROWSER GATES WAIT FOR THE LAND (ADR-XXXX). A commit used to run the full gate list and
+// BROWSER GATES WAIT FOR THE LAND (ADR-0432). A commit used to run the full gate list and
 // `scripts/land.sh` ran the same list again on the rebased diff minutes later (measured
 // 2026-11-08: commit ~10 min + land ~10 min for one surface change). The pass cache above does
 // not help once main moved, which with ~10 parallel threads is almost always. So in COMMIT mode
@@ -585,7 +585,7 @@ function show(job, r) {
   process.stdout.write(`${parts.filter(Boolean).join("\n")}\n`);
 }
 
-// ── COMMIT MODE: browser gates wait for the land (see the header, ADR-XXXX) ───────────
+// ── COMMIT MODE: browser gates wait for the land (see the header, ADR-0432) ───────────
 const COMMIT_MODE = !process.env.LAND_RANGE && process.env.CIT_FULL_COMMIT !== "1";
 const BROWSER_GATE = /playwright|chromium/i;
 function browserGate(job) {
@@ -618,7 +618,7 @@ for (const j of jobs) {
 if (toLand.length) {
   const names = [...new Set(toLand.map((j) => path.basename(j.script).replace(/\.(mts|mjs|ts|js)$/, "")))];
   process.stdout.write(
-    `[pre-commit] ⏭ ${toLand.length} böngészős kapu a LAND-en fut, nem most (commit-mód, ADR-XXXX): ${names.join(", ")}\n` +
+    `[pre-commit] ⏭ ${toLand.length} böngészős kapu a LAND-en fut, nem most (commit-mód, ADR-0432): ${names.join(", ")}\n` +
       `   A land.sh mindet lefuttatja a teljes landolt diffre. Teljes kör most: CIT_FULL_COMMIT=1 git commit …\n`,
   );
 }

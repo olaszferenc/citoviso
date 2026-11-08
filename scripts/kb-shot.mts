@@ -15,7 +15,7 @@
 //                                                  # képekkel veti össze (deploy GATE 1c, ADR-0220)
 //   npx tsx scripts/kb-shot.mts --check-committed --full  # ugyanez gyorsítótár NÉLKÜL: minden képet újragyárt
 //
-// ⏱️ VÁLTOZATLAN BEMENET = NINCS ÚJRAGYÁRTÁS (ADR-XXXX). A --check-committed csak azt a képet
+// ⏱️ VÁLTOZATLAN BEMENET = NINCS ÚJRAGYÁRTÁS (ADR-0432). A --check-committed csak azt a képet
 // gyártja újra és veti össze, amelynek valamelyik bemenete (HTML, betöltött fájl, gyártó-kód,
 // böngésző, betűk, a commitolt PNG) eltér egy korábbi ZÖLD összevetésétől — a többi bizonyítottan
 // ugyanazt adná (determinizmus, ADR-0220). Részletek: scripts/lib/kb-shot-pass.mts.
@@ -1132,7 +1132,7 @@ if (process.argv.includes("--self-test")) {
     process.exit(1);
   }
 
-  // ── A „VÁLTOZATLAN BEMENET" GYORSÍTÓTÁR ÖNKONTROLLJA (ADR-XXXX) ─────────────────
+  // ── A „VÁLTOZATLAN BEMENET" GYORSÍTÓTÁR ÖNKONTROLLJA (ADR-0432) ─────────────────
   // Egy kép CSAK akkor maradhat ki, ha minden bemenete azonos egy zöld összevetésével. Hermetikus
   // próba egy eldobható fában: az azonos bemenet találat (különben a gyorsítás csak költség), és
   // MINDEN egyes bemenet változása újragyártást ad (különben a kapu zölden hazudna).
@@ -1215,7 +1215,7 @@ const page = await browser.newPage({
 // Google Fonts from the committed snapshot, every other external request refused (ADR-0220).
 const netMisses = await pinNetwork(page);
 
-// ── PASS CACHE (ADR-XXXX, scripts/lib/kb-shot-pass.mts) ──────────────────────────────
+// ── PASS CACHE (ADR-0432, scripts/lib/kb-shot-pass.mts) ──────────────────────────────
 // Every shot starts from the SAME page state whether or not earlier shots were skipped: pointer
 // parked, storage and cookies empty, the browser cache off (each shot's every load is observed).
 const PASS_DIR = OUT_DIR && process.argv.includes("--pass-cache") ? passDir(process.cwd()) : null;
