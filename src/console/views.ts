@@ -9631,7 +9631,11 @@ function repAddr(r: ReplyView, text: string, subject: string | null, lang: strin
 function repState(x: ReplySendView, r: ReplyView, hidden: string, lang: string): string {
   if (x.status === "scheduled")
     return `<span class="con-rep__st is-q" data-rep-pending="${esc(r.id)}">${icf("clock", 13)}${esc(T(lang, "Sorban — {when} megy ki", { when: x.scheduledFor ? whenAhead(x.scheduledFor, lang) : "—" }))}</span>`;
-  if (x.status === "queued") return `<span class="con-rep__st is-q" data-rep-pending="${esc(r.id)}"><span class="con-rep__spin"></span>${esc(T(lang, "Sorban — a modem-sáv viszi ki"))}</span>`;
+  if (x.status === "queued") {
+    // ADR-0430: a Viber/WhatsApp answer is typed into the chat by the S10, not sent by the modem.
+    const how = x.channel === "viber" || x.channel === "whatsapp" ? T(lang, "Sorban — a telefon beírja a csevegésbe") : T(lang, "Sorban — a modem-sáv viszi ki");
+    return `<span class="con-rep__st is-q" data-rep-pending="${esc(r.id)}"><span class="con-rep__spin"></span>${esc(how)}</span>`;
+  }
   if (x.status === "failed")
     return (
       `<span class="con-rep__st is-err">${icf("alert", 13)}${esc(T(lang, "Nem ment ki: {why}", { why: x.error ?? "—" }))}</span>` +

@@ -46,9 +46,10 @@ A menü egy fa: **„Irányítópult”**, alatta a modulok — **CRM**, **„P�
 
 ## Az Irányítópult tartalma
 
-**„Válaszok a megkeresésekre”** — a lap tetején, a kártyák fölött: ide kerül minden SMS és
-e-mail, amivel egy lead a megkeresésünkre válaszolt. A gép az SMS-eket percenként, a postafiókot
-két percenként nézi meg; a blokk alján lévő sor mutatja, mikor nézte utoljára (ha 10 percnél
+**„Válaszok a megkeresésekre”** — a lap tetején, a kártyák fölött: ide kerül minden SMS,
+e-mail, Viber- és WhatsApp-üzenet, amivel egy lead a megkeresésünkre válaszolt. A gép az SMS-eket
+percenként, a postafiókot két percenként nézi meg; a Viber- és WhatsApp-csevegéseket a telefon
+10 percenként nézi végig (a friss megkeresést óránként, az egy napnál régebbit 6 óránként, egy hétig); a blokk alján lévő sor mutatja, mikor nézte utoljára (ha 10 percnél
 régebben, a sor borostyán — a gyűjtés akadt el, nem a válaszok maradtak el). Csak olyan feladó
 jelenik meg, akinek mi írtunk; más SMS vagy levél nem kerül ide.
 
@@ -56,7 +57,7 @@ jelenik meg, akinek mi írtunk; más SMS vagy levél nem kerül ide.
   **„mind megválaszolva”** (zöld). Alatta két szűrő: **„Megválaszolatlan”** (ez az alap) és
   **„Mind”**, mellettük a darabszám.
 - **Asztali gépen** bal oldalt a lista, a legújabb felül: piros pötty = megválaszolatlan, zöld
-  karika = megválaszolt, a lead neve, SMS vagy E-mail, az időpont és a válasz eleje. Jobb oldalt
+  karika = megválaszolt, a lead neve, a csatorna (SMS, E-mail, Viber vagy WhatsApp), az időpont és a válasz eleje. Jobb oldalt
   a kiválasztott beszélgetés: felül a MI kiküldött üzenetünk (melyik csatornán, mikor, levélnél a
   tárgy), alatta a válasz teljes szövege.
 - **Telefonon** csak a lista látszik; egy sorra koppintva a beszélgetés nyílik meg helyette, a
@@ -79,7 +80,8 @@ buborék áll: ez még NEM ment ki.
   Alatta címkékben, mire alapozott (például: élő árlista, a beszélgetés kérdése). Kiírja a
   csatornát és a címzettet — a válasz MINDIG ugyanazon a csatornán megy, ahol a lead írt, és
   annak a számára/címére; levélnél a beérkezett levél szálában, „Re: …” tárggyal. SMS-nél azt
-  is, hány részből áll.
+  is, hány részből áll. Viber- és WhatsApp-válasznál a választ a telefon írja be ugyanabba a
+  csevegésbe — SMS nem megy, részszámláló és tárgy nincs.
 - **„Elküldöm”** — kiküldi a szöveget úgy, ahogy van.
 - **„Szerkesztem”** — a szöveg (levélnél a **„Tárgy”** is) helyben szerkeszthetővé válik, ott
   **„Elküldöm”** vagy **„Mégse”**. SMS-nél egy számláló mutatja a karaktereket és a részeket:
@@ -93,7 +95,9 @@ buborék áll: ez még NEM ment ki.
   Ablakon kívül az **„Elküldöm”** sorba állítja, és kiírja, mikor indul (például: holnap 9:00).
   A sorban álló választ (**„Válasz a sorban”**) már nem lehet szerkeszteni vagy visszavonni, és
   amíg ott áll, újabb válasz sem küldhető ugyanerre — ezért este, hétvégén küldés előtt olvasd át.
-- **Állapot:** SMS-nél először **„Sorban — a modem-sáv viszi ki”**, amíg a modem ki nem küldi.
+- **Állapot:** SMS-nél először **„Sorban — a modem-sáv viszi ki”**, amíg a modem ki nem küldi;
+  Viber- és WhatsApp-válasznál **„Sorban — a telefon beírja a csevegésbe”**, amíg a telefon be nem
+  írja (legfeljebb ~10 perc).
   Sikeres küldés után a buborék helyén az **„Elküldött válasz”** áll (csatorna — SMS-nél a részek
   száma, levélnél a tárgy —, idő, ki küldte), és a tétel MAGÁTÓL **„Megválaszolva”** lesz, a te neveddel — a **„Megválaszoltam”**-ot
   ilyenkor nem kell megnyomni. Ha nem ment ki: piros sor az okkal és **„Újraküldés”** gomb; a
