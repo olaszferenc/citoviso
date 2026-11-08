@@ -195,7 +195,7 @@ kb_shot_gate() { # $1 = commit sha
     fail "kb-kép-kapu: a gyártó 0-val lépett ki, de a „friss\" sort nem írta ki — a mérés nem történt meg"
   fi
   echo "     ✓ $ok"
-  grep -o 'súgó-kép újragyártva.*' "$log" | sed 's/^/       /' || true
+  grep -o '[0-9]* súgó-kép újragyártva.*' "$log" | sed 's/^/       /' || true
   rm -f "$log"
 }
 
