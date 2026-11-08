@@ -367,6 +367,13 @@ def main():
         fcntl.flock(lf, fcntl.LOCK_EX)
         if call_busy():
             raise Fail("call in progress — screen not touched")
+        # A (swipe) keyguard hides every app behind it and every read comes back "unknown"
+        # (measured 2026-11-08 evening). Dismiss it; refuse if a secure lock stays up.
+        if "isKeyguardShowing=true" in sh("dumpsys", "window"):
+            sh("wm", "dismiss-keyguard")
+            time.sleep(1.5)
+            if "isKeyguardShowing=true" in sh("dumpsys", "window"):
+                raise Fail("screen locked — keyguard could not be dismissed")
         if a.cmd == "presence":
             res.update(presence(ph)); res["ok"] = True
         elif a.cmd == "status":
