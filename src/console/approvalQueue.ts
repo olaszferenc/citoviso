@@ -476,7 +476,7 @@ export function approvalPage(
     return i.channel.channel === "viber" && i.channel.step === 1 ? `${i.city} · ${i.channel.reason.replace(/^.*utoljára aktív: /, T(lang, "aktív") + ": ")}` : `${i.city} · ${site}`;
   };
   const row = (i: PendingApproval): string =>
-    `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small>${contactBadges(i, lang)}</a>`;
+    `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-chk="${i.channel.channel === "check" ? "wait" : "done"}" data-alt="${i.altId ? "yes" : "no"}" data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small>${contactBadges(i, lang)}</a>`;
   const groups = APPROVAL_GROUPS.map((g) => {
     const its = items.filter((i) => groupOf(i) === g);
     if (!its.length) return "";
@@ -486,6 +486,10 @@ export function approvalPage(
     `<div class="aq-filt"><input type="search" placeholder="${esc(T(lang, "Keresés név vagy település szerint"))}" aria-label="${esc(T(lang, "Keresés név vagy település szerint"))}">` +
     `<h4>${esc(T(lang, "Csatorna"))}</h4>${chips("ch", APPROVAL_GROUPS.map((g) => [g, chipName(g, lang)] as const), lang)}` +
     `<h4>${esc(T(lang, "Honlap"))}</h4>${chips("site", [["none", T(lang, "Nincs honlap")], ["old", T(lang, "Elavult honlap")]], lang)}` +
+    // Owner 2026-11-08: hide / show what the phone has not checked for Viber / WhatsApp yet,
+    // and the leads whose send would stop now for want of a reviewed second plan.
+    `<h4>${esc(T(lang, "Messenger-ellenőrzés"))}</h4>${chips("chk", [["done", T(lang, "Ellenőrizve")], ["wait", T(lang, "Ellenőrzésre vár")]], lang)}` +
+    `<h4>${esc(T(lang, "Második terv"))}</h4>${chips("alt", [["yes", T(lang, "Van")], ["no", T(lang, "Nincs — most megállna")]], lang)}` +
     `<button type="button" class="aq-clear">${esc(T(lang, "Szűrők törlése"))}</button></div>`;
   const left =
     `<nav class="aq-list"><div class="aq-cnt">${esc(T(lang, "Jóváhagyásra vár"))}: ${items.length}</div>${items.length ? filters : ""}${groups}` +
