@@ -3105,6 +3105,27 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-dev { display: grid; gap: 8px; }
 .rp-drow { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; font-size: 12.5px; }
 
+/* Honnan nyitották (frozen plan: assets/design-refs/console/honnan-nyitottak/, B) */
+.rp-os-stack { display: flex; height: 30px; border-radius: 6px; overflow: hidden; margin: 2px 0 8px; }
+.rp-os-stack i { display: flex; align-items: center; justify-content: center; font: 600 12px var(--citui-font-text); font-style: normal; color: var(--citui-ink-inverse); min-width: 0; white-space: nowrap; overflow: hidden; }
+.rp-os-leg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; margin: 0 0 12px; }
+.rp-os-leg b, .rp-os-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.rp-os-email { background: var(--citui-link-ink); }
+.rp-os-sms { background: var(--citui-cyan-500); }
+.rp-os-viber { background: var(--citui-navy-700); }
+.rp-os-whatsapp { background: color-mix(in srgb, var(--citui-ok) 80%, var(--citui-navy-900)); }
+.rp-os-unknown { background: color-mix(in srgb, var(--citui-muted) 55%, var(--citui-panel)); }
+.rp-os-dim { opacity: .55; }
+.con .rp-os-tbl .rp-os-btn { all: unset; min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: center; }
+.con .rp-os-tbl .rp-os-btn::before { content: "▸"; margin-right: 5px; color: var(--citui-muted); }
+.con .rp-os-tbl .rp-os-btn[aria-expanded="true"]::before { content: "▾"; }
+.con .rp-os-tbl .rp-os-btn:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+.rp-os-tbl tr:has(.rp-os-btn) { cursor: pointer; }
+.rp-os-tbl tr:has(.rp-os-btn):hover td { background: var(--citui-surface-2); }
+.rp-os-sub td { background: var(--citui-surface); }
+.rp-os-sub .rp-ret__list { margin: 2px 0; }
+@media (max-width: 600px) { .rp-os-hm { display: none; } .rp-tbl.rp-os-tbl th { white-space: normal; } .rp-tbl.rp-os-tbl th, .rp-tbl.rp-os-tbl td { padding-left: 4px; padding-right: 4px; } }
+
 /* tables */
 .rp-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .rp-tbl th { text-align: left; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--citui-muted); padding: 6px; border-bottom: 1px solid var(--citui-line); white-space: nowrap; background: none; }

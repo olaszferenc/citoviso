@@ -186,7 +186,7 @@ export async function sendEscalationFollowups(
       skipped++;
       continue;
     }
-    const msg = buildOutreachEmail(draft, email, { lang });
+    const msg = buildOutreachEmail(draft, email, { lang, openVia: "e" });
     // Claim BEFORE the send (ADR-0287): an overlapping or repeated run loses here and
     // sends nothing; an offer that expired since the query cannot be claimed.
     if (!(await claimFollowup(f.offerId, now))) {

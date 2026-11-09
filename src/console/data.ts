@@ -42,6 +42,7 @@ import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
 import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
 import { CLIENT_FILTERS, isClientFilter, loadLeadClients, passesClientFilter, trialNoLogin, type ClientFilter, type ClientKind } from "./leadClient.js";
 import { isEngineArtifact } from "../conversion/provision.js";
+import type { OpenVia } from "../outreach/openVia.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -2056,6 +2057,7 @@ export async function recordView(
   prospectId: string,
   userAgent: string | null,
   referrer: string | null,
+  openVia: OpenVia | null = null,
 ): Promise<string> {
   // ADR-0322 ③ (ADR-0108 shape): only what the report needs is stored — the device
   // class, OS, browser and the referrer HOST. The raw UA and the full referrer are not.
@@ -2068,6 +2070,7 @@ export async function recordView(
       os: ua.os,
       browser: ua.browser,
       referrer_host: referrerHost(referrer),
+      open_via: openVia,
     })
     .returning("id")
     .executeTakeFirstOrThrow();

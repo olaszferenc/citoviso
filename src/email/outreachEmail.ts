@@ -26,6 +26,7 @@ import { config } from "../config.js";
 import type { OutreachDraft, OutreachParts } from "../outreach/draft.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 import { bandBrand } from "./platformLayout.js";
+import { tagLink, tagLinkInText, type OpenViaTag } from "../outreach/openVia.js";
 
 /** CID of the embedded hero screenshot (referenced from the HTML). */
 export const HERO_CID = "hero-terv";
@@ -211,7 +212,9 @@ export function buildOutreachEmail(
   draft: OutreachDraft,
   to: string,
   // ADR-0067: `lang` DECLARES the language of the (already lead-language) body.
-  opts: { heroShotPath?: string | null; lang?: string } = {},
+  // `openVia`: the REAL send passes "e" — the link then carries the channel letter
+  // (openVia.ts). The console preview passes nothing and shows the plain link.
+  opts: { heroShotPath?: string | null; lang?: string; openVia?: OpenViaTag } = {},
 ): EmailMessage {
   // ⛔ §I / §C.4 CONSISTENCY GUARD. The HTML renders `parts`, the gate judges `body` —
   // so they must carry the same content. This is not theoretical: the escalation
@@ -237,7 +240,7 @@ export function buildOutreachEmail(
     hasShot ? `cid:${HERO_CID}` : null,
     draft.parts,
     {
-      cta: draft.link,
+      cta: opts.openVia ? tagLink(draft.link, opts.openVia) : draft.link,
       unsub: draft.unsubscribeLink,
       privacy: draft.privacyLink,
       ...(draft.whyLink ? { why: draft.whyLink } : {}),
@@ -284,7 +287,7 @@ export function buildOutreachEmail(
     to,
     audience: "platform",
     subject: draft.subject,
-    text: draft.body,
+    text: opts.openVia ? tagLinkInText(draft.body, draft.link, opts.openVia) : draft.body,
     html,
     ...(headers ? { headers } : {}),
     ...(attachments ? { attachments } : {}),

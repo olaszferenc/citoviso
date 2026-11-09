@@ -138,6 +138,40 @@ export interface Visit {
   /** Deepest section reached (index into EXIT_SECTIONS), -1 = none reported. */
   readonly lastSection: number;
   readonly events: readonly RawEvent[];
+  /** „Honnan nyitották” (0132): which message's link opened this visit — see attributeOpen(). */
+  readonly openSource?: OpenSource;
+  /** true = the link's own channel letter said it; false = inferred (send order / referrer). */
+  readonly openSourceSure?: boolean;
+}
+
+/** Where a visit came from. `unknown` = an old, untagged link the lead got on 2+ channels. */
+export type OpenSource = "email" | "sms" | "viber" | "whatsapp" | "unknown";
+export const OPEN_SOURCES: readonly OpenSource[] = ["email", "sms", "viber", "whatsapp", "unknown"];
+/** The first send of the LINK per channel (before the second-touch cut). */
+export type ChannelTouches = Readonly<Partial<Record<Exclude<OpenSource, "unknown">, Date>>>;
+
+export interface OpenSourceLead {
+  readonly prospectId: string;
+  readonly leadId: string;
+  readonly leadName: string;
+  /** Visits of this lead from this source. */
+  readonly visits: number;
+  readonly lastVisitAt: Date;
+  readonly sure: boolean;
+}
+
+export interface OpenSourceRow {
+  readonly source: OpenSource;
+  /** Sent links that went out on this channel (null for `unknown`). */
+  readonly got: number | null;
+  /** Leads with at least one visit from this source (a lead may sit in two rows). */
+  readonly openers: number;
+  readonly views: number;
+  /** Of `openers`: leads with at least one channel-tagged visit from here. */
+  readonly sure: number;
+  readonly inferred: number;
+  /** Most recent visit first. */
+  readonly leads: readonly OpenSourceLead[];
 }
 
 export interface ProspectFacts {
@@ -158,6 +192,8 @@ export interface ProspectFacts {
   /** free_trial.started_at of this send's trial (see the header definition), null = none. */
   readonly trialedAt: Date | null;
   readonly orderedAt: Date | null;
+  /** „Honnan nyitották” (0132): when the link went out on each channel; absent = none known. */
+  readonly touches?: ChannelTouches;
   readonly paidAt: Date | null;
   readonly unsubscribedAt: Date | null;
   readonly escalationShown: boolean;
@@ -361,6 +397,8 @@ export interface ReportData {
   };
   readonly hypotheses: readonly Hypothesis[];
   readonly returns: readonly ReturnRow[];
+  /** „Honnan nyitották” (0132, frozen plan design-refs/console/honnan-nyitottak/ B). */
+  readonly openSources: readonly OpenSourceRow[];
   readonly escalation: { shown: number; cta: number; ordered: number; dismissed: number };
   readonly dims: readonly DimRow[];
   readonly cohorts: readonly CohortRow[];
@@ -574,10 +612,11 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
 
   const views = await db
     .selectFrom("mock_view")
-    .select(["id", "prospect_id", "started_at", "user_agent", "device"])
+    .select(["id", "prospect_id", "started_at", "user_agent", "device", "open_via", "referrer_host"])
     .where("prospect_id", "in", ids)
     .orderBy("started_at", "asc")
     .execute();
+  const messengerSends = await loadMessengerSends(ids);
   const viewIds = views.map((v) => v.id);
   const events = viewIds.length
     ? await db
@@ -607,6 +646,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     list.push({ type: e.type, payload: e.payload, occurredAt: toDate(e.occurred_at)! });
     eventsByView.set(e.mock_view_id, list);
   }
+  const rowById = new Map(rows.map((r) => [r.id, r]));
   const viewsByProspect = new Map<string, Visit[]>();
   for (const v of views) {
     // A bot-classified view (headless test, link scanner that passed the human gate) is
@@ -615,7 +655,17 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     if (device === "bot") continue;
     if (!before(leadOfProspect.get(v.prospect_id) ?? "", toDate(v.started_at))) continue;
     const evs = eventsByView.get(v.id) ?? [];
-    const visit = foldVisit(v.id, toDate(v.started_at)!, device, evs);
+    const r = rowById.get(v.prospect_id);
+    const src = r
+      ? attributeOpen(
+          toDate(v.started_at)!,
+          v.open_via,
+          v.referrer_host,
+          touchesOf(r, messengerSends.get(v.prospect_id) ?? [], (at) => before(r.lead_id, at)),
+          messengerSends.get(v.prospect_id) ?? [],
+        )
+      : { source: "unknown" as const, sure: false };
+    const visit = { ...foldVisit(v.id, toDate(v.started_at)!, device, evs), openSource: src.source, openSourceSure: src.sure };
     const list = viewsByProspect.get(v.prospect_id) ?? [];
     list.push(visit);
     viewsByProspect.set(v.prospect_id, list);
@@ -664,6 +714,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       deepAt,
       trialedAt: before(r.lead_id, trialed.get(r.id) ?? null),
       orderedAt: firstOrder.get(r.id) ?? null,
+      touches: touchesOf(r, messengerSends.get(r.id) ?? [], (at) => before(r.lead_id, at)),
       paidAt,
       unsubscribedAt: before(r.lead_id, toDate(r.unsubscribed_at)),
       escalationShown: escShown,
@@ -674,6 +725,122 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       exitConfidence: verdict?.confidence ?? null,
       stated: feedback.get(r.id) ?? null,
       replied: replied.has(r.id),
+    };
+  });
+}
+
+// ── „Honnan nyitották” (0132) ──────────────────────────────────────────────────
+// The link went out the same on every channel until 0132, so an old visit's channel is
+// INFERRED — and the panel says so ("következtetett"). The rules, in order:
+//   1. the visit's own channel letter (mock_view.open_via, openVia.ts) → sure. `messenger`
+//      resolves to the app the phone actually used (the latest Viber/WhatsApp send before it);
+//   2. a mail client as referrer (the Gmail app hands over `com.google.android.gm`) → e-mail;
+//   3. only ONE channel had carried the link before the visit → that channel;
+//   4. otherwise `unknown` — never a guess.
+// ⛔ `prospect.sms_sent_at` is NOT "an SMS went out": a messenger send stamps it too (it means
+// "the lead got the link", ADR-0430). The SMS touch is therefore the stamp only when no
+// messenger send exists, else the owner's MMS+SMS fallback (mms_outbox.fallback_of, channel mms).
+
+export interface MessengerSend {
+  readonly channel: "viber" | "whatsapp" | "mms";
+  readonly sentAt: Date;
+  /** true = the owner's MMS+SMS fallback of a messenger send (its companion SMS carries the link). */
+  readonly fallback: boolean;
+}
+
+async function loadMessengerSends(ids: readonly string[]): Promise<Map<string, MessengerSend[]>> {
+  const out = new Map<string, MessengerSend[]>();
+  if (!ids.length) return out;
+  const rows = await db
+    .selectFrom("mms_outbox")
+    .select(["prospect_id", "channel", "sent_at", "fallback_of"])
+    .where("prospect_id", "in", ids)
+    .where("status", "=", "sent")
+    .where("channel", "in", ["viber", "whatsapp", "mms"])
+    .where("sent_at", "is not", null)
+    .orderBy("sent_at", "asc")
+    .execute();
+  for (const r of rows) {
+    if (!r.prospect_id || !r.channel) continue;
+    const list = out.get(r.prospect_id) ?? [];
+    list.push({ channel: r.channel, sentAt: toDate(r.sent_at)!, fallback: r.fallback_of !== null });
+    out.set(r.prospect_id, list);
+  }
+  return out;
+}
+
+/** First send of the link per channel; `keep` drops what falls after the second-touch cut. */
+export function touchesOf(
+  p: { email_sent_at: unknown; sms_sent_at: unknown },
+  sends: readonly MessengerSend[],
+  keep: (at: Date | null) => Date | null = (at) => at,
+): ChannelTouches {
+  const first = (ch: MessengerSend["channel"], fallback?: boolean): Date | null =>
+    sends.find((s) => s.channel === ch && (fallback === undefined || s.fallback === fallback))?.sentAt ?? null;
+  const viber = keep(first("viber"));
+  const whatsapp = keep(first("whatsapp"));
+  const messenger = sends.some((s) => s.channel !== "mms");
+  const sms = keep(messenger ? first("mms", true) : toDate(p.sms_sent_at));
+  const email = keep(toDate(p.email_sent_at));
+  return {
+    ...(email ? { email } : {}),
+    ...(sms ? { sms } : {}),
+    ...(viber ? { viber } : {}),
+    ...(whatsapp ? { whatsapp } : {}),
+  };
+}
+
+/** Mail clients that name themselves as the referrer (host only, ADR-0108). */
+const MAIL_REFERRERS: readonly RegExp[] = [/^com\.google\.android\.gm$/, /^mail\.google\.com$/, /^outlook\.(live|office)\.com$/, /(^|\.)mail\.yahoo\.com$/, /^(levelezo|webmail|posta|mail)\./];
+
+export function attributeOpen(
+  at: Date,
+  openVia: string | null,
+  referrerHost: string | null,
+  touches: ChannelTouches,
+  sends: readonly MessengerSend[] = [],
+): { source: OpenSource; sure: boolean } {
+  if (openVia === "email" || openVia === "sms" || openVia === "whatsapp") return { source: openVia, sure: true };
+  if (openVia === "messenger") {
+    const last = [...sends].reverse().find((s) => s.channel !== "mms" && s.sentAt.getTime() <= at.getTime());
+    if (last) return { source: last.channel as "viber" | "whatsapp", sure: true };
+  }
+  if (referrerHost && MAIL_REFERRERS.some((re) => re.test(referrerHost)) && touches.email && touches.email.getTime() <= at.getTime()) {
+    return { source: "email", sure: false };
+  }
+  const before = (Object.entries(touches) as [Exclude<OpenSource, "unknown">, Date][]).filter(([, d]) => d.getTime() <= at.getTime());
+  if (before.length === 1) return { source: before[0]![0], sure: false };
+  return { source: "unknown", sure: false };
+}
+
+/** The panel's rows — every number the „Honnan nyitották” panel prints. */
+export function foldOpenSources(inRange: readonly ProspectFacts[]): OpenSourceRow[] {
+  return OPEN_SOURCES.map((source) => {
+    const leads: OpenSourceLead[] = [];
+    let views = 0;
+    for (const p of inRange) {
+      const vs = p.visits.filter((v) => (v.openSource ?? "unknown") === source);
+      if (!vs.length) continue;
+      views += vs.length;
+      leads.push({
+        prospectId: p.id,
+        leadId: p.leadId,
+        leadName: p.leadName,
+        visits: vs.length,
+        lastVisitAt: vs[vs.length - 1]!.startedAt,
+        sure: vs.some((v) => v.openSourceSure === true),
+      });
+    }
+    leads.sort((a, b) => b.lastVisitAt.getTime() - a.lastVisitAt.getTime());
+    const sure = leads.filter((l) => l.sure).length;
+    return {
+      source,
+      got: source === "unknown" ? null : inRange.filter((p) => p.touches?.[source]).length,
+      openers: leads.length,
+      views,
+      sure,
+      inferred: leads.length - sure,
+      leads,
     };
   });
 }
@@ -1208,6 +1375,7 @@ export function foldReport(
     times,
     hypotheses,
     returns,
+    openSources: foldOpenSources(inRange),
     escalation,
     dims,
     cohorts,

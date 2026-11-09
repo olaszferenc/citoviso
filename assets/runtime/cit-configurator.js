@@ -113,6 +113,30 @@
   }
   var viewSent = false;
   var mounted = false;
+  /* cit-cfg-openvia-start — 0132: the outreach link's channel letter (?e mail · ?s SMS · ?m
+   * Viber/WhatsApp · ?w WhatsApp follow-up, src/outreach/openVia.ts). Read ONCE at load, sent
+   * with the view, then taken off the address bar: a forwarded link must not credit the
+   * channel the lead got it on. */
+  var OPEN_VIA = (function () {
+    try {
+      var qs = new URLSearchParams(window.location.search);
+      var tags = ["e", "s", "m", "w"];
+      for (var i = 0; i < tags.length; i++) {
+        if (qs.has(tags[i]) && qs.get(tags[i]) === "") {
+          qs.delete(tags[i]);
+          var rest = qs.toString();
+          if (window.history && history.replaceState) {
+            history.replaceState(history.state, "", window.location.pathname + (rest ? "?" + rest : "") + window.location.hash);
+          }
+          return tags[i];
+        }
+      }
+    } catch (_e) {
+      /* measurement must never break the page */
+    }
+    return "";
+  })();
+  /* cit-cfg-openvia-end */
   function registerView() {
     if (!TRACK || viewSent) return;
     viewSent = true;
@@ -121,7 +145,7 @@
         method: "POST",
         headers: { "content-type": "application/json" },
         // Elek3 B2: the trial campaign mail's visit (forras=proba) mints no escalation offer.
-        body: JSON.stringify({ referrer: document.referrer || "", forras: pageForras() }),
+        body: JSON.stringify({ referrer: document.referrer || "", forras: pageForras(), via: OPEN_VIA }),
         keepalive: true,
       })
         .then(function (r) {

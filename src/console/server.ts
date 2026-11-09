@@ -268,6 +268,7 @@ import {
   verdictAckOf,
   type BlockingVerdict,
 } from "../outreach/mockVerdictGate.js";
+import { openViaFromTag } from "../outreach/openVia.js";
 import { esc as escHtml, outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import {
   cleanFeedbackText,
@@ -3818,7 +3819,7 @@ async function handle(
   if (method === "POST" && pViewMatch) {
     const p = await getProspectByToken(pViewMatch[1]);
     if (!p || p.unsubscribed || (await ownedSiteForProspectToken(pViewMatch[1]))) return send(res, 204, "");
-    const body = (await readJson(req)) as { referrer?: unknown; forras?: unknown };
+    const body = (await readJson(req)) as { referrer?: unknown; forras?: unknown; via?: unknown };
     // MULTI-PLAN (plan-tabs contract): the page says which plan it shows. A switch within
     // PLAN_SWITCH_VIEW_MINUTES of the visit's start continues that visit — no new view, no
     // new offer — and the plan looked at is an event inside it (§G.21, no schema change).
@@ -3849,6 +3850,8 @@ async function handle(
       p.id,
       (req.headers["user-agent"] as string | undefined) ?? null,
       typeof body.referrer === "string" && body.referrer ? body.referrer.slice(0, 500) : null,
+      // 0132: the link's channel letter (?e/?s/?m/?w, openVia.ts) — whitelisted, else null.
+      openViaFromTag(body.via),
     );
     // Elek3 B2 (ADR-0359): a visit from the trial campaign mail (forras=proba) came to TRY —
     // it gets no decision card (proba-c/2 A), so it must not get the card's offer either: the

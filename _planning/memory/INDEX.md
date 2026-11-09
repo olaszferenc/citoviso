@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-09_honnan_nyitottak_csatorna_jel.md](2026-11-09_honnan_nyitottak_csatorna_jel.md) — 2026-11-09 — Honnan nyitották: csatorna-jel a linkben + panel a Tölcsérben
 - [2026-11-08_token_fogyas_varosor_fek.md](2026-11-08_token_fogyas_varosor_fek.md) — 2026-11-08 — Token-fogyás: az új lánc mennyisége vitte a B-keretet, várósor-fék
 - [2026-11-08_session_kezelo_diff_panel.md](2026-11-08_session_kezelo_diff_panel.md) — 2026-11-08 — Session-kezelő: nem lehetett reagálni (CLI diff-panel) — gyökér-ok kikapcsolva
 - [2026-11-08_kapu_gyorsitas.md](2026-11-08_kapu_gyorsitas.md) — 2026-11-08 — Kapu-gyorsítás: böngészős kapuk a landen, súgókép-kapu csak változott bemenetre

@@ -3516,6 +3516,19 @@ if [ -f scripts/report-mock-check.mts ] && \
   echo "[pre-commit] report-mock-check (Mock fül: vonzóság-pont, ítélet, szűrők)…"
   npx tsx scripts/report-mock-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Riport „Honnan nyitották” (assets/design-refs/console/honnan-nyitottak/README.md, 0132): a link
+#     csatorna-jele (?e/?s/?m/?w) a kiküldött szövegen, a leiratkozó link érintetlen, a hozzárendelés
+#     (jel → referrer → egyetlen csatorna → nem eldönthető), Viber ≠ SMS, összesítés + panel. Tiszta, DB nélkül.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/open-via-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/openVia\.ts$|^src/console/report(Data|Views)\.ts$|^src/outreach/sendOutreach(Sms|Pair)\.ts$|^src/email/outreachEmail\.ts$|^src/mms/messenger\.ts$|^scripts/open-via-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/open-via-check\.mts$'; then
+    echo "[pre-commit] open-via-check --self-test (a csatorna-őr pirosra tud-e menni)…"
+    npx tsx scripts/open-via-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] open-via-check (honnan nyitották: linkjel, hozzárendelés, panel)…"
+  npx tsx scripts/open-via-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Ingyenes próba (free_trial, 0097 — src/trial/start.ts): kártya nélküli konvertálás — próbázóra nincs számla/dunning, dupla indítás =
 #     1 tenant, minden modul aktív (trial_grant), 1 kupon, vásárolt lead elutasítva, trial_start mérve.
 #     Saját, eldobható sorokat ír a közös dev-DB-re, `finally`-ben törli; EMAIL_PROVIDER=mock kötelező. ~10 mp.

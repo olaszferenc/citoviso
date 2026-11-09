@@ -51,6 +51,7 @@ import {
   type ReportPeriod,
   type ReportPresetKey,
   type StageCounts,
+  type OpenSource,
 } from "./reportData.js";
 
 export type ReasonMode = "inf" | "said" | "both";
@@ -409,11 +410,79 @@ function timelinePanel(d: ReportData, lang: string, today: string): string {
   );
 }
 
+// ── Honnan nyitották (frozen plan: assets/design-refs/console/honnan-nyitottak/, B) ──
+const OPEN_SOURCE_LABEL = (lang: string): Readonly<Record<OpenSource, string>> => ({
+  email: T(lang, "E-mail"),
+  sms: T(lang, "SMS"),
+  viber: T(lang, "Viber"),
+  whatsapp: T(lang, "WhatsApp"),
+  unknown: T(lang, "Nem eldönthető"),
+});
+/** Toggles a row's lead list (the table cannot hold a <details>); measurement-free. */
+const OPEN_SOURCE_JS =
+  `document.querySelectorAll('[data-os-tbl]').forEach(function(t){t.addEventListener('click',function(e){` +
+  `if(e.target.closest('a'))return;var tr=e.target.closest('tr');var b=tr&&tr.querySelector('button[data-os]');if(!b)return;var s=t.querySelector('[data-os-sub="'+b.dataset.os+'"]');if(!s)return;` +
+  `s.hidden=!s.hidden;b.setAttribute('aria-expanded',String(!s.hidden))})})`;
+
+function openSourcePanel(d: ReportData, lang: string): string {
+  const lab = OPEN_SOURCE_LABEL(lang);
+  const openers = d.counts.opened;
+  const rows = d.openSources;
+  const total = rows.reduce((a, r) => a + r.openers, 0);
+  const stack = rows
+    .filter((r) => r.openers)
+    .map((r) => {
+      const w = total ? (r.openers / total) * 100 : 0;
+      return `<i class="rp-os-${r.source}" style="width:${w.toFixed(2)}%" title="${esc(`${lab[r.source]}: ${r.openers}`)}">${w > 12 ? r.openers : ""}</i>`;
+    })
+    .join("");
+  const legend = rows
+    .map((r) => `<span${r.openers ? "" : ' class="rp-os-dim"'}><b class="rp-os-${r.source}"></b>${esc(lab[r.source])} ${r.openers}</span>`)
+    .join("");
+  const body = rows
+    .map((r) => {
+      const unk = r.source === "unknown";
+      const rate = unk ? T(lang, "{p}*", { p: pct1(r.openers, openers) }) : r.got ? pct1(r.openers, r.got) : "–";
+      const basis = unk || !r.openers
+        ? "—"
+        : [r.sure ? T(lang, "biztos {n}", { n: r.sure }) : "", r.inferred ? T(lang, "következtetett {n}", { n: r.inferred }) : ""].filter(Boolean).join(" · ");
+      const name = r.openers
+        ? `<button type="button" class="rp-os-btn" data-os="${r.source}" aria-expanded="false"><b class="rp-os-${r.source} rp-os-dot"></b>${esc(lab[r.source])}</button>`
+        : `<b class="rp-os-${r.source} rp-os-dot"></b>${esc(lab[r.source])}`;
+      const tr =
+        `<tr${r.openers ? "" : ' class="rp-os-dim"'}><td>${name}</td><td class="num">${r.got === null ? "—" : r.got}</td>` +
+        `<td class="num"><b>${r.openers}</b></td><td class="num">${esc(rate)}</td><td class="num rp-os-hm">${r.views}</td><td class="rp-os-hm small mut">${esc(basis)}</td></tr>`;
+      if (!r.openers) return tr;
+      const items = r.leads
+        .map(
+          (l) =>
+            `<li><a href="/prospect/${esc(l.prospectId)}/activity">${esc(l.leadName)}</a>` +
+            `${l.sure ? ` <span class="rp-pill rp-pill--ok rp-pill--xs">${esc(T(lang, "biztos"))}</span>` : ""}` +
+            `<span class="rp-ret__m">${esc(T(lang, "{n} megnyitás", { n: l.visits }))} · ${esc(T(lang, "utoljára {t}", { t: whenLabel(l.lastVisitAt) }))} · <a href="/lead/${esc(l.leadId)}">${esc(T(lang, "lead-lap"))}</a></span></li>`,
+        )
+        .join("");
+      return `${tr}<tr class="rp-os-sub" data-os-sub="${r.source}" hidden><td colspan="6"><ul class="rp-ret__list">${items}</ul></td></tr>`;
+    })
+    .join("");
+  const note = T(
+    lang,
+    "Egy sorra kattintva: a leadek névsora; a névre kattintva a lead riportja. Egy lead több sorban is szerepelhet (pl. előbb az e-mailből, később az SMS-ből nyitott). „Biztos” = a link csatorna-jelet hordozott (2026-11-09 óta minden kiküldésnél); „következtetett” = régebbi küldés: a megnyitás előtt csak ez az egy csatorna vitte ki a linket, vagy a levelezőprogram küldte át. „Nem eldönthető” = régebbi küldés, amely előtt több csatornán is ugyanaz a link ment ki. * a megnyitók arányában.",
+  );
+  return (
+    `<div class="panel"><h2>${esc(T(lang, "Honnan nyitották"))} <span class="rp-q">${esc(T(lang, "— a {n} megnyitó lead csatorna szerint", { n: openers }))}</span></h2>` +
+    (total ? `<div class="rp-os-stack">${stack}</div>` : "") +
+    `<div class="rp-os-leg">${legend}</div>` +
+    `<table class="rp-tbl rp-os-tbl" data-os-tbl><thead><tr><th>${esc(T(lang, "Csatorna"))}</th><th class="num">${esc(T(lang, "Kapta"))}</th><th class="num">${esc(T(lang, "Megnyitotta innen"))}</th><th class="num">${esc(T(lang, "Arány"))}</th><th class="num rp-os-hm">${esc(T(lang, "Megnyitás"))}</th><th class="rp-os-hm">${esc(T(lang, "Alap"))}</th></tr></thead><tbody>${body}</tbody></table>` +
+    `<p class="mut small rp-note">${esc(note)}</p><script>${OPEN_SOURCE_JS}</script></div>`
+  );
+}
+
 export function reportFunnelPage(d: ReportData, today: string): string {
   const lang = consoleLang();
   const body =
     hypothesisCards(d, lang) +
     `<div class="rp-grid2 rp-grid2--stack">${returnsPanel(d, lang)}${dimPanel(d, lang)}</div>` +
+    openSourcePanel(d, lang) +
     cohortPanel(d, lang) +
     timelinePanel(d, lang, today);
   return shell(d, "/report", body, lang);

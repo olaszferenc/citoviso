@@ -4,7 +4,7 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-11-02
+updated: 2026-11-09
 ---
 
 A Riport négy lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
@@ -86,6 +86,27 @@ leadet mutatja.
   az a rendelés melletti másik út, nem lépcsőfok — aki próbázik, nem feltétlenül rendel, és aki már
   fizetett, az nem indíthat próbát. Ha a próbázó a próba után fizetve folytatja, az a folytatás rendelésnek
   számít: ő a **„Próba”**, a **„Rendelés”** és a **„Fizetve”** oszlopban is ott van.
+- **„Honnan nyitották”**: melyik üzenet linkjére kattintott a lead — **E-mail**, **SMS**,
+  **Viber**, **WhatsApp**, vagy **„Nem eldönthető”**. Felül egy sáv a megnyitó leadek
+  megoszlásával, alatta a táblázat: **„Kapta”** (hány lead kapta meg ezen a csatornán a linket),
+  **„Megnyitotta innen”** (hány lead nyitotta meg innen), **„Arány”** (a kettő hányadosa; a
+  „Nem eldönthető” sorban a megnyitók arányában, csillaggal), és asztali gépen **„Megnyitás”**
+  (a látogatások száma) és **„Alap”**. Egy sorra kattintva lenyílik a leadek névsora; a névre
+  kattintva a lead riportja nyílik. Egy lead több sorban is lehet: ha előbb az e-mailből, később
+  az SMS-ből nyitott, mindkettőben ott van — ezért a sorok összege nagyobb lehet a cím melletti
+  megnyitó-számnál; ez nem hiba. A névsorban a **„biztos”** címke azt jelzi, hogy a lead legalább
+  egyszer csatorna-jeles linkről jött (telefonon, ahol az „Alap” oszlop nem látszik, ez mutatja a
+  biztos megnyitást).
+  Az **„Alap”** megmondja, mennyire biztos a szám. **„biztos”**: 2026-11-09 óta a kiküldött link
+  végén egy betű jelzi a csatornát (`/?e` e-mail · `/?s` SMS · `/?m` Viber vagy WhatsApp ·
+  `/?w` a WhatsApp-utánküldés); a lap ezt olvassa ki, és utána leveszi a címsorból, így egy
+  továbbküldött link már nem az eredeti csatornára számít. Viber és WhatsApp között a telefon a
+  küldés pillanatában választ, ezért ott a küldés naplója mondja meg, melyik volt.
+  **„következtetett”**: régebbi küldés, amelynek linkjén még nem volt jel — ha a megnyitás előtt
+  csak egy csatornán ment ki a link, vagy a levelezőprogram (pl. a Gmail-app) adta át, akkor onnan
+  jött. **„Nem eldönthető”**: jel nélküli megnyitás, amely előtt több csatornán is kiment ugyanaz a
+  link (pl. e-mail és SMS, vagy Viber és a tartalék MMS+SMS) — ez a sor egyre kevesebb lesz, mert
+  az új küldések linkje jelet hordoz (jel nélkül csak a begépelt vagy jel nélkül átmásolt cím jön).
 - **„Kohorsz”**: küldési hetek soronként — a hét kiküldöttjeinek hány százaléka nyitott meg 7,
   indított próbát 14 (**„Próba 14 n.”**), rendelt 14, fizetett 30 napon belül. A **„nyitott”** jel azt mondja, hogy a 30 nap még nem
   telt le, tehát a sor még nőhet. A sötétebb cella a magasabb arány. Telefonon ez is húzható.

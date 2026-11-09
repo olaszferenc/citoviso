@@ -24,6 +24,7 @@ import { db } from "../db/client.js";
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { budapestIsoDay, budapestMidnight } from "../text/budapestTime.js";
+import { retagMessengerAsWhatsapp } from "../outreach/openVia.js";
 
 export const MESSENGER_SETTING_KEY = "messenger_outreach";
 
@@ -605,7 +606,7 @@ export async function scheduleWhatsappFollowups(now: Date = new Date()): Promise
     try {
       await db
         .insertInto("mms_outbox")
-        .values({ prospect_id: r.prospect_id, to_phone: r.to_phone, subject: src.subject, image: src.image, messenger_text: src.messenger_text, fallback_of: r.id, force_channel: "whatsapp" })
+        .values({ prospect_id: r.prospect_id, to_phone: r.to_phone, subject: src.subject, image: src.image, messenger_text: retagMessengerAsWhatsapp(src.messenger_text), fallback_of: r.id, force_channel: "whatsapp" })
         .execute();
       n++;
     } catch (err) {

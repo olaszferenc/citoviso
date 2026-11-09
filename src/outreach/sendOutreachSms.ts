@@ -54,6 +54,7 @@ import { isLiveHost } from "../invoicing/keyGuard.js";
 import { copyOutreachSms } from "./pilotCopy.js";
 import { alreadyCustomerBlocks } from "./customerGate.js";
 import { planCountStill } from "./planSet.js";
+import { tagLinkInText } from "./openVia.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -384,7 +385,8 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   }
   if (claimed !== "won") return no("párhuzamos küldés claimelte a prospectet");
 
-  const result = await sendSms({ to, text: d.sms.text });
+  // The lead's copy carries the channel letter (openVia.ts); the gate judged the plain draft.
+  const result = await sendSms({ to, text: tagLinkInText(d.sms.text, d.sms.link, "s") });
   if (result.provider === "blocked") {
     // Transport failed → release the claim so the operator can retry. Nothing else
     // was touched yet (first-touch stamp and status advance happen only on success).

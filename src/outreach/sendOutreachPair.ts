@@ -42,6 +42,7 @@ import { config } from "../config.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { copyOutreachMms, copyOutreachSms } from "./pilotCopy.js";
 import { planCountStill } from "./planSet.js";
+import { tagLinkInText } from "./openVia.js";
 
 export interface PairJobState {
   /** mms = uploading to the modem; sms = companion text; done/failed = terminal. */
@@ -188,7 +189,8 @@ export async function startOutreachPair(
       imagePath: jpeg,
       subject: asciiSubject(d.input.leadName),
       prospectId,
-      ...(captionOk ? { messengerText: caption.text } : {}),
+      // `?m`: the phone picks Viber or WhatsApp after this text is frozen (openVia.ts).
+      ...(captionOk ? { messengerText: tagLinkInText(caption.text, caption.link, "m") } : {}),
     });
     if (!mms.ok) return { ok: false, message: `MMS-hiba: ${mms.error ?? "ismeretlen"} — semmi nem ment ki` };
     // Pilot copy: queued right BEHIND the lead's row (the relay drains by created_at).
@@ -277,7 +279,7 @@ export async function sendPairSmsHalf(
   const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang, gate.d.market);
   if (check.verdict === "FLAG") return fail(`Jogszerűségi kapu FLAG az SMS-felén: ${check.reasons.join(" · ")}`);
 
-  const result = await sendSms({ to: gate.to, text: pairSms.text });
+  const result = await sendSms({ to: gate.to, text: tagLinkInText(pairSms.text, pairSms.link, "s") });
   if (result.provider === "blocked") {
     // ADR-0083: the claim STAYS (the lead saw the image); only the SMS half retries.
     return fail("a kísérő SMS elhasalt (modem/relay hiba) — a pár claimje marad, az SMS-fele újraküldhető");
@@ -321,7 +323,7 @@ export async function sendFallbackSmsHalf(prospectId: string): Promise<{ ok: boo
   const pairSms = await effectivePairSms(prospectId, gate.d.input);
   const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang, gate.d.market);
   if (check.verdict === "FLAG") return { ok: false, message: `Jogszerűségi kapu FLAG a tartalék SMS-felén: ${check.reasons.join(" · ")}` };
-  const result = await sendSms({ to: gate.to, text: pairSms.text });
+  const result = await sendSms({ to: gate.to, text: tagLinkInText(pairSms.text, pairSms.link, "s") });
   if (result.provider === "blocked") return { ok: false, message: "a tartalék kísérő SMS elhasalt (modem/relay hiba)" };
   return { ok: true, message: "a tartalék-pár teljes — MMS + SMS kint" };
 }

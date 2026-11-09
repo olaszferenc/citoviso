@@ -577,7 +577,7 @@ export async function sendOutreachMail(
   const heroShotPath = p.artifactId ? await ensureHeroShot(p.artifactId) : null;
   // ADR-0067: the draft prose is already in the lead's language (draft.ts) —
   // declare it on the message too, and localize the image alt text.
-  const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath, lang: d.lang });
+  const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath, lang: d.lang, openVia: "e" });
   // Belt-and-braces: refuse to hand anything UNSUBSCRIBABLE to the raw adapter.
   // What the law requires (Grt./GDPR) is a working opt-out the recipient can act
   // on — that is the IN-BODY link, which §C.1 separately checks for presence and
