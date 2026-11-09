@@ -206,6 +206,12 @@ def send_viber(ph, uri, text):
     x, ok = wait_for(chat_ready)
     if not ok:
         raise Fail("viber: chat did not open")
+    # A retry after "sent message not visible" must not send twice: if the caption is already in
+    # the chat, the earlier attempt went out.
+    time.sleep(1.5)
+    if text[:25] in dump():
+        home()
+        return
     for k in ("com.viber.voip:id/close", "com.viber.voip:id/gotIt"):
         if k in x:
             a11y("click", k)

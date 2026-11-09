@@ -9,7 +9,7 @@
 //   ② switch ON → the first attempt carries the caption; the mock S10 answers "viber" → the ack
 //      stores channel / last-seen / receipt 'sent', stamps mms_sent_at, runs the messenger
 //      bookkeeping ONCE and the SMS half NEVER
-//   ③ a failed messenger attempt → the retry carries NO caption (never a second messenger message)
+//   ③ a failed messenger attempt → the retry carries the caption again (owner 2026-11-09: only Viber, never an MMS fallback)
 //   ④ NO daily cap (owner 2026-11-08): several messenger sends today, the next row still gets the caption
 //   ⑤ a "restricted" ack trips the brake ONCE (one alert); braked → no caption
 //   ⑥ the watch list holds the fresh messenger row; a report moves the receipt forward only,
@@ -200,7 +200,7 @@ try {
     say(afterMessenger.length === 1, "② a dupla ack no-op");
   }
 
-  // ── ③ failed messenger attempt → MMS retry ─────────────────────────────
+  // ── ③ failed messenger attempt → Viber retry ────────────────────────────
   {
     const p3 = await mkProspect("c");
     const r3 = await enqueue(p3);
@@ -209,7 +209,7 @@ try {
     say(bad.got[0]?.text === CAPTION && (await outboxRow(r3)).status === "queued", "③ az első (messenger) kísérlet bukik → vissza a sorba", JSON.stringify(await outboxRow(r3)));
     const ok = phone((msg) => ({ ok: true, messageId: "MMSC-3", provider: "cli", channel: msg.messengerText ? "viber" : "mms" }));
     await tick(ok);
-    say(ok.got[0]?.text === undefined && (await outboxRow(r3)).channel === "mms", "③ az újrapróba szöveg NÉLKÜL megy (MMS) — második messenger-üzenet soha", JSON.stringify(ok.got));
+    say(ok.got[0]?.text === CAPTION && (await outboxRow(r3)).channel === "viber", "③ az újrapróba is Viber-szöveggel megy — MMS-re soha nem vált (tulaj 2026-11-09)", JSON.stringify(ok.got));
   }
 
   // ── ④ no daily cap ──────────────────────────────────────────────────────
@@ -219,7 +219,7 @@ try {
     const ph = phone((msg) => ({ ok: true, messageId: "s10-wa-4", provider: "cli", channel: msg.messengerText ? "whatsapp" : "mms" }));
     await tick(ph);
     say(ph.got[0]?.text === CAPTION && (await outboxRow(r4)).channel === "whatsapp", "④ nincs napi keret: a mai messenger-küldések után is megy a szöveg", JSON.stringify(ph.got));
-    say((await m.messengerSentToday()) === 2, "④ a mai messenger-szám csak számláló (2)", String(await m.messengerSentToday()));
+    say((await m.messengerSentToday()) === 3, "④ a mai messenger-szám csak számláló (3)", String(await m.messengerSentToday()));
   }
 
   // ── ⑤ restricted → brake ───────────────────────────────────────────────
@@ -442,5 +442,5 @@ if (failed) {
   console.error(`\n⛔ messenger-relay-check: ${failed} ellenőrzés bukott.`);
   process.exit(1);
 }
-console.log("\n✅ messenger-relay-check: a messenger-ág csak bekapcsolva, fék nélkül és első kísérletre megy (napi keret nincs); az ack lezárja a párt kísérő SMS nélkül; az olvasás és a válasz visszajön.");
+console.log("\n✅ messenger-relay-check: a messenger-ág csak bekapcsolva, fék nélkül és minden kísérletnél Viber-szöveggel megy (napi keret nincs); az ack lezárja a párt kísérő SMS nélkül; az olvasás és a válasz visszajön.");
 process.exit(0);

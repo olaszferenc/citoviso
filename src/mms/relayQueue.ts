@@ -198,8 +198,9 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
     .where("status", "=", "queued")
     .returning(["id", "to_phone", "subject", "image", "messenger_text", "attempts", "prospect_id", "force_channel"])
     .execute();
-  // ADR-0430: the messenger option only on a prospect row's first attempt, and only when allowed.
-  const blocked = claimed.some((r) => r.messenger_text && r.prospect_id && r.attempts === 1) ? await messengerBlocked() : "—";
+  // ADR-0430: the messenger option on every attempt of a prospect row, when allowed. Owner 2026-11-09
+  // („első körben MMS, SMS nem megy ki, csak Viber”): a retry is a Viber retry, never an MMS fallback.
+  const blocked = claimed.some((r) => r.messenger_text && r.prospect_id) ? await messengerBlocked() : "—";
   return claimed.map((r) => ({
     id: r.id,
     to_phone: r.to_phone,
@@ -207,7 +208,7 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
     image_b64: Buffer.from(r.image).toString("base64"),
     ...(r.force_channel === "whatsapp" && r.messenger_text
       ? { messenger_text: r.messenger_text, channel: "whatsapp" as const }
-      : r.messenger_text && r.prospect_id && r.attempts === 1 && !blocked
+      : r.messenger_text && r.prospect_id && !blocked
         ? { messenger_text: r.messenger_text }
         : {}),
     ...(mcfg.whatsapp === false ? { no_whatsapp: true as const } : {}),
