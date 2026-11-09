@@ -18,6 +18,13 @@ SER = os.environ.get("ADB_SERIAL", "RF8M2101WXX")
 ADB = [os.path.expanduser("~/Android/platform-tools/adb"), "-s", SER]
 LOCK = os.path.expanduser("~/.cache/s10-ui.lock")
 VIBER_FRESH_DAYS = 30
+# The open Viber chat's call button: 'menu_viber_call' until the 2026-11-09 overnight Viber update,
+# 'menu_mixed_call' since (measured: every presence read turned "unknown" and a send would have failed).
+VIBER_CHAT_IDS = ("com.viber.voip:id/menu_viber_call", "com.viber.voip:id/menu_mixed_call")
+
+
+def viber_chat_open(x):
+    return any(i in x for i in VIBER_CHAT_IDS)
 MONTHS = ["január", "február", "március", "április", "május", "június", "július",
           "augusztus", "szeptember", "október", "november", "december"]
 
@@ -111,7 +118,7 @@ def presence_whatsapp(ph):
 
 def presence_viber(ph):
     sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
-    x, r = wait_for(lambda x: "no" if "nem elérhető" in x else ("yes" if "com.viber.voip:id/menu_viber_call" in x else None))
+    x, r = wait_for(lambda x: "no" if "nem elérhető" in x else ("yes" if viber_chat_open(x) else None))
     name = seen = ""
     if r == "yes":
         time.sleep(2)
@@ -216,7 +223,7 @@ def send_viber(ph, uri, text):
     if not a11y("click", "com.viber.voip:id/btn_send"):
         raise Fail("viber: send click failed")
     snippet = text[:25]
-    x, ok = wait_for(lambda x: snippet in x and "com.viber.voip:id/menu_viber_call" in x, tries=12)
+    x, ok = wait_for(lambda x: snippet in x and viber_chat_open(x), tries=12)
     if not ok:
         raise Fail("viber: sent message not visible in chat")
     home()
@@ -336,7 +343,7 @@ def status(ph, channel):
         home()
         return {"receipt": receipt, "receipt_raw": last, "last_seen": seen, "incoming": incoming}
     sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
-    x, _ = wait_for(lambda x: "com.viber.voip:id/menu_viber_call" in x or RESTRICTED_RX.search(x))
+    x, _ = wait_for(lambda x: viber_chat_open(x) or RESTRICTED_RX.search(x))
     if RESTRICTED_RX.search(x):
         home()
         return {"restricted": True}

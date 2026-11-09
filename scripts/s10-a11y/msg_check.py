@@ -38,7 +38,7 @@ def check_viber(ph):
         x = dump()
         if 'A kérés nem elérhető' in x or 'nem elérhető' in text_of(x, 'com.viber.voip:id/alertTitle'):
             res = 'no'; a11y_click('android:id/button2'); break
-        if 'com.viber.voip:id/menu_viber_call' in x:
+        if ('com.viber.voip:id/menu_viber_call' in x or 'com.viber.voip:id/menu_mixed_call' in x):
             res = 'yes'; time.sleep(2)
             y = dump(); name = text_of(y, 'com.viber.voip:id/title'); seen = text_of(y, 'com.viber.voip:id/subtitle'); break
     if res == 'unknown': open(f'{LOGDIR}/unknown-vb-{ph}.xml', 'w').write(dump())
