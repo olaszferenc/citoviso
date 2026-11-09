@@ -19,7 +19,8 @@ Bal oldalt a lista, csatornánként csoportosítva: **„Viberen megy”**, **�
 **„MMS + SMS megy”**, **„E-mailben megy”** és **„Még ellenőrizzük”**. A csatornát a telefon
 dönti el: kiküldéskor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja. Előre is megnézi: azt a
 leadet, amelyiket itt megnyitod, vagy amelyiknek a lead lapján mobilszámot írsz be és elmentesz,
-soron kívül, 1–2 percen belül (a lap magától frissül, amint megvan az eredmény); a sor többi számát
+soron kívül a Vibert 1–2 percen belül (a lap magától frissül, amint megvan az eredmény; ha Vibert nem
+talál, a WhatsApp a háttérsorral együtt jön sorra, akár órák múlva); a sor többi számát
 a háttérben, éjjel-nappal, másfél percenként egyet — az e-mail-címes leadekkel kezdve. A háttérben csak
 a Vibert nézi; a WhatsAppot csak ott, ahol Vibert nem talált, és legfeljebb 5 percenként egy számot,
 mert sok idegen szám gyors egymás utáni lekérdezését a WhatsApp tiltással büntette. Amíg egy lead nincs megnézve, a **„Még ellenőrizzük”**
@@ -34,7 +35,7 @@ Telefonon a lista felül áll, alatta a kiválasztott lead.
 
 - **Szűrés:** a keresőmezőbe név vagy település írható, alatta csatorna és honlap szerint
   szűrhetsz. A **„Messenger-ellenőrzés”** sorban az **„Ellenőrizve”** csak azokat mutatja, akiknél
-  a telefon már megnézte a Vibert (és, ha nem szünetel, a WhatsAppot); az **„Ellenőrzésre vár”** csak a még meg nem
+  a telefon már megnézte a Vibert, és ha Vibert nem talált (és a WhatsApp nem szünetel), a WhatsAppot is; az **„Ellenőrzésre vár”** csak a még meg nem
   nézetteket. A **„Második terv”** sorban a **„Nincs — egy tervvel megy”** azokat mutatja, akiknek
   nincs második, átnézett terve: ők egy tervvel kapják meg a megkeresést, a levél is egy tervről szól. Minden gombon ott
   a darabszám; a 0 darabos gomb nem nyomható. A **„Szűrők törlése”** mindent visszaállít.
