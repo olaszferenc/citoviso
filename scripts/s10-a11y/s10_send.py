@@ -130,14 +130,22 @@ def presence_viber(ph):
     return r or "unknown", name, seen
 
 
-def presence(ph, no_whatsapp=False):
-    # WhatsApp paused (the account was banned on bulk lookups, 2026-11-08): never open it then.
-    wa = "skipped" if no_whatsapp else presence_whatsapp(ph)
-    if not no_whatsapp:
-        time.sleep(3)
+def presence(ph, no_whatsapp=False, only_whatsapp=False):
+    # Viber FIRST; WhatsApp only when there is no fresh Viber (owner 2026-11-09: „whatsappot csak ott
+    # keressünk … ahol nem találtunk vibert” — the bulk WhatsApp lookups got the account banned).
+    # no_whatsapp: WhatsApp paused, never open it. only_whatsapp: the Viber read is already known.
+    if only_whatsapp:
+        return {"whatsapp": presence_whatsapp(ph), "viber": "skipped", "viber_name": "", "viber_last_seen": "",
+                "viber_age_days": None}
     vb, name, seen = presence_viber(ph)
-    return {"whatsapp": wa, "viber": vb, "viber_name": name, "viber_last_seen": seen,
-            "viber_age_days": viber_age_days(seen)}
+    age = viber_age_days(seen)
+    fresh = vb == "yes" and age is not None and age <= VIBER_FRESH_DAYS
+    if no_whatsapp or fresh:
+        wa = "skipped"
+    else:
+        time.sleep(3)
+        wa = presence_whatsapp(ph)
+    return {"whatsapp": wa, "viber": vb, "viber_name": name, "viber_last_seen": seen, "viber_age_days": age}
 
 
 def pick_channel(p):
@@ -367,6 +375,7 @@ def main():
     ap.add_argument("--channel", default="auto")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-whatsapp", action="store_true", help="WhatsApp paused: never open it (presence, auto ladder)")
+    ap.add_argument("--only-whatsapp", action="store_true", help="presence: read WhatsApp only (the Viber read is known: no Viber)")
     a = ap.parse_args()
     res = {"ok": False, "cmd": a.cmd}
     try:
@@ -385,7 +394,7 @@ def main():
             if "isKeyguardShowing=true" in sh("dumpsys", "window"):
                 raise Fail("screen locked — keyguard could not be dismissed")
         if a.cmd == "presence":
-            res.update(presence(ph, a.no_whatsapp)); res["ok"] = True
+            res.update(presence(ph, a.no_whatsapp, a.only_whatsapp)); res["ok"] = True
         elif a.cmd == "status":
             res.update(status(ph, a.channel)); res["ok"] = True
         else:

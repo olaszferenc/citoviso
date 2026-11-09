@@ -381,6 +381,11 @@ try {
     await m.applyPresence([{ phone: PHONE, ok: true, whatsapp: "yes", viber: "no", viberAgeDays: null }]);
     await m.applyPresence([{ phone: PHONE, ok: true, whatsapp: "skipped", viber: "no", viberAgeDays: null }]);
     say((await m.presenceOf([PHONE])).get(PHONE)?.whatsapp === "yes", "⑬ a szünet alatti (WhatsApp nélküli) olvasás nem törli a régi WhatsApp-adatot");
+    await m.applyPresence([{ phone: PHONE, ok: true, whatsapp: "no", viber: "skipped" }]);
+    const p13w = (await m.presenceOf([PHONE])).get(PHONE);
+    say(p13w?.whatsapp === "no" && p13w?.viber === "no", "⑬ a csak-WhatsApp olvasás a Viber-adatot megtartja", JSON.stringify(p13w));
+    await m.applyPresence([{ phone: PHONE, ok: true, whatsapp: "yes", viber: "no", viberAgeDays: null }]);
+    say((await m.whatsappPresenceDue()).length === 0, "⑭ szünetelő WhatsAppnál nincs WhatsApp-lekérdezés");
     const p13b = await mkProspect("i");
     const r13b = await enqueue(p13b);
     say((await pullMms(new Date(), MIDDAY)).length === 0 && (await outboxRow(r13b)).status === "queued", "⑬ szünetelő WhatsAppnál a csak-WhatsAppos lead NEM megy ki (sorban vár, MMS-ként sem)");
@@ -392,6 +397,10 @@ try {
     await m.setMessengerConfig({ enabled: true, brake: null });
     say((await m.getMessengerConfig()).presenceBacklog === true, "⑬ alapból fut a háttér-ellenőrzés (futásonként 1 szám, éjjel-nappal)");
     say(m.PRESENCE_BACKGROUND === 1, "⑬ futásonként legfeljebb 1 háttér-szám");
+    say(m.WA_LOOKUP_EVERY_MS === 5 * 60_000, "⑭ WhatsApp-lekérdezés legfeljebb 5 percenként 1");
+    await setSetting(m.WA_LOOKUP_AT_KEY, new Date().toISOString());
+    say((await m.whatsappPresenceDue()).length === 0, "⑭ 5 percen belül nincs újabb WhatsApp-lekérdezés");
+    say((await m.messengerWatchList()).noWhatsapp === true, "⑭ a háttér-ellenőrzés soha nem nyit WhatsAppot (csak Vibert)");
   }
 
   // ── ⑧ brake verdict (pure) ─────────────────────────────────────────────

@@ -101,6 +101,12 @@ try {
     // Spread the lookups (WhatsApp / Viber watch the tempo of unknown-number lookups).
     await new Promise((res) => setTimeout(res, 15_000 + Math.floor(Math.random() * 15_000)));
   }
+  // ⑥ WhatsApp only where no Viber was found — the server hands out ≤ 1 number per 5 minutes (owner 2026-11-09).
+  for (const phone of list.waPresence ?? []) {
+    const r = await s10(["presence", "--to", phone, "--only-whatsapp"]);
+    presence.push({ phone, ok: r.ok === true, whatsapp: r.whatsapp, viber: "skipped" });
+    console.log(`[messenger-watch] WhatsApp-jelenlét ${phone}: ${r.ok ? `WhatsApp ${r.whatsapp}` : `HIBA ${r.error}`}`);
+  }
   if (DRY) {
     console.log(`[messenger-watch] (dry-run) ${chats.length} csevegés, ${presence.length} jelenlét olvasva, jelentés nem ment fel.`);
   } else if (chats.length || answers.length || presence.length) {

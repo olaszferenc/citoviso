@@ -211,8 +211,13 @@ export interface WatchList {
   readonly answers: readonly QueuedAnswer[];
   /** E.164 numbers whose Viber / WhatsApp presence the phone should read (no message). */
   readonly presence: readonly string[];
-  /** true = WhatsApp is paused: the phone must not open WhatsApp at all (presence, sends). */
+  /**
+   * true = the `presence` reads must not open WhatsApp (always since 2026-11-09: the background check
+   * reads Viber only; WhatsApp is read separately, through `waPresence`).
+   */
   readonly noWhatsapp: boolean;
+  /** At most one number whose WhatsApp the phone should read (no Viber found), ≥ WA_LOOKUP_EVERY_MS apart. */
+  readonly waPresence: readonly string[];
 }
 
 /** The chats due for a re-read (oldest check first) and the queued messenger answers. */
@@ -248,7 +253,8 @@ export async function messengerWatchList(now: Date = new Date()): Promise<WatchL
     chats: rows.map((r) => ({ id: r.id, channel: r.channel as MessengerChannel, to_phone: r.to_phone })),
     answers: answers.map((a) => ({ id: a.id, channel: a.channel as MessengerChannel, to_phone: a.to_addr, text: a.body })),
     presence: await presenceDue(now),
-    noWhatsapp: (await getMessengerConfig()).whatsapp === false,
+    noWhatsapp: true,
+    waPresence: await whatsappPresenceDue(now),
   };
 }
 
@@ -342,6 +348,9 @@ export async function applyMessengerWatch(
 export const PRESENCE_MAX_AGE_DAYS = 14;
 /** Numbers per watcher run (~20 s each on the phone's screen). Small, so a requested number waits ≤ ~2 runs. */
 export const PRESENCE_BATCH = 4;
+/** WhatsApp lookups: one number per 5 minutes, only where no Viber was found (owner 2026-11-09). */
+export const WA_LOOKUP_EVERY_MS = 5 * 60_000;
+export const WA_LOOKUP_AT_KEY = "messenger_wa_lookup_at";
 /** Background (not requested) numbers checked per watcher run (owner 2026-11-08: 1 per 1.5 min). */
 export const PRESENCE_BACKGROUND = 1;
 /** app_setting key: numbers the owner is looking at right now — checked before the backlog. */
@@ -450,7 +459,7 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
   const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
   const cfg = await getMessengerConfig();
-  const waOn = cfg.whatsapp !== false;
+  // The background check reads Viber only (WhatsApp goes through whatsappPresenceDue): a known Viber = done.
   const fresh = new Set(
     (
       await db
@@ -458,7 +467,7 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
         .select("phone")
         .where("phone", "in", phones)
         .where("checked_at", ">=", new Date(now.getTime() - PRESENCE_MAX_AGE_DAYS * 86_400_000))
-        .where((eb) => (waOn ? eb.and([eb("whatsapp", "<>", "unknown"), eb("viber", "<>", "unknown")]) : eb("viber", "<>", "unknown")))
+        .where("viber", "<>", "unknown")
         .execute()
     ).map((r) => r.phone),
   );
@@ -479,6 +488,42 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
   if (!cfg.presenceBacklog) return head;
   const bg = due.filter((p) => !first.includes(p)).slice(0, Math.max(0, Math.min(PRESENCE_BACKGROUND, limit - head.length)));
   return [...head, ...bg];
+}
+
+/**
+ * The WhatsApp lookup (owner 2026-11-09: „whatsappot csak ott keressünk a leadeknél ahol nem találtunk
+ * vibert. 5 percenként 1-et nézhetünk”): one approval-queue number whose Viber read is "no" and whose
+ * WhatsApp is not known yet, e-mail leads first — at most one per WA_LOOKUP_EVERY_MS, and only while
+ * WhatsApp is on. Handing it out stamps the time, so a failed read does not speed the tempo up.
+ */
+export async function whatsappPresenceDue(now: Date = new Date()): Promise<string[]> {
+  if ((await getMessengerConfig()).whatsapp === false) return [];
+  const last = Date.parse((await getSetting(WA_LOOKUP_AT_KEY)) ?? "");
+  if (Number.isFinite(last) && now.getTime() - last < WA_LOOKUP_EVERY_MS) return [];
+  const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
+  const { normalizePhone } = await import("../text/phone.js");
+  const rows = await sql<{ phone: string | null }>`
+    select l.raw->>'phone' as phone
+      from outreach_dispatch d join lead l on l.id = d.lead_id
+     where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
+     order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
+  const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
+  if (!phones.length) return [];
+  const cand = new Set(
+    (
+      await db
+        .selectFrom("messenger_presence")
+        .select("phone")
+        .where("phone", "in", phones)
+        .where("viber", "=", "no")
+        .where("whatsapp", "=", "unknown")
+        .execute()
+    ).map((r) => r.phone),
+  );
+  const pick = phones.find((p) => cand.has(p));
+  if (!pick) return [];
+  await setSetting(WA_LOOKUP_AT_KEY, now.toISOString());
+  return [pick];
 }
 
 export interface PresenceReport {
@@ -503,13 +548,18 @@ export async function applyPresence(reports: readonly PresenceReport[], now: Dat
       viber_age_days: Number.isInteger(r.viberAgeDays) ? (r.viberAgeDays as number) : null,
       checked_at: now,
     };
-    // WhatsApp paused: the phone did not open it ('skipped') — keep the last WhatsApp read, so a
-    // WhatsApp-only lead stays recognisable (and waits) instead of turning "unknown".
-    const { whatsapp: _wa, ...noWa } = row;
+    // A side the phone did not open ('skipped': WhatsApp paused / not needed, or a WhatsApp-only
+    // lookup) keeps its last read instead of turning "unknown".
+    const { whatsapp: _wa, viber: _vb, viber_seen: _vs, viber_age_days: _va, ...base } = row;
+    const upd = {
+      ...base,
+      ...(r.whatsapp === "skipped" ? {} : { whatsapp: row.whatsapp }),
+      ...(r.viber === "skipped" ? {} : { viber: row.viber, viber_seen: row.viber_seen, viber_age_days: row.viber_age_days }),
+    };
     await db
       .insertInto("messenger_presence")
       .values({ phone: r.phone, ...row })
-      .onConflict((oc) => oc.column("phone").doUpdateSet(r.whatsapp === "skipped" ? noWa : row))
+      .onConflict((oc) => oc.column("phone").doUpdateSet(upd))
       .execute();
     n++;
   }

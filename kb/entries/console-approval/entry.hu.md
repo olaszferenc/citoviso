@@ -20,8 +20,9 @@ Bal oldalt a lista, csatornánként csoportosítva: **„Viberen megy”**, **�
 dönti el: kiküldéskor üzenet NÉLKÜL megnézi, van-e Vibere vagy WhatsAppja. Előre is megnézi: azt a
 leadet, amelyiket itt megnyitod, vagy amelyiknek a lead lapján mobilszámot írsz be és elmentesz,
 soron kívül, 1–2 percen belül (a lap magától frissül, amint megvan az eredmény); a sor többi számát
-a háttérben, éjjel-nappal, másfél percenként egyet — lassan, mert sok idegen szám gyors egymás utáni
-lekérdezését a WhatsApp tiltással büntette. Amíg egy lead nincs megnézve, a **„Még ellenőrizzük”**
+a háttérben, éjjel-nappal, másfél percenként egyet — az e-mail-címes leadekkel kezdve. A háttérben csak
+a Vibert nézi; a WhatsAppot csak ott, ahol Vibert nem talált, és legfeljebb 5 percenként egy számot,
+mert sok idegen szám gyors egymás utáni lekérdezését a WhatsApp tiltással büntette. Amíg egy lead nincs megnézve, a **„Még ellenőrizzük”**
 csoportban áll — nyugodtan jóváhagyhatod, kiküldéskor a telefon megnézi, és a jó csatornán küld.
 Ha a WhatsApp szünetel (például mert a fiók felülvizsgálat alatt áll), a telefon a WhatsAppot nem
 nyitja meg: Viberen megy, különben MMS + SMS-ben, és a követő WhatsApp-üzenet sem megy. Akinek csak
