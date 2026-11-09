@@ -83,7 +83,7 @@ for (const row of rows) {
     continue;
   }
   const { lead } = await loadLead(String(row.lead_id));
-  const l = lead as { city?: string | null; country?: string | null };
+  const l = lead as { city?: string | null; country?: string | null; lat?: number | null; lon?: number | null };
   const city = (l.city ?? "").trim();
   if (!city) {
     stats.noCity++;
@@ -93,7 +93,7 @@ for (const row of rows) {
   const key = `${country.toUpperCase()}|${city.toLowerCase()}`;
   const fresh = !seen.has(key);
   seen.add(key);
-  const town = await resolveTownPhoto(city, country);
+  const town = await resolveTownPhoto(city, country, l.lat != null && l.lon != null ? { lat: Number(l.lat), lon: Number(l.lon) } : null);
   if (fresh) await new Promise((r) => setTimeout(r, LOOKUP_PAUSE_MS));
   if (!town) {
     stats.noTown++;

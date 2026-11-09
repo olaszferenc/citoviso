@@ -357,7 +357,7 @@ async function generateEngineMockInner(
   // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-0436, plan
   // assets/design-refs/tenant-site/varos-hero/): free (Wikimedia), never a photo of the lodging,
   // persisted in siteData.townPhoto. Not found → the typographic hero below (2026-11-07).
-  const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, lead.country ?? regionRow?.country ?? undefined) : null;
+  const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, lead.country ?? regionRow?.country ?? undefined, lead.lat != null && lead.lon != null ? { lat: Number(lead.lat), lon: Number(lead.lon) } : null) : null;
   // The Kapunyitás needs a gate photo that is NOT the hero (owner 2026-11-04, ADR-0423): the
   // gallery's second photo, distinct by URL and fingerprint. None → the plan is refused out
   // loud HERE, before any AI spend — never a gate that opens onto itself. A town-photo lead has
