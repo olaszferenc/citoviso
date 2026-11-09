@@ -197,7 +197,13 @@ def send_whatsapp(ph, uri, text):
 
 def send_viber(ph, uri, text):
     sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
-    x, ok = wait_for(lambda x: "com.viber.voip:id/options_menu_open_gallery" in x)
+    def chat_ready(x):
+        # Viber promo sheets ("Adjon új külsőt a képeknek" — Rendben) cover the chat after an update.
+        if "com.viber.voip:id/design_bottom_sheet" in x and "com.viber.voip:id/positive_button" in x:
+            a11y("click", "com.viber.voip:id/positive_button")
+            return None
+        return "com.viber.voip:id/options_menu_open_gallery" in x or None
+    x, ok = wait_for(chat_ready)
     if not ok:
         raise Fail("viber: chat did not open")
     for k in ("com.viber.voip:id/close", "com.viber.voip:id/gotIt"):
