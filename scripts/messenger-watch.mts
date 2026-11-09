@@ -17,6 +17,8 @@
 //   tsx scripts/messenger-watch.mts [--dry-run]
 
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { config } from "../src/config.js";
@@ -87,7 +89,14 @@ try {
   }
   // ⑤ Presence of the numbers waiting for approval — read only, no message (the approval page groups by it).
   const presence: Record<string, unknown>[] = [];
-  for (const phone of list.presence ?? []) {
+  // Owner 2026-11-09: the bulk unknown-number lookups got first WhatsApp, then Viber restricted. While
+  // ~/.config/citoviso/messenger-no-presence exists, NO presence lookup runs (⑤ and ⑥) — a new number is
+  // opened only by the send itself. Chats and answers keep running.
+  const noPresence = existsSync(path.join(homedir(), ".config", "citoviso", "messenger-no-presence"));
+  if (noPresence && ((list.presence ?? []).length || (list.waPresence ?? []).length)) {
+    console.log("[messenger-watch] jelenlét-nézés KI (messenger-no-presence) — új számot csak a küldés nyit meg.");
+  }
+  for (const phone of noPresence ? [] : list.presence ?? []) {
     const r = await s10(["presence", "--to", phone, ...(list.noWhatsapp ? ["--no-whatsapp"] : [])]);
     presence.push({
       phone,
@@ -102,7 +111,7 @@ try {
     await new Promise((res) => setTimeout(res, 15_000 + Math.floor(Math.random() * 15_000)));
   }
   // ⑥ WhatsApp only where no Viber was found — the server hands out ≤ 1 number per 5 minutes (owner 2026-11-09).
-  for (const phone of list.waPresence ?? []) {
+  for (const phone of noPresence ? [] : list.waPresence ?? []) {
     const r = await s10(["presence", "--to", phone, "--only-whatsapp"]);
     presence.push({ phone, ok: r.ok === true, whatsapp: r.whatsapp, viber: "skipped" });
     console.log(`[messenger-watch] WhatsApp-jelenlét ${phone}: ${r.ok ? `WhatsApp ${r.whatsapp}` : `HIBA ${r.error}`}`);
