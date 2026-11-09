@@ -22,4 +22,4 @@ honnan (e-mail / SMS / Viber / WhatsApp) nyitotta meg a lead a linket.
 **Ellenőrizve:** open-via-check + önteszt, beacon e2e (`/p/<t>?e` → `open_via=email`, címsor tisztul, 0 JS-hiba,
 a próba sorai törölve), Tölcsér ui-shot 390px + asztali, sor-lenyitás Playwrighttal.
 
-**Nyitott:** élesítés külön engedéllyel (0132 migráció). A próba-kampány linkjei jel nélkül maradnak (szándékos).
+**Élesítve:** 2026-11-09 12:24, `b508db36` (prod/20261109-1224). Első futás a GATE 5-ön állt meg (12 felirat fordítása hiányzott) → Bábel `b508db36` → második futás zöld. A próba-kampány linkjei jel nélkül maradnak (szándékos).
