@@ -10,6 +10,7 @@
 - [2026-11-08_token_fogyas_varosor_fek.md](2026-11-08_token_fogyas_varosor_fek.md) — 2026-11-08 — Token-fogyás: az új lánc mennyisége vitte a B-keretet, várósor-fék
 - [2026-11-08_session_kezelo_diff_panel.md](2026-11-08_session_kezelo_diff_panel.md) — 2026-11-08 — Session-kezelő: nem lehetett reagálni (CLI diff-panel) — gyökér-ok kikapcsolva
 - [2026-11-08_kapu_gyorsitas.md](2026-11-08_kapu_gyorsitas.md) — 2026-11-08 — Kapu-gyorsítás: böngészős kapuk a landen, súgókép-kapu csak változott bemenetre
+- [2026-11-08_email_google_kereso_egy_terv_eleg.md](2026-11-08_email_google_kereso_egy_terv_eleg.md) — 2026-11-08 — E-mail a Google-ből + jóváhagyó lap szűrők + egy terv elég (ADR-0433)
 - [2026-11-07_stock_illusztracio_vekony_leadek.md](2026-11-07_stock_illusztracio_vekony_leadek.md) — 2026-11-07 — Stock-illusztráció a vékony leadek mockjában
 - [2026-11-06_s10_hivasfogadas_sms_hid.md](2026-11-06_s10_hivasfogadas_sms_hid.md) — 2026-11-06 — SMS/MMS-költség, S10 hívásfogadás és SMS-híd
 - [2026-11-06_facebook_modul_koordinator.md](2026-11-06_facebook_modul_koordinator.md) — Facebook-modul — koordinátor-szál (2026-11-04 → 11-06, cit208299e0)
