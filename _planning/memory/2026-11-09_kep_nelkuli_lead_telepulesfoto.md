@@ -1,4 +1,4 @@
-# 2026-11-09 — Kép nélküli lead: a település fotója a hősben, tiszta mintaképek (ADR-XXXX)
+# 2026-11-09 — Kép nélküli lead: a település fotója a hősben, tiszta mintaképek (ADR-0436)
 
 **Brief:** `~/rc-briefs/k-pek-n-lk-l-20261109-193407.md` · **Munkafa:** `citf538de1d` · **Tulaj-döntés:** „C” a terv-körből.
 

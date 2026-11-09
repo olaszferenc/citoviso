@@ -354,7 +354,7 @@ async function generateEngineMockInner(
     opts.template === GATE_OPENING.id
       ? await fingerprintCandidates(gated.photos, GATE_SUBJECTS, [1])
       : gated.photos;
-  // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-XXXX, plan
+  // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-0436, plan
   // assets/design-refs/tenant-site/varos-hero/): free (Wikimedia), never a photo of the lodging,
   // persisted in siteData.townPhoto. Not found → the typographic hero below (2026-11-07).
   const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, lead.country ?? regionRow?.country ?? undefined) : null;
@@ -706,7 +706,7 @@ async function generateEngineMockInner(
   // NO OWN PHOTO (owner 2026-11-07, plan assets/design-refs/tenant-site/stock-fill/): such a lead
   // gets a mock too — through wordmark-grow, whose typographic hero (name + town over a faded,
   // watermarked regional landscape) needs no photo. Every other template's hero IS a photo.
-  // With a town photo (ADR-XXXX) the lead is no longer photo-less for the template: its hero is
+  // With a town photo (ADR-0436) the lead is no longer photo-less for the template: its hero is
   // the town, so the curator's pick stands.
   const noPhotoHero = !opts.archetype && photos.length === 0 && !townPhoto;
   const templateId = noPhotoHero ? WORDMARK_GROW.id : (opts.template ?? DEFAULT_TEMPLATE);

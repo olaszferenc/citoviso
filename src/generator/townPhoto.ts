@@ -1,5 +1,5 @@
 // The TOWN photo of a lead with no own photo (owner 2026-11-09: „Képek nélküli leadet nem
-// küldhetünk ki … Hero városról kép”; ADR-XXXX, plan assets/design-refs/tenant-site/varos-hero/).
+// küldhetünk ki … Hero városról kép”; ADR-0436, plan assets/design-refs/tenant-site/varos-hero/).
 //
 // Source, in order — free, no key, no paid call (ADR-0413):
 //   ① the lead image of the town's Wikipedia article (the language of the lead's country, then

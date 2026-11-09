@@ -65,7 +65,7 @@ a dupla ellenőrzések kimaradnak. A mock-ítéleted mellé mockonként ezt a n�
    telefon-képernyőkép → levételi kérés pontos URL-lel. Kell **legalább 1 saját kép (a hős)
    VAGY a település fotója a hősben** (a lap alján „Borítókép: … Wikimedia Commons” sor; a
    településfotót ugyanígy nézed). A hiányzó képhelyeket mintaképek töltik, a galéria alatti
-   egy felirat jelöli őket (ADR-0431, ADR-XXXX) — ezért nem kell 6 saját kép és saját hálókép.
+   egy felirat jelöli őket (ADR-0431, ADR-0436) — ezért nem kell 6 saját kép és saját hálókép.
    Betűs hős (se saját kép, se településfotó) → TARTVA. Poe a
    szöveghez nézi a képeket, és jelezhet, de a képekért te felelsz.
 

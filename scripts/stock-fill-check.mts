@@ -9,7 +9,7 @@
 //   ⑤ deterministic per lead, no picture twice; the gallery's own photos come first;
 //   ⑥ a lead with NO own photo gets the typographic hero over a regional landscape, no empty
 //      „about” frame — and no stock interior as its cover;
-//   ⑨ …unless it has a TOWN photo (owner „C” 2026-11-09, ADR-XXXX, plan
+//   ⑨ …unless it has a TOWN photo (owner „C” 2026-11-09, ADR-0436, plan
 //      assets/design-refs/tenant-site/varos-hero/): then the town is the hero, credited at the
 //      foot, the gallery is filled, one sample note sits under it, and the live page has neither.
 //

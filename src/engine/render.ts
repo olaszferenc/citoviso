@@ -724,7 +724,7 @@ function withStockFill(data: SiteData): SiteData {
 }
 
 /**
- * A lead with NO own photo and a resolved town photo (owner 2026-11-09, ADR-XXXX, plan
+ * A lead with NO own photo and a resolved town photo (owner 2026-11-09, ADR-0436, plan
  * assets/design-refs/tenant-site/varos-hero/): on the MOCK the town photo is the hero — the
  * page's only `photos` entry for this render, so the template's own hero and the gallery pick it
  * up, and the stock fill counts one picture. The stored data never carries it in `photos`.

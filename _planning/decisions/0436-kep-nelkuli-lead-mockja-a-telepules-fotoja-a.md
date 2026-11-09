@@ -1,4 +1,4 @@
-## ADR-XXXX — Kép nélküli lead mockja: a település fotója a hősben, tiszta mintaképek egy felirattal
+## ADR-0436 — Kép nélküli lead mockja: a település fotója a hősben, tiszta mintaképek egy felirattal
 
 **Dátum:** 2026-11-09 · **Döntött:** tulaj (brief `k-pek-n-lk-l-20261109-193407.md`: „Képek nélküli leadet nem küldhetünk ki, nagyon gagyi… Hero városról kép. Minta képek ingyenes, de azért látszódjanak most így is”; a terv-körből: „C”) · **Terv (kontraktus):** `assets/design-refs/tenant-site/varos-hero/README.md` · **Felülírja:** ADR-0431 1. pont (vízjel a pixelekben) és 3. pont (nulla képnél betűs hős, ha van településfotó) · **Kapcsolódik:** ADR-0150 (kép nélküli lap nem megy ki), ADR-0413 (a generálás nem hív fizetős szolgáltatást), ADR-0419 (Vera képátnézése), §A (fotó-jogállás), §B.17
 

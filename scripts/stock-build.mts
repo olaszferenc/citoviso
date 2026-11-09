@@ -6,7 +6,7 @@
 // Source: Pexels (Pexels License — free for commercial use, no attribution required), fetched
 // straight from the images.pexels.com CDN, NO API key. Every file is:
 //   ① cropped to 3:2 and scaled to 1600 px wide,
-//   ② CLEAN — no watermark (owner „C”, 2026-11-09, ADR-XXXX, plan
+//   ② CLEAN — no watermark (owner „C”, 2026-11-09, ADR-0436, plan
 //      assets/design-refs/tenant-site/varos-hero/; it overrides the 2026-11-07 burned-in
 //      „MINTA” stamp). The mock marks them with ONE line under the gallery instead (render.ts).
 //   ③ JPEG-encoded to ~200 KB.

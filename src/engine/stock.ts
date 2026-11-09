@@ -6,14 +6,14 @@
 // The leads with few own photos (< 6) or no bedroom photo were dropped until now — and they are
 // the ones who need a website most. Their mock now fills the gaps from a LOCAL library
 // (public/assets/stock/, built by scripts/stock-build.mts from Pexels). Since 2026-11-09 the files
-// are CLEAN (owner „C”, ADR-XXXX, plan assets/design-refs/tenant-site/varos-hero/): the mock
+// are CLEAN (owner „C”, ADR-0436, plan assets/design-refs/tenant-site/varos-hero/): the mock
 // prints one sample note under its gallery (render.ts withMockNotes) instead of a burned-in stamp.
 //
 // ⛔ THE HARD RULES (each enforced in code, guarded by scripts/stock-fill-check.mts):
 //   ① Stock goes ONLY into the gallery and onto room cards. Never the hero, never the about /
 //      band / contact pictures: it is NOT added to `photos` (which every one of those slots reads)
 //      but rides beside it in `stock` — render-time, mock phase only. A lead with no own photo gets
-//      its TOWN's photo as the hero (SiteData.townPhoto, ADR-XXXX); without one, the TYPOGRAPHIC
+//      its TOWN's photo as the hero (SiteData.townPhoto, ADR-0436); without one, the TYPOGRAPHIC
 //      hero (name + town over a faded regional landscape, `stock.backdrop`).
 //   ② MOCK ONLY. Never stored in the siteData; the live/tenant paths strip anything stock-shaped
 //      (photoPolicy.isLiveSafePhoto, tenant/editor.ts) and the tenant uploader refuses the

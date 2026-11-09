@@ -8,7 +8,7 @@ egy felirat a galéria alatt (JÓVÁHAGYVA)**. A vázlat-forrás a fán kívül:
 **Képek (a valódi motorból renderelve, 390 px + asztali):** `rozalia-gate-opening-felirat-*` (Rozália
 Apartman, Balatonalmádi) · `szabo-parallax-felirat-*` és `szabo-wordmark-grow-felirat-*` (Szabó Vendégház,
 Villány) · `galeria-C-mobile.jpg`.
-**ADR:** ADR-XXXX (felülírja az ADR-0431 4. pontját: a vízjel a pixelekben).
+**ADR:** ADR-0436 (felülírja az ADR-0431 4. pontját: a vízjel a pixelekben).
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.** A kódot ehhez mérjük.
 

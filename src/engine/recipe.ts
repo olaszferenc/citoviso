@@ -372,7 +372,7 @@ export interface SiteData {
   readonly stockSeed?: string;
   /**
    * A lead with NO own photo: a free-licence photo of its TOWN (Wikimedia Commons; owner
-   * 2026-11-09, ADR-XXXX, plan assets/design-refs/tenant-site/varos-hero/) — the MOCK's hero
+   * 2026-11-09, ADR-0436, plan assets/design-refs/tenant-site/varos-hero/) — the MOCK's hero
    * (render.ts withTownHero), credited in the footer. Resolved once at generation
    * (generator/townPhoto.ts) and persisted, so a rerender keeps it. Never a photo of the lodging,
    * never in `photos`, never on the live site.
