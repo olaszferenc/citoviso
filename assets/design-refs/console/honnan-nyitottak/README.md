@@ -1,4 +1,4 @@
-# Riport — „Honnan nyitották” panel (ADR-XXXX — „B”)
+# Riport — „Honnan nyitották” panel (ADR-0435 — „B”)
 
 Tulajdonosi jóváhagyás: 2026-11-09 („B”). A vázlat `honnan-nyitottak-mock.html` (A és B
 változat + a link csatorna-jele egy fájlban; a **B köt**, az A elvetve), képek:

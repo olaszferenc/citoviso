@@ -1,4 +1,4 @@
-// ADR-XXXX — WHERE the lead opened the link from (owner, 2026-11-09: „azt is szeretném látni, hogy
+// ADR-0435 — WHERE the lead opened the link from (owner, 2026-11-09: „azt is szeretném látni, hogy
 // ha tudjuk mérni, honnan nyitotta meg a lead a linket”; frozen plan:
 // assets/design-refs/console/honnan-nyitottak/, variant B).
 //

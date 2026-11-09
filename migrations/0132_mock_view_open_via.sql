@@ -1,4 +1,4 @@
--- 0132 OPEN VIA (ADR-XXXX) — which message's link the lead opened the page from (owner 2026-11-09:
+-- 0132 OPEN VIA (ADR-0435) — which message's link the lead opened the page from (owner 2026-11-09:
 -- „azt is szeretném látni, hogy ha tudjuk mérni, honnan nyitotta meg a lead a linket”;
 -- frozen plan: assets/design-refs/console/honnan-nyitottak/, variant B).
 --

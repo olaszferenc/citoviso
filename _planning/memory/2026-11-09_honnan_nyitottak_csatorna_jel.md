@@ -9,7 +9,7 @@ honnan (e-mail / SMS / Viber / WhatsApp) nyitotta meg a lead a linket.
 **Terv-kapu:** mock A/B (asztali + mobil, élő adat) → tulaj: „B”. Befagyasztva
 `assets/design-refs/console/honnan-nyitottak/` (README köt).
 
-**Megvalósítás (ADR-XXXX):**
+**Megvalósítás (ADR-0435):**
 - `src/outreach/openVia.ts` — `tagLink`/`tagLinkInText`/`retagMessengerAsWhatsapp`/`openViaFromTag`.
   A jel a KÜLDÉS utolsó lépésében kerül a szövegbe: `sendBatch` + `escalationFollowup` (levél, `openVia: "e"`),
   `sendOutreachSms` + `sendOutreachPair` (SMS `s`, messenger-képaláírás `m`), `mms/messenger.ts` (WhatsApp-utánküldés `w`).

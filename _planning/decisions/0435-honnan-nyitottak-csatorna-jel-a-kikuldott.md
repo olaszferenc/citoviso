@@ -1,4 +1,4 @@
-## ADR-XXXX — Honnan nyitották: csatorna-jel a kiküldött linkben + „Honnan nyitották” panel a Tölcsérben
+## ADR-0435 — Honnan nyitották: csatorna-jel a kiküldött linkben + „Honnan nyitották” panel a Tölcsérben
 
 **Dátum:** 2026-11-09 · **Döntött:** a tulaj (a „B” változat a mockon, a link-jellel együtt)
 
