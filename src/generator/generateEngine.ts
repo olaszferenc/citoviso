@@ -45,6 +45,7 @@ import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems,
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { fingerprintCandidates } from "./photoHash.js";
 import { GATE_OPENING, GATE_SUBJECTS, gatePhotoOf } from "../engine/templates/gateOpening.js";
+import { resolveTownPhoto } from "./townPhoto.js";
 import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
@@ -353,10 +354,15 @@ async function generateEngineMockInner(
     opts.template === GATE_OPENING.id
       ? await fingerprintCandidates(gated.photos, GATE_SUBJECTS, [1])
       : gated.photos;
+  // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-XXXX, plan
+  // assets/design-refs/tenant-site/varos-hero/): free (Wikimedia), never a photo of the lodging,
+  // persisted in siteData.townPhoto. Not found → the typographic hero below (2026-11-07).
+  const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, lead.country ?? regionRow?.country ?? undefined) : null;
   // The Kapunyitás needs a gate photo that is NOT the hero (owner 2026-11-04, ADR-0423): the
   // gallery's second photo, distinct by URL and fingerprint. None → the plan is refused out
-  // loud HERE, before any AI spend — never a gate that opens onto itself.
-  if (opts.template === GATE_OPENING.id && !gatePhotoOf(photos as never)) {
+  // loud HERE, before any AI spend — never a gate that opens onto itself. A town-photo lead has
+  // no gate photo at all: its Kapunyitás renders without the leaves, as the approved plan shows.
+  if (opts.template === GATE_OPENING.id && !townPhoto && !gatePhotoOf(photos as never)) {
     throw new Error(
       "Kapunyitás: nincs a nyitóképtől különböző második kép (a kapu képe az admin második képe, és nem lehet ugyanaz, mint ami az animáció után ott marad) — a tervet elutasítottam, nem generáltam.", // i18n-exempt: operator-facing generation error (console)
     );
@@ -677,6 +683,7 @@ async function generateEngineMockInner(
     ...sampleHints,
     // The seed of the mock's deterministic stock-illustration pick (engine/stock.ts).
     stockSeed: leadId,
+    ...(townPhoto ? { townPhoto } : {}),
   };
   // The gate photo in its own field (the tenant admin's later choice; ADR-0423).
   // A lead with no own photo renders through wordmark-grow (noPhotoHero below), not the gate.
@@ -699,9 +706,11 @@ async function generateEngineMockInner(
   // NO OWN PHOTO (owner 2026-11-07, plan assets/design-refs/tenant-site/stock-fill/): such a lead
   // gets a mock too — through wordmark-grow, whose typographic hero (name + town over a faded,
   // watermarked regional landscape) needs no photo. Every other template's hero IS a photo.
-  const noPhotoHero = !opts.archetype && photos.length === 0;
+  // With a town photo (ADR-XXXX) the lead is no longer photo-less for the template: its hero is
+  // the town, so the curator's pick stands.
+  const noPhotoHero = !opts.archetype && photos.length === 0 && !townPhoto;
   const templateId = noPhotoHero ? WORDMARK_GROW.id : (opts.template ?? DEFAULT_TEMPLATE);
-  const useTemplate = !opts.archetype && (photos.length > 0 || noPhotoHero) && Boolean(TEMPLATES[templateId]);
+  const useTemplate = !opts.archetype && (photos.length > 0 || noPhotoHero || Boolean(townPhoto)) && Boolean(TEMPLATES[templateId]);
   let recipe: Recipe;
   let source: "template" | "ai" | "fallback";
   if (useTemplate) {

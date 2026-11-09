@@ -124,6 +124,21 @@ export interface Photo {
   readonly stock?: boolean;
 }
 
+/** A town photo from Wikimedia Commons with what its licence asks us to print (SiteData.townPhoto). */
+export interface TownPhoto {
+  /** Hot-linked Wikimedia thumbnail (upload./thumb.wikimedia.org — its own CDN), 1600–1920 px wide. */
+  readonly url: string;
+  /** The town it shows (the lead's own town, as stored). */
+  readonly city: string;
+  /** Commons file page — the attribution link. */
+  readonly pageUrl: string;
+  /** The author as Commons names it (plain text). */
+  readonly author: string;
+  /** Licence short name, e.g. „CC BY-SA 4.0” or „Public domain”. */
+  readonly license: string;
+  readonly licenseUrl?: string;
+}
+
 /** One amenity ON a unit: the owner's stored label plus the catalogue's icon markup. */
 export interface RoomAmenity {
   /** The stored Hungarian label — also the i18n source key (amenityCatalog.ts). */
@@ -355,6 +370,14 @@ export interface SiteData {
   /** The lead id — the seed of the mock's deterministic stock-illustration pick (engine/stock.ts).
    *  Absent (older artifacts) → name + town. */
   readonly stockSeed?: string;
+  /**
+   * A lead with NO own photo: a free-licence photo of its TOWN (Wikimedia Commons; owner
+   * 2026-11-09, ADR-XXXX, plan assets/design-refs/tenant-site/varos-hero/) — the MOCK's hero
+   * (render.ts withTownHero), credited in the footer. Resolved once at generation
+   * (generator/townPhoto.ts) and persisted, so a rerender keeps it. Never a photo of the lodging,
+   * never in `photos`, never on the live site.
+   */
+  readonly townPhoto?: TownPhoto;
   /**
    * RENDER-TIME ONLY, mock phase (render.ts withStockFill) — never stored, never live.
    * `gallery`: watermarked illustrations the gallery shows AFTER the own photos (templates read

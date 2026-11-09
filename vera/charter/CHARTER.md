@@ -62,8 +62,11 @@ a dupla ellenőrzések kimaradnak. A mock-ítéleted mellé mockonként ezt a n�
 4. **Képátnézés — a gazdája te vagy.** A kész mockon a TÉNYLEGESEN kiválasztott képeket nézed
    meg, kertképet és utcaképet nagyban: felismerhető személy (kicsi/távoli is), olvasható
    rendszám, idegen vízjel vagy logó, szöveg-, térkép-, alaprajz-, kollázs- vagy
-   telefon-képernyőkép → levételi kérés pontos URL-lel. Kell **≥6 egyedi saját kép és egy
-   egyértelmű hálókép** (ágy = háló, kanapéágy és galériaágy is); kevesebb → TARTVA. Poe a
+   telefon-képernyőkép → levételi kérés pontos URL-lel. Kell **legalább 1 saját kép (a hős)
+   VAGY a település fotója a hősben** (a lap alján „Borítókép: … Wikimedia Commons” sor; a
+   településfotót ugyanígy nézed). A hiányzó képhelyeket mintaképek töltik, a galéria alatti
+   egy felirat jelöli őket (ADR-0431, ADR-XXXX) — ezért nem kell 6 saját kép és saját hálókép.
+   Betűs hős (se saját kép, se településfotó) → TARTVA. Poe a
    szöveghez nézi a képeket, és jelezhet, de a képekért te felelsz.
 
 **Átfedéses hét (2026-11-04 – 11-11):** a -bb változatlanul fut mellette. Minden ítéleted után

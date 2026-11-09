@@ -1,5 +1,7 @@
 # KONTRAKTUS — stock-illusztráció a vékony leadek mockjában
 
+> ⚠️ **2026-11-09, ADR-XXXX (tulaj „C”):** a 4. pont (vízjel a pixelekben) FELÜLÍRVA — a könyvtár tiszta, a jelölés egy felirat a galéria alatt; nulla saját képnél a hős a település fotója, ha van (2. és 3. pont). Kontraktus: `assets/design-refs/tenant-site/varos-hero/README.md`.
+
 **Jóváhagyta:** a tulaj, 2026-11-07, szó szerint: „Mehet” (§2b terv-jóváhagyási kapu; a koordináló
 session hozta, a terv-mockok: a–d, valós dev-DB-s leadekből) · **Tulaj-döntés:** „ha már hero kép van,
 stock fotókkal töltsük fel a hiányzókat” + kiegészítés (erős, beégetett vízjel · soha élesre · nulla

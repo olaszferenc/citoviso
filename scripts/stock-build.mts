@@ -6,15 +6,15 @@
 // Source: Pexels (Pexels License — free for commercial use, no attribution required), fetched
 // straight from the images.pexels.com CDN, NO API key. Every file is:
 //   ① cropped to 3:2 and scaled to 1600 px wide,
-//   ② WATERMARKED IN THE PIXELS (owner, 2026-11-07): a diagonal, repeating
-//      „MINTAKÉP · ILLUSZTRÁCIÓ” pattern over the whole picture and a large „MINTA” stamp in
-//      the middle — strong on purpose, so a downloaded copy is never a clean stock photo and
-//      nobody mistakes it for the lodging's own picture. A CSS layer would vanish on download.
+//   ② CLEAN — no watermark (owner „C”, 2026-11-09, ADR-XXXX, plan
+//      assets/design-refs/tenant-site/varos-hero/; it overrides the 2026-11-07 burned-in
+//      „MINTA” stamp). The mock marks them with ONE line under the gallery instead (render.ts).
 //   ③ JPEG-encoded to ~200 KB.
 // The manifest (public/assets/stock/manifest.json) records per file: source URL, page URL,
 // author, licence, md5 of the published file and dHashes of the published AND the clean
 // source picture. The md5/dHash list is the tenant uploader's blocklist (src/engine/stock.ts):
-// a stock picture can never become a tenant asset, watermarked or not.
+// a stock picture can never become a tenant asset. Fingerprints of files a rebuild replaced
+// (e.g. the 2026-11-07 watermarked set) move to `retired` and stay on the blocklist.
 //
 // The selection below was reviewed by eye (no person, no text, no watermark, no brand, fits a
 // Hungarian countryside lodging) on 2026-11-07. Re-running is idempotent per file.
@@ -78,33 +78,6 @@ const previous: StockManifestEntry[] = existsSync(MANIFEST)
   : [];
 const prevByFile = new Map(previous.map((e) => [e.file, e]));
 
-/** The burned-in watermark: a diagonal repeating pattern + a centred stamp. */
-function watermarkSvg(): Buffer {
-  const line = "MINTAKÉP · ILLUSZTRÁCIÓ · MINTAKÉP · ILLUSZTRÁCIÓ · MINTAKÉP · ILLUSZTRÁCIÓ";
-  const rows: string[] = [];
-  // Rows are drawn in a rotated group larger than the frame, so the corners are covered too.
-  for (let i = -14; i <= 14; i++) {
-    const y = i * 118;
-    const x = (i % 2) * -260 - 900;
-    rows.push(`<text x="${x}" y="${y}">${line}</text>`);
-  }
-  const font = `font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold"`;
-  return Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}">` +
-      `<g transform="translate(${WIDTH / 2} ${HEIGHT / 2}) rotate(-28)" ${font} font-size="44" ` +
-      `fill="white" fill-opacity="0.5" stroke="black" stroke-opacity="0.55" stroke-width="1.6" letter-spacing="3">` +
-      rows.join("") +
-      `</g>` +
-      `<g transform="translate(${WIDTH / 2} ${HEIGHT / 2}) rotate(-12)">` +
-      `<rect x="-470" y="-165" width="940" height="330" rx="34" fill="black" fill-opacity="0.28" ` +
-      `stroke="white" stroke-opacity="0.92" stroke-width="16"/>` +
-      `<rect x="-440" y="-135" width="880" height="270" rx="22" fill="none" stroke="white" stroke-opacity="0.7" stroke-width="5"/>` +
-      `<text x="0" y="86" text-anchor="middle" ${font} font-size="250" letter-spacing="24" ` +
-      `fill="white" fill-opacity="0.9" stroke="black" stroke-opacity="0.65" stroke-width="5">MINTA</text>` +
-      `</g></svg>`,
-  );
-}
-
 async function encode(img: sharp.Sharp): Promise<Buffer> {
   let out = Buffer.alloc(0);
   for (const q of [80, 74, 68, 62, 56, 50, 44]) {
@@ -114,7 +87,6 @@ async function encode(img: sharp.Sharp): Promise<Buffer> {
   return out;
 }
 
-const mark = watermarkSvg();
 const entries: StockManifestEntry[] = [];
 for (const [category, ids] of Object.entries(SELECTION)) {
   if (only && only !== category) {
@@ -132,7 +104,7 @@ for (const [category, ids] of Object.entries(SELECTION)) {
       .rotate()
       .resize(WIDTH, HEIGHT, { fit: "cover", position: sharp.strategy.attention })
       .toBuffer();
-    const out = await encode(sharp(framed).composite([{ input: mark }]));
+    const out = await encode(sharp(framed));
     writeFileSync(path.join(ROOT, file), out);
     const prev = prevByFile.get(file);
     const a = authors[String(id)] ?? {};
@@ -156,15 +128,27 @@ for (const [category, ids] of Object.entries(SELECTION)) {
   }
 }
 
+// Replaced files keep their fingerprints on the uploader's blocklist (src/engine/stock.ts).
+const previousRetired: { md5: string; dhash: string }[] = existsSync(MANIFEST)
+  ? ((JSON.parse(readFileSync(MANIFEST, "utf8")).retired as { md5: string; dhash: string }[] | undefined) ?? [])
+  : [];
+const liveMd5 = new Set(entries.map((e) => e.md5));
+const retired = [
+  ...previousRetired,
+  ...previous.filter((e) => !liveMd5.has(e.md5)).map((e) => ({ md5: e.md5, dhash: e.dhash })),
+].filter((r, i, all) => all.findIndex((x) => x.md5 === r.md5) === i);
+
 writeFileSync(
   MANIFEST,
   JSON.stringify(
     {
       note:
-        "Mock-only illustration photos, watermarked in the pixels. NEVER a hero, NEVER on a live/tenant site " +
-        "(src/engine/stock.ts gates). Built by scripts/stock-build.mts.",
+        "Mock-only illustration photos (clean; the mock prints one sample note under the gallery). NEVER a hero, " +
+        "NEVER on a live/tenant site (src/engine/stock.ts gates). `retired`: fingerprints of replaced files, still " +
+        "refused by the tenant uploader. Built by scripts/stock-build.mts.",
       builtAt: new Date().toISOString().slice(0, 10),
       images: entries,
+      retired,
     },
     null,
     2,

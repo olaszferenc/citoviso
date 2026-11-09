@@ -8,7 +8,10 @@
 //   ④ it never enters the stored photo list (the counts stay the lodging's own);
 //   ⑤ deterministic per lead, no picture twice; the gallery's own photos come first;
 //   ⑥ a lead with NO own photo gets the typographic hero over a regional landscape, no empty
-//      „about” frame — and no stock interior as its cover.
+//      „about” frame — and no stock interior as its cover;
+//   ⑨ …unless it has a TOWN photo (owner „C” 2026-11-09, ADR-XXXX, plan
+//      assets/design-refs/tenant-site/varos-hero/): then the town is the hero, credited at the
+//      foot, the gallery is filled, one sample note sits under it, and the live page has neither.
 //
 //   npx tsx scripts/stock-fill-check.mts        (exit 1 on any failure)
 
@@ -34,6 +37,7 @@ import {
 import { TEMPLATES } from "../src/engine/templates.js";
 import { dHashFromBuffer } from "../src/generator/photoHash.js";
 import { StockAssetRefused, getAssetStore } from "../src/tenant/assetStore.js";
+import { extractImageRefs } from "../src/outreach/mockPhotoHealth.js";
 
 let failed = 0;
 function check(name: string, ok: boolean, detail?: unknown): void {
@@ -234,6 +238,47 @@ console.log("⑧ uploader / asset store bar");
     if (!isStockBytes(b) || !isStockDhash(await dHashFromBuffer(b))) misses.push(e.file);
   }
   check("a könyvtár MINDEN fájlja a tiltólistán", misses.length === 0, misses);
+}
+
+console.log("⑨ no own photo + town photo → the town is the hero, credited; one sample note");
+{
+  const town = {
+    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/x/xx/Koveskal.jpg/1600px-Koveskal.jpg",
+    city: "Köveskál",
+    pageUrl: "https://commons.wikimedia.org/wiki/File:Koveskal.jpg",
+    author: "Teszt Fotós",
+    license: "CC BY-SA 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0",
+  };
+  const NOTE = "Néhány kép minta: a helyükre a szállás saját fotói kerülnek.";
+  for (const t of ["parallax", "gate-opening", "wordmark-grow"]) {
+    const d = lead(0, { townPhoto: town });
+    const html = renderSite(recipe(t), d, { phase: "mock" });
+    const gal = /data-cit-module="gallery"/.test(html);
+    check(`${t}: a hero a település fotója`, (heroSrc(html) ?? "").includes("Koveskal.jpg") || (t === "wordmark-grow" && html.includes("Koveskal.jpg") && !html.includes("w-hero--type")), heroSrc(html));
+    check(`${t}: forrásmegjelölés (szerző, Wikimedia Commons, licenc) a lap alján`, /class="cit-town-credit"[^>]*>[^<]*Köveskál[\s\S]*?Teszt Fotós<\/a>, Wikimedia Commons, <a[^>]*>CC BY-SA 4\.0<\/a><\/p>/.test(html));
+    check(`${t}: a galériában mintakép`, gal && /\/assets\/stock\//.test(html));
+    check(`${t}: EGY minta-felirat, a galéria után`, html.split(NOTE).length === 2 && html.indexOf(NOTE) > html.indexOf('data-cit-module="gallery"'));
+    check(`${t}: a tárolt photos érintetlen (üres)`, d.photos.length === 0);
+    check(`${t}: a kapu nem „kép nélküli”-nek látja (a településfotó kép-hivatkozás)`, extractImageRefs(html).some((r) => r.url.includes("Koveskal.jpg")));
+    const live = renderSite(recipe(t), d, { phase: "live" });
+    check(`${t} LIVE: se településfotó, se forrás-sor, se minta-felirat`, !live.includes("Koveskal.jpg") && !live.includes("cit-town-credit") && !live.includes(NOTE));
+  }
+  // A lead WITH own photos keeps them as the hero even when a town photo is stored.
+  const own2 = renderSite(recipe("parallax"), lead(2, { townPhoto: town }), { phase: "mock" });
+  check("saját képnél a településfotó nem kerül a lapra", !own2.includes("Koveskal.jpg") && !own2.includes("cit-town-credit"));
+  // 1–5 own photos: the stock is clean, so the same one note marks it.
+  const thin = renderSite(recipe("parallax"), lead(2), { phase: "mock" });
+  check("1–5 saját képnél is EGY minta-felirat a galéria alatt", thin.split(NOTE).length === 2);
+  check("0 kép, településfotó nélkül: marad a betűs hero (2026-11-07)", renderSite(recipe("wordmark-grow"), lead(0), { phase: "mock" }).includes("w-hero--type"));
+}
+
+console.log("⑩ the replaced (watermarked) set stays on the uploader's blocklist");
+{
+  const m = JSON.parse(readFileSync("public/assets/stock/manifest.json", "utf8")) as { retired?: { md5: string; dhash: string }[] };
+  const retired = m.retired ?? [];
+  check("a manifest őrzi a lecserélt fájlok ujjlenyomatát", retired.length > 0, retired.length);
+  check("egy lecserélt fájl dHash-e tiltott", retired.length > 0 && isStockDhash(retired[0]!.dhash));
 }
 
 console.log(failed ? `\n✗ ${failed} hiba` : "\n✓ stock-fill-check: minden rendben");

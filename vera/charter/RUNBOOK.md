@@ -67,7 +67,8 @@ Mockonként, a tényítélet után, egy-egy sor a jelentésbe:
 - **iker** ✓/✗ — `~/rc-briefs/bb-tools/tw.sh <l8>`; ha „→ OK”, rendben, különben TARTVA iker.
 - **sorrend** — no_site vagy outdated (8:2); modern → nem megy.
 - **képek** ✓/✗ — a mock kiválasztott képei nagyban: személy, rendszám, vízjel/logó,
-  szöveg-/térképkép → levételi kérés pontos URL-lel; ≥6 egyedi saját kép + hálókép, különben TARTVA.
+  szöveg-/térképkép → levételi kérés pontos URL-lel; ≥1 saját kép VAGY településfotó a hősben
+  („Borítókép: … Wikimedia Commons” a lap alján — azt is nézd); betűs hős → TARTVA (ADR-0431, ADR-XXXX).
 - Átfedéses hét (11-04–11-11): egy sor a `~/rc-briefs/atfedes/vera-ÉÉÉÉHHNN.txt`-be
   (`l8|PASS/J/TARTVA|kontakt ✓✗ iker ✓✗ képek ✓✗|ok`).
 

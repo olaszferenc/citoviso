@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Városfotós hős — terv (C)</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+  body{margin:0;font-family:var(--citui-font-sans,system-ui,sans-serif);background:var(--citui-bg);color:var(--citui-fg)}
+  header{padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  h1{font-size:1.1rem;margin:0}
+  .sw{display:flex;gap:8px}
+  .sw button,.leads button{font:inherit;padding:6px 12px;border-radius:var(--citui-radius,8px);border:1px solid var(--citui-border);background:var(--citui-surface);color:var(--citui-fg);cursor:pointer}
+  .sw button[aria-pressed="true"],.leads button[aria-pressed="true"]{background:var(--citui-accent);color:var(--citui-on-accent);border-color:var(--citui-accent)}
+  .leads{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 12px}
+  main{padding:0 16px 32px}
+  .shot{display:block;margin:0 auto;max-width:100%;border:1px solid var(--citui-border);border-radius:var(--citui-radius,8px)}
+  .shot.m{width:390px}
+  p.note{max-width:70ch;margin:0 auto 16px;font-size:.9rem;opacity:.8}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kép nélküli lead: településfotó a hősben + tiszta mintaképek, egy felirattal (C — jóváhagyva 2026-11-09)</h1>
+  <div class="sw" role="group" aria-label="Méret">
+    <button type="button" data-size="m" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-size="d" aria-pressed="false">Asztali</button>
+  </div>
+</header>
+<div class="leads" role="group" aria-label="Minta">
+  <button type="button" data-lead="rozalia-gate-opening-felirat" aria-pressed="true">Rozália Apartman · Kapunyitás</button>
+  <button type="button" data-lead="szabo-parallax-felirat" aria-pressed="false">Szabó Vendégház · Parallax</button>
+  <button type="button" data-lead="szabo-wordmark-grow-felirat" aria-pressed="false">Szabó Vendégház · Névből növő</button>
+</div>
+<main>
+  <p class="note">A hős a település Wikimedia-fotója, a lap alján forrásmegjelöléssel. A galériában a mintaképek tiszták; alattuk egyetlen felirat jelzi, hogy minták. A valódi motor renderelte (a vázlat-forrás: ~/rc-briefs/varos-hero/build.mts).</p>
+  <img id="shot" class="shot m" alt="Terv-kép" src="rozalia-gate-opening-felirat-mobile.jpg">
+</main>
+<script>
+  let size = "m";
+  let lead = "rozalia-gate-opening-felirat";
+  const img = document.getElementById("shot");
+  function show() {
+    img.src = lead + (size === "m" ? "-mobile.jpg" : "-desktop.jpg");
+    img.className = "shot " + size;
+  }
+  for (const b of document.querySelectorAll("[data-size]")) {
+    b.addEventListener("click", () => {
+      size = b.dataset.size;
+      for (const x of document.querySelectorAll("[data-size]")) x.setAttribute("aria-pressed", String(x === b));
+      show();
+    });
+  }
+  for (const b of document.querySelectorAll("[data-lead]")) {
+    b.addEventListener("click", () => {
+      lead = b.dataset.lead;
+      for (const x of document.querySelectorAll("[data-lead]")) x.setAttribute("aria-pressed", String(x === b));
+      show();
+    });
+  }
+</script>
+</body>
+</html>

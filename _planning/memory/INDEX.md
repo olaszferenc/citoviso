@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-09_kep_nelkuli_lead_telepulesfoto.md](2026-11-09_kep_nelkuli_lead_telepulesfoto.md) — 2026-11-09 — Kép nélküli lead: a település fotója a hősben, tiszta mintaképek (ADR-XXXX)
 - [2026-11-09_honnan_nyitottak_csatorna_jel.md](2026-11-09_honnan_nyitottak_csatorna_jel.md) — 2026-11-09 — Honnan nyitották: csatorna-jel a linkben + panel a Tölcsérben
 - [2026-11-09_brave_tartalek_kulcs.md](2026-11-09_brave_tartalek_kulcs.md) — 2026-11-09 — Brave tartalék-kulcs (BRAVE_API_KEY_2), élesen
 - [2026-11-09_beno_rossz_cimzett.md](2026-11-09_beno_rossz_cimzett.md) — 2026-11-09 — BeNo Kőröshegy: rossz címzett javítása, válaszlevél a kész tervvel

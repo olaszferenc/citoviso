@@ -5,14 +5,16 @@
 //
 // The leads with few own photos (< 6) or no bedroom photo were dropped until now — and they are
 // the ones who need a website most. Their mock now fills the gaps from a LOCAL library
-// (public/assets/stock/, built by scripts/stock-build.mts from Pexels, watermarked IN THE PIXELS
-// with a diagonal „MINTAKÉP · ILLUSZTRÁCIÓ” pattern and a large „MINTA” stamp).
+// (public/assets/stock/, built by scripts/stock-build.mts from Pexels). Since 2026-11-09 the files
+// are CLEAN (owner „C”, ADR-XXXX, plan assets/design-refs/tenant-site/varos-hero/): the mock
+// prints one sample note under its gallery (render.ts withMockNotes) instead of a burned-in stamp.
 //
 // ⛔ THE HARD RULES (each enforced in code, guarded by scripts/stock-fill-check.mts):
 //   ① Stock goes ONLY into the gallery and onto room cards. Never the hero, never the about /
 //      band / contact pictures: it is NOT added to `photos` (which every one of those slots reads)
 //      but rides beside it in `stock` — render-time, mock phase only. A lead with no own photo gets
-//      the TYPOGRAPHIC hero (name + town over a faded regional landscape, `stock.backdrop`).
+//      its TOWN's photo as the hero (SiteData.townPhoto, ADR-XXXX); without one, the TYPOGRAPHIC
+//      hero (name + town over a faded regional landscape, `stock.backdrop`).
 //   ② MOCK ONLY. Never stored in the siteData; the live/tenant paths strip anything stock-shaped
 //      (photoPolicy.isLiveSafePhoto, tenant/editor.ts) and the tenant uploader refuses the
 //      library's files by md5 / dHash (isStockBytes / isStockDhash).
@@ -56,6 +58,8 @@ export interface StockEntry {
 export const STOCK_GALLERY_MIN = 6;
 
 let cache: readonly StockEntry[] | null = null;
+/** Fingerprints of library files a rebuild replaced (the 2026-11-07 watermarked set) — still refused. */
+let retiredCache: readonly { md5: string; dhash: string }[] = [];
 
 /** The library manifest — read once, from the app root (both servers run from there). */
 export function stockLibrary(): readonly StockEntry[] {
@@ -63,8 +67,10 @@ export function stockLibrary(): readonly StockEntry[] {
   try {
     const raw = JSON.parse(readFileSync(path.resolve(process.cwd(), "public/assets/stock/manifest.json"), "utf8")) as {
       images?: StockEntry[];
+      retired?: { md5: string; dhash: string }[];
     };
     cache = raw.images ?? [];
+    retiredCache = raw.retired ?? [];
   } catch {
     // No library on disk (a stripped checkout): nothing is filled, nothing breaks.
     cache = [];
@@ -86,7 +92,7 @@ export function isStockPhoto(p: { readonly url: string; readonly stock?: boolean
 /** The library's own bytes (md5 of a published file) — the tenant uploader's blocklist. */
 export function isStockBytes(buf: Buffer): boolean {
   const md5 = createHash("md5").update(buf).digest("hex");
-  return stockLibrary().some((e) => e.md5 === md5);
+  return stockLibrary().some((e) => e.md5 === md5) || retiredCache.some((e) => e.md5 === md5);
 }
 
 /**
@@ -103,7 +109,7 @@ export function isStockDhash(dhash: string | null | undefined): boolean {
     const d = hashDistance(dhash, h);
     return d !== null && d <= STOCK_DHASH_BITS;
   };
-  return stockLibrary().some((e) => near(e.dhash) || near(e.sourceDhash));
+  return stockLibrary().some((e) => near(e.dhash) || near(e.sourceDhash)) || retiredCache.some((e) => near(e.dhash));
 }
 
 function fold(s: string | undefined | null): string {

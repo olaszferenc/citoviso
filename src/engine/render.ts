@@ -723,6 +723,61 @@ function withStockFill(data: SiteData): SiteData {
   return { ...data, stock: { gallery, cards: true, ...(backdrop ? { backdrop } : {}) } };
 }
 
+/**
+ * A lead with NO own photo and a resolved town photo (owner 2026-11-09, ADR-XXXX, plan
+ * assets/design-refs/tenant-site/varos-hero/): on the MOCK the town photo is the hero — the
+ * page's only `photos` entry for this render, so the template's own hero and the gallery pick it
+ * up, and the stock fill counts one picture. The stored data never carries it in `photos`.
+ */
+function withTownHero(data: SiteData): SiteData {
+  const t = data.townPhoto;
+  if (!t || data.photos.length > 0) return data;
+  return {
+    ...data,
+    photos: [{ url: t.url, alt: t.city, provenance: "generated", subject: "exterior", bedroom: false }],
+  };
+}
+
+/** End index of the element that carries `marker` (its own tag balanced), or -1. */
+function markedElementEnd(html: string, marker: string): number {
+  const pos = html.indexOf(marker);
+  if (pos < 0) return -1;
+  const open = html.lastIndexOf("<", pos);
+  const tag = /^<([a-z][a-z0-9]*)/i.exec(html.slice(open))?.[1]?.toLowerCase();
+  return tag ? elementEnd(html, open, tag) : -1;
+}
+
+/**
+ * The mock's two notes (plan varos-hero, owner „C” 2026-11-09): ① the stock pictures are CLEAN,
+ * so ONE line under the gallery says some pictures are samples; ② the town photo's licence asks
+ * for its credit — a line at the page's foot names place, author, Wikimedia Commons, licence.
+ */
+function withMockNotes(html: string, data: SiteData): string {
+  let out = html;
+  if (data.stock?.gallery.length) {
+    const end = markedElementEnd(out, 'data-cit-module="gallery"');
+    if (end > 0) {
+      const note =
+        `<p class="cit-stock-note" style="max-width:60ch;margin:12px auto 0;padding:0 16px;font-size:.85rem;line-height:1.45;opacity:.75;text-align:center">` +
+        `${T(data, "Néhány kép minta: a helyükre a szállás saját fotói kerülnek.")}</p>`;
+      out = out.slice(0, end) + note + out.slice(end);
+    }
+  }
+  const t = data.townPhoto;
+  if (t && data.photos.some((p) => p.url === t.url)) {
+    const license = t.licenseUrl
+      ? `<a href="${esc(t.licenseUrl)}" target="_blank" rel="noopener license" style="color:inherit">${esc(t.license)}</a>`
+      : esc(t.license);
+    const credit =
+      `<p class="cit-town-credit" style="margin:0;padding:10px 16px;font-size:.75rem;line-height:1.4;opacity:.7;text-align:center">` +
+      `${T(data, "Borítókép")}: ${esc(t.city)} · ${T(data, "Fotó")}: ` +
+      `<a href="${esc(t.pageUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.author)}</a>, Wikimedia Commons, ${license}</p>`;
+    const i = out.lastIndexOf("</body>");
+    out = i >= 0 ? out.slice(0, i) + credit + out.slice(i) : out + credit;
+  }
+  return out;
+}
+
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
@@ -752,7 +807,7 @@ export function renderSite(
     // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
     // tenant site and meaningless on a mock (no legal data about the lead, no such
     // page on the preview host). Cut here, once, for both render paths.
-    return phase === "mock" ? stripTenantLegalLinks(out) : out;
+    return phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : out;
   };
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
@@ -805,7 +860,7 @@ export function renderSite(
   if (data.photos.some((p) => isStockPhoto(p))) data = { ...data, photos: data.photos.filter((p) => !isStockPhoto(p)) };
   // Owner 2026-11-07 (plan assets/design-refs/tenant-site/stock-fill/): on the MOCK the missing
   // image slots are filled with watermarked stock illustrations — gallery + room cards only.
-  if (phase === "mock") data = withStockFill(data);
+  if (phase === "mock") data = withStockFill(withTownHero(data));
   // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
   // so no card is left as a bare icon panel next to a page full of real imagery.
   if (phase === "mock" && data.rooms?.length) data = { ...data, rooms: roomsForMock(data) };
