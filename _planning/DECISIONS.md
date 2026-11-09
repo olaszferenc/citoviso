@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-rossz-cimzett-javitasa-es-telefon-utkozes-az-egesz-kiku.md) — Rossz címzett: a javított megkeresés kimehet, és a telefon-ütközés az e-mailt is megállítja
+- [ADR-0434](decisions/0434-rossz-cimzett-a-javitott-megkereses-kimehet-es.md) — Rossz címzett: a javított megkeresés kimehet, és a telefon-ütközés az e-mailt is megállítja
 - [ADR-0433](decisions/0433-egy-terv-eleg-a-hianyzo-masodik-terv-nem-tartja.md) — Egy terv elég: a hiányzó második terv nem tartja vissza a kiküldést
 - [ADR-0432](decisions/0432-gyorsabb-commit-es-deploy-a-bongeszos-kapuk-a.md) — Gyorsabb commit és deploy: a böngészős kapuk a landen futnak, a súgóképeket csak bemenet-változáskor gyártjuk újra
 - [ADR-0431](decisions/0431-stock-illusztracio-a-vekony-leadek-mockjaban.md) — Stock-illusztráció a vékony leadek mockjában (csak galéria + szobakártya, soha élesre)
