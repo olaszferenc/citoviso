@@ -29,11 +29,13 @@ interface S10Line {
  */
 export async function sendMmsViaS10(msg: MmsMessage, to: string): Promise<MmsSendResult> {
   const script = path.resolve(process.cwd(), "scripts", "s10-a11y", "s10_send.py");
-  const args = msg.forceChannel && msg.messengerText
-    ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--channel", msg.forceChannel]
-    : msg.messengerText
-    ? [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--mms-text", msg.subject, "--channel", "auto", ...(msg.noWhatsapp ? ["--no-whatsapp"] : [])]
-    : [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.subject, "--channel", "mms"];
+  // Owner 2026-11-09: „első körben MMS, SMS nem megy ki, csak Viber”. The approval already proved
+  // Viber for the number, so no live re-check (it read "unknown" half the time and fell back to
+  // MMS for 26 leads) and NO MMS at all: without a messenger caption nothing is sent.
+  if (!msg.messengerText) {
+    return { ok: false, error: "csak Viber mehet ki (tulaj 2026-11-09): MMS nem indul", provider: "cli" };
+  }
+  const args = [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--channel", msg.forceChannel ?? "viber"];
   let stdout: string;
   try {
     ({ stdout } = await execFileP("python3", args, { timeout: MMS_CLI_TIMEOUT_MS }));
