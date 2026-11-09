@@ -257,7 +257,18 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
 
   let result: { status: "sent" | "held" | "skipped"; note: string; prospectId?: string };
   try {
-    result = await dispatchOne(claimed.lead_id, claimed.artifact_id);
+    // Owner rule 2026-10-26 (again 11-09): whoever already answered (refusal, "not mine", closed) or
+    // unsubscribed gets NOTHING more. In doubt we do not send — any reply or unsubscribe skips the lead.
+    const answered = await db
+      .selectFrom("outreach_reply")
+      .select("id")
+      .where("lead_id", "=", claimed.lead_id)
+      .union(db.selectFrom("prospect").select("id").where("lead_id", "=", claimed.lead_id).where("unsubscribed_at", "is not", null))
+      .limit(1)
+      .executeTakeFirst();
+    result = answered
+      ? { status: "skipped", note: "nem küldjük: a lead már válaszolt vagy leiratkozott (tulaj-szabály 2026-10-26)" }
+      : await dispatchOne(claimed.lead_id, claimed.artifact_id);
   } catch (e) {
     result = { status: "held", note: `hiba: ${(e as Error).message}`.slice(0, 500) };
   }

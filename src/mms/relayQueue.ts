@@ -182,6 +182,12 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
         .selectFrom("mms_outbox")
         .select("id")
         .where("status", "=", "queued")
+        // Owner rule 2026-10-26 (again 11-09): a lead that already answered (refusal, "not mine", closed) or
+        // unsubscribed gets no Viber / WhatsApp / MMS either — the row just stays out of the claim.
+        .where(
+          sql<boolean>`not exists (select 1 from prospect pr where pr.id = mms_outbox.prospect_id and (pr.unsubscribed_at is not null
+            or exists (select 1 from outreach_reply r where r.lead_id = pr.lead_id)))`,
+        )
         .$if(followupBlocked, (qb) => qb.where("force_channel", "is", null))
         .$if(holdWhatsapp, (qb) =>
           qb.where(

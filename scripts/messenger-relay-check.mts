@@ -266,6 +266,12 @@ try {
     const s = await db.selectFrom("outreach_reply_send").select("status").where("reply_id", "=", replies[0]!.id).executeTakeFirstOrThrow();
     const r = await db.selectFrom("outreach_reply").select(["answered_at", "answered_by"]).where("id", "=", replies[0]!.id).executeTakeFirstOrThrow();
     say(s.status === "sent" && !!r.answered_at && r.answered_by === "_messenger_check", "⑦ a figyelő ok-ja: 'sent' + a válasz megválaszolt", JSON.stringify({ s, r }));
+    // Owner rule 2026-10-26 / 11-09: a lead that answered gets nothing more — its queued row is not handed out.
+    const pR = await mkProspect("r");
+    await enqueue(pR);
+    say((await pullMms(new Date(), MIDDAY)).length === 0, "⑦ a már válaszolt lead sorban álló üzenete NEM megy ki (elutasítóknak soha többé)");
+    await db.deleteFrom("mms_outbox").where("prospect_id", "=", pR).execute();
+    await db.deleteFrom("outreach_reply").where("lead_id", "=", lead.id).execute(); // reset the fixture for the steps below
   }
 
   // ── ⑨ expected channel (pure) ──────────────────────────────────────────
