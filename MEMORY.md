@@ -263,6 +263,10 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
   - **Háttér-ellenőrzés:** éjjel-nappal, a figyelő 90 mp-es futásonként a kért számok + legfeljebb 1 háttér-szám (`PRESENCE_BACKGROUND = 1`, `presenceBacklog` alapból `true`). Szünet alatt csak Vibert néz; a régi WhatsApp-olvasást nem írja felül.
   - **Csak-WhatsAppos lead** (WhatsApp yes, Viber nem yes): a szünet alatt a `pullMms` ki sem adja, `queued`-ban vár a feloldásig, MMS-ként SEM megy; a jóváhagyó lapon a „WhatsAppon megy” csoportban, óra-jellel. WhatsApp yes + régi Viber → Viberen megy. Ismeretlen WhatsApp (a szünet előtt nem nézett szám) → Viber, különben MMS + SMS (a telefon WhatsAppot nem nyithat, tehát nem tudhatja).
   - **Feloldáskor:** `messenger_outreach.whatsapp = true` → a várakozók maguktól kimennek.
+- 2026-11-09 07:00 · CSAK E-MAIL + VIBER PÁROS MEHET KI (tulaj: „Csak Viber és email páros mehet ki.” + „2 percenként menjen ki”):
+  - a sorban állt, de nem e-mail + Viber 30 lead `held`-be téve, note: „VISSZATARTVA: csak e-mail + Viber páros mehet (tulaj 2026-11-09) ‹ <régi note>” — visszaállítható;
+  - az automata kiküldő 2 percenként indít (`citoviso-outreach-dispatch.timer` `*:0/2`, élesen 165fa607) → 9–16 között ~210 lead/nap;
+  - ⚠️ a Viber 11-09 hajnali frissítése után a csevegés hívógombja `menu_mixed_call` (előtte `menu_viber_call`) → ~03:30–07:10 minden jelenlét „unknown” lett, és a Viber-küldés is bukott volna; javítva (`s10_send.py` `VIBER_CHAT_IDS`, 5c4d85b7). Tanulság: ha a jelenlét-napló sorozatban „unknown”, előbb a Viber UI-azonosítóit nézd (uiautomator dump).
 - 2026-11-08 23:10 · E-MAIL + VIBER = A FONTOS KÖR (tulaj: „igen az a fontos” + „9 óra előtt mindent tömegesen hagyj jóvá ahol van email és viber is”):
   - a háttér-jelenlétellenőrzés az e-mailes leadekkel kezd (c20db24b, élesen 23:13);
   - tömeges jóváhagyás (`decideApproval` → `queued`, note: „tömeges jóváhagyás: e-mail + Viber (tulaj 2026-11-08)”): 11-08 23:09-kor 14 db; 11-09 06:00 és 08:50 újra (Debian, egyszeri `systemd-run` timerek `cit-approve-ev-0600/0850`, szkript élesen `/opt/citoviso/approve-email-viber.mts`, napló `~/.claude/approve-email-viber.log`).
