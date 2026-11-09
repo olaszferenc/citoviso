@@ -29,7 +29,10 @@ import { sendOutreachMail } from "./sendBatch.js";
 import { startOutreachPair } from "./sendOutreachPair.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
-import { twinAlreadyContacted } from "./sharedContactGate.js";
+import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
+import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
+import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
+import { normalizePhone } from "../text/phone.js";
 import type { QualifiedLead } from "../scraper/types.js";
 
 /**
@@ -176,6 +179,16 @@ async function alreadyContacted(leadId: string): Promise<{ reason: string; twin:
   return twin ? { reason: twin, twin: true } : null;
 }
 
+/** The shared-contact reason for the lead's own phone, or null (no phone / the number is its alone). */
+async function sharedPhoneHold(leadId: string): Promise<string | null> {
+  const lead = await db.selectFrom("lead").select(["name", "raw"]).where("id", "=", leadId).executeTakeFirst();
+  const raw = (typeof lead?.raw === "string" ? JSON.parse(lead.raw) : lead?.raw) as QualifiedLead | undefined;
+  const phone = typeof raw?.phone === "string" ? raw.phone.trim() : "";
+  if (!lead || !phone) return null;
+  const e164 = normalizePhone(phone) ?? phone;
+  return sharedContactBlocks(leadId, "phone", e164, isAllowlistedTestNumber(e164) || ownerTestPhoneExempt(lead.name, e164));
+}
+
 /** Leads the timer contacted today (Budapest day). */
 export async function sentToday(): Promise<number> {
   const r = await db
@@ -302,6 +315,12 @@ async function dispatchOne(
   if (rcpt.ambiguous) {
     return { status: "held", note: "több e-mail-cím — a lead lapján válaszd ki, kinek menjen, majd küldd kézzel vagy tedd újra sorba" };
   }
+  // A phone that also belongs to ANOTHER lodging means the whole contact set is suspect, not only
+  // the mobile pair (owner 2026-11-09, Benó Balatongyörök ↔ BeNo Kőröshegy: the pair was held on
+  // the shared number, the e-mail — attached by the same wrong match — still went to the other
+  // business). So the collision holds the ENTIRE dispatch before anything is sent.
+  const phoneHold = await sharedPhoneHold(leadId);
+  if (phoneHold) return { status: "held", note: `e-mail sem ment: ${phoneHold}` };
   const prepared = await prepareDispatchProspect(leadId, artifactId, rcpt.contactEmail);
   if (!prepared.ok) return { status: prepared.status, note: prepared.note, ...(prepared.prospectId ? { prospectId: prepared.prospectId } : {}) };
   const prospectId = prepared.prospectId;

@@ -6,7 +6,10 @@
 //   ② the same through a shared E-MAIL, and through the other prospect's contact_email;
 //   ③ the other lead's prospect only CREATED (nothing sent) → no hold (a first outreach may go);
 //   ④ a same_owner ruling does NOT release it (the check never reads lead_link);
-//   ⑤ wiring: enqueue refuses, and the tick holds (held, not skipped) a twin.
+//   ⑤ wiring: enqueue refuses, and the tick holds (held, not skipped) a twin;
+//   ⑥ a mailed address a curator LATER took off the other lead (wrong recipient) → no hold, on
+//      both gates; ⑦ a curator stamp older than the prospect does not release it;
+//   ⑧ wiring: a phone shared with another lodging holds the whole dispatch, e-mail included.
 //
 // The dev DB is SHARED: ONE transaction, rolled back — the leads' contact edits and the prospect
 // rows are never visible to anyone else.
@@ -17,7 +20,7 @@ import { readFileSync } from "node:fs";
 import { sql } from "kysely";
 import { randomBytes } from "node:crypto";
 import { db } from "../src/db/client.js";
-import { twinAlreadyContacted } from "../src/outreach/sharedContactGate.js";
+import { foreignHoldersOf, twinAlreadyContacted } from "../src/outreach/sharedContactGate.js";
 import type { QualifiedLead } from "../src/scraper/types.js";
 
 let failures = 0;
@@ -77,6 +80,24 @@ try {
     await trx.updateTable("prospect").set({ sent_at: null }).where("lead_id", "=", napsugar.id).execute();
     const r3 = await twinAlreadyContacted(lakeside.id, await rawOf(lakeside.id), trx);
     check("③ a másik prospect csak létrehozva (semmi nem ment ki) → nincs tartás", r3 === null, r3);
+
+    // ⑥ wrong recipient, ruled (owner 2026-11-09, Benó ↔ BeNo): the mailed address was taken off
+    // the other lead by a curator AFTER the prospect was made → that mail went to the wrong
+    // business, the address's real owner may get their first outreach.
+    const h5 = await foreignHoldersOf(mailTwin.id, "email", `twin-${tag}@example.com`, trx);
+    check("⑥a kontroll: ítélet előtt a régi prospect címe IDEGEN birtokos (a kapu tud pirosra menni)", h5.some((h) => h.id === fresh.id), h5);
+    const later = new Date(Date.now() + 60_000).toISOString();
+    await trx.updateTable("lead").set({ raw: sql`(raw - 'email' - 'phone') || ${JSON.stringify({ emailCuratedAt: later })}::jsonb` }).where("id", "=", fresh.id).execute();
+    const r6 = await twinAlreadyContacted(mailTwin.id, await rawOf(mailTwin.id), trx);
+    check("⑥ a kurátor a kiküldés UTÁN levette a címet a másik leadről → nincs tartás (rossz címzett volt)", r6 === null, r6);
+    const h6 = await foreignHoldersOf(mailTwin.id, "email", `twin-${tag}@example.com`, trx);
+    check("⑥b ugyanez a közös-kontakt kapun: a régi prospect címe nem idegen birtokos", h6.every((h) => h.id !== fresh.id), h6);
+
+    // ⑦ the curator stamp is OLDER than the prospect (no later ruling) → still a twin.
+    const earlier = new Date(Date.now() - 86_400_000).toISOString();
+    await trx.updateTable("lead").set({ raw: sql`raw || ${JSON.stringify({ emailCuratedAt: earlier })}::jsonb` }).where("id", "=", fresh.id).execute();
+    const r7 = await twinAlreadyContacted(mailTwin.id, await rawOf(mailTwin.id), trx);
+    check("⑦ kurátori levétel a prospect ELŐTT (nincs későbbi ítélet) → marad a TARTVA iker", r7?.startsWith("TARTVA iker:") === true, r7);
     throw new Rollback();
   });
 } catch (e) {
@@ -91,6 +112,9 @@ check("⑤ bekötés: az alreadyContacted hívja, a tick held-re teszi (nem skip
   /await twinAlreadyContacted\(leadId, raw\)/.test(disp) &&
     /status: contacted\.twin \? "held" : "skipped"/.test(disp) &&
     /if \(contacted\) return \{ ok: false, reason: contacted\.reason \}/.test(disp));
+check("⑧ bekötés: telefon-ütközésnél az e-mail sem megy (a sharedPhoneHold a prepareDispatchProspect ELŐTT fut)",
+  /const phoneHold = await sharedPhoneHold\(leadId\);\s*if \(phoneHold\) return \{ status: "held"/.test(disp) &&
+    disp.indexOf("await sharedPhoneHold(leadId)") < disp.indexOf("await prepareDispatchProspect("));
 
 await db.destroy();
 if (failures) {

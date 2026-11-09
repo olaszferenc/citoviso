@@ -61,6 +61,26 @@ function contactKeysOf(raw: QualifiedLead, kind: ContactKind): Set<string> {
 }
 
 /**
+ * WRONG RECIPIENT, RULED (owner 2026-11-09, Benó Balatongyörök ↔ BeNo Kőröshegy): a prospect was
+ * mailed to an address a curator LATER took off its lead (`raw.emailCuratedAt` after the prospect
+ * was made, and the lead no longer carries it). That mail went to the wrong business — the
+ * mailbox's real owner never got an outreach for THEIR lodging, so the old prospect neither makes
+ * the address a foreign holder's nor a "twin already contacted". Without the curator's later
+ * removal nothing changes: a prospect address still counts.
+ */
+function curatedAwayFrom(
+  raw: Pick<QualifiedLead, "email" | "otherEmails" | "contacts"> & { readonly emailCuratedAt?: string | null },
+  emailKey: string,
+  prospectCreatedAt: unknown,
+): boolean {
+  if (!raw.emailCuratedAt || !prospectCreatedAt) return false;
+  const curated = new Date(raw.emailCuratedAt).getTime();
+  const made = new Date(prospectCreatedAt as string | number | Date).getTime();
+  if (!Number.isFinite(curated) || !Number.isFinite(made) || curated <= made) return false;
+  return !contactKeysOf(raw as QualifiedLead, "email").has(emailKey);
+}
+
+/**
  * Other live leads that carry this contact and are NOT released by a same_owner /
  * duplicate ruling. Empty = the contact is this lead's alone (or ruled shared).
  */
@@ -68,11 +88,13 @@ export async function foreignHoldersOf(
   leadId: string,
   kind: ContactKind,
   value: string,
+  /** The query executor — a check passes its rolled-back transaction. */
+  q: Pick<typeof db, "selectFrom"> = db,
 ): Promise<{ id: string; name: string; city?: string }[]> {
   const target = keyOf(kind, value);
   if (!target) return [];
 
-  const rows = await db
+  const rows = await q
     .selectFrom("lead")
     .select(["id", "name", "raw"])
     .where("id", "!=", leadId)
@@ -90,23 +112,30 @@ export async function foreignHoldersOf(
   // A prospect row IS the address we would mail — another lead's prospect on the
   // same mailbox is the same collision, even if its lead record says otherwise.
   if (kind === "email") {
-    const pros = await db
+    const pros = await q
       .selectFrom("prospect")
       .innerJoin("lead", "lead.id", "prospect.lead_id")
-      .select(["lead.id as id", "lead.name as name", "prospect.contact_email as email"])
+      .select([
+        "lead.id as id",
+        "lead.name as name",
+        "prospect.contact_email as email",
+        "prospect.created_at as createdAt",
+        sql<QualifiedLead & { emailCuratedAt?: string | null }>`jsonb_build_object('email', lead.raw->'email', 'otherEmails', lead.raw->'otherEmails', 'contacts', lead.raw->'contacts', 'emailCuratedAt', lead.raw->'emailCuratedAt')`.as("raw"),
+      ])
       .where("lead.id", "!=", leadId)
       .where("lead.lifecycle_status", "not in", [...INACTIVE])
       .where("prospect.contact_email", "is not", null)
       .execute();
     for (const p of pros) {
-      if (!holders.has(p.id) && keyOf("email", p.email ?? "") === target) {
+      const praw = (typeof p.raw === "string" ? JSON.parse(p.raw) : p.raw) as QualifiedLead & { emailCuratedAt?: string | null };
+      if (!holders.has(p.id) && keyOf("email", p.email ?? "") === target && !curatedAwayFrom(praw, target, p.createdAt)) {
         holders.set(p.id, { id: p.id, name: p.name });
       }
     }
   }
   if (!holders.size) return [];
 
-  const released = await db
+  const released = await q
     .selectFrom("lead_link")
     .select(["lead_a", "lead_b"])
     .where("verdict", "in", ["same_owner", "duplicate"])
@@ -177,8 +206,9 @@ export async function twinAlreadyContacted(
     .select([
       "lead.id as id",
       "lead.name as name",
-      sql<QualifiedLead>`jsonb_build_object('email', lead.raw->'email', 'otherEmails', lead.raw->'otherEmails', 'phone', lead.raw->'phone', 'contacts', lead.raw->'contacts')`.as("raw"),
+      sql<QualifiedLead>`jsonb_build_object('email', lead.raw->'email', 'otherEmails', lead.raw->'otherEmails', 'phone', lead.raw->'phone', 'contacts', lead.raw->'contacts', 'emailCuratedAt', lead.raw->'emailCuratedAt')`.as("raw"),
       "prospect.contact_email as email",
+      "prospect.created_at as createdAt",
     ])
     .where("lead.id", "!=", leadId)
     .where((eb) =>
@@ -191,11 +221,12 @@ export async function twinAlreadyContacted(
     )
     .execute();
   for (const s of sent) {
-    const other = (typeof s.raw === "string" ? JSON.parse(s.raw) : s.raw) as QualifiedLead;
+    const other = (typeof s.raw === "string" ? JSON.parse(s.raw) : s.raw) as QualifiedLead & { emailCuratedAt?: string | null };
+    const sentTo = s.email ? keyOf("email", s.email) : null;
     const theirs = [
       ...[...contactKeysOf(other, "email")].map((k) => `e:${k}`),
       ...[...contactKeysOf(other, "phone")].map((k) => `p:${k}`),
-      ...(s.email && keyOf("email", s.email) ? [`e:${keyOf("email", s.email)}`] : []),
+      ...(sentTo && !curatedAwayFrom(other, sentTo, s.createdAt) ? [`e:${sentTo}`] : []),
     ];
     if (theirs.some((k) => mine.has(k))) return `TARTVA iker: a közös kontaktra már ment megkeresés (${s.name})`;
   }
