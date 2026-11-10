@@ -17,7 +17,7 @@
 //   tsx scripts/messenger-watch.mts [--dry-run]
 
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -96,7 +96,17 @@ try {
   if (noPresence && ((list.presence ?? []).length || (list.waPresence ?? []).length)) {
     console.log("[messenger-watch] jelenlét-nézés KI (messenger-no-presence) — új számot csak a küldés nyit meg.");
   }
-  for (const phone of noPresence ? [] : list.presence ?? []) {
+  // Owner 2026-11-10 („miért nem ellenőrzünk?”): the Viber lookups are back, but slow — at most ONE number
+  // per PRESENCE_EVERY_MS, only between 08:00 and 20:00 Budapest. 2026-11-09 the bulk lookups (822 reads,
+  // 383 numbers in one morning) got the Viber account restricted; 1 per 3 min is ~20 an hour.
+  const PRESENCE_EVERY_MS = 3 * 60_000;
+  const stampFile = path.join(homedir(), ".cache", "citoviso-presence-at");
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Europe/Budapest" }).format(new Date()));
+  const lastAt = (() => { try { return Number(readFileSync(stampFile, "utf8")) || 0; } catch { return 0; } })();
+  const presenceSlot = !noPresence && hour >= 8 && hour < 20 && Date.now() - lastAt >= PRESENCE_EVERY_MS;
+  const presenceNow = presenceSlot ? (list.presence ?? []).slice(0, 1) : [];
+  if (presenceNow.length && !DRY) writeFileSync(stampFile, String(Date.now()));
+  for (const phone of presenceNow) {
     const r = await s10(["presence", "--to", phone, ...(list.noWhatsapp ? ["--no-whatsapp"] : [])]);
     presence.push({
       phone,
@@ -111,7 +121,7 @@ try {
     await new Promise((res) => setTimeout(res, 15_000 + Math.floor(Math.random() * 15_000)));
   }
   // ⑥ WhatsApp only where no Viber was found — the server hands out ≤ 1 number per 5 minutes (owner 2026-11-09).
-  for (const phone of noPresence ? [] : list.waPresence ?? []) {
+  for (const phone of noPresence || hour < 8 || hour >= 20 ? [] : list.waPresence ?? []) {
     const r = await s10(["presence", "--to", phone, "--only-whatsapp"]);
     presence.push({ phone, ok: r.ok === true, whatsapp: r.whatsapp, viber: "skipped" });
     console.log(`[messenger-watch] WhatsApp-jelenlét ${phone}: ${r.ok ? `WhatsApp ${r.whatsapp}` : `HIBA ${r.error}`}`);
