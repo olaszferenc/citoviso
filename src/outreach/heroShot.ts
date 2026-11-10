@@ -120,9 +120,11 @@ async function cachedShot(artifactId: string): Promise<HeroShotResult | null> {
     return { path: null, fail: { code: "no-mock-file", detail: a.path } };
   }
   const mtime = Math.floor((await stat(mockAbs)).mtimeMs / 1000);
-  // v4 cache-busts v3: those shots were taken without verifying the first
+  // v5 cache-busts v4: those shots opened the mock from disk without serving
+  // /assets/stock, so a no-photo mock's hero showed the placeholder icon.
+  // v4 cache-busted v3: those shots were taken without verifying the first
   // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
-  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v4.png`);
+  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v5.png`);
   return (await fileExists(dest)) ? { path: dest } : null;
 }
 
@@ -213,7 +215,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
     const ribbonLang = await prepareMailLang(shotLang);
     const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
-    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v4.png`);
+    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v5.png`);
 
     await mkdir(SHOT_DIR, { recursive: true });
     // Declared OUTSIDE the browser block: it is the reason the operator reads on
@@ -262,6 +264,27 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
           await page.route("**/*", async (route) => {
             if (route.request().resourceType() !== "image") return route.continue();
             const url = route.request().url();
+            // The mock is opened from disk (file://), so a root-relative own asset
+            // (e.g. the watermarked stock illustration /assets/stock/…, engine/stock.ts)
+            // resolves to file:///assets/… and would render as a broken image in the
+            // e-mail picture. Serve it from public/ — the same bytes the live page gets.
+            if (url.startsWith("file:///assets/")) {
+              const rel = decodeURIComponent(url.slice("file:///".length));
+              const abs = path.resolve(process.cwd(), "public", rel);
+              const pub = path.resolve(process.cwd(), "public") + path.sep;
+              if (abs.startsWith(pub)) {
+                try {
+                  const body = await readFile(abs);
+                  const ext = path.extname(abs).toLowerCase();
+                  const contentType =
+                    ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".svg" ? "image/svg+xml" : "image/jpeg";
+                  return route.fulfill({ status: 200, contentType, body });
+                } catch {
+                  // Missing file: let it fail visibly, the broken-image check below catches it.
+                }
+              }
+              return route.continue();
+            }
             // ⛔ A CACHE-TALÁLAT NEM MEGY BE A POLITENESS-LÁNCBA. Ez a lényeg: a lánc a
             // PORTÁLT védi, egy lemezről kiszolgált kép viszont el sem hagyja a gépet.
             // Ha a várakozás elé kerülne, a 19 render továbbra is 19 × 12 s-et állna —
