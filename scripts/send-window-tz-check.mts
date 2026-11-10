@@ -16,8 +16,8 @@
 //      name) — right around midnight, where UTC and Budapest disagree;
 //   ⑦ STRUCTURE: the owner/buyer-facing files read no local getter, every date formatter in
 //      them names the zone, every SQL day/month boundary says AT TIME ZONE;
-//   ⑧ ADR-0334 the MOCK-OUTREACH window (owner 2026-10-06): weekdays 09:00–16:00 Budapest —
-//      08:59 shut · 09:00 open · 15:59 open · 16:00 shut, Saturday/Sunday shut all day, the
+//   ⑧ ADR-0334 the MOCK-OUTREACH window (owner 2026-10-06): weekdays 08:00 (owner 2026-11-10; was 09:00)–16:00 Budapest —
+//      07:59 shut · 08:00 open · 15:59 open · 16:00 shut, Saturday/Sunday shut all day, the
 //      weekday is the BUDAPEST one around midnight, and MOBILE_SEND_WINDOW_OFF (set on prod)
 //      does not lift it;
 //   ⑨ STRUCTURE: the window guards every place a mock outreach STARTS (the mail send below its
@@ -29,7 +29,7 @@
 // Run: npx tsx scripts/send-window-tz-check.mts
 
 import { readFileSync } from "node:fs";
-import { minutesUntilWindowCloses, mockOutreachWindowBlocks, mockOutreachWindowOpen, sendWindowOpen } from "../src/sms/sendWindow.js";
+import { MOCK_OUTREACH_WINDOW, minutesUntilWindowCloses, mockOutreachWindowBlocks, mockOutreachWindowOpen, sendWindowOpen } from "../src/sms/sendWindow.js";
 import { config } from "../src/config.js";
 import { pairWindowBlocks } from "../src/outreach/sendOutreachSms.js";
 import { deadlineText, followupWindowBlocks } from "../src/outreach/escalationFollowup.js";
@@ -46,6 +46,8 @@ function check(name: string, got: unknown, want: unknown): void {
 }
 
 const ZONES = ["Europe/Budapest", "UTC", "America/New_York"];
+// The closing hour follows MOCK_OUTREACH_TO_HOUR (17 in the dev/prod .env since 2026-11-09).
+const MOCK_TO = MOCK_OUTREACH_WINDOW.toHour;
 // Budapest wall-clock instants: summer = UTC+2, winter = UTC+1.
 const SUMMER = (hhmm: string) => new Date(`2026-07-01T${hhmm}:00+02:00`);
 const WINTER = (hhmm: string) => new Date(`2026-12-01T${hhmm}:00+01:00`);
@@ -73,8 +75,8 @@ try {
     }
     // ⑧ 2026-07-01 is a Wednesday, 2026-12-01 a Tuesday.
     for (const [season, at] of [["nyár", SUMMER], ["tél", WINTER]] as const) {
-      check(`⑧ [${tz}, ${season}] mock-ablak hétköznap 08:59 · 09:00 · 15:59 · 16:00 (Budapest)`,
-        ["08:59", "09:00", "15:59", "16:00"].map((t) => mockOutreachWindowOpen(at(t))), [false, true, true, false]);
+      check(`⑧ [${tz}, ${season}] mock-ablak hétköznap 07:59 · 08:00 · ${MOCK_TO - 1}:59 · ${MOCK_TO}:00 (Budapest)`,
+        ["07:59", "08:00", `${MOCK_TO - 1}:59`, `${MOCK_TO}:00`].map((t) => mockOutreachWindowOpen(at(t))), [false, true, true, false]);
     }
     check(`⑧ [${tz}] szombat és vasárnap 10:00 (Budapest) zárva, péntek 15:59 nyitva`,
       [new Date("2026-10-03T10:00:00+02:00"), new Date("2026-10-04T10:00:00+02:00"), new Date("2026-10-02T15:59:00+02:00")].map(mockOutreachWindowOpen),
@@ -83,7 +85,7 @@ try {
     check(`⑧ [${tz}] a hétköznap budapesti: hétfő 09:00 nyitva, szombat 00:30 zárva`,
       [mockOutreachWindowOpen(new Date("2026-10-05T09:00:00+02:00")), mockOutreachWindowOpen(new Date("2026-10-03T00:30:00+02:00"))], [true, false]);
     check(`⑧ [${tz}] az ok kimondja a napot és az órát`,
-      mockOutreachWindowBlocks(new Date("2026-10-03T10:00:00+02:00")), "mock-megkeresés csak hétköznap 9:00–16:00 (Budapest) között megy ki (most szombat 10:00) — a következő hétköznap 9:00-tól indítható");
+      mockOutreachWindowBlocks(new Date("2026-10-03T10:00:00+02:00")), `mock-megkeresés csak hétköznap 8:00–${MOCK_TO}:00 (Budapest) között megy ki (most szombat 10:00) — a következő hétköznap 8:00-tól indítható`);
     check(`⑥ [${tz}] DST: a tavaszi nap 23, az őszi 25 órás (budapesti éjféltől éjfélig)`,
       [(budapestMidnight("2026-03-30").getTime() - budapestMidnight("2026-03-29").getTime()) / 3_600_000,
        (budapestMidnight("2026-10-26").getTime() - budapestMidnight("2026-10-25").getTime()) / 3_600_000], [23, 25]);
@@ -188,4 +190,4 @@ if (failures > 0) {
   console.error(`\n✗ SEND-WINDOW-TZ-CHECK: ${failures} bukott ellenőrzés`);
   process.exit(1);
 }
-console.log("\n✅ SEND-WINDOW-TZ-CHECK: minden kimenő ablak és határidő Budapest szerint számol, bármely szerver-zónában; mock-megkeresés csak hétköznap 9–16");
+console.log(`\n✅ SEND-WINDOW-TZ-CHECK: minden kimenő ablak és határidő Budapest szerint számol, bármely szerver-zónában; mock-megkeresés csak hétköznap 8–${MOCK_TO}`);

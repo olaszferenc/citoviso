@@ -20,8 +20,8 @@
 //   ⑨ lost ack: the journal keeps the send; the next tick re-acks → 'sent' (even from 'unknown')
 //   ⑩ a non-JPEG image in the row is converted (sharp) before the modem sees it
 //   ⑪ pairJobState reads the queue row: pending → mms, unknown/failed → failed with the reason
-//   ⑫ the pull window (ADR-0334, owner 2026-10-06): weekdays 09:00–16:00 Budapest — 15:59
-//      pulls, 16:00 does not (the row stays 'queued', no attempt spent), 08:59 and the
+//   ⑫ the pull window (ADR-0334, owner 2026-10-06): weekdays 08:00 (owner 2026-11-10; was 09:00)–16:00 Budapest — 15:59
+//      pulls, 16:00 does not (the row stays 'queued', no attempt spent), 07:59 and the
 //      weekend do not; DST-correct, the weekday is the Budapest one on a UTC process
 //      (prod), and MOBILE_SEND_WINDOW_OFF does not lift it
 //
@@ -51,6 +51,8 @@
 // Usage: npx tsx scripts/mms-relay-check.mts
 
 process.env.MMS_PROVIDER = "queue";
+// The ⑫/⑲ window assertions are written for the default 16:00 close; the .env may move it (MOCK_OUTREACH_TO_HOUR).
+process.env.MOCK_OUTREACH_TO_HOUR = "16";
 delete process.env.ELEK_RUN;
 
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -440,8 +442,8 @@ try {
       // Summer (CEST, UTC+2) and winter (CET, UTC+1), on a Budapest AND on a UTC process.
       // 2026-09-30 is a Wednesday, 2026-12-01 a Tuesday, 2026-10-03 a Saturday, 2026-10-04 a Sunday.
       for (const tz of ["Europe/Budapest", "UTC"]) {
-        say(at(tz, "2026-09-30T06:59:00Z") !== null, `⑫ [${tz}] nyáron szerda 08:59 (Budapest) → NEM húz`);
-        say(at(tz, "2026-09-30T07:00:00Z") === null, `⑫ [${tz}] nyáron szerda 09:00 (Budapest) → húz`);
+        say(at(tz, "2026-09-30T05:59:00Z") !== null, `⑫ [${tz}] nyáron szerda 07:59 (Budapest) → NEM húz`);
+        say(at(tz, "2026-09-30T06:00:00Z") === null, `⑫ [${tz}] nyáron szerda 08:00 (Budapest) → húz`);
         say(at(tz, "2026-09-30T13:59:00Z") === null, `⑫ [${tz}] nyáron szerda 15:59 (Budapest) → húz`);
         say(at(tz, "2026-09-30T14:00:00Z") !== null, `⑫ [${tz}] nyáron szerda 16:00 (Budapest) → NEM húz`);
         say(at(tz, "2026-12-01T08:00:00Z") === null, `⑫ [${tz}] télen kedd 09:00 (Budapest) → húz`);
@@ -721,7 +723,7 @@ try {
     for (const [label, iso] of [
       ["szerda 16:00", "2026-09-30T14:00:00Z"],
       ["szombat 10:00", "2026-10-03T08:00:00Z"],
-      ["hétfő 08:59", "2026-10-05T06:59:00Z"],
+      ["hétfő 07:59", "2026-10-05T05:59:00Z"],
     ] as const) {
       const m = okModem();
       const t = await runMmsRelayOnce({ ...relayDeps(m.send), windowAt: () => new Date(iso) });

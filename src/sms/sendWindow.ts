@@ -19,7 +19,7 @@
 //
 // ADR-0334 (owner, 2026-10-06: „Mockot hétköznap 9-16 között küldjünk!”): the MOCK
 // OUTREACH itself — the cold e-mail, the MMS+SMS pair, a standalone cold SMS — starts
-// only on a WEEKDAY between 09:00 and 16:00 Budapest (MOCK_OUTREACH_WINDOW). It is
+// only on a WEEKDAY between 08:00 (09:00 until 2026-11-10) and 16:00 Budapest (MOCK_OUTREACH_WINDOW). It is
 // narrower than SEND_WINDOW and sits on top of it; the 8–20 window keeps guarding what
 // is NOT a new outreach (the companion SMS of a pair started at 15:59, the pair repair,
 // the escalation follow-up). Unlike SEND_WINDOW it is NOT lifted by MOBILE_SEND_WINDOW_OFF:
@@ -63,12 +63,13 @@ export function minutesUntilWindowCloses(now: Date): number {
 
 /** When a mock outreach (mail, MMS+SMS pair, cold SMS) may START: Mon–Fri, Budapest wall clock (ADR-0334). */
 // The closing hour may be moved later by the owner (2026-11-06: „ma 5-ig”) with
-// MOCK_OUTREACH_TO_HOUR (17–20); anything else keeps 16. The opening hour is fixed.
+// MOCK_OUTREACH_TO_HOUR (17–20); anything else keeps 16. The opening hour is 08:00 since
+// owner 2026-11-10 („minden reggel 8 és este 5 közé, kivéve hétvége”; it was 09:00).
 const mockToHour = ((): number => {
   const n = Number(process.env.MOCK_OUTREACH_TO_HOUR ?? "");
   return Number.isInteger(n) && n >= 16 && n <= 20 ? n : 16;
 })();
-export const MOCK_OUTREACH_WINDOW = { fromHour: 9, toHour: mockToHour, timeZone: SEND_WINDOW_TZ } as const;
+export const MOCK_OUTREACH_WINDOW = { fromHour: 8, toHour: mockToHour, timeZone: SEND_WINDOW_TZ } as const;
 
 const WEEKDAY_HU = ["vasárnap", "hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat"] as const;
 
