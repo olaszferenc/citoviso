@@ -97,9 +97,9 @@ try {
     console.log("[messenger-watch] jelenlét-nézés KI (messenger-no-presence) — új számot csak a küldés nyit meg.");
   }
   // Owner 2026-11-10 („miért nem ellenőrzünk?”): the Viber lookups are back, but slow — at most ONE number
-  // per PRESENCE_EVERY_MS, only between 08:00 and 20:00 Budapest. 2026-11-09 the bulk lookups (822 reads,
-  // 383 numbers in one morning) got the Viber account restricted; 1 per 3 min is ~20 an hour.
-  const PRESENCE_EVERY_MS = 3 * 60_000;
+  // per PRESENCE_EVERY_MS (one per 90 s watcher run = ~40/h), only between 08:00 and 20:00 Budapest. 2026-11-09 the bulk lookups (822 reads,
+  // 383 numbers in one morning) got the Viber account restricted.
+  const PRESENCE_EVERY_MS = 80_000; // every 90 s watcher run (timer jitter tolerated) = ~40/h; owner 2026-11-10 12:3x: „Viber legyen 40 darab óránként”
   const stampFile = path.join(homedir(), ".cache", "citoviso-presence-at");
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Europe/Budapest" }).format(new Date()));
   const lastAt = (() => { try { return Number(readFileSync(stampFile, "utf8")) || 0; } catch { return 0; } })();
