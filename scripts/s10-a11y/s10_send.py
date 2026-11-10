@@ -11,7 +11,7 @@ UI rules: WhatsApp drops injected input -> clicks/text go through the accessibil
 (com.citoviso.a11y, scripts/s10-a11y). The screen is exclusive: flock ~/.cache/s10-ui.lock, and
 nothing is touched while a call is ringing or active (citoviso-callbot owns calls).
 """
-import argparse, fcntl, hashlib, json, os, re, subprocess, sys, time
+import argparse, fcntl, hashlib, html, json, os, re, subprocess, sys, time
 from datetime import date
 
 SER = os.environ.get("ADB_SERIAL", "RF8M2101WXX")
@@ -202,6 +202,12 @@ def send_viber(ph, uri, text):
         if "com.viber.voip:id/design_bottom_sheet" in x and "com.viber.voip:id/positive_button" in x:
             a11y("click", "com.viber.voip:id/positive_button")
             return None
+        # 2026-11-10: the privacy-consent screen swallows the chat intent; accept it and open the chat again.
+        if "com.viber.voip:id/allow_btn" in x:
+            a11y("click", "com.viber.voip:id/allow_btn")
+            time.sleep(2)
+            sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
+            return None
         return "com.viber.voip:id/options_menu_open_gallery" in x or None
     x, ok = wait_for(chat_ready)
     if not ok:
@@ -209,9 +215,18 @@ def send_viber(ph, uri, text):
     # A retry after "sent message not visible" must not send twice: if the caption is already in
     # the chat, the earlier attempt went out.
     time.sleep(1.5)
-    if text[:25] in dump():
+    x = dump()
+    if text[:25] in x:
         home()
         return
+    # 2026-11-10: two leads' messages landed in a THIRD lead's chat — the intent did not switch the
+    # chat (a consent screen swallowed it) and the previously open chat looked "ready". Every outreach
+    # chat holds our caption "<Name> – … A Citoviso csapata"; one with ANOTHER name is the wrong chat.
+    ours = text.split(" – ")[0]
+    foreign = [t for t in re.findall(r'text="([^"]*Citoviso csapata[^"]*)"', x) if html.unescape(t).split(" – ")[0] != ours]
+    if foreign:
+        home()
+        raise Fail("viber: wrong chat open (another lead's message is there) — not sent")
     for k in ("com.viber.voip:id/close", "com.viber.voip:id/gotIt"):
         if k in x:
             a11y("click", k)
