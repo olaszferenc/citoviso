@@ -195,6 +195,24 @@ def send_whatsapp(ph, uri, text):
     home()
 
 
+def viber_dismiss_overlays(x):
+    """2026-11-10 (fresh install): popups cover the chat and hide it from the dump, so a sent message
+    looked "not visible" and the retry could send twice. Close them; True = something was closed."""
+    if "com.viber.voip:id/design_bottom_sheet" in x and "com.viber.voip:id/positive_button" in x:
+        a11y("click", "com.viber.voip:id/positive_button")
+        return True
+    if "com.viber.voip:id/allow_btn" in x:
+        a11y("click", "com.viber.voip:id/allow_btn")
+        return True
+    if "A kérés nem elérhető" in x and 'text="Mégse"' in x:
+        a11y("click", "~Mégse")
+        return True
+    if 'text="Rendben"' in x and ("MI-funkci" in x or "új külsőt" in x):
+        a11y("click", "~Rendben")
+        return True
+    return False
+
+
 def send_viber(ph, uri, text):
     sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"'viber://chat?number=%2B{ph}'")
     def chat_ready(x):
@@ -216,6 +234,11 @@ def send_viber(ph, uri, text):
     # the chat, the earlier attempt went out.
     time.sleep(1.5)
     x = dump()
+    for _ in range(3):
+        if not viber_dismiss_overlays(x):
+            break
+        time.sleep(1.5)
+        x = dump()
     if text[:25] in x:
         home()
         return
@@ -258,7 +281,7 @@ def send_viber(ph, uri, text):
     if not a11y("click", "com.viber.voip:id/btn_send"):
         raise Fail("viber: send click failed")
     snippet = text[:25]
-    x, ok = wait_for(lambda x: snippet in x and viber_chat_open(x), tries=12)
+    x, ok = wait_for(lambda x: None if viber_dismiss_overlays(x) else (snippet in x and viber_chat_open(x)), tries=12)
     if not ok:
         raise Fail("viber: sent message not visible in chat")
     home()
