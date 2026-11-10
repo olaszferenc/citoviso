@@ -120,7 +120,7 @@ try {
     // Spread the lookups (WhatsApp / Viber watch the tempo of unknown-number lookups).
     await new Promise((res) => setTimeout(res, 15_000 + Math.floor(Math.random() * 15_000)));
   }
-  // ⑥ WhatsApp only where no Viber was found — the server hands out ≤ 1 number per 5 minutes (owner 2026-11-09).
+  // ⑥ WhatsApp only where no Viber was found — the server hands out ≤ 1 number per 2 minutes (owner 2026-11-10).
   for (const phone of noPresence || hour < 8 || hour >= 20 ? [] : list.waPresence ?? []) {
     const r = await s10(["presence", "--to", phone, "--only-whatsapp"]);
     presence.push({ phone, ok: r.ok === true, whatsapp: r.whatsapp, viber: "skipped" });

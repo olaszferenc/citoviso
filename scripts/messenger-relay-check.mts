@@ -403,9 +403,9 @@ try {
     await m.setMessengerConfig({ enabled: true, brake: null });
     say((await m.getMessengerConfig()).presenceBacklog === true, "⑬ alapból fut a háttér-ellenőrzés (futásonként 1 szám, éjjel-nappal)");
     say(m.PRESENCE_BACKGROUND === 1, "⑬ futásonként legfeljebb 1 háttér-szám");
-    say(m.WA_LOOKUP_EVERY_MS === 5 * 60_000, "⑭ WhatsApp-lekérdezés legfeljebb 5 percenként 1");
+    say(m.WA_LOOKUP_EVERY_MS === 2 * 60_000, "⑭ WhatsApp-lekérdezés legfeljebb 2 percenként 1");
     await setSetting(m.WA_LOOKUP_AT_KEY, new Date().toISOString());
-    say((await m.whatsappPresenceDue()).length === 0, "⑭ 5 percen belül nincs újabb WhatsApp-lekérdezés");
+    say((await m.whatsappPresenceDue()).length === 0, "⑭ 2 percen belül nincs újabb WhatsApp-lekérdezés");
     say((await m.messengerWatchList()).noWhatsapp === true, "⑭ a háttér-ellenőrzés soha nem nyit WhatsAppot (csak Vibert)");
   }
 

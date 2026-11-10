@@ -349,8 +349,8 @@ export async function applyMessengerWatch(
 export const PRESENCE_MAX_AGE_DAYS = 14;
 /** Numbers per watcher run (~20 s each on the phone's screen). Small, so a requested number waits ≤ ~2 runs. */
 export const PRESENCE_BATCH = 4;
-/** WhatsApp lookups: one number per 5 minutes, only where no Viber was found (owner 2026-11-09). */
-export const WA_LOOKUP_EVERY_MS = 5 * 60_000;
+/** WhatsApp lookups: one number per 2 minutes, only where no Viber was found (owner 2026-11-10: „2 percenként 1”; 11-09: 5 min). */
+export const WA_LOOKUP_EVERY_MS = 2 * 60_000;
 export const WA_LOOKUP_AT_KEY = "messenger_wa_lookup_at";
 /** Background (not requested) numbers checked per watcher run (owner 2026-11-08: 1 per 1.5 min). */
 export const PRESENCE_BACKGROUND = 1;
