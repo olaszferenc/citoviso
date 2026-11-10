@@ -318,7 +318,7 @@ def send_text(ph, channel, text):
 
 def send_mms(ph, uri, text):
     sh("am", "start", "-a", "android.intent.action.SEND", "-t", "image/jpeg",
-       "--eu", "android.intent.extra.STREAM", uri, "--es", "address", "0" + ph[2:],
+       "--eu", "android.intent.extra.STREAM", uri, "--es", "address", "06" + ph[2:],  # ph = 36…: domestic form is 06…, not 0… (2026-11-10: every S10 MMS went to an invalid number)
        "--es", "sms_body", "'" + text.replace("'", "'\\''") + "'",
        "-n", "com.samsung.android.messaging/.ui.ComposeMessageMms", "--grant-read-uri-permission")
     x, ok = wait_for(lambda x: "com.samsung.android.messaging:id/send_button" in x)
