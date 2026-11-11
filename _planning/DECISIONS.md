@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-orszag-reteg-master-data-a-lead-koordinataja-aktivalja.md) — ORSZÁG-RÉTEG: egy master-data entitás országonként, amit a lead koordinátája aktivál; a HU-folyamat ettől paraméterezve fut bármely országra
 - [ADR-0436](decisions/0436-kep-nelkuli-lead-mockja-a-telepules-fotoja-a.md) — Kép nélküli lead mockja: a település fotója a hősben, tiszta mintaképek egy felirattal
 - [ADR-0435](decisions/0435-honnan-nyitottak-csatorna-jel-a-kikuldott.md) — Honnan nyitották: csatorna-jel a kiküldött linkben + „Honnan nyitották” panel a Tölcsérben
 - [ADR-0434](decisions/0434-rossz-cimzett-a-javitott-megkereses-kimehet-es.md) — Rossz címzett: a javított megkeresés kimehet, és a telefon-ütközés az e-mailt is megállítja
