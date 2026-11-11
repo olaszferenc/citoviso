@@ -102,6 +102,7 @@ const {
   purgeWarningDay,
   runPurgeWarnings,
 } = await import("../src/trial/retention.js");
+const { MOCK_OUTREACH_WINDOW } = await import("../src/sms/sendWindow.js");
 const { purgeWarningDeps, sendPurgeWarningEmail } = await import("../src/trial/notices.js");
 const { addIsoDays } = await import("../src/text/budapestTime.js");
 const { buildPurgeWarningEmail } = await import("../src/email/trialEmail.js");
@@ -187,8 +188,11 @@ try {
   const p7Rows = () => db.selectFrom("free_trial_notice").select(["status", "detail"]).where("free_trial_id", "=", trial.id).where("step", "=", "p7").execute();
   const sat = await runPurgeWarnings(bp("2026-10-03", "10:00"), deps, only);
   check("szombat 10:00 → ablak zárva, 0 levél", sat.windowClosed && sent.length === 0);
-  const evening = await runPurgeWarnings(bp("2026-10-01", "16:30"), deps, only);
-  check("csütörtök 16:30 → ablak zárva, 0 levél", evening.windowClosed && sent.length === 0);
+  // The closing hour is the rule's (MOCK_OUTREACH_WINDOW: env-settable since 2026-11-06,
+  // .env 17) — a burned-in 16:30 fell INSIDE the window and every later step cascaded red.
+  const closeAt = `${String(MOCK_OUTREACH_WINDOW.toHour).padStart(2, "0")}:30`;
+  const evening = await runPurgeWarnings(bp("2026-10-01", closeAt), deps, only);
+  check(`csütörtök ${closeAt} → ablak zárva, 0 levél`, evening.windowClosed && sent.length === 0);
   const early = await runPurgeWarnings(bp("2026-09-30", "10:00"), deps, only);
   check("szerda (még nem esedékes) → 0 esedékes, 0 levél", early.due === 0 && sent.length === 0);
   const dry = await runPurgeWarnings(bp("2026-10-01", "10:00"), deps, { ...only, dryRun: true });
