@@ -48,6 +48,7 @@ import type { ReplyView, RepliesBlock } from "../src/replies/store.js";
 import { db } from "../src/db/client.js";
 import { answerTextError, nextWindowStart, smsParts, SMS_MAX_PARTS } from "../src/replies/answerRules.js";
 import { sendAnswer, settleReplySends } from "../src/replies/answer.js";
+import { MOCK_OUTREACH_WINDOW } from "../src/sms/sendWindow.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 
@@ -223,8 +224,11 @@ function blockCases(render: typeof repliesBlockHtml): boolean[] {
 }
 
 // ---------- ⑦ answering rules ----------
-const FRI_1630 = new Date("2026-10-09T14:30:00Z"); // Friday 16:30 Budapest (CEST)
-const MON_0900 = new Date("2026-10-12T07:00:00Z"); // Monday 09:00 Budapest
+// Derived from the window itself: the hard-coded 16:30 / 09:00 went red when the window
+// moved to 8–17 (2026-11-10) — 16:30 is now INSIDE it. October 2026 is CEST (UTC+2).
+const CEST = 2;
+const FRI_1630 = new Date(Date.UTC(2026, 9, 9, MOCK_OUTREACH_WINDOW.toHour - CEST, 30)); // Friday, 30 min after close
+const MON_0900 = new Date(Date.UTC(2026, 9, 12, MOCK_OUTREACH_WINDOW.fromHour - CEST, 0)); // Monday, window opens
 const TUE_1000 = new Date("2026-10-13T08:00:00Z"); // inside the window
 function ruleCases(parts: typeof smsParts, next: typeof nextWindowStart): boolean[] {
   const p = (n: number) => parts("á".repeat(n));
@@ -233,7 +237,7 @@ function ruleCases(parts: typeof smsParts, next: typeof nextWindowStart): boolea
     check("⑦ SMS 71 karakter → 2 rész (67-es részek)", p(71) === 2, String(p(71))),
     check(`⑦ SMS 335 karakter → ${SMS_MAX_PARTS} rész`, p(335) === SMS_MAX_PARTS, String(p(335))),
     check(`⑦ SMS 336 karakter → ${SMS_MAX_PARTS + 1} rész`, p(336) === SMS_MAX_PARTS + 1, String(p(336))),
-    check("⑦ péntek 16:30 → a következő hétfő 9:00 (Budapest)", next(FRI_1630).getTime() === MON_0900.getTime(), next(FRI_1630).toISOString()),
+    check(`⑦ péntek zárás után → a következő hétfő ${MOCK_OUTREACH_WINDOW.fromHour}:00 (Budapest)`, next(FRI_1630).getTime() === MON_0900.getTime(), next(FRI_1630).toISOString()),
     check("⑦ ablakon belül → most", next(TUE_1000).getTime() === TUE_1000.getTime(), next(TUE_1000).toISOString()),
   ];
 }
@@ -258,7 +262,7 @@ async function sendCases(send: typeof sendAnswer, settle: typeof settleReplySend
     const row = await db.selectFrom("outreach_reply_send").select(["status", "scheduled_for"]).where("reply_id", "=", a.id).executeTakeFirst();
     res.push(
       check(
-        "⑧ ablakon kívül (szombat) az „Elküldöm” csak sorba állít, hétfő 9:00-ra",
+        "⑧ ablakon kívül (szombat) az „Elküldöm” csak sorba állít, hétfő ablaknyitásra",
         out.status === "scheduled" && row?.status === "scheduled" && new Date(row.scheduled_for as unknown as Date).getTime() === MON_0900.getTime(),
         JSON.stringify({ out: out.status, row }),
       ),

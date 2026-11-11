@@ -250,17 +250,45 @@
       track("dwell", { seconds: dwell });
       if (dwell >= 600) clearInterval(beat);
     }, 15000);
+    // Real visible time (ms), independent of the 15 s heartbeat: a 7 s glance used to
+    // report 0 s, because the heartbeat had not ticked yet.
+    var visMs = 0;
+    var visSince = document.visibilityState === "visible" ? Date.now() : 0;
+    function visibleSeconds() {
+      return Math.round((visMs + (visSince ? Date.now() - visSince : 0)) / 1000);
+    }
     // Final dwell on leave (sendBeacon survives unload). ADR-0322 ②: it also carries
     // WHERE the visit ended — the last section seen and, with the panel open, the
     // checkout step — which is what the report's exit map reads.
-    window.addEventListener("pagehide", function () {
+    //
+    // ⛔ pagehide ALONE LOST THE END OF MOST MOBILE VISITS (measured 2026-11-11, prod,
+    // last 30 days: 140 of 351 mobile visits had no dwell_end). On iOS/Android the
+    // visitor switches app or locks the phone — the page is never unloaded, so pagehide
+    // never fires, and the OS later kills the tab silently. `visibilitychange → hidden`
+    // is the last event a mobile page reliably gets, so the end is sent THERE; a return
+    // re-arms it, and the next leave sends a later end (readers take the max).
+    var endSent = false;
+    function sendEnd() {
+      if (endSent) return;
+      endSent = true;
       track("dwell_end", {
-        seconds: dwell,
+        seconds: Math.max(dwell, visibleSeconds()),
         last_section: lastSection,
         last_step: checkoutStep(),
         panel_seconds: panelSeconds(),
       });
+    }
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") {
+        if (visSince) visMs += Date.now() - visSince;
+        visSince = 0;
+        sendEnd();
+      } else if (document.visibilityState === "visible") {
+        if (!visSince) visSince = Date.now();
+        endSent = false;
+      }
     });
+    window.addEventListener("pagehide", sendEnd);
     // ADR-0322 ②: section visibility — each section ONCE per visit, at 50 % in view.
     // A section = the hero, every top-level `data-cit-module` hook and every template
     // section with a `t-…` id; the order index is the DOM order. The panel and the

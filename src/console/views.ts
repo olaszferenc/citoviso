@@ -9001,6 +9001,8 @@ export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
   trial_send_failed: T(lang, "A próba indítása nem sikerült"),
   trial_close: T(lang, "Bezárta a próba-űrlapot"),
   trial_start: T(lang, "ELINDÍTOTTA AZ INGYENES PRÓBÁT"),
+  // Multi-plan mocks: which plan tab the visitor was looking at (server-side, /view?plan=N).
+  plan_view: T(lang, "Tervet nézett"),
 });
 
 /** Events shown emphasised (the order went out / to payment). */
@@ -9078,6 +9080,8 @@ export function eventDetail(type: string, payload: unknown, lang = "hu"): string
       return esc(p.msg);
     case "order_intent_submitted":
       return `${esc(p.modules)} modul · ${period(p.period)}`;
+    case "plan_view":
+      return typeof p.plan === "number" ? esc(T(lang, "{n}. terv", { n: p.plan })) : "";
     default:
       return "";
   }
@@ -9088,10 +9092,13 @@ export function prospectActivityPage(a: ProspectActivity): string {
   const lang = consoleLang();
   const modLabel = (id: string): string =>
     MODULE_CATALOG.find((m) => m.id === id)?.publicLabel ?? id;
-  const hhmm = (iso: string) => esc(iso.slice(11, 19));
-  const dmy = (iso: string) => esc(iso.slice(0, 16).replace("T", " "));
+  // ⛔ The reader's clock, not UTC: the raw ISO slice printed 12:35 for a visit the
+  // owner saw happen at 13:35 (tulaj 2026-11-11, „nem következetes”).
+  const hhmm = (iso: string) => esc(consoleTime(iso, lang));
+  const dmy = (iso: string) => esc(consoleDateTime(iso, lang).replace(/:\d\d$/, ""));
 
-  const totalEvents = a.sessions.reduce((n, s) => n + s.events.length, 0);
+  // The same count the visit rows show: section_seen is the exit map's raw input, not a row.
+  const totalEvents = a.sessions.reduce((n, s) => n + s.events.filter((e) => e.type !== "section_seen").length, 0);
   const bestScroll = a.sessions.reduce((m, s) => Math.max(m, s.maxScroll), 0);
   const bestDwell = a.sessions.reduce((m, s) => Math.max(m, s.maxDwell), 0);
 
@@ -9133,8 +9140,17 @@ export function prospectActivityPage(a: ProspectActivity): string {
         .map((s, i) => {
           // section_seen is the exit map's raw input — one row per scrolled-past section
           // would bury the clicks (README rendeles-panel ⑩).
-          const rows = s.events
-            .filter((e) => e.type !== "section_seen")
+          const shown = s.events.filter((e) => e.type !== "section_seen");
+          // A visit is CLOSED when the page reported its end (dwell_end). Without it the
+          // tab was killed or the phone locked before the old pagehide-only beacon fired
+          // — say so, with the last sign we have, instead of leaving the operator to guess
+          // why there is no reading time.
+          const closed = s.events.some((e) => e.type === "dwell_end");
+          const lastAt = s.events.length ? s.events[s.events.length - 1]!.at : s.startedAt;
+          const endNote = closed
+            ? ""
+            : `<p class="mut small" style="margin-top:8px">${T(lang, "A látogatás vége nem érkezett meg (a telefon lezárt / appot váltott, mielőtt jelzett) — utolsó jel: {t}", { t: hhmm(lastAt) })}</p>`;
+          const rows = shown
             .map((e) => {
               const label = eventLabel(e.type, e.payload, lang);
               const d = eventDetail(e.type, e.payload, lang);
@@ -9148,9 +9164,10 @@ export function prospectActivityPage(a: ProspectActivity): string {
             .join("");
           return `<details class="panel"${i === a.sessions.length - 1 ? " open" : ""}>
             <summary style="cursor:pointer;font-weight:600">${i + 1}. látogatás — ${dmy(s.startedAt)}
-              <span class="mut small" style="font-weight:400">· ${T(lang, "{n} esemény", { n: s.events.length })}${s.maxScroll ? ` · ${T(lang, "{n}% görgetés", { n: s.maxScroll })}` : ""}${s.maxDwell ? ` · ${T(lang, "{n} mp olvasás", { n: s.maxDwell })}` : ""}</span>
+              <span class="mut small" style="font-weight:400">· ${T(lang, "{n} esemény", { n: shown.length })}${s.maxScroll ? ` · ${T(lang, "{n}% görgetés", { n: s.maxScroll })}` : ""}${s.maxDwell ? ` · ${T(lang, "{n} mp olvasás", { n: s.maxDwell })}` : ""}${closed ? "" : ` · ${T(lang, "vége ismeretlen")}`}</span>
             </summary>
             <div class="tblwrap"><table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">${T(lang, "nincs esemény")}</td></tr>`}</tbody></table></div>
+            ${endNote}
             ${s.referrer ? `<p class="mut small" style="margin-top:8px">${T(lang, "Forrás: {src}", { src: esc(s.referrer) })}</p>` : ""}
           </details>`;
         })
