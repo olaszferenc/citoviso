@@ -285,6 +285,9 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   return { kind: "done", leadId: claimed.lead_id, status: result.status, note: result.note };
 }
 
+/** app_setting key: any non-empty value pauses the dispatcher's e-mail (the mobile pair still goes). */
+export const EMAIL_PAUSED_KEY = "outreach_email_paused";
+
 /** The console's send-all, step by step, without the human clicks (those → held). */
 async function dispatchOne(
   leadId: string,
@@ -336,7 +339,12 @@ async function dispatchOne(
   if (!prepared.ok) return { status: prepared.status, note: prepared.note, ...(prepared.prospectId ? { prospectId: prepared.prospectId } : {}) };
   const prospectId = prepared.prospectId;
 
-  const mail = await sendOutreachMail(prospectId);
+  // Owner 2026-11-10 „Ne menjen el az email”: while app_setting outreach_email_paused is set, the
+  // dispatcher sends only the mobile pair (Viber / WhatsApp / MMS); the e-mail is not sent at all.
+  const mailPaused = !!(await getSetting(EMAIL_PAUSED_KEY));
+  const mail: Pick<Awaited<ReturnType<typeof sendOutreachMail>>, "outcome"> = mailPaused
+    ? { outcome: { kind: "skipped", reason: "az e-mail szünetel (tulaj 2026-11-10: „Ne menjen el az email”) — csak a mobil megy" } }
+    : await sendOutreachMail(prospectId);
   const mailNote =
     mail.outcome.kind === "sent"
       ? "e-mail kiment"
