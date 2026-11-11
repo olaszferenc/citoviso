@@ -32,7 +32,8 @@ import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
 import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
-import { normalizePhone } from "../text/phone.js";
+import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { expectedChannel, getMessengerConfig, presenceOf } from "../mms/messenger.js";
 import type { QualifiedLead } from "../scraper/types.js";
 
 /**
@@ -285,8 +286,23 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   return { kind: "done", leadId: claimed.lead_id, status: result.status, note: result.note };
 }
 
-/** app_setting key: any non-empty value pauses the dispatcher's e-mail (the mobile pair still goes). */
-export const EMAIL_PAUSED_KEY = "outreach_email_paused";
+/**
+ * Owner rule 2026-11-11 („EMAILES LEADNÉL LE KELL ELLENŐRIZNI … HOGY VAN-E viber whatsupp, ha nincs mehet
+ * az email és sms mms”): a lead whose mobile has Viber or WhatsApp is reached there ONLY — no e-mail.
+ * No Viber / WhatsApp → e-mail + MMS/SMS pair. Not checked yet → the e-mail waits (held) until the
+ * phone has looked. No Hungarian mobile at all → e-mail. Returns the skip reason, "hold", or null (send).
+ */
+async function emailRule(leadId: string): Promise<string | "hold" | null> {
+  const lead = await db.selectFrom("lead").select(["raw"]).where("id", "=", leadId).executeTakeFirst();
+  const raw = (typeof lead?.raw === "string" ? JSON.parse(lead.raw) : lead?.raw) as QualifiedLead | undefined;
+  const e164 = typeof raw?.phone === "string" ? normalizePhone(raw.phone.trim()) : null;
+  if (!e164 || !isHuMobileE164(e164)) return null;
+  const p = (await presenceOf([e164])).get(e164) ?? null;
+  const plan = expectedChannel(p, await getMessengerConfig());
+  if (plan.channel === "viber" || plan.channel === "whatsapp") return `${plan.channel === "viber" ? "Viber" : "WhatsApp"} van — csak azon megy, e-mail nem (tulaj 2026-11-11)`;
+  if (plan.channel === "check") return "hold";
+  return null;
+}
 
 /** The console's send-all, step by step, without the human clicks (those → held). */
 async function dispatchOne(
@@ -335,15 +351,16 @@ async function dispatchOne(
   // business). So the collision holds the ENTIRE dispatch before anything is sent.
   const phoneHold = await sharedPhoneHold(leadId);
   if (phoneHold) return { status: "held", note: `e-mail sem ment: ${phoneHold}` };
+  if (rcpt.contactEmail && (await emailRule(leadId)) === "hold") {
+    return { status: "held", note: "a telefon még nem nézte meg, van-e Vibere / WhatsAppja — addig nem megy ki (tulaj 2026-11-11)" };
+  }
   const prepared = await prepareDispatchProspect(leadId, artifactId, rcpt.contactEmail);
   if (!prepared.ok) return { status: prepared.status, note: prepared.note, ...(prepared.prospectId ? { prospectId: prepared.prospectId } : {}) };
   const prospectId = prepared.prospectId;
 
-  // Owner 2026-11-10 „Ne menjen el az email”: while app_setting outreach_email_paused is set, the
-  // dispatcher sends only the mobile pair (Viber / WhatsApp / MMS); the e-mail is not sent at all.
-  const mailPaused = !!(await getSetting(EMAIL_PAUSED_KEY));
-  const mail: Pick<Awaited<ReturnType<typeof sendOutreachMail>>, "outcome"> = mailPaused
-    ? { outcome: { kind: "skipped", reason: "az e-mail szünetel (tulaj 2026-11-10: „Ne menjen el az email”) — csak a mobil megy" } }
+  const mailSkip = await emailRule(leadId);
+  const mail: Pick<Awaited<ReturnType<typeof sendOutreachMail>>, "outcome"> = mailSkip
+    ? { outcome: { kind: "skipped", reason: mailSkip === "hold" ? "a telefon még nem nézte meg a Vibert / WhatsAppot" : mailSkip } }
     : await sendOutreachMail(prospectId);
   const mailNote =
     mail.outcome.kind === "sent"
