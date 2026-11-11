@@ -17,6 +17,8 @@
 // somebody else's servers; politeness.ts keeps every host strictly serial with a
 // gap, so more leads means a longer run, never a faster hammer.
 
+import { countryConfigSync, countryOf } from "../country.js";
+import { plausibleInCountry } from "../text/phoneCountry.js";
 import { isBusinessEmail, isCorroboratedEmail } from "./enrichWebSearch.js";
 import { findPortalCandidates, portalLookup, twinBrands } from "./sources/portalListing.js";
 import { distinctPortalPhotos, holdSharedPhotoSets } from "./portalPhotos.js";
@@ -215,21 +217,11 @@ export async function enrichPortal(
    * `telephone` (live: +441135199515 / support@booked.net on a Badacsonytomaj
    * apartment). The shared-contact count catches it across a batch, but a small
    * run has nothing to compare against — so a number from a different country
-   * than the lead is rejected outright. Only the countries we actually scrape
-   * are listed; an unknown country skips the check rather than guessing.
+   * than the lead is rejected outright. The dial code is the lead's country-layer
+   * row's (ADR-0437); a country without a row skips the check rather than guessing.
    */
-  const COUNTRY_DIAL: Record<string, string> = {
-    HU: "36", HR: "385", AT: "43", SK: "421", SI: "386", RO: "40", RS: "381", DE: "49",
-  };
-  const plausibleLocalPhone = (phone: string | undefined, country: string | undefined): boolean => {
-    if (!phone) return false;
-    const expected = country ? COUNTRY_DIAL[country.toUpperCase()] : undefined;
-    if (!expected) return true; // unknown country — no basis to reject
-    const digits = phone.replace(/\D/g, "");
-    // A national-format number (06 30 …, 030 …) carries no country code at all.
-    if (!/^(\+|00)/.test(phone.trim()) && !digits.startsWith(expected)) return true;
-    return digits.startsWith(expected) || digits.startsWith(`00${expected}`);
-  };
+  const plausibleLocalPhone = (phone: string | undefined, country: string | undefined): boolean =>
+    !!phone && plausibleInCountry(phone, countryConfigSync(country));
 
   const lookedUp = new Set(candidates);
   return leads.map((l) => {
@@ -246,7 +238,8 @@ export async function enrichPortal(
       // A portal listing is a legitimate contact source (the business put its
       // own details there) — but only from a listing that passed the gate, and
       // only to FILL a gap, never to overwrite what we already trust.
-      phone: l.phone ?? (plausibleLocalPhone(phone, l.country) ? phone : undefined),
+      // The lead's country (ADR-0437 ②) — before the geo pass, the area's as the fallback.
+      phone: l.phone ?? (plausibleLocalPhone(phone, countryOf(l, region.country) ?? undefined) ? phone : undefined),
       // The same two bars every other contact path applies: a business address
       // (not an office/template/machine one) that is tied to THIS business.
       email:

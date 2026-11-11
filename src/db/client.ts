@@ -19,7 +19,7 @@ import type { Database } from "./schema.js";
 // label, not an instant; it must never pass through a timezone.
 pg.types.setTypeParser(pg.types.builtins.DATE, (v: string) => v);
 
-function poolConfig(): pg.PoolConfig {
+export function poolConfig(): pg.PoolConfig {
   if (config.databaseUrl) return { connectionString: config.databaseUrl };
   return {
     host: config.pg.host,

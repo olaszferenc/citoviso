@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { leadCountryConfig } from "../country.js";
 import { classifyWebsite } from "./qualify.js";
 import { PORTAL_USER_AGENT } from "./sources/portals/politeness.js";
 import type { QualifiedLead, Region } from "./types.js";
@@ -12,7 +13,8 @@ import type { QualifiedLead, Region } from "./types.js";
 // rejected. Zero external API cost. Runs BEFORE enrichOutdated so a newly-found
 // own site is assessed for outdatedness in the same run.
 
-const TLDS = ["hu", "com"];
+// The TLDs a domain guess tries, and the browser locale of the rendered second look,
+// are the lead's COUNTRY LAYER row's (ADR-0437: own_site_tlds, browser_locale).
 const TIMEOUT_MS = 5000;
 const MAX_BYTES = 120_000;
 const CONCURRENCY = 10;
@@ -216,7 +218,7 @@ function candidateHosts(name: string): string[] {
   return [...sets].filter((h) => h.replace(/-/g, "").length >= 5);
 }
 
-function urlCandidates(name: string, region: Region): string[] {
+function urlCandidates(name: string, region: Region, tlds: readonly string[]): string[] {
   const hosts = new Set(candidateHosts(name));
   // Also try brand+region and name+region hosts (common for local businesses).
   const t = tokens(name);
@@ -231,7 +233,7 @@ function urlCandidates(name: string, region: Region): string[] {
   const urls: string[] = [];
   for (const host of hosts) {
     if (host.replace(/-/g, "").length < 5) continue;
-    for (const tld of TLDS) {
+    for (const tld of tlds) {
       urls.push(`https://${host}.${tld}`);
       urls.push(`https://www.${host}.${tld}`);
     }
@@ -292,13 +294,15 @@ export function verify(name: string, terms: string[], html: string): boolean {
  */
 export function renderHtml(
   url: string,
+  locale: string,
 ): Promise<{ finalUrl: string; html: string } | null> {
   // The domain guess hits the same site under several names (bare/www, .hu
   // redirecting to /hu/) and the search pass fetches it again — render once.
-  let pending = renderCache.get(url);
+  const key = `${locale} ${url}`;
+  let pending = renderCache.get(key);
   if (!pending) {
-    pending = renderUncached(url);
-    renderCache.set(url, pending);
+    pending = renderUncached(url, locale);
+    renderCache.set(key, pending);
   }
   return pending;
 }
@@ -307,12 +311,13 @@ const renderCache = new Map<string, Promise<{ finalUrl: string; html: string } |
 
 async function renderUncached(
   url: string,
+  locale: string,
 ): Promise<{ finalUrl: string; html: string } | null> {
   const { chromium } = await import("playwright-core");
   let browser;
   try {
     browser = await chromium.launch({ executablePath: config.chromiumPath });
-    const context = await browser.newContext({ userAgent: PORTAL_USER_AGENT, locale: "hu-HU" });
+    const context = await browser.newContext({ userAgent: PORTAL_USER_AGENT, locale });
     const page = await context.newPage();
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20_000 });
     await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
@@ -338,13 +343,14 @@ export async function verifyOrRender(
   name: string,
   terms: string[],
   page: { finalUrl: string; html: string },
+  locale: string,
 ): Promise<boolean> {
   if (verify(name, terms, page.html)) return true;
   const text = deaccent(page.html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
   const core = tokens(name).filter((w) => !TYPE_WORDS.has(w));
   if (!core.some((w) => w.length >= 4 && text.includes(w))) return false;
-  const rendered = await renderHtml(page.finalUrl);
+  const rendered = await renderHtml(page.finalUrl, locale);
   return Boolean(rendered && verify(name, terms, rendered.html));
 }
 
@@ -352,10 +358,13 @@ async function probeLead(
   lead: QualifiedLead,
   region: Region,
 ): Promise<string | null> {
+  // No country-layer row = no TLDs to guess: the probe is skipped (fail closed, ADR-0437).
+  const loc = leadCountryConfig(lead, region);
+  if (!loc) return null;
   const terms = geoTerms(lead, region);
-  for (const url of urlCandidates(lead.name, region)) {
+  for (const url of urlCandidates(lead.name, region, loc.ownSiteTlds)) {
     const r = await fetchHtml(url);
-    if (r && (await verifyOrRender(lead.name, terms, r))) return r.finalUrl;
+    if (r && (await verifyOrRender(lead.name, terms, r, loc.browserLocale))) return r.finalUrl;
   }
   return null;
 }

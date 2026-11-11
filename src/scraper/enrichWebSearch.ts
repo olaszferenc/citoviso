@@ -6,6 +6,7 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
+import { leadCountryConfig } from "../country.js";
 import { mailtoAddress } from "../email/leadEmails.js";
 import { splitPhones } from "../text/phone.js";
 import { FOREIGN_DOMAIN_REASON, FREEMAIL, mergeContacts } from "./contactLedger.js";
@@ -258,12 +259,11 @@ export async function enrichWebSearch(
       try {
         // Same geo rule as the site search: the lead's own town, not the region
         // label. "Tekergő keszthely és környéke kapcsolat" describes no business.
-        const results = await webSearch(
-          `${lead.name} ${searchPlace(lead, region)} kapcsolat`,
-          apiKey,
-          cseId,
-          5,
-        );
+        // ADR-0437: in the lead's country's search language; no layer row = no search.
+        const loc = leadCountryConfig(lead, region);
+        const results = loc
+          ? await webSearch(`${lead.name} ${searchPlace(lead, region)} kapcsolat`, apiKey, cseId, 5, loc.searchLang)
+          : [];
         // Every sighting is recorded with its verdict — including the drops.
         const seen: Omit<ContactCandidate, "firstSeen">[] = [];
         const noteEmail = (v: string, source: string, sourceUrl?: string): void => {

@@ -1,4 +1,5 @@
 import { config } from "../../config.js";
+import { countryConfigSync } from "../../country.js";
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
 import { GENERIC_NAME_WORD, PLACES_TRADE_WORD } from "../genericWords.js";
@@ -73,11 +74,17 @@ export function localityFromComponents(components?: AddressComponent[]): {
 // query: a single "szállás" query never surfaces places whose name and profile say
 // "hotel" or "kemping" strongly enough, no matter how many pages we read. Measured
 // 2026-09-13 (owner report): Balaton-Kelet returned 20 Google players against 1009
-// from OSM — one keyword, one page, over a 64×46 km box. The keyword set is part
-// of the industry parameter, same as the OSM tag filter.
-const TEXT_QUERIES: Record<Industry, string[]> = {
-  accommodation: ["szállás", "hotel", "panzió", "apartman", "vendégház", "kemping"],
-};
+// from OSM — one keyword, one page, over a 64×46 km box. The keyword set is
+// industry × COUNTRY: the country layer's search_keywords (ADR-0437) — the area's
+// country picks the row. No row / no list for the industry = the source refuses to run
+// (fail closed) rather than search a foreign area with Hungarian words.
+function textQueries(industry: Industry, country: string | undefined): readonly string[] {
+  const list = countryConfigSync(country)?.searchKeywords[industry] ?? [];
+  if (!list.length) {
+    throw new Error(`[google_places] nincs kulcsszó-készlet: ${country ?? "ismeretlen ország"} × ${industry} (ország-réteg)`); // i18n-exempt: operátori napló
+  }
+  return list;
+}
 
 // ── Discovery traversal knobs (env-tunable; defaults sized for a 32 km circle) ──
 // Text Search pages are 20 items, at most 3 pages (60) per query. A query that
@@ -775,7 +782,7 @@ export class GoogleMapsSource implements LeadSource {
       );
       return [];
     }
-    const keywords = TEXT_QUERIES[query.industry];
+    const keywords = textQueries(query.industry, query.region.country);
     const ids = new Set<string>();
     let calls = 0;
     let saturatedFloor = 0;

@@ -864,6 +864,40 @@ export interface MarketTable {
   updated_at: Generated<Date>;
 }
 
+/** 0133 (ADR-0437): the COUNTRY LAYER — one master-data row per country, picked by the
+ *  lead's coordinate (raw.country). No row = the caller fails closed. Read through
+ *  src/country.ts (countryConfig / countryConfigSync), never directly. */
+export interface CountryTable {
+  iso2: string;
+  name: string;
+  aliases: JSONColumnType<string[]>;
+  default_lang: string;
+  time_zone: string;
+  currency: string;
+  pricing_region: string;
+  area_bbox: JSONColumnType<[number, number, number, number]>;
+  search_keywords: JSONColumnType<Record<string, string[]>>;
+  portal_domains: JSONColumnType<string[]>;
+  own_site_tlds: JSONColumnType<string[]>;
+  search_lang: string;
+  search_region: string;
+  browser_locale: string;
+  accept_language: string;
+  dial_code: string;
+  trunk_prefix: string;
+  mobile_prefixes: JSONColumnType<string[]>;
+  phone_plan: Generated<string>;
+  phone_nsn_min: number;
+  phone_nsn_max: number;
+  outreach_channels: JSONColumnType<string[]>;
+  send_window_from: number;
+  send_window_to: number;
+  daily_quota: number;
+  invoice_lang: string;
+  legal_pack: string;
+  updated_at: Generated<Date>;
+}
+
 /** 0057: append-only record of market decisions — who opened a market, when, on what
  *  ground. A status column says where we are; this says how we got there. */
 export interface MarketLogTable {
@@ -2183,6 +2217,7 @@ export interface Database {
   tenant_legal: TenantLegalTable;
   market: MarketTable;
   market_log: MarketLogTable;
+  country: CountryTable;
   site: SiteTable;
   site_slug_alias: SiteSlugAliasTable;
   payment: PaymentTable;

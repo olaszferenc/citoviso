@@ -14,6 +14,7 @@
 
 import { db } from "../db/client.js";
 import { DEFAULT_LANG, langForCountry } from "./lang.js";
+import { countryOfLead } from "../country.js";
 import { ensureLanguagePack, interpolate, loadPack, requestLanguagePack, tSync } from "./packs.js";
 
 /**
@@ -185,7 +186,9 @@ export async function langForSite(siteId: string): Promise<string> {
  * A LEAD has no site yet. Its language is the one its MOCK was generated in —
  * the same frozen `siteData.lang` the tenant would inherit on conversion, so the
  * preview mail and the previewed page can never disagree. Falls back to the
- * scrape definition's country (ADR-0036), then Hungarian.
+ * lead's country (ADR-0437 ②: its coordinate, else the scrape area) through the country
+ * layer. A country the layer does not know has no language — Hungarian is returned so a
+ * console preview still renders, LOUDLY, and the market gate keeps every send shut.
  */
 export async function langForLead(leadId: string): Promise<string> {
   const art = await db
@@ -196,18 +199,10 @@ export async function langForLead(leadId: string): Promise<string> {
     .executeTakeFirst();
   const fromArtifact = pickLang(art?.inputs);
   if (fromArtifact) return fromArtifact;
-  const row = await db
-    .selectFrom("lead")
-    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
-    .innerJoin(
-      "scraper_definition",
-      "scraper_definition.id",
-      "scrape_run.scraper_definition_id",
-    )
-    .select("scraper_definition.country as country")
-    .where("lead.id", "=", leadId)
-    .executeTakeFirst();
-  return langForCountry(row?.country ?? null);
+  const country = await countryOfLead(leadId);
+  const lang = langForCountry(country);
+  if (!lang) console.error(`[i18n] a lead országa (${country ?? "ismeretlen"}) nincs az ország-rétegben — hu, a kapu zár (${leadId})`); // i18n-exempt: operátori napló
+  return lang ?? DEFAULT_LANG;
 }
 
 function pickLang(inputs: unknown): string | null {

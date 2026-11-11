@@ -17,6 +17,7 @@
 // is assessed for outdatedness in the same run). Without a search backend this is
 // a no-op, so the pipeline still works on the guess alone.
 
+import { leadCountryConfig } from "../country.js";
 import {
   deaccent,
   fetchHtml,
@@ -176,7 +177,10 @@ export async function findOwnSite(
 ): Promise<string | null> {
   const query = `${lead.name} ${searchPlace(lead, region)} hivatalos oldal`;
   const terms = geoTerms(lead, region);
-  const results = await webSearch(query, apiKey, cseId, MAX_RESULTS);
+  // ADR-0437: the search runs in the lead's country's search language; no layer row = no search.
+  const loc = leadCountryConfig(lead, region);
+  if (!loc) return null;
+  const results = await webSearch(query, apiKey, cseId, MAX_RESULTS, loc.searchLang);
   for (const r of results) {
     if (!r.link || !isCandidateHost(r.link) || !isShallowUrl(r.link)) continue;
     const page = await fetchHtml(r.link);
@@ -189,7 +193,7 @@ export async function findOwnSite(
     // only thing standing between us and a town portal or a blog post.
     if (!domainCarriesBrand(page.finalUrl, lead.name, terms)) continue;
     // JavaScript-built sites show the town only after rendering (Dalma panzió).
-    if (!(await verifyOrRender(lead.name, terms, page))) continue;
+    if (!(await verifyOrRender(lead.name, terms, page, loc.browserLocale))) continue;
     // A search hit that resolves to a portal is not an own site.
     if (classifyWebsite(page.finalUrl) === "has_own") return page.finalUrl;
   }

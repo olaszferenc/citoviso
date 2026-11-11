@@ -16,6 +16,7 @@
 // the entry of the async flows that must be fresh (order submit, configurator
 // serve, outreach draft/send, homepage serve); downstream reads use the sync getters.
 
+import { allCountriesSync, pricingRegionForCountry } from "./country.js";
 import { db } from "./db/client.js";
 import { formatMoney } from "./text/money.js";
 import {
@@ -515,7 +516,9 @@ export function pricingRegions(): PricingSnapshot[] {
 /**
  * Pick the pricing region for a public request. Priority: an explicit override
  * (query param, for testing) → Cloudflare's CF-IPCountry geo header → Accept-Language
- * → 'global'. Only 'HU' maps to the HUF market; everything else is the EUR global.
+ * → 'global'. The country → region link is the COUNTRY LAYER's `pricing_region`
+ * (ADR-0437); a country without a row buys in the EUR 'global'. Accept-Language picks
+ * the region of a country whose layer language it names.
  */
 export function resolvePricingRegion(
   headers: Record<string, string | string[] | undefined>,
@@ -526,9 +529,14 @@ export function resolvePricingRegion(
     if (snapshots.has(r) || r === "hu" || r === "global") return r;
   }
   const country = headerStr(headers["cf-ipcountry"]);
-  if (country) return country.toUpperCase() === "HU" ? "hu" : "global";
+  if (country) return pricingRegionForCountry(country);
   const accept = headerStr(headers["accept-language"]);
-  if (accept && /(^|[,\s])hu\b/i.test(accept)) return "hu";
+  if (accept) {
+    for (const c of allCountriesSync()) {
+      const lang = c.defaultLang.replace(/[^a-z]/gi, "");
+      if (lang && new RegExp(`(^|[,\\s])${lang}\\b`, "i").test(accept)) return c.pricingRegion;
+    }
+  }
   return "global";
 }
 

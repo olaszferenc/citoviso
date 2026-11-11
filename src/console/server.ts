@@ -2843,7 +2843,13 @@ async function handle(
       Math.abs(centerLat) <= 90 && Math.abs(centerLon) <= 180 &&
       radiusKm > 0 && radiusKm <= 100; // cap: a huge radius means a huge API bill
     if (!valid) return redirect(res, "/scrape/regions?ok=Hib%C3%A1s%20adatok%20%E2%80%94%20nem%20mentettem");
-    await saveRegion({ id, label, centerLat, centerLon, radiusKm, active: form.get("active") === "on" });
+    try {
+      await saveRegion({ id, label, centerLat, centerLon, radiusKm, active: form.get("active") === "on" });
+    } catch (err) {
+      // ADR-0437: a new area whose center cannot be located is not saved (no HU default).
+      console.error(`[region] ${(err as Error).message}`); // i18n-exempt: operátori napló
+      return redirect(res, "/scrape/regions?ok=Hib%C3%A1s%20adatok%20%E2%80%94%20nem%20mentettem");
+    }
     await loadRegions(true); // the launcher offers it immediately
     return redirect(res, "/scrape/regions?ok=Ter%C3%BClet%20mentve");
   }

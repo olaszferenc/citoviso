@@ -29,9 +29,10 @@ import { T } from "../engine/templateKit.js";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
-import { loadRegions } from "../scraper/regions.js";
+import { loadRegions, REGIONS as SCRAPE_REGIONS } from "../scraper/regions.js";
 import type { GuestReview, PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
+import { countryOf } from "../country.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBriefAndCopy } from "./brief.js";
 import { curatorManualOf, fixHomoglyphs, validateCuratorCopy, type CuratorCopy } from "./copyCurator.js";
@@ -328,16 +329,21 @@ async function generateEngineMockInner(
   const region = resolveRegion(regionId, lead.lat, lead.lon);
   const ctx = getRegionContext(region);
 
-  // ADR-0036: language derives from the region's country; a new language area auto-provisions
-  // its UI-string pack here (one-time per language, deterministic afterwards). A failed/partial
-  // pack logs loudly and rendering falls back to Hungarian strings for the missing keys.
+  // ADR-0437 ②: language derives from THE LEAD'S country (its coordinate, ADR-0040), the
+  // region's country only for a coordinate-less lead; the country layer names the language.
+  // A new language area auto-provisions its UI-string pack here (one-time per language,
+  // deterministic afterwards). A failed/partial pack logs loudly and rendering falls back
+  // to Hungarian strings for the missing keys.
   const regionRow = await db
     .selectFrom("region")
     .select("country")
     .where("id", "=", region.id)
     .executeTakeFirst()
     .catch(() => null);
-  const lang = langForCountry(regionRow?.country);
+  const leadCountry = countryOf(lead, regionRow?.country ?? SCRAPE_REGIONS[region.id]?.country);
+  const lang = langForCountry(leadCountry);
+  // ⛔ ADR-0437 ③: a country without a layer row gets NO mock — not a Hungarian one.
+  if (!lang) throw new Error(`Az ország (${leadCountry ?? "ismeretlen"}) nincs az ország-rétegben — a mock nem készül`); // i18n-exempt: operátori hiba
   if (lang !== DEFAULT_LANG) await ensureLanguagePack(lang);
   const dLang = { lang }; // identifier form so the i18n extractor picks up T(dLang, "…") calls
 

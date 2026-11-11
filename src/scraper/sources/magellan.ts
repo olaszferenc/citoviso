@@ -9,6 +9,7 @@
 // returned beside it, keyed by sourceId, and run.ts lays it on the qualified lead AFTER
 // dedupe (applyScoutExtras) — the merge would otherwise drop it.
 
+import { countryConfig } from "../../country.js";
 import { db } from "../../db/client.js";
 import { foundLinks, phoneE164, rowComplete, webClass, webUrl } from "../../scout/rules.js";
 import { classifyWebsite } from "../qualify.js";
@@ -66,6 +67,7 @@ export class MagellanSource implements LeadSource {
       .where("status", "=", "proc")
       .execute();
     const out: RawLead[] = [];
+    const areaCfg = await countryConfig(query.region.country);
     for (const r of rows) {
       // The close gate already checked this; a row edited around it is not guessed at.
       if (!rowComplete({ ...r, status: "new" })) continue;
@@ -89,9 +91,12 @@ export class MagellanSource implements LeadSource {
         lat: r.lat,
         lon: r.lon,
         address: r.address ?? undefined,
-        country: query.region.country ?? "HU",
+        // ⛔ No country tag (ADR-0437 ②): the worksheet has no source country — the chain's
+        // geo pass reads it from the pin (ADR-0040), the area's country only as the fallback.
+        // (Until 2026-11-11: the area's country, else a burned-in "HU".)
         city: r.city ?? undefined,
-        phone: phoneE164(r.phone) ?? undefined,
+        // The national format is read in the AREA's country plan (the discovery parameter).
+        phone: phoneE164(r.phone, areaCfg) ?? undefined,
         website: site,
         photoCount: r.photo_count ?? undefined,
       });

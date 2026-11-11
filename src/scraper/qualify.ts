@@ -1,70 +1,32 @@
 import type { WebsiteStatus } from "./types.js";
+import { countryPortalDomains } from "../country.js";
+
+/** The whole catalogue: the global list ∪ every country row's own portal hosts (ADR-0437).
+ *  Every row, not just the lead's: a Hungarian listing site is a portal for any lead. */
+function portalDomains(): readonly string[] {
+  return [...GLOBAL_PORTAL_DOMAINS, ...countryPortalDomains()];
+}
 
 // Known booking/listing/social portals: a website on one of these is NOT an own
-// site — the player is still a prime lead (portal_only). Extend per country
-// (this list is the Hungarian/accommodation seed of the platform registry).
-const PORTAL_DOMAINS = [
+// site — the player is still a prime lead (portal_only).
+// ADR-0437: this is the CROSS-BORDER part (global aggregators, social, meta-search,
+// generated subdomain farms). Each country's own listing sites and town directories live
+// in its country-layer row (country.portal_domains — the Hungarian seed moved there WITH
+// its measurement notes, migrations/0133_country.sql). A new country = a new row, not an
+// edit here. List entries are read four ways (see isPortalHost below).
+const GLOBAL_PORTAL_DOMAINS = [
   "booking.com",
   "airbnb.",
-  "szallas.hu",
-  "szallashely",
-  "hovamenjek",
-  "zimmerinfo",
   "tripadvisor.",
   "expedia.",
   "hotels.com",
   "agoda.",
-  "balatonnyaralas",
-  "turistautak.hu",
   "facebook.com",
   "instagram.com",
-  // Found live by the Brave trial run (2026-08-18, Badacsony): listing pages on
-  // these portals corroborate brand+region by construction, so verify() passes
-  // them — the host list is the only defense against the inverse credibility
-  // bug (a real no-site lead misfiled as has_own drops out of the funnel).
-  "szallaskeres",
-  "kiadoapartman",
-  "szallashirdeto",
-  // Round 2 of the same trial (OSM pool included): more listing hosts.
-  "szallas24",
-  "iranymagyarorszag",
-  // szallas.hu's white-label booking-engine subdomains (<property>.booked.hu) —
-  // a booking page on their domain, not a site the business controls.
-  "booked.hu",
-  // Town tourism portals list local businesses under their own roof
-  // (badacsony.hu/fortuna_szallashely). Region-specific seeds for now; the
-  // scalable fix is the platform registry. The .com twin surfaced in the
-  // reenrich dry-run (2026-08-19, badacsony.com/services/accomodation — note
-  // the single-m typo, so the listing-path regex cannot catch it either).
-  "badacsony.hu",
-  "badacsony.com",
-  // Káli-medence tourism portal — kali.hu/szallas/<name> lists local lodgings
-  // (owner test, Ferenc Ház). Its entries are the only "website" some of these
-  // businesses have, which is exactly what makes them targets.
-  "kali.hu",
-  // Keszthely reenrich dry-run (2026-08-19): a NEW region surfaced ~15 more
-  // listing hosts in one shot — the hardcoded list is whack-a-mole and ADR-0037
-  // (platform registry) is the structural fix. Seeds until then:
-  "szallasotletek",
-  "hellomiskolc",
-  "rendezvenyhelyszinek",
-  "termeszetjaro.hu",
-  "ittjartam.hu",
-  "lap.hu",
-  "apartman.hu",
-  "balaton.hu",
-  "szepkartyat",
-  "balatoniszallas",
   "camping.info",
-  "szallas-kereso",
-  "myszallas",
-  // white-label per-property subdomains (<property>.lake-balaton.com)
-  "lake-balaton.com",
-  // WHITE-LABEL SUBDOMAIN FARMS (2026-08-20 dry-run): the property name sits in
-  // the SUBDOMAIN (3-barat-apartman.hungaryhotel.net, bella-ciao.hungaryhotel.net,
-  // hunguesthelios.com-hotel.website), so brand-in-domain corroboration passes
+  // WHITE-LABEL SUBDOMAIN FARMS (2026-08-20 dry-run): the property name sits in the
+  // SUBDOMAIN (hunguesthelios.com-hotel.website), so brand-in-domain corroboration passes
   // by construction. Only the registrable domain identifies these as portals.
-  "hungaryhotel.net",
   "com-hotel.website",
   // BOOKING AGGREGATORS / META-SEARCH (measured on prod, 2026-10-02, A1): Google
   // Places hands these out as the "website" of a lodging that has none, and every
@@ -84,12 +46,9 @@ const PORTAL_DOMAINS = [
   "ferienhausmiete.de",
   "traum-ferienwohnungen.de",
   "kleinanzeigen.de",
-  "balaton24.de",
   "hotel-mix.de",
   "rentalsunited.com",
-  "bookhungaryhotels.com",
   "hotelmania.net",
-  "hotelsmart.hu",
   "checkinstay.eu",
   "availabilitycheck.eu",
   "travellone.eu",
@@ -97,62 +56,22 @@ const PORTAL_DOMAINS = [
   "happycamp.com",
   "dogfriendlyretreats.com",
   "incitytravel.eu",
-  // Per-property SUBDOMAIN FARMS (the hungaryhotel.net pattern above): the
-  // property name in the subdomain makes the URL look like an own site —
-  // muschel-panzio.hotels-in-hungary.net was Elek's H-3 finding. The .com.es /
-  // .org.es hosts are a generated farm of the same kind (garbled slugs such as
-  // z-nka-v-zparti-d-l-h-zak.org.es); these second-level zones are matched as a
-  // whole, which is safe for a Hungarian lead stock. hotel.hu / hotelizator.com
-  // are NOT listed — measured under rules A+B, see the RULE B block below.
-  "hotels-in-hungary.net",
+  // Per-property SUBDOMAIN FARMS: the property name in the subdomain makes the URL look
+  // like an own site. The .com.es / .org.es hosts are a generated farm of the same kind
+  // (garbled slugs such as z-nka-v-zparti-d-l-h-zak.org.es); these second-level zones are
+  // matched as a whole. hotel.hu / hotelizator.com are NOT listed anywhere — measured
+  // under rules A+B (MEASURED_OWN_HOSTS below).
   "bedsandhotels.com",
   "worhot.com",
-  "hu-hotels.com",
   "okhotel.top",
   "com-resort.com",
   "com.es",
   "org.es",
-  // Hungarian listing portals and town/regional directories with a per-property
-  // path (nyaralo24.hu/balatonbereny/, keszthely.hu/szallas/apartman/<name>/).
-  "szallasinfo.hu",
-  "nyaralo24.hu",
-  "kiadonyaralok.hu",
-  "360szallasok.hu",
-  "balatonszallasok.hu",
-  "balatonlelleiszallasok.hu",
-  "balcsi-apartman.hu",
-  "appartman.hu",
-  "balaton.info",
-  "keszthely.hu",
-  "orvenyes.hu",
-  "kerteszetturul.eu",
-  // RULE B, measured 2026-10-02 (front page lists several lodgings / runs them as
-  // an intermediary): balatonhost.com — a property manager, "Kiadó szállások",
-  // 25 lodgings; siofokszallas.info — 7 lodgings under one roof (also rule A).
-  // Measured and kept OWN: hotelizator.com (builds and runs the hotel's OWN site),
-  // marcaliszallas.hu (one property's own site), humtour.com (the farm's own
-  // booking site on a subdomain), hotel.hu (unreachable; only Kolping, by name).
-  "balatonhost.com",
-  "siofokszallas.info",
   // RULE A without a usable rule B (front page unreachable from dev AND prod):
   // 13 DIFFERENT lodgings with no common owner or brand, each on a garbled path
   // slug (visty.site/kagylkkk, /balatonapar3) — no chain explains that sharing.
   "visty.site",
-  // RULE B, round 2 (2026-10-02, the remaining rule-A candidates): a MUNICIPAL or
-  // tourism-body page that lists other people's lodgings is a portal —
-  // balatonakali.hu (Turizmus › Szálláshelyek), marcali.hu (turizmus › szálláshelyek),
-  // vonyarcvashegy.hu (inquiry form "a választott szállásnak küldjük"), zenefalu.hu
-  // (the tourism association's szallasok.html; unreachable, measured by its path).
-  // PATH-SCOPED where the town's own institutions live on the same host: the
-  // mayor's office (marcali.hu/…/hivatal-m) and the municipal beach
-  // (balatonakali.hu/Turizmus/Strand) ARE the town's own pages — only the lodging
-  // list is someone else's roof. vonyarcvashegy.hu carries only lodgings here.
-  "balatonakali.hu/turizmus/szallashelyek",
-  "marcali.hu/index.php/elet-a-varosban/turizmus-m",
-  "zenefalu.hu/facebook_pages/szallasok",
-  "vonyarcvashegy.hu",
   // Company registries: a firm-data page is not a website either.
-  "ceginformacio.hu",
   "197.eu",
 ];
 
@@ -197,7 +116,7 @@ function isPortalHost(url: string): boolean {
   // A directory ENTRY under someone else's domain is a portal entry, not an own site.
   if (LISTING_ENTRY_RE.test(pathname)) return true;
   const labels = host.split(".");
-  return PORTAL_DOMAINS.some((entry) => {
+  return portalDomains().some((entry) => {
     const d = entry.toLowerCase();
     // "host/path" → a listing BRANCH of a site whose other pages are someone's own.
     const slash = d.indexOf("/");
@@ -255,7 +174,7 @@ export function isShortLink(website: string): boolean {
  * szallassiofokon.hu …). Auto-flipping them would tell a chain hotel "we found no
  * site of yours" — the credibility bug in the other direction. So rule A only names
  * the CANDIDATES (requalify-websites.mts lists them); rule B — the front page,
- * measured — decides, and its verdict is recorded in PORTAL_DOMAINS with evidence.
+ * measured — decides, and its verdict is recorded in the portal catalogue with evidence.
  *
  * Name test: a lead's link is FOREIGN when no distinctive word of its name appears
  * in the host (abbazia-clubhotel.hu carries 7 buildings, all named "Abbázia" → not
@@ -310,7 +229,7 @@ export const MEASURED_OWN_HOSTS: readonly string[] = [
   // Unreachable from dev AND prod — no rule-B evidence, so the safe verdict (has_own):
   // a false "no site" insults a real customer, a missed portal only delays a target.
   "balatonlelleapartment.com",
-  // Round 1 (see the RULE B block in PORTAL_DOMAINS).
+  // Round 1 (see the RULE B notes of the HU row, migrations/0133_country.sql).
   "hotelizator.com", "marcaliszallas.hu", "humtour.com", "hotel.hu",
 ];
 
@@ -341,7 +260,7 @@ export function sharedHostCandidates(
           b.size >= minBusinesses &&
           !isPortalHost(`https://${h}/`) &&
           // a host with a measured listing BRANCH is settled too (its other pages are own)
-          !PORTAL_DOMAINS.some((d) => d.includes("/") && hostMatches(h, [d.slice(0, d.indexOf("/"))])) &&
+          !portalDomains().some((d) => d.includes("/") && hostMatches(h, [d.slice(0, d.indexOf("/"))])) &&
           !hostMatches(h, MEASURED_OWN_HOSTS) &&
           !hostMatches(h, SHORTENER_HOSTS) &&
           !hostMatches(h, FILE_LINK_HOSTS),

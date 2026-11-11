@@ -4,6 +4,7 @@
 // The JSON file stays as a debug/replay artifact; the DB is now the source of truth.
 
 import { APP_TZ } from "../text/zoneTime.js";
+import { resolveCountryCode } from "../country.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { partitionNewLeads, type LeadIdentity } from "./dedupe.js";
@@ -20,9 +21,17 @@ function discoveryEntity(source: string, ref: string | undefined): string | null
   return url ? JSON.stringify({ ref, url, license: "ODbL-1.0", attribution: "© OpenStreetMap contributors" }) : null;
 }
 
-// The Balaton pilot regions are Hungarian; country is fixed until the scraper
-// definition itself carries a country (Industry × Country parameterization).
-const COUNTRY = "HU";
+/**
+ * The scrape definition's country = the AREA's country (ADR-0437 ②: region.country is the
+ * discovery's starting parameter; every lead's own country comes from its coordinate).
+ * ⛔ No default: until 2026-11-11 this was a burned-in "HU", and the letter's language and
+ * the market gate read it for every lead — a Croatian area's leads went out as Hungarian.
+ */
+function areaCountry(region: Region): string {
+  const cc = resolveCountryCode(region.country);
+  if (!cc) throw new Error(`A gyűjtési terület (${region.id}) országa ismeretlen — a scraper_definition nem jön létre`); // i18n-exempt: operátori hiba
+  return cc;
+}
 
 /** website presence + own-site assessment → the lead.qualification enum. */
 export function qualificationOf(
@@ -48,10 +57,11 @@ export async function ensureScraperDefinition(
   industry: string,
   sources: string[],
 ): Promise<string> {
+  const country = areaCountry(region);
   const existing = await db
     .selectFrom("scraper_definition")
     .select("id")
-    .where("country", "=", COUNTRY)
+    .where("country", "=", country)
     .where("region", "=", region.id)
     .where("industry", "=", industry)
     .executeTakeFirst();
@@ -71,7 +81,7 @@ export async function ensureScraperDefinition(
     .insertInto("scraper_definition")
     .values({
       label: region.label,
-      country: COUNTRY,
+      country,
       region: region.id,
       city: null,
       industry,

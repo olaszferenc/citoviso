@@ -73,13 +73,14 @@ async function braveSearch(
   query: string,
   apiKey: string,
   num: number,
+  searchLang: string,
 ): Promise<BraveOutcome> {
   // NOTE: Brave has no HU market — country=HU is rejected with HTTP 422 (the
-  // enum only lists ~37 markets). country=ALL + search_lang=hu is the correct
-  // combination for Hungarian queries (verified live 2026-08-18).
+  // enum only lists ~37 markets). country=ALL + search_lang=<the country layer's
+  // search_lang> is the correct combination (verified live 2026-08-18 for hu).
   const url =
     `${BRAVE_ENDPOINT}?q=${encodeURIComponent(query)}` +
-    `&count=${num}&country=ALL&search_lang=hu`;
+    `&count=${num}&country=ALL&search_lang=${encodeURIComponent(searchLang)}`;
   const res = await fetch(url, {
     signal: AbortSignal.timeout(10_000),
     headers: { Accept: "application/json", "X-Subscription-Token": apiKey },
@@ -127,16 +128,16 @@ export function braveUsableKeys(now = Date.now()): string[] {
   return config.braveApiKeys.filter((k) => (benchedUntil.get(k) ?? 0) <= now);
 }
 
-async function braveWithFailover(query: string, num: number): Promise<WebResult[]> {
+async function braveWithFailover(query: string, num: number, searchLang: string): Promise<WebResult[]> {
   const keys = config.braveApiKeys;
   let last: { status: number; body: string; label: string } | null = null;
   for (const key of braveUsableKeys()) {
-    let out = await braveSearch(query, key, num);
+    let out = await braveSearch(query, key, num, searchLang);
     if (!out.ok && out.status === 429) {
       // A per-second burst limit clears in a second; only a 429 that persists means
       // the key's quota is spent.
       await new Promise((r) => setTimeout(r, BRAVE_MIN_GAP_MS));
-      out = await braveSearch(query, key, num);
+      out = await braveSearch(query, key, num, searchLang);
     }
     if (out.ok) return out.results;
     const label = braveKeyLabel(keys, key);
@@ -219,15 +220,18 @@ export function webSearchBackend(): "brave" | "google_cse" | "none" {
  * Search the open web. Brave first; Google CSE only as a legacy fallback. The
  * apiKey/cseId params are the CSE credentials (kept for call-site compatibility);
  * the Brave keys come from config (BRAVE_API_KEY, then BRAVE_API_KEY_2 … as failover).
+ * `searchLang` = the language the query is written in — for a lead, its country layer
+ * row's search_lang (ADR-0437).
  */
 export async function webSearch(
   query: string,
-  apiKey?: string,
-  cseId?: string,
-  num = 5,
+  apiKey: string | undefined,
+  cseId: string | undefined,
+  num: number,
+  searchLang: string,
 ): Promise<WebResult[]> {
   if (config.braveApiKeys.length > 0) {
-    return braveThrottled(() => braveWithFailover(query, num));
+    return braveThrottled(() => braveWithFailover(query, num, searchLang));
   }
   // Fall back to the configured CSE credentials so the behaviour always matches
   // webSearchBackend() (callers may pass them explicitly or not at all).

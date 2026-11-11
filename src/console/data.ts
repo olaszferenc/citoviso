@@ -3,6 +3,8 @@
 // "latest artifact/decision per lead" is stitched in JS rather than with
 // window functions — clarity over cleverness.
 
+import { resolveCountryCode } from "../country.js";
+import { reverseGeocode } from "../scraper/enrichGeo.js";
 import { randomBytes } from "node:crypto";
 import { unlink } from "node:fs/promises";
 
@@ -2500,6 +2502,12 @@ export async function listRegions(): Promise<RegionRow[]> {
  * Create or update a CIRCULAR scrape area (0019). The operator sets a center and a
  * radius; the enclosing bbox is derived here so the sources (which query rectangles)
  * need no change, and the scraper filters back to the circle.
+ *
+ * The area's COUNTRY comes from its center coordinate (ADR-0437 ②, the ADR-0040 rule for
+ * leads applied to the area): reverse-geocoded on every save. Until 2026-11-11 the form had
+ * no country and every area — Makarska and Nesebar too — was stored as the column default
+ * "HU". ⛔ A NEW area whose center cannot be located is refused (thrown), not defaulted; an
+ * existing one keeps the country it had.
  */
 export async function saveRegion(input: {
   id: string;
@@ -2515,6 +2523,13 @@ export async function saveRegion(input: {
     input.centerLon,
     input.radiusKm,
   );
+  const geo = await reverseGeocode(input.centerLat, input.centerLon).catch(() => ({ country: undefined }));
+  const country = resolveCountryCode(geo.country);
+  if (!country) {
+    const existing = await db.selectFrom("region").select("id").where("id", "=", input.id).executeTakeFirst();
+    if (!existing) throw new Error(`A terület (${input.id}) országa nem állapítható meg a középpontból — nem mentettem`); // i18n-exempt: operátori hiba
+    console.error(`[region] ${input.id}: a középpont országa most nem állapítható meg — a tárolt ország marad`); // i18n-exempt: operátori napló
+  }
   const values = {
     id: input.id,
     label: input.label,
@@ -2523,6 +2538,7 @@ export async function saveRegion(input: {
     center_lon: input.centerLon,
     radius_km: input.radiusKm,
     active: input.active,
+    ...(country ? { country } : {}),
   };
   await db
     .insertInto("region")

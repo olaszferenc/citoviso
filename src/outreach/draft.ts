@@ -20,7 +20,8 @@ import { listProspectPlans } from "./planSet.js";
 import { formatNumber } from "../text/money.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
-import { langForCountry } from "../i18n/lang.js";
+import { DEFAULT_LANG, langForCountry } from "../i18n/lang.js";
+import { countryConfig, countryOf } from "../country.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { loadPricing } from "../pricing.js";
 import { cheapestOfferedMonthly, cheapestOfferedMonthlyFrom } from "../packageOffer.js";
@@ -766,12 +767,17 @@ export async function buildDraftForProspect(
     sdRating && typeof sdRating.value === "number" && typeof sdRating.count === "number"
       ? { value: sdRating.value, count: sdRating.count }
       : null;
+  // ADR-0437 ②: THE lead's country — its own raw.country (coordinate, ADR-0040), the scrape
+  // area's country only for a coordinate-less lead. One source for the language AND the gate.
+  const country = countryOf(r.raw as { country?: unknown } | null, r.country);
   // Load the reader's pack BEFORE rendering — renderDraft's T() is synchronous.
   // ADR-0070: the mail's language is the MOCK's language (the page the link
-  // opens), falling back to the scrape country (ADR-0036) — the letter and the
-  // page it links to must not disagree.
+  // opens), falling back to the country layer's language (ADR-0437) — the letter and the
+  // page it links to must not disagree. A country with no layer row has no language: the
+  // draft still renders (the console shows it) in Hungarian, but the gate below is shut,
+  // so it can never be SENT.
   const sdLang = (inputs.siteData as { lang?: string } | undefined)?.lang;
-  const lang = await prepareMailLang(sdLang || langForCountry(r.country));
+  const lang = await prepareMailLang(sdLang || langForCountry(country) || DEFAULT_LANG);
   // The plan count from the SAME rule the page counts with — the letter may not say "3"
   // while the link shows 2 (one rule, one copy).
   const planCount =
@@ -797,11 +803,15 @@ export async function buildDraftForProspect(
     // Owner 2026-10-27: the trial sentence — the SAME rule as the /p page's trial entry.
     trialDays: await trialDaysOnOffer(r.leadId, isEngineArtifact(r.artifactInputs)),
   };
-  // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
+  // ADR-0111 §C country gate: resolved HERE, from the lead's country (ADR-0437 ②), so every
   // send path gets the same verdict. The gate itself stays synchronous (it is a pure
-  // check) and fails closed when this field is absent.
-  const country = normalizeCountryCode(r.country);
-  const market = { country, approved: await isMarketApproved(country) };
+  // check) and fails closed when this field is absent. ADR-0437 ③: a country the layer
+  // does not know is shut as well, whatever the market table says.
+  const marketCountry = normalizeCountryCode(country);
+  const market = {
+    country: marketCountry,
+    approved: (await countryConfig(marketCountry)) !== null && (await isMarketApproved(marketCountry)),
+  };
   return {
     draft: renderDraft(input),
     sms: renderSmsDraft(input),

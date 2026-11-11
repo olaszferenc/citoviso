@@ -73,7 +73,7 @@ export function startScrapeJob(regionId: string, cap?: number): string | null {
     const { requestLanguagePack } = await import("../i18n/packs.js");
     const row = await db.selectFrom("region").select("country").where("id", "=", regionId).executeTakeFirst().catch(() => null);
     const lang = langForCountry(row?.country);
-    if (lang !== DEFAULT_LANG) requestLanguagePack(lang);
+    if (lang && lang !== DEFAULT_LANG) requestLanguagePack(lang);
   })().catch((e) => console.error(`[i18n] scrape-időzített provisioning hiba: ${(e as Error).message}`));
   const args = ["tsx", path.join("src", "scraper", "run.ts"), regionId];
   if (cap && Number.isFinite(cap) && cap > 0) args.push("--cap", String(cap));

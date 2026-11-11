@@ -16,6 +16,7 @@
 // Static fetch is the default. A headless render is only used when a registry
 // entry explicitly asks for it, because a browser costs ~100× a fetch.
 
+import type { CountryConfig } from "../../../country.js";
 import { config } from "../../../config.js";
 
 /** Honest, contactable identity. Never spoof a browser UA. */
@@ -243,9 +244,12 @@ export interface PortalPage {
  * logged reason rather than throwing — one unreadable listing must never take a
  * scrape run down.
  */
+/** The language a portal page is requested in — the lead's country layer row (ADR-0437). */
+export type PortalLocale = Pick<CountryConfig, "acceptLanguage" | "browserLocale">;
+
 export async function fetchPortalPage(
   url: string,
-  opts: { gapMs?: number; render?: boolean } = {},
+  opts: { gapMs?: number; render?: boolean; locale: PortalLocale },
 ): Promise<{ page: PortalPage | null; reason?: string }> {
   const gate = await mayFetch(url);
   if (!gate.allowed) return { page: null, reason: gate.reason };
@@ -255,7 +259,7 @@ export async function fetchPortalPage(
 
   return throttled(host, gap, async () => {
     if (opts.render) {
-      const rendered = await renderPage(url);
+      const rendered = await renderPage(url, opts.locale.browserLocale);
       if (rendered) return { page: rendered };
       return { page: null, reason: "a böngészős renderelés nem sikerült" };
     }
@@ -265,7 +269,7 @@ export async function fetchPortalPage(
         headers: {
           "User-Agent": PORTAL_USER_AGENT,
           Accept: "text/html,application/xhtml+xml",
-          "Accept-Language": "hu,en;q=0.6",
+          "Accept-Language": opts.locale.acceptLanguage,
         },
         signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
       });
@@ -317,12 +321,12 @@ export async function fetchPortalPage(
  * JavaScript. Opt-in per registry entry only; the seed portals all serve their
  * facts in the static HTML, so this stays cold on the normal path.
  */
-async function renderPage(url: string): Promise<PortalPage | null> {
+async function renderPage(url: string, locale: string): Promise<PortalPage | null> {
   const { chromium } = await import("playwright-core");
   let browser;
   try {
     browser = await chromium.launch({ executablePath: config.chromiumPath });
-    const context = await browser.newContext({ userAgent: PORTAL_USER_AGENT, locale: "hu-HU" });
+    const context = await browser.newContext({ userAgent: PORTAL_USER_AGENT, locale });
     const page = await context.newPage();
     const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: PAGE_TIMEOUT_MS });
     await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});

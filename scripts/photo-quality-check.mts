@@ -451,7 +451,7 @@ check(
 );
 check(
   "bekötés: a saját-honlap olvasó a JSON-galériát a fetchPortalPage-dzsel (robots + host-szünet) olvassa, a képek a jelölt-listába mennek",
-  /await appartmanImages\(page\.html, page\.finalUrl\)/.test(ap) && /fetchPortalPage\(`\$\{origin\}\$\{path\}`\)/.test(ap) && /\/x\/hotels\/\$\{slug\}\/images/.test(ap),
+  /await appartmanImages\(page\.html, page\.finalUrl, loc\)/.test(ap) && /fetchPortalPage\(`\$\{origin\}\$\{path\}`, \{ locale \}\)/.test(ap) && /\/x\/hotels\/\$\{slug\}\/images/.test(ap),
   "",
 );
 check(

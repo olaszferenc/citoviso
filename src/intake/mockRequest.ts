@@ -9,6 +9,7 @@
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { config } from "../config.js";
+import { HOME_MARKET } from "../markets.js";
 import { db } from "../db/client.js";
 import { checkDemoFraming } from "../generator/provenanceCheck.js";
 import { readServableMock } from "../generator/modelHtml.js";
@@ -30,10 +31,14 @@ const AUTO_MIN_CONFIDENCE = 0.7;
 export const CURATOR_QUEUE_FLAG = "curator_queue";
 
 /** Synthetic region for inbound leads (bbox = rough Hungary; unused for the box). */
+// The inbound area is the home market's box (the homepage form serves it); its country is
+// the area's FALLBACK only — each request's lead carries its own country from its pin
+// (ADR-0437 ②). Named through HOME_MARKET, not a second literal.
 const INBOUND_REGION: Region = {
   id: "inbound",
   label: "Beérkező igény",
   bbox: [45.7, 16.1, 48.6, 22.9],
+  country: HOME_MARKET,
 };
 
 export interface MockRequestInput {
@@ -131,6 +136,7 @@ export async function processMockRequest(id: string): Promise<void> {
       lat: req.lat,
       lon: req.lon,
       mapsLink: req.maps_link,
+      country: INBOUND_REGION.country,
     });
     if (!resolved) {
       // Not found automatically — still the colleagues' job (Neo identifies it from the

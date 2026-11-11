@@ -332,7 +332,9 @@ export async function gatherSettlement(batch: GatherBatch, target: Settlement): 
 
   try {
     // 1. Brave — URL discovery only; WE decide what reaches the model.
-    const results = await webSearch(queryFor(target, today, windowEnd), undefined, undefined, RESULTS_PER_QUERY);
+    // The query template is Hungarian (MONTHS_HU, "programok rendezvények") — the search
+    // language is the template's own, not a country parameter (events module, ADR-0437 later).
+    const results = await webSearch(queryFor(target, today, windowEnd), undefined, undefined, RESULTS_PER_QUERY, "hu");
     sum.queries = 1;
     sum.costUsd += BRAVE_USD_PER_QUERY;
 
@@ -348,7 +350,8 @@ export async function gatherSettlement(batch: GatherBatch, target: Settlement): 
         continue;
       }
       if ((batch.hostPages.get(host) ?? 0) >= MAX_PAGES_PER_HOST) continue;
-      const { page } = await fetchPortalPage(r.link);
+      // Hungarian query template → Hungarian page request (see the webSearch call above).
+      const { page } = await fetchPortalPage(r.link, { locale: { acceptLanguage: "hu,en;q=0.6", browserLocale: "hu-HU" } });
       if (!page) continue;
       batch.hostPages.set(host, (batch.hostPages.get(host) ?? 0) + 1);
       batch.seenUrls.add(page.finalUrl);

@@ -15,6 +15,7 @@
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { allCountriesSync, countryConfigSync } from "../country.js";
 import {
   beatScrapeRun,
   closeScrapeRun,
@@ -92,11 +93,14 @@ function parseArgs(argv: string[]): {
   return { regionId, out, cap, scout, dryRun, country };
 }
 
-/** Whole-country areas for `--country` (bbox = [S, W, N, E]; the OSM query uses the
- *  admin boundary, the bbox is only the enclosing box the Region type requires). */
-const COUNTRY_AREAS: Record<string, Region> = {
-  HU: { id: "country-hu", label: "Magyarország (teljes ország)", country: "HU", bbox: [45.73, 16.11, 48.59, 22.9], osmArea: "HU" },
-};
+/** Whole-country area for `--country` — from the COUNTRY LAYER (ADR-0437: area_bbox; the OSM
+ *  query uses the ISO admin boundary, the bbox is only the enclosing box the Region type
+ *  requires). A country without a layer row has no area: refused. */
+function countryArea(iso: string): Region | null {
+  const c = countryConfigSync(iso);
+  if (!c) return null;
+  return { id: `country-${c.iso2.toLowerCase()}`, label: `${c.name} (teljes ország)`, country: c.iso2, bbox: c.areaBbox, osmArea: c.iso2 }; // i18n-exempt: operátori napló-címke
+}
 
 /**
  * Dry run (Magellan project, 2026-10-07): what the FREE OSM source would bring for an
@@ -158,8 +162,8 @@ async function dryRun(region: Region): Promise<void> {
 async function main(): Promise<void> {
   const { regionId, out, cap, scout, dryRun: dry, country } = parseArgs(process.argv);
   if (dry && scout) throw new Error("--dry-run és --scout együtt nem értelmes (a munkalap sorai nem OSM-ből jönnek).");
-  if (country && !COUNTRY_AREAS[country]) {
-    throw new Error(`--country ${country}: ismeretlen ország (ismert: ${Object.keys(COUNTRY_AREAS).join(", ")}).`);
+  if (country && !countryArea(country)) {
+    throw new Error(`--country ${country}: az ország nincs az ország-rétegben (ismert: ${allCountriesSync().map((c) => c.iso2).join(", ")}).`);
   }
   // A whole-country WRITE has no region row to hang the leads on (lead.region, the
   // console's area facet) — counts only, until that is decided.
@@ -171,7 +175,7 @@ async function main(): Promise<void> {
   }
   // Operator-defined areas live in the DB (0018); refresh before resolving.
   await loadRegions(true);
-  const region = country ? COUNTRY_AREAS[country]! : getRegion(regionId);
+  const region = country ? countryArea(country)! : getRegion(regionId);
   if (dry) {
     try {
       await dryRun(region);

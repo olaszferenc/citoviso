@@ -3805,6 +3805,15 @@ if [ -f scripts/outreach-customer-gate-check.mts ] && \
   echo "[pre-commit] outreach-customer-gate-check (próbázónak/ügyfélnek nincs hideg megkeresés)…"
   npx tsx scripts/outreach-customer-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-0437 — az ORSZÁG-RÉTEG: a HU-sor teljes, a még kódban élő HU-értékekkel egyezik, ismeretlen
+#     országra minden zár, és a réteg hatókörében nincs beégetett HU-paraméter (ALLOW-lista okkal).
+#     Csak olvas (country tábla + forrás), ~3 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/country-layer-check.mts ] && \
+   changed_files | grep -qE '^src/(country|pricing)\.ts$|^src/text/(phone|phoneCountry|zoneTime)\.ts$|^src/scraper/|^src/scout/rules\.ts$|^src/i18n/(lang|mail)\.ts$|^src/outreach/(draft|autoDispatch)\.ts$|^src/sms/sendWindow\.ts$|^src/trial/start\.ts$|^src/intake/mockRequest\.ts$|^src/generator/generateEngine\.ts$|^migrations/|^scripts/country-layer-check\.mts$'; then
+  echo "[pre-commit] country-layer-check (ADR-0437: ország-réteg — HU-sor, zárt ismeretlen ország, nincs beégetés)…"
+  npx tsx scripts/country-layer-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

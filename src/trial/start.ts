@@ -31,6 +31,7 @@ import { tenantSiteUrl } from "../domains.js";
 import { isValidEmail } from "../email/leadEmails.js";
 import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
+import { countryConfig, countryOfLead } from "../country.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
@@ -161,15 +162,13 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 
   // 2. The market gate, as at the paid go-live: a live page publishes legal pages, and
   //    those exist only for an approved market (ADR-0111). Trial has no billing
-  //    declaration, so the lead's own scrape country decides.
-  const origin = await db
-    .selectFrom("lead")
-    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
-    .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
-    .select("scraper_definition.country")
-    .where("lead.id", "=", p.lead_id)
-    .executeTakeFirst();
-  if (!(await isMarketApproved(origin?.country ?? "HU"))) return { ok: false, error: "market_not_approved" };
+  //    declaration, so the lead's own country decides (ADR-0437 ②: its coordinate, else
+  //    the scrape area). ⛔ No "?? HU": an unknown country, or one the country layer has
+  //    no row for, is shut (ADR-0437 ③).
+  const leadCountry = await countryOfLead(p.lead_id);
+  if (!(await countryConfig(leadCountry)) || !(await isMarketApproved(leadCountry))) {
+    return { ok: false, error: "market_not_approved" };
+  }
 
   // 3. CLAIM the trial (unique lead_id). Losing the race = the other request is building it.
   let trial = prior;

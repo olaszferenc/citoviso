@@ -1,6 +1,6 @@
 ## ADR-0437 — ORSZÁG-RÉTEG: egy master-data entitás országonként, amit a lead koordinátája aktivál; a HU-folyamat ettől paraméterezve fut bármely országra
 
-**Státusz:** JAVASOLT (tulaj-brief 2026-11-11: „tetszőleges számban bővíthető ország layer, ami a HUN folyamatot követi, egyedi paraméterekkel… amelyik országban van a lead GPS-koordinátája, az a folyamat lesz igaz rá”) ·
+**Státusz:** ELFOGADVA (tulaj 2026-11-11 „ok mehet”); ⑤ 1–2. lépés + felderítés-csoport MEGVALÓSÍTVA lokálban — lent · eredeti brief 2026-11-11: „tetszőleges számban bővíthető ország layer, ami a HUN folyamatot követi, egyedi paraméterekkel… amelyik országban van a lead GPS-koordinátája, az a folyamat lesz igaz rá”) ·
 **Épít:** ADR-0040 (koordináta → ország, garantált), ADR-0111 (piac-kapu: a kulcs az ORSZÁG, `market` tábla), ADR-0020 (ár-régió), DOMAIN 03-INVARIANTS §22 és §27 ·
 **Lezárja az ADR-0360 nyitott tételét** („Ország-réteg a piac-fülek mellé”) ·
 **Felülírja:** a 2026-10-27-i BG/HR roadmap országonkénti (M1–M25) javítási listáját mint MÓDSZERT — a tételek maradnak, de nem országonként javítjuk, hanem egy réteg bekötésével.
@@ -73,3 +73,38 @@ Utána egy új ország = a sor kitöltése a konzolon + Bábel-csomag + jogi cso
 ### Visszafordíthatóság
 🔄 — additív entitás; a HU-sor a mai értékeket hordozza, a kód ugyanazt olvassa ki, amit ma beégetve tud.
 Törléskor a beégetések visszaállnak (a történetben megvannak).
+
+### Megvalósítás — ⑤ 1–2. lépés + a felderítés-csoport (2026-11-11, `cit1b0b1b7c`)
+
+- **Entitás:** `migrations/0133_country.sql` — `country` tábla (ISO-2 kulcs; azonosság · felderítés ·
+  megkeresés · kereskedelem · jog mezőcsoportok + `aliases`, `area_bbox`), a HU-sor a 2026-11-11-i
+  beégetett értékekből (forrásonként a migráció fejlécében; a HU-portálok mérési jegyzetei is oda
+  költöztek). Additív: új tábla + egy sor.
+- **Olvasó:** `src/country.ts` — importkor EGY kliens-lekérdezéssel pillanatkép (top-level await, pool
+  nélkül, így a szinkron segédek — `classifyWebsite`, telefon, `langForCountry` — minden folyamatban a
+  rétegből olvasnak), az async olvasók 60 mp után frissítenek. `countryConfig(iso)` / `countryConfigSync`,
+  `countryOf(raw, területOrszág)` (ADR-0040 sorrend + alias: „MAGYARORSZÁG” → HU), `countryOfLead(id)`,
+  `pricingRegionForCountry`, `leadCountryConfig(lead, region)`. Ismeretlen ország → `null`.
+- **Átkötve:** `persist.ts` (a beégetett `"HU"` helyett a terület országa, ismeretlenre hiba) ·
+  `saveRegion` (a terület országa a középpont reverse-geocode-jából; új, nem lokalizálható terület nem
+  mentődik) · nyelv (`langForCountry` → a sor `default_lang`-ja, ismeretlenre `null`; a mock ilyenkor
+  NEM készül, a levél a kapun megáll) · piac-kapu ország-forrása (`draft.ts`, `mail.ts langForLead`,
+  `trial/start.ts`: a lead országa, nincs `?? "HU"`; a kapu a réteg sorát is megköveteli) · ár-régió
+  (`resolvePricingRegion`, `partnerData`) · időzóna (`defaultTimeZoneForCountry` a sor `time_zone`-jából,
+  a táblázat marad a választó listája) · `run.ts --country` (a sor `area_bbox`-a).
+- **Felderítés-csoport:** Places kulcsszavak (`googleMaps.ts`), Places `languageCode`/`regionCode`
+  (`resolveOne.ts`), Brave `search_lang`, böngésző-locale + `Accept-Language` (portál-olvasó, honlap-
+  render), TLD-tippek (`enrichPresence.ts`), portál-lista (`qualify.ts`: GLOBÁLIS lista a kódban ∪ minden
+  sor `portal_domains`-a — 5052 tárolt URL-en 0 eltérés), telefon (`src/text/phoneCountry.ts`: a HU-sor
+  a `phone.ts` teljes tervét választja, más ország trönk-előtag + hossz; `enrichPortal` hívószám-
+  ellenőrzése; a Magellan-ingest a terület tervében olvas, és NEM ad ország-tag-et — a lead országa a
+  pin geo-passából jön, eddig `?? "HU"` volt).
+- **Őr:** `scripts/country-layer-check.mts` (pre-commit) — HU-sor teljes; a még kódban élő HU-értékek
+  (küldési ablak, napi kvóta, munkalap-kulcsszavak, mobil-tartományok, időzóna) egyeznek a sorral;
+  ismeretlen ország zárva; a hatókörben nincs beégetett HU-paraméter, a maradék ALLOW-listán okkal.
+- **Elfogadás:** `npx tsx scripts/foreign-market-e2e-ingest.mts --synthetic` — kitalált paraméterű sor
+  (a kulcsa az az ISO-kód, amire a pinek geokódolnak: koordinátából csak valós ország jöhet) → 37 PASS, 0 FAIL.
+- **Maradt (következő lépések, ⑤3):** megkeresés-csoport bekötése (`sendWindow.ts`, `autoDispatch.ts`,
+  `+36`-szűrők — a sor mezői már kitöltve, az őr méri az egyezést) · a Magellan munkalap kulcsszó-
+  oszlopai (a tárolt `kw`-rekord kulcsai magyar szavak; a munkalap átalakítását kéri) · a webes kontakt-
+  kinyerő HU-szám-mintája · tartalom / kereskedelem / jog csoport · konzol „Országok” lap (terv-kapu).

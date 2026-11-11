@@ -9,6 +9,8 @@
 
 import { classifyWebsite } from "../scraper/qualify.js";
 import { normalizePhone } from "../text/phone.js";
+import { normalizePhoneIn } from "../text/phoneCountry.js";
+import type { CountryConfig } from "../country.js";
 import { T } from "../i18n/mail.js";
 
 /** The six Maps searches every tile gets — the Google Maps source's TEXT_QUERIES. */
@@ -210,10 +212,13 @@ export function foundLinks(raw: string | null | undefined): string[] {
   return (raw ?? "").split(/\s+/).map((s) => s.trim()).filter(Boolean);
 }
 
-/** Phone as Magellan typed it → E.164, or null (empty field → null too). */
-export function phoneE164(raw: string | null | undefined): string | null {
+/** Phone as Magellan typed it → E.164, or null (empty field → null too). With `cfg` (the
+ *  area's country-layer row, ADR-0437) a national number is read in THAT country's plan;
+ *  without it, the form's label uses phone.ts's own reading. */
+export function phoneE164(raw: string | null | undefined, cfg?: CountryConfig | null): string | null {
   const s = (raw ?? "").trim();
-  return s ? normalizePhone(s) : null;
+  if (!s) return null;
+  return cfg === undefined ? normalizePhone(s) : normalizePhoneIn(s, cfg);
 }
 
 /** „4,6 · 21" → {rating 4.6, count 21}; empty → both null; anything else → "bad". */

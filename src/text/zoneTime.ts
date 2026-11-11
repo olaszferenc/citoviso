@@ -1,4 +1,5 @@
-// Wall-clock arithmetic in an EXPLICIT IANA zone (ADR-0290) — pure, no DB.
+// Wall-clock arithmetic in an EXPLICIT IANA zone (ADR-0290) — pure arithmetic; the only
+// outside read is a country's starting zone from the country layer's import-time snapshot.
 //
 // Every accommodation lives in its own time zone (tenant.time_zone); the platform itself
 // (outreach windows, operator console, traffic report) lives in APP_TZ. Both read the
@@ -7,6 +8,8 @@
 // box — and that is exactly how a green dev check shipped a wrong "today" (ADR-0288/0289).
 //
 // ⭐ THE ONE "TODAY": todayIn(zone). Nothing else in src computes today's calendar day.
+
+import { countryConfigSync } from "../country.js";
 
 /** The platform's own zone (outreach, console, platform billing). */
 export const APP_TZ = "Europe/Budapest";
@@ -57,9 +60,16 @@ export const COUNTRY_DEFAULT_TIME_ZONE: Readonly<Record<string, string>> = {
   AL: "Europe/Tirane",
 };
 
-/** The zone a new accommodation in `country` (ISO 3166-1 alpha-2) starts with. */
+/**
+ * The zone a new accommodation in `country` (ISO 3166-1 alpha-2) starts with. The COUNTRY
+ * LAYER's `time_zone` wins (ADR-0437: one source for a country's parameters); the table
+ * above stays the picker's list and the starting zone for countries the layer has no row
+ * for yet (a tenant's zone is the place's fact, not a gate — ADR on the lodging zone).
+ */
 export function defaultTimeZoneForCountry(country: string | null | undefined): string {
-  return COUNTRY_DEFAULT_TIME_ZONE[String(country ?? "").trim().toUpperCase()] ?? APP_TZ;
+  return countryConfigSync(country)?.timeZone
+    ?? COUNTRY_DEFAULT_TIME_ZONE[String(country ?? "").trim().toUpperCase()]
+    ?? APP_TZ;
 }
 
 /** A real IANA zone name the runtime can compute with (never a free-text label). */

@@ -26,15 +26,24 @@
 // child, SCRAPE_PAID_APIS=off), no translation. The free steps DO reach the network: the
 // domain-guess presence probe, the own-site audit fetch, the portal page read, Nominatim.
 //
-// Run: npx tsx scripts/foreign-market-e2e-ingest.mts [--fix-country]
+// Run: npx tsx scripts/foreign-market-e2e-ingest.mts [--fix-country | --synthetic]
 //   --fix-country: after saveRegion, set region.country to HR / BG by SQL (what a fixed
 //   console would store), to see what the REST of the chain does with a correct country.
+//   --synthetic (ADR-0437 acceptance): ONE country-layer row with made-up parameters
+//   (keywords, language, phone plan, portal hosts — nothing taken from a real market's
+//   setup) is inserted into the scratch DB, and the Makarska places run through the chain
+//   on it. The row's key is the ISO code the places' COORDINATES geocode to — a coordinate
+//   can only ever name a real country, so a fictitious code could not be reached from one.
+//   Asserted: the area's country from its center, the lead's country from its pin (geo
+//   pass), the national phone read in the row's plan, the portal host from the row, the
+//   generation + letter language from the row. BG is skipped in this mode.
 
 import pg from "pg";
 import { execFileSync, spawnSync } from "node:child_process";
 import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./lib/scratch-db.mts";
 
 const FIX_COUNTRY = process.argv.includes("--fix-country");
+const SYNTHETIC = process.argv.includes("--synthetic");
 const SCRATCH_BASE = "citoviso_foreign_e2e";
 const SCRATCH = scratchDbName(SCRATCH_BASE);
 const PG = {
@@ -99,6 +108,32 @@ const { langForCountry } = await import("../src/i18n/lang.js");
 const { langForLead } = await import("../src/i18n/mail.js");
 const { loadRegions } = await import("../src/scraper/regions.js");
 const { resolveRegion } = await import("../src/generator/generate.js");
+const { refreshCountries, countryConfigSync } = await import("../src/country.js");
+const { normalizePhoneIn } = await import("../src/text/phoneCountry.js");
+
+// ── --synthetic: the made-up country row (ADR-0437 acceptance) ───────────────────────────
+const SYN_ISO = "HR"; // what the Makarska pins geocode to — see the header
+const SYN_LANG = "hr"; // a language with a pack, so the generation path can load it
+const SYN_PORTAL = "synth-portal-e2e.example";
+if (SYNTHETIC) {
+  await sql`
+    INSERT INTO country (
+      iso2, name, aliases, default_lang, time_zone, currency, pricing_region, area_bbox,
+      search_keywords, portal_domains, own_site_tlds, search_lang, search_region, browser_locale,
+      accept_language, dial_code, trunk_prefix, mobile_prefixes, phone_plan, phone_nsn_min,
+      phone_nsn_max, outreach_channels, send_window_from, send_window_to, daily_quota,
+      invoice_lang, legal_pack
+    ) VALUES (
+      ${SYN_ISO}, 'Szintetikus e2e-ország', '["SYNTHLAND"]'::jsonb, ${SYN_LANG}, 'Europe/Zagreb', 'EUR', 'global',
+      '[42.0, 13.0, 46.6, 19.5]'::jsonb,
+      '{"accommodation": ["synthkw-a", "synthkw-b"]}'::jsonb, ${JSON.stringify([SYN_PORTAL])}::jsonb,
+      '["example"]'::jsonb, ${SYN_LANG}, ${SYN_ISO}, 'hr-HR', 'hr,en;q=0.6',
+      '385', '0', '["9"]'::jsonb, 'generic', 8, 9,
+      '["email"]'::jsonb, 9, 18, 5, ${SYN_LANG}, 'synthetic'
+    )`.execute(db);
+  await refreshCountries();
+  console.log(`szintetikus ország-sor: ${SYN_ISO} (made-up paraméterek) a scratch DB-ben`);
+}
 
 // ── test data: REAL lodgings (public OpenStreetMap facts, read 2026-10-28) ────────────────
 interface Place {
@@ -123,7 +158,7 @@ interface Market {
   readonly radiusKm: number;
   readonly places: readonly Place[];
 }
-const MARKETS: readonly Market[] = [
+const ALL_MARKETS: readonly Market[] = [
   {
     country: "HR",
     regionId: "e2e-makarska",
@@ -158,6 +193,8 @@ const MARKETS: readonly Market[] = [
   },
 ];
 
+const MARKETS: readonly Market[] = SYNTHETIC ? ALL_MARKETS.filter((m) => m.country === SYN_ISO) : ALL_MARKETS;
+
 /** The Maps PLACE link Magellan copies (pin in !3d/!4d; no feature id — we do not invent one). */
 const mapsLink = (p: Place): string =>
   `https://www.google.com/maps/place/${encodeURIComponent(p.name).replace(/%20/g, "+")}/@${p.lat},${p.lon},17z/data=!3m1!4b1!4m5!3m4!8m2!3d${p.lat}!4d${p.lon}`;
@@ -171,9 +208,22 @@ console.log("\n── tiszta függvények: telefon + portál-osztályozás ─�
     ["089 446 6788", "+359894466788"], ["0888 040 056", "+359888040056"], ["0554 43 746", "+35955443746"],
     ["+359 898 656 010", "+359898656010"], ["00359 898 656 010", "+359898656010"],
   ];
+  const synCfg = countryConfigSync(SYN_ISO);
   for (const [raw, want] of phones) {
+    if (SYNTHETIC) {
+      // In the synthetic row's plan (dial 385, trunk 0); the BG vectors only internationally.
+      const national = !/^(\+|00)/.test(raw);
+      if (national && !want!.startsWith("+385")) continue;
+      const got = normalizePhoneIn(raw, synCfg);
+      report(`normalizePhoneIn("${raw}", ${SYN_ISO}-sor)`, got === want ? "PASS" : "FAIL", `kapott ${JSON.stringify(got)}, várt ${want}`);
+      continue;
+    }
     const got = normalizePhone(raw);
     report(`normalizePhone("${raw}")`, got === want ? "PASS" : "FAIL", `kapott ${JSON.stringify(got)}, várt ${want}`);
+  }
+  if (SYNTHETIC) {
+    report(`classifyWebsite(${SYN_PORTAL}) — a sor portál-hostja`, classifyWebsite(`https://www.${SYN_PORTAL}/listing/1`) === "portal_only" ? "PASS" : "FAIL",
+      classifyWebsite(`https://www.${SYN_PORTAL}/listing/1`));
   }
   const sites = [
     "https://www.booking.com/hotel/hr/anka-apartments.hr.html", "https://www.apartmanija.hr/apartmani/makarska/12345",
@@ -260,6 +310,13 @@ for (const m of MARKETS) {
     console.log(log.split("\n").filter((l) => l.trim()).map((l) => `    │ ${l}`).join("\n"));
     report(`④ run.ts --scout ${tile.label}`, child.status === 0 ? "PASS" : "FAIL",
       `exit ${child.status}, ${((Date.now() - t0) / 1000).toFixed(0)} mp`);
+    if (SYNTHETIC) {
+      // The lead's country comes from its PIN: Magellan hands no country tag, so the geo pass
+      // (ADR-0040, Nominatim) must have looked up every row of the tile.
+      const geo = /Geo-enrich \(Nominatim\): (\d+) lead/.exec(log);
+      report(`④ ország a koordinátából (geo-pass)`, geo && Number(geo[1]) >= places.length ? "PASS" : "FAIL",
+        geo ? `${geo[1]} lead reverse-geocode` : "nincs geo-pass a naplóban");
+    }
     const paidHint = /places\.googleapis|api\.search\.brave|anthropic/i.test(log);
     report(`④ fizetős hívás nyoma a naplóban`, paidHint ? "FAIL" : "PASS", paidHint ? "találat a naplóban" : "nincs");
   }
@@ -292,7 +349,7 @@ for (const m of MARKETS) {
     const genRegion = resolveRegion(undefined, Number(raw.lat), Number(raw.lon));
     const genRow = await db.selectFrom("region").select("country").where("id", "=", genRegion.id).executeTakeFirst();
     const genLang = langForCountry(genRow?.country);
-    const wantLang = m.country === "HR" ? "hr" : "bg";
+    const wantLang = SYNTHETIC ? SYN_LANG : m.country === "HR" ? "hr" : "bg";
     report(`⑤ ${p.name}: generálási nyelv`, genLang === wantLang ? "PASS" : "FAIL",
       `resolveRegion → ${genRegion.id}, region.country=${genRow?.country} → lang "${genLang}" (várt "${wantLang}")`);
     const mailLang = await langForLead(lead.id);

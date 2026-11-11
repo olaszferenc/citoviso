@@ -25,6 +25,7 @@
 // Photo rights: every image returned carries provenance "portal" (§A.3), stamped
 // by the extractor at the point of ingest — see extract.ts/toPortalPhotos.
 
+import { leadCountryConfig } from "../../country.js";
 import { scorePortalMatch, type MatchConfidence } from "../confidence.js";
 import { acronymWords, cityTerms, deaccent, geoTerms, hasNameWord, isBrandShaped, nameWords, searchPlace, tokens, verify } from "../enrichPresence.js";
 import { classifyWebsite } from "../qualify.js";
@@ -220,7 +221,7 @@ export interface PortalReadResult {
 
 type LeadFacts = Pick<
   QualifiedLead,
-  "name" | "city" | "address" | "phone" | "website" | "websiteStatus" | "lat" | "lon"
+  "name" | "city" | "address" | "phone" | "website" | "websiteStatus" | "lat" | "lon" | "country"
 >;
 
 /**
@@ -283,9 +284,13 @@ export async function readPortalListing(
     return { url, skipped: "a lead neve csupa általános szó — portálon nem azonosítható" };
   }
 
+  // ADR-0437: the page is requested in the lead's country's language; no layer row = not read.
+  const loc = leadCountryConfig(lead, region);
+  if (!loc) return { url, skipped: "a lead országa nincs az ország-rétegben" };
   const { page, reason } = await fetchPortalPage(url, {
     gapMs: adapter.gapMs,
     render: adapter.render,
+    locale: loc,
   });
   if (!page) return { url, skipped: reason ?? "az oldal nem olvasható" };
 
@@ -541,7 +546,7 @@ export async function readPortalListing(
  * a second read buys nothing but load on someone else's server.
  */
 export async function findPortalCandidates(
-  lead: Pick<QualifiedLead, "name" | "city" | "website" | "websiteStatus" | "listings">,
+  lead: Pick<QualifiedLead, "name" | "city" | "website" | "websiteStatus" | "listings" | "country">,
   region: Region,
   maxCandidates = 6,
   /** false = only the listings we already know (free); no paid web search. */
@@ -587,12 +592,11 @@ export async function findPortalCandidates(
   if (search && ordered.length < maxCandidates && webSearchAvailable()) {
     // The lead's own town, not the region label (ADR-0043): "Tekergő keszthely
     // és környéke" returns portals about a different place entirely.
-    const results = await webSearch(
-      `${lead.name} ${searchPlace(lead, region)} szállás`,
-      undefined,
-      undefined,
-      10,
-    );
+    // ADR-0437: in the lead's country's search language; no layer row = no search.
+    const loc = leadCountryConfig(lead, region);
+    const results = loc
+      ? await webSearch(`${lead.name} ${searchPlace(lead, region)} szállás`, undefined, undefined, 10, loc.searchLang)
+      : [];
     for (const r of results) {
       if (!r.link) continue;
       // The result must at least NAME the business; a portal's category page

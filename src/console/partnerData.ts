@@ -6,6 +6,7 @@
 // i18n note: every string here is operator-facing (internal console) — outside
 // the §B.18 customer-facing i18n scope.
 
+import { pricingRegionForCountry } from "../country.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { budapestMidnight, budapestYear } from "../text/budapestTime.js";
@@ -259,7 +260,7 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
         .orderBy("module")
         .execute();
       await loadPricing();
-      const region = p.country === "HU" ? "hu" : "global";
+      const region = pricingRegionForCountry(p.country);
       const modules = mods.map((m) => m.module);
       // What cadence they actually pay on: the latest PAID payment's period.
       // The chain: initial orders hang off the lead's prospects, upsells off

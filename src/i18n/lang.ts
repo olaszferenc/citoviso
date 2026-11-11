@@ -9,23 +9,13 @@
 // silently have offered the operator 28 console languages, each first click kicking off a
 // 2405-string AI pack + KB translation with hu-fallback until it finished.
 
-/** ISO 3166-1 alpha-2 country → primary language (BCP-47 primary subtag). Extend as new
- *  markets open; unknown countries fall back to Hungarian (the pilot home market). */
-const COUNTRY_LANG: Readonly<Record<string, string>> = {
-  HU: "hu",
-  PL: "pl",
-  AT: "de",
-  DE: "de",
-  SK: "sk",
-  CZ: "cs",
-  RO: "ro",
-  HR: "hr",
-  SI: "sl",
-  IT: "it",
-  GB: "en",
-  IE: "en",
-  US: "en",
-};
+import { allCountriesSync, countryConfigSync } from "../country.js";
+
+/** The languages our OWN surfaces (operator console, tenant admin, owner login) are really
+ *  translated into — kept as the set COUNTRY_LANG implied until ADR-0437 moved the
+ *  country → language link into the country layer. uiLangs() adds every country row's
+ *  language on top, so opening a country in the layer still earns its UI language. */
+const UI_LANGS: readonly string[] = ["hu", "pl", "de", "sk", "cs", "ro", "hr", "sl", "it", "en"];
 
 /**
  * Human language names for the AI writers ("write in <language>") and for the tenant's
@@ -94,8 +84,13 @@ export const LANG_REGIONS: readonly {
 
 export const DEFAULT_LANG = "hu";
 
-export function langForCountry(country: string | null | undefined): string {
-  return COUNTRY_LANG[String(country ?? "").trim().toUpperCase()] ?? DEFAULT_LANG;
+/**
+ * The language a country's leads are written to (ADR-0437: the country layer's
+ * `default_lang`). ⛔ A country WITHOUT a row returns null — never a quiet Hungarian: the
+ * caller fails closed (no mock, no letter) or says loudly what it falls back to.
+ */
+export function langForCountry(country: string | null | undefined): string | null {
+  return countryConfigSync(country)?.defaultLang ?? null;
 }
 
 /** Language display name for prompts; falls back to the code itself (loud enough in output). */
@@ -114,14 +109,13 @@ export function siteLangs(): string[] {
 
 /**
  * The languages OUR OWN surfaces are written in — operator console, tenant admin, owner
- * login. DERIVED from the markets we actually operate in (COUNTRY_LANG) rather than kept
- * as a second hand-maintained list, so the two can never drift apart: opening a market is
- * what earns a UI language, not an edit in two places.
+ * login: the translated set (UI_LANGS) plus every country-layer row's language (ADR-0437),
+ * so opening a country in the layer earns its UI language without a second edit here.
  *
  * ⛔ Deliberately NOT siteLangs(): a code only belongs here once our surfaces are really
  * translated into it. Offering more would let an operator switch to a language where every
  * string falls back to Hungarian (packs.tSync logs it, the person just sees Hungarian).
  */
 export function uiLangs(): string[] {
-  return [...new Set([DEFAULT_LANG, ...Object.values(COUNTRY_LANG)])];
+  return [...new Set([DEFAULT_LANG, ...UI_LANGS, ...allCountriesSync().map((c) => c.defaultLang)])];
 }

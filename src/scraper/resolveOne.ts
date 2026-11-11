@@ -5,6 +5,7 @@
 // segment). FALLBACK: name + town via Places Text Search, scored for confidence.
 // The caller (intake) gates the auto-send on that confidence.
 
+import { countryConfig, type CountryConfig } from "../country.js";
 import { config } from "../config.js";
 import { reverseGeocode } from "./enrichGeo.js";
 import { localityFromComponents, type AddressComponent } from "./sources/googleMaps.js";
@@ -85,11 +86,15 @@ function metersBetween(aLat: number, aLon: number, bLat: number, bLon: number): 
 }
 
 /** Places Text Search biased to a circle (for the human-dropped pin, which is approximate). */
+/** The search language/region a Places query runs in — the country layer's (ADR-0437). */
+type SearchLocale = Pick<CountryConfig, "searchLang" | "searchRegion">;
+
 async function textSearchNear(
   name: string,
   lat: number,
   lon: number,
   apiKey: string,
+  search: SearchLocale,
   radius = 3000,
 ): Promise<TextSearchPlace[]> {
   const res = await fetch(PLACES_TEXT_SEARCH, {
@@ -101,8 +106,8 @@ async function textSearchNear(
     },
     body: JSON.stringify({
       textQuery: name,
-      languageCode: "hu",
-      regionCode: "HU",
+      languageCode: search.searchLang,
+      regionCode: search.searchRegion,
       maxResultCount: 8,
       locationBias: { circle: { center: { latitude: lat, longitude: lon }, radius } },
     }),
@@ -124,12 +129,14 @@ async function resolveByPin(input: {
   town?: string;
   lat: number;
   lon: number;
+  search: SearchLocale | null;
 }): Promise<ResolvedBusiness | null> {
-  const apiKey = config.googleMapsApiKey;
+  // No country-layer row = no search locale: the pin still yields a coordinate-only lead.
+  const apiKey = input.search ? config.googleMapsApiKey : "";
   // A human-dropped pin is approximate → search a ~3km circle around it and pick
   // the candidate that best combines name match with proximity to the pin.
   const candidates = apiKey
-    ? await textSearchNear(input.name, input.lat, input.lon, apiKey).catch(() => [])
+    ? await textSearchNear(input.name, input.lat, input.lon, apiKey, input.search!).catch(() => [])
     : [];
 
   let best: TextSearchPlace | undefined;
@@ -211,9 +218,11 @@ async function resolveByText(input: {
   name: string;
   town: string;
   mapsLink?: string | null;
+  search: SearchLocale | null;
 }): Promise<ResolvedBusiness | null> {
   const apiKey = config.googleMapsApiKey;
-  if (!apiKey) return null;
+  if (!apiKey || !input.search) return null;
+  const search = input.search;
 
   const res = await fetch(PLACES_TEXT_SEARCH, {
     method: "POST",
@@ -224,8 +233,8 @@ async function resolveByText(input: {
     },
     body: JSON.stringify({
       textQuery: `${input.name}, ${input.town}`,
-      languageCode: "hu",
-      regionCode: "HU",
+      languageCode: search.searchLang,
+      regionCode: search.searchRegion,
       maxResultCount: 5,
     }),
     signal: AbortSignal.timeout(10_000),
@@ -282,6 +291,8 @@ async function resolveByText(input: {
 /**
  * Resolve a business from a self-serve request. Prefers the exact map pin; falls
  * back to name + town text search. Returns null only when nothing can be resolved.
+ * `country` = the market the request came in through (the intake area's country); its
+ * country-layer row sets the Places search language/region (ADR-0437).
  */
 export async function resolveBusiness(input: {
   name: string;
@@ -289,17 +300,20 @@ export async function resolveBusiness(input: {
   lat?: number | null;
   lon?: number | null;
   mapsLink?: string | null;
+  country: string | null | undefined;
 }): Promise<ResolvedBusiness | null> {
+  const search = (await countryConfig(input.country)) ?? null;
   if (input.lat != null && input.lon != null) {
     return resolveByPin({
       name: input.name,
       town: input.town,
       lat: input.lat,
       lon: input.lon,
+      search,
     });
   }
   if (input.town) {
-    return resolveByText({ name: input.name, town: input.town, mapsLink: input.mapsLink });
+    return resolveByText({ name: input.name, town: input.town, mapsLink: input.mapsLink, search });
   }
   return null;
 }

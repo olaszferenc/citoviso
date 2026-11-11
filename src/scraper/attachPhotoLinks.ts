@@ -24,6 +24,8 @@
 // NO OVERWRITE: profiles merge by URL into l.portalProfiles (a fresh read wins over
 // a stale one, the rest stay); curator edits on `raw` are carried across verbatim.
 
+import { leadCountryConfig } from "../country.js";
+import type { PortalLocale } from "./sources/portals/politeness.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, readPortalListing, twinBrands } from "./sources/portalListing.js";
@@ -267,7 +269,7 @@ function galleryLinks(html: string, pageUrl: string): string[] {
   return out;
 }
 
-type LeadFacts = Pick<QualifiedLead, "name" | "city" | "phone" | "website" | "websiteStatus">;
+type LeadFacts = Pick<QualifiedLead, "name" | "city" | "phone" | "website" | "websiteStatus" | "country">;
 
 /**
  * Read the business's OWN website for photos. The identity check is lighter than a
@@ -283,7 +285,10 @@ export async function readOwnSitePhotos(
   const host = hostOf(url);
   if (!host) return { skipped: "értelmezhetetlen URL" };
 
-  let { page, reason } = await fetchPortalPage(url);
+  // ADR-0437: the page is requested in the lead's country's language; no layer row = not read.
+  const loc = leadCountryConfig(lead, region);
+  if (!loc) return { skipped: "a lead országa nincs az ország-rétegben" };
+  let { page, reason } = await fetchPortalPage(url, { locale: loc });
   if (!page) return { skipped: readableFailure(reason) };
 
   // IDENTITY (§F.17b — jog-provenance review 2026-10-07): an unknown host is not
@@ -317,7 +322,7 @@ export async function readOwnSitePhotos(
   // A site built by JavaScript (Wix, booking-engine builders) ships an empty shell:
   // render it once (local headless Chromium — free) before calling it photo-less.
   if (!candidates.length || !identityOf(page.html)) {
-    const rendered = await fetchPortalPage(url, { render: true });
+    const rendered = await fetchPortalPage(url, { render: true, locale: loc });
     if (rendered.page) {
       page = rendered.page;
       candidates = ownSiteImages(page.html, page.finalUrl);
@@ -335,13 +340,13 @@ export async function readOwnSitePhotos(
   // it instead of rendering the page: no browser, $0 (Fecske Kabin, 2026-10-28).
   {
     const seen = new Set(candidates.map((c) => c.url.split("?")[0]!.toLowerCase()));
-    for (const img of await appartmanImages(page.html, page.finalUrl)) {
+    for (const img of await appartmanImages(page.html, page.finalUrl, loc)) {
       if (!seen.has(img.url.split("?")[0]!.toLowerCase())) candidates.push(img);
     }
   }
 
   for (const gallery of galleryLinks(page.html, page.finalUrl)) {
-    const g = await fetchPortalPage(gallery);
+    const g = await fetchPortalPage(gallery, { locale: loc });
     if (!g.page) continue;
     const seen = new Set(candidates.map((c) => c.url.split("?")[0]!.toLowerCase()));
     for (const img of ownSiteImages(g.page.html, g.page.finalUrl)) {
@@ -463,12 +468,12 @@ export function appartmanSlug(html: string): string | null {
 }
 
 const APPARTMAN_MAX_ROOMS = 8;
-async function appartmanImages(html: string, pageUrl: string): Promise<{ url: string; caption?: string }[]> {
+async function appartmanImages(html: string, pageUrl: string, locale: PortalLocale): Promise<{ url: string; caption?: string }[]> {
   const slug = appartmanSlug(html);
   if (!slug) return [];
   const origin = new URL(pageUrl).origin;
   const readJson = async (path: string): Promise<unknown> => {
-    const r = await fetchPortalPage(`${origin}${path}`);
+    const r = await fetchPortalPage(`${origin}${path}`, { locale });
     if (!r.page) return null;
     try { return JSON.parse(r.page.html); } catch { return null; }
   };

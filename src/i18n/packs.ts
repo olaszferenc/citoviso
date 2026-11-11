@@ -398,7 +398,7 @@ export async function knownLanguages(): Promise<string[]> {
     .catch(() => []);
   for (const r of regions) {
     const l = langForCountry(r.country);
-    if (l !== DEFAULT_LANG) langs.add(l);
+    if (l && l !== DEFAULT_LANG) langs.add(l);
   }
   return [...langs].sort();
 }
