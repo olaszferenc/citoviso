@@ -108,6 +108,7 @@ const { trialNoticeDeps } = await import("../src/trial/notices.js");
 const { getEmailSender } = await import("../src/email/sender.js");
 const { sendSms } = await import("../src/sms/sender.js");
 const { budapestIsoDay, budapestMidnight, budapestWeekday, addIsoDays } = await import("../src/text/budapestTime.js");
+const { MOCK_OUTREACH_WINDOW } = await import("../src/sms/sendWindow.js");
 const { runBillingCycle } = await import("../src/payment/billing.js");
 const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
 type EmailMessage = import("../src/email/sender.js").EmailMessage;
@@ -278,17 +279,22 @@ try {
   const notice = (now: Date) => runTrialNotices(now, trialNoticeDeps(now, recMail, recSms), { onlyTrialIds: [trialA.id] });
   const before = await notice(bpAt(addIsoDays(T3_DAY, -1), 10));
   check(`T−4 (${addIsoDays(T3_DAY, -1)}) 10:00 → 0 küldés`, before.sent === 0 && mails.length + smss.length === 0);
-  const early = await notice(bpAt(T3_DAY, 8, 59));
-  check(`T−3 08:59 → ablak zárva, 0 küldés`, early.windowClosed && mails.length + smss.length === 0);
-  const late = await notice(bpAt(T3_DAY, 16, 0));
-  check(`T−3 16:00 → ablak zárva, 0 küldés`, late.windowClosed && mails.length + smss.length === 0);
-  const t3 = await notice(bpAt(T3_DAY, 9, 0));
-  check(`T−3 09:00 → 1 e-mail + 1 SMS`, t3.sent === 2 && mails.length === 1 && smss.length === 1, `${t3.sent}/${mails.length}/${smss.length}`);
+  // The window edges come from the rule itself (MOCK_OUTREACH_WINDOW): the owner moved the
+  // opening to 08:00 on 2026-11-10 (aa29e302) and the closing hour is env-settable — the
+  // burned-in 08:59 / 16:00 / 09:00 of this check went red on main that day.
+  const W = MOCK_OUTREACH_WINDOW;
+  const hhmm = (h: number, m = 0): string => `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const early = await notice(bpAt(T3_DAY, W.fromHour - 1, 59));
+  check(`T−3 ${hhmm(W.fromHour - 1, 59)} → ablak zárva, 0 küldés`, early.windowClosed && mails.length + smss.length === 0);
+  const late = await notice(bpAt(T3_DAY, W.toHour, 0));
+  check(`T−3 ${hhmm(W.toHour)} → ablak zárva, 0 küldés`, late.windowClosed && mails.length + smss.length === 0);
+  const t3 = await notice(bpAt(T3_DAY, W.fromHour, 0));
+  check(`T−3 ${hhmm(W.fromHour)} → 1 e-mail + 1 SMS`, t3.sent === 2 && mails.length === 1 && smss.length === 1, `${t3.sent}/${mails.length}/${smss.length}`);
   check(`…tárgy: „Még 3 nap az ingyenes próbából…”`, (mails[0]?.subject ?? "").startsWith("Még 3 nap az ingyenes próbából"), mails[0]?.subject);
   check(`…SMS: GSM-7 szöveg a /folytatas linkkel, a próbázó számára`,
     (smss[0]?.text ?? "").includes(`citoviso.test/p/${a.token}/folytatas`) && (smss[0]?.to ?? "").replace(/\D/g, "").endsWith("307654321"), smss[0]?.text);
-  const t3again = await notice(bpAt(T3_DAY, 15, 59));
-  check(`T−3 15:59 újra → 0 (nem kétszer)`, t3again.sent === 0 && mails.length === 1 && smss.length === 1);
+  const t3again = await notice(bpAt(T3_DAY, W.toHour - 1, 59));
+  check(`T−3 ${hhmm(W.toHour - 1, 59)} újra → 0 (nem kétszer)`, t3again.sent === 0 && mails.length === 1 && smss.length === 1);
   const mid = await notice(bpAt(addIsoDays(T3_DAY, 1), 12));
   check(`T−2 12:00 → 0`, mid.sent === 0 && mails.length === 1);
   const t1 = await notice(bpAt(T1_DAY, 9, 30));
