@@ -7,6 +7,8 @@
 // a messenger caption (ADR-0430 F2) lets the phone choose Viber / WhatsApp first.
 
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { MMS_CLI_TIMEOUT_MS, type MmsMessage, type MmsSendResult } from "./sender.js";
@@ -35,7 +37,10 @@ export async function sendMmsViaS10(msg: MmsMessage, to: string): Promise<MmsSen
   if (!msg.messengerText) {
     return { ok: false, error: "csak Viber mehet ki (tulaj 2026-11-09): MMS nem indul", provider: "cli" };
   }
-  const args = [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--channel", msg.forceChannel ?? "viber"];
+  // Viber-off mode (owner 2026-11-11 „mehet az 1-es”): the relay only claims numbers read as
+  // Viber-less, so the phone picks WhatsApp → MMS itself instead of the default forced Viber.
+  const viberOff = existsSync(path.join(homedir(), ".config", "citoviso", "viber-off"));
+  const args = [script, "send", "--to", to, "--image", msg.imagePath, "--text", msg.messengerText, "--channel", msg.forceChannel ?? (viberOff ? "auto" : "viber")];
   let stdout: string;
   try {
     ({ stdout } = await execFileP("python3", args, { timeout: MMS_CLI_TIMEOUT_MS }));
