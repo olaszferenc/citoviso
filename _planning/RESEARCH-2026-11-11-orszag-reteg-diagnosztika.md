@@ -1,7 +1,7 @@
 # Ország-réteg — rendszer- és folyamat-diagnosztika: hol van relevanciája az országváltásnak
 
 Készült: 2026-11-11, `cit9b4690e3`, három párhuzamos kódolvasó felmérésből. Kód nem változott.
-Döntés: ADR-XXXX (ország-réteg). Előzmény: `ROADMAP-2026-10-terjeszkedes-bulgaria-horvatorszag.md` (M1–M25).
+Döntés: ADR-0437 (ország-réteg). Előzmény: `ROADMAP-2026-10-terjeszkedes-bulgaria-horvatorszag.md` (M1–M25).
 
 ## Szerkezeti lelet
 

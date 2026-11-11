@@ -1,4 +1,4 @@
-## ADR-XXXX — ORSZÁG-RÉTEG: egy master-data entitás országonként, amit a lead koordinátája aktivál; a HU-folyamat ettől paraméterezve fut bármely országra
+## ADR-0437 — ORSZÁG-RÉTEG: egy master-data entitás országonként, amit a lead koordinátája aktivál; a HU-folyamat ettől paraméterezve fut bármely országra
 
 **Státusz:** JAVASOLT (tulaj-brief 2026-11-11: „tetszőleges számban bővíthető ország layer, ami a HUN folyamatot követi, egyedi paraméterekkel… amelyik országban van a lead GPS-koordinátája, az a folyamat lesz igaz rá”) ·
 **Épít:** ADR-0040 (koordináta → ország, garantált), ADR-0111 (piac-kapu: a kulcs az ORSZÁG, `market` tábla), ADR-0020 (ár-régió), DOMAIN 03-INVARIANTS §22 és §27 ·
