@@ -18,6 +18,9 @@ SER = os.environ.get("ADB_SERIAL", "RF8M2101WXX")
 ADB = [os.path.expanduser("~/Android/platform-tools/adb"), "-s", SER]
 LOCK = os.path.expanduser("~/.cache/s10-ui.lock")
 VIBER_FRESH_DAYS = 30
+# Viber down on the phone (owner 2026-11-11 „mehet az 1-es”): this flag file makes every step skip Viber —
+# the server then hands out only numbers already read as having no Viber (app_setting viber_off).
+VIBER_OFF = os.path.exists(os.path.expanduser("~/.config/citoviso/viber-off"))
 # The open Viber chat's call button: 'menu_viber_call' until the 2026-11-09 overnight Viber update,
 # 'menu_mixed_call' since (measured: every presence read turned "unknown" and a send would have failed).
 VIBER_CHAT_IDS = ("com.viber.voip:id/menu_viber_call", "com.viber.voip:id/menu_mixed_call")
@@ -137,6 +140,9 @@ def presence(ph, no_whatsapp=False, only_whatsapp=False):
     if only_whatsapp:
         return {"whatsapp": presence_whatsapp(ph), "viber": "skipped", "viber_name": "", "viber_last_seen": "",
                 "viber_age_days": None}
+    if VIBER_OFF:
+        return {"whatsapp": "skipped" if no_whatsapp else presence_whatsapp(ph), "viber": "skipped", "viber_name": "",
+                "viber_last_seen": "", "viber_age_days": None}
     vb, name, seen = presence_viber(ph)
     age = viber_age_days(seen)
     fresh = vb == "yes" and age is not None and age <= VIBER_FRESH_DAYS
@@ -451,6 +457,8 @@ def main():
             if not a.image and a.channel in ("viber", "whatsapp"):
                 if not a.text.strip():
                     raise Fail("missing --text")
+                if a.channel == "viber" and VIBER_OFF:
+                    raise Fail("viber is off on the phone (~/.config/citoviso/viber-off) — not sent")
                 res["channel"] = a.channel
                 if not a.dry_run:
                     send_text(ph, a.channel, a.text)
@@ -465,6 +473,8 @@ def main():
                 p = presence(ph, a.no_whatsapp)
                 res["presence"] = p
                 ch = pick_channel(p)
+            if ch == "viber" and VIBER_OFF:
+                raise Fail("viber is off on the phone (~/.config/citoviso/viber-off) — not sent")
             res["channel"] = ch
             if a.dry_run:
                 res["ok"] = True

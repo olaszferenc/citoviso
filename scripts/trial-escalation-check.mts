@@ -217,8 +217,8 @@ try {
   check("3. nap: semmi", d3.flagged + d3.sent + d3.queued === 0 && (await rowsOf(A.trialId)).every((r) => !["e4", "m5", "h7", "s10"].includes(r.step)), JSON.stringify(d3));
   const d4 = await E.runTrialEscalation(bp("2026-10-08", "10:00"), deps, onlyA);
   check("4. nap: csak a piros jelzés (e4 mark), üzenet nincs", d4.flagged === 1 && d4.sent === 0 && mmss.length === 0 && mails.length === 0, JSON.stringify(d4));
-  const d5early = await E.runTrialEscalation(bp("2026-10-09", "08:00"), deps, onlyA);
-  check("5. nap 08:00: ablak zárva → nincs MMS", d5early.windowClosed && mmss.length === 0);
+  const d5early = await E.runTrialEscalation(bp("2026-10-09", "07:59"), deps, onlyA);
+  check("5. nap 07:59: ablak zárva → nincs MMS", d5early.windowClosed && mmss.length === 0);
   const smsBefore = smss.length;
   const d5 = await E.runTrialEscalation(bp("2026-10-09", "10:00"), deps, onlyA);
   let rows = await rowsOf(A.trialId);

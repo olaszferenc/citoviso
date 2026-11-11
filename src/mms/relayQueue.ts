@@ -21,6 +21,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { alertHouse } from "../console/houseAlert.js";
 import { mmsPullBlocks } from "../sms/sendWindow.js";
+import { getSetting } from "../console/appSettings.js";
 import { getMessengerConfig, messengerBlocked, tripBrake, type OutboxChannel } from "./messenger.js";
 
 /** A 'sending' row older than this is a relay that died mid-send (a send is ≤200 s, MMS_CLI_TIMEOUT_MS). */
@@ -144,6 +145,9 @@ async function alertRow(id: string, headline: string, detail: string): Promise<v
  * the companion SMS's gate is open); the row stays 'queued' for the morning.
  * `windowAt` is the guard's seam: the window is judged at that instant, the rest at `now`.
  */
+/** app_setting key: any non-empty value = Viber is down on the phone (see pullMms). */
+export const VIBER_OFF_KEY = "viber_off";
+
 export async function pullMms(now: Date = new Date(), windowAt: Date = now): Promise<PulledMms[]> {
   const stale = await db
     .updateTable("mms_outbox")
@@ -171,6 +175,10 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
   // „ami whatsappos kiküldés lenne feloldásig nem menjen ki”); never an MMS instead. Filtered in the
   // claim itself, so the queue behind it moves on and nothing spins. Messenger off / braked: all MMS anyway.
   const holdWhatsapp = mcfg.whatsapp === false && !messengerOff;
+  // Viber down on the phone (owner 2026-11-11 „mehet az 1-es”: the number cannot be re-activated): only rows
+  // whose number the phone has READ as having no Viber go out (WhatsApp or MMS); a Viber lead or one not
+  // read yet waits, still 'queued' — never an MMS in place of a Viber message. app_setting viber_off.
+  const viberOff = !!(await getSetting(VIBER_OFF_KEY));
   // Claim-then-read in ONE statement: two overlapping pulls cannot get the same row.
   const claimed = await db
     .updateTable("mms_outbox")
@@ -194,6 +202,12 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
             sql<boolean>`not (mms_outbox.force_channel is null and mms_outbox.messenger_text is not null and mms_outbox.prospect_id is not null
               and mms_outbox.attempts = 0 and exists (select 1 from messenger_presence p
                 where p.phone = mms_outbox.to_phone and p.whatsapp = 'yes' and p.viber <> 'yes'))`,
+          ),
+        )
+        .$if(viberOff, (qb) =>
+          qb.where(
+            sql<boolean>`coalesce(mms_outbox.channel, '') <> 'viber' and exists (select 1 from messenger_presence p
+              where p.phone = mms_outbox.to_phone and p.viber = 'no')`,
           ),
         )
         .orderBy("created_at", "asc")
