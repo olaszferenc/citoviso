@@ -27,7 +27,7 @@
 - `scripts/money-path-e2e.mts`: CZ/CZK szintetikus sor scratch DB-ben, végig (konfigurátor → rendelés → fizetés + Barion-kérés → számla + Számlázz-XML), RO/RON zártan bukik, HU változatlan.
 
 ### Maradt (következő körök)
-Tenant-admin felületek a HU-régió pénznemében írnak (felület-kör; nem-HU tenant a piac-kapu miatt még nem jöhet létre) · bevétel-riport egy pénznemben (riport-kör) · a hideg levél ár-mondata „Ft”-ot ír (megkeresés-kör; a „-tól” ár már a lead régiójából) · számla-tételnevek és „Bankkártya” magyarul (jog/nyelv-kör) · `buyer.ts` hiányzó ország → HU alapérték.
+A böngésző-kosár (`cit-configurator.js`) minor-unit formázása kész, de PARKOLVA (`~/rc-briefs/orszag-reteg-3a-cit-configurator-minor-unit.patch`): az ismert `mock-trial-overlay-check` ⑪ minden ilyen landot buktat; addig tizedes pénznemű piacon a konfigurátor zártan nem jelenik meg (`regionForArtifactOrNull`) · Tenant-admin felületek a HU-régió pénznemében írnak (felület-kör; nem-HU tenant a piac-kapu miatt még nem jöhet létre) · bevétel-riport egy pénznemben (riport-kör) · a hideg levél ár-mondata „Ft”-ot ír (megkeresés-kör; a „-tól” ár már a lead régiójából) · számla-tételnevek és „Bankkártya” magyarul (jog/nyelv-kör) · `buyer.ts` hiányzó ország → HU alapérték.
 
 ### Visszafordíthatóság
 🔄 additív migráció (0135); a HU-összegek és a HU számla-XML változatlanok (kivéve a fordított adózás kulcsát).
