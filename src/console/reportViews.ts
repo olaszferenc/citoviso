@@ -11,6 +11,8 @@
 import { esc, eventDetail, eventLabel, EVENT_BAD, EVENT_STRONG, helpLink, layout } from "./views.js";
 import { APP_TZ, partsIn, todayIn } from "../text/zoneTime.js";
 import { T } from "../i18n/mail.js";
+import type { LeadStock } from "./leadStock.js";
+import { leadStockReportBody, stockChips, type StockPreset } from "./leadStockViews.js";
 import { consoleLang } from "./i18nCtx.js";
 import { SKINS } from "../engine/skins.js";
 import { EXIT_REASONS, EXPECTED_STATED, STATED_REASONS, type ExitReason, type StatedReason } from "../analytics/exitReason.js";
@@ -167,7 +169,7 @@ const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
 const periodHidden = (p: ReportPeriod): string =>
   Object.entries(periodParams(p)).map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`).join("");
 
-type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants";
+type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants" | "/report/leads";
 
 /** The Riport tab row — Tölcsér · Viselkedés · Mock (mock-tab README ①) · the coming rounds. */
 export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string): string {
@@ -183,6 +185,8 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
     a("/report/revenue", "", T(lang, "Előfizetők")) +
     // Tenant activity + site visits (frozen plan: design-refs/console/tenant-aktivitas/, 2A).
     a("/report/tenants", "", T(lang, "Tenantok")) +
+    // Lead-állomány (frozen plan: design-refs/console/lead-allomany/, 2026-11-12).
+    a("/report/leads", "", T(lang, "Lead-állomány")) +
     `</nav>`
   );
 }
@@ -1065,4 +1069,18 @@ export function reportMockPage(m: MockReport, st: MockPageState): string {
     `<div class="rpm" id="rpm" data-tpl="${esc(s.tpl ?? "")}" data-sort="${s.sort}" data-n="${s.n}">${filters}${fact}${mockVerdictHtml(m, lang)}${cards}${formula}${list}</div>` +
     `<script>${MOCK_JS}</script>`;
   return layout(T(lang, "Megkeresés-riport"), `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_mock")}</h1></div>${tabs}${body}`, { active: "/report/mock" });
+}
+
+// ── Lead-állomány tab (frozen plan: assets/design-refs/console/lead-allomany/, 2026-11-12) ──
+export function reportLeadStockPage(s: LeadStock, days: StockPreset): string {
+  const lang = consoleLang();
+  const tabs = reportTabs("/report/leads", "", "", lang);
+  const filter =
+    `<div class="rp-filt">${stockChips(days, (k) => `/report/leads?days=${k}`, lang)}` +
+    `<span class="rp-filt__n">${esc(T(lang, "Kvalifikált leadek képtípus, állapot és csatorna szerint · az időszakban felmért leadek, a mai állapotukban"))}</span></div>`;
+  return layout(
+    T(lang, "Megkeresés-riport"),
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${filter}${leadStockReportBody(s, days, lang)}`,
+    { active: "/report" },
+  );
 }

@@ -1,0 +1,216 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Lead-állomány kártya + riport (A/B vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#06222e; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-400:#3fc5e0; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#fff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.45 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .note{max-width:1180px;margin:14px auto 0;padding:12px 16px;background:var(--citui-warn-soft);border:1px solid var(--citui-line);border-radius:10px;font-size:13px}
+  .note b{display:block;margin-bottom:2px}
+  .stage{display:flex;justify-content:center;padding:16px}
+  .frame{width:100%;max-width:1180px;background:var(--citui-white);border-radius:12px;box-shadow:var(--citui-shadow-sm);container-type:inline-size;overflow:hidden}
+  .frame.m{max-width:390px}
+  .page{padding:18px 20px 28px}
+  .ph{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .ph h1{margin:0;font:700 20px/1.2 var(--citui-font-display)}
+  .ph small{display:block;color:var(--citui-muted);font-size:12.5px}
+  .chips{display:inline-flex;gap:2px;padding:3px;background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill)}
+  .chips button{border:0;background:transparent;padding:6px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;color:var(--citui-muted);cursor:pointer}
+  .chips button.on{background:var(--citui-white);color:var(--citui-ink);box-shadow:0 1px 3px rgba(14,42,71,.15)}
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+  .w{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px 14px 12px;background:var(--citui-white);min-width:0}
+  .w.full{grid-column:1/-1}
+  .wh{display:flex;align-items:center;gap:7px;color:var(--citui-muted);font-size:12.5px}
+  .wh svg{width:15px;height:15px;stroke:var(--citui-navy-700);fill:none;stroke-width:1.8}
+  .big{font:700 24px/1.15 var(--citui-font-display);margin-top:6px}
+  .sub{color:var(--citui-muted);font-size:12.5px;margin-bottom:8px}
+  .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-top:1px solid var(--citui-line)}
+  .kv:first-of-type{border-top:0}
+  .sec{margin-top:12px;font:700 12px/1.2 system-ui;letter-spacing:.02em;text-transform:uppercase;color:var(--citui-navy-700);display:flex;justify-content:space-between;gap:8px}
+  .sec span{text-transform:none;letter-spacing:0;font-weight:500;color:var(--citui-muted)}
+  table.t{width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px;font-variant-numeric:tabular-nums}
+  .t th{hyphens:manual;font-weight:600;color:var(--citui-muted);text-align:right;padding:4px 4px;border-bottom:1px solid var(--citui-line-strong);font-size:11.5px;line-height:1.2;vertical-align:bottom}
+  .t th:first-child{text-align:left}
+  .t td{padding:5px 4px;text-align:right;border-bottom:1px solid var(--citui-line)}
+  .t td:first-child{text-align:left;color:var(--citui-ink)}
+  .t tr.sum td{font-weight:700;border-bottom:1px solid var(--citui-line-strong)}
+  .t tr.dim td{color:var(--citui-muted)}
+  .t a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--citui-line-strong);cursor:pointer}
+  .t a:hover{color:var(--citui-cyan-500);border-color:var(--citui-cyan-500)}
+  .t td.z a{color:var(--citui-muted);border:0}
+  .t .pc{display:block;font-size:10.5px;color:var(--citui-muted);font-weight:400}
+  .cat{display:inline-flex;align-items:baseline}
+  .dot{flex:none;display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px}
+  .d1{background:var(--citui-cyan-500)} .d2{background:var(--citui-warn)} .d3{background:var(--citui-bad)}
+  .bcols{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:18px}
+  .stub{color:var(--citui-muted);font-size:12px;margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:90vw}
+  .toast.show{opacity:1}
+  /* report */
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--citui-line);margin-bottom:14px}
+  .tabs a{padding:8px 12px;font-weight:600;font-size:13px;color:var(--citui-muted);border-bottom:2px solid transparent;text-decoration:none}
+  .tabs a.on{color:var(--citui-ink);border-color:var(--citui-cyan-500)}
+  .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .kpi{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px}
+  .kpi b{display:block;font:700 22px/1.1 var(--citui-font-display)} .kpi span{font-size:12px;color:var(--citui-muted)}
+  .stack{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--citui-surface-2);min-width:80px}
+  .stack i{display:block;height:100%}
+  .s-sent{background:var(--citui-navy-700)} .s-ready{background:var(--citui-ok)} .s-wm{background:var(--citui-warn)} .s-wc{background:var(--citui-cyan-300)}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--citui-muted);margin-top:8px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .rgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+  details.def{margin-top:14px;border:1px solid var(--citui-line);border-radius:12px;padding:10px 14px;background:var(--citui-surface)}
+  details.def summary{cursor:pointer;font-weight:600}
+  details.def dl{margin:8px 0 0;font-size:12.5px} details.def dt{font-weight:600;margin-top:6px} details.def dd{margin:0;color:var(--citui-muted)}
+  .scroll{overflow-x:auto} .sh{display:none}
+  @container (max-width:760px){
+    .grid{grid-template-columns:1fr}
+    .bcols{grid-template-columns:1fr;gap:4px}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .kpis .kpi:first-child{grid-column:1/-1}
+    .rgrid{grid-template-columns:1fr}
+    .page{padding:14px 12px 22px}
+    .ph{flex-direction:column;align-items:stretch}
+    .chips{justify-content:space-between}
+    .chips button{flex:1;padding:7px 4px}
+    .t{font-size:12px} .t th{font-size:10.5px}
+    .hide-m{display:none} .lg{display:none} .sh{display:inline}
+  }
+</style></head><body>
+<div class="bar">
+  <b>Változat</b>
+  <button data-v="B" class="on">Irányítópult</button>
+  <button data-v="R">Riport · Lead-állomány</button>
+  <span class="sp"></span>
+  <button data-s="m">Mobil 390px</button>
+  <button data-s="d" class="on">Asztali</button>
+</div>
+<div class="note" id="note"></div>
+<div class="stage"><div class="frame" id="frame"><div class="page" id="page"></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+// Real production numbers, read-only query 2026-11-12. Cohort = leads first surveyed (lead.created_at) in the period.
+// per photo category: [count, sent, ready, waitMock, waitContact, rEmail, rMessenger, rMms, rAll, wNoMock, wGenerated, wApprovedNoReview]
+const D={
+  today:{total:0,c:[[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0]]},
+  "7":{total:202,c:[[61,5,6,46,4,3,3,4,1,40,6,0],[110,0,10,95,5,9,7,9,6,86,9,0],[1,1,0,0,0,0,0,0,0,0,0,0]]},
+  "30":{total:10320,c:[[2635,685,268,1500,182,234,61,94,33,1178,319,3],[4543,0,580,3458,505,556,169,232,149,2947,511,0],[97,33,25,24,15,25,5,6,5,0,24,0]]},
+  all:{total:19315,c:[[5208,1140,630,3201,237,595,95,159,66,2498,700,3],[8107,0,809,6756,542,784,176,247,155,5590,1166,0],[149,45,37,50,17,37,5,7,5,0,50,0]]}
+};
+const CATS=[["saját kép","d1"],["település / stock","d2"],["semmilyen kép","d3"]];
+const PER=[["today","Ma"],["7","7 nap"],["30","1 hónap"],["all","Összes"]];
+const PLBL={today:"ma",["7"]:"elmúlt 7 nap","30":"elmúlt 30 nap",all:"összes"};
+let st={v:"B",s:"d",p:"7"};
+try{const s=localStorage.getItem("la-mock2");if(s)Object.assign(st,JSON.parse(s));}catch(e){}
+if(st.v!=="B"&&st.v!=="R")st.v="B";
+if(window.innerWidth<600&&!localStorage.getItem("la-mock-size"))st.s="m";
+const fmt=n=>n.toLocaleString("hu-HU");
+const sum=(i)=>D[st.p].c.reduce((a,r)=>a+r[i],0);
+function L(n,what){return n===0?`<span>0</span>`:`<a data-go="${what}">${fmt(n)}</a>`}
+function td(n,what){return `<td class="${n===0?"z":""}">${L(n,what)}</td>`}
+function pc(n,base){return base?`<span class="pc">${Math.round(n*100/base)}%</span>`:""}
+function catCell(i){return `<span class="cat"><span class="dot ${CATS[i][1]}"></span><span>${CATS[i][0]}</span></span>`}
+const ICON=`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>`;
+
+function stateTable(withPct){
+  const d=D[st.p];let rows="";
+  d.c.forEach((r,i)=>{rows+=`<tr><td>${catCell(i)}</td>${[0,1,3,2].map(k=>`<td class="${r[k]===0?"z":""}">${L(r[k],CATS[i][0]+" · "+{0:"darab",1:"kiküldött",2:"kiküldhető",3:"generálásra vár"}[k])}${withPct&&k?pc(r[k],r[0]):""}</td>`).join("")}</tr>`});
+  const q=sum(0),nq=d.total-q;
+  rows+=`<tr class="sum"><td>Összes kvalifikált</td>${td(q,"kvalifikált")}${td(sum(1),"kvalifikált · kiküldött")}${td(sum(3),"kvalifikált · generálásra vár")}${td(sum(2),"kvalifikált · kiküldhető")}</tr>`;
+  rows+=`<tr class="dim"><td>Nem kvalifikált</td>${td(nq,"nem kvalifikált")}<td></td><td></td><td></td></tr>`;
+  rows+=`<tr class="sum"><td>Összes lead</td>${td(d.total,"összes lead")}<td></td><td></td><td></td></tr>`;
+  return `<table class="t"><thead><tr><th>Kvalifikált</th>${withPct?"<th>Darab</th><th><span class='lg'>Ebből kiküldött</span><span class='sh'>Kiküldve</span></th><th><span class='lg'>Generálásra vár</span><span class='sh'>Vár</span></th><th><span class='lg'>Kiküldhető</span><span class='sh'>Kiküld&shy;hető</span></th>":"<th>Darab</th><th title='Ebből kiküldött'>Kiküldve</th><th title='Generálásra vár'>Vár</th><th>Kiküld&shy;hető</th>"}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+function chanTable(){
+  const d=D[st.p];let rows="";
+  d.c.forEach((r,i)=>{rows+=`<tr><td>${catCell(i)}</td>${[5,6,7,8].map(k=>td(r[k],CATS[i][0]+" · kiküldhető · "+["","","","","","e-mail","messenger","MMS","mind"][k])).join("")}</tr>`});
+  rows+=`<tr class="sum"><td>Összesen</td>${[5,6,7,8].map(k=>td(sum(k),"kiküldhető · "+["","","","","","e-mail","messenger","MMS","mind"][k])).join("")}</tr>`;
+  return `<table class="t"><thead><tr><th>Kiküldhető</th><th>E-mail</th><th>Messenger</th><th>MMS</th><th>Mind<span class="hide-m"> (e-mail + messenger)</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function waitTable(detail){
+  const d=D[st.p];let rows="";
+  const cols=detail?[9,10,11,4]:[3,4];
+  d.c.forEach((r,i)=>{rows+=`<tr><td>${catCell(i)}</td>${(detail?cols:[3,4]).map(k=>td(r[k],CATS[i][0]+" · "+lab(k))).join("")}</tr>`});
+  rows+=`<tr class="sum"><td>Összesen</td>${(detail?cols:[3,4]).map(k=>td(sum(k),lab(k))).join("")}</tr>`;
+  const heads=detail?["Nincs mock","<span class='lg'>Generált, átnézésre vár</span><span class='sh'>Átnézésre vár</span>","<span class='lg'>Elutasítva / nem mehet ki</span><span class='sh'>Elutasítva</span>","<span class='lg'>Nincs kontakt-ellenőrzés</span><span class='sh'>Nincs kontakt</span>"]:["Nincs mock generálás / ellenőrzés","Nincs kontakt-ellenőrzés"];
+  return `<table class="t"><thead><tr><th>Generálásra vár</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+function lab(k){return {3:"nincs mock / ellenőrzés",4:"nincs kontakt-ellenőrzés",9:"nincs mock",10:"generált, átnézésre vár",11:"elutasítva / nem mehet ki"}[k]}
+function chips(){return `<div class="chips" role="group" aria-label="Időszak">${PER.map(([k,l])=>`<button data-p="${k}" class="${st.p===k?"on":""}">${l}</button>`).join("")}</div>`}
+function header(title,sub){return `<div class="ph"><div><h1>${title}</h1><small>${sub}</small></div>${chips()}</div>`}
+function leadCard(full){
+  const q=sum(0);
+  const head=`<div class="wh">${ICON}Lead-állomány <span style="margin-left:auto">${PLBL[st.p]}</span></div>
+  <div class="big">${fmt(q)}</div><div class="sub">kvalifikált lead · ebből ${fmt(sum(2))} kiküldhető most</div>`;
+  if(!full) return `<div class="w">${head}
+    <div class="sec">Állapot</div>${stateTable(false)}
+    <div class="sec">Csatorna szerint <span>kiküldhetők</span></div>${chanTable()}
+    <div class="sec">Generálásra vár <span>miért</span></div>${waitTable(false)}</div>`;
+  return `<div class="w full">${head}<div class="bcols">
+    <div><div class="sec">Állapot</div>${stateTable(false)}</div>
+    <div><div class="sec">Csatorna szerint <span>kiküldhetők</span></div>${chanTable()}</div>
+    <div><div class="sec">Generálásra vár <span>miért</span></div>${waitTable(false)}</div></div></div>`;
+}
+const fin=`<div class="w"><div class="wh"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="16" cy="8" r="1.5"/></svg>Pénzügy</div><div class="big">0</div><div class="sub">nyitott bizonylat · nincs lejárt</div><div class="kv"><span>Bizonylat</span><b>3</b></div><div class="kv"><span>Partner</span><b>3</b></div><div class="kv"><span>AAM-limit</span><b>0%</b></div></div>`;
+function outr(){const s=sum(1);return `<div class="w"><div class="wh"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Megkeresések</div><div class="big">${fmt(s)}</div><div class="sub">kiküldött megkeresés · ${PLBL[st.p]}</div><div class="kv"><span>Válaszolt</span><b>…</b></div><div class="kv"><span>Megkezdett rendelés</span><b>…</b></div><div class="stub">A számok az időszakra szűrve.</div></div>`}
+
+function report(){
+  const d=D[st.p],q=sum(0);
+  const kp=(n,l)=>`<div class="kpi"><b>${fmt(n)}</b><span>${l}</span></div>`;
+  let bars="";d.c.forEach((r,i)=>{const t=r[0]||1;bars+=`<tr><td>${catCell(i)}</td><td style="width:45%"><div class="stack">${[[1,"s-sent"],[2,"s-ready"],[3,"s-wm"],[4,"s-wc"]].map(([k,c])=>`<i class="${c}" style="width:${r[k]*100/t}%"></i>`).join("")}</div></td><td>${fmt(r[0])}</td></tr>`});
+  return `<div class="tabs"><a>Tölcsér</a><a>Viselkedés</a><a>Mock</a><a>Próba</a><a class="on">Lead-állomány</a></div>
+  ${header("Lead-állomány","Kvalifikált leadek képtípus, állapot és csatorna szerint · a felmérés dátuma szerinti kohorsz")}
+  <div class="kpis">${kp(d.total,"összes lead")}${kp(q,"kvalifikált")}${kp(sum(1),"kiküldött")}${kp(sum(2),"kiküldhető most")}${kp(sum(3)+sum(4),"generálásra vár")}</div>
+  <div class="w"><div class="sec">Állapot <span>a cellában a sor százaléka</span></div><div class="scroll">${stateTable(true)}</div>
+    <table class="t" style="margin-top:12px"><tbody>${bars}</tbody></table>
+    <div class="legend"><span><i class="s-sent"></i>kiküldött</span><span><i class="s-ready"></i>kiküldhető</span><span><i class="s-wm"></i>nincs mock / ellenőrzés</span><span><i class="s-wc"></i>nincs kontakt-ellenőrzés</span></div></div>
+  <div class="rgrid">
+    <div class="w"><div class="sec">Generálásra vár <span>részletezve</span></div><div class="scroll">${waitTable(true)}</div></div>
+    <div class="w"><div class="sec">Csatorna szerint <span>kiküldhetők, egy lead több oszlopban is lehet</span></div><div class="scroll">${chanTable()}</div></div>
+  </div>
+  <details class="def"><summary>Mit jelentenek az oszlopok?</summary><dl>
+    <dt>Kvalifikált</dt><dd>Nincs vagy elavult honlapja, nem diszkvalifikált, és nincs letiltva a megkeresésből. (Ma a CRM-kártya ehhez még legalább 1 képet is megkövetel, ezért ott 5932 áll. Az új kártyán a kép nélküliek is látszanak a saját soraikban.)</dd>
+    <dt>saját kép</dt><dd>Van legalább 1 saját fotója (portál, Google, saját honlap). A Street View nem számít.</dd>
+    <dt>település / stock</dt><dd>Nincs saját fotó: a mock a település fotóját vagy stockképet kap (ADR-0436). Ide számít az is, akinek még nincs mockja.</dd>
+    <dt>semmilyen kép</dt><dd>A mock elkészült, de településfotót sem kapott (betűs hős), ezért a képőr nem engedi ki.</dd>
+    <dt>Ebből kiküldött</dt><dd>Bármelyik csatornán megkapta a linket.</dd>
+    <dt>Kiküldhető</dt><dd>Az átnéző MEHET-et adott a mockra, a jóváhagyó lapon nem lett „Nem mehet ki”, és van ellenőrzött elérhetősége, de még nem ment ki.</dd>
+    <dt>Generálásra vár</dt><dd>Nincs még kész, átnézett mockja, vagy a mock kész, de nincs ellenőrzött elérhetősége. Egy lead csak egy oszlopban szerepel, a mock-ok áll előrébb.</dd>
+    <dt>Kontakt-ellenőrzés</dt><dd>Van e-mail, vagy a magyar mobilszámon a Viber/WhatsApp-ellenőrzés lefutott.</dd>
+    <dt>Mind</dt><dd>E-mailen és messengeren is elérhető (a messenger mobilszámot jelent, így MMS-en is).</dd>
+  </dl></details>`;
+}
+function render(){
+  const p=document.getElementById("page");
+  if(st.v==="R"){p.innerHTML=report();}
+  else{
+    const card=leadCard(st.v==="B");
+    p.innerHTML=header("Irányítópult","Az időszak a lead-állományra és a megkeresésekre hat")+`<div class="grid" style="margin-top:12px">${card+fin+outr()}</div>`;
+  }
+  document.getElementById("frame").className="frame"+(st.s==="m"?" m":"");
+  document.querySelectorAll("[data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===st.v));
+  document.querySelectorAll("[data-s]").forEach(b=>b.classList.toggle("on",b.dataset.s===st.s));
+  const notes={B:"<b>Irányítópult — B (jóváhagyva 2026-11-12)</b>A CRM-kártya helyén teljes szélességű „Lead-állomány” sor: asztali gépen a három tábla egymás mellett, mobilon egymás alatt. Alatta a Pénzügy és a Megkeresések; a Messenger-út változatlan.",
+    R:"<b>Riport · Lead-állomány fül (részletes)</b>Új fül a riportban: összesítő számok, az állapot-tábla százalékkal és sávval, a „Generálásra vár” négy okra bontva, a csatorna-tábla, és lent a fogalmak magyarázata."};
+  document.getElementById("note").innerHTML=notes[st.v]+"<div style='margin-top:4px'>Valós éles számok (2026-11-12). Az időszak gombjai működnek, és minden szám kattintható: a lead-listára visz, erre a szűrésre.</div>";
+  try{localStorage.setItem("la-mock2",JSON.stringify(st));}catch(e){}
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button,a[data-go]");if(!b)return;
+  if(b.dataset.v){st.v=b.dataset.v;render();}
+  else if(b.dataset.s){st.s=b.dataset.s;try{localStorage.setItem("la-mock-size","1")}catch(x){};render();}
+  else if(b.dataset.p){st.p=b.dataset.p;render();}
+  else if(b.dataset.go){const t=document.getElementById("toast");t.textContent="→ Lead-lista: "+b.dataset.go+" ("+PLBL[st.p]+"), "+b.textContent+" lead";t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2200);}
+});
+render();
+</script></body></html>

@@ -2,6 +2,8 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
+import type { LeadStock } from "./leadStock.js";
+import { leadStockCard, stockChips, stockFilterLabel, stockPeriodPhrase, type StockPreset } from "./leadStockViews.js";
 import { recipientKey } from "../email/address.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { domainStateText, type OwnerDomainView } from "../email/activationEmail.js";
@@ -1844,6 +1846,12 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   // ⛔ A cím ALATTI két szöveg-blokk (számláló-sor + szűrő/sorrend-mondat) KIKERÜLT
   // (tulajdonosi döntés 2026-09-19, ADR-0188). A linkek megmaradnak — a „Szűrők törlése"
   // maga is ÁLLÍTÁS: csak akkor van ott, ha fut szűrő, és el is tudja vinni onnan.
+  // Lead-állomány card number (2026-11-12): say which number this list is, and how to leave it.
+  const stockBanner = q.stock
+    ? `<p class="ls-flt" data-stock-filter><span>${esc(stockFilterLabel(q.stock, q.stockDays ?? null, lang))}</span>` +
+      `<a class="small" href="/leads">${esc(T(lang, "Szűrés törlése"))}</a>` +
+      `<a class="small" href="/?days=${esc(q.stockDays ?? "0")}#lead-stock">${esc(T(lang, "◂ vissza az Irányítópultra"))}</a></p>`
+    : "";
   const headLinks = `<span class="con-leadhead__sp">
     ${activeFilters.length ? `<a class="small" href="${clearHref}" data-clear-filters>${T(lang, "Szűrők törlése")}</a>` : ""}
     <a class="small" href="${switchHref}">${
@@ -2032,6 +2040,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
               title="${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}">?</button>
       ${headLinks}
     </div>
+    ${stockBanner}
     ${disqView ? "" : clientFilterRow(q, result.clientCounts, lang)}
     ${scrollHint}
     <form method="get" id="leadFilters">${hidden}
@@ -9350,6 +9359,11 @@ export interface HubData {
   readonly noLoginTrials?: readonly { leadId: string; name: string; day: number }[];
   /** ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates). */
   readonly messenger?: MessengerStats;
+  /** Lead-állomány (frozen plan design-refs/console/lead-allomany/, „B”): replaces the CRM card. */
+  readonly stock?: LeadStock;
+  /** The dashboard period chip (Ma / 7 nap / 1 hónap / Összes) — scopes the stock and the Megkeresések card. */
+  readonly stockDays?: StockPreset;
+  readonly outreachP?: { readonly sent: number; readonly replied: number; readonly orderIntent: number };
 }
 
 interface AttentionRow {
@@ -9505,6 +9519,8 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
   const t = d.r.leadTotals;
   switch (groupId) {
     case "crm": {
+      // Lead-állomány (owner, 2026-11-12, plan „B”): a full row, photo kind × state / channel / why waiting.
+      if (d.stock) return leadStockCard(d.stock, d.stockDays ?? "0", ic("leads", 16), lang);
       // The two mock queues, counted per ACTIVE lead by the same predicates the MOCK filter
       // runs (countMockQueues) — the number and the list its link opens agree (tulaj, 2026-10-05).
       const nav = consoleNav();
@@ -9539,6 +9555,14 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
       );
     }
     case "report":
+      if (d.outreachP && d.stockDays) {
+        const days = d.stockDays;
+        return w("report", T(lang, "Megkeresések"), String(d.outreachP.sent), T(lang, "kiküldött megkeresés · {per}", { per: stockPeriodPhrase(days, lang) }), [
+          [T(lang, "Válaszolt"), String(d.outreachP.replied), "/?replies=all#replies"],
+          [T(lang, "Megkezdett rendelés"), String(d.outreachP.orderIntent), `/report?days=${days}`],
+          [T(lang, "Tölcsér"), T(lang, "megnyitás"), `/report?days=${days}`],
+        ]);
+      }
       return w("report", T(lang, "Megkeresések"), String(d.r.total.sent), T(lang, "kiküldött megkeresés összesen"), [
         [T(lang, "Válaszolt"), String(d.replies.total), "/?replies=all#replies"],
         [T(lang, "Megkezdett rendelés"), String(d.r.total.orderIntent), "/report"],
@@ -10281,6 +10305,9 @@ export function dashboardPage(d: HubData): string {
     `<p>${esc(T(lang, "Szia, {name}! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.", { name: d.operatorName }))}</p></div>` +
     repliesBlockHtml(d.replies, d.repliesQuery, lang) +
     (d.messenger ? messengerBlockHtml(d.messenger, lang) : "") +
+    (d.stockDays
+      ? `<div class="ls-period" id="period">${stockChips(d.stockDays, (k) => `/?days=${k}#period`, lang)}<span>${esc(T(lang, "Az időszak a Lead-állomány és a Megkeresések kártyára hat."))}</span></div>`
+      : "") +
     `<div class="con-wgrid">${widgets}</div>` +
     attentionHtml(attentionRows(d, lang), lang);
   return layout(T(lang, "Irányítópult"), body, { active: "/" });

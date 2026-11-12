@@ -3,6 +3,7 @@
 // "latest artifact/decision per lead" is stitched in JS rather than with
 // window functions — clarity over cleverness.
 
+import { leadStockIds } from "./leadStock.js";
 import { resolveCountryCode } from "../country.js";
 import { reverseGeocode } from "../scraper/enrichGeo.js";
 import { randomBytes } from "node:crypto";
@@ -211,6 +212,10 @@ export interface LeadQuery {
    *  query so a view switch can carry it back; without it the default filter silently
    *  reappeared and the cleared state was lost (Elek FK-003, 2026-09-11). */
   all?: boolean;
+  /** Lead-állomány card number (`<cat>.<col>`, leadStock.ts) — the list shows exactly those leads. */
+  stock?: string;
+  /** The card's period chip the number was read in (today | 7 | 30 | 0). */
+  stockDays?: string;
 }
 
 /**
@@ -424,6 +429,10 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
     };
   });
 
+  if (q.stock) {
+    const ids = await leadStockIds(q.stock, q.stockDays ?? "0");
+    if (ids) return buildLeadListResult(all.filter((r) => ids.has(r.id)), q);
+  }
   return buildLeadListResult(all, q);
 }
 

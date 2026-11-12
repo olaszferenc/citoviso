@@ -2,6 +2,8 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
+import { getLeadStock, outreachInPeriod, parseStockFilter } from "./leadStock.js";
+import { isStockPreset, type StockPreset } from "./leadStockViews.js";
 import { requireExplicitPick, resolveTemplatePicks } from "../generator/templatePicks.js";
 import { couponConfigErrors, couponFromForm, getCouponConfig, liveTenantCoupons, setCouponConfig } from "../payment/couponConfig.js";
 import { crossOriginRefusal } from "../server/originGuard.js";
@@ -96,7 +98,7 @@ import {
   unblockLeadContact,
 } from "./partnerMessages.js";
 import { MESSAGE_FILTERS, messageBubble, messagesTab, type ComposeState, type MessageFilter } from "./partnerMessageViews.js";
-import { reportFunnelPage, reportBehaviourPage, reportMockPage, type ReasonMode } from "./reportViews.js";
+import { reportFunnelPage, reportBehaviourPage, reportMockPage, reportLeadStockPage, type ReasonMode } from "./reportViews.js";
 import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, reportPeriod, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
@@ -1789,6 +1791,14 @@ async function handle(
       noLoginTrials: await loadNoLoginTrials(),
       // ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates).
       messenger: await (await import("../mms/messenger.js")).messengerStats(),
+      // Lead-állomány + the period chip (owner, 2026-11-12): default „Összes”, like the CRM card it replaces.
+      ...(await (async () => {
+        const raw = url.searchParams.get("days");
+        const stockDays: StockPreset = isStockPreset(raw) ? raw : "0";
+        const period = reportPeriod(stockDays, null, null, new Date(), "0");
+        const [stock, outreachP] = await Promise.all([getLeadStock(period), outreachInPeriod(period)]);
+        return { stock, stockDays, outreachP };
+      })()),
       repliesQuery: {
         filter: url.searchParams.get("replies") === "all" ? "all" : "open",
         channel: (["email", "sms", "viber", "whatsapp"] as const).find((c) => c === url.searchParams.get("ch")) ?? "all",
@@ -2377,7 +2387,14 @@ async function handle(
     // drops it, and any manual filter takes over. Injected into q so the header renders
     // it as live filter state and it survives adding another filter. The predicate
     // itself lives in defaultLeadQuery() — the dashboard chip counts the same thing.
-    if (!anyLeadFilter(q) && !q.all && q.disqualified !== "1") {
+    // Lead-állomány (2026-11-12): a card number opens exactly the leads it counted — the
+    // same classifier, so no default filter on top of it.
+    const stock = sp.get("stock");
+    if (stock && parseStockFilter(stock)) {
+      q.stock = stock;
+      q.stockDays = isStockPreset(sp.get("stockDays")) ? (sp.get("stockDays") as string) : "0";
+    }
+    if (!anyLeadFilter(q) && !q.all && q.disqualified !== "1" && !q.stock) {
       Object.assign(q, defaultLeadQuery());
     }
     return send(res, 200, leadsPage(await listLeadPage(q), q));
@@ -2927,6 +2944,13 @@ async function handle(
   // GET /report/tenants — the Tenantok tab: every tenant's owner activity + site visits in one
   // row (frozen plan: design-refs/console/tenant-aktivitas/, 2A). Query: f ∈ TENANT_FILTERS
   // (default „Aktív”), test=1 shows the [TESZT] tenants, sort ∈ TENANT_SORTS, dir=desc.
+  // GET /report/leads — the Lead-állomány tab (frozen plan: design-refs/console/lead-allomany/).
+  // Query: days ∈ today|7|30|0 (default „Összes”, like the dashboard card).
+  if (method === "GET" && path === "/report/leads") {
+    const raw = url.searchParams.get("days");
+    const days: StockPreset = isStockPreset(raw) ? raw : "0";
+    return send(res, 200, reportLeadStockPage(await getLeadStock(reportPeriod(days, null, null, new Date(), "0")), days));
+  }
   if (method === "GET" && path === "/report/tenants") {
     const fRaw = url.searchParams.get("f") ?? "active";
     const f: TenantFilter = (TENANT_FILTERS as readonly string[]).includes(fRaw) ? (fRaw as TenantFilter) : "active";
