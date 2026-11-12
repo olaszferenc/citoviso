@@ -300,8 +300,21 @@ async function emailRule(leadId: string): Promise<string | "hold" | null> {
   const p = (await presenceOf([e164])).get(e164) ?? null;
   const plan = expectedChannel(p, await getMessengerConfig());
   if (plan.channel === "viber" || plan.channel === "whatsapp") return `${plan.channel === "viber" ? "Viber" : "WhatsApp"} van — csak azon megy, e-mail nem (tulaj 2026-11-11)`;
-  if (plan.channel === "check") return "hold";
+  if (plan.channel === "check") return (await emailUncheckedAllowed(leadId)) ? null : "hold";
   return null;
+}
+
+/** Owner 2026-11-12 („122 mehet”): while Viber and WhatsApp are both down, the owner-named leads (own
+ *  photos, e-mail, presence not checked) get the e-mail without waiting for the phone. app_setting
+ *  EMAIL_UNCHECKED_OK_KEY = JSON array of lead ids; anything else keeps the hold. */
+export const EMAIL_UNCHECKED_OK_KEY = "email_unchecked_ok";
+async function emailUncheckedAllowed(leadId: string): Promise<boolean> {
+  try {
+    const ids = JSON.parse((await getSetting(EMAIL_UNCHECKED_OK_KEY)) ?? "[]") as unknown;
+    return Array.isArray(ids) && ids.includes(leadId);
+  } catch {
+    return false;
+  }
 }
 
 /** The console's send-all, step by step, without the human clicks (those → held). */
