@@ -581,6 +581,26 @@ export interface TrialCampaignTable {
   sent_at: Timestamp | null;
 }
 
+/** 0134 (ADR-XXXX): the behaviour message — ONE automatic message per lead (variant A), sent when
+ *  the lead acts on the plan page; (channel, address_key) unique per address. */
+export interface BehaviorMessageTable {
+  id: Generated<string>;
+  lead_id: string;
+  prospect_id: string | null;
+  /** return = came back to the plan · price = opened „Árak és rendelés” · start = pressed the trial button, did not send it. */
+  trigger: "return" | "price" | "start";
+  trigger_at: Timestamp;
+  channel: "email" | "sms";
+  /** recipientKey(email) for mail, E.164 for SMS. */
+  address_key: string;
+  status: Generated<"claimed" | "sent">;
+  detail: string | null;
+  /** The text that went out (SMS, or the mail's subject + plain text). */
+  body: string | null;
+  created_at: Generated<Timestamp>;
+  sent_at: Timestamp | null;
+}
+
 /** 0115 (ADR-0405): the automatic outreach go list — one row per lead, sent by the prod
  *  timer through the send-all gates (src/outreach/autoDispatch.ts). */
 export interface OutreachDispatchTable {
@@ -2205,6 +2225,7 @@ export interface Database {
   free_trial_notice: FreeTrialNoticeTable;
   free_trial_alert: FreeTrialAlertTable;
   trial_campaign: TrialCampaignTable;
+  behavior_message: BehaviorMessageTable;
   outreach_dispatch: OutreachDispatchTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;

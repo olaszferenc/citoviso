@@ -81,6 +81,7 @@ import { reportBehaviourPage, reportFunnelPage, reportMockPage } from "../src/co
 import { DEFAULT_TARGETS, foldMockReport, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
 import { foldTrialReport, type RawTrial } from "../src/console/trialReport.js";
 import { reportTrialPage } from "../src/console/trialReportViews.js";
+import { behaviorMessagePage } from "../src/console/behaviorMessagePage.js";
 import { foldRevenueReport, type RevenueSub } from "../src/console/revenueReport.js";
 import { reportRevenuePage } from "../src/console/revenueReportViews.js";
 import { attentionOf, domainStats, lifeSteps, type DomainRecord } from "../src/console/domainRegistry.js";
@@ -2425,6 +2426,28 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "trial-list.png"), undefined, "#rp-trials");
   // ADR-0425: the „Hol szakad meg a próba?” panel.
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "breaks.png"), undefined, "[data-cit-breaks]");
+}
+// ADR-XXXX: CRM „Viselkedés-üzenetek” (assets/design-refs/console/viselkedes-uzenet/, „Konzol-nézet”) — the
+// master switch on, three sent messages with different outcomes, one lead held back by a stop rule.
+{
+  const sent = (h: number, m: number): Date => new Date(Date.UTC(2026, 10, 12, h - 1, m));
+  const row = (i: number, name: string, trigger: "return" | "price" | "start", channel: "email" | "sms", h: number, body: string, o: { came?: boolean; asked?: boolean; started?: boolean } = {}) => ({
+    leadId: `00000000-0000-0000-0000-0000000001${i}0`, name, trigger, triggerAt: sent(h, 0), channel, sentAt: sent(h, 25), body,
+    came: o.came ?? false, asked: o.asked ?? false, started: o.started ?? false, unsub: false,
+  });
+  const html = behaviorMessagePage({
+    settings: { enabled: true, since: sent(9, 0), by: "Ferenc" },
+    filter: "all",
+    rows: [
+      row(1, "Szeged One Apartman", "price", "sms", 14, "Szeged One Apartman: a honlap-terve havi 2 780 Ft-tol indul. Hogy mi van benne es mi nem, itt latja: https://szeged-one-apartman.citoviso.com/?k=ar#ar Citoviso", { came: true, asked: true }),
+      row(2, "Zója Apartmanház", "start", "email", 12, "Zója Apartmanház – egy kattintással elindul", { came: true }),
+      row(3, "Kristály Apartman", "return", "sms", 10, "Kristaly Apartman: ha a honlap-tervevel kapcsolatban kerdese van, a terv aljan azonnal valaszt kap ra. https://kristaly-apartman.citoviso.com/#kerdes Citoviso"),
+    ],
+    stopped: [],
+    waiting: [],
+    flash: null,
+  });
+  await shootConsole(html, path.join(ROOT, "kb/entries", "console-behavior-message", "assets", "hu", "page.png"));
 }
 // The Előfizetők tab (assets/design-refs/console/elofizetok-riport/, variant A): the top (five
 // numbers + the expected income) and the subscriber table. Sample subscribers folded without a

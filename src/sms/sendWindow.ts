@@ -110,3 +110,23 @@ export function mmsPullBlocks(now: Date): string | null {
   }
   return null;
 }
+
+/**
+ * ADR-XXXX — the BEHAVIOUR MESSAGE window (owner, 2026-11-11: „hétköznap 8–20, hétvégén nem”).
+ * The message answers the lead's own step on the plan page, so it gets the escalation
+ * follow-up's hours (SEND_WINDOW, 8–20, ADR-0287) — but on weekdays only. Budapest wall clock.
+ * Unlike SEND_WINDOW it is NOT lifted by MOBILE_SEND_WINDOW_OFF (an owner rule the live box
+ * ignores is no rule, as with ADR-0334).
+ */
+export function behaviorWindowOpen(now: Date): boolean {
+  const day = budapestWeekday(now);
+  if (day === 0 || day === 6) return false;
+  const m = budapestMinutes(now);
+  return m >= SEND_WINDOW.fromHour * 60 && m < SEND_WINDOW.toHour * 60;
+}
+
+/** Why a behaviour message may not go out at `now`, or null when it may (operator-facing). */
+export function behaviorWindowBlocks(now: Date): string | null {
+  if (behaviorWindowOpen(now)) return null;
+  return `viselkedés-üzenet csak hétköznap ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 (Budapest) között megy ki (most ${WEEKDAY_HU[budapestWeekday(now)]} ${budapestHhmm(now)})`; // i18n-exempt: operátori üzenet, sosem éri el a leadet
+}

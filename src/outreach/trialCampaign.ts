@@ -570,7 +570,7 @@ export async function buildTrialCampaignLetterFor(
 
 /** The curator sign-off and the stored guard verdicts of the mock the letter links to; null =
  *  sendable. The SMS branch gets both from mobileOutreachGates. */
-async function artifactBlocks(artifactId: string | null): Promise<string | null> {
+export async function artifactBlocks(artifactId: string | null): Promise<string | null> {
   if (!artifactId) return "nincs mock-artifact — nincs mit kurátornak jóváhagynia"; // i18n-exempt: operátori CLI-kimenet
   const art = await db.selectFrom("mock_artifact").select(["status", "inputs"]).where("id", "=", artifactId).executeTakeFirst();
   if (art?.status !== "approved") {

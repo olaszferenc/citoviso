@@ -1,0 +1,367 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Viselkedés-üzenetek (vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16324f; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-accent-soft:#e3f6fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22); --citui-page:#e8eef3; --citui-link-ink:#0b7894; --citui-sms:#e9e9eb;
+    --citui-ok:#2fa96b; --citui-ok-ink:#1d7a4b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-ink:#8a5a00; --citui-warn-soft:#fff7e6;
+    --citui-bad:#e5484d; --citui-bad-ink:#b3261e; --citui-bad-soft:#fdecec; --citui-violet:#7a5af5;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:var(--citui-page);color:var(--citui-ink)}
+  a{color:var(--citui-link-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button,.seg button{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{border-color:var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink)}
+  .seg button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:13.5px;color:var(--citui-muted)} .note b{color:var(--citui-ink)}
+  .stage{margin:10px auto 30px;container-type:inline-size;width:100%;max-width:1100px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0}
+  .con{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:18px;overflow:hidden;min-height:520px}
+  .head{padding:14px 16px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white)}
+  .head h2{margin:0;font:700 1.25rem/1.2 var(--citui-font-display)} .head p{margin:2px 0 0;color:var(--citui-ink-inverse);opacity:.8;font-size:.85rem}
+  .body{padding:12px} @container (min-width:640px){ .body{padding:20px 24px} }
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;box-shadow:var(--citui-shadow-sm);padding:14px 16px;margin-bottom:14px}
+  .card h3{margin:0 0 8px;font:700 1.05rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .card h4{margin:12px 0 6px;font:700 .8rem/1.2 var(--citui-font-text);letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .muted{color:var(--citui-muted);font-size:.86rem}
+  .pill{display:inline-block;padding:3px 9px;border-radius:var(--citui-radius-pill);font:700 .75rem/1.4 var(--citui-font-text);background:var(--citui-surface-2);color:var(--citui-ink);white-space:nowrap}
+  .pill.bad{background:var(--citui-bad-soft);color:var(--citui-bad-ink)} .pill.warn{background:var(--citui-warn-soft);color:var(--citui-warn-ink)} .pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)} .pill.cy{background:var(--citui-accent-soft);color:var(--citui-link-ink)}
+  /* desktop: rules + simulator side by side; mobile: stacked, simulator first */
+  .grid{display:grid;grid-template-columns:1fr;gap:14px}
+  .grid .sim{order:-1}
+  @container (min-width:860px){ .grid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)} .grid .sim{order:0} }
+  .rules{list-style:none;margin:0;padding:0}
+  .rules li{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--citui-line);font-size:.9rem}
+  .rules li:last-child{border-bottom:0}
+  .rules .k{width:24px;height:24px;border-radius:50%;background:var(--citui-navy-900);color:var(--citui-white);font:700 .72rem/24px var(--citui-font-text);text-align:center}
+  .rules .k.stop{background:var(--citui-bad)}
+  .nums{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+  @container (min-width:640px){ .nums{grid-template-columns:repeat(4,1fr)} }
+  .num{border:1px solid var(--citui-line);border-radius:12px;padding:8px 10px;background:var(--citui-surface)}
+  .num b{display:block;font:700 1.35rem/1.1 var(--citui-font-display);color:var(--citui-navy-900)}
+  .num span{font-size:.76rem;color:var(--citui-muted)}
+  .ctl{display:grid;gap:10px;margin-bottom:10px}
+  @container (min-width:640px){ .ctl{grid-template-columns:1fr 1fr} }
+  .ctl label{display:block;font:700 .7rem/1.2 var(--citui-font-text);letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);margin-bottom:4px}
+  select{width:100%;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:10px;font:600 14px var(--citui-font-text);background:var(--citui-white);color:var(--citui-ink)}
+  .chk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.84rem;margin:4px 0 10px}
+  .chk label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+  .tl{list-style:none;margin:0;padding:0;border-left:2px solid var(--citui-line-strong);margin-left:8px}
+  .tl li{position:relative;padding:6px 0 8px 16px;font-size:.86rem}
+  .tl li::before{content:"";position:absolute;left:-7px;top:11px;width:12px;height:12px;border-radius:50%;background:var(--citui-white);border:2px solid var(--citui-line-strong)}
+  .tl li.visit::before{border-color:var(--citui-navy-900)}
+  .tl li.sig::before{background:var(--citui-warn);border-color:var(--citui-warn)}
+  .tl li.msg::before{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500)}
+  .tl li.drop::before{background:var(--citui-white);border-color:var(--citui-bad)}
+  .tl li.stop::before{background:var(--citui-bad);border-color:var(--citui-bad)}
+  .tl .t{font-weight:700;color:var(--citui-muted);font-size:.78rem;display:block}
+  .tl .why{display:block;color:var(--citui-muted);font-size:.8rem}
+  .tl button{margin-top:4px}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:7px 12px;font:700 .8rem/1 var(--citui-font-text);cursor:pointer;background:var(--citui-navy-900);color:var(--citui-white)}
+  .btn.ghost{background:var(--citui-white);color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
+  .btn.on{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .prev{margin-top:12px;border-top:1px solid var(--citui-line);padding-top:12px}
+  .phone{max-width:330px;border:1px solid var(--citui-line-strong);border-radius:22px;padding:12px;background:var(--citui-white)}
+  .phone .from{font:700 .78rem/1 var(--citui-font-text);color:var(--citui-muted);text-align:center;margin-bottom:8px}
+  .bubble{background:var(--citui-sms);border-radius:16px 16px 16px 4px;padding:9px 12px;font-size:.9rem;white-space:pre-wrap;word-break:break-word}
+  .meter{font-size:.78rem;margin-top:6px;color:var(--citui-muted)} .meter b.bad{color:var(--citui-bad-ink)} .meter b.ok{color:var(--citui-ok-ink)}
+  .mail{border:1px solid var(--citui-line-strong);border-radius:12px;background:var(--citui-white);overflow:hidden}
+  .mail .mh{padding:8px 12px;background:var(--citui-surface-2);font-size:.8rem;border-bottom:1px solid var(--citui-line)}
+  .mail .mb{padding:12px 14px;font-size:.9rem;white-space:pre-wrap}
+  .mail .mf{padding:8px 14px;font-size:.72rem;color:var(--citui-muted);border-top:1px solid var(--citui-line)}
+  .mail .cta{display:inline-block;margin:6px 0;padding:9px 14px;border-radius:10px;background:var(--citui-navy-900);color:var(--citui-white);text-decoration:none;font-weight:700}
+  .prevgrid{display:grid;grid-template-columns:1fr;gap:12px}
+  @container (min-width:640px){ .prevgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)} }
+  .esc{border:2px solid var(--citui-warn);background:var(--citui-warn-soft)}
+  .opt{display:grid;gap:8px;margin-top:8px}
+  @container (min-width:640px){ .opt{grid-template-columns:repeat(3,1fr)} }
+  .opt button{text-align:left;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:12px;padding:10px 12px;font:14px/1.35 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+  .opt button.on{border:2px solid var(--citui-navy-900);background:var(--citui-accent-soft)}
+  .opt button b{display:block;margin-bottom:2px}
+  .okmsg{background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-radius:10px;padding:9px 12px;font-weight:600;font-size:.86rem;margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:.86rem} th{text-align:left;font:700 .68rem/1.2 var(--citui-font-text);letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:8px 6px;border-bottom:1px solid var(--citui-line-strong)}
+  td{padding:9px 6px;border-bottom:1px solid var(--citui-line);vertical-align:top}
+  .hide-m{display:none} @container (min-width:640px){ .hide-m{display:table-cell} }
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px} @container (min-width:640px){ .tiles{grid-template-columns:repeat(5,1fr)} }
+  .tile{border:1px solid var(--citui-line);border-radius:14px;padding:10px 12px;background:var(--citui-white)}
+  .tile .n{font:700 1.5rem/1 var(--citui-font-display);color:var(--citui-navy-900)} .tile .l{font-size:.76rem;color:var(--citui-muted)}
+  .rowcards{display:block} .rowtable{display:none}
+  @container (min-width:640px){ .rowcards{display:none} .rowtable{display:block} }
+  .rc{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--citui-white);font-size:.86rem}
+  .rc b{display:block}
+  .drawer{margin-top:8px;border:1px dashed var(--citui-line-strong);border-radius:10px;padding:10px;background:var(--citui-surface);font-size:.85rem;white-space:pre-wrap}
+  .hid{display:none!important}
+</style></head><body>
+<div class="bar">
+  <b>Viselkedés-üzenetek · terv</b>
+  <button data-v="A" class="on">A · Egy üzenet</button><button data-v="B">B · Háromlépcsős</button><button data-v="C">C · Eseményenként</button><button data-v="K">Konzol-nézet</button>
+  <span class="sp"></span>
+  <button data-size="m" id="szm">Mobil 390px</button><button data-size="d" id="szd">Asztali</button>
+</div>
+<p class="note"><b>Valós adat:</b> éles DB, csak olvasva, 2026-11-05. A leadek és a látogatásaik időpontja valódi; az üzenetek <b>szimulációk</b> („mi ment volna ki, ha a szabály már élne"). Élesre semmi nem megy. A szöveg tényekből áll össze (név, saját cím, terv-szám, árazás), LLM-hívás nincs; a fordítás Bábelé.</p>
+
+<div class="stage" id="stage"><div class="con">
+  <div class="head"><h2 id="vt">A · Egy üzenet, a legerősebb pillanatban</h2><p id="vs"></p></div>
+  <div class="body">
+
+  <div id="strategy">
+    <div class="grid">
+      <div>
+        <div class="card"><h3>Szabályok</h3><ul class="rules" id="rules"></ul></div>
+        <div class="card"><h3>Ma hány leadet érintene?</h3>
+          <p class="muted" style="margin:0 0 6px">996 + 50 kiküldött lead, ebből 40 kiesik (10 leiratkozott, 35 válaszolt, 2 próbázik — átfedéssel).</p>
+          <div class="nums" id="nums"></div>
+          <h4>Küldési ablak (a 2. látogatás + 20 perc, 92 visszatérő)</h4>
+          <div class="seg" id="winseg"><button data-w="916">Hétköznap 9–16 (régi hideg-ablak)</button><button data-w="820" class="on">Hétköznap 8–20 (tulaj-döntés)</button></div>
+          <p class="muted" id="winnote" style="margin:6px 0 0"></p>
+        </div>
+      </div>
+      <div class="sim card">
+        <h3>Lejátszó — valós lead, valós látogatások</h3>
+        <div class="ctl">
+          <div><label for="lead">Lead</label><select id="lead"></select></div>
+          <div><label>SMS-szöveg</label><div class="seg" id="accseg"><button data-a="0" class="on">Ékezet nélkül (GSM-7)</button><button data-a="1">Ékezetes (UCS-2)</button></div></div>
+        </div>
+        <div class="chk"><span class="muted">Leállító (próbaként be lehet kapcsolni):</span>
+          <label><input type="checkbox" data-stop="unsub"> leiratkozott</label>
+          <label><input type="checkbox" data-stop="reply"> válaszolt (SMS/e-mail)</label>
+          <label><input type="checkbox" data-stop="nem"> „NEM"-et írt</label>
+          <label><input type="checkbox" data-stop="trial"> próbát indított</label>
+        </div>
+        <div class="muted" id="leadmeta" style="margin-bottom:8px"></div>
+        <ul class="tl" id="tl"></ul>
+        <div class="prev" id="prev"></div>
+      </div>
+    </div>
+    <div class="card esc"><h3>A mostani eszkalációs ajánlat sorsa</h3>
+      <p style="margin:0 0 6px;font-size:.9rem"><b>Élesen ma (mérve):</b> a /pricing szerint <b>−30%, a 2. különböző napi megnyitásnál, 72 óráig</b>, 24 óra után emlékeztető levél (a brief −50%-ot ír: az a kód alapértéke, élesen a /pricing-on azóta átállították). Eddig <b>12-szer jelent meg, 1-szer nyomták meg, 0 lett belőle</b> rendelés; most 7 ilyen ajánlat él. A bemutatkozó −25%-nak <b>nincs határideje</b> (1 044 / 1 050 ajánlat lejárat nélküli).</p>
+      <p style="margin:0;font-size:.9rem">Ha a visszatérő <b>üzenetet kap</b>, a 72 órás visszaszámláló ugyanarra a pillanatra ül rá — két különböző hang: „kérdezzen nyugodtan" és „siessen, lejár". A sürgető, lejáró kedvezmény a csalás-minta (4.3 fejezet), és nem hozott vevőt.</p>
+      <div class="opt" id="escopt">
+        <button data-e="off"><b>1 · Kivezetjük</b>A /pricing kapcsolója KI — kód nem kell. A 7 élő ajánlat kifut. A −25% határidő nélkül marad; az üzenetek nem kedvezménnyel, hanem válasszal és indítással hívnak.</button>
+        <button data-e="quiet"><b>2 · Marad, csendben</b>A felső sáv marad a lapon, de az üzenetek nem említik, és amíg viselkedés-üzenet megy, a sáv nem jelenik meg (egyszerre egy hang).</button>
+        <button data-e="keep" class="on"><b>3 · Marad, ahogy van (tulaj-döntés, 2026-11-11)</b>Az eszkalációs ajánlat marad („úgy néz ki, ez hoz most egy megrendelést”). A viselkedés-üzenet SOHA nem említ kedvezményt, így nem mond mást, mint a lap.</button>
+      </div>
+      <div class="okmsg" id="escmsg"></div>
+    </div>
+  </div>
+
+  <div id="console" class="hid">
+    <div class="card"><h3>Viselkedés-üzenetek — mi ment ki, mi lett belőle</h3>
+      <p class="muted" style="margin:0 0 10px">Új lap a konzolon (Megkeresések alatt). A mérőszám nem a fizetés (túl ritka), hanem hogy az üzenet után <b>24 órán belül</b> visszajött-e, használta-e a kérdés-panelt, indított-e. Lent: az A-változat szimulált sorai a valós leadeken.</p>
+      <div class="tiles" id="ktiles"></div>
+      <div class="seg" id="kfilter" style="margin-bottom:10px"><button data-f="all" class="on">Mind</button><button data-f="ret2">2. látogatás</button><button data-f="panel">Árnézés</button><button data-f="trial">Próba-gomb</button><button data-f="stop">Leállítva</button></div>
+      <div class="rowtable"><table><thead><tr><th>Lead</th><th>Kiváltó</th><th>Üzenet</th><th class="hide-m">Csatorna</th><th>Ment</th><th>24 órán belül</th></tr></thead><tbody id="ktbody"></tbody></table></div>
+      <div class="rowcards" id="kcards"></div>
+      <div class="drawer hid" id="kdrawer"></div>
+    </div>
+    <div class="card"><h3>Kiváltónként (szimulált)</h3>
+      <table><thead><tr><th>Kiváltó</th><th>Kiment</th><th>Visszajött</th><th>Kérdés-panel</th><th>Indított</th><th class="hide-m">Leiratk.</th></tr></thead><tbody id="kagg"></tbody></table>
+      <p class="muted" style="margin:8px 0 0">Az „eredmény" oszlopok forrása a meglévő <code>mock_view</code>/<code>mock_event</code> + a kérdés-panel és az indítás új eseményei (a „kerdes-inditas" terv adja). Itt minden eredmény üres, mert ma még semmi nem ment ki — a lap a szerkezetet mutatja.</p>
+    </div>
+  </div>
+
+  </div>
+</div></div>
+
+<script>
+(function(){
+"use strict";
+// ---- real data (prod, read-only, 2026-11-05) ----
+var LEADS=[
+ {id:"szeged",name:"Szeged One Apartman",label:"szeged-one-apartman",seg:"nincs honlap",plans:2,mail:false,mob:true,sent:"2026-11-03 13:59",
+  v:[["2026-11-03 14:15",""],["2026-11-03 15:13","panel"],["2026-11-03 16:07",""],["2026-11-03 19:07",""]]},
+ {id:"zoja",name:"Zója Apartmanház",label:"zoja-apartmanhaz",seg:"nincs honlap",plans:2,mail:false,mob:true,sent:"2026-10-28 13:29",esc:true,
+  v:[["2026-10-29 14:05","panel"],["2026-11-02 11:21","panel"],["2026-11-04 16:25","esc"]]},
+ {id:"kristaly",name:"Kristály Apartman",label:"kristaly-apartman",seg:"nincs honlap",plans:2,mail:true,mob:true,sent:"2026-10-27 15:26",
+  v:[["2026-10-27 17:10",""],["2026-10-27 19:43",""],["2026-10-30 07:55","panel"],["2026-10-30 09:38","panel"]]},
+ {id:"violetta",name:"Violetta Vendégház",label:"violetta-vendeghaz",seg:"nincs honlap",plans:1,mail:true,mob:true,sent:"2026-10-07 09:23",
+  v:[["2026-10-07 09:57",""],["2026-10-27 10:13",""],["2026-10-27 11:51",""],["2026-10-28 06:27","panel trial"]]},
+ {id:"marti",name:"Márti Vendégház",label:"marti-vendeghaz",seg:"nincs honlap",plans:1,mail:true,mob:true,sent:"2026-10-07 09:41",
+  v:[["2026-10-07 13:10",""],["2026-10-07 16:36",""],["2026-10-07 21:41",""],["2026-10-26 15:48","trial"]]},
+ {id:"paksi",name:"Paksi Magánszálláshely",label:"paksi-maganszallashely",seg:"nincs honlap",plans:2,mail:true,mob:true,sent:"2026-10-27 15:43",
+  v:[["2026-10-27 16:24",""],["2026-10-27 19:55",""],["2026-10-27 21:21",""],["2026-10-28 11:10",""],["2026-10-28 11:50",""],["2026-10-28 17:45",""]]},
+ {id:"daniel",name:"Dániel Vendégháza",label:"daniel-vendeghaza",seg:"van honlapja",plans:2,mail:true,mob:false,sent:"2026-11-03 11:04",
+  v:[["2026-11-03 14:54",""],["2026-11-03 17:30","panel"]]},
+ {id:"rigokert",name:"Rigókert Vendégház",label:"rigokert-vendeghaz",seg:"nincs honlap",plans:1,mail:false,mob:true,sent:"2026-11-03 09:19",
+  v:[["2026-11-03 11:09","panel"],["2026-11-03 14:38",""]]}
+];
+var PRICE="2 780"; // cheapest package list price on prod: base 1 800 + Alap modules 980 (HUF/month)
+var SEASON="2027-01-13 09:00"; // B: season reminder date (parameter)
+var NUMS=[ // prod counts, reachable (not stopped)
+ ["92","2. látogatás (≥2)"],["27","3. látogatás (≥3)"],["17","árnézés, próba nélkül"],["5","próba-gomb, nem küldte el"],
+ ["60","2. tervet is megnézte"],["2","próba indult, nem lépett be (ADR-0417/0425 viszi)"],["0","„Mi tartotta vissza?” válasz"],["98","ebből egyedi lead (A/C kiváltói)"]];
+
+// ---- SMS encoding: mirrors src/sms/encoding.ts exactly ----
+var GSM7="@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+var BASIC={}; Array.from(GSM7).forEach(function(c){BASIC[c]=1});
+function isGsm7(t){return Array.from(t).every(function(c){return BASIC[c]})}
+function smsEnc(t){var g=isGsm7(t),n=Array.from(t).length;var one=g?160:70,part=g?153:67;return{gsm7:g,length:n,segments:n===0?0:(n<=one?1:Math.ceil(n/part))}}
+var PUNCT={"„":'"',"“":'"',"”":'"',"‘":"'","’":"'","–":"-","—":"-","…":"..."};
+function toGsm7(t){var f=Array.from(t.normalize("NFD").replace(/[̀-ͯ]/g,"")).map(function(c){return PUNCT[c]||c}).join("");return Array.from(f).filter(function(c){return BASIC[c]}).join("").replace(/ {2,}/g," ")}
+
+// ---- time helpers: Budapest wall-clock carried as UTC fields ----
+function P(s){return new Date(s.replace(" ","T")+":00Z")}
+function F(d){var p=function(n){return(n<10?"0":"")+n};return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "+p(d.getUTCHours())+":"+p(d.getUTCMinutes())}
+var DN=["vas","hét","kedd","sze","csüt","pén","szo"];
+function FS(d){return F(d).slice(5).replace("-",".")+" ("+DN[d.getUTCDay()]+")"}
+function addM(d,m){return new Date(d.getTime()+m*60000)}
+var WIN={"916":[9,16],"820":[8,20]};
+function inWin(d,w){var day=d.getUTCDay(),h=d.getUTCHours()+d.getUTCMinutes()/60;return day>=1&&day<=5&&h>=WIN[w][0]&&h<WIN[w][1]}
+function nextOpen(d,w){if(inWin(d,w))return d;var x=new Date(d.getTime());for(var i=0;i<10;i++){var day=x.getUTCDay(),h=x.getUTCHours()+x.getUTCMinutes()/60;
+  if(day>=1&&day<=5&&h<WIN[w][0]){x.setUTCHours(WIN[w][0],0,0,0);return x}
+  x.setUTCDate(x.getUTCDate()+1);x.setUTCHours(0,0,0,0);if(inWin(addM(x,WIN[w][0]*60),w)){x.setUTCHours(WIN[w][0],0,0,0);return x}}return x}
+function addWorkdays(d,n){var x=new Date(d.getTime());while(n>0){x.setUTCDate(x.getUTCDate()+1);var k=x.getUTCDay();if(k>=1&&k<=5)n--}return x}
+
+// ---- messages: deterministic, from facts only ----
+function link(l,frag){return l.label+".citoviso.com"+(frag==="ar"?"/?k=ar#ar":frag?"/#"+frag:"")}
+var MSG={
+ ask:{sub:function(l){return l.name+" – kérdése van a tervvel?"},
+  sms:function(l){return l.name+": ha a honlap-tervével kapcsolatban kérdése van, a terv alján azonnal választ kap rá. "+link(l,"kerdes")+" Citoviso."},
+  mail:function(l){return "Tisztelt "+l.name+"!\n\nHa a honlap-"+(l.plans>1?"terveivel":"tervével")+" kapcsolatban kérdése van — mennyibe kerül, mi van benne, mi lesz a próba után —, a terv alján a „Kérdése van?” résznél azonnal választ kap rá, várakozás nélkül.\n\n[Kérdezek]\n\nÜdvözlettel:\nKiss Eszter, Citoviso"}, cta:"kerdes"},
+ price:{sub:function(l){return l.name+" – mennyibe kerül a honlap?"},
+  sms:function(l){return l.name+": a honlap-terve havi "+PRICE+" Ft-tól indul. Hogy mi van benne és mi nem, itt látja: "+link(l,"ar")+" Citoviso."},
+  mail:function(l){return "Tisztelt "+l.name+"!\n\nA honlap-terve havi "+PRICE+" forinttól indul (Alap csomag, listaár).\n\nHogy pontosan mi van benne, mi kerül pluszba, és lemondható-e, a terv alján egy helyen megtalálja — és ha más kérdése van, ott azonnal választ kap.\n\n[Mi van benne?]\n\nÜdvözlettel:\nKiss Eszter, Citoviso"}, cta:"ar"},
+ start:{sub:function(l){return l.name+" – egy kattintással elindul"},
+  sms:function(l){return l.name+": a honlap-tervéből egy kattintással élő honlap lesz, 14 napig ingyen, kártya nélkül. "+link(l,"inditas")+" Citoviso."},
+  mail:function(l){return "Tisztelt "+l.name+"!\n\nA honlap-tervéből egy kattintással élő honlap lesz a saját címén ("+l.label+".citoviso.com), és 14 napig ingyen fut, kártya nélkül. Nem kell semmit beállítania; a próba végén Ön dönt, folytatja-e.\n\n[Elindítom]\n\nÜdvözlettel:\nKiss Eszter, Citoviso"}, cta:"inditas"},
+ season:{sub:function(l){return l.name+" – frissített honlap-terv a szezonra"},
+  sms:function(l){return l.name+": közeleg a szezon, frissítettük a honlap-tervét. Megnézheti itt: "+link(l,"")+" Citoviso."},
+  mail:function(l){return "Tisztelt "+l.name+"!\n\nKözeleg a szezon, ezért frissítettük a honlap-tervét a nyilvános adatai alapján.\n\n[Megnézem]\n\nHa kérdése van, a terv alján azonnal választ kap.\n\nÜdvözlettel:\nKiss Eszter, Citoviso"}, cta:""}
+};
+var TRIG={ret2:"2. látogatás",panel:"árnézés („Árak és rendelés”), próba nélkül",trial:"próba-gomb, de nem küldte el",again:"újra visszajött az 1. üzenet után",season:"szezon-nyitás",ret3:"3. látogatás"};
+
+// ---- the three strategies ----
+var V={
+ A:{t:"A · Egy üzenet, a legerősebb pillanatban",s:"Leadenként EGYETLEN üzenet, életében egyszer. Ami előbb jön: 2. látogatás, árnézés vagy el nem küldött próba-gomb.",
+  rules:[["1","Kiváltó: az első a három közül — 2. látogatás · árnézés („Árak és rendelés”) próba nélkül · próba-gomb, el nem küldve. A szöveg a kiváltóhoz illik (kérdés / ár / indítás)."],
+   ["2","Időzítés: az utolsó látogatás után 20 perccel (ha közben újra jön, tolódik) — ne olvasás közben jöjjön. Ablakon kívül: a következő ablak-nyitáskor."],
+   ["3","Legfeljebb 1 üzenet leadenként, örökre. Mobil van → SMS, különben e-mail."],
+   ["⛔","Nem megy: leiratkozott · „ne keressük” · válaszolt (ott a válasz-út dönt) · próbázik (ADR-0417/0425 viszi) · rendelt · közös mobil, ha a másik szállás már kapott (ADR-0353).",1]],
+  plan:function(l,o){return planA(l,o)}},
+ B:{t:"B · Háromlépcsős szekvencia",s:"1. lépés mint A-ban; 2. lépés csak, ha UTÁNA megint visszajön; 3. lépés a szezon-nyitáskor. Legfeljebb 3 üzenet, köztük legalább 2 munkanap.",
+  rules:[["1","Első lépés: ugyanaz, mint A (2. látogatás / árnézés / próba-gomb, +20 perc, kiváltóhoz illő szöveg)."],
+   ["2","Második lépés: csak ha legalább 2 munkanappal az első üzenet UTÁN újra megnyitja a tervet (+20 perc) → „egy kattintással elindul” (a kerdes-inditas terv gombjára)."],
+   ["3","Harmadik lépés: szezon-nyitás (paraméter, ma 2027-01-13 9:00) minden visszatérőnek, aki nem indított — „frissítettük a tervét”. Viselkedés nélkül is megy, de csak a meleg listának."],
+   ["⛔","Leállás ugyanaz, mint A-ban; bármelyik leállító után a hátralévő lépések törlődnek.",1]],
+  plan:function(l,o){return planB(l,o)}},
+ C:{t:"C · Eseményenként egy üzenet",s:"Minden eseményfajta EGYSZER vált ki üzenetet, a saját szövegével. Egy napon legfeljebb 1 üzenet (a legerősebb nyer), összesen legfeljebb 3.",
+  rules:[["1","Események és szövegük: 2. látogatás → kérdés · árnézés próba nélkül → ár + mi van benne · próba-gomb el nem küldve → egy kattintásos indítás · 3. látogatás → indítás (ha még nem kapta)."],
+   ["2","Egy napon 1 üzenet: ha több esemény jön, a legerősebb megy (próba-gomb > árnézés > látogatás), a többi elmarad. Előző üzenet után 24 órán belül nem jön új."],
+   ["3","Időzítés: +20 perc, ablakon kívül a következő nyitáskor. Összesen legfeljebb 3 üzenet."],
+   ["⛔","Leállás ugyanaz, mint A-ban.",1]],
+  plan:function(l,o){return planC(l,o)}}
+};
+
+function visits(l){return l.v.map(function(x,i){return{at:P(x[0]),n:i+1,f:x[1]}})}
+function stopAt(o){return o.stops.length?o.stops:null}
+// pending send time for a trigger at visit vi: +20 min, pushed by later visits starting before it
+function sendTime(vs,i,w){var t=addM(vs[i].at,20);for(var j=i+1;j<vs.length;j++){if(vs[j].at<t)t=addM(vs[j].at,20);else break}return nextOpen(t,w)}
+function firstTrigger(vs,from){for(var i=from;i<vs.length;i++){var f=vs[i].f;if(/trial/.test(f))return{i:i,k:"trial",m:"start"};if(/panel/.test(f))return{i:i,k:"panel",m:"price"};if(vs[i].n>=2)return{i:i,k:"ret2",m:"ask"}}return null}
+function planA(l,o){var vs=visits(l),out=[];var tr=firstTrigger(vs,0);if(tr)out.push({at:sendTime(vs,tr.i,o.w),k:tr.k,m:tr.m,vi:tr.i});return out}
+function planB(l,o){var vs=visits(l),out=planA(l,o);if(!out.length)return out;var s1=out[0];var minAt=addWorkdays(s1.at,2);
+  if(s1.m!=="start")for(var i=0;i<vs.length;i++){if(vs[i].at>=minAt){out.push({at:sendTime(vs,i,o.w),k:"again",m:"start",vi:i});break}}
+  out.push({at:P(SEASON),k:"season",m:"season"});return out}
+function planC(l,o){var vs=visits(l),out=[],used={},rank={start:3,price:2,ask:1};
+  vs.forEach(function(v,i){var c=[];if(/trial/.test(v.f)&&!used.trial)c.push({k:"trial",m:"start"});if(/panel/.test(v.f)&&!/trial/.test(v.f)&&!used.panel)c.push({k:"panel",m:"price"});
+    if(v.n===2&&!used.ret2)c.push({k:"ret2",m:"ask"});if(v.n===3&&!used.ret3)c.push({k:"ret3",m:"start"});
+    c.forEach(function(x){used[x.k]=1});if(!c.length)return;c.sort(function(a,b){return rank[b.m]-rank[a.m]});var best=c[0];var at=sendTime(vs,i,o.w);
+    var real=out.filter(function(x){return!x.drop});var last=real.length?real[real.length-1]:null;var drop=null;
+    if(real.length>=3)drop="már 3 üzenet ment";else if(last&&(at-last.at)<24*3600e3)drop="24 órán belül már ment üzenet";else if(out.some(function(x){return!x.drop&&x.m===best.m}))drop="ezt a szöveget már megkapta";
+    c.slice(1).forEach(function(x){out.push({at:at,k:x.k,m:x.m,vi:i,drop:"ugyanaznap az erősebb esemény nyert"})});
+    out.push({at:at,k:best.k,m:best.m,vi:i,drop:drop})});
+  return out}
+
+// ---- state + render ----
+var st={v:"A",w:"820",acc:false,lead:"szeged",stops:[],sel:0,esc:"keep",kf:"all"};
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function leadOf(){return LEADS.filter(function(x){return x.id===st.lead})[0]}
+var STOPTXT={unsub:"leiratkozott",reply:"válaszolt",nem:"„NEM”-et írt",trial:"próbát indított"};
+
+function renderStrategy(){
+  var v=V[st.v];$("vt").textContent=v.t;$("vs").textContent=v.s;
+  $("rules").innerHTML=v.rules.map(function(r){return'<li><span class="k'+(r[2]?" stop":"")+'">'+esc(r[0])+'</span><span>'+esc(r[1])+'</span></li>'}).join("");
+  $("nums").innerHTML=NUMS.map(function(n){return'<div class="num"><b>'+n[0]+'</b><span>'+esc(n[1])+'</span></div>'}).join("");
+  $("winnote").innerHTML=st.w==="916"?"114 visszatérőből <b>55</b>-nél (48%) menne ki az üzenet a pillanatban (8–17 között 62, 54%); a többi a következő hétköznap reggel — addigra a pillanat elmúlt. (Éles mérés, 2026-11-11.)":"114-ből <b>85</b>-nél (75%) menne ki a pillanatban. Ugyanaz az ablak, mint az eszkalációs emlékeztetőé (ADR-0287, 8–20). Hétvégén nem megy. (Éles mérés, 2026-11-11.)";
+  var l=leadOf();var o={w:st.w};var plan=v.plan(l,o);var vs=visits(l);
+  $("leadmeta").innerHTML='<span class="pill">'+esc(l.seg)+'</span> <span class="pill">'+l.plans+' terv</span> <span class="pill">'+(l.mob&&l.mail?"e-mail + mobil":l.mob?"csak mobil":"csak e-mail")+'</span> '+(l.esc?'<span class="pill warn">−30% sáv élt</span> ':"")+'<span class="muted">kiküldve '+FS(P(l.sent))+'</span>';
+  var items=[];vs.forEach(function(x){items.push({at:x.at,type:"visit",x:x})});
+  var stopT=null;if(st.stops.length){stopT=addM(vs[0].at,5);items.push({at:stopT,type:"stop"})}
+  plan.forEach(function(p,i){items.push({at:p.at,type:"msg",p:p,i:i})});
+  items.sort(function(a,b){return a.at-b.at||(a.type==="visit"?-1:1)});
+  var sent=0,firstSent=-1;
+  $("tl").innerHTML=items.map(function(it){
+    if(it.type==="visit"){var f=it.x.f;var tags=[];if(/panel/.test(f))tags.push("árat nézett");if(/trial/.test(f))tags.push("próba-gomb, nem küldte el");if(/esc/.test(f))tags.push("−30% sáv megjelent");
+      return'<li class="visit'+(tags.length?" sig":"")+'"><span class="t">'+FS(it.at)+'</span>'+it.x.n+'. látogatás'+(tags.length?' — <b>'+esc(tags.join(", "))+'</b>':"")+'</li>'}
+    if(it.type==="stop")return'<li class="stop"><span class="t">'+FS(it.at)+'</span><b>Leállító: '+esc(st.stops.map(function(s){return STOPTXT[s]}).join(", "))+'</b><span class="why">innentől semmi nem megy ki</span></li>';
+    var p=it.p;var stopped=stopT&&p.at>=stopT;var drop=p.drop||(stopped?"leállítva":null);
+    if(!drop){sent++;if(firstSent<0)firstSent=it.i}
+    var late=p.vi!=null&&(p.at-addM(visits(l)[p.vi].at,20))>60*60e3;
+    return'<li class="'+(drop?"drop":"msg")+'"><span class="t">'+FS(p.at)+'</span>'+(drop?'<s>':'<b>')+esc(TRIG[p.k])+' → '+(l.mob?"SMS":"e-mail")+(drop?'</s>':'</b>')+
+      '<span class="why">'+(drop?"nem megy: "+esc(drop):p.vi==null?"ütemezett (szezon-dátum), viselkedéstől független":(late?"az ablak miatt később — a pillanat elmúlt":"a pillanatban (≤ 1 óra)"))+'</span>'+
+      '<button class="btn ghost'+(st.sel===it.i?" on":"")+'" data-show="'+it.i+'">Szöveg</button></li>'}).join("");
+  if(!plan.length)$("tl").innerHTML+='<li class="drop"><span class="t">—</span>Nincs kiváltó: ennek a leadnek nem menne üzenet.</li>';
+  if(st.sel>=plan.length)st.sel=0;
+  renderPreview(l,plan[st.sel]);
+}
+function renderPreview(l,p){
+  if(!p){$("prev").innerHTML="";return}
+  var m=MSG[p.m];var raw=m.sms(l);var txt=st.acc?raw:toGsm7(raw);var e=smsEnc(txt);
+  var smsHtml='<div class="phone"><div class="from">Citoviso (+36 30 120 0971)</div><div class="bubble" id="smsbody">'+esc(txt)+'</div>'+
+   '<div class="meter">'+e.length+' karakter · '+(e.gsm7?"GSM-7":"UCS-2")+' · <b class="'+(e.segments<=2?"ok":"bad")+'">'+e.segments+' szelet</b>'+(e.segments>2?" — 2 fölött":"")+'</div></div>';
+  var body=m.mail(l).split("\n").map(esc).join("\n").replace(/\[(.+?)\]/,function(_,t){return'<a class="cta" href="#'+(m.cta||"")+'">'+t+'</a>'});
+  var mailHtml='<div class="mail"><div class="mh"><b>Feladó:</b> Kiss Eszter, Citoviso<br><b>Tárgy:</b> '+esc(m.sub(l))+'</div><div class="mb">'+body+'</div>'+
+   '<div class="mf">Ha nem szeretne több levelet: egy kattintással leiratkozhat. A küldő: Olasz Ferenc e.v. · cégadatok a lábban, mint a megkeresésben.</div></div>';
+  $("prev").innerHTML='<h4 style="margin-top:0">Szöveg — '+esc(TRIG[p.k])+(p.drop?' <span class="pill bad">nem menne ki</span>':'')+'</h4><div class="prevgrid"><div>'+(l.mob?smsHtml:'<p class="muted">Nincs mobilszám — e-mail megy.</p>')+'</div><div>'+(l.mail?mailHtml:'<p class="muted">Nincs e-mail-cím — csak SMS. (Az e-mail változat a többi leadnél látszik.)</p>')+'</div></div>'+
+   '<p class="muted" style="margin:8px 0 0">A link a „kerdes-inditas” terv paneljére/gombjára mutat (<code>#'+esc(m.cta||"")+'</code>); a válaszokat az a terv adja. A leiratkozás a linkelt lapon van; a „NEM” válasz NEM iratkoztat le automatikusan (tulaj, 2026-11-11), a válasz a tulaj jóváhagyó sorába megy.</p>';
+}
+var ESCMSG={off:"Kivezetés: a /pricing „Döntés-segítő ajánlat” kapcsolója KI. Kód és deploy nem kell; a bemutatkozó −25% marad.",quiet:"Csendben marad: a sáv csak akkor jelenik meg, ha az elmúlt 72 órában nem ment viselkedés-üzenet. Ez kódváltozás (egy feltétel).",keep:"DÖNTÉS: marad, ahogy van. Az eszkaláció kódja nem változik; az üzenet-szövegekben kedvezmény nem szerepel."};
+function renderEsc(){Array.from(document.querySelectorAll("#escopt button")).forEach(function(b){b.classList.toggle("on",b.dataset.e===st.esc)});$("escmsg").textContent=ESCMSG[st.esc]}
+
+// ---- console view: simulated A rows over the 8 real leads ----
+function renderConsole(){
+  var rows=[];LEADS.forEach(function(l){var p=planA(l,{w:st.w})[0];if(p)rows.push({l:l,p:p,res:"—"})});
+  rows.push({l:{name:"Duna Vibe House",label:"dunavibehouse",mob:true},p:{k:"ret2",m:"ask",at:P("2026-11-03 10:34")},stop:"fizetett 10:16 — leállítva"});
+  var f=st.kf;var shown=rows.filter(function(r){return f==="all"||(f==="stop"?r.stop:(!r.stop&&r.p.k===f))});
+  var sentN=rows.filter(function(r){return!r.stop}).length;
+  $("ktiles").innerHTML=[[sentN,"kiment (szimulált)"],["—","24 órán belül visszajött"],["—","kérdés-panelt nyitott"],["—","indított"],["0","leiratkozott"]].map(function(t){return'<div class="tile"><div class="n">'+t[0]+'</div><div class="l">'+t[1]+'</div></div>'}).join("");
+  $("ktbody").innerHTML=shown.map(function(r,i){return'<tr data-row="'+rows.indexOf(r)+'" style="cursor:pointer"><td><b>'+esc(r.l.name)+'</b></td><td>'+esc(TRIG[r.p.k])+'</td><td>'+esc(MSG[r.p.m].sub(r.l).split(" – ")[1])+'</td><td class="hide-m">'+(r.l.mob?"SMS":"e-mail")+'</td><td>'+(r.stop?'<span class="pill bad">nem</span>':FS(r.p.at))+'</td><td>'+(r.stop?esc(r.stop):'<span class="muted">vár</span>')+'</td></tr>'}).join("");
+  $("kcards").innerHTML=shown.map(function(r){return'<div class="rc" data-row="'+rows.indexOf(r)+'"><b>'+esc(r.l.name)+'</b>'+esc(TRIG[r.p.k])+' · '+(r.l.mob?"SMS":"e-mail")+'<br>'+(r.stop?'<span class="pill bad">'+esc(r.stop)+'</span>':'<span class="muted">'+FS(r.p.at)+' · eredmény: vár</span>')+'</div>'}).join("");
+  $("kdrawer").classList.add("hid");
+  window.__rows=rows;
+  var ks=["ret2","panel","trial"];$("kagg").innerHTML=ks.map(function(k){var n=rows.filter(function(r){return!r.stop&&r.p.k===k}).length;return'<tr><td>'+esc(TRIG[k])+'</td><td>'+n+'</td><td>—</td><td>—</td><td>—</td><td class="hide-m">—</td></tr>'}).join("");
+}
+function openRow(i){var r=window.__rows[i];var d=$("kdrawer");d.classList.remove("hid");d.textContent=(r.stop?"Leállítva: "+r.stop+"\n\n":"")+"SMS-szöveg (ékezet nélkül):\n"+toGsm7(MSG[r.p.m].sms(r.l))}
+
+function render(){
+  var k=st.v==="K";$("strategy").classList.toggle("hid",k);$("console").classList.toggle("hid",!k);
+  Array.from(document.querySelectorAll(".bar [data-v]")).forEach(function(b){b.classList.toggle("on",b.dataset.v===st.v)});
+  if(k){$("vt").textContent="Konzol-nézet · Viselkedés-üzenetek";$("vs").textContent="Ki mit kapott, mikor, mi lett belőle. A sorra kattintva a kiment szöveg.";renderConsole()}else{renderStrategy();renderEsc()}
+}
+// ---- wiring ----
+$("lead").innerHTML=LEADS.map(function(l){return'<option value="'+l.id+'">'+esc(l.name)+' — '+l.v.length+' látogatás</option>'}).join("");
+document.querySelector(".bar").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+  if(b.dataset.v){st.v=b.dataset.v;st.sel=0;render()}
+  if(b.dataset.size)setSize(b.dataset.size)});
+$("lead").addEventListener("change",function(){st.lead=this.value;st.sel=0;render()});
+$("winseg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st.w=b.dataset.w;Array.from(this.children).forEach(function(c){c.classList.toggle("on",c===b)});render()});
+$("accseg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st.acc=b.dataset.a==="1";Array.from(this.children).forEach(function(c){c.classList.toggle("on",c===b)});render()});
+document.querySelector(".chk").addEventListener("change",function(){st.stops=Array.from(document.querySelectorAll("[data-stop]:checked")).map(function(c){return c.dataset.stop});render()});
+$("tl").addEventListener("click",function(e){var b=e.target.closest("[data-show]");if(!b)return;st.sel=+b.dataset.show;render()});
+$("escopt").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st.esc=b.dataset.e;renderEsc()});
+$("kfilter").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;st.kf=b.dataset.f;Array.from(this.children).forEach(function(c){c.classList.toggle("on",c===b)});renderConsole()});
+$("console").addEventListener("click",function(e){var r=e.target.closest("[data-row]");if(r)openRow(+r.dataset.row)});
+function setSize(s){$("stage").classList.toggle("m",s==="m");$("szm").classList.toggle("on",s==="m");$("szd").classList.toggle("on",s==="d")}
+setSize(window.innerWidth<700?"m":"d");
+var h=(location.hash||"").replace("#","");if(/^[ABCK]$/.test(h))st.v=h;
+render();
+window.__test={st:st,render:render,planA:planA,planB:planB,planC:planC,LEADS:LEADS,smsEnc:smsEnc,toGsm7:toGsm7,MSG:MSG};
+})();
+</script>
+</body></html>

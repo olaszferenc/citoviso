@@ -1917,6 +1917,27 @@ async function handle(
       return void res.end(Buffer.from(row.image));
     }
   }
+  // GET /viselkedes-uzenetek — ADR-XXXX, the behaviour message's console tab (plan: viselkedes-uzenet, „Konzol-nézet”).
+  // POST /viselkedes-uzenetek/kapcsolo (on=1|0) — the master switch; turning it on stamps `since` (no retroactive sweep).
+  if (path === "/viselkedes-uzenetek" || path === "/viselkedes-uzenetek/kapcsolo") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const { behaviorMessagePage, getBehaviorPage, isBehaviorFilter } = await import("./behaviorMessagePage.js");
+    if (method === "POST" && path === "/viselkedes-uzenetek/kapcsolo") {
+      const form = await readBody(req);
+      const { setBehaviorEnabled } = await import("../outreach/behaviorMessage.js");
+      const on = form.get("on") === "1";
+      await setBehaviorEnabled(on, op.displayName || op.username);
+      return redirect(res, `/viselkedes-uzenetek?ok=${on ? "be" : "ki"}`);
+    }
+    if (method === "GET" && path === "/viselkedes-uzenetek") {
+      const f = url.searchParams.get("f");
+      const ok = url.searchParams.get("ok");
+      const lang = consoleLang();
+      const flash = ok === "be" ? T(lang, "Bekapcsolva — az innentől történő lépésekre megy üzenet.") : ok === "ki" ? T(lang, "Kikapcsolva — a futás semmit nem küld.") : null;
+      return send(res, 200, behaviorMessagePage(await getBehaviorPage(isBehaviorFilter(f) ? f : "all", flash)));
+    }
+  }
   // POST /jovahagyas/nemnezte/:outbox (d=mms|nem) — the owner's decision, then the next lead of the tab.
   {
     const m = method === "POST" ? /^\/jovahagyas\/nemnezte\/([0-9a-f-]{36})$/i.exec(path) : null;

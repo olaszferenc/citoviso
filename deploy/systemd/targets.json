@@ -3,6 +3,7 @@
   "timers": {
     "citoviso-billing.timer": { "target": "prod" },
     "citoviso-offer-followup.timer": { "target": "prod" },
+    "citoviso-behavior-message.timer": { "target": "prod" },
     "citoviso-booking-maintenance.timer": { "target": "prod" },
     "citoviso-domain-resume.timer": { "target": "prod" },
     "citoviso-tenant-tls.timer": { "target": "prod" },

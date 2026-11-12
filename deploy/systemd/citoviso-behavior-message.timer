@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso viselkedés-üzenet 10 percenként (ADR-XXXX)
+
+[Timer]
+# 10 percenként, egész nap: az ablakot (hétköznap 8:00–20:00 Europe/Budapest) a KÓD tartja,
+# nem ez a naptár — az éles gép UTC-ben fut. Az üzenet a lead utolsó aktivitása után 20 perccel
+# esedékes; a 10 perces ütem így 20–30 perc múlva viszi ki. Kikapcsolt főkapcsolóval, ablakon
+# kívül a futás semmit nem küld; futásonként legfeljebb 5 üzenet.
+OnCalendar=*:0/10
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

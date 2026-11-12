@@ -3613,6 +3613,23 @@ if [ -f scripts/trial-campaign-check.mts ] && \
   echo "[pre-commit] trial-campaign-check (próba-kampány: levél, SMS, why-oldal, egy lövés, follow-up)…"
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-campaign-check.mts >"$GATE_LOG" || gate_failed
 fi
+# behavior-message-check (ADR-XXXX, viselkedés-üzenet, A változat): az SMS GSM-7 és ≤ 2 szelet (hosszú
+#     névnél a név rövidül, a link soha), nincs „írja vissza: NEM” sor, nincs kedvezmény, a link a lépés
+#     horgonyára visz (#kerdes · ?k=ar#ar · #inditas); a §C kapu (SMS + levél) átengedi; hétköznap 8–20; a
+#     kiváltók (visszatérés, árnézés, próba-gomb; a saját #inditas linkünk nem), csak a főkapcsoló UTÁNI
+#     események; a leállítók (leiratkozott, „ne keressük”, válaszolt, próbázik, archivált, rendelés); EGY
+#     LÖVÉS (szombaton nem foglal, olvasás közben nem megy, bukás feloldja, ikercím nem kap); a főkapcsoló
+#     alapból KI. Saját sorok a közös dev-DB-n, `finally`-ben törölve; mock szállító kötelező. ~10 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/behavior-message-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(behaviorMessage|behaviorMessageCopy|outreachCheck|sendOutreachSms|trialCampaign)\.ts$|^src/sms/sendWindow\.ts$|^migrations/0134_behavior_message\.sql$|^scripts/behavior-message(-check)?\.mts$'; then
+  if changed_files | grep -qE '^scripts/behavior-message-check\.mts$'; then
+    echo "[pre-commit] behavior-message-check --self-test (a viselkedés-üzenet őr pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/behavior-message-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] behavior-message-check (viselkedés-üzenet: szöveg, ablak, kiváltók, leállítók, egy lövés)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/behavior-message-check.mts >"$GATE_LOG" || gate_failed
+fi
 # free-trial-config-check (ADR-0342, /pricing „Ingyenes próba” szekció): határok, a POST-értelmezés
 #     (régi fül nem nulláz, kikapcsolva a tárolt szám marad), a POST minden írás ELŐTT utasít el, a lap a
 #     tárolt értéket mutatja, kikapcsolt próba → startTrial 'disabled'. Nem ír DB-sort. ~3 mp.

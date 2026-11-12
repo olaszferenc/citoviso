@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-12_viselkedes_uzenet_megvalositas.md](2026-11-12_viselkedes_uzenet_megvalositas.md) — 2026-11-12 — Viselkedés-üzenet (A változat) megvalósítva (SUB cit3ea34be2)
 - [2026-11-12_riport_tevekenyseg_ido_elteres.md](2026-11-12_riport_tevekenyseg_ido_elteres.md) — 2026-11-12 — Riport vs. Tevékenység-oldal: 1 órás időeltérés (élesítve)
 - [2026-11-12_lead_allomany.md](2026-11-12_lead_allomany.md) — 2026-11-12 — Lead-állomány a CRM-kártya helyett + Visszatérés csatorna-badge
 - [2026-11-12_latogatas_meres_lezaratlan.md](2026-11-12_latogatas_meres_lezaratlan.md) — 2026-11-12 — Látogatás-mérés „lezáratlan” javítva (mobil záró jel + Tevékenység-oldal)
