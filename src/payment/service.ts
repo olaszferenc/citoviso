@@ -935,10 +935,17 @@ export async function chargeRenewalWithToken(
     if (!gw.chargeRecurring) return "failed";
     const oi = await db
       .selectFrom("order_intent")
-      .select(["id", "price", "billing_period", "kind", "buyer_country", "currency"])
+      .select(["id", "price", "billing_period", "kind", "buyer_country", "currency", "pricing_region", "buyer_type", "vat_treatment"])
       .where("id", "=", orderIntentId)
       .executeTakeFirst();
     if (!oi || oi.kind !== "renewal" || oi.price == null) return "failed";
+    // ADR-XXXX (tulaj 11-12): the 100 % OSS hold covers the token renewal too — the same gate
+    // as the pay-link (which the failure path then hits and refuses as well).
+    const renewBlock = await paymentMoneyBlock(oi);
+    if (renewBlock) {
+      console.warn(`[billing] auto-terhelés VISSZATARTVA (${orderIntentId}): ${renewBlock}`);
+      return "failed";
+    }
 
     // Crash self-heal: the cycle may ALREADY be paid with the settlement lost
     // (a crash between mark-paid and applyRenewalPaid, or a rolled-back period).
@@ -1118,10 +1125,15 @@ export async function chargeUpsellWithToken(
     if (!gw.chargeRecurring) return "failed";
     const oi = await db
       .selectFrom("order_intent")
-      .select(["id", "price", "billing_period", "kind", "currency"])
+      .select(["id", "price", "billing_period", "kind", "currency", "pricing_region", "buyer_country", "buyer_type", "vat_treatment"])
       .where("id", "=", orderIntentId)
       .executeTakeFirst();
     if (!oi || oi.kind !== "upsell" || oi.price == null) return "failed";
+    const upsellBlock = await paymentMoneyBlock(oi);
+    if (upsellBlock) {
+      console.warn(`[upsell] kártyás terhelés VISSZATARTVA (${orderIntentId}): ${upsellBlock}`);
+      return "failed";
+    }
 
     // Crash self-heal: the order may ALREADY be paid with the settlement lost.
     // Charging again would be a DOUBLE CHARGE — settle the paid payment instead.
