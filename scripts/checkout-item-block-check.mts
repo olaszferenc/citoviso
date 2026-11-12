@@ -204,7 +204,23 @@ const STEP1 = `(function () {
   };
 })()`;
 
+/**
+ * The fixture's photo is an external URL (picsum.photos). Measured 2026-11-12: with that host
+ * unreachable the `load` event never came and the gate timed out on main too — a red that says
+ * nothing about the pay page. Every network request is answered locally with a blank image; the
+ * gate measures the panel, never a third party's uptime.
+ */
+const routed = new WeakSet<Page>();
+async function offline(page: Page): Promise<void> {
+  if (routed.has(page)) return;
+  routed.add(page);
+  await page.route(/^https?:\/\//, (r) =>
+    r.fulfill({ status: 200, contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="10"/>' }),
+  );
+}
+
 async function openPayStep(page: Page, file: string): Promise<void> {
+  await offline(page);
   await page.goto(pathToFileURL(file).href);
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 20000 });
   await page.locator(".cit-cfg-launch").click();
@@ -300,6 +316,7 @@ async function runAll(regress?: string): Promise<void> {
       const jsErrors: string[] = [];
       page.on("pageerror", (e) => jsErrors.push(e.message));
       // ⑧ the module step FIRST — the cards live there, one screen before the pay step
+      await offline(page);
       await page.goto(pathToFileURL(withOffer).href);
       await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 20000 });
       await page.locator(".cit-cfg-launch").click();
