@@ -24,6 +24,7 @@ import { renderDraft } from "../src/outreach/draft.js";
 import { buildOutreachEmail } from "../src/email/outreachEmail.js";
 import { buildTrafficEmail } from "../src/email/trafficEmail.js";
 import { buildTrialCampaignEmail, renderTrialCampaignLetter } from "../src/email/trialCampaignEmail.js";
+import { buildNonOpenerEmail, renderNonOpenerLetter } from "../src/email/nonOpenerEmail.js";
 import { advertiserIdentity, senderParts } from "../src/outreach/draft.js";
 import { loadPricing } from "../src/pricing.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
@@ -147,6 +148,36 @@ const LETTERS: readonly { name: string; html: string }[] = [
         identity: advertiserIdentity(lang),
         links: {
           cta: "https://roze-fogado.citoviso.com",
+          unsub: "https://citoviso.com/p/roze-fogado/00000000000000000000/unsubscribe",
+          privacy: "https://citoviso.com/privacy",
+        },
+      }),
+      "teszt@example.com",
+      { lang, heroShotPath: "assets/design-refs/console/outreach-mail/hero.png" },
+    ).html as string,
+  },
+  {
+    name: "nem-nyitó utánkövető levél (ADR-XXXX)",
+    html: buildNonOpenerEmail(
+      renderNonOpenerLetter({
+        lang,
+        leadName: "Rozé Fogadó",
+        planCount: 2,
+        trialDays: 14,
+        senderName: "Minta Név",
+        cold: {
+          priceList: "4 880",
+          priceOffer: "3 660",
+          percent: "25",
+          sigCo: senderParts().sigCo,
+          sigMail: senderParts().sigMail,
+          fine: "A kedvezmény az első díjra szól, a hosszabbítás már listaáras.",
+          unsubTxt: "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:",
+          legal: "Ezt a levelet azért kapta (jogos érdek). Adatkezelési tájékoztató:",
+          identity: advertiserIdentity(lang),
+        },
+        links: {
+          cta: "https://roze-fogado.citoviso.com/?f",
           unsub: "https://citoviso.com/p/roze-fogado/00000000000000000000/unsubscribe",
           privacy: "https://citoviso.com/privacy",
         },

@@ -6,7 +6,8 @@
 // subdomain, one prospect token), so an open could not say which message it came from.
 // Now each transport appends ONE letter to the link — `?e` mail, `?s` SMS, `?m` messenger
 // (Viber/WhatsApp: the phone picks the app at send time, after the text is frozen — the
-// mms_outbox row's `channel` says which), `?w` the automatic WhatsApp follow-up.
+// mms_outbox row's `channel` says which), `?w` the automatic WhatsApp follow-up, `?f` the
+// non-opener follow-up letter (ADR-XXXX).
 //
 // ⛔ The tag is applied at the LAST step, on the text that goes to the transport — never
 // on the draft. The draft link is what the §C gate, the owner's copy overrides, the
@@ -17,14 +18,15 @@
 // The page (cit-configurator.js) reads the letter, sends it with the view beacon, and
 // strips it from the address bar — a forwarded link no longer credits the first channel.
 
-export type OpenViaTag = "e" | "s" | "m" | "w";
-export type OpenVia = "email" | "sms" | "messenger" | "whatsapp";
+export type OpenViaTag = "e" | "s" | "m" | "w" | "f";
+export type OpenVia = "email" | "sms" | "messenger" | "whatsapp" | "followup";
 
 export const OPEN_VIA_BY_TAG: Readonly<Record<OpenViaTag, OpenVia>> = {
   e: "email",
   s: "sms",
   m: "messenger",
   w: "whatsapp",
+  f: "followup",
 };
 
 /** The beacon's `via` → the stored value; anything else is null (never trusted further). */

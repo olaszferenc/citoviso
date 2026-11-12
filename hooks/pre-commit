@@ -3655,6 +3655,22 @@ if [ -f scripts/behavior-message-check.mts ] && \
   echo "[pre-commit] behavior-message-check (viselkedés-üzenet: szöveg, ablak, kiváltók, leállítók, egy lövés)…"
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/behavior-message-check.mts >"$GATE_LOG" || gate_failed
 fi
+# nonopener-followup-check (a nem-nyitók egyszeri utánkövető levele, terv: assets/design-refs/console/nem-nyito-level/): tárgy „<név> – közvetlen
+#     foglalás / érdeklődés”, a látható feladó és az aláírás SZEMÉLYNÉV (nem „Citoviso”), az előnézet pontosan a
+#     levél első sorai (reklámsor nincs), a KÉP a megszólítás előtt, ?f jel; célcsoport (14 nap az UTOLSÓ bármely
+#     csatornás megkeresés óta, sosem nyitott; válaszolt / visszavont / leiratkozott / iker-cím
+#     kizárva); EGY LÖVÉS (ablakon kívül nem foglal, másodszor nem küld, bukás feloldja, késői megnyitás megállít,
+#     napi keret 0 → semmi). Saját, eldobható sorok a közös dev-DB-n; mock szállító kötelező. ~10 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/nonopener-followup-check.mts ] && \
+   changed_files | grep -qE '^src/email/nonOpenerEmail\.ts$|^src/outreach/(nonOpenerFollowup|openVia|outreachCheck|trialCampaign|sharedContactGate)\.ts$|^migrations/0135_nonopener_followup\.sql$|^scripts/nonopener-followup(-check)?\.mts$'; then
+  if changed_files | grep -qE '^scripts/nonopener-followup-check\.mts$'; then
+    echo "[pre-commit] nonopener-followup-check --self-test (az utánkövető-levél őr pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/nonopener-followup-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] nonopener-followup-check (nem-nyitó utánkövető levél: levél, célcsoport, egy lövés, ütem)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/nonopener-followup-check.mts >"$GATE_LOG" || gate_failed
+fi
 # free-trial-config-check (ADR-0342, /pricing „Ingyenes próba” szekció): határok, a POST-értelmezés
 #     (régi fül nem nulláz, kikapcsolva a tárolt szám marad), a POST minden írás ELŐTT utasít el, a lap a
 #     tárolt értéket mutatja, kikapcsolt próba → startTrial 'disabled'. Nem ír DB-sort. ~3 mp.

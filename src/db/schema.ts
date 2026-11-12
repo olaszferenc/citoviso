@@ -240,7 +240,7 @@ export interface MockViewTable {
   referrer_host: string | null;
   /** 0132: the channel letter the opened link carried (src/outreach/openVia.ts); NULL = untagged
    *  link (sends before 0132, a typed or forwarded address) — the report infers, never guesses here. */
-  open_via: "email" | "sms" | "messenger" | "whatsapp" | null;
+  open_via: "email" | "sms" | "messenger" | "whatsapp" | "followup" | null;
 }
 
 /** ADR-0322 ④/B (0087): the SPOKEN exit reason — one-tap micro-survey answer.
@@ -597,6 +597,20 @@ export interface BehaviorMessageTable {
   detail: string | null;
   /** The text that went out (SMS, or the mail's subject + plain text). */
   body: string | null;
+  created_at: Generated<Timestamp>;
+  sent_at: Timestamp | null;
+}
+
+/** 0135 (ADR-XXXX): the non-opener follow-up letter — one send per lead and per address. */
+export interface NonopenerFollowupTable {
+  id: Generated<string>;
+  lead_id: string;
+  prospect_id: string | null;
+  /** recipientKey(email) of the address the letter went to. */
+  address_key: string;
+  status: Generated<"claimed" | "sent">;
+  /** The send detail (provider:id). */
+  note: string | null;
   created_at: Generated<Timestamp>;
   sent_at: Timestamp | null;
 }
@@ -2242,6 +2256,7 @@ export interface Database {
   free_trial_alert: FreeTrialAlertTable;
   trial_campaign: TrialCampaignTable;
   behavior_message: BehaviorMessageTable;
+  nonopener_followup: NonopenerFollowupTable;
   outreach_dispatch: OutreachDispatchTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;

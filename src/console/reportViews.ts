@@ -427,6 +427,7 @@ const OPEN_SOURCE_LABEL = (lang: string): Readonly<Record<OpenSource, string>> =
   sms: T(lang, "SMS"),
   viber: T(lang, "Viber"),
   whatsapp: T(lang, "WhatsApp"),
+  followup: T(lang, "Utánkövető levél"),
   unknown: T(lang, "Nem eldönthető"),
 });
 /** Toggles a row's lead list (the table cannot hold a <details>); measurement-free. */

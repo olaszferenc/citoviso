@@ -24,6 +24,9 @@
 // ADR-0374 — and the STALL WATCH (src/console/stallWatch.ts): a payment the gateway never
 // closed, a domain stuck before registration, an SMS queue not draining, an iCal link failing
 // for a day, a dead Anthropic key → house mail (+ filtered SMS for the severe ones), once each.
+// ADR-XXXX — and the NON-OPENER FOLLOW-UP letter (src/outreach/nonOpenerFollowup.ts): a lead who
+// never opened the link, 14 days after its last outreach on any channel, gets ONE letter that opens
+// with the plan image; ≤ 5 per tick, ≤ the daily cap, weekday 8–17 Budapest.
 //   tsx scripts/offer-followup.mts [--now=2026-10-01T09:00:00+02:00]
 
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
@@ -37,6 +40,7 @@ import { runStallWatch } from "../src/console/stallWatch.js";
 import { runClientNotices } from "../src/console/clientNotify.js";
 import { flushNightSmsDigest } from "../src/console/houseAlert.js";
 import { flushRenewalPaymentDigest } from "../src/console/paymentAlert.js";
+import { runNonOpenerFollowups } from "../src/outreach/nonOpenerFollowup.js";
 import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -59,6 +63,14 @@ try {
   console.log(`trial-notices (e-mail + SMS éles) @ ${now.toISOString()}:`, JSON.stringify(n));
 } catch (e) {
   console.error("trial-notices HIBA:", e);
+  process.exitCode = 1;
+}
+try {
+  // ADR-XXXX: the non-opener follow-up letter (one per lead, image first, from a person).
+  const no = await runNonOpenerFollowups(now);
+  console.log(`nonopener-followup (e-mail éles) @ ${now.toISOString()}:`, JSON.stringify(no));
+} catch (e) {
+  console.error("nonopener-followup HIBA:", e);
   process.exitCode = 1;
 }
 try {
