@@ -18,7 +18,7 @@ A bal menüben **„CRM”** → **„Viselkedés-üzenetek”**.
 
 ## Mit mutat
 
-![Képernyőkép: a Viselkedés-üzenetek lap — főkapcsoló, öt szám, „Ki mit kapott” lista, „Kiváltónként” tábla](assets/hu/page.png)
+![Képernyőkép: a Viselkedés-üzenetek lap teteje — főkapcsoló és az öt szám](assets/hu/page.png)
 
 - **„Főkapcsoló”**: **„Bekapcsolás”** / **„Kikapcsolás”**. Alapból KI, ilyenkor semmi nem megy ki.
   Bekapcsoláskor csak az onnantól történő lépések számítanak; a régi látogatásokra nem megy
@@ -51,8 +51,10 @@ Aki leiratkozott; akin „ne keressük” jel van; aki **bármelyik üzenetünkr
 jóváhagyó sorba megy, onnan te döntesz); aki próbázik vagy próbázott; aki rendelt; akinek a címe vagy
 mobilszáma egy másik leadnél már kapott üzenetet; és akinek a terve nincs jóváhagyva. A válasz és a
 „ne keressük” jel az EMBERRE szól: ugyanazzal a mobillal vagy címmel egy másik leadje sem kap üzenetet.
-Néhány technikai ok is leállít (teszt, kizárt lead, archivált link) — a **„Leállítva”** szűrő minden
-esetben kiírja az okot.
+Néhány technikai ok is leállít (teszt, kizárt lead, archivált link). Amit a rendszer már a lépés
+után kizár, azt a **„Leállítva”** szűrő az okával mutatja. Amit csak a küldés pillanatában mér újra
+(pl. a terv még nincs jóváhagyva, vagy közben válaszolt), az nem kerül a **„Leállítva”** alá: az
+ilyen lead a **„vár”** számban marad, és nem kap üzenetet.
 
 ## Mit tegyél
 
