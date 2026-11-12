@@ -116,7 +116,27 @@ export type OpeningKind =
   | "leltar_nyitas"
   | "minta_masolas"
   | "hangulat_forras_nelkul"
-  | "ismetles_nyitas";
+  | "ismetles_nyitas"
+  | "baba_nyitas";
+
+/**
+ * ⛔ BABY / SMALL-CHILD AUDIENCE NEVER IN THE OPENING (owner, 2026-11-12: „Ez honnan a geciből jött,
+ * hogy babával is várjuk? … nehogy már belerakjunk”). A cot and a high chair are on every second
+ * listing — not a reason to come, not a headline. Measured: 300+ shipped mocks opened with
+ * „…, babával érkezőknek is”, because the chain's rulebook used it as its thin-source example.
+ * Town names (Babarc) and property names (Babaház) are not hits.
+ */
+const BABY_OPENING = /(?<![\p{L}])(?:bab[aá](?!rc|h[aá]z)|kisbab|csecsem|kisgyerm|kisgyerek|legkisebb|kiság|kicsik)/iu;
+
+/** The baby/small-child word in an opening line, or null. Exported for the curator gate. */
+export function babyOpening(text: string): string | null {
+  return BABY_OPENING.exec(text)?.[0] ?? null;
+}
+
+/** The intro's first sentence — the only part of the intro the hero shows. */
+export function firstSentence(text: string): string {
+  return text.trim().split(/(?<=[.!?])\s+/u)[0] ?? "";
+}
 
 /** Function words: they repeat in any sentence and say nothing about the place. */
 const FUNCTION_WORDS = new Set([
@@ -263,6 +283,17 @@ export function lintOpening(lines: readonly { field: string; text: string }[], s
         kind: "leltar_nyitas",
         guestReaction: "Ez egy felszereltség-lista, nem ok arra, hogy idejöjjek.",
         fix: `a nyitórész lírai: legfeljebb ${limit} adottság, élménybe ágyazva; a többi (${amen.join(", ")}) a kiemelésekbe`,
+      });
+    }
+
+    const baby = babyOpening(field === "intro" ? firstSentence(raw) : raw);
+    if (baby) {
+      out.push({
+        field,
+        quote: raw,
+        kind: "baba_nyitas",
+        guestReaction: "Babával jöhetek? Ez minden második szállásra igaz — miért ez a főcím?",
+        fix: "hagyd ki a baba/kisgyermek/kiságy célközönséget a nyitórészből; legfeljebb a kiemelések egyik sora lehet",
       });
     }
 

@@ -115,6 +115,9 @@ const CONSOLE_FAMILIAR = new Set([
   // scoutViews „… amit a Térképen egy nézetben átnézel … beírod … nézed”, views „Jelölj ki
   // sablont”, „Ha nem vársz rá, írd meg te.” (Poe's curator lock).
   "kérdezd", "átnézel", "beírod", "nézed", "jelölj", "vársz",
+  // 2026-11-12 reviewed: approvalCopy (the approval page, ADR-0430) addresses the operator —
+  // „… egyik sincs kiválasztva — … ezt a levelet, amíg nem választasz” · „Ha átírod a lenti SMS-t …”.
+  "választasz", "átírod",
 ]);
 
 /** The seven measured eyebrows, as the critic's lint sees them (features.eyebrow). */

@@ -85,6 +85,10 @@ const SHIPPED: { lines: Line[]; src: Src; want: string; label: string }[] = [
   { label: "csend zaj-panasz mellett (Kerekerdő A, mérés)", lines: [{ field: "hero.lead", text: "Nyitott tájra néző csend az erdő szélén" }], src: KEREKERDO, want: "hangulat_forras_nelkul" },
   { label: "kitalált madárszó (Kerekerdő B, pilot)", lines: [{ field: "intro", text: "Erdők és hegyek határolta táj, ahol a reggel madárszóval kezdődik." }], src: KEREKERDO, want: "hangulat_forras_nelkul" },
   { label: "a prompt példájának lemásolása", lines: [{ field: "tagline", text: "Bekerített kert tűzrakóval és saját parkoló az erdő szélén" }], src: KEREKERDO, want: "minta_masolas" },
+  { label: "baba a főcímben (Vali, éles 11-12)", lines: [{ field: "hero.lead", text: "Babával is szívesen látjuk Önöket Balatonfüreden" }], src: { name: "Vali vendégház Balatonfüred", town: "Balatonfüred", texts: [], reviews: [] }, want: "baba_nyitas" },
+  { label: "„babával érkezőknek is” főcím (300+ éles mock)", lines: [{ field: "hero.lead", text: "Pihenés Sümegen, babával érkezőknek is" }], src: { name: "Muskátli vendégház", town: "Sümeg", texts: [], reviews: [] }, want: "baba_nyitas" },
+  { label: "kisgyermekes alcím", lines: [{ field: "tagline", text: "Nálunk kisgyermekkel érkezőket is szívesen látunk." }], src: { name: "Teszt Ház", town: "Ajka", texts: [], reviews: [] }, want: "baba_nyitas" },
+  { label: "intro első mondata kisgyermekkel", lines: [{ field: "intro", text: "Balatonfüreden várjuk Önöket, akár kisgyermekkel érkeznek. A ház csendes." }], src: { name: "Teszt Ház", town: "Balatonfüred", texts: [], reviews: [] }, want: "baba_nyitas" },
   { label: "alcím-leltár (Strand B, mérés)", lines: [{ field: "tagline", text: "Kerékpárral a tó körül, nyári esték a medence partján" }], src: { name: "Strand Apartman Keszthely", town: "Keszthely", texts: [], reviews: [] }, want: "leltar_nyitas" },
 ];
 for (const c of SHIPPED) {
@@ -101,6 +105,9 @@ const HONEST: { lines: Line[]; src: Src; label: string }[] = [
   ] },
   { label: "vékony forrás: település + célközönség (tulaj-döntés ②)", src: { name: "Rozé Fogadó", town: "Révfülöp", texts: ["Révfülöp"], reviews: [] }, lines: [
     { field: "hero.lead", text: "Nyári napok Révfülöpön, pároknak és baráti társaságoknak" },
+  ] },
+  { label: "Babarc település / Babaház név nem baba-szó", src: { name: "House Babaház", town: "Babarc", texts: [], reviews: [] }, lines: [
+    { field: "tagline", text: "Nálunk Babarcon pihenhet, a Babaház kertjében." },
   ] },
   { label: "forrásolt csend, zaj-panasz nélkül", src: { name: "Bánó Porta Köveskál", town: "Köveskál", texts: ["Köveskálon található csendes, nyugodt lakó-pihenő övezetben", "Balaton északi részén, 8 km-re Révfülöp fölött, a Káli medencében található Köveskál."], reviews: [] }, lines: [
     { field: "hero.lead", text: "A Káli-medence csendje Köveskálon, családoknak és baráti köröknek" },

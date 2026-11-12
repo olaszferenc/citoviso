@@ -113,6 +113,14 @@ red("hiányzó bemutatkozó", { ...good, fields: { ...good.fields, intro: "" } }
 red("üres kiemelés-lista", { ...good, fields: { ...good.fields, highlights: [] } }, "highlights");
 red("hét kiemelés", { ...good, fields: { ...good.fields, highlights: ["a", "b", "c", "d", "e", "f", "g"] } }, "highlights");
 red("hibás HEX", { ...good, accent: "kék" }, "accent");
+// Owner 2026-11-12: the baby / small-child audience never opens the page.
+red("baba a főcímben (300+ éles mock)", { ...good, fields: { ...good.fields, "hero.lead": "Pihenés Sümegen, babával érkezőknek is" } }, "hero.lead");
+red("kisgyermek az alcímben", { ...good, fields: { ...good.fields, tagline: "Nálunk kisgyermekkel érkezőket is szívesen látunk." } }, "tagline");
+red("kiságy a bemutatkozó első mondatában", { ...good, fields: { ...good.fields, intro: "A legkisebbeknek kiságy is van. A ház csendes." } }, "intro");
+{
+  const later = validateCuratorCopy({ ...good, fields: { ...good.fields, intro: `${String(good.fields.intro).replace(/\.?\s*$/, ".")} Kiságy kérésre.` } }, corpus);
+  ok(!later.ok ? !later.errors.intro : true, "① a bemutatkozó KÉSŐBBI mondatában a kiságy nem nyitórész — nem piros");
+}
 
 // ② one rule
 const curatorSrc = readFileSync("src/generator/copyCurator.ts", "utf8");

@@ -26,6 +26,7 @@ import type { SectionCopy } from "../engine/recipe.js";
 import { validateSellingPoints, type GeneratedBrief } from "./brief.js";
 import { copyValueError, normalizeCopyValue } from "./copyManual.js";
 import { guestValueHighlights } from "./highlightValue.js";
+import { babyOpening, firstSentence } from "./lyricOpening.js";
 
 /** The account name the persona writes under (console operator `poe`). */
 export const POE_BY = "Poe";
@@ -95,6 +96,13 @@ export function validateCuratorCopy(pack: CuratorCopy, corpus: readonly string[]
     else if (value.length) fields[key] = value;
   }
   for (const key of REQUIRED_KEYS) if (!(key in fields) && !errors[key]) errors[key] = "Ez a mező nem lehet üres.";
+  // Owner 2026-11-12: the baby / small-child audience never opens the page (lyricOpening.babyOpening).
+  for (const key of ["hero.lead", "hero.accent", "tagline", "intro"] as const) {
+    const v = fields[key];
+    if (typeof v !== "string" || errors[key]) continue;
+    const hit = babyOpening(key === "intro" ? firstSentence(v) : v);
+    if (hit) errors[key] = `Baba/kisgyermek a nyitórészben („${hit}…”) — ez nem kiemelt dolog, hagyd ki (legfeljebb egy kiemelés lehet).`;
+  }
 
   let accent: string | null = null;
   if (pack.accent?.trim()) {
