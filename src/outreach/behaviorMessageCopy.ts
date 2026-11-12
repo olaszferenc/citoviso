@@ -180,7 +180,7 @@ export function buildBehaviorMail(input: BehaviorMailInput): BehaviorMail {
             days: String(input.trialDays ?? ""),
           })) +
       " " +
-      T(lang, "Nem kell semmit beállítania; a próba végén Ön dönt, folytatja-e.");
+      T(lang, "A próba végén Ön dönt, folytatja-e.");
     button = T(lang, "Elindítom");
   } else {
     subject = T(lang, "{name} – kérdése van a tervvel?", { name });

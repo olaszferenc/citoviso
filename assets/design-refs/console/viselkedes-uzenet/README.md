@@ -46,7 +46,9 @@ Fájlok:
   kínált próba hossza. Ha a lap nem kínál próbát → az árnézés szövege megy; ha nincs ár → a kérdésé.
   A „próba-gomb” szövegben a „terv” szó a §A demó-keretezés miatt kötelező (a §C kapu kéri); a „saját
   címén” az SMS-ből kimaradt (jog-őr 2026-11-12: a próba citoviso-aldomainen fut, a „saját cím” saját
-  domaint sugallna — a levél a címet szó szerint kiírja).
+  domaint sugallna — a levél a címet szó szerint kiírja). A levélből a „Nem kell semmit beállítania” mondat
+  kimaradt (koordinátor 2026-11-12: a beállító varázsló miatt nem igaz); marad: „A próba végén Ön dönt,
+  folytatja-e.”
   Az e-mail ugyanezt mondja egy bekezdésben, egy gombbal, a segítő aláírásával, leiratkozó linkkel
   (+ `List-Unsubscribe` fejléc a hideg levél kapcsolója szerint), a próba-kampány jogalap-mondatával
   (a küldött tervre hivatkozik, NEM arra, hogy „megnézte”; tiltakozási joggal) és cégazonosítással.
