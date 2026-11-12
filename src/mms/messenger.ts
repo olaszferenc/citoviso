@@ -523,16 +523,19 @@ export async function whatsappPresenceDue(now: Date = new Date()): Promise<strin
       select o.to_phone from mms_outbox o
        where o.status = 'queued' and o.prospect_id is not null and o.messenger_text is not null
          and not exists (select 1 from messenger_presence p where p.phone = o.to_phone and (p.whatsapp <> 'unknown' or p.viber = 'no'))
-       order by o.created_at asc`.execute(db);
+       -- an unclear read ('unknown') goes to the back, so one number never blocks the rest
+       order by (select p.checked_at from messenger_presence p where p.phone = o.to_phone and p.whatsapp = 'unknown'
+                  and p.checked_at > now() - interval '6 hours') asc nulls first, o.created_at asc`.execute(db);
     const qp = [...new Set(queued.rows.map((r) => r.to_phone))];
     phones = [...qp, ...phones.filter((p) => !qp.includes(p))];
   }
-  const rowsP = await db.selectFrom("messenger_presence").select(["phone", "viber", "whatsapp"]).where("phone", "in", phones).execute();
+  const rowsP = await db.selectFrom("messenger_presence").select(["phone", "viber", "whatsapp", "checked_at"]).where("phone", "in", phones).execute();
+  const recent = (r: { checked_at: Date | null }) => !!r.checked_at && now.getTime() - new Date(r.checked_at).getTime() < 6 * 3_600_000;
   const known = new Map(rowsP.map((r) => [r.phone, r]));
   const cand = new Set(
     phones.filter((p) => {
       const r = known.get(p);
-      if (viberOff) return !r || r.whatsapp === "unknown";
+      if (viberOff) return !r || (r.whatsapp === "unknown" && !recent(r));
       return !!r && r.viber === "no" && r.whatsapp === "unknown";
     }),
   );
