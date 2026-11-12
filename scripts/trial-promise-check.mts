@@ -214,7 +214,11 @@ try {
       page.on("pageerror", (e) => errs.push(e.message));
       await page.goto(`http://127.0.0.1:${cport}/p/${b.token}?proba=nyit`, { waitUntil: "load" });
       await page.waitForSelector(".cit-cfg-tfacts", { state: "attached", timeout: 15_000 }).catch(() => null);
-      const facts = (await page.locator(".cit-cfg-tfacts").first().textContent().catch(() => "")) ?? "";
+      // ADR-XXXX (kerdes-inditas): the one-click launch sheet says the package in its own row
+      // (.cit-cfg-tpkg, „Csomag: ráér” + the trial's package line) under the facts list — the
+      // promise is the sheet's text, facts and package row together.
+      await page.waitForFunction(() => (document.querySelector(".cit-cfg-tpkg")?.textContent ?? "").trim().length > 0, null, { timeout: 15_000 }).catch(() => null);
+      const facts = ((await page.locator(".cit-cfg-tfacts").first().textContent().catch(() => "")) ?? "") + " " + ((await page.locator(".cit-cfg-tpkg").first().textContent().catch(() => "")) ?? "");
       check(`${width}px: az űrlap NEM ígér „minden funkció”-t`, !!facts && !/minden funkció/.test(facts), facts.slice(0, 140));
       check(`${width}px: …a csomag nevét és az adott modulokat mondja`, facts.includes("(Ajánlott)") && granted.every((id) => facts.includes(labelOf(id))));
       check(`${width}px: …foglalási naptárt nem ígér`, !/foglalási naptár|Online foglalás/.test(facts));
