@@ -1,4 +1,4 @@
-## ADR-XXXX — Lead-állomány: a CRM-kártya helyett képtípus × állapot mátrix, riport-fül, időszak-gomb
+## ADR-0438 — Lead-állomány: a CRM-kártya helyett képtípus × állapot mátrix, riport-fül, időszak-gomb
 
 **Dátum:** 2026-11-12 · **Döntött:** tulaj (terv „B”), a fogalmakat a session rögzítette
 
