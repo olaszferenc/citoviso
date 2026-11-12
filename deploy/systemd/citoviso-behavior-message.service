@@ -1,9 +1,9 @@
 [Unit]
-# ADR-XXXX: viselkedés-üzenet (A változat) — leadenként EGY automatikus üzenet, ha a lead
+# ADR-0439: viselkedés-üzenet (A változat) — leadenként EGY automatikus üzenet, ha a lead
 # visszajön a tervére, megnézi az árat vagy megnyomja a próba-gombot. Idempotens: a
 # behavior_message egyedi kulcsai (lead, cím) miatt egy leadnek / címnek egyszer megy ki.
 # A konzol főkapcsolója (CRM → Viselkedés-üzenetek) alapból KI: addig a futás semmit nem küld.
-Description=Citoviso viselkedés-üzenet tick (ADR-XXXX)
+Description=Citoviso viselkedés-üzenet tick (ADR-0439)
 After=network-online.target
 Wants=network-online.target
 # ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).

@@ -1917,7 +1917,7 @@ async function handle(
       return void res.end(Buffer.from(row.image));
     }
   }
-  // GET /viselkedes-uzenetek — ADR-XXXX, the behaviour message's console tab (plan: viselkedes-uzenet, „Konzol-nézet”).
+  // GET /viselkedes-uzenetek — ADR-0439, the behaviour message's console tab (plan: viselkedes-uzenet, „Konzol-nézet”).
   // POST /viselkedes-uzenetek/kapcsolo (on=1|0) — the master switch; turning it on stamps `since` (no retroactive sweep).
   if (path === "/viselkedes-uzenetek" || path === "/viselkedes-uzenetek/kapcsolo") {
     const op = await currentOperator(req);

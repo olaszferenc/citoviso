@@ -1,4 +1,4 @@
-// ADR-XXXX — the BEHAVIOUR MESSAGE copy: the SMS and the e-mail the lead gets ONCE, when they act
+// ADR-0439 — the BEHAVIOUR MESSAGE copy: the SMS and the e-mail the lead gets ONCE, when they act
 // on their plan page (came back · opened „Árak és rendelés” · pressed the trial button and did not
 // send it). Frozen plan: assets/design-refs/console/viselkedes-uzenet/ (variant A; README = what BINDS).
 //

@@ -1,4 +1,4 @@
-## ADR-XXXX — Viselkedés-üzenet: egy automatikus üzenet leadenként, amikor a lead lép (A változat)
+## ADR-0439 — Viselkedés-üzenet: egy automatikus üzenet leadenként, amikor a lead lép (A változat)
 
 **Dátum:** 2026-11-12 · **Döntött:** tulaj (2026-11-11, a koordinálón át: A változat, hétköznap 8–20,
 az eszkaláció marad, a „NEM” nem iratkoztat le, GSM-7), a megvalósítás részleteit a session rögzítette

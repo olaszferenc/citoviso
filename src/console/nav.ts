@@ -127,7 +127,7 @@ export function navTree(lang = "hu"): readonly NavNode[] {
         { kind: "leaf", id: "approved", label: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved" },
         // Owner 2026-11-06: the single-pass chain's MEHET leads wait here for his yes/no.
         { kind: "leaf", id: "approval", label: T(lang, "Jóváhagyás"), href: "/jovahagyas" },
-        // ADR-XXXX: the behaviour message (variant A) — master switch + who got what (plan: viselkedes-uzenet).
+        // ADR-0439: the behaviour message (variant A) — master switch + who got what (plan: viselkedes-uzenet).
         { kind: "leaf", id: "behavior", label: T(lang, "Viselkedés-üzenetek"), href: "/viselkedes-uzenetek" },
         { kind: "leaf", id: "duplicates", label: T(lang, "Duplikátumok"), href: "/duplicates" },
         { kind: "leaf", id: "scrape", label: T(lang, "Adatgyűjtés indítása"), href: "/scrape" },

@@ -1,4 +1,4 @@
-# Viselkedés-üzenet — befagyasztott terv (ADR-XXXX)
+# Viselkedés-üzenet — befagyasztott terv (ADR-0439)
 
 **Jóváhagyva:** tulaj, 2026-11-11, a koordinálón át (cit8a744532). A terv-kapu (§2b) szerint ez a
 megvalósítás KONTRAKTUSA: amit alább „KÖT” jelöl, az elvárt viselkedés, nem stílus-javaslat.

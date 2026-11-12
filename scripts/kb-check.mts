@@ -92,7 +92,7 @@ const VIEW_GROUPS = {
     "src/console/reportViews.ts",
     // ADR-0407: the Riport „Próba” tab is its own view file — its labels are quoted by the KB.
     "src/console/trialReportViews.ts",
-    // ADR-XXXX: CRM „Viselkedés-üzenetek” page (frozen plan: design-refs/console/viselkedes-uzenet/) — own view file.
+    // ADR-0439: CRM „Viselkedés-üzenetek” page (frozen plan: design-refs/console/viselkedes-uzenet/) — own view file.
     "src/console/behaviorMessagePage.ts",
     // Riport „Előfizetők” tab (frozen plan: design-refs/console/elofizetok-riport/) — own view file.
     "src/console/revenueReportViews.ts",

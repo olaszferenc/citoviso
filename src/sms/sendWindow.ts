@@ -112,7 +112,7 @@ export function mmsPullBlocks(now: Date): string | null {
 }
 
 /**
- * ADR-XXXX — the BEHAVIOUR MESSAGE window (owner, 2026-11-11: „hétköznap 8–20, hétvégén nem”).
+ * ADR-0439 — the BEHAVIOUR MESSAGE window (owner, 2026-11-11: „hétköznap 8–20, hétvégén nem”).
  * The message answers the lead's own step on the plan page, so it gets the escalation
  * follow-up's hours (SEND_WINDOW, 8–20, ADR-0287) — but on weekdays only. Budapest wall clock.
  * Unlike SEND_WINDOW it is NOT lifted by MOBILE_SEND_WINDOW_OFF (an owner rule the live box

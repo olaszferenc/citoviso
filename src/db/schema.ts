@@ -581,7 +581,7 @@ export interface TrialCampaignTable {
   sent_at: Timestamp | null;
 }
 
-/** 0134 (ADR-XXXX): the behaviour message — ONE automatic message per lead (variant A), sent when
+/** 0134 (ADR-0439): the behaviour message — ONE automatic message per lead (variant A), sent when
  *  the lead acts on the plan page; (channel, address_key) unique per address. */
 export interface BehaviorMessageTable {
   id: Generated<string>;

@@ -1,4 +1,4 @@
-// CRM → Viselkedés-üzenetek (ADR-XXXX) — the console view of the behaviour message (variant A).
+// CRM → Viselkedés-üzenetek (ADR-0439) — the console view of the behaviour message (variant A).
 // Frozen plan: assets/design-refs/console/viselkedes-uzenet/ (the „Konzol-nézet” tab). Top to bottom:
 // the master switch → KPIs (sent, came back / asked / started / unsubscribed within 24 h) → filter
 // chips → one row per message (tap: the text that went out) → the per-trigger summary → the leads

@@ -2,7 +2,7 @@
 
 **Mit:** a tulaj 2026-11-11-i döntése (A változat · hétköznap 8–20 · az eszkaláció marad · a „NEM” nem
 iratkoztat le · GSM-7) alapján leadenként EGY automatikus üzenet, amikor a lead visszajön, árat néz vagy
-megnyomja a próba-gombot. ADR-XXXX.
+megnyomja a próba-gombot. ADR-0439.
 
 **Fájlok:**
 - `migrations/0134_behavior_message.sql`, `src/db/schema.ts` (`BehaviorMessageTable`)

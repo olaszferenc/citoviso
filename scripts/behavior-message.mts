@@ -1,4 +1,4 @@
-// ADR-XXXX — the BEHAVIOUR MESSAGE tick (citoviso-behavior-message.timer, every 10 minutes).
+// ADR-0439 — the BEHAVIOUR MESSAGE tick (citoviso-behavior-message.timer, every 10 minutes).
 // Variant A (owner 2026-11-11): one automatic message per lead, 20 minutes after the lead's last
 // activity once they came back / opened the prices / pressed the trial button; weekdays 8–20
 // Budapest. The send path, the gates and the one-shot claim live in src/outreach/behaviorMessage.ts.

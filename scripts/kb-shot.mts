@@ -2427,7 +2427,7 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
   // ADR-0425: the „Hol szakad meg a próba?” panel.
   await shootConsole(reportTrialPage(sample), path.join(ROOT, "kb/entries", "console-report-trial", "assets", "hu", "breaks.png"), undefined, "[data-cit-breaks]");
 }
-// ADR-XXXX: CRM „Viselkedés-üzenetek” (assets/design-refs/console/viselkedes-uzenet/, „Konzol-nézet”) — the
+// ADR-0439: CRM „Viselkedés-üzenetek” (assets/design-refs/console/viselkedes-uzenet/, „Konzol-nézet”) — the
 // master switch on, three sent messages with different outcomes, one lead held back by a stop rule.
 {
   const sent = (h: number, m: number): Date => new Date(Date.UTC(2026, 10, 12, h - 1, m));

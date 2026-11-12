@@ -1,5 +1,5 @@
 -- 0134 BEHAVIOUR MESSAGE — ONE automatic message per lead, sent when the lead acts on the plan
--- page (ADR-XXXX; frozen plan: assets/design-refs/console/viselkedes-uzenet/, variant A;
+-- page (ADR-0439; frozen plan: assets/design-refs/console/viselkedes-uzenet/, variant A;
 -- runner: scripts/behavior-message.mts; sender: src/outreach/behaviorMessage.ts).
 --
 -- The owner's decision (2026-11-11): variant A = at most ONE message per lead, ever; weekdays

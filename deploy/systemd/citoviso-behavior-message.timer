@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso viselkedés-üzenet 10 percenként (ADR-XXXX)
+Description=Citoviso viselkedés-üzenet 10 percenként (ADR-0439)
 
 [Timer]
 # 10 percenként, egész nap: az ablakot (hétköznap 8:00–20:00 Europe/Budapest) a KÓD tartja,

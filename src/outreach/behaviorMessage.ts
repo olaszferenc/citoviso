@@ -1,4 +1,4 @@
-// ADR-XXXX — the BEHAVIOUR MESSAGE (variant A, owner 2026-11-11): ONE automatic message per lead,
+// ADR-0439 — the BEHAVIOUR MESSAGE (variant A, owner 2026-11-11): ONE automatic message per lead,
 // ever, sent when the lead acts on their plan page. Frozen plan: assets/design-refs/console/viselkedes-uzenet/
 // (README = what BINDS). Runner: scripts/behavior-message.mts (citoviso-behavior-message.timer, every 10 min).
 //

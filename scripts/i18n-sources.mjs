@@ -63,7 +63,7 @@ export const I18N_SOURCES = [
   "src/email/trialEmail.ts",
   // ADR-0348: the retroactive "14 nap ingyen" letter + its accent-free SMS (owner-approved C).
   "src/email/trialCampaignEmail.ts",
-  // ADR-XXXX: the behaviour message SMS + mail copy (variant A) — every lead-facing line through T().
+  // ADR-0439: the behaviour message SMS + mail copy (variant A) — every lead-facing line through T().
   "src/outreach/behaviorMessageCopy.ts",
   // Elek T-3: the masked mail copy logged to the owner's Üzenetek tab.
   "src/tenant/credentials.ts",

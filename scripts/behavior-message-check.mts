@@ -1,4 +1,4 @@
-// ADR-XXXX — the BEHAVIOUR MESSAGE (src/outreach/behaviorMessage.ts + behaviorMessageCopy.ts).
+// ADR-0439 — the BEHAVIOUR MESSAGE (src/outreach/behaviorMessage.ts + behaviorMessageCopy.ts).
 // Frozen plan: assets/design-refs/console/viselkedes-uzenet/README.md. What this proves, each leg a
 // way the feature could break the owner's decision (2026-11-11) or a stop rule:
 //   ① the copy — the SMS is GSM-7 and ≤ 2 segments for a normal AND a very long name (the name
