@@ -147,6 +147,9 @@ async function alertRow(id: string, headline: string, detail: string): Promise<v
  */
 /** app_setting key: any non-empty value = Viber is down on the phone (see pullMms). */
 export const VIBER_OFF_KEY = "viber_off";
+/** Outreach MMS per Budapest day (owner 2026-11-12: 20); app_setting overrides. */
+export const MMS_DAILY_CAP_KEY = "mms_daily_cap";
+export const MMS_DAILY_CAP_DEFAULT = 20;
 
 export async function pullMms(now: Date = new Date(), windowAt: Date = now): Promise<PulledMms[]> {
   const stale = await db
@@ -179,6 +182,28 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
   // whose number the phone has READ as having no Viber go out (WhatsApp or MMS); a Viber lead or one not
   // read yet waits, still 'queued' — never an MMS in place of a Viber message. app_setting viber_off.
   const viberOff = !!(await getSetting(VIBER_OFF_KEY));
+  // MMS budget (owner 2026-11-12 „összesen ma 20 MMS mehet ki … KURVÁRA CSAK SAJÁT KÉPPEL RENDELKEZŐ”): an
+  // outreach row that MAY end as an MMS (the phone's auto ladder falls back to MMS unless the channel is
+  // forced to a messenger) is claimed only while today's outreach MMS count is under the cap AND the lead's
+  // mock carries its own photos (no town photo). A row that is sure to go on Viber / WhatsApp is not touched.
+  const capSetting = await getSetting(MMS_DAILY_CAP_KEY);
+  const mmsCap = capSetting !== null && /^\d+$/.test(capSetting.trim()) ? Number(capSetting) : MMS_DAILY_CAP_DEFAULT;
+  const mmsToday = Number(
+    (
+      await sql<{ n: string }>`select count(*) as n from mms_outbox where status = 'sent' and prospect_id is not null
+        and coalesce(channel, 'mms') = 'mms'
+        and sent_at >= date_trunc('day', now() at time zone 'Europe/Budapest') at time zone 'Europe/Budapest'`.execute(db)
+    ).rows[0]?.n ?? 0,
+  );
+  const mmsRoom = mmsToday < mmsCap;
+  // Sure messenger: messenger on, a caption, and the channel forced — force_channel, or the stored presence
+  // (WhatsApp yes → forced WhatsApp; Viber not off → forced Viber, never MMS; see waOnly and s10Sender).
+  const sureMessenger = messengerOff
+    ? sql<boolean>`false`
+    : sql<boolean>`(mms_outbox.messenger_text is not null and (mms_outbox.force_channel in ('viber', 'whatsapp')
+        ${sql.raw(viberOff ? "" : "or true")}
+        or exists (select 1 from messenger_presence p where p.phone = mms_outbox.to_phone and p.whatsapp = 'yes'
+          ${sql.raw(viberOff ? "" : "and p.viber <> 'yes'")})))`;
   // Claim-then-read in ONE statement: two overlapping pulls cannot get the same row.
   const claimed = await db
     .updateTable("mms_outbox")
@@ -209,6 +234,18 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
             sql<boolean>`exists (select 1 from messenger_presence p where p.phone = mms_outbox.to_phone
               and ((p.viber = 'no' and coalesce(mms_outbox.channel, '') <> 'viber') or p.whatsapp = 'yes'))`,
           ),
+        )
+        .where((eb) =>
+          eb.or([
+            eb("mms_outbox.prospect_id", "is", null),
+            sureMessenger,
+            mmsRoom
+              ? sql<boolean>`exists (select 1 from prospect pr join outreach_dispatch d on d.lead_id = pr.lead_id
+                  join mock_artifact a on a.id = d.artifact_id
+                  where pr.id = mms_outbox.prospect_id and coalesce((a.inputs->>'photos')::int, 0) > 0
+                    and a.inputs::text not like '%townPhoto%')`
+              : sql<boolean>`false`,
+          ]),
         )
         .orderBy("created_at", "asc")
         .limit(1)

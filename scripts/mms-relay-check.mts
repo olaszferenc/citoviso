@@ -283,6 +283,13 @@ try {
         .returning("id")
         .executeTakeFirstOrThrow()
     ).id;
+  // Owner 2026-11-12 MMS gate: an outreach MMS goes only for a lead whose mock carries OWN photos.
+  const art = await db
+    .insertInto("mock_artifact")
+    .values({ lead_id: lead.id, inputs: JSON.stringify({ photos: 3 }) })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await db.insertInto("outreach_dispatch").values({ lead_id: lead.id, artifact_id: art.id, queued_by: "_mms_relay_check" }).execute();
   ids.p1 = await mkProspect("a");
   ids.p2 = await mkProspect("b");
   ids.p3 = await mkProspect("c");
@@ -747,6 +754,8 @@ try {
   await db.deleteFrom("mms_outbox").where("subject", "in", ["Teszt 4", "PNG", "Teszt 12"]).where("prospect_id", "is", null).execute();
   if (ids.leadId) {
     await db.deleteFrom("prospect").where("lead_id", "=", ids.leadId).execute(); // cascades mms_outbox
+    await db.deleteFrom("outreach_dispatch").where("lead_id", "=", ids.leadId).execute();
+    await db.deleteFrom("mock_artifact").where("lead_id", "=", ids.leadId).execute();
     await db.deleteFrom("lead").where("id", "=", ids.leadId).execute();
   }
   if (ids.runId) await db.deleteFrom("scrape_run").where("id", "=", ids.runId).execute();

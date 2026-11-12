@@ -158,6 +158,12 @@ try {
     .returning("id")
     .executeTakeFirstOrThrow();
   ids.leadId = lead.id;
+  // Owner 2026-11-12 MMS gate: an outreach MMS goes only for a lead whose mock carries OWN photos.
+  const ownPhotoMock = async (leadId: string) => {
+    const art = await db.insertInto("mock_artifact").values({ lead_id: leadId, inputs: JSON.stringify({ photos: 3 }) }).returning("id").executeTakeFirstOrThrow();
+    await db.insertInto("outreach_dispatch").values({ lead_id: leadId, artifact_id: art.id, queued_by: "_messenger_check" }).execute();
+  };
+  await ownPhotoMock(lead.id);
   const mkProspect = async (tag: string) => {
     const id = (
       await db.insertInto("prospect").values({ lead_id: lead.id, token: `msc_${tag}_${Date.now().toString(36)}` }).returning("id").executeTakeFirstOrThrow()
@@ -304,6 +310,7 @@ try {
       .returning("id")
       .executeTakeFirstOrThrow();
     ids.lead2 = lead2.id;
+    await ownPhotoMock(lead2.id);
     const p10 = (await db.insertInto("prospect").values({ lead_id: lead2.id, token: `msc_f_${Date.now().toString(36)}` }).returning("id").executeTakeFirstOrThrow()).id;
     const r10 = (await sendMms({ to: "+36301234571", imagePath: path.join(tmp, "hero.jpg"), subject: "Citoviso latvanyterv - Teszt", prospectId: p10, messengerText: CAPTION })).messageId!;
     const ph = phone((msg) => ({ ok: true, messageId: "s10-wa-10", provider: "cli", channel: msg.messengerText ? "whatsapp" : "mms" }));
@@ -345,6 +352,7 @@ try {
       .returning("id")
       .executeTakeFirstOrThrow();
     ids.lead3 = lead3.id;
+    await ownPhotoMock(lead3.id);
     const p12 = (await db.insertInto("prospect").values({ lead_id: lead3.id, token: `msc_g_${Date.now().toString(36)}` }).returning("id").executeTakeFirstOrThrow()).id;
     const r12 = (await sendMms({ to: "+36301234572", imagePath: path.join(tmp, "hero.jpg"), subject: "Citoviso latvanyterv - Teszt", prospectId: p12, messengerText: CAPTION })).messageId!;
     await tick(phone((msg) => ({ ok: true, messageId: "s10-viber-12", provider: "cli", channel: msg.messengerText ? "viber" : "mms" })));
@@ -437,14 +445,20 @@ try {
   if (ids.leadId) {
     await db.deleteFrom("outreach_reply").where("lead_id", "=", ids.leadId).execute(); // cascades the sends
     await db.deleteFrom("prospect").where("lead_id", "=", ids.leadId).execute(); // cascades mms_outbox
+    await db.deleteFrom("outreach_dispatch").where("lead_id", "=", ids.leadId).execute();
+    await db.deleteFrom("mock_artifact").where("lead_id", "=", ids.leadId).execute();
     await db.deleteFrom("lead").where("id", "=", ids.leadId).execute();
   }
   if (ids.lead3) {
     await db.deleteFrom("prospect").where("lead_id", "=", ids.lead3).execute();
+    await db.deleteFrom("outreach_dispatch").where("lead_id", "=", ids.lead3).execute();
+    await db.deleteFrom("mock_artifact").where("lead_id", "=", ids.lead3).execute();
     await db.deleteFrom("lead").where("id", "=", ids.lead3).execute();
   }
   if (ids.lead2) {
     await db.deleteFrom("prospect").where("lead_id", "=", ids.lead2).execute();
+    await db.deleteFrom("outreach_dispatch").where("lead_id", "=", ids.lead2).execute();
+    await db.deleteFrom("mock_artifact").where("lead_id", "=", ids.lead2).execute();
     await db.deleteFrom("lead").where("id", "=", ids.lead2).execute();
   }
   if (ids.runId) await db.deleteFrom("scrape_run").where("id", "=", ids.runId).execute();
