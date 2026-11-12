@@ -82,7 +82,7 @@ const market = { country: "HU", approved: true };
 await loadPricing();
 // The dev box's /pricing is not marked final („Az árak véglegesek” off) — the price-ad rule then
 // fires on ANY price, which is the configuration's verdict, not the copy's. Only then is it tolerated.
-const PRICING_FINAL = isPricingConfirmed();
+const PRICING_FINAL = isPricingConfirmed("hu");
 const gateReasons = (r: readonly string[]): string[] => r.filter((x) => PRICING_FINAL || !x.startsWith("ÁR-HIRDETÉS"));
 const sabotage = (t: string): string =>
   SELF_TEST ? `${t.replace(host, host.slice(0, -6))} Ha nem érdekli, írja vissza: NEM. −30% kedvezmény` : t;

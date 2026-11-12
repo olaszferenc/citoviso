@@ -818,7 +818,7 @@ try {
     if (SELF_TEST) await db.updateTable("module_entitlement").set({ trial_grant: true }).where("tenant_id", "=", cTenant).where("module", "=", "rooms").execute();
     const trialOnly = e1.filter((e) => e.active && e.trial_grant).map((e) => e.module);
     check("K1: a következő terhelés tételei közt nincs próba-modul", trialOnly.length > 0 && ren.every((m) => !trialOnly.includes(m)), `számlázott: ${ren.join(",")} · próba: ${trialOnly.join(",")}`);
-    const want = computeMonthly(["gallery", "enquiry"]);
+    const want = computeMonthly(["gallery", "enquiry"], "hu");
     check("K1: a sikerlap következő terhelése = a megvett csomag listaára", summary?.renewal?.amount === want, `${summary?.renewal?.amount} (várt ${want})`);
     // Elek3 K2: the Pénztárca's next charge — the cycle's sum. Monthly here; flipped to annual
     // the same subscription must quote the year (10 monthly fees), never the monthly rate.
@@ -830,7 +830,7 @@ try {
     await db.updateTable("subscription").set({ billing_period: "annual" }).where("tenant_id", "=", cTenant).execute();
     const sa = await getSubscriptionAdmin(cTenant, mv);
     await db.updateTable("subscription").set({ billing_period: "monthly" }).where("tenant_id", "=", cTenant).execute();
-    const wantA = want * (12 - getAnnualFreeMonths());
+    const wantA = want * (12 - getAnnualFreeMonths("hu"));
     check("K2: éves előfizetés → a következő terhelés az éves összeg", sa?.nextChargeTotal === wantA, `${sa?.nextChargeTotal} (várt ${wantA})`);
   }
   const rerendered: string[] = [];

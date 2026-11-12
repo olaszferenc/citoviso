@@ -83,7 +83,7 @@ if (!SELF_TEST) {
     });
     return { status: r.status, j: (await r.json().catch(() => ({}))) as Record<string, unknown> };
   };
-  const list = computeMonthly([]);
+  const list = computeMonthly([], "hu");
   try {
     const noName = await post({ domain_type: "citoviso_registered", domain_name: null, price: list + 1000 });
     check(
@@ -169,7 +169,7 @@ async function runCase(browser: Browser, html: string, vp: (typeof VIEWPORTS)[nu
       posts++;
       const b = JSON.parse(route.request().postData() ?? "{}") as { modules: string[]; billing_period: string; price: number };
       // What the server charges once the offer has lapsed: the LIST price of the same basket.
-      const list = b.billing_period === "annual" ? (await import("../src/pricing.js")).computeAnnual(b.modules) : computeMonthly(b.modules);
+      const list = b.billing_period === "annual" ? (await import("../src/pricing.js")).computeAnnual(b.modules, "hu") : computeMonthly(b.modules, "hu");
       serverPrice = c === "price_changed" ? list : b.price;
       const body =
         c === "price_changed"

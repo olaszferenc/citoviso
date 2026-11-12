@@ -95,6 +95,8 @@ export async function ensureSubscriptionForOrder(
     .select([
       "order_intent.tenant_id as tenantId",
       "order_intent.billing_period as billingPeriod",
+      "order_intent.pricing_region as pricingRegion",
+      "order_intent.currency as currency",
       "prospect.lead_id as leadId",
     ])
     .where("order_intent.id", "=", orderIntentId)
@@ -142,6 +144,9 @@ export async function ensureSubscriptionForOrder(
       startDay
         ? {
             tenant_id: tenantId,
+            // ADR-XXXX: the customer keeps the region/currency of the order that created it.
+            pricing_region: oi.pricingRegion,
+            currency: oi.currency,
             billing_period: paid.period,
             anchor_date: startDay,
             current_period_start: startDay,
@@ -149,6 +154,8 @@ export async function ensureSubscriptionForOrder(
           }
         : {
             tenant_id: tenantId,
+            pricing_region: oi.pricingRegion,
+            currency: oi.currency,
             billing_period: paid.period,
             anchor_date: anchor,
             current_period_start: anchor,

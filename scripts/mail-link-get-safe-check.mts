@@ -217,6 +217,7 @@ async function main(): Promise<void> {
   );
   if (!buyer.ok) throw new Error("a fixtúra vevő-adata érvénytelen");
   const order = await recordOrderIntent({
+    money: { region: "hu", currency: "HUF" },
     artifactId: payArt.id,
     modules: [],
     billingPeriod: "monthly",

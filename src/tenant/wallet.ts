@@ -11,6 +11,9 @@
 // already owns the next-invoice rule, and a second copy would be a second truth
 // (feedback_one_rule_two_copies). The view takes both and prints one number.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
+import { cardVerifyAmountMinor } from "../payment/providers.js";
+import { currencySign } from "../text/money.js";
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
@@ -210,7 +213,19 @@ export interface CardUpdateOrder {
  * Billing identity is inherited (0029 doctrine) so the order passes the same
  * gates as any other; FAIL CLOSED without a declared buyer.
  */
+/**
+ * ADR-0226/0228 + ADR-XXXX: the card-verification amount in a currency — HUF stays the
+ * owner's 10 Ft (CARD_VERIFY_AMOUNT_HUF); another currency takes its provider's minimum
+ * (payment/providers.ts, from the provider's documented minimums). null = not chargeable.
+ */
+export function cardVerifyAmountFor(currency: string): number | null {
+  return currencySign(currency) === "Ft" ? CARD_VERIFY_AMOUNT_HUF : cardVerifyAmountMinor("barion", currency);
+}
+
 export async function createCardUpdateOrder(tenantId: string): Promise<CardUpdateOrder> {
+  const money = await regionOfTenant(tenantId);
+  const verify = cardVerifyAmountFor(money.currency);
+  if (verify === null) return { ok: false, error: `a kártya-ellenőrzés ${money.currency} pénznemben nem indítható` };
   const open = await db
     .selectFrom("order_intent")
     .innerJoin("payment", "payment.order_intent_id", "order_intent.id")
@@ -264,8 +279,11 @@ export async function createCardUpdateOrder(tenantId: string): Promise<CardUpdat
       prospect_id: prospect.id,
       kind: "card_update",
       tenant_id: tenantId,
+      // ADR-XXXX: the hold is in the tenant's own currency — the provider's minimum in it.
+      pricing_region: money.region,
+      currency: money.currency,
       modules: JSON.stringify([]),
-      price: CARD_VERIFY_AMOUNT_HUF,
+      price: verify,
       billing_period: "monthly", // N/A for a hold; the column is NOT NULL
       status: "submitted",
       submitted_at: new Date(),

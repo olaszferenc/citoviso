@@ -29,6 +29,7 @@
 //      correct; its input was not. Re-check those documents before treating any
 //      of them as a template for what "good" looks like.
 
+import { majorToMinor, minorToMajor } from "../text/money.js";
 import type { InvoiceInput, InvoiceProvider, InvoiceResult } from "./invoice.js";
 
 const ENDPOINT = process.env.SZAMLAZZ_URL ?? "https://www.szamlazz.hu/szamla/";
@@ -108,8 +109,15 @@ export class SzamlazzAgent implements InvoiceProvider {
     return this.demo ? t("felhasznalo", "demo") + t("jelszo", "demo") : t("szamlaagentkulcs", this.key);
   }
 
+  /** Exposed for the money-path e2e (the XML is built, never sent): ADR-XXXX. */
+  buildXmlForTest(input: InvoiceInput): string {
+    return this.buildXml(input);
+  }
+
   private buildXml(input: InvoiceInput): string {
     const b = input.buyer;
+    // ADR-XXXX: our amounts are MINOR units; the XML takes the currency's major unit.
+    const major = (v: number): number => minorToMajor(v, input.currency);
     const items = input.items
       .map(
         (i) =>
@@ -117,11 +125,11 @@ export class SzamlazzAgent implements InvoiceProvider {
           t("megnevezes", i.name) +
           t("mennyiseg", num(i.quantity)) +
           t("mennyisegiEgyseg", "db") +
-          t("nettoEgysegar", num(i.unitNet)) +
+          t("nettoEgysegar", num(major(i.unitNet))) +
           t("afakulcs", i.vatKey) +
-          t("nettoErtek", num(i.net)) +
-          t("afaErtek", num(i.vat)) +
-          t("bruttoErtek", num(i.gross)) +
+          t("nettoErtek", num(major(i.net))) +
+          t("afaErtek", num(major(i.vat))) +
+          t("bruttoErtek", num(major(i.gross))) +
           "</tetel>",
       )
       .join("");
@@ -149,8 +157,13 @@ export class SzamlazzAgent implements InvoiceProvider {
       t("fizetesiHataridoDatum", input.dueDate) +
       t("fizmod", input.paymentMethod) +
       t("penznem", input.currency) +
-      t("szamlaNyelve", "hu") +
+      // ADR-XXXX: the country's invoice language (country.invoice_lang → Számlázz code).
+      t("szamlaNyelve", input.language) +
       (input.comment ? t("megjegyzes", input.comment) : "") +
+      // ADR-XXXX: a foreign-currency invoice names its rate source; with no explicit rate
+      // Számlázz.hu takes the day's MNB rate itself (xmlszamla.xsd, arfolyamBank comment).
+      (input.fxBank ? t("arfolyamBank", input.fxBank) : "") +
+      (input.fxBank && input.fxRate ? t("arfolyam", String(input.fxRate)) : "") +
       // ⛔ NO <rendelesSzam>: on the live CITO plan Számlázz rejects it (error 8, „Nincs jogosultságod vagy megfelelő
       // díjcsomagod … (rendelésszám)”, measured 2026-09-30 on a paid 97 Ft order); the demo account accepted it.
       // Idempotency rides on szamlaKulsoAzon alone (ADR-0283).
@@ -209,7 +222,13 @@ export class SzamlazzAgent implements InvoiceProvider {
     const net = Number(pick(/<szamlanetto>([\s\S]*?)<\/szamlanetto>/i.exec(body)) ?? "0");
     const gross = Number(pick(/<szamlabrutto>([\s\S]*?)<\/szamlabrutto>/i.exec(body)) ?? "0");
     const pdf = pick(/<pdf>([\s\S]*?)<\/pdf>/i.exec(body)) ?? undefined;
-    return { invoiceNumber, net, gross, pdfBase64: pdf };
+    // Back to OUR unit (minor) — the caller stores it next to the payment amount.
+    return {
+      invoiceNumber,
+      net: majorToMinor(net, input.currency),
+      gross: majorToMinor(gross, input.currency),
+      pdfBase64: pdf,
+    };
   }
 }
 

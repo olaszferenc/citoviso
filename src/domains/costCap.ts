@@ -3,11 +3,14 @@
 // currency, and the registrar's live NET price is compared with it in that SAME currency —
 // no FX (ADR-0103 ④'s conversion was a workaround for a cap kept in EUR).
 //
-// The cap guards OUR cost, so it reads the DEFAULT market's ending list — one knob per
-// ending, set on the console /pricing HU page (the same convention the EUR cap had).
+// ADR-XXXX: the cap is PER REGION and per currency — it reads the ending list of the
+// buyer's own pricing region, so a local ending (.ro, .pl, .cz …) offered on its market is
+// judged against THAT market's cap, never refused because the HU list does not carry it.
+// Amounts compare in the cost currency's MINOR unit (the registrar answers in major units).
 
 import { getRegistrar } from "./registrar/index.js";
 import { domainCostCap, loadPricing } from "../pricing.js";
+import { formatMinor, majorToMinor } from "../text/money.js";
 
 /** A refusal the cap itself made (as opposed to "the registrar could not price it"). */
 export class CostCapRefusal extends Error {
@@ -23,9 +26,9 @@ export class CostCapRefusal extends Error {
  * when the currencies differ, or when the price is above the cap. An unknown price is a
  * blocked purchase, never a free pass (§B.17 missing-data branch).
  */
-export async function assertUnderCostCap(domain: string): Promise<void> {
+export async function assertUnderCostCap(domain: string, region: string): Promise<void> {
   await loadPricing();
-  const cap = domainCostCap(domain);
+  const cap = domainCostCap(domain, region);
   if (!cap) throw new CostCapRefusal(`a(z) ${domain} végződését nem kínáljuk (ADR-0360 ③) — a vásárlás nem indult el`);
   const price = await getRegistrar().getYearlyNetPrice(domain);
   if (price.currency.toUpperCase() !== cap.currency.toUpperCase()) {
@@ -34,10 +37,11 @@ export async function assertUnderCostCap(domain: string): Promise<void> {
         "átváltás nélkül nem vethető össze, a vásárlás nem indult el",
     );
   }
-  if (price.amount > cap.max) {
+  const priceMinor = majorToMinor(price.amount, price.currency);
+  if (priceMinor > cap.max) {
     throw new CostCapRefusal(
-      `ár-plafon (ADR-0360 ③): a(z) ${domain} éves nettó díja ${price.amount} ${price.currency} — ` +
-        `a végződés plafonja ${cap.max} ${cap.currency}, a vásárlás nem indult el`,
+      `ár-plafon (ADR-0360 ③): a(z) ${domain} éves nettó díja ${formatMinor(priceMinor, price.currency)} — ` +
+        `a végződés plafonja (${region}) ${formatMinor(cap.max, cap.currency)}, a vásárlás nem indult el`,
     );
   }
 }
@@ -48,9 +52,9 @@ export async function assertUnderCostCap(domain: string): Promise<void> {
  * A registrar that cannot price yet does not hide the offer — the authoritative gate above
  * still refuses before any money moves.
  */
-export async function exceedsCostCap(domain: string): Promise<boolean> {
+export async function exceedsCostCap(domain: string, region: string): Promise<boolean> {
   try {
-    await assertUnderCostCap(domain);
+    await assertUnderCostCap(domain, region);
     return false;
   } catch (e) {
     if (e instanceof CostCapRefusal) return true;

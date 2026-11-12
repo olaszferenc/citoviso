@@ -14,6 +14,7 @@
 // ⚠️ NOT yet validated against a live sandbox account — built to the documented
 // spec; run the sandbox test pass (test cards) before flipping to production.
 
+import { minorToMajor } from "../text/money.js";
 import type {
   PaymentGateway,
   PaymentRequest,
@@ -130,14 +131,14 @@ export class BarionGateway implements PaymentGateway {
           }
         : {}),
       Currency: req.currency,
-      Locale: "hu-HU",
+      Locale: req.locale,
       RedirectUrl: req.returnUrl,
       CallbackUrl: req.callbackUrl,
       Transactions: [
         {
           POSTransactionId: req.paymentId,
           Payee: this.payee,
-          Total: req.amount,
+          Total: minorToMajor(req.amount, req.currency),
           Comment: req.description,
           Items: [
             {
@@ -145,8 +146,8 @@ export class BarionGateway implements PaymentGateway {
               Description: req.description,
               Quantity: 1,
               Unit: "db",
-              UnitPrice: req.amount,
-              ItemTotal: req.amount,
+              UnitPrice: minorToMajor(req.amount, req.currency),
+              ItemTotal: minorToMajor(req.amount, req.currency),
             },
           ],
         },
@@ -193,13 +194,13 @@ export class BarionGateway implements PaymentGateway {
       // issuer matches the MIT charge to that authentication through this.
       ...(req.traceId ? { TraceId: req.traceId } : {}),
       Currency: req.currency,
-      Locale: "hu-HU",
+      Locale: req.locale,
       CallbackUrl: req.callbackUrl,
       Transactions: [
         {
           POSTransactionId: req.paymentId,
           Payee: this.payee,
-          Total: req.amount,
+          Total: minorToMajor(req.amount, req.currency),
           Comment: req.description,
           Items: [
             {
@@ -207,8 +208,8 @@ export class BarionGateway implements PaymentGateway {
               Description: req.description,
               Quantity: 1,
               Unit: "db",
-              UnitPrice: req.amount,
-              ItemTotal: req.amount,
+              UnitPrice: minorToMajor(req.amount, req.currency),
+              ItemTotal: minorToMajor(req.amount, req.currency),
             },
           ],
         },
@@ -330,7 +331,8 @@ export class BarionGateway implements PaymentGateway {
    * transactions in one call (docs). Never throws; false = not captured (the
    * caller keeps the row `reserved` and the resume timer retries).
    */
-  async captureHold(gatewayRef: string, total: number): Promise<boolean> {
+  async captureHold(gatewayRef: string, totalMinor: number, currency: string): Promise<boolean> {
+    const total = minorToMajor(totalMinor, currency);
     try {
       const stateUrl = `${API}/v2/Payment/GetPaymentState?POSKey=${encodeURIComponent(
         this.posKey,

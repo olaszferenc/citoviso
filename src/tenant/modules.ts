@@ -4,6 +4,7 @@
 // still comes from the site's recipe, so a newly enabled module shows up on the next
 // re-render/publish — the UI says so honestly rather than implying instant layout change.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG, renderableModules, supersederOf, type ModuleGroup } from "../modules.js";
@@ -46,6 +47,9 @@ export interface TenantModule {
 
 export interface TenantModuleView {
   readonly modules: TenantModule[];
+  /** ADR-XXXX: ISO 4217 of every amount here (the tenant's pricing region). Optional so the
+   *  hand-made fixtures that predate it keep compiling; absent = the fixture's HUF. */
+  readonly currency?: string;
   readonly baseMonthly: number;
   /** base + every active non-spine module. */
   readonly totalMonthly: number;
@@ -225,8 +229,14 @@ export function paidButEmptyModules(
 }
 
 /** The full catalog with this tenant's active flags + current prices. */
-export async function getTenantModules(tenantId: string): Promise<TenantModuleView> {
+export async function getTenantModules(
+  tenantId: string,
+  /** A guard's fixture money context; product callers omit it (the tenant's own region). */
+  fixtureMoney?: { readonly region: string; readonly currency: string },
+): Promise<TenantModuleView> {
   await loadPricing();
+  // ADR-XXXX: the tenant's own pricing region — every price below is in its currency.
+  const { region, currency } = fixtureMoney ?? (await regionOfTenant(tenantId));
   const disabledSales = await getDisabledModules();
   const rows = await db
     .selectFrom("module_entitlement")
@@ -271,14 +281,14 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
     // The spine (enquiry) is always on — it is the conversion backbone, in the base
     // price — UNLESS a bought module replaces it (booking takes over its slot).
     active: Boolean(m.spine) || activeIds.has(m.id),
-    priceMonthly: getModulePrice(m.id),
+    priceMonthly: getModulePrice(m.id, region),
     supersededBy: supersederOf(m.id, effectiveIds),
     cancelAtPeriodEnd: cancelIds.has(m.id),
     awaitingFirstCharge: awaitingIds.has(m.id),
     trialGrant: trialGrantIds.has(m.id),
     hidden: hiddenIds.has(m.id),
   }));
-  const baseMonthly = getBaseMonthly();
+  const baseMonthly = getBaseMonthly(region);
   // A replaced module is never billed: the page cannot show it, so charging for it
   // would be selling nothing.
   // A trial-granted module is not paid for either (ADR-0354 ⓑ, Elek3 K1).
@@ -303,7 +313,7 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
     const t = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirst();
     if (t?.trial_until) trialUntil = budapestIsoDay(new Date(t.trial_until as unknown as string));
   }
-  return { modules, baseMonthly, totalMonthly, notOrderable, trialUntil };
+  return { modules, currency, baseMonthly, totalMonthly, notOrderable, trialUntil };
 }
 
 /**

@@ -19,7 +19,8 @@ import { readFileSync } from "node:fs";
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
 import { toGsm7 } from "../sms/encoding.js";
-import { isPricingConfirmed } from "../pricing.js";
+import { HU_PRICING_REGION, hasPricingRegion, isPricingConfirmed } from "../pricing.js";
+import { countryConfigSync } from "../country.js";
 import { NO_PACKAGE_PRICE, type OutreachDraft } from "./draft.js";
 
 /** ADR-0111: a market decision as the synchronous gate sees it. */
@@ -619,6 +620,20 @@ function countryGateReason(
   return null;
 }
 
+/**
+ * ADR-XXXX: is the price the message may advertise confirmed — in the LEAD's pricing
+ * region (country.pricing_region of the market verdict's country)? A country without a
+ * row or a region without a sheet is "not confirmed" (fail closed). Without a verdict, the
+ * same pre-ADR-0111 convention countryGateReason keeps: a Hungarian-language lead is HU.
+ */
+function priceConfirmedFor(lang: string | undefined, market: MarketVerdict | undefined): boolean {
+  if (market?.country) {
+    const r = countryConfigSync(market.country)?.pricingRegion;
+    return !!r && hasPricingRegion(r) && isPricingConfirmed(r);
+  }
+  return !lang || lang === "hu" ? isPricingConfirmed(HU_PRICING_REGION) : false;
+}
+
 export function checkOutreachSms(
   sms: { text: string; link: string; unsubscribeLink: string },
   leadName: string,
@@ -706,7 +721,7 @@ export function checkOutreachSms(
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
-  if (!isPricingConfirmed() && (PRICE_AD.test(prose) || PRICE_AD_PLAIN.test(plainProse))) {
+  if (!priceConfirmedFor(lang, market) && (PRICE_AD.test(prose) || PRICE_AD_PLAIN.test(plainProse))) {
     reasons.push(
       "ÁR-HIRDETÉS: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
     );
@@ -852,7 +867,7 @@ export function checkOutreachDraft(
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
   // While pricing is not owner-confirmed (default), any price claim in the mail is
   // a fabricated commercial promise → not sendable. Confirm on Konzol ▸ Árazás.
-  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
+  if (!priceConfirmedFor(lang, market) && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
     reasons.push(
       // ⚠️ The switch's REAL label is "Az árak véglegesek, élesíthetők" (views.ts) —
       // advice that names a control the operator cannot find is worse than none.

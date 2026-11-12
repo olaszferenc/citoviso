@@ -4,7 +4,7 @@
 // daily billing-cycle tick.
 //
 // Semantics:
-//   - tiers 80% and 100% of AAM_ANNUAL_LIMIT_HUF, each signalled ONCE per
+//   - tiers 80% and 100% of the year's AAM cap (aamAnnualLimitHuf), each signalled ONCE per
 //     calendar year AND channel (aam_alert stamp table, dunning_event style);
 //   - crossing 100% also fires even if 80% was already stamped (separate rows);
 //   - channels: SMS + email, recipients from the console /settings page
@@ -18,7 +18,7 @@ import { budapestYear } from "../text/budapestTime.js";
 import { getEmailSender } from "../email/sender.js";
 import { sendOperatorSms } from "./operatorSms.js";
 import { getAlertRecipients } from "./appSettings.js";
-import { AAM_ANNUAL_LIMIT_HUF, getAamYearNet } from "./partnerData.js";
+import { aamAnnualLimitHuf, getAamYearNet } from "./partnerData.js";
 
 const TIERS = [80, 100] as const;
 type Channel = "sms" | "email";
@@ -30,17 +30,17 @@ export interface AamAlertResult {
 }
 
 /** Internal operator text — outside the §B.18 customer-facing i18n scope. */
-function smsText(tier: number, pct: number, netHuf: number): string {
+function smsText(tier: number, pct: number, netHuf: number, limitHuf: number): string {
   const m = (netHuf / 1e6).toFixed(1).replace(".", ",");
-  const limitM = (AAM_ANNUAL_LIMIT_HUF / 1e6).toFixed(0);
+  const limitM = (limitHuf / 1e6).toFixed(0);
   return tier >= 100
     ? `Citoviso: AAM-limit ATLEPVE — ${pct}% (${m}/${limitM} M Ft). Az atlepo szamla mar teljes egeszeben afas + 15 napon belul NAV-bejelentes jar. Reszletek a konzolon.`
     : `Citoviso: AAM-limit ${pct}%-on (${m}/${limitM} M Ft). Kozeledik a plafon — ideje a konyvelovel egyeztetni. Reszletek a konzolon.`;
 }
 
-function emailParts(tier: number, pct: number, netHuf: number): { subject: string; text: string } {
+function emailParts(tier: number, pct: number, netHuf: number, limitHuf: number): { subject: string; text: string } {
   const m = (netHuf / 1e6).toFixed(1).replace(".", ",");
-  const limitM = (AAM_ANNUAL_LIMIT_HUF / 1e6).toFixed(0);
+  const limitM = (limitHuf / 1e6).toFixed(0);
   return tier >= 100
     ? {
         subject: `Citoviso — AAM-limit ÁTLÉPVE (${pct}%)`,
@@ -88,7 +88,8 @@ async function stamp(year: number, tier: number, channel: Channel): Promise<void
 /** One daily check. Injected `now` keeps it testable like the dunning ladder. */
 export async function checkAamAlert(now: Date): Promise<AamAlertResult> {
   const { netHuf } = await getAamYearNet();
-  const pct = Math.round((netHuf / AAM_ANNUAL_LIMIT_HUF) * 100);
+  const limitHuf = await aamAnnualLimitHuf();
+  const pct = Math.round((netHuf / limitHuf) * 100);
   const year = budapestYear(now);
   const sent: string[] = [];
   const rcpt = await getAlertRecipients();
@@ -106,12 +107,12 @@ export async function checkAamAlert(now: Date): Promise<AamAlertResult> {
     }
 
     if (rcpt.phone && !(await stamped(year, tier, "sms"))) {
-      await sendOperatorSms({ tag: "aam", to: rcpt.phone, text: smsText(tier, pct, netHuf) });
+      await sendOperatorSms({ tag: "aam", to: rcpt.phone, text: smsText(tier, pct, netHuf, limitHuf) });
       await stamp(year, tier, "sms");
       sent.push(`${tier}/sms`);
     }
     if (rcpt.email && !(await stamped(year, tier, "email"))) {
-      const { subject, text } = emailParts(tier, pct, netHuf);
+      const { subject, text } = emailParts(tier, pct, netHuf, limitHuf);
       await getEmailSender().send({ to: rcpt.email, audience: "platform", subject, text });
       await stamp(year, tier, "email");
       sent.push(`${tier}/email`);

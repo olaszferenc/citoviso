@@ -500,14 +500,14 @@ await block("B3 / K1 / ISMERT", async () => {
   const retry = domainSection({ ...base, status: "setup_retry", money: "paid", activeDomain: "ribizli.hu" }, {});
   ok(/az Öné/i.test(retry) && /tovább tart/.test(retry) && !/más lefoglalta|nem tudtuk megvásárolni/.test(retry),
     "⭐ B2 a felület setup_retry-nél azt mondja: a név az Öné, a beállítás késik");
-  const typedCom = await (await import("../src/domains/domainAdmin.js")).checkTypedDomain("ribizli.com");
+  const typedCom = await (await import("../src/domains/domainAdmin.js")).checkTypedDomain("ribizli.com", "hu");
   ok(typedCom.notOffered === true, "K1 a .com (nem kínált) a checkTypedDomain-ben notOffered", JSON.stringify(typedCom));
 });
 
 // B4 — the picked ending prices the review; the next charge = the minted renewal
 await block("B4", async () => {
   await pricing.loadPricing(true);
-  const hu = pricing.getTlds().find((t) => t.tld === ".hu")!;
+  const hu = pricing.getTlds("hu").find((t) => t.tld === ".hu")!;
   // A fresh DB has no pricing_config row — the endings are read only for a stored market.
   const sn = pricing.pricingSnapshot("hu");
   await pricing.savePricing({
@@ -523,7 +523,7 @@ await block("B4", async () => {
   await pricing.loadPricing(true);
   const { tenantId, siteId } = await makeTenant("Laguna");
   const { loadDomainAdmin } = await import("../src/domains/domainAdmin.js");
-  const d = await loadDomainAdmin(tenantId, "Laguna", undefined, "laguna-uj.eu");
+  const d = await loadDomainAdmin(tenantId, "Laguna", "hu", "laguna-uj.eu");
   const q = await up.quoteDomainUpgrade(tenantId, "laguna-uj.eu");
   ok(d.priceMonthly === 1200 && q?.price === 1200,
     "⭐ B4 .eu választásnál az Áttekintés díja = a rendelés díja = 1 200", `screen=${d.priceMonthly} order=${q?.price}`);

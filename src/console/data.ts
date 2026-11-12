@@ -1173,7 +1173,10 @@ export async function recordOrderIntent(input: {
   artifactId: string;
   modules: string[];
   billingPeriod: "monthly" | "annual";
+  /** Minor units of `money.currency`. */
   price: number | null;
+  /** ADR-XXXX: the region + currency the price was computed in (resolved once, orderRegion.ts). */
+  money: { readonly region: string; readonly currency: string };
   /** Domain choice (ADR-0020). */
   domainType: "citoviso_sub" | "citoviso_registered" | "own";
   domainName: string | null;
@@ -1252,6 +1255,8 @@ export async function recordOrderIntent(input: {
     .values({
       prospect_id: prospect.id,
       price: input.price,
+      pricing_region: input.money.region,
+      currency: input.money.currency,
       billing_period: input.billingPeriod,
       modules: JSON.stringify(input.modules),
       status: "submitted",

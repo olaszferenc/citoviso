@@ -124,3 +124,84 @@ export function formatMoney(
   const num = groupHu(n);
   return sign ? `${num} ${sign}` : num;
 }
+
+// ── AMOUNTS IN THE MINOR UNIT (ADR-0437 ⑤3, ADR-XXXX) ────────────────────────────────────
+// Every amount of OUR money (price, order, payment, invoice) is an integer in the currency's
+// MINOR unit, and how many digits that unit has is a property of the CURRENCY — not of the
+// screen, the region or the caller. ISO 4217 says it (Intl knows the table), with ONE
+// deliberate exception: HUF = 0. ISO lists the fillér, but neither Barion nor Számlázz.hu
+// takes one and no HU amount ever had one — so for HUF the minor unit IS the forint, and
+// every Hungarian amount stays exactly the integer it always was.
+//
+// ⚠️ formatMoney() above stays MAJOR-unit: it also prints the tenants' room prices, which are
+// scraped / typed in whole units. Our own money goes through formatMinor().
+
+/** Currencies whose minor-unit digits differ from ISO 4217 on purpose (see above). */
+const MINOR_DIGITS_OVERRIDE: Readonly<Record<string, number>> = { HUF: 0 };
+
+/**
+ * Minor-unit digits of an ISO 4217 code: HUF → 0, EUR/RON/PLN/CZK → 2, JPY → 0.
+ * null = not an ISO currency code (the caller must refuse it, never guess).
+ */
+export function minorDigits(currency: string | null | undefined): number | null {
+  const c = String(currency ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(c)) return null;
+  if (c in MINOR_DIGITS_OVERRIDE) return MINOR_DIGITS_OVERRIDE[c]!;
+  try {
+    return new Intl.NumberFormat("en", { style: "currency", currency: c }).resolvedOptions().maximumFractionDigits ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Minor-unit integer → major-unit number (2590, "EUR" → 25.9; 3900, "HUF" → 3900). */
+export function minorToMajor(amountMinor: number, currency: string): number {
+  const d = minorDigits(currency) ?? 0;
+  return d ? amountMinor / 10 ** d : amountMinor;
+}
+
+/** Major-unit number → minor-unit integer, rounded half away from zero to the currency's unit. */
+export function majorToMinor(amountMajor: number, currency: string): number {
+  const d = minorDigits(currency) ?? 0;
+  const v = amountMajor * 10 ** d;
+  return Math.sign(v) * Math.round(Math.abs(v) + 1e-9);
+}
+
+/**
+ * Our money as its reader writes it — the amount is in the MINOR unit:
+ * `formatMinor(3900, "HUF")` → `"3 900 Ft"` (identical to formatMoney for HUF),
+ * `formatMinor(1000, "EUR")` → `"10 €"`, `formatMinor(990, "EUR")` → `"9,90 €"`,
+ * `formatMinor(4990, "RON", "ro")` → `"49,90 RON"`.
+ * The fraction is printed only when the amount has one (a whole price stays "10 €").
+ */
+export function formatMinor(
+  amountMinor: number | null | undefined,
+  currency: string | null | undefined,
+  lang = "hu",
+): string {
+  if (amountMinor == null || typeof amountMinor !== "number" || !Number.isFinite(amountMinor)) return "";
+  const d = minorDigits(currency);
+  if (!d) return formatMoney(amountMinor, currency, lang);
+  const n = Math.round(amountMinor);
+  const frac = Math.abs(n) % 10 ** d;
+  if (frac === 0) return formatMoney(n / 10 ** d, currency, lang);
+  const major = n / 10 ** d;
+  if (lang && lang !== "hu") {
+    try {
+      return new Intl.NumberFormat(lang, {
+        style: "currency",
+        currency: String(currency ?? "").trim().toUpperCase(),
+        minimumFractionDigits: d,
+        maximumFractionDigits: d,
+      })
+        .format(major)
+        .replace(NON_BREAKING, " ");
+    } catch {
+      // fall through to the Hungarian shape
+    }
+  }
+  const whole = Math.trunc(Math.abs(n) / 10 ** d);
+  const num = `${n < 0 ? "-" : ""}${groupHu(whole)},${String(frac).padStart(d, "0")}`;
+  const sign = currencySign(currency);
+  return sign ? `${num} ${sign}` : num;
+}

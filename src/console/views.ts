@@ -2,6 +2,9 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
+import { marketOpenGaps } from "../payment/providers.js";
+import { countryConfigSync } from "../country.js";
+import { regionPriceGaps } from "../pricing.js";
 import type { LeadStock } from "./leadStock.js";
 import { leadStockCard, stockChips, stockFilterLabel, stockPeriodPhrase, type StockPreset } from "./leadStockViews.js";
 import type { OpenChannelsData } from "./openChannels.js";
@@ -719,6 +722,10 @@ export interface MarketView {
  */
 function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; text: string } | null): string {
   const lang = consoleLang();
+  // ADR-XXXX: a market whose money path cannot work (no country row, a currency its payment
+  // provider does not take, an incomplete price sheet) shows WHY instead of the open action.
+  const moneyGaps = (country: string): string[] =>
+    marketOpenGaps(country, { row: countryConfigSync, regionGaps: regionPriceGaps });
   const fmt = (d: Date | null): string =>
     d ? new Date(d).toISOString().slice(0, 16).replace("T", " ") : "—";
 
@@ -756,7 +763,9 @@ function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; tex
                 <button type="submit">${T(lang, "Lezárás")}</button>
               </form>
             </details>`
-          : `<details class="mkt-act">
+          : moneyGaps(m.country).length
+            ? `<p class="ob-law" role="status"><b>${T(lang, "Nem nyitható:")}</b> ${esc(moneyGaps(m.country).join(" · "))}</p>`
+            : `<details class="mkt-act">
               <summary>${T(lang, "Piac megnyitása ▸")}</summary>
               <p class="ob-law">${T(lang, "A megnyitás felelősségvállalás: kijelented, hogy ennek az országnak a jogi csomagja (ÁSZF, elállás, adatkezelés, megkeresési szabályok) kész és felülvizsgált. Amíg zárva van, erre az országra nem megy hideg megkeresés, nem adható ki fizetési link és nem élesíthető oldal.")}</p>
               <form method="post" action="/settings/markets" class="mkt-form">
@@ -817,7 +826,7 @@ export function settingsPage(
     </div>
     <div class="panel" style="max-width:560px">
       <h2>${T(lang, "Üzemi riasztások — ide szól a rendszer")}</h2>
-      <p class="mut small" style="margin:0 0 10px">${T(lang, "Ide megy MINDEN üzemi riasztás: az AAM-keret (18 M Ft/év) 80%/100%-a, a törött MMS+SMS pár, a .hu megerősítő link, a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás, a megrekedt rendelés (a vevő megrendelt, de fizetési linket nem kapott), az elakadt ingyenes próba (lejárat, értesítés, élesítés, belépő-levél, folytatás-fizetés), és a megvett, de a beállításban elakadt saját domain. Hír is jön ide: az új ingyenes próba (levél + SMS) és a 24 órája megválaszolatlan foglalási kérés (levél). Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
+      <p class="mut small" style="margin:0 0 10px">${T(lang, "Ide megy MINDEN üzemi riasztás: az AAM-keret (az adóév törvényi összege, 2026-ban 20 M Ft) 80%/100%-a, az OSS-küszöb (10 000 €) közelsége és elérése, a törött MMS+SMS pár, a .hu megerősítő link, a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás, a megrekedt rendelés (a vevő megrendelt, de fizetési linket nem kapott), az elakadt ingyenes próba (lejárat, értesítés, élesítés, belépő-levél, folytatás-fizetés), és a megvett, de a beállításban elakadt saját domain. Hír is jön ide: az új ingyenes próba (levél + SMS) és a 24 órája megválaszolatlan foglalási kérés (levél). Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
       ${alertNotice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${alertNotice.ok ? "approved" : "rejected"}">${esc(alertNotice.text)}</span></div>` : ""}
       <form method="post" action="/settings/alerts" style="display:block;max-width:340px">
         <label class="small mut" for="al-phone">${T(lang, "SMS-szám")}</label>

@@ -5,6 +5,7 @@
 // --tenant: dev/teszt szűkítés EGY tenantra (FK-006 időutazás a közös dev DB-ben).
 import { runBillingCycle } from "../src/payment/billing.js";
 import { checkAamAlert } from "../src/console/aamAlert.js";
+import { checkOssAlert } from "../src/console/ossAlert.js";
 import { retryFailedInvoices } from "../src/billing/invoiceRetry.js";
 import { db } from "../src/db/client.js";
 import { endTrialGrantsAfterConversion, lapseExpiredTrials } from "../src/trial/expiry.js";
@@ -65,6 +66,14 @@ try {
   console.log(`aam-alert @ ${now.toISOString()}:`, JSON.stringify(a));
 } catch (e) {
   console.error("aam-alert HIBA:", e);
+  sideStepFailed = true;
+}
+// ADR-XXXX: the OSS 10 000 € B2C threshold — same tick, same loud non-blocking shape.
+try {
+  const o = await checkOssAlert(now);
+  console.log(`oss-alert @ ${now.toISOString()}:`, JSON.stringify(o));
+} catch (e) {
+  console.error("oss-alert HIBA:", e);
   sideStepFailed = true;
 }
 // ADR-0283: a failed invoice is re-issued once a day, at most INVOICE_AUTO_RETRY_LIMIT

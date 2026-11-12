@@ -204,7 +204,7 @@ await block("①", async () => {
   const drop = ajanlott.find((id) => MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once"));
   if (drop) {
     await db.updateTable("module_entitlement").set({ active: false }).where("tenant_id", "=", tenantId).where("module", "=", drop).execute();
-    const due = await domainFeeForRenewal(tenantId, 1);
+    const due = await domainFeeForRenewal(tenantId, 1, "hu");
     ok((due?.fee ?? 0) > 0, "④ kisebb csomagra váltva a név díja a következő megújításon elindul", JSON.stringify(due));
   } else ok(false, "④ nincs eldobható modul az Ajánlottban (fixture)");
 });
@@ -242,7 +242,7 @@ await block("③", async () => {
   const letter = mail.find((x) => /Nem tudtuk megvásárolni/.test(x.subject ?? ""));
   ok(!!letter && /nem fizetett érte semmit/.test(letter.body_text) && !/zárolás|befizetett|terheltük/.test(letter.body_text),
     "⭐ ③ a tulaj levele igaz: nem fizetett semmit — nincs zárolás/befizetés-mondat", letter?.body_text ?? "nincs levél");
-  const d = await loadDomainAdmin(tenantId, "Balsors Panzió");
+  const d = await loadDomainAdmin(tenantId, "Balsors Panzió", "hu");
   ok(d.money === "free" && d.status === "failed", "③ a fül a díjmentes állapotot látja", `${d.money} / ${d.status}`);
   const screen = domainSection(d, {});
   ok(/nem tudtuk megvásárolni|más lefoglalta/.test(screen) && /Nem fizetett érte semmit/.test(screen) &&

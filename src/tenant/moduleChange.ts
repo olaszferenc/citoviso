@@ -21,6 +21,7 @@
 // The 'once' modules (ADR-0063: multilang) and the spine are untouchable here,
 // exactly as in setTenantModules.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { MODULE_CATALOG, type DependencyIssue } from "../modules.js";
@@ -80,6 +81,8 @@ export async function applyModuleChange(
   wanted: readonly string[],
 ): Promise<ModuleChangeResult> {
   await loadPricing();
+  // ADR-XXXX: the tenant's own region decides what is paid and the package floor's sum.
+  const { region } = await regionOfTenant(tenantId);
   const want = new Set(wanted.filter(toggleable));
 
   const rows = await db
@@ -123,7 +126,7 @@ export async function applyModuleChange(
         continue;
       }
       if (s?.active && s.cancel_at_period_end) rejoined.push(m.id);
-      else if (getModulePrice(m.id) > 0) requiresPayment.push(m.id);
+      else if (getModulePrice(m.id, region) > 0) requiresPayment.push(m.id);
       else added.push(m.id);
     } else {
       if (s?.awaiting_first_charge) switchedOff.push(m.id);
@@ -181,7 +184,7 @@ export async function applyModuleChange(
   const commitment = await activeDomainCommitment(tenantId);
   if (commitment?.floorMonthly != null) {
     const immediate = [...want].filter((id) => !requiresPayment.includes(id));
-    const attempted = computeMonthly(immediate);
+    const attempted = computeMonthly(immediate, region);
     if (attempted < commitment.floorMonthly) {
       return {
         added: [],

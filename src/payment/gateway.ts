@@ -11,8 +11,11 @@
 export interface PaymentRequest {
   /** Our payment.id (opaque, round-trips through the gateway). */
   readonly paymentId: string;
+  /** MINOR unit of `currency` (ADR-XXXX) — the adapter converts to what its API takes. */
   readonly amount: number;
   readonly currency: string;
+  /** The pay page's locale, from the BUYER's language (providers.ts providerLocale). */
+  readonly locale: string;
   readonly period: "monthly" | "annual";
   readonly description: string;
   /** Absolute webhook URL the gateway calls on completion. */
@@ -45,8 +48,11 @@ export interface PaymentRequest {
 /** ADR-0080 ④: a merchant-initiated charge with a stored token (payer absent). */
 export interface RecurringChargeRequest {
   readonly paymentId: string;
+  /** MINOR unit of `currency` (ADR-XXXX). */
   readonly amount: number;
   readonly currency: string;
+  /** The buyer's locale (a MIT charge has no page, the gateway may still log it). */
+  readonly locale: string;
   readonly description: string;
   /** The token minted at the initiating checkout (subscription.recurrence_token). */
   readonly recurrenceId: string;
@@ -136,7 +142,8 @@ export interface PaymentGateway {
    * ADR-0251: capture an authorized (DelayedCapture) payment for `total` — the
    * moment the buyer is actually charged. Never throws: false = not captured.
    */
-  captureHold?(gatewayRef: string, total: number): Promise<boolean>;
+  /** `total` in the MINOR unit of `currency` (ADR-XXXX). */
+  captureHold?(gatewayRef: string, total: number, currency: string): Promise<boolean>;
   /** ADR-0251: cancel the authorization — the block on the card is lifted, 0 charged. */
   releaseHold?(gatewayRef: string): Promise<boolean>;
 }

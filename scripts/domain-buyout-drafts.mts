@@ -23,8 +23,8 @@ const OUT = path.join(ROOT, "assets", "design-refs", "_drafts");
 
 // ── Valós adat-minta ──
 const DOMAIN = "napfenypanzio.hu";
-const FLOOR = getDomainMinPackageMonthly(); // ADR-0109 ④: a belépési küszöb = a padló (kötbér-alap)
-const BUYOUT = getDomainBuyoutPrice(); // a domain definiált vételára
+const FLOOR = getDomainMinPackageMonthly("hu"); // ADR-0109 ④: a belépési küszöb = a padló (kötbér-alap)
+const BUYOUT = getDomainBuyoutPrice("hu"); // a domain definiált vételára
 const COMMITMENT = 12;
 const SERVED = 5;
 const REMAINING = COMMITMENT - SERVED;

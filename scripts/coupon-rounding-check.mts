@@ -155,11 +155,11 @@ try {
 
   // ── the basket: three paid, non-spine, recurring modules ────────────────────
   const BASKET = MODULE_CATALOG.filter(
-    (m) => !m.spine && m.billing !== "once" && getModulePrice(m.id) > 0,
+    (m) => !m.spine && m.billing !== "once" && getModulePrice(m.id, "hu") > 0,
   )
     .slice(0, 3)
     .map((m) => m.id);
-  const PRICES = BASKET.map((id) => getModulePrice(id));
+  const PRICES = BASKET.map((id) => getModulePrice(id, "hu"));
   if (BASKET.length < 2) throw new Error("a katalógusban nincs elég fizetős modul a méréshez");
 
   // ⭐⭐ THE DISCRIMINATING COUPON, derived — not guessed. The percentage is picked so
@@ -263,8 +263,8 @@ try {
   const periodEnd = isoInDays(20);
   check(
     "a havi ütem 1 hónapra árazza az első terhelést (az őr feltevése MÉRVE)",
-    proratedFirstChargeMonths("monthly", new Date(periodEnd)) === MONTHS,
-    proratedFirstChargeMonths("monthly", new Date(periodEnd)),
+    proratedFirstChargeMonths("monthly", new Date(periodEnd), "hu") === MONTHS,
+    proratedFirstChargeMonths("monthly", new Date(periodEnd), "hu"),
   );
 
   // ── ② the CHARGE: the real order-writing path ───────────────────────────────
@@ -290,7 +290,7 @@ try {
     `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head>` +
     `<body><div class="adm-shell"><main class="adm-main"><div class="adm-main__inner">` +
-    modulesSection(mv, mkSub("monthly", periodEnd, PCT), null, "hello@citoviso.com", null, "hu") +
+    modulesSection(mv, mkSub("monthly", periodEnd, PCT), null, "hello@citoviso.com", null) +
     `</div></main></div></body></html>`;
 
   check(
@@ -363,7 +363,7 @@ try {
 
   // ── ⑥ the annual path, where the two rules used to agree by accident ────────
   const annualEnd = isoInDays(300);
-  const annualMonths = proratedFirstChargeMonths("annual", new Date(annualEnd));
+  const annualMonths = proratedFirstChargeMonths("annual", new Date(annualEnd), "hu");
   const annualOrder = await createFirstChargeOrder(
     tenant.id,
     BASKET,

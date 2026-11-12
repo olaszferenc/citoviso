@@ -163,6 +163,7 @@ async function submitLikeTheRoute(
   const v = await validateBuyer(BUYER_INPUT, { requireTerms: false });
   if (!v.ok) throw new Error(`az őr vevő-adata érvénytelen: ${JSON.stringify(v.errors)}`);
   const rec = await recordOrderIntent({
+    money: { region: "hu", currency: "HUF" },
     artifactId,
     modules: [],
     billingPeriod: "monthly",

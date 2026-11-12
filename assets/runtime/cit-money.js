@@ -82,7 +82,58 @@ var CitMoney = (function () {
     return sign ? num + " " + sign : num;
   }
 
-  return { formatMoney: formatMoney, formatNumber: formatNumber, currencySign: currencySign };
+  /** Minor-unit digits (the TS twin's rule): HUF → 0, else ISO 4217 via Intl; null = not ISO. */
+  var MINOR_OVERRIDE = { HUF: 0 };
+  function minorDigits(currency) {
+    var c = String(currency == null ? "" : currency).trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(c)) return null;
+    if (Object.prototype.hasOwnProperty.call(MINOR_OVERRIDE, c)) return MINOR_OVERRIDE[c];
+    try {
+      var d = new Intl.NumberFormat("en", { style: "currency", currency: c }).resolvedOptions().maximumFractionDigits;
+      return d == null ? null : d;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Our money, amount in the MINOR unit: 3900,"HUF" → "3 900 Ft" · 990,"EUR" → "9,90 €". */
+  function formatMinor(amountMinor, currency, lang) {
+    if (!finite(amountMinor)) return "";
+    var d = minorDigits(currency);
+    if (!d) return formatMoney(amountMinor, currency, lang);
+    var n = Math.round(amountMinor);
+    var p = Math.pow(10, d);
+    var frac = Math.abs(n) % p;
+    if (frac === 0) return formatMoney(n / p, currency, lang);
+    if (lang && lang !== "hu") {
+      try {
+        return new Intl.NumberFormat(lang, {
+          style: "currency",
+          currency: String(currency == null ? "" : currency).trim().toUpperCase(),
+          minimumFractionDigits: d,
+          maximumFractionDigits: d,
+        })
+          .format(n / p)
+          .replace(NON_BREAKING, " ");
+      } catch (e) {
+        /* fall through to the Hungarian shape */
+      }
+    }
+    var whole = Math.trunc(Math.abs(n) / p);
+    var fs = String(frac);
+    while (fs.length < d) fs = "0" + fs;
+    var num = (n < 0 ? "-" : "") + group(whole) + "," + fs;
+    var sign = currencySign(currency);
+    return sign ? num + " " + sign : num;
+  }
+
+  return {
+    formatMoney: formatMoney,
+    formatNumber: formatNumber,
+    currencySign: currencySign,
+    minorDigits: minorDigits,
+    formatMinor: formatMinor,
+  };
 })();
 
 /* Node (the parity guard) loads this file as a script and reads CitMoney off the

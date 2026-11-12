@@ -214,9 +214,17 @@ import {
   offeredTlds,
   domainFeeForCycle,
   savePricing,
-  getCurrency,
+  HU_PRICING_REGION,
+  createPricingRegion,
+  hasPricingRegion,
+  newRegionErrors,
+  regionPriceGaps,
 } from "../pricing.js";
-import { formatMoney } from "../text/money.js";
+import { marketOpenGaps } from "../payment/providers.js";
+import { a60Csv, a60Summary, parseA60Period } from "../billing/a60.js";
+import { countryConfigSync } from "../country.js";
+import { formatMinor, majorToMinor } from "../text/money.js";
+import { OrderRegionError, regionForCountry, regionForLead, type OrderMoney } from "../payment/orderRegion.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
@@ -1028,10 +1036,15 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
     const html = await readServableMock(a.path, a.inputs);
     // ADR-0036: the configurator UI renders in the buyer's language (persisted on the artifact).
     const lang = ((a.inputs ?? {}) as { siteData?: { lang?: string } }).siteData?.lang;
+    // ADR-XXXX: the lead's market prices the configurator; a market that cannot price shows
+    // the mock WITHOUT an order entry (fail closed) rather than another market's prices.
+    const pricingRegion = await regionForArtifactOrNull(artifactId);
+    if (!pricingRegion) return send(res, 200, html);
     send(
       res,
       200,
       await injectConfigurator(html, artifactId, a.leadName, {
+        pricingRegion,
         ...(lang ? { lang } : {}),
         billingPrefill: leadBillingPrefill(a.leadAddress, a.leadRaw),
       }),
@@ -1246,13 +1259,31 @@ async function handleOrderRequest(
   // SERVER-side from the ONE pricing source (pricing.ts, operator-set) — the
   // client figure is display-only; a mismatch is logged as a tamper/drift signal.
   await loadPricing();
+  // ADR-XXXX — THE ORDER'S REGION, resolved ONCE: the lead's country (the lodging's market)
+  // → country.pricing_region; the buyer's billing country only stands in when the lead has
+  // none. Every price below is in that region's currency, and the order stores both. ⛔ No
+  // country row / incomplete price sheet / currency mismatch = NO order and no pay-link
+  // (ADR-0437 ③): the buyer is told the order cannot be taken, the operator sees why.
+  const orderLeadRow = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  let money: OrderMoney;
+  try {
+    money = orderLeadRow
+      ? await regionForLead(orderLeadRow.lead_id, buyer.buyerCountry)
+      : await regionForCountry(null, buyer.buyerCountry);
+  } catch (e) {
+    if (!(e instanceof OrderRegionError)) throw e;
+    console.warn(`[console] rendelés ELUTASÍTVA — a piac nem árazható: ${e.message} — nincs order_intent, nincs pay-link`);
+    send(res, 409, JSON.stringify({ ok: false, error: "market_not_priced", reason: e.reason }), "application/json");
+    return;
+  }
+  const region = money.region;
   const clientPrice = typeof body.price === "number" ? Math.round(body.price) : null;
   // ADR-0088: the computed amount is the LIST price; a tracked prospect may hold
   // an offer (outreach −25% / escalation / campaign — the single largest one,
   // never stacked), and then the TRANSACTION is discounted: this order only,
   // renewals recompute from list in billing.ts.
   const listPrice =
-    billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
+    billingPeriod === "annual" ? computeAnnual(modules, region) : computeMonthly(modules, region);
   // ADR-0354 ("C"): the trial's continuation is priced by the TRIAL offer — the lead's
   // intro/escalation offer, pinned at trial start to the trial's last day. A lapsed
   // trial's offer is expired → list price (the deadline is real). One offer, never
@@ -1280,19 +1311,19 @@ async function handleOrderRequest(
   const wantsOwnDomain = domainType === "citoviso_registered";
   const salesOff = await getDisabledModules();
   const pkgCtx = { modules: [...modules, ...spineIds], disabled: salesOff };
-  const tldOffered = !wantsOwnDomain || (domainName !== null && offeredTldOf(domainName) !== null);
-  const domainEligible = wantsOwnDomain && tldOffered && isDomainEligible(computeMonthly(modules), undefined, pkgCtx);
+  const tldOffered = !wantsOwnDomain || (domainName !== null && offeredTldOf(domainName, region) !== null);
+  const domainEligible = wantsOwnDomain && tldOffered && isDomainEligible(computeMonthly(modules, region), region, pkgCtx);
   if (wantsOwnDomain && !domainEligible) {
     console.warn(
       tldOffered
-        ? `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
-            `${getDomainMinPackageMonthly()} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-0366)`
+        ? `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules, region)} < ` +
+            `${getDomainMinPackageMonthly(region)} és nem csomag-tartalom (ADR-0109 ②, ADR-0360) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-0366)`
         : `[console] saját domain ELUTASÍTVA: a(z) ${domainName ?? "—"} végződését ezen a piacon nem kínáljuk (ADR-0360 ③) — a rendelés ELUTASÍTVA, a vevő újra dönt (ADR-0366)`,
     );
   }
   const effectiveDomainType = domainEligible ? domainType : "citoviso_sub";
   const domainFee = domainEligible
-    ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1, undefined, { domain: domainName, ...pkgCtx })
+    ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1, region, { domain: domainName, ...pkgCtx })
     : 0;
   const price = (offer ? applyOffer(listPrice, offer) : listPrice) + domainFee;
   // ⛔ ADR-0366 ① (Elek 10-11 B1) — NO SILENT FALLBACK. Both branches below used to
@@ -1342,13 +1373,14 @@ async function handleOrderRequest(
     return;
   }
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
-  const commitmentMonths = domainEligible ? getDomainMinCommitmentMonths() : null;
+  const commitmentMonths = domainEligible ? getDomainMinCommitmentMonths(region) : null;
   // ADR-0094 ④ / ADR-0109 ④: a custom-domain order freezes the package floor AT
   // ORDER TIME — during the hűségidő the tenant may not sink below the entry
   // threshold. Now EVERY custom-domain order carries the floor (there is no
   // free/paid split any more: the threshold is the entry condition itself).
   // ADR-0360 ④: a threshold of 0 is "no threshold" — and then there is no floor either.
-  const committedMinMonthly = domainEligible && getDomainMinPackageMonthly() > 0 ? getDomainMinPackageMonthly() : null;
+  const committedMinMonthly =
+    domainEligible && getDomainMinPackageMonthly(region) > 0 ? getDomainMinPackageMonthly(region) : null;
   // ⛔ ADR-0366 ⑥ (Elek 5. kör K2): two simultaneous submits (two tabs, a double tap) each
   // recorded an order AND minted a payable pay-link — the money could move twice. Per lead,
   // record → approve → pay-link now run ONE AT A TIME, and an identical, still-open first
@@ -1384,6 +1416,7 @@ async function handleOrderRequest(
     modules,
     billingPeriod,
     price,
+    money,
     domainType: effectiveDomainType,
     // Elek3 B1 (ADR-0032 / ADR-0356): a freely-chosen platform subdomain is a domain NAME
     // too — dropping it here meant activation never saw the buyer's choice. A custom-domain
@@ -1403,12 +1436,12 @@ async function handleOrderRequest(
   });
   console.log(
     `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
-      `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"}` +
-      (offer ? ` (lista ${listPrice} Ft, −${offer.percent}% ${offer.kind}-ajánlat)` : "") +
+      `${formatMinor(price, money.currency) || "?"}/${billingPeriod === "annual" ? "év" : "hó"} (${region})` +
+      (offer ? ` (lista ${formatMinor(listPrice, money.currency)}, −${offer.percent}% ${offer.kind}-ajánlat)` : "") +
       ` · modulok: ${modules.join(", ") || "—"} · ` +
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
       (domainType === "citoviso_registered"
-        ? ` · domain-díj ${domainFee ? `${formatMoney(domainFee, getCurrency())}/ciklus` : `${formatMoney(0, getCurrency())} (csomag-tartalom, ADR-0360)`}`
+        ? ` · domain-díj ${domainFee ? `${formatMinor(domainFee, money.currency)}/ciklus` : `${formatMinor(0, money.currency)} (csomag-tartalom, ADR-0360)`}`
         : "") +
       (prospectToken ? " · követett link" : ""),
   );
@@ -1491,6 +1524,25 @@ async function acquireOrderLock(key: string): Promise<() => void> {
     release();
     if (orderLocks.get(key) === chained) orderLocks.delete(key);
   };
+}
+
+/**
+ * ADR-XXXX: the pricing region of the lead behind a mock artifact, or null when that market
+ * cannot price (no country row, incomplete price sheet) — the configurator's side endpoints
+ * then offer nothing rather than another market's endings.
+ */
+async function regionForArtifactOrNull(artifactId: string): Promise<string | null> {
+  const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  if (!a) return null;
+  try {
+    return (await regionForLead(a.lead_id)).region;
+  } catch (e) {
+    if (e instanceof OrderRegionError) {
+      console.warn(`[console] konfigurátor: ${e.message}`);
+      return null;
+    }
+    throw e;
+  }
 }
 
 /** Neutral page after unsubscribe (no tracking, no sell). ADR-0322 ④/B: UNDER the
@@ -2146,6 +2198,15 @@ async function handle(
       );
     }
     const decision = { country, actor: op.username, reason };
+    // ADR-XXXX: a market whose money path cannot work does not open (fail closed) — its
+    // currency is not taken by its payment provider, or its pricing region cannot price.
+    if (action === "approve") {
+      await loadPricing(true);
+      const gaps = marketOpenGaps(country.toUpperCase(), { row: countryConfigSync, regionGaps: regionPriceGaps });
+      if (gaps.length) {
+        return redirect(res, `/settings?mk=${encodeURIComponent(`hiba:${country} nem nyitható: ${gaps.join("; ")}`)}`);
+      }
+    }
     const ok =
       action === "approve" ? await approveMarket(decision) : await revokeMarket(decision);
     const label = action === "approve" ? "megnyitva" : "lezárva";
@@ -2219,7 +2280,10 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     await loadPricing(true);
-    const region = url.searchParams.get("region") || undefined;
+    // The console opens on the home market's tab; an unknown ?region= opens it too (the tab
+    // row shows every region that exists, the new one included).
+    const askedRegion = url.searchParams.get("region");
+    const region = askedRegion && hasPricingRegion(askedRegion) ? askedRegion : HU_PRICING_REGION;
     const k = url.searchParams.get("saved");
     const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
     const liveRows = await db
@@ -2266,6 +2330,38 @@ async function handle(
       return send(res, 200, JSON.stringify({ ok: false }), "application/json");
     }
   }
+  // GET /documents/a60?period=2026-11 | 2026-Q4 — ADR-XXXX: the A60 summary rows (reverse-
+  // charge invoices per partner VAT number, net in HUF and thousand HUF) as CSV.
+  if (method === "GET" && path === "/documents/a60") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const period = parseA60Period(url.searchParams.get("period"));
+    if (!period) return send(res, 400, "period=YYYY-MM vagy YYYY-Qn", "text/plain; charset=utf-8");
+    const summary = await a60Summary(period);
+    res.setHeader("content-disposition", `attachment; filename="a60-${period.label}.csv"`);
+    return send(res, 200, a60Csv(summary), "text/csv; charset=utf-8");
+  }
+  // POST /pricing/region — ADR-XXXX: a NEW pricing region with its own currency. Created
+  // unconfirmed and without prices: incomplete (every order path fails closed on it) until
+  // its tab is filled and saved.
+  if (method === "POST" && path === "/pricing/region") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const id = (form.get("new_region") ?? "").trim().toLowerCase();
+    const cur = (form.get("new_currency") ?? "").trim().toUpperCase();
+    await loadPricing(true);
+    const errs = newRegionErrors(id, cur);
+    if (errs.length) {
+      return redirect(res, `/pricing?saved=${encodeURIComponent(`hiba:Nem hoztam létre: ${errs.join("; ")}.`)}`);
+    }
+    await createPricingRegion(id, cur);
+    console.log(`[pricing] új ár-régió: ${id} (${cur}) — ${op.operatorUserId}`); // i18n-exempt: operátori napló
+    return redirect(
+      res,
+      `/pricing?region=${encodeURIComponent(id)}&saved=${encodeURIComponent("ok:Ár-régió létrehozva — töltse ki az alapdíjat és a modulárakat, utána árazható.")}`,
+    );
+  }
   // POST /pricing — persist the prices + the "confirmed" gate flip (per region).
   if (method === "POST" && path === "/pricing") {
     const op = await currentOperator(req);
@@ -2274,18 +2370,33 @@ async function handle(
     // Elek K3: a field the form did NOT send keeps its stored value — `Number(null)` is 0,
     // which used to zero `custom_domain_monthly` and clamp `domain_max_price_eur` to 1 on
     // every save of the new /pricing page (it no longer carries those legacy fields).
+    const region = form.get("region") ?? "";
+    if (!hasPricingRegion(region)) {
+      return redirect(res, `/pricing?saved=${encodeURIComponent("hiba:Nem mentettem: ismeretlen ár-régió.")}`);
+    }
+    const snap = pricingSnapshot(region);
+    // ADR-XXXX: the page shows MAJOR units of the region's currency (9.90 €); the store holds
+    // minor (990). HUF has no minor digits, so for the home market this is the identity.
+    const money = (name: string): number | null => {
+      const raw = form.get(name);
+      if (raw === null || raw.trim() === "") return null;
+      const v = Number(raw.replace(",", "."));
+      return Number.isFinite(v) && v >= 0 ? majorToMinor(v, snap.currency) : null;
+    };
     const num = (name: string, fallback: number): number => {
       const raw = form.get(name);
       if (raw === null || raw.trim() === "") return fallback;
       const v = Number(raw);
       return Number.isFinite(v) && v >= 0 ? v : fallback;
     };
-    const region = form.get("region") || undefined;
-    const snap = pricingSnapshot(region);
+    const moneyOr = (name: string, fallback: number): number => money(name) ?? fallback;
     const modulePrices: Record<string, number> = {};
     for (const m of MODULE_CATALOG) {
       if (m.spine) continue;
-      modulePrices[m.id] = num(`m_${m.id}`, snap.modulePrices.get(m.id) ?? 0);
+      // A field left empty keeps the stored price; on a non-home region an id never priced
+      // stays missing (the region stays incomplete — fail closed, ADR-XXXX).
+      const v = money(`m_${m.id}`) ?? snap.modulePrices.get(m.id);
+      if (v !== undefined) modulePrices[m.id] = v;
     }
     // ADR-0128: a multilang SÁV-árai (`multilang6`, `multilang28`) nem katalógus-
     // modulok — egy modul csomagméretei —, ezért a fenti ciklus nem látja őket.
@@ -2293,7 +2404,11 @@ async function handle(
     // az árak operátor-szerkeszthetők. (A savePricing már írja mindhárom sort.)
     for (const t of MULTILANG_TIERS) {
       if (t.priceId === "multilang") continue; // az Alap a katalógus-sorral azonos
-      modulePrices[t.priceId] = num(`m_${t.priceId}`, snap.modulePrices.get(t.priceId) ?? t.priceDefault);
+      const v =
+        money(`m_${t.priceId}`) ??
+        snap.modulePrices.get(t.priceId) ??
+        (snap.region === HU_PRICING_REGION ? t.priceDefault : undefined);
+      if (v !== undefined) modulePrices[t.priceId] = v;
     }
     // ADR-0285 / ADR-0286: the GLOBAL lead-offer parameters ride on every region's form.
     // Validated BEFORE anything is written — a refused value must not leave half a save.
@@ -2341,7 +2456,14 @@ async function handle(
         )}`,
       );
     }
-    const tlds = parseTldRows(form.get("tld_json"));
+    // The ending table travels in MAJOR units too (fee: the region's currency; cost and cap:
+    // each ending's own cost currency) — back to minor before the rules judge it.
+    const tlds = parseTldRows(form.get("tld_json"))?.map((t) => ({
+      ...t,
+      costNet: t.costNet === null ? null : majorToMinor(t.costNet, t.costCurrency),
+      maxCost: majorToMinor(t.maxCost, t.costCurrency),
+      monthlyFee: majorToMinor(t.monthlyFee, snap.currency),
+    })) ?? null;
     if (form.get("tld_json") !== null && (!tlds || tldRowErrors(tlds).length)) {
       console.warn(`[pricing] végződés-lista elutasítva: ${tlds ? tldRowErrors(tlds).join("; ") : "olvashatatlan"}`); // i18n-exempt: operátori napló
       return redirect(
@@ -2360,20 +2482,20 @@ async function handle(
       await savePricing({
         region: snap.region,
         currency: snap.currency,
-        baseMonthly: num("base_monthly", snap.baseMonthly),
+        baseMonthly: moneyOr("base_monthly", snap.baseMonthly),
         annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
-        customDomainMonthly: num("custom_domain_monthly", snap.customDomainMonthly),
+        customDomainMonthly: moneyOr("custom_domain_monthly", snap.customDomainMonthly),
         // ADR-0093/0094/0109 domain terms (cap, commitment, ENTRY threshold, buyout).
         domainMaxPriceEur: num("domain_max_price_eur", snap.domainMaxPriceEur),
         domainMinCommitmentMonths: num("domain_min_commitment_months", snap.domainMinCommitmentMonths),
-        domainMinPackageMonthly: num("domain_min_package_monthly", snap.domainMinPackageMonthly),
-        domainBuyoutPrice: num("domain_buyout_price", snap.domainBuyoutPrice),
+        domainMinPackageMonthly: moneyOr("domain_min_package_monthly", snap.domainMinPackageMonthly),
+        domainBuyoutPrice: moneyOr("domain_buyout_price", snap.domainBuyoutPrice),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         // ADR-0360 ②: only a form that carries the domain panel may flip the switch.
         ...(form.get("dom_present") === "1" ? { domainFreeInPackage: form.get("domain_free_in_package") === "on" } : {}),
         modulePrices,
       });
-      if (snap.region === "hu") {
+      if (snap.region === HU_PRICING_REGION) {
         await setDisabledModules(
           MODULE_CATALOG.filter((m) => !m.spine && form.get(`sell_${m.id}`) !== "on").map((m) => m.id),
         );
@@ -3779,9 +3901,11 @@ async function handle(
       .where("mock_artifact.id", "=", cfgDomMatch[1])
       .executeTakeFirst();
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
-    // ADR-0360 ③: only the endings this market offers are suggested.
-    await loadPricing();
-    const candidates = suggestDomains(a.leadName, offeredTlds().map((t) => t.tld));
+    // ADR-0360 ③: only the endings this market offers are suggested — the LEAD's market
+    // (ADR-XXXX); a lead whose market cannot price gets no suggestion (fail closed).
+    const sugRegion = await regionForArtifactOrNull(cfgDomMatch[1]!);
+    if (!sugRegion) return send(res, 200, JSON.stringify({ suggestions: [] }), "application/json");
+    const candidates = suggestDomains(a.leadName, offeredTlds(sugRegion).map((t) => t.tld));
     const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
     const suggestions = candidates.map((domain, i) => ({ domain, availability: verdicts[i]! }));
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
@@ -3809,10 +3933,11 @@ async function handle(
     if (!norm.ok) {
       return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
     }
-    // ADR-0360 ③: the buyer picks name AND ending — but only from the offered endings.
-    await loadPricing();
-    if (!offeredTldOf(norm.domain!)) {
-      const list = offeredTlds().map((t) => t.tld).join(", ");
+    // ADR-0360 ③: the buyer picks name AND ending — but only from the offered endings of
+    // the lead's market (ADR-XXXX).
+    const chkRegion = await regionForArtifactOrNull(cfgDomCheckMatch[1]!);
+    if (!chkRegion || !offeredTldOf(norm.domain!, chkRegion)) {
+      const list = chkRegion ? offeredTlds(chkRegion).map((t) => t.tld).join(", ") : "";
       return send(
         res,
         200,
@@ -4185,7 +4310,10 @@ async function handle(
     const contLang = p.lang ?? "hu";
     try {
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(p.artifactPath, p.artifactInputs)));
+      const contRegion = await regionForArtifactOrNull(p.artifactId);
+      if (!contRegion) return send(res, 200, disableIntroAnimation(html));
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
+        pricingRegion: contRegion,
         requestUrl: `/p/${pContMatch[1]}/request`,
         // ADR-0407 (Próba riport): the order's opening + checkout steps, recorded by the page.
         trialTrack: { url: `/p/${pContMatch[1]}/trial-event`, from: orderOpenFrom(url.searchParams.get("from")) },
@@ -4316,7 +4444,9 @@ async function handle(
       const trialDays = await trialDaysOnOffer(pf?.leadId, p.engine);
       // ADR-0364 (B1): the form names what the trial GIVES — the same list startTrial grants.
       const trialPkg = trialDays !== null ? await configuredTrialPackage() : null;
-      const page = await injectConfigurator(html, plan.artifactId, p.leadName, {
+      const planRegion = await regionForArtifactOrNull(plan.artifactId);
+      const page = !planRegion ? html : await injectConfigurator(html, plan.artifactId, p.leadName, {
+        pricingRegion: planRegion,
         // §F.19: the order binds to the plan on screen.
         requestUrl: plan.n === 1 ? `/p/${pMatch[1]}/request` : `/p/${pMatch[1]}/v/${plan.n}/request`,
         // ADR-0330: the subdomain the outreach link showed is the default they keep — via

@@ -12,6 +12,12 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { sql } from "kysely";
 import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
+import { allCountriesSync, countryConfigSync } from "../country.js";
+import { langForLead, langForTenant } from "../i18n/mail.js";
+import { providerAccepts, providerLocale } from "./providers.js";
+import { isOssCountedSale, isTaxableBuyerCountry, ossStatus } from "../billing/taxCounters.js";
+import { mnbRate } from "../billing/fxRate.js";
+import { currencySign, formatMinor } from "../text/money.js";
 import { convertLead } from "../conversion/provision.js";
 import { ownedBlocksInitialPurchase, preTrialOrderOfContinuableTrial } from "../conversion/owned.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
@@ -63,6 +69,77 @@ export interface RequestPaymentResult {
  */
 export const CARD_VERIFY_AMOUNT_HUF = 10;
 
+/**
+ * The provider behind a gateway adapter name: the live adapter IS the provider ("barion");
+ * the dev/test "mock" stands in for the provider the country names, so the same currency
+ * rule runs locally as in production.
+ */
+function providerOfGateway(gatewayName: string): string {
+  return gatewayName === "mock" ? "barion" : gatewayName;
+}
+
+/** The buyer's language for the pay page: the tenant's (follow-up orders) or the lead's. */
+async function buyerLangOfOrder(orderIntentId: string): Promise<string> {
+  const r = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select(["order_intent.tenant_id as tenantId", "prospect.lead_id as leadId"])
+    .where("order_intent.id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (r?.tenantId) return langForTenant(r.tenantId);
+  if (r?.leadId) return langForLead(r.leadId);
+  return "en";
+}
+
+/**
+ * ADR-XXXX: why this order cannot be charged in its currency (null = it can). Two facts:
+ * (1) the provider of the order's market (country.payment_provider of the region's country)
+ * must accept the currency; (2) an EU consumer outside Hungary is an OSS-counted sale —
+ * at the 10 000 € threshold new such sales are held back (taxCounters.ts).
+ */
+async function paymentMoneyBlock(oi: {
+  readonly currency: string;
+  readonly pricing_region: string;
+  readonly buyer_country: string | null;
+  readonly buyer_type: string | null;
+  readonly vat_treatment: string | null;
+}): Promise<string | null> {
+  const providers = allCountriesSync().filter((c) => c.pricingRegion === oi.pricing_region).map((c) => c.paymentProvider);
+  if (!providers.length) return `a(z) "${oi.pricing_region}" ár-régióhoz nem tartozik ország-sor — nincs fizetési szolgáltató`;
+  for (const pv of new Set(providers)) {
+    if (!providerAccepts(pv, oi.currency)) {
+      return `a(z) ${pv} fizetési szolgáltató nem fogad ${oi.currency} pénznemet (régió: ${oi.pricing_region}) — a piac nem nyitható`;
+    }
+  }
+  if (isOssCountedSale(oi)) {
+    const oss = await ossStatus();
+    if (oss.blocked) return `OSS-küszöb: ${oss.reason} — az újabb EU-s magánszemély-eladás visszatartva (tulaj-döntés: OSS-regisztráció)`;
+  }
+  return null;
+}
+
+/** Számlázz.hu áfakulcs values (docs.szamlazz.hu … settings_and_rules/vat-rates). */
+export const VAT_KEY_AAM = "AAM";
+export const VAT_KEY_REVERSE_CHARGE = "EUFAD37";
+
+/** Számlázz.hu `szamlaNyelve` values (xmlszamla.xsd szamlaNyelveTipus). */
+const SZAMLAZZ_LANGS = new Set(["hu", "en", "de", "it", "ro", "sk", "hr", "fr", "es", "cz", "pl", "bg", "nl", "ru", "si"]);
+/** BCP-47 → Számlázz code where they differ (Czech is cz, Slovene si). */
+const toSzamlazzLang = (l: string): string => ({ cs: "cz", sl: "si" } as Record<string, string>)[l] ?? l;
+
+/**
+ * ADR-XXXX: the invoice language — the buyer country's layer row (country.invoice_lang), else
+ * the order region's country. A code Számlázz.hu does not print falls to English (the guard
+ * keeps every row's code printable, so this is the last resort, logged).
+ */
+export function invoiceLanguageFor(buyerCountry: string | null, pricingRegion: string): string {
+  const row = countryConfigSync(buyerCountry) ?? allCountriesSync().find((c) => c.pricingRegion === pricingRegion) ?? null;
+  const code = toSzamlazzLang(String(row?.invoiceLang ?? "").toLowerCase());
+  if (SZAMLAZZ_LANGS.has(code)) return code;
+  console.warn(`[invoice] a(z) "${row?.invoiceLang ?? "—"}" számlanyelvet a Számlázz.hu nem ismeri — angol`); // i18n-exempt: operátori napló
+  return "en";
+}
+
 /** Create (or reuse a still-pending) pay-link for a submitted order intent.
  *  ADR-0226 `newCard`: an UPSELL the tenant chose to pay "with another card" —
  *  the pay-link then initiates a token, and the card that pays becomes the
@@ -73,7 +150,10 @@ export async function requestPayment(
 ): Promise<RequestPaymentResult | null> {
   const oi = await db
     .selectFrom("order_intent")
-    .select(["id", "price", "billing_period", "kind", "buyer_country", "domain_name"])
+    .select([
+      "id", "price", "billing_period", "kind", "buyer_country", "domain_name",
+      "currency", "pricing_region", "buyer_type", "vat_treatment", "tenant_id",
+    ])
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi || oi.price == null) return null;
@@ -169,6 +249,16 @@ export async function requestPayment(
     return null;
   }
 
+  // ADR-XXXX PROVIDER GATE — the order's currency must be one its country's payment
+  // provider takes (providers.ts, verified from the provider's documentation). A country
+  // whose currency the provider does not accept cannot be charged at all: no pay-link,
+  // never a silent switch to another currency (that would be a different price).
+  const moneyBlock = await paymentMoneyBlock(oi);
+  if (moneyBlock) {
+    console.warn(`[payment] requestPayment ${orderIntentId} MEGTAGADVA: ${moneyBlock}`);
+    return null;
+  }
+
   const gw = getGateway();
 
   // Reuse an outstanding pending pay-link (idempotent re-request).
@@ -215,7 +305,7 @@ export async function requestPayment(
     .values({
       order_intent_id: orderIntentId,
       amount: oi.price,
-      currency: "HUF",
+      currency: oi.currency,
       period: oi.billing_period,
       gateway: gw.name,
       status: "pending",
@@ -229,7 +319,9 @@ export async function requestPayment(
   const link = await gw.createPayLink({
     paymentId: payment.id,
     amount: oi.price,
-    currency: "HUF",
+    currency: oi.currency,
+    // ADR-XXXX: the pay page speaks the BUYER's language.
+    locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
     period: oi.billing_period,
     // ADR-0063: a one-time purchase must not read "előfizetés" on the pay screen.
     description:
@@ -386,7 +478,7 @@ export function paymentEndLogLine(
     status === "cancelled"
       ? "a vevő MEGSZAKÍTOTTA a fizetést (visszalépett a fizetőoldalon)"
       : "a fizetés SIKERTELEN (elutasítva / lejárt / hiba)";
-  const sum = p.amount != null ? `${p.amount} ${p.currency ?? "HUF"}` : "? HUF";
+  const sum = p.amount != null && p.currency ? formatMinor(p.amount, p.currency) : "?";
   return (
     `[payment] ${what} — terhelés nem történt · payment ${p.paymentId} · order ${p.orderIntentId}` +
     ` (${p.kind ?? "?"}) · ${sum} · ref ${p.gatewayRef}`
@@ -670,7 +762,7 @@ async function flagPaidAfterEndState(paymentId: string, endState: string, gatewa
     ])
     .where("payment.id", "=", paymentId)
     .executeTakeFirst();
-  const sum = `${info?.amount ?? "?"} ${info?.currency ?? "HUF"}`;
+  const sum = info?.amount != null && info.currency ? formatMinor(info.amount, info.currency) : "?";
   const text =
     `SIKERES FIZETÉS-JELZÉS egy már LEZÁRT (${endState}) fizetésre (Elek IT A2).\n\n` +
     `Lead: ${info?.leadName ?? "?"} · vevő e-mail: ${info?.email ?? "?"}\n` +
@@ -700,7 +792,7 @@ async function flagDuplicateInitialPayment(
     ])
     .where("payment.id", "=", paymentId)
     .executeTakeFirst();
-  const sum = `${info?.amount ?? "?"} ${info?.currency ?? "HUF"}`;
+  const sum = info?.amount != null && info.currency ? formatMinor(info.amount, info.currency) : "?";
   const text =
     `MÁSODIK TERHELÉS egy már kifizetett első vásárlásra (B1-PAR).\n\n` +
     `Lead: ${info?.leadName ?? "?"} · vevő e-mail: ${info?.email ?? "?"}\n` +
@@ -843,7 +935,7 @@ export async function chargeRenewalWithToken(
     if (!gw.chargeRecurring) return "failed";
     const oi = await db
       .selectFrom("order_intent")
-      .select(["id", "price", "billing_period", "kind", "buyer_country"])
+      .select(["id", "price", "billing_period", "kind", "buyer_country", "currency"])
       .where("id", "=", orderIntentId)
       .executeTakeFirst();
     if (!oi || oi.kind !== "renewal" || oi.price == null) return "failed";
@@ -895,7 +987,7 @@ export async function chargeRenewalWithToken(
       .values({
         order_intent_id: orderIntentId,
         amount: oi.price,
-        currency: "HUF",
+        currency: oi.currency,
         period: oi.billing_period,
         gateway: gw.name,
         status: "pending",
@@ -907,7 +999,8 @@ export async function chargeRenewalWithToken(
     const res = await gw.chargeRecurring({
       paymentId: payment.id,
       amount: oi.price,
-      currency: "HUF",
+      currency: oi.currency,
+      locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
       description: `Citoviso előfizetés megújítás (${oi.billing_period === "annual" ? "éves" : "havi"})`,
       recurrenceId: recurrenceToken,
       traceId,
@@ -1025,7 +1118,7 @@ export async function chargeUpsellWithToken(
     if (!gw.chargeRecurring) return "failed";
     const oi = await db
       .selectFrom("order_intent")
-      .select(["id", "price", "billing_period", "kind"])
+      .select(["id", "price", "billing_period", "kind", "currency"])
       .where("id", "=", orderIntentId)
       .executeTakeFirst();
     if (!oi || oi.kind !== "upsell" || oi.price == null) return "failed";
@@ -1060,7 +1153,7 @@ export async function chargeUpsellWithToken(
       .values({
         order_intent_id: orderIntentId,
         amount: oi.price,
-        currency: "HUF",
+        currency: oi.currency,
         period: oi.billing_period,
         gateway: gw.name,
         status: "pending",
@@ -1072,7 +1165,8 @@ export async function chargeUpsellWithToken(
     const res = await gw.chargeRecurring({
       paymentId: payment.id,
       amount: oi.price,
-      currency: "HUF",
+      currency: oi.currency,
+      locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
       description: "Citoviso modul-bővítés — időarányos első díj",
       recurrenceId: recurrenceToken,
       traceId,
@@ -1217,14 +1311,14 @@ async function applyDomainReservationResult(
 export async function captureDomainReservation(orderIntentId: string): Promise<boolean> {
   const p = await db
     .selectFrom("payment")
-    .select(["id", "gateway", "gateway_ref", "amount"])
+    .select(["id", "gateway", "gateway_ref", "amount", "currency"])
     .where("order_intent_id", "=", orderIntentId)
     .where("reservation", "=", true)
     .where("status", "=", "reserved")
     .executeTakeFirst();
   if (!p?.gateway_ref) return false;
   const gw = gatewayFor(p.gateway);
-  const ok = gw.captureHold ? await gw.captureHold(p.gateway_ref, p.amount) : false;
+  const ok = gw.captureHold ? await gw.captureHold(p.gateway_ref, p.amount, p.currency) : false;
   if (!ok) {
     console.error(`[domain] ⛔ a név megvéve, de a zárolt összeg lehívása NEM sikerült (${p.gateway_ref}) — újrapróba a resume-időzítőn`);
     return false;
@@ -1397,14 +1491,27 @@ export function invoiceComment(
   amount: number,
   /** Elek F-3: WHICH offer — its one name (offerLabel). Absent → the plain word. */
   offerKind?: OfferNameKind | null,
+  /**
+   * ADR-XXXX: the invoice's currency (amounts are its minor unit) and, on a reverse-charge
+   * invoice, BOTH community VAT numbers (ours from config, the buyer's VIES-verified one).
+   * Absent / a forint invoice → the historic forint wording, byte for byte.
+   */
+  ctx?: { readonly currency?: string; readonly sellerEuVat?: string | null; readonly buyerEuVat?: string | null },
 ): string {
   const legal = reverse
-    ? "A szolgáltatás teljesítési helye a megrendelő tagállama — fordított adózás (Áfa tv. 37. §). Reverse charge."
+    ? "Fordított adózás / Reverse charge — a szolgáltatás teljesítési helye a megrendelő tagállama (Áfa tv. 37. §)." +
+      (ctx?.sellerEuVat ? ` Eladó közösségi adószáma: ${ctx.sellerEuVat}.` : "") +
+      (ctx?.buyerEuVat ? ` Vevő közösségi adószáma: ${ctx.buyerEuVat}.` : "")
     : "Alanyi adómentes (AAM).";
   if (!offerPercent || !listPrice || listPrice <= amount) return legal;
+  // A forint invoice keeps its historic shape exactly (the HU invoice XML must not move);
+  // any other currency prints through the one money rule, in its own decimal digits.
+  const forint = !ctx?.currency || currencySign(ctx.currency) === "Ft";
+  const fee = forint ? `${listPrice.toLocaleString("hu-HU")} Ft-os díjból` : `${formatMinor(listPrice, ctx!.currency!)} díjból`;
+  const due = forint ? `${amount.toLocaleString("hu-HU")} Ft` : formatMinor(amount, ctx!.currency!);
   return (
-    `${legal} ${offerKind ? offerLabel("hu", offerKind) : "Kedvezmény"}: a ${listPrice.toLocaleString("hu-HU")} Ft-os díjból ` +
-    `−${offerPercent}%, így a fizetendő ${amount.toLocaleString("hu-HU")} Ft.`
+    `${legal} ${offerKind ? offerLabel("hu", offerKind) : "Kedvezmény"}: a ${fee} ` +
+    `−${offerPercent}%, így a fizetendő ${due}.`
   );
 }
 
@@ -1432,10 +1539,10 @@ export function splitInvoiceAmount(amount: number, weights: readonly number[]): 
 }
 
 /** The bought modules as invoice lines: the guest-facing name + the weight of the split. */
-export function invoiceModuleLines(moduleIds: readonly string[]): { label: string; weight: number }[] {
+export function invoiceModuleLines(moduleIds: readonly string[], region: string): { label: string; weight: number }[] {
   return moduleIds.map((id) => {
     const def = MODULE_CATALOG.find((m) => m.id === id);
-    return { label: def?.publicLabel ?? def?.label ?? id, weight: getModulePrice(id) };
+    return { label: def?.publicLabel ?? def?.label ?? id, weight: getModulePrice(id, region) };
   });
 }
 
@@ -1618,6 +1725,8 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       "order_intent.buyer_address as address",
       "order_intent.buyer_email as buyerEmail",
       "order_intent.vat_treatment as vatTreatment",
+      // ADR-XXXX: the region the order was priced in (the module-line weights are its prices).
+      "order_intent.pricing_region as pricingRegion",
       // ADR-0205: a kedvezmény a SZÁMLÁN is látszik. A listaárat eddig TÁROLTUK, de
       // sosem olvastuk vissza ide, ezért a vevő egy 14 775 Ft-os végösszeget kapott
       // minden nyom nélkül arról, hogy az egy 19 700 Ft-os díj kedvezményes ára.
@@ -1646,7 +1755,8 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       .values({
         payment_id: paymentId,
         provider: provider.name,
-        vat_key: "AAM",
+        // ADR-XXXX: the key the document WOULD have carried (reverse charge = EUFAD37).
+        vat_key: p.vatTreatment === "reverse_charge" ? VAT_KEY_REVERSE_CHARGE : VAT_KEY_AAM,
         vat_rate: 0,
         net: p.amount,
         gross: p.amount,
@@ -1733,8 +1843,25 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
   if (p.kind === "upsell") await loadPricing();
   // Reverse charge (Áfa tv. 37. §) is decided at order time against a VIES-verified
   // VAT number; everything else is AAM. The DB constraint guarantees the pairing.
+  // ADR-XXXX: the reverse-charge key is EUFAD37 („Áfa tv. 37. §-a alapján másik tagállamban
+  // teljesített, fordítottan adózó ügylet", docs.szamlazz.hu … settings_and_rules/vat-rates)
+  // — TAM is „tárgyi adómentes", a domestic exemption, and was wrong on these invoices.
   const reverse = p.vatTreatment === "reverse_charge";
-  const vatKey = reverse ? "TAM" : "AAM";
+  const vatKey = reverse ? VAT_KEY_REVERSE_CHARGE : VAT_KEY_AAM;
+  // Non-EU buyers stay blocked in this round (the accountant has not ruled on them).
+  if (!isTaxableBuyerCountry(p.country)) {
+    return recordFailure(`A vevő országa (${p.country ?? "—"}) nem HU/EU — ebben a körben nem számlázunk rá (ADR-XXXX).`, true);
+  }
+  // Both community VAT numbers must stand on a reverse-charge invoice; ours comes from config.
+  const sellerEuVat = config.legalEntity.euVatNumber.trim();
+  if (reverse && !sellerEuVat) {
+    return recordFailure("Fordított adózású számlához hiányzik a saját közösségi adószám (LEGAL_ENTITY_EU_VAT_NUMBER).", true);
+  }
+  // The invoice language: the buyer country's layer row, else the order region's country.
+  const language = invoiceLanguageFor(p.country, p.pricingRegion);
+  // A non-HUF invoice is issued with the MNB rate of its fulfilment day (Számlázz arfolyamBank
+  // MNB); the rate is passed explicitly when we have it, so the tax counters use the SAME one.
+  const fx = currencySign(p.currency) === "Ft" ? null : await mnbRate(p.currency, today);
   const input = {
     buyer: {
       name: p.buyerName,
@@ -1751,7 +1878,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       {
         ...p,
         ...(p.kind === "upsell"
-          ? { moduleLines: invoiceModuleLines((p.modules as unknown as string[]) ?? []) }
+          ? { moduleLines: invoiceModuleLines((p.modules as unknown as string[]) ?? [], p.pricingRegion) }
           : {}),
       },
       cadence,
@@ -1760,12 +1887,18 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       vatKey,
     ),
     currency: p.currency,
+    language,
+    ...(fx ? { fxBank: "MNB", fxRate: fx.rate } : currencySign(p.currency) === "Ft" ? {} : { fxBank: "MNB" }),
     issueDate: today,
     fulfillmentDate: today,
     dueDate: today,
     paymentMethod: "Bankkártya",
     paid: true,
-    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, (await isTrialOffer(p.offerId)) ? "trial" : p.offerKind),
+    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, (await isTrialOffer(p.offerId)) ? "trial" : p.offerKind, {
+      currency: p.currency,
+      sellerEuVat: reverse ? sellerEuVat : null,
+      buyerEuVat: reverse ? p.euVatNumber : null,
+    }),
     // ADR-0283: provider-side idempotency — a retry can never mint a second document.
     externalId: `citoviso-payment-${paymentId}`,
   };
@@ -1790,13 +1923,19 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
         fulfillment_date: today,
         due_date: today,
         vat_treatment: reverse ? "reverse_charge" : "aam",
+        // ADR-XXXX: what the tax counters (AAM, OSS, A60) group and convert by.
+        fx_rate: fx ? String(fx.rate) : null,
+        fx_date: fx ? fx.date : null,
+        buyer_country: p.country,
+        buyer_type: p.buyerType,
+        buyer_eu_vat_number: p.euVatNumber,
       })
       // ADR-0084: the id anchors the tenant's message log entry to this bizonylat,
       // so the Üzenetek row can link straight to it on the Dokumentumok tab.
       .returning("id")
       .executeTakeFirstOrThrow();
     console.log(
-      `[invoice] kiállítva ${res.invoiceNumber} (${provider.name}) · ${p.amount} ${p.currency}`,
+      `[invoice] kiállítva ${res.invoiceNumber} (${provider.name}) · ${formatMinor(p.amount, p.currency)} · ${vatKey}`,
     );
     // DELIVERY. Separate from issuance and deliberately AFTER the insert: the
     // bizonylat is the thing that must survive, so a mail outage may never lose
@@ -2099,7 +2238,7 @@ async function renewalPreview(tenantId: string): Promise<ActivationSummary["rene
   try {
     const sub = await db
       .selectFrom("subscription")
-      .select(["billing_period", "pending_period"])
+      .select(["billing_period", "pending_period", "pricing_region"])
       .where("tenant_id", "=", tenantId)
       .executeTakeFirst();
     // The DATE the buyer was promised at checkout comes from ONE definition
@@ -2110,8 +2249,9 @@ async function renewalPreview(tenantId: string): Promise<ActivationSummary["rene
     const period = (sub.pending_period ?? sub.billing_period) as "monthly" | "annual";
     const months = period === "annual" ? 12 : 1;
     const moduleIds = await renewableModuleIds(tenantId);
-    const listPrice = period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
-    const domain = await domainFeeForRenewal(tenantId, months);
+    const region = sub.pricing_region;
+    const listPrice = period === "annual" ? computeAnnual(moduleIds, region) : computeMonthly(moduleIds, region);
+    const domain = await domainFeeForRenewal(tenantId, months, region);
     return {
       date,
       amount: listPrice + (domain?.fee ?? 0),

@@ -96,6 +96,7 @@ async function seed(): Promise<{ leadId: string; orderIntentId: string; artifact
   const v = await validateBuyer(BUYER, { requireTerms: false });
   if (!v.ok) throw new Error(`az őr vevő-adata érvénytelen: ${JSON.stringify(v.errors)}`);
   const rec = await recordOrderIntent({
+    money: { region: "hu", currency: "HUF" },
     artifactId: art.id,
     modules: [],
     billingPeriod: "monthly",
@@ -162,6 +163,7 @@ async function run(): Promise<void> {
     const v2 = await validateBuyer(BUYER, { requireTerms: false });
     if (!v2.ok) throw new Error("vevő-adat");
     const stale = await recordOrderIntent({
+    money: { region: "hu", currency: "HUF" },
       artifactId: s.artifactId,
       modules: [],
       billingPeriod: "monthly",

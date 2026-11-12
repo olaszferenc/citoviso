@@ -13,7 +13,16 @@
 import { db } from "../db/client.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
-import { computeAnnual, computeMonthly, getAnnualFreeMonths, getModulePrice, loadPricing, pricingSnapshot } from "../pricing.js";
+import {
+  HU_PRICING_REGION,
+  computeAnnual,
+  computeMonthly,
+  getAnnualFreeMonths,
+  getCurrency,
+  getModulePrice,
+  loadPricing,
+  pricingSnapshot,
+} from "../pricing.js";
 import { domainFeeForRenewal, renewableModuleIds } from "../payment/billing.js";
 import { addMonths } from "../payment/subscription.js";
 import { isHouseDomain, wantAutoRenew } from "../domains/domainRenewal.js";
@@ -26,6 +35,9 @@ type SubStatus = "active" | "past_due" | "frozen" | "cancelled";
 
 export interface RevenueSub {
   readonly tenantId: string;
+  /** ADR-XXXX: the region/currency the customer pays in — every amount below is in it. */
+  readonly pricingRegion: string;
+  readonly currency: string;
   readonly leadId: string;
   readonly name: string;
   readonly city: string | null;
@@ -276,6 +288,8 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
       "s.cancelled_at as cancelledAt",
       "s.frozen_at as frozenAt",
       "s.created_at as createdAt",
+      "s.pricing_region as pricingRegion",
+      "s.currency as currency",
     ])
     .execute();
   if (!rows.length) return { subs: [], failedPayments: [] };
@@ -347,8 +361,10 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
     const period = (r.pendingPeriod ?? r.period) as "monthly" | "annual";
     const minted = mine.find((o) => o.kind === "renewal" && o.renewalStart && toDate(o.renewalStart).getTime() === periodEnd.getTime());
     const months = period === "annual" ? 12 : 1;
-    const domainDue = await domainFeeForRenewal(r.tenantId, months);
-    const computed = (period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds)) + (domainDue?.fee ?? 0);
+    const domainDue = await domainFeeForRenewal(r.tenantId, months, r.pricingRegion);
+    const computed =
+      (period === "annual" ? computeAnnual(moduleIds, r.pricingRegion) : computeMonthly(moduleIds, r.pricingRegion)) +
+      (domainDue?.fee ?? 0);
     const cycleAmount = minted?.price ?? computed;
 
     const initial = mine.find((o) => o.kind === "initial");
@@ -386,6 +402,8 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
 
     subs.push({
       tenantId: r.tenantId,
+      pricingRegion: r.pricingRegion,
+      currency: r.currency,
       leadId: r.leadId,
       name: r.name,
       city: partners.find((p) => p.tenantId === r.tenantId)?.city ?? null,
@@ -471,11 +489,15 @@ export function foldFacts(raw: RawFacts, includeTests: boolean): FactMonth[] {
   return [...by.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-6).map(([month, v]) => ({ month, ...v }));
 }
 
-/** Base fee + every billed module + the domain fee, over the renewing subscriptions (monthly). */
-function buildModules(subs: readonly RevenueSub[]): ModuleLine[] {
-  const renewing = subs.filter((s) => isLive(s) && !s.cancelAtEnd);
-  const annualFactor = (12 - getAnnualFreeMonths()) / 12;
-  const f = (s: RevenueSub) => (s.period === "annual" ? annualFactor : 1);
+/**
+ * Base fee + every billed module + the domain fee, over the renewing subscriptions (monthly).
+ * ADR-XXXX: each subscription is priced in ITS OWN region; the lines sum ONE currency —
+ * `currency` (the report's) — and a subscription in another currency is not added into it
+ * (the per-currency report is the riport-kör's job, ADR-0437 ⑤ sorrend).
+ */
+function buildModules(subs: readonly RevenueSub[], currency: string): ModuleLine[] {
+  const renewing = subs.filter((s) => isLive(s) && !s.cancelAtEnd && s.currency === currency);
+  const f = (s: RevenueSub) => (s.period === "annual" ? (12 - getAnnualFreeMonths(s.pricingRegion)) / 12 : 1);
   const lines = new Map<string, { subs: number; monthly: number }>();
   const add = (id: string, v: number) => {
     const l = lines.get(id) ?? { subs: 0, monthly: 0 };
@@ -483,10 +505,10 @@ function buildModules(subs: readonly RevenueSub[]): ModuleLine[] {
     l.monthly += v;
     lines.set(id, l);
   };
-  const base = pricingSnapshot().baseMonthly;
   for (const s of renewing) {
+    const base = pricingSnapshot(s.pricingRegion).baseMonthly;
     if (base > 0) add("base", base * f(s));
-    for (const id of s.moduleIds) add(id, getModulePrice(id) * f(s));
+    for (const id of s.moduleIds) add(id, getModulePrice(id, s.pricingRegion) * f(s));
     if (s.domainFee > 0) add("domain", s.domainFee / (s.period === "annual" ? 12 : 1));
   }
   return [...lines.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.monthly - a.monthly);
@@ -524,7 +546,8 @@ export function foldRevenueReport(
     forecast,
     facts: foldFacts(facts, includeTests),
     moves: buildMoves(subs, now),
-    modules: buildModules(subs),
+    // The report reads in the home market's currency until the riport-kör (ADR-0437 ⑤).
+    modules: buildModules(subs, getCurrency(HU_PRICING_REGION)),
     trials: trials.filter((t) => includeTests || !isTest(t.name)),
     kpi: {
       active: live.length,

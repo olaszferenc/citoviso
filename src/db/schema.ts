@@ -311,7 +311,14 @@ export interface SiteVisitTable {
 export interface OrderIntentTable {
   id: Generated<string>;
   prospect_id: string;
+  /** Amount in the MINOR unit of `currency` (HUF: the forint). */
   price: number | null;
+  /** 0135 (ADR-XXXX): the pricing region every price of this order came from. Required on
+   *  insert ON PURPOSE (the DB default only describes the pre-0135 HU rows): a new insert
+   *  site that forgot it is a compile error, not a silent HU order. */
+  pricing_region: string;
+  /** 0135: ISO 4217 currency of every amount of this order (= the region's). */
+  currency: string;
   /** Chosen billing cadence (0005). Annual prepay = 2 months free. */
   billing_period: Generated<"monthly" | "annual">;
   /** Chosen module ids. */
@@ -671,6 +678,10 @@ export interface FreeTrialAlertTable {
 export interface SubscriptionTable {
   id: Generated<string>;
   tenant_id: string;
+  /** 0135 (ADR-XXXX): the region/currency the customer bought in — renewals, upsells,
+   *  module changes price from HERE, never a default. Required on insert on purpose. */
+  pricing_region: string;
+  currency: string;
   billing_period: Generated<"monthly" | "annual">;
   /** ADR-0088 §8: billing period the NEXT renewal should bill (monthly→annual
    *  switch armed by the tenant); NULL = no change. Cleared by the renewal
@@ -929,6 +940,8 @@ export interface CountryTable {
   daily_quota: number;
   invoice_lang: string;
   legal_pack: string;
+  /** 0135: the payment gateway that charges this country's buyers (today: 'barion'). */
+  payment_provider: Generated<string>;
   updated_at: Generated<Date>;
 }
 
@@ -1130,6 +1143,13 @@ export interface InvoiceTable {
   vat_treatment: "aam" | "reverse_charge" | null;
   /** Storno/correction chain: the invoice this one cancels or amends. */
   cancels_invoice_id: string | null;
+  /** 0135: the MNB rate (HUF per unit) a non-HUF invoice was issued with; NULL for HUF. */
+  fx_rate: string | null;
+  fx_date: Timestamp | null;
+  /** 0135: the buyer facts the tax counters (AAM, OSS, A60) group by. */
+  buyer_country: string | null;
+  buyer_type: string | null;
+  buyer_eu_vat_number: string | null;
 }
 
 // --- Self-serve auto-mock intake (migration 0010, ADR-0022). ---
@@ -1193,6 +1213,8 @@ export interface PricingConfigTable {
   /** ADR-0360 ②: the domain counts as package content (no monthly fee) where a package
    *  carries it AND the TLD is marked free-in-package. Off = the ADR-0109 behaviour. */
   domain_free_in_package: Generated<boolean>;
+  /** 0135: false = a row written before 0135, in MAJOR units (the loader scales it). */
+  minor_units: Generated<boolean>;
   updated_at: Timestamp;
 }
 
@@ -1219,6 +1241,8 @@ export interface DomainTldTable {
   /** Monthly fee (row currency of the market) when the domain is NOT package content. */
   monthly_fee: number;
   free_in_package: Generated<boolean>;
+  /** 0135: false = a row written before 0135, in MAJOR units (the loader scales it). */
+  minor_units: Generated<boolean>;
   sort: Generated<number>;
   updated_at: Generated<Timestamp>;
 }
@@ -1228,6 +1252,23 @@ export interface ModulePriceTable {
   module_id: string;
   price_monthly: number;
   updated_at: Timestamp;
+}
+
+/** 0135: a non-HU region's module add-on prices (minor units of the region's currency). */
+export interface ModulePriceRegionTable {
+  region: string;
+  module_id: string;
+  price_monthly: number;
+  updated_at: Timestamp;
+}
+
+/** 0135: MNB official daily rate — tax counters + foreign-currency invoices only. */
+export interface FxRateTable {
+  rate_date: string;
+  currency: string;
+  huf_per_unit: string;
+  source: Generated<string>;
+  fetched_at: Generated<Timestamp>;
 }
 
 /** Operator-editable scrape area (0018): a WGS84 bbox the scraper queries. */
@@ -2283,6 +2324,8 @@ export interface Database {
   login_token: LoginTokenTable;
   pricing_config: PricingConfigTable;
   module_price: ModulePriceTable;
+  module_price_region: ModulePriceRegionTable;
+  fx_rate: FxRateTable;
   package_module: PackageModuleTable;
   domain_tld: DomainTldTable;
   schema_migrations: SchemaMigrationsTable;

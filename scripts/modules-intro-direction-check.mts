@@ -81,8 +81,8 @@ const mk = (
   };
 };
 
-const BASE = getBaseMonthly();
-const MULT = 12 - getAnnualFreeMonths();
+const BASE = getBaseMonthly("hu");
+const MULT = 12 - getAnnualFreeMonths("hu");
 const modules = [...ACTIVE.map((id) => mk(id, true)), mk("enquiry", true, "booking"), mk("email", false)];
 const modulesMonthly = ACTIVE.reduce(
   (s, id) => s + MODULE_CATALOG.find((m) => m.id === id)!.priceMonthly,
@@ -111,8 +111,8 @@ const mkSub = (frozen: boolean): SubscriptionAdminData => ({
   pendingAnnual: false,
   pendingEffectiveDate: null,
   annualTotal: totalMonthly * MULT,
-  annualSavings: totalMonthly * getAnnualFreeMonths(),
-  annualFreeMonths: getAnnualFreeMonths(),
+  annualSavings: totalMonthly * getAnnualFreeMonths("hu"),
+  annualFreeMonths: getAnnualFreeMonths("hu"),
   autoCharge: false,
   coupon: null,
 });

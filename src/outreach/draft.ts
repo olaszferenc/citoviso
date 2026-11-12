@@ -12,6 +12,7 @@
 //
 // The owner tunes the wording HERE (one file) at the pre-send copy gate.
 
+import { OrderRegionError, regionForLead } from "../payment/orderRegion.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
@@ -23,7 +24,7 @@ import { T, prepareMailLang } from "../i18n/mail.js";
 import { DEFAULT_LANG, langForCountry } from "../i18n/lang.js";
 import { countryConfig, countryOf } from "../country.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
-import { loadPricing } from "../pricing.js";
+import { HU_PRICING_REGION, loadPricing } from "../pricing.js";
 import { cheapestOfferedMonthly, cheapestOfferedMonthlyFrom } from "../packageOffer.js";
 import { trialDaysOnOffer } from "../trial/config.js";
 import { isEngineArtifact } from "../conversion/provision.js";
@@ -443,7 +444,9 @@ export function renderDraft(d: DraftInput): OutreachDraft {
 
   const percent = String(draftOfferPercent(d));
   const { priceList, priceOffer } = fromPricePair(
-    d.fromMonthly !== undefined ? d.fromMonthly : cheapestOfferedMonthlyFrom(new Set()),
+    // A DraftInput without fromMonthly is a guard's HU fixture; every product draft carries
+    // the from-price of its LEAD's region (buildDraftForProspect below, ADR-XXXX).
+    d.fromMonthly !== undefined ? d.fromMonthly : cheapestOfferedMonthlyFrom(new Set(), HU_PRICING_REGION),
     draftOfferPercent(d),
   );
 
@@ -714,6 +717,16 @@ export const PAIR_SMS_MAX_SEGMENTS = 2;
 
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
+/** The cheapest offered package in the lead's own pricing region, or null (fail closed). */
+async function leadFromMonthly(leadId: string): Promise<number | null> {
+  try {
+    return await cheapestOfferedMonthly((await regionForLead(leadId)).region);
+  } catch (e) {
+    if (e instanceof OrderRegionError) return null;
+    throw e;
+  }
+}
+
 export async function buildDraftForProspect(
   prospectId: string,
   /** reserveLabel false = a dry run: the preview label is only peeked, never written (IT D-8k). */
@@ -799,7 +812,8 @@ export async function buildDraftForProspect(
     // message must show the same address.
     previewLabel: opts.reserveLabel === false ? await peekPreviewLabel(r.leadId) : await ensurePreviewLabel(r.leadId),
     // Owner 2026-10-12: the from-price follows /pricing — read at send time, every time.
-    fromMonthly: await cheapestOfferedMonthly(),
+    // ADR-XXXX: in the LEAD's pricing region; a market that cannot price advertises none.
+    fromMonthly: await leadFromMonthly(r.leadId),
     // Owner 2026-10-27: the trial sentence — the SAME rule as the /p page's trial entry.
     trialDays: await trialDaysOnOffer(r.leadId, isEngineArtifact(r.artifactInputs)),
   };

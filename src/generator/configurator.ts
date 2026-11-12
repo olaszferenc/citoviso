@@ -35,6 +35,8 @@ import {
   offeredTlds,
   getDomainFreeInPackage,
   getPackageAssignment,
+  HU_PRICING_REGION,
+  assertRegionPriceable,
 } from "../pricing.js";
 import { domainTier, tierModules } from "../packages.js";
 import { subdomainHost } from "../domains.js";
@@ -344,6 +346,12 @@ export interface AskEntry {
 
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
 export interface ConfiguratorOpts {
+  /**
+   * ADR-XXXX: the pricing region of the lead (orderRegion.ts regionForLead) — every amount
+   * of the manifest is in its currency's minor unit. Every product caller passes it (the
+   * country-layer guard measures that); absent = a guard's HU fixture.
+   */
+  readonly pricingRegion?: string;
   /** Override the order-submit endpoint (e.g. /p/<token>/request). */
   readonly requestUrl?: string;
   /**
@@ -439,6 +447,9 @@ export async function buildManifest(
   opts: ConfiguratorOpts = {},
 ): Promise<ConfiguratorManifest> {
   await loadPricing();
+  // Guard fixtures render without a lead; every product caller passes the lead's region.
+  const region = opts.pricingRegion ?? HU_PRICING_REGION;
+  assertRegionPriceable(region);
   const disabledSales = await getDisabledModules();
   const present = new Set(detectPresentModules(html));
   // The offered set is computed ONCE and shared with the renewal quote below —
@@ -466,12 +477,12 @@ export async function buildManifest(
     groups: GROUP_LABELS,
     i18n: await packForClientAsync(opts.lang),
     pricing: {
-      base: getBaseMonthly(),
-      annualFreeMonths: getAnnualFreeMonths(),
+      base: getBaseMonthly(region),
+      annualFreeMonths: getAnnualFreeMonths(region),
       // ⛔ The ISO CODE, not the sign. This sent the literal "Ft", which the
       // client glued onto every amount — so an EUR-region buyer would have been
       // charged in € and read "Ft" on the page they pay from (measured 2026-09-14).
-      currency: getCurrency(),
+      currency: getCurrency(region),
       ...(opts.offer ? { offer: opts.offer } : {}),
       ...(opts.offer && opts.offerQuiet ? { offerQuiet: true } : {}),
     },
@@ -520,23 +531,23 @@ export async function buildManifest(
       subCheckUrl: `/configure/${artifactId}/subdomain`,
       suggestUrl: `/configure/${artifactId}/domains`,
       checkUrl: `/configure/${artifactId}/domain-check`,
-      customMonthly: getCustomDomainMonthly(),
+      customMonthly: getCustomDomainMonthly(region),
       // ADR-0093: operator-set commitment (pricing_config), no longer a constant.
-      minCommitmentMonths: getDomainMinCommitmentMonths(),
+      minCommitmentMonths: getDomainMinCommitmentMonths(region),
       // ADR-0395: the „Feltételek” popup names the buyout price the commitment binds to.
-      buyoutPrice: getDomainBuyoutPrice(),
+      buyoutPrice: getDomainBuyoutPrice(region),
       // ADR-0093 free-domain rule: the client resolves the fee against the LIVE
       // module selection (the threshold crossing must move with the toggles).
-      minPackageMonthly: getDomainMinPackageMonthly(),
+      minPackageMonthly: getDomainMinPackageMonthly(region),
       // ADR-0360 ③: the endings a buyer may pick, with their fee outside a package.
-      tlds: offeredTlds().map((t) => ({ tld: t.tld, monthly: t.monthlyFee, freeInPackage: t.freeInPackage })),
+      tlds: offeredTlds(region).map((t) => ({ tld: t.tld, monthly: t.monthlyFee, freeInPackage: t.freeInPackage })),
       // ADR-0360 ②: the modules a selection must cover for the domain to be package content
       // (the lowest domain-carrying tier, minus the spine and what is off sale); null = the
       // market does not offer the domain as package content.
       pkgModules: ((): string[] | null => {
         const a = getPackageAssignment();
         const t = domainTier(a);
-        if (!getDomainFreeInPackage() || !t) return null;
+        if (!getDomainFreeInPackage(region) || !t) return null;
         return tierModules(a, t).filter((id) => !disabledSales.has(id) && !MODULE_CATALOG.find((m) => m.id === id)?.spine);
       })(),
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
@@ -560,7 +571,7 @@ export async function buildManifest(
     // tick a module the list below no longer offers — and not one whose hard requirement
     // fell off the shelf with it (ADR-0192). ONE computation with the cold letter's
     // „…-tól” price (src/packageOffer.ts), so the two cannot disagree.
-    presets: offeredPackagesFrom(disabledSales).map((p) => ({
+    presets: offeredPackagesFrom(disabledSales, region).map((p) => ({
       id: p.id,
       label: p.label,
       note: p.note,
@@ -579,7 +590,7 @@ export async function buildManifest(
       group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,
-      price: getModulePrice(m.id),
+      price: getModulePrice(m.id, region),
       // Ids this module replaces: the client greys them out and drops them from the
       // total, so a prospect is never charged for two things that share one slot
       // ("ha van foglalás, akkor nincs érdeklődés").

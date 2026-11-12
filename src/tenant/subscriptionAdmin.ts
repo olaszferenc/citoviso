@@ -3,6 +3,7 @@
 // payment-state banners (past_due/frozen with the open pay-link), and the
 // whole-subscription cancel/resume pair (danger zone).
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing, offeredTldOf } from "../pricing.js";
@@ -184,6 +185,8 @@ export async function getSubscriptionAdmin(
     .executeTakeFirst();
   if (!sub) return null;
   await loadPricing();
+  // ADR-XXXX: the subscription's own region — the next invoice is in its currency.
+  const { region } = await regionOfTenant(tenantId);
 
   // The next invoice = base + every module that will still be subscribed at the
   // renewal: active, not leaving at the period end, monthly-billed, not replaced.
@@ -192,12 +195,12 @@ export async function getSubscriptionAdmin(
     .map((m) => ({
       id: m.id,
       label: m.label,
-      price: getModulePrice(m.id),
+      price: getModulePrice(m.id, region),
       isNew: m.awaitingFirstCharge,
     }));
-  const modulesTotal = items.reduce((s, i) => s + i.price, getBaseMonthly());
+  const modulesTotal = items.reduce((s, i) => s + i.price, getBaseMonthly(region));
   // Elek B4: the screen's totals carry the domain fee exactly as the renewal mint does.
-  const domainDue = await domainFeeForRenewal(tenantId, 1);
+  const domainDue = await domainFeeForRenewal(tenantId, 1, region);
   const domainMonthly = domainDue?.fee ?? 0;
   const total = modulesTotal + domainMonthly;
   let domainInPackage: SubscriptionAdminData["domainInPackage"] = null;
@@ -209,7 +212,7 @@ export async function getSubscriptionAdmin(
       .where("custom_domain_status", "=", "live")
       .where("custom_domain", "is not", null)
       .executeTakeFirst();
-    const outside = own?.custom_domain ? offeredTldOf(own.custom_domain)?.monthlyFee ?? 0 : 0;
+    const outside = own?.custom_domain ? offeredTldOf(own.custom_domain, region)?.monthlyFee ?? 0 : 0;
     if (own?.custom_domain && outside > 0) domainInPackage = { domain: own.custom_domain, outsideMonthly: outside };
   }
 
@@ -299,7 +302,7 @@ export async function getSubscriptionAdmin(
       .executeTakeFirst();
     pendingEffectiveDate = isoDate(mintedMonthly ? addMonths(periodEndDate, 1) : periodEndDate);
   }
-  const freeMonths = getAnnualFreeMonths();
+  const freeMonths = getAnnualFreeMonths(region);
   // ADR-0088 ⑨: a mandate counts only with a token we could actually charge —
   // 'token' without one would advertise an automation that silently falls back.
   const autoCharge = sub.payment_method === "token" && !!sub.recurrence_token;

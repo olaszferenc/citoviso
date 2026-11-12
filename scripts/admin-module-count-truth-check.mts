@@ -83,7 +83,7 @@ const LISTED = PAID.length + 1; // + the superseded spine row
 const LIVE = PAID.length; // the superseded spine does not render
 const BILLED = PAID.length;
 
-const BASE = getBaseMonthly();
+const BASE = getBaseMonthly("hu");
 const MONTHLY = BASE + PAID.reduce((s, id) => s + MODULE_CATALOG.find((m) => m.id === id)!.priceMonthly, 0);
 const emailDef = MODULE_CATALOG.find((m) => m.id === "email")!;
 

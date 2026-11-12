@@ -28,7 +28,7 @@ import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 
-import { currencySign, formatMoney, formatNumber } from "../src/text/money.js";
+import { currencySign, formatMinor, formatMoney, formatNumber, minorDigits } from "../src/text/money.js";
 import {
   buildRenewalPreNoticeEmail,
   buildRenewalChargeEmail,
@@ -72,6 +72,8 @@ function loadMirror(src = MIRROR_SRC): {
   formatMoney: (a: unknown, c: unknown, l?: string) => string;
   formatNumber: (a: unknown, l?: string) => string;
   currencySign: (c: unknown) => string;
+  minorDigits: (c: unknown) => number | null;
+  formatMinor: (a: unknown, c: unknown, l?: string) => string;
 } {
   const ctx: Record<string, unknown> = { Intl, isFinite, Math, String, Object, module: { exports: {} } };
   vm.createContext(ctx);
@@ -110,6 +112,22 @@ function parity(mirror: ReturnType<typeof loadMirror>): { n: number; bad: string
     n++;
     if (currencySign(cur) !== mirror.currencySign(cur)) bad.push(`currencySign("${cur}")`);
   }
+  // ADR-XXXX: our money in the MINOR unit — the same pair, the same matrix, plus the
+  // currencies a country row may carry (RON/PLN/CZK/BGN) and a cent amount.
+  for (const lang of LANGS) {
+    for (const amount of [...AMOUNTS, 990, 4999, 100005, -250]) {
+      for (const cur of [...CURRENCIES, "PLN", "CZK", "BGN", "JPY"]) {
+        n++;
+        const a = formatMinor(amount, cur, lang);
+        const b = mirror.formatMinor(amount, cur, lang);
+        if (a !== b) bad.push(`formatMinor(${amount},"${cur}","${lang}"): TS=${JSON.stringify(a)} JS=${JSON.stringify(b)}`);
+      }
+    }
+  }
+  for (const cur of [...CURRENCIES, "PLN", "JPY", "XYZ1"]) {
+    n++;
+    if (minorDigits(cur) !== mirror.minorDigits(cur)) bad.push(`minorDigits("${cur}")`);
+  }
   return { n, bad };
 }
 
@@ -127,6 +145,10 @@ check(formatMoney(99900, "HUF") === "99 900 Ft", "② HUF → „Ft” magyarul"
 check(formatMoney(10, "EUR") === "10 €", "② EUR → „€” magyarul", formatMoney(10, "EUR"));
 // The defect this file exists for: an unknown currency must NOT become forint.
 check(formatMoney(50, "RON") === "50 RON", "② ismeretlen pénznem ≠ „Ft”", formatMoney(50, "RON"));
+// ADR-XXXX: minor units — HUF has none (the forint IS the unit), EUR/RON have cents.
+check(minorDigits("HUF") === 0 && minorDigits("EUR") === 2 && minorDigits("RON") === 2 && minorDigits("Ft") === null, "② minor-unit: HUF 0, EUR/RON 2, nem-ISO null");
+check(formatMinor(3900, "HUF") === formatMoney(3900, "HUF"), "② formatMinor HUF = formatMoney (a HU bitre azonos)", formatMinor(3900, "HUF"));
+check(formatMinor(1000, "EUR") === "10 €" && formatMinor(990, "EUR") === "9,90 €", "② formatMinor EUR: egész → „10 €”, centes → „9,90 €”", `${formatMinor(1000, "EUR")} · ${formatMinor(990, "EUR")}`);
 check(!NBSP_RE.test(formatMoney(1234567, "HUF")), "② nincs NBSP a magyar alakban");
 check(
   LANGS.every((l) => CURRENCIES.every((c) => !NBSP_RE.test(formatMoney(1234567, c, l)))),
@@ -233,7 +255,8 @@ check(
   "④ a vendég foglalás-előnézete a közös szabályt hívja",
 );
 check(
-  CONFIGURATOR_JS.includes("CitMoney.formatMoney"),
+  // ADR-XXXX: our money is minor-unit — the checkout formats through formatMinor (same rule file).
+  CONFIGURATOR_JS.includes("CitMoney.formatMinor"),
   "④ a fizetőoldal a közös szabályt hívja",
 );
 // The manifest must carry the ISO CODE. It used to carry the literal "Ft", which

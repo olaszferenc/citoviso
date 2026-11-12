@@ -115,8 +115,9 @@ const {
 /** Operator-set knob via the real pricing API; forces the snapshot fresh. */
 async function setThreshold(minPackageMonthly: number): Promise<void> {
   await loadPricing(true);
-  const s = pricingSnapshot();
+  const s = pricingSnapshot("hu");
   await savePricing({
+    region: "hu",
     baseMonthly: s.baseMonthly,
     annualFreeMonths: s.annualFreeMonths,
     customDomainMonthly: s.customDomainMonthly,
@@ -199,19 +200,19 @@ const NOW = new Date("2027-06-15T00:00:00");
     domainStatus: SELF_TEST ? "failed" : undefined,
     registeredAt: new Date("2026-08-15T00:00:00"),
   });
-  const fee = domainFeeForCycle(12);
+  const fee = domainFeeForCycle(12, "hu");
   ok(
-    fee === getCustomDomainMonthly() * 12,
+    fee === getCustomDomainMonthly("hu") * 12,
     "az éves ciklus díja = 12 x havidíj",
-    `fee=${fee}, havidíj=${getCustomDomainMonthly()}`,
+    `fee=${fee}, havidíj=${getCustomDomainMonthly("hu")}`,
   );
   const { orderIntentId, price } = await mintRenewalForTenant(tid, NOW);
   ok(!!orderIntentId, "éves megújulás: order létrejön");
   const row = await orderRow(orderIntentId!);
   ok(
-    price === computeAnnual([]) + fee,
+    price === computeAnnual([], "hu") + fee,
     "⭐ a megújulás ára = csomag + a ciklus saját-cím díja",
-    `price=${price}, várt=${computeAnnual([])}+${fee}`,
+    `price=${price}, várt=${computeAnnual([], "hu")}+${fee}`,
   );
   ok(Number(row.domain_fee) === fee, "a domain_fee lepecsételve", `domain_fee=${row.domain_fee}`);
   ok(row.domain_name === "evespanzio.hu", "a domain neve az orderen (számla-tétel)", `név=${row.domain_name}`);
@@ -235,7 +236,7 @@ const NOW = new Date("2027-06-15T00:00:00");
   const { orderIntentId, price } = await mintRenewalForTenant(tid, NOW);
   const row = await orderRow(orderIntentId!);
   ok(
-    price === computeAnnual([]) + domainFeeForCycle(12),
+    price === computeAnnual([], "hu") + domainFeeForCycle(12, "hu"),
     "⭐ NINCS ingyen-ág: a nagy csomag is fizeti a havidíjat",
     `price=${price}`,
   );
@@ -245,7 +246,7 @@ const NOW = new Date("2027-06-15T00:00:00");
 // ── MONTHLY CYCLE: 1 x the monthly fee, and it recurs (no anniversary window) ──
 {
   await setThreshold(1);
-  const fee = domainFeeForCycle(1);
+  const fee = domainFeeForCycle(1, "hu");
   const tid = await makeTenant({
     name: "Havi Panzió",
     billingPeriod: "monthly",
@@ -255,9 +256,9 @@ const NOW = new Date("2027-06-15T00:00:00");
   });
   const first = await mintRenewalForTenant(tid, NOW);
   ok(
-    first.price === computeMonthly([]) + fee,
+    first.price === computeMonthly([], "hu") + fee,
     "⭐ a havi ciklus is szedi a díjat (nem csak az évfordulós)",
-    `price=${first.price}, várt=${computeMonthly([])}+${fee}`,
+    `price=${first.price}, várt=${computeMonthly([], "hu")}+${fee}`,
   );
   ok(
     Number((await orderRow(first.orderIntentId!)).domain_fee) === fee,
@@ -277,7 +278,7 @@ const NOW = new Date("2027-06-15T00:00:00");
     registeredAt: new Date("2026-08-15T00:00:00"),
   });
   const { price } = await mintRenewalForTenant(tid, NOW);
-  ok(price === computeAnnual([]), "⭐ bukott/regisztrálatlan domain SOSEM számláz", `price=${price}`);
+  ok(price === computeAnnual([], "hu"), "⭐ bukott/regisztrálatlan domain SOSEM számláz", `price=${price}`);
 }
 
 await db.destroy();

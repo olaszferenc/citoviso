@@ -38,13 +38,12 @@ import { exceedsCostCap } from "./costCap.js";
  * order), the offer is NOT blocked — this pre-check is advisory; the purchase-side
  * guard in provisionDomain.ts is the authoritative, fail-closed gate.
  *
- * The cap guards OUR registrar cost, so it is deliberately NOT region-scoped:
- * every call site (here, domainUpgrade, provisionDomain) reads the DEFAULT
- * region's value — one knob, set on the console /pricing HU page.
+ * ADR-XXXX: the cap is the buyer's REGION's (its ending list, its currency) — a local
+ * ending of a foreign market is judged on that market's cap, not the HU list.
  */
-export async function exceedsPriceCap(domain: string): Promise<boolean> {
+export async function exceedsPriceCap(domain: string, region: string): Promise<boolean> {
   // ADR-0360 ③: the per-ending cap (and an ending we do not offer counts as over it).
-  return exceedsCostCap(domain);
+  return exceedsCostCap(domain, region);
 }
 
 export interface DomainSuggestionView {
@@ -166,7 +165,7 @@ export interface DomainCheckResult {
  * Ellenőriz egy tenant által beírt domaint: normalizálás (a VALÓDI szabályokkal) + előzetes
  * elérhetőség + ár-plafon előszűrés (ADR-0093). Nem ír semmit; a vásárlás külön lépés.
  */
-export async function checkTypedDomain(raw: string, region?: string): Promise<DomainCheckResult> {
+export async function checkTypedDomain(raw: string, region: string): Promise<DomainCheckResult> {
   const norm = normalizeCustomDomain(raw);
   if (!norm.ok || !norm.domain) {
     return { input: raw, domain: null, reason: norm.reason ?? null, availability: null, tooExpensive: false, notOffered: false };
@@ -177,7 +176,7 @@ export async function checkTypedDomain(raw: string, region?: string): Promise<Do
   }
   const [availability, tooExpensive] = await Promise.all([
     checkWebcimAvailability(norm.domain),
-    exceedsPriceCap(norm.domain),
+    exceedsPriceCap(norm.domain, region),
   ]);
   return { input: raw, domain: norm.domain, reason: null, availability, tooExpensive, notOffered: false };
 }
@@ -190,7 +189,8 @@ export async function checkTypedDomain(raw: string, region?: string): Promise<Do
 export async function loadDomainAdmin(
   tenantId: string,
   displayName: string,
-  regionId?: string,
+  /** ADR-XXXX: the tenant's pricing region (orderRegion.ts regionOfTenant) — required. */
+  regionId: string,
   /** The name on the review step (`?d=`), so its ENDING prices the screen (Elek B4). */
   picked?: string | null,
 ): Promise<DomainAdminData> {
@@ -273,7 +273,7 @@ export async function loadDomainAdmin(
         availability: await checkWebcimAvailability(d),
         // ADR-0093: a known-over-cap (premium) domain is never offered — see
         // exceedsPriceCap; generated suggestions simply drop it.
-        overCap: await exceedsPriceCap(d),
+        overCap: await exceedsPriceCap(d, regionId),
       })),
     );
     candidates.forEach((domain, i) => {

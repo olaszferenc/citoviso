@@ -417,13 +417,13 @@ async function producers(): Promise<void> {
     group: c.group,
     spine: !!c.spine,
     active: true,
-    priceMonthly: getModulePrice(c.id),
+    priceMonthly: getModulePrice(c.id, "hu"),
     supersededBy: supersederOf(c.id, activeIds),
     cancelAtPeriodEnd: false,
     awaitingFirstCharge: false,
   }));
   const superseded = modules.filter((m) => m.supersededBy).length;
-  const mv = { modules, baseMonthly: getBaseMonthly(), totalMonthly: getBaseMonthly() };
+  const mv = { modules, baseMonthly: getBaseMonthly("hu"), totalMonthly: getBaseMonthly("hu") };
   let cards = 0;
   for (let day = 1; day <= 31; day++) {
     for (const billingPeriod of ["monthly", "annual"] as const) {

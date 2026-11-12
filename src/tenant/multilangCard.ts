@@ -14,6 +14,7 @@
 // the assembly lives here so the guard (scripts/module-purchase-state-check.mts)
 // can measure the very same function the admin page renders.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { APP_TZ, partsIn } from "../text/zoneTime.js";
 import { siteTimeZone, tenantTimeZone } from "./timeZone.js";
@@ -163,7 +164,11 @@ export interface MultilangCardInput {
  * hiányoztak belőle az új mezők, és három őr futásidőben szállt el. Ha mindenki EBBŐL
  * épít, egy új mező nem maradhat ki csendben.
  */
-export function multilangCatalogView(primaryLang: string): {
+export function multilangCatalogView(
+  primaryLang: string,
+  /** ADR-XXXX: the tenant's pricing region (the tier prices are in its currency). */
+  region: string,
+): {
   tiers: MultilangAdminData["tiers"];
   selectedTier: string;
   totalTargets: number;
@@ -175,7 +180,7 @@ export function multilangCatalogView(primaryLang: string): {
   const byCode = new Map(options.map((o) => [o.code, o]));
   const tiers = MULTILANG_TIERS.map((t) => {
     const cap = t.cap ?? targets.length;
-    const price = getMultilangTierPrice(t);
+    const price = getMultilangTierPrice(t, region);
     return {
       id: t.id,
       name: t.name,
@@ -214,7 +219,7 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
 
   // ⛔ EGY FORRÁS a célnyelvekre és a sávokra (multilangCatalogView): a picker, a
   // „Teljes" sáv kapacitása és a „Választható: N nyelv" felirat mind EBBŐL számol.
-  const catalog = multilangCatalogView(primaryLang);
+  const catalog = multilangCatalogView(primaryLang, (await regionOfTenant(input.tenantId)).region);
 
   // ADR-0088 §6: a bemutatkozó kupon a KÖVETKEZŐ vásárláskor számít be — korábban
   // NÉMÁN, a kártya listaára mellett (Elek FK-005b H3/G1). MINDEN sávra kiszámoljuk,

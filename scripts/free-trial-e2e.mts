@@ -366,7 +366,7 @@ try {
   const oi = await db.selectFrom("order_intent").select(["id", "price", "offer_id", "kind"]).where("prospect_id", "=", a.prospectId).orderBy("created_at", "desc").executeTakeFirstOrThrow();
   const { computeMonthly, loadPricing } = await import("../src/pricing.js");
   await loadPricing();
-  const list = computeMonthly(MODULES);
+  const list = computeMonthly(MODULES, "hu");
   check(`order_intent initial, LISTAÁRON (lista ${list} → ${oi.price}), ajánlat nélkül`, oi.kind === "initial" && oi.offer_id === null && Number(oi.price) === list, `${oi.kind} offer=${oi.offer_id} ár=${oi.price}`);
   const pay = await db.selectFrom("payment").select(["gateway_ref"]).where("order_intent_id", "=", oi.id).executeTakeFirstOrThrow();
   const payRes = await cPost(`/pay/mock/${pay.gateway_ref}/paid`, "card=visa4242", true);

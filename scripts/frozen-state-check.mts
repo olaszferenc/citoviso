@@ -188,7 +188,7 @@ if (!selfTest && !/adm-owe__pay/.test(stateCard)) {
 // A katalógus-fele a TERMÉK forrásából jön (ADR-0128): a scripts/ nincs típus-
 // ellenőrizve, ezért egy kézzel másolt fixture némán elavul — ez élőben meg is történt.
 const ML = {
-  ...multilangCatalogView("hu"),
+  ...multilangCatalogView("hu", "hu"),
   price: 14900,
   count: 3,
   primaryLangName: "magyar",

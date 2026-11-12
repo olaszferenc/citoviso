@@ -36,10 +36,10 @@ const content = {
   previewPath: null,
 } as unknown as Parameters<typeof adminDashboard>[1];
 
-const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
+const modules = await getTenantModules("00000000-0000-0000-0000-000000000000", { region: "hu", currency: "HUF" }).catch(() => null);
 
 const base: MultilangAdminData = {
-  ...multilangCatalogView("hu"),
+  ...multilangCatalogView("hu", "hu"),
   price: 14900,
   count: 3,
   primaryLangName: "magyar",

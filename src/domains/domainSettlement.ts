@@ -9,6 +9,7 @@
 // order. Ownership transfers only after full payment (ÁSZF §9 — the domain is
 // the collateral); non-payment falls to the existing dunning/freeze machinery.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import {
   getCurrency,
@@ -43,13 +44,15 @@ export async function settlementQuote(tenantId: string): Promise<SettlementQuote
   const commitment = await activeDomainCommitment(tenantId);
   if (!commitment) return null;
   await loadPricing();
+  // ADR-XXXX: the tenant's own region — the penalty and the buyout are in its currency.
+  const { region, currency } = await regionOfTenant(tenantId);
 
   // ADR-0094 ④: a free-domain order froze its package floor — that is the
   // committed minimum. A paid-fee order has no floor ("a vállalás a 12 hó
   // előfizetés maga"), so its monthly commitment is the package it actually
   // renews today.
   const penaltyBase =
-    commitment.floorMonthly ?? computeMonthly(await renewableModuleIds(tenantId));
+    commitment.floorMonthly ?? computeMonthly(await renewableModuleIds(tenantId), region);
   const penaltyTotal = commitment.remainingMonths * penaltyBase;
 
   const site = await db
@@ -73,8 +76,8 @@ export async function settlementQuote(tenantId: string): Promise<SettlementQuote
     domainName,
     penaltyBase,
     penaltyTotal,
-    buyoutPrice: getDomainBuyoutPrice(),
-    currency: getCurrency(),
+    buyoutPrice: getDomainBuyoutPrice(region),
+    currency,
     accessEndDate,
   };
 }
@@ -203,6 +206,8 @@ export async function createSettlementOrder(
       prospect_id: prospect.id,
       kind: "domain_settlement",
       tenant_id: tenantId,
+      pricing_region: (await regionOfTenant(tenantId)).region,
+      currency: quote.currency,
       modules: JSON.stringify([]),
       price,
       billing_period: "monthly", // N/A for a one-time settlement; the column is NOT NULL

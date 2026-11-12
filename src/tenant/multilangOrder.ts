@@ -3,6 +3,7 @@
 // one order_intent (kind='multilang') + one multilang_generation row; the webhook
 // flips the generation to 'paid' and runs it.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { huArticleLower } from "../hu.js";
 import { multilangTier } from "../modules.js";
@@ -90,7 +91,9 @@ export async function createMultilangOrder(
   }
 
   await loadPricing();
-  const listPrice = getMultilangTierPrice(tier);
+  // ADR-XXXX: the tenant's own region — the one-time fee is in the currency it pays in.
+  const money = await regionOfTenant(tenantId);
+  const listPrice = getMultilangTierPrice(tier, money.region);
   if (listPrice <= 0) return { ok: false, error: "a modul ára nincs beállítva" };
   // ADR-0088 §6: the welcome coupon applies to the tenant's next purchase —
   // a one-time module buy is exactly that. Single largest offer, no stacking;
@@ -151,6 +154,8 @@ export async function createMultilangOrder(
       prospect_id: prospect.id,
       kind: "multilang",
       tenant_id: tenantId,
+      pricing_region: money.region,
+      currency: money.currency,
       modules: JSON.stringify(["multilang"]),
       price,
       billing_period: "monthly", // N/A for a one-time fee; the column is NOT NULL

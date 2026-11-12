@@ -305,7 +305,7 @@ const units = [
   { id: "u2", name: "Padlásszoba" },
 ];
 
-const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
+const modules = await getTenantModules("00000000-0000-0000-0000-000000000000", { region: "hu", currency: "HUF" }).catch(() => null);
 // ⛔ Az --out (determinizmus-próba, deploy-kapu) gyártása nem mehet DB nélkül: modul-lista
 // nélkül a Modulok-képek ÜRESEK lennének, és a kapu egy környezeti hibát „elavult képnek" mondana.
 if (OUT_DIR && !modules) {
@@ -1508,7 +1508,7 @@ await shoot(
     // MÉG NEM VETT állapot: ezt írja le az entry 1-2. lépése (sáv-választás + pipálás).
     // A `multilangCatalogView` a VALÓDI katalógusból épít (29 nyelv, régiók, sávok) —
     // fixture-be másolt nyelvlista némán elavulna a következő bővítésnél.
-    ...multilangCatalogView(LANG),
+    ...multilangCatalogView(LANG, "hu"),
     price: 14900,
     count: 3,
     primaryLangName: "magyar",
@@ -2457,7 +2457,7 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
   const D = 86_400_000;
   const day = (n: number): Date => new Date(rpNow.getTime() + n * D);
   const sub = (i: number, name: string, city: string, extra: Partial<RevenueSub>): RevenueSub => ({
-    tenantId: `t${i}`, leadId: `00000000-0000-0000-0000-0000000000${10 + i}`, name, city, test: false, preset: "ajanlott",
+    tenantId: `t${i}`, pricingRegion: "hu", currency: "HUF", leadId: `00000000-0000-0000-0000-0000000000${10 + i}`, name, city, test: false, preset: "ajanlott",
     moduleIds: ["gallery", "rooms", "amenities", "location", "reviews", "booking"], period: "monthly", cycleAmount: 5250, monthly: 5250,
     domainFee: 0, firstDiscount: null, lastPaid: { amount: 5250, at: day(-20) }, method: "token",
     card: { brand: "MasterCard", last4: "4821", expMonth: 9, expYear: 2028 }, next: day(10), status: "active", cancelAtEnd: false,

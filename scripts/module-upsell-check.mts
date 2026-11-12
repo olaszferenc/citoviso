@@ -221,8 +221,8 @@ ok(
 );
 
 // ── ADR-0113 ②: the first fee is PRORATED to the renewal date ───────────────
-const monthly = getModulePrice(PAID);
-const CAP = 12 - getAnnualFreeMonths();
+const monthly = getModulePrice(PAID, "hu");
+const CAP = 12 - getAnnualFreeMonths("hu");
 function endIn(months: number, days = 0): Date {
   const d = new Date();
   d.setMonth(d.getMonth() + months);
@@ -230,19 +230,19 @@ function endIn(months: number, days = 0): Date {
   return d;
 }
 ok(
-  proratedFirstChargeMonths("monthly", endIn(1)) === 1,
+  proratedFirstChargeMonths("monthly", endIn(1), "hu") === 1,
   "havi ütem: az első díj 1 teljes hónap (nincs fillérszámla)",
-  `kapott: ${proratedFirstChargeMonths("monthly", endIn(1))}`,
+  `kapott: ${proratedFirstChargeMonths("monthly", endIn(1), "hu")}`,
 );
 ok(
-  proratedFirstChargeMonths("annual", endIn(11, 15)) === CAP,
+  proratedFirstChargeMonths("annual", endIn(11, 15), "hu") === CAP,
   `éves ütem, friss forduló: felül-korlát ${CAP} hónap (sosem drágább az éves csomagárnál)`,
-  `kapott: ${proratedFirstChargeMonths("annual", endIn(11, 15))}`,
+  `kapott: ${proratedFirstChargeMonths("annual", endIn(11, 15), "hu")}`,
 );
 ok(
-  proratedFirstChargeMonths("annual", endIn(3, 15)) === 4,
+  proratedFirstChargeMonths("annual", endIn(3, 15), "hu") === 4,
   "éves ütem, 3,5 hónappal a forduló előtt: 4 megkezdett hónap",
-  `kapott: ${proratedFirstChargeMonths("annual", endIn(3, 15))}`,
+  `kapott: ${proratedFirstChargeMonths("annual", endIn(3, 15), "hu")}`,
 );
 
 const order = await createFirstChargeOrder(tenant.id, [PAID], "annual", endIn(3, 15));

@@ -87,7 +87,7 @@ const modules = (
 ).map((r) => r.module);
 
 await loadPricing();
-const price = getBaseMonthly();
+const price = getBaseMonthly("hu");
 // A horgony a bérlő SZÜLETÉSE: ez az a nap, amikor a vásárlás ténylegesen megtörtént
 // (a payment-sorokat utólag purge-ölte valaki, a tenant és a jogosultságok maradtak).
 // ⛔ Nem `new Date()`: egy „mai" horgony olyan fordulónapot adna, ami sosem létezett,

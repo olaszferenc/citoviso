@@ -419,8 +419,8 @@ try {
   // since ADR-0211) — read from its own unit, never assumed; no unit = red.
   const clientCycle = /\/\s*év/.test(clientSum) ? "annual" : /\/\s*hó/.test(clientSum) ? "monthly" : null;
   const clientAmount = digits(clientSum);
-  const serverAnnual = computeAnnual(clientChosen);
-  const serverAmount = clientCycle === "annual" ? serverAnnual : computeMonthly(clientChosen);
+  const serverAnnual = computeAnnual(clientChosen, "hu");
+  const serverAmount = clientCycle === "annual" ? serverAnnual : computeMonthly(clientChosen, "hu");
   const unitLabel = clientCycle === "annual" ? "Ft/év" : "Ft/hó";
   check(
     "⑤ a kliens „Fizetendő most\" == a szerver ára UGYANARRA a halmazra",
@@ -431,8 +431,8 @@ try {
   const withoutDeps = clientChosen.filter((id) => !PULLED.includes(id));
   check(
     "N2 …és a kontroll nem üres: a függőségek nélküli halmaz ára ELTÉR",
-    computeAnnual(withoutDeps) !== serverAnnual && computeMonthly(withoutDeps) !== computeMonthly(clientChosen),
-    `függőség nélkül ${computeAnnual(withoutDeps)} Ft/év vs ${serverAnnual} Ft/év`,
+    computeAnnual(withoutDeps, "hu") !== serverAnnual && computeMonthly(withoutDeps, "hu") !== computeMonthly(clientChosen, "hu"),
+    `függőség nélkül ${computeAnnual(withoutDeps, "hu")} Ft/év vs ${serverAnnual} Ft/év`,
   );
   check(
     "⑤ a kosár a TELJES láncot küldené be (a kliens halmaza érvényes)",

@@ -6,7 +6,8 @@
 // i18n note: every string here is operator-facing (internal console) — outside
 // the §B.18 customer-facing i18n scope.
 
-import { pricingRegionForCountry } from "../country.js";
+import { regionOfTenant } from "../payment/orderRegion.js";
+import { invoiceNetHuf, taxThresholds } from "../billing/taxCounters.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { budapestMidnight, budapestYear } from "../text/budapestTime.js";
@@ -260,7 +261,8 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
         .orderBy("module")
         .execute();
       await loadPricing();
-      const region = pricingRegionForCountry(p.country);
+      // ADR-XXXX: the tenant's own pricing region (stored on its subscription at activation).
+      const region = (await regionOfTenant(t.id)).region;
       const modules = mods.map((m) => m.module);
       // What cadence they actually pay on: the latest PAID payment's period.
       // The chain: initial orders hang off the lead's prospects, upsells off
@@ -327,11 +329,14 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
 
 // ── Hub counts (console home) ───────────────────────────────────────────────
 
-/** AAM (alanyi adómentesség) annual revenue cap — 18 M HUF since 2025-01-01.
- *  Owner decision (2026-09-06): stay AAM until size forces the question; the
- *  console warns from 80% so crossing the cap never comes as a surprise
- *  (the invoice that crosses it is FULLY taxable + 15-day NAV report). */
-export const AAM_ANNUAL_LIMIT_HUF = 18_000_000;
+/** AAM (alanyi adómentesség) annual revenue cap — the statute's figure for the tax year
+ *  (Áfa tv. 188. § (2): 20 M Ft in 2026; billing/taxCounters.ts carries the schedule and its
+ *  source), overridable on the settings store. Owner decision (2026-09-06): stay AAM until
+ *  size forces the question; the console warns from 80% so crossing the cap never comes as
+ *  a surprise (the invoice that crosses it is FULLY taxable + 15-day NAV report). */
+export async function aamAnnualLimitHuf(): Promise<number> {
+  return (await taxThresholds()).aamLimitHuf;
+}
 
 /** Current-year net revenue that counts toward the AAM cap.
  *
@@ -350,6 +355,10 @@ export const AAM_ANNUAL_LIMIT_HUF = 18_000_000;
  *  Exported: the dashboard chip AND the daily SMS alert (aamAlert.ts) read the
  *  SAME number — two meters would drift. */
 export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
+  // ADR-XXXX: the system invoices in OTHER currencies count too — converted with the MNB rate
+  // they were issued with (invoice.fx_rate), else the rate of their day. One that cannot be
+  // converted is counted into fxDocs (surfaced), never silently dropped.
+  const fxSys = await nonHufAamInvoicesHuf();
   // The tax year starts at Budapest midnight, whatever the server's zone (ADR-0289).
   const yearStart = budapestMidnight(`${budapestYear(new Date())}-01-01`);
   const sys = await db
@@ -390,9 +399,32 @@ export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number 
     .where("issue_date", ">=", yearStart)
     .executeTakeFirst();
   return {
-    netHuf: Number(sys?.net ?? 0) + Number(man?.net ?? 0),
-    fxDocs: Number(fx?.n ?? 0),
+    netHuf: Number(sys?.net ?? 0) + Number(man?.net ?? 0) + fxSys.huf,
+    fxDocs: Number(fx?.n ?? 0) + fxSys.unknown,
   };
+}
+
+/** This tax year's AAM-treated system invoices in a currency other than HUF, in HUF. */
+async function nonHufAamInvoicesHuf(): Promise<{ huf: number; unknown: number }> {
+  const yearStart = budapestMidnight(`${budapestYear(new Date())}-01-01`);
+  const rows = await db
+    .selectFrom("invoice")
+    .select(["net", "currency", "fx_rate as fxRate", "fulfillment_date as fulfilment", "issued_at as issuedAt"])
+    .where("status", "=", "issued")
+    .where("currency", "!=", "HUF")
+    .where((eb) => eb.or([eb("vat_treatment", "=", "aam"), eb("vat_treatment", "is", null)]))
+    .where(sql<boolean>`issued_at >= ${yearStart}`)
+    .execute();
+  let huf = 0;
+  let unknown = 0;
+  for (const r of rows) {
+    const raw = (r.fulfilment ?? r.issuedAt) as unknown;
+    const day = typeof raw === "string" ? raw.slice(0, 10) : new Date(raw as string).toISOString().slice(0, 10);
+    const v = await invoiceNetHuf({ net: r.net, currency: r.currency, fxRate: r.fxRate === null ? null : Number(r.fxRate), day });
+    if (v === null) unknown++;
+    else huf += v;
+  }
+  return { huf: Math.round(huf), unknown };
 }
 
 /** Live finance numbers for the hub card + attention chips (one cheap query). */
@@ -436,7 +468,7 @@ export async function getFinanceCounts(): Promise<{
     overdue: Number(overdue?.n ?? 0),
     partners: Number(partners?.n ?? 0),
     aamYearNetHuf: aam.netHuf,
-    aamLimitHuf: AAM_ANNUAL_LIMIT_HUF,
+    aamLimitHuf: await aamAnnualLimitHuf(),
     aamFxDocs: aam.fxDocs,
   };
 }

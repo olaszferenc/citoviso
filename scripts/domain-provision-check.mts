@@ -379,10 +379,10 @@ async function siteRow(siteId: string) {
   // domain is SELLABLE; one forint below it is not sold at all — and the fee is the
   // same flat monthly amount on both sides (there is no free tier any more).
   const { isDomainEligible, getDomainMinPackageMonthly, getCustomDomainMonthly } = await import("../src/pricing.js");
-  const minPkg = getDomainMinPackageMonthly();
-  ok(isDomainEligible(minPkg), "⭐ a küszöböt elérő csomag JOGOSULT a saját címre (ADR-0109 ②)", `küszöb=${minPkg}`);
-  ok(!isDomainEligible(minPkg - 1), "⭐ egy forinttal alatta NEM jogosult (nem olcsóbb: nincs)", `küszöb=${minPkg}`);
-  ok(getCustomDomainMonthly() > 0, "a havidíj pozitív (nincs ingyen-ág)", `havidíj=${getCustomDomainMonthly()}`);
+  const minPkg = getDomainMinPackageMonthly("hu");
+  ok(isDomainEligible(minPkg, "hu"), "⭐ a küszöböt elérő csomag JOGOSULT a saját címre (ADR-0109 ②)", `küszöb=${minPkg}`);
+  ok(!isDomainEligible(minPkg - 1, "hu"), "⭐ egy forinttal alatta NEM jogosult (nem olcsóbb: nincs)", `küszöb=${minPkg}`);
+  ok(getCustomDomainMonthly("hu") > 0, "a havidíj pozitív (nincs ingyen-ág)", `havidíj=${getCustomDomainMonthly("hu")}`);
 
   const orderId = SELF_TEST ? null : await createDomainUpgradeOrder(tenantId, "uj-domain.hu");
   ok(Boolean(orderId), "az utólagos domain-rendelés létrejön", "createDomainUpgradeOrder null-t adott");
@@ -430,7 +430,7 @@ async function siteRow(siteId: string) {
   }
   const quote = await quoteDomainUpgrade(tenantId, "nagycsomag.hu");
   ok(
-    quote?.price === getCustomDomainMonthly(),
+    quote?.price === getCustomDomainMonthly("hu"),
     "⭐ küszöb FELETTI csomagnál a quote = egy havi díj (nincs ingyen-ág)",
     `ár=${quote?.price}`,
   );
@@ -438,7 +438,7 @@ async function siteRow(siteId: string) {
   ok(Boolean(orderId), "a rendelés létrejön");
   if (orderId) {
     const oi = await db.selectFrom("order_intent").select(["price"]).where("id", "=", orderId).executeTakeFirstOrThrow();
-    ok(Number(oi.price) === getCustomDomainMonthly(), "⭐ amit lát = amit fizet", `ár=${oi.price}`);
+    ok(Number(oi.price) === getCustomDomainMonthly("hu"), "⭐ amit lát = amit fizet", `ár=${oi.price}`);
   }
 }
 
@@ -460,12 +460,12 @@ async function siteRow(siteId: string) {
   if (orderId) {
     const oi = await db.selectFrom("order_intent").select(["committed_min_monthly"]).where("id", "=", orderId).executeTakeFirstOrThrow();
     const { getDomainMinPackageMonthly: floorOf } = await import("../src/pricing.js");
-    ok(Number(oi.committed_min_monthly) === floorOf(), "⭐ a domain-rendelés BEFAGYASZTJA a padlót (= a belépési küszöb, ADR-0109 ④)", `padló=${oi.committed_min_monthly}`);
+    ok(Number(oi.committed_min_monthly) === floorOf("hu"), "⭐ a domain-rendelés BEFAGYASZTJA a padlót (= a belépési küszöb, ADR-0109 ④)", `padló=${oi.committed_min_monthly}`);
     await db.insertInto("payment")
       .values({ order_intent_id: orderId, amount: 0, currency: "HUF", period: "annual", gateway: "none", status: "paid", paid_at: new Date() } as never)
       .execute();
     const c = await activeDomainCommitment(tenantId);
-    ok(c?.floorMonthly === floorOf() && c.remainingMonths >= 11, "⭐ a futó hűség kiolvasható (padló + hátralévő hónapok)", `c=${JSON.stringify(c)}`);
+    ok(c?.floorMonthly === floorOf("hu") && c.remainingMonths >= 11, "⭐ a futó hűség kiolvasható (padló + hátralévő hónapok)", `c=${JSON.stringify(c)}`);
 
     // Sinking below the floor (drop every module → base 3900 < 7000) is REFUSED atomically.
     const refuse = await applyModuleChange(tenantId, []);
@@ -529,8 +529,8 @@ async function siteRow(siteId: string) {
       .execute();
     const q = await settlementQuote(tenantId);
     const { getDomainMinPackageMonthly: floorOf2 } = await import("../src/pricing.js");
-    ok(q?.penaltyBase === floorOf2(), "⭐ a kötbér-alap a rendelésen BEFAGYASZTOTT padló (= belépési küszöb)", `alap=${q?.penaltyBase}`);
-    ok(q !== null && q.penaltyTotal === q.commitment.remainingMonths * floorOf2(), "kötbér = hátralévő hónapok × vállalt minimum", `összeg=${q?.penaltyTotal}`);
+    ok(q?.penaltyBase === floorOf2("hu"), "⭐ a kötbér-alap a rendelésen BEFAGYASZTOTT padló (= belépési küszöb)", `alap=${q?.penaltyBase}`);
+    ok(q !== null && q.penaltyTotal === q.commitment.remainingMonths * floorOf2("hu"), "kötbér = hátralévő hónapok × vállalt minimum", `összeg=${q?.penaltyTotal}`);
     ok(q?.buyoutPrice === 20000, "a webcím-vételár a definiált paraméter (20 000)", `ár=${q?.buyoutPrice}`);
     ok(q?.domainName === "elszamolo.hu", "a quote a hűséggel érintett domaint nevezi meg", `domain=${q?.domainName}`);
 
@@ -609,7 +609,7 @@ async function siteRow(siteId: string) {
   if (upgId) {
     const oi = await db.selectFrom("order_intent").select(["committed_min_monthly"]).where("id", "=", upgId).executeTakeFirstOrThrow();
     ok(
-      Number(oi.committed_min_monthly) === getDomainMinPackageMonthly(),
+      Number(oi.committed_min_monthly) === getDomainMinPackageMonthly("hu"),
       "⭐ a padló MINDIG befagy (a kötbér-alap sosem hiányzik többé)",
       `padló=${oi.committed_min_monthly}`,
     );

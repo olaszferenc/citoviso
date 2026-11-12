@@ -9,12 +9,13 @@
 // Separate module on purpose: this is called from the subscription lifecycle,
 // and billing.ts already imports that — putting it there would close a cycle.
 
+import { regionOfTenant } from "./orderRegion.js";
 import { db } from "../db/client.js";
 import { buildSiteRestoredEmail } from "../email/billingEmail.js";
 import { formatMoney } from "../text/money.js";
 import { getEmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
-import { getCurrency, loadPricing } from "../pricing.js";
+import { loadPricing } from "../pricing.js";
 import { billingEmails } from "../billing/partner.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { config } from "../config.js";
@@ -55,7 +56,8 @@ export async function announceRestore(tenantId: string, amountPaid: number): Pro
     const siteUrl = await siteUrlFor(tenantId);
     // The mail builder formats it (text/money.ts); this side stays machine form.
     const amount = amountPaid;
-    const currency = getCurrency();
+    // ADR-XXXX: the currency the customer pays in (the amount paid is in it).
+    const { currency } = await regionOfTenant(tenantId);
 
     if (!recipients.length) {
       console.error(`[billing] ${siteName}: nincs értesítési cím — a visszakapcsolás CSAK naplózva`);

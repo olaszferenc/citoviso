@@ -15,6 +15,7 @@
 // countsToward() rule to the union — one predicate, not two (the Modulok tab
 // already taught us what two copies cost: 60 700 vs 53 800 on one screen).
 
+import { regionOfTenant } from "./orderRegion.js";
 import { db } from "../db/client.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
 import { nextChargeDate } from "./subscription.js";
@@ -74,16 +75,18 @@ export async function renewalQuoteForTenant(
     // stray entitlement rows exist. The date is what decides, not the rows.
     if (!date) return FRESH;
 
+    // ADR-XXXX: the tenant's own region — the quote is in the currency it pays in.
+    const { region } = await regionOfTenant(tenantId);
     const offered = new Set(offeredModuleIds);
     const owned = await renewableModuleIds(tenantId);
     const otherModulesMonthly = owned
       .filter((id) => !offered.has(id))
-      .reduce((sum, id) => sum + getModulePrice(id), 0);
+      .reduce((sum, id) => sum + getModulePrice(id, region), 0);
 
     // Asked for a ONE-month cycle deliberately: the caller needs the monthly
     // rate, and the annual multiplication belongs with the discount rule on the
     // client, next to the modules it applies to.
-    const domain = await domainFeeForRenewal(tenantId, 1);
+    const domain = await domainFeeForRenewal(tenantId, 1, region);
 
     return {
       date,

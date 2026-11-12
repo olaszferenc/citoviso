@@ -480,7 +480,7 @@ try {
       cfBG: resolvePricingRegion({ "cf-ipcountry": "BG" }),
       acceptHr: resolvePricingRegion({ "accept-language": "hr-HR,hr;q=0.9" }),
     },
-    orderPathMonthly: { hu: computeMonthly(ORDER_COMMON.modules), global: computeMonthly(ORDER_COMMON.modules, "global") },
+    orderPathMonthly: { hu: computeMonthly(ORDER_COMMON.modules, "hu"), global: computeMonthly(ORDER_COMMON.modules, "global") },
   };
   console.log(`csomagok (${DEV_DB} másolat): hr ${(report.packs as { hr: number }).hr}/${CATALOG.size}, bg ${(report.packs as { bg: number }).bg}/${CATALOG.size}; COUNTRY_LANG: HR→${langForCountry("HR")}, BG→${langForCountry("BG")}`);
 

@@ -18,6 +18,7 @@ import {
   loadPricing,
   pricingSnapshot,
   resolvePricingRegion,
+  regionPriceGaps,
 } from "../pricing.js";
 import { lockup } from "../ui/brand.js";
 
@@ -111,7 +112,8 @@ export async function renderHomepage(
   const snap = pricingSnapshot(region);
   let plans = "";
   let ml = "";
-  if (snap.pricingConfirmed) {
+  // ADR-XXXX: an incomplete region shows NO price (the "custom offer" block), never a guess.
+  if (snap.pricingConfirmed && regionPriceGaps(region).length === 0) {
     plans = homepagePlansHtml(
       offeredPackagesFrom(await getDisabledModules(), region),
       getAnnualFreeMonths(region),

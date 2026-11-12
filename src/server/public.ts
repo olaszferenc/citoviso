@@ -7,6 +7,7 @@
 //   GET  /login              → login placeholder (ADR-0021 ③ builds the real one)
 // Run: tsx src/server/public.ts   (persist with setsid/nohup like the preview server)
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import http from "node:http";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
@@ -2024,7 +2025,9 @@ async function serveAdmin(
     const typed = q.get("check");
     const picked = q.get("d");
     // Elek B4: the picked name's ENDING prices the review screen (the order charges that).
-    domain = await loadDomainAdmin(session.tenantId, session.displayName, undefined, picked);
+    // ADR-XXXX: the tenant's own pricing region prices the tab (its endings, fees, cap).
+    const tenantRegion = (await regionOfTenant(session.tenantId)).region;
+    domain = await loadDomainAdmin(session.tenantId, session.displayName, tenantRegion, picked);
     // ADR-0251: the review step shows a FRESH registrar verdict ("Szabad — most
     // ellenőrizve") — a name picked minutes ago may be gone, and a stale "free"
     // would be the one promise the pay button rests on.
@@ -2032,7 +2035,7 @@ async function serveAdmin(
     const pickedDomain = pickedNorm?.ok && pickedNorm.domain ? pickedNorm.domain : null;
     domainView = {
       ...(pickedDomain ? { picked: pickedDomain, pickedAvailability: await checkWebcimAvailability(pickedDomain) } : {}),
-      ...(typed ? { check: await checkTypedDomain(typed) } : {}),
+      ...(typed ? { check: await checkTypedDomain(typed, tenantRegion) } : {}),
       ...(q.get("payerror") === "1" ? { payError: true } : {}),
       ...(q.get("uj") === "1" ? { restart: true } : {}),
     };
@@ -3070,7 +3073,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       orderId: order.orderId,
       domainName: quote?.domainName ?? "",
       total: open?.total ?? 0,
-      currency: getCurrency(),
+      currency: (await regionOfTenant(session.tenantId)).currency,
       monthsRemaining: quote?.commitment.remainingMonths ?? 0,
       penaltyBase: quote?.penaltyBase ?? 0,
       takeDomain,

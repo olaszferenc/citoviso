@@ -286,7 +286,7 @@ try {
   console.log("\n⑥ Három sáv, mindegyik a saját árával");
   const flat = (s: string) => s.replace(/\u00a0/g, " ");
   for (const t of MULTILANG_TIERS) {
-    const price = getMultilangTierPrice(t);
+    const price = getMultilangTierPrice(t, "hu");
   // ⚠️ A magyar ezres-elválasztó NEM TÖRŐ szóköz (U+00A0), a kártya viszont sima
   //    szóközzel formáz — a nyers összehasonlítás HELYES feliraton is bukna.
     const shown = flat(html).includes(flat(price.toLocaleString("hu-HU")));

@@ -168,7 +168,7 @@ console.log("A) render — állapotok és a kontraktus feliratai");
 // ── B) TERV-SÁV — valódi kattintással ───────────────────────────────────────
 console.log("B) kártyaválasztó a fizetés-megerősítőn (⑧, modules-cart ④) — Playwright");
 {
-  const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
+  const modules = await getTenantModules("00000000-0000-0000-0000-000000000000", { region: "hu", currency: "HUF" }).catch(() => null);
   const render = (s: SubscriptionAdminData) =>
     adminDashboard(session, content, { tab: "modulok", modules, siteUrl: "https://x.citoviso.com", previewToken: "demo", units: [], subscription: s })
       .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)

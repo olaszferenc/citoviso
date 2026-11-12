@@ -15,9 +15,10 @@
 //                         (domainFeeForCycle over the tenant's renewable modules), so "covered
 //                         by the package" here means exactly "no domain line on the invoice"
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
-import { domainFeeForCycle, getCurrency, loadPricing, offeredTldOf } from "../pricing.js";
+import { HU_PRICING_REGION, domainFeeForCycle, getCurrency, loadPricing, offeredTldOf } from "../pricing.js";
 import { renewableModuleIds } from "../payment/billing.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { isHouseDomain } from "../domains/domainRenewal.js";
@@ -330,7 +331,19 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
   const disabled = await getDisabledModules();
   const modulesByTenant = new Map<string, string[]>();
   const out: DomainRecord[] = [];
+  const moneyByTenant = new Map<string, { region: string; currency: string }>();
   for (const r of rows) {
+    // ADR-XXXX: each name is priced in its tenant's own region (its endings, fee, currency).
+    let money = moneyByTenant.get(r.tenant_id);
+    if (!money) {
+      money = await regionOfTenant(r.tenant_id).catch((e: Error) => {
+        // An operator LIST must not die on one tenant; the row is shown in the home region
+        // and the reason is logged (the money path itself fails closed on the same error).
+        console.warn(`[domain-registry] ${r.tenant_id}: ${e.message}`); // i18n-exempt: operátori napló
+        return { region: HU_PRICING_REGION, currency: getCurrency(HU_PRICING_REGION) };
+      });
+      moneyByTenant.set(r.tenant_id, money);
+    }
     const house = isHouseDomain(r.domain);
     const tld = tldOf(r.domain);
     const bought = !!r.registrar_ref || ["registered", "dns_pending", "tls_pending", "setup_retry", "live"].includes(r.status);
@@ -361,10 +374,10 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
         mods = await renewableModuleIds(r.tenant_id);
         modulesByTenant.set(r.tenant_id, mods);
       }
-      monthlyFee = domainFeeForCycle(1, undefined, { domain: r.domain, modules: mods, disabled });
+      monthlyFee = domainFeeForCycle(1, money.region, { domain: r.domain, modules: mods, disabled });
       cover = monthlyFee > 0 ? "fee" : "package";
     }
-    const tldRow = offeredTldOf(r.domain);
+    const tldRow = offeredTldOf(r.domain, money.region);
     const waiting = r.status !== "live" && r.status !== "failed";
     out.push({
       provisioningId: r.id,
@@ -401,7 +414,7 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
       renewProblem: r.domain_renew_problem,
       cover,
       monthlyFee,
-      feeCurrency: getCurrency(),
+      feeCurrency: money.currency,
       costNet: tldRow?.costNet ?? null,
       costCurrency: tldRow?.costCurrency ?? null,
       attention: attentionOf(

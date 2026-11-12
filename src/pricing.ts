@@ -4,12 +4,22 @@
 // admin page (persisted in pricing_config + module_price). modules.ts / domains.ts
 // keep only the built-in DEFAULTS used as the seed until the owner saves.
 //
-// REGION-KEYED (migration 0020): pricing_config has one row per market region
-// (e.g. 'hu' = HUF, 'global' = EUR). 'global' is the fallback pricelist used when
-// no region-specific row matches. Every getter takes an OPTIONAL regionId that
-// DEFAULTS to 'hu' — so the existing HUF call sites (configurator, outreach, the §C
-// gate, the manifest) keep their exact prior behavior with no change. module_price
-// stays a single GLOBAL (HUF) map for now; region-scoping add-ons is a follow-up.
+// REGION-KEYED (migration 0020, ADR-0437 ⑤3 / ADR-XXXX): pricing_config has one row per
+// pricing region, each in ITS OWN currency (owner, 2026-11-12: every country prices,
+// charges and invoices in its own currency; the regional prices are absolute — there is
+// no FX conversion of a price). Every getter REQUIRES the region: the order/subscription
+// carries it (order_intent.pricing_region / subscription.pricing_region), a prospect gets
+// it from the lead's country (country.pricing_region). There is NO default region and NO
+// silent fall back to 'global': a region without a complete price sheet throws
+// PricingRegionError, and the caller fails closed (no price shown, no order taken).
+// 'global' survives only as the anonymous homepage visitor's display list.
+//
+// MODULE PRICES PER REGION (0135): the 'hu' region reads module_price (its historic map),
+// every other region module_price_region — never the HUF map, so an EUR base can no
+// longer get HUF add-ons summed onto it ("10 € + 2000 €", measured 2026-11-12).
+//
+// AMOUNTS ARE MINOR-UNIT INTEGERS of the region's currency (text/money.ts minorDigits:
+// HUF 0, EUR/RON/PLN 2). For 'hu' that is the forint — every HU amount is unchanged.
 //
 // Kept SYNC for the many call sites (compute*, the §C gate, the manifest) via an
 // in-memory snapshot refreshed from the DB on a short TTL. Call loadPricing() at
@@ -18,7 +28,7 @@
 
 import { allCountriesSync, pricingRegionForCountry } from "./country.js";
 import { db } from "./db/client.js";
-import { formatMoney } from "./text/money.js";
+import { formatMinor, minorDigits } from "./text/money.js";
 import {
   MODULE_CATALOG,
   MULTILANG_TIERS,
@@ -41,15 +51,30 @@ import {
   CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
 } from "./domains.js";
 
-/** The region getters default to when no regionId is passed (the HUF home market). */
-export const DEFAULT_PRICING_REGION = "hu";
-/** The fallback pricelist region used whenever a requested region has no row. */
+/** The HUF home market — the region whose module prices live in module_price. */
+export const HU_PRICING_REGION = "hu";
+/** The anonymous homepage visitor's display list (EUR). NOT a fallback for a country. */
 export const GLOBAL_PRICING_REGION = "global";
+
+/**
+ * A region that cannot price: no pricing_config row, a currency that is not ISO 4217, or
+ * a sellable module / multilang tier without a price. The caller fails CLOSED — no price
+ * shown, no order recorded, no pay-link — and never retries on another region.
+ */
+export class PricingRegionError extends Error {
+  constructor(
+    readonly region: string,
+    readonly gaps: readonly string[],
+  ) {
+    super(`[pricing] a(z) "${region}" ár-régió nem árazható: ${gaps.join("; ")}`);
+    this.name = "PricingRegionError";
+  }
+}
 
 export interface PricingSnapshot {
   /** Market region slug this snapshot is for (e.g. 'hu', 'global'). */
   readonly region: string;
-  /** ISO 4217 currency of the amounts below ('HUF' | 'EUR'). */
+  /** ISO 4217 currency of the amounts below (minor-unit integers of it). */
   readonly currency: string;
   /** Base subscription price (per month, in `currency`). */
   readonly baseMonthly: number;
@@ -72,7 +97,8 @@ export interface PricingSnapshot {
   readonly domainFreeInPackage: boolean;
   /** ADR-0360 ③: the domain endings of this market, `sort` order. */
   readonly tlds: readonly TldRow[];
-  /** module id -> monthly add-on price (HUF, global). Covers every catalog id. */
+  /** module id -> monthly add-on price, in THIS region's currency (minor unit). 'hu' covers
+   *  every catalog id (code seed + module_price); another region only what it saved. */
   readonly modulePrices: ReadonlyMap<string, number>;
 }
 
@@ -112,7 +138,7 @@ function defaultTlds(customDomainMonthly: number): TldRow[] {
   ];
 }
 
-/** Catalog default module add-on prices (HUF) — the seed until the owner saves. */
+/** Catalog default module add-on prices — HUF, so the seed of the 'hu' region ONLY. */
 function defaultModulePrices(): Map<string, number> {
   const m = new Map(MODULE_CATALOG.map((d) => [d.id, d.priceMonthly]));
   // ADR-0128: the multilang tiers price themselves through module_price rows too, so the
@@ -125,8 +151,9 @@ function defaultModulePrices(): Map<string, number> {
 
 /**
  * Built-in code default for a known region (used until the owner saves a row).
- * 'hu' comes from modules.ts/domains.ts (HUF); 'global' is the EUR fallback
- * (~100 €/yr = 10 €/mo × (12 − 2 free)). Unknown region => null (resolve to global).
+ * 'hu' comes from modules.ts/domains.ts (HUF); 'global' is the anonymous homepage's EUR
+ * list (~100 €/yr = 10 €/mo × (12 − 2 free)) in CENTS, with NO module prices (an EUR region
+ * has no code seed — the HUF catalog prices are not its prices). Unknown region => null.
  */
 function codeDefault(
   region: string,
@@ -153,17 +180,17 @@ function codeDefault(
       return {
         region: "global",
         currency: "EUR",
-        baseMonthly: 10,
+        baseMonthly: 1000,
         annualFreeMonths: 2,
-        customDomainMonthly: 2,
+        customDomainMonthly: 200,
         domainMaxPriceEur: 15,
         domainMinCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
-        domainMinPackageMonthly: 20,
-        domainBuyoutPrice: 60,
+        domainMinPackageMonthly: 2000,
+        domainBuyoutPrice: 6000,
         pricingConfirmed: false,
         domainFreeInPackage: false,
-        tlds: defaultTlds(2),
-        modulePrices,
+        tlds: defaultTlds(200),
+        modulePrices: new Map(),
       };
     default:
       return null;
@@ -171,13 +198,21 @@ function codeDefault(
 }
 
 /** Seed map with the known code-default regions (hu + global). */
-function seedMap(modulePrices: ReadonlyMap<string, number>): Map<string, PricingSnapshot> {
+function seedMap(huModulePrices: ReadonlyMap<string, number>): Map<string, PricingSnapshot> {
   const m = new Map<string, PricingSnapshot>();
-  for (const r of ["hu", "global"]) {
-    const d = codeDefault(r, modulePrices);
+  for (const r of [HU_PRICING_REGION, GLOBAL_PRICING_REGION]) {
+    const d = codeDefault(r, huModulePrices);
     if (d) m.set(r, d);
   }
   return m;
+}
+
+/**
+ * ×10^digits for a row written before 0135 in MAJOR units (the seeded 'global': 10 = 10 €);
+ * 1 for a minor-unit row and for every HUF row (0 digits) — the HU amounts never move.
+ */
+function legacyScale(minorUnits: boolean, currency: string): number {
+  return minorUnits ? 1 : 10 ** (minorDigits(currency) ?? 0);
 }
 
 let snapshots: Map<string, PricingSnapshot> = seedMap(defaultModulePrices());
@@ -211,7 +246,8 @@ export function overridePricingStateInProcess(
   }
   guardFrozen = true;
   if (o.assignment) packageAssignment = new Map(o.assignment);
-  const region = o.region ?? DEFAULT_PRICING_REGION;
+  // Guard-only: the HU market is what the price guards pin (product code never calls this).
+  const region = o.region ?? HU_PRICING_REGION;
   const cur = snap(region);
   snapshots.set(region, {
     ...cur,
@@ -238,43 +274,52 @@ export async function loadPricing(force = false): Promise<void> {
     const modulePrices = defaultModulePrices();
     const rows = await db.selectFrom("module_price").selectAll().execute();
     for (const r of rows) modulePrices.set(r.module_id, r.price_monthly);
+    // 0135: every non-HU region's own add-on prices (minor units of its currency).
+    const regionModuleRows = await db.selectFrom("module_price_region").selectAll().execute();
+    const regionModules = (region: string): Map<string, number> =>
+      new Map(regionModuleRows.filter((r) => r.region === region).map((r) => [r.module_id, r.price_monthly]));
 
     const next = seedMap(modulePrices);
     const cfgRows = await db.selectFrom("pricing_config").selectAll().execute();
     const tldRows = await db.selectFrom("domain_tld").selectAll().orderBy("sort").orderBy("tld").execute();
-    const tldsOf = (region: string, legacyFee: number): TldRow[] => {
+    const tldsOf = (region: string, currency: string, legacyFee: number): TldRow[] => {
       const rows = tldRows.filter((t) => t.region === region);
       if (!rows.length) return defaultTlds(legacyFee);
-      return rows.map((t) => ({
-        tld: t.tld,
-        offered: t.offered,
-        costNet: t.cost_net,
-        costCurrency: t.cost_currency,
-        costMeasuredAt: t.cost_measured_at ? new Date(t.cost_measured_at).toISOString() : null,
-        maxCost: t.max_cost,
-        monthlyFee: t.monthly_fee,
-        freeInPackage: t.free_in_package,
-      }));
+      return rows.map((t) => {
+        const fee = legacyScale(t.minor_units, currency);
+        const cost = legacyScale(t.minor_units, t.cost_currency);
+        return {
+          tld: t.tld,
+          offered: t.offered,
+          costNet: t.cost_net === null ? null : t.cost_net * cost,
+          costCurrency: t.cost_currency,
+          costMeasuredAt: t.cost_measured_at ? new Date(t.cost_measured_at).toISOString() : null,
+          maxCost: t.max_cost * cost,
+          monthlyFee: t.monthly_fee * fee,
+          freeInPackage: t.free_in_package,
+        };
+      });
     };
     const pkgRows = await db.selectFrom("package_module").selectAll().execute();
     const nextAssignment = pkgRows.length
       ? new Map(pkgRows.map((r) => [r.module_id, r.tier] as [string, Tier]))
       : seedAssignment();
     for (const c of cfgRows) {
+      const k = legacyScale(c.minor_units, c.currency);
       next.set(c.region, {
         region: c.region,
         currency: c.currency,
-        baseMonthly: c.base_monthly,
+        baseMonthly: c.base_monthly * k,
         annualFreeMonths: c.annual_free_months,
-        customDomainMonthly: c.custom_domain_monthly,
+        customDomainMonthly: c.custom_domain_monthly * k,
         domainMaxPriceEur: c.domain_max_price_eur,
         domainMinCommitmentMonths: c.domain_min_commitment_months,
-        domainMinPackageMonthly: c.domain_min_package_monthly,
-        domainBuyoutPrice: c.domain_buyout_price,
+        domainMinPackageMonthly: c.domain_min_package_monthly * k,
+        domainBuyoutPrice: c.domain_buyout_price * k,
         pricingConfirmed: c.pricing_confirmed,
         domainFreeInPackage: c.domain_free_in_package,
-        tlds: tldsOf(c.region, c.custom_domain_monthly),
-        modulePrices,
+        tlds: tldsOf(c.region, c.currency, c.custom_domain_monthly * k),
+        modulePrices: c.region === HU_PRICING_REGION ? modulePrices : regionModules(c.region),
       });
     }
     snapshots = next;
@@ -286,21 +331,59 @@ export async function loadPricing(force = false): Promise<void> {
 }
 
 /**
- * Resolve the snapshot for a region, defaulting to 'hu'. A missing region falls
- * back to 'global', and 'global' itself is always present (seeded). Never throws.
+ * The snapshot of a region. ⛔ No default and no fallback (ADR-XXXX): a missing region
+ * name or a region without a pricing_config row THROWS — a price from another region would
+ * be a price in another currency.
  */
-function snap(region: string = DEFAULT_PRICING_REGION): PricingSnapshot {
-  return (
-    snapshots.get(region) ??
-    snapshots.get(GLOBAL_PRICING_REGION) ??
-    codeDefault(GLOBAL_PRICING_REGION, defaultModulePrices())!
-  );
+function snap(region: string): PricingSnapshot {
+  if (typeof region !== "string" || !region) {
+    throw new PricingRegionError(String(region), ["nincs ár-régió megadva (a hívó nem adta át)"]);
+  }
+  const s = snapshots.get(region);
+  if (!s) throw new PricingRegionError(region, ["nincs ársor (pricing_config)"]);
+  return s;
 }
 
-export function getBaseMonthly(region?: string): number {
+/** Does the region exist at all (has a pricing_config row or a code default)? */
+export function hasPricingRegion(region: string | null | undefined): boolean {
+  return !!region && snapshots.has(region);
+}
+
+/** The ids a region must price before it may sell: every offered catalog add-on + the
+ *  multilang tiers. The spine is in the base; a retired module is not on sale. */
+function requiredPriceIds(): string[] {
+  return [
+    ...MODULE_CATALOG.filter((m) => !m.spine && !(m as { retired?: boolean }).retired).map((m) => m.id),
+    ...MULTILANG_TIERS.map((t) => t.priceId),
+  ];
+}
+
+/**
+ * Why a region cannot price (empty = it can). The SAME list the guard measures over every
+ * country.pricing_region and the console shows next to a new region — so "the order failed
+ * closed" and "the console said this region is incomplete" are one fact.
+ */
+export function regionPriceGaps(region: string): string[] {
+  const s = snapshots.get(region);
+  if (!s) return ["nincs ársor (pricing_config)"];
+  const gaps: string[] = [];
+  if (minorDigits(s.currency) === null) gaps.push(`a pénznem (${s.currency}) nem ISO 4217`);
+  if (!(s.baseMonthly > 0)) gaps.push("nincs alapdíj");
+  const missing = requiredPriceIds().filter((id) => !s.modulePrices.has(id));
+  if (missing.length) gaps.push(`hiányzó modulár: ${missing.join(", ")}`);
+  return gaps;
+}
+
+/** Throws PricingRegionError unless the region can price (order paths call this first). */
+export function assertRegionPriceable(region: string): void {
+  const gaps = regionPriceGaps(region);
+  if (gaps.length) throw new PricingRegionError(region, gaps);
+}
+
+export function getBaseMonthly(region: string): number {
   return snap(region).baseMonthly;
 }
-export function getAnnualFreeMonths(region?: string): number {
+export function getAnnualFreeMonths(region: string): number {
   return snap(region).annualFreeMonths;
 }
 /**
@@ -309,7 +392,7 @@ export function getAnnualFreeMonths(region?: string): number {
  * per-ending one; callers that do not know the ending yet (a quote before the buyer picked
  * a name) read this. With the ending known, use domainMonthlyFee().
  */
-export function getCustomDomainMonthly(region?: string): number {
+export function getCustomDomainMonthly(region: string): number {
   return primaryTld(region)?.monthlyFee ?? snap(region).customDomainMonthly;
 }
 
@@ -326,27 +409,27 @@ export function currentPresets(): Preset[] {
 }
 
 /** ADR-0360 ②: may the domain be package content on this market? */
-export function getDomainFreeInPackage(region?: string): boolean {
+export function getDomainFreeInPackage(region: string): boolean {
   return snap(region).domainFreeInPackage;
 }
 
 /** Every ending of the market (offered or not), `sort` order. */
-export function getTlds(region?: string): TldRow[] {
+export function getTlds(region: string): TldRow[] {
   return [...snap(region).tlds];
 }
 
 /** The endings a buyer may pick on this market. */
-export function offeredTlds(region?: string): TldRow[] {
+export function offeredTlds(region: string): TldRow[] {
   return snap(region).tlds.filter((t) => t.offered);
 }
 
 /** The first offered ending (the market's default suggestion), or null. */
-export function primaryTld(region?: string): TldRow | null {
+export function primaryTld(region: string): TldRow | null {
   return offeredTlds(region)[0] ?? null;
 }
 
 /** The OFFERED ending a domain name falls under (longest match), or null. */
-export function offeredTldOf(domain: string, region?: string): TldRow | null {
+export function offeredTldOf(domain: string, region: string): TldRow | null {
   const d = domain.trim().toLowerCase().replace(/\.$/, "");
   let best: TldRow | null = null;
   for (const t of offeredTlds(region)) {
@@ -364,7 +447,7 @@ export function offeredTldOf(domain: string, region?: string): TldRow | null {
 export function domainIsPackageContent(
   moduleIds: Iterable<string>,
   disabled: ReadonlySet<string>,
-  region?: string,
+  region: string,
 ): boolean {
   return snap(region).domainFreeInPackage && coversDomainTier(packageAssignment, moduleIds, disabled);
 }
@@ -379,7 +462,7 @@ export function domainMonthlyFee(
   domain: string | null,
   moduleIds: Iterable<string>,
   disabled: ReadonlySet<string>,
-  region?: string,
+  region: string,
 ): number | null {
   const t = domain ? offeredTldOf(domain, region) : primaryTld(region);
   if (!t) return null;
@@ -391,24 +474,24 @@ export function domainMonthlyFee(
  * ADR-0360 ③: the purchase-cost cap of the ending a domain falls under — compared with the
  * registrar's NET price IN THE SAME CURRENCY. null = not an offered ending (do not buy).
  */
-export function domainCostCap(domain: string, region?: string): { max: number; currency: string } | null {
+export function domainCostCap(domain: string, region: string): { max: number; currency: string } | null {
   const t = offeredTldOf(domain, region);
   return t ? { max: t.maxCost, currency: t.costCurrency } : null;
 }
 /** ADR-0093: purchase-cost cap (EUR) — the registrar buy must stay under this. */
-export function getDomainMaxPriceEur(region?: string): number {
+export function getDomainMaxPriceEur(region: string): number {
   return snap(region).domainMaxPriceEur;
 }
 /** ADR-0093: minimum subscription commitment (months) for a domain through us. */
-export function getDomainMinCommitmentMonths(region?: string): number {
+export function getDomainMinCommitmentMonths(region: string): number {
   return snap(region).domainMinCommitmentMonths;
 }
 /** ADR-0109 ②/⑧: minimum monthly package LIST total that allows a custom domain. */
-export function getDomainMinPackageMonthly(region?: string): number {
+export function getDomainMinPackageMonthly(region: string): number {
   return snap(region).domainMinPackageMonthly;
 }
 /** ADR-0093: fixed cash buyout price for the early-exit ownership transfer. */
-export function getDomainBuyoutPrice(region?: string): number {
+export function getDomainBuyoutPrice(region: string): number {
   return snap(region).domainBuyoutPrice;
 }
 
@@ -425,7 +508,7 @@ export function getDomainBuyoutPrice(region?: string): number {
  */
 export function isDomainEligible(
   listMonthlyTotal: number,
-  region?: string,
+  region: string,
   /** ADR-0360 ②④: with the module set known, package content is eligible regardless. */
   pkg?: { readonly modules: Iterable<string>; readonly disabled: ReadonlySet<string> },
 ): boolean {
@@ -443,7 +526,7 @@ export function isDomainEligible(
  */
 export function domainFeeForCycle(
   cycleMonths: number,
-  region?: string,
+  region: string,
   /** ADR-0360: with the name and module set known, the per-ending / package-content fee. */
   ctx?: { readonly domain: string | null; readonly modules: Iterable<string>; readonly disabled: ReadonlySet<string> },
 ): number {
@@ -452,15 +535,26 @@ export function domainFeeForCycle(
     : getCustomDomainMonthly(region);
   return monthly * Math.max(1, Math.round(cycleMonths));
 }
-export function isPricingConfirmed(region?: string): boolean {
+export function isPricingConfirmed(region: string): boolean {
   return snap(region).pricingConfirmed;
 }
-export function getCurrency(region?: string): string {
+export function getCurrency(region: string): string {
   return snap(region).currency;
 }
-/** Current monthly add-on price for a module id (0 if unknown / included in base). */
-export function getModulePrice(id: string, region?: string): number {
-  return snap(region).modulePrices.get(id) ?? 0;
+/**
+ * Current monthly add-on price for a module id, in the region's currency. 0 for the spine
+ * and for an id that is not a priced catalog entry (included in base). A PRICED module the
+ * region has no price for THROWS — a 0 there would be a free module, the HUF map a price in
+ * the wrong currency.
+ */
+export function getModulePrice(id: string, region: string): number {
+  const s = snap(region);
+  const v = s.modulePrices.get(id);
+  if (v !== undefined) return v;
+  if (requiredPriceIds().includes(id) || MODULE_CATALOG.some((m) => m.id === id && !m.spine)) {
+    throw new PricingRegionError(region, [`hiányzó modulár: ${id}`]);
+  }
+  return 0;
 }
 
 /**
@@ -468,8 +562,8 @@ export function getModulePrice(id: string, region?: string): number {
  * operator-editable module_price row as the monthly prices — for a one-time
  * module that column IS the one-time price (there is no monthly component).
  */
-export function getOneTimePrice(id: string, region?: string): number {
-  return isOneTimeModule(id) ? (snap(region).modulePrices.get(id) ?? 0) : 0;
+export function getOneTimePrice(id: string, region: string): number {
+  return isOneTimeModule(id) ? getModulePrice(id, region) : 0;
 }
 
 /**
@@ -477,30 +571,36 @@ export function getOneTimePrice(id: string, region?: string): number {
  * 0 when the row is missing: a missing row means "the operator never saved a price", not
  * "this package is free", and a 0 here would surface as a buyable 0 Ft package.
  */
-export function getMultilangTierPrice(tier: MultilangTier, region?: string): number {
-  return snap(region).modulePrices.get(tier.priceId) ?? tier.priceDefault;
+export function getMultilangTierPrice(tier: MultilangTier, region: string): number {
+  const v = snap(region).modulePrices.get(tier.priceId);
+  if (v !== undefined) return v;
+  // The code default is a HUF amount: it may stand in for the HU region only.
+  if (region === HU_PRICING_REGION) return tier.priceDefault;
+  throw new PricingRegionError(region, [`hiányzó többnyelvű csomag-ár: ${tier.priceId}`]);
 }
 
 /** Monthly total for a selected module set: base + Σ selected add-ons.
  *  One-time modules (ADR-0063) never join the subscription math. */
-export function computeMonthly(moduleIds: readonly string[], region?: string): number {
+export function computeMonthly(moduleIds: readonly string[], region: string): number {
   const s = snap(region);
-  const set = new Set(moduleIds);
   let sum = s.baseMonthly;
-  for (const [id, price] of s.modulePrices) {
-    if (set.has(id) && !isOneTimeModule(id)) sum += price;
+  for (const id of new Set(moduleIds)) {
+    if (isOneTimeModule(id)) continue;
+    // getModulePrice throws for a priced module this region has no price for: one currency
+    // per sum, never a HUF add-on on a EUR base.
+    sum += getModulePrice(id, region);
   }
   return sum;
 }
 
 /** Annual total (prepay) for a selected module set, with the free-months discount. */
-export function computeAnnual(moduleIds: readonly string[], region?: string): number {
+export function computeAnnual(moduleIds: readonly string[], region: string): number {
   const s = snap(region);
   return computeMonthly(moduleIds, region) * (12 - s.annualFreeMonths);
 }
 
 /** A defensive copy of one region's snapshot (for the admin page render). */
-export function pricingSnapshot(region?: string): PricingSnapshot {
+export function pricingSnapshot(region: string): PricingSnapshot {
   const s = snap(region);
   return { ...s, modulePrices: new Map(s.modulePrices) };
 }
@@ -526,18 +626,21 @@ export function resolvePricingRegion(
 ): string {
   if (override) {
     const r = override.toLowerCase();
-    if (snapshots.has(r) || r === "hu" || r === "global") return r;
+    if (snapshots.has(r)) return r;
   }
+  // The anonymous visitor's DISPLAY list: a country whose region has no sheet yet shows the
+  // global list (the homepage is not an order; every order path resolves strictly).
+  const shown = (r: string): string => (snapshots.has(r) ? r : GLOBAL_PRICING_REGION);
   const country = headerStr(headers["cf-ipcountry"]);
-  if (country) return pricingRegionForCountry(country);
+  if (country) return shown(pricingRegionForCountry(country));
   const accept = headerStr(headers["accept-language"]);
   if (accept) {
     for (const c of allCountriesSync()) {
       const lang = c.defaultLang.replace(/[^a-z]/gi, "");
-      if (lang && new RegExp(`(^|[,\\s])${lang}\\b`, "i").test(accept)) return c.pricingRegion;
+      if (lang && new RegExp(`(^|[,\\s])${lang}\\b`, "i").test(accept)) return shown(c.pricingRegion);
     }
   }
-  return "global";
+  return GLOBAL_PRICING_REGION;
 }
 
 function headerStr(v: string | string[] | undefined): string {
@@ -545,18 +648,18 @@ function headerStr(v: string | string[] | undefined): string {
 }
 
 /**
- * Format a price for display in its currency: HUF → "39 000 Ft", EUR → "100 €",
- * anything else → "<n> <code>". Kept as a re-export so the ~20 call sites here
- * and in the console need not learn a new name; the RULE lives in text/money.ts,
- * which owns no DB and can therefore be imported by a mail builder too.
+ * Format a price (MINOR-unit integer) for display in its currency: HUF → "39 000 Ft",
+ * EUR 1000 → "10 €", EUR 990 → "9,90 €", anything else → "<n> <code>". The RULE lives in
+ * text/money.ts (formatMinor), which owns no DB and can therefore be imported by a mail
+ * builder too.
  */
 export function formatPrice(amount: number, currency: string, lang?: string): string {
-  return formatMoney(amount, currency, lang);
+  return formatMinor(amount, currency, lang);
 }
 
 export interface PricingInput {
-  /** Market region to save (defaults to 'hu'). */
-  readonly region?: string;
+  /** Pricing region to save (an existing one — createPricingRegion makes a new one). */
+  readonly region: string;
   /** Currency for this region (defaults to the region's current currency). */
   readonly currency?: string;
   readonly baseMonthly: number;
@@ -570,15 +673,17 @@ export interface PricingInput {
   readonly pricingConfirmed: boolean;
   /** ADR-0360 ②: omitted = keep the stored value. */
   readonly domainFreeInPackage?: boolean;
-  /** module id -> monthly add-on price (HUF); catalog ids only, spine ignored. */
+  /** module id -> monthly add-on price (MINOR units of the region's currency); catalog ids
+   *  only, spine ignored. */
   readonly modulePrices: Readonly<Record<string, number>>;
 }
 
 /** Persist the operator-set pricing (upsert config + per-module) and refresh. */
 export async function savePricing(input: PricingInput): Promise<void> {
   const now = new Date();
-  const region = input.region ?? DEFAULT_PRICING_REGION;
+  const region = input.region;
   const currency = input.currency ?? snap(region).currency;
+  if (minorDigits(currency) === null) throw new PricingRegionError(region, [`a pénznem (${currency}) nem ISO 4217`]);
   const base = Math.max(0, Math.round(input.baseMonthly));
   const freeMonths = Math.min(11, Math.max(0, Math.round(input.annualFreeMonths)));
   const domainMonthly = Math.max(0, Math.round(input.customDomainMonthly));
@@ -604,10 +709,12 @@ export async function savePricing(input: PricingInput): Promise<void> {
       domain_buyout_price: domainBuyout,
       pricing_confirmed: input.pricingConfirmed,
       domain_free_in_package: domainFree,
+      minor_units: true,
       updated_at: now,
     })
     .onConflict((oc) =>
       oc.column("region").doUpdateSet({
+        minor_units: true,
         currency,
         base_monthly: base,
         annual_free_months: freeMonths,
@@ -635,9 +742,22 @@ export async function savePricing(input: PricingInput): Promise<void> {
   ];
   for (const id of new Set(priceIds)) {
     const raw = input.modulePrices[id];
+    if (region !== HU_PRICING_REGION) {
+      // 0135: another region keeps its own add-on prices. An id the form did not send keeps
+      // its stored row; an id never priced stays MISSING (the region stays incomplete and
+      // fails closed) — never a HUF catalog default in a foreign currency.
+      if (raw === undefined || !Number.isFinite(raw)) continue;
+      const price = Math.max(0, Math.round(raw));
+      await db
+        .insertInto("module_price_region")
+        .values({ region, module_id: id, price_monthly: price, updated_at: now })
+        .onConflict((oc) => oc.columns(["region", "module_id"]).doUpdateSet({ price_monthly: price, updated_at: now }))
+        .execute();
+      continue;
+    }
     const fallback =
       MULTILANG_TIERS.find((t) => t.priceId === id && id !== "multilang")?.priceDefault ??
-      getModulePrice(id);
+      getModulePrice(id, HU_PRICING_REGION);
     const price = Math.max(0, Math.round(raw ?? fallback));
     await db
       .insertInto("module_price")
@@ -648,6 +768,41 @@ export async function savePricing(input: PricingInput): Promise<void> {
       .execute();
   }
 
+  await loadPricing(true);
+}
+
+/** Why a new region cannot be created (empty = it can). */
+export function newRegionErrors(region: string, currency: string): string[] {
+  const errs: string[] = [];
+  if (!/^[a-z][a-z0-9-]{1,23}$/.test(region)) errs.push("a régió azonosítója kisbetű/szám/kötőjel, 2–24 karakter");
+  if (snapshots.has(region)) errs.push(`a(z) "${region}" régió már létezik`);
+  if (minorDigits(currency) === null) errs.push(`a pénznem (${currency}) nem ISO 4217 kód`);
+  return errs;
+}
+
+/**
+ * ADR-XXXX: a NEW pricing region with its own currency (console /pricing „+ Új régió”).
+ * Created UNCONFIRMED and with no prices: it is incomplete (regionPriceGaps) until the
+ * operator saves its base and module prices, and every order path fails closed until then.
+ */
+export async function createPricingRegion(region: string, currency: string): Promise<void> {
+  const cur = currency.trim().toUpperCase();
+  const errs = newRegionErrors(region, cur);
+  if (errs.length) throw new PricingRegionError(region, errs);
+  await db
+    .insertInto("pricing_config")
+    .values({
+      region,
+      currency: cur,
+      base_monthly: 0,
+      annual_free_months: 0,
+      custom_domain_monthly: 0,
+      pricing_confirmed: false,
+      minor_units: true,
+      updated_at: new Date(),
+    })
+    .onConflict((oc) => oc.column("region").doNothing())
+    .execute();
   await loadPricing(true);
 }
 
@@ -701,6 +856,7 @@ export async function saveDomainTlds(region: string, rows: readonly TldRow[]): P
             max_cost: r.maxCost,
             monthly_fee: r.monthlyFee,
             free_in_package: r.freeInPackage,
+            minor_units: true,
             sort: i,
           })),
         )

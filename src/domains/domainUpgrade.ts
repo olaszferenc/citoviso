@@ -12,6 +12,7 @@
 // REFUSED up front for a domain known to exceed the purchase-price cap, so the
 // buyer never pays for a purchase that the provisioning guard would kill.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { sql } from "kysely";
 import { db, pool } from "../db/client.js";
 import { normalizeCustomDomain } from "../domains.js";
@@ -23,6 +24,7 @@ import {
   getDomainMinPackageMonthly,
   getDomainMinCommitmentMonths,
   offeredTldOf,
+  getCurrency,
 } from "../pricing.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { renewableModuleIds } from "../payment/billing.js";
@@ -36,6 +38,8 @@ export interface DomainUpgradeQuote {
   readonly price: number;
   /** Subscription commitment implied by a domain through us (operator-set, ADR-0093). */
   readonly commitmentMonths: number;
+  /** ADR-XXXX: the tenant's pricing region the quote is in. */
+  readonly region: string;
 }
 
 /**
@@ -48,11 +52,13 @@ export interface DomainUpgradeQuote {
 export async function quoteDomainUpgrade(
   tenantId: string,
   rawDomain: string,
-  region?: string,
+  /** Override for tests; absent = the tenant's OWN region (ADR-XXXX) — never a default. */
+  regionArg?: string,
 ): Promise<DomainUpgradeQuote | null> {
   const norm = normalizeCustomDomain(rawDomain);
   if (!norm.ok || !norm.domain) return null;
   await loadPricing();
+  const region = regionArg ?? (await regionOfTenant(tenantId)).region;
   // ADR-0109 ②/⑧: eligibility on the LIST monthly total — below the threshold we
   // do not sell the domain at all, so there is no quote to give (the caller shows
   // the condition instead of a price the buyer cannot act on).
@@ -68,6 +74,7 @@ export async function quoteDomainUpgrade(
     // charged NOW is one month of the fee (ADR-0109 ①) — 0 for package content.
     price: domainFeeForCycle(1, region, { domain: norm.domain, ...ctx }),
     commitmentMonths: getDomainMinCommitmentMonths(region),
+    region,
   };
 }
 
@@ -160,8 +167,10 @@ export async function supersedePendingDomainPayments(tenantId: string): Promise<
 export async function createDomainUpgradeOrder(
   tenantId: string,
   rawDomain: string,
-  region?: string,
+  regionArg?: string,
 ): Promise<string | null> {
+  const money = await regionOfTenant(tenantId);
+  const region = regionArg ?? money.region;
   const quote = await quoteDomainUpgrade(tenantId, rawDomain, region);
   if (!quote) return null;
   // ADR-0381: a 0 Ft order (the domain is package content, ADR-0360) is created too — it
@@ -169,9 +178,8 @@ export async function createDomainUpgradeOrder(
 
   // ADR-0093 offer-side cap check. Advisory here (the adapter may not price a
   // domain yet — the INWX stub); the authoritative fail-closed gate runs in
-  // provisionDomain.ts before real money moves. The cap guards OUR cost, so it
-  // is the DEFAULT region's single knob — same as every other cap call site.
-  if (await exceedsCostCap(quote.domain)) {
+  // provisionDomain.ts before real money moves. ADR-XXXX: the tenant's region's cap.
+  if (await exceedsCostCap(quote.domain, region)) {
     console.warn(`[domain] rendelés elutasítva (végződés-plafon, ADR-0360 ③): ${quote.domain}`);
     return null;
   }
@@ -223,6 +231,8 @@ export async function createDomainUpgradeOrder(
       prospect_id: prospect.id,
       kind: "domain_upgrade",
       tenant_id: tenantId,
+      pricing_region: region,
+      currency: getCurrency(region),
       domain_type: "citoviso_registered",
       domain_name: quote.domain,
       commitment_months: quote.commitmentMonths,
@@ -323,7 +333,8 @@ async function claimPackageDomainLocked(
     .values({
       order_intent_id: orderId,
       amount: 0,
-      currency: "HUF",
+      // ADR-XXXX: the 0 payment is in the order's own currency (the tenant's region).
+      currency: getCurrency(quote.region),
       period: "monthly",
       gateway: "none",
       status: "paid",

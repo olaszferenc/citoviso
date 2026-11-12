@@ -328,7 +328,7 @@ function frozenSub(): SubscriptionAdminData {
 const sub = selfTest ? ({ ...frozenSub(), status: "active" } as SubscriptionAdminData) : frozenSub();
 
 const mlBase = {
-  ...multilangCatalogView("hu"),
+  ...multilangCatalogView("hu", "hu"),
   price: 14900,
   count: 3,
   primaryLangName: "magyar",

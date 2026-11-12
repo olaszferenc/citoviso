@@ -30,6 +30,7 @@ async function loadOrder(
       "order_intent.buyer_type as buyerType",
       "order_intent.billing_period as billingPeriod",
       "order_intent.price as price",
+      "order_intent.currency as orderCurrency",
       "prospect.contact_email as contactEmail",
       "prospect.lead_id as leadId",
       "lead.name as leadName",
@@ -48,7 +49,8 @@ async function loadOrder(
       buyerName: row.buyerName ?? null,
       buyerIsPerson: row.buyerType === "individual",
       amount: total,
-      currency: currency ?? getCurrency(),
+      // ADR-XXXX: the payment's currency, else the order's own — never a default region's.
+      currency: currency ?? row.orderCurrency,
       billingPeriod: row.billingPeriod === "annual" ? "annual" : "monthly",
       lang,
     },

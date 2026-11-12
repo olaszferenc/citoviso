@@ -78,24 +78,24 @@ const hu = (o: Partial<import("../src/pricing.js").TldRow> = {}) => ({
 const com = hu({ tld: ".com", costNet: 4899, maxCost: 8000, monthlyFee: 1500, freeInPackage: false });
 pricing.overridePricingStateInProcess({ assignment: withDom, tlds: [hu(), com], domainFreeInPackage: false, domainMinPackageMonthly: 7000 });
 const none = new Set<string>();
-check("④ kapcsoló KI → a végződés díja (1000)", pricing.domainMonthlyFee("pelda.hu", ajanlott, none) === 1000);
+check("④ kapcsoló KI → a végződés díja (1000)", pricing.domainMonthlyFee("pelda.hu", ajanlott, none, "hu") === 1000);
 pricing.overridePricingStateInProcess({ tlds: [hu(), com], domainFreeInPackage: true });
-check("④ kapcsoló BE + csomag-tartalom + .hu ingyen → 0", pricing.domainMonthlyFee("pelda.hu", ajanlott, none) === 0);
-check("④ csomag-tartalom, de a .com nem ingyen → 1500", pricing.domainMonthlyFee("pelda.com", ajanlott, none) === 1500);
-check("④ nem csomag-tartalom → díj", pricing.domainMonthlyFee("pelda.hu", ["enquiry", "gallery"], none) === 1000);
-check("④ nem kínált végződés → null (nem eladható)", pricing.domainMonthlyFee("pelda.de", ajanlott, none) === null);
-check("④ név nélkül az elsődleges végződés", pricing.domainMonthlyFee(null, ["enquiry"], none) === 1000);
-check("④ leghosszabb illeszkedés (.co.hu ≠ .hu-nál rövidebb)", pricing.offeredTldOf("a.co.hu")?.tld === ".hu");
-check("④ a ciklus díja = havi × hónap (éves, csomag-tartalom: 0)", pricing.domainFeeForCycle(12, undefined, { domain: "x.hu", modules: ajanlott, disabled: none }) === 0);
-check("④ a ciklus díja = havi × hónap (éves, felár)", pricing.domainFeeForCycle(12, undefined, { domain: "x.hu", modules: ["enquiry"], disabled: none }) === 12_000);
-check("④ getCustomDomainMonthly = az elsődleges végződés díja", pricing.getCustomDomainMonthly() === 1000);
+check("④ kapcsoló BE + csomag-tartalom + .hu ingyen → 0", pricing.domainMonthlyFee("pelda.hu", ajanlott, none, "hu") === 0);
+check("④ csomag-tartalom, de a .com nem ingyen → 1500", pricing.domainMonthlyFee("pelda.com", ajanlott, none, "hu") === 1500);
+check("④ nem csomag-tartalom → díj", pricing.domainMonthlyFee("pelda.hu", ["enquiry", "gallery"], none, "hu") === 1000);
+check("④ nem kínált végződés → null (nem eladható)", pricing.domainMonthlyFee("pelda.de", ajanlott, none, "hu") === null);
+check("④ név nélkül az elsődleges végződés", pricing.domainMonthlyFee(null, ["enquiry"], none, "hu") === 1000);
+check("④ leghosszabb illeszkedés (.co.hu ≠ .hu-nál rövidebb)", pricing.offeredTldOf("a.co.hu", "hu")?.tld === ".hu");
+check("④ a ciklus díja = havi × hónap (éves, csomag-tartalom: 0)", pricing.domainFeeForCycle(12, "hu", { domain: "x.hu", modules: ajanlott, disabled: none }) === 0);
+check("④ a ciklus díja = havi × hónap (éves, felár)", pricing.domainFeeForCycle(12, "hu", { domain: "x.hu", modules: ["enquiry"], disabled: none }) === 12_000);
+check("④ getCustomDomainMonthly = az elsődleges végződés díja", pricing.getCustomDomainMonthly("hu") === 1000);
 
 // ⑤ threshold
-check("⑤ küszöb alatt, nem csomag-tartalom → nem választható", !pricing.isDomainEligible(5000, undefined, { modules: ["enquiry"], disabled: none }));
-check("⑤ küszöb alatt, de csomag-tartalom → választható", pricing.isDomainEligible(5000, undefined, { modules: ajanlott, disabled: none }));
-check("⑤ küszöb felett → választható", pricing.isDomainEligible(8000));
+check("⑤ küszöb alatt, nem csomag-tartalom → nem választható", !pricing.isDomainEligible(5000, "hu", { modules: ["enquiry"], disabled: none }));
+check("⑤ küszöb alatt, de csomag-tartalom → választható", pricing.isDomainEligible(5000, "hu", { modules: ajanlott, disabled: none }));
+check("⑤ küszöb felett → választható", pricing.isDomainEligible(8000, "hu"));
 pricing.overridePricingStateInProcess({ domainMinPackageMonthly: 0 });
-check("⑤ küszöb 0 = nincs küszöb (mindenki választhat)", pricing.isDomainEligible(0));
+check("⑤ küszöb 0 = nincs küszöb (mindenki választhat)", pricing.isDomainEligible(0, "hu"));
 
 // ⑥ ending rows
 check("⑥ jó sorok → nincs hiba", pricing.tldRowErrors([hu(), com]).length === 0);
@@ -116,22 +116,22 @@ check("⑦ tld_json: típus-hiba a szabály-rétegen bukik (maxCost)", !!parsed 
 // ⑧ per-ending cost cap on the mock registrar
 pricing.overridePricingStateInProcess({ tlds: [hu(), com] });
 let ok8 = true;
-try { await assertUnderCostCap("pelda.hu"); } catch { ok8 = false; }
+try { await assertUnderCostCap("pelda.hu", "hu"); } catch { ok8 = false; }
 check("⑧ olcsó .hu a plafon alatt → vehető", ok8);
 let refused: unknown = null;
-try { await assertUnderCostCap("premium.hu"); } catch (e) { refused = e; }
+try { await assertUnderCostCap("premium.hu", "hu"); } catch (e) { refused = e; }
 check("⑧ prémium név a plafon felett → CostCapRefusal", refused instanceof CostCapRefusal, String(refused));
 refused = null;
-try { await assertUnderCostCap("pelda.de"); } catch (e) { refused = e; }
+try { await assertUnderCostCap("pelda.de", "hu"); } catch (e) { refused = e; }
 check("⑧ nem kínált végződés → CostCapRefusal (fail-closed)", refused instanceof CostCapRefusal, String(refused));
-check("⑧ a tanácsadó előszűrő ugyanígy dönt", (await exceedsCostCap("premium.hu")) && !(await exceedsCostCap("pelda.hu")));
+check("⑧ a tanácsadó előszűrő ugyanígy dönt", (await exceedsCostCap("premium.hu", "hu")) && !(await exceedsCostCap("pelda.hu", "hu")));
 // Elek IT K4 (2026-10-11): with the currency comparison in costCap.ts disabled
 // (`if (false && price.currency… !== cap.currency…)`) this gate stayed GREEN — a price in one
 // currency was compared with a cap in another as bare numbers. The mock registrar prices in
 // HUF; an ending whose cap is kept in EUR must be REFUSED (no FX), even though 1990 < 5000.
 pricing.overridePricingStateInProcess({ tlds: [hu({ costCurrency: "EUR" }), com] });
 refused = null;
-try { await assertUnderCostCap("pelda.hu"); } catch (e) { refused = e; }
+try { await assertUnderCostCap("pelda.hu", "hu"); } catch (e) { refused = e; }
 check("⑧ eltérő pénznem (HUF-ár, EUR-plafon) → CostCapRefusal, nincs átváltás nélküli összevetés",
   refused instanceof CostCapRefusal && /átváltás nélkül/.test(String(refused)), String(refused));
 pricing.overridePricingStateInProcess({ tlds: [hu(), com] });

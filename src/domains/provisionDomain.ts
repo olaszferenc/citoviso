@@ -23,6 +23,7 @@
 // re-rendereli a snapshotot, hogy a canonical/og:url az új domainre álljon
 // (reference_snapshot_rerender_propagation: a canonical a statikus HTML-be van sütve).
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
@@ -563,7 +564,8 @@ export async function runDomainProvisioning(
       // price the domain, getYearlyPriceEur throws and the run lands in `failed`
       // — an unknown price is never a free pass (§B.17 missing-data branch).
       // ADR-0360 ③: the cap is per ending, NET, in the registrar's currency.
-      await assertUnderCostCap(p.domain);
+      // ADR-XXXX: the buyer's own region — its ending list and its cap.
+      await assertUnderCostCap(p.domain, (await regionOfTenant(p.tenantId)).region);
       // ⛔ SINGLE FLIGHT (2026-10-21, overseer.hu): the payment webhook and the 2-minute
       // resume timer ran this same row at the same second — `registering` was re-entered
       // by both, two orders went to the registrar, the second came back „Duplicate order",

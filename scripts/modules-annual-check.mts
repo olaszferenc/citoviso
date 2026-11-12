@@ -71,8 +71,8 @@ const mkModule = (
   };
 };
 
-const BASE = getBaseMonthly();
-const FREE = getAnnualFreeMonths();
+const BASE = getBaseMonthly("hu");
+const FREE = getAnnualFreeMonths("hu");
 const MULT = 12 - FREE;
 
 const modules = [

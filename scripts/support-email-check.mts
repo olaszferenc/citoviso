@@ -112,8 +112,8 @@ check(
 
 // ── ② minden vevő-felület UGYANAZT a címet rendereli ───────────────────────
 console.log("\n② A tenant-admin, a belépési súgó és a fizetés-lapok UGYANAZT írják:\n");
-const BASE = getBaseMonthly();
-const MULT = 12 - getAnnualFreeMonths();
+const BASE = getBaseMonthly("hu");
+const MULT = 12 - getAnnualFreeMonths("hu");
 const def = MODULE_CATALOG.find((m) => m.id === "gallery")!;
 const mv: TenantModuleView = {
   modules: [
@@ -150,7 +150,7 @@ const sub: SubscriptionAdminData = {
   pendingEffectiveDate: null,
   annualTotal: (BASE + def.priceMonthly) * MULT,
   annualSavings: 0,
-  annualFreeMonths: getAnnualFreeMonths(),
+  annualFreeMonths: getAnnualFreeMonths("hu"),
   autoCharge: false,
   coupon: null,
 };

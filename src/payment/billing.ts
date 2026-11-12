@@ -30,7 +30,7 @@ import {
   buildSubscriptionCancelledEmail,
 } from "../email/billingEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
-import { formatNumber } from "../text/money.js";
+import { formatMinor } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { getTenantModules, isBilledModule } from "../tenant/modules.js";
@@ -38,7 +38,6 @@ import {
   computeAnnual,
   computeMonthly,
   getAnnualFreeMonths,
-  getCurrency,
   getModulePrice,
   loadPricing,
   domainFeeForCycle,
@@ -98,11 +97,6 @@ function toDate(v: unknown): Date {
   return new Date(v as string | number | Date);
 }
 
-/** The grouped number for the operator LOG lines below, whose sentences carry
- *  their own "Ft". One source for the grouping (text/money.ts) — the hand-rolled
- *  NBSP-strip this replaced is why the same 4 880 could read differently here
- *  and in the very letter it was logging. */
-const formatAmount = (n: number): string => formatNumber(n);
 
 interface SubRow {
   readonly id: string;
@@ -118,6 +112,9 @@ interface SubRow {
   readonly paymentMethod: "invoice" | "token";
   readonly recurrenceToken: string | null;
   readonly recurrenceTraceId: string | null;
+  /** 0135 (ADR-XXXX): the region/currency the customer bought in — every renewal price. */
+  readonly pricingRegion: string;
+  readonly currency: string;
 }
 
 /**
@@ -155,6 +152,8 @@ export async function renewableModuleIds(tenantId: string): Promise<string[]> {
 export async function domainFeeForRenewal(
   tenantId: string,
   cycleMonths: number,
+  /** The subscription's pricing region (ADR-XXXX) — the fee is in its currency. */
+  region: string,
 ): Promise<{ fee: number; domain: string } | null> {
   const site = await db
     .selectFrom("site")
@@ -170,7 +169,7 @@ export async function domainFeeForRenewal(
   // tenant who downgrades below the domain-carrying package starts paying the fee on the
   // next cycle, and one who upgrades stops. The off-sale modules cannot be bought, so they
   // do not count against the set (the same reading the order path uses).
-  const fee = domainFeeForCycle(cycleMonths, undefined, {
+  const fee = domainFeeForCycle(cycleMonths, region, {
     domain: site.custom_domain,
     modules: await renewableModuleIds(tenantId),
     disabled: await getDisabledModules(),
@@ -283,19 +282,19 @@ async function findOrCreateRenewalOrder(
   }
 
   const moduleIds = await renewableModuleIds(sub.tenantId);
-  // Default region on purpose — the same convention every other price call site
-  // uses today (moduleUpsell, configurator); region-scoped renewals follow the
-  // pricing module when IT becomes region-complete.
+  // ADR-XXXX: the subscription's OWN region — the customer renews in the currency they
+  // bought in, at that region's current list price.
+  const region = sub.pricingRegion;
   // ADR-0088 §8: an armed switch takes effect HERE — the next minted renewal
   // bills the pending period; the subscription row adopts it when this order
   // is paid (applyRenewalPaid).
   const period = sub.pendingPeriod ?? sub.billingPeriod;
   const months = period === "annual" ? 12 : 1;
   const listPrice =
-    period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
+    period === "annual" ? computeAnnual(moduleIds, region) : computeMonthly(moduleIds, region);
   // ADR-0109 ①: the saját-cím fee rides EVERY cycle (monthly fee x cycle months).
   // Never coupon-discounted — pass-through registrar cost (ADR-0109 ⑥).
-  const domainDue = await domainFeeForRenewal(sub.tenantId, months);
+  const domainDue = await domainFeeForRenewal(sub.tenantId, months, region);
   const domainFee = domainDue?.fee ?? 0;
 
   if (listPrice + domainFee <= 0) {
@@ -324,16 +323,16 @@ async function findOrCreateRenewalOrder(
   if (firstCharge.length) {
     const coupon = await bestActiveCouponForTenant(sub.tenantId);
     if (coupon) {
-      const billedMonths = period === "annual" ? 12 - getAnnualFreeMonths() : 1;
+      const billedMonths = period === "annual" ? 12 - getAnnualFreeMonths(region) : 1;
       const lineSum =
-        firstCharge.reduce((s, id) => s + getModulePrice(id), 0) * billedMonths;
+        firstCharge.reduce((s, id) => s + getModulePrice(id, region), 0) * billedMonths;
       const discount = lineSum - applyOffer(lineSum, coupon);
       if (discount > 0) {
         price = listPrice - discount;
         offerId = coupon.id;
         console.log(
           `[offer] kupon (−${coupon.percent}%) a modul-első-díjra · ${sub.displayName} · ` +
-            `${firstCharge.join(", ")} · −${formatAmount(discount)} Ft`,
+            `${firstCharge.join(", ")} · −${formatMinor(discount, sub.currency)}`,
         );
       }
     }
@@ -365,6 +364,8 @@ async function findOrCreateRenewalOrder(
       prospect_id: prospect.id,
       kind: "renewal",
       tenant_id: sub.tenantId,
+      pricing_region: region,
+      currency: sub.currency,
       modules: JSON.stringify(moduleIds),
       price: total,
       billing_period: period,
@@ -380,8 +381,8 @@ async function findOrCreateRenewalOrder(
     .returning("id")
     .executeTakeFirstOrThrow();
   console.log(
-    `[billing] renewal order · ${sub.displayName} · ${formatAmount(total)} Ft` +
-      (domainDue ? ` (ebből saját cím: ${formatAmount(domainFee)} Ft — ${domainDue.domain})` : "") +
+    `[billing] renewal order · ${sub.displayName} · ${formatMinor(total, sub.currency)}` +
+      (domainDue ? ` (ebből saját cím: ${formatMinor(domainFee, sub.currency)} — ${domainDue.domain})` : "") +
       ` · ${isoDate(periodStart)} →`,
   );
   return { id: row.id, price: total, period };
@@ -467,6 +468,8 @@ export async function mintRenewalForTenant(
       "subscription.payment_method as paymentMethod",
       "subscription.recurrence_token as recurrenceToken",
       "subscription.recurrence_trace_id as recurrenceTraceId",
+      "subscription.pricing_region as pricingRegion",
+      "subscription.currency as currency",
     ])
     .where("subscription.tenant_id", "=", tenantId)
     .executeTakeFirst();
@@ -506,6 +509,8 @@ export async function runBillingCycle(
       "subscription.payment_method as paymentMethod",
       "subscription.recurrence_token as recurrenceToken",
       "subscription.recurrence_trace_id as recurrenceTraceId",
+      "subscription.pricing_region as pricingRegion",
+      "subscription.currency as currency",
     ])
     .where("subscription.status", "!=", "cancelled");
   if (opts?.tenantId) subsQ = subsQ.where("subscription.tenant_id", "=", opts.tenantId);
@@ -568,7 +573,7 @@ async function advanceOne(
     const outcome = await chargeRenewalWithToken(order.id, sub.recurrenceToken, sub.recurrenceTraceId);
     if (outcome === "paid") {
       await recordStep(sub.id, order.id, "charge", "system");
-      console.log(`[billing] auto-terhelés OK · ${sub.displayName} · ${formatAmount(order.price)} Ft`);
+      console.log(`[billing] auto-terhelés OK · ${sub.displayName} · ${formatMinor(order.price, sub.currency)}`);
       return 0; // the invoice e-mail is the confirmation; no dunning mail
     }
     if (outcome === "pending") {
@@ -648,7 +653,8 @@ async function notify(
   const lang = await prepareMailLang(await langForTenant(sub.tenantId));
   // ⛔ The letter gets the NUMBER, not a string — the builder formats it (ADR-0144 ②).
   const amount = order.price;
-  const currency = getCurrency();
+  // ADR-XXXX: the currency the customer bought in (the order's amount is in it).
+  const currency = sub.currency;
   // The covered-period text follows the ORDER being dunned, not the sub row —
   // with a switch armed the two can differ for one cycle (ADR-0088 §8).
   const months = order.period === "annual" ? 12 : 1;

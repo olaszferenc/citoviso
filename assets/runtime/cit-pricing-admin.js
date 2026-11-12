@@ -25,8 +25,14 @@
     // ── helpers ─────────────────────────────────────────────────────────────
     function fill(t, v) { return String(t).replace(/\{(\w+)\}/g, function (_, k) { return v[k] != null ? v[k] : "{" + k + "}"; }); }
     // ADR-0162: one amount, one spelling — CitMoney (cit-money.js, inlined before this file).
-    function grp(n) { return CitMoney.formatNumber(Math.round(n)); }
-    function money(n) { return CitMoney.formatMoney(Math.round(n), D.currency); }
+    // ADR-XXXX: the page works in MAJOR units of the region's currency (D.scale = 10^minor
+    // digits: 1 for HUF, 100 for EUR/RON) — the server sends and takes major, stores minor.
+    var SCALE = D.scale || 1;
+    function grp(n) {
+      if (SCALE > 1) return CitMoney.formatMinor(Math.round(n * SCALE), D.currency).replace(/\s*\S+$/, "");
+      return CitMoney.formatNumber(Math.round(n));
+    }
+    function money(n) { return CitMoney.formatMinor(Math.round(n * SCALE), D.currency); }
     function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
     function idx(t) { return TIERS.indexOf(t); }
     function $(id) { return document.getElementById(id); }

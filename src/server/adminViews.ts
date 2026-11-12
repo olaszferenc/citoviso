@@ -14,7 +14,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { APP_TZ, isoDayDiff, isoDayIn, partsIn } from "../text/zoneTime.js";
 import { viewZone } from "../tenant/zoneCtx.js";
 import { zonePickerHtml, type ZonePickerData } from "../tenant/zonePicker.js";
-import { getCurrency } from "../pricing.js";
+import { HU_PRICING_REGION, getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import {
@@ -1096,7 +1096,13 @@ export interface DomainSettleState {
 // this out of the page builders on the same day — same instinct, one level short:
 // the grouping was still hand-rolled here, and the "Ft" was still hard-coded onto
 // whatever currency arrived.
-const hufAmount = (n: number) => formatMoney(n, getCurrency());
+// ⛔ ADR-XXXX — FELÜLET-KÖR (ADR-0437 ⑤ sorrend, 2. lépés): the tenant-admin views still
+// write in the HOME region's currency. The money path itself (orders, renewals, upsell,
+// multilang, module change) prices in the tenant's own region; these screens follow in the
+// next round. No non-HU tenant can exist before then — the market gate (ADR-0111) keeps
+// every foreign market closed until the owner opens it.
+const TENANT_VIEW_REGION = HU_PRICING_REGION;
+const hufAmount = (n: number) => formatMoney(n, getCurrency(TENANT_VIEW_REGION));
 
 /** Whole days from today (Budapest, our billing calendar) to an ISO date — never negative. */
 function daysUntil(iso: string): number {
@@ -1788,7 +1794,7 @@ export function modulesSection(
   const renewDateS = formatDayStem(renewDateISO, lang);
   // ADR-0113 ②: months the first charge covers — the SAME rule the order is
   // priced with (moduleUpsell), so the bar can never promise a different amount.
-  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(renewDateISO)) : 1;
+  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(renewDateISO), TENANT_VIEW_REGION) : 1;
   const labelOf = (id: string) => mv.modules.find((m) => m.id === id)?.label ?? id;
 
   // ── ADR-0080 ⑥ · approved plan "A — Teendő-kártya"
@@ -2983,7 +2989,7 @@ export function modulesSection(
     )};` +
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
         `${MONEY_JS}` +
-        `var CUR=${jsonForScript(getCurrency())};` +
+        `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
     `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     // ADR-0113 server-injected constants: the SAME proration and coupon rounding
@@ -3234,7 +3240,7 @@ export function modulesSection(
     `var foot=document.getElementById("adm-pv-foot"),ttl=document.getElementById("adm-pv-ttl");` +
     `var base=${mv.baseMonthly},focus=null;` +
         `${MONEY_JS}` +
-        `var CUR=${jsonForScript(getCurrency())};` +
+        `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
     `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     `var OWNED=${jsonForScript(Object.fromEntries(mv.modules.map((m) => [m.id, m.active])))};` +
@@ -3429,7 +3435,7 @@ export interface DomainSettlementView {
  * JS only mirrors it live.
  */
 export function domainSettlementSection(view: DomainSettlementView, lang = "hu"): string {
-  const huf = (n: number) => formatMoney(n, getCurrency());
+  const huf = (n: number) => formatMoney(n, getCurrency(TENANT_VIEW_REGION));
   const dom = esc(view.domainName);
   const back = `<a class="citui-btn citui-btn--ghost" style="width:100%" href="/admin?tab=modulok">${T(lang, "Vissza")}</a>`;
   const head = (title: string) =>
@@ -3506,7 +3512,7 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `var box=row.querySelector('input');` +
     `var PEN=${view.penaltyTotal},BUY=${view.buyoutPrice};` +
     `${MONEY_JS}` +
-    `var CUR=${jsonForScript(getCurrency())};` +
+    `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
     `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
     `var FATE_ON=${jsonForScript(T(lang, "A webcímet elviszi: {art} {domain} tulajdonjoga a fizetés után az Öné.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
     `var FATE_OFF=${jsonForScript(T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
@@ -3629,7 +3635,7 @@ export interface MultilangAdminData {
  * generated; content change → stale banner → pay again; swap = new set + pay.
  */
 export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
-  const huf = (n: number) => formatMoney(n, getCurrency());
+  const huf = (n: number) => formatMoney(n, getCurrency(TENANT_VIEW_REGION));
   // A PAID, undelivered purchase owns the picker: it shows WHAT WAS BOUGHT and
   // is frozen — re-picking languages here could only lead to a second charge for
   // something already paid for.
@@ -3887,7 +3893,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         `var allBox=f.querySelector('[data-ml-all]');` +
         `var btns=[].slice.call(f.querySelectorAll('[type=submit]'));` +
         `${MONEY_JS}` +
-        `var CUR=${jsonForScript(getCurrency())};` +
+        `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
         `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
         `function cur(){var v=(radios.filter(function(r){return r.checked})[0]||{}).value;` +
         `for(var i=0;i<TIERS.length;i++){if(TIERS[i].id===v)return TIERS[i]}return TIERS[0]}` +

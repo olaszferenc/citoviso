@@ -128,8 +128,8 @@ const mk = (
   };
 };
 
-const BASE = getBaseMonthly();
-const FREE = getAnnualFreeMonths();
+const BASE = getBaseMonthly("hu");
+const FREE = getAnnualFreeMonths("hu");
 const MULT = 12 - FREE;
 const modules = [...PAID.map((id) => mk(id, true)), mk("enquiry", true, "booking"), mk("email", false)];
 // Független referencia: a KATALÓGUSBÓL, nem a nézet által kapott összegekből

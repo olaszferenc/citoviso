@@ -58,7 +58,7 @@ console.log("\n① Pénztárca");
 console.log("\n② Modulok fül");
 {
   const { getTenantModules } = await import("../src/tenant/modules.js");
-  const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
+  const modules = await getTenantModules("00000000-0000-0000-0000-000000000000", { region: "hu", currency: "HUF" }).catch(() => null);
   const page = (s: SubscriptionAdminData) => strip(adminDashboard(session, content, { tab: "modulok", modules, siteUrl: "https://x.citoviso.com", previewToken: "demo", units: [], subscription: s } as never));
   const m = page(cancelled);
   check("⭐ „Következő számla nincs”, nincs dátumos összeg", /Következő számla nincs/.test(m) && !/Következő számla \(/.test(m), m.slice(m.indexOf("Következő"), m.indexOf("Következő") + 200));

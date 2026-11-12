@@ -21,6 +21,7 @@
 //   * ADDING a free module (price 0) needs no payment — charging nothing
 //     through a payment gateway is a worse experience than just switching it on.
 
+import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { couponRule } from "../payment/couponRule.js";
@@ -37,9 +38,11 @@ import { getAnnualFreeMonths, getModulePrice, loadPricing } from "../pricing.js"
 export function proratedFirstChargeMonths(
   period: "monthly" | "annual",
   periodEnd: Date,
+  /** ADR-XXXX: the tenant's pricing region (its annual free months set the cap). */
+  region: string,
   now: Date = new Date(),
 ): number {
-  const cap = period === "annual" ? Math.max(1, 12 - getAnnualFreeMonths()) : 1;
+  const cap = period === "annual" ? Math.max(1, 12 - getAnnualFreeMonths(region)) : 1;
   let months = 0;
   const cursor = new Date(now);
   while (cursor < periodEnd && months < 12) {
@@ -82,10 +85,13 @@ export async function createFirstChargeOrder(
   periodEnd: Date,
 ): Promise<FirstChargeOrder | null> {
   await loadPricing();
+  // ADR-XXXX: the tenant's own region — the upsell is in the currency it already pays in.
+  const money = await regionOfTenant(tenantId);
+  const region = money.region;
   const ids = moduleIds.filter(
     (id) => MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once"),
   );
-  const monthly = ids.reduce((sum, id) => sum + getModulePrice(id), 0);
+  const monthly = ids.reduce((sum, id) => sum + getModulePrice(id, region), 0);
   if (!ids.length || monthly <= 0) return null;
 
   const prospect = await db
@@ -128,7 +134,7 @@ export async function createFirstChargeOrder(
     .executeTakeFirst();
   if (!buyer?.buyerName) return null;
 
-  const months = proratedFirstChargeMonths(period, periodEnd);
+  const months = proratedFirstChargeMonths(period, periodEnd, region);
   const listPrice = monthly * months;
   const coupon = await bestActiveCouponForTenant(tenantId);
   // ⛔ THE SAME SPLIT THE BROWSER SHOWED, not a second computation of it. The tenant-admin
@@ -137,7 +143,7 @@ export async function createFirstChargeOrder(
   // per-module rounding there, whole-basket rounding here). The park never caught it
   // because its only upsell is annual, where the two paths happen to agree.
   const price = couponRule.splitFirstCharge(
-    ids.map((id) => getModulePrice(id)),
+    ids.map((id) => getModulePrice(id, region)),
     months,
     coupon ? coupon.percent : 0,
   ).total;
@@ -148,6 +154,8 @@ export async function createFirstChargeOrder(
       prospect_id: prospect.id,
       kind: "upsell",
       tenant_id: tenantId,
+      pricing_region: region,
+      currency: money.currency,
       // ONLY the added modules: the price is for the difference, so the record
       // must say the same thing the buyer is paying for.
       modules: JSON.stringify(ids),

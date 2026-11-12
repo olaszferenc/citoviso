@@ -15,11 +15,11 @@
 import { esc, helpLink } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
-import { formatMoney, formatNumber } from "../text/money.js";
+import { currencySign, formatMinor, formatNumber, minorDigits, minorToMajor } from "../text/money.js";
 import { consoleLang } from "./i18nCtx.js";
 import { GROUP_LABELS, MODULE_CATALOG, MULTILANG_TIERS, applicableRequirements, sellableModuleIds } from "../modules.js";
 import { DOMAIN_PSEUDO_MODULE, TIERS, packageableIds, tierModules, type Tier } from "../packages.js";
-import { computeMonthly, type PricingSnapshot, type TldRow } from "../pricing.js";
+import { HU_PRICING_REGION, computeMonthly, regionPriceGaps, type PricingSnapshot, type TldRow } from "../pricing.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 
 type Lang = ReturnType<typeof consoleLang>;
@@ -32,11 +32,16 @@ export interface PricingPageExtras {
   readonly trialPackage: Tier | null;
 }
 
-const unitOf = (snap: PricingSnapshot): string =>
-  snap.currency === "HUF" ? "Ft" : snap.currency === "EUR" ? "€" : snap.currency;
+/** The region currency's sign (text/money.ts currencySign: HUF → Ft, EUR → €, else the code). */
+const unitOf = (snap: PricingSnapshot): string => currencySign(snap.currency);
+
+/** ADR-XXXX: the page shows and takes MAJOR units; the store holds minor (×10^digits). */
+const scaleOf = (currency: string): number => 10 ** (minorDigits(currency) ?? 0);
+const majorOf = (snap: PricingSnapshot, minor: number): number => minorToMajor(minor, snap.currency);
+const stepOf = (snap: PricingSnapshot): string => (scaleOf(snap.currency) > 1 ? String(1 / scaleOf(snap.currency)) : "1");
 
 export function regionLabel(lang: Lang, r: string): string {
-  return r === "hu" ? T(lang, "Magyarország") : r === "global" ? T(lang, "Globális") : r;
+  return r === HU_PRICING_REGION ? T(lang, "Magyarország") : r === "global" ? T(lang, "Globális") : r;
 }
 
 function tierLabel(lang: Lang, t: Tier): string {
@@ -61,16 +66,29 @@ export function pricingHead(lang: Lang, snap: PricingSnapshot, notice: { ok: boo
 
 /** Market tabs (report tab language). The country layer comes later. */
 export function regionTabs(lang: Lang, snap: PricingSnapshot, regions: readonly PricingSnapshot[]): string {
+  // ADR-XXXX: a region that cannot price yet (no base / missing module prices) is marked in
+  // its tab, and the gap list stands under the tabs — the SAME list the order path refuses on.
+  const gaps = regionPriceGaps(snap.region);
   const tabs = regions
     .map((r) => {
       const on = r.region === snap.region;
-      const label = `${esc(regionLabel(lang, r.region))} · ${esc(r.currency)}`;
+      const incomplete = regionPriceGaps(r.region).length > 0;
+      const label = `${esc(regionLabel(lang, r.region))} · ${esc(r.currency)}${incomplete ? ` <span class="pill outdated">${T(lang, "hiányos")}</span>` : ""}`;
       return on
         ? `<span class="pr2-tab" aria-current="page">${label}</span>`
         : `<a class="pr2-tab" href="/pricing?region=${encodeURIComponent(r.region)}">${label}</a>`;
     })
     .join("");
-  return `<nav class="pr2-tabs" aria-label="${esc(T(lang, "Piac"))}">${tabs}<span class="pr2-tab is-later" title="${esc(T(lang, "Az ország-réteg később jön"))}">${T(lang, "+ Ország")}</span></nav>`;
+  const add = `<details class="pr2-tab pr2-newreg"><summary>${T(lang, "+ Új ár-régió")}</summary>
+      <form method="post" action="/pricing/region" class="pr2-newreg__f">
+        <label>${T(lang, "Azonosító")} <input name="new_region" required pattern="[a-z][a-z0-9-]{1,23}" placeholder="ro" aria-label="${esc(T(lang, "Új ár-régió azonosítója"))}"></label>
+        <label>${T(lang, "Pénznem (ISO 4217)")} <input name="new_currency" required pattern="[A-Za-z]{3}" maxlength="3" placeholder="RON" aria-label="${esc(T(lang, "Új ár-régió pénzneme"))}"></label>
+        <button class="pr2-btn" type="submit">${T(lang, "Létrehozás")}</button>
+      </form></details>`;
+  const gapNote = gaps.length
+    ? `<div class="pr2-notice is-bad" role="status"><b>${T(lang, "Ez az ár-régió még nem árazható — rendelés nem jön létre rajta:")}</b> ${esc(gaps.join(" · "))}</div>`
+    : "";
+  return `<nav class="pr2-tabs" aria-label="${esc(T(lang, "Piac"))}">${tabs}${add}</nav>${gapNote}`;
 }
 
 /** The overview: three summary cards + „Figyelmet kér” (both drawn by the script). */
@@ -103,7 +121,10 @@ export function sectionNav(lang: Lang): string {
 
 // ADR-0162: one amount, one spelling — the shared formatter, never a local grouping.
 const grp3 = (n: number): string => formatNumber(Math.round(n));
-const moneyOf = (snap: PricingSnapshot, n: number): string => formatMoney(Math.round(n), snap.currency);
+const moneyOf = (snap: PricingSnapshot, n: number): string => formatMinor(Math.round(n), snap.currency);
+/** The amount alone (no sign), in the region's own decimal rule — "+990" HUF, "+9,90" EUR. */
+const amountOf = (snap: PricingSnapshot, n: number): string =>
+  scaleOf(snap.currency) > 1 ? moneyOf(snap, n).replace(/\s*\S+$/, "") : grp3(n);
 
 /**
  * The SERVER render of the pool + the three columns — the first paint, and what a guard
@@ -126,7 +147,7 @@ function packagesInitial(lang: Lang, snap: PricingSnapshot, x: PricingPageExtras
     const cls = `pr2-pl${isDom ? " is-dom" : ""}${m?.spine ? " is-spine" : ""}${o.inh ? " is-inh" : ""}${stop ? " is-stop" : ""}${isDom && !domOn && o.pool ? " is-off" : ""}`;
     const p = isDom
       ? domOn ? "" : T(lang, "felár")
-      : m?.spine ? T(lang, "gerinc") : stop ? T(lang, "nem eladó") : `+${grp3(snap.modulePrices.get(id) ?? 0)}`;
+      : m?.spine ? T(lang, "gerinc") : stop ? T(lang, "nem eladó") : snap.modulePrices.has(id) ? `+${amountOf(snap, snap.modulePrices.get(id)!)}` : T(lang, "nincs ár");
     const xBtn = !o.inh && !o.pool && !m?.spine
       ? `<button class="pr2-x" type="button" data-rm="${esc(id)}" aria-label="${esc(T(lang, "Kivétel: {m}", { m: label(id) }))}">×</button>`
       : "";
@@ -135,10 +156,16 @@ function packagesInitial(lang: Lang, snap: PricingSnapshot, x: PricingPageExtras
   const outside = pkgable.filter((id) => !a.has(id));
   const cols = TIERS.map((t, i) => {
     const full = tierModules(a, t);
-    const price = computeMonthly(full.filter((id) => sellable.has(id) || MODULE_CATALOG.find((m) => m.id === id)?.spine), snap.region);
+    // ADR-XXXX: an incomplete region has no package price yet — "—", never a guess.
+    let price: number | null = null;
+    try {
+      price = computeMonthly(full.filter((id) => sellable.has(id) || MODULE_CATALOG.find((m) => m.id === id)?.spine), snap.region);
+    } catch {
+      price = null;
+    }
     const mine = [...a].filter(([, tt]) => tt === t).map(([id]) => id);
     const inh = i ? [...tierModules(a, TIERS[i - 1]!), ...(a.get(DOMAIN_PSEUDO_MODULE) && TIERS.indexOf(a.get(DOMAIN_PSEUDO_MODULE)!) < i ? [DOMAIN_PSEUDO_MODULE] : [])] : [];
-    return `<div class="pr2-pk" data-tier="${t}"><div class="pr2-pk__h"><span class="pr2-pk__n">${esc(tierLabel(lang, t))}</span><span class="pr2-pk__p">${esc(moneyOf(snap, price))}<small> ${T(lang, "/hó")}</small></span></div>
+    return `<div class="pr2-pk" data-tier="${t}"><div class="pr2-pk__h"><span class="pr2-pk__n">${esc(tierLabel(lang, t))}</span><span class="pr2-pk__p">${esc(price === null ? "—" : moneyOf(snap, price))}<small> ${T(lang, "/hó")}</small></span></div>
       <div class="pr2-pk__lbl">${i ? (i === 1 ? T(lang, "Minden az Alapból") : T(lang, "Minden az Ajánlottból")) : T(lang, "Tartalma")}</div>
       <div class="pr2-chips">${(i ? inh.map((id) => pill(id, { inh: true })) : []).concat(mine.map((id) => pill(id))).join("")}</div></div>`;
   }).join("");
@@ -163,13 +190,9 @@ export function packagesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageE
 
 /** The module table — the existing m_<id> / sell_<id> fields, one row per module. */
 export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageExtras): string {
-  if (snap.region !== "hu") {
-    return `
-    <section class="pr2-pn" id="pr2-s-mod">
-      <div class="pr2-pn__h"><h2>${T(lang, "Modulok")}</h2><span class="pr2-sub">— ${T(lang, "felár és értékesítés")}</span></div>
-      <p class="pr2-desc">${T(lang, "A modul-felárak jelenleg globálisak (HUF); a")} <a href="/pricing?region=hu">${T(lang, "Magyarország")}</a> ${T(lang, "oldalon szerkeszthetők.")}</p>
-    </section>`;
-  }
+  // ADR-XXXX: every region prices its modules in its own currency (module_price_region); the
+  // „Eladó” switch stays ONE global list, edited on the home market's tab.
+  const sellLocked = snap.region !== HU_PRICING_REGION;
   const rows = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
     .map((g) => {
       const mods = MODULE_CATALOG.filter((m) => m.group === g && !m.retired);
@@ -185,8 +208,13 @@ export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageEx
               <td class="pr2-num"><span class="pr2-lm">${T(lang, "Felár")}</span><span class="mut">—</span></td>
               <td><span class="pr2-lm">${T(lang, "Eladó")}</span><span class="mut small">${T(lang, "mindig")}</span></td></tr>`;
           const off = x.disabledSales.has(m.id);
-          const price = snap.modulePrices.get(m.id) ?? 0;
-          const unit = m.billing === "once" ? T(lang, "Ft / alkalom") : T(lang, "Ft / hó");
+          // ADR-XXXX: shown in MAJOR units; a module this region never priced stays EMPTY (the
+          // region is incomplete until it is filled — never the HUF catalog price).
+          const stored = snap.modulePrices.get(m.id);
+          const price = stored === undefined ? "" : String(majorOf(snap, stored));
+          const unit = snap.region === HU_PRICING_REGION
+            ? (m.billing === "once" ? T(lang, "Ft / alkalom") : T(lang, "Ft / hó"))
+            : `${unitOf(snap)} ${m.billing === "once" ? T(lang, "/ alkalom") : T(lang, "/ hó")}`;
           const tierCell = packageableIds().includes(m.id)
             ? `<span class="pill" data-tier-of="${esc(m.id)}"></span>`
             : `<span class="mut small">${T(lang, "csak külön")}</span>`;
@@ -194,8 +222,8 @@ export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageEx
               <td class="pr2-full"><b class="pr2-mname">${esc(m.label)}</b><span class="pr2-why">${T(lang, "Leállítva — új előfizetés nem köthető rá; a meglévők futnak tovább.")}</span></td>
               <td><span class="pr2-lm">${T(lang, "Csomag")}</span>${tierCell}</td>
               <td class="pr2-num"><span class="pr2-lm">${T(lang, "Élő")}</span>${livePill}</td>
-              <td class="pr2-num"><span class="pr2-lm">${T(lang, "Felár")}</span><input class="pr2-tin" name="m_${esc(m.id)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}" aria-label="${esc(m.label)}"><span class="pr2-u">${esc(unit)}</span></td>
-              <td><span class="pr2-lm">${T(lang, "Eladó")}</span><label class="con-sell"><input type="checkbox" name="sell_${esc(m.id)}"${off ? "" : " checked"} aria-label="${esc(T(lang, "{m} eladó", { m: m.label }))}"><span class="con-sell__track"></span></label></td>
+              <td class="pr2-num"><span class="pr2-lm">${T(lang, "Felár")}</span><input class="pr2-tin" name="m_${esc(m.id)}" type="number" min="0" step="${stepOf(snap)}" inputmode="${scaleOf(snap.currency) > 1 ? "decimal" : "numeric"}" value="${esc(price)}" aria-label="${esc(m.label)}"><span class="pr2-u">${esc(unit)}</span></td>
+              <td><span class="pr2-lm">${T(lang, "Eladó")}</span><label class="con-sell"><input type="checkbox" name="sell_${esc(m.id)}"${off ? "" : " checked"}${sellLocked ? " disabled" : ""} aria-label="${esc(T(lang, "{m} eladó", { m: m.label }))}"><span class="con-sell__track"></span></label></td>
             </tr>${m.id === "multilang" ? multilangRows(lang, snap) : ""}`;
         })
         .join("");
@@ -205,7 +233,7 @@ export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageEx
   return `
     <section class="pr2-pn" id="pr2-s-mod">
       <div class="pr2-pn__h"><h2>${T(lang, "Modulok")}</h2><span class="pr2-sub">— ${T(lang, "felár és értékesítés")}</span></div>
-      <p class="pr2-desc">${T(lang, "A kikapcsolt modult új ügyfél nem kapja meg (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.")}</p>
+      <p class="pr2-desc">${T(lang, "A kikapcsolt modult új ügyfél nem kapja meg (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.")}${sellLocked ? ` ${T(lang, "A felár ennek az ár-régiónak a pénznemében értendő; az „Eladó” kapcsoló minden régióra közös, a Magyarország lapon állítható.")}` : ""}</p>
       <table class="pr2-tb pr2-resp" id="pr2-mods">
         <thead><tr><th>${T(lang, "Modul")}</th><th>${T(lang, "Csomag")}</th><th class="pr2-num">${T(lang, "Élő")}</th><th class="pr2-num">${T(lang, "Felár")}</th><th>${T(lang, "Eladó")}</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -217,19 +245,21 @@ export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageEx
 function multilangRows(lang: Lang, snap: PricingSnapshot): string {
   return MULTILANG_TIERS.filter((t) => t.priceId !== "multilang")
     .map((t) => {
-      const price = snap.modulePrices.get(t.priceId) ?? t.priceDefault;
+      const stored = snap.modulePrices.get(t.priceId) ?? (snap.region === HU_PRICING_REGION ? t.priceDefault : undefined);
+      const price = stored === undefined ? "" : String(majorOf(snap, stored));
+      const unit = snap.region === HU_PRICING_REGION ? T(lang, "Ft / alkalom") : `${unitOf(snap)} ${T(lang, "/ alkalom")}`;
       const cap = t.cap === null ? T(lang, "mind a nyelv") : T(lang, "legfeljebb {n} nyelv", { n: t.cap });
       return `<tr class="pr2-subrow"><td class="pr2-full"><span class="mut">↳ ${esc(t.name)} — ${esc(cap)}</span></td><td></td><td></td>
-        <td class="pr2-num"><span class="pr2-lm">${T(lang, "Felár")}</span><input class="pr2-tin" name="m_${esc(t.priceId)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}" aria-label="${esc(t.name)}"><span class="pr2-u">${T(lang, "Ft / alkalom")}</span></td><td></td></tr>`;
+        <td class="pr2-num"><span class="pr2-lm">${T(lang, "Felár")}</span><input class="pr2-tin" name="m_${esc(t.priceId)}" type="number" min="0" step="${stepOf(snap)}" inputmode="${scaleOf(snap.currency) > 1 ? "decimal" : "numeric"}" value="${esc(price)}" aria-label="${esc(t.name)}"><span class="pr2-u">${esc(unit)}</span></td><td></td></tr>`;
     })
     .join("");
 }
 
 /** One priced field (label above, unit inside the field row). */
-function field(id: string, name: string, label: string, value: number, unit: string, hint = ""): string {
+function field(id: string, name: string, label: string, value: number, unit: string, hint = "", step = "1"): string {
   return `<div class="pr-field" id="f_${id}">
       <label class="pr-field__l" for="${id}">${esc(label)}</label>
-      <div class="pr-input"><input id="${id}" name="${name}" type="number" min="0" step="1" inputmode="numeric" value="${esc(value)}"><span class="pr-input__u">${esc(unit)}</span></div>
+      <div class="pr-input"><input id="${id}" name="${name}" type="number" min="0" step="${step}" inputmode="${step === "1" ? "numeric" : "decimal"}" value="${esc(value)}"><span class="pr-input__u">${esc(unit)}</span></div>
       ${hint ? `<div class="pr-hint">${esc(hint)}</div>` : ""}
     </div>`;
 }
@@ -242,7 +272,7 @@ export function basePanel(lang: Lang, snap: PricingSnapshot): string {
       <div class="pr2-pn__h"><h2>${T(lang, "Alapdíj és éves fizetés")}</h2></div>
       <p class="pr2-desc">${T(lang, "Minden csomag alja — a gerinccel (érdeklődés-CTA) együtt.")}</p>
       <div class="pr2-g2">
-        ${field("pr-base_monthly", "base_monthly", T(lang, "Alapdíj"), snap.baseMonthly, `${u} ${T(lang, "/ hó")}`)}
+        ${field("pr-base_monthly", "base_monthly", T(lang, "Alapdíj"), majorOf(snap, snap.baseMonthly), `${u} ${T(lang, "/ hó")}`, "", stepOf(snap))}
         ${field("pr-annual_free_months", "annual_free_months", T(lang, "Éves előfizetés — ingyen hónapok"), snap.annualFreeMonths, T(lang, "hónap"))}
       </div>
       <div class="pr2-run" id="pr2-run-base"></div>
@@ -262,9 +292,9 @@ export function domainPanel(lang: Lang, snap: PricingSnapshot): string {
         <span><b>${T(lang, "Ingyen domain csomagban")}</b> <span class="mut small">— ${T(lang, "kikapcsolva a domain mindig felár")}</span></span>
       </label>
       <div class="pr2-g3">
-        ${field("pr-domain_min_package_monthly", "domain_min_package_monthly", T(lang, "Belépési küszöb (csomag havidíja legalább)"), snap.domainMinPackageMonthly, `${u} ${T(lang, "/ hó")}`, T(lang, "0 = nincs küszöb"))}
+        ${field("pr-domain_min_package_monthly", "domain_min_package_monthly", T(lang, "Belépési küszöb (csomag havidíja legalább)"), majorOf(snap, snap.domainMinPackageMonthly), `${u} ${T(lang, "/ hó")}`, T(lang, "0 = nincs küszöb"), stepOf(snap))}
         ${field("pr-domain_min_commitment_months", "domain_min_commitment_months", T(lang, "Hűség saját domainnel"), snap.domainMinCommitmentMonths, T(lang, "hónap"))}
-        ${field("pr-domain_buyout_price", "domain_buyout_price", T(lang, "Név átírása a vevőre"), snap.domainBuyoutPrice, u, T(lang, "bármikor, a hűségtől függetlenül; hűség alatt a kötbér külön jár"))}
+        ${field("pr-domain_buyout_price", "domain_buyout_price", T(lang, "Név átírása a vevőre"), majorOf(snap, snap.domainBuyoutPrice), u, T(lang, "bármikor, a hűségtől függetlenül; hűség alatt a kötbér külön jár"), stepOf(snap))}
       </div>
       <input type="hidden" name="tld_json" id="tld_json">
       <table class="pr2-tb pr2-resp pr2-tld" id="pr2-tld">
@@ -321,7 +351,7 @@ export function pricingPageData(lang: Lang, snap: PricingSnapshot, x: PricingPag
   const modules = MODULE_CATALOG.filter((m) => !m.retired && (m.billing !== "once" || m.id === "multilang")).map((m) => ({
     id: m.id,
     label: m.label,
-    price: m.spine ? 0 : (snap.modulePrices.get(m.id) ?? 0),
+    price: m.spine ? 0 : majorOf(snap, snap.modulePrices.get(m.id) ?? 0),
     spine: !!m.spine,
     once: m.billing === "once",
     packageable: packageableIds().includes(m.id),
@@ -334,7 +364,9 @@ export function pricingPageData(lang: Lang, snap: PricingSnapshot, x: PricingPag
     region: snap.region,
     currency: snap.currency,
     unit: unitOf(snap),
-    base: snap.baseMonthly,
+    // ADR-XXXX: every amount below is MAJOR units; the script multiplies by `scale` to format.
+    scale: scaleOf(snap.currency),
+    base: majorOf(snap, snap.baseMonthly),
     freeM: snap.annualFreeMonths,
     modules,
     domainId: DOMAIN_PSEUDO_MODULE,
@@ -342,10 +374,15 @@ export function pricingPageData(lang: Lang, snap: PricingSnapshot, x: PricingPag
     tiers: TIERS.map((t) => ({ id: t, label: tierLabel(lang, t), withArt: `${huArticleLower(tierLabel(lang, t))} ${tierLabel(lang, t)}` })),
     assign: Object.fromEntries(x.assignment),
     domFree: snap.domainFreeInPackage,
-    tlds: snap.tlds.map((t: TldRow) => ({ ...t })),
-    minPkg: snap.domainMinPackageMonthly,
+    tlds: snap.tlds.map((t: TldRow) => ({
+      ...t,
+      costNet: t.costNet === null ? null : minorToMajor(t.costNet, t.costCurrency),
+      maxCost: minorToMajor(t.maxCost, t.costCurrency),
+      monthlyFee: majorOf(snap, t.monthlyFee),
+    })),
+    minPkg: majorOf(snap, snap.domainMinPackageMonthly),
     commit: snap.domainMinCommitmentMonths,
-    buyout: snap.domainBuyoutPrice,
+    buyout: majorOf(snap, snap.domainBuyoutPrice),
     confirmed: snap.pricingConfirmed,
     measureUrl: "/pricing/tld-measure",
     msgs: {

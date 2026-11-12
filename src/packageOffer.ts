@@ -12,7 +12,7 @@
 
 import { getDisabledModules } from "./moduleSales.js";
 import { MODULE_CATALOG, sellableModuleIds, type Preset } from "./modules.js";
-import { computeMonthly, currentPresets, loadPricing } from "./pricing.js";
+import { PricingRegionError, computeMonthly, currentPresets, loadPricing } from "./pricing.js";
 
 export interface OfferedPackage extends Preset {
   /** Monthly LIST price of the package (base + its offered add-ons), market currency. */
@@ -43,7 +43,7 @@ export function offeredModuleIds(disabledSales: ReadonlySet<string>): Set<string
  * ticks a module the offer no longer carries, and its price is what the card shows
  * (cit-configurator.js presetMonthly: base + the add-ons of the offered modules).
  */
-export function offeredPackagesFrom(disabledSales: ReadonlySet<string>, region?: string): OfferedPackage[] {
+export function offeredPackagesFrom(disabledSales: ReadonlySet<string>, region: string): OfferedPackage[] {
   const offered = offeredModuleIds(disabledSales);
   return currentPresets().map((p) => {
     const modules = sellableModuleIds(p.modules, disabledSales).filter((id) => offered.has(id));
@@ -56,15 +56,23 @@ export function offeredPackagesFrom(disabledSales: ReadonlySet<string>, region?:
  * (no tier, or a non-positive / non-finite price) — the caller must then refuse to
  * advertise a price at all, never fall back to an old number.
  */
-export function cheapestOfferedMonthlyFrom(disabledSales: ReadonlySet<string>, region?: string): number | null {
-  const prices = offeredPackagesFrom(disabledSales, region)
+export function cheapestOfferedMonthlyFrom(disabledSales: ReadonlySet<string>, region: string): number | null {
+  let packages: OfferedPackage[];
+  try {
+    packages = offeredPackagesFrom(disabledSales, region);
+  } catch (e) {
+    // ADR-XXXX: a region that cannot price advertises NO price (never another region's).
+    if (e instanceof PricingRegionError) return null;
+    throw e;
+  }
+  const prices = packages
     .map((p) => p.monthly)
     .filter((n) => Number.isFinite(n) && n > 0);
   return prices.length ? Math.min(...prices) : null;
 }
 
 /** Fresh pricing + the live module-sales switch → the cheapest offered package price. */
-export async function cheapestOfferedMonthly(region?: string): Promise<number | null> {
+export async function cheapestOfferedMonthly(region: string): Promise<number | null> {
   await loadPricing();
   return cheapestOfferedMonthlyFrom(await getDisabledModules(), region);
 }

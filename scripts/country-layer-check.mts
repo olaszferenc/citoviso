@@ -12,6 +12,13 @@
 //      in the files the layer already covers — each remaining one is on the ALLOW list WITH
 //      its reason. Comments are not code: they are stripped before the scan.
 //
+//   ⑤ ADR-XXXX — THE MONEY PATH: every country's pricing region has a complete price sheet
+//      in the country's own currency, its payment provider accepts that currency, its invoice
+//      language is one Számlázz.hu prints; no region borrows another region's module prices
+//      (no currency mixing); every order insert stores region + currency; every product
+//      configurator call passes the lead's region; and the money-path files carry no burned
+//      "HUF" / "hu-HU" / "AAM" (each remaining one on the ALLOW list WITH its reason).
+//
 //   npx tsx scripts/country-layer-check.mts
 import { readFileSync } from "node:fs";
 import {
@@ -28,7 +35,19 @@ import { SCOUT_KEYWORDS } from "../src/scout/rules.js";
 import { APP_TZ, COUNTRY_DEFAULT_TIME_ZONE, defaultTimeZoneForCountry } from "../src/text/zoneTime.js";
 import { isHuMobileE164, normalizePhone } from "../src/text/phone.js";
 import { isMobileE164In, normalizePhoneIn } from "../src/text/phoneCountry.js";
-import { resolvePricingRegion } from "../src/pricing.js";
+import {
+  GLOBAL_PRICING_REGION,
+  HU_PRICING_REGION,
+  getCurrency,
+  loadPricing,
+  pricingRegions,
+  pricingSnapshot,
+  regionPriceGaps,
+  resolvePricingRegion,
+} from "../src/pricing.js";
+import { marketPaymentGaps } from "../src/payment/providers.js";
+import { invoiceLanguageFor } from "../src/payment/service.js";
+import { db } from "../src/db/client.js";
 import { classifyWebsite } from "../src/scraper/qualify.js";
 
 let fails = 0;
@@ -184,6 +203,89 @@ for (const f of SCOPE) {
 }
 check("nincs beégetett HU-paraméter a hatókörben", hits.length === 0, `\n      ${hits.join("\n      ")}`);
 ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, allowUsed.has(i)));
+
+console.log("⑤ a pénz útja (ADR-XXXX)");
+await loadPricing(true);
+for (const c of allCountriesSync()) {
+  const gaps = regionPriceGaps(c.pricingRegion);
+  check(`${c.iso2}: a(z) „${c.pricingRegion}” ár-régiónak teljes ársora van`, gaps.length === 0, gaps.join("; "));
+  if (!gaps.length) {
+    check(`${c.iso2}: az ország pénzneme = a régióé (${c.currency})`, getCurrency(c.pricingRegion) === c.currency, getCurrency(c.pricingRegion));
+  }
+  const pay = marketPaymentGaps(c);
+  check(`${c.iso2}: a(z) ${c.paymentProvider} fogadja a(z) ${c.currency} pénznemet`, pay.length === 0, pay.join("; "));
+  const il = invoiceLanguageFor(c.iso2, c.pricingRegion);
+  check(`${c.iso2}: a számla nyelve (${c.invoiceLang}) Számlázz-kód`, il !== "en" || c.invoiceLang === "en", il);
+}
+// No currency mixing: a non-HU region prices its modules ONLY from its own rows.
+const regionRows = await db.selectFrom("module_price_region").select(["region", "module_id"]).execute();
+for (const r of pricingRegions().filter((x) => x.region !== HU_PRICING_REGION)) {
+  const own = new Set(regionRows.filter((x) => x.region === r.region).map((x) => x.module_id));
+  const foreign = [...r.modulePrices.keys()].filter((id) => !own.has(id));
+  check(`„${r.region}” (${r.currency}): csak a saját modulárai (nincs HUF-térkép)`, foreign.length === 0, foreign.join(", "));
+}
+check("a 'global' kód-alapértéke EUR", pricingSnapshot(GLOBAL_PRICING_REGION).currency === "EUR");
+const pricingSrc = src("src/pricing.ts");
+check("pricing.ts: a hu régió a module_price-ból, minden más a saját soraiból",
+  /modulePrices: c\.region === HU_PRICING_REGION \? modulePrices : regionModules\(c\.region\)/.test(pricingSrc));
+check("pricing.ts: nincs csendes 'global'-ra esés (snap dob)", /if \(!s\) throw new PricingRegionError\(region/.test(pricingSrc) && !/DEFAULT_PRICING_REGION/.test(pricingSrc));
+// Every order insert stores the region + currency (the DB default only describes old rows).
+{
+  const files = ["src/console/data.ts", "src/payment/billing.ts", "src/tenant/moduleUpsell.ts", "src/tenant/multilangOrder.ts",
+    "src/domains/domainUpgrade.ts", "src/domains/domainSettlement.ts", "src/tenant/wallet.ts"];
+  for (const f of files) {
+    const t = src(f);
+    const blocks = t.split('.insertInto("order_intent")').slice(1).map((b) => b.slice(0, 1600));
+    check(`${f}: minden order_intent-beszúrás régiót + pénznemet ír`, blocks.length > 0 && blocks.every((b) => /pricing_region:/.test(b) && /\bcurrency:/.test(b)));
+  }
+  const sub = src("src/payment/subscription.ts");
+  check("subscription: a régió + pénznem a rendelésből", (sub.match(/pricing_region: oi\.pricingRegion/g) ?? []).length === 2);
+}
+// Every product configurator call passes the lead's region.
+{
+  const cs = src("src/console/server.ts");
+  const calls = cs.split("await injectConfigurator(").slice(1).map((b) => b.slice(0, 400));
+  check("konzol: minden injectConfigurator-hívás átadja a lead régióját", calls.length >= 3 && calls.every((b) => /pricingRegion/.test(b)), `${calls.length} hívás`);
+}
+// No burned HUF / hu-HU / AAM in the money path.
+const PAY_SCOPE = [
+  "src/pricing.ts", "src/payment/service.ts", "src/payment/barion.ts", "src/payment/billing.ts",
+  "src/payment/orderRegion.ts", "src/payment/providers.ts", "src/payment/renewalQuote.ts",
+  "src/payment/restoreNotice.ts", "src/payment/subscription.ts", "src/invoicing/szamlazz.ts",
+  "src/billing/taxCounters.ts", "src/billing/fxRate.ts", "src/billing/a60.ts", "src/generator/configurator.ts",
+  "src/tenant/moduleUpsell.ts", "src/tenant/multilangOrder.ts", "src/tenant/moduleChange.ts",
+  "src/tenant/subscriptionAdmin.ts", "src/domains/domainUpgrade.ts", "src/domains/domainSettlement.ts",
+  "src/domains/costCap.ts", "src/console/orderMail.ts", "src/packageOffer.ts", "src/console/pricingPage.ts",
+];
+const PAY_BURNED = /["'`](?:HUF|hu-HU|AAM)["'`]/;
+const PAY_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+  { file: "src/pricing.ts", frag: 'costCurrency: "HUF",', why: "a .hu végződés MÉRT beszerzési ára (Websupport, forintban) — a regisztrátor pénzneme, nem a vevőé" },
+  { file: "src/pricing.ts", frag: 'currency: "HUF",', why: "a 'hu' régió KÓD-alapértéke (a pricing_config-sor előtti seed) — maga a régió definíciója" },
+  { file: "src/pricing.ts", frag: 'String(o.costCurrency ?? "HUF")', why: "a konzol végződés-táblájának régi (pénznem nélküli) sora a forintos beszerzés volt" },
+  { file: "src/payment/providers.ts", frag: '"en-US", "hu-HU",', why: "a Barion UILocale értékkészlete (forrás: barion-web-php) — adat, nem választás" },
+  { file: "src/billing/fxRate.ts", frag: 'if (c === "HUF") return { rate: 1', why: "az MNB-árfolyam egysége maga a forint (Ft / egység) — az adótörvény pénzneme" },
+  { file: "src/billing/taxCounters.ts", frag: 'if (i.currency === "HUF") return i.net;', why: "az AAM-keret és az A60 forintban számol (Áfa tv.) — a forint itt az adó pénzneme" },
+  { file: "src/payment/service.ts", frag: 'export const VAT_KEY_AAM = "AAM";', why: "a Számlázz.hu áfakulcs-kódja (EGY definíció; a kiválasztás a vat_treatment-ből)" },
+  { file: "src/payment/service.ts", frag: 'listPrice.toLocaleString("hu-HU")', why: "a forintos számla-megjegyzés történeti alakja bájtra (a HU számla-XML nem változhat); más pénznem formatMinor" },
+  { file: "src/payment/service.ts", frag: 'amount.toLocaleString("hu-HU")', why: "ugyanaz (forintos számla-megjegyzés, bájtra azonos)" },
+];
+const payHits: string[] = [];
+const payAllowUsed = new Set<number>();
+for (const f of PAY_SCOPE) {
+  src(f).split("\n").forEach((raw, n) => {
+    const code = stripComments(raw);
+    if (!PAY_BURNED.test(code)) return;
+    const a = PAY_ALLOW.findIndex((x) => x.file === f && code.includes(x.frag));
+    if (a >= 0) {
+      payAllowUsed.add(a);
+      return;
+    }
+    payHits.push(`${f}:${n + 1}: ${raw.trim()}`);
+  });
+}
+check("nincs beégetett HUF / hu-HU / AAM a pénzút fájljaiban", payHits.length === 0, `\n      ${payHits.join("\n      ")}`);
+PAY_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, payAllowUsed.has(i)));
+await db.destroy();
 
 console.log(fails ? `\n⛔ country-layer-check: ${fails} hiba` : "\n✅ country-layer-check: az ország-réteg rendben");
 process.exit(fails ? 1 : 0);

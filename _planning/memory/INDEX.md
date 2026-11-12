@@ -9,6 +9,7 @@
 - [2026-11-13_megnyitas_csatornankent_kartya.md](2026-11-13_megnyitas_csatornankent_kartya.md) — 2026-11-13 — Megnyitás csatornánként kártya az Irányítópulton
 - [2026-11-12_viselkedes_uzenet_megvalositas.md](2026-11-12_viselkedes_uzenet_megvalositas.md) — 2026-11-12 — Viselkedés-üzenet (A változat) megvalósítva (SUB cit3ea34be2)
 - [2026-11-12_riport_tevekenyseg_ido_elteres.md](2026-11-12_riport_tevekenyseg_ido_elteres.md) — 2026-11-12 — Riport vs. Tevékenység-oldal: 1 órás időeltérés (élesítve)
+- [2026-11-12_orszag_reteg_penzut.md](2026-11-12_orszag_reteg_penzut.md) — 2026-11-12 — Ország-réteg 3/1: a pénz útja (ADR-XXXX)
 - [2026-11-12_lead_allomany.md](2026-11-12_lead_allomany.md) — 2026-11-12 — Lead-állomány a CRM-kártya helyett + Visszatérés csatorna-badge
 - [2026-11-12_latogatas_meres_lezaratlan.md](2026-11-12_latogatas_meres_lezaratlan.md) — 2026-11-12 — Látogatás-mérés „lezáratlan” javítva (mobil záró jel + Tevékenység-oldal)
 - [2026-11-12_kerdes_inditas_megvalositas.md](2026-11-12_kerdes_inditas_megvalositas.md) — 2026-11-12 — „Kérdése van?” + egy kattintásos indítás: befagyasztás és megvalósítás (SUB cit8e71feb7)
