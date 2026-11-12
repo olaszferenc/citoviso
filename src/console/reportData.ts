@@ -281,6 +281,18 @@ export interface ReturnLead {
   readonly visits: number;
   readonly lastVisitAt: Date | null;
   readonly ordered: boolean;
+  /** Which message's link opened the visits (owner, 2026-11-12): source → visit count, first-opened first. */
+  readonly sources: readonly { readonly source: OpenSource; readonly visits: number }[];
+}
+
+/** Per-source visit counts of one prospect, in order of the first visit from each source. */
+export function visitSources(visits: readonly Pick<Visit, "openSource">[]): { source: OpenSource; visits: number }[] {
+  const m = new Map<OpenSource, number>();
+  for (const v of visits) {
+    const k = v.openSource ?? "unknown";
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return [...m.entries()].map(([source, n]) => ({ source, visits: n }));
 }
 
 export interface ReturnRow {
@@ -1260,7 +1272,7 @@ export function foldReport(
   const returns: ReturnRow[] = (["1", "2", "3", "4+"] as const).map((k) => {
     const g = openers.filter((p) => (k === "4+" ? p.visits.length >= 4 : p.visits.length === Number(k)));
     const leads: ReturnLead[] = g
-      .map((p) => ({ prospectId: p.id, leadId: p.leadId, leadName: p.leadName, visits: p.visits.length, lastVisitAt: lastVisitAt(p), ordered: p.orderedAt !== null }))
+      .map((p) => ({ prospectId: p.id, leadId: p.leadId, leadName: p.leadName, visits: p.visits.length, lastVisitAt: lastVisitAt(p), ordered: p.orderedAt !== null, sources: visitSources(p.visits) }))
       .sort((a, b) => (b.lastVisitAt?.getTime() ?? 0) - (a.lastVisitAt?.getTime() ?? 0));
     return { visits: k, prospects: g.length, ordered: g.filter((p) => p.orderedAt).length, leads };
   });

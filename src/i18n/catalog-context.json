@@ -319,6 +319,7 @@
 "{n} követett megkeresés-link · ebből {s} ment ki.":"konzol",
 "{n} kulcsszó van még hátra.":"egyeb",
 "{n} látogatás":"konzol",
+"{n} látogatás ezen a linken: {c}":"konzol",
 "{n} látogatásnál van kimondott ok is: a gép {h}-ban ({p}) ugyanazt tippelte (zöld cella). Ami nem egyezik, azon a szabályon kell tekerni — pl. ha a „Drága” sorban a gép „nézelődött”-et mondott, az ár-sokk küszöbe (20 mp) túl szoros.":"konzol",
 "{n} lead nyitotta meg a panelt · {o} elküldte a rendelést · {p} fizetett. Sorra kattintva: mi történt a panelben.":"konzol",
 "{n} lead nyitotta meg a panelt ({v}) · {o} elküldte a rendelést · {p} fizetett. Sorra kattintva: mi történt a panelben.":"konzol",

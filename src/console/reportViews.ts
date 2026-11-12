@@ -302,6 +302,7 @@ function hypothesisCards(d: ReportData, lang: string): string {
 
 function returnsPanel(d: ReportData, lang: string): string {
   const total = d.counts.opened;
+  const srcLab = OPEN_SOURCE_LABEL(lang);
   const label = (k: ReturnRow["visits"]): string =>
     k === "1" ? T(lang, "1 látogatás") : k === "2" ? T(lang, "2 látogatás") : k === "3" ? T(lang, "3 látogatás") : T(lang, "4+ látogatás");
   // Each bucket opens (no JS, <details>) into the leads behind it; a name leads to that
@@ -320,6 +321,12 @@ function returnsPanel(d: ReportData, lang: string): string {
           (l) =>
             `<li><a href="/prospect/${esc(l.prospectId)}/activity">${esc(l.leadName)}</a>` +
             `${l.ordered ? ` <span class="rp-pill rp-pill--ok rp-pill--xs">${esc(T(lang, "rendelt"))}</span>` : ""}` +
+            l.sources
+              .map(
+                (s) =>
+                  ` <span class="rp-pill rp-pill--xs rp-src" title="${esc(T(lang, "{n} látogatás ezen a linken: {c}", { n: s.visits, c: srcLab[s.source] }))}"><b class="rp-os-dot rp-os-${s.source}"></b>${esc(srcLab[s.source])}${s.visits > 1 && l.sources.length > 1 ? ` ×${s.visits}` : ""}</span>`,
+              )
+              .join("") +
             `<span class="rp-ret__m">${esc(T(lang, "{n} látogatás", { n: l.visits }))}${l.lastVisitAt ? ` · ${esc(T(lang, "utoljára {t}", { t: whenLabel(l.lastVisitAt) }))}` : ""} · <a href="/lead/${esc(l.leadId)}">${esc(T(lang, "lead-lap"))}</a></span></li>`,
         )
         .join("");

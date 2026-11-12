@@ -3116,6 +3116,8 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-os-whatsapp { background: color-mix(in srgb, var(--citui-ok) 80%, var(--citui-navy-900)); }
 .rp-os-unknown { background: color-mix(in srgb, var(--citui-muted) 55%, var(--citui-panel)); }
 .rp-os-dim { opacity: .55; }
+.rp-pill.rp-src { gap: 0; font-weight: 500; }
+.rp-pill.rp-src .rp-os-dot { width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
 .con .rp-os-tbl .rp-os-btn { all: unset; min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: center; }
 .con .rp-os-tbl .rp-os-btn::before { content: "▸"; margin-right: 5px; color: var(--citui-muted); }
 .con .rp-os-tbl .rp-os-btn[aria-expanded="true"]::before { content: "▾"; }
