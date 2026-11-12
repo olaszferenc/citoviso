@@ -4183,3 +4183,238 @@ html.cit-cfg-is-open .cit-cfg-esccard { display: none !important; }
 html.cit-cfg-is-open .cit-cfg-dock {
   display: none !important;
 }
+
+/* ── ADR-XXXX (kerdes-inditas, frozen plan assets/design-refs/prospect-page/kerdes-inditas/) ──
+ * The price card + „Kérdése van?” block the /p/<token> page adds after the hero. It sits IN
+ * the previewed site, so like the trial sheet it carries its own palette (token-independent:
+ * a pale or dark template skin must not swallow it). Phone: the card first, the questions
+ * under it. Wide (≥ 900 px block width, @container — the block is the container, not the
+ * window): the questions on the left, the card sticky on the right (400 px). */
+.cit-ask,
+.cit-ask * {
+  box-sizing: border-box;
+}
+.cit-ask {
+  --ca-bg: #f4f7fa;
+  --ca-card: #ffffff;
+  --ca-ink: #10243a;
+  --ca-muted: #5a6d82;
+  --ca-line: rgba(14, 42, 71, 0.12);
+  --ca-line-strong: rgba(14, 42, 71, 0.22);
+  --ca-cyan: #1fb6d6;
+  --ca-accent-ink: #06131b;
+  --ca-link: #10697a;
+  --ca-ok: #2fa96b;
+  --ca-ok-ink: #19733f;
+  --ca-bad-ink: #b3262b;
+  --ca-navy: #0e2a47;
+  container-type: inline-size;
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 28px 16px 32px;
+  background: var(--ca-bg);
+  color: var(--ca-ink);
+  font: 400 15.5px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+  scroll-margin-top: 72px;
+}
+.cit-ask h2,
+.cit-ask h3,
+.cit-ask p,
+.cit-ask ul,
+.cit-ask dl,
+.cit-ask dd {
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  color: inherit;
+}
+.cit-ask ul { list-style: none; }
+.cit-ask button { font-family: inherit; letter-spacing: normal; text-transform: none; }
+.cit-ask svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; }
+.cit-ask__in { display: flex; flex-direction: column; gap: 24px; max-width: 1120px; margin: 0 auto; }
+.cit-ask__kick { margin: 0 0 8px; color: var(--ca-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.cit-ask__card {
+  padding: 20px 18px 16px;
+  border: 1px solid var(--ca-line);
+  border-radius: 18px;
+  background: var(--ca-card);
+  box-shadow: 0 10px 30px rgba(14, 42, 71, 0.08);
+}
+.cit-ask__lbl { font-size: 15px; font-weight: 600; color: var(--ca-muted); line-height: 1.4; }
+.cit-ask__reset {
+  margin-left: 6px; padding: 0; border: 0; background: none; color: var(--ca-link);
+  font-size: 13.5px; font-weight: 600; text-decoration: underline; cursor: pointer;
+}
+.cit-ask__price { display: flex; align-items: baseline; gap: 6px; margin: 4px 0 2px; }
+.cit-ask__big { font-size: 36px; font-weight: 800; line-height: 1.1; color: var(--ca-ink); }
+.cit-ask__per { color: var(--ca-muted); font-size: 16px; }
+.cit-ask__first { color: var(--ca-ok-ink); font-size: 14.5px; }
+.cit-ask__min { color: var(--ca-muted); font-size: 13.5px; margin-top: 2px; }
+.cit-ask__facts { display: grid; gap: 7px; margin: 14px 0 4px; }
+.cit-ask__facts li { display: flex; gap: 9px; align-items: flex-start; font-size: 14.5px; }
+.cit-ask__facts svg { stroke: var(--ca-ok); margin-top: 2px; }
+.cit-ask__go {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%; min-height: 56px; margin: 14px 0 0; padding: 8px 20px;
+  border: 0; border-radius: 999px; background: var(--ca-cyan); color: var(--ca-accent-ink);
+  font-size: 17px; font-weight: 800; line-height: 1.2; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(31, 182, 214, 0.35);
+}
+.cit-ask__go small { font-size: 12.5px; font-weight: 600; opacity: 0.85; }
+.cit-ask__go--sm { display: inline-flex; width: auto; min-height: 40px; margin: 0; padding: 6px 18px; font-size: 15px; box-shadow: none; }
+.cit-ask__alt,
+.cit-ask__pk {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 44px; margin: 6px 0 0; padding: 6px 0;
+  border: 0; background: none; color: var(--ca-link);
+  font-size: 14.5px; font-weight: 600; text-decoration: underline; cursor: pointer;
+}
+.cit-ask__pk { margin-top: 2px; border-top: 1px solid var(--ca-line); text-decoration: none; justify-content: space-between; padding: 10px 2px 0; color: var(--ca-ink); }
+.cit-ask__pk svg { transform: rotate(-90deg); stroke: var(--ca-muted); }
+.cit-ask__h { font-size: 24px; font-weight: 800; line-height: 1.2; color: var(--ca-ink); }
+.cit-ask__sub { margin-top: 4px; color: var(--ca-muted); font-size: 14.5px; }
+.cit-ask__list { margin-top: 14px; border-top: 1px solid var(--ca-line); }
+.cit-ask__list details { border-bottom: 1px solid var(--ca-line); }
+.cit-ask__list summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 52px; padding: 12px 2px; cursor: pointer; list-style: none;
+  font-size: 16px; font-weight: 650; color: var(--ca-ink);
+}
+.cit-ask__list summary::-webkit-details-marker { display: none; }
+.cit-ask__list summary::after {
+  content: ""; flex: none; width: 10px; height: 10px; margin-right: 4px;
+  border-right: 2px solid var(--ca-muted); border-bottom: 2px solid var(--ca-muted);
+  transform: rotate(45deg) translateY(-3px); transition: transform 0.15s;
+}
+.cit-ask__list details[open] summary::after { transform: rotate(-135deg) translateY(-3px); }
+.cit-ask__ans { padding: 0 2px 16px; color: var(--ca-ink); font-size: 15px; }
+.cit-ask__ans p + p,
+.cit-ask__ans p + div,
+.cit-ask__ans div + div,
+.cit-ask__ans dl + p { margin-top: 8px; }
+.cit-ask__tier { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--ca-line); border-radius: 12px; }
+.cit-ask__tierh { display: flex; justify-content: space-between; gap: 8px; }
+.cit-ask__tier ul { margin-top: 4px; display: grid; gap: 2px; font-size: 14px; }
+.cit-ask__tier li::before,
+.cit-ask__tcard li::before { content: "· "; color: var(--ca-muted); }
+.cit-ask__prev { color: var(--ca-muted); font-style: italic; }
+.cit-ask__co { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin-top: 8px; font-size: 14px; }
+.cit-ask__co dt { color: var(--ca-muted); }
+.cit-ask__small { color: var(--ca-muted); font-size: 13px; }
+.cit-ask__then { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px !important; }
+.cit-ask__then span { color: var(--ca-muted); font-size: 13px; }
+.cit-ask__form { display: flex; gap: 8px; margin-top: 16px; }
+.cit-ask__form input {
+  flex: 1; min-width: 0; min-height: 48px; padding: 0 14px;
+  border: 1px solid var(--ca-line-strong); border-radius: 12px; background: #ffffff; color: var(--ca-ink);
+  font: inherit; font-size: 16px;
+}
+.cit-ask__form input:disabled { background: #eef2f6; }
+.cit-ask__form button {
+  flex: none; min-height: 48px; padding: 0 16px; border: 0; border-radius: 12px;
+  background: var(--ca-navy); color: #ffffff; font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.cit-ask__form button:disabled { opacity: 0.6; cursor: default; }
+.cit-ask__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cit-ask__meta { display: flex; justify-content: space-between; gap: 8px; min-height: 20px; margin-top: 4px; font-size: 13px; color: var(--ca-muted); }
+.cit-ask__over { color: var(--ca-bad-ink); font-weight: 700; }
+.cit-ask__say { margin-top: 8px; padding: 12px 14px; border-radius: 12px; background: #ffffff; border: 1px solid var(--ca-line); font-size: 14.5px; }
+.cit-ask__echo { margin-top: 8px; color: var(--ca-muted); font-style: italic; font-size: 14px; }
+.cit-ask__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cit-ask__chip {
+  min-height: 36px; padding: 4px 12px; border: 1px solid var(--ca-line-strong); border-radius: 999px;
+  background: #ffffff; color: var(--ca-ink); font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+@container (min-width: 900px) {
+  .cit-ask { padding: 48px 32px; }
+  .cit-ask__in { flex-direction: row-reverse; align-items: flex-start; gap: 48px; }
+  .cit-ask__cardcol { flex: none; width: 400px; position: sticky; top: 96px; }
+  .cit-ask__faq { flex: 1; min-width: 0; padding-top: 26px; }
+  .cit-ask__h { font-size: 30px; }
+}
+/* The pill pair steps aside while the card (with its own main button) is on screen. */
+html.cit-ask-page.cit-ask-cardon .cit-cfg-launch,
+html.cit-ask-page.cit-ask-cardon .cit-cfg-trialpill,
+html.cit-ask-page.cit-ask-cardon .cit-cfg-dock {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+/* On the ask page the RIGHT pill („Indítsa el”) is the main action: it takes the platform
+ * colour (violet where the template accent is cyan-near), the left one goes navy. */
+html.cit-ask-page .cit-cfg-launch--ask { --cit-lp: #0e2a47; --cit-lp-ink: #ffffff; animation: none; }
+html.cit-ask-page .cit-cfg-trialpill { --cit-tp: #1fb6d6; --cit-tp-ink: #06131b; --cit-tp-icon: #06131b; --cit-tp-dot: #06131b; }
+html.cit-ask-page.cit-ask-alt .cit-cfg-trialpill { --cit-tp: #6d4aff; --cit-tp-ink: #ffffff; --cit-tp-icon: #ffffff; --cit-tp-dot: #ffffff; }
+/* The one-click sheet's new parts (the rest is the trial sheet's own styling). */
+.cit-cfg-tsub { margin: -2px 0 8px; color: var(--cit-ts-muted); }
+.cit-cfg-taddr { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--cit-ts-line); border-radius: 12px; }
+.cit-cfg-taddr svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--cit-ts-link); }
+.cit-cfg-tpkg p,
+.cit-cfg-tcontact { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--cit-ts-line); border-radius: 12px; font-size: 14.5px; color: var(--cit-ts-ink); }
+.cit-cfg-tpkg small { display: block; margin-top: 2px; color: var(--cit-ts-muted); font-size: 13px; }
+.cit-cfg-tcrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin: 0; }
+.cit-cfg-tcto b { overflow-wrap: anywhere; }
+.cit-cfg-tedit,
+.cit-cfg-tlink {
+  flex: none; padding: 0; border: 0; background: none; color: var(--cit-ts-link);
+  font: 600 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-decoration: underline; cursor: pointer;
+}
+.cit-cfg-tlink { display: block; width: 100%; min-height: 44px; margin: 2px 0 0; text-align: center; }
+.cit-cfg-tfields { margin-top: 10px; }
+.cit-cfg-tsubmit { flex-direction: column; gap: 0; min-height: 56px; }
+.cit-cfg-tsubmit.cit-cfg-tsending { flex-direction: row; gap: 8px; }
+.cit-cfg-tsmall { font-size: 12.5px; font-weight: 600; opacity: 0.85; }
+.cit-cfg-tsending .cit-cfg-tsmall { display: none; }
+.cit-cfg-tlegal { margin: 6px 0 0; color: var(--cit-ts-muted); font-size: 12.5px; line-height: 1.45; }
+.cit-cfg-tlegal a { color: var(--cit-ts-link); }
+.cit-cfg-toklive { margin: 6px 0; font-weight: 600; }
+.cit-cfg-toklive a { color: var(--cit-ts-link); overflow-wrap: anywhere; }
+/* The packages sheet (T2) reuses the trial sheet's frame, wider on a desktop. */
+.cit-ask-pk { max-width: 860px !important; }
+.cit-ask-pk .cit-ask__sh { margin: 0 32px 4px 0; font: 800 21px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--cit-ts-ink); }
+.cit-ask-pk .cit-ask__ss { margin: 0 0 12px; color: var(--cit-ts-muted); font-size: 14.5px; }
+.cit-ask__tcards { display: grid; gap: 10px; align-items: stretch; }
+@media (min-width: 760px) { .cit-ask__tcards { grid-template-columns: repeat(3, 1fr); } }
+.cit-ask__tcard {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; padding: 12px 14px; text-align: left;
+  border: 2px solid var(--cit-ts-line); border-radius: 14px; background: #ffffff; color: var(--cit-ts-ink);
+  font: 400 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer;
+}
+.cit-ask__tcard[aria-pressed="true"] { border-color: var(--cit-ts-cyan); box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18); }
+.cit-ask__th { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; font-size: 16px; }
+.cit-ask__th > span { white-space: nowrap; }
+.cit-ask__badge { align-self: flex-start; display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: #e6f7fb; color: #10697a; font-size: 12px; font-style: normal; font-weight: 700; }
+.cit-ask__tcard ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.cit-ask__tune {
+  display: block; width: 100%; min-height: 44px; margin: 10px 0 0; padding: 0;
+  border: 1px dashed var(--cit-ts-line-strong); border-radius: 12px; background: none; color: var(--cit-ts-link);
+  font: 600 14.5px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer;
+}
+.cit-ask__mods { margin: 10px 0 0; padding: 0; list-style: none; }
+.cit-ask__mods li label { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14.5px; color: var(--cit-ts-ink); cursor: pointer; }
+.cit-ask__mods li label span:first-of-type { flex: 1; }
+.cit-ask__mods input { width: 20px; height: 20px; flex: none; accent-color: #1fb6d6; }
+.cit-ask__lock label { color: var(--cit-ts-muted) !important; cursor: default !important; }
+.cit-ask__grp { margin-top: 8px; padding: 4px 0; color: var(--cit-ts-muted); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.cit-ask__pr { color: var(--cit-ts-muted); font-size: 13.5px; white-space: nowrap; }
+.cit-ask__dep { min-height: 18px; margin: 6px 0 0; color: #10697a; font-size: 13.5px; }
+.cit-ask__tot { display: flex; justify-content: space-between; gap: 8px; margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--cit-ts-line); font-size: 16px; color: var(--cit-ts-ink); }
+.cit-ask__acts { display: flex; gap: 10px; align-items: stretch; margin-top: 12px; }
+.cit-ask__acts .cit-ask__go { flex: 1.4; margin: 0; }
+.cit-ask__ghost {
+  flex: 1; min-height: 56px; border: 1px solid var(--cit-ts-line-strong); border-radius: 999px; background: #ffffff;
+  color: var(--cit-ts-ink); font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer;
+}
+.cit-ask-pk .cit-ask__go {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 56px; padding: 6px 14px;
+  border: 0; border-radius: 999px; background: var(--cit-ts-cyan); color: var(--cit-ts-accent-ink);
+  font: 800 16px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer;
+}
+.cit-ask-pk .cit-ask__go small { font-size: 12px; font-weight: 600; opacity: 0.85; }

@@ -130,11 +130,13 @@ try {
   const letter = buildLoginReminderEmail({
     to: "x@example.invalid", username: "sama-vendeghaz", setPasswordUrl: `https://citoviso.com/login/jelszo/${TOKEN}`,
     loginUrl: "https://citoviso.com/login", siteName: "Sáma Vendégház", contactName: "Zoltán Marton", daysLeft: 9,
-    trialUntilIso: "2026-11-11", helpPhone: "+36 1 234 5678", lang: "hu",
+    trialUntilIso: "2026-11-11", lang: "hu",
   });
   check("levél: tárgy „Még nem lépett be – <szállás>”", letter.subject === "Még nem lépett be – Sáma Vendégház", letter.subject);
-  check("levél: gomb, felhasználónév, belépési cím, segítő telefon",
-    (letter.html ?? "").includes(TOKEN) && letter.text.includes("sama-vendeghaz") && letter.text.includes("https://citoviso.com/login") && letter.text.includes("+36 1 234 5678"));
+  check("levél: gomb, felhasználónév, belépési cím",
+    (letter.html ?? "").includes(TOKEN) && letter.text.includes("sama-vendeghaz") && letter.text.includes("https://citoviso.com/login"));
+  // ADR-XXXX ⑧ (owner, 2026-11-12): the company phone is in no customer-facing text.
+  check("levél: NINCS telefonszám, nincs „hívjon minket”", !/hívjon minket|\+36/.test(letter.text + (letter.html ?? "")));
   check("levél: „A Sáma Vendégház honlapja már él … még 9 nap van”", letter.text.includes("A Sáma Vendégház honlapja már él, de még nem lépett be a szerkesztőbe. A próbából még 9 nap van"), letter.text.split("\n")[2]);
 
   // fixture: a real trial through the real door

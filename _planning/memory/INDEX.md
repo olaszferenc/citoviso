@@ -11,6 +11,7 @@
 - [2026-11-12_riport_tevekenyseg_ido_elteres.md](2026-11-12_riport_tevekenyseg_ido_elteres.md) — 2026-11-12 — Riport vs. Tevékenység-oldal: 1 órás időeltérés (élesítve)
 - [2026-11-12_lead_allomany.md](2026-11-12_lead_allomany.md) — 2026-11-12 — Lead-állomány a CRM-kártya helyett + Visszatérés csatorna-badge
 - [2026-11-12_latogatas_meres_lezaratlan.md](2026-11-12_latogatas_meres_lezaratlan.md) — 2026-11-12 — Látogatás-mérés „lezáratlan” javítva (mobil záró jel + Tevékenység-oldal)
+- [2026-11-12_kerdes_inditas_megvalositas.md](2026-11-12_kerdes_inditas_megvalositas.md) — 2026-11-12 — „Kérdése van?” + egy kattintásos indítás: befagyasztás és megvalósítás (SUB cit8e71feb7)
 - [2026-11-12_fura_whatsapp_valaszok_iranyitopult.md](2026-11-12_fura_whatsapp_valaszok_iranyitopult.md) — 2026-11-12 — „Fura üzenetek” az Irányítópulton: saját WhatsApp-képaláírás válaszként
 - [2026-11-12_baba_nyitas_takaritas.md](2026-11-12_baba_nyitas_takaritas.md) — 2026-11-12 — „Babával is várjuk” le a mockok nyitórészéből
 - [2026-11-11_orszag_reteg_1_2.md](2026-11-11_orszag_reteg_1_2.md) — 2026-11-11 — Ország-réteg ⑤1–2 + felderítés-csoport (ADR-0437)

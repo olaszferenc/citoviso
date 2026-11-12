@@ -3129,6 +3129,18 @@ if [ -f scripts/mock-trial-overlay-check.mts ] && \
   echo "[pre-commit] mock-trial-overlay-check (kérdező-kártya · Rendben→élő · pirula-pár · köszönőlap)…"
   npx tsx scripts/mock-trial-overlay-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX (kerdes-inditas): a lead-lap szabad kérdés mezőjének szerver-fele — 300 karakter, link/cím/szám
+# kiszűrve, 4 mp, ismétlés, 100/lead/nap, 5 rögzítés/nap a TULAJ jóváhagyó sorába (soha nem gépi válasz),
+# leiratkozott és saját nézet nem kerül a sorba. Az őr módosításakor az önteszt is fut (a napi plafon nélkül pirosra kell mennie).
+if [ -f scripts/page-question-check.mts ] && \
+   changed_files | grep -qE '^src/replies/pageQuestion\.ts$|^migrations/0134_prospect_question\.sql$|^scripts/page-question-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/page-question-check\.mts$'; then
+    echo "[pre-commit] page-question-check --selftest (az őr pirosra tud-e menni)…"
+    npx tsx scripts/page-question-check.mts --selftest >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] page-question-check (szabad kérdés: korlátok · jóváhagyó sor · nincs gépi válasz)…"
+  npx tsx scripts/page-question-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0044 fixture-kapu: a modul-konfig réteg VÉGPONTTÓL VÉGPONTIG működik-e — alapérték-rétegek,
 # iparág-réteg, mentés/visszaolvasás, ismeretlen-kulcs elutasítás, visszaállítás, a közös
 # foglalás/érdeklődés hely, a foglaltság-naptár duplafoglalás-védelme és a kérés→döntés út.

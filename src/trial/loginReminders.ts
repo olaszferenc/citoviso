@@ -232,7 +232,6 @@ export async function runLoginReminders(
           contactName: c.contactName,
           daysLeft,
           trialUntilIso: untilIso,
-          helpPhone: config.legalEntity.phone || null,
           missing,
           lang: c.lang,
         });

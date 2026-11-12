@@ -257,8 +257,6 @@ export function buildLoginReminderEmail(input: {
   /** Whole Budapest days left (trialDaysLeft). */
   daysLeft: number;
   trialUntilIso: string;
-  /** Our phone for "Ha elakadt, hívjon minket" — omitted when not configured. */
-  helpPhone: string | null;
   /** ADR-0429 — the open setup topics, named by the registry (src/tenant/moduleSetup.ts remindTopics). */
   missing?: readonly string[];
   lang?: string;
@@ -281,14 +279,14 @@ export function buildLoginReminderEmail(input: {
   );
   const button = T(lang, "Jelszó beállítása");
   const fresh = T(lang, "Új link, 7 napig érvényes, és egyszer használható.");
-  const help = input.helpPhone ? T(lang, "Ha elakadt, hívjon minket: {phone}.", { phone: input.helpPhone }) : null;
+  // ⛔ ADR-XXXX ⑧ (owner, 2026-11-12): no „hívjon minket: {phone}” line any more — the company
+  // phone is left out of every customer-facing text.
   const text =
     `${greeting}\n\n${intro}\n\n` +
     (missing.length ? `${missHead}\n${missing.map((m) => `• ${m}`).join("\n")}\n${missTail}\n\n` : "") +
     `${button}: ${setPasswordUrl}\n${fresh}\n\n` +
     `${T(lang, "Felhasználónév:")} ${username}\n` +
-    `${loginTextLine(lang, loginUrl)}\n` +
-    (help ? `\n${help}\n` : "");
+    `${loginTextLine(lang, loginUrl)}\n`;
   return platformMail({
     to,
     subject,
@@ -305,7 +303,6 @@ export function buildLoginReminderEmail(input: {
       mailButton(setPasswordUrl, button),
       mailNote(esc(fresh)),
       mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }, loginDetailRow(lang, loginUrl)]),
-      ...(help ? [mailPara(esc(help))] : []),
     ],
   });
 }

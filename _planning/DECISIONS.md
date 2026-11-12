@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-kerdes-panel-es-egy-kattintasos-inditas-a-lead-lapon.md) — „Kérdése van?” panel és egy kattintásos indítás a lead-lapon (T2)
 - [ADR-0441](decisions/0441-megnyitas-csatornankent-kartya-az.md) — Megnyitás csatornánként: kártya az Irányítópulton (saját Ma · 7 nap · Összes)
 - [ADR-0439](decisions/0439-viselkedes-uzenet-egy-automatikus-uzenet.md) — Viselkedés-üzenet: egy automatikus üzenet leadenként, amikor a lead lép (A változat)
 - [ADR-0438](decisions/0438-lead-allomany-a-crm-kartya-helyett-keptipus.md) — Lead-állomány: a CRM-kártya helyett képtípus × állapot mátrix, riport-fül, időszak-gomb

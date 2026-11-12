@@ -40,6 +40,7 @@ import { domainTier, tierModules } from "../packages.js";
 import { subdomainHost } from "../domains.js";
 import {
   PHOTO_RIGHTS_DECLARATION_V1,
+  TRIAL_CLICKWRAP_V1,
   TERMS_ACCEPTANCE_V1,
   RECURRING_MANDATE_V1,
   WITHDRAWAL_WAIVER_V1,
@@ -268,6 +269,7 @@ export interface ConfiguratorManifest {
    * subscription.ts) and that a lapsed trial pays the list price.
    */
   readonly continuation?: ContinuationInfo;
+  readonly ask?: AskEntry;
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -319,6 +321,25 @@ export interface TrialEntry {
     readonly label: string | null;
     readonly modules: readonly { readonly id: string; readonly label: string }[];
   };
+  /** ADR-XXXX ⑦: the one sentence under „Indítsa el” that stands for both ticks (TRIAL_CLICKWRAP_V1,
+   *  stamped onto free_trial verbatim) — filled in here, never by the caller. */
+  readonly clickwrap?: string;
+}
+
+/**
+ * ADR-XXXX (kerdes-inditas, frozen plan assets/design-refs/prospect-page/kerdes-inditas/):
+ * the price card + „Kérdése van?” block the /p/<token> page adds after the hero. Present only
+ * on a cold-outreach lead page (never on the operator preview, an owned lead or /folytatas).
+ * Every answer the block shows is built ON THE PAGE from this and the pricing manifest — no
+ * LLM, no API call per visit.
+ */
+export interface AskEntry {
+  /** POST endpoint of the free-question field (/p/<token>/ask, + ?sajat=1 on the own view). */
+  readonly url: string;
+  /** The service provider the „Kik Önök?” answer names (config.legalEntity — never the phone, owner 2026-11-12). */
+  readonly company: { readonly name: string; readonly address: string; readonly regNumber: string; readonly taxNumber: string; readonly email: string } | null;
+  /** The one-click start's prefill: who the notifications go to (editable on the sheet). */
+  readonly contact: { readonly name: string; readonly phone: string; readonly email: string };
 }
 
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
@@ -377,6 +398,8 @@ export interface ConfiguratorOpts {
   readonly trial?: Omit<TrialEntry, "sub">;
   /** The trialist's continue-and-pay checkout (/p/<t>/folytatas) — see the manifest field. */
   readonly continuation?: ContinuationInfo;
+  /** ADR-XXXX: the price card + questions block (cold lead page only). */
+  readonly ask?: AskEntry;
 }
 
 /** The trialist's checkout facts (proba-C). Calendar days are Budapest ISO days. */
@@ -518,7 +541,8 @@ export async function buildManifest(
       })(),
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
-    ...(opts.trial ? { trial: { ...opts.trial, sub: subHost } } : {}),
+    ...(opts.trial ? { trial: { ...opts.trial, sub: subHost, clickwrap: TRIAL_CLICKWRAP_V1 } } : {}),
+    ...(opts.ask ? { ask: opts.ask } : {}),
     ...(opts.continuation ? { continuation: opts.continuation } : {}),
     cta: {
       booking: {

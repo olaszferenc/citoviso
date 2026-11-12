@@ -2141,6 +2141,21 @@ export interface OutreachReplyTable {
   updated_at: Generated<Timestamp>;
 }
 
+/** 0134 (ADR-XXXX): a question typed into the lead page's free-question field. */
+export interface ProspectQuestionTable {
+  id: Generated<string>;
+  prospect_id: string;
+  view_id: string | null;
+  text: string;
+  /** The ready answer it matched ('ar', 'koltseg', …, 'smalltalk'); null = unmatched. */
+  category: string | null;
+  /** Unmatched and sent to the owner's approval queue (outreach_reply 'page:<id>'). */
+  recorded: Generated<boolean>;
+  reply_id: string | null;
+  own_view: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+}
+
 /** 0096: one operator send of an answer (ADR-0340) — a failed one is retried as a new row. */
 export interface OutreachReplySendTable {
   id: Generated<string>;
@@ -2199,6 +2214,7 @@ export interface Database {
   messenger_presence: MessengerPresenceTable;
   region: RegionTable;
   outreach_reply: OutreachReplyTable;
+  prospect_question: ProspectQuestionTable;
   outreach_reply_poll: OutreachReplyPollTable;
   outreach_reply_send: OutreachReplySendTable;
   partner_message: PartnerMessageTable;

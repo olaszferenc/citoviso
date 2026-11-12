@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T2 — Csomagok külön lapon</title>
+<style>/* --citui-* = the Citoviso control-plane tokens (copied from public/assets/ui/citui.css).
+   --cit-*   = a stand-in generated-site skin (the lead's mock; unchanged by this plan). */
+:root {
+  --citui-navy-950: #0a1f36; --citui-navy-900: #0e2a47; --citui-navy-800: #16283f; --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; --citui-cyan-400: #35c4e0; --citui-cyan-300: #6fd8eb; --citui-white: #ffffff;
+  --citui-ink: #10243a; --citui-ink-inverse: #eaf3f8; --citui-muted: #5a6d82;
+  --citui-surface: #f6fbfd; --citui-surface-2: #eef7fa;
+  --citui-line: rgba(14, 42, 71, 0.12); --citui-line-strong: rgba(14, 42, 71, 0.22);
+  --citui-ok: #2fa96b; --citui-ok-soft: #e7f8ef; --citui-ok-ink: #19733f; --citui-bad: #e5484d; --citui-bad-ink: #b3262b;
+  --citui-warn-ink: #7d5a12; --citui-link-ink: #10697a;
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08); --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+  --citui-radius-sm: 14px; --citui-radius: 22px; --citui-radius-lg: 32px; --citui-radius-pill: 999px;
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --citui-transition: 220ms ease;
+  /* stand-in site skin */
+  --cit-bg: #faf7f2; --cit-ink: #2b2a27; --cit-muted: #6f6a60; --cit-accent: #9a6b3f; --cit-line: rgba(43, 42, 39, .14);
+  --cit-font-display: Georgia, "Times New Roman", serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--citui-navy-950); font-family: var(--citui-font-text); color: var(--citui-ink); }
+
+/* ── design-tool chrome (not part of the design) ── */
+.tool { position: relative; z-index: 100; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: var(--citui-navy-900); color: var(--citui-ink-inverse); font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.tool b { font-family: var(--citui-font-display); font-size: 14px; }
+.tool .sz { display: inline-flex; border: 1px solid rgba(255,255,255,.25); border-radius: var(--citui-radius-pill); overflow: hidden; }
+.tool .sz button { font: inherit; color: inherit; background: transparent; border: 0; padding: 6px 12px; cursor: pointer; }
+.tool .sz button[aria-pressed="true"] { background: var(--citui-cyan-500); color: var(--citui-navy-950); font-weight: 700; }
+.stagewrap { padding: 18px 0 40px; }
+.stage { container-type: inline-size; container-name: page; margin: 0 auto; background: var(--cit-bg); position: relative; overflow: hidden;
+  transform: translateZ(0); /* makes position:fixed children stick to the stage, not the window */ height: min(860px, calc(100vh - 70px)); }
+.stage[data-size="mobile"] { width: 390px; max-width: 100%; box-shadow: 0 0 0 1px rgba(255,255,255,.15); }
+.stage[data-size="desktop"] { width: 100%; max-width: 1280px; }
+.stage .scroller { height: 100%; overflow-y: auto; position: relative; }
+.note { max-width: 1280px; margin: 0 auto; padding: 14px 16px 0; color: var(--citui-ink-inverse); font-size: 13px; line-height: 1.5; opacity: .85; }
+.note code { background: rgba(255,255,255,.1); padding: 1px 5px; border-radius: 4px; }
+#evlog { white-space: pre-wrap; font: 12px/1.5 ui-monospace, monospace; color: var(--citui-cyan-300); max-width: 1280px; margin: 8px auto 0; padding: 0 16px; min-height: 1.5em; }
+
+/* ── stand-in generated site ── */
+.site { color: var(--cit-ink); }
+.site header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--cit-line); }
+.site .brand { font-family: var(--cit-font-display); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
+.site nav { display: none; gap: 22px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--cit-muted); }
+.site .hero { min-height: 420px; padding: 120px 20px 40px; color: #fff; display: flex; flex-direction: column; justify-content: flex-end;
+  background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.55)), linear-gradient(135deg, #7d8f6a 0%, #b9a27a 45%, #6d8aa3 100%); }
+.site .hero h1 { font-family: var(--cit-font-display); font-weight: 400; font-size: 38px; line-height: 1.1; margin: 0 0 10px; }
+.site .hero p { margin: 0; font-size: 16px; opacity: .92; }
+.site .hero .photo-note { position: absolute; top: 76px; right: 12px; font-size: 11px; background: rgba(0,0,0,.35); padding: 3px 8px; border-radius: 6px; }
+.site section.stub { padding: 40px 20px; border-bottom: 1px solid var(--cit-line); }
+.site section.stub h2 { font-family: var(--cit-font-display); font-weight: 400; font-size: 26px; margin: 0 0 14px; }
+.site .ph { height: 120px; border-radius: 10px; background: repeating-linear-gradient(45deg, rgba(43,42,39,.06) 0 10px, rgba(43,42,39,.03) 10px 20px); display: grid; place-items: center; color: var(--cit-muted); font-size: 13px; }
+.site .grid3 { display: grid; gap: 12px; grid-template-columns: 1fr; }
+.site footer { padding: 30px 20px 140px; font-size: 12px; color: var(--cit-muted); }
+@container page (min-width: 900px) {
+  .site header { padding: 20px 48px; }
+  .site nav { display: flex; }
+  .site .hero { min-height: 560px; padding: 160px 64px 64px; }
+  .site .hero h1 { font-size: 64px; max-width: 900px; }
+  .site section.stub { padding: 64px; }
+  .site .grid3 { grid-template-columns: repeat(3, 1fr); }
+  .site footer { padding: 40px 64px 120px; }
+}
+
+/* ── shared Citoviso UI atoms ── */
+.cu { font-family: var(--citui-font-text); color: var(--citui-ink); }
+.cu h3, .cu .disp { font-family: var(--citui-font-display); }
+.btn-go { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; cursor: pointer; font: 700 17px/1.1 var(--citui-font-display);
+  color: var(--citui-navy-950); background: var(--citui-cyan-400); border-radius: var(--citui-radius-pill); padding: 16px 26px; min-height: 54px;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--citui-cyan-500) 40%, transparent); transition: transform var(--citui-transition); }
+.btn-go:hover { transform: translateY(-1px); }
+.btn-go small { display: block; font: 500 12px var(--citui-font-text); opacity: .8; margin-top: 3px; }
+.btn-go .stack { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+.btn-ghost { font: 600 15px var(--citui-font-text); border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-ink); border-radius: var(--citui-radius-pill); padding: 12px 18px; cursor: pointer; }
+.chip { font: 600 14px var(--citui-font-text); border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-ink); border-radius: var(--citui-radius-pill);
+  padding: 10px 14px; cursor: pointer; text-align: left; }
+.chip[aria-expanded="true"], .chip.on { background: var(--citui-navy-900); color: var(--citui-ink-inverse); border-color: var(--citui-navy-900); }
+.ans { font-size: 15px; line-height: 1.55; }
+.ans p { margin: 0 0 10px; }
+.ans .small { font-size: 13px; color: var(--citui-muted); }
+.ans dl.co { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; font-size: 14px; background: var(--citui-surface-2); padding: 10px 12px; border-radius: var(--citui-radius-sm); }
+.ans dl.co dt { color: var(--citui-muted); } .ans dl.co dd { margin: 0; }
+.ans .tierrow { border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 10px 12px; margin: 0 0 8px; }
+.ans .tierhead { display: flex; justify-content: space-between; font-size: 15px; }
+.ans ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; } .ans li.prev { color: var(--citui-muted); list-style: none; margin-left: -18px; }
+.ans .then { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ask { display: flex; gap: 8px; margin-top: 12px; }
+.ask input { flex: 1; min-width: 0; font: 15px var(--citui-font-text); padding: 12px 14px; border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-pill); background: var(--citui-white); color: var(--citui-ink); }
+.ask button { font: 700 15px var(--citui-font-display); border: 0; border-radius: var(--citui-radius-pill); padding: 0 18px; background: var(--citui-navy-900); color: var(--citui-ink-inverse); cursor: pointer; }
+.askres { margin-top: 10px; }
+.askres .rec { background: var(--citui-surface-2); border-radius: var(--citui-radius-sm); padding: 10px 12px; font-size: 14px; }
+.badge-auto { display: inline-block; font: 600 11px var(--citui-font-text); letter-spacing: .04em; text-transform: uppercase; color: var(--citui-ok-ink); background: var(--citui-ok-soft); border-radius: var(--citui-radius-pill); padding: 3px 8px; }
+.ico { width: 20px; height: 20px; flex: none; }
+
+/* ── launch flow (shared by all variants) ── */
+.lf-back { position: fixed; inset: 0; z-index: 60; background: rgba(10, 31, 54, .55); display: none; }
+.lf-back.open { display: block; }
+.lf { position: fixed; z-index: 61; left: 0; right: 0; bottom: 0; max-height: 92%; overflow-y: auto; background: var(--citui-white); color: var(--citui-ink);
+  border-radius: var(--citui-radius) var(--citui-radius) 0 0; padding: 22px 20px 26px; display: none; font-family: var(--citui-font-text); box-shadow: var(--citui-shadow-md); }
+.lf.open { display: block; }
+.lf h3 { font: 700 24px/1.2 var(--citui-font-display); margin: 0 0 6px; }
+.lf .sub { color: var(--citui-muted); margin: 0 0 16px; font-size: 15px; }
+.lf .x { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border: 0; background: var(--citui-surface-2); border-radius: 50%; cursor: pointer; font-size: 20px; color: var(--citui-ink); }
+.lf .facts { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; }
+.lf .facts li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.4; }
+.lf .facts svg { color: var(--citui-ok); margin-top: 1px; }
+.lf .addr { display: flex; align-items: center; gap: 8px; font: 700 16px var(--citui-font-display); background: var(--citui-surface-2); border-radius: var(--citui-radius-sm); padding: 12px 14px; margin: 0 0 14px; word-break: break-all; }
+.lf .contact { border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 12px 14px; margin: 0 0 16px; font-size: 14px; }
+.lf .contact .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lf .contact button.link { border: 0; background: none; color: var(--citui-link-ink); font: 600 14px var(--citui-font-text); text-decoration: underline; cursor: pointer; padding: 4px 0; }
+.lf .contact .edit { display: none; margin-top: 10px; gap: 8px; flex-direction: column; }
+.lf .contact .edit.open { display: flex; }
+.lf .contact label { font-size: 13px; color: var(--citui-muted); }
+.lf .contact input { font: 15px var(--citui-font-text); padding: 11px 12px; border: 1px solid var(--citui-line-strong); border-radius: 12px; }
+.lf .contact input[aria-invalid="true"] { border-color: var(--citui-bad); }
+.lf .err { color: var(--citui-bad-ink); font-size: 13px; min-height: 1em; }
+.lf .legal { font-size: 12.5px; color: var(--citui-muted); line-height: 1.45; margin: 10px 0 0; }
+.lf .legal a { color: var(--citui-link-ink); }
+.lf .btn-go { width: 100%; }
+.lf .steps { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 12px; }
+.lf .steps li { display: flex; gap: 10px; align-items: center; font-size: 15px; color: var(--citui-muted); }
+.lf .steps li.done { color: var(--citui-ink); }
+.lf .steps .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--citui-line-strong); flex: none; display: grid; place-items: center; }
+.lf .steps li.done .dot { background: var(--citui-ok); border-color: var(--citui-ok); color: #fff; }
+.lf .steps li.run .dot { border-color: var(--citui-cyan-500); border-top-color: transparent; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.lf .ok-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.lf .ok-head .big { width: 44px; height: 44px; border-radius: 50%; background: var(--citui-ok-soft); color: var(--citui-ok-ink); display: grid; place-items: center; flex: none; }
+.lf .live { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--citui-navy-900); color: var(--citui-ink-inverse); border-radius: var(--citui-radius-sm); padding: 14px; margin: 0 0 16px; }
+.lf .live { flex-wrap: wrap; }
+.lf .live a { flex: 1 1 200px; color: var(--citui-cyan-300); font: 700 16px var(--citui-font-display); overflow-wrap: anywhere; }
+.lf .live .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--citui-ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--citui-ok) 30%, transparent); flex: none; }
+.lf .tl { list-style: none; margin: 0 0 16px; padding: 0 0 0 18px; border-left: 2px solid var(--citui-line); display: grid; gap: 12px; }
+.lf .tl li { position: relative; font-size: 14px; line-height: 1.45; }
+.lf .tl li::before { content: ""; position: absolute; left: -25px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--citui-white); border: 2px solid var(--citui-cyan-500); }
+.lf .tl li.now::before { background: var(--citui-ok); border-color: var(--citui-ok); }
+.lf .tl b { display: block; font-family: var(--citui-font-display); }
+.lf .msgs h4 { font: 700 14px var(--citui-font-display); margin: 4px 0 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--citui-muted); }
+.lf .sms { background: #e9e9eb; color: #111; border-radius: 18px 18px 18px 4px; padding: 10px 13px; font: 14px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0 0 4px; }
+.lf .smsmeta { font-size: 11.5px; color: var(--citui-muted); margin: 0 0 14px; }
+.lf .mail { border: 1px solid var(--citui-line); border-radius: 12px; overflow: hidden; font-size: 14px; }
+.lf .mail .mh { background: var(--citui-surface-2); padding: 8px 12px; font-size: 12.5px; color: var(--citui-muted); }
+.lf .mail .mh b { color: var(--citui-ink); }
+.lf .mail .mb { padding: 12px; line-height: 1.5; }
+.lf .mail .mb .mbtn { display: inline-block; margin: 6px 0; background: var(--citui-cyan-400); color: var(--citui-navy-950); font-weight: 700; padding: 9px 14px; border-radius: var(--citui-radius-pill); }
+.lf .nothing { background: var(--citui-ok-soft); color: var(--citui-ok-ink); border-radius: var(--citui-radius-sm); padding: 12px 14px; font-weight: 600; margin: 0 0 16px; }
+@container page (min-width: 900px) {
+  .lf { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 560px; max-height: 86%; border-radius: var(--citui-radius); padding: 30px 32px; }
+  .lf.wide { width: 920px; }
+  .lf .okgrid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 28px; }
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.d-only { display: none; }
+@container page (min-width: 900px) { .d-only { display: inline; } }
+
+/* ── Round 2: hero price pill + price card + FAQ accordion + one free-question field ── */
+.tool .spam { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tool .spam button { font: 600 12px var(--citui-font-text); color: var(--citui-ink-inverse); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25); border-radius: var(--citui-radius-pill); padding: 5px 10px; cursor: pointer; }
+.herocta { margin-top: 18px; align-self: flex-start; display: inline-flex; flex-direction: column; align-items: flex-start; border: 0; cursor: pointer; border-radius: var(--citui-radius-pill);
+  background: var(--citui-white); color: var(--citui-navy-900); padding: 12px 20px; font: 700 16px var(--citui-font-display); box-shadow: var(--citui-shadow-md); }
+.herocta small { font: 500 12.5px var(--citui-font-text); color: var(--citui-muted); }
+.pc { background: var(--citui-navy-900); color: var(--citui-ink-inverse); padding: 26px 16px 30px; }
+.pc .inner { max-width: 1180px; margin: 0 auto; }
+.pc .kick { font: 600 12px var(--citui-font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--citui-cyan-300); margin: 0 0 6px; }
+.card { background: var(--citui-white); color: var(--citui-ink); border-radius: var(--citui-radius); padding: 20px 18px; box-shadow: var(--citui-shadow-md); }
+.card .lbl { font: 700 15px var(--citui-font-display); margin: 0 0 6px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.card .lbl .reset { border: 0; background: none; color: var(--citui-link-ink); font: 600 13px var(--citui-font-text); text-decoration: underline; cursor: pointer; padding: 0; }
+.card .price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.card .price .big { font: 700 40px/1 var(--citui-font-display); }
+.card .price .per { color: var(--citui-muted); }
+.card .first { margin: 6px 0 2px; font-size: 14.5px; } .card .first b { color: var(--citui-ok-ink); }
+.card .min { margin: 0 0 12px; font-size: 14px; color: var(--citui-muted); }
+.card ul.facts { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 7px; font-size: 14.5px; }
+.card ul.facts li { display: flex; gap: 8px; } .card ul.facts svg { color: var(--citui-ok); }
+.card .btn-go { width: 100%; }
+.card .alt { display: block; width: 100%; margin-top: 10px; border: 0; background: none; color: var(--citui-link-ink); font: 600 14.5px var(--citui-font-text); text-decoration: underline; cursor: pointer; padding: 6px 0; }
+.card .custom-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  background: var(--citui-surface); font: 600 14.5px var(--citui-font-text); color: var(--citui-ink); cursor: pointer; }
+.card .custom-toggle .chev { transition: transform var(--citui-transition); }
+.card .custom-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+/* customizer (shared by T1 inline and T2 sheet) */
+.cz .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 10px; }
+.cz .tiers button { border: 1.5px solid var(--citui-line-strong); background: var(--citui-white); border-radius: var(--citui-radius-sm); padding: 9px 6px; cursor: pointer; text-align: center; color: var(--citui-ink); font: 600 13.5px var(--citui-font-text); }
+.cz .tiers button b { display: block; font: 700 15px var(--citui-font-display); }
+.cz .tiers button[aria-pressed="true"] { border-color: var(--citui-navy-900); background: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+.cz .mods { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+.cz .mods li label { display: flex; align-items: center; gap: 10px; padding: 8px 4px; font-size: 14.5px; cursor: pointer; border-radius: 8px; }
+.cz .mods li label:hover { background: var(--citui-surface); }
+.cz .mods input { width: 20px; height: 20px; accent-color: var(--citui-navy-900); flex: none; }
+.cz .mods .pr { margin-left: auto; color: var(--citui-muted); font-size: 13.5px; white-space: nowrap; }
+.cz .mods li.lock label { color: var(--citui-muted); cursor: default; }
+.cz .mods .grp { font: 600 11.5px var(--citui-font-text); text-transform: uppercase; letter-spacing: .06em; color: var(--citui-muted); padding: 10px 4px 2px; }
+.cz .dep { font-size: 12.5px; color: var(--citui-warn-ink); min-height: 1em; margin: 4px 0 0; }
+.cz .tot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--citui-line); font: 700 16px var(--citui-font-display); }
+.cz .note2 { font-size: 12.5px; color: var(--citui-muted); margin: 8px 0 0; line-height: 1.45; }
+.cz-inline { display: none; margin-top: 8px; padding: 4px 2px 0; }
+.cz-inline.open { display: block; }
+
+/* T2 separate sheet */
+.czs-back { position: fixed; inset: 0; z-index: 55; background: rgba(10,31,54,.5); display: none; }
+.czs { position: fixed; z-index: 56; left: 0; right: 0; bottom: 0; max-height: 92%; overflow-y: auto; background: var(--citui-white); color: var(--citui-ink); border-radius: var(--citui-radius) var(--citui-radius) 0 0; padding: 22px 18px 24px; display: none; }
+.czs.open, .czs-back.open { display: block; }
+.czs h3 { font: 700 22px var(--citui-font-display); margin: 0 0 4px; }
+.czs .x { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border: 0; background: var(--citui-surface-2); border-radius: 50%; cursor: pointer; font-size: 20px; color: var(--citui-ink); }
+.czs .tcards { display: grid; gap: 10px; margin: 14px 0; }
+.czs .tcard { border: 1.5px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm); padding: 14px; cursor: pointer; background: var(--citui-white); text-align: left; color: var(--citui-ink); font: inherit; }
+.czs .tcard[aria-pressed="true"] { border-color: var(--citui-navy-900); box-shadow: 0 0 0 2px var(--citui-navy-900) inset; }
+.czs .tcard .th { display: flex; justify-content: space-between; font: 700 17px var(--citui-font-display); }
+.czs .tcard ul { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--citui-ink); }
+.czs .tcard li.prev { list-style: none; margin-left: -18px; color: var(--citui-muted); }
+.czs .tcard .badge { font: 600 11px var(--citui-font-text); text-transform: uppercase; letter-spacing: .05em; color: var(--citui-link-ink); }
+.czs .tune { border: 0; background: none; color: var(--citui-link-ink); font: 600 14.5px var(--citui-font-text); text-decoration: underline; cursor: pointer; padding: 4px 0; }
+.czs .acts { display: grid; gap: 8px; margin-top: 14px; position: sticky; bottom: -24px; background: var(--citui-white); padding: 10px 0 4px; }
+
+/* questions: FAQ accordion + ONE free-question field */
+.faq { margin-top: 22px; }
+.faq h2 { font: 700 24px var(--citui-font-display); margin: 0 0 4px; }
+.faq p.sub2 { margin: 0 0 12px; opacity: .8; font-size: 14.5px; }
+.faq details { border-top: 1px solid rgba(255,255,255,.14); }
+.faq details:last-of-type { border-bottom: 1px solid rgba(255,255,255,.14); }
+.faq summary { list-style: none; cursor: pointer; padding: 15px 2px; font: 600 16px var(--citui-font-text); display: flex; justify-content: space-between; gap: 10px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-size: 22px; line-height: 1; color: var(--citui-cyan-300); }
+.faq details[open] summary::after { content: "−"; }
+.faq details .ans { background: var(--citui-white); color: var(--citui-ink); border-radius: var(--citui-radius-sm); padding: 14px; margin: 0 0 14px; }
+.faq .ask { margin-top: 14px; }
+.faq .ask input { background: var(--citui-white); }
+.faq .ask input:disabled { background: var(--citui-surface-2); }
+.faq .ask button { background: var(--citui-cyan-400); color: var(--citui-navy-950); }
+.faq .ask button:disabled { opacity: .45; cursor: default; }
+.faq .meta { display: flex; justify-content: space-between; gap: 8px; padding: 6px 6px 0; font-size: 12px; opacity: .85; }
+.faq .meta .cnt.over { color: var(--citui-cyan-300); font-weight: 700; }
+.faq .meta .hint { color: var(--citui-cyan-300); }
+.faq .askres { margin-top: 10px; }
+.faq .askres .echo { margin: 0; font-size: 13px; opacity: .75; }
+.faq .askres .rec { background: var(--citui-white); color: var(--citui-ink); border-radius: var(--citui-radius-sm); padding: 12px 14px; font-size: 14.5px; line-height: 1.5; }
+.faq .askres .alsos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.faq .askres .chip { font-size: 13px; padding: 7px 11px; }
+.bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 40; padding: 10px 12px; background: color-mix(in srgb, var(--citui-navy-950) 92%, transparent); display: flex; gap: 8px; align-items: center; transition: transform var(--citui-transition); }
+.bar.hide { transform: translateY(110%); }
+.bar .btn-go { flex: 1; min-height: 52px; padding: 10px 18px; }
+.bar .qbtn { display: inline-flex; align-items: center; gap: 8px; font: 700 14px var(--citui-font-display); color: var(--citui-ink); background: var(--citui-white); border: 0; border-radius: var(--citui-radius-pill); padding: 0 14px 0 10px; min-height: 52px; cursor: pointer; }
+.bar .qbtn .q { width: 28px; height: 28px; border-radius: 50%; background: var(--citui-navy-900); color: var(--citui-cyan-300); display: grid; place-items: center; }
+
+/* launch: package line + order form */
+.lf .pkg { display: flex; justify-content: space-between; gap: 10px; align-items: center; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 12px 14px; margin: 0 0 14px; font-size: 14px; }
+.lf .pkg b { font-family: var(--citui-font-display); }
+.lf .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 12px; }
+.lf .seg button { border: 1.5px solid var(--citui-line-strong); background: var(--citui-white); border-radius: var(--citui-radius-sm); padding: 10px; cursor: pointer; font: 600 14px var(--citui-font-text); color: var(--citui-ink); }
+.lf .seg button small { display: block; font-weight: 500; color: var(--citui-muted); font-size: 12px; }
+.lf .seg button[aria-pressed="true"] { border-color: var(--citui-navy-900); box-shadow: 0 0 0 2px var(--citui-navy-900) inset; }
+.lf .sum { background: var(--citui-surface-2); border-radius: var(--citui-radius-sm); padding: 12px 14px; margin: 0 0 14px; font-size: 14px; display: grid; gap: 4px; }
+.lf .sum .row { display: flex; justify-content: space-between; gap: 8px; }
+.lf .sum .row.tot { font: 700 16px var(--citui-font-display); border-top: 1px solid var(--citui-line); padding-top: 6px; margin-top: 2px; }
+.lf .form { display: grid; gap: 8px; margin: 0 0 12px; }
+.lf .form .two { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
+.lf .form label { font-size: 13px; color: var(--citui-muted); display: grid; gap: 4px; }
+.lf .form input { font: 15px var(--citui-font-text); padding: 11px 12px; border: 1px solid var(--citui-line-strong); border-radius: 12px; color: var(--citui-ink); }
+.lf .form input[aria-invalid="true"] { border-color: var(--citui-bad); }
+.lf .barion { text-align: center; padding: 10px 0; }
+.lf .barion .logo { font: 800 26px var(--citui-font-display); color: var(--citui-navy-900); letter-spacing: -.02em; margin: 6px 0 2px; }
+.lf .barion .amt { font: 700 30px var(--citui-font-display); margin: 10px 0; }
+.lf .barion .sim { font-size: 12px; color: var(--citui-muted); margin-bottom: 14px; }
+.lf .barion .btns { display: grid; gap: 8px; }
+
+@container page (min-width: 900px) {
+  .herocta { padding: 14px 24px; font-size: 18px; }
+  .pc { padding: 56px 64px; }
+  .pc .inner { display: grid; grid-template-columns: 1fr 400px; gap: 40px; align-items: start; }
+  .pc .cardcol { grid-column: 2; grid-row: 1; position: sticky; top: 20px; }
+  .faq { margin-top: 0; grid-column: 1; grid-row: 1; }
+  .faq h2 { font-size: 32px; }
+  .bar { left: auto; right: 24px; bottom: 24px; background: var(--citui-navy-950); border-radius: var(--citui-radius-pill); padding: 8px; box-shadow: var(--citui-shadow-md); }
+  .bar .btn-go { flex: none; }
+  .czs { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: 980px; max-height: 88%; border-radius: var(--citui-radius); padding: 30px 32px; }
+  .czs .tcards { grid-template-columns: repeat(3, 1fr); }
+  .czs .tunebox { columns: 2; column-gap: 28px; }
+  .czs .acts { grid-template-columns: 1fr 1fr; position: static; }
+}
+</style></head>
+<body>
+<div class="tool"><span><b>T2 — Csomagok külön lapon</b> · Melinda Apartman (valós lead, éles árlista 2026-11-05)</span>
+  <span class="spam" aria-label="Spam-próba">Korlát-próba:
+    <button type="button" data-spam="fast">2 kérdés gyorsan</button><button type="button" data-spam="long">Túl hosszú</button><button type="button" data-spam="link">Linkes</button><button type="button" data-spam="day">Napi plafon</button><button type="button" data-spam="ip">IP-plafon</button><button type="button" data-spam="reset">Újra</button></span>
+  <span class="sz" role="group" aria-label="Méret"><button type="button" data-sz="mobile">Mobil 390px</button><button type="button" data-sz="desktop">Asztali</button></span></div>
+<div class="stagewrap"><div class="stage"><div class="scroller">
+<div class="site">
+  <header><div class="brand">Melinda Apartman</div><nav><span>Képek</span><span>Szobák</span><span>Elérhetőség</span><span>Érdeklődés</span></nav></header>
+  <div class="hero"><span class="photo-note">a lead saját fotója</span><h1>Melinda Apartman</h1><p>Apartman Balatonbogláron</p></div>
+</div>
+
+<section class="pc cu" id="ar" aria-labelledby="pc-h">
+  <div class="inner">
+    <div class="cardcol">
+      <p class="kick">Az Ön honlapja</p>
+      <div class="card cz">
+        <h2 id="pc-h" class="lbl">Ahogy most látja</h2>
+        <div class="price"><span class="big"></span><span class="per">/ hó</span></div>
+        <p class="first"></p>
+        <p class="min"></p>
+        <ul class="facts"></ul>
+        <button type="button" class="btn-go js-launch" data-from="card"><span class="stack">Indítsa el<small>14 nap ingyen · kártya nélkül</small></span></button>
+        <button type="button" class="alt js-order">Megrendelem most, próba nélkül</button>
+        <button type="button" class="custom-toggle js-cz-open"><span>Csomagok és modulok</span><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>
+      </div>
+    </div>
+    <div class="faq">
+      <h2>Kérdése van?</h2>
+      <p class="sub2">Azonnal válaszolunk, a terv adataiból és a mai árlistából.</p>
+      <div class="list"></div>
+      <form class="ask" autocomplete="off"><label class="sr" for="pc-in">Saját kérdés</label><input id="pc-in" placeholder="Más kérdése van? Írja be…"><button type="submit">Kérdezem</button></form>
+      <div class="meta"><span class="hint" aria-live="polite"></span><span class="cnt"></span></div>
+      <div class="askres" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+<div class="site">
+  <section class="stub"><h2>Képek a szállásról</h2><div class="grid3"><div class="ph">a generált oldal — változatlan</div><div class="ph">fotó</div><div class="ph">fotó</div></div></section>
+  <section class="stub"><h2>Szobák, apartmanok</h2><div class="ph">a generált oldal — változatlan</div></section>
+  <section class="stub"><h2>Elérhetőség</h2><div class="ph">Balatonboglár, Erzsébet u. 72. — térkép</div></section>
+  <footer>Ez egy terv a Melinda Apartman nyilvános adataiból. · Leiratkozás · Citoviso</footer>
+</div>
+
+</div>
+<div class="bar cu"><button type="button" class="qbtn js-toq"><span class="q" aria-hidden="true">?</span>Kérdések</button>
+  <button type="button" class="btn-go js-launch" data-from="bar"><span class="stack">Indítsa el<small>14 nap ingyen<span class="d-only"> · havi <span class="js-from"></span>-tól</span></small></span></button></div>
+</div></div>
+<div class="note">Fő út: EGY gomb (Indítsa el). Másodlagos: a „Csomagok és modulok” külön lapot nyit — a három csomag kártyán egymás mellett, alatta „Testre szabom modulonként”; „Indítsa el ezzel” vagy „Kész, vissza”. Aki nem nyitja meg, annak semmi plusz döntés nem jön. A „Megrendelem most, próba nélkül” ugyanaz az indítás, rögtön fizetéssel. A kérdések: harmonika + egy szabad kérdés mező (korlát-próba fent). Alul a mérés.</div>
+<pre id="evlog"></pre>
+<script>window.VARIANT = "T2";</script>
+<script>/* Shared core for the "Kérdése van?" + one-click launch drafts (design only, not product code).
+ * Everything here is DETERMINISTIC: answers are assembled from the lead / plan / pricing facts,
+ * the free-text matcher is a keyword table — no LLM call per visit or per reply. */
+(function (root) {
+  "use strict";
+
+  // ── Facts (real sample) ─────────────────────────────────────────────────────
+  // Lead: Melinda Apartman (dev DB + prod outreach_reply 2026-10-07: she asked price + extra costs).
+  // Prices: PROD pricing_config/module_price/package_module, read 2026-11-05 (base 1 800 since 11-03).
+  // Company: LEGAL_ENTITY_* (config.legalEntity). Offer: prospect's outreach offer, 25 %.
+  var LEAD = {
+    name: "Melinda Apartman",
+    city: "Balatonboglár",
+    host: "melinda-apartman.citoviso.com",
+    phone: "+36 30 527 9272",
+    phoneMasked: "+36 30 527 ••72",
+    email: "kovacsmelinda01@hotmail.com",
+    emailMasked: "k•••••@hotmail.com",
+    offerPct: 25,
+    trialDays: 14,
+    annualFree: 2,
+    multilangFrom: 4990,
+    tiers: [
+      { id: "alap", label: "Alap", monthly: 2780,
+        items: ["Képek a szállásról", "Térkép, megközelítés", "Időpontkérés, kapcsolat (a vendég közvetlenül Önnek ír)", "Saját .hu domain (pl. melindaapartman.hu)"] },
+      { id: "ajanlott", label: "Ajánlott", monthly: 4740,
+        items: ["Szobák, apartmanok", "Amit kínál (felszereltség)", "Miért Önt válasszák", "Vendégek véleménye"] },
+      { id: "teljes", label: "Teljes", monthly: 7000,
+        items: ["Online foglalás, naptár-szinkron (Booking.com, Szállás.hu, Airbnb)", "Árak, szezonok", "Nyitvatartás, érkezés", "Heti programajánló", "Saját e-mail cím (info@…)"] },
+    ],
+    shownTier: "teljes", // the plan the visitor is looking at shows every module
+  };
+  // PROD module_price + package_module (2026-11-05). tier = lowest package containing it; lock = part of the floor.
+  var BASE = 1800;
+  var MODULES = [
+    { id: "gallery", label: "Képek a szállásról", price: 490, tier: "alap", lock: true },
+    { id: "location", label: "Térkép, megközelítés", price: 490, tier: "alap", lock: true },
+    { id: "enquiry", label: "Időpontkérés, kapcsolat", price: 0, tier: "alap", lock: true },
+    { id: "domain", label: "Saját .hu domain", price: 0, tier: "alap", lock: true },
+    { id: "rooms", label: "Szobák, apartmanok", price: 490, tier: "ajanlott" },
+    { id: "amenities", label: "Amit kínál (felszereltség)", price: 490, tier: "ajanlott" },
+    { id: "usp", label: "Miért Önt válasszák", price: 490, tier: "ajanlott" },
+    { id: "reviews", label: "Vendégek véleménye", price: 490, tier: "ajanlott" },
+    { id: "booking", label: "Online foglalás, naptár-szinkron", price: 790, tier: "teljes", requires: "pricing" },
+    { id: "pricing", label: "Árak, szezonok", price: 490, tier: "teljes" },
+    { id: "hours", label: "Nyitvatartás, érkezés", price: 100, tier: "teljes" },
+    { id: "poi", label: "Heti programajánló", price: 490, tier: "teljes" },
+    { id: "email", label: "Saját e-mail cím (info@…)", price: 390, tier: "teljes" },
+  ];
+  var TIER_ORDER = ["alap", "ajanlott", "teljes"];
+  function tierModules(id) { var lim = TIER_ORDER.indexOf(id); return MODULES.filter(function (m) { return TIER_ORDER.indexOf(m.tier) <= lim; }).map(function (m) { return m.id; }); }
+  function priceOf(ids) { return BASE + MODULES.reduce(function (a, m) { return a + (ids.indexOf(m.id) >= 0 ? m.price : 0); }, 0); }
+  function tierOf(ids) { for (var i = 0; i < TIER_ORDER.length; i++) { var t = tierModules(TIER_ORDER[i]); if (t.length === ids.length && t.every(function (x) { return ids.indexOf(x) >= 0; })) return TIER_ORDER[i]; } return "egyedi"; }
+  // SEL: null = the visitor never touched the package picker (default path, no extra decision).
+  var SEL = { touched: false, modules: tierModules("teljes") };
+  function selLabel() { var t = tierOf(SEL.modules); return t === "egyedi" ? "Egyedi összeállítás" : tier(t).label; }
+  function selPrice() { return priceOf(SEL.modules); }
+
+  var COMPANY = {
+    brand: "Citoviso",
+    name: "Olasz Ferenc e.v.",
+    address: "2100 Gödöllő, Klebelsberg Kunó utca 6. 2.",
+    reg: "62588818",
+    tax: "92227011-1-33",
+    email: "olasz.ferenc@citoviso.com",
+  };
+
+  function ft(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; }
+  function tier(id) { for (var i = 0; i < LEAD.tiers.length; i++) if (LEAD.tiers[i].id === id) return LEAD.tiers[i]; return null; }
+  function disc(n) { return n * (100 - LEAD.offerPct) / 100; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  var MONTHS = ["jan.", "febr.", "márc.", "ápr.", "máj.", "jún.", "júl.", "aug.", "szept.", "okt.", "nov.", "dec."];
+  function hDate(d) { return MONTHS[d.getMonth()] + " " + d.getDate() + "."; }
+  // Day with a case suffix, Hungarian rules: "nov. 18-ig", "nov. 15-én", "nov. 18-án".
+  function hDay(d, suf) {
+    var n = d.getDate(), s = suf;
+    if (suf === "an") { var A = { 1: "jén", 2: "án", 3: "án", 4: "én", 5: "én", 6: "án", 7: "én", 8: "án", 9: "én", 0: n === 10 ? "én" : "án" }; s = A[n % 10]; }
+    return MONTHS[d.getMonth()] + " " + n + "-" + s;
+  }
+  // Day 1 = start day (ADR-0417), so the last trial day is start + (days - 1).
+  function trialDates(start) {
+    var s = start || new Date();
+    return { start: s, last: addDays(s, LEAD.trialDays - 1), t3: addDays(s, LEAD.trialDays - 4), t1: addDays(s, LEAD.trialDays - 2) };
+  }
+
+  // ── Answer set: one category = one fact-built answer ────────────────────────
+  // auto: may this category be sent AUTOMATICALLY as a reply to an inbound SMS / e-mail (proposal).
+  var Q = [
+    { id: "ar", q: "Mennyibe kerül?", auto: true, kw: ["mennyibe", "mennyi", "ara ", " ar ", "arak", "araz", "kerul", "dij", "havidij", "forint", " ft", "fizetni", "osszeg", "költ"],
+      html: function () {
+        var shown = { label: SEL.touched ? selLabel() : tier(LEAD.shownTier).label, monthly: selPrice() }, alap = tier("alap");
+        return "<p>" + (SEL.touched ? "Az Ön választása" : "Az oldal, ahogy most látja") + " (<b>" + shown.label + "</b>): <b>" + ft(shown.monthly) + "/hó</b>. " +
+          "A legkisebb csomag (<b>Alap</b>) <b>" + ft(alap.monthly) + "/hó</b>.</p>" +
+          "<p>Az első havidíj <b>−" + LEAD.offerPct + "%</b>: " + ft(disc(shown.monthly)) + ", illetve " + ft(disc(alap.monthly)) + ". " +
+          "Éves fizetésnél " + LEAD.annualFree + " hónap ingyen.</p>" +
+          "<p>Most nem kell csomagot választania: az oldal " + LEAD.trialDays + " napig ingyen fut élesben, a csomagot a próba végén választja ki.</p>";
+      },
+      sms: function () {
+        var shown = tier(LEAD.shownTier), alap = tier("alap");
+        return "A honlap, ahogy látta: " + ft(shown.monthly) + "/hó (a legkisebb csomag " + ft(alap.monthly) + "), az első hónap −" + LEAD.offerPct + "%.";
+      } },
+    { id: "koltseg", q: "Van további költség?", auto: true, kw: ["tovabbi", "rejtett", "fenntart", "uzemelte", "tarhely", "plusz", "extra", "egyeb kolts", "koltseg", "evente", "egyszeri"],
+      html: function () {
+        return "<p><b>Nincs.</b> Nincs beállítási díj, nincs külön tárhely- vagy üzemeltetési díj. A saját <b>.hu domain</b> minden csomagban benne van.</p>" +
+          "<p>Amit fizet, az a havidíj. Egyetlen külön tétel van, és csak ha kéri: a többnyelvű oldal egyszeri díja (" + ft(LEAD.multilangFrom) + "-tól).</p>" +
+          "<p>A " + LEAD.trialDays + " napos próba alatt semmit nem fizet, bankkártyát sem kérünk.</p>";
+      },
+      sms: function () { return "Más díj nincs, a .hu domain is benne van."; } },
+    { id: "benne", q: "Mi van benne?", auto: true, kw: ["mi van benne", "mit tartalmaz", "tartalmaz", "funkci", "modul", "mit kapok", "mit tud", "foglalas", "naptar", "csomag"],
+      html: function () {
+        var out = "", acc = [];
+        for (var i = 0; i < LEAD.tiers.length; i++) {
+          var t = LEAD.tiers[i];
+          out += "<div class='tierrow'><div class='tierhead'><b>" + t.label + "</b><span>" + ft(t.monthly) + "/hó</span></div><ul>" +
+            (i ? "<li class='prev'>Minden, ami az " + LEAD.tiers[i - 1].label + " csomagban</li>" : "") +
+            t.items.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+          acc = acc.concat(t.items);
+        }
+        return "<p>Amit most lát, az a <b>Teljes</b> csomag. A három csomag egymásra épül:</p>" + out;
+      },
+      sms: function () { return "A csomagok tartalma a linken, a „Mi van benne?” alatt."; } },
+    { id: "utana", q: "Mi lesz a 14 nap után?", auto: false, kw: ["utana", "proba vege", "14 nap", "lejar", "letelik", "probaido", "ingyenes idoszak"],
+      html: function () {
+        var d = trialDates();
+        return "<p>Ha ma elindítja, az oldal <b>" + hDay(d.last, "ig") + "</b> ingyen fut élesben. A vége előtt 3 nappal és 1 nappal SMS-ben és e-mailben küldünk egy <b>fizetési linket</b>: ott választ csomagot, és kártyával fizet.</p>" +
+          "<p>Ha nem fizet, az oldal leáll. <b>Semmit nem terhelünk</b>, nem jön számla, és nem kell lemondania. Amit beállított, megmarad, ha később mégis folytatná.</p>";
+      } },
+    { id: "lemond", q: "Lemondható?", auto: false, kw: ["lemond", "felmond", "kotelez", "huseg", "szerzodes", "kilep", "megszuntet", "le lehet mondani"],
+      html: function () {
+        return "<p><b>Igen, bármikor.</b> Nincs hűségidő. A belépés után a „Modulok” fülön az „Előfizetés lemondása” gombbal mondhatja le, vagy egy e-maillel.</p>" +
+          "<p>A lemondás a már kifizetett időszak végén lép életbe, addig az oldal változatlanul működik. A próba alatt nincs mit lemondani: ha nem fizet, az oldal magától leáll.</p>";
+      } },
+    { id: "kik", q: "Kik Önök? Miért kaptam?", auto: false, kw: ["kik", "ki maguk", "kicsoda", "ceg", "adoszam", "honnan", "miert kaptam", "egyeztet", "ki kuldte", "mi ez", "csalas", "atveres", "megbizhat", "valodi", "szemely"],
+      html: function () {
+        return "<p>A <b>" + COMPANY.brand + "</b> szállásoknak készít honlapot. Ezt a tervet senki nem rendelte meg Ön helyett: a Google Térképen és a szállásportálokon <b>nyilvánosan elérhető adatai</b> alapján mi készítettük el, hogy lássa, hogyan nézne ki.</p>" +
+          "<dl class='co'><dt>Szolgáltató</dt><dd>" + COMPANY.name + "</dd><dt>Cím</dt><dd>" + COMPANY.address + "</dd><dt>Nyilvántartási szám</dt><dd>" + COMPANY.reg + "</dd><dt>Adószám</dt><dd>" + COMPANY.tax + "</dd><dt>E-mail</dt><dd>" + COMPANY.email + "</dd></dl>" +
+          "<p class='small'>Az adatokat a NAV és az e-cégjegyzék nyilvános keresőjében ellenőrizheti. Mi soha nem kérünk jelszót, bankkártya-adatot SMS-ben vagy e-mailben.</p>";
+      } },
+    { id: "nemkerem", q: "Mi történik, ha nem kérem?", auto: false, kw: ["ha nem kerem", "ha nem kell", "nem rendeltem", "nem rendelt", "kotelezettseg", "ha nem fizetek", "nem kerem"],
+      html: function () {
+        return "<p><b>Semmi.</b> Nem kell lemondania, nem terhelünk, nem jön számla. A terv megnézése semmire nem kötelez.</p>" +
+          "<p>Ha nem szeretne több üzenetet tőlünk, válaszoljon az SMS-re vagy az e-mailre egy szóval: <b>NEM</b>. Utána többet nem keressük.</p>";
+      } },
+    { id: "beallit", q: "Kell valamit beállítanom?", auto: false, kw: ["beallit", "szerkeszt", "modosit", "kep", "szoveg", "csere", "kicserel", "atir", "javit", "sajat foto", "mit kell tennem", "dolgom"],
+      html: function () {
+        return "<p><b>Nem.</b> Az oldal úgy indul el, ahogy most látja, a saját címén. Nincs mit beállítania ahhoz, hogy működjön.</p>" +
+          "<p>Ha később szeretne képet, szöveget vagy árat cserélni, azt a kezelőfelületen teheti meg, de ez nem feltétel. A vendégek érdeklődése a kezdetektől közvetlenül Önhöz érkezik.</p>";
+      } },
+    { id: "telefon", q: "Felhívnának?", auto: false, hidden: true, kw: ["visszahiv", "hivjon", "hivjanak", "felhiv", "telefonal", "beszelni", "beszelhet", "hivhat"],
+      html: function () {
+        return "<p>Telefonos ügyintézés nincs, de nem is kell rá várnia: a leggyakoribb kérdésekre a terve „Kérdése van?” részén azonnal megkapja a választ. Ha a kérdése nincs ott, írja be: rögzítjük, és a válaszkészletünk bővül vele.</p>";
+      } },
+  ];
+
+  // ── Deterministic matcher ───────────────────────────────────────────────────
+  function norm(s) {
+    return (" " + String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ") + " ");
+  }
+  // GSM-7 fold: Hungarian accents dropped (ő/ű/á… → o/u/a), typographic dashes/quotes to ASCII.
+  function gsm7(s) {
+    return String(s || "").replace(/[–—]/g, "-").replace(/[„”“]/g, '"').replace(/[’‘]/g, "'").replace(/…/g, "...")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function matchQuestion(text) {
+    var t = norm(text), hits = [];
+    for (var i = 0; i < Q.length; i++) {
+      var score = 0;
+      for (var k = 0; k < Q[i].kw.length; k++) {
+        // A leading/trailing space in a keyword = word boundary on that side; otherwise a stem match.
+        var kw = Q[i].kw[k], key = (/^\s/.test(kw) ? " " : "") + norm(kw).trim() + (/\s$/.test(kw) ? " " : "");
+        if (t.indexOf(key) >= 0) score++;
+      }
+      if (score) hits.push({ id: Q[i].id, score: score });
+    }
+    hits.sort(function (a, b) { return b.score - a.score; });
+    return hits;
+  }
+
+  // Inbound reply: refusal / not-concerned signals WIN over any question (rule 2026-10-26:
+  // a refuser never gets another message; doubtful = we do not send).
+  var NEG = [
+    /nem ker/, /nem kerj/, /nem tart(unk|ok|ott)? .{0,10}igeny/, /nem szeretn/, /nem (elek|elunk|kivanok elni|kivanunk elni)/, /nincs (ra )?szukseg/,
+    /ne zaklas/, /ne bombaz/, /ne keress/, /ne irjon/, /torol/, /leirat/, /nem az en/, /nem a mi/, /semmi kozom/, /rossz helyre/, /ne nekem/,
+    /nem nekem/, /megszun/, /eladtam/, /nem mukod/, /zarva/, /zarvatart/, /van .{0,20}(honlap|weboldal|oldal)/, /informatikus/, /elegedett/,
+    /megelegedes/, /jo a mostani/, /nem aktualis/, /nem rendelt/, /nem hasznalhat/, /nem tervez/, /nem honlapot/, /koszonom,? de/, /de nem\b/, /^ ?nem\.? ?$/,
+    /automatikus valasz/, /out of office/, /szabadsag/,
+  ];
+  function classifyReply(subject, body) {
+    var t = norm(subject + " " + body).replace(/ +/g, " ");
+    var raw = String(subject + " " + body).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    for (var i = 0; i < NEG.length; i++) if (NEG[i].test(t) || NEG[i].test(raw)) return { action: "block", reason: NEG[i].source, cats: [] };
+    var hits = matchQuestion(body);
+    if (!hits.length) return { action: "record", cats: [] };
+    var cats = hits.map(function (h) { return h.id; });
+    var allAuto = cats.every(function (c) { return byId(c).auto; });
+    return { action: allAuto ? "auto" : "suggest", cats: cats };
+  }
+  function byId(id) { for (var i = 0; i < Q.length; i++) if (Q[i].id === id) return Q[i]; return null; }
+
+  // Reply text for an inbound question, built only from the answer set (no free composition).
+  function replySms(cats) {
+    var parts = [];
+    ["ar", "koltseg", "benne"].forEach(function (c) { if (cats.indexOf(c) >= 0) parts.push(byId(c).sms()); });
+    if (!parts.length) { // non-auto category: its first answer paragraph, plain text
+      var first = (byId(cats[0]).html().match(/<p>([\s\S]*?)<\/p>/) || ["", ""])[1];
+      parts.push(first.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
+    }
+    return "Jó napot! " + parts.join(" ") + " " + LEAD.trialDays + " napig ingyen fut, kártya nélkül, egy gombbal indul: " + LEAD.host + "/?k=" + cats[0] + " – Citoviso";
+  }
+  function smsSegments(text) {
+    var gsm = /^[\n\r !"#$%&'()*+,\-.\/0-9:;<=>?@A-Z\[\\\]^_a-z{|}~£¥èéùìòÇØøÅåÄÖÑÜ§¿äöñüà€]*$/.test(text);
+    var len = text.length, per = gsm ? (len <= 160 ? 160 : 153) : (len <= 70 ? 70 : 67);
+    return { enc: gsm ? "GSM-7" : "UCS-2", chars: len, parts: Math.ceil(len / per) };
+  }
+
+  // ── Contact normalisation (mirrors the trial form's rules: HU mobile → E.164) ─
+  function normPhone(s) {
+    var d = String(s || "").replace(/[^\d+]/g, "");
+    if (/^\+36/.test(d)) d = d.slice(3); else if (/^0036/.test(d)) d = d.slice(4); else if (/^36/.test(d) && d.length === 11) d = d.slice(2); else if (/^06/.test(d)) d = d.slice(2);
+    if (!/^(20|30|31|50|70)\d{7}$/.test(d)) return null;
+    return "+36 " + d.slice(0, 2) + " " + d.slice(2, 5) + " " + d.slice(5);
+  }
+  function normEmail(s) {
+    var e = String(s || "").trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(e) ? e : null;
+  }
+
+  // ── Measurement stub (the real page would POST mock_event; here: a visible log) ─
+  var EVENTS = [];
+  function track(name, data) {
+    EVENTS.push({ t: new Date().toISOString().slice(11, 19), name: name, data: data || {} });
+    var el = root.document && root.document.getElementById("evlog");
+    if (el) el.textContent = EVENTS.map(function (e) { return e.t + "  " + e.name + (Object.keys(e.data).length ? " " + JSON.stringify(e.data) : ""); }).join("\n");
+  }
+
+  root.CIT = { MODULES: MODULES, BASE: BASE, tierModules: tierModules, priceOf: priceOf, tierOf: tierOf, SEL: SEL, selLabel: selLabel, selPrice: selPrice, LEAD: LEAD, COMPANY: COMPANY, Q: Q, byId: byId, ft: ft, esc: esc, disc: disc, tier: tier, hDate: hDate, hDay: hDay, trialDates: trialDates,
+    norm: norm, matchQuestion: matchQuestion, classifyReply: classifyReply, replySms: replySms, smsSegments: smsSegments, gsm7: gsm7,
+    normPhone: normPhone, normEmail: normEmail, track: track, EVENTS: EVENTS };
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>/* Question engine for the price card: the FAQ accordion and the ONE free-question field share it.
+ * Deterministic answers from core2.js; NO LLM/API call. Includes the anti-spam guard
+ * (the real one runs server-side per prospect token + per IP; this is the same rule set, simulated). */
+(function (root) {
+  "use strict";
+  var C = root.CIT;
+
+  // ── Anti-spam limits (proposal; see report for the reasoning) ───────────────
+  var LIMITS = {
+    maxLen: 300,          // chars per message — the longest real inbound question (Melinda) was 205
+    minGapSec: 4,         // between two free-text messages from one visitor
+    perDay: 100,          // free-text messages per prospect token per calendar day
+    perIpHour: 300,       // server-side only: questions per IP per hour across ALL tokens (scraper guard)
+    unmatchedPerDay: 5,   // stored ("recorded") unmatched questions per token per day — the only thing we persist
+  };
+  var URLISH = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(hu|com|net|org|ru|io|xyz|info|top)\b|@[a-z0-9-]+\.|(\+?\d[\d\s\-\/]{7,}\d))/i;
+
+  var clockOffset = 0; // design-tool time travel (spam test); the real guard uses server time
+  function now() { return Date.now() + clockOffset; }
+
+  var state = { history: [], free: [], day: [], unmatched: 0, ipHour: 0, coolUntil: 0, lastNorm: null, blockedDay: false };
+
+  function guard(text) {
+    var t = String(text || "").trim(), n = now();
+    if (!t) return { ok: false, code: "empty" };
+    if (t.length > LIMITS.maxLen) return { ok: false, code: "long", msg: "Legfeljebb " + LIMITS.maxLen + " karakter. Írja meg röviden, mire kíváncsi." };
+    if (state.blockedDay || state.day.length >= LIMITS.perDay) { state.blockedDay = true; return { ok: false, code: "day" }; }
+    if (state.ipHour >= LIMITS.perIpHour) return { ok: false, code: "ip" };
+    var last = state.free.length ? state.free[state.free.length - 1] : 0;
+    if (last && n - last < LIMITS.minGapSec * 1000) return { ok: false, code: "gap", wait: Math.ceil((LIMITS.minGapSec * 1000 - (n - last)) / 1000) };
+    var nt = C.norm(t);
+    if (nt === state.lastNorm) return { ok: false, code: "dup" };
+    if (URLISH.test(t)) return { ok: "nolink" };
+    return { ok: true };
+  }
+  function count() {
+    var n = now();
+    state.free.push(n); state.day.push(n); state.ipHour++;
+  }
+
+  var SMALLTALK = [
+    { re: /^(koszon|kosz|koszi|thx|thanks|kosz szepen|koszonom szepen)/, a: "Szívesen! Ha más kérdése van, írja be nyugodtan." },
+    { re: /^(szia|hello|helo|jo napot|udv|udvozlom|jo reggelt|jo estet)\b/, a: "Jó napot! Miben segíthetek? Írja be a kérdését, vagy válasszon lent." },
+  ];
+
+  // One entry point for chips and free text. Returns the bot reply object (rendered by the UI).
+  function ask(input) {
+    if (input.id) {           // chip: always allowed, never stored (just a measured event)
+      state.history.push({ who: "me", text: C.byId(input.id).q });
+      var r0 = { who: "bot", kind: "answer", id: input.id };
+      state.history.push(r0); C.track("ask_q", { q: input.id, via: input.via || "chip" });
+      return r0;
+    }
+    var g = guard(input.text);
+    if (g.ok === false) { C.track("ask_blocked", { code: g.code }); return { who: "sys", kind: "blocked", code: g.code, msg: g.msg, wait: g.wait }; }
+    var text = input.text.trim();
+    count();
+    state.lastNorm = C.norm(text);
+    state.history.push({ who: "me", text: text });
+    var r;
+    if (g.ok === "nolink") r = { who: "bot", kind: "nolink" };
+    else {
+      var plain = C.norm(text).trim(), st = null;
+      for (var i = 0; i < SMALLTALK.length; i++) if (SMALLTALK[i].re.test(plain)) { st = SMALLTALK[i]; break; }
+      var hits = C.matchQuestion(text);
+      if (hits.length) r = { who: "bot", kind: "answer", id: hits[0].id, also: hits.slice(1, 3).map(function (h) { return h.id; }) };
+      else if (st) r = { who: "bot", kind: "smalltalk", text: st.a };
+      else if (state.unmatched < LIMITS.unmatchedPerDay) { state.unmatched++; r = { who: "bot", kind: "recorded" }; }
+      else r = { who: "bot", kind: "notrecorded" };
+    }
+    state.history.push(r);
+    C.track("ask_free", { kind: r.kind, q: r.id || null });
+    return r;
+  }
+
+  C.CHAT = { LIMITS: LIMITS, state: state, ask: ask, guard: guard, now: now,
+    timeTravel: function (sec) { clockOffset += sec * 1000; },
+    simulateIpCap: function () { state.ipHour = LIMITS.perIpHour; },
+    reset: function () { state.history.length = 0; state.free.length = 0; state.day.length = 0; state.unmatched = 0; state.ipHour = 0; state.coolUntil = 0; state.lastNorm = null; state.blockedDay = false; } };
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>/* Round-2 UI: price card + FAQ accordion + ONE free-question field + package customizer (T1 inline / T2 sheet) + launch (trial | direct order). */
+(function () {
+  "use strict";
+  var C = window.CIT, L = C.LEAD, H = C.CHAT, V = window.VARIANT || "T1";
+  var CHECK = '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
+  var GLOBE = '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M2.5 10h15M10 2.5c2.2 2.4 2.2 12.6 0 15M10 2.5c-2.2 2.4-2.2 12.6 0 15"/></svg>';
+  var CHEV = '<svg class="ico chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg>';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function isDesk() { return $(".stage").getAttribute("data-size") === "desktop"; }
+
+  // ── size switch ──
+  function initSize() {
+    var stage = $(".stage"), btns = $$(".sz button");
+    function set(sz) { stage.setAttribute("data-size", sz); btns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-sz") === sz)); }); }
+    btns.forEach(function (b) { b.addEventListener("click", function () { set(b.getAttribute("data-sz")); }); });
+    set(window.innerWidth < 700 ? "mobile" : "desktop");
+    // Fit the stage into the viewport below the (tall, wrapping) tool bar, so fixed sheets are fully visible.
+    function fit() { var t = $(".tool").offsetHeight; stage.style.height = Math.max(560, Math.min(860, window.innerHeight - t - 24)) + "px"; }
+    fit(); window.addEventListener("resize", fit);
+  }
+
+  // ── price card ──
+  function renderCard() {
+    var p = C.selPrice(), alap = C.tier("alap");
+    $(".card .lbl").innerHTML = (C.SEL.touched ? "Az Ön választása: " + C.esc(C.selLabel()) + ' <button type="button" class="reset js-reset">Alaphelyzet</button>' : "Ahogy most látja");
+    $(".card .big").textContent = C.ft(p);
+    $(".card .first").innerHTML = "Az első hónap: <b>" + C.ft(C.disc(p)) + "</b> (−" + L.offerPct + "%)";
+    $(".card .min").innerHTML = C.SEL.touched ? "A csomag a próbába és a fizetési linkbe is így megy." : "A legkisebb csomag " + C.ft(alap.monthly) + "/hó.";
+    $$(".js-from").forEach(function (e) { e.textContent = C.ft(alap.monthly); });
+  }
+
+  // ── customizer (shared) ──
+  function czHtml(withTiers) {
+    var t = C.tierOf(C.SEL.modules), groups = { alap: "Alap — mindig benne", ajanlott: "Ajánlott csomagban", teljes: "Teljes csomagban" }, last = null, out = "";
+    if (withTiers) out += '<div class="tiers" role="group" aria-label="Csomag">' + ["alap", "ajanlott", "teljes"].map(function (id) {
+      return '<button type="button" data-tier="' + id + '" aria-pressed="' + (t === id) + '"><b>' + C.tier(id).label + "</b>" + C.ft(C.priceOf(C.tierModules(id))) + "</button>"; }).join("") + "</div>";
+    out += '<ul class="mods">';
+    C.MODULES.forEach(function (m) {
+      if (m.tier !== last) { out += '<li class="grp">' + groups[m.tier] + "</li>"; last = m.tier; }
+      var on = C.SEL.modules.indexOf(m.id) >= 0;
+      out += '<li class="' + (m.lock ? "lock" : "") + '"><label><input type="checkbox" data-mod="' + m.id + '"' + (on ? " checked" : "") + (m.lock ? " disabled" : "") + ">" + C.esc(m.label) +
+        '<span class="pr">' + (m.price ? "+" + C.ft(m.price) : "benne") + "</span></label></li>";
+    });
+    out += '</ul><p class="dep" aria-live="polite"></p><div class="tot"><span>' + C.esc(C.selLabel()) + "</span><span>" + C.ft(C.selPrice()) + "/hó</span></div>";
+    return out;
+  }
+  function bindCz(root, onChange) {
+    root.addEventListener("click", function (e) {
+      var tb = e.target.closest("[data-tier]");
+      if (tb) { C.SEL.modules = C.tierModules(tb.getAttribute("data-tier")); C.SEL.touched = true; C.track("pkg_tier", { tier: tb.getAttribute("data-tier") }); onChange(""); }
+    });
+    root.addEventListener("change", function (e) {
+      var cb = e.target.closest("[data-mod]"); if (!cb) return;
+      var id = cb.getAttribute("data-mod"), mods = C.SEL.modules.slice(), msg = "";
+      if (cb.checked) { mods.push(id); if (id === "booking" && mods.indexOf("pricing") < 0) { mods.push("pricing"); msg = "Az online foglaláshoz az Árak, szezonok modul is kell, bekapcsoltuk."; } }
+      else { mods = mods.filter(function (x) { return x !== id; }); if (id === "pricing" && mods.indexOf("booking") >= 0) { mods = mods.filter(function (x) { return x !== "booking"; }); msg = "Az Árak nélkül az online foglalás sem működik, azt is kikapcsoltuk."; } }
+      C.SEL.modules = mods; C.SEL.touched = true; C.track("pkg_module", { id: id, on: cb.checked }); onChange(msg);
+    });
+  }
+  // T1: inline drop-down inside the card
+  function initT1() {
+    var box = $(".cz-inline"), tg = $(".js-cz-toggle");
+    function draw(msg) { box.innerHTML = czHtml(true) + '<p class="note2">Ha nem nyúl hozzá, nincs teendője: a próbában a teljes oldal fut, csomagot a fizetési linken választ.</p>'; if (msg) $(".dep", box).textContent = msg; renderCard(); }
+    tg.addEventListener("click", function () { var o = !box.classList.contains("open"); box.classList.toggle("open", o); tg.setAttribute("aria-expanded", String(o)); if (o) { draw(""); C.track("pkg_open", { ui: "inline" }); } });
+    bindCz(box, draw);
+    C.redrawCz = function () { if (box.classList.contains("open")) draw(""); };
+  }
+  // T2: separate sheet with tier cards + optional fine-tuning
+  function initT2() {
+    var back = document.createElement("div"), sh = document.createElement("div"), tune = false;
+    back.className = "czs-back"; sh.className = "czs cu cz"; sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true");
+    $(".stage").appendChild(back); $(".stage").appendChild(sh);
+    function draw(msg) {
+      var t = C.tierOf(C.SEL.modules);
+      sh.innerHTML = '<button class="x js-czs-close" type="button" aria-label="Bezárás">×</button><h3>Csomagok és modulok</h3>' +
+        '<p style="margin:0;color:var(--citui-muted);font-size:14.5px">Nem kötelező. Ha nem választ, a próbában a teljes oldal fut, és csomagot a fizetési linken választ.</p><div class="tcards">' +
+        ["alap", "ajanlott", "teljes"].map(function (id, i) { var tr = C.tier(id);
+          return '<button type="button" class="tcard" data-tier="' + id + '" aria-pressed="' + (t === id) + '"><div class="th"><span>' + tr.label + "</span><span>" + C.ft(C.priceOf(C.tierModules(id))) + '/hó</span></div>' +
+            (id === "teljes" ? '<span class="badge">Ahogy most látja</span>' : "") + "<ul>" + (i ? '<li class="prev">Minden, ami az ' + C.tier(["alap", "ajanlott"][i - 1]).label + " csomagban, és:</li>" : "") +
+            tr.items.map(function (x) { return "<li>" + C.esc(x) + "</li>"; }).join("") + "</ul></button>"; }).join("") + "</div>" +
+        '<button type="button" class="tune js-tune" aria-expanded="' + tune + '">' + (tune ? "Modulok elrejtése" : "Testre szabom modulonként") + "</button>" +
+        (tune ? '<div class="tunebox">' + czHtml(false) + "</div>" : '<div class="tot" style="display:flex;justify-content:space-between;margin-top:10px;font:700 16px var(--citui-font-display)"><span>' + C.esc(C.selLabel()) + "</span><span>" + C.ft(C.selPrice()) + "/hó</span></div>") +
+        '<div class="acts"><button type="button" class="btn-ghost js-czs-close">Kész, vissza</button><button type="button" class="btn-go js-launch" data-from="pkg-sheet"><span class="stack">Indítsa el ezzel<small>14 nap ingyen · kártya nélkül</small></span></button></div>';
+      if (msg) { var d = $(".dep", sh); if (d) d.textContent = msg; }
+      renderCard();
+    }
+    function open() { draw(""); back.classList.add("open"); sh.classList.add("open"); C.track("pkg_open", { ui: "sheet" }); }
+    function close() { back.classList.remove("open"); sh.classList.remove("open"); }
+    $(".js-cz-open").addEventListener("click", open);
+    back.addEventListener("click", close);
+    sh.addEventListener("click", function (e) { if (e.target.closest(".js-czs-close")) close(); if (e.target.closest(".js-tune")) { tune = !tune; draw(""); } if (e.target.closest(".js-launch")) close(); });
+    bindCz(sh, draw);
+    C.openCz = open; C.redrawCz = function () { if (sh.classList.contains("open")) draw(""); };
+  }
+
+  // ── questions: FAQ accordion + ONE free-question field (same engine, no chat) ──
+  var list, form, inp, cnt, hint, res, timer;
+  function answerHtml(id) {
+    return '<div class="ans">' + C.byId(id).html() + '<div class="then"><button class="btn-go js-launch" data-from="ans-' + id + '" type="button">Indítsa el</button><span style="color:var(--citui-muted);font-size:13px">' + L.trialDays + " nap ingyen, kártya nélkül</span></div></div>";
+  }
+  function openQ(id, via) {
+    var d = $('details[data-q="' + id + '"]', list); if (!d) return;
+    d.open = true; d.scrollIntoView({ block: "start", behavior: "smooth" });
+    H.ask({ id: id, via: via || "faq" });
+  }
+  function topChips() {
+    return C.Q.filter(function (q) { return !q.hidden; }).slice(0, 3).map(function (q) { return '<button type="button" class="chip js-q" data-q="' + q.id + '">' + q.q + "</button>"; }).join("");
+  }
+  function say(html) { res.innerHTML = '<div class="rec">' + html + "</div>"; }
+  function lockInput(sec, text) {
+    clearInterval(timer); inp.disabled = true; $("button[type=submit]", form).disabled = true; var left = sec;
+    function tick() { hint.textContent = text.replace("{n}", left); if (left-- <= 0) { clearInterval(timer); inp.disabled = false; $("button[type=submit]", form).disabled = false; hint.textContent = ""; } }
+    tick(); timer = setInterval(tick, 1000);
+  }
+  function updCnt() { var n = inp.value.length; cnt.textContent = n + " / " + H.LIMITS.maxLen; cnt.classList.toggle("over", n > H.LIMITS.maxLen); }
+  function send(text) {
+    var r = H.ask({ text: text });
+    hint.textContent = "";
+    if (r.who === "sys") {
+      if (r.code === "empty") inp.focus();
+      else if (r.code === "long") { hint.textContent = r.msg; cnt.classList.add("over"); }
+      else if (r.code === "gap") lockInput(r.wait, "Egy pillanat… {n} mp");
+      else if (r.code === "dup") { hint.textContent = "Erre az imént válaszoltunk, fent nyitva látja."; inp.value = ""; updCnt(); }
+      else if (r.code === "day" || r.code === "ip") {
+        say(r.code === "day" ? "Mára elérte a " + H.LIMITS.perDay + " kérdést. A fenti kérdésekre továbbra is azonnal válaszolunk, holnap újra írhat." : "Most túl sok kérdés érkezik erről a hálózatról. A fenti kérdésekre addig is válaszolunk, később újra írhat.");
+        inp.disabled = true; $("button[type=submit]", form).disabled = true; inp.placeholder = "Mára lezárva — válasszon a fenti kérdések közül";
+      }
+      return false;
+    }
+    inp.value = ""; updCnt();
+    if (r.kind === "answer") { res.innerHTML = '<p class="echo">„' + C.esc(text) + '”</p>'; openQ(r.id, "text"); }
+    else if (r.kind === "smalltalk") say(r.text);
+    else if (r.kind === "nolink") say("Biztonsági okból linket, e-mail-címet vagy telefonszámot nem fogadunk a kérdésben. Írja meg szavakkal, mire kíváncsi.");
+    else if (r.kind === "recorded") say("<b>Erre most nem tudunk pontos választ adni.</b> Rögzítettük a kérdését, és a válaszaink bővülnek vele. Addig ezek segíthetnek:<div class='alsos'>" + topChips() + "</div>");
+    else say("Erre most nem tudunk pontos választ adni. Ma már több kérdést rögzítettünk Öntől, ezt nem tudjuk felvenni. A leggyakoribb kérdések:<div class='alsos'>" + topChips() + "</div>");
+    return true;
+  }
+  function initAsk() {
+    list = $(".faq .list"); form = $(".faq form.ask"); inp = $("input", form); cnt = $(".faq .cnt"); hint = $(".faq .hint"); res = $(".faq .askres");
+    list.innerHTML = C.Q.filter(function (q) { return !q.hidden; }).map(function (q) { return '<details data-q="' + q.id + '"><summary>' + q.q + "</summary>" + answerHtml(q.id) + "</details>"; }).join("");
+    $$("details", list).forEach(function (d) { d.addEventListener("toggle", function () { if (d.open) { C.track("ask_q", { q: d.getAttribute("data-q"), via: "faq" }); $$("details", list).forEach(function (o) { if (o !== d) o.open = false; }); } }); });
+    inp.setAttribute("maxlength", String(H.LIMITS.maxLen + 50));
+    form.addEventListener("submit", function (e) { e.preventDefault(); send(inp.value); });
+    inp.addEventListener("input", function () { updCnt(); if (!cnt.classList.contains("over")) hint.textContent = ""; });
+    updCnt();
+  }
+
+  // ── launch: trial | order ──
+  var lback, sheet, st = { phone: L.phone, email: L.email, period: "havi", bill: { name: "", zip: "", city: "", street: "", tax: "" } };
+  function lclose() { lback.classList.remove("open"); sheet.classList.remove("open"); sheet.classList.remove("wide"); }
+  function pkgLine(mode) {
+    if (mode === "trial") return C.SEL.touched
+      ? '<div class="pkg"><span>Csomag: <b>' + C.esc(C.selLabel()) + "</b> · " + C.ft(C.selPrice()) + '/hó<br><span style="color:var(--citui-muted)">A próba ezzel fut, a fizetési linken ez lesz kijelölve.</span></span></div>'
+      : '<div class="pkg"><span>Csomag: <b>ráér</b><br><span style="color:var(--citui-muted)">A próbában a teljes oldal fut, csomagot a fizetési linken választ.</span></span></div>';
+    return '<div class="pkg"><span>Csomag: <b>' + C.esc(C.selLabel()) + "</b> · " + C.ft(C.selPrice()) + '/hó</span><button type="button" class="link js-pkg" style="border:0;background:none;color:var(--citui-link-ink);font:600 14px var(--citui-font-text);text-decoration:underline;cursor:pointer">Módosítom</button></div>';
+  }
+  function contactHtml() {
+    return '<div class="contact"><div class="row"><span>Az értesítéseket ide küldjük:<br><b>' + (st.phone === L.phone ? L.phoneMasked : C.esc(st.phone)) + "</b> · " + (st.email === L.email ? L.emailMasked : C.esc(st.email || "nincs e-mail")) +
+      '</span><button type="button" class="link js-edit">Módosítom</button></div><div class="edit"><label for="lf-ph">Mobilszám</label><input id="lf-ph" inputmode="tel" autocomplete="tel" value="' + C.esc(st.phone) +
+      '"><label for="lf-em">E-mail-cím (nem kötelező)</label><input id="lf-em" type="email" autocomplete="email" value="' + C.esc(st.email) + '"><div class="err" aria-live="polite"></div></div></div>';
+  }
+  function readContact() {
+    var ed = $(".edit", sheet); if (!ed || !ed.classList.contains("open")) return true;
+    var phIn = $("#lf-ph", sheet), emIn = $("#lf-em", sheet), err = $(".contact .err", sheet);
+    var ph = C.normPhone(phIn.value), em = emIn.value.trim() ? C.normEmail(emIn.value) : "";
+    phIn.setAttribute("aria-invalid", String(!ph)); emIn.setAttribute("aria-invalid", String(em === null));
+    if (!ph) { err.textContent = "Ez nem magyar mobilszám. Így írja: 06 30 123 4567"; phIn.focus(); return false; }
+    if (em === null) { err.textContent = "Az e-mail-cím hibás. Hagyja üresen, ha nem kér e-mailt."; emIn.focus(); return false; }
+    st.phone = ph; st.email = em || ""; return true;
+  }
+  function trialView() {
+    sheet.innerHTML = '<button class="x" type="button" aria-label="Bezárás">×</button><h3 id="lf-h">Indítsa el a ' + C.esc(L.name) + ' honlapját</h3><p class="sub">Egy gombnyomás, és az oldal azonnal él.</p>' +
+      '<div class="addr">' + GLOBE + "<span>" + L.host + "</span></div>" +
+      '<ul class="facts"><li>' + CHECK + "<span><b>" + L.trialDays + " napig ingyen</b>, bankkártya nélkül</span></li><li>" + CHECK + "<span>Úgy indul, ahogy most látja: <b>nincs mit beállítania</b></span></li><li>" + CHECK +
+      "<span>A vendégek érdeklődése <b>közvetlenül Önhöz</b> érkezik, jutalék nélkül</span></li></ul>" + pkgLine("trial") + contactHtml() +
+      '<button type="button" class="btn-go js-go"><span class="stack">Indítsa el<small>' + L.trialDays + " nap ingyen · kártya nélkül</small></span></button>" +
+      '<button type="button" class="alt js-to-order" style="display:block;width:100%;margin-top:8px;border:0;background:none;color:var(--citui-link-ink);font:600 14px var(--citui-font-text);text-decoration:underline;cursor:pointer;padding:6px 0">Inkább most megrendelem, próba nélkül</button>' +
+      '<p class="legal">Az indítással elfogadja az <a href="#" onclick="return false">ÁSZF</a>-et, és kijelenti, hogy az oldalon látható képek használatára jogosult. A próba végén semmi nem terhelődik automatikusan.</p>';
+    $(".js-go", sheet).addEventListener("click", function () { if (!readContact()) return; C.track("launch_go", { mode: "trial", pkg: C.SEL.touched ? C.tierOf(C.SEL.modules) : null }); progress("trial"); });
+    $(".js-to-order", sheet).addEventListener("click", function () { C.track("order_open", { from: "trial-sheet" }); orderView(); });
+  }
+  function amounts() {
+    var p = C.selPrice(), full = st.period === "havi" ? p : p * (12 - L.annualFree);
+    return { monthly: p, full: full, first: C.disc(full) };
+  }
+  function orderView() {
+    var a = amounts(), b = st.bill;
+    sheet.innerHTML = '<button class="x" type="button" aria-label="Bezárás">×</button><h3 id="lf-h">Megrendelés próba nélkül</h3><p class="sub">Az oldal a fizetés után azonnal él: ' + L.host + "</p>" + pkgLine("order") +
+      '<div class="seg" role="group" aria-label="Fizetési időszak"><button type="button" data-per="havi" aria-pressed="' + (st.period === "havi") + '">Havi<small>bármikor lemondható</small></button><button type="button" data-per="eves" aria-pressed="' + (st.period === "eves") +
+      '">Éves<small>' + L.annualFree + " hónap ingyen</small></button></div>" +
+      '<div class="sum"><div class="row"><span>' + (st.period === "havi" ? "Havidíj" : "Éves díj (10 hónap ára)") + "</span><span>" + C.ft(a.full) + '</span></div><div class="row" style="color:var(--citui-ok-ink)"><span>Bevezető kedvezmény (első fizetés)</span><span>−' + L.offerPct + '%</span></div><div class="row tot"><span>Most fizet</span><span>' + C.ft(a.first) +
+      '</span></div><div class="row" style="color:var(--citui-muted);font-size:12.5px"><span>Utána ' + (st.period === "havi" ? "havonta " : "évente ") + C.ft(a.full) + ", a saját .hu domainnel együtt.</span></div></div>" +
+      '<div class="form"><label>Név vagy cégnév<input id="b-name" autocomplete="name" value="' + C.esc(b.name) + '"></label><div class="two"><label>Irányítószám<input id="b-zip" inputmode="numeric" value="' + C.esc(b.zip) + '"></label><label>Település<input id="b-city" value="' + C.esc(b.city) +
+      '"></label></div><label>Utca, házszám<input id="b-street" value="' + C.esc(b.street) + '"></label><label>Adószám (csak cégnek)<input id="b-tax" inputmode="numeric" value="' + C.esc(b.tax) + '"></label><div class="err" aria-live="polite"></div></div>' + contactHtml() +
+      '<button type="button" class="btn-go js-pay"><span class="stack">Fizetés: ' + C.ft(a.first) + "<small>bankkártyával, Barion</small></span></button>" +
+      '<button type="button" class="alt js-to-trial" style="display:block;width:100%;margin-top:8px;border:0;background:none;color:var(--citui-link-ink);font:600 14px var(--citui-font-text);text-decoration:underline;cursor:pointer;padding:6px 0">Inkább 14 napig ingyen kipróbálom</button>' +
+      '<p class="legal">A megrendeléssel elfogadja az <a href="#" onclick="return false">ÁSZF</a>-et, és kijelenti, hogy az oldalon látható képek használatára jogosult. A számlát e-mailben küldjük.</p>';
+    $$("[data-per]", sheet).forEach(function (x) { x.addEventListener("click", function () { saveBill(); st.period = x.getAttribute("data-per"); C.track("order_period", { p: st.period }); orderView(); }); });
+    var pk = $(".js-pkg", sheet); if (pk) pk.addEventListener("click", function () { saveBill(); lclose(); if (V === "T2") C.openCz(); else { $(".pc").scrollIntoView(); var tg = $(".js-cz-toggle"); if (tg.getAttribute("aria-expanded") !== "true") tg.click(); } });
+    $(".js-to-trial", sheet).addEventListener("click", function () { saveBill(); trialView(); });
+    $(".js-pay", sheet).addEventListener("click", function () {
+      saveBill(); var err = $(".form .err", sheet), bad = null;
+      [["b-name", st.bill.name.length >= 3], ["b-zip", /^\d{4}$/.test(st.bill.zip)], ["b-city", st.bill.city.length >= 2], ["b-street", st.bill.street.length >= 3], ["b-tax", !st.bill.tax || /^\d{8}-?\d-?\d{2}$/.test(st.bill.tax)]]
+        .forEach(function (f) { var el = $("#" + f[0], sheet); el.setAttribute("aria-invalid", String(!f[1])); if (!f[1] && !bad) bad = el; });
+      if (bad) { err.textContent = bad.id === "b-zip" ? "Az irányítószám 4 számjegy." : bad.id === "b-tax" ? "Az adószám formája: 12345678-1-12" : "Kérjük, töltse ki a számlázási adatokat."; bad.focus(); return; }
+      if (!readContact()) return;
+      C.track("order_pay", { period: st.period, pkg: C.tierOf(C.SEL.modules), amount: amounts().first }); barionView();
+    });
+  }
+  function saveBill() { ["name", "zip", "city", "street", "tax"].forEach(function (k) { var el = $("#b-" + k, sheet); if (el) st.bill[k] = el.value.trim(); }); }
+  function barionView() {
+    var a = amounts();
+    sheet.innerHTML = '<div class="barion"><div style="font-size:12px;color:var(--citui-muted)">Átirányítás a fizetőoldalra</div><div class="logo">Barion</div><div class="amt">' + C.ft(a.first) + '</div><div class="sim">(A valódi oldalon itt a Barion kártyás fizetése jön. Ez a terv csak a két kimenetet mutatja.)</div>' +
+      '<div class="btns"><button type="button" class="btn-go js-ok">Sikeres fizetés szimulálása</button><button type="button" class="btn-ghost js-cancel">Megszakítom</button></div></div>';
+    $(".js-ok", sheet).addEventListener("click", function () { progress("order"); });
+    $(".js-cancel", sheet).addEventListener("click", function () { C.track("order_cancel"); orderView(); var e = $(".form .err", sheet); if (e) e.textContent = "A fizetés megszakadt, nem terheltünk semmit. Újrapróbálhatja."; });
+  }
+  function progress(mode) {
+    sheet.innerHTML = '<h3 id="lf-h">' + (mode === "order" ? "Fizetés rendben, indul az oldala…" : "Indul az oldala…") + '</h3><ul class="steps"><li><span class="dot"></span>Az oldal élesítése a saját címén</li><li><span class="dot"></span>Keresőknek bejelentve (Google)</li><li><span class="dot"></span>' +
+      (mode === "order" ? "Számla és visszaigazolás elküldve" : "SMS és e-mail elküldve") + "</li></ul>";
+    var i = 0, items = $$(".steps li", sheet);
+    (function tick() {
+      if (i > 0) { items[i - 1].className = "done"; $(".dot", items[i - 1]).innerHTML = '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 10.5l4 4 8-9"/></svg>'; }
+      if (i < items.length) { items[i].className = "run"; i++; setTimeout(tick, 500); } else setTimeout(function () { done(mode); }, 300);
+    })();
+  }
+  function done(mode) {
+    var d = C.trialDates(), url = "https://" + L.host, a = amounts();
+    var nextPay = new Date(); nextPay.setMonth(nextPay.getMonth() + (st.period === "havi" ? 1 : 12));
+    var nextPayTxt = (st.period === "havi" ? "" : nextPay.getFullYear() + ". ") + C.hDate(nextPay);
+    var sms = mode === "order"
+      ? "Citoviso: Köszönjük a megrendelést! A " + L.name + " honlapja él: " + L.host + ". A számlát e-mailben küldtük. Következő díj: " + nextPayTxt + ", " + C.ft(a.full) + "."
+      : "Citoviso: Elindult a " + L.name + " honlapja: " + L.host + " – " + L.trialDays + " napig ingyen, kártya nélkül, nincs teendője. A vendégek érdeklődését ide továbbítjuk. " + C.hDay(d.t3, "an") + " küldjük a fizetési linket; ha nem kéri, az oldal leáll, semmit nem terhelünk.";
+    sms = C.gsm7(sms); // owner 2026-11-11: SMS goes without accents (GSM-7)
+    var seg = C.smsSegments(sms);
+    var tl = mode === "order"
+      ? '<li class="now"><b>Ma</b>Fizetve: ' + C.ft(a.first) + " (−" + L.offerPct + "%). Él az oldal, a Google-nak bejelentettük.</li><li><b>" + nextPayTxt + "</b>Következő díj: " + C.ft(a.full) + ". Előtte 3 nappal szólunk.</li><li><b>Bármikor</b>Lemondhatja, a kifizetett időszak végéig fut.</li>"
+      : '<li class="now"><b>Ma</b>Él az oldal, a Google-nak bejelentettük. A vendégek érdeklődését azonnal továbbítjuk Önnek.</li><li><b>A próba alatt</b>Ha valaki megnézi az oldalát vagy érdeklődik, röviden megírjuk.</li><li><b>' + C.hDate(d.t3) + " és " + C.hDate(d.t1) + "</b>Fizetési link SMS-ben és e-mailben" +
+        (C.SEL.touched ? ", a választott csomaggal (" + C.esc(C.selLabel()) + ", " + C.ft(C.selPrice()) + "/hó)" : " (" + C.ft(C.tier("alap").monthly) + "/hó-tól)") + ", az első hónap −" + L.offerPct + "%.</li><li><b>" + C.hDate(d.last) + " után</b>Ha nem fizet, az oldal leáll. Nem terhelünk semmit, nem jön számla.</li>";
+    sheet.classList.add("wide");
+    sheet.innerHTML = '<button class="x" type="button" aria-label="Bezárás">×</button><div class="okgrid"><div>' +
+      '<div class="ok-head"><span class="big">' + CHECK + '</span><div><h3 id="lf-h" style="margin:0">' + (mode === "order" ? "Megrendelve, az oldala él" : "Az oldala él") + '</h3><div class="sub" style="margin:0">' + (mode === "order" ? C.esc(C.selLabel()) + " · " + (st.period === "havi" ? "havi" : "éves") + " fizetés" : C.hDay(d.last, "ig") + " ingyen") + "</div></div></div>" +
+      '<div class="live"><span class="pulse" aria-hidden="true"></span><a href="' + url + '" target="_blank" rel="noopener">' + L.host + '</a><button type="button" class="btn-ghost js-copy" style="padding:8px 12px;font-size:13px">Másolás</button></div>' +
+      '<div class="nothing">Most nincs teendője. Az oldal működik, a vendégek írhatnak Önnek.</div><ul class="tl">' + tl + '</ul><button type="button" class="btn-ghost js-close" style="width:100%">Rendben</button></div>' +
+      "<div class='msgs'><h4>Ezt kapja most SMS-ben</h4><div class='sms'>" + C.esc(sms) + "</div><div class='smsmeta'>A " + C.esc(st.phone === L.phone ? L.phoneMasked : st.phone) + " számra · " + seg.parts + " részes SMS (" + seg.enc + ")</div>" +
+      (mode === "order" ? "<h4>És e-mailben</h4><div class='mail'><div class='mh'><b>Citoviso</b> · Tárgy: <b>Megrendelés visszaigazolása – " + C.esc(L.name) + "</b></div><div class='mb'>Jó napot!<br><br>Köszönjük a megrendelést. A honlap él: <b>" + L.host +
+          "</b>.<br>Csomag: " + C.esc(C.selLabel()) + " · Fizetve: " + C.ft(a.first) + "<br>A számlát mellékeltük (" + C.esc(st.bill.name) + ", " + C.esc(st.bill.zip + " " + st.bill.city) + ").<br><br><span class='mbtn'>Belépés jelszó nélkül</span><br><span style='color:var(--citui-muted);font-size:13px'>" + C.COMPANY.name + " · " + C.COMPANY.address + " · adószám: " + C.COMPANY.tax + "</span></div></div>"
+        : (st.email ? "<h4>És e-mailben</h4><div class='mail'><div class='mh'><b>Citoviso</b> · Tárgy: <b>Elindult a " + C.esc(L.name) + " honlapja</b></div><div class='mb'>Jó napot!<br><br>A " + C.esc(L.name) + " honlapja mától él: <b>" + L.host + "</b>. " + L.trialDays +
+          " napig ingyen fut, Önnek nincs vele teendője.<br><br>Ha szeretne képet, szöveget vagy árat módosítani, itt léphet be (nem kötelező):<br><span class='mbtn'>Belépés jelszó nélkül</span><br><span style='color:var(--citui-muted);font-size:13px'>A fizetési linket " + C.hDay(d.t3, "an") + " küldjük. Ha nem kéri, az oldal leáll, és semmit nem terhelünk.<br>" +
+          C.COMPANY.name + " · " + C.COMPANY.address + " · adószám: " + C.COMPANY.tax + "</span></div></div>" : "")) + "</div></div>";
+    $(".js-close", sheet).addEventListener("click", lclose);
+    $(".js-copy", sheet).addEventListener("click", function (e) { e.target.textContent = "Kimásolva"; try { navigator.clipboard.writeText(url); } catch (x) {} });
+    C.track(mode === "order" ? "order_done" : "launch_done", {});
+  }
+  function initLaunch() {
+    lback = document.createElement("div"); lback.className = "lf-back"; sheet = document.createElement("div"); sheet.className = "lf cu"; sheet.setAttribute("role", "dialog"); sheet.setAttribute("aria-modal", "true");
+    $(".stage").appendChild(lback); $(".stage").appendChild(sheet); lback.addEventListener("click", lclose);
+    sheet.addEventListener("click", function (e) { if (e.target.closest(".x")) lclose(); if (e.target.closest(".js-edit")) { $(".edit", sheet).classList.toggle("open"); C.track("launch_edit_contact"); } });
+  }
+  function openLaunch(from, mode) { C.track(mode === "order" ? "order_open" : "launch_open", { from: from }); if (mode === "order") orderView(); else trialView(); lback.classList.add("open"); sheet.classList.add("open"); }
+
+  // ── spam test tools (design chrome) ──
+  function initSpamTools() {
+    var bar = $(".tool .spam"); if (!bar) return;
+    bar.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-spam]"); if (!b) return; var k = b.getAttribute("data-spam");
+      $(".faq").scrollIntoView();
+      if (k === "fast") { H.timeTravel(60); send("Van éves díj?"); send("És a domain?"); }
+      if (k === "day") { H.timeTravel(120); for (var j = 0; j < H.LIMITS.perDay + 5; j++) { H.timeTravel(16); if (!send("Napi teszt " + (j + 1))) break; } }
+      if (k === "link") { H.timeTravel(30); inp.value = "Olcsó SEO: www.seo-akcio.ru vagy hívjon: +36 30 111 2222"; send(inp.value); }
+      if (k === "long") { H.timeTravel(30); inp.value = "Hosszú szöveg ".repeat(30); updCnt(); send(inp.value); }
+      if (k === "ip") { H.simulateIpCap(); H.timeTravel(30); send("Mi van benne?"); }
+      if (k === "reset") { location.reload(); }
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    var l = e.target.closest(".js-launch"); if (l) { e.preventDefault(); openLaunch(l.getAttribute("data-from") || "?", "trial"); return; }
+    if (e.target.closest(".js-order")) { openLaunch("card", "order"); return; }
+    var q = e.target.closest(".js-q"); if (q) { openQ(q.getAttribute("data-q"), "chip"); return; }
+    if (e.target.closest(".js-toq")) { $(".faq").scrollIntoView({ behavior: "smooth" }); C.track("ask_open", { from: "bar" }); return; }
+    if (e.target.closest(".js-toar")) { $("#ar").scrollIntoView({ behavior: "smooth" }); C.track("price_open", { from: "hero" }); return; }
+    if (e.target.closest(".js-reset")) { C.SEL.touched = false; C.SEL.modules = C.tierModules("teljes"); C.track("pkg_reset"); renderCard(); if (C.redrawCz) C.redrawCz(); }
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") lclose(); });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initSize();
+    $(".hero").insertAdjacentHTML("beforeend", '<button type="button" class="herocta cu js-toar">Mennyibe kerül?<small>havi <span class="js-from"></span>-tól · 14 nap ingyen</small></button>');
+    $(".card ul.facts").innerHTML = ["Nincs beállítási díj, nincs további költség", "Saját .hu domain minden csomagban", "Bármikor lemondható, nincs hűségidő"].map(function (t) { return "<li>" + CHECK + "<span>" + t + "</span></li>"; }).join("");
+    if (V === "T1") initT1(); else initT2();
+    initAsk(); initLaunch(); initSpamTools(); renderCard();
+    var sc = $(".scroller"), pc = $(".pc"), bar = $(".bar");
+    sc.addEventListener("scroll", function () { var r = pc.getBoundingClientRect(), s = sc.getBoundingClientRect(); bar.classList.toggle("hide", r.top < s.bottom - 80 && r.bottom > s.top + 120); });
+    var k = (location.search.match(/[?&]k=(\w+)/) || [])[1];
+    if (k && C.byId(k)) openQ(k, "link");
+  });
+  C.UI2 = { send: send, openQ: openQ };
+})();
+</script>
+</body></html>

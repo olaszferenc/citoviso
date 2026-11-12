@@ -212,7 +212,8 @@ function footerHtml(lang: string | undefined, siteName: string | null | undefine
   const line2 = [
     le.taxNumber ? `${esc(T(lang, "Adószám:"))} ${esc(le.taxNumber)}` : "",
     le.email ? esc(le.email) : "",
-    le.phone ? esc(le.phone) : "",
+    // ⛔ No phone number (owner, 2026-11-12, ADR-XXXX ⑧): the company phone is left out of every
+    // customer-facing text — zero-human sales and support; the e-mail is the contact.
   ]
     .filter(Boolean)
     .join(" · ");
