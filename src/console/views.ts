@@ -112,6 +112,7 @@ import {
   saveBar,
   sectionNav,
   trialPackageField,
+  newRegionForm,
 } from "./pricingPage.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
@@ -910,7 +911,8 @@ export function pricingPage(
       ${saveBar(lang, snap)}
       ${pricingPageData(lang, snap, extras)}
       <script>${ESCALATION_MONEY_JS}\n${PRICING_ADMIN_JS}</script>
-    </form>`;
+    </form>
+    ${newRegionForm()}`;
   return layout(T(lang, "Árazás és értékesítés"), body, { active: "/pricing" });
 }
 

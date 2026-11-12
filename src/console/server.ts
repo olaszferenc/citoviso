@@ -223,7 +223,7 @@ import {
 import { marketOpenGaps } from "../payment/providers.js";
 import { a60Csv, a60Summary, parseA60Period } from "../billing/a60.js";
 import { countryConfigSync } from "../country.js";
-import { formatMinor, majorToMinor } from "../text/money.js";
+import { formatMinor, majorToMinor, minorDigits } from "../text/money.js";
 import { OrderRegionError, regionForCountry, regionForLead, type OrderMoney } from "../payment/orderRegion.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
@@ -1535,7 +1535,16 @@ async function regionForArtifactOrNull(artifactId: string): Promise<string | nul
   const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
   if (!a) return null;
   try {
-    return (await regionForLead(a.lead_id)).region;
+    const m = await regionForLead(a.lead_id);
+    // ⛔ TEMPORARY (ADR-XXXX): the browser cart still formats whole units — its minor-unit
+    // patch is parked (~/rc-briefs/orszag-reteg-3a-cit-configurator-minor-unit.patch) behind
+    // the known mock-trial-overlay ⑪ gate. Until it lands, a currency WITH minor digits
+    // (EUR, CZK…) gets no cart at all rather than a cart showing 100× the price.
+    if ((minorDigits(m.currency) ?? 0) !== 0) {
+      console.warn(`[console] konfigurátor: a(z) ${m.currency} kliens-formázása még nincs bent — rendelés-belépő nélkül`);
+      return null;
+    }
+    return m.region;
   } catch (e) {
     if (e instanceof OrderRegionError) {
       console.warn(`[console] konfigurátor: ${e.message}`);

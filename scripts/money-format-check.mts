@@ -255,8 +255,7 @@ check(
   "④ a vendég foglalás-előnézete a közös szabályt hívja",
 );
 check(
-  // ADR-XXXX: our money is minor-unit — the checkout formats through formatMinor (same rule file).
-  CONFIGURATOR_JS.includes("CitMoney.formatMinor"),
+  CONFIGURATOR_JS.includes("CitMoney.formatMoney"),
   "④ a fizetőoldal a közös szabályt hívja",
 );
 // The manifest must carry the ISO CODE. It used to carry the literal "Ft", which

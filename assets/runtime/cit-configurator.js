@@ -1036,16 +1036,8 @@
    * same rule as the server (assets/runtime/cit-money.js). Before this it glued
    * PRICING.currency on raw, and the server sent the literal string "Ft", so an
    * EUR-region buyer would have paid in € and read "Ft". */
-  // ADR-XXXX: every amount in the manifest is a MINOR-unit integer of PRICING.currency (HUF:
-  // the forint itself; EUR/RON: cents) — summed as integers, formatted with the currency's
-  // own decimal rule.
   function fmt(n) {
-    return CitMoney.formatMinor(n, PRICING.currency, document.documentElement.lang || "hu");
-  }
-  /** Minor → major for the Barion Pixel, which takes amounts in the currency's MAJOR unit. */
-  function pxAmt(n) {
-    var d = CitMoney.minorDigits(PRICING.currency) || 0;
-    return d ? n / Math.pow(10, d) : n;
+    return CitMoney.formatMoney(n, PRICING.currency, document.documentElement.lang || "hu");
   }
   // Shared-slot rule (tulaj, 2026-08-21): a selected module can REPLACE another
   // ("ha van foglalás, akkor nincs érdeklődés"). The replaced one does not render
@@ -1260,8 +1252,8 @@
         contentType: "Product",
         name: pxProductName(),
         unit: c.unit,
-        unitPrice: pxAmt(PRICING.base * c.mult),
-        totalItemPrice: pxAmt(PRICING.base * c.mult),
+        unitPrice: PRICING.base * c.mult,
+        totalItemPrice: PRICING.base * c.mult,
         currency: PRICING.currency,
         quantity: 1,
       },
@@ -1277,8 +1269,8 @@
         contentType: "Product",
         name: domainName || tr("Saját domain"),
         unit: c.unit,
-        unitPrice: pxAmt(d),
-        totalItemPrice: pxAmt(d),
+        unitPrice: d,
+        totalItemPrice: d,
         currency: PRICING.currency,
         quantity: 1,
       });
@@ -1294,8 +1286,8 @@
       contentType: "Product",
       name: mod.label,
       unit: c.unit,
-      unitPrice: pxAmt(p),
-      totalItemPrice: pxAmt(p),
+      unitPrice: p,
+      totalItemPrice: p,
       currency: PRICING.currency,
       quantity: 1,
     };
@@ -1305,7 +1297,7 @@
     var o = {
       contents: pxContents(),
       step: step,
-      revenue: pxAmt(payableTotal()),
+      revenue: payableTotal(),
       currency: PRICING.currency,
     };
     if (OFFER) o.coupon = OFFER.kind || "offer";
@@ -7060,7 +7052,7 @@
       id: "base",
       name: pxProductName(),
       unit: pxC.unit,
-      unitPrice: pxAmt(PRICING.base * pxC.mult),
+      unitPrice: PRICING.base * pxC.mult,
       currency: PRICING.currency,
       quantity: 1,
     });

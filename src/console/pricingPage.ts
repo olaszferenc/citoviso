@@ -64,6 +64,17 @@ export function pricingHead(lang: Lang, snap: PricingSnapshot, notice: { ok: boo
     ${notice ? `<div class="pr2-notice ${notice.ok ? "is-ok" : "is-bad"}" role="status">${esc(notice.text)}</div>` : ""}`;
 }
 
+/**
+ * ADR-XXXX: the „+ Új ár-régió” fields sit in the tab row, INSIDE the page's main form — a
+ * nested <form> would close the main one early (HTML drops the inner tag, its </form> ends
+ * the outer). So the fields point at this standalone form by id (`form=` attribute), and
+ * the page renders it AFTER the main form (newRegionForm()).
+ */
+const NEW_REGION_FORM = "pr2-newreg-f";
+export function newRegionForm(): string {
+  return `<form id="${NEW_REGION_FORM}" method="post" action="/pricing/region" hidden></form>`;
+}
+
 /** Market tabs (report tab language). The country layer comes later. */
 export function regionTabs(lang: Lang, snap: PricingSnapshot, regions: readonly PricingSnapshot[]): string {
   // ADR-XXXX: a region that cannot price yet (no base / missing module prices) is marked in
@@ -80,11 +91,11 @@ export function regionTabs(lang: Lang, snap: PricingSnapshot, regions: readonly 
     })
     .join("");
   const add = `<details class="pr2-tab pr2-newreg"><summary>${T(lang, "+ Új ár-régió")}</summary>
-      <form method="post" action="/pricing/region" class="pr2-newreg__f">
-        <label>${T(lang, "Azonosító")} <input name="new_region" required pattern="[a-z][a-z0-9-]{1,23}" placeholder="ro" aria-label="${esc(T(lang, "Új ár-régió azonosítója"))}"></label>
-        <label>${T(lang, "Pénznem (ISO 4217)")} <input name="new_currency" required pattern="[A-Za-z]{3}" maxlength="3" placeholder="RON" aria-label="${esc(T(lang, "Új ár-régió pénzneme"))}"></label>
-        <button class="pr2-btn" type="submit">${T(lang, "Létrehozás")}</button>
-      </form></details>`;
+      <div class="pr2-newreg__f">
+        <label>${T(lang, "Azonosító")} <input form="${NEW_REGION_FORM}" name="new_region" required pattern="[a-z][a-z0-9-]{1,23}" placeholder="ro" aria-label="${esc(T(lang, "Új ár-régió azonosítója"))}"></label>
+        <label>${T(lang, "Pénznem (ISO 4217)")} <input form="${NEW_REGION_FORM}" name="new_currency" required pattern="[A-Za-z]{3}" maxlength="3" placeholder="RON" aria-label="${esc(T(lang, "Új ár-régió pénzneme"))}"></label>
+        <button form="${NEW_REGION_FORM}" class="pr2-btn" type="submit">${T(lang, "Létrehozás")}</button>
+      </div></details>`;
   const gapNote = gaps.length
     ? `<div class="pr2-notice is-bad" role="status"><b>${T(lang, "Ez az ár-régió még nem árazható — rendelés nem jön létre rajta:")}</b> ${esc(gaps.join(" · "))}</div>`
     : "";
