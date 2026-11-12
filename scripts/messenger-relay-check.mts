@@ -251,6 +251,14 @@ try {
     say(row.receipt === "read" && String(row.read_at) === String(readAt), "⑥ a receipt csak előre lép (egy elgörgetett buborék nem vonja vissza)", JSON.stringify(row));
     const replies = await db.selectFrom("outreach_reply").select(["id", "channel", "lead_id", "body", "sender"]).where("lead_id", "=", lead.id).execute();
     say(replies.length === 1 && replies[0]!.channel === "viber" && replies[0]!.sender === PHONE, "⑥ a bejövő szöveg EGY válasz lett (viber, a leadhez párosítva), az újraolvasás nem duplikál", JSON.stringify(replies));
+    // 2026-11-12: our own WhatsApp caption was read as an incoming bubble → never a reply.
+    const ours = (await db.selectFrom("mms_outbox").select("messenger_text").where("id", "=", r2).executeTakeFirstOrThrow()).messenger_text ?? "";
+    await m.applyMessengerWatch([{ id: r2, ok: true, receipt: "read", incoming: [ours.replace(/\n/g, "&#10;"), ours.slice(0, 40), "Köszönöm"] }], []);
+    const after = await db.selectFrom("outreach_reply").select(["body"]).where("lead_id", "=", lead.id).execute();
+    say(ours.length > 40 && after.length === 2 && after.some((x) => x.body === "Köszönöm") && !after.some((x) => x.body.includes(ours.slice(0, 40))), "⑥ a saját kimenő szövegünk (egészben, &#10;-del, vagy csonkán) NEM lesz válasz, egy rövid valódi válasz igen", JSON.stringify({ ours, after }));
+    await db.deleteFrom("outreach_reply").where("lead_id", "=", lead.id).where("body", "=", "Köszönöm").execute();
+    say(m.isOwnMessengerText("Köszönöm", "Köszönöm") && !m.isOwnMessengerText("Köszönöm", "Köszönöm a figyelmet, a Citoviso csapata"), "⑥ rövid szöveg csak pontos egyezésre számít sajátnak");
+    say(m.decodeA11yText("a&#10;b &amp; c") === "a\nb & c", "⑥ az a11y-dump karakter-hivatkozásai kibontva");
     const w2 = await m.messengerWatchList();
     say(!w2.chats.some((c) => c.id === r2), "⑥ a frissen nézett csevegés egy óráig nincs a listán");
 

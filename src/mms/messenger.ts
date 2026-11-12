@@ -282,6 +282,37 @@ export function messengerReplyKey(channel: MessengerChannel, outboxId: string, t
   return `${channel}:${outboxId}:${createHash("sha1").update(text).digest("hex").slice(0, 16)}`;
 }
 
+/**
+ * The phone's accessibility dump keeps XML character references (`&#10;` for a line break) — decode
+ * them, so a reply reads as the prospect wrote it.
+ */
+export function decodeA11yText(t: string): string {
+  return t
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+const squash = (t: string) => decodeA11yText(t).replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * true = this „incoming” bubble is OUR OWN outreach text. On WhatsApp the image + caption bubble is
+ * wide enough that the caption starts at the left edge, so the phone's left-edge rule read it as the
+ * prospect's (2026-11-12: 7 own captions landed as replies). A part of our caption counts too (a long
+ * caption may be cut on screen); a short text only on an exact match, so a „Köszönöm” never vanishes.
+ */
+export function isOwnMessengerText(text: string, ours: string | null | undefined): boolean {
+  if (!ours) return false;
+  const t = squash(text);
+  const o = squash(ours);
+  if (!t || !o) return false;
+  return t === o || (t.length >= 24 && o.includes(t)) || (o.length >= 24 && t.includes(o));
+}
+
 /** Store what the watcher read; incoming texts join the reply flow; the brake is judged. */
 export async function applyMessengerWatch(
   chats: readonly ChatReport[],
@@ -316,12 +347,14 @@ export async function applyMessengerWatch(
       })
       .where("id", "=", row.id)
       .execute();
-    const texts = (c.incoming ?? []).map((t) => String(t).trim()).filter(Boolean);
+    const texts = (c.incoming ?? [])
+      .map((t) => String(t).trim())
+      .filter((t) => t && !isOwnMessengerText(t, row.messenger_text));
     if (texts.length) {
       const r = await ingestReplies(
-        texts.map((text) => ({
+        texts.map((raw) => ({ raw, text: decodeA11yText(raw).trim() })).map(({ raw, text }) => ({
           channel: row.channel as MessengerChannel,
-          key: messengerReplyKey(row.channel as MessengerChannel, row.id, text),
+          key: messengerReplyKey(row.channel as MessengerChannel, row.id, raw),
           from: row.to_phone,
           // The screen shows no reliable time. A stable stand-in (the re-ingest upserts it): the send
           // time + 1 s — never before the outreach, so matchReply accepts it.
