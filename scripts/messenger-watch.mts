@@ -64,7 +64,9 @@ try {
   const list = (await api("/api/messenger/watch", {})) as unknown as WatchList;
   const chats: ChatReport[] = [];
   const answers: AnswerReport[] = [];
-  for (const c of list.chats ?? []) {
+  // Viber-off mode (owner 2026-11-11): the phone has no working Viber — skip the Viber chats / answers.
+  const viberOff = existsSync(path.join(homedir(), ".config", "citoviso", "viber-off"));
+  for (const c of (list.chats ?? []).filter((x) => !(viberOff && x.channel === "viber"))) {
     const r = await s10(["status", "--to", c.to_phone, "--channel", c.channel]);
     const receipt = r.receipt === "sent" || r.receipt === "delivered" || r.receipt === "read" ? r.receipt : "";
     chats.push({
@@ -78,7 +80,7 @@ try {
     });
     console.log(`[messenger-watch] ${c.channel} ${c.to_phone}: ${r.ok ? `${receipt || "?"} · ${(r.incoming as unknown[] | undefined)?.length ?? 0} bejövő` : `HIBA ${r.error}`}`);
   }
-  for (const a of list.answers ?? []) {
+  for (const a of (list.answers ?? []).filter((x) => !(viberOff && x.channel === "viber"))) {
     if (DRY) {
       console.log(`[messenger-watch] (dry-run) válasz → ${a.channel} ${a.to_phone}: ${a.text.slice(0, 60)}`);
       continue;

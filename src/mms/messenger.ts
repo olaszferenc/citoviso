@@ -459,6 +459,9 @@ export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH
   // Leads with an e-mail address first (owner 2026-11-08: the e-mail + Viber leads are what matters).
   const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
+  // Viber-off mode (owner 2026-11-11): the phone cannot read Viber — no Viber lookups until it is back.
+  const { VIBER_OFF_KEY } = await import("./relayQueue.js");
+  if (await getSetting(VIBER_OFF_KEY)) return [];
   const cfg = await getMessengerConfig();
   // The background check reads Viber only (WhatsApp goes through whatsappPresenceDue): a known Viber = done.
   const fresh = new Set(
@@ -510,16 +513,18 @@ export async function whatsappPresenceDue(now: Date = new Date()): Promise<strin
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
+  // Viber-off mode (owner 2026-11-12: „ha nincs viber vagy nem működik, akkor nézzünk whatsuppot”):
+  // a number whose Viber is not read yet gets the WhatsApp lookup too (same tempo, one per 2 minutes).
+  const { VIBER_OFF_KEY } = await import("./relayQueue.js");
+  const viberOff = !!(await getSetting(VIBER_OFF_KEY));
+  const rowsP = await db.selectFrom("messenger_presence").select(["phone", "viber", "whatsapp"]).where("phone", "in", phones).execute();
+  const known = new Map(rowsP.map((r) => [r.phone, r]));
   const cand = new Set(
-    (
-      await db
-        .selectFrom("messenger_presence")
-        .select("phone")
-        .where("phone", "in", phones)
-        .where("viber", "=", "no")
-        .where("whatsapp", "=", "unknown")
-        .execute()
-    ).map((r) => r.phone),
+    phones.filter((p) => {
+      const r = known.get(p);
+      if (viberOff) return !r || (r.whatsapp === "unknown" && r.viber !== "yes");
+      return !!r && r.viber === "no" && r.whatsapp === "unknown";
+    }),
   );
   const pick = phones.find((p) => cand.has(p));
   if (!pick) return [];

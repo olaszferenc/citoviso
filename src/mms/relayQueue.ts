@@ -207,7 +207,7 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
         .$if(viberOff, (qb) =>
           qb.where(
             sql<boolean>`coalesce(mms_outbox.channel, '') <> 'viber' and exists (select 1 from messenger_presence p
-              where p.phone = mms_outbox.to_phone and p.viber = 'no')`,
+              where p.phone = mms_outbox.to_phone and (p.viber = 'no' or p.whatsapp = 'yes'))`,
           ),
         )
         .orderBy("created_at", "asc")
