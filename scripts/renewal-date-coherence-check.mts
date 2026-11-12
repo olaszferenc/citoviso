@@ -330,6 +330,12 @@ async function preChargeSentence(
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));
+    // The fixture's photo is external (picsum.photos); measured 2026-11-12 unreachable, the
+    // preview never finished loading and the gate timed out on main too. Answer every network
+    // request locally — the gate measures the renewal date, not a third party's uptime.
+    await page.route(/^https?:\/\//, (r) =>
+      r.fulfill({ status: 200, contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="10"/>' }),
+    );
     await page.goto(pathToFileURL(PREVIEW).href);
     await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 15000 });
     await page.locator(".cit-cfg-launch").click();

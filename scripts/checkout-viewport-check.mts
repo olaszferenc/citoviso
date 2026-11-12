@@ -495,6 +495,13 @@ async function main(): Promise<void> {
   await buildPreview();
   const browser = await chromium.launch();
   const page = await browser.newPage();
+  // The fixture's photos are external (picsum.photos). Measured 2026-11-12: with that host
+  // unreachable the preview never finished loading and the gate timed out on main too. Every
+  // network request is answered locally with a blank image — the gate measures the checkout,
+  // never a third party's uptime.
+  await page.route(/^https?:\/\//, (r) =>
+    r.fulfill({ status: 200, contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="10"/>' }),
+  );
   try {
     for (const s of SIZES) await auditSize(page, s);
     await auditBusinessBranch(page);
