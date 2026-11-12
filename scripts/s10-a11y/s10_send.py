@@ -348,7 +348,7 @@ def send_mms(ph, uri, text):
 
 
 # A banned/limited account shows one of these instead of the chat (WhatsApp, Viber; HU + EN).
-RESTRICTED_RX = re.compile(r"nem használhatja a WhatsAppot|fiókod(at)? (le|ki)tiltott|korlátozt|"
+RESTRICTED_RX = re.compile(r"nem használhatja a WhatsAppot|fiókod(at)? (le|ki)tiltott|korlátoz|nem tudsz új csevegést|"
                            r"is banned|account (is )?(banned|restricted)|deaktivál", re.I)
 
 
@@ -401,8 +401,13 @@ def status(ph, channel):
         last = sts[-1] if sts else ""
         receipt = ("read" if re.search(r"Megnézve|Olvasott|Read", last) else
                    "delivered" if re.search(r"Kézbesítve|Delivered", last) else "sent" if last else "")
+        # Our own bubbles carry a delivery "status" icon; a long caption of ours spans from the left
+        # edge too (x1 150, measured 2026-11-12), so position alone mislabels it as incoming.
+        st_boxes = [(x1, y1, x2, y2) for (rid, t, d, x1, y1, x2, y2) in ns if rid == "status"]
+        ours = lambda bx1, by1, bx2, by2: any(bx1 <= sx1 and sx2 <= bx2 + 40 and by1 <= sy1 and sy2 <= by2 + 40
+                                              for (sx1, sy1, sx2, sy2) in st_boxes)
         incoming = [t for (rid, t, d, x1, y1, x2, y2) in ns
-                    if rid in ("message_text", "caption") and t and x1 < INCOMING_MAX_X1]
+                    if rid in ("message_text", "caption") and t and x1 < INCOMING_MAX_X1 and not ours(x1, y1, x2, y2)]
         seen = text_of(x, "com.whatsapp:id/conversation_contact_status")
         home()
         return {"receipt": receipt, "receipt_raw": last, "last_seen": seen, "incoming": incoming}
