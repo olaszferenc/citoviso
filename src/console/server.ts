@@ -16,6 +16,8 @@ import {
   trialDaysOnOffer,
 } from "../trial/config.js";
 import { startTrial } from "../trial/start.js";
+import { askQuestion } from "../replies/pageQuestion.js";
+import { clientIp } from "../server/clientIp.js";
 import { configuredTrialPackage, tenantTrialPackage, trialModuleLabel } from "../trial/package.js";
 import { liveTrialOffer } from "../trial/offer.js";
 import { trialDaysLeft } from "../trial/notices.js";
@@ -352,7 +354,9 @@ function consoleAudience(path: string): PageAudience {
   if (LEGAL_PATHS.has(path) || CONSOLE_OWN_ROUTES.some((re) => re.test(path))) return "own";
   return "operator";
 }
-import { config } from "../config.js";
+import { config, isLegalEntityComplete } from "../config.js";
+import { prettyPhone } from "../text/phone.js";
+import { leadEmails } from "../email/leadEmails.js";
 import {
   approveMarket,
   encounteredCountries,
@@ -1056,6 +1060,19 @@ function leadBillingPrefill(
     },
     contactEmail ?? null,
   );
+}
+
+/**
+ * ADR-XXXX (kerdes-inditas): the one-click start's prefill — the business name (the trial's
+ * contact name until the owner edits it), the lead's mobile in the printed form, and the
+ * address the outreach mail went to (else the lead's first e-mail). The sheet shows them and
+ * lets the visitor change them before the start.
+ */
+function askContactPrefill(leadName: string, raw: unknown, contactEmail: string | null): { name: string; phone: string; email: string } {
+  const r = (raw ?? {}) as { phone?: string; email?: string; otherEmails?: string[] };
+  const phone = r.phone ? normalizePhone(r.phone) : null;
+  const email = (contactEmail ?? "").trim().toLowerCase() || (leadEmails(r)[0] ?? "").trim().toLowerCase();
+  return { name: leadName, phone: phone ? prettyPhone(phone) : "", email };
 }
 
 /**
@@ -4045,6 +4062,9 @@ async function handle(
       photoRightsAccepted: b.photoRightsAccepted === true,
       viewId: typeof b.viewId === "string" ? b.viewId : null,
       seenOfferPercent: typeof b.offerPercent === "number" && Number.isFinite(b.offerPercent) ? b.offerPercent : null,
+      // ADR-XXXX ③/⑦: the picked set and the one-click sheet's click-wrap.
+      modules: Array.isArray(b.modules) ? b.modules.slice(0, 40) : null,
+      clickwrap: b.clickwrap === true,
     });
     const status = r.ok ? 200 : r.error === "not_found" ? 404 : r.error === "provision_failed" ? 500 : 409;
     return send(
@@ -4053,6 +4073,22 @@ async function handle(
       JSON.stringify(r.ok ? { ...r, trialUntil: r.trialUntil.toISOString() } : r),
       "application/json",
     );
+  }
+  // POST /p/:token/ask — ADR-XXXX (kerdes-inditas): the lead page's free-question field.
+  // JSON {text, category|null, viewId?} → {ok, recorded, capped} or {ok:false, error, wait?}.
+  // The page answers a matched question itself; this stores it under the spam limits and puts an
+  // unmatched one into the owner's approval queue (nothing is answered automatically outward).
+  // `?sajat=1` = the owner's own preview: stored, never queued.
+  const pAskMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/ask$/.exec(pPath);
+  if (method === "POST" && pAskMatch) {
+    const b = (await readJson(req)) as Record<string, unknown>;
+    const r = await askQuestion(
+      pAskMatch[1],
+      { text: b.text, category: b.category, viewId: b.viewId, own: url.searchParams.get(OWN_VIEW_PARAM) === "1" },
+      clientIp(req),
+    );
+    const status = r.ok ? 200 : r.error === "not_found" ? 404 : r.error === "day" || r.error === "ip" || r.error === "gap" ? 429 : 400;
+    return send(res, status, JSON.stringify(r), "application/json");
   }
   // POST /p/:token/request — order submit bound to the token's prospect.
   const pReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/request$/.exec(pPath);
@@ -4326,6 +4362,20 @@ async function handle(
               },
             }
           : {}),
+        // ADR-XXXX (kerdes-inditas): the price card + „Kérdése van?” block after the hero.
+        ask: {
+          url: `/p/${pMatch[1]}/ask${measured ? "" : `?${OWN_VIEW_PARAM}=1`}`,
+          company: isLegalEntityComplete()
+            ? {
+                name: config.legalEntity.name,
+                address: config.legalEntity.address,
+                regNumber: config.legalEntity.regNumber,
+                taxNumber: config.legalEntity.taxNumber,
+                email: config.legalEntity.email,
+              }
+            : null,
+          contact: askContactPrefill(p.leadName, pf?.leadRaw, pf?.contactEmail ?? null),
+        },
       });
       return send(
         res,

@@ -1,5 +1,13 @@
 # „14 nap ingyen” — az ingyenes próba belépője a lead-lapon (JÓVÁHAGYOTT TERV, 2026-10-09)
 
+> ⛔ **AZ ŰRLAP ÉS A PIRULA SZEREPE FELÜLÍRVA 2026-11-12 (tulaj, ADR-XXXX, `../kerdes-inditas/`):**
+> a próba EGY KATTINTÁSSAL indul. Az űrlap helyén az indító lap áll: a kapcsolat előtöltve és csak
+> „Módosítom”-ra nyílik, a két pipa (ÁSZF, fotó-nyilatkozat) helyett EGY mondat áll a gomb alatt
+> (`TRIAL_CLICKWRAP_V1`), a gomb „Indítsa el”. A kérdés-oldalon (`CFG.ask`) a pirula-pár bal tagja
+> „Mennyibe kerül?” (az ár-kártyához görget), a jobb „Indítsa el” (az indító lapot nyitja). Az alábbi
+> 7–9. pont (űrlap-mezők, pipák, „Elindítom a {n} napos próbát”, „Itt rendelheti meg”) TÖRTÉNETI; a
+> pirula-pár helye, kikerülése, a napszám-szabály és a mérés (1–6., 10–12.) változatlanul köt.
+
 > ⛔ **FELIRAT FELÜLÍRVA 2026-11-05 (tulaj):** a „{n} nap ingyen” (és a „{n} napig ingyen”) a szokásos
 > előfizetéses próbát idézi — előbb kártya, a végén fizetni kell. Nálunk nincs se kártya, se fizetés, ezt
 > mondja a pirula: **MINDEN méreten két sorban
@@ -106,5 +114,6 @@ siker, napszám-váltás): mind zöld, JS-hiba 0.
 
 ## Kötő feliratok (contract-drift-check)
 
-**„{n} nap ingyen”** · **„Itt rendelheti meg”** · **„Próbálja ki {n} napig ingyen”** ·
-**„Elindítom a {n} napos próbát”** · **„A hozzáférést elküldtük”** · **„Nem kell bankkártya, nincs előre fizetés”**
+**„{n} nap ingyen”** · **„A hozzáférést elküldtük”**
+(2026-11-12-ig kötött, azóta történeti: „Itt rendelheti meg”, „Próbálja ki {n} napig ingyen”, „Elindítom a {n} napos próbát”,
+„Nem kell bankkártya, nincs előre fizetés” — az új feliratokat a `../kerdes-inditas/` köti.)

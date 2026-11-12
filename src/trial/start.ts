@@ -29,7 +29,7 @@ import { ownedSiteForLead } from "../conversion/owned.js";
 import { convertLead, isEngineArtifact } from "../conversion/provision.js";
 import { tenantSiteUrl } from "../domains.js";
 import { isValidEmail } from "../email/leadEmails.js";
-import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1 } from "../legal.js";
+import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1, TRIAL_CLICKWRAP_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
 import { countryConfig, countryOfLead } from "../country.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
@@ -39,7 +39,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { getFreeTrialConfig, trialUntilFrom } from "./config.js";
 import { loadPricing } from "../pricing.js";
-import { tenantTrialPackage, trialModuleIds, trialPackageView } from "./package.js";
+import { tenantTrialPackage, trialModuleIds, trialModulesFromSelection, trialPackageView } from "./package.js";
 import { pinTrialOffer, trialDiscount } from "./offer.js";
 
 export interface TrialInput {
@@ -55,6 +55,12 @@ export interface TrialInput {
   readonly viewId?: string | null;
   /** Elek3 B2: the discount percent the trial form printed (0 = none) — the trial pins that. */
   readonly seenOfferPercent?: number | null;
+  /** ADR-XXXX ③: the package/modules the visitor picked on the lead page before starting —
+   *  the trial grants exactly these (trialModulesFromSelection). Absent = the configured set. */
+  readonly modules?: readonly unknown[] | null;
+  /** ADR-XXXX ⑦: the one-click sheet's click-wrap sentence stood for both ticks — the stamp is
+   *  TRIAL_CLICKWRAP_V1 instead of the two separate wordings. */
+  readonly clickwrap?: boolean;
 }
 
 export type TrialError =
@@ -201,9 +207,9 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         contact_email: v.email,
         contact_phone: v.phone,
         terms_accepted_at: now,
-        terms_text: TERMS_ACCEPTANCE_V1,
+        terms_text: input.clickwrap ? TRIAL_CLICKWRAP_V1 : TERMS_ACCEPTANCE_V1,
         photo_rights_declared_at: now,
-        photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1,
+        photo_rights_text: input.clickwrap ? TRIAL_CLICKWRAP_V1 : PHOTO_RIGHTS_DECLARATION_V1,
         started_at: now,
         trial_until: trialUntilFrom(now, cfg.days),
       })
@@ -226,7 +232,8 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 
   try {
     await loadPricing();
-    const modules = trialModuleIds((await getFreeTrialConfig()).package);
+    // ADR-XXXX ③: a set picked on the lead page wins over the configured trial package.
+    const modules = trialModulesFromSelection(input.modules) ?? trialModuleIds((await getFreeTrialConfig()).package);
     let tenantId = trial.tenant_id;
     if (!tenantId) {
       // 4. Provision: the visitor's own submit is the approval of the mock they are on

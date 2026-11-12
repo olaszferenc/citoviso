@@ -89,6 +89,20 @@ export const TERMS_ACCEPTANCE_V1 =
   "Adatkezelési tájékoztatót.";
 
 /**
+ * ADR-XXXX (kerdes-inditas, owner 2026-11-12: „egy mondat a gomb alatt elég”) — the ONE-CLICK
+ * trial's click-wrap: the sentence under the „Indítsa el” button stands for BOTH ticks the old
+ * trial form had (the ÁSZF and the §A photo declaration). It carries the declaration's three
+ * mandatory elements (rights, warranty, indemnification) in the visitor's grammar, and it is
+ * stamped onto free_trial (terms_text AND photo_rights_text) as the wording that was accepted.
+ * The page shows exactly this text (manifest `trial.clickwrap`), the two document names linked.
+ */
+export const TRIAL_CLICKWRAP_V1 =
+  "Az „Indítsa el” gombbal elfogadja a Citoviso Általános Szerződési Feltételeit, megismerte az " +
+  "Adatkezelési tájékoztatót, és kijelenti, hogy a honlapon megjelenítendő fényképek tekintetében " +
+  "felhasználási joggal rendelkezik, azok felhasználása harmadik személy jogát nem sérti, és az ebből " +
+  "eredő igények alól a Citoviso-t mentesíti.";
+
+/**
  * ADR-0088 ⑨ — recurring card mandate, accepted at checkout ALONGSIDE the ÁSZF.
  *
  * WHY A SEPARATE TICK: the charge is merchant-initiated on a stored credential.

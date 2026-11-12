@@ -298,11 +298,13 @@ async function toSurveyCard(p: Page): Promise<boolean> {
 }
 
 async function fillTrial(p: Page): Promise<void> {
+  // ADR-XXXX (kerdes-inditas ⑧–⑨): the one-click sheet — the contact opens on „Módosítom” (or is
+  // open already when the prefill is missing), and ONE click-wrap sentence replaced the two ticks.
+  const edit = p.locator(".cit-cfg-tsheet .cit-cfg-tedit");
+  if (await edit.isVisible()) await edit.click();
   await p.fill('.cit-cfg-tsheet [name="name"]', "Teszt Elek");
   await p.fill('.cit-cfg-tsheet [name="email"]', "elek@example.invalid");
   await p.fill('.cit-cfg-tsheet [name="phone"]', "+36 30 123 4567");
-  await p.check('.cit-cfg-tsheet [name="terms"]');
-  await p.check('.cit-cfg-tsheet [name="photo_rights"]');
 }
 
 /** The survey bar's geometry against the order pills (measured, never asked of the runtime). */

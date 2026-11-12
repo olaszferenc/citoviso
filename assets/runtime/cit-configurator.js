@@ -2109,6 +2109,10 @@
   var TRIAL =
     CFG.trial && CFG.trial.enabled && CFG.trial.url && Number(CFG.trial.days) >= 1 ? CFG.trial : null;
   var TRIAL_DAYS = TRIAL ? Math.round(Number(TRIAL.days)) : 0;
+  // ADR-XXXX (kerdes-inditas): the price card + questions block's facts (cold lead page only),
+  // and the visitor's package pick (set up with the block below; null until then).
+  var ASK = CFG.ask && typeof CFG.ask === "object" ? CFG.ask : null;
+  var SEL = null;
   // proba-C: the trial campaign mail's links (trialCampaignEmail.ts) — `forras=proba` on both,
   // `proba=nyit` on the "try it" button.
   var PAGE_QS = (function () {
@@ -4118,7 +4122,9 @@
     panelOpenedAt = 0;
   }
   launch.addEventListener("click", function () {
-    open("pill");
+    // ADR-XXXX ⑨: on the ask page the left pill is „Mennyibe kerül?” → the price card.
+    if (launch.classList.contains("cit-cfg-launch--ask")) toPriceCard();
+    else open("pill");
   });
   scrim.addEventListener("click", collapse);
   panel.querySelector(".cit-cfg-close").addEventListener("click", close);
@@ -4168,11 +4174,8 @@
 
   /** The ÁSZF tick's label: the STAMPED wording (startTrial stores TERMS_ACCEPTANCE_V1),
    *  verbatim — its two document names become the links, as at the checkout. */
-  function trialTermsHtml() {
+  function trialTermsHtml(text) {
     var B = CFG.billing || {};
-    var text =
-      B.termsText ||
-      "Elfogadom a Citoviso Általános Szerződési Feltételeit, és megismertem az Adatkezelési tájékoztatót."; // i18n-exempt: legal wording (TERMS_ACCEPTANCE_V1) — country LEGAL pack scope
     var html = esc(text);
     function link(phrase, href, fallbackLabel) {
       if (!href) return;
@@ -4224,61 +4227,58 @@
   }
 
   function buildTrialSheet() {
-    var exampleName = DOM && DOM.exampleName ? DOM.exampleName : "";
+    // ADR-XXXX (kerdes-inditas ⑦, owner 2026-11-12): the ONE-CLICK start. The contact comes
+    // prefilled (CFG.ask.contact) and is only shown — „Módosítom” opens the three fields; the
+    // two ticks are gone, ONE sentence under the button (TRIAL_CLICKWRAP_V1, stamped verbatim)
+    // stands for the ÁSZF and the §A photo declaration.
     tScrim = el('<div class="cit-cfg-tscrim" hidden></div>');
     tSheet = el(
       '<div class="cit-cfg-tsheet" role="dialog" aria-modal="true" aria-labelledby="cit-cfg-th" hidden>' +
         '<button class="cit-cfg-tx" type="button" aria-label="' + esc(tr("Bezárás")) + '">' + I.x + "</button>" +
         '<div class="cit-cfg-tbody" data-t="form">' +
         '<p class="cit-cfg-tkick">' + I.gift + "<span>" + esc(tr("Ingyenes próba")) + "</span></p>" +
-        '<h3 class="cit-cfg-th" id="cit-cfg-th">' + esc(trialN(tr("Próbálja ki {n} napig ingyen"))) + "</h3>" +
-        '<p class="cit-cfg-taddr">' + esc(tr("Az Ön oldala élesben, ezen a címen:")) + " <b>" + esc(TRIAL.sub || "") + "</b></p>" +
+        '<h3 class="cit-cfg-th" id="cit-cfg-th">' + esc(launchTitle()) + "</h3>" +
+        '<p class="cit-cfg-tsub">' + esc(tr("Egy gombnyomás, és az oldal azonnal él.")) + "</p>" +
+        '<p class="cit-cfg-taddr">' + I.globe + "<b>" + esc(TRIAL.sub || "") + "</b></p>" +
         '<ul class="cit-cfg-tfacts">' +
-        "<li>" + I.okc + "<span>" + esc(tr("Nem kell bankkártya, nincs előre fizetés")) + "</span></li>" +
-        "<li>" + I.okc + "<span>" + esc(trialWhatLine()) + "</span></li>" +
-        "<li>" + I.okc + "<span>" + esc(tr("Saját kezelőfelület: a képeket és a szövegeket Ön cseréli")) + "</span></li>" +
-        "<li>" + I.okc + "<span>" +
-        esc(tr("A keresőknek szóló alapok benne vannak: szálláshely-adatok, oldaltérkép, biztonságos (HTTPS) cím")) +
-        "</span></li>" +
+        "<li>" + I.okc + "<span>" + esc(trialN(tr("{n} napig ingyen, bankkártya nélkül"))) + "</span></li>" +
+        "<li>" + I.okc + "<span>" + esc(tr("Úgy indul, ahogy most látja: nincs mit beállítania")) + "</span></li>" +
+        "<li>" + I.okc + "<span>" + esc(tr("A vendégek érdeklődése közvetlenül Önhöz érkezik, jutalék nélkül")) + "</span></li>" +
         '<li class="cit-cfg-tpause">' + I.pausec + "<span>" +
         esc(trialN(tr("A {n}. nap után az oldal szünetel: nem terhelünk semmit, az adatai megmaradnak. Folytatni megrendeléssel lehet."))) +
         "</span></li>" +
         "</ul>" +
-        '<p class="cit-cfg-tnote">' +
-        esc(
-          exampleName
-            ? tr("Saját domain (pl. {domain}) a próbában nincs — megrendeléskor választható.").replace("{domain}", exampleName)
-            : tr("Saját domain a próbában nincs — megrendeléskor választható."),
-        ) +
-        "</p>" +
+        '<div class="cit-cfg-tpkg"></div>' +
         '<form class="cit-cfg-tform" novalidate>' +
+        '<div class="cit-cfg-tcontact"><p class="cit-cfg-tcrow"><span class="cit-cfg-tcto"></span>' +
+        '<button class="cit-cfg-tedit" type="button" aria-expanded="false">' + esc(tr("Módosítom")) + "</button></p>" +
+        '<div class="cit-cfg-tfields" hidden>' +
         '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("Az Ön neve")) + "</span>" +
         '<input class="cit-cfg-tin" name="name" autocomplete="name" aria-describedby="cit-cfg-te-name">' +
         '<em class="cit-cfg-terr" id="cit-cfg-te-name" data-e="name"></em></label>' +
-        '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("E-mail-cím")) + "</span>" +
-        '<input class="cit-cfg-tin" name="email" type="email" inputmode="email" autocomplete="email" ' +
-        'autocapitalize="off" spellcheck="false" aria-describedby="cit-cfg-te-email">' +
-        '<small class="cit-cfg-thint">' + esc(tr("Ide küldjük a belépés linkjét.")) + "</small>" +
-        '<em class="cit-cfg-terr" id="cit-cfg-te-email" data-e="email"></em></label>' +
         '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("Telefonszám")) + "</span>" +
         '<input class="cit-cfg-tin" name="phone" type="tel" inputmode="tel" autocomplete="tel" ' +
         'placeholder="06 30 123 4567" aria-describedby="cit-cfg-te-phone">' +
         '<small class="cit-cfg-thint">' + esc(tr("A próba vége előtt itt is szólunk.")) + "</small>" +
         '<em class="cit-cfg-terr" id="cit-cfg-te-phone" data-e="phone"></em></label>' +
-        '<label class="cit-cfg-ttick"><input type="checkbox" name="terms"><span>' + trialTermsHtml() + "</span></label>" +
-        '<em class="cit-cfg-terr" data-e="terms"></em>' +
-        '<label class="cit-cfg-ttick"><input type="checkbox" name="photo_rights"><span class="cit-cfg-tphoto"></span></label>' +
-        '<em class="cit-cfg-terr" data-e="photo_rights"></em>' +
+        '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("E-mail-cím")) + "</span>" +
+        '<input class="cit-cfg-tin" name="email" type="email" inputmode="email" autocomplete="email" ' +
+        'autocapitalize="off" spellcheck="false" aria-describedby="cit-cfg-te-email">' +
+        '<small class="cit-cfg-thint">' + esc(tr("Ide küldjük a belépés linkjét.")) + "</small>" +
+        '<em class="cit-cfg-terr" id="cit-cfg-te-email" data-e="email"></em></label>' +
+        "</div></div>" +
         '<button class="cit-cfg-tsubmit" type="submit"><span class="cit-cfg-tspin" aria-hidden="true"></span>' +
-        '<span class="cit-cfg-tlbl"></span></button>' +
+        '<span class="cit-cfg-tlbl"></span><small class="cit-cfg-tsmall"></small></button>' +
         '<p class="cit-cfg-tsenderr" role="alert" hidden></p>' +
         "</form>" +
-        '<p class="cit-cfg-talt"><span></span> <button class="cit-cfg-tlink" type="button">' +
-        esc(tr("Itt rendelheti meg")) + "</button></p>" +
+        '<p class="cit-cfg-talt"><span></span></p>' +
+        '<button class="cit-cfg-tlink" type="button">' + esc(tr("Inkább most megrendelem, próba nélkül")) + "</button>" +
+        '<p class="cit-cfg-tlegal"></p>' +
         "</div>" +
         '<div class="cit-cfg-tbody cit-cfg-tok" data-t="ok" hidden tabindex="-1">' +
         '<div class="cit-cfg-tokico">' + I.okc + "</div>" +
         '<h3 class="cit-cfg-th cit-cfg-tokh"></h3>' +
+        '<p class="cit-cfg-toklive"></p>' +
         '<p class="cit-cfg-tokmail"></p>' +
         '<p class="cit-cfg-tokdates"></p>' +
         '<p class="cit-cfg-tnote cit-cfg-tokwarn">' +
@@ -4287,12 +4287,13 @@
         "</div>" +
         "</div>",
     );
-    // §A: the declaration the tick stands for IS the stamped wording (startTrial stores
-    // PHOTO_RIGHTS_DECLARATION_V1) — shown verbatim, like the checkout's photo tick.
-    tSheet.querySelector(".cit-cfg-tphoto").textContent =
-      CFG.photoRightsText ||
-      "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok."; // i18n-exempt: §A legal wording — country LEGAL pack scope
-    tSheet.querySelector(".cit-cfg-tlbl").textContent = trialN(tr("Elindítom a {n} napos próbát"));
+    // ⑦ the click-wrap: the stamped sentence, its two document names linked (as the old tick did).
+    tSheet.querySelector(".cit-cfg-tlegal").innerHTML = trialTermsHtml(
+      TRIAL.clickwrap ||
+        "Az „Indítsa el” gombbal elfogadja a Citoviso Általános Szerződési Feltételeit, megismerte az Adatkezelési tájékoztatót, és kijelenti, hogy a honlapon megjelenítendő fényképek tekintetében felhasználási joggal rendelkezik, azok felhasználása harmadik személy jogát nem sérti, és az ebből eredő igények alól a Citoviso-t mentesíti.", // i18n-exempt: legal wording (TRIAL_CLICKWRAP_V1) — country LEGAL pack scope
+    );
+    tSheet.querySelector(".cit-cfg-tlbl").textContent = tr("Indítsa el");
+    tSheet.querySelector(".cit-cfg-tsmall").textContent = trialN(tr("{n} nap ingyen · kártya nélkül"));
     document.body.appendChild(tScrim);
     document.body.appendChild(tSheet);
 
@@ -4300,23 +4301,54 @@
     var fName = form.querySelector('[name="name"]');
     var fEmail = form.querySelector('[name="email"]');
     var fPhone = form.querySelector('[name="phone"]');
-    var fTerms = form.querySelector('[name="terms"]');
-    var fPhoto = form.querySelector('[name="photo_rights"]');
+    var fieldsBox = form.querySelector(".cit-cfg-tfields");
+    var editBtn = form.querySelector(".cit-cfg-tedit");
     var submit = form.querySelector(".cit-cfg-tsubmit");
     var sendErr = form.querySelector(".cit-cfg-tsenderr");
     // Elek N-1 (2026-10-14): the outreach mail went to this address, and the checkout already
     // prefills it (CFG.billing.prefill, from the prospect) — the trial form asked for it again.
-    var pfMail = ((CFG.billing || {}).prefill || {}).email || "";
+    // ADR-XXXX: the one-click start's prefill (CFG.ask.contact: business name, the lead's
+    // mobile, the outreach address); the old checkout prefill stays the e-mail's fallback.
+    var ASKC = (ASK && ASK.contact) || {};
+    var pfMail = ASKC.email || ((CFG.billing || {}).prefill || {}).email || "";
     if (pfMail && !fEmail.value) fEmail.value = pfMail;
-    var FIELD = { name: fName, email: fEmail, phone: fPhone, terms: fTerms, photo_rights: fPhoto };
+    if (ASKC.name && !fName.value) fName.value = ASKC.name;
+    if (ASKC.phone && !fPhone.value) fPhone.value = ASKC.phone;
+    var FIELD = { name: fName, email: fEmail, phone: fPhone };
+    /** The contact line shown instead of the fields: „Az értesítéseket ide küldjük: … · …”. */
+    function syncContactLine() {
+      var to = form.querySelector(".cit-cfg-tcto");
+      to.textContent = "";
+      to.appendChild(document.createTextNode(tr("Az értesítéseket ide küldjük:") + " "));
+      var b = document.createElement("b");
+      b.textContent = [fPhone.value.trim(), fEmail.value.trim()].filter(Boolean).join(" · ") || tr("még nincs megadva");
+      to.appendChild(b);
+    }
+    function openFields() {
+      fieldsBox.hidden = false;
+      editBtn.hidden = true;
+      editBtn.setAttribute("aria-expanded", "true");
+    }
+    editBtn.addEventListener("click", function () {
+      openFields();
+      track("launch_edit_contact", {});
+      setTimeout(function () {
+        fPhone.focus({ preventScroll: false });
+      }, 20);
+    });
+    syncContactLine();
+    // A missing or unusable prefill: the fields are open from the start (nothing to confirm).
+    if (fName.value.trim().length < 2 || !TRIAL_EMAIL_RE.test(fEmail.value.trim()) || !trialNorm(fPhone.value.trim())) openFields();
+    syncLaunchSheet = function () {
+      syncContactLine();
+      tSheet.querySelector(".cit-cfg-tpkg").innerHTML = launchPkgHtml();
+    };
     var MSG = {
       name: tr("Kérjük, írja be a nevét."),
       emailEmpty: tr("Az e-mail-cím kell: ide küldjük a belépés linkjét."),
       email: tr("Ez nem tűnik e-mail-címnek. Pl.: nev@gmail.com"),
       phoneEmpty: tr("A telefonszám kell: a próba vége előtt SMS-ben is szólunk."),
       phone: tr("Ezt a számot nem tudjuk értelmezni. Így írja: 06 30 123 4567"),
-      terms: tr("A próba indításához el kell fogadnia az ÁSZF-et."),
-      photo_rights: tr("A próbaoldalon a mostani fotók jelennek meg — ehhez a fotó-nyilatkozat kell."),
     };
     function setErr(key, msg) {
       var e = form.querySelector('[data-e="' + key + '"]');
@@ -4351,12 +4383,6 @@
       if (toSubmit(e) || tSending) return;
       if (fName.value.trim().replace(/\s+/g, " ").length >= 2) setErr("name", "");
     });
-    fTerms.addEventListener("change", function () {
-      if (fTerms.checked) setErr("terms", "");
-    });
-    fPhoto.addEventListener("change", function () {
-      if (fPhoto.checked) setErr("photo_rights", "");
-    });
 
     function lock(on) {
       tSending = on;
@@ -4364,8 +4390,8 @@
       submit.classList.toggle("cit-cfg-tsending", on);
       submit.querySelector(".cit-cfg-tlbl").textContent = on
         ? tr("Indítjuk a próbát…")
-        : trialN(tr("Elindítom a {n} napos próbát"));
-      [fName, fEmail, fPhone, fTerms, fPhoto].forEach(function (f) {
+        : tr("Indítsa el");
+      [fName, fEmail, fPhone].forEach(function (f) {
         f.disabled = on;
       });
     }
@@ -4376,10 +4402,9 @@
         invalid_name: ["name", MSG.name],
         invalid_email: ["email", MSG.email],
         invalid_phone: ["phone", MSG.phone],
-        terms_required: ["terms", MSG.terms],
-        photo_rights_required: ["photo_rights", MSG.photo_rights],
       }[code];
       if (field) {
+        openFields();
         setErr(field[0], field[1]);
         FIELD[field[0]].focus();
         return;
@@ -4407,6 +4432,17 @@
       var until = trialDate(j.trialUntil);
       mail.textContent = "";
       dates.textContent = "";
+      var live = ok.querySelector(".cit-cfg-toklive");
+      live.textContent = "";
+      if (j.siteUrl) {
+        live.appendChild(document.createTextNode(tr("Az oldala él:") + " "));
+        var a = document.createElement("a");
+        a.href = j.siteUrl;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = String(j.siteUrl).replace(/^https?:\/\//, "").replace(/\/$/, "");
+        live.appendChild(a);
+      }
       if (j.loginSentTo) {
         ok.querySelector(".cit-cfg-tokh").textContent = tr("A hozzáférést elküldtük");
         mail.appendChild(document.createTextNode(tr("A belépés linkjét erre a címre küldtük:") + " "));
@@ -4477,15 +4513,8 @@
         fPhone.value = trialPretty(pn);
         setErr("phone", "");
       }
-      if (!fTerms.checked) {
-        setErr("terms", MSG.terms);
-        bad.push("terms");
-      } else setErr("terms", "");
-      if (!fPhoto.checked) {
-        setErr("photo_rights", MSG.photo_rights);
-        bad.push("photo_rights");
-      } else setErr("photo_rights", "");
       if (bad.length) {
+        openFields();
         track("trial_invalid", { fields: bad });
         FIELD[bad[0]].focus();
         return;
@@ -4501,7 +4530,11 @@
         photoRightsAccepted: true,
         viewId: VIEW_ID,
         offerPercent: trialShownPct,
+        // ADR-XXXX ③/⑦: the picked set (only when the visitor touched the picker) + the click-wrap.
+        modules: SEL.touched ? SEL.modules.slice() : undefined,
+        clickwrap: true,
       });
+      track("launch_go", { pkg: SEL.touched ? selTier() : null, via: tVia });
       fetch(TRIAL.url, { method: "POST", headers: { "content-type": "application/json" }, body: body })
         .then(function (r) {
           return r
@@ -4537,7 +4570,8 @@
     });
     tSheet.querySelector(".cit-cfg-tlink").addEventListener("click", function () {
       closeTrial(true);
-      open("trial");
+      // ADR-XXXX ④: the same launch, paid at once — the order panel with the picked set.
+      openOrder("trial");
     });
   }
 
@@ -4553,6 +4587,7 @@
       });
       tSheet.querySelector(".cit-cfg-tsenderr").hidden = true;
       tSheet.querySelector(".cit-cfg-talt span").textContent = trialAltText();
+      syncLaunchSheet();
     }
     trialSheetOpen = true;
     launch.hidden = true;
@@ -4565,7 +4600,7 @@
     tVia = via;
     track("trial_open", { via: via });
     setTimeout(function () {
-      var f = tDone ? tSheet.querySelector('[data-t="ok"]') : tSheet.querySelector('[name="name"]');
+      var f = tDone ? tSheet.querySelector('[data-t="ok"]') : tSheet.querySelector(".cit-cfg-tsubmit");
       if (f) f.focus({ preventScroll: true });
     }, 30);
   }
@@ -5415,6 +5450,14 @@
       var group = [h1];
       for (var sib = h1.nextElementSibling; sib; sib = sib.nextElementSibling) {
         if (sib.tagName === "P") group.push(sib);
+        // A short line of plain words under the title counts too — card-sidebar's meta row
+        // („4,7 · 134 értékelés · Erzsébet utca 23, …”) is a DIV, and with the consent bar the
+        // pair settled on the address (mock-trial-overlay-check ⑪, measured 2026-11-12 at
+        // 1536×864). Only text: a sibling holding a control, an image or a long block is not.
+        else if (
+          !sib.querySelector("a, button, input, select, textarea, img, video, iframe") &&
+          (sib.textContent || "").replace(/\s+/g, " ").trim().length <= 160
+        ) group.push(sib);
       }
       for (var g = 0; g < group.length; g++) {
         var cs = getComputedStyle(group[g]);
@@ -6166,6 +6209,815 @@
     check();
   }
 
+  // ── ADR-XXXX: price card + „Kérdése van?” + packages sheet (frozen plan:
+  // assets/design-refs/prospect-page/kerdes-inditas/, the owner's T2, 2026-11-12) ──────────────
+  // A block after the hero: the price card (ONE main button „Indítsa el”, two secondary
+  // entries — „Megrendelem most, próba nélkül” and „Csomagok és modulok”), the ready
+  // questions as an accordion, and ONE free-question field. Every answer is assembled HERE
+  // from the manifest's facts (prices, presets, the trial, the provider) — no LLM, no API call
+  // per visit. The free field matches a ready answer by keywords; a question it cannot match
+  // goes to POST /p/<t>/ask, which records it for the OWNER (nothing is answered outward
+  // automatically, ADR-XXXX ⑥).
+  // Anchors other surfaces link to (viselkedes-uzenet): #ar (the card), #kerdes (the questions),
+  // #inditas (opens the one-click start), ?k=<category> (opens that ready answer).
+  var ASK_ON = !!ASK && !CFG.continuation;
+  var ASK_LIMITS = { maxLen: 300, minGapSec: 4, perDay: 100 };
+  var askBox = null;
+
+  /** Presets smallest → largest (the manifest lists the all-in one first). */
+  var TIERS = PRESETS.slice().sort(function (a, b) {
+    return (a.modules || []).length - (b.modules || []).length;
+  });
+  var ALL_IN = PRESETS.length ? PRESETS[0] : null;
+  function idsPrice(ids) {
+    return presetMonthly({ modules: ids });
+  }
+  function sameSet(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (b.indexOf(a[i]) < 0) return false;
+    return true;
+  }
+  /** The ids that count for a set: priced and switchable (the spine is always there). */
+  function sellIds(ids) {
+    return ids.filter(function (id) {
+      var d = defOf(id);
+      return d && !d.spine;
+    });
+  }
+  // SEL: the visitor's own pick. untouched = the default path, no extra decision: the start
+  // runs on the configured set and the payment link offers the package then.
+  if (!SEL) SEL = { touched: false, modules: ALL_IN ? ALL_IN.modules.slice() : [] };
+  function selTier() {
+    var mine = sellIds(SEL.modules);
+    for (var i = 0; i < TIERS.length; i++) if (sameSet(sellIds(TIERS[i].modules || []), mine)) return TIERS[i].id;
+    return "egyedi";
+  }
+  function tierById(id) {
+    for (var i = 0; i < TIERS.length; i++) if (TIERS[i].id === id) return TIERS[i];
+    return null;
+  }
+  function selLabel() {
+    var t = tierById(selTier());
+    return t ? tr(t.label) : tr("Egyedi összeállítás");
+  }
+  function selPrice() {
+    return idsPrice(SEL.modules);
+  }
+  /** Hungarian article before a name („a Melinda Apartman”, „az Öreg Pajta”); other languages: none. */
+  function artOf(name) {
+    var lang = (document.documentElement.lang || "hu").slice(0, 2);
+    if (lang !== "hu") return "";
+    return /^[aáeéiíoóöőuúüű]/i.test(String(name || "").trim()) ? "az" : "a";
+  }
+  function launchTitle() {
+    var name = (CFG.product && CFG.product.name) || "";
+    return tr("Indítsa el {art} {name} honlapját")
+      .replace("{art}", artOf(name))
+      .replace("{name}", name)
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  /** The launch sheet's package line: the pick, or „ráér” (nothing to decide now). */
+  function launchPkgHtml() {
+    if (SEL.touched) {
+      return (
+        "<p><span>" + esc(tr("Csomag:")) + " <b>" + esc(selLabel()) + "</b> · " + esc(fmt(selPrice())) + esc(tr("/hó")) + "</span>" +
+        "<small>" + esc(tr("A próba ezzel fut, a fizetési linken ez lesz kijelölve.")) + "</small></p>"
+      );
+    }
+    return (
+      "<p><span>" + esc(tr("Csomag:")) + " <b>" + esc(tr("ráér")) + "</b></span>" +
+      "<small>" + esc(trialWhatLine()) + ". " + esc(tr("Csomagot a fizetési linken választ.")) + "</small></p>"
+    );
+  }
+  var syncLaunchSheet = function () {};
+
+  /** „Megrendelem most, próba nélkül”: the order panel, with the picked set already ticked. */
+  function openOrder(via) {
+    if (SEL.touched) {
+      var t = tierById(selTier());
+      applyPreset(t || { id: "__custom__", modules: SEL.modules.slice() });
+    }
+    track("order_open", { from: via });
+    // panel_open.via keeps its four values (report chips): the launch sheet's link = "trial",
+    // the card / packages sheet = the order entry ("pill"); order_open.from tells them apart.
+    open(via === "trial" ? "trial" : "pill");
+  }
+  function openLaunch(via) {
+    if (TRIAL) openTrial(via);
+    else openOrder(via);
+  }
+
+  // ── the ready answers (one category = one fact-built answer) ──
+  var OFFER_PCT = OFFER && Number(OFFER.percent) > 0 ? Math.round(Number(OFFER.percent)) : 0;
+  function ftm(n) {
+    return esc(fmt(n)) + esc(tr("/hó"));
+  }
+  function smallestTier() {
+    return TIERS.length ? TIERS[0] : null;
+  }
+  function domainInEvery() {
+    return TIERS.length > 0 && TIERS.every(function (p) {
+      return presetCarriesDomain(p);
+    });
+  }
+  function onceFrom() {
+    var min = null;
+    MODULES.forEach(function (m) {
+      if (m.billing === "once" && m.price > 0 && (min === null || m.price < min)) min = m.price;
+    });
+    return min;
+  }
+  function lastTrialDay() {
+    var d = new Date();
+    d.setDate(d.getDate() + TRIAL_DAYS - 1);
+    return d;
+  }
+  function dayText(d) {
+    try {
+      return d.toLocaleDateString(document.documentElement.lang || "hu", { month: "long", day: "numeric" });
+    } catch (e) {
+      return d.toISOString().slice(0, 10);
+    }
+  }
+  var QA = [
+    {
+      id: "ar",
+      q: tr("Mennyibe kerül?"),
+      kw: ["mennyibe", "mennyi", "ara ", " ar ", "arak", "araz", "kerul", "dij", "havidij", "forint", " ft", "fizetni", "osszeg"],
+      html: function () {
+        var small = smallestTier();
+        var shown = SEL.touched ? selPrice() : ALL_IN ? idsPrice(ALL_IN.modules) : PRICING.base;
+        var out =
+          "<p>" + esc(SEL.touched ? tr("Az Ön választása") : tr("Az oldal, ahogy most látja")) + " (<b>" +
+          esc(SEL.touched ? selLabel() : ALL_IN ? tr(ALL_IN.label) : "") + "</b>): <b>" + ftm(shown) + "</b>." +
+          (small ? " " + esc(tr("A legkisebb csomag ({pkg}):").replace("{pkg}", tr(small.label))) + " <b>" + ftm(idsPrice(small.modules)) + "</b>." : "") +
+          "</p>";
+        if (OFFER_PCT) out += "<p>" + esc(tr("Az első díjból −{p}% kedvezmény jár.").replace("{p}", String(OFFER_PCT))) + "</p>";
+        if (PRICING.annualFreeMonths > 0)
+          out += "<p>" + esc(tr("Éves fizetésnél {m} hónap ingyen.").replace("{m}", String(PRICING.annualFreeMonths))) + "</p>";
+        if (TRIAL) out += "<p>" + esc(trialN(tr("Most nem kell csomagot választania: az oldal {n} napig ingyen fut élesben, a csomagot a próba végén választja ki."))) + "</p>";
+        return out;
+      },
+    },
+    {
+      id: "koltseg",
+      q: tr("Van további költség?"),
+      kw: ["tovabbi", "rejtett", "fenntart", "uzemelte", "tarhely", "plusz", "extra", "egyeb kolts", "koltseg", "evente", "egyszeri"],
+      html: function () {
+        var once = onceFrom();
+        return (
+          "<p><b>" + esc(tr("Nincs.")) + "</b> " + esc(tr("Nincs beállítási díj, nincs külön tárhely- vagy üzemeltetési díj.")) +
+          (domainInEvery() ? " " + esc(tr("A saját domain minden csomagban benne van.")) : "") + "</p>" +
+          "<p>" + esc(tr("Amit fizet, az a havi (vagy éves) díj.")) +
+          (once ? " " + esc(tr("Külön tétel csak az, amit külön kér, például a többnyelvű oldal egyszeri díja ({price}-tól).").replace("{price}", fmt(once))) : "") +
+          "</p>" +
+          (TRIAL ? "<p>" + esc(trialN(tr("A {n} napos próba alatt semmit nem fizet, bankkártyát sem kérünk."))) + "</p>" : "")
+        );
+      },
+    },
+    {
+      id: "benne",
+      q: tr("Mi van benne?"),
+      kw: ["mi van benne", "mit tartalmaz", "tartalmaz", "funkci", "modul", "mit kapok", "mit tud", "foglalas", "naptar", "csomag"],
+      html: function () {
+        var out = ALL_IN ? "<p>" + esc(tr("Amit most lát, az {art} {pkg} csomag. A csomagok egymásra épülnek:").replace("{art}", artOf(tr(ALL_IN.label))).replace("{pkg}", tr(ALL_IN.label)).replace(/\s+/g, " ")) + "</p>" : "";
+        var prev = [];
+        TIERS.forEach(function (t, i) {
+          var add = (t.modules || []).filter(function (id) {
+            var d = defOf(id);
+            return d && prev.indexOf(id) < 0 && !d.spine;
+          });
+          out +=
+            '<div class="cit-ask__tier"><p class="cit-ask__tierh"><b>' + esc(tr(t.label)) + "</b><span>" + ftm(idsPrice(t.modules)) + "</span></p><ul>" +
+            (i ? '<li class="cit-ask__prev">' + esc(tr("Minden az előző csomagból ({pkg}), és:").replace("{pkg}", tr(TIERS[i - 1].label))) + "</li>" : "") +
+            add.map(function (id) {
+              return "<li>" + esc(tr(labelOf(id))) + "</li>";
+            }).join("") +
+            "</ul></div>";
+          prev = prev.concat(t.modules || []);
+        });
+        return out;
+      },
+    },
+    {
+      id: "utana",
+      q: tr("Mi lesz a próba után?"),
+      kw: ["utana", "proba vege", "14 nap", "lejar", "letelik", "probaido", "ingyenes idoszak", "proba utan"],
+      html: function () {
+        if (!TRIAL) return "<p>" + esc(tr("Ehhez az oldalhoz most nem indítható ingyenes próba; a megrendelés után azonnal él.")) + "</p>";
+        return (
+          "<p>" + esc(tr("Ha ma elindítja, az oldal {date} végéig ingyen fut élesben.").replace("{date}", dayText(lastTrialDay()))) + " " +
+          esc(tr("A vége előtt 3 nappal és 1 nappal SMS-ben és e-mailben küldünk egy fizetési linket: ott választ csomagot, és kártyával fizet.")) + "</p>" +
+          "<p>" + esc(tr("Ha nem fizet, az oldal szünetel. Semmit nem terhelünk, nem jön számla, és nem kell lemondania. Az adatai megmaradnak, ha később mégis folytatná.")) + "</p>"
+        );
+      },
+    },
+    {
+      id: "lemond",
+      q: tr("Lemondható?"),
+      kw: ["lemond", "felmond", "kotelez", "huseg", "szerzodes", "kilep", "megszuntet", "le lehet mondani"],
+      html: function () {
+        var min = DOM && Number(DOM.minCommitmentMonths) > 0 ? Math.round(Number(DOM.minCommitmentMonths)) : 0;
+        return (
+          "<p><b>" + esc(tr("Igen.")) + "</b> " + esc(tr("A kezelőfelületen az „Előfizetés lemondása” résznél mondhatja le. A lemondás a már kifizetett időszak végén lép életbe, addig az oldal változatlanul működik.")) + "</p>" +
+          (min ? "<p>" + esc(tr("Ha általunk regisztrált saját domaint kér, arra {m} hónap vállalás vonatkozik; ezt a megrendelésnél külön látja.").replace("{m}", String(min))) + "</p>" : "") +
+          (TRIAL ? "<p>" + esc(tr("A próba alatt nincs mit lemondani: ha nem fizet, az oldal magától szünetel.")) + "</p>" : "")
+        );
+      },
+    },
+    {
+      id: "kik",
+      q: tr("Kik Önök? Miért kaptam?"),
+      kw: ["kik", "ki maguk", "kicsoda", "ceg", "adoszam", "honnan", "miert kaptam", "ki kuldte", "mi ez", "csalas", "atveres", "megbizhat", "valodi"],
+      html: function () {
+        var c = ASK && ASK.company;
+        return (
+          "<p>" + esc(tr("A Citoviso szállásoknak készít honlapot. Ezt a tervet senki nem rendelte meg Ön helyett: a térképen és a szállásportálokon nyilvánosan elérhető adatai alapján mi készítettük el, hogy lássa, hogyan nézne ki.")) + "</p>" +
+          (c
+            ? '<dl class="cit-ask__co"><dt>' + esc(tr("Szolgáltató")) + "</dt><dd>" + esc(c.name) + "</dd><dt>" + esc(tr("Cím")) + "</dt><dd>" + esc(c.address) +
+              "</dd><dt>" + esc(tr("Nyilvántartási szám")) + "</dt><dd>" + esc(c.regNumber) + "</dd><dt>" + esc(tr("Adószám")) + "</dt><dd>" + esc(c.taxNumber) +
+              "</dd><dt>" + esc(tr("E-mail")) + "</dt><dd>" + esc(c.email) + "</dd></dl>"
+            : "") +
+          '<p class="cit-ask__small">' + esc(tr("Mi soha nem kérünk jelszót vagy bankkártya-adatot SMS-ben vagy e-mailben.")) + "</p>"
+        );
+      },
+    },
+    {
+      id: "nemkerem",
+      q: tr("Mi történik, ha nem kérem?"),
+      kw: ["ha nem kerem", "ha nem kell", "nem rendeltem", "nem rendelt", "kotelezettseg", "ha nem fizetek", "nem kerem"],
+      html: function () {
+        return (
+          "<p><b>" + esc(tr("Semmi.")) + "</b> " + esc(tr("Nem kell lemondania, nem terhelünk, nem jön számla. A terv megnézése semmire nem kötelez.")) + "</p>" +
+          "<p>" + esc(tr("Ha nem szeretne több üzenetet tőlünk, a lap alján a „Leiratkozás” linkkel jelezheti.")) + "</p>"
+        );
+      },
+    },
+    {
+      id: "beallit",
+      q: tr("Kell valamit beállítanom?"),
+      kw: ["beallit", "szerkeszt", "modosit", "kep", "szoveg", "csere", "kicserel", "atir", "javit", "sajat foto", "mit kell tennem", "dolgom"],
+      html: function () {
+        return (
+          "<p><b>" + esc(tr("Nem.")) + "</b> " + esc(tr("Az oldal úgy indul el, ahogy most látja, a saját címén. Nincs mit beállítania ahhoz, hogy működjön.")) + "</p>" +
+          "<p>" + esc(tr("Ha később képet, szöveget vagy árat cserélne, azt a kezelőfelületen teheti meg, de ez nem feltétel. A vendégek érdeklődése a kezdetektől közvetlenül Önhöz érkezik.")) + "</p>"
+        );
+      },
+    },
+    {
+      id: "telefon",
+      q: tr("Felhívnának?"),
+      hidden: true,
+      kw: ["visszahiv", "hivjon", "hivjanak", "felhiv", "telefonal", "beszelni", "beszelhet", "hivhat"],
+      html: function () {
+        return "<p>" + esc(tr("Telefonos ügyintézés nincs, de nem is kell rá várnia: a leggyakoribb kérdésekre itt azonnal megkapja a választ. Ha a kérdése nincs a listában, írja be: rögzítjük, és a válaszaink bővülnek vele.")) + "</p>";
+      },
+    },
+  ];
+  function qaById(id) {
+    for (var i = 0; i < QA.length; i++) if (QA[i].id === id) return QA[i];
+    return null;
+  }
+  function askNorm(s) {
+    return " " + String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim() + " ";
+  }
+  /** The best-matching ready answer's id (keyword table; a leading/trailing space = word edge), or null. */
+  function matchQuestion(text) {
+    var t = askNorm(text);
+    var best = null;
+    var bestScore = 0;
+    QA.forEach(function (q) {
+      var score = 0;
+      q.kw.forEach(function (kw) {
+        var key = (/^\s/.test(kw) ? " " : "") + askNorm(kw).trim() + (/\s$/.test(kw) ? " " : "");
+        if (t.indexOf(key) >= 0) score++;
+      });
+      if (score > bestScore) {
+        best = q.id;
+        bestScore = score;
+      }
+    });
+    return best;
+  }
+  var SMALLTALK = [
+    { re: /^ (koszon|kosz|koszi|thx|thanks)/, a: tr("Szívesen! Ha más kérdése van, írja be nyugodtan.") },
+    { re: /^ (szia|hello|helo|jo napot|udv|udvozlom|jo reggelt|jo estet) /, a: tr("Jó napot! Írja be a kérdését, vagy válasszon a fenti kérdések közül.") },
+  ];
+  // Mirrors src/replies/pageQuestion.ts URLISH (the server decides; this only spares a round trip).
+  var URLISH = /(https?:\/\/|www\.|\b[a-z0-9-]{2,}\.(hu|com|net|org|eu|info|io|ru|de|at|sk|ro|co|me|ly|xyz|top|online|site|shop)\b|[^\s@]+@[^\s@]+\.[a-z]{2,}|(\+?\d[\d\s\-/().]{7,}\d))/i;
+
+  function askCardHtml() {
+    var small = smallestTier();
+    var p = selPrice();
+    var head = SEL.touched
+      ? esc(tr("Az Ön választása:")) + " " + esc(selLabel()) + ' <button type="button" class="cit-ask__reset">' + esc(tr("Alaphelyzet")) + "</button>"
+      : esc(tr("Ahogy most látja"));
+    return (
+      '<h2 class="cit-ask__lbl" id="cit-ask-h">' + head + "</h2>" +
+      '<p class="cit-ask__price"><b class="cit-ask__big">' + esc(fmt(p)) + '</b><span class="cit-ask__per">' + esc(tr("/ hó")) + "</span></p>" +
+      (OFFER_PCT ? '<p class="cit-ask__first">' + esc(tr("Az első díj:")) + " <b>" + esc(fmt(offerPrice(p))) + "</b> (−" + OFFER_PCT + "%)</p>" : "") +
+      '<p class="cit-ask__min">' +
+      esc(SEL.touched ? tr("A csomag a próbába és a fizetési linkbe is így megy.") : small ? tr("A legkisebb csomag havi {price}.").replace("{price}", fmt(idsPrice(small.modules))) : "") +
+      "</p>" +
+      '<ul class="cit-ask__facts">' +
+      (TRIAL ? "<li>" + I.okc + "<span>" + esc(trialN(tr("{n} napig ingyen fut élesben, bankkártya nélkül"))) + "</span></li>" : "") +
+      "<li>" + I.okc + "<span>" + esc(tr("Nincs beállítási díj, nincs külön tárhelydíj")) + "</span></li>" +
+      (TRIAL
+        ? "<li>" + I.okc + "<span>" + esc(tr("A próba végén semmi nem terhelődik automatikusan")) + "</span></li>"
+        : PRICING.annualFreeMonths > 0
+          ? "<li>" + I.okc + "<span>" + esc(tr("Éves fizetésnél {m} hónap ingyen.").replace("{m}", String(PRICING.annualFreeMonths))) + "</span></li>"
+          : "") +
+      "</ul>" +
+      (TRIAL
+        ? '<button type="button" class="cit-ask__go" data-go="card"><span>' + esc(tr("Indítsa el")) + "</span><small>" + esc(trialN(tr("{n} nap ingyen · kártya nélkül"))) + "</small></button>" +
+          '<button type="button" class="cit-ask__alt" data-order="card">' + esc(tr("Megrendelem most, próba nélkül")) + "</button>"
+        : '<button type="button" class="cit-ask__go" data-order="card"><span>' + esc(tr("Megrendelem")) + "</span><small>" + esc(tr("bankkártyával, a fizetés után azonnal él")) + "</small></button>") +
+      '<button type="button" class="cit-ask__pk">' + esc(tr("Csomagok és modulok")) + I.chev + "</button>"
+    );
+  }
+  function renderCard() {
+    if (!askBox) return;
+    askBox.querySelector(".cit-ask__card").innerHTML = askCardHtml();
+    var open = askBox.querySelector("details[open][data-q='ar']");
+    if (open) open.querySelector(".cit-ask__ans").innerHTML = answerHtml("ar");
+  }
+  function answerHtml(id) {
+    var q = qaById(id);
+    return (
+      q.html() +
+      (TRIAL
+        ? '<p class="cit-ask__then"><button type="button" class="cit-ask__go cit-ask__go--sm" data-go="ans-' + id + '">' + esc(tr("Indítsa el")) + "</button><span>" +
+          esc(trialN(tr("{n} nap ingyen, kártya nélkül"))) + "</span></p>"
+        : "")
+    );
+  }
+  function askSectionHtml() {
+    return (
+      '<div class="cit-ask__in">' +
+      '<div class="cit-ask__cardcol"><p class="cit-ask__kick">' + esc(tr("Az Ön honlapja")) + '</p><div class="cit-ask__card" aria-labelledby="cit-ask-h"></div></div>' +
+      '<div class="cit-ask__faq" id="kerdes"><h2 class="cit-ask__h">' + esc(tr("Kérdése van?")) + "</h2>" +
+      '<p class="cit-ask__sub">' + esc(tr("Azonnal válaszolunk, a terv adataiból és a mai árlistából.")) + "</p>" +
+      '<div class="cit-ask__list">' +
+      QA.filter(function (q) {
+        return !q.hidden;
+      }).map(function (q) {
+        return '<details data-q="' + q.id + '"><summary>' + esc(q.q) + '</summary><div class="cit-ask__ans"></div></details>';
+      }).join("") +
+      "</div>" +
+      '<form class="cit-ask__form" autocomplete="off" novalidate><label class="cit-ask__sr" for="cit-ask-in">' + esc(tr("Saját kérdés")) + "</label>" +
+      '<input id="cit-ask-in" maxlength="' + (ASK_LIMITS.maxLen + 50) + '" placeholder="' + esc(tr("Más kérdése van? Írja be…")) + '">' +
+      '<button type="submit">' + esc(tr("Kérdezem")) + "</button></form>" +
+      '<p class="cit-ask__meta"><span class="cit-ask__hint" aria-live="polite"></span><span class="cit-ask__cnt"></span></p>' +
+      '<div class="cit-ask__res" aria-live="polite"></div>' +
+      "</div></div>"
+    );
+  }
+  function openQ(id, via) {
+    var d = askBox && askBox.querySelector('details[data-q="' + id + '"]');
+    if (!d) return;
+    d.setAttribute("data-via", via || "faq");
+    d.open = true;
+    setTimeout(function () {
+      try {
+        d.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      } catch (e) {
+        d.scrollIntoView();
+      }
+    }, 30);
+  }
+  function topChips() {
+    return ["ar", "koltseg", "utana"]
+      .map(function (id) {
+        return '<button type="button" class="cit-ask__chip" data-chip="' + id + '">' + esc(qaById(id).q) + "</button>";
+      })
+      .join("");
+  }
+
+  function mountAsk() {
+    if (!ASK_ON || askBox) return;
+    askBox = el('<section class="cit-ask" id="ar" aria-label="' + esc(tr("Árak és kérdések")) + '"></section>');
+    askBox.innerHTML = askSectionHtml();
+    // After the hero: the block is the answer to „mennyibe kerül?”, the first thing a lead asks.
+    var top = document.getElementById("top");
+    var anchor = top;
+    while (anchor && anchor.parentElement && anchor.parentElement !== document.body && !/^(MAIN|ARTICLE)$/.test(anchor.parentElement.tagName)) {
+      anchor = anchor.parentElement;
+    }
+    if (anchor && anchor.parentElement) anchor.parentElement.insertBefore(askBox, anchor.nextSibling);
+    else {
+      var first = document.querySelector("main, [data-cit-module]");
+      if (first && first.parentElement) first.parentElement.insertBefore(askBox, first);
+      else document.body.appendChild(askBox);
+    }
+    renderCard();
+    var list = askBox.querySelector(".cit-ask__list");
+    list.querySelectorAll("details").forEach(function (d) {
+      d.addEventListener("toggle", function () {
+        if (!d.open) return;
+        var id = d.getAttribute("data-q");
+        d.querySelector(".cit-ask__ans").innerHTML = answerHtml(id);
+        track("ask_q", { q: id, via: d.getAttribute("data-via") || "faq" });
+        d.removeAttribute("data-via");
+        list.querySelectorAll("details").forEach(function (o) {
+          if (o !== d) o.open = false;
+        });
+      });
+    });
+    askBox.addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target.closest("button") : null;
+      if (!t || !askBox.contains(t)) return;
+      if (t.hasAttribute("data-go")) openLaunch(t.getAttribute("data-go"));
+      else if (t.hasAttribute("data-order")) openOrder("card");
+      else if (t.classList.contains("cit-ask__pk")) openPkg("card");
+      else if (t.classList.contains("cit-ask__reset")) {
+        SEL.touched = false;
+        SEL.modules = ALL_IN ? ALL_IN.modules.slice() : [];
+        track("pkg_reset", {});
+        renderCard();
+      } else if (t.hasAttribute("data-chip")) openQ(t.getAttribute("data-chip"), "chip");
+    });
+    wireAskField();
+    // The pill pair steps aside while the card itself is on screen (its own button is the way).
+    if (typeof IntersectionObserver === "function") {
+      try {
+        var cardIo = new IntersectionObserver(
+          function (en) {
+            var on = en[0] && en[0].isIntersecting;
+            document.documentElement.classList.toggle("cit-ask-cardon", !!on);
+            if (on) sectionSeen("ar", SEC_TAIL + 3);
+          },
+          { threshold: 0.35 },
+        );
+        cardIo.observe(askBox.querySelector(".cit-ask__card"));
+      } catch (e) {
+        /* the pills simply stay */
+      }
+    }
+    // Deep links: ?k=<category> opens that ready answer (the owner-approved reply links here),
+    // #inditas opens the one-click start, #ar / #kerdes are plain anchors.
+    var k = PAGE_QS ? PAGE_QS.get("k") : null;
+    var hash = String(window.location.hash || "");
+    if (k && qaById(k) && !qaById(k).hidden) setTimeout(function () {
+      openQ(k, "link");
+    }, 60);
+    else if (hash === "#ar" || hash === "#kerdes") setTimeout(function () {
+      var tgt = document.getElementById(hash.slice(1));
+      if (tgt) tgt.scrollIntoView();
+    }, 60);
+    if (hash === "#inditas") setTimeout(function () {
+      openLaunch("link");
+    }, 0);
+    window.addEventListener("hashchange", function () {
+      if (window.location.hash === "#inditas") openLaunch("link");
+    });
+  }
+
+  // ── the ONE free-question field ──
+  function wireAskField() {
+    var form = askBox.querySelector(".cit-ask__form");
+    var inp = form.querySelector("input");
+    var btn = form.querySelector("button");
+    var hint = askBox.querySelector(".cit-ask__hint");
+    var cnt = askBox.querySelector(".cit-ask__cnt");
+    var res = askBox.querySelector(".cit-ask__res");
+    var lastAt = 0;
+    var lastNorm = "";
+    var dayCount = 0;
+    var sending = false;
+    var closed = false; // the day / IP ceiling: the field stays shut, the ready answers work
+    function updCnt() {
+      var n = inp.value.trim().length;
+      cnt.textContent = n ? n + " / " + ASK_LIMITS.maxLen : "";
+      cnt.classList.toggle("cit-ask__over", n > ASK_LIMITS.maxLen);
+    }
+    function say(html) {
+      res.innerHTML = '<div class="cit-ask__say">' + html + "</div>";
+    }
+    function lockFor(sec) {
+      inp.disabled = true;
+      btn.disabled = true;
+      var left = sec;
+      hint.textContent = tr("Egy pillanat… {n} mp").replace("{n}", String(left));
+      var iv = setInterval(function () {
+        left--;
+        if (left <= 0) {
+          clearInterval(iv);
+          if (closed) return;
+          inp.disabled = false;
+          btn.disabled = false;
+          hint.textContent = "";
+          inp.focus({ preventScroll: true });
+        } else if (!closed) hint.textContent = tr("Egy pillanat… {n} mp").replace("{n}", String(left));
+      }, 1000);
+    }
+    function closeForDay(msg) {
+      closed = true;
+      hint.textContent = "";
+      say(esc(msg));
+      inp.disabled = true;
+      btn.disabled = true;
+      inp.placeholder = tr("Mára lezárva — válasszon a fenti kérdések közül");
+    }
+    function post(text, cat) {
+      if (!ASK.url) return Promise.resolve(null);
+      return fetch(ASK.url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: text, category: cat, viewId: VIEW_ID }),
+      })
+        .then(function (r) {
+          return r.json().catch(function () {
+            return null;
+          });
+        })
+        .catch(function () {
+          return null;
+        });
+    }
+    function blocked(code, wait) {
+      track("ask_blocked", { code: code });
+      if (code === "long") {
+        hint.textContent = tr("Legfeljebb {n} karakter. Írja meg röviden, mire kíváncsi.").replace("{n}", String(ASK_LIMITS.maxLen));
+        cnt.classList.add("cit-ask__over");
+      } else if (code === "gap") lockFor(wait || ASK_LIMITS.minGapSec);
+      else if (code === "dup") {
+        hint.textContent = tr("Erre az imént válaszoltunk, fent nyitva látja.");
+        inp.value = "";
+        updCnt();
+      } else if (code === "link") {
+        say(esc(tr("Biztonsági okból linket, e-mail-címet vagy telefonszámot nem fogadunk a kérdésben. Írja meg szavakkal, mire kíváncsi.")));
+      } else if (code === "day") {
+        closeForDay(tr("Mára elérte a {n} kérdést. A fenti kérdésekre továbbra is azonnal válaszolunk, holnap újra írhat.").replace("{n}", String(ASK_LIMITS.perDay)));
+      } else if (code === "ip") {
+        closeForDay(tr("Most túl sok kérdés érkezik erről a hálózatról. A fenti kérdésekre addig is válaszolunk, később újra írhat."));
+      }
+    }
+    function send() {
+      if (sending) return;
+      var text = inp.value.replace(/\s+/g, " ").trim();
+      hint.textContent = "";
+      if (!text) return inp.focus();
+      if (text.length > ASK_LIMITS.maxLen) return blocked("long");
+      if (dayCount >= ASK_LIMITS.perDay) return blocked("day");
+      var ago = (Date.now() - lastAt) / 1000;
+      if (lastAt && ago < ASK_LIMITS.minGapSec) return blocked("gap", Math.ceil(ASK_LIMITS.minGapSec - ago));
+      var n = askNorm(text);
+      if (n === lastNorm) return blocked("dup");
+      if (URLISH.test(text)) return blocked("link");
+      var small = null;
+      SMALLTALK.forEach(function (s) {
+        if (!small && s.re.test(n)) small = s.a;
+      });
+      var cat = small ? "smalltalk" : matchQuestion(text);
+      lastAt = Date.now();
+      lastNorm = n;
+      dayCount++;
+      sending = true;
+      inp.value = "";
+      updCnt();
+      track("ask_free", { q: cat || null });
+      // A matched answer shows at once; the server call only stores it (and enforces the limits).
+      if (cat && cat !== "smalltalk") {
+        res.innerHTML = '<p class="cit-ask__echo">„' + esc(text) + "”</p>";
+        openQ(cat, "text");
+      } else if (small) say(esc(small));
+      post(text, cat).then(function (j) {
+        sending = false;
+        if (j && j.ok === false && j.error) {
+          if (j.error === "gap" || j.error === "day" || j.error === "ip" || j.error === "dup" || j.error === "long" || j.error === "link") blocked(j.error, j.wait);
+          return;
+        }
+        if (cat) return;
+        if (j && j.ok && j.capped) {
+          say(esc(tr("Erre most nem tudunk pontos választ adni. Ma már több kérdést rögzítettünk Öntől, ezt nem tudjuk felvenni. A leggyakoribb kérdések:")) + '<span class="cit-ask__chips">' + topChips() + "</span>");
+        } else {
+          say(
+            "<b>" + esc(tr("Erre most nem tudunk pontos választ adni.")) + "</b> " +
+              esc(tr("Rögzítettük a kérdését, és a válaszaink bővülnek vele. Addig ezek segíthetnek:")) +
+              '<span class="cit-ask__chips">' + topChips() + "</span>",
+          );
+        }
+      });
+      lockFor(ASK_LIMITS.minGapSec);
+    }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      send();
+    });
+    inp.addEventListener("input", function () {
+      updCnt();
+      if (!cnt.classList.contains("cit-ask__over")) hint.textContent = "";
+    });
+    updCnt();
+  }
+
+  // ── „Csomagok és modulok” — the separate sheet (T2) ──
+  var pkgScrim = null;
+  var pkgSheet = null;
+  var pkgTune = false;
+  function pkgModules() {
+    // Every module some package carries, grouped by the smallest package that has it.
+    var seen = {};
+    var out = [];
+    TIERS.forEach(function (t, i) {
+      (t.modules || []).forEach(function (id) {
+        var d = defOf(id);
+        if (!d || seen[id]) return;
+        seen[id] = true;
+        out.push({ d: d, tier: i, lock: i === 0 || !!d.spine });
+      });
+    });
+    return out;
+  }
+  function pkgTot() {
+    return '<p class="cit-ask__tot"><span>' + esc(selLabel()) + "</span><b>" + ftm(selPrice()) + "</b></p>";
+  }
+  function pkgHtml(msg) {
+    var cur = SEL.touched ? selTier() : ALL_IN ? ALL_IN.id : null;
+    var prev = [];
+    var cards = TIERS.map(function (t, i) {
+      var add = (t.modules || []).filter(function (id) {
+        var d = defOf(id);
+        return d && prev.indexOf(id) < 0 && !d.spine;
+      });
+      prev = prev.concat(t.modules || []);
+      return (
+        '<button type="button" class="cit-ask__tcard" data-tier="' + esc(t.id) + '" aria-pressed="' + (cur === t.id) + '">' +
+        '<span class="cit-ask__th"><b>' + esc(tr(t.label)) + "</b><span>" + ftm(idsPrice(t.modules)) + "</span></span>" +
+        (ALL_IN && t.id === ALL_IN.id ? '<em class="cit-ask__badge">' + esc(tr("Ahogy most látja")) + "</em>" : "") +
+        "<ul>" + (i ? '<li class="cit-ask__prev">' + esc(tr("Minden az előző csomagból ({pkg}), és:").replace("{pkg}", tr(TIERS[i - 1].label))) + "</li>" : "") +
+        add.map(function (id) {
+          return "<li>" + esc(tr(labelOf(id))) + "</li>";
+        }).join("") +
+        "</ul></button>"
+      );
+    }).join("");
+    var mods = "";
+    if (pkgTune) {
+      var last = -1;
+      mods = '<ul class="cit-ask__mods">';
+      pkgModules().forEach(function (x) {
+        if (x.tier !== last) {
+          last = x.tier;
+          mods += '<li class="cit-ask__grp">' + esc(x.tier === 0 ? tr("{pkg} — mindig benne").replace("{pkg}", tr(TIERS[0].label)) : tr("{pkg} csomagban").replace("{pkg}", tr(TIERS[x.tier].label))) + "</li>";
+        }
+        var on = SEL.modules.indexOf(x.d.id) >= 0;
+        mods +=
+          '<li class="' + (x.lock ? "cit-ask__lock" : "") + '"><label><input type="checkbox" data-mod="' + esc(x.d.id) + '"' + (on || x.lock ? " checked" : "") + (x.lock ? " disabled" : "") + ">" +
+          "<span>" + esc(tr(x.d.label)) + '</span><span class="cit-ask__pr">' + (priceOf(x.d.id) ? "+" + esc(fmt(priceOf(x.d.id))) : esc(tr("benne"))) + "</span></label></li>";
+      });
+      mods += '</ul><p class="cit-ask__dep" aria-live="polite">' + esc(msg || "") + "</p>";
+    }
+    return (
+      '<button class="cit-cfg-tx" type="button" data-pk="close" aria-label="' + esc(tr("Bezárás")) + '">' + I.x + "</button>" +
+      '<div class="cit-cfg-tbody"><h3 class="cit-ask__sh" id="cit-ask-pkh">' + esc(tr("Csomagok és modulok")) + "</h3>" +
+      '<p class="cit-ask__ss">' + esc(tr("Nem kötelező. Ha nem választ, a próba úgy indul, ahogy most látja, és csomagot a fizetési linken választ.")) + "</p>" +
+      '<div class="cit-ask__tcards">' + cards + "</div>" +
+      '<button type="button" class="cit-ask__tune" data-pk="tune" aria-expanded="' + pkgTune + '">' + esc(pkgTune ? tr("Modulok elrejtése") : tr("Testre szabom modulonként")) + "</button>" +
+      mods + pkgTot() +
+      '<div class="cit-ask__acts"><button type="button" class="cit-ask__ghost" data-pk="close">' + esc(tr("Kész, vissza")) + "</button>" +
+      (TRIAL
+        ? '<button type="button" class="cit-ask__go" data-pk="go"><span>' + esc(tr("Indítsa el ezzel")) + "</span><small>" + esc(trialN(tr("{n} nap ingyen · kártya nélkül"))) + "</small></button>"
+        : '<button type="button" class="cit-ask__go" data-pk="order"><span>' + esc(tr("Megrendelem ezzel")) + "</span></button>") +
+      "</div></div>"
+    );
+  }
+  function drawPkg(msg) {
+    pkgSheet.innerHTML = pkgHtml(msg);
+    renderCard();
+  }
+  function closePkg() {
+    if (!pkgSheet || pkgSheet.hidden) return;
+    pkgSheet.hidden = true;
+    pkgScrim.hidden = true;
+    document.documentElement.classList.remove("cit-ask-pkopen");
+  }
+  function openPkg(via) {
+    if (!pkgSheet) {
+      pkgScrim = el('<div class="cit-cfg-tscrim cit-ask-pkscrim" hidden></div>');
+      pkgSheet = el('<div class="cit-cfg-tsheet cit-ask-pk" role="dialog" aria-modal="true" aria-labelledby="cit-ask-pkh" hidden></div>');
+      document.body.appendChild(pkgScrim);
+      document.body.appendChild(pkgSheet);
+      pkgScrim.addEventListener("click", closePkg);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closePkg();
+      });
+      pkgSheet.addEventListener("click", function (e) {
+        var b = e.target.closest ? e.target.closest("button") : null;
+        if (!b) return;
+        var tier = b.getAttribute("data-tier");
+        var act = b.getAttribute("data-pk");
+        if (tier) {
+          var t = tierById(tier);
+          SEL.modules = depClosure((t.modules || []).slice());
+          SEL.touched = true;
+          track("pkg_tier", { tier: tier });
+          drawPkg("");
+        } else if (act === "tune") {
+          pkgTune = !pkgTune;
+          drawPkg("");
+        } else if (act === "close") closePkg();
+        else if (act === "go") {
+          closePkg();
+          openLaunch("pkg");
+        } else if (act === "order") {
+          closePkg();
+          openOrder("pkg");
+        }
+      });
+      pkgSheet.addEventListener("change", function (e) {
+        var cb = e.target;
+        if (!cb || !cb.hasAttribute || !cb.hasAttribute("data-mod")) return;
+        var id = cb.getAttribute("data-mod");
+        var mods = SEL.modules.slice();
+        var msg = "";
+        if (cb.checked) {
+          if (mods.indexOf(id) < 0) mods.push(id);
+          var closed = depClosure(mods);
+          var added = closed.filter(function (x) {
+            return mods.indexOf(x) < 0;
+          });
+          if (added.length) {
+            msg = (whyOf(id, added[0]) || tr("Ehhez kell: {mods}. Bekapcsoltuk.")).replace(
+              "{mods}",
+              added.map(function (x) {
+                return tr(labelOf(x));
+              }).join(", "),
+            );
+          }
+          mods = closed;
+        } else {
+          mods = mods.filter(function (x) {
+            return x !== id;
+          });
+          // What needs it goes too (never a set the checkout would refuse), said aloud.
+          var gone = [];
+          for (var g = 0; g <= MODULES.length; g++) {
+            var set = setOf(mods);
+            var drop = mods.filter(function (x) {
+              return !supersededIn(x, set) && (REQ[x] || []).some(function (r) {
+                return mods.indexOf(r.id) < 0;
+              });
+            });
+            if (!drop.length) break;
+            gone = gone.concat(drop);
+            mods = mods.filter(function (x) {
+              return drop.indexOf(x) < 0;
+            });
+          }
+          if (gone.length)
+            msg = tr("Nélküle ez sem működik, ezért ezt is kikapcsoltuk: {mods}.").replace(
+              "{mods}",
+              gone.map(function (x) {
+                return tr(labelOf(x));
+              }).join(", "),
+            );
+        }
+        SEL.modules = mods;
+        SEL.touched = true;
+        track("pkg_module", { id: id, on: !!cb.checked });
+        drawPkg(msg);
+      });
+    }
+    drawPkg("");
+    pkgScrim.hidden = false;
+    pkgSheet.hidden = false;
+    pkgSheet.scrollTop = 0;
+    document.documentElement.classList.add("cit-ask-pkopen");
+    track("pkg_open", { via: via || "card" });
+    var f = pkgSheet.querySelector(".cit-ask__tcard[aria-pressed='true']") || pkgSheet.querySelector(".cit-ask__tcard");
+    if (f) f.focus({ preventScroll: true });
+  }
+
+  // ── the pill pair's new roles (frozen plan ⑨): left „Mennyibe kerül?” → the card,
+  // right „Indítsa el” → the one-click start. Without a trial the order pill stays as it was.
+  if (ASK_ON && trialPill) {
+    var lLbl = launch.querySelector(".cit-cfg-launch__lbl");
+    if (lLbl) {
+      lLbl.innerHTML = esc(tr("Mennyibe kerül?")) + (launchFromText ? '<small class="cit-cfg-launch__from">' + esc(launchFromText) + "</small>" : "");
+    }
+    var lTag = launch.querySelector(".cit-cfg-launch__tag");
+    if (lTag) lTag.parentNode.removeChild(lTag);
+    launch.setAttribute("aria-label", tr("Mennyibe kerül?") + (launchFromText ? " — " + launchFromText : ""));
+    launch.classList.add("cit-cfg-launch--ask");
+    document.documentElement.classList.add("cit-ask-page");
+    var tLbl = trialPill.querySelector(".cit-cfg-launch__lbl");
+    tLbl.innerHTML = esc(tr("Indítsa el")) + '<small class="cit-cfg-launch__from">' + esc(trialN(tr("{n} nap ingyen"))) + "</small>";
+    trialPill.setAttribute("aria-label", trialN(tr("Indítsa el az oldalát: {n} napig ingyen, bankkártya nélkül")));
+  }
+  /** The left pill on the ask page: to the card, not the panel (the card holds the order entry). */
+  function toPriceCard() {
+    var c = askBox && askBox.querySelector(".cit-ask__card");
+    if (!c) return open("pill");
+    track("price_open", { via: "pill" });
+    try {
+      askBox.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      askBox.scrollIntoView();
+    }
+  }
+
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
     // ALL-IN on first paint (ADR-0047): the lead must SEE the full package in the
@@ -6173,6 +7025,7 @@
     // now trim it". Withholding the samples until a panel open meant the offer was
     // invisible to anyone who did not start fiddling.
     revealSamples();
+    mountAsk();
     document.body.appendChild(scrim);
     document.body.appendChild(panel);
     document.body.appendChild(launch);
@@ -6207,6 +7060,7 @@
     // láthatónak kell lennie") — a 0.3 s slide-in, not the old 2.6 s / first-scroll wait,
     // during which a lead who read the first screen had no buy entry at all.
     pickLaunchColour();
+    if (launch.classList.contains("cit-cfg-launch--alt")) document.documentElement.classList.add("cit-ask-alt");
     var pillShown = false;
     function showPill() {
       if (pillShown) return;

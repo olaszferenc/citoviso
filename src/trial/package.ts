@@ -16,7 +16,7 @@
 // not generate a translation, so naming it would be the same overclaim.
 
 import { db } from "../db/client.js";
-import { MODULE_CATALOG, orderPresetId } from "../modules.js";
+import { MODULE_CATALOG, orderPresetId, withRequiredModules } from "../modules.js";
 import { isTier, tierModules, type Tier } from "../packages.js";
 import { currentPresets, getPackageAssignment, loadPricing } from "../pricing.js";
 import { getFreeTrialConfig } from "./config.js";
@@ -28,6 +28,26 @@ export function trialModuleIds(pkg?: Tier): string[] {
   // "FULL funkció", the translation module included).
   if (pkg) return tierModules(getPackageAssignment(), pkg);
   return MODULE_CATALOG.filter((m) => !m.retired).map((m) => m.id);
+}
+
+/**
+ * ADR-XXXX (kerdes-inditas ③, owner 2026-11-12): the visitor picked a package or modules on the
+ * lead page BEFORE starting → the trial runs with THAT set („amit lát, azt fizeti”), not the
+ * configured trial package. The picked ids are cleaned the way an order is: only sold,
+ * switch-like catalog modules (retired, one-off and tenant-only ones dropped), the spine folded
+ * in (always provisioned), and every hard requirement added (the client ticks them too — the
+ * server never trusts a set it would refuse at the checkout). null = nothing usable was sent →
+ * the caller falls back to trialModuleIds().
+ */
+export function trialModulesFromSelection(ids: readonly unknown[] | null | undefined): string[] | null {
+  if (!Array.isArray(ids) || !ids.length) return null;
+  const sellable = new Set(MODULE_CATALOG.filter((m) => !m.retired && m.billing !== "once" && !m.tenantOnly).map((m) => m.id));
+  const picked = [...new Set(ids.filter((x): x is string => typeof x === "string" && sellable.has(x)))];
+  if (!picked.length) return null;
+  const spine = MODULE_CATALOG.filter((m) => m.spine && !m.retired).map((m) => m.id);
+  const withSpine = withRequiredModules([...spine, ...picked]);
+  // Catalog order, so the grant and its wording read the same everywhere.
+  return MODULE_CATALOG.filter((m) => withSpine.includes(m.id)).map((m) => m.id);
 }
 
 export interface TrialPackage {

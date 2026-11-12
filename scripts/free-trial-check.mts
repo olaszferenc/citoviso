@@ -28,6 +28,8 @@
 //   ⑭ IT C5.3: a claim whose provisioning never finished (no tenant) is not lapsed by the
 //      expiry tick, and the next submit starts it with a FRESH clock — also a tenant-less
 //      claim an older expiry run already lapsed; never "trial_used" for a trial that never was.
+//   ⑮ ADR-XXXX (kerdes-inditas): a set picked on the lead page is what the trial grants (+ the
+//      spine + hard requirements; unknown ids dropped), and the one-click click-wrap is stamped.
 //
 // The dev DB is SHARED: the config is set with the PROCESS-LOCAL override (the app_setting
 // row is never written); every row is this run's own and deleted in `finally`; the
@@ -55,6 +57,9 @@ import {
 } from "../src/trial/config.js";
 import { overrideCouponConfigInProcess } from "../src/payment/couponConfig.js";
 import { startTrial, trialModuleIds } from "../src/trial/start.js";
+import { trialModulesFromSelection } from "../src/trial/package.js";
+import { MODULE_CATALOG } from "../src/modules.js";
+import { TRIAL_CLICKWRAP_V1 } from "../src/legal.js";
 import { lapseExpiredTrials } from "../src/trial/expiry.js";
 import { preTrialOrderOfContinuableTrial } from "../src/conversion/owned.js";
 import { ensureEscalationOffer, ESCALATION_CONFIG_DEFAULT, overrideEscalationConfigInProcess } from "../src/payment/offers.js";
@@ -455,6 +460,30 @@ try {
   tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", i.leadId).execute()).map((t) => t.id));
   const iAfter = await db.selectFrom("free_trial").select(["status", "lapsed_at"]).where("id", "=", i.trialId).executeTakeFirst();
   check("a régi futás által lapsed-elt tenant nélküli foglalás is indítható", ri.ok && iAfter?.status === "active" && iAfter.lapsed_at === null, `${JSON.stringify(ri)} · ${iAfter?.status}`);
+
+  // ⑮ ADR-XXXX (kerdes-inditas ③/⑦): a set picked on the lead page → the trial grants EXACTLY
+  // that (+ the spine + every hard requirement), not the configured package; the one-click
+  // sheet's click-wrap is stamped as the accepted wording of both declarations.
+  console.log("⑮ a lapon választott csomaggal indított próba + egy mondatos elfogadás");
+  const sel = await fixtureLead("s");
+  const withReq = MODULE_CATALOG.find((m) => !m.retired && m.billing !== "once" && !m.tenantOnly && !m.spine && (m.requires ?? []).length > 0);
+  const plain = MODULE_CATALOG.find((m) => !m.retired && m.billing !== "once" && !m.tenantOnly && !m.spine && !(m.requires ?? []).length && m.id !== withReq?.id);
+  const picked = [withReq?.id, plain?.id, "nincs-ilyen-modul"].filter(Boolean) as string[];
+  const rs = await startTrial(sel.token, { ...FORM, modules: picked, clickwrap: true });
+  tenants.push(...(await db.selectFrom("tenant").select("id").where("lead_id", "=", sel.leadId).execute()).map((t) => t.id));
+  check("a választott halmazzal indul", rs.ok, JSON.stringify(rs));
+  if (rs.ok) {
+    const got = (await db.selectFrom("module_entitlement").select("module").where("tenant_id", "=", rs.tenantId).where("active", "=", true).where("trial_grant", "=", true).execute()).map((e) => e.module).sort();
+    const want = (trialModulesFromSelection(picked) ?? []).slice().sort();
+    const spine = MODULE_CATALOG.filter((m) => m.spine && !m.retired).map((m) => m.id);
+    check("…pontosan a választott + gerinc + kötelező párok kapnak trial_grant-ot", JSON.stringify(got) === JSON.stringify(want), `${got.join(",")} ≠ ${want.join(",")}`);
+    check("…a választott modulok benne vannak, az ismeretlen id nem", picked.slice(0, 2).every((m) => got.includes(m)) && !got.includes("nincs-ilyen-modul"));
+    check("…a kötelező pár is (ADR-0192)", !withReq || (withReq.requires ?? []).every((r) => got.includes(r.id)), withReq?.id ?? "");
+    check("…a gerinc is", spine.every((m) => got.includes(m)));
+    check("…NEM a teljes katalógus", got.length < MODULE_CATALOG.filter((m) => !m.retired).length, `${got.length}`);
+    const ft = await db.selectFrom("free_trial").select(["terms_text", "photo_rights_text"]).where("lead_id", "=", sel.leadId).executeTakeFirst();
+    check("az elfogadás szövege a TRIAL_CLICKWRAP_V1 (mindkét oszlopban)", ft?.terms_text === TRIAL_CLICKWRAP_V1 && ft?.photo_rights_text === TRIAL_CLICKWRAP_V1);
+  }
 } finally {
   closeConsole?.();
   await rm(MOCK_FILE, { force: true });

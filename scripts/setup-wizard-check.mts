@@ -206,7 +206,7 @@ try {
   check("belépés-emlékeztető SMS: megnevezi a hiányt, GSM-7, ≤ 2 szelet", /Meg hianyzik: Hogyan adja ki\?, Arak \+1/.test(sms) && smsEncoding(sms).segments <= 2, sms);
   const longSms = buildLoginReminderSmsText({ siteName: "A Nagyon Hosszú Nevű Balatoni Családi Vendégház és Apartmanház", daysLeft: 11, setPasswordUrl: url, missing: ["Egy nagyon hosszú témanév ami nem fér el", "Még egy hosszú témanév"], lang: "hu" });
   check("ha nem férne 2 szeletbe, a lista nélküli SMS megy", !/hianyzik/.test(longSms) && smsEncoding(longSms).segments <= 2, longSms);
-  const mail = buildLoginReminderEmail({ to: "a@b.hu", username: "u", setPasswordUrl: url, loginUrl: "https://x/login", siteName: "Marilyn Vendégház", contactName: null, daysLeft: 11, trialUntilIso: "2026-11-16", helpPhone: null, missing: ["Árak", "Férőhely"], lang: "hu" });
+  const mail = buildLoginReminderEmail({ to: "a@b.hu", username: "u", setPasswordUrl: url, loginUrl: "https://x/login", siteName: "Marilyn Vendégház", contactName: null, daysLeft: 11, trialUntilIso: "2026-11-16", missing: ["Árak", "Férőhely"], lang: "hu" });
   check("belépés-emlékeztető e-mail: a hiánylista + végigvezetés", mail.text.includes("még ez hiányzik") && mail.text.includes("• Árak") && mail.text.includes("végigvezetjük"));
   const { maintainSetupReminders } = await import("../src/tenant/setupReminder.js");
   const t0 = new Date();
