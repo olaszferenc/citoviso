@@ -2171,6 +2171,7 @@ async function handle(
     // without a market row — otherwise the Polish lead that just arrived would stay
     // invisible until an operator wondered why nothing could be sent to it.
     const known = await encounteredCountries();
+    await loadPricing();
     const rows = await listMarkets();
     const byCountry = new Map(rows.map((r) => [r.country, r]));
     const markets = await Promise.all(
@@ -2184,6 +2185,8 @@ async function handle(
           note: r?.note ?? null,
           home: country === HOME_MARKET,
           log: await marketLog(country),
+          // ADR-XXXX: why the money path keeps this market shut (shown instead of „Megnyitás”).
+          openGaps: marketOpenGaps(country, { row: countryConfigSync, regionGaps: regionPriceGaps }),
         };
       }),
     );

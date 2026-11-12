@@ -2,9 +2,6 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
-import { marketOpenGaps } from "../payment/providers.js";
-import { countryConfigSync } from "../country.js";
-import { regionPriceGaps } from "../pricing.js";
 import type { LeadStock } from "./leadStock.js";
 import { leadStockCard, stockChips, stockFilterLabel, stockPeriodPhrase, type StockPreset } from "./leadStockViews.js";
 import type { OpenChannelsData } from "./openChannels.js";
@@ -711,6 +708,9 @@ export interface MarketView {
   /** True for the home market: its pack is the product's foundation, not a decision here. */
   readonly home: boolean;
   readonly log: readonly { action: string; actor: string; reason: string; at: Date }[];
+  /** ADR-XXXX: why the market cannot open (payment provider / currency / price sheet / non-EU);
+   *  empty or absent = it may. Computed by the server (payment/providers.ts marketOpenGaps). */
+  readonly openGaps?: readonly string[];
 }
 
 /**
@@ -725,8 +725,7 @@ function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; tex
   const lang = consoleLang();
   // ADR-XXXX: a market whose money path cannot work (no country row, a currency its payment
   // provider does not take, an incomplete price sheet) shows WHY instead of the open action.
-  const moneyGaps = (country: string): string[] =>
-    marketOpenGaps(country, { row: countryConfigSync, regionGaps: regionPriceGaps });
+  const moneyGaps = (country: string): readonly string[] => markets.find((x) => x.country === country)?.openGaps ?? [];
   const fmt = (d: Date | null): string =>
     d ? new Date(d).toISOString().slice(0, 16).replace("T", " ") : "—";
 
