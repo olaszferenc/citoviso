@@ -307,12 +307,20 @@ async function runAll(regress?: string): Promise<void> {
   await writeFile(noName, await build({ offer: true, name: "", regress }), "utf8");
 
   const browser = await chromium.launch();
+  // Fixture photos come from an external CDN (picsum.photos), outside what this gate audits:
+  // a CDN outage must not fail it (2026-11-12: picsum unreachable → the FIRST goto timed out
+  // on "load"). Every page gets the stub BEFORE its first navigation — same fix as 4c50604f.
+  const newPage = async (opts: Parameters<typeof browser.newPage>[0]) => {
+    const pg = await browser.newPage(opts);
+    await pg.route("**/picsum.photos/**", (route) => route.fulfill({ status: 200, contentType: "image/gif", body: "" }));
+    return pg;
+  };
   try {
     for (const size of [
       { tag: "390px", width: 390, height: 844 },
       { tag: "desktop", width: 1280, height: 900 },
     ]) {
-      const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
+      const page = await newPage({ viewport: { width: size.width, height: size.height } });
       const jsErrors: string[] = [];
       page.on("pageerror", (e) => jsErrors.push(e.message));
       // ⑧ the module step FIRST — the cards live there, one screen before the pay step
@@ -385,7 +393,7 @@ async function runAll(regress?: string): Promise<void> {
 
     // ── no offer → NO discount row (a "−0 Ft" line reads as a broken sum) ─────
     {
-      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await newPage({ viewport: { width: 390, height: 844 } });
       await openPayStep(page, noOffer);
       const r = (await page.evaluate(READ)) as Read;
       check(r.hasItem, "[ajánlat nélkül] a tétel-doboz ott van");
@@ -400,7 +408,7 @@ async function runAll(regress?: string): Promise<void> {
 
     // ── no name → the box must NOT invent one (§B.17) ────────────────────────
     {
-      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await newPage({ viewport: { width: 390, height: 844 } });
       await openPayStep(page, noName);
       const r = (await page.evaluate(READ)) as Read;
       check(r.hasItem, "[név nélkül] a tétel-doboz ott van (az árak attól még kellenek)");
