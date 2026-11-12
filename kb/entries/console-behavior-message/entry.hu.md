@@ -52,9 +52,10 @@ jóváhagyó sorba megy, onnan te döntesz); aki próbázik vagy próbázott; ak
 mobilszáma egy másik leadnél már kapott üzenetet; és akinek a terve nincs jóváhagyva. A válasz és a
 „ne keressük” jel az EMBERRE szól: ugyanazzal a mobillal vagy címmel egy másik leadje sem kap üzenetet.
 Néhány technikai ok is leállít (teszt, kizárt lead, archivált link). Amit a rendszer már a lépés
-után kizár, azt a **„Leállítva”** szűrő az okával mutatja. Amit csak a küldés pillanatában mér újra
-(pl. a terv még nincs jóváhagyva, vagy közben válaszolt), az nem kerül a **„Leállítva”** alá: az
-ilyen lead a **„vár”** számban marad, és nem kap üzenetet.
+után kizár, azt a **„Leállítva”** szűrő az okával mutatja. Kivétel: ha a lead terve még nincs jóváhagyva,
+azt a rendszer csak a küldés pillanatában veszi észre. Az ilyen lead nem kap üzenetet, és legfeljebb
+4 napig a **„vár”** számban marad; utána a **„Leállítva”** alatt látszik, „a kiváltó 4 napnál
+régebbi” okkal.
 
 ## Mit tegyél
 
