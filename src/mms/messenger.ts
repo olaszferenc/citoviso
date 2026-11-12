@@ -511,18 +511,28 @@ export async function whatsappPresenceDue(now: Date = new Date()): Promise<strin
       from outreach_dispatch d join lead l on l.id = d.lead_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
-  const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
+  let phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
   // Viber-off mode (owner 2026-11-12: „ha nincs viber vagy nem működik, akkor nézzünk whatsuppot”):
   // a number whose Viber is not read yet gets the WhatsApp lookup too (same tempo, one per 2 minutes).
   const { VIBER_OFF_KEY } = await import("./relayQueue.js");
   const viberOff = !!(await getSetting(VIBER_OFF_KEY));
+  // While Viber is off the numbers already queued for sending (approved, waiting on Viber) come first.
+  if (viberOff) {
+    const queued = await sql<{ to_phone: string }>`
+      select o.to_phone from mms_outbox o
+       where o.status = 'queued' and o.prospect_id is not null and o.messenger_text is not null
+         and not exists (select 1 from messenger_presence p where p.phone = o.to_phone and (p.whatsapp <> 'unknown' or p.viber = 'no'))
+       order by o.created_at asc`.execute(db);
+    const qp = [...new Set(queued.rows.map((r) => r.to_phone))];
+    phones = [...qp, ...phones.filter((p) => !qp.includes(p))];
+  }
   const rowsP = await db.selectFrom("messenger_presence").select(["phone", "viber", "whatsapp"]).where("phone", "in", phones).execute();
   const known = new Map(rowsP.map((r) => [r.phone, r]));
   const cand = new Set(
     phones.filter((p) => {
       const r = known.get(p);
-      if (viberOff) return !r || (r.whatsapp === "unknown" && r.viber !== "yes");
+      if (viberOff) return !r || r.whatsapp === "unknown";
       return !!r && r.viber === "no" && r.whatsapp === "unknown";
     }),
   );

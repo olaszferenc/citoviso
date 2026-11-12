@@ -206,8 +206,8 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
         )
         .$if(viberOff, (qb) =>
           qb.where(
-            sql<boolean>`coalesce(mms_outbox.channel, '') <> 'viber' and exists (select 1 from messenger_presence p
-              where p.phone = mms_outbox.to_phone and (p.viber = 'no' or p.whatsapp = 'yes'))`,
+            sql<boolean>`exists (select 1 from messenger_presence p where p.phone = mms_outbox.to_phone
+              and ((p.viber = 'no' and coalesce(mms_outbox.channel, '') <> 'viber') or p.whatsapp = 'yes'))`,
           ),
         )
         .orderBy("created_at", "asc")
@@ -231,7 +231,9 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
       .select("phone")
       .where("phone", "in", claimed.map((r) => r.to_phone))
       .where("whatsapp", "=", "yes")
-      .where("viber", "<>", "yes")
+      // Viber-off mode (owner 2026-11-12: „ha nincs viber vagy nem működik … whatsupp”): a Viber user with
+      // WhatsApp goes on WhatsApp too — forced, so a send-time miss never turns into an MMS.
+      .$if(!viberOff, (qb) => qb.where("viber", "<>", "yes"))
       .execute();
     for (const p of rows) waOnly.add(p.phone);
   }
