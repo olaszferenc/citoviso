@@ -4124,7 +4124,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .ls-card .con-w__v a { color: inherit; text-decoration: none; }
 .ls-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 4px; }
 .ls-cols > div { min-width: 0; }
-.ls-sec { margin: 12px 0 2px; display: flex; justify-content: space-between; gap: 8px; font: 700 11.5px/1.2 var(--citui-font-text); letter-spacing: .03em; text-transform: uppercase; color: var(--citui-navy-700); }
+.ls-sec { margin: 12px 0 2px; display: flex; justify-content: space-between; gap: 8px; font: 700 11.5px/1.2 var(--citui-font-text); letter-spacing: .03em; text-transform: uppercase; color: var(--citui-ink-brand-2); }
 .ls-sec span { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--citui-muted); }
 .ls-scroll { overflow-x: auto; }
 .ls-t { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
