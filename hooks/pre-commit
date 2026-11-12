@@ -3129,7 +3129,7 @@ if [ -f scripts/mock-trial-overlay-check.mts ] && \
   echo "[pre-commit] mock-trial-overlay-check (kérdező-kártya · Rendben→élő · pirula-pár · köszönőlap)…"
   npx tsx scripts/mock-trial-overlay-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (kerdes-inditas): a lead-lap szabad kérdés mezőjének szerver-fele — 300 karakter, link/cím/szám
+# kerdes-inditas (terv: assets/design-refs/prospect-page/kerdes-inditas/): a lead-lap szabad kérdés mezőjének szerver-fele — 300 karakter, link/cím/szám
 # kiszűrve, 4 mp, ismétlés, 100/lead/nap, 5 rögzítés/nap a TULAJ jóváhagyó sorába (soha nem gépi válasz),
 # leiratkozott és saját nézet nem kerül a sorba. Az őr módosításakor az önteszt is fut (a napi plafon nélkül pirosra kell mennie).
 if [ -f scripts/page-question-check.mts ] && \
