@@ -3613,7 +3613,7 @@ if [ -f scripts/trial-campaign-check.mts ] && \
   echo "[pre-commit] trial-campaign-check (próba-kampány: levél, SMS, why-oldal, egy lövés, follow-up)…"
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/trial-campaign-check.mts >"$GATE_LOG" || gate_failed
 fi
-# behavior-message-check (ADR-XXXX, viselkedés-üzenet, A változat): az SMS GSM-7 és ≤ 2 szelet (hosszú
+# behavior-message-check (a viselkedés-üzenet ADR-je, A változat): az SMS GSM-7 és ≤ 2 szelet (hosszú
 #     névnél a név rövidül, a link soha), nincs „írja vissza: NEM” sor, nincs kedvezmény, a link a lépés
 #     horgonyára visz (#kerdes · ?k=ar#ar · #inditas); a §C kapu (SMS + levél) átengedi; hétköznap 8–20; a
 #     kiváltók (visszatérés, árnézés, próba-gomb; a saját #inditas linkünk nem), csak a főkapcsoló UTÁNI
