@@ -326,6 +326,11 @@ async function main(): Promise<void> {
   await buildPreview();
   const browser = await chromium.launch();
   const page = await browser.newPage();
+  // Fixture photos come from an external CDN (picsum.photos); they are outside what this
+  // gate audits, and a CDN outage must not fail the billing check (2026-11-12: 522 → goto timeout).
+  await page.route("**/picsum.photos/**", (route) =>
+    route.fulfill({ status: 200, contentType: "image/gif", body: "" }),
+  );
   try {
     await auditBuyerReality(page);
   } finally {
