@@ -13,11 +13,14 @@ konzolon, és mit kell tenned, ha a rendszer riaszt.
 
 ## Mi a próba, röviden
 
-- A lead a kiküldött terv lapján (a követett linken) egy rövid űrlapot tölt ki: név, e-mail, telefon,
-  és elfogadja az ÁSZF-et meg a fotó-nyilatkozatot. Fizetési adatot nem kérünk.
-- Az oldala azonnal **él** a citoviso.com aldomainjén — azon a címen, amit a lap előre megmutatott —,
+- A lead a kiküldött terv lapján (a követett linken) az „Indítsa el” gombbal indítja a próbát. Az
+  indító lap a lead adataival előre kitöltve mutatja a nevet (a szállás nevét), a telefonszámot és az
+  e-mail-címet (ahová a megkeresés ment); a „Módosítom” gombbal átírhatja őket. Külön pipa nincs: a gomb alatti egy mondat mondja ki, hogy az indítással elfogadja az ÁSZF-et és a
+  fotó-nyilatkozatot. Fizetési adatot nem kérünk.
+- Az oldala azonnal **él** a citoviso.com aldomainjén — azon a címen, amit a lap előre megmutatott.
+  Ha a lead a lapon csomagot vagy modulokat választott, a próba **azzal a készlettel** indul; ha nem,
   a **beállított próba-csomag moduljai** vannak bekapcsolva (az Árazás lap **„A próbázó ezt kapja”**
-  mezője; mentés előtt minden modul), és belépő-levelet kap a kezelőfelületéhez. A próba-űrlap, a
+  mezője; mentés előtt minden modul). Belépő-levelet is kap a kezelőfelületéhez. A próba-űrlap, a
   belépő-levél és a próbázó Modulok füle ezt a csomagot nevezi meg a benne lévő modulokkal; „minden
   funkció” csak akkor áll ott, ha a próba tényleg minden modult ad. Ha a csomagban nincs online foglalás,
   a próbázó Foglalások füle ezt kimondja, és a „Megrendelem” gombra mutat.

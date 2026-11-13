@@ -10,6 +10,7 @@
 //      stored (contract: assets/design-refs/console/valaszok/README.md, Adat-elvárások).
 //   ⛔ a message older than our first touch is not a reply to it.
 
+import { isPageQuestion } from "./pageQuestion.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { normalizePhone } from "../text/phone.js";
@@ -247,6 +248,8 @@ export interface ReplyView {
   readonly receivedAt: Date;
   readonly subject: string | null;
   readonly body: string;
+  /** ADR-0440: an unmatched question typed on the lead page (source_key 'page:…') — no message of ours above it. */
+  readonly pageQuestion?: boolean;
   readonly oursAt: Date | null;
   readonly oursSubject: string | null;
   readonly oursText: string | null;
@@ -343,6 +346,7 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         "r.received_at",
         "r.subject",
         "r.body",
+        "r.source_key",
         "r.ours_at",
         "r.ours_subject",
         "r.ours_text",
@@ -398,6 +402,7 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
     receivedAt: new Date(r.received_at),
     subject: r.subject,
     body: r.body,
+    pageQuestion: isPageQuestion(r.source_key),
     // No message of ours was found in the sent folder → the prospect's own stamp for that channel.
     oursAt: (() => {
       const d = r.ours_at ?? (r.channel === "sms" ? (r.mms_sent_at ?? r.sms_sent_at) : (r.email_sent_at ?? r.sent_at));
