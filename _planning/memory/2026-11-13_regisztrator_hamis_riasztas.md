@@ -18,5 +18,5 @@
 - Élő, csak olvasó készenlét a valódi fiókon: `ok: true`.
 
 ## Nyitott
-- Élesítés a tulaj külön „mehet”-jére.
+- ✅ Élesítve 2026-11-13: `038a45b1` (`prod/20261113-1359`), hotfix-út a 7a0f111a-ra.
 - A kredit (2020 Ft) még egy .hu vételt fed (1990 Ft) — feltöltés a tulajé.
