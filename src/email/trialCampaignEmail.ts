@@ -40,6 +40,7 @@ import { config } from "../config.js";
 import { formatDayShortOn, formatMonthDayOn } from "../text/day.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { bandBrand, esc } from "./platformLayout.js";
+import { senderSignature, signatureBlock } from "./signature.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
 /** CID of the embedded hero screenshot — the same image the cold letter carried. */
@@ -296,7 +297,7 @@ function para(html: string, extra = ""): string {
 }
 
 /** The letter's inner HTML (the fluid table inside the MSO ghost table). */
-function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampaignLetterInput["links"], brand: string): string {
+function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampaignLetterInput["links"], brand: string, sigHtml: string): string {
   const b = trialCampaignLinks(l.cta);
   const header =
     `<tr><td style="padding:16px ${PAD}px 12px;border-bottom:2px solid ${CYAN}">` +
@@ -376,13 +377,12 @@ function letterHtml(heroSrc: string | null, t: TrialCampaignParts, l: TrialCampa
     bullets(t.ends) +
     `</td></tr>`;
 
+  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
   const signature =
     `<tr><td style="padding:4px ${PAD}px 0">` +
     `<div style="padding-top:16px;border-top:1px solid ${LINE}">` +
-    `<p style="margin:0 0 4px;font-family:${FONT};font-size:15px;color:${INK}">${esc(t.regards)}</p>` +
-    `<p style="margin:0;font-family:${FONT};font-size:15px;font-weight:600;color:${INK}">${esc(t.sigName)}</p>` +
-    `<p style="margin:2px 0 0;font-family:${FONT};font-size:13px;color:${MUTED}">${esc(t.sigCo)} · ` +
-    `<span style="color:${MUTED}">${esc(t.sigMail)}</span></p></div></td></tr>`;
+    sigHtml +
+    `</div></td></tr>`;
 
   const footer =
     `<tr><td style="padding:18px ${PAD}px 22px">` +
@@ -434,6 +434,7 @@ export function buildTrialCampaignEmail(
   }
   const hasShot = Boolean(opts.heroShotPath);
   const brand = bandBrand();
+  const sig = signatureBlock(senderSignature(t, opts.lang, t.regards, config.outreachSender.title));
   const html =
     `<!DOCTYPE html><html lang="${opts.lang || "hu"}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1"></head>` +
@@ -442,10 +443,11 @@ export function buildTrialCampaignEmail(
       cta: letter.link,
       unsub: letter.unsubscribeLink,
       privacy: letter.privacyLink,
-    }, brand.html) +
+    }, brand.html, sig.html) +
     `</body></html>`;
   const list: EmailAttachment[] = [
     ...brand.attachments,
+    ...sig.attachments,
     ...(hasShot
       ? [
           {

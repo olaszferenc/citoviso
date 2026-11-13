@@ -30,11 +30,13 @@
 // box, right under the username, and early in the plain-text part (loginDetailRow / loginTextLine).
 
 import { T } from "../i18n/mail.js";
+import { config } from "../config.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { loginAddressLabel, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
 import type { FooterReason, MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
+import { helperSignature, signatureBlock } from "./signature.js";
 import { boldVars, couponValue, isTrialOffer, type TrialCouponView } from "./trialEmail.js";
 import { formatDayLongStem, formatDayShortStem, formatDayShortWeekday } from "../text/day.js";
 
@@ -416,6 +418,8 @@ export function buildTrialHelperEmail(input: {
     `${T(lang, "Felhasználónév:")} ${username}\n` +
     `${loginTextLine(lang, loginUrl)}\n\n` +
     `${help}\n\n${left}\n\n${bye}\n${sig}\n`;
+  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
+  const sigBlock = signatureBlock(helperSignature(input.helperName, lang, config.supportEmail, bye));
   const mail = platformMail({
     to,
     subject,
@@ -435,8 +439,9 @@ export function buildTrialHelperEmail(input: {
       mailDetails([{ label: T(lang, "Felhasználónév"), value: username, mono: true }, loginDetailRow(lang, loginUrl)]),
       mailPara(esc(help)),
       mailPara(esc(left)),
-      mailPara(`${esc(bye)}<br>${esc(sig).replace(/\n/g, "<br>")}`),
+      sigBlock.html,
     ],
+    attachments: sigBlock.attachments,
   });
   return { ...mail, fromName: input.fromName };
 }

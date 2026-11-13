@@ -7,7 +7,9 @@
 // exists to prevent.
 
 import { T } from "../i18n/mail.js";
+import { config } from "../config.js";
 import type { EmailMessage } from "./sender.js";
+import { signatureBlock, teamSignature } from "./signature.js";
 
 export function buildMockReadyEmail(input: {
   businessName: string;
@@ -38,6 +40,8 @@ export function buildMockReadyEmail(input: {
     T(lang, "a Citoviso csapata") +
     `\n`;
 
+  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
+  const sig = signatureBlock(teamSignature(lang, config.supportEmail, T(lang, "Üdvözlettel,")));
   const html =
     `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
     `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
@@ -50,7 +54,7 @@ export function buildMockReadyEmail(input: {
     `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Megnézem az előnézetem")}</a></p>` +
     `<p style="margin:0 0 16px;color:#60748b;font-size:14px">${T(lang, "Ez egy bemutató előnézet, kötelezettség nélkül. Ha tetszik, néhány lépésben élesíthető — csak akkor fizet, ha valóban szeretné.")}</p>` +
     `<p style="margin:0 0 16px;color:#60748b;font-size:14px">${T(lang, "Kérdése van? Egyszerűen válaszoljon erre a levélre.")}</p>` +
-    `<p style="margin:24px 0 0;color:#8a95a1;font-size:13px">${T(lang, "Üdvözlettel,")}<br>${T(lang, "a Citoviso csapata")}</p>` +
+    `<div style="margin:24px 0 0">${sig.html}</div>` +
     `</div></body></html>`;
 
   // Someone asked US for a preview of their own business → pilot BCC applies.
@@ -60,5 +64,6 @@ export function buildMockReadyEmail(input: {
     subject: T(lang, "Kész az ingyenes előnézete – {name}", { name: businessName }),
     text,
     html,
+    ...(sig.attachments.length ? { attachments: sig.attachments } : {}),
   };
 }

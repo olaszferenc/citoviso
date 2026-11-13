@@ -335,6 +335,8 @@ export const config = {
     company: env("OUTREACH_SENDER_COMPANY"),
     email: env("OUTREACH_SENDER_EMAIL"),
     phone: env("OUTREACH_SENDER_PHONE"),
+    /** The named signature's title line ("alapító") — only read when `name` is a person. */
+    title: env("OUTREACH_SENDER_TITLE"),
   },
   /**
    * Our own identity as a service provider — the Impresszum (Eker.tv. 4. §) and

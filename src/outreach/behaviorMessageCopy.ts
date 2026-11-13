@@ -18,9 +18,11 @@
 // long name is shortened, the link is never cut.
 
 import { T } from "../i18n/mail.js";
+import { config } from "../config.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { esc, mailButton, mailNote, mailPara, platformMail } from "../email/platformLayout.js";
 import type { EmailMessage } from "../email/sender.js";
+import { helperSignature, signatureBlock } from "../email/signature.js";
 
 export type BehaviorTrigger = "return" | "price" | "start";
 
@@ -209,6 +211,8 @@ export function buildBehaviorMail(input: BehaviorMailInput): BehaviorMail {
   const body =
     `${greeting}\n\n${para}\n\n${button}: ${link}\n\n${bye}\n${sig}\n\n` +
     `---\n${unsubTxt} ${input.unsubscribeLink}\n${legal} ${input.privacyLink}\n${input.identity}\n`;
+  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
+  const sigBlock = signatureBlock(helperSignature(input.helperName, lang, config.supportEmail, bye));
   const mail = platformMail({
     to: input.to,
     subject,
@@ -221,12 +225,13 @@ export function buildBehaviorMail(input: BehaviorMailInput): BehaviorMail {
     blocks: [
       mailPara(esc(para)),
       mailButton(link, button),
-      mailPara(`${esc(bye)}<br>${esc(sig).replace(/\n/g, "<br>")}`),
+      sigBlock.html,
       mailNote(
         `${esc(unsubTxt)} <a href="${esc(input.unsubscribeLink)}">${esc(input.unsubscribeLink)}</a><br>` +
           `${esc(legal)} <a href="${esc(input.privacyLink)}">${esc(input.privacyLink)}</a><br>${esc(input.identity)}`,
       ),
     ],
+    attachments: sigBlock.attachments,
   });
   // The List-Unsubscribe header follows the cold letter's switch (ADR-0069), as the trial campaign's.
   const headers = input.listUnsubscribe

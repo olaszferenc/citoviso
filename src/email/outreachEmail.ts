@@ -26,6 +26,7 @@ import { config } from "../config.js";
 import type { OutreachDraft, OutreachParts } from "../outreach/draft.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 import { bandBrand } from "./platformLayout.js";
+import { senderSignature, signatureBlock, type SignatureBlock } from "./signature.js";
 import { tagLink, tagLinkInText, type OpenViaTag } from "../outreach/openVia.js";
 
 /** CID of the embedded hero screenshot (referenced from the HTML). */
@@ -82,8 +83,9 @@ function buildMail(
   heroSrc: string | null,
   t: OutreachParts,
   l: MailLinks,
-  lang?: string,
-  brand = `Citoviso<span style="color:${CYAN}">.</span>`,
+  lang: string | undefined,
+  brand: string,
+  sig: SignatureBlock,
 ): string {
   // ── header: two cells, NOT float (Outlook drops float) ───────────────────
   // `brand` = the E4 logo from bandBrand() (owner, 2026-09-25).
@@ -141,13 +143,12 @@ function buildMail(
     ) +
     `</td></tr>`;
 
+  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
   const signature =
     `<tr><td style="padding:4px ${PAD}px 0">` +
     `<div style="padding-top:16px;border-top:1px solid ${LINE}">` +
-    `<p style="margin:0 0 4px;font-family:${FONT};font-size:15px;color:${INK}">${esc(T(lang, "Üdvözlettel,"))}</p>` +
-    `<p style="margin:0;font-family:${FONT};font-size:15px;font-weight:600;color:${INK}">${esc(t.sigName)}</p>` +
-    `<p style="margin:2px 0 0;font-family:${FONT};font-size:13px;color:${MUTED}">${esc(t.sigCo)} · ` +
-    `<span style="color:${MUTED}">${esc(t.sigMail)}</span></p></div></td></tr>`;
+    sig.html +
+    `</div></td></tr>`;
 
   const footer =
     `<tr><td style="padding:18px ${PAD}px 22px">` +
@@ -236,6 +237,7 @@ export function buildOutreachEmail(
 
   const hasShot = Boolean(opts.heroShotPath);
   const brand = bandBrand();
+  const sig = signatureBlock(senderSignature(draft.parts, opts.lang, T(opts.lang, "Üdvözlettel,"), config.outreachSender.title));
   const inner = buildMail(
     hasShot ? `cid:${HERO_CID}` : null,
     draft.parts,
@@ -247,6 +249,7 @@ export function buildOutreachEmail(
     },
     opts.lang,
     brand.html,
+    sig,
   );
 
   const html =
@@ -256,6 +259,7 @@ export function buildOutreachEmail(
 
   const list: EmailAttachment[] = [
     ...brand.attachments,
+    ...sig.attachments,
     ...(hasShot
       ? [
           {
