@@ -68,7 +68,7 @@ try {
   console.error("aam-alert HIBA:", e);
   sideStepFailed = true;
 }
-// ADR-XXXX: the OSS 10 000 € B2C threshold — same tick, same loud non-blocking shape.
+// ADR-0443: the OSS 10 000 € B2C threshold — same tick, same loud non-blocking shape.
 try {
   const o = await checkOssAlert(now);
   console.log(`oss-alert @ ${now.toISOString()}:`, JSON.stringify(o));

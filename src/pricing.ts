@@ -4,7 +4,7 @@
 // admin page (persisted in pricing_config + module_price). modules.ts / domains.ts
 // keep only the built-in DEFAULTS used as the seed until the owner saves.
 //
-// REGION-KEYED (migration 0020, ADR-0437 ⑤3 / ADR-XXXX): pricing_config has one row per
+// REGION-KEYED (migration 0020, ADR-0437 ⑤3 / ADR-0443): pricing_config has one row per
 // pricing region, each in ITS OWN currency (owner, 2026-11-12: every country prices,
 // charges and invoices in its own currency; the regional prices are absolute — there is
 // no FX conversion of a price). Every getter REQUIRES the region: the order/subscription
@@ -331,7 +331,7 @@ export async function loadPricing(force = false): Promise<void> {
 }
 
 /**
- * The snapshot of a region. ⛔ No default and no fallback (ADR-XXXX): a missing region
+ * The snapshot of a region. ⛔ No default and no fallback (ADR-0443): a missing region
  * name or a region without a pricing_config row THROWS — a price from another region would
  * be a price in another currency.
  */
@@ -781,7 +781,7 @@ export function newRegionErrors(region: string, currency: string): string[] {
 }
 
 /**
- * ADR-XXXX: a NEW pricing region with its own currency (console /pricing „+ Új régió”).
+ * ADR-0443: a NEW pricing region with its own currency (console /pricing „+ Új régió”).
  * Created UNCONFIRMED and with no prices: it is incomplete (regionPriceGaps) until the
  * operator saves its base and module prices, and every order path fails closed until then.
  */

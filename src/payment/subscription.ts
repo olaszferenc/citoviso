@@ -144,7 +144,7 @@ export async function ensureSubscriptionForOrder(
       startDay
         ? {
             tenant_id: tenantId,
-            // ADR-XXXX: the customer keeps the region/currency of the order that created it.
+            // ADR-0443: the customer keeps the region/currency of the order that created it.
             pricing_region: oi.pricingRegion,
             currency: oi.currency,
             billing_period: paid.period,

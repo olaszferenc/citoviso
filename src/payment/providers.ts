@@ -1,4 +1,4 @@
-// PAYMENT PROVIDERS — what each one can charge, as FACTS with their source (ADR-XXXX).
+// PAYMENT PROVIDERS — what each one can charge, as FACTS with their source (ADR-0443).
 //
 // A country names its provider (country.payment_provider, 0135); the provider decides which
 // currencies the country can be charged in. A country whose currency its provider does not
@@ -93,7 +93,7 @@ export function providerLocale(provider: string, lang: string | null | undefined
 }
 
 /**
- * ADR-XXXX: why a market cannot be OPENED (empty = it can, as far as money goes): no country
+ * ADR-0443: why a market cannot be OPENED (empty = it can, as far as money goes): no country
  * row, the provider cannot charge its currency, or its pricing region cannot price. The
  * console's market row shows this list and the open action refuses on it.
  */
@@ -106,7 +106,7 @@ export function marketOpenGaps(
 ): string[] {
   // A non-EU buyer is not invoiceable in this round (the accountant has not ruled on it):
   // such a market does not open, so the pay-link gate (ADR-0111) keeps refusing it.
-  const nonEu = isTaxableBuyerCountry(country) ? [] : ["nem EU-s ország — a számlázása ebben a körben nem megoldott (ADR-XXXX)"];
+  const nonEu = isTaxableBuyerCountry(country) ? [] : ["nem EU-s ország — a számlázása ebben a körben nem megoldott (ADR-0443)"];
   const row = deps.row(country);
   if (!row) return [...nonEu, "nincs ország-sor (ADR-0437 ③)"];
   return [...nonEu, ...marketPaymentGaps(row), ...deps.regionGaps(row.pricingRegion).map((g) => `ár-régió „${row.pricingRegion}”: ${g}`)];

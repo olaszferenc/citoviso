@@ -49,7 +49,7 @@ async function loadOrder(
       buyerName: row.buyerName ?? null,
       buyerIsPerson: row.buyerType === "individual",
       amount: total,
-      // ADR-XXXX: the payment's currency, else the order's own — never a default region's.
+      // ADR-0443: the payment's currency, else the order's own — never a default region's.
       currency: currency ?? row.orderCurrency,
       billingPeriod: row.billingPeriod === "annual" ? "annual" : "monthly",
       lang,

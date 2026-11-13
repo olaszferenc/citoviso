@@ -2025,7 +2025,7 @@ async function serveAdmin(
     const typed = q.get("check");
     const picked = q.get("d");
     // Elek B4: the picked name's ENDING prices the review screen (the order charges that).
-    // ADR-XXXX: the tenant's own pricing region prices the tab (its endings, fees, cap).
+    // ADR-0443: the tenant's own pricing region prices the tab (its endings, fees, cap).
     const tenantRegion = (await regionOfTenant(session.tenantId)).region;
     domain = await loadDomainAdmin(session.tenantId, session.displayName, tenantRegion, picked);
     // ADR-0251: the review step shows a FRESH registrar verdict ("Szabad — most

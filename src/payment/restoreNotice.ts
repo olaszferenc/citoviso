@@ -56,7 +56,7 @@ export async function announceRestore(tenantId: string, amountPaid: number): Pro
     const siteUrl = await siteUrlFor(tenantId);
     // The mail builder formats it (text/money.ts); this side stays machine form.
     const amount = amountPaid;
-    // ADR-XXXX: the currency the customer pays in (the amount paid is in it).
+    // ADR-0443: the currency the customer pays in (the amount paid is in it).
     const { currency } = await regionOfTenant(tenantId);
 
     if (!recipients.length) {

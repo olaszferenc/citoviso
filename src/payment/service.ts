@@ -92,7 +92,7 @@ async function buyerLangOfOrder(orderIntentId: string): Promise<string> {
 }
 
 /**
- * ADR-XXXX: why this order cannot be charged in its currency (null = it can). Two facts:
+ * ADR-0443: why this order cannot be charged in its currency (null = it can). Two facts:
  * (1) the provider of the order's market (country.payment_provider of the region's country)
  * must accept the currency; (2) an EU consumer outside Hungary is an OSS-counted sale —
  * at the 10 000 € threshold new such sales are held back (taxCounters.ts).
@@ -128,7 +128,7 @@ const SZAMLAZZ_LANGS = new Set(["hu", "en", "de", "it", "ro", "sk", "hr", "fr", 
 const toSzamlazzLang = (l: string): string => ({ cs: "cz", sl: "si" } as Record<string, string>)[l] ?? l;
 
 /**
- * ADR-XXXX: the invoice language — the buyer country's layer row (country.invoice_lang), else
+ * ADR-0443: the invoice language — the buyer country's layer row (country.invoice_lang), else
  * the order region's country. A code Számlázz.hu does not print falls to English (the guard
  * keeps every row's code printable, so this is the last resort, logged).
  */
@@ -249,7 +249,7 @@ export async function requestPayment(
     return null;
   }
 
-  // ADR-XXXX PROVIDER GATE — the order's currency must be one its country's payment
+  // ADR-0443 PROVIDER GATE — the order's currency must be one its country's payment
   // provider takes (providers.ts, verified from the provider's documentation). A country
   // whose currency the provider does not accept cannot be charged at all: no pay-link,
   // never a silent switch to another currency (that would be a different price).
@@ -320,7 +320,7 @@ export async function requestPayment(
     paymentId: payment.id,
     amount: oi.price,
     currency: oi.currency,
-    // ADR-XXXX: the pay page speaks the BUYER's language.
+    // ADR-0443: the pay page speaks the BUYER's language.
     locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
     period: oi.billing_period,
     // ADR-0063: a one-time purchase must not read "előfizetés" on the pay screen.
@@ -939,7 +939,7 @@ export async function chargeRenewalWithToken(
       .where("id", "=", orderIntentId)
       .executeTakeFirst();
     if (!oi || oi.kind !== "renewal" || oi.price == null) return "failed";
-    // ADR-XXXX (tulaj 11-12): the 100 % OSS hold covers the token renewal too — the same gate
+    // ADR-0443 (tulaj 11-12): the 100 % OSS hold covers the token renewal too — the same gate
     // as the pay-link (which the failure path then hits and refuses as well).
     const renewBlock = await paymentMoneyBlock(oi);
     if (renewBlock) {
@@ -1504,7 +1504,7 @@ export function invoiceComment(
   /** Elek F-3: WHICH offer — its one name (offerLabel). Absent → the plain word. */
   offerKind?: OfferNameKind | null,
   /**
-   * ADR-XXXX: the invoice's currency (amounts are its minor unit) and, on a reverse-charge
+   * ADR-0443: the invoice's currency (amounts are its minor unit) and, on a reverse-charge
    * invoice, BOTH community VAT numbers (ours from config, the buyer's VIES-verified one).
    * Absent / a forint invoice → the historic forint wording, byte for byte.
    */
@@ -1737,7 +1737,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       "order_intent.buyer_address as address",
       "order_intent.buyer_email as buyerEmail",
       "order_intent.vat_treatment as vatTreatment",
-      // ADR-XXXX: the region the order was priced in (the module-line weights are its prices).
+      // ADR-0443: the region the order was priced in (the module-line weights are its prices).
       "order_intent.pricing_region as pricingRegion",
       // ADR-0205: a kedvezmény a SZÁMLÁN is látszik. A listaárat eddig TÁROLTUK, de
       // sosem olvastuk vissza ide, ezért a vevő egy 14 775 Ft-os végösszeget kapott
@@ -1767,7 +1767,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       .values({
         payment_id: paymentId,
         provider: provider.name,
-        // ADR-XXXX: the key the document WOULD have carried (reverse charge = EUFAD37).
+        // ADR-0443: the key the document WOULD have carried (reverse charge = EUFAD37).
         vat_key: p.vatTreatment === "reverse_charge" ? VAT_KEY_REVERSE_CHARGE : VAT_KEY_AAM,
         vat_rate: 0,
         net: p.amount,
@@ -1855,14 +1855,14 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
   if (p.kind === "upsell") await loadPricing();
   // Reverse charge (Áfa tv. 37. §) is decided at order time against a VIES-verified
   // VAT number; everything else is AAM. The DB constraint guarantees the pairing.
-  // ADR-XXXX: the reverse-charge key is EUFAD37 („Áfa tv. 37. §-a alapján másik tagállamban
+  // ADR-0443: the reverse-charge key is EUFAD37 („Áfa tv. 37. §-a alapján másik tagállamban
   // teljesített, fordítottan adózó ügylet", docs.szamlazz.hu … settings_and_rules/vat-rates)
   // — TAM is „tárgyi adómentes", a domestic exemption, and was wrong on these invoices.
   const reverse = p.vatTreatment === "reverse_charge";
   const vatKey = reverse ? VAT_KEY_REVERSE_CHARGE : VAT_KEY_AAM;
   // Non-EU buyers stay blocked in this round (the accountant has not ruled on them).
   if (!isTaxableBuyerCountry(p.country)) {
-    return recordFailure(`A vevő országa (${p.country ?? "—"}) nem HU/EU — ebben a körben nem számlázunk rá (ADR-XXXX).`, true);
+    return recordFailure(`A vevő országa (${p.country ?? "—"}) nem HU/EU — ebben a körben nem számlázunk rá (ADR-0443).`, true);
   }
   // Both community VAT numbers must stand on a reverse-charge invoice; ours comes from config.
   const sellerEuVat = config.legalEntity.euVatNumber.trim();
@@ -1935,7 +1935,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
         fulfillment_date: today,
         due_date: today,
         vat_treatment: reverse ? "reverse_charge" : "aam",
-        // ADR-XXXX: what the tax counters (AAM, OSS, A60) group and convert by.
+        // ADR-0443: what the tax counters (AAM, OSS, A60) group and convert by.
         fx_rate: fx ? String(fx.rate) : null,
         fx_date: fx ? fx.date : null,
         buyer_country: p.country,

@@ -313,7 +313,7 @@ export interface OrderIntentTable {
   prospect_id: string;
   /** Amount in the MINOR unit of `currency` (HUF: the forint). */
   price: number | null;
-  /** 0135 (ADR-XXXX): the pricing region every price of this order came from. Required on
+  /** 0135 (ADR-0443): the pricing region every price of this order came from. Required on
    *  insert ON PURPOSE (the DB default only describes the pre-0135 HU rows): a new insert
    *  site that forgot it is a compile error, not a silent HU order. */
   pricing_region: string;
@@ -678,7 +678,7 @@ export interface FreeTrialAlertTable {
 export interface SubscriptionTable {
   id: Generated<string>;
   tenant_id: string;
-  /** 0135 (ADR-XXXX): the region/currency the customer bought in — renewals, upsells,
+  /** 0135 (ADR-0443): the region/currency the customer bought in — renewals, upsells,
    *  module changes price from HERE, never a default. Required on insert on purpose. */
   pricing_region: string;
   currency: string;

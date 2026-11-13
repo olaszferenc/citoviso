@@ -112,7 +112,7 @@ export async function renderHomepage(
   const snap = pricingSnapshot(region);
   let plans = "";
   let ml = "";
-  // ADR-XXXX: an incomplete region shows NO price (the "custom offer" block), never a guess.
+  // ADR-0443: an incomplete region shows NO price (the "custom offer" block), never a guess.
   if (snap.pricingConfirmed && regionPriceGaps(region).length === 0) {
     plans = homepagePlansHtml(
       offeredPackagesFrom(await getDisabledModules(), region),

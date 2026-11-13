@@ -445,7 +445,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   const percent = String(draftOfferPercent(d));
   const { priceList, priceOffer } = fromPricePair(
     // A DraftInput without fromMonthly is a guard's HU fixture; every product draft carries
-    // the from-price of its LEAD's region (buildDraftForProspect below, ADR-XXXX).
+    // the from-price of its LEAD's region (buildDraftForProspect below, ADR-0443).
     d.fromMonthly !== undefined ? d.fromMonthly : cheapestOfferedMonthlyFrom(new Set(), HU_PRICING_REGION),
     draftOfferPercent(d),
   );
@@ -812,7 +812,7 @@ export async function buildDraftForProspect(
     // message must show the same address.
     previewLabel: opts.reserveLabel === false ? await peekPreviewLabel(r.leadId) : await ensurePreviewLabel(r.leadId),
     // Owner 2026-10-12: the from-price follows /pricing — read at send time, every time.
-    // ADR-XXXX: in the LEAD's pricing region; a market that cannot price advertises none.
+    // ADR-0443: in the LEAD's pricing region; a market that cannot price advertises none.
     fromMonthly: await leadFromMonthly(r.leadId),
     // Owner 2026-10-27: the trial sentence — the SAME rule as the /p page's trial entry.
     trialDays: await trialDaysOnOffer(r.leadId, isEngineArtifact(r.artifactInputs)),

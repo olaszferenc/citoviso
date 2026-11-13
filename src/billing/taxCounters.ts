@@ -1,4 +1,4 @@
-// TAX COUNTERS for foreign buyers — the accountant's rule (MEMORY.md 2026-11-12), ADR-XXXX.
+// TAX COUNTERS for foreign buyers — the accountant's rule (MEMORY.md 2026-11-12), ADR-0443.
 //
 //   · EU company with a VIES-valid VAT number → reverse charge (Áfa tv. 37. §, Számlázz key
 //     EUFAD37): no Hungarian VAT, not in the AAM cap (accountant; to be confirmed), listed

@@ -31,7 +31,7 @@ export interface InvoiceBuyer {
 export interface InvoiceItem {
   readonly name: string;
   readonly quantity: number;
-  /** ADR-XXXX: every amount of an item is in the MINOR unit of InvoiceInput.currency; the
+  /** ADR-0443: every amount of an item is in the MINOR unit of InvoiceInput.currency; the
    *  provider adapter converts to what its API takes. */
   readonly unitNet: number;
   /** Számlázz.hu áfakulcs: "AAM" for alanyi adómentes (VAT-exempt). */
@@ -45,9 +45,9 @@ export interface InvoiceInput {
   readonly buyer: InvoiceBuyer;
   readonly items: readonly InvoiceItem[];
   readonly currency: string;
-  /** ADR-XXXX: Számlázz.hu `szamlaNyelve` (country.invoice_lang, mapped). */
+  /** ADR-0443: Számlázz.hu `szamlaNyelve` (country.invoice_lang, mapped). */
   readonly language: string;
-  /** ADR-XXXX: a non-HUF invoice's rate source ("MNB") and, when known, the rate itself
+  /** ADR-0443: a non-HUF invoice's rate source ("MNB") and, when known, the rate itself
    *  (HUF per 1 unit). Bank without a rate = the provider takes the day's MNB rate. */
   readonly fxBank?: string;
   readonly fxRate?: number;
@@ -71,7 +71,7 @@ export interface InvoiceInput {
 
 export interface InvoiceResult {
   readonly invoiceNumber: string;
-  /** MINOR unit of the invoice currency (ADR-XXXX). */
+  /** MINOR unit of the invoice currency (ADR-0443). */
   readonly net: number;
   readonly gross: number;
   /** base64 PDF if requested/available. */

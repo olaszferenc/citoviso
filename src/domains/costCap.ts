@@ -3,7 +3,7 @@
 // currency, and the registrar's live NET price is compared with it in that SAME currency —
 // no FX (ADR-0103 ④'s conversion was a workaround for a cap kept in EUR).
 //
-// ADR-XXXX: the cap is PER REGION and per currency — it reads the ending list of the
+// ADR-0443: the cap is PER REGION and per currency — it reads the ending list of the
 // buyer's own pricing region, so a local ending (.ro, .pl, .cz …) offered on its market is
 // judged against THAT market's cap, never refused because the HU list does not carry it.
 // Amounts compare in the cost currency's MINOR unit (the registrar answers in major units).

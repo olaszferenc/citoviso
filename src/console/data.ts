@@ -1175,7 +1175,7 @@ export async function recordOrderIntent(input: {
   billingPeriod: "monthly" | "annual";
   /** Minor units of `money.currency`. */
   price: number | null;
-  /** ADR-XXXX: the region + currency the price was computed in (resolved once, orderRegion.ts). */
+  /** ADR-0443: the region + currency the price was computed in (resolved once, orderRegion.ts). */
   money: { readonly region: string; readonly currency: string };
   /** Domain choice (ADR-0020). */
   domainType: "citoviso_sub" | "citoviso_registered" | "own";

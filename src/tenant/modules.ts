@@ -47,7 +47,7 @@ export interface TenantModule {
 
 export interface TenantModuleView {
   readonly modules: TenantModule[];
-  /** ADR-XXXX: ISO 4217 of every amount here (the tenant's pricing region). Optional so the
+  /** ADR-0443: ISO 4217 of every amount here (the tenant's pricing region). Optional so the
    *  hand-made fixtures that predate it keep compiling; absent = the fixture's HUF. */
   readonly currency?: string;
   readonly baseMonthly: number;
@@ -235,7 +235,7 @@ export async function getTenantModules(
   fixtureMoney?: { readonly region: string; readonly currency: string },
 ): Promise<TenantModuleView> {
   await loadPricing();
-  // ADR-XXXX: the tenant's own pricing region — every price below is in its currency.
+  // ADR-0443: the tenant's own pricing region — every price below is in its currency.
   const { region, currency } = fixtureMoney ?? (await regionOfTenant(tenantId));
   const disabledSales = await getDisabledModules();
   const rows = await db

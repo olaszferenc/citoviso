@@ -355,7 +355,7 @@ export const config = {
     regNumber: env("LEGAL_ENTITY_REG_NUMBER"),
     /** Hungarian tax number (adószám), e.g. 12345678-1-42. */
     taxNumber: env("LEGAL_ENTITY_TAX_NUMBER"),
-    /** ADR-XXXX: our COMMUNITY VAT number (közösségi adószám, e.g. HU12345678) — printed on
+    /** ADR-0443: our COMMUNITY VAT number (közösségi adószám, e.g. HU12345678) — printed on
      *  every reverse-charge invoice next to the buyer's. Config only, never in the repo. */
     euVatNumber: env("LEGAL_ENTITY_EU_VAT_NUMBER"),
     /** Contact address for legal notices + data-subject requests. */

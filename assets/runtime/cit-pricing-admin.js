@@ -25,7 +25,7 @@
     // ── helpers ─────────────────────────────────────────────────────────────
     function fill(t, v) { return String(t).replace(/\{(\w+)\}/g, function (_, k) { return v[k] != null ? v[k] : "{" + k + "}"; }); }
     // ADR-0162: one amount, one spelling — CitMoney (cit-money.js, inlined before this file).
-    // ADR-XXXX: the page works in MAJOR units of the region's currency (D.scale = 10^minor
+    // ADR-0443: the page works in MAJOR units of the region's currency (D.scale = 10^minor
     // digits: 1 for HUF, 100 for EUR/RON) — the server sends and takes major, stores minor.
     var SCALE = D.scale || 1;
     function grp(n) {

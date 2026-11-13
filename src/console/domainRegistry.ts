@@ -333,7 +333,7 @@ async function toRecords(rows: readonly Row[], now: Date): Promise<DomainRecord[
   const out: DomainRecord[] = [];
   const moneyByTenant = new Map<string, { region: string; currency: string }>();
   for (const r of rows) {
-    // ADR-XXXX: each name is priced in its tenant's own region (its endings, fee, currency).
+    // ADR-0443: each name is priced in its tenant's own region (its endings, fee, currency).
     let money = moneyByTenant.get(r.tenant_id);
     if (!money) {
       money = await regionOfTenant(r.tenant_id).catch((e: Error) => {

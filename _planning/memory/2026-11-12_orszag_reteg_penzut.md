@@ -1,4 +1,4 @@
-# 2026-11-12 — Ország-réteg 3/1: a pénz útja (ADR-XXXX)
+# 2026-11-12 — Ország-réteg 3/1: a pénz útja (ADR-0443)
 
 Session `cit8e9c29ff`, brief `~/rc-briefs/orszag-reteg-3a-penzut-20261112.md`, koordinátor `cit9b4690e3`.
 

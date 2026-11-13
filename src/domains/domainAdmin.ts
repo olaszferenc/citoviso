@@ -38,7 +38,7 @@ import { exceedsCostCap } from "./costCap.js";
  * order), the offer is NOT blocked — this pre-check is advisory; the purchase-side
  * guard in provisionDomain.ts is the authoritative, fail-closed gate.
  *
- * ADR-XXXX: the cap is the buyer's REGION's (its ending list, its currency) — a local
+ * ADR-0443: the cap is the buyer's REGION's (its ending list, its currency) — a local
  * ending of a foreign market is judged on that market's cap, not the HU list.
  */
 export async function exceedsPriceCap(domain: string, region: string): Promise<boolean> {
@@ -189,7 +189,7 @@ export async function checkTypedDomain(raw: string, region: string): Promise<Dom
 export async function loadDomainAdmin(
   tenantId: string,
   displayName: string,
-  /** ADR-XXXX: the tenant's pricing region (orderRegion.ts regionOfTenant) — required. */
+  /** ADR-0443: the tenant's pricing region (orderRegion.ts regionOfTenant) — required. */
   regionId: string,
   /** The name on the review step (`?d=`), so its ENDING prices the screen (Elek B4). */
   picked?: string | null,

@@ -166,7 +166,7 @@ export interface MultilangCardInput {
  */
 export function multilangCatalogView(
   primaryLang: string,
-  /** ADR-XXXX: the tenant's pricing region (the tier prices are in its currency). */
+  /** ADR-0443: the tenant's pricing region (the tier prices are in its currency). */
   region: string,
 ): {
   tiers: MultilangAdminData["tiers"];

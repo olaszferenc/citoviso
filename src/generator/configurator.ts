@@ -347,7 +347,7 @@ export interface AskEntry {
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
 export interface ConfiguratorOpts {
   /**
-   * ADR-XXXX: the pricing region of the lead (orderRegion.ts regionForLead) — every amount
+   * ADR-0443: the pricing region of the lead (orderRegion.ts regionForLead) — every amount
    * of the manifest is in its currency's minor unit. Every product caller passes it (the
    * country-layer guard measures that); absent = a guard's HU fixture.
    */

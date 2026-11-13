@@ -1,4 +1,4 @@
-// A60 ÖSSZESÍTŐ NYILATKOZAT — the data behind it (ADR-XXXX, accountant's rule 2026-11-12).
+// A60 ÖSSZESÍTŐ NYILATKOZAT — the data behind it (ADR-0443, accountant's rule 2026-11-12).
 //
 // Every reverse-charge invoice (EU company, VIES-valid, Áfa tv. 37. §) must be reported for
 // its period on NAV form 26A60, sheet 26A60-03 „Közösségen belüli szolgáltatásnyújtások

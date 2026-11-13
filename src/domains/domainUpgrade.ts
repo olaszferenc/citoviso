@@ -38,7 +38,7 @@ export interface DomainUpgradeQuote {
   readonly price: number;
   /** Subscription commitment implied by a domain through us (operator-set, ADR-0093). */
   readonly commitmentMonths: number;
-  /** ADR-XXXX: the tenant's pricing region the quote is in. */
+  /** ADR-0443: the tenant's pricing region the quote is in. */
   readonly region: string;
 }
 
@@ -52,7 +52,7 @@ export interface DomainUpgradeQuote {
 export async function quoteDomainUpgrade(
   tenantId: string,
   rawDomain: string,
-  /** Override for tests; absent = the tenant's OWN region (ADR-XXXX) — never a default. */
+  /** Override for tests; absent = the tenant's OWN region (ADR-0443) — never a default. */
   regionArg?: string,
 ): Promise<DomainUpgradeQuote | null> {
   const norm = normalizeCustomDomain(rawDomain);
@@ -178,7 +178,7 @@ export async function createDomainUpgradeOrder(
 
   // ADR-0093 offer-side cap check. Advisory here (the adapter may not price a
   // domain yet — the INWX stub); the authoritative fail-closed gate runs in
-  // provisionDomain.ts before real money moves. ADR-XXXX: the tenant's region's cap.
+  // provisionDomain.ts before real money moves. ADR-0443: the tenant's region's cap.
   if (await exceedsCostCap(quote.domain, region)) {
     console.warn(`[domain] rendelés elutasítva (végződés-plafon, ADR-0360 ③): ${quote.domain}`);
     return null;
@@ -333,7 +333,7 @@ async function claimPackageDomainLocked(
     .values({
       order_intent_id: orderId,
       amount: 0,
-      // ADR-XXXX: the 0 payment is in the order's own currency (the tenant's region).
+      // ADR-0443: the 0 payment is in the order's own currency (the tenant's region).
       currency: getCurrency(quote.region),
       period: "monthly",
       gateway: "none",

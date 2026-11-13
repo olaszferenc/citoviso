@@ -1,5 +1,5 @@
 // MNB OFFICIAL EXCHANGE RATES — for TAX COUNTING and FOREIGN-CURRENCY INVOICES only
-// (ADR-XXXX). ⛔ Never to convert a PRICE: every country prices in its own currency at an
+// (ADR-0443). ⛔ Never to convert a PRICE: every country prices in its own currency at an
 // absolute amount the owner sets (owner, 2026-11-12). A rate is needed where Hungarian tax
 // law counts in forint (the AAM cap, the A60 summary in thousand HUF) or in euro (the OSS
 // 10 000 € threshold), and on a non-HUF invoice (Számlázz.hu `arfolyamBank=MNB`).

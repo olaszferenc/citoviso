@@ -91,7 +91,7 @@ export async function createMultilangOrder(
   }
 
   await loadPricing();
-  // ADR-XXXX: the tenant's own region — the one-time fee is in the currency it pays in.
+  // ADR-0443: the tenant's own region — the one-time fee is in the currency it pays in.
   const money = await regionOfTenant(tenantId);
   const listPrice = getMultilangTierPrice(tier, money.region);
   if (listPrice <= 0) return { ok: false, error: "a modul ára nincs beállítva" };

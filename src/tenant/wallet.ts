@@ -214,7 +214,7 @@ export interface CardUpdateOrder {
  * gates as any other; FAIL CLOSED without a declared buyer.
  */
 /**
- * ADR-0226/0228 + ADR-XXXX: the card-verification amount in a currency — HUF stays the
+ * ADR-0226/0228 + ADR-0443: the card-verification amount in a currency — HUF stays the
  * owner's 10 Ft (CARD_VERIFY_AMOUNT_HUF); another currency takes its provider's minimum
  * (payment/providers.ts, from the provider's documented minimums). null = not chargeable.
  */
@@ -279,7 +279,7 @@ export async function createCardUpdateOrder(tenantId: string): Promise<CardUpdat
       prospect_id: prospect.id,
       kind: "card_update",
       tenant_id: tenantId,
-      // ADR-XXXX: the hold is in the tenant's own currency — the provider's minimum in it.
+      // ADR-0443: the hold is in the tenant's own currency — the provider's minimum in it.
       pricing_region: money.region,
       currency: money.currency,
       modules: JSON.stringify([]),

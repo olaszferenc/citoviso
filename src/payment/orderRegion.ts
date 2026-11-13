@@ -1,4 +1,4 @@
-// THE PRICING REGION OF A CUSTOMER — resolved ONCE, then carried (ADR-0437 ⑤3, ADR-XXXX).
+// THE PRICING REGION OF A CUSTOMER — resolved ONCE, then carried (ADR-0437 ⑤3, ADR-0443).
 //
 // Owner, 2026-11-12: every country prices, charges and invoices in its own currency. The
 // region is decided by the LEAD's country (ADR-0437 ②: the country of the lodging, from its

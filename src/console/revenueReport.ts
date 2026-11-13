@@ -35,7 +35,7 @@ type SubStatus = "active" | "past_due" | "frozen" | "cancelled";
 
 export interface RevenueSub {
   readonly tenantId: string;
-  /** ADR-XXXX: the region/currency the customer pays in — every amount below is in it. */
+  /** ADR-0443: the region/currency the customer pays in — every amount below is in it. */
   readonly pricingRegion: string;
   readonly currency: string;
   readonly leadId: string;
@@ -491,7 +491,7 @@ export function foldFacts(raw: RawFacts, includeTests: boolean): FactMonth[] {
 
 /**
  * Base fee + every billed module + the domain fee, over the renewing subscriptions (monthly).
- * ADR-XXXX: each subscription is priced in ITS OWN region; the lines sum ONE currency —
+ * ADR-0443: each subscription is priced in ITS OWN region; the lines sum ONE currency —
  * `currency` (the report's) — and a subscription in another currency is not added into it
  * (the per-currency report is the riport-kör's job, ADR-0437 ⑤ sorrend).
  */

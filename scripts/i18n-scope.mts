@@ -47,7 +47,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/domains.ts": "adat-regiszter (domain-ajánló szótöve) — nem levél-szöveg",
   // ADR-0344 C2: the long-date helpers. The Hungarian month/weekday names ARE the hu
   // branch of a formatter; every other pack goes through Intl in the reader's locale.
-  // ADR-XXXX: the money path's operator-facing texts — the OSS alert goes to the OWNER
+  // ADR-0443: the money path's operator-facing texts — the OSS alert goes to the OWNER
   // (Hungarian operator), the tax-counter reasons and the region errors are operator log /
   // console lines; none of them reaches a buyer.
   "src/console/ossAlert.ts": "operátori riasztás (tulajnak, magyarul) — nem vevő-szöveg",

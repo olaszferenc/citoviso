@@ -112,7 +112,7 @@ function parity(mirror: ReturnType<typeof loadMirror>): { n: number; bad: string
     n++;
     if (currencySign(cur) !== mirror.currencySign(cur)) bad.push(`currencySign("${cur}")`);
   }
-  // ADR-XXXX: our money in the MINOR unit — the same pair, the same matrix, plus the
+  // ADR-0443: our money in the MINOR unit — the same pair, the same matrix, plus the
   // currencies a country row may carry (RON/PLN/CZK/BGN) and a cent amount.
   for (const lang of LANGS) {
     for (const amount of [...AMOUNTS, 990, 4999, 100005, -250]) {
@@ -145,7 +145,7 @@ check(formatMoney(99900, "HUF") === "99 900 Ft", "② HUF → „Ft” magyarul"
 check(formatMoney(10, "EUR") === "10 €", "② EUR → „€” magyarul", formatMoney(10, "EUR"));
 // The defect this file exists for: an unknown currency must NOT become forint.
 check(formatMoney(50, "RON") === "50 RON", "② ismeretlen pénznem ≠ „Ft”", formatMoney(50, "RON"));
-// ADR-XXXX: minor units — HUF has none (the forint IS the unit), EUR/RON have cents.
+// ADR-0443: minor units — HUF has none (the forint IS the unit), EUR/RON have cents.
 check(minorDigits("HUF") === 0 && minorDigits("EUR") === 2 && minorDigits("RON") === 2 && minorDigits("Ft") === null, "② minor-unit: HUF 0, EUR/RON 2, nem-ISO null");
 check(formatMinor(3900, "HUF") === formatMoney(3900, "HUF"), "② formatMinor HUF = formatMoney (a HU bitre azonos)", formatMinor(3900, "HUF"));
 check(formatMinor(1000, "EUR") === "10 €" && formatMinor(990, "EUR") === "9,90 €", "② formatMinor EUR: egész → „10 €”, centes → „9,90 €”", `${formatMinor(1000, "EUR")} · ${formatMinor(990, "EUR")}`);

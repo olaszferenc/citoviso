@@ -81,7 +81,7 @@ export async function applyModuleChange(
   wanted: readonly string[],
 ): Promise<ModuleChangeResult> {
   await loadPricing();
-  // ADR-XXXX: the tenant's own region decides what is paid and the package floor's sum.
+  // ADR-0443: the tenant's own region decides what is paid and the package floor's sum.
   const { region } = await regionOfTenant(tenantId);
   const want = new Set(wanted.filter(toggleable));
 

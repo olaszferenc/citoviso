@@ -12,7 +12,7 @@
 //      in the files the layer already covers — each remaining one is on the ALLOW list WITH
 //      its reason. Comments are not code: they are stripped before the scan.
 //
-//   ⑤ ADR-XXXX — THE MONEY PATH: every country's pricing region has a complete price sheet
+//   ⑤ ADR-0443 — THE MONEY PATH: every country's pricing region has a complete price sheet
 //      in the country's own currency, its payment provider accepts that currency, its invoice
 //      language is one Számlázz.hu prints; no region borrows another region's module prices
 //      (no currency mixing); every order insert stores region + currency; every product
@@ -204,7 +204,7 @@ for (const f of SCOPE) {
 check("nincs beégetett HU-paraméter a hatókörben", hits.length === 0, `\n      ${hits.join("\n      ")}`);
 ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, allowUsed.has(i)));
 
-console.log("⑤ a pénz útja (ADR-XXXX)");
+console.log("⑤ a pénz útja (ADR-0443)");
 await loadPricing(true);
 for (const c of allCountriesSync()) {
   const gaps = regionPriceGaps(c.pricingRegion);

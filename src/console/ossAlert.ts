@@ -1,4 +1,4 @@
-// OSS-THRESHOLD ALERT (ADR-XXXX) — the AAM alert's twin for the EU-wide 10 000 € B2C
+// OSS-THRESHOLD ALERT (ADR-0443) — the AAM alert's twin for the EU-wide 10 000 € B2C
 // threshold of electronically supplied services (billing/taxCounters.ts ossStatus).
 // Two tiers per calendar year: the warning (taxThresholds.warnPct, default 80 %) and the
 // HOLD (threshold reached, or the sum could not be computed — every new EU-consumer sale

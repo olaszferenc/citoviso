@@ -621,7 +621,7 @@ function countryGateReason(
 }
 
 /**
- * ADR-XXXX: is the price the message may advertise confirmed — in the LEAD's pricing
+ * ADR-0443: is the price the message may advertise confirmed — in the LEAD's pricing
  * region (country.pricing_region of the market verdict's country)? A country without a
  * row or a region without a sheet is "not confirmed" (fail closed). Without a verdict, the
  * same pre-ADR-0111 convention countryGateReason keeps: a Hungarian-language lead is HU.

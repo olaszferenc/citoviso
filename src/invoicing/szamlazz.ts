@@ -109,14 +109,14 @@ export class SzamlazzAgent implements InvoiceProvider {
     return this.demo ? t("felhasznalo", "demo") + t("jelszo", "demo") : t("szamlaagentkulcs", this.key);
   }
 
-  /** Exposed for the money-path e2e (the XML is built, never sent): ADR-XXXX. */
+  /** Exposed for the money-path e2e (the XML is built, never sent): ADR-0443. */
   buildXmlForTest(input: InvoiceInput): string {
     return this.buildXml(input);
   }
 
   private buildXml(input: InvoiceInput): string {
     const b = input.buyer;
-    // ADR-XXXX: our amounts are MINOR units; the XML takes the currency's major unit.
+    // ADR-0443: our amounts are MINOR units; the XML takes the currency's major unit.
     const major = (v: number): number => minorToMajor(v, input.currency);
     const items = input.items
       .map(
@@ -157,10 +157,10 @@ export class SzamlazzAgent implements InvoiceProvider {
       t("fizetesiHataridoDatum", input.dueDate) +
       t("fizmod", input.paymentMethod) +
       t("penznem", input.currency) +
-      // ADR-XXXX: the country's invoice language (country.invoice_lang → Számlázz code).
+      // ADR-0443: the country's invoice language (country.invoice_lang → Számlázz code).
       t("szamlaNyelve", input.language) +
       (input.comment ? t("megjegyzes", input.comment) : "") +
-      // ADR-XXXX: a foreign-currency invoice names its rate source; with no explicit rate
+      // ADR-0443: a foreign-currency invoice names its rate source; with no explicit rate
       // Számlázz.hu takes the day's MNB rate itself (xmlszamla.xsd, arfolyamBank comment).
       (input.fxBank ? t("arfolyamBank", input.fxBank) : "") +
       (input.fxBank && input.fxRate ? t("arfolyam", String(input.fxRate)) : "") +

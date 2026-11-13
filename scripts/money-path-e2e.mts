@@ -1,4 +1,4 @@
-// ADR-XXXX ACCEPTANCE — the MONEY PATH on a synthetic NON-EURO country (ADR-0437 ⑤3).
+// ADR-0443 ACCEPTANCE — the MONEY PATH on a synthetic NON-EURO country (ADR-0437 ⑤3).
 //
 // A country row with a real ISO key and its own currency walks the whole chain in a SCRATCH
 // database (never the shared dev DB, never production):

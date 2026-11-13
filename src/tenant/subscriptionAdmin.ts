@@ -185,7 +185,7 @@ export async function getSubscriptionAdmin(
     .executeTakeFirst();
   if (!sub) return null;
   await loadPricing();
-  // ADR-XXXX: the subscription's own region — the next invoice is in its currency.
+  // ADR-0443: the subscription's own region — the next invoice is in its currency.
   const { region } = await regionOfTenant(tenantId);
 
   // The next invoice = base + every module that will still be subscribed at the

@@ -125,7 +125,7 @@ export function formatMoney(
   return sign ? `${num} ${sign}` : num;
 }
 
-// ── AMOUNTS IN THE MINOR UNIT (ADR-0437 ⑤3, ADR-XXXX) ────────────────────────────────────
+// ── AMOUNTS IN THE MINOR UNIT (ADR-0437 ⑤3, ADR-0443) ────────────────────────────────────
 // Every amount of OUR money (price, order, payment, invoice) is an integer in the currency's
 // MINOR unit, and how many digits that unit has is a property of the CURRENCY — not of the
 // screen, the region or the caller. ISO 4217 says it (Intl knows the table), with ONE

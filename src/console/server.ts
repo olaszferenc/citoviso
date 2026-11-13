@@ -1036,7 +1036,7 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
     const html = await readServableMock(a.path, a.inputs);
     // ADR-0036: the configurator UI renders in the buyer's language (persisted on the artifact).
     const lang = ((a.inputs ?? {}) as { siteData?: { lang?: string } }).siteData?.lang;
-    // ADR-XXXX: the lead's market prices the configurator; a market that cannot price shows
+    // ADR-0443: the lead's market prices the configurator; a market that cannot price shows
     // the mock WITHOUT an order entry (fail closed) rather than another market's prices.
     const pricingRegion = await regionForArtifactOrNull(artifactId);
     if (!pricingRegion) return send(res, 200, html);
@@ -1259,7 +1259,7 @@ async function handleOrderRequest(
   // SERVER-side from the ONE pricing source (pricing.ts, operator-set) — the
   // client figure is display-only; a mismatch is logged as a tamper/drift signal.
   await loadPricing();
-  // ADR-XXXX — THE ORDER'S REGION, resolved ONCE: the lead's country (the lodging's market)
+  // ADR-0443 — THE ORDER'S REGION, resolved ONCE: the lead's country (the lodging's market)
   // → country.pricing_region; the buyer's billing country only stands in when the lead has
   // none. Every price below is in that region's currency, and the order stores both. ⛔ No
   // country row / incomplete price sheet / currency mismatch = NO order and no pay-link
@@ -1527,7 +1527,7 @@ async function acquireOrderLock(key: string): Promise<() => void> {
 }
 
 /**
- * ADR-XXXX: the pricing region of the lead behind a mock artifact, or null when that market
+ * ADR-0443: the pricing region of the lead behind a mock artifact, or null when that market
  * cannot price (no country row, incomplete price sheet) — the configurator's side endpoints
  * then offer nothing rather than another market's endings.
  */
@@ -1536,7 +1536,7 @@ async function regionForArtifactOrNull(artifactId: string): Promise<string | nul
   if (!a) return null;
   try {
     const m = await regionForLead(a.lead_id);
-    // ⛔ TEMPORARY (ADR-XXXX): the browser cart still formats whole units — its minor-unit
+    // ⛔ TEMPORARY (ADR-0443): the browser cart still formats whole units — its minor-unit
     // patch is parked (~/rc-briefs/orszag-reteg-3a-cit-configurator-minor-unit.patch) behind
     // the known mock-trial-overlay ⑪ gate. Until it lands, a currency WITH minor digits
     // (EUR, CZK…) gets no cart at all rather than a cart showing 100× the price.
@@ -2185,7 +2185,7 @@ async function handle(
           note: r?.note ?? null,
           home: country === HOME_MARKET,
           log: await marketLog(country),
-          // ADR-XXXX: why the money path keeps this market shut (shown instead of „Megnyitás”).
+          // ADR-0443: why the money path keeps this market shut (shown instead of „Megnyitás”).
           openGaps: marketOpenGaps(country, { row: countryConfigSync, regionGaps: regionPriceGaps }),
         };
       }),
@@ -2210,7 +2210,7 @@ async function handle(
       );
     }
     const decision = { country, actor: op.username, reason };
-    // ADR-XXXX: a market whose money path cannot work does not open (fail closed) — its
+    // ADR-0443: a market whose money path cannot work does not open (fail closed) — its
     // currency is not taken by its payment provider, or its pricing region cannot price.
     if (action === "approve") {
       await loadPricing(true);
@@ -2342,7 +2342,7 @@ async function handle(
       return send(res, 200, JSON.stringify({ ok: false }), "application/json");
     }
   }
-  // GET /documents/a60?period=2026-11 | 2026-Q4 — ADR-XXXX: the A60 summary rows (reverse-
+  // GET /documents/a60?period=2026-11 | 2026-Q4 — ADR-0443: the A60 summary rows (reverse-
   // charge invoices per partner VAT number, net in HUF and thousand HUF) as CSV.
   if (method === "GET" && path === "/documents/a60") {
     const op = await currentOperator(req);
@@ -2353,7 +2353,7 @@ async function handle(
     res.setHeader("content-disposition", `attachment; filename="a60-${period.label}.csv"`);
     return send(res, 200, a60Csv(summary), "text/csv; charset=utf-8");
   }
-  // POST /pricing/region — ADR-XXXX: a NEW pricing region with its own currency. Created
+  // POST /pricing/region — ADR-0443: a NEW pricing region with its own currency. Created
   // unconfirmed and without prices: incomplete (every order path fails closed on it) until
   // its tab is filled and saved.
   if (method === "POST" && path === "/pricing/region") {
@@ -2387,7 +2387,7 @@ async function handle(
       return redirect(res, `/pricing?saved=${encodeURIComponent("hiba:Nem mentettem: ismeretlen ár-régió.")}`);
     }
     const snap = pricingSnapshot(region);
-    // ADR-XXXX: the page shows MAJOR units of the region's currency (9.90 €); the store holds
+    // ADR-0443: the page shows MAJOR units of the region's currency (9.90 €); the store holds
     // minor (990). HUF has no minor digits, so for the home market this is the identity.
     const money = (name: string): number | null => {
       const raw = form.get(name);
@@ -2406,7 +2406,7 @@ async function handle(
     for (const m of MODULE_CATALOG) {
       if (m.spine) continue;
       // A field left empty keeps the stored price; on a non-home region an id never priced
-      // stays missing (the region stays incomplete — fail closed, ADR-XXXX).
+      // stays missing (the region stays incomplete — fail closed, ADR-0443).
       const v = money(`m_${m.id}`) ?? snap.modulePrices.get(m.id);
       if (v !== undefined) modulePrices[m.id] = v;
     }
@@ -3914,7 +3914,7 @@ async function handle(
       .executeTakeFirst();
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
     // ADR-0360 ③: only the endings this market offers are suggested — the LEAD's market
-    // (ADR-XXXX); a lead whose market cannot price gets no suggestion (fail closed).
+    // (ADR-0443); a lead whose market cannot price gets no suggestion (fail closed).
     const sugRegion = await regionForArtifactOrNull(cfgDomMatch[1]!);
     if (!sugRegion) return send(res, 200, JSON.stringify({ suggestions: [] }), "application/json");
     const candidates = suggestDomains(a.leadName, offeredTlds(sugRegion).map((t) => t.tld));
@@ -3946,7 +3946,7 @@ async function handle(
       return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
     }
     // ADR-0360 ③: the buyer picks name AND ending — but only from the offered endings of
-    // the lead's market (ADR-XXXX).
+    // the lead's market (ADR-0443).
     const chkRegion = await regionForArtifactOrNull(cfgDomCheckMatch[1]!);
     if (!chkRegion || !offeredTldOf(norm.domain!, chkRegion)) {
       const list = chkRegion ? offeredTlds(chkRegion).map((t) => t.tld).join(", ") : "";

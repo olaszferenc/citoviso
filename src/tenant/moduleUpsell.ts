@@ -38,7 +38,7 @@ import { getAnnualFreeMonths, getModulePrice, loadPricing } from "../pricing.js"
 export function proratedFirstChargeMonths(
   period: "monthly" | "annual",
   periodEnd: Date,
-  /** ADR-XXXX: the tenant's pricing region (its annual free months set the cap). */
+  /** ADR-0443: the tenant's pricing region (its annual free months set the cap). */
   region: string,
   now: Date = new Date(),
 ): number {
@@ -85,7 +85,7 @@ export async function createFirstChargeOrder(
   periodEnd: Date,
 ): Promise<FirstChargeOrder | null> {
   await loadPricing();
-  // ADR-XXXX: the tenant's own region — the upsell is in the currency it already pays in.
+  // ADR-0443: the tenant's own region — the upsell is in the currency it already pays in.
   const money = await regionOfTenant(tenantId);
   const region = money.region;
   const ids = moduleIds.filter(

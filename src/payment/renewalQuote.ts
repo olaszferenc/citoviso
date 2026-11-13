@@ -75,7 +75,7 @@ export async function renewalQuoteForTenant(
     // stray entitlement rows exist. The date is what decides, not the rows.
     if (!date) return FRESH;
 
-    // ADR-XXXX: the tenant's own region — the quote is in the currency it pays in.
+    // ADR-0443: the tenant's own region — the quote is in the currency it pays in.
     const { region } = await regionOfTenant(tenantId);
     const offered = new Set(offeredModuleIds);
     const owned = await renewableModuleIds(tenantId);

@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/1: a pénz útja — minden ország a saját pénznemében áraz, fizettet és számláz
+## ADR-0443 — Ország-réteg 3/1: a pénz útja — minden ország a saját pénznemében áraz, fizettet és számláz
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-12: „jó a sorrend … 1-es indulunk”; brief `~/rc-briefs/orszag-reteg-3a-penzut-20261112.md`, koordinátor `cit9b4690e3`) ·
 **Épít:** ADR-0437 ⑤3 (kereskedelem-csoport), ADR-0020 (ár-régió), ADR-0360 (végződések), ADR-0111 (piac-kapu), ADR-0098 (AAM) ·

@@ -708,7 +708,7 @@ export interface MarketView {
   /** True for the home market: its pack is the product's foundation, not a decision here. */
   readonly home: boolean;
   readonly log: readonly { action: string; actor: string; reason: string; at: Date }[];
-  /** ADR-XXXX: why the market cannot open (payment provider / currency / price sheet / non-EU);
+  /** ADR-0443: why the market cannot open (payment provider / currency / price sheet / non-EU);
    *  empty or absent = it may. Computed by the server (payment/providers.ts marketOpenGaps). */
   readonly openGaps?: readonly string[];
 }
@@ -723,7 +723,7 @@ export interface MarketView {
  */
 function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; text: string } | null): string {
   const lang = consoleLang();
-  // ADR-XXXX: a market whose money path cannot work (no country row, a currency its payment
+  // ADR-0443: a market whose money path cannot work (no country row, a currency its payment
   // provider does not take, an incomplete price sheet) shows WHY instead of the open action.
   const moneyGaps = (country: string): readonly string[] => markets.find((x) => x.country === country)?.openGaps ?? [];
   const fmt = (d: Date | null): string =>

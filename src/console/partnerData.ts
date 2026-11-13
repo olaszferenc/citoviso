@@ -261,7 +261,7 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
         .orderBy("module")
         .execute();
       await loadPricing();
-      // ADR-XXXX: the tenant's own pricing region (stored on its subscription at activation).
+      // ADR-0443: the tenant's own pricing region (stored on its subscription at activation).
       const region = (await regionOfTenant(t.id)).region;
       const modules = mods.map((m) => m.module);
       // What cadence they actually pay on: the latest PAID payment's period.
@@ -355,7 +355,7 @@ export async function aamAnnualLimitHuf(): Promise<number> {
  *  Exported: the dashboard chip AND the daily SMS alert (aamAlert.ts) read the
  *  SAME number — two meters would drift. */
 export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
-  // ADR-XXXX: the system invoices in OTHER currencies count too — converted with the MNB rate
+  // ADR-0443: the system invoices in OTHER currencies count too — converted with the MNB rate
   // they were issued with (invoice.fx_rate), else the rate of their day. One that cannot be
   // converted is counted into fxDocs (surfaced), never silently dropped.
   const fxSys = await nonHufAamInvoicesHuf();

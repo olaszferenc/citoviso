@@ -35,7 +35,7 @@ export interface PricingPageExtras {
 /** The region currency's sign (text/money.ts currencySign: HUF → Ft, EUR → €, else the code). */
 const unitOf = (snap: PricingSnapshot): string => currencySign(snap.currency);
 
-/** ADR-XXXX: the page shows and takes MAJOR units; the store holds minor (×10^digits). */
+/** ADR-0443: the page shows and takes MAJOR units; the store holds minor (×10^digits). */
 const scaleOf = (currency: string): number => 10 ** (minorDigits(currency) ?? 0);
 const majorOf = (snap: PricingSnapshot, minor: number): number => minorToMajor(minor, snap.currency);
 const stepOf = (snap: PricingSnapshot): string => (scaleOf(snap.currency) > 1 ? String(1 / scaleOf(snap.currency)) : "1");
@@ -65,7 +65,7 @@ export function pricingHead(lang: Lang, snap: PricingSnapshot, notice: { ok: boo
 }
 
 /**
- * ADR-XXXX: the „+ Új ár-régió” fields sit in the tab row, INSIDE the page's main form — a
+ * ADR-0443: the „+ Új ár-régió” fields sit in the tab row, INSIDE the page's main form — a
  * nested <form> would close the main one early (HTML drops the inner tag, its </form> ends
  * the outer). So the fields point at this standalone form by id (`form=` attribute), and
  * the page renders it AFTER the main form (newRegionForm()).
@@ -77,7 +77,7 @@ export function newRegionForm(): string {
 
 /** Market tabs (report tab language). The country layer comes later. */
 export function regionTabs(lang: Lang, snap: PricingSnapshot, regions: readonly PricingSnapshot[]): string {
-  // ADR-XXXX: a region that cannot price yet (no base / missing module prices) is marked in
+  // ADR-0443: a region that cannot price yet (no base / missing module prices) is marked in
   // its tab, and the gap list stands under the tabs — the SAME list the order path refuses on.
   const gaps = regionPriceGaps(snap.region);
   const tabs = regions
@@ -167,7 +167,7 @@ function packagesInitial(lang: Lang, snap: PricingSnapshot, x: PricingPageExtras
   const outside = pkgable.filter((id) => !a.has(id));
   const cols = TIERS.map((t, i) => {
     const full = tierModules(a, t);
-    // ADR-XXXX: an incomplete region has no package price yet — "—", never a guess.
+    // ADR-0443: an incomplete region has no package price yet — "—", never a guess.
     let price: number | null = null;
     try {
       price = computeMonthly(full.filter((id) => sellable.has(id) || MODULE_CATALOG.find((m) => m.id === id)?.spine), snap.region);
@@ -201,7 +201,7 @@ export function packagesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageE
 
 /** The module table — the existing m_<id> / sell_<id> fields, one row per module. */
 export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageExtras): string {
-  // ADR-XXXX: every region prices its modules in its own currency (module_price_region); the
+  // ADR-0443: every region prices its modules in its own currency (module_price_region); the
   // „Eladó” switch stays ONE global list, edited on the home market's tab.
   const sellLocked = snap.region !== HU_PRICING_REGION;
   const rows = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
@@ -219,7 +219,7 @@ export function modulesPanel(lang: Lang, snap: PricingSnapshot, x: PricingPageEx
               <td class="pr2-num"><span class="pr2-lm">${T(lang, "Felár")}</span><span class="mut">—</span></td>
               <td><span class="pr2-lm">${T(lang, "Eladó")}</span><span class="mut small">${T(lang, "mindig")}</span></td></tr>`;
           const off = x.disabledSales.has(m.id);
-          // ADR-XXXX: shown in MAJOR units; a module this region never priced stays EMPTY (the
+          // ADR-0443: shown in MAJOR units; a module this region never priced stays EMPTY (the
           // region is incomplete until it is filled — never the HUF catalog price).
           const stored = snap.modulePrices.get(m.id);
           const price = stored === undefined ? "" : String(majorOf(snap, stored));
@@ -375,7 +375,7 @@ export function pricingPageData(lang: Lang, snap: PricingSnapshot, x: PricingPag
     region: snap.region,
     currency: snap.currency,
     unit: unitOf(snap),
-    // ADR-XXXX: every amount below is MAJOR units; the script multiplies by `scale` to format.
+    // ADR-0443: every amount below is MAJOR units; the script multiplies by `scale` to format.
     scale: scaleOf(snap.currency),
     base: majorOf(snap, snap.baseMonthly),
     freeM: snap.annualFreeMonths,

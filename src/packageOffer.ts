@@ -61,7 +61,7 @@ export function cheapestOfferedMonthlyFrom(disabledSales: ReadonlySet<string>, r
   try {
     packages = offeredPackagesFrom(disabledSales, region);
   } catch (e) {
-    // ADR-XXXX: a region that cannot price advertises NO price (never another region's).
+    // ADR-0443: a region that cannot price advertises NO price (never another region's).
     if (e instanceof PricingRegionError) return null;
     throw e;
   }

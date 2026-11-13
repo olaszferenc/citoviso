@@ -1,4 +1,4 @@
--- 0135 ORSZÁG-RÉTEG 3/1 — A PÉNZ ÚTJA (ADR-0437 ⑤3, ADR-XXXX).
+-- 0135 ORSZÁG-RÉTEG 3/1 — A PÉNZ ÚTJA (ADR-0437 ⑤3, ADR-0443).
 --
 -- Every country prices, charges and invoices in ITS OWN currency (owner, 2026-11-12): the
 -- regional prices are absolute amounts set on the console, there is no FX conversion of a
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS module_price_region (
   PRIMARY KEY (region, module_id)
 );
 COMMENT ON TABLE module_price_region IS
-  'ADR-XXXX: régiónkénti modulár (a régió pénznemének minor unitjában); a hu régióé a module_price.';
+  'ADR-0443: régiónkénti modulár (a régió pénznemének minor unitjában); a hu régióé a module_price.';
 
 -- ── 3. Region + currency ON THE ORDER and ON THE SUBSCRIPTION ────────────────────────────
 -- Resolved ONCE (the lead's country → country.pricing_region) when the order is recorded, and
@@ -72,4 +72,4 @@ CREATE TABLE IF NOT EXISTS fx_rate (
   PRIMARY KEY (rate_date, currency)
 );
 COMMENT ON TABLE fx_rate IS
-  'ADR-XXXX: MNB hivatalos napi árfolyam (Ft / egység) — CSAK adó-számlálóhoz és devizás számlához, árat soha nem vált át.';
+  'ADR-0443: MNB hivatalos napi árfolyam (Ft / egység) — CSAK adó-számlálóhoz és devizás számlához, árat soha nem vált át.';

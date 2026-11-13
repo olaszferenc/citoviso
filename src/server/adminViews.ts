@@ -1096,7 +1096,7 @@ export interface DomainSettleState {
 // this out of the page builders on the same day — same instinct, one level short:
 // the grouping was still hand-rolled here, and the "Ft" was still hard-coded onto
 // whatever currency arrived.
-// ⛔ ADR-XXXX — FELÜLET-KÖR (ADR-0437 ⑤ sorrend, 2. lépés): the tenant-admin views still
+// ⛔ ADR-0443 — FELÜLET-KÖR (ADR-0437 ⑤ sorrend, 2. lépés): the tenant-admin views still
 // write in the HOME region's currency. The money path itself (orders, renewals, upsell,
 // multilang, module change) prices in the tenant's own region; these screens follow in the
 // next round. No non-HU tenant can exist before then — the market gate (ADR-0111) keeps

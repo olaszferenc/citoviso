@@ -112,7 +112,7 @@ interface SubRow {
   readonly paymentMethod: "invoice" | "token";
   readonly recurrenceToken: string | null;
   readonly recurrenceTraceId: string | null;
-  /** 0135 (ADR-XXXX): the region/currency the customer bought in — every renewal price. */
+  /** 0135 (ADR-0443): the region/currency the customer bought in — every renewal price. */
   readonly pricingRegion: string;
   readonly currency: string;
 }
@@ -152,7 +152,7 @@ export async function renewableModuleIds(tenantId: string): Promise<string[]> {
 export async function domainFeeForRenewal(
   tenantId: string,
   cycleMonths: number,
-  /** The subscription's pricing region (ADR-XXXX) — the fee is in its currency. */
+  /** The subscription's pricing region (ADR-0443) — the fee is in its currency. */
   region: string,
 ): Promise<{ fee: number; domain: string } | null> {
   const site = await db
@@ -282,7 +282,7 @@ async function findOrCreateRenewalOrder(
   }
 
   const moduleIds = await renewableModuleIds(sub.tenantId);
-  // ADR-XXXX: the subscription's OWN region — the customer renews in the currency they
+  // ADR-0443: the subscription's OWN region — the customer renews in the currency they
   // bought in, at that region's current list price.
   const region = sub.pricingRegion;
   // ADR-0088 §8: an armed switch takes effect HERE — the next minted renewal
@@ -653,7 +653,7 @@ async function notify(
   const lang = await prepareMailLang(await langForTenant(sub.tenantId));
   // ⛔ The letter gets the NUMBER, not a string — the builder formats it (ADR-0144 ②).
   const amount = order.price;
-  // ADR-XXXX: the currency the customer bought in (the order's amount is in it).
+  // ADR-0443: the currency the customer bought in (the order's amount is in it).
   const currency = sub.currency;
   // The covered-period text follows the ORDER being dunned, not the sub row —
   // with a switch armed the two can differ for one cycle (ADR-0088 §8).

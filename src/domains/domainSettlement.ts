@@ -44,7 +44,7 @@ export async function settlementQuote(tenantId: string): Promise<SettlementQuote
   const commitment = await activeDomainCommitment(tenantId);
   if (!commitment) return null;
   await loadPricing();
-  // ADR-XXXX: the tenant's own region — the penalty and the buyout are in its currency.
+  // ADR-0443: the tenant's own region — the penalty and the buyout are in its currency.
   const { region, currency } = await regionOfTenant(tenantId);
 
   // ADR-0094 ④: a free-domain order froze its package floor — that is the
