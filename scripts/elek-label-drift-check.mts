@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — nem indít böngészőt, csak a Playwright-futó szemantikáját írja le a szövegében
 // ELEK-FORGATÓKÖNYV FELIRAT-ŐR — a `várd: látható "…"` állítás olyan szövegre mérjen,
 // ami a termékben TÉNYLEG létezik.
 //

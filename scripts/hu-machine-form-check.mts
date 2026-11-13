@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — tartalmi kapu (magyar felületi szöveg, „a(z)”); a hook --fast módja böngésző nélkül fut
 // GÉPIES-ALAK ŐR — magyar névelőt és toldalékot SOHA nem választatunk az olvasóval.
 //
 // ⛔ MIÉRT: az ADR-0101 ① kimondottan tiltja a „a(z)"-t (a tulaj a saját postaládájában

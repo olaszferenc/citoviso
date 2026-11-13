@@ -1,0 +1,23 @@
+[Unit]
+# DEV GÉP (ADR-XXXX): a landot már nem blokkoló böngészős kapuk óránkénti futása az origin/main-re
+# landolt commitokon. A FŐ FÁBÓL fut (a citoviso-main-sync tartja az origin/main-en), a kapuk
+# viszont egy saját, ~/wt-n kívüli detached munkafában (~/.cache/citoviso-gate-hourly/tree).
+# Piros kapunál a szkript maga riaszt (scripts/gate-hourly-alert.mts → alertHouse, egyszer
+# piros-halmazonként) és 0-val lép ki; nem-0 = a futtatás maga hibázott (fetch, worktree, riasztás).
+Description=Citoviso böngészős kapuk óránként az origin/main-en
+After=local-fs.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/bin/bash /home/citoviso/citoviso/scripts/gate-hourly.sh
+# A teljes böngészős kör terhelés alatt percekig tart; a futtató kapunkénti csend-korlátja (900 s)
+# a beragadást már kezeli — ez csak végső plafon.
+TimeoutStartSec=3600
+# Alacsonyabb prioritás: a sessionök munkáját ne lassítsa.
+Nice=10
+IOSchedulingClass=idle
+StandardOutput=append:/home/citoviso/.claude/citoviso-gate-hourly.log
+StandardError=append:/home/citoviso/.claude/citoviso-gate-hourly.log

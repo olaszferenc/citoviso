@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — tartalmi kapu (nincs ADR-szám a felületi szövegben); a hook --fast módja böngésző nélkül fut
 // BELSŐ-HIVATKOZÁS ŐR — fejlesztői azonosító nem kerülhet EMBER által olvasott szövegbe.
 //
 // ⛔ MIÉRT: 2026-09-12-én a konzol Árazás-képernyőjén ez állt az operátor előtt:

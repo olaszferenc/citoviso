@@ -265,7 +265,15 @@ try {
   if (job.stdin) copyFileSync(job.stdin, path.join(pj, `${id}.stdin`));
 
   // MAIN's runner, not this tree's (the diff may have changed the runner too). No pass cache.
-  const runnerEnv = { ...CLEAN, CIT_GATE_CACHE: "0" };
+  // ⛔ FORCED RUN (ADR-XXXX, measured 2026-11-13): LAND_RANGE is scrubbed above, so main's runner
+  // starts in COMMIT mode — and there it DEFERS every browser gate (ADR-0432). The probe of a red
+  // browser gate (lead-mobile-check) thus ran NOTHING, the runner exited 0 in 0 s, and the probe
+  // printed "a mainen ZÖLD (0 s) ⇒ A TE VÁLTOZÁSOD BUKIK" — a verdict without a measurement.
+  // CIT_FULL_COMMIT / CIT_FULL_LAND make the runner run the one recorded gate, whatever its kind;
+  // CIT_GATE_TIMES lists what really ran, and an empty list is said out loud (SKIPPED, below).
+  const timesFile = path.join(pj, "TIMES");
+  const runnerEnv = { ...CLEAN, CIT_GATE_CACHE: "0", CIT_FULL_COMMIT: "1", CIT_FULL_LAND: "1", CIT_GATE_TIMES: timesFile };
+  delete runnerEnv.CIT_GATE_HOURLY;
   const t0 = Date.now();
   const r = spawnSync("timeout", ["-k", "10", String(TIMEOUT), process.execPath, path.join(dir, "scripts/lib/gate-runner.mjs"), pj, dir], {
     cwd: dir,
@@ -296,6 +304,13 @@ try {
       `⏱️  TISZTA-MAIN PRÓBA — ${title}`,
       `   A kapu a ${REF}-en (${short}) ${TIMEOUT} s alatt nem futott le (időkorlát) — NEM DÖNTÖTT.`,
       `   Kézzel: CIT_GATE_MAIN_PROBE_TIMEOUT=<s> a következő futásnál.`,
+    ]);
+  } else if (r.status === 0 && !(existsSync(timesFile) && readFileSync(timesFile, "utf8").trim())) {
+    exitNote = "SKIPPED";
+    verdict("SKIPPED", [
+      `   ⚠ tiszta-main próba — ${title}: a kapu a ${REF}-en (${short}) NEM FUTOTT LE (a futtató kihagyta) —`,
+      `     NEM DÖNTÖTT, hogy a te változásod-e. Egy 0 s-os „zöld” nem bizonyíték. A futtató kimenete:`,
+      ...mainOut.trim().split("\n").slice(-6).map((l) => `     │ ${l}`),
     ]);
   } else if (r.status === 0) {
     const behind = gitOut(["rev-list", "--count", `HEAD..${mainSha}`]);

@@ -50,6 +50,15 @@ land_lock_acquire "$ROOT" || fail "a gépszintű land-zár nem szerezhető meg"
 
 git fetch origin || fail "git fetch origin sikertelen"
 
+# TIMING (ADR-XXXX): every phase is measured and printed at the end, with the slowest gates, so the
+# land's cost is a number in every log instead of a feeling ("kurva lassú").
+LAND_T0=$(date +%s)
+LAND_TIMES=""
+lap() { LAND_TIMES="$LAND_TIMES · $1 $(( $(date +%s) - $2 )) s"; }
+# ⛔ No trap of its own: land-lock.sh's EXIT trap releases the lock, and a second `trap … EXIT` would
+# REPLACE it. The file is tiny and removed on the success path; a failed land leaves it in $TMPDIR.
+GATE_TIMES_FILE="$(mktemp -t cit-land-times-XXXXXX)"
+
 ATTEMPT=0
 while :; do
   ATTEMPT=$((ATTEMPT + 1))
@@ -61,6 +70,7 @@ while :; do
   fi
 
   echo "── land #$ATTEMPT: rebase origin/main-re…"
+  T=$(date +%s)
   # The two planning indexes are GENERATED: a conflict confined to them is resolved by
   # regenerating (scripts/land-rebase.sh). Any other conflict still aborts loudly.
   if ! bash "$ROOT/scripts/land-rebase.sh"; then
@@ -68,10 +78,15 @@ while :; do
     fail "rebase-konfliktus — oldd fel kézzel (git rebase origin/main), majd land újra"
   fi
 
+  lap "#$ATTEMPT rebase" "$T"
   echo "── kapuk: typecheck…"
+  T=$(date +%s)
   npx tsc --noEmit -p tsconfig.json || fail "tsc piros"
+  lap "tsc" "$T"
   echo "── kapuk: pre-commit suite a landolt diffre (LAND_RANGE=origin/main...HEAD)…"
-  LAND_RANGE="origin/main...HEAD" bash "$ROOT/hooks/pre-commit" || fail "pre-commit kapu piros"
+  T=$(date +%s)
+  LAND_RANGE="origin/main...HEAD" CIT_GATE_TIMES="$GATE_TIMES_FILE" bash "$ROOT/hooks/pre-commit" || fail "pre-commit kapu piros"
+  lap "kapuk" "$T"
 
   echo "── push origin HEAD:main…"
   if [ "${LAND_FAKE_PUSH:-}" = "1" ]; then
@@ -92,6 +107,12 @@ while :; do
   git merge-base --is-ancestor HEAD origin/main || fail "a HEAD nem őse az origin/main-nek"
   echo
   echo "✅ LAND: IGAZOLTAN FENT — origin/main=$(git rev-parse --short origin/main) tartalmazza a HEAD-et ($(git rev-parse --short HEAD))."
+  echo "⏱  land: összesen $(( $(date +%s) - LAND_T0 )) s (a zár megszerzése után)${LAND_TIMES}"
+  if [ -s "$GATE_TIMES_FILE" ]; then
+    echo "   a 10 leglassabb kapu (s):"
+    head -10 "$GATE_TIMES_FILE" | sed 's/^/     /'
+  fi
+  rm -f "$GATE_TIMES_FILE"
 
   # SINGLE TEST SURFACE (feedback_single_test_surface_no_ports): the owner reviews
   # everything on the main tree's :4600/:4800 (systemd + tsx watch). Landing must

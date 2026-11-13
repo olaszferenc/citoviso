@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — nem indít böngészőt (Chromium NEM kell), csak a szövegében szerepel a szó
 // ⏰ IDŐUTAZÓ ŐR az óránkénti foglalás-karbantartás két, eddig csak egy-egy pontján mért
 // söprésére (scripts/booking-maintenance.mts → systemd `citoviso-booking-maintenance`, óránként):
 //

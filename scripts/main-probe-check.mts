@@ -21,7 +21,7 @@
 //
 // Futtatás:       npx tsx scripts/main-probe-check.mts
 // Piros önteszt:  npx tsx scripts/main-probe-check.mts --self-test
-//   (hét visszarontás — a próba a session fájában fut · GIT_* szivárog · nincs időkorlát · a hook
+//   (nyolc visszarontás — a próba nem kényszeríti a böngészős kapu futását · a próba a session fájában fut · GIT_* szivárog · nincs időkorlát · a hook
 //    átengedi a commitot · a mainen piros kaput zöldnek olvassa · a próba-fa ott marad · a hook
 //    nem hívja a próbát —, mindegyiknek pirosat KELL adnia.)
 
@@ -72,6 +72,8 @@ const GATES_MAIN: Record<string, string> = {
   "where.mjs": WHERE_MAIN,
   "slow.mjs": `await new Promise((r) => setTimeout(r, 60000));`,
   // Mentions the diff, so a clean tree proves nothing about it.
+  // ⑩ a BROWSER gate by the runner's rule (the word below): green on main, with a side effect proving it RAN.
+  "brow.mjs": `import { appendFileSync } from "node:fs"; /* drives Chromium via playwright-core (fixture) */ appendFileSync(process.env.FIX_BROW, "x"); console.log("BROW-MAIN-OK");`,
   "diffy.mjs": `const range = process.env.LAND_RANGE ?? "--cached"; void range; process.exit(1);`,
 };
 const GATES_BRANCH: Record<string, string> = {
@@ -79,6 +81,7 @@ const GATES_BRANCH: Record<string, string> = {
   "where.mjs": `console.log("WHERE-BRANCH-RED"); process.exit(6);`,
   "slow.mjs": `process.exit(5);`,
   "newgate.mjs": `process.exit(2);`,
+  "brow.mjs": `/* drives Chromium via playwright-core (fixture) */ console.log("BROW-BRANCH-RED"); process.exit(7);`,
 };
 const line = (label: string, script: string): string => `echo "[pre-commit] ${label}…"\nnode scripts/${script} >"$GATE_LOG" || gate_failed\n`;
 
@@ -203,6 +206,17 @@ async function audit(v: Variant): Promise<string[]> {
     const j = await f.run(line("red", "red.mjs"), { CIT_GATE_MAIN_PROBE: "0" });
     say(j.rc === 4 && !j.out.includes("TISZTA-MAIN PRÓBA"), `⑧ CIT_GATE_MAIN_PROBE=0 mellett is futott (rc=${j.rc})`);
 
+    // ⑩ a browser gate red at the land (CIT_FULL_LAND=1 makes the land run it): the probe must
+    // REALLY run it on main (measured 2026-11-13: it was deferred there, "ZÖLD (0 s)").
+    const browMark = path.join(f.base, "brow-ran");
+    const k = await f.run(line("brow", "brow.mjs"), { LAND_RANGE: "origin/main...HEAD", CIT_FULL_LAND: "1", FIX_BROW: browMark });
+    let browRan = "";
+    try {
+      browRan = readFileSync(browMark, "utf8");
+    } catch {}
+    say(k.rc === 7, `⑩ a hook kilépési kódja ${k.rc} (7 várt)\n${k.out.slice(-1200)}`);
+    say(browRan === "x" && k.out.includes(YOURS), `⑩ a böngészős kaput a próba a mainen NEM futtatta le (futások: ${browRan.length}), mégis ítéletet mondott, vagy nem a „${YOURS}”-t\n${k.out.slice(-1200)}`);
+
     // ⑨ no probe worktree left behind (only the fixture repo and the session tree).
     say(f.worktrees() === 2, `⑨ a próba worktree-t hagyott maga után (${f.worktrees()} bejegyzés, 2 várt)`);
   } finally {
@@ -229,6 +243,7 @@ if (SELF_TEST) {
     ["a hook átengedi a commitot", { ...shipped, hook: mutate("exit", hookText, '"$first" || true\n  fi\n  exit "$last"', '"$first" || true\n  fi\n  exit 0') }],
     ["a mainen piros kaput zöldnek olvassa", { ...shipped, probe: mutate("verdict", probeText, "} else if (r.status === 0) {", "} else if (r.status === 0 || r.status === 3) {") }],
     ["a próba-fa ott marad", { ...shipped, probe: mutate("cleanup", probeText, "} finally {\n  cleanup();\n}", "} finally {\n}") }],
+    ["a próba nem kényszeríti a kapu futását", { ...shipped, probe: mutate("force", probeText, 'CIT_FULL_COMMIT: "1", CIT_FULL_LAND: "1", ', "") }],
     ["a hook nem hívja a próbát", { ...shipped, hook: mutate("wire", hookText, "[ -f scripts/lib/main-probe.mjs ]", "[ -f scripts/lib/nincs-ilyen.mjs ]") }],
   ];
   let ok = true;
@@ -251,4 +266,4 @@ if (bad.length) {
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ main-probe-check: a tiszta-main próba mind a kilenc forgatókönyvben (①–⑨) a helyes gazdát nevezi meg, és a bukott commitot nem engedi át.");
+console.log("✅ main-probe-check: a tiszta-main próba mind a tíz forgatókönyvben (①–⑩) a helyes gazdát nevezi meg, és a bukott commitot nem engedi át.");

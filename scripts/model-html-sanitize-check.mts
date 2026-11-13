@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — biztonsági kapu: a modell-HTML nem futtathat kódot — a land nem engedheti át
 // Guard (ADR-0370): model-authored mock HTML can never run code in a visitor's browser.
 //
 // Measured 2026-10-12 on the legacy AI-HTML path (generate.ts → generateFromCorpus): a prose

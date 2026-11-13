@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — biztonsági kapu: a <script>-be ágyazott JSON nem törhet ki (XSS) — a land nem engedheti át
 // SZERVER-OLDALI ADAT INLINE <script>-BE CSAK A jsonForScript()-EN ÁT (2026-10-11).
 //
 //   npx tsx scripts/json-for-script-check.mts

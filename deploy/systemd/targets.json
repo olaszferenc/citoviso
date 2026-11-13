@@ -13,6 +13,10 @@
     "citoviso-events-pending.timer": { "target": "prod" },
     "citoviso-outreach-dispatch.timer": { "target": "prod" },
     "citoviso-search-console.timer": { "target": "prod" },
+    "citoviso-gate-hourly.timer": {
+      "target": "dev",
+      "why": "a landot nem blokkoló böngészős kapukat futtatja óránként az origin/main-en a dev gépen (ADR-XXXX); élesen nincs fejlesztői fa és kapu"
+    },
     "citoviso-backup-dev.timer": {
       "target": "dev",
       "why": "a DEV adatbázist menti a dev gépen; az éles mentése a deploy GATE 3 pg_dump-ja és a VPS saját mentése"

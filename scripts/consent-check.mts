@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — jogi kapu (süti-hozzájárulás, ePrivacy/GDPR) — a land nem engedheti át
 // Őr: a süti-hozzájárulás sáv és a Barion Pixel NÉGY TILTÁSA.
 //
 // A befagyasztott terv (assets/design-refs/public-site/consent-bar/README.md) a

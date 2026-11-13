@@ -97,6 +97,30 @@
 // surface gate, which is no browser gate) must never be deferred: scripts/gate-runner-check.mts
 // keeps that true. CIT_FULL_COMMIT=1 restores the full commit-time run.
 //
+// BROWSER GATES DO NOT BLOCK THE LAND — THEY RUN HOURLY ON origin/main (ADR-XXXX). Measured
+// 2026-11-12/13: with the dev machine at load 15–30 (~10 sessions + their Chromes) the browser and
+// timing gates went red WITHOUT any fault in the landed diff (checkout-item-block-check,
+// mock-trial-overlay-check, billing-checkout-check TimeoutError — red on a CLEAN main too;
+// lead-page-surface-check green on a re-run), and one finished feature waited four lands for an
+// owner exception. So in LAND mode a browser gate (same rule as above) is NOT run: it is listed
+// loudly as "óránként fut", and scripts/gate-hourly.sh runs exactly these gates every hour on the
+// commits that landed since the last green hourly run (LAND_RANGE=<last green>...origin/main,
+// CIT_GATE_HOURLY=1 — this runner then runs ONLY them), and alerts the house when one goes red.
+// EXCEPTION — a browser-rule gate whose header (first 40 lines) carries
+//   // gate-runner: land-blocking — <reason, ≥ 20 characters>
+// still blocks the land: the content gates the land must never let through (security, legal, §C
+// outreach, Hungarian text) and the false positives that only MENTION the word. The list and the
+// reasons live in the ADR. CIT_FULL_LAND=1 restores the old land (every browser gate blocking).
+//
+// ONE AUTOMATIC RE-RUN (ADR-XXXX). A gate that fails is run ONCE more, the same way (same phase,
+// same slot), before it counts as red: a green re-run is GREEN, printed with a loud "↻" line that
+// carries the first failure's exit code and its last output lines, and appended to
+// <git-common-dir>/cit-gate-retries.log (date · gate · first rc · last line) so a flaky gate shows
+// up in numbers instead of anecdotes. A red re-run is red, and its output carries the first run's
+// too. NOT re-run: a timed-out gate (it already sat CIT_GATE_JOB_SILENCE seconds silent — a second
+// wait would double a 15-minute hang) and a phase-① gate that tried to write (it re-runs in phase ②
+// anyway). CIT_GATE_RETRY=0 turns the re-run off.
+//
 // Usage (from hooks/pre-commit only):  node scripts/lib/gate-runner.mjs <jobs-dir> <root>
 
 import { spawn, spawnSync } from "node:child_process";
@@ -570,6 +594,47 @@ if (CACHE_DIR && existsSync(CACHE_DIR)) {
   }
 }
 
+// ── ONE AUTOMATIC RE-RUN (see the header) ────────────────────────────────────────────
+const RETRY = process.env.CIT_GATE_RETRY !== "0";
+const RETRY_LOG = process.env.CIT_GATE_RETRY_LOG || (commonDir() ? path.join(commonDir(), "cit-gate-retries.log") : null);
+let retried = 0;
+let retriedGreen = 0;
+/** run(), and once more when it failed (not for a timeout, not for a phase-① writer). */
+async function runRetry(job, readOnly, held = null) {
+  const r1 = await run(job, readOnly, held);
+  if (!RETRY || r1.rc === 0 || r1.timedOut || (readOnly && r1.wrote)) return r1;
+  retried++;
+  const name = (job.label || job.script).trim();
+  // Keep the first attempt's output: the re-run writes the same files.
+  const first = { out: `${r1.out}.first`, err: `${r1.err}.first` };
+  renameSync(r1.out, first.out);
+  renameSync(r1.err, first.err);
+  const tail = [...lastLines(first.out, 12), ...lastLines(first.err, 8)];
+  process.stdout.write(`   ↻ kapu-futtató: ${name} — elbukott (kilépési kód ${r1.rc}, ${r1.secs.toFixed(0)} s), egyszer újrafuttatom…\n`);
+  const r2 = await run(job, readOnly, held);
+  const firstText = tail.length ? tail.map((l) => `     │ ${l}`).join("\n") : "     │ (semmi — a kapu egy sort sem írt)";
+  if (RETRY_LOG) {
+    try {
+      const last = (tail[tail.length - 1] ?? "").replace(/\s+/g, " ").slice(0, 200);
+      appendFileSync(RETRY_LOG, `${new Date().toISOString()}\t${r2.rc === 0 ? "ZÖLD-ÚJRA" : "PIROS-ÚJRA"}\t${job.argv.join(" ")}\trc=${r1.rc}\t${last}\n`);
+    } catch {
+      // The statistic is a convenience; the verdict above does not depend on it.
+    }
+  }
+  if (r2.rc === 0 && !(readOnly && r2.wrote)) {
+    retriedGreen++;
+    r2.retryNote =
+      `   ↻ ÚJRAFUTTATVA, ZÖLD: az első futás ${r1.rc} kóddal bukott (${r1.secs.toFixed(0)} s) — valószínű terhelés/időzítés, nem a diff.\n` +
+      `     Az első futás utolsó kimenete:\n${firstText}`;
+  } else if (r2.rc !== 0) {
+    appendFileSync(
+      r2.err,
+      `\n↻ Ez a kapu az ÚJRAFUTTATÁSBAN is bukott (most ${r2.rc}). Az ELSŐ futás kódja ${r1.rc} volt, utolsó kimenete:\n${firstText}\n`,
+    );
+  }
+  return r2;
+}
+
 const failed = [];
 const times = [];
 function show(job, r) {
@@ -582,6 +647,7 @@ function show(job, r) {
   const parts = [job.label];
   if (!job.quiet) parts.push(readFileSync(r.out, "utf8").replace(/\n$/, ""));
   parts.push(readFileSync(r.err, "utf8").replace(/\n$/, ""));
+  if (r.retryNote) parts.push(r.retryNote);
   process.stdout.write(`${parts.filter(Boolean).join("\n")}\n`);
 }
 
@@ -595,15 +661,40 @@ function browserGate(job) {
     return false;
   }
 }
+// ── LAND MODE: browser gates run hourly on origin/main, not in the land (see the header, ADR-XXXX) ──
+const HOURLY = !!process.env.LAND_RANGE && process.env.CIT_GATE_HOURLY === "1";
+const OFF_LAND = !!process.env.LAND_RANGE && !HOURLY && process.env.CIT_FULL_LAND !== "1";
+const LAND_BLOCK_MARK = "// gate-runner: land-blocking —";
+function landBlocking(job) {
+  try {
+    return readFileSync(path.join(job.cwd, job.script), "utf8")
+      .split("\n", 40)
+      .some((l) => l.trim().startsWith(LAND_BLOCK_MARK) && l.trim().slice(LAND_BLOCK_MARK.length).trim().length >= 20);
+  } catch {
+    return false;
+  }
+}
+/** A gate that the land does not wait for: a browser gate without the land-blocking marker. */
+const hourlyGate = (job) => browserGate(job) && !landBlocking(job);
 
 const t0 = Date.now();
 const serial = [];
 const queue = [];
 const toLand = [];
+const toHourly = [];
+let notHourly = 0;
 let reused = 0;
 for (const j of jobs) {
+  if (HOURLY && !hourlyGate(j)) {
+    notHourly++; // already gated (blocking) by the land that brought it
+    continue;
+  }
   if (COMMIT_MODE && browserGate(j)) {
-    toLand.push(j);
+    (landBlocking(j) ? toLand : toHourly).push(j);
+    continue;
+  }
+  if (OFF_LAND && hourlyGate(j)) {
+    toHourly.push(j);
     continue;
   }
   j.sig = signature(j);
@@ -615,13 +706,20 @@ for (const j of jobs) {
   }
   (knownWriters.has(j.script) ? serial : queue).push(j);
 }
+const gateNames = (list) => [...new Set(list.map((j) => path.basename(j.script).replace(/\.(mts|mjs|ts|js)$/, "")))];
 if (toLand.length) {
-  const names = [...new Set(toLand.map((j) => path.basename(j.script).replace(/\.(mts|mjs|ts|js)$/, "")))];
   process.stdout.write(
-    `[pre-commit] ⏭ ${toLand.length} böngészős kapu a LAND-en fut, nem most (commit-mód, ADR-0432): ${names.join(", ")}\n` +
+    `[pre-commit] ⏭ ${toLand.length} böngészős kapu a LAND-en fut, nem most (commit-mód, ADR-0432): ${gateNames(toLand).join(", ")}\n` +
       `   A land.sh mindet lefuttatja a teljes landolt diffre. Teljes kör most: CIT_FULL_COMMIT=1 git commit …\n`,
   );
 }
+if (toHourly.length) {
+  process.stdout.write(
+    `[pre-commit] ⏭ ${toHourly.length} böngészős kapu NEM blokkol: óránként fut az origin/main-en (scripts/gate-hourly.sh, ADR-XXXX), pirosnál riaszt: ${gateNames(toHourly).join(", ")}\n` +
+      `   Most lefuttatni: ${COMMIT_MODE ? "CIT_FULL_COMMIT=1 git commit …" : "CIT_FULL_LAND=1 bash scripts/land.sh"}\n`,
+  );
+}
+if (HOURLY) process.stdout.write(`[pre-commit] óránkénti mód: csak a land-en nem futó böngészős kapuk (${notHourly} másik kaput a land már lefuttatott)\n`);
 const phase1 = queue.length;
 const known = queue.filter((j) => pastSecs(j) !== Infinity).length;
 queue.splice(0, queue.length, ...longestFirst(queue));
@@ -643,7 +741,7 @@ function pool(list, readOnly, onDone) {
           if (exclusive && busy.has(job.script)) continue;
           list.splice(i--, 1);
           if (exclusive) busy.add(job.script);
-          const p = run(job, readOnly).then((r) => {
+          const p = runRetry(job, readOnly).then((r) => {
             running.delete(p);
             if (exclusive) busy.delete(job.script);
             onDone(job, r);
@@ -689,7 +787,7 @@ if (failed.length === 0 && strict.length) {
   const held = await acquireSlot();
   try {
     for (const job of strict) {
-      const r = await run(job, false, held);
+      const r = await runRetry(job, false, held);
       show(job, r);
       if (r.rc !== 0) break;
     }
@@ -716,6 +814,8 @@ console.log(
   `[pre-commit] kapu-futtató: ${jobs.length} kapu · ${phase1 - deferred} párhuzamosan (${PARALLEL} szál, csak-olvasó DB) · ` +
     `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ` +
     (toLand.length ? `${toLand.length} böngészős a land-re halasztva · ` : "") +
+    (toHourly.length ? `${toHourly.length} böngészős óránkéntire bízva · ` : "") +
+    (retried ? `${retried} újrafuttatva (${retriedGreen} lett zöld) · ` : "") +
     `leghosszabb-először (${known}/${phase1} kapunak volt előzménye) · ${secs} s ` +
     `(① ${phase1Secs} s · ${slotNote})`,
 );

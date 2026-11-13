@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — §C/jog: a mock-oldal demo-keretezése minden látogatónak — a land nem engedheti át
 // A KIKÜLDÖTT MOCK-LAP KERETEZÉSE — a sáv MINDEN látogatónak szól, és a helyét
 // egyetlen sablon CSS-e sem veheti el.
 //

@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — nem indít böngészőt, csak mintaként keresi a böngésző-hívást a mért kódban
 // Őr: a `.hu` Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09).
 //
 // A figyelő EGY dolgot ígér: ha megerősítő link érkezik, a tulaj SMS-t és e-mailt kap,

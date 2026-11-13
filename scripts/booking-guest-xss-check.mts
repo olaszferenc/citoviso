@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — biztonsági kapu: a vendég neve szöveg, nem kód (XSS) — a land nem engedheti át
 // A VENDÉG ÁLTAL BEÍRT SZÖVEG SOSEM FUT LE A TULAJ ADMINJÁBAN (Elek IT-kör, 2026-10-11).
 //
 //   npx tsx scripts/booking-guest-xss-check.mts

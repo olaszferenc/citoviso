@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-land-egyszerusites-bongeszos-kapuk-orankent-egyszeri-ujrafuttatas.md) — Land egyszerűsítés: böngészős kapuk óránként az origin/mainen, egyszeri automatikus újrafuttatás
 - [ADR-0445](decisions/0445-az-elso-megkereso-level-mukodo-oldalt-mutat-be.md) — Az első megkereső levél működő oldalt mutat be, nem „látványtervet”; tárgy „– kész honlap”; a levél-kritikus előfizetésen fut (2026-11-13)
 - [ADR-0444](decisions/0444-egyseges-e-mail-alairas-jel-cian-vonal-a-csapat.md) — Egységes e-mail aláírás: „Jel + cián vonal” (A), csapat- és névvel aláírt olvasat
 - [ADR-0443](decisions/0443-orszag-reteg-3-1-a-penz-utja-minden-orszag-a.md) — Ország-réteg 3/1: a pénz útja — minden ország a saját pénznemében áraz, fizettet és számláz

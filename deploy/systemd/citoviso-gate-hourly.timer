@@ -1,0 +1,11 @@
+[Unit]
+Description=Citoviso böngészős kapuk óránként (ADR-XXXX)
+
+[Timer]
+# :40 — kikerüli a :15-ös dev-mentést és az egész órás booking-karbantartást.
+OnCalendar=*-*-* *:40:00
+Persistent=true
+AccuracySec=2min
+
+[Install]
+WantedBy=timers.target

@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — §C megkeresés: a piszkozat-előnézet nem vághatja le a levél jogi végét
 // ⛔ THE OPERATOR MUST SEE THE WHOLE LETTER BEFORE SENDING IT (Elek FK-004 ①).
 //
 // What went wrong: the console's "Így néz ki a levél a címzett postafiókjában"

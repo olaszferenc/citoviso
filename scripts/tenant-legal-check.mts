@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — jogi kapu (ADR-0110): a jogi lábazat a generált oldalon — a land nem engedheti át
 // ADR-0110 guard — the generated tenant site's LEGAL FOOTING.
 //
 // What it protects, in the order the failures actually happened:
