@@ -1,4 +1,4 @@
-## ADR-XXXX — Az első megkereső levél működő oldalt mutat be, nem „látványtervet”; tárgy „– kész honlap”; a levél-kritikus előfizetésen fut (2026-11-13)
+## ADR-0445 — Az első megkereső levél működő oldalt mutat be, nem „látványtervet”; tárgy „– kész honlap”; a levél-kritikus előfizetésen fut (2026-11-13)
 
 **Státusz:** elfogadva (tulaj, 2026-11-13; a szöveget a tulaj küldte vissza jóváhagyottként, a naptár-mondatot ő diktálta) ·
 **Lokál, nem élesítve** (§0) · **Kapcsolódó:** ADR-0306 (a levél csak a mértet állítja), ADR-0101 (a levél részei),
