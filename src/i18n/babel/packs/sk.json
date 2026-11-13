@@ -1160,6 +1160,7 @@
  "A levél linkjei ide mutatnak: {host}": "Odkazy v e-maile smerujú sem: {host}",
  "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki.": "Videl si koniec e-mailu — odoslanie je otvorené. Nedá sa vrátiť späť a týmto kanálom odíde iba raz.",
  "a levél, ahogy megérkezik": "e-mail tak, ako príde",
+ "A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.": "Bezpečnostný filter poštového systému otvoril stránku (so zrýchlenými hodinami alebo pár sekúnd po skutočnom otvorení, bez signálov) — toto nie je návšteva príjemcu.",
  "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.": "Bezpečnostný filter poštového systému otvoril a spustil stránku so zrýchlenými hodinami — „čas čítania“ tu nie je skutočný.",
  "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.": "Uzavretie pôsobí do BUDÚCNOSTI: nové oslovenie, nová objednávka ani spustenie sa nezačnú. Obnovu už bežiacich predplatných to neovplyvní.",
  "A link a mentés után itt jelenik meg.": "Odkaz sa tu zobrazí po uložení.",

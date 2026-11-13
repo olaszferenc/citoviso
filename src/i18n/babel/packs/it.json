@@ -1160,6 +1160,7 @@
  "A levél linkjei ide mutatnak: {host}": "I link dell'email puntano a: {host}",
  "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki.": "Hai visualizzato la fine dell'email — l'invio è sbloccato. Non è annullabile e su questo canale viene effettuato una sola volta.",
  "a levél, ahogy megérkezik": "l'e-mail come arriva",
+ "A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.": "Il filtro di sicurezza del sistema di posta ha aperto la pagina (con un orologio accelerato, oppure pochi secondi dopo l'apertura reale, senza segnali) — non è una visita del destinatario.",
  "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.": "Il filtro di sicurezza del sistema di posta ha aperto ed eseguito la pagina con un orologio accelerato — il «tempo di lettura» qui non è reale.",
  "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.": "La chiusura vale per il FUTURO: non parte alcuna nuova proposta, ordine o attivazione. Non incide sul rinnovo degli abbonamenti già attivi.",
  "A link a mentés után itt jelenik meg.": "Il link compare qui dopo il salvataggio.",

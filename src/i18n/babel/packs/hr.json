@@ -1160,6 +1160,7 @@
  "A levél linkjei ide mutatnak: {host}": "Poveznice u poruci vode na: {host}",
  "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki.": "Vidio si kraj e-maila — slanje je otvoreno. Ne može se poništiti i na ovom kanalu odlazi samo jednom.",
  "a levél, ahogy megérkezik": "e-poruka kako će stići",
+ "A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.": "Sigurnosni filtar sustava e-pošte otvorio je stranicu (s ubrzanim satom ili nekoliko sekundi nakon stvarnog otvaranja, bez signala) — ovo nije posjet primatelja.",
  "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.": "Sigurnosni filtar sustava e-pošte otvorio je i pokrenuo stranicu s ubrzanim satom — „vrijeme čitanja” ovdje nije stvarno.",
  "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.": "Zatvaranje djeluje na BUDUĆNOST: novo kontaktiranje, nova narudžba ni objava neće se pokrenuti. Obnovu već aktivnih pretplata ne mijenja.",
  "A link a mentés után itt jelenik meg.": "Poveznica se ovdje prikazuje nakon spremanja.",

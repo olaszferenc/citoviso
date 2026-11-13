@@ -1160,6 +1160,7 @@
  "A levél linkjei ide mutatnak: {host}": "Die Links der E-Mail verweisen auf: {host}",
  "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki.": "Du hast das Ende der E-Mail gesehen — der Versand ist freigeschaltet. Er kann nicht rückgängig gemacht werden und geht über diesen Kanal nur einmal raus.",
  "a levél, ahogy megérkezik": "die E-Mail, wie sie ankommt",
+ "A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.": "Der Sicherheitsfilter des Mailsystems hat die Seite geöffnet (mit beschleunigter Uhr oder wenige Sekunden nach der echten Öffnung, ohne Signale) — das ist kein Besuch des Empfängers.",
  "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.": "Der Sicherheitsfilter des Mailsystems hat die Seite geöffnet und mit beschleunigter Uhr ausgeführt — die „Lesezeit“ ist hier nicht echt.",
  "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.": "Die Schließung wirkt in die ZUKUNFT: keine neue Ansprache, keine neue Bestellung, keine Freischaltung. Die Verlängerung laufender Abonnements bleibt unberührt.",
  "A link a mentés után itt jelenik meg.": "Der Link erscheint hier nach dem Speichern.",
