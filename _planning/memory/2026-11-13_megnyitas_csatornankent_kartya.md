@@ -14,6 +14,6 @@
   `kb-check` operator-csoport bővítve.
 
 ## Nyitott
-- Élesen NINCS. Élesítés előtt Bábel fordítsa az új konzol-feliratokat (deploy GATE 5).
+- ✅ ÉLESEN 2026-11-13 10:32: `21fee6ff` (`prod/20261113-1032`), csak a kártya (tulaj „csak a kártya”): hotfix-ág az éles `977f90f1`-re, Bábel 6 felirata (6754762c) átvéve, a mainbe `-s ours` merge (`1adeb7a4`). Élő adat 10:35: ma e-mail 19/188, 7 nap e-mail 100/588, SMS/MMS 4/124, Viber 0/55, WhatsApp 3/53.
 - Az SMS/MMS 7 napos „kapta” (109) magasabb a tényleges SMS/MMS-küldésnél is lehet: a `touchesOf` a messenger-küldés
   nélküli `sms_sent_at`-ot SMS-nek veszi (ADR-0435 ④) — ha a szám gyanús, ott kell vizsgálni.
