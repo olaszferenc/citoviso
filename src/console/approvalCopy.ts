@@ -134,8 +134,12 @@ function fixedBlocks(draft: OutreachDraft): { afterP1: string; footer: string } 
   const linkAt = body.indexOf(draft.link);
   const p2At = body.indexOf(draft.parts.p2, linkAt);
   const afterP1 = linkAt >= 0 && p2At > linkAt ? body.slice(linkAt, p2At).trim() : draft.link;
+  // The fixed footer starts after the LAST editable paragraph (p3 closes the offer since
+  // 2026-11-13; before that p4 did).
   const p4At = body.lastIndexOf(draft.parts.p4);
-  const footer = p4At >= 0 ? body.slice(p4At + draft.parts.p4.length).trim() : "";
+  const p3At = body.lastIndexOf(draft.parts.p3);
+  const end = Math.max(p4At >= 0 ? p4At + draft.parts.p4.length : -1, p3At >= 0 ? p3At + draft.parts.p3.length : -1);
+  const footer = end >= 0 ? body.slice(end).trim() : "";
   return { afterP1, footer };
 }
 
@@ -235,9 +239,9 @@ export async function approvalCopyPanel(
       field("p1") +
       `<div class="aq-fix"><b>${esc(T(lang, "Nem szerkeszthető"))}</b>${esc(fixed.afterP1)}</div>` +
       field("p2") +
-      field("p3") +
       (mail.parts.trial ? field("trial") : "") +
       field("p4") +
+      field("p3") +
       `<div class="aq-fix"><b>${esc(T(lang, "Nem szerkeszthető — aláírás, leiratkozás, jogi tájékoztató"))}</b>${esc(fixed.footer)}</div></div>`
     : `<div class="aq-ch"><h3>${esc(T(lang, "E-mail"))}</h3><div class="aq-to">${esc(T(lang, "Nincs e-mail-cím — levél nem megy ki."))}</div></div>`;
 

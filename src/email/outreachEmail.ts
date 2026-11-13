@@ -97,7 +97,7 @@ function buildMail(
         `<td align="left" style="font-family:${FONT};font-size:13px;font-weight:700;letter-spacing:2px;color:${NAVY};text-transform:uppercase">` +
         brand +
         `</td>` +
-        `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;color:${MUTED};text-transform:uppercase">${esc(T(lang, "Előzetes látványterv"))}</td>` +
+        `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;color:${MUTED};text-transform:uppercase">${esc(T(lang, "Még nem nyilvános"))}</td>` +
         `</tr>`,
     ) +
     `</td></tr>`;
@@ -105,7 +105,7 @@ function buildMail(
   const hero = heroSrc
     ? `<tr><td style="padding:0 ${PAD}px">` +
       `<a href="${esc(l.cta)}" style="text-decoration:none">` +
-      `<img src="${heroSrc}" alt="${esc(T(lang, "A honlap-terv nyitóképe"))}" width="${W - 2 * PAD}" ` +
+      `<img src="${heroSrc}" alt="${esc(T(lang, "A honlap nyitóképe"))}" width="${W - 2 * PAD}" ` +
       `style="display:block;width:100%;max-width:${W - 2 * PAD}px;height:auto;border:1px solid ${LINE}" border="0"></a>` +
       // Multi-plan link: the letter shows ONE of several plans — and says so (§I).
       (t.planNote
@@ -120,7 +120,7 @@ function buildMail(
     tbl(
       `cellpadding="0"`,
       `<tr><td bgcolor="${NAVY}" style="background:${NAVY};border-radius:8px">` +
-        `<a href="${esc(l.cta)}" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(t.planCount >= 2 ? T(lang, "Megnézem a terveket") : T(lang, "Megnézem a tervet"))}</a>` +
+        `<a href="${esc(l.cta)}" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(T(lang, "Megnézem a honlapot"))}</a>` +
         `</td></tr>`,
     ) +
     `</td></tr>`;
@@ -176,9 +176,10 @@ function buildMail(
     cta +
     rawUrl +
     `<tr><td style="padding:0 ${PAD}px">${p(t.p2)}</td></tr>` +
-    priceBox +
     (t.trial ? `<tr><td style="padding:0 ${PAD}px">${p(t.trial)}</td></tr>` : "") +
     `<tr><td style="padding:0 ${PAD}px">${p(t.p4)}</td></tr>` +
+    // Same place as p3 in the plain text (composeBody): the price closes the offer.
+    priceBox +
     signature +
     footer;
 

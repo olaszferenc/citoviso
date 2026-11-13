@@ -122,8 +122,8 @@ console.log("\n── Több terv egy linken ────────────
       `${n} terv — levél: §C-kapu tiszta`,
       notPricing(checkOutreachDraft(m, LEAD, "hu").reasons).join(" | "),
     );
-    say(m.subject === `${LEAD} – ${n} honlap-terv`, `${n} terv — tárgy: „${LEAD} – ${n} honlap-terv”`, m.subject);
-    const word = n === 3 ? "három honlap-tervet" : "két honlap-tervet";
+    say(m.subject === `${LEAD} – kész honlap`, `${n} terv — tárgy: „${LEAD} – kész honlap” (tulaj, 2026-11-13)`, m.subject);
+    const word = n === 3 ? "háromféle kinézetben" : "kétféle kinézetben";
     say(m.body.includes(word), `${n} terv — a levél kimondja: „${word}”`);
     const note = n === 3 ? "a másik kettőt a linken találja" : "a másikat a linken találja";
     say(m.body.includes(note), `${n} terv — a képaláírás a kapuzott szövegben is benne van`);
@@ -147,13 +147,13 @@ console.log("\n── Több terv egy linken ────────────
       html = `THROW ${(e as Error).message}`;
     }
     say(!html.startsWith("THROW"), `${n} terv — a HTML-levél összeáll (a §C.4 egyezés-őr elfogadja)`, html.slice(0, 200));
-    say(html.includes("Megnézem a terveket"), `${n} terv — a gomb többes számú`);
+    say(html.includes("Megnézem a honlapot"), `${n} terv — a gomb: „Megnézem a honlapot”`);
     say(html.includes(note), `${n} terv — a kép alatt ott a képaláírás`);
   }
   // (2) single plan = today's letter, byte for byte
   const one = renderDraft(INPUT);
   const missing = renderDraft({ ...INPUT, planCount: undefined as unknown as number });
-  say(one.subject === `${LEAD} – honlap-terv`, "1 terv — a tárgy a mai", one.subject);
+  say(one.subject === `${LEAD} – kész honlap`, "1 terv — a tárgy: „– kész honlap”", one.subject);
   say(missing.subject === one.subject && missing.body === one.body, "hiányzó mező = 1 terv (a mai levél, betűre)");
   say(!one.body.includes("A képen"), "1 terv — nincs képaláírás");
   // One plan = the single-plan wording (folded GSM-7, ADR-0366/0373) — never a plural.
@@ -170,7 +170,7 @@ console.log("\n── Több terv egy linken ────────────
     renderPairSmsDraft(INPUT).text,
   );
   const oneHtml = String((buildOutreachEmail(one, "a@b.hu", { lang: "hu", heroShotPath: "/nonexistent/hero.png" }) as { html?: unknown }).html ?? "");
-  say(oneHtml.includes("Megnézem a tervet") && !oneHtml.includes("Megnézem a terveket"), "1 terv — a gomb a mai");
+  say(oneHtml.includes("Megnézem a honlapot"), "1 terv — a gomb: „Megnézem a honlapot”");
 }
 
 // ── FREE TRIAL (owner 2026-10-27: „írd bele, hátha úgy még vonzóbb”). ─────────
@@ -184,7 +184,7 @@ console.log("\n── Ingyenes próba a levélben és a pár-SMS-ben ───�
   const { buildOutreachEmail } = await import("../src/email/outreachEmail.js");
   const { smsEncoding } = await import("../src/sms/encoding.js");
   const { PAIR_SMS_MAX_SEGMENTS } = await import("../src/outreach/draft.js");
-  const LETTER = (n: number): string => `Mielőtt döntene, ${n} napig ingyen kipróbálhatja, kötelezettség nélkül.`;
+  const LETTER = (n: number): string => `Ha tetszik, egy kattintással maga is elindíthatja, és ${n} napig ingyen használhatja, kötelezettség nélkül.`;
   const SMS = (n: number): string => fold(`most megnézheti, és ${n} napig ingyen kipróbálhatja, kötelezettségmentesen! A Citoviso csapata`);
   const SMS_SHORT = (n: number): string => fold(`amit most megnézhet, és ${n} napig ingyen kipróbálhat, kötelezettségmentesen! A Citoviso csapata`);
   const SMS_OFF = fold("most megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata");
@@ -408,7 +408,7 @@ const BAD_MAIL: readonly BadMail[] = [
   },
   {
     why: "kész oldalt állít a levél (§A demo-framing sérül)",
-    draft: { ...mail, body: mail.body.replace(/Ez még csak látványterv/u, "Elkészült az új honlapja") },
+    draft: { ...mail, body: mail.body.replace(/Még nem nyilvános, csak ezen a linken érhető el/u, "Elkészült az új honlapja") },
     expect: /FÉLREVEZETÉS: kész\/élő oldalt sugall/,
   },
   {

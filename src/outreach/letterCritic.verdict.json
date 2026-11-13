@@ -1,16 +1,16 @@
 {
-  "fingerprint": "a6130a7a46e9511a",
+  "fingerprint": "90b1b13e1ab8fff1",
   "verdict": "PASS",
-  "model": "claude-opus-4-8",
-  "at": "2026-10-27T11:54:22.859Z",
+  "model": "opus (claude CLI, előfizetés)",
+  "at": "2026-11-13T07:58:56.742Z",
   "branches": 9,
-  "plan": "Végignéztem mind a nyolc ágat. A levéltörzsek jórészt tiszták, de a 4. és 5. ág első bekezdésében a mobil/összevetés-állítások rendben vannak. A kiemelt figyelem: ellentmondás az ág-valósággal, szakzsargon, reklámfordulat, csonka mondatok az SMS-ekben és az emlékeztető-sablon gépies/reklámízű fordulatai. Az ár-számok, jogi lábléc, link, megszólítás és a jóváhagyott mondatok nem kifogásolhatók. Az SMS ékezet nélküli, de ez technikai, nem nyelvi hiba, így a központozást nézem. Az emlékeztető-sablonban a kettős kedvezmény-megfogalmazás gépies ismétlés.",
+  "plan": "Mind a hat levél-ágnál összevetettem a nyitó két mondatot a címkével (van-e értékelés, van-e honlap, betöltött-e, mobilos-e). A Google-mondat csak ott szerepel, ahol van 4,0 feletti értékelés. Honlapot csak ott állít hiányzónak, ahol tényleg nincs, és a régi oldal hibáját is csak a mért mértékben írja le. Ellentmondást vagy túlzást nem találtam. A tulaj által jóváhagyott mondatokat, a láblécet és az árakat nem bíráltam. A két SMS-ben nincs kifogásolható elem. Az emlékeztető sablonban viszont kétszer szerepel ugyanaz a kedvezmény, és az ismétlés körlevél-ízű, marketinges címkével indul.",
   "objections": [
     {
       "branch": "EMLÉKEZTETŐ-LEVÉL (aki többször megnézte a tervét) — a sablon mondatai",
       "quote": "Döntés-segítő ajánlatként {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
       "kind": "gepies",
-      "fix": "hagyd ki — ugyanazt a kedvezményt már az előző mondat elmondta, ez fölösleges körlevél-ízű ismétlés",
+      "fix": "Így a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
       "severity": "javitando"
     }
   ]

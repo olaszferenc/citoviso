@@ -3,7 +3,7 @@
 //
 // Usage:
 //   npx tsx scripts/outreach-letter-critic.mts         → status only (no AI call)
-//   npx tsx scripts/outreach-letter-critic.mts --run   → one critic call, writes the verdict
+//   npx tsx scripts/outreach-letter-critic.mts --run   → one critic run (claude CLI, subscription — no API), writes the verdict
 //
 // A FLAG verdict is recorded too (the gate stays red) — fix the wording and run again.
 
@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { loadPricing } from "../src/pricing.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 import { renderDraft, renderPairSmsDraft, renderSmsDraft, type DraftInput } from "../src/outreach/draft.js";
-import { critiqueLetter, letterTemplateFingerprint, letterTemplateStrings, type LetterBranch } from "../src/outreach/letterCritic.js";
+import { critiqueLetter, MODEL, letterTemplateFingerprint, letterTemplateStrings, type LetterBranch } from "../src/outreach/letterCritic.js";
 import { db } from "../src/db/client.js";
 
 const VERDICT = new URL("../src/outreach/letterCritic.verdict.json", import.meta.url);
@@ -52,7 +52,7 @@ const blocking = res.objections.filter((o) => o.severity === "blokkolo");
 const verdict = blocking.length ? "FLAG" : "PASS";
 writeFileSync(
   VERDICT,
-  JSON.stringify({ fingerprint: fp, verdict, model: "claude-opus-4-8", at: new Date().toISOString(), branches: branches.length, plan: res.plan, objections: res.objections }, null, 2) + "\n",
+  JSON.stringify({ fingerprint: fp, verdict, model: `${MODEL} (claude CLI, előfizetés)`, at: new Date().toISOString(), branches: branches.length, plan: res.plan, objections: res.objections }, null, 2) + "\n",
 );
 console.log(`\n${verdict === "PASS" ? "✅" : "⛔"} ítélet: ${verdict} — ${blocking.length} blokkoló, ${res.objections.length - blocking.length} javítandó`);
 for (const o of res.objections) console.log(`  [${o.severity}] ${o.kind} · ${o.branch}\n     „${o.quote}” → ${o.fix}`);

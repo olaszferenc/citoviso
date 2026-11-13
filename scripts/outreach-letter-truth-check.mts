@@ -123,8 +123,10 @@ const gap = (b: (typeof letters)[number]) =>
 check("④ „Ezért …” csak kimondott hiány után",
   letters.every((b) => /^Ezért /u.test(b.body.split("\n\n")[2] ?? "") === gap(b)),
   letters.find((b) => /^Ezért /u.test(b.body.split("\n\n")[2] ?? "") !== gap(b))?.key);
-check("④ a demó-keretezés minden ágban megvan („látványterv, nem kész oldal”)",
-  letters.every((b) => /látványterv, nem kész oldal/u.test(b.body)));
+// Owner's wording, 2026-11-13: the working site is framed by the TRUE fact (not public yet),
+// no longer as a „látványterv, nem kész oldal”.
+check("④ a demó-keretezés minden ágban megvan („Még nem nyilvános, csak ezen a linken érhető el”)",
+  letters.every((b) => /Még nem nyilvános, csak ezen a linken érhető el/u.test(b.body)));
 
 // ⑤ landlord-eyed LLM critic: PASS recorded for this exact template fingerprint
 const fp = letterTemplateFingerprint;

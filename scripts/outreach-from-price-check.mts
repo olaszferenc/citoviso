@@ -94,7 +94,7 @@ async function measure(tag: string): Promise<void> {
   );
   check(
     `${tag}: a szöveges levél ezt az árpárt írja`,
-    sp(d.draft.body).includes(`${grp(cheapest)} forint helyett ${grp(offer)} forinttól`),
+    sp(d.draft.body).includes(`${grp(cheapest)} helyett ${grp(offer)} forinttól`),
     d.draft.parts.p3,
   );
   const html = buildOutreachEmail(d.draft, "from-price-or@example.invalid", { lang: d.lang }).html ?? "";

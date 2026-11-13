@@ -349,43 +349,46 @@ function hookText(d: DraftInput): string {
 }
 
 /**
- * The offer + §A demo-framing. „Ezért” only after a stated gap; the source phrase only when
- * the hook did not already say we read their public data.
+ * The offer + §A demo-framing (owner's wording, 2026-11-13). The page behind the link WORKS —
+ * clickable, mobile, configurable, one click to start — so the letter says so; the old
+ * „Ez még csak látványterv, nem kész oldal” denied our strongest point and was untrue. The
+ * §A framing is the TRUE fact instead: the site is not public yet, only this link reaches it.
+ * „Ezért” only after a stated gap; without a gap the site is offered for comparison.
  */
 function offerText(d: DraftInput): string {
   const gap = observation(d).gap;
-  const rated = quotesRating(d);
   const plans = planCountOf(d);
-  if (plans > 1) {
-    // Multi-plan (plan-tabs contract): the count the link really carries, same two branches.
-    const many = plans === 3;
-    const first = gap
-      ? rated
-        ? many
-          ? T(d.lang, "Ezért készítettünk Önnek három honlap-tervet, háromféle kinézettel, a nyilvánosan elérhető adataiból.")
-          : T(d.lang, "Ezért készítettünk Önnek két honlap-tervet, kétféle kinézettel, a nyilvánosan elérhető adataiból.")
-        : many
-          ? T(d.lang, "Ezért készítettünk Önnek három honlap-tervet, háromféle kinézettel.")
-          : T(d.lang, "Ezért készítettünk Önnek két honlap-tervet, kétféle kinézettel.")
-      : rated
-        ? many
-          ? T(d.lang, "Készítettünk Önnek három másik honlap-tervet a nyilvánosan elérhető adataiból, hogy össze tudja vetni a mostanival.")
-          : T(d.lang, "Készítettünk Önnek két másik honlap-tervet a nyilvánosan elérhető adataiból, hogy össze tudja vetni a mostanival.")
-        : many
-          ? T(d.lang, "Készítettünk Önnek három másik honlap-tervet, hogy össze tudja vetni a mostanival.")
-          : T(d.lang, "Készítettünk Önnek két másik honlap-tervet, hogy össze tudja vetni a mostanival.");
-    return `${first} ${T(d.lang, "Ezek még csak látványtervek, nem kész oldalak, és semmire nem kötelezik.")}`;
+  // „a honlapját” only where we found NO site: beside an old site that did not load / has no
+  // mobile view it reads as if we had rebuilt THAT one (letter critic, 2026-11-13) → „egy új”.
+  const oldSite = (d.segment ?? "") === "elavult";
+  if (gap && oldSite) {
+    return `${
+      plans === 3
+        ? T(d.lang, "Ezért készítettünk Önnek egy új honlapot, háromféle kinézetben.")
+        : plans === 2
+          ? T(d.lang, "Ezért készítettünk Önnek egy új honlapot, kétféle kinézetben.")
+          : T(d.lang, "Ezért készítettünk Önnek egy új honlapot.")
+    } ${T(
+      d.lang,
+      "Nem kép, hanem működő oldal: kattintható, telefonon is jól mutat, és benne vannak a szállása képei és adatai. Még nem nyilvános, csak ezen a linken érhető el:",
+    )}`;
   }
-  const first = gap
-    ? rated
-      ? T(d.lang, "Ezért készítettünk Önnek egy honlap-tervet a nyilvánosan elérhető adataiból.")
-      : T(d.lang, "Ezért készítettünk Önnek egy honlap-tervet.")
-    : // No gap stated → no replacement implied: a second plan to compare (landlord critic,
-      // 2026-10-02: „új honlap-terv” beside a working modern site read as a contradiction).
-      rated
-      ? T(d.lang, "Készítettünk Önnek egy másik honlap-tervet a nyilvánosan elérhető adataiból, hogy össze tudja vetni a mostanival.")
-      : T(d.lang, "Készítettünk Önnek egy másik honlap-tervet, hogy össze tudja vetni a mostanival.");
-  return `${first} ${T(d.lang, "Ez még csak látványterv, nem kész oldal, és semmire nem kötelezi.")}`;
+  const first =
+    plans === 3
+      ? gap
+        ? T(d.lang, "Ezért elkészítettük Önnek a honlapját, háromféle kinézetben.")
+        : T(d.lang, "Készítettünk Önnek egy új honlapot, háromféle kinézetben, hogy össze tudja vetni a mostanival.")
+      : plans === 2
+        ? gap
+          ? T(d.lang, "Ezért elkészítettük Önnek a honlapját, kétféle kinézetben.")
+          : T(d.lang, "Készítettünk Önnek egy új honlapot, kétféle kinézetben, hogy össze tudja vetni a mostanival.")
+        : gap
+          ? T(d.lang, "Ezért elkészítettük Önnek a honlapját.")
+          : T(d.lang, "Készítettünk Önnek egy új honlapot, hogy össze tudja vetni a mostanival.");
+  return `${first} ${T(
+    d.lang,
+    "Nem kép, hanem működő oldal: kattintható, telefonon is jól mutat, és benne vannak a szállása képei és adatai. Még nem nyilvános, csak ezen a linken érhető el:",
+  )}`;
 }
 
 /**
@@ -437,10 +440,11 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // measured on 598 lead names, "– 3 honlap-terv" fits the ~38-char preview for 82%
   // (today's "– honlap-terv" 87%, "– három honlap-terv" 68%).
   const plans = planCountOf(d);
-  const subject =
-    plans === 1
-      ? T(d.lang, "{name} – honlap-terv", { name: d.leadName })
-      : T(d.lang, "{name} – {n} honlap-terv", { name: d.leadName, n: plans });
+  //
+  // Owner, 2026-11-13: „honlap-terv” undersold a working site → „kész honlap” for every plan
+  // count (13 characters, shorter than „– 3 honlap-terv”). Not a live-site claim: the body
+  // says it is not public yet (§A).
+  const subject = T(d.lang, "{name} – kész honlap", { name: d.leadName });
 
   const percent = String(draftOfferPercent(d));
   const { priceList, priceOffer } = fromPricePair(
@@ -469,43 +473,43 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     // Multi-plan (plan-tabs README, „A megkeresés szövege", approved 2026-09-23): the count is
     // derived from the link's plans, so the letter can never say „kettő" while the link shows one.
     p1: offerText(d),
+    // Owner's wording, 2026-11-13 (see offerText).
     p2:
       plans === 3
-        ? T(
-            d.lang,
-            "A linken mindhármat megnézheti, és egy kattintással válthat köztük. Ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
-          )
+        ? T(d.lang, "Egy kattintással válthat a három kinézet között, és beállíthatja, mi kerüljön az oldalra.")
         : plans === 2
-          ? T(
-              d.lang,
-              "A linken mindkettőt megnézheti, és egy kattintással válthat köztük. Ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
-            )
-          : T(
-              d.lang,
-              "A linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
-            ),
+          ? T(d.lang, "Egy kattintással válthat a két kinézet között, és beállíthatja, mi kerüljön az oldalra.")
+          : T(d.lang, "A linken beállíthatja, mi kerüljön az oldalra."),
     p3: T(
       d.lang,
-      "Bemutatkozó ajánlatként minden csomagra {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
+      "Bemutatkozó ajánlatként minden csomagra {percent}% kedvezményt adunk: havi {price} helyett {offerPrice} forinttól.",
       { percent, price: priceList, offerPrice: priceOffer },
     ),
+    // The one-click start IS the trial (ADR-0440: the page's single „Indítsa el” button) — so
+    // the sentence exists only while the page offers the trial; without it the letter says
+    // the site can be ordered on the link, never that one click starts it.
     ...(d.trialDays
-      ? { trial: T(d.lang, "Mielőtt döntene, {days} napig ingyen kipróbálhatja, kötelezettség nélkül.", { days: d.trialDays }) }
+      ? {
+          trial: T(d.lang, "Ha tetszik, egy kattintással maga is elindíthatja, és {days} napig ingyen használhatja, kötelezettség nélkül.", {
+            days: d.trialDays,
+          }),
+        }
       : {}),
-    p4:
-      plans === 1
-        ? T(
-            d.lang,
-            "Ha tetszik, elindítjuk az oldalt. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
-          )
-        : T(
-            d.lang,
-            "Ha valamelyik tetszik, elindítjuk az oldalt. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
-          ),
+    // iCal portal sync (ADR-0361): part of the booking module; ONLY the three portals whose
+    // iCal is verified may be named, and never „azonnal” / „árak is” (§B.17).
+    p4: d.trialDays
+      ? T(
+          d.lang,
+          "A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül. Foglalásait automatikusan szinkronizálhatja a Booking.com, az Airbnb és a Szállás.hu naptárával.",
+        )
+      : T(
+          d.lang,
+          "Ha tetszik, a linken meg is rendelheti. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül. Foglalásait automatikusan szinkronizálhatja a Booking.com, az Airbnb és a Szállás.hu naptárával.",
+        ),
     ...(plans === 3
-      ? { planNote: T(d.lang, "A képen az első terv látható — a másik kettőt a linken találja.") }
+      ? { planNote: T(d.lang, "A képen az első kinézet látható — a másik kettőt a linken találja.") }
       : plans === 2
-        ? { planNote: T(d.lang, "A képen az első terv látható — a másikat a linken találja.") }
+        ? { planNote: T(d.lang, "A képen az első kinézet látható — a másikat a linken találja.") }
         : {}),
     planCount: plans,
     priceList,
@@ -556,10 +560,11 @@ export function composeBody(
     ...(t.planNote ? [t.planNote, ""] : []),
     t.p2,
     "",
-    t.p3,
-    "",
+    // Owner's order, 2026-11-13: start + no commission first, the price closes the offer.
     ...(t.trial ? [t.trial, ""] : []),
     t.p4,
+    "",
+    t.p3,
     "",
     T(lang, "Üdvözlettel,"),
     t.sigName,
