@@ -55,11 +55,12 @@ jelenik meg, akinek mi írtunk; más SMS vagy levél nem kerül ide.
 
 **Kérdés a terv lapjáról** — a kiküldött lapon a lead a „Kérdése van?” részen azonnal kész választ kap
 (ár, további költség, mi van benne, mi lesz a próba után, lemondás, kik vagyunk…). Ha olyat ír be a
-„Más kérdése van? Írja be…” mezőbe, amire nincs kész válasz, az is ide kerül, „Kérdés a terv lapjáról”
-tárggyal. Felül ilyenkor nincs „mi üzenetünk”, csak a kérdés. A csatorna az, amin a leadet elértük
+„Más kérdése van? Írja be…” mezőbe, amire nincs kész válasz, az is ide kerül. A listában a sor
+szövege így kezdődik: „Kérdés a terv lapjáról:”. Megnyitva felül nincs „mi üzenetünk”, csak a kérdés,
+„Kérdés a terv lapjáról · válasz: E-mail” (vagy SMS) felirattal. A csatorna az, amin a leadet elértük
 (e-mail, ha van, különben SMS), a válaszod is azon megy ki. A gép semmit nem válaszol helyetted.
-Leadenként naponta legfeljebb 5 ilyen kérdés kerül ide. Leiratkozott lead kérdése és a saját nézetből
-(`?sajat=1`) beírt kérdés nem kerül ide.
+Leadenként naponta legfeljebb 5 ilyen kérdés kerül ide. Leiratkozott lead kérdése nem kerül ide, és az
+sem, amit te írsz be, amikor a lead lapjáról a saját előnézetedben nézed a tervet.
 
 - A cím mellett a jelvény: **„{n} megválaszolatlan”** (piros), vagy ha nincs ilyen,
   **„mind megválaszolva”** (zöld). Alatta két szűrő: **„Megválaszolatlan”** (ez az alap) és
