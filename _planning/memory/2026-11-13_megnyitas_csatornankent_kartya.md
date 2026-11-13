@@ -1,6 +1,6 @@
 # 2026-11-13 — Megnyitás csatornánként kártya az Irányítópulton
 
-**Brief:** `~/rc-briefs/report-20261113-071126.md` · **Fa:** `cit9a954e9b` · **Tulaj:** „B mehet” · ADR-XXXX
+**Brief:** `~/rc-briefs/report-20261113-071126.md` · **Fa:** `cit9a954e9b` · **Tulaj:** „B mehet” · ADR-0441
 
 ## Elvégzett munka
 - Élesből mért (csak olvasás) számok a tervhez: 7 nap — e-mail 79/390 (20,3%), SMS/MMS 4/109, Viber 0/55,
