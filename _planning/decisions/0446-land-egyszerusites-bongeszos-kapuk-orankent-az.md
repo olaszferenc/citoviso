@@ -1,4 +1,4 @@
-## ADR-XXXX — Land egyszerűsítés: böngészős kapuk óránként az origin/mainen, egyszeri automatikus újrafuttatás
+## ADR-0446 — Land egyszerűsítés: böngészős kapuk óránként az origin/mainen, egyszeri automatikus újrafuttatás
 
 **Dátum:** 2026-11-13 · **Döntött:** a tulaj („nincs ez a landolási folyamat feleslegesen túlbonyolítva?” → „külön session javítsa a javaslatod alapján”) · **Kapcsolódik:** ADR-0052 (land), ADR-0227/0230 (párhuzamos futtató, gépi slot), ADR-0249 (tiszta-main próba), ADR-0268/0269 (csend-korlát), ADR-0276 (ház-riasztás), ADR-0432 (böngészős kapuk a land-re halasztva)
 

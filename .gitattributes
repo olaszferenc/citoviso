@@ -1,5 +1,5 @@
 # MEMORY.md: parallel sessions append lines to the same sections ("Tények és döntések") on nearly
 # every land, and the rebase stopped on that conflict ("nem oldom fel gépiesen", measured 2026-11-13).
-# Union merge keeps BOTH sides' lines instead (ADR-XXXX). Trade-off: a line edited on both sides is
+# Union merge keeps BOTH sides' lines instead (ADR-0446). Trade-off: a line edited on both sides is
 # kept twice — visible, fixable, and far cheaper than a blocked land. Root file only.
 /MEMORY.md merge=union

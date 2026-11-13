@@ -32,13 +32,13 @@
 //     a LASSÚ, de folyamatosan író kapu — és a kimenetét a végéig PUFFERELŐ, de egységenként
 //     szívverő poolos kapu (CIT_GATE_HEARTBEAT) — a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),
 //     és csak a teljes-idő plafon (CIT_GATE_JOB_MAX) állítja meg,
-//   · (ADR-0432, ADR-XXXX) commit-módban a böngészős kapu (forrásában `playwright`/`chromium`) HANGOSAN
+//   · (ADR-0432, ADR-0446) commit-módban a böngészős kapu (forrásában `playwright`/`chromium`) HANGOSAN
 //     halasztva; LAND-módban (LAND_RANGE) a jelöletlen böngészős kapu NEM fut (hangosan „óránként fut”),
 //     a `// gate-runner: land-blocking — <ok>` jelölésű viszont blokkol; az óránkénti mód
 //     (CIT_GATE_HOURLY=1) CSAK a land-en nem futókat futtatja; CIT_FULL_COMMIT=1 / CIT_FULL_LAND=1
 //     mindet; és a hook CSAK commit-módú blokkjaiban nincs böngészős kapu (azt se a land, se az
 //     óránkénti futás nem futtatná),
-//   · (ADR-XXXX) a bukó kapu EGYSZER újrafut: zöld újrafutás = zöld, hangos „↻” sorral és az első hiba
+//   · (ADR-0446) a bukó kapu EGYSZER újrafut: zöld újrafutás = zöld, hangos „↻” sorral és az első hiba
 //     kimenetével + statisztika-sorral; piros újrafutás = piros, az első futás kimenetével együtt;
 //     CIT_GATE_RETRY=0 mellett nincs újrafutás, és időtúllépés után sincs (J),
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
@@ -135,7 +135,7 @@ node scripts/modeaware.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] flaky…"
 node scripts/flaky.mjs >"$GATE_LOG" || gate_failed
 `;
-// ── K: browser gates (ADR-0432, ADR-XXXX). One plain browser gate, one land-blocking browser gate,
+// ── K: browser gates (ADR-0432, ADR-0446). One plain browser gate, one land-blocking browser gate,
 // one plain gate.
 const BROWSER_GATES = String.raw`
 echo "[pre-commit] browser…"
@@ -145,7 +145,7 @@ node scripts/browserblock.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] counted…"
 node scripts/count.mjs >"$GATE_LOG" || gate_failed
 `;
-// ── L: one automatic re-run (ADR-XXXX). `flip` fails on its first run only; `always` always fails.
+// ── L: one automatic re-run (ADR-0446). `flip` fails on its first run only; `always` always fails.
 const RETRY_GATES = String.raw`
 echo "[pre-commit] flip…"
 node scripts/flip.mjs >"$GATE_LOG" || gate_failed

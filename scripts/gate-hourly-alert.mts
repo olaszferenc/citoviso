@@ -1,4 +1,4 @@
-// The hourly browser-gate run went red → alert the house (ADR-XXXX).
+// The hourly browser-gate run went red → alert the house (ADR-0446).
 //
 // Called by scripts/gate-hourly.sh, once per distinct set of red gates (the script dedupes), through
 // the SAME channel the ADR-0276 unit alerts use: alertHouse() → app_setting alert_email, via the
@@ -32,7 +32,7 @@ const gates = red.split("\n").filter(Boolean);
 const subject = `Citoviso: óránkénti böngészős kapu PIROS az origin/main-en — ${gates.length} kapu`;
 const text =
   `Az óránkénti kapufutás (scripts/gate-hourly.sh) a landolt commitokon (${range}) piros.\n` +
-  `Ezek a böngészős kapuk a landot már nem blokkolják (ADR-XXXX), ezért itt kell észrevenni őket.\n\n` +
+  `Ezek a böngészős kapuk a landot már nem blokkolják (ADR-0446), ezért itt kell észrevenni őket.\n\n` +
   `Piros kapuk:\n${gates.map((g) => `  · ${g}`).join("\n")}\n\n` +
   `Mit jelent: vagy egy landolt változás tört el egy felületet, vagy a kapu maga terhelés-érzékeny.\n` +
   `A futtató minden bukó kaput egyszer már újrafuttatott, tehát ez kétszer egymás után piros volt.\n` +

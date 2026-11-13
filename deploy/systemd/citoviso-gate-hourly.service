@@ -1,5 +1,5 @@
 [Unit]
-# DEV GÉP (ADR-XXXX): a landot már nem blokkoló böngészős kapuk óránkénti futása az origin/main-re
+# DEV GÉP (ADR-0446): a landot már nem blokkoló böngészős kapuk óránkénti futása az origin/main-re
 # landolt commitokon. A FŐ FÁBÓL fut (a citoviso-main-sync tartja az origin/main-en), a kapuk
 # viszont egy saját, ~/wt-n kívüli detached munkafában (~/.cache/citoviso-gate-hourly/tree).
 # Piros kapunál a szkript maga riaszt (scripts/gate-hourly-alert.mts → alertHouse, egyszer

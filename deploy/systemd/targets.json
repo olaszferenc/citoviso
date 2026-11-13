@@ -15,7 +15,7 @@
     "citoviso-search-console.timer": { "target": "prod" },
     "citoviso-gate-hourly.timer": {
       "target": "dev",
-      "why": "a landot nem blokkoló böngészős kapukat futtatja óránként az origin/main-en a dev gépen (ADR-XXXX); élesen nincs fejlesztői fa és kapu"
+      "why": "a landot nem blokkoló böngészős kapukat futtatja óránként az origin/main-en a dev gépen (ADR-0446); élesen nincs fejlesztői fa és kapu"
     },
     "citoviso-backup-dev.timer": {
       "target": "dev",

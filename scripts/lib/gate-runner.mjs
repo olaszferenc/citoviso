@@ -97,7 +97,7 @@
 // surface gate, which is no browser gate) must never be deferred: scripts/gate-runner-check.mts
 // keeps that true. CIT_FULL_COMMIT=1 restores the full commit-time run.
 //
-// BROWSER GATES DO NOT BLOCK THE LAND — THEY RUN HOURLY ON origin/main (ADR-XXXX). Measured
+// BROWSER GATES DO NOT BLOCK THE LAND — THEY RUN HOURLY ON origin/main (ADR-0446). Measured
 // 2026-11-12/13: with the dev machine at load 15–30 (~10 sessions + their Chromes) the browser and
 // timing gates went red WITHOUT any fault in the landed diff (checkout-item-block-check,
 // mock-trial-overlay-check, billing-checkout-check TimeoutError — red on a CLEAN main too;
@@ -112,7 +112,7 @@
 // outreach, Hungarian text) and the false positives that only MENTION the word. The list and the
 // reasons live in the ADR. CIT_FULL_LAND=1 restores the old land (every browser gate blocking).
 //
-// ONE AUTOMATIC RE-RUN (ADR-XXXX). A gate that fails is run ONCE more, the same way (same phase,
+// ONE AUTOMATIC RE-RUN (ADR-0446). A gate that fails is run ONCE more, the same way (same phase,
 // same slot), before it counts as red: a green re-run is GREEN, printed with a loud "↻" line that
 // carries the first failure's exit code and its last output lines, and appended to
 // <git-common-dir>/cit-gate-retries.log (date · gate · first rc · last line) so a flaky gate shows
@@ -661,7 +661,7 @@ function browserGate(job) {
     return false;
   }
 }
-// ── LAND MODE: browser gates run hourly on origin/main, not in the land (see the header, ADR-XXXX) ──
+// ── LAND MODE: browser gates run hourly on origin/main, not in the land (see the header, ADR-0446) ──
 const HOURLY = !!process.env.LAND_RANGE && process.env.CIT_GATE_HOURLY === "1";
 const OFF_LAND = !!process.env.LAND_RANGE && !HOURLY && process.env.CIT_FULL_LAND !== "1";
 const LAND_BLOCK_MARK = "// gate-runner: land-blocking —";
@@ -715,7 +715,7 @@ if (toLand.length) {
 }
 if (toHourly.length) {
   process.stdout.write(
-    `[pre-commit] ⏭ ${toHourly.length} böngészős kapu NEM blokkol: óránként fut az origin/main-en (scripts/gate-hourly.sh, ADR-XXXX), pirosnál riaszt: ${gateNames(toHourly).join(", ")}\n` +
+    `[pre-commit] ⏭ ${toHourly.length} böngészős kapu NEM blokkol: óránként fut az origin/main-en (scripts/gate-hourly.sh, ADR-0446), pirosnál riaszt: ${gateNames(toHourly).join(", ")}\n` +
       `   Most lefuttatni: ${COMMIT_MODE ? "CIT_FULL_COMMIT=1 git commit …" : "CIT_FULL_LAND=1 bash scripts/land.sh"}\n`,
   );
 }

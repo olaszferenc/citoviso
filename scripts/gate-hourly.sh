@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gate-hourly — the browser gates that no longer block the land, run every hour on origin/main
-# (ADR-XXXX). Measured 2026-11-12/13: at load 15–30 the browser/timing gates went red without any
+# (ADR-0446). Measured 2026-11-12/13: at load 15–30 the browser/timing gates went red without any
 # fault in the landed diff (red on a clean main too), and a finished feature waited four lands for an
 # owner exception. So the land skips them (scripts/lib/gate-runner.mjs, "óránként fut"), and THIS
 # script runs exactly them on the commits that landed since the last green hourly run:

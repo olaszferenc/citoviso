@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso böngészős kapuk óránként (ADR-XXXX)
+Description=Citoviso böngészős kapuk óránként (ADR-0446)
 
 [Timer]
 # :40 — kikerüli a :15-ös dev-mentést és az egész órás booking-karbantartást.

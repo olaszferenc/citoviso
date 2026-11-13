@@ -265,7 +265,7 @@ try {
   if (job.stdin) copyFileSync(job.stdin, path.join(pj, `${id}.stdin`));
 
   // MAIN's runner, not this tree's (the diff may have changed the runner too). No pass cache.
-  // ⛔ FORCED RUN (ADR-XXXX, measured 2026-11-13): LAND_RANGE is scrubbed above, so main's runner
+  // ⛔ FORCED RUN (ADR-0446, measured 2026-11-13): LAND_RANGE is scrubbed above, so main's runner
   // starts in COMMIT mode — and there it DEFERS every browser gate (ADR-0432). The probe of a red
   // browser gate (lead-mobile-check) thus ran NOTHING, the runner exited 0 in 0 s, and the probe
   // printed "a mainen ZÖLD (0 s) ⇒ A TE VÁLTOZÁSOD BUKIK" — a verdict without a measurement.

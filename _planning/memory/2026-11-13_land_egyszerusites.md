@@ -1,4 +1,4 @@
-# 2026-11-13 — Land egyszerűsítés: böngészős kapuk óránként, egyszeri újrafuttatás (ADR-XXXX)
+# 2026-11-13 — Land egyszerűsítés: böngészős kapuk óránként, egyszeri újrafuttatás (ADR-0446)
 
 **Session:** `cit565535c3` · **Brief:** `~/rc-briefs/land-egyszerusites-20261113.md` (+ a `cit5f6654b8` session kiegészítése)
 
