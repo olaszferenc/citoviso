@@ -321,13 +321,13 @@ export interface TrialEntry {
     readonly label: string | null;
     readonly modules: readonly { readonly id: string; readonly label: string }[];
   };
-  /** ADR-XXXX ⑦: the one sentence under „Indítsa el” that stands for both ticks (TRIAL_CLICKWRAP_V1,
+  /** ADR-0440 ⑦: the one sentence under „Indítsa el” that stands for both ticks (TRIAL_CLICKWRAP_V1,
    *  stamped onto free_trial verbatim) — filled in here, never by the caller. */
   readonly clickwrap?: string;
 }
 
 /**
- * ADR-XXXX (kerdes-inditas, frozen plan assets/design-refs/prospect-page/kerdes-inditas/):
+ * ADR-0440 (kerdes-inditas, frozen plan assets/design-refs/prospect-page/kerdes-inditas/):
  * the price card + „Kérdése van?” block the /p/<token> page adds after the hero. Present only
  * on a cold-outreach lead page (never on the operator preview, an owned lead or /folytatas).
  * Every answer the block shows is built ON THE PAGE from this and the pricing manifest — no
@@ -398,7 +398,7 @@ export interface ConfiguratorOpts {
   readonly trial?: Omit<TrialEntry, "sub">;
   /** The trialist's continue-and-pay checkout (/p/<t>/folytatas) — see the manifest field. */
   readonly continuation?: ContinuationInfo;
-  /** ADR-XXXX: the price card + questions block (cold lead page only). */
+  /** ADR-0440: the price card + questions block (cold lead page only). */
   readonly ask?: AskEntry;
 }
 

@@ -1,4 +1,4 @@
-## ADR-XXXX — „Kérdése van?” panel és egy kattintásos indítás a lead-lapon (T2)
+## ADR-0440 — „Kérdése van?” panel és egy kattintásos indítás a lead-lapon (T2)
 
 **Dátum:** 2026-11-12 · **Döntött:** tulaj (a §2b terv-körben, a koordinátoron át: T2; a 8 pont alább) ·
 **Terv:** `assets/design-refs/prospect-page/kerdes-inditas/` · **Kapcsolódik:** ADR-0342 (kártya nélküli próba),

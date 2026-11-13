@@ -63,7 +63,7 @@ function orderRows(input: OrderMailBase): ReturnType<typeof mailDetails> {
  *  the support address (see withReplyTo). */
 function contactLine(lang: string | undefined, meanwhile: boolean): { html: string; text: string } {
   const email = config.supportEmail;
-  // ⛔ No phone number (owner, 2026-11-12, ADR-XXXX ⑧): the e-mail and a reply are the contact.
+  // ⛔ No phone number (owner, 2026-11-12, ADR-0440 ⑧): the e-mail and a reply are the contact.
   const phone: string | null = null;
   const text = meanwhile
     ? phone

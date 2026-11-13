@@ -4184,7 +4184,7 @@ html.cit-cfg-is-open .cit-cfg-dock {
   display: none !important;
 }
 
-/* ── ADR-XXXX (kerdes-inditas, frozen plan assets/design-refs/prospect-page/kerdes-inditas/) ──
+/* ── ADR-0440 (kerdes-inditas, frozen plan assets/design-refs/prospect-page/kerdes-inditas/) ──
  * The price card + „Kérdése van?” block the /p/<token> page adds after the hero. It sits IN
  * the previewed site, so like the trial sheet it carries its own palette (token-independent:
  * a pale or dark template skin must not swallow it). Phone: the card first, the questions

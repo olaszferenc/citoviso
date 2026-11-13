@@ -135,7 +135,7 @@ try {
   check("levél: tárgy „Még nem lépett be – <szállás>”", letter.subject === "Még nem lépett be – Sáma Vendégház", letter.subject);
   check("levél: gomb, felhasználónév, belépési cím",
     (letter.html ?? "").includes(TOKEN) && letter.text.includes("sama-vendeghaz") && letter.text.includes("https://citoviso.com/login"));
-  // ADR-XXXX ⑧ (owner, 2026-11-12): the company phone is in no customer-facing text.
+  // ADR-0440 ⑧ (owner, 2026-11-12): the company phone is in no customer-facing text.
   check("levél: NINCS telefonszám, nincs „hívjon minket”", !/hívjon minket|\+36/.test(letter.text + (letter.html ?? "")));
   check("levél: „A Sáma Vendégház honlapja már él … még 9 nap van”", letter.text.includes("A Sáma Vendégház honlapja már él, de még nem lépett be a szerkesztőbe. A próbából még 9 nap van"), letter.text.split("\n")[2]);
 

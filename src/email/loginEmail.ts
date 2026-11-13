@@ -279,7 +279,7 @@ export function buildLoginReminderEmail(input: {
   );
   const button = T(lang, "Jelszó beállítása");
   const fresh = T(lang, "Új link, 7 napig érvényes, és egyszer használható.");
-  // ⛔ ADR-XXXX ⑧ (owner, 2026-11-12): no „hívjon minket: {phone}” line any more — the company
+  // ⛔ ADR-0440 ⑧ (owner, 2026-11-12): no „hívjon minket: {phone}” line any more — the company
   // phone is left out of every customer-facing text.
   const text =
     `${greeting}\n\n${intro}\n\n` +

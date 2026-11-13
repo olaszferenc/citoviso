@@ -1,4 +1,4 @@
-// ADR-XXXX (kerdes-inditas, owner approved 2026-11-12) — the lead page's ONE free-question field.
+// ADR-0440 (kerdes-inditas, owner approved 2026-11-12) — the lead page's ONE free-question field.
 //
 // The page answers a question that matches a ready category ITSELF, deterministically, from
 // the plan's facts (assets/runtime/cit-configurator.js, the „Kérdése van?” block — no LLM, no

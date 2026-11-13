@@ -1,4 +1,4 @@
-// page-question-check — ADR-XXXX (kerdes-inditas): the lead page's free-question field, server half.
+// page-question-check — ADR-0440 (kerdes-inditas): the lead page's free-question field, server half.
 //
 // What it holds (owner 2026-11-12, frozen plan assets/design-refs/prospect-page/kerdes-inditas/ ⑤–⑥):
 //   ① pure: 300 characters, a link / domain / e-mail / phone number is refused, repeats compare

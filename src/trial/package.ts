@@ -31,7 +31,7 @@ export function trialModuleIds(pkg?: Tier): string[] {
 }
 
 /**
- * ADR-XXXX (kerdes-inditas ③, owner 2026-11-12): the visitor picked a package or modules on the
+ * ADR-0440 (kerdes-inditas ③, owner 2026-11-12): the visitor picked a package or modules on the
  * lead page BEFORE starting → the trial runs with THAT set („amit lát, azt fizeti”), not the
  * configured trial package. The picked ids are cleaned the way an order is: only sold,
  * switch-like catalog modules (retired, one-off and tenant-only ones dropped), the spine folded

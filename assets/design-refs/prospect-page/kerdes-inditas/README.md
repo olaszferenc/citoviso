@@ -2,7 +2,7 @@
 
 A tulaj döntése a §2b terv-körben (2026-11-12, a koordinátoron át): a 2. kör **T2** változata (csomagok
 KÜLÖN LAPON), a kérdés-rész a C változat (ár a kártyán + kész kérdések harmonikában + EGY szabad kérdés
-mező, csevegő NINCS). Döntés: ADR-XXXX. A terv-körök jelentései: `~/rc-briefs/konverzio-terv/kerdes-inditas-jelentes{,-2}.md`.
+mező, csevegő NINCS). Döntés: ADR-0440. A terv-körök jelentései: `~/rc-briefs/konverzio-terv/kerdes-inditas-jelentes{,-2}.md`.
 
 Kattintható terv: `plan.html` (önhordó; méret-váltó, korlát-próba gombok, csomag-lap, indítás, rendelés,
 mérés-napló). A megvalósítás képei (`megvalositas-*`) a valódi runtime egy valódi dev-mockon (Artemisz
@@ -72,7 +72,7 @@ Panzió, dev árlista), a terv képei (`terv-T2-*`) a mock állapot-sorai.
     `applyOffer` éves díjon így számol).
 12. **A cég telefonszáma MINDENHONNAN kimarad** (tulaj ⑧): a válaszokból, a platform-levelek lábléceiből,
     a rendelési levelek kapcsolat-sorából és az ADR-0417 belépés-emlékeztetőből („Ha elakadt, hívjon
-    minket” törölve). A jogi oldalak (Impresszum, ÁSZF) nem változtak — lásd ADR-XXXX nyitott pont.
+    minket” törölve). A jogi oldalak (Impresszum, ÁSZF) nem változtak — lásd ADR-0440 nyitott pont.
 13. **SMS ékezet nélkül (GSM-7)** — ebben a körben nem született új SMS-szöveg; a meglévő próba-SMS-ek
     már GSM-7-ek (`src/sms/encoding.ts`).
 14. **i18n (§B.18):** minden vevő-oldali felirat `tr("…")`; a magyar névelő ({a/az}) csak magyar lapon.

@@ -2141,7 +2141,7 @@ export interface OutreachReplyTable {
   updated_at: Generated<Timestamp>;
 }
 
-/** 0134 (ADR-XXXX): a question typed into the lead page's free-question field. */
+/** 0134 (ADR-0440): a question typed into the lead page's free-question field. */
 export interface ProspectQuestionTable {
   id: Generated<string>;
   prospect_id: string;

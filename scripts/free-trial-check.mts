@@ -28,7 +28,7 @@
 //   ⑭ IT C5.3: a claim whose provisioning never finished (no tenant) is not lapsed by the
 //      expiry tick, and the next submit starts it with a FRESH clock — also a tenant-less
 //      claim an older expiry run already lapsed; never "trial_used" for a trial that never was.
-//   ⑮ ADR-XXXX (kerdes-inditas): a set picked on the lead page is what the trial grants (+ the
+//   ⑮ ADR-0440 (kerdes-inditas): a set picked on the lead page is what the trial grants (+ the
 //      spine + hard requirements; unknown ids dropped), and the one-click click-wrap is stamped.
 //
 // The dev DB is SHARED: the config is set with the PROCESS-LOCAL override (the app_setting
@@ -461,7 +461,7 @@ try {
   const iAfter = await db.selectFrom("free_trial").select(["status", "lapsed_at"]).where("id", "=", i.trialId).executeTakeFirst();
   check("a régi futás által lapsed-elt tenant nélküli foglalás is indítható", ri.ok && iAfter?.status === "active" && iAfter.lapsed_at === null, `${JSON.stringify(ri)} · ${iAfter?.status}`);
 
-  // ⑮ ADR-XXXX (kerdes-inditas ③/⑦): a set picked on the lead page → the trial grants EXACTLY
+  // ⑮ ADR-0440 (kerdes-inditas ③/⑦): a set picked on the lead page → the trial grants EXACTLY
   // that (+ the spine + every hard requirement), not the configured package; the one-click
   // sheet's click-wrap is stamped as the accepted wording of both declarations.
   console.log("⑮ a lapon választott csomaggal indított próba + egy mondatos elfogadás");
