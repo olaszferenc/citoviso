@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-13_overlay_kartya_kapu_mar_zold.md](2026-11-13_overlay_kartya_kapu_mar_zold.md) — 2026-11-13 — Overlay ⑪ (card-sidebar, 1536×864, süti-sávval): a mainen már zöld, kód nem változott
 - [2026-11-13_megnyitas_csatornankent_kartya.md](2026-11-13_megnyitas_csatornankent_kartya.md) — 2026-11-13 — Megnyitás csatornánként kártya az Irányítópulton
 - [2026-11-13_land_egyszerusites.md](2026-11-13_land_egyszerusites.md) — 2026-11-13 — Land egyszerűsítés: böngészős kapuk óránként, egyszeri újrafuttatás (ADR-0446)
 - [2026-11-13_email_alairas.md](2026-11-13_email_alairas.md) — 2026-11-13 — Egységes e-mail aláírás („A”: jel + cián vonal)
