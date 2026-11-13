@@ -36,9 +36,11 @@ besorolásnak mond ellent, ami kiválasztotta.
 
 - **„Ezért …” CSAK kimondott hiány után.** Hiány nélkül nincs „Ezért”, és nincs „új” terv (cserét sugallna — a
   szállásadó-szemű kritikus BLOKKOLÓ kifogása volt modern oldal mellett):
-  **„Készítettünk Önnek egy másik honlap-tervet, hogy össze tudja vetni a mostanival.”**
+  **„Készítettünk Önnek egy új honlapot, hogy össze tudja vetni a mostanival.”**
+  (2026-11-13, tulaj: a levél működő oldalt mutat be, nem tervet — `8ee53d68`, „első levél működő oldal” ADR.)
 - A forrás-fordulat („a nyilvánosan elérhető adataiból”) csak akkor, ha a horog nem mondta már ki.
-- A demó-keretezés minden ágban: **„Ez még csak látványterv, nem kész oldal, és semmire nem kötelezi.”**
+- A keretezés minden ágban (2026-11-13 óta; a régi „Ez még csak látványterv, nem kész oldal …” azt sugallta, hogy
+  félkész, holott működik): **„Nem kép, hanem működő oldal: kattintható, telefonon is jól mutat, és benne vannak a szállása képei és adatai. Még nem nyilvános, csak ezen a linken érhető el:”**
 
 ## 4. Csiszolás (B)
 
