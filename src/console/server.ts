@@ -1063,7 +1063,7 @@ function leadBillingPrefill(
 }
 
 /**
- * ADR-XXXX (kerdes-inditas): the one-click start's prefill — the business name (the trial's
+ * ADR-0440 (kerdes-inditas): the one-click start's prefill — the business name (the trial's
  * contact name until the owner edits it), the lead's mobile in the printed form, and the
  * address the outreach mail went to (else the lead's first e-mail). The sheet shows them and
  * lets the visitor change them before the start.
@@ -4064,7 +4064,7 @@ async function handle(
       photoRightsAccepted: b.photoRightsAccepted === true,
       viewId: typeof b.viewId === "string" ? b.viewId : null,
       seenOfferPercent: typeof b.offerPercent === "number" && Number.isFinite(b.offerPercent) ? b.offerPercent : null,
-      // ADR-XXXX ③/⑦: the picked set and the one-click sheet's click-wrap.
+      // ADR-0440 ③/⑦: the picked set and the one-click sheet's click-wrap.
       modules: Array.isArray(b.modules) ? b.modules.slice(0, 40) : null,
       clickwrap: b.clickwrap === true,
     });
@@ -4076,7 +4076,7 @@ async function handle(
       "application/json",
     );
   }
-  // POST /p/:token/ask — ADR-XXXX (kerdes-inditas): the lead page's free-question field.
+  // POST /p/:token/ask — ADR-0440 (kerdes-inditas): the lead page's free-question field.
   // JSON {text, category|null, viewId?} → {ok, recorded, capped} or {ok:false, error, wait?}.
   // The page answers a matched question itself; this stores it under the spam limits and puts an
   // unmatched one into the owner's approval queue (nothing is answered automatically outward).
@@ -4364,7 +4364,7 @@ async function handle(
               },
             }
           : {}),
-        // ADR-XXXX (kerdes-inditas): the price card + „Kérdése van?” block after the hero.
+        // ADR-0440 (kerdes-inditas): the price card + „Kérdése van?” block after the hero.
         ask: {
           url: `/p/${pMatch[1]}/ask${measured ? "" : `?${OWN_VIEW_PARAM}=1`}`,
           company: isLegalEntityComplete()

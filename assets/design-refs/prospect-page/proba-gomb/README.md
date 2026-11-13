@@ -1,6 +1,6 @@
 # „14 nap ingyen” — az ingyenes próba belépője a lead-lapon (JÓVÁHAGYOTT TERV, 2026-10-09)
 
-> ⛔ **AZ ŰRLAP ÉS A PIRULA SZEREPE FELÜLÍRVA 2026-11-12 (tulaj, ADR-XXXX, `../kerdes-inditas/`):**
+> ⛔ **AZ ŰRLAP ÉS A PIRULA SZEREPE FELÜLÍRVA 2026-11-12 (tulaj, ADR-0440, `../kerdes-inditas/`):**
 > a próba EGY KATTINTÁSSAL indul. Az űrlap helyén az indító lap áll: a kapcsolat előtöltve és csak
 > „Módosítom”-ra nyílik, a két pipa (ÁSZF, fotó-nyilatkozat) helyett EGY mondat áll a gomb alatt
 > (`TRIAL_CLICKWRAP_V1`), a gomb „Indítsa el”. A kérdés-oldalon (`CFG.ask`) a pirula-pár bal tagja

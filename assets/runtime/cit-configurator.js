@@ -2109,7 +2109,7 @@
   var TRIAL =
     CFG.trial && CFG.trial.enabled && CFG.trial.url && Number(CFG.trial.days) >= 1 ? CFG.trial : null;
   var TRIAL_DAYS = TRIAL ? Math.round(Number(TRIAL.days)) : 0;
-  // ADR-XXXX (kerdes-inditas): the price card + questions block's facts (cold lead page only),
+  // ADR-0440 (kerdes-inditas): the price card + questions block's facts (cold lead page only),
   // and the visitor's package pick (set up with the block below; null until then).
   var ASK = CFG.ask && typeof CFG.ask === "object" ? CFG.ask : null;
   var SEL = null;
@@ -4122,7 +4122,7 @@
     panelOpenedAt = 0;
   }
   launch.addEventListener("click", function () {
-    // ADR-XXXX ⑨: on the ask page the left pill is „Mennyibe kerül?” → the price card.
+    // ADR-0440 ⑨: on the ask page the left pill is „Mennyibe kerül?” → the price card.
     if (launch.classList.contains("cit-cfg-launch--ask")) toPriceCard();
     else open("pill");
   });
@@ -4227,7 +4227,7 @@
   }
 
   function buildTrialSheet() {
-    // ADR-XXXX (kerdes-inditas ⑦, owner 2026-11-12): the ONE-CLICK start. The contact comes
+    // ADR-0440 (kerdes-inditas ⑦, owner 2026-11-12): the ONE-CLICK start. The contact comes
     // prefilled (CFG.ask.contact) and is only shown — „Módosítom” opens the three fields; the
     // two ticks are gone, ONE sentence under the button (TRIAL_CLICKWRAP_V1, stamped verbatim)
     // stands for the ÁSZF and the §A photo declaration.
@@ -4307,7 +4307,7 @@
     var sendErr = form.querySelector(".cit-cfg-tsenderr");
     // Elek N-1 (2026-10-14): the outreach mail went to this address, and the checkout already
     // prefills it (CFG.billing.prefill, from the prospect) — the trial form asked for it again.
-    // ADR-XXXX: the one-click start's prefill (CFG.ask.contact: business name, the lead's
+    // ADR-0440: the one-click start's prefill (CFG.ask.contact: business name, the lead's
     // mobile, the outreach address); the old checkout prefill stays the e-mail's fallback.
     var ASKC = (ASK && ASK.contact) || {};
     var pfMail = ASKC.email || ((CFG.billing || {}).prefill || {}).email || "";
@@ -4530,7 +4530,7 @@
         photoRightsAccepted: true,
         viewId: VIEW_ID,
         offerPercent: trialShownPct,
-        // ADR-XXXX ③/⑦: the picked set (only when the visitor touched the picker) + the click-wrap.
+        // ADR-0440 ③/⑦: the picked set (only when the visitor touched the picker) + the click-wrap.
         modules: SEL.touched ? SEL.modules.slice() : undefined,
         clickwrap: true,
       });
@@ -4570,7 +4570,7 @@
     });
     tSheet.querySelector(".cit-cfg-tlink").addEventListener("click", function () {
       closeTrial(true);
-      // ADR-XXXX ④: the same launch, paid at once — the order panel with the picked set.
+      // ADR-0440 ④: the same launch, paid at once — the order panel with the picked set.
       openOrder("trial");
     });
   }
@@ -6209,7 +6209,7 @@
     check();
   }
 
-  // ── ADR-XXXX: price card + „Kérdése van?” + packages sheet (frozen plan:
+  // ── ADR-0440: price card + „Kérdése van?” + packages sheet (frozen plan:
   // assets/design-refs/prospect-page/kerdes-inditas/, the owner's T2, 2026-11-12) ──────────────
   // A block after the hero: the price card (ONE main button „Indítsa el”, two secondary
   // entries — „Megrendelem most, próba nélkül” and „Csomagok és modulok”), the ready
@@ -6217,7 +6217,7 @@
   // from the manifest's facts (prices, presets, the trial, the provider) — no LLM, no API call
   // per visit. The free field matches a ready answer by keywords; a question it cannot match
   // goes to POST /p/<t>/ask, which records it for the OWNER (nothing is answered outward
-  // automatically, ADR-XXXX ⑥).
+  // automatically, ADR-0440 ⑥).
   // Anchors other surfaces link to (viselkedes-uzenet): #ar (the card), #kerdes (the questions),
   // #inditas (opens the one-click start), ?k=<category> (opens that ready answer).
   var ASK_ON = !!ASK && !CFG.continuation;

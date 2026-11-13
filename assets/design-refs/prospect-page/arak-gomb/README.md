@@ -1,6 +1,6 @@
 # „Árak és rendelés” + „havi X Ft-tól” — a lead-lap rendelő gombjának felirata (JÓVÁHAGYOTT TERV, 2026-10-27)
 
-> ⛔ **A KÉRDÉS-OLDALON FELÜLÍRVA 2026-11-12 (tulaj, ADR-XXXX, `../kerdes-inditas/`):** ahol a lap az ár-kártyát és a
+> ⛔ **A KÉRDÉS-OLDALON FELÜLÍRVA 2026-11-12 (tulaj, ADR-0440, `../kerdes-inditas/`):** ahol a lap az ár-kártyát és a
 > kérdéseket is viszi (`CFG.ask`) ÉS a próba indítható, a pirula felirata „Mennyibe kerül?” + „havi {price}-tól”, és az
 > ár-kártyához görget (a rendelő-panel a kártya „Megrendelem most, próba nélkül” linkjéről nyílik). Próba nélkül a pirula
 > az alábbiak szerint „Árak és rendelés”, és a panelt nyitja.

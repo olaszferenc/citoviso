@@ -1,6 +1,6 @@
 # 2026-11-12 — „Kérdése van?” + egy kattintásos indítás: befagyasztás és megvalósítás (SUB cit8e71feb7)
 
-**Döntés:** ADR-XXXX (tulaj, a koordinátoron át, 2026-11-12: T2 + 8 pont). Terv: `assets/design-refs/prospect-page/kerdes-inditas/`.
+**Döntés:** ADR-0440 (tulaj, a koordinátoron át, 2026-11-12: T2 + 8 pont). Terv: `assets/design-refs/prospect-page/kerdes-inditas/`.
 
 ## Mi készült
 - **Lead-lap (`/p/<token>`, hideg lead):** a hős után `#ar` blokk — ár-kártya (EGY fő gomb „Indítsa el”, „Megrendelem

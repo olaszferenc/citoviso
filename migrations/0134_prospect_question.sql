@@ -1,4 +1,4 @@
--- 0134 PROSPECT QUESTION (ADR-XXXX, kerdes-inditas — owner approved 2026-11-12, plan
+-- 0134 PROSPECT QUESTION (ADR-0440, kerdes-inditas — owner approved 2026-11-12, plan
 -- assets/design-refs/prospect-page/kerdes-inditas/).
 --
 -- The lead page's ONE free-question field („Más kérdése van? Írja be…”). The answer to a question
@@ -7,7 +7,7 @@
 --
 --   category  — the ready answer it matched ('ar', 'koltseg', …, 'smalltalk'); NULL = unmatched.
 --   recorded  — an unmatched question that went to the owner's approval queue (outreach_reply,
---               source_key 'page:<id>' — ADR-XXXX ⑥: nothing is answered automatically outward).
+--               source_key 'page:<id>' — ADR-0440 ⑥: nothing is answered automatically outward).
 --               At most 5 per prospect per Budapest day; the rest is kept here, unrecorded.
 --   own_view  — asked on the owner's own preview (?sajat=1): stored, never queued.
 -- Not stored at all: an empty / too long text, a text with a link, e-mail or phone number, a

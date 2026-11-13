@@ -55,10 +55,10 @@ export interface TrialInput {
   readonly viewId?: string | null;
   /** Elek3 B2: the discount percent the trial form printed (0 = none) — the trial pins that. */
   readonly seenOfferPercent?: number | null;
-  /** ADR-XXXX ③: the package/modules the visitor picked on the lead page before starting —
+  /** ADR-0440 ③: the package/modules the visitor picked on the lead page before starting —
    *  the trial grants exactly these (trialModulesFromSelection). Absent = the configured set. */
   readonly modules?: readonly unknown[] | null;
-  /** ADR-XXXX ⑦: the one-click sheet's click-wrap sentence stood for both ticks — the stamp is
+  /** ADR-0440 ⑦: the one-click sheet's click-wrap sentence stood for both ticks — the stamp is
    *  TRIAL_CLICKWRAP_V1 instead of the two separate wordings. */
   readonly clickwrap?: boolean;
 }
@@ -232,7 +232,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
 
   try {
     await loadPricing();
-    // ADR-XXXX ③: a set picked on the lead page wins over the configured trial package.
+    // ADR-0440 ③: a set picked on the lead page wins over the configured trial package.
     const modules = trialModulesFromSelection(input.modules) ?? trialModuleIds((await getFreeTrialConfig()).package);
     let tenantId = trial.tenant_id;
     if (!tenantId) {
