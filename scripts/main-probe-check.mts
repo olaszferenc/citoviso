@@ -1,3 +1,4 @@
+// gate-runner: land-blocking — a tiszta-main próba őre; böngészőt nem indít, csak a fixture szövegében szerepel a szó
 // MAIN-PROBE GUARD — a „piros a tiszta mainen is?” próba (scripts/lib/main-probe.mjs, ADR-0249)
 // a helyes gazdát nevezi-e meg, és SOHA nem engedi-e át a bukott commitot.
 //
