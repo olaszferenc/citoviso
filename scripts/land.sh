@@ -74,6 +74,13 @@ while :; do
   # The two planning indexes are GENERATED: a conflict confined to them is resolved by
   # regenerating (scripts/land-rebase.sh). Any other conflict still aborts loudly.
   if ! bash "$ROOT/scripts/land-rebase.sh"; then
+    # land-rebase.sh aborts a conflicted rebase itself; if none is in progress and HEAD is already on
+    # origin/main, the rebase SUCCEEDED and a later step (index rebuild / ADR number) failed — saying
+    # "rebase-konfliktus" then sent sessions hunting a conflict that did not exist (measured 2026-11-13).
+    if [ ! -d "$(git rev-parse --git-path rebase-merge)" ] && [ ! -d "$(git rev-parse --git-path rebase-apply)" ] && \
+       git merge-base --is-ancestor origin/main HEAD; then
+      fail "a rebase RENDBEN, de az utána jövő lépés (generált index / ADR-szám kiosztás) bukott — az okot lásd fent"
+    fi
     git rebase --abort 2>/dev/null || true
     fail "rebase-konfliktus — oldd fel kézzel (git rebase origin/main), majd land újra"
   fi
