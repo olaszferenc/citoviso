@@ -103,17 +103,17 @@ leadet mutatja.
   `/?w` a WhatsApp-utánküldés · `/?f` a nem-nyitó utánkövető levél); a lap ezt olvassa ki, és utána leveszi a címsorból, így egy
   továbbküldött link már nem az eredeti csatornára számít. Viber és WhatsApp között a telefon a
   küldés pillanatában választ, ezért ott a küldés naplója mondja meg, melyik volt.
+  **„következtetett”**: régebbi küldés, amelynek linkjén még nem volt jel — ha a megnyitás előtt
+  csak egy csatornán ment ki a link, vagy a levelezőprogram (pl. a Gmail-app) adta át, akkor onnan
+  jött. **„Nem eldönthető”**: jel nélküli megnyitás, amely előtt több csatornán is kiment ugyanaz a
+  link (pl. e-mail és SMS, vagy Viber és a tartalék MMS+SMS) — ez a sor egyre kevesebb lesz, mert
+  az új küldések linkje jelet hordoz (jel nélkül csak a begépelt vagy jel nélkül átmásolt cím jön).
 - **Az utánkövető levél** (nem-nyitóknak): aki e-mailt kapott, de 14 nappal az utolsó megkeresése után
   (bármely csatornán) egyik linkjét sem nyitotta meg, egyszer kap még egy levelet, ami a terv képével
   indul, és a feladója egy személynév. Nem kapja meg, aki leiratkozott, válaszolt, próbázik, rendelt vagy
   vásárolt, akinek a kiküldését visszavonták, vagy akinek a terve nincs jóváhagyva. Óránként legfeljebb 5,
   naponta alapból legfeljebb 40 megy ki, csak hétköznap 8–17. Ha az éles beállításban nincs megadva a feladó
   neve, egy sem megy ki. Aki ebből a levélből nyitott, az a fenti táblázat „Utánkövető levél” sorában van.
-  **„következtetett”**: régebbi küldés, amelynek linkjén még nem volt jel — ha a megnyitás előtt
-  csak egy csatornán ment ki a link, vagy a levelezőprogram (pl. a Gmail-app) adta át, akkor onnan
-  jött. **„Nem eldönthető”**: jel nélküli megnyitás, amely előtt több csatornán is kiment ugyanaz a
-  link (pl. e-mail és SMS, vagy Viber és a tartalék MMS+SMS) — ez a sor egyre kevesebb lesz, mert
-  az új küldések linkje jelet hordoz (jel nélkül csak a begépelt vagy jel nélkül átmásolt cím jön).
 - **„Kohorsz”**: küldési hetek soronként — a hét kiküldöttjeinek hány százaléka nyitott meg 7,
   indított próbát 14 (**„Próba 14 n.”**), rendelt 14, fizetett 30 napon belül. A **„nyitott”** jel azt mondja, hogy a 30 nap még nem
   telt le, tehát a sor még nőhet. A sötétebb cella a magasabb arány. Telefonon ez is húzható.
