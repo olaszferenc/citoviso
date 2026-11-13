@@ -1,4 +1,4 @@
-## ADR-XXXX — Megnyitás csatornánként: kártya az Irányítópulton (saját Ma · 7 nap · Összes)
+## ADR-0441 — Megnyitás csatornánként: kártya az Irányítópulton (saját Ma · 7 nap · Összes)
 
 **Dátum:** 2026-11-13 · **Döntött:** tulaj (terv „B” — csatorna-csempék), a fogalmakat a session rögzítette
 
