@@ -1,6 +1,7 @@
 // „Megnyitás csatornánként” — the dashboard card (frozen plan:
 // assets/design-refs/console/csatorna-megnyitas/, „B” — channel tiles, owner 2026-11-13).
-// Four tiles (E-mail · SMS / MMS · Viber · WhatsApp): the big number is the 7-day rate,
+// Four tiles (E-mail · SMS / MMS · Viber · WhatsApp) + the follow-up round's „Újrakeresés” tile
+// (plan ujrakereses-meres, point 7): the big number is the 7-day rate,
 // below it the three periods side by side. A tile opens the Riport „Honnan nyitották”
 // panel with the channel's row unfolded.
 
@@ -49,14 +50,33 @@ function tile(ch: OpenChannel, d: OpenChannelsData, lang: string): string {
   );
 }
 
+/** The 5th tile — the non-opener follow-up letter, a round of its own („2. kör”). */
+function reTile(d: OpenChannelsData, lang: string): string {
+  const c = d["7"].re;
+  const fill = c.got ? Math.min(100, (c.opened / c.got) * 200) : 0;
+  const trio = OPEN_PERIODS.map((k) => {
+    const x = d[k].re;
+    return `<div class="oc-p${k === "7" ? " is-on" : ""}"><b${x.got ? "" : ' class="oc-z"'}>${esc(openRate(x))}</b><span>${esc(PERIOD_LABEL(lang)[k])}</span></div>`;
+  }).join("");
+  return (
+    `<a class="oc-tile oc-tile--re" data-oc="re" href="/report?days=7&amp;kor=ujra">` +
+    `<span class="oc-h"><i class="oc-sq rp-os-followup"></i>${esc(T(lang, "Újrakeresés"))}<em class="oc-tag">${esc(T(lang, "2. kör"))}</em></span>` +
+    `<span class="oc-hero">${esc(openRate(c))}<small>${esc(T(lang, "7 nap"))}</small></span>` +
+    `<span class="oc-of">${esc(c.got ? T(lang, "{o} megnyitotta a {g} utánkövető levélből", { o: c.opened, g: c.got }) : T(lang, "nem ment ki"))}</span>` +
+    `<span class="oc-meter"><i class="rp-os-followup" style="width:${fill.toFixed(1)}%"></i></span>` +
+    `<span class="oc-trio">${trio}</span></a>`
+  );
+}
+
 export function openChannelsCard(d: OpenChannelsData, icon: string, lang = consoleLang()): string {
   return (
     `<div class="con-w oc-card" data-widget="open-channels" id="open-channels">` +
     `<div class="con-w__h">${icon}${esc(T(lang, "Megnyitás csatornánként"))}<a class="oc-more" href="/report?days=7#honnan">${esc(T(lang, "Riport ▸ Honnan nyitották"))}</a></div>` +
     `<div class="con-w__s">${esc(T(lang, "Nagy szám: elmúlt 7 nap. Alatta mindhárom időszak egymás mellett. A sáv 50%-nál telik meg."))}</div>` +
-    `<div class="oc-tiles">${OPEN_CHANNELS.map((ch) => tile(ch, d, lang)).join("")}</div>` +
+    `<div class="oc-tiles">${OPEN_CHANNELS.map((ch) => tile(ch, d, lang)).join("")}${reTile(d, lang)}</div>` +
     `<div class="oc-foot">${esc(T(lang, "Megnyitás = a kiküldött linkre kattintott ebből a csatornából; a levél megnyitását nem mérjük. Kapta = az időszakban ezen a csatornán ment ki neki a link."))} ` +
-    `<b>${esc(T(lang, "Nem eldönthető"))}</b> ${esc(T(lang, "(több csatornán kapta, a link még jel nélküli volt): {n} megnyitó lead (7 nap).", { n: d["7"].unknown }))}</div>` +
+    `<b>${esc(T(lang, "Nem eldönthető"))}</b> ${esc(T(lang, "(több csatornán kapta, a link még jel nélküli volt): {n} megnyitó lead (7 nap).", { n: d["7"].unknown }))} ` +
+    `<b>${esc(T(lang, "Újrakeresés"))}</b> ${esc(T(lang, "= a nem-nyitóknak 14 nap után kiment utánkövető levél, külön az első körtől; rákattintva a Riport Újrakeresés köre nyílik."))}</div>` +
     `</div>`
   );
 }

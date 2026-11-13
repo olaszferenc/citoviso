@@ -3064,7 +3064,10 @@ async function handle(
     const dim = (REPORT_DIMS as readonly string[]).includes(dimRaw) ? (dimRaw as ReportDim) : "segment";
     const segRaw = url.searchParams.get("seg") ?? "all";
     const seg = (REPORT_SEGS as readonly string[]).includes(segRaw) ? (segRaw as ReportSeg) : "all";
-    const d = await getReportData(days, dim, seg);
+    // kor=ujra → the non-opener follow-up round (frozen plan: design-refs/console/ujrakereses-meres/);
+    // only the Tölcsér page switches rounds, Viselkedés stays on the first outreach.
+    const round = url.searchParams.get("kor") === "ujra" ? "re" : "first";
+    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined);
     if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
     const rsRaw = url.searchParams.get("rs") ?? "inf";
     const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";

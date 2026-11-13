@@ -391,7 +391,18 @@ export interface PanelSummary {
   readonly paid: number;
 }
 
+/** The other round's headline, for the „Melyik kör?” switch counts and the follow-up cards' comparison. */
+export interface ReportRoundPeer {
+  readonly round: ReportRound;
+  readonly counts: StageCounts;
+  readonly hypotheses: readonly Hypothesis[];
+}
+
 export interface ReportData {
+  /** Which round these numbers are (absent = first; the fixtures fold first-round facts). */
+  readonly round?: ReportRound;
+  /** The other round over the same window and lead type (the Tölcsér page asks for it). */
+  readonly peer?: ReportRoundPeer;
   /** The window's span in days (0 = all time); see `period` for the exact window. */
   readonly days: number;
   readonly period: ReportPeriod;
@@ -596,9 +607,20 @@ function foldVisit(id: string, startedAt: Date, device: Device, events: readonly
   };
 }
 
+/**
+ * Which outreach round the facts describe (frozen plan: assets/design-refs/console/ujrakereses-meres/,
+ * owner 2026-11-13: „az újra megkeresést külön kell mérni az első kiküldéstől”):
+ *   first = the first outreach; everything after the lead's second touch (trial campaign or the
+ *           non-opener follow-up letter, whichever came first) is cut off;
+ *   re    = the non-opener follow-up letter (ADR-0442): the cohort is the leads it was SENT to, the
+ *           send time is the letter's, and only what happened AFTER the letter counts.
+ */
+export type ReportRound = "first" | "re";
+export const REPORT_ROUNDS: readonly ReportRound[] = ["first", "re"];
+
 /** Load the facts of every SENT prospect (the whole pilot; the range filter is applied in the fold). */
-export async function loadProspectFacts(): Promise<ProspectFacts[]> {
-  const rows = await db
+export async function loadProspectFacts(round: ReportRound = "first"): Promise<ProspectFacts[]> {
+  const base = await db
     .selectFrom("prospect")
     .innerJoin("lead", "lead.id", "prospect.lead_id")
     .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
@@ -617,11 +639,17 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .where("prospect.sent_at", "is not", null)
     .execute()
     .then((all) => all.filter((r) => !isTestLeadName(r.lead_name) && r.lead_name !== ELEK_LEAD_NAME));
+  // The follow-up round: only the prospects the letter went out for, timed by the letter.
+  const reSent = round === "re" ? await loadFollowupSends(base.map((r) => r.id)) : null;
+  const rows = reSent ? base.filter((r) => reSent.has(r.id)).map((r) => ({ ...r, sent_at: reSent.get(r.id)! as Date | string | null })) : base;
   if (!rows.length) return [];
   const ids = rows.map((r) => r.id);
-  const cutByLead = await loadSecondTouch([...new Set(rows.map((r) => r.lead_id))]);
+  const cutByLead = round === "first" ? await loadSecondTouch([...new Set(rows.map((r) => r.lead_id))]) : new Map<string, Date>();
+  const startByLead = new Map(rows.map((r) => [r.lead_id, round === "re" ? toDate(r.sent_at)!.getTime() : -Infinity]));
   const cutOf = (leadId: string): number => cutByLead.get(leadId)?.getTime() ?? Infinity;
-  const before = (leadId: string, at: Date | null): Date | null => (at && at.getTime() < cutOf(leadId) ? at : null);
+  /** Does an event at `at` belong to this round? first: before the second touch; re: from the letter on. */
+  const inRound = (leadId: string, at: Date): boolean => at.getTime() < cutOf(leadId) && at.getTime() >= (startByLead.get(leadId) ?? -Infinity);
+  const before = (leadId: string, at: Date | null): Date | null => (at && inRound(leadId, at) ? at : null);
   const leadOfProspect = new Map(rows.map((r) => [r.id, r.lead_id]));
 
   const views = await db
@@ -648,10 +676,10 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
     .where("order_intent.kind", "=", "initial")
     .execute();
   const trialed = await loadTrialStarts(rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })));
-  const feedback = await loadFeedback(ids, (prospectId, at) => at.getTime() < cutOf(leadOfProspect.get(prospectId) ?? ""));
+  const feedback = await loadFeedback(ids, (prospectId, at) => inRound(leadOfProspect.get(prospectId) ?? "", at));
   const replied = await loadReplied(
     rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })),
-    (leadId, at) => at.getTime() < cutOf(leadId),
+    (leadId, at) => inRound(leadId, at),
   );
 
   const eventsByView = new Map<string, RawEvent[]>();
@@ -675,7 +703,9 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
           toDate(v.started_at)!,
           v.open_via,
           v.referrer_host,
-          touchesOf(r, messengerSends.get(v.prospect_id) ?? [], (at) => before(r.lead_id, at)),
+          // The follow-up round keeps the first round's touches for an untagged (old-link) visit,
+          // so it is named by the channel the old link came on; the letter's own link is `?f`.
+          touchesOf(r, messengerSends.get(v.prospect_id) ?? [], (at) => (round === "re" ? at : before(r.lead_id, at))),
           messengerSends.get(v.prospect_id) ?? [],
         )
       : { source: "unknown" as const, sure: false };
@@ -728,7 +758,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
       deepAt,
       trialedAt: before(r.lead_id, trialed.get(r.id) ?? null),
       orderedAt: firstOrder.get(r.id) ?? null,
-      touches: touchesOf(r, messengerSends.get(r.id) ?? [], (at) => before(r.lead_id, at)),
+      touches: round === "re" ? { followup: sentAt } : touchesOf(r, messengerSends.get(r.id) ?? [], (at) => before(r.lead_id, at)),
       paidAt,
       unsubscribedAt: before(r.lead_id, toDate(r.unsubscribed_at)),
       escalationShown: escShown,
@@ -906,21 +936,49 @@ async function loadTrialStarts(ps: readonly { id: string; leadId: string; sentAt
 }
 
 /**
- * When the second touch (the retroactive trial letter) went out, per lead — the first-touch
+ * When the second touch (the retroactive trial letter or the non-opener follow-up letter) went out, per lead — the first-touch
  * funnel's cut. Only a SENT campaign row cuts; a claim or an operator exclusion did not reach
  * the person.
  */
 async function loadSecondTouch(leadIds: readonly string[]): Promise<Map<string, Date>> {
   const out = new Map<string, Date>();
   if (!leadIds.length) return out;
-  const rows = await db
+  const camp = await db
     .selectFrom("trial_campaign")
     .select(["lead_id", "sent_at"])
     .where("lead_id", "in", leadIds)
     .where("status", "=", "sent")
     .where("sent_at", "is not", null)
     .execute();
-  for (const r of rows) out.set(r.lead_id, toDate(r.sent_at)!);
+  // The non-opener follow-up letter is a second touch too (ADR-0442, owner 2026-11-13: measured
+  // apart from the first outreach) — the earlier of the two cuts.
+  const letter = await db
+    .selectFrom("nonopener_followup")
+    .select(["lead_id", "sent_at"])
+    .where("lead_id", "in", leadIds)
+    .where("status", "=", "sent")
+    .where("sent_at", "is not", null)
+    .execute();
+  for (const r of [...camp, ...letter]) {
+    const at = toDate(r.sent_at)!;
+    const cur = out.get(r.lead_id);
+    if (!cur || at < cur) out.set(r.lead_id, at);
+  }
+  return out;
+}
+
+/** The follow-up round's send per prospect: when the non-opener letter went out (status sent). */
+async function loadFollowupSends(prospectIds: readonly string[]): Promise<Map<string, Date>> {
+  const out = new Map<string, Date>();
+  if (!prospectIds.length) return out;
+  const rows = await db
+    .selectFrom("nonopener_followup")
+    .select(["prospect_id", "sent_at"])
+    .where("prospect_id", "in", prospectIds)
+    .where("status", "=", "sent")
+    .where("sent_at", "is not", null)
+    .execute();
+  for (const r of rows) if (r.prospect_id) out.set(r.prospect_id, toDate(r.sent_at)!);
   return out;
 }
 
@@ -1196,9 +1254,24 @@ export function summarizePanel(all: readonly PanelSession[], via: PanelFilter): 
 }
 
 /** Everything both pages render from, for one range + one breakdown dimension + one lead type. */
-export async function getReportData(days: ReportDays | ReportPeriod, dim: ReportDim, seg: ReportSeg = "all", now = new Date()): Promise<ReportData> {
-  const [all, targets, notes] = await Promise.all([loadProspectFacts(), loadTargets(), loadNotes()]);
-  return foldReport(all, targets, notes, days, dim, now, seg);
+/**
+ * `round` given (the Tölcsér page) → that round's numbers plus the other round's headline
+ * (`peer`); omitted (Viselkedés) → the first round alone.
+ */
+export async function getReportData(
+  days: ReportDays | ReportPeriod,
+  dim: ReportDim,
+  seg: ReportSeg = "all",
+  now = new Date(),
+  round?: ReportRound,
+): Promise<ReportData> {
+  const cur = round ?? "first";
+  const [all, targets, notes] = await Promise.all([loadProspectFacts(cur), loadTargets(), loadNotes()]);
+  const main = foldReport(all, targets, notes, days, dim, now, seg);
+  if (!round) return main;
+  const other: ReportRound = round === "re" ? "first" : "re";
+  const o = foldReport(await loadProspectFacts(other), targets, notes, days, dim, now, seg);
+  return { ...main, round, peer: { round: other, counts: o.counts, hypotheses: o.hypotheses } };
 }
 
 /** The pure fold — the pages' fixtures (kb-shot) feed it synthetic facts. */

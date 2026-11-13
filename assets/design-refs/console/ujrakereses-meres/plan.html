@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Újrakeresés mérése — terv</title>
+<style>
+  :root{
+    --citui-navy-950:#06222e; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#fff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d; --citui-bad-soft:#fdecec;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+    --ch-email:var(--citui-cyan-500); --ch-sms:var(--citui-navy-700); --ch-viber:#7360f2; --ch-wa:var(--citui-ok); --ch-re:#c2410c;
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.45 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .note{max-width:1180px;margin:14px auto 0;padding:12px 16px;background:var(--citui-warn-soft);border:1px solid var(--citui-line);border-radius:10px;font-size:13px}
+  .note > b:first-child{display:block;margin-bottom:2px} .note ul{margin:4px 0 0;padding-left:18px}
+  .stage{display:flex;justify-content:center;padding:16px}
+  .frame{width:100%;max-width:1180px;background:var(--citui-white);border-radius:12px;box-shadow:var(--citui-shadow-sm);container-type:inline-size;overflow:hidden}
+  .frame.m{max-width:390px}
+  .page{padding:18px 20px 28px}
+  .crumb{font-size:12.5px;color:var(--citui-muted);margin-bottom:8px}
+  h1{margin:0 0 10px;font:700 22px/1.2 var(--citui-font-display)}
+  h2.sec{margin:26px 0 8px;font:700 16px/1.2 var(--citui-font-display);color:var(--citui-navy-700)}
+  .tabs{display:flex;gap:18px;border-bottom:1px solid var(--citui-line);margin-bottom:14px;overflow-x:auto}
+  .tabs span{padding:8px 2px;font-weight:600;color:var(--citui-muted);white-space:nowrap}
+  .tabs span.on{color:var(--citui-ink);border-bottom:2px solid var(--citui-cyan-500)}
+  /* THE NEW SWITCH */
+  .kor{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .kor .lbl{font-size:12.5px;color:var(--citui-muted);font-weight:600}
+  .seg{display:inline-flex;padding:3px;background:var(--citui-surface-2);border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill)}
+  .seg button{border:0;background:transparent;padding:8px 14px;border-radius:var(--citui-radius-pill);font:700 13px/1 system-ui;color:var(--citui-muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--citui-navy-900);color:#fff}
+  .seg button.on.re{background:var(--ch-re)}
+  .seg button small{font:600 11px/1 system-ui;opacity:.75}
+  .kor .why{font-size:12px;color:var(--citui-muted);flex-basis:100%}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .chips{display:inline-flex;gap:2px;padding:3px;background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill)}
+  .chips button{border:0;background:transparent;padding:6px 11px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;color:var(--citui-muted);cursor:pointer}
+  .chips button.on{background:var(--citui-navy-900);color:#fff}
+  .sel{border:1px solid var(--citui-line-strong);border-radius:8px;padding:6px 10px;font-size:12.5px;background:#fff}
+  .meta{font-size:12px;color:var(--citui-muted);margin:4px 0 12px}
+  .meta b{color:var(--citui-ink)}
+  .badge-re{display:inline-block;background:var(--ch-re);color:#fff;border-radius:6px;padding:1px 7px;font:700 11px/1.5 system-ui;margin-right:6px}
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .card{border:1px solid var(--citui-line);border-top:4px solid var(--citui-ok);border-radius:12px;padding:12px 14px;background:#fff;min-width:0}
+  .card.bad{border-top-color:var(--citui-bad)} .card.mid{border-top-color:var(--citui-warn)} .card.na{border-top-color:var(--citui-line-strong)}
+  .card h3{margin:0;font:700 15px/1.2 var(--citui-font-display)}
+  .card .sub{font-size:11.5px;color:var(--citui-muted);margin:2px 0 8px}
+  .card .big{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card .big b{font:700 24px/1.1 var(--citui-font-display)}
+  .pill{font:600 11px/1 system-ui;padding:4px 8px;border-radius:99px;border:1px solid}
+  .pill.bad{color:var(--citui-bad);background:var(--citui-bad-soft);border-color:#f5c2c3}
+  .pill.mid{color:#8a6100;background:var(--citui-warn-soft);border-color:#f0d9a3}
+  .pill.ok{color:#1d7a4b;background:var(--citui-ok-soft);border-color:#b9e6cd}
+  .pill.na{color:var(--citui-muted);background:var(--citui-surface);border-color:var(--citui-line)}
+  .track{position:relative;height:6px;background:var(--citui-surface-2);border-radius:99px;margin:10px 0 2px}
+  .track i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--citui-navy-700)}
+  .track u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--citui-muted)}
+  .goal{font-size:10px;color:var(--citui-muted);text-align:center}
+  .cmp{font-size:11.5px;color:var(--citui-muted);margin-top:4px}
+  .cmp .neg{color:var(--citui-bad);font-weight:700} .cmp .pos{color:var(--citui-ok);font-weight:700}
+  .vs{margin-top:8px;padding-top:7px;border-top:1px dashed var(--citui-line-strong);font-size:11.5px;color:var(--citui-muted);display:none}
+  .vs b{color:var(--ch-re)}
+  .frame.B .vs{display:block}
+  svg.spark{width:100%;height:30px;margin-top:6px}
+  .panel{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;margin-top:14px}
+  .panel h4{margin:0 0 8px;font:700 14px/1.2 var(--citui-font-display)} .panel h4 small{font:500 12px system-ui;color:var(--citui-muted)}
+  .vrow{display:grid;grid-template-columns:110px 1fr 80px;gap:8px;align-items:center;margin:5px 0;font-size:12px}
+  .vrow .b{height:22px;background:var(--citui-surface-2);border-radius:6px;overflow:hidden}
+  .vrow .b i{display:block;height:100%;background:var(--citui-cyan-500);color:#fff;font:700 11px/22px system-ui;padding-left:6px}
+  .frame.re .vrow .b i{background:var(--ch-re)}
+  .os{display:flex;flex-wrap:wrap;gap:8px;font-size:12px}
+  .os span{border:1px solid var(--citui-line);border-radius:8px;padding:5px 9px}
+  .sq{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+  /* dashboard card */
+  .w{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px 14px 12px;background:#fff}
+  .wh{display:flex;align-items:center;gap:7px;color:var(--citui-muted);font-size:12.5px;flex-wrap:wrap}
+  .wh .sp{flex:1} .wh a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 1.05fr;gap:10px;margin-top:8px}
+  .tile{border:1px solid var(--citui-line);border-radius:12px;padding:11px 12px 10px;background:var(--citui-surface);cursor:pointer}
+  .tile.re{background:#fff7f2;border-color:#f3c9b1}
+  .tile.re .tag{display:inline-block;font:700 10px/1.4 system-ui;color:#fff;background:var(--ch-re);border-radius:5px;padding:0 5px;margin-left:6px}
+  .tile h5{margin:0;font:600 13px/1.2 system-ui;display:flex;align-items:center}
+  .tile .hero{font:700 26px/1.05 var(--citui-font-display);margin:8px 0 1px} .tile .hero small{font:500 12px system-ui;color:var(--citui-muted);margin-left:3px}
+  .tile .of{font-size:11.5px;color:var(--citui-muted)}
+  .meter{height:6px;border-radius:99px;background:var(--citui-surface-2);border:1px solid var(--citui-line);margin:8px 0;overflow:hidden} .meter i{display:block;height:100%}
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:11px;text-align:center}
+  .trio div{background:#fff;border:1px solid var(--citui-line);border-radius:8px;padding:4px 2px} .trio div.on{border-color:var(--citui-cyan-500)}
+  .trio b{display:block;font:700 13px/1.2 var(--citui-font-display)} .trio span{color:var(--citui-muted)}
+  .foot{font-size:11.5px;color:var(--citui-muted);margin-top:8px;border-top:1px solid var(--citui-line);padding-top:7px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:90vw}
+  .toast.show{opacity:1}
+  @container (max-width:640px){
+    .page{padding:14px 12px 22px}
+    .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .card{padding:10px}
+    .card .big b{font-size:20px}
+    .card h3{font-size:13.5px}
+    .seg{display:flex;width:100%} .seg button{flex:1;justify-content:center;padding:9px 6px}
+    .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .tile.re{grid-column:1 / -1}
+    .vrow{grid-template-columns:80px 1fr 60px}
+  }
+</style></head>
+<body>
+<div class="bar">
+  <b>Változat:</b><button data-v="A" class="on">A · Váltó</button><button data-v="B">B · Váltó + összevetés a kártyán</button>
+  <span class="sp"></span>
+  <b>Méret:</b><button data-s="m">Mobil 390</button><button data-s="d" class="on">Asztali</button>
+</div>
+<div class="note">
+  <b>Újrakeresés = a nem-nyitóknak 14 nap után kiment utánkövető levél.</b> A riport mostantól két kört mér külön:
+  <ul>
+    <li><b>Első megkeresés</b>: a mostani számok, de a levél kiküldése után történteket <u>nem</u> számolja bele (így az utánkövető levél nem fújja fel az első kör nyitási arányát).</li>
+    <li><b>Újrakeresés</b>: ugyanazok a kártyák és panelek, de csak azokra a leadekre, akiknek az utánkövető levél kiment az időszakban, és csak a levél <u>utáni</u> eseményeket számolja (a küldéstől mért reakcióidővel).</li>
+  </ul>
+  Az „Első megkeresés” kártyáinak számai a riport mai (11. 13.) képéről valósak; az „Újrakeresés” számai és a csatorna-csempék számai <b>MINTA</b> — élesen még nem ment ki utánkövető levél.
+</div>
+
+<div class="stage"><div class="frame A" id="fr">
+<div class="page">
+  <div class="crumb">Konzol › Riport › Megkeresés-tölcsér — hol akadnak el</div>
+  <h1>Megkeresés-riport</h1>
+  <div class="tabs"><span class="on">Tölcsér</span><span>Viselkedés</span><span>Mock</span><span>Próba</span><span>Előfizetők</span><span>Tenantok</span><span>Lead-állomány</span></div>
+
+  <div class="kor">
+    <span class="lbl">Melyik kör?</span>
+    <div class="seg" id="seg">
+      <button data-k="first" class="on">Első megkeresés <small id="nFirst">116</small></button>
+      <button data-k="re" class="re">Újrakeresés <small id="nRe">40</small></button>
+    </div>
+    <span class="why" id="why">Az első kiküldés: e-mail, SMS/MMS, Viber, WhatsApp. Az utánkövető levél utáni események nem számítanak bele.</span>
+  </div>
+
+  <div class="filters">
+    <div class="chips" id="per"><button class="on">Ma</button><button>7 nap</button><button>30 nap</button><button>90 nap</button><button>Összes</button></div>
+    <select class="sel"><option>Lead-típus: mind</option></select>
+    <select class="sel"><option>Bontás: szegmens</option></select>
+  </div>
+  <div class="meta" id="meta"></div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="panel">
+    <h4>Visszatérés <small>— hányadik látogatásnál születik a rendelés</small></h4>
+    <div id="visits"></div>
+  </div>
+  <div class="panel" id="osPanel">
+    <h4>Honnan nyitották</h4>
+    <div class="os" id="os"></div>
+  </div>
+
+  <h2 class="sec">Irányítópult — „Megnyitás csatornánként” kártya, új 5. csempével</h2>
+  <div class="w">
+    <div class="wh"><b style="color:var(--citui-ink)">Megnyitás csatornánként</b><span class="sp"></span><a data-go="os">Riport ▸ Honnan nyitották</a></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="foot">Kapta = az időszakban ezen a csatornán ment ki neki a link · Megnyitotta = erről kattintott. Az <b>Újrakeresés</b> csempe az utánkövető levelet méri, külön az első körtől; rákattintva a Riport „Újrakeresés” köre nyílik.</div>
+  </div>
+</div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const D = {
+  first: { n:116, meta:'<b>116</b> követett link az időszakban · csak KIKÜLDÖTT linkek (saját megnyitás, teszt nem számít)',
+    why:'Az első kiküldés: e-mail, SMS/MMS, Viber, WhatsApp. Az utánkövető levél utáni események nem számítanak bele.',
+    cards:[
+      ['Megfogja-e a levél?','megnyitás / kiküldött','6,9%','bad','cél alatt',6.9,40,'8 / 116','−2,6 pont',-1],
+      ['Visszatér-e?','visszatérő / megnyitó','25,0%','mid','közelít',25,30,'2 / 8','−25,0 pont',-1],
+      ['Belenyúl-e a modulokba?','elmélyülő / megnyitó','50,0%','ok','cél felett',50,20,'4 / 8','± 0',0],
+      ['Kipróbálja-e?','próba / kiküldött','0,0%','bad','cél alatt',0,5,'0 / 116','± 0',0],
+      ['Megrendeli-e?','rendelés / kiküldött','0,0%','bad','cél alatt',0,4,'0 / 116','± 0',0],
+      ['Ki is fizeti?','fizetve / rendelés','—','na','nincs adat',0,75,'0 / 0','—',0],
+      ['Gyorsan reagál-e?','medián küldés → 1. megnyitás','9 perc','ok','cél felett',95,50,'8 megnyitás · a kisebb a jobb','−0,5 óra',1]],
+    visits:[[ '1 látogatás',6],['2 látogatás',2],['3 látogatás',0],['4+ látogatás',0]],
+    os:[['E-mail','var(--ch-email)',5],['SMS / MMS','var(--ch-sms)',1],['Viber','var(--ch-viber)',1],['WhatsApp','var(--ch-wa)',1],['Nem eldönthető','var(--citui-line-strong)',0]] },
+  re: { n:40, meta:'<span class="badge-re">Újrakeresés</span><b>40</b> utánkövető levél ment ki az időszakban · mind olyan leadnek, aki az első megkeresés linkjét 14 napig nem nyitotta meg',
+    why:'Az utánkövető levél (képpel, a te neveddel): csak a levél kiküldése UTÁNI események, a reakcióidő a levél küldésétől.',
+    cards:[
+      ['Megfogja-e a levél?','megnyitás / kiküldött utánkövető levél','15,0%','bad','cél alatt',15,40,'6 / 40','az első körben: 6,9%',1],
+      ['Visszatér-e?','visszatérő / megnyitó','33,3%','ok','cél felett',33.3,30,'2 / 6','az első körben: 25,0%',1],
+      ['Belenyúl-e a modulokba?','elmélyülő / megnyitó','50,0%','ok','cél felett',50,20,'3 / 6','az első körben: 50,0%',0],
+      ['Kipróbálja-e?','próba / kiküldött','2,5%','mid','közelít',2.5,5,'1 / 40','az első körben: 0,0%',1],
+      ['Megrendeli-e?','rendelés / kiküldött','0,0%','bad','cél alatt',0,4,'0 / 40','az első körben: 0,0%',0],
+      ['Ki is fizeti?','fizetve / rendelés','—','na','nincs adat',0,75,'0 / 0','—',0],
+      ['Gyorsan reagál-e?','medián levél → 1. megnyitás','3,2 óra','ok','cél felett',80,50,'6 megnyitás · a kisebb a jobb','az első körben: 9 perc',-1]],
+    visits:[['1 látogatás',4],['2 látogatás',2],['3 látogatás',0],['4+ látogatás',0]],
+    os:[['Utánkövető levél linkje','var(--ch-re)',5],['Régi link (első megkeresésből), a levél után','var(--citui-navy-700)',1]] }
+};
+const spark = (seed) => { let p=[],y=20; for(let i=0;i<8;i++){ y = 6 + ((seed*7+i*13)%22); p.push((i*100/7).toFixed(1)+','+y);} return '<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="#1d5a72" stroke-width="1.4" vector-effect="non-scaling-stroke" points="'+p.join(' ')+'"/></svg>'; };
+let kor='first';
+function render(){
+  const d=D[kor], o=D[kor==='first'?'re':'first'];
+  document.getElementById('fr').classList.toggle('re', kor==='re');
+  document.getElementById('meta').innerHTML=d.meta;
+  document.getElementById('why').textContent=d.why;
+  document.getElementById('cards').innerHTML=d.cards.map((c,i)=>{
+    const [t,s,v,cls,pl,fill,goal,frac,delta,dir]=c;
+    const cmp = kor==='re'
+      ? '<div class="cmp">'+frac+' · <span class="'+(dir>0?'pos':dir<0?'neg':'')+'">'+delta+'</span></div>'
+      : '<div class="cmp">'+frac+' · <span class="'+(dir>0?'pos':dir<0?'neg':'')+'">'+delta+'</span> a tegnapihoz</div>';
+    const other = o.cards[i][2];
+    const vs = '<div class="vs">'+(kor==='first'?'Újrakeresés: <b>'+other+'</b> ('+o.cards[i][7]+')':'Első megkeresés: <b style="color:var(--citui-navy-700)">'+other+'</b> ('+o.cards[i][7]+')')+'</div>';
+    return '<div class="card '+(cls==='ok'?'':cls)+'"><h3>'+t+'</h3><div class="sub">'+s+'</div><div class="big"><b>'+v+'</b><span class="pill '+cls+'">● '+pl+'</span></div>'+
+      '<div class="track"><i style="width:'+Math.min(100,fill)+'%"></i><u style="left:'+goal+'%"></u></div><div class="goal">cél '+goal+(i===6?' (24 óra)':'%')+'</div>'+cmp+vs+spark(i+(kor==='re'?3:0))+'</div>';
+  }).join('');
+  const max=Math.max(...d.visits.map(v=>v[1]),1);
+  document.getElementById('visits').innerHTML=d.visits.map(v=>'<div class="vrow"><span>'+v[0]+'<br><small style="color:var(--citui-muted)">0 rendelés</small></span><div class="b"><i style="width:'+Math.max(3,v[1]/max*100)+'%">'+v[1]+'</i></div><span style="text-align:right">rendel: '+(v[1]?'0%':'–')+'</span></div>').join('');
+  document.getElementById('os').innerHTML=d.os.map(x=>'<span><i class="sq" style="background:'+x[1]+'"></i>'+x[0]+': <b>'+x[2]+'</b></span>').join('');
+  document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on', b.dataset.k===kor));
+}
+const T=[['E-mail','var(--ch-email)','4,7%','5 / 106',[ '4,7%','5,9%','23,4%']],['SMS / MMS','var(--ch-sms)','10,0%','1 / 10',['10,0%','12,5%','31,0%']],['Viber','var(--ch-viber)','14,3%','1 / 7',['14,3%','18,2%','28,6%']],['WhatsApp','var(--ch-wa)','20,0%','1 / 5',['20,0%','16,7%','25,0%']]];
+document.getElementById('tiles').innerHTML=T.map(t=>'<div class="tile" data-go="first"><h5><i class="sq" style="background:'+t[1]+'"></i>'+t[0]+'</h5><div class="hero">'+t[4][1]+'<small>7 nap</small></div><div class="of">'+t[3]+'</div><div class="meter"><i style="width:'+parseFloat(t[4][1])*2+'%;background:'+t[1]+'"></i></div><div class="trio"><div><b>'+t[4][0]+'</b><span>Ma</span></div><div class="on"><b>'+t[4][1]+'</b><span>7 nap</span></div><div><b>'+t[4][2]+'</b><span>Összes</span></div></div></div>').join('')+
+ '<div class="tile re" data-go="re"><h5><i class="sq" style="background:var(--ch-re)"></i>Újrakeresés<span class="tag">2. kör</span></h5><div class="hero">15,0%<small>7 nap</small></div><div class="of">6 megnyitotta a 40 utánkövető levélből</div><div class="meter"><i style="width:30%;background:var(--ch-re)"></i></div><div class="trio"><div><b>—</b><span>Ma</span></div><div class="on"><b>15,0%</b><span>7 nap</span></div><div><b>15,0%</b><span>Összes</span></div></div></div>';
+const toast=(m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2200);};
+document.getElementById('seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;kor=b.dataset.k;render();toast(kor==='re'?'Újrakeresés kör — a cím: /report?kor=ujra':'Első megkeresés kör — a cím: /report');});
+document.getElementById('per').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#per button').forEach(x=>x.classList.toggle('on',x===b));toast('Időszak: '+b.textContent+' — a kör-váltó megmarad');});
+document.getElementById('tiles').addEventListener('click',e=>{const t=e.target.closest('.tile');if(!t)return;kor=t.dataset.go;render();document.getElementById('fr').scrollIntoView({behavior:'smooth'});toast(kor==='re'?'Az Újrakeresés csempe → Riport, Újrakeresés kör':'Csatorna-csempe → Riport, Első megkeresés, Honnan nyitották');});
+document.querySelector('.wh a').addEventListener('click',()=>{kor='first';render();toast('→ Riport, Első megkeresés, Honnan nyitották');});
+document.querySelectorAll('.bar button[data-v]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.bar button[data-v]').forEach(x=>x.classList.toggle('on',x===b));const f=document.getElementById('fr');f.classList.toggle('A',b.dataset.v==='A');f.classList.toggle('B',b.dataset.v==='B');}));
+document.querySelectorAll('.bar button[data-s]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.bar button[data-s]').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('fr').classList.toggle('m',b.dataset.s==='m');}));
+if (window.innerWidth < 640) document.querySelector('.bar button[data-s="m"]').click();
+const q=new URLSearchParams(location.search); if(q.get('v')==='B') document.querySelector('.bar button[data-v="B"]').click(); if(q.get('kor')==='re') kor='re';
+render();
+</script>
+</body></html>

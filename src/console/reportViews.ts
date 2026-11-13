@@ -159,7 +159,7 @@ const PRESET_LABEL = (k: ReportPresetKey, lang: string): string => (k === "today
 const periodParams = (p: ReportPeriod): Record<string, string> =>
   p.key === "custom" ? { from: p.from!, to: p.to! } : { days: p.key };
 const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
-  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }) };
+  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...(d.round === "re" ? { kor: "ujra" } : {}) };
   // A preset chip in `extra` replaces a custom window (and vice versa).
   if ("days" in extra) { delete base.from; delete base.to; }
   const p = new URLSearchParams({ ...base, ...extra });
@@ -202,9 +202,11 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
   // Custom window: two date fields, own GET form (no JS needed); the other filters ride along.
   const today = todayIn(APP_TZ, d.now);
   const custom = d.period.key === "custom";
+  const re = d.round === "re";
+  const korHidden = re ? `<input type="hidden" name="kor" value="ujra">` : "";
   const dates =
     `<form class="rp-dates${custom ? " on" : ""}" method="get" action="${base}" aria-label="${esc(T(lang, "Egyedi időszak"))}">` +
-    `<input type="hidden" name="dim" value="${esc(d.dim)}">${d.seg === "all" ? "" : `<input type="hidden" name="seg" value="${esc(d.seg)}">`}` +
+    `<input type="hidden" name="dim" value="${esc(d.dim)}">${d.seg === "all" ? "" : `<input type="hidden" name="seg" value="${esc(d.seg)}">`}${korHidden}` +
     `<input type="date" name="from" value="${esc(d.period.from ?? "")}" max="${today}" required aria-label="${esc(T(lang, "Kezdőnap"))}">` +
     `<span aria-hidden="true">–</span>` +
     `<input type="date" name="to" value="${esc(d.period.to ?? "")}" max="${today}" required aria-label="${esc(T(lang, "Utolsó nap"))}">` +
@@ -218,21 +220,47 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
     REPORT_SEGS.map((k) => segOpt(k, T(lang, "Lead típus: {s}", { s: SEG_LABEL(lang)[k]!.toLowerCase() }))).join("");
   const filter =
     `<form class="rp-filt" method="get" action="${base}">` +
-    periodHidden(d.period) +
+    periodHidden(d.period) + korHidden +
     `<div class="rp-chips" role="group" aria-label="${esc(T(lang, "Időszak"))}">${ranges}</div>` +
     `<select name="seg" aria-label="${esc(T(lang, "Lead típus"))}" onchange="this.form.submit()"${d.seg === "all" ? "" : ' class="on"'}>${segs}</select>` +
     `<select name="dim" aria-label="${esc(T(lang, "Bontás"))}" onchange="this.form.submit()">${dims}</select>` +
     `<noscript><button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Alkalmaz"))}</button></noscript>` +
-    `<span class="rp-filt__n">${esc(T(lang, "{n} követett link az időszakban · csak KIKÜLDÖTT linkek (saját megnyitás, teszt nem számít)", { n: d.counts.sent }))}</span>` +
+    (re
+      ? `<span class="rp-filt__n"><b class="rp-kor-tag">${esc(T(lang, "Újrakeresés"))}</b>${esc(T(lang, "{n} utánkövető levél ment ki az időszakban · mind olyan leadnek, aki az első megkeresés linkjét 14 napig nem nyitotta meg", { n: d.counts.sent }))}</span>`
+      : `<span class="rp-filt__n">${esc(T(lang, "{n} követett link az időszakban · csak KIKÜLDÖTT linkek (saját megnyitás, teszt nem számít)", { n: d.counts.sent }))}</span>`) +
     `</form>`;
+  // „Melyik kör?” (frozen plan: assets/design-refs/console/ujrakereses-meres/, A) — Tölcsér only.
+  const korSwitch = d.peer
+    ? (() => {
+        const nFirst = re ? d.peer.counts.sent : d.counts.sent;
+        const nRe = re ? d.counts.sent : d.peer.counts.sent;
+        const link = (k: "first" | "re", label: string, n: number): string => {
+          const p = new URLSearchParams(qs(d).slice(1));
+          if (k === "re") p.set("kor", "ujra");
+          else p.delete("kor");
+          const q = p.toString();
+          return `<a href="${base}${q ? `?${q}` : ""}" class="rp-kor__b${k === "re" ? " rp-kor__b--re" : ""}${(k === "re") === re ? " on" : ""}"${(k === "re") === re ? ' aria-current="true"' : ""}>${esc(label)} <small>${n}</small></a>`;
+        };
+        const why = re
+          ? T(lang, "Az utánkövető levél: csak a levél kiküldése utáni események, a reakcióidő a levél küldésétől.")
+          : T(lang, "Az első kiküldés: e-mail, SMS/MMS, Viber, WhatsApp. Az utánkövető levél utáni események nem számítanak bele.");
+        return (
+          `<div class="rp-kor"><span class="rp-kor__l">${esc(T(lang, "Melyik kör?"))}</span>` +
+          `<div class="rp-kor__seg" role="group" aria-label="${esc(T(lang, "Melyik kör?"))}">${link("first", T(lang, "Első megkeresés"), nFirst)}${link("re", T(lang, "Újrakeresés"), nRe)}</div>` +
+          `<span class="rp-kor__why">${esc(why)}</span></div>`
+        );
+      })()
+    : "";
   const periodNote = custom
     ? T(lang, "Kiküldve {a} – {b} között", { a: dayLabel(d.period.from!), b: dayLabel(d.period.to!) })
     : d.period.key === "today"
-      ? T(lang, "Ma kiküldött megkeresések ({a})", { a: dayLabel(today) })
+      ? re
+        ? T(lang, "Ma kiment utánkövető levelek ({a})", { a: dayLabel(today) })
+        : T(lang, "Ma kiküldött megkeresések ({a})", { a: dayLabel(today) })
       : "";
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${filter}<div class="rp-filt rp-filt--dates">${dates}${periodNote ? `<span class="rp-filt__n">${esc(periodNote)}</span>` : ""}</div>${body}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${korSwitch}${filter}<div class="rp-filt rp-filt--dates">${dates}${periodNote ? `<span class="rp-filt__n">${esc(periodNote)}</span>` : ""}</div>${body}`,
     { active },
   );
 }
@@ -289,7 +317,11 @@ function hypothesisCards(d: ReportData, lang: string): string {
         ? T(lang, "{n} megnyitás · a kisebb a jobb", { n: h.num })
         : `${h.num} / ${h.den}`;
       const change = delta(h.value, h.prevValue, lang, lower);
-      const changeNote = !d.days
+      // The follow-up round compares with the first round over the same window (plan A, point 5).
+      const peerH = d.round === "re" ? d.peer?.hypotheses.find((x) => x.key === h.key) : undefined;
+      const changeNote = peerH
+        ? esc(T(lang, "az első körben: {v}", { v: lower ? fmtH(peerH.value, lang) : pctV(peerH.value) }))
+        : !d.days
         ? change
         : d.period.key === "today"
           ? T(lang, "{d} a tegnapihoz", { d: change })
@@ -443,7 +475,8 @@ const OPEN_SOURCE_JS =
 function openSourcePanel(d: ReportData, lang: string): string {
   const lab = OPEN_SOURCE_LABEL(lang);
   const openers = d.counts.opened;
-  const rows = d.openSources;
+  // The first round is cut at the follow-up letter, so its row would only ever read 0 (plan point 3).
+  const rows = d.round === "re" ? d.openSources.filter((r) => r.source === "followup" || r.got !== 0 || r.openers) : d.openSources.filter((r) => r.source !== "followup");
   const total = rows.reduce((a, r) => a + r.openers, 0);
   const stack = rows
     .filter((r) => r.openers)

@@ -9,6 +9,9 @@
 // A mail being merely opened is not measured — an "open" is the link click.
 // SMS and MMS are one channel: the link rides the SMS (or the MMS's companion SMS).
 //
+// The 5th tile is the non-opener follow-up letter (ADR-0442), measured apart from the first
+// outreach (frozen plan: assets/design-refs/console/ujrakereses-meres/, point 7).
+//
 // The data is the report's own (loadProspectFacts), so a number here and the Riport
 // „Honnan nyitották” panel are attributed by the same rules.
 
@@ -27,6 +30,9 @@ export interface OpenCell {
 
 export interface OpenChannelsPeriod {
   readonly cells: Readonly<Record<OpenChannel, OpenCell>>;
+  /** The 5th tile „Újrakeresés” (plan ujrakereses-meres, point 7): got = follow-up letters sent in the
+   *  period; opened = of those, a lead that opened any link after the letter (bots excluded). */
+  readonly re: OpenCell;
   /** Leads that got the link in the period and have an open no channel could be named for. */
   readonly unknown: number;
 }
@@ -53,12 +59,27 @@ export function foldOpenChannels(facts: readonly ProspectFacts[], period: Report
     const touched = OPEN_CHANNELS.some((ch) => inPeriod(p.touches?.[ch], period));
     if (touched && p.visits.some((v) => (v.openSource ?? "unknown") === "unknown")) unknown++;
   }
-  return { cells, unknown };
+  return { cells, unknown, re: { got: 0, opened: 0 } };
+}
+
+/** The follow-up round's cell: `reFacts` = loadProspectFacts("re") (sentAt = the letter, visits after it). */
+export function foldFollowupCell(reFacts: readonly ProspectFacts[], period: ReportPeriod): OpenCell {
+  let got = 0;
+  let opened = 0;
+  for (const p of reFacts) {
+    if (!inPeriod(p.sentAt, period)) continue;
+    got++;
+    if (p.visits.length) opened++;
+  }
+  return { got, opened };
 }
 
 export async function getOpenChannels(now = new Date()): Promise<OpenChannelsData> {
-  const facts = await loadProspectFacts();
+  const [facts, reFacts] = await Promise.all([loadProspectFacts(), loadProspectFacts("re")]);
   const out = {} as Record<OpenPeriod, OpenChannelsPeriod>;
-  for (const k of OPEN_PERIODS) out[k] = foldOpenChannels(facts, reportPeriod(k, null, null, now));
+  for (const k of OPEN_PERIODS) {
+    const period = reportPeriod(k, null, null, now);
+    out[k] = { ...foldOpenChannels(facts, period), re: foldFollowupCell(reFacts, period) };
+  }
   return out;
 }

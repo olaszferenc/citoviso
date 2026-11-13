@@ -17,6 +17,9 @@
 //      a second run sends nothing; a failed send releases the claim; daily cap 0 → the tick
 //      sends nothing; an open that lands after the list was read stops the send;
 //   ④ the measurement: `?f` → open_via 'followup' → the report credits "followup", sure.
+//   ⑤ measured apart from the first outreach (owner 2026-11-13): the first round is cut at the
+//      letter; the follow-up round („Újrakeresés”) holds only the letter's leads, timed by the
+//      letter, with only what came after it; the dashboard tile counts the same.
 //
 // The dev DB is SHARED: every row is this run's own (stamped names, example.invalid addresses)
 // and deleted in `finally`; nothing leaves the machine — the mailer is an injected recorder, and
@@ -30,7 +33,8 @@
 import { config } from "../src/config.js";
 import { db } from "../src/db/client.js";
 import { getSetting, setSetting } from "../src/console/appSettings.js";
-import { attributeOpen } from "../src/console/reportData.js";
+import { foldFollowupCell } from "../src/console/openChannels.js";
+import { attributeOpen, loadProspectFacts, reportPeriod } from "../src/console/reportData.js";
 import { nonOpenerHtmlFor, renderNonOpenerLetter, type NonOpenerLetter, type NonOpenerLetterInput } from "../src/email/nonOpenerEmail.js";
 import type { EmailMessage, EmailSender } from "../src/email/sender.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
@@ -272,6 +276,27 @@ if (!SELF_TEST) {
     await db.insertInto("mock_view").values({ prospect_id: botOnly.prospectId, device: "desktop" } as never).execute();
     const late = await sendNonOpenerFollowup(bot, { ...base, now: WEEKDAY });
     check("③ a lista után érkezett megnyitás megállítja a küldést", late.kind === "skipped" && late.reason.includes("megnyitotta") && (await claimsOf(botOnly.leadId)) === 0, JSON.stringify(late));
+
+    // ⑤ measured apart (owner 2026-11-13; plan design-refs/console/ujrakereses-meres/): the first
+    // round is cut at the letter, the follow-up round counts only what came after it.
+    console.log("⑤ külön mérés");
+    const letterAt = (await db.selectFrom("nonopener_followup").select("sent_at").where("lead_id", "=", target.leadId).executeTakeFirst())?.sent_at;
+    check("⑤ (a levél kiküldése rögzítve)", !!letterAt);
+    if (letterAt) {
+      const at = new Date(letterAt as Date | string);
+      await db.insertInto("mock_view").values({ prospect_id: target.prospectId, device: "mobile", open_via: "email", started_at: new Date(at.getTime() - 86_400_000) } as never).execute();
+      await db.insertInto("mock_view").values({ prospect_id: target.prospectId, device: "mobile", open_via: "followup", started_at: new Date(at.getTime() + 3_600_000) } as never).execute();
+      const first = (await loadProspectFacts("first")).find((p) => p.id === target.prospectId);
+      const re = (await loadProspectFacts("re")).find((p) => p.id === target.prospectId);
+      check("⑤ első kör: a levél UTÁNI megnyitás nem számít bele", first?.visits.length === 1 && first.visits[0]!.openSource !== "followup", JSON.stringify(first?.visits.map((v) => v.openSource)));
+      check("⑤ első kör: nincs „Utánkövető levél” forrás", !first?.visits.some((v) => v.openSource === "followup"));
+      check("⑤ újrakeresés: a lead benne van, a küldés ideje a levélé", !!re && re.sentAt.getTime() === at.getTime(), `${re?.sentAt.toISOString()} vs ${at.toISOString()}`);
+      check("⑤ újrakeresés: csak a levél utáni megnyitás, „followup” biztos forrással", re?.visits.length === 1 && re.visits[0]!.openSource === "followup" && re.visits[0]!.openSourceSure === true, JSON.stringify(re?.visits.map((v) => v.openSource)));
+      const cell = foldFollowupCell(re ? [re] : [], reportPeriod("0", null, null, WEEKDAY));
+      check("⑤ irányítópult Újrakeresés csempe: 1 kapta, 1 megnyitotta", cell.got === 1 && cell.opened === 1, JSON.stringify(cell));
+      const others = (await loadProspectFacts("re")).filter((p) => prospects.includes(p.id) && p.id !== target.prospectId);
+      check("⑤ újrakeresés: levél nélküli lead nincs a körben", others.length === 0, String(others.length));
+    }
 
     await setSetting(NONOPENER_DAILY_CAP_KEY, "0");
     const capped = await runNonOpenerFollowups(WEEKDAY, base);

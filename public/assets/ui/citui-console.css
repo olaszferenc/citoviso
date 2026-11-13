@@ -3115,6 +3115,22 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-os-viber { background: var(--citui-navy-700); }
 .rp-os-whatsapp { background: color-mix(in srgb, var(--citui-ok) 80%, var(--citui-navy-900)); }
 .rp-os-unknown { background: color-mix(in srgb, var(--citui-muted) 55%, var(--citui-panel)); }
+/* Újrakeresés — the non-opener follow-up round (plan: design-refs/console/ujrakereses-meres/) */
+.rp-os-followup { background: color-mix(in srgb, var(--citui-bad) 55%, var(--citui-warn)); }
+.rp-kor { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin: 4px 0 12px; }
+.rp-kor__l { font-size: 12.5px; font-weight: 600; color: var(--citui-muted); }
+.rp-kor__seg { display: inline-flex; padding: 3px; background: var(--citui-surface-2); border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-pill); }
+.con .rp-kor__b, .rp-kor__b { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--citui-radius-pill); font-weight: 700; font-size: 13px; color: var(--citui-muted); text-decoration: none; }
+.con .rp-kor__b:hover, .rp-kor__b:hover { color: var(--citui-ink); text-decoration: none; }
+.rp-kor__b small { font-size: 11px; font-weight: 600; opacity: .75; }
+.con .rp-kor__b.on, .rp-kor__b.on { background: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+.con .rp-kor__b--re.on, .rp-kor__b--re.on { background: color-mix(in srgb, var(--citui-bad) 55%, var(--citui-warn)); }
+.rp-kor__why { flex-basis: 100%; font-size: 12px; color: var(--citui-muted); }
+.rp-kor-tag { display: inline-block; margin-right: 6px; padding: 0 7px; border-radius: 6px; font-size: 11px; line-height: 1.6; color: var(--citui-ink-inverse); background: color-mix(in srgb, var(--citui-bad) 55%, var(--citui-warn)); }
+@media (max-width: 640px) {
+  .rp-kor__seg { display: flex; width: 100%; }
+  .con .rp-kor__b, .rp-kor__b { flex: 1; justify-content: center; padding: 9px 6px; }
+}
 .rp-os-dim { opacity: .55; }
 .rp-pill.rp-src { gap: 0; font-weight: 500; }
 .rp-pill.rp-src .rp-os-dot { width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
@@ -4162,9 +4178,11 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 /* Megnyitás csatornánként — dashboard card (frozen plan: assets/design-refs/console/csatorna-megnyitas/, „B”) */
 .oc-card { container-type: inline-size; margin-top: 14px; }
 .oc-card .con-w__h .oc-more { margin-left: auto; font-weight: 600; color: var(--citui-link-ink); }
-.oc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.oc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.05fr); gap: 10px; margin-top: 10px; }
+.oc-tag { font-style: normal; font-size: 10px; font-weight: 700; line-height: 1.4; color: var(--citui-ink-inverse); background: color-mix(in srgb, var(--citui-bad) 55%, var(--citui-warn)); border-radius: 5px; padding: 0 5px; margin-left: 6px; }
 .con .oc-tile, .oc-tile { display: block; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 11px 12px 10px; background: var(--citui-surface-2); color: var(--citui-ink); text-decoration: none; min-width: 0; }
 .con .oc-tile:hover, .oc-tile:hover { border-color: var(--citui-link-ink); text-decoration: none; }
+.con .oc-tile--re, .oc-tile--re { background: color-mix(in srgb, var(--citui-warn) 10%, var(--citui-panel)); border-color: color-mix(in srgb, var(--citui-bad) 30%, var(--citui-line)); }
 .oc-h { display: flex; align-items: center; font-weight: 600; font-size: 13px; }
 .oc-sq { flex: none; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; }
 .oc-hero { display: block; font: 700 28px/1.05 var(--citui-font-display); margin: 8px 0 1px; font-variant-numeric: tabular-nums; }
@@ -4182,6 +4200,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .oc-foot b { color: var(--citui-ink); font-weight: 600; }
 @container (max-width: 640px) {
   .oc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .oc-tile--re { grid-column: 1 / -1; }
   .oc-hero { font-size: 24px; }
   .oc-trio { font-size: 10.5px; gap: 3px; }
   .oc-tile, .con .oc-tile { padding: 10px 9px 9px; }

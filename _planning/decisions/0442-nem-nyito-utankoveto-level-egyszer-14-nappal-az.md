@@ -33,3 +33,15 @@ csak azoknak megy, akiket a mostani nem fogott meg.
 **Következmény.** Élesítéskor a prod `.env`-be `OUTREACH_FOLLOWUP_SENDER_NAME` kell (enélkül a tick minden leadet
 kihagy, és naplózza, miért); a 0135 migráció additív. Csak-olvasó áttekintés: `npx tsx scripts/nonopener-followup.mts
 [--gates]`. Őr: `scripts/nonopener-followup-check.mts`.
+
+### Kiegészítés 2026-11-13 — az Újrakeresés külön mérése (tulaj)
+
+Tulaj: „az újra megkeresést külön kell mérni az első kiküldéstől!!!!”, majd: „ide is kell egy váltó …” → „A) legyen”.
+Terv: `assets/design-refs/console/ujrakereses-meres/` (A köt).
+- Az **első kör** riportja az utánkövető levél kiküldésénél VÁG (mint a próba-kampánynál; a korábbi vág) —
+  `loadSecondTouch`, `src/console/reportData.ts`. A „Honnan nyitották” első-köri panelén nincs „Utánkövető levél” sor
+  (ez felülírja a fenti terv 7. pontjának ezt a részét).
+- **Újrakeresés kör** (`loadProspectFacts("re")`, `/report?kor=ujra`): a kohorsz a levelet kapott leadek, a küldés
+  ideje a levélé, csak a levél utáni események számítanak; a kártyákon „az első körben: X” összevetés.
+- Irányítópult „Megnyitás csatornánként”: 5. csempe „Újrakeresés · 2. kör”.
+- Őr: `scripts/nonopener-followup-check.mts` ⑤.

@@ -3674,9 +3674,11 @@ fi
 #     csatornás megkeresés óta, sosem nyitott; válaszolt / visszavont / leiratkozott / iker-cím
 #     kizárva); EGY LÖVÉS (ablakon kívül nem foglal, másodszor nem küld, bukás feloldja, késői megnyitás megállít,
 #     napi keret 0 → semmi). Saját, eldobható sorok a közös dev-DB-n; mock szállító kötelező. ~10 mp.
+#     ⑤ KÜLÖN MÉRÉS (tulaj 11-13, terv: assets/design-refs/console/ujrakereses-meres/): az első kör a levélnél
+#     vág, az Újrakeresés kör csak a levél leadjeit és a levél utáni eseményeket számolja (riport + csempe).
 #     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/nonopener-followup-check.mts ] && \
-   changed_files | grep -qE '^src/email/nonOpenerEmail\.ts$|^src/outreach/(nonOpenerFollowup|openVia|outreachCheck|trialCampaign|sharedContactGate)\.ts$|^migrations/0135_nonopener_followup\.sql$|^scripts/nonopener-followup(-check)?\.mts$'; then
+   changed_files | grep -qE '^src/email/nonOpenerEmail\.ts$|^src/outreach/(nonOpenerFollowup|openVia|outreachCheck|trialCampaign|sharedContactGate)\.ts$|^src/console/(reportData|openChannels)\.ts$|^migrations/0135_nonopener_followup\.sql$|^scripts/nonopener-followup(-check)?\.mts$'; then
   if changed_files | grep -qE '^scripts/nonopener-followup-check\.mts$'; then
     echo "[pre-commit] nonopener-followup-check --self-test (az utánkövető-levél őr pirosra tud-e menni)…"
     EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/nonopener-followup-check.mts --self-test >"$GATE_LOG" || gate_failed
