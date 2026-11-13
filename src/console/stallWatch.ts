@@ -47,7 +47,7 @@ export const REGISTRY_CONFIRM_HOURS = 2;
 /** ADR-0403: the daily renewal sync runs at 04:20; a held name it has not checked for this long = it is not running. */
 export const RENEWAL_SYNC_STALE_HOURS = 48;
 
-export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar" | "renewal";
+export type StallKind = "payment" | "domain" | "sms-queue" | "ical" | "api-key" | "registry" | "registrar" | "registrar-down" | "renewal";
 
 export interface StallWatchDeps {
   /** Ask the gateway about a pending payment (the same idempotent path /pay/done runs). */
@@ -63,7 +63,7 @@ export interface StallWatchDeps {
    * ADR-0400: the registrar account's pre-flight (null = no live registrar here, nothing to
    * measure). Default: the memoized live adapter; the guard injects a verdict.
    */
-  registrarReady?(): Promise<{ ok: boolean; problems: readonly string[]; facts: readonly string[] } | null>;
+  registrarReady?(): Promise<{ ok: boolean; problems: readonly string[]; facts: readonly string[]; unreachable?: boolean } | null>;
   /** ADR-0400: did a .hu confirmation link arrive since `since`? Default: the mailbox watcher's state. */
   confirmLinkSeenSince?(since: Date): Promise<boolean>;
 }
@@ -253,24 +253,47 @@ async function sweepRegistryConfirmation(now: Date, deps: StallWatchDeps): Promi
 // Asked hourly, not only at a purchase: the gap (no identifier on the domain profile, 0
 // credit, ToS pending) must surface BEFORE a customer pays. One alert per problem-set per
 // day; a changed problem-set is a new alert.
+//
+// "The registrar did not answer" (5xx / network, `unreachable`) is NOT a gap in the account:
+// 2026-11-13 12:00 UTC one Websupport HTTP 500 sent "the account is incomplete" mail + SMS
+// while the profile was complete (200 again minutes later). The adapter already retries;
+// here an outage alerts only when it is still there REGISTRAR_DOWN_MINUTES after it was
+// first seen (the hourly run → the next consecutive run), under its own subject. The start
+// of the streak lives in house_alert_once (key REGISTRAR_DOWN_STREAK, created_at = first seen).
 
-async function sweepRegistrarReadiness(now: Date, deps: StallWatchDeps): Promise<Case[]> {
+export const REGISTRAR_DOWN_MINUTES = 45;
+const REGISTRAR_DOWN_STREAK = "registrar-down:streak";
+
+async function sweepRegistrarReadiness(now: Date, deps: StallWatchDeps): Promise<{ missing: Case[]; down: Case[] }> {
   const ask = deps.registrarReady ?? realStallDeps.registrarReady!;
-  let r: { ok: boolean; problems: readonly string[]; facts: readonly string[] } | null;
+  let r: { ok: boolean; problems: readonly string[]; facts: readonly string[]; unreachable?: boolean } | null;
   try {
     r = await ask();
   } catch (e) {
     r = { ok: false, problems: [`a készenlét-ellenőrzés hibázott: ${(e as Error).message}`], facts: [] };
   }
-  if (!r || r.ok) return [];
   const day = budapestIsoDay(now);
+  const line = (x: NonNullable<typeof r>): string =>
+    x.problems.map((p) => `- ${p}`).join("\n") + (x.facts.length ? `\n\nMért tények:\n${x.facts.map((f) => `- ${f}`).join("\n")}` : "");
+  if (r && !r.ok && r.unreachable) {
+    await db
+      .insertInto("house_alert_once")
+      .values({ key: REGISTRAR_DOWN_STREAK, tag: "registrar-down", created_at: now as never })
+      .onConflict((oc) => oc.column("key").doNothing())
+      .execute();
+    const row = await db.selectFrom("house_alert_once").select("created_at").where("key", "=", REGISTRAR_DOWN_STREAK).executeTakeFirst();
+    const since = row ? new Date(row.created_at as unknown as string) : now;
+    const minutes = Math.floor((now.getTime() - since.getTime()) / 60_000);
+    if (minutes < REGISTRAR_DOWN_MINUTES) return { missing: [], down: [] };
+    return {
+      missing: [],
+      down: [{ key: `registrar-down:${day}`, line: `Először mérve: ${iso(since)} (${minutes} perce).\n\n${line(r)}` }],
+    };
+  }
+  await releaseOnce([REGISTRAR_DOWN_STREAK]);
+  if (!r || r.ok) return { missing: [], down: [] };
   const sig = r.problems.join("|").length.toString(36) + ":" + r.problems.length;
-  return [
-    {
-      key: `registrar-ready:${day}:${sig}`,
-      line: r.problems.map((p) => `- ${p}`).join("\n") + (r.facts.length ? `\n\nMért tények:\n${r.facts.map((f) => `- ${f}`).join("\n")}` : ""),
-    },
-  ];
+  return { missing: [{ key: `registrar-ready:${day}:${sig}`, line: line(r) }], down: [] };
 }
 
 // ── ②d the own domain's renewal (ADR-0403) ─────────────────────────────────────────
@@ -496,9 +519,26 @@ export async function runStallWatch(now: Date, deps: StallWatchDeps = realStallD
     })),
   );
 
+  const registrar = await sweepRegistrarReadiness(now, deps);
+  note(
+    "registrar-down",
+    await alertNew(deps, "registrar-down", registrar.down, (lines) => ({
+      tag: "registrar-down",
+      sms: true,
+      smsKey: "registrar-down",
+      subject: `Citoviso: a regisztrátor (Websupport) ${REGISTRAR_DOWN_MINUTES} perce nem válaszol — domain-vétel most nem indulna`,
+      text:
+        `A Websupport API ismételt próbálkozásra sem ad használható választ (szerverhiba vagy elérhetetlen). ` +
+        `Ez az ő oldaluk kiesése, NEM a fiókunk hiánya: a domain-profilt, a kreditet és az ÁSZF-et most nem lehet ` +
+        `megmérni. Amíg tart, egy új saját-domain vétel függőben marad (2 percenként újrapróbálja), pénz nem megy el.\n\n` +
+        `${lines.join("\n")}\n\n` +
+        `Teendő: csak ha órákig tart — a Websupport állapotoldala / ügyfélszolgálata. Ha helyreáll, a gép magától folytatja; ` +
+        `ez a levél naponta egyszer jön, amíg a kiesés áll.\n`,
+    })),
+  );
   note(
     "registrar",
-    await alertNew(deps, "registrar", await sweepRegistrarReadiness(now, deps), (lines) => ({
+    await alertNew(deps, "registrar", registrar.missing, (lines) => ({
       tag: "registrar-ready",
       sms: true,
       smsKey: "registrar-ready",

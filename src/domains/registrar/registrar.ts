@@ -27,6 +27,21 @@ export interface RegistrarReadiness {
   readonly problems: readonly string[];
   /** Measured facts worth seeing next to the verdict (credit, profile, identifier). */
   readonly facts: readonly string[];
+  /**
+   * True when EVERY problem is "the registrar did not answer" (5xx / network / non-JSON),
+   * not a measured gap in the account. Still `ok: false` (fail-closed for a purchase), but
+   * the house alert waits for it to persist: one Websupport 500 on 2026-11-13 12:00 UTC
+   * sent a "your account is incomplete" mail + SMS while the profile was complete.
+   */
+  readonly unreachable?: boolean;
+}
+
+/** The registrar API did not answer usably (HTTP 5xx, network error, non-JSON) — worth a retry. */
+export class RegistrarUnreachableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RegistrarUnreachableError";
+  }
 }
 
 /** The registrar account cannot register right now — nothing was ordered or charged. */

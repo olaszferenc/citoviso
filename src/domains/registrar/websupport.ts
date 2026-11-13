@@ -38,7 +38,7 @@
 
 import { createHmac } from "node:crypto";
 import type { DomainRegistration, DomainService, RegistrarAdapter, RegistrarReadiness } from "./registrar.js";
-import { DomainTakenError, RegistrarNotReadyError } from "./registrar.js";
+import { DomainTakenError, RegistrarNotReadyError, RegistrarUnreachableError } from "./registrar.js";
 import { noteDeadKey } from "../../console/keyDeath.js";
 
 const BASE = "https://rest.websupport.hu";
@@ -167,22 +167,31 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   async #request<T>(method: string, pathWithQuery: string, body?: unknown): Promise<T> {
-    const res = await fetch(`${BASE}${pathWithQuery}`, {
-      method,
-      headers: this.#headers(method, pathWithQuery),
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    const text = await res.text();
+    let res: Response;
+    let text: string;
+    try {
+      res = await fetch(`${BASE}${pathWithQuery}`, {
+        method,
+        headers: this.#headers(method, pathWithQuery),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      text = await res.text();
+    } catch (e) {
+      throw new RegistrarUnreachableError(`Websupport ${method} ${pathWithQuery}: nem érhető el (${(e as Error).message})`);
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(text);
     } catch {
-      throw new Error(`Websupport ${method} ${pathWithQuery}: nem JSON válasz (${res.status})`);
+      const m = `Websupport ${method} ${pathWithQuery}: nem JSON válasz (${res.status})`;
+      throw res.status >= 500 ? new RegistrarUnreachableError(m) : new Error(m);
     }
     if (!res.ok) {
       const msg = (parsed as { message?: string })?.message ?? text.slice(0, 200);
       if (res.status === 401 || res.status === 403) noteDeadKey("websupport", `registrar ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`);
-      throw new Error(`Websupport ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`);
+      const m = `Websupport ${method} ${pathWithQuery}: HTTP ${res.status} — ${msg}`;
+      // Same message either way: the purchase path matches on it (e.g. "Duplicate order").
+      throw res.status >= 500 ? new RegistrarUnreachableError(m) : new Error(m);
     }
     return parsed as T;
   }
@@ -289,19 +298,20 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   async readiness(): Promise<RegistrarReadiness> {
     const problems: string[] = [];
     const facts: string[] = [];
+    let unreachableProblems = 0;
     const expected = this.#expectedRegistrant.trim();
     if (!expected) {
       problems.push("WEBSUPPORT_EXPECTED_REGISTRANT nincs beállítva — a domain tulajdonosa nem igazolható (ADR-0103 ⑤)");
     }
     const sameName = (a: string, b: string): boolean => a.trim().toLowerCase().replace(/\s+/g, " ") === b.trim().toLowerCase().replace(/\s+/g, " ");
     try {
-      const user = await this.#request<{
+      const user = await this.#readGet<{
         login?: string;
         credit?: number | string | null;
         awaitingTosConfirmation?: string | number | null;
         billing?: { profile?: string; isDefault?: boolean; name?: string }[];
-      }>("GET", `/v1/user/${this.#userId}`);
-      const def = (user.billing ?? []).find((b) => b.isDefault) ?? (user.billing ?? [])[0];
+      }>(`/v1/user/${this.#userId}`);
+      const def =(user.billing ?? []).find((b) => b.isDefault) ?? (user.billing ?? [])[0];
       const actual = (def?.name ?? "").trim();
       facts.push(`fiók ${user.login ?? this.#userId}: alapértelmezett kontakt „${actual || "hiányzik"}”, kredit ${user.credit ?? "?"} Ft`);
       if (expected && !sameName(actual, expected)) {
@@ -313,10 +323,11 @@ export class WebsupportRegistrar implements RegistrarAdapter {
       const credit = Number(user.credit ?? 0);
       if (!(credit > 0)) problems.push(`a fiók kreditje ${user.credit ?? 0} Ft — a vétel kreditből megy, 0 kredittel nincs vétel`);
     } catch (e) {
+      if (e instanceof RegistrarUnreachableError) unreachableProblems++;
       problems.push(`a regisztrátor-fiók nem olvasható: ${(e as Error).message}`);
     }
     try {
-      const prof = await this.#request<{
+      const prof = await this.#readGet<{
         items?: {
           id?: number | string;
           firstName?: string | null;
@@ -330,7 +341,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
           identCompanyRegistration?: string | null;
           identIdentityCard?: string | null;
         }[];
-      }>("GET", `/v1/user/${this.#userId}/domainProfile`);
+      }>(`/v1/user/${this.#userId}/domainProfile`);
       const items = prof.items ?? [];
       if (items.length === 0) {
         problems.push("a fiókban NINCS domain-profil — a Nyilvántartó ebből venné a domain-használó adatait");
@@ -364,9 +375,28 @@ export class WebsupportRegistrar implements RegistrarAdapter {
         }
       }
     } catch (e) {
+      if (e instanceof RegistrarUnreachableError) unreachableProblems++;
       problems.push(`a domain-profil nem olvasható: ${(e as Error).message}`);
     }
-    return { ok: problems.length === 0, problems, facts };
+    const unreachable = problems.length > 0 && unreachableProblems === problems.length;
+    return { ok: problems.length === 0, problems, facts, ...(unreachable ? { unreachable: true } : {}) };
+  }
+
+  /**
+   * A read-only GET for the pre-flight, retried on a transient failure (5xx / network /
+   * non-JSON 5xx): 2026-11-13 12:00 UTC one `GET …/domainProfile` came back HTTP 500
+   * „Unexpected error" and answered 200 again minutes later. Never used for a mutation.
+   */
+  async #readGet<T>(path: string): Promise<T> {
+    const waits = [2_000, 5_000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.#request<T>("GET", path);
+      } catch (e) {
+        if (!(e instanceof RegistrarUnreachableError) || attempt >= waits.length) throw e;
+        await new Promise((r) => setTimeout(r, waits[attempt]));
+      }
+    }
   }
 
   /**
