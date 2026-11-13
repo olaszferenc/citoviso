@@ -342,6 +342,45 @@ await db.deleteFrom("domain_provisioning").where("site_id", "in", [1, 2, 3, 4, 5
 await resetLedger();
 drain();
 
+// ── ②c' the registrar did not ANSWER (2026-11-13 12:00 UTC: one Websupport HTTP 500 on
+// GET …/domainProfile → "the account is incomplete" mail + SMS, while it was complete).
+console.log("②c' a regisztrátor nem válaszol (5xx) ≠ hiányos fiók");
+const down = {
+  ok: false,
+  unreachable: true,
+  problems: ["a domain-profil nem olvasható: Websupport GET /v1/user/1/domainProfile: HTTP 500 — Unexpected error (teszt)"],
+  facts: ["fiók teszt: kredit 2020 Ft"],
+};
+let verdict: typeof down | { ok: true; problems: string[]; facts: string[] } = down;
+const deps3 = { ...deps, registrarReady: async () => verdict };
+await S.runStallWatch(NOW, deps3);
+d = drain();
+check("⭐ egyetlen 5xx-mérés: NINCS levél és NINCS SMS", d.mails.length === 0 && d.texts.length === 0, d.mails.map((m) => m.subject).join(" | "));
+verdict = { ok: true, problems: [], facts: [] };
+await S.runStallWatch(new Date(NOW.getTime() + 60 * 60_000), deps3);
+verdict = down;
+await S.runStallWatch(new Date(NOW.getTime() + 120 * 60_000), deps3);
+d = drain();
+check("közben helyreállt, majd újra egy 5xx: a számláló újraindult, NINCS riasztás", d.mails.length === 0 && d.texts.length === 0, d.mails.map((m) => m.subject).join(" | "));
+await S.runStallWatch(new Date(NOW.getTime() + 180 * 60_000), deps3);
+d = drain();
+const downMail = subj(/nem válaszol/);
+check(
+  "⭐ a következő óránkénti mérésnél is 5xx → SAJÁT tárgyú levél („nem válaszol”), nem „hiányos fiók”",
+  !!downMail && !subj(/regisztrátor-fiókunk NEM tud/) && downMail.text.includes("HTTP 500") && downMail.text.includes("NEM a fiókunk hiánya"),
+  d.mails.map((m) => m.subject).join(" | "),
+);
+check("a kiesés-riasztás SMS-sel is megy (egy darab)", d.texts.length === 1, d.texts.map((t) => t.text).join(" | "));
+await S.runStallWatch(new Date(NOW.getTime() + 240 * 60_000), deps3);
+d = drain();
+check("egy órával később ugyanaz a kiesés: semmi új (naponta egyszer)", d.mails.length === 0 && d.texts.length === 0, d.mails.map((m) => m.subject).join(" | "));
+verdict = { ok: false, problems: ["a fiók kreditje 0 Ft (teszt, kiesés után)"], facts: [] } as never;
+await S.runStallWatch(new Date(NOW.getTime() + 300 * 60_000), deps3);
+d = drain();
+check("valódi hiány (mért, nem kiesés) → továbbra is AZONNAL a „hiányos fiók” levél", !!subj(/regisztrátor-fiókunk NEM tud/), d.mails.map((m) => m.subject).join(" | "));
+await resetLedger();
+drain();
+
 S.resetCredentialMemo();
 const k1 = await S.reportCredentialFailure("places", "HTTP 403", { now: NOW, alert: H.alertHouse, live: true });
 const k2 = await S.reportCredentialFailure("places", "HTTP 403", { now: NOW, alert: H.alertHouse, live: true });
