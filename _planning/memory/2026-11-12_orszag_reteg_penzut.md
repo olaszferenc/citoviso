@@ -12,7 +12,7 @@ Session `cit8e9c29ff`, brief `~/rc-briefs/orszag-reteg-3a-penzut-20261112.md`, k
 - Őr: `scripts/country-layer-check.mts` ⑤; e2e: `scripts/money-path-e2e.mts` (CZ/CZK zöld, RO/RON zártan bukik).
 
 ## Nyitott / döntési pontok
-- LAND blokkolva: `mock-trial-overlay-check` ⑪ (card-sidebar 1536×864 süti-sávval, ismert, a mainen is piros) — tulaj-kivétel vagy a kapu javítása kell. Commitok: 46ac67d8, 14ecd16b, 5fd679db.
+- LAND tulaj-kivétellel (2026-11-13, ADR-0068, a koordinátoron át): a `mock-trial-overlay-check` ⑪ (card-sidebar 1536×864 süti-sávval, a tiszta `origin/main` a8d6fe19-en is piros) erre az EGY landra kihagyva, ugyanúgy, mint a 80f63d64-nél; minden más kapu lefutott. A kapu javítása nyitott.
 - Konfigurátor-kliens minor-unit patch parkolva: `~/rc-briefs/orszag-reteg-3a-cit-configurator-minor-unit.patch`.
 - RON/PLN Barionnál: sandbox-próba + tárcaszámla kell, addig RO/PL zárt (vagy másik szolgáltató — tulaj-döntés).
 - OSS-küszöbnél a megújítás is visszatartva (a küszöb feletti AAM-számla jogsértő lenne) — tulaj-döntés: OSS-regisztráció.
