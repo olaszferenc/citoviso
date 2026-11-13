@@ -4158,6 +4158,38 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .ls-s-wc { background: var(--citui-cyan-300); }
 .ls-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--citui-muted); margin-top: 8px; }
 .ls-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+/* Megnyitás csatornánként — dashboard card (frozen plan: assets/design-refs/console/csatorna-megnyitas/, „B”) */
+.oc-card { container-type: inline-size; margin-top: 14px; }
+.oc-card .con-w__h .oc-more { margin-left: auto; font-weight: 600; color: var(--citui-link-ink); }
+.oc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.con .oc-tile, .oc-tile { display: block; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 11px 12px 10px; background: var(--citui-surface-2); color: var(--citui-ink); text-decoration: none; min-width: 0; }
+.con .oc-tile:hover, .oc-tile:hover { border-color: var(--citui-link-ink); text-decoration: none; }
+.oc-h { display: flex; align-items: center; font-weight: 600; font-size: 13px; }
+.oc-sq { flex: none; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; }
+.oc-hero { display: block; font: 700 28px/1.05 var(--citui-font-display); margin: 8px 0 1px; font-variant-numeric: tabular-nums; }
+.oc-hero small { font: 500 12px var(--citui-font-text); color: var(--citui-muted); margin-left: 4px; }
+.oc-of { display: block; font-size: 11.5px; color: var(--citui-muted); }
+.oc-meter { display: block; height: 6px; border-radius: var(--citui-radius-pill); background: var(--citui-panel); border: 1px solid var(--citui-line); margin: 8px 0; overflow: hidden; }
+.oc-meter i { display: block; height: 100%; }
+.oc-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; font-size: 11.5px; text-align: center; }
+.oc-p { background: var(--citui-panel); border: 1px solid var(--citui-line); border-radius: 8px; padding: 4px 2px; }
+.oc-p.is-on { border-color: var(--citui-link-ink); }
+.oc-p b { display: block; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.oc-p span { color: var(--citui-muted); white-space: nowrap; }
+.oc-z { color: var(--citui-muted); }
+.oc-foot { font-size: 11.5px; color: var(--citui-muted); margin-top: 10px; border-top: 1px solid var(--citui-line); padding-top: 7px; }
+.oc-foot b { color: var(--citui-ink); font-weight: 600; }
+@container (max-width: 640px) {
+  .oc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .oc-hero { font-size: 24px; }
+  .oc-trio { font-size: 10.5px; gap: 3px; }
+  .oc-tile, .con .oc-tile { padding: 10px 9px 9px; }
+  .oc-p { padding: 4px 1px; }
+  .oc-p b { font-size: 11.5px; letter-spacing: -0.02em; }
+  .oc-card .con-w__h { flex-wrap: wrap; }
+  .oc-card .con-w__h .oc-more { margin-left: 0; flex-basis: 100%; }
+}
 .ls-rgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 .ls-def { margin: 12px 0; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 10px 14px; background: var(--citui-surface-2); }
 .ls-def summary { cursor: pointer; font-weight: 600; }

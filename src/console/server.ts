@@ -1808,6 +1808,8 @@ async function handle(
       noLoginTrials: await loadNoLoginTrials(),
       // ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates).
       messenger: await (await import("../mms/messenger.js")).messengerStats(),
+      // „Megnyitás csatornánként” (owner, 2026-11-13, plan „B”): its own Ma · 7 nap · Összes.
+      openChannels: await (await import("./openChannels.js")).getOpenChannels(),
       // Lead-állomány + the period chip (owner, 2026-11-12): default „Összes”, like the CRM card it replaces.
       ...(await (async () => {
         const raw = url.searchParams.get("days");

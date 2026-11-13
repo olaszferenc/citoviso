@@ -66,6 +66,9 @@ const VIEW_GROUPS = {
   ],
   operator: [
     "src/console/views.ts",
+    // Owner 2026-11-13 (plan design-refs/console/csatorna-megnyitas/): the dashboard's
+    // „Megnyitás csatornánként” card is its own view file — the dashboard entry quotes it.
+    "src/console/openChannelsViews.ts",
     // ADR-0290: the shared time-zone picker (see the tenant list).
     "src/tenant/zonePicker.ts",
     "src/console/nav.ts",
