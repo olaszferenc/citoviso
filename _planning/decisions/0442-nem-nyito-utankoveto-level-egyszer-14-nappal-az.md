@@ -1,4 +1,4 @@
-## ADR-XXXX — Nem-nyitó utánkövető levél: egyszer, 14 nappal az utolsó megkeresés után, képpel indul, személynévvel
+## ADR-0442 — Nem-nyitó utánkövető levél: egyszer, 14 nappal az utolsó megkeresés után, képpel indul, személynévvel
 
 **Dátum:** 2026-11-12 · **Döntött:** tulaj (brief `email-20261112-141510.md`, két terv-kör után „Az email így már ok”,
 „Első körben mehet a nevem”) · **Terv:** `assets/design-refs/console/nem-nyito-level/` (README = a kontraktus)

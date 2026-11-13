@@ -7,7 +7,7 @@
 // Now each transport appends ONE letter to the link — `?e` mail, `?s` SMS, `?m` messenger
 // (Viber/WhatsApp: the phone picks the app at send time, after the text is frozen — the
 // mms_outbox row's `channel` says which), `?w` the automatic WhatsApp follow-up, `?f` the
-// non-opener follow-up letter (ADR-XXXX).
+// non-opener follow-up letter (ADR-0442).
 //
 // ⛔ The tag is applied at the LAST step, on the text that goes to the transport — never
 // on the draft. The draft link is what the §C gate, the owner's copy overrides, the

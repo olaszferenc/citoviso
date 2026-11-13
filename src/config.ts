@@ -323,7 +323,7 @@ export const config = {
    */
   supportEmail: env("SUPPORT_EMAIL") || "info@citoviso.com",
   /**
-   * ADR-XXXX: the PERSON the non-opener follow-up letter is from (visible From + signature).
+   * ADR-0442: the PERSON the non-opener follow-up letter is from (visible From + signature).
    * Owner, 2026-11-12: „ne citoviso legyen a látható küldő hanem a nevem … személynév kell”,
    * „első körben mehet a nevem”. Config, never hardcoded (the owner's name is no fixed text);
    * empty = the follow-up sends nothing and says why.

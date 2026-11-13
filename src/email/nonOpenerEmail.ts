@@ -1,4 +1,4 @@
-// ADR-XXXX — the ONE follow-up letter to a lead who never opened the outreach link (owner,
+// ADR-0442 — the ONE follow-up letter to a lead who never opened the outreach link (owner,
 // 2026-11-12: „ezt a verziót 2 hét után küldenénk azoknak, akik nem nyitották meg … ha nem a
 // duma hanem a képpel indulna”). Frozen plan: assets/design-refs/console/nem-nyito-level/.
 //

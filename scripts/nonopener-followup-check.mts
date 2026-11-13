@@ -1,4 +1,4 @@
-// ADR-XXXX — the NON-OPENER FOLLOW-UP letter (src/email/nonOpenerEmail.ts,
+// ADR-0442 — the NON-OPENER FOLLOW-UP letter (src/email/nonOpenerEmail.ts,
 // src/outreach/nonOpenerFollowup.ts). What this proves, each leg a way the letter could break the
 // owner's approval (assets/design-refs/console/nem-nyito-level/README.md) or a rule:
 //   ① the letter: subject "<name> – közvetlen foglalás / érdeklődés"; the visible From and the

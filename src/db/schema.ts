@@ -601,7 +601,7 @@ export interface BehaviorMessageTable {
   sent_at: Timestamp | null;
 }
 
-/** 0135 (ADR-XXXX): the non-opener follow-up letter — one send per lead and per address. */
+/** 0135 (ADR-0442): the non-opener follow-up letter — one send per lead and per address. */
 export interface NonopenerFollowupTable {
   id: Generated<string>;
   lead_id: string;

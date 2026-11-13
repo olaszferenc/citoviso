@@ -1,4 +1,4 @@
-// ADR-XXXX — the non-opener follow-up, READ-ONLY view: who would get the letter and why the rest
+// ADR-0442 — the non-opener follow-up, READ-ONLY view: who would get the letter and why the rest
 // would not (src/outreach/nonOpenerFollowup.ts). The real sends ride the hourly tick
 // (scripts/offer-followup.mts); this script never claims or sends.
 //

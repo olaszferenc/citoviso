@@ -1,4 +1,4 @@
-// ADR-XXXX — the NON-OPENER FOLLOW-UP: ONE letter to a lead who never opened the outreach link,
+// ADR-0442 — the NON-OPENER FOLLOW-UP: ONE letter to a lead who never opened the outreach link,
 // 14 days after its LAST outreach on ANY channel (owner, 2026-11-12: „ezt a verziót 2 hét után
 // küldenénk azoknak a leadeknek akik nem nyitották meg egyáltalán a megkeresést … ha nem a duma
 // hanem a képpel indulna”; „ne csak emailt nézzünk, hanem az utolsó bármilyen csatornás

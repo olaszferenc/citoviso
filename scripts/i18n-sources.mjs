@@ -65,7 +65,7 @@ export const I18N_SOURCES = [
   "src/email/trialCampaignEmail.ts",
   // ADR-0439: the behaviour message SMS + mail copy (variant A) — every lead-facing line through T().
   "src/outreach/behaviorMessageCopy.ts",
-  // ADR-XXXX: the non-opener follow-up letter (subject, body, button, price box).
+  // ADR-0442: the non-opener follow-up letter (subject, body, button, price box).
   "src/email/nonOpenerEmail.ts",
   // Elek T-3: the masked mail copy logged to the owner's Üzenetek tab.
   "src/tenant/credentials.ts",

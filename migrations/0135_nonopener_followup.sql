@@ -1,4 +1,4 @@
--- 0135 NON-OPENER FOLLOW-UP (ADR-XXXX) — ONE letter to a lead who never opened the outreach link,
+-- 0135 NON-OPENER FOLLOW-UP (ADR-0442) — ONE letter to a lead who never opened the outreach link,
 -- 14 days after its LAST outreach on any channel (owner 2026-11-12; frozen plan:
 -- assets/design-refs/console/nem-nyito-level/). src/outreach/nonOpenerFollowup.ts.
 --
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS nonopener_followup (
 CREATE UNIQUE INDEX IF NOT EXISTS nonopener_followup_address_uq ON nonopener_followup (address_key);
 
 COMMENT ON TABLE nonopener_followup IS
-  'Non-opener follow-up letter: one send per lead and per mail address (src/outreach/nonOpenerFollowup.ts, ADR-XXXX).';
+  'Non-opener follow-up letter: one send per lead and per mail address (src/outreach/nonOpenerFollowup.ts, ADR-0442).';
 
 -- The letter's link carries `?f` (src/outreach/openVia.ts) — the open is credited to it.
 ALTER TABLE mock_view DROP CONSTRAINT IF EXISTS mock_view_open_via_check;

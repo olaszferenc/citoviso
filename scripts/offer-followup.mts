@@ -24,7 +24,7 @@
 // ADR-0374 — and the STALL WATCH (src/console/stallWatch.ts): a payment the gateway never
 // closed, a domain stuck before registration, an SMS queue not draining, an iCal link failing
 // for a day, a dead Anthropic key → house mail (+ filtered SMS for the severe ones), once each.
-// ADR-XXXX — and the NON-OPENER FOLLOW-UP letter (src/outreach/nonOpenerFollowup.ts): a lead who
+// ADR-0442 — and the NON-OPENER FOLLOW-UP letter (src/outreach/nonOpenerFollowup.ts): a lead who
 // never opened the link, 14 days after its last outreach on any channel, gets ONE letter that opens
 // with the plan image; ≤ 5 per tick, ≤ the daily cap, weekday 8–17 Budapest.
 //   tsx scripts/offer-followup.mts [--now=2026-10-01T09:00:00+02:00]
@@ -66,7 +66,7 @@ try {
   process.exitCode = 1;
 }
 try {
-  // ADR-XXXX: the non-opener follow-up letter (one per lead, image first, from a person).
+  // ADR-0442: the non-opener follow-up letter (one per lead, image first, from a person).
   const no = await runNonOpenerFollowups(now);
   console.log(`nonopener-followup (e-mail éles) @ ${now.toISOString()}:`, JSON.stringify(no));
 } catch (e) {

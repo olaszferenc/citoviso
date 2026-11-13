@@ -145,7 +145,7 @@ export interface Visit {
 }
 
 /** Where a visit came from. `unknown` = an old, untagged link the lead got on 2+ channels. */
-/** `followup` = the non-opener follow-up letter (`?f`, ADR-XXXX) — only ever a sure, tagged open. */
+/** `followup` = the non-opener follow-up letter (`?f`, ADR-0442) — only ever a sure, tagged open. */
 export type OpenSource = "email" | "sms" | "viber" | "whatsapp" | "followup" | "unknown";
 export const OPEN_SOURCES: readonly OpenSource[] = ["email", "sms", "viber", "whatsapp", "followup", "unknown"];
 /** The first send of the LINK per channel (before the second-touch cut). */

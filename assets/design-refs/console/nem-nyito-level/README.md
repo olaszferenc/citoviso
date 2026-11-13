@@ -12,7 +12,7 @@ a mostani és az új levéllel) · `ui-nem-nyito-level-mobile.png` · `ui-nem-ny
 (dev-mintalead: Lidó Wellness és Bor Villa, 1 terv; a próbalevél a tulaj postafiókjába ment, 11-12 15:0x).
 **Megvalósítás:** `src/email/nonOpenerEmail.ts` (a levél) · `src/outreach/nonOpenerFollowup.ts` (célcsoport, kapuk,
 egy-lövés, ütem) · óránkénti tick: `scripts/offer-followup.mts` · csak-olvasó nézet: `scripts/nonopener-followup.mts` ·
-őr: `scripts/nonopener-followup-check.mts` · migráció `0135_nonopener_followup.sql` · ADR-XXXX.
+őr: `scripts/nonopener-followup-check.mts` · migráció `0135_nonopener_followup.sql` · ADR-0442.
 
 ## Mit KÖT ez a terv (nem stílus-javaslat)
 

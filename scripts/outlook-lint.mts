@@ -157,7 +157,7 @@ const LETTERS: readonly { name: string; html: string }[] = [
     ).html as string,
   },
   {
-    name: "nem-nyitó utánkövető levél (ADR-XXXX)",
+    name: "nem-nyitó utánkövető levél (ADR-0442)",
     html: buildNonOpenerEmail(
       renderNonOpenerLetter({
         lang,
