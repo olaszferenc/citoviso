@@ -87,7 +87,8 @@ leadet mutatja.
   fizetett, az nem indíthat próbát. Ha a próbázó a próba után fizetve folytatja, az a folytatás rendelésnek
   számít: ő a **„Próba”**, a **„Rendelés”** és a **„Fizetve”** oszlopban is ott van.
 - **„Honnan nyitották”**: melyik üzenet linkjére kattintott a lead — **E-mail**, **SMS**,
-  **Viber**, **WhatsApp**, vagy **„Nem eldönthető”**. Felül egy sáv a megnyitó leadek
+  **Viber**, **WhatsApp**, **„Utánkövető levél”** (a nem-nyitóknak küldött egyszeri levél, lásd lent),
+  vagy **„Nem eldönthető”**. Felül egy sáv a megnyitó leadek
   megoszlásával, alatta a táblázat: **„Kapta”** (hány lead kapta meg ezen a csatornán a linket),
   **„Megnyitotta innen”** (hány lead nyitotta meg innen), **„Arány”** (a kettő hányadosa; a
   „Nem eldönthető” sorban a megnyitók arányában, csillaggal), és asztali gépen **„Megnyitás”**
@@ -99,9 +100,15 @@ leadet mutatja.
   biztos megnyitást).
   Az **„Alap”** megmondja, mennyire biztos a szám. **„biztos”**: 2026-11-09 óta a kiküldött link
   végén egy betű jelzi a csatornát (`/?e` e-mail · `/?s` SMS · `/?m` Viber vagy WhatsApp ·
-  `/?w` a WhatsApp-utánküldés); a lap ezt olvassa ki, és utána leveszi a címsorból, így egy
+  `/?w` a WhatsApp-utánküldés · `/?f` a nem-nyitó utánkövető levél); a lap ezt olvassa ki, és utána leveszi a címsorból, így egy
   továbbküldött link már nem az eredeti csatornára számít. Viber és WhatsApp között a telefon a
   küldés pillanatában választ, ezért ott a küldés naplója mondja meg, melyik volt.
+- **Az utánkövető levél** (nem-nyitóknak): aki e-mailt kapott, de 14 nappal az utolsó megkeresése után
+  (bármely csatornán) egyik linkjét sem nyitotta meg, egyszer kap még egy levelet, ami a terv képével
+  indul, és a feladója egy személynév. Nem kapja meg, aki leiratkozott, válaszolt, próbázik, rendelt vagy
+  vásárolt, akinek a kiküldését visszavonták, vagy akinek a terve nincs jóváhagyva. Óránként legfeljebb 5,
+  naponta alapból legfeljebb 40 megy ki, csak hétköznap 8–17. Ha az éles beállításban nincs megadva a feladó
+  neve, egy sem megy ki. Aki ebből a levélből nyitott, az a fenti táblázat „Utánkövető levél” sorában van.
   **„következtetett”**: régebbi küldés, amelynek linkjén még nem volt jel — ha a megnyitás előtt
   csak egy csatornán ment ki a link, vagy a levelezőprogram (pl. a Gmail-app) adta át, akkor onnan
   jött. **„Nem eldönthető”**: jel nélküli megnyitás, amely előtt több csatornán is kiment ugyanaz a

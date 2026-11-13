@@ -207,7 +207,8 @@ konzol-gomb nincs hozzá, és a nagy élesítés UTÁN, a tulaj külön „mehet
 
 Egy lead és egy cím (e-mail vagy telefonszám) **egyszer** kap kampány-üzenetet — ezt az adatbázis kényszeríti,
 mert a levél lábléce ígéri: „Erről a próbáról több levelet nem küldünk”. Akinek kiment, annak utána az
-eszkalációs emlékeztető sem megy. Ha egy küldés elbukik, nem számít kiküldöttnek: a következő futás újra próbálja.
+eszkalációs emlékeztető sem megy. Kivétel: ha egyik linket sem nyitotta meg, 14 nappal később egyszer
+megkapja a nem-nyitó utánkövető levelet (lásd a Riport cikk „Honnan nyitották” részét). Ha egy küldés elbukik, nem számít kiküldöttnek: a következő futás újra próbálja.
 
 A levél „Ha nem érdekli: mi tartja vissza?” gombjai egy kérdőlapot nyitnak (előre kijelölt válasszal); a válasz
 csak a lap „Elküldöm” gombjával rögzül, és a Riport megállt-okai között jelenik meg, mint a többi kimondott ok.
