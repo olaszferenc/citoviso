@@ -143,7 +143,7 @@ function buildMail(
     ) +
     `</td></tr>`;
 
-  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
+  // ADR-0444: the approved variant-A signature block (src/email/signature.ts).
   const signature =
     `<tr><td style="padding:4px ${PAD}px 0">` +
     `<div style="padding-top:16px;border-top:1px solid ${LINE}">` +

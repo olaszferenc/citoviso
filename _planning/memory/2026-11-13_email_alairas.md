@@ -1,6 +1,6 @@
 # 2026-11-13 — Egységes e-mail aláírás („A”: jel + cián vonal)
 
-**Brief:** `~/rc-briefs/email-al-r-s-20261113-082201.md` · **Fa:** `~/wt/cit383fe8b6` · **ADR:** ADR-XXXX
+**Brief:** `~/rc-briefs/email-al-r-s-20261113-082201.md` · **Fa:** `~/wt/cit383fe8b6` · **ADR:** ADR-0444
 
 ## Elvégezve
 - §2b terv-kör: 3 változat (A jel + cián vonal, B sötétkék névjegykártya, C logó felül), csapat/névvel, mobil/asztali → tulaj: **A**.

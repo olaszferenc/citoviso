@@ -1,4 +1,4 @@
-# E-mail aláírás — jóváhagyott terv (ADR-XXXX)
+# E-mail aláírás — jóváhagyott terv (ADR-0444)
 
 **Tulaj döntése, 2026-11-13: „A) kell”** — a `terv-3-valtozat.html` A változata („Jel + cián vonal”).
 A B és C változat csak a döntés dokumentációja.

@@ -40,7 +40,7 @@ export function buildMockReadyEmail(input: {
     T(lang, "a Citoviso csapata") +
     `\n`;
 
-  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
+  // ADR-0444: the approved variant-A signature block (src/email/signature.ts).
   const sig = signatureBlock(teamSignature(lang, config.supportEmail, T(lang, "Üdvözlettel,")));
   const html =
     `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +

@@ -418,7 +418,7 @@ export function buildTrialHelperEmail(input: {
     `${T(lang, "Felhasználónév:")} ${username}\n` +
     `${loginTextLine(lang, loginUrl)}\n\n` +
     `${help}\n\n${left}\n\n${bye}\n${sig}\n`;
-  // ADR-XXXX: the approved variant-A signature block (src/email/signature.ts).
+  // ADR-0444: the approved variant-A signature block (src/email/signature.ts).
   const sigBlock = signatureBlock(helperSignature(input.helperName, lang, config.supportEmail, bye));
   const mail = platformMail({
     to,

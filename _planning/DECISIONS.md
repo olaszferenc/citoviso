@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-egyseges-email-alairas-jel-cian-vonal.md) — Egységes e-mail aláírás: „Jel + cián vonal” (A), csapat- és névvel aláírt olvasat
+- [ADR-0444](decisions/0444-egyseges-e-mail-alairas-jel-cian-vonal-a-csapat.md) — Egységes e-mail aláírás: „Jel + cián vonal” (A), csapat- és névvel aláírt olvasat
 - [ADR-0443](decisions/0443-orszag-reteg-3-1-a-penz-utja-minden-orszag-a.md) — Ország-réteg 3/1: a pénz útja — minden ország a saját pénznemében áraz, fizettet és számláz
 - [ADR-0442](decisions/0442-nem-nyito-utankoveto-level-egyszer-14-nappal-az.md) — Nem-nyitó utánkövető levél: egyszer, 14 nappal az utolsó megkeresés után, képpel indul, személynévvel
 - [ADR-0441](decisions/0441-megnyitas-csatornankent-kartya-az.md) — Megnyitás csatornánként: kártya az Irányítópulton (saját Ma · 7 nap · Összes)

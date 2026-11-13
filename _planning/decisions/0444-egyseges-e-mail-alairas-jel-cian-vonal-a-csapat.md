@@ -1,4 +1,4 @@
-## ADR-XXXX — Egységes e-mail aláírás: „Jel + cián vonal” (A), csapat- és névvel aláírt olvasat
+## ADR-0444 — Egységes e-mail aláírás: „Jel + cián vonal” (A), csapat- és névvel aláírt olvasat
 
 **Dátum:** 2026-11-13 · **Döntött:** tulaj (§2b terv-kör, 3 változatból: „A) kell”) ·
 **Terv:** `assets/design-refs/console/email-alairas/` · **Kapcsolódik:** ADR-0101 (hideg levél, levélpapír),
