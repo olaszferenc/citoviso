@@ -9885,7 +9885,7 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
     (r.outreach
       ? messengerThread(r, thread, lang)
       : r.pageQuestion
-        ? `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(T(lang, "Kérdés a terv lapjáról"))} · ${esc(T(lang, "válasz: {ch}", { ch: repChName(r.channel, lang) }))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>`
+        ? `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(r.subject ?? "")} · ${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>`
         : `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
         `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>`) +
     (r.block ? "" : replyAnswer(r, q, hidden, lang)) +
@@ -9953,7 +9953,8 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
     chChip("whatsapp", "WhatsApp");
   const items = all
     .map((r) => {
-      const first = (r.pageQuestion ? `${T(lang, "Kérdés a terv lapjáról")}: ` : "") + replyExcerpt(r.body, 160);
+      // The page question's stored subject (PAGE_QUESTION_SUBJECT, data — not a UI string) marks the row.
+      const first = (r.pageQuestion && r.subject ? `${r.subject}: ` : "") + replyExcerpt(r.body, 160);
       return (
         `<a class="con-rep__it${r.answeredAt ? " is-done" : ""}" href="${esc(repliesHref({ filter: q.filter, reply: r.id, channel: ch }))}" data-rep-id="${esc(r.id)}" data-done="${r.answeredAt ? 1 : 0}" data-ch="${r.channel}"` +
         `${sel?.id === r.id ? ' aria-current="true"' : ""}${visible(r) ? "" : " hidden"}>` +
