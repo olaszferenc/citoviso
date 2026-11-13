@@ -433,7 +433,10 @@ const OPEN_SOURCE_LABEL = (lang: string): Readonly<Record<OpenSource, string>> =
 const OPEN_SOURCE_JS =
   `document.querySelectorAll('[data-os-tbl]').forEach(function(t){t.addEventListener('click',function(e){` +
   `if(e.target.closest('a'))return;var tr=e.target.closest('tr');var b=tr&&tr.querySelector('button[data-os]');if(!b)return;var s=t.querySelector('[data-os-sub="'+b.dataset.os+'"]');if(!s)return;` +
-  `s.hidden=!s.hidden;b.setAttribute('aria-expanded',String(!s.hidden))})})`;
+  `s.hidden=!s.hidden;b.setAttribute('aria-expanded',String(!s.hidden))})});` +
+  // The dashboard's „Megnyitás csatornánként” tile links here with #os-<channel>: unfold that row.
+  `(function(){var m=/^#os-(\\w+)$/.exec(location.hash);if(!m)return;var b=document.querySelector('button[data-os="'+m[1]+'"]');var s=document.querySelector('[data-os-sub="'+m[1]+'"]');` +
+  `if(b&&s){s.hidden=false;b.setAttribute('aria-expanded','true')}})()`;
 
 function openSourcePanel(d: ReportData, lang: string): string {
   const lab = OPEN_SOURCE_LABEL(lang);
@@ -461,7 +464,7 @@ function openSourcePanel(d: ReportData, lang: string): string {
         ? `<button type="button" class="rp-os-btn" data-os="${r.source}" aria-expanded="false"><b class="rp-os-${r.source} rp-os-dot"></b>${esc(lab[r.source])}</button>`
         : `<b class="rp-os-${r.source} rp-os-dot"></b>${esc(lab[r.source])}`;
       const tr =
-        `<tr${r.openers ? "" : ' class="rp-os-dim"'}><td>${name}</td><td class="num">${r.got === null ? "—" : r.got}</td>` +
+        `<tr id="os-${r.source}"${r.openers ? "" : ' class="rp-os-dim"'}><td>${name}</td><td class="num">${r.got === null ? "—" : r.got}</td>` +
         `<td class="num"><b>${r.openers}</b></td><td class="num">${esc(rate)}</td><td class="num rp-os-hm">${r.views}</td><td class="rp-os-hm small mut">${esc(basis)}</td></tr>`;
       if (!r.openers) return tr;
       const items = r.leads
@@ -480,7 +483,7 @@ function openSourcePanel(d: ReportData, lang: string): string {
     "Egy sorra kattintva: a leadek névsora; a névre kattintva a lead riportja. Egy lead több sorban is szerepelhet (pl. előbb az e-mailből, később az SMS-ből nyitott). „Biztos” = a link csatorna-jelet hordozott (2026-11-09 óta minden kiküldésnél); „következtetett” = régebbi küldés: a megnyitás előtt csak ez az egy csatorna vitte ki a linket, vagy a levelezőprogram küldte át. „Nem eldönthető” = régebbi küldés, amely előtt több csatornán is ugyanaz a link ment ki. * a megnyitók arányában.",
   );
   return (
-    `<div class="panel"><h2>${esc(T(lang, "Honnan nyitották"))} <span class="rp-q">${esc(T(lang, "— a {n} megnyitó lead csatorna szerint", { n: openers }))}</span></h2>` +
+    `<div class="panel" id="honnan"><h2>${esc(T(lang, "Honnan nyitották"))} <span class="rp-q">${esc(T(lang, "— a {n} megnyitó lead csatorna szerint", { n: openers }))}</span></h2>` +
     (total ? `<div class="rp-os-stack">${stack}</div>` : "") +
     `<div class="rp-os-leg">${legend}</div>` +
     `<table class="rp-tbl rp-os-tbl" data-os-tbl><thead><tr><th>${esc(T(lang, "Csatorna"))}</th><th class="num">${esc(T(lang, "Kapta"))}</th><th class="num">${esc(T(lang, "Megnyitotta innen"))}</th><th class="num">${esc(T(lang, "Arány"))}</th><th class="num rp-os-hm">${esc(T(lang, "Megnyitás"))}</th><th class="rp-os-hm">${esc(T(lang, "Alap"))}</th></tr></thead><tbody>${body}</tbody></table>` +

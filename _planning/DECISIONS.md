@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-megnyitas-csatornankent-kartya-az-iranyitopulton.md) — Megnyitás csatornánként: kártya az Irányítópulton (saját Ma · 7 nap · Összes)
 - [ADR-0439](decisions/0439-viselkedes-uzenet-egy-automatikus-uzenet.md) — Viselkedés-üzenet: egy automatikus üzenet leadenként, amikor a lead lép (A változat)
 - [ADR-0438](decisions/0438-lead-allomany-a-crm-kartya-helyett-keptipus.md) — Lead-állomány: a CRM-kártya helyett képtípus × állapot mátrix, riport-fül, időszak-gomb
 - [ADR-0437](decisions/0437-orszag-reteg-egy-master-data-entitas.md) — ORSZÁG-RÉTEG: egy master-data entitás országonként, amit a lead koordinátája aktivál; a HU-folyamat ettől paraméterezve fut bármely országra

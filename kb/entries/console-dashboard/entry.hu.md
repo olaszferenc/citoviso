@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-11-05
+updated: 2026-11-13
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -194,6 +194,29 @@ WhatsApp szünetel: Viber → MMS + SMS, a csak-WhatsAppos leadek a feloldásig 
 - Csatornánként egy csempe: hány százalék kézbesült, hányat néztek meg (Viber) vagy olvastak
   (WhatsApp), és hányra jött válasz. MMS-nél az olvasás nem mérhető, ott „n/a” áll; a
   „kézbesítve” ott azt jelenti, hogy a szolgáltató befogadta.
+
+### Megnyitás csatornánként
+
+A Messenger-út alatt a **„Megnyitás csatornánként”** kártya azt mutatja, melyik csatornán kiküldött
+linkre kattintanak a leadek. Négy csempe: E-mail, **„SMS / MMS”**, Viber, WhatsApp.
+
+- **A nagy szám** az elmúlt 7 nap aránya: a 7 napban ezen a csatornán kiküldött linkek közül
+  hányra kattintottak ebből a csatornából. Alatta a darabszám: „79 megnyitotta a 390 kapottból”.
+  Ha az elmúlt 7 napban ezen a csatornán semmi nem ment ki, a nagy szám helyén „—” áll, alatta **„nem ment ki”**.
+- **A sáv** az arányt mutatja, 50%-nál van tele.
+- **Alul három kis doboz**: a **„Ma”** (éjfél óta), a **„7 nap”** és az **„Összes”** aránya egymás mellett.
+  Ahol nem ment ki semmi, ott „—”. A kártya alatti időszak-gomb (Lead-állomány) erre a kártyára nem hat.
+- **Megnyitás** = a lead a linkre kattintott. Azt, hogy a levelet megnyitotta-e, nem mérjük.
+  Egy lead több csatornán is kaphatja a linket; mindegyik csatorna azt számolja, ami rajta ment ki,
+  és azt a kattintást, ami ABBÓL a csatornából jött (a link végén álló csatorna-jelből, régebbi
+  küldésnél kikövetkeztetve).
+- **„Nem eldönthető”** — a kártya alján: az elmúlt 7 napban kiküldött leadek közül hány nyitotta meg a
+  linket úgy, hogy nem tudni, melyik csatornából (régebben ugyanaz a link ment ki több csatornán is).
+- **Egy csempére koppintva** a **„Riport”** Tölcsér lapja nyílik a **„Honnan nyitották”** panelnél, a
+  csatorna sora lenyitva: ott látod a megnyitók névsorát. Ha abból a csatornából még senki nem nyitotta
+  meg, a sor halványan áll, névsor nélkül — ez nem hiba. A **„Riport ▸ Honnan nyitották”** link a
+  kártya fejlécében ugyanide visz. A Riport a kiküldés napja szerint számol, ezért a „Kapta” szám ott
+  eltérhet a kártyáétól.
 
 ## A modul irányítópultja
 

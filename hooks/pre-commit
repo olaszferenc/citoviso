@@ -3529,6 +3529,19 @@ if [ -f scripts/open-via-check.mts ] && \
   echo "[pre-commit] open-via-check (honnan nyitották: linkjel, hozzárendelés, panel)…"
   npx tsx scripts/open-via-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Irányítópult „Megnyitás csatornánként” (owner 2026-11-13; terv assets/design-refs/console/csatorna-megnyitas/, „B”):
+#     kapta = a csatorna első küldése az időszakban, megnyitotta = ABBÓL a csatornából kattintott; időszak-határ,
+#     „Nem eldönthető”, az arány formája, a csempék sorrendje + a Riport-sorra mutató link. Tiszta, DB nélkül.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/open-channels-check.mts ] && \
+   changed_files | grep -qE '^src/console/openChannels(Views)?\.ts$|^src/console/report(Data|Views)\.ts$|^scripts/open-channels-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/open-channels-check\.mts$'; then
+    echo "[pre-commit] open-channels-check --self-test (a kártya-őr pirosra tud-e menni)…"
+    npx tsx scripts/open-channels-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] open-channels-check (megnyitás csatornánként: kapta / megnyitotta / időszak)…"
+  npx tsx scripts/open-channels-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Ingyenes próba (free_trial, 0097 — src/trial/start.ts): kártya nélküli konvertálás — próbázóra nincs számla/dunning, dupla indítás =
 #     1 tenant, minden modul aktív (trial_grant), 1 kupon, vásárolt lead elutasítva, trial_start mérve.
 #     Saját, eldobható sorokat ír a közös dev-DB-re, `finally`-ben törli; EMAIL_PROVIDER=mock kötelező. ~10 mp.

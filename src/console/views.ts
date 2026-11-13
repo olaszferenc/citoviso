@@ -4,6 +4,8 @@
 
 import type { LeadStock } from "./leadStock.js";
 import { leadStockCard, stockChips, stockFilterLabel, stockPeriodPhrase, type StockPreset } from "./leadStockViews.js";
+import type { OpenChannelsData } from "./openChannels.js";
+import { openChannelsCard } from "./openChannelsViews.js";
 import { recipientKey } from "../email/address.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { domainStateText, type OwnerDomainView } from "../email/activationEmail.js";
@@ -9363,6 +9365,8 @@ export interface HubData {
   readonly stock?: LeadStock;
   /** The dashboard period chip (Ma / 7 nap / 1 hónap / Összes) — scopes the stock and the Megkeresések card. */
   readonly stockDays?: StockPreset;
+  /** „Megnyitás csatornánként” (frozen plan design-refs/console/csatorna-megnyitas/, „B”): own Ma · 7 nap · Összes, not the chip. */
+  readonly openChannels?: OpenChannelsData;
   readonly outreachP?: { readonly sent: number; readonly replied: number; readonly orderIntent: number };
 }
 
@@ -10305,6 +10309,7 @@ export function dashboardPage(d: HubData): string {
     `<p>${esc(T(lang, "Szia, {name}! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.", { name: d.operatorName }))}</p></div>` +
     repliesBlockHtml(d.replies, d.repliesQuery, lang) +
     (d.messenger ? messengerBlockHtml(d.messenger, lang) : "") +
+    (d.openChannels ? openChannelsCard(d.openChannels, ic("mail", 16), lang) : "") +
     (d.stockDays
       ? `<div class="ls-period" id="period">${stockChips(d.stockDays, (k) => `/?days=${k}#period`, lang)}<span>${esc(T(lang, "Az időszak a Lead-állomány és a Megkeresések kártyára hat."))}</span></div>`
       : "") +

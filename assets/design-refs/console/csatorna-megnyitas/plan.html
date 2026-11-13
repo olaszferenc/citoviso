@@ -1,0 +1,177 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Csatorna-megnyitás kártya (A/B/C vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#06222e; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#fff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+    --ch-email:var(--citui-cyan-500); --ch-sms:var(--citui-navy-700); --ch-viber:#7360f2; --ch-wa:var(--citui-ok);
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.45 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px;margin-right:4px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .note{max-width:1180px;margin:14px auto 0;padding:12px 16px;background:var(--citui-warn-soft);border:1px solid var(--citui-line);border-radius:10px;font-size:13px}
+  .note b{display:block;margin-bottom:2px}
+  .stage{display:flex;justify-content:center;padding:16px}
+  .frame{width:100%;max-width:1180px;background:var(--citui-white);border-radius:12px;box-shadow:var(--citui-shadow-sm);container-type:inline-size;overflow:hidden}
+  .frame.m{max-width:390px}
+  .page{padding:18px 20px 28px}
+  .ph h1{margin:0 0 4px;font:700 20px/1.2 var(--citui-font-display)}
+  .ph p{margin:0 0 14px;color:var(--citui-muted);font-size:13px}
+  .ghost{border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);padding:12px 14px;color:var(--citui-muted);font-size:12.5px;margin-bottom:12px;background:var(--citui-surface)}
+  .w{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px 14px 12px;background:var(--citui-white);min-width:0;margin-bottom:12px}
+  .wh{display:flex;align-items:center;gap:7px;color:var(--citui-muted);font-size:12.5px;flex-wrap:wrap}
+  .wh svg{width:15px;height:15px;stroke:var(--citui-navy-700);fill:none;stroke-width:1.8}
+  .wh .sp{flex:1}
+  .wh a.more{color:var(--citui-cyan-500);text-decoration:none;font-weight:600;cursor:pointer}
+  .lead{font-size:12.5px;color:var(--citui-muted);margin:6px 0 8px}
+  .chips{display:inline-flex;gap:2px;padding:3px;background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill)}
+  .chips button{border:0;background:transparent;padding:6px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;color:var(--citui-muted);cursor:pointer}
+  .chips button.on{background:var(--citui-white);color:var(--citui-ink);box-shadow:0 1px 3px rgba(14,42,71,.15)}
+  .sq{flex:none;display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:0}
+  .s-email{background:var(--ch-email)} .s-sms{background:var(--ch-sms)} .s-viber{background:var(--ch-viber)} .s-wa{background:var(--ch-wa)}
+  .foot{font-size:11.5px;color:var(--citui-muted);margin-top:8px;border-top:1px solid var(--citui-line);padding-top:7px}
+  .foot b{color:var(--citui-ink);font-weight:600}
+  .clk{cursor:pointer} .clk:hover{background:var(--citui-surface)}
+  .z{color:var(--citui-muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:90vw}
+  .toast.show{opacity:1}
+
+  /* A — table, three period column groups */
+  table.t{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  .t th{font-weight:600;color:var(--citui-muted);text-align:right;padding:5px 6px;border-bottom:1px solid var(--citui-line-strong);font-size:11.5px;line-height:1.2;vertical-align:bottom}
+  .t th:first-child{text-align:left}
+  .t th.grp{text-align:center;color:var(--citui-navy-700);border-bottom:1px solid var(--citui-line)}
+  .t td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--citui-line)}
+  .t td:first-child{text-align:left;white-space:nowrap}
+  .t .pct{font:700 15px/1.1 var(--citui-font-display)}
+  .t .of{display:block;font-size:11px;color:var(--citui-muted)}
+  .t .gl{border-left:1px solid var(--citui-line)}
+  .t tr.dim td{color:var(--citui-muted);font-size:12px}
+  .a-tabs{display:none;margin:4px 0 8px}
+  @container (max-width:640px){
+    .a-tabs{display:inline-flex}
+    .t .pcol:not(.cur){display:none}
+    .t th.grp{display:none}
+    .t .gl{border-left:0}
+  }
+
+  /* B — channel tiles */
+  .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
+  .tile{border:1px solid var(--citui-line);border-radius:12px;padding:11px 12px 10px;background:var(--citui-surface)}
+  .tile h4{margin:0;font:600 13px/1.2 system-ui;display:flex;align-items:center}
+  .tile .hero{font:700 28px/1.05 var(--citui-font-display);margin:8px 0 1px}
+  .tile .hero small{font:500 12px system-ui;color:var(--citui-muted);margin-left:3px}
+  .tile .of{font-size:11.5px;color:var(--citui-muted)}
+  .meter{height:6px;border-radius:99px;background:var(--citui-surface-2);border:1px solid var(--citui-line);margin:8px 0 8px;overflow:hidden}
+  .meter i{display:block;height:100%}
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:11.5px;text-align:center}
+  .trio div{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:8px;padding:4px 2px}
+  .trio div.on{border-color:var(--citui-cyan-500)}
+  .trio b{display:block;font:700 13px/1.2 var(--citui-font-display)}
+  .trio span{color:var(--citui-muted)}
+  @container (max-width:640px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .tile .hero{font-size:24px} .trio{font-size:10.5px;gap:3px} .trio span{white-space:nowrap} }
+
+  /* C — horizontal bars, in-card period switch */
+  .crow{display:grid;grid-template-columns:120px 1fr 120px;gap:12px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--citui-line);border-radius:8px}
+  .crow:last-of-type{border-bottom:0}
+  .crow .nm{font-weight:600;font-size:13px;display:flex;align-items:center}
+  .track{height:22px;background:var(--citui-surface-2);border-radius:6px;position:relative;overflow:hidden}
+  .track i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .35s}
+  .track em{position:absolute;left:8px;top:50%;transform:translateY(-50%);font:700 12px/1 var(--citui-font-display);font-style:normal;color:var(--citui-ink)}
+  .crow .num{text-align:right;font-size:12px;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+  .crow .num b{font:700 16px/1.1 var(--citui-font-display);color:var(--citui-ink);display:block}
+  .avg{font-size:12px;color:var(--citui-muted);margin:2px 0 6px}
+  @container (max-width:640px){ .crow{grid-template-columns:1fr 140px;row-gap:6px} .crow .num{white-space:nowrap} .crow .track{grid-column:1/-1;grid-row:2} }
+</style></head><body>
+<div class="bar">
+  <b>Változat:</b><button data-v="A">A — táblázat (elvetve)</button><button data-v="B" class="on">B — csatorna-csempék (JÓVÁHAGYVA)</button><button data-v="C">C — sávok (elvetve)</button>
+  <span class="sp"></span>
+  <b>Méret:</b><button data-s="m">Mobil 390px</button><button data-s="d" class="on">Asztali</button>
+</div>
+<div class="note"><b>Mit döntesz el?</b>
+Melyik formában álljon az Irányítópulton a „Megnyitás csatornánként” kártya. A számok valósak (élesből, 2026-11-13 07:20 — ezért „Ma” még üres: 8 óra előtt nem megy ki megkeresés).
+<b style="margin-top:6px">Mit számol (mindhárom változatban ugyanaz):</b>
+<i>Kapta</i> = az időszakban ezen a csatornán ment ki neki a link. <i>Megnyitotta</i> = ebből a csatornából kattintott a linkre (bármikor azóta). A levél puszta megnyitását nem mérjük — a „megnyitás” a link kattintása. A csatornát a link jele adja (biztos), a jel előtti küldéseknél következtetjük (mint a Riport „Honnan nyitották” panelje). Egy lead több csatornán is kaphatta.
+<b style="margin-top:6px">Időszak:</b> a kártya mindig a saját „Ma · 7 nap · Összes” hármasát mutatja, a kártya alatti időszak-gomb (Lead-állomány) nem hat rá.
+</div>
+
+<div class="stage"><div class="frame" id="frame"><div class="page">
+  <div class="ph"><h1>Irányítópult</h1><p>Szia, Ferenc! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.</p></div>
+  <div class="ghost">Válaszok · Messenger-út (változatlan)</div>
+  <div id="card"></div>
+  <div class="ghost">Időszak-gomb · Lead-állomány · Pénzügy · Megkeresések (változatlan)</div>
+</div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Real figures, prod 2026-11-13 07:20 (loadProspectFacts + attributeOpen, bots excluded)
+const CH=[
+  {k:"email",n:"E-mail",s:"s-email",c:"var(--ch-email)"},
+  {k:"sms",n:"SMS / MMS",s:"s-sms",c:"var(--ch-sms)"},
+  {k:"viber",n:"Viber",s:"s-viber",c:"var(--ch-viber)"},
+  {k:"wa",n:"WhatsApp",s:"s-wa",c:"var(--ch-wa)"},
+];
+const P=[{k:"ma",n:"Ma"},{k:"d7",n:"7 nap"},{k:"all",n:"Összes"}];
+const D={
+  ma:{email:[0,0],sms:[0,0],viber:[0,0],wa:[0,0],unk:0},
+  d7:{email:[390,79],sms:[109,4],viber:[55,0],wa:[53,3],unk:17},
+  all:{email:[797,146],sms:[1055,125],viber:[55,0],wa:[53,3],unk:102},
+};
+const pct=(g,o)=>g?Math.round(o/g*1000)/10:null;
+const fmt=(g,o)=>{const p=pct(g,o);return p===null?"—":(p%1===0?p.toFixed(0):p.toFixed(1)).replace(".",",")+"%"};
+const ofTxt=(g,o)=>g?`${o} / ${g}`:"nem ment ki";
+let V="B",S="d",AP="d7",CP="d7";
+const svg='<svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>';
+const head=(extra="")=>`<div class="wh">${svg}<span>Megnyitás csatornánként</span><span class="sp"></span>${extra}<a class="more" data-go="tolcser">Riport ▸ Honnan nyitották</a></div>`;
+const foot=p=>`<div class="foot">Megnyitás = a kiküldött linkre kattintott ebből a csatornából; a levél megnyitását nem mérjük. <b>Nem eldönthető</b> (több csatornán kapta, a link még jel nélküli volt): ${D[p].unk} megnyitó lead${p==="all"?"":" ("+P.find(x=>x.k===p).n.toLowerCase()+")"}.</div>`;
+const chips=(cur,attr)=>`<span class="chips">${P.map(p=>`<button data-${attr}="${p.k}" class="${p.k===cur?"on":""}">${p.n}</button>`).join("")}</span>`;
+
+function renderA(){
+  const th=P.map((p,i)=>`<th class="grp pcol${p.k===AP?" cur":""}${i?" gl":""}" colspan="2">${p.n}</th>`).join("");
+  const th2=P.map((p,i)=>`<th class="pcol${p.k===AP?" cur":""}${i?" gl":""}">Arány</th><th class="pcol${p.k===AP?" cur":""}">Megnyitotta / kapta</th>`).join("");
+  const rows=CH.map(c=>`<tr class="clk" data-go="${c.k}"><td><span class="sq ${c.s}"></span>${c.n}</td>`+P.map((p,i)=>{const [g,o]=D[p.k][c.k];return `<td class="pcol${p.k===AP?" cur":""}${i?" gl":""}"><span class="pct${g?"":" z"}">${fmt(g,o)}</span></td><td class="pcol${p.k===AP?" cur":""}${g?"":" z"}">${ofTxt(g,o)}</td>`}).join("")+`</tr>`).join("");
+  return `<div class="w" data-widget="open-channels">${head()}<div class="lead">Hány százalékuk kattintott a linkre abból a csatornából, amin kapta.</div>
+  <div class="a-tabs">${chips(AP,"ap")}</div>
+  <table class="t"><thead><tr><th rowspan="2">Csatorna</th>${th}</tr><tr>${th2}</tr></thead><tbody>${rows}</tbody></table>${foot(AP)}</div>`;
+}
+function renderB(){
+  const tiles=CH.map(c=>{const [g,o]=D.d7[c.k];const p=pct(g,o)??0;
+    return `<div class="tile clk" data-go="${c.k}"><h4><span class="sq ${c.s}"></span>${c.n}</h4>
+    <div class="hero">${fmt(g,o)}<small>7 nap</small></div><div class="of">${g?`${o} megnyitotta a ${g} kapottból`:"nem ment ki"}</div>
+    <div class="meter"><i style="width:${Math.min(100,p*2)}%;background:${c.c}"></i></div>
+    <div class="trio">${P.map(pp=>{const [gg,oo]=D[pp.k][c.k];return `<div class="${pp.k==="d7"?"on":""}"><b class="${gg?"":"z"}">${fmt(gg,oo)}</b><span>${pp.n}</span></div>`}).join("")}</div></div>`}).join("");
+  return `<div class="w" data-widget="open-channels">${head()}<div class="lead">Nagy szám: elmúlt 7 nap. Alatta mindhárom időszak egymás mellett. A sáv 50%-nál telik meg.</div><div class="tiles">${tiles}</div>${foot("d7")}</div>`;
+}
+function renderC(){
+  const tot=CH.reduce((a,c)=>{const [g,o]=D[CP][c.k];return [a[0]+g,a[1]+o]},[0,0]);
+  const max=Math.max(1,...CH.map(c=>pct(...D[CP][c.k])??0));
+  const rows=CH.map(c=>{const [g,o]=D[CP][c.k];const p=pct(g,o);
+    return `<div class="crow clk" data-go="${c.k}"><div class="nm"><span class="sq ${c.s}"></span>${c.n}</div>
+    <div class="track"><i style="width:${p?Math.max(2,p/max*100):0}%;background:color-mix(in srgb, ${c.c} 70%, transparent)"></i><em>${fmt(g,o)}</em></div>
+    <div class="num"><b>${g?o:"—"}</b>${g?`megnyitotta / ${g}`:"nem ment ki"}</div></div>`}).join("");
+  return `<div class="w" data-widget="open-channels">${head(chips(CP,"cp"))}<div class="avg">${tot[0]?`Összesen ${fmt(tot[0],tot[1])} — ${tot[1]} megnyitás ${tot[0]} kiküldött linkből`:"Ebben az időszakban még nem ment ki link."} · a leghosszabb sáv a legjobb csatorna</div>${rows}${foot(CP)}</div>`;
+}
+function render(){
+  document.getElementById("card").innerHTML=V==="A"?renderA():V==="B"?renderB():renderC();
+  document.getElementById("frame").className="frame"+(S==="m"?" m":"");
+}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.remove("show"),2400)}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button,[data-go]"); if(!b)return;
+  if(b.dataset.v){V=b.dataset.v;document.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on",x===b));render();return}
+  if(b.dataset.s){S=b.dataset.s;document.querySelectorAll("[data-s]").forEach(x=>x.classList.toggle("on",x===b));render();return}
+  if(b.dataset.ap){AP=b.dataset.ap;render();return}
+  if(b.dataset.cp){CP=b.dataset.cp;render();return}
+  if(b.dataset.go){const c=CH.find(x=>x.k===b.dataset.go);toast(c?`→ Riport ▸ Tölcsér ▸ „Honnan nyitották”, a(z) ${c.n} sor lenyitva (a megnyitók névsora)`:"→ Riport ▸ Tölcsér ▸ „Honnan nyitották” panel")}
+});
+if(window.matchMedia("(max-width:600px)").matches){S="m";document.querySelectorAll("[data-s]").forEach(x=>x.classList.toggle("on",x.dataset.s==="m"))}
+render();
+</script>
+</body></html>
