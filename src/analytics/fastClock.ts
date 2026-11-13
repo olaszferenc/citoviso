@@ -31,3 +31,29 @@ export function isFastClock(claimedSeconds: number, elapsedSeconds: number): boo
   const elapsed = Math.max(0, elapsedSeconds);
   return claimedSeconds - elapsed >= FAST_CLOCK_MIN_EXCESS_S && claimedSeconds >= FAST_CLOCK_MIN_RATIO * elapsed;
 }
+
+// ── The SHADOW open: a link checker that follows a person's click ────────────────
+//
+// ⛔ WHY (tulaj 2026-11-13, a Bojtor Vendégház képernyője — „Nem tűnik jónak”): the second
+// machine shape. When the lead taps the link on the phone, a desktop Windows Chrome opens
+// the same link seconds later and does NOTHING: no beat, no scroll, and no end signal. A
+// real desktop browser always sends the end (pagehide fires on close, visibilitychange on
+// tab switch); a sandbox that is torn down sends nothing. Measured on prod (60 days to
+// 2026-11-13): 10 views open-only within 120 s of another view of the same prospect — all
+// desktop Windows Chrome, 0.7–16 s after the other one (DoriNita 6.0 s, Bojtor 10.4 s).
+// It can only be judged once the silence is long enough: SHADOW_WAIT_S after the open.
+
+/** The other view must have started at most this long before the shadow. */
+export const SHADOW_MAX_GAP_S = 30;
+/** Judge the view only this long after it began — a person's first beat comes at 15 s. */
+export const SHADOW_WAIT_S = 60;
+
+/**
+ * True when a view is the silent desktop twin of another view.
+ * @param device the view's device class
+ * @param signals events other than `open` / `section_seen` in the view
+ * @param gapSeconds seconds since the closest EARLIER view of the same prospect began (null = none)
+ */
+export function isShadowOpen(device: string | null, signals: number, gapSeconds: number | null): boolean {
+  return device === "desktop" && signals === 0 && gapSeconds !== null && gapSeconds >= 0 && gapSeconds <= SHADOW_MAX_GAP_S;
+}

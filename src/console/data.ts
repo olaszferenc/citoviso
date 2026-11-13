@@ -42,7 +42,7 @@ import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offer
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
-import { isFastClock } from "../analytics/fastClock.js";
+import { isFastClock, isShadowOpen, SHADOW_MAX_GAP_S, SHADOW_WAIT_S } from "../analytics/fastClock.js";
 import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
 import { CLIENT_FILTERS, isClientFilter, loadLeadClients, passesClientFilter, trialNoLogin, type ClientFilter, type ClientKind } from "./leadClient.js";
 import { isEngineArtifact } from "../conversion/provision.js";
@@ -2108,7 +2108,50 @@ export async function recordView(
     .where("id", "=", prospectId)
     .where("status", "in", ["created", "sent"])
     .execute();
+  // A desktop view may be the link checker's silent twin (fastClock.ts) — judged once the
+  // silence is long enough. In-process timer: a restart in between leaves it to the backfill.
+  if (ua.device === "desktop") {
+    const t = setTimeout(() => {
+      void checkShadowView(view.id).catch((e) => console.error("[shadow-view]", (e as Error).message));
+    }, SHADOW_WAIT_S * 1000);
+    t.unref?.();
+  }
   return view.id;
+}
+
+/**
+ * Re-class the view as a machine view if it is a SHADOW open (src/analytics/fastClock.ts):
+ * desktop, no signal at all, begun ≤ SHADOW_MAX_GAP_S after another view of the same
+ * prospect. Returns true when it marked the view. Used by recordView's timer and the backfill.
+ */
+export async function checkShadowView(viewId: string): Promise<boolean> {
+  const v = await db
+    .selectFrom("mock_view")
+    .select(["id", "prospect_id", "started_at", "device"])
+    .where("id", "=", viewId)
+    .executeTakeFirst();
+  if (!v || v.device !== "desktop") return false;
+  const startedAt = new Date(v.started_at as unknown as string);
+  if (Date.now() - startedAt.getTime() < SHADOW_WAIT_S * 1000) return false;
+  const sig = await db
+    .selectFrom("mock_event")
+    .select(db.fn.countAll().as("n"))
+    .where("mock_view_id", "=", viewId)
+    .where("type", "not in", ["open", "section_seen"])
+    .executeTakeFirstOrThrow();
+  const prev = await db
+    .selectFrom("mock_view")
+    .select("started_at")
+    .where("prospect_id", "=", v.prospect_id)
+    .where("id", "!=", viewId)
+    .where(sql<boolean>`started_at <= ${startedAt} and started_at >= ${new Date(startedAt.getTime() - SHADOW_MAX_GAP_S * 1000)}`)
+    .orderBy("started_at", "desc")
+    .limit(1)
+    .executeTakeFirst();
+  const gap = prev ? (startedAt.getTime() - new Date(prev.started_at as unknown as string).getTime()) / 1000 : null;
+  if (!isShadowOpen(v.device, Number(sig.n), gap)) return false;
+  await markViewAsMachine(v.prospect_id, viewId, startedAt);
+  return true;
 }
 
 /** Engagement/configurator event within a view; advances opened→engaged. */

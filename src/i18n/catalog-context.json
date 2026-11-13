@@ -1151,7 +1151,7 @@
 "A levél linkjei ide mutatnak: {host}":"konzol",
 "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki.":"konzol",
 "a levél, ahogy megérkezik":"konzol",
-"A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.":"konzol",
+"A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.":"konzol",
 "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.":"konzol",
 "A link a mentés után itt jelenik meg.":"admin",
 "A link ehhez a mockhoz készül: {skin} · {date}{more}":"konzol",

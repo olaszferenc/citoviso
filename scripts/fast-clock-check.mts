@@ -14,7 +14,7 @@
 //  ② a Tevékenység-lap a gépi látogatást jelöli, és NEM számolja bele a „Megnyitások”-ba,
 //     se az olvasási időbe.
 
-import { isFastClock } from "../src/analytics/fastClock.js";
+import { isFastClock, isShadowOpen } from "../src/analytics/fastClock.js";
 import { prospectActivityPage } from "../src/console/views.js";
 import type { ActivitySession, ProspectActivity } from "../src/console/data.js";
 
@@ -52,6 +52,15 @@ const PERSON: [number, number, string][] = [
 console.log("① a szabály a mért sorokon:");
 for (const [c, e, n] of MACHINE) check(`gépi: ${n} — ${c} mp ${e} mp alatt`, rule(c, e));
 for (const [c, e, n] of PERSON) check(`ember: ${n} — ${c} mp ${e} mp alatt`, !rule(c, e));
+
+console.log("①b az árnyék-megnyitás (néma asztali iker) a mért sorokon:");
+const shadow = SELFTEST ? (_d: string | null, _s: number, _g: number | null) => false : isShadowOpen;
+check("Bojtor 58f95f02: asztali, 0 jel, 10,4 mp a mobil után → gépi", shadow("desktop", 0, 10.4));
+check("DoriNita e0005880: asztali, 0 jel, 6,0 mp a mobil után → gépi", shadow("desktop", 0, 6.0));
+check("asztali, 0 jel, nincs előző látogatás → ember (marad)", !shadow("desktop", 0, null));
+check("asztali, 0 jel, 5 perccel később → ember (marad)", !shadow("desktop", 0, 300));
+check("asztali, van jel (olvasott) → ember", !shadow("desktop", 3, 10));
+check("mobil, 0 jel, 10 mp → nem ez a minta", !shadow("mobile", 0, 10));
 
 console.log("② a Tevékenység-lap a gépi látogatást nem számolja:");
 const sess = (id: string, machine: boolean, maxDwell: number): ActivitySession => ({
@@ -94,4 +103,4 @@ if (failures) {
   console.error(`\n❌ fast-clock-check: ${failures} eset bukott`);
   process.exit(1);
 }
-console.log(`\n✅ fast-clock-check: ${MACHINE.length + PERSON.length} mért sor + a Tevékenység-lap rendben.`);
+console.log(`\n✅ fast-clock-check: ${MACHINE.length + PERSON.length} mért sor + 6 árnyék-eset + a Tevékenység-lap rendben.`);

@@ -13,9 +13,10 @@
 //   npx tsx scripts/fast-clock-backfill.mts           # száraz futás
 //   npx tsx scripts/fast-clock-backfill.mts --go      # végrehajtja
 
+import { sql } from "kysely";
 import { db } from "../src/db/client.js";
 import { isFastClock } from "../src/analytics/fastClock.js";
-import { markViewAsMachine } from "../src/console/data.js";
+import { checkShadowView, markViewAsMachine } from "../src/console/data.js";
 
 const args = process.argv.slice(2);
 const unknown = args.filter((a) => a !== "--go");
@@ -60,6 +61,40 @@ for (const [viewId, h] of hits) {
   );
   if (GO) await markViewAsMachine(h.prospectId, viewId, h.startedAt);
 }
+// ② SHADOW opens (fastClock.ts isShadowOpen): desktop, silent, seconds after another view.
+// checkShadowView judges AND marks — so the dry run only lists the candidates by the same SQL shape.
+const desk = await db
+  .selectFrom("mock_view")
+  .select(["id", "started_at"])
+  .where("device", "=", "desktop")
+  .where(sql<boolean>`started_at < now() - interval '2 minutes'`)
+  .where(({ not, exists, selectFrom }) =>
+    not(exists(selectFrom("mock_event").select("mock_event.id").whereRef("mock_event.mock_view_id", "=", "mock_view.id").where("mock_event.type", "not in", ["open", "section_seen"]))),
+  )
+  .execute();
+let shadows = 0;
+for (const d of desk) {
+  if (GO) {
+    if (await checkShadowView(d.id)) {
+      shadows++;
+      console.log(`  árnyék: ${d.id.slice(0, 8)} · ${new Date(d.started_at as unknown as string).toISOString()}`);
+    }
+  } else {
+    const prev = await db
+      .selectFrom("mock_view as o")
+      .innerJoin("mock_view as me", "me.prospect_id", "o.prospect_id")
+      .select("o.id")
+      .where("me.id", "=", d.id)
+      .where("o.id", "!=", d.id)
+      .where(sql<boolean>`o.started_at <= me.started_at and o.started_at >= me.started_at - interval '30 seconds'`)
+      .executeTakeFirst();
+    if (prev) {
+      shadows++;
+      console.log(`  árnyék-jelölt: ${d.id.slice(0, 8)} · ${new Date(d.started_at as unknown as string).toISOString()}`);
+    }
+  }
+}
+console.log(`${GO ? "VÉGREHAJTVA" : "SZÁRAZ FUTÁS"} — ${shadows} árnyék-megnyitás (néma asztali ikerlátogatás)`);
 if (GO) {
   const left = await db
     .selectFrom("mock_view")

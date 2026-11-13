@@ -9,3 +9,5 @@
 **Ellenőrzés:** tsc 0 hiba; `fast-clock-check` 14 mért sor + a lap, selftest piros; dev-DB integráció: gyors ütem → bot + 'sent' + ajánlat lejárt, emberi ütem → desktop marad.
 
 **Nyitott:** élesítés + élesen `npx tsx scripts/fast-clock-backfill.mts --go` (~10 látogatás) — tulaj-engedély kell; Bábel fordítsa az új konzol-feliratokat.
+
+**Folytatás 15:30 (tulaj képe, Bojtor Vendégház: „Nem tűnik jónak”):** a 3. látogatás valódi (137 mp, 3 kérdés), a 2. egy „néma iker”: asztali Windows Chrome, 10,4 mp-cel a mobilos után, csak `open`, záró jel nélkül (DoriNitánál 6,0 mp). Élesen 60 nap alatt 10 ilyen eset volt, mind asztali Windows Chrome. Szabály: `isShadowOpen` (asztali, 0 jel, ≤30 mp), a `recordView` 60 mp-es időzítője ítél (`checkShadowView`), a visszamenőleges javítást a backfill végzi. KB: a `console-outreach-draft` Tevékenység szakasza kiegészítve. Az 1. (mobil) látogatás „vége ismeretlen”: az olvasás-ütem 45 mp-nél leállt, de záró jel nem jött — nyitott.

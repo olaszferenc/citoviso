@@ -1152,7 +1152,7 @@
   "A levél linkjei ide mutatnak: {host}",
   "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki.",
   "a levél, ahogy megérkezik",
-  "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.",
+  "A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.",
   "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.",
   "A link a mentés után itt jelenik meg.",
   "A link ehhez a mockhoz készül: {skin} · {date}{more}",

@@ -308,9 +308,24 @@ mutatja — két külön sorban, mert két külön mennyiség.
 **Mi számít megnyitásnak?** Az, amikor a látogató a lapon görget, koppint, kattint vagy
 billentyűt üt, vagy amikor a lap összesen 5 másodpercig látható a képernyőn. A puszta letöltés nem
 számít: a levelezőprogramok link-ellenőrzője és a link-előnézet a linket ember nélkül is megnyitja,
-és 2026. október 1. óta ezek többsége nem számít megnyitásnak. ⚠️ Teljesen nem zárható ki: egy
-olyan gépi ellenőrző, amely valódi böngészőben, látható lapon 5 másodpercig futtatja az oldalt,
-továbbra is megnyitásnak számíthat. Az eszkalációs ajánlat („hányadik megnyitásnál kapja”) is
+és 2026. október 1. óta ezek többsége nem számít megnyitásnak.
+
+**Gépi megnyitások** (2026. november 13. óta). Két gépi ellenőrző valódi böngészőben futtatja az
+oldalt, ezért azt először megnyitásnak veszi a rendszer, majd pár másodpercen belül felismeri és
+átsorolja:
+
+- **Gyorsított órával futó szűrő** — a levél kiküldése után percekkel nyitja meg, és egy perc alatt
+  „több perc olvasást" jelent. Erről árulkodik, hogy több olvasási időt jelent, mint amennyi eltelt.
+- **Néma iker** — amikor a címzett a telefonján rákattint a linkre, pár másodperccel később egy
+  asztali gépen is megnyílik ugyanaz a link, és semmit nem csinál (nem görget, nem olvas, bezáráskor
+  sem jelez). Egy valódi asztali böngésző bezáráskor mindig jelez.
+
+Az ilyen látogatás a Tevékenység-képernyőn megmarad, de a fejlécében ez áll: **„gépi megnyitás
+(levélszűrő) — nem ember, nem számít"**, és a felső összefoglalóban külön sorban látszik
+(**Gépi megnyitások**). A **Megnyitások**, a **Rögzített események**, a **Legmélyebb görgetés** és a
+**Leghosszabb olvasás** csak az emberi látogatásokat számolja. Gépi megnyitástól a lead nem lesz
+„megnyitotta", és nem kap „hányadik megnyitás" kedvezményt. ⚠️ Egy ellenőrző, amely valós ütemben és
+egyedül nyitja meg a linket, továbbra is megnyitásnak számíthat. Az eszkalációs ajánlat („hányadik megnyitásnál kapja”) is
 ebből a számból dolgozik — alapbeállításban a megnyitások NAPJAIT számolja (egy napon belül akárhány
 megnyitás egynek számít; az Árazás lapon a „Csak a különböző napokon történt megnyitások számítanak”
 jelölőnégyzettel állítható) —, és egy régebben kiküldött linknél a 2026. október 1. előtt rögzített

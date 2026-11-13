@@ -9198,7 +9198,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
                   : `<span class="mut small" style="font-weight:400">· ${T(lang, "{n} esemény", { n: shown.length })}${s.maxScroll ? ` · ${T(lang, "{n}% görgetés", { n: s.maxScroll })}` : ""}${s.maxDwell ? ` · ${T(lang, "{n} mp olvasás", { n: s.maxDwell })}` : ""}${closed ? "" : ` · ${T(lang, "vége ismeretlen")}`}</span>`
               }
             </summary>
-            ${s.machine ? `<p class="mut small" style="margin-top:8px">${T(lang, "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.")}</p>` : ""}
+            ${s.machine ? `<p class="mut small" style="margin-top:8px">${T(lang, "A levelezőrendszer biztonsági szűrője nyitotta meg az oldalt (gyorsított órával, vagy pár másodperccel a valódi megnyitás után, jel nélkül) — ez nem a címzett látogatása.")}</p>` : ""}
             <div class="tblwrap"><table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">${T(lang, "nincs esemény")}</td></tr>`}</tbody></table></div>
             ${endNote}
             ${s.referrer ? `<p class="mut small" style="margin-top:8px">${T(lang, "Forrás: {src}", { src: esc(s.referrer) })}</p>` : ""}
