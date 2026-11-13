@@ -1,4 +1,4 @@
-## ADR-XXXX — Gyorsított órás gépi látogatás (levélszűrő) nem megnyitás
+## ADR-0447 — Gyorsított órás gépi látogatás (levélszűrő) nem megnyitás
 
 **Dátum:** 2026-11-13 · **Döntött:** session (tulaj jelzése: „szerintem valami nem ok a méréssel, túl gyors a megnyitás, kvázi nincs különbség 2 megnyitás között”, brief `megkeres-s-m-r-s-20261113-100519.md`)
 
