@@ -537,6 +537,8 @@ export async function ensureEscalationOffer(
         : db.fn.countAll<number>().as("n"),
     )
     .where("prospect_id", "=", prospectId)
+    // Machine views (bot UA, fast-clock scanner — src/analytics/fastClock.ts) are no visit.
+    .where((eb) => eb.or([eb("device", "is", null), eb("device", "!=", "bot")]))
     .executeTakeFirst();
   if (Number(views?.n ?? 0) < cfg.threshold) return null;
   if (await prospectHasPaidOrder(prospectId)) return null;

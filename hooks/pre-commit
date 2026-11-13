@@ -1210,6 +1210,13 @@ if [ -f scripts/prospect-activity-label-check.mts ] && \
   echo "[pre-commit] prospect-activity-label-check (a felirat megnevezi, mit számol)…"
   npx tsx scripts/prospect-activity-label-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Gyorsított órás gépi látogatás (levélszűrő) ≠ megnyitás (tulaj 2026-11-13, „túl gyors a
+# megnyitás”): a szabály a mért éles sorokon + a Tevékenység-lap számolása. Böngésző nélkül.
+if [ -f scripts/fast-clock-check.mts ] && \
+   changed_files | grep -qE '^(src/analytics/fastClock|src/console/views|src/console/data|src/payment/offers|scripts/fast-clock-check)'; then
+  echo "[pre-commit] fast-clock-check (gépi látogatás nem megnyitás)…"
+  npx tsx scripts/fast-clock-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A vevő VÁSÁRLÁSI BELÉPŐJE lebeg-e ÉS LÁTSZIK-e minden sablonon (2026-09-08). Mérve: az
 # aurora `body>*{position:relative}` szabálya kiütötte a fixed rétegből a konfigurátor indító
 # pilljét, és az a lap aljára esett (y≈14 000) — a mock tökéletes volt, a vásárlás útja

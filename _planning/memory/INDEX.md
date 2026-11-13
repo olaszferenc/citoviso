@@ -10,6 +10,7 @@
 - [2026-11-13_overlay_kartya_kapu_mar_zold.md](2026-11-13_overlay_kartya_kapu_mar_zold.md) — 2026-11-13 — Overlay ⑪ (card-sidebar, 1536×864, süti-sávval): a mainen már zöld, kód nem változott
 - [2026-11-13_megnyitas_csatornankent_kartya.md](2026-11-13_megnyitas_csatornankent_kartya.md) — 2026-11-13 — Megnyitás csatornánként kártya az Irányítópulton
 - [2026-11-13_land_egyszerusites.md](2026-11-13_land_egyszerusites.md) — 2026-11-13 — Land egyszerűsítés: böngészős kapuk óránként, egyszeri újrafuttatás (ADR-0446)
+- [2026-11-13_gyorsitott_oras_gepi_latogatas.md](2026-11-13_gyorsitott_oras_gepi_latogatas.md) — 2026-11-13 — Mérés: a levélszűrő gyorsított órás „látogatásai” gépinek jelölve
 - [2026-11-13_email_alairas.md](2026-11-13_email_alairas.md) — 2026-11-13 — Egységes e-mail aláírás („A”: jel + cián vonal)
 - [2026-11-12_viselkedes_uzenet_megvalositas.md](2026-11-12_viselkedes_uzenet_megvalositas.md) — 2026-11-12 — Viselkedés-üzenet (A változat) megvalósítva (SUB cit3ea34be2)
 - [2026-11-12_riport_tevekenyseg_ido_elteres.md](2026-11-12_riport_tevekenyseg_ido_elteres.md) — 2026-11-12 — Riport vs. Tevékenység-oldal: 1 órás időeltérés (élesítve)

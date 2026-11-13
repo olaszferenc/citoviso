@@ -42,6 +42,7 @@ import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offer
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
+import { isFastClock } from "../analytics/fastClock.js";
 import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
 import { CLIENT_FILTERS, isClientFilter, loadLeadClients, passesClientFilter, trialNoLogin, type ClientFilter, type ClientKind } from "./leadClient.js";
 import { isEngineArtifact } from "../conversion/provision.js";
@@ -1614,16 +1615,19 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
   const optoutLog = await getProspectOptoutLog(rows.map((r) => r.id));
   const out: ProspectView[] = [];
   for (const r of rows) {
+    // Human views only: a bot UA or a fast-clock scanner (fastClock.ts) is no "megnyitás".
     const views = await db
       .selectFrom("mock_view")
       .select(db.fn.countAll().as("n"))
       .where("prospect_id", "=", r.id)
+      .where((eb) => eb.or([eb("device", "is", null), eb("device", "!=", "bot")]))
       .executeTakeFirst();
     const events = await db
       .selectFrom("mock_event")
       .innerJoin("mock_view", "mock_view.id", "mock_event.mock_view_id")
       .select(db.fn.countAll().as("n"))
       .where("mock_view.prospect_id", "=", r.id)
+      .where((eb) => eb.or([eb("mock_view.device", "is", null), eb("mock_view.device", "!=", "bot")]))
       .executeTakeFirst();
     out.push({
       id: r.id,
@@ -1662,6 +1666,8 @@ export interface ActivitySession {
   readonly startedAt: string;
   readonly referrer: string | null;
   readonly userAgent: string | null;
+  /** A machine opened it (bot UA or fast-clock scanner, src/analytics/fastClock.ts). */
+  readonly machine: boolean;
   /** Deepest scroll reached in this session (%), 0 if none. */
   readonly maxScroll: number;
   /** Longest dwell reported in this session (seconds), 0 if none. */
@@ -1707,7 +1713,7 @@ export async function getProspectActivity(prospectId: string): Promise<ProspectA
 
   const views = await db
     .selectFrom("mock_view")
-    .select(["id", "started_at", "referrer", "user_agent"])
+    .select(["id", "started_at", "referrer", "user_agent", "device"])
     .where("prospect_id", "=", prospectId)
     .orderBy("started_at", "asc")
     .execute();
@@ -1740,6 +1746,7 @@ export async function getProspectActivity(prospectId: string): Promise<ProspectA
       startedAt: toIso(v.started_at),
       referrer: v.referrer,
       userAgent: v.user_agent,
+      machine: v.device === "bot",
       maxScroll,
       maxDwell,
       events: evs.map((e) => ({
@@ -2114,7 +2121,7 @@ export async function recordEvent(
   // The view must belong to the token's prospect — no cross-prospect writes.
   const view = await db
     .selectFrom("mock_view")
-    .select("id")
+    .select(["id", "started_at", "device"])
     .where("id", "=", viewId)
     .where("prospect_id", "=", prospectId)
     .executeTakeFirst();
@@ -2123,7 +2130,18 @@ export async function recordEvent(
     .insertInto("mock_event")
     .values({ mock_view_id: viewId, type, payload: JSON.stringify(payload) })
     .execute();
-  if (type === "module_add" || type === "module_remove" || type === "panel_open") {
+  // Fast-clock scanner (src/analytics/fastClock.ts): the page claims more reading time
+  // than could have passed. The view becomes a machine view, like a bot UA's.
+  if ((type === "dwell" || type === "dwell_end") && view.device !== "bot") {
+    const claimed = typeof payload.seconds === "number" ? payload.seconds : Number.NaN;
+    const startedAt = new Date(view.started_at as unknown as string);
+    if (isFastClock(claimed, (Date.now() - startedAt.getTime()) / 1000)) {
+      await markViewAsMachine(prospectId, viewId, startedAt);
+      return true;
+    }
+  }
+  // A machine view's clicks advance nothing (a scanner "opens" panels too).
+  if (view.device !== "bot" && (type === "module_add" || type === "module_remove" || type === "panel_open")) {
     await db
       .updateTable("prospect")
       .set({ status: "engaged" })
@@ -2132,6 +2150,45 @@ export async function recordEvent(
       .execute();
   }
   return true;
+}
+
+/**
+ * Re-class a view as a MACHINE view (device 'bot') after the fact — today: the fast-clock
+ * scanner, detected only once its dwell beats arrive. Undoes what the view did when it
+ * was still taken for a person:
+ *  · the funnel 'opened' it set falls back to 'sent' when no human view remains;
+ *  · the escalation offer it minted on arrival (ADR-0088 §4: the visit-count trigger) is
+ *    expired before anyone sees it — the 2026-11-04 scanner visit minted a −30% "visit #2"
+ *    offer and armed its reminder mail for a lead who had not looked at all.
+ * Exported for the backfill (scripts/fast-clock-backfill.mts). Idempotent.
+ */
+export async function markViewAsMachine(prospectId: string, viewId: string, startedAt: Date): Promise<void> {
+  await db.updateTable("mock_view").set({ device: "bot" }).where("id", "=", viewId).execute();
+  const human = await db
+    .selectFrom("mock_view")
+    .select("id")
+    .where("prospect_id", "=", prospectId)
+    .where((eb) => eb.or([eb("device", "is", null), eb("device", "!=", "bot")]))
+    .limit(1)
+    .executeTakeFirst();
+  if (!human) {
+    await db
+      .updateTable("prospect")
+      .set({ status: "sent" })
+      .where("id", "=", prospectId)
+      .where("status", "=", "opened")
+      .execute();
+  }
+  // The view endpoint mints the offer right after inserting the view — within seconds.
+  await db
+    .updateTable("offer")
+    .set({ expires_at: new Date() })
+    .where("prospect_id", "=", prospectId)
+    .where("kind", "=", "escalation")
+    .where("used_count", "=", 0)
+    .where(sql<boolean>`created_at between ${new Date(startedAt.getTime() - 5_000)} and ${new Date(startedAt.getTime() + 60_000)}`)
+    .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", new Date())]))
+    .execute();
 }
 
 /** GDPR/Grt. opt-out: no further outreach, no further tracking. Idempotent. */
@@ -2381,7 +2438,12 @@ export async function getFunnelReport(): Promise<FunnelReport> {
   const prospects = await db
     .selectFrom("prospect")
     .leftJoin(
-      db.selectFrom("mock_view").select(["prospect_id", db.fn.countAll().as("views")]).groupBy("prospect_id").as("v"),
+      db
+        .selectFrom("mock_view")
+        .select(["prospect_id", db.fn.countAll().as("views")])
+        .where((eb) => eb.or([eb("device", "is", null), eb("device", "!=", "bot")]))
+        .groupBy("prospect_id")
+        .as("v"),
       (join) => join.onRef("v.prospect_id", "=", "prospect.id"),
     )
     .leftJoin(

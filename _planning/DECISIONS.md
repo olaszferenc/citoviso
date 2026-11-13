@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-gyorsitott-oras-gepi-latogatas-nem-megnyitas.md) — Gyorsított órás gépi látogatás (levélszűrő) nem megnyitás
 - [ADR-0446](decisions/0446-land-egyszerusites-bongeszos-kapuk-orankent-az.md) — Land egyszerűsítés: böngészős kapuk óránként az origin/mainen, egyszeri automatikus újrafuttatás
 - [ADR-0445](decisions/0445-az-elso-megkereso-level-mukodo-oldalt-mutat-be.md) — Az első megkereső levél működő oldalt mutat be, nem „látványtervet”; tárgy „– kész honlap”; a levél-kritikus előfizetésen fut (2026-11-13)
 - [ADR-0444](decisions/0444-egyseges-e-mail-alairas-jel-cian-vonal-a-csapat.md) — Egységes e-mail aláírás: „Jel + cián vonal” (A), csapat- és névvel aláírt olvasat

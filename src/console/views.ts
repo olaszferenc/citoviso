@@ -9118,10 +9118,16 @@ export function prospectActivityPage(a: ProspectActivity): string {
   const hhmm = (iso: string) => esc(consoleTime(iso, lang));
   const dmy = (iso: string) => esc(consoleDateTime(iso, lang).replace(/:\d\d$/, ""));
 
+  // ⛔ A MACHINE VISIT IS NO "MEGNYITÁS" (tulaj 2026-11-13, „túl gyors a megnyitás”): a mail
+  // scanner ran the page on a fast clock — "225 mp olvasás" 26 s after it began, three
+  // "visits" in a minute (src/analytics/fastClock.ts). Its rows stay visible, marked, but
+  // the summary counts people only.
+  const human = a.sessions.filter((s) => !s.machine);
   // The same count the visit rows show: section_seen is the exit map's raw input, not a row.
-  const totalEvents = a.sessions.reduce((n, s) => n + s.events.filter((e) => e.type !== "section_seen").length, 0);
-  const bestScroll = a.sessions.reduce((m, s) => Math.max(m, s.maxScroll), 0);
-  const bestDwell = a.sessions.reduce((m, s) => Math.max(m, s.maxDwell), 0);
+  const totalEvents = human.reduce((n, s) => n + s.events.filter((e) => e.type !== "section_seen").length, 0);
+  const bestScroll = human.reduce((m, s) => Math.max(m, s.maxScroll), 0);
+  const bestDwell = human.reduce((m, s) => Math.max(m, s.maxDwell), 0);
+  const machineCount = a.sessions.length - human.length;
 
   // Intent summary — the "mit csinált" answer at a glance.
   const on = a.moduleToggles.filter((m) => m.on).map((m) => modLabel(m.module));
@@ -9140,11 +9146,12 @@ export function prospectActivityPage(a: ProspectActivity): string {
   //    are distinguishable in the data (no session at all vs. a session with a zero
   //    maximum), so they are stated apart: 0 % is a measurement, "nem mértünk" is
   //    the absence of one. A choice that was never made is neither — it says so.
-  const opened = a.sessions.length > 0;
+  const opened = human.length > 0;
   const unmeasured = `<span class="mut">${T(lang, "nem mértünk")}</span>`;
   const unchosen = `<span class="mut">${T(lang, "nem választott")}</span>`;
   const signals = [
-    `<dt>${T(lang, "Megnyitások")}</dt><dd>${T(lang, "{v} megnyitás", { v: a.sessions.length })}</dd>`,
+    `<dt>${T(lang, "Megnyitások")}</dt><dd>${T(lang, "{v} megnyitás", { v: human.length })}</dd>`,
+    machineCount ? `<dt>${T(lang, "Gépi megnyitások")}</dt><dd><span class="mut">${T(lang, "{n} gépi megnyitás (levélszűrő) — nem számít", { n: machineCount })}</span></dd>` : "",
     `<dt>${T(lang, "Rögzített események")}</dt><dd>${T(lang, "{e} esemény", { e: totalEvents })}</dd>`,
     `<dt>${T(lang, "Legmélyebb görgetés")}</dt><dd>${opened ? `${bestScroll}%` : unmeasured}</dd>`,
     `<dt>${T(lang, "Leghosszabb olvasás")}</dt><dd>${opened ? T(lang, "{s} másodperc", { s: bestDwell }) : unmeasured}</dd>`,
@@ -9166,7 +9173,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
           // tab was killed or the phone locked before the old pagehide-only beacon fired
           // — say so, with the last sign we have, instead of leaving the operator to guess
           // why there is no reading time.
-          const closed = s.events.some((e) => e.type === "dwell_end");
+          const closed = s.machine || s.events.some((e) => e.type === "dwell_end");
           const lastAt = s.events.length ? s.events[s.events.length - 1]!.at : s.startedAt;
           const endNote = closed
             ? ""
@@ -9185,8 +9192,13 @@ export function prospectActivityPage(a: ProspectActivity): string {
             .join("");
           return `<details class="panel"${i === a.sessions.length - 1 ? " open" : ""}>
             <summary style="cursor:pointer;font-weight:600">${i + 1}. látogatás — ${dmy(s.startedAt)}
-              <span class="mut small" style="font-weight:400">· ${T(lang, "{n} esemény", { n: shown.length })}${s.maxScroll ? ` · ${T(lang, "{n}% görgetés", { n: s.maxScroll })}` : ""}${s.maxDwell ? ` · ${T(lang, "{n} mp olvasás", { n: s.maxDwell })}` : ""}${closed ? "" : ` · ${T(lang, "vége ismeretlen")}`}</span>
+              ${
+                s.machine
+                  ? `<span class="mut small" style="font-weight:400">· ${T(lang, "gépi megnyitás (levélszűrő) — nem ember, nem számít")}</span>`
+                  : `<span class="mut small" style="font-weight:400">· ${T(lang, "{n} esemény", { n: shown.length })}${s.maxScroll ? ` · ${T(lang, "{n}% görgetés", { n: s.maxScroll })}` : ""}${s.maxDwell ? ` · ${T(lang, "{n} mp olvasás", { n: s.maxDwell })}` : ""}${closed ? "" : ` · ${T(lang, "vége ismeretlen")}`}</span>`
+              }
             </summary>
+            ${s.machine ? `<p class="mut small" style="margin-top:8px">${T(lang, "A levelezőrendszer biztonsági szűrője nyitotta meg és futtatta le az oldalt, gyorsított órával — az „olvasási idő” itt nem valós.")}</p>` : ""}
             <div class="tblwrap"><table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">${T(lang, "nincs esemény")}</td></tr>`}</tbody></table></div>
             ${endNote}
             ${s.referrer ? `<p class="mut small" style="margin-top:8px">${T(lang, "Forrás: {src}", { src: esc(s.referrer) })}</p>` : ""}

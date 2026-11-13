@@ -65,6 +65,7 @@ const OPENED: ProspectActivity = {
       startedAt: "2026-09-12T09:00:00.000Z",
       referrer: null,
       userAgent: "Chrome",
+      machine: false,
       maxScroll: 0,
       maxDwell: 0,
       events: [VIEW_EVENT],
