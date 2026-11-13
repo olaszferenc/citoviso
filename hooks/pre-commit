@@ -80,7 +80,7 @@ gate_failed() {
 # commitnál: CIT_FULL_COMMIT=1. ⛔ CSAK commit-módú blokkba (`[ -z "${LAND_RANGE:-}" ]`) böngészős kapu
 # nem kerülhet — azt a land sosem futtatná (a gate-runner-check K forgatókönyve méri).
 # ⚠️ Soros módban NINCS tiszta-main próba (a bukott kapu feljegyzése a futtatóé) — ott kézzel.
-# ⏭ LAND-MÓDBAN a böngészős kapuk NEM blokkolnak (ADR-XXXX, mérve 2026-11-12/13: load 15–30 mellett
+# ⏭ LAND-MÓDBAN a böngészős kapuk NEM blokkolnak (ADR: `_planning/decisions/*-land-egyszerusites-*`, mérve 2026-11-12/13: load 15–30 mellett
 # hamis pirosak, tiszta mainen is): a land kiírja őket, és a `scripts/gate-hourly.sh` óránként futtatja
 # őket az origin/main-re landolt commitokon (LAND_RANGE + CIT_GATE_HOURLY=1), pirosnál riaszt. Kivétel a
 # fejlécében `// gate-runner: land-blocking — <ok>` jelölésű kapu (tartalmi: biztonság, jog, §C, magyar

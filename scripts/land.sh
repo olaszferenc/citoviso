@@ -50,7 +50,7 @@ land_lock_acquire "$ROOT" || fail "a gépszintű land-zár nem szerezhető meg"
 
 git fetch origin || fail "git fetch origin sikertelen"
 
-# TIMING (ADR-XXXX): every phase is measured and printed at the end, with the slowest gates, so the
+# TIMING (ADR: `_planning/decisions/*-land-egyszerusites-*`): every phase is measured and printed at the end, with the slowest gates, so the
 # land's cost is a number in every log instead of a feeling ("kurva lassú").
 LAND_T0=$(date +%s)
 LAND_TIMES=""
