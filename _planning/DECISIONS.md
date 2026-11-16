@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-proba-es-rendeles-a-nezett-tervhez-kotve.md) — A próba, a folytatás és a rendelés a nézett / futó tervhez kötve
+- [ADR-0449](decisions/0449-a-proba-a-folytatas-es-a-rendeles-a-nezett-futo.md) — A próba, a folytatás és a rendelés a nézett / futó tervhez kötve
 - [ADR-0448](decisions/0448-portal-feltoltes-a-tenant-helyett-digitalis.md) — Portál-feltöltés a tenant helyett: digitális kollégával, a fiókot mi hozzuk létre; első kör csak felderítés
 - [ADR-0447](decisions/0447-gyorsitott-oras-gepi-latogatas-levelszuro-nem.md) — Gyorsított órás gépi látogatás (levélszűrő) nem megnyitás
 - [ADR-0446](decisions/0446-land-egyszerusites-bongeszos-kapuk-orankent-az.md) — Land egyszerűsítés: böngészős kapuk óránként az origin/mainen, egyszeri automatikus újrafuttatás
