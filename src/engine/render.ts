@@ -807,7 +807,10 @@ export function renderSite(
     // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
     // tenant site and meaningless on a mock (no legal data about the lead, no such
     // page on the preview host). Cut here, once, for both render paths.
-    return phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : out;
+    // Owner 2026-11-16 („Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): the
+    // sample pictures and the town photo the mock showed stay on the trial / live page too, with
+    // the same sample note and licence credit, until the owner's own photos replace them.
+    return phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data);
   };
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
@@ -860,7 +863,8 @@ export function renderSite(
   if (data.photos.some((p) => isStockPhoto(p))) data = { ...data, photos: data.photos.filter((p) => !isStockPhoto(p)) };
   // Owner 2026-11-07 (plan assets/design-refs/tenant-site/stock-fill/): on the MOCK the missing
   // image slots are filled with watermarked stock illustrations — gallery + room cards only.
-  if (phase === "mock") data = withStockFill(withTownHero(data));
+  // Owner 2026-11-16: the same fill on the live page — what the mock promised is what the trial shows.
+  data = withStockFill(withTownHero(data));
   // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
   // so no card is left as a bare icon panel next to a page full of real imagery.
   if (phase === "mock" && data.rooms?.length) data = { ...data, rooms: roomsForMock(data) };

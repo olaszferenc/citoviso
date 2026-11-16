@@ -2,8 +2,9 @@
 // assets/design-refs/tenant-site/stock-fill/, engine/stock.ts) keep every hard rule:
 //
 //   ① stock ONLY in the gallery and on room cards — never the hero, about, band or contact picture;
-//   ② MOCK ONLY — the live render, the live photo policy, the tenant asset store and the uploader's
-//      md5/dHash bar all refuse it;
+//   ② never a STORED photo — the live photo policy, the tenant asset store and the uploader's
+//      md5/dHash bar all refuse it; the render-time fill shows on the live / trial page too, with
+//      the same sample note (owner 2026-11-16: „Ki mondta, hogy vegye ki bárki is a teszt fotókat!?”);
 //   ③ nothing on the page claims anything about it (alt „Illusztráció”, no subject/bedroom);
 //   ④ it never enters the stored photo list (the counts stay the lodging's own);
 //   ⑤ deterministic per lead, no picture twice; the gallery's own photos come first;
@@ -11,7 +12,7 @@
 //      „about” frame — and no stock interior as its cover;
 //   ⑨ …unless it has a TOWN photo (owner „C” 2026-11-09, ADR-0436, plan
 //      assets/design-refs/tenant-site/varos-hero/): then the town is the hero, credited at the
-//      foot, the gallery is filled, one sample note sits under it, and the live page has neither.
+//      foot, the gallery is filled, one sample note sits under it — on the live page as well (owner 11-16).
 //
 //   npx tsx scripts/stock-fill-check.mts        (exit 1 on any failure)
 
@@ -194,7 +195,7 @@ console.log("⑥ no own photo → typographic hero, no empty about frame");
   check("egyetlen üres ikonos képkeret sincs a lapon (cit-fill)", !html.includes('class="cit-fill"'), (html.match(/class="cit-fill" role="img" aria-label="[^"]*"/g) ?? []).slice(0, 3));
 }
 
-console.log("⑦ never live");
+console.log("⑦ never stored as the lodging's photo; the sample fill shows live too (owner 2026-11-16)");
 {
   const stockPhoto: Photo = { url: "/assets/stock/bathroom/bathroom-7005268.jpg", alt: "x", provenance: "generated", stock: true };
   const flagless: Photo = { url: "https://citoviso.com/assets/stock/bathroom/bathroom-7005268.jpg", alt: "x", provenance: "owner" };
@@ -205,8 +206,8 @@ console.log("⑦ never live");
   check("applyLivePhotoPolicy: a stock kikerül a galériából és a szobáról", !pol.photos.some(isStockPhoto) && !pol.rooms?.[0]?.photo);
   for (const t of ["parallax", "gate-opening", "wordmark-grow"]) {
     const live = renderSite(recipe(t), lead(2, { photos: [own(0), stockPhoto, own(1)] }), { phase: "live" });
-    check(`${t} LIVE: egyetlen illusztráció sincs a lapon`, !STOCK_RE.test(live) && !live.includes("/assets/stock/"));
-    STOCK_RE.lastIndex = 0;
+    check(`${t} LIVE: a tárolt stock nem hero`, !(heroSrc(live) ?? "").includes("/assets/stock/"), heroSrc(live));
+    check(`${t} LIVE: a mintakép a galériában, a minta-felirattal`, /\/assets\/stock\//.test(live) && live.split("Néhány kép minta: a helyükre a szállás saját fotói kerülnek.").length === 2);
   }
   const mockWithStored = renderSite(recipe("parallax"), lead(2, { photos: [stockPhoto, own(0), own(1)] }), { phase: "mock" });
   check("egy tárolt stock-kép a MOCKON sem lehet hero", !(heroSrc(mockWithStored) ?? "").includes("/assets/stock/"));
@@ -262,7 +263,7 @@ console.log("⑨ no own photo + town photo → the town is the hero, credited; o
     check(`${t}: a tárolt photos érintetlen (üres)`, d.photos.length === 0);
     check(`${t}: a kapu nem „kép nélküli”-nek látja (a településfotó kép-hivatkozás)`, extractImageRefs(html).some((r) => r.url.includes("Koveskal.jpg")));
     const live = renderSite(recipe(t), d, { phase: "live" });
-    check(`${t} LIVE: se településfotó, se forrás-sor, se minta-felirat`, !live.includes("Koveskal.jpg") && !live.includes("cit-town-credit") && !live.includes(NOTE));
+    check(`${t} LIVE: a településfotó, a forrás-sor és a minta-felirat is ott van (tulaj 11-16)`, live.includes("Koveskal.jpg") && live.includes("cit-town-credit") && live.split("Néhány kép minta: a helyükre a szállás saját fotói kerülnek.").length === 2);
   }
   // A lead WITH own photos keeps them as the hero even when a town photo is stored.
   const own2 = renderSite(recipe("parallax"), lead(2, { townPhoto: town }), { phase: "mock" });

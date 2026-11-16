@@ -42,6 +42,6 @@ legjobban a honlap. Mostantól ők is mockot kapnak; a hiányzó képhelyeket v�
 7. **Szöveg nem állít semmit a stockról** (§B.17): alt „Illusztráció” / „Illusztráció — <egység>”,
    nincs subject, nincs hálójel. Provenance `generated` + `stock: true`.
 8. **Determinisztikus** (seed = lead id, `stockSeed`), egy lapon egy kép egyszer.
-9. **SOHA ÉLESRE:** a live render, a `isLiveSafePhoto` (nyilatkozattal sem), a tenant-előnézet, az
+9. **ÉLŐ OLDALON IS LÁTSZIK, de SOHA nem tárolt fotó** (tulaj 2026-11-16: „Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): a render-időben töltött mintakép és a településfotó a próba / élő oldalon ugyanúgy megjelenik, mint a mockon, a minta-felirattal és a licenc-sorral, amíg a partner saját fotója a helyére nem kerül. Tárolt fotóként viszont a `isLiveSafePhoto` (nyilatkozattal sem), a tenant-előnézet, az
    `addTenantPhotos`, az `assetStore.save` és a feltöltő (md5 + dHash ≤ 6 bit, a vízjeles és a tiszta
    forráskép ellen) mind elutasítja. Nem számít saját képnek (nincs a tárolt fotólistában).
