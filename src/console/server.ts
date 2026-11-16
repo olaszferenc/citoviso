@@ -181,7 +181,7 @@ import {
   payAlreadyOwnedPage,
 } from "./views.js";
 import { checkSubdomainAvailable, convertLead, plannedSiteSlug } from "../conversion/provision.js";
-import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForLead, ownedSiteForProspectToken } from "../conversion/owned.js";
+import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForLead, ownedSiteForProspectToken, trialRunningArtifactForLead } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import { normalizeCustomDomain, slugify, suggestDomains } from "../domains.js";
@@ -1403,6 +1403,7 @@ async function handleOrderRequest(
         domainName: storedDomainName,
         platformLabel: storedPlatformLabel,
         buyerEmail: buyer.buyerEmail,
+        planArtifactId: artifactId,
       })
     : null;
   if (twin) {
@@ -4193,10 +4194,22 @@ async function handle(
   // JSON {name, email, phone, aszfAccepted, photoRightsAccepted, viewId?} → {ok, …} or
   // {ok:false, error:<TrialError>}; the page maps the code to its own wording.
   // Idempotent: a repeat answers the SAME trial (existing:true), never a second tenant.
-  const pTrialMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/trial$/.exec(pPath);
+  // /p/:token/v/:n/trial — the same start from PLAN n (tervvaltas A, 2026-11-16): the trial is
+  // built from the plan the lead was looking at. The bare /p/:token/trial stays plan 1, so the
+  // links already out keep working. startTrial re-checks that the artifact is this link's plan.
+  const pTrialMatch = /^\/p\/([A-Za-z0-9_-]{16,})(?:\/v\/([1-9]))?\/trial$/.exec(pPath);
   if (method === "POST" && pTrialMatch) {
+    let planArtifactId: string | null = null;
+    if (pTrialMatch[2]) {
+      const pt = await getProspectByToken(pTrialMatch[1]!);
+      const plans = pt ? await listProspectPlans(pt.id, { artifactId: pt.artifactId, artifactPath: pt.artifactPath }) : [];
+      const plan = plans.find((x) => x.n === Number(pTrialMatch[2]));
+      if (!plan) return send(res, 404, JSON.stringify({ ok: false, error: "not_found" }), "application/json");
+      planArtifactId = plan.artifactId;
+    }
     const b = (await readJson(req)) as Record<string, unknown>;
-    const r = await startTrial(pTrialMatch[1], {
+    const r = await startTrial(pTrialMatch[1]!, {
+      planArtifactId,
       name: typeof b.name === "string" ? b.name : "",
       email: typeof b.email === "string" ? b.email : "",
       phone: typeof b.phone === "string" ? b.phone : "",
@@ -4237,7 +4250,10 @@ async function handle(
   if (method === "POST" && pReqMatch) {
     const p = await getProspectByToken(pReqMatch[1]);
     if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
-    return handleOrderRequest(req, res, p.artifactId, pReqMatch[1]);
+    // tervvaltas A: a trialist's order (a /folytatas page opened before the fix posts here)
+    // buys the plan the trial site runs, never silently plan 1.
+    const running = await trialRunningArtifactForLead(p.leadId);
+    return handleOrderRequest(req, res, running?.id ?? p.artifactId, pReqMatch[1]);
   }
   // POST /p/:token/v/:n/request — the order submit of PLAN n (plan-tabs contract §F.19):
   // the order binds to the plan the lead was looking at, not to the link's first plan.
@@ -4295,6 +4311,17 @@ async function handle(
   // (handleOrderRequest already lets a continuable trial through and prices it with the
   // trial offer, ADR-0354). Only for a continuable trial — anyone else goes back to /p/:token,
   // which knows what to show them. Nothing is measured: this visitor is a customer.
+  // POST /p/:token/folytatas/request — the continuation's order submit (tervvaltas A,
+  // 2026-11-16). It binds to the plan the TRIAL SITE RUNS (site.source_artifact_id), not to
+  // the link's plan 1: before this, a trialist on plan 2 paid through /p/:token/request, and
+  // the paid conversion rebuilt the site from plan 1.
+  const pContReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas\/request$/.exec(pPath);
+  if (method === "POST" && pContReqMatch) {
+    const p = await getProspectByToken(pContReqMatch[1]!);
+    if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    const running = await trialRunningArtifactForLead(p.leadId);
+    return handleOrderRequest(req, res, running?.id ?? p.artifactId, pContReqMatch[1]!);
+  }
   const pContMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas$/.exec(pPath);
   if (method === "GET" && pContMatch) {
     const p = await getProspectByToken(pContMatch[1]);
@@ -4323,13 +4350,16 @@ async function handle(
       .executeTakeFirstOrThrow();
     const trialEndIso = budapestIsoDay(new Date(ft.trial_until as unknown as string));
     const contLang = p.lang ?? "hu";
+    // tervvaltas A: the page shows — and the order buys — the plan the trial site RUNS.
+    const running = await trialRunningArtifactForLead(pf.leadId);
+    const contArt = running ?? { id: p.artifactId, path: p.artifactPath, inputs: p.artifactInputs };
     try {
-      const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(p.artifactPath, p.artifactInputs)));
-      const contRegion = await regionForArtifactOrNull(p.artifactId);
+      const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(contArt.path, contArt.inputs)));
+      const contRegion = await regionForArtifactOrNull(contArt.id);
       if (!contRegion) return send(res, 200, disableIntroAnimation(html));
-      const page = await injectConfigurator(html, p.artifactId, p.leadName, {
+      const page = await injectConfigurator(html, contArt.id, p.leadName, {
         pricingRegion: contRegion,
-        requestUrl: `/p/${pContMatch[1]}/request`,
+        requestUrl: `/p/${pContMatch[1]}/folytatas/request`,
         // ADR-0407 (Próba riport): the order's opening + checkout steps, recorded by the page.
         trialTrack: { url: `/p/${pContMatch[1]}/trial-event`, from: orderOpenFrom(url.searchParams.get("from")) },
         // ADR-0343 ②: the slug the trial site HAS (plannedSiteSlug: an existing site keeps it).
@@ -4496,7 +4526,8 @@ async function handle(
               trial: {
                 enabled: true as const,
                 days: trialDays,
-                url: `/p/${pMatch[1]}/trial`,
+                // The trial starts from the plan on screen (tervvaltas A); plan 1 keeps the bare address.
+                url: plan.n === 1 ? `/p/${pMatch[1]}/trial` : `/p/${pMatch[1]}/v/${plan.n}/trial`,
                 privacyUrl: "/privacy",
                 ...(trialPkg && !trialPkg.everything
                   ? {

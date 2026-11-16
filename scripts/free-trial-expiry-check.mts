@@ -632,7 +632,7 @@ try {
   const contA = await get(`/p/${a.token}/folytatas`);
   const bodyA = contA.status === 200 ? await contA.text() : "";
   if (SELF_TEST) await db.updateTable("offer").set({ expires_at: trialOfferDeadline(yesterdayEnd) } as never).where("id", "=", aOffer.id).execute();
-  check("GET /p/<t>/folytatas (lejárt próbázó) → 200, konfigurátor a saját /request-re", contA.status === 200 && bodyA.includes(`/p/${a.token}/request`), String(contA.status));
+  check("GET /p/<t>/folytatas (lejárt próbázó) → 200, konfigurátor a /folytatas/request-re (a futó terv, tervvaltas A)", contA.status === 200 && bodyA.includes(`/p/${a.token}/folytatas/request`), String(contA.status));
   // Elek (2026-10-09): the browse header said „Most nem fizet semmit" to someone who came to
   // pay — the page must mark itself the continuation so the runtime swaps that header.
   // proba-C: `continuation` carries the trial's dates (ContinuationInfo); this trialist is LAPSED.

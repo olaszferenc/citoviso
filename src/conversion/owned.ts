@@ -175,6 +175,28 @@ export async function continuableTrialForLead(leadId: string): Promise<{
   return { trialId: t.id, tenantId: t.tenant_id, status: t.status as "active" | "lapsed" };
 }
 
+/**
+ * tervvaltas A (2026-11-16): the mock the lead's TRIAL SITE was built from
+ * (site.source_artifact_id) — the plan the continuation (/p/<token>/folytatas) must show and
+ * sell. The paid activation runs convertLead with the ORDER's artifact, so an order bound to
+ * plan 1 rebuilt a plan-2 trial site from plan 1. Null when the lead has no continuable trial
+ * or the site's source is not one of the lead's own mocks (the caller then keeps plan 1).
+ */
+export async function trialRunningArtifactForLead(
+  leadId: string,
+): Promise<{ readonly id: string; readonly path: string; readonly inputs: unknown } | null> {
+  const trial = await continuableTrialForLead(leadId);
+  if (!trial) return null;
+  const r = await db
+    .selectFrom("site")
+    .innerJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
+    .select(["mock_artifact.id as id", "mock_artifact.path as path", "mock_artifact.inputs as inputs"])
+    .where("site.tenant_id", "=", trial.tenantId)
+    .where("mock_artifact.lead_id", "=", leadId)
+    .executeTakeFirst();
+  return r?.path ? { id: r.id, path: r.path, inputs: r.inputs } : null;
+}
+
 /** The purchase gate's question: owned AND not a trial waiting for its first payment. */
 export async function ownedBlocksInitialPurchase(leadId: string): Promise<OwnedSite | null> {
   const owned = await ownedSiteForLead(leadId);
