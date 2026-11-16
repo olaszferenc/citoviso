@@ -99,6 +99,7 @@
  "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, {art2} {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso": "{name}: the website plan sent on {date} is now free for {days} days, you can try it live, no card needed. Order before the trial ends and keep the {p}% discount. {link} Unsubscribe at the bottom of the page. Citoviso",
  "{name}: a honlap-terve havi {price} Ft-tól indul. Hogy mi van benne és mi nem, itt látja: {link} Citoviso": "{name}: your website design starts at {price} HUF a month. See what is and isn't included here: {link} Citoviso",
  "{name}: a honlap-tervéből egy kattintással élő honlap lesz, {days} napig ingyen, kártya nélkül. {link} Citoviso": "{name}: one click turns your website design into a live site, free for {days} days, no card. {link} Citoviso",
+ "{name}: az ár csak pozitív szám lehet (legfeljebb {d} tizedesjeggyel).": "{name}: the price must be a positive number (maximum decimal places: {d}).",
  "{name}: ha a honlap-tervével kapcsolatban kérdése van, a terv alján azonnal választ kap rá. {link} Citoviso": "{name}: if you have a question about your website design, you'll get an instant answer at the bottom of it. {link} Citoviso",
  "{o} megnyitotta a {g} kapottból": "Opened: {o} of {g} received",
  "{o} megnyitotta a {g} utánkövető levélből": "Opened: {o} of {g} follow-up emails",

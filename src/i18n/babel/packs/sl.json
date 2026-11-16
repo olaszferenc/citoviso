@@ -99,6 +99,7 @@
  "{name}: {art} {date} küldött honlap-tervet most {days} napig ingyen, élesben is kipróbálhatja, kártya nélkül. Ha a próba végéig megrendeli, {art2} {p}% kedvezmény megmarad. {link} Leiratkozás a lap alján. Citoviso": "{name}: Osnutek spletne strani, poslan {date}, lahko zdaj {days} dni brezplačno preizkusite tudi v živo, brez kartice. Če naročite do konca preizkusa, vam {p}% popust ostane. {link} Odjava na dnu strani. Citoviso",
  "{name}: a honlap-terve havi {price} Ft-tól indul. Hogy mi van benne és mi nem, itt látja: {link} Citoviso": "{name}: vas nacrt spletne strani od {price} Ft na mesec. Kaj vsebuje in kaj ne, vidite tukaj: {link} Citoviso",
  "{name}: a honlap-tervéből egy kattintással élő honlap lesz, {days} napig ingyen, kártya nélkül. {link} Citoviso": "{name}: z enim klikom nacrt postane prava spletna stran, {days} dni brezplacno, brez kartice. {link} Citoviso",
+ "{name}: az ár csak pozitív szám lehet (legfeljebb {d} tizedesjeggyel).": "{name}: cena je lahko samo pozitivno število (največje število decimalnih mest: {d}).",
  "{name}: ha a honlap-tervével kapcsolatban kérdése van, a terv alján azonnal választ kap rá. {link} Citoviso": "{name}: ce imate vprasanje o nacrtu spletne strani, na dnu nacrta takoj dobite odgovor. {link} Citoviso",
  "{o} megnyitotta a {g} kapottból": "Odprto: {o} od {g} prejetih",
  "{o} megnyitotta a {g} utánkövető levélből": "Odprto: {o} od {g} sledilnih e-sporočil",

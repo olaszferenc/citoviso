@@ -492,6 +492,7 @@
  "{name}: a honlap-terve havi {price} Ft-tól indul. Hogy mi van benne és mi nem, itt látja: {link} Citoviso": "{name}: la sua bozza del sito parte da {price} Ft al mese. Cosa include e cosa no, lo vede qui: {link} Citoviso",
  "{name}: a honlap-tervéből egy kattintással élő honlap lesz, {days} napig ingyen, kártya nélkül. {link} Citoviso": "{name}: con un clic la sua bozza diventa un sito vero, gratis per {days} giorni, senza carta. {link} Citoviso",
  "{name}: az ár csak pozitív egész szám lehet.": "{name}: il prezzo può essere solo un numero intero positivo.",
+ "{name}: az ár csak pozitív szám lehet (legfeljebb {d} tizedesjeggyel).": "{name}: il prezzo può essere solo un numero positivo (numero massimo di decimali: {d}).",
  "{name}: az időszakokon kívüli éjszakáknak nincs ára. A vendég nem lát végösszeget, ajánlatot kér.": "{name}: le notti fuori dai periodi non hanno prezzo. L'ospite non vede un totale e chiede un'offerta.",
  "{name}: azóta élesben is kipróbálhatja": "{name}: da allora può provarla anche online",
  "{name}: egyetlen napra sem lehet foglalni — csak az időszakokban adja ki, de nincs időszaka.": "{name}: non si può prenotare nessun giorno — affitta solo nei periodi, ma non ha nessun periodo.",
