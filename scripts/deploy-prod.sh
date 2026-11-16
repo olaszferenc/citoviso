@@ -539,9 +539,12 @@ timers_install_and_verify
 scrape_gate "közvetlenül a restart előtt"
 
 echo "── restart: console (belső kanári) → verify → public…"
-# tsx cold-start needs ~6s; poll up to 30s instead of guessing a sleep.
+# tsx cold-start needs ~6s idle, but ~40s under load (2026-11-16: load 12.9, public up
+# at 40s, the old 30s window failed a healthy deploy). Poll up to DEPLOY_WAIT_SECS (default 120).
+WAIT_SECS="${DEPLOY_WAIT_SECS:-120}"
+WAIT_TRIES=$(( (WAIT_SECS + 1) / 2 ))
 wait_port() { # $1=port $2=path $3=expected-prefix
-  $SSH "for i in \$(seq 1 15); do C=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost:$1$2); case \$C in $3*) echo \":$1 → \$C (\$((i*2))s)\"; exit 0;; esac; sleep 2; done; echo \":$1 → \$C 30s után\"; exit 1" </dev/null
+  $SSH "for i in \$(seq 1 $WAIT_TRIES); do C=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost:$1$2); case \$C in $3*) echo \":$1 → \$C (\$((i*2))s)\"; exit 0;; esac; sleep 2; done; echo \":$1 → \$C ${WAIT_SECS}s után\"; exit 1" </dev/null
 }
 $SSH "systemctl restart citoviso-console" </dev/null || fail "console restart parancs hibázott"
 wait_port 4600 /leads 3 || fail "console nem jött vissza — public NEM lett bántva"
