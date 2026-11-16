@@ -33,7 +33,7 @@
 process.env.MMS_PROVIDER = "queue";
 delete process.env.ELEK_RUN;
 
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
@@ -434,6 +434,14 @@ try {
     say(m.brakeVerdict(mk(60, (i) => i % 4 !== 0)) === null, "⑧ egyenletes olvasási arány nem állít le");
     say(m.brakeVerdict(mk(60, () => true, (i) => i < 4)) === null, "⑧ 5 válasz alatt a válasz-arány nem számít");
     say(/válasz-arány/.test(m.brakeVerdict(mk(60, () => true, (i) => i < 40 && i % 5 === 0)) ?? ""), "⑧ a felére esett válasz-arány leállít");
+  }
+  {
+    // ⑭ Owner 2026-11-16 („whatsappon … csak olyan ahol nincs email”): e-mail out → no mobile message.
+    const rq = await readFile(path.resolve("src/mms/relayQueue.ts"), "utf8");
+    const ad = await readFile(path.resolve("src/outreach/autoDispatch.ts"), "utf8");
+    say(/pe\.id = mms_outbox\.prospect_id and pe\.email_sent_at is not null/.test(rq), "⑭ a relay nem adja ki annak a leadnek a mobilüzenetét, akinek az e-mail kiment");
+    say(/mail\.outcome\.kind === "sent"\s*\?\s*\{ ok: false/.test(ad), "⑭ az automata e-mail után nem indít mobil-párt");
+    say(!/csak azon megy, e-mail nem/.test(ad), "⑭ a 11-11-i „Viber/WhatsApp van → e-mail nem” szabály kivezetve");
   }
 } catch (e) {
   failed++;

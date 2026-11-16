@@ -221,6 +221,11 @@ export async function pullMms(now: Date = new Date(), windowAt: Date = now): Pro
           sql<boolean>`not exists (select 1 from prospect pr where pr.id = mms_outbox.prospect_id and (pr.unsubscribed_at is not null
             or exists (select 1 from outreach_reply r where r.lead_id = pr.lead_id)))`,
         )
+        // Owner 2026-11-16 („mehet ki whatsappon … de csak olyan ahol nincs email”): a lead that got the
+        // outreach e-mail gets no Viber / WhatsApp / MMS — the row stays queued, out of the claim.
+        .where(
+          sql<boolean>`not exists (select 1 from prospect pe where pe.id = mms_outbox.prospect_id and pe.email_sent_at is not null)`,
+        )
         .$if(followupBlocked, (qb) => qb.where("force_channel", "is", null))
         .$if(holdWhatsapp, (qb) =>
           qb.where(
