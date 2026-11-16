@@ -1,6 +1,6 @@
 // tervvaltas E (2026-11-16, owner: „a 2 két tervet bármikor lehessen váltogatni. Miért ne?”) —
 // the owner switches the site between the plans its link offered, during the trial and after
-// purchase. Contract: assets/design-refs/console/tervvalto-admin/README.md; ADR-XXXX.
+// purchase. Contract: assets/design-refs/console/tervvalto-admin/README.md; ADR-0451.
 //
 // What a switch IS (B report 2.2–2.5): `site.source_artifact_id` points at another plan's
 // artifact and the snapshot is re-rendered. Everything the owner edited lives in

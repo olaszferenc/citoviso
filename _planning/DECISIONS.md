@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-tervvalto-admin-kinezet-lap.md) — Tervváltó a tenant-adminban: „Kinézet” lap, váltás bármikor a lead saját tervei között
+- [ADR-0451](decisions/0451-tervvalto-a-tenant-adminban-kinezet-lap-valtas.md) — Tervváltó a tenant-adminban: „Kinézet” lap, váltás bármikor a lead saját tervei között
 - [ADR-0450](decisions/0450-orszag-reteg-3-2-a-feluletek-a-szallas-es-a.md) — Ország-réteg 3/2: a felületek a szállás és a partner országában beszélnek (pénznem, dátum, telefon, IFA-szabály)
 - [ADR-0449](decisions/0449-a-proba-a-folytatas-es-a-rendeles-a-nezett-futo.md) — A próba, a folytatás és a rendelés a nézett / futó tervhez kötve
 - [ADR-0448](decisions/0448-portal-feltoltes-a-tenant-helyett-digitalis.md) — Portál-feltöltés a tenant helyett: digitális kollégával, a fiókot mi hozzuk létre; első kör csak felderítés

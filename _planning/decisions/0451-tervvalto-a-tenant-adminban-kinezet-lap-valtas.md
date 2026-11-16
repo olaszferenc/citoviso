@@ -1,4 +1,4 @@
-## ADR-XXXX — Tervváltó a tenant-adminban: „Kinézet” lap, váltás bármikor a lead saját tervei között
+## ADR-0451 — Tervváltó a tenant-adminban: „Kinézet” lap, váltás bármikor a lead saját tervei között
 
 **Dátum:** 2026-11-16 · **Döntött:** tulaj („a 2 két tervet bármikor lehessen váltogatni. Miért ne?”; a C3 mock
 „3.A” változata; a terv egészére „igen mehet”) · **Kapcsolódik:** ADR-0449 (a próba, a folytatás és a rendelés a
