@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-11-16_konverzio_javitasok_zaras.md](2026-11-16_konverzio_javitasok_zaras.md) — 2026-11-16 — Konverzió-elemzés és a három gépi javítás (zárás, cit8a744532)
+- [2026-11-16_elesites_alairas_b_meres.md](2026-11-16_elesites_alairas_b_meres.md) — 2026-11-16 — Élesítés 068073d0: e-mail aláírás, ?b mérés, fejléc/előnézet (cit383fe8b6)
 - [2026-11-13_regisztrator_hamis_riasztas.md](2026-11-13_regisztrator_hamis_riasztas.md) — 2026-11-13 — Hamis „regisztrátor-fiók hiányos” riasztás (Websupport HTTP 500)
 - [2026-11-13_overlay_kartya_kapu_mar_zold.md](2026-11-13_overlay_kartya_kapu_mar_zold.md) — 2026-11-13 — Overlay ⑪ (card-sidebar, 1536×864, süti-sávval): a mainen már zöld, kód nem változott
 - [2026-11-13_megnyitas_csatornankent_kartya.md](2026-11-13_megnyitas_csatornankent_kartya.md) — 2026-11-13 — Megnyitás csatornánként kártya az Irányítópulton
