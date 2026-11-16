@@ -12,6 +12,7 @@
 // International input ("+CC…", "00CC…") is the same for every country: phone.ts's rules.
 import type { CountryConfig } from "../country.js";
 import { isHuMobileE164, normalizePhone, prettyPhone } from "./phone.js";
+import { jsonForScript } from "./jsonForScript.js";
 
 export type PhoneRules = Pick<CountryConfig, "dialCode" | "trunkPrefix" | "mobilePrefixes" | "phonePlan" | "phoneNsnMin" | "phoneNsnMax">;
 
@@ -91,9 +92,8 @@ export function phoneExampleIn(cfg: PhoneRules): string {
  */
 export function phoneRulesJs(cfg: PhoneRules | null): string {
   if (!cfg || cfg.phonePlan === "hu") return "";
-  const r = JSON.stringify({ d: cfg.dialCode, t: cfg.trunkPrefix, a: cfg.phoneNsnMin, b: cfg.phoneNsnMax });
   return (
-    `var PR=${r};` +
+    `var PR=${jsonForScript({ d: cfg.dialCode, t: cfg.trunkPrefix, a: cfg.phoneNsnMin, b: cfg.phoneNsnMax })};` +
     `function norm(raw){var c=String(raw||'').replace(/[\\s\\-()./]/g,'');if(!/^\\+?[0-9]{6,15}$/.test(c))return null;` +
     `var intl=c[0]==='+'?c:(c.indexOf('00')===0&&c[2]!=='0'?'+'+c.slice(2):null);` +
     `if(intl)return /^\\+[1-9][0-9]{6,14}$/.test(intl)?intl:null;var n=null;` +
