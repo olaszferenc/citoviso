@@ -17,12 +17,13 @@ import type { OwnerEvent, TenantActivity, TenantVerdict } from "./tenantActivity
 
 const DAY = 86_400_000;
 
-function fmtAt(d: Date): string {
-  const p = partsIn(d, APP_TZ);
+// Times of one tenant are read in ITS lodging's zone (TenantActivity.timeZone, ország-réteg 3/3).
+function fmtAt(d: Date, tz: string = APP_TZ): string {
+  const p = partsIn(d, tz);
   return `${p.month}. ${p.day}. ${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}`;
 }
-function fmtDay(d: Date): string {
-  const p = partsIn(d, APP_TZ);
+function fmtDay(d: Date, tz: string = APP_TZ): string {
+  const p = partsIn(d, tz);
   return `${p.month}. ${p.day}.`;
 }
 const isoShort = (iso: string): string => `${Number(iso.slice(5, 7))}. ${Number(iso.slice(8, 10))}.`;
@@ -133,12 +134,12 @@ function summary(a: TenantActivity, lang: string): string {
   const o = a.owner;
   const v = a.visitors;
   const owner = o.logins30
-    ? T(lang, "A tulaj 30 nap alatt {n}× lépett be (utoljára {d}).", { n: o.logins30, d: fmtAt(o.lastLoginAt ?? new Date()) })
+    ? T(lang, "A tulaj 30 nap alatt {n}× lépett be (utoljára {d}).", { n: o.logins30, d: fmtAt(o.lastLoginAt ?? new Date(), a.timeZone) })
     : o.lastLoginAt
-      ? T(lang, "A tulaj utoljára {d} lépett be.", { d: fmtAt(o.lastLoginAt) })
+      ? T(lang, "A tulaj utoljára {d} lépett be.", { d: fmtAt(o.lastLoginAt, a.timeZone) })
       : T(lang, "A tulaj még nem lépett be.");
   const save = o.lastSave
-    ? T(lang, "Utoljára {d} mentett.", { d: fmtAt(o.lastSave.at) })
+    ? T(lang, "Utoljára {d} mentett.", { d: fmtAt(o.lastSave.at, a.timeZone) })
     : T(lang, "Mentése még nincs.");
   const guests = v.v30
     ? v.mainSource
@@ -203,17 +204,17 @@ export function tenantActivityBlock(a: TenantActivity, now = new Date()): string
     `<div class="con-kbox"><div class="con-kbox__t">${esc(t)}</div><div class="con-kbox__r"><span class="con-kbox__v">${esc(val)}</span></div><div class="con-kbox__s">${esc(sub)}</div></div>`;
   const kpis =
     `<div class="con-kstrip ta-kstrip">` +
-    kbox(T(lang, "Belépés 7 / 30 nap"), `${o.logins7} / ${o.logins30}`, o.lastLoginAt ? T(lang, "utolsó: {d}", { d: fmtAt(o.lastLoginAt) }) : T(lang, "még soha")) +
+    kbox(T(lang, "Belépés 7 / 30 nap"), `${o.logins7} / ${o.logins30}`, o.lastLoginAt ? T(lang, "utolsó: {d}", { d: fmtAt(o.lastLoginAt, a.timeZone) }) : T(lang, "még soha")) +
     kbox(
       T(lang, "Utolsó mentés"),
-      o.lastSave ? fmtDay(o.lastSave.at) : T(lang, "nincs"),
+      o.lastSave ? fmtDay(o.lastSave.at, a.timeZone) : T(lang, "nincs"),
       o.lastSave?.area ? (SAVE_AREA(lang)[o.lastSave.area] ?? o.lastSave.area) : T(lang, "a mentések naplója 10. 27. óta él"),
     ) +
     kbox(T(lang, "Látogató 7 / 30 nap"), `${v.v7} / ${v.v30}`, T(lang, "botok és saját megnyitás nélkül")) +
     kbox(T(lang, "Érdeklődés 30 nap"), String(a.enquiries30), T(lang, "érdeklődés + foglalási kérés")) +
     `</div>`;
   const events = o.events.length
-    ? `<ul class="ta-ev">${o.events.map((e) => `<li><time>${esc(fmtAt(e.at))}</time><span>${esc(eventText(e, lang))}</span></li>`).join("")}</ul>`
+    ? `<ul class="ta-ev">${o.events.map((e) => `<li><time>${esc(fmtAt(e.at, a.timeZone))}</time><span>${esc(eventText(e, lang))}</span></li>`).join("")}</ul>`
     : `<p class="ta-empty">${esc(T(lang, "Még nincs rögzített esemény."))}</p>`;
   const src = SOURCE_LABEL(lang);
   const right =
@@ -367,7 +368,7 @@ export function reportTenantsPage(all: readonly TenantActivity[], q: TenantRepor
     a.partnerId ? ` · <a href="/partner/${esc(a.partnerId)}?tab=usage">${esc(T(lang, "a partner-adatlap aktivitás-blokkja →"))}</a>` : "";
   const lastEv = (a: TenantActivity): string => {
     const e = a.owner.events[0];
-    return e ? T(lang, "Utolsó esemény: {d} — {t}", { d: fmtAt(e.at), t: eventText(e, lang) }) : T(lang, "Még nincs rögzített esemény.");
+    return e ? T(lang, "Utolsó esemény: {d} — {t}", { d: fmtAt(e.at, a.timeZone), t: eventText(e, lang) }) : T(lang, "Még nincs rögzített esemény.");
   };
   const body = rows
     .map((a) => {
@@ -375,8 +376,8 @@ export function reportTenantsPage(all: readonly TenantActivity[], q: TenantRepor
       return (
         `<tr class="ta-row" data-ta-toggle="${id}" tabindex="0" aria-expanded="false">` +
         `<td><div class="ta-nm">${esc(a.name)}</div><div class="ta-st">${esc(kindLabel(a, lang, now))}</div></td>` +
-        `<td class="num">${a.owner.logins7} / ${a.owner.logins30}<div class="ta-st">${esc(a.owner.lastLoginAt ? T(lang, "utolsó {d}", { d: fmtDay(a.owner.lastLoginAt) }) : T(lang, "soha"))}</div></td>` +
-        `<td>${a.owner.lastSave ? esc(fmtDay(a.owner.lastSave.at)) : `<span class="mut">${esc(T(lang, "nincs"))}</span>`}</td>` +
+        `<td class="num">${a.owner.logins7} / ${a.owner.logins30}<div class="ta-st">${esc(a.owner.lastLoginAt ? T(lang, "utolsó {d}", { d: fmtDay(a.owner.lastLoginAt, a.timeZone) }) : T(lang, "soha"))}</div></td>` +
+        `<td>${a.owner.lastSave ? esc(fmtDay(a.owner.lastSave.at, a.timeZone)) : `<span class="mut">${esc(T(lang, "nincs"))}</span>`}</td>` +
         `<td class="num">${a.visitors.v7} / ${a.visitors.v30}${spark(a.visitors.daily)}</td>` +
         `<td>${a.visitors.mainSource ? esc(src[a.visitors.mainSource]) : `<span class="mut">—</span>`}</td>` +
         `<td class="num">${a.enquiries30}</td>` +
@@ -390,7 +391,7 @@ export function reportTenantsPage(all: readonly TenantActivity[], q: TenantRepor
       (a) =>
         `<details class="ta-card"><summary><span class="ta-card__top"><span><span class="ta-nm">${esc(a.name)}</span><span class="ta-st">${esc(kindLabel(a, lang, now))}</span></span>${pill(a.verdict, lang)}</span>` +
         `<span class="ta-card__why">${esc(verdictReason(a, lang, now))}</span>` +
-        `<span class="ta-card__nums"><span>${esc(T(lang, "Belépés"))} <b>${a.owner.logins7}/${a.owner.logins30}</b></span><span>${esc(T(lang, "Mentés"))} <b>${esc(a.owner.lastSave ? fmtDay(a.owner.lastSave.at) : T(lang, "nincs"))}</b></span><span>${esc(T(lang, "Látogató"))} <b>${a.visitors.v7}/${a.visitors.v30}</b>${spark(a.visitors.daily)}</span><span>${esc(T(lang, "Forrás"))} <b>${esc(a.visitors.mainSource ? src[a.visitors.mainSource] : "—")}</b></span><span>${esc(T(lang, "Érdeklődés"))} <b>${a.enquiries30}</b></span></span>` +
+        `<span class="ta-card__nums"><span>${esc(T(lang, "Belépés"))} <b>${a.owner.logins7}/${a.owner.logins30}</b></span><span>${esc(T(lang, "Mentés"))} <b>${esc(a.owner.lastSave ? fmtDay(a.owner.lastSave.at, a.timeZone) : T(lang, "nincs"))}</b></span><span>${esc(T(lang, "Látogató"))} <b>${a.visitors.v7}/${a.visitors.v30}</b>${spark(a.visitors.daily)}</span><span>${esc(T(lang, "Forrás"))} <b>${esc(a.visitors.mainSource ? src[a.visitors.mainSource] : "—")}</b></span><span>${esc(T(lang, "Érdeklődés"))} <b>${a.enquiries30}</b></span></span>` +
         `</summary><p class="ta-card__more">${esc(lastEv(a))}${partnerLink(a)}</p></details>`,
     )
     .join("");

@@ -9364,6 +9364,15 @@ export interface FinanceCounts {
   readonly aamLimitHuf: number;
   /** Non-HUF outgoing docs excluded from the sum (no FX rate stored). */
   readonly aamFxDocs: number;
+  /** ADR-0443 OSS counter (EU-consumer e-services, EUR); absent in old fixtures. */
+  readonly oss?: {
+    readonly pct: number;
+    readonly eurThisYear: number;
+    readonly limitEur: number;
+    readonly warn: boolean;
+    readonly blocked: boolean;
+    readonly reason: string;
+  };
 }
 
 /** One submenu entry on a hub module card. */
@@ -9471,6 +9480,20 @@ function attentionRows(d: HubData, lang: string): readonly AttentionRow[] {
         (d.fin.aamFxDocs
           ? ` — ${esc(T(lang, "+{n} nem-HUF bizonylat nincs beszámítva (nincs árfolyam)", { n: d.fin.aamFxDocs }))}`
           : ""),
+      href: "/documents",
+      where: T(lang, "Bizonylat keresése"),
+    });
+  }
+  // OSS threshold (ADR-0443, ország-réteg 3/3): silent below the warn tier (80 %); warn row
+  // from there, red once new EU-consumer sales are HELD (threshold reached or not computable).
+  const oss = d.fin.oss;
+  if (oss && (oss.warn || oss.blocked)) {
+    rows.push({
+      group: "finance",
+      tone: oss.blocked ? "bad" : "warn",
+      html:
+        `${b(esc(T(lang, "OSS-küszöb")))}: ${b(`${oss.pct}%`)} (${esc(formatMoney(Math.round(oss.eurThisYear), "EUR", lang))} / ${esc(formatMoney(oss.limitEur, "EUR", lang))})` +
+        (oss.blocked ? ` — ${esc(T(lang, "az EU-s magánszemély-eladások visszatartva, amíg az OSS-regisztrációról nincs döntés"))}` : ""),
       href: "/documents",
       where: T(lang, "Bizonylat keresése"),
     });
@@ -9585,6 +9608,10 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
           [T(lang, "Bizonylat"), String(d.fin.docs), "/documents"],
           [T(lang, "Partner"), String(d.fin.partners), "/partners"],
           [T(lang, "AAM-limit"), `${pct}%`, "/documents"],
+          // The OSS counter, once there is EU-consumer revenue or a hold (ADR-0443).
+          ...(d.fin.oss && (d.fin.oss.eurThisYear > 0 || d.fin.oss.blocked)
+            ? [[T(lang, "OSS-küszöb"), `${d.fin.oss.pct}%`, "/documents"] as [string, string, string]]
+            : []),
         ],
       );
     }

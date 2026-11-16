@@ -36,12 +36,13 @@ function dur(ms: number | null, lang: string): string {
   return T(lang, "{n} nap", { n: dec1(h / 24) });
 }
 
-function fmtAt(d: Date): string {
-  const p = partsIn(d, APP_TZ);
+// A trial's times and days are read in its LODGING's zone (TrialRow.timeZone, ország-réteg 3/3).
+function fmtAt(d: Date, tz: string = APP_TZ): string {
+  const p = partsIn(d, tz);
   return `${p.month}. ${p.day}. ${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}`;
 }
-function fmtDay(d: Date): string {
-  const p = partsIn(d, APP_TZ);
+function fmtDay(d: Date, tz: string = APP_TZ): string {
+  const p = partsIn(d, tz);
   return `${p.month}. ${p.day}.`;
 }
 
@@ -218,7 +219,7 @@ function timeline(t: TrialRow, lang: string): string {
   for (const e of t.events) {
     if (prev && e.at.getTime() - prev.getTime() > 2 * 86_400_000)
       li += `<li class="rp-tl__gap"><span></span><span></span><span>${esc(T(lang, "{n} nap csend", { n: Math.floor((e.at.getTime() - prev.getTime()) / 86_400_000) }))}</span></li>`;
-    li += `<li><time>${esc(fmtAt(e.at))}</time><i class="rp-mk rp-mk--${mk(e)}"></i><span>${esc(T(lang, "{n}. nap", { n: e.day + 1 }))} · ${esc(eventText(e, lang))}</span></li>`;
+    li += `<li><time>${esc(fmtAt(e.at, t.timeZone))}</time><i class="rp-mk rp-mk--${mk(e)}"></i><span>${esc(T(lang, "{n}. nap", { n: e.day + 1 }))} · ${esc(eventText(e, lang))}</span></li>`;
     prev = e.at;
   }
   const v = verdictOf(t.verdict, lang, t.measured);
@@ -241,7 +242,7 @@ function trialRow(t: TrialRow, lang: string): string {
         : T(lang, "lejárt");
   return (
     `<details class="rp-tr"><summary>` +
-    `<span class="rp-tr__who"><b>${esc(t.name)}</b><small>${esc([t.town, T(lang, "indult {d}", { d: fmtDay(t.startedAt) }), when].filter(Boolean).join(" · "))}</small></span>` +
+    `<span class="rp-tr__who"><b>${esc(t.name)}</b><small>${esc([t.town, T(lang, "indult {d}", { d: fmtDay(t.startedAt, t.timeZone) }), when].filter(Boolean).join(" · "))}</small></span>` +
     `<span class="rp-tr__strip">${strip(t, lang)}</span>` +
     `<span class="rp-tr__where"><span class="rp-pill ${v.cls}"><i></i>${esc(v.pill)}</span><small>${esc(v.sub)}</small></span>` +
     `</summary>${timeline(t, lang)}</details>`

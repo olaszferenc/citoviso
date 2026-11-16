@@ -27,7 +27,10 @@ A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselk
 Egy sorban: az **időszak** chipjei (**„Ma”** · 7 · 30 · 90 nap vagy **„Összes”**; a lap a
 **„Ma”**-val nyílik), a **„Lead típus”**
 legördülő (**„mind”** · nincs honlap · 0 lábnyom · van lábnyom · elavult honlap · ismeretlen) és a
-**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra). A „Lead típus”
+**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra · ország). Ha az
+időszakban több ország leadjei is szerepelnek, megjelenik az **„Ország”** legördülő is (**„mind”**,
+vagy egy ország a kiküldések számával): ugyanúgy szűkít, mint a „Lead típus”, minden panelre és a
+Viselkedés lapra is. A lead országa a szállás helyéből jön. A „Lead típus”
 csak az adott típusú leadeket hagyja meg: így egyetlen csoport tölcsérét látod önmagában, míg a
 szegmens szerinti bontás egymás mellé teszi a típusokat. Ha nem „mind” van kiválasztva, a doboz
 kiemelt, és a választás a Viselkedés lapon is érvényes marad. Minden panel a kiválasztott
@@ -174,8 +177,11 @@ A lap tetején hat mutató: **„Medián időtöltés”** (és a p90), **„Med
 - **„A vevők elmélyülése”**: **„Gyors vevő”** (6 órán belül fizet az első megnyitástól) és
   **„Mély vevő”** (visszajár, végigpróbálja a modulokat) — két külön vevő, két külön eladási út.
   Ha egyik csoportban sincs vevő, a számok helyén kötőjel áll.
-- **„Mikor nyitják”**: nap × óra, Budapest-idő; a legsötétebb cella a csúcs — a küldési ablakot
-  ehhez igazítjuk, a mondat alatta megnevezi.
+- **„Mikor nyitják”**: nap × óra, a LEAD helyi ideje szerint (magyar leadnél ez a Budapest-idő);
+  a legsötétebb cella a csúcs — a küldési ablakot ehhez igazítjuk, a mondat alatta megnevezi. Ha
+  több ország leadjei is benne vannak, a mondat országonként mondja meg a csúcsot, mindegyiket a
+  saját helyi idejében; egy ország csúcsát az „Ország” szűrővel nézheted külön. A **küldési óra**
+  szerinti bontás is a lead helyi idejében számol.
 - **„A mikro-kérdőív”**: előnézet — így látja majd a vendég a mock-oldalon az eszkalációs
   ajánlat elvetése után (a gombok itt nem élnek, csak mutatják a kártyát). A válaszok a
   „Kimondott” nézetbe és a kalibrációba folynak be.

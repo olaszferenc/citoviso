@@ -4,7 +4,7 @@ title: Riport — Előfizetők: bevétel és előrejelzés
 audience: operator
 category: measure
 anchors: console.report_revenue
-updated: 2026-11-04
+updated: 2026-11-16
 ---
 
 Az Előfizetők fül arra felel, kik fizetnek elő, mennyi pénz jön be havonta, és mennyi jön a
@@ -22,6 +22,15 @@ A bal menüben **„Riport”** → **„Előfizetők”**, vagy a Riport bárme
 
 A szűrősor: az **„Előrejelzés”** hossza (3, 6 vagy 12 hónap, az aktuális hónappal kezdve) és a **„Tesztek”** (**„Kizárva”** · **„Beszámítva”**). Teszt az a szállás, amelynek
 neve „[TESZT]”-tel kezdődik; alapból nem számít bele semmibe.
+
+**Több pénznem.** Minden ország a saját pénznemében fizet (forint, cseh korona, euró…), és a lap a
+pénznemeket SOHA nem adja össze és nem váltja át. Amíg csak forintos előfizető van, a lap pontosan
+a fent leírt. Ha már több pénznemben is jön pénz, a szűrősor elején megjelenik a **„Pénznem”**
+chip-sor (pl. HUF · CZK · EUR), a lap tetején pedig a **„Pénznemenként”** tábla: pénznemenként egy
+sor az aktív előfizetőkkel, az MRR-rel, a beérkezett összeggel és a kintlévőséggel. Az alatta lévő
+számok, grafikonok és táblák mind a kiválasztott pénznemben vannak, és csak az abban fizető
+előfizetőket mutatják; másik pénznemre a chipre vagy a tábla sorára koppintva váltasz. A saját
+domain megújítási költsége abban a pénznemben látszik, amiben a regisztrátornál fizetjük.
 
 - **Öt szám**: **„Aktív előfizető”** (alatta havi / éves, befagyott, lemondta);
   **„MRR — havi ismétlődő”** = a megújuló előfizetések következő díja havira vetítve (az éves díj
@@ -63,4 +72,6 @@ neve „[TESZT]”-tel kezdődik; alapból nem számít bele semmibe.
 - A **kártya lejárata** a tárolt kártya adataiból jön; a lejárat hónapjának végéig érvényes.
 - A **domain megújítási ideje** a regisztrátortól mért lejárat; a költség a mért beszerzési ár
   (nettó).
-- A hónapok és a napok magyar idő szerint számolnak.
+- A hónapok és a napok magyar idő szerint számolnak (a cég könyvelési naptára).
+- Minden összeg a saját pénznemében és annak váltópénz-egységében íródik (a forint egész, az euró
+  és a korona két tizedesig); árfolyam-átváltás nincs.

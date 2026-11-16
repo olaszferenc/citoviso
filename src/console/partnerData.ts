@@ -7,7 +7,7 @@
 // the §B.18 customer-facing i18n scope.
 
 import { regionOfTenant } from "../payment/orderRegion.js";
-import { invoiceNetHuf, taxThresholds } from "../billing/taxCounters.js";
+import { invoiceNetHuf, ossStatus, taxThresholds } from "../billing/taxCounters.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { budapestMidnight, budapestYear } from "../text/budapestTime.js";
@@ -438,6 +438,9 @@ export async function getFinanceCounts(): Promise<{
   aamLimitHuf: number;
   /** Non-HUF outgoing docs NOT included in aamYearNetHuf (no FX rate stored). */
   aamFxDocs: number;
+  /** ADR-0443 OSS counter (EU-consumer e-services, EUR): the SAME ossStatus the payment hold
+   *  and the daily alert read, so the console shows the number that holds sales back. */
+  oss: { pct: number; eurThisYear: number; limitEur: number; warn: boolean; blocked: boolean; reason: string };
 }> {
   const doc = await db
     .selectFrom("accounting_document")
@@ -462,7 +465,9 @@ export async function getFinanceCounts(): Promise<{
     .where("active", "=", true)
     .executeTakeFirst();
   const aam = await getAamYearNet();
+  const o = await ossStatus();
   return {
+    oss: { pct: o.pct, eurThisYear: o.eurThisYear, limitEur: o.limitEur, warn: o.warn, blocked: o.blocked, reason: o.reason },
     docs: Number(doc?.docs ?? 0),
     open: Number(doc?.open ?? 0),
     overdue: Number(overdue?.n ?? 0),

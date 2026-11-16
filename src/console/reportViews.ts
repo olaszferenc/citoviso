@@ -15,6 +15,7 @@ import type { LeadStock } from "./leadStock.js";
 import { leadStockReportBody, stockChips, type StockPreset } from "./leadStockViews.js";
 import { consoleLang } from "./i18nCtx.js";
 import { SKINS } from "../engine/skins.js";
+import { countryConfigSync } from "../country.js";
 import { EXIT_REASONS, EXPECTED_STATED, STATED_REASONS, type ExitReason, type StatedReason } from "../analytics/exitReason.js";
 import {
   MOCK_CHANNELS,
@@ -113,7 +114,13 @@ export const DIM_LABEL = (lang: string): Readonly<Record<ReportDim, string>> => 
   device: T(lang, "Eszköz"),
   style: T(lang, "Mock-stílus"),
   hour: T(lang, "Küldési óra"),
+  country: T(lang, "Ország"),
 });
+/** A country key as the operator reads it: the layer row's name, else the code; "" = unknown. */
+function countryLabel(iso: string, lang: string): string {
+  if (!iso) return T(lang, "Ismeretlen");
+  return countryConfigSync(iso)?.name ?? iso;
+}
 export const REASON_LABEL = (lang: string): Readonly<Record<ExitReason, string>> => ({
   no_hook: T(lang, "Nem fogta meg"),
   browsed: T(lang, "Nézelődött, nem lépett"),
@@ -149,6 +156,7 @@ function dimValueLabel(dim: ReportDim, key: string, lang: string): string {
   if (dim === "channel") return CHANNEL_LABEL(lang)[key as Channel] ?? key;
   if (dim === "device") return DEVICE_LABEL(lang)[key as Device] ?? key;
   if (dim === "style") return SKINS[key]?.label ?? (key === "ismeretlen" ? T(lang, "Ismeretlen") : key);
+  if (dim === "country") return countryLabel(key, lang);
   return key;
 }
 
@@ -159,12 +167,18 @@ const PRESET_LABEL = (k: ReportPresetKey, lang: string): string => (k === "today
 const periodParams = (p: ReportPeriod): Record<string, string> =>
   p.key === "custom" ? { from: p.from!, to: p.to! } : { days: p.key };
 const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
-  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...(d.round === "re" ? { kor: "ujra" } : {}) };
+  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...ctryParam(d), ...(d.round === "re" ? { kor: "ujra" } : {}) };
   // A preset chip in `extra` replaces a custom window (and vice versa).
   if ("days" in extra) { delete base.from; delete base.to; }
   const p = new URLSearchParams({ ...base, ...extra });
   return `?${p.toString()}`;
 };
+/** The country filter as a query param (absent = every country). */
+/** "" (no known country) travels as "-" — an empty param would read as "every country". */
+const ctryValue = (iso: string): string => (iso === "" ? "-" : iso);
+const ctryParam = (d: ReportData): Record<string, string> => (d.country !== undefined && d.country !== "all" ? { ctry: ctryValue(d.country) } : {});
+const ctryHidden = (d: ReportData): string =>
+  d.country !== undefined && d.country !== "all" ? `<input type="hidden" name="ctry" value="${esc(ctryValue(d.country))}">` : "";
 /** Hidden inputs that carry the period through a GET/POST form. */
 const periodHidden = (p: ReportPeriod): string =>
   Object.entries(periodParams(p)).map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`).join("");
@@ -206,7 +220,7 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
   const korHidden = re ? `<input type="hidden" name="kor" value="ujra">` : "";
   const dates =
     `<form class="rp-dates${custom ? " on" : ""}" method="get" action="${base}" aria-label="${esc(T(lang, "Egyedi időszak"))}">` +
-    `<input type="hidden" name="dim" value="${esc(d.dim)}">${d.seg === "all" ? "" : `<input type="hidden" name="seg" value="${esc(d.seg)}">`}${korHidden}` +
+    `<input type="hidden" name="dim" value="${esc(d.dim)}">${d.seg === "all" ? "" : `<input type="hidden" name="seg" value="${esc(d.seg)}">`}${ctryHidden(d)}${korHidden}` +
     `<input type="date" name="from" value="${esc(d.period.from ?? "")}" max="${today}" required aria-label="${esc(T(lang, "Kezdőnap"))}">` +
     `<span aria-hidden="true">–</span>` +
     `<input type="date" name="to" value="${esc(d.period.to ?? "")}" max="${today}" required aria-label="${esc(T(lang, "Utolsó nap"))}">` +
@@ -218,11 +232,25 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
   const segs =
     segOpt("all", T(lang, "Lead típus: mind")) +
     REPORT_SEGS.map((k) => segOpt(k, T(lang, "Lead típus: {s}", { s: SEG_LABEL(lang)[k]!.toLowerCase() }))).join("");
+  // Country chooser (ország-réteg 3/3): only once the window holds more than one country, or a
+  // country is already chosen — a one-country page keeps the row it always had.
+  const ctry = d.country ?? "all";
+  const ctryList = d.countries ?? [];
+  const ctryOpt = (k: string, label: string): string => `<option value="${esc(k === "all" ? k : ctryValue(k))}"${k === ctry ? " selected" : ""}>${esc(label)}</option>`;
+  const ctrySelect =
+    ctryList.length > 1 || ctry !== "all"
+      ? `<select name="ctry" aria-label="${esc(T(lang, "Ország"))}" onchange="this.form.submit()"${ctry === "all" ? "" : ' class="on"'}>` +
+        ctryOpt("all", T(lang, "Ország: mind")) +
+        (ctry !== "all" && !ctryList.some((c) => c.iso === ctry) ? ctryOpt(ctry, T(lang, "Ország: {c}", { c: countryLabel(ctry, lang) })) : "") +
+        ctryList.map((c) => ctryOpt(c.iso, T(lang, "Ország: {c}", { c: countryLabel(c.iso, lang) }) + ` (${c.sent})`)).join("") +
+        `</select>`
+      : "";
   const filter =
     `<form class="rp-filt" method="get" action="${base}">` +
     periodHidden(d.period) + korHidden +
     `<div class="rp-chips" role="group" aria-label="${esc(T(lang, "Időszak"))}">${ranges}</div>` +
     `<select name="seg" aria-label="${esc(T(lang, "Lead típus"))}" onchange="this.form.submit()"${d.seg === "all" ? "" : ' class="on"'}>${segs}</select>` +
+    ctrySelect +
     `<select name="dim" aria-label="${esc(T(lang, "Bontás"))}" onchange="this.form.submit()">${dims}</select>` +
     `<noscript><button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Alkalmaz"))}</button></noscript>` +
     (re
@@ -446,7 +474,7 @@ function timelinePanel(d: ReportData, lang: string, today: string): string {
     `<div class="panel"><h2>${esc(T(lang, "Pilot-napló"))} <span class="rp-q">${esc(T(lang, "— mi történt, és mi változott utána"))}</span></h2>` +
     `<div class="rp-chart rp-chart--wide">${timelineSvg(d, lang, 720)}</div><div class="rp-chart rp-chart--narrow">${timelineSvg(d, lang, 360)}</div>` +
     `<div class="rp-legend"><span><i style="background:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel))"></i>${esc(T(lang, "kiküldés / nap"))}</span><span><i class="rp-legend__ln" style="background:var(--citui-link-ink)"></i>${esc(T(lang, "megnyitás / nap"))}</span><span><i class="rp-legend__ln" style="background:var(--citui-warn)"></i>${esc(T(lang, "jegyzet (a te megjegyzésed)"))}</span></div>` +
-    `<form class="rp-notes" method="post" action="/report/note">${periodHidden(d.period)}<input type="hidden" name="dim" value="${esc(d.dim)}"><input type="hidden" name="seg" value="${esc(d.seg)}">` +
+    `<form class="rp-notes" method="post" action="/report/note">${periodHidden(d.period)}<input type="hidden" name="dim" value="${esc(d.dim)}"><input type="hidden" name="seg" value="${esc(d.seg)}">${ctryHidden(d)}` +
     `<input type="date" name="day" value="${esc(today)}" aria-label="${esc(T(lang, "Nap"))}" required>` +
     `<input type="text" name="text" maxlength="80" required placeholder="${esc(T(lang, "Jegyzet, pl. „Tárgymező csere: személyes megszólítás”"))}" aria-label="${esc(T(lang, "Jegyzet"))}">` +
     `<button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Jegyzet hozzáadása"))}</button></form></div>`
@@ -864,10 +892,20 @@ function heatPanel(d: ReportData, lang: string): string {
           row.map((v, hi) => `<div class="rp-hm__c" title="${esc(`${DN[di]} ${HRS[hi]}:00 — ${T(lang, "{n} megnyitás", { n: v })}`)}" style="background:color-mix(in srgb, var(--citui-link-ink) ${Math.round((v / mx) * 85)}%, var(--citui-panel))"></div>`).join(""),
       )
       .join("");
-  const note = best.v
-    ? T(lang, "Legtöbb megnyitás: {d} {h}:00 körül ({n}). A küldési ablakot ehhez igazítjuk, nem a magunk szokásához.", { d: best.d, h: best.h, n: best.v })
-    : T(lang, "Még nincs megnyitás az időszakban.");
-  return `<div class="panel"><h2>${esc(T(lang, "Mikor nyitják"))} <span class="rp-q">${esc(T(lang, "— nap × óra, Budapest-idő"))}</span></h2><div class="rp-hm">${grid}</div><p class="mut small rp-note">${esc(note)}</p></div>`;
+  // More than one country in the grid: one send-hour suggestion PER COUNTRY, each in its own
+  // local time (ország-réteg 3/3) — one shared "best hour" would be a Budapest habit again.
+  const perCountry = (b.heatBest ?? []).length > 1;
+  const note = !best.v
+    ? T(lang, "Még nincs megnyitás az időszakban.")
+    : perCountry
+      ? T(lang, "Legtöbb megnyitás országonként, helyi idő szerint: {list}. A küldési ablakot országonként ehhez igazítjuk.", {
+          list: b.heatBest!.map((x) => `${countryLabel(x.country, lang)} ${DN[x.dow]} ${x.hour}:00 (${x.n})`).join(" · "),
+        })
+      : T(lang, "Legtöbb megnyitás: {d} {h}:00 körül ({n}). A küldési ablakot ehhez igazítjuk, nem a magunk szokásához.", { d: best.d, h: best.h, n: best.v });
+  // The grid reads every open in its lead's local time; one Budapest zone keeps the old label.
+  const zones = b.heatZones ?? [];
+  const sub = zones.every((z) => z === APP_TZ) ? T(lang, "— nap × óra, Budapest-idő") : T(lang, "— nap × óra, a lead helyi ideje szerint");
+  return `<div class="panel"><h2>${esc(T(lang, "Mikor nyitják"))} <span class="rp-q">${esc(sub)}</span></h2><div class="rp-hm">${grid}</div><p class="mut small rp-note">${esc(note)}</p></div>`;
 }
 
 /** The micro survey as the guest sees it on the mock page — a preview, not a form here. */

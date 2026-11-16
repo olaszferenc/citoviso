@@ -2532,11 +2532,11 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
   ];
   const facts = {
     paid: [
-      { amount: 21000, at: day(-50), test: false }, { amount: 52500, at: day(-40), test: false },
-      { amount: 18950, at: day(-20), test: false }, { amount: 3938, at: day(-20), test: false },
+      { amount: 21000, currency: "HUF", at: day(-50), test: false }, { amount: 52500, currency: "HUF", at: day(-40), test: false },
+      { amount: 18950, currency: "HUF", at: day(-20), test: false }, { amount: 3938, currency: "HUF", at: day(-20), test: false },
     ],
-    invoices: [{ status: "issued", at: day(-50), test: false }, { status: "issued", at: day(-20), test: false }],
-    failedCharges: [{ at: day(-3), test: false }],
+    invoices: [{ status: "issued", currency: "HUF", at: day(-50), test: false }, { status: "issued", currency: "HUF", at: day(-20), test: false }],
+    failedCharges: [{ at: day(-3), currency: "HUF", test: false }],
   };
   const sample = foldRevenueReport(subs, facts, [{ name: "Napsugár Panzió", until: day(9) }], 6, false, null, rpNow);
   await shootConsole(reportRevenuePage(sample), path.join(ROOT, "kb/entries", "console-report-revenue", "assets", "hu", "revenue.png"));

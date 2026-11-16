@@ -15,7 +15,8 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
-import { APP_TZ, addIsoDays, budapestDayStart, budapestIsoDay } from "../text/budapestTime.js";
+import { APP_TZ, addIsoDays, dayStartIn, isValidTimeZone, todayIn } from "../text/zoneTime.js";
+import { tenantTimeZone } from "../tenant/timeZone.js";
 
 export interface TrafficReport {
   /** Hány NAPRA szól (30 vagy 7) — a felirat ebből jön. */
@@ -57,17 +58,21 @@ export interface TrafficReport {
   readonly isEmpty: boolean;
 }
 
-/** Az időszak kezdete: N nappal ezelőtt, a nap elejétől — BUDAPESTI éjféltől (ADR-0289:
- *  az éles gép UTC-ben fut, a helyi éjfél ott 1–2 órával később van; DST-napon is helyes). */
-export function since(days: number, now: Date = new Date()): Date {
-  return budapestDayStart(days, now);
+/** Az időszak kezdete: N nappal ezelőtt, a nap elejétől — a SZÁLLÁS helyi éjfélétől
+ *  (ADR-0289: az éles gép UTC-ben fut; ország-réteg 3/3: a zóna a tenant.time_zone, egy magyar
+ *  szállásnál Europe/Budapest, mint eddig; DST-napon is helyes). */
+export function since(days: number, now: Date = new Date(), tz: string = APP_TZ): Date {
+  return dayStartIn(days, tz, now);
 }
 
-/** The Budapest calendar day of a visit, in SQL — the per-day series groups by it. */
-const visitDay = sql<string>`to_char(occurred_at AT TIME ZONE ${sql.lit(APP_TZ)}, 'YYYY-MM-DD')`;
+/** The lodging's calendar day of a visit, in SQL — the per-day series groups by it. A LITERAL
+ *  zone, not a bind parameter: SELECT and GROUP BY must be the same expression, and two bind
+ *  parameters are not (42803). The zone is a validated IANA name (tenantTimeZone → trusted). */
+const visitDayIn = (tz: string) =>
+  sql<string>`to_char(occurred_at AT TIME ZONE ${sql.lit(isValidTimeZone(tz) ? tz : APP_TZ)}, 'YYYY-MM-DD')`;
 
-export async function getTrafficReport(tenantId: string, days = 30): Promise<TrafficReport> {
-  const from = since(days);
+export async function getTrafficReport(tenantId: string, days = 30, now: Date = new Date()): Promise<TrafficReport> {
+  const from = since(days, now, await tenantTimeZone(tenantId));
 
   // Egy körben minden látogatás-alapú szám — a botok itt esnek ki, egy helyen.
   const v = await db
@@ -140,7 +145,10 @@ export interface VisitorSeries {
 }
 
 export async function getVisitorSeries(tenantId: string, days = 7): Promise<VisitorSeries> {
-  const from = since(days - 1);
+  const tz = await tenantTimeZone(tenantId);
+  const now = new Date();
+  const from = since(days - 1, now, tz);
+  const visitDay = visitDayIn(tz);
   const rows = await db
     .selectFrom("site_visit")
     .select([
@@ -161,7 +169,7 @@ export async function getVisitorSeries(tenantId: string, days = 7): Promise<Visi
     .executeTakeFirst();
   const byKey = new Map(rows.map((r) => [r.day, Number(r.n)]));
   const byDay: number[] = [];
-  const today = budapestIsoDay(new Date());
+  const today = todayIn(tz, now);
   for (let i = days - 1; i >= 0; i--) byDay.push(byKey.get(addIsoDays(today, -i)) ?? 0);
   return { days, visitors: Number(total?.n ?? 0), byDay };
 }

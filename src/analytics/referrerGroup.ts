@@ -12,10 +12,17 @@
 // owner or us looking at the site. The report excludes the whole day of such a fingerprint
 // (see tenantActivity.ts), so this group never reaches a guest figure.
 //
-// Pure functions. Self-test: `npx tsx src/analytics/referrerGroup.ts --self-test`.
+// ⛔ NOT HUNGARY-BOUND (ország-réteg 3/3, ADR-0437): a portal is whatever the portal catalogue
+// calls one — the global list ∪ every country row's `portal_domains` (scraper/qualify.ts, the
+// same catalogue the lead qualifier reads), so a Czech listing site is recognised the day its
+// country row lists it, with no edit here. The webmail list is cross-border (the big ones of
+// every market we sell in), not the two Hungarian freemail hosts alone.
+//
+// Pure over the loaded country snapshot. Self-test: `npx tsx src/analytics/referrerGroup.ts --self-test`.
 
 import { fileURLToPath } from "node:url";
 import { PLATFORM_DOMAIN } from "../domains.js";
+import { isPortalReferrerHost } from "../scraper/qualify.js";
 
 export type SourceGroup =
   | "direct"
@@ -29,7 +36,12 @@ export type SourceGroup =
   | "ours"
   | "other";
 
-const PORTALS = [
+/**
+ * Portals the referrer report always knew, kept so no Hungarian figure moves (several are not
+ * in the qualifier's catalogue: a lodging LISTED there may still own a site, but a GUEST arriving
+ * from there came from a portal). Everything else comes from the catalogue (country rows).
+ */
+const LEGACY_PORTALS = [
   "szallas.hu",
   "booking.com",
   "airbnb.",
@@ -41,6 +53,31 @@ const PORTALS = [
   "utazzitthon.hu",
   "lake-balaton.com",
   "tripadvisor.",
+];
+
+/** Webmail hosts across the markets (a referrer from a mail web app is a mail click). */
+const WEBMAIL_HOSTS = [
+  "freemail.hu",
+  "citromail.hu",
+  "email.seznam.cz",
+  "post.cz",
+  "centrum.cz",
+  "atlas.cz",
+  "azet.sk",
+  "centrum.sk",
+  "poczta.wp.pl",
+  "poczta.onet.pl",
+  "poczta.interia.pl",
+  "poczta.o2.pl",
+  "web.de",
+  "gmx.net",
+  "gmx.de",
+  "gmx.at",
+  "email.t-online.de",
+  "abv.bg",
+  "icloud.com",
+  "proton.me",
+  "protonmail.com",
 ];
 
 const has = (host: string, suffix: string): boolean => host === suffix || host.endsWith(`.${suffix}`);
@@ -55,12 +92,12 @@ export function sourceGroupOf(referrer: string | null, siteHosts: readonly strin
   if (siteHosts.some((s) => s.replace(/^www\./, "").toLowerCase() === h)) return "self";
   if (h === PLATFORM_DOMAIN || h === `admin.${PLATFORM_DOMAIN}`) return "ours";
   // Android apps send their package name as the referrer.
-  if (h === "com.google.android.gm" || /(^|\.)mail\.|outlook\.|freemail\.hu|citromail\.hu/.test(h)) return "mail";
+  if (h === "com.google.android.gm" || /(^|\.)mail\.|outlook\./.test(h) || WEBMAIL_HOSTS.some((m) => has(h, m))) return "mail";
   if (/(^|\.)google\.[a-z.]+$/.test(h) || h === "com.google.android.googlequicksearchbox") return "google";
   if (has(h, "bing.com")) return "bing";
   if (/(^|\.)(duckduckgo\.com|yahoo\.com|yandex\.[a-z]+|baidu\.com|ecosia\.org|startpage\.com)$/.test(h)) return "search_other";
   if (/(^|\.)(facebook\.com|fb\.com|instagram\.com|messenger\.com|tiktok\.com|youtube\.com|t\.co|x\.com)$/.test(h) || h.startsWith("com.facebook.") || h.startsWith("com.instagram.")) return "social";
-  if (PORTALS.some((p) => (p.endsWith(".") ? h.includes(p) : has(h, p)))) return "portal";
+  if (LEGACY_PORTALS.some((p) => (p.endsWith(".") ? h.includes(p) : has(h, p))) || isPortalReferrerHost(h)) return "portal";
   return "other";
 }
 
@@ -81,6 +118,10 @@ function selfTest(): void {
     ["m.facebook.com", "social"],
     ["instagram.com", "social"],
     ["szallas.hu", "portal"],
+    ["expedia.com", "portal"],
+    ["www.freemail.hu", "mail"],
+    ["email.seznam.cz", "mail"],
+    ["poczta.wp.pl", "mail"],
     ["www.booking.com", "portal"],
     ["citoviso.com", "ours"],
     ["admin.citoviso.com", "ours"],

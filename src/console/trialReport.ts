@@ -21,8 +21,8 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
-import { budapestIsoDay } from "../text/budapestTime.js";
-import { isoDayDiff } from "../text/zoneTime.js";
+import { APP_TZ, isoDayDiff, isoDayIn } from "../text/zoneTime.js";
+import { tenantTimeZone } from "../tenant/timeZone.js";
 import { median, type ReportDays } from "./reportData.js";
 
 export const TRIAL_DAYS = 14;
@@ -55,7 +55,7 @@ export type TrialEventKind =
 
 export interface TrialEvent {
   readonly at: Date;
-  /** 0-based day of the trial, Budapest calendar days (0 = the start day). */
+  /** 0-based day of the trial, the LODGING's calendar days (0 = the start day; HU = Budapest). */
   readonly day: number;
   readonly kind: TrialEventKind;
   /** login: via (password|link|null) · save: area · order: from · checkout/stall: step · notice: step. */
@@ -89,6 +89,8 @@ export interface TrialRow {
   /** Index into TRIAL_STAGES of the furthest stage reached. */
   readonly reached: number;
   readonly verdict: TrialVerdict;
+  /** The lodging's zone (tenant.time_zone) every day and time of this trial is read in. */
+  readonly timeZone?: string;
   readonly logins: number;
   readonly saves: number;
 }
@@ -143,6 +145,8 @@ export interface RawTrial {
   readonly activity: readonly { readonly at: Date; readonly kind: string; readonly detail: Record<string, unknown> }[];
   readonly orderSentAt: readonly Date[];
   readonly notices: readonly { readonly at: Date; readonly step: string }[];
+  /** The lodging's zone (ország-réteg 3/3); absent = the app zone. */
+  readonly timeZone?: string;
 }
 
 /** „8600 Siófok, Fő u. 1." → „Siófok"; anything else → its first comma part. */
@@ -157,8 +161,9 @@ const str = (v: unknown): string | null => (typeof v === "string" && v ? v : nul
 
 /** One trial's timeline, ladder position and verdict (`now` decides „csend" and the stall). */
 export function deriveTrial(r: RawTrial, measuredFrom: Date | null, now: Date): TrialRow {
-  const day0 = budapestIsoDay(r.startedAt);
-  const dayOf = (at: Date): number => Math.max(0, isoDayDiff(day0, budapestIsoDay(at)));
+  const tz = r.timeZone ?? APP_TZ;
+  const day0 = isoDayIn(r.startedAt, tz);
+  const dayOf = (at: Date): number => Math.max(0, isoDayDiff(day0, isoDayIn(at, tz)));
   const status = r.status === "purged" ? "lapsed" : r.status;
   const ev: TrialEvent[] = [{ at: r.startedAt, day: 0, kind: "start", detail: null }];
 
@@ -244,6 +249,7 @@ export function deriveTrial(r: RawTrial, measuredFrom: Date | null, now: Date): 
     events: ev,
     reached,
     verdict,
+    timeZone: tz,
     logins: ev.filter((e) => e.kind === "login").length,
     saves: ev.filter((e) => e.kind === "save").length,
   };
@@ -405,6 +411,9 @@ export async function getTrialReport(
       : Promise.resolve([]),
   ]);
 
+  // Each trial in its lodging's zone (a trial whose tenant is gone reads the app zone).
+  const zoneOf = new Map<string, string>();
+  for (const id of tenantIds) zoneOf.set(id, await tenantTimeZone(id));
   const raws: RawTrial[] = base.map((r) => {
     const startedAt = toDate(r.startedAt);
     const end = r.convertedAt ? toDate(r.convertedAt) : r.lapsedAt ? toDate(r.lapsedAt) : now;
@@ -424,6 +433,7 @@ export async function getTrialReport(
         .filter((a) => inWindow(a.at)),
       orderSentAt: orders.filter((o) => o.leadId === r.leadId).map((o) => toDate(o.submittedAt)).filter(inWindow),
       notices: notices.filter((n) => n.free_trial_id === r.trialId).map((n) => ({ at: toDate(n.created_at), step: n.step })),
+      timeZone: (r.tenantId && zoneOf.get(r.tenantId)) || APP_TZ,
     };
   });
 

@@ -282,15 +282,25 @@ export function partnerPage(
 }
 
 /** Monthly breakdown chart (MineREAL "Havi bontás"): pure-SVG bars from the
- *  partner's documents — outgoing (revenue) vs incoming (cost), HUF only, the
- *  running year. No client JS, renders everywhere. */
+ *  partner's documents — outgoing (revenue) vs incoming (cost), the running year.
+ *  ONE CHART PER CURRENCY (ország-réteg 3/3): a document keeps its own currency and
+ *  amounts of two currencies are never drawn on one scale — no conversion. A partner
+ *  with forint documents only sees the one forint chart it always had. No client JS. */
 function monthlyChart(docs: PartnerDocuments): string {
+  const year = String(budapestYear(new Date()));
+  const inYear = docs.rows.filter((r) => r.issueDate.startsWith(year));
+  const currencies = [...new Set(inYear.map((r) => r.currency))].sort((a, b) =>
+    a === "HUF" ? -1 : b === "HUF" ? 1 : a.localeCompare(b),
+  );
+  // No document this year: the empty forint chart, as before.
+  return (currencies.length ? currencies : ["HUF"]).map((c) => monthlyChartOf(inYear.filter((r) => r.currency === c), c, year)).join("");
+}
+
+function monthlyChartOf(rows: PartnerDocuments["rows"], currency: string, year: string): string {
   const lang = consoleLang();
-  const year = budapestYear(new Date());
   const out = Array(12).fill(0) as number[];
   const inc = Array(12).fill(0) as number[];
-  for (const r of docs.rows) {
-    if (r.currency !== "HUF" || !r.issueDate.startsWith(String(year))) continue;
+  for (const r of rows) {
     const m = Number(r.issueDate.slice(5, 7)) - 1;
     if (r.direction === "outgoing") out[m] += r.gross;
     else inc[m] += r.gross;
@@ -299,18 +309,23 @@ function monthlyChart(docs: PartnerDocuments): string {
   const W = 720;
   const H = 120;
   const bw = W / 12;
+  const amount = (v: number): string => esc(formatMoney(Math.round(v), currency, lang));
   const bars = Array.from({ length: 12 }, (_, m) => {
     const ho = Math.round((out[m]! / max) * (H - 24));
     const hi = Math.round((inc[m]! / max) * (H - 24));
     const x = m * bw;
     return (
-      `<rect x="${(x + bw * 0.18).toFixed(1)}" y="${H - 14 - ho}" width="${(bw * 0.28).toFixed(1)}" height="${ho}" rx="2" fill="var(--citui-cyan-500)"><title>${T(lang, "{month}: kimenő {amount}", { month: MONTHS(lang)[m]!, amount: Math.round(out[m]!).toLocaleString("hu-HU") })} Ft</title></rect>` +
-      `<rect x="${(x + bw * 0.54).toFixed(1)}" y="${H - 14 - hi}" width="${(bw * 0.28).toFixed(1)}" height="${hi}" rx="2" fill="var(--citui-navy-700)"><title>${T(lang, "{month}: bejövő {amount}", { month: MONTHS(lang)[m]!, amount: Math.round(inc[m]!).toLocaleString("hu-HU") })} Ft</title></rect>` +
+      `<rect x="${(x + bw * 0.18).toFixed(1)}" y="${H - 14 - ho}" width="${(bw * 0.28).toFixed(1)}" height="${ho}" rx="2" fill="var(--citui-cyan-500)"><title>${T(lang, "{month}: kimenő {amount}", { month: MONTHS(lang)[m]!, amount: amount(out[m]!) })}</title></rect>` +
+      `<rect x="${(x + bw * 0.54).toFixed(1)}" y="${H - 14 - hi}" width="${(bw * 0.28).toFixed(1)}" height="${hi}" rx="2" fill="var(--citui-navy-700)"><title>${T(lang, "{month}: bejövő {amount}", { month: MONTHS(lang)[m]!, amount: amount(inc[m]!) })}</title></rect>` +
       `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 2}" text-anchor="middle" font-size="9" fill="var(--citui-muted)">${MONTHS(lang)[m]}</text>`
     );
   }).join("");
+  const title =
+    currency === "HUF"
+      ? T(lang, "Havi bontás — {year} (Ft)", { year })
+      : T(lang, "Havi bontás — {year} ({currency})", { year, currency: esc(currency) });
   return `<div class="con-chart">
-    <div class="con-chart__t">${T(lang, "Havi bontás — {year} (Ft)", { year })} · <span style="color:var(--citui-link-ink)">■</span> ${T(lang, "kimenő ·")} <span style="color:var(--citui-navy-700)">■</span> ${T(lang, "bejövő")}</div>
+    <div class="con-chart__t">${title} · <span style="color:var(--citui-link-ink)">■</span> ${T(lang, "kimenő ·")} <span style="color:var(--citui-navy-700)">■</span> ${T(lang, "bejövő")}</div>
     <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="${T(lang, "Havi forgalom-bontás")}">${bars}</svg>
   </div>`;
 }

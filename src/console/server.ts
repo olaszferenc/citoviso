@@ -3121,7 +3121,10 @@ async function handle(
     // kor=ujra → the non-opener follow-up round (frozen plan: design-refs/console/ujrakereses-meres/);
     // only the Tölcsér page switches rounds, Viselkedés stays on the first outreach.
     const round = url.searchParams.get("kor") === "ujra" ? "re" : "first";
-    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined);
+    // ctry = the lead's country (ISO-2, "-" = unknown; ország-réteg 3/3) — scopes every metric like seg.
+    const ctryRaw = (url.searchParams.get("ctry") ?? "all").toUpperCase();
+    const ctry = /^[A-Z]{2}$/.test(ctryRaw) ? ctryRaw : ctryRaw === "-" ? "" : "all";
+    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined, ctry);
     if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
     const rsRaw = url.searchParams.get("rs") ?? "inf";
     const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";
@@ -3160,7 +3163,7 @@ async function handle(
   }
   // GET /report/revenue — the Előfizetők tab (frozen plan: design-refs/console/elofizetok-riport/).
   // Query: h ∈ {3,6,12} forecast months (default 6), t=1 counts the tests, m=YYYY-MM the month shown in
-  // detail, st ∈ {all,attn,ok} + sort ∈ {next,fee,name} for the subscriber table.
+  // detail, st ∈ {all,attn,ok} + sort ∈ {next,fee,name} for the subscriber table, c=ISO 4217 the currency.
   if (method === "GET" && path === "/report/revenue") {
     const hRaw = Number(url.searchParams.get("h") ?? "6");
     const h: RevenueHorizon = (REVENUE_HORIZONS as readonly number[]).includes(hRaw) ? (hRaw as RevenueHorizon) : 6;
@@ -3170,7 +3173,10 @@ async function handle(
     const st: RevenueListFilter = (REVENUE_LIST_FILTERS as readonly string[]).includes(stRaw) ? (stRaw as RevenueListFilter) : "all";
     const sortRaw = url.searchParams.get("sort") ?? "next";
     const sort: RevenueSort = (REVENUE_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as RevenueSort) : "next";
-    return send(res, 200, reportRevenuePage(await getRevenueReport(h, url.searchParams.get("t") === "1", m), { st, sort }));
+    // c = the currency the page is folded in (ország-réteg 3/3); absent/unknown = the home currency.
+    const cRaw = (url.searchParams.get("c") ?? "").toUpperCase();
+    const c = /^[A-Z]{3}$/.test(cRaw) ? cRaw : null;
+    return send(res, 200, reportRevenuePage(await getRevenueReport(h, url.searchParams.get("t") === "1", m, c), { st, sort }));
   }
   // GET /report/tenants — the Tenantok tab: every tenant's owner activity + site visits in one
   // row (frozen plan: design-refs/console/tenant-aktivitas/, 2A). Query: f ∈ TENANT_FILTERS
@@ -3206,6 +3212,8 @@ async function handle(
     } else back.set("days", body.get("days") ?? "today");
     const seg = body.get("seg");
     if (seg && seg !== "all") back.set("seg", seg);
+    const ctry = body.get("ctry");
+    if (ctry && ctry !== "all") back.set("ctry", ctry);
     return redirect(res, `/report?${back.toString()}`);
   }
   // GET /lead/:id

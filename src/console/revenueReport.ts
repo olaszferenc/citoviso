@@ -6,6 +6,13 @@
 // prices it from: computeMonthly/computeAnnual over renewableModuleIds() + domainFeeForRenewal().
 // One rule for "what will be charged" — the forecast must show the number the card will see.
 //
+// ⛔ ONE CURRENCY PER VIEW (ADR-0437 ⑤, ország-réteg 3/3): every customer pays in its own
+// country's currency (ADR-0443) and there is NO conversion. The report is folded for ONE
+// currency at a time (`currency`, the home market's by default — the Hungarian page is the
+// page it always was); `currencies` lists every currency that has money in it, one line each,
+// side by side and never summed. A domain renewal is OUR cost in the registrar's currency, so
+// it lands in that currency's view, whatever the customer pays in.
+//
 // §B.17: nothing is estimated that is not measured. A trial's conversion rate is not known yet,
 // so trials are LISTED next to the forecast, never added into it; a churn rate with no subscriber
 // at the window start is "no data", not 0 %.
@@ -27,6 +34,7 @@ import { domainFeeForRenewal, renewableModuleIds } from "../payment/billing.js";
 import { addMonths } from "../payment/subscription.js";
 import { isHouseDomain, wantAutoRenew } from "../domains/domainRenewal.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
+import { countryConfig, countryOfLead } from "../country.js";
 
 export const REVENUE_HORIZONS = [3, 6, 12] as const;
 export type RevenueHorizon = (typeof REVENUE_HORIZONS)[number];
@@ -70,7 +78,14 @@ export interface RevenueSub {
   readonly failedCharges: number;
   /** Unpaid renewal orders whose cycle already started. */
   readonly owed: number;
-  readonly domain: { readonly name: string; readonly expiresAt: Date | null; readonly renews: boolean; readonly cost: number | null } | null;
+  /** `cost` is our yearly registrar cost in `costCurrency` (NOT necessarily the customer's currency). */
+  readonly domain: {
+    readonly name: string;
+    readonly expiresAt: Date | null;
+    readonly renews: boolean;
+    readonly cost: number | null;
+    readonly costCurrency?: string | null;
+  } | null;
 }
 
 export type ChargeKind = "sure" | "est" | "end" | "out";
@@ -119,8 +134,24 @@ export interface ModuleLine {
   readonly monthly: number;
 }
 
+/** One currency's headline, for the side-by-side list (never added across currencies). */
+export interface CurrencyLine {
+  readonly currency: string;
+  readonly active: number;
+  readonly renewing: number;
+  /** Monthly recurring revenue, minor unit of `currency`. */
+  readonly mrr: number;
+  /** Paid in the facts window (the last six months with any money event of this currency). */
+  readonly paid: number;
+  readonly owed: number;
+}
+
 export interface RevenueReport {
   readonly horizon: RevenueHorizon;
+  /** The currency every amount below is in (minor unit). */
+  readonly currency: string;
+  /** Every currency with a subscription or a payment, the shown one included; home first. */
+  readonly currencies: readonly CurrencyLine[];
   readonly tests: boolean;
   readonly month: string | null;
   readonly today: string;
@@ -181,15 +212,17 @@ function monthsFrom(startMonth: string, n: number): string[] {
  * everything else that will be asked for is an estimate, with the reason. A due date already
  * behind `now` is not forecast: that money is the outstanding debt (`owed`), not future income.
  */
-export function buildForecast(subs: readonly RevenueSub[], horizon: number, now: Date): ForecastMonth[] {
+export function buildForecast(subs: readonly RevenueSub[], horizon: number, now: Date, currency?: string): ForecastMonth[] {
   const months = monthsFrom(monthOf(now), horizon);
   const last = months[months.length - 1]!;
   const by = new Map(months.map((m) => [m, { sure: 0, est: 0, out: 0, items: [] as ForecastItem[] }]));
   const today = budapestIsoDay(now);
+  // `currency` given: income of that currency's customers + domain costs paid in it.
+  const mine = (c: string | null | undefined): boolean => currency === undefined || c === currency;
   for (const s of subs) {
     if (!isLive(s)) continue;
     const step = s.period === "annual" ? 12 : 1;
-    for (let d = s.next; monthOf(d) <= last; d = addMonths(d, step)) {
+    for (let d = s.next; mine(s.currency) && monthOf(d) <= last; d = addMonths(d, step)) {
       if (budapestIsoDay(d) < today) continue;
       const b = by.get(monthOf(d));
       if (s.cancelAtEnd) {
@@ -208,7 +241,7 @@ export function buildForecast(subs: readonly RevenueSub[], horizon: number, now:
       }
     }
     // Domain renewal at the registrar: OUR cost, on the measured expiry, while we still renew it.
-    if (s.domain?.renews && s.domain.expiresAt && s.domain.cost !== null) {
+    if (s.domain?.renews && s.domain.expiresAt && s.domain.cost !== null && mine(s.domain.costCurrency ?? s.currency)) {
       for (let d = s.domain.expiresAt; monthOf(d) <= last; d = addMonths(d, 12)) {
         if (budapestIsoDay(d) < today) continue;
         const b = by.get(monthOf(d));
@@ -264,7 +297,7 @@ export function churn3m(subs: readonly RevenueSub[], now: Date): { ended: number
   return { ended, atStart };
 }
 
-async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: Date; test: boolean }[] }> {
+async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: RawFacts["failedCharges"][number][] }> {
   await loadPricing();
   const rows = await db
     .selectFrom("subscription as s")
@@ -309,6 +342,7 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
     .where("custom_domain", "is not", null)
     .execute();
   const tlds = await db.selectFrom("domain_tld").select(["tld", "cost_net as cost", "cost_currency as currency"]).execute();
+  // Trials folded per currency: a trial's lead buys in its country's currency.
 
   // Every order of these tenants: renewals/upsells carry tenant_id, the conversion checkout only
   // its prospect (the tenant is born from its payment) — reached through the lead.
@@ -322,6 +356,7 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
       "oi.tenant_id as tenantId",
       "p.lead_id as leadId",
       "oi.price as price",
+      "oi.currency as currency",
       "oi.list_price as listPrice",
       "oi.preset as preset",
       "oi.renewal_period_start as renewalStart",
@@ -338,7 +373,7 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
   const payments = orders.length
     ? await db
         .selectFrom("payment")
-        .select(["order_intent_id as orderId", "amount", "status", "paid_at as paidAt", "created_at as createdAt"])
+        .select(["order_intent_id as orderId", "amount", "currency", "status", "paid_at as paidAt", "created_at as createdAt"])
         .where("order_intent_id", "in", orders.map((o) => o.id))
         .execute()
     : [];
@@ -349,7 +384,7 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
   const renewalOrders = new Set(orders.filter((o) => o.kind === "renewal").map((o) => o.id));
   const failedPayments = payments
     .filter((p) => p.status === "failed" && renewalOrders.has(p.orderId))
-    .map((p) => ({ at: toDate(p.createdAt), test: testOfTenant.get(orderTenant.get(p.orderId) ?? "") ?? false }));
+    .map((p) => ({ at: toDate(p.createdAt), currency: p.currency, test: testOfTenant.get(orderTenant.get(p.orderId) ?? "") ?? false }));
 
   const now = new Date();
   const subs: RevenueSub[] = [];
@@ -390,13 +425,18 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
     let domain: RevenueSub["domain"] = null;
     if (site?.domain) {
       const tld = site.domain.slice(site.domain.lastIndexOf(".")).toLowerCase();
-      const costs = tlds.filter((t) => t.tld === tld && t.cost != null && t.currency === "HUF").map((t) => t.cost!);
+      // Our registrar cost, in the registrar's currency: the customer's own currency when a
+      // cost is measured in it, otherwise the currency the cost IS measured in (never converted).
+      const measured = tlds.filter((t) => t.tld === tld && t.cost != null);
+      const costCurrency = measured.some((t) => t.currency === r.currency) ? r.currency : (measured[0]?.currency ?? null);
+      const costs = measured.filter((t) => t.currency === costCurrency).map((t) => t.cost!);
       const expiresAt = toDateOrNull(site.expiresAt);
       domain = {
         name: site.domain,
         expiresAt,
         renews: r.status !== "cancelled" && wantAutoRenew(expiresAt, toDateOrNull(site.renewEnd)),
         cost: costs.length ? Math.min(...costs) : null,
+        costCurrency,
       };
     }
 
@@ -436,9 +476,10 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: { at: D
 }
 
 export interface RawFacts {
-  readonly paid: readonly { readonly amount: number; readonly at: Date; readonly test: boolean }[];
-  readonly invoices: readonly { readonly status: string; readonly at: Date; readonly test: boolean }[];
-  readonly failedCharges: readonly { readonly at: Date; readonly test: boolean }[];
+  /** `currency` = payment.currency; the amount is in its minor unit. */
+  readonly paid: readonly { readonly amount: number; readonly currency: string; readonly at: Date; readonly test: boolean }[];
+  readonly invoices: readonly { readonly status: string; readonly currency: string; readonly at: Date; readonly test: boolean }[];
+  readonly failedCharges: readonly { readonly at: Date; readonly currency: string; readonly test: boolean }[];
 }
 
 /** Paid payments and issued / failed invoices — every kind of order counts. */
@@ -448,7 +489,7 @@ async function loadFacts(failedCharges: RawFacts["failedCharges"]): Promise<RawF
     .innerJoin("order_intent as oi", "oi.id", "pay.order_intent_id")
     .leftJoin("prospect as p", "p.id", "oi.prospect_id")
     .leftJoin("lead as l", "l.id", "p.lead_id")
-    .select(["pay.amount as amount", "pay.paid_at as paidAt", "l.name as leadName"])
+    .select(["pay.amount as amount", "pay.currency as currency", "pay.paid_at as paidAt", "l.name as leadName"])
     .where("pay.status", "=", "paid")
     .where("pay.paid_at", "is not", null)
     .execute();
@@ -458,23 +499,23 @@ async function loadFacts(failedCharges: RawFacts["failedCharges"]): Promise<RawF
     .innerJoin("order_intent as oi", "oi.id", "pay.order_intent_id")
     .leftJoin("prospect as p", "p.id", "oi.prospect_id")
     .leftJoin("lead as l", "l.id", "p.lead_id")
-    .select(["i.status as status", "i.issued_at as issuedAt", "l.name as leadName"])
+    .select(["i.status as status", "i.currency as currency", "i.issued_at as issuedAt", "l.name as leadName"])
     .execute();
   return {
-    paid: paid.map((p) => ({ amount: p.amount, at: toDate(p.paidAt), test: isTest(p.leadName) })),
-    invoices: inv.map((i) => ({ status: i.status, at: toDate(i.issuedAt), test: isTest(i.leadName) })),
+    paid: paid.map((p) => ({ amount: p.amount, currency: p.currency, at: toDate(p.paidAt), test: isTest(p.leadName) })),
+    invoices: inv.map((i) => ({ status: i.status, currency: i.currency, at: toDate(i.issuedAt), test: isTest(i.leadName) })),
     failedCharges,
   };
 }
 
-/** Per Budapest month, the last six months with any money event. Pure. */
-export function foldFacts(raw: RawFacts, includeTests: boolean): FactMonth[] {
+/** Per Budapest month, the last six months with any money event — of ONE currency when given. Pure. */
+export function foldFacts(raw: RawFacts, includeTests: boolean, currency?: string): FactMonth[] {
   const by = new Map<string, { paid: number; payments: number; invoices: number; invoiceFailures: number; chargeFailures: number }>();
   const at = (m: string) => {
     if (!by.has(m)) by.set(m, { paid: 0, payments: 0, invoices: 0, invoiceFailures: 0, chargeFailures: 0 });
     return by.get(m)!;
   };
-  const keep = (x: { test: boolean }) => includeTests || !x.test;
+  const keep = (x: { test: boolean; currency: string }) => (includeTests || !x.test) && (currency === undefined || x.currency === currency);
   for (const p of raw.paid.filter(keep)) {
     const b = at(monthOf(p.at));
     b.paid += p.amount;
@@ -492,8 +533,8 @@ export function foldFacts(raw: RawFacts, includeTests: boolean): FactMonth[] {
 /**
  * Base fee + every billed module + the domain fee, over the renewing subscriptions (monthly).
  * ADR-0443: each subscription is priced in ITS OWN region; the lines sum ONE currency —
- * `currency` (the report's) — and a subscription in another currency is not added into it
- * (the per-currency report is the riport-kör's job, ADR-0437 ⑤ sorrend).
+ * `currency` (the report's) — and a subscription in another currency is not added into it:
+ * that currency has its own view (ország-réteg 3/3).
  */
 function buildModules(subs: readonly RevenueSub[], currency: string): ModuleLine[] {
   const renewing = subs.filter((s) => isLive(s) && !s.cancelAtEnd && s.currency === currency);
@@ -517,6 +558,33 @@ function buildModules(subs: readonly RevenueSub[], currency: string): ModuleLine
 export interface RawTrial {
   readonly name: string;
   readonly until: Date;
+  /** The currency the trial's lead would buy in (its country's); absent = the home currency. */
+  readonly currency?: string | null;
+}
+
+/** The home market's currency — the view the report opens on. */
+export const homeCurrency = (): string => getCurrency(HU_PRICING_REGION);
+
+/** Every currency with money in it, one line each (home first, then A→Z). Pure. */
+export function buildCurrencyLines(subs: readonly RevenueSub[], raw: RawFacts, includeTests: boolean): CurrencyLine[] {
+  const home = homeCurrency();
+  const keep = (x: { test: boolean }) => includeTests || !x.test;
+  const set = new Set<string>([...subs.map((s) => s.currency), ...raw.paid.filter(keep).map((p) => p.currency)]);
+  return [...set]
+    .sort((a, b) => (a === home ? -1 : b === home ? 1 : a.localeCompare(b)))
+    .map((currency) => {
+      const mine = subs.filter((s) => s.currency === currency);
+      const live = mine.filter(isLive);
+      const renewing = live.filter((s) => !s.cancelAtEnd);
+      return {
+        currency,
+        active: live.length,
+        renewing: renewing.length,
+        mrr: renewing.reduce((a, s) => a + s.monthly, 0),
+        paid: foldFacts(raw, includeTests, currency).reduce((a, f) => a + f.paid, 0),
+        owed: mine.reduce((a, s) => a + s.owed, 0),
+      };
+    });
 }
 
 /**
@@ -531,24 +599,29 @@ export function foldRevenueReport(
   includeTests: boolean,
   month: string | null,
   now: Date,
+  currency: string = homeCurrency(),
 ): RevenueReport {
-  const subs = all.filter((s) => includeTests || !s.test);
-  const forecast = buildForecast(subs, horizon, now);
+  const shown = all.filter((s) => includeTests || !s.test);
+  const currencies = buildCurrencyLines(shown, facts, includeTests);
+  // ONE currency per view — every count and amount below is this currency's customers only.
+  const subs = shown.filter((s) => s.currency === currency);
+  const forecast = buildForecast(shown, horizon, now, currency);
   const live = subs.filter(isLive);
   const renewing = live.filter((s) => !s.cancelAtEnd);
   const withDiscount = subs.filter((s) => s.firstDiscount);
   return {
     horizon,
+    currency,
+    currencies,
     tests: includeTests,
     month: month && forecast.some((f) => f.month === month) ? month : (forecast.find((f) => f.items.length)?.month ?? null),
     today: budapestIsoDay(now),
     subs,
     forecast,
-    facts: foldFacts(facts, includeTests),
+    facts: foldFacts(facts, includeTests, currency),
     moves: buildMoves(subs, now),
-    // The report reads in the home market's currency until the riport-kör (ADR-0437 ⑤).
-    modules: buildModules(subs, getCurrency(HU_PRICING_REGION)),
-    trials: trials.filter((t) => includeTests || !isTest(t.name)),
+    modules: buildModules(subs, currency),
+    trials: trials.filter((t) => (includeTests || !isTest(t.name)) && (t.currency ?? homeCurrency()) === currency),
     kpi: {
       active: live.length,
       monthlyN: live.filter((s) => s.period === "monthly").length,
@@ -567,16 +640,28 @@ export function foldRevenueReport(
   };
 }
 
-export async function getRevenueReport(horizon: RevenueHorizon, includeTests: boolean, month: string | null): Promise<RevenueReport> {
+export async function getRevenueReport(
+  horizon: RevenueHorizon,
+  includeTests: boolean,
+  month: string | null,
+  currency: string | null = null,
+): Promise<RevenueReport> {
   const { subs, failedPayments } = await loadSubs();
   const facts = await loadFacts(failedPayments);
   const trialRows = await db
     .selectFrom("free_trial as ft")
     .innerJoin("lead as l", "l.id", "ft.lead_id")
-    .select(["l.name as name", "ft.trial_until as until"])
+    .select(["l.name as name", "l.id as leadId", "ft.trial_until as until"])
     .where("ft.status", "=", "active")
     .orderBy("ft.trial_until", "asc")
     .execute();
-  const trials = trialRows.map((t) => ({ name: t.name, until: toDate(t.until) }));
-  return foldRevenueReport(subs, facts, trials, horizon, includeTests, month, new Date());
+  const trials: RawTrial[] = [];
+  for (const t of trialRows) {
+    const c = await countryConfig(await countryOfLead(t.leadId));
+    trials.push({ name: t.name, until: toDate(t.until), currency: c?.currency ?? null });
+  }
+  // A currency nobody pays in (a stale link) falls back to the home view, never an empty guess.
+  const lines = buildCurrencyLines(includeTests ? subs : subs.filter((s) => !s.test), facts, includeTests);
+  const cur = currency && lines.some((l) => l.currency === currency) ? currency : homeCurrency();
+  return foldRevenueReport(subs, facts, trials, horizon, includeTests, month, new Date(), cur);
 }

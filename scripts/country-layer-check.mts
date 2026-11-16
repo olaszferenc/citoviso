@@ -22,6 +22,11 @@
 //   ⑥ ADR-0450 — THE SURFACES (ország-réteg 3/2): the owner-, guest- and partner-facing files
 //      carry no burned "HUF" / "hu-HU" / " Ft" and no price getter without a region.
 //
+//   ⑦ ADR-XXXX — THE REPORTS (ország-réteg 3/3): the revenue report folds per currency (no
+//      cross-currency sum, no conversion), every amount query reads its currency, the funnel's
+//      send hour and heat map are in the lead's zone, portals come from the catalogue, and the
+//      tenant reports/letters run on the lodging's zone; no burned HUF / Ft / Budapest clock.
+//
 //   npx tsx scripts/country-layer-check.mts
 import { readFileSync } from "node:fs";
 import {
@@ -357,6 +362,75 @@ for (const f of SURFACE_SCOPE) {
 }
 check("nincs beégetett HUF / hu-HU / „ Ft” és régió nélküli ár-getter a felület-fájlokban", surfHits.length === 0, `\n      ${surfHits.join("\n      ")}`);
 SURFACE_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, surfAllowUsed.has(i)));
+
+console.log("⑦ riportok (ország-réteg 3/3)");
+// The console reports and the tenant-facing reports/letters: money is folded PER CURRENCY (never
+// summed across, never converted), and days/hours are the LEAD's / LODGING's — so no burned
+// "HUF" / "hu-HU" / " Ft" / Europe/Budapest, and the Budapest clock is imported only where the
+// company calendar is meant (each one on the ALLOW list WITH its reason), and every query that reads an amount also reads its currency.
+const REPORT_SCOPE = [
+  "src/console/revenueReport.ts", "src/console/revenueReportViews.ts", "src/console/reportData.ts",
+  "src/console/reportViews.ts", "src/analytics/referrerGroup.ts", "src/console/trialReport.ts",
+  "src/console/trialReportViews.ts", "src/console/tenantActivityData.ts", "src/console/tenantActivityViews.ts",
+  "src/analytics/trafficMail.ts", "src/analytics/trafficReport.ts",
+];
+const REPORT_BURNED =
+  /["'`](?:HUF|hu-HU)["'`]|["'`][^"'`\n]* Ft\b|Europe\/Budapest|budapestTime\.js/;
+const REPORT_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+  { file: "src/console/revenueReport.ts", frag: 'from "../text/budapestTime.js"', why: "a riport HÓNAPJA a cég könyvelési hónapja (Budapest) — pénznemtől független, a pénzt nem keveri" },
+  { file: "src/console/revenueReportViews.ts", frag: 'from "../text/budapestTime.js"', why: "ugyanaz (a fordulónap kiírása a cég naptárában, operátori lap)" },
+];
+const repHits: string[] = [];
+const repAllowUsed = new Set<number>();
+for (const f of REPORT_SCOPE) {
+  const text = src(f);
+  text.split("\n").forEach((raw, n) => {
+    const code = stripComments(raw);
+    if (!REPORT_BURNED.test(code)) return;
+    const a = REPORT_ALLOW.findIndex((x) => x.file === f && code.includes(x.frag));
+    if (a >= 0) {
+      repAllowUsed.add(a);
+      return;
+    }
+    repHits.push(`${f}:${n + 1}: ${raw.trim()}`);
+  });
+  // An amount read without its currency is a sum waiting to mix currencies.
+  for (const m of text.matchAll(/\.select\(\[([\s\S]*?)\]\)/g)) {
+    const cols = m[1]!;
+    if (/\b(?:amount|price|net|gross)\b["'` ]/.test(cols) && !/currency/.test(cols))
+      repHits.push(`${f}: összeg pénznem nélkül olvasva: ${cols.replace(/\s+/g, " ").trim().slice(0, 160)}`);
+  }
+}
+check("nincs beégetett HUF / hu-HU / „ Ft” / Budapest-óra és pénznem nélküli összeg a riport-fájlokban", repHits.length === 0, `\n      ${repHits.join("\n      ")}`);
+REPORT_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, repAllowUsed.has(i)));
+// The fold itself: one currency per view, never a cross-currency sum.
+const rev = src("src/console/revenueReport.ts");
+check(
+  "a bevételi riport pénznemenként hajtogat (előfizetés, tény-bevétel, előrejelzés, modulok)",
+  /subs = shown\.filter\(\(s\) => s\.currency === currency\)/.test(rev) &&
+    /x\.currency === currency/.test(rev) &&
+    /buildForecast\(shown, horizon, now, currency\)/.test(rev) &&
+    /buildModules\(subs, currency\)/.test(rev),
+);
+check(
+  "a partner havi diagramja pénznemenként (nincs forint-szűrés)",
+  !/r\.currency !== "HUF"/.test(src("src/console/partnerViews.ts")) && /monthlyChartOf\(/.test(src("src/console/partnerViews.ts")),
+);
+const rd = src("src/console/reportData.ts");
+check(
+  "a tölcsér a lead helyi idejében: küldési óra és hőtérkép a lead zónájában, ország-szűrő",
+  /sentHour: partsIn\(sentAt, timeZone\)\.hour/.test(rd) && /partsIn\(v\.startedAt, tz\)/.test(rd) && /\bcountry: ReportCountry = "all"/.test(rd),
+);
+check(
+  "a portálfelismerés a katalógusból (globális ∪ ország-sorok portal_domains)",
+  /isPortalReferrerHost\(/.test(src("src/analytics/referrerGroup.ts")) && /countryPortalDomains\(\)/.test(src("src/scraper/qualify.ts")),
+);
+check(
+  "a havi tenant-levél és a forgalmi riport a szállás zónájában (tenant.time_zone) és dátumformájában",
+  /tenantTimeZone\(t\.tenantId\)/.test(src("src/analytics/trafficMail.ts")) &&
+    /dateLocale\(lang\)/.test(src("src/analytics/trafficMail.ts")) &&
+    /tenantTimeZone\(tenantId\)/.test(src("src/analytics/trafficReport.ts")),
+);
 
 await db.destroy();
 

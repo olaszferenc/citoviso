@@ -2,19 +2,23 @@
 // (variant A, „Pénz felül”). Top to bottom: five numbers → the expected income (chart + month
 // table + "who, how much, when" for the chosen month) → actual income and the subscriber
 // movement side by side → discount and package split → one row per subscriber.
+// ONE CURRENCY PER VIEW (ország-réteg 3/3): every amount is written in the shown currency with
+// its own minor unit; with more than one currency a chip row switches the view and a small
+// table lists each currency's headline side by side — never summed, never converted.
 // Links only (filters, month choice) — the page works without JS; charts are inline SVG whose
 // colours are console tokens, the hover text is the SVG <title>.
 
 import { esc, helpLink, layout } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor, minorToMajor } from "../text/money.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { reportTabs } from "./reportViews.js";
 import {
   REVENUE_HORIZONS,
   cardValidOn,
+  homeCurrency,
   isLive,
   type FactMonth,
   type ForecastMonth,
@@ -23,7 +27,9 @@ import {
   type RevenueSub,
 } from "./revenueReport.js";
 
-const ft = (n: number, lang: string): string => formatMoney(Math.round(n), "HUF", lang);
+// The shown currency, set once per render (like UI below): every amount is its minor unit.
+let CUR = "";
+const ft = (n: number, lang: string): string => formatMinor(Math.round(n), CUR, lang);
 const day = (d: Date): string => budapestIsoDay(d).replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$1. $2. $3.");
 const expOf = (s: RevenueSub): string => (s.card ? `${s.card.expYear}/${String(s.card.expMonth).padStart(2, "0")}` : "");
 
@@ -54,9 +60,11 @@ let UI: RevenueUi = { st: "all", sort: "next" };
 
 function href(
   r: RevenueReport,
-  over: { h?: RevenueHorizon; t?: boolean; m?: string | null; st?: RevenueListFilter; sort?: RevenueSort } = {},
+  over: { h?: RevenueHorizon; t?: boolean; m?: string | null; st?: RevenueListFilter; sort?: RevenueSort; c?: string } = {},
 ): string {
   const p = new URLSearchParams({ h: String(over.h ?? r.horizon) });
+  const c = over.c ?? r.currency;
+  if (c !== homeCurrency()) p.set("c", c);
   if (over.t ?? r.tests) p.set("t", "1");
   const m = over.m === undefined ? r.month : over.m;
   if (m) p.set("m", m);
@@ -117,7 +125,8 @@ function niceMax(v: number): number {
   for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10]) if (m * p >= raw) return 4 * m * p;
   return 40 * p;
 }
-function short(v: number, lang: string): string {
+function short(minor: number, lang: string): string {
+  const v = minorToMajor(minor, CUR);
   if (v >= 1e6) return T(lang, "{n} M", { n: (v / 1e6).toFixed(v % 1e6 ? 1 : 0).replace(".", ",") });
   if (v >= 1e3) return T(lang, "{n} e", { n: Math.round(v / 1e3) });
   return String(Math.round(v));
@@ -427,8 +436,30 @@ function tenantsPanel(r: RevenueReport, lang: string): string {
   );
 }
 
+/** Each currency's headline side by side — only when more than one currency has money in it. */
+function currencyPanel(r: RevenueReport, lang: string): string {
+  if (r.currencies.length < 2) return "";
+  const rows = r.currencies
+    .map((c) => {
+      const f = (n: number): string => esc(formatMinor(Math.round(n), c.currency, lang));
+      const on = c.currency === r.currency;
+      return (
+        `<tr${on ? ' class="rv-sel"' : ""}><td><a href="${esc(href(r, { c: c.currency, m: null }))}">${esc(c.currency)}</a></td>` +
+        `<td class="num">${c.active}</td><td class="num">${c.renewing ? f(c.mrr) : "—"}</td>` +
+        `<td class="num">${c.paid ? f(c.paid) : "—"}</td><td class="num rv-hide-n">${c.owed ? f(c.owed) : "—"}</td></tr>`
+      );
+    })
+    .join("");
+  return (
+    `<div class="panel"><h2>${esc(T(lang, "Pénznemenként"))} <span class="rp-q">— ${esc(T(lang, "minden ország a saját pénznemében fizet; a pénznemeket nem adjuk össze és nem váltjuk át"))}</span></h2>` +
+    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(T(lang, "Pénznem"))}</th><th class="num">${esc(T(lang, "Aktív előfizető"))}</th><th class="num">${esc(T(lang, "MRR"))}</th><th class="num">${esc(T(lang, "Beérkezett"))}</th><th class="num rv-hide-n">${esc(T(lang, "Kintlévőség"))}</th></tr></thead><tbody>${rows}</tbody></table></div>` +
+    `<p class="rp-q rp-note">${esc(T(lang, "Az alábbi számok mind {c} pénznemben vannak. Másik pénznem: koppints a sorára.", { c: r.currency }))}</p></div>`
+  );
+}
+
 export function reportRevenuePage(r: RevenueReport, ui: RevenueUi = { st: "all", sort: "next" }): string {
   UI = ui;
+  CUR = r.currency;
   const lang = consoleLang();
   const tabs = reportTabs("/report/revenue", "", "", lang);
   const hz = REVENUE_HORIZONS.map(
@@ -437,11 +468,18 @@ export function reportRevenuePage(r: RevenueReport, ui: RevenueUi = { st: "all",
   const ts =
     `<a href="${esc(href(r, { t: false }))}"${!r.tests ? ' class="on"' : ""}>${esc(T(lang, "Kizárva"))}</a>` +
     `<a href="${esc(href(r, { t: true }))}"${r.tests ? ' class="on"' : ""}>${esc(T(lang, "Beszámítva"))}</a>`;
+  const curChips =
+    r.currencies.length > 1
+      ? `<span class="rv-fl">${esc(T(lang, "Pénznem"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Pénznem"))}">` +
+        r.currencies.map((c) => `<a href="${esc(href(r, { c: c.currency, m: null }))}"${c.currency === r.currency ? ' class="on"' : ""}>${esc(c.currency)}</a>`).join("") +
+        `</div>`
+      : "";
   const filter =
-    `<div class="rp-filt"><span class="rv-fl">${esc(T(lang, "Előrejelzés"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Előrejelzés"))}">${hz}</div>` +
+    `<div class="rp-filt">${curChips}<span class="rv-fl">${esc(T(lang, "Előrejelzés"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Előrejelzés"))}">${hz}</div>` +
     `<span class="rv-fl">${esc(T(lang, "Tesztek"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Tesztek"))}">${ts}</div>` +
     `<span class="rp-filt__n">${esc(r.tests ? T(lang, "{n} előfizetés", { n: r.subs.length }) : T(lang, "{n} előfizetés · tesztek nélkül", { n: r.subs.length }))}</span></div>`;
   const body =
+    currencyPanel(r, lang) +
     kpis(r, lang) +
     forecastPanel(r, lang) +
     `<div class="rp-grid2">${factsPanel(r, lang)}${movesPanel(r, lang)}</div>` +

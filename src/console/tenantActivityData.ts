@@ -24,7 +24,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
-import { APP_TZ, addIsoDays, isoDayIn, todayIn } from "../text/zoneTime.js";
+import { APP_TZ, addIsoDays, isoDayIn, isValidTimeZone, todayIn } from "../text/zoneTime.js";
 import { sourceGroupOf, type SourceGroup } from "../analytics/referrerGroup.js";
 
 const DAY = 86_400_000;
@@ -61,6 +61,8 @@ export interface SourceCount {
 
 export interface TenantActivity {
   readonly tenantId: string;
+  /** The lodging's zone (tenant.time_zone): its days and times are read in it. Absent = app zone. */
+  readonly timeZone?: string;
   readonly partnerId: string | null;
   readonly name: string;
   readonly isTest: boolean;
@@ -90,7 +92,7 @@ export interface TenantActivity {
     readonly views30: number;
     /** Front-page views excluded as the owner's / operator's own look (30 days). */
     readonly ownViews30: number;
-    /** Visitors per Budapest day, oldest first, CHART_DAYS long, ending today. */
+    /** Visitors per day of the LODGING's calendar (tenant.time_zone), oldest first, CHART_DAYS long, ending today. */
     readonly daily: readonly { readonly day: string; readonly n: number }[];
     /** 30-day views by source group, biggest first. */
     readonly sources: readonly SourceCount[];
@@ -147,11 +149,12 @@ export interface VisitRow {
  * the measured Duna / Sáma rows). A fingerprint referred from the tenant admin or the console
  * on a day is the owner / us for that whole day: none of its views that day counts.
  */
-export function summarizeVisits(rows: readonly VisitRow[], hosts: readonly string[], now: Date): TenantActivity["visitors"] {
+export function summarizeVisits(rows: readonly VisitRow[], hosts: readonly string[], now: Date, tz: string = APP_TZ): TenantActivity["visitors"] {
   const since30 = new Date(now.getTime() - 30 * DAY);
   const since7 = new Date(now.getTime() - 7 * DAY);
-  const chartFirstDay = addIsoDays(todayIn(APP_TZ, now), -(CHART_DAYS - 1));
-  const keyOf = (x: VisitRow): string => `${x.visitor_hash}|${isoDayIn(toDate(x.occurred_at), APP_TZ)}`;
+  // Days are the lodging's (ország-réteg 3/3): a Czech guest's evening visit is that Prague day.
+  const chartFirstDay = addIsoDays(todayIn(tz, now), -(CHART_DAYS - 1));
+  const keyOf = (x: VisitRow): string => `${x.visitor_hash}|${isoDayIn(toDate(x.occurred_at), tz)}`;
   const own = new Set(rows.filter((x) => sourceGroupOf(x.referrer) === "ours").map(keyOf));
   const guest = rows.filter((x) => !own.has(keyOf(x)));
   const inWin = (x: VisitRow, since: Date): boolean => toDate(x.occurred_at) >= since;
@@ -159,7 +162,7 @@ export function summarizeVisits(rows: readonly VisitRow[], hosts: readonly strin
   const g30 = guest.filter((x) => inWin(x, since30));
   const perDay = new Map<string, Set<string>>();
   for (const x of guest) {
-    const day = isoDayIn(toDate(x.occurred_at), APP_TZ);
+    const day = isoDayIn(toDate(x.occurred_at), tz);
     perDay.set(day, (perDay.get(day) ?? new Set()).add(x.visitor_hash));
   }
   const daily = Array.from({ length: CHART_DAYS }, (_, i) => {
@@ -201,7 +204,7 @@ export async function getTenantActivities(only?: readonly string[], now = new Da
   let tq = db
     .selectFrom("tenant")
     .innerJoin("lead", "lead.id", "tenant.lead_id")
-    .select(["tenant.id as id", "tenant.display_name as name", "tenant.created_at as createdAt", "lead.name as leadName"]);
+    .select(["tenant.id as id", "tenant.display_name as name", "tenant.created_at as createdAt", "lead.name as leadName", "tenant.time_zone as timeZone"]);
   if (only) tq = tq.where("tenant.id", "in", only);
   const tenants = await tq.execute();
   if (!tenants.length) return [];
@@ -314,10 +317,12 @@ export async function getTenantActivities(only?: readonly string[], now = new Da
     events.sort((x, y) => y.at.getTime() - x.at.getTime());
 
     // ── visitor side ──
-    const visitors = summarizeVisits(visitsBy.get(t.id) ?? [], hosts, now);
+    const tz = isValidTimeZone(t.timeZone) ? t.timeZone : APP_TZ;
+    const visitors = summarizeVisits(visitsBy.get(t.id) ?? [], hosts, now, tz);
 
     return {
       tenantId: t.id,
+      timeZone: tz,
       partnerId: partnerOf.get(t.id) ?? null,
       name: t.name,
       isTest,

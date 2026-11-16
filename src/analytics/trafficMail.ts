@@ -21,7 +21,9 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
-import { APP_TZ, budapestParts } from "../text/budapestTime.js";
+import { APP_TZ, partsIn } from "../text/zoneTime.js";
+import { dateLocale } from "../i18n/lang.js";
+import { tenantTimeZone } from "../tenant/timeZone.js";
 import { config } from "../config.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildTrafficEmail } from "../email/trafficEmail.js";
@@ -48,12 +50,14 @@ export const TRAFFIC_WINDOW_DAYS = 30;
  */
 export const TRAFFIC_MAIL_MIN_LIVE_DAYS = 21;
 
-/** „szeptember 14." — a nap a címzett nyelvén, BUDAPEST szerinti naptár (ADR-0289). */
-export function dayLabel(d: Date, lang: string): string {
+/** „szeptember 14." — a nap a címzett nyelvén és dátumformájában (dateLocale), a SZÁLLÁS
+ *  naptára szerint (ADR-0289; ország-réteg 3/3: tenant.time_zone — magyar szállásnál Budapest). */
+export function dayLabel(d: Date, lang: string, tz: string = APP_TZ): string {
+  const locale = dateLocale(lang);
   try {
-    return d.toLocaleDateString(lang, { month: "long", day: "numeric", timeZone: APP_TZ });
+    return d.toLocaleDateString(locale, { month: "long", day: "numeric", timeZone: tz });
   } catch {
-    const p = budapestParts(d);
+    const p = partsIn(d, tz);
     return `${p.month}.${p.day}.`;
   }
 }
@@ -68,10 +72,10 @@ export function trafficMailEligible(liveSince: Date | null, now: Date): boolean 
  * day start (Budapest midnight, 30 days back) or the site's go-live day, whichever is later,
  * up to today (the report has no upper bound, so today's visits so far are in it).
  */
-export function trafficPeriodLabel(liveSince: Date | null, now: Date, lang: string): string {
-  const windowStart = since(TRAFFIC_WINDOW_DAYS, now);
+export function trafficPeriodLabel(liveSince: Date | null, now: Date, lang: string, tz: string = APP_TZ): string {
+  const windowStart = since(TRAFFIC_WINDOW_DAYS, now, tz);
   const from = liveSince && liveSince.getTime() > windowStart.getTime() ? liveSince : windowStart;
-  return `${dayLabel(from, lang)} – ${dayLabel(now, lang)}`;
+  return `${dayLabel(from, lang, tz)} – ${dayLabel(now, lang, tz)}`;
 }
 
 /**
@@ -105,23 +109,23 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
         continue;
       }
 
+      // The lodging's zone: its month, its days (ország-réteg 3/3).
+      const tz = await tenantTimeZone(t.tenantId);
       // 2. szabály: ebben a hónapban ment már ki?
       const already = await db
         .selectFrom("tenant_message")
         .select("id")
         .where("tenant_id", "=", t.tenantId)
         .where("kind", "=", "traffic")
-        // The month starts at Budapest midnight (ADR-0289) — not in the DB session's zone.
-        .where(
-          sql<boolean>`sent_at >= (date_trunc('month', ${now}::timestamptz AT TIME ZONE ${sql.lit(APP_TZ)}) AT TIME ZONE ${sql.lit(APP_TZ)})`,
-        )
+        // The month starts at the lodging's local midnight (ADR-0289) — not in the DB session's zone.
+        .where(sql<boolean>`sent_at >= (date_trunc('month', ${now}::timestamptz AT TIME ZONE ${tz}) AT TIME ZONE ${tz})`)
         .executeTakeFirst();
       if (already) {
         out.skippedAlready++;
         continue;
       }
 
-      const report = await getTrafficReport(t.tenantId, TRAFFIC_WINDOW_DAYS);
+      const report = await getTrafficReport(t.tenantId, TRAFFIC_WINDOW_DAYS, now);
       // 1. szabály: üres hónapról hallgatunk.
       if (report.isEmpty) {
         out.skippedEmpty++;
@@ -144,7 +148,7 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
       const msg = buildTrafficEmail({
         to,
         siteName: t.name ?? t.slug ?? "",
-        periodLabel: trafficPeriodLabel(liveSince, now, lang),
+        periodLabel: trafficPeriodLabel(liveSince, now, lang, tz),
         report,
         adminUrl: `${config.publicSiteUrl}/admin?tab=forgalom`,
         lang,

@@ -103,6 +103,25 @@ const GLOBAL_PORTAL_DOMAINS = [
 const LISTING_ENTRY_RE =
   /\/(szallashelyek|szallashely|accommodation|apartmanok|panziok|hotelek|vendeghazak|latnivalok)\/[^/]+/;
 
+/**
+ * Is a bare HOST (a stored referrer: "booking.com", "www.szallas.hu") one of the catalogue's
+ * portals — the global list ∪ every country row's portal_domains? Host entries only: a
+ * "host/path" listing branch needs the path, which a referrer host does not carry, so the
+ * town directory itself is not called a portal from its host alone.
+ */
+export function isPortalReferrerHost(rawHost: string): boolean {
+  const host = rawHost.trim().toLowerCase().replace(/^www\./, "");
+  if (!host) return false;
+  const labels = host.split(".");
+  return portalDomains().some((entry) => {
+    const d = entry.toLowerCase();
+    if (d.includes("/")) return false;
+    if (d.endsWith(".")) return labels.includes(d.slice(0, -1));
+    if (d.includes(".")) return host === d || host.endsWith(`.${d}`);
+    return labels.some((l) => l.includes(d));
+  });
+}
+
 function isPortalHost(url: string): boolean {
   let host: string;
   let pathname: string;

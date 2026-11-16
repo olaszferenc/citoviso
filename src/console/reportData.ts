@@ -36,11 +36,18 @@
 // visits, trial, order, reply and unsubscribe to the first letter (owner, 2026-10-26: „hogy
 // lehetne … hogy ne torzítson?”). The second letter's sent_at is a per-lead CUT: nothing at
 // or after it counts here.
+// COUNTRY (ország-réteg 3/3, ADR-0437): every prospect carries its LEAD's country (raw.country
+// → the scrape area's, the countryOf() order) and that country's zone. The page can be scoped
+// to one country (`ctry`, like the lead-type filter) and broken down by it; the send hour and
+// the „Mikor nyitják” grid are in the LEAD's local time — a Czech lodging opening at 9 is 9 in
+// Prague, not a Budapest hour. A prospect whose country has no layer row reads the app zone.
 
 import { db } from "../db/client.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
-import { partsIn, APP_TZ, addIsoDays, isoDayDiff, midnightIn, todayIn } from "../text/zoneTime.js";
+import { sql } from "kysely";
+import { partsIn, APP_TZ, addIsoDays, isoDayDiff, isoDayIn, midnightIn, todayIn } from "../text/zoneTime.js";
+import { countryConfig, countryConfigSync, countryOf } from "../country.js";
 import {
   EXIT_REASONS,
   EXPECTED_STATED,
@@ -53,8 +60,10 @@ import {
 } from "../analytics/exitReason.js";
 
 export type ReportDays = 0 | 7 | 30 | 90;
-export type ReportDim = "segment" | "channel" | "device" | "style" | "hour";
-export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device", "style", "hour"];
+export type ReportDim = "segment" | "channel" | "device" | "style" | "hour" | "country";
+export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device", "style", "hour", "country"];
+/** Country filter: "all", or the lead's ISO-2 ("" = no known country). Scopes EVERY metric, like `seg`. */
+export type ReportCountry = string;
 /** Lead-type filter (prospect.segment; NULL folds to "ismeretlen"): scopes EVERY metric on the page. */
 export const REPORT_SEGS = ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult", "ismeretlen"] as const;
 export type ReportSeg = (typeof REPORT_SEGS)[number] | "all";
@@ -186,8 +195,12 @@ export interface ProspectFacts {
   /** The mock's art template id (`inputs.template`, src/engine/templates.ts), "ismeretlen" when absent. */
   readonly template: string;
   readonly sentAt: Date;
-  /** Hour of the send in Budapest time (ADR-0288). */
+  /** Hour of the send in the LEAD's local time (its country's zone; ADR-0288 for HU). */
   readonly sentHour: number;
+  /** The lead's country, ISO-2 ("" = unknown); absent in old fixtures = unknown. */
+  readonly country?: string;
+  /** The lead's country zone (IANA); absent = the app zone. */
+  readonly timeZone?: string;
   readonly visits: readonly Visit[];
   readonly openedAt: Date | null;
   readonly deepAt: Date | null;
@@ -408,6 +421,10 @@ export interface ReportData {
   readonly period: ReportPeriod;
   readonly dim: ReportDim;
   readonly seg: ReportSeg;
+  /** The country filter ("all" = every country). */
+  readonly country?: ReportCountry;
+  /** Countries among the window's sends (before the country filter), most sends first. */
+  readonly countries?: readonly { readonly iso: string; readonly sent: number }[];
   readonly now: Date;
   readonly prospects: readonly ProspectFacts[];
   readonly counts: StageCounts;
@@ -449,8 +466,12 @@ export interface ReportData {
     readonly calibrationTotal: number;
     readonly fastBuyers: BuyerProfile;
     readonly deepBuyers: BuyerProfile;
-    /** 7 × 17 (Mon…Sun × 07…23 h) open counts, Budapest time. */
+    /** 7 × 17 (Mon…Sun × 07…23 h) open counts, each in its LEAD's local time. */
     readonly heat: readonly (readonly number[])[];
+    /** The zones the grid's opens were read in (one = a single local clock). */
+    readonly heatZones?: readonly string[];
+    /** The busiest local slot PER COUNTRY (more than one country = one suggestion each). */
+    readonly heatBest?: readonly { readonly country: string; readonly dow: number; readonly hour: number; readonly n: number }[];
     /** The Rendelés-panel (README rendeles-panel ④–⑨): sessions newest first + the pill KPI. */
     readonly panel: {
       readonly sessions: readonly PanelSession[];
@@ -624,7 +645,11 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
     .selectFrom("prospect")
     .innerJoin("lead", "lead.id", "prospect.lead_id")
     .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
+    .leftJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+    .leftJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
     .select([
+      sql<string | null>`lead.raw->>'country'`.as("raw_country"),
+      "scraper_definition.country as area_country",
       "prospect.id as id",
       "prospect.lead_id as lead_id",
       "prospect.segment as segment",
@@ -643,6 +668,7 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
   const reSent = round === "re" ? await loadFollowupSends(base.map((r) => r.id)) : null;
   const rows = reSent ? base.filter((r) => reSent.has(r.id)).map((r) => ({ ...r, sent_at: reSent.get(r.id)! as Date | string | null })) : base;
   if (!rows.length) return [];
+  await countryConfig(null); // refresh the layer snapshot once; the per-row lookups are sync
   const ids = rows.map((r) => r.id);
   const cutByLead = round === "first" ? await loadSecondTouch([...new Set(rows.map((r) => r.lead_id))]) : new Map<string, Date>();
   const startByLead = new Map(rows.map((r) => [r.lead_id, round === "re" ? toDate(r.sent_at)!.getTime() : -Infinity]));
@@ -743,6 +769,8 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
     const paidAt = firstPaid.get(r.id) ?? null;
     const lastVisit = visits[visits.length - 1];
     const verdict = paidAt || !lastVisit ? null : inferExitReason(signalsFromEvents(lastVisit.events, false));
+    const country = countryOf({ country: r.raw_country }, r.area_country) ?? "";
+    const timeZone = countryConfigSync(country)?.timeZone ?? APP_TZ;
     return {
       id: r.id,
       leadId: r.lead_id,
@@ -752,7 +780,9 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
       style: styleOf(r.inputs as Record<string, unknown> | null),
       template: templateOf(r.inputs as Record<string, unknown> | null),
       sentAt,
-      sentHour: partsIn(sentAt, APP_TZ).hour,
+      sentHour: partsIn(sentAt, timeZone).hour,
+      country,
+      timeZone,
       visits,
       openedAt,
       deepAt,
@@ -1083,6 +1113,8 @@ export function dimKey(p: ProspectFacts, dim: ReportDim): string {
       return p.style;
     case "hour":
       return String(p.sentHour).padStart(2, "0") + ":00";
+    case "country":
+      return p.country ?? "";
   }
 }
 
@@ -1264,13 +1296,14 @@ export async function getReportData(
   seg: ReportSeg = "all",
   now = new Date(),
   round?: ReportRound,
+  country: ReportCountry = "all",
 ): Promise<ReportData> {
   const cur = round ?? "first";
   const [all, targets, notes] = await Promise.all([loadProspectFacts(cur), loadTargets(), loadNotes()]);
-  const main = foldReport(all, targets, notes, days, dim, now, seg);
+  const main = foldReport(all, targets, notes, days, dim, now, seg, country);
   if (!round) return main;
   const other: ReportRound = round === "re" ? "first" : "re";
-  const o = foldReport(await loadProspectFacts(other), targets, notes, days, dim, now, seg);
+  const o = foldReport(await loadProspectFacts(other), targets, notes, days, dim, now, seg, country);
   return { ...main, round, peer: { round: other, counts: o.counts, hypotheses: o.hypotheses } };
 }
 
@@ -1283,12 +1316,20 @@ export function foldReport(
   dim: ReportDim,
   now: Date,
   seg: ReportSeg = "all",
+  country: ReportCountry = "all",
 ): ReportData {
   const period = typeof range === "number" ? reportPeriod(range, null, null, now) : range;
   const days = period.spanDays;
   // The lead-type filter scopes the WHOLE fold (cards, previous window, sparklines, cohorts,
   // timeline, behaviour) — a segment's metrics compared with that segment's own past.
-  const all = seg === "all" ? everyone : everyone.filter((p) => p.segment === seg);
+  const bySeg = seg === "all" ? everyone : everyone.filter((p) => p.segment === seg);
+  // The country filter the same way (ország-réteg 3/3); the chooser lists the window's countries.
+  const countryCount = new Map<string, number>();
+  for (const p of bySeg)
+    if (p.sentAt.getTime() >= period.fromMs && p.sentAt.getTime() < period.toMs)
+      countryCount.set(p.country ?? "", (countryCount.get(p.country ?? "") ?? 0) + 1);
+  const countries = [...countryCount.entries()].map(([iso, sent]) => ({ iso, sent })).sort((a, b) => b.sent - a.sent || a.iso.localeCompare(b.iso));
+  const all = country === "all" ? bySeg : bySeg.filter((p) => (p.country ?? "") === country);
   const from = period.fromMs;
   const prevFrom = days ? from - (period.toMs - from) : -Infinity;
   const inRange = all.filter((p) => p.sentAt.getTime() >= from && p.sentAt.getTime() < period.toMs);
@@ -1441,20 +1482,40 @@ export function foldReport(
   const fast = buyers.filter((p) => hours(p.openedAt, p.paidAt)! <= 6);
   const deep = buyers.filter((p) => hours(p.openedAt, p.paidAt)! > 6);
   const heat: number[][] = Array.from({ length: 7 }, () => Array<number>(17).fill(0));
-  for (const p of openers)
+  const heatOf = new Map<string, number[][]>();
+  const heatZones = new Set<string>();
+  for (const p of openers) {
+    const tz = p.timeZone ?? APP_TZ;
+    const own = heatOf.get(p.country ?? "") ?? Array.from({ length: 7 }, () => Array<number>(17).fill(0));
+    heatOf.set(p.country ?? "", own);
     for (const v of p.visits) {
-      const z = partsIn(v.startedAt, APP_TZ);
-      // Weekday of the BUDAPEST calendar day (UTC noon of that day is safe from DST shifts);
+      const z = partsIn(v.startedAt, tz);
+      // Weekday of the LEAD's local calendar day (UTC noon of that day is safe from DST shifts);
       // getUTCDay gives 0 = Sunday, the grid is Monday-first.
-      const dow = (new Date(`${isoDay(v.startedAt)}T12:00:00Z`).getUTCDay() + 6) % 7;
-      if (z.hour >= 7 && z.hour <= 23) heat[dow]![z.hour - 7]!++;
+      const dow = (new Date(`${isoDayIn(v.startedAt, tz)}T12:00:00Z`).getUTCDay() + 6) % 7;
+      if (z.hour >= 7 && z.hour <= 23) {
+        heat[dow]![z.hour - 7]!++;
+        own[dow]![z.hour - 7]!++;
+        heatZones.add(tz);
+      }
     }
+  }
+  const heatBest = [...heatOf.entries()]
+    .map(([c, grid]) => {
+      let best = { country: c, dow: 0, hour: 0, n: 0 };
+      grid.forEach((row, dow) => row.forEach((n, hi) => { if (n > best.n) best = { country: c, dow, hour: hi + 7, n }; }));
+      return best;
+    })
+    .filter((b) => b.n > 0)
+    .sort((a, b) => b.n - a.n || a.country.localeCompare(b.country));
 
   return {
     days,
     period,
     dim,
     seg,
+    country,
+    countries,
     now,
     prospects: inRange,
     counts,
@@ -1488,6 +1549,8 @@ export function foldReport(
       fastBuyers: buyerProfile(fast),
       deepBuyers: buyerProfile(deep),
       heat,
+      heatZones: [...heatZones],
+      heatBest,
       panel: {
         sessions: panelSessions(inRange),
         pressedPill: openers.filter((p) => p.visits.some((v) => v.events.some((e) => e.type === "panel_open" && viaOf(e.payload) === "pill"))).length,
