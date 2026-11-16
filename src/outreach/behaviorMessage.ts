@@ -61,7 +61,7 @@ export const BEHAVIOR_SETTING_KEY = "behavior_message";
 /** The message waits this long after the lead's last activity (never while they are reading). */
 export const BEHAVIOR_QUIET_MS = 20 * 60_000;
 /** A trigger older than this is dropped, not sent late (Friday evening → Monday 8:00 still goes). */
-export const BEHAVIOR_MAX_AGE_MS = 4 * 24 * 3_600_000;
+export const BEHAVIOR_MAX_AGE_MS = 10 * 24 * 3_600_000; // owner 2026-11-16: 10-day reaction window (was 4)
 /** At most this many messages per run (the timer runs every 10 minutes) — a burst brake. */
 export const BEHAVIOR_MAX_PER_RUN = 5;
 /** A `claimed` row older than this, still without sent_at, is a run that died mid-send. */
@@ -127,7 +127,7 @@ export const BEHAVIOR_EXCLUSION_LABEL: Record<BehaviorExclusion, string> = {
   intent: "rendelési szándék / leadott rendelés", // i18n-exempt: operátori kimenet
   no_channel: "nincs csatorna (a hideg megkeresés nem ért el se magyar mobilt, se e-mail-címet)", // i18n-exempt: operátori kimenet
   duplicate_address: "ugyanez a cím / szám egy másik lead üzenetéhez tartozik", // i18n-exempt: operátori kimenet
-  too_old: "a kiváltó 4 napnál régebbi — késve nem küldjük", // i18n-exempt: operátori kimenet
+  too_old: "a kiváltó 10 napnál régebbi — késve nem küldjük", // i18n-exempt: operátori kimenet
 };
 
 export interface BehaviorCandidate {

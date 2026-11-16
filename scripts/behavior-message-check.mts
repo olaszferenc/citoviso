@@ -254,8 +254,8 @@ if (!SELF_TEST) {
     check("③ esedékes = utolsó aktivitás + 20 perc", L.get(start.leadId)?.dueAt?.getTime() === at("09:32").getTime(), L.get(start.leadId)?.dueAt?.toISOString());
     check("③ mobilra ment a hideg üzenet → SMS-csatorna", L.get(smsLead.leadId)?.channel === "sms");
     check("③ e-mailben ment → e-mail-csatorna", L.get(two.leadId)?.channel === "email");
-    L = await list(new Date("2026-11-13T10:00:00+01:00"));
-    check("③ 4 napnál régebbi kiváltó → kiesik ('too_old')", L.get(oldTrig.leadId)?.excluded === "too_old", String(L.get(oldTrig.leadId)?.excluded));
+    L = await list(new Date("2026-11-20T10:00:00+01:00"));
+    check("③ 10 napnál régebbi kiváltó → kiesik ('too_old')", L.get(oldTrig.leadId)?.excluded === "too_old", String(L.get(oldTrig.leadId)?.excluded));
 
     console.log("④ a leállítók");
     const vis = [at("09:00"), at("09:20")];
