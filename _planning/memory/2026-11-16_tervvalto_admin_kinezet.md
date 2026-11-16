@@ -1,4 +1,4 @@
-# 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-XXXX)
+# 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-0451)
 
 **Session:** `citfad84390` (SUB, koordinátor `cit3918dbf3`). Brief: `~/rc-briefs/tervvaltas/E-admin-tervvalto-epites.md`.
 Háttér: B felmérés (`jelentes-B.md`), C3 mock (`jelentes-C3.md`), tulaj: „3.A”, „igen mehet”.
