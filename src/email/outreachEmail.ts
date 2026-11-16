@@ -97,7 +97,7 @@ function buildMail(
         `<td align="left" style="font-family:${FONT};font-size:13px;font-weight:700;letter-spacing:2px;color:${NAVY};text-transform:uppercase">` +
         brand +
         `</td>` +
-        `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;color:${MUTED};text-transform:uppercase">${esc(T(lang, "Még nem nyilvános"))}</td>` +
+        `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;color:${MUTED};text-transform:uppercase"></td>` +
         `</tr>`,
     ) +
     `</td></tr>`;
@@ -255,6 +255,11 @@ export function buildOutreachEmail(
 
   const html =
     `<!DOCTYPE html><html lang="${opts.lang || "hu"}"><body style="margin:0;padding:0;background:${PAGE_BG}">` +
+    // Hidden preheader (owner, 2026-11-16): the inbox list shows THIS under the subject,
+    // not the first visible line. The zero-width filler keeps the greeting out of the
+    // snippet. Hidden everywhere incl. Outlook (mso-hide).
+    `<div style="display:none;font-size:1px;line-height:1px;max-height:0;overflow:hidden;opacity:0;mso-hide:all;color:${PAGE_BG}">` +
+    `${esc(T(opts.lang, "Elkészült a honlapja, nézze meg!"))}${"&#847;&zwnj;&nbsp;".repeat(60)}</div>` +
     inner +
     `</body></html>`;
 
