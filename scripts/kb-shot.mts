@@ -487,15 +487,16 @@ let lookFixture: import("../src/server/planSwitchViews.js").LookView = {
 };
 function lookStandIn(template: string, phone: boolean): string {
   const stock = pathToFileURL(path.join(ROOT, "public/assets/stock")).href;
+  // One photo for BOTH plans: on a plan switch the hero photo is kept (photos[0]),
+  // so the guide picture must not suggest the owner's photo gets replaced.
   const lake = `${stock}/landscape-balaton/landscape-balaton-15227988.jpg`;
-  const terrace = `${stock}/terrace/terrace-17418139.jpg`;
   const name = "Nyugalom Vendégház";
   const tag = "Csend, kert, Balaton";
   const pad = phone ? 28 : 64;
   return template === "wordmark-grow"
     ? `<body style="margin:0;min-height:100vh;background:#f4efe6;color:#2b2a27;font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${phone ? 28 : 36}px;text-align:center">` +
         `<div style="font-size:${phone ? 46 : 92}px;letter-spacing:.02em;line-height:1.05;padding:0 ${pad}px">${name}</div>` +
-        `<img src="${terrace}" style="width:${phone ? 62 : 34}%;aspect-ratio:4/3;object-fit:cover;border-radius:22px">` +
+        `<img src="${lake}" style="width:${phone ? 62 : 34}%;aspect-ratio:4/3;object-fit:cover;border-radius:22px">` +
         `<div style="font-size:${phone ? 22 : 30}px;font-style:italic">${tag}</div></body>`
     : `<body style="margin:0;min-height:100vh;background:#111 url('${lake}') center/cover;color:#fff;font-family:Arial,sans-serif;display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;padding:${pad}px">` +
         `<div style="font-size:${phone ? 44 : 96}px;font-weight:800;text-transform:uppercase;line-height:1;text-shadow:0 2px 18px rgba(0,0,0,.5)">${name}</div>` +
