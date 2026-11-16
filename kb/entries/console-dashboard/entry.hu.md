@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-11-13
+updated: 2026-11-16
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -207,7 +207,7 @@ WhatsApp szünetel: Viber → MMS + SMS, a csak-WhatsAppos leadek a feloldásig 
 ### Megnyitás csatornánként
 
 A Messenger-út alatt a **„Megnyitás csatornánként”** kártya azt mutatja, melyik csatornán kiküldött
-linkre kattintanak a leadek. Négy csempe: E-mail, **„SMS / MMS”**, Viber, WhatsApp.
+linkre kattintanak a leadek. Öt csempe: E-mail, **„SMS / MMS”**, Viber, WhatsApp, és az **„Újrakeresés”** (a **„2. kör”** címkével).
 
 - **A nagy szám** az elmúlt 7 nap aránya: a 7 napban ezen a csatornán kiküldött linkek közül
   hányra kattintottak ebből a csatornából. Alatta a darabszám: „79 megnyitotta a 390 kapottból”.
@@ -226,6 +226,11 @@ linkre kattintanak a leadek. Négy csempe: E-mail, **„SMS / MMS”**, Viber, W
   meg, a sor halványan áll, névsor nélkül — ez nem hiba. A **„Riport ▸ Honnan nyitották”** link a
   kártya fejlécében ugyanide visz. A Riport a kiküldés napja szerint számol, ezért a „Kapta” szám ott
   eltérhet a kártyáétól.
+- **Az „Újrakeresés” csempe** (narancs, **„2. kör”** címkével) a nem-nyitóknak 14 nap után kiment utánkövető levelet
+  méri, az első körtől külön. A nagy szám alatt: „3 megnyitotta a 40 utánkövető levélből” (ha nem ment ki
+  levél: **„nem ment ki”**). **Kapta** = az időszakban kiment utánkövető levél, **megnyitotta** = utána
+  bármelyik linkjéről rákattintott. Erre koppintva a **„Riport”** Tölcsér lapja nyílik **„Újrakeresés”**
+  állásban, 7 napos időszakkal. A kártya alján egy mondat is elmondja, mi az Újrakeresés.
 
 ## A modul irányítópultja
 

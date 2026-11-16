@@ -4,7 +4,7 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-11-09
+updated: 2026-11-16
 ---
 
 A Riport négy lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
@@ -40,6 +40,25 @@ nyomd meg a **„Szűrés”** gombot. Mindkét nap beleszámít, a mai napnál 
 Ilyenkor a dátum-doboz kiemelt, mellette ez áll: „Kiküldve 9. 20. – 9. 27. között”. A választás
 a lead-típus és a bontás váltásakor, és a Viselkedés lapon is megmarad; egy chipre kattintva
 visszatérsz a gyors időszakokhoz. Itt is a link KIKÜLDÉSI napja számít.
+
+### Melyik kör? — Első megkeresés és Újrakeresés
+
+A Tölcsér lap tetején, a szűrősor fölött áll a **„Melyik kör?”** váltó, két gombbal: **„Első megkeresés”**
+és **„Újrakeresés”**. A gombon a kis szám azt mutatja, hány üzenet ment ki az adott körben a választott időszakban.
+Alattuk egy sor elmondja, mit mér az éppen választott kör.
+
+- **„Első megkeresés”** (így nyílik a lap): az e-mail, SMS/MMS, Viber és WhatsApp kiküldés. Ami az
+  utánkövető levél kiküldése után történt (megnyitás, próba, rendelés, fizetés, leiratkozás, válasz),
+  az ide nem számít bele.
+- **„Újrakeresés”**: csak azok a leadek, akiknek az időszakban kiment az utánkövető levél (lásd lent),
+  és csak a levél UTÁNI események. A **„Gyorsan reagál-e?”** a levél küldésétől méri az első megnyitást.
+  A szűrősor jobb széle ilyenkor ezt írja: „… utánkövető levél ment ki az időszakban · mind olyan
+  leadnek, aki az első megkeresés linkjét 14 napig nem nyitotta meg”, a **„Ma”** chipnél pedig
+  „Ma kiment utánkövető levelek” áll. A kártyák alján a változás helyén „az első körben: X” olvasható:
+  ugyanez a szám az első körben, ugyanarra az időszakra.
+- A választás megmarad, ha időszakot, lead-típust, bontást vagy egyedi időszakot választasz.
+- **Miért külön?** Ha a két kör egybefolyna, a levél után jött megnyitások az első megkeresés számait
+  fújnák fel, és nem látnád, mennyit ér maga a levél.
 
 ## Tölcsér — hét kérdés, hét kártya
 
@@ -87,7 +106,8 @@ leadet mutatja.
   fizetett, az nem indíthat próbát. Ha a próbázó a próba után fizetve folytatja, az a folytatás rendelésnek
   számít: ő a **„Próba”**, a **„Rendelés”** és a **„Fizetve”** oszlopban is ott van.
 - **„Honnan nyitották”**: melyik üzenet linkjére kattintott a lead — **E-mail**, **SMS**,
-  **Viber**, **WhatsApp**, **„Utánkövető levél”** (a nem-nyitóknak küldött egyszeri levél, lásd lent),
+  **Viber**, **WhatsApp**, **„Utánkövető levél”** (a nem-nyitóknak küldött egyszeri levél, lásd lent; ez a sor csak az
+  **„Újrakeresés”** körben látszik),
   **„Viselkedés-üzenet”** (a második megkeresés, amit a lead egy lépése indít el: visszajött, megnézte
   az árat vagy a próba-gombot), vagy **„Nem eldönthető”**. Felül egy sáv a megnyitó leadek
   megoszlásával, alatta a táblázat: **„Kapta”** (hány lead kapta meg ezen a csatornán a linket),
@@ -114,7 +134,8 @@ leadet mutatja.
   indul, és a feladója egy személynév. Nem kapja meg, aki leiratkozott, válaszolt, próbázik, rendelt vagy
   vásárolt, akinek a kiküldését visszavonták, vagy akinek a terve nincs jóváhagyva. Óránként legfeljebb 5,
   naponta alapból legfeljebb 40 megy ki, csak hétköznap 8–17. Ha az éles beállításban nincs megadva a feladó
-  neve, egy sem megy ki. Aki ebből a levélből nyitott, az a fenti táblázat „Utánkövető levél” sorában van.
+  neve, egy sem megy ki. Aki ebből a levélből nyitott, azt a **„Melyik kör?”** váltó **„Újrakeresés”** állásában
+  látod, a „Honnan nyitották” táblázat „Utánkövető levél” sorában.
 - **„Kohorsz”**: küldési hetek soronként — a hét kiküldöttjeinek hány százaléka nyitott meg 7,
   indított próbát 14 (**„Próba 14 n.”**), rendelt 14, fizetett 30 napon belül. A **„nyitott”** jel azt mondja, hogy a 30 nap még nem
   telt le, tehát a sor még nőhet. A sötétebb cella a magasabb arány. Telefonon ez is húzható.
