@@ -16,6 +16,7 @@ import { missingRuns, type GuestOfferView, type OfferView, type SendOfferResult 
 import { readFileSync } from "node:fs";
 import { guestPageShell } from "./moduleConfigViews.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 // The BROWSER half of the money rule — the page's live total must spell "142 000 Ft"
 // exactly as the server and the mails do. It travels with the script (adminViews.ts
@@ -40,7 +41,9 @@ function addDays(iso: string, n: number): string {
 }
 
 function huDateTime(d: Date, lang: string): string {
-  const parts = new Intl.DateTimeFormat("hu-HU", {
+  // ADR-XXXX: only numeric parts are read; the day itself is formatDay in the page's language.
+  const parts = new Intl.DateTimeFormat(lang || undefined, {
+    numberingSystem: "latn",
     timeZone: APP_TZ, // a lead's offer is platform business (ADR-0290)
     year: "numeric",
     month: "2-digit",
@@ -141,7 +144,7 @@ export function ownerOfferPage(
 ): string {
   const lang = v.lang;
   if (v.outcome !== "open") return ownerOfferClosedPage(v);
-  const cur = currencySign(v.currency ?? "HUF");
+  const cur = currencySign(v.currency ?? LEGACY_CURRENCY);
   const money = (n: number): string => formatMoney(n, v.currency, lang);
   const missing = v.missing ?? [];
   const known = v.known ?? [];
@@ -289,7 +292,7 @@ export function ownerOfferPage(
     mul: guestsMul,
     mode,
     lang,
-    currency: v.currency ?? "HUF",
+    currency: v.currency ?? LEGACY_CURRENCY,
     per: perSuffix(lang, mode),
     msg,
   };

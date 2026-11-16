@@ -37,9 +37,18 @@
   }
   /* The ONE money rule (cit-money.js, inlined before this script) — no sixth formatter. */
   function group(n) { return CitMoney.formatNumber(Math.round(Number(n)), D.lang); }
+  /* ADR-XXXX: the amount keeps the currency's own decimals (a 1,50 € tax); for HUF (0
+   * digits) this is exactly the old whole-forint formatMoney. */
   function money(n) {
     if (n == null || n === "") return "—";
-    return CitMoney.formatMoney(Math.round(Number(n)), S.currency, D.lang);
+    var d = CitMoney.minorDigits(S.currency) || 0;
+    return CitMoney.formatMinor(Math.round(Number(n) * Math.pow(10, d)), S.currency, D.lang);
+  }
+  /* ADR-XXXX: the offered currencies (the country's first) come from the server. */
+  function curOf(code) {
+    var list = S.currencies || [];
+    for (var i = 0; i < list.length; i++) if (list[i].code === code) return list[i];
+    return { code: code, label: code, name: code, sign: code };
   }
   var mdFmt = (function () {
     try { return new Intl.DateTimeFormat(D.lang, { month: "short", day: "numeric", timeZone: "UTC" }); }
@@ -162,7 +171,7 @@
       case "rooms":
         if (S.mode === "single") { var w = bookable()[0]; return w && w.cap ? fmt(L.nPersons, { n: w.cap }) : L.capMissing; }
         return bookable().map(function (u) { return (u.name || L.unnamed) + (u.cap ? " (" + fmt(L.nPersons, { n: u.cap }) + ")" : ""); }).join(", ");
-      case "unit": return answered("unit") ? UNIT_TXT[S.priceUnit] + " · " + (S.currency === "EUR" ? L.curEur : L.curHuf) : "—";
+      case "unit": return answered("unit") ? UNIT_TXT[S.priceUnit] + " · " + curOf(S.currency).name : "—";
       case "base": return bookable().map(function (u) { return (u.name || L.unnamed) + ": " + (u.por ? L.porShort : money(u.base)); }).join(" · ");
       case "seasons":
         var n = 0; bookable().forEach(function (u) { n += u.seasons.length; });
@@ -216,8 +225,10 @@
         opt("priceUnit", "per_night", L.unitNightOpt, L.unitNightSub, answered("unit") ? S.priceUnit : "") +
         opt("priceUnit", "per_person_night", L.unitPersonOpt, L.unitPersonSub, answered("unit") ? S.priceUnit : "") +
         opt("priceUnit", "per_stay", L.unitStayOpt, L.unitStaySub, answered("unit") ? S.priceUnit : "") +
-        '</div><label class="bs-f" for="bs-cur">' + esc(L.currency) + '</label><select class="bs-inp" id="bs-cur" data-g="currency"><option value="HUF"' +
-        (S.currency === "HUF" ? " selected" : "") + ">" + esc(L.curHufOpt) + '</option><option value="EUR"' + (S.currency === "EUR" ? " selected" : "") + ">" + esc(L.curEurOpt) + "</option></select>";
+        '</div><label class="bs-f" for="bs-cur">' + esc(L.currency) + '</label><select class="bs-inp" id="bs-cur" data-g="currency">' +
+        (S.currencies || []).map(function (c) {
+          return '<option value="' + esc(c.code) + '"' + (S.currency === c.code ? " selected" : "") + ">" + esc(c.label) + "</option>";
+        }).join("") + "</select>";
     }
     if (id === "base") {
       var ut = UNIT_TXT[S.priceUnit] || L.unitNight;
@@ -277,7 +288,7 @@
         opt("taxState", "amount", L.taxYes, L.taxYesSub, S.taxState) +
         opt("taxState", "none", L.taxNone, L.taxNoneSub, S.taxState) +
         opt("taxState", "unknown", L.taxUnknown, L.taxUnknownSub, S.taxState) + "</div>" +
-        (S.taxState === "amount" ? '<label class="bs-f" for="bs-tax">' + esc(L.taxAmount) + '</label><input class="bs-inp" id="bs-tax" data-g="tax" type="number" min="1" max="100000" value="' + esc(S.tax) +
+        (S.taxState === "amount" ? '<label class="bs-f" for="bs-tax">' + esc(S.currency === "HUF" ? L.taxAmount : fmt(L.taxAmountCur, { cur: curOf(S.currency).sign })) + '</label><input class="bs-inp" id="bs-tax" data-g="tax" type="number" min="1" max="100000"' + (CitMoney.minorDigits(S.currency) ? ' step="any"' : "") + ' value="' + esc(S.tax) +
           '"><p class="bs-hint">' + esc(L.taxHint) + "</p>" : "");
     }
     if (id === "includes") {

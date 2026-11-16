@@ -37,6 +37,10 @@ import {
   type Unit,
 } from "./units.js";
 import { todayForSite } from "./timeZone.js";
+import { countryOfSite } from "./siteCountry.js";
+import { currencyName, currencyOptionLabel, currencySymbol, isIsoCurrency, offeredCurrencies } from "../text/currencyName.js";
+import { currencySign, formatMoney, minorDigits } from "../text/money.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 export type SetupMode = "single" | "rooms" | "both";
 export type TaxState = "amount" | "none" | "unknown";
@@ -76,6 +80,8 @@ export interface SetupState {
   readonly mode: SetupMode;
   readonly units: SetupUnit[];
   readonly currency: string;
+  /** ADR-XXXX: the currencies the owner may pick, the country's own first (code + label + name). */
+  readonly currencies: { code: string; label: string; name: string; sign: string }[];
   readonly priceUnit: string;
   /** null when the owner's bookable units disagree (set per room on the Árak screen). */
   readonly seasonalOnly: boolean | null;
@@ -159,7 +165,8 @@ function taxStateOf(stored: ModuleConfigValues): { state: TaxState | null; tax: 
   if (!("touristTaxPerPersonNight" in stored)) return { state: null, tax: "" };
   const v = stored.touristTaxPerPersonNight;
   if (v === "" || v === null || v === undefined || !Number.isFinite(Number(v))) return { state: "unknown", tax: "" };
-  const n = Math.max(0, Math.round(Number(v)));
+  // Two decimals kept (a EUR/CZK tax may have them); a stored HUF tax is a whole number already.
+  const n = Math.max(0, Math.round(Number(v) * 100) / 100);
   return n === 0 ? { state: "none", tax: "" } : { state: "amount", tax: String(n) };
 }
 
@@ -185,10 +192,20 @@ export async function loadBookingSetup(siteId: string, accountEmail: string, lan
   const seasonalOnly = flags.size === 1 ? [...flags][0]! : null;
 
   const has = (k: string) => k in bookingStored;
+  // ADR-XXXX: an unsaved currency is the lodging's COUNTRY's (provisioning seeds it too);
+  // a Hungarian site — or one without a country row — keeps the catalog default.
+  const country = await countryOfSite(siteId);
+  const currency = String(pricingStored.currency ?? country?.currency ?? pdef.currency ?? LEGACY_CURRENCY);
   const state: Omit<SetupState, "blockers"> = {
     mode,
     units: setupUnits,
-    currency: String(pricingStored.currency ?? pdef.currency ?? "HUF"),
+    currency,
+    currencies: offeredCurrencies(country?.currency ?? null, currency).map((code) => ({
+      code,
+      label: currencyOptionLabel(code, lang),
+      name: currencyName(code, lang),
+      sign: currencySymbol(code, lang),
+    })),
     priceUnit: String(pricingStored.unit ?? pdef.unit ?? "per_night"),
     seasonalOnly,
     minNights: Number(b.minNights ?? 1),
@@ -280,6 +297,17 @@ function intIn(v: unknown, min: number, max: number): number | null {
   const n = Number(String(v).replace(/[\s.]/g, "").replace(",", "."));
   if (!Number.isFinite(n) || !Number.isInteger(n) || n < min || n > max) return null;
   return n;
+}
+
+/** A tourist tax in major units with up to `digits` decimals ("1,50", "350"); 0 < n ≤ 100 000.
+ *  With 0 digits this is exactly intIn(v, 1, 100000) — the Hungarian rule unchanged. */
+function taxAmountIn(v: unknown, digits: number): number | null {
+  if (!digits) return intIn(v, 1, 100000);
+  if (v === "" || v === null || v === undefined) return null;
+  const t = String(v).replace(/\s/g, "").replace(",", ".");
+  if (!new RegExp(`^\\d+(\\.\\d{1,${digits}})?$`).test(t)) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 && n <= 100000 ? n : null;
 }
 
 /** A price amount the way the owner types it ("28 000", "28.000", "28000"). */
@@ -378,7 +406,8 @@ async function savePrices(siteId: string, body: Record<string, unknown>, userId:
   const priceUnit = String(body.priceUnit ?? "");
   const currency = String(body.currency ?? "");
   if (!unitOpts.has(priceUnit)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
-  if (currency !== "HUF" && currency !== "EUR") errors.push(T(lang, "Válassza ki, mire szól az ára."));
+  // ADR-XXXX: any ISO 4217 currency (it was HUF/EUR only — a Czech lodging could not price in Kč).
+  if (!isIsoCurrency(currency)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
   const units = await ensureUnits(siteId);
   const rows = Array.isArray(body.units) ? (body.units as Record<string, unknown>[]) : [];
   const targets: { unit: Unit; base: number | null; por: boolean }[] = [];
@@ -426,8 +455,17 @@ async function saveGuest(siteId: string, body: Record<string, unknown>, userId: 
   const state = body.taxState;
   let tax: number | "" = "";
   if (state === "amount") {
-    const n = intIn(body.tax, 1, 100000);
-    if (n === null) return fail([T(lang, "Az idegenforgalmi adó 1 és 100 000 Ft között lehet.")]);
+    // ADR-XXXX: the tax is in the SITE's currency, with that currency's decimals (EUR 1,50 is
+    // a real tax; HUF stays a whole number, exactly as before).
+    const cur = String((await storedConfig(siteId, "pricing")).currency ?? (await countryOfSite(siteId))?.currency ?? LEGACY_CURRENCY);
+    const n = taxAmountIn(body.tax, minorDigits(cur) ?? 0);
+    if (n === null) {
+      return fail([
+        currencySign(cur) === "Ft"
+          ? T(lang, "Az idegenforgalmi adó 1 és 100 000 Ft között lehet.")
+          : T(lang, "Az idegenforgalmi adó nullánál nagyobb, legfeljebb {max} összeg lehet.", { max: formatMoney(100000, cur, lang) }),
+      ]);
+    }
     tax = n;
   } else if (state === "none") tax = 0;
   else if (state !== "unknown") return fail([T(lang, "Válassza ki, kér-e idegenforgalmi adót.")]);

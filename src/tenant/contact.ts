@@ -10,6 +10,7 @@
 
 import { normalizePhone } from "../sms/sender.js";
 import { prettyPhone } from "../text/phone.js";
+import { normalizePhoneIn, prettyPhoneIn, type PhoneRules } from "../text/phoneCountry.js";
 
 export interface ContactFacts {
   readonly address: string;
@@ -79,6 +80,9 @@ export function cleanAddress(raw: string): string {
 export function applyContactEdits(
   current: ContactFacts,
   edits: ContactEdits,
+  /** ADR-XXXX: the lodging country's phone plan — a national number of THAT country is
+   *  accepted. null / the Hungarian plan = the Hungarian rule, exactly as before. */
+  phoneRules: PhoneRules | null = null,
 ): { ok: true; facts: ContactFacts } | { ok: false; errors: ContactErrorKey[] } {
   const errors: ContactErrorKey[] = [];
 
@@ -99,9 +103,15 @@ export function applyContactEdits(
     else {
       // Owners write "06 30/123-4567"; the SMS rule does not know the slash, the
       // admin's live check does — strip it here so the two can never disagree.
-      const n = normalizePhone(raw.replace(/\//g, ""));
-      if (n) phone = prettyPhone(n);
-      else errors.push("phone");
+      if (phoneRules && phoneRules.phonePlan !== "hu") {
+        const n = normalizePhoneIn(raw.replace(/\//g, ""), phoneRules);
+        if (n) phone = prettyPhoneIn(n, phoneRules);
+        else errors.push("phone");
+      } else {
+        const n = normalizePhone(raw.replace(/\//g, ""));
+        if (n) phone = prettyPhone(n);
+        else errors.push("phone");
+      }
     }
   }
 

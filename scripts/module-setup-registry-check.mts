@@ -62,7 +62,7 @@ const allModules = new Set(MODULE_CATALOG.filter((m) => !m.retired).map((m) => m
 
 function emptyCtx(): SetupCtx {
   return {
-    tenantId: "t", siteId: "s", today: "2026-11-06", held: allModules, prices: new Map(),
+    tenantId: "t", siteId: "s", today: "2026-11-06", held: allModules, prices: new Map(), pricesCurrency: "HUF", siteCurrency: "HUF",
     units: [unit()], unitPrices: new Map(), filled: new Set(), stored: new Map(),
     intro: "", photoCount: 6, ownPhotos: false, address: "", hasGeo: false, customDomainLive: false,
     multilang: null, calendar: [], progress: new Map(), suggestedRooms: [],

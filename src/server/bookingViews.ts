@@ -27,6 +27,8 @@ import { formatAmount } from "../tenant/prices.js";
 import { huArticle } from "../hu.js";
 import { formatDay } from "../text/day.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { dateLocale } from "../i18n/lang.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 export interface BookingsTabData {
   readonly units: readonly { id: string; name: string }[];
@@ -200,7 +202,7 @@ const tabHref = (extra: string) => `/admin?tab=foglalasok${extra}`;
 
 /** "2026. október" in the reader's language — the calendar link names its target. */
 function monthName(iso: string, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     year: "numeric",
     month: "long",
     timeZone: "UTC",
@@ -489,7 +491,7 @@ function dayPanelCard(b: InboxItem, view: string, lang: string): string {
     `<div class="bk-dayinfo">` +
     `<b>${esc(b.guestName)}</b>` +
     `<span>${esc(huDay(b.dateFrom, lang))} — ${esc(huDay(b.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(b) })} · ${T(lang, "{n} fő", { n: b.guests })}${
-      b.quotedTotal ? ` · <b>${esc(formatAmount(b.quotedTotal, b.quotedCurrency ?? "HUF"))}</b>` : ""
+      b.quotedTotal ? ` · <b>${esc(formatAmount(b.quotedTotal, b.quotedCurrency ?? LEGACY_CURRENCY))}</b>` : ""
     }</span>` +
     (b.decisionNote
       ? `<span>${T(lang, "Üzenet a vendégnek:")} „${esc(b.decisionNote)}"</span>`
@@ -666,7 +668,7 @@ function requestCard(
   const confirmLine = [
     when,
     r.unitName,
-    r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF") : "",
+    r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY) : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -745,7 +747,7 @@ function requestCard(
       rooms > 1 ? ` · ${T(lang, "{n} szoba", { n: rooms })}` : ""
     }</span></span>` +
     `<span class="bk-req__dates">${esc(when)} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
-      r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
+      r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(bookingRef(r.id))}</span>` +
     // ADR-0378 ⑩: the meal on a pill, the frozen breakdown one tap away.
@@ -761,9 +763,9 @@ function requestCard(
               `<span class="bk-req__line"><span>${esc(l.label)}: ` +
               (l.perNight * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1
                 ? T(lang, "a teljes tartózkodásra")
-                : `${T(lang, "{n} éj", { n: l.nights })} × ${esc(formatAmount(l.perNight, r.quotedCurrency ?? "HUF"))}` +
+                : `${T(lang, "{n} éj", { n: l.nights })} × ${esc(formatAmount(l.perNight, r.quotedCurrency ?? LEGACY_CURRENCY))}` +
                   `${l.guests > 1 ? ` × ${T(lang, "{n} fő", { n: l.guests })}` : ""}`) +
-              `</span><b>${esc(formatAmount(l.sum, r.quotedCurrency ?? "HUF"))}</b></span>`,
+              `</span><b>${esc(formatAmount(l.sum, r.quotedCurrency ?? LEGACY_CURRENCY))}</b></span>`,
           )
           .join("") +
         `</details>`
@@ -805,7 +807,7 @@ function offeredCard(r: InboxItem, expireHours: number, lang: string): string {
   const exp = r.offeredAt && expireHours ? new Date(r.offeredAt.getTime() + expireHours * 3_600_000) : null;
   // The accommodation's clock (ADR-0290) — the server's own zone is not the owner's.
   const when = exp
-    ? new Intl.DateTimeFormat("hu-HU", {
+    ? new Intl.DateTimeFormat(dateLocale(lang), {
         timeZone: viewZone(),
         month: "short",
         day: "numeric",
@@ -821,7 +823,7 @@ function offeredCard(r: InboxItem, expireHours: number, lang: string): string {
     `<div class="bk-req__t">` +
     `<strong>${esc(r.guestName)}</strong>` +
     `<span class="bk-req__dates">${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
-      r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
+      r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${esc(r.guestEmail)}${r.guestPhone ? ` · ${esc(r.guestPhone)}` : ""}${r.unitName ? ` · ${esc(r.unitName)}` : ""}</span>` +
     `<span class="bk-chip bk-chip--offer">${
@@ -975,7 +977,7 @@ function historyRow(r: InboxItem, expireHours: number, view: string, lang: strin
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
     // Elek 10-17 (Marika): the row — and its „Lemondom” — named no room.
     `<span>${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${heads(r, lang)}${
-      r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
+      r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY))}` : ""
     }${decided}</span>` +
     (quotes ? `<div class="bk-quotes">${quotes}</div>` : "") +
     `</div>` +
@@ -1112,8 +1114,8 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
 /* ── „Kiküldött ajánlatok" (ADR-0267, approved plan booking-offer-scope) ──── */
 
 /** The accommodation's wall-clock of a deadline, short ("okt. 1. 16:10"; ADR-0290). */
-function shortWhen(d: Date): string {
-  return new Intl.DateTimeFormat("hu-HU", {
+function shortWhen(d: Date, lang: string): string {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     timeZone: viewZone(),
     month: "short",
     day: "numeric",
@@ -1130,7 +1132,7 @@ function offerFate(o: SentOffer, expireHours: number, lang: string): { group: "w
       const exp = expireHours ? new Date(o.offeredAt.getTime() + expireHours * 3_600_000) : null;
       return {
         group: "wait",
-        label: exp ? T(lang, "Válaszra vár · lejár {when}", { when: shortWhen(exp) }) : T(lang, "Válaszra vár"),
+        label: exp ? T(lang, "Válaszra vár · lejár {when}", { when: shortWhen(exp, lang) }) : T(lang, "Válaszra vár"),
       };
     }
     case "accepted":
@@ -1168,7 +1170,7 @@ function offerPerNight(o: SentOffer, lang: string): string {
   if (!o.lines.length) return "";
   const perPerson = o.lines[0]!.guests > 1;
   if (o.lines.some((l) => l.guests > 1 !== perPerson)) return "";
-  const cur = o.currency ?? "HUF";
+  const cur = o.currency ?? LEGACY_CURRENCY;
   const pers = [...new Set(o.lines.map((l) => l.perNight))].sort((a, b) => a - b);
   // A range names the currency once ("26 000 – 32 000 Ft"): twice it did not fit a phone card.
   const hi = formatAmount(pers[pers.length - 1]!, cur);
@@ -1188,7 +1190,7 @@ function sentOffersSection(offers: readonly SentOffer[], expireHours: number, la
     const when =
       `${hard(huDay(o.dateFrom, lang))} – ${hard(huDay(o.dateTo, lang))} · ` +
       `${hard(T(lang, "{n} éj", { n: nights }))} · ${hard(T(lang, "{n} fő", { n: o.guests }))}`;
-    const total = o.total != null ? formatAmount(o.total, o.currency ?? "HUF") : "—";
+    const total = o.total != null ? formatAmount(o.total, o.currency ?? LEGACY_CURRENCY) : "—";
     const sent = huDay(o.offeredAt.toISOString().slice(0, 10), lang);
     return { o, fate, when, total, per: offerPerNight(o, lang), sent, list: offerListLine(o, lang) };
   });

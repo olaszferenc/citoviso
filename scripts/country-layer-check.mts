@@ -19,6 +19,9 @@
 //      configurator call passes the lead's region; and the money-path files carry no burned
 //      "HUF" / "hu-HU" / "AAM" (each remaining one on the ALLOW list WITH its reason).
 //
+//   ⑥ ADR-XXXX — THE SURFACES (ország-réteg 3/2): the owner-, guest- and partner-facing files
+//      carry no burned "HUF" / "hu-HU" / " Ft" and no price getter without a region.
+//
 //   npx tsx scripts/country-layer-check.mts
 import { readFileSync } from "node:fs";
 import {
@@ -177,6 +180,9 @@ const ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
   { file: "src/i18n/lang.ts", frag: 'const UI_LANGS: readonly string[] = ["hu"', why: "a saját felületeink lefordított NYELVEI (nem ország)" },
   { file: "src/i18n/lang.ts", frag: 'export const DEFAULT_LANG = "hu"', why: "a forrásnyelv (a T() kulcsa magyar) — nyelv, nem ország" },
   { file: "src/i18n/mail.ts", frag: 'case "hu":', why: "nyelvi elágazás (a levél nyelve), nem ország" },
+  { file: "src/country.ts", frag: 'readonly touristTaxModel: "hu" | "none";', why: "az IFA-modell KULCSA (0137 tourist_tax_model értékkészlete), nem a HU paraméter" },
+  { file: "src/country.ts", frag: 'r.tourist_tax_model === "hu" ? "hu" : "none"', why: "ugyanaz (a kulcs olvasása a sorból)" },
+  { file: "src/i18n/lang.ts", frag: '? "hu-HU" : lang;', why: "dateLocale(): a magyar olvasó locale-je EGY helyen (a felületek ezt hívják)" },
   { file: "src/text/phoneCountry.ts", frag: 'phonePlan === "hu"', why: "a számozási-terv KULCSA, amit a HU-sor phone_plan mezője választ" },
 ];
 const stripComments = (line: string): string => {
@@ -285,6 +291,74 @@ for (const f of PAY_SCOPE) {
 }
 check("nincs beégetett HUF / hu-HU / AAM a pénzút fájljaiban", payHits.length === 0, `\n      ${payHits.join("\n      ")}`);
 PAY_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, payAllowUsed.has(i)));
+
+console.log("⑥ felületek (ADR-XXXX, ország-réteg 3/2)");
+// The owner/guest/partner-facing surfaces of the country layer: the tenant admin, the booking
+// setup and widget, the contact form, the partner letters and console views. They write money,
+// dates and phone numbers in the LODGING's / PARTNER's own country — so no burned "HUF",
+// "hu-HU" or " Ft" (each remaining one on the ALLOW list WITH its reason), and no price getter
+// without a region (the region is the tenant's: regionOfTenant / the data object's currency).
+const SURFACE_SCOPE = [
+  "src/conversion/provision.ts", "src/tenant/bookingSetup.ts", "src/server/bookingSetupViews.ts",
+  "assets/runtime/cit-booking-setup.js", "src/server/setupSteps.ts", "src/server/setupWizard.ts",
+  "src/tenant/moduleSetup.ts", "src/server/adminViews.ts", "src/tenant/modules.ts", "src/tenant/wallet.ts",
+  "src/tenant/multilangCard.ts", "src/server/moduleConfigViews.ts", "src/tenant/contact.ts",
+  "src/server/contactViews.ts", "src/booking/requests.ts", "src/server/offerViews.ts",
+  "src/server/bookingViews.ts", "assets/runtime/cit-runtime.js", "src/email/activationEmail.ts",
+  "src/payment/activationMail.ts", "src/console/partnerProfileViews.ts", "src/console/partnerProfile.ts",
+  "src/console/partnerData.ts", "src/console/views.ts", "src/intake/mockRequest.ts",
+  "src/tenant/siteCountry.ts", "src/text/currencyName.ts", "src/text/legacyCurrency.ts", "src/i18n/lang.ts",
+];
+const SURFACE_BURNED = /["'`](?:HUF|hu-HU)["'`]|["'`][^"'`\n]* Ft\b/;
+const REGIONLESS = /\bgetCurrency\(\s*\)|\bgetModulePrice\(\s*[^,()]*\)|\bTENANT_VIEW_REGION\b/;
+const SURFACE_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+  { file: "src/text/legacyCurrency.ts", frag: 'LEGACY_CURRENCY = "HUF"', why: "a pénznem nélküli RÉGI sor olvasási szabálya, EGY helyen (minden ilyen sor magyar volt)" },
+  { file: "src/text/currencyName.ts", frag: 'new Set(["HUF", "EUR"])', why: "tartalék, ha a futtatókörnyezet nem ad ISO-listát (Intl.supportedValuesOf hiánya)" },
+  { file: "src/text/currencyName.ts", frag: 'if (code === "HUF") return T(lang, "forint")', why: "a meglévő magyar felirat T()-kulcsa bájtra — a HU felület nem változhat" },
+  { file: "src/text/currencyName.ts", frag: 'if (code === "HUF") return T(lang, "forint (Ft)")', why: "ugyanaz (a régi „forint (Ft)” opció-felirat)" },
+  { file: "src/text/currencyName.ts", frag: 'countryCurrency ?? "HUF"', why: "ország-sor nélküli oldal = a katalógus-alapérték (moduleConfig.ts), amit minden HU-oldal eddig is kapott" },
+  { file: "src/tenant/bookingSetup.ts", frag: 'Az idegenforgalmi adó 1 és 100 000 Ft között lehet.', why: "a forint-ág (currencySign === Ft) régi hibaüzenete bájtra; más pénznem saját mondatot kap" },
+  { file: "src/server/bookingSetupViews.ts", frag: "Pl. 19 000 Ft egy éjszakára", why: "példa-mondat; országfüggő példa (pénznem és nagyságrend) a következő kör kozmetikai tétele" },
+  { file: "src/server/bookingSetupViews.ts", frag: "Pl. 6 000 Ft / fő / éj", why: "ugyanaz (példa-mondat)" },
+  { file: "assets/runtime/cit-booking-setup.js", frag: 'S.currency === "HUF" ? L.taxAmount', why: "a forintos IFA-felirat „Összeg (Ft / fő / éj)” bájtra; más pénznem a jelével" },
+  { file: "src/server/setupWizard.ts", frag: 'T(lang, "{p} Ft / éj"', why: "a forint-ág (currencySign === Ft) régi előnézet-mondata bájtra" },
+  { file: "src/server/setupWizard.ts", frag: 'T(lang, "{p} Ft/hó"', why: "a forint-ág régi modulár-mondata bájtra" },
+  { file: "src/tenant/moduleSetup.ts", frag: 'T(lang, "{p} Ft/hó"', why: "a forint-ág régi modulár-mondata bájtra" },
+  { file: "assets/runtime/cit-runtime.js", frag: 's.currency || "HUF"', why: "a pénznem nélküli RÉGI foglalási nyugta (a böngésző nem importálja a LEGACY_CURRENCY-t)" },
+  { file: "assets/runtime/cit-runtime.js", frag: '.currency || "HUF")', why: "ugyanaz (régi, pénznem nélküli ár-válasz)" },
+  { file: "assets/runtime/cit-runtime.js", frag: 'return { currency: "HUF", unit: "per_night"', why: "a mock minta-ára (jelölten „Minta-ár”); országfüggő minta-ár a következő kör kozmetikai tétele" },
+  { file: "src/console/partnerProfileViews.ts", frag: 'new Intl.DateTimeFormat("hu-HU"', why: "operátori konzol (magyar nyelvű belső felület), nem partnernek menő szöveg" },
+  { file: "src/console/partnerData.ts", frag: '.where("currency", "=", "HUF")', why: "AAM/A60 számláló: a forint itt az ADÓ pénzneme (Áfa tv.)" },
+  { file: "src/console/partnerData.ts", frag: '.where("currency", "!=", "HUF")', why: "ugyanaz (a nem forintos számlák MNB-árfolyamon forintra számolva)" },
+  { file: "src/console/views.ts", frag: "az AAM-keret (az adóév törvényi összege, 2026-ban 20 M Ft)", why: "operátori riasztás-leírás: a törvényi AAM-keret forintban" },
+  { file: "src/console/views.ts", frag: 'CitMoney.formatMoney(x, "HUF", "hu")', why: "a /pricing eszkalációs példája a 'hu' régió listaárával (operátori beállító lap)" },
+  { file: "src/console/views.ts", frag: 'inTok.toLocaleString("hu-HU")', why: "operátori token-számláló (magyar konzol), nem pénz" },
+  { file: "src/console/views.ts", frag: '(u.outputTokens ?? 0).toLocaleString("hu-HU")', why: "ugyanaz" },
+  { file: "src/console/views.ts", frag: "M Ft)", why: "operátori AAM-keret kijelzés (törvényi forint-összeg)" },
+  { file: "src/console/views.ts", frag: 'new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest"', why: "operátori idő (a cég órája), nem partnernek menő" },
+  { file: "src/i18n/lang.ts", frag: '"hu-HU"', why: "dateLocale(): a magyar olvasó locale-je EGY helyen" },
+];
+const surfHits: string[] = [];
+const surfAllowUsed = new Set<number>();
+for (const f of SURFACE_SCOPE) {
+  src(f).split("\n").forEach((raw, n) => {
+    const code = stripComments(raw);
+    if (REGIONLESS.test(code)) {
+      surfHits.push(`${f}:${n + 1}: (régió nélküli ár-getter) ${raw.trim()}`);
+      return;
+    }
+    if (!SURFACE_BURNED.test(code)) return;
+    const a = SURFACE_ALLOW.findIndex((x) => x.file === f && code.includes(x.frag));
+    if (a >= 0) {
+      surfAllowUsed.add(a);
+      return;
+    }
+    surfHits.push(`${f}:${n + 1}: ${raw.trim()}`);
+  });
+}
+check("nincs beégetett HUF / hu-HU / „ Ft” és régió nélküli ár-getter a felület-fájlokban", surfHits.length === 0, `\n      ${surfHits.join("\n      ")}`);
+SURFACE_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, surfAllowUsed.has(i)));
+
 await db.destroy();
 
 console.log(fails ? `\n⛔ country-layer-check: ${fails} hiba` : "\n✅ country-layer-check: az ország-réteg rendben");

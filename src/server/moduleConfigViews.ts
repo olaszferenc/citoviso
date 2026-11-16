@@ -25,7 +25,8 @@ import {
 } from "../moduleConfig.js";
 import { currencySign } from "../text/money.js";
 import { viewToday, viewZone } from "../tenant/zoneCtx.js";
-import { formatMoney, formatNumber } from "../text/money.js";
+import { formatMinor, formatMoney, formatNumber } from "../text/money.js";
+import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
 import { DEFAULT_UNIT_NAME, guestUnits, type UnitDeletionImpact } from "../tenant/units.js";
@@ -54,6 +55,8 @@ import {
 } from "../tenant/amenityCatalog.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { MEAL_CHILD_PRICING, MEAL_PLAN_IDS, mealPlanLabel, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
+import { dateLocale } from "../i18n/lang.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 // ADR-0067: tenant-facing module settings — every label from the language pack.
 // eslint-disable-next-line
@@ -1053,7 +1056,8 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 }
 </style>`;
 
-const huf = (n: number) => formatMoney(n, "HUF");
+// ADR-XXXX: a module fee is our money — minor units of the tenant's currency (ADR-0443).
+const moneyIn = (currency: string | undefined, lang: string) => (n: number) => formatMinor(n, currency || getCurrency(HU_PRICING_REGION), lang);
 
 /** ADR-0045 §J: contextual guide link for a module settings screen. Textual on purpose
  *  (the IT-novice owner reads words, not icons); the data-kb-anchor is the coverage
@@ -1092,7 +1096,8 @@ function helpLinkInHead(anchor: string, lang = "hu"): string {
  *  account the YEARLY figure leads. ⛔ The twin must move with its pair: leaving the
  *  old „+490 Ft/hó = 4 900 Ft/év" here would put two different price languages one
  *  click apart (the modules-annual-pricing contract binds this file too). */
-function priceInPeriod(monthly: number, annualMult: number, lang: string): string {
+function priceInPeriod(monthly: number, annualMult: number, lang: string, currency?: string): string {
+  const huf = moneyIn(currency, lang);
   const price = esc(huf(monthly));
   if (annualMult <= 0) return `<b class="adm-price__lead">${T(lang, "{price}/hó", { price })}</b>`;
   return (
@@ -1107,13 +1112,14 @@ function moduleHeader(
   anchor: string,
   lang = "hu",
   annualMult = 0,
+  currency?: string,
 ): string {
   return (
     `<div class="mhead">` +
     `<div class="mhead__top"><span class="mhead__ico">${ic("modules", 20)}</span>` +
     `<h2>${esc(title)}</h2>` +
     (priceMonthly && priceMonthly > 0
-      ? `<span class="mhead__price">${priceInPeriod(priceMonthly, annualMult, lang)}</span>`
+      ? `<span class="mhead__price">${priceInPeriod(priceMonthly, annualMult, lang, currency)}</span>`
       : "") +
     `</div>` +
     `<div class="mhead__links"><a href="/admin?tab=modulok">‹ ${T(lang, "Vissza a modulokhoz")}</a>` +
@@ -1679,7 +1685,7 @@ function houseCard(units: readonly EditorUnit[], nu: NewUnitView | undefined, la
       : T(lang, "legalább {n} fő", { n: capSum })
     : "";
   const h = nu?.house ?? null;
-  const cur = esc(currencySign(nu?.currency ?? "HUF"));
+  const cur = esc(currencySign(nu?.currency ?? LEGACY_CURRENCY));
   const saved = h?.saved
     ? `<p class="rs-house__saved" role="status">${ic("check", 14)}<span>` +
       ({
@@ -2612,6 +2618,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
  * later. A published review can still be withdrawn: the page is theirs.
  */
 function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"): string {
+  const numLocale = dateLocale(lang);
   // Approved contract: assets/design-refs/console/reviews-inbox/README.md.
   // The filled and the empty star are DIFFERENT glyphs and the count is written out,
   // so a 1-star review can never read as five — with or without colour.
@@ -2703,7 +2710,7 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
     ? `<div class="adm-card" data-rv-google="${showGoogle ? "on" : "off"}">` +
       `<div class="adm-card__head"><span class="adm-ico">${ic("star")}</span><h2>${T(lang, "Google-értékelés")}</h2></div>` +
       `<div class="rv-gr${showGoogle ? "" : " is-off"}"><span class="rv-gr__num">${data.google.value
-        .toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>` +
+        .toLocaleString(numLocale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>` +
       // The page's own rule (engine/rating.ts honestStars) — this row shows what the visitor sees.
       `<span class="rv-stars" role="img" aria-label="${esc(T(lang, "{n} csillag az oldalon", { n: googleStars }))}">` +
       `<span class="rv-stars__g" aria-hidden="true"><span class="on">${"★".repeat(googleStars)}</span></span></span>` +
@@ -2788,7 +2795,8 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
   const portals = syncPortals(lang);
   const known = new Set(portals.map((p) => p.provider));
   const unitField = `<input type="hidden" name="unit" value="${esc(booking.unitId)}">`;
-  const when = (d: Date | string): string => new Date(d).toLocaleString("hu-HU", { timeZone: viewZone() });
+  const loc = dateLocale(lang);
+  const when = (d: Date | string): string => new Date(d).toLocaleString(loc, { timeZone: viewZone() });
   // A6: each portal gets its own address of our feed (it leaves out that portal's nights).
   const exportField = (provider: string): string => {
     const url = booking.exportUrls?.[provider] ?? booking.exportUrl;
@@ -3965,6 +3973,8 @@ export interface ModuleSettingsOpts {
   readonly units?: EditorUnit[];
   readonly pricing?: PricingEditorData;
   readonly priceMonthly?: number;
+  /** ADR-XXXX: ISO 4217 of priceMonthly (the tenant's region); absent = the home region's. */
+  readonly priceCurrency?: string;
   /** Invoice months per year on an ANNUAL subscription (12 − free months, today
    *  10); 0 on a monthly account. Approved contract: a price shown to the owner
    *  is shown in the period he is actually billed in — the Modulok tab chips and
@@ -4507,7 +4517,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
   // right above it already says the module's name.
   const priceNote =
     opts.priceMonthly && opts.priceMonthly > 0
-      ? `<span class="mcfg-price">${priceInPeriod(opts.priceMonthly, opts.annualMult ?? 0, lang)}</span>`
+      ? `<span class="mcfg-price">${priceInPeriod(opts.priceMonthly, opts.annualMult ?? 0, lang, opts.priceCurrency)}</span>`
       : "";
 
   // An editor that is declared but not built yet is stated plainly, at the bottom,
@@ -4543,6 +4553,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         "admin.modules.booking",
         lang,
         opts.annualMult ?? 0,
+        opts.priceCurrency,
       ) +
       errs +
       // ADR-0397: the guided card and the advanced form are sections of the last zone.
@@ -4728,7 +4739,7 @@ export function bookingDecideConfirmPage(
           v.children ? T(lang, "{n} fő, ebből {k} gyermek", { n: v.guests, k: v.children }) : T(lang, "{n} fő", { n: v.guests }),
         )
       : "") +
-    (v.quotedTotal ? factRow(T(lang, "Ár összesen:"), esc(formatMoney(v.quotedTotal, v.currency ?? "HUF", lang))) : "") +
+    (v.quotedTotal ? factRow(T(lang, "Ár összesen:"), esc(formatMoney(v.quotedTotal, v.currency ?? LEGACY_CURRENCY, lang))) : "") +
     (v.ref ? factRow(T(lang, "Hivatkozás:"), esc(v.ref)) : "");
   const what = accept
     ? T(lang, "Ha elfogadja, a vendég e-mailben visszaigazolást kap, és a napok foglalttá válnak a naptárban. Ha erre az időszakra más kérés is érkezett, azt a rendszer automatikusan elutasítja.")

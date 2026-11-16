@@ -219,7 +219,8 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
 
   // ⛔ EGY FORRÁS a célnyelvekre és a sávokra (multilangCatalogView): a picker, a
   // „Teljes" sáv kapacitása és a „Választható: N nyelv" felirat mind EBBŐL számol.
-  const catalog = multilangCatalogView(primaryLang, (await regionOfTenant(input.tenantId)).region);
+  const money = await regionOfTenant(input.tenantId);
+  const catalog = multilangCatalogView(primaryLang, money.region);
 
   // ADR-0088 §6: a bemutatkozó kupon a KÖVETKEZŐ vásárláskor számít be — korábban
   // NÉMÁN, a kártya listaára mellett (Elek FK-005b H3/G1). MINDEN sávra kiszámoljuk,
@@ -240,6 +241,7 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
 
   return {
     price: selected.effPrice,
+    currency: money.currency,
     frozen,
     couponPercent: coupon?.percent ?? null,
     couponPrice: coupon ? selected.effPrice : null,

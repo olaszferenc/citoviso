@@ -5657,7 +5657,7 @@ async function handle(
       .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
       .leftJoin("lead", "lead.id", "prospect.lead_id")
       .select([
-        "payment.amount as amount", "payment.period as period", "payment.status as status",
+        "payment.amount as amount", "payment.period as period", "payment.status as status", "payment.currency as currency",
         "payment.initiates_recurrence as initiatesRecurrence",
         "order_intent.kind as kind", "order_intent.modules as modules", "lead.name as leadName",
       ])
@@ -5699,7 +5699,7 @@ async function handle(
         cardPick: p.initiatesRecurrence,
         verification: p.kind === "card_update",
         cards: MOCK_CARDS.map((c) => ({ id: c.id, label: `${c.card.brand} ····${c.card.last4}` })),
-      }),
+      }, p.currency),
       "text/html; charset=utf-8",
       { "cache-control": "no-store, no-cache, must-revalidate", pragma: "no-cache" },
     );

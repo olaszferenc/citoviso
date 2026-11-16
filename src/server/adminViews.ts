@@ -15,7 +15,8 @@ import { APP_TZ, isoDayDiff, isoDayIn, partsIn } from "../text/zoneTime.js";
 import { viewZone } from "../tenant/zoneCtx.js";
 import { zonePickerHtml, type ZonePickerData } from "../tenant/zonePicker.js";
 import { HU_PRICING_REGION, getCurrency } from "../pricing.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor, formatMoney, minorToMajor } from "../text/money.js";
+import { DEFAULT_LANG, dateLocale } from "../i18n/lang.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import {
   isHideableModule,
@@ -75,6 +76,7 @@ import {
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 import { lockup, markThemed } from "../ui/brand.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -835,6 +837,9 @@ export function loginPage(
       `<h1 style="font-size:1.5rem;text-align:center">${T(lang, "Ügyfél-belépés")}</h1>` +
       `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapja kezeléséhez adja meg a felhasználónevét és a jelszavát.")}</p>` +
       `<form method="POST" action="/login">` +
+      // ADR-XXXX: the page's language rides along, so a refusal (429 / wrong password)
+      // answers in it. A Hungarian page carries no field — its markup is unchanged.
+      (lang && lang !== DEFAULT_LANG ? `<input type="hidden" name="lang" value="${esc(lang)}">` : "") +
       // A mail link to one admin card: the path rides in `next`; the #card part never
       // reaches the server, so the page adds it from its own address before posting.
       (next
@@ -1101,8 +1106,15 @@ export interface DomainSettleState {
 // multilang, module change) prices in the tenant's own region; these screens follow in the
 // next round. No non-HU tenant can exist before then — the market gate (ADR-0111) keeps
 // every foreign market closed until the owner opens it.
-const TENANT_VIEW_REGION = HU_PRICING_REGION;
-const hufAmount = (n: number) => formatMoney(n, getCurrency(TENANT_VIEW_REGION));
+// ⭐ ADR-XXXX (ország-réteg 3/2, felület-kör): every amount on these screens is written in the
+// TENANT's own currency — the one its data object carries (TenantModuleView.currency,
+// SubscriptionAdminData.currency, …, all from regionOfTenant). Amounts are minor units
+// (ADR-0443), so formatMinor; for HUF that is byte-for-byte the old formatMoney. A fixture
+// without a currency is the HU region's (HUF), which is what every screen printed before.
+const viewCurrency = (currency: string | null | undefined): string => currency || getCurrency(HU_PRICING_REGION);
+// The reader's language decides the SIGN: a Hungarian reads "Ft" / "49,50 CZK", a Czech "49,50 Kč".
+const moneyIn = (currency: string | null | undefined, lang = DEFAULT_LANG) => (n: number) => formatMinor(n, viewCurrency(currency), lang);
+const subRegion = (sub: { readonly region?: string } | null | undefined) => sub?.region ?? HU_PRICING_REGION;
 
 /** Whole days from today (Budapest, our billing calendar) to an ISO date — never negative. */
 function daysUntil(iso: string): number {
@@ -1478,7 +1490,7 @@ export function chargeRetryAnchor(code: string): string {
  * egy magabiztos nulla itt állítás lenne (§B.17).
  */
 function settleBtnLabel(sub: SubscriptionAdminData, lang: string): string {
-  const owed = sub.arrears ? hufAmount(sub.arrears.amount) : null;
+  const owed = sub.arrears ? moneyIn(sub.currency, lang)(sub.arrears.amount) : null;
   return owed ? T(lang, "Befizetem — {amount}", { amount: owed }) : T(lang, "Díj rendezése");
 }
 
@@ -1493,7 +1505,7 @@ function frozenStateBlock(
   compact: boolean,
   guestUrl: string | null = null,
 ): string {
-  const owed = sub.arrears ? hufAmount(sub.arrears.amount) : null;
+  const owed = sub.arrears ? moneyIn(sub.currency, lang)(sub.arrears.amount) : null;
   // No arrears row can only mean the ladder has not minted the order yet — say
   // that instead of printing a confident zero (§B.17).
   const money =
@@ -1621,7 +1633,8 @@ function annualMultiplier(sub: SubscriptionAdminData | null): number {
  * not carry. So the discounted figure stands for the FIRST fee only, and the standing fee is
  * named next to it. Same floor math as the server (applyOffer); same period as modulePriceForm.
  */
-export function couponCardPrice(monthly: number, percent: number, annualMult: number, lang: string): string {
+export function couponCardPrice(monthly: number, percent: number, annualMult: number, lang: string, currency?: string): string {
+  const hufAmount = moneyIn(currency, lang);
   const per = annualMult > 0 ? annualMult : 1;
   const list = monthly * per;
   const first = Math.floor((monthly * (100 - percent)) / 100) * per;
@@ -1637,7 +1650,8 @@ export function couponCardPrice(monthly: number, percent: number, annualMult: nu
   );
 }
 
-function modulePriceForm(monthly: number, plus: boolean, annualMult: number, lang: string): string {
+function modulePriceForm(monthly: number, plus: boolean, annualMult: number, lang: string, currency?: string): string {
+  const hufAmount = moneyIn(currency, lang);
   const yearly = esc(hufAmount(monthly * annualMult));
   const price = esc(hufAmount(monthly));
   const lead =
@@ -1781,7 +1795,7 @@ export function modulesSection(
   trial: TrialAdminState | null = null,
 ): string {
   if (trial?.status === "active") return trialModulesTab(mv, trial, lang, applied);
-  const huf = hufAmount;
+  const huf = moneyIn(mv.currency ?? sub?.currency, lang);
   // The anniversary the owner reads a dozen times on this page. It arrives in
   // STORAGE form (`2027-09-10`) and used to be printed raw into every one of
   // those sentences — an ISO stamp in the middle of Hungarian prose, next to a
@@ -1794,7 +1808,7 @@ export function modulesSection(
   const renewDateS = formatDayStem(renewDateISO, lang);
   // ADR-0113 ②: months the first charge covers — the SAME rule the order is
   // priced with (moduleUpsell), so the bar can never promise a different amount.
-  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(renewDateISO), TENANT_VIEW_REGION) : 1;
+  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(renewDateISO), subRegion(sub)) : 1;
   const labelOf = (id: string) => mv.modules.find((m) => m.id === id)?.label ?? id;
 
   // ── ADR-0080 ⑥ · approved plan "A — Teendő-kártya"
@@ -1833,7 +1847,7 @@ export function modulesSection(
             : T(lang, "Ezzel a {from} – {to} időszak van rendezve, {amount}.", {
                 from: esc(formatDay(sub.settled.periodStart, lang)),
                 to: esc(formatDay(sub.settled.periodEnd, lang)),
-                amount: esc(hufAmount(sub.settled.amount)),
+                amount: esc(huf(sub.settled.amount)),
               })) +
           `</p>`
         : "") +
@@ -2310,7 +2324,7 @@ export function modulesSection(
   // annualMultiplier() / modulePriceForm() for the approved contract they carry.
   const annualMult = annualMultiplier(sub);
   const priceForm = (monthly: number, plus: boolean): string =>
-    modulePriceForm(monthly, plus, annualMult, lang);
+    modulePriceForm(monthly, plus, annualMult, lang, mv.currency ?? sub?.currency);
 
   const priceChip = (m: TenantModuleView["modules"][number], replacedBy: string | null): string =>
     replacedBy
@@ -2336,7 +2350,7 @@ export function modulesSection(
     // ADM3-1: the discounted figure is the FIRST fee, the standing fee is named beside it —
     // in the SAME period form as every other card (a monthly figure on an annual account
     // would re-open the gap modulePriceForm closes).
-    return couponCardPrice(m.priceMonthly, coupon.percent, annualMult, lang);
+    return couponCardPrice(m.priceMonthly, coupon.percent, annualMult, lang, mv.currency ?? sub?.currency);
   };
 
   // ① Owned modules — the work surface.
@@ -2989,8 +3003,8 @@ export function modulesSection(
     )};` +
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
         `${MONEY_JS}` +
-        `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
-    `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
+        `var CUR=${jsonForScript(viewCurrency(mv.currency ?? sub?.currency))};` +
+    `var HUF=function(n){return CitMoney.formatMinor(n,CUR,${jsonForScript(lang)})};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     // ADR-0113 server-injected constants: the SAME proration and coupon rounding
     // the order is priced with (moduleUpsell.createFirstChargeOrder ↔ applyOffer),
@@ -3240,8 +3254,8 @@ export function modulesSection(
     `var foot=document.getElementById("adm-pv-foot"),ttl=document.getElementById("adm-pv-ttl");` +
     `var base=${mv.baseMonthly},focus=null;` +
         `${MONEY_JS}` +
-        `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
-    `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
+        `var CUR=${jsonForScript(viewCurrency(mv.currency ?? sub?.currency))};` +
+    `var HUF=function(n){return CitMoney.formatMinor(n,CUR,${jsonForScript(lang)})};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     `var OWNED=${jsonForScript(Object.fromEntries(mv.modules.map((m) => [m.id, m.active])))};` +
     `var LABEL=${jsonForScript(Object.fromEntries(mv.modules.map((m) => [m.id, T(lang, m.label)])))};` +
@@ -3418,6 +3432,8 @@ export interface DomainSettlementView {
   readonly penaltyBase: number;
   readonly penaltyTotal: number;
   readonly buyoutPrice: number;
+  /** ADR-XXXX: ISO 4217 of every amount here (the tenant's region); absent = HUF (fixtures). */
+  readonly currency?: string;
   /** ISO date the site stays reachable until; null = not known yet. */
   readonly accessEndDate: string | null;
   /** A recorded settlement — the done screen renders this DB truth. */
@@ -3435,7 +3451,7 @@ export interface DomainSettlementView {
  * JS only mirrors it live.
  */
 export function domainSettlementSection(view: DomainSettlementView, lang = "hu"): string {
-  const huf = (n: number) => formatMoney(n, getCurrency(TENANT_VIEW_REGION));
+  const huf = moneyIn(view.currency, lang);
   const dom = esc(view.domainName);
   const back = `<a class="citui-btn citui-btn--ghost" style="width:100%" href="/admin?tab=modulok">${T(lang, "Vissza")}</a>`;
   const head = (title: string) =>
@@ -3512,8 +3528,8 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `var box=row.querySelector('input');` +
     `var PEN=${view.penaltyTotal},BUY=${view.buyoutPrice};` +
     `${MONEY_JS}` +
-    `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
-    `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
+    `var CUR=${jsonForScript(viewCurrency(view.currency))};` +
+    `function huf(n){return CitMoney.formatMinor(n,CUR,${jsonForScript(lang)})}` +
     `var FATE_ON=${jsonForScript(T(lang, "A webcímet elviszi: {art} {domain} tulajdonjoga a fizetés után az Öné.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
     `var FATE_OFF=${jsonForScript(T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
     `var BTN=${jsonForScript(T(lang, "Elszámolás és lemondás — {total}", { total: "@@" }))};` +
@@ -3579,9 +3595,11 @@ export interface MultilangTierView {
 }
 
 export interface MultilangAdminData {
-  /** One-time fee (HUF) of the SELECTED tier — the same for first generation,
+  /** One-time fee of the SELECTED tier (minor unit of `currency`) — the same for first generation,
    *  regeneration and swap (ADR-0063 §3 stands; only the tier decides the amount). */
   readonly price: number;
+  /** ADR-XXXX: ISO 4217 of every amount here (the tenant's region); absent = HUF (fixtures). */
+  readonly currency?: string;
   /** Capacity of the selected tier (ADR-0128 replaced the fixed 3). */
   readonly count: number;
   /** All three tiers, priced (ADR-0128). */
@@ -3635,7 +3653,7 @@ export interface MultilangAdminData {
  * generated; content change → stale banner → pay again; swap = new set + pay.
  */
 export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
-  const huf = (n: number) => formatMoney(n, getCurrency(TENANT_VIEW_REGION));
+  const huf = moneyIn(ml.currency, lang);
   // A PAID, undelivered purchase owns the picker: it shows WHAT WAS BOUGHT and
   // is frozen — re-picking languages here could only lead to a second charge for
   // something already paid for.
@@ -3893,8 +3911,8 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         `var allBox=f.querySelector('[data-ml-all]');` +
         `var btns=[].slice.call(f.querySelectorAll('[type=submit]'));` +
         `${MONEY_JS}` +
-        `var CUR=${jsonForScript(getCurrency(TENANT_VIEW_REGION))};` +
-        `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
+        `var CUR=${jsonForScript(viewCurrency(ml.currency))};` +
+        `function huf(n){return CitMoney.formatMinor(n,CUR,${jsonForScript(lang)})}` +
         `function cur(){var v=(radios.filter(function(r){return r.checked})[0]||{}).value;` +
         `for(var i=0;i<TIERS.length;i++){if(TIERS[i].id===v)return TIERS[i]}return TIERS[0]}` +
         `function sync(){var t=cur();` +
@@ -3985,7 +4003,12 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
 
 /** Pénz-formátum a tenant pénznemében (a multilang-kártya mintája). */
 function money(n: number, currency: string): string {
-  return formatMoney(n, currency);
+  // ADR-XXXX: domain fees are our money — minor units (ADR-0443); HUF unchanged.
+  return formatMinor(n, currency);
+}
+/** The bare number of a minor-unit amount (the low end of a range whose unit follows). */
+function moneyNum(n: number, currency: string): string {
+  return formatMoney(minorToMajor(n, currency), null);
 }
 
 /** Elérhetőség-jelölő (ADR-0251, jóváhagyott A1 terv). A négy állapot a regisztrátor
@@ -4022,7 +4045,7 @@ function dRowAt(state: "ok" | "now" | "todo", title: string, sub: string, at: Da
 
 /** „okt. 21. 15:54” — the step times of the domain status list, on the accommodation's clock. */
 function fmtShortDateTime(d: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -4081,8 +4104,8 @@ function domainStatusB(d: DomainAdminData, lang: string, now: Date = new Date())
   else if (hu && !registryDone && base) {
     const eta = new Date(Math.ceil((base.getTime() + 24 * 3_600_000) / 3_600_000) * 3_600_000);
     const sameDay = isoDayIn(eta, viewZone()) === isoDayIn(now, viewZone());
-    const day = sameDay ? T(lang, "ma") : new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { weekday: "long", timeZone: viewZone() }).format(eta);
-    const hour = new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { hour: "2-digit", minute: "2-digit", timeZone: viewZone() }).format(eta);
+    const day = sameDay ? T(lang, "ma") : new Intl.DateTimeFormat(dateLocale(lang), { weekday: "long", timeZone: viewZone() }).format(eta);
+    const hour = new Intl.DateTimeFormat(dateLocale(lang), { hour: "2-digit", minute: "2-digit", timeZone: viewZone() }).format(eta);
     big = T(lang, "{Art} {domain} az Öné. Várhatóan {when}-ig az új címen él a honlapja.", { Art, domain: name, when: `${esc(day)} ${esc(hour)}` });
   } else if (hu && !registryDone)
     big = T(lang, "{Art} {domain} az Öné. A .hu bejegyzés általában 24 órán belül megtörténik, utána néhány perc, és az új címen él a honlapja.", { Art, domain: name });
@@ -4245,7 +4268,7 @@ function domainFeeLine(d: DomainAdminData, lang: string, fee: number | null, lis
     const price = fee === 0 && listFee !== null
       ? money(listFee, d.currency)
       : r.min !== r.max
-      ? `${formatMoney(r.min, null)}–${money(r.max, d.currency)}`
+      ? `${moneyNum(r.min, d.currency)}–${money(r.max, d.currency)}`
       : money(r.min, d.currency);
     return T(
       lang,
@@ -4258,7 +4281,7 @@ function domainFeeLine(d: DomainAdminData, lang: string, fee: number | null, lis
     return T(
       lang,
       "A név díja {range}/hó, végződéstől függően, és {n} hónapos előfizetés vállalásával jár. A havidíj addig jár, amíg a név az Ön honlapjához tartozik; ha a {n} hónap után lemond, a név vételár nélkül az Öné lesz.",
-      { range: `${formatMoney(d.feeRange.min, null)}–${money(d.feeRange.max, d.currency)}`, ...tail },
+      { range: `${moneyNum(d.feeRange.min, d.currency)}–${money(d.feeRange.max, d.currency)}`, ...tail },
     );
   }
   return T(
@@ -4870,7 +4893,7 @@ function relDay(d: Date, lang: string, now: Date = new Date()): string {
   const diff = isoDayDiff(isoDayIn(d, viewZone()), isoDayIn(now, viewZone()));
   if (diff <= 0) return T(lang, "ma");
   if (diff === 1) return T(lang, "tegnap");
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { month: "short", day: "numeric", timeZone: viewZone() }).format(d);
+  return new Intl.DateTimeFormat(dateLocale(lang), { month: "short", day: "numeric", timeZone: viewZone() }).format(d);
 }
 
 /** Overview (ADR-0224 ⑤): title · 3 widgets · cover showcase · to-do list · (phone) plan card. */
@@ -4996,7 +5019,7 @@ function overviewSection(
         // but the modules the trial switched on are still not bought — the row says so.
         (trialActive || m.trialGrant
           ? `${T(lang, "— a próbában be van kapcsolva, de üres, ezért a vendég ma nem látja")}`
-          : `<span class="adm-todo__price">${modulePriceForm(m.priceMonthly, false, annualMult, lang)}</span> ` +
+          : `<span class="adm-todo__price">${modulePriceForm(m.priceMonthly, false, annualMult, lang, mv?.currency ?? sub?.currency)}</span> ` +
             `${T(lang, "— kifizette, de üres, ezért a vendég ma nem látja")}`) +
         `<span class="adm-todo__note">${emptyNote(m.id)}</span>` +
         `<span class="adm-todo__acts">${fill}${look}</span>` +
@@ -5049,7 +5072,7 @@ function overviewSection(
         `${formatDay(r.dateFrom, lang)} → ${formatDay(r.dateTo, lang)}`,
         T(lang, "{n} éj", { n: nights }),
         T(lang, "{n} fő", { n: r.guests }),
-        r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF") : "",
+        r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY) : "",
         r.unitName,
         left != null ? T(lang, "még {n} óra a válaszra", { n: left }) : "",
       ]
@@ -5239,7 +5262,7 @@ function textsSection(content: NonNullable<AdminContent>, lang = "hu"): string {
 
 /** A hónap/nap formátum a felhasználó nyelvén — sosem beégetett magyar alak. */
 function fmtDate(d: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -5254,7 +5277,7 @@ function fmtDate(d: Date, lang: string): string {
 /** Date WITH time — same-day system messages were indistinguishable without it
  *  (Elek FK-001 G2: two mails, one date, no order visible). */
 function fmtDateTime(d: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -5268,7 +5291,8 @@ function fmtDateTime(d: Date, lang: string): string {
 // hu-HU instead of the € we print everywhere else and (b) THROWS on a non-ISO
 // code — and the configurator hands us those. text/money.ts handles both.
 function fmtMoney(amount: number, currency: string, lang: string): string {
-  return formatMoney(amount, currency, lang);
+  // ADR-XXXX: invoice amounts are minor units (ADR-0443); for HUF this is formatMoney exactly.
+  return formatMinor(amount, currency, lang);
 }
 
 /** Kereső + szűrő-chipek sávja. `chips` = [érték, felirat]; az aktív az `active`. */
@@ -5436,8 +5460,13 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
 
   // Az összegző EGYÜTT MOZOG a szűrővel: szűrt nézetben a teljes összeg félrevezet.
   const issued = invHits.filter((i) => i.status === "issued");
-  const total = issued.reduce((s, i) => s + i.gross, 0);
-  const currency = issued[0]?.currency ?? "HUF";
+  // ADR-XXXX: never add two currencies into one number (a tenant that moved region, or a
+  // domain bought in EUR) — one total per currency, the newest invoice's currency first.
+  const currency = viewCurrency(issued[0]?.currency);
+  const totals = new Map<string, number>();
+  for (const i of issued) totals.set(i.currency, (totals.get(i.currency) ?? 0) + i.gross);
+  if (!totals.size) totals.set(currency, 0);
+  const totalText = [...totals].map(([c, n]) => fmtMoney(n, c, lang)).join(" + ");
   const summary =
     // ── Elek FK-001 Z6: az összegző MEGNEVEZI MAGÁT (kontraktus ⑦) ────────────
     // A képernyő legnagyobb, legfeltűnőbb száma „Összesen 1 224 450 Ft" volt,
@@ -5450,7 +5479,7 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
     `<div class="adm-blk adm-blk--plain"><div class="adm-docsum">` +
     `<div><div class="l">${d.year === "mind" ? T(lang, "Kiállított számla") : T(lang, "{year}-ben", { year: d.year })}</div>` +
     `<div class="v">${T(lang, "{n} db", { n: issued.length })}</div></div>` +
-    `<div><div class="l">${T(lang, "Eddig kifizetett")}</div><div class="v">${esc(fmtMoney(total, currency, lang))}</div>` +
+    `<div><div class="l">${T(lang, "Eddig kifizetett")}</div><div class="v">${esc(totalText)}</div>` +
     `<div class="n">${T(lang, "a {n} kiállított számla összege — nem tartozás", { n: issued.length })}</div></div>` +
     (d.owed === null
       ? ""
@@ -6012,6 +6041,8 @@ export function walletSection(
   flash: "ok" | "fail" | "err" | null,
   lang = "hu",
 ): string {
+  // ADR-XXXX: every amount of the wallet is in the subscription's currency.
+  const hufAmount = moneyIn(sub?.currency, lang);
   const head =
     `<div class="adm-card__head"><span class="adm-ico">${ic("card")}</span><h2>${T(lang, "Pénztárca")}</h2>${helpLink("admin.wallet", lang)}</div>`;
   // No subscription yet (site not paid/live): an honest empty state, not a half-working wallet.

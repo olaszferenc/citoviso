@@ -14,6 +14,7 @@
 // racing for the same nights cannot both win.
 
 import { parseOfferAmount } from "./amount.js";
+import { countryOfSite } from "../tenant/siteCountry.js";
 import { chosenPlan, clampChildren, countedChildAge, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealLine, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
 import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
@@ -68,6 +69,9 @@ import { bookableUnits, guestUnits } from "../tenant/unitVisibility.js";
 import { seasonRule } from "../tenant/seasonRule.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 import { siteTimeZone, todayForSite } from "../tenant/timeZone.js";
+import { DEFAULT_LANG } from "../i18n/lang.js";
+import { formatDay } from "../text/day.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 export interface BookingRequestInput {
   readonly siteId: string;
@@ -226,7 +230,8 @@ export async function seasonRulesFor(
 function declaredTouristTax(rules: Record<string, unknown>): number | null {
   const v = rules.touristTaxPerPersonNight;
   if (v === "" || v === null || v === undefined || !Number.isFinite(Number(v))) return null;
-  return Math.max(0, Math.round(Number(v)));
+  // Two decimals kept (ADR-XXXX: a EUR/CZK tax may have them); a HUF tax is whole already.
+  return Math.max(0, Math.round(Number(v) * 100) / 100);
 }
 
 /**
@@ -240,6 +245,10 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
   if (!req.quoted_total) return [];
   const tax = req.quoted_tax_per_person_night ?? declaredTouristTax(await bookingRules(req.site_id));
   if (tax === 0) return [];
+  // ADR-XXXX: the "payable on site" fact and the under-18 exemption are the Hungarian rule
+  // (country.tourist_tax_model); a country without it gets only what the owner typed in.
+  const huRule = (await countryOfSite(req.site_id))?.touristTaxModel !== "none";
+  if (tax === null && !huRule) return [];
   if (tax === null) {
     return [
       {
@@ -250,11 +259,11 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
     ];
   }
   const n = nights(dayStr(req.date_from), dayStr(req.date_to));
-  const cur = req.quoted_currency ?? "HUF";
+  const cur = req.quoted_currency ?? LEGACY_CURRENCY;
   // Elek 10-13 T-3: a guest under 18 pays no tourist tax — the counted children are left out.
-  const payers = taxPayers(req.guests, req.children);
+  const payers = huRule ? taxPayers(req.guests, req.children) : Math.max(1, req.guests);
   const childAge =
-    req.children === null
+    !huRule || req.children === null
       ? null
       : countedChildAge(readMeals((await getSiteModuleConfig(req.site_id, "pricing")).config.meals), req.meal_plan);
   return [
@@ -265,7 +274,7 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
         n,
       }),
       value: formatAmount(tax * payers * n, cur),
-      note: minorsTaxNote(lang, childAge),
+      ...(huRule ? { note: minorsTaxNote(lang, childAge) } : {}),
       rule: true,
     },
   ];
@@ -406,14 +415,14 @@ function quoteBlock(req: RequestRow, lang: string): string {
     // "the price list at booking time" would misdescribe where the number came from.
     `\n${req.offered_at ? T(lang, "Az ajánlott ár:") : T(lang, "Ár (a foglaláskor érvényes árak szerint):")}\n` +
     lines +
-    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, req.quoted_currency ?? "HUF")}\n`
+    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY)}\n`
   );
 }
 
 /** The frozen breakdown as label/value pairs — the text block and the HTML panel
  *  render the SAME rows ("Alapár: 7 éj × 90 000 Ft" → "630 000 Ft"). */
 function quoteRows(req: RequestRow, lang: string): { label: string; value: string }[] {
-  const cur = req.quoted_currency ?? "HUF";
+  const cur = req.quoted_currency ?? LEGACY_CURRENCY;
   return (req.quoted_lines ?? []).map((l) => {
     if (l.nights && l.per_night * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1) {
       // per_stay: one price for the whole stay
@@ -495,7 +504,7 @@ function priceRows(req: RequestRow, lang: string): MailDetailRow[] {
     ...lines.map((r, i) => ({ label: r.label, value: r.value, rule: !req.offered_at && i === 0 })),
     {
       label: T(lang, "Összesen"),
-      value: formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"),
+      value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY),
       emphasis: true,
       rule: !req.offered_at && !lines.length,
     },
@@ -712,7 +721,7 @@ export async function stayQuote(
         dateFrom,
         dateTo,
         guests: Math.max(1, Math.round(guests || 1)),
-        currency: String(pricing.currency ?? "HUF"),
+        currency: String(pricing.currency ?? LEGACY_CURRENCY),
         unitMode: String(pricing.unit ?? "per_night"),
         baseLabel: T(lang, "Alapár"),
       })
@@ -989,7 +998,7 @@ export async function createBookingRequest(
       ...(children ? { children } : {}),
       guestEmail,
       total: quote?.total ?? null,
-      currency: quote?.currency ?? String(pricing.currency ?? "HUF"),
+      currency: quote?.currency ?? String(pricing.currency ?? LEGACY_CURRENCY),
       lines: (quote?.lines ?? []).map((l) => ({
         label: l.label,
         nights: l.nights,
@@ -1101,7 +1110,7 @@ async function sendGuestAck(id: string): Promise<void> {
                 ...quoteRows(req, lang).map((r, i) => ({ label: r.label, value: r.value, rule: i === 0 })),
                 {
                   label: T(lang, "Összesen"),
-                  value: formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"),
+                  value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY),
                   emphasis: true,
                 },
               ]
@@ -1276,7 +1285,7 @@ export async function notifyOwner(
     `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     (req.meal_plan ? `${T(lang, "Ellátás:")} ${mealPlanLabel(lang, req.meal_plan)}\n` : "") +
     (req.quoted_total
-      ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? "HUF")}\n`
+      ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY)}\n`
       : "") +
     (req.guest_phone ? `${T(lang, "Telefon:")} ${req.guest_phone}\n` : "") +
     `${T(lang, "E-mail:")} ${req.guest_email}\n` +
@@ -1319,7 +1328,7 @@ export async function notifyOwner(
         ? [
             {
               label: T(lang, "Ár (a foglaláskori árlista szerint)"),
-              value: formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"),
+              value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY),
               emphasis: true,
               rule: true,
             },
@@ -1536,7 +1545,7 @@ export async function peekDecision(token: string, verdict: "accepted" | "decline
     unitName: req.unit_name,
     guests: req.guests,
     ref: bookingRef(req.id),
-    ...(req.quoted_total ? { quotedTotal: req.quoted_total, currency: req.quoted_currency ?? "HUF" } : {}),
+    ...(req.quoted_total ? { quotedTotal: req.quoted_total, currency: req.quoted_currency ?? LEGACY_CURRENCY } : {}),
     ...(req.children ? { children: req.children } : {}),
     ...(overCapacity(req.guests, req.unit_capacity) ? { capacity: req.unit_capacity! } : {}),
   };
@@ -2638,7 +2647,7 @@ async function pricingConfigFor(siteId: string): Promise<{ currency: string; uni
     (row?.config ?? null) as Record<string, unknown> | null,
     null,
   );
-  return { currency: String(cfg.currency ?? "HUF"), unitMode: String(cfg.unit ?? "per_night") };
+  return { currency: String(cfg.currency ?? LEGACY_CURRENCY), unitMode: String(cfg.unit ?? "per_night") };
 }
 
 /** The owner's offer page (GET) — the action token is the owner's key. */
@@ -3003,8 +3012,11 @@ export async function sendOffer(
 
 /** "2026. szept. 25. 14:05" in the ACCOMMODATION's time zone (ADR-0290) — the guest
  *  books a place, and its deadlines are that place's wall clock. */
-function huDateTime(d: Date, tz: string): string {
-  const parts = new Intl.DateTimeFormat("hu-HU", {
+function huDateTime(d: Date, tz: string, lang: string): string {
+  // ADR-XXXX: the guest reads the date in the page's language; the numeric parts come out
+  // in Latin digits whatever the locale. A Hungarian guest keeps huDate's exact form.
+  const parts = new Intl.DateTimeFormat(lang || undefined, {
+    numberingSystem: "latn",
     timeZone: tz,
     year: "numeric",
     month: "2-digit",
@@ -3014,7 +3026,8 @@ function huDateTime(d: Date, tz: string): string {
     hour12: false,
   }).formatToParts(d);
   const get = (t: string): string => parts.find((p) => p.type === t)?.value ?? "";
-  return `${huDate(`${get("year")}-${get("month")}-${get("day")}`)} ${get("hour")}:${get("minute")}`;
+  const iso = `${get("year")}-${get("month")}-${get("day")}`;
+  return `${!lang || lang === DEFAULT_LANG ? huDate(iso) : formatDay(iso, lang)} ${get("hour")}:${get("minute")}`;
 }
 
 /** When an offer lapses (null = the module never expires anything). */
@@ -3044,7 +3057,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
     `\n` +
     (req.decision_note ? `${T(lang, "A szállásadó üzenete:")} „${req.decision_note}”\n\n` : "") +
     (expires
-      ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz) }) + " "
+      ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz, lang) }) + " "
       : "") +
     T(lang, "A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja.") +
     `\n\n${T(lang, "Az ajánlat megtekintése és elfogadása:")}\n${url}\n\n` +
@@ -3066,7 +3079,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
       ...(req.decision_note ? [mailQuote(T(lang, "A szállásadó üzenete:"), req.decision_note)] : []),
       mailPara(
         esc(
-          (expires ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz) }) + " " : "") +
+          (expires ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz, lang) }) + " " : "") +
             T(lang, "A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja."),
         ),
       ),
@@ -3137,7 +3150,7 @@ export async function peekGuestOffer(offerToken: string): Promise<GuestOfferView
     dateTo: dayStr(req.date_to),
     guests: req.guests,
     total: req.quoted_total ?? undefined,
-    currency: req.quoted_currency ?? "HUF",
+    currency: req.quoted_currency ?? LEGACY_CURRENCY,
     lines: req.quoted_lines ?? [],
     note: req.decision_note ?? null,
     expiresAt: offerExpiresAt(req.offered_at, ctx.expireHours),
@@ -3246,7 +3259,7 @@ async function sendOwnerOfferNews(
     to: huDate(dayStr(req.date_to)),
     unit: req.unit_name ?? "",
   };
-  const total = req.quoted_total ? formatAmount(req.quoted_total, req.quoted_currency ?? "HUF") : "";
+  const total = req.quoted_total ? formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY) : "";
   const M = {
     accepted: {
       subject: T(lang, "{guest} elfogadta az ajánlatát", hu),

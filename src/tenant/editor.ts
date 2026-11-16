@@ -41,7 +41,8 @@ import {
 import { renderableModules, unboughtPageAnchors } from "../modules.js";
 import { applyContactEdits, effectiveContact, type ContactEdits, type ContactErrorKey, type ContactFacts } from "./contact.js";
 import { programsOnPage, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
-import { todayForTenant } from "./timeZone.js";
+import { tenantTimeZone, todayForTenant } from "./timeZone.js";
+import { countryOfSite, countryOfTenant } from "./siteCountry.js";
 
 export interface PhotoEdit {
   url: string;
@@ -612,6 +613,10 @@ export async function moduleContentFor(
         ? {}
         : { touristTaxPerPersonNight: Math.max(0, Number(b.touristTaxPerPersonNight)) }),
       ...(b.priceIncludes ? { priceIncludes: String(b.priceIncludes).slice(0, 200) } : {}),
+      // ADR-XXXX: the Hungarian tourist-tax rule is the COUNTRY's (country.tourist_tax_model);
+      // a lodging whose row has no such rule gets no "payable on site" sentence.
+      ...((await countryOfSite(siteId))?.touristTaxModel === "none" ? { touristTaxRule: "none" as const } : {}),
+      timeZone: await tenantTimeZone(tenantId),
     };
   }
 
@@ -1054,7 +1059,7 @@ export async function saveTenantContact(
   const s = await loadSiteForEdit(tenantId);
   if (!s || !s.path) return { ok: false, errors: [] };
   const before = contactOf(s);
-  const r = applyContactEdits(before, edits);
+  const r = applyContactEdits(before, edits, await countryOfTenant(tenantId));
   if (!r.ok) return r;
   const f = r.facts;
   const changed =

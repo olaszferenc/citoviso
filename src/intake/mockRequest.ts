@@ -10,6 +10,8 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { config } from "../config.js";
 import { HOME_MARKET } from "../markets.js";
+import { resolveCountryCode } from "../country.js";
+import { reverseGeocode, type GeoFacets } from "../scraper/enrichGeo.js";
 import { db } from "../db/client.js";
 import { checkDemoFraming } from "../generator/provenanceCheck.js";
 import { readServableMock } from "../generator/modelHtml.js";
@@ -130,13 +132,20 @@ export async function processMockRequest(id: string): Promise<void> {
 
   try {
     await setStatus(id, "resolving");
+    // ADR-XXXX (ADR-0040 order): the request's country is its PIN's — a Czech guesthouse
+    // dropped on the map is searched in Czech, in Czechia. Without a pin (name + town only)
+    // the inbound area's country (the home market the form serves) is the fallback.
+    const pinCountry =
+      req.lat != null && req.lon != null
+        ? resolveCountryCode((await reverseGeocode(req.lat, req.lon).catch(() => ({}) as GeoFacets)).country ?? null)
+        : null;
     const resolved = await resolveBusiness({
       name: req.business_name,
       town: req.town || undefined,
       lat: req.lat,
       lon: req.lon,
       mapsLink: req.maps_link,
-      country: INBOUND_REGION.country,
+      country: pinCountry ?? INBOUND_REGION.country,
     });
     if (!resolved) {
       // Not found automatically — still the colleagues' job (Neo identifies it from the

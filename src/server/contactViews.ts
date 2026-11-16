@@ -12,6 +12,7 @@ import { T } from "../i18n/mail.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { CONTACT_ERRORS, type ContactErrorKey, type ContactFacts } from "../tenant/contact.js";
 import { PHONE_NORM_JS } from "../text/phone.js";
+import { phoneExampleIn, phoneRulesJs, type PhoneRules } from "../text/phoneCountry.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 
 function esc(s: unknown): string {
@@ -30,6 +31,8 @@ export interface ContactView {
   /** The save failed for a reason no field explains (no site yet, render error). */
   readonly failed?: boolean;
   readonly lang?: string;
+  /** ADR-XXXX: the lodging country's phone plan (null / Hungarian plan = the HU rule). */
+  readonly phoneRules?: PhoneRules | null;
 }
 
 export const CONTACT_CSS =
@@ -59,9 +62,16 @@ export const CONTACT_CSS =
   `.pl-errs{margin:0 0 14px}` +
   `</style>`;
 
-function errLine(id: string, errors: readonly ContactErrorKey[] | undefined, key: ContactErrorKey, lang: string): string {
+function errLine(id: string, errors: readonly ContactErrorKey[] | undefined, key: ContactErrorKey, lang: string, rules: PhoneRules | null = null): string {
   const on = errors?.includes(key);
-  return `<p class="pl-err" id="${id}"${on ? "" : " hidden"}>${on ? esc(T(lang, CONTACT_ERRORS[key])) : ""}</p>`;
+  return `<p class="pl-err" id="${id}"${on ? "" : " hidden"}>${on ? esc(key === "phone" ? phoneBadText(lang, rules) : T(lang, CONTACT_ERRORS[key])) : ""}</p>`;
+}
+
+/** ADR-XXXX: the phone error with an example in the lodging country's shape (HU: unchanged). */
+function phoneBadText(lang: string, rules: PhoneRules | null | undefined): string {
+  return rules && rules.phonePlan !== "hu"
+    ? T(lang, "Ez nem telefonszám. Így írja: {example}", { example: phoneExampleIn(rules) })
+    : T(lang, CONTACT_ERRORS.phone);
 }
 
 /** ADR-0045 §J: the card-head help icon for this surface (kb anchor admin.contact). Sits on
@@ -111,7 +121,7 @@ function contactFields(v: ContactView): string {
     `<div class="adm-blk adm-blk--plain"><div class="pl-2">` +
     `<div class="citui-field"><label class="citui-label" for="ct_phone">${T(lang, "Telefon")}</label>` +
     `<input class="citui-input" id="ct_phone" name="phone" type="tel" inputmode="tel" value="${esc(v.facts.phone)}" autocomplete="tel" maxlength="40">` +
-    errLine("ct_phone_err", v.errors, "phone", lang) +
+    errLine("ct_phone_err", v.errors, "phone", lang, v.phoneRules ?? null) +
     `<p class="pl-ok" id="ct_phone_ok" hidden></p></div>` +
     `<div class="citui-field"><label class="citui-label" for="ct_email">${T(lang, "E-mail")}</label>` +
     `<input class="citui-input" id="ct_email" name="email" type="email" inputmode="email" value="${esc(v.facts.email)}" autocomplete="email" maxlength="160">` +
@@ -167,7 +177,7 @@ export function placeScript(v: ContactView): string {
     searching: T(lang, "Keresem…"),
     search: T(lang, "Megkeresem a térképen"),
     noPin: T(lang, "Még nincs tű — keresse meg a címet, vagy koppintson a térképre"),
-    phoneBad: T(lang, CONTACT_ERRORS.phone),
+    phoneBad: phoneBadText(lang, v.phoneRules),
     phoneEmpty: T(lang, "Üresen hagyva a honlapon nem lesz telefonszám."),
     phoneAs: T(lang, "A honlapon így: {p}"),
     emailBad: T(lang, CONTACT_ERRORS.email),
@@ -194,6 +204,8 @@ export function placeScript(v: ContactView): string {
     `function setStatus(s,t){var st=$('pl_status');if(!st)return;st.dataset.s=s;$('pl_state').textContent=t;$('pl_coords').textContent=fmt(cur);$('pl_undo').hidden=(s==='saved'||saved.lat===null)}` +
     PHONE_NORM_JS +
     `function pretty(e){if(!e||e.indexOf('+36')!==0)return e;var n=e.slice(3);if(n[0]==='1')return '+36 1 '+n.slice(1,4)+' '+n.slice(4);var r=n.slice(2);return '+36 '+n.slice(0,2)+' '+r.slice(0,3)+' '+r.slice(3)}` +
+    // ADR-XXXX: another country's plan redefines norm/pretty (empty for the HU plan).
+    phoneRulesJs(v.phoneRules ?? null) +
     `function watched(){return [].slice.call(form.querySelectorAll('[data-watch]'))}` +
     `function val(el){return el.type==='checkbox'?String(el.checked):el.value}` +
     `function dirty(){var d=$('pl_dirty');if(!d)return;var ch=[];` +

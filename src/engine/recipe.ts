@@ -549,6 +549,14 @@ export interface SiteData {
      *   · `> 0`            → az összeg, tételesen kiszámolva.
      */
     readonly touristTaxPerPersonNight?: number;
+    /** ADR-XXXX (country row `tourist_tax_model`): set to "none" when the lodging's country has
+     *  no tourist-tax rule we may state — the widget then says nothing the owner did not type
+     *  (no "payable on site", no Hungarian under-18 exemption). Absent = the Hungarian rule,
+     *  so every existing (Hungarian) page renders exactly as before. */
+    readonly touristTaxRule?: "none";
+    /** ADR-XXXX (ADR-0290): the lodging's IANA zone — the widget's "today" (earliest arrival,
+     *  calendar) is the accommodation's day, not UTC's. */
+    readonly timeZone?: string;
     /** What the nightly price already covers ("takarítás, ágynemű") — owner's words. */
     readonly priceIncludes?: string;
   };

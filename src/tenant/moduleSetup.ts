@@ -13,7 +13,10 @@
 
 import { db } from "../db/client.js";
 import { T } from "../i18n/mail.js";
-import { formatNumber } from "../text/money.js";
+import { currencySign, formatMinor, formatNumber } from "../text/money.js";
+import { countryOfSite } from "./siteCountry.js";
+import { MODULE_CONFIG_REGISTRY } from "../moduleConfig.js";
+import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { generatedRoomNames, getTenantContact, getTenantContent, moduleContentFor } from "./editor.js";
 import { filledContentFields, getTenantModules, type FilledContentFields } from "./modules.js";
@@ -50,8 +53,13 @@ export interface SetupCtx {
   readonly today: string;
   /** Catalog ids the tenant holds right now (active, incl. trial grants) + the spine. */
   readonly held: ReadonlySet<string>;
-  /** Live module prices (HUF / month) — the "what it costs" sentence of a missing module. */
+  /** Live module prices (minor unit of `pricesCurrency` / month) — the "what it costs" sentence of a missing module. */
   readonly prices: ReadonlyMap<string, number>;
+  /** ADR-XXXX: ISO 4217 of `prices` — the tenant's pricing region's currency. */
+  readonly pricesCurrency: string;
+  /** ADR-XXXX: ISO 4217 the SITE's room prices are in — the saved pricing currency, else the
+   *  lodging country's, else the catalog default (a Hungarian site: HUF, as always). */
+  readonly siteCurrency: string;
   readonly units: readonly Unit[];
   readonly unitPrices: ReadonlyMap<string, readonly UnitPrice[]>;
   /** The renderer's own filled content fields (moduleContentFor().data). */
@@ -524,7 +532,11 @@ export function moduleName(id: string, lang: string): string {
 }
 export function modulePriceText(ctx: SetupCtx, id: string, lang: string): string {
   const p = ctx.prices.get(id);
-  return p ? T(lang, "{p} Ft/hó", { p: formatNumber(p, lang) }) : "";
+  if (!p) return "";
+  // ADR-XXXX: in the tenant's own currency; HUF keeps its exact old sentence.
+  return currencySign(ctx.pricesCurrency) === "Ft"
+    ? T(lang, "{p} Ft/hó", { p: formatNumber(p, lang) })
+    : T(lang, "{price}/hó", { price: formatMinor(p, ctx.pricesCurrency, lang) });
 }
 
 export interface TopicView {
@@ -606,6 +618,7 @@ export async function loadSetupCtx(tenantId: string, siteId: string): Promise<Se
     loadSetupProgress(siteId),
     moduleContentFor(tenantId, siteId),
   ]);
+  const country = await countryOfSite(siteId);
   const suggestedRooms = await generatedRoomNames(tenantId);
   const held = new Set<string>(MODULE_CATALOG.filter((m) => m.spine).map((m) => m.id));
   for (const m of mv.modules) if (m.active) held.add(m.id);
@@ -615,6 +628,12 @@ export async function loadSetupCtx(tenantId: string, siteId: string): Promise<Se
     today,
     held,
     prices: new Map(mv.modules.map((m) => [m.id, m.priceMonthly] as const)),
+    pricesCurrency: mv.currency ?? getCurrency(HU_PRICING_REGION),
+    siteCurrency: String(
+      (storedRows.find((r) => r.module === "pricing")?.config as Record<string, unknown> | null)?.currency ??
+        country?.currency ??
+        MODULE_CONFIG_REGISTRY.pricing?.defaults.currency,
+    ),
     units,
     unitPrices,
     filled: filledContentFields(modContent.data),

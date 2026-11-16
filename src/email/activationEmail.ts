@@ -18,7 +18,8 @@
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
 import { formatDay } from "../text/day.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor } from "../text/money.js";
+import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
 import { esc, loginSentence, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { MailDetailRow } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
@@ -88,7 +89,7 @@ export function buildActivationEmail(input: ActivationEmailInput): EmailMessage 
     : T(lang, "A jelszava nem változott.");
   const per = renewal?.period === "monthly" ? T(lang, "/ hó") : T(lang, "/ év");
   const nextCharge = renewal
-    ? `${formatDay(renewal.date, lang)} — ${formatMoney(renewal.amount, input.currency ?? "HUF", lang)} ${per}`
+    ? `${formatDay(renewal.date, lang)} — ${formatMinor(renewal.amount, input.currency ?? getCurrency(HU_PRICING_REGION), lang)} ${per}`
     : T(lang, "A pontos dátumot és összeget e-mailben küldjük el.");
   const button = T(lang, "Jelszó beállítása");
 

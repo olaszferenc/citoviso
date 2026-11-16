@@ -9,7 +9,7 @@
 
 import { esc } from "./views.js";
 import { ic } from "../ui/icons.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor, formatMoney } from "../text/money.js";
 import { normalizePhone, prettyPhone } from "../text/phone.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { T } from "../i18n/mail.js";
@@ -24,10 +24,13 @@ import type {
   PartnerRelations,
   PartnerSubscription,
 } from "./partnerProfile.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 export type PartnerTabId = "overview" | "messages" | "data" | "subscription" | "domain" | "documents" | "usage" | "activity";
 
-const huf = (n: number, cur = "HUF") => esc(formatMoney(n, cur));
+const huf = (n: number, cur = LEGACY_CURRENCY) => esc(formatMoney(n, cur));
+/** ADR-XXXX: our money of a subscription — minor units of its own currency (ADR-0443). */
+const subMoney = (n: number, cur: string) => esc(formatMinor(n, cur));
 const dash = `<span class="mut">–</span>`;
 
 /** "2026-11-03 10:16" in Budapest wall-clock time — what the operator reads. */
@@ -109,11 +112,11 @@ export function partnerHeader(d: PartnerDetail, prof: PartnerProfile): string {
   const kpis: string[] = [];
   if (d.isCustomer) {
     kpis.push(
-      kpi(sub?.monthlyRate != null ? huf(sub.monthlyRate) : d.tenant ? huf(d.tenant.monthlyFee) : "–", esc(T(lang, "havi díj (listaár)"))),
+      kpi(sub?.monthlyRate != null ? subMoney(sub.monthlyRate, sub.currency) : d.tenant ? huf(d.tenant.monthlyFee) : "–", esc(T(lang, "havi díj (listaár)"))),
       kpi(
         sub ? esc(sub.periodEnd) : "–",
         sub
-          ? esc(`${T(lang, "következő terhelés")}${sub.nextCharge != null ? ` · ${formatMoney(sub.nextCharge, "HUF")}` : ""}${sub.card ? ` · ${sub.card.brand ?? ""} ••${sub.card.last4}` : ""}`)
+          ? esc(`${T(lang, "következő terhelés")}${sub.nextCharge != null ? ` · ${formatMinor(sub.nextCharge, sub.currency)}` : ""}${sub.card ? ` · ${sub.card.brand ?? ""} ••${sub.card.last4}` : ""}`)
           : esc(T(lang, "nincs előfizetés")),
       ),
       kpi(moneyTile(d.receivable), esc(T(lang, "kintlévőség"))),
@@ -507,8 +510,8 @@ export function overviewCards(d: PartnerDetail, prof: PartnerProfile): string {
         s
           ? kv([
               [T(lang, "Állapot"), pill(SUB_LABEL[s.status][1], SUB_LABEL[s.status][0])],
-              [T(lang, "Havi díj"), s.monthlyRate != null ? huf(s.monthlyRate) : ""],
-              [T(lang, "Következő terhelés"), esc(`${s.periodEnd}${s.nextCharge != null ? ` · ${formatMoney(s.nextCharge, "HUF")}` : ""}${s.card ? ` · ${s.card.brand ?? ""} ••${s.card.last4}` : ""}`)],
+              [T(lang, "Havi díj"), s.monthlyRate != null ? subMoney(s.monthlyRate, s.currency) : ""],
+              [T(lang, "Következő terhelés"), esc(`${s.periodEnd}${s.nextCharge != null ? ` · ${formatMinor(s.nextCharge, s.currency)}` : ""}${s.card ? ` · ${s.card.brand ?? ""} ••${s.card.last4}` : ""}`)],
             ])
           : `<p class="mut">${esc(T(lang, "Nincs előfizetés."))}</p>`,
         `${base}subscription`,

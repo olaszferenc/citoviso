@@ -19,6 +19,8 @@ import { db } from "../db/client.js";
 import { RESERVED_SLUGS, slugify } from "../domains.js";
 import { fitLabel, labelHeldByOther, releasePreviewLabelUnlessKept } from "../outreach/previewLabel.js";
 import { defaultTimeZoneForCountry } from "../text/zoneTime.js";
+import { countryConfig, countryOfLead } from "../country.js";
+import { MODULE_CONFIG_REGISTRY } from "../moduleConfig.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { renderableModules, unboughtPageAnchors } from "../modules.js";
@@ -403,6 +405,28 @@ export async function convertLead(
           })
           .returning(["id", "preview_token"])
           .executeTakeFirstOrThrow();
+
+    // ADR-XXXX (ország-réteg 3/2): the site's prices start in its COUNTRY's currency — the
+    // same way the time zone starts in the country's zone (above). The catalog default
+    // (moduleConfig.ts, HUF) already says it for a Hungarian lodging, so a HU site keeps
+    // having no stored row, exactly as before; any other country gets its currency written
+    // once, here, and the owner can change it on the booking setup / prices page.
+    // Only a site that has no stored pricing config yet is seeded — never an owner's choice.
+    const siteCurrency = (await countryConfig(await countryOfLead(leadId)))?.currency ?? null;
+    const catalogCurrency = MODULE_CONFIG_REGISTRY.pricing?.defaults.currency;
+    if (siteCurrency && siteCurrency !== catalogCurrency) {
+      await trx
+        .insertInto("site_module_config")
+        .values({
+          site_id: row.id,
+          module: "pricing",
+          version: MODULE_CONFIG_REGISTRY.pricing?.version ?? 1,
+          config: JSON.stringify({ currency: siteCurrency }),
+          updated_by: "provision",
+        })
+        .onConflict((oc) => oc.columns(["site_id", "module"]).doNothing())
+        .execute();
+    }
 
     // Advance lifecycle to 'conversion' — but never regress a lead that already
     // moved past it (subscription/activation/…/terminal).

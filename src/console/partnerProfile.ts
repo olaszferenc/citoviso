@@ -68,6 +68,8 @@ export interface PartnerSubscription {
   readonly nextCharge: number | null;
   /** The monthly rate of the current module set (list price, no coupon). */
   readonly monthlyRate: number | null;
+  /** ADR-XXXX: ISO 4217 of nextCharge / monthlyRate (the subscription's own, ADR-0443). */
+  readonly currency: string;
   readonly autoCharge: boolean;
   readonly paymentMethod: "invoice" | "token";
   readonly card: { readonly brand: string | null; readonly last4: string; readonly exp: string | null; readonly savedAt: string | null } | null;
@@ -193,6 +195,7 @@ async function subscriptionOf(tenantId: string): Promise<PartnerSubscription | n
       "cancelled_at",
       "frozen_at",
       "pending_period",
+      "currency",
     ])
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
@@ -220,6 +223,7 @@ async function subscriptionOf(tenantId: string): Promise<PartnerSubscription | n
     periodEnd: day(s.current_period_end),
     nextCharge,
     monthlyRate,
+    currency: s.currency,
     autoCharge,
     paymentMethod: s.payment_method,
     card: s.card_last4

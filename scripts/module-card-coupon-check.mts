@@ -30,7 +30,7 @@ check("éves fiók: a kedvezményes szám mellett nincs „/év”", !/3 670 Ft\
 
 const src = readFileSync(new URL("../src/server/adminViews.ts", import.meta.url), "utf8");
 const shop = src.slice(src.indexOf("const shopPriceChip"), src.indexOf("const shopPriceChip") + 900);
-check("a bolt kártyája a couponCardPrice-t hívja", /couponCardPrice\(m\.priceMonthly, coupon\.percent, annualMult, lang\)/.test(shop), "nincs bekötve");
+check("a bolt kártyája a couponCardPrice-t hívja", /couponCardPrice\(m\.priceMonthly, coupon\.percent, annualMult, lang(?:, [^)]+)?\)/.test(shop), "nincs bekötve");
 check("kupon nélkül a kártya változatlan (priceForm, „+”)", /if \(!coupon \|\| m\.priceMonthly <= 0\)\s*\n\s*return `<span class="adm-price">\$\{priceForm\(m\.priceMonthly, true\)\}<\/span>`;/.test(shop), "megváltozott");
 
 console.log(`\nmodule-card-coupon-check: ${pass} zöld, ${failures} bukás`);

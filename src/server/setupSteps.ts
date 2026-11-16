@@ -13,6 +13,8 @@
 import { normaliseFeedUrl, SYNC_MSG, syncCalendarLink } from "../booking/sync.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
+import { currencySign, formatMoney, minorDigits } from "../text/money.js";
+import { currencySymbol } from "../text/currencyName.js";
 import { addCalendarLink, EXPORT_PORTALS, getExportFeedUrl } from "../tenant/availability.js";
 import { AMENITY_CATALOG, composeAmenities } from "../tenant/amenityCatalog.js";
 import { saveTenantContact, saveTenantContent } from "../tenant/editor.js";
@@ -119,14 +121,51 @@ async function saveConfig(env: StepEnv, moduleId: string, patch: Record<string, 
   return r.ok ? {} : { error: r.errors.join(" ") };
 }
 
-/** Normalised price: spaces, dots and "Ft" are fine; decimals are not. */
-export function parsePrice(raw: string, lang: string): { value: number | null; error?: string } {
+/**
+ * Normalised price in the SITE's currency (ADR-XXXX): spaces, group dots and the currency's
+ * own code/sign are fine. HUF keeps its exact old rule (whole forints, the 1000 floor that
+ * catches a price typed in euros). Another currency has no forint floor; a decimal is read
+ * as such, but the stored room price is a whole unit, so a real fraction is refused with a
+ * plain sentence rather than rounded behind the owner's back.
+ */
+export function parsePrice(raw: string, lang: string, currency: string): { value: number | null; error?: string } {
+  if (currencySign(currency) !== "Ft") return parseForeignPrice(raw, lang, currency);
   const s = raw.replace(/ft|huf/gi, "").replace(/[\s. ]/g, "");
   if (!s) return { value: null, error: T(lang, "Írjon be egy összeget, vagy jelölje be: „Ennél nem adok meg árat”.") };
   if (!/^\d+$/.test(s)) return { value: null, error: T(lang, "Csak számot írjon (pl. 25 000).") };
   const v = Number(s);
   if (v < 1000) return { value: null, error: T(lang, "Ez nagyon kevés egy éjszakára — biztos, hogy forintban írta?") };
   if (v > 2000000) return { value: null, error: T(lang, "Ez szokatlanul sok egy éjszakára — nézze meg a nullákat.") };
+  return { value: v };
+}
+
+function parseForeignPrice(raw: string, lang: string, currency: string): { value: number | null; error?: string } {
+  const strip = [currency, currencySign(currency), currencySymbol(currency, lang)]
+    .filter(Boolean)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  let s = raw.replace(new RegExp(strip.join("|"), "gi"), "").replace(/[\s  ']/g, "");
+  if (!s) return { value: null, error: T(lang, "Írjon be egy összeget, vagy jelölje be: „Ennél nem adok meg árat”.") };
+  // A trailing ",dd" / ".dd" (up to the currency's minor digits) is the decimal part; any
+  // other dot or comma is a group separator ("1.890", "1,890").
+  const digits = minorDigits(currency) ?? 0;
+  let frac = "";
+  const m = digits ? new RegExp(`[.,](\\d{1,${digits}})$`).exec(s) : null;
+  if (m) {
+    frac = m[1]!;
+    s = s.slice(0, m.index);
+  }
+  s = s.replace(/[.,]/g, "");
+  if (!/^\d+$/.test(s)) return { value: null, error: T(lang, "Csak számot írjon (pl. 25 000).") };
+  if (/[1-9]/.test(frac)) {
+    return {
+      value: null,
+      error: T(lang, "Egész összeget írjon, tizedes nélkül (pl. {example}).", {
+        example: formatMoney(Math.round(Number(`${s}.${frac}`)), currency, lang),
+      }),
+    };
+  }
+  const v = Number(s);
+  if (v <= 0) return { value: null, error: T(lang, "Írjon be egy összeget, vagy jelölje be: „Ennél nem adok meg árat”.") };
   return { value: v };
 }
 
@@ -275,14 +314,21 @@ function pricingSteps(env: StepEnv): SetupStep[] {
       lead: units.length > 1 ? T(lang, "Szobánként külön ár — a vendég annak az árát látja, amit kivesz.") : T(lang, "Az egész szállás ára egy éjre. Később szezononként is módosíthatja."),
       writes: "setBasePrice/setUnitPriceOnRequest",
       render: () =>
-        textField("amount", T(lang, "{name} — ár / éj (Ft)", { name: u.name }), base ? String(base.amount) : "", { placeholder: T(lang, "pl. 25 000") }) +
+        textField(
+          "amount",
+          currencySign(ctx.siteCurrency) === "Ft"
+            ? T(lang, "{name} — ár / éj (Ft)", { name: u.name })
+            : T(lang, "{name} — ár / éj ({cur})", { name: u.name, cur: currencySymbol(ctx.siteCurrency, lang) }),
+          base ? String(base.amount) : "",
+          { placeholder: T(lang, "pl. 25 000") },
+        ) +
         check("por", "1", u.priceOnRequest, T(lang, "Ennél nem adok meg árat"), T(lang, "A vendég árajánlatot kér, Ön válaszol neki.")),
       save: async (e, form) => {
         if (form.get("por") === "1") {
           await setUnitPriceOnRequest(u.id, true);
           return {};
         }
-        const p = parsePrice(form.get("amount") ?? "", lang);
+        const p = parsePrice(form.get("amount") ?? "", lang, ctx.siteCurrency);
         if (p.error) return { error: p.error };
         await setBasePrice(u.id, p.value);
         if (u.priceOnRequest) await setUnitPriceOnRequest(u.id, false);

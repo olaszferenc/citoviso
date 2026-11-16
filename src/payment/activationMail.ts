@@ -13,6 +13,7 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { tenantSiteUrl } from "../domains.js";
 import { issuePasswordToken, passwordLinkUrl } from "../auth/passwordLink.js";
+import { regionOfTenant } from "./orderRegion.js";
 import { buildActivationEmail, type OwnerDomainView } from "../email/activationEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
@@ -131,7 +132,8 @@ export async function sendActivationMail(
       username: user.username,
       setPasswordUrl: token ? passwordLinkUrl(token, lang) : null,
       renewal: await renewalOf(row.tenantId),
-      currency: pay?.currency ?? "HUF",
+      // ADR-XXXX: the payment's currency, else the tenant's own region — never a default.
+      currency: pay?.currency ?? (await regionOfTenant(row.tenantId)).currency,
     });
     await getEmailSender().send(msg);
     // ADR-0084: logged AFTER the send; the one-time link is masked in the logged copy.

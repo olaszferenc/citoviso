@@ -1098,6 +1098,8 @@ export interface OrderIntentView {
    *  closes an unpaid earlier one (the buyer came back and bought). */
   readonly kind: string;
   readonly price: number | null;
+  /** ADR-XXXX: ISO 4217 of `price` (the order's own currency, ADR-0443). */
+  readonly currency: string;
   readonly billingPeriod: string;
   readonly modules: string[];
   readonly status: string;
@@ -1344,6 +1346,7 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
       "order_intent.id as id",
       "order_intent.kind as kind",
       "order_intent.price as price",
+      "order_intent.currency as currency",
       "order_intent.billing_period as billingPeriod",
       "order_intent.modules as modules",
       "order_intent.status as status",
@@ -1360,6 +1363,7 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
     id: r.id,
     kind: r.kind,
     price: r.price,
+    currency: r.currency,
     billingPeriod: r.billingPeriod,
     modules: (r.modules as unknown as string[]) ?? [],
     status: r.status,

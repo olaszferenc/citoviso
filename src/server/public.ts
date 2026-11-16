@@ -98,6 +98,7 @@ import { bookingSetupPage, bookingSetupQuestions } from "./bookingSetupViews.js"
 import { capacityError, overCapacity, siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
+import { countryOfTenant } from "../tenant/siteCountry.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
@@ -1937,6 +1938,7 @@ async function serveAdmin(
                 errors: contactErrorsFrom(new URL(req.url ?? "/", "http://x").searchParams),
                 failed: new URL(req.url ?? "/", "http://x").searchParams.getAll("pe").includes("save"),
                 lang: content?.lang ?? "hu",
+                phoneRules: await countryOfTenant(session.tenantId),
               },
             }
           : {}),
@@ -1945,6 +1947,8 @@ async function serveAdmin(
         values: cfg.config,
         canRestore,
         priceMonthly: active.priceMonthly,
+        // ADR-XXXX: the module fee is in the tenant's own currency (its region's).
+        ...(modules.currency ? { priceCurrency: modules.currency } : {}),
         // Same rule as the module chips: if a price is shown, it is shown in the
         // period the account is billed in (0 = monthly account, no conversion).
         annualMult:
@@ -2270,6 +2274,7 @@ async function serveAdmin(
           errors: contactErrorsFrom(params),
           failed: params.getAll("pe").includes("save"),
           lang: content?.lang ?? "hu",
+          phoneRules: await countryOfTenant(session.tenantId),
         }
       : null;
   } else if (tab === "penztarca") {
@@ -2670,8 +2675,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const next = safeAdminNext(form.get("next"));
     // ADR-0277: failed-attempt throttle per IP, checked BEFORE the password.
+    // ADR-XXXX: the language the login page was shown in (its hidden field), else Hungarian.
+    const postedLang = uiLangs().includes(form.get("lang") ?? "") ? (form.get("lang") as string) : DEFAULT_LANG;
     if (loginLocked("tenant", req)) {
-      const lang = await prepareMailLang(DEFAULT_LANG);
+      const lang = await prepareMailLang(postedLang);
       return send(
         res,
         429,
@@ -4734,6 +4741,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         penaltyBase: quote.penaltyBase,
         penaltyTotal: quote.penaltyTotal,
         buyoutPrice: quote.buyoutPrice,
+        currency: quote.currency,
         accessEndDate: quote.accessEndDate,
         // The done screen renders the RECORDED order (DB truth), never a query flag.
         done: open ? { takeDomain: open.takeDomain, total: open.total } : null,

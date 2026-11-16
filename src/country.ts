@@ -53,6 +53,9 @@ export interface CountryConfig {
   readonly legalPack: string;
   // Fizetés (0135): the gateway that charges this country's buyers (payment/providers.ts).
   readonly paymentProvider: string;
+  // Tartalom (0137): which tourist-tax rule the guest's booking widget may state.
+  // 'hu' = the Hungarian rule (payable on site, under-18 exempt); 'none' = no rule is stated.
+  readonly touristTaxModel: "hu" | "none";
 }
 
 /** The columns, in the order the snapshot query and the kysely refresh both read them. */
@@ -62,6 +65,7 @@ const COLUMNS = [
   "browser_locale", "accept_language", "dial_code", "trunk_prefix", "mobile_prefixes",
   "phone_plan", "phone_nsn_min", "phone_nsn_max", "outreach_channels", "send_window_from",
   "send_window_to", "daily_quota", "invoice_lang", "legal_pack", "payment_provider",
+  "tourist_tax_model",
 ] as const;
 
 type Row = Record<(typeof COLUMNS)[number], unknown>;
@@ -102,6 +106,7 @@ function toConfig(r: Row): CountryConfig {
     invoiceLang: String(r.invoice_lang),
     legalPack: String(r.legal_pack),
     paymentProvider: String(r.payment_provider),
+    touristTaxModel: r.tourist_tax_model === "hu" ? "hu" : "none",
   };
 }
 

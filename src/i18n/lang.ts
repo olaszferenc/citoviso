@@ -119,3 +119,12 @@ export function siteLangs(): string[] {
 export function uiLangs(): string[] {
   return [...new Set([DEFAULT_LANG, ...UI_LANGS, ...allCountriesSync().map((c) => c.defaultLang)])];
 }
+
+/**
+ * The Intl locale a date/number of the reader's language is formatted with (ADR-XXXX): the
+ * Hungarian reader keeps the exact "hu-HU" every screen used before; any other language its
+ * own tag ("cs" → "1. 12. 2026"). One place, so no view hard-codes a locale again.
+ */
+export function dateLocale(lang?: string | null): string {
+  return !lang || lang === DEFAULT_LANG ? "hu-HU" : lang;
+}

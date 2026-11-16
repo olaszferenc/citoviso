@@ -13,7 +13,7 @@ import { db } from "../db/client.js";
 import { budapestMidnight, budapestYear } from "../text/budapestTime.js";
 import { huArticleLower } from "../hu.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor, formatMoney } from "../text/money.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
 
 /** Per-currency amount map (a document carries its OWN currency — summing across
@@ -988,6 +988,7 @@ export async function getPartnerTimeline(partnerId: string): Promise<TimelineEve
         .select([
           "id",
           "price",
+          "currency",
           "billing_period",
           "modules",
           "status",
@@ -1006,6 +1007,7 @@ export async function getPartnerTimeline(partnerId: string): Promise<TimelineEve
         .select([
           "id",
           "price",
+          "currency",
           "billing_period",
           "modules",
           "status",
@@ -1029,7 +1031,7 @@ export async function getPartnerTimeline(partnerId: string): Promise<TimelineEve
         detail: [
           `${mods.length} modul`,
           o.billing_period === "annual" ? "éves" : "havi",
-          o.price != null ? money(o.price, "HUF") : "",
+          o.price != null ? formatMinor(o.price, o.currency) : "",
           o.domain_name ?? "",
         ]
           .filter(Boolean)

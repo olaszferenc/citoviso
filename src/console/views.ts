@@ -52,7 +52,8 @@ import {
 } from "./leadFilters.js";
 import { portalPhotoCount, profilesAwaitingApproval } from "../scraper/portalPhotos.js";
 import type { ContactCandidate, PortalListing, QualifiedLead } from "../scraper/types.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor, formatMoney, minorToMajor } from "../text/money.js";
+import { regionOfTenant } from "../payment/orderRegion.js";
 import {
   BOOKING_SILENT_HOURS,
   CLIENT_FILTERS,
@@ -77,8 +78,10 @@ import path from "node:path";
 const ASSET_V = String(Date.now());
 
 /** HUF formatter (thin-space grouping) for the operator views. */
-function fmtHuf(n: number): string {
-  return formatMoney(n, "HUF");
+// ADR-XXXX: our money (orders, payments) is a minor-unit integer of ITS currency (ADR-0443);
+// a call without a currency is the home region's (what every one of these lines printed).
+function fmtHuf(n: number, currency?: string | null): string {
+  return formatMinor(n, currency || getCurrency(HU_PRICING_REGION));
 }
 
 // Module catalog (05-MODULES.md) offered at conversion. Single-sourced in
@@ -141,7 +144,7 @@ import {
   type FreeTrialConfig,
 } from "../trial/config.js";
 import { formatDay } from "../text/day.js";
-import { computeMonthly, currentPresets, getModulePrice } from "../pricing.js";
+import { computeMonthly, currentPresets, getCurrency, getModulePrice, HU_PRICING_REGION } from "../pricing.js";
 import { ic, icAdmin } from "../ui/icons.js";
 import { lockup, markDataUri } from "../ui/brand.js";
 import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, type NavCounts, type NavNode } from "./nav.js";
@@ -158,7 +161,7 @@ import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
 import { config } from "../config.js";
-import { langName, uiLangs } from "../i18n/lang.js";
+import { langName, uiLangs, dateLocale } from "../i18n/lang.js";
 import { packGapSync } from "../i18n/packs.js";
 import { consoleAi, consoleLang, consoleNav } from "./i18nCtx.js";
 import {
@@ -2449,7 +2452,7 @@ export function orderIntentsPanel(
       const stateCls = st.key === "paid" ? "approved" : st.key === "failed" ? "rejected" : st.key === "pending" || st.key === "submitted" ? "generated" : "";
       return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
-          <span><b style="font-size:16px">${o.price != null ? fmtHuf(o.price) : "?"}</b>
+          <span><b style="font-size:16px">${o.price != null ? fmtHuf(o.price, o.currency) : "?"}</b>
             <span class="mut">/ ${per}</span>
             <span class="pill ${stateCls}" style="margin-left:6px">${esc(stateWord)}</span></span>
           <span class="mut small">${esc(when)}</span>
@@ -2541,6 +2544,8 @@ export function payMockPage(
    *  test card pays (the Pénztárca shows its mask afterwards); `verification` — a
    *  card_update: the amount is only HELD and released, never charged. */
   wallet?: { readonly cardPick?: boolean; readonly verification?: boolean; readonly cards?: readonly { id: string; label: string }[] },
+  /** ADR-XXXX: ISO 4217 of `amount` (the payment's own currency; absent = home region). */
+  currency?: string | null,
 ): string {
   const lang = consoleLang();
   // ADR-0226: the card picker rides INSIDE the "Fizetek" form, so the choice
@@ -2575,8 +2580,8 @@ export function payMockPage(
       ? `<div class="pay-act">
       <form method="post" action="/pay/mock/${esc(ref)}/paid">${cardPicker}<button type="submit">${
         wallet?.verification
-          ? `${T(lang, "Megerősítem a kártyát")} — ${T(lang, "{sum}, azonnal visszautalva", { sum: fmtHuf(amount) })}`
-          : `${T(lang, "Fizetek")} — ${fmtHuf(amount)}`
+          ? `${T(lang, "Megerősítem a kártyát")} — ${T(lang, "{sum}, azonnal visszautalva", { sum: fmtHuf(amount, currency) })}`
+          : `${T(lang, "Fizetek")} — ${fmtHuf(amount, currency)}`
       }</button></form>
       <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/${wallet?.verification ? "failed" : "cancelled"}"><button type="submit">${
         wallet?.verification ? T(lang, "A bank elutasítja (próba)") : T(lang, "Mégsem fizetek most")
@@ -2599,7 +2604,7 @@ export function payMockPage(
         : `<div class="pay-act">
       <form method="post" action="/pay/mock/${esc(ref)}/paid"><button type="submit">${
         status === "cancelled" ? T(lang, "Folytatom — Fizetek") : T(lang, "Újra próbálom — Fizetek")
-      } ${fmtHuf(amount)}</button></form>
+      } ${fmtHuf(amount, currency)}</button></form>
     </div>`;
   // ⛔ THE STATE MUST BE VISIBLE, not spelled in a raw DB token (Elek FK-005b H4,
   // 2026-09-11): stepping BACK after a decline gave a screen byte-identical to the
@@ -2645,7 +2650,7 @@ export function payMockPage(
           ? T(lang, "Kártya-megerősítés — az összeget azonnal visszautaljuk")
           : T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }),
     )}
-    <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>
+    <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount, currency)}</b> ${perLabel}</p>
     ${banner}
     <p class="mut small" data-pay-status="${esc(status)}">${T(lang, "státusz: {status}", { status: esc(statusWord) })}</p>
     ${actions}
@@ -2843,7 +2848,7 @@ export async function multilangPayResultPage(
   const body = `<div class="panel" style="max-width:560px;margin:48px auto">
     <h2 style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
     <p class="q-good" style="margin:0 0 14px;font-size:15px"><b>${T(lang, "✓ Sikeres fizetés")}</b>${
-      amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(amount) }) : ""
+      amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(amount, (await regionOfTenant(tenantId)).currency) }) : ""
     }</p>
     <p style="margin:0 0 10px">${
       done
@@ -2897,6 +2902,8 @@ function subscriptionBox(
   info?: {
     contactEmail?: string | null;
     amount?: number | null;
+    /** ADR-XXXX: ISO 4217 of `amount` / `renewal.amount` (absent = home region). */
+    currency?: string | null;
     renewal?: { readonly date: string; readonly amount: number; readonly period: "monthly" | "annual" } | null;
   },
   /**
@@ -2912,7 +2919,7 @@ function subscriptionBox(
   const nextCharge = r
     ? payRow(
         T(lang, "Következő terhelés"),
-        `${esc(formatDay(r.date, lang))} — ${fmtHuf(r.amount)} ${per}`,
+        `${esc(formatDay(r.date, lang))} — ${fmtHuf(r.amount, info?.currency)} ${per}`,
       )
     : payRow(
         T(lang, "Következő terhelés"),
@@ -2924,7 +2931,7 @@ function subscriptionBox(
   // the amount stands in the card header right above it (avoids two divisors on
   // one screen); the caller decides with `showPaid`.
   return `<p class="pd-sect">${T(lang, "Az előfizetése")}</p>
-      ${showPaid && info?.amount ? payRow(T(lang, "Most fizetett"), fmtHuf(info.amount)) : ""}
+      ${showPaid && info?.amount ? payRow(T(lang, "Most fizetett"), fmtHuf(info.amount, info.currency)) : ""}
       ${nextCharge}
       ${payRow(T(lang, "Megújulás"), T(lang, "Automatikus, a megadott kártyáról"))}
       ${payRow(T(lang, "ÁFA"), T(lang, "Alanyi adómentes — az ár ÁFÁ-t nem tartalmaz"))}
@@ -3117,12 +3124,12 @@ function payDarkStyles(): string {
  */
 function cardHead(
   lang: string,
-  info: { amount?: number | null; productName?: string | null; businessName?: string | null } | undefined,
+  info: { amount?: number | null; currency?: string | null; productName?: string | null; businessName?: string | null } | undefined,
   pill: string,
 ): string {
   const what = (info?.productName ?? info?.businessName ?? "").trim();
   return `${pill}
-    <div class="pd-sum">${info?.amount ? fmtHuf(info.amount) : T(lang, "A terhelés megtörtént")}</div>
+    <div class="pd-sum">${info?.amount ? fmtHuf(info.amount, info.currency) : T(lang, "A terhelés megtörtént")}</div>
     ${what ? `<div class="pd-what">${T(lang, "Citoviso honlap — {name}", { name: esc(what) })}</div>` : ""}`;
 }
 
@@ -3317,7 +3324,7 @@ export function payResultPage(
   // The buyer must SEE that the charge went through — an explicit confirmation
   // line, not just an implied "thank you" (owner feedback, 2026-08-21).
   const paidLine = `<p class="q-good" style="margin:0 0 14px;font-size:15px"><b>${T(lang, "✓ Sikeres fizetés")}</b>${
-    info?.amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(info.amount) }) : T(lang, " — a terhelés megtörtént.")
+    info?.amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(info.amount, info.currency) }) : T(lang, " — a terhelés megtörtént.")
   }</p>`;
   // The same statement in the approved card header (contract ⑥): the pill says the
   // charge succeeded, the amount stands under it, and one line names WHAT was paid
@@ -3354,15 +3361,15 @@ export function payResultPage(
               contentType: "Product",
               name: info.productName || "Citoviso",
               unit: "db",
-              unitPrice: info.amount,
-              totalItemPrice: info.amount,
+              unitPrice: minorToMajor(info.amount, info.currency),
+              totalItemPrice: minorToMajor(info.amount, info.currency),
               currency: info.currency,
               quantity: 1,
             },
           ],
           currency: info.currency,
           step: 3,
-          revenue: info.amount,
+          revenue: minorToMajor(info.amount, info.currency),
           ...(info.ref ? { orderNumber: info.ref } : {}),
         })
       : "";
@@ -3421,7 +3428,7 @@ export function payResultPage(
         <span class="pay-state pay-state--neutral">${T(lang, "Fizetés megszakítva")}</span>
         <h2>${T(lang, "Megszakította a fizetést")}</h2>
         <p style="margin:0 0 14px"><b>${T(lang, "Nem terheltünk semmit.")}</b> ${T(lang, "A megrendelése megmaradt — amikor szeretné, innen folytathatja.")}</p>
-        ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount))}` : "" }))}
+        ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount, info.currency))}` : "" }))}
         ${go}
         ${refLine}
         ${calmRow}</div>`,
@@ -3434,7 +3441,7 @@ export function payResultPage(
         <span class="pay-state pay-state--bad">${T(lang, "Fizetés elutasítva")}</span>
         <h2 class="q-bad">${T(lang, "A fizetés nem sikerült")}</h2>
         <p style="margin:0 0 14px"><b>${T(lang, "Nem történt terhelés.")}</b> ${T(lang, "A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.")}</p>
-        ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount))}` : "" }))}
+        ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount, info.currency))}` : "" }))}
         ${retry}
         ${refLine}
         ${exitRow}</div>`,
@@ -5613,7 +5620,7 @@ function bookingTable(c: LeadClientView, lang: string): string {
           ? T(lang, "{n} fő (ebből {k} gyerek)", { n: b.guests, k: b.children })
           : T(lang, "{n} fő", { n: b.guests });
       const meal = b.mealPlan && isMealPlanId(b.mealPlan) ? mealPlanLabel(lang, b.mealPlan) : "–";
-      const money = b.total != null ? formatMoney(b.total, b.currency ?? "HUF", lang) : "–";
+      const money = b.total != null ? formatMoney(b.total, b.currency ?? LEGACY_CURRENCY, lang) : "–";
       const age = b.status === "pending" ? T(lang, " · {n} órája", { n: b.ageHours }) : "";
       return (
         `<tr data-cit-booking="${esc(b.status)}">` +
@@ -9226,6 +9233,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
 
 import type { ScrapeJobState } from "./scrapeJob.js";
 import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 /** The operator's wall clock. The PRODUCTION machine runs on UTC (timedatectl:
  *  "Local time: … UTC"), so a bare toLocaleString() printed 6:49:59 for a scrape
@@ -9236,7 +9244,7 @@ import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
 const CONSOLE_TZ = APP_TZ; // the operator console is platform-side (ADR-0290)
 
 function consoleDateTime(d: Date | string, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -9248,7 +9256,7 @@ function consoleDateTime(d: Date | string, lang: string): string {
 }
 
 function consoleTime(d: Date | string, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+  return new Intl.DateTimeFormat(dateLocale(lang), {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",

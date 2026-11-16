@@ -11,7 +11,8 @@
 
 import { db } from "../db/client.js";
 import { T } from "../i18n/mail.js";
-import { formatNumber } from "../text/money.js";
+import { currencySign, formatMinor, formatMoney, formatNumber } from "../text/money.js";
+import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
 import {
   bookableOf,
   guestSentence,
@@ -139,7 +140,7 @@ export function previewOf(ctx: SetupCtx, lang: string, siteName: string, host: s
       return {
         name: u.name,
         cap: u.capacity,
-        price: !pricing ? null : ps === "on_request" ? T(lang, "árajánlat") : base ? T(lang, "{p} Ft / éj", { p: formatNumber(base.amount, lang) }) : ps === "none" ? T(lang, "nincs ár") : T(lang, "időszakos ár"),
+        price: !pricing ? null : ps === "on_request" ? T(lang, "árajánlat") : base ? (currencySign(ctx.siteCurrency) === "Ft" ? T(lang, "{p} Ft / éj", { p: formatNumber(base.amount, lang) }) : T(lang, "{p} / éj", { p: formatMoney(base.amount, ctx.siteCurrency, lang) })) : ps === "none" ? T(lang, "nincs ár") : T(lang, "időszakos ár"),
         priceMissing: pricing && ps === "none",
       };
     }),
@@ -337,7 +338,7 @@ export async function walkPost(o: {
     const keep = mv.modules.filter((m) => m.active && !m.cancelAtPeriodEnd && !m.spine && !m.supersededBy).map((m) => m.id);
     const add = res.cart.filter((id) => !keep.includes(id)).map((id) => {
       const m = mv.modules.find((x) => x.id === id);
-      return { id, name: m ? T(lang, m.label) : id, price: m ? T(lang, "{p} Ft/hó", { p: formatNumber(m.priceMonthly, lang) }) : "" };
+      return { id, name: m ? T(lang, m.label) : id, price: m ? modulePriceMonthly(m.priceMonthly, mv.currency, lang) : "" };
     });
     return { html: cartHandoffPage({ lang, keep, add }), rerender: false };
   }
@@ -381,4 +382,13 @@ export async function walkWanted(tenantId: string, siteId: string, lang: string)
 
 export async function markWalkSeen(siteId: string): Promise<void> {
   await setProgress(siteId, "_welcome", { completed: true });
+}
+
+/** ADR-XXXX: a module fee per month in the tenant's own currency (its region's, minor units).
+ *  The forint keeps its exact old sentence ("1 990 Ft/hó"). */
+function modulePriceMonthly(minor: number, currency: string | undefined, lang: string): string {
+  const cur = currency || getCurrency(HU_PRICING_REGION);
+  return currencySign(cur) === "Ft"
+    ? T(lang, "{p} Ft/hó", { p: formatNumber(minor, lang) })
+    : T(lang, "{price}/hó", { price: formatMinor(minor, cur, lang) });
 }

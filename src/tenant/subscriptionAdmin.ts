@@ -23,6 +23,10 @@ export interface NextInvoiceItem {
 
 export interface SubscriptionAdminData {
   readonly status: "active" | "past_due" | "frozen" | "cancelled";
+  /** ADR-XXXX: the subscription's pricing region + ISO 4217 of every amount here. Optional so
+   *  the hand-made fixtures keep compiling; absent = the HU region (HUF). */
+  readonly region?: string;
+  readonly currency?: string;
   /** ISO date of the next renewal (current period end). */
   readonly periodEnd: string;
   /** Day-of-month of the anchor (the tenant's renewal day). */
@@ -186,7 +190,7 @@ export async function getSubscriptionAdmin(
   if (!sub) return null;
   await loadPricing();
   // ADR-0443: the subscription's own region — the next invoice is in its currency.
-  const { region } = await regionOfTenant(tenantId);
+  const { region, currency } = await regionOfTenant(tenantId);
 
   // The next invoice = base + every module that will still be subscribed at the
   // renewal: active, not leaving at the period end, monthly-billed, not replaced.
@@ -315,6 +319,8 @@ export async function getSubscriptionAdmin(
 
   return {
     status: sub.status,
+    region,
+    currency,
     periodEnd: isoDate(periodEndDate),
     renewDay: new Date(sub.anchor_date as unknown as string).getDate(),
     nextInvoiceTotal: total,

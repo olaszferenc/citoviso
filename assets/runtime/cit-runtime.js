@@ -55,8 +55,19 @@
     });
   }
 
+  /* ADR-XXXX (ADR-0290): "today" is the ACCOMMODATION's day — the booking slot carries its
+   * zone (data-cit-tz). Without it (an older page, the mock) the old UTC day stands. */
   function todayISO() {
     var d = new Date();
+    var slot = document.querySelector("[data-cit-tz]");
+    var tz = slot && slot.getAttribute("data-cit-tz");
+    if (tz) {
+      try {
+        var p = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
+        var g = function (t) { for (var i = 0; i < p.length; i++) if (p[i].type === t) return p[i].value; return ""; };
+        return g("year") + "-" + g("month") + "-" + g("day");
+      } catch (e) { /* unknown zone → the UTC day below */ }
+    }
     return d.toISOString().slice(0, 10);
   }
 
@@ -118,6 +129,11 @@
     var ifaRaw = slot.getAttribute("data-cit-ifa");
     var ifaDeclared = ifaRaw !== null && ifaRaw !== "";
     var ifaPerPersonNight = ifaDeclared ? Number(ifaRaw) || 0 : 0;
+    /* ADR-XXXX (country row tourist_tax_model): "none" = the lodging's country has no
+     * tourist-tax rule we may state. Then an undeclared tax is not mentioned, and a declared
+     * amount is itemised for every guest, without the Hungarian under-18 exemption. Absent
+     * attribute = the Hungarian rule, exactly as before. */
+    var taxRuleNone = slot.getAttribute("data-cit-tax-rule") === "none";
     var priceIncludes = slot.getAttribute("data-cit-includes") || "";
     /* ADR-0378 — meal plans (approved plan tenant-admin/ellatas, B ⑧). The server hands the
      * plans a guest can choose (base first, names and price texts already in the page's
@@ -573,7 +589,7 @@
      * guest counted with the stepper are left out of the sum; the sentence says the rule and
      * what the sum did with it — it never claims more than the figure (a 15-year-old counted
      * as an adult is still IN the sum, so the sentence says that one is exempt too). */
-    function taxPayers(g, k) { return Math.max(1, g - Math.max(0, Math.min(k || 0, g - 1))); }
+    function taxPayers(g, k) { return taxRuleNone ? Math.max(1, g) : Math.max(1, g - Math.max(0, Math.min(k || 0, g - 1))); }
     function minorsHtml() {
       var age = kidAge();
       if (!age) return tr("A 18 év alatti vendég mentes az adó alól; a fenti összeg minden vendéggel számol.");
@@ -583,6 +599,7 @@
     }
     function onSiteHtml(declared, per, g, n, cur) {
       if (declared && !per) return "";
+      if (!per && taxRuleNone) return "";
       if (!per) {
         return '<div class="cit-book__later">' +
           tr("A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő — az összegéről a szállásadó tájékoztatja.") +
@@ -596,7 +613,7 @@
           .replace("{n}", esc(String(n)))
           .replace("{sum}", moneyHtml(per * g * n, cur)) +
         "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") +
-        "<br>" + esc(minorsHtml()) + "</div>";
+        (taxRuleNone ? "" : "<br>" + esc(minorsHtml())) + "</div>";
     }
     function renderQuote(a, b, n) {
       var el = form.querySelector("[data-quote]");
