@@ -37,13 +37,15 @@ A bal menüben **„CRM”** → **„Viselkedés-üzenetek”**.
 
 - **Mikor:** az utolsó aktivitása után kb. 20–30 perccel (a rendszer 10 percenként néz rá; ha a lead
   közben újra megnyitja a tervet, az üzenet vár), **hétköznap 8 és 20 óra között**. Ami este vagy hétvégén történik, az a következő hétköznap reggel
-  megy; ami 4 napnál régebbi, az már nem megy ki.
+  megy; ami 10 napnál régebbi, az már nem megy ki.
 - **Mit:** a lépéshez illő egyetlen mondatot, egyetlen linkkel a terv megfelelő részére:
   visszajött → „Kérdése van?” rész; árnézés → az ár és hogy mi van benne; próba-gomb → az egy
   kattintásos indítás. Kedvezményt, határidőt, „láttuk, hogy megnézte” mondatot nem tartalmaz.
 - **Csatorna:** ha a hideg megkeresés a mobiljára ment, SMS (ékezet nélkül, legfeljebb 2 szelet);
   ha a hideg levél ment ki, e-mail a helyi ügyfélsegítő nevében, leiratkozó linkkel. Ha egyik sem,
   nem kap üzenetet (a **„Leállítva”** alatt látod, „nincs csatorna” okkal).
+- **Mérés:** az üzenet linkje saját jelet visel (`/?b`), ezért aki ebből nyitotta meg a tervet, az a
+  **„Riport”** **„Honnan nyitották”** paneljén külön, a **„Viselkedés-üzenet”** sorban látszik.
 
 ## Ki NEM kap üzenetet
 
@@ -54,7 +56,7 @@ mobilszáma egy másik leadnél már kapott üzenetet; és akinek a terve nincs 
 Néhány technikai ok is leállít (teszt, kizárt lead, archivált link). Amit a rendszer már a lépés
 után kizár, azt a **„Leállítva”** szűrő az okával mutatja. Kivétel: ha a lead terve még nincs jóváhagyva,
 azt a rendszer csak a küldés pillanatában veszi észre. Az ilyen lead nem kap üzenetet, és legfeljebb
-4 napig a **„vár”** számban marad; utána a **„Leállítva”** alatt látszik, „a kiváltó 4 napnál
+10 napig a **„vár”** számban marad; utána a **„Leállítva”** alatt látszik, „a kiváltó 10 napnál
 régebbi” okkal.
 
 ## Mit tegyél

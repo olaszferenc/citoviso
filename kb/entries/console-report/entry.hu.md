@@ -88,7 +88,8 @@ leadet mutatja.
   számít: ő a **„Próba”**, a **„Rendelés”** és a **„Fizetve”** oszlopban is ott van.
 - **„Honnan nyitották”**: melyik üzenet linkjére kattintott a lead — **E-mail**, **SMS**,
   **Viber**, **WhatsApp**, **„Utánkövető levél”** (a nem-nyitóknak küldött egyszeri levél, lásd lent),
-  vagy **„Nem eldönthető”**. Felül egy sáv a megnyitó leadek
+  **„Viselkedés-üzenet”** (a második megkeresés, amit a lead egy lépése indít el: visszajött, megnézte
+  az árat vagy a próba-gombot), vagy **„Nem eldönthető”**. Felül egy sáv a megnyitó leadek
   megoszlásával, alatta a táblázat: **„Kapta”** (hány lead kapta meg ezen a csatornán a linket),
   **„Megnyitotta innen”** (hány lead nyitotta meg innen), **„Arány”** (a kettő hányadosa; a
   „Nem eldönthető” sorban a megnyitók arányában, csillaggal), és asztali gépen **„Megnyitás”**
@@ -100,7 +101,7 @@ leadet mutatja.
   biztos megnyitást).
   Az **„Alap”** megmondja, mennyire biztos a szám. **„biztos”**: 2026-11-09 óta a kiküldött link
   végén egy betű jelzi a csatornát (`/?e` e-mail · `/?s` SMS · `/?m` Viber vagy WhatsApp ·
-  `/?w` a WhatsApp-utánküldés · `/?f` a nem-nyitó utánkövető levél); a lap ezt olvassa ki, és utána leveszi a címsorból, így egy
+  `/?w` a WhatsApp-utánküldés · `/?f` a nem-nyitó utánkövető levél · `/?b` a viselkedés-üzenet); a lap ezt olvassa ki, és utána leveszi a címsorból, így egy
   továbbküldött link már nem az eredeti csatornára számít. Viber és WhatsApp között a telefon a
   küldés pillanatában választ, ezért ott a küldés naplója mondja meg, melyik volt.
   **„következtetett”**: régebbi küldés, amelynek linkjén még nem volt jel — ha a megnyitás előtt
