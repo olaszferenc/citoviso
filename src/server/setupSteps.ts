@@ -156,15 +156,8 @@ function parseForeignPrice(raw: string, lang: string, currency: string): { value
   }
   s = s.replace(/[.,]/g, "");
   if (!/^\d+$/.test(s)) return { value: null, error: T(lang, "Csak számot írjon (pl. 25 000).") };
-  if (/[1-9]/.test(frac)) {
-    return {
-      value: null,
-      error: T(lang, "Egész összeget írjon, tizedes nélkül (pl. {example}).", {
-        example: formatMoney(Math.round(Number(`${s}.${frac}`)), currency, lang),
-      }),
-    };
-  }
-  const v = Number(s);
+  // ADR-XXXX (0138 tizedes szobaár): the fraction is kept — the room price stores it exactly.
+  const v = Number(frac ? `${s}.${frac}` : s);
   if (v <= 0) return { value: null, error: T(lang, "Írjon be egy összeget, vagy jelölje be: „Ennél nem adok meg árat”.") };
   return { value: v };
 }

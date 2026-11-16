@@ -28,6 +28,9 @@ import { formatMoney } from "../text/money.js";
 import { alertHouse, type HouseAlert } from "./houseAlert.js";
 import { claimOnce } from "./stallWatch.js";
 import { BOOKING_SILENT_HOURS } from "./leadClient.js";
+import { readExact } from "../booking/amount.js";
+import { formatAmount } from "../tenant/prices.js";
+import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 /** A trial older than this is history: the first sweep after the deploy must not announce old ones. */
 export const TRIAL_NOTICE_LOOKBACK_HOURS = 24;
@@ -178,7 +181,7 @@ export interface SilentBookingFacts {
 export function silentBookingMessage(f: SilentBookingFacts): { subject: string; text: string } {
   const nights = Math.round((Date.parse(`${f.dateTo}T00:00:00Z`) - Date.parse(`${f.dateFrom}T00:00:00Z`)) / 86_400_000);
   const people = `${f.guests} fő${f.children ? ` (ebből ${f.children} gyerek)` : ""}`;
-  const money = f.total != null ? ` · ${formatMoney(f.total, f.currency ?? "HUF", "hu")}` : "";
+  const money = f.total != null ? ` · ${formatAmount(f.total, f.currency ?? LEGACY_CURRENCY, "hu")}` : "";
   const at = (d: Date) => `${mmdd(budapestIsoDay(d))} ${budapestHhmm(d)}`;
   const expiry =
     f.expiresAfterHours > 0
@@ -237,7 +240,7 @@ export async function runClientNotices(
     .select([
       "booking_request.id as id", "booking_request.site_id as siteId", "booking_request.date_from as dateFrom",
       "booking_request.date_to as dateTo", "booking_request.guests as guests", "booking_request.children as children",
-      "booking_request.quoted_total as total", "booking_request.quoted_currency as currency",
+      "booking_request.quoted_total as total", "booking_request.quoted_total_exact as totalExact", "booking_request.quoted_currency as currency",
       "booking_request.created_at as createdAt", "tenant.display_name as name", "tenant.lead_id as leadId",
       "free_trial.id as trialId",
     ])
@@ -261,7 +264,7 @@ export async function runClientNotices(
         dateTo: String(b.dateTo).slice(0, 10),
         guests: Number(b.guests),
         children: b.children == null ? null : Number(b.children),
-        total: b.total == null ? null : Number(b.total),
+        total: b.total == null ? null : readExact(Number(b.total), b.totalExact),
         currency: b.currency ?? null,
         createdAt,
         ageHours: Math.floor((now.getTime() - createdAt.getTime()) / 3_600_000),

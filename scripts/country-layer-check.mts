@@ -316,7 +316,6 @@ const SURFACE_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> 
   { file: "src/text/currencyName.ts", frag: 'new Set(["HUF", "EUR"])', why: "tartalék, ha a futtatókörnyezet nem ad ISO-listát (Intl.supportedValuesOf hiánya)" },
   { file: "src/text/currencyName.ts", frag: 'if (code === "HUF") return T(lang, "forint")', why: "a meglévő magyar felirat T()-kulcsa bájtra — a HU felület nem változhat" },
   { file: "src/text/currencyName.ts", frag: 'if (code === "HUF") return T(lang, "forint (Ft)")', why: "ugyanaz (a régi „forint (Ft)” opció-felirat)" },
-  { file: "src/text/currencyName.ts", frag: 'countryCurrency ?? "HUF"', why: "ország-sor nélküli oldal = a katalógus-alapérték (moduleConfig.ts), amit minden HU-oldal eddig is kapott" },
   { file: "src/tenant/bookingSetup.ts", frag: 'Az idegenforgalmi adó 1 és 100 000 Ft között lehet.', why: "a forint-ág (currencySign === Ft) régi hibaüzenete bájtra; más pénznem saját mondatot kap" },
   { file: "src/server/bookingSetupViews.ts", frag: "Pl. 19 000 Ft egy éjszakára", why: "példa-mondat; országfüggő példa (pénznem és nagyságrend) a következő kör kozmetikai tétele" },
   { file: "src/server/bookingSetupViews.ts", frag: "Pl. 6 000 Ft / fő / éj", why: "ugyanaz (példa-mondat)" },

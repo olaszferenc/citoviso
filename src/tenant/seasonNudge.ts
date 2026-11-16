@@ -26,6 +26,7 @@ import { formatAmount } from "./prices.js";
 import { seasonRule } from "./seasonRule.js";
 import { tenantTimeZone } from "./timeZone.js";
 import { partsIn, todayIn } from "../text/zoneTime.js";
+import { readExact } from "../booking/amount.js";
 
 export const NUDGE_WINDOW_DAYS = 7;
 /** 07:00 on the accommodation's own clock (ADR-0290; it was 06:00 UTC = 07/08 in Hungary). */
@@ -88,6 +89,7 @@ export async function maintainSeasonNudges(
       "unit_price.date_from as from",
       "unit_price.date_to as to",
       "unit_price.amount as amount",
+      "unit_price.amount_exact as amountExact",
       "unit_price.season_nudged_year as nudgedYear",
       "site_unit.name as unitName",
       "site.id as siteId",
@@ -110,10 +112,10 @@ export async function maintainSeasonNudges(
     const today = todayIn(tz, now);
     const children = await db
       .selectFrom("unit_price")
-      .select(["valid_from", "amount"])
+      .select(["valid_from", "amount", "amount_exact"])
       .where("parent_id", "=", s.id)
       .execute();
-    const byYear = new Map(children.map((c) => [Number(String(c.valid_from).slice(0, 4)), c.amount]));
+    const byYear = new Map(children.map((c) => [Number(String(c.valid_from).slice(0, 4)), readExact(c.amount, c.amount_exact)]));
     const due = nudgeDue({ from: s.from!, to: s.to!, nudgedYear: s.nudgedYear }, today, (y) => byYear.has(y));
     if (!due) continue;
     // A tenant who no longer has the pricing module is not asked about prices.
@@ -140,7 +142,7 @@ export async function maintainSeasonNudges(
         label: s.label ?? "",
         from: s.from!,
         to: s.to!,
-        amount: byYear.get(due.endedYear) ?? s.amount,
+        amount: byYear.get(due.endedYear) ?? readExact(s.amount, s.amountExact),
         yesterday: due.endedOn === addDays(today, -1),
         endedOn: due.endedOn,
         nextYear: due.nextYear,

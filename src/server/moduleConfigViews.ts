@@ -3165,7 +3165,11 @@ export interface MealsFormEcho {
 
 /** "28 000" — grouped, no currency (the field shows the unit next to it). */
 function grouped(n: number): string {
-  return formatNumber(n);
+  // ADR-XXXX (0138 tizedes szobaár): a fractional price keeps its two decimals ("45,50");
+  // a whole one — every forint — is formatNumber exactly as before.
+  if (Number.isInteger(n) || !Number.isFinite(n)) return formatNumber(n);
+  const [, frac = "00"] = n.toFixed(2).split(".");
+  return `${formatNumber(Math.trunc(n))},${frac}`;
 }
 
 /** "2027. 06. 15." — the admin's full-date spelling (the dated-base row uses it too). */
@@ -3199,7 +3203,7 @@ function seasonFields(
     `<input class="citui-input" name="to" value="${esc(v.to)}" placeholder="03-01" maxlength="7" aria-label="${T(lang, "Vég (hónap-nap)")}">` +
     `</span></div>` +
     `<label class="pn-f pn-amt"><span class="pn-l">${T(lang, "Ár / éjszaka")}</span><span class="mcfg-suffix">` +
-    `<input class="citui-input" name="amount"${add ? ` type="number" min="0"` : ""} inputmode="numeric" value="${esc(v.amount)}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
+    `<input class="citui-input" name="amount"${add ? ` type="number" min="0"${cur === "Ft" ? "" : ` step="any"`}` : ""} inputmode="${cur === "Ft" ? "numeric" : "decimal"}" value="${esc(v.amount)}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
     // ADR-0049: the period carries its own minimum stay. Booking-only: without the
     // calendar nothing would ever ask for it.
     (bk
@@ -3689,7 +3693,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `<input type="hidden" name="unit" value="${esc(u.id)}">` +
         `<label class="citui-label" style="flex:1;min-width:150px"><span class="adm-vh">${T(lang, "Alapár")}</span>` +
         `<span class="mcfg-suffix" style="margin-top:5px">` +
-        `<input class="citui-input" name="amount" type="number" inputmode="numeric" min="0" ` +
+        `<input class="citui-input" name="amount" type="number" inputmode="${cur === "Ft" ? "numeric" : "decimal"}" min="0"${cur === "Ft" ? "" : ` step="any"`} ` +
         `value="${base ? base.amount : ""}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +

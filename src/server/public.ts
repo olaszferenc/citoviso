@@ -101,7 +101,8 @@ import { bookingSetupPage, bookingSetupQuestions } from "./bookingSetupViews.js"
 import { capacityError, overCapacity, siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
-import { countryOfTenant } from "../tenant/siteCountry.js";
+import { countryOfTenant, siteCurrency } from "../tenant/siteCountry.js";
+import { minorDigits } from "../text/money.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
@@ -3619,7 +3620,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         // (ADR-0193 ①) — a unit without either is created, and the flash says what
         // that means and offers both ways out.
         if (created && !presentation && (await tenantHasModule(session.tenantId, "pricing"))) {
-          const amount = parseOfferAmount(form.get("price") ?? "");
+          const amount = parseOfferAmount(form.get("price") ?? "", await siteCurrency(siteId));
           if (amount.value) {
             await setBasePrice(created, amount.value);
             newUnit = { id: created, state: "ar" };
@@ -3677,7 +3678,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (form.get("what") === "price") {
         await settleHouse(siteId);
         const house = (await getUnits(siteId)).find((u) => u.representsWhole && u.isWholeProperty);
-        const amount = parseOfferAmount(form.get("price") ?? "");
+        const amount = parseOfferAmount(form.get("price") ?? "", await siteCurrency(siteId));
         if (!house) {
           return redirect(res, `/admin?tab=modulok&m=rooms&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
         }
@@ -3877,10 +3878,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (!(await unitBelongsToSite(siteId, unit))) {
         return redirect(res, `/admin?tab=modulok&m=pricing&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       }
-      const raw = Number(form.get("amount") ?? "");
+      const cur = await siteCurrency(siteId);
+      // ADR-XXXX: a currency with decimals keeps them (45,50 €); the forint keeps its old rule.
+      const raw = minorDigits(cur) ? (parseOfferAmount(form.get("amount") ?? "", cur).value ?? 0) : Number(form.get("amount") ?? "");
       // Blank or zero clears the price: an owner must be able to take a number
       // back down, and an unset price renders nothing rather than a wrong figure.
-      await setBasePrice(unit, Number.isFinite(raw) && raw > 0 ? Math.round(raw) : null);
+      await setBasePrice(unit, Number.isFinite(raw) && raw > 0 ? (minorDigits(cur) ? raw : Math.round(raw)) : null);
     }
     // The price is a LINE on the room card and a row in the price table.
     return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
@@ -3900,7 +3903,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         form.get("label") ?? "",
         (form.get("from") ?? "").trim(),
         (form.get("to") ?? "").trim(),
-        Number(form.get("amount") ?? ""),
+        await ownerAmount(siteId, form.get("amount") ?? "", false),
         // ADR-0049: optional per-season minimum stay; empty → the module default.
         form.get("min_nights") ? Number(form.get("min_nights")) : null,
       );
@@ -3926,7 +3929,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         label: form.get("label") ?? "",
         from: form.get("from") ?? "",
         to: form.get("to") ?? "",
-        amount: Number(String(form.get("amount") ?? "").replace(/[\s.\u00a0]/g, "")),
+        amount: await ownerAmount(siteId, form.get("amount") ?? "", true),
         minNights: min ? Number(min) : null,
       });
       if (!result.ok && result.errors.length) {
@@ -4918,4 +4921,16 @@ if (process.env.CIT_SHOT !== "1") {
     }
     if (!rows.length) console.log("[i18n] nincs nem-magyar nyelvterület — csomag-ellenőrzés kész");
   })().catch((e) => console.error(`[i18n] boot-ellenőrzés hiba: ${(e as Error).message}`));
+}
+
+/**
+ * ADR-XXXX (0138 tizedes szobaár): an owner-typed season price in the site's currency. A
+ * currency with decimals takes them ("45,50"); the forint keeps the exact old reading (the
+ * season form: Number(); the edit form: group dots and spaces dropped first). NaN = invalid,
+ * which the price functions refuse with their own sentence.
+ */
+async function ownerAmount(siteId: string | null, raw: string, stripGroups: boolean): Promise<number> {
+  const cur = siteId ? await siteCurrency(siteId) : null;
+  if (cur && minorDigits(cur)) return parseOfferAmount(raw, cur).value ?? Number.NaN;
+  return Number(stripGroups ? String(raw).replace(/[\s.\u00a0]/g, "") : raw);
 }

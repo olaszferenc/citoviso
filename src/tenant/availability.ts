@@ -24,6 +24,7 @@ import { formatAmount, getUnitPrices, seasonCovers } from "./prices.js";
 import { seasonRule } from "./seasonRule.js";
 import { seasonalOnlyInForce } from "./seasonalOnly.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
+import { readExact } from "../booking/amount.js";
 
 export type DaySource = "manual" | "booking" | "ical" | "linked";
 
@@ -178,6 +179,7 @@ async function resolveDayDetails(rows: BlockRow[]): Promise<Map<string, DayDetai
               "message",
               "status",
               "quoted_total",
+              "quoted_total_exact",
               "quoted_currency",
             ])
             .where("id", "in", bookingIds)
@@ -226,7 +228,7 @@ async function resolveDayDetails(rows: BlockRow[]): Promise<Map<string, DayDetai
           // not a raw currency code the owner has to decode.
           amount:
             b.quoted_total !== null
-              ? formatAmount(b.quoted_total, b.quoted_currency ?? "HUF")
+              ? formatAmount(readExact(b.quoted_total, b.quoted_total_exact), b.quoted_currency ?? "HUF")
               : null,
           message: b.message,
           status: b.status,

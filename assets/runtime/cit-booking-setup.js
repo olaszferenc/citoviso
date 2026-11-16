@@ -36,7 +36,12 @@
     return String(s).replace(/\{(\w+)\}/g, function (m, k) { return v && v[k] != null ? v[k] : m; });
   }
   /* The ONE money rule (cit-money.js, inlined before this script) — no sixth formatter. */
-  function group(n) { return CitMoney.formatNumber(Math.round(Number(n)), D.lang); }
+  function group(n) {
+    var x = Number(n);
+    if (x === Math.round(x)) return CitMoney.formatNumber(Math.round(x), D.lang);
+    /* a fractional price keeps its two decimals ("45,50") — ADR-XXXX */
+    return CitMoney.formatNumber(Math.trunc(x), D.lang) + "," + x.toFixed(2).split(".")[1];
+  }
   /* ADR-0450: the amount keeps the currency's own decimals (a 1,50 € tax); for HUF (0
    * digits) this is exactly the old whole-forint formatMoney. */
   function money(n) {
@@ -60,7 +65,17 @@
   }
   function iso(d) { return d.toISOString().slice(0, 10); }
   function addDays(isoD, n) { var d = new Date(isoD + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return iso(d); }
-  function num(v) { var n = Number(String(v).replace(/[\s.]/g, "").replace(",", ".")); return Number.isFinite(n) ? Math.round(n) : NaN; }
+  /* ADR-XXXX (0138 tizedes szobaár): in a currency with decimals a trailing ",dd"/".dd" is
+   * the fraction (the server's parseOfferAmount rule); the forint reads exactly as before. */
+  function num(v) {
+    var d = CitMoney.minorDigits(S.currency) || 0;
+    if (!d) { var n = Number(String(v).replace(/[\s.]/g, "").replace(",", ".")); return Number.isFinite(n) ? Math.round(n) : NaN; }
+    var t = String(v).replace(/[\s\u00a0\u202f']/g, ""), frac = "", m = new RegExp("[.,](\\d{1," + d + "})$").exec(t);
+    if (m) { frac = m[1]; t = t.slice(0, m.index); }
+    t = t.replace(/[.,]/g, "");
+    if (!/^\d+$/.test(t)) return NaN;
+    return Number(frac ? t + "." + frac : t);
+  }
   function post(url, body) {
     return fetch(url, {
       method: "POST",
@@ -225,10 +240,16 @@
         opt("priceUnit", "per_night", L.unitNightOpt, L.unitNightSub, answered("unit") ? S.priceUnit : "") +
         opt("priceUnit", "per_person_night", L.unitPersonOpt, L.unitPersonSub, answered("unit") ? S.priceUnit : "") +
         opt("priceUnit", "per_stay", L.unitStayOpt, L.unitStaySub, answered("unit") ? S.priceUnit : "") +
-        '</div><label class="bs-f" for="bs-cur">' + esc(L.currency) + '</label><select class="bs-inp" id="bs-cur" data-g="currency">' +
-        (S.currencies || []).map(function (c) {
-          return '<option value="' + esc(c.code) + '"' + (S.currency === c.code ? " selected" : "") + ">" + esc(c.label) + "</option>";
-        }).join("") + "</select>";
+        '</div>' +
+        /* ADR-XXXX (tulaj 2026-11-16): no currency PICKER — a lodging outside Hungary prices in
+         * its country's currency, shown as a fact. Only a list of two or more (the Hungarian
+         * forint/euró pair, or an earlier saved choice) stays a select. */
+        ((S.currencies || []).length > 1
+          ? '<label class="bs-f" for="bs-cur">' + esc(L.currency) + '</label><select class="bs-inp" id="bs-cur" data-g="currency">' +
+            (S.currencies || []).map(function (c) {
+              return '<option value="' + esc(c.code) + '"' + (S.currency === c.code ? " selected" : "") + ">" + esc(c.label) + "</option>";
+            }).join("") + "</select>"
+          : '<p class="bs-f">' + esc(L.currency) + ": <b>" + esc(curOf(S.currency).label) + "</b></p>");
     }
     if (id === "base") {
       var ut = UNIT_TXT[S.priceUnit] || L.unitNight;

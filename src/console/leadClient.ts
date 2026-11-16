@@ -20,6 +20,7 @@ import { tenantSiteUrl } from "../domains.js";
 import { bookingRef, bookingRules } from "../booking/requests.js";
 import { trialDaysLeft } from "../trial/notices.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
+import { readExact } from "../booking/amount.js";
 
 export type ClientKind = "trial" | "paid" | "lapsed";
 /** The list filter values (`/leads?client=…`) — the B filter row. */
@@ -221,7 +222,7 @@ export async function loadLeadClients(
       .selectFrom("booking_request")
       .select([
         "id", "site_id", "date_from", "date_to", "guest_name", "guests", "children",
-        "meal_plan", "quoted_total", "quoted_currency", "status", "created_at",
+        "meal_plan", "quoted_total", "quoted_total_exact", "quoted_currency", "status", "created_at",
       ])
       .where("site_id", "in", siteIds)
       .orderBy("created_at", "desc")
@@ -241,7 +242,7 @@ export async function loadLeadClients(
         guests: Number(r.guests),
         children: r.children == null ? null : Number(r.children),
         mealPlan: r.meal_plan ?? null,
-        total: r.quoted_total == null ? null : Number(r.quoted_total),
+        total: r.quoted_total == null ? null : readExact(r.quoted_total, r.quoted_total_exact),
         currency: r.quoted_currency ?? null,
         status: r.status as BookingStatus,
         createdAt: new Date(r.created_at as unknown as string).toISOString(),

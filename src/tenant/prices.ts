@@ -11,7 +11,9 @@
 
 import { db } from "../db/client.js";
 import { T, langForUnit, prepareMailLang } from "../i18n/mail.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor, formatMoney, majorToMinor, minorDigits } from "../text/money.js";
+import { exactCol, parseOfferAmount, readExact, wholeCol } from "../booking/amount.js";
+import { siteCurrency } from "./siteCountry.js";
 import { formatNumber } from "../text/money.js";
 import { seasonRule } from "./seasonRule.js";
 import { todayForSite } from "./timeZone.js";
@@ -54,7 +56,7 @@ export function normMonthDay(raw: string): string | null {
 export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
   const rows = await db
     .selectFrom("unit_price")
-    .select(["id", "label", "date_from", "date_to", "amount", "min_nights", "valid_from", "valid_to", "parent_id"])
+    .select(["id", "label", "date_from", "date_to", "amount", "amount_exact", "min_nights", "valid_from", "valid_to", "parent_id"])
     .where("unit_id", "=", unitId)
     .orderBy("sort_order")
     .orderBy("created_at")
@@ -64,7 +66,7 @@ export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
     label: r.label ?? "",
     from: r.date_from,
     to: r.date_to,
-    amount: r.amount,
+    amount: readExact(r.amount, r.amount_exact),
     isBase: r.date_from === null && r.date_to === null,
     minNights: r.min_nights,
     validFrom: r.valid_from,
@@ -85,6 +87,7 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       "unit_price.date_from as dateFrom",
       "unit_price.date_to as dateTo",
       "unit_price.amount as amount",
+      "unit_price.amount_exact as amountExact",
       "unit_price.min_nights as minNights",
       "unit_price.valid_from as validFrom",
       "unit_price.valid_to as validTo",
@@ -103,7 +106,7 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       label: r.label ?? "",
       from: r.dateFrom,
       to: r.dateTo,
-      amount: r.amount,
+      amount: readExact(r.amount, r.amountExact),
       isBase: r.dateFrom === null && r.dateTo === null,
       minNights: r.minNights,
       validFrom: r.validFrom,
@@ -148,7 +151,8 @@ export async function setBasePrice(unitId: string, amount: number | null): Promi
         label: null,
         date_from: null,
         date_to: null,
-        amount,
+        amount: wholeCol(amount),
+        amount_exact: exactCol(amount),
         min_nights: null,
         sort_order: 0,
       })
@@ -204,7 +208,8 @@ export async function addSeasonPrice(
       label: label.trim().slice(0, 80),
       date_from: nFrom,
       date_to: nTo,
-      amount: Math.round(amount),
+      amount: wholeCol(amount),
+      amount_exact: exactCol(amount),
       min_nights: minNights && minNights > 0 ? Math.min(60, Math.round(minNights)) : null,
       sort_order: existing.length + 1,
     })
@@ -288,7 +293,7 @@ export async function updateSeasonPrice(
   await db.transaction().execute(async (trx) => {
     await trx
       .updateTable("unit_price")
-      .set({ label, date_from: nFrom, date_to: nTo, amount: Math.round(edit.amount), min_nights: minNights })
+      .set({ label, date_from: nFrom, date_to: nTo, amount: wholeCol(edit.amount), amount_exact: exactCol(edit.amount), min_nights: minNights })
       .where("id", "=", season.id)
       .execute();
     const children = await trx
@@ -374,11 +379,22 @@ export async function setSeasonYearPrice(
   const lang = await prepareMailLang(await langForUnit(season.unitId));
   const errors: string[] = [];
   const year = Math.trunc(Number(input.year));
-  const raw = String(input.amount ?? "").replace(/[\s.\u00a0]/g, "");
+  // ADR-XXXX: in the site's currency — its decimals are accepted (45,50 €); a forint
+  // price keeps the exact old rule (whole number, group dots dropped).
+  const cur = await siteCurrency(siteId);
   let amount: number | null = null;
-  if (raw) {
-    if (!/^\d+$/.test(raw) || Number(raw) <= 0) errors.push(T(lang, "Adjon meg egy árat, számmal (például: 35 000)."));
-    else amount = Number(raw);
+  if (minorDigits(cur)) {
+    const parsed = parseOfferAmount(String(input.amount ?? ""), cur);
+    if (!parsed.empty) {
+      if (parsed.value === undefined) errors.push(T(lang, "Adjon meg egy árat, számmal (például: 35 000)."));
+      else amount = parsed.value;
+    }
+  } else {
+    const raw = String(input.amount ?? "").replace(/[\s.\u00a0]/g, "");
+    if (raw) {
+      if (!/^\d+$/.test(raw) || Number(raw) <= 0) errors.push(T(lang, "Adjon meg egy árat, számmal (például: 35 000)."));
+      else amount = Number(raw);
+    }
   }
   let from = season.from!;
   let to = season.to!;
@@ -414,7 +430,8 @@ export async function setSeasonYearPrice(
         label: season.label,
         date_from: from,
         date_to: to,
-        amount: amount ?? season.amount,
+        amount: wholeCol(amount ?? season.amount),
+        amount_exact: exactCol(amount ?? season.amount),
         min_nights: season.minNights,
         sort_order: season.sortOrder,
         valid_from: occ.start,
@@ -459,7 +476,8 @@ export async function addDatedBasePrice(
         label: null,
         date_from: null,
         date_to: null,
-        amount: Math.round(amount),
+        amount: wholeCol(amount),
+        amount_exact: exactCol(amount),
         min_nights: null,
         sort_order: 0,
         valid_from: validFrom,
@@ -627,7 +645,11 @@ export function priceOn(prices: readonly UnitPrice[], isoDay: string): UnitPrice
  *  browser twin (cit-runtime.js) also grouped with a NBSP where this grouped
  *  with a space — the same guest, the same quote, two spellings. */
 export function formatAmount(amount: number, currency: string, lang?: string): string {
-  return formatMoney(amount, currency, lang);
+  // ADR-XXXX (0138 tizedes szobaár): a fraction prints in the currency's own decimals
+  // ("45,50 €"); a whole amount — every forint — is formatMoney exactly as before.
+  const d = minorDigits(currency) ?? 0;
+  if (!d || Number.isInteger(amount)) return formatMoney(amount, currency, lang);
+  return formatMinor(majorToMinor(amount, currency), currency, lang);
 }
 
 /**
@@ -660,8 +682,9 @@ export function priceSpan(
 
 /** "24 000–32 000 Ft" (one currency mark), or a single amount when the span is flat. */
 export function formatSpan(min: number, max: number, currency: string): string {
-  if (Math.round(min) === Math.round(max)) return formatAmount(min, currency);
-  const n = formatNumber(min);
+  if (min === max || (Number.isInteger(min) && Number.isInteger(max) && Math.round(min) === Math.round(max))) return formatAmount(min, currency);
+  // A fractional low end keeps its decimals (the unit follows once, after the high end).
+  const n = Number.isInteger(min) ? formatNumber(min) : formatAmount(min, currency).replace(/\s*\S+$/, "");
   return `${n}–${formatAmount(max, currency)}`;
 }
 

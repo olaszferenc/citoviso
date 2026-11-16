@@ -17,7 +17,9 @@ import {
   getPackageAssignment,
   loadPricing,
   pricingSnapshot,
-  resolvePricingRegion,
+  HU_PRICING_REGION,
+  pricingRegions,
+  primaryTld,
   regionPriceGaps,
 } from "../pricing.js";
 import { lockup } from "../ui/brand.js";
@@ -60,6 +62,9 @@ export function homepagePlansHtml(
   freeMonths: number,
   currency: string,
   assignment: PackageAssignment,
+  /** ADR-XXXX: the region's own domain ending (country row → pricing region TLD list); the
+   *  card says "Saját .cz domain" for a Czech list. Absent = the file's ".hu". */
+  tld?: string | null,
 ): string {
   const tiers = [...pkgs].filter((p) => Number.isFinite(p.monthly) && p.monthly > 0).sort((x, y) => x.monthly - y.monthly);
   if (!tiers.length) return "";
@@ -67,7 +72,7 @@ export function homepagePlansHtml(
   const lines = (p: OfferedPackage): string[] => {
     const mods = new Set(p.modules);
     const dom = isTier(p.id) && tierHasDomain(assignment, p.id);
-    return HOME_FEATURES.filter((f) => f.has(mods, dom)).map((f) => f.text);
+    return HOME_FEATURES.filter((f) => f.has(mods, dom)).map((f) => (tld ? withTld(f.text, tld) : f.text));
   };
   let prev: string[] = [];
   let prevId = "";
@@ -104,11 +109,19 @@ export function homepagePlansHtml(
  */
 export async function renderHomepage(
   html: string,
-  headers: http.IncomingHttpHeaders,
+  _headers: http.IncomingHttpHeaders,
   regionOverride: string | null,
 ): Promise<string> {
   await loadPricing();
-  const region = resolvePricingRegion(headers, regionOverride);
+  // ADR-XXXX (tulaj 2026-11-16): the public page's country is the LEAD's physical location
+  // (ADR-0437) — no IP or browser-language guess. The homepage has no lead context, so it
+  // keeps today's Hungarian page and Hungarian list; the lead-context surface (the
+  // configurator) already prices in the lead's region. `?region=` stays an operator preview.
+  const region = regionOverride && pricingRegions().some((r) => r.region === regionOverride.toLowerCase())
+    ? regionOverride.toLowerCase()
+    : HU_PRICING_REGION;
+  // The domain ending is the region's own (its TLD list on /pricing), not a literal.
+  const tld = primaryTld(region)?.tld ?? null;
   const snap = pricingSnapshot(region);
   let plans = "";
   let ml = "";
@@ -119,6 +132,7 @@ export async function renderHomepage(
       getAnnualFreeMonths(region),
       snap.currency,
       getPackageAssignment(),
+      tld,
     );
     const mlPrice = getMultilangTierPrice(DEFAULT_MULTILANG_TIER, region);
     if (mlPrice > 0 && DEFAULT_MULTILANG_TIER.cap) {
@@ -131,6 +145,8 @@ export async function renderHomepage(
     : html;
   rendered = rendered.replace(/<!--CIT_ML_PRICE-->[\s\S]*?<!--\/CIT_ML_PRICE-->/, () => ml);
   if (!plans) rendered = rendered.replace(/<div class="toggle"[\s\S]*?<\/div>/, "");
+  // The page's own ".hu domain" sentences follow the region's ending (identical for HU).
+  if (tld) rendered = withTld(rendered, tld);
   const free = getAnnualFreeMonths(region);
   rendered = rendered.replace("Évente — 2 hónap ingyen", free > 0 ? `Évente — ${free} hónap ingyen` : "Évente");
   // The header follows the stage (dark over the intro, light after it): the themed
@@ -143,4 +159,10 @@ export async function renderHomepage(
       : lockup({ on: "dark", href: "#top" }),
   );
   return rendered;
+}
+
+/** ".hu domain" → "<tld> domain" in a sentence (the file's wording is Hungarian; only the
+ *  ending moves). A Hungarian region's ".hu" leaves the text byte-for-byte as it was. */
+function withTld(text: string, tld: string): string {
+  return tld === ".hu" ? text : text.replace(/(^|[\s>])\.hu(?=\s+domain)/g, `$1${tld}`);
 }

@@ -519,7 +519,14 @@
      * src/tenant/prices.ts with a plain space (measured 2026-09-14). One rule now,
      * and scripts/money-format-check.mts proves this copy equals the TS one. */
     function money(amount, currency) {
-      return CitMoney.formatMoney(amount, currency, document.documentElement.lang || "hu");
+      /* ADR-XXXX (0138 tizedes szobaár): a fraction prints in the currency's own decimals
+       * ("45,50 €"), like src/tenant/prices.ts formatAmount; a whole amount — every forint —
+       * is formatMoney exactly as before. */
+      var lang = document.documentElement.lang || "hu";
+      var d = CitMoney.minorDigits(currency) || 0;
+      var n = Number(amount);
+      if (!d || n === Math.round(n)) return CitMoney.formatMoney(amount, currency, lang);
+      return CitMoney.formatMinor(Math.round(n * Math.pow(10, d)), currency, lang);
     }
     /* The amount as MARKUP: one element that cannot break inside itself. The string
      * keeps its plain spaces (ADR-0162 ⑤ — the separator is U+0020 everywhere; an

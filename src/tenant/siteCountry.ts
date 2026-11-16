@@ -9,6 +9,7 @@
 // cannot back.
 import { countryConfig, countryOfLead, type CountryConfig } from "../country.js";
 import { db } from "../db/client.js";
+import { MODULE_CONFIG_REGISTRY } from "../moduleConfig.js";
 
 /** The layer row of a tenant's lodging; null = unknown or not configured. */
 export async function countryOfTenant(tenantId: string): Promise<CountryConfig | null> {
@@ -22,4 +23,21 @@ export async function countryOfSite(siteId: string): Promise<CountryConfig | nul
   const s = await db.selectFrom("site").select("tenant_id").where("id", "=", siteId).executeTakeFirst();
   if (!s?.tenant_id) return null;
   return countryOfTenant(s.tenant_id);
+}
+
+/**
+ * The currency a site's room prices are in (ADR-XXXX): the owner's saved pricing currency,
+ * else the lodging country's (provisioning seeds it), else the catalog default — which is
+ * what every Hungarian site always had.
+ */
+export async function siteCurrency(siteId: string): Promise<string> {
+  const row = await db
+    .selectFrom("site_module_config")
+    .select("config")
+    .where("site_id", "=", siteId)
+    .where("module", "=", "pricing")
+    .executeTakeFirst();
+  const saved = (row?.config as { currency?: unknown } | undefined)?.currency;
+  if (typeof saved === "string" && saved.trim()) return saved;
+  return (await countryOfSite(siteId))?.currency ?? String(MODULE_CONFIG_REGISTRY.pricing?.defaults.currency);
 }

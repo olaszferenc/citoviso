@@ -13,7 +13,11 @@
 //   ⑤ the contact form takes a Czech national number and prints it "+420 777 123 456";
 //   ⑥ the booking widget: no Hungarian tourist-tax sentence (data-cit-tax-rule="none"), the
 //      lodging's zone for "today", the Czech date form;
-//   ⑦ the Hungarian path is unchanged (HUF labels, forint floor, HU phone rule, no attribute).
+//   ⑦ the Hungarian path is unchanged (HUF labels, forint floor, HU phone rule, no attribute);
+//   ⑧ decimal room prices (tulaj 2026-11-16, 0138): a 45,50 € night on a synthetic EUR country
+//      (SK) is stored exactly, read back, quoted (3 nights = 136,50 €) and formatted; a
+//      Czech 1 890,50 Kč likewise; a forint price writes no exact twin (the row as before);
+//   ⑨ no currency picker outside Hungary: the CZ lodging is offered CZK only.
 //
 //   npx tsx scripts/country-surfaces-e2e.mts
 import pg from "pg";
@@ -73,6 +77,8 @@ const { moduleContentFor } = await import("../src/tenant/editor.js");
 const { moduleSectionGroups } = await import("../src/engine/moduleSections.js");
 const { dateLocale } = await import("../src/i18n/lang.js");
 const { formatDay } = await import("../src/text/day.js");
+const { getUnitPrices, formatAmount } = await import("../src/tenant/prices.js");
+const { createBookingRequest, getRequests } = await import("../src/booking/requests.js");
 
 let fails = 0;
 function check(name: string, ok: boolean, detail = ""): void {
@@ -94,6 +100,19 @@ await db.executeQuery(
            outreach_channels, send_window_from, send_window_to, daily_quota, 'cs', legal_pack, 'barion'
     from country where iso2 = 'HU'`.compile(db),
 );
+// A synthetic EURO country for the decimal room price (real ISO key; Slovak, +421).
+await db.executeQuery(
+  sql`
+    insert into country (iso2, name, aliases, default_lang, time_zone, currency, pricing_region, area_bbox,
+      search_keywords, portal_domains, own_site_tlds, search_lang, search_region, browser_locale, accept_language,
+      dial_code, trunk_prefix, mobile_prefixes, phone_plan, phone_nsn_min, phone_nsn_max,
+      outreach_channels, send_window_from, send_window_to, daily_quota, invoice_lang, legal_pack, payment_provider)
+    select 'SK', 'Szlovákia (szintetikus)', '[]'::jsonb, 'sk', 'Europe/Bratislava', 'EUR', 'sk', area_bbox,
+           search_keywords, '[]'::jsonb, own_site_tlds, 'sk', 'SK', browser_locale, accept_language,
+           '421', '0', '["9"]'::jsonb, 'generic', 9, 9,
+           outreach_channels, send_window_from, send_window_to, daily_quota, 'sk', legal_pack, 'barion'
+    from country where iso2 = 'HU'`.compile(db),
+);
 await refreshCountries();
 const cz = await countryConfig("CZ");
 check("CZ-sor: CZK, cs, Europe/Prague, IFA-modell 'none' (alapérték)", cz?.currency === "CZK" && cz.defaultLang === "cs" && cz.touristTaxModel === "none", JSON.stringify(cz && { c: cz.currency, t: cz.touristTaxModel }));
@@ -106,6 +125,12 @@ await pricing.savePricing({
   region: "cz", currency: "CZK", baseMonthly: 24990, annualFreeMonths: 2, customDomainMonthly: 9900,
   domainMaxPriceEur: 15, domainMinCommitmentMonths: 12, domainMinPackageMonthly: 0, domainBuyoutPrice: 99000,
   pricingConfirmed: true, modulePrices: Object.fromEntries(ids.map((id) => [id, 4950])),
+});
+await pricing.createPricingRegion("sk", "EUR");
+await pricing.savePricing({
+  region: "sk", currency: "EUR", baseMonthly: 1990, annualFreeMonths: 2, customDomainMonthly: 300,
+  domainMaxPriceEur: 15, domainMinCommitmentMonths: 12, domainMinPackageMonthly: 0, domainBuyoutPrice: 4900,
+  pricingConfirmed: true, modulePrices: Object.fromEntries(ids.map((id) => [id, 290])),
 });
 
 // ── leads + approved legacy-copy artifacts → convertLead (the real provisioning) ───────────
@@ -156,7 +181,7 @@ try {
   const p3 = parsePrice("900", "cs", "CZK");
   check("„900” CZK-ban rendben (nincs forint-padló)", p3.value === 900 && !p3.error, JSON.stringify(p3));
   const p4 = parsePrice("1890,50", "cs", "CZK");
-  check("„1890,50” → érthető elutasítás (egész egységben tárolt ár, nincs kerekítés)", p4.value === null && !!p4.error, JSON.stringify(p4));
+  check("„1890,50” → 1890,5 (a CZK minor unitja 2 tizedes, 0138)", p4.value === 1890.5 && !p4.error, JSON.stringify(p4));
   const p5 = parsePrice("1890,00", "cs", "CZK");
   check("„1890,00” → 1890 (nulla tört rész)", p5.value === 1890, JSON.stringify(p5));
   const modText = norm(modulePriceText(ctx, "booking", "cs"));
@@ -168,8 +193,9 @@ try {
   check("a lista első eleme az ország pénzneme", st.currencies[0]?.code === "CZK", JSON.stringify(st.currencies.map((c) => c.code)));
   check("a felirat csehül, jellel", /Kč/.test(st.currencies[0]?.label ?? ""), st.currencies[0]?.label);
   const units = st.units.map((u) => ({ id: u.id, base: "1890", por: false }));
+  check("⑨ nincs pénznem-választó: a CZ-szállásnak csak a CZK jár", st.currencies.length === 1, JSON.stringify(st.currencies.map((c) => c.code)));
   const sv = await saveBookingSetupSection(czSite.siteId, "prices", { priceUnit: "per_night", currency: "PLN", units }, "e2e", "cs");
-  check("bármely ISO-pénznem menthető (PLN)", sv.ok, sv.errors.join("; "));
+  check("⑨ más pénznem nem menthető (PLN)", !sv.ok, sv.errors.join("; "));
   const bad = await saveBookingSetupSection(czSite.siteId, "prices", { priceUnit: "per_night", currency: "XYZ", units }, "e2e", "cs");
   check("nem ISO kód elutasítva (XYZ)", !bad.ok);
   await saveBookingSetupSection(czSite.siteId, "prices", { priceUnit: "per_night", currency: "CZK", units }, "e2e", "cs");
@@ -224,6 +250,45 @@ try {
   const huMv = await getTenantModules(huSite.tenantId);
   const huHtml = norm(modulesSection(huMv, null, null, "elek@citoviso.com", null, "hu")).replace(/<script[\s\S]*?<\/script>/g, "");
   check("HU: a modul-fül forintban ír", /\d Ft\b/.test(huHtml));
+
+  console.log("⑧ tizedes szobaár (0138)");
+  const skSite = await provisioned("SK", "Penzión Pod Lipou (e2e)");
+  const skSt = await loadBookingSetup(skSite.siteId, "elek@citoviso.com", "sk");
+  check("SK: a szállás pénzneme EUR, fixen", skSt.currency === "EUR" && skSt.currencies.length === 1, JSON.stringify(skSt.currencies));
+  const skUnits = skSt.units.map((u) => ({ id: u.id, base: "45,50", por: false }));
+  const skSave = await saveBookingSetupSection(skSite.siteId, "prices", { priceUnit: "per_night", currency: "EUR", units: skUnits }, "e2e", "sk");
+  check("45,50 € menthető", skSave.ok, skSave.errors.join("; "));
+  const skUnitId = skSt.units[0]!.id;
+  const raw = await db.selectFrom("unit_price").select(["amount", "amount_exact"]).where("unit_id", "=", skUnitId).executeTakeFirst();
+  check("tárolva: amount 46 (régi olvasóknak) + amount_exact 45.5", raw?.amount === 46 && Number(raw?.amount_exact) === 45.5, JSON.stringify(raw));
+  const back = await getUnitPrices(skUnitId);
+  check("visszaolvasva: 45,5", back[0]?.amount === 45.5, JSON.stringify(back.map((p) => p.amount)));
+  check("formázva: 45,50 €", norm(formatAmount(45.5, "EUR", "hu")) === "45,50 €", formatAmount(45.5, "EUR", "hu"));
+  await saveBookingSetupSection(skSite.siteId, "rules", { minNights: 1, maxNights: 30, horizon: 24, lead: 0 }, "e2e", "sk");
+  const day = (n: number): string => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const req = await createBookingRequest(
+    { siteId: skSite.siteId, unitId: skUnitId, guestName: "Test Hosť", guestEmail: `sk-${stamp}@citoviso.test`, guestPhone: "+421905123456", dateFrom: day(40), dateTo: day(43), guests: 2 },
+    null,
+  );
+  check("foglalási kérés létrejött", req.ok, (req as { errors?: string[] }).errors?.join("; "));
+  if (req.ok) {
+    const row = await db.selectFrom("booking_request").select(["quoted_total", "quoted_total_exact", "quoted_currency"]).where("id", "=", req.id!).executeTakeFirst();
+    check("a kérés végösszege: 136,50 € (3 × 45,50), egész ikerrel", Number(row?.quoted_total_exact) === 136.5 && row?.quoted_total === 137 && row?.quoted_currency === "EUR", JSON.stringify(row));
+    const inbox = await getRequests(skSite.siteId);
+    const item = inbox.find((i) => i.id === req.id);
+    check("a tulaj kérés-listája a pontos összeget olvassa: 136,5", item?.quotedTotal === 136.5, String(item?.quotedTotal));
+  }
+  const czUnit = st.units[0]!.id;
+  await saveBookingSetupSection(czSite.siteId, "prices", { priceUnit: "per_night", currency: "CZK", units: [{ id: czUnit, base: "1 890,50", por: false }] }, "e2e", "cs");
+  check("1 890,50 Kč visszaolvasva", (await getUnitPrices(czUnit))[0]?.amount === 1890.5);
+  check("formázva csehül: 1 890,50 Kč", norm(formatAmount(1890.5, "CZK", "cs")) === "1 890,50 Kč", formatAmount(1890.5, "CZK", "cs"));
+  const huUnits = (await loadBookingSetup(huSite.siteId, "elek@citoviso.com", "hu")).units;
+  await saveBookingSetupSection(huSite.siteId, "prices", { priceUnit: "per_night", currency: "HUF", units: [{ id: huUnits[0]!.id, base: "18 900", por: false }] }, "e2e", "hu");
+  const huRaw = await db.selectFrom("unit_price").select(["amount", "amount_exact"]).where("unit_id", "=", huUnits[0]!.id).executeTakeFirst();
+  check("HU: 18 900 Ft → amount 18900, NINCS exact iker (a sor, ahogy eddig)", huRaw?.amount === 18900 && huRaw.amount_exact === null, JSON.stringify(huRaw));
+  check("HU: formázva 18 900 Ft", formatAmount(18900, "HUF", "hu") === "18 900 Ft");
+  const rt2 = await readFile("assets/runtime/cit-runtime.js", "utf8");
+  check("widget: a tört összeg a pénznem tizedeseivel (formatMinor)", /CitMoney\.formatMinor\(Math\.round\(n \* Math\.pow\(10, d\)\), currency, lang\)/.test(rt2));
 } finally {
   for (const t of tenantsToClean) await rm(path.resolve(process.cwd(), "sites", t), { recursive: true, force: true });
   await rm(path.resolve(process.cwd(), MOCK_REL), { force: true });

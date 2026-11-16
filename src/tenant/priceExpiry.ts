@@ -24,6 +24,7 @@ import { getEmailSender } from "../email/sender.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
 import { formatAmount } from "./prices.js";
+import { readExact } from "../booking/amount.js";
 
 export const REMIND_DAYS = 14;
 
@@ -57,6 +58,7 @@ export async function maintainDatedPrices(
       "unit_price.id as id",
       "unit_price.unit_id as unitId",
       "unit_price.amount as amount",
+      "unit_price.amount_exact as amountExact",
       "unit_price.valid_to as validTo",
       "site_unit.name as unitName",
       "site.tenant_id as tenantId",
@@ -86,7 +88,7 @@ export async function maintainDatedPrices(
       .executeTakeFirst();
     if (!Number(claim.numUpdatedRows)) continue;
     try {
-      await remindOwner(r.tenantId, r.siteId, r.unitId, r.unitName, r.amount, r.validTo!);
+      await remindOwner(r.tenantId, r.siteId, r.unitId, r.unitName, readExact(r.amount, r.amountExact), r.validTo!);
       reminded++;
     } catch (err) {
       console.error(`[price-expiry] az emlékeztető NEM ment ki (${r.id}):`, err);

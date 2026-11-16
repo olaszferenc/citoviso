@@ -13,8 +13,8 @@
 // re-checks the nights and writes the day rows in one atomic step, so two requests
 // racing for the same nights cannot both win.
 
-import { parseOfferAmount } from "./amount.js";
-import { countryOfSite } from "../tenant/siteCountry.js";
+import { exactCol, parseOfferAmount, wholeCol } from "./amount.js";
+import { countryOfSite, siteCurrency } from "../tenant/siteCountry.js";
 import { chosenPlan, clampChildren, countedChildAge, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealLine, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
 import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
@@ -952,7 +952,8 @@ export async function createBookingRequest(
         children,
         ...(quote
           ? {
-              quoted_total: quote.total,
+              quoted_total: wholeCol(quote.total),
+              quoted_total_exact: exactCol(quote.total),
               quoted_currency: quote.currency,
               quoted_lines: JSON.stringify(
                 quote.lines.map((l) => ({
@@ -967,7 +968,8 @@ export async function createBookingRequest(
             }
           : {}),
         // Elek V-3: the tax the panel showed is frozen with the price it sat next to.
-        quoted_tax_per_person_night: declaredTouristTax(rules),
+        quoted_tax_per_person_night: declaredTouristTax(rules) === null ? null : wholeCol(declaredTouristTax(rules)!),
+        quoted_tax_exact: exactCol(declaredTouristTax(rules)),
       })
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -1173,6 +1175,12 @@ function requestUnitIds(req: { unit_id: string; unit_ids?: readonly string[] | n
   return req.unit_ids?.length ? [...req.unit_ids] : [req.unit_id];
 }
 
+// ADR-XXXX (0138 tizedes szobaár): the total and the tax as the guest was quoted them — the
+// exact twin when the amount had a fraction, else the integer column (every forint row).
+// Selected AFTER selectAll under the SAME name, so every reader of the row gets the exact
+// amount without a second code path (node-pg keeps the last field of a duplicate name).
+const QUOTED_TOTAL = sql<number | null>`coalesce(booking_request.quoted_total_exact::float8, booking_request.quoted_total::float8)`;
+const QUOTED_TAX = sql<number | null>`coalesce(booking_request.quoted_tax_exact::float8, booking_request.quoted_tax_per_person_night::float8)`;
 const UNIT_CAPACITY = sql<number | null>`(select case when bool_or(u.capacity is null) then null else sum(u.capacity)::int end from site_unit u where u.id = any(booking_request.unit_ids))`;
 
 async function loadRequest(where: { id?: string; token?: string }): Promise<RequestRow | null> {
@@ -1180,7 +1188,7 @@ async function loadRequest(where: { id?: string; token?: string }): Promise<Requ
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select([UNIT_NAMES.as("unit_name"), UNIT_CAPACITY.as("unit_capacity")]);
+    .select([UNIT_NAMES.as("unit_name"), UNIT_CAPACITY.as("unit_capacity"), QUOTED_TOTAL.as("quoted_total"), QUOTED_TAX.as("quoted_tax_per_person_night")]);
   if (where.id) q = q.where("booking_request.id", "=", where.id);
   if (where.token) q = q.where("booking_request.action_token", "=", where.token);
   return ((await q.executeTakeFirst()) as RequestRow | undefined) ?? null;
@@ -1442,7 +1450,7 @@ async function overlappingPending(
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select(UNIT_NAMES.as("unit_name"))
+    .select([UNIT_NAMES.as("unit_name"), QUOTED_TOTAL.as("quoted_total"), QUOTED_TAX.as("quoted_tax_per_person_night")])
     // ADR-0393: a multi-room request overlaps when ANY of its rooms is in the set.
     .where(sql<boolean>`booking_request.unit_ids && ${sql.val(unitIds)}::uuid[]`)
     .where("booking_request.status", "=", "pending")
@@ -2226,6 +2234,8 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     .selectAll("booking_request")
     .select([
       UNIT_NAMES.as("unit_name"),
+      QUOTED_TOTAL.as("quoted_total"),
+      QUOTED_TAX.as("quoted_tax_per_person_night"),
       UNIT_CAPACITY.as("unit_capacity"),
       sql<string[]>`(select array_agg(u.name order by array_position(booking_request.unit_ids, u.id)) from site_unit u where u.id = any(booking_request.unit_ids))`.as("unit_names"),
     ])
@@ -2306,7 +2316,7 @@ export async function getSentOffers(siteId: string, limit = 60): Promise<SentOff
       "booking_request.date_from as dateFrom",
       "booking_request.date_to as dateTo",
       "booking_request.guests as guests",
-      "booking_request.quoted_total as total",
+      QUOTED_TOTAL.as("total"),
       "booking_request.quoted_currency as currency",
       "booking_request.offered_at as offeredAt",
       "booking_request.status as status",
@@ -2380,6 +2390,7 @@ export async function expireStaleRequests(): Promise<number> {
   const pending = await db
     .selectFrom("booking_request")
     .selectAll()
+    .select([QUOTED_TOTAL.as("quoted_total"), QUOTED_TAX.as("quoted_tax_per_person_night")])
     .where("status", "=", "pending")
     .execute();
 
@@ -2862,7 +2873,8 @@ export async function sendOffer(
     : await unpricedNights(req.unit_id, from, to);
 
   const errors: string[] = [];
-  const amount = parseOfferAmount(input.amount);
+  // ADR-XXXX: the offer is in the request's / site's currency — its decimals are accepted.
+  const amount = parseOfferAmount(input.amount, req.quoted_currency ?? (await siteCurrency(req.site_id)));
   // Anything but an explicit choice is 'request' — the default writes nothing, so an old
   // form (or a tampered value) can never put a price into the list unasked.
   const save: OfferSaveAs = !multi && (input.save === "dates" || input.save === "base") ? input.save : "request";
@@ -2960,7 +2972,8 @@ export async function sendOffer(
       // Only a price the owner actually entered has a "where did it go" — a request whose
       // nights were all priced already gets no answer (null), not a made-up 'request'.
       offer_saved_as: missing.length ? save : null,
-      quoted_total: quote.total,
+      quoted_total: wholeCol(quote.total),
+      quoted_total_exact: exactCol(quote.total),
       quoted_currency: quote.currency,
       quoted_lines: JSON.stringify(
         quote.lines.map((l) => ({
@@ -3121,7 +3134,7 @@ async function loadByOfferToken(offerToken: string): Promise<RequestRow | null> 
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select(UNIT_NAMES.as("unit_name"))
+    .select([UNIT_NAMES.as("unit_name"), QUOTED_TOTAL.as("quoted_total"), QUOTED_TAX.as("quoted_tax_per_person_night")])
     .where("booking_request.offer_token", "=", offerToken)
     .executeTakeFirst();
   return (row as unknown as RequestRow | undefined) ?? null;
@@ -3388,7 +3401,7 @@ export async function expireStaleOffers(): Promise<number> {
     .selectFrom("booking_request")
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
-    .select(UNIT_NAMES.as("unit_name"))
+    .select([UNIT_NAMES.as("unit_name"), QUOTED_TOTAL.as("quoted_total"), QUOTED_TAX.as("quoted_tax_per_person_night")])
     .where("booking_request.status", "=", "offered")
     .execute();
   let n = 0;

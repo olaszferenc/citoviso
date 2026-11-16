@@ -1450,6 +1450,8 @@ export interface UnitPriceTable {
   date_to: string | null;
   /** Whole currency units; the currency is a per-site pricing-module setting. */
   amount: number;
+  /** 0138: the exact amount when it has a fraction (45,50 €); NULL = `amount` is exact. pg numeric → string. */
+  amount_exact: Generated<string | null>;
   /** Minimum stay inside this season (0028). NULL → the module's site-wide minNights. */
   min_nights: number | null;
   sort_order: Generated<number>;
@@ -1503,6 +1505,8 @@ export interface BookingRequestTable {
   decided_by: "owner" | "guest" | "auto" | "system" | null;
   /** 0052: total quoted from the price list IN FORCE AT REQUEST TIME (frozen). */
   quoted_total: number | null;
+  /** 0138: the exact total when it has a fraction; NULL = `quoted_total` is exact. pg numeric → string. */
+  quoted_total_exact: Generated<string | null>;
   quoted_currency: string | null;
   /** 0052: breakdown lines the mails/UI render verbatim (no recompute). */
   quoted_lines: JSONColumnType<
@@ -1519,6 +1523,8 @@ export interface BookingRequestTable {
   /** 0084 (Elek V-3): on-site tourist tax per person per night in force at request time;
    *  0 = the owner declared none; null = not given (or an older row). */
   quoted_tax_per_person_night: number | null;
+  /** 0138: the exact tax when it has a fraction (1,50 €); NULL = the integer is exact. */
+  quoted_tax_exact: Generated<string | null>;
   /** 0072: when the owner sent a price offer (status 'offered'); expiry derives from it. */
   offered_at: Timestamp | null;
   /** 0072: the GUEST's single-use key to accept the offer — never the owner's action_token. */

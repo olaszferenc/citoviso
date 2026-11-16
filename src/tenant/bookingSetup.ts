@@ -37,7 +37,8 @@ import {
   type Unit,
 } from "./units.js";
 import { todayForSite } from "./timeZone.js";
-import { countryOfSite } from "./siteCountry.js";
+import { countryOfSite, siteCurrency } from "./siteCountry.js";
+import { parseOfferAmount } from "../booking/amount.js";
 import { currencyName, currencyOptionLabel, currencySymbol, isIsoCurrency, offeredCurrencies } from "../text/currencyName.js";
 import { currencySign, formatMoney, minorDigits } from "../text/money.js";
 import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
@@ -310,9 +311,12 @@ function taxAmountIn(v: unknown, digits: number): number | null {
   return Number.isFinite(n) && n > 0 && n <= 100000 ? n : null;
 }
 
-/** A price amount the way the owner types it ("28 000", "28.000", "28000"). */
-function amountOf(v: unknown): number | null {
+/** A price amount the way the owner types it ("28 000", "28.000", "28000"). ADR-XXXX: in a
+ *  currency with decimals ("45,50 €") the fraction is kept (parseOfferAmount); the forint —
+ *  and a call without a currency — reads exactly as before. */
+function amountOf(v: unknown, currency?: string): number | null {
   if (v === "" || v === null || v === undefined) return null;
+  if (currency && minorDigits(currency)) return parseOfferAmount(String(v), currency).value ?? null;
   const n = Math.round(Number(String(v).replace(/[\s.]/g, "").replace(",", ".")));
   return Number.isFinite(n) && n > 0 ? n : null;
 }
@@ -406,8 +410,13 @@ async function savePrices(siteId: string, body: Record<string, unknown>, userId:
   const priceUnit = String(body.priceUnit ?? "");
   const currency = String(body.currency ?? "");
   if (!unitOpts.has(priceUnit)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
-  // ADR-0450: any ISO 4217 currency (it was HUF/EUR only — a Czech lodging could not price in Kč).
-  if (!isIsoCurrency(currency)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
+  // ADR-XXXX: only a currency the lodging may price in — its country's (fixed, tulaj
+  // 2026-11-16), the saved one, and for a Hungarian lodging the old forint/euró pair.
+  const offered = offeredCurrencies(
+    (await countryOfSite(siteId))?.currency ?? null,
+    String((await storedConfig(siteId, "pricing")).currency ?? "") || null,
+  );
+  if (!isIsoCurrency(currency) || !offered.includes(currency)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
   const units = await ensureUnits(siteId);
   const rows = Array.isArray(body.units) ? (body.units as Record<string, unknown>[]) : [];
   const targets: { unit: Unit; base: number | null; por: boolean }[] = [];
@@ -415,9 +424,13 @@ async function savePrices(siteId: string, body: Record<string, unknown>, userId:
     const unit = units.find((u) => u.id === r.id);
     if (!unit) continue; // not this site's — ignored, never written (admin-foreign-object)
     const raw = r.base;
-    const base = amountOf(raw);
+    const base = amountOf(raw, currency);
     if (base === null && raw !== "" && raw !== null && raw !== undefined) {
-      errors.push(T(lang, "{name}: az ár csak pozitív egész szám lehet.", { name: unit.name }));
+      errors.push(
+        minorDigits(currency)
+          ? T(lang, "{name}: az ár csak pozitív szám lehet (legfeljebb {d} tizedesjeggyel).", { name: unit.name, d: minorDigits(currency)! })
+          : T(lang, "{name}: az ár csak pozitív egész szám lehet.", { name: unit.name }),
+      );
     }
     targets.push({ unit, base, por: r.por === true });
   }
@@ -535,7 +548,7 @@ export async function seasonOp(siteId: string, body: Record<string, unknown>, la
   const label = String(body.label ?? "").trim().slice(0, 80);
   const from = String(body.from ?? "");
   const to = String(body.to ?? "");
-  const amount = amountOf(body.amount) ?? Number.NaN;
+  const amount = amountOf(body.amount, await siteCurrency(siteId)) ?? Number.NaN;
   const minRaw = body.min;
   const min = minRaw === "" || minRaw === null || minRaw === undefined ? null : intIn(minRaw, 1, 60);
   if (min === null && !(minRaw === "" || minRaw === null || minRaw === undefined)) {

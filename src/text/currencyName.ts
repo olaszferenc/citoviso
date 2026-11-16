@@ -8,6 +8,7 @@
 // were, so a Hungarian page reads byte-for-byte what it did.
 import { T } from "../i18n/mail.js";
 import { currencySign } from "./money.js";
+import { LEGACY_CURRENCY } from "./legacyCurrency.js";
 
 let isoSet: ReadonlySet<string> | null = null;
 
@@ -60,13 +61,18 @@ export function currencyOptionLabel(code: string, lang: string): string {
 }
 
 /**
- * The currencies offered to an owner, the country's own first (it is the default), then the
- * one already saved (never drop an owner's choice), then the euro. A Hungarian lodging gets
- * exactly the list it always had: forint, euró.
+ * The currencies an owner's prices may be in (tulaj 2026-11-16: „Pénznem-VÁLASZTÓ NINCS: a
+ * szállás pénzneme az ország-sorból jön, fixen”). A lodging outside Hungary gets ITS
+ * country's currency only — the surface shows it, there is nothing to choose — plus the one
+ * already saved if it differs (an owner's earlier choice is never silently dropped).
+ * A Hungarian lodging keeps exactly the list it always had (forint, euró): the Hungarian
+ * surface may not change.
  */
 export function offeredCurrencies(countryCurrency: string | null, saved: string | null): string[] {
+  const home = String(countryCurrency ?? LEGACY_CURRENCY).trim().toUpperCase();
+  const list = home === LEGACY_CURRENCY ? [home, saved, "EUR"] : [home, saved];
   const out: string[] = [];
-  for (const c of [countryCurrency ?? "HUF", saved, "EUR"]) {
+  for (const c of list) {
     const u = String(c ?? "").trim().toUpperCase();
     if (u && isIsoCurrency(u) && !out.includes(u)) out.push(u);
   }
