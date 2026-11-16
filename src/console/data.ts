@@ -1130,6 +1130,8 @@ export async function pendingTwinInitialOrder(input: {
   domainName: string | null;
   platformLabel: string | null;
   buyerEmail: string;
+  /** tervvaltas A: the plan being ordered — an order on ANOTHER plan is not a twin. */
+  planArtifactId: string;
 }): Promise<{ leadId: string; leadName: string; orderIntentId: string } | null> {
   const rows = await db
     .selectFrom("order_intent")
@@ -1148,6 +1150,7 @@ export async function pendingTwinInitialOrder(input: {
     .where("order_intent.price", "=", input.price)
     .where("order_intent.billing_period", "=", input.billingPeriod)
     .where("order_intent.domain_type", "=", input.domainType)
+    .where(sql<boolean>`coalesce(order_intent.plan_artifact_id, prospect.mock_artifact_id) = ${input.planArtifactId}`)
     .where(sql<boolean>`lower(order_intent.buyer_email) = ${input.buyerEmail.toLowerCase()}`)
     .where(sql<boolean>`order_intent.created_at > now() - interval '30 minutes'`)
     .where(({ not, exists, selectFrom }) =>
@@ -1262,6 +1265,9 @@ export async function recordOrderIntent(input: {
       modules: JSON.stringify(input.modules),
       status: "submitted",
       submitted_at: new Date(),
+      // tervvaltas A (0137): the plan this order buys — the artifact the configurator was on
+      // (/p/<t>/v/<n>/request, /folytatas → the running trial plan). Activation converts it.
+      plan_artifact_id: input.artifactId,
       domain_type: input.domainType,
       domain_name: input.domainName,
       platform_label: input.platformLabel ?? null,

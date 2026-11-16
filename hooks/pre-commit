@@ -3581,6 +3581,22 @@ if [ -f scripts/free-trial-check.mts ] && \
   echo "[pre-commit] free-trial-check (ingyenes próba: nincs számla, 1 tenant, full modul, 1 kupon)…"
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/free-trial-check.mts >"$GATE_LOG" || gate_failed
 fi
+# trial-plan-binding-check (tervvaltas A, 2026-11-16, migráció 0137): a próba, a /folytatas és a rendelés a NÉZETT /
+#     FUTÓ tervhez kötve — /p/<t>/v/<n>/trial a terv artifactjából épít, idegen/elutasított terv elutasítva, a /folytatas
+#     a futó site tervét árulja, a 2. terven rendelt csomag fizetés után a 2. tervet élesíti (order_intent.plan_artifact_id).
+#     Saját fixture-szülő a közös dev-DB-n; a mock postát/SMS-t/átjárót maga kényszeríti. ~15 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/trial-plan-binding-check.mts ] && \
+   changed_files | grep -qE '^src/trial/start\.ts$|^src/outreach/planSet\.ts$|^src/conversion/(owned|provision)\.ts$|^src/payment/service\.ts$|^src/console/(server|data)\.ts$|^migrations/0137_order_plan_artifact\.sql$|^scripts/trial-plan-binding-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/trial-plan-binding-check\.mts$'; then
+    echo "[pre-commit] trial-plan-binding-check --self-test (a terv-kötés őre pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+      npx tsx scripts/trial-plan-binding-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] trial-plan-binding-check (próba + rendelés a nézett tervből)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+    npx tsx scripts/trial-plan-binding-check.mts >"$GATE_LOG" || gate_failed
+fi
 # trial-promise-check (Elek 10-11 próba-kör, a próba-ígéret ADR-je): a próba azt ÍGÉRI, amit AD — a beállított
 #     próba-csomagnál (Ajánlott) a próba-űrlap (valódi Chromium, 390 + 1280 px), a belépő-levél és az admin
 #     Modulok fül nem mond „minden funkció/modul”-t, hanem a csomag nevét + a ténylegesen adott modulokat; A7

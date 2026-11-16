@@ -12,7 +12,8 @@
 //      the right weekday 9–16 times, nothing outside the window, nothing twice;
 //   ④ lapse: lapseExpiredTrials after trial_until → 'lapsed', site 'suspended', the
 //      public host answers 503 + Retry-After, trial modules off, the admin still opens;
-//   ⑤ continuation: GET /p/<t>/folytatas (lapsed → list price, ADR-0354) → POST /p/<t>/request → POST
+//   ⑤ continuation: GET /p/<t>/folytatas (lapsed → list price, ADR-0354) → POST /p/<t>/folytatas/request
+//      (tervvaltas A: the order buys the plan the trial site RUNS) → POST
 //      /pay/mock/<ref>/paid → live again, 'converted', subscription, a mock invoice,
 //      no offer burnt, no coupon minted;
 //   ⑥ FORDULÓNAP (paid AFTER the trial; paid during it see free-trial-expiry-check ⑥ ⓐ): anchor_date = current_period_start = the payment day (Budapest), ≠
@@ -349,10 +350,10 @@ try {
   const trialOfferA = (await db.selectFrom("free_trial").select("offer_id").where("id", "=", trialA.id).executeTakeFirstOrThrow()).offer_id;
   const cont = await cGet(`/p/${a.token}/folytatas`);
   const contBody = cont.status === 200 ? await cont.text() : "";
-  check("GET /p/<t>/folytatas → 200, konfigurátor a /p/<t>/request-re", cont.status === 200 && contBody.includes(`/p/${a.token}/request`), String(cont.status));
+  check("GET /p/<t>/folytatas → 200, konfigurátor a /p/<t>/folytatas/request-re (a futó terv)", cont.status === 200 && contBody.includes(`/p/${a.token}/folytatas/request`), String(cont.status));
   check("…lejárt próba: nincs ajánlat a manifestben (listaár, ADR-0354)", !contBody.includes('"offer":{'));
   const MODULES = ["gallery", "enquiry"];
-  const reqRes = await cPost(`/p/${a.token}/request`, {
+  const reqRes = await cPost(`/p/${a.token}/folytatas/request`, {
     // ADR-0356 / ADR-0032: the buyer chose a NEW free subdomain on /folytatas (Elek3 B1:
     // the order dropped it — the old guard read only the POST body, never the outcome).
     modules: MODULES, billing_period: "monthly", domain_type: "citoviso_sub", domain_name: `${RENAMED}.citoviso.com`,
@@ -362,7 +363,7 @@ try {
     withdrawal_waiver: true, terms_accepted: true,
   });
   const reqJson = (await reqRes.json().catch(() => ({}))) as { ok?: boolean; payUrl?: string; error?: string };
-  check("POST /p/<t>/request → 200 + payUrl (mock pénztár)", reqRes.status === 200 && !!reqJson.payUrl && reqJson.payUrl.includes("/pay/mock/"), `${reqRes.status} ${JSON.stringify(reqJson)}`);
+  check("POST /p/<t>/folytatas/request → 200 + payUrl (mock pénztár)", reqRes.status === 200 && !!reqJson.payUrl && reqJson.payUrl.includes("/pay/mock/"), `${reqRes.status} ${JSON.stringify(reqJson)}`);
   const oi = await db.selectFrom("order_intent").select(["id", "price", "offer_id", "kind"]).where("prospect_id", "=", a.prospectId).orderBy("created_at", "desc").executeTakeFirstOrThrow();
   const { computeMonthly, loadPricing } = await import("../src/pricing.js");
   await loadPricing();

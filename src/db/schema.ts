@@ -326,6 +326,9 @@ export interface OrderIntentTable {
   status: Generated<"started" | "submitted" | "abandoned">;
   created_at: Generated<Timestamp>;
   submitted_at: Timestamp | null;
+  /** 0137 (tervvaltas A): the PLAN the order bought — the artifact the paid activation
+   *  converts. NULL = pre-0137 / no plan → activation uses prospect.mock_artifact_id. */
+  plan_artifact_id: Generated<string | null>;
   /** ADR-0322 ⑤ (0087): the preset chosen at submit; 'egyedi' = the module list
    *  matches no preset. NULL = order captured before 0087 or not a configurator order. */
   preset: "alap" | "ajanlott" | "teljes" | "egyedi" | null;

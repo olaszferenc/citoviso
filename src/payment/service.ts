@@ -211,7 +211,10 @@ export async function requestPayment(
     const artifact = await db
       .selectFrom("order_intent")
       .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
-      .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
+      // tervvaltas A (0137): the gate judges the plan the order BUYS (activation converts it).
+      .leftJoin("mock_artifact", (j) =>
+        j.on(sql<boolean>`mock_artifact.id = coalesce(order_intent.plan_artifact_id, prospect.mock_artifact_id)`),
+      )
       .select("mock_artifact.status as status")
       .where("order_intent.id", "=", orderIntentId)
       .executeTakeFirst();
@@ -1986,7 +1989,8 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "order_intent.platform_label as platformLabel",
       "prospect.id as prospectId",
       "prospect.lead_id as leadId",
-      "prospect.mock_artifact_id as artifactId",
+      // tervvaltas A (0137): the plan the order bought; a pre-0137 order has none → plan 1.
+      sql<string | null>`coalesce(order_intent.plan_artifact_id, prospect.mock_artifact_id)`.as("artifactId"),
       "prospect.contact_email as contactEmail",
       // ADR-0366 (Elek 10-11 B2): the address the buyer typed at checkout (required there).
       "order_intent.buyer_email as buyerEmail",

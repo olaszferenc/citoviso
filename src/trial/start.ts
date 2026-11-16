@@ -37,6 +37,7 @@ import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
+import { listProspectPlans } from "../outreach/planSet.js";
 import { getFreeTrialConfig, trialUntilFrom } from "./config.js";
 import { loadPricing } from "../pricing.js";
 import { tenantTrialPackage, trialModuleIds, trialModulesFromSelection, trialPackageView } from "./package.js";
@@ -61,6 +62,10 @@ export interface TrialInput {
   /** ADR-0440 ⑦: the one-click sheet's click-wrap sentence stood for both ticks — the stamp is
    *  TRIAL_CLICKWRAP_V1 instead of the two separate wordings. */
   readonly clickwrap?: boolean;
+  /** The plan the visitor was LOOKING AT when they pressed „Indítsa el” (/p/<token>/v/<n>/trial).
+   *  Must be one of THIS prospect's plans (listProspectPlans) — anything else is refused as
+   *  not_found. Absent = plan 1, the prospect's own mock (the bare /p/<token>/trial). */
+  readonly planArtifactId?: string | null;
 }
 
 export type TrialError =
@@ -114,6 +119,27 @@ function validate(input: TrialInput): TrialError | { name: string; email: string
 }
 
 /**
+ * The artifact a trial start may build from: plan 1 when no plan was named, otherwise the
+ * named artifact IF it is one of the link's plans (the same list the page's switcher shows) and
+ * not rejected; otherwise the refusal code.
+ */
+async function planArtifactOf(
+  prospectId: string,
+  primaryArtifactId: string,
+  wanted: string | null,
+): Promise<string | "not_found" | "not_available"> {
+  if (!wanted || wanted === primaryArtifactId) return primaryArtifactId;
+  const primary = await db.selectFrom("mock_artifact").select("path").where("id", "=", primaryArtifactId).executeTakeFirst();
+  const plans = await listProspectPlans(prospectId, { artifactId: primaryArtifactId, artifactPath: primary?.path ?? "" });
+  if (!plans.some((x) => x.artifactId === wanted)) return "not_found";
+  // An offered plan stays on the page after a curator's reject (§I), but a 'rejected' mock is
+  // never converted (approveArtifactForBuyerOrder keeps the human NO) — refused here, before the
+  // claim, instead of a claim → provision_failed → house alert for a known outcome.
+  const st = await db.selectFrom("mock_artifact").select("status").where("id", "=", wanted).executeTakeFirst();
+  return st?.status === "rejected" ? "not_available" : wanted;
+}
+
+/**
  * Start (or return the already-started) free trial for the lead behind an outreach token.
  * Refuses a lead that already bought, and a lead whose trial has ended.
  */
@@ -124,6 +150,14 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     .where("token", "=", prospectToken)
     .executeTakeFirst();
   if (!p || !p.mock_artifact_id) return { ok: false, error: "not_found" };
+
+  // The trial is built from the plan on screen, not always plan 1 (tervvaltas A, 2026-11-16:
+  // a lead who pressed „Indítsa el” on plan 2 got plan 1's site). ⛔ Only a plan of THIS
+  // link: an artifact id from anywhere else — another lead's mock, a dropped alternative —
+  // is refused before anything is written.
+  const picked = await planArtifactOf(p.id, p.mock_artifact_id, input.planArtifactId ?? null);
+  if (picked === "not_found" || picked === "not_available") return { ok: false, error: picked };
+  const artifactId = picked;
 
   const v = validate(input);
   if (typeof v === "string") return { ok: false, error: v };
@@ -159,7 +193,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   //     NEVER finish. Refused BEFORE anything is claimed — measured: the old order claimed,
   //     built a tenant, then refused, and the lead read „Ez az oldal már az Öné” with no login.
   //     A claim such an old run left behind is cleaned up here too.
-  const art = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", p.mock_artifact_id).executeTakeFirst();
+  const art = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", artifactId).executeTakeFirst();
   if (!isEngineArtifact(art?.inputs)) {
     if (prior && unprovisioned) await abandonTrialStart(prior.id, p.lead_id, "legacy HTML-másolat mock (régi kör hagyta félbe)", null); // i18n-exempt: operátori napló
     else await alertTrialNotStarted(p.lead_id, "legacy HTML-másolat mock — élő próba-oldal nem készíthető belőle; semmi nem jött létre"); // i18n-exempt: operátori napló
@@ -238,11 +272,11 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     if (!tenantId) {
       // 4. Provision: the visitor's own submit is the approval of the mock they are on
       //    (same owner ruling as the paid order, 2026-09-13). A 'rejected' mock stays refused.
-      const promo = await approveArtifactForBuyerOrder(p.mock_artifact_id, `trial:${trialId}`);
+      const promo = await approveArtifactForBuyerOrder(artifactId, `trial:${trialId}`);
       if (!promo.promoted && promo.status !== "approved") {
         return fail(`a mock '${promo.status ?? "hiányzik"}' — próba nem indítható`); // i18n-exempt: operátori napló
       }
-      const conv = await convertLead(p.lead_id, p.mock_artifact_id, modules, null);
+      const conv = await convertLead(p.lead_id, artifactId, modules, null);
       if (conv.renderSource === "copy") return fail("legacy HTML-másolat mock — a §A fotó-policy nem alkalmazható"); // i18n-exempt: operátori napló
       // Trial-origin marking: everything granted here that money does not back. (A fresh
       // trial tenant has paid for nothing, so that is all of them.)
