@@ -1,4 +1,4 @@
-# 2026-11-16 — Ország-réteg 3/3: riportok (ADR-XXXX)
+# 2026-11-16 — Ország-réteg 3/3: riportok (ADR-0454)
 
 Session `citd77d463e`, koordinátor `cit9b4690e3`, brief `~/rc-briefs/orszag-reteg-3c-riportok-20261116.md` (tulaj „igen mehet”).
 

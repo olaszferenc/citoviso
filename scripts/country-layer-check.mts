@@ -22,7 +22,7 @@
 //   ⑥ ADR-0450 — THE SURFACES (ország-réteg 3/2): the owner-, guest- and partner-facing files
 //      carry no burned "HUF" / "hu-HU" / " Ft" and no price getter without a region.
 //
-//   ⑦ ADR-XXXX — THE REPORTS (ország-réteg 3/3): the revenue report folds per currency (no
+//   ⑦ ADR-0454 — THE REPORTS (ország-réteg 3/3): the revenue report folds per currency (no
 //      cross-currency sum, no conversion), every amount query reads its currency, the funnel's
 //      send hour and heat map are in the lead's zone, portals come from the catalogue, and the
 //      tenant reports/letters run on the lodging's zone; no burned HUF / Ft / Budapest clock.

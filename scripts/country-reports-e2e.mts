@@ -1,4 +1,4 @@
-// ADR-XXXX ACCEPTANCE — the COUNTRY LAYER's REPORTS (ország-réteg 3/3), in a SCRATCH database
+// ADR-0454 ACCEPTANCE — the COUNTRY LAYER's REPORTS (ország-réteg 3/3), in a SCRATCH database
 // (never the shared dev DB, never production).
 //
 // Three markets, each in its own currency — HU / HUF, CZ / CZK (Europe/Prague), SK / EUR — plus a

@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/3: a riportok pénznemenként, országonként és a helyi időben
+## ADR-0454 — Ország-réteg 3/3: a riportok pénznemenként, országonként és a helyi időben
 
 **Státusz:** ELFOGADVA (tulaj-jóváhagyás 2026-11-16, „igen mehet”, a koordinátoron át, `cit9b4690e3`; brief `~/rc-briefs/orszag-reteg-3c-riportok-20261116.md`) ·
 **Épít:** ADR-0437 (ország-réteg, a lead országa), ADR-0443 (pénzút: régió + pénznem a rendelésen és az előfizetésen, minor unit), ADR-0450/0452 (felületek, `dateLocale`, `siteCountry`) ·
