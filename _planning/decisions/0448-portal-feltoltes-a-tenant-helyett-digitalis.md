@@ -1,4 +1,4 @@
-## ADR-XXXX — Portál-feltöltés a tenant helyett: digitális kollégával, a fiókot mi hozzuk létre; első kör csak felderítés
+## ADR-0448 — Portál-feltöltés a tenant helyett: digitális kollégával, a fiókot mi hozzuk létre; első kör csak felderítés
 
 **Dátum:** 2026-11-16 · **Státusz:** IRÁNY ELFOGADVA (tulaj, 2026-11-16, `cit5926a648`) ·
 **Alap:** `_planning/RESEARCH-2026-11-13-portal-feltoltes.md` · **Kapcsolódik:** ADR-0361 (portál-iCal), ADR-0416 (jutalék-kiváltás)
