@@ -2120,6 +2120,26 @@
   // ADR-0440 (kerdes-inditas): the price card + questions block's facts (cold lead page only),
   // and the visitor's package pick (set up with the block below; null until then).
   var ASK = CFG.ask && typeof CFG.ask === "object" ? CFG.ask : null;
+  // p-lap-vegleges: the link's plans (number, address, picture) — see the block near mount().
+  // The cold lead page only (the ask block's page — never /folytatas or /configure).
+  var PLANS = ASK && !CFG.continuation && CFG.plans && CFG.plans.list && CFG.plans.list.length >= 2 ? CFG.plans : null;
+  var PICK = { plan: PLANS ? Number(PLANS.current) || 1 : 1, sel: 0 };
+  var PICK_KEY = PLANS ? "cit-plan-pick:" + String(PLANS.key || "") : "";
+  function planOf(n) {
+    if (!PLANS) return null;
+    for (var i = 0; i < PLANS.list.length; i++) if (Number(PLANS.list[i].n) === n) return PLANS.list[i];
+    return null;
+  }
+  (function () {
+    if (!PLANS) return;
+    var v = 0;
+    try {
+      v = Number(window.sessionStorage.getItem(PICK_KEY) || 0);
+    } catch (e) {
+      v = 0;
+    }
+    if (planOf(v)) PICK.sel = v;
+  })();
   var SEL = null;
   // proba-C: the trial campaign mail's links (trialCampaignEmail.ts) — `forras=proba` on both,
   // `proba=nyit` on the "try it" button.
@@ -2600,7 +2620,7 @@
   // §A declaration) is folded into the pay step, so showStep2 is no longer reached.
   var hBack = panel.querySelector(".cit-cfg-hback");
   function syncProgress() {
-    var names = [tr("Csomag"), tr("Cím"), tr("Fizetés")];
+    var names = [PLANS ? tr("Terv és csomag") : tr("Csomag"), tr("Cím"), tr("Fizetés")];
     panel.querySelectorAll(".cit-cfg-prog i").forEach(function (b, i) {
       b.classList.toggle("cit-cfg-on", i < cfgStep);
     });
@@ -3951,6 +3971,7 @@
   }
 
   function updateSummary() {
+    if (PLANS) plapSyncOrder();
     // ⭐ EGY TORKOLAT: a függőségi sor-állapot minden újraszámoláskor frissül, így
     // nem lehet elfelejteni egy új beavatkozási pontnál (csomagváltás, visszavétel,
     // kiváltás). Idempotens — a ciklus- és domain-váltás is bátran hívhatja.
@@ -4178,6 +4199,7 @@
   var tVia = "sticky";
   var tLastFocus = null;
   var tDone = false;
+  var tStartedPlan = 0; // p-lap-vegleges: the plan the trial was started from (the „elküldtük” line)
   var tSending = false;
 
   /** The ÁSZF tick's label: the STAMPED wording (startTrial stores TERMS_ACCEPTANCE_V1),
@@ -4247,6 +4269,7 @@
         '<p class="cit-cfg-tkick">' + I.gift + "<span>" + esc(tr("Ingyenes próba")) + "</span></p>" +
         '<h3 class="cit-cfg-th" id="cit-cfg-th">' + esc(launchTitle()) + "</h3>" +
         '<p class="cit-cfg-tsub">' + esc(tr("Egy gombnyomás, és az oldal azonnal él.")) + "</p>" +
+        (PLANS ? '<div class="cit-pk-tpick"></div>' : "") +
         '<p class="cit-cfg-taddr">' + I.globe + "<b>" + esc(TRIAL.sub || "") + "</b></p>" +
         '<ul class="cit-cfg-tfacts">' +
         "<li>" + I.okc + "<span>" + esc(trialN(tr("{n} napig ingyen, bankkártya nélkül"))) + "</span></li>" +
@@ -4304,6 +4327,7 @@
     tSheet.querySelector(".cit-cfg-tsmall").textContent = trialN(tr("{n} nap ingyen · kártya nélkül"));
     document.body.appendChild(tScrim);
     document.body.appendChild(tSheet);
+    plapRender();
 
     var form = tSheet.querySelector(".cit-cfg-tform");
     var fName = form.querySelector('[name="name"]');
@@ -4442,6 +4466,15 @@
       dates.textContent = "";
       var live = ok.querySelector(".cit-cfg-toklive");
       live.textContent = "";
+      var was = ok.querySelector(".cit-pk-tokplan");
+      if (was) was.parentNode.removeChild(was);
+      if (PLANS) {
+        live.parentNode.insertBefore(
+          el('<p class="cit-pk-tokplan"><span class="cit-pk-osimg">' + thumbHtml(tStartedPlan || pickN()) + "</span><span>" +
+            esc(tr("Ezzel a tervvel indult:")) + " <b>" + esc(planLbl(tStartedPlan || pickN())) + "</b></span></p>"),
+          live.nextSibling,
+        );
+      }
       if (j.siteUrl) {
         live.appendChild(document.createTextNode(tr("Az oldala él:") + " "));
         var a = document.createElement("a");
@@ -4541,7 +4574,10 @@
         // ADR-0440 ③/⑦: the picked set (only when the visitor touched the picker) + the click-wrap.
         modules: SEL.touched ? SEL.modules.slice() : undefined,
         clickwrap: true,
+        // p-lap-vegleges: the PICKED plan (the server checks it is this link's own plan)
+        plan: pickBody(),
       });
+      tStartedPlan = pickN();
       track("launch_go", { pkg: SEL.touched ? selTier() : null, via: tVia });
       fetch(TRIAL.url, { method: "POST", headers: { "content-type": "application/json" }, body: body })
         .then(function (r) {
@@ -4810,6 +4846,8 @@
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        // p-lap-vegleges: the PICKED plan (absent on a single-plan page; the server checks it)
+        plan: PLANS ? pickN() : undefined,
         modules: chosen,
         // ADR-0322 ⑤: the preset card that is on (null = none matches → "egyedi"
         // server-side, which re-derives it from the module list anyway).
@@ -5403,6 +5441,7 @@
     for (var k = 0; k < nodes.length; k++) {
       var fb = nodes[k];
       if (fb === launch || (fb.closest && fb.closest('[class*="cit-cfg"]'))) continue;
+      if (fb.closest && fb.closest(".cit-pbar")) continue; // p-lap-vegleges: the bar never counts itself
       var fcs = getComputedStyle(fb);
       if (fcs.position !== "fixed" || fcs.display === "none" || fcs.visibility === "hidden") continue;
       if (parseFloat(fcs.opacity) === 0) continue;
@@ -6539,7 +6578,9 @@
       "</ul>" +
       (TRIAL
         ? '<button type="button" class="cit-ask__go" data-go="card"><span>' + esc(tr("Indítsa el")) + "</span><small>" + esc(trialN(tr("{n} nap ingyen · kártya nélkül"))) + "</small></button>" +
-          '<button type="button" class="cit-ask__alt" data-order="card">' + esc(tr("Megrendelem most, próba nélkül")) + "</button>"
+          // p-lap-vegleges: an EQUAL, framed second button (owner: „le ne vedd a rendelési lehetőséget”)
+          '<button type="button" class="cit-ask__alt cit-ask__alt--eq" data-order="card">' + esc(tr("Megrendelem most")) +
+          "<small>" + esc(tr("próba nélkül")) + "</small></button>"
         : '<button type="button" class="cit-ask__go" data-order="card"><span>' + esc(tr("Megrendelem")) + "</span><small>" + esc(tr("bankkártyával, a fizetés után azonnal él")) + "</small></button>") +
       '<button type="button" class="cit-ask__pk">' + esc(tr("Csomagok és modulok")) + I.chev + "</button>"
     );
@@ -6549,6 +6590,7 @@
     askBox.querySelector(".cit-ask__card").innerHTML = askCardHtml();
     var open = askBox.querySelector("details[open][data-q='ar']");
     if (open) open.querySelector(".cit-ask__ans").innerHTML = answerHtml("ar");
+    plapDecorateCard();
   }
   function answerHtml(id) {
     var q = qaById(id);
@@ -6606,18 +6648,9 @@
     if (!ASK_ON || askBox) return;
     askBox = el('<section class="cit-ask" id="ar" aria-label="' + esc(tr("Árak és kérdések")) + '"></section>');
     askBox.innerHTML = askSectionHtml();
-    // After the hero: the block is the answer to „mennyibe kerül?”, the first thing a lead asks.
-    var top = document.getElementById("top");
-    var anchor = top;
-    while (anchor && anchor.parentElement && anchor.parentElement !== document.body && !/^(MAIN|ARTICLE)$/.test(anchor.parentElement.tagName)) {
-      anchor = anchor.parentElement;
-    }
-    if (anchor && anchor.parentElement) anchor.parentElement.insertBefore(askBox, anchor.nextSibling);
-    else {
-      var first = document.querySelector("main, [data-cit-module]");
-      if (first && first.parentElement) first.parentElement.insertBefore(askBox, first);
-      else document.body.appendChild(askBox);
-    }
+    // p-lap-vegleges (ADR-XXXX, supersedes kerdes-inditas ①'s „after the hero”): the block comes
+    // AFTER the whole plan, in the Citoviso end block, and the floating bar replaces the pills.
+    plapMount();
     renderCard();
     var list = askBox.querySelector(".cit-ask__list");
     list.querySelectorAll("details").forEach(function (d) {
@@ -7024,6 +7057,408 @@
     } catch (e) {
       askBox.scrollIntoView();
     }
+  }
+
+
+  // ── p-lap-vegleges (ADR-XXXX, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/) ──
+  // The cold lead page (ASK_ON): the plan runs through UNDISTURBED; the price card + „Kérdése
+  // van?” come AFTER the whole plan behind an „A honlap-terv vége” seam, in a light Citoviso
+  // block; a floating bar („Kérdése van?” · „Megrendelem” · „Indítsa el · N. terv”) replaces the
+  // pill pair and appears only once the hero has left the screen. A multi-plan link gets plan
+  // preview cards in three places:
+  //   · the end block — a click on ANOTHER plan loads that plan at the TOP (owner, 2026-11-16),
+  //     so there the picked plan is always the one on screen;
+  //   · the launch sheet and the order panel — the card picks IN PLACE (no reload); when the
+  //     pick differs from the plan on screen one line says so, „Megnézem” loads it.
+  // The trial and the order POST carry the picked plan (`plan`); the server takes it from the
+  // request, checked against the link's own plan set (server.ts, ADR-0449's routes).
+  /** The picked plan: the explicit pick, else the plan on screen. */
+  function pickN() {
+    return PICK.sel || PICK.plan;
+  }
+  function storePick(n) {
+    PICK.sel = n;
+    try {
+      window.sessionStorage.setItem(PICK_KEY, String(n));
+    } catch (e) {
+      /* the pick lives for this page only */
+    }
+  }
+  /** What the POST carries: the picked plan's number, or nothing on a single-plan page. */
+  function pickBody() {
+    return PLANS ? pickN() : undefined;
+  }
+  function planLbl(n) {
+    return tr("{n}. terv").replace("{n}", String(n));
+  }
+  /** Hungarian article before an ordinal numeral (az 1., a 2.); other languages: none. */
+  function numArt(n) {
+    var lang = (document.documentElement.lang || "hu").slice(0, 2);
+    if (lang !== "hu") return "";
+    return n === 1 || n === 5 ? "az" : "a";
+  }
+  function squash(s) {
+    return String(s).replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  }
+  function planGo(n, fromEnd) {
+    var p = planOf(n);
+    if (!p) return;
+    if (fromEnd) storePick(n);
+    track("plan_view_click", { plan: n, from: fromEnd ? "end" : "mismatch" });
+    window.location.href = p.href;
+  }
+  var EYE =
+    '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>';
+  var TICK =
+    '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function thumbHtml(n) {
+    var p = planOf(n);
+    return p && p.thumb
+      ? '<img alt="" loading="lazy" src="' + esc(p.thumb) + '">'
+      : '<span class="cit-pk-noimg">' + esc(planLbl(n)) + "</span>";
+  }
+  function mismatchHtml() {
+    var s = pickN();
+    if (s === PICK.plan) return "";
+    return (
+      '<div class="cit-pk-mm" role="status"><span>' +
+      esc(
+        squash(
+          tr("A lapon most {art} {n}. tervet látja, de {art2} {m}. terv van kiválasztva.")
+            .replace("{art}", numArt(PICK.plan))
+            .replace("{n}", String(PICK.plan))
+            .replace("{art2}", numArt(s))
+            .replace("{m}", String(s)),
+        ),
+      ) +
+      '</span><button type="button" data-pk-view="' + s + '">' + EYE + esc(tr("Megnézem")) + "</button></div>"
+    );
+  }
+  function cardsHtml(scope) {
+    var s = pickN();
+    var h = '<div class="cit-pk-cards" role="radiogroup" aria-label="' + esc(tr("Melyik terv legyen?")) + '">';
+    PLANS.list.forEach(function (p) {
+      var n = Number(p.n);
+      var cur = n === PICK.plan;
+      h +=
+        '<div class="cit-pk-cw"><button type="button" class="cit-pk-card" role="radio" aria-checked="' + (n === s) +
+        '" data-pk-pick="' + n + '" data-pk-scope="' + scope + '">' +
+        '<span class="cit-pk-img">' + thumbHtml(n) + "</span>" +
+        '<span class="cit-pk-badge">' + TICK + esc(tr("Kiválasztva")) + "</span>" +
+        '<span class="cit-pk-meta"><span class="cit-pk-radio">' + TICK + "</span><b>" + esc(planLbl(n)) + "</b>" +
+        "<em>" + (cur ? esc(tr("ezt nézi")) : "") + "</em></span></button>" +
+        (cur
+          ? '<span class="cit-pk-view cit-pk-view--cur">' + esc(tr("a lapon most ez látható")) + "</span>"
+          : '<button type="button" class="cit-pk-view" data-pk-view="' + n + '"' + (scope === "end" ? ' data-pk-end="1"' : "") + ">" +
+            EYE + esc(scope === "end" ? tr("Megnézem teljes méretben") : tr("Megnézem")) + "</button>") +
+        "</div>";
+    });
+    return h + "</div>";
+  }
+  var pend = null; // the Citoviso end block
+  var pbar = null; // the floating bar
+  function presetOnName() {
+    var on = panel.querySelector(".cit-cfg-preset--on");
+    var id = on ? on.getAttribute("data-preset") : null;
+    var p = PRESETS.filter(function (x) {
+      return x.id === id;
+    })[0];
+    return p ? tr(p.label) : tr("Egyedi");
+  }
+  /** Every place that names the picked plan. */
+  function plapRender() {
+    var s = pickN();
+    if (PLANS) {
+      var ep = pend && pend.querySelector(".cit-pk-endcards");
+      if (ep) ep.innerHTML = cardsHtml("end");
+      var tp = tSheet && tSheet.querySelector(".cit-pk-tpick");
+      if (tp) tp.innerHTML = '<p class="cit-pk-q">' + esc(tr("Melyik tervvel induljon?")) + "</p>" + mismatchHtml() + cardsHtml("trial");
+      var op = panel.querySelector(".cit-pk-opick");
+      if (op) op.innerHTML = '<p class="cit-pk-q">' + esc(tr("1. Melyik tervet rendeli meg?")) + "</p>" + mismatchHtml() + cardsHtml("order");
+      var cp = askBox && askBox.querySelector(".cit-pk-cardplan");
+      if (cp) {
+        cp.querySelector(".cit-pk-cpimg").innerHTML = thumbHtml(s);
+        cp.querySelector("b").textContent = planLbl(s);
+      }
+      plapSyncOrder();
+    }
+    var go = askBox && askBox.querySelector(".cit-ask__card .cit-ask__go[data-go] small");
+    if (go) go.textContent = (PLANS ? planLbl(s) + " · " : "") + trialN(tr("{n} nap ingyen · kártya nélkül"));
+    var ts = tSheet && tSheet.querySelector(".cit-cfg-tsmall");
+    if (ts) ts.textContent = (PLANS ? planLbl(s) + " · " : "") + trialN(tr("{n} nap ingyen · kártya nélkül"));
+    var alt = askBox && askBox.querySelector(".cit-ask__card .cit-ask__alt small");
+    if (alt) alt.textContent = (PLANS ? planLbl(s) + " · " : "") + tr("próba nélkül");
+    var bg = pbar && pbar.querySelector('[data-pbar="go"]');
+    if (bg) {
+      bg.innerHTML = esc(tr("Indítsa el") + (PLANS ? " · " + planLbl(s) : "")) + "<small>" + esc(trialN(tr("{n} nap ingyen"))) + "</small>";
+    }
+  }
+  function plapSyncOrder() {
+    if (!PLANS) return;
+    var s = pickN();
+    var sum = panel.querySelector(".cit-pk-osum");
+    if (sum) {
+      var k = s + "|" + presetOnName();
+      if (sum.getAttribute("data-k") !== k) {
+        sum.setAttribute("data-k", k);
+        sum.innerHTML = '<span class="cit-pk-osimg">' + thumbHtml(s) + "</span><span>" + esc(tr("Ezt rendeli meg:")) + " <b>" + esc(planLbl(s) + " · " + presetOnName()) + "</b></span>";
+      }
+    }
+    var line = panel.querySelector(".cit-pk-oline span:last-child");
+    if (line) line.textContent = planLbl(s);
+  }
+  var pkToastT = 0;
+  function pkToast(msg) {
+    var t = document.querySelector(".cit-pk-toast");
+    if (!t) {
+      t = el('<div class="cit-pk-toast" role="status" aria-live="polite"></div>');
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add("cit-pk-toast--on");
+    clearTimeout(pkToastT);
+    pkToastT = setTimeout(function () {
+      t.classList.remove("cit-pk-toast--on");
+    }, 2200);
+  }
+  /** Clicks on any plan card / „Megnézem” / „Csere”, wherever they sit (end block, sheet, panel, card). */
+  function plapClick(e) {
+    var t = e.target && e.target.closest ? e.target.closest("[data-pk-pick],[data-pk-view],[data-pk-tocards]") : null;
+    if (!t) return;
+    if (t.hasAttribute("data-pk-tocards")) {
+      var pk = pend && pend.querySelector(".cit-pk-pick");
+      if (pk) {
+        try {
+          pk.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (er) {
+          pk.scrollIntoView();
+        }
+      }
+      return;
+    }
+    if (t.hasAttribute("data-pk-view")) {
+      planGo(Number(t.getAttribute("data-pk-view")), t.hasAttribute("data-pk-end"));
+      return;
+    }
+    var n = Number(t.getAttribute("data-pk-pick"));
+    var scope = t.getAttribute("data-pk-scope");
+    if (scope === "end" && n !== PICK.plan) {
+      planGo(n, true);
+      return;
+    }
+    if (n === pickN() && PICK.sel) return;
+    storePick(n);
+    track("plan_pick", { plan: n, where: scope });
+    plapRender();
+    pkToast(squash(tr("Kiválasztva: {art} {n}. terv").replace("{art}", numArt(n)).replace("{n}", String(n))));
+  }
+  /** The price card's top row: the picked plan + „Csere” (to the cards). Re-added on every card render. */
+  function plapDecorateCard() {
+    if (!askBox) return;
+    var card = askBox.querySelector(".cit-ask__card");
+    if (PLANS && !card.querySelector(".cit-pk-cardplan")) {
+      card.insertBefore(
+        el(
+          '<div class="cit-pk-cardplan"><span class="cit-pk-cpimg"></span><span class="cit-pk-cptx">' + esc(tr("Az Ön választása")) +
+            '<b></b></span><button type="button" data-pk-tocards>' + esc(tr("Csere")) + "</button></div>",
+        ),
+        card.firstChild,
+      );
+    }
+    plapRender();
+  }
+
+  /** The plan's own fixed / sticky chrome — measured, never a template class list. */
+  var asideMarked = [];
+  function markAside() {
+    asideMarked.forEach(function (n) {
+      n.removeAttribute("data-cit-aside");
+    });
+    asideMarked = [];
+    var nodes = document.querySelectorAll("body > *, body > * > *, body > * > * > *, body > * > * > * > *");
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n === pend || n === pbar || (pend && pend.contains(n)) || (pbar && pbar.contains(n))) continue;
+      if (n.id === "cit-consent" || n.closest("#cit-consent") || n.id === "cit-plans") continue;
+      if (n.closest('[class*="cit-cfg"]') && !n.closest(".cit-cfg-editstrip")) continue; // our sheets/panel/survey
+      if (/^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/.test(n.tagName)) continue;
+      var cs = getComputedStyle(n);
+      if (cs.position !== "fixed" && cs.position !== "sticky") continue;
+      if (cs.display === "none") continue;
+      n.setAttribute("data-cit-aside", "");
+      asideMarked.push(n);
+    }
+  }
+  function plapOverlayOpen() {
+    var h = document.documentElement.classList;
+    return h.contains("cit-cfg-is-open") || h.contains("cit-ask-pkopen") || !!(tSheet && !tSheet.hidden);
+  }
+  var heroEl = null;
+  var endOn = false;
+  var inEnd = false;
+  function plapSync() {
+    if (!pend) return;
+    var vh = window.innerHeight;
+    var nowIn = pend.getBoundingClientRect().top < vh * 0.5;
+    if (nowIn !== inEnd) {
+      inEnd = nowIn;
+      if (inEnd) markAside();
+      document.documentElement.classList.toggle("cit-pend-in", inEnd);
+    }
+    if (!pbar) return;
+    var hb = heroEl ? heroEl.getBoundingClientRect().bottom : 0;
+    var want = !endOn && !inEnd && !plapOverlayOpen() && hb < vh * 0.35;
+    var off = consentH();
+    if (want) {
+      var top = fixedBottomTop();
+      off = Math.max(off, vh - top);
+    }
+    pbar.style.bottom = Math.max(0, Math.round(off)) + "px";
+    var was = !pbar.classList.contains("cit-pbar--off");
+    pbar.classList.toggle("cit-pbar--off", !want);
+    // the survey bar steps around the bar's buttons (blockingRects sees them): re-place it on a change
+    if (was !== want && placeFbHook) setTimeout(placeFbHook, 320);
+    pbar.setAttribute("aria-hidden", want ? "false" : "true");
+    pbar.querySelectorAll("button").forEach(function (b) {
+      b.tabIndex = want ? 0 : -1;
+    });
+  }
+  var plapQueued = 0;
+  function plapSchedule() {
+    if (plapQueued) return;
+    plapQueued = setTimeout(function () {
+      plapQueued = 0;
+      plapSync();
+    }, 60);
+  }
+  /** Moves the price card + questions behind the plan and wraps them in the Citoviso block. */
+  function plapMountEnd() {
+    var name = (CFG.product && CFG.product.name) || "";
+    var count = PLANS ? PLANS.list.length : 1;
+    var sub = PLANS
+      ? squash(
+          (count >= 3 ? tr("Mindhárom {art} {name} adataiból és képeiből készült.") : tr("Mindkettő {art} {name} adataiból és képeiből készült."))
+            .replace("{art}", artOf(name))
+            .replace("{name}", name),
+        ) +
+        " " + tr("Egy másik tervre kattintva betöltjük, a lap tetejétől.") +
+        (PLANS.samePrice ? " " + tr("Az ár ugyanaz, és később is cserélheti.") : " " + tr("Később is cserélheti."))
+      : "";
+    pend = el(
+      '<section class="cit-pend" aria-label="' + esc(tr("Citoviso — ár, kérdések és indítás")) + '">' +
+        '<div class="cit-pend__seam">' + esc(tr("A honlap-terv vége")) + "</div>" +
+        '<div class="cit-pend__head"><span class="cit-pend__logo">citoviso<i></i></span><p>' +
+        esc(tr("Ez már nem a honlap része — a Citoviso ajánlata.")) + "</p></div>" +
+        (PLANS
+          ? '<div class="cit-pk-pick" id="cit-tervek"><h2>' + esc(tr("Melyik terv legyen?")) + '</h2><p class="cit-pk-sub">' + esc(sub) +
+            '</p><div class="cit-pk-endcards"></div></div>'
+          : "") +
+        "</section>",
+    );
+    // After the WHOLE plan: right before the configurator's manifest (injected at the end of the
+    // plan's body), so the framing footer appended after it stays the page's last word.
+    var mf = document.querySelector("body > script[data-cit-configurator]");
+    if (mf) document.body.insertBefore(pend, mf);
+    else document.body.appendChild(pend);
+    pend.appendChild(askBox);
+  }
+  function plapMountBar() {
+    pbar = el(
+      '<div class="cit-pbar cit-pbar--off" role="region" aria-label="' + esc(tr("Indítás és megrendelés")) + '"><div class="cit-pbar__in">' +
+        '<span class="cit-pbar__txt">' + esc(tr("Tetszik a terv?")) + "</span>" +
+        '<button type="button" class="cit-pbar__ask" data-pbar="ask">' + esc(tr("Kérdése van?")) + "</button>" +
+        (TRIAL
+          ? '<button type="button" class="cit-pbar__b cit-pbar__b--order" data-pbar="order">' + esc(tr("Megrendelem")) +
+            (launchFromText ? "<small>" + esc(launchFromText) + "</small>" : "") + "</button>" +
+            '<button type="button" class="cit-pbar__b cit-pbar__b--go" data-pbar="go"></button>'
+          : '<button type="button" class="cit-pbar__b cit-pbar__b--go" data-pbar="order">' + esc(tr("Megrendelem")) +
+            (launchFromText ? "<small>" + esc(launchFromText) + "</small>" : "") + "</button>") +
+        "</div></div>",
+    );
+    document.body.appendChild(pbar);
+    pbar.addEventListener("click", function (e) {
+      var b = e.target.closest ? e.target.closest("[data-pbar]") : null;
+      if (!b) return;
+      var a = b.getAttribute("data-pbar");
+      if (a === "go") openLaunch("bar");
+      else if (a === "order") openOrder("bar");
+      else if (a === "ask") {
+        track("price_open", { via: "bar" });
+        var k = document.getElementById("kerdes");
+        if (!k) return;
+        try {
+          k.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (er) {
+          k.scrollIntoView();
+        }
+        setTimeout(function () {
+          var f = k.querySelector("summary");
+          if (f) f.focus({ preventScroll: true });
+        }, 700);
+      }
+      setTimeout(plapSync, 60);
+    });
+  }
+  /** The order panel: plan cards as step 1, the package question becomes step 2, a summary line. */
+  function plapDecoratePanel() {
+    if (!PLANS) return;
+    var q = panel.querySelector(".cit-cfg-body > .cit-cfg-q");
+    if (q && !panel.querySelector(".cit-pk-opick")) {
+      q.parentNode.insertBefore(el('<div class="cit-pk-opick"></div>'), q);
+      q.textContent = tr("2. Milyen legyen az oldala?");
+    }
+    var bar = panel.querySelector(".cit-cfg-s1bar");
+    if (bar && !panel.querySelector(".cit-pk-osum")) bar.parentNode.insertBefore(el('<div class="cit-pk-osum"></div>'), bar);
+    var item = panel.querySelector(".cit-cfg-item-list");
+    if (item && !panel.querySelector(".cit-pk-oline")) {
+      item.parentNode.insertBefore(el('<div class="cit-cfg-item-line cit-pk-oline"><span>' + esc(tr("Terv")) + "</span><span></span></div>"), item);
+    }
+  }
+  function plapMount() {
+    if (!ASK_ON || !askBox) return;
+    document.documentElement.classList.add("cit-plap");
+    plapMountEnd();
+    plapMountBar();
+    plapDecoratePanel();
+    plapDecorateCard();
+    document.addEventListener("click", plapClick);
+    // The hero = the top-level block the plan's #top lives in (mountAsk's old anchor); without
+    // one, the first section.
+    var top = document.getElementById("top");
+    heroEl = top;
+    while (heroEl && heroEl.parentElement && heroEl.parentElement !== document.body && !/^(MAIN|ARTICLE)$/.test(heroEl.parentElement.tagName)) {
+      heroEl = heroEl.parentElement;
+    }
+    if (!heroEl) heroEl = document.querySelector("main section, section, header");
+    if (typeof IntersectionObserver === "function") {
+      try {
+        new IntersectionObserver(
+          function (en) {
+            endOn = !!(en[0] && en[0].isIntersecting);
+            plapSync();
+          },
+          { rootMargin: "0px 0px -15% 0px" },
+        ).observe(pend);
+      } catch (e) {
+        endOn = false;
+      }
+    }
+    window.addEventListener("scroll", plapSchedule, { passive: true });
+    window.addEventListener("resize", function () {
+      plapRender();
+      plapSchedule();
+    });
+    document.addEventListener(
+      "click",
+      function () {
+        setTimeout(plapSync, 80);
+        setTimeout(plapSync, 450);
+      },
+      true,
+    );
+    // the consent bar and a template's booking bar come and go without an event of ours
+    setInterval(plapSync, 700);
+    plapSync();
   }
 
   // ── mount ───────────────────────────────────────────────────────────────────

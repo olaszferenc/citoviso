@@ -12,7 +12,8 @@ Panzió, dev árlista), a terv képei (`terv-T2-*`) a mock állapot-sorai.
 
 ## Ami KÖT (elvárt viselkedés, nem stílus-javaslat)
 
-1. **Hely és horgonyok.** A `/p/<token>` lap (hideg lead, nem saját-vásárolt, nem `/folytatas`) a hős után
+1. **Hely és horgonyok.** **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a blokk NEM a hős után, hanem a TELJES terv után jön, a
+   Citoviso-blokkban („A honlap-terv vége”); a horgonyok változatlanok. — Eredetileg: a `/p/<token>` lap (hideg lead, nem saját-vásárolt, nem `/folytatas`) a hős után
    egy blokkot kap (`CFG.ask`): `#ar` = az ár-kártya blokkja, `#kerdes` = a „Kérdése van?” rész,
    `#inditas` = a hash az indító lapot nyitja, `?k=<kategória>` (ar, koltseg, benne, utana, lemond, kik,
    nemkerem, beallit) a kész választ nyitja ki — `#ar`-ral együtt is (`?k=ar#ar`). Ezekre épülnek a
@@ -20,7 +21,8 @@ Panzió, dev árlista), a terv képei (`terv-T2-*`) a mock állapot-sorai.
 2. **Ár-kártya.** Címke „Ahogy most látja” (a teljes, mindent mutató csomag ára), vagy választás után
    „Az Ön választása: X” + „Alaphelyzet”. Alatta: az első díj a bevezető kedvezménnyel (csak ha él),
    a legkisebb csomag havi ára, 3 tény (csak ami igaz), **EGY fő gomb: „Indítsa el”** („{n} nap ingyen ·
-   kártya nélkül”), alatta két másodlagos elem: **„Megrendelem most, próba nélkül”** (link) és
+   kártya nélkül”), alatta két másodlagos elem: **„Megrendelem most, próba nélkül”** (link — **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** egyenrangú,
+   keretes gomb: „Megrendelem most” / „N. terv · próba nélkül”, fölötte „Az Ön választása · N. terv · Csere”) és
    **„Csomagok és modulok”**. Próba nélkül (kikapcsolva / már volt) a fő gomb „Megrendelem” és a
    rendelő-panelt nyitja. Asztalon (≥ 900 px blokk-szélesség, `@container`) a kártya jobbra ragad, a
    kérdések balra; telefonon a kártya van elöl.
@@ -62,11 +64,14 @@ Panzió, dev árlista), a terv képei (`terv-T2-*`) a mock állapot-sorai.
 9. **Click-wrap (tulaj ⑦): EGY mondat a gomb alatt** — `TRIAL_CLICKWRAP_V1`, az ÁSZF és az Adatkezelési
    tájékoztató linkelve; ez áll a két régi pipa (ÁSZF + §A fotó-nyilatkozat) helyén, és szó szerint ez
    kerül a `free_trial.terms_text` / `photo_rights_text` oszlopba (`clickwrap: true`).
-10. **A pirula-pár új szerepe a kérdés-oldalon** (próbával): bal **„Indítsa el”** („{n} nap ingyen”,
+10. **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a hideg lead lapon a pirula-pár NEM jelenik meg; helyét a nyitókép után megjelenő lebegő sáv
+    veszi át („Kérdése van?” · „Megrendelem” · „Indítsa el · N. terv”). A pár más lapokon (konfigurátor, `/folytatas`)
+    változatlan. — Eredetileg: **A pirula-pár új szerepe a kérdés-oldalon** (próbával): bal **„Indítsa el”** („{n} nap ingyen”,
     platform-cián — a fő lépés), jobb **„Mennyibe kerül?”** („havi X Ft-tól”, sötétkék) → az
     ár-kártyához görget, a panelt NEM nyitja. Amíg a kártya a képernyőn van, a pár (és a telefonos
     sáv) félreáll. A pár helye, kikerülése (ADR-0242/0377/0382/0396) változatlan.
-11. **Próba nélküli rendelés (tulaj ②: másodlagos link marad).** „Megrendelem most, próba nélkül” (kártya)
+11. **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a kártyán a rendelés egyenrangú gomb, és a sávban is ott a „Megrendelem”; a rendelő panel első
+    lépése a terv. — Eredetileg: **Próba nélküli rendelés (tulaj ②: másodlagos link marad).** „Megrendelem most, próba nélkül” (kártya)
     és „Inkább most megrendelem, próba nélkül” (indító lap) → a MEGLÉVŐ rendelő-panel, a választott
     halmaz előre bepipálva. Az első díj −{p}%, évesnél az egész első éves díjra (tulaj ④ — a meglévő
     `applyOffer` éves díjon így számol).
