@@ -16,7 +16,8 @@ lapról készültek (`scripts/mock-trial-overlay-check.mts --shots=…`): `sav-z
    Mobilon csak **„Mi tartotta vissza?”**, asztalon mellette **„Egy koppintás, segít jobbat kínálnunk.”**
    Mobilon teljes szélesség (12 px szegély), asztalon a bal alsó sarok, legfeljebb 540 px.
    **Fátyol nincs**, a terv alatta görgethető és kattintható marad.
-2. **Nem takarja a rendelés-pirulákat** („14 nap ingyen”, „Itt rendelheti meg”), sem a sablon alsó
+2. **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a hideg lead lapon a pirulák helyett a lebegő sávot (`.cit-pbar`) nem takarja
+   (a sáv gombjai a `blockingRects` akadályai). — Eredetileg: **Nem takarja a rendelés-pirulákat** („14 nap ingyen”, „Itt rendelheti meg”), sem a sablon alsó
    foglalás-sávját, sem a süti-sávot: mindegyik FÖLÖTT ül (a pirula-elhelyezés által közzétett
    `--citui-cfg-clear` magasság fölött; ha az nincs, a süti-sáv fölött). Kinyitva is fölfelé nyílik.
 3. **A válaszok koppintásra nyílnak** (a sorra vagy a nyílra), zárva nem látszanak. Kinyitva a

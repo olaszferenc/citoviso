@@ -30,7 +30,8 @@ a `/p/:token` route adja át, ha a próba be van kapcsolva és a leadnek nincs `
 
 ## Ami KÖT (elvárt viselkedés, nem stílus-javaslat)
 
-1. **Pirula-pár.** A jóváhagyott „Itt rendelheti meg” pirula (ADR-0242, `../order-pill/`) MELLÉ, ugyanabba a
+1. **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a hideg lead lapon (kérdés-blokkal) a pirula-pár nem jelenik meg, a lebegő sáv
+   „Indítsa el · N. terv” gombja viszi a próbát (1., 3., 4. pont ott nem köt). — Eredetileg: **Pirula-pár.** A jóváhagyott „Itt rendelheti meg” pirula (ADR-0242, `../order-pill/`) MELLÉ, ugyanabba a
    rögzített rétegbe kerül a „{n} nap ingyen” pirula — EGY egységként, egymás mellett, egy sorban
    (`white-space: nowrap`; 390 px-en is egy sor, mérve). Sorrend: bal = próba, jobb = rendelés.
    Telefonon (≤ 560 px) a pár a teljes szélességet kitölti (széleken 12 px), asztalon középen áll.

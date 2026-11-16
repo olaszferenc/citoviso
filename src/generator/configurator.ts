@@ -272,6 +272,8 @@ export interface ConfiguratorManifest {
    */
   readonly continuation?: ContinuationInfo;
   readonly ask?: AskEntry;
+  /** p-lap-vegleges: the link's plans (multi-plan cold lead page only) — see PlansEntry. */
+  readonly plans?: PlansEntry;
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -344,6 +346,25 @@ export interface AskEntry {
   readonly contact: { readonly name: string; readonly phone: string; readonly email: string };
 }
 
+/**
+ * p-lap-vegleges (ADR-XXXX, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/): the
+ * plans of a MULTI-plan tracked link, for the preview cards (end block, launch sheet, order
+ * panel). The page posts the PICKED plan's number with the trial / order (`plan`); the server
+ * re-resolves it against listProspectPlans — nothing here is trusted.
+ */
+export interface PlansEntry {
+  /** The plan on screen (1-based). */
+  readonly current: number;
+  /** The session-storage key of the pick (the link's token: one pick per link). */
+  readonly key: string;
+  /** Every plan of the link, in display order: its number, address (/p/<slug>/<t>/v/<n>) and
+   *  cached hero-shot picture (null → the card shows its number; never rendered on request). */
+  readonly list: readonly { readonly n: number; readonly href: string; readonly thumb: string | null }[];
+  /** All plans are priced in ONE region: the price does not depend on the pick (§B.17 — the
+   *  page says „az ár ugyanaz” only when this is true). */
+  readonly samePrice: boolean;
+}
+
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
 export interface ConfiguratorOpts {
   /**
@@ -408,6 +429,8 @@ export interface ConfiguratorOpts {
   readonly continuation?: ContinuationInfo;
   /** ADR-0440: the price card + questions block (cold lead page only). */
   readonly ask?: AskEntry;
+  /** p-lap-vegleges: the link's plans (only with ≥ 2 plans). */
+  readonly plans?: PlansEntry;
 }
 
 /** The trialist's checkout facts (proba-C). Calendar days are Budapest ISO days. */
@@ -554,6 +577,7 @@ export async function buildManifest(
     },
     ...(opts.trial ? { trial: { ...opts.trial, sub: subHost, clickwrap: TRIAL_CLICKWRAP_V1 } } : {}),
     ...(opts.ask ? { ask: opts.ask } : {}),
+    ...(opts.plans && opts.plans.list.length >= 2 ? { plans: opts.plans } : {}),
     ...(opts.continuation ? { continuation: opts.continuation } : {}),
     cta: {
       booking: {

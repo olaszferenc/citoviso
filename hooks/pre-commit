@@ -3597,6 +3597,23 @@ if [ -f scripts/trial-plan-binding-check.mts ] && \
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
     npx tsx scripts/trial-plan-binding-check.mts >"$GATE_LOG" || gate_failed
 fi
+# p-lap-check (tervvaltas F, 2026-11-16, terv: assets/design-refs/prospect-page/p-lap-vegleges/): a /p lap végleges
+#     elrendezése a VALÓDI konzol-láncon, két valódi sablonnal, 390/1280 px — az első képernyőn nincs sáv; a kérdésblokk
+#     a terv után, a Citoviso-blokkban; a lezáró blokk kártyája a másik tervet a lap TETEJÉN tölti be; az indító lapon
+#     kijelölt 2. tervvel a próba a 2. tervből épül; a rendelő panelen kijelölt terv kerül az order_intent.plan_artifact_id-be;
+#     idegen tervszám elutasítva; JS-hiba 0. Saját fixture-szülő; a mock postát/SMS-t/átjárót maga kényszeríti. ~60 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/p-lap-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/console/(server|planSwitcher)\.ts$|^src/outreach/planSet\.ts$|^src/trial/start\.ts$|^assets/design-refs/prospect-page/p-lap-vegleges/|^scripts/p-lap-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/p-lap-check\.mts$'; then
+    echo "[pre-commit] p-lap-check --self-test (a /p lap őre pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+      npx tsx scripts/p-lap-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] p-lap-check (a /p lap végleges elrendezése + a kijelölt terv a kérésben)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+    npx tsx scripts/p-lap-check.mts >"$GATE_LOG" || gate_failed
+fi
 # plan-switch-check (tervvaltas E, 2026-11-16, migráció 0138): a tenant-admin „Kinézet” lapja a site-ot a lead SAJÁT
 #     tervei között váltja — idegen/elutasított terv elutasítva (függvény, POST /admin/kinezet és az előnézet-útvonal),
 #     váltás után a site az új tervből renderel, az edited_site_data szerkesztései megmaradnak, a site_plan_switch sor

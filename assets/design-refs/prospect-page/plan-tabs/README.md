@@ -77,6 +77,11 @@ Képek: `plan-mobil.jpg` (390 px) · `plan-asztali.jpg` (1440 px) · `plan-mobil
 
 ### E. A lap alji tervváltó
 
+> **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a konfigurátoros lapon a „Tetszett?” blokk nem jelenik meg — beleolvadt a lezáró
+> Citoviso-blokk terv-kártyáiba („Melyik terv legyen?”); a MÁSIK terv kártyája azt a tervet tölti be, a lap tetejétől.
+> Konfigurátor nélküli többtervű lapon a 15–18. pont változatlanul köt.
+
+
 15. **A terv végén, a jogi lábléc FÖLÖTT** egy blokk: „**Tetszett?** Nézze meg a másik kettőt is.”
     (két tervnél: „… a másikat is.”). A lábléc marad a lap legalja (framing §6, ADR-0112).
 16. **Csak a TÖBBI tervet kínálja**, az épp nézettet soha. Kártyánként: a terv nyitókép-előnézete,
@@ -86,6 +91,10 @@ Képek: `plan-mobil.jpg` (390 px) · `plan-asztali.jpg` (1440 px) · `plan-mobil
 18. **Skin-független** (a keretező sáv semleges színei), a folyamban, semmit nem takar.
 
 ### F. Rendelés
+
+> **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a rendelés és a próba a KIJELÖLT tervé (a rendelő panel és az indító lap terv-kártyái,
+> a kérés `plan` mezője, szerver-oldalon a link tervkészletéhez mérve); kijelölés nélkül a nézett tervé, mint eddig.
+
 
 19. **A rendelés-gomb és a konfigurátor az ÉPP NÉZETT tervre vonatkozik** — a panel kimondja („Ezt a
     tervet rendeli meg: N. terv”), és a rendelés ehhez az artefaktumhoz kötődik. A fizetési kapu

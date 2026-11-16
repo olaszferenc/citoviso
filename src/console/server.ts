@@ -145,7 +145,7 @@ import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import { payDonePasswordUrl } from "../auth/passwordLink.js";
 import { leadIdOfPayment, retryInvoice } from "../billing/invoiceRetry.js";
-import type { BillingPrefill } from "../generator/configurator.js";
+import type { BillingPrefill, PlansEntry } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, earlierPaidInitialPayment, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { mockCard, MOCK_CARDS } from "../payment/mock.js";
@@ -251,7 +251,7 @@ import {
   deferConsentUntilEngagement,
 } from "./prospectNotice.js";
 import { markOwnViewLinks, normalizeProspectPath, OWN_VIEW_PARAM } from "./prospectPath.js";
-import { injectPlanEndBlock, injectPlanSwitcherBar, planHref } from "./planSwitcher.js";
+import { injectPlanEndBlock, injectPlanSwitcherBar, planHref, planThumbUrl } from "./planSwitcher.js";
 import {
   ensureCardJpeg,
   ensureHeroShot,
@@ -1009,13 +1009,42 @@ async function multiPlanLayers(
     current: number;
     viewId: string | null;
     ownView: boolean;
+    endBlock: boolean;
   },
 ): Promise<string> {
   const plans = await Promise.all(
     i.plans.map(async (p) => ({ n: p.n, hasThumb: (await heroShotState(p.artifactId)).kind === "ready" })),
   );
   const input = { ...i, plans };
-  return injectPlanEndBlock(injectPlanSwitcherBar(html, input), input);
+  const withBar = injectPlanSwitcherBar(html, input);
+  return i.endBlock ? injectPlanEndBlock(withBar, input) : withBar;
+}
+
+/**
+ * p-lap-vegleges (ADR-XXXX): the plans of a multi-plan link as the page's preview cards see
+ * them — number, the address WITH the readable slug (planHref), the cached hero shot (never
+ * rendered on request, Elek FK-004 H1). `samePrice` only when every plan prices in the page's
+ * region: the cards say „az ár ugyanaz” only then (§B.17 — the price is module-based, the
+ * template does not change it, but the region does).
+ */
+async function plansForPage(
+  plans: readonly ProspectPlan[],
+  i: { token: string; leadName: string; current: number; ownView: boolean; region: string },
+): Promise<PlansEntry> {
+  const list = await Promise.all(
+    plans.map(async (p) => ({
+      n: p.n,
+      href: planHref(i.leadName, i.token, p.n, null, i.ownView),
+      thumb: (await heroShotState(p.artifactId)).kind === "ready" ? planThumbUrl(i.token, p.n) : null,
+      region: await regionForArtifactOrNull(p.artifactId),
+    })),
+  );
+  return {
+    current: i.current,
+    key: i.token,
+    list: list.map(({ n, href, thumb }) => ({ n, href, thumb })),
+    samePrice: list.every((p) => p.region === i.region),
+  };
 }
 
 async function serveConfigure(res: http.ServerResponse, artifactId: string): Promise<void> {
@@ -1094,11 +1123,35 @@ function askContactPrefill(leadName: string, raw: unknown, contactEmail: string 
  * binds the order to the token's prospect). Body: modules + billing_period +
  * price + domain choice (ADR-0020).
  */
+/**
+ * p-lap-vegleges (ADR-XXXX): the plan number the page posted (`plan`). Absent / null → null (the
+ * address decides); a value that is not a plan number at all → "bad" (refused like a plan the
+ * link does not have — the page never sends one, so it is a forged or stale request).
+ */
+function pickedPlanNumber(v: unknown): number | null | "bad" {
+  if (v === undefined || v === null) return null;
+  return typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 9 ? v : "bad";
+}
+
+/** The artifact of the PICKED plan, resolved against the link's own plan set (listProspectPlans
+ *  — the same set the ADR-0449 /v/<n>/ routes check): null = no pick, "bad" = not this link's plan. */
+async function pickedPlanArtifact(
+  p: { id: string; artifactId: string; artifactPath: string },
+  raw: unknown,
+): Promise<string | null | "bad"> {
+  const n = pickedPlanNumber(raw);
+  if (n === null || n === "bad") return n;
+  const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+  return plans.find((x) => x.n === n)?.artifactId ?? "bad";
+}
+
 async function handleOrderRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   artifactId: string,
   prospectToken?: string,
+  /** The body, when the route already read it (the stream can be read once). */
+  preBody?: unknown,
 ): Promise<void> {
   // ALREADY-A-CUSTOMER GATE (2026-09-20) — BEFORE anything is recorded.
   // requestPayment() refuses an initial order from an existing customer, but
@@ -1133,7 +1186,7 @@ async function handleOrderRequest(
     );
     return;
   }
-  const body = (await readJson(req)) as {
+  const body = (preBody !== undefined ? preBody : await readJson(req)) as {
     modules?: unknown;
     /** ADR-0322 ⑤: the preset card that was on at submit (a claim, re-checked). */
     preset?: unknown;
@@ -4199,15 +4252,22 @@ async function handle(
   // links already out keep working. startTrial re-checks that the artifact is this link's plan.
   const pTrialMatch = /^\/p\/([A-Za-z0-9_-]{16,})(?:\/v\/([1-9]))?\/trial$/.exec(pPath);
   if (method === "POST" && pTrialMatch) {
+    const b = (await readJson(req)) as Record<string, unknown>;
+    // p-lap-vegleges (ADR-XXXX): the plan PICKED on the page's cards rides in the body (`plan`)
+    // and wins over the address's plan — the lead may start plan 2 from plan 1's page. Resolved
+    // against THIS link's plan set (a number it does not have → 404, nothing written); without
+    // `plan`, the address's plan, as ADR-0449.
+    const picked = pickedPlanNumber(b.plan);
+    if (picked === "bad") return send(res, 404, JSON.stringify({ ok: false, error: "not_found" }), "application/json");
+    const wantN = picked ?? (pTrialMatch[2] ? Number(pTrialMatch[2]) : null);
     let planArtifactId: string | null = null;
-    if (pTrialMatch[2]) {
+    if (wantN !== null) {
       const pt = await getProspectByToken(pTrialMatch[1]!);
       const plans = pt ? await listProspectPlans(pt.id, { artifactId: pt.artifactId, artifactPath: pt.artifactPath }) : [];
-      const plan = plans.find((x) => x.n === Number(pTrialMatch[2]));
+      const plan = plans.find((x) => x.n === wantN);
       if (!plan) return send(res, 404, JSON.stringify({ ok: false, error: "not_found" }), "application/json");
       planArtifactId = plan.artifactId;
     }
-    const b = (await readJson(req)) as Record<string, unknown>;
     const r = await startTrial(pTrialMatch[1]!, {
       planArtifactId,
       name: typeof b.name === "string" ? b.name : "",
@@ -4250,10 +4310,15 @@ async function handle(
   if (method === "POST" && pReqMatch) {
     const p = await getProspectByToken(pReqMatch[1]);
     if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    const body = await readJson(req);
+    // p-lap-vegleges: the plan PICKED in the order panel (`plan`), checked against the link's set.
+    const picked = await pickedPlanArtifact(p, (body as Record<string, unknown>).plan);
+    if (picked === "bad") return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    if (picked) return handleOrderRequest(req, res, picked, pReqMatch[1], body);
     // tervvaltas A: a trialist's order (a /folytatas page opened before the fix posts here)
     // buys the plan the trial site runs, never silently plan 1.
     const running = await trialRunningArtifactForLead(p.leadId);
-    return handleOrderRequest(req, res, running?.id ?? p.artifactId, pReqMatch[1]);
+    return handleOrderRequest(req, res, running?.id ?? p.artifactId, pReqMatch[1], body);
   }
   // POST /p/:token/v/:n/request — the order submit of PLAN n (plan-tabs contract §F.19):
   // the order binds to the plan the lead was looking at, not to the link's first plan.
@@ -4261,10 +4326,15 @@ async function handle(
   if (method === "POST" && pvReqMatch) {
     const p = await getProspectByToken(pvReqMatch[1]!);
     if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    const body = await readJson(req);
+    // p-lap-vegleges: the PICKED plan (`plan`) wins over the address's plan — checked against the set.
+    const picked = await pickedPlanArtifact(p, (body as Record<string, unknown>).plan);
+    if (picked === "bad") return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    if (picked) return handleOrderRequest(req, res, picked, pvReqMatch[1]!, body);
     const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
     const plan = plans.find((x) => x.n === Number(pvReqMatch[2]));
     if (!plan) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
-    return handleOrderRequest(req, res, plan.artifactId, pvReqMatch[1]!);
+    return handleOrderRequest(req, res, plan.artifactId, pvReqMatch[1]!, body);
   }
   // GET /p/:token/v/:n/thumb.jpg — the switcher chip's picture: the plan's CACHED hero
   // shot as a card JPEG. ⛔ Never renders on request (Elek FK-004 H1 — an <img> may not
@@ -4490,7 +4560,12 @@ async function handle(
       // ADR-0364 (B1): the form names what the trial GIVES — the same list startTrial grants.
       const trialPkg = trialDays !== null ? await configuredTrialPackage() : null;
       const planRegion = await regionForArtifactOrNull(plan.artifactId);
+      // p-lap-vegleges: a multi-plan page's preview cards (end block, launch sheet, order panel).
+      const plansEntry = multi && planRegion
+        ? await plansForPage(plans, { token: pMatch[1], leadName: p.leadName, current: plan.n, ownView: tracked && !measured, region: planRegion })
+        : undefined;
       const page = !planRegion ? html : await injectConfigurator(html, plan.artifactId, p.leadName, {
+        ...(plansEntry ? { plans: plansEntry } : {}),
         pricingRegion: planRegion,
         // §F.19: the order binds to the plan on screen.
         requestUrl: plan.n === 1 ? `/p/${pMatch[1]}/request` : `/p/${pMatch[1]}/v/${plan.n}/request`,
@@ -4588,6 +4663,9 @@ async function handle(
                       current: plan.n,
                       viewId: null,
                       ownView: !measured,
+                      // p-lap-vegleges: with the configurator on the page the „Tetszett?” block
+                      // folds into the end block's plan cards (C2 „B”) — only a page without it keeps it.
+                      endBlock: page === html,
                     })
                   : injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
                 pMatch[1],
