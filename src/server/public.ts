@@ -3879,7 +3879,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         return redirect(res, `/admin?tab=modulok&m=pricing&hiba=${encodeURIComponent(UNIT_NOT_FOUND)}`);
       }
       const cur = await siteCurrency(siteId);
-      // ADR-XXXX: a currency with decimals keeps them (45,50 €); the forint keeps its old rule.
+      // ADR-0452: a currency with decimals keeps them (45,50 €); the forint keeps its old rule.
       const raw = minorDigits(cur) ? (parseOfferAmount(form.get("amount") ?? "", cur).value ?? 0) : Number(form.get("amount") ?? "");
       // Blank or zero clears the price: an owner must be able to take a number
       // back down, and an unset price renders nothing rather than a wrong figure.
@@ -4924,7 +4924,7 @@ if (process.env.CIT_SHOT !== "1") {
 }
 
 /**
- * ADR-XXXX (0138 tizedes szobaár): an owner-typed season price in the site's currency. A
+ * ADR-0452 (0138 tizedes szobaár): an owner-typed season price in the site's currency. A
  * currency with decimals takes them ("45,50"); the forint keeps the exact old reading (the
  * season form: Number(); the edit form: group dots and spaces dropped first). NaN = invalid,
  * which the price functions refuse with their own sentence.

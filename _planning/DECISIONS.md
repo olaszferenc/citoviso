@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-orszag-reteg-3-2b-tizedes-szobaar-fix-penznem.md) — Ország-réteg 3/2b: tizedes szobaár, fix ország-pénznem, a nyilvános oldal országa a lead helye
+- [ADR-0452](decisions/0452-orszag-reteg-3-2b-tizedes-szobaar-fix-orszag.md) — Ország-réteg 3/2b: tizedes szobaár, fix ország-pénznem, a nyilvános oldal országa a lead helye
 - [ADR-0451](decisions/0451-tervvalto-a-tenant-adminban-kinezet-lap-valtas.md) — Tervváltó a tenant-adminban: „Kinézet” lap, váltás bármikor a lead saját tervei között
 - [ADR-0450](decisions/0450-orszag-reteg-3-2-a-feluletek-a-szallas-es-a.md) — Ország-réteg 3/2: a felületek a szállás és a partner országában beszélnek (pénznem, dátum, telefon, IFA-szabály)
 - [ADR-0449](decisions/0449-a-proba-a-folytatas-es-a-rendeles-a-nezett-futo.md) — A próba, a folytatás és a rendelés a nézett / futó tervhez kötve

@@ -519,7 +519,7 @@
      * src/tenant/prices.ts with a plain space (measured 2026-09-14). One rule now,
      * and scripts/money-format-check.mts proves this copy equals the TS one. */
     function money(amount, currency) {
-      /* ADR-XXXX (0138 tizedes szobaár): a fraction prints in the currency's own decimals
+      /* ADR-0452 (0138 tizedes szobaár): a fraction prints in the currency's own decimals
        * ("45,50 €"), like src/tenant/prices.ts formatAmount; a whole amount — every forint —
        * is formatMoney exactly as before. */
       var lang = document.documentElement.lang || "hu";

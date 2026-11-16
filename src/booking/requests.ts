@@ -1175,7 +1175,7 @@ function requestUnitIds(req: { unit_id: string; unit_ids?: readonly string[] | n
   return req.unit_ids?.length ? [...req.unit_ids] : [req.unit_id];
 }
 
-// ADR-XXXX (0138 tizedes szobaár): the total and the tax as the guest was quoted them — the
+// ADR-0452 (0138 tizedes szobaár): the total and the tax as the guest was quoted them — the
 // exact twin when the amount had a fraction, else the integer column (every forint row).
 // Selected AFTER selectAll under the SAME name, so every reader of the row gets the exact
 // amount without a second code path (node-pg keeps the last field of a duplicate name).
@@ -2873,7 +2873,7 @@ export async function sendOffer(
     : await unpricedNights(req.unit_id, from, to);
 
   const errors: string[] = [];
-  // ADR-XXXX: the offer is in the request's / site's currency — its decimals are accepted.
+  // ADR-0452: the offer is in the request's / site's currency — its decimals are accepted.
   const amount = parseOfferAmount(input.amount, req.quoted_currency ?? (await siteCurrency(req.site_id)));
   // Anything but an explicit choice is 'request' — the default writes nothing, so an old
   // form (or a tampered value) can never put a price into the list unasked.

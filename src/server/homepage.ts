@@ -62,7 +62,7 @@ export function homepagePlansHtml(
   freeMonths: number,
   currency: string,
   assignment: PackageAssignment,
-  /** ADR-XXXX: the region's own domain ending (country row → pricing region TLD list); the
+  /** ADR-0452: the region's own domain ending (country row → pricing region TLD list); the
    *  card says "Saját .cz domain" for a Czech list. Absent = the file's ".hu". */
   tld?: string | null,
 ): string {
@@ -113,7 +113,7 @@ export async function renderHomepage(
   regionOverride: string | null,
 ): Promise<string> {
   await loadPricing();
-  // ADR-XXXX (tulaj 2026-11-16): the public page's country is the LEAD's physical location
+  // ADR-0452 (tulaj 2026-11-16): the public page's country is the LEAD's physical location
   // (ADR-0437) — no IP or browser-language guess. The homepage has no lead context, so it
   // keeps today's Hungarian page and Hungarian list; the lead-context surface (the
   // configurator) already prices in the lead's region. `?region=` stays an operator preview.

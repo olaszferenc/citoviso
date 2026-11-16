@@ -311,7 +311,7 @@ function taxAmountIn(v: unknown, digits: number): number | null {
   return Number.isFinite(n) && n > 0 && n <= 100000 ? n : null;
 }
 
-/** A price amount the way the owner types it ("28 000", "28.000", "28000"). ADR-XXXX: in a
+/** A price amount the way the owner types it ("28 000", "28.000", "28000"). ADR-0452: in a
  *  currency with decimals ("45,50 €") the fraction is kept (parseOfferAmount); the forint —
  *  and a call without a currency — reads exactly as before. */
 function amountOf(v: unknown, currency?: string): number | null {
@@ -410,7 +410,7 @@ async function savePrices(siteId: string, body: Record<string, unknown>, userId:
   const priceUnit = String(body.priceUnit ?? "");
   const currency = String(body.currency ?? "");
   if (!unitOpts.has(priceUnit)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
-  // ADR-XXXX: only a currency the lodging may price in — its country's (fixed, tulaj
+  // ADR-0452: only a currency the lodging may price in — its country's (fixed, tulaj
   // 2026-11-16), the saved one, and for a Hungarian lodging the old forint/euró pair.
   const offered = offeredCurrencies(
     (await countryOfSite(siteId))?.currency ?? null,

@@ -156,7 +156,7 @@ function parseForeignPrice(raw: string, lang: string, currency: string): { value
   }
   s = s.replace(/[.,]/g, "");
   if (!/^\d+$/.test(s)) return { value: null, error: T(lang, "Csak számot írjon (pl. 25 000).") };
-  // ADR-XXXX (0138 tizedes szobaár): the fraction is kept — the room price stores it exactly.
+  // ADR-0452 (0138 tizedes szobaár): the fraction is kept — the room price stores it exactly.
   const v = Number(frac ? `${s}.${frac}` : s);
   if (v <= 0) return { value: null, error: T(lang, "Írjon be egy összeget, vagy jelölje be: „Ennél nem adok meg árat”.") };
   return { value: v };

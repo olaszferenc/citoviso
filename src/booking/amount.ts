@@ -8,7 +8,7 @@ import { currencySign, minorDigits } from "../text/money.js";
  */
 export function parseOfferAmount(
   raw: string,
-  /** ADR-XXXX: the site's currency. Absent or one without a minor unit (HUF) = the rule
+  /** ADR-0452: the site's currency. Absent or one without a minor unit (HUF) = the rule
    *  above, unchanged. A currency with one (EUR, RON, CZK …) also takes its decimals. */
   currency?: string | null,
 ): {
@@ -29,7 +29,7 @@ export function parseOfferAmount(
 
 
 /**
- * ADR-XXXX (tulaj 2026-11-16: tizedes szobaár): an owner-typed amount in a currency WITH a
+ * ADR-0452 (tulaj 2026-11-16: tizedes szobaár): an owner-typed amount in a currency WITH a
  * minor unit — "45,50", "45.50 €", "1 890 Kč", "1.890,5". A trailing ",d"/".d" of up to the
  * currency's digits is the fraction; any other dot/comma/space is a group separator; the
  * currency's code and sign are dropped. More decimals than the currency has = "num".

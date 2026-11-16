@@ -39,7 +39,7 @@
   function group(n) {
     var x = Number(n);
     if (x === Math.round(x)) return CitMoney.formatNumber(Math.round(x), D.lang);
-    /* a fractional price keeps its two decimals ("45,50") — ADR-XXXX */
+    /* a fractional price keeps its two decimals ("45,50") — ADR-0452 */
     return CitMoney.formatNumber(Math.trunc(x), D.lang) + "," + x.toFixed(2).split(".")[1];
   }
   /* ADR-0450: the amount keeps the currency's own decimals (a 1,50 € tax); for HUF (0
@@ -65,7 +65,7 @@
   }
   function iso(d) { return d.toISOString().slice(0, 10); }
   function addDays(isoD, n) { var d = new Date(isoD + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return iso(d); }
-  /* ADR-XXXX (0138 tizedes szobaár): in a currency with decimals a trailing ",dd"/".dd" is
+  /* ADR-0452 (0138 tizedes szobaár): in a currency with decimals a trailing ",dd"/".dd" is
    * the fraction (the server's parseOfferAmount rule); the forint reads exactly as before. */
   function num(v) {
     var d = CitMoney.minorDigits(S.currency) || 0;
@@ -241,7 +241,7 @@
         opt("priceUnit", "per_person_night", L.unitPersonOpt, L.unitPersonSub, answered("unit") ? S.priceUnit : "") +
         opt("priceUnit", "per_stay", L.unitStayOpt, L.unitStaySub, answered("unit") ? S.priceUnit : "") +
         '</div>' +
-        /* ADR-XXXX (tulaj 2026-11-16): no currency PICKER — a lodging outside Hungary prices in
+        /* ADR-0452 (tulaj 2026-11-16): no currency PICKER — a lodging outside Hungary prices in
          * its country's currency, shown as a fact. Only a list of two or more (the Hungarian
          * forint/euró pair, or an earlier saved choice) stays a select. */
         ((S.currencies || []).length > 1

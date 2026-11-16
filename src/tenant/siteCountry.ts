@@ -26,7 +26,7 @@ export async function countryOfSite(siteId: string): Promise<CountryConfig | nul
 }
 
 /**
- * The currency a site's room prices are in (ADR-XXXX): the owner's saved pricing currency,
+ * The currency a site's room prices are in (ADR-0452): the owner's saved pricing currency,
  * else the lodging country's (provisioning seeds it), else the catalog default — which is
  * what every Hungarian site always had.
  */

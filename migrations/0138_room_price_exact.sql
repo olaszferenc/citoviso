@@ -1,4 +1,4 @@
--- 0138 ORSZÁG-RÉTEG 3/2 — TIZEDES SZOBAÁR (tulaj 2026-11-16: „Tizedes szobaár: IGEN”, ADR-XXXX).
+-- 0138 ORSZÁG-RÉTEG 3/2 — TIZEDES SZOBAÁR (tulaj 2026-11-16: „Tizedes szobaár: IGEN”, ADR-0452).
 --
 -- A room price and a booking quote are whole units today (integer columns) — fine for the
 -- forint, wrong for a 45,50 € or 49,90 lei night. The fraction is a property of the

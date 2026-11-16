@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/2b: tizedes szobaár, fix ország-pénznem, a nyilvános oldal országa a lead helye
+## ADR-0452 — Ország-réteg 3/2b: tizedes szobaár, fix ország-pénznem, a nyilvános oldal országa a lead helye
 
 **Státusz:** ELFOGADVA (tulaj-döntés 2026-11-16, a koordinátoron át, `cit9b4690e3`: a B) mockok nyelv-A/B/C és pénznem-A/B/C változata ELVETVE, kötelező irány négy pontban) ·
 **Épít:** ADR-0450 (ország-réteg 3/2 felületek), ADR-0437 (lead koordinátája → ország), ADR-0443 (minor unit, `src/text/money.ts`) ·

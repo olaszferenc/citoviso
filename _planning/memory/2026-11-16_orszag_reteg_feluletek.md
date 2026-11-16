@@ -18,7 +18,7 @@ Session `citb24e7da9`, brief `~/rc-briefs/orszag-reteg-3b-feluletek-20261116.md`
 ## B rész (terv-kapu) → tulaj-döntés (2026-11-16)
 A mockok (`assets/design-refs/_drafts/orszag-feluletek/`) ELVETVE: eldöntött dolgokat nyitottak újra. Kötelező irány: a nyilvános oldal országa a lead helye (nincs IP-, böngésző- vagy URL-tipp), a TLD az ország-sorból, nincs pénznem-választó, tizedes szobaár IGEN.
 
-## 2. kör (ADR-XXXX, `_planning/decisions/XXXX-orszag-reteg-3-2b-tizedes-szobaar-fix-penznem.md`)
+## 2. kör (ADR-0452, `_planning/decisions/XXXX-orszag-reteg-3-2b-tizedes-szobaar-fix-penznem.md`)
 - Tizedes szobaár: `migrations/0138_room_price_exact.sql`, `src/booking/amount.ts` (`parseOfferAmount(raw, currency)`, `exactCol`, `readExact`), `src/tenant/prices.ts`, `src/booking/requests.ts` (`QUOTED_TOTAL`/`QUOTED_TAX`), az admin ár-űrlapok kezelője, `src/tenant/{bookingSetup,seasonNudge,priceExpiry,availability}.ts`, `src/console/{leadClient,clientNotify}.ts`, `src/server/{setupSteps,moduleConfigViews}.ts`, `assets/runtime/{cit-runtime,cit-booking-setup}.js`.
 - Fix pénznem: `src/text/currencyName.ts offeredCurrencies`; a foglalás-beállítás egyelemű listát szövegként mutat.
 - Főoldal: `src/server/homepage.ts` IP-tipp nélkül, TLD a régió `primaryTld`-jéből.

@@ -379,7 +379,7 @@ export async function setSeasonYearPrice(
   const lang = await prepareMailLang(await langForUnit(season.unitId));
   const errors: string[] = [];
   const year = Math.trunc(Number(input.year));
-  // ADR-XXXX: in the site's currency — its decimals are accepted (45,50 €); a forint
+  // ADR-0452: in the site's currency — its decimals are accepted (45,50 €); a forint
   // price keeps the exact old rule (whole number, group dots dropped).
   const cur = await siteCurrency(siteId);
   let amount: number | null = null;
@@ -645,7 +645,7 @@ export function priceOn(prices: readonly UnitPrice[], isoDay: string): UnitPrice
  *  browser twin (cit-runtime.js) also grouped with a NBSP where this grouped
  *  with a space — the same guest, the same quote, two spellings. */
 export function formatAmount(amount: number, currency: string, lang?: string): string {
-  // ADR-XXXX (0138 tizedes szobaár): a fraction prints in the currency's own decimals
+  // ADR-0452 (0138 tizedes szobaár): a fraction prints in the currency's own decimals
   // ("45,50 €"); a whole amount — every forint — is formatMoney exactly as before.
   const d = minorDigits(currency) ?? 0;
   if (!d || Number.isInteger(amount)) return formatMoney(amount, currency, lang);

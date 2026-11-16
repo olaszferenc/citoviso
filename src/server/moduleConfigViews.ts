@@ -3165,7 +3165,7 @@ export interface MealsFormEcho {
 
 /** "28 000" — grouped, no currency (the field shows the unit next to it). */
 function grouped(n: number): string {
-  // ADR-XXXX (0138 tizedes szobaár): a fractional price keeps its two decimals ("45,50");
+  // ADR-0452 (0138 tizedes szobaár): a fractional price keeps its two decimals ("45,50");
   // a whole one — every forint — is formatNumber exactly as before.
   if (Number.isInteger(n) || !Number.isFinite(n)) return formatNumber(n);
   const [, frac = "00"] = n.toFixed(2).split(".");
