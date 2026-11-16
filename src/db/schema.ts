@@ -946,6 +946,8 @@ export interface CountryTable {
   /** 0135: the payment gateway that charges this country's buyers (today: 'barion'). */
   payment_provider: Generated<string>;
   tourist_tax_model: Generated<string>;
+  /** 0139: public holidays, "MM-DD" (every year) | "YYYY-MM-DD" (once); the reply-answer window is shut on them. */
+  public_holidays: Generated<string[]>;
   updated_at: Generated<Date>;
 }
 
@@ -2213,6 +2215,8 @@ export interface OutreachReplyTable {
   suggestion_by: string | null;
   suggestion_at: Timestamp | null;
   suggestion_basis: Generated<string[]>;
+  /** 0139: the conversation's language — the lead's country default_lang at ingest; null = no country row. */
+  lang: string | null;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }

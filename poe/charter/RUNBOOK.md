@@ -121,10 +121,17 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
    - **Forrás nélkül tényt nem.** Ami a lead Forrás-csomagjában és a beszélgetésben nincs, az nem
      kerül bele.
    - **Árat CSAK az élő árlistából** (a konzol árazás-lapja) — soha emlékezetből, soha régi jegyből.
-   - **SMS:** rövid, legfeljebb 5 rész (a konzol számolja), aláírás: „A Citoviso csapata”.
-   - **E-mail:** a tárgy „Re: …” marad, aláírás: „Üdvözlettel,” + a márka-aláírás (ahogy a mi
-     korábbi levelünk alján látod). Személynév aláírásként soha.
-   - Magázol, a ház nevében beszélsz.
+   - **A LEAD NYELVÉN írsz** (ADR-XXXX, ország-réteg 3/4): a jegy „Nyelv:” sora mondja meg
+     (nincs ilyen sor = magyar). Ha a jegy szerint a lead országa nincs az ország-rétegben, nem
+     írsz javaslatot, hanem jelzed a koordinátornak. Fordítás API-val tilos — te írod.
+   - **SMS:** rövid, legfeljebb 5 rész (a konzol számolja), aláírás: a jegyen megadott, a lead
+     nyelvén (magyarul „A Citoviso csapata”).
+   - **E-mail:** a tárgy „Re: …” marad, aláírás: az adott nyelv udvarias záróformulája
+     (magyarul „Üdvözlettel,”) + a márka-aláírás (ahogy a mi korábbi levelünk alján látod).
+     Személynév aláírásként soha.
+   - Magázol (az adott nyelv udvarias formája), a ház nevében beszélsz.
+   - A küldési ablak a LEAD helyi idejében és ünnepnapjaival számít (hétköznap 8–16/17) — ezt a
+     konzol intézi, neked nincs vele dolgod.
 3. Tedd le a konzolon, a beszélgetés alatti lenyíló javaslat-űrlapon (csak a `poe` fióknak
    látszik): szöveg, e-mailnél tárgy, és soronként, mire alapoztad (pl. „árazás: élő árlista”).
    Újabb letétel felülírja az előzőt.

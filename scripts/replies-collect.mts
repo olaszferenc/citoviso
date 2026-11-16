@@ -70,6 +70,10 @@ interface NeedsSuggestion {
   body: string;
   receivedAt: string;
   url?: string | null;
+  /** ADR-XXXX: the conversation's language (the lead's); null = its country has no row. */
+  lang?: string | null;
+  /** The SMS sign-off in that language. */
+  signature?: string;
 }
 
 interface IngestReply {
@@ -128,10 +132,21 @@ function poeTicket(n: NeedsSuggestion, consoleBase: string): { name: string; bod
   const url = n.url || `${consoleBase}/?reply=${encodeURIComponent(n.id)}#replies`;
   const ch = n.channel === "sms" ? "SMS" : "e-mail";
   const at = new Date(n.receivedAt).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" });
+  const sig = n.signature || "A Citoviso csapata";
+  // ADR-XXXX: a non-Hungarian conversation says its language — Poe answers in it. A Hungarian
+  // ticket stays as it was (no extra line).
+  const langLine =
+    n.lang === null
+      ? `- ⛔ A lead országa nincs az ország-rétegben — a nyelv ismeretlen: ne írj javaslatot, jelezd a koordinátornak.\n`
+      : n.lang && n.lang !== "hu"
+        ? `- Nyelv: **${n.lang}** — a javaslatot EZEN a nyelven írod (a lead nyelve), magázó/udvarias formában.\n`
+        : "";
   const body =
     `# Válasz-javaslat — ${n.lead}\n\n` +
     `- Válasz a konzolon: ${url}\n` +
-    `- Csatorna: ${ch} · feladó: ${n.sender} · érkezett: ${at}\n\n` +
+    `- Csatorna: ${ch} · feladó: ${n.sender} · érkezett: ${at}\n` +
+    langLine +
+    `\n` +
     `## A beérkezett szöveg\n\n` +
     n.body.split("\n").map((l) => `> ${l}`).join("\n") +
     `\n\n## Szabályok (RUNBOOK „Válasz-javaslat”)\n\n` +
@@ -139,7 +154,7 @@ function poeTicket(n: NeedsSuggestion, consoleBase: string): { name: string; bod
     `- Forrás nélkül tényt nem írsz (a lead Forrás-csomagja és a beszélgetés a forrás).\n` +
     `- Árat CSAK az élő árlistából (a konzol árazás-lapja — pricing_config), soha emlékezetből.\n` +
     (n.channel === "sms"
-      ? `- SMS: legfeljebb 5 rész (a konzol számolja), aláírás: „A Citoviso csapata”.\n`
+      ? `- SMS: legfeljebb 5 rész (a konzol számolja), aláírás: „${sig}”.\n`
       : `- E-mail: a tárgy „Re: …”, aláírás: „Üdvözlettel,” + a megkeresés-levél márka-aláírása (konfigból — a mi korábbi levelünk alján látod).\n`) +
     `- Magázol; személynév aláírásként soha.\n` +
     `- A „mire alapoztam” mezőbe soronként írd, honnan vetted (pl. „árazás: élő árlista”).\n`;

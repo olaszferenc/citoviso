@@ -3,6 +3,8 @@
 // and the cut that keeps ONLY the reply's own text (contract README ⑧: the quoted part,
 // i.e. our own mail, is not part of the reply).
 
+import { QUOTE_LINE_PATTERNS, QUOTE_WRAP_FIRST, QUOTE_WRAP_SECOND } from "./quoteMarkers.js";
+
 export interface ParsedMail {
   readonly from: { readonly name: string | null; readonly address: string };
   readonly to: string;
@@ -159,30 +161,23 @@ export function parseMail(raw: Buffer): ParsedMail {
 }
 
 /**
- * The reply's OWN text: everything above the first quote marker. Markers seen in
- * Hungarian/English clients: "On … wrote:", "… ezt írta:", "… írta:", Outlook's
- * "-----Original Message-----" / "From: … Sent: …" block, and ">"-prefixed lines.
+ * The reply's OWN text: everything above the first quote marker. The markers come from
+ * QUOTE_MARKERS (quoteMarkers.ts) — the attribution line ("On … wrote:", "… írta:",
+ * "Am … schrieb X:", "… napsal(a):", "… написа:" …), the "-----Original Message-----"
+ * banner, Outlook's "From: … Sent: …" block in every covered language, and ">"-prefixed
+ * lines. ADR-XXXX: data, not one `if` per language.
  */
 export function stripQuoted(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const markers = [
-    /^\s*On .+wrote:\s*$/i,
-    /^\s*.{0,200}írta:\s*$/i,
-    // Gmail HU: "X <a@b> ezt írta (időpont: 2026. okt. 7., Sze" — the date wraps onto the next line.
-    /^\s*.{0,200}\bezt írta\b/i,
-    /^\s*-{2,}\s*(Original Message|Eredeti üzenet|Forwarded message|Továbbított üzenet)\s*-{2,}/i,
-    /^\s*(From|Feladó|Küldő):\s.+/i,
-    /^\s*_{10,}\s*$/,
-  ];
   let cut = lines.length;
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]!;
-    if (markers.some((m) => m.test(l)) || (/^\s*>/.test(l) && lines.slice(i).filter((x) => x.trim()).every((x) => /^\s*>/.test(x)))) {
+    if (QUOTE_LINE_PATTERNS.some((m) => m.test(l)) || (/^\s*>/.test(l) && lines.slice(i).filter((x) => x.trim()).every((x) => /^\s*>/.test(x)))) {
       cut = i;
       break;
     }
     // Gmail wraps a long "On … wrote:" over two lines.
-    if (/^\s*(On|\d{4}\.)\s.+/.test(l) && /(wrote|írta):\s*$/i.test(lines[i + 1] ?? "")) {
+    if (QUOTE_WRAP_FIRST.test(l) && QUOTE_WRAP_SECOND.test(lines[i + 1] ?? "")) {
       cut = i;
       break;
     }

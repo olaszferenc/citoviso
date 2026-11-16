@@ -49,6 +49,7 @@ import { db } from "../src/db/client.js";
 import { answerTextError, nextWindowStart, smsParts, SMS_MAX_PARTS } from "../src/replies/answerRules.js";
 import { sendAnswer, settleReplySends } from "../src/replies/answer.js";
 import { MOCK_OUTREACH_WINDOW } from "../src/sms/sendWindow.js";
+import { countryConfigSync } from "../src/country.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 
@@ -68,10 +69,12 @@ function ucs2(s: string): string {
 
 // ---------- ① matcher ----------
 const T0 = new Date("2026-10-06T09:00:00Z");
+// ADR-XXXX: a contact carries its lead's country phone rules (loadSentContacts sets them).
+const huRules = countryConfigSync("HU");
 const contacts: SentContact[] = [
-  { leadId: "L-old", prospectId: "P-old", firstSentAt: new Date("2026-09-01T09:00:00Z"), phone: "+36301112222", emails: [] },
-  { leadId: "L-new", prospectId: "P-new", firstSentAt: T0, phone: "+36301112222", emails: ["info@villa.example"] },
-  { leadId: "L-late", prospectId: "P-late", firstSentAt: new Date("2026-10-08T09:00:00Z"), phone: "+36309998888", emails: [] },
+  { leadId: "L-old", prospectId: "P-old", firstSentAt: new Date("2026-09-01T09:00:00Z"), phone: "+36301112222", emails: [], phoneRules: huRules },
+  { leadId: "L-new", prospectId: "P-new", firstSentAt: T0, phone: "+36301112222", emails: ["info@villa.example"], phoneRules: huRules },
+  { leadId: "L-late", prospectId: "P-late", firstSentAt: new Date("2026-10-08T09:00:00Z"), phone: "+36309998888", emails: [], phoneRules: huRules },
 ];
 function matcherCases(match: typeof matchReply): boolean[] {
   const at = "2026-10-07T10:00:00Z";

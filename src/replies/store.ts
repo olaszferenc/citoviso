@@ -9,11 +9,17 @@
 //      copies, DMARC reports and bounces; anything that does not match is DROPPED, not
 //      stored (contract: assets/design-refs/console/valaszok/README.md, Adat-elvárások).
 //   ⛔ a message older than our first touch is not a reply to it.
+//   ADR-XXXX (ország-réteg 3/4): a number is read in the LEAD's country — a Czech lead's
+//      "777 123 456" and a reply from "+420777123456" are the same number; the HU row keeps
+//      the Hungarian plan, so a Hungarian match is exactly what it was.
 
 import { isPageQuestion } from "./pageQuestion.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
-import { normalizePhone } from "../text/phone.js";
+import { normalizePhoneIn, type PhoneRules } from "../text/phoneCountry.js";
+import { countryConfig, countryConfigSync, countryOf, countryOfLead } from "../country.js";
+import { T, langForLead } from "../i18n/mail.js";
+import { loadPack } from "../i18n/packs.js";
 import { leadEmails } from "../email/leadEmails.js";
 import { settleReplySends } from "./answer.js";
 
@@ -46,12 +52,29 @@ export interface SentContact {
   readonly firstSentAt: Date;
   readonly phone: string | null;
   readonly emails: readonly string[];
+  /** The lead's phone rules (its country row); null = no row → only a "+CC" number can match. */
+  readonly phoneRules?: PhoneRules | null;
 }
 
 export const AUTO_ANSWERER = "postafiók";
 
 const MAX_BODY = 8000;
 const MAX_OURS = 2000;
+
+/**
+ * The conversation's language (ADR-XXXX): the language the lead was written to (its mock),
+ * else its country's — and null when the lead's country has no row (ADR-0437 ③: no
+ * Hungarian fallback; Poe's ticket then says the language is unknown).
+ */
+export async function replyLang(leadId: string): Promise<string | null> {
+  if (!(await countryConfig(await countryOfLead(leadId)))) return null;
+  return langForLead(leadId);
+}
+
+/** The SMS sign-off of an answer in the conversation's language (the house, never a person). */
+export function smsSignatureFor(lang: string | null): string {
+  return T(lang ?? undefined, "A Citoviso csapata");
+}
 
 /** Lower-cased bare address, or "" when it is not one. */
 export function emailKey(raw: string): string {
@@ -70,10 +93,10 @@ export function matchReply(r: Pick<IncomingReply, "channel" | "from" | "received
   if (!Number.isFinite(at)) return null;
   let hit: SentContact | null = null;
   if (isPhoneChannel(r.channel)) {
-    const phone = normalizePhone(r.from);
-    if (!phone) return null;
+    // The sender is read in each contact's own country: a national-format sender only
+    // matches a lead of that country, a "+CC" one matches whichever lead holds it.
     for (const c of contacts) {
-      if (c.phone !== phone || c.firstSentAt.getTime() > at) continue;
+      if (!c.phone || normalizePhoneIn(r.from, c.phoneRules ?? null) !== c.phone || c.firstSentAt.getTime() > at) continue;
       if (!hit || c.firstSentAt > hit.firstSentAt) hit = c;
     }
   } else {
@@ -92,11 +115,14 @@ export async function loadSentContacts(): Promise<SentContact[]> {
   const rows = await db
     .selectFrom("prospect as p")
     .innerJoin("lead as l", "l.id", "p.lead_id")
-    .select(["p.id as prospect_id", "p.lead_id", "p.sent_at", "p.email_sent_at", "p.sms_sent_at", "p.mms_sent_at", "p.contact_email", "l.raw"])
+    .leftJoin("scrape_run as sr", "sr.id", "l.scrape_run_id")
+    .leftJoin("scraper_definition as sd", "sd.id", "sr.scraper_definition_id")
+    .select(["p.id as prospect_id", "p.lead_id", "p.sent_at", "p.email_sent_at", "p.sms_sent_at", "p.mms_sent_at", "p.contact_email", "l.raw", "sd.country as area_country"])
     .where((eb) => eb.or([eb("p.sent_at", "is not", null), eb("p.email_sent_at", "is not", null), eb("p.sms_sent_at", "is not", null), eb("p.mms_sent_at", "is not", null)]))
     .execute();
   return rows.map((r) => {
-    const raw = (r.raw ?? {}) as { phone?: string; email?: string; otherEmails?: string[] };
+    const raw = (r.raw ?? {}) as { phone?: string; email?: string; otherEmails?: string[]; country?: unknown };
+    const phoneRules = countryConfigSync(countryOf(raw, r.area_country));
     const stamps = [r.sent_at, r.email_sent_at, r.sms_sent_at, r.mms_sent_at].filter((d): d is Date => !!d).map((d) => new Date(d));
     const emails = new Set<string>();
     if (r.contact_email) emails.add(emailKey(r.contact_email));
@@ -106,8 +132,9 @@ export async function loadSentContacts(): Promise<SentContact[]> {
       leadId: r.lead_id,
       prospectId: r.prospect_id,
       firstSentAt: new Date(Math.min(...stamps.map((d) => d.getTime()))),
-      phone: raw.phone ? normalizePhone(raw.phone) : null,
+      phone: raw.phone ? normalizePhoneIn(raw.phone, phoneRules) : null,
       emails: [...emails],
+      phoneRules,
     };
   });
 }
@@ -162,7 +189,7 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
       dropped++;
       continue;
     }
-    const sender = isPhoneChannel(r.channel) ? normalizePhone(r.from)! : emailKey(r.from);
+    const sender = isPhoneChannel(r.channel) ? c.phone! : emailKey(r.from);
     const row = {
       channel: r.channel,
       lead_id: c.leadId,
@@ -175,6 +202,7 @@ export async function ingestReplies(items: readonly IncomingReply[], checked?: r
       ours_at: isoOrNull(r.ours?.at),
       ours_subject: clip(r.ours?.subject, 500),
       ours_text: clip(r.ours?.text, MAX_OURS),
+      lang: await replyLang(c.leadId),
     };
     await db
       .insertInto("outreach_reply")
@@ -469,12 +497,24 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
 /** Open replies Poe has not suggested an answer for yet — the collector writes his ticket
  *  for each (once: it skips a ticket file that already exists). ADR-0340. */
 export async function repliesNeedingSuggestion(): Promise<
-  readonly { readonly id: string; readonly lead: string; readonly leadId: string; readonly channel: ReplyChannel; readonly sender: string; readonly body: string; readonly receivedAt: string }[]
+  readonly {
+    readonly id: string;
+    readonly lead: string;
+    readonly leadId: string;
+    readonly channel: ReplyChannel;
+    readonly sender: string;
+    readonly body: string;
+    readonly receivedAt: string;
+    /** ADR-XXXX: the conversation's language (null = the lead's country has no row). */
+    readonly lang: string | null;
+    /** The SMS sign-off in that language (the house, never a person). */
+    readonly signature: string;
+  }[]
 > {
   const rows = await db
     .selectFrom("outreach_reply as r")
     .innerJoin("lead as l", "l.id", "r.lead_id")
-    .select(["r.id", "l.name as lead", "r.lead_id", "r.channel", "r.sender", "r.body", "r.received_at"])
+    .select(["r.id", "l.name as lead", "r.lead_id", "r.channel", "r.sender", "r.body", "r.received_at", "r.lang"])
     .where("r.answered_at", "is", null)
     .where("r.suggestion_text", "is", null)
     // A reply already answered from the dashboard needs no ticket after a „Visszavonás”.
@@ -483,15 +523,24 @@ export async function repliesNeedingSuggestion(): Promise<
     .orderBy("r.received_at")
     .limit(20)
     .execute();
-  return rows.map((r) => ({
-    id: r.id,
-    lead: r.lead,
-    leadId: r.lead_id,
-    channel: r.channel,
-    sender: r.sender,
-    body: r.body,
-    receivedAt: new Date(r.received_at as unknown as Date).toISOString(),
-  }));
+  const out = [];
+  for (const r of rows) {
+    // A reply stored before 0139 has no language yet: the lead's, read now.
+    const lang = r.lang ?? (await replyLang(r.lead_id));
+    if (lang) await loadPack(lang).catch(() => {});
+    out.push({
+      id: r.id,
+      lead: r.lead,
+      leadId: r.lead_id,
+      channel: r.channel,
+      sender: r.sender,
+      body: r.body,
+      receivedAt: new Date(r.received_at as unknown as Date).toISOString(),
+      lang,
+      signature: smsSignatureFor(lang),
+    });
+  }
+  return out;
 }
 
 /** Poe's current suggestion on one reply (the editor's poll), or null while there is none. */

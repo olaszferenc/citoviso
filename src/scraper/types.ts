@@ -147,6 +147,12 @@ export interface QualifiedLead {
   readonly sourceRefs?: Readonly<Record<string, string>>;
   /** Photos available on Google Places (carried from discovery). */
   readonly photoCount?: number;
+  /**
+   * ADR-XXXX: an already-stored lead within ~250 m whose name reads the same in another
+   * script ("Vila Marija" / "Вила Марија"). Kept as a SEPARATE lead — two scripts are not
+   * proof of one player — and flagged with that lead's name for a look on the Duplikátumok page.
+   */
+  readonly scriptTwinOf?: string;
   /** A4 match-confidence (0..1) of the per-lead Places match, if one was scored. */
   readonly matchConfidence?: number;
   /**

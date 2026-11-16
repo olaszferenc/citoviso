@@ -54,7 +54,7 @@ pontatlan):
 | `taj_forras_nelkul` | táj-, hely-, hangulati tény forrás nélkül, vagy ellentmond egy véleménynek | „csend” egy zajra panaszkodó vélemény mellett |
 | `idegen_entitas` | más szállás fotója, adata, neve (§F.17b) | a ★/értékelés-szám vagy a fotó nem ehhez a házhoz tartozik |
 | `szam_elteres` | a szám nem egyezik a forrással | 4,6★ a mockon, 4,4★ a mezőben |
-| `szoveg_hiba` | igaz, de magyartalan, tegező, „X várja a vendégeket” (ADR-0292) | nem tény-, hanem valódiság-hiba — javítandó |
+| `szoveg_hiba` | igaz, de magyartalan (a lead nyelvén: természetellenes), tegező, „X várja a vendégeket” (ADR-0292) | nem tény-, hanem valódiság-hiba — javítandó |
 
 **NEM DÖNTHETŐ** — a forrás nem elérhető (betöltési hiba, hiányzó fotó). Mindig írd meg, miért.
 
@@ -70,7 +70,9 @@ megjegyzésben az élő idézet.
 - **Az erő is tény:** „parkoló” ≠ „saját parkoló”; „elegendő” ≠ „bőséges”; „közel a strandhoz”
   ≠ „a strand mellett”; „ki lehet ülni” ≠ „terasz”.
 - **A vendég-oldal MAGÁZ;** a ház T/1-ben beszélhet magáról. Tegezés = `szoveg_hiba`.
-- **Mérce:** kiírná-e ezt egy normális magyar szállásadó a honlapjára — és igaz lenne-e?
+- **Mérce:** kiírná-e ezt egy normális szállásadó A LEAD ORSZÁGÁBAN (magyar leadnél: magyar
+  szállásadó) a honlapjára, a lead nyelvén — és igaz lenne-e? (ADR-XXXX: a mock nyelve a lead
+  országáé; a `szoveg_hiba` mércéje az adott nyelv természetes, magázó/udvarias formája.)
 
 ## 5. Két tényből nem lesz harmadik (ADR-0317)
 

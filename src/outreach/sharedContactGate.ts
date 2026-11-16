@@ -26,6 +26,8 @@ import { ELEK_EMAIL } from "../elek/park.js";
 import { phoneKey } from "../scraper/contactLedger.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import { leadEmails } from "../email/leadEmails.js";
+import { countryConfigSync, countryOf } from "../country.js";
+import { normalizePhoneIn, type PhoneRules } from "../text/phoneCountry.js";
 
 /** Leads that no longer receive anything — their contacts cannot collide. */
 export const INACTIVE = ["terminated", "disqualified"] as const;
@@ -35,13 +37,22 @@ const INTERMEDIARY_MIN = 7;
 
 export type ContactKind = "email" | "phone";
 
-function keyOf(kind: ContactKind, value: string): string | null {
+function keyOf(kind: ContactKind, value: string, rules: PhoneRules | null = null): string | null {
   if (kind === "email") {
     const e = normalizeEmail(value);
     return e.includes("@") ? e : null;
   }
-  const p = phoneKey(value);
+  // ADR-XXXX (ország-réteg 3/4): a number of a NON-Hungarian-plan country is first read in its
+  // lead's country ("777 123 456" → +420777123456), so the national and the "+CC" spelling of
+  // one number get one key. The Hungarian plan (and a lead without a row) keeps phoneKey as is.
+  const e164 = rules && rules.phonePlan !== "hu" ? normalizePhoneIn(value, rules) : null;
+  const p = phoneKey(e164 ?? value);
   return p.length >= 8 ? p : null;
+}
+
+/** The phone rules of the lead a raw record belongs to (its own country; no row → null). */
+function rulesOfRaw(raw: { readonly country?: unknown }): PhoneRules | null {
+  return countryConfigSync(countryOf(raw));
 }
 
 /** Every e-mail/phone this lead is known by: the primaries (all of the lead's e-mail
@@ -53,8 +64,9 @@ function contactKeysOf(raw: QualifiedLead, kind: ContactKind): Set<string> {
     ...primaries,
     ...(raw.contacts ?? []).filter((c) => c.kind === kind && c.accepted).map((c) => c.value),
   ];
+  const rules = kind === "phone" ? rulesOfRaw(raw) : null;
   for (const v of values) {
-    const k = keyOf(kind, v);
+    const k = keyOf(kind, v, rules);
     if (k) out.add(k);
   }
   return out;
@@ -91,7 +103,13 @@ export async function foreignHoldersOf(
   /** The query executor — a check passes its rolled-back transaction. */
   q: Pick<typeof db, "selectFrom"> = db,
 ): Promise<{ id: string; name: string; city?: string }[]> {
-  const target = keyOf(kind, value);
+  // The asked value is read in the asking lead's own country (ADR-XXXX) — a national-format
+  // number of a Czech lead keys the same as the "+420" spelling another lead holds.
+  const own =
+    kind === "phone"
+      ? await q.selectFrom("lead").select(sql<string | null>`raw->>'country'`.as("country")).where("id", "=", leadId).executeTakeFirst()
+      : undefined;
+  const target = keyOf(kind, value, own ? rulesOfRaw({ country: own.country }) : null);
   if (!target) return [];
 
   const rows = await q

@@ -27,6 +27,13 @@
 //      send hour and heat map are in the lead's zone, portals come from the catalogue, and the
 //      tenant reports/letters run on the lodging's zone; no burned HUF / Ft / Budapest clock.
 //
+//   ⑧ ADR-XXXX — CRM ÉS KOMMUNIKÁCIÓ (ország-réteg 3/4): the CRM files read phone numbers in the
+//      lead's / partner's country (no Hungarian-only normalizePhone), keep no burned
+//      Europe/Budapest / "hu"-fallback / Budapest clock (each one on the ALLOW list WITH its
+//      reason); the name key keeps every script and never matches empty; the answer window
+//      and the partner quiet hours run on the lead's / partner's zone; the reply stores its
+//      language; and the HU row's clock is byte-for-byte the old Budapest window.
+//
 //   npx tsx scripts/country-layer-check.mts
 import { readFileSync } from "node:fs";
 import {
@@ -73,7 +80,14 @@ console.log("① a HU-sor teljes");
 const hu = countryConfigSync(HOME);
 check("van HU-sor", hu !== null);
 if (hu) {
+  // An EMPTY list is a valid value for these fields (HU: the owner's rule is "weekdays only",
+  // there is no holiday list — ADR-XXXX keeps it so).
+  const MAY_BE_EMPTY = new Set(["publicHolidays"]);
   for (const [k, v] of Object.entries(hu)) {
+    if (MAY_BE_EMPTY.has(k)) {
+      check(`HU.${k} lista`, Array.isArray(v), JSON.stringify(v));
+      continue;
+    }
     const filled =
       typeof v === "string" ? v.trim().length > 0
       : typeof v === "number" ? Number.isFinite(v)
@@ -431,6 +445,82 @@ check(
     /dateLocale\(lang\)/.test(src("src/analytics/trafficMail.ts")) &&
     /tenantTimeZone\(tenantId\)/.test(src("src/analytics/trafficReport.ts")),
 );
+
+console.log("⑧ CRM és kommunikáció (ország-réteg 3/4)");
+const CRM_SCOPE = [
+  "src/scraper/dedupe.ts", "src/replies/store.ts", "src/replies/answer.ts", "src/replies/mime.ts",
+  "src/replies/quoteMarkers.ts", "src/console/partnerMessages.ts", "src/outreach/sharedContactGate.ts",
+  "src/console/approvalQueue.ts", "src/console/prospectFeedback.ts", "src/crm/countryClock.ts", "src/crm/leadContact.ts",
+];
+const CRM_BURNED =
+  /\bnormalizePhone\(|Europe\/Budapest|budapestTime\.js|\|\|\s*["'`]hu["'`]|\?\?\s*["'`]hu["'`]|smsQuietHours\(|mockOutreachWindowOpen\(/;
+const CRM_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+  { file: "src/console/partnerMessages.ts", frag: 'import { budapestIsoDay } from "../text/budapestTime.js"', why: "a szálban a dátum az OPERÁTOR naptárában (konzol-felirat), nem a partner küldési órája" },
+  { file: "src/console/approvalQueue.ts", frag: "const e = raw ? normalizePhone(raw) : null;", why: "a MOBIL-CSATORNA terve (Viber/WA/MMS a magyar modemről) a kiküldés-kör (ország-réteg 3/5) dolga; a lap csak magyar mobilt ajánl" },
+  { file: "src/console/approvalQueue.ts", frag: 'new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest"', why: "a „Messengeren nem nézte meg” fül a magyar telefonról küldött üzenetek idejét az OPERÁTOR naptárában írja (operátori lap)" },
+];
+const crmHits: string[] = [];
+const crmAllowUsed = new Set<number>();
+for (const f of CRM_SCOPE) {
+  src(f).split("\n").forEach((raw, n) => {
+    const code = stripComments(raw);
+    if (!CRM_BURNED.test(code)) return;
+    const a = CRM_ALLOW.findIndex((x) => x.file === f && code.includes(x.frag));
+    if (a >= 0) {
+      crmAllowUsed.add(a);
+      return;
+    }
+    crmHits.push(`${f}:${n + 1}: ${raw.trim()}`);
+  });
+}
+check("nincs régi normalizePhone, Budapest-óra, „hu”-fallback a CRM-fájlokban", crmHits.length === 0, `\n      ${crmHits.join("\n      ")}`);
+CRM_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, crmAllowUsed.has(i)));
+check(
+  "a bejövő válasz a lead országában olvassa a számot (store, partner-szál, ikerkapu)",
+  /normalizePhoneIn\(r\.from, c\.phoneRules/.test(src("src/replies/store.ts")) &&
+    /normalizePhoneIn\(raw\.phone, phoneRules\)/.test(src("src/replies/store.ts")) &&
+    /normalizePhoneIn\(v, rulesOf\(country\)\)/.test(src("src/console/partnerMessages.ts")) &&
+    /normalizePhoneIn\(phone, countryConfigSync\(countryOf\(raw\)\)\)/.test(src("src/outreach/autoDispatch.ts")) &&
+    /rulesOfRaw\(raw\)/.test(src("src/outreach/sharedContactGate.ts")),
+);
+check(
+  "a válasz-ablak a lead zónájában + ünnepnapjaival, a csendes óra a partner zónájában",
+  /answerWindowOpenIn\(now, clock\)/.test(src("src/replies/answer.ts")) &&
+    /quietHoursIn\(now, zone\)/.test(src("src/console/partnerMessages.ts")) &&
+    /quietHoursIn\(now, zones\.get\(d\.partner_id\)!\)/.test(src("src/console/partnerMessages.ts")),
+);
+check("a válasz nyelve tárolva (outreach_reply.lang)", /lang: await replyLang\(c\.leadId\)/.test(src("src/replies/store.ts")));
+check("a jóváhagyási sor ország-oszlop + szűrő", /chips\("cc"/.test(src("src/console/approvalQueue.ts")) && /data-cc=/.test(src("src/console/approvalQueue.ts")));
+{
+  const { normalizeName, sameNameOtherScript } = await import("../src/scraper/dedupe.js");
+  const { isSamePlayer } = await import("../src/scraper/dedupe.js");
+  check("névkulcs: a cirill/görög betű megmarad", normalizeName("Вила Марија") === "вила марија" && normalizeName("Βίλα Ελένη") === "βιλα ελενη");
+  check("névkulcs: a magyar ékezet úgy hajlik, mint eddig", normalizeName("Rózsakő Vendégház!") === "rozsako vendeghaz");
+  check(
+    "üres névkulcs SOHA nem egyezik (két csak-írásjeles név 0 m-re)",
+    !isSamePlayer({ name: "★★★", lat: 47, lon: 19 }, { name: "—", lat: 47, lon: 19 }),
+  );
+  check("latin/cirill azonos név: jelölhető, nem olvad", sameNameOtherScript("Vila Marija", "Вила Марија") && !isSamePlayer({ name: "Vila Marija", lat: 44, lon: 20 }, { name: "Вила Марија", lat: 44, lon: 20 }));
+}
+{
+  const { answerWindowOpenIn, nextAnswerWindowStartIn, quietHoursIn, quietHoursEndIn } = await import("../src/crm/countryClock.js");
+  const { mockOutreachWindowOpen } = await import("../src/sms/sendWindow.js");
+  const { nextWindowStart } = await import("../src/replies/answerRules.js");
+  const { smsQuietHours } = await import("../src/console/smsQuietHours.js");
+  if (hu) {
+    // A sweep over two weeks in 20-minute steps, across a DST switch: the HU row's clock must
+    // say exactly what the Budapest-only rules said.
+    let bad = 0;
+    for (let t = Date.UTC(2026, 2, 20); t < Date.UTC(2026, 3, 3); t += 20 * 60_000) {
+      const d = new Date(t);
+      if (answerWindowOpenIn(d, hu) !== mockOutreachWindowOpen(d)) bad++;
+      if (nextAnswerWindowStartIn(d, hu).getTime() !== nextWindowStart(d).getTime()) bad++;
+      if (quietHoursIn(d, hu.timeZone) !== smsQuietHours(d)) bad++;
+      if (quietHoursIn(d, hu.timeZone) && quietHoursEndIn(d, hu.timeZone).getTime() <= d.getTime()) bad++;
+    }
+    check("a HU-sor órája = a régi budapesti ablak és csendes óra (két hét, DST-váltással)", bad === 0, `${bad} eltérés`);
+  }
+}
 
 await db.destroy();
 

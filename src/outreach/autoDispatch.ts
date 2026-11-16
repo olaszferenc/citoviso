@@ -32,7 +32,8 @@ import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
 import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
-import { normalizePhone } from "../text/phone.js";
+import { normalizePhoneIn } from "../text/phoneCountry.js";
+import { countryConfigSync, countryOf } from "../country.js";
 import type { QualifiedLead } from "../scraper/types.js";
 
 /**
@@ -185,7 +186,9 @@ async function sharedPhoneHold(leadId: string): Promise<string | null> {
   const raw = (typeof lead?.raw === "string" ? JSON.parse(lead.raw) : lead?.raw) as QualifiedLead | undefined;
   const phone = typeof raw?.phone === "string" ? raw.phone.trim() : "";
   if (!lead || !phone) return null;
-  const e164 = normalizePhone(phone) ?? phone;
+  // ADR-XXXX: the number in the lead's own country (a Czech "777 123 456" is +420…); the HU
+  // row keeps the Hungarian plan, so a Hungarian lead's key is what it always was.
+  const e164 = normalizePhoneIn(phone, countryConfigSync(countryOf(raw))) ?? phone;
   return sharedContactBlocks(leadId, "phone", e164, isAllowlistedTestNumber(e164) || ownerTestPhoneExempt(lead.name, e164));
 }
 

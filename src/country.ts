@@ -56,6 +56,9 @@ export interface CountryConfig {
   // Tartalom (0137): which tourist-tax rule the guest's booking widget may state.
   // 'hu' = the Hungarian rule (payable on site, under-18 exempt); 'none' = no rule is stated.
   readonly touristTaxModel: "hu" | "none";
+  // Megkeresés (0139): public holidays — "MM-DD" (every year) or "YYYY-MM-DD" (that day
+  // only). The answer to a reply does not go out on them (src/crm/countryClock.ts).
+  readonly publicHolidays: readonly string[];
 }
 
 /** The columns, in the order the snapshot query and the kysely refresh both read them. */
@@ -65,7 +68,7 @@ const COLUMNS = [
   "browser_locale", "accept_language", "dial_code", "trunk_prefix", "mobile_prefixes",
   "phone_plan", "phone_nsn_min", "phone_nsn_max", "outreach_channels", "send_window_from",
   "send_window_to", "daily_quota", "invoice_lang", "legal_pack", "payment_provider",
-  "tourist_tax_model",
+  "tourist_tax_model", "public_holidays",
 ] as const;
 
 type Row = Record<(typeof COLUMNS)[number], unknown>;
@@ -107,6 +110,7 @@ function toConfig(r: Row): CountryConfig {
     legalPack: String(r.legal_pack),
     paymentProvider: String(r.payment_provider),
     touristTaxModel: r.tourist_tax_model === "hu" ? "hu" : "none",
+    publicHolidays: strList(r.public_holidays).filter((d) => /^(?:\d{4}-)?\d{2}-\d{2}$/.test(d)),
   };
 }
 

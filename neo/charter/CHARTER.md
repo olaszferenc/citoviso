@@ -32,6 +32,9 @@ vállalható.** A kiküldés az övé — te azt garantálod, hogy amit kiküld,
    nem keresel rá újra (2026-11-04, ADR-0419). Csak a „bizonytalan” ítéletű leadnél keresel:
    Google-keresés a nevére + a településére, a találatokat megnyitod. Portál-bejegyzés
    (szallas.hu, booking, hovamenjek, zimmerinfo…) NEM saját honlap; parkolt/eladó domain sem.
+   **Külföldi lead (ADR-XXXX):** a helyi portálok, a saját-honlap végződések és a mobil-előtagok
+   a lead ORSZÁGÁNAK sorából jönnek (`npx tsx scripts/lead-country.mts --country <ISO>`); a
+   `.hu`-heurisztika csak magyar leadre igaz. Egy lead attól, hogy nem magyar, nem kiesett.
 2. **Elérhetőség:** ha nincs e-mail vagy telefon, megkeresed (Google, a portál-bejegyzések,
    Facebook-oldal nyilvános része, a település szálláslistája). Amit találsz, a konzol
    lead-oldalán a kontakt-szerkesztőben rögzíted.

@@ -6,9 +6,11 @@
 //   ② The OPERATOR sends it (never a colleague, ADR-0325), on the channel the reply came
 //     in: SMS to the sender's number, e-mail to the sender's address in the same thread
 //     (In-Reply-To / References = the incoming Message-ID, already stored in source_key).
-//   ③ The owner's mock window (weekday 9–16 Budapest, ADR-0334) holds for the answer
-//     too (owner, 2026-10-08): outside it the send is 'scheduled' for the next window
-//     start and goes out on the first settle after it.
+//   ③ The owner's mock window (weekday 8–16, ADR-0334) holds for the answer too (owner,
+//     2026-10-08): outside it the send is 'scheduled' for the next window start and goes
+//     out on the first settle after it. ADR-XXXX: the window is read in the LEAD's zone,
+//     on the LEAD's country's working days (country.public_holidays) — HU = Budapest, no
+//     holidays, exactly as before.
 //   ④ Success marks the reply answered by the sending operator; a failure leaves it open.
 //
 // SMS states: sendSms() with SMS_PROVIDER=queue (prod) only enqueues into sms_outbox, the
@@ -26,10 +28,11 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { getEmailSender } from "../email/sender.js";
 import { sendSms } from "../sms/sender.js";
-import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
+import { countryConfig, countryOfLead } from "../country.js";
+import { answerWindowOpenIn, nextAnswerWindowStartIn, type ClockRules } from "../crm/countryClock.js";
 
 export { SMS_MAX_PARTS, SMS_SIGNATURE, answerTextError, incomingMessageId, nextWindowStart, replySubject, smsParts } from "./answerRules.js";
-import { MAX_SUBJECT, MAX_TEXT, answerTextError, incomingMessageId, nextWindowStart, replySubject, smsParts } from "./answerRules.js";
+import { MAX_SUBJECT, MAX_TEXT, answerTextError, incomingMessageId, replySubject, smsParts } from "./answerRules.js";
 const MAX_BASIS = 8;
 
 const clean = (s: unknown, n: number): string => (typeof s === "string" ? s.replace(/\r\n/g, "\n").trim().slice(0, n) : "");
@@ -188,8 +191,12 @@ export async function sendAnswer(
   const err = answerTextError(r.channel, text);
   if (err) return { ok: false, status: "failed", message: err };
   const subject = r.channel === "email" ? clean(input.subject, MAX_SUBJECT) || replySubject(r.subject ?? r.ours_subject) : null;
-  const open = mockOutreachWindowOpen(now);
-  const when = open ? null : nextWindowStart(now);
+  // ADR-XXXX: the window is the LEAD's — its zone, its weekdays, its public holidays. A lead
+  // whose country has no row gets no answer scheduled (ADR-0437 ③: fail closed, no HU clock).
+  const clock = await leadClock(r.lead_id);
+  if (!clock) return { ok: false, status: "failed", message: "A lead országa nincs az ország-rétegben — a válasz nem ütemezhető." };
+  const open = answerWindowOpenIn(now, clock);
+  const when = open ? null : nextAnswerWindowStartIn(now, clock);
   const row = await db
     .insertInto("outreach_reply_send")
     .values({
@@ -210,6 +217,12 @@ export async function sendAnswer(
 }
 
 let settling: Promise<void> | null = null;
+
+/** The clock rules of a lead's country (zone + public holidays); null = no country row. */
+export async function leadClock(leadId: string): Promise<ClockRules | null> {
+  const cfg = await countryConfig(await countryOfLead(leadId));
+  return cfg ? { timeZone: cfg.timeZone, publicHolidays: cfg.publicHolidays } : null;
+}
 
 /**
  * Move the pending sends on: scheduled ones whose window opened go out; queued SMS
@@ -243,15 +256,21 @@ export async function settleMessengerAnswer(sendId: string, ok: boolean, error?:
 export function settleReplySends(now: Date = new Date()): Promise<void> {
   if (settling) return settling;
   settling = (async () => {
-    if (mockOutreachWindowOpen(now)) {
+    {
       const due = await db
-        .selectFrom("outreach_reply_send")
-        .select("id")
-        .where("status", "=", "scheduled")
-        .where("scheduled_for", "<=", now)
-        .orderBy("created_at")
+        .selectFrom("outreach_reply_send as s")
+        .innerJoin("outreach_reply as r", "r.id", "s.reply_id")
+        .select(["s.id as id", "r.lead_id as lead_id"])
+        .where("s.status", "=", "scheduled")
+        .where("s.scheduled_for", "<=", now)
+        .orderBy("s.created_at")
         .execute();
+      const clocks = new Map<string, ClockRules | null>();
       for (const d of due) {
+        // Each send waits for ITS lead's window (zone + holidays); no row → it stays scheduled.
+        if (!clocks.has(d.lead_id)) clocks.set(d.lead_id, await leadClock(d.lead_id));
+        const clock = clocks.get(d.lead_id);
+        if (!clock || !answerWindowOpenIn(now, clock)) continue;
         // Claim first: only the call that flips it to 'queued' transmits.
         const c = await db
           .updateTable("outreach_reply_send")

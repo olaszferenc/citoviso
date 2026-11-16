@@ -16,6 +16,7 @@ import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { ic } from "../ui/icons.js";
 import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { countryConfigSync, countryOf } from "../country.js";
 import {
   expectedChannel,
   getMessengerConfig,
@@ -43,6 +44,8 @@ export type PendingApproval = {
   readonly altId: string | null;
   readonly reason: string;
   readonly queuedAt: Date;
+  /** ADR-XXXX: the lead's country (ISO-2, from its coordinate — ADR-0437 ②); "" = unknown. */
+  readonly country: string;
   /**
    * ADR-0430 (approved plan design-refs/console/messenger-felulet): where the first outreach
    * would go — from the phone's presence read (no message sent) and the switch / brake.
@@ -72,8 +75,13 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
     alt_id: string | null;
     reason: string | null;
     queued_at: Date;
+    country: string | null;
+    area_country: string | null;
   }>`
     select d.lead_id, l.name, l.raw->>'city' as city, l.qualification,
+           l.raw->>'country' as country,
+           (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id
+             where sr.id = l.scrape_run_id) as area_country,
            l.raw->>'phone' as phone, l.raw->>'email' as email,
            d.artifact_id as main_id,
            (select m.id from mock_artifact m
@@ -106,6 +114,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       altId: r.alt_id,
       reason: (r.reason ?? "").replace(/^MEHET \(egylépéses\):\s*/, ""),
       queuedAt: r.queued_at,
+      country: countryOf({ country: r.country }, r.area_country) ?? "",
       mobile: m,
       presence: m ? (presence.get(m) ?? null) : null,
       waOn: cfg.whatsapp !== false,
@@ -477,12 +486,18 @@ export function approvalPage(
 ): string {
   const lang = consoleLang();
   const cur = selectedApproval(items, selected);
+  // ADR-XXXX: the country column + filter appear once the queue holds more than one country —
+  // a one-country (Hungarian) queue looks exactly as before.
+  const countries = [...new Set(items.map((i) => i.country))].sort();
+  const multi = countries.length > 1;
+  const ctryName = (iso: string): string => (iso ? (countryConfigSync(iso)?.name ?? iso) : T(lang, "Ismeretlen"));
   const sub = (i: PendingApproval): string => {
     const site = i.qualification === "no_site" ? T(lang, "nincs honlap") : T(lang, "elavult honlap");
-    return i.channel.channel === "viber" && i.channel.step === 1 ? `${i.city} · ${i.channel.reason.replace(/^.*utoljára aktív: /, T(lang, "aktív") + ": ")}` : `${i.city} · ${site}`;
+    const where = multi ? `${i.country || "?"} · ${i.city}` : i.city;
+    return i.channel.channel === "viber" && i.channel.step === 1 ? `${where} · ${i.channel.reason.replace(/^.*utoljára aktív: /, T(lang, "aktív") + ": ")}` : `${where} · ${site}`;
   };
   const row = (i: PendingApproval): string =>
-    `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-chk="${i.channel.channel === "check" ? "wait" : "done"}" data-alt="${i.altId ? "yes" : "no"}" data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small>${contactBadges(i, lang)}</a>`;
+    `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-chk="${i.channel.channel === "check" ? "wait" : "done"}" data-alt="${i.altId ? "yes" : "no"}"${multi ? ` data-cc="${esc(i.country || "-")}"` : ""} data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small>${contactBadges(i, lang)}</a>`;
   const groups = APPROVAL_GROUPS.map((g) => {
     const its = items.filter((i) => groupOf(i) === g);
     if (!its.length) return "";
@@ -491,6 +506,7 @@ export function approvalPage(
   const filters =
     `<div class="aq-filt"><input type="search" placeholder="${esc(T(lang, "Keresés név vagy település szerint"))}" aria-label="${esc(T(lang, "Keresés név vagy település szerint"))}">` +
     `<h4>${esc(T(lang, "Csatorna"))}</h4>${chips("ch", APPROVAL_GROUPS.map((g) => [g, chipName(g, lang)] as const), lang)}` +
+    (multi ? `<h4>${esc(T(lang, "Ország"))}</h4>${chips("cc", countries.map((c) => [c || "-", ctryName(c)] as const), lang)}` : "") +
     `<h4>${esc(T(lang, "Honlap"))}</h4>${chips("site", [["none", T(lang, "Nincs honlap")], ["old", T(lang, "Elavult honlap")]], lang)}` +
     // Owner 2026-11-08: hide / show what the phone has not checked for Viber / WhatsApp yet,
     // and whether the link carries a reviewed second plan (ADR-0433: one plan is enough).

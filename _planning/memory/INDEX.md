@@ -11,6 +11,7 @@
 - [2026-11-16_p_lap_vegleges.md](2026-11-16_p_lap_vegleges.md) — 2026-11-16 · A /p lap végleges elrendezése megépült (tervvaltas F, ADR-0453)
 - [2026-11-16_orszag_reteg_riportok.md](2026-11-16_orszag_reteg_riportok.md) — 2026-11-16 — Ország-réteg 3/3: riportok (ADR-0454)
 - [2026-11-16_orszag_reteg_feluletek.md](2026-11-16_orszag_reteg_feluletek.md) — 2026-11-16 — Ország-réteg 3/2: felületek (ADR-0450)
+- [2026-11-16_orszag_reteg_3_4_crm.md](2026-11-16_orszag_reteg_3_4_crm.md) — 2026-11-16 — Ország-réteg 3/4: CRM és kommunikáció (ADR-XXXX)
 - [2026-11-16_konverzio_javitasok_zaras.md](2026-11-16_konverzio_javitasok_zaras.md) — 2026-11-16 — Konverzió-elemzés és a három gépi javítás (zárás, cit8a744532)
 - [2026-11-16_elesites_alairas_b_meres.md](2026-11-16_elesites_alairas_b_meres.md) — 2026-11-16 — Élesítés 068073d0: e-mail aláírás, ?b mérés, fejléc/előnézet (cit383fe8b6)
 - [2026-11-13_regisztrator_hamis_riasztas.md](2026-11-13_regisztrator_hamis_riasztas.md) — 2026-11-13 — Hamis „regisztrátor-fiók hiányos” riasztás (Websupport HTTP 500)

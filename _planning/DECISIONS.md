@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-orszag-reteg-3-4-crm-es-kommunikacio.md) — Ország-réteg 3/4: a CRM és a kommunikáció a lead országának telefon-rendjén, nyelvén, időzónáján és ünnepnapjain fut
 - [ADR-0454](decisions/0454-orszag-reteg-3-3-a-riportok-penznemenkent.md) — Ország-réteg 3/3: a riportok pénznemenként, országonként és a helyi időben
 - [ADR-0453](decisions/0453-a-p-lap-vegleges-elrendezese-kerdesblokk-a.md) — A /p lap végleges elrendezése: kérdésblokk a teljes terv után, lebegő sáv, előnézeti terv-kártyák, a kijelölt terv a kérésben
 - [ADR-0452](decisions/0452-orszag-reteg-3-2b-tizedes-szobaar-fix-orszag.md) — Ország-réteg 3/2b: tizedes szobaár, fix ország-pénznem, a nyilvános oldal országa a lead helye

@@ -4079,7 +4079,10 @@ async function handle(
       !/text\/html/i.test(String(req.headers.accept ?? ""));
     if (oneClick) return send(res, 200, "OK", "text/plain; charset=utf-8");
     const up = await getProspectByToken(unsubMatch[1]);
-    return send(res, 200, unsubscribedPage(unsubMatch[1], await feedbackLang(up?.lang ?? null)));
+    // ADR-XXXX: the lead's language; unknown country → the unsubscribe stands, no page (fail closed).
+    const upLang = await feedbackLang(up?.lang ?? null, up?.leadId ?? null);
+    if (!upLang) return send(res, 200, "OK", "text/plain; charset=utf-8");
+    return send(res, 200, unsubscribedPage(unsubMatch[1], upLang));
   }
   // POST /p/:token/view — the VISIT, sent by the page on the first human sign (scroll,
   // touch, pointer, key) or after 5 s of a visible tab (ADR-0291, owner's ruling B,
@@ -4174,7 +4177,7 @@ async function handle(
       text = f.get("text");
       skip = f.get("skip") === "1";
     }
-    const lang = await feedbackLang(p?.lang ?? null);
+    const lang = await feedbackLang(p?.lang ?? null, p?.leadId ?? null);
     if (p && !skip && isFeedbackSource(src) && isFeedbackReason(reason)) {
       const viewId = typeof view === "string" && /^[0-9a-f-]{36}$/i.test(view) ? view : null;
       await recordProspectFeedback({
@@ -4186,7 +4189,7 @@ async function handle(
       });
     }
     if (isJson) return send(res, 204, "");
-    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    if (!p || !lang) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
     return send(
       res,
       200,
@@ -4199,7 +4202,8 @@ async function handle(
   if (method === "GET" && pWhyMatch) {
     const p = await getProspectByToken(pWhyMatch[1]);
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
-    const lang = await feedbackLang(p.lang);
+    const lang = await feedbackLang(p.lang, p.leadId);
+    if (!lang) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
     // ADR-0348: the retroactive trial letter's answer links carry `forras=proba` and the
     // tapped answer — shown pre-selected; the GET still records nothing.
     if (url.searchParams.get("forras") === "proba") {

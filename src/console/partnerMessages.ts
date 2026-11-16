@@ -9,7 +9,12 @@
 //   partner_message         — manual sends from this tab, and inbound mail/SMS from the
 //                             partner's or a contact's address that was not an outreach reply
 // Sending reuses the existing paths: getEmailSender (immediately) and sendSms (the SMS queue;
-// in quiet hours 22–07 the row waits as 'scheduled' until 07:00 Budapest).
+// in quiet hours 22–07 the row waits as 'scheduled' until 07:00).
+//
+// ADR-XXXX (ország-réteg 3/4): the quiet hours are the PARTNER's — its lodging's zone
+// (tenant.time_zone), else its country row's zone — and every phone number is read in the
+// partner's / lead's country (a Czech partner's "777 123 456" is +420…). The HU partner keeps
+// Budapest and the Hungarian plan, i.e. exactly what this tab did before.
 //
 // ⛔ The rejecter guard (feedback 2026-10-26: a rejecter / „not concerned” replier never gets
 // another message): lead.contact_block_at, or an unsubscribed prospect of the lead, blocks every
@@ -20,9 +25,11 @@ import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { sendSms } from "../sms/sender.js";
 import { smsEncoding } from "../sms/encoding.js";
-import { normalizePhone, prettyPhone } from "../text/phone.js";
-import { addIsoDays, budapestIsoDay, budapestMidnight, budapestMinutes } from "../text/budapestTime.js";
-import { SMS_QUIET_FROM_HOUR, SMS_QUIET_TO_HOUR, smsQuietHours } from "./smsQuietHours.js";
+import { normalizePhoneIn, prettyPhoneIn, type PhoneRules } from "../text/phoneCountry.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
+import { countryConfigSync, countryOfLead } from "../country.js";
+import { tenantTimeZone } from "../tenant/timeZone.js";
+import { quietHoursEndIn, quietHoursIn } from "../crm/countryClock.js";
 import { MAX_SUBJECT, MAX_TEXT, SMS_MAX_PARTS, SMS_SIGNATURE } from "../replies/answerRules.js";
 import { emailKey } from "../replies/store.js";
 import { isEmailSuppressed } from "../outreach/sendBatch.js";
@@ -108,20 +115,44 @@ interface PartnerCore {
   readonly email: string | null;
   readonly phone: string | null;
   readonly tenantId: string | null;
+  /** partner.country (ISO-2) — the phone plan and the zone when there is no lodging/lead. */
+  readonly country: string;
 }
 
 async function partnerCore(partnerId: string): Promise<PartnerCore | null> {
   const p = await db
     .selectFrom("partner")
-    .select(["id", "name", "email", "phone", "tenant_id"])
+    .select(["id", "name", "email", "phone", "tenant_id", "country"])
     .where("id", "=", partnerId)
     .executeTakeFirst();
-  return p ? { id: p.id, name: p.name, email: p.email, phone: p.phone, tenantId: p.tenant_id } : null;
+  return p ? { id: p.id, name: p.name, email: p.email, phone: p.phone, tenantId: p.tenant_id, country: p.country } : null;
+}
+
+/** The phone rules a partner's numbers are read with: its lead's country, else its own. */
+function phoneRulesOf(p: Pick<PartnerCore, "country">, lead: LeadCore | null): PhoneRules | null {
+  return lead?.phoneRules ?? countryConfigSync(p.country);
+}
+
+/**
+ * The partner's wall clock (ADR-XXXX): the lodging's zone when there is a tenant, else the
+ * partner's country row's zone. A partner with neither (no tenant, no row) is an operator
+ * record of ours — tenantTimeZone(null) gives the company zone for it.
+ */
+export async function partnerTimeZone(p: Pick<PartnerCore, "tenantId" | "country">): Promise<string> {
+  if (p.tenantId) return tenantTimeZone(p.tenantId);
+  return countryConfigSync(p.country)?.timeZone ?? tenantTimeZone(null);
+}
+
+async function partnerZoneById(partnerId: string): Promise<string> {
+  const p = await partnerCore(partnerId);
+  return p ? partnerTimeZone(p) : tenantTimeZone(null);
 }
 
 interface LeadCore {
   readonly id: string;
   readonly phone: string | null;
+  /** The lead's country phone rules (null = no row: only "+CC" numbers are read). */
+  readonly phoneRules: PhoneRules | null;
   readonly emails: readonly string[];
   readonly blockAt: string | null;
   readonly blockReason: string | null;
@@ -146,9 +177,11 @@ async function leadOf(tenantId: string | null): Promise<LeadCore | null> {
     .executeTakeFirst();
   if (!r) return null;
   const raw = (r.raw ?? {}) as { phone?: string; email?: string; otherEmails?: string[] };
+  const phoneRules = countryConfigSync(await countryOfLead(r.id));
   return {
     id: r.id,
-    phone: raw.phone ? normalizePhone(raw.phone) : null,
+    phone: raw.phone ? normalizePhoneIn(raw.phone, phoneRules) : null,
+    phoneRules,
     emails: [raw.email, ...(raw.otherEmails ?? [])].filter((e): e is string => typeof e === "string" && e.includes("@")).map(emailKey),
     blockAt: iso(r.block_at),
     blockReason: r.block_reason,
@@ -205,9 +238,10 @@ async function recipientsOf(p: PartnerCore, lead: LeadCore | null): Promise<Reci
     .orderBy("created_at")
     .execute();
   const out: { channel: "email" | "sms"; address: string; label: string }[] = [];
+  const rules = phoneRulesOf(p, lead);
   const add = (channel: "email" | "sms", raw: string | null | undefined, label: string) => {
     if (!raw) return;
-    const address = channel === "email" ? emailKey(raw) : normalizePhone(raw);
+    const address = channel === "email" ? emailKey(raw) : normalizePhoneIn(raw, rules);
     if (!address || (channel === "email" && !address.includes("@"))) return;
     const seen = out.find((r) => r.channel === channel && r.address === address);
     if (seen) return;
@@ -216,11 +250,11 @@ async function recipientsOf(p: PartnerCore, lead: LeadCore | null): Promise<Reci
   for (const c of contacts) {
     const who = [c.name, `${ROLE[c.kind] ?? c.kind}${c.is_primary ? ", elsődleges" : ""}`].filter(Boolean).join(" — ");
     add("email", c.email, `${c.email} · ${who}`);
-    if (c.phone) add("sms", c.phone, `${prettyPhone(normalizePhone(c.phone) ?? c.phone)} · ${who}`);
+    if (c.phone) add("sms", c.phone, `${prettyPhoneIn(normalizePhoneIn(c.phone, rules) ?? c.phone, rules)} · ${who}`);
   }
   add("email", p.email, `${p.email} · céges e-mail`);
-  if (p.phone) add("sms", p.phone, `${prettyPhone(normalizePhone(p.phone) ?? p.phone)} · céges telefon`);
-  if (lead?.phone) add("sms", lead.phone, `${prettyPhone(lead.phone)} · a lead telefonja (ide ment a megkeresés)`);
+  if (p.phone) add("sms", p.phone, `${prettyPhoneIn(normalizePhoneIn(p.phone, rules) ?? p.phone, rules)} · céges telefon`);
+  if (lead?.phone) add("sms", lead.phone, `${prettyPhoneIn(lead.phone, rules)} · a lead telefonja (ide ment a megkeresés)`);
   const checked = await Promise.all(
     out.map(async (r) => ({
       ...r,
@@ -465,11 +499,9 @@ export function smsText(body: string, sign: boolean): string {
   return sign ? `${t}\n${SMS_SIGNATURE}` : t;
 }
 
-/** The next 07:00 Budapest after a quiet-hours moment. */
-export function quietHoursEnd(now: Date): Date {
-  const day = budapestIsoDay(now);
-  const target = budapestMinutes(now) >= SMS_QUIET_FROM_HOUR * 60 ? addIsoDays(day, 1) : day;
-  return new Date(budapestMidnight(target).getTime() + SMS_QUIET_TO_HOUR * 3600_000);
+/** The next 07:00 in the partner's zone after a quiet-hours moment (ADR-XXXX). */
+export function quietHoursEnd(now: Date, timeZone: string): Date {
+  return quietHoursEndIn(now, timeZone);
 }
 
 /** Pure validation — the client mirrors the same rules. */
@@ -501,7 +533,8 @@ export async function sendPartnerMessage(partnerId: string, v: ComposeInput, by:
   if (Object.keys(problems).length) return { ok: false, problems };
   const channel = v.channel as "email" | "sms";
   const body = channel === "sms" ? smsText(v.body, v.sign) : v.body.trim();
-  const night = channel === "sms" && smsQuietHours(now);
+  const zone = await partnerZoneById(partnerId);
+  const night = channel === "sms" && quietHoursIn(now, zone);
   const row = await db
     .insertInto("partner_message")
     .values({
@@ -512,13 +545,13 @@ export async function sendPartnerMessage(partnerId: string, v: ComposeInput, by:
       subject: channel === "email" ? v.subject.trim() : null,
       body,
       status: "scheduled",
-      scheduled_for: night ? quietHoursEnd(now) : now,
+      scheduled_for: night ? quietHoursEnd(now, zone) : now,
       sent_by: by,
     })
     .returning("id")
     .executeTakeFirstOrThrow();
   if (night) {
-    const at = quietHoursEnd(now).toISOString();
+    const at = quietHoursEnd(now, zone).toISOString();
     return { ok: true, id: row.id, status: "scheduled", scheduledFor: at, message: "Csendes óra van (22:00–07:00): az SMS reggel 7-kor megy ki." };
   }
   const status = await transmit(row.id);
@@ -546,8 +579,9 @@ export async function retryPartnerMessage(partnerId: string, id: string, now = n
   if (!m || m.direction !== "out" || m.status !== "failed") return { ok: false, problems: { form: "Ez az üzenet nem küldhető újra." } };
   const t = await getPartnerThread(partnerId);
   if (t?.block) return { ok: false, problems: { form: t.block.why } };
-  if (m.channel === "sms" && smsQuietHours(now)) {
-    const at = quietHoursEnd(now);
+  const zone = await partnerZoneById(partnerId);
+  if (m.channel === "sms" && quietHoursIn(now, zone)) {
+    const at = quietHoursEnd(now, zone);
     await db
       .updateTable("partner_message")
       .set({ status: "scheduled", scheduled_for: at, error: null, updated_at: sql`now()` })
@@ -651,16 +685,28 @@ let settling: Promise<void> | null = null;
 export function settlePartnerMessages(now = new Date()): Promise<void> {
   settling ??= (async () => {
     try {
-      if (!smsQuietHours(now)) {
+      {
         const due = await db
-          .updateTable("partner_message")
-          .set({ status: "queued", updated_at: sql`now()` })
+          .selectFrom("partner_message")
+          .select(["id", "partner_id"])
           .where("direction", "=", "out")
           .where("status", "=", "scheduled")
           .where("scheduled_for", "<=", now)
-          .returning("id")
           .execute();
-        for (const d of due) await transmit(d.id);
+        const zones = new Map<string, string>();
+        for (const d of due) {
+          // Each row waits for ITS partner's morning (ADR-XXXX).
+          if (!zones.has(d.partner_id)) zones.set(d.partner_id, await partnerZoneById(d.partner_id));
+          if (quietHoursIn(now, zones.get(d.partner_id)!)) continue;
+          // Claim first: only the call that flips it to 'queued' transmits.
+          const c = await db
+            .updateTable("partner_message")
+            .set({ status: "queued", updated_at: sql`now()` })
+            .where("id", "=", d.id)
+            .where("status", "=", "scheduled")
+            .executeTakeFirst();
+          if (Number(c.numUpdatedRows ?? 0) > 0) await transmit(d.id);
+        }
       }
       const q = await db
         .selectFrom("partner_message")
@@ -704,27 +750,33 @@ export interface InboundItem {
  * Several partners on one address → the most recently updated one (a person's current record).
  */
 export async function ingestPartnerInbound(r: InboundItem): Promise<boolean> {
-  const addr = r.channel === "sms" ? normalizePhone(r.from) : emailKey(r.from);
-  if (!addr) return false;
-  const col = r.channel === "sms" ? "phone" : "email";
-  const norm = (v: string | null) => (v == null ? null : r.channel === "sms" ? normalizePhone(v) : emailKey(v));
+  const sms = r.channel === "sms";
+  // ADR-XXXX: a number is read in each partner's own country — a national-format sender
+  // matches only a partner of that country, a "+CC" one any partner holding that number.
+  const rulesOf = (country: string) => countryConfigSync(country);
+  const key = (v: string | null, country: string): string | null =>
+    v == null ? null : sms ? normalizePhoneIn(v, rulesOf(country)) : emailKey(v) || null;
+  const col = sms ? "phone" : "email";
   // Partner + contact addresses are few (hundreds) — normalise in code, the stored spelling varies.
   const [ps, cs] = await Promise.all([
-    db.selectFrom("partner").select(["id", col, "updated_at"]).where(col, "is not", null).execute(),
+    db.selectFrom("partner").select(["id", `${col} as v`, "country", "updated_at"]).where(col, "is not", null).execute(),
     db
       .selectFrom("partner_contact")
       .innerJoin("partner", "partner.id", "partner_contact.partner_id")
-      .select(["partner.id as id", `partner_contact.${col} as v`, "partner.updated_at as updated_at"])
+      .select(["partner.id as id", `partner_contact.${col} as v`, "partner.country as country", "partner.updated_at as updated_at"])
       .where("partner_contact.active", "=", true)
       .where(`partner_contact.${col}`, "is not", null)
       .execute(),
   ]);
-  const hits = [
-    ...ps.filter((x) => norm((x as Record<string, unknown>)[col] as string | null) === addr),
-    ...cs.filter((x) => norm(x.v) === addr),
-  ].sort((a, b) => new Date(b.updated_at as unknown as Date).getTime() - new Date(a.updated_at as unknown as Date).getTime());
+  const matches = (x: { v: string | null; country: string }): boolean => {
+    const mine = key(x.v, x.country);
+    return mine !== null && key(r.from, x.country) === mine;
+  };
+  const hits = [...ps.filter(matches), ...cs.filter(matches)].sort((a, b) => new Date(b.updated_at as unknown as Date).getTime() - new Date(a.updated_at as unknown as Date).getTime());
   const partnerId = hits[0]?.id;
   if (!partnerId) return false;
+  const addr = key(r.from, hits[0]!.country);
+  if (!addr) return false;
   await db
     .insertInto("partner_message")
     .values({

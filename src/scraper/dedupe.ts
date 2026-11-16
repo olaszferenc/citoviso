@@ -6,14 +6,58 @@ import { leadEmails } from "../email/leadEmails.js";
 // same player when their normalized names match AND they are within ~250 m (or
 // coordinates are missing on either side). Merged fields prefer non-empty values,
 // and an own-domain website wins over a portal/none.
+//
+// ADR-XXXX (ország-réteg 3/4): the name key keeps EVERY script's letters. It used to keep
+// only [a-z0-9], so a Cyrillic or Greek name became "" — and every such lead within 250 m
+// (or without coordinates) melted into ONE lead. Now: NFKD + combining marks stripped
+// (Hungarian/Czech accents fold exactly as before: "Rózsa" = "rozsa"), Cyrillic/Greek/…
+// letters stay, and an EMPTY key never matches anything (a name of only punctuation is
+// not evidence of sameness). A Latin and a Cyrillic spelling of one name are two keys:
+// they are NOT merged silently — `sameNameOtherScript` lets the caller flag the pair.
 
-function normalizeName(name: string): string {
+export function normalizeName(name: string): string {
   return name
+    .normalize("NFKD")
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip accents
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\p{M}+/gu, "") // strip accents (combining marks of any script)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
+}
+
+/** Same name key, and the key is not empty — the only way two names "match". */
+function sameName(a: string, b: string): boolean {
+  const na = normalizeName(a);
+  return na !== "" && na === normalizeName(b);
+}
+
+// Cyrillic → Latin (the common BG/RS/MK/UA/RU readings) and Greek → Latin, ONLY to notice that
+// two spellings may be one name. Never used as a merge key.
+const TRANSLIT: Readonly<Record<string, string>> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", ђ: "dj", е: "e", ё: "e", є: "e", ж: "zh", з: "z", и: "i", і: "i", ї: "i",
+  й: "j", ј: "j", к: "k", л: "l", љ: "lj", м: "m", н: "n", њ: "nj", о: "o", п: "p", р: "r", с: "s", т: "t", ћ: "c",
+  у: "u", ф: "f", х: "h", ц: "c", ч: "ch", џ: "dz", ш: "sh", щ: "sht", ъ: "a", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+  ѓ: "gj", ќ: "kj", ѕ: "dz",
+  α: "a", β: "v", γ: "g", δ: "d", ε: "e", ζ: "z", η: "i", θ: "th", ι: "i", κ: "k", λ: "l", μ: "m", ν: "n", ξ: "x",
+  ο: "o", π: "p", ρ: "r", σ: "s", ς: "s", τ: "t", υ: "y", φ: "f", χ: "ch", ψ: "ps", ω: "o",
+};
+
+/** A rough Latin reading of a name key, for spotting a cross-script pair (never a merge key). */
+export function latinReading(name: string): string {
+  return [...normalizeName(name)]
+    .map((ch) => TRANSLIT[ch] ?? ch)
+    .join("")
+    .replace(/(sh|ch|zh)/g, (m) => m[0]!) // "Šumava"/"Шумава" both fold to s-…
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * Two names that are NOT the same key but read the same once transliterated ("Vila Marija" /
+ * "Вила Марија") — the caller keeps them as two leads and flags the pair for a look.
+ */
+export function sameNameOtherScript(a: string, b: string): boolean {
+  if (sameName(a, b)) return false;
+  const la = latinReading(a);
+  return la.length >= 3 && la === latinReading(b);
 }
 
 function distanceMeters(
@@ -102,12 +146,19 @@ export interface LeadIdentity {
  * name-only match would wrongly merge distinct same-name businesses far apart.
  */
 export function isSamePlayer(a: LeadIdentity, b: LeadIdentity): boolean {
-  if (normalizeName(a.name) !== normalizeName(b.name)) return false;
+  if (!sameName(a.name, b.name)) return false;
   const d = distanceMeters(
     { lat: a.lat ?? undefined, lon: a.lon ?? undefined },
     { lat: b.lat ?? undefined, lon: b.lon ?? undefined },
   );
   return d <= 250; // Infinity (missing coords on either side) does NOT match here
+}
+
+/** Within ~250 m — both coordinates required (the persistent-store rule). */
+function near(a: LeadIdentity, b: LeadIdentity): boolean {
+  return (
+    distanceMeters({ lat: a.lat ?? undefined, lon: a.lon ?? undefined }, { lat: b.lat ?? undefined, lon: b.lon ?? undefined }) <= 250
+  );
 }
 
 /**
@@ -130,7 +181,9 @@ export function partitionNewLeads(
     if (store.some((e) => isSamePlayer(id, e))) {
       duplicates.push(lead);
     } else {
-      fresh.push(lead);
+      // Same name in another script, nearby: still a new lead, but flagged (ADR-XXXX).
+      const twin = store.find((e) => sameNameOtherScript(id.name, e.name) && near(id, e));
+      fresh.push(twin ? { ...lead, scriptTwinOf: twin.name } : lead);
       // A just-accepted lead joins the store so a second incoming row for the same
       // new player (should not happen post within-run dedup, but be safe) is caught.
       store.push(id);
@@ -146,12 +199,11 @@ export function dedupeAndQualify(
 ): QualifiedLead[] {
   const clusters: RawLead[][] = [];
   for (const lead of raw) {
-    const norm = normalizeName(lead.name);
     let placed = false;
     for (const cluster of clusters) {
       const head = cluster[0];
       const d = distanceMeters(head, lead);
-      if (normalizeName(head.name) === norm && (d <= 250 || d === Infinity)) {
+      if (sameName(head.name, lead.name) && (d <= 250 || d === Infinity)) {
         cluster.push(lead);
         placed = true;
         break;

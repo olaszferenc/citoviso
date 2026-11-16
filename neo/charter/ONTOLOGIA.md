@@ -23,11 +23,14 @@
    szövegével). A márkanév és a település együtt kell, hogy az oldalon szerepeljen.
 3. **Csak névegyezés = ÜTKÖZÉS, nem találat.** Azonos nevű, másik településen működő
    vállalkozás más cég (Rózsakő ház/Badacsony ↔ Rózsakő Étterem/Kisvárda).
-4. **A magyar név sorrendje a domainben felcserélődhet**: „Sissi Panzió” → `panziosissi.hu`.
-   Mindkét sorrendet próbáld, mielőtt „nincs honlapja”-t mondasz.
+4. **A név sorrendje a domainben felcserélődhet**: „Sissi Panzió” → `panziosissi.hu`.
+   Mindkét sorrendet próbáld, mielőtt „nincs honlapja”-t mondasz. ⛔ **A végződés A LEAD
+   ORSZÁGÁÉ** (ADR-XXXX): magyar leadnél `.hu`, `.com`; másutt az ország-sor saját-honlap
+   TLD-listája (`npx tsx scripts/lead-country.mts --country <ISO>`), cirill nevű szállásnál
+   a latin átírással is.
 5. **Parkolt, eladó, „hamarosan” oldal nem saját honlap.**
-6. **Portál ≠ saját honlap.** A portál-bejegyzés (szallas.hu, booking, hovamenjek…) a jelenlét
-   nyoma, nem saját oldal. A saját oldalának `/szallas/` aloldala viszont az övé.
+6. **Portál ≠ saját honlap.** A portál-bejegyzés (szallas.hu, booking, hovamenjek…, és a lead
+   országának helyi portáljai az ország-sorból) a jelenlét nyoma, nem saját oldal. A saját oldalának `/szallas/` aloldala viszont az övé.
 7. **Telefonszám-egyezés erős kötés** (egy szám egy üzleté), de egymagában nem dönt a
    honlap-kérdésben. Ha a kép vegyes (más cím, foglalómotorra irányító domain stb.):
    **bizonytalan eset** → nem generálsz, naplózod, és a jelentésben kérdezel.

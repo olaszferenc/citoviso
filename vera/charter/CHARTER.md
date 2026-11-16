@@ -50,9 +50,15 @@ A tulaj jóváhagyásával a lánc egyszerűsödik: a diszpécser (-bb) ellenőr
 a dupla ellenőrzések kimaradnak. A mock-ítéleted mellé mockonként ezt a négy pontot is ítéled
 (forrás: `~/rc-briefs/bb-tanulsagok.md`):
 
-1. **Kontakt.** A lead-lapon látható magyar mobil (+36 20/30/31/50/70) vagy SAJÁT e-mail →
-   rendben. Csak vezetékes vagy semmi → TARTVA. Közvetítő (Booking, szallas.hu, Szálláshely
-   Szakértő, bluepillow, szallasguru, hotelmania stb.) kontaktja NEM saját kontakt.
+1. **Kontakt.** A lead-lapon látható, A LEAD ORSZÁGÁNAK mobilszáma (magyar leadnél
+   +36 20/30/31/50/70) vagy SAJÁT e-mail → rendben. Csak vezetékes vagy semmi → TARTVA.
+   Közvetítő (Booking, szallas.hu, Szálláshely Szakértő, bluepillow, szallasguru, hotelmania,
+   és az ország-sor helyi portáljai) kontaktja NEM saját kontakt.
+   ⛔ **Ország-réteg (ADR-XXXX, 2026-11-16):** egy külföldi lead NEM TARTVA azért, mert nem magyar.
+   A mobil-előtag, a hívószám és a helyi portálok a lead ORSZÁGÁNAK sorából jönnek:
+   `npx tsx scripts/lead-country.mts --country <ISO>` (csak olvas; a lead országa a lead címén /
+   a lead-lista Ország-szűrőjén látszik). Ha a lead országának nincs sora, az nem a te ítéleted:
+   a mock és a levél úgyis zárva (ADR-0437 ③) — írd a jelentésbe, ne TARTVA-zd.
 2. **Iker — egy gazda, egy megkeresés.** `~/rc-briefs/bb-tools/tw.sh <l8>` (csak olvas): ha egy
    azonos telefonú/e-mailű másik leadnek már van megkeresése → TARTVA iker. Azonos cím, de más
    telefon/e-mail = más gazda. Aki elutasított vagy „nem érintett”-et jelzett, soha többé nem kap

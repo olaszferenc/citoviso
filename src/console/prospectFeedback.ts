@@ -19,6 +19,8 @@ import { db } from "../db/client.js";
 import { T } from "../i18n/mail.js";
 import { loadPack } from "../i18n/packs.js";
 import { isTrialMailReason } from "../email/trialCampaignEmail.js";
+import { langForCountry } from "../i18n/lang.js";
+import { countryOfLead } from "../country.js";
 
 export const FEEDBACK_SOURCES = ["escalation_dismiss", "unsubscribe", "reminder_link", "trial_mail"] as const;
 export const FEEDBACK_REASONS = ["expensive", "not_now", "distrust", "have_site", "other"] as const;
@@ -105,9 +107,15 @@ function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
-/** Load the lead-language pack (a no-op for Hungarian) before rendering with T(). */
-export async function feedbackLang(lang: string | null): Promise<string> {
-  const l = lang || "hu";
+/**
+ * The page language: the prospect's own (the language it was written to), else its lead's
+ * country language (ADR-XXXX) — and null when neither is known (ADR-0437 ③: an unknown
+ * country fails CLOSED; there is no Hungarian fallback). Loads the pack (a no-op for the
+ * source language) before rendering with T().
+ */
+export async function feedbackLang(lang: string | null, leadId: string | null): Promise<string | null> {
+  const l = lang || (leadId ? langForCountry(await countryOfLead(leadId)) : null);
+  if (!l) return null;
   try {
     await loadPack(l);
   } catch {
