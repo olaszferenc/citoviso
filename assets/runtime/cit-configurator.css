@@ -4419,7 +4419,7 @@ html.cit-ask-page.cit-ask-alt .cit-cfg-trialpill { --cit-tp: #6d4aff; --cit-tp-i
 }
 .cit-ask-pk .cit-ask__go small { font-size: 12px; font-weight: 600; opacity: 0.85; }
 
-/* ── p-lap-vegleges (ADR-XXXX, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/) ──
+/* ── p-lap-vegleges (ADR-0453, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/) ──
  * The cold lead page: the price card + questions AFTER the whole plan, in a light Citoviso block
  * behind an „A honlap-terv vége” seam; a floating bar replaces the pill pair once the hero has
  * left the screen; plan preview cards (end block, launch sheet, order panel). Like .cit-ask it

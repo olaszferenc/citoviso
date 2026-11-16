@@ -1,4 +1,4 @@
-## ADR-XXXX — A /p lap végleges elrendezése: kérdésblokk a teljes terv után, lebegő sáv, előnézeti terv-kártyák, a kijelölt terv a kérésben
+## ADR-0453 — A /p lap végleges elrendezése: kérdésblokk a teljes terv után, lebegő sáv, előnézeti terv-kártyák, a kijelölt terv a kérésben
 
 **Dátum:** 2026-11-16 · **Döntött:** tulaj („1)B 2B) kell, az előnézeti kártyák. 3.A De le ne vedd a rendlési
 lehetőséget”; az egyesített mockra: „annyi, ha a lap alján a másik tervre kattint, akkor ugorjon a lap tetejére

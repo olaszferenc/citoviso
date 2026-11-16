@@ -3,7 +3,7 @@
 A tulaj döntése (2026-11-16, a koordinátoron át, a C1/C2/D mock-körök után):
 „1)B 2B) kell, az előnézeti kártyák. 3.A De le ne vedd a rendlési lehetőséget” → az egyesített mock
 (D) után: **„annyi, ha a lap alján a másik tervre kattint, akkor ugorjon a lap tetejére az új
-designnal”** = jóváhagyva ezzel az egy módosítással. Döntés: ADR-XXXX. A mock-körök jelentései:
+designnal”** = jóváhagyva ezzel az egy módosítással. Döntés: ADR-0453. A mock-körök jelentései:
 `~/rc-briefs/tervvaltas/jelentes-{C1,C2,D}.md`.
 
 Kattintható terv: `plan.html` (önhordó; „Mobil 390px / Asztali” váltó, „Alaphelyzet”, a fejlécben
