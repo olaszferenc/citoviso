@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/4 — the CRM clock in the LEAD's / PARTNER's country (ADR-0437, ADR-XXXX).
+// ORSZÁG-RÉTEG 3/4 — the CRM clock in the LEAD's / PARTNER's country (ADR-0437, ADR-0455).
 //
 // Two windows used to be read on the Budapest wall clock for everybody:
 //   · the ANSWER window (ADR-0340/0334): an operator-approved answer to a reply goes out only

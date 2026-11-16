@@ -27,7 +27,7 @@
 //      send hour and heat map are in the lead's zone, portals come from the catalogue, and the
 //      tenant reports/letters run on the lodging's zone; no burned HUF / Ft / Budapest clock.
 //
-//   ⑧ ADR-XXXX — CRM ÉS KOMMUNIKÁCIÓ (ország-réteg 3/4): the CRM files read phone numbers in the
+//   ⑧ ADR-0455 — CRM ÉS KOMMUNIKÁCIÓ (ország-réteg 3/4): the CRM files read phone numbers in the
 //      lead's / partner's country (no Hungarian-only normalizePhone), keep no burned
 //      Europe/Budapest / "hu"-fallback / Budapest clock (each one on the ALLOW list WITH its
 //      reason); the name key keeps every script and never matches empty; the answer window
@@ -81,7 +81,7 @@ const hu = countryConfigSync(HOME);
 check("van HU-sor", hu !== null);
 if (hu) {
   // An EMPTY list is a valid value for these fields (HU: the owner's rule is "weekdays only",
-  // there is no holiday list — ADR-XXXX keeps it so).
+  // there is no holiday list — ADR-0455 keeps it so).
   const MAY_BE_EMPTY = new Set(["publicHolidays"]);
   for (const [k, v] of Object.entries(hu)) {
     if (MAY_BE_EMPTY.has(k)) {

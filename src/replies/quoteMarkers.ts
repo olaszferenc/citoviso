@@ -1,4 +1,4 @@
-// The quote markers of mail clients, PER LANGUAGE, as data (ADR-XXXX, ország-réteg 3/4).
+// The quote markers of mail clients, PER LANGUAGE, as data (ADR-0455, ország-réteg 3/4).
 // stripQuoted() (mime.ts) builds its patterns from this table — a new language is a new
 // entry, never a new `if`. Covered: the languages Bábel already ships (src/i18n/babel/packs)
 // plus the languages of the countries we prepare (cs, ro, bg, sr, el …) and the big

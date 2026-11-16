@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/4 — a lead's CONTACT read in its own country (ADR-0437, ADR-XXXX).
+// ORSZÁG-RÉTEG 3/4 — a lead's CONTACT read in its own country (ADR-0437, ADR-0455).
 //
 // Vera's first rule (charter §3b ①, ADR-0419) is "a mobile of the lead's country, or an own
 // e-mail → OK; only a landline or nothing → TARTVA". It used to be written as "+36 20/30/31/

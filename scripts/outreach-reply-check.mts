@@ -69,7 +69,7 @@ function ucs2(s: string): string {
 
 // ---------- ① matcher ----------
 const T0 = new Date("2026-10-06T09:00:00Z");
-// ADR-XXXX: a contact carries its lead's country phone rules (loadSentContacts sets them).
+// ADR-0455: a contact carries its lead's country phone rules (loadSentContacts sets them).
 const huRules = countryConfigSync("HU");
 const contacts: SentContact[] = [
   { leadId: "L-old", prospectId: "P-old", firstSentAt: new Date("2026-09-01T09:00:00Z"), phone: "+36301112222", emails: [], phoneRules: huRules },

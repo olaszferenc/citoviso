@@ -1,4 +1,4 @@
-// ADR-XXXX ACCEPTANCE — the COUNTRY LAYER's CRM AND COMMUNICATION (ország-réteg 3/4), in a SCRATCH
+// ADR-0455 ACCEPTANCE — the COUNTRY LAYER's CRM AND COMMUNICATION (ország-réteg 3/4), in a SCRATCH
 // database (never the shared dev DB, never production). Nothing is sent: SMS/e-mail providers are
 // 'mock' and the network is fenced.
 //

@@ -109,7 +109,7 @@ function esc(s: string): string {
 
 /**
  * The page language: the prospect's own (the language it was written to), else its lead's
- * country language (ADR-XXXX) — and null when neither is known (ADR-0437 ③: an unknown
+ * country language (ADR-0455) — and null when neither is known (ADR-0437 ③: an unknown
  * country fails CLOSED; there is no Hungarian fallback). Loads the pack (a no-op for the
  * source language) before rendering with T().
  */

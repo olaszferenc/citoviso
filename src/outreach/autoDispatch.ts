@@ -186,7 +186,7 @@ async function sharedPhoneHold(leadId: string): Promise<string | null> {
   const raw = (typeof lead?.raw === "string" ? JSON.parse(lead.raw) : lead?.raw) as QualifiedLead | undefined;
   const phone = typeof raw?.phone === "string" ? raw.phone.trim() : "";
   if (!lead || !phone) return null;
-  // ADR-XXXX: the number in the lead's own country (a Czech "777 123 456" is +420…); the HU
+  // ADR-0455: the number in the lead's own country (a Czech "777 123 456" is +420…); the HU
   // row keeps the Hungarian plan, so a Hungarian lead's key is what it always was.
   const e164 = normalizePhoneIn(phone, countryConfigSync(countryOf(raw))) ?? phone;
   return sharedContactBlocks(leadId, "phone", e164, isAllowlistedTestNumber(e164) || ownerTestPhoneExempt(lead.name, e164));

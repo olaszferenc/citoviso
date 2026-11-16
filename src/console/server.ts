@@ -4079,7 +4079,7 @@ async function handle(
       !/text\/html/i.test(String(req.headers.accept ?? ""));
     if (oneClick) return send(res, 200, "OK", "text/plain; charset=utf-8");
     const up = await getProspectByToken(unsubMatch[1]);
-    // ADR-XXXX: the lead's language; unknown country → the unsubscribe stands, no page (fail closed).
+    // ADR-0455: the lead's language; unknown country → the unsubscribe stands, no page (fail closed).
     const upLang = await feedbackLang(up?.lang ?? null, up?.leadId ?? null);
     if (!upLang) return send(res, 200, "OK", "text/plain; charset=utf-8");
     return send(res, 200, unsubscribedPage(unsubMatch[1], upLang));

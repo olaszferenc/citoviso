@@ -9,7 +9,7 @@
 //      copies, DMARC reports and bounces; anything that does not match is DROPPED, not
 //      stored (contract: assets/design-refs/console/valaszok/README.md, Adat-elvárások).
 //   ⛔ a message older than our first touch is not a reply to it.
-//   ADR-XXXX (ország-réteg 3/4): a number is read in the LEAD's country — a Czech lead's
+//   ADR-0455 (ország-réteg 3/4): a number is read in the LEAD's country — a Czech lead's
 //      "777 123 456" and a reply from "+420777123456" are the same number; the HU row keeps
 //      the Hungarian plan, so a Hungarian match is exactly what it was.
 
@@ -62,7 +62,7 @@ const MAX_BODY = 8000;
 const MAX_OURS = 2000;
 
 /**
- * The conversation's language (ADR-XXXX): the language the lead was written to (its mock),
+ * The conversation's language (ADR-0455): the language the lead was written to (its mock),
  * else its country's — and null when the lead's country has no row (ADR-0437 ③: no
  * Hungarian fallback; Poe's ticket then says the language is unknown).
  */
@@ -505,7 +505,7 @@ export async function repliesNeedingSuggestion(): Promise<
     readonly sender: string;
     readonly body: string;
     readonly receivedAt: string;
-    /** ADR-XXXX: the conversation's language (null = the lead's country has no row). */
+    /** ADR-0455: the conversation's language (null = the lead's country has no row). */
     readonly lang: string | null;
     /** The SMS sign-off in that language (the house, never a person). */
     readonly signature: string;

@@ -8,7 +8,7 @@
 //     (In-Reply-To / References = the incoming Message-ID, already stored in source_key).
 //   ③ The owner's mock window (weekday 8–16, ADR-0334) holds for the answer too (owner,
 //     2026-10-08): outside it the send is 'scheduled' for the next window start and goes
-//     out on the first settle after it. ADR-XXXX: the window is read in the LEAD's zone,
+//     out on the first settle after it. ADR-0455: the window is read in the LEAD's zone,
 //     on the LEAD's country's working days (country.public_holidays) — HU = Budapest, no
 //     holidays, exactly as before.
 //   ④ Success marks the reply answered by the sending operator; a failure leaves it open.
@@ -191,7 +191,7 @@ export async function sendAnswer(
   const err = answerTextError(r.channel, text);
   if (err) return { ok: false, status: "failed", message: err };
   const subject = r.channel === "email" ? clean(input.subject, MAX_SUBJECT) || replySubject(r.subject ?? r.ours_subject) : null;
-  // ADR-XXXX: the window is the LEAD's — its zone, its weekdays, its public holidays. A lead
+  // ADR-0455: the window is the LEAD's — its zone, its weekdays, its public holidays. A lead
   // whose country has no row gets no answer scheduled (ADR-0437 ③: fail closed, no HU clock).
   const clock = await leadClock(r.lead_id);
   if (!clock) return { ok: false, status: "failed", message: "A lead országa nincs az ország-rétegben — a válasz nem ütemezhető." };

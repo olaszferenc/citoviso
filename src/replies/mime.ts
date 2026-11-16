@@ -165,7 +165,7 @@ export function parseMail(raw: Buffer): ParsedMail {
  * QUOTE_MARKERS (quoteMarkers.ts) — the attribution line ("On … wrote:", "… írta:",
  * "Am … schrieb X:", "… napsal(a):", "… написа:" …), the "-----Original Message-----"
  * banner, Outlook's "From: … Sent: …" block in every covered language, and ">"-prefixed
- * lines. ADR-XXXX: data, not one `if` per language.
+ * lines. ADR-0455: data, not one `if` per language.
  */
 export function stripQuoted(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");

@@ -1,4 +1,4 @@
-# 2026-11-16 — Ország-réteg 3/4: CRM és kommunikáció (ADR-XXXX)
+# 2026-11-16 — Ország-réteg 3/4: CRM és kommunikáció (ADR-0455)
 
 Brief: `~/rc-briefs/orszag-reteg-3d-crm-20261116.md` · session `cit00db194a` · koordinátor `cit9b4690e3` · élesen NINCS.
 

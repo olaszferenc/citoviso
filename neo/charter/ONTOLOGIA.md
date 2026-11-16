@@ -25,7 +25,7 @@
    vállalkozás más cég (Rózsakő ház/Badacsony ↔ Rózsakő Étterem/Kisvárda).
 4. **A név sorrendje a domainben felcserélődhet**: „Sissi Panzió” → `panziosissi.hu`.
    Mindkét sorrendet próbáld, mielőtt „nincs honlapja”-t mondasz. ⛔ **A végződés A LEAD
-   ORSZÁGÁÉ** (ADR-XXXX): magyar leadnél `.hu`, `.com`; másutt az ország-sor saját-honlap
+   ORSZÁGÁÉ** (ADR-0455): magyar leadnél `.hu`, `.com`; másutt az ország-sor saját-honlap
    TLD-listája (`npx tsx scripts/lead-country.mts --country <ISO>`), cirill nevű szállásnál
    a latin átírással is.
 5. **Parkolt, eladó, „hamarosan” oldal nem saját honlap.**

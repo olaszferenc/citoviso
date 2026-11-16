@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/4 (ADR-XXXX) — a lead's country rules, for the colleagues (Vera, Neo, Poe).
+// ORSZÁG-RÉTEG 3/4 (ADR-0455) — a lead's country rules, for the colleagues (Vera, Neo, Poe).
 // READ-ONLY: reads the lead and the country row, writes nothing, sends nothing.
 //
 //   npx tsx scripts/lead-country.mts <lead-id | first 8 chars of it>

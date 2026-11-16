@@ -44,7 +44,7 @@ export type PendingApproval = {
   readonly altId: string | null;
   readonly reason: string;
   readonly queuedAt: Date;
-  /** ADR-XXXX: the lead's country (ISO-2, from its coordinate — ADR-0437 ②); "" = unknown. */
+  /** ADR-0455: the lead's country (ISO-2, from its coordinate — ADR-0437 ②); "" = unknown. */
   readonly country: string;
   /**
    * ADR-0430 (approved plan design-refs/console/messenger-felulet): where the first outreach
@@ -486,7 +486,7 @@ export function approvalPage(
 ): string {
   const lang = consoleLang();
   const cur = selectedApproval(items, selected);
-  // ADR-XXXX: the country column + filter appear once the queue holds more than one country —
+  // ADR-0455: the country column + filter appear once the queue holds more than one country —
   // a one-country (Hungarian) queue looks exactly as before.
   const countries = [...new Set(items.map((i) => i.country))].sort();
   const multi = countries.length > 1;

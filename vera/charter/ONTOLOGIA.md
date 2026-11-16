@@ -71,7 +71,7 @@ megjegyzésben az élő idézet.
   ≠ „a strand mellett”; „ki lehet ülni” ≠ „terasz”.
 - **A vendég-oldal MAGÁZ;** a ház T/1-ben beszélhet magáról. Tegezés = `szoveg_hiba`.
 - **Mérce:** kiírná-e ezt egy normális szállásadó A LEAD ORSZÁGÁBAN (magyar leadnél: magyar
-  szállásadó) a honlapjára, a lead nyelvén — és igaz lenne-e? (ADR-XXXX: a mock nyelve a lead
+  szállásadó) a honlapjára, a lead nyelvén — és igaz lenne-e? (ADR-0455: a mock nyelve a lead
   országáé; a `szoveg_hiba` mércéje az adott nyelv természetes, magázó/udvarias formája.)
 
 ## 5. Két tényből nem lesz harmadik (ADR-0317)

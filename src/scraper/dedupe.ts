@@ -7,7 +7,7 @@ import { leadEmails } from "../email/leadEmails.js";
 // coordinates are missing on either side). Merged fields prefer non-empty values,
 // and an own-domain website wins over a portal/none.
 //
-// ADR-XXXX (ország-réteg 3/4): the name key keeps EVERY script's letters. It used to keep
+// ADR-0455 (ország-réteg 3/4): the name key keeps EVERY script's letters. It used to keep
 // only [a-z0-9], so a Cyrillic or Greek name became "" — and every such lead within 250 m
 // (or without coordinates) melted into ONE lead. Now: NFKD + combining marks stripped
 // (Hungarian/Czech accents fold exactly as before: "Rózsa" = "rozsa"), Cyrillic/Greek/…
@@ -181,7 +181,7 @@ export function partitionNewLeads(
     if (store.some((e) => isSamePlayer(id, e))) {
       duplicates.push(lead);
     } else {
-      // Same name in another script, nearby: still a new lead, but flagged (ADR-XXXX).
+      // Same name in another script, nearby: still a new lead, but flagged (ADR-0455).
       const twin = store.find((e) => sameNameOtherScript(id.name, e.name) && near(id, e));
       fresh.push(twin ? { ...lead, scriptTwinOf: twin.name } : lead);
       // A just-accepted lead joins the store so a second incoming row for the same

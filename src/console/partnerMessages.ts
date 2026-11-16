@@ -11,7 +11,7 @@
 // Sending reuses the existing paths: getEmailSender (immediately) and sendSms (the SMS queue;
 // in quiet hours 22–07 the row waits as 'scheduled' until 07:00).
 //
-// ADR-XXXX (ország-réteg 3/4): the quiet hours are the PARTNER's — its lodging's zone
+// ADR-0455 (ország-réteg 3/4): the quiet hours are the PARTNER's — its lodging's zone
 // (tenant.time_zone), else its country row's zone — and every phone number is read in the
 // partner's / lead's country (a Czech partner's "777 123 456" is +420…). The HU partner keeps
 // Budapest and the Hungarian plan, i.e. exactly what this tab did before.
@@ -134,7 +134,7 @@ function phoneRulesOf(p: Pick<PartnerCore, "country">, lead: LeadCore | null): P
 }
 
 /**
- * The partner's wall clock (ADR-XXXX): the lodging's zone when there is a tenant, else the
+ * The partner's wall clock (ADR-0455): the lodging's zone when there is a tenant, else the
  * partner's country row's zone. A partner with neither (no tenant, no row) is an operator
  * record of ours — tenantTimeZone(null) gives the company zone for it.
  */
@@ -499,7 +499,7 @@ export function smsText(body: string, sign: boolean): string {
   return sign ? `${t}\n${SMS_SIGNATURE}` : t;
 }
 
-/** The next 07:00 in the partner's zone after a quiet-hours moment (ADR-XXXX). */
+/** The next 07:00 in the partner's zone after a quiet-hours moment (ADR-0455). */
 export function quietHoursEnd(now: Date, timeZone: string): Date {
   return quietHoursEndIn(now, timeZone);
 }
@@ -695,7 +695,7 @@ export function settlePartnerMessages(now = new Date()): Promise<void> {
           .execute();
         const zones = new Map<string, string>();
         for (const d of due) {
-          // Each row waits for ITS partner's morning (ADR-XXXX).
+          // Each row waits for ITS partner's morning (ADR-0455).
           if (!zones.has(d.partner_id)) zones.set(d.partner_id, await partnerZoneById(d.partner_id));
           if (quietHoursIn(now, zones.get(d.partner_id)!)) continue;
           // Claim first: only the call that flips it to 'queued' transmits.
@@ -751,7 +751,7 @@ export interface InboundItem {
  */
 export async function ingestPartnerInbound(r: InboundItem): Promise<boolean> {
   const sms = r.channel === "sms";
-  // ADR-XXXX: a number is read in each partner's own country — a national-format sender
+  // ADR-0455: a number is read in each partner's own country — a national-format sender
   // matches only a partner of that country, a "+CC" one any partner holding that number.
   const rulesOf = (country: string) => countryConfigSync(country);
   const key = (v: string | null, country: string): string | null =>

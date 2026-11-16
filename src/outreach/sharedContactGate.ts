@@ -42,7 +42,7 @@ function keyOf(kind: ContactKind, value: string, rules: PhoneRules | null = null
     const e = normalizeEmail(value);
     return e.includes("@") ? e : null;
   }
-  // ADR-XXXX (ország-réteg 3/4): a number of a NON-Hungarian-plan country is first read in its
+  // ADR-0455 (ország-réteg 3/4): a number of a NON-Hungarian-plan country is first read in its
   // lead's country ("777 123 456" → +420777123456), so the national and the "+CC" spelling of
   // one number get one key. The Hungarian plan (and a lead without a row) keeps phoneKey as is.
   const e164 = rules && rules.phonePlan !== "hu" ? normalizePhoneIn(value, rules) : null;
@@ -103,7 +103,7 @@ export async function foreignHoldersOf(
   /** The query executor — a check passes its rolled-back transaction. */
   q: Pick<typeof db, "selectFrom"> = db,
 ): Promise<{ id: string; name: string; city?: string }[]> {
-  // The asked value is read in the asking lead's own country (ADR-XXXX) — a national-format
+  // The asked value is read in the asking lead's own country (ADR-0455) — a national-format
   // number of a Czech lead keys the same as the "+420" spelling another lead holds.
   const own =
     kind === "phone"

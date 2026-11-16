@@ -70,7 +70,7 @@ interface NeedsSuggestion {
   body: string;
   receivedAt: string;
   url?: string | null;
-  /** ADR-XXXX: the conversation's language (the lead's); null = its country has no row. */
+  /** ADR-0455: the conversation's language (the lead's); null = its country has no row. */
   lang?: string | null;
   /** The SMS sign-off in that language. */
   signature?: string;
@@ -133,7 +133,7 @@ function poeTicket(n: NeedsSuggestion, consoleBase: string): { name: string; bod
   const ch = n.channel === "sms" ? "SMS" : "e-mail";
   const at = new Date(n.receivedAt).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" });
   const sig = n.signature || "A Citoviso csapata";
-  // ADR-XXXX: a non-Hungarian conversation says its language — Poe answers in it. A Hungarian
+  // ADR-0455: a non-Hungarian conversation says its language — Poe answers in it. A Hungarian
   // ticket stays as it was (no extra line).
   const langLine =
     n.lang === null

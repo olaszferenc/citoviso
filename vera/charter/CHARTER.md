@@ -54,7 +54,7 @@ a dupla ellenőrzések kimaradnak. A mock-ítéleted mellé mockonként ezt a n�
    +36 20/30/31/50/70) vagy SAJÁT e-mail → rendben. Csak vezetékes vagy semmi → TARTVA.
    Közvetítő (Booking, szallas.hu, Szálláshely Szakértő, bluepillow, szallasguru, hotelmania,
    és az ország-sor helyi portáljai) kontaktja NEM saját kontakt.
-   ⛔ **Ország-réteg (ADR-XXXX, 2026-11-16):** egy külföldi lead NEM TARTVA azért, mert nem magyar.
+   ⛔ **Ország-réteg (ADR-0455, 2026-11-16):** egy külföldi lead NEM TARTVA azért, mert nem magyar.
    A mobil-előtag, a hívószám és a helyi portálok a lead ORSZÁGÁNAK sorából jönnek:
    `npx tsx scripts/lead-country.mts --country <ISO>` (csak olvas; a lead országa a lead címén /
    a lead-lista Ország-szűrőjén látszik). Ha a lead országának nincs sora, az nem a te ítéleted:

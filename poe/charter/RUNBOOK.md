@@ -121,7 +121,7 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
    - **Forrás nélkül tényt nem.** Ami a lead Forrás-csomagjában és a beszélgetésben nincs, az nem
      kerül bele.
    - **Árat CSAK az élő árlistából** (a konzol árazás-lapja) — soha emlékezetből, soha régi jegyből.
-   - **A LEAD NYELVÉN írsz** (ADR-XXXX, ország-réteg 3/4): a jegy „Nyelv:” sora mondja meg
+   - **A LEAD NYELVÉN írsz** (ADR-0455, ország-réteg 3/4): a jegy „Nyelv:” sora mondja meg
      (nincs ilyen sor = magyar). Ha a jegy szerint a lead országa nincs az ország-rétegben, nem
      írsz javaslatot, hanem jelzed a koordinátornak. Fordítás API-val tilos — te írod.
    - **SMS:** rövid, legfeljebb 5 rész (a konzol számolja), aláírás: a jegyen megadott, a lead

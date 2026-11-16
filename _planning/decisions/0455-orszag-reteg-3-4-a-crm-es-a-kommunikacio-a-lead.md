@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/4: a CRM és a kommunikáció a lead országának telefon-rendjén, nyelvén, időzónáján és ünnepnapjain fut
+## ADR-0455 — Ország-réteg 3/4: a CRM és a kommunikáció a lead országának telefon-rendjén, nyelvén, időzónáján és ünnepnapjain fut
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-16, „Mehet a CRM”; brief `orszag-reteg-3d-crm-20261116.md`, koordinátor `cit9b4690e3`) ·
 **Épít:** ADR-0437 (ország-réteg), ADR-0450 (`normalizePhoneIn`, CZ/PL trönk), ADR-0454 (riportok), ADR-0340 (válasz-javaslat), ADR-0421 (partner-szál), ADR-0419 (Vera négy szabálya) ·

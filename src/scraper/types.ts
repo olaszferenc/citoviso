@@ -148,7 +148,7 @@ export interface QualifiedLead {
   /** Photos available on Google Places (carried from discovery). */
   readonly photoCount?: number;
   /**
-   * ADR-XXXX: an already-stored lead within ~250 m whose name reads the same in another
+   * ADR-0455: an already-stored lead within ~250 m whose name reads the same in another
    * script ("Vila Marija" / "Вила Марија"). Kept as a SEPARATE lead — two scripts are not
    * proof of one player — and flagged with that lead's name for a look on the Duplikátumok page.
    */
