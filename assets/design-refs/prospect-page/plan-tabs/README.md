@@ -77,7 +77,7 @@ Képek: `plan-mobil.jpg` (390 px) · `plan-asztali.jpg` (1440 px) · `plan-mobil
 
 ### E. A lap alji tervváltó
 
-> **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a konfigurátoros lapon a „Tetszett?” blokk nem jelenik meg — beleolvadt a lezáró
+> **FELÜLÍRVA (2026-11-16, ADR-0453, `../p-lap-vegleges/`):** a konfigurátoros lapon a „Tetszett?” blokk nem jelenik meg — beleolvadt a lezáró
 > Citoviso-blokk terv-kártyáiba („Melyik terv legyen?”); a MÁSIK terv kártyája azt a tervet tölti be, a lap tetejétől.
 > Konfigurátor nélküli többtervű lapon a 15–18. pont változatlanul köt.
 
@@ -92,7 +92,7 @@ Képek: `plan-mobil.jpg` (390 px) · `plan-asztali.jpg` (1440 px) · `plan-mobil
 
 ### F. Rendelés
 
-> **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a rendelés és a próba a KIJELÖLT tervé (a rendelő panel és az indító lap terv-kártyái,
+> **FELÜLÍRVA (2026-11-16, ADR-0453, `../p-lap-vegleges/`):** a rendelés és a próba a KIJELÖLT tervé (a rendelő panel és az indító lap terv-kártyái,
 > a kérés `plan` mezője, szerver-oldalon a link tervkészletéhez mérve); kijelölés nélkül a nézett tervé, mint eddig.
 
 

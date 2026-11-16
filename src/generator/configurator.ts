@@ -347,7 +347,7 @@ export interface AskEntry {
 }
 
 /**
- * p-lap-vegleges (ADR-XXXX, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/): the
+ * p-lap-vegleges (ADR-0453, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/): the
  * plans of a MULTI-plan tracked link, for the preview cards (end block, launch sheet, order
  * panel). The page posts the PICKED plan's number with the trial / order (`plan`); the server
  * re-resolves it against listProspectPlans — nothing here is trusted.

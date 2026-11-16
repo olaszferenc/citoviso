@@ -13,7 +13,7 @@ Kattintható terv: `plan.html` (stílus-, méret- és süti-sáv-váltó; a gomb
 ## Ami KÖT (elvárt viselkedés, nem stílus-javaslat)
 
 1. **Felirat:** ~~„Itt rendelheti meg”~~ → **FELÜLÍRVA (2026-10-27, ADR-0408):** „Árak és rendelés” + „havi X Ft-tól”, lásd `../arak-gomb/`. A többi pont változatlanul köt.
-2. **FELÜLÍRVA (2026-11-16, ADR-XXXX, `../p-lap-vegleges/`):** a hideg lead lapon (kérdés-blokkal) a pirula nem jelenik meg; a lebegő sáv a nyitókép
+2. **FELÜLÍRVA (2026-11-16, ADR-0453, `../p-lap-vegleges/`):** a hideg lead lapon (kérdés-blokkal) a pirula nem jelenik meg; a lebegő sáv a nyitókép
    után jön, és a Citoviso-blokknál félreáll. Más lapokon változatlan. — Eredetileg: **Mindig kint van**, kivéve, amíg a rendelő-panel nyitva van (ott a panel a lényeg), és amíg a
    döntés-segítő kártya fátyla takarja (annak saját „Megrendelem” gombja van).
    - betöltés: azonnal, 0,3 mp-es beúszással (nem 2,6 mp / első görgetés);

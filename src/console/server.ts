@@ -1021,7 +1021,7 @@ async function multiPlanLayers(
 }
 
 /**
- * p-lap-vegleges (ADR-XXXX): the plans of a multi-plan link as the page's preview cards see
+ * p-lap-vegleges (ADR-0453): the plans of a multi-plan link as the page's preview cards see
  * them — number, the address WITH the readable slug (planHref), the cached hero shot (never
  * rendered on request, Elek FK-004 H1). `samePrice` only when every plan prices in the page's
  * region: the cards say „az ár ugyanaz” only then (§B.17 — the price is module-based, the
@@ -1124,7 +1124,7 @@ function askContactPrefill(leadName: string, raw: unknown, contactEmail: string 
  * price + domain choice (ADR-0020).
  */
 /**
- * p-lap-vegleges (ADR-XXXX): the plan number the page posted (`plan`). Absent / null → null (the
+ * p-lap-vegleges (ADR-0453): the plan number the page posted (`plan`). Absent / null → null (the
  * address decides); a value that is not a plan number at all → "bad" (refused like a plan the
  * link does not have — the page never sends one, so it is a forged or stale request).
  */
@@ -4253,7 +4253,7 @@ async function handle(
   const pTrialMatch = /^\/p\/([A-Za-z0-9_-]{16,})(?:\/v\/([1-9]))?\/trial$/.exec(pPath);
   if (method === "POST" && pTrialMatch) {
     const b = (await readJson(req)) as Record<string, unknown>;
-    // p-lap-vegleges (ADR-XXXX): the plan PICKED on the page's cards rides in the body (`plan`)
+    // p-lap-vegleges (ADR-0453): the plan PICKED on the page's cards rides in the body (`plan`)
     // and wins over the address's plan — the lead may start plan 2 from plan 1's page. Resolved
     // against THIS link's plan set (a number it does not have → 404, nothing written); without
     // `plan`, the address's plan, as ADR-0449.

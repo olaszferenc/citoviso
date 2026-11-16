@@ -1,4 +1,4 @@
-// p-lap-vegleges (ADR-XXXX, owner 2026-11-16: „1)B 2B) kell, az előnézeti kártyák. 3.A De le ne vedd
+// p-lap-vegleges (ADR-0453, owner 2026-11-16: „1)B 2B) kell, az előnézeti kártyák. 3.A De le ne vedd
 // a rendlési lehetőséget” + „ha a lap alján a másik tervre kattint, akkor ugorjon a lap tetejére az új
 // designnal”) — the cold lead page's final layout, measured on the REAL /p chain (in-process console,
 // own fixture: two plans rendered from two real templates, shared dev DB, every row dropped on exit).

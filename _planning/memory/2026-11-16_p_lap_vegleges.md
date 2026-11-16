@@ -1,4 +1,4 @@
-# 2026-11-16 · A /p lap végleges elrendezése megépült (tervvaltas F, ADR-XXXX)
+# 2026-11-16 · A /p lap végleges elrendezése megépült (tervvaltas F, ADR-0453)
 
 **Session:** `cit16bca50a` (SUB, koordinátor `cit3918dbf3`), brief `~/rc-briefs/tervvaltas/F-p-lap-epites.md`.
 

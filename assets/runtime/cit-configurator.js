@@ -6640,7 +6640,7 @@
     if (!ASK_ON || askBox) return;
     askBox = el('<section class="cit-ask" id="ar" aria-label="' + esc(tr("Árak és kérdések")) + '"></section>');
     askBox.innerHTML = askSectionHtml();
-    // p-lap-vegleges (ADR-XXXX, supersedes kerdes-inditas ①'s „after the hero”): the block comes
+    // p-lap-vegleges (ADR-0453, supersedes kerdes-inditas ①'s „after the hero”): the block comes
     // AFTER the whole plan, in the Citoviso end block, and the floating bar replaces the pills.
     plapMount();
     renderCard();
@@ -7052,7 +7052,7 @@
   }
 
 
-  // ── p-lap-vegleges (ADR-XXXX, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/) ──
+  // ── p-lap-vegleges (ADR-0453, frozen plan assets/design-refs/prospect-page/p-lap-vegleges/) ──
   // The cold lead page (ASK_ON): the plan runs through UNDISTURBED; the price card + „Kérdése
   // van?” come AFTER the whole plan behind an „A honlap-terv vége” seam, in a light Citoviso
   // block; a floating bar („Kérdése van?” · „Megrendelem” · „Indítsa el · N. terv”) replaces the
