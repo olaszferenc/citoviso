@@ -68,6 +68,10 @@ const NO_RENDER_NEEDED: Record<string, string> = {
   "/admin/booking/cancel": "foglalás lemondása — a foglaltság élő lekérdezés",
 };
 
+/** Tenant modules OUTSIDE editor.ts whose exported functions re-render through the editor's own
+ *  public door (rerenderTenantSnapshot) — tervvaltas E: switchSitePlan swaps the plan AND renders. */
+const RERENDERING_MODULES = ["src/tenant/planSwitch.ts"];
+
 /** `export async function NAME` … whose body calls renderAndPersist → writing it re-renders. */
 async function renderingWriters(): Promise<Set<string>> {
   const src = (await readFile(EDITOR_TS, "utf8")).split("\n");
@@ -78,6 +82,16 @@ async function renderingWriters(): Promise<Set<string>> {
     if (decl) current = decl[1]!;
     if (current && /\brenderAndPersist\(/.test(line) && !/async function renderAndPersist/.test(line)) {
       out.add(current);
+    }
+  }
+  for (const rel of RERENDERING_MODULES) {
+    const lines = (await readFile(path.join(ROOT, rel), "utf8").catch(() => "")).split("\n");
+    let fn: string | null = null;
+    for (const line of lines) {
+      const decl = /^export async function (\w+)/.exec(line);
+      if (decl) fn = decl[1]!;
+      else if (/^(export )?(async )?function |^const |^export const /.test(line)) fn = null;
+      if (fn && /\brerenderTenantSnapshot\(/.test(line)) out.add(fn);
     }
   }
   return out;

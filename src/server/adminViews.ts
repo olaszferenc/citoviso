@@ -41,6 +41,7 @@ import { SHRINK_JS } from "../tenant/photoUpload.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { contactSection, type ContactView } from "./contactViews.js";
+import { lookSection, overviewLookButton, overviewLookTag, type LookView } from "./planSwitchViews.js";
 import { flagSvg } from "../ui/flags.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
@@ -345,6 +346,8 @@ interface NavCounts {
   readonly buyModules: readonly { readonly id: string; readonly label: string }[];
   /** The module whose settings screen is open (`?m=`), or null. */
   readonly openModule: string | null;
+  /** tervvaltas E: the plan the site runs („1. terv”) — only when there is another to switch to. */
+  readonly lookN: number | null;
 }
 
 /** Count / badge cell for a nav item — the SAME rule on the sidebar, the drawer and
@@ -355,6 +358,8 @@ function navMark(id: string, c: NavCounts, lang: string, counts = true): string 
   if (id === "foglalasok" && c.pendingBookings > 0)
     return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} kérés vár döntésre", { n: c.pendingBookings }))}">${c.pendingBookings > 99 ? "99+" : c.pendingBookings}</span>`;
   if (!counts) return "";
+  // tervvaltas E (contract ①): the Kinézet row names the plan the site runs.
+  if (id === "kinezet" && c.lookN !== null) return `<span class="adm-nav__n">${esc(T(lang, "{n}. terv", { n: c.lookN }))}</span>`;
   if (id === "fotok" && c.photos > 0) return `<span class="adm-nav__n">${c.photos}</span>`;
   // module-subnav ⑤: one row, one unit — the badge counts the list right under it.
   if (id === "modulok" && c.subModules.length > 0) return `<span class="adm-nav__n">${c.subModules.length}</span>`;
@@ -4830,6 +4835,9 @@ const DOMAIN_STYLE =
  *  home (no label) · site „Az oldalam" · guests „Vendégek" · biz „Üzlet" · acct „Fiók". */
 const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string; group: string }[] => [
   { id: "attekintes", label: T(lang, "Áttekintés"), icon: "overview", group: "home" },
+  // tervvaltas E (approved plan design-refs/console/tervvalto-admin, „3.A”): the site's plans,
+  // switchable any time — first in „Az oldalam”.
+  { id: "kinezet", label: T(lang, "Kinézet"), icon: "layout", group: "site" },
   { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts", group: "site" },
   { id: "fotok", label: T(lang, "Fotók"), icon: "photos", group: "site" },
   // ADR-0241 (approved plan design-refs/tenant-admin/elerhetoseg, „B"): address, map pin,
@@ -4926,6 +4934,9 @@ function overviewSection(
    * design-refs/tenant-admin/modul-statusz README ①4.
    */
   setupStrip: string | null = null,
+  /** tervvaltas E (contract ⑧): the running plan's number when there is another plan — the
+   *  cover card's „Kinézet: N. terv” + „Másik terv”. Null: one plan, nothing to say. */
+  lookN: number | null = null,
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -5203,11 +5214,12 @@ function overviewSection(
       `<img src="${esc(cover.url)}" alt="${esc(cover.alt)}" data-lb="0">` +
       `<span class="adm-covc__tag">${ic("starf", 12)}${own ? T(lang, "Saját nyitókép") : T(lang, "Bemutató nyitókép")}</span>` +
       `<span class="adm-covc__meta">${T(lang, "{n} kép", { n: photoCount })}</span>` +
-      `<div class="adm-covc__b"><div><b>${esc(content.name)}</b><span>${
+      `<div class="adm-covc__b"><div>${lookN !== null ? overviewLookTag(lookN, lang) : ""}<b>${esc(content.name)}</b><span>${
         own
           ? T(lang, "A saját fotói láthatók az oldalán — így látja a vendég az oldal tetején.")
           : T(lang, "Ha szeretné, feltölthet saját képeket.")
-      }</span></div><div class="adm-covc__acts">` +
+      }${lookN !== null ? ` ${T(lang, "Bármikor válthat a másik tervre — a módosításai megmaradnak.")}` : ""}</span></div><div class="adm-covc__acts">` +
+      (lookN !== null ? overviewLookButton(lang) : "") +
       `<a class="adm-btn adm-btn--sm" href="/admin?tab=fotok">${ic("photos", 14)}${T(lang, "Fotók kezelése")}</a>` +
       `<button type="button" class="adm-btn adm-btn--sm" data-lb="0">${ic("preview", 14)}${T(lang, "Nagyítás")}</button>` +
       `</div></div></div>`
@@ -6533,6 +6545,11 @@ export interface AdminOpts {
   readonly bookings?: BookingsTabData | null;
   /** Döntésre váró foglalási kérések — a fülsor jelvénye (ADR-0274 ①; a fül megnyitásától nem tűnik el). */
   readonly pendingBookings?: number;
+  /** tervvaltas E: the Kinézet tab's data (loaded for that tab only). */
+  readonly look?: LookView | null;
+  /** tervvaltas E: the running plan's number and the plan count — the nav badge and the
+   *  Áttekintés cover card (every tab; one cheap read). */
+  readonly lookNow?: { readonly n: number; readonly count: number } | null;
 }
 
 /** module-subnav ④: on a module screen the path is `<site> › Modulok › <module>`. */
@@ -6659,6 +6676,7 @@ export function adminDashboard(
       ? mv.modules.filter((m) => !m.active && !m.spine).map((m) => ({ id: m.id, label: T(lang, m.label) }))
       : [],
     openModule: tab === "modulok" && opts.moduleSettingsHtml ? (opts.openModule ?? null) : null,
+    lookN: opts.lookNow && opts.lookNow.count >= 2 ? opts.lookNow.n : null,
   };
   const siteName = session.displayName;
   const head = THEME_BOOT;
@@ -6877,6 +6895,11 @@ export function adminDashboard(
   const section =
     tab === "sugo"
       ? helpSection(opts.help ?? { topics: [], open: null, query: "" }, lang)
+      : tab === "kinezet"
+      ? (opts.look
+          ? lookSection(opts.look, lang, helpLink("admin.look", lang))
+          : `<div class="adm-ph"><h1>${T(lang, "Kinézet")}${helpLink("admin.look", lang)}</h1></div>` +
+            `<div class="adm-card"><p class="citui-hint">${T(lang, "A kinézet akkor választható, ha a honlapja már elkészült.")}</p></div>`)
       : tab === "szovegek"
       ? textsSection(content, lang)
       : tab === "elerhetoseg"
@@ -6986,12 +7009,13 @@ export function adminDashboard(
                 opts.trial?.status === "lapsed" ? opts.trial : null,
                 opts.trial?.status === "active",
                 opts.setupStrip ?? null,
+                opts.lookNow && opts.lookNow.count >= 2 ? opts.lookNow.n : null,
               );
 
   // The Áttekintés and the Fotók render their own page head (title + sentence);
   // every other tab gets the plain H1 here.
   const pageHead =
-    tab === "attekintes" || tab === "fotok"
+    tab === "attekintes" || tab === "fotok" || tab === "kinezet"
       ? ""
       : tab === "foglalasok"
         ? // ADR-0274 ②: the guide link moved from the tab body to the title (ADR-0045 §J

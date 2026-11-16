@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-11-06
+updated: 2026-11-16
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -14,8 +14,8 @@ oldala, és mi a következő teendője.
 
 ## A kezelőfelület felépítése
 
-- **Gépen** a bal oldali menü csoportokba rendezve mutatja a lapokat: **„Az oldalam”** (Szövegek,
-  Fotók, Elérhetőség, Modulok), **„Vendégek”** (Foglalások, Üzenetek), **„Üzlet”** (Webcím, Forgalom,
+- **Gépen** a bal oldali menü csoportokba rendezve mutatja a lapokat: **„Az oldalam”** (Kinézet,
+  Szövegek, Fotók, Elérhetőség, Modulok), **„Vendégek”** (Foglalások, Üzenetek), **„Üzlet”** (Webcím, Forgalom,
   Dokumentumok, Pénztárca) és **„Fiók”** (Fiók, Súgó). A Fotók és a Modulok mellett a darabszám, az Üzenetek
   mellett az olvasatlanok száma áll. A **„Modulok”** alatt lenyíló lista a beállítható moduljait
   sorolja fel — egy névre kattintva az adott modul beállításai nyílnak meg. A menü tetején lévő nyíllal a menü keskeny ikonsávvá
@@ -62,6 +62,9 @@ A csempék alatt a **nyitókép-mutató** azt a képet mutatja, amit a vendég a
 a sarkában az áll, hogy ez **„Bemutató nyitókép”** vagy **„Saját nyitókép”**, és hogy összesen hány
 képe van. A **„Fotók kezelése”** gomb a Fotók lapra visz — ha szeretné, ott feltölthet saját
 képeket. A **„Nagyítás”** teljes képernyőn mutatja a képet.
+
+Ha az oldalához több terv készült, a kártyán az is látszik, melyik fut most (például „Kinézet: 1. terv”), és
+a **„Másik terv”** gomb a Kinézet lapra visz, ahol bármikor átválthat egy másik tervre.
 
 ## Előfizetés-kártya
 

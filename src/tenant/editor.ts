@@ -883,6 +883,9 @@ async function renderAndPersist(
   s: SiteForEdit,
   overrides: Overrides,
   asStatus: string = s.status,
+  /** tervvaltas E (B 2.6): a plan switch may change the section copy hash — the translations
+   *  still flip to 'stale' (true), but the owner is not mailed about a change THEY just chose. */
+  quietStale = false,
 ): Promise<boolean> {
   if (!s.path) return false;
   const { effective, units: contentUnits, hideGallery, hideAnchors } = await assembleEffective(s, overrides, asStatus);
@@ -891,7 +894,7 @@ async function renderAndPersist(
   // change. A mismatch flips the translations to 'stale' + notifies the tenant ONCE.
   const mlHash = multilangContentHash(effective, contentUnits, s.recipe);
   const { newlyStale, state: mlState } = await reconcileMultilangState(s.id, mlHash);
-  if (newlyStale) {
+  if (newlyStale && !quietStale) {
     // Best-effort: a mail outage must not block the owner's save.
     notifyMultilangStale(s.tenantId, s.id).catch((e) =>
       console.error(`[multilang] stale-értesítés HIBA (tenant ${s.tenantId}):`, e),
@@ -1119,11 +1122,41 @@ export async function addTenantPhotos(
  */
 export async function rerenderTenantSnapshot(
   tenantId: string,
-  opts: { as?: "live" } = {},
+  opts: { as?: "live"; quietStale?: boolean } = {},
 ): Promise<boolean> {
   const s = await loadSiteForEdit(tenantId);
   if (!s) return false;
-  return renderAndPersist(s, s.overrides, opts.as ?? s.status);
+  return renderAndPersist(s, s.overrides, opts.as ?? s.status, opts.quietStale ?? false);
+}
+
+/**
+ * tervvaltas E — what the site WOULD look like on another of its plans: that plan's recipe and
+ * base data, with THIS tenant's overrides and module content on top (the same assembly the live
+ * snapshot renders from). The Kinézet tab's previews, so the owner judges their own page, not
+ * the cold mock.
+ *
+ * ⛔ WRITES NOTHING (no snapshot, no DB row) and calls nothing paid (B 2.7: the render path reads
+ * DB + cache only). Forms are demo-only. The caller has already checked that `artifactId` is
+ * one of this tenant's plans. Null when that artifact has no recipe to render from.
+ */
+export async function renderTenantPlanPreview(tenantId: string, artifactId: string): Promise<string | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return null;
+  const art = await db.selectFrom("mock_artifact").select(["inputs"]).where("id", "=", artifactId).executeTakeFirst();
+  const inputs = (art?.inputs ?? {}) as Record<string, unknown>;
+  if (!inputs.recipe || !inputs.siteData) return null;
+  const alt: SiteForEdit = {
+    ...s,
+    recipe: inputs.recipe as unknown as Recipe,
+    baseSiteData: inputs.siteData as unknown as SiteData,
+  };
+  const { effective, hideGallery, hideAnchors } = await assembleEffective(alt, alt.overrides, alt.status);
+  const html = await injectRuntime(
+    stripTenantLegalLinks(renderSite(alt.recipe, effective, { phase: "live", demoForms: true, hideGallery, hideAnchors })),
+    effective.lang,
+    "live",
+  );
+  return toPrivatePreview(html, s.id);
 }
 
 /**

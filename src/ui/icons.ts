@@ -180,6 +180,10 @@ export const ICON_THIN: Readonly<Record<string, string>> = {
   // ADR-0340 — answering a reply from the dashboard: „Elküldöm" / „Szerkesztem".
   send: `<path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/>`,
   pen: `<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`,
+  // tervvaltas E — the Kinézet tab (a page layout), and its Asztali / Telefonos preview switch.
+  layout: `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>`,
+  desktop: `<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>`,
+  phone: `<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>`,
 };
 
 /** The tenant-admin icon (ADR-0224): thin line, no accent dot. Unknown thin name →

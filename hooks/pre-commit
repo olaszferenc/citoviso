@@ -3597,6 +3597,23 @@ if [ -f scripts/trial-plan-binding-check.mts ] && \
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
     npx tsx scripts/trial-plan-binding-check.mts >"$GATE_LOG" || gate_failed
 fi
+# plan-switch-check (tervvaltas E, 2026-11-16, migráció 0138): a tenant-admin „Kinézet” lapja a site-ot a lead SAJÁT
+#     tervei között váltja — idegen/elutasított terv elutasítva (függvény, POST /admin/kinezet és az előnézet-útvonal),
+#     váltás után a site az új tervből renderel, az edited_site_data szerkesztései megmaradnak, a site_plan_switch sor
+#     megvan, a visszavonás visszavált, a /folytatas a futó tervet rendeli. Saját fixture-szülő a közös dev-DB-n; a mock
+#     postát/SMS-t/MMS-t/átjárót maga kényszeríti. ~20 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/plan-switch-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(planSwitch|editor)\.ts$|^src/outreach/planSet\.ts$|^src/server/planSwitchViews\.ts$|^src/conversion/owned\.ts$|^migrations/0138_site_plan_switch\.sql$|^scripts/plan-switch-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/plan-switch-check\.mts$'; then
+    echo "[pre-commit] plan-switch-check --self-test (a tervváltó őre pirosra tud-e menni)…"
+    EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+      npx tsx scripts/plan-switch-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] plan-switch-check (tervváltás a tenant-adminban)…"
+  EMAIL_PROVIDER=mock SMS_PROVIDER=mock MMS_PROVIDER=mock PAYMENT_GATEWAY=mock INVOICE_PROVIDER=mock REGISTRAR_PROVIDER=mock DNS_PROVIDER=mock \
+    npx tsx scripts/plan-switch-check.mts >"$GATE_LOG" || gate_failed
+fi
 # trial-promise-check (Elek 10-11 próba-kör, a próba-ígéret ADR-je): a próba azt ÍGÉRI, amit AD — a beállított
 #     próba-csomagnál (Ajánlott) a próba-űrlap (valódi Chromium, 390 + 1280 px), a belépő-levél és az admin
 #     Modulok fül nem mond „minden funkció/modul”-t, hanem a csomag nevét + a ténylegesen adott modulokat; A7

@@ -43,6 +43,8 @@ const VIEW_GROUPS = {
     "src/server/offerViews.ts",
     // ADR-0241: the Elérhetőség tab + the Térkép screen's place card — own view file.
     "src/server/contactViews.ts",
+    // tervvaltas E: the Kinézet tab (plan switcher) — own view file.
+    "src/server/planSwitchViews.ts",
     // Module-settings field labels ("Hová küldjük a foglalási kéréseket?" …) are
     // DEFINED here and rendered verbatim on the tenant admin — corpus member.
     "src/moduleConfig.ts",

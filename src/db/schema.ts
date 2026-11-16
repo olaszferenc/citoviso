@@ -977,6 +977,17 @@ export interface DunningEventTable {
   sent_at: Generated<Timestamp>;
 }
 
+/** 0138 (tervvaltas E): one row per owner plan switch — report + „Visszavonás” (= switch back to `from`). */
+export interface SitePlanSwitchTable {
+  id: Generated<string>;
+  site_id: string;
+  from_artifact_id: string | null;
+  to_artifact_id: string | null;
+  at: Generated<Timestamp>;
+  /** 'tenant_user:<id>' from the admin, else a script / operator name. */
+  actor: string;
+}
+
 export interface SiteTable {
   id: Generated<string>;
   tenant_id: string;
@@ -2316,6 +2327,7 @@ export interface Database {
   market_log: MarketLogTable;
   country: CountryTable;
   site: SiteTable;
+  site_plan_switch: SitePlanSwitchTable;
   site_slug_alias: SiteSlugAliasTable;
   payment: PaymentTable;
   saved_card_history: SavedCardHistoryTable;
