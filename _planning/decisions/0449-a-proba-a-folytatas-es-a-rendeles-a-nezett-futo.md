@@ -1,4 +1,4 @@
-## ADR-XXXX — A próba, a folytatás és a rendelés a nézett / futó tervhez kötve
+## ADR-0449 — A próba, a folytatás és a rendelés a nézett / futó tervhez kötve
 
 **Dátum:** 2026-11-16 · **Döntött:** tulaj („Próba javaslat OK!”), koordinátor (approved-kapu, rendelés-javítás:
 `~/rc-briefs/tervvaltas/A-kiegeszites.md`) · **Kapcsolódik:** ADR-0342 (kártya nélküli próba), ADR-0344/0354

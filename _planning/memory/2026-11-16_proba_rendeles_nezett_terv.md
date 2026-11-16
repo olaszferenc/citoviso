@@ -1,4 +1,4 @@
-# 2026-11-16 — Próba és rendelés a nézett / futó tervhez kötve (tervvaltas A, ADR-XXXX)
+# 2026-11-16 — Próba és rendelés a nézett / futó tervhez kötve (tervvaltas A, ADR-0449)
 
 **Session:** `cit7ae56d82` (SUB, koordinátor `cit3918dbf3`). Brief: `~/rc-briefs/tervvaltas/A-hibajavitas.md` + `A-kiegeszites.md`.
 
