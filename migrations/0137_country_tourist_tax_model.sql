@@ -1,5 +1,5 @@
 -- 0137 ORSZÁG-RÉTEG 3/2 — FELÜLETEK: a tartalmi kapcsoló „idegenforgalmi adó modell” (ADR-0437
--- ① Tartalom, ADR-XXXX).
+-- ① Tartalom, ADR-0450).
 --
 -- The guest's booking widget states a HUNGARIAN rule (Htv.): an undeclared tax is "payable on
 -- site", and a guest under 18 is exempt. That is true in Hungary and nowhere else we know of,

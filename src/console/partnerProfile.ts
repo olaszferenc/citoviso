@@ -68,7 +68,7 @@ export interface PartnerSubscription {
   readonly nextCharge: number | null;
   /** The monthly rate of the current module set (list price, no coupon). */
   readonly monthlyRate: number | null;
-  /** ADR-XXXX: ISO 4217 of nextCharge / monthlyRate (the subscription's own, ADR-0443). */
+  /** ADR-0450: ISO 4217 of nextCharge / monthlyRate (the subscription's own, ADR-0443). */
   readonly currency: string;
   readonly autoCharge: boolean;
   readonly paymentMethod: "invoice" | "token";

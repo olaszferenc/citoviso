@@ -41,7 +41,7 @@ function addDays(iso: string, n: number): string {
 }
 
 function huDateTime(d: Date, lang: string): string {
-  // ADR-XXXX: only numeric parts are read; the day itself is formatDay in the page's language.
+  // ADR-0450: only numeric parts are read; the day itself is formatDay in the page's language.
   const parts = new Intl.DateTimeFormat(lang || undefined, {
     numberingSystem: "latn",
     timeZone: APP_TZ, // a lead's offer is platform business (ADR-0290)

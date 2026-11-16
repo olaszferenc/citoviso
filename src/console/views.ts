@@ -78,7 +78,7 @@ import path from "node:path";
 const ASSET_V = String(Date.now());
 
 /** HUF formatter (thin-space grouping) for the operator views. */
-// ADR-XXXX: our money (orders, payments) is a minor-unit integer of ITS currency (ADR-0443);
+// ADR-0450: our money (orders, payments) is a minor-unit integer of ITS currency (ADR-0443);
 // a call without a currency is the home region's (what every one of these lines printed).
 function fmtHuf(n: number, currency?: string | null): string {
   return formatMinor(n, currency || getCurrency(HU_PRICING_REGION));
@@ -2544,7 +2544,7 @@ export function payMockPage(
    *  test card pays (the Pénztárca shows its mask afterwards); `verification` — a
    *  card_update: the amount is only HELD and released, never charged. */
   wallet?: { readonly cardPick?: boolean; readonly verification?: boolean; readonly cards?: readonly { id: string; label: string }[] },
-  /** ADR-XXXX: ISO 4217 of `amount` (the payment's own currency; absent = home region). */
+  /** ADR-0450: ISO 4217 of `amount` (the payment's own currency; absent = home region). */
   currency?: string | null,
 ): string {
   const lang = consoleLang();
@@ -2902,7 +2902,7 @@ function subscriptionBox(
   info?: {
     contactEmail?: string | null;
     amount?: number | null;
-    /** ADR-XXXX: ISO 4217 of `amount` / `renewal.amount` (absent = home region). */
+    /** ADR-0450: ISO 4217 of `amount` / `renewal.amount` (absent = home region). */
     currency?: string | null;
     renewal?: { readonly date: string; readonly amount: number; readonly period: "monthly" | "annual" } | null;
   },

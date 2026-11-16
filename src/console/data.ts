@@ -1098,7 +1098,7 @@ export interface OrderIntentView {
    *  closes an unpaid earlier one (the buyer came back and bought). */
   readonly kind: string;
   readonly price: number | null;
-  /** ADR-XXXX: ISO 4217 of `price` (the order's own currency, ADR-0443). */
+  /** ADR-0450: ISO 4217 of `price` (the order's own currency, ADR-0443). */
   readonly currency: string;
   readonly billingPeriod: string;
   readonly modules: string[];

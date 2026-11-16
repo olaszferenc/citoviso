@@ -1,4 +1,4 @@
-// THE CURRENCY OF A ROW WRITTEN BEFORE IT HAD ONE (ADR-XXXX, ország-réteg 3/2).
+// THE CURRENCY OF A ROW WRITTEN BEFORE IT HAD ONE (ADR-0450, ország-réteg 3/2).
 //
 // Booking quotes, site pricing configs and orders written before the money path stored a
 // currency are all Hungarian — the market was closed to every other country until then

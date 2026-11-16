@@ -132,7 +132,7 @@ export async function sendActivationMail(
       username: user.username,
       setPasswordUrl: token ? passwordLinkUrl(token, lang) : null,
       renewal: await renewalOf(row.tenantId),
-      // ADR-XXXX: the payment's currency, else the tenant's own region — never a default.
+      // ADR-0450: the payment's currency, else the tenant's own region — never a default.
       currency: pay?.currency ?? (await regionOfTenant(row.tenantId)).currency,
     });
     await getEmailSender().send(msg);

@@ -55,9 +55,9 @@ export interface SetupCtx {
   readonly held: ReadonlySet<string>;
   /** Live module prices (minor unit of `pricesCurrency` / month) — the "what it costs" sentence of a missing module. */
   readonly prices: ReadonlyMap<string, number>;
-  /** ADR-XXXX: ISO 4217 of `prices` — the tenant's pricing region's currency. */
+  /** ADR-0450: ISO 4217 of `prices` — the tenant's pricing region's currency. */
   readonly pricesCurrency: string;
-  /** ADR-XXXX: ISO 4217 the SITE's room prices are in — the saved pricing currency, else the
+  /** ADR-0450: ISO 4217 the SITE's room prices are in — the saved pricing currency, else the
    *  lodging country's, else the catalog default (a Hungarian site: HUF, as always). */
   readonly siteCurrency: string;
   readonly units: readonly Unit[];
@@ -533,7 +533,7 @@ export function moduleName(id: string, lang: string): string {
 export function modulePriceText(ctx: SetupCtx, id: string, lang: string): string {
   const p = ctx.prices.get(id);
   if (!p) return "";
-  // ADR-XXXX: in the tenant's own currency; HUF keeps its exact old sentence.
+  // ADR-0450: in the tenant's own currency; HUF keeps its exact old sentence.
   return currencySign(ctx.pricesCurrency) === "Ft"
     ? T(lang, "{p} Ft/hó", { p: formatNumber(p, lang) })
     : T(lang, "{price}/hó", { price: formatMinor(p, ctx.pricesCurrency, lang) });

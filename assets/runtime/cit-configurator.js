@@ -1036,7 +1036,7 @@
    * same rule as the server (assets/runtime/cit-money.js). Before this it glued
    * PRICING.currency on raw, and the server sent the literal string "Ft", so an
    * EUR-region buyer would have paid in € and read "Ft". */
-  // ADR-XXXX: every amount in the manifest is a MINOR-unit integer of PRICING.currency (HUF:
+  // ADR-0450: every amount in the manifest is a MINOR-unit integer of PRICING.currency (HUF:
   // the forint itself; EUR/RON: cents) — summed as integers, formatted with the currency's
   // own decimal rule.
   function fmt(n) {

@@ -195,7 +195,7 @@ export async function getWalletAdmin(tenantId: string): Promise<WalletAdminData 
       endedOn: budapestIsoDay(new Date(h.ended_at as unknown as string)),
       reason: h.end_reason,
     })),
-    // ADR-XXXX: the hold is in the tenant's own currency (createCardUpdateOrder charges it so);
+    // ADR-0450: the hold is in the tenant's own currency (createCardUpdateOrder charges it so);
     // HUF → CARD_VERIFY_AMOUNT_HUF exactly as before.
     verifyAmount: cardVerifyAmountFor((await regionOfTenant(tenantId)).currency) ?? CARD_VERIFY_AMOUNT_HUF,
     canChangeCard: !!getGateway().finishReservation && !!getGateway().chargeRecurring,

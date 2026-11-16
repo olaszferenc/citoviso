@@ -31,7 +31,7 @@ export interface ContactView {
   /** The save failed for a reason no field explains (no site yet, render error). */
   readonly failed?: boolean;
   readonly lang?: string;
-  /** ADR-XXXX: the lodging country's phone plan (null / Hungarian plan = the HU rule). */
+  /** ADR-0450: the lodging country's phone plan (null / Hungarian plan = the HU rule). */
   readonly phoneRules?: PhoneRules | null;
 }
 
@@ -67,7 +67,7 @@ function errLine(id: string, errors: readonly ContactErrorKey[] | undefined, key
   return `<p class="pl-err" id="${id}"${on ? "" : " hidden"}>${on ? esc(key === "phone" ? phoneBadText(lang, rules) : T(lang, CONTACT_ERRORS[key])) : ""}</p>`;
 }
 
-/** ADR-XXXX: the phone error with an example in the lodging country's shape (HU: unchanged). */
+/** ADR-0450: the phone error with an example in the lodging country's shape (HU: unchanged). */
 function phoneBadText(lang: string, rules: PhoneRules | null | undefined): string {
   return rules && rules.phonePlan !== "hu"
     ? T(lang, "Ez nem telefonszám. Így írja: {example}", { example: phoneExampleIn(rules) })
@@ -204,7 +204,7 @@ export function placeScript(v: ContactView): string {
     `function setStatus(s,t){var st=$('pl_status');if(!st)return;st.dataset.s=s;$('pl_state').textContent=t;$('pl_coords').textContent=fmt(cur);$('pl_undo').hidden=(s==='saved'||saved.lat===null)}` +
     PHONE_NORM_JS +
     `function pretty(e){if(!e||e.indexOf('+36')!==0)return e;var n=e.slice(3);if(n[0]==='1')return '+36 1 '+n.slice(1,4)+' '+n.slice(4);var r=n.slice(2);return '+36 '+n.slice(0,2)+' '+r.slice(0,3)+' '+r.slice(3)}` +
-    // ADR-XXXX: another country's plan redefines norm/pretty (empty for the HU plan).
+    // ADR-0450: another country's plan redefines norm/pretty (empty for the HU plan).
     phoneRulesJs(v.phoneRules ?? null) +
     `function watched(){return [].slice.call(form.querySelectorAll('[data-watch]'))}` +
     `function val(el){return el.type==='checkbox'?String(el.checked):el.value}` +

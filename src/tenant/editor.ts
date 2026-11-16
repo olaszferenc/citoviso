@@ -613,7 +613,7 @@ export async function moduleContentFor(
         ? {}
         : { touristTaxPerPersonNight: Math.max(0, Number(b.touristTaxPerPersonNight)) }),
       ...(b.priceIncludes ? { priceIncludes: String(b.priceIncludes).slice(0, 200) } : {}),
-      // ADR-XXXX: the Hungarian tourist-tax rule is the COUNTRY's (country.tourist_tax_model);
+      // ADR-0450: the Hungarian tourist-tax rule is the COUNTRY's (country.tourist_tax_model);
       // a lodging whose row has no such rule gets no "payable on site" sentence.
       ...((await countryOfSite(siteId))?.touristTaxModel === "none" ? { touristTaxRule: "none" as const } : {}),
       timeZone: await tenantTimeZone(tenantId),

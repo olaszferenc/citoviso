@@ -1947,7 +1947,7 @@ async function serveAdmin(
         values: cfg.config,
         canRestore,
         priceMonthly: active.priceMonthly,
-        // ADR-XXXX: the module fee is in the tenant's own currency (its region's).
+        // ADR-0450: the module fee is in the tenant's own currency (its region's).
         ...(modules.currency ? { priceCurrency: modules.currency } : {}),
         // Same rule as the module chips: if a price is shown, it is shown in the
         // period the account is billed in (0 = monthly account, no conversion).
@@ -2675,7 +2675,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const next = safeAdminNext(form.get("next"));
     // ADR-0277: failed-attempt throttle per IP, checked BEFORE the password.
-    // ADR-XXXX: the language the login page was shown in (its hidden field), else Hungarian.
+    // ADR-0450: the language the login page was shown in (its hidden field), else Hungarian.
     const postedLang = uiLangs().includes(form.get("lang") ?? "") ? (form.get("lang") as string) : DEFAULT_LANG;
     if (loginLocked("tenant", req)) {
       const lang = await prepareMailLang(postedLang);

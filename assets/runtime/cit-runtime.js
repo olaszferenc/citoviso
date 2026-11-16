@@ -55,7 +55,7 @@
     });
   }
 
-  /* ADR-XXXX (ADR-0290): "today" is the ACCOMMODATION's day — the booking slot carries its
+  /* ADR-0450 (ADR-0290): "today" is the ACCOMMODATION's day — the booking slot carries its
    * zone (data-cit-tz). Without it (an older page, the mock) the old UTC day stands. */
   function todayISO() {
     var d = new Date();
@@ -129,7 +129,7 @@
     var ifaRaw = slot.getAttribute("data-cit-ifa");
     var ifaDeclared = ifaRaw !== null && ifaRaw !== "";
     var ifaPerPersonNight = ifaDeclared ? Number(ifaRaw) || 0 : 0;
-    /* ADR-XXXX (country row tourist_tax_model): "none" = the lodging's country has no
+    /* ADR-0450 (country row tourist_tax_model): "none" = the lodging's country has no
      * tourist-tax rule we may state. Then an undeclared tax is not mentioned, and a declared
      * amount is itemised for every guest, without the Hungarian under-18 exemption. Absent
      * attribute = the Hungarian rule, exactly as before. */

@@ -122,7 +122,7 @@ async function saveConfig(env: StepEnv, moduleId: string, patch: Record<string, 
 }
 
 /**
- * Normalised price in the SITE's currency (ADR-XXXX): spaces, group dots and the currency's
+ * Normalised price in the SITE's currency (ADR-0450): spaces, group dots and the currency's
  * own code/sign are fine. HUF keeps its exact old rule (whole forints, the 1000 floor that
  * catches a price typed in euros). Another currency has no forint floor; a decimal is read
  * as such, but the stored room price is a whole unit, so a real fraction is refused with a

@@ -837,7 +837,7 @@ export function loginPage(
       `<h1 style="font-size:1.5rem;text-align:center">${T(lang, "Ügyfél-belépés")}</h1>` +
       `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapja kezeléséhez adja meg a felhasználónevét és a jelszavát.")}</p>` +
       `<form method="POST" action="/login">` +
-      // ADR-XXXX: the page's language rides along, so a refusal (429 / wrong password)
+      // ADR-0450: the page's language rides along, so a refusal (429 / wrong password)
       // answers in it. A Hungarian page carries no field — its markup is unchanged.
       (lang && lang !== DEFAULT_LANG ? `<input type="hidden" name="lang" value="${esc(lang)}">` : "") +
       // A mail link to one admin card: the path rides in `next`; the #card part never
@@ -1106,7 +1106,7 @@ export interface DomainSettleState {
 // multilang, module change) prices in the tenant's own region; these screens follow in the
 // next round. No non-HU tenant can exist before then — the market gate (ADR-0111) keeps
 // every foreign market closed until the owner opens it.
-// ⭐ ADR-XXXX (ország-réteg 3/2, felület-kör): every amount on these screens is written in the
+// ⭐ ADR-0450 (ország-réteg 3/2, felület-kör): every amount on these screens is written in the
 // TENANT's own currency — the one its data object carries (TenantModuleView.currency,
 // SubscriptionAdminData.currency, …, all from regionOfTenant). Amounts are minor units
 // (ADR-0443), so formatMinor; for HUF that is byte-for-byte the old formatMoney. A fixture
@@ -3432,7 +3432,7 @@ export interface DomainSettlementView {
   readonly penaltyBase: number;
   readonly penaltyTotal: number;
   readonly buyoutPrice: number;
-  /** ADR-XXXX: ISO 4217 of every amount here (the tenant's region); absent = HUF (fixtures). */
+  /** ADR-0450: ISO 4217 of every amount here (the tenant's region); absent = HUF (fixtures). */
   readonly currency?: string;
   /** ISO date the site stays reachable until; null = not known yet. */
   readonly accessEndDate: string | null;
@@ -3598,7 +3598,7 @@ export interface MultilangAdminData {
   /** One-time fee of the SELECTED tier (minor unit of `currency`) — the same for first generation,
    *  regeneration and swap (ADR-0063 §3 stands; only the tier decides the amount). */
   readonly price: number;
-  /** ADR-XXXX: ISO 4217 of every amount here (the tenant's region); absent = HUF (fixtures). */
+  /** ADR-0450: ISO 4217 of every amount here (the tenant's region); absent = HUF (fixtures). */
   readonly currency?: string;
   /** Capacity of the selected tier (ADR-0128 replaced the fixed 3). */
   readonly count: number;
@@ -4003,7 +4003,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
 
 /** Pénz-formátum a tenant pénznemében (a multilang-kártya mintája). */
 function money(n: number, currency: string): string {
-  // ADR-XXXX: domain fees are our money — minor units (ADR-0443); HUF unchanged.
+  // ADR-0450: domain fees are our money — minor units (ADR-0443); HUF unchanged.
   return formatMinor(n, currency);
 }
 /** The bare number of a minor-unit amount (the low end of a range whose unit follows). */
@@ -5291,7 +5291,7 @@ function fmtDateTime(d: Date, lang: string): string {
 // hu-HU instead of the € we print everywhere else and (b) THROWS on a non-ISO
 // code — and the configurator hands us those. text/money.ts handles both.
 function fmtMoney(amount: number, currency: string, lang: string): string {
-  // ADR-XXXX: invoice amounts are minor units (ADR-0443); for HUF this is formatMoney exactly.
+  // ADR-0450: invoice amounts are minor units (ADR-0443); for HUF this is formatMoney exactly.
   return formatMinor(amount, currency, lang);
 }
 
@@ -5460,7 +5460,7 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
 
   // Az összegző EGYÜTT MOZOG a szűrővel: szűrt nézetben a teljes összeg félrevezet.
   const issued = invHits.filter((i) => i.status === "issued");
-  // ADR-XXXX: never add two currencies into one number (a tenant that moved region, or a
+  // ADR-0450: never add two currencies into one number (a tenant that moved region, or a
   // domain bought in EUR) — one total per currency, the newest invoice's currency first.
   const currency = viewCurrency(issued[0]?.currency);
   const totals = new Map<string, number>();
@@ -6041,7 +6041,7 @@ export function walletSection(
   flash: "ok" | "fail" | "err" | null,
   lang = "hu",
 ): string {
-  // ADR-XXXX: every amount of the wallet is in the subscription's currency.
+  // ADR-0450: every amount of the wallet is in the subscription's currency.
   const hufAmount = moneyIn(sub?.currency, lang);
   const head =
     `<div class="adm-card__head"><span class="adm-ico">${ic("card")}</span><h2>${T(lang, "Pénztárca")}</h2>${helpLink("admin.wallet", lang)}</div>`;

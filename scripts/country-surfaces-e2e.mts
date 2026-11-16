@@ -1,4 +1,4 @@
-// ADR-XXXX ACCEPTANCE — the COUNTRY LAYER's SURFACES (ország-réteg 3/2) on a synthetic
+// ADR-0450 ACCEPTANCE — the COUNTRY LAYER's SURFACES (ország-réteg 3/2) on a synthetic
 // NON-EURO country, in a SCRATCH database (never the shared dev DB, never production).
 //
 // The country is CZ / CZK (a real ISO key — a pin can only geocode to a real country; Czech

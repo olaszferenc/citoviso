@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/2: a felületek a szállás és a partner országában beszélnek (pénznem, dátum, telefon, IFA-szabály)
+## ADR-0450 — Ország-réteg 3/2: a felületek a szállás és a partner országában beszélnek (pénznem, dátum, telefon, IFA-szabály)
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-16 „mehet a következő lépés”; brief `~/rc-briefs/orszag-reteg-3b-feluletek-20261116.md`, koordinátor `cit9b4690e3`) ·
 **Épít:** ADR-0437 (ország-réteg, „Tartalom” csoport), ADR-0443 (pénzút, minor unit, `regionOfTenant`), ADR-0290 (szállás-időzóna), ADR-0040 (koordináta → ország) ·

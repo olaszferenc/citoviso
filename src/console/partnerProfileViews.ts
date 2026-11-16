@@ -29,7 +29,7 @@ import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 export type PartnerTabId = "overview" | "messages" | "data" | "subscription" | "domain" | "documents" | "usage" | "activity";
 
 const huf = (n: number, cur = LEGACY_CURRENCY) => esc(formatMoney(n, cur));
-/** ADR-XXXX: our money of a subscription — minor units of its own currency (ADR-0443). */
+/** ADR-0450: our money of a subscription — minor units of its own currency (ADR-0443). */
 const subMoney = (n: number, cur: string) => esc(formatMinor(n, cur));
 const dash = `<span class="mut">–</span>`;
 

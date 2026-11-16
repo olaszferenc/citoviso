@@ -1307,7 +1307,7 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
         (b.touristTaxPerPersonNight === undefined
           ? ""
           : ` data-cit-ifa="${esc(String(b.touristTaxPerPersonNight))}"`) +
-        // ADR-XXXX: no attribute = the Hungarian rule (every HU page unchanged).
+        // ADR-0450: no attribute = the Hungarian rule (every HU page unchanged).
         (b.touristTaxRule === "none" ? ` data-cit-tax-rule="none"` : "") +
         (b.timeZone ? ` data-cit-tz="${esc(b.timeZone)}"` : "") +
         (b.priceIncludes ? ` data-cit-includes="${esc(b.priceIncludes)}"` : "") +

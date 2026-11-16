@@ -80,7 +80,7 @@ export function cleanAddress(raw: string): string {
 export function applyContactEdits(
   current: ContactFacts,
   edits: ContactEdits,
-  /** ADR-XXXX: the lodging country's phone plan — a national number of THAT country is
+  /** ADR-0450: the lodging country's phone plan — a national number of THAT country is
    *  accepted. null / the Hungarian plan = the Hungarian rule, exactly as before. */
   phoneRules: PhoneRules | null = null,
 ): { ok: true; facts: ContactFacts } | { ok: false; errors: ContactErrorKey[] } {

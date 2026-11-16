@@ -1,4 +1,4 @@
-// A CURRENCY, NAMED FOR ITS READER (ADR-XXXX ország-réteg 3/2).
+// A CURRENCY, NAMED FOR ITS READER (ADR-0450 ország-réteg 3/2).
 //
 // The owner picks the currency their prices are in. The list used to be two hard-coded
 // options ("forint (Ft)", "euró (€)"); a lodging in any other country could not price in its

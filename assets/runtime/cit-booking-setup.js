@@ -37,14 +37,14 @@
   }
   /* The ONE money rule (cit-money.js, inlined before this script) — no sixth formatter. */
   function group(n) { return CitMoney.formatNumber(Math.round(Number(n)), D.lang); }
-  /* ADR-XXXX: the amount keeps the currency's own decimals (a 1,50 € tax); for HUF (0
+  /* ADR-0450: the amount keeps the currency's own decimals (a 1,50 € tax); for HUF (0
    * digits) this is exactly the old whole-forint formatMoney. */
   function money(n) {
     if (n == null || n === "") return "—";
     var d = CitMoney.minorDigits(S.currency) || 0;
     return CitMoney.formatMinor(Math.round(Number(n) * Math.pow(10, d)), S.currency, D.lang);
   }
-  /* ADR-XXXX: the offered currencies (the country's first) come from the server. */
+  /* ADR-0450: the offered currencies (the country's first) come from the server. */
   function curOf(code) {
     var list = S.currencies || [];
     for (var i = 0; i < list.length; i++) if (list[i].code === code) return list[i];

@@ -121,7 +121,7 @@ export function uiLangs(): string[] {
 }
 
 /**
- * The Intl locale a date/number of the reader's language is formatted with (ADR-XXXX): the
+ * The Intl locale a date/number of the reader's language is formatted with (ADR-0450): the
  * Hungarian reader keeps the exact "hu-HU" every screen used before; any other language its
  * own tag ("cs" → "1. 12. 2026"). One place, so no view hard-codes a locale again.
  */

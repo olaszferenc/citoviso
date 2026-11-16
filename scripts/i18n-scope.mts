@@ -39,7 +39,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // Legal wording is a per-country LEGAL pack (§B.18, ADR-0067 ②): a mistranslated
   // ÁSZF is a liability, not a UI bug. Never machine translation.
   "src/legal.ts": "jogi szöveg — országonkénti JOGI csomag, nem gépi fordítás",
-  // ADR-XXXX (ország-réteg 3/2): the guest letter's tax row asks the lodging's country
+  // ADR-0450 (ország-réteg 3/2): the guest letter's tax row asks the lodging's country
   // (tenant/siteCountry.ts → country.ts), and the inbound request reads its pin's country
   // (intake/mockRequest.ts → scraper/enrichGeo.ts). Their Hungarian literals are operator
   // errors and logs (a fatal boot error, a progress line) — none reaches a customer.

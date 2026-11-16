@@ -23,7 +23,7 @@ export interface NextInvoiceItem {
 
 export interface SubscriptionAdminData {
   readonly status: "active" | "past_due" | "frozen" | "cancelled";
-  /** ADR-XXXX: the subscription's pricing region + ISO 4217 of every amount here. Optional so
+  /** ADR-0450: the subscription's pricing region + ISO 4217 of every amount here. Optional so
    *  the hand-made fixtures keep compiling; absent = the HU region (HUF). */
   readonly region?: string;
   readonly currency?: string;

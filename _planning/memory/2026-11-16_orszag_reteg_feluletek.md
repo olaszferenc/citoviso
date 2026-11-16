@@ -1,4 +1,4 @@
-# 2026-11-16 — Ország-réteg 3/2: felületek (ADR-XXXX)
+# 2026-11-16 — Ország-réteg 3/2: felületek (ADR-0450)
 
 Session `citb24e7da9`, brief `~/rc-briefs/orszag-reteg-3b-feluletek-20261116.md`, koordinátor `cit9b4690e3`.
 

@@ -1056,7 +1056,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 }
 </style>`;
 
-// ADR-XXXX: a module fee is our money — minor units of the tenant's currency (ADR-0443).
+// ADR-0450: a module fee is our money — minor units of the tenant's currency (ADR-0443).
 const moneyIn = (currency: string | undefined, lang: string) => (n: number) => formatMinor(n, currency || getCurrency(HU_PRICING_REGION), lang);
 
 /** ADR-0045 §J: contextual guide link for a module settings screen. Textual on purpose
@@ -3973,7 +3973,7 @@ export interface ModuleSettingsOpts {
   readonly units?: EditorUnit[];
   readonly pricing?: PricingEditorData;
   readonly priceMonthly?: number;
-  /** ADR-XXXX: ISO 4217 of priceMonthly (the tenant's region); absent = the home region's. */
+  /** ADR-0450: ISO 4217 of priceMonthly (the tenant's region); absent = the home region's. */
   readonly priceCurrency?: string;
   /** Invoice months per year on an ANNUAL subscription (12 − free months, today
    *  10); 0 on a monthly account. Approved contract: a price shown to the owner

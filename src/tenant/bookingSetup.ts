@@ -80,7 +80,7 @@ export interface SetupState {
   readonly mode: SetupMode;
   readonly units: SetupUnit[];
   readonly currency: string;
-  /** ADR-XXXX: the currencies the owner may pick, the country's own first (code + label + name). */
+  /** ADR-0450: the currencies the owner may pick, the country's own first (code + label + name). */
   readonly currencies: { code: string; label: string; name: string; sign: string }[];
   readonly priceUnit: string;
   /** null when the owner's bookable units disagree (set per room on the Árak screen). */
@@ -192,7 +192,7 @@ export async function loadBookingSetup(siteId: string, accountEmail: string, lan
   const seasonalOnly = flags.size === 1 ? [...flags][0]! : null;
 
   const has = (k: string) => k in bookingStored;
-  // ADR-XXXX: an unsaved currency is the lodging's COUNTRY's (provisioning seeds it too);
+  // ADR-0450: an unsaved currency is the lodging's COUNTRY's (provisioning seeds it too);
   // a Hungarian site — or one without a country row — keeps the catalog default.
   const country = await countryOfSite(siteId);
   const currency = String(pricingStored.currency ?? country?.currency ?? pdef.currency ?? LEGACY_CURRENCY);
@@ -406,7 +406,7 @@ async function savePrices(siteId: string, body: Record<string, unknown>, userId:
   const priceUnit = String(body.priceUnit ?? "");
   const currency = String(body.currency ?? "");
   if (!unitOpts.has(priceUnit)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
-  // ADR-XXXX: any ISO 4217 currency (it was HUF/EUR only — a Czech lodging could not price in Kč).
+  // ADR-0450: any ISO 4217 currency (it was HUF/EUR only — a Czech lodging could not price in Kč).
   if (!isIsoCurrency(currency)) errors.push(T(lang, "Válassza ki, mire szól az ára."));
   const units = await ensureUnits(siteId);
   const rows = Array.isArray(body.units) ? (body.units as Record<string, unknown>[]) : [];
@@ -455,7 +455,7 @@ async function saveGuest(siteId: string, body: Record<string, unknown>, userId: 
   const state = body.taxState;
   let tax: number | "" = "";
   if (state === "amount") {
-    // ADR-XXXX: the tax is in the SITE's currency, with that currency's decimals (EUR 1,50 is
+    // ADR-0450: the tax is in the SITE's currency, with that currency's decimals (EUR 1,50 is
     // a real tax; HUF stays a whole number, exactly as before).
     const cur = String((await storedConfig(siteId, "pricing")).currency ?? (await countryOfSite(siteId))?.currency ?? LEGACY_CURRENCY);
     const n = taxAmountIn(body.tax, minorDigits(cur) ?? 0);

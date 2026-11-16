@@ -230,7 +230,7 @@ export async function seasonRulesFor(
 function declaredTouristTax(rules: Record<string, unknown>): number | null {
   const v = rules.touristTaxPerPersonNight;
   if (v === "" || v === null || v === undefined || !Number.isFinite(Number(v))) return null;
-  // Two decimals kept (ADR-XXXX: a EUR/CZK tax may have them); a HUF tax is whole already.
+  // Two decimals kept (ADR-0450: a EUR/CZK tax may have them); a HUF tax is whole already.
   return Math.max(0, Math.round(Number(v) * 100) / 100);
 }
 
@@ -245,7 +245,7 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
   if (!req.quoted_total) return [];
   const tax = req.quoted_tax_per_person_night ?? declaredTouristTax(await bookingRules(req.site_id));
   if (tax === 0) return [];
-  // ADR-XXXX: the "payable on site" fact and the under-18 exemption are the Hungarian rule
+  // ADR-0450: the "payable on site" fact and the under-18 exemption are the Hungarian rule
   // (country.tourist_tax_model); a country without it gets only what the owner typed in.
   const huRule = (await countryOfSite(req.site_id))?.touristTaxModel !== "none";
   if (tax === null && !huRule) return [];
@@ -3013,7 +3013,7 @@ export async function sendOffer(
 /** "2026. szept. 25. 14:05" in the ACCOMMODATION's time zone (ADR-0290) — the guest
  *  books a place, and its deadlines are that place's wall clock. */
 function huDateTime(d: Date, tz: string, lang: string): string {
-  // ADR-XXXX: the guest reads the date in the page's language; the numeric parts come out
+  // ADR-0450: the guest reads the date in the page's language; the numeric parts come out
   // in Latin digits whatever the locale. A Hungarian guest keeps huDate's exact form.
   const parts = new Intl.DateTimeFormat(lang || undefined, {
     numberingSystem: "latn",

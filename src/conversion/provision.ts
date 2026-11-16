@@ -406,7 +406,7 @@ export async function convertLead(
           .returning(["id", "preview_token"])
           .executeTakeFirstOrThrow();
 
-    // ADR-XXXX (ország-réteg 3/2): the site's prices start in its COUNTRY's currency — the
+    // ADR-0450 (ország-réteg 3/2): the site's prices start in its COUNTRY's currency — the
     // same way the time zone starts in the country's zone (above). The catalog default
     // (moduleConfig.ts, HUF) already says it for a Hungarian lodging, so a HU site keeps
     // having no stored row, exactly as before; any other country gets its currency written

@@ -255,7 +255,7 @@ check(
   "④ a vendég foglalás-előnézete a közös szabályt hívja",
 );
 check(
-  // ADR-XXXX: the basket's amounts are minor units (ADR-0443) → CitMoney.formatMinor, which is
+  // ADR-0450: the basket's amounts are minor units (ADR-0443) → CitMoney.formatMinor, which is
   // the same shared rule (formatMoney for HUF); either one is the ONE formatter, not a sixth.
   /CitMoney\.format(?:Money|Minor)\(/.test(CONFIGURATOR_JS),
   "④ a fizetőoldal a közös szabályt hívja",

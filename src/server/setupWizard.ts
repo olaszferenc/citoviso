@@ -384,7 +384,7 @@ export async function markWalkSeen(siteId: string): Promise<void> {
   await setProgress(siteId, "_welcome", { completed: true });
 }
 
-/** ADR-XXXX: a module fee per month in the tenant's own currency (its region's, minor units).
+/** ADR-0450: a module fee per month in the tenant's own currency (its region's, minor units).
  *  The forint keeps its exact old sentence ("1 990 Ft/hó"). */
 function modulePriceMonthly(minor: number, currency: string | undefined, lang: string): string {
   const cur = currency || getCurrency(HU_PRICING_REGION);

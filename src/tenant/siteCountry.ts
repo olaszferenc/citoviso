@@ -1,4 +1,4 @@
-// THE COUNTRY OF A SITE / TENANT (ADR-0437 ②, ADR-XXXX ország-réteg 3/2).
+// THE COUNTRY OF A SITE / TENANT (ADR-0437 ②, ADR-0450 ország-réteg 3/2).
 //
 // The owner-facing surfaces (tenant admin, booking setup, contact form, booking widget) need
 // the lodging's country row — its currency, language, phone plan, tourist-tax rule. The

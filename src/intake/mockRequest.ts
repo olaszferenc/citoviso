@@ -132,7 +132,7 @@ export async function processMockRequest(id: string): Promise<void> {
 
   try {
     await setStatus(id, "resolving");
-    // ADR-XXXX (ADR-0040 order): the request's country is its PIN's — a Czech guesthouse
+    // ADR-0450 (ADR-0040 order): the request's country is its PIN's — a Czech guesthouse
     // dropped on the map is searched in Czech, in Czechia. Without a pin (name + town only)
     // the inbound area's country (the home market the form serves) is the fallback.
     const pinCountry =

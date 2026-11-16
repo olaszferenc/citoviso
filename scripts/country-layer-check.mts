@@ -19,7 +19,7 @@
 //      configurator call passes the lead's region; and the money-path files carry no burned
 //      "HUF" / "hu-HU" / "AAM" (each remaining one on the ALLOW list WITH its reason).
 //
-//   ⑥ ADR-XXXX — THE SURFACES (ország-réteg 3/2): the owner-, guest- and partner-facing files
+//   ⑥ ADR-0450 — THE SURFACES (ország-réteg 3/2): the owner-, guest- and partner-facing files
 //      carry no burned "HUF" / "hu-HU" / " Ft" and no price getter without a region.
 //
 //   npx tsx scripts/country-layer-check.mts
@@ -292,7 +292,7 @@ for (const f of PAY_SCOPE) {
 check("nincs beégetett HUF / hu-HU / AAM a pénzút fájljaiban", payHits.length === 0, `\n      ${payHits.join("\n      ")}`);
 PAY_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, payAllowUsed.has(i)));
 
-console.log("⑥ felületek (ADR-XXXX, ország-réteg 3/2)");
+console.log("⑥ felületek (ADR-0450, ország-réteg 3/2)");
 // The owner/guest/partner-facing surfaces of the country layer: the tenant admin, the booking
 // setup and widget, the contact form, the partner letters and console views. They write money,
 // dates and phone numbers in the LODGING's / PARTNER's own country — so no burned "HUF",

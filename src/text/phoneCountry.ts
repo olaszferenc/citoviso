@@ -29,7 +29,7 @@ export function normalizePhoneIn(raw: string, cfg: PhoneRules | null): string | 
   let nsn: string | null = null;
   if (cfg.trunkPrefix && c.startsWith(cfg.trunkPrefix)) nsn = c.slice(cfg.trunkPrefix.length);
   else if (c.startsWith(cfg.dialCode) && c.length - cfg.dialCode.length >= cfg.phoneNsnMin) nsn = c.slice(cfg.dialCode.length);
-  // ADR-XXXX: a country WITHOUT a trunk prefix (CZ, PL …) writes its national number bare
+  // ADR-0450: a country WITHOUT a trunk prefix (CZ, PL …) writes its national number bare
   // ("777 123 456") — that IS the national significant number.
   else if (!cfg.trunkPrefix) nsn = c;
   if (nsn === null || nsn.startsWith("0")) return null;
@@ -57,7 +57,7 @@ export function plausibleInCountry(phone: string, cfg: Pick<CountryConfig, "dial
 
 
 /**
- * An E.164 number as its country's reader writes it (ADR-XXXX): the Hungarian plan keeps
+ * An E.164 number as its country's reader writes it (ADR-0450): the Hungarian plan keeps
  * prettyPhone ("+36 30 123 4567"); another country's number is "+<dial> " and the national
  * number in groups of three ("+420 777 123 456"), the last group taking a leftover digit.
  * A number of another country (or no row) is returned as given — never re-cut wrongly.
