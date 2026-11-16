@@ -46,7 +46,10 @@ export const BEHAVIOR_SMS_MAX_SEGMENTS = 2;
  */
 export function anchoredLink(link: string, trigger: BehaviorTrigger): string {
   const base = /^https?:\/\/[^/]+$/i.test(link) ? `${link}/` : link;
-  return `${base}${BEHAVIOR_ANCHOR[trigger]}`;
+  // `?b` = this message's own channel letter (openVia.ts; owner 2026-11-16: the second contact is
+  // measured on its own). The anchor may carry its own query (?k=ar#ar) → joined with "&".
+  const anchor = BEHAVIOR_ANCHOR[trigger];
+  return `${base}${anchor.startsWith("?") ? `?b&${anchor.slice(1)}` : `?b${anchor}`}`;
 }
 
 /** The facts one message may state. */

@@ -146,8 +146,9 @@ export interface Visit {
 
 /** Where a visit came from. `unknown` = an old, untagged link the lead got on 2+ channels. */
 /** `followup` = the non-opener follow-up letter (`?f`, ADR-0442) — only ever a sure, tagged open. */
-export type OpenSource = "email" | "sms" | "viber" | "whatsapp" | "followup" | "unknown";
-export const OPEN_SOURCES: readonly OpenSource[] = ["email", "sms", "viber", "whatsapp", "followup", "unknown"];
+/** `behavior` = the behaviour message, the second contact (`?b`, ADR-0439) — only ever a sure, tagged open. */
+export type OpenSource = "email" | "sms" | "viber" | "whatsapp" | "followup" | "behavior" | "unknown";
+export const OPEN_SOURCES: readonly OpenSource[] = ["email", "sms", "viber", "whatsapp", "followup", "behavior", "unknown"];
 /** The first send of the LINK per channel (before the second-touch cut). */
 export type ChannelTouches = Readonly<Partial<Record<Exclude<OpenSource, "unknown">, Date>>>;
 
@@ -813,7 +814,7 @@ export function attributeOpen(
   touches: ChannelTouches,
   sends: readonly MessengerSend[] = [],
 ): { source: OpenSource; sure: boolean } {
-  if (openVia === "email" || openVia === "sms" || openVia === "whatsapp" || openVia === "followup") return { source: openVia, sure: true };
+  if (openVia === "email" || openVia === "sms" || openVia === "whatsapp" || openVia === "followup" || openVia === "behavior") return { source: openVia, sure: true };
   if (openVia === "messenger") {
     const last = [...sends].reverse().find((s) => s.channel !== "mms" && s.sentAt.getTime() <= at.getTime());
     if (last) return { source: last.channel as "viber" | "whatsapp", sure: true };

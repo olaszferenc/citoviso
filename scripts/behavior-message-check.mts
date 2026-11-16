@@ -103,9 +103,10 @@ for (const trigger of ["return", "price", "start"] as const) {
   }
 }
 const longSms = buildBehaviorSms({ lang, leadName: "Napfényes Balatoni Panoráma Apartmanház és Vendégszoba Kiadó Szálláshely Siófok Központ ".repeat(3).trim(), trigger: "start", link: host, priceList: "2 780", trialDays: 14, planCount: 1 });
-check("① nagyon hosszú név → a név rövidül („...”), a link nem", longSms.name.endsWith("...") && longSms.text.includes(`${host}/#inditas`));
-check("① csupasz host → „/” a horgony elé", anchoredLink(host, "price") === `${host}/?k=ar#ar`);
-check("① /p/ útvonal → a horgony közvetlenül utána", anchoredLink("https://citoviso.com/p/x/tok", "return") === "https://citoviso.com/p/x/tok#kerdes");
+check("① nagyon hosszú név → a név rövidül („...”), a link nem", longSms.name.endsWith("...") && longSms.text.includes(`${host}/?b#inditas`));
+check("① csupasz host → „/” a horgony elé, a ?b jel a saját lekérdezés elé", anchoredLink(host, "price") === `${host}/?b&k=ar#ar`);
+check("① /p/ útvonal → a ?b jel és a horgony közvetlenül utána", anchoredLink("https://citoviso.com/p/x/tok", "return") === "https://citoviso.com/p/x/tok?b#kerdes");
+check("① minden kiváltó linkje viseli a saját ?b csatorna-jelét (külön mérés, tulaj 2026-11-16)", (["return", "price", "start"] as const).every((t) => /[?&]b(?=[&#]|$)/.test(anchoredLink(host, t))));
 check("① 'start' próba nélkül → 'price'", effectiveTrigger("start", { priceList: "2 780", trialDays: null }) === "price");
 check("① 'price' ár nélkül → 'return'", effectiveTrigger("price", { priceList: null, trialDays: 14 }) === "return");
 const noTrial = buildBehaviorSms({ lang, leadName: "Rózsa Vendégház", trigger: "start", link: host, priceList: "2 780", trialDays: null, planCount: 1 });

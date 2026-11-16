@@ -18,8 +18,9 @@
 // The page (cit-configurator.js) reads the letter, sends it with the view beacon, and
 // strips it from the address bar — a forwarded link no longer credits the first channel.
 
-export type OpenViaTag = "e" | "s" | "m" | "w" | "f";
-export type OpenVia = "email" | "sms" | "messenger" | "whatsapp" | "followup";
+export type OpenViaTag = "e" | "s" | "m" | "w" | "f" | "b";
+// `b` = the behaviour message (ADR-0439), the second contact (owner 2026-11-16: „mindenképpen külön is kell mérni”).
+export type OpenVia = "email" | "sms" | "messenger" | "whatsapp" | "followup" | "behavior";
 
 export const OPEN_VIA_BY_TAG: Readonly<Record<OpenViaTag, OpenVia>> = {
   e: "email",
@@ -27,6 +28,7 @@ export const OPEN_VIA_BY_TAG: Readonly<Record<OpenViaTag, OpenVia>> = {
   m: "messenger",
   w: "whatsapp",
   f: "followup",
+  b: "behavior",
 };
 
 /** The beacon's `via` → the stored value; anything else is null (never trusted further). */
