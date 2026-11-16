@@ -2817,7 +2817,38 @@
     window.addEventListener("resize", measure);
   }
 
-  function boot() { initStickClearance(); hydrate(); initPhoneChrome(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); initReviewWrite(); shiftSampleDates(); }
+  /* tervvaltas E (B 2.4): the owner can switch the site between its plans, and every template
+   * names its in-page anchors its own way (parallax t-*, horizontal h-*, gate-opening ko-*,
+   * wordmark-grow cit-*). A guest's saved „…#t-gallery” link would land at the top of the new
+   * plan — so a hash that names NO element on this page is mapped to the same topic's anchor
+   * that DOES exist here. A hash that exists is never touched. */
+  var ANCHOR_ALIAS = [
+    ["t-about", "ko-about", "cit-about"],
+    ["t-book", "cit-booking"],
+    ["t-contact", "h-contact", "cit-contact"],
+    ["t-gallery", "h-gallery", "ko-gallery", "ko-galgrid", "t-showcase"],
+    ["t-reviews", "h-reviews", "ko-reviews"],
+    ["h-rooms", "cit-rooms"],
+    ["t-services", "h-services", "t-features"],
+    ["h-faq", "ko-faq"]
+  ];
+  function initAnchorAlias() {
+    function follow() {
+      var id = decodeURIComponent((location.hash || "").slice(1));
+      if (!id || document.getElementById(id)) return;
+      for (var g = 0; g < ANCHOR_ALIAS.length; g++) {
+        if (ANCHOR_ALIAS[g].indexOf(id) < 0) continue;
+        for (var k = 0; k < ANCHOR_ALIAS[g].length; k++) {
+          var el = document.getElementById(ANCHOR_ALIAS[g][k]);
+          if (el) { el.scrollIntoView(); return; }
+        }
+      }
+    }
+    follow();
+    window.addEventListener("hashchange", follow);
+  }
+
+  function boot() { initAnchorAlias(); initStickClearance(); hydrate(); initPhoneChrome(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); initReviewWrite(); shiftSampleDates(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

@@ -457,7 +457,60 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["uzenetek", "admin-messages"],
   ["fiok", "admin-account"],
   ["foglalasok", "admin-bookings"],
+  // tervvaltas E: the Kinézet tab — two plans side by side (phone view at 390 px).
+  ["kinezet", "admin-look"],
 ];
+
+// tervvaltas E — the Kinézet tab's fixture: the invented guesthouse's two plans. The real tab
+// frames a live render of each plan with the owner's content (/admin/kinezet/elonezet); a KB
+// picture must be the same on every run (no template intro animation mid-frame), so the shot
+// swaps each frame for a STILL stand-in of that template's first screen, drawn with THIS
+// fixture's name, slogan and a stock photo — never another guesthouse's name (tudásbázis-őr,
+// 2026-11-16). The entry's caption says the previews are simplified.
+const LOOK_PLANS = [
+  { n: 1, artifactId: "00000000-0000-4000-8000-0000000000a1", template: "parallax", available: true },
+  { n: 2, artifactId: "00000000-0000-4000-8000-0000000000a2", template: "wordmark-grow", available: true },
+] as const;
+let lookFixture: import("../src/server/planSwitchViews.js").LookView = {
+  plans: LOOK_PLANS,
+  currentArtifactId: LOOK_PLANS[0].artifactId,
+  previousArtifactId: null,
+  mode: "trial",
+  trialUntil: "2026. 11. 30.",
+  siteHref: "https://nyugalom-vendeghaz.citoviso.com",
+  dev: null,
+  confirm: null,
+  big: null,
+  done: false,
+  undone: null,
+  error: null,
+};
+function lookStandIn(template: string, phone: boolean): string {
+  const stock = pathToFileURL(path.join(ROOT, "public/assets/stock")).href;
+  const lake = `${stock}/landscape-balaton/landscape-balaton-15227988.jpg`;
+  const terrace = `${stock}/terrace/terrace-17418139.jpg`;
+  const name = "Nyugalom Vendégház";
+  const tag = "Csend, kert, Balaton";
+  const pad = phone ? 28 : 64;
+  return template === "wordmark-grow"
+    ? `<body style="margin:0;min-height:100vh;background:#f4efe6;color:#2b2a27;font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${phone ? 28 : 36}px;text-align:center">` +
+        `<div style="font-size:${phone ? 46 : 92}px;letter-spacing:.02em;line-height:1.05;padding:0 ${pad}px">${name}</div>` +
+        `<img src="${terrace}" style="width:${phone ? 62 : 34}%;aspect-ratio:4/3;object-fit:cover;border-radius:22px">` +
+        `<div style="font-size:${phone ? 22 : 30}px;font-style:italic">${tag}</div></body>`
+    : `<body style="margin:0;min-height:100vh;background:#111 url('${lake}') center/cover;color:#fff;font-family:Arial,sans-serif;display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;padding:${pad}px">` +
+        `<div style="font-size:${phone ? 44 : 96}px;font-weight:800;text-transform:uppercase;line-height:1;text-shadow:0 2px 18px rgba(0,0,0,.5)">${name}</div>` +
+        `<div style="font-size:${phone ? 22 : 32}px;margin:18px 0 ${phone ? 40 : 60}px;text-shadow:0 2px 12px rgba(0,0,0,.6)">${tag}</div></body>`;
+}
+function lookFrames(html: string): string {
+  const attr = (h: string) => h.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return html.replace(
+    /<iframe src="\/admin\/kinezet\/elonezet\?a=([0-9a-f-]+)"( width="(\d+)")?/g,
+    (_m, id: string, wAttr: string | undefined, w: string | undefined) => {
+      const t = LOOK_PLANS.find((p) => p.artifactId === id)?.template ?? "parallax";
+      return `<iframe srcdoc="${attr(lookStandIn(t, w === "390"))}"${wAttr ?? ""}`;
+    },
+  );
+}
 
 // ADR-0084 fixtures. Representative, never personal: an invented guesthouse's own
 // invoices and our own service notices. The FAILED row is here on purpose — the
@@ -1293,7 +1346,7 @@ async function shoot(
   /** ADR-0251: the Webcím tab's view state (the review step is shot from this). */
   domainView?: import("../src/server/adminViews.js").DomainViewState,
 ): Promise<void> {
-  const html = adminDashboard(session, content, {
+  let html = adminDashboard(session, content, {
     ...(multilang ? { multilang } : {}),
     // ADR-0429: the overview strip and the Modulok tiles are on these pictures, as on the real admin.
     ...(tab === "attekintes" ? { setupStrip: overviewSetupStrip({ lang: LANG, items: SETUP_ITEMS, next: SETUP_ITEMS[1]!, guestLine: SETUP_GUEST }) } : {}),
@@ -1343,6 +1396,7 @@ async function shoot(
     // ÜRES állapotot fotózza („a foglalások akkor jelennek meg…"), mert a shot-tenanthoz
     // nincs bekapcsolt Foglalás modul — mérve, az első két próbálkozásomon.
     ...(tab === "foglalasok" ? { bookings: bookingsFixture } : {}),
+    ...(tab === "kinezet" ? { look: lookFixture, lookNow: { n: 1, count: LOOK_PLANS.length } } : {}),
     // ADR-0241: the Elérhetőség tab — an invented guesthouse's public contact facts. The
     // map key is blank on purpose: pinNetwork refuses Google anyway, and the picture is
     // the phone/e-mail card (element capture below), which needs no map.
@@ -1359,6 +1413,7 @@ async function shoot(
     // Design core + fixture photos straight off disk instead of through the server.
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
+  if (tab === "kinezet") html = lookFrames(html);
   if (await beginShot(html, outPath, { fn: "shoot", tab, topic, scrollTo, viewportAt, hash, clickFirst })) return;
   const file = path.join(tmp, `${tab}-${topic ?? "x"}-${path.basename(outPath, ".png")}.html`);
   await writeFile(file, html, "utf8");
@@ -1442,6 +1497,10 @@ for (const [tab, entryId] of TAB_TO_ENTRY) {
 // ADR-0241: the Elérhetőség guide shows the phone/e-mail card with its live
 // "A honlapon így: …" line — the map above it is Google's, never in a KB picture.
 await shoot("elerhetoseg", path.join(ROOT, "kb/entries/admin-contact/assets", LANG, "telefon-email.png"), undefined, undefined, "#ct_card");
+// tervvaltas E: the Kinézet guide's confirmation step — the sheet the owner meets after „Ezt választom”.
+lookFixture = { ...lookFixture, confirm: 2 };
+await shoot("kinezet", path.join(ROOT, "kb/entries/admin-look/assets", LANG, "megerosites.png"), undefined, undefined, ".pls-sheet__box");
+lookFixture = { ...lookFixture, confirm: null };
 // Két KIS kép az admin-modules ÁRAZÁS szakaszához. A fül-képe az ELSŐ képernyőt
 // mutatja, az árcímke és a végösszeg viszont jóval a hajtás alatt van — a szöveg
 // különben olyasmiről beszélne, amit a saját képe nem mutat meg.

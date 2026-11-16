@@ -70,8 +70,11 @@ import {
   photosByUnit,
   rerenderTenantSnapshot,
   renderTenantModulePreview,
+  renderTenantPlanPreview,
   moduleContentFor,
 } from "../tenant/editor.js";
+import { switchSitePlan, tenantPlanSet } from "../tenant/planSwitch.js";
+import { formatDay } from "../text/day.js";
 import { priceSiteView } from "../tenant/priceSiteView.js";
 import { CONTACT_ERRORS, type ContactErrorKey } from "../tenant/contact.js";
 import { normalizeUpload } from "../tenant/photoUpload.js";
@@ -1617,6 +1620,33 @@ async function serveAdmin(
   const subSummary = await getSubscriptionSummary(session.tenantId);
   // ADR-0344 C2c: the card-less trial's strip / paused block (every tab).
   const trial = await trialAdminState(session.tenantId);
+  // tervvaltas E — the site's plans: the nav badge + the Áttekintés card on every tab, the
+  // Kinézet tab's whole view on that tab (contract: design-refs/console/tervvalto-admin).
+  const planSet = site?.id ? await tenantPlanSet(session.tenantId) : null;
+  const lookNow = planSet
+    ? { n: planSet.plans.find((p) => p.artifactId === planSet.currentArtifactId)?.n ?? 1, count: planSet.plans.length }
+    : null;
+  let look: AdminOpts["look"] = null;
+  if (tab === "kinezet" && planSet && site) {
+    const q = new URL(req.url ?? "/", "http://x").searchParams;
+    const num = (k: string): number | null => (/^[1-9]$/.test(q.get(k) ?? "") ? Number(q.get(k)) : null);
+    const dev = q.get("dev");
+    const trialActive = trial?.status === "active";
+    look = {
+      plans: planSet.plans,
+      currentArtifactId: planSet.currentArtifactId,
+      previousArtifactId: planSet.previousArtifactId,
+      mode: trialActive ? "trial" : site.status === "live" ? "live" : "other",
+      trialUntil: trialActive ? formatDay(trial!.untilIso, content?.lang ?? "hu") : null,
+      siteHref: siteUrl ?? (site.preview_token ? `/site/${site.preview_token}` : null),
+      dev: dev === "d" || dev === "m" ? dev : null,
+      confirm: num("valaszt"),
+      big: num("nagy"),
+      done: q.get("valtva") === "1",
+      undone: num("visszavont"),
+      error: q.get("hiba"),
+    };
+  }
   let overview: AdminOpts["overview"] = null;
   if (overviewTab) {
     const series = await getVisitorSeries(session.tenantId, 7);
@@ -2416,6 +2446,8 @@ async function serveAdmin(
       pendingBookings,
       subSummary,
       overview,
+      look,
+      lookNow,
       siteSlug: site?.slug ?? null,
       photosView: new URL(req.url ?? "/", "http://x").searchParams.get("v") === "list" ? "list" : "grid",
     }),
@@ -2839,6 +2871,37 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
   // ADR-0241 — POST /admin/elerhetoseg: address, map pin, phone, e-mail. All-or-nothing;
   // a refusal returns to the same screen with the failing fields named.
+  // tervvaltas E — POST /admin/kinezet: switch the site to another of its plans (`a` = the
+  // plan's artifact id; `undo=1` = the done strip's „Visszavonás”, the same switch backwards).
+  // switchSitePlan refuses anything outside the lead's own offered plans.
+  if (req.method === "POST" && pathname === "/admin/kinezet") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const r = await switchSitePlan(session.tenantId, form.get("a") ?? "", `tenant_user:${session.tenantUserId}`);
+    if (!r.ok) return redirect(res, r.error === "same" ? "/admin?tab=kinezet" : `/admin?tab=kinezet&hiba=${encodeURIComponent(r.error)}`);
+    return redirect(res, form.get("undo") === "1" ? `/admin?tab=kinezet&visszavont=${r.n}` : "/admin?tab=kinezet&valtva=1");
+  }
+  // tervvaltas E — GET /admin/kinezet/elonezet?a=<artifact>: one of the site's plans rendered
+  // with the owner's CURRENT content (the Kinézet tab's previews). Only the tenant's own plans;
+  // writes nothing, calls nothing paid; never indexable (toPrivatePreview).
+  if (req.method === "GET" && pathname === "/admin/kinezet/elonezet") {
+    const session = await currentTenant(req);
+    if (!session) return send(res, 401, "", "text/plain; charset=utf-8");
+    const a = new URL(req.url ?? "/", "http://x").searchParams.get("a") ?? "";
+    const set = await tenantPlanSet(session.tenantId);
+    const plan = set?.plans.find((p) => p.artifactId === a);
+    const html = plan ? await renderTenantPlanPreview(session.tenantId, plan.artifactId) : null;
+    if (!html) return send(res, 404, "", "text/plain; charset=utf-8");
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "private, no-store",
+      "X-Robots-Tag": "noindex, nofollow",
+      "X-Frame-Options": "SAMEORIGIN",
+    });
+    res.end(html);
+    return;
+  }
   if (req.method === "POST" && pathname === "/admin/elerhetoseg") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");

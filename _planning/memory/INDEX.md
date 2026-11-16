@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-16_tervvalto_admin_kinezet.md](2026-11-16_tervvalto_admin_kinezet.md) — 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-XXXX)
 - [2026-11-16_proba_rendeles_nezett_terv.md](2026-11-16_proba_rendeles_nezett_terv.md) — 2026-11-16 — Próba és rendelés a nézett / futó tervhez kötve (tervvaltas A, ADR-0449)
 - [2026-11-16_konverzio_javitasok_zaras.md](2026-11-16_konverzio_javitasok_zaras.md) — 2026-11-16 — Konverzió-elemzés és a három gépi javítás (zárás, cit8a744532)
 - [2026-11-16_elesites_alairas_b_meres.md](2026-11-16_elesites_alairas_b_meres.md) — 2026-11-16 — Élesítés 068073d0: e-mail aláírás, ?b mérés, fejléc/előnézet (cit383fe8b6)

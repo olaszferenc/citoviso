@@ -206,6 +206,8 @@ export const PURGE_TABLES: readonly { readonly table: string; readonly where: st
   // ADR-0356: a former slug is minted only at a PAID activation, which the blockers refuse —
   // listed so the cascade stays counted, not because a purge is expected to meet one.
   { table: "site_slug_alias", where: `site_id IN ${SITES}` },
+  // tervvaltas E (0138): the owner's plan switches — the site's own log, gone with the site.
+  { table: "site_plan_switch", where: `site_id IN ${SITES}` },
   { table: "site_visit", where: `tenant_id = $1 OR site_id IN ${SITES}` },
   { table: "multilang_generation", where: `tenant_id = $1 OR site_id IN ${SITES}` },
   // ADR-0380: the booking-setup helper's cost rows (no question text) go with the site.
