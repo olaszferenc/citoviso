@@ -159,7 +159,9 @@ jelvényként; 0-nál eltűnik.
 
   Mindkét szám pontosan annyi, ahány sort a link mögötti lista mutat.
 - **„Pénzügy”** — a nyitott bizonylatok száma (és hogy van-e lejárt), alatta a bizonylatok, a
-  partnerek és az AAM-limit kihasználtsága százalékban.
+  partnerek és az AAM-limit kihasználtsága százalékban; ha idén már volt EU-s magánszemélynek
+  eladás (vagy az ilyen eladások vissza vannak tartva), alatta az **„OSS-küszöb”** sor is, szintén
+  százalékban.
 - **„Megkeresések”** — a kiküldött megkeresések száma, alatta a **„Válaszolt”** sor (hány válasz
   érkezett összesen; koppintva a fenti blokk a **„Mind”** szűrővel), a megkezdett rendelések és a
   tölcsér megnyitása.
@@ -173,6 +175,14 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
   adómentesség 18 M Ft-os keretéhez mérve; amíg 80% alatt van, a sor nem jelenik meg — ha
   felbukkan, a rendszer SMS-t/e-mailt is küldött róla (címzettek: Beállítások →
   „Riasztások — keret-kihasználtság”);
+- **„OSS-küszöb”** (80%-tól borostyán, piros, ha az eladások vissza vannak tartva) — az idei,
+  EU-s (nem magyar) magánszemélyeknek eladott előfizetések összege euróban, a 10 000 €-s uniós
+  küszöbhöz mérve, például „OSS-küszöb: 84% (8 400 € / 10 000 €)”. 80% alatt a sor nem jelenik meg.
+  Ha a küszöb betelt (vagy nem számolható), mögötte ez áll: „az EU-s magánszemély-eladások
+  visszatartva, amíg az OSS-regisztrációról nincs döntés” — ilyenkor az újabb EU-s magánszemély
+  vásárlása nem indul el, a magyar és a cégvevők vásárlása zavartalan. **Teendő:** a tulajdonos
+  dönt az OSS-regisztrációról (az uniós egyablakos áfa-bevallásról); amíg nincs döntés, a
+  visszatartás marad. A sor jobb szélén **„Bizonylat keresése”** — koppintva a bizonylatok lapja nyílik;
 - **„próbázó nem lépett be”** (piros) — hány futó próbázó nem lépett be (jelszót sem állított be) a
   próba 4. napjától, a nevükkel és a próba napjával; ha közülük valaki már 10 napja nem lépett be,
   mellette „ebből N elakadt (10 nap belépés nélkül)”. Egy próbázónál a sorra koppintva a lead-lapja
