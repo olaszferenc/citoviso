@@ -162,6 +162,8 @@ async function fixture(
     status?: "sent" | "order_intent";
     visits?: readonly Date[];
     events?: readonly { type: string; at: Date; payload?: Record<string, unknown> }[];
+    /** When the cold outreach went (default 2026-11-02 09:30, long before the 48-hour floor). */
+    sentAt?: Date;
   } = {},
 ): Promise<{ leadId: string; prospectId: string }> {
   const lead = await db
@@ -180,7 +182,7 @@ async function fixture(
     .values({ lead_id: lead.id, path: `sites/_behaviorcheck_${stamp}.html`, status: "approved", inputs: JSON.stringify({}) })
     .returning("id")
     .executeTakeFirstOrThrow();
-  const sentAt = new Date("2026-11-02T09:30:00+01:00");
+  const sentAt = o.sentAt ?? new Date("2026-11-02T09:30:00+01:00");
   const p = await db
     .insertInto("prospect")
     .values({
@@ -240,6 +242,8 @@ if (!SELF_TEST) {
     const start = await fixture("start", { visits: [at("09:00"), at("09:10")], events: [{ type: "panel_open", at: at("09:11") }, { type: "trial_open", at: at("09:12") }] });
     const viaLink = await fixture("vialink", { visits: [at("09:05")], events: [{ type: "trial_open", at: at("09:06"), payload: { via: "link" } }] });
     const reading = await fixture("reading", { visits: [at("09:00"), at("09:50")] });
+    // Owner 2026-11-17: the same-day case (Benevia) — outreach 08:25, two visits, never before +48 h.
+    const sameDay = await fixture("sameday", { visits: [at("08:28"), at("09:20")], sentAt: at("08:25") });
     const smsLead = await fixture("sms", { email: null, phone: mobile(), smsSent: true, visits: [at("09:00"), at("09:20")] });
     const oldTrig = await fixture("oldtrig", { visits: [at("09:00", "2026-11-09"), at("09:20", "2026-11-09")] });
     const only = leads.slice();
@@ -253,6 +257,9 @@ if (!SELF_TEST) {
     check("③ próba-gomb + árnézés + látogatás → a legerősebb: 'start'", L.get(start.leadId)?.trigger === "start");
     check("③ a saját #inditas linkünk nyitotta trial_open nem kiváltó", !L.get(viaLink.leadId)?.trigger);
     check("③ esedékes = utolsó aktivitás + 20 perc", L.get(start.leadId)?.dueAt?.getTime() === at("09:32").getTime(), L.get(start.leadId)?.dueAt?.toISOString());
+    check("③ tulaj 11-17: a megkeresés után 48 órán belül nem esedékes — a 48. órában lesz az",
+      L.get(sameDay.leadId)?.dueAt?.getTime() === at("08:25", "2026-11-13").getTime() && !L.get(sameDay.leadId)?.excluded,
+      L.get(sameDay.leadId)?.dueAt?.toISOString());
     check("③ mobilra ment a hideg üzenet → SMS-csatorna", L.get(smsLead.leadId)?.channel === "sms");
     check("③ e-mailben ment → e-mail-csatorna", L.get(two.leadId)?.channel === "email");
     L = await list(new Date("2026-11-20T10:00:00+01:00"));
@@ -310,7 +317,7 @@ if (!SELF_TEST) {
     const satRow = await db.selectFrom("behavior_message").select("id").where("lead_id", "=", two.leadId).executeTakeFirst();
     check("⑤ szombaton nem megy és nem foglal", sat.kind === "skipped" && !satRow, JSON.stringify(sat));
     const early = await sendBehaviorMessage(L.get(reading.leadId)!, { ...deps, now: at("10:05") });
-    check("⑤ még olvas (utolsó aktivitás < 20 perce) → nem megy", early.kind === "skipped" && /20 percet/.test((early as { reason: string }).reason));
+    check("⑤ még olvas (utolsó aktivitás < 20 perce) → nem megy", early.kind === "skipped" && /20 perc/.test((early as { reason: string }).reason));
     mailer.fail = true;
     const bad = await sendBehaviorMessage(cTwo, { ...deps, now: WED10 });
     const badRow = await db.selectFrom("behavior_message").select("id").where("lead_id", "=", two.leadId).executeTakeFirst();

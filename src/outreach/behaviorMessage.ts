@@ -12,7 +12,8 @@
 // the matching part of the page (kerdes-inditas anchors: #kerdes · ?k=ar#ar · #inditas).
 //
 // TIMING: 20 minutes after the lead's LAST activity on the page (a new visit postpones it — never
-// while they are reading), on weekdays 08:00–20:00 Budapest (behaviorWindowBlocks). Outside the
+// while they are reading), and never sooner than 48 hours after the lead's first cold outreach
+// (owner 2026-11-17), on weekdays 08:00–20:00 Budapest (behaviorWindowBlocks). Outside the
 // window it goes at the first run inside it; a trigger older than BEHAVIOR_MAX_AGE_MS is dropped
 // (an outage or a long holiday must not produce a message about a visit the lead has forgotten).
 //
@@ -60,6 +61,9 @@ import {
 export const BEHAVIOR_SETTING_KEY = "behavior_message";
 /** The message waits this long after the lead's last activity (never while they are reading). */
 export const BEHAVIOR_QUIET_MS = 20 * 60_000;
+/** Owner 2026-11-17 („legyen 48 óra”): never sooner than this after the lead's FIRST cold outreach —
+ *  a same-day second letter read as pushing (Benevia, 11-17: „tolják túl”). A trigger inside it waits. */
+export const BEHAVIOR_MIN_AFTER_OUTREACH_MS = 48 * 3_600_000;
 /** A trigger older than this is dropped, not sent late (Friday evening → Monday 8:00 still goes). */
 export const BEHAVIOR_MAX_AGE_MS = 10 * 24 * 3_600_000; // owner 2026-11-16: 10-day reaction window (was 4)
 /** At most this many messages per run (the timer runs every 10 minutes) — a burst brake. */
@@ -298,6 +302,11 @@ export async function listBehaviorCandidates(
       address = mailedEmail;
       addressKey = recipientKey(mailedEmail);
     }
+    // The lead's first cold outreach on any channel (owner 2026-11-17: the message waits 48 hours after it).
+    const firstOutreachMs = Math.min(
+      ...pr.flatMap((p) => [p.sent_at, p.email_sent_at, p.sms_sent_at, p.mms_sent_at]).map(ms).filter((x) => x > 0),
+      Number.MAX_SAFE_INTEGER,
+    );
     const base = {
       leadId: lead.id,
       leadName: lead.name,
@@ -309,7 +318,7 @@ export async function listBehaviorCandidates(
       channel,
       address,
       addressKey,
-      dueAt: trigger && lastActivity ? new Date(+lastActivity + BEHAVIOR_QUIET_MS) : null,
+      dueAt: trigger && lastActivity ? new Date(Math.max(+lastActivity + BEHAVIOR_QUIET_MS, firstOutreachMs + BEHAVIOR_MIN_AFTER_OUTREACH_MS)) : null,
     };
     const no = (excluded: BehaviorExclusion): void => {
       out.push({ ...base, excluded });
@@ -451,7 +460,7 @@ export async function sendBehaviorMessage(c: BehaviorCandidate, deps: BehaviorDe
   if (!c.trigger || !c.triggerAt || !c.dueAt || !c.prospectId || !c.channel || !c.address || !c.addressKey) {
     return { kind: "skipped", reason: "nincs kiváltó vagy célpont" }; // i18n-exempt: operátori kimenet
   }
-  if (+now < +c.dueAt) return { kind: "skipped", reason: "még olvas — az utolsó aktivitás után 20 percet várunk" }; // i18n-exempt: operátori kimenet
+  if (+now < +c.dueAt) return { kind: "skipped", reason: "még nem esedékes — az utolsó aktivitás után 20 perc, a megkeresés után 48 óra" }; // i18n-exempt: operátori kimenet
   const block = behaviorWindowBlocks(now);
   if (block) return { kind: "skipped", reason: block };
 

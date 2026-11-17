@@ -33,7 +33,7 @@ try {
     const s = await getBehaviorSettings();
     console.log(`főkapcsoló: ${s.enabled ? "BE" : "KI"} · kiváltó-határ: ${s.since?.toISOString() ?? "—"}`);
     for (const c of await listBehaviorCandidates({ now })) {
-      const v = c.excluded ? BEHAVIOR_EXCLUSION_LABEL[c.excluded] : c.dueAt && +c.dueAt <= +now ? "ESEDÉKES" : "vár (20 perc csend)";
+      const v = c.excluded ? BEHAVIOR_EXCLUSION_LABEL[c.excluded] : c.dueAt && +c.dueAt <= +now ? "ESEDÉKES" : "vár (20 perc csend / 48 óra a megkeresés után)";
       console.log(`${c.leadName} · ${c.trigger ?? "—"} · ${c.channel ?? "—"} · ${v}`);
     }
   } else {
