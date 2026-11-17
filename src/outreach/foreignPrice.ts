@@ -23,3 +23,20 @@ export function foreignOfferSentence(
     { percent: vars.percent, price: vars.price, offerPrice: vars.offerPrice },
   );
 }
+
+/**
+ * ORSZÁG-RÉTEG 3/6: the escalation follow-up's price sentence for a NON-forint region — the
+ * Hungarian one („… havi {price} forint helyett {offerPrice} forinttól”) names the forint. Kept here,
+ * not in escalationFollowup.ts, for the same reason as above (the Hungarian letter family's
+ * critic fingerprint stays untouched).
+ */
+export function foreignEscalationSentence(
+  lang: string,
+  vars: { readonly percent: string; readonly price: string; readonly offerPrice: string },
+): string {
+  return T(
+    lang,
+    "Döntés-segítő ajánlatként {percent}% kedvezményt adunk: havi {price} helyett már {offerPrice} összegtől.",
+    { percent: vars.percent, price: vars.price, offerPrice: vars.offerPrice },
+  );
+}

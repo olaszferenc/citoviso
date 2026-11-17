@@ -184,7 +184,7 @@ import { checkSubdomainAvailable, convertLead, plannedSiteSlug } from "../conver
 import { continuableTrialForLead, ownedSiteForArtifact, ownedSiteForLead, ownedSiteForProspectToken, trialRunningArtifactForLead } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
-import { normalizeCustomDomain, slugify, suggestDomains } from "../domains.js";
+import { endingsForCountry, normalizeCustomDomain, slugify, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { mockPayRoutesEnabled } from "../payment/index.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
@@ -222,7 +222,7 @@ import {
 } from "../pricing.js";
 import { marketOpenGaps } from "../payment/providers.js";
 import { a60Csv, a60Summary, parseA60Period } from "../billing/a60.js";
-import { countryConfigSync } from "../country.js";
+import { countryConfigSync, countryOf, countryOfLead } from "../country.js";
 import { formatMinor, majorToMinor, minorDigits } from "../text/money.js";
 import { OrderRegionError, regionForCountry, regionForLead, type OrderMoney } from "../payment/orderRegion.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
@@ -408,7 +408,7 @@ import { getNavNumbers, resetNavCountsCache } from "./navCounts.js";
 import { getAiSpend } from "./aiSpend.js";
 import { runStaggered } from "./staggeredBatch.js";
 import { HUB_PREFIX } from "./nav.js";
-import { uiLangs } from "../i18n/lang.js";
+import { langForCountry, uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
 import { prepareRenderLang, T } from "../i18n/mail.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
@@ -3384,7 +3384,8 @@ async function handle(
       // Who answers for the words = the signed-in curator (Poe signs in as `poe`).
       by: op?.displayName || op?.username || POE_BY,
     };
-    const check = validateCuratorCopy(pack, storedQuoteCorpus(loaded));
+    // The lead's page language decides the lookalike scrub's direction (ORSZÁG-RÉTEG 3/6).
+    const check = validateCuratorCopy(pack, storedQuoteCorpus(loaded), langForCountry(countryOf(loaded.lead)));
     // The requested pair EXACTLY (templatePicks.ts): an unknown / retired / repeated id is refused, never dropped.
     const picked = requireExplicitPick(resolveTemplatePicks(Array.isArray(body.templates) ? body.templates : [], 2));
     const templates = picked.ok ? [...picked.templates] : [];
@@ -3974,7 +3975,7 @@ async function handle(
     const a = await db
       .selectFrom("mock_artifact")
       .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
-      .select("lead.name as leadName")
+      .select(["lead.name as leadName", "lead.id as leadId"])
       .where("mock_artifact.id", "=", cfgDomMatch[1])
       .executeTakeFirst();
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
@@ -3982,7 +3983,10 @@ async function handle(
     // (ADR-0443); a lead whose market cannot price gets no suggestion (fail closed).
     const sugRegion = await regionForArtifactOrNull(cfgDomMatch[1]!);
     if (!sugRegion) return send(res, 200, JSON.stringify({ suggestions: [] }), "application/json");
-    const candidates = suggestDomains(a.leadName, offeredTlds(sugRegion).map((t) => t.tld));
+    // ORSZÁG-RÉTEG 3/6: only endings of the LEAD's country (+ the generic ones) — never another
+    // country's national ending the market happens to carry.
+    const sugCountry = countryConfigSync(await countryOfLead(a.leadId));
+    const candidates = suggestDomains(a.leadName, endingsForCountry(offeredTlds(sugRegion).map((t) => t.tld), sugCountry?.ownSiteTlds ?? null));
     const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
     const suggestions = candidates.map((domain, i) => ({ domain, availability: verdicts[i]! }));
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
@@ -5460,6 +5464,7 @@ async function handle(
   // house on such a visit. The GET now offers a button (renew), the POST reissues.
   const payGoMatch = /^\/pay\/go\/([0-9a-f-]{36})$/i.exec(path);
   if ((method === "GET" || method === "POST") && payGoMatch) {
+    await useBuyerLang({ id: payGoMatch[1]! });
     const d = await resolvePayEntry(payGoMatch[1]!, { reissue: method === "POST" });
     if (d.kind === "redirect") return redirect(res, d.url);
     if (d.kind === "renew") return send(res, 200, payLinkRenewPage(payGoMatch[1]!));
@@ -5501,6 +5506,7 @@ async function handle(
   const adminBase = (): string => config.publicSiteUrl.replace(/\/+$/, "");
 
     const ref = url.searchParams.get("paymentId") ?? url.searchParams.get("PaymentId") ?? "";
+    if (ref) await useBuyerLang({ gatewayRef: ref });
     // ⛔ Ez a lap a Barion RedirectUrl-je: ide a VEVŐ érkezik vissza, fizetés után.
     // A frissítés-kísérlet KÉNYELEM, nem feltétel — az állapotot a webhook úgyis
     // meghozza. Ha a gateway épp nem válaszol (mérve 2026-09-15: HTML-t adott JSON
@@ -5738,6 +5744,7 @@ async function handle(
     return send(res, 404, layout("404", `<p>${T(consoleLang(), "Nincs ilyen fizetés.")}</p>`));
   }
   if (method === "GET" && mockPayMatch) {
+    await useBuyerLang({ gatewayRef: mockPayMatch[1]! });
     // ⭐ The lead's name comes along: the pay screen must say WHAT is being paid
     // for (approved contract: assets/design-refs/console/pay-gateway-exit/ ②).
     // Measured 2026-09-15: none of the four gateway states named the product —
@@ -5940,6 +5947,17 @@ function alertWebhookOnce(gateway: string, paymentRef: string, status: number, r
   }
   webhookAlerted.set(key, now);
   void alertWebhookFailure({ gateway, paymentRef, status, reason });
+}
+
+/**
+ * ORSZÁG-RÉTEG 3/6: a payment's pages are the BUYER's (the gateway sends them back here), so they
+ * render in the buyer's language — the lead's mock / country (payment/service.ts
+ * buyerLangOfPayment) — not the console operator's. Unknown payment → the request's language stays.
+ */
+async function useBuyerLang(key: { id?: string; gatewayRef?: string }): Promise<void> {
+  const { buyerLangOfPayment } = await import("../payment/service.js");
+  const lang = await buyerLangOfPayment(key);
+  if (lang) setConsoleLang(await prepareRenderLang(lang));
 }
 
 export const server = http.createServer((req, res) => {

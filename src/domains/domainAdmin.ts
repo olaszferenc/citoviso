@@ -6,10 +6,12 @@
 // A B változat 3 lépése (a befagyasztott kontraktus szerint,
 // assets/design-refs/console/domain/README.md): 1. Név → 2. Áttekintés → 3. Kész.
 
+import { countryOfTenant } from "../tenant/siteCountry.js";
 import { db } from "../db/client.js";
 import {
   PLATFORM_DOMAIN,
   normalizeCustomDomain,
+  endingsForCountry,
   suggestDomains,
 } from "../domains.js";
 import { checkWebcimAvailability, type WebcimAvailability } from "./availability.js";
@@ -267,7 +269,9 @@ export async function loadDomainAdmin(
   if (!inFlight) {
     // ADR-0360 ③ (Elek A4): suggest only OFFERED endings, every one of them — the same
     // rule as the lead configurator (console /configure/…/domains).
-    const candidates = suggestDomains(displayName, offeredTlds(regionId).map((t) => t.tld));
+    // ORSZÁG-RÉTEG 3/6: only the lodging country's own endings (+ generic ones) — see endingsForCountry.
+    const siteCountry = await countryOfTenant(tenantId);
+    const candidates = suggestDomains(displayName, endingsForCountry(offeredTlds(regionId).map((t) => t.tld), siteCountry?.ownSiteTlds ?? null));
     const checks = await Promise.all(
       candidates.map(async (d) => ({
         availability: await checkWebcimAvailability(d),

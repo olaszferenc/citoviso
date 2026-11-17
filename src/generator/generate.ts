@@ -2,6 +2,7 @@
 // standalone HTML mock, and records a mock_artifact row. Both the CLI (run.ts)
 // and the operator console call this — one code path, clean boundary.
 
+import { transliterate } from "../text/translit.js";
 import {
   currentAiUsage,
   formatUsage,
@@ -99,7 +100,8 @@ const REGIONS: Record<string, RegionContext> = {
 
 export function slugify(s: string): string {
   return (
-    s
+    // ORSZÁG-RÉTEG 3/6: a Cyrillic/Greek name is transliterated first (a Latin name is untouched).
+    transliterate(s)
       .toLowerCase()
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")

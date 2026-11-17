@@ -110,6 +110,8 @@ export const I18N_SOURCES = [
   // Same failure shape as draft.ts above: the file that WRITES the copy must be here,
   // not just the one that wraps it in HTML.
   "src/outreach/escalationFollowup.ts",
+  // ORSZÁG-RÉTEG 3/5–3/6: the cold letter's and the escalation's non-forint price sentence (T()-wrapped).
+  "src/outreach/foreignPrice.ts",
   // ADR-0070 derived-scope finds: lead-visible surfaces OUTSIDE the mail body.
   "src/generator/demoFrame.ts",
   "src/outreach/heroShot.ts",

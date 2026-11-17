@@ -38,12 +38,12 @@ import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { missingPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, missingPackStrings } from "../i18n/packs.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { behaviorWindowBlocks } from "../sms/sendWindow.js";
 import { isHuMobileE164, normalizePhone } from "../text/phone.js";
 import { helperFromName, helperName } from "../trial/helperPersona.js";
-import { advertiserIdentity, buildDraftForProspect, formatHuf } from "./draft.js";
+import { advertiserIdentity, buildDraftForProspect, fromPricePair } from "./draft.js";
 import { checkOutreachDraft, checkOutreachSms } from "./outreachCheck.js";
 import { isTestLeadName } from "./ownerTestPhone.js";
 import { isEmailSuppressed } from "./sendBatch.js";
@@ -473,16 +473,23 @@ export async function sendBehaviorMessage(c: BehaviorCandidate, deps: BehaviorDe
       if (g.to !== c.address) return { kind: "skipped", reason: `a lead száma közben változott (${g.to})` }; // i18n-exempt: operátori kimenet
       d = g.d;
     }
-    const sms = buildBehaviorSms({
+    // ORSZÁG-RÉTEG 3/6: measured — one Hungarian fallback holds a foreign message (§C NYELV).
+    const trigger = c.trigger;
+    const { value: sms, fallbacks: smsFallbacks } = collectFallbacks(() => buildBehaviorSms({
       lang: d.lang,
       leadName: c.leadName,
-      trigger: c.trigger,
+      trigger,
       link: d.sms.link,
-      priceList: d.input.fromMonthly ? formatHuf(d.input.fromMonthly) : null,
+      priceList: d.input.fromMonthly ? fromPricePair(d.input.fromMonthly, 0, { currency: d.input.currency, lang: d.lang }).priceList : null,
       trialDays: d.input.trialDays ?? null,
       planCount: d.input.planCount,
-    });
-    const gate = checkOutreachSms({ text: sms.text, link: d.sms.link, unsubscribeLink: d.sms.unsubscribeLink }, sms.name, d.lang, d.market);
+    }));
+    const gate = checkOutreachSms(
+      { text: sms.text, link: d.sms.link, unsubscribeLink: d.sms.unsubscribeLink, ...(d.lang !== DEFAULT_LANG ? { untranslated: smsFallbacks } : {}) },
+      sms.name,
+      d.lang,
+      d.market,
+    );
     if (gate.verdict === "FLAG") return { kind: "skipped", reason: `§C FLAG: ${gate.reasons.join(" · ")}` }; // i18n-exempt: operátori kimenet
     sentTrigger = sms.trigger;
     preview = sms.text;
@@ -504,25 +511,34 @@ export async function sendBehaviorMessage(c: BehaviorCandidate, deps: BehaviorDe
       const missing = (await missingPackStrings(d.lang)).length;
       if (missing > 0) return { kind: "skipped", reason: `${d.lang} nyelvi csomagból ${missing} string hiányzik` }; // i18n-exempt: operátori kimenet
     }
-    const mail = buildBehaviorMail({
+    const trigger = c.trigger;
+    const to = c.address;
+    const trialHost = await trialCampaignHost(c.leadId);
+    const { value: mail, fallbacks: mailFallbacks } = collectFallbacks(() => buildBehaviorMail({
       lang: d.lang,
       leadName: c.leadName,
-      trigger: c.trigger,
+      trigger,
       link: d.draft.link,
-      priceList: d.input.fromMonthly ? formatHuf(d.input.fromMonthly) : null,
+      priceList: d.input.fromMonthly ? fromPricePair(d.input.fromMonthly, 0, { currency: d.input.currency, lang: d.lang }).priceList : null,
       trialDays: d.input.trialDays ?? null,
       planCount: d.input.planCount,
-      to: c.address,
-      trialHost: await trialCampaignHost(c.leadId),
+      to,
+      trialHost,
       unsubscribeLink: d.draft.unsubscribeLink,
       privacyLink: d.draft.privacyLink,
       identity: advertiserIdentity(d.lang),
       helperName: helperName(d.lang),
       fromName: helperFromName(d.lang),
       listUnsubscribe: config.outreachListUnsubscribe,
-    });
-    // §C on the text that goes out — the cold letter's own judge (link, opt-out, identity, country).
-    const gate = checkOutreachDraft(mail.letter, c.leadName, d.lang, d.market);
+    }));
+    // §C on the text that goes out — the cold letter's own judge (link, opt-out, identity, country);
+    // ORSZÁG-RÉTEG 3/6: with the render's Hungarian fallbacks on a foreign letter (NYELV → TARTVA).
+    const gate = checkOutreachDraft(
+      { ...mail.letter, ...(d.lang !== DEFAULT_LANG ? { untranslated: mailFallbacks } : {}) },
+      c.leadName,
+      d.lang,
+      d.market,
+    );
     if (gate.verdict === "FLAG") return { kind: "skipped", reason: `§C FLAG: ${gate.reasons.join(" · ")}` }; // i18n-exempt: operátori kimenet
     sentTrigger = mail.trigger;
     preview = `${mail.letter.subject} · ${mail.letter.link}`;

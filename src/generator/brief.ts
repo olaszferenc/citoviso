@@ -11,7 +11,7 @@ import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
 import type { ThemeBrief } from "./theme.js";
-import { COPY_SCHEMA, EDITORIAL_SYSTEM, type EditorialCopy } from "../engine/copywriter.js";
+import { COPY_SCHEMA, EDITORIAL_SYSTEM, foreignCountryRule, type EditorialCopy } from "../engine/copywriter.js";
 import { OPENING_BAD_EXAMPLES } from "./lyricOpening.js";
 
 export interface GeneratedBrief {
@@ -163,6 +163,8 @@ export async function generateBrief(input: {
   curatorGuidance?: string;
   /** ADR-0036: target language name for the copy (e.g. "lengyel (polski)"); absent → magyar. */
   languageName?: string;
+  /** ORSZÁG-RÉTEG 3/6: the lead's country as the layer names it — with a foreign languageName. */
+  countryName?: string;
 }): Promise<GeneratedBrief | null> {
   if (!config.anthropicApiKey) return null;
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -185,7 +187,8 @@ export async function generateBrief(input: {
         ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${input.curatorGuidance.trim()}`
         : "") +
       (input.languageName
-        ? `\n\nCÉL-NYELV (ADR-0036): a tagline/intro/highlights szövegét ${input.languageName} nyelven írd — a célközönség ezen a nyelven olvassa az oldalt. Minden más szabály változatlan.`
+        ? `\n\nCÉL-NYELV (ADR-0036): a tagline/intro/highlights szövegét ${input.languageName} nyelven írd — a célközönség ezen a nyelven olvassa az oldalt. Minden más szabály változatlan.` +
+          foreignCountryRule(input.languageName, input.countryName)
         : ""),
   });
 
@@ -333,6 +336,8 @@ export async function generateBriefAndCopy(input: {
   imageUrls?: string[];
   curatorGuidance?: string;
   languageName?: string;
+  /** ORSZÁG-RÉTEG 3/6: the lead's country (country.name) — with a foreign languageName. */
+  countryName?: string;
 }): Promise<{
   brief: GeneratedBrief | null;
   editorial: EditorialCopy;
@@ -408,7 +413,8 @@ export async function generateBriefAndCopy(input: {
           ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${input.curatorGuidance.trim()}`
           : "") +
         (input.languageName
-          ? `\n\nCÉL-NYELV (ADR-0036): MINDEN szöveget (brief ÉS editorial) ${input.languageName} nyelven írj. Minden más szabály változatlan.`
+          ? `\n\nCÉL-NYELV (ADR-0036): MINDEN szöveget (brief ÉS editorial) ${input.languageName} nyelven írj. Minden más szabály változatlan.` +
+            foreignCountryRule(input.languageName, input.countryName)
           : ""),
     });
 

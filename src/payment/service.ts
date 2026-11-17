@@ -92,6 +92,27 @@ async function buyerLangOfOrder(orderIntentId: string): Promise<string> {
 }
 
 /**
+ * ORSZÁG-RÉTEG 3/6: the BUYER's language for the pages a payment ends on (/pay/go, /pay/done,
+ * the mock gateway) — those are the buyer's pages, not the operator's, so they must not render in
+ * the console operator's language (until 2026-11-17 a Czech buyer landed on a Hungarian
+ * „Köszönjük”). Keyed on the payment's id or its gateway reference; null = no such payment / no
+ * order behind it (the caller keeps the page as it was), or a lead whose country has no language.
+ */
+export async function buyerLangOfPayment(key: { readonly id?: string; readonly gatewayRef?: string }): Promise<string | null> {
+  if (!key.id && !key.gatewayRef) return null;
+  let q = db.selectFrom("payment").select(["order_intent_id as orderIntentId"]);
+  q = key.id ? q.where("id", "=", key.id) : q.where("gateway_ref", "=", key.gatewayRef!);
+  const row = await q.executeTakeFirst().catch(() => undefined);
+  if (!row?.orderIntentId) return null;
+  try {
+    return await buyerLangOfOrder(row.orderIntentId);
+  } catch (err) {
+    console.error(`[pay] a vevő nyelve nem állapítható meg (${key.id ?? key.gatewayRef}): ${(err as Error).message}`); // i18n-exempt: operator log
+    return null;
+  }
+}
+
+/**
  * ADR-0443: why this order cannot be charged in its currency (null = it can). Two facts:
  * (1) the provider of the order's market (country.payment_provider of the region's country)
  * must accept the currency; (2) an EU consumer outside Hungary is an OSS-counted sale —

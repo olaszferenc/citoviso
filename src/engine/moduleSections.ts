@@ -239,6 +239,13 @@ const CSS = `<style data-cit-modsec>
 const ICON_PIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>`;
 const ICON_STAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.3 4.9 5.2.7-3.8 3.6 1 5.2-4.7-2.6-4.7 2.6 1-5.2L4.5 9.6l5.2-.7Z"/></svg>`;
 
+/** The page language's number locale (ORSZÁG-RÉTEG 3/6) — Hungarian = the "hu-HU" every page always
+ *  used (4,7); a Bulgarian/Czech page its own. (Not lang.ts dateLocale: the engine stays free of the
+ *  country layer's import-time DB read.) */
+function numberLocale(lang: string | undefined): string {
+  return !lang || lang === "hu" ? "hu-HU" : lang;
+}
+
 function listBlock(
   d: SiteData,
   module: string,
@@ -1128,7 +1135,7 @@ function googleRatingBlock(d: SiteData, ratingAlreadyLinked = false): string {
   const g = d.googleRating;
   // The template's own review section already shows this number with the same link.
   if (!g || ratingAlreadyLinked) return "";
-  const value = g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const value = g.value.toLocaleString(numberLocale(d.lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   return (
     `<section class="cit-modsec" data-cit-module="google-rating">` +
     `<div class="cit-modsec__in">` +
@@ -1217,7 +1224,7 @@ function reviewsPendingBlock(
 
   let card = "";
   if (showScore && g) {
-    const value = g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const value = g.value.toLocaleString(numberLocale(d.lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     // §B.17 — the same honest star count every star row on the page uses (4,4 → 4).
     const on = honestStars({ rating: { value: g.value } });
     const stars = [0, 1, 2, 3, 4]

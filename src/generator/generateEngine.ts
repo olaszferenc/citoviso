@@ -20,7 +20,6 @@ import { copyKeyApplies, currentCopy, type CopyKey } from "../engine/copyFields.
 import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, Room, SiteData, Stat } from "../engine/recipe.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
-import { renderSite } from "../engine/render.js";
 import { parseHex } from "../engine/palette.js";
 import { leadToSiteData, toSitePhotos } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
@@ -31,9 +30,9 @@ import { config } from "../config.js";
 import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
 import { loadRegions, REGIONS as SCRAPE_REGIONS } from "../scraper/regions.js";
 import type { GuestReview, PortalProfile } from "../scraper/types.js";
-import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
-import { countryOf } from "../country.js";
-import { ensureLanguagePack } from "../i18n/packs.js";
+import { DEFAULT_LANG, dateLocale, langForCountry, langName } from "../i18n/lang.js";
+import { countryConfigSync, countryOf } from "../country.js";
+import { collectFallbacks, ensureLanguagePack } from "../i18n/packs.js";
 import { generateBriefAndCopy } from "./brief.js";
 import { curatorManualOf, fixHomoglyphs, validateCuratorCopy, type CuratorCopy } from "./copyCurator.js";
 import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
@@ -57,7 +56,7 @@ import {
   type LoadedLead,
 } from "./persist.js";
 import { secureMockPhotos } from "./photoTransport.js";
-import { injectRuntime } from "./runtime.js";
+import { renderMockMeasured } from "./mockLanguage.js";
 
 export interface EngineGenerateResult {
   readonly artifactId: string;
@@ -346,6 +345,8 @@ async function generateEngineMockInner(
   if (!lang) throw new Error(`Az ország (${leadCountry ?? "ismeretlen"}) nincs az ország-rétegben — a mock nem készül`); // i18n-exempt: operátori hiba
   if (lang !== DEFAULT_LANG) await ensureLanguagePack(lang);
   const dLang = { lang }; // identifier form so the i18n extractor picks up T(dLang, "…") calls
+  // ORSZÁG-RÉTEG 3/6: the AI guards read a foreign page in ITS language and country.
+  const foreignPage = lang !== DEFAULT_LANG ? { languageName: langName(lang), countryName: countryConfigSync(leadCountry)?.name ?? String(leadCountry) } : undefined;
 
   // Same trust-gated media as the AI path (A4): portal-listing images first, then the
   // confidence-gated Places set. No Street View fallback: the Static API is paid, and the
@@ -363,7 +364,7 @@ async function generateEngineMockInner(
   // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-0436, plan
   // assets/design-refs/tenant-site/varos-hero/): free (Wikimedia), never a photo of the lodging,
   // persisted in siteData.townPhoto. Not found → the typographic hero below (2026-11-07).
-  const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, lead.country ?? regionRow?.country ?? undefined, lead.lat != null && lead.lon != null ? { lat: Number(lead.lat), lon: Number(lead.lon) } : null) : null;
+  const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, leadCountry ?? undefined, lead.lat != null && lead.lon != null ? { lat: Number(lead.lat), lon: Number(lead.lon) } : null) : null;
   // The Kapunyitás needs a gate photo that is NOT the hero (owner 2026-11-04, ADR-0423): the
   // gallery's second photo, distinct by URL and fingerprint. None → the plan is refused out
   // loud HERE, before any AI spend — never a gate that opens onto itself. A town-photo lead has
@@ -377,16 +378,18 @@ async function generateEngineMockInner(
 
   // Real Google rating as a fact-safe stat (rides the same A4 gate; never fabricated). No "★"
   // glyph — the design doctrine mandates SVG stars, not the character (designCheck emoji gate).
-  const stats: Stat[] = rating
+  // The stats label is translated HERE, before the render — its fallback joins the language gate.
+  const { value: stats, fallbacks: statsFallbacks } = collectFallbacks((): Stat[] => rating
     ? [
         {
-          value: `${rating}`.replace(".", ","),
+          // In the page language's number format (ORSZÁG-RÉTEG 3/6) — Hungarian "4,7" as before.
+          value: rating.toLocaleString(dateLocale(lang)),
           // Translated at generation (the pack is ensured above) and persisted — mock=live.
           label: T(dLang, "Google-értékelés · {n} vélemény", { n: userRatingCount ?? "?" }),
           icon: "star",
         },
       ]
-    : [];
+    : []);
 
   // GUEST VOICE (ADR-0106): the guests' own public words about THIS property —
   // the tone source that finally speaks the guest's language instead of the
@@ -453,14 +456,14 @@ async function generateEngineMockInner(
       : {}),
     imageUrls: groundImages,
     ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
-    ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
+    ...(foreignPage ? { languageName: foreignPage.languageName, countryName: foreignPage.countryName } : {}),
   };
   opts.onStage?.("copy");
   // CURATOR MODE: the pack is checked against the SAME quote corpus the AI's selling points
   // are (the prose + the guest reviews, brief.ts) — a broken pack fails the generation loudly
   // instead of shipping half a text.
   const curatorCheck = opts.curatorCopy
-    ? validateCuratorCopy(opts.curatorCopy, quoteCorpusOf(sources))
+    ? validateCuratorCopy(opts.curatorCopy, quoteCorpusOf(sources), lang)
     : null;
   if (curatorCheck && !curatorCheck.ok) {
     const why = Object.entries(curatorCheck.errors).map(([k, m]) => `${k}: ${m}`).join(" · ");
@@ -554,6 +557,7 @@ async function generateEngineMockInner(
       sales: salesOf(),
       source: marketSource,
       photos: groundImages,
+      ...(foreignPage ? { foreign: foreignPage } : {}),
     });
     // Curator mode: no regeneration — the verdict goes to the curator, who rewrites (D1 = A).
     if (!curated && market.verdict === "flag" && market.critique) {
@@ -572,6 +576,7 @@ async function generateEngineMockInner(
           sales: salesOf(),
           source: marketSource,
           photos: groundImages,
+          ...(foreignPage ? { foreign: foreignPage } : {}),
         });
         // Keep the SECOND verdict either way: it describes the copy we are shipping.
         market = second;
@@ -627,7 +632,7 @@ async function generateEngineMockInner(
     // copy is final, the verdict follows it (a flag goes to the curator like any other).
     if (market) {
       try {
-        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: groundImages });
+        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: groundImages, ...(foreignPage ? { foreign: foreignPage } : {}) });
         console.log(`  marketing-őr a kiszállított szövegen: ${market.verdict.toUpperCase()} · ${market.reason}`); // i18n-exempt: operator log
       } catch (mErr) {
         // Never keep the stale verdict, and never drop it silently: unverifiable → error.
@@ -643,14 +648,14 @@ async function generateEngineMockInner(
     ...leadToSiteData(lead, {
       copy: brief
         ? {
-            tagline: fixHomoglyphs(brief.tagline),
-            intro: fixHomoglyphs(brief.intro),
+            tagline: fixHomoglyphs(brief.tagline, lang),
+            intro: fixHomoglyphs(brief.intro, lang),
             // ⛔ A vision brief describes SURFACES unless stopped: the mock shipped
             // "Bézs csempés fürdőszoba", "kék-zöld ágynemű", "sárga homlokzat".
             // The prompt asks for guest VALUE; this filter enforces it (a prompt is
             // statistical, a filter is not). Conservative: only clear decor-filler
             // with no guest value in it is dropped — fewer, but each one sells.
-            highlights: guestValueHighlights(brief.highlights.map(fixHomoglyphs)),
+            highlights: guestValueHighlights(brief.highlights.map((h) => fixHomoglyphs(h, lang))),
           }
         : null,
       // §A.3: each photo keeps the rights class it was COLLECTED under (portal vs places),
@@ -750,8 +755,9 @@ async function generateEngineMockInner(
   // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
   opts.onStage?.("render");
   const sampleDeny = sampleDenyKeys(await getDisabledModules());
-  const baseHtml = renderSite(finalRecipe, siteData, { sampleDeny });
-  const rendered = await injectRuntime(baseHtml, lang);
+  // ORSZÁG-RÉTEG 3/6: rendered AND measured — every fixed string that fell back to Hungarian on a
+  // foreign page is recorded, and such a mock is held from sending (mockLanguage.ts).
+  const { html: rendered, language: mockLanguage } = await renderMockMeasured(finalRecipe, siteData, { sampleDeny }, statsFallbacks);
 
   // EGY ARTEFAKTUM = EGY FÁJL (ADR-0140). Ez a komment eddig is ezt állította, de a
   // név csak a SABLON-változatokat választotta szét: ugyanannak a leadnek ugyanazzal a
@@ -855,6 +861,8 @@ async function generateEngineMockInner(
       // was told to fix something the system never recorded. The AI path (generate.ts)
       // already stored it; this path did not — one rule, two copies, one of them silent.
       designReason: design.reason ?? null,
+      // ORSZÁG-RÉTEG 3/6: the language gate's verdict (foreign page only; mockVerdictGate holds a flag).
+      ...(mockLanguage ?? {}),
       factVerdict: factCheck?.verdict ?? null,
       // Melyik kép lett a nyitókép, és MIÉRT (heroPick.ts). A konzol ítélet-pirulája
       // ezt olvassa: a kurátor a listán látja, ha a hero nem eladó kép — eddig csak a

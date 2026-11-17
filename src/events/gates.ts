@@ -6,6 +6,7 @@
 // here is load-bearing (§B.17) — the prompt only asks nicely, these refuse.
 //
 // Pure functions only: no DB, no network. `scripts/events-gates-check.mts` pins them.
+import { transliterate } from "../text/translit.js";
 
 /** How far ahead the recommender looks. The measured chain (17 programs, 0 wrong
  *  dates) ran on a two-week window; the weekly refresh keeps it rolling. */
@@ -107,9 +108,14 @@ export function dateMentioned(text: string, iso: string): boolean {
 
 /* ------------------------------------------------------------------ dedup ----- */
 
-/** Accent-folded lower case — "Szüreti Napok" and "szureti napok" are one name. */
+/**
+ * Accent-folded lower case — "Szüreti Napok" and "szureti napok" are one name.
+ * ORSZÁG-RÉTEG 3/6: a Cyrillic/Greek name is transliterated first (src/text/translit.ts). Until
+ * 2026-11-17 the `[^a-z0-9]` steps below deleted every Cyrillic letter, so every Bulgarian program
+ * of one day got the SAME empty key and the dedup merged them into one. A Latin name is untouched.
+ */
 export function fold(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return transliterate(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 // Words that name the KIND of text, not the event: "Szüreti napok 2026 program" and

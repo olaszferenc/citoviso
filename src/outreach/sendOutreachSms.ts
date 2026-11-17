@@ -29,6 +29,8 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import {
   ackCoversVerdicts,
   blockingVerdicts,
+  hasLanguageHold,
+  LANGUAGE_HOLD_WAY_OUT,
   hasPendingReview,
   verdictAckOf,
   verdictReasonLine,
@@ -264,6 +266,10 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   // refusing). Both now read the same module.
   const smsBlocking = blockingVerdicts(inputs);
   if (smsBlocking.length && !ackCoversVerdicts(verdictAckOf(inputs), smsBlocking)) {
+    // ORSZÁG-RÉTEG 3/6: Hungarian on a foreign lead's page — no confirmation clears it.
+    if (hasLanguageHold(smsBlocking)) {
+      return no(`${smsBlocking.map(verdictReasonLine).join(" · ")} — ${LANGUAGE_HOLD_WAY_OUT}`);
+    }
     if (hasPendingReview(smsBlocking)) {
       return no(
         `${smsBlocking.map(verdictReasonLine).join(" · ")} — kiút: előbb Vera ítélete kell erre a szövegre (a lead lapján, a mock kártyáján); ítélet nélkül nincs megerősítés`,

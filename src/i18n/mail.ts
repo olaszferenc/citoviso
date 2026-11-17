@@ -185,10 +185,15 @@ export async function langForSite(siteId: string): Promise<string> {
 /**
  * A LEAD has no site yet. Its language is the one its MOCK was generated in —
  * the same frozen `siteData.lang` the tenant would inherit on conversion, so the
- * preview mail and the previewed page can never disagree. Falls back to the
- * lead's country (ADR-0437 ②: its coordinate, else the scrape area) through the country
- * layer. A country the layer does not know has no language — Hungarian is returned so a
- * console preview still renders, LOUDLY, and the market gate keeps every send shut.
+ * preview mail and the previewed page can never disagree. A mock WITHOUT `siteData.lang` is a
+ * Hungarian mock by the siteData contract (generateEngine writes `lang` only when it is not
+ * Hungarian) — that is the page's language, not a fallback. A lead with no mock: its country's
+ * language (ADR-0437 ②: its coordinate, else the scrape area) through the country layer.
+ *
+ * ⛔ ORSZÁG-RÉTEG 3/6 (ADR-0437 ③): a lead with no mock whose country the layer does not know has
+ * NO language — this throws instead of the Hungarian it used to return „loudly”: a letter in a
+ * guessed language is the very fault the layer exists to prevent. (Every caller is behind the
+ * market gate, which already refuses such a lead; the throw makes the rule hold without it.)
  */
 export async function langForLead(leadId: string): Promise<string> {
   const art = await db
@@ -197,12 +202,13 @@ export async function langForLead(leadId: string): Promise<string> {
     .where("lead_id", "=", leadId)
     .orderBy("generated_at", "desc")
     .executeTakeFirst();
-  const fromArtifact = pickLang(art?.inputs);
-  if (fromArtifact) return fromArtifact;
+  if (art) return readLang(art.inputs);
   const country = await countryOfLead(leadId);
   const lang = langForCountry(country);
-  if (!lang) console.error(`[i18n] a lead országa (${country ?? "ismeretlen"}) nincs az ország-rétegben — hu, a kapu zár (${leadId})`); // i18n-exempt: operátori napló
-  return lang ?? DEFAULT_LANG;
+  if (!lang) {
+    throw new Error(`a lead országa (${country ?? "ismeretlen"}) nincs az ország-rétegben — nincs nyelve, nem írunk neki (${leadId})`); // i18n-exempt: operátori hiba
+  }
+  return lang;
 }
 
 function pickLang(inputs: unknown): string | null {

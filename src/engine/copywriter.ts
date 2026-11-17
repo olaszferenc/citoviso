@@ -133,6 +133,23 @@ function describeFacts(data: SiteData, region: string): string {
 }
 
 /**
+ * ORSZÁG-RÉTEG 3/6: the rules above are written for a Hungarian page — their examples are the
+ * Balaton, Hungarian landscapes and Hungarian words. On a page in another language (another
+ * country) those examples must stay examples: a Bulgarian guesthouse's copy that names the
+ * Balaton, or keeps the rule „élő magyar mondat” literally, is wrong. Only with a foreign
+ * language name (the Hungarian prompt has no such block — byte for byte as before).
+ */
+export function foreignCountryRule(languageName: string, countryName?: string): string {
+  return (
+    ` ORSZÁG: a szállás ${countryName ?? "nem Magyarországon"} van. A szabályok magyar példái (Balaton, ` +
+    `magyar tájak, magyar szavak) CSAK a hibatípust szemléltetik: Balatont, magyar tájat, magyar ` +
+    `települést vagy magyar szót SOHA ne írj — tájat és helyet csak a forrás mondhat. Az „élő, ` +
+    `természetes magyar mondat” szabály itt élő, természetes ${languageName} mondatot jelent, az adott ` +
+    `nyelv udvarias (magázó) formájában, ha a nyelvben van ilyen.`
+  );
+}
+
+/**
  * Write grounded editorial copy for the site. AI proposes brand voice; the caller attaches it
  * to the recipe sections. Vision-grounded on up to 4 real photos for mood/palette. Keyless or
  * on any error → {} (primitives fall back to generic headings). Never throws to the caller.
@@ -145,6 +162,8 @@ export async function writeEditorialCopy(
   curatorGuidance?: string,
   /** ADR-0036: target language name (e.g. "lengyel (polski)"); absent → magyar. */
   languageName?: string,
+  /** ORSZÁG-RÉTEG 3/6: the lead's country (country.name) — with a foreign languageName. */
+  countryName?: string,
 ): Promise<EditorialCopy> {
   if (!config.anthropicApiKey) return {};
   try {
@@ -155,7 +174,8 @@ export async function writeEditorialCopy(
         ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${curatorGuidance.trim()}`
         : "") +
       (languageName
-        ? `\n\nCÉL-NYELV (ADR-0036): minden címet/leadet ${languageName} nyelven írj. Minden más szabály változatlan.`
+        ? `\n\nCÉL-NYELV (ADR-0036): minden címet/leadet ${languageName} nyelven írj. Minden más szabály változatlan.` +
+          foreignCountryRule(languageName, countryName)
         : "");
     const content: AnthropicSdk.MessageParam["content"] = [
       { type: "text", text: describeFacts(data, region) + guidance },

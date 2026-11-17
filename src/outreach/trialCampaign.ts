@@ -44,7 +44,7 @@ import { plannedSiteSlug } from "../conversion/provision.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { missingPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, missingPackStrings } from "../i18n/packs.js";
 import { getEscalationConfig, legacyOutreachPercent } from "../payment/offers.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
@@ -550,7 +550,7 @@ async function rejudge(c: TrialCampaignCandidate, deps: TrialCampaignDeps): Prom
 export async function buildTrialCampaignLetterFor(
   c: TrialCampaignCandidate,
   opts: { readonly dryRun?: boolean } = {},
-): Promise<{ letter: TrialCampaignLetter; lang: string; market: { country: string | null; approved: boolean } } | { error: string }> {
+): Promise<{ letter: TrialCampaignLetter & { readonly untranslated?: readonly string[] }; lang: string; market: { country: string | null; approved: boolean } } | { error: string }> {
   if (!c.prospectId || !c.sentAt) return { error: "nincs élő prospect vagy küldési dátum" }; // i18n-exempt: operátori CLI-kimenet
   const d = await buildDraftForProspect(c.prospectId, { reserveLabel: !opts.dryRun });
   if (!d) return { error: "a piszkozat nem állítható elő" }; // i18n-exempt: operátori CLI-kimenet
@@ -558,10 +558,13 @@ export async function buildTrialCampaignLetterFor(
   if (!host) return { error: "a próba-aldomain nem határozható meg" }; // i18n-exempt: operátori CLI-kimenet
   const n = await trialCampaignNumbers();
   const offer = await trialCampaignOffer(c.leadId);
-  const letter = renderTrialCampaignLetter({
+  const sentAt = c.sentAt;
+  // ORSZÁG-RÉTEG 3/6 (ADR-0456 pattern): measured — a foreign letter with one Hungarian fallback is
+  // held by the §C gate (NYELV, „Bábelre vár”).
+  const { value: rendered, fallbacks } = collectFallbacks(() => renderTrialCampaignLetter({
     lang: d.lang,
     leadName: d.input.leadName,
-    sentIso: budapestIsoDay(c.sentAt),
+    sentIso: budapestIsoDay(sentAt),
     days: n.days,
     host,
     retentionDays: n.retentionDays,
@@ -569,7 +572,8 @@ export async function buildTrialCampaignLetterFor(
     sender: senderParts(),
     identity: advertiserIdentity(d.lang),
     links: { cta: d.draft.link, unsub: d.draft.unsubscribeLink, privacy: d.draft.privacyLink },
-  });
+  }));
+  const letter = d.lang !== DEFAULT_LANG ? { ...rendered, untranslated: fallbacks } : rendered;
   return { letter, lang: d.lang, market: d.market };
 }
 
@@ -630,7 +634,11 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   if (block) return { kind: "skipped", reason: block };
 
   const heroShotPath = !deps.offline && c.artifactId ? await ensureHeroShot(c.artifactId) : null;
-  const msg = buildTrialCampaignEmail(letter, c.address, { heroShotPath, lang });
+  const { value: msg, fallbacks: mailFallbacks } = collectFallbacks(() => buildTrialCampaignEmail(letter, c.address!, { heroShotPath, lang }));
+  // ORSZÁG-RÉTEG 3/6: the mail frame's own strings too — one Hungarian word holds the letter.
+  if (lang !== DEFAULT_LANG && mailFallbacks.length) {
+    return { kind: "skipped", reason: `NYELV: ${mailFallbacks.length} szövegrész nincs ${lang} nyelven (Bábelre vár) — TARTVA, magyarul nem megy ki` }; // i18n-exempt: operátori CLI-kimenet
+  }
   if (!msg.text.includes(letter.unsubscribeLink)) return { kind: "skipped", reason: "hiányzó leiratkozó-link" }; // i18n-exempt: operátori CLI-kimenet
 
   const changed = await rejudge(c, deps);
@@ -677,10 +685,19 @@ export async function sendTrialCampaignSms(c: TrialCampaignCandidate, deps: Tria
   }
   const n = await trialCampaignNumbers();
   const percent = await trialCampaignOfferPercent(c.leadId);
-  const sms = buildTrialCampaignSmsText({ lang, leadName: c.leadName, sentIso: budapestIsoDay(c.sentAt), days: n.days, link, percent });
+  const sentAt = c.sentAt;
+  const { value: sms, fallbacks: smsFallbacks } = collectFallbacks(() =>
+    buildTrialCampaignSmsText({ lang, leadName: c.leadName, sentIso: budapestIsoDay(sentAt), days: n.days, link, percent }),
+  );
   // §C on the text that goes out. The name is checked in its GSM-7 form — the form the
   // message actually carries (the accented original is, by design, not in it).
-  const gate = checkOutreachSms({ text: sms.text, link, unsubscribeLink }, sms.name, lang, market);
+  // ORSZÁG-RÉTEG 3/6: with the render's Hungarian fallbacks on a foreign SMS (NYELV → TARTVA).
+  const gate = checkOutreachSms(
+    { text: sms.text, link, unsubscribeLink, ...(lang !== DEFAULT_LANG ? { untranslated: smsFallbacks } : {}) },
+    sms.name,
+    lang,
+    market,
+  );
   if (gate.verdict === "FLAG") return { kind: "skipped", reason: `§C FLAG: ${gate.reasons.join(" · ")}` }; // i18n-exempt: operátori CLI-kimenet
   if (deps.dryRun) return { kind: "dry-run", detail: sms.text };
 

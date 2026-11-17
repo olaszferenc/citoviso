@@ -38,9 +38,8 @@ import { writeFile } from "node:fs/promises";
 
 import { db } from "../src/db/client.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
-import { renderSite } from "../src/engine/render.js";
 import { checkDesign } from "../src/generator/designCheck.js";
-import { injectRuntime } from "../src/generator/runtime.js";
+import { persistMockLanguage, renderMockMeasured } from "../src/generator/mockLanguage.js";
 import { getHeroPin, rerenderArtifactWithHero } from "../src/generator/heroOverride.js";
 import { secureMockPhotos } from "../src/generator/photoTransport.js";
 import { sampleHintsOf } from "../src/generator/generateEngine.js";
@@ -146,13 +145,16 @@ for (const row of rows) {
     done++;
     continue;
   }
-  const html = await injectRuntime(renderSite(recipe, siteData, { phase: "mock" }), siteData.lang);
+  // ORSZÁG-RÉTEG 3/6: measured — a foreign mock's language gate is re-judged (after Bábel delivers,
+  // this is what clears its „Bábelre vár” hold).
+  const { html, language } = await renderMockMeasured(recipe, siteData, { phase: "mock" });
+  await persistMockLanguage(String(row.id), language);
   // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
   const secured = await secureMockPhotos(html, String(row.id), (siteData.photos ?? []).map((p) => p.url), String(row.lead_id));
   await writeFile(row.path, secured.html, "utf8");
   const design = checkDesign(html);
   console.log(
-    `  ✓ ${row.name} → ${row.path} (dizájn: ${design.verdict}${design.verdict === "pass" ? "" : ` — ${design.reason}`})`,
+    `  ✓ ${row.name} → ${row.path} (dizájn: ${design.verdict}${design.verdict === "pass" ? "" : ` — ${design.reason}`}${language ? ` · nyelv: ${language.langVerdict}${language.langReason ? ` — ${language.langReason}` : ""}` : ""})`,
   );
   done++;
 }

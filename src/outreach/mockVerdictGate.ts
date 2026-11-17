@@ -33,6 +33,10 @@ export const GUARD_VERDICT_KEYS = [
   // review is the verdict instead. "pending" = no review for the CURRENT text yet, and it
   // BLOCKS (unlike an absent key): the AI guards' absence is only safe because this replaces them.
   "reviewVerdict",
+  // ORSZÁG-RÉTEG 3/6 (mockLanguage.ts): a foreign mock with a fixed string still in Hungarian
+  // (Bábel's pack lacks it). Absent on Hungarian mocks. ⛔ NOT acknowledgeable (ackCoversVerdicts):
+  // the owner's rule is that a foreign lead gets no Hungarian word — never "send anyway".
+  "langVerdict",
 ] as const;
 export type GuardVerdictKey = (typeof GUARD_VERDICT_KEYS)[number];
 
@@ -44,6 +48,7 @@ const REASON_KEY: Record<GuardVerdictKey, string> = {
   marketVerdict: "marketReason",
   guestCriticVerdict: "guestCriticReason",
   reviewVerdict: "reviewReason",
+  langVerdict: "langReason",
 };
 
 /**
@@ -62,6 +67,7 @@ export const VERDICT_LABEL: Record<GuardVerdictKey, string> = {
   marketVerdict: "Piac-kapu",
   guestCriticVerdict: "Vendég-kritikus",
   reviewVerdict: "Vera-ellenőrzés",
+  langVerdict: "Nyelvi teljesség",
 };
 
 export interface BlockingVerdict {
@@ -161,6 +167,16 @@ export function blockingVerdicts(inputs: unknown): BlockingVerdict[] {
   }
   return out;
 }
+
+/** ORSZÁG-RÉTEG 3/6: is the page still partly in Hungarian on a foreign lead? Never acknowledgeable;
+ *  the way out is Bábel's pack + a re-render (scripts/rerender-mock.mts). */
+export function hasLanguageHold(blocking: readonly BlockingVerdict[]): boolean {
+  return blocking.some((b) => b.key === "langVerdict");
+}
+
+/** The operator's way out of a language hold (one sentence, every send path says the same). */
+export const LANGUAGE_HOLD_WAY_OUT =
+  "Kiút: Bábel fordítsa le a hiányzó feliratokat (babel-pack export <nyelv>), utána újrarenderelés (npx tsx scripts/rerender-mock.mts <artifact>) — megerősítéssel sem megy ki magyarul.";
 
 /** Is there a missing review among the findings? Then nothing may be acknowledged past it. */
 export function hasPendingReview(blocking: readonly BlockingVerdict[]): boolean {
@@ -265,6 +281,8 @@ export function ackCoversVerdicts(ack: VerdictAck | null, blocking: readonly Blo
   // ⛔ A missing review is NEVER acknowledged away (owner's ruling, ADR-0329): a review is
   // what makes the curator path safe without the AI guards — "send anyway" would skip both.
   if (hasPendingReview(blocking)) return false;
+  // ⛔ ORSZÁG-RÉTEG 3/6: nor a page still partly in Hungarian on a foreign lead (owner, 2026-11-17).
+  if (hasLanguageHold(blocking)) return false;
   return blocking.every((b) => ack.verdicts[b.key] === b.value);
 }
 
@@ -309,6 +327,9 @@ export function verdictReasonLine(b: BlockingVerdict): string {
     return b.value === "pending"
       ? `${b.label}: erre a szövegre még NINCS ellenőrző ítélet`
       : `${b.label}: Vera SÉRTÉST talált${b.reason ? ` — ${b.reason}` : ""}`;
+  }
+  if (b.key === "langVerdict") {
+    return `${b.label}: Bábelre vár — TARTVA, magyarul nem megy ki${b.reason ? ` — ${b.reason}` : ""}`;
   }
   const head =
     b.value === "flag"

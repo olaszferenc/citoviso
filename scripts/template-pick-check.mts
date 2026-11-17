@@ -101,7 +101,9 @@ const engine = readFileSync(new URL("../src/generator/generateEngine.ts", import
 check(
   "bekötés: a motor a render ELŐTT ellenőrzi a kért sablont",
   /assertTemplateHonoured\(opts\.template, finalRecipe\.template\)/.test(engine) &&
-    engine.indexOf("assertTemplateHonoured(opts.template") < engine.indexOf("renderSite(finalRecipe"),
+    // ORSZÁG-RÉTEG 3/6: the render goes through renderMockMeasured (renderSite + the language gate).
+    engine.indexOf("renderMockMeasured(finalRecipe") > 0 &&
+    engine.indexOf("assertTemplateHonoured(opts.template") < engine.indexOf("renderMockMeasured(finalRecipe"),
 );
 
 if (failed) {

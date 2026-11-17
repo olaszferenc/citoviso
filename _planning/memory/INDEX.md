@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-17_orszag_reteg_3_6_mock_nyelv.md](2026-11-17_orszag_reteg_3_6_mock_nyelv.md) — 2026-11-17 — Ország-réteg 3/6: mock és nyelv (SUB `citf44663e7`, koordinátor `cit9b4690e3`)
 - [2026-11-17_orszag_reteg_3_5_kikuldes.md](2026-11-17_orszag_reteg_3_5_kikuldes.md) — 2026-11-17 — Ország-réteg 3/5: kiküldés a lead országában (cit c737a035)
 - [2026-11-17_dev_teszt_levelek_lenemitva.md](2026-11-17_dev_teszt_levelek_lenemitva.md) — 2026-11-17 — Dev teszt-levelek lenémítva; élesben 8 előtt nincs küldés
 - [2026-11-16_tervvalto_admin_kinezet.md](2026-11-16_tervvalto_admin_kinezet.md) — 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-0451)

@@ -447,8 +447,8 @@ function stayRows(req: RequestRow, lang: string, rule: boolean): MailDetailRow[]
   return [
     { label: T(lang, "Hivatkozás"), value: bookingRef(req.id), mono: true, rule },
     ...(req.unit_name ? [{ label: T(lang, "Szállás"), value: req.unit_name }] : []),
-    { label: T(lang, "Érkezés"), value: huDate(from) },
-    { label: T(lang, "Távozás"), value: huDate(to), note: T(lang, "({n} éj)", { n: nights(from, to) }) },
+    { label: T(lang, "Érkezés"), value: formatDay(from, lang) },
+    { label: T(lang, "Távozás"), value: formatDay(to, lang), note: T(lang, "({n} éj)", { n: nights(from, to) }) },
     {
       label: T(lang, "Létszám"),
       value: headcount(req, lang),
@@ -654,7 +654,7 @@ export async function stayRuleErrors(
   const earliest = addDays(today, leadTimeDays);
   if (dateFrom < earliest) {
     // huDate ends with a dot and so does the sentence — "2026. 09. 24.." was Elek FK-008 H6.
-    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest).replace(/\.$/, "") }));
+    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: formatDay(earliest, lang).replace(/\.$/, "") }));
   }
   if (dateFrom > addMonths(today, horizonMonths)) {
     errors.push(T(lang, "Ennyire előre még nem lehet foglalni."));
@@ -1021,8 +1021,8 @@ async function sendGuestAck(id: string): Promise<void> {
   if (!req) return;
   const ctx = await siteMailContext(req.site_id);
   const lang = ctx.lang;
-  const from = huDate(dayStr(req.date_from));
-  const to = huDate(dayStr(req.date_to));
+  const from = formatDay(dayStr(req.date_from), lang);
+  const to = formatDay(dayStr(req.date_to), lang);
   const unit = req.unit_name ? ` (${req.unit_name})` : "";
 
   // Booking-offer ⑭: no frozen price = the guest asked for a QUOTE (the page said so,
@@ -1257,8 +1257,8 @@ export async function notifyOwner(
             {
               unit: unitName,
               n: missing.length,
-              from: huDate(missing[0]!),
-              to: huDate(addDays(missing[missing.length - 1]!, 1)),
+              from: formatDay(missing[0]!, lang),
+              to: formatDay(addDays(missing[missing.length - 1]!, 1), lang),
             },
           )
         : multiRooms && openRooms.length && openRooms.length < requestUnitIds(req).length
@@ -1289,7 +1289,7 @@ export async function notifyOwner(
     // The guest reads the same reference on screen and in their own mail — without
     // it a phone call ("a hétvégi foglalásom ügyében…") has nothing to match on.
     `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
-    `${T(lang, "Érkezés:")} ${huDate(from)}\n${T(lang, "Távozás:")} ${huDate(until)}\n` +
+    `${T(lang, "Érkezés:")} ${formatDay(from, lang)}\n${T(lang, "Távozás:")} ${formatDay(until, lang)}\n` +
     `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     (req.meal_plan ? `${T(lang, "Ellátás:")} ${mealPlanLabel(lang, req.meal_plan)}\n` : "") +
     (req.quoted_total
@@ -1362,13 +1362,13 @@ export async function notifyOwner(
   const subject = isQuote
       ? T(lang, "Árajánlat-kérés: {guest}, {from}–{to}", {
           guest: req.guest_name,
-          from: huDate(from),
-          to: huDate(until),
+          from: formatDay(from, lang),
+          to: formatDay(until, lang),
         })
       : T(lang, "Foglalási kérés: {guest}, {from}–{to}", {
           guest: req.guest_name,
-          from: huDate(from),
-          to: huDate(until),
+          from: formatDay(from, lang),
+          to: formatDay(until, lang),
         });
   const msg = {
     ...platformMail({
@@ -1693,13 +1693,15 @@ async function sendGuestVerdict(
   publicBaseUrl: string | null,
   note: string | null,
 ): Promise<void> {
-  const from = huDate(dayStr(req.date_from));
-  const to = huDate(dayStr(req.date_to));
+  // ORSZÁG-RÉTEG 3/6: the days in the site's language (formatDay; Hungarian = the old huDate form).
+
   // ADR-0067: the GUEST is written to in the site's language — the language they
   // just booked in. A Hungarian confirmation from a Polish guesthouse is a defect
   // the guest sees before the tenant ever does.
   const ctx = await siteMailContext(req.site_id);
   const lang = ctx.lang;
+  const from = formatDay(dayStr(req.date_from), lang);
+  const to = formatDay(dayStr(req.date_to), lang);
   const host = ctx.hostName;
   const unit = req.unit_name ? ` (${req.unit_name})` : "";
   const cancelUrl = publicBaseUrl
@@ -2031,7 +2033,7 @@ export async function cancelRequest(opts: {
       .execute();
   });
 
-  const hu = { from: huDate(from), to: huDate(to) };
+  const hu = { from: formatDay(from, ctx.lang), to: formatDay(to, ctx.lang) };
   const cancelIcs = {
     filename: "foglalas-lemondas.ics",
     content: Buffer.from(
@@ -2426,7 +2428,7 @@ async function sendOwnerExpired(req: RequestRow, hours: number): Promise<void> {
     console.warn(`[booking] nincs értesítési cím — a lejárt kérés (${req.id}) CSAK naplózva`);
     return;
   }
-  const hu = { from: huDate(dayStr(req.date_from)), to: huDate(dayStr(req.date_to)) };
+  const hu = { from: formatDay(dayStr(req.date_from), lang), to: formatDay(dayStr(req.date_to), lang) };
   const subject = T(lang, "Lejárt egy foglalási kérés: {guest}, {from} — {to}", {
     guest: req.guest_name,
     ...hu,
@@ -2488,7 +2490,7 @@ async function sendOwnerExpired(req: RequestRow, hours: number): Promise<void> {
 async function sendGuestExpired(req: RequestRow, hours: number): Promise<void> {
   const ctx = await siteMailContext(req.site_id);
   const lang = ctx.lang;
-  const hu = { from: huDate(dayStr(req.date_from)), to: huDate(dayStr(req.date_to)) };
+  const hu = { from: formatDay(dayStr(req.date_from), lang), to: formatDay(dayStr(req.date_to), lang) };
   const body =
     T(lang, "Kedves {name}!", { name: req.guest_name }) +
     `\n\n` +
@@ -3054,8 +3056,8 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
   const ctx = await siteMailContext(req.site_id);
   const tz = await siteTimeZone(req.site_id);
   const lang = ctx.lang;
-  const from = huDate(dayStr(req.date_from));
-  const to = huDate(dayStr(req.date_to));
+  const from = formatDay(dayStr(req.date_from), lang);
+  const to = formatDay(dayStr(req.date_to), lang);
   const unit = req.unit_name ? ` (${req.unit_name})` : "";
   const url = `${publicBaseUrl ?? ""}/ajanlat/${req.offer_token}`;
   const expires = offerExpiresAt(req.offered_at, ctx.expireHours);
@@ -3268,8 +3270,8 @@ async function sendOwnerOfferNews(
   }
   const hu = {
     guest: req.guest_name,
-    from: huDate(dayStr(req.date_from)),
-    to: huDate(dayStr(req.date_to)),
+    from: formatDay(dayStr(req.date_from), lang),
+    to: formatDay(dayStr(req.date_to), lang),
     unit: req.unit_name ?? "",
   };
   const total = req.quoted_total ? formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY) : "";
@@ -3357,8 +3359,8 @@ async function expireOffer(req: RequestRow): Promise<boolean> {
 async function sendGuestOfferExpired(req: RequestRow): Promise<void> {
   const ctx = await siteMailContext(req.site_id);
   const lang = ctx.lang;
-  const from = huDate(dayStr(req.date_from));
-  const to = huDate(dayStr(req.date_to));
+  const from = formatDay(dayStr(req.date_from), lang);
+  const to = formatDay(dayStr(req.date_to), lang);
   const body =
     T(lang, "Kedves {name}!", { name: req.guest_name }) +
     `\n\n` +

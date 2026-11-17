@@ -17,6 +17,8 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import {
   ackCoversVerdicts,
   blockingVerdicts,
+  hasLanguageHold,
+  LANGUAGE_HOLD_WAY_OUT,
   hasPendingReview,
   verdictAckOf,
   verdictReasonLine,
@@ -538,6 +540,8 @@ export async function sendOutreachMail(
       const stale = ack ? " (a korábbi kurátori vállalás NEM fedi a mostani leletet)" : "";
       // ADR-0329: a MISSING Vera review cannot be acknowledged — the way out is the review.
       const pending = hasPendingReview(blocking);
+      // ORSZÁG-RÉTEG 3/6: a foreign page with Hungarian on it is not confirmable either.
+      const languageHold = hasLanguageHold(blocking);
       return {
         ...base,
         outcome: {
@@ -549,12 +553,14 @@ export async function sendOutreachMail(
             // kimondott kattintás kiküldi. ⚠️ Ez a mondat egy kört még a JÓVÁHAGYÁSRA
             // irányított (az előző terv maradéka): egy kiút-mondat, ami nem létező utat
             // ajánl, ugyanolyan zsákutca, mint a „kurátor-rendezésig" volt.
-            pending
-              ? "Kiút: előbb Vera ítélete kell erre a szövegre — a lead lapján, a mock kártyáján rögzíthető. Ítélet nélkül nincs „Kiküldöm mégis”."
-              : `Kiút${stale}: nyomd meg újra a küldés gombot — a felugróban látod a leletet, és a megerősítéssel kimegy. Vagy generálj új mockot.`,
+            languageHold
+              ? LANGUAGE_HOLD_WAY_OUT
+              : pending
+                ? "Kiút: előbb Vera ítélete kell erre a szövegre — a lead lapján, a mock kártyáján rögzíthető. Ítélet nélkül nincs „Kiküldöm mégis”."
+                : `Kiút${stale}: nyomd meg újra a küldés gombot — a felugróban látod a leletet, és a megerősítéssel kimegy. Vagy generálj új mockot.`,
           ],
           gate: "verdict",
-          confirmable: !pending,
+          confirmable: !pending && !languageHold,
         },
       };
     }

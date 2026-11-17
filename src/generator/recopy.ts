@@ -28,9 +28,9 @@ import { writeFile } from "node:fs/promises";
 import type { EditorialCopy } from "../engine/copywriter.js";
 import type { Recipe, RecipeSection, SiteData } from "../engine/recipe.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
-import { renderSite } from "../engine/render.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG, langName } from "../i18n/lang.js";
+import { countryConfigSync, countryOf } from "../country.js";
 import { applyManualCopy, applyManualToSurface, manualCopyOf } from "../engine/copyFields.js";
 import { criticFactsOf, factLeadOf, loadCopySources, marketSourceOf } from "./copySources.js";
 import { explainAiFailure, generateBriefAndCopy } from "./brief.js";
@@ -39,7 +39,9 @@ import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
-import { injectRuntime } from "./runtime.js";
+import { renderMockMeasured } from "./mockLanguage.js";
+// The SAME lookalike scrub as the full path, in the page language's direction (ORSZÁG-RÉTEG 3/6).
+import { fixHomoglyphs } from "./copyCurator.js";
 import { secureMockPhotos } from "./photoTransport.js";
 import { loadLead } from "./persist.js";
 import { isAttachedAsAlternative } from "../outreach/planSet.js";
@@ -49,13 +51,6 @@ export interface RecopyResult {
   /** Operator-facing summary (Hungarian) — shown as a flash on the lead page. */
   readonly message: string;
 }
-
-/** Cyrillic homoglyph scrub, same as the full path (LLM output occasionally carries them). */
-const HOMOGLYPHS: Readonly<Record<string, string>> = {
-  а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y", і: "i",
-  А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T",
-};
-const fixHomoglyphs = (s: string): string => s.replace(/[Ѐ-ӿіІ]/g, (c) => HOMOGLYPHS[c] ?? c);
 
 /** Replace ONLY the copy on each section; variant/kind/order stay exactly as they were. */
 function reCopyRecipe(recipe: Recipe, copy: EditorialCopy): Recipe {
@@ -133,6 +128,11 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // One source assembly for both post-generation paths (copySources.ts).
   const sources = await loadCopySources(row.lead_id, inputs, siteData);
   const { lead, region, ctx, lang, descriptions, amenities, photoUrls } = sources;
+  // ORSZÁG-RÉTEG 3/6: the market judge reads a foreign page in its language and country.
+  const foreignPage =
+    lang !== DEFAULT_LANG
+      ? { languageName: langName(lang), countryName: countryConfigSync(countryOf(lead))?.name ?? String(countryOf(lead)) }
+      : undefined;
   // D3 (ADR-0323): the curator's hand-written fields are FIXED — the rewrite fills only the
   // rest, and every guard below judges the overlaid text, i.e. what will actually ship.
   const manual = manualCopyOf(inputs);
@@ -155,7 +155,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
       : {}),
     imageUrls: photoUrls,
     ...(curatorPrompt?.trim() ? { curatorGuidance: curatorPrompt.trim() } : {}),
-    ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
+    ...(foreignPage ? { languageName: foreignPage.languageName, countryName: foreignPage.countryName } : {}),
   };
 
   let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
@@ -194,7 +194,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // Same gate + one fed-back retry as the full path: new words are new risk.
   let market: MarketVerdict | null = null;
   try {
-    market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls });
+    market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls, ...(foreignPage ? { foreign: foreignPage } : {}) });
     if (market.verdict === "flag" && market.critique) {
       console.log(`  ⛔ marketing-őr: FLAG · ${market.reason}`); // i18n-exempt: operator log
       const retry = await generateBriefAndCopy({
@@ -205,7 +205,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
         brief = retry.brief;
         editorial = retry.editorial;
         withManual();
-        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls });
+        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls, ...(foreignPage ? { foreign: foreignPage } : {}) });
       }
     }
   } catch (err) {
@@ -239,7 +239,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     // rule as generateEngine: re-judged, never regenerated; a failure is an error verdict.
     if (market) {
       try {
-        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls });
+        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls, ...(foreignPage ? { foreign: foreignPage } : {}) });
       } catch (err) {
         market = { verdict: "error", layer: "judge", factsNamed: [], missed: [], reason: `a kiszállított szöveg nem ítélhető: ${(err as Error).message}` }; // i18n-exempt: operator-facing verdict reason (console)
       }
@@ -251,18 +251,18 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // Only the WORDS change; photos, palette, rooms, stats and the section order stay.
   const nextData: SiteData = {
     ...siteData,
-    tagline: fixHomoglyphs(brief.tagline),
-    intro: fixHomoglyphs(brief.intro),
-    highlights: guestValueHighlights(brief.highlights.map(fixHomoglyphs)),
+    tagline: fixHomoglyphs(brief.tagline, lang),
+    intro: fixHomoglyphs(brief.intro, lang),
+    highlights: guestValueHighlights(brief.highlights.map((h) => fixHomoglyphs(h, lang))),
   };
   const overlaid = applyManualCopy(reCopyRecipe(recipe, editorial), nextData, manual);
   const nextRecipe = overlaid.recipe;
   const nextSiteData = overlaid.data;
   // Module-sales switch: the re-copied mock obeys the same sample deny as generation.
-  const html = await injectRuntime(
-    renderSite(nextRecipe, nextSiteData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
-    lang,
-  );
+  // ORSZÁG-RÉTEG 3/6: measured like the first render — the language gate is re-judged on this page.
+  const { html, language: mockLanguage } = await renderMockMeasured(nextRecipe, nextSiteData, {
+    sampleDeny: sampleDenyKeys(await getDisabledModules()),
+  });
   // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
   const secured = await secureMockPhotos(html, String(row.id), (nextSiteData.photos ?? []).map((p) => p.url), row.lead_id);
   await writeFile(row.path, secured.html, "utf8");
@@ -292,6 +292,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
         siteData: nextSiteData as unknown as Record<string, unknown>,
         designVerdict: design.verdict,
         designReason: design.reason ?? null,
+        ...(mockLanguage ?? {}),
         factVerdict: factCheck?.verdict ?? null,
         factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
         factCandidates: factCheck?.candidates.length ?? 0,

@@ -40,7 +40,16 @@
 //      and the partner quiet hours run on the lead's / partner's zone; the reply stores its
 //      language; and the HU row's clock is byte-for-byte the old Budapest window.
 //
+//   ⑩ ORSZÁG-RÉTEG 3/6 — MOCK ÉS NYELV (ADR-XXXX): the lookalike scrub follows the page's script
+//      (no unconditional Cyrillic→Latin swap), every web-font URL of a Cyrillic/Greek page names
+//      the script's subset and loads only families that carry it, a Cyrillic name gets a
+//      transliterated slug and its market's endings (no `…szallas.hu` outside .hu), the AI guards
+//      and writers get the page's language and country (no Hungarian-only prompt on a foreign
+//      page), the lead's mail language has no quiet Hungarian fallback, the mock's language gate
+//      and the follow-ups' fallback measurement are wired, and the HU answers are the old ones.
+//
 //   npx tsx scripts/country-layer-check.mts
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import {
   allCountriesSync,
@@ -614,6 +623,136 @@ SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file}
   }
   check("ismeretlen ország: nincs ablak, nincs mobil-pár", outreachWindowBlocksIn(new Date(), null) !== null && modemPairBlocks(null) !== null);
   check("bolgár/görög SMS nem hajlik GSM-7-re, a cseh igen", !gsm7FoldableLang("bg") && !gsm7FoldableLang("el") && gsm7FoldableLang("cs") && gsm7FoldableLang("hu"));
+}
+
+console.log("⑩ Mock és nyelv (ország-réteg 3/6)");
+{
+  const { alignHomoglyphs, scriptOfLang, fontSubsetsOfLang } = await import("../src/i18n/script.js");
+  const { FONT_SCRIPTS, FONT_STAND_IN, familySupports, localizeFonts } = await import("../src/engine/fontScripts.js");
+  const { SKINS, renderSkinFontLinks } = await import("../src/engine/skins.js");
+  const { slugify, suggestDomains } = await import("../src/domains.js");
+  const { judgeLanguageBlock } = await import("../src/generator/marketCheck.js");
+  const { foreignCountryRule } = await import("../src/engine/copywriter.js");
+  const { LETTER_CRITIC_SYSTEM, letterCriticSystem } = await import("../src/outreach/letterCritic.js");
+  const { mockLanguageVerdict } = await import("../src/generator/mockLanguage.js");
+  const { GUARD_VERDICT_KEYS, ackCoversVerdicts, blockingVerdicts } = await import("../src/outreach/mockVerdictGate.js");
+  const { dedupKey } = await import("../src/events/gates.js");
+
+  // ── írás (homoglyph) ──
+  const OLD_SCRUB: Record<string, string> = { а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y", і: "i", А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T" };
+  const oldScrub = (x: string) => x.replace(/[Ѐ-ӿіІ]/g, (ch) => OLD_SCRUB[ch] ?? ch);
+  const huSamples = ["tеrаsz a kеrtben", "Panzió Nаpfény", "Wi-Fi és parkoló", "Хотел"];
+  check("HU-oldalon a homoglyph-csere bájtra a régi", huSamples.every((x) => alignHomoglyphs(x, "hu") === oldScrub(x) && alignHomoglyphs(x, undefined) === oldScrub(x)));
+  check("bolgár oldalon a cirill szöveg megmarad, a vegyes szó cirillre igazodik, a latin márkanév marad",
+    alignHomoglyphs("Къща за гости с градина", "bg") === "Къща за гости с градина" && alignHomoglyphs("хотeл", "bg") === "хотел" && alignHomoglyphs("Wi-Fi", "bg") === "Wi-Fi");
+  check("az írás a nyelvből (CLDR), nem kézi táblából", scriptOfLang("bg") === "Cyrl" && scriptOfLang("el") === "Grek" && scriptOfLang("cs") === "Latn" && scriptOfLang("hu") === "Latn");
+  const MOCK_TEXT_FILES = ["src/generator/copyCurator.ts", "src/generator/recopy.ts", "src/generator/generateEngine.ts"];
+  const scrubHits = MOCK_TEXT_FILES.filter((f) => /\[Ѐ-ӿ/.test(src(f)));
+  check("nincs feltétel nélküli cirill→latin csere a mock-szöveg útján (csak src/i18n/script.ts)", scrubHits.length === 0, scrubHits.join(", "));
+  const oneArg = MOCK_TEXT_FILES.flatMap((f) =>
+    [...src(f).matchAll(/fixHomoglyphs\(([^()]*(?:\([^()]*\))?[^()]*)\)/g)]
+      .filter((m) => !/^s: string/.test(m[1]!) && !/,\s*lang\s*$/.test(m[1]!.trim()))
+      .map((m) => `${f}: ${m[0]}`),
+  );
+  check("minden fixHomoglyphs-hívás megkapja a lap nyelvét", oneArg.length === 0, oneArg.join(" · "));
+
+  // ── betűk ──
+  const famOf = (f: string) => decodeURIComponent(f.split(":")[0]!.replace(/\+/g, " "));
+  const skinFamilies = [...new Set(Object.values(SKINS).flatMap((k) => (k.fonts ?? []).map(famOf)))];
+  const unmeasured = skinFamilies.filter((f) => !(f in FONT_SCRIPTS));
+  check("minden sablon-betűcsalád írás-készlete mérve (FONT_SCRIPTS)", unmeasured.length === 0, unmeasured.join(", "));
+  const noStand = skinFamilies.filter((f) => (!familySupports(f, "Cyrl") || !familySupports(f, "Grek")) && !FONT_STAND_IN[f]);
+  check("minden cirill/görög nélküli családnak van tartalék-párja", noStand.length === 0, noStand.join(", "));
+  const badStand = Object.values(FONT_STAND_IN).filter((x) => !familySupports(x.name, "Cyrl") || !familySupports(x.name, "Grek"));
+  check("minden tartalék-pár hordozza a cirill ÉS a görög írást", badStand.length === 0, badStand.map((x) => x.name).join(", "));
+  const fontProblems: string[] = [];
+  for (const [id, skin] of Object.entries(SKINS)) {
+    const links = renderSkinFontLinks(skin);
+    if (!links) continue;
+    const css = (skin.fonts ?? []).map((f) => `font-family:'${famOf(f)}', serif;`).join("");
+    const page = `${links}<style>${css}</style>`;
+    if (localizeFonts(page, "hu") !== page || localizeFonts(page, "cs") !== page) fontProblems.push(`${id}: a latin írású lap megváltozott`);
+    for (const lang of ["bg", "el"]) {
+      const out = localizeFonts(page, lang);
+      const url = /https:\/\/fonts\.googleapis\.com\/css2\?[^"]+/.exec(out)?.[0] ?? "";
+      if (!url.includes(`subset=${fontSubsetsOfLang(lang).join(",")}`)) fontProblems.push(`${id}/${lang}: subset nélküli font-URL`);
+      const script = scriptOfLang(lang);
+      for (const fam of [...url.matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]!.replace(/\+/g, " ")))) {
+        if (!familySupports(fam, script)) fontProblems.push(`${id}/${lang}: ${fam} nem hordozza a(z) ${script} írást`);
+      }
+      for (const fam of skinFamilies.filter((f) => !familySupports(f, script) && FONT_STAND_IN[f])) {
+        if (out.includes(`'${fam}'`)) fontProblems.push(`${id}/${lang}: a CSS még '${fam}'-t kér`);
+      }
+    }
+  }
+  check("cirill/görög lapon minden font-URL kéri az írás subsetjét és csak azt hordozó családot tölt; latin lap változatlan", fontProblems.length === 0, fontProblems.slice(0, 6).join(" · "));
+  check("a betű-honosítás a renderSite közös zárásában fut (minden sablon)", /return localizeFonts\(noted, data\.lang\);/.test(src("src/engine/render.ts")));
+  // Font URLs outside the localized render path — each one named WITH its reason.
+  const FONT_URL_ALLOW: Record<string, string> = {
+    "src/engine/skins.ts": "a sablonok font-linkje — a renderSite zárása (localizeFonts) honosítja",
+    "src/engine/fontScripts.ts": "maga a honosító (a font-URL mintája)",
+    "src/engine/legalPages.ts": "a jogi lapok (impresszum/adatvédelem) a 7. lépés (jogi csomag) hatóköre — ma magyar jogi szöveg",
+    "src/generator/render.ts": "a régi korpusz-út (generate.ts) — nem a motor-mock útja",
+    "src/generator/renderVaried.ts": "a régi korpusz-út (generate.ts) változata",
+    "src/generator/theme.ts": "a régi korpusz-út témái",
+  };
+  const fontFiles = execFileSync("git", ["grep", "-l", "fonts.googleapis.com/css2", "--", "src/engine", "src/generator"], { encoding: "utf8" }).split("\n").filter(Boolean);
+  const unlisted = fontFiles.filter((f) => !FONT_URL_ALLOW[f]);
+  check("nincs honosítatlan font-URL a mock-útban (a többi ALLOW indoklással)", unlisted.length === 0, unlisted.join(", "));
+
+  // ── slug és domain ──
+  check("cirill/görög névből átírt, nem üres slug; a magyar slug a régi",
+    slugify("Къща Мария") === "kashta-mariya" && slugify("Ξενώνας Αθηνά") === "xenonas-athina" && slugify("Napfény Panzió") === "napfeny-panzio");
+  const bgSug = suggestDomains("Къща за гости Мария", [".bg", ".com", ".eu"]);
+  check("bolgár piacon a javaslat a piac végződéseiből, saját végződés elöl, nincs …szallas.hu",
+    bgSug.length > 0 && bgSug[0]!.endsWith(".bg") && bgSug.every((d) => !d.endsWith(".hu") && !d.includes("szallas")), bgSug.join(", "));
+  check("a magyar javaslat-lista a régi", suggestDomains("Napfény Panzió").join(",") === "napfenypanzio.hu,napfeny-panzio.hu,napfeny.hu,napfenyszallas.hu,napfenypanzio.com");
+
+  // ── ellenőrzők és írók a célnyelven ──
+  check("piac-bíró: magyar lapon nincs nyelvi blokk, idegen lapon van (nyelv + ország)",
+    judgeLanguageBlock(undefined) === "" && /bolgár[\s\S]*Bulgária/.test(judgeLanguageBlock({ languageName: "bolgár (български)", countryName: "Bulgária" })));
+  const genSrc = src("src/generator/generateEngine.ts");
+  const recSrc = src("src/generator/recopy.ts");
+  const calls = (t: string) => (t.match(/verifyMarketRelevance\(\{/g) ?? []).length;
+  const withForeign = (t: string) => (t.match(/verifyMarketRelevance\(\{[\s\S]*?\}\);/g) ?? []).filter((c) => /foreignPage/.test(c)).length;
+  check("minden piac-bíró hívás megkapja az idegen lap nyelvét (motor + újraírás)", calls(genSrc) > 0 && calls(genSrc) === withForeign(genSrc) && calls(recSrc) === withForeign(recSrc), `motor ${withForeign(genSrc)}/${calls(genSrc)}, újraírás ${withForeign(recSrc)}/${calls(recSrc)}`);
+  check("az író (brief + editorial) idegen lapon az ország-szabályt is kapja (Balaton csak példa)",
+    /foreignCountryRule\(input\.languageName, input\.countryName\)/.test(src("src/generator/brief.ts")) && /Balatont/.test(foreignCountryRule("bolgár", "Bulgária")) &&
+      /countryName: foreignPage\.countryName/.test(genSrc) && /countryName: foreignPage\.countryName/.test(recSrc));
+  const bgCritic = letterCriticSystem({ languageName: "bolgár (български)", countryName: "Bulgária" });
+  check("levél-kritikus: magyar perszóna bájtra, idegen nyelven az ország szállásadója", letterCriticSystem() === LETTER_CRITIC_SYSTEM && !/balatoni/.test(bgCritic) && /Bulgária/.test(bgCritic));
+  check("a vendég-kritikus csak magyar lapon fut (nyelvtudása a lényeg — idegen lapon nincs ítélet, nem hamis)", /\} else if \(brief && lang === DEFAULT_LANG\) \{\s*const critic = await applyGuestCritic/.test(genSrc));
+
+  // ── nyelv-levezetés zártan ──
+  const mailSrc = src("src/i18n/mail.ts");
+  check("a lead levél-nyelve: nincs csendes magyar visszaesés ismeretlen országra", !/return lang \?\? DEFAULT_LANG;/.test(mailSrc) && /if \(!lang\) \{\s*throw new Error/.test(mailSrc));
+  check("a fizetés utáni lapok a vevő nyelvén (nem az operátorén)",
+    (src("src/console/server.ts").match(/await useBuyerLang\(/g) ?? []).length >= 3 && /export async function buyerLangOfPayment/.test(src("src/payment/service.ts")));
+
+  // ── a mock nyelvi kapuja + követő üzenetek ──
+  check("a mock nyelvi kapuja a motorban, az újraírásban és az újrarenderelésben",
+    /renderMockMeasured\(finalRecipe, siteData/.test(genSrc) && /\.\.\.\(mockLanguage \?\? \{\}\)/.test(genSrc) && /renderMockMeasured\(nextRecipe/.test(recSrc) && /persistMockLanguage\(/.test(src("scripts/rerender-mock.mts")));
+  check("nyelvi kapu: magyar mock nem kap kulcsot, hiányos idegen mock FLAG",
+    mockLanguageVerdict("hu", ["x"]) === null && mockLanguageVerdict("bg", ["Foglalás"])?.langVerdict === "flag" && mockLanguageVerdict("bg", [])?.langVerdict === "pass");
+  const blk = blockingVerdicts({ langVerdict: "flag", langReason: "x" });
+  check("a nyelvi FLAG blokkol, és megerősítéssel sem oldható",
+    (GUARD_VERDICT_KEYS as readonly string[]).includes("langVerdict") && blk.length === 1 && !ackCoversVerdicts({ at: "", by: "op", reason: "", verdicts: { langVerdict: "flag" } }, blk));
+  const FOLLOWUPS = ["src/outreach/nonOpenerFollowup.ts", "src/outreach/behaviorMessage.ts", "src/outreach/escalationFollowup.ts", "src/outreach/trialCampaign.ts"];
+  const unmeasuredFu = FOLLOWUPS.filter((f) => !/collectFallbacks\(/.test(src(f)) || !/untranslated/.test(src(f)));
+  check("a követő üzenetek (nem-nyitó, viselkedés, eszkaláció, próba-kampány) renderje a fallback-mérés alatt", unmeasuredFu.length === 0, unmeasuredFu.join(", "));
+  const behSrc = src("src/outreach/behaviorMessage.ts");
+  check("a viselkedés-üzenet ára a lead régiójának pénznemében", !/formatHuf\(/.test(behSrc) && /currency: d\.input\.currency/.test(behSrc));
+
+  // ── helyi szabályok, tartalom ──
+  check("esemény-dedup: két különböző cirill program nem olvad egy kulcsba", dedupKey("Фестивал на виното", "Мелник", "2026-09-01") !== dedupKey("Джаз вечер", "Мелник", "2026-09-01"));
+  check("esemény-dedup: a magyar kulcs a régi", dedupKey("Szüreti napok Tihanyban", "Tihany", "2026-09-01") === "2026-09-01|napok szureti");
+  check("idegen lapra csak a runtime saját feliratai kerülnek (nem a teljes csomag — a dizájn-őr emoji-szabálya miatt)", /window\.CIT_I18N=\$\{jsonForScript\(await runtimePack\(lang\)\)\}/.test(src("src/generator/runtime.ts")));
+  const { endingsForCountry } = await import("../src/domains.js");
+  check("domain-javaslat: más ország nemzeti végződése kiesik, a magyar lista változatlan",
+    endingsForCountry([".hu", ".com", ".eu"], ["bg", "com"]).join(",") === ".com,.eu" && endingsForCountry([".hu", ".com", ".eu"], ["hu", "com"]).join(",") === ".hu,.com,.eu" &&
+      /endingsForCountry\(offeredTlds\(sugRegion\)/.test(src("src/console/server.ts")) && /endingsForCountry\(offeredTlds\(regionId\)/.test(src("src/domains/domainAdmin.ts")));
+  check("településfotó: a wiki-nyelv az ország-rétegből", /countryConfigSync\(cc\)\?\.defaultLang/.test(src("src/generator/townPhoto.ts")));
+  check("foglalási levelek napja a levél nyelvén (csak a huDate definíciója és a magyar ág maradt)", (src("src/booking/requests.ts").match(/\bhuDate\(/g) ?? []).length === 2);
 }
 
 await db.destroy();

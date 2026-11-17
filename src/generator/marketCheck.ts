@@ -1053,13 +1053,50 @@ export function sourcedPlaceWords(heroNorm: string, source: MarketSource): strin
     .filter((w) => hay.includes(w.slice(0, 6)));
 }
 
+/**
+ * ORSZÁG-RÉTEG 3/6: a page NOT in Hungarian — its language's display name (lang.ts langName) and
+ * the lead's country as the layer names it. The caller passes it for a foreign page only; absent
+ * = the Hungarian judge, byte for byte. (Not the language code: this module stays free of the
+ * country layer's import-time DB read, so the pure gate scripts keep running without a DB.)
+ */
+export interface ForeignPage {
+  readonly languageName: string;
+  readonly countryName: string;
+}
+
+/**
+ * The judge's language block for a foreign page. The rules above are written for a Hungarian
+ * page (their examples are Hungarian); on a Bulgarian/Czech/… page the judge must read the copy
+ * as a native guest of THAT language and country would — otherwise rule 1b („élő magyar”) fails
+ * every foreign headline. No foreign page → "" (the system prompt byte for byte).
+ */
+export function judgeLanguageBlock(page: ForeignPage | undefined): string {
+  if (!page) return "";
+  const name = page.languageName;
+  return (
+    `\n\nNYELV ÉS ORSZÁG: a szöveg ${name} nyelvű, a szállás ${page.countryName} területén van, ` +
+    `a vendég e nyelv anyanyelvi beszélője. A fenti szabályokat EZEN a nyelven alkalmazd: az 1b szabály ` +
+    `„élő magyar” helyett élő ${name} nyelvet kér (tükörfordítás, kitalált összetett szó, nem élő fordulat ` +
+    `bukik), és a klisé (5.) is az adott nyelv kliséje. A magyar példák csak a hibatípust szemléltetik, ` +
+    `magyar szó a szövegben NEM elvárás — magyar szó vagy mondat egy ${name} oldalon HIBA (4. szabály: a ` +
+    `vendég nem érti). A "reason" és a "critique" mezőt magyarul írd (az operátor olvassa, a szövegíró ` +
+    `${name} nyelven ír, de a magyar utasítást érti); a "missed" elemeket SZÓ SZERINT a listából másold.`
+  );
+}
+
 export async function verifyMarketRelevance(input: {
   sales: SalesSurface;
   source: MarketSource;
   photos?: readonly string[];
+  /** ORSZÁG-RÉTEG 3/6: set for a NON-Hungarian page only (see ForeignPage). */
+  foreign?: ForeignPage;
 }): Promise<MarketVerdict> {
   const blob = salesBlob(input.sales);
   const amenities = (input.source.amenities ?? []).filter((a) => a.trim().length > 1);
+  // ⛔ The structural layers below are HUNGARIAN word lists (stems, material words, the value
+  // vocabulary): on a Bulgarian page they would name nothing and flag every mock. A foreign
+  // page goes to the judge alone, with its language block (judgeLanguageBlock).
+  if (input.foreign) return judgeMarketRelevance(input, amenities, [], []);
 
   const named = amenities.filter((a) => copyNames(a, blob));
   const missedRanked = amenities
@@ -1212,6 +1249,18 @@ export async function verifyMarketRelevance(input: {
     }
   }
 
+  return judgeMarketRelevance(input, amenities, named, missedRanked);
+}
+
+/** Layer 2: the marketing judge (Hungarian page: on what the structural layer let through;
+ *  foreign page: alone, with the language block). */
+async function judgeMarketRelevance(
+  input: Parameters<typeof verifyMarketRelevance>[0],
+  amenities: readonly string[],
+  named: string[],
+  missedRanked: string[],
+): Promise<MarketVerdict> {
+  const foreign = Boolean(input.foreign);
   // ── Layer 2: the marketing judge, on what the structural layer let through. ─────
   if (!config.anthropicApiKey) {
     return {
@@ -1261,11 +1310,14 @@ export async function verifyMarketRelevance(input: {
         `ALCÍM: ${input.sales.tagline ?? "(nincs)"}\n` +
         `BEMUTATKOZÓ: ${input.sales.intro ?? "(nincs)"}\n` +
         `KIEMELÉSEK:\n${input.sales.highlights.map((h) => `  - ${h}`).join("\n") || "  (nincs)"}\n\n` +
-        `A determinisztikus előszűrő szerint a szöveg ezeket az igazolt szolgáltatásokat nevezi ` +
-        `meg: ${named.length ? named.join(", ") : "EGYET SEM"}.\n` +
-        (missedRanked.length
-          ? `Ezeket az erős eladási pontokat viszont NEM említi: ${missedRanked.slice(0, 8).join(", ")}.\n`
-          : "") +
+        // The pre-filter is a Hungarian stem match — on a foreign page it knows nothing, so it is not quoted.
+        (foreign
+          ? ""
+          : `A determinisztikus előszűrő szerint a szöveg ezeket az igazolt szolgáltatásokat nevezi ` +
+            `meg: ${named.length ? named.join(", ") : "EGYET SEM"}.\n` +
+            (missedRanked.length
+              ? `Ezeket az erős eladási pontokat viszont NEM említi: ${missedRanked.slice(0, 8).join(", ")}.\n`
+              : "")) +
         `\nÍtélj a fenti szabályok szerint. A képek a szállás valós fotói — a 4. szabálynál ` +
         `(félrevezető állítás) ezek is bizonyítékok.`,
     });
@@ -1277,7 +1329,7 @@ export async function verifyMarketRelevance(input: {
       // whole guard reached the owner's screen. `reason` + `missed[]` + a concrete `critique`
       // is simply more than 900 tokens of Hungarian.
       max_tokens: 2500,
-      system: cachedSystem(JUDGE_SYSTEM),
+      system: cachedSystem(JUDGE_SYSTEM + judgeLanguageBlock(input.foreign)),
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: JUDGE_SCHEMA } },
     } as AnthropicNS.MessageCreateParamsNonStreaming);

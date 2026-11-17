@@ -11,6 +11,7 @@ import { config } from "../config.js";
 import type { RenderPhase } from "../engine/recipe.js";
 import { huArticleLower } from "../hu.js";
 import { packForClientAsync } from "../i18n/packs.js";
+import { T } from "../i18n/mail.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { jsonForScript } from "../text/jsonForScript.js";
@@ -143,6 +144,56 @@ const CIT_CREDIT =
   `style="color:inherit;text-decoration:underline">Citoviso</a> készítette — modern honlap percek alatt.` +
   `</div>`;
 
+const CREDIT_LINK = `<a href="https://citoviso.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Citoviso</a>`;
+
+/**
+ * The credit strip in the page's language (ORSZÁG-RÉTEG 3/6). Hungarian → CIT_CREDIT, byte for byte;
+ * any other language → the same strip, the sentence through T() (until 2026-11-17 a Bulgarian live
+ * page closed on a Hungarian sentence). `data-cit-credit` marks it so a refresh can find it again.
+ */
+function creditStrip(lang: string | undefined): string {
+  if (!lang || lang === "hu") return CIT_CREDIT;
+  return (
+    `<div data-cit-runtime data-cit-credit style="font:400 13px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;` +
+    `text-align:center;padding:16px 20px;color:#8a8a8a;border-top:1px solid rgba(128,128,128,.22)">` +
+    T(lang, "Ezt az oldalt a {brand} készítette — modern honlap percek alatt.", { brand: CREDIT_LINK }) +
+    `</div>`
+  );
+}
+
+/** The client runtime's own visible strings — every `tr("…")` literal of cit-runtime.js. */
+let runtimeStringsCache: string[] | null = null;
+async function runtimeStrings(): Promise<string[]> {
+  if (runtimeStringsCache) return runtimeStringsCache;
+  const js = await readFile(path.join(RUNTIME_DIR, "cit-runtime.js"), "utf8");
+  runtimeStringsCache = [...new Set([...js.matchAll(/\btr\("((?:[^"\\]|\\.)*)"\)/g)].map((m) => JSON.parse(`"${m[1]}"`) as string))];
+  return runtimeStringsCache;
+}
+
+/** The language's translations of exactly the runtime's strings (missing ones left out → tr() shows the source). */
+async function runtimePack(lang: string): Promise<Record<string, string>> {
+  const pack = await packForClientAsync(lang);
+  const out: Record<string, string> = {};
+  for (const k of await runtimeStrings()) if (pack[k]) out[k] = pack[k];
+  return out;
+}
+
+/**
+ * ORSZÁG-RÉTEG 3/6 (the mock's language gate): which of the strings injectRuntime() adds to a
+ * `lang` page would show in Hungarian — the client widgets' `tr()` literals missing from the
+ * language's pack, and the credit sentence when the phase shows it. Hungarian → [].
+ */
+export async function runtimeUntranslated(lang: string | undefined, phase: RenderPhase = "mock"): Promise<string[]> {
+  if (!lang || lang === "hu") return [];
+  const pack = await packForClientAsync(lang);
+  const missing = (await runtimeStrings()).filter((s) => !pack[s]);
+  if (phase === "live" || config.mockCitovisoCredit) {
+    const credit = "Ezt az oldalt a {brand} készítette — modern honlap percek alatt.";
+    if (!pack[credit]) missing.push(credit);
+  }
+  return missing;
+}
+
 /** Every block injectRuntime added: head guards, i18n map, style, script, credit strip. */
 const RUNTIME_BLOCKS: readonly RegExp[] = [
   /<script data-cit-runtime>[\s\S]*?<\/script>\n?/g,
@@ -177,18 +228,22 @@ export async function injectRuntime(
   phase: RenderPhase = "mock",
 ): Promise<string> {
   if (html.includes("data-cit-runtime")) {
-    const hadCredit = html.includes(">Citoviso</a> készítette");
+    const hadCredit = html.includes(">Citoviso</a> készítette") || html.includes("data-cit-credit");
     const pageLang = lang ?? /<html[^>]*\blang="([a-z]{2})"/i.exec(html)?.[1]?.toLowerCase();
     return injectRuntime(stripRuntime(html), pageLang, hadCredit ? "live" : phase);
   }
   let out = fillBookingFallback(html);
   out = injectHeadGuards(out);
   const block = await runtimeBlock();
+  // ORSZÁG-RÉTEG 3/6: only the runtime's OWN strings (its `tr("…")` literals — the only tr() calls
+  // there are), not the whole pack. Until 2026-11-17 every foreign page carried all ~7000 catalog
+  // strings, console texts with ⛔/✅ glyphs among them — so the design gate (no emoji, §B.4) flagged
+  // EVERY non-Hungarian mock, and the page shipped our operator vocabulary to the guest.
   const i18n =
     lang && lang !== "hu"
-      ? `<script data-cit-runtime>window.CIT_I18N=${jsonForScript(await packForClientAsync(lang))}</script>\n`
+      ? `<script data-cit-runtime>window.CIT_I18N=${jsonForScript(await runtimePack(lang))}</script>\n`
       : "";
-  const credit = phase === "live" || config.mockCitovisoCredit ? `${CIT_CREDIT}\n` : "";
+  const credit = phase === "live" || config.mockCitovisoCredit ? `${creditStrip(lang)}\n` : "";
   const tail = `${credit}${i18n}${block}`;
   if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, `${tail}</body>`);
   return out + "\n" + tail; // no </body> — append as a safe fallback

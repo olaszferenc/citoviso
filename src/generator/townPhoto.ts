@@ -15,6 +15,7 @@
 // The result is persisted in the mock's siteData (SiteData.townPhoto), so a rerender never asks
 // again. Any failure → null: the caller keeps the typographic hero (the 2026-11-07 behaviour).
 
+import { countryConfigSync } from "../country.js";
 import type { TownPhoto } from "../engine/recipe.js";
 
 const UA = "CitovisoMockBot/1.0 (https://citoviso.com)";
@@ -182,8 +183,20 @@ async function fromCommonsGeo(city: string, at: GeoPoint): Promise<TownPhoto | n
 /** The Wikipedia language editions to ask for a town in `country` (ISO-2). */
 function wikiLangs(country: string | undefined): string[] {
   const own: Record<string, string> = { HU: "hu", AT: "de", DE: "de", SK: "sk", RO: "ro", HR: "hr", SI: "sl", PL: "pl", CZ: "cs", IT: "it" };
-  const l = own[(country ?? "HU").toUpperCase()];
-  return l ? [l, "en"] : ["en"];
+  const cc = (country ?? "HU").toUpperCase();
+  // ORSZÁG-RÉTEG 3/6: the country layer names the language (a Bulgarian town is asked of bgwiki —
+  // until 2026-11-17 BG had no entry and only enwiki was asked, by a Cyrillic title it rarely has).
+  const l = countryConfigSync(cc)?.defaultLang ?? own[cc];
+  return l && l !== "en" ? [l, "en"] : ["en"];
+}
+
+function englishRegionName(iso2: string): string | undefined {
+  try {
+    const n = new Intl.DisplayNames(["en"], { type: "region" }).of(iso2);
+    return n && n !== iso2 ? n : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Article titles to try in `wikiLang`: the bare name, then the namesake-proof forms
@@ -193,7 +206,10 @@ function titlesFor(city: string, wikiLang: string, country: string): string[] {
   const en: Record<string, string> = { HU: "Hungary", AT: "Austria", DE: "Germany", SK: "Slovakia", RO: "Romania", HR: "Croatia", SI: "Slovenia", PL: "Poland", CZ: "Czech Republic", IT: "Italy" };
   const out = [city];
   if (wikiLang === "hu" && hu[country]) out.push(`${city} (${hu[country]})`, `${city} (település)`);
-  if (wikiLang === "en" && en[country]) out.push(`${city}, ${en[country]}`);
+  // ORSZÁG-RÉTEG 3/6: a country outside the table still gets its namesake-proof enwiki form, from
+  // the platform's region names („Melnik, Bulgaria”) — never a guessed article.
+  const enName = en[country] ?? englishRegionName(country);
+  if (wikiLang === "en" && enName) out.push(`${city}, ${enName}`);
   return out;
 }
 

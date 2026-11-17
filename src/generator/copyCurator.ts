@@ -27,21 +27,20 @@ import { validateSellingPoints, type GeneratedBrief } from "./brief.js";
 import { copyValueError, normalizeCopyValue } from "./copyManual.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { babyOpening, firstSentence } from "./lyricOpening.js";
+import { alignHomoglyphs } from "../i18n/script.js";
 
 /** The account name the persona writes under (console operator `poe`). */
 export const POE_BY = "Poe";
 
-// Cyrillic → Latin homoglyph map. LLM output occasionally carries lookalike Cyrillic letters
-// inside Hungarian words (e.g. "е" U+0435 in "teraszon") — invisible on screen but breaking
-// search/matching (the fact guard caught one in production). Applied to all brief-derived
-// text — and to the curator's, who writes with an LLM too.
-const HOMOGLYPHS: Readonly<Record<string, string>> = {
-  а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y", і: "i",
-  А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T",
-};
-
-export function fixHomoglyphs(s: string): string {
-  return s.replace(/[Ѐ-ӿіІ]/g, (ch) => HOMOGLYPHS[ch] ?? ch);
+// Lookalike-letter scrub (src/i18n/script.ts). LLM output occasionally carries lookalike letters
+// of the OTHER script inside a word (e.g. Cyrillic "е" U+0435 in "teraszon") — invisible on
+// screen but breaking search/matching (the fact guard caught one in production). Applied to all
+// brief-derived text — and to the curator's, who writes with an LLM too.
+// ⛔ ORSZÁG-RÉTEG 3/6: the direction follows the PAGE's language — a Latin-script page keeps the
+// old Cyrillic→Latin swap byte for byte; a Bulgarian page keeps its Cyrillic (only a mixed-script
+// word is aligned to Cyrillic). Until 2026-11-17 every Bulgarian text was bent into Latin.
+export function fixHomoglyphs(s: string, lang?: string | null): string {
+  return alignHomoglyphs(s, lang);
 }
 
 /** What the curator hands the engine (CLI / console form / Poe's own session). */
@@ -79,7 +78,7 @@ export type CuratorCopyCheck =
  * the AI's selling points are checked against: descriptions + guest-review texts).
  * Errors block the generation; warnings ride along to the operator log.
  */
-export function validateCuratorCopy(pack: CuratorCopy, corpus: readonly string[]): CuratorCopyCheck {
+export function validateCuratorCopy(pack: CuratorCopy, corpus: readonly string[], lang?: string | null): CuratorCopyCheck {
   const errors: Record<string, string> = {};
   const warnings: string[] = [];
   const fields: Partial<Record<CopyKey, CopyValue>> = {};
@@ -89,7 +88,7 @@ export function validateCuratorCopy(pack: CuratorCopy, corpus: readonly string[]
       errors[key] = "Ismeretlen mező.";
       continue;
     }
-    const cleaned: CopyValue = Array.isArray(raw) ? raw.map((x) => fixHomoglyphs(String(x))) : fixHomoglyphs(String(raw));
+    const cleaned: CopyValue = Array.isArray(raw) ? raw.map((x) => fixHomoglyphs(String(x), lang)) : fixHomoglyphs(String(raw), lang);
     const value = normalizeCopyValue(key, cleaned);
     const err = copyValueError(key, value);
     if (err) errors[key] = err;
@@ -118,7 +117,7 @@ export function validateCuratorCopy(pack: CuratorCopy, corpus: readonly string[]
       warnings.push(`kiemelés kiesik (berendezés-leírás, nem vendég-érték): „${h}”`);
   }
 
-  const offered = (pack.sellingPoints ?? []).map((p) => ({ label: fixHomoglyphs(p.label), quote: p.quote }));
+  const offered = (pack.sellingPoints ?? []).map((p) => ({ label: fixHomoglyphs(p.label, lang), quote: p.quote }));
   const sellingPoints = validateSellingPoints(offered, corpus);
   for (const p of offered) {
     if (!sellingPoints.some((s) => s.label.toLowerCase() === p.label.trim().toLowerCase()))

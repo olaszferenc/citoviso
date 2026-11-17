@@ -5169,6 +5169,8 @@ function mockInputLabel(key: string, lang = "hu"): string {
     case "guestCriticRounds": return T(lang, "Vendég-kritikus körei");
     // ADR-0329. ⛔ A kapu neve BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
     case "reviewVerdict": return T(lang, "Vera-ellenőrzés");
+    // ORSZÁG-RÉTEG 3/6. ⛔ A kapu neve BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
+    case "langVerdict": return T(lang, "Nyelvi teljesség");
     default: return key.replace(/_/g, " ");
   }
 }

@@ -39,10 +39,8 @@ export interface EnquiryResult {
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-// The fourth copy of "write a calendar day the way a human reads it" lived
-// here; it now shares the one in text/day.ts. Same output, and the shared one
-// passes non-ISO input through instead of appending a dot to whatever it got.
-const huDate = (iso: string): string => formatDay(iso);
+// The fourth copy of "write a calendar day the way a human reads it" lived here; it now shares
+// the one in text/day.ts — in the mail's language (ORSZÁG-RÉTEG 3/6; Hungarian = the old form).
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -95,14 +93,14 @@ export async function createEnquiry(input: EnquiryInput): Promise<EnquiryResult>
   const phone = oneLine(input.guestPhone);
   const subject = T(lang, "Foglalási érdeklődés: {guest}, {from}–{to}", {
     guest: name,
-    from: huDate(input.dateFrom),
-    to: huDate(input.dateTo),
+    from: formatDay(input.dateFrom, lang),
+    to: formatDay(input.dateTo, lang),
   });
   const text =
     T(lang, "Új foglalási érdeklődés érkezett az oldaláról.") +
     `\n\n${T(lang, "Vendég:")} ${name}\n` +
-    `${T(lang, "Érkezés:")} ${huDate(input.dateFrom)}\n` +
-    `${T(lang, "Távozás:")} ${huDate(input.dateTo)}\n` +
+    `${T(lang, "Érkezés:")} ${formatDay(input.dateFrom, lang)}\n` +
+    `${T(lang, "Távozás:")} ${formatDay(input.dateTo, lang)}\n` +
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: guests })}\n` +
     (email ? `${T(lang, "E-mail:")} ${email}\n` : "") +
     (phone ? `${T(lang, "Telefon:")} ${phone}\n` : "") +
@@ -128,7 +126,7 @@ export async function createEnquiry(input: EnquiryInput): Promise<EnquiryResult>
       `<p style="font-size:17px"><strong>${esc(T(lang, "Új foglalási érdeklődés érkezett az oldaláról."))}</strong></p>` +
       `<p style="font-size:16px;line-height:1.7">` +
       `<strong>${esc(name)}</strong><br>` +
-      `${esc(huDate(input.dateFrom))} — ${esc(huDate(input.dateTo))}<br>` +
+      `${esc(formatDay(input.dateFrom, lang))} — ${esc(formatDay(input.dateTo, lang))}<br>` +
       `${esc(T(lang, "{n} fő", { n: guests }))}` +
       (email ? `<br>${T(lang, "E-mail:")} ${esc(email)}` : "") +
       (phone ? `<br>${T(lang, "Telefon:")} ${esc(phone)}` : "") +

@@ -39,7 +39,7 @@ import { recipientKey } from "../email/address.js";
 import { buildNonOpenerEmail, renderNonOpenerLetter, type NonOpenerLetter } from "../email/nonOpenerEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { missingPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, missingPackStrings } from "../i18n/packs.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { normalizePhone } from "../text/phone.js";
 import { buildDraftForProspect } from "./draft.js";
@@ -294,13 +294,16 @@ export interface NonOpenerDeps {
   readonly senderName?: string;
 }
 
+/** A letter with its render's Hungarian fallbacks (foreign letter only — ORSZÁG-RÉTEG 3/6). */
+type MeasuredLetter = NonOpenerLetter & { readonly untranslated?: readonly string[] };
+
 /** The letter for one candidate: `gate` carries the plain link (what the §C judge reads, as on
  *  the cold path), `send` the same letter with the `?f` channel letter. */
 export async function buildNonOpenerLetterFor(
   c: NonOpenerCandidate,
   opts: { readonly dryRun?: boolean; readonly senderName: string },
 ): Promise<
-  | { gate: NonOpenerLetter; send: NonOpenerLetter; lang: string; market: { country: string | null; approved: boolean } }
+  | { gate: MeasuredLetter; send: MeasuredLetter; lang: string; market: { country: string | null; approved: boolean } }
   | { error: string }
 > {
   if (!c.prospectId) return { error: "nincs élő prospect" }; // i18n-exempt: operátori kimenet
@@ -326,9 +329,16 @@ export async function buildNonOpenerLetterFor(
     },
   };
   const links = { unsub: d.draft.unsubscribeLink, privacy: d.draft.privacyLink };
+  // ORSZÁG-RÉTEG 3/6 (ADR-0456 pattern): the render collects its own Hungarian fallbacks; on a
+  // foreign letter the §C gate holds it on any one of them („Bábelre vár”), and an unmeasured
+  // foreign letter is held too — so the measurement rides on BOTH letters.
+  const gate = collectFallbacks(() => renderNonOpenerLetter({ ...input, links: { ...links, cta: d.draft.link } }));
+  const send = collectFallbacks(() => renderNonOpenerLetter({ ...input, links: { ...links, cta: tagLink(d.draft.link, "f") } }));
+  const untranslated = [...new Set([...(d.draft.untranslated ?? []), ...gate.fallbacks, ...send.fallbacks])];
+  const measured = d.lang !== DEFAULT_LANG ? { untranslated } : {};
   return {
-    gate: renderNonOpenerLetter({ ...input, links: { ...links, cta: d.draft.link } }),
-    send: renderNonOpenerLetter({ ...input, links: { ...links, cta: tagLink(d.draft.link, "f") } }),
+    gate: { ...gate.value, ...measured },
+    send: { ...send.value, ...measured },
     lang: d.lang,
     market: d.market,
   };
@@ -380,7 +390,11 @@ export async function sendNonOpenerFollowup(c: NonOpenerCandidate, deps: NonOpen
   if (block) return { kind: "skipped", reason: block };
   const hero = deps.heroShot ?? (c.artifactId ? await ensureHeroShot(c.artifactId) : null);
   if (!hero) return { kind: "skipped", reason: "nincs nyitókép — a levél a képpel indul, kép nélkül nem megy" }; // i18n-exempt: operátori kimenet
-  const msg = buildNonOpenerEmail(built.send, c.address, { heroShotPath: hero, lang: built.lang });
+  const { value: msg, fallbacks: mailFallbacks } = collectFallbacks(() => buildNonOpenerEmail(built.send, c.address!, { heroShotPath: hero, lang: built.lang }));
+  // ORSZÁG-RÉTEG 3/6: the mail frame's own strings too — one Hungarian word holds the letter.
+  if (built.lang !== DEFAULT_LANG && mailFallbacks.length) {
+    return { kind: "skipped", reason: `NYELV: ${mailFallbacks.length} szövegrész nincs ${built.lang} nyelven (Bábelre vár) — TARTVA, magyarul nem megy ki` }; // i18n-exempt: operátori kimenet
+  }
   if (!msg.text.includes(built.send.unsubscribeLink)) return { kind: "skipped", reason: "hiányzó leiratkozó-link" }; // i18n-exempt: operátori kimenet
 
   // Re-judge right before the claim: an answer, an open or an unsubscribe may have landed.

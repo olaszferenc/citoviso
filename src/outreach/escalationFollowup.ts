@@ -33,6 +33,9 @@ import { trialCampaignReached } from "./trialCampaign.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { T } from "../i18n/mail.js";
+import { DEFAULT_LANG } from "../i18n/lang.js";
+import { collectFallbacks } from "../i18n/packs.js";
+import { foreignEscalationSentence } from "./foreignPrice.js";
 
 export interface FollowupRunResult {
   readonly sent: number;
@@ -113,6 +116,9 @@ export async function sendEscalationFollowups(
     }
     const lang = base.lang;
     const name = base.input.leadName;
+    // ORSZÁG-RÉTEG 3/6 (ADR-0456 pattern): the follow-up's render is MEASURED — on a foreign letter
+    // one Hungarian fallback holds it (§C NYELV, „Bábelre vár”), it never goes out half Hungarian.
+    const measured = collectFallbacks(() => {
     const subject = T(lang, "{name} – döntés-segítő ajánlat", { name });
     // ⛔ The follow-up supplies its OWN parts. It used to be `{...base.draft, subject,
     // body}` — which overrode the text but INHERITED the cold letter's parts. Since the
@@ -126,9 +132,12 @@ export async function sendEscalationFollowups(
     // owner rejected (ADR-0101). It rides in the SALUTATION instead (nominative, no
     // ending to guess) — which since 2026-09-11 opens the letter on both paths.
     // The same from-price as the cold letter: the cheapest offered package (owner 2026-10-12).
+    // ORSZÁG-RÉTEG 3/6: in the lead region's currency (absent / HUF = forint, as before).
+    const foreignMoney = Boolean(base.input.currency && base.input.currency.toUpperCase() !== "HUF");
     const { priceList: listPrice, priceOffer: offerPrice } = fromPricePair(
       base.input.fromMonthly ?? null,
       f.percent,
+      foreignMoney ? { currency: base.input.currency, lang } : undefined,
     );
     const parts: OutreachParts = {
       greet: T(lang, "Tisztelt {name}!", { name }),
@@ -139,7 +148,9 @@ export async function sendEscalationFollowups(
         { deadline: deadlineText(f.expiresAt, lang), percent: String(f.percent) },
       ),
       p2: T(lang, "A fenti linken a kedvezményes ár már be van állítva — egy kattintással megrendelheti."),
-      p3: T(
+      p3: foreignMoney
+        ? foreignEscalationSentence(lang, { percent: String(f.percent), price: listPrice, offerPrice })
+        : T(
         lang,
         "Döntés-segítő ajánlatként {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
         { percent: String(f.percent), price: listPrice, offerPrice },
@@ -175,6 +186,9 @@ export async function sendEscalationFollowups(
     );
 
     const draft = { ...base.draft, subject, body, parts, whyLink };
+    return { draft, msg: buildOutreachEmail(draft, email, { lang, openVia: "e" }) };
+    });
+    const draft = lang !== DEFAULT_LANG ? { ...measured.value.draft, untranslated: measured.fallbacks } : measured.value.draft;
     // §C DETERMINISTIC GATE on the REPLACED text (guard-scope lesson: a new send
     // path must run the same judge as the old one, incl. the ADR-0036 country
     // gate) — a FLAGged follow-up is skipped and reported, never sent.
@@ -186,7 +200,7 @@ export async function sendEscalationFollowups(
       skipped++;
       continue;
     }
-    const msg = buildOutreachEmail(draft, email, { lang, openVia: "e" });
+    const msg = measured.value.msg;
     // Claim BEFORE the send (ADR-0287): an overlapping or repeated run loses here and
     // sends nothing; an offer that expired since the query cannot be claimed.
     if (!(await claimFollowup(f.offerId, now))) {

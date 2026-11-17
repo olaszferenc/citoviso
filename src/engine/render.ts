@@ -10,6 +10,7 @@ import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./re
 import { renderSeoHead, seoTitle } from "./seo.js";
 import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
+import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, sampleRooms, T } from "./templateKit.js";
@@ -810,7 +811,10 @@ export function renderSite(
     // Owner 2026-11-16 („Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): the
     // sample pictures and the town photo the mock showed stay on the trial / live page too, with
     // the same sample note and licence credit, until the owner's own photos replace them.
-    return phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data);
+    const noted = phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data);
+    // ORSZÁG-RÉTEG 3/6: a Cyrillic/Greek page gets fonts that carry its script (fontScripts.ts);
+    // a Latin-script page — the Hungarian mock — is returned untouched.
+    return localizeFonts(noted, data.lang);
   };
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.

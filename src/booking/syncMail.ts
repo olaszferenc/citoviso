@@ -19,7 +19,8 @@ import { huArticle, huArticleLower } from "../hu.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { footerReasonForTenant } from "../trial/footer.js";
 import type { CalendarLinkRow, SyncConflict } from "../tenant/availability.js";
-import { esc, huDate, ownerLetter, siteMailContext } from "./requests.js";
+import { esc, ownerLetter, siteMailContext } from "./requests.js";
+import { formatDay } from "../text/day.js";
 
 interface LinkContext {
   readonly siteId: string;
@@ -61,7 +62,7 @@ export async function sendOwnerSyncConflict(linkId: string, conflicts: readonly 
     : [];
   const guestOf = new Map(guests.map((g) => [g.id, g.guest_name]));
   const rows = conflicts.map((c) => ({
-    label: huDate(c.day),
+    label: formatDay(c.day, lang),
     value: guestOf.get(c.holder.replace(/^booking:/, "")) ?? T(lang, "elfogadott foglalás"),
   }));
 

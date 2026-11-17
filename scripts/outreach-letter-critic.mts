@@ -4,6 +4,9 @@
 // Usage:
 //   npx tsx scripts/outreach-letter-critic.mts         → status only (no AI call)
 //   npx tsx scripts/outreach-letter-critic.mts --run   → one critic run (claude CLI, subscription — no API), writes the verdict
+//   npx tsx scripts/outreach-letter-critic.mts --run --country=BG → ORSZÁG-RÉTEG 3/6: the letter in that country's
+//     language (Bábel's pack), read by a landlord of that country (letterCriticSystem); prints, writes no verdict
+//     (the recorded verdict is the Hungarian template's).
 //
 // A FLAG verdict is recorded too (the gate stays red) — fix the wording and run again.
 
@@ -29,7 +32,16 @@ if (!process.argv.includes("--run")) {
 }
 
 await loadPricing();
-const lang = await prepareMailLang("hu");
+const countryArg = process.argv.find((a) => a.startsWith("--country="))?.slice("--country=".length).toUpperCase();
+const { countryConfigSync } = await import("../src/country.js");
+const { langName } = await import("../src/i18n/lang.js");
+const countryRow = countryArg ? countryConfigSync(countryArg) : null;
+if (countryArg && !countryRow) {
+  console.error(`⛔ ismeretlen ország az ország-rétegben: ${countryArg}`);
+  process.exit(2);
+}
+const foreign = countryRow && countryRow.defaultLang !== "hu" ? { languageName: langName(countryRow.defaultLang), countryName: countryRow.name } : undefined;
+const lang = await prepareMailLang(countryRow?.defaultLang ?? "hu");
 // trialDays: the trial sentence is part of the wording the critic judges (owner 2026-10-27).
 const base = { leadName: "Rozé Fogadó", region: "", qualification: null, token: "T".repeat(24), lang, trialDays: 14 } as const;
 const SITUATIONS: { label: string; d: Partial<DraftInput> }[] = [
@@ -45,12 +57,14 @@ const d0 = { ...base, segment: "nincs_honlap", rating: null } as DraftInput;
 branches.push({ label: "SMS — önálló megkeresés", text: renderSmsDraft(d0).text });
 branches.push({ label: "SMS — az MMS-kép után érkező párja", text: renderPairSmsDraft(d0).text });
 const follow = letterTemplateStrings().filter((s) => /Döntés-segítő|többször is megnézte|Szeretnénk segíteni|kedvezményes ár már be van/u.test(s));
-branches.push({ label: "EMLÉKEZTETŐ-LEVÉL (aki többször megnézte a tervét) — a sablon mondatai", text: follow.join("\n\n") });
+// A foreign run reads the reminder's sentences in the country's language (Bábel's pack).
+const { tSync } = await import("../src/i18n/packs.js");
+branches.push({ label: "EMLÉKEZTETŐ-LEVÉL (aki többször megnézte a tervét) — a sablon mondatai", text: follow.map((x) => (foreign ? tSync(lang, x) : x)).join("\n\n") });
 
-const res = await critiqueLetter(branches);
+const res = await critiqueLetter(branches, foreign);
 const blocking = res.objections.filter((o) => o.severity === "blokkolo");
 const verdict = blocking.length ? "FLAG" : "PASS";
-writeFileSync(
+if (!foreign) writeFileSync(
   VERDICT,
   JSON.stringify({ fingerprint: fp, verdict, model: `${MODEL} (claude CLI, előfizetés)`, at: new Date().toISOString(), branches: branches.length, plan: res.plan, objections: res.objections }, null, 2) + "\n",
 );

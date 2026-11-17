@@ -12,6 +12,8 @@
 // preliminary ("elérhetőnek tűnik"); the authoritative check + registration is
 // the registrar-API layer (post-pilot; manual house step during the pilot, A2).
 
+import { transliterate } from "./text/translit.js";
+
 export const PLATFORM_DOMAIN = "citoviso.com";
 
 /**
@@ -52,9 +54,10 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "assets", "cdn", "help", "support", "status", "blog", "shop", "test", "dev",
 ]);
 
-/** ASCII slug from a business name: accents stripped, non-alnum → hyphen. */
+/** ASCII slug from a business name: Cyrillic/Greek transliterated (ORSZÁG-RÉTEG 3/6 —
+ *  src/text/translit.ts; a Latin name is untouched), accents stripped, non-alnum → hyphen. */
 export function slugify(name: string): string {
-  return name
+  return transliterate(name)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -126,6 +129,28 @@ const TYPE_WORDS = new Set([
  * to happen BEFORE the callers filtered for the offered endings, so a sixth-place .eu fell
  * off while four .hu variants stayed.
  */
+const LEGACY_ENDINGS: ReadonlySet<string> = new Set([".hu", ".com", ".eu"]);
+
+/**
+ * ORSZÁG-RÉTEG 3/6: the market's OFFERED endings a lead of this country may be suggested. A national
+ * ending (two letters, not the EU-wide .eu) that is not one of the lead country's own site endings
+ * (country.own_site_tlds) is dropped — a Bulgarian guesthouse is never offered `….hu` because its
+ * market fell back to the Hungarian default ending. Generic endings (.com, .eu) stay. For a
+ * Hungarian lead nothing is dropped (.hu is its own) — the Hungarian list is the old one.
+ * `ownSiteTlds` null = no layer row for the lodging (a tenant with no lead, a pre-layer lead) → the
+ * market's list unchanged, the convention of every owner surface (siteCountry.ts: "keep the catalog
+ * default, which is what a Hungarian site always had").
+ */
+export function endingsForCountry(offered: readonly string[], ownSiteTlds: readonly string[] | null): string[] {
+  if (!ownSiteTlds) return [...offered];
+  const own = new Set((ownSiteTlds ?? []).map((t) => `.${t.replace(/^\./, "").toLowerCase()}`));
+  return offered.filter((e) => {
+    const t = e.toLowerCase();
+    const national = /^\.[a-z]{2}$/.test(t) && t !== ".eu";
+    return !national || own.has(t);
+  });
+}
+
 export function suggestDomains(name: string, endings?: readonly string[]): string[] {
   const slug = slugify(name);
   if (!slug) return [];
@@ -140,17 +165,33 @@ export function suggestDomains(name: string, endings?: readonly string[]): strin
   push(`${joined}.hu`);
   push(`${slug}.hu`);
   if (core !== joined) push(`${core}.hu`);
+  // „szállás” is a Hungarian word: this variant exists only under .hu (filtered out below for
+  // any market that does not offer .hu — ORSZÁG-RÉTEG 3/6).
   push(`${core}szallas.hu`);
   push(`${joined}.com`);
   push(`${joined}.eu`);
   if (!endings) return out.slice(0, 5);
   const offered = endings.map((e) => e.toLowerCase());
-  for (const e of offered) push(`${joined}${e}`);
+  for (const e of offered) {
+    push(`${joined}${e}`);
+    // ORSZÁG-RÉTEG 3/6: a market's OWN ending (.bg, .cz, …) gets the same name variants the
+    // Hungarian .hu always had — not one lone candidate behind .com/.eu. The legacy endings
+    // above keep their exact list (the Hungarian suggestion is unchanged).
+    if (!LEGACY_ENDINGS.has(e)) {
+      push(`${slug}${e}`);
+      if (core !== joined) push(`${core}${e}`);
+    }
+  }
   const ok = out.filter((d) => offered.some((e) => d.endsWith(e)));
   // One per ending first (in the market's order), then the rest in generation order.
   const firsts = offered.map((e) => ok.find((d) => d.endsWith(e))).filter((d): d is string => !!d);
   const picked = [...firsts, ...ok.filter((d) => !firsts.includes(d))].slice(0, 5);
-  return ok.filter((d) => picked.includes(d));
+  const result = ok.filter((d) => picked.includes(d));
+  // A market with its OWN ending (.bg, .cz) lists in the market's order — its own ending first,
+  // not behind .com. Legacy-only markets (HU) keep the generation order exactly.
+  if (offered.every((e) => LEGACY_ENDINGS.has(e))) return result;
+  const rank = (d: string): number => offered.findIndex((e) => d.endsWith(e));
+  return result.map((d, i) => ({ d, i })).sort((a, b) => rank(a.d) - rank(b.d) || a.i - b.i).map((x) => x.d);
 }
 
 /** Fetch with a hard timeout; null on any failure (network is best-effort here). */
